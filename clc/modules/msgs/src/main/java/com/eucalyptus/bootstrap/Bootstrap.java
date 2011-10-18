@@ -65,12 +65,15 @@ package com.eucalyptus.bootstrap;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CompletionService;
 import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.concurrent.ExecutorCompletionService;
+import java.util.concurrent.Future;
+import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.Component;
-import com.eucalyptus.component.Component.State;
-import com.eucalyptus.component.Component.Transition;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
@@ -82,9 +85,9 @@ import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.scripting.Groovyness;
+import com.eucalyptus.system.Threads;
+import com.eucalyptus.system.Threads.ThreadPool;
 import com.eucalyptus.util.LogUtil;
-import com.eucalyptus.util.fsm.ExistingTransitionException;
-import com.eucalyptus.util.fsm.StateMachine;
 import com.eucalyptus.ws.EmpyreanService;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Iterables;
@@ -525,21 +528,19 @@ public class Bootstrap {
      * and satisfy any forward references from bootstrappers.
      */
     LOG.info( LogUtil.header( "Building core local services: cloudLocal=" + BootstrapArgs.isCloudController( ) ) );
-    List<Component> components = Components.whichCanLoad( );
-    for ( Component comp : components ) {
+    for ( Component comp : Components.whichCanLoad( ) ) {
       try {
         comp.initService( );
       } catch ( ServiceRegistrationException ex ) {
-        LOG.info( ex.getMessage( ) );
+        LOG.error( ex.getMessage( ) );
+        Logs.extreme( ).error( ex, ex );
       } catch ( Exception ex ) {
         LOG.error( ex, ex );
       }
     }
     
     LOG.info( LogUtil.header( "Initializing component resources:" ) );
-    for ( Component c : Components.whichCanLoad( ) ) {
-      Bootstrap.applyTransition( c, Component.State.INITIALIZED );
-    }
+    Bootstrap.applyTransition( Component.State.INITIALIZED, Components.whichCanLoad( ) );
     
     LOG.info( LogUtil.header( "Initializing bootstrappers." ) );
     Bootstrap.initBootstrappers( );
@@ -550,17 +551,45 @@ public class Bootstrap {
     }
   }
   
-  public static int INIT_RETRIES = 5;
+  private static int INIT_RETRIES = 5;
   
-  public static void applyTransition( Component component, Component.State state ) {
-    ServiceConfiguration config = component.getLocalServiceConfiguration( );
-    for ( int i = 0; i < INIT_RETRIES; i++ ) {
-      try {
-        ServiceTransitions.pathTo( config, state ).get( );
-        break;
-      } catch ( Exception ex ) {
-        Logs.extreme( ).error( ex );
-      }
+  static void applyTransition( Component.State state, Iterable<Component> components ) {
+    applyTransition( state, Iterables.toArray( components, Component.class ) );
+  }
+  
+  private static void applyTransition( final Component.State state, Component... components ) {
+    ThreadPool exec = Threads.lookup( Empyrean.class );
+    CompletionService<ServiceConfiguration> workPool = new ExecutorCompletionService<ServiceConfiguration>( exec );
+    int submitted = 0;
+    for ( final Component component : components ) {
+      submitted++;
+      workPool.submit( new Callable<ServiceConfiguration>( ) {
+        
+        @Override
+        public ServiceConfiguration call( ) throws Exception {
+          ServiceConfiguration config = component.getLocalServiceConfiguration( );
+          Exception lastEx = null;
+          for ( int i = 0; i < INIT_RETRIES; i++ ) {
+            try {
+              return ServiceTransitions.pathTo( config, state ).get( );
+            } catch ( Exception ex ) {
+              lastEx = ex;
+              Logs.extreme( ).error( ex );
+            }
+          }
+          throw lastEx;
+        }
+      } );
+    }
+    for ( int i = 0; i < submitted; i++ ) {
+      Future<ServiceConfiguration> future = null;
+      do {
+        try {
+          future = workPool.poll( 50, TimeUnit.MILLISECONDS );
+        } catch ( final InterruptedException e ) {
+          Thread.currentThread( ).interrupt( );
+        }
+      } while ( future == null );
     }
   }
   

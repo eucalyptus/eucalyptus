@@ -72,16 +72,17 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.PriorityBlockingQueue;
-
 import org.apache.log4j.Logger;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import com.eucalyptus.bootstrap.Bootstrap.Stage;
 import com.eucalyptus.component.Component;
+import com.eucalyptus.component.Component.State;
 import com.eucalyptus.component.Component.Transition;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.context.ServiceContextManager;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.EventClass;
@@ -159,7 +160,7 @@ public class SystemBootstrapper {
    * @throws Throwable
    */
   public boolean init( ) throws Throwable {
-    ExpandoMetaClass.enableGlobally();
+    ExpandoMetaClass.enableGlobally( );
     Logs.init( );
     Thread.setDefaultUncaughtExceptionHandler( new UncaughtExceptionHandler( ) {
       
@@ -187,7 +188,7 @@ public class SystemBootstrapper {
         }
       }
     } );
-    OrderedShutdown.initialize();
+    OrderedShutdown.initialize( );
     BootstrapArgs.init( );
     Security.addProvider( new BouncyCastleProvider( ) );
     try {
@@ -221,7 +222,7 @@ public class SystemBootstrapper {
           return true;
         }
       } );
-      SystemBootstrapper.runComponentStages( Component.Transition.LOADING, Components.filterWhichCanLoad( ) );
+      Bootstrap.applyTransition( Component.State.LOADED, Components.whichCanLoad( ) );
     }
     return true;
   }
@@ -244,13 +245,13 @@ public class SystemBootstrapper {
         return true;
       }
     } );
-    SystemBootstrapper.runComponentStages( Component.Transition.STARTING, Components.filterWhichCanLoad( ) );
-    Threads.lookup( Empyrean.class ).submit( new Runnable( ) {
+    Bootstrap.applyTransition( Component.State.NOTREADY, Components.whichCanLoad( ) );
+    Threads.enqueue( ServiceConfigurations.createEphemeral( Empyrean.INSTANCE ), new Runnable( ) {
       @Override
       public void run( ) {
         try {
-          SystemBootstrapper.runComponentStages( Component.Transition.READY_CHECK, Components.filterWhichCanLoad( ) );
-          SystemBootstrapper.runComponentStages( Component.Transition.ENABLING, Components.filterWhichCanLoad( ) );
+          Bootstrap.applyTransition( Component.State.DISABLED, Components.whichCanLoad( ) );
+          Bootstrap.applyTransition( Component.State.ENABLED, Components.whichCanEnable( ) );
         } catch ( Exception ex ) {
           LOG.error( ex, ex );
         }
@@ -272,16 +273,6 @@ public class SystemBootstrapper {
       LOG.error( t, t );
       System.exit( 1 );
       throw t;
-    }
-  }
-  
-  private static void runComponentStages( Transition transition, Predicate<Component> filter ) {
-    for ( Component c : Iterables.filter( Components.list( ), filter ) ) {
-      try {
-        Bootstrap.applyTransition( c, transition );
-      } catch ( Throwable t ) {
-        Thread.getDefaultUncaughtExceptionHandler( ).uncaughtException( Thread.currentThread( ), t );
-      }
     }
   }
   
@@ -415,7 +406,7 @@ public class SystemBootstrapper {
     }
     banner += headerHeader + String.format( headerFormat, "Component Bootstrap Configuration" ) + headerFooter;
     for ( Component c : Components.list( ) ) {
-      if ( c.isAvailableLocally( ) ) {
+      if ( c.getComponentId( ).isAvailableLocally( ) ) {
         for ( Bootstrapper b : c.getBootstrapper( ).getBootstrappers( ) ) {
           banner += prefix + String.format( "%-15.15s", c.getName( ) ) + SEP + b.toString( );
         }

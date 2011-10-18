@@ -86,7 +86,7 @@ import com.eucalyptus.keys.SshKeyPair;
 import com.eucalyptus.network.ExtantNetwork;
 import com.eucalyptus.network.NetworkGroup;
 import com.eucalyptus.records.Logs;
-import com.eucalyptus.util.Counters;
+import com.eucalyptus.util.UniqueIds;
 import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.vm.VmType;
@@ -134,7 +134,7 @@ public class Allocations {
       if ( this.request.getInstanceType( ) == null || "".equals( this.request.getInstanceType( ) ) ) {
         this.request.setInstanceType( VmTypes.defaultTypeName( ) );
       }
-      this.reservationIndex = Counters.getIdBlock( request.getMaxCount( ) );
+      this.reservationIndex = UniqueIds.nextIndex( VmInstance.class, ( long ) request.getMaxCount( ) );
       this.reservationId = VmInstances.getId( this.reservationIndex, 0 ).replaceAll( "i-", "r-" );
       byte[] tmpData = new byte[0];
       if ( this.request.getUserData( ) != null ) {

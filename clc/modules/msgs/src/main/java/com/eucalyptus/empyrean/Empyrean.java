@@ -77,6 +77,7 @@ import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.scripting.Groovyness;
+import com.eucalyptus.util.UniqueIds;
 import com.eucalyptus.util.Internets;
 
 public class Empyrean extends ComponentId.Unpartioned {
@@ -137,6 +138,7 @@ public class Empyrean extends ComponentId.Unpartioned {
     @Override
     public boolean load( ) throws Exception {
       Groovyness.run( "setup_persistence.groovy" );
+      UniqueIds.nextId( Empyrean.class );
       return true;
     }
   }
@@ -202,12 +204,12 @@ public class Empyrean extends ComponentId.Unpartioned {
     }
     
   }
-
+  
   @Override
   public String getUriPattern( ) {
     return "http://%s:%d/internal/Empyrean";
   }
-
+  
   @Override
   public String getExternalUriPattern( ) {
     return "http://%s:%d/services/Empyrean";

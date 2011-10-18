@@ -17,11 +17,14 @@ import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.Channels;
+import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.bootstrap.BootstrapException;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.empyrean.AnonymousMessage;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.util.UniqueIds;
+import com.eucalyptus.util.UniqueIds.UniqueIdProducer;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.util.HasName;
@@ -428,6 +431,16 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
   
   public boolean isRegisterable( ) {
     return !( ServiceBuilders.lookup( this ) instanceof DummyServiceBuilder );
+  }
+
+  /**
+   * Can the component be run locally (i.e., is the needed code available)
+   * 
+   * @param component TODO
+   * @return true if the component could be run locally.
+   */
+  public Boolean isAvailableLocally( ) {
+    return this.isAlwaysLocal( ) || ( this.isCloudLocal( ) && BootstrapArgs.isCloudController( ) );
   }
 
   protected static ServiceConfiguration setupServiceState( InetAddress addr, ComponentId compId ) throws ServiceRegistrationException, ExecutionException {

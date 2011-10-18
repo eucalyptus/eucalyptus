@@ -75,7 +75,10 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
     }
   }
   
-  @Override
+  /**
+   * TODO:GRZE: remove this in the future.
+   */
+  @Deprecated
   public CheckedListenableFuture<P> transitionByName( T transitionName ) throws IllegalStateException, ExistingTransitionException {
     if ( this.state.isMarked( ) ) {
       throw new ExistingTransitionException( "Transition request transition=" + transitionName + " rejected because of an ongoing transition: "

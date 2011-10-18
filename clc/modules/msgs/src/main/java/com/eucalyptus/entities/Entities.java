@@ -96,6 +96,7 @@ import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.HasNaturalId;
 import com.eucalyptus.util.LogUtil;
 import com.google.common.base.Function;
+import com.google.common.base.Functions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
 import com.google.common.collect.MapMaker;
@@ -105,7 +106,7 @@ import com.google.common.collect.Sets;
 @ConfigurableClass( root = "bootstrap.tx", description = "Parameters controlling transaction behaviour." )
 public class Entities {
   @ConfigurableField( description = "Maximum number of times a transaction may be retried before giving up.", initial = "5" )
-  public static Long                                             CONCURRENT_UPDATE_RETRIES = 5l;
+  public static Integer                                          CONCURRENT_UPDATE_RETRIES = 5;
   private static ConcurrentMap<String, String>                   txLog                     = new MapMaker( ).softKeys( ).softValues( ).makeMap( );
   private static Logger                                          LOG                       = Logger.getLogger( Entities.class );
   private static ThreadLocal<String>                             txRootThreadLocal         = new ThreadLocal<String>( );
@@ -842,24 +843,55 @@ public class Entities {
     
   }
   
-  public static <T> boolean retry( T arg, Predicate<T> predicate ) {
-    RuntimeException rootCause = null;
-    for ( int i = 0; i < CONCURRENT_UPDATE_RETRIES; i++ ) {
-      try {
-        return predicate.apply( arg );
-      } catch ( RuntimeException ex ) {
-        if ( Exceptions.isCausedBy( ex, OptimisticLockException.class ) ) {
-          rootCause = Exceptions.causedBy( ex, OptimisticLockException.class );
-          continue;
-        } else {
-          rootCause = ex;
-          Logs.extreme( ).error( ex, ex );
-          throw ex;
-        }
-      }
-    }
-    throw ( rootCause != null
-            ? rootCause
-            : new NullPointerException( "BUG: Transaction retry failed but root cause exception is unknown!" ) );
+  private interface TransactionalFunction<D, R> extends Function<D, R> {}
+  
+  public static <T, R> Function<T, R> asTransaction( final Function<T, R> function ) {
+    return asTransaction( function, CONCURRENT_UPDATE_RETRIES );
   }
+  
+  public static <T, R> Function<T, R> asTransaction( final Function<T, R> function, final int retries ) {
+    if ( function instanceof TransactionalFunction ) {
+      return function;
+    } else {
+      List<Class<?>> generics = Classes.genericsToClasses( function );
+      if ( generics.isEmpty( ) ) {
+        throw new IllegalArgumentException( "Failed to find generics for provided function, cannot make into transaction: " + Threads.currentStackString( ) );
+      }
+      final Class<?> type = generics.get( 0 );
+      return new TransactionalFunction<T, R>( ) {
+        
+        @Override
+        public R apply( T input ) {
+          if ( Entities.hasTransaction( ) ) {
+            throw new RuntimeException( "Failed to execute retryable transaction because of a nested transaction: "
+                                        + Entities.getTransaction( input.getClass( ) ).getRecord( ).stack );
+          } else {
+            RuntimeException rootCause = null;
+            for ( int i = 0; i < retries; i++ ) {
+              EntityTransaction db = Entities.get( type );
+              try {
+                R ret = function.apply( input );
+                db.commit( );
+                return ret;
+              } catch ( RuntimeException ex ) {
+                db.rollback( );
+                if ( Exceptions.isCausedBy( ex, OptimisticLockException.class ) ) {
+                  rootCause = Exceptions.causedBy( ex, OptimisticLockException.class );
+                  continue;
+                } else {
+                  rootCause = ex;
+                  Logs.extreme( ).error( ex, ex );
+                  throw ex;
+                }
+              }
+            }
+            throw ( rootCause != null
+                    ? rootCause
+                    : new NullPointerException( "BUG: Transaction retry failed but root cause exception is unknown!" ) );
+          }
+        }
+      };
+    }
+  }
+  
 }

@@ -76,6 +76,8 @@ import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.bootstrap.BootstrapException;
 import com.eucalyptus.bootstrap.Bootstrapper;
+import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.empyrean.ServiceId;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
@@ -109,12 +111,12 @@ public class Components {
    * 
    * @return
    */
-  public static List<Component> whichCanLoad( ) {
-    return Lists.newArrayList( Iterables.filter( Components.list( ), filterWhichCanLoad( ) ) );
+  public static Iterable<Component> whichCanLoad( ) {
+    return Iterables.filter( Components.list( ), filterWhichCanLoad( ) );
   }
-
-  public static Predicate<Component> filterWhichCanLoad( ) {
-    return Predicates.BOOTSTRAP_LOCALS;
+  
+  public static Iterable<Component> whichCanEnable( ) {
+    return Iterables.filter( Components.list( ), filterWhichCanEnable( ) );
   }
   
   /**
@@ -125,7 +127,7 @@ public class Components {
   public static List<Component> whichAreEnabledLocally( ) {
     return Lists.newArrayList( Iterables.filter( Components.list( ), filterWhichAreEnabledLocally( ) ) );
   }
-
+  
   public static Predicate<Component> filterWhichAreEnabledLocally( ) {
     return Predicates.ARE_ENABLED_LOCAL;
   }
@@ -138,7 +140,7 @@ public class Components {
   public static List<Component> whichAreEnabled( ) {
     return Lists.newArrayList( Iterables.filter( Components.list( ), filterWhichAreEnabled( ) ) );
   }
-
+  
   public static Predicate<Component> filterWhichAreEnabled( ) {
     return Predicates.ARE_ENABLED;
   }
@@ -299,32 +301,59 @@ public class Components {
       }
     }
     
-    
   }
   
   private enum Predicates implements Predicate<Component> {
-    BOOTSTRAP_LOCALS {
+    BOOTSTRAP_LOAD_LOCAL {
       @Override
-      public boolean apply( Component c ) {
-        return ComponentIds.shouldBootstrapLocally( c.getComponentId( ) );
+      public boolean apply( Component component ) {
+        ComponentId c = component.getComponentId( );
+        boolean cloudLocal = BootstrapArgs.isCloudController( ) && c.isCloudLocal( ) && !c.isRegisterable( );
+        boolean isCloudItself = BootstrapArgs.isCloudController( ) && Eucalyptus.class.equals( c.getClass( ) );
+        boolean alwaysLocal = c.isAlwaysLocal( );
+        boolean isBootrapperItself = Empyrean.class.equals( c.getClass( ) );
+        return cloudLocal || alwaysLocal || isBootrapperItself || isCloudItself;
+      }
+    },
+    BOOTSTRAP_ENABLE_LOCAL {
+      @Override
+      public boolean apply( Component component ) {
+        ComponentId compId = component.getComponentId( );
+        boolean cloudLocal = BootstrapArgs.isCloudController( ) && compId.isCloudLocal( ) && !compId.isRegisterable( );
+        boolean isCloudItself = BootstrapArgs.isCloudController( ) && Eucalyptus.class.equals( compId.getClass( ) );
+        boolean alwaysLocal = compId.isAlwaysLocal( );
+        boolean isBootrapperItself = Empyrean.class.equals( compId.getClass( ) );
+        return cloudLocal || alwaysLocal || isBootrapperItself || isCloudItself;
       }
     },
     ARE_ENABLED_LOCAL {
       @Override
-      public boolean apply( Component c ) {
-        boolean cloudLocal = BootstrapArgs.isCloudController( ) && c.getComponentId( ).isCloudLocal( );
-        boolean alwaysLocal = c.getComponentId( ).isAlwaysLocal( );
-        boolean runningLocal = c.isEnabledLocally( );
+      public boolean apply( Component component ) {
+        ComponentId compId = component.getComponentId( );
+        boolean cloudLocal = BootstrapArgs.isCloudController( ) && compId.isCloudLocal( ) && !compId.isRegisterable( );
+        boolean alwaysLocal = compId.isAlwaysLocal( );
+        boolean runningLocal = component.isEnabledLocally( );
         return cloudLocal || alwaysLocal || runningLocal;
       }
-    }, ARE_ENABLED{ 
+    },
+    ARE_ENABLED {
       @Override
       public boolean apply( Component c ) {
         NavigableSet<ServiceConfiguration> services = c.lookupServiceConfigurations( );
-        return services.isEmpty( ) ? false : Component.State.ENABLED.equals( services.first( ).lookupState( ) );
+        return services.isEmpty( )
+          ? false
+          : Component.State.ENABLED.equals( services.first( ).lookupState( ) );
       }
     }
-
+    
+  }
+  
+  private static Predicate<Component> filterWhichCanLoad( ) {
+    return Predicates.BOOTSTRAP_LOAD_LOCAL;
+  }
+  
+  private static Predicate<Component> filterWhichCanEnable( ) {
+    return Predicates.BOOTSTRAP_ENABLE_LOCAL;
   }
   
 }

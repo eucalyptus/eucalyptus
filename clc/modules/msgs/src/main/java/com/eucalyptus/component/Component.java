@@ -73,7 +73,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.log4j.Logger;
-import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.Hertz;
 import com.eucalyptus.event.ListenerRegistry;
@@ -97,7 +96,7 @@ import com.google.common.collect.Sets;
 
 public class Component implements HasName<Component> {
   private static Logger               LOG = Logger.getLogger( Component.class );
-  private final ComponentId           identity;
+  public final ComponentId            identity;
   private final ServiceRegistry       serviceRegistry;
   private final ComponentBootstrapper bootstrapper;
   
@@ -119,7 +118,7 @@ public class Component implements HasName<Component> {
     DISABLED_CHECK,
     DESTROYING,
     FAILED_TO_PREPARE,
-    RELOADING, 
+    RELOADING,
     REMOVING;
   }
   
@@ -170,24 +169,6 @@ public class Component implements HasName<Component> {
   
   public ServiceBuilder<? extends ServiceConfiguration> getBuilder( ) {
     return ServiceBuilders.lookup( this.identity );
-  }
-  
-  /**
-   * Can the component be run locally (i.e., is the needed code available)
-   * 
-   * @return true if the component could be run locally.
-   */
-  public Boolean isAvailableLocally( ) {
-    return this.identity.isAlwaysLocal( ) || ( this.identity.isCloudLocal( ) && BootstrapArgs.isCloudController( ) ) || this.checkComponentParts( );
-  }
-  
-  private boolean checkComponentParts( ) {
-    return true;//TODO:GRZE:add checks to ensure full component state is present
-//    try {
-//      return ComponentMessages.lookup( this.getComponentId( ).getClass( ) ) != null;
-//    } catch ( NoSuchElementException ex ) {
-//      return false;
-//    }
   }
   
   /**
@@ -276,7 +257,7 @@ public class Component implements HasName<Component> {
    * @throws ServiceRegistrationException
    */
   public ServiceConfiguration initService( ) throws ServiceRegistrationException {
-    if ( !this.isAvailableLocally( ) ) {
+    if ( !this.identity.isAvailableLocally( ) ) {
       throw new ServiceRegistrationException( "The component " + this.getName( ) + " is not being loaded automatically." );
     } else {
       String fakeName = Internets.localHostAddress( );
@@ -401,7 +382,7 @@ public class Component implements HasName<Component> {
   @Override
   public String toString( ) {
     return String.format( "Component %s available=%s local-service=%s\n",
-                          this.identity.name( ), this.isAvailableLocally( ), this.serviceRegistry.hasLocalService( )
+                          this.identity.name( ), this.identity.isAvailableLocally( ), this.serviceRegistry.hasLocalService( )
                             ? this.serviceRegistry.getLocalService( )
                             : "none" );
   }

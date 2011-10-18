@@ -132,26 +132,6 @@ public class ServiceState implements StateMachine<ServiceConfiguration, Componen
   }
   
   @Override
-  public CheckedListenableFuture<ServiceConfiguration> transitionByName( Transition transition ) throws IllegalStateException, NoSuchElementException, ExistingTransitionException {
-    if ( !this.parent.lookupComponent( ).isAvailableLocally( ) ) {
-      throw new IllegalStateException( "Failed to perform service transition " + transition + " for " + this.parent.getName( )
-                                       + " because it is not available locally." );
-    }
-    try {
-      return this.stateMachine.transitionByName( transition );
-    } catch ( IllegalStateException ex ) {
-      throw Exceptions.trace( ex );
-    } catch ( NoSuchElementException ex ) {
-      throw Exceptions.trace( ex );
-    } catch ( ExistingTransitionException ex ) {
-      throw ex;
-    } catch ( Exception ex ) {
-      throw Exceptions.trace( new RuntimeException( "Failed to perform service transition " + transition + " for " + this.parent.getName( ) + ".\nCAUSE: "
-                                                    + ex.getMessage( ) + "\nSTATE: " + this.stateMachine.toString( ), ex ) );
-    }
-  }
-  
-  @Override
   public CheckedListenableFuture<ServiceConfiguration> transition( Component.State state ) throws IllegalStateException, NoSuchElementException, ExistingTransitionException {
     try {
       return this.stateMachine.transition( state );
@@ -165,21 +145,6 @@ public class ServiceState implements StateMachine<ServiceConfiguration, Componen
       throw Exceptions.trace( new RuntimeException( "Failed to perform transition from " + this.getState( ) + " to " + state + " for " + this.parent.getName( )
                                                     + ".\nCAUSE: " + ex.getMessage( ) + "\nSTATE: " + this.stateMachine.toString( ), ex ) );
     }
-  }
-  
-  public CheckedListenableFuture<ServiceConfiguration> transitionSelf( ) {
-    try {
-      if ( this.checkTransition( Transition.READY_CHECK ) ) {//this is a special case of a transition which does not return to itself on a successful check
-        return this.transitionByName( Transition.READY_CHECK );
-      } else {
-        return this.transition( this.getState( ) );
-      }
-    } catch ( IllegalStateException ex ) {
-      LOG.error( Exceptions.filterStackTrace( ex ) );
-    } catch ( NoSuchElementException ex ) {
-      LOG.error( Exceptions.filterStackTrace( ex ) );
-    } catch ( ExistingTransitionException ex ) {}
-    return Futures.predestinedFuture( this.parent );
   }
   
   /**
@@ -199,7 +164,7 @@ public class ServiceState implements StateMachine<ServiceConfiguration, Componen
   }
   
   protected boolean checkTransition( Transition transition ) {
-    return this.parent.lookupComponent( ).isAvailableLocally( ) && this.stateMachine.isLegalTransition( transition );
+    return this.parent.getComponentId( ).isAvailableLocally( ) && this.stateMachine.isLegalTransition( transition );
   }
   
   @Override

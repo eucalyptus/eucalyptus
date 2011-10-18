@@ -64,115 +64,143 @@
 package com.eucalyptus.util;
 
 import java.io.Serializable;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.atomic.AtomicLong;
 import javax.persistence.Column;
-import org.hibernate.annotations.Entity;
+import javax.persistence.EntityTransaction;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.hibernate.annotations.Entity;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.Digest;
 import com.eucalyptus.entities.AbstractPersistent;
-import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.entities.Transactions;
-import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.Tx;
+import com.eucalyptus.entities.Entities;
+import com.google.common.base.Function;
 
-@Entity @javax.persistence.Entity
-@PersistenceContext( name = "eucalyptus_cloud" )
-@Table( name = "metadata_counters" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class Counters extends AbstractPersistent implements Serializable {
-  private static Logger   LOG = Logger.getLogger( Counters.class );
-  private static Counters singleton;
+public class UniqueIds implements Serializable {
+  private static final long serialVersionUID = 1L;
+  private static Logger     LOG              = Logger.getLogger( UniqueIds.class );
+  private static final Long BLOCK_SIZE       = 1000L;
   
-  public static long getIdBlock( int length ) {
-    if ( singleton != null ) {
-      return singleton.getBlock( length );
-    } else {
-      synchronized ( Counters.class ) {
-        if ( singleton == null ) {
-          EntityWrapper<Counters> db = EntityWrapper.get( Counters.class );
-          try {
-            singleton = db.getUnique( new Counters( ) );
-          } catch ( EucalyptusCloudException e ) {
-            singleton = new Counters( 0l );
-            try {
-              db.add( singleton );
-              db.commit( );
-            } catch ( Exception e1 ) {
-              db.rollback( );
-              LOG.fatal( e1, e1 );
-              LOG.fatal( "Failed to initialize system counters.  These are important." );
-            }
-          } catch ( Exception ex ) {
-            db.rollback( );
-          }
+  public interface UniqueIdProducer {
+    public String nextId( );
+    
+    public Long nextIndex( Long extent );
+    
+    public Long nextIndex( );
+  }
+  
+  @Entity
+  @javax.persistence.Entity
+  @PersistenceContext( name = "eucalyptus_config" )
+  @Table( name = "config_unique_ids" )
+  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+  public static class PersistedCounter extends AbstractPersistent implements UniqueIdProducer {
+    enum Transaction implements Function<PersistedCounter, Long> {
+      NEXT_ID {
+        
+        @Override
+        public Long apply( PersistedCounter input ) {
+          final PersistedCounter entity = Entities.merge( input );
+          return entity.nextBlock( 1L );
         }
-      }
-      return singleton.getBlock( length );
+      };
     }
-  }
-  
-  public static String getNextId( ) {
-    return Crypto.getDigestBase64( Long.toString( Counters.getIdBlock( 1 ) ), Digest.SHA512, false ).replaceAll( "\\.", "" );
-  }
-  
-  @Transient
-  private static Long             period   = 1000l;
-  @Transient
-  private static final AtomicLong tempId   = new AtomicLong( -1 );
-  @Transient
-  private static final AtomicLong lastSave = new AtomicLong( -1 );
-  @Column( name = "msg_count" )
-  private Long                    messageId;
-  
-  public Counters( ) {}
-  
-  public Counters( Long start ) {
-    this.messageId = start;
-  }
-  
-  public static Counters uninitialized( ) {
-    Counters c = new Counters( );
-    c.setMessageId( null );
-    return c;
-  }
-  
-  Long getBlock( int length ) {
-    final Long idStart;
-    if ( tempId.compareAndSet( -1l, this.messageId ) ) {
-      lastSave.set( tempId.addAndGet( Counters.period ) );
-      idStart = tempId.addAndGet( length );
-    } else {
-      idStart = tempId.addAndGet( length );
-      if ( ( idStart - lastSave.get( ) ) > 1000 ) {
-        try {
-          Transactions.one( Counters.uninitialized( ), new Tx<Counters>( ) {
-            @Override
-            public void fire( Counters t ) {
-              t.setMessageId( idStart );
-            }
-          } );
-        } catch ( ExecutionException ex ) {
-          LOG.error( ex , ex );
+    
+    @Transient
+    private static final long serialVersionUID = 1L;
+    @Column( name = "config_unique_ids_current_base" )
+    private Long              currentBase;
+    @Column( name = "config_unique_ids_name" )
+    private String            idSetName;
+    
+    private PersistedCounter( ) {
+      super( );
+    }
+    
+    private PersistedCounter( final Long counter, final String counterName ) {
+      this.currentBase = counter;
+      this.idSetName = counterName;
+    }
+    
+    private Long nextBlock( Long size ) {
+      this.setCurrentBase( this.currentBase + size );
+      return this.getCurrentBase( );
+    }
+    
+    private Long getCurrentBase( ) {
+      return this.currentBase;
+    }
+    
+    private void setCurrentBase( Long currentBase ) {
+      this.currentBase = currentBase;
+    }
+    
+    private String getIdSetName( ) {
+      return this.idSetName;
+    }
+    
+    private void setIdSetName( String idSetName ) {
+      this.idSetName = idSetName;
+    }
+    
+    @Override
+    public String nextId( ) {
+      return Crypto.getDigestBase64( Long.toString( this.nextIndex( ) ), Digest.SHA512, false ).replaceAll( "\\.", "" );
+    }
+    
+    @Override
+    public Long nextIndex( ) {
+      return Entities.asTransaction( Transaction.NEXT_ID ).apply( this );
+    }
+    
+    @Override
+    public Long nextIndex( final Long extent ) {
+      Long ret = nextIndex( );
+      Entities.asTransaction( new Function<PersistedCounter, Long>( ) {
+        
+        @Override
+        public Long apply( PersistedCounter input ) {
+          final PersistedCounter entity = Entities.merge( input );
+          return entity.nextBlock( extent );
         }
-        lastSave.set( idStart );
+      } ).apply( this );
+      return ret;
+    }
+    
+  }
+  
+  public static Long nextIndex( Class c, long extent ) {
+    return named( c.toString( ) ).nextIndex( extent );
+  }
+  
+  public static String nextId( Class c ) {
+    return named( c.toString( ) ).nextId( );
+  }
+  
+  public static String nextId( ) {
+    return named( "SYSTEM" ).nextId( );
+  }
+  
+  private static UniqueIdProducer named( final String counterName ) {
+    final EntityTransaction db = Entities.get( PersistedCounter.class );
+    try {
+      final PersistedCounter entity = Entities.uniqueResult( new PersistedCounter( null, counterName ) );
+      db.commit( );
+      return entity;
+    } catch ( final Exception ex ) {
+      try {
+        final PersistedCounter entity = Entities.persist( new PersistedCounter( 0L, counterName ) );
+        db.commit( );
+        return entity;
+      } catch ( final Exception ex1 ) {
+        db.rollback( );
+        LOG.error( ex1, ex1 );
+        throw Exceptions.fatal( "Failed to initialize counter for: " + counterName + " because of: " + ex.getMessage( ), ex );
       }
     }
-    return idStart;
-  }
-  
-  public Long getMessageId( ) {
-    return messageId;
-  }
-  
-  public void setMessageId( Long messageId ) {
-    this.messageId = messageId;
   }
   
 }
