@@ -43,7 +43,7 @@ public class ClusterController extends ComponentId {
 
   @Override
   public String getServicePath( String... pathParts ) {
-    return "/services/EucalyptusCC";
+    return "/axis2/services/EucalyptusCC";
   }
 
   @Override

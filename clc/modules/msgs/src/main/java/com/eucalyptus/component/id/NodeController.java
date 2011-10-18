@@ -87,7 +87,7 @@ public class NodeController extends ComponentId {
   
   @Override
   public String getServicePath( String... pathParts ) {
-    return "/services/EucalyptusNC";
+    return "/axis2/services/EucalyptusNC";
   }
   
   @Override
