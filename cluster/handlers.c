@@ -341,7 +341,6 @@ int ncClientCall(ncMetadata *meta, int timeout, int ncLock, char *ncURL, char *n
       char *publicIp = va_arg(al, char *);
 
       rc = ncAssignAddressStub(ncs, localmeta, instanceId, publicIp);
-      //rc = 0;
     } else if (!strcmp(ncOp, "ncRebootInstance")) {
       char *instId = va_arg(al, char *);
 
@@ -920,11 +919,11 @@ int doAssignAddress(ncMetadata *ccMeta, char *uuid, char *src, char *dst) {
   if (rc || ccIsEnabled()) {
     return(1);
   }
-  logprintfl(EUCAINFO,"AssignAddress(): called \n");
-  logprintfl(EUCADEBUG,"AssignAddress(): params: src=%s, dst=%s\n", SP(src), SP(dst));
+  logprintfl(EUCAINFO,"doAssignAddress(): called \n");
+  logprintfl(EUCADEBUG,"doAssignAddress(): params: src=%s, dst=%s\n", SP(src), SP(dst));
 
   if (!src || !dst || !strcmp(src, "0.0.0.0")) {
-    logprintfl(EUCADEBUG, "AssignAddress(): bad input params\n");
+    logprintfl(EUCADEBUG, "doAssignAddress(): bad input params\n");
     return(1);
   }
   
@@ -932,21 +931,31 @@ int doAssignAddress(ncMetadata *ccMeta, char *uuid, char *src, char *dst) {
   memcpy(&resourceCacheLocal, resourceCache, sizeof(ccResourceCache));
   sem_mypost(RESCACHE);
 
-  ret = 0;
-  
+  ret = 1;  
   if (!strcmp(vnetconfig->mode, "SYSTEM") || !strcmp(vnetconfig->mode, "STATIC") || !strcmp(vnetconfig->mode, "STATIC-DYNMAC") ) {
     ret = 0;
   } else {
-    
-    sem_mywait(VNET);
 
-    ret = vnetReassignAddress(vnetconfig, uuid, src, dst);
-    if (ret) {
-      logprintfl(EUCAERROR, "doAssignAddress(): vnetReassignAddress() failed\n");
-      ret = 1;
+    rc = find_instanceCacheIP(dst, &myInstance);
+    if (!rc) {
+      if (myInstance) {
+	logprintfl(EUCADEBUG, "doAssignAddress(): found local instance, applying %s->%s mapping\n", src, dst);
+
+	sem_mywait(VNET);	
+	rc = vnetReassignAddress(vnetconfig, uuid, src, dst);
+	if (rc) {
+	  logprintfl(EUCAERROR, "doAssignAddress(): vnetReassignAddress() failed\n");
+	  ret = 1;
+	} else {
+	  ret = 0;
+	}
+	sem_mypost(VNET);
+
+	if (myInstance) free(myInstance);
+      }
+    } else {
+      logprintfl(EUCADEBUG, "doAssignAddress(): skipping %s->%s mapping, as this clusters does not own the instance (%s)\n", src, dst, dst); 
     }
-    
-    sem_mypost(VNET);
   }
   
   if (!ret && strcmp(dst, "0.0.0.0")) {
@@ -954,17 +963,17 @@ int doAssignAddress(ncMetadata *ccMeta, char *uuid, char *src, char *dst) {
 
     rc = map_instanceCache(privIpCmp, dst, pubIpSet, src);
     if (rc) {
-      logprintfl(EUCAERROR, "AssignAddress(): map_instanceCache() failed to assign %s->%s\n", dst, src);
+      logprintfl(EUCAERROR, "doAssignAddress(): map_instanceCache() failed to assign %s->%s\n", dst, src);
     } else {
       rc = find_instanceCacheIP(src, &myInstance);
       if (!rc) {
-	logprintfl(EUCADEBUG, "AssignAddress(): found instance %s in cache with IP %s\n", myInstance->instanceId, myInstance->ccnet.publicIp);
+	logprintfl(EUCADEBUG, "doAssignAddress(): found instance (%s) in cache with IP (%s)\n", myInstance->instanceId, myInstance->ccnet.publicIp);
 	// found the instance in the cache
 	if (myInstance) {
 	  //timeout = ncGetTimeout(op_start, OP_TIMEOUT, 1, myInstance->ncHostIdx);
 	  rc = ncClientCall(ccMeta, OP_TIMEOUT, resourceCacheLocal.resources[myInstance->ncHostIdx].lockidx, resourceCacheLocal.resources[myInstance->ncHostIdx].ncURL, "ncAssignAddress", myInstance->instanceId, myInstance->ccnet.publicIp);
 	  if (rc) {
-	    logprintfl(EUCAERROR, "AssignAddress(): could not sync IP with NC\n");
+	    logprintfl(EUCAERROR, "doAssignAddress(): could not sync public IP %s with NC\n", src);
 	    ret = 1;
 	  } else {
 	    ret = 0;
@@ -975,7 +984,7 @@ int doAssignAddress(ncMetadata *ccMeta, char *uuid, char *src, char *dst) {
     }
   }
   
-  logprintfl(EUCADEBUG,"AssignAddress(): done. \n");
+  logprintfl(EUCADEBUG,"doAssignAddress(): done. \n");
   
   shawn();
 
@@ -3922,6 +3931,11 @@ int maintainNetworkState() {
 	}
       }
     }
+   
+    //    rc = vnetApplyArpTableRules(vnetconfig);
+    //    if (rc) {
+    //      logprintfl(EUCAWARN, "maintainNetworkState(): failed to maintain arp tables\n");
+    //    }
     
     sem_mypost(VNET);
   }
