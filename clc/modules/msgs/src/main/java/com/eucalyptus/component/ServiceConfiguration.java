@@ -52,13 +52,10 @@ public interface ServiceConfiguration extends Serializable, HasFullName<ServiceC
   
   public abstract ServiceBuilder lookupBuilder( );
 
-  public Collection<ServiceCheckRecord> lookupDetails( );
+  public abstract Collection<ServiceCheckRecord> lookupDetails( );
 
   public abstract Boolean isHostLocal( );
 
-  /**
-   * @return
-   */
-  InetAddress getInetAddress( );
+  public abstract InetAddress getInetAddress( );
 
 }

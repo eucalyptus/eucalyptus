@@ -76,6 +76,7 @@ import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.entities.AbstractPersistent;
+import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 
 @Entity
 @javax.persistence.Entity
@@ -161,7 +162,7 @@ public class StackConfiguration extends AbstractPersistent {
   @ConfigurableField( initial = "8192", description = "Maximum HTTP headers size (bytes)." )
   public static Integer       HTTP_MAX_HEADER_BYTES             = 8 * 1024;
   
-  @ConfigurableField( initial = "false", description = "Default scheme prefix in eucarc.", changeListener = TemporarySchemeUpdater.class )
+  @ConfigurableField( description = "Default scheme prefix in eucarc.", changeListener = TemporarySchemeUpdater.class )
   public static Boolean       DEFAULT_HTTPS_ENABLED             = Boolean.FALSE;
   
   @ConfigurableField( initial = "http", description = "Default scheme for EC2_URL in eucarc.", changeListener = UriChangeListener.class )
@@ -175,6 +176,9 @@ public class StackConfiguration extends AbstractPersistent {
   
   @ConfigurableField( initial = "http", description = "Default scheme for EUARE_URL in eucarc.", changeListener = UriChangeListener.class )
   public static String        DEFAULT_EUARE_URI_SCHEME          = "http";
+  
+  @ConfigurableField( description = "Use DNS delegation for eucarc." )
+  public static Boolean       USE_DNS_DELEGATION                = Boolean.FALSE;
   
   private static Logger       LOG                               = Logger.getLogger( StackConfiguration.class );
   
@@ -217,6 +221,10 @@ public class StackConfiguration extends AbstractPersistent {
     public abstract String getScheme( );
     
     public abstract String getSecureScheme( );
+  }
+  
+  public static String lookupDnsDomain( ) {
+    return SystemConfiguration.getSystemConfiguration( ).getDnsDomain( );//TODO:GRZE: sigh. 
   }
   
   public static class TimeChangeListener implements PropertyChangeListener {

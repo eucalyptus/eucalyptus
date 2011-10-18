@@ -78,7 +78,6 @@ import org.hibernate.annotations.Entity;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.configurable.ConfigurableClass;
@@ -196,10 +195,10 @@ public class SystemConfiguration extends AbstractPersistent {
     Component walrus = Components.lookup( Walrus.class );
     if( walrus.hasEnabledService( ) ) {
       ServiceConfiguration walrusConfig = Components.lookup( Walrus.class ).enabledServices( ).first( );
-      return ServiceUris.remote( walrusConfig ).toASCIIString( );
+      return walrusConfig.getUri( ).toASCIIString( );
     } else {
       LOG.error( "BUG BUG: Deprecated method called. No walrus service is registered.  Using local address for walrus URL." );
-      return ServiceUris.remote( Walrus.class, Internets.localHostInetAddress( ) ).toASCIIString( );
+      return walrus.getComponentId( ).makeExternalRemoteUri( Internets.localHostInetAddress( ).getCanonicalHostName( ), 8773, "http" ).toASCIIString( );
     }
   }
 
@@ -223,9 +222,9 @@ public class SystemConfiguration extends AbstractPersistent {
   public static InetAddress getCloudAddress() throws EucalyptusCloudException {
 	Component cloud = Components.lookup( Eucalyptus.class );
 	if( cloud.hasEnabledService( ) ) {
-	  ServiceConfiguration cloudConfig = Components.lookup( Eucalyptus.class ).enabledServices( ).first( );
-	  return Internets.toAddress (cloudConfig.getHostName());
+	  return Components.lookup( Eucalyptus.class ).enabledServices( ).first( ).getInetAddress( );
 	}
 	return null;
   }
+  
 }

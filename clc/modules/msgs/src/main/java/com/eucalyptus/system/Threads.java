@@ -117,6 +117,9 @@ import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
 import edu.emory.mathcs.backport.java.util.concurrent.atomic.AtomicBoolean;
 
+/**
+ * TODO:GRZE: wrong package should be .util
+ */
 public class Threads {
   private static Logger                                  LOG               = Logger.getLogger( Threads.class );
   private final static String                            PREFIX            = "Eucalyptus.";

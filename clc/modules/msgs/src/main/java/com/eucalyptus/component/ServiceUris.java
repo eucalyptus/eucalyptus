@@ -236,8 +236,11 @@ public class ServiceUris {
       String schemeString = StackConfiguration.DEFAULT_HTTPS_ENABLED
         ? this.scheme.getSecureScheme( )
         : this.scheme.getScheme( );
+      String hostNameString = StackConfiguration.USE_DNS_DELEGATION
+        ? this.componentId.name( ) + "." + StackConfiguration.lookupDnsDomain( )
+        : this.address.getCanonicalHostName( );
       try {
-        URI u = new URI( schemeString, null, this.address.getCanonicalHostName( ), this.port, this.path, Lexemes.QUERY.format( this.query ), this.fragment );
+        URI u = new URI( schemeString, null, hostNameString, this.port, this.path, Lexemes.QUERY.format( this.query ), this.fragment );
         u.parseServerAuthority( );
         return u;
       } catch ( URISyntaxException e ) {
@@ -269,8 +272,7 @@ public class ServiceUris {
   public static URI internal( ComponentId compId, String... pathParts ) {
     return internal( compId, Internets.localHostInetAddress( ), pathParts );
   }
-
-
+  
   public static URI internal( Component comp, final InetAddress host, String... pathParts ) {
     return internal( comp.getComponentId( ), host, pathParts );
   }
@@ -282,8 +284,7 @@ public class ServiceUris {
   public static URI internal( Component comp, String... pathParts ) {
     return internal( comp.getComponentId( ), Internets.localHostInetAddress( ), pathParts );
   }
-
-
+  
   public static URI internal( ServiceConfiguration config, String... pathParts ) {
     return internal( config.getComponentId( ), config.getInetAddress( ), config.getPort( ), pathParts );
   }
@@ -303,7 +304,7 @@ public class ServiceUris {
   public static URI remote( Component comp, final InetAddress host, String... pathParts ) {
     return remote( comp.getComponentId( ), host, pathParts );
   }
-
+  
   public static URI remote( final Class<? extends ComponentId> idClass, String... pathParts ) {
     return remote( Components.lookup( idClass ), Internets.localHostInetAddress( ), pathParts );
   }
@@ -311,11 +312,11 @@ public class ServiceUris {
   public static URI remote( Component comp, String... pathParts ) {
     return remote( comp.getComponentId( ), Internets.localHostInetAddress( ), pathParts );
   }
-
+  
   public static URI remote( ComponentId compId, String... pathParts ) {
     return remote( compId, Internets.localHostInetAddress( ), pathParts );
   }
-
+  
   public static URI remote( ServiceConfiguration config, String... pathParts ) {
     return remote( config.getComponentId( ), config.getInetAddress( ), config.getPort( ), pathParts );
   }
