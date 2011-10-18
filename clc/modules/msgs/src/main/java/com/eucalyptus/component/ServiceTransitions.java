@@ -196,14 +196,16 @@ public class ServiceTransitions {
   private static final State[] pathToStopped( final Component.State fromState ) {
     switch ( fromState ) {
       case ENABLED:
+      case DISABLED:
         return ServiceTransitions.sequence( Component.State.ENABLED,
                                             Component.State.DISABLED,
                                             Component.State.STOPPED );
-      case DISABLED:
-      case NOTREADY:
-      case BROKEN:
       default:
-        return ServiceTransitions.sequence( Component.State.STOPPED );
+        return ServiceTransitions.sequence( Component.State.PRIMORDIAL,
+                                            Component.State.INITIALIZED,
+                                            Component.State.LOADED,
+                                            Component.State.NOTREADY,
+                                            Component.State.STOPPED );
     }
   }
   
