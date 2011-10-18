@@ -185,9 +185,9 @@ public class ServiceBootstrapper extends Bootstrapper {
           public void run( ) {
             Bootstrap.awaitFinished( );
             try {
-              ServiceTransitions.transitionChain( config, Component.State.NOTREADY ).get( );
+              ServiceTransitions.pathTo( config, Component.State.NOTREADY ).get( );
               try {
-                ServiceTransitions.transitionChain( config, Component.State.ENABLED ).get( );
+                ServiceTransitions.pathTo( config, Component.State.ENABLED ).get( );
               } catch ( IllegalStateException ex ) {
                 LOG.error( ex, ex );
               } catch ( InterruptedException ex ) {

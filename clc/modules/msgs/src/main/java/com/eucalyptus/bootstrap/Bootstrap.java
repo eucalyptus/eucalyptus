@@ -76,6 +76,7 @@ import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceRegistrationException;
+import com.eucalyptus.component.ServiceTransitions;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
@@ -537,7 +538,7 @@ public class Bootstrap {
     
     LOG.info( LogUtil.header( "Initializing component resources:" ) );
     for ( Component c : Components.whichCanLoad( ) ) {
-      Bootstrap.applyTransition( c, Component.Transition.INITIALIZING );
+      Bootstrap.applyTransition( c, Component.State.INITIALIZED );
     }
     
     LOG.info( LogUtil.header( "Initializing bootstrappers." ) );
@@ -551,28 +552,16 @@ public class Bootstrap {
   
   public static int INIT_RETRIES = 5;
   
-  public static void applyTransition( Component component, Component.Transition transition ) {
-    StateMachine<ServiceConfiguration, State, Transition> fsm = component.getLocalServiceConfiguration( ).getStateMachine( );
-    if ( fsm.isLegalTransition( transition ) ) {
-      for ( int i = 0; i < INIT_RETRIES; i++ ) {
-        try {
-          EventRecord.caller( Bootstrap.class, EventType.COMPONENT_INFO, transition.name( ), component.getName( ), component.getComponentId( ) ).info( );
-          fsm.transitionByName( transition ).get( );
-          break;
-        } catch ( ExistingTransitionException ex ) {
-          Logs.extreme( ).error( ex );
-        } catch ( Exception ex ) {
-          Logs.extreme( ).error( ex );
-        }
-//        try {
-//          TimeUnit.MILLISECONDS.sleep( 50 );
-//        } catch ( InterruptedException ex ) {
-//          Thread.currentThread( ).interrupt( );
-//          throw new RuntimeException( ex );
-//        }
+  public static void applyTransition( Component component, Component.State state ) {
+    ServiceConfiguration config = component.getLocalServiceConfiguration( );
+    for ( int i = 0; i < INIT_RETRIES; i++ ) {
+      try {
+        ServiceTransitions.pathTo( config, state ).get( );
+        break;
+      } catch ( Exception ex ) {
+        Logs.extreme( ).error( ex );
       }
     }
-    
   }
   
   static void initializeSystem( ) throws Exception {

@@ -112,13 +112,15 @@ public class Component implements HasName<Component> {
     READY_CHECK,
     STOPPING,
     STOPPING_NOTREADY,
+    STOPPING_BROKEN,
     ENABLING,
     ENABLED_CHECK,
     DISABLING,
     DISABLED_CHECK,
     DESTROYING,
     FAILED_TO_PREPARE,
-    RELOADING;
+    RELOADING, 
+    REMOVING;
   }
   
   Component( ComponentId componentId ) throws ServiceRegistrationException {
@@ -333,7 +335,7 @@ public class Component implements HasName<Component> {
   }
   
   Future<ServiceConfiguration> stopTransition( final ServiceConfiguration configuration ) {
-    return ServiceTransitions.transitionChain( configuration, State.STOPPED );
+    return ServiceTransitions.pathTo( configuration, State.STOPPED );
   }
   
   public void destroyTransition( final ServiceConfiguration configuration ) throws ServiceRegistrationException {
@@ -343,7 +345,7 @@ public class Component implements HasName<Component> {
         service = this.serviceRegistry.lookup( configuration );
       }
       try {
-        ServiceTransitions.destroyTransitionChain( configuration ).get( );
+        ServiceTransitions.pathTo( configuration, Component.State.NONE ).get( );
       } catch ( ExecutionException ex1 ) {
         LOG.error( ex1 );
       } catch ( InterruptedException ex1 ) {
@@ -373,7 +375,7 @@ public class Component implements HasName<Component> {
         throw ex;
       }
     }
-    return ServiceTransitions.transitionChain( configuration, State.NOTREADY );
+    return ServiceTransitions.pathTo( configuration, State.NOTREADY );
   }
   
   public NavigableSet<ServiceConfiguration> enabledServices( ) {
