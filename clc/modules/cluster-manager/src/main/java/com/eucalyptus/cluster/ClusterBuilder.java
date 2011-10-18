@@ -14,8 +14,8 @@ import com.eucalyptus.component.ServiceChecks.CheckException;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.ServiceRegistrationException;
+import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.id.ClusterController;
-import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.config.DeregisterClusterType;
 import com.eucalyptus.config.DescribeClustersType;
 import com.eucalyptus.config.ModifyClusterAttributeType;
@@ -83,7 +83,7 @@ public class ClusterBuilder extends AbstractServiceBuilder<ClusterConfiguration>
   public void fireStart( ServiceConfiguration config ) throws ServiceRegistrationException {
     LOG.info( "Starting cluster: " + config );
     EventRecord.here( ClusterBuilder.class, EventType.COMPONENT_SERVICE_START, config.getComponentId( ).name( ), config.getName( ),
-                      config.getUri( ).toASCIIString( ) ).info( );
+                      ServiceUris.remote( config ).toASCIIString( ) ).info( );
     try {
       if ( !Clusters.getInstance( ).contains( config.getName( ) ) ) {
         Cluster newCluster = new Cluster( ( ClusterConfiguration ) config );//TODO:GRZE:fix the type issue here.
@@ -108,7 +108,7 @@ public class ClusterBuilder extends AbstractServiceBuilder<ClusterConfiguration>
   public void fireEnable( ServiceConfiguration config ) throws ServiceRegistrationException {
     LOG.info( "Enabling cluster: " + config );
     EventRecord.here( ClusterBuilder.class, EventType.COMPONENT_SERVICE_ENABLED, config.getComponentId( ).name( ), config.getName( ),
-                      config.getUri( ).toASCIIString( ) ).info( );
+                      ServiceUris.remote( config ).toASCIIString( ) ).info( );
     try {
       try {
         Cluster newCluster = Clusters.getInstance( ).lookupDisabled( config.getName( ) );
@@ -127,7 +127,7 @@ public class ClusterBuilder extends AbstractServiceBuilder<ClusterConfiguration>
   public void fireDisable( ServiceConfiguration config ) throws ServiceRegistrationException {
     LOG.info( "Disabling cluster: " + config );
     EventRecord.here( ClusterBuilder.class, EventType.COMPONENT_SERVICE_DISABLED, config.getComponentId( ).name( ), config.getName( ),
-                      config.getUri( ).toASCIIString( ) ).info( );
+                      ServiceUris.remote( config ).toASCIIString( ) ).info( );
     try {
       if ( Clusters.getInstance( ).contains( config.getName( ) ) ) {
         try {
@@ -149,7 +149,7 @@ public class ClusterBuilder extends AbstractServiceBuilder<ClusterConfiguration>
       LOG.info( "Tearing down cluster: " + config );
       Cluster cluster = Clusters.getInstance( ).lookupDisabled( config.getName( ) );
       EventRecord.here( ClusterBuilder.class, EventType.COMPONENT_SERVICE_STOPPED, config.getComponentId( ).name( ), config.getName( ),
-                        config.getUri( ).toASCIIString( ) ).info( );
+                        ServiceUris.remote( config ).toASCIIString( ) ).info( );
       cluster.stop( );
     } catch ( NoSuchElementException ex ) {
       LOG.error( ex, ex );

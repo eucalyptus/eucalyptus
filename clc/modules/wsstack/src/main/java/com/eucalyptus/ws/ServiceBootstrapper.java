@@ -75,14 +75,19 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.bootstrap.Bootstrapper;
+import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
+import com.eucalyptus.bootstrap.SystemBootstrapper;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
+import com.eucalyptus.component.LifecycleEvents;
 import com.eucalyptus.component.ServiceBuilder;
+import com.eucalyptus.component.ServiceChecks;
 import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.ServiceTransitions;
 import com.eucalyptus.component.id.Eucalyptus;
@@ -99,9 +104,9 @@ public class ServiceBootstrapper extends Bootstrapper {
   private static Logger LOG = Logger.getLogger( ServiceBootstrapper.class );
   
   static class ServiceBootstrapWorker implements Runnable {
-    private final AtomicBoolean             running  = new AtomicBoolean( true );
-    private final BlockingQueue<Runnable>   msgQueue = new LinkedBlockingQueue<Runnable>( );
-    private final ExecutorService           executor = Executors.newFixedThreadPool( 20 );
+    private final AtomicBoolean                 running  = new AtomicBoolean( true );
+    private final BlockingQueue<Runnable>       msgQueue = new LinkedBlockingQueue<Runnable>( );
+    private final ExecutorService               executor = Executors.newFixedThreadPool( 20 );
     private static final ServiceBootstrapWorker worker   = new ServiceBootstrapWorker( );
     
     private ServiceBootstrapWorker( ) {
@@ -113,6 +118,7 @@ public class ServiceBootstrapper extends Bootstrapper {
     public static void markFinished( ) {
       worker.running.set( false );
     }
+    
     public static void submit( Runnable run ) {
       worker.msgQueue.add( run );
     }
@@ -138,15 +144,14 @@ public class ServiceBootstrapper extends Bootstrapper {
   }
   
   enum ShouldLoad implements Predicate<ServiceConfiguration> {
-    INSTANCE {
-      
-      @Override
-      public boolean apply( final ServiceConfiguration config ) {
-        boolean ret = config.getComponentId( ).isAlwaysLocal( ) || config.isVmLocal( ) || BootstrapArgs.isCloudController( );
-        LOG.debug( "ServiceBootstrapper.shouldLoad(" + config.toString( ) + "):" + ret );
-        return ret;
-      }
-    };
+    INSTANCE;
+    
+    @Override
+    public boolean apply( final ServiceConfiguration config ) {
+      boolean ret = config.getComponentId( ).isAlwaysLocal( ) || config.isVmLocal( ) || BootstrapArgs.isCloudController( );
+      LOG.debug( "ServiceBootstrapper.shouldLoad(" + config.toString( ) + "):" + ret );
+      return ret;
+    }
   }
   
   @Override
@@ -161,18 +166,18 @@ public class ServiceBootstrapper extends Bootstrapper {
           comp.loadService( config ).get( );
           return true;
         } catch ( ServiceRegistrationException ex ) {
-          config.error( ex );
+          LifecycleEvents.fireExceptionEvent( config, ServiceChecks.Severity.ERROR, ex );
           return false;
         } catch ( Exception ex ) {
-          Exceptions.trace( "load(): Building service failed: " + Components.Functions.componentToString( ).apply( comp ), ex );
-          config.error( ex );
+          Exceptions.trace( "load(): Building service failed: " + Components.describe( comp ), ex );
+          LifecycleEvents.fireExceptionEvent( config, ServiceChecks.Severity.ERROR, ex );
           return false;
         }
       }
     } );
     return true;
   }
-
+  
   @Override
   public boolean start( ) throws Exception {
     ServiceBootstrapper.execute( new Predicate<ServiceConfiguration>( ) {
@@ -185,9 +190,9 @@ public class ServiceBootstrapper extends Bootstrapper {
           public void run( ) {
             Bootstrap.awaitFinished( );
             try {
-              ServiceTransitions.transitionChain( config, Component.State.NOTREADY ).get( );
+              ServiceTransitions.pathTo( config, Component.State.NOTREADY ).get( );
               try {
-                ServiceTransitions.transitionChain( config, Component.State.ENABLED ).get( );
+                ServiceTransitions.pathTo( config, Component.State.ENABLED ).get( );
               } catch ( IllegalStateException ex ) {
                 LOG.error( ex, ex );
               } catch ( InterruptedException ex ) {

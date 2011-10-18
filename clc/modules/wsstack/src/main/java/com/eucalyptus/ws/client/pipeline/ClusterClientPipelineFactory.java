@@ -69,10 +69,12 @@ import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.Channels;
+import com.eucalyptus.component.ComponentPart;
+import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.ws.Handlers;
-import com.eucalyptus.ws.StackConfiguration;
 import com.eucalyptus.ws.handlers.ClusterWsSecHandler;
 
+@ComponentPart( ClusterController.class )
 public final class ClusterClientPipelineFactory implements ChannelPipelineFactory {
   private static ChannelHandler bindingHandler;
   private static ChannelHandler wssecHandler;
@@ -86,17 +88,19 @@ public final class ClusterClientPipelineFactory implements ChannelPipelineFactor
       }
     }
   }
-
+  
   public ClusterClientPipelineFactory( ) {
     setupHandlers( );
   }
-
-
-
+  
   @Override
   public ChannelPipeline getPipeline( ) throws Exception {
     final ChannelPipeline pipeline = Channels.pipeline( );
-    for( Map.Entry<String,ChannelHandler> e : Handlers.channelMonitors( TimeUnit.SECONDS, 60 /** TODO:GRZE: configurable **/ ).entrySet( ) ) {
+    for ( Map.Entry<String, ChannelHandler> e : Handlers.channelMonitors( TimeUnit.SECONDS, 60 /**
+     * 
+     * TODO:GRZE: configurable
+     **/
+    ).entrySet( ) ) {
       pipeline.addLast( e.getKey( ), e.getValue( ) );
     }
     pipeline.addLast( "decoder", Handlers.newHttpResponseDecoder( ) );

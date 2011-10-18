@@ -125,13 +125,13 @@ public class TopologyChanges {
           ServiceKey serviceKey = ServiceKey.create( config );
           if ( Topology.getInstance( ).getGuard( ).tryEnable( config ) ) {
             try {
-              return ServiceTransitions.transitionChain( config, Component.State.ENABLED ).get( );
+              return ServiceTransitions.pathTo( config, Component.State.ENABLED ).get( );
             } catch ( Exception ex ) {
               Topology.getInstance( ).getGuard( ).tryDisable( config );
               throw ex;
             }
           } else {
-            return ServiceTransitions.transitionChain( config, Component.State.DISABLED ).get( );
+            return ServiceTransitions.pathTo( config, Component.State.DISABLED ).get( );
           }
         } catch ( InterruptedException ex ) {
           Thread.currentThread( ).interrupt( );
@@ -147,7 +147,7 @@ public class TopologyChanges {
       public ServiceConfiguration apply( ServiceConfiguration config ) {
         try {
           ServiceKey serviceKey = ServiceKey.create( config );
-          Future<ServiceConfiguration> transition = ServiceTransitions.transitionChain( config, Component.State.DISABLED );
+          Future<ServiceConfiguration> transition = ServiceTransitions.pathTo( config, Component.State.DISABLED );
           ServiceConfiguration result = transition.get( );
           Topology.getInstance( ).getGuard( ).tryDisable( config );
           return result;
@@ -189,7 +189,7 @@ public class TopologyChanges {
             return config;
           }
           try {
-            Future<ServiceConfiguration> result = ServiceTransitions.transitionChain( config, nextState );//TODO:GRZE:OMGFIXME timeout here.
+            Future<ServiceConfiguration> result = ServiceTransitions.pathTo( config, nextState );//TODO:GRZE:OMGFIXME timeout here.
             ServiceConfiguration endConfig = result.get( );
             State endState = endConfig.lookupState( );
             Logs.exhaust( ).debug( this.toString( ) + " completed for: " + endConfig + " trying " + initialState + "->" + nextState + " ended in: " + endState );
@@ -243,13 +243,13 @@ public class TopologyChanges {
           ServiceKey serviceKey = ServiceKey.create( config );
           if ( Topology.getInstance( ).getGuard( ).tryEnable( config ) ) {
             try {
-              return ServiceTransitions.transitionChain( config, Component.State.ENABLED ).get( );
+              return ServiceTransitions.pathTo( config, Component.State.ENABLED ).get( );
             } catch ( Exception ex ) {
               Topology.getInstance( ).getGuard( ).tryDisable( config );
               throw ex;
             }
           } else {
-            return ServiceTransitions.transitionChain( config, Component.State.DISABLED ).get( );
+            return ServiceTransitions.pathTo( config, Component.State.DISABLED ).get( );
           }
         } catch ( InterruptedException ex ) {
           Thread.currentThread( ).interrupt( );
@@ -266,7 +266,7 @@ public class TopologyChanges {
         ServiceKey serviceKey = null;
         try {
           serviceKey = ServiceKey.create( config );
-          Future<ServiceConfiguration> transition = ServiceTransitions.transitionChain( config, Component.State.DISABLED );
+          Future<ServiceConfiguration> transition = ServiceTransitions.pathTo( config, Component.State.DISABLED );
           ServiceConfiguration result = transition.get( );
           return result;
         } catch ( InterruptedException ex ) {
@@ -318,7 +318,7 @@ public class TopologyChanges {
             return config;
           }
           try {
-            Future<ServiceConfiguration> result = ServiceTransitions.transitionChain( config, nextState );
+            Future<ServiceConfiguration> result = ServiceTransitions.pathTo( config, nextState );
             ServiceConfiguration endConfig = result.get( );
             State endState = endConfig.lookupState( );
             Logs.exhaust( ).debug( this.toString( ) + " completed for: " + endConfig.getFullName( ) + " trying " + initialState + "->" + nextState + " ended in: " + endState );

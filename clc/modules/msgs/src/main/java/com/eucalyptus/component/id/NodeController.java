@@ -66,6 +66,7 @@ package com.eucalyptus.component.id;
 import java.util.ArrayList;
 import java.util.List;
 import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.util.Internets;
 
 public class NodeController extends ComponentId {
@@ -73,7 +74,7 @@ public class NodeController extends ComponentId {
   public NodeController( ) {
     super( "node" );
   }
-
+  
   @Override
   public Integer getPort( ) {
     return 8775;
@@ -81,12 +82,17 @@ public class NodeController extends ComponentId {
   
   @Override
   public String getLocalEndpointName( ) {
-    return String.format( getUriPattern(), Internets.localHostAddress( ), this.getPort( ) );
+    return ServiceUris.remote( this, Internets.localHostInetAddress( ), this.getPort( ) ).toASCIIString( );
   }
   
   @Override
-  public String getUriPattern( ) {
-    return "http://%s:%d/axis2/services/EucalyptusCC";
+  public String getServicePath( String... pathParts ) {
+    return "/axis2/services/EucalyptusNC";
+  }
+  
+  @Override
+  public String getInternalServicePath( String... pathParts ) {
+    return this.getServicePath( pathParts );
   }
   
   @Override

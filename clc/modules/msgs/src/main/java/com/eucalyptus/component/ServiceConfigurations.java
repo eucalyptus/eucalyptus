@@ -239,9 +239,9 @@ public class ServiceConfigurations {
           this.setType( arg0.getComponentId( ).name( ) );
           this.setFullName( arg0.getFullName( ).toString( ) );
           if ( arg0.isVmLocal( ) ) {
-            this.setUri( arg0.getComponentId( ).makeExternalRemoteUri( Internets.localHostAddress( ), arg0.getComponentId( ).getPort( ), "http" ).toASCIIString( ) );
+            this.setUri( ServiceUris.remote( arg0.getComponentId( ) ).toASCIIString( ) );
           } else {
-            this.setUri( arg0.getUri( ).toASCIIString( ) );
+            this.setUri( ServiceUris.remote( arg0 ).toASCIIString( ) );
           }
         }
       };
@@ -262,8 +262,7 @@ public class ServiceConfigurations {
   }
   
   public static ServiceConfiguration createEphemeral( final ComponentId compId, final InetAddress host ) {
-    return new EphemeralConfiguration( compId, compId.getPartition( ), host.getHostAddress( ), compId.makeInternalRemoteUri( host.getHostAddress( ),
-                                                                                                                             compId.getPort( ) ) );
+    return new EphemeralConfiguration( compId, compId.getPartition( ), host.getHostAddress( ), ServiceUris.internal( compId ) );
   }
   
   public static ServiceConfiguration createEphemeral( final Component component, final InetAddress host ) {

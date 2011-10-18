@@ -101,13 +101,13 @@ negackBroadcast.setGcLag( 20 );
 UNICAST reliableUnicast = new UNICAST( );
 
 STABLE stableBroadcast = new STABLE( );
-stableBroadcast.setDesiredAverageGossip( 50000 );
+//stableBroadcast.setDesiredAverageGossip( 20000 );
 stableBroadcast.setMaxBytes( 400000 );
 
 GMS groupMembership = new GMS( );
-if( !BootstrapArgs.isCloudController( ) ) {
-  groupMembership.setValue( "disable_initial_coord", true );
-}
+//if( !BootstrapArgs.isCloudController( ) ) {
+//  groupMembership.setValue( "disable_initial_coord", true );
+//}
 groupMembership.setPrintLocalAddress( true );
 groupMembership.setJoinTimeout( 3000 );
 groupMembership.setShun( false );

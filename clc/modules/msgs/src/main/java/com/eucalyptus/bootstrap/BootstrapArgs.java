@@ -114,7 +114,7 @@ public class BootstrapArgs {
   }
   
   public static boolean isInitializeSystem( ) {
-    return initSystem;
+    return System.getProperty( "euca.initialize" ) != null;
   }
   
   public static List<String> parseBootstrapHosts( ) {
@@ -143,7 +143,7 @@ public class BootstrapArgs {
     return retList;
     
   }
-
+  
   public static Boolean isCloudController( ) {
     return SubDirectory.DB.hasChild( "data", "ibdata1" ) && !Boolean.TRUE.valueOf( System.getProperty( "euca.force.remote.bootstrap" ) );
   }

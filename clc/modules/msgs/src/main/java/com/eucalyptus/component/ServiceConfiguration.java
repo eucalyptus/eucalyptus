@@ -36,8 +36,6 @@ public interface ServiceConfiguration extends Serializable, HasFullName<ServiceC
   
   public abstract URI getUri( );
 
-  public abstract URI getUri( String prefix );
-  
   public abstract Boolean isVmLocal( );
   
   public abstract Partition lookupPartition( );
@@ -54,25 +52,10 @@ public interface ServiceConfiguration extends Serializable, HasFullName<ServiceC
   
   public abstract ServiceBuilder lookupBuilder( );
 
-  public void fatal( Throwable t );
-  
-  public void error( Throwable t );
-  
-  public void urgent( Throwable t );
-  
-  public void warning( Throwable t );
-  
-  public void debug( Throwable t );
-  
-  public void info( Throwable t );
-
-  public Collection<ServiceCheckRecord> lookupDetails( );
+  public abstract Collection<ServiceCheckRecord> lookupDetails( );
 
   public abstract Boolean isHostLocal( );
 
-  /**
-   * @return
-   */
-  InetAddress getInetAddress( );
+  public abstract InetAddress getInetAddress( );
 
 }

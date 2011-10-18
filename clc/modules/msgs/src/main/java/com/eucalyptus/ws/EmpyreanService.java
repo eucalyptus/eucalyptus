@@ -310,17 +310,10 @@ public class EmpyreanService {
         ServiceConfiguration service = TypeMappers.transform( serviceInfo, ServiceConfiguration.class );
         if ( service.isVmLocal( ) ) {
           try {
-            Topology.start( service ).get( );
+            Topology.start( service );
             reply.getServices( ).add( serviceInfo );
           } catch ( IllegalStateException ex ) {
             LOG.error( ex, ex );
-            throw ex;
-          } catch ( ExecutionException ex ) {
-            LOG.error( ex, ex );
-            throw Exceptions.toCatchable( ex.getCause( ) );
-          } catch ( InterruptedException ex ) {
-            LOG.error( ex, ex );
-            Thread.currentThread( ).interrupt( );
             throw ex;
           }
         }
@@ -340,18 +333,18 @@ public class EmpyreanService {
         ServiceConfiguration service = TypeMappers.transform( serviceInfo, ServiceConfiguration.class );
         if ( service.isVmLocal( ) ) {
           try {
-            Topology.stop( service ).get( );
+            Topology.stop( service );
             reply.getServices( ).add( serviceInfo );
           } catch ( IllegalStateException ex ) {
             LOG.error( ex, ex );
             throw ex;
-          } catch ( ExecutionException ex ) {
-            LOG.error( ex, ex );
-            throw Exceptions.toCatchable( ex.getCause( ) );
-          } catch ( InterruptedException ex ) {
-            LOG.error( ex, ex );
-            Thread.currentThread( ).interrupt( );
-            throw ex;
+//          } catch ( ExecutionException ex ) {
+//            LOG.error( ex, ex );
+//            throw Exceptions.toCatchable( ex.getCause( ) );
+//          } catch ( InterruptedException ex ) {
+//            LOG.error( ex, ex );
+//            Thread.currentThread( ).interrupt( );
+//            throw ex;
           }
         }
       } catch ( Exception ex ) {
@@ -370,20 +363,13 @@ public class EmpyreanService {
         ServiceConfiguration service = TypeMappers.transform( serviceInfo, ServiceConfiguration.class );
         if ( service.isVmLocal( ) ) {
           try {
-            Topology.getInstance( ).enable( service ).get( );
+            Topology.getInstance( ).enable( service );
             reply.getServices( ).add( serviceInfo );
           } catch ( ServiceRegistrationException ex ) {
             LOG.error( ex, ex );
             throw ex;
           } catch ( IllegalStateException ex ) {
             LOG.error( ex, ex );
-            throw ex;
-          } catch ( ExecutionException ex ) {
-            LOG.error( ex, ex );
-            throw Exceptions.toCatchable( ex.getCause( ) );
-          } catch ( InterruptedException ex ) {
-            LOG.error( ex, ex );
-            Thread.currentThread( ).interrupt( );
             throw ex;
           }
         }
@@ -403,17 +389,10 @@ public class EmpyreanService {
         ServiceConfiguration service = TypeMappers.transform( serviceInfo, ServiceConfiguration.class );
         if ( service.isVmLocal( ) ) {
           try {
-            Topology.getInstance( ).disable( service ).get( );
+            Topology.getInstance( ).disable( service );
             reply.getServices( ).add( serviceInfo );
           } catch ( IllegalStateException ex ) {
             LOG.error( ex, ex );
-            throw ex;
-          } catch ( ExecutionException ex ) {
-            LOG.error( ex, ex );
-            throw Exceptions.toCatchable( ex.getCause( ) );
-          } catch ( InterruptedException ex ) {
-            LOG.error( ex, ex );
-            Thread.currentThread( ).interrupt( );
             throw ex;
           }
         }

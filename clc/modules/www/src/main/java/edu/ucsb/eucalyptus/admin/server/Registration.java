@@ -76,6 +76,7 @@ import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
+import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.component.id.Walrus;
@@ -97,7 +98,7 @@ public class Registration extends HttpServlet {
   
   private static String getConfigurationString( String uuid ) {
     return "<CloudSchema>\n" + "  <Services type=\"array\">\n" + "    <Service>\n" + "      <Name>ec2</Name>\n" + "      <EndpointUrl>"
-   	   + Eucalyptus.INSTANCE.makeExternalRemoteUri( Internets.localHostInetAddress( ).getCanonicalHostName( ), 8773, "http" ) + "</EndpointUrl>\n" + "      <Resources type=\"array\">\n" + "        <Resource>\n"
+   	   + ServiceUris.remote( Eucalyptus.class, Internets.localHostInetAddress( ) ) + "</EndpointUrl>\n" + "      <Resources type=\"array\">\n" + "        <Resource>\n"
            + "          <Name>instances</Name>\n" + "        </Resource>\n" + "        <Resource>\n" + "          <Name>security_groups</Name>\n"
            + "        </Resource>\n" + "        <Resource>\n" + "          <Name>ssh_keys</Name>\n" + "        </Resource>\n" + "        <Resource>\n"
            + "          <Name>images</Name>\n" + "        </Resource>\n" + blockStorageConfiguration( ) + publicAddressConfiguration( )
@@ -137,7 +138,7 @@ public class Registration extends HttpServlet {
   private static String getWalrusUrl( ) {
     if( Components.lookup( Walrus.class ).hasEnabledService( ) ) {
       ServiceConfiguration walrusConfig = Components.lookup( Walrus.class ).enabledServices( ).first( );
-      return walrusConfig.getUri( ).toASCIIString( );
+      return ServiceUris.remote( walrusConfig ).toASCIIString( );
     } else {
       return "NOT REGISTERED.";
     }
