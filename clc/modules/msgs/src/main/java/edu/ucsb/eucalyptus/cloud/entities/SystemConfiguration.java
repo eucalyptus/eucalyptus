@@ -78,6 +78,7 @@ import org.hibernate.annotations.Entity;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.configurable.ConfigurableClass;
@@ -86,8 +87,6 @@ import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.DNSProperties;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.Internets;
-import com.eucalyptus.ws.StackConfiguration;
 
 @Entity @javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_general" )
@@ -198,7 +197,7 @@ public class SystemConfiguration extends AbstractPersistent {
       return walrusConfig.getUri( ).toASCIIString( );
     } else {
       LOG.error( "BUG BUG: Deprecated method called. No walrus service is registered.  Using local address for walrus URL." );
-      return walrus.getComponentId( ).makeExternalRemoteUri( Internets.localHostInetAddress( ).getCanonicalHostName( ), 8773, "http" ).toASCIIString( );
+      return ServiceUris.remote( walrus ).toASCIIString( );
     }
   }
 
