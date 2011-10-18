@@ -61,16 +61,14 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-import com.eucalyptus.bootstrap.BootstrapArgs
-import com.eucalyptus.bootstrap.SystemIds
 import groovy.xml.MarkupBuilder
 import org.apache.log4j.Logger
 import org.logicalcobwebs.proxool.ProxoolFacade
 import com.eucalyptus.bootstrap.Databases
-import com.eucalyptus.bootstrap.Host;
-import com.eucalyptus.bootstrap.Hosts;
+import com.eucalyptus.bootstrap.Host
+import com.eucalyptus.bootstrap.Hosts
 import com.eucalyptus.bootstrap.SystemIds
-import com.eucalyptus.component.ComponentIds
+import com.eucalyptus.component.ServiceUris
 import com.eucalyptus.component.id.Database
 import com.eucalyptus.entities.PersistenceContexts
 import com.eucalyptus.system.SubDirectory
