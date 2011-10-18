@@ -128,14 +128,6 @@ public class Hosts {
   private static final AtomicBoolean             initialized              = new AtomicBoolean( false );
   private static ReplicatedHashMap<String, Host> hostMap;
   
-  enum ShouldInitialize implements Predicate<ServiceConfiguration> {
-    INSTANCE;
-    @Override
-    public boolean apply( final ServiceConfiguration input ) {
-      return !BootstrapArgs.isCloudController( ) && Internets.testLocal( input.getInetAddress( ) );
-    }
-  }
-  
   enum ShouldLoadRemote implements Predicate<ComponentId> {
     INSTANCE;
     @Override
@@ -157,7 +149,7 @@ public class Hosts {
         if ( !maybeDirty.getLastTime( ).equals( currentHost.getTimestamp( ).getTime( ) ) ) {
           hostMap.replace( maybeDirty.getDisplayName( ), currentHost, maybeDirty );
           LOG.info( "Updated local host information:   " + localHost( ) );
-        } else if ( event.isAsserted( 60L ) ) {
+        } else {
           hostMap.replace( Hosts.localHost( ).getDisplayName( ), Hosts.localHost( ) );
           LOG.info( "Replacing local host information: " + localHost( ) );
         }
@@ -231,11 +223,9 @@ public class Hosts {
     if ( !Bootstrap.isFinished( ) ) return;
     try {
       final ServiceConfiguration maybeConfig = ServiceConfigurations.lookupByHost( Eucalyptus.class, arg1.getBindAddress( ).getCanonicalHostName( ) );
-      if ( ShouldInitialize.INSTANCE.apply( maybeConfig ) ) {
-        arg1.markDatabase( );
-        hostMap.replace( arg1.getDisplayName( ), arg1 );
-        LOG.info( "Hosts.entryAdded(): Marked as database => " + arg1 );
-      }
+      arg1.markDatabase( );
+      hostMap.replace( arg1.getDisplayName( ), arg1 );
+      LOG.info( "Hosts.entryAdded(): Marked as database => " + arg1 );
     } catch ( final Exception ex ) {
       if ( Exceptions.causedBy( ex, NoSuchElementException.class ) != null ) {
         Logs.extreme( ).error( ex, ex );
