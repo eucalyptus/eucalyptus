@@ -161,9 +161,11 @@ public class Hosts {
     public void entrySet( String arg0, Host arg1 ) {
       LOG.info( "Hosts.entryAdded(): " + arg0 + " => " + arg1 );
       LOG.info( "Hosts.entryAdded(): " + hostMap.keySet( ) );
-      setup( Empyrean.class, arg1.getBindAddress( ) );
-      if ( arg1.hasDatabase( ) ) {
-        setup( Eucalyptus.class, arg1.getBindAddress( ) );
+      if ( !arg1.isLocalHost( ) ) {
+        setup( Empyrean.class, arg1.getBindAddress( ) );
+        if ( arg1.hasDatabase( ) ) {
+          setup( Eucalyptus.class, arg1.getBindAddress( ) );
+        }
       }
     }
     
