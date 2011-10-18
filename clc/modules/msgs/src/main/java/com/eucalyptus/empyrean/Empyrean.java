@@ -63,22 +63,24 @@
 
 package com.eucalyptus.empyrean;
 
-import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.log4j.Logger;
+import org.logicalcobwebs.proxool.ProxoolFacade;
 import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
-import com.eucalyptus.component.Topology;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.scripting.Groovyness;
-import com.eucalyptus.util.UniqueIds;
 import com.eucalyptus.util.Internets;
+import com.eucalyptus.util.UniqueIds;
+import com.google.common.base.Predicate;
+import com.google.common.collect.Iterables;
 
 public class Empyrean extends ComponentId.Unpartioned {
   /**
@@ -133,8 +135,26 @@ public class Empyrean extends ComponentId.Unpartioned {
     @Override
     public boolean load( ) throws Exception {
       Groovyness.run( "setup_persistence.groovy" );
+      if ( Iterables.any( ServiceConfigurations.list( Eucalyptus.class ), ShouldInitialize.INST ) ) {
+        try {
+          ProxoolFacade.shutdown( );
+          Bootstrap.initializeSystem( );
+          System.exit( 123 );
+        } catch ( Exception ex ) {
+          LOG.error( ex, ex );
+          System.exit( 123 );
+        }
+      }
       UniqueIds.nextId( Empyrean.class );
       return true;
+    }
+  }
+  
+  enum ShouldInitialize implements Predicate<ServiceConfiguration> {
+    INST;
+    @Override
+    public boolean apply( ServiceConfiguration input ) {
+      return !BootstrapArgs.isCloudController( ) && Internets.testLocal( input.getInetAddress( ) );
     }
   }
   

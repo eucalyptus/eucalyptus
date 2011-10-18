@@ -5,6 +5,7 @@ import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.component.Component;
+import com.eucalyptus.component.LifecycleEvents;
 import com.eucalyptus.component.Component.State;
 import com.eucalyptus.component.ServiceChecks;
 import com.eucalyptus.component.ServiceChecks.CheckException;
@@ -38,10 +39,10 @@ public class ServiceStateCallback extends SubjectMessageCallback<Cluster, Descri
             throw new IllegalStateException( ex );
           } else if ( Component.State.NOTREADY.equals( localState )
                       && Component.State.NOTREADY.ordinal( ) < serviceState.ordinal( ) ) {
-            this.getSubject( ).getConfiguration( ).debug( ex );
+            LifecycleEvents.fireExceptionEvent( this.getSubject( ).getConfiguration( ), ServiceChecks.Severity.DEBUG, ex );
             this.getSubject( ).clearExceptions( );
           } else {
-            this.getSubject( ).getConfiguration( ).info( ex );
+            LifecycleEvents.fireExceptionEvent( this.getSubject( ).getConfiguration( ), ServiceChecks.Severity.INFO, ex );
           }
         } else {
           LOG.error( "Found information for unknown service: " + status );

@@ -215,7 +215,11 @@ public class Components {
     INSTANCE;
     @Override
     public Component apply( final ComponentId input ) {
-      return Components.lookup( input );
+      if ( !components.containsKey( input.getClass( ) ) ) {
+        throw new NoSuchElementException( "Failed to lookup component with id type: " + input.getClass( ) );
+      } else {
+        return components.get( input.getClass( ) );
+      }
     }
   }
   

@@ -68,6 +68,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Vector;
@@ -119,7 +120,6 @@ public class Hosts {
   public static final Long                       STATE_TRANSFER_TIMEOUT = 10000L;
   private static final Logger                    LOG                    = Logger.getLogger( Hosts.class );
   private static ReplicatedHashMap<String, Host> hostMap;
-  private static Host                            localHostSingleton;
   
   enum HostBootstrapEventListener implements EventListener<Hertz> {
     INSTANCE;
@@ -127,7 +127,7 @@ public class Hosts {
     @Override
     public void fireEvent( Hertz event ) {
       Host maybeDirty = Hosts.localHost( ).checkDirty( );
-      if ( Hosts.localHost( ).getTimestamp( ).equals( maybeDirty.getLastTime( ) ) ) {
+      if ( Hosts.localHost( ).getTimestamp( ).before( new Date( maybeDirty.getLastTime( ) ) ) ) {
         hostMap.replace( maybeDirty.getDisplayName( ), maybeDirty );
         LOG.info( "Updated local host information: " + localHost( ) );
       }
@@ -433,12 +433,8 @@ public class Hosts {
     return Lists.newArrayList( Iterables.filter( Hosts.list( ), DbFilter.INSTANCE ) );
   }
   
-  private static Host localHost( ) {
+  public static Host localHost( ) {
     return hostMap.get( Internets.localHostIdentifier( ) );
-  }
-  
-  private static Host localHost( Host newLocalHost ) {
-    return localHostSingleton = newLocalHost;
   }
   
 }

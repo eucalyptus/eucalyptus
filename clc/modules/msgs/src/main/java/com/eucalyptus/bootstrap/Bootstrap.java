@@ -593,7 +593,7 @@ public class Bootstrap {
     }
   }
   
-  static void initializeSystem( ) throws Exception {
+  public static void initializeSystem( ) throws Exception {
     Groovyness.run( "initialize_cloud.groovy" );
   }
 }

@@ -365,36 +365,6 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
   }
   
   @Override
-  public void error( Throwable t ) {
-    LifecycleEvents.fireExceptionEvent( this, ServiceChecks.Severity.ERROR, t );
-  }
-  
-  @Override
-  public void info( Throwable t ) {
-    LifecycleEvents.fireExceptionEvent( this, ServiceChecks.Severity.INFO, t );
-  }
-  
-  @Override
-  public void fatal( Throwable t ) {
-    LifecycleEvents.fireExceptionEvent( this, ServiceChecks.Severity.FATAL, t );
-  }
-  
-  @Override
-  public void urgent( Throwable t ) {
-    LifecycleEvents.fireExceptionEvent( this, ServiceChecks.Severity.URGENT, t );
-  }
-  
-  @Override
-  public void warning( Throwable t ) {
-    LifecycleEvents.fireExceptionEvent( this, ServiceChecks.Severity.WARNING, t );
-  }
-  
-  @Override
-  public void debug( Throwable t ) {
-    LifecycleEvents.fireExceptionEvent( this, ServiceChecks.Severity.DEBUG, t );
-  }
-  
-  @Override
   public StateMachine<ServiceConfiguration, Component.State, Component.Transition> getStateMachine( ) {
     try {
       return this.lookupService( ).getStateMachine( );

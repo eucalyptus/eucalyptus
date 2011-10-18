@@ -105,9 +105,15 @@ public class Host implements java.io.Serializable, Comparable<Host> {
   private Boolean                    hasBootstrapped;
   private AtomicLong                 timestamp        = new AtomicLong( System.currentTimeMillis( ) );
   private Long                       lastTime         = 0l;
+  private final Long                 startedTime;
   private Integer                    epoch;
   
   Host( ) {
+    this( System.currentTimeMillis( ) );
+  }
+  
+  Host( Long startedTime ) {
+    this.startedTime = startedTime;
     this.displayName = Internets.localHostIdentifier( );
     this.groupsId = Hosts.getLocalGroupAddress( );
     this.bindAddress = Internets.localHostInetAddress( );
@@ -120,8 +126,6 @@ public class Host implements java.io.Serializable, Comparable<Host> {
     this.hostAddresses = newAddrs;
     LOG.trace( "Updated host: " + this );
   }
-  
-  synchronized void update( Integer epoch, Boolean hasDb, Boolean hasBootstrapped, List<InetAddress> addresses ) {}
   
   public Address getGroupsId( ) {
     return this.groupsId;
@@ -181,7 +185,7 @@ public class Host implements java.io.Serializable, Comparable<Host> {
    *         return this otherwise
    */
   Host checkDirty( ) {
-    Host that = new Host( );
+    Host that = new Host( this.startedTime );
     boolean result = false;
     result |= !this.hasBootstrapped.equals( that.hasBootstrapped );
     result |= !this.hasDatabase.equals( that.hasDatabase );
@@ -238,6 +242,10 @@ public class Host implements java.io.Serializable, Comparable<Host> {
   
   public String getDisplayName( ) {
     return this.displayName;
+  }
+
+  public Long getStartedTime( ) {
+    return this.startedTime;
   }
   
 }

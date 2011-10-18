@@ -76,6 +76,7 @@ import java.util.concurrent.TimeoutException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapArgs;
+import com.eucalyptus.bootstrap.Host;
 import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.component.TopologyChanges.CloudTopologyCallables;
 import com.eucalyptus.component.TopologyChanges.RemoteTopologyCallables;
@@ -113,7 +114,7 @@ public class Topology implements EventListener<Event> {
   }
   
   public static void touch( ServiceTransitionType msg ) {
-    if ( !BootstrapArgs.isCloudController( ) && msg.get_epoch( ) != null ) {
+    if ( !checkPrimary( ) && msg.get_epoch( ) != null ) {
       Integer msgEpoch = msg.get_epoch( );
       Topology.getInstance( ).currentEpoch = ( Topology.getInstance( ).currentEpoch > msgEpoch )
         ? Topology.getInstance( ).currentEpoch
@@ -122,7 +123,7 @@ public class Topology implements EventListener<Event> {
   }
   
   public static boolean check( BaseMessage msg ) {
-    if ( !BootstrapArgs.isCloudController( ) && msg.get_epoch( ) != null ) {
+    if ( !checkPrimary( ) && msg.get_epoch( ) != null ) {
       Integer msgEpoch = msg.get_epoch( );
       boolean rightEpoch = Topology.getInstance( ).epoch( ) <= msgEpoch;
       return rightEpoch;
@@ -219,6 +220,25 @@ public class Topology implements EventListener<Event> {
     } );
   }
   
+  private static Boolean checkPrimary( ) {
+    if ( BootstrapArgs.isCloudController( ) ) {
+      try {
+        Host localHost = Hosts.localHost( );
+        for ( Host h : Hosts.listDatabases( ) ) {
+          if ( !h.equals( localHost ) && h.getStartedTime( ) > localHost.getStartedTime( ) ) {
+            return false;
+          }
+        }
+      } catch ( Exception ex ) {
+        LOG.error( ex , ex );
+      }
+      return true;
+    } else {
+      return false;
+    }
+  }
+  
+
   private Future<ServiceConfiguration> submitExternal( final ServiceConfiguration config, final Function<ServiceConfiguration, ServiceConfiguration> function ) {
     Logs.exhaust( ).debug( EventRecord.here( Topology.class, EventType.ENQUEUE, Topology.this.toString( ), function.toString( ), config.toString( ) ) );
     final Long queueStart = System.currentTimeMillis( );
@@ -287,15 +307,15 @@ public class Topology implements EventListener<Event> {
   }
   
   public static Future<ServiceConfiguration> stop( final ServiceConfiguration config ) throws ServiceRegistrationException {
-    if ( BootstrapArgs.isCloudController( ) ) {
+    if ( checkPrimary( ) ) {
       return Topology.getInstance( ).submitExternal( config, CloudTopologyCallables.STOP );
     } else {
       return Topology.getInstance( ).submitExternal( config, RemoteTopologyCallables.STOP );
     }
   }
-  
+
   public static Future<ServiceConfiguration> start( final ServiceConfiguration config ) throws ServiceRegistrationException {
-    if ( BootstrapArgs.isCloudController( ) ) {
+    if ( checkPrimary( ) ) {
       return Topology.getInstance( ).submitExternal( config, CloudTopologyCallables.START );
     } else {
       return Topology.getInstance( ).submitExternal( config, RemoteTopologyCallables.START );
@@ -303,7 +323,7 @@ public class Topology implements EventListener<Event> {
   }
   
   public static Future<ServiceConfiguration> enable( final ServiceConfiguration config ) throws ServiceRegistrationException {
-    if ( BootstrapArgs.isCloudController( ) ) {
+    if ( checkPrimary( ) ) {
       return Topology.getInstance( ).submit( config, CloudTopologyCallables.ENABLE );
     } else {
       return Topology.getInstance( ).submit( config, RemoteTopologyCallables.ENABLE );
@@ -512,7 +532,7 @@ public class Topology implements EventListener<Event> {
   }
   
   public TransitionGuard getGuard( ) {
-    return ( BootstrapArgs.isCloudController( )
+    return ( checkPrimary( )
       ? cloudControllerGuard( )
       : remoteGuard( ) );
   }
@@ -520,7 +540,7 @@ public class Topology implements EventListener<Event> {
   @Override
   public String toString( ) {
     StringBuilder builder = new StringBuilder( );
-    builder.append( "Topology:currentEpoch=" ).append( this.currentEpoch ).append( ":guard=" ).append( BootstrapArgs.isCloudController( )
+    builder.append( "Topology:currentEpoch=" ).append( this.currentEpoch ).append( ":guard=" ).append( checkPrimary( )
       ? "cloud"
       : "remote" );
     return builder.toString( );
@@ -545,7 +565,7 @@ public class Topology implements EventListener<Event> {
           
           @Override
           public boolean apply( ServiceConfiguration arg0 ) {
-            if ( BootstrapArgs.isCloudController( ) ) {
+            if ( checkPrimary( ) ) {
               return true;
             } else {
               return arg0.isVmLocal( );
@@ -599,14 +619,14 @@ public class Topology implements EventListener<Event> {
         }
         Logs.exhaust( ).debug( "CHECK ===================================\n" + Joiner.on( "\n\t" ).join( checkedServices ) );
         Logs.exhaust( ).debug( "DISABLED ================================\n" + Joiner.on( "\n\t" ).join( disabledServices ) );
-        if ( BootstrapArgs.isCloudController( ) ) {
+        if ( checkPrimary( ) ) {
           final Predicate<ServiceConfiguration> predicate = new Predicate<ServiceConfiguration>( ) {
             
             @Override
             public boolean apply( ServiceConfiguration arg0 ) {
               try {
                 ServiceKey key = ServiceKey.create( arg0 );
-                if ( !BootstrapArgs.isCloudController( ) ) {
+                if ( !checkPrimary( ) ) {
                   Logs.exhaust( ).debug( "FAILOVER-REJECT: " + arg0 + ": not cloud controller." );
                   return false;
                 } else if ( disabledServices.contains( arg0 ) ) {

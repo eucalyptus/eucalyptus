@@ -212,7 +212,14 @@ public class SystemBootstrapper {
    */
   public boolean load( ) throws Throwable {
     if ( BootstrapArgs.isInitializeSystem( ) ) {
-      SystemBootstrapper.runSystemInitialize( );
+      try {
+        Bootstrap.initializeSystem( );
+        System.exit( 0 );
+      } catch ( Throwable t ) {
+        LOG.error( t, t );
+        System.exit( 1 );
+        throw t;
+      }
     } else {
       SystemBootstrapper.runSystemStages( new Predicate<Stage>( ) {
         
@@ -263,17 +270,6 @@ public class SystemBootstrapper {
       LOG.error( ex, ex );
     }
     return true;
-  }
-  
-  private static void runSystemInitialize( ) throws Throwable {
-    try {
-      Bootstrap.initializeSystem( );
-      System.exit( 0 );
-    } catch ( Throwable t ) {
-      LOG.error( t, t );
-      System.exit( 1 );
-      throw t;
-    }
   }
   
   private static void runSystemStages( Predicate<Bootstrap.Stage> exec ) throws Throwable {

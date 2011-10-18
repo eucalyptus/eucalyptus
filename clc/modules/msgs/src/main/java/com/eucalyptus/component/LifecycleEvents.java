@@ -286,13 +286,13 @@ public class LifecycleEvents {
     try {
       ListenerRegistry.getInstance( ).fireEventAsync( config, event );
     } catch ( Exception ex1 ) {
-      config.info( ex1 );
+      LifecycleEvents.fireExceptionEvent( config, ServiceChecks.Severity.INFO, ex1 );
       Logs.exhaust( ).error( ex1, ex1 );
     }
     try {
       ListenerRegistry.getInstance( ).fireEventAsync( componentId, event );
     } catch ( Exception ex1 ) {
-      config.info( ex1 );
+      LifecycleEvents.fireExceptionEvent( config, ServiceChecks.Severity.INFO, ex1 );
       Logs.exhaust( ).error( ex1, ex1 );
     }
   }
