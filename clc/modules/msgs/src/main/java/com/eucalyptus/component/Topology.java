@@ -252,7 +252,7 @@ public class Topology implements EventListener<Event> {
       @Override
       public ServiceConfiguration call( ) throws Exception {
         if ( Bootstrap.isShuttingDown( ) ) {
-          return config;
+          return null;
         } else {
           Bootstrap.awaitFinished( );
           Long serviceStart = System.currentTimeMillis( );
@@ -282,7 +282,7 @@ public class Topology implements EventListener<Event> {
       @Override
       public ServiceConfiguration call( ) throws Exception {
         if ( Bootstrap.isShuttingDown( ) ) {
-          return config;
+          return null;
         } else {
           Bootstrap.awaitFinished( );
           Long serviceStart = System.currentTimeMillis( );
@@ -555,117 +555,121 @@ public class Topology implements EventListener<Event> {
   }
   
   private void runChecks( ) {
-    this.getWorker( ).submit( new Runnable( ) {
-      
-      @Override
-      public void run( ) {
-        List<ServiceConfiguration> checkServicesList = Services.collect( new Predicate<ServiceConfiguration>( ) {
-          
-          @Override
-          public boolean apply( ServiceConfiguration arg0 ) {
-            if ( checkPrimary( ) ) {
-              return true;
-            } else {
-              return arg0.isVmLocal( );
-            }
-          }
-        } );
-        Logs.exhaust( ).debug( "PARTITIONS ==============================\n" + Joiner.on( "\n\t" ).join( Topology.this.services.keySet( ) ) );
-        Logs.exhaust( ).debug( "PRIMARY =================================\n" + Joiner.on( "\n\t" ).join( Topology.this.services.values( ) ) );
-        Predicate<Future<?>> futureIsDone = new Predicate<Future<?>>( ) {
-          
-          @Override
-          public boolean apply( Future<?> arg0 ) {
-            if ( !arg0.isDone( ) ) {
-              try {
-                arg0.get( 100, TimeUnit.MILLISECONDS );
-              } catch ( InterruptedException ex ) {
-                Thread.currentThread( ).interrupt( );
-              } catch ( ExecutionException ex ) {
-                LOG.error( ex );
-              } catch ( TimeoutException ex ) {
-                                            }
-                                        }
-                                        return arg0.isDone( );
-                                      }
-        };
-        Map<ServiceConfiguration, Future<ServiceConfiguration>> futures = Maps.newHashMap( );
-        for ( ServiceConfiguration config : checkServicesList ) {
-          futures.put( config, Topology.getInstance( ).submitExternal( config, TopologyChanges.checkFunction( ) ) );
-        }
-        for ( int i = 0; i < 100 && !Iterables.all( futures.values( ), futureIsDone ); i++ );
-        final List<ServiceConfiguration> disabledServices = Lists.newArrayList( );
-        final List<ServiceConfiguration> checkedServices = Lists.newArrayList( );
-        for ( Map.Entry<ServiceConfiguration, Future<ServiceConfiguration>> result : futures.entrySet( ) ) {
-          try {
-            ServiceConfiguration resultConfig = result.getValue( ).get( );
-            checkedServices.add( resultConfig );
-          } catch ( InterruptedException ex ) {
-            LOG.error( ex, ex );
-            Thread.currentThread( ).interrupt( );
-          } catch ( Exception ex ) {
-            LOG.debug( "Error while inspecting result of CHECK for: \n\t" + result.getKey( ) + ": \n\t" + ex.getMessage( ) );
-            try {
-              disabledServices.add( result.getKey( ) );
-              Topology.this.getGuard( ).tryDisable( result.getKey( ) );
-            } catch ( ServiceRegistrationException ex1 ) {
-              LOG.error( ex1, ex1 );
-            }
-            LOG.error( ex.getMessage( ) );
-            Logs.exhaust( ).error( ex, ex );
-          }
-        }
-        Logs.exhaust( ).debug( "CHECK ===================================\n" + Joiner.on( "\n\t" ).join( checkedServices ) );
-        Logs.exhaust( ).debug( "DISABLED ================================\n" + Joiner.on( "\n\t" ).join( disabledServices ) );
-        if ( checkPrimary( ) ) {
-          final Predicate<ServiceConfiguration> predicate = new Predicate<ServiceConfiguration>( ) {
+    if ( !Bootstrap.isFinished( ) ) {
+      return;
+    } else {
+      this.getWorker( ).submit( new Runnable( ) {
+        
+        @Override
+        public void run( ) {
+          List<ServiceConfiguration> checkServicesList = Services.collect( new Predicate<ServiceConfiguration>( ) {
             
             @Override
             public boolean apply( ServiceConfiguration arg0 ) {
-              try {
-                ServiceKey key = ServiceKey.create( arg0 );
-                if ( !checkPrimary( ) ) {
-                  Logs.exhaust( ).debug( "FAILOVER-REJECT: " + arg0 + ": not cloud controller." );
-                  return false;
-                } else if ( disabledServices.contains( arg0 ) ) {
-                  Logs.exhaust( ).debug( "FAILOVER-REJECT: " + arg0 + ": service was just DISABLED." );
-                  return false;
-                } else if ( Component.State.NOTREADY.equals( arg0.lookupState( ) ) ) {
-                  Logs.exhaust( ).debug( "FAILOVER-REJECT: " + arg0 + ": service is NOTREADY." );
-                  return false;
-                } else if ( Topology.this.services.containsKey( key ) && arg0.equals( Topology.this.services.get( key ) ) ) {
-                  Logs.exhaust( ).debug( "FAILOVER-REJECT: " + arg0 + ": service is ENABLED." );
-                  return false;
-                } else if ( !Topology.this.services.containsKey( key ) ) {
-                  Logs.exhaust( ).debug( "FAILOVER-ACCEPT: " + arg0 + ": service for partition: " + key );
-                  return true;
-                } else {
-                  Logs.exhaust( ).debug( "FAILOVER-ACCEPT: " + arg0 );
-                  return true;
-                }
-              } catch ( ServiceRegistrationException ex ) {
-                LOG.error( ex, ex );
-                return false;
+              if ( checkPrimary( ) ) {
+                return true;
+              } else {
+                return arg0.isVmLocal( );
               }
             }
+          } );
+          Logs.exhaust( ).debug( "PARTITIONS ==============================\n" + Joiner.on( "\n\t" ).join( Topology.this.services.keySet( ) ) );
+          Logs.exhaust( ).debug( "PRIMARY =================================\n" + Joiner.on( "\n\t" ).join( Topology.this.services.values( ) ) );
+          Predicate<Future<?>> futureIsDone = new Predicate<Future<?>>( ) {
+            
+            @Override
+            public boolean apply( Future<?> arg0 ) {
+              if ( !arg0.isDone( ) ) {
+                try {
+                  arg0.get( 100, TimeUnit.MILLISECONDS );
+                } catch ( InterruptedException ex ) {
+                  Thread.currentThread( ).interrupt( );
+                } catch ( ExecutionException ex ) {
+                  LOG.error( ex );
+                } catch ( TimeoutException ex ) {
+                                              }
+                                          }
+                                          return arg0.isDone( );
+                                        }
           };
-          List<ServiceConfiguration> failoverServicesList = Services.collect( predicate );
-          Logs.exhaust( ).debug( "FAILOVER ================================\n" + Joiner.on( "\n\t" ).join( failoverServicesList ) );
-          for ( ServiceConfiguration config : failoverServicesList ) {
+          Map<ServiceConfiguration, Future<ServiceConfiguration>> futures = Maps.newHashMap( );
+          for ( ServiceConfiguration config : checkServicesList ) {
+            futures.put( config, Topology.getInstance( ).submitExternal( config, TopologyChanges.checkFunction( ) ) );
+          }
+          for ( int i = 0; i < 100 && !Iterables.all( futures.values( ), futureIsDone ); i++ );
+          final List<ServiceConfiguration> disabledServices = Lists.newArrayList( );
+          final List<ServiceConfiguration> checkedServices = Lists.newArrayList( );
+          for ( Map.Entry<ServiceConfiguration, Future<ServiceConfiguration>> result : futures.entrySet( ) ) {
             try {
-              Topology.getInstance( ).submitExternal( config, CloudTopologyCallables.ENABLE ).get( );
+              ServiceConfiguration resultConfig = result.getValue( ).get( );
+              checkedServices.add( resultConfig );
             } catch ( InterruptedException ex ) {
               LOG.error( ex, ex );
               Thread.currentThread( ).interrupt( );
-            } catch ( ExecutionException ex ) {
-              LOG.error( ex, ex );
             } catch ( Exception ex ) {
-              LOG.error( ex, ex );
+              LOG.debug( "Error while inspecting result of CHECK for: \n\t" + result.getKey( ) + ": \n\t" + ex.getMessage( ) );
+              try {
+                disabledServices.add( result.getKey( ) );
+                Topology.this.getGuard( ).tryDisable( result.getKey( ) );
+              } catch ( ServiceRegistrationException ex1 ) {
+                LOG.error( ex1, ex1 );
+              }
+              LOG.error( ex.getMessage( ) );
+              Logs.exhaust( ).error( ex, ex );
+            }
+          }
+          Logs.exhaust( ).debug( "CHECK ===================================\n" + Joiner.on( "\n\t" ).join( checkedServices ) );
+          Logs.exhaust( ).debug( "DISABLED ================================\n" + Joiner.on( "\n\t" ).join( disabledServices ) );
+          if ( checkPrimary( ) ) {
+            final Predicate<ServiceConfiguration> predicate = new Predicate<ServiceConfiguration>( ) {
+              
+              @Override
+              public boolean apply( ServiceConfiguration arg0 ) {
+                try {
+                  ServiceKey key = ServiceKey.create( arg0 );
+                  if ( !checkPrimary( ) ) {
+                    Logs.exhaust( ).debug( "FAILOVER-REJECT: " + arg0 + ": not cloud controller." );
+                    return false;
+                  } else if ( disabledServices.contains( arg0 ) ) {
+                    Logs.exhaust( ).debug( "FAILOVER-REJECT: " + arg0 + ": service was just DISABLED." );
+                    return false;
+                  } else if ( Component.State.NOTREADY.equals( arg0.lookupState( ) ) ) {
+                    Logs.exhaust( ).debug( "FAILOVER-REJECT: " + arg0 + ": service is NOTREADY." );
+                    return false;
+                  } else if ( Topology.this.services.containsKey( key ) && arg0.equals( Topology.this.services.get( key ) ) ) {
+                    Logs.exhaust( ).debug( "FAILOVER-REJECT: " + arg0 + ": service is ENABLED." );
+                    return false;
+                  } else if ( !Topology.this.services.containsKey( key ) ) {
+                    Logs.exhaust( ).debug( "FAILOVER-ACCEPT: " + arg0 + ": service for partition: " + key );
+                    return true;
+                  } else {
+                    Logs.exhaust( ).debug( "FAILOVER-ACCEPT: " + arg0 );
+                    return true;
+                  }
+                } catch ( ServiceRegistrationException ex ) {
+                  LOG.error( ex, ex );
+                  return false;
+                }
+              }
+            };
+            List<ServiceConfiguration> failoverServicesList = Services.collect( predicate );
+            Logs.exhaust( ).debug( "FAILOVER ================================\n" + Joiner.on( "\n\t" ).join( failoverServicesList ) );
+            for ( ServiceConfiguration config : failoverServicesList ) {
+              try {
+                Topology.getInstance( ).submitExternal( config, CloudTopologyCallables.ENABLE ).get( );
+              } catch ( InterruptedException ex ) {
+                LOG.error( ex, ex );
+                Thread.currentThread( ).interrupt( );
+              } catch ( ExecutionException ex ) {
+                LOG.error( ex, ex );
+              } catch ( Exception ex ) {
+                LOG.error( ex, ex );
+              }
             }
           }
         }
-      }
-    } );
+      } );
+    }
   }
   
 }
