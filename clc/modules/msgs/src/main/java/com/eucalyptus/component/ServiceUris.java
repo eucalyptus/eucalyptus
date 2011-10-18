@@ -126,12 +126,17 @@ public class ServiceUris {
         
         @Override
         String format( Object... args ) {
-          if ( args.length > 0 ) {
+          if ( args != null && args.length > 0 ) {
             assertThat( args[0].getClass( ), typeCompatibleWith( Map.class ) );
-            Iterable argPairString = Iterables.transform( ( ( Map ) args[0] ).entrySet( ), transform );
-            return QUESTIONMARK.format( ) + Joiner.on( Lexemes.AMPERSAND.format( ) ).join( argPairString );
+            Map queryArgs = ( Map ) args[0];
+            if ( !queryArgs.isEmpty( ) ) {
+              Iterable argPairString = Iterables.transform( queryArgs.entrySet( ), transform );
+              return Joiner.on( Lexemes.AMPERSAND.format( ) ).join( argPairString );
+            } else {
+              return null;
+            }
           } else {
-            return "";
+            return null;
           }
         }
       },
@@ -240,7 +245,7 @@ public class ServiceUris {
         ? this.componentId.name( ) + "." + StackConfiguration.lookupDnsDomain( )
         : this.address.getCanonicalHostName( );
       try {
-        URI u = new URI( schemeString, null, hostNameString, this.port, this.path, Lexemes.QUERY.format( this.query ), this.fragment );
+        URI u = new URI( schemeString, null, hostNameString, this.port, this.path, Lexemes.QUERY.format( this.query ), null );
         u.parseServerAuthority( );
         return u;
       } catch ( URISyntaxException e ) {
