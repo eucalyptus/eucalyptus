@@ -59,28 +59,23 @@
  *    ANY SUCH LICENSES OR RIGHTS.
  *******************************************************************************/
 
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.SQLException;
-import java.sql.Statement;
-import java.lang.Runtime;
-import java.lang.Process;
-import java.lang.ProcessBuilder;
-import org.apache.log4j.Logger;
-import java.net.Socket;
-import java.io.File;
-import java.util.List;
-
-import com.eucalyptus.bootstrap.Bootstrapper;
-import com.eucalyptus.bootstrap.DatabaseBootstrapper;
-import com.eucalyptus.bootstrap.Databases;
-import com.eucalyptus.bootstrap.SystemIds;
-import com.eucalyptus.component.Component;
-import com.eucalyptus.component.ComponentIds;
-import com.eucalyptus.component.Components;
-import com.eucalyptus.component.id.Database;
-import com.eucalyptus.entities.PersistenceContexts;
-import com.eucalyptus.system.SubDirectory;
+import java.io.File
+import java.sql.Connection
+import java.sql.DriverManager
+import java.sql.Statement
+import org.apache.log4j.Logger
+import com.eucalyptus.bootstrap.Bootstrapper
+import com.eucalyptus.bootstrap.DatabaseBootstrapper
+import com.eucalyptus.bootstrap.Databases
+import com.eucalyptus.component.Component
+import com.eucalyptus.component.ComponentIds
+import com.eucalyptus.component.Components
+import com.eucalyptus.component.ServiceUris
+import com.eucalyptus.component.id.Database
+import com.eucalyptus.entities.PersistenceContexts
+import com.eucalyptus.system.SubDirectory
+import com.eucalyptus.util.Internets
+import com.google.common.base.Joiner
 
 /*
  * REQUIREMENTS : Postgres 8.4 and Postgres jdbc driver
@@ -324,10 +319,7 @@ public class PostgresqlBootstrapper extends Bootstrapper.Simple implements Datab
 		Connection conn = null;
 
 		try {
-			String url = String.format( "jdbc:%s_%s",
-					ComponentIds.lookup( Database.class ).makeInternalRemoteUri( "127.0.0.1" ,
-					ComponentIds.lookup( Database.class ).getPort( ) ).toString( ),
-					context.replaceAll( "eucalyptus_", "" ) );
+      String url = String.format( "jdbc:%s?createDatabaseIfNotExist=true", ServiceUris.remote( Database.class, InetAddress.getLocalHost( ), context ) );
 
 			LOG.debug("connecting url : " + url);
 
