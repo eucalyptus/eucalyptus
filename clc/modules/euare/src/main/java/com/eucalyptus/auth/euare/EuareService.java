@@ -195,7 +195,7 @@ public class EuareService {
     User requestUser = ctx.getUser( );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     String path = "/";
-    if ( Strings.isNullOrEmpty( request.getPathPrefix( ) ) ) {
+    if ( !Strings.isNullOrEmpty( request.getPathPrefix( ) ) ) {
       path = request.getPathPrefix( );
     }
     // TODO(Ye Wen, 01/16/2011): support pagination
@@ -627,7 +627,7 @@ public class EuareService {
     User requestUser = ctx.getUser( );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     String path = "/";
-    if ( Strings.isNullOrEmpty( request.getPathPrefix( ) ) ) {
+    if ( !Strings.isNullOrEmpty( request.getPathPrefix( ) ) ) {
       path = request.getPathPrefix( );
     }
     // TODO(Ye Wen, 01/16/2011): support pagination
