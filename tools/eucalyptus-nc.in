@@ -319,10 +319,6 @@ elif [ $LOOP_AVL -lt 50 ]; then
 fi
 
 if [ -z "$EUCA_USER" ] ; then
-        EUCA_USER="root"
-fi
-
-if [ -z "$EUCA_USER" ] ; then
 	EUCA_USER="root"
 fi
 
