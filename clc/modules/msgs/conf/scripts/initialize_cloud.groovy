@@ -5,12 +5,11 @@ import com.eucalyptus.bootstrap.Bootstrap
 import com.eucalyptus.bootstrap.BootstrapArgs
 import com.eucalyptus.bootstrap.Databases
 import com.eucalyptus.bootstrap.ServiceJarDiscovery
-import com.eucalyptus.component.Component
 import com.eucalyptus.component.ComponentDiscovery
-import com.eucalyptus.component.Components
 import com.eucalyptus.component.ServiceBuilder
 import com.eucalyptus.component.ServiceBuilders
 import com.eucalyptus.component.ServiceConfiguration
+import com.eucalyptus.component.ServiceUris
 import com.eucalyptus.component.ServiceBuilders.ServiceBuilderDiscovery
 import com.eucalyptus.component.auth.SystemCredentials
 import com.eucalyptus.component.id.Database
@@ -22,6 +21,7 @@ import com.eucalyptus.util.Internets
 
 
 Logger LOG = Logger.getLogger( Bootstrap.class );
+
 if( BootstrapArgs.isInitializeSystem( ) ) {
   new DirectoryBootstrapper( ).load( );
   ServiceJarDiscovery.doSingleDiscovery(  new ComponentDiscovery( ) );
@@ -33,7 +33,6 @@ if( BootstrapArgs.isInitializeSystem( ) ) {
   }
   SystemCredentials.initialize( );
 }
-Component dbComp = Components.lookup( Database.class );
 try {
   Databases.initialize( );
   try {
@@ -60,7 +59,7 @@ try {
     for ( String ctx : PersistenceContexts.list( ) ) {
       Properties p = new Properties( );
       p.putAll( props );
-      String ctxUrl = String.format( "jdbc:%s_%s?createDatabaseIfNotExist=true", dbComp.getUri( ).toString( ), ctx.replaceAll( "eucalyptus_", "" ) );
+      String ctxUrl = "jdbc:${ServiceUris.remote(Database.class,Internets.loopback( ),ctx)}?createDatabaseIfNotExist=true";
       p.put( "hibernate.connection.url", ctxUrl );
       p.put("hibernate.cache.region_prefix", "eucalyptus_" + ctx + "_cache" );
       Ejb3Configuration config = new Ejb3Configuration( );

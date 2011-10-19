@@ -85,6 +85,7 @@ import org.hibernate.annotations.NaturalId;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Component.State;
 import com.eucalyptus.component.Component.Transition;
+import com.eucalyptus.component.ComponentFullName;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.ComponentPart;
@@ -100,6 +101,7 @@ import com.eucalyptus.component.ServiceCheckRecord;
 import com.eucalyptus.component.ServiceChecks;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceRegistrationException;
+import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.system.Ats;
@@ -168,19 +170,15 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
     return this.getSocketAddress( ).getAddress( );
   }
   
+  /**
+   * Use the facade instead.
+   * 
+   * @see ServiceUris#remote(ServiceConfiguration, String...)
+   */
   @Override
+  @Deprecated
   public URI getUri( ) {
-    return this.getComponentId( ).makeExternalRemoteUri( this.getHostName( ), this.getPort( ),  "http" );
-  }
-
-
-  @Override
-  public URI getUri( String prefix ) {
-    return this.getComponentId( ).makeExternalRemoteUri( this.getHostName( ), this.getPort( ), prefix );
-  }
-  
-  public URI getInternalUri( ) {
-    return this.getComponentId( ).makeInternalRemoteUri( this.getHostName( ), this.getPort( ) );
+    return ServiceUris.remote( this );
   }
   
   @Override
@@ -236,7 +234,7 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
   
   @Override
   public final FullName getFullName( ) {
-    return this.getComponentId( ).makeFullName( this );
+    return ComponentFullName.getInstance( this );
   }
   
   @Override
@@ -367,36 +365,6 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
   }
   
   @Override
-  public void error( Throwable t ) {
-    LifecycleEvents.fireExceptionEvent( this, ServiceChecks.Severity.ERROR, t );
-  }
-  
-  @Override
-  public void info( Throwable t ) {
-    LifecycleEvents.fireExceptionEvent( this, ServiceChecks.Severity.INFO, t );
-  }
-  
-  @Override
-  public void fatal( Throwable t ) {
-    LifecycleEvents.fireExceptionEvent( this, ServiceChecks.Severity.FATAL, t );
-  }
-  
-  @Override
-  public void urgent( Throwable t ) {
-    LifecycleEvents.fireExceptionEvent( this, ServiceChecks.Severity.URGENT, t );
-  }
-  
-  @Override
-  public void warning( Throwable t ) {
-    LifecycleEvents.fireExceptionEvent( this, ServiceChecks.Severity.WARNING, t );
-  }
-  
-  @Override
-  public void debug( Throwable t ) {
-    LifecycleEvents.fireExceptionEvent( this, ServiceChecks.Severity.DEBUG, t );
-  }
-  
-  @Override
   public StateMachine<ServiceConfiguration, Component.State, Component.Transition> getStateMachine( ) {
     try {
       return this.lookupService( ).getStateMachine( );
@@ -423,11 +391,11 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
       }
     }
   }
-
+  
   public String getSourceHostName( ) {
     return this.sourceHostName;
   }
-
+  
   public void setSourceHostName( String aliasHostName ) {
     this.sourceHostName = aliasHostName;
   }

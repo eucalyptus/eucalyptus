@@ -66,12 +66,17 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
+import org.hibernate.criterion.Example;
+import com.eucalyptus.blockstorage.Volume;
+import com.eucalyptus.cloud.CloudMetadata.AddressMetadata;
+import com.eucalyptus.cloud.CloudMetadata.VolumeMetadata;
 import com.eucalyptus.cloud.util.NotEnoughResourcesException;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.event.AbstractNamedRegistry;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
@@ -81,7 +86,9 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.LogUtil;
+import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes;
+import com.eucalyptus.util.RestrictedTypes.QuantityMetricFunction;
 import com.eucalyptus.util.RestrictedTypes.Resolver;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.UnconditionalCallback;
@@ -198,20 +205,22 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
     
   }
   
-  public static Address restrictedLookup( String addr ) throws EucalyptusCloudException {
-    Address address = null;
-    try {
-      address = Addresses.getInstance( ).lookup( addr );
-    } catch ( NoSuchElementException e ) {
-      throw new EucalyptusCloudException( "Permission denied while trying to release address: " + addr );
+  @QuantityMetricFunction( AddressMetadata.class )
+  public enum CountAddresses implements Function<OwnerFullName, Long> {
+    INSTANCE;
+    
+    @SuppressWarnings( "unchecked" )
+    @Override
+    public Long apply( final OwnerFullName input ) {
+      int i = 0;
+      for ( Address addr : Addresses.getInstance( ).listValues( ) ) {
+        if ( addr.isAllocated( ) && addr.getOwnerAccountNumber( ).equals( input.getAccountNumber( ) ) ) {
+          i++;
+        }
+      }
+      return ( long ) i;
     }
-    if ( address.isSystemOwned( ) ) {
-      throw new EucalyptusCloudException( "Non admin user cannot manipulate system owned address " + addr );
-    }
-    if ( !RestrictedTypes.filterPrivileged( ).apply( address ) ) {
-      throw new EucalyptusCloudException( "Permission denied while trying to access address " + addr );
-    }
-    return address;
+    
   }
   
   public enum Allocator implements Supplier<Address>, Predicate<Address> {
@@ -225,12 +234,13 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
         throw Exceptions.toUndeclared( ex );
       }
     }
+    
     @Override
     public boolean apply( Address input ) {
       try {
         input.release( );
       } catch ( Exception ex ) {
-        LOG.error( ex , ex );
+        LOG.error( ex, ex );
       }
       return true;
     }

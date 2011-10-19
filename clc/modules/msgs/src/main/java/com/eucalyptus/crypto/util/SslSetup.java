@@ -66,7 +66,7 @@ public class SslSetup {
     return SERVER_CONTEXT;
   }
 
-  public static SSLEngine getServerEngine() {
+  public static SSLEngine getServerEngine() {//TODO:GRZE: @Configurability
     SSLEngine engine = SslSetup.getServerContext( ).createSSLEngine( );
     engine.setUseClientMode( false );
     return engine;

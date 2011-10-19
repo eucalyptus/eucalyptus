@@ -67,7 +67,9 @@ import java.util.ArrayList;
 import java.util.List;
 import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.util.Internets;
+import com.eucalyptus.ws.StackConfiguration.Transport;
 
 public class Database extends ComponentId.Unpartioned {
   
@@ -82,17 +84,7 @@ public class Database extends ComponentId.Unpartioned {
   
   @Override
   public String getLocalEndpointName( ) {
-    return String.format( this.getUriPattern( ), Internets.localHostAddress( ), 8777 );
-  }
-  
-  @Override
-  public String getExternalUriPattern( ) {
-    return this.getUriPattern( );
-  }
-
-  @Override
-  public String getUriPattern( ) {
-    return Databases.getUriPattern( );
+    return ServiceUris.remote( this, Internets.localHostInetAddress( ) ).toASCIIString( );
   }
   
   @Override
@@ -109,4 +101,19 @@ public class Database extends ComponentId.Unpartioned {
     };
   }
 
+  @Override
+  public String getServicePath( String... pathParts ) {
+    return Databases.getServicePath( pathParts );
+  }
+
+  @Override
+  public String getInternalServicePath( String... pathParts ) {
+    return this.getServicePath( pathParts );
+  }
+
+  @Override
+  public Transport getTransport( ) {
+    return Transport.JDBC;
+  }
+  
 }

@@ -215,4 +215,7 @@ public class ComponentFullName implements FullName {
     return this.name;
   }
   
+  public static FullName getInstance( ServiceConfiguration config, String... parts ) {
+    return new ComponentFullName( config, parts );
+  }
 }

@@ -69,13 +69,21 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelHandler;
+import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.ChannelPipelineCoverage;
+import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.http.HttpChunkAggregator;
+import org.jboss.netty.handler.ssl.SslHandler;
 import org.jboss.netty.handler.timeout.IdleStateHandler;
 import org.jboss.netty.handler.timeout.ReadTimeoutHandler;
 import org.jboss.netty.handler.timeout.WriteTimeoutHandler;
 import org.jboss.netty.util.HashedWheelTimer;
 import com.eucalyptus.binding.BindingManager;
+import com.eucalyptus.crypto.util.SslSetup;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.ws.handlers.BindingHandler;
 import com.eucalyptus.ws.handlers.ChannelStateMonitor;
@@ -84,6 +92,7 @@ import com.eucalyptus.ws.handlers.SoapMarshallingHandler;
 import com.eucalyptus.ws.handlers.http.NioHttpRequestEncoder;
 import com.eucalyptus.ws.protocol.AddressingHandler;
 import com.eucalyptus.ws.protocol.SoapHandler;
+import com.eucalyptus.ws.util.HttpUtils;
 import com.google.common.collect.Lists;
 
 public class Handlers {
@@ -108,6 +117,10 @@ public class Handlers {
         put( "writeTimeout", new WriteTimeoutHandler( Handlers.timer, timeout, unit ) );
       }
     };
+  }
+  
+  public static ChannelHandler newSslHandler( ) {
+    return new NioSslHandler( );
   }
   
   public static ChannelHandler newHttpResponseDecoder( ) {
@@ -154,4 +167,28 @@ public class Handlers {
     return soapHandler;
   }
   
+
+  @ChannelPipelineCoverage("one")
+  private static class NioSslHandler extends SslHandler {
+    private AtomicBoolean first = new AtomicBoolean( true );
+    
+    NioSslHandler( ) {
+      super( SslSetup.getServerEngine( ) );
+    }
+      
+    @Override
+    public void handleUpstream( ChannelHandlerContext ctx, ChannelEvent e ) throws Exception {
+      Object o = null;
+      if ( e instanceof MessageEvent
+          && first.compareAndSet( true, false )
+          && ( o = ( ( MessageEvent ) e ).getMessage( ) ) instanceof ChannelBuffer 
+          && !HttpUtils.maybeSsl( ( ChannelBuffer ) o ) ) {
+        ctx.getPipeline( ).removeFirst( );
+        ctx.sendUpstream( e );
+      } else {
+        super.handleUpstream( ctx, e );
+      }
+    }
+    
+  }
 }

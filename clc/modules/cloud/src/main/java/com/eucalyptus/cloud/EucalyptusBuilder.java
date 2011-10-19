@@ -19,6 +19,7 @@ import com.eucalyptus.component.DiscoverableServiceBuilder;
 import com.eucalyptus.component.ServiceChecks.CheckException;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceRegistrationException;
+import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.id.Database;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.entities.PersistenceContexts;
@@ -26,7 +27,6 @@ import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.Mbeans;
-import com.eucalyptus.ws.StackConfiguration;
 import com.google.common.collect.ImmutableMap;
 
 @DiscoverableServiceBuilder( Eucalyptus.class )
@@ -133,8 +133,7 @@ public class EucalyptusBuilder extends AbstractServiceBuilder<EucalyptusConfigur
         ? ctx
         : "eucalyptus_" + ctx;
       
-      String dbUrl = "jdbc:" + ComponentIds.lookup( Database.class ).makeExternalRemoteUri( hostName, 8777, "http" ).toASCIIString( ) + "_"
-                     + contextName.replace( "eucalyptus_", "" );
+      String dbUrl = "jdbc:" + ServiceUris.remote( Database.class, config.getInetAddress( ), contextName );
       
       try {
         DriverDatabaseClusterMBean cluster = Mbeans.lookup( jdbcJmxDomain, ImmutableMap.builder( ).put( "cluster", contextName ).build( ),
@@ -168,9 +167,6 @@ public class EucalyptusBuilder extends AbstractServiceBuilder<EucalyptusConfigur
       final String contextName = ctx.startsWith( "eucalyptus_" )
         ? ctx
         : "eucalyptus_" + ctx;
-      
-      String dbUrl = "jdbc:" + ComponentIds.lookup( Database.class ).makeExternalRemoteUri( hostName, 8777, "http" ).toASCIIString( ) + "_"
-                     + contextName.replace( "eucalyptus_", "" );
       
       try {
         DriverDatabaseClusterMBean cluster = Mbeans.lookup( jdbcJmxDomain, ImmutableMap.builder( ).put( "cluster", contextName ).build( ),

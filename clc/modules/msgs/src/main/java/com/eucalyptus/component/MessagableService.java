@@ -88,9 +88,9 @@ public class MessagableService extends AbstractService implements Service {
     this.serviceDelegate = baseService;
     URI remoteUri;
     if ( this.getServiceConfiguration( ).isVmLocal( ) ) {
-      remoteUri = this.getComponentId( ).makeInternalRemoteUri( "127.0.0.1", this.getComponentId( ).getPort( ) );
+      remoteUri = ServiceUris.internal( this.getComponentId( ) );
     } else {
-      remoteUri = this.getComponentId( ).makeInternalRemoteUri( this.getServiceConfiguration( ).getHostName( ), this.getServiceConfiguration( ).getPort( ) );
+      remoteUri = ServiceUris.internal( this.getServiceConfiguration( ) );
     }
     this.endpoint = new ServiceEndpoint( this, true, baseService.getServiceConfiguration( ).isVmLocal( )
       ? this.getComponentId( ).getLocalEndpointUri( )

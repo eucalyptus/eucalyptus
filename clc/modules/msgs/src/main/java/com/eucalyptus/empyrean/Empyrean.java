@@ -63,21 +63,25 @@
 
 package com.eucalyptus.empyrean;
 
-import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.log4j.Logger;
+import org.logicalcobwebs.proxool.ProxoolFacade;
 import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.component.ServiceBuilders;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
-import com.eucalyptus.component.Topology;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.scripting.Groovyness;
 import com.eucalyptus.util.Internets;
+import com.eucalyptus.util.UniqueIds;
+import com.google.common.base.Predicate;
+import com.google.common.collect.Iterables;
 
 public class Empyrean extends ComponentId.Unpartioned {
   /**
@@ -90,11 +94,6 @@ public class Empyrean extends ComponentId.Unpartioned {
   @Override
   public String getPartition( ) {
     return this.name( );
-  }
-  
-  @Override
-  public String getVendorName( ) {
-    return "euca";
   }
   
   public Empyrean( ) {
@@ -141,6 +140,14 @@ public class Empyrean extends ComponentId.Unpartioned {
     }
   }
   
+  enum ShouldInitialize implements Predicate<ServiceConfiguration> {
+    INST;
+    @Override
+    public boolean apply( ServiceConfiguration input ) {
+      return !BootstrapArgs.isCloudController( ) && Internets.testLocal( input.getInetAddress( ) );
+    }
+  }
+  
   @Provides( Empyrean.class )
   @RunDuring( Bootstrap.Stage.PoolInit )
   public static class DatabasePoolBootstrapper extends Bootstrapper.Simple {
@@ -153,63 +160,13 @@ public class Empyrean extends ComponentId.Unpartioned {
     
   }
   
-  public static boolean setupServiceDependencies( final InetAddress addr ) {
-    if ( !Internets.testLocal( addr ) && !Internets.testReachability( addr ) ) {
-      LOG.warn( "Failed to reach host for cloud controller: " + addr );
-      return false;
-    } else {
-      try {
-        setupServiceState( addr, Empyrean.INSTANCE );
-      } catch ( final Exception ex ) {
-        LOG.error( ex, ex );
-        return false;
-      }
-      for ( final ComponentId compId : ComponentIds.list( ) ) {//TODO:GRZE:URGENT THIS LIES
-        try {
-          if ( compId.isAlwaysLocal( ) ) {
-            setupServiceState( addr, compId );
-          }
-        } catch ( final Exception ex ) {
-          LOG.error( ex, ex );
-        }
-      }
-      return true;
-    }
-    
+  @Override
+  public String getInternalServicePath( String... pathParts ) {
+    return "/internal/Empyrean";
   }
   
-  public static boolean teardownServiceDependencies( final InetAddress addr ) {
-    if ( !Internets.testLocal( addr ) ) {
-      LOG.warn( "Failed to reach host for cloud controller: " + addr );
-      return false;
-    } else {
-      try {
-        for ( final ComponentId compId : ComponentIds.list( ) ) {//TODO:GRZE:URGENT THIS LIES
-          try {
-            if ( compId.isAlwaysLocal( ) ) {
-              final ServiceConfiguration dependsConfig = ServiceConfigurations.lookupByName( compId.getClass( ), addr.getHostAddress( ) );
-              Topology.stop( dependsConfig );
-            }
-          } catch ( final Exception ex ) {
-            LOG.error( ex, ex );
-          }
-        }
-        return true;
-      } catch ( final Exception ex ) {
-        LOG.error( ex, ex );
-        return false;
-      }
-    }
-    
-  }
-
   @Override
-  public String getUriPattern( ) {
-    return "http://%s:%d/internal/Empyrean";
-  }
-
-  @Override
-  public String getExternalUriPattern( ) {
-    return "http://%s:%d/services/Empyrean";
+  public String getServicePath( String... pathParts ) {
+    return "/services/Empyrean";
   }
 }

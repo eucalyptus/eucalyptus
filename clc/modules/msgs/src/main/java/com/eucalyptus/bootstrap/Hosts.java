@@ -66,11 +66,16 @@ package com.eucalyptus.bootstrap;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.net.InetAddress;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Vector;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.log4j.Logger;
 import org.jgroups.Address;
@@ -85,13 +90,25 @@ import org.jgroups.conf.ClassConfigurator;
 import org.jgroups.stack.Protocol;
 import org.jgroups.stack.ProtocolStack;
 import com.eucalyptus.bootstrap.Host.DbFilter;
+import com.eucalyptus.component.Component;
+import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.component.Components;
+import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.ServiceConfigurations;
+import com.eucalyptus.component.ServiceRegistrationException;
+import com.eucalyptus.component.ServiceTransitions;
+import com.eucalyptus.component.Topology;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Hertz;
 import com.eucalyptus.event.Listeners;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.scripting.Groovyness;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Internets;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
@@ -104,20 +121,38 @@ import com.google.common.collect.Lists;
 @ConfigurableClass( root = "bootstrap.hosts", description = "Properties controlling the handling of remote host bootstrapping" )
 public class Hosts {
   @ConfigurableField( description = "Timeout for state transfers (in msec).", readonly = true )
-  public static final Long                       STATE_TRANSFER_TIMEOUT = 10000L;
-  private static final Logger                    LOG                    = Logger.getLogger( Hosts.class );
+  public static final Long                       STATE_TRANSFER_TIMEOUT   = 10000L;
+  @ConfigurableField( description = "Timeout for state initialization (in msec).", readonly = true )
+  public static final Long                       STATE_INITIALIZE_TIMEOUT = 30000L;
+  private static final Logger                    LOG                      = Logger.getLogger( Hosts.class );
+  private static final AtomicBoolean             initialized              = new AtomicBoolean( false );
   private static ReplicatedHashMap<String, Host> hostMap;
-  private static Host                            localHostSingleton;
+  
+  enum ShouldLoadRemote implements Predicate<ComponentId> {
+    INSTANCE;
+    @Override
+    public boolean apply( final ComponentId input ) {
+      return Eucalyptus.INSTANCE.isCloudLocal( ) && !input.isRegisterable( );
+    }
+  };
   
   enum HostBootstrapEventListener implements EventListener<Hertz> {
     INSTANCE;
     
     @Override
-    public void fireEvent( Hertz event ) {
-      Host maybeDirty = Hosts.localHost( ).checkDirty( );
-      if ( Hosts.localHost( ).getTimestamp( ).equals( maybeDirty.getLastTime( ) ) ) {
-        hostMap.replace( maybeDirty.getDisplayName( ), maybeDirty );
-        LOG.info( "Updated local host information: " + localHost( ) );
+    public void fireEvent( final Hertz event ) {
+      final Host currentHost = Hosts.localHost( );
+      if ( !BootstrapArgs.isCloudController( ) && currentHost.hasDatabase( ) ) {
+        Hosts.localCloudInitialize( );
+      } else if ( event.isAsserted( 5L ) ) {
+        final Host maybeDirty = currentHost.checkDirty( );
+        if ( !maybeDirty.getLastTime( ).equals( currentHost.getTimestamp( ).getTime( ) ) ) {
+          hostMap.replace( maybeDirty.getDisplayName( ), currentHost, maybeDirty );
+          LOG.info( "Updated local host information:   " + localHost( ) );
+        } else {
+          hostMap.replace( Hosts.localHost( ).getDisplayName( ), Hosts.localHost( ) );
+          LOG.info( "Replacing local host information: " + localHost( ) );
+        }
       }
     }
   }
@@ -131,34 +166,45 @@ public class Hosts {
     
     @Override
     public void contentsCleared( ) {
-      LOG.info( "Hosts.contentsCleared(): " + printMap( ) );
+      LOG.info( "Hosts.contentsCleared(): " + this.printMap( ) );
     }
     
     @Override
-    public void contentsSet( Map<String, Host> arg0 ) {
-      LOG.info( "Hosts.contentsSet(): " + printMap( ) );
+    public void contentsSet( final Map<String, Host> arg0 ) {
+      LOG.info( "Hosts.contentsSet(): " + this.printMap( ) );
     }
     
     @Override
-    public void entryRemoved( String arg0 ) {
+    public void entryRemoved( final String arg0 ) {
       LOG.info( "Hosts.entryRemoved(): " + arg0 );
-      LOG.info( "Hosts.entryRemoved(): " + printMap( ) );
+      LOG.info( "Hosts.entryRemoved(): " + hostMap.keySet( ) );
     }
     
     @Override
-    public void entrySet( String arg0, Host arg1 ) {
+    public void entrySet( final String arg0, final Host arg1 ) {
       LOG.info( "Hosts.entryAdded(): " + arg0 + " => " + arg1 );
-      LOG.info( "Hosts.entryAdded(): " + printMap( ) );
+      LOG.info( "Hosts.entryAdded(): " + hostMap.keySet( ) );
+      if ( !BootstrapArgs.isCloudController( ) && arg1.isLocalHost( ) && arg1.hasDatabase( ) ) {
+        Hosts.localCloudInitialize( );
+      } else if ( !BootstrapArgs.isCloudController( ) && !arg1.isLocalHost( ) && arg1.hasDatabase( ) && initialized.compareAndSet( false, true ) ) {
+        Hosts.remoteBootstrap( arg1 );
+      } else if ( BootstrapArgs.isCloudController( ) ) {
+        Hosts.remoteCloudInitialize( arg1 );
+      }
     }
     
     @Override
-    public void viewChange( View currentView, Vector<Address> joinMembers, Vector<Address> partMembers ) {
+    public void viewChange( final View currentView, final Vector<Address> joinMembers, final Vector<Address> partMembers ) {
       LOG.trace( "Hosts.viewChange(): new view => " + Joiner.on( ", " ).join( currentView.getMembers( ) ) );
       if ( !joinMembers.isEmpty( ) ) LOG.info( "Hosts.viewChange(): joined   => " + Joiner.on( ", " ).join( joinMembers ) );
       if ( !partMembers.isEmpty( ) ) LOG.info( "Hosts.viewChange(): parted   => " + Joiner.on( ", " ).join( partMembers ) );
-      for ( Host h : Hosts.list( ) ) {
+      for ( final Host h : Hosts.list( ) ) {
         if ( Iterables.contains( partMembers, h.getGroupsId( ) ) ) {
           hostMap.remove( h.getDisplayName( ) );
+          teardown( Empyrean.class, h.getBindAddress( ) );
+          if ( h.hasDatabase( ) ) {
+            teardown( Eucalyptus.class, h.getBindAddress( ) );
+          }
           LOG.info( "Hosts.viewChange(): -> removed  => " + h );
         }
       }
@@ -166,8 +212,102 @@ public class Hosts {
     
   }
   
+  private static void remoteBootstrap( final Host arg1 ) {
+    setup( Empyrean.class, arg1.getBindAddress( ) );
+    if ( arg1.hasDatabase( ) ) {
+      setup( Eucalyptus.class, arg1.getBindAddress( ) );
+    }
+  }
+  
+  private static void remoteCloudInitialize( final Host arg1 ) {
+    if ( !Bootstrap.isFinished( ) ) return;
+    try {
+      final ServiceConfiguration maybeConfig = ServiceConfigurations.lookupByHost( Eucalyptus.class, arg1.getBindAddress( ).getCanonicalHostName( ) );
+      arg1.markDatabase( );
+      hostMap.replace( arg1.getDisplayName( ), arg1 );
+      LOG.info( "Hosts.entryAdded(): Marked as database => " + arg1 );
+    } catch ( final Exception ex ) {
+      if ( Exceptions.causedBy( ex, NoSuchElementException.class ) != null ) {
+        Logs.extreme( ).error( ex, ex );
+      }
+    }
+  }
+  
+  private static void localCloudInitialize( ) {
+    try {
+      hostMap.stop( );
+    } catch ( Exception ex1 ) {
+      LOG.error( ex1, ex1 );
+    }
+    try {
+      Bootstrap.initializeSystem( );
+      System.exit( 123 );
+    } catch ( final Exception ex ) {
+      System.exit( 123 );
+    }
+  }
+  
   public static Address getLocalGroupAddress( ) {
     return HostManager.getInstance( ).getMembershipChannel( ).getAddress( );
+  }
+  
+  private static boolean setup( final Class<? extends ComponentId> compClass, final InetAddress addr ) {
+    if ( !Internets.testLocal( addr ) && !Internets.testReachability( addr ) ) {
+      LOG.warn( "Failed to reach host for cloud controller: " + addr );
+      return false;
+    } else {
+      try {
+        setupServiceState( compClass, addr );
+        for ( final ComponentId c : Iterables.filter( ComponentIds.list( ), ShouldLoadRemote.INSTANCE ) ) {
+          try {
+            setupServiceState( c.getClass( ), addr );
+          } catch ( final Exception ex ) {
+            LOG.error( ex, ex );
+          }
+        }
+      } catch ( final Exception ex ) {
+        LOG.error( ex, ex );
+        return false;
+      }
+      return true;
+    }
+  }
+  
+  private static boolean teardown( final Class<? extends ComponentId> compClass, final InetAddress addr ) {
+    if ( !Internets.testLocal( addr ) && !Internets.testReachability( addr ) ) {
+      LOG.warn( "Failed to reach host for cloud controller: " + addr );
+      return false;
+    } else {
+      try {
+        for ( final ComponentId c : Iterables.filter( ComponentIds.list( ), ShouldLoadRemote.INSTANCE ) ) {
+          try {
+            final ServiceConfiguration dependsConfig = ServiceConfigurations.lookupByName( compClass, addr.getHostAddress( ) );
+            Topology.stop( dependsConfig );
+          } catch ( final Exception ex ) {
+            LOG.error( ex, ex );
+          }
+        }
+      } catch ( final Exception ex ) {
+        LOG.error( ex, ex );
+        return false;
+      }
+      return true;
+    }
+  }
+  
+  private static void setupServiceState( final Class<? extends ComponentId> compClass, final InetAddress addr ) throws ServiceRegistrationException, ExecutionException {
+    try {
+      final Component comp = Components.lookup( compClass );
+      final ServiceConfiguration config = ( Internets.testLocal( addr ) )
+        ? comp.initRemoteService( addr )
+        : comp.initRemoteService( addr );//TODO:GRZE:REVIEW: use of initRemote
+      if ( Component.State.INITIALIZED.ordinal( ) >= config.lookupState( ).ordinal( ) ) {
+        ServiceTransitions.pathTo( config, Component.State.DISABLED ).get( );
+      }
+      Topology.enable( config );
+    } catch ( final InterruptedException ex ) {
+      Thread.currentThread( ).interrupt( );
+    }
   }
   
   static class HostManager {
@@ -190,17 +330,17 @@ public class Hosts {
         this.physicalAddress = ( PhysicalAddress ) this.membershipChannel.downcall( new org.jgroups.Event( org.jgroups.Event.GET_PHYSICAL_ADDRESS,
                                                                                                            this.membershipChannel.getAddress( ) ) );
         LOG.info( "Started membership channel: " + SystemIds.membershipGroupName( ) );
-      } catch ( ChannelException ex ) {
+      } catch ( final ChannelException ex ) {
         LOG.fatal( ex, ex );
         throw BootstrapException.throwFatal( "Failed to connect membership channel because of " + ex.getMessage( ), ex );
       }
     }
     
-    public static short lookupRegisteredId( Class c ) {
+    public static short lookupRegisteredId( final Class c ) {
       return ClassConfigurator.getMagicNumber( c );
     }
     
-    private static synchronized <T extends Header> String registerHeader( Class<T> h ) {
+    private static synchronized <T extends Header> String registerHeader( final Class<T> h ) {
       if ( ClassConfigurator.getMagicNumber( h ) == -1 ) {
         ClassConfigurator.add( ++HEADER_ID, h );
       }
@@ -209,7 +349,7 @@ public class Hosts {
         : h.getSimpleName( ).toLowerCase( ) ) + "-header";
     }
     
-    private static synchronized String registerProtocol( Protocol p ) {
+    private static synchronized String registerProtocol( final Protocol p ) {
       if ( ClassConfigurator.getProtocolId( p.getClass( ) ) == 0 ) {
         ClassConfigurator.addProtocol( ++PROTOCOL_ID, p.getClass( ) );
       }
@@ -241,12 +381,12 @@ public class Hosts {
       try {
         final JChannel channel = new JChannel( false );
         channel.setName( Internets.localHostIdentifier( ) );
-        ProtocolStack stack = new ProtocolStack( );
+        final ProtocolStack stack = new ProtocolStack( );
         channel.setProtocolStack( stack );
         stack.addProtocols( HostManager.getMembershipProtocolStack( ) );
         stack.init( );
         return channel;
-      } catch ( Exception ex ) {
+      } catch ( final Exception ex ) {
         LOG.fatal( ex, ex );
         throw new RuntimeException( ex );
       }
@@ -263,18 +403,18 @@ public class Hosts {
         super( );
       }
       
-      public EpochHeader( Integer value ) {
+      public EpochHeader( final Integer value ) {
         super( );
         this.value = value;
       }
       
       @Override
-      public void writeTo( DataOutputStream out ) throws IOException {
+      public void writeTo( final DataOutputStream out ) throws IOException {
         out.writeInt( this.value );
       }
       
       @Override
-      public void readFrom( DataInputStream in ) throws IOException, IllegalAccessException, InstantiationException {
+      public void readFrom( final DataInputStream in ) throws IOException, IllegalAccessException, InstantiationException {
         this.value = in.readInt( );
       }
       
@@ -305,7 +445,7 @@ public class Hosts {
         hostMap.addNotifier( HostMapStateListener.INSTANCE );
         hostMap.start( STATE_TRANSFER_TIMEOUT );
         Listeners.register( HostBootstrapEventListener.INSTANCE );
-        Host local = new Host( );
+        final Host local = new Host( );
         hostMap.put( local.getDisplayName( ), local );
         LOG.info( "Added localhost to system state: " + localHost( ) );
         LOG.info( "System view:\n" + HostMapStateListener.INSTANCE.printMap( ) );
@@ -332,21 +472,21 @@ public class Hosts {
       return Collections.max( Collections2.transform( hostMap.values( ), new Function<Host, Integer>( ) {
         
         @Override
-        public Integer apply( Host arg0 ) {
+        public Integer apply( final Host arg0 ) {
           return arg0.getEpoch( );
         }
       } ) );
-    } catch ( Exception ex ) {
+    } catch ( final Exception ex ) {
       return 0;
     }
   }
   
   public static List<Host> list( ) {
-    Predicate<Host> trueFilter = Predicates.alwaysTrue( );
+    final Predicate<Host> trueFilter = Predicates.alwaysTrue( );
     return Hosts.list( trueFilter );
   }
   
-  public static List<Host> list( Predicate<Host> filter ) {
+  public static List<Host> list( final Predicate<Host> filter ) {
     return Lists.newArrayList( Iterables.filter( hostMap.values( ), filter ) );
   }
   
@@ -354,12 +494,8 @@ public class Hosts {
     return Lists.newArrayList( Iterables.filter( Hosts.list( ), DbFilter.INSTANCE ) );
   }
   
-  private static Host localHost( ) {
+  public static Host localHost( ) {
     return hostMap.get( Internets.localHostIdentifier( ) );
-  }
-  
-  private static Host localHost( Host newLocalHost ) {
-    return localHostSingleton = newLocalHost;
   }
   
 }

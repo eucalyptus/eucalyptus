@@ -61,16 +61,14 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-import com.eucalyptus.bootstrap.BootstrapArgs
-import com.eucalyptus.bootstrap.SystemIds
 import groovy.xml.MarkupBuilder
 import org.apache.log4j.Logger
 import org.logicalcobwebs.proxool.ProxoolFacade
 import com.eucalyptus.bootstrap.Databases
-import com.eucalyptus.bootstrap.Host;
-import com.eucalyptus.bootstrap.Hosts;
+import com.eucalyptus.bootstrap.Host
+import com.eucalyptus.bootstrap.Hosts
 import com.eucalyptus.bootstrap.SystemIds
-import com.eucalyptus.component.ComponentIds
+import com.eucalyptus.component.ServiceUris
 import com.eucalyptus.component.id.Database
 import com.eucalyptus.entities.PersistenceContexts
 import com.eucalyptus.system.SubDirectory
@@ -135,7 +133,7 @@ PersistenceContexts.list( ).each { String ctx_simplename ->
             Hosts.listDatabases( ).each{ Host host ->
               database(id:host.getBindAddress().getHostAddress( ),local:host.isLocalHost( )) {
                 driver(real_jdbc_driver)
-                url("jdbc:${ComponentIds.lookup(Database.class).makeExternalRemoteUri( host.getBindAddress( ).getHostAddress( ), 8777, "http" ).toASCIIString( )}_${context_name}")
+                url("jdbc:${ServiceUris.remote(Database.class,host.getBindAddress( ), context_pool_alias ).toASCIIString( )}")
                 user('eucalyptus')
                 password(db_pass)
               }

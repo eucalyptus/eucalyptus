@@ -190,10 +190,12 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
         }
       }
     } catch ( RuntimeException ex ) {
-      LOG.error( ex, ex );
+      LOG.warn( ex );
+      Logs.exhaust( ).error( ex, ex );
       this.result.setException( ex );
     } catch ( Exception ex ) {
-      LOG.error( ex, ex );
+      LOG.warn( ex );
+      Logs.exhaust( ).error( ex, ex );
       this.result.setException( ex );
       throw new RuntimeException( ex );
     }

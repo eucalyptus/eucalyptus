@@ -19,6 +19,7 @@ import com.eucalyptus.component.NoSuchServiceException;
 import com.eucalyptus.component.Service;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
+import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.context.ServiceContext;
 import com.eucalyptus.context.ServiceDispatchException;
 import com.eucalyptus.empyrean.Empyrean;
@@ -67,7 +68,7 @@ public abstract class ServiceDispatcher implements Dispatcher {
   }
   
   public static Dispatcher makeRemote( ServiceConfiguration configuration ) {
-    return new RemoteDispatcher( configuration, configuration.getComponentId( ).makeInternalRemoteUri( configuration.getHostName( ), configuration.getPort( ) ) );
+    return new RemoteDispatcher( configuration, ServiceUris.internal( configuration ) );
   }
   
   public static Dispatcher makeLocal( ServiceConfiguration configuration ) {
