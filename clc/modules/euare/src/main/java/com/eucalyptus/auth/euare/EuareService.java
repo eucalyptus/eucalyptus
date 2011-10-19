@@ -1109,6 +1109,8 @@ public class EuareService {
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to remove user from group by " + requestUser.getName( ) );
+        } else if ( AuthException.NO_SUCH_USER.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.NO_SUCH_ENTITY, "User " + request.getUserName( ) + " is not in the group " + request.getGroupName( ) );
         }
       }
       throw new EucalyptusCloudException( e );
@@ -1347,6 +1349,8 @@ public class EuareService {
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to add user to group by " + requestUser.getName( ) );
+        } else if ( AuthException.CONFLICT.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.ENTITY_ALREADY_EXISTS, "User " + request.getUserName( ) + " is already in the group " + request.getGroupName( ) );
         }
       }
       throw new EucalyptusCloudException( e );

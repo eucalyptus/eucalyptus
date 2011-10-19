@@ -296,6 +296,9 @@ public class Privileged {
         throw new AuthException( AuthException.ACCESS_DENIED );
       }
     }
+    if ( group.hasUser( user.getName( ) ) ) {
+      throw new AuthException( AuthException.CONFLICT );
+    }
     group.addUserByName( user.getName( ) );
   }
   
@@ -310,6 +313,9 @@ public class Privileged {
       if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_GROUP, Accounts.getGroupFullName( group ), account, PolicySpec.IAM_REMOVEUSERFROMGROUP, requestUser ) ) {
         throw new AuthException( AuthException.ACCESS_DENIED );
       }
+    }
+    if ( !group.hasUser( user.getName( ) ) ) {
+      throw new AuthException( AuthException.NO_SUCH_USER );
     }
     group.removeUserByName( user.getName( ) );
   }
