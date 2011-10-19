@@ -1,13 +1,10 @@
 package com.eucalyptus.auth.util;
 
 import java.io.UnsupportedEncodingException;
-import java.security.KeyPair;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
-import com.eucalyptus.crypto.Certs;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.crypto.util.PEMFiles;
-import com.eucalyptus.crypto.util.B64.url;
 
 public class X509CertHelper {
   
