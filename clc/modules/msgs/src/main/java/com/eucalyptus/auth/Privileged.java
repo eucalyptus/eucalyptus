@@ -237,17 +237,25 @@ public class Privileged {
         throw new AuthException( AuthException.ACCESS_DENIED );
       }
     }
-    // Not allowed to modify admin user
-    if ( user.isAccountAdmin( ) ) {
-      throw new AuthException( AuthException.ACCESS_DENIED );
-    }
     if ( !Strings.isNullOrEmpty( newName ) ) {
+      // Not allowed to modify admin user
+      if ( user.isAccountAdmin( ) ) {
+        throw new AuthException( AuthException.ACCESS_DENIED );
+      }
       user.setName( newName );
     }
     if ( !Strings.isNullOrEmpty( newPath ) ) {
+      // Not allowed to modify admin user
+      if ( user.isAccountAdmin( ) ) {
+        throw new AuthException( AuthException.ACCESS_DENIED );
+      }
       user.setPath( newPath );
     }
     if ( enabled != null ) {
+      // Not allowed to modify admin user
+      if ( user.isAccountAdmin( ) ) {
+        throw new AuthException( AuthException.ACCESS_DENIED );
+      }
       user.setEnabled( enabled );
     }
     if ( passwordExpires != null ) {
