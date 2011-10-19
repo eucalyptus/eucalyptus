@@ -249,6 +249,7 @@ int timelog=0; /* change to 1 for TIMELOG entries */
 
 int logging=0;
 int loglevel=EUCADEBUG;
+int logrollnumber=4;
 FILE *LOGFH=NULL;
 char logFile[MAX_PATH];
 
@@ -819,7 +820,7 @@ from_var_to_char_list(	const char *v) {
 	return tmp;
 }
 
-int logfile(char *file, int in_loglevel) {
+int logfile(char *file, int in_loglevel, int in_logrollnumber) {
   logging = 0;
   if (in_loglevel >= EUCADEBUG2 && in_loglevel <= EUCAFATAL) {
     loglevel = in_loglevel;
@@ -838,6 +839,9 @@ int logfile(char *file, int in_loglevel) {
     if (LOGFH) {
       logging=1;
     }
+  }
+  if (in_logrollnumber > 0 && in_logrollnumber < 100) {
+      logrollnumber = in_logrollnumber;
   }
   return(1-logging);
 }
@@ -923,7 +927,7 @@ int logprintfl(int level, const char *format, ...) {
 	
 	rc = stat(logFile, &statbuf);
 	if (!rc && ((int)statbuf.st_size > MAXLOGFILESIZE)) {
-	  for (i=4; i>=0; i--) {
+	  for (i=logrollnumber; i>=0; i--) {
 	    snprintf(oldFile, MAX_PATH, "%s.%d", logFile, i);
 	    snprintf(newFile, MAX_PATH, "%s.%d", logFile, i+1);
 	    rename(oldFile, newFile);
