@@ -80,6 +80,7 @@ public class UserActivity extends AbstractSearchActivity
       
       @Override
       public void onFailure( Throwable caught ) {
+        ActivityUtil.logoutForInvalidSession( clientFactory, caught );
         LOG.log( Level.WARNING, "Search failed: " + caught );
         displayData( null );
       }
@@ -120,6 +121,7 @@ public class UserActivity extends AbstractSearchActivity
 
       @Override
       public void onFailure( Throwable caught ) {
+        ActivityUtil.logoutForInvalidSession( clientFactory, caught );
         clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.ERROR, "Failed to modify user", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
         clientFactory.getShellView( ).getLogView( ).log( LogType.ERROR, "Failed to modify user " + userId  + ": " + caught.getMessage( ) );
       }
@@ -332,6 +334,7 @@ public class UserActivity extends AbstractSearchActivity
 
       @Override
       public void onFailure( Throwable caught ) {
+        ActivityUtil.logoutForInvalidSession( clientFactory, caught );
         clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.ERROR, "Failed to add selected users to groups", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
         clientFactory.getShellView( ).getLogView( ).log( LogType.ERROR, "Failed to add users " + ids + " to groups " + names + ": " + caught.getMessage( ) );
       }
@@ -361,6 +364,7 @@ public class UserActivity extends AbstractSearchActivity
 
       @Override
       public void onFailure( Throwable caught ) {
+        ActivityUtil.logoutForInvalidSession( clientFactory, caught );
         clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.ERROR, "Failed to remove selected users from groups", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
         clientFactory.getShellView( ).getLogView( ).log( LogType.ERROR, "Failed to remove users " + ids + " from groups " + names + ": " + caught.getMessage( ) );
       }
@@ -385,6 +389,7 @@ public class UserActivity extends AbstractSearchActivity
 
       @Override
       public void onFailure( Throwable caught ) {
+        ActivityUtil.logoutForInvalidSession( clientFactory, caught );
         clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.ERROR, "Failed to add policy", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
         clientFactory.getShellView( ).getLogView( ).log( LogType.ERROR, "Failed to add policy " + name + " for user " + userId + ": " + caught.getMessage( ) );
       }
@@ -410,6 +415,7 @@ public class UserActivity extends AbstractSearchActivity
 
       @Override
       public void onFailure( Throwable caught ) {
+        ActivityUtil.logoutForInvalidSession( clientFactory, caught );
         clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.ERROR, "Failed to add certificate", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
         clientFactory.getShellView( ).getLogView( ).log( LogType.ERROR, "Failed to add certificate for user " + userId + ": " + caught.getMessage( ) );
       }
@@ -448,6 +454,7 @@ public class UserActivity extends AbstractSearchActivity
 
       @Override
       public void onFailure( Throwable caught ) {
+        ActivityUtil.logoutForInvalidSession( clientFactory, caught );
         clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.ERROR, "Failed to add access key", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
         clientFactory.getShellView( ).getLogView( ).log( LogType.ERROR, "Failed to add access key for user " + userId + ": " + caught.getMessage( ) );
       }
@@ -478,6 +485,7 @@ public class UserActivity extends AbstractSearchActivity
 
       @Override
       public void onFailure( Throwable caught ) {
+        ActivityUtil.logoutForInvalidSession( clientFactory, caught );
         clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.ERROR, "Failed to delete users", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
         clientFactory.getShellView( ).getLogView( ).log( LogType.ERROR, "Failed to delete users " + ids + ": " + caught.getMessage( ) );
       }
@@ -571,6 +579,7 @@ public class UserActivity extends AbstractSearchActivity
 
       @Override
       public void onFailure( Throwable caught ) {
+        ActivityUtil.logoutForInvalidSession( clientFactory, caught );
         clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.ERROR, "Failed to change password", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
         clientFactory.getShellView( ).getLogView( ).log( LogType.ERROR, "Failed to change password for user " + userId + ": " + caught.getMessage( ) );
       }
@@ -611,6 +620,7 @@ public class UserActivity extends AbstractSearchActivity
 
       @Override
       public void onFailure( Throwable caught ) {
+        ActivityUtil.logoutForInvalidSession( clientFactory, caught );
         clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.ERROR, "Failed to approve users", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
         clientFactory.getShellView( ).getLogView( ).log( LogType.ERROR, "Failed to approve users " + ids + ": " + caught.getMessage( ) );
       }
@@ -651,6 +661,7 @@ public class UserActivity extends AbstractSearchActivity
 
       @Override
       public void onFailure( Throwable caught ) {
+        ActivityUtil.logoutForInvalidSession( clientFactory, caught );
         clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.ERROR, "Failed to reject users", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
         clientFactory.getShellView( ).getLogView( ).log( LogType.ERROR, "Failed to reject users " + ids + ": " + caught.getMessage( ) );
       }

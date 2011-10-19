@@ -7,6 +7,9 @@ import java.util.Map;
 import org.apache.log4j.Logger;
 import org.hibernate.Session;
 import org.hibernate.criterion.Restrictions;
+import com.eucalyptus.auth.checker.InvalidValueException;
+import com.eucalyptus.auth.checker.ValueChecker;
+import com.eucalyptus.auth.checker.ValueCheckerFactory;
 import com.eucalyptus.auth.entities.AccessKeyEntity;
 import com.eucalyptus.auth.entities.AuthorizationEntity;
 import com.eucalyptus.auth.entities.CertificateEntity;
@@ -39,6 +42,10 @@ public class DatabaseUserProxy implements User {
   private static final long serialVersionUID = 1L;
   
   private static Logger LOG = Logger.getLogger( DatabaseUserProxy.class );
+  
+  private static final ValueChecker NAME_CHECKER = ValueCheckerFactory.createUserAndGroupNameChecker( );
+  private static final ValueChecker PATH_CHECKER = ValueCheckerFactory.createPathChecker( );
+  private static final ValueChecker POLICY_NAME_CHECKER = ValueCheckerFactory.createPolicyNameChecker( );
   
   private UserEntity delegate;
   
@@ -74,6 +81,12 @@ public class DatabaseUserProxy implements User {
   @Override
   public void setName( String name ) throws AuthException {
     try {
+      NAME_CHECKER.check( name );
+    } catch ( InvalidValueException e ) {
+      Debugging.logError( LOG, e, "Invalid user name " + name );
+      throw new AuthException( AuthException.INVALID_NAME, e );
+    }
+    try {
       // try looking up the user with same name
       this.getAccount( ).lookupUserByName( name );
     } catch ( AuthException e ) {
@@ -97,7 +110,7 @@ public class DatabaseUserProxy implements User {
       return;
     }
     // found
-    throw new AuthException( "Can not change to a name already in use: " + name );
+    throw new AuthException( AuthException.USER_ALREADY_EXISTS );
   }
 
   @Override
@@ -107,6 +120,12 @@ public class DatabaseUserProxy implements User {
 
   @Override
   public void setPath( final String path ) throws AuthException {
+    try {
+      PATH_CHECKER.check( path );
+    } catch ( InvalidValueException e ) {
+      Debugging.logError( LOG, e, "Invalid path " + path );
+      throw new AuthException( AuthException.INVALID_PATH, e );
+    }
     try {
       Transactions.one( UserEntity.newInstanceWithUserId( this.delegate.getUserId( ) ), new Tx<UserEntity>( ) {
         public void fire( UserEntity t ) {
@@ -530,6 +549,12 @@ public class DatabaseUserProxy implements User {
   
   @Override
   public Policy addPolicy( String name, String policy ) throws AuthException, PolicyParseException {
+    try {
+      POLICY_NAME_CHECKER.check( name );
+    } catch ( InvalidValueException e ) {
+      Debugging.logError( LOG, e, "Invalid policy name " + name );
+      throw new AuthException( AuthException.INVALID_NAME, e );
+    }
     PolicyEntity parsedPolicy = PolicyParser.getInstance( ).parse( policy );
     parsedPolicy.setName( name );
     EntityWrapper<GroupEntity> db = EntityWrapper.get( GroupEntity.class );

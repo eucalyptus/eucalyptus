@@ -389,7 +389,7 @@ public class HostManager {
     }
     
     private boolean setInitialView( View oldView, View newView ) {
-      return this.currentView.compareAndSet( oldView, newView, true, !( BootstrapArgs.isCloudController( ) && oldView == null && newView.size( ) == 1 ) );//handle the bootstrap case correctly
+      return this.currentView.compareAndSet( oldView, newView, true, !( BootstrapArgs.isCloudController( ) && oldView == null ) );//GRZE:TODO:see note && newView.size( ) == 1 ) );//handle the bootstrap case correctly
     }
     
     public void viewAccepted( View newView ) {

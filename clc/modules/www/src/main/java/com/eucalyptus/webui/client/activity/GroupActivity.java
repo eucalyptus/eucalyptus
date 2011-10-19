@@ -59,6 +59,7 @@ public class GroupActivity extends AbstractSearchActivity
       
       @Override
       public void onFailure( Throwable caught ) {
+        ActivityUtil.logoutForInvalidSession( clientFactory, caught );
         LOG.log( Level.WARNING, "Search failed: " + caught );
         displayData( null );
       }
@@ -99,6 +100,7 @@ public class GroupActivity extends AbstractSearchActivity
 
       @Override
       public void onFailure( Throwable caught ) {
+        ActivityUtil.logoutForInvalidSession( clientFactory, caught );
         clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.ERROR, "Failed to modify group", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
         clientFactory.getShellView( ).getLogView( ).log( LogType.ERROR, "Failed to modify group " + groupId  + ": " + caught.getMessage( ) );
       }
@@ -263,6 +265,7 @@ public class GroupActivity extends AbstractSearchActivity
 
       @Override
       public void onFailure( Throwable caught ) {
+        ActivityUtil.logoutForInvalidSession( clientFactory, caught );
         clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.ERROR, "Failed to add policy", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
         clientFactory.getShellView( ).getLogView( ).log( LogType.ERROR, "Failed to add policy " + name + " for group " + groupId + ": " + caught.getMessage( ) );
       }
@@ -293,6 +296,7 @@ public class GroupActivity extends AbstractSearchActivity
 
       @Override
       public void onFailure( Throwable caught ) {
+        ActivityUtil.logoutForInvalidSession( clientFactory, caught );
         clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.ERROR, "Failed to remove users", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
         clientFactory.getShellView( ).getLogView( ).log( LogType.ERROR, "Failed to remove users " + names + " from groups " + ids + ": " + caught.getMessage( ) );
       }
@@ -322,6 +326,7 @@ public class GroupActivity extends AbstractSearchActivity
 
       @Override
       public void onFailure( Throwable caught ) {
+        ActivityUtil.logoutForInvalidSession( clientFactory, caught );
         clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.ERROR, "Failed to add users to selected groups", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
         clientFactory.getShellView( ).getLogView( ).log( LogType.ERROR, "Failed to add users " + names + " to groups " + ids + ": " + caught.getMessage( ) );
       }
@@ -359,6 +364,7 @@ public class GroupActivity extends AbstractSearchActivity
 
       @Override
       public void onFailure( Throwable caught ) {
+        ActivityUtil.logoutForInvalidSession( clientFactory, caught );
         clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.ERROR, "Failed to delete groups", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
         clientFactory.getShellView( ).getLogView( ).log( LogType.ERROR, "Failed to delete groups " + ids + ": " + caught.getMessage( ) );
       }
