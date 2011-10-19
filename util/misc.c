@@ -214,23 +214,35 @@ int add_euca_to_path (const char * euca_home_supplied)
     return setenv ("PATH", new_path, TRUE);
 }
 
-pid_t timewait(pid_t pid, int *status, int timeout) {
-  time_t timer=0;
-  int rc;
+// Wrapper around waitpid() that retries waiting until
+// a timeout, specified in seconds, occurs. Return value 
+// is that of waitpid():
+//
+//  -1 means there was an error
+//   0 means there was a timeout
+//   N is the PID of the process 
+// 
+// When a positive value is returned, status is set
+// to the exit status of the process
 
-  if (timeout <= 0) timeout = 1;
-
-  *status = 1;
-  rc = waitpid(pid, status, WNOHANG);
-  while(rc == 0 && timer < (timeout * 1000000)) {
-    usleep(10000);
-    timer += 10000;
-    rc = waitpid(pid, status, WNOHANG);
-  }
-  if (rc == 0) {
-    logprintfl(EUCAERROR, "waitpid() timed out: pid=%d\n", pid);
-  }
-  return(rc);
+pid_t timewait (pid_t pid, int *status, int timeout_sec) 
+{    
+    if (timeout_sec < 0) // do not allow negative timeouts
+        timeout_sec = 0;
+    
+    *status = 1; // TODO: remove this once we know that no callers rely on status to detect timeout
+    
+    int rc = waitpid (pid, status, WNOHANG);
+    time_t elapsed_usec = 0;
+    while (rc == 0 && elapsed_usec < (timeout_sec * 1000000)) {
+        usleep (10000);
+        elapsed_usec += 10000;
+        rc = waitpid(pid, status, WNOHANG);
+    }
+    if (rc == 0) {
+        logprintfl(EUCAERROR, "waitpid() timed out: pid=%d\n", pid);
+    }
+    return (rc);
 }
 
 int timelog=0; /* change to 1 for TIMELOG entries */
