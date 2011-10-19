@@ -317,7 +317,7 @@ public class Privileged {
     }
     List<Group> groups = Lists.newArrayList( );
     for ( Group g : user.getGroups( ) ) {
-      if ( g.isUserGroup( ) ) {
+      if ( !g.isUserGroup( ) ) {
         groups.add( g );
       }
     }

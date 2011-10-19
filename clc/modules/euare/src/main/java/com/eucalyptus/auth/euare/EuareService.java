@@ -203,7 +203,7 @@ public class EuareService {
     ArrayList<GroupType> groups = reply.getListGroupsResult( ).getGroups( ).getMemberList( );
     try {
       for ( Group group : account.getGroups( ) ) {
-        if ( group.isUserGroup( ) && group.getPath( ).startsWith( path ) ) {
+        if ( group.getPath( ).startsWith( path ) ) {
           if ( Privileged.allowListGroup( requestUser, account, group ) ) {
             GroupType g = new GroupType( );
             fillGroupResult( g, group, account );
