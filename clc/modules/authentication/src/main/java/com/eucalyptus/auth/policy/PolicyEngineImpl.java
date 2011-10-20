@@ -102,7 +102,7 @@ public class PolicyEngineImpl implements PolicyEngine {
       action = action.toLowerCase( );
 
       // System admin can do everything
-      if ( !requestUser.isSystemAdmin( ) && !requestUser.isSystemInternal( ) ) {
+      if ( !requestUser.isSystemAdmin( ) ) {
         String userId = requestUser.getUserId( );
         Account account = requestUser.getAccount( );
         
@@ -146,7 +146,7 @@ public class PolicyEngineImpl implements PolicyEngine {
   public void evaluateQuota( String resourceType, String resourceName, String action, User requestUser, Long quantity) throws AuthException {
     try {
       // System admins are not restricted by quota limits.
-      if ( !requestUser.isSystemAdmin( ) && !requestUser.isSystemInternal( ) ) {
+      if ( !requestUser.isSystemAdmin( ) ) {
         List<Authorization> quotas = lookupQuotas( resourceType, requestUser, requestUser.getAccount( ), requestUser.isAccountAdmin( ) );
         processQuotas( quotas, action, resourceType, resourceName, quantity );
       }
