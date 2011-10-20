@@ -437,10 +437,11 @@ public class Hosts {
         return false;
       } else {
         try {
-          ServiceConfigurations.filter( Eucalyptus.class, nonLocalAddressMatch( arg1.getBindAddress( ) ) );
-          arg1.markDatabase( );
-          hostMap.replace( arg1.getDisplayName( ), arg1 );
-          return true;
+          if ( !Iterables.isEmpty( ServiceConfigurations.filter( Eucalyptus.class, nonLocalAddressMatch( arg1.getBindAddress( ) ) ) ) ) {
+            arg1.markDatabase( );
+            hostMap.replace( arg1.getDisplayName( ), arg1 );
+            return true;
+          }
         } catch ( final Exception ex ) {
           if ( Exceptions.causedBy( ex, NoSuchElementException.class ) == null ) {
             Logs.extreme( ).error( ex, ex );
