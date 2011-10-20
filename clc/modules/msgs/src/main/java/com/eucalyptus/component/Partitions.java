@@ -128,23 +128,28 @@ public class Partitions {
   }
   
   public static Partition lookup( final ServiceConfiguration config ) {
-    if ( config.getComponentId( ).isPartitioned( ) && config.getComponentId( ).isRegisterable( ) ) {
-      Partition p;
-      try {
-        p = Partitions.lookupByName( config.getPartition( ) );
-      } catch ( NoSuchElementException ex ) {
-        LOG.warn( "Failed to lookup partition for " + config + ".  Generating new partition configuration." );
+    try {
+      if ( config.getComponentId( ).isPartitioned( ) && config.getComponentId( ).isRegisterable( ) ) {
+        Partition p;
         try {
-          p = Partitions.generatePartition( config );
-        } catch ( ServiceRegistrationException ex1 ) {
-          LOG.error( ex1, ex1 );
-          throw Exceptions.toUndeclared( ex1 );
+          p = Partitions.lookupByName( config.getPartition( ) );
+        } catch ( NoSuchElementException ex ) {
+          LOG.warn( "Failed to lookup partition for " + config + ".  Generating new partition configuration." );
+          try {
+            p = Partitions.generatePartition( config );
+          } catch ( ServiceRegistrationException ex1 ) {
+            LOG.error( ex1, ex1 );
+            throw Exceptions.toUndeclared( ex1 );
+          }
         }
+        return p;
+      } else if ( config.getComponentId( ).isPartitioned( ) ) {
+        return Partitions.lookupByName( config.getPartition( ) );
+      } else {
+        return Partitions.lookupInternal( config );
       }
-      return p;
-    } else if ( config.getComponentId( ).isPartitioned( ) ) {
-      return Partitions.lookupByName( config.getPartition( ) );
-    } else {
+    } catch ( Exception ex ) {
+      LOG.trace( ex );
       return Partitions.lookupInternal( config );
     }
   }
