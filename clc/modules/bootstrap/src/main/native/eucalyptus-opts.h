@@ -133,8 +133,6 @@ struct eucalyptus_opts
   const char *jmx_help; /**< @brief Launch with JMX enabled. help description.  */
   int debug_flag;	/**< @brief Launch with debugger enabled. (default=off).  */
   const char *debug_help; /**< @brief Launch with debugger enabled. help description.  */
-  int debug_ha_flag;	/**< @brief Launch with CLC in debug mode (no state management). (default=off).  */
-  const char *debug_ha_help; /**< @brief Launch with CLC in debug mode (no state management). help description.  */
   int verbose_flag;	/**< @brief Launch the JVM w/ verbose output flags. (default=off).  */
   const char *verbose_help; /**< @brief Launch the JVM w/ verbose output flags. help description.  */
   int debug_port_arg;	/**< @brief Set the port to use for the debugger. (default='5005').  */
@@ -189,7 +187,6 @@ struct eucalyptus_opts
   unsigned int jvm_args_given ;	/**< @brief Whether jvm-args was given.  */
   unsigned int jmx_given ;	/**< @brief Whether jmx was given.  */
   unsigned int debug_given ;	/**< @brief Whether debug was given.  */
-  unsigned int debug_ha_given ;	/**< @brief Whether debug-ha was given.  */
   unsigned int verbose_given ;	/**< @brief Whether verbose was given.  */
   unsigned int debug_port_given ;	/**< @brief Whether debug-port was given.  */
   unsigned int debug_suspend_given ;	/**< @brief Whether debug-suspend was given.  */

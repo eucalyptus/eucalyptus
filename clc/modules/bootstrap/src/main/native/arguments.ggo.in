@@ -50,7 +50,6 @@ option "jvm-name"              -   "Which JVM type to run (see jvm.cfg)."       
 option "jvm-args"              X   "Arguments to pass to the JVM."                     string                                                  optional multiple
 option "jmx"                   -   "Launch with JMX enabled."                          flag                              on
 option "debug"                 d   "Launch with debugger enabled."                     flag                              off
-option "debug-ha"              H   "Launch with CLC in debug mode (no state management)."                     flag                              off     hidden
 option "verbose"               v   "Launch the JVM w/ verbose output flags."           flag                              off
 option "debug-port"            -   "Set the port to use for the debugger."             int                               default="5005"          no     dependon="debug"
 option "debug-suspend"         -   "Force debugger to wait at main()."                 flag                              off                            dependon="debug"          

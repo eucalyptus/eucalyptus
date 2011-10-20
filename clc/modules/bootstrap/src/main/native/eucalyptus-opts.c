@@ -74,7 +74,6 @@ const char *eucalyptus_opts_full_help[] = {
   "  -X, --jvm-args=STRING         Arguments to pass to the JVM.",
   "      --jmx                     Launch with JMX enabled.  (default=on)",
   "  -d, --debug                   Launch with debugger enabled.  (default=off)",
-  "  -H, --debug-ha                Launch with CLC in debug mode (no state \n                                  management).  (default=off)",
   "  -v, --verbose                 Launch the JVM w/ verbose output flags.  \n                                  (default=off)",
   "      --debug-port=INT          Set the port to use for the debugger.  \n                                  (default=`5005')",
   "      --debug-suspend           Force debugger to wait at main().  \n                                  (default=off)",
@@ -121,12 +120,11 @@ init_help_array(void)
   eucalyptus_opts_help[31] = eucalyptus_opts_full_help[42];
   eucalyptus_opts_help[32] = eucalyptus_opts_full_help[43];
   eucalyptus_opts_help[33] = eucalyptus_opts_full_help[44];
-  eucalyptus_opts_help[34] = eucalyptus_opts_full_help[45];
-  eucalyptus_opts_help[35] = 0; 
+  eucalyptus_opts_help[34] = 0; 
   
 }
 
-const char *eucalyptus_opts_help[36];
+const char *eucalyptus_opts_help[35];
 
 typedef enum {ARG_NO
   , ARG_FLAG
@@ -190,7 +188,6 @@ void clear_given (struct eucalyptus_opts *args_info)
   args_info->jvm_args_given = 0 ;
   args_info->jmx_given = 0 ;
   args_info->debug_given = 0 ;
-  args_info->debug_ha_given = 0 ;
   args_info->verbose_given = 0 ;
   args_info->debug_port_given = 0 ;
   args_info->debug_suspend_given = 0 ;
@@ -251,7 +248,6 @@ void clear_args (struct eucalyptus_opts *args_info)
   args_info->jvm_args_orig = NULL;
   args_info->jmx_flag = 1;
   args_info->debug_flag = 0;
-  args_info->debug_ha_flag = 0;
   args_info->verbose_flag = 0;
   args_info->debug_port_arg = 5005;
   args_info->debug_port_orig = NULL;
@@ -317,13 +313,12 @@ void init_args_info(struct eucalyptus_opts *args_info)
   args_info->jvm_args_max = 0;
   args_info->jmx_help = eucalyptus_opts_full_help[40] ;
   args_info->debug_help = eucalyptus_opts_full_help[41] ;
-  args_info->debug_ha_help = eucalyptus_opts_full_help[42] ;
-  args_info->verbose_help = eucalyptus_opts_full_help[43] ;
-  args_info->debug_port_help = eucalyptus_opts_full_help[44] ;
-  args_info->debug_suspend_help = eucalyptus_opts_full_help[45] ;
-  args_info->profile_help = eucalyptus_opts_full_help[46] ;
-  args_info->profiler_home_help = eucalyptus_opts_full_help[47] ;
-  args_info->agentlib_help = eucalyptus_opts_full_help[48] ;
+  args_info->verbose_help = eucalyptus_opts_full_help[42] ;
+  args_info->debug_port_help = eucalyptus_opts_full_help[43] ;
+  args_info->debug_suspend_help = eucalyptus_opts_full_help[44] ;
+  args_info->profile_help = eucalyptus_opts_full_help[45] ;
+  args_info->profiler_home_help = eucalyptus_opts_full_help[46] ;
+  args_info->agentlib_help = eucalyptus_opts_full_help[47] ;
   
 }
 
@@ -593,8 +588,6 @@ arguments_dump(FILE *outfile, struct eucalyptus_opts *args_info)
     write_into_file(outfile, "jmx", 0, 0 );
   if (args_info->debug_given)
     write_into_file(outfile, "debug", 0, 0 );
-  if (args_info->debug_ha_given)
-    write_into_file(outfile, "debug-ha", 0, 0 );
   if (args_info->verbose_given)
     write_into_file(outfile, "verbose", 0, 0 );
   if (args_info->debug_port_given)
@@ -1228,7 +1221,6 @@ arguments_internal (
         { "jvm-args",	1, NULL, 'X' },
         { "jmx",	0, NULL, 0 },
         { "debug",	0, NULL, 'd' },
-        { "debug-ha",	0, NULL, 'H' },
         { "verbose",	0, NULL, 'v' },
         { "debug-port",	1, NULL, 0 },
         { "debug-suspend",	0, NULL, 0 },
@@ -1238,7 +1230,7 @@ arguments_internal (
         { 0,  0, 0, 0 }
       };
 
-      c = getopt_long (argc, argv, "Vu:h:i:b:D:fkl:L:xo:e:j:X:dHv", long_options, &option_index);
+      c = getopt_long (argc, argv, "Vu:h:i:b:D:fkl:L:xo:e:j:X:dv", long_options, &option_index);
 
       if (c == -1) break;	/* Exit from `while (1)' loop.  */
 
@@ -1402,16 +1394,6 @@ arguments_internal (
           if (update_arg((void *)&(args_info->debug_flag), 0, &(args_info->debug_given),
               &(local_args_info.debug_given), optarg, 0, 0, ARG_FLAG,
               check_ambiguity, override, 1, 0, "debug", 'd',
-              additional_error))
-            goto failure;
-        
-          break;
-        case 'H':	/* Launch with CLC in debug mode (no state management)..  */
-        
-        
-          if (update_arg((void *)&(args_info->debug_ha_flag), 0, &(args_info->debug_ha_given),
-              &(local_args_info.debug_ha_given), optarg, 0, 0, ARG_FLAG,
-              check_ambiguity, override, 1, 0, "debug-ha", 'H',
               additional_error))
             goto failure;
         
