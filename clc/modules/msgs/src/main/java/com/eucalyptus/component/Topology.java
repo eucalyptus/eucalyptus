@@ -664,13 +664,7 @@ public class Topology implements EventListener<Event> {
   }
   
   public static Collection<ServiceConfiguration> enabledServices( final Class<? extends ComponentId> compId ) {
-    return Maps.filterEntries( singleton.getServices( ), new Predicate<Entry<ServiceKey, ServiceConfiguration>>( ) {
-      
-      @Override
-      public boolean apply( final Entry<ServiceKey, ServiceConfiguration> arg0 ) {
-        return compId.equals( arg0.getKey( ).getComponentId( ).getClass( ) );
-      }
-    } ).values( );
+    return Topology.getInstance( ).componentFiltered.get( compId ).values( );
   }
   
   public static boolean isEnabledLocally( final Class<? extends ComponentId> compClass ) {
