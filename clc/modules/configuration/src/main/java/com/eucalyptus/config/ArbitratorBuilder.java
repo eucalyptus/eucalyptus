@@ -14,7 +14,7 @@ import com.eucalyptus.empyrean.Empyrean.Arbitrator;
 @ComponentPart( Arbitrator.class )
 @Handles( { RegisterArbitratorType.class, DeregisterArbitratorType.class, DescribeArbitratorsType.class, ArbitratorConfiguration.class,
            ModifyArbitratorAttributeType.class } )
-public class ArbitratorBuilder extends AbstractServiceBuilder<ArbitratorConfiguration> implements ServiceBuilder<ArbitratorConfiguration>{
+public class ArbitratorBuilder extends AbstractServiceBuilder<ArbitratorConfiguration> {
   private static Logger LOG = Logger.getLogger( ArbitratorBuilder.class );
   
   @Override

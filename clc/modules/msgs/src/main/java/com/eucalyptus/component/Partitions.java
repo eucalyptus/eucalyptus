@@ -219,7 +219,7 @@ public class Partitions {
   
   public static Partition lookupInternal( final ServiceConfiguration config ) {
     ComponentId compId = config.getComponentId( );
-    if ( compId.isPartitioned( ) ) {
+    if ( compId.isRegisterable( ) ) {
       throw new IllegalArgumentException( "Provided compId is partitioned: " + compId.getFullName( ) );
     } else {
       if ( compId.isAlwaysLocal( ) ) {
