@@ -165,7 +165,7 @@ public class ServiceBootstrapper extends Bootstrapper {
         LOG.debug( "load(): " + config );
         try {
           Components.lookup( config ).loadService( config );
-          Topology.start( config ).get( );
+          ServiceTransitions.pathTo( config, Component.State.LOADED ).get( );
           return true;
         } catch ( Exception ex ) {
           Faults.failure( config, ex );
