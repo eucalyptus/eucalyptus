@@ -282,9 +282,10 @@ public class ServiceContextManager {
                                             "       http://www.eucalyptus.com/schema/cloud/1.6 http://www.eucalyptus.com/schema/cloud/1.6/euca.xsd\">\n" +
                                             "</mule>\n";
   
-  private MuleContext createContext( final List<ComponentId> currentComponentIds ) {
+  private MuleContext createContext( ) {
     this.canHasWrite.lock( );
     try {
+      List<ComponentId> currentComponentIds = ComponentIds.list( );
       LOG.error( "Restarting service context with these enabled services: " + currentComponentIds );
       final Set<ConfigResource> configs = Sets.newHashSet( );
       MuleContext muleCtx = null;
