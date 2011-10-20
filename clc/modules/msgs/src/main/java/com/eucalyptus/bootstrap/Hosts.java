@@ -380,7 +380,6 @@ public class Hosts {
       } else if ( !that.getHostAddresses( ).equals( input.getHostAddresses( ) ) ) {
         return true;
       } else {
-        input.stateUpdate( );
         return false;
       }
     }
@@ -391,18 +390,39 @@ public class Hosts {
     
     @Override
     public boolean apply( Host input ) {
-      if ( input == null ) {
-        Host newHost = new Host( );
-        hostMap.replace( newHost.getDisplayName( ), newHost );
-        LOG.info( "Inserted local host information:   " + localHost( ) );
-      } else if ( input.isLocalHost( ) ) {
-        if ( CheckStale.INSTANCE.apply( input ) ) {
-          Host newHost = new Host( input.getStartedTime( ) );
-          Host oldHost = hostMap.replace( newHost.getDisplayName( ), newHost );
-          LOG.info( "Updated local host information:   " + localHost( ) );
-        } else {
-          if ( hostMap.putIfAbsent( input.getDisplayName( ), input ) == null ) {
-            LOG.info( "Inserted local host information: " + localHost( ) );
+      if ( !input.isLocalHost( ) ) {
+        return false;
+      } else {
+        if ( input == null ) {
+          Host newHost = new Host( );
+          Host oldHost = hostMap.putIfAbsent( newHost.getDisplayName( ), newHost );
+          if ( oldHost != null ) {
+            LOG.info( "Inserted local host information:   " + localHost( ) );
+            return true;
+          } else {
+            return false;
+          }
+        } else if ( input.isLocalHost( ) ) {
+          if ( CheckStale.INSTANCE.apply( input ) ) {
+            Host newHost = new Host( input.getStartedTime( ) );
+            Host oldHost = hostMap.replace( newHost.getDisplayName( ), newHost );
+            if ( oldHost != null ) {
+              LOG.info( "Updated local host information:   " + localHost( ) );
+              return true;
+            } else {
+              return false;
+            }
+          } else {
+            if ( !hostMap.containsKey( input.getDisplayName( ) ) ) {
+              Host newHost = new Host( );
+              Host oldHost = hostMap.putIfAbsent( newHost.getDisplayName( ), newHost );
+              if ( oldHost == null ) {
+                LOG.info( "Updated local host information:   " + localHost( ) );
+                return true;
+              } else {
+                return false;
+              }
+            }
           }
         }
       }
@@ -420,12 +440,10 @@ public class Hosts {
         return false;
       } else {
         try {
-          if ( !Internets.testLocal( arg1.getBindAddress( ) ) ) {
-            ServiceConfigurations.filter( Eucalyptus.class, nonLocalAddressMatch( arg1.getBindAddress( ) ) );
-            arg1.markDatabase( );
-            hostMap.replace( arg1.getDisplayName( ), arg1 );
-            return true;
-          }
+          ServiceConfigurations.filter( Eucalyptus.class, nonLocalAddressMatch( arg1.getBindAddress( ) ) );
+          arg1.markDatabase( );
+          hostMap.replace( arg1.getDisplayName( ), arg1 );
+          return true;
         } catch ( final Exception ex ) {
           if ( Exceptions.causedBy( ex, NoSuchElementException.class ) == null ) {
             Logs.extreme( ).error( ex, ex );
