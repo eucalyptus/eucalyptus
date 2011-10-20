@@ -1768,15 +1768,20 @@ art_implement_tree ( // traverse artifact tree and create/download/combine artif
             if (ret != OK) {
                 logprintfl (EUCAERROR, "[%s] error: failed to create artifact %s (may retry)\n", root->instanceId, root->id, ret);
                 // delete the partially created artifact so we can retry with a clean slate
-                if (blockblob_delete (root->bb, DELETE_BLOB_TIMEOUT_USEC) == -1) {
-                    // failure of 'delete' is bad, since we may have an open blob
-                    // that will prevent others from ever opening it again, so at
-                    // least try to close it
-                    logprintfl (EUCAERROR, "[%s] error: failed to remove partially created artifact %s: %d %s (potential resource leak!)\n",
-                                root->instanceId, root->id, blobstore_get_error(), blobstore_get_last_msg());
-                    if (blockblob_close (root->bb) == -1) {
-                        logprintfl (EUCAERROR, "[%s] error: failed to close partially created artifact %s: %d %s (potential deadlock!)\n",
+                if (root->id_is_path) { // artifact is not a blob, but a file
+                    unlink (root->id); // attempt to delete, but it may not even exist
+
+                } else {
+                    if (blockblob_delete (root->bb, DELETE_BLOB_TIMEOUT_USEC) == -1) {
+                        // failure of 'delete' is bad, since we may have an open blob
+                        // that will prevent others from ever opening it again, so at
+                        // least try to close it
+                        logprintfl (EUCAERROR, "[%s] error: failed to remove partially created artifact %s: %d %s (potential resource leak!)\n",
                                     root->instanceId, root->id, blobstore_get_error(), blobstore_get_last_msg());
+                        if (blockblob_close (root->bb) == -1) {
+                            logprintfl (EUCAERROR, "[%s] error: failed to close partially created artifact %s: %d %s (potential deadlock!)\n",
+                                        root->instanceId, root->id, blobstore_get_error(), blobstore_get_last_msg());
+                        }
                     }
                 }
             } else {
