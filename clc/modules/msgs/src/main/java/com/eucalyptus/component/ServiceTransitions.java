@@ -257,7 +257,6 @@ public class ServiceTransitions {
   private static <T extends EmpyreanMessage> T sendEmpyreanRequest( final ServiceConfiguration parent, final EmpyreanMessage msg ) throws Exception {
     ServiceConfiguration config = ServiceConfigurations.createEphemeral( Empyrean.INSTANCE, parent.getInetAddress( ) );
     LOG.debug( "Sending request " + msg.getClass( ).getSimpleName( ) + " to " + parent.getFullName( ) );
-    Throwable lastEx = null;
     try {
       T reply = ( T ) AsyncRequests.sendSync( config, msg );
       return reply;
