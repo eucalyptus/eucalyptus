@@ -197,7 +197,7 @@ public class Exceptions {
   }
   
   public static <T extends Throwable> T error( String message, T t ) {
-    Throwable filtered = new RuntimeException( t.getMessage( ) );
+    Throwable filtered = new RuntimeException( message );
     filtered.setStackTrace( Exceptions.filterStackTraceElements( t ).toArray( steArrayType ) );
     LOG.error( message, filtered );
     return t;
