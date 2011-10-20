@@ -262,13 +262,15 @@ static void gen_id (char * str, unsigned int size)
     snprintf (str, size, "%08lx%08lx%08lx", (unsigned long)random(), (unsigned long)random(), (unsigned long)random());
 }
 
-struct flock * file_lock (struct flock * l, short type, short whence) 
+struct flock * flock_whole_file (struct flock * l, short type) 
 {
     l->l_type = type;
-    l->l_start = 0;
-    l->l_whence = whence;
-    l->l_len = 0;
     l->l_pid = getpid();
+
+    // set params so as to lock the whole file
+    l->l_start = 0;
+    l->l_whence = SEEK_SET;
+    l->l_len = 0;
 
     return l;
 }
@@ -498,7 +500,7 @@ static int open_and_lock (const char * path,
             // Posix rwlock succeeded, try the file lock
             errno = 0;
             struct flock l;
-            if (fcntl (fd, F_SETLK, file_lock (&l, l_type, SEEK_SET)) == 0)
+            if (fcntl (fd, F_SETLK, flock_whole_file (&l, l_type)) == 0)
                 break; // success!
             pthread_rwlock_unlock (&(path_lock->lock)); // give up the Posix lock
             if (errno != EAGAIN) { // any error other than inability to get the lock
