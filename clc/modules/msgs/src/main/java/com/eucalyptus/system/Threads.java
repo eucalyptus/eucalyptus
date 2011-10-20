@@ -219,11 +219,7 @@ public class Threads {
             if ( oldExec != null ) {
               oldExec.shutdown( );
             }
-            if ( numThreads == -1 ) {
-              this.pool = Executors.newFixedThreadPool( NUM_QUEUE_WORKERS, this );
-            } else {
-              this.pool = Executors.newFixedThreadPool( this.numThreads, this );
-            }
+            this.pool = this.makePool( );
           }
         }
       }
