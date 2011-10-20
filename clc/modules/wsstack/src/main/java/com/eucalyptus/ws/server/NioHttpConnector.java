@@ -74,17 +74,13 @@ public class NioHttpConnector extends AbstractConnector implements Initialisable
   private static Logger LOG      = Logger.getLogger( NioHttpConnector.class );
 
   public static String  PROTOCOL = "euca";
-  private static AtomicReference<NioServer>     server = new AtomicReference<NioServer>( null );
 
   public NioHttpConnector( ) {
     super.registerSupportedProtocol( "http" );
     super.registerSupportedProtocol( "https" );
   }
 
-  public void doConnect( ) throws MuleException {
-    this.server.compareAndSet( null, new NioServer( ) );
-    this.server.get( ).start( );
-  }
+  public void doConnect( ) throws MuleException {}
 
   public String getProtocol( ) {
     return PROTOCOL;
@@ -100,7 +96,6 @@ public class NioHttpConnector extends AbstractConnector implements Initialisable
 
   @Override
   public void doStop( ) throws MuleException {
-//  server.get( ).stop( );
   }
 
   @Override

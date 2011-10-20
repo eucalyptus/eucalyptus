@@ -96,6 +96,7 @@ import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Internets;
+import com.eucalyptus.ws.util.ChannelUtil;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import edu.emory.mathcs.backport.java.util.concurrent.atomic.AtomicBoolean;
@@ -159,6 +160,7 @@ public class ServiceBootstrapper extends Bootstrapper {
   
   @Override
   public boolean load( ) {
+    ChannelUtil.getServerChannel( );
     ServiceBootstrapper.execute( new Predicate<ServiceConfiguration>( ) {
       
       @Override
