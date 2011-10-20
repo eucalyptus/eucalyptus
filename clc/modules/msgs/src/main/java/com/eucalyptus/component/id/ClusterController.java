@@ -52,12 +52,7 @@ public class ClusterController extends ComponentId {
   
   @Partition( value = { ClusterController.class }, manyToOne = true )
   @InternalService
-  public class NodeController extends ComponentId {
-    
-    /**
-     * 
-     */
-    private static final long serialVersionUID = 1L;
+  public static class NodeController extends ComponentId {
     
     public NodeController( ) {
       super( "node" );
