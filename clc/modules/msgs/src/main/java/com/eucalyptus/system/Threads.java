@@ -192,7 +192,7 @@ public class Threads {
       this.creationPoint = Thread.currentThread( ).getStackTrace( );
       this.name = groupPrefix;
       this.group = new ThreadGroup( this.name );
-      this.makePool( );
+      this.pool = this.makePool( );
       this.completionService = new ExecutorCompletionService( this.pool );
       OrderedShutdown.register( Eucalyptus.class, new Runnable( ) {
         @Override
