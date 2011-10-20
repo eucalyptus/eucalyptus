@@ -91,6 +91,7 @@ import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.ServiceTransitions;
+import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.util.Exceptions;
@@ -184,11 +185,10 @@ public class ServiceBootstrapper extends Bootstrapper {
         ServiceBootstrapWorker.submit( new Runnable( ) {
           @Override
           public void run( ) {
-            Bootstrap.awaitFinished( );
             try {
-              ServiceTransitions.pathTo( config, Component.State.NOTREADY ).get( );
+              Topology.disable( config ).get( );
               try {
-                ServiceTransitions.pathTo( config, Component.State.ENABLED ).get( );
+                Topology.enable( config ).get( );
               } catch ( IllegalStateException ex ) {
                 LOG.error( ex, ex );
               } catch ( InterruptedException ex ) {

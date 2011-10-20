@@ -91,9 +91,9 @@ public class TopologyChanges {
   
   static Function<ServiceConfiguration, ServiceConfiguration> startFunction( ) {
     if ( Hosts.isCoordinator( ) ) {
-      return CloudTopologyCallables.CHECK;
+      return CloudTopologyCallables.START;
     } else {
-      return RemoteTopologyCallables.CHECK;
+      return RemoteTopologyCallables.START;
     }
   }
   
