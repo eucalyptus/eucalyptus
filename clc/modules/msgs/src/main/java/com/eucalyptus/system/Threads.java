@@ -192,7 +192,7 @@ public class Threads {
       this.name = groupPrefix;
       this.group = new ThreadGroup( this.name );
       this.pool = Executors.newCachedThreadPool( this );
-      this.completionService = new ExecutorCompletionService<ServiceConfiguration>( this.pool );
+      this.completionService = new ExecutorCompletionService( this.pool );
       OrderedShutdown.register( Eucalyptus.class, new Runnable( ) {
         @Override
         public void run( ) {

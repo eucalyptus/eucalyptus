@@ -96,7 +96,6 @@ import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Function;
-import com.google.common.base.Functions;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
@@ -106,7 +105,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
-import com.google.common.util.concurrent.Futures;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class Topology implements EventListener<Event> {
@@ -143,7 +141,7 @@ public class Topology implements EventListener<Event> {
   
   private static Predicate<Partition> partitionFilter( final Partition p ) {
     return new Predicate<Partition>( ) {
-
+      
       @Override
       public boolean apply( Partition input ) {
         return p.equals( input );
@@ -207,12 +205,13 @@ public class Topology implements EventListener<Event> {
       
       @Override
       public Future<ServiceConfiguration> apply( Callable<ServiceConfiguration> input ) {
-        return externalCompletionService( ).submit( input );
+        CompletionService<ServiceConfiguration> externalCompletionService = externalCompletionService( );
+        return externalCompletionService.submit( input );
       }
     };
   }
   
-  private CompletionService<ServiceConfiguration> completionService( final ServiceConfiguration config ) {
+  private CompletionService completionService( final ServiceConfiguration config ) {
     return Threads.lookup( Empyrean.class, Topology.class, "worker-" + config.getComponentId( ).name( ) ).limitTo( 1 ).getCompletionService( );
   }
   
@@ -220,7 +219,7 @@ public class Topology implements EventListener<Event> {
     return Threads.lookup( Empyrean.class, Topology.class, "external-worker" ).limitTo( 16 );
   }
   
-  private static CompletionService<ServiceConfiguration> externalCompletionService( ) {
+  private static <T> CompletionService<T> externalCompletionService( ) {
     return getInstance( ).externalPool( ).getCompletionService( );
   }
   
@@ -516,7 +515,7 @@ public class Topology implements EventListener<Event> {
   @Override
   public void fireEvent( final Event event ) {
     if ( ( event instanceof Hertz ) && ( ( Hertz ) event ).isAsserted( 15l ) ) {
-      this.completionService( internalQueue ).submit( RunChecks.INSTANCE, null );
+      Future enabled = this.completionService( this.internalQueue ).submit( RunChecks.INSTANCE );
     }
   }
   
@@ -593,7 +592,8 @@ public class Topology implements EventListener<Event> {
     @Override
     public ServiceConfiguration get( ) {
       try {
-        final ServiceConfiguration conf = Topology.getInstance( ).externalCompletionService( ).take( ).get( );
+        CompletionService<ServiceConfiguration> externalCompletionService = Topology.getInstance( ).externalCompletionService( );
+        final ServiceConfiguration conf = externalCompletionService.take( ).get( );
         LOG.trace( "CHECK passed: " + conf.getFullName( ).toString( ) );
         return conf;
       } catch ( InterruptedException ex ) {
@@ -605,11 +605,11 @@ public class Topology implements EventListener<Event> {
     }
   }
   
-  enum RunChecks implements Runnable {
+  enum RunChecks implements Callable<List<ServiceConfiguration>> {
     INSTANCE;
     
     @Override
-    public void run( ) {
+    public List<ServiceConfiguration> call( ) {
       /** submit describe operations **/
       Collection<ServiceConfiguration> checkServices = Collections2.filter( ServiceConfigurations.list( ), CheckServiceFilter.INSTANCE );
       Collection<Callable<ServiceConfiguration>> submitChecks = Collections2.transform( checkServices, SubmitCheck.INSTANCE );
@@ -625,6 +625,7 @@ public class Topology implements EventListener<Event> {
                                                                                            functionalCallable( TopologyChanges.enableFunction( ) ) );
       List<ServiceConfiguration> enabledServices = WaitForResults.invokeAll( enableCallables );
       LOG.trace( LogUtil.subheader( "ENABLED: " + Joiner.on( "\nENABLED: " ).join( enabledServices ) ) );
+      return enabledServices;
     }
   }
   
