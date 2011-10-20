@@ -72,11 +72,8 @@ import com.eucalyptus.bootstrap.OrderedShutdown;
 import com.eucalyptus.component.Component.State;
 import com.eucalyptus.component.Component.Transition;
 import com.eucalyptus.component.auth.SystemCredentials;
-import com.eucalyptus.event.EventListener;
 import com.eucalyptus.records.Logs;
-import com.eucalyptus.util.async.Request;
 import com.eucalyptus.util.fsm.StateMachine;
-import com.eucalyptus.ws.client.ServiceDispatcher;
 
 public class BasicService {
   private static Logger                                                                   LOG            = Logger.getLogger( BasicService.class );
@@ -120,14 +117,6 @@ public class BasicService {
   
   public Boolean isLocal( ) {
     return this.serviceConfiguration.isVmLocal( );
-  }
-  
-  public KeyPair getKeys( ) {
-    return SystemCredentials.getCredentialProvider( this.serviceConfiguration.getComponentId( ) ).getKeyPair( );
-  }
-  
-  public X509Certificate getCertificate( ) {
-    return SystemCredentials.getCredentialProvider( this.serviceConfiguration.getComponentId( ) ).getCertificate( );
   }
   
   ServiceConfiguration getServiceConfiguration( ) {

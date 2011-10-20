@@ -66,16 +66,6 @@ package com.eucalyptus.component.id;
 import java.util.ArrayList;
 import java.util.List;
 import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.ComponentId.Partition;
 import com.eucalyptus.empyrean.Empyrean;
 
-public class Arbitrator extends ComponentId.Unpartioned {
-  @Override
-  public List<Class<? extends ComponentId>> serviceDependencies( ) {
-    return new ArrayList( ) {
-      {
-        this.add( Empyrean.class );
-      }
-    };
-  }
-  
-}

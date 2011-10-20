@@ -243,7 +243,7 @@ public class Hosts {
       return new Predicate<T>( ) {
         @Override
         public boolean apply( final T input ) {
-          return input.serviceDependencies( ).contains( compId ) && !input.isRegisterable( );
+          return input.isAncestor( compId ) && !input.isRegisterable( );
         }
       };
     }

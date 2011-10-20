@@ -64,15 +64,14 @@
 package com.eucalyptus.config
 
 import java.io.Serializable
-import javax.persistence.DiscriminatorValue;
 import javax.persistence.PersistenceContext
 import javax.persistence.Table
 import javax.persistence.Transient
 import org.hibernate.annotations.Cache
 import org.hibernate.annotations.CacheConcurrencyStrategy
 import org.hibernate.annotations.Entity
-import com.eucalyptus.component.ComponentPart
-import com.eucalyptus.component.id.Arbitrator
+import com.eucalyptus.component.ComponentId.ComponentPart
+import com.eucalyptus.empyrean.Empyrean.Arbitrator
 
 @Entity @javax.persistence.Entity
 @PersistenceContext(name="eucalyptus_config")

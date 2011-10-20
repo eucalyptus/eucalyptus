@@ -70,6 +70,7 @@ import java.util.Set;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Handles;
 import com.eucalyptus.bootstrap.ServiceJarDiscovery;
+import com.eucalyptus.component.ComponentId.ComponentPart;
 import com.eucalyptus.system.Ats;
 import com.eucalyptus.util.TypeMapper;
 import com.google.common.base.Function;
@@ -93,12 +94,10 @@ public class ServiceBuilders {
            && !Modifier.isInterface( candidate.getModifiers( ) ) ) {
         /** GRZE: this implies that service builder is a singleton **/
         ServiceBuilder b = ( ServiceBuilder ) candidate.newInstance( );
-        if ( Ats.from( candidate ).has( DiscoverableServiceBuilder.class ) ) {
-          DiscoverableServiceBuilder at = Ats.from( candidate ).get( DiscoverableServiceBuilder.class );
-          for ( Class c : at.value( ) ) {
-            ComponentId compId = ( ComponentId ) c.newInstance( );
-            ServiceBuilders.addBuilder( compId, b );
-          }
+        if ( Ats.from( candidate ).has( ComponentPart.class ) ) {
+          ComponentPart at = Ats.from( candidate ).get( ComponentPart.class );
+          ComponentId compId = ( ComponentId ) at.value( ).newInstance( );
+          ServiceBuilders.addBuilder( compId, b );
         }
         if ( Ats.from( candidate ).has( Handles.class ) ) {
           for ( Class c : Ats.from( candidate ).get( Handles.class ).value( ) ) {

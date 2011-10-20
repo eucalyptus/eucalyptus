@@ -64,7 +64,7 @@
 package com.eucalyptus.config;
 
 import java.util.ArrayList
-import com.eucalyptus.component.ComponentMessage
+import com.eucalyptus.component.ComponentId.ComponentMessage
 import com.eucalyptus.util.HasSideEffect
 import edu.ucsb.eucalyptus.msgs.BaseMessage
 import edu.ucsb.eucalyptus.msgs.EucalyptusData

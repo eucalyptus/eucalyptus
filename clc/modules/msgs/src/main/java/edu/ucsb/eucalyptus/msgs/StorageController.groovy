@@ -65,7 +65,7 @@
 
 package edu.ucsb.eucalyptus.msgs;
 
-import com.eucalyptus.component.ComponentMessage
+import com.eucalyptus.component.ComponentId.ComponentMessage
 import com.eucalyptus.component.id.Storage
 
 public class StorageResponseType extends BaseMessage {

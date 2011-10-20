@@ -75,6 +75,7 @@ import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
+import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.ChannelUpstreamHandler;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpRequest;
@@ -87,7 +88,7 @@ import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.bootstrap.ServiceJarDiscovery;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
-import com.eucalyptus.component.ComponentPart;
+import com.eucalyptus.component.ComponentId.ComponentPart;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.http.MappingHttpMessage;
@@ -107,13 +108,19 @@ import com.eucalyptus.ws.protocol.AddressingHandler;
 import com.eucalyptus.ws.protocol.BaseQueryBinding;
 import com.eucalyptus.ws.protocol.OperationParameter;
 import com.eucalyptus.ws.protocol.SoapHandler;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class Pipelines {
-  private static final Logger                LOG               = Logger.getLogger( Pipelines.class );
-  private static final Set<FilteredPipeline> internalPipelines = Sets.newHashSet( );
-  private static final Set<FilteredPipeline> pipelines         = Sets.newHashSet( );
+  private static final Logger                                                    LOG               = Logger.getLogger( Pipelines.class );
+  private static final Set<FilteredPipeline>                                     internalPipelines = Sets.newHashSet( );
+  private static final Set<FilteredPipeline>                                     pipelines         = Sets.newHashSet( );
+  private static final Map<Class<? extends ComponentId>, ChannelPipelineFactory> clientPipelines   = Maps.newHashMap( );
+  
+  public static ChannelPipelineFactory lookup( Class<? extends ComponentId> compId ) {
+    return clientPipelines.get( compId );
+  }
   
   static FilteredPipeline find( final HttpRequest request ) throws DuplicatePipelineException, NoAcceptingPipelineException {
     final FilteredPipeline candidate = findAccepting( request );
@@ -177,7 +184,7 @@ public class Pipelines {
       if ( FilteredPipeline.class.isAssignableFrom( candidate ) && !Modifier.isAbstract( candidate.getModifiers( ) )
            && !Modifier.isInterface( candidate.getModifiers( ) ) && Ats.from( candidate ).has( ComponentPart.class ) ) {
         try {
-          final ComponentId compId = ( ComponentId ) Ats.from( candidate ).get( ComponentPart.class ).value( ).newInstance( );
+          final ComponentId compId = Ats.from( candidate ).get( ComponentPart.class ).value( ).newInstance( );
           final Class<? extends FilteredPipeline> pipelineClass = candidate;
           final FilteredPipeline pipeline = Classes.newInstance( pipelineClass );
           Pipelines.pipelines.add( pipeline );
@@ -186,6 +193,19 @@ public class Pipelines {
           LOG.trace( ex, ex );
           return false;
         }
+      } else if ( ChannelPipelineFactory.class.isAssignableFrom( candidate ) && !Modifier.isAbstract( candidate.getModifiers( ) )
+                  && !Modifier.isInterface( candidate.getModifiers( ) ) && Ats.from( candidate ).has( ComponentPart.class ) ) {
+        try {
+          final ComponentId compId = Ats.from( candidate ).get( ComponentPart.class ).value( ).newInstance( );
+          final Class<? extends ChannelPipelineFactory> pipelineClass = candidate;
+          final ChannelPipelineFactory pipeline = Classes.newInstance( pipelineClass );
+          Pipelines.clientPipelines.put( compId.getClass( ), pipeline );
+          return true;
+        } catch ( final Exception ex ) {
+          LOG.trace( ex, ex );
+          return false;
+        }
+        
       } else {
         return false;
       }

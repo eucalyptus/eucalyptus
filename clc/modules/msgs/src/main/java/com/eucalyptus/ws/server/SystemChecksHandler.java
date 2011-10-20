@@ -78,22 +78,14 @@ import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
-import org.mortbay.log.Log;
-import com.eucalyptus.component.Component;
 import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.component.ComponentIds;
-import com.eucalyptus.component.ComponentMessage;
 import com.eucalyptus.component.ComponentMessages;
-import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.empyrean.ServiceTransitionType;
 import com.eucalyptus.http.MappingHttpMessage;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.records.Logs;
-import com.eucalyptus.system.Ats;
-import com.eucalyptus.util.Classes;
-import com.google.common.base.Predicate;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 @ChannelPipelineCoverage( "all" )

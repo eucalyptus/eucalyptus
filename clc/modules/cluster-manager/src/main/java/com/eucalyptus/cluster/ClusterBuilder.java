@@ -5,14 +5,12 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Handles;
 import com.eucalyptus.component.AbstractServiceBuilder;
 import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.ComponentId.ComponentPart;
 import com.eucalyptus.component.ComponentIds;
-import com.eucalyptus.component.DiscoverableServiceBuilder;
 import com.eucalyptus.component.Faults;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.component.Partitions;
-import com.eucalyptus.component.ServiceChecks;
 import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.id.ClusterController;
@@ -24,7 +22,7 @@ import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 
-@DiscoverableServiceBuilder( ClusterController.class )
+@ComponentPart( ClusterController.class )
 @Handles( { RegisterClusterType.class, DeregisterClusterType.class, DescribeClustersType.class, ClusterConfiguration.class, ModifyClusterAttributeType.class } )
 public class ClusterBuilder extends AbstractServiceBuilder<ClusterConfiguration> {
   static Logger LOG = Logger.getLogger( ClusterBuilder.class );

@@ -121,7 +121,7 @@ public class InternalWsSecHandler extends WsSecHandler {
       try {
         X509Certificate cert = WSSecurity.verifySignature( secNode, sig );
         Logs.exhaust( ).debug( cert );
-        if ( cert == null || !cert.equals( SystemCredentials.getCredentialProvider( Eucalyptus.class ).getCertificate( ) ) ) {
+        if ( cert == null || !cert.equals( SystemCredentials.lookup( Eucalyptus.class ).getCertificate( ) ) ) {
           throw new WebServicesException( "Authentication failed: The following certificate is not trusted:\n " + cert );
         }
       } catch ( Exception ex ) {

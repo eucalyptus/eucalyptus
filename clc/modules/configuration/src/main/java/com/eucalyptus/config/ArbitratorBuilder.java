@@ -4,16 +4,17 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Handles;
 import com.eucalyptus.component.AbstractServiceBuilder;
 import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.ComponentId.ComponentPart;
 import com.eucalyptus.component.ComponentIds;
-import com.eucalyptus.component.DiscoverableServiceBuilder;
+import com.eucalyptus.component.ServiceBuilder;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceRegistrationException;
-import com.eucalyptus.component.id.Arbitrator;
+import com.eucalyptus.empyrean.Empyrean.Arbitrator;
 
-@DiscoverableServiceBuilder( Arbitrator.class )
+@ComponentPart( Arbitrator.class )
 @Handles( { RegisterArbitratorType.class, DeregisterArbitratorType.class, DescribeArbitratorsType.class, ArbitratorConfiguration.class,
            ModifyArbitratorAttributeType.class } )
-public class ArbitratorBuilder extends AbstractServiceBuilder<ArbitratorConfiguration> {
+public class ArbitratorBuilder extends AbstractServiceBuilder<ArbitratorConfiguration> implements ServiceBuilder<ArbitratorConfiguration>{
   private static Logger LOG = Logger.getLogger( ArbitratorBuilder.class );
   
   @Override

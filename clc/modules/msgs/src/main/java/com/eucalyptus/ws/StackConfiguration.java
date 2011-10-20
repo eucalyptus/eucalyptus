@@ -182,7 +182,7 @@ public class StackConfiguration extends AbstractPersistent {
   
   private static Logger       LOG                               = Logger.getLogger( StackConfiguration.class );
   
-  public enum Transport {
+  public enum BasicTransport implements TransportDefinition {
     HTTP {
       @Override
       public String getScheme( ) {
@@ -218,8 +218,10 @@ public class StackConfiguration extends AbstractPersistent {
       }
       
     };
+    @Override
     public abstract String getScheme( );
     
+    @Override
     public abstract String getSecureScheme( );
   }
   

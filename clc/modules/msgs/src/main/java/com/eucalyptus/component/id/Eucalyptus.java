@@ -65,10 +65,16 @@ package com.eucalyptus.component.id;
 
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.ComponentId;
-import com.google.common.base.Predicate;
-import com.google.common.base.Predicates;
+import com.eucalyptus.component.ComponentId.GenerateKeys;
+import com.eucalyptus.component.ComponentId.Partition;
+import com.eucalyptus.component.ComponentId.PolicyVendor;
+import com.eucalyptus.component.ComponentId.PublicService;
 
-public class Eucalyptus extends ComponentId.Unpartioned {
+@PublicService
+@GenerateKeys
+@PolicyVendor( "ec2" )
+@Partition( Eucalyptus.class )
+public class Eucalyptus extends ComponentId {
   public static final Eucalyptus INSTANCE = new Eucalyptus( );                   //NOTE: this has a silly name because it is temporary.  do not use it as an example of good form for component ids.
   private static Logger          LOG      = Logger.getLogger( Eucalyptus.class );
   
@@ -77,30 +83,7 @@ public class Eucalyptus extends ComponentId.Unpartioned {
     return "vm://EucalyptusRequestQueue";
   }
   
-  @Override
-  public String getVendorName( ) {
-    return "ec2";
-  }
-  
-  @Override
-  public Boolean hasCredentials( ) {
-    return true;
-  }
-  
-  @Override
-  public boolean isUserService( ) {
-    return true;
-  }
-  
-//  @Override
-//  public Predicate<ComponentId> isRelated( ) {
-//    return Predicates.and( super.isRelated( ), new Predicate<ComponentId>( ) {
-//      
-//      @Override
-//      public boolean apply( ComponentId input ) {
-//        return Eucalyptus.this.equals( input ) || !input.isRegisterable( );
-//      }
-//    } );
-//  }
-//  
+  @Partition( Eucalyptus.class )
+  @PublicService
+  public static class Notifications extends ComponentId {}
 }

@@ -218,19 +218,19 @@ public class Partitions {
       throw new IllegalArgumentException( "Provided compId is partitioned: " + compId.getFullName( ) );
     } else {
       if ( compId.isAlwaysLocal( ) ) {
-        return new Partition( ).new Fake( config.getHostName( ), SystemCredentials.getCredentialProvider( Empyrean.class ).getKeyPair( ),
-                                          SystemCredentials.getCredentialProvider( Empyrean.class ).getCertificate( ) );
+        return new Partition( ).new Fake( config.getHostName( ), SystemCredentials.lookup( Empyrean.class ).getKeyPair( ),
+                                          SystemCredentials.lookup( Empyrean.class ).getCertificate( ) );
       } else if ( compId.isCloudLocal( ) ) {
-        return new Partition( ).new Fake( config.getHostName( ), SystemCredentials.getCredentialProvider( Eucalyptus.class ).getKeyPair( ),
-                                          SystemCredentials.getCredentialProvider( Eucalyptus.class ).getCertificate( ) );
+        return new Partition( ).new Fake( config.getHostName( ), SystemCredentials.lookup( Eucalyptus.class ).getKeyPair( ),
+                                          SystemCredentials.lookup( Eucalyptus.class ).getCertificate( ) );
       } else {
         if ( !compId.hasCredentials( ) ) {
           ComponentId p = ComponentIds.lookup( compId.getPartition( ) );
-          return new Partition( ).new Fake( compId.getPartition( ), SystemCredentials.getCredentialProvider( p ).getKeyPair( ),
-                                            SystemCredentials.getCredentialProvider( p ).getCertificate( ) );
+          return new Partition( ).new Fake( compId.getPartition( ), SystemCredentials.lookup( p ).getKeyPair( ),
+                                            SystemCredentials.lookup( p ).getCertificate( ) );
         } else {
-          return new Partition( ).new Fake( compId.getPartition( ), SystemCredentials.getCredentialProvider( compId ).getKeyPair( ),
-                                            SystemCredentials.getCredentialProvider( compId ).getCertificate( ) );
+          return new Partition( ).new Fake( compId.getPartition( ), SystemCredentials.lookup( compId ).getKeyPair( ),
+                                            SystemCredentials.lookup( compId ).getCertificate( ) );
         }
       }
     }

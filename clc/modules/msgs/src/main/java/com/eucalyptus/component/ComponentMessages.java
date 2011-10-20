@@ -63,10 +63,13 @@
 
 package com.eucalyptus.component;
 
+import java.lang.reflect.Modifier;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
+import com.eucalyptus.bootstrap.ServiceJarDiscovery;
+import com.eucalyptus.component.ComponentId.ComponentMessage;
 import com.eucalyptus.system.Ats;
 import com.eucalyptus.util.Classes;
 import com.google.common.base.Predicate;
@@ -106,6 +109,31 @@ public class ComponentMessages {
     @SuppressWarnings( "unchecked" )
     Class<? extends ComponentId> componentIdClass = Ats.from( componentMsg ).get( ComponentMessage.class ).value( );
     compIdMap.put( componentIdClass, componentMsg );
+  }
+  
+  public static class ComponentMessageDiscovery extends ServiceJarDiscovery {
+    
+    @Override
+    public boolean processClass( Class candidate ) throws Exception {
+      if ( BaseMessage.class.isAssignableFrom( candidate ) && Ats.from( candidate ).has( ComponentMessage.class )
+           && !Modifier.isAbstract( candidate.getModifiers( ) )
+           && !Modifier.isInterface( candidate.getModifiers( ) ) ) {
+        try {
+          ComponentMessages.register( candidate );
+        } catch ( Exception ex ) {
+          LOG.error( ex, ex );
+        }
+        return true;
+      } else {
+        return false;
+      }
+    }
+    
+    @Override
+    public Double getPriority( ) {
+      return 0.0d;
+    }
+    
   }
   
 }

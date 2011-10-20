@@ -63,15 +63,20 @@
 
 package com.eucalyptus.component.id;
 
-import java.util.ArrayList;
 import java.util.List;
 import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.ComponentId.GenerateKeys;
+import com.eucalyptus.component.ComponentId.Partition;
 import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.util.Internets;
-import com.eucalyptus.ws.StackConfiguration.Transport;
+import com.eucalyptus.ws.StackConfiguration.BasicTransport;
+import com.eucalyptus.ws.TransportDefinition;
+import com.google.common.collect.Lists;
 
-public class Database extends ComponentId.Unpartioned {
+@Partition( Eucalyptus.class )
+@GenerateKeys
+public class Database extends ComponentId {
   
   public Database( ) {
     super( "Db" );
@@ -88,32 +93,18 @@ public class Database extends ComponentId.Unpartioned {
   }
   
   @Override
-  public Boolean hasCredentials( ) {
-    return true;
-  }
-  
-  @Override
-  public List<Class<? extends ComponentId>> serviceDependencies( ) {
-    return new ArrayList( ) {
-      {
-        this.add( Eucalyptus.class );
-      }
-    };
-  }
-
-  @Override
   public String getServicePath( String... pathParts ) {
     return Databases.getServicePath( pathParts );
   }
-
+  
   @Override
   public String getInternalServicePath( String... pathParts ) {
     return this.getServicePath( pathParts );
   }
-
+  
   @Override
-  public Transport getTransport( ) {
-    return Transport.JDBC;
+  public List<? extends TransportDefinition> getTransports( ) {
+    return Lists.newArrayList( BasicTransport.JDBC );
   }
   
 }

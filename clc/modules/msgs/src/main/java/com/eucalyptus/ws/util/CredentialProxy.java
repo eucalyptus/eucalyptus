@@ -86,12 +86,12 @@ public class CredentialProxy implements Crypto {
 
   @Override
   public X509Certificate[] getCertificates( final String arg0 ) throws WSSecurityException {
-    return new X509Certificate[] { SystemCredentials.getCredentialProvider( this.componentId ).getCertificate( ) };
+    return new X509Certificate[] { SystemCredentials.lookup( this.componentId ).getCertificate( ) };
   }
 
   @Override
   public PrivateKey getPrivateKey( final String alias, final String password ) throws Exception {
-    return SystemCredentials.getCredentialProvider( this.componentId ).getPrivateKey( );
+    return SystemCredentials.lookup( this.componentId ).getPrivateKey( );
   }
 
   @Override public X509Certificate loadCertificate( final InputStream inputStream ) throws WSSecurityException { return null; }

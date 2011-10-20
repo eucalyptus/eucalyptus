@@ -454,7 +454,7 @@ public class EmpyreanService {
               ? true
                 : Internets.testLocal( input.getHostName( ) ) ) {
             return true;
-          } else if ( input.getComponentId( ).isUserService( ) ) {
+          } else if ( input.getComponentId( ).isPublicService( ) ) {
             return true;
           } else if ( input.getComponentId( ).isAdminService( ) ) {
             return true;

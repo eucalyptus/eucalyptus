@@ -270,7 +270,7 @@ public class Partition extends AbstractPersistent implements Comparable<Partitio
     if ( !keyDir.exists( ) && !keyDir.mkdir( ) ) {
       throw new RuntimeException( "Failed to create directory for partition credentials: " + this );
     }
-    X509Certificate systemX509 = SystemCredentials.getCredentialProvider( Eucalyptus.class ).getCertificate( );
+    X509Certificate systemX509 = SystemCredentials.lookup( Eucalyptus.class ).getCertificate( );
     FileWriter out = null;
     try {
       PEMFiles.write( keyDir.getAbsolutePath( ) + File.separator + "cluster-pk.pem", this.getPrivateKey( ) );

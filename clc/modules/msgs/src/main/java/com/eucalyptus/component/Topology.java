@@ -130,9 +130,6 @@ public class Topology implements EventListener<Event> {
     for ( final ComponentId c : ComponentIds.list( ) ) {
       this.componentFiltered.put( c.getClass( ), Maps.filterEntries( this.getServices( ), componentFilter( c.getClass( ) ) ) );
     }
-    for ( final Partition p : Partitions.list( ) ) {
-      this.partitionFiltered.put( p, Maps.filterEntries( this.getServices( ), partitionFilter( p ) ) );
-    }
   }
   
   private static Predicate<Entry<ServiceKey, ServiceConfiguration>> componentFilter( final Class<? extends ComponentId> compId ) {
@@ -144,11 +141,12 @@ public class Topology implements EventListener<Event> {
     };
   }
   
-  private static Predicate<Entry<ServiceKey, ServiceConfiguration>> partitionFilter( final Partition p ) {
-    return new Predicate<Entry<ServiceKey, ServiceConfiguration>>( ) {
+  private static Predicate<Partition> partitionFilter( final Partition p ) {
+    return new Predicate<Partition>( ) {
+
       @Override
-      public boolean apply( final Entry<ServiceKey, ServiceConfiguration> arg0 ) {
-        return p.equals( arg0.getKey( ).getPartition( ) );
+      public boolean apply( Partition input ) {
+        return p.equals( input );
       }
     };
   }
@@ -162,7 +160,7 @@ public class Topology implements EventListener<Event> {
       
       @Override
       public boolean apply( final ServiceConfiguration config ) {
-        if ( config.getComponentId( ).isUserService( ) ) {
+        if ( config.getComponentId( ).isPublicService( ) ) {
           return true;
         } else if ( config.getComponentId( ).isRootService( ) && !config.getComponentId( ).isPartitioned( ) ) {
           return true;

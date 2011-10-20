@@ -55,7 +55,7 @@ public class HttpTransfer {
 			method.setRequestHeader(StorageProperties.EUCALYPTUS_HEADER, eucaHeader);
 		}
 		try {
-			PrivateKey ccPrivateKey = SystemCredentials.getCredentialProvider(Storage.class).getPrivateKey();
+			PrivateKey ccPrivateKey = SystemCredentials.lookup(Storage.class).getPrivateKey();
 			Signature sign = Signature.getInstance("SHA1withRSA");
 			sign.initSign(ccPrivateKey);
 			sign.update(data.getBytes());

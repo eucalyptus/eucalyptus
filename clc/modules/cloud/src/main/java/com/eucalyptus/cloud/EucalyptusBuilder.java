@@ -13,11 +13,7 @@ import com.eucalyptus.bootstrap.Handles;
 import com.eucalyptus.bootstrap.SystemIds;
 import com.eucalyptus.component.AbstractServiceBuilder;
 import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.component.ComponentIds;
-import com.eucalyptus.component.Components;
-import com.eucalyptus.component.DiscoverableServiceBuilder;
-import com.eucalyptus.component.Faults;
-import com.eucalyptus.component.Faults.CheckException;
+import com.eucalyptus.component.ComponentId.ComponentPart;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.ServiceUris;
@@ -30,7 +26,7 @@ import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.Mbeans;
 import com.google.common.collect.ImmutableMap;
 
-@DiscoverableServiceBuilder( Eucalyptus.class )
+@ComponentPart( Eucalyptus.class )
 @Handles( { RegisterEucalyptusType.class, DeregisterEucalyptusType.class, DescribeEucalyptusType.class, EucalyptusConfiguration.class,
            ModifyEucalyptusAttributeType.class } )
 public class EucalyptusBuilder extends AbstractServiceBuilder<EucalyptusConfiguration> {
