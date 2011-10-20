@@ -3461,8 +3461,8 @@ int do_file_lock_test (void)
             errors = 0;
             close_and_unlock (fd1);
             _OPEN(fd1,F1,_C,0,-1);
-            _OPEN(fd1,F1,_W,300,-1);
-            _OPEN(fd1,F1,_R,3000,-1); 
+            _OPEN(fd1,F1,_W,30000,-1);
+            _OPEN(fd1,F1,_R,30000,-1); 
             _OPEN(fd1,F2,_C,0,0); // test unlocking upon exit
             _OPEN(fd2,F3,_C,0,0);
             _CLOS(fd2,F3);
@@ -3481,10 +3481,10 @@ int do_file_lock_test (void)
             errors = 0;
             close_and_unlock (fd2);
             close_and_unlock (fd3);
-            _OPEN(fd2,F2,_W,300,-1);
+            _OPEN(fd2,F2,_W,30000,-1);
             _OPEN(fd2,F2,_R,0,0);
-            _OPEN(fd3,F2,_W,300,-1);
-            _OPEN(fd3,F3,_W,3000,-1);
+            _OPEN(fd3,F2,_W,30000,-1);
+            _OPEN(fd3,F3,_W,30000,-1);
             _exit (errors);
         }
         _CLOS(fd3,F3);
