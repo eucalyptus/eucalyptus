@@ -299,9 +299,9 @@ public class ServiceContextManager {
         try {
           final String serviceModel = this.loadModel( componentId );
           final String outString = Templates.prepare( componentId.getServiceModelFileName( ) )
-                                      .withProperty( "components", currentComponentIds )
-                                      .withProperty( "thisComponent", componentId )
-                                      .evaluate( serviceModel );
+                                            .withProperty( "components", currentComponentIds )
+                                            .withProperty( "thisComponent", componentId )
+                                            .evaluate( serviceModel );
           final ConfigResource configRsc = createConfigResource( componentId, outString );
           configs.add( configRsc );
         } catch ( final Exception ex ) {
@@ -346,6 +346,9 @@ public class ServiceContextManager {
   public static MuleClient getClient( ) throws MuleException {
     singleton.canHasRead.lock( );
     try {
+      if ( singleton.context == null ) {
+        singleton.update( );
+      }
       return singleton.client;
     } finally {
       singleton.canHasRead.unlock( );
