@@ -114,6 +114,7 @@ static configEntry configKeysRestart[] = {
   {"CC_IMAGE_PROXY_CACHE_SIZE", "32768"},
   {"CC_IMAGE_PROXY_PATH", "$EUCALYPTUS/var/lib/eucalyptus/dynserv/"},
   {"LOGLEVEL", "DEBUG"},
+  {"LOGROLLNUMBER", "4"},
   {NULL, NULL}
 };
 static configEntry configKeysNoRestart[] = {
