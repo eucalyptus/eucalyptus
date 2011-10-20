@@ -341,7 +341,7 @@ public class PostgresqlBootstrapper extends Bootstrapper.Simple implements Datab
 		}
 	}
 
-	public boolean isRunning() throws Exception {
+	public boolean isRunning() {
 
 		String chmodCmd = "/bin/chmod -R 700 " + EUCA_DB_DIR;
 

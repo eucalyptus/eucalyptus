@@ -83,6 +83,7 @@ import com.eucalyptus.component.Component;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
+import com.eucalyptus.component.Faults;
 import com.eucalyptus.component.LifecycleEvents;
 import com.eucalyptus.component.ServiceBuilder;
 import com.eucalyptus.component.ServiceChecks;
@@ -160,17 +161,13 @@ public class ServiceBootstrapper extends Bootstrapper {
       
       @Override
       public boolean apply( final ServiceConfiguration config ) {
-        final Component comp = config.lookupComponent( );
         LOG.debug( "load(): " + config );
         try {
-          comp.loadService( config ).get( );
+          Components.lookup( config ).loadService( config );
+          ServiceTransitions.pathTo( config, Component.State.LOADED ).get( );
           return true;
-        } catch ( ServiceRegistrationException ex ) {
-          LifecycleEvents.fireExceptionEvent( config, ServiceChecks.Severity.ERROR, ex );
-          return false;
         } catch ( Exception ex ) {
-          Exceptions.trace( "load(): Building service failed: " + Components.describe( comp ), ex );
-          LifecycleEvents.fireExceptionEvent( config, ServiceChecks.Severity.ERROR, ex );
+          Faults.failure( config, ex );
           return false;
         }
       }
@@ -184,7 +181,6 @@ public class ServiceBootstrapper extends Bootstrapper {
       
       @Override
       public boolean apply( final ServiceConfiguration config ) {
-        final Component comp = config.lookupComponent( );
         ServiceBootstrapWorker.submit( new Runnable( ) {
           @Override
           public void run( ) {
@@ -216,17 +212,12 @@ public class ServiceBootstrapper extends Bootstrapper {
     for ( final ComponentId compId : ComponentIds.list( ) ) {
       Component comp = Components.lookup( compId );
       if ( compId.isRegisterable( ) ) {
-        ServiceBuilder<? extends ServiceConfiguration> builder = comp.getBuilder( );
-        try {
-          for ( ServiceConfiguration config : Iterables.filter( builder.list( ), ShouldLoad.INSTANCE ) ) {
-            try {
-              predicate.apply( config );
-            } catch ( Exception ex ) {
-              LOG.error( ex, ex );
-            }
+        for ( ServiceConfiguration config : Iterables.filter( ServiceConfigurations.list( compId.getClass( ) ), ShouldLoad.INSTANCE ) ) {
+          try {
+            predicate.apply( config );
+          } catch ( Exception ex ) {
+            LOG.error( ex, ex );
           }
-        } catch ( ServiceRegistrationException ex ) {
-          LOG.error( ex, ex );
         }
       } else if ( comp.hasLocalService( ) ) {
         final ServiceConfiguration config = comp.getLocalServiceConfiguration( );

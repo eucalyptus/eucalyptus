@@ -1,5 +1,5 @@
 /*******************************************************************************
- *Copyright (c) 2009  Eucalyptus Systems, Inc.
+ * Copyright (c) 2009  Eucalyptus Systems, Inc.
  * 
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -53,61 +53,83 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
- *******************************************************************************/
-/*
- * Author: chris grzegorczyk <grze@eucalyptus.com>
+ *******************************************************************************
+ * @author chris grzegorczyk <grze@eucalyptus.com>
  */
-package com.eucalyptus.cluster.callback;
 
-import java.util.Date;
-import org.apache.log4j.Logger;
-import org.bouncycastle.util.encoders.Base64;
-import com.eucalyptus.context.Contexts;
-import com.eucalyptus.util.LogUtil;
-import com.eucalyptus.util.async.MessageCallback;
-import com.eucalyptus.vm.VmInstance;
-import com.eucalyptus.vm.VmInstances;
-import edu.ucsb.eucalyptus.msgs.GetConsoleOutputResponseType;
-import edu.ucsb.eucalyptus.msgs.GetConsoleOutputType;
+package com.eucalyptus.bootstrap;
 
-public class ConsoleOutputCallback extends MessageCallback<GetConsoleOutputType,GetConsoleOutputResponseType> {
+import com.eucalyptus.ws.EmpyreanService;
+
+public interface CanBootstrap {
   
-  private static Logger LOG = Logger.getLogger( ConsoleOutputCallback.class );
-  private final String correlationId;
-  public ConsoleOutputCallback( GetConsoleOutputType msg ) {
-    super( msg );
-    this.correlationId = msg.getCorrelationId( );
-  }
+  /**
+   * Check the status of the bootstrapped resource.
+   * 
+   * @note Intended for future use. May become {@code abstract}.
+   * @return true when all is clear
+   * @throws Exception should contain detail any malady which may be present.
+   */
+  public abstract boolean check( ) throws Exception;
   
-  @Override
-  public void initialize( GetConsoleOutputType msg )  {}
+  /**
+   * Initiate a forced shutdown releasing all used resources and effectively unloading the this
+   * bootstrapper.
+   * 
+   * @note Intended for future use. May become {@code abstract}.
+   * @throws Exception
+   */
+  public abstract void destroy( ) throws Exception;
   
-  @Override
-  public void fire( GetConsoleOutputResponseType reply )  {
-    VmInstance vm = VmInstances.lookup( this.getRequest( ).getInstanceId( ) );
-    String output = null;
-    try {
-      output = new String( Base64.decode( reply.getOutput( ).getBytes( ) ) );
-//for rolling serial we needed this...      if ( !"EMPTY".equals( output ) ) vm.getConsoleOutput( ).append( output );
-      if ( !"EMPTY".equals( output ) ) vm.setConsoleOutput( new StringBuffer().append( output ) );
-    } catch ( ArrayIndexOutOfBoundsException e1 ) {}
-    reply.setCorrelationId( this.correlationId );
-    reply.setInstanceId( this.getRequest( ).getInstanceId( ) );
-    reply.setTimestamp( new Date( ) );
-    reply.setOutput( vm.getConsoleOutputString( ) );
-    LOG.debug( reply.toSimpleString( ) );
-    Contexts.response( reply );
-  }
-
-
-  @Override
-  public void fireException( Throwable e ) {
-    LOG.debug( LogUtil.subheader( this.getRequest( ).toString( "eucalyptus_ucsb_edu" ) ) );
-    LOG.debug( e, e );
-  }
+  /**
+   * Enter an idle/passive state.
+   * 
+   * @return
+   * @throws Exception
+   */
+  public abstract boolean disable( ) throws Exception;
+  
+  /**
+   * Perform the enable phase of bootstrap -- this occurs when the service associated with this
+   * bootstrapper is made active and should bring the resource to an active operational state.
+   * 
+   * @return
+   * @throws Exception
+   */
+  public abstract boolean enable( ) throws Exception;
+  
+  /**
+   * Perform the {@link SystemBootstrapper#load()} phase of bootstrap.
+   * NOTE: The only code which can execute with uid=0 runs during the
+   * {@link EmpyreanService.Stage.PrivilegedConfiguration} stage of the {@link #load()} phase.
+   * 
+   * @see SystemBootstrapper#load()
+   * @return true on successful completion
+   * @throws Exception
+   */
+  public abstract boolean load( ) throws Exception;
+  
+  /**
+   * Perform the {@link SystemBootstrapper#start()} phase of bootstrap.
+   * 
+   * @see SystemBootstrapper#start()
+   * @return true on successful completion
+   * @throws Exception
+   */
+  
+  public abstract boolean start( ) throws Exception;
+  
+  /**
+   * Initiate a graceful shutdown
+   * 
+   * @note Intended for future use. May become {@code abstract}.
+   * @return true on successful completion
+   * @throws Exception
+   */
+  public abstract boolean stop( ) throws Exception;
   
 }

@@ -9,6 +9,7 @@ import com.eucalyptus.component.ComponentDiscovery
 import com.eucalyptus.component.ServiceBuilder
 import com.eucalyptus.component.ServiceBuilders
 import com.eucalyptus.component.ServiceConfiguration
+import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.ServiceUris
 import com.eucalyptus.component.ServiceBuilders.ServiceBuilderDiscovery
 import com.eucalyptus.component.auth.SystemCredentials
@@ -71,7 +72,8 @@ try {
     }
     if( BootstrapArgs.isInitializeSystem( ) ) {
       ServiceBuilder sb = ServiceBuilders.lookup( Eucalyptus.class );
-      final ServiceConfiguration newComponent = sb.add( Eucalyptus.INSTANCE.name( ), Internets.localHostAddress( ), Internets.localHostAddress( ), 8773 );
+      final ServiceConfiguration newComponent = sb.newInstance( Eucalyptus.INSTANCE.name( ), Internets.localHostAddress( ), Internets.localHostAddress( ), 8773 );
+      ServiceConfigurations.store( newComponent );
       LOG.info( "Added registration for this cloud controller: " + newComponent.toString() );
     }
     Databases.getBootstrapper( ).destroy( );

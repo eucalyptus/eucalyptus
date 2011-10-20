@@ -67,8 +67,8 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.InetAddress;
+import java.util.Collection;
 import java.util.Collections;
-import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -111,6 +111,7 @@ import com.eucalyptus.scripting.Groovyness;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Internets;
 import com.google.common.base.Function;
+import com.google.common.base.Functions;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
@@ -120,21 +121,105 @@ import com.google.common.collect.Lists;
 
 @ConfigurableClass( root = "bootstrap.hosts", description = "Properties controlling the handling of remote host bootstrapping" )
 public class Hosts {
+  public static Boolean isCoordinator( ) {
+    if ( BootstrapArgs.isCloudController( ) ) {
+      try {
+        Host localHost = Hosts.localHost( );
+        for ( Host h : Hosts.listDatabases( ) ) {
+          if ( !h.equals( localHost ) && h.getStartedTime( ) > localHost.getStartedTime( ) ) {
+            return false;
+          }
+        }
+      } catch ( Exception ex ) {
+        LOG.error( ex, ex );
+      }
+      return true;
+    } else {
+      return false;
+    }
+  }
+  
+  public @interface HostAdded {
+    Class[] value( ) default {};
+    
+    boolean failStop( ) default false;
+  }
+  
+  public @interface HostUpdated {
+    Class[] value( ) default {};
+    
+    boolean failStop( ) default false;
+  }
+  
+  public @interface HostRemoved {
+    Class[] value( ) default {};
+    
+    boolean failStop( ) default false;
+  }
+  
   @ConfigurableField( description = "Timeout for state transfers (in msec).", readonly = true )
   public static final Long                       STATE_TRANSFER_TIMEOUT   = 10000L;
   @ConfigurableField( description = "Timeout for state initialization (in msec).", readonly = true )
   public static final Long                       STATE_INITIALIZE_TIMEOUT = 30000L;
   private static final Logger                    LOG                      = Logger.getLogger( Hosts.class );
-  private static final AtomicBoolean             initialized              = new AtomicBoolean( false );
   private static ReplicatedHashMap<String, Host> hostMap;
   
-  enum ShouldLoadRemote implements Predicate<ComponentId> {
+  enum HostEpoch implements Function<Host, Integer> {
     INSTANCE;
     @Override
-    public boolean apply( final ComponentId input ) {
-      return Eucalyptus.INSTANCE.isCloudLocal( ) && !input.isRegisterable( );
+    public Integer apply( final Host arg0 ) {
+      return arg0.getEpoch( );
     }
-  };
+  }
+  
+  public static Predicate<ComponentId> addressPredicate( final InetAddress addr ) {
+    return new Predicate<ComponentId>( ) {
+      
+      @Override
+      public boolean apply( ComponentId input ) {
+        return !Internets.testLocal( addr ) && !Internets.testReachability( addr );
+      }
+    };
+  }
+  
+  private static Function<ComponentId, ServiceConfiguration> initRemoteSetupConfigurations( final InetAddress addr ) {
+    return new Function<ComponentId, ServiceConfiguration>( ) {
+      
+      @Override
+      public ServiceConfiguration apply( ComponentId input ) {
+        final ServiceConfiguration config = Components.lookup( input ).initRemoteService( addr );
+        LOG.info( "Initialized remote service: " + config.getFullName( ) );
+        return config;
+      }
+    };
+  }
+  
+  enum SetupRemoteServiceConfigurations implements Function<ServiceConfiguration, ServiceConfiguration> {
+    INSTANCE;
+    @Override
+    public ServiceConfiguration apply( ServiceConfiguration input ) {
+      try {
+        ServiceConfiguration conf = ServiceTransitions.pathTo( input, Component.State.DISABLED ).get( );
+        LOG.info( "Initialized service: " + conf.getFullName( ) );
+        return conf;
+      } catch ( ExecutionException ex ) {
+        Exceptions.trace( ex.getCause( ) );
+      } catch ( InterruptedException ex ) {
+        Thread.currentThread( ).interrupt( );
+        Exceptions.trace( ex.getCause( ) );
+      }
+      return input;
+    }
+  }
+  
+  public static Predicate<ComponentId> shouldLoadRemote( final Class<? extends ComponentId> compId ) {
+    return new Predicate<ComponentId>( ) {
+      @Override
+      public boolean apply( final ComponentId input ) {
+        return input.serviceDependencies( ).contains( compId ) && !input.isRegisterable( );
+      }
+    };
+  }
   
   enum HostBootstrapEventListener implements EventListener<Hertz> {
     INSTANCE;
@@ -142,18 +227,8 @@ public class Hosts {
     @Override
     public void fireEvent( final Hertz event ) {
       final Host currentHost = Hosts.localHost( );
-      if ( !BootstrapArgs.isCloudController( ) && currentHost.hasDatabase( ) ) {
-        Hosts.localCloudInitialize( );
-      } else if ( event.isAsserted( 5L ) ) {
-        final Host maybeDirty = currentHost.checkDirty( );
-        if ( !maybeDirty.getLastTime( ).equals( currentHost.getTimestamp( ).getTime( ) ) ) {
-          hostMap.replace( maybeDirty.getDisplayName( ), currentHost, maybeDirty );
-          LOG.info( "Updated local host information:   " + localHost( ) );
-        } else {
-          hostMap.replace( Hosts.localHost( ).getDisplayName( ), Hosts.localHost( ) );
-          LOG.info( "Replacing local host information: " + localHost( ) );
-        }
-      }
+      InitializeAsCloudController.INSTANCE.apply( currentHost );
+      UpdateEntry.INSTANCE.apply( currentHost );
     }
   }
   
@@ -184,12 +259,16 @@ public class Hosts {
     public void entrySet( final String arg0, final Host arg1 ) {
       LOG.info( "Hosts.entryAdded(): " + arg0 + " => " + arg1 );
       LOG.info( "Hosts.entryAdded(): " + hostMap.keySet( ) );
-      if ( !BootstrapArgs.isCloudController( ) && arg1.isLocalHost( ) && arg1.hasDatabase( ) ) {
-        Hosts.localCloudInitialize( );
-      } else if ( !BootstrapArgs.isCloudController( ) && !arg1.isLocalHost( ) && arg1.hasDatabase( ) && initialized.compareAndSet( false, true ) ) {
-        Hosts.remoteBootstrap( arg1 );
-      } else if ( BootstrapArgs.isCloudController( ) ) {
-        Hosts.remoteCloudInitialize( arg1 );
+      if ( AdvertiseToRemoteCloudController.INSTANCE.apply( arg1 ) ) {
+        LOG.info( "Hosts.entryAdded(): Marked as database  => " + arg1 );
+      } else if ( InitializeAsCloudController.INSTANCE.apply( arg1 ) ) {
+        LOG.info( "Hosts.entryAdded(): Initialized as clc  => " + arg1 );
+      } else if ( BootstrapRemoteComponent.INSTANCE.apply( arg1 ) ) {
+        LOG.info( "Hosts.entryAdded(): Bootstrapping host  => " + arg1 );
+      } else if ( arg1.hasBootstrapped( ) ) {
+        LOG.info( "Hosts.entryAdded(): Host is operational => " + arg1 );
+      } else {
+        LOG.info( "Hosts.entryAdded(): Wait for bootstrap  => " + arg1 );
       }
     }
     
@@ -212,39 +291,125 @@ public class Hosts {
     
   }
   
-  private static void remoteBootstrap( final Host arg1 ) {
-    setup( Empyrean.class, arg1.getBindAddress( ) );
-    if ( arg1.hasDatabase( ) ) {
-      setup( Eucalyptus.class, arg1.getBindAddress( ) );
+  enum BootstrapRemoteComponent implements Predicate<Host> {
+    INSTANCE;
+    private static final AtomicBoolean initialized = new AtomicBoolean( false );
+    
+    @Override
+    public boolean apply( final Host arg1 ) {
+      doBootstrap( arg1, Empyrean.class );
+      if ( !BootstrapArgs.isCloudController( ) && !arg1.isLocalHost( ) && arg1.hasDatabase( ) && initialized.compareAndSet( false, true ) ) {
+        doBootstrap( arg1, Eucalyptus.class );
+      }
     }
+    
+    private static void doBootstrap( final Host arg1, final Class<? extends ComponentId> compId ) {
+      try {
+        Predicate<ComponentId> filter = Predicates.and( shouldLoadRemote( compId ), addressPredicate( arg1.getBindAddress( ) ) );
+        Collection<? extends ComponentId> deps = Collections2.filter( ComponentIds.list( ), filter );
+        Function<ComponentId, ServiceConfiguration> initFunction = Functions.compose( SetupRemoteServiceConfigurations.INSTANCE,
+                                                                                      initRemoteSetupConfigurations( arg1.getBindAddress( ) ) );
+        initFunction.apply( Eucalyptus.INSTANCE );
+        Iterables.transform( deps, initFunction );
+      } catch ( Exception ex ) {
+        LOG.error( ex, ex );
+      }
+    }
+    
   }
   
-  private static void remoteCloudInitialize( final Host arg1 ) {
-    if ( !Bootstrap.isFinished( ) ) return;
-    try {
-      final ServiceConfiguration maybeConfig = ServiceConfigurations.lookupByHost( Eucalyptus.class, arg1.getBindAddress( ).getCanonicalHostName( ) );
-      arg1.markDatabase( );
-      hostMap.replace( arg1.getDisplayName( ), arg1 );
-      LOG.info( "Hosts.entryAdded(): Marked as database => " + arg1 );
-    } catch ( final Exception ex ) {
-      if ( Exceptions.causedBy( ex, NoSuchElementException.class ) != null ) {
-        Logs.extreme( ).error( ex, ex );
+  enum CheckStale implements Predicate<Host> {
+    INSTANCE;
+    
+    @Override
+    public boolean apply( Host input ) {
+      Host that = new Host( input.getStartedTime( ) );
+      if ( !input.isLocalHost( ) ) {
+        return false;
+      } else if ( that.hasBootstrapped( ) && !input.hasBootstrapped( ) ) {
+        return true;
+      } else if ( that.hasDatabase( ) && !input.hasDatabase( ) ) {
+        return true;
+      } else if ( that.getEpoch( ) > input.getEpoch( ) ) {
+        return true;
+      } else if ( !that.getHostAddresses( ).equals( input.getHostAddresses( ) ) ) {
+        return true;
+      } else {
+        input.stateUpdate( );
+        return false;
       }
     }
   }
   
-  private static void localCloudInitialize( ) {
-    try {
-      hostMap.stop( );
-    } catch ( Exception ex1 ) {
-      LOG.error( ex1, ex1 );
+  public enum UpdateEntry implements Predicate<Host> {
+    INSTANCE;
+    
+    @Override
+    public boolean apply( Host input ) {
+      if ( input.isLocalHost( ) ) {
+        if ( CheckStale.INSTANCE.apply( input ) ) {
+          Host newHost = new Host( input.getStartedTime( ) );
+          Host oldHost = hostMap.replace( newHost.getDisplayName( ), newHost );
+          LOG.info( "Updated local host information:   " + localHost( ) );
+        } else {
+          if ( hostMap.putIfAbsent( input.getDisplayName( ), input ) == null ) {
+            LOG.info( "Inserted local host information: " + localHost( ) );
+          }
+        }
+      }
+      return true;
     }
-    try {
-      Bootstrap.initializeSystem( );
-      System.exit( 123 );
-    } catch ( final Exception ex ) {
-      System.exit( 123 );
+  }
+  
+  @HostUpdated
+  public enum AdvertiseToRemoteCloudController implements Predicate<Host> {
+    INSTANCE;
+    
+    @Override
+    public boolean apply( Host arg1 ) {
+      if ( !Bootstrap.isFinished( ) || !BootstrapArgs.isCloudController( ) || arg1.isLocalHost( ) ) {
+        return false;
+      } else {
+        try {
+          if ( !Internets.testLocal( arg1.getBindAddress( ) ) ) {
+            ServiceConfigurations.lookupByHost( Eucalyptus.class, arg1.getBindAddress( ).getCanonicalHostName( ) );
+            arg1.markDatabase( );
+            hostMap.replace( arg1.getDisplayName( ), arg1 );
+            LOG.info( "Hosts.entryAdded(): Marked as database => " + arg1 );
+          }
+        } catch ( final Exception ex ) {
+          if ( Exceptions.causedBy( ex, NoSuchElementException.class ) == null ) {
+            Logs.extreme( ).error( ex, ex );
+          }
+        }
+        return true;
+      }
     }
+    
+  }
+  
+  @HostUpdated
+  public enum InitializeAsCloudController implements Predicate<Host> {
+    INSTANCE;
+    
+    @Override
+    public boolean apply( Host input ) {
+      if ( !BootstrapArgs.isCloudController( ) && input.isLocalHost( ) && input.hasDatabase( ) ) {
+        try {
+          hostMap.stop( );
+        } catch ( Exception ex1 ) {
+          LOG.error( ex1, ex1 );
+        }
+        try {
+          Bootstrap.initializeSystem( );
+          System.exit( 123 );
+        } catch ( final Exception ex ) {
+          System.exit( 123 );
+        }
+      }
+      return true;
+    }
+    
   }
   
   public static Address getLocalGroupAddress( ) {
@@ -257,8 +422,18 @@ public class Hosts {
       return false;
     } else {
       try {
+        try {
+          final ServiceConfiguration config = Components.lookup( compClass ).initRemoteService( addr );
+          ServiceConfiguration conf = ServiceTransitions.pathTo( config, Component.State.DISABLED ).get( );
+          LOG.info( "Initialized service: " + conf.getFullName( ) );
+          return conf;
+        } catch ( final InterruptedException ex ) {
+          Thread.currentThread( ).interrupt( );
+          throw Exceptions.toUndeclared( ex );
+        }
+        
         setupServiceState( compClass, addr );
-        for ( final ComponentId c : Iterables.filter( ComponentIds.list( ), ShouldLoadRemote.INSTANCE ) ) {
+        for ( final ComponentId c : Iterables.filter( ComponentIds.list( ), shouldLoadRemote( compClass ) ) ) {
           try {
             setupServiceState( c.getClass( ), addr );
           } catch ( final Exception ex ) {
@@ -292,21 +467,6 @@ public class Hosts {
         return false;
       }
       return true;
-    }
-  }
-  
-  private static void setupServiceState( final Class<? extends ComponentId> compClass, final InetAddress addr ) throws ServiceRegistrationException, ExecutionException {
-    try {
-      final Component comp = Components.lookup( compClass );
-      final ServiceConfiguration config = ( Internets.testLocal( addr ) )
-        ? comp.initRemoteService( addr )
-        : comp.initRemoteService( addr );//TODO:GRZE:REVIEW: use of initRemote
-      if ( Component.State.INITIALIZED.ordinal( ) >= config.lookupState( ).ordinal( ) ) {
-        ServiceTransitions.pathTo( config, Component.State.DISABLED ).get( );
-      }
-      Topology.enable( config );
-    } catch ( final InterruptedException ex ) {
-      Thread.currentThread( ).interrupt( );
     }
   }
   
@@ -469,13 +629,7 @@ public class Hosts {
   
   public static int maxEpoch( ) {
     try {
-      return Collections.max( Collections2.transform( hostMap.values( ), new Function<Host, Integer>( ) {
-        
-        @Override
-        public Integer apply( final Host arg0 ) {
-          return arg0.getEpoch( );
-        }
-      } ) );
+      return Collections.max( Collections2.transform( hostMap.values( ), HostEpoch.INSTANCE ) );
     } catch ( final Exception ex ) {
       return 0;
     }

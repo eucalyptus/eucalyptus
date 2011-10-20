@@ -72,15 +72,10 @@ import com.eucalyptus.empyrean.Empyrean;
 
 @Provides( Empyrean.class )
 @RunDuring( Bootstrap.Stage.CloudServiceInit )
-public class ServiceContextBootstrapper extends Bootstrapper {
+public class ServiceContextBootstrapper extends Bootstrapper.Simple {
   private static Logger LOG = Logger.getLogger( ServiceContextBootstrapper.class );
   
   public ServiceContextBootstrapper( ) {}
-  
-  @Override
-  public boolean load( ) throws Exception {
-    return true;
-  }
   
   @Override
   public boolean start( ) throws Exception {
@@ -92,43 +87,4 @@ public class ServiceContextBootstrapper extends Bootstrapper {
       throw ex;
     }
   }
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#enable()
-   */
-  @Override
-  public boolean enable( ) throws Exception {
-    return true;
-  }
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#stop()
-   */
-  @Override
-  public boolean stop( ) throws Exception {
-    return true;
-  }
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#destroy()
-   */
-  @Override
-  public void destroy( ) throws Exception {}
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#disable()
-   */
-  @Override
-  public boolean disable( ) throws Exception {
-    return true;
-  }
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#check()
-   */
-  @Override
-  public boolean check( ) throws Exception {
-    return true;
-  }
-  
 }

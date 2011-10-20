@@ -4,14 +4,10 @@ import java.util.NoSuchElementException;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.Components;
-import com.eucalyptus.component.NoSuchServiceException;
 import com.eucalyptus.component.Partitions;
-import com.eucalyptus.component.Service;
 import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.ServiceEndpoint;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.Logs;
@@ -134,7 +130,14 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
   @Override
   public CheckedListenableFuture<R> dispatch( final ServiceConfiguration serviceConfig ) {
     try {
-      serviceConfig.lookupService( ).enqueue( this );
+      Callable<CheckedListenableFuture<R>> call = new Callable<CheckedListenableFuture<R>>( ) {
+        
+        @Override
+        public CheckedListenableFuture<R> call( ) throws Exception {
+          return AsyncRequest.this.execute( serviceConfig ).getResponse( );
+        }
+      };
+      Threads.enqueue( serviceConfig, call );
       return this.getResponse( );
     } catch ( Exception ex1 ) {
       Future<CheckedListenableFuture<R>> res = Threads.lookup( Empyrean.class, AsyncRequest.class, serviceConfig.getFullName( ).toString( ) ).limitTo( NUM_WORKERS ).submit( new Callable<CheckedListenableFuture<R>>( ) {
@@ -157,7 +160,6 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
   }
   
   /**
-   * @see com.eucalyptus.util.async.Request#sendSync(com.eucalyptus.component.ServiceEndpoint)
    * @param endpoint
    * @return
    * @throws ExecutionException

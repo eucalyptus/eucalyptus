@@ -42,12 +42,12 @@ public class ServiceStateCallback extends SubjectMessageCallback<Cluster, Descri
             throw new IllegalStateException( ex );
           } else if ( Component.State.NOTREADY.equals( localState )
                       && Component.State.NOTREADY.ordinal( ) < serviceState.ordinal( ) ) {
-            LifecycleEvents.fireExceptionEvent( this.getSubject( ).getConfiguration( ), ServiceChecks.Severity.DEBUG, ex );
+//            LifecycleEvents.fireExceptionEvent( this.getSubject( ).getConfiguration( ), ServiceChecks.Severity.DEBUG, ex );
             this.getSubject( ).clearExceptions( );
           } else if ( Component.State.ENABLED.equals( serviceState ) && Component.State.DISABLED.equals( proxyState ) ) {
             throw new IllegalStateException( ex );
           } else {
-            LifecycleEvents.fireExceptionEvent( this.getSubject( ).getConfiguration( ), ServiceChecks.Severity.INFO, ex );
+//            LifecycleEvents.fireExceptionEvent( this.getSubject( ).getConfiguration( ), ServiceChecks.Severity.INFO, ex );
           }
         } else {
           LOG.error( "Found information for unknown service: " + status );

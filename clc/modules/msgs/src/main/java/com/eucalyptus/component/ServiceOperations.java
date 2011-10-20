@@ -77,7 +77,6 @@ import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.bootstrap.ServiceJarDiscovery;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
-import com.eucalyptus.context.ServiceContext;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Ats;
@@ -150,10 +149,10 @@ public class ServiceOperations {
             Contexts.threadLocal( ctx );
             try {
               final O reply = op.apply( request );
-              ServiceContext.response( request );
+              Contexts.response( request );
             } catch ( final Exception ex ) {
               Logs.extreme( ).error( ex, ex );
-              ServiceContext.responseError( request.getCorrelationId( ), ex );
+              Contexts.responseError( request.getCorrelationId( ), ex );
             } finally {
               Contexts.removeThreadLocal( );
             }

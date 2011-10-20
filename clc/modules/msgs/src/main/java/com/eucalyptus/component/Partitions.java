@@ -66,18 +66,22 @@ package com.eucalyptus.component;
 import java.io.File;
 import java.security.KeyPair;
 import java.security.cert.X509Certificate;
+import java.util.List;
 import java.util.NavigableSet;
 import java.util.NoSuchElementException;
+import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
-import com.eucalyptus.component.Partition.Fake;
 import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.crypto.Certs;
 import com.eucalyptus.empyrean.Empyrean;
+import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.entities.TransactionException;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.SubDirectory;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.Exceptions;
 
 public class Partitions {
   static Logger         LOG                 = Logger.getLogger( Partitions.class );
@@ -106,28 +110,36 @@ public class Partitions {
       return false;
     }
   }
-
-  public static Partition lookupByName( String partitionName ) throws NoSuchElementException {
-    EntityWrapper<Partition> db = EntityWrapper.get( Partition.class );
+  
+  public static Partition lookupByName( String partitionName ) {
+    EntityTransaction db = Entities.get( Partition.class );
     Partition p = null;
     try {
-      p = db.getUnique( Partition.newInstanceNamed( partitionName ) );
+      p = Entities.uniqueResult( Partition.newInstanceNamed( partitionName ) );
       db.commit( );
       return p;
-    } catch ( EucalyptusCloudException ex1 ) {
+    } catch ( TransactionException ex ) {
       db.rollback( );
-      throw new NoSuchElementException( "Failed to lookup partition for " + partitionName );
+      throw new NoSuchElementException( "Failed to lookup partition for " + partitionName + " because of: " + ex.getMessage( ) );
+    } catch ( RuntimeException ex ) {
+      db.rollback( );
+      throw ex;
     }
   }
   
-  public static Partition lookup( final ServiceConfiguration config ) throws ServiceRegistrationException {
+  public static Partition lookup( final ServiceConfiguration config ) {
     if ( config.getComponentId( ).isPartitioned( ) && config.getComponentId( ).isRegisterable( ) ) {
       Partition p;
       try {
         p = Partitions.lookupByName( config.getPartition( ) );
       } catch ( NoSuchElementException ex ) {
         LOG.warn( "Failed to lookup partition for " + config + ".  Generating new partition configuration." );
-        p = Partitions.generatePartition( config );
+        try {
+          p = Partitions.generatePartition( config );
+        } catch ( ServiceRegistrationException ex1 ) {
+          LOG.error( ex1, ex1 );
+          throw Exceptions.toUndeclared( ex1 );
+        }
       }
       return p;
     } else if ( config.getComponentId( ).isPartitioned( ) ) {
@@ -181,21 +193,25 @@ public class Partitions {
     }
   }
   
+  /**
+   * @deprecated
+   * @see Topology#lookup(Class, Partition...)
+   */
   @Deprecated
   public static <T extends ServiceConfiguration> T lookupService( Class<? extends ComponentId> compClass, String partition ) {
     return lookupService( compClass, Partitions.lookupByName( partition ) );
   }
-
-  @SuppressWarnings("unchecked")
-  public static  <T extends ServiceConfiguration> T lookupService( Class<? extends ComponentId> compClass, Partition partition ) {
-    NavigableSet<ServiceConfiguration> services = Components.lookup( compClass ).enabledPartitionServices( partition );
-    if ( services.isEmpty( ) ) {
-      throw new NoSuchElementException( "Failed to find service of type: " + compClass.getSimpleName( ) + " in partition: " + partition );
-    } else {
-      return (T) services.first( );
-    }
+  
+  /**
+   * @deprecated
+   * @see Topology#lookup(Class, Partition...)
+   */
+  @SuppressWarnings( "unchecked" )
+  @Deprecated
+  public static <T extends ServiceConfiguration> T lookupService( Class<? extends ComponentId> compClass, Partition partition ) {
+    return ( T ) Topology.lookup( compClass, partition );
   }
-
+  
   public static Partition lookupInternal( final ServiceConfiguration config ) {
     ComponentId compId = config.getComponentId( );
     if ( compId.isPartitioned( ) ) {
@@ -219,5 +235,21 @@ public class Partitions {
       }
     }
   }
-
+  
+  /**
+   * @return
+   * @return
+   */
+  public static List<Partition> list( ) {
+    EntityTransaction db = Entities.get( Partition.class );
+    try {
+      List<Partition> entities = Entities.query( new Partition( ) );
+      db.commit( );
+      return entities;
+    } catch ( RuntimeException ex ) {
+      db.rollback( );
+      throw ex;
+    }
+  }
+  
 }

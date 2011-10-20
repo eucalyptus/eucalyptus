@@ -106,12 +106,10 @@ public enum SystemChecksHandler implements ChannelUpstreamHandler {
       if ( msg != null ) {
         try {
           Class<? extends ComponentId> compClass = ComponentMessages.lookup( msg );
-          ComponentId compId = ComponentIds.lookup( compClass );
-          Component comp = Components.lookup( compId );
-          if ( comp.isEnabledLocally( ) ) {
+          if ( Topology.isEnabledLocally( compClass ) ) {
             ctx.sendUpstream( e );
           } else {
-            this.sendError( ctx, e, comp, request.getServicePath( ) );
+            this.sendError( ctx, e, compClass, request.getServicePath( ) );
           }
         } catch ( NoSuchElementException ex ) {
           LOG.warn( "Failed to find reverse component mapping for message type: " + msg.getClass( ) );
@@ -140,9 +138,7 @@ public enum SystemChecksHandler implements ChannelUpstreamHandler {
             ctx.sendUpstream( e );
           } else {
             Class<? extends ComponentId> compClass = ComponentMessages.lookup( msg );
-            ComponentId compId = ComponentIds.lookup( compClass );
-            Component comp = Components.lookup( compId );
-            this.sendError( ctx, e, comp, request.getServicePath( ) );
+            this.sendError( ctx, e, compClass, request.getServicePath( ) );
           }
         } catch ( Exception ex ) {
           Logs.extreme( ).error( ex, ex );
@@ -153,12 +149,12 @@ public enum SystemChecksHandler implements ChannelUpstreamHandler {
   };
   private static Logger LOG = Logger.getLogger( SystemChecksHandler.class );
   
-  protected void sendError( ChannelHandlerContext ctx, ChannelEvent e, Component comp, String originalPath ) {
+  protected void sendError( ChannelHandlerContext ctx, ChannelEvent e, Class<? extends ComponentId> compClass, String originalPath ) {
     e.getFuture( ).cancel( );
     HttpResponse response = null;
-    if ( !comp.enabledServices( ).isEmpty( ) ) {
-      response = new DefaultHttpResponse( HttpVersion.HTTP_1_1, HttpResponseStatus.MOVED_PERMANENTLY );
-      URI serviceUri = ServiceUris.remote( comp.enabledServices( ).first( ) );
+    if ( !Topology.enabledServices( compClass ).isEmpty( ) ) {
+      response = new DefaultHttpResponse( HttpVersion.HTTP_1_1, HttpResponseStatus.TEMPORARY_REDIRECT );
+      URI serviceUri = ServiceUris.remote( Topology.lookup( compClass ) );
       String redirectUri = serviceUri.toASCIIString( ) + originalPath.replace( serviceUri.getPath( ), "" );
       response.setHeader( HttpHeaders.Names.LOCATION, redirectUri );
     } else {

@@ -71,7 +71,11 @@ import java.util.UUID;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.component.Faults.NoopErrorFilter;
+import com.eucalyptus.component.Faults.Severity;
+import com.eucalyptus.component.ServiceChecks.CheckException;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.system.Threads;
+import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
 
@@ -88,7 +92,11 @@ public class Faults {
     
   }
   
-  public static class CheckException extends Exception implements Iterable<CheckException> {
+  public static class CheckException extends RuntimeException implements Iterable<CheckException> {
+    /**
+     * 
+     */
+    private static final long serialVersionUID = 1L;
     private static Logger              LOG = Logger.getLogger( CheckException.class );
     private final Severity             severity;
     private final ServiceConfiguration config;
@@ -99,11 +107,31 @@ public class Faults {
     private final Component.State      eventState;
     private CheckException             other;
     
-    CheckException( String correlationId, Throwable cause, Severity severity, ServiceConfiguration config ) {
-      super( cause.getMessage( ) );
+    CheckException( final ServiceConfiguration config, final Severity severity, final String message ) {
+      this( config, severity, message, null );
+    }
+    
+    CheckException( final ServiceConfiguration config, final Severity severity, final String message, final Throwable cause ) {
+      this( config, severity, message, cause, null );
+    }
+    
+    CheckException( final ServiceConfiguration config, final Severity severity, final Throwable cause ) {
+      this( config, severity, cause.getMessage( ), cause, null );
+    }
+    
+    CheckException( final String correlationId, final Throwable cause, final Severity severity, final ServiceConfiguration config ) {
+      this( config, severity, cause.getMessage( ), cause, correlationId );
+    }
+    
+    CheckException( final ServiceConfiguration config, final Severity severity, final String message, final Throwable cause, final String correlationId ) {
+      super( message != null
+        ? message
+        : ( cause != null
+          ? cause.getMessage( )
+          : Threads.currentStackRange( 1, 5 ) ) );
       if ( cause instanceof CheckException ) {
         this.setStackTrace( cause.getStackTrace( ) );
-      } else {
+      } else if ( cause != null ) {
         this.initCause( cause );
       }
       this.severity = severity;
@@ -117,8 +145,8 @@ public class Faults {
       this.eventEpoch = Topology.epoch( );
     }
     
-    private static String uuid( Throwable cause ) {
-      if ( cause != null && cause instanceof CheckException ) {
+    private static String uuid( final Throwable cause ) {
+      if ( ( cause != null ) && ( cause instanceof CheckException ) ) {
         return ( ( CheckException ) cause ).getUuid( );
       } else {
         return UUID.randomUUID( ).toString( );
@@ -129,18 +157,18 @@ public class Faults {
       return this.severity;
     }
     
-    static CheckException wrap( CheckException ex, Exception e ) {
-      return ( CheckException ) ( e instanceof CheckException
-        ? e
-        : new CheckException( ex.correlationId, e, ex.severity, ex.config ) );
+    static CheckException wrap( final CheckException ex, final Throwable throwable ) {
+      return ( CheckException ) ( throwable instanceof CheckException
+        ? throwable
+        : new CheckException( ex.correlationId, throwable, ex.severity, ex.config ) );
     }
     
-    CheckException append( Exception e ) {
+    CheckException append( final Throwable ex ) {
       if ( this.other != null ) {
-        this.other.append( e );
+        this.other.append( ex );
         return this;
       } else {
-        this.other = wrap( this, e );
+        this.other = wrap( this, ex );
         return this;
       }
     }
@@ -155,7 +183,7 @@ public class Faults {
         
         @Override
         public boolean hasNext( ) {
-          return this.curr != null && this.curr.other != null;
+          return ( this.curr != null ) && ( this.curr.other != null );
         }
         
         @Override
@@ -196,29 +224,29 @@ public class Faults {
    */
   public static final boolean filter( final ServiceConfiguration parent, final Throwable ex, final Predicate<Throwable>... filters ) {
     Predicate<Throwable> failureAction;
-    if ( filters != null && filters.length > 0 ) {
+    if ( ( filters != null ) && ( filters.length > 0 ) ) {
       failureAction = filters[0];
     } else {
       failureAction = NoopErrorFilter.INSTANCE;
     }
     if ( ex instanceof CheckException ) {//go through all the exceptions and look for things with Severity greater than or equal to ERROR
-      CheckException checkExHead = ( CheckException ) ex;
-      for ( CheckException checkEx : checkExHead ) {
+      final CheckException checkExHead = ( CheckException ) ex;
+      for ( final CheckException checkEx : checkExHead ) {
 //        ServiceEvents.fireExceptionEvent( parent, checkEx.getSeverity( ), checkEx );
       }
       if ( checkExHead.getSeverity( ).ordinal( ) >= Severity.ERROR.ordinal( ) ) {
         try {
           failureAction.apply( ex );
-        } catch ( Exception ex1 ) {
+        } catch ( final Exception ex1 ) {
           Logs.extreme( ).error( ex1, ex1 );
         }
         return true;
       }
-      for ( CheckException checkEx : checkExHead ) {
+      for ( final CheckException checkEx : checkExHead ) {
         if ( checkEx.getSeverity( ).ordinal( ) >= Severity.ERROR.ordinal( ) ) {
           try {
             failureAction.apply( ex );
-          } catch ( Exception ex1 ) {
+          } catch ( final Exception ex1 ) {
             Logs.extreme( ).error( ex1, ex1 );
           }
           return true;
@@ -229,7 +257,7 @@ public class Faults {
 //      ServiceEvents.fireExceptionEvent( parent, Severity.ERROR, ex );
       try {
         failureAction.apply( ex );
-      } catch ( Exception ex1 ) {
+      } catch ( final Exception ex1 ) {
         Logs.extreme( ).error( ex1, ex1 );
       }
       return true;
@@ -279,5 +307,34 @@ public class Faults {
     
   }
   
-  public static void failStop( ServiceConfiguration config, ServiceRegistrationException ex ) {}
+  private static CheckException chain( final ServiceConfiguration config, final Severity severity, final List<Throwable> exs ) {
+    CheckException last = null;
+    for ( final Throwable ex : Lists.reverse( exs ) ) {
+      if ( ( last != null ) && ( ex instanceof CheckException ) ) {
+        last.append( ex );
+      } else if ( last != null ) {
+        last = new CheckException( config, severity, ex );
+      }
+    }
+    return last != null
+      ? last
+      : new CheckException( config, severity, new NullPointerException( ) );
+  }
+  
+  public static CheckException failure( final ServiceConfiguration config, final Throwable... exs ) {
+    return failure( config, Arrays.asList( exs ) );
+  }
+  
+  public static CheckException failure( final ServiceConfiguration config, final List<Throwable> exs ) {
+    return chain( config, Severity.ERROR, exs );
+  }
+  
+  public static CheckException advisory( final ServiceConfiguration config, final List<Throwable> exs ) {
+    return chain( config, Severity.INFO, exs );
+  }
+  
+  public static CheckException advisory( final ServiceConfiguration config, final Throwable... exs ) {
+    return advisory( config, Arrays.asList( exs ) );
+  }
+  
 }

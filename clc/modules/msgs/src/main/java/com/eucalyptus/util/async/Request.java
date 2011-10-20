@@ -68,70 +68,27 @@ import com.eucalyptus.util.Callback;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public interface Request<Q extends BaseMessage, R extends BaseMessage> {
-  //ASAP: move these to message callback.
-  /**
-   * TODO: DOCUMENT Request.java
-   * @param serviceEndpoint
-   * @return
-   */
   public abstract CheckedListenableFuture<R> dispatch( ServiceConfiguration serviceEndpoint );
-  /**
-   * TODO: DOCUMENT Request.java
-   * @param endpoint
-   * @return
-   * @throws ExecutionException
-   * @throws InterruptedException
-   */
+  
   public abstract R sendSync( ServiceConfiguration endpoint ) throws ExecutionException, InterruptedException;
+  
   public Request<Q, R> execute( ServiceConfiguration config );
-  //ASAP: add time information
-  /**
-   * TODO: DOCUMENT Request.java
-   * @param callback
-   * @return
-   */
-  public abstract Request<Q, R> then( UnconditionalCallback callback );  
-  /**
-   * TODO: DOCUMENT Request.java
-   * @param callback
-   * @return
-   */
+  
+  public abstract Request<Q, R> then( UnconditionalCallback callback );
+  
   public abstract Request<Q, R> then( Callback.Completion callback );
-  /**
-   * TODO: DOCUMENT Request.java
-   * @param callback
-   * @return
-   */
+  
   public abstract Request<Q, R> then( Callback.Failure<R> callback );
-  /**
-   * TODO: DOCUMENT Request.java
-   * @param callback
-   * @return
-   */
+  
   public abstract Request<Q, R> then( Callback.Success<R> callback );
-  /**
-   * TODO: DOCUMENT Request.java
-   * @return
-   */
+  
   public abstract Callback.TwiceChecked<Q, R> getCallback( );
-  /**
-   * TODO: DOCUMENT Request.java
-   * @return
-   */
+  
   public abstract CheckedListenableFuture<R> getResponse( );
-  /**
-   * TODO: DOCUMENT Request.java
-   * @return
-   */
+  
   public abstract Q getRequest( );
   
-  /**
-   * Don't even think about using this call.
-   * @param cluster
-   * @return
-   */
   @Deprecated
   public abstract CheckedListenableFuture<R> dispatch( String cluster );
-
   
 }

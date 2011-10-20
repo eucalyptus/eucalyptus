@@ -85,15 +85,18 @@ import java.util.List;
 import java.util.concurrent.AbstractExecutorService;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CompletionService;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.RunnableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -128,11 +131,15 @@ public class Threads {
   private final static ConcurrentMap<String, ThreadPool> execServices      = new ConcurrentHashMap<String, ThreadPool>( );
   
   public static ThreadPool lookup( final Class<? extends ComponentId> group, final Class owningClass ) {
-    return lookup( ComponentIds.lookup( group ).name( ) + "." + owningClass.getSimpleName( ) );
+    return lookup( ComponentIds.lookup( group ).name( ) + ":" + owningClass.getSimpleName( ) );
+  }
+  
+  public static ThreadPool lookup( final ServiceConfiguration config ) {
+    return lookup( config.getComponentId( ).getClass( ), config.getClass( ), config.getFullName( ).toString( ) );
   }
   
   public static ThreadPool lookup( final Class<? extends ComponentId> group, final Class owningClass, final String name ) {
-    return lookup( ComponentIds.lookup( group ).name( ) + "." + owningClass.getSimpleName( ) + "." + name );
+    return lookup( ComponentIds.lookup( group ).name( ) + ":" + owningClass.getSimpleName( ) + ":" + name );
   }
   
   public static ThreadPool lookup( final Class<? extends ComponentId> group ) {
@@ -167,13 +174,13 @@ public class Threads {
   }
   
   public static class ThreadPool implements ThreadFactory, ExecutorService {
-    private final ThreadGroup         group;
-    private final String              clusterName = "";
-    private final String              prefix      = "Eucalyptus.";
-    private final String              name;
-    private ExecutorService           pool;
-    private Integer                   numThreads  = -1;
-    private final StackTraceElement[] creationPoint;
+    private final ThreadGroup                    group;
+    private final String                         name;
+    private ExecutorService                      pool;
+    private final CompletionService<?>           completionService;
+    private Integer                              numThreads = -1;
+    private final StackTraceElement[]            creationPoint;
+    private final LinkedBlockingQueue<Future<?>> taskQueue  = new LinkedBlockingQueue<Future<?>>( );
     
     private ThreadPool( final String groupPrefix, final Integer threadCount ) {
       this( groupPrefix );
@@ -185,6 +192,7 @@ public class Threads {
       this.name = groupPrefix;
       this.group = new ThreadGroup( this.name );
       this.pool = Executors.newCachedThreadPool( this );
+      this.completionService = new ExecutorCompletionService<ServiceConfiguration>( this.pool );
       OrderedShutdown.register( Eucalyptus.class, new Runnable( ) {
         @Override
         public void run( ) {
@@ -365,15 +373,18 @@ public class Threads {
     @Override
     public void setAddress( final String address ) {}
     
-    /**
-     * TODO: DOCUMENT
-     * 
-     * @see org.jgroups.util.ThreadFactory#renameThread(java.lang.String, java.lang.Thread)
-     * @param base_name
-     * @param thread
-     */
     @Override
-    public void renameThread( final String base_name, final Thread thread ) {}
+    public void renameThread( final String base_name, final Thread thread ) {
+      thread.setName( base_name );
+    }
+    
+    public <T> CompletionService<T> getCompletionService( ) {
+      return ( CompletionService<T> ) this.completionService;
+    }
+    
+    private <T> LinkedBlockingQueue<Future<?>> getTaskQueue( ) {
+      return this.taskQueue;
+    }
   }
   
   public static ExecutorService currentThreadExecutor( ) {
@@ -545,7 +556,7 @@ public class Threads {
     }
     
     private String key( ) {
-      return this.componentId.getSimpleName( ) + ":" + this.ownerType.getSimpleName( ) + ":" + this.owner;
+      return this.componentId.getSimpleName( ) + ":" + this.ownerType.getSimpleName( ) + ":" + this.owner + "[workers]";
     }
     
     private void stop( ) {
@@ -557,7 +568,7 @@ public class Threads {
       return Threads.lookup( this.componentId, this.owner.getClass( ), this.name );
     }
     
-    private <C> Future<C> submit( final Runnable run ) {
+    private <C> RunnableFuture<C> submit( final Runnable run ) {
       final GenericCheckedListenableFuture<C> f = new GenericCheckedListenableFuture<C>( );
       final Callable<C> call = new Callable<C>( ) {
         
@@ -571,7 +582,7 @@ public class Threads {
       return submit( call );
     }
     
-    private <C> Future<C> submit( final Callable<C> call ) {
+    private <C> RunnableFuture<C> submit( final Callable<C> call ) {
       FutureTask<C> f = new FutureTask<C>( call );
       this.msgQueue.add( f );
       return f;
@@ -657,17 +668,17 @@ public class Threads {
     }
   }
   
-  public static <C> Future<C> enqueue( final ServiceConfiguration config, final Runnable runnable ) {
+  public static <C> RunnableFuture<C> enqueue( final ServiceConfiguration config, final Runnable runnable ) {
     return queue( config.getComponentId( ).getClass( ), config, NUM_QUEUE_WORKERS ).submit( runnable );
   }
   
   @SuppressWarnings( "unchecked" )
-  public static <C> Future<C> enqueue( final ServiceConfiguration config, final Callable<?> callable ) {
-    return ( Future<C> ) queue( config.getComponentId( ).getClass( ), config, NUM_QUEUE_WORKERS ).submit( callable );
+  public static <C> RunnableFuture<C> enqueue( final ServiceConfiguration config, final Callable<?> callable ) {
+    return ( RunnableFuture<C> ) queue( config.getComponentId( ).getClass( ), config, NUM_QUEUE_WORKERS ).submit( callable );
   }
   
   @SuppressWarnings( "unchecked" )
-  public static <C> Future<C> enqueue( final ServiceConfiguration config, final Integer workers, final Callable<?> callable ) {
-    return ( Future<C> ) queue( config.getComponentId( ).getClass( ), config, workers ).submit( callable );
+  public static <C> RunnableFuture<C> enqueue( final ServiceConfiguration config, final Integer workers, final Callable<?> callable ) {
+    return ( RunnableFuture<C> ) queue( config.getComponentId( ).getClass( ), config, workers ).submit( callable );
   }
 }

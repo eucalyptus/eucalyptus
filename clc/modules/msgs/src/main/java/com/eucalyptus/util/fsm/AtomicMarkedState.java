@@ -205,7 +205,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
         Logs.exhaust( ).debug( "Firing state-in listener: " + cb.getClass( ) + " for " + this.toString( ) );
         cb.fire( this.parent );
       } catch ( Exception t ) {
-        Exceptions.debug( "Firing state-in listeners failed for :" + cb.getClass( ).getCanonicalName( ), Exceptions.filterStackTrace( t ) );
+        Exceptions.trace( "Firing state-in listeners failed for :" + cb.getClass( ).getCanonicalName( ), Exceptions.filterStackTrace( t ) );
       }
     }
   }
@@ -216,7 +216,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
         Logs.exhaust( ).debug( "Firing state-in listener: " + cb.getClass( ) + " for " + this.toString( ) );
         cb.fire( this.parent );
       } catch ( Exception t ) {
-        Exceptions.debug( "Firing state-out listeners failed for :" + cb.getClass( ).getCanonicalName( ), Exceptions.filterStackTrace( t ) );
+        Exceptions.trace( "Firing state-out listeners failed for :" + cb.getClass( ).getCanonicalName( ), Exceptions.filterStackTrace( t ) );
       }
     }
   }

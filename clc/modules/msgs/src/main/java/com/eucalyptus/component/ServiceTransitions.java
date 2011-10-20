@@ -69,6 +69,7 @@ import java.util.Map.Entry;
 import java.util.concurrent.Callable;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.BootstrapArgs;
+import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.component.Component.State;
 import com.eucalyptus.component.ServiceChecks.CheckException;
 import com.eucalyptus.configurable.ConfigurableProperty;
@@ -96,17 +97,14 @@ import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.Callback.Completion;
-import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Futures;
 import com.eucalyptus.util.fsm.Automata;
 import com.eucalyptus.util.fsm.TransitionAction;
-import com.eucalyptus.ws.server.Pipelines;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import com.google.common.collect.ObjectArrays;
 import com.google.common.util.concurrent.Callables;
 
@@ -130,6 +128,8 @@ public class ServiceTransitions {
   public static CheckedListenableFuture<ServiceConfiguration> pathTo( final ServiceConfiguration configuration, final Component.State goalState ) {
     Callable<CheckedListenableFuture<ServiceConfiguration>> transition;
     switch ( goalState ) {
+      case LOADED:
+        return executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToLoaded( configuration.lookupState( ) ) ) );
       case DISABLED:
         return executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToDisabled( configuration.lookupState( ) ) ) );
       case ENABLED:
@@ -141,7 +141,33 @@ public class ServiceTransitions {
       case NONE:
         return executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToNone( configuration.lookupState( ) ) ) );
       default:
-        return ( CheckedListenableFuture<ServiceConfiguration> ) Callables.returning( Futures.predestinedFuture( configuration ) );
+        return Futures.predestinedFuture( configuration );
+    }
+  }
+  
+  /**
+   * @param lookupState
+   * @return
+   */
+  private static final State[] pathToLoaded( final Component.State fromState ) {
+    switch ( fromState ) {
+      case DISABLED:
+      case ENABLED:
+        return ServiceTransitions.sequence( Component.State.ENABLED,
+                                            Component.State.DISABLED,
+                                            Component.State.STOPPED,
+                                            Component.State.INITIALIZED,
+                                            Component.State.LOADED );
+      case NOTREADY:
+        return ServiceTransitions.sequence( Component.State.NOTREADY,
+                                            Component.State.DISABLED,
+                                            Component.State.STOPPED,
+                                            Component.State.INITIALIZED,
+                                            Component.State.LOADED );
+      default:
+        return ServiceTransitions.sequence( Component.State.PRIMORDIAL,
+                                            Component.State.INITIALIZED,
+                                            Component.State.LOADED );
     }
   }
   
@@ -238,21 +264,21 @@ public class ServiceTransitions {
   private static void processTransition( final ServiceConfiguration parent, final Completion transitionCallback, final TransitionActions transitionAction ) {
     ServiceTransitionCallback trans = null;
     try {
-      if ( parent.isVmLocal( ) || ( parent.isHostLocal( ) && BootstrapArgs.isCloudController( ) ) ) {
+      if ( parent.isVmLocal( ) || ( parent.isHostLocal( ) && Hosts.isCoordinator( ) ) ) {
         try {
           trans = ServiceLocalTransitionCallbacks.valueOf( transitionAction.name( ) );
         } catch ( Exception ex ) {
           LOG.error( ex, ex );
           throw ex;
         }
-      } else if ( !BootstrapArgs.isCloudController( ) ) {
+      } else if ( !Hosts.isCoordinator( ) ) {
         try {
           trans = ServiceRemoteTransitionNotification.valueOf( transitionAction.name( ) );
         } catch ( Exception ex ) {
           LOG.error( ex, ex );
           throw ex;
         }
-      } else if ( BootstrapArgs.isCloudController( ) ) {
+      } else if ( Hosts.isCoordinator( ) ) {
         try {
           trans = CloudRemoteTransitionCallbacks.valueOf( transitionAction.name( ) );
         } catch ( Exception ex ) {
@@ -268,7 +294,7 @@ public class ServiceTransitions {
       }
       transitionCallback.fire( );
     } catch ( Exception ex ) {
-      if ( ServiceExceptions.filterExceptions( parent, ex ) ) {
+      if ( Faults.filter( parent, ex ) ) {
         transitionCallback.fireException( ex );
         throw new UndeclaredThrowableException( ex );
       } else {
@@ -385,7 +411,7 @@ public class ServiceTransitions {
           }
         } );
         try {
-          parent.lookupComponent( ).getBuilder( ).fireStart( parent );
+          ServiceBuilders.lookup( parent.getComponentId( ) ).fireStart( parent );
         } catch ( Exception ex ) {
           LOG.error( ex, ex );
         }
@@ -401,7 +427,7 @@ public class ServiceTransitions {
           }
         } );
         try {
-          parent.lookupComponent( ).getBuilder( ).fireEnable( parent );
+          ServiceBuilders.lookup( parent.getComponentId( ) ).fireEnable( parent );
         } catch ( Exception ex ) {
           LOG.error( ex, ex );
         }
@@ -418,7 +444,7 @@ public class ServiceTransitions {
           }
         } );
         try {
-          parent.lookupComponent( ).getBuilder( ).fireDisable( parent );
+          ServiceBuilders.lookup( parent.getComponentId( ) ).fireDisable( parent );
         } catch ( Exception ex ) {
           LOG.error( ex, ex );
         }
@@ -434,7 +460,7 @@ public class ServiceTransitions {
           }
         } );
         try {
-          parent.lookupComponent( ).getBuilder( ).fireStop( parent );
+          ServiceBuilders.lookup( parent.getComponentId( ) ).fireStop( parent );
         } catch ( Exception ex ) {
           LOG.error( ex, ex );
         }
@@ -448,7 +474,7 @@ public class ServiceTransitions {
       
       @Override
       public void fire( final ServiceConfiguration parent ) throws Exception {
-        parent.lookupComponent( ).getBootstrapper( ).load( );
+        parent.lookupBootstrapper( ).load( );
       }
       
     },
@@ -456,7 +482,7 @@ public class ServiceTransitions {
       
       @Override
       public void fire( final ServiceConfiguration parent ) throws Exception {
-        parent.lookupComponent( ).getBootstrapper( ).destroy( );
+        parent.lookupBootstrapper( ).destroy( );
       }
     },
     CHECK {
@@ -464,8 +490,8 @@ public class ServiceTransitions {
       @Override
       public void fire( final ServiceConfiguration parent ) throws Exception {
         try {
-          parent.lookupComponent( ).getBootstrapper( ).check( );
-          parent.lookupComponent( ).getBuilder( ).fireCheck( parent );
+          parent.lookupBootstrapper( ).check( );
+          ServiceBuilders.lookup( parent.getComponentId( ) ).fireCheck( parent );
         } catch ( Exception ex ) {
           LOG.error( ex, ex );
           throw ex;
@@ -476,8 +502,8 @@ public class ServiceTransitions {
       
       @Override
       public void fire( final ServiceConfiguration parent ) throws Exception {
-        parent.lookupComponent( ).getBootstrapper( ).start( );
-        parent.lookupComponent( ).getBuilder( ).fireStart( parent );
+        parent.lookupBootstrapper( ).start( );
+        ServiceBuilders.lookup( parent.getComponentId( ) ).fireStart( parent );
       }
     },
     ENABLE {
@@ -485,8 +511,8 @@ public class ServiceTransitions {
       @Override
       public void fire( final ServiceConfiguration parent ) throws Exception {
         CHECK.fire( parent );
-        parent.lookupComponent( ).getBootstrapper( ).enable( );
-        parent.lookupComponent( ).getBuilder( ).fireEnable( parent );
+        parent.lookupBootstrapper( ).enable( );
+        ServiceBuilders.lookup( parent.getComponentId( ) ).fireEnable( parent );
       }
     },
     DISABLE {
@@ -494,19 +520,19 @@ public class ServiceTransitions {
       @Override
       public void fire( final ServiceConfiguration parent ) throws Exception {
 //        if ( State.NOTREADY.equals( parent.lookupComponent( ).getState( ) ) ) {
-//          parent.lookupComponent( ).getBootstrapper( ).check( );
-//          parent.lookupComponent( ).getBuilder( ).fireCheck( parent );
+//          parent.lookupComponent( ).check( );
+//          ServiceBuilders.lookup( parent.getComponentId( ) ).fireCheck( parent );
 //        }
-        parent.lookupComponent( ).getBootstrapper( ).disable( );
-        parent.lookupComponent( ).getBuilder( ).fireDisable( parent );
+        parent.lookupBootstrapper( ).disable( );
+        ServiceBuilders.lookup( parent.getComponentId( ) ).fireDisable( parent );
       }
     },
     STOP {
       
       @Override
       public void fire( final ServiceConfiguration parent ) throws Exception {
-        parent.lookupComponent( ).getBootstrapper( ).stop( );
-        parent.lookupComponent( ).getBuilder( ).fireStop( parent );
+        parent.lookupBootstrapper( ).stop( );
+        ServiceBuilders.lookup( parent.getComponentId( ) ).fireStop( parent );
       }
     };
     
@@ -528,7 +554,7 @@ public class ServiceTransitions {
       @Override
       public void fire( final ServiceConfiguration parent ) throws Exception {
         try {
-          parent.lookupBuilder( ).fireCheck( parent );
+          ServiceBuilders.lookup( parent.getComponentId( ) ).fireCheck( parent );
         } catch ( Exception ex ) {
           LOG.error( ex, ex );
         }
@@ -540,7 +566,7 @@ public class ServiceTransitions {
       @Override
       public void fire( final ServiceConfiguration parent ) throws Exception {
         try {
-          parent.lookupComponent( ).getBuilder( ).fireStart( parent );
+          ServiceBuilders.lookup( parent.getComponentId( ) ).fireStart( parent );
         } catch ( Exception ex ) {
           LOG.error( ex, ex );
         }
@@ -551,7 +577,7 @@ public class ServiceTransitions {
       @Override
       public void fire( final ServiceConfiguration parent ) throws Exception {
         try {
-          parent.lookupComponent( ).getBuilder( ).fireEnable( parent );
+          ServiceBuilders.lookup( parent.getComponentId( ) ).fireEnable( parent );
         } catch ( Exception ex ) {
           LOG.error( ex, ex );
         }
@@ -563,7 +589,7 @@ public class ServiceTransitions {
       @Override
       public void fire( final ServiceConfiguration parent ) throws Exception {
         try {
-          parent.lookupComponent( ).getBuilder( ).fireDisable( parent );
+          ServiceBuilders.lookup( parent.getComponentId( ) ).fireDisable( parent );
         } catch ( Exception ex ) {
           LOG.error( ex, ex );
         }
@@ -574,7 +600,7 @@ public class ServiceTransitions {
       @Override
       public void fire( final ServiceConfiguration parent ) throws Exception {
         try {
-          parent.lookupComponent( ).getBuilder( ).fireStop( parent );
+          ServiceBuilders.lookup( parent.getComponentId( ) ).fireStop( parent );
         } catch ( Exception ex ) {
           LOG.error( ex, ex );
         }
@@ -584,62 +610,11 @@ public class ServiceTransitions {
   }
   
   public enum StateCallbacks implements Callback<ServiceConfiguration> {
-    FIRE_START_EVENT {
+    FIRE_STATE_EVENT {
       
       @Override
       public void fire( final ServiceConfiguration config ) {
-        EventRecord.here( ServiceBuilder.class,
-                          EventType.COMPONENT_SERVICE_START,
-                          config.getFullName( ).toString( ), config.toString( ) ).extreme( );
-        LifecycleEvents.start( config );
-      }
-    },
-    FIRE_STOP_EVENT {
-      @Override
-      public void fire( final ServiceConfiguration config ) {
-        EventRecord.here( ServiceBuilder.class,
-                                         EventType.COMPONENT_SERVICE_STOP,
-                                         config.getFullName( ).toString( ), config.toString( ) ).extreme( );
-        LifecycleEvents.stop( config );
-      }
-    },
-    FIRE_ENABLE_EVENT {
-      @Override
-      public void fire( final ServiceConfiguration config ) {
-        EventRecord.here( ServiceBuilder.class,
-                                         EventType.COMPONENT_SERVICE_ENABLE,
-                                         config.getFullName( ).toString( ), config.toString( ) ).extreme( );
-        LifecycleEvents.enable( config );
-      }
-    },
-    FIRE_DISABLE_EVENT {
-      @Override
-      public void fire( final ServiceConfiguration config ) {
-        EventRecord.here( ServiceBuilder.class,
-                                         EventType.COMPONENT_SERVICE_DISABLE,
-                                         config.getFullName( ).toString( ), config.toString( ) ).extreme( );
-        LifecycleEvents.disable( config );
-      }
-      
-    },
-    ENDPOINT_START {
-      @Override
-      public void fire( final ServiceConfiguration parent ) {
-        try {
-          parent.lookupService( ).start( );
-        } catch ( Exception ex ) {
-          LOG.error( ex, ex );
-        }
-      }
-    },
-    ENDPOINT_STOP {
-      @Override
-      public void fire( final ServiceConfiguration parent ) {
-        try {
-          parent.lookupService( ).stop( );
-        } catch ( Exception ex ) {
-          LOG.error( ex, ex );
-        }
+        ServiceEvents.fire( config, config.getStateMachine( ).getState( ) );
       }
     },
     SERVICE_CONTEXT_RESTART {
@@ -678,7 +653,7 @@ public class ServiceTransitions {
               try {
                 prop.getValue( );
               } catch ( Exception ex ) {
-                Logs.extreme( ).error( ex, ex );
+                Logs.exhaust( ).error( ex );
               }
             }
           } catch ( Exception ex ) {

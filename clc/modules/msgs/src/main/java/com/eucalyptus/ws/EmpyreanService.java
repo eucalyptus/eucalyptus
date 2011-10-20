@@ -204,7 +204,7 @@ public class EmpyreanService {
           case DISABLE:
             switch ( a.lookupState( ) ) {
               case ENABLED:
-                Topology.getInstance( ).disable( a ).get( );
+                Topology.disable( a ).get( );
                 break;
               default:
                 return reply;
@@ -219,7 +219,7 @@ public class EmpyreanService {
               case STOPPED:
               case DISABLED:
               case NOTREADY:
-                Topology.getInstance( ).enable( a ).get( );
+                Topology.enable( a ).get( );
                 break;
               case ENABLED:
               default:
@@ -229,7 +229,7 @@ public class EmpyreanService {
           case STOP:
             switch ( a.lookupState( ) ) {
               case ENABLED:
-                Topology.getInstance( ).disable( a ).get( );
+                Topology.disable( a ).get( );
               case INITIALIZED:
               case PRIMORDIAL:
               case BROKEN:
@@ -237,7 +237,7 @@ public class EmpyreanService {
               case LOADED:
               case DISABLED:
               case NOTREADY:
-                Topology.getInstance( ).stop( a ).get( );
+                Topology.stop( a ).get( );
                 break;
               default:
                 return reply;
@@ -252,7 +252,7 @@ public class EmpyreanService {
               case LOADED:
               case DISABLED:
               case NOTREADY:
-                Topology.getInstance( ).start( a ).get( );
+                Topology.start( a ).get( );
                 break;
               case ENABLED:
               default:
@@ -262,16 +262,16 @@ public class EmpyreanService {
           case RESTART:
             switch ( a.lookupState( ) ) {
               case ENABLED:
-                Topology.getInstance( ).disable( a ).get( );
+                Topology.disable( a ).get( );
               case DISABLED:
               case NOTREADY:
-                Topology.getInstance( ).stop( a ).get( );
+                Topology.stop( a ).get( );
               case INITIALIZED:
               case PRIMORDIAL:
               case BROKEN:
               case LOADED:
               default:
-                Topology.getInstance( ).start( a ).get( );
+                Topology.start( a ).get( );
                 break;
             }
             break;
@@ -363,11 +363,8 @@ public class EmpyreanService {
         ServiceConfiguration service = TypeMappers.transform( serviceInfo, ServiceConfiguration.class );
         if ( service.isVmLocal( ) ) {
           try {
-            Topology.getInstance( ).enable( service );
+            Topology.enable( service );
             reply.getServices( ).add( serviceInfo );
-          } catch ( ServiceRegistrationException ex ) {
-            LOG.error( ex, ex );
-            throw ex;
           } catch ( IllegalStateException ex ) {
             LOG.error( ex, ex );
             throw ex;
@@ -389,7 +386,7 @@ public class EmpyreanService {
         ServiceConfiguration service = TypeMappers.transform( serviceInfo, ServiceConfiguration.class );
         if ( service.isVmLocal( ) ) {
           try {
-            Topology.getInstance( ).disable( service );
+            Topology.disable( service );
             reply.getServices( ).add( serviceInfo );
           } catch ( IllegalStateException ex ) {
             LOG.error( ex, ex );

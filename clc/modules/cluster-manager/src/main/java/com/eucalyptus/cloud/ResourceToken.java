@@ -76,6 +76,7 @@ import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.NoSuchTokenException;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.network.ExtantNetwork;
@@ -165,7 +166,7 @@ public class ResourceToken implements VmInstanceMetadata, Comparable<ResourceTok
   
   public void abort( ) {
     try {
-      final ServiceConfiguration config = Partitions.lookupService( ClusterController.class, this.getAllocationInfo( ).getPartition( ) );
+      final ServiceConfiguration config = Topology.lookup( ClusterController.class, this.getAllocationInfo( ).getPartition( ) );
       final Cluster cluster = Clusters.lookup( config );
       cluster.getNodeState( ).releaseToken( this );
     } catch ( final Exception ex ) {

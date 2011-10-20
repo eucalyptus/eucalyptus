@@ -64,22 +64,22 @@
 package com.eucalyptus.component;
 
 import java.net.InetAddress;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CompletionService;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import java.util.concurrent.RunnableFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapArgs;
-import com.eucalyptus.bootstrap.Host;
 import com.eucalyptus.bootstrap.Hosts;
-import com.eucalyptus.component.TopologyChanges.CloudTopologyCallables;
-import com.eucalyptus.component.TopologyChanges.RemoteTopologyCallables;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.empyrean.ServiceId;
 import com.eucalyptus.empyrean.ServiceTransitionType;
@@ -92,25 +92,34 @@ import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.system.Threads.ThreadPool;
+import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.LogUtil;
+import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Function;
+import com.google.common.base.Functions;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
+import com.google.common.base.Supplier;
+import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
+import com.google.common.util.concurrent.Futures;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class Topology implements EventListener<Event> {
-  private static Logger                                         LOG          = Logger.getLogger( Topology.class );
-  private static Topology                                       singleton    = null;                                                                   //TODO:GRZE:handle differently for remote case?
-  private Integer                                               currentEpoch = 0;                                                                      //TODO:GRZE: get the right initial epoch value from membership bootstrap
-  private TransitionGuard                                       guard;
-  private final ConcurrentMap<ServiceKey, ServiceConfiguration> services     = new ConcurrentSkipListMap<Topology.ServiceKey, ServiceConfiguration>( );
-  private final ServiceConfiguration                            internalQueue;
-  private final ServiceConfiguration                            externalQueue;
+  private static Logger                                                                           LOG               = Logger.getLogger( Topology.class );
+  private static Topology                                                                         singleton         = null;                                                                   //TODO:GRZE:handle differently for remote case?
+  private Integer                                                                                 currentEpoch      = 0;                                                                      //TODO:GRZE: get the right initial epoch value from membership bootstrap
+  private final ConcurrentMap<ServiceKey, ServiceConfiguration>                                   services          = new ConcurrentSkipListMap<Topology.ServiceKey, ServiceConfiguration>( );
+  private final Map<Class<? extends ComponentId>, Map<Topology.ServiceKey, ServiceConfiguration>> componentFiltered = Maps.newHashMap( );
+  private final Map<Partition, Map<Topology.ServiceKey, ServiceConfiguration>>                    partitionFiltered = Maps.newConcurrentMap( );
+  private final ServiceConfiguration                                                              internalQueue;
+  private final ServiceConfiguration                                                              externalQueue;
   
-  private Topology( int i ) {
+  private Topology( final int i ) {
     super( );
     this.currentEpoch = i;
     this.internalQueue = ServiceConfigurations.createEphemeral( Empyrean.INSTANCE, Topology.class.getSimpleName( ), "internal",
@@ -118,16 +127,63 @@ public class Topology implements EventListener<Event> {
     this.externalQueue = ServiceConfigurations.createEphemeral( Empyrean.INSTANCE, Topology.class.getSimpleName( ), "external",
                                                                 ServiceUris.internal( Empyrean.INSTANCE ) );
     ListenerRegistry.getInstance( ).register( Hertz.class, this );
+    for ( final ComponentId c : ComponentIds.list( ) ) {
+      this.componentFiltered.put( c.getClass( ), Maps.filterEntries( this.getServices( ), componentFilter( c.getClass( ) ) ) );
+    }
+    for ( final Partition p : Partitions.list( ) ) {
+      this.partitionFiltered.put( p, Maps.filterEntries( this.getServices( ), partitionFilter( p ) ) );
+    }
   }
   
-  public static void touch( ServiceTransitionType msg ) {
-    if ( !checkPrimary( ) && msg.get_epoch( ) != null ) {
+  private static Predicate<Entry<ServiceKey, ServiceConfiguration>> componentFilter( final Class<? extends ComponentId> compId ) {
+    return new Predicate<Entry<ServiceKey, ServiceConfiguration>>( ) {
+      @Override
+      public boolean apply( final Entry<ServiceKey, ServiceConfiguration> arg0 ) {
+        return compId.equals( arg0.getKey( ).getComponentId( ) );
+      }
+    };
+  }
+  
+  private static Predicate<Entry<ServiceKey, ServiceConfiguration>> partitionFilter( final Partition p ) {
+    return new Predicate<Entry<ServiceKey, ServiceConfiguration>>( ) {
+      @Override
+      public boolean apply( final Entry<ServiceKey, ServiceConfiguration> arg0 ) {
+        return p.equals( arg0.getKey( ).getPartition( ) );
+      }
+    };
+  }
+  
+  public List<ServiceConfiguration> partitionView( final Partition partition ) {
+    return Lists.newArrayList( Iterables.filter( this.getServices( ).values( ), partitionViewFilter( partition ) ) );
+  }
+  
+  private static Predicate<ServiceConfiguration> partitionViewFilter( final Partition p ) {
+    return new Predicate<ServiceConfiguration>( ) {
+      
+      @Override
+      public boolean apply( final ServiceConfiguration config ) {
+        if ( config.getComponentId( ).isUserService( ) ) {
+          return true;
+        } else if ( config.getComponentId( ).isRootService( ) && !config.getComponentId( ).isPartitioned( ) ) {
+          return true;
+        } else if ( ( config.getComponentId( ).isRootService( ) || config.getComponentId( ).isRegisterable( ) ) && config.getComponentId( ).isPartitioned( )
+                    && p.getName( ).equals( config.getPartition( ) ) ) {
+          return true;
+        } else {
+          return false;
+        }
+      }
+    };
+  }
+  
+  public static void touch( final ServiceTransitionType msg ) {//TODO:GRZE: @Service interceptor
+    if ( !Hosts.isCoordinator( ) && ( msg.get_epoch( ) != null ) ) {
       Topology.getInstance( ).currentEpoch = Ints.max( Topology.getInstance( ).currentEpoch, msg.get_epoch( ) );
     }
   }
   
-  public static boolean check( BaseMessage msg ) {
-    if ( !checkPrimary( ) && msg.get_epoch( ) != null ) {
+  public static boolean check( final BaseMessage msg ) {
+    if ( !Hosts.isCoordinator( ) && ( msg.get_epoch( ) != null ) ) {
       return Topology.getInstance( ).epoch( ) <= msg.get_epoch( );
     } else {
       return true;
@@ -148,8 +204,26 @@ public class Topology implements EventListener<Event> {
     }
   }
   
-  private ThreadPool getWorker( ) {
-    return Threads.lookup( Empyrean.class, Topology.class, "worker" ).limitTo( 1 );
+  private Function<Callable<ServiceConfiguration>, Future<ServiceConfiguration>> externalCompletionFunction( ) {
+    return new Function<Callable<ServiceConfiguration>, Future<ServiceConfiguration>>( ) {
+      
+      @Override
+      public Future<ServiceConfiguration> apply( Callable<ServiceConfiguration> input ) {
+        return externalCompletionService( ).submit( input );
+      }
+    };
+  }
+  
+  private CompletionService<ServiceConfiguration> completionService( final ServiceConfiguration config ) {
+    return Threads.lookup( Empyrean.class, Topology.class, "worker-" + config.getComponentId( ).name( ) ).limitTo( 1 ).getCompletionService( );
+  }
+  
+  private ThreadPool externalPool( ) {
+    return Threads.lookup( Empyrean.class, Topology.class, "external-worker" ).limitTo( 16 );
+  }
+  
+  private static CompletionService<ServiceConfiguration> externalCompletionService( ) {
+    return getInstance( ).externalPool( ).getCompletionService( );
   }
   
   private Integer getEpoch( ) {
@@ -161,89 +235,34 @@ public class Topology implements EventListener<Event> {
   }
   
   public static List<ServiceId> partitionRelativeView( final ServiceConfiguration config, final InetAddress localAddr ) {
-    Partition partition;
-    try {
-      partition = Partitions.lookup( config );
-    } catch ( ServiceRegistrationException ex ) {
-      LOG.error( ex, ex );
-      partition = Partitions.lookupInternal( config );
-    }
-    final String localhostAddr = localAddr.getHostAddress( );
-    Function<ServiceConfiguration, ServiceId> toServiceId = new Function<ServiceConfiguration, ServiceId>( ) {
+    final Partition partition = Partitions.lookup( config );
+    return Lists.transform( Topology.getInstance( ).partitionView( partition ), TypeMappers.lookup( ServiceConfiguration.class, ServiceId.class ) );
+  }
+  
+  private RunnableFuture<ServiceConfiguration> submitExternal( final ServiceConfiguration config, final Function<ServiceConfiguration, ServiceConfiguration> function ) {
+    final Callable<ServiceConfiguration> call = this.transitionCallable( config, function );
+    return Threads.enqueue( this.externalQueue, 32, call );
+  }
+  
+  private RunnableFuture<ServiceConfiguration> submit( final ServiceConfiguration config, final Function<ServiceConfiguration, ServiceConfiguration> function ) {
+    final Callable<ServiceConfiguration> call = this.transitionCallable( config, function );
+    return Threads.enqueue( this.internalQueue, 1, call );
+  }
+  
+  private static Function<ServiceConfiguration, Callable<ServiceConfiguration>> functionalCallable( final Function<ServiceConfiguration, ServiceConfiguration> function ) {
+    return new Function<ServiceConfiguration, Callable<ServiceConfiguration>>( ) {
       
       @Override
-      public ServiceId apply( final ServiceConfiguration input ) {
-        return new ServiceId( ) {
-          {
-            setPartition( input.getPartition( ) );
-            setName( input.getName( ) );
-            setType( input.getComponentId( ).name( ) );
-            if ( input.isVmLocal( ) ) {
-              getUris( ).add( ServiceUris.remote( input.getComponentId( ), localAddr ).toASCIIString( ) );
-            } else {
-              getUris( ).add( ServiceUris.remote( input ).toASCIIString( ) );
-            }
-          }
-        };
+      public Callable<ServiceConfiguration> apply( ServiceConfiguration input ) {
+        return transitionCallable( input, function );
       }
     };
-    return Lists.transform( Topology.getInstance( ).lookupPartitionView( partition ), toServiceId );
   }
   
-  private <T> Future<T> submit( final Callable<T> callable ) {
-    Logs.exhaust( ).debug( EventRecord.here( Topology.class, EventType.ENQUEUE, Topology.this.toString( ), callable.toString( ) ) );
-    final Long queueStart = System.currentTimeMillis( );
-    
-    return this.getWorker( ).submit( new Callable<T>( ) {
-      
-      @Override
-      public T call( ) throws Exception {
-        if ( Bootstrap.isShuttingDown( ) ) {
-          return null;
-        } else {
-          Bootstrap.awaitFinished( );
-          Long serviceStart = System.currentTimeMillis( );
-          Logs.exhaust( ).debug( EventRecord.here( Topology.class, EventType.DEQUEUE, Topology.this.toString( ), callable.toString( ) )
-                                            .append( EventType.QUEUE_TIME.name( ), Long.toString( serviceStart - queueStart ) ) );
-          
-          try {
-            T result = callable.call( );
-            
-            Long finish = System.currentTimeMillis( );
-            Logs.exhaust( ).debug( EventRecord.here( Topology.class, EventType.QUEUE, Topology.this.toString( ), callable.toString( ) )
-                                              .append( EventType.SERVICE_TIME.name( ), Long.toString( finish - serviceStart ) ) );
-            return result;
-          } catch ( Exception ex ) {
-            LOG.error( ex, ex );
-            throw ex;
-          }
-        }
-      }
-    } );
-  }
-  
-  private static Boolean checkPrimary( ) {
-    if ( BootstrapArgs.isCloudController( ) ) {
-      try {
-        Host localHost = Hosts.localHost( );
-        for ( Host h : Hosts.listDatabases( ) ) {
-          if ( !h.equals( localHost ) && h.getStartedTime( ) > localHost.getStartedTime( ) ) {
-            return false;
-          }
-        }
-      } catch ( Exception ex ) {
-        LOG.error( ex, ex );
-      }
-      return true;
-    } else {
-      return false;
-    }
-  }
-  
-  private Future<ServiceConfiguration> submitExternal( final ServiceConfiguration config, final Function<ServiceConfiguration, ServiceConfiguration> function ) {
-    final Long queueStart = System.currentTimeMillis( );
+  private static Callable<ServiceConfiguration> transitionCallable( final ServiceConfiguration config, final Function<ServiceConfiguration, ServiceConfiguration> function ) {
     final String functionName = function.getClass( ).toString( ).replaceAll( "^.*\\.", "" );
-    return Threads.enqueue( this.externalQueue, new Callable<ServiceConfiguration>( ) {
+    final Long queueStart = System.currentTimeMillis( );
+    final Callable<ServiceConfiguration> call = new Callable<ServiceConfiguration>( ) {
       
       @Override
       public ServiceConfiguration call( ) throws Exception {
@@ -251,104 +270,52 @@ public class Topology implements EventListener<Event> {
           return null;
         } else {
           Bootstrap.awaitFinished( );
-          Long serviceStart = System.currentTimeMillis( );
-          LOG.trace( EventRecord.here( Topology.class, EventType.DEQUEUE, functionName, config.getFullName( ).toString( ),
-                                       Long.toString( serviceStart - queueStart ), "ms" ) );
-          try {
-            ServiceConfiguration result = function.apply( config );
-            LOG.trace( EventRecord.here( Topology.class, EventType.QUEUE, functionName, config.getFullName( ).toString( ),
-                                         Long.toString( System.currentTimeMillis( ) - serviceStart ), "ms" ) );
-            return result;
-          } catch ( Exception ex ) {
-            Logs.exhaust( ).error( ex, ex );
-            LOG.error( ex );
-            throw ex;
-          }
-        }
-      }
-    } );
-  }
-  
-  private Future<ServiceConfiguration> submit( final ServiceConfiguration config, final Function<ServiceConfiguration, ServiceConfiguration> function ) {
-    final Long queueStart = System.currentTimeMillis( );
-    final String functionName = function.getClass( ).toString( ).replaceAll( "^.*\\.", "" );
-    
-    return Threads.enqueue( this.externalQueue, 1, new Callable<ServiceConfiguration>( ) {
-      
-      @Override
-      public ServiceConfiguration call( ) throws Exception {
-        if ( Bootstrap.isShuttingDown( ) ) {
-          return null;
-        } else {
-          Bootstrap.awaitFinished( );
-          Long serviceStart = System.currentTimeMillis( );
+          final Long serviceStart = System.currentTimeMillis( );
           LOG.trace( EventRecord.here( Topology.class, EventType.DEQUEUE, functionName, config.getFullName( ).toString( ),
                                        Long.toString( serviceStart - queueStart ), "ms" ) );
           
           try {
-            ServiceConfiguration result = function.apply( config );
+            final ServiceConfiguration result = function.apply( config );
             LOG.trace( EventRecord.here( Topology.class, EventType.QUEUE, functionName, config.getFullName( ).toString( ),
                                          Long.toString( System.currentTimeMillis( ) - serviceStart ), "ms" ) );
             return result;
-          } catch ( Exception ex ) {
+          } catch ( final Exception ex ) {
             Logs.exhaust( ).error( ex, ex );
             LOG.error( ex );
             throw ex;
           }
         }
       }
-    } );
+    };
+    return call;
   }
   
-  public static Future<ServiceConfiguration> stop( final ServiceConfiguration config ) throws ServiceRegistrationException {
-    if ( checkPrimary( ) ) {
-      return Topology.getInstance( ).submitExternal( config, CloudTopologyCallables.STOP );
-    } else {
-      return Topology.getInstance( ).submitExternal( config, RemoteTopologyCallables.STOP );
-    }
+  public static RunnableFuture<ServiceConfiguration> check( final ServiceConfiguration config ) {
+    return Topology.getInstance( ).submitExternal( config, TopologyChanges.checkFunction( ) );
   }
   
-  public static Future<ServiceConfiguration> start( final ServiceConfiguration config ) throws ServiceRegistrationException {
-    if ( checkPrimary( ) ) {
-      return Topology.getInstance( ).submitExternal( config, CloudTopologyCallables.START );
-    } else {
-      return Topology.getInstance( ).submitExternal( config, RemoteTopologyCallables.START );
-    }
+  public static RunnableFuture<ServiceConfiguration> stop( final ServiceConfiguration config ) {
+    return Topology.getInstance( ).submitExternal( config, TopologyChanges.stopFunction( ) );
   }
   
-  public static Future<ServiceConfiguration> enable( final ServiceConfiguration config ) throws ServiceRegistrationException {
-    if ( checkPrimary( ) ) {
-      return Topology.getInstance( ).submit( config, CloudTopologyCallables.ENABLE );
-    } else {
-      return Topology.getInstance( ).submit( config, RemoteTopologyCallables.ENABLE );
-    }
+  public static RunnableFuture<ServiceConfiguration> destroy( final ServiceConfiguration config ) {
+    return Topology.getInstance( ).submitExternal( config, TopologyChanges.destroyFunction( ) );
   }
   
-  public static Future<ServiceConfiguration> disable( final ServiceConfiguration config ) throws ServiceRegistrationException {
+  public static RunnableFuture<ServiceConfiguration> start( final ServiceConfiguration config ) {
+    return Topology.getInstance( ).submitExternal( config, TopologyChanges.startFunction( ) );
+  }
+  
+  public static RunnableFuture<ServiceConfiguration> enable( final ServiceConfiguration config ) {
+    return Topology.getInstance( ).submit( config, TopologyChanges.enableFunction( ) );
+  }
+  
+  public static RunnableFuture<ServiceConfiguration> disable( final ServiceConfiguration config ) {
     return Topology.getInstance( ).submit( config, TopologyChanges.disableFunction( ) );
   }
   
-  public List<ServiceConfiguration> lookupPartitionView( final Partition partition ) {
-    return Lists.newArrayList( Iterables.filter( this.services.values( ), new Predicate<ServiceConfiguration>( ) {
-      
-      @Override
-      public boolean apply( final ServiceConfiguration config ) {
-        if ( config.getComponentId( ).isUserService( ) ) {
-          return true;
-        } else if ( config.getComponentId( ).isRootService( ) && !config.getComponentId( ).isPartitioned( ) ) {
-          return true;
-        } else if ( ( config.getComponentId( ).isRootService( ) || config.getComponentId( ).isRegisterable( ) ) && config.getComponentId( ).isPartitioned( )
-                    && partition.getName( ).equals( config.getPartition( ) ) ) {
-          return true;
-        } else {
-          return false;
-        }
-      }
-    } ) );
-  }
-  
   private ServiceConfiguration lookup( final ServiceKey serviceKey ) {
-    return this.services.get( serviceKey );
+    return this.getServices( ).get( serviceKey );
   }
   
   interface TransitionGuard {
@@ -371,10 +338,10 @@ public class Topology implements EventListener<Event> {
       @Override
       public boolean tryEnable( final ServiceConfiguration config ) throws ServiceRegistrationException {
         final ServiceKey serviceKey = ServiceKey.create( config );
-        ServiceConfiguration curr = Topology.this.services.putIfAbsent( serviceKey, config );
-        if ( curr != null && !curr.equals( config ) ) {
+        final ServiceConfiguration curr = Topology.this.getServices( ).putIfAbsent( serviceKey, config );
+        if ( ( curr != null ) && !curr.equals( config ) ) {
           return false;
-        } else if ( curr != null && curr.equals( config ) ) {
+        } else if ( ( curr != null ) && curr.equals( config ) ) {
           return true;
         } else {
           Topology.this.currentEpoch++;
@@ -385,7 +352,8 @@ public class Topology implements EventListener<Event> {
       @Override
       public boolean tryDisable( final ServiceConfiguration config ) throws ServiceRegistrationException {
         final ServiceKey serviceKey = ServiceKey.create( config );
-        return !config.equals( Topology.this.services.get( serviceKey ) ) || ( Topology.this.services.remove( serviceKey, config ) && this.nextEpoch( ) );
+        return !config.equals( Topology.this.getServices( ).get( serviceKey ) )
+               || ( Topology.this.getServices( ).remove( serviceKey, config ) && this.nextEpoch( ) );
       }
       
     };
@@ -402,10 +370,10 @@ public class Topology implements EventListener<Event> {
       @Override
       public boolean tryEnable( final ServiceConfiguration config ) throws ServiceRegistrationException {
         final ServiceKey serviceKey = ServiceKey.create( config );
-        ServiceConfiguration curr = Topology.this.services.put( serviceKey, config );
-        if ( curr != null && !curr.equals( config ) ) {
+        final ServiceConfiguration curr = Topology.this.getServices( ).put( serviceKey, config );
+        if ( ( curr != null ) && !curr.equals( config ) ) {
           return false;
-        } else if ( curr != null && curr.equals( config ) ) {
+        } else if ( ( curr != null ) && curr.equals( config ) ) {
           return true;
         } else {
           return true;
@@ -415,7 +383,8 @@ public class Topology implements EventListener<Event> {
       @Override
       public boolean tryDisable( final ServiceConfiguration config ) throws ServiceRegistrationException {
         final ServiceKey serviceKey = ServiceKey.create( config );
-        return ( Topology.this.services.remove( serviceKey, config ) || !config.equals( Topology.this.services.get( serviceKey ) ) ) && this.nextEpoch( );
+        return ( Topology.this.getServices( ).remove( serviceKey, config ) || !config.equals( Topology.this.getServices( ).get( serviceKey ) ) )
+               && this.nextEpoch( );
       }
     };
   }
@@ -424,12 +393,16 @@ public class Topology implements EventListener<Event> {
     private final Partition   partition;
     private final ComponentId componentId;
     
-    static ServiceKey create( final ServiceConfiguration config ) throws ServiceRegistrationException {
+    static ServiceKey create( final ComponentId compId, final Partition partition ) {
+      return new ServiceKey( compId, partition );
+    }
+    
+    static ServiceKey create( final ServiceConfiguration config ) {
       if ( config.getComponentId( ).isPartitioned( ) ) {
-        Partition p = Partitions.lookup( config );
+        final Partition p = Partitions.lookup( config );
         return new ServiceKey( config.getComponentId( ), p );
       } else if ( config.getComponentId( ).isAlwaysLocal( ) || ( config.getComponentId( ).isCloudLocal( ) && !config.getComponentId( ).isRegisterable( ) ) ) {
-        Partition p = Partitions.lookupInternal( config );
+        final Partition p = Partitions.lookupInternal( config );
         return new ServiceKey( config.getComponentId( ), p );
       } else {
         return new ServiceKey( config.getComponentId( ) );
@@ -452,7 +425,7 @@ public class Topology implements EventListener<Event> {
     
     @Override
     public String toString( ) {
-      StringBuilder builder = new StringBuilder( );
+      final StringBuilder builder = new StringBuilder( );
       builder.append( "ServiceKey " ).append( this.componentId.name( ) ).append( ":" );
       if ( this.partition == null ) {
         builder.append( "cloud-global-service" );
@@ -487,10 +460,10 @@ public class Topology implements EventListener<Event> {
       if ( obj == null ) {
         return false;
       }
-      if ( getClass( ) != obj.getClass( ) ) {
+      if ( this.getClass( ) != obj.getClass( ) ) {
         return false;
       }
-      ServiceKey other = ( ServiceKey ) obj;
+      final ServiceKey other = ( ServiceKey ) obj;
       if ( this.componentId == null ) {
         if ( other.componentId != null ) {
           return false;
@@ -509,9 +482,9 @@ public class Topology implements EventListener<Event> {
     }
     
     @Override
-    public int compareTo( ServiceKey that ) {
+    public int compareTo( final ServiceKey that ) {
       if ( this.componentId.equals( that.componentId ) ) {
-        if ( this.partition == null && that.partition == null ) {
+        if ( ( this.partition == null ) && ( that.partition == null ) ) {
           return 0;
         } else if ( this.partition != null ) {
           return this.partition.compareTo( that.partition );
@@ -525,147 +498,191 @@ public class Topology implements EventListener<Event> {
     
   }
   
-  public TransitionGuard getGuard( ) {
-    return ( checkPrimary( )
-      ? cloudControllerGuard( )
-      : remoteGuard( ) );
+  protected static TransitionGuard guard( ) {
+    return getInstance( ).getGuard( );
   }
   
-  @Override
-  public String toString( ) {
-    StringBuilder builder = new StringBuilder( );
-    builder.append( "Topology:currentEpoch=" ).append( this.currentEpoch ).append( ":guard=" ).append( checkPrimary( )
-      ? "cloud"
-      : "remote" );
-    return builder.toString( );
+  public TransitionGuard getGuard( ) {
+    return ( Hosts.isCoordinator( )
+      ? this.cloudControllerGuard( )
+      : this.remoteGuard( ) );
+  }
+  
+  private ConcurrentMap<ServiceKey, ServiceConfiguration> getServices( ) {
+    return this.services;
   }
   
   /**
    * @see com.eucalyptus.event.EventListener#fireEvent(com.eucalyptus.event.Event)
    */
   @Override
-  public void fireEvent( Event event ) {
-    if ( event instanceof Hertz && ( ( Hertz ) event ).isAsserted( 15l ) ) {
-      this.runChecks( );
+  public void fireEvent( final Event event ) {
+    if ( ( event instanceof Hertz ) && ( ( Hertz ) event ).isAsserted( 15l ) ) {
+      this.completionService( internalQueue ).submit( RunChecks.INSTANCE, null );
     }
   }
   
-  private void runChecks( ) {
-    if ( !Bootstrap.isFinished( ) ) {
-      return;
-    } else {
-      this.getWorker( ).submit( new Runnable( ) {
-        
-        @Override
-        public void run( ) {
-          List<ServiceConfiguration> checkServicesList = Services.collect( new Predicate<ServiceConfiguration>( ) {
-            
-            @Override
-            public boolean apply( ServiceConfiguration arg0 ) {
-              if ( checkPrimary( ) ) {
-                return true;
-              } else {
-                return arg0.isVmLocal( );
-              }
-            }
-          } );
-          Logs.exhaust( ).debug( "PARTITIONS ==============================\n" + Joiner.on( "\n\t" ).join( Topology.this.services.keySet( ) ) );
-          Logs.exhaust( ).debug( "PRIMARY =================================\n" + Joiner.on( "\n\t" ).join( Topology.this.services.values( ) ) );
-          Predicate<Future<?>> futureIsDone = new Predicate<Future<?>>( ) {
-            
-            @Override
-            public boolean apply( Future<?> arg0 ) {
-              if ( !arg0.isDone( ) ) {
-                try {
-                  arg0.get( 100, TimeUnit.MILLISECONDS );
-                } catch ( InterruptedException ex ) {
-                  Thread.currentThread( ).interrupt( );
-                } catch ( ExecutionException ex ) {
-                  LOG.error( ex );
-                } catch ( TimeoutException ex ) {
-                                              }
-                                          }
-                                          return arg0.isDone( );
-                                        }
-          };
-          Map<ServiceConfiguration, Future<ServiceConfiguration>> futures = Maps.newHashMap( );
-          for ( ServiceConfiguration config : checkServicesList ) {
-            futures.put( config, Topology.getInstance( ).submitExternal( config, TopologyChanges.checkFunction( ) ) );
-          }
-          for ( int i = 0; i < 100 && !Iterables.all( futures.values( ), futureIsDone ); i++ );
-          final List<ServiceConfiguration> disabledServices = Lists.newArrayList( );
-          final List<ServiceConfiguration> checkedServices = Lists.newArrayList( );
-          for ( Map.Entry<ServiceConfiguration, Future<ServiceConfiguration>> result : futures.entrySet( ) ) {
-            try {
-              ServiceConfiguration resultConfig = result.getValue( ).get( );
-              checkedServices.add( resultConfig );
-            } catch ( InterruptedException ex ) {
-              LOG.error( ex, ex );
-              Thread.currentThread( ).interrupt( );
-            } catch ( Exception ex ) {
-              LOG.debug( "Error while inspecting result of CHECK for: \n\t" + result.getKey( ) + ": \n\t" + ex.getMessage( ) );
-              try {
-                disabledServices.add( result.getKey( ) );
-                Topology.this.getGuard( ).tryDisable( result.getKey( ) );
-              } catch ( ServiceRegistrationException ex1 ) {
-                LOG.error( ex1, ex1 );
-              }
-              LOG.error( ex.getMessage( ) );
-              Logs.exhaust( ).error( ex, ex );
-            }
-          }
-          Logs.exhaust( ).debug( "CHECK ===================================\n" + Joiner.on( "\n\t" ).join( checkedServices ) );
-          Logs.exhaust( ).debug( "DISABLED ================================\n" + Joiner.on( "\n\t" ).join( disabledServices ) );
-          if ( checkPrimary( ) ) {
-            final Predicate<ServiceConfiguration> predicate = new Predicate<ServiceConfiguration>( ) {
-              
-              @Override
-              public boolean apply( ServiceConfiguration arg0 ) {
-                try {
-                  ServiceKey key = ServiceKey.create( arg0 );
-                  if ( !checkPrimary( ) ) {
-                    Logs.exhaust( ).debug( "FAILOVER-REJECT: " + arg0 + ": not cloud controller." );
-                    return false;
-                  } else if ( disabledServices.contains( arg0 ) ) {
-                    Logs.exhaust( ).debug( "FAILOVER-REJECT: " + arg0 + ": service was just DISABLED." );
-                    return false;
-                  } else if ( Component.State.NOTREADY.equals( arg0.lookupState( ) ) ) {
-                    Logs.exhaust( ).debug( "FAILOVER-REJECT: " + arg0 + ": service is NOTREADY." );
-                    return false;
-                  } else if ( Topology.this.services.containsKey( key ) && arg0.equals( Topology.this.services.get( key ) ) ) {
-                    Logs.exhaust( ).debug( "FAILOVER-REJECT: " + arg0 + ": service is ENABLED." );
-                    return false;
-                  } else if ( !Topology.this.services.containsKey( key ) ) {
-                    Logs.exhaust( ).debug( "FAILOVER-ACCEPT: " + arg0 + ": service for partition: " + key );
-                    return true;
-                  } else {
-                    Logs.exhaust( ).debug( "FAILOVER-ACCEPT: " + arg0 );
-                    return true;
-                  }
-                } catch ( ServiceRegistrationException ex ) {
-                  LOG.error( ex, ex );
-                  return false;
-                }
-              }
-            };
-            List<ServiceConfiguration> failoverServicesList = Services.collect( predicate );
-            Logs.exhaust( ).debug( "FAILOVER ================================\n" + Joiner.on( "\n\t" ).join( failoverServicesList ) );
-            for ( ServiceConfiguration config : failoverServicesList ) {
-              try {
-                Topology.getInstance( ).submitExternal( config, CloudTopologyCallables.ENABLE ).get( );
-              } catch ( InterruptedException ex ) {
-                LOG.error( ex, ex );
-                Thread.currentThread( ).interrupt( );
-              } catch ( ExecutionException ex ) {
-                LOG.error( ex, ex );
-              } catch ( Exception ex ) {
-                LOG.error( ex, ex );
-              }
-            }
-          }
-        }
-      } );
+  enum CheckServiceFilter implements Predicate<ServiceConfiguration> {
+    INSTANCE;
+    @Override
+    public boolean apply( final ServiceConfiguration arg0 ) {
+      if ( BootstrapArgs.isCloudController( ) ) {
+        return true;
+      } else {
+        return arg0.isVmLocal( );
+      }
     }
+    
+  }
+  
+  enum SubmitCheck implements Function<ServiceConfiguration, Callable<ServiceConfiguration>> {
+    INSTANCE;
+    
+    @Override
+    public Callable<ServiceConfiguration> apply( ServiceConfiguration input ) {
+      return Topology.transitionCallable( input, TopologyChanges.checkFunction( ) );
+    }
+    
+  }
+  
+  enum WaitForResults implements Predicate<Future<?>> {
+    INSTANCE;
+    
+    @SuppressWarnings( "unchecked" )
+    public static <T> List<T> invokeAll( Collection<? extends Callable<T>> submitChecks ) {
+      try {
+        List<Future<T>> results = Topology.getInstance( ).externalPool( ).invokeAll( submitChecks, 30L, TimeUnit.SECONDS );
+        return ( List<T> ) Collections2.transform( Collections2.filter( results, WaitForResults.INSTANCE ), Transform.TRANSFORM );
+      } catch ( InterruptedException ex ) {
+        Thread.currentThread( ).interrupt( );
+        throw Exceptions.toUndeclared( ex );
+      }
+    }
+    
+    @Override
+    public boolean apply( Future<?> input ) {
+      try {
+        final Object conf = input.get( );
+        LOG.trace( "Operation succeeded for " + conf );
+        return true;
+      } catch ( final InterruptedException ex ) {
+        Thread.currentThread( ).interrupt( );
+      } catch ( final Exception ex ) {
+        Logs.exhaust( ).trace( ex, ex );
+      }
+      return false;
+    }
+    
+    enum Transform implements Function<Future<?>, Object> {
+      TRANSFORM;
+      @Override
+      public Object apply( Future<?> input ) {
+        try {
+          return input.get( );
+        } catch ( final InterruptedException ex ) {
+          Thread.currentThread( ).interrupt( );
+        } catch ( final Exception ex ) {
+          Logs.exhaust( ).trace( ex, ex );
+        }
+        return null;
+      }
+    }
+  }
+  
+  enum GatherCheckResults implements Supplier<ServiceConfiguration> {
+    INSTANCE;
+    
+    @Override
+    public ServiceConfiguration get( ) {
+      try {
+        final ServiceConfiguration conf = Topology.getInstance( ).externalCompletionService( ).take( ).get( );
+        LOG.trace( "CHECK passed: " + conf.getFullName( ).toString( ) );
+        return conf;
+      } catch ( InterruptedException ex ) {
+        Thread.currentThread( ).interrupt( );
+        throw Exceptions.toUndeclared( ex );
+      } catch ( ExecutionException ex ) {
+        throw Exceptions.toUndeclared( ex );
+      }
+    }
+  }
+  
+  enum RunChecks implements Runnable {
+    INSTANCE;
+    
+    @Override
+    public void run( ) {
+      /** submit describe operations **/
+      Collection<ServiceConfiguration> checkServices = Collections2.filter( ServiceConfigurations.list( ), CheckServiceFilter.INSTANCE );
+      Collection<Callable<ServiceConfiguration>> submitChecks = Collections2.transform( checkServices, SubmitCheck.INSTANCE );
+      
+      /** consume describe results **/
+      Collection<ServiceConfiguration> goodServices = WaitForResults.invokeAll( submitChecks );
+      LOG.trace( LogUtil.subheader( "CHECKED: " + Joiner.on( "\nCHECKED: " ).join( goodServices ) ) );
+      
+      /** make promotion decisions **/
+      Predicate<ServiceConfiguration> canPromote = Predicates.and( FailoverPredicate.INSTANCE, Predicates.not( Predicates.in( goodServices ) ) );
+      Collection<ServiceConfiguration> promoteServices = Collections2.filter( ServiceConfigurations.list( ), canPromote );
+      Collection<Callable<ServiceConfiguration>> enableCallables = Collections2.transform( promoteServices,
+                                                                                           functionalCallable( TopologyChanges.enableFunction( ) ) );
+      List<ServiceConfiguration> enabledServices = WaitForResults.invokeAll( enableCallables );
+      LOG.trace( LogUtil.subheader( "ENABLED: " + Joiner.on( "\nENABLED: " ).join( enabledServices ) ) );
+    }
+  }
+  
+  enum FailoverPredicate implements Predicate<ServiceConfiguration> {
+    INSTANCE;
+    @Override
+    public boolean apply( final ServiceConfiguration arg0 ) {
+      final ServiceKey key = ServiceKey.create( arg0 );
+      if ( !Hosts.isCoordinator( ) ) {
+        Logs.exhaust( ).debug( "FAILOVER-REJECT: " + arg0 + ": not cloud controller." );
+        return false;
+      } else if ( Component.State.NOTREADY.equals( arg0.lookupState( ) ) ) {
+        Logs.exhaust( ).debug( "FAILOVER-REJECT: " + arg0 + ": service is NOTREADY." );
+        return false;
+      } else if ( Topology.getInstance( ).getServices( ).containsKey( key ) && arg0.equals( Topology.getInstance( ).getServices( ).get( key ) ) ) {
+        Logs.exhaust( ).debug( "FAILOVER-REJECT: " + arg0 + ": service is ENABLED." );
+        return false;
+      } else if ( !Topology.getInstance( ).getServices( ).containsKey( key ) ) {
+        Logs.exhaust( ).debug( "FAILOVER-ACCEPT: " + arg0 + ": service for partition: " + key );
+        return true;
+      } else {
+        Logs.exhaust( ).debug( "FAILOVER-ACCEPT: " + arg0 );
+        return true;
+      }
+    }
+  }
+  
+  public static ServiceConfiguration lookup( final Class<? extends ComponentId> compClass, final Partition... maybePartition ) {
+    final Partition partition = ( ( maybePartition != null ) && ( maybePartition.length > 0 )
+      ? maybePartition[0]
+      : null );
+    return Topology.getInstance( ).getServices( ).get( ServiceKey.create( ComponentIds.lookup( compClass ), partition ) );
+    
+  }
+  
+  public static Collection<ServiceConfiguration> enabledServices( final Class<? extends ComponentId> compId ) {
+    return Maps.filterEntries( singleton.getServices( ), new Predicate<Entry<ServiceKey, ServiceConfiguration>>( ) {
+      
+      @Override
+      public boolean apply( final Entry<ServiceKey, ServiceConfiguration> arg0 ) {
+        return compId.equals( arg0.getKey( ).getComponentId( ) );
+      }
+    } ).values( );
+  }
+  
+  public static boolean isEnabledLocally( final Class<? extends ComponentId> compClass ) {
+    return Iterables.any( Topology.enabledServices( compClass ), ServiceConfigurations.filterHostLocal( ) );
+  }
+  
+  @Override
+  public String toString( ) {
+    final StringBuilder builder = new StringBuilder( );
+    builder.append( "Topology:currentEpoch=" ).append( this.currentEpoch ).append( ":guard=" ).append( Hosts.isCoordinator( )
+      ? "cloud"
+      : "remote" );
+    return builder.toString( );
   }
   
 }

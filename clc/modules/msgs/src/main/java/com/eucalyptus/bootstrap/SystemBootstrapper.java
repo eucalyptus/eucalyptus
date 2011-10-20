@@ -403,9 +403,7 @@ public class SystemBootstrapper {
     banner += headerHeader + String.format( headerFormat, "Component Bootstrap Configuration" ) + headerFooter;
     for ( Component c : Components.list( ) ) {
       if ( c.getComponentId( ).isAvailableLocally( ) ) {
-        for ( Bootstrapper b : c.getBootstrapper( ).getBootstrappers( ) ) {
-          banner += prefix + String.format( "%-15.15s", c.getName( ) ) + SEP + b.toString( );
-        }
+        banner += c.getBootstrapper( );
       }
     }
     banner += headerHeader + String.format( headerFormat, "Local Services" ) + headerFooter;
@@ -413,7 +411,6 @@ public class SystemBootstrapper {
       if ( c.hasLocalService( ) ) {
         ServiceConfiguration localConfig = c.getLocalServiceConfiguration( );
         banner += prefix + c.getName( ) + SEP + localConfig.toString( );
-        banner += prefix + c.getName( ) + SEP + localConfig.lookupBuilder( ).toString( );
         banner += prefix + c.getName( ) + SEP + localConfig.getComponentId( ).toString( );
         banner += prefix + c.getName( ) + SEP + localConfig.lookupState( ).toString( );
       }

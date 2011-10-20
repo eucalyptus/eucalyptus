@@ -63,35 +63,36 @@
 package com.eucalyptus.component;
 
 import java.net.InetAddress;
-import java.net.URI;
+import java.util.List;
 import java.util.NavigableSet;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ConcurrentNavigableMap;
-import java.util.concurrent.ConcurrentSkipListMap;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.log4j.Logger;
-import com.eucalyptus.event.ClockTick;
-import com.eucalyptus.event.Hertz;
-import com.eucalyptus.event.ListenerRegistry;
+import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.bootstrap.Bootstrap.Stage;
+import com.eucalyptus.bootstrap.Bootstrapper;
+import com.eucalyptus.bootstrap.CanBootstrap;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Assertions;
+import com.eucalyptus.util.CheckedFunction;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.async.CheckedListenableFuture;
-import com.eucalyptus.util.async.Futures;
 import com.eucalyptus.util.fsm.Automata;
-import com.eucalyptus.util.fsm.ExistingTransitionException;
-import com.eucalyptus.util.fsm.HasStateMachine;
-import com.google.common.base.Predicates;
+import com.eucalyptus.util.fsm.StateMachine;
+import com.eucalyptus.util.fsm.TransitionException;
+import com.google.common.base.Joiner;
+import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Multimap;
+import com.google.common.collect.Multimaps;
 import com.google.common.collect.Sets;
 
 public class Component implements HasName<Component> {
@@ -128,27 +129,11 @@ public class Component implements HasName<Component> {
     this.bootstrapper = new ComponentBootstrapper( this );
   }
   
-  public Service getLocalService( ) {
-    return this.serviceRegistry.getLocalService( );
-  }
-  
-  private boolean inState( State queryState ) {
-    return queryState.equals( this.getState( ) );
-  }
-  
   /**
    * @return the identity
    */
   public ComponentId getComponentId( ) {
     return this.identity;
-  }
-  
-  /**
-   * @return
-   * @see com.eucalyptus.component.ComponentId#name()
-   */
-  public String name( ) {
-    return this.identity.name( );
   }
   
   public State getState( ) {
@@ -192,8 +177,9 @@ public class Component implements HasName<Component> {
     return this.serviceRegistry.hasLocalService( );
   }
   
+  @Deprecated
   public Boolean hasEnabledService( ) {
-    return !this.enabledServices( ).isEmpty( );
+    return !Topology.enabledServices( this.getComponentId( ).getClass( ) ).isEmpty( );
   }
   
   public Boolean isEnabledLocally( ) {
@@ -207,7 +193,7 @@ public class Component implements HasName<Component> {
   /**
    * @return the bootstrapper
    */
-  public ComponentBootstrapper getBootstrapper( ) {
+  public CanBootstrap getBootstrapper( ) {
     return this.bootstrapper;
   }
   
@@ -217,7 +203,7 @@ public class Component implements HasName<Component> {
    * @throws NoSuchServiceException
    * @see com.eucalyptus.component.Component.ServiceRegistry#lookup(com.eucalyptus.component.ServiceConfiguration)
    */
-  public Service lookupService( ServiceConfiguration config ) throws NoSuchServiceException {
+  public BasicService lookupService( ServiceConfiguration config ) throws NoSuchServiceException {
     return this.serviceRegistry.lookup( config );
   }
   
@@ -226,15 +212,11 @@ public class Component implements HasName<Component> {
     return this.serviceRegistry.getService( name );
   }
   
-  NavigableSet<Service> lookupServices( String partition ) {
-    return this.serviceRegistry.lookupPartition( partition );
-  }
-  
   /**
-   * Builds a Service instance for this component using the local default
+   * Builds a BasicService instance for this component using the local default
    * values.
    * 
-   * @return Service instance of the service
+   * @return BasicService instance of the service
    * @throws ServiceRegistrationException
    */
   public ServiceConfiguration initService( ) throws ServiceRegistrationException {
@@ -250,68 +232,34 @@ public class Component implements HasName<Component> {
   }
   
   /**
-   * Builds a Service instance for this cloudLocal component when Eucalyptus is remote.
+   * Builds a BasicService instance for this cloudLocal component when Eucalyptus is remote.
    * 
-   * @return Service instance of the service
+   * @return BasicService instance of the service
    * @throws ServiceRegistrationException
    */
-  public ServiceConfiguration initRemoteService( InetAddress addr ) throws ServiceRegistrationException {
-////TODO:GRZE:REVIEW: should this handle local case for 2ndry clc?
-//    if( Internets.testLocal( addr ) ) {
-//      throw new ServiceRegistrationException( "Skipping invalid attempt to init remote service configuration for host " + addr + " on component "
-//                                              + this.getName( ) );
-//    }
+  public ServiceConfiguration initRemoteService( InetAddress addr ) {
     ServiceConfiguration config = this.getBuilder( ).newInstance( this.getComponentId( ).getPartition( ), addr.getHostAddress( ), addr.getHostAddress( ),
                                                                   this.getComponentId( ).getPort( ) );
-    Service ret = this.serviceRegistry.register( config );
+    BasicService ret = this.serviceRegistry.register( config );
     LOG.debug( "Initializing remote service for host " + addr + " with configuration: " + config );
     return config;
   }
   
   /**
-   * Builds a Service instance for this component using the provided service
+   * Builds a BasicService instance for this component using the provided service
    * configuration.
    * 
-   * @return Service instance of the service
    * @throws ServiceRegistrationException
    */
-  public CheckedListenableFuture<ServiceConfiguration> loadService( final ServiceConfiguration config ) throws ServiceRegistrationException {
+  public void loadService( final ServiceConfiguration config ) {//TODO:GRZE: deprecate either initService, loadService or setup
     this.lookupRegisteredService( config );
-    if ( State.PRIMORDIAL.equals( config.lookupState( ) ) || State.INITIALIZED.equals( config.lookupState( ) ) ) {
-      try {
-        CheckedListenableFuture<ServiceConfiguration> ret = Automata.sequenceTransitions( config,
-                                                                                          Component.State.PRIMORDIAL,
-                                                                                          Component.State.INITIALIZED,
-                                                                                          Component.State.LOADED ).call( );//.get( );
-        ret.get( );
-        return ret;
-      } catch ( Exception ex ) {
-        throw Exceptions.debug( new ServiceRegistrationException( "Failed to initialize service state: " + config + " because of: " + ex.getMessage( ), ex ) );
-      }
-    }
-    if ( State.LOADED.equals( config.lookupState( ) ) ) {
-      return Futures.predestinedFuture( config );
-    } else {
-      return Futures.predestinedFuture( config );
-    }
   }
   
-  Future<ServiceConfiguration> stopTransition( final ServiceConfiguration configuration ) {
-    return ServiceTransitions.pathTo( configuration, State.STOPPED );
-  }
-  
-  public void destroyTransition( final ServiceConfiguration configuration ) throws ServiceRegistrationException {
+  void destroy( final ServiceConfiguration configuration ) throws ServiceRegistrationException {
     try {
-      Service service = null;
+      BasicService service = null;
       if ( this.serviceRegistry.hasService( configuration ) ) {
         service = this.serviceRegistry.lookup( configuration );
-      }
-      try {
-        ServiceTransitions.pathTo( configuration, Component.State.NONE ).get( );
-      } catch ( ExecutionException ex1 ) {
-        LOG.error( ex1 );
-      } catch ( InterruptedException ex1 ) {
-        LOG.error( ex1 );
       }
       try {
         EventRecord.caller( Component.class, EventType.COMPONENT_SERVICE_DESTROY, this.getName( ), configuration.getFullName( ),
@@ -325,33 +273,17 @@ public class Component implements HasName<Component> {
     }
   }
   
-  Future<ServiceConfiguration> startTransition( final ServiceConfiguration configuration ) throws IllegalStateException, ServiceRegistrationException {
-    Service service = null;
+  void setup( final ServiceConfiguration configuration ) throws IllegalStateException {
     if ( this.serviceRegistry.hasService( configuration ) ) {
-      service = this.serviceRegistry.lookup( configuration );
+      this.serviceRegistry.lookup( configuration );
     } else {
-      try {
-        service = this.serviceRegistry.register( configuration );
-      } catch ( ServiceRegistrationException ex ) {
-        LOG.error( ex, ex );
-        throw ex;
-      }
+      this.serviceRegistry.register( configuration );
     }
-    return ServiceTransitions.pathTo( configuration, State.NOTREADY );
   }
   
   public NavigableSet<ServiceConfiguration> enabledServices( ) {
     return Sets.newTreeSet( Iterables.filter( this.serviceRegistry.getServices( ), ServiceConfigurations.enabledService( ) ) );
   }
-  
-  NavigableSet<ServiceConfiguration> enabledPartitionServices( final Partition partition ) {
-    Iterable<ServiceConfiguration> services = Iterables.filter( this.serviceRegistry.getServices( ),
-                                                                Predicates.and( ServiceConfigurations.enabledService( ),
-                                                                                ServiceConfigurations.serviceInPartition( partition ) ) );
-    return Sets.newTreeSet( services );
-  }
-  
-  private ConcurrentNavigableMap<String, ServiceCheckRecord> errors = new ConcurrentSkipListMap<String, ServiceCheckRecord>( );
   
   public boolean hasService( ServiceConfiguration config ) {
     return this.serviceRegistry.hasService( config );
@@ -423,28 +355,26 @@ public class Component implements HasName<Component> {
     return true;
   }
   
-  public Service lookupRegisteredService( final ServiceConfiguration config ) throws ServiceRegistrationException, NoSuchElementException {
-    Service service = null;
+  private void lookupRegisteredService( final ServiceConfiguration config ) throws NoSuchElementException {
     if ( ( config.isVmLocal( ) || config.isHostLocal( ) ) && !this.serviceRegistry.hasLocalService( ) ) {
-      service = this.serviceRegistry.register( config );
+      this.serviceRegistry.register( config );
     } else if ( this.serviceRegistry.hasService( config ) ) {
-      service = this.serviceRegistry.lookup( config );
+      this.serviceRegistry.lookup( config );
     } else {
-      service = this.serviceRegistry.register( config );
+      this.serviceRegistry.register( config );
     }
-    return service;
   }
   
   class ServiceRegistry {
-    private final AtomicReference<Service>                     localService = new AtomicReference( null );
-    private final ConcurrentMap<ServiceConfiguration, Service> services     = Maps.newConcurrentMap( );
+    private final AtomicReference<BasicService>                     localService = new AtomicReference( null );
+    private final ConcurrentMap<ServiceConfiguration, BasicService> services     = Maps.newConcurrentMap( );
     
     public boolean hasLocalService( ) {
-      return !Component.this.isRunningRemoteMode( ) && ( this.localService.get( ) != null && !( this.localService.get( ) instanceof MissingService ) );
+      return !Component.this.isRunningRemoteMode( ) && ( this.localService.get( ) != null );
     }
     
-    public Service getLocalService( ) {
-      Service ret = this.localService.get( );
+    public BasicService getLocalService( ) {
+      BasicService ret = this.localService.get( );
       if ( ret == null ) {
         throw new NoSuchElementException( "Attempt to access a local service reference when none exists for: " + Component.this.toString( ) );
       } else {
@@ -471,22 +401,12 @@ public class Component implements HasName<Component> {
      * @throws NoSuchElementException if no {@link Service} is registered with the provided
      *           {@link FullName}
      */
-    public Service deregister( ServiceConfiguration config ) throws NoSuchElementException {
-      Service ret = this.services.remove( config );
+    public BasicService deregister( ServiceConfiguration config ) throws NoSuchElementException {
+      BasicService ret = this.services.remove( config );
       if ( ret == null ) {
         throw new NoSuchElementException( "Failed to lookup service corresponding to full-name: " + config );
-      } else if ( ret.getServiceConfiguration( ).isVmLocal( ) ) {
+      } else if ( config.isVmLocal( ) ) {
         this.localService.compareAndSet( ret, null );
-      }
-      try {
-        ListenerRegistry.getInstance( ).deregister( ClockTick.class, ret );
-      } catch ( Exception ex ) {
-        LOG.error( ex, ex );
-      }
-      try {
-        ListenerRegistry.getInstance( ).deregister( Hertz.class, ret );
-      } catch ( Exception ex ) {
-        LOG.error( ex, ex );
       }
       return ret;
     }
@@ -502,7 +422,7 @@ public class Component implements HasName<Component> {
      * @return {@link Service} corresponding to provided the {@link ServiceConfiguration}
      * @throws NoSuchElementException
      */
-    public Service lookup( ServiceConfiguration config ) throws NoSuchElementException {
+    public BasicService lookup( ServiceConfiguration config ) throws NoSuchElementException {
       if ( !this.services.containsKey( config ) ) {
         throw new NoSuchElementException( "Failed to lookup service corresponding to service configuration: " + config.getName( ) );
       } else {
@@ -511,59 +431,29 @@ public class Component implements HasName<Component> {
     }
     
     /**
-     * List the services registered within a give partition.
-     * 
-     * @param partition - name of the partition.
-     * @return a new set with the list of service registered in the give partition.
-     * @throws NoSuchElementException if no {@link Service}s are registered within the given
-     *           partition.
-     */
-    public NavigableSet<Service> lookupPartition( String partition ) throws NoSuchElementException {
-      NavigableSet<Service> partitionServices = Sets.newTreeSet( );
-      for ( Service s : this.services.values( ) ) {
-        if ( partition.equals( s.getServiceConfiguration( ).getPartition( ) ) ) {
-          partitionServices.add( s );
-        }
-      }
-      if ( partitionServices.isEmpty( ) ) {
-        throw new NoSuchElementException( "No services were found in partition: " + partition + " for component " + Component.this.getComponentId( ) );
-      }
-      return partitionServices;
-    }
-    
-    /**
      * Register the given {@link Service} with the registry. Only used internally.
      * 
      * @param service
      * @throws ServiceRegistrationException
      */
-    Service register( ServiceConfiguration config ) throws ServiceRegistrationException {
-      Service service = Services.newServiceInstance( config );
+    BasicService register( ServiceConfiguration config ) {
+      BasicService service = new BasicService( config );
       if ( config.isVmLocal( ) || config.isHostLocal( ) ) {
         this.localService.set( service );
       }
-      Service ret = this.services.putIfAbsent( config, service );
+      BasicService ret = this.services.putIfAbsent( config, service );
       if ( ret == null ) {
         ret = service;
         try {
-          ret.getStateMachine( ).transition( Component.State.INITIALIZED ).get( );
-          ListenerRegistry.getInstance( ).register( ClockTick.class, ret );
-          ListenerRegistry.getInstance( ).register( Hertz.class, ret );
+          config.lookupStateMachine( ).transition( Component.State.INITIALIZED ).get( );
           EventRecord.caller( Component.class, EventType.COMPONENT_SERVICE_REGISTERED,
                               Component.this.getName( ),
                               ( config.isVmLocal( ) || config.isHostLocal( ) )
                                 ? "local"
                                 : "remote",
                               config.toString( ) ).info( );
-          Logs.exhaust( ).debug( "Registered service " + ret + " for configuration: " + config );
-        } catch ( IllegalStateException ex ) {
-          LOG.error( ex, ex );
-        } catch ( ExecutionException ex ) {
-          LOG.error( ex, ex );
-        } catch ( InterruptedException ex ) {
-          LOG.error( ex, ex );
-        } catch ( ExistingTransitionException ex ) {
-          LOG.error( ex, ex );
+        } catch ( Exception ex ) {
+          Logs.extreme( ).error( ex, ex );
         }
       }
       return ret;
@@ -604,4 +494,223 @@ public class Component implements HasName<Component> {
     return this.serviceRegistry.getLocalService( ).getServiceConfiguration( );
   }
   
+  /**
+   * @param componentConfiguration
+   * @return
+   */
+  public StateMachine<ServiceConfiguration, State, Transition> getStateMachine( ServiceConfiguration conf ) {
+    return this.serviceRegistry.lookup( conf ).getStateMachine( );
+  }
+  
+  public void addBootstrapper( Bootstrapper bootstrapper ) {
+    this.bootstrapper.addBootstrapper( bootstrapper );
+  }
+  
+  public boolean load( ) {
+    return this.bootstrapper.load( );
+  }
+  
+  public boolean start( ) {
+    return this.bootstrapper.start( );
+  }
+  
+  public boolean enable( ) {
+    return this.bootstrapper.enable( );
+  }
+  
+  public boolean stop( ) {
+    return this.bootstrapper.stop( );
+  }
+  
+  public void destroy( ) {
+    this.bootstrapper.destroy( );
+  }
+  
+  public boolean disable( ) {
+    return this.bootstrapper.disable( );
+  }
+  
+  public boolean check( ) {
+    return this.bootstrapper.check( );
+  }
+  
+  public List<Bootstrapper> getBootstrappers( ) {
+    return this.bootstrapper.getBootstrappers( );
+  }
+  
+  static class ComponentBootstrapper implements CanBootstrap {
+    private final Multimap<Bootstrap.Stage, Bootstrapper> bootstrappers;
+    private final Multimap<Bootstrap.Stage, Bootstrapper> disabledBootstrappers;
+    private final Component                               component;
+    
+    ComponentBootstrapper( Component component ) {
+      super( );
+      this.component = component;
+      Multimap<Bootstrap.Stage, Bootstrapper> a = ArrayListMultimap.create( );
+      this.bootstrappers = Multimaps.synchronizedMultimap( a );
+      Multimap<Bootstrap.Stage, Bootstrapper> b = ArrayListMultimap.create( );
+      this.disabledBootstrappers = Multimaps.synchronizedMultimap( b );
+    }
+    
+    public void addBootstrapper( Bootstrapper bootstrapper ) {
+      if ( Stage.PrivilegedConfiguration.equals( bootstrapper.getBootstrapStage( ) ) ) {
+        EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, "stage:" + bootstrapper.getBootstrapStage( ).toString( ),
+                          this.component.getComponentId( ).name( ),
+                          bootstrapper.getClass( ).getName( ),
+                          "component=" + this.component.getComponentId( ).name( ) ).exhaust( );
+      } else {
+        EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ADDED, "stage:" + bootstrapper.getBootstrapStage( ).toString( ),
+                          this.component.getComponentId( ).name( ),
+                          bootstrapper.getClass( ).getName( ),
+                          "component=" + this.component.getComponentId( ).name( ) ).exhaust( );
+        this.bootstrappers.put( bootstrapper.getBootstrapStage( ), bootstrapper );
+      }
+    }
+    
+    private void updateBootstrapDependencies( ) {
+      Iterable<Bootstrapper> currBootstrappers = Iterables.concat( Lists.newArrayList( this.bootstrappers.values( ) ),
+                                                                                   Lists.newArrayList( this.disabledBootstrappers.values( ) ) );
+      this.bootstrappers.clear( );
+      this.disabledBootstrappers.clear( );
+      for ( Bootstrapper bootstrapper : currBootstrappers ) {
+        try {
+          Bootstrap.Stage stage = bootstrapper.getBootstrapStage( );
+          if ( bootstrapper.checkLocal( ) && bootstrapper.checkRemote( ) ) {
+            this.enableBootstrapper( stage, bootstrapper );
+          } else {
+            this.disableBootstrapper( stage, bootstrapper );
+          }
+        } catch ( Exception ex ) {
+          LOG.error( ex, ex );
+        }
+      }
+    }
+    
+    private void enableBootstrapper( Bootstrap.Stage stage, Bootstrapper bootstrapper ) {
+      EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_MARK_ENABLED, "stage:", stage.toString( ), this.component.getComponentId( ).name( ),
+                        bootstrapper.getClass( ).getName( ), "component=" + this.component.getComponentId( ).name( ) ).exhaust( );
+      this.disabledBootstrappers.remove( stage, bootstrapper );
+      this.bootstrappers.put( stage, bootstrapper );
+    }
+    
+    private void disableBootstrapper( Bootstrap.Stage stage, Bootstrapper bootstrapper ) {
+      EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_MARK_DISABLED, "stage:" + stage.toString( ), this.component.getComponentId( ).name( ),
+                        bootstrapper.getClass( ).getName( ), "component=" + this.component.getComponentId( ).name( ) ).exhaust( );
+      this.bootstrappers.remove( stage, bootstrapper );
+      this.disabledBootstrappers.put( stage, bootstrapper );
+    }
+    
+    private boolean doTransition( EventType transition, CheckedFunction<Bootstrapper, Boolean> checkedFunction ) {
+      String name = transition.name( ).replaceAll( ".*_", "" ).toLowerCase( );
+      this.updateBootstrapDependencies( );
+      for ( Stage s : Bootstrap.Stage.values( ) ) {
+        for ( Bootstrapper b : Lists.newArrayList( this.bootstrappers.get( s ) ) ) {
+          EventRecord.here( this.component.getClass( ), transition, this.component.getComponentId( ).name( ), "stage", s.name( ),
+                            b.getClass( ).getCanonicalName( ) ).extreme( );
+          try {
+            boolean result = checkedFunction.apply( b );
+            if ( !result ) {
+              throw Exceptions.toUndeclared( new TransitionException( b.getClass( ).getSimpleName( ) + " returned 'false' from " + name
+                                                                      + "( ): terminating bootstrap for component: " + this.component.getName( ) ) );
+            }
+          } catch ( Exception e ) {
+            throw Exceptions.toUndeclared( new TransitionException( b.getClass( ).getSimpleName( ) + " returned '" + e.getMessage( ) + "' from " + name
+                                                                    + "( ): terminating bootstrap for component: " + this.component.getName( ), e ) );
+          }
+        }
+      }
+      return true;
+      
+    }
+    
+    public boolean load( ) {
+      this.doTransition( EventType.BOOTSTRAPPER_LOAD, new CheckedFunction<Bootstrapper, Boolean>( ) {
+        @Override
+        public Boolean apply( Bootstrapper arg0 ) throws Exception {
+          return arg0.load( );
+        }
+      } );
+      return true;
+    }
+    
+    public boolean start( ) {
+      this.doTransition( EventType.BOOTSTRAPPER_START, new CheckedFunction<Bootstrapper, Boolean>( ) {
+        @Override
+        public Boolean apply( Bootstrapper arg0 ) throws Exception {
+          return arg0.start( );
+        }
+      } );
+      return true;
+    }
+    
+    public boolean enable( ) {
+      this.doTransition( EventType.BOOTSTRAPPER_ENABLE, new CheckedFunction<Bootstrapper, Boolean>( ) {
+        @Override
+        public Boolean apply( Bootstrapper arg0 ) throws Exception {
+          return arg0.enable( );
+        }
+      } );
+      return true;
+    }
+    
+    public boolean stop( ) {
+      this.doTransition( EventType.BOOTSTRAPPER_STOP, new CheckedFunction<Bootstrapper, Boolean>( ) {
+        @Override
+        public Boolean apply( Bootstrapper arg0 ) throws Exception {
+          try {
+            arg0.stop( );
+          } catch ( Exception ex ) {
+            LOG.error( ex, ex );
+          }
+          return true;
+        }
+      } );
+      return true;
+    }
+    
+    public void destroy( ) {
+      this.doTransition( EventType.BOOTSTRAPPER_DESTROY, new CheckedFunction<Bootstrapper, Boolean>( ) {
+        @Override
+        public Boolean apply( Bootstrapper arg0 ) throws Exception {
+          try {
+            arg0.destroy( );
+          } catch ( Exception ex ) {
+            LOG.error( ex, ex );
+          }
+          return true;
+        }
+      } );
+    }
+    
+    public boolean disable( ) {
+      this.doTransition( EventType.BOOTSTRAPPER_DISABLE, new CheckedFunction<Bootstrapper, Boolean>( ) {
+        @Override
+        public Boolean apply( Bootstrapper arg0 ) throws Exception {
+          return arg0.disable( );
+        }
+      } );
+      
+      return true;
+    }
+    
+    public boolean check( ) {
+      this.doTransition( EventType.BOOTSTRAPPER_CHECK, new CheckedFunction<Bootstrapper, Boolean>( ) {
+        @Override
+        public Boolean apply( Bootstrapper arg0 ) throws Exception {
+          return arg0.check( );
+        }
+      } );
+      return true;
+    }
+    
+    public List<Bootstrapper> getBootstrappers( ) {
+      return Lists.newArrayList( this.bootstrappers.values( ) );
+    }
+
+    @Override
+    public String toString( ) {
+      return Joiner.on( "\n" ).join( this.bootstrappers.values( ) );
+    }
+    
+  }
 }

@@ -71,6 +71,7 @@ import com.eucalyptus.cluster.ClusterState;
 import com.eucalyptus.component.ComponentRegistrationHandler;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Dispatcher;
+import com.eucalyptus.component.ServiceBuilders;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.id.ClusterController;
@@ -151,6 +152,7 @@ public class RemoteInfoHandler {
     List<Runnable> dispatchParameters = Lists.newArrayList( );
     for ( StorageInfoWeb storageControllerWeb : newStorageList ) {
       final StorageControllerConfiguration scConfig = new StorageControllerConfiguration( null /**
+       * 
        * 
        * ASAP: FIXME: GRZE
        **/
@@ -307,36 +309,14 @@ public class RemoteInfoHandler {
       LOG.info( "-> add: " + addComponents );
       LOG.info( "-> remove: " + removeComponents );
       for ( ComponentConfiguration config : removeComponents ) {
-//        DeregisterComponentType regComponent = null;
-//        if ( config instanceof StorageControllerConfiguration ) {
-//          regComponent = new DeregisterStorageControllerType( );
-//        } else if ( config instanceof WalrusConfiguration ) {
-//          regComponent = new DeregisterWalrusType( );
-//        } else if ( config instanceof ClusterConfiguration ) {
-//          regComponent = new DeregisterClusterType( );
-//        } else {
-//          regComponent = new DeregisterComponentType( );
-//        }
-//        regComponent.setName( config.getName( ) );
-        ComponentRegistrationHandler.deregister( Components.oneWhichHandles( config.getClass( ) ),
-                                                 config.getPartition( ), config.getHostName( ) );
+        ComponentRegistrationHandler.deregister( ServiceBuilders.oneWhichHandles( config.getClass( ) ), config.getHostName( ) );
       }
       for ( ComponentConfiguration config : addComponents ) {
-//        RegisterComponentType regComponent = null;
-//        if ( config instanceof StorageControllerConfiguration ) {
-//          regComponent = new RegisterStorageControllerType( );
-//        } else if ( config instanceof WalrusConfiguration ) {
-//          regComponent = new RegisterWalrusType( );
-//        } else if ( config instanceof ClusterConfiguration ) {
-//          regComponent = new RegisterClusterType( );
-//        } else {
-//          regComponent = new RegisterComponentType( );
-//        }
-//        regComponent.setName( config.getName( ) );
-//        regComponent.setHost( config.getHostName( ) );
-//        regComponent.setPort( config.getPort( ) );
-        ComponentRegistrationHandler.register( Components.oneWhichHandles( config.getClass( ) ),
-                                               config.getPartition( ), config.getName( ), config.getHostName( ), config.getPort( ) );
+        ComponentRegistrationHandler.register( ServiceBuilders.oneWhichHandles( config.getClass( ) ),
+                                               config.getPartition( ),
+                                               config.getName( ),
+                                               config.getHostName( ),
+                                               config.getPort( ) );
       }
     } catch ( Exception e ) {
       LOG.error( e, e );

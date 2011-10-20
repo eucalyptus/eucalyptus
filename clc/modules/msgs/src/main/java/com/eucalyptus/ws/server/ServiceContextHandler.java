@@ -205,7 +205,7 @@ public class ServiceContextHandler implements ChannelUpstreamHandler, ChannelDow
     }
   }
   
-  private void messageReceived( final ChannelHandlerContext ctx, final BaseMessage msg ) throws ServiceInitializationException, ServiceDispatchException, ServiceStateException {
+  private void messageReceived( final ChannelHandlerContext ctx, final BaseMessage msg ) throws ServiceDispatchException {
     this.startTime.set( ctx.getChannel( ), System.currentTimeMillis( ) );
     this.messageType.set( ctx.getChannel( ), msg );
     EventRecord.here( ServiceContextHandler.class, EventType.MSG_RECEIVED, msg.getClass( ).getSimpleName( ) ).trace( );

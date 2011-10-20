@@ -69,6 +69,8 @@ import java.util.concurrent.Future;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapArgs;
+import com.eucalyptus.bootstrap.Host;
+import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.component.Component.State;
 import com.eucalyptus.component.Topology.ServiceKey;
 import com.eucalyptus.records.Logs;
@@ -79,8 +81,24 @@ import com.google.common.base.Function;
 public class TopologyChanges {
   private static Logger LOG = Logger.getLogger( TopologyChanges.class );
   
+  static Function<ServiceConfiguration, ServiceConfiguration> enableFunction( ) {
+    if ( Hosts.isCoordinator( ) ) {
+      return CloudTopologyCallables.ENABLE;
+    } else {
+      return RemoteTopologyCallables.ENABLE;
+    }
+  }
+  
+  static Function<ServiceConfiguration, ServiceConfiguration> startFunction( ) {
+    if ( Hosts.isCoordinator( ) ) {
+      return CloudTopologyCallables.CHECK;
+    } else {
+      return RemoteTopologyCallables.CHECK;
+    }
+  }
+  
   static Function<ServiceConfiguration, ServiceConfiguration> checkFunction( ) {
-    if ( BootstrapArgs.isCloudController( ) ) {
+    if ( Hosts.isCoordinator( ) ) {
       return CloudTopologyCallables.CHECK;
     } else {
       return RemoteTopologyCallables.CHECK;
@@ -88,33 +106,42 @@ public class TopologyChanges {
   }
   
   static Function<ServiceConfiguration, ServiceConfiguration> disableFunction( ) {
-    if ( BootstrapArgs.isCloudController( ) ) {
+    if ( Hosts.isCoordinator( ) ) {
       return CloudTopologyCallables.DISABLE;
     } else {
       return RemoteTopologyCallables.DISABLE;
     }
   }
   
-  static Function<ServiceConfiguration, ServiceConfiguration> enableFunction( ) {
-    if ( BootstrapArgs.isCloudController( ) ) {
-      return CloudTopologyCallables.ENABLE;
+  static Function<ServiceConfiguration, ServiceConfiguration> stopFunction( ) {
+    if ( Hosts.isCoordinator( ) ) {
+      return CloudTopologyCallables.STOP;
     } else {
-      return RemoteTopologyCallables.ENABLE;
+      return RemoteTopologyCallables.STOP;
     }
   }
   
-  enum RemoteTopologyCallables implements Function<ServiceConfiguration, ServiceConfiguration> {
+  static Function<ServiceConfiguration, ServiceConfiguration> destroyFunction( ) {
+    if ( Hosts.isCoordinator( ) ) {
+      return CloudTopologyCallables.DESTROY;
+    } else {
+      return RemoteTopologyCallables.DESTROY;
+    }
+  }
+  
+  private enum RemoteTopologyCallables implements Function<ServiceConfiguration, ServiceConfiguration> {
     START {
       
       @Override
       public ServiceConfiguration apply( ServiceConfiguration input ) {
         try {
-          return input.lookupComponent( ).startTransition( input ).get( );
+          Components.lookup( input.getComponentId( ) ).setup( input );
+          return ServiceTransitions.pathTo( input, State.NOTREADY ).get( );
         } catch ( InterruptedException ex ) {
           Thread.currentThread( ).interrupt( );
-          throw new UndeclaredThrowableException( ex );
+          throw Exceptions.toUndeclared( ex );
         } catch ( Exception ex ) {
-          throw new UndeclaredThrowableException( ex );
+          throw Exceptions.toUndeclared( ex );
         }
       }
     },
@@ -123,11 +150,11 @@ public class TopologyChanges {
       public ServiceConfiguration apply( ServiceConfiguration config ) {
         try {
           ServiceKey serviceKey = ServiceKey.create( config );
-          if ( Topology.getInstance( ).getGuard( ).tryEnable( config ) ) {
+          if ( Topology.guard( ).tryEnable( config ) ) {
             try {
               return ServiceTransitions.pathTo( config, Component.State.ENABLED ).get( );
             } catch ( Exception ex ) {
-              Topology.getInstance( ).getGuard( ).tryDisable( config );
+              Topology.guard( ).tryDisable( config );
               throw ex;
             }
           } else {
@@ -135,10 +162,10 @@ public class TopologyChanges {
           }
         } catch ( InterruptedException ex ) {
           Thread.currentThread( ).interrupt( );
-          throw new UndeclaredThrowableException( ex );
+          throw Exceptions.toUndeclared( ex );
         } catch ( Exception ex ) {
           LOG.error( ex, ex );
-          throw new UndeclaredThrowableException( ex );
+          throw Exceptions.toUndeclared( ex );
         }
       }
     },
@@ -149,14 +176,14 @@ public class TopologyChanges {
           ServiceKey serviceKey = ServiceKey.create( config );
           Future<ServiceConfiguration> transition = ServiceTransitions.pathTo( config, Component.State.DISABLED );
           ServiceConfiguration result = transition.get( );
-          Topology.getInstance( ).getGuard( ).tryDisable( config );
+          Topology.guard( ).tryDisable( config );
           return result;
         } catch ( InterruptedException ex ) {
           Thread.currentThread( ).interrupt( );
-          throw new UndeclaredThrowableException( ex );
+          throw Exceptions.toUndeclared( ex );
         } catch ( Exception ex ) {
           LOG.error( ex, ex );
-          throw new UndeclaredThrowableException( ex );
+          throw Exceptions.toUndeclared( ex );
         }
       }
     },
@@ -165,12 +192,29 @@ public class TopologyChanges {
       @Override
       public ServiceConfiguration apply( ServiceConfiguration input ) {
         try {
-          return input.lookupComponent( ).stopTransition( input ).get( );
+          if ( Component.State.ENABLED.equals( input.lookupState( ) ) ) {
+            DISABLE.apply( input );
+          }
+          return ServiceTransitions.pathTo( input, Component.State.STOPPED ).get( );
         } catch ( InterruptedException ex ) {
           Thread.currentThread( ).interrupt( );
-          throw new UndeclaredThrowableException( ex );
+          throw Exceptions.toUndeclared( ex );
         } catch ( Exception ex ) {
-          throw new UndeclaredThrowableException( ex );
+          throw Exceptions.toUndeclared( ex );
+        }
+      }
+    },
+    DESTROY {
+      
+      @Override
+      public ServiceConfiguration apply( ServiceConfiguration input ) {
+        try {
+          return ServiceTransitions.pathTo( input, Component.State.NONE ).get( );
+        } catch ( InterruptedException ex ) {
+          Thread.currentThread( ).interrupt( );
+          throw Exceptions.toUndeclared( ex );
+        } catch ( Exception ex ) {
+          throw Exceptions.toUndeclared( ex );
         }
       }
     },
@@ -199,7 +243,7 @@ public class TopologyChanges {
             return config;
           } catch ( Exception ex ) {
             LOG.error( ex, ex );
-            throw new UndeclaredThrowableException( ex );
+            throw Exceptions.toUndeclared( ex );
           }
         } else {
           return config;
@@ -215,24 +259,26 @@ public class TopologyChanges {
   }
   
   /**
-   * ServiceConfiguration empyrean = ServiceConfigurations.createEphemeral(Empyrean.INSTANCE, InetAddress.getByName("192.168.51.116"));
+   * ServiceConfiguration empyrean = ServiceConfigurations.createEphemeral(Empyrean.INSTANCE,
+   * InetAddress.getByName("192.168.51.116"));
    * DescribeServicesType msg = new DescribeServicesType();
    * msg.listAll = true;
    * return AsyncRequests.sendSync(empyrean,msg)
    */
   
-  enum CloudTopologyCallables implements Function<ServiceConfiguration, ServiceConfiguration> {
+  private enum CloudTopologyCallables implements Function<ServiceConfiguration, ServiceConfiguration> {
     START {
       
       @Override
       public ServiceConfiguration apply( ServiceConfiguration input ) {
         try {
-          return input.lookupComponent( ).startTransition( input ).get( );
+          Components.lookup( input.getComponentId( ) ).setup( input );
+          return ServiceTransitions.pathTo( input, State.NOTREADY ).get( );
         } catch ( InterruptedException ex ) {
           Thread.currentThread( ).interrupt( );
-          throw new UndeclaredThrowableException( ex );
+          throw Exceptions.toUndeclared( ex );
         } catch ( Exception ex ) {
-          throw new UndeclaredThrowableException( ex );
+          throw Exceptions.toUndeclared( ex );
         }
       }
     },
@@ -241,11 +287,11 @@ public class TopologyChanges {
       public ServiceConfiguration apply( ServiceConfiguration config ) {
         try {
           ServiceKey serviceKey = ServiceKey.create( config );
-          if ( Topology.getInstance( ).getGuard( ).tryEnable( config ) ) {
+          if ( Topology.guard( ).tryEnable( config ) ) {
             try {
               return ServiceTransitions.pathTo( config, Component.State.ENABLED ).get( );
             } catch ( Exception ex ) {
-              Topology.getInstance( ).getGuard( ).tryDisable( config );
+              Topology.guard( ).tryDisable( config );
               throw ex;
             }
           } else {
@@ -253,10 +299,10 @@ public class TopologyChanges {
           }
         } catch ( InterruptedException ex ) {
           Thread.currentThread( ).interrupt( );
-          throw new UndeclaredThrowableException( ex );
+          throw Exceptions.toUndeclared( ex );
         } catch ( Exception ex ) {
           LOG.error( ex, ex );
-          throw new UndeclaredThrowableException( ex );
+          throw Exceptions.toUndeclared( ex );
         }
       }
     },
@@ -271,10 +317,10 @@ public class TopologyChanges {
           return result;
         } catch ( InterruptedException ex ) {
           Thread.currentThread( ).interrupt( );
-          throw new UndeclaredThrowableException( ex );
+          throw Exceptions.toUndeclared( ex );
         } catch ( Exception ex ) {
           LOG.error( ex, ex );
-          throw new UndeclaredThrowableException( ex );
+          throw Exceptions.toUndeclared( ex );
         } finally {
           if ( serviceKey != null ) {
             try {
@@ -294,12 +340,26 @@ public class TopologyChanges {
           if ( Component.State.ENABLED.equals( input.lookupState( ) ) ) {
             DISABLE.apply( input );
           }
-          return input.lookupComponent( ).stopTransition( input ).get( );
+          return ServiceTransitions.pathTo( input, Component.State.STOPPED ).get( );
         } catch ( InterruptedException ex ) {
           Thread.currentThread( ).interrupt( );
-          throw new UndeclaredThrowableException( ex );
+          throw Exceptions.toUndeclared( ex );
         } catch ( Exception ex ) {
-          throw new UndeclaredThrowableException( ex );
+          throw Exceptions.toUndeclared( ex );
+        }
+      }
+    },
+    DESTROY {
+      
+      @Override
+      public ServiceConfiguration apply( ServiceConfiguration input ) {
+        try {
+          return ServiceTransitions.pathTo( input, Component.State.NONE ).get( );
+        } catch ( InterruptedException ex ) {
+          Thread.currentThread( ).interrupt( );
+          throw Exceptions.toUndeclared( ex );
+        } catch ( Exception ex ) {
+          throw Exceptions.toUndeclared( ex );
         }
       }
     },
@@ -321,16 +381,18 @@ public class TopologyChanges {
             Future<ServiceConfiguration> result = ServiceTransitions.pathTo( config, nextState );
             ServiceConfiguration endConfig = result.get( );
             State endState = endConfig.lookupState( );
-            Logs.exhaust( ).debug( this.toString( ) + " completed for: " + endConfig.getFullName( ) + " trying " + initialState + "->" + nextState + " ended in: " + endState );
+            Logs.exhaust( ).debug( this.toString( ) + " completed for: " + endConfig.getFullName( ) + " trying " + initialState + "->" + nextState
+                                       + " ended in: " + endState );
             return endConfig;
           } catch ( InterruptedException ex ) {
             Thread.currentThread( ).interrupt( );
-            throw new UndeclaredThrowableException( ex );
+            throw Exceptions.toUndeclared( ex );
           } catch ( UndeclaredThrowableException ex ) {
             throw ex;
           } catch ( Exception ex ) {
-            Logs.extreme( ).warn( this.toString( ) + " failed for: " + config.getFullName( ) + " trying " + initialState + "->" + nextState + " because of: " + Exceptions.causeString( ex ) );
-            throw new UndeclaredThrowableException( ex );
+            Logs.extreme( ).warn( this.toString( ) + " failed for: " + config.getFullName( ) + " trying " + initialState + "->" + nextState + " because of: "
+                                      + Exceptions.causeString( ex ) );
+            throw Exceptions.toUndeclared( ex );
           }
         }
       }

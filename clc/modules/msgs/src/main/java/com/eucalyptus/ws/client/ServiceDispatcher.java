@@ -13,6 +13,7 @@ import org.mule.RequestContext;
 import org.mule.api.MuleEvent;
 import org.mule.module.client.MuleClient;
 import com.eucalyptus.component.Component;
+import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Dispatcher;
 import com.eucalyptus.component.NoSuchServiceException;
@@ -20,6 +21,7 @@ import com.eucalyptus.component.Service;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.ServiceUris;
+import com.eucalyptus.component.Topology;
 import com.eucalyptus.context.ServiceContext;
 import com.eucalyptus.context.ServiceDispatchException;
 import com.eucalyptus.empyrean.Empyrean;
@@ -39,40 +41,29 @@ public abstract class ServiceDispatcher implements Dispatcher {
   private static ChannelPipelineFactory              internalPipeline = ComponentIds.lookup( Empyrean.class ).getClientPipeline( );
   
   public static Dispatcher lookupSingle( Component c ) throws NoSuchElementException {
+    return lookupSingle( c.getComponentId( ).getClass( ) );
+  }
+  
+  public static Dispatcher lookupSingle( Class<? extends ComponentId> c ) throws NoSuchElementException {
     try {
-      ServiceConfiguration first = c.lookupServiceConfigurations( ).first( );
+      ServiceConfiguration first = Topology.enabledServices( c ).iterator( ).next( );
       if ( !Component.State.ENABLED.equals( first.lookupState( ) ) ) {
         LOG.error( "Failed to find service dispatcher for component=" + c );
         throw new NoSuchElementException( "Failed to find ENABLED service for component=" + c.getName( ) + " existing services are: "
-                                          + c.lookupServiceConfigurations( ) );
+                                          + ServiceConfigurations.list( c ) );
       } else {
-        return first.lookupService( ).getDispatcher( );
+        return ServiceDispatcher.lookup( first );
       }
-    } catch ( NoSuchServiceException ex ) {
+    } catch ( NoSuchElementException ex ) {
       LOG.error( "Failed to find service dispatcher for component=" + c, ex );
       throw new NoSuchElementException( "Failed to find service for component=" + c );
     }
   }
   
-  public static Dispatcher lookup( ServiceConfiguration config ) {
-    try {
-      return config.lookupService( ).getDispatcher( );
-    } catch ( NoSuchServiceException ex ) {
-      LOG.error( ex, ex );
-      throw new NoSuchElementException( "Failed to lookup dispatcher for: " + config.toString( ) );
-    }
-  }
-  
-  public static Collection<Dispatcher> values( ) {
-    return proxies.values( );
-  }
-  
-  public static Dispatcher makeRemote( ServiceConfiguration configuration ) {
-    return new RemoteDispatcher( configuration, ServiceUris.internal( configuration ) );
-  }
-  
-  public static Dispatcher makeLocal( ServiceConfiguration configuration ) {
-    return new LocalDispatcher( configuration, configuration.getComponentId( ).getLocalEndpointUri( ) );
+  public static Dispatcher lookup( ServiceConfiguration configuration ) {
+    return configuration.isVmLocal( )
+      ? new LocalDispatcher( configuration, configuration.getComponentId( ).getLocalEndpointUri( ) )
+      : new RemoteDispatcher( configuration, ServiceUris.internal( configuration ) );
   }
   
   static abstract class AbstractDispatcher implements Dispatcher {
@@ -84,8 +75,8 @@ public abstract class ServiceDispatcher implements Dispatcher {
       this.address = address;
     }
     
-    public final Component getComponent( ) {
-      return serviceConfiguration.lookupComponent( );
+    public final ComponentId getComponentId( ) {
+      return serviceConfiguration.getComponentId( );
     }
     
     public final String getName( ) {
@@ -178,7 +169,7 @@ public abstract class ServiceDispatcher implements Dispatcher {
     @Override
     public BaseMessage send( BaseMessage msg ) throws EucalyptusCloudException {
       try {
-        return ServiceContext.send( this.getComponent( ).getComponentId( ).getLocalEndpointName( ), msg );
+        return ServiceContext.send( this.getComponentId( ), msg );
       } catch ( ServiceDispatchException ex ) {
         throw new EucalyptusCloudException( ex.getMessage( ), ex );
       }

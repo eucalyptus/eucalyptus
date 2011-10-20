@@ -91,12 +91,18 @@ import org.mule.config.spring.SpringXmlConfigurationBuilder;
 import org.mule.context.DefaultMuleContextFactory;
 import org.mule.module.client.MuleClient;
 import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.bootstrap.Bootstrapper;
+import com.eucalyptus.bootstrap.OrderedShutdown;
+import com.eucalyptus.bootstrap.Provides;
+import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Templates;
 import com.google.common.collect.Lists;
@@ -104,6 +110,24 @@ import com.google.common.collect.Sets;
 import com.google.common.io.Resources;
 
 public class ServiceContextManager {
+  @Provides( Empyrean.class )
+  @RunDuring( Bootstrap.Stage.CloudServiceInit )
+  public class ServiceContextBootstrapper extends Bootstrapper.Simple {
+    
+    public ServiceContextBootstrapper( ) {}
+    
+    @Override
+    public boolean start( ) throws Exception {
+      try {
+        ServiceContextManager.restartSync( );
+        return true;
+      } catch ( Exception ex ) {
+        LOG.error( ex, ex );
+        throw ex;
+      }
+    }
+  }
+  
   private static Logger                                CONFIG_LOG        = Logger.getLogger( "Configs" );
   private static Logger                                LOG               = Logger.getLogger( ServiceContextManager.class );
   private static final ServiceContextManager           singleton         = new ServiceContextManager( );
@@ -119,12 +143,11 @@ public class ServiceContextManager {
   private final BlockingQueue<ServiceConfiguration>    queue             = new LinkedBlockingQueue<ServiceConfiguration>( );
   private MuleContext                                  context;
   private MuleClient                                   client;
-  private ExecutorService                              executor          = Executors.newFixedThreadPool( 1 );
   
   private ServiceContextManager( ) {
     this.canHasRead = this.canHas.readLock( );
     this.canHasWrite = this.canHas.writeLock( );
-    Runtime.getRuntime( ).addShutdownHook( new Thread( ) {
+    OrderedShutdown.register( Empyrean.class, new Runnable( ) {
       
       @Override
       public void run( ) {
@@ -141,7 +164,7 @@ public class ServiceContextManager {
       }
       
     } );
-    this.executor.submit( new Runnable( ) {
+    Threads.lookup( Empyrean.class, ServiceContextManager.class ).submit( new Runnable( ) {
       public void run( ) {
         while ( ServiceContextManager.this.running.get( ) ) {
           ServiceConfiguration event;
@@ -164,8 +187,6 @@ public class ServiceContextManager {
             Thread.currentThread( ).interrupt( );
             ServiceContextManager.this.running.set( false );
             return;
-          } catch ( final Throwable e ) {
-            LOG.error( e, e );
           }
         }
       }
@@ -173,7 +194,7 @@ public class ServiceContextManager {
   }
   
   private List<ComponentId> shouldReload( ) {
-    List<ComponentId> currentComponentIds = Components.toIds( Components.whichAreEnabledLocally( ) );
+    List<ComponentId> currentComponentIds = ComponentIds.list( );
     if ( this.context == null ) {
       return currentComponentIds;
     } else if ( !this.enabledCompIds.equals( currentComponentIds ) ) {
@@ -184,14 +205,14 @@ public class ServiceContextManager {
   }
   
   public static final void restartSync( ) {
-    restartSync( Components.lookup( Empyrean.class ).getLocalServiceConfiguration( ) );
+//    restartSync( Components.lookup( Empyrean.class ).getLocalServiceConfiguration( ) );
   }
   
   public static final void restartSync( ServiceConfiguration config ) {
-    singleton.queue.add( config );
+//    singleton.queue.add( config );
   }
   
-  private void update( ) throws ServiceInitializationException {
+  private void update( ) {
     this.canHasWrite.lock( );
     Bootstrap.awaitFinished( );
     try {
@@ -223,7 +244,7 @@ public class ServiceContextManager {
           }
         } catch ( Exception e ) {
           LOG.error( e, e );
-          throw new ServiceInitializationException( "Failed to start service this.context.", e );
+          throw Exceptions.toUndeclared( new ServiceInitializationException( "Failed to start service this.context.", e ) );
         }
       }
     } finally {
@@ -255,7 +276,7 @@ public class ServiceContextManager {
                                             "       http://www.eucalyptus.com/schema/cloud/1.6 http://www.eucalyptus.com/schema/cloud/1.6/euca.xsd\">\n" +
                                             "</mule>\n";
   
-  private MuleContext createContext( List<ComponentId> currentComponentIds ) throws ServiceInitializationException {
+  private MuleContext createContext( List<ComponentId> currentComponentIds ) {
     this.canHasWrite.lock( );
     try {
       LOG.error( "Restarting service context with these enabled services: " + currentComponentIds );
@@ -278,7 +299,7 @@ public class ServiceContextManager {
           configs.add( configRsc );
         } catch ( Exception ex ) {
           LOG.error( errMsg + ex.getMessage( ), ex );
-          throw new ServiceInitializationException( errMsg + ex.getMessage( ), ex );
+          throw Exceptions.toUndeclared( new ServiceInitializationException( errMsg + ex.getMessage( ), ex ) );
         }
       }
       try {
@@ -288,15 +309,15 @@ public class ServiceContextManager {
         this.enabledCompIds.addAll( currentComponentIds );
       } catch ( Exception ex ) {
         LOG.error( ex, ex );
-        throw new ServiceInitializationException( "Failed to build service context because of: " + ex.getMessage( ), ex );
+        throw Exceptions.toUndeclared( new ServiceInitializationException( "Failed to build service context because of: " + ex.getMessage( ), ex ) );
       }
       return muleCtx;
     } finally {
       this.canHasWrite.unlock( );
     }
   }
-
-  public String loadModel( ComponentId componentId ) {
+  
+  private String loadModel( ComponentId componentId ) {
     try {
       return Resources.toString( Resources.getResource( componentId.getServiceModelFileName( ) ), Charset.defaultCharset( ) );
     } catch ( Exception ex ) {
@@ -325,7 +346,7 @@ public class ServiceContextManager {
     }
   }
   
-  public static MuleContext getContext( ) throws MuleException, ServiceInitializationException {
+  public static MuleContext getContext( ) throws MuleException {
     singleton.canHasRead.lock( );
     try {
       if ( singleton.context == null ) {

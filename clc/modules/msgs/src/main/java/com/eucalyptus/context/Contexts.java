@@ -4,11 +4,18 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.Channels;
 import org.mule.RequestContext;
 import org.mule.api.MuleMessage;
+import com.eucalyptus.BaseException;
 import com.eucalyptus.http.MappingHttpRequest;
+import com.eucalyptus.records.EventRecord;
+import com.eucalyptus.records.EventType;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Assertions;
+import com.eucalyptus.ws.util.ReplyQueue;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
 import edu.ucsb.eucalyptus.msgs.HasRequest;
 
 public class Contexts {
@@ -131,6 +138,46 @@ public class Contexts {
       Context ctx = new Context( dest, msg );
       uuidContexts.put( ctx.getCorrelationId( ), ctx );
       return ctx;
+    }
+  }
+
+  @SuppressWarnings( "unchecked" )
+  public static void response( BaseMessage responseMessage ) {
+    if ( responseMessage instanceof ExceptionResponseType ) {
+      Logs.exhaust( ).trace( responseMessage );
+    }
+    String corrId = responseMessage.getCorrelationId( );
+    try {
+      Context ctx = lookup( corrId );
+      EventRecord.here( ServiceContext.class, EventType.MSG_REPLY, responseMessage.getCorrelationId( ), responseMessage.getClass( ).getSimpleName( ),
+                        String.format( "%.3f ms", ( System.nanoTime( ) - ctx.getCreationTime( ) ) / 1000000.0 ) ).debug( );
+      Channel channel = ctx.getChannel( );
+      Channels.write( channel, responseMessage );
+      clear( ctx );
+    } catch ( NoSuchContextException e ) {
+      ServiceContext.LOG.warn( "Received a reply for absent client:  No channel to write response message.", e );
+      ServiceContext.LOG.debug( responseMessage );
+    } catch ( Exception e ) {
+      ServiceContext.LOG.warn( "Error occurred while handling reply: " + responseMessage, e );
+    }
+  }
+
+  public static void responseError( Throwable cause ) {
+    Contexts.responseError( lookup( ).getCorrelationId( ), cause );
+  }
+
+  public static void responseError( String corrId, Throwable cause ) {
+    try {
+      Context ctx = lookup( corrId );
+      EventRecord.here( ReplyQueue.class, EventType.MSG_REPLY, cause.getClass( ).getCanonicalName( ), cause.getMessage( ),
+                        String.format( "%.3f ms", ( System.nanoTime( ) - ctx.getCreationTime( ) ) / 1000000.0 ) ).debug( );
+      Channels.fireExceptionCaught( ctx.getChannel( ), cause );
+      if ( !( cause instanceof BaseException ) ) {
+        clear( ctx );
+      }
+    } catch ( Exception ex ) {
+      ServiceContext.LOG.error( ex );
+      ServiceContext.LOG.error( cause, cause );
     }
   }
   

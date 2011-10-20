@@ -198,7 +198,7 @@ public class UniqueIds implements Serializable {
       } catch ( final Exception ex1 ) {
         db.rollback( );
         LOG.error( ex1, ex1 );
-        throw Exceptions.fatal( "Failed to initialize counter for: " + counterName + " because of: " + ex.getMessage( ), ex );
+        throw Exceptions.toUndeclared( "Failed to initialize counter for: " + counterName + " because of: " + ex.getMessage( ), ex );
       }
     }
   }

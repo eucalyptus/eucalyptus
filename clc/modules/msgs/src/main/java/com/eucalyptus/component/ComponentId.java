@@ -4,7 +4,6 @@ import java.io.Serializable;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;
-import java.util.MissingFormatArgumentException;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentMap;
 import org.apache.log4j.Logger;
@@ -18,14 +17,11 @@ import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.util.HasName;
-import com.eucalyptus.util.Internets;
-import com.eucalyptus.ws.StackConfiguration;
 import com.eucalyptus.ws.StackConfiguration.Transport;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public abstract class ComponentId implements HasName<ComponentId>, HasFullName<ComponentId>, Serializable {

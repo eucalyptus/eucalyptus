@@ -359,7 +359,7 @@ public class VmControl {
         reply.setInstanceId( request.getInstanceId( ) );
         reply.setTimestamp( new Date( ) );
         reply.setOutput( v.getConsoleOutputString( ) );
-        ServiceContext.response( reply );
+        Contexts.response( reply );
       } catch ( final NoSuchElementException ex ) {
         throw new EucalyptusCloudException( "No such instance: " + request.getInstanceId( ) );
       }
@@ -371,7 +371,7 @@ public class VmControl {
       reply.setInstanceId( request.getInstanceId( ) );
       reply.setTimestamp( new Date( ) );
       reply.setOutput( v.getConsoleOutputString( ) );
-      ServiceContext.response( reply );
+      Contexts.response( reply );
     } else {
       Cluster cluster = null;
       try {
