@@ -668,7 +668,7 @@ public class Topology implements EventListener<Event> {
       
       @Override
       public boolean apply( final Entry<ServiceKey, ServiceConfiguration> arg0 ) {
-        return compId.equals( arg0.getKey( ).getComponentId( ) );
+        return compId.equals( arg0.getKey( ).getComponentId( ).getClass( ) );
       }
     } ).values( );
   }
