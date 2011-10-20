@@ -233,6 +233,7 @@ public class Hosts {
     
     private ShouldLoadRemote( Class<? extends ComponentId> compId ) {
       this.delegate = shouldLoadRemote( compId );
+      this.compId = compId;
     }
     
     public boolean apply( ComponentId input ) {
@@ -432,7 +433,7 @@ public class Hosts {
     
     @Override
     public boolean apply( Host arg1 ) {
-      if ( !Bootstrap.isFinished( ) || !BootstrapArgs.isCloudController( ) || arg1.isLocalHost( ) ) {
+      if ( !Bootstrap.isFinished( ) || !BootstrapArgs.isCloudController( ) || arg1.isLocalHost( ) || arg1.hasDatabase( ) ) {
         return false;
       } else {
         try {
