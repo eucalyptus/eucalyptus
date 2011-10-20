@@ -3457,6 +3457,7 @@ int do_file_lock_test (void)
         _OPEN(fd1,F1,_C,0,0);
         fflush (stdout);
         fflush (stderr);
+
         pid = fork();
         if (pid) {
             _PARENT_WAITS;
@@ -3464,12 +3465,13 @@ int do_file_lock_test (void)
             errors = 0;
             close_and_unlock (fd1);
             _OPEN(fd1,F1,_C,0,-1);
-            _OPEN(fd1,F1,_W,30000,-1);
-            _OPEN(fd1,F1,_R,30000,-1); 
+            _OPEN(fd1,F1,_W,600000,-1);
+            _OPEN(fd1,F1,_R,600000,-1); 
             _OPEN(fd1,F2,_C,0,0); // test unlocking upon exit
             _OPEN(fd2,F3,_C,0,0);
             _CLOS(fd2,F3);
             _OPEN(fd2,F3,_W,0,0); // test unlocking upon exit
+            fflush (stdout);
             _exit (errors);
         }
         _CLOS(fd1,F1);
@@ -3488,6 +3490,7 @@ int do_file_lock_test (void)
             _OPEN(fd2,F2,_R,0,0);
             _OPEN(fd3,F2,_W,30000,-1);
             _OPEN(fd3,F3,_W,30000,-1);
+            fflush (stdout);
             _exit (errors);
         }
         _CLOS(fd3,F3);
@@ -3502,6 +3505,7 @@ int do_file_lock_test (void)
             _PARENT_WAITS;
         } else {
             _OPEN(fd2,F2,_W,0,0);
+            fflush (stdout);
             pid = * (int *)0; // crash!
         }
         _OPEN(fd2,F2,_W,0,0);
@@ -3564,6 +3568,7 @@ int main (int argc, char ** argv)
     getcwd (cwd, sizeof (cwd));
     srandom (time(NULL));
 
+    logfile (NULL, EUCADEBUG2, 4);
     blobstore_set_error_function (dummy_err_fn);    
 
     printf ("testing blobstore.c\n");
