@@ -339,11 +339,15 @@ public class Hosts {
     
     @Override
     public boolean apply( final Host arg1 ) {
-      doBootstrap( Empyrean.class, arg1.getBindAddress( ) );
-      if ( !BootstrapArgs.isCloudController( ) && !arg1.isLocalHost( ) && arg1.hasDatabase( ) && initialized.compareAndSet( false, true ) ) {
-        doBootstrap( Eucalyptus.class, arg1.getBindAddress( ) );
+      if ( !arg1.isLocalHost( ) && !Bootstrap.isFinished( ) ) {
+        doBootstrap( Empyrean.class, arg1.getBindAddress( ) );
+        if ( !BootstrapArgs.isCloudController( ) && !arg1.isLocalHost( ) && arg1.hasDatabase( ) && initialized.compareAndSet( false, true ) ) {
+          doBootstrap( Eucalyptus.class, arg1.getBindAddress( ) );
+        }
+        return true;
+      } else {
+        return false;
       }
-      return true;
     }
     
     private static <T extends ComponentId> void doBootstrap( final Class<T> compId, InetAddress addr ) {
