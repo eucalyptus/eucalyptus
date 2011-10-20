@@ -645,42 +645,36 @@ public class EuareWebBackend {
         // Optimization for a single user's policies
         User user = Accounts.lookupUserById( query.getSingle( USERID ).getValue( ) );
         Account account = user.getAccount( );
-        for ( Policy policy : Privileged.listUserPolicies( requestUser, account, user ) ) {
-          try {
-            if ( Privileged.allowReadUserPolicy( requestUser, account, user ) ) {
-              results.add( serializePolicy( policy, account, null, user ) );
-            }
-          } catch ( Exception e ) {
-            LOG.error( e, e );
+        if ( Privileged.allowListOrReadUserPolicy( requestUser, account, user ) ) {
+          for ( Policy policy : user.getPolicies( ) ) {
+            results.add( serializePolicy( policy, account, null, user ) );
           }
         }
       } else if ( query.hasOnlySingle( GROUPID ) ) {
         // Optimization for a single group's policies
         Group group = Accounts.lookupGroupById( query.getSingle( GROUPID ).getValue( ) );
         Account account = group.getAccount( );
-        for ( Policy policy : Privileged.listGroupPolicies( requestUser, account, group ) ) {
-          try {
-            if ( Privileged.allowReadGroupPolicy( requestUser, account, group ) ) {
-              results.add( serializePolicy( policy, account, group, null ) );
-            }
-          } catch ( Exception e ) {
-            LOG.error( e, e );
+        if ( Privileged.allowReadGroupPolicy( requestUser, account, group ) ) {
+          for ( Policy policy : Privileged.listGroupPolicies( requestUser, account, group ) ) {
+            results.add( serializePolicy( policy, account, group, null ) );
           }
         }
       } else if ( query.hasOnlySingle( ACCOUNTID ) ) {
         // Optimization for a single account's policies
         Account account = Accounts.lookupAccountById( query.getSingle( ACCOUNTID ).getValue( ) );
-        for ( Policy policy : Privileged.listAccountPolicies( requestUser.isSystemAdmin( ), account ) ) {
-          results.add( serializePolicy( policy, account, null, null ) );
+        if ( Privileged.allowListOrReadAccountPolicy( requestUser, account ) ) {
+          for ( Policy policy : account.lookupUserByName( User.ACCOUNT_ADMIN ).getPolicies( ) ) {
+            results.add( serializePolicy( policy, account, null, null ) );
+          }
         }
       } else {
         for ( Account account : getAccounts( query ) ) {
           try {
             for ( User user : getUsers( account, query ) ) {
               try {
-                for ( Policy policy : Privileged.listUserPolicies( requestUser, account, user ) ) {
-                  if ( policyMatchQuery( policy, query ) ) {
-                    if ( Privileged.allowReadUserPolicy( requestUser, account, user ) ) {
+                if ( Privileged.allowListOrReadUserPolicy( requestUser, account, user ) ) {
+                  for ( Policy policy : user.getPolicies( ) ) {
+                    if ( policyMatchQuery( policy, query ) ) {
                       results.add( serializePolicy( policy, account, null, user ) );
                     }
                   }
@@ -695,9 +689,9 @@ public class EuareWebBackend {
           try {
             for ( Group group : getGroups( account, query ) ) {
               try {
-                for ( Policy policy : Privileged.listGroupPolicies( requestUser, account, group ) ) {
-                  if ( policyMatchQuery( policy, query ) ) {
-                    if ( Privileged.allowReadGroupPolicy( requestUser, account, group ) ) {
+                if ( Privileged.allowReadGroupPolicy( requestUser, account, group ) ) {
+                  for ( Policy policy : Privileged.listGroupPolicies( requestUser, account, group ) ) {
+                    if ( policyMatchQuery( policy, query ) ) {
                       results.add( serializePolicy( policy, account, group, null ) );
                     }
                   }
