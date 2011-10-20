@@ -266,8 +266,8 @@ public class Hosts {
     @Override
     public void fireEvent( final Hertz event ) {
       final Host currentHost = Hosts.localHost( );
-      InitializeAsCloudController.INSTANCE.apply( currentHost );
       UpdateEntry.INSTANCE.apply( currentHost );
+      InitializeAsCloudController.INSTANCE.apply( currentHost );
     }
   }
   
@@ -297,8 +297,11 @@ public class Hosts {
     @Override
     public void entrySet( final String arg0, final Host arg1 ) {
       LOG.info( "Hosts.entryAdded(): " + arg0 + " => " + arg1 );
-      LOG.info( "Hosts.entryAdded(): " + hostMap.keySet( ) );
-      if ( AdvertiseToRemoteCloudController.INSTANCE.apply( arg1 ) ) {
+      if ( arg1.isLocalHost( ) ) {
+        LOG.info( "Hosts.entryAdded(): Bootstrap  " + ( Bootstrap.isFinished( )
+          ? "true"
+          : "false" ) + "=> " + arg1 );
+      } else if ( AdvertiseToRemoteCloudController.INSTANCE.apply( arg1 ) ) {
         LOG.info( "Hosts.entryAdded(): Marked as database  => " + arg1 );
       } else if ( InitializeAsCloudController.INSTANCE.apply( arg1 ) ) {
         LOG.info( "Hosts.entryAdded(): Initialized as clc  => " + arg1 );
