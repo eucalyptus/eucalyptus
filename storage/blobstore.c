@@ -350,7 +350,7 @@ static int close_and_unlock (int fd)
                     }
                     if (open_fds==0) { // no open blockblob file descriptors in this process
                         close_filelock (l);
-                        logprintfl (EUCADEBUG2, "{%u} close_and_unlock: fd=%d closed along with all others\n", (unsigned int)pthread_self(), fd);
+                        logprintfl (EUCADEBUG2, "{%u} close_and_unlock: closed fd=%d path=%s\n", (unsigned int)pthread_self(), fd, l->path);
                     }
                     did_close = 1;
                 }
