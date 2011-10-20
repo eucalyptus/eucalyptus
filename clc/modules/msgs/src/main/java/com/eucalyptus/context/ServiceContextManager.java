@@ -221,7 +221,6 @@ public class ServiceContextManager {
   
   private void update( ) {
     this.canHasWrite.lock( );
-    Bootstrap.awaitFinished( );
     try {
       final List<ComponentId> reloadComponentIds = this.shouldReload( );
       
@@ -328,7 +327,6 @@ public class ServiceContextManager {
     try {
       return Resources.toString( Resources.getResource( componentId.getServiceModelFileName( ) ), Charset.defaultCharset( ) );
     } catch ( final Exception ex ) {
-      Logs.extreme( ).error( ex );
       return EMPTY_MODEL;
     }
   }
