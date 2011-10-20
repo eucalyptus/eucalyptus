@@ -280,7 +280,7 @@ public class Topology implements EventListener<Event> {
             return result;
           } catch ( final Exception ex ) {
             Logs.exhaust( ).error( ex, ex );
-            LOG.error( ex );
+            LOG.error( config.getFullName( ) + " failed to transition because of: " + ex );
             throw ex;
           }
         }
