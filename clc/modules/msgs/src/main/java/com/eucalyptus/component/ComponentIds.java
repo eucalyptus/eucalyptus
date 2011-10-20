@@ -81,7 +81,7 @@ public class ComponentIds {
   private static final ClassToInstanceMap<ComponentId>           compIdMap  = MutableClassToInstanceMap.create( );
   private static final Map<String, Class<? extends ComponentId>> compIdName = Maps.newHashMap( );
   
-  public static List<? extends ComponentId> list( ) {
+  public static List<ComponentId> list( ) {
     return Lists.newArrayList( compIdMap.values( ) );
   }
   

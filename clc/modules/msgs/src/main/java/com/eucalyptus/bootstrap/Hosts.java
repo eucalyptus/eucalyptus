@@ -172,7 +172,7 @@ public class Hosts {
     }
   }
   
-  public static Predicate<ComponentId> addressPredicate( final InetAddress addr ) {
+  public static Predicate<ComponentId> addressFilter( final InetAddress addr ) {
     return new Predicate<ComponentId>( ) {
       
       @Override
@@ -182,11 +182,11 @@ public class Hosts {
     };
   }
   
-  private static Function<ComponentId, ServiceConfiguration> initRemoteSetupConfigurations( final InetAddress addr ) {
-    return new Function<ComponentId, ServiceConfiguration>( ) {
+  private static <T extends ComponentId> Function<T, ServiceConfiguration> initRemoteSetupConfigurations( final InetAddress addr ) {
+    return new Function<T, ServiceConfiguration>( ) {
       
       @Override
-      public ServiceConfiguration apply( ComponentId input ) {
+      public ServiceConfiguration apply( T input ) {
         final ServiceConfiguration config = Components.lookup( input ).initRemoteService( addr );
         LOG.info( "Initialized remote service: " + config.getFullName( ) );
         return config;
@@ -212,13 +212,38 @@ public class Hosts {
     }
   }
   
-  public static Predicate<ComponentId> shouldLoadRemote( final Class<? extends ComponentId> compId ) {
-    return new Predicate<ComponentId>( ) {
-      @Override
-      public boolean apply( final ComponentId input ) {
-        return input.serviceDependencies( ).contains( compId ) && !input.isRegisterable( );
-      }
-    };
+  enum ShouldLoadRemote implements Predicate<ComponentId> {
+    EMPYREAN( Empyrean.class ), EUCALYPTUS( Eucalyptus.class );
+    Predicate<ComponentId> delegate;
+    Class<? extends ComponentId>     compId;
+    
+    private ShouldLoadRemote( Class<? extends ComponentId> compId ) {
+      this.delegate = shouldLoadRemote( compId );
+    }
+    
+    public boolean apply( ComponentId input ) {
+      return this.delegate.apply( input );
+    }
+    
+    private static <T extends ComponentId> Predicate<T> shouldLoadRemote( final Class<? extends ComponentId> compId ) {
+      return new Predicate<T>( ) {
+        @Override
+        public boolean apply( final T input ) {
+          return input.serviceDependencies( ).contains( compId ) && !input.isRegisterable( );
+        }
+      };
+    }
+    
+    public static Predicate<ComponentId> getInitFilter( Class<? extends ComponentId> comp, InetAddress addr ) {
+      return Predicates.and( EMPYREAN.compId.equals( comp )
+        ? EMPYREAN
+        : EUCALYPTUS, addressFilter( addr ) );
+    }
+    
+    public static Function<ComponentId, ServiceConfiguration> getInitFunction( InetAddress addr ) {
+      return Functions.compose( SetupRemoteServiceConfigurations.INSTANCE,
+                                initRemoteSetupConfigurations( addr ) );
+    }
   }
   
   enum HostBootstrapEventListener implements EventListener<Hertz> {
@@ -297,20 +322,19 @@ public class Hosts {
     
     @Override
     public boolean apply( final Host arg1 ) {
-      doBootstrap( arg1, Empyrean.class );
+      doBootstrap( Empyrean.class, arg1.getBindAddress( ) );
       if ( !BootstrapArgs.isCloudController( ) && !arg1.isLocalHost( ) && arg1.hasDatabase( ) && initialized.compareAndSet( false, true ) ) {
-        doBootstrap( arg1, Eucalyptus.class );
+        doBootstrap( Eucalyptus.class, arg1.getBindAddress( ) );
       }
+      return true;
     }
     
-    private static void doBootstrap( final Host arg1, final Class<? extends ComponentId> compId ) {
+    private static <T extends ComponentId> void doBootstrap( final Class<T> compId, InetAddress addr ) {
       try {
-        Predicate<ComponentId> filter = Predicates.and( shouldLoadRemote( compId ), addressPredicate( arg1.getBindAddress( ) ) );
-        Collection<? extends ComponentId> deps = Collections2.filter( ComponentIds.list( ), filter );
-        Function<ComponentId, ServiceConfiguration> initFunction = Functions.compose( SetupRemoteServiceConfigurations.INSTANCE,
-                                                                                      initRemoteSetupConfigurations( arg1.getBindAddress( ) ) );
-        initFunction.apply( Eucalyptus.INSTANCE );
-        Iterables.transform( deps, initFunction );
+        Collection<ComponentId> deps = Collections2.filter( ComponentIds.list( ), ShouldLoadRemote.getInitFilter( compId, addr ) );
+        Function<ComponentId, ServiceConfiguration> initFunc = ShouldLoadRemote.getInitFunction( addr );
+        initFunc.apply( ComponentIds.lookup( compId ) );
+        Iterables.transform( deps, initFunc );
       } catch ( Exception ex ) {
         LOG.error( ex, ex );
       }
@@ -416,45 +440,12 @@ public class Hosts {
     return HostManager.getInstance( ).getMembershipChannel( ).getAddress( );
   }
   
-  private static boolean setup( final Class<? extends ComponentId> compClass, final InetAddress addr ) {
-    if ( !Internets.testLocal( addr ) && !Internets.testReachability( addr ) ) {
-      LOG.warn( "Failed to reach host for cloud controller: " + addr );
-      return false;
-    } else {
-      try {
-        try {
-          final ServiceConfiguration config = Components.lookup( compClass ).initRemoteService( addr );
-          ServiceConfiguration conf = ServiceTransitions.pathTo( config, Component.State.DISABLED ).get( );
-          LOG.info( "Initialized service: " + conf.getFullName( ) );
-          return conf;
-        } catch ( final InterruptedException ex ) {
-          Thread.currentThread( ).interrupt( );
-          throw Exceptions.toUndeclared( ex );
-        }
-        
-        setupServiceState( compClass, addr );
-        for ( final ComponentId c : Iterables.filter( ComponentIds.list( ), shouldLoadRemote( compClass ) ) ) {
-          try {
-            setupServiceState( c.getClass( ), addr );
-          } catch ( final Exception ex ) {
-            LOG.error( ex, ex );
-          }
-        }
-      } catch ( final Exception ex ) {
-        LOG.error( ex, ex );
-        return false;
-      }
-      return true;
-    }
-  }
-  
   private static boolean teardown( final Class<? extends ComponentId> compClass, final InetAddress addr ) {
-    if ( !Internets.testLocal( addr ) && !Internets.testReachability( addr ) ) {
-      LOG.warn( "Failed to reach host for cloud controller: " + addr );
+    if ( Internets.testLocal( addr ) ) {
       return false;
     } else {
       try {
-        for ( final ComponentId c : Iterables.filter( ComponentIds.list( ), ShouldLoadRemote.INSTANCE ) ) {
+        for ( final ComponentId c : Iterables.filter( ComponentIds.list( ), ShouldLoadRemote.getInitFilter( compClass, addr ) ) ) {
           try {
             final ServiceConfiguration dependsConfig = ServiceConfigurations.lookupByName( compClass, addr.getHostAddress( ) );
             Topology.stop( dependsConfig );
