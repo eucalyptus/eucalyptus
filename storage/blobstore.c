@@ -862,10 +862,15 @@ int blobstore_unlock ( blobstore * bs )
 
 // if no outside references to store or blobs exist, and 
 // no blobs are protected, deletes the blobs, the store metadata, 
-// and frees the blobstore handle
+// and frees the blobstore handle 
 int blobstore_delete ( blobstore * bs ) 
 {
-    return -1; // TODO: implement blobstore_delete
+    char meta_path [PATH_MAX];
+    snprintf (meta_path, sizeof(meta_path), "%s/%s", bs->path, BLOBSTORE_METADATA_FILE);
+    unlink (meta_path);
+    free (bs);
+    
+    return -1; // TODO: implement blobstore_delete properly
 }
 
 int blobstore_get_error (void) 
