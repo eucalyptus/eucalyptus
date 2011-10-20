@@ -118,6 +118,7 @@ import com.google.common.base.Predicates;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.net.InetAddresses;
 
 @ConfigurableClass( root = "bootstrap.hosts", description = "Properties controlling the handling of remote host bootstrapping" )
 public class Hosts {
@@ -172,12 +173,25 @@ public class Hosts {
     }
   }
   
-  public static Predicate<ComponentId> addressFilter( final InetAddress addr ) {
+  public static Predicate<ServiceConfiguration> nonLocalAddressMatch( final InetAddress addr ) {
+    return new Predicate<ServiceConfiguration>( ) {
+      
+      @Override
+      public boolean apply( ServiceConfiguration input ) {
+        return input.getInetAddress( ).equals( addr )
+               || input.getInetAddress( ).getCanonicalHostName( ).equals( addr.getCanonicalHostName( ) )
+               || input.getHostName( ).equals( addr.getCanonicalHostName( ) );
+      }
+      
+    };
+  }
+  
+  public static Predicate<ComponentId> nonLocalAddressFilter( final InetAddress addr ) {
     return new Predicate<ComponentId>( ) {
       
       @Override
       public boolean apply( ComponentId input ) {
-        return !Internets.testLocal( addr ) && !Internets.testReachability( addr );
+        return !Internets.testLocal( addr );
       }
     };
   }
@@ -214,8 +228,8 @@ public class Hosts {
   
   enum ShouldLoadRemote implements Predicate<ComponentId> {
     EMPYREAN( Empyrean.class ), EUCALYPTUS( Eucalyptus.class );
-    Predicate<ComponentId> delegate;
-    Class<? extends ComponentId>     compId;
+    Predicate<ComponentId>       delegate;
+    Class<? extends ComponentId> compId;
     
     private ShouldLoadRemote( Class<? extends ComponentId> compId ) {
       this.delegate = shouldLoadRemote( compId );
@@ -237,7 +251,7 @@ public class Hosts {
     public static Predicate<ComponentId> getInitFilter( Class<? extends ComponentId> comp, InetAddress addr ) {
       return Predicates.and( EMPYREAN.compId.equals( comp )
         ? EMPYREAN
-        : EUCALYPTUS, addressFilter( addr ) );
+        : EUCALYPTUS, nonLocalAddressFilter( addr ) );
     }
     
     public static Function<ComponentId, ServiceConfiguration> getInitFunction( InetAddress addr ) {
@@ -396,17 +410,17 @@ public class Hosts {
       } else {
         try {
           if ( !Internets.testLocal( arg1.getBindAddress( ) ) ) {
-            ServiceConfigurations.lookupByHost( Eucalyptus.class, arg1.getBindAddress( ).getCanonicalHostName( ) );
+            ServiceConfigurations.filter( Eucalyptus.class, nonLocalAddressMatch( arg1.getBindAddress( ) ) );
             arg1.markDatabase( );
             hostMap.replace( arg1.getDisplayName( ), arg1 );
-            LOG.info( "Hosts.entryAdded(): Marked as database => " + arg1 );
+            return true;
           }
         } catch ( final Exception ex ) {
           if ( Exceptions.causedBy( ex, NoSuchElementException.class ) == null ) {
             Logs.extreme( ).error( ex, ex );
           }
         }
-        return true;
+        return false;
       }
     }
     

@@ -36,7 +36,7 @@ public class ServiceConfigurations {
     Predicate<ServiceConfiguration> alwaysTrue = Predicates.alwaysTrue( );
     return Lists.newArrayList( filter( alwaysTrue ) );
   }
-
+  
   public static <T extends ServiceConfiguration> Iterable<ServiceConfiguration> filter( final Predicate<T> pred ) throws PersistenceException {
     List<ServiceConfiguration> configs = Lists.newArrayList( );
     for ( ComponentId compId : ComponentIds.list( ) ) {
@@ -280,12 +280,14 @@ public class ServiceConfigurations {
     return ( Predicate<T> ) EnabledServiceConfiguration.INSTANCE;
   }
   
-  public static <T extends ServiceConfiguration, C extends ComponentId> Iterable<ServiceConfiguration> enabledServices( final Class<C> type ) throws PersistenceException {
-    return ServiceConfigurations.filter( type, enabledService( ) );
+  public static <T extends ServiceConfiguration, C extends ComponentId> Iterable<T> enabledServices( final Class<C> type ) throws PersistenceException {
+    Predicate<T> enabledService = enabledService( );
+    return ServiceConfigurations.filter( type, enabledService );
   }
   
-  public static <T extends ServiceConfiguration, C extends ComponentId> Iterable<ServiceConfiguration> filter( final Class<C> type, final Predicate<T> pred ) throws PersistenceException {
-    return Iterables.filter( ServiceConfigurations.list( type ), enabledService( ) );
+  public static <T extends ServiceConfiguration, C extends ComponentId> Iterable<T> filter( final Class<C> type, final Predicate<T> pred ) throws PersistenceException {
+    List<T> list = ServiceConfigurations.list( type );
+    return Iterables.filter( list, pred );
   }
   
   public static <T extends ServiceConfiguration, C extends ComponentId> List<T> list( final Class<C> type ) throws PersistenceException {
