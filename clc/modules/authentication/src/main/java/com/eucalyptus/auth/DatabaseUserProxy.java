@@ -358,7 +358,7 @@ public class DatabaseUserProxy implements User {
     } catch ( Exception e ) {
       db.rollback( );
       Debugging.logError( LOG, e, "Failed to get access key " + keyId );
-      throw new AuthException( e );
+      throw new AuthException( AuthException.NO_SUCH_KEY );
     }
   }
 
@@ -425,7 +425,7 @@ public class DatabaseUserProxy implements User {
     } catch ( Exception e ) {
       db.rollback( );
       Debugging.logError( LOG, e, "Failed to get signing certificate " + certificateId );
-      throw new AuthException( e );
+      throw new AuthException( AuthException.NO_SUCH_CERTIFICATE );
     }
   }
 
@@ -671,16 +671,6 @@ public class DatabaseUserProxy implements User {
       db.rollback( );
       Debugging.logError( LOG, e, "Failed to lookup quotas for user with ID " + userId + ", type=" + resourceType);
       throw new AuthException( "Failed to lookup quota", e );
-    }
-  }
-
-  @Override
-  public boolean isSystemInternal( ) {
-    try {
-      return DatabaseAuthUtils.isSystemAccount( this.getAccount( ).getName( ) );
-    } catch ( AuthException e ) {
-      LOG.error( e, e );
-      return false;
     }
   }
 

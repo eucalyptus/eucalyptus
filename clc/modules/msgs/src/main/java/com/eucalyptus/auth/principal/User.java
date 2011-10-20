@@ -143,7 +143,6 @@ public interface User extends /*HasId, */BasePrincipal, Serializable {
   public Account getAccount( ) throws AuthException;
   
   public boolean isSystemAdmin( );
-  public boolean isSystemInternal( );
   
   public boolean isAccountAdmin( );
   

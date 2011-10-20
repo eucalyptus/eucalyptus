@@ -147,7 +147,7 @@ from_var_to_char_list(const char *var);
 int logprintf(const char *format, ...);
 int logprintfl(int level, const char *format, ...);
 void eventlog(char *hostTag, char *userTag, char *cid, char *eventTag, char *other);
-int logfile(char *file, int in_loglevel);
+int logfile(char *file, int in_loglevel, int in_logrollnumber);
 int check_process(pid_t pid, char *search);
 int check_directory(const char *dir);
 int check_file (const char *file);

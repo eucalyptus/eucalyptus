@@ -310,7 +310,7 @@ public class BaseMessage {
       this.setUser( Principals.nobodyUser( ) );
     } else {
       this.userId = user.getName( );
-      this.effectiveUserId = ( user.isSystemAdmin( ) || user.isSystemInternal( ) )
+      this.effectiveUserId = user.isSystemAdmin( )
         ? Principals.systemUser( ).getName( )
         : user.getName( );
     }

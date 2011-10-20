@@ -366,12 +366,7 @@ public class Principals {
                                                 public boolean isSystemAdmin( ) {
                                                   return true;
                                                 }
-                                                
-                                                @Override
-                                                public boolean isSystemInternal( ) {
-                                                  return true;
-                                                }
-                                                
+                                                                                                
                                                 @Override
                                                 public boolean isAccountAdmin( ) {
                                                   return true;
@@ -599,11 +594,6 @@ public class Principals {
                                                 
                                                 @Override
                                                 public boolean isSystemAdmin( ) {
-                                                  return true;
-                                                }
-                                                
-                                                @Override
-                                                public boolean isSystemInternal( ) {
                                                   return true;
                                                 }
                                                 

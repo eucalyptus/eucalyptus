@@ -359,7 +359,7 @@ public class Pipelines {
       final BaseMessage msg = BaseMessage.extractMessage( e );
       if ( ( request != null ) && ( msg != null ) ) {
         final User user = Contexts.lookup( request.getCorrelationId( ) ).getUser( );
-        if ( user.isSystemInternal( ) || user.isSystemAdmin( ) ) {
+        if ( user.isSystemAdmin( ) ) {
           ctx.sendUpstream( e );
         } else {
           Contexts.clear( Contexts.lookup( msg.getCorrelationId( ) ) );

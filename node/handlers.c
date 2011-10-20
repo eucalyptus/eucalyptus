@@ -99,6 +99,8 @@ permission notice:
 
 #include "windows-bundle.h"
 #define MONITORING_PERIOD (5)
+#define MAX_CREATE_TRYS 5
+#define CREATE_TIMEOUT_SEC 5
 
 #ifdef EUCA_COMPILE_TIMESTAMP
 static char * compile_timestamp_str = EUCA_COMPILE_TIMESTAMP;
@@ -553,23 +555,20 @@ monitoring_thread (void *arg)
 void *startup_thread (void * arg)
 {
     ncInstance * instance = (ncInstance *)arg;
-    virDomainPtr dom = NULL;
     char * disk_path, * xml=NULL;
     char *brname=NULL;
     int error, i;
     
     if (! check_hypervisor_conn ()) {
         logprintfl (EUCAERROR, "[%s] could not contact the hypervisor, abandoning the instance\n", instance->instanceId);
-        change_state (instance, SHUTOFF);
-        goto free;
+        goto shutoff;
     }
     
     // set up networking
     error = vnetStartNetwork (nc_state.vnetconfig, instance->ncnet.vlan, NULL, NULL, NULL, &brname);
     if (error) {
         logprintfl (EUCAERROR, "[%s] start network failed for instance, terminating it\n", instance->instanceId);
-        change_state (instance, SHUTOFF);
-        goto free;
+        goto shutoff;
     }
 
     safe_strncpy (instance->params.guestNicDeviceName, brname, sizeof (instance->params.guestNicDeviceName));
@@ -588,21 +587,21 @@ void *startup_thread (void * arg)
     safe_strncpy (instance->hypervisorType, nc_state.H->name, sizeof (instance->hypervisorType)); // set the hypervisor type
 
     instance->hypervisorCapability = nc_state.capability; // set the cap (xen/hw/hw+xen)
-    char *s = system_output("getconf LONG_BIT");
-    if (s){
-         int bitness = atoi(s);
-         if(bitness == 32 || bitness == 64)
+    char *s = system_output ("getconf LONG_BIT");
+    if (s) {
+        int bitness = atoi(s);
+        if (bitness == 32 || bitness == 64) {
             instance->hypervisorBitness = bitness;
-         else{
+        } else {
             logprintfl(EUCAWARN, "[%s] can't determine the host's bitness (%s, assuming 64)\n", instance->instanceId, s);
-	    instance->hypervisorBitness = 64;
-         }
-         free(s);
-    }else{
-            logprintfl(EUCAWARN, "[%s] can't determine the host's bitness (assuming 64)\n", instance->instanceId);
             instance->hypervisorBitness = 64;
+        }
+        free (s);
+    } else {
+        logprintfl(EUCAWARN, "[%s] can't determine the host's bitness (assuming 64)\n", instance->instanceId);
+        instance->hypervisorBitness = 64;
     }
-
+    
     instance->combinePartitions = nc_state.convert_to_disk; 
     instance->do_inject_key = nc_state.do_inject_key;
 
@@ -613,8 +612,7 @@ void *startup_thread (void * arg)
         || (error = gen_libvirt_xml (instance, xslt_path))) {
         
         logprintfl (EUCAERROR, "[%s] error: failed to prepare images for instance (error=%d)\n", instance->instanceId, error);
-        change_state (instance, SHUTOFF);
-        goto free;
+        goto shutoff;
     }
     xml = file2str (instance->libvirtFilePath);
     
@@ -623,13 +621,11 @@ void *startup_thread (void * arg)
     }
     if (instance->state==CANCELED) {
         logprintfl (EUCAERROR, "[%s] cancelled instance startup\n", instance->instanceId);
-        change_state (instance, SHUTOFF);
-        goto free;
+        goto shutoff;
     }
     if (call_hooks (NC_EVENT_PRE_BOOT, instance->instancePath)) {
         logprintfl (EUCAERROR, "[%s] cancelled instance startup via hooks\n", instance->instanceId);
-        change_state (instance, SHUTOFF);
-        goto free;
+        goto shutoff;
     }
     
     save_instance_struct (instance); // to enable NC recovery
@@ -637,25 +633,80 @@ void *startup_thread (void * arg)
     // serialize domain creation as hypervisors can get confused with
     // too many simultaneous create requests 
     logprintfl (EUCADEBUG2, "[%s] instance about to boot\n", instance->instanceId);
-
-    for (i=0; i<5 && dom == NULL; i++) {
-      sem_p (hyp_sem);
-      sem_p (loop_sem);
-      dom = virDomainCreateLinux (nc_state.conn, xml, 0);
-      sem_v (loop_sem);
-      sem_v (hyp_sem);
-    }
-
-    if (dom == NULL) {
-        logprintfl (EUCAERROR, "[%s] hypervisor failed to start instance\n", instance->instanceId);
-        change_state (instance, SHUTOFF);
-        goto free;
-    }
-    eventlog("NC", instance->userId, "", "instanceBoot", "begin"); // TODO: bring back correlationId
     
-    sem_p(hyp_sem);
-    virDomainFree(dom);
-    sem_v(hyp_sem);
+    boolean created = FALSE;
+    for (i=0; i<MAX_CREATE_TRYS; i++) { // retry loop
+        if (i>0) {
+            logprintfl (EUCAINFO, "[%s] attempt %d of %d to create the instance\n", instance->instanceId, i+1, MAX_CREATE_TRYS);
+        }
+        sem_p (hyp_sem);
+        sem_p (loop_sem);
+
+        // We have seen virDomainCreateLinux() on occasion block indefinitely,
+        // which freezes all activity on the NC since hyp_sem and loop_sem are
+        // being held by the thread. (This is on Lucid with AppArmor enabled.)
+        // To protect against that, we invoke the function in a process and 
+        // terminate it after CREATE_TIMEOUT_SEC seconds.
+        //
+        // #0  0x00007f359f0b1f93 in poll () from /lib/libc.so.6
+        // #1  0x00007f359a9a44e2 in ?? () from /usr/lib/libvirt.so.0
+        // #2  0x00007f359a9a5060 in ?? () from /usr/lib/libvirt.so.0
+        // #3  0x00007f359a9ac159 in ?? () from /usr/lib/libvirt.so.0
+        // #4  0x00007f359a98d65b in virDomainCreateXML () from /usr/lib/libvirt.so.0
+        // #5  0x00007f359b053c8e in startup_thread (arg=0x7f358813bf40) at handlers.c:644
+        // #6  0x00007f359f3619ca in start_thread () from /lib/libpthread.so.0
+        // #7  0x00007f359f0be70d in clone () from /lib/libc.so.6
+        // #8  0x0000000000000000 in ?? ()
+
+        pid_t cpid = fork(); 
+        if (cpid<0) { // fork error
+            logprintfl (EUCAERROR, "[%s] failed to fork to start instance\n", instance->instanceId);
+            
+        } else if (cpid==0) { // child process - creates the domain
+            virDomainPtr dom = virDomainCreateLinux (nc_state.conn, xml, 0);
+            if (dom!=NULL) {
+                virDomainFree (dom); // To be safe. Docs are not clear on whether the handle exists outside the process.
+                exit (0);
+            } else {
+                exit (1);
+            }
+            
+        } else { // parent process - waits for the child, kills it if necessary
+            int status;
+            int rc = timewait (cpid, &status, CREATE_TIMEOUT_SEC);
+            boolean try_killing = FALSE;
+            if (rc < 0) {
+                logprintfl (EUCAERROR, "[%s] failed to wait for forked process: %s\n", instance->instanceId, strerror(errno));
+                try_killing = TRUE;
+
+            } else if (rc ==0) {
+                logprintfl (EUCAERROR, "[%s] timed out waiting for forked process pid=%d\n", instance->instanceId, cpid);
+                try_killing = TRUE;
+
+            } else if (WEXITSTATUS(status) != 0) {
+                logprintfl (EUCAERROR, "[%s] hypervisor failed to create the instance\n", instance->instanceId);
+
+            } else {
+                created = TRUE;
+            }
+
+            if (try_killing) {
+                kill (cpid, SIGKILL); // should be able to do
+                kill (cpid, 9); // may not be able to do?
+            }
+        }
+        
+        sem_v (loop_sem);
+        sem_v (hyp_sem);
+        if (created)
+            break;
+        sleep (1);
+    }
+    if (!created) {
+        goto shutoff;
+    }
+
+    eventlog("NC", instance->userId, "", "instanceBoot", "begin"); // TODO: bring back correlationId
 
     sem_p (inst_sem);
     // check one more time for cancellation
@@ -670,8 +721,12 @@ void *startup_thread (void * arg)
         change_state (instance, BOOTING);
     }
     sem_v (inst_sem);
- free:
+    goto free;
+
+ shutoff: // escape point for error conditions
+    change_state (instance, SHUTOFF);
     
+ free:
     if (xml) free (xml);
     if (brname) free (brname);
     return NULL;
@@ -770,7 +825,7 @@ void adopt_instances()
 static int init (void)
 {
 	static int initialized = 0;
-	int do_warn = 0, i;
+	int do_warn = 0, i, j;
 	char configFiles[2][MAX_PATH],
 		log[MAX_PATH],
 		*bridge,
@@ -803,7 +858,7 @@ static int init (void)
 
 	/* set the minimum log for now */
 	snprintf(log, MAX_PATH, "%s/var/log/eucalyptus/nc.log", nc_state.home);
-	logfile(log, EUCADEBUG);
+	logfile(log, EUCADEBUG, 4);
         logprintfl (EUCAINFO, "Eucalyptus node controller initializing %s\n", compile_timestamp_str);
 
 	if (do_warn) 
@@ -830,7 +885,13 @@ static int init (void)
         else if (!strcmp(tmp,"DEBUG2")) {i=EUCADEBUG2;}
 		free(tmp);
 	}
-	logfile(log, i);
+	tmp = getConfString(configFiles, 2, "LOGROLLNUMBER");
+	j = 4;
+	if (tmp) {
+        j = atoi(tmp);
+		free(tmp);
+	}
+	logfile(log, i, j);
 
     { // initialize hooks if their directory looks ok
         char dir [MAX_PATH];
