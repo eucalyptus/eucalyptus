@@ -97,6 +97,7 @@ import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.Callback.Completion;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.CheckedListenableFuture;
@@ -127,21 +128,27 @@ public class ServiceTransitions {
   @SuppressWarnings( "unchecked" )
   public static CheckedListenableFuture<ServiceConfiguration> pathTo( final ServiceConfiguration configuration, final Component.State goalState ) {
     Callable<CheckedListenableFuture<ServiceConfiguration>> transition;
-    switch ( goalState ) {
-      case LOADED:
-        return executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToLoaded( configuration.lookupState( ) ) ) );
-      case DISABLED:
-        return executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToDisabled( configuration.lookupState( ) ) ) );
-      case ENABLED:
-        return executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToEnabled( configuration.lookupState( ) ) ) );
-      case STOPPED:
-        return executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToStopped( configuration.lookupState( ) ) ) );
-      case NOTREADY:
-        return executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToStarted( configuration.lookupState( ) ) ) );
-      case NONE:
-        return executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToNone( configuration.lookupState( ) ) ) );
-      default:
-        return Futures.predestinedFuture( configuration );
+    try {
+      switch ( goalState ) {
+        case LOADED:
+          return executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToLoaded( configuration.lookupState( ) ) ) );
+        case DISABLED:
+          return executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToDisabled( configuration.lookupState( ) ) ) );
+        case ENABLED:
+          return executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToEnabled( configuration.lookupState( ) ) ) );
+        case STOPPED:
+          return executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToStopped( configuration.lookupState( ) ) ) );
+        case NOTREADY:
+          return executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToStarted( configuration.lookupState( ) ) ) );
+        case NONE:
+          return executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToNone( configuration.lookupState( ) ) ) );
+        default:
+          return Futures.predestinedFuture( configuration );
+      }
+    } catch ( RuntimeException ex ) {
+      Logs.extreme( ).error( ex, ex );
+      LOG.error( configuration.getFullName( ) + " failed to transition to " + goalState + " because of: " + Exceptions.causeString( ex ) );
+      throw ex;
     }
   }
   
@@ -240,7 +247,6 @@ public class ServiceTransitions {
       try {
         return transition.call( );
       } catch ( Exception ex ) {
-        LOG.error( ex, ex );
         return Futures.predestinedFailedFuture( ex );
       }
     } else {

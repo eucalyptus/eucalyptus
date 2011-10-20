@@ -490,7 +490,8 @@ public class Hosts {
             final ServiceConfiguration dependsConfig = ServiceConfigurations.lookupByName( compClass, addr.getHostAddress( ) );
             Topology.stop( dependsConfig );
           } catch ( final Exception ex ) {
-            LOG.error( ex, ex );
+            LOG.error( ex );
+            Logs.extreme( ).error( ex, ex );
           }
         }
       } catch ( final Exception ex ) {
