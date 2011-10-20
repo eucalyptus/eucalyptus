@@ -387,7 +387,11 @@ public class Hosts {
     
     @Override
     public boolean apply( Host input ) {
-      if ( input.isLocalHost( ) ) {
+      if ( input == null ) {
+        Host newHost = new Host( );
+        hostMap.replace( newHost.getDisplayName( ), newHost );
+        LOG.info( "Inserted local host information:   " + localHost( ) );
+      } else if ( input.isLocalHost( ) ) {
         if ( CheckStale.INSTANCE.apply( input ) ) {
           Host newHost = new Host( input.getStartedTime( ) );
           Host oldHost = hostMap.replace( newHost.getDisplayName( ), newHost );
