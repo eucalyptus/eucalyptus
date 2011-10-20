@@ -486,6 +486,7 @@ static int open_and_lock (const char * path,
         PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
         goto error;
     }
+    logprintfl (EUCADEBUG2, "{%u} open_and_lock: opened fd=%d flags=%0x path=%s\n", (unsigned int)pthread_self(), o_flags, path);
     for (;;) {
         // first try getting the Posix rwlock
         int ret;
