@@ -105,13 +105,13 @@ public class StaticPropertyEntry extends AbstractConfigurableProperty {
                                                                                 this.safeGetFieldValue( )
                                                                        );
       if ( this.lastLoad == null || this.lastLoad.before( dbEntry.getLastUpdateTimestamp( ) ) ) {
+        this.lastLoad = dbEntry.getLastUpdateTimestamp( );
         Object o = super.getTypeParser( ).apply( dbEntry.getValue( ) );
         if ( !Modifier.isFinal( this.field.getModifiers( ) ) ) {
           this.fireChange( dbEntry.getValue( ) );
           this.field.set( null, o );
           Logs.extreme( ).trace( "--> Set property value:  " + super.getQualifiedName( ) + " to " + dbEntry.getValue( ) );
         }
-        this.lastLoad = dbEntry.getLastUpdateTimestamp( );
       }
       return dbEntry.getValue( );
     } catch ( IllegalAccessException e ) {
