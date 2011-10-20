@@ -303,12 +303,12 @@ public class Hosts {
           : "false" ) + "=> " + arg1 );
       } else if ( AdvertiseToRemoteCloudController.INSTANCE.apply( arg1 ) ) {
         LOG.info( "Hosts.entryAdded(): Marked as database  => " + arg1 );
-      } else if ( InitializeAsCloudController.INSTANCE.apply( arg1 ) ) {
-        LOG.info( "Hosts.entryAdded(): Initialized as clc  => " + arg1 );
       } else if ( BootstrapRemoteComponent.INSTANCE.apply( arg1 ) ) {
         LOG.info( "Hosts.entryAdded(): Bootstrapping host  => " + arg1 );
       } else if ( arg1.hasBootstrapped( ) ) {
         LOG.info( "Hosts.entryAdded(): Host is operational => " + arg1 );
+      } else if ( InitializeAsCloudController.INSTANCE.apply( arg1 ) ) {
+        LOG.info( "Hosts.entryAdded(): Initialized as clc  => " + arg1 );
       } else {
         LOG.info( "Hosts.entryAdded(): Wait for bootstrap  => " + arg1 );
       }
