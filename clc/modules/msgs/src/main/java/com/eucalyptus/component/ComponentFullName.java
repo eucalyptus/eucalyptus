@@ -124,7 +124,7 @@ public class ComponentFullName implements FullName {
       ? ""
       : this.realComponentId.name( );
     this.authority = Joiner.on( SEP ).join( PREFIX, this.componentId.name( ), displayPartition, displayCompType, this.name );
-    this.relativeId = Joiner.on( SEP_PATH ).join( pathPartsArray );
+    this.relativeId = ( SEP_PATH + Joiner.on( SEP_PATH ).join( pathPartsArray ) ).replaceAll( "^//", "/" );
     this.qName = this.authority + this.relativeId;
   }
   
