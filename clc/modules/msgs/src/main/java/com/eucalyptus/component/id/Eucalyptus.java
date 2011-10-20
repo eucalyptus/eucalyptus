@@ -63,12 +63,19 @@
 
 package com.eucalyptus.component.id;
 
+import java.util.List;
 import org.apache.log4j.Logger;
+import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.ComponentId.GenerateKeys;
 import com.eucalyptus.component.ComponentId.Partition;
 import com.eucalyptus.component.ComponentId.PolicyVendor;
 import com.eucalyptus.component.ComponentId.PublicService;
+import com.eucalyptus.util.Internets;
+import com.eucalyptus.ws.TransportDefinition;
+import com.eucalyptus.ws.StackConfiguration.BasicTransport;
+import com.google.common.collect.Lists;
 
 @PublicService
 @GenerateKeys
@@ -86,4 +93,40 @@ public class Eucalyptus extends ComponentId {
   @Partition( Eucalyptus.class )
   @PublicService
   public static class Notifications extends ComponentId {}
+  
+  @Partition( Eucalyptus.class )
+  @GenerateKeys
+  public static class Database extends ComponentId {
+    
+    public Database( ) {
+      super( "Db" );
+    }
+    
+    @Override
+    public Integer getPort( ) {
+      return 8777;
+    }
+    
+    @Override
+    public String getLocalEndpointName( ) {
+      return ServiceUris.remote( this, Internets.localHostInetAddress( ) ).toASCIIString( );
+    }
+    
+    @Override
+    public String getServicePath( String... pathParts ) {
+      return Databases.getServicePath( pathParts );
+    }
+    
+    @Override
+    public String getInternalServicePath( String... pathParts ) {
+      return this.getServicePath( pathParts );
+    }
+    
+    @Override
+    public List<? extends TransportDefinition> getTransports( ) {
+      return Lists.newArrayList( BasicTransport.JDBC );
+    }
+    
+  }
+  
 }

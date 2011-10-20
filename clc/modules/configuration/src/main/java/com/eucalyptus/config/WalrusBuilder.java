@@ -3,13 +3,13 @@ package com.eucalyptus.config;
 import com.eucalyptus.bootstrap.Handles;
 import com.eucalyptus.component.AbstractServiceBuilder;
 import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.ComponentId.ComponentPart;
 import com.eucalyptus.component.ComponentIds;
-import com.eucalyptus.component.DiscoverableServiceBuilder;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.id.Walrus;
 
-@DiscoverableServiceBuilder(Walrus.class)
+@ComponentPart(Walrus.class)
 @Handles( { RegisterWalrusType.class, DeregisterWalrusType.class, DescribeWalrusesType.class, WalrusConfiguration.class, ModifyWalrusAttributeType.class } )
 public class WalrusBuilder extends AbstractServiceBuilder<WalrusConfiguration> {
   

@@ -9,12 +9,12 @@ import com.eucalyptus.component.ComponentDiscovery
 import com.eucalyptus.component.ServiceBuilder
 import com.eucalyptus.component.ServiceBuilders
 import com.eucalyptus.component.ServiceConfiguration
-import com.eucalyptus.component.ServiceConfigurations;
+import com.eucalyptus.component.ServiceConfigurations
 import com.eucalyptus.component.ServiceUris
 import com.eucalyptus.component.ServiceBuilders.ServiceBuilderDiscovery
 import com.eucalyptus.component.auth.SystemCredentials
-import com.eucalyptus.component.id.Database
 import com.eucalyptus.component.id.Eucalyptus
+import com.eucalyptus.component.id.Eucalyptus.Database
 import com.eucalyptus.entities.PersistenceContextDiscovery
 import com.eucalyptus.entities.PersistenceContexts
 import com.eucalyptus.system.DirectoryBootstrapper

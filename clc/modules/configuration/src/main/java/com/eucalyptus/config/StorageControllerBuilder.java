@@ -4,18 +4,17 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Handles;
 import com.eucalyptus.component.AbstractServiceBuilder;
 import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.ComponentId.ComponentPart;
 import com.eucalyptus.component.ComponentIds;
-import com.eucalyptus.component.DiscoverableServiceBuilder;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.util.LogUtil;
 
 
-@DiscoverableServiceBuilder( Storage.class )
+@ComponentPart( Storage.class )
 @Handles( { RegisterStorageControllerType.class, DeregisterStorageControllerType.class, DescribeStorageControllersType.class, StorageControllerConfiguration.class, ModifyStorageControllerAttributeType.class } )
 public class StorageControllerBuilder extends AbstractServiceBuilder<StorageControllerConfiguration> {
   private static Logger LOG = Logger.getLogger( StorageControllerBuilder.class );

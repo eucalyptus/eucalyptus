@@ -7,7 +7,7 @@ import com.eucalyptus.component.id.Eucalyptus.Notifications
 import edu.ucsb.eucalyptus.msgs.BaseMessage
 import edu.ucsb.eucalyptus.msgs.EucalyptusData
 
-@ComponentMessage(Eucalyptus.Notifications.class)
+@ComponentMessage(Notifications.class)
 public class NotificationMessage extends BaseMessage {
 }
 public class Subscription extends EucalyptusData {

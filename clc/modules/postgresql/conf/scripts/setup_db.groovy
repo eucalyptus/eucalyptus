@@ -68,10 +68,9 @@ import com.eucalyptus.bootstrap.Bootstrapper
 import com.eucalyptus.bootstrap.DatabaseBootstrapper
 import com.eucalyptus.bootstrap.Databases
 import com.eucalyptus.component.Component
-import com.eucalyptus.component.ComponentIds
 import com.eucalyptus.component.Components
 import com.eucalyptus.component.ServiceUris
-import com.eucalyptus.component.id.Database
+import com.eucalyptus.component.id.Eucalyptus.Database
 import com.eucalyptus.entities.PersistenceContexts
 import com.eucalyptus.system.SubDirectory
 import com.eucalyptus.util.Internets

@@ -78,7 +78,9 @@ public class ComponentRegistrationHandler {
   private static Logger LOG = Logger.getLogger( ComponentRegistrationHandler.class );
   
   public static boolean register( final ComponentId compId, String partitionName, String name, String hostName, Integer port ) throws ServiceRegistrationException {
-    
+    if ( !compId.isRegisterable( ) ) {
+      throw new ServiceRegistrationException( "Failed to register component: " + compId.getFullName( ) + " does not support registration." );
+    }
     final ServiceBuilder builder = ServiceBuilders.lookup( compId );
     String partition = partitionName;
     

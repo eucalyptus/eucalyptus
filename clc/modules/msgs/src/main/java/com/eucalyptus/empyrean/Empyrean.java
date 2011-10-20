@@ -89,21 +89,31 @@ public class Empyrean extends ComponentId {
   @Partition( value = { Empyrean.class }, manyToOne = true )
   @InternalService
   public static class Arbitrator extends ComponentId {
-
-    /**
-     * 
-     */
-    private static final long serialVersionUID = 1L;}
+    
+    private static final long serialVersionUID = 1L;
+  }
+  
+  @Partition( Empyrean.class )
+  @AdminService
+  public static class ComponentService extends ComponentId {
+    
+    public ComponentService( ) {
+      super( "Component" );
+    }
+    
+    @Override
+    public String getLocalEndpointName( ) {
+      return "vm://ComponentInternal";
+    }
+    
+  }
   
   @Partition( Empyrean.class )
   @AdminService
   public static class PropertiesService extends ComponentId {
     
-    /**
-     * 
-     */
     private static final long serialVersionUID = 1L;
-
+    
     public PropertiesService( ) {
       super( "Properties" );
     }
