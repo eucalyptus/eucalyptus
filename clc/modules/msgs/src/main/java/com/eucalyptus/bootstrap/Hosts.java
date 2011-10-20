@@ -390,38 +390,34 @@ public class Hosts {
     
     @Override
     public boolean apply( Host input ) {
-      if ( !input.isLocalHost( ) ) {
-        return false;
-      } else {
-        if ( input == null ) {
-          Host newHost = new Host( );
-          Host oldHost = hostMap.putIfAbsent( newHost.getDisplayName( ), newHost );
+      if ( input == null ) {
+        Host newHost = new Host( );
+        Host oldHost = hostMap.putIfAbsent( newHost.getDisplayName( ), newHost );
+        if ( oldHost != null ) {
+          LOG.info( "Inserted local host information:   " + localHost( ) );
+          return true;
+        } else {
+          return false;
+        }
+      } else if ( input.isLocalHost( ) ) {
+        if ( CheckStale.INSTANCE.apply( input ) ) {
+          Host newHost = new Host( input.getStartedTime( ) );
+          Host oldHost = hostMap.replace( newHost.getDisplayName( ), newHost );
           if ( oldHost != null ) {
-            LOG.info( "Inserted local host information:   " + localHost( ) );
+            LOG.info( "Updated local host information:   " + localHost( ) );
             return true;
           } else {
             return false;
           }
-        } else if ( input.isLocalHost( ) ) {
-          if ( CheckStale.INSTANCE.apply( input ) ) {
-            Host newHost = new Host( input.getStartedTime( ) );
-            Host oldHost = hostMap.replace( newHost.getDisplayName( ), newHost );
-            if ( oldHost != null ) {
+        } else {
+          if ( !hostMap.containsKey( input.getDisplayName( ) ) ) {
+            Host newHost = new Host( );
+            Host oldHost = hostMap.putIfAbsent( newHost.getDisplayName( ), newHost );
+            if ( oldHost == null ) {
               LOG.info( "Updated local host information:   " + localHost( ) );
               return true;
             } else {
               return false;
-            }
-          } else {
-            if ( !hostMap.containsKey( input.getDisplayName( ) ) ) {
-              Host newHost = new Host( );
-              Host oldHost = hostMap.putIfAbsent( newHost.getDisplayName( ), newHost );
-              if ( oldHost == null ) {
-                LOG.info( "Updated local host information:   " + localHost( ) );
-                return true;
-              } else {
-                return false;
-              }
             }
           }
         }
