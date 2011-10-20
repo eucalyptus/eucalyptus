@@ -150,7 +150,8 @@ public class ServiceBootstrapper extends Bootstrapper {
     
     @Override
     public boolean apply( final ServiceConfiguration config ) {
-      boolean ret = config.getComponentId( ).isAlwaysLocal( ) || config.isVmLocal( ) || BootstrapArgs.isCloudController( );
+      boolean ret = config.getComponentId( ).isAlwaysLocal( ) || config.isVmLocal( )
+                    || ( BootstrapArgs.isCloudController( ) && config.getComponentId( ).isCloudLocal( ) );
       LOG.debug( "ServiceBootstrapper.shouldLoad(" + config.toString( ) + "):" + ret );
       return ret;
     }
@@ -186,7 +187,7 @@ public class ServiceBootstrapper extends Bootstrapper {
           @Override
           public void run( ) {
             try {
-              Topology.disable( config ).get( );
+              ServiceTransitions.pathTo( config, Component.State.DISABLED ).get( );
               try {
                 Topology.enable( config ).get( );
               } catch ( IllegalStateException ex ) {
@@ -224,6 +225,8 @@ public class ServiceBootstrapper extends Bootstrapper {
         if ( config.isVmLocal( ) || ( BootstrapArgs.isCloudController( ) && config.isHostLocal( ) ) ) {
           predicate.apply( config );
         }
+      } else if ( compId.isAlwaysLocal( )|| ( BootstrapArgs.isCloudController( ) && comp.identity.isCloudLocal( ) ) ) {
+        
       }
     }
   }

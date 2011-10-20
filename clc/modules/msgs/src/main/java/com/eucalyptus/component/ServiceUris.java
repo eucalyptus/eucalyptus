@@ -211,8 +211,8 @@ public class ServiceUris {
     
     public UriParserBuilder path( String... path ) {
       this.path = ( path != null && path.length > 0
-        ? Lexemes.SLASH.format( ) + Joiner.on( Lexemes.SLASH.format( ) ).join( path )
-        : Lexemes.SLASH.format( ) ).replaceAll( "^//*", "/" );
+        ? "/" + Joiner.on( "/" ).join( path )
+        : "/" ).replaceAll( "^//*", "/" );
       return this;
     }
     
@@ -246,7 +246,7 @@ public class ServiceUris {
         ? this.componentId.name( ) + "." + StackConfiguration.lookupDnsDomain( )
         : this.address.getCanonicalHostName( );
       try {
-        URI u = new URI( schemeString, null, hostNameString, this.port, this.path, Lexemes.QUERY.format( this.query ), null );
+        URI u = new URI( schemeString, null, hostNameString, this.port, ( "/" + this.path ).replaceAll( "^//", "/" ), Lexemes.QUERY.format( this.query ), null );
         u.parseServerAuthority( );
         return u;
       } catch ( URISyntaxException e ) {
