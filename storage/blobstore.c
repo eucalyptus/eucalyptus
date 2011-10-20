@@ -262,15 +262,15 @@ static void gen_id (char * str, unsigned int size)
     snprintf (str, size, "%08lx%08lx%08lx", (unsigned long)random(), (unsigned long)random(), (unsigned long)random());
 }
 
-static struct flock * file_lock (short type, short whence) 
+struct flock * file_lock (struct flock * l, short type, short whence) 
 {
-    static struct flock ret;
-    ret.l_type = type;
-    ret.l_start = 0;
-    ret.l_whence = whence;
-    ret.l_len = 0;
-    ret.l_pid = getpid();
-    return & ret;
+    l->l_type = type;
+    l->l_start = 0;
+    l->l_whence = whence;
+    l->l_len = 0;
+    l->l_pid = getpid();
+
+    return l;
 }
 
 // MUST be called with _blobstore_mutex held
@@ -497,7 +497,8 @@ static int open_and_lock (const char * path,
         if (ret==0) {
             // Posix rwlock succeeded, try the file lock
             errno = 0;
-            if (fcntl (fd, F_SETLK, file_lock (l_type, SEEK_SET)) == 0)
+            struct flock l;
+            if (fcntl (fd, F_SETLK, file_lock (&l, l_type, SEEK_SET)) == 0)
                 break; // success!
             pthread_rwlock_unlock (&(path_lock->lock)); // give up the Posix lock
             if (errno != EAGAIN) { // any error other than inability to get the lock
