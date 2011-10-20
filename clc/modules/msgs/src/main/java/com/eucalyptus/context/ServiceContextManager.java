@@ -228,7 +228,7 @@ public class ServiceContextManager {
         if ( this.context != null ) {
           shutdown( );
         }
-        this.context = this.createContext( reloadComponentIds );
+        this.context = this.createContext( );
         if ( Bootstrap.isShuttingDown( ) ) {
           this.running.set( false );
           shutdown( );
