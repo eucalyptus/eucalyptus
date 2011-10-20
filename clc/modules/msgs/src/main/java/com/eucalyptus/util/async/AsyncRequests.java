@@ -63,12 +63,9 @@
 
 package com.eucalyptus.util.async;
 
-import java.util.concurrent.ExecutionException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.context.ServiceContext;
-import com.eucalyptus.records.Logs;
-import com.eucalyptus.util.Exceptions;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class AsyncRequests {
@@ -78,22 +75,23 @@ public class AsyncRequests {
   public static <A extends BaseMessage, B extends BaseMessage> B sendSync( ServiceConfiguration config, final A msg ) throws Exception {
     if ( config.isVmLocal( ) ) {
       return ServiceContext.send( config.getComponentId( ), msg );
-    }
-    try {
-      Request<A, B> req = newRequest( new MessageCallback<A, B>( ) {
-        {
-          this.setRequest( msg );
-        }
-        
-        @Override
-        public void fire( B msg ) {
-          LOG.debug( msg.toSimpleString( ) );
-        }
-      } );
-      return req.sendSync( config );
-    } catch ( InterruptedException ex ) {
-      Thread.currentThread( ).interrupt( );
-      throw ex;
+    } else {
+      try {
+        Request<A, B> req = newRequest( new MessageCallback<A, B>( ) {
+          {
+            this.setRequest( msg );
+          }
+          
+          @Override
+          public void fire( B msg ) {
+            LOG.debug( msg.toSimpleString( ) );
+          }
+        } );
+        return req.sendSync( config );
+      } catch ( InterruptedException ex ) {
+        Thread.currentThread( ).interrupt( );
+        throw ex;
+      }
     }
   }
   
