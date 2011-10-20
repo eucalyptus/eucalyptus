@@ -97,6 +97,7 @@ import java.util.concurrent.FutureTask;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.RunnableFuture;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -191,7 +192,7 @@ public class Threads {
       this.creationPoint = Thread.currentThread( ).getStackTrace( );
       this.name = groupPrefix;
       this.group = new ThreadGroup( this.name );
-      this.pool = Executors.newCachedThreadPool( this );
+      this.makePool( );
       this.completionService = new ExecutorCompletionService( this.pool );
       OrderedShutdown.register( Eucalyptus.class, new Runnable( ) {
         @Override
@@ -219,9 +220,9 @@ public class Threads {
               oldExec.shutdown( );
             }
             if ( numThreads == -1 ) {
-              this.pool = Executors.newCachedThreadPool( this );
+              this.pool = Executors.newFixedThreadPool( NUM_QUEUE_WORKERS, this );
             } else {
-              this.pool = Executors.newFixedThreadPool( this.numThreads );
+              this.pool = Executors.newFixedThreadPool( this.numThreads, this );
             }
           }
         }
@@ -242,14 +243,22 @@ public class Threads {
         return this.pool;
       } else {
         synchronized ( this ) {
-          if ( ( this.pool == null ) && ( this.numThreads == -1 ) ) {
-            this.pool = Executors.newCachedThreadPool( this );
-          } else {
-            this.pool = Executors.newFixedThreadPool( this.numThreads );
+          if ( ( this.pool == null ) ) {
+            this.pool = makePool( );
           }
         }
         return this;
       }
+    }
+    
+    public ExecutorService makePool( ) {
+      ExecutorService newPool = ( this.numThreads == -1 )
+        ? Executors.newFixedThreadPool( NUM_QUEUE_WORKERS, this )
+        : Executors.newFixedThreadPool( this.numThreads, this );
+      if ( newPool instanceof ThreadPoolExecutor ) {
+        ( ( ThreadPoolExecutor ) newPool ).setRejectedExecutionHandler( new ThreadPoolExecutor.CallerRunsPolicy( ) );
+      }
+      return newPool;
     }
     
     private static final Runnable[] EMPTY = new Runnable[] {};
