@@ -129,6 +129,12 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
   @Retention( RetentionPolicy.RUNTIME )
   public @interface InternalService {}
   
+  @Target( { ElementType.TYPE } )
+  @Retention( RetentionPolicy.RUNTIME )
+  public @interface ServiceOperation {
+    boolean user( ) default false;
+  }
+  
   private static final long  serialVersionUID = 1L;
   private static Logger      LOG              = Logger.getLogger( ComponentId.class );
   private String             capitalizedName;
@@ -197,13 +203,13 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
     return this.partitionParent( ).equals( this );
   }
   
-  public final boolean isAncestor( Class<? extends ComponentId> compId ) {
+  public final boolean isAncestor( final Class<? extends ComponentId> compId ) {
     if ( this.isCloudLocal( ) && Eucalyptus.class.equals( compId ) ) {
       return true;
     } else if ( this.isAlwaysLocal( ) && Empyrean.class.equals( compId ) ) {
       return true;
     } else {
-      for ( ComponentId deps = this; deps != null && !deps.equals( deps.partitionParent( ) ); deps = deps.partitionParent( ) ) {
+      for ( ComponentId deps = this; ( deps != null ) && !deps.equals( deps.partitionParent( ) ); deps = deps.partitionParent( ) ) {
         if ( compId.equals( deps.getClass( ) ) ) {
           return true;
         }
@@ -258,7 +264,7 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
   
   public ChannelPipelineFactory getClientPipeline( ) {
     ChannelPipelineFactory factory = null;
-    for ( Class c : Classes.ancestors( this ) ) {
+    for ( final Class c : Classes.ancestors( this ) ) {
       if ( ( factory = Pipelines.lookup( this.getClass( ) ) ) != null ) {
         return factory;
       }

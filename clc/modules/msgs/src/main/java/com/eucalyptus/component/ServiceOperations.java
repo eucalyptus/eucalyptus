@@ -63,10 +63,6 @@
 
 package com.eucalyptus.component;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
 import java.util.List;
 import java.util.Map;
 import org.apache.log4j.Logger;
@@ -75,6 +71,7 @@ import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.bootstrap.ServiceJarDiscovery;
+import com.eucalyptus.component.ComponentId.ServiceOperation;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.empyrean.Empyrean;
@@ -89,18 +86,6 @@ import edu.ucsb.eucalyptus.msgs.BaseMessage;
 public class ServiceOperations {
   private static Logger                           LOG               = Logger.getLogger( ServiceOperations.class );
   private static final Map<Class, Function<?, ?>> serviceOperations = Maps.newHashMap( );
-  
-  @Provides( Empyrean.class )
-  @RunDuring( Bootstrap.Stage.UnprivilegedConfiguration )
-  public static class ServiceOperationBootstrapper extends Bootstrapper.Simple {
-    //GRZE: had something here, but need to come back to it later.
-  }
-  
-  @Target( { ElementType.TYPE, ElementType.METHOD } )
-  @Retention( RetentionPolicy.RUNTIME )
-  public @interface ServiceOperation {
-    boolean user( ) default false;
-  }
   
   @SuppressWarnings( "unchecked" )
   public static <T extends BaseMessage, I, O> Function<I, O> lookup( final Class<T> msgType ) {
@@ -159,7 +144,7 @@ public class ServiceOperations {
           }
         } );
         return true;
-      } catch ( Exception ex ) {
+      } catch ( final Exception ex ) {
         Logs.extreme( ).error( ex, ex );
         return false;
       }
