@@ -66,8 +66,6 @@ package com.eucalyptus.component;
 import java.net.InetAddress;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionService;
 import java.util.concurrent.ConcurrentMap;
@@ -93,6 +91,7 @@ import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.system.Threads.ThreadPool;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Function;
@@ -103,8 +102,8 @@ import com.google.common.base.Supplier;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
+import com.google.common.util.concurrent.SettableFuture;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class Topology implements EventListener<Event> {
@@ -125,20 +124,11 @@ public class Topology implements EventListener<Event> {
     ListenerRegistry.getInstance( ).register( Hertz.class, this );
   }
   
-  private static Predicate<Entry<ServiceKey, ServiceConfiguration>> componentFilter( final Class<? extends ComponentId> compId ) {
-    return new Predicate<Entry<ServiceKey, ServiceConfiguration>>( ) {
-      @Override
-      public boolean apply( final Entry<ServiceKey, ServiceConfiguration> arg0 ) {
-        return compId.equals( arg0.getKey( ).getComponentId( ) );
-      }
-    };
-  }
-  
   private static Predicate<Partition> partitionFilter( final Partition p ) {
     return new Predicate<Partition>( ) {
       
       @Override
-      public boolean apply( Partition input ) {
+      public boolean apply( final Partition input ) {
         return p.equals( input );
       }
     };
@@ -195,27 +185,8 @@ public class Topology implements EventListener<Event> {
     }
   }
   
-  private Function<Callable<ServiceConfiguration>, Future<ServiceConfiguration>> externalCompletionFunction( ) {
-    return new Function<Callable<ServiceConfiguration>, Future<ServiceConfiguration>>( ) {
-      
-      @Override
-      public Future<ServiceConfiguration> apply( Callable<ServiceConfiguration> input ) {
-        CompletionService<ServiceConfiguration> externalCompletionService = externalCompletionService( );
-        return externalCompletionService.submit( input );
-      }
-    };
-  }
-  
-  private CompletionService completionService( final ServiceConfiguration config ) {
-    return Threads.lookup( Empyrean.class, Topology.class, "worker-" + config.getComponentId( ).name( ) ).limitTo( 1 ).getCompletionService( );
-  }
-  
   private ThreadPool externalPool( ) {
     return Threads.lookup( Empyrean.class, Topology.class, "external-worker" ).limitTo( 16 );
-  }
-  
-  private static <T> CompletionService<T> externalCompletionService( ) {
-    return getInstance( ).externalPool( ).getCompletionService( );
   }
   
   private Integer getEpoch( ) {
@@ -231,12 +202,12 @@ public class Topology implements EventListener<Event> {
     return Lists.transform( Topology.getInstance( ).partitionView( partition ), TypeMappers.lookup( ServiceConfiguration.class, ServiceId.class ) );
   }
   
-  private RunnableFuture<ServiceConfiguration> submitExternal( final ServiceConfiguration config, final Function<ServiceConfiguration, ServiceConfiguration> function ) {
+  private Future<ServiceConfiguration> submitExternal( final ServiceConfiguration config, final Function<ServiceConfiguration, ServiceConfiguration> function ) {
     final Callable<ServiceConfiguration> call = transitionCallable( config, function );
     return Threads.enqueue( this.externalQueue, 32, call );
   }
   
-  private RunnableFuture<ServiceConfiguration> submit( final ServiceConfiguration config, final Function<ServiceConfiguration, ServiceConfiguration> function ) {
+  private Future<ServiceConfiguration> submit( final ServiceConfiguration config, final Function<ServiceConfiguration, ServiceConfiguration> function ) {
     final Callable<ServiceConfiguration> call = transitionCallable( config, function );
     return Threads.enqueue( this.internalQueue, 1, call );
   }
@@ -245,7 +216,7 @@ public class Topology implements EventListener<Event> {
     return new Function<ServiceConfiguration, Callable<ServiceConfiguration>>( ) {
       
       @Override
-      public Callable<ServiceConfiguration> apply( ServiceConfiguration input ) {
+      public Callable<ServiceConfiguration> apply( final ServiceConfiguration input ) {
         return transitionCallable( input, function );
       }
     };
@@ -284,27 +255,27 @@ public class Topology implements EventListener<Event> {
     return call;
   }
   
-  public static RunnableFuture<ServiceConfiguration> check( final ServiceConfiguration config ) {
+  public static Future<ServiceConfiguration> check( final ServiceConfiguration config ) {
     return Topology.getInstance( ).submitExternal( config, TopologyChanges.checkFunction( ) );
   }
   
-  public static RunnableFuture<ServiceConfiguration> stop( final ServiceConfiguration config ) {
+  public static Future<ServiceConfiguration> stop( final ServiceConfiguration config ) {
     return Topology.getInstance( ).submitExternal( config, TopologyChanges.stopFunction( ) );
   }
   
-  public static RunnableFuture<ServiceConfiguration> destroy( final ServiceConfiguration config ) {
+  public static Future<ServiceConfiguration> destroy( final ServiceConfiguration config ) {
     return Topology.getInstance( ).submitExternal( config, TopologyChanges.destroyFunction( ) );
   }
   
-  public static RunnableFuture<ServiceConfiguration> start( final ServiceConfiguration config ) {
+  public static Future<ServiceConfiguration> start( final ServiceConfiguration config ) {
     return Topology.getInstance( ).submitExternal( config, TopologyChanges.startFunction( ) );
   }
   
-  public static RunnableFuture<ServiceConfiguration> enable( final ServiceConfiguration config ) {
+  public static Future<ServiceConfiguration> enable( final ServiceConfiguration config ) {
     return Topology.getInstance( ).submit( config, TopologyChanges.enableFunction( ) );
   }
   
-  public static RunnableFuture<ServiceConfiguration> disable( final ServiceConfiguration config ) {
+  public static Future<ServiceConfiguration> disable( final ServiceConfiguration config ) {
     return Topology.getInstance( ).submit( config, TopologyChanges.disableFunction( ) );
   }
   
@@ -512,7 +483,13 @@ public class Topology implements EventListener<Event> {
   @Override
   public void fireEvent( final Event event ) {
     if ( ( event instanceof Hertz ) && ( ( Hertz ) event ).isAsserted( 15l ) ) {
-      Future enabled = this.completionService( this.internalQueue ).submit( RunChecks.INSTANCE );
+      try {
+        Threads.enqueue( this.internalQueue, RunChecks.INSTANCE ).get( );
+      } catch ( InterruptedException ex ) {
+        Thread.currentThread( ).interrupt( );
+      } catch ( ExecutionException ex ) {
+        LOG.error( ex, ex );
+      }
     }
   }
   
@@ -529,32 +506,35 @@ public class Topology implements EventListener<Event> {
     
   }
   
-  enum SubmitCheck implements Function<ServiceConfiguration, Callable<ServiceConfiguration>> {
+  enum SubmitEnable implements Function<ServiceConfiguration, Future<ServiceConfiguration>> {
     INSTANCE;
     
     @Override
-    public Callable<ServiceConfiguration> apply( ServiceConfiguration input ) {
-      return Topology.transitionCallable( input, TopologyChanges.checkFunction( ) );
+    public Future<ServiceConfiguration> apply( final ServiceConfiguration input ) {
+      Callable<ServiceConfiguration> call = Topology.transitionCallable( input, TopologyChanges.enableFunction( ) );
+      Future<ServiceConfiguration> future = Threads.enqueue( Topology.getInstance( ).externalQueue, call );
+      return future;
     }
     
   }
   
-  enum WaitForResults implements Predicate<Future<?>> {
+  enum SubmitCheck implements Function<ServiceConfiguration, Future<ServiceConfiguration>> {
     INSTANCE;
     
-    @SuppressWarnings( "unchecked" )
-    public static <T> List<T> invokeAll( Collection<? extends Callable<T>> submitChecks ) {
-      try {
-        List<Future<T>> results = Topology.getInstance( ).externalPool( ).invokeAll( submitChecks, 30L, TimeUnit.SECONDS );
-        return ( List<T> ) Collections2.transform( Collections2.filter( results, WaitForResults.INSTANCE ), Transform.TRANSFORM );
-      } catch ( InterruptedException ex ) {
-        Thread.currentThread( ).interrupt( );
-        throw Exceptions.toUndeclared( ex );
-      }
+    @Override
+    public Future<ServiceConfiguration> apply( final ServiceConfiguration input ) {
+      Callable<ServiceConfiguration> call = Topology.transitionCallable( input, TopologyChanges.checkFunction( ) );
+      Future<ServiceConfiguration> future = Threads.enqueue( Topology.getInstance( ).externalQueue, call );
+      return future;
     }
     
+  }
+  
+  enum WaitForResults implements Predicate<Future> {
+    INSTANCE;
+    
     @Override
-    public boolean apply( Future<?> input ) {
+    public boolean apply( final Future input ) {
       try {
         final Object conf = input.get( );
         LOG.trace( "Operation succeeded for " + conf );
@@ -567,38 +547,20 @@ public class Topology implements EventListener<Event> {
       return false;
     }
     
-    enum Transform implements Function<Future<?>, Object> {
-      TRANSFORM;
-      @Override
-      public Object apply( Future<?> input ) {
-        try {
-          return input.get( );
-        } catch ( final InterruptedException ex ) {
-          Thread.currentThread( ).interrupt( );
-        } catch ( final Exception ex ) {
-          Logs.exhaust( ).trace( ex, ex );
-        }
-        return null;
-      }
-    }
   }
   
-  enum GatherCheckResults implements Supplier<ServiceConfiguration> {
+  enum ExtractFuture implements Function<Future<ServiceConfiguration>, ServiceConfiguration> {
     INSTANCE;
-    
     @Override
-    public ServiceConfiguration get( ) {
+    public ServiceConfiguration apply( final Future<ServiceConfiguration> input ) {
       try {
-        CompletionService<ServiceConfiguration> externalCompletionService = Topology.getInstance( ).externalCompletionService( );
-        final ServiceConfiguration conf = externalCompletionService.take( ).get( );
-        LOG.trace( "CHECK passed: " + conf.getFullName( ).toString( ) );
-        return conf;
-      } catch ( InterruptedException ex ) {
+        return input.get( );
+      } catch ( final InterruptedException ex ) {
         Thread.currentThread( ).interrupt( );
-        throw Exceptions.toUndeclared( ex );
-      } catch ( ExecutionException ex ) {
-        throw Exceptions.toUndeclared( ex );
+      } catch ( final Exception ex ) {
+        Logs.exhaust( ).trace( ex, ex );
       }
+      return null;
     }
   }
   
@@ -608,21 +570,21 @@ public class Topology implements EventListener<Event> {
     @Override
     public List<ServiceConfiguration> call( ) {
       /** submit describe operations **/
-      Collection<ServiceConfiguration> checkServices = Collections2.filter( ServiceConfigurations.list( ), CheckServiceFilter.INSTANCE );
-      Collection<Callable<ServiceConfiguration>> submitChecks = Collections2.transform( checkServices, SubmitCheck.INSTANCE );
+      final Collection<ServiceConfiguration> checkServices = Collections2.filter( ServiceConfigurations.list( ), CheckServiceFilter.INSTANCE );
+      final Collection<Future<ServiceConfiguration>> submittedChecks = Collections2.transform( checkServices, SubmitCheck.INSTANCE );
       
       /** consume describe results **/
-      Collection<ServiceConfiguration> goodServices = WaitForResults.invokeAll( submitChecks );
-      LOG.trace( LogUtil.subheader( "CHECKED: " + Joiner.on( "\nCHECKED: " ).join( goodServices ) ) );
+      final Collection<Future<ServiceConfiguration>> checkedServices = Collections2.filter( submittedChecks, WaitForResults.INSTANCE );
+      LOG.trace( LogUtil.subheader( "CHECKED: " + Joiner.on( "\nCHECKED: " ).join( checkedServices ) ) );
       
       /** make promotion decisions **/
-      Predicate<ServiceConfiguration> canPromote = Predicates.and( FailoverPredicate.INSTANCE, Predicates.not( Predicates.in( goodServices ) ) );
-      Collection<ServiceConfiguration> promoteServices = Collections2.filter( ServiceConfigurations.list( ), canPromote );
-      Collection<Callable<ServiceConfiguration>> enableCallables = Collections2.transform( promoteServices,
-                                                                                           functionalCallable( TopologyChanges.enableFunction( ) ) );
-      List<ServiceConfiguration> enabledServices = WaitForResults.invokeAll( enableCallables );
+      Collection<ServiceConfiguration> excludeForPromotion = Collections2.transform( checkedServices, ExtractFuture.INSTANCE );
+      final Predicate<ServiceConfiguration> canPromote = Predicates.and( Predicates.not( Predicates.in( excludeForPromotion ) ), FailoverPredicate.INSTANCE );
+      final Collection<ServiceConfiguration> promoteServices = Collections2.filter( ServiceConfigurations.list( ) , canPromote );
+      final Collection<Future<ServiceConfiguration>> enableCallables = Collections2.transform( promoteServices, SubmitEnable.INSTANCE );
+      final Collection<Future<ServiceConfiguration>> enabledServices = Collections2.filter( enableCallables, WaitForResults.INSTANCE );
       LOG.trace( LogUtil.subheader( "ENABLED: " + Joiner.on( "\nENABLED: " ).join( enabledServices ) ) );
-      return enabledServices;
+      return Lists.transform( Lists.newArrayList( enabledServices ), ExtractFuture.INSTANCE );
     }
   }
   
@@ -632,16 +594,16 @@ public class Topology implements EventListener<Event> {
     public boolean apply( final ServiceConfiguration arg0 ) {
       final ServiceKey key = ServiceKey.create( arg0 );
       if ( !Hosts.isCoordinator( ) ) {
-        Logs.exhaust( ).debug( "FAILOVER-REJECT: " + arg0 + ": not cloud controller." );
+        Logs.exhaust( ).debug( "FAILOVER-REJECT: " + Internets.localHostInetAddress( ) + ": not cloud controller, ignoring promotion for: " + arg0.getFullName( ) );
         return false;
-      } else if ( Component.State.NOTREADY.equals( arg0.lookupState( ) ) ) {
-        Logs.exhaust( ).debug( "FAILOVER-REJECT: " + arg0 + ": service is NOTREADY." );
+      } else if ( !Component.State.DISABLED.equals( arg0.lookupState( ) ) ) {
+        Logs.exhaust( ).debug( "FAILOVER-REJECT: " + arg0.getFullName( ) + ": service is in an invalid state: " + arg0.lookupState( ) );
         return false;
       } else if ( Topology.getInstance( ).getServices( ).containsKey( key ) && arg0.equals( Topology.getInstance( ).getServices( ).get( key ) ) ) {
-        Logs.exhaust( ).debug( "FAILOVER-REJECT: " + arg0 + ": service is ENABLED." );
+        Logs.exhaust( ).debug( "FAILOVER-REJECT: " + arg0.getFullName( ) + ": service is already ENABLED." );
         return false;
       } else if ( !Topology.getInstance( ).getServices( ).containsKey( key ) ) {
-        Logs.exhaust( ).debug( "FAILOVER-ACCEPT: " + arg0 + ": service for partition: " + key );
+        Logs.exhaust( ).debug( "FAILOVER-ACCEPT: " + arg0.getFullName( ) + ": service for partition: " + key );
         return true;
       } else {
         Logs.exhaust( ).debug( "FAILOVER-ACCEPT: " + arg0 );
@@ -663,6 +625,10 @@ public class Topology implements EventListener<Event> {
   }
   
   public static boolean isEnabledLocally( final Class<? extends ComponentId> compClass ) {
+    return Iterables.any( Topology.enabledServices( compClass ), ServiceConfigurations.filterHostLocal( ) );
+  }
+  
+  public static boolean isEnabled( final Class<? extends ComponentId> compClass ) {
     return Iterables.any( Topology.enabledServices( compClass ), ServiceConfigurations.filterHostLocal( ) );
   }
   

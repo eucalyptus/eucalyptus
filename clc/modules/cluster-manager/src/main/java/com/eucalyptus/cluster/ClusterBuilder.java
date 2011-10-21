@@ -30,19 +30,14 @@ public class ClusterBuilder extends AbstractServiceBuilder<ClusterConfiguration>
   @Override
   public Boolean checkAdd( final String partition, final String name, final String host, final Integer port ) throws ServiceRegistrationException {
     try {
-      final Partition part = Partitions.lookupByName( partition );
+      final Partition part = Partitions.lookup( this.newInstance( partition, name, host, port ) );
       part.syncKeysToDisk( );
     } catch ( final Exception ex ) {
       Logs.extreme( ).error( ex, ex );
       throw new ServiceRegistrationException( String.format( "Unexpected error caused cluster registration to fail for: partition=%s name=%s host=%s port=%d",
                                                              partition, name, host, port ), ex );
     }
-    
-    if ( !Partitions.testPartitionCredentialsDirectory( partition ) ) {
-      throw new ServiceRegistrationException( "Cluster registration failed because the key directory cannot be created." );
-    } else {
-      return super.checkAdd( partition, name, host, port );
-    }
+    return super.checkAdd( partition, name, host, port );
   }
   
   @Override

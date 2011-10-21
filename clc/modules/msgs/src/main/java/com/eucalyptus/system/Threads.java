@@ -383,11 +383,6 @@ public class Threads {
       thread.setName( base_name );
     }
     
-    @SuppressWarnings( "unchecked" )
-    public <T> CompletionService<T> getCompletionService( ) {
-      return this.completionService;
-    }
-    
     private <T> LinkedBlockingQueue<Future<?>> getTaskQueue( ) {
       return this.taskQueue;
     }
@@ -567,7 +562,6 @@ public class Threads {
     
     private void stop( ) {
       this.running.set( false );
-      this.threadPool( ).free( );
     }
     
     private ThreadPool threadPool( ) {
@@ -674,17 +668,17 @@ public class Threads {
     }
   }
   
-  public static <C> RunnableFuture<C> enqueue( final ServiceConfiguration config, final Runnable runnable ) {
+  public static <C> Future<C> enqueue( final ServiceConfiguration config, final Runnable runnable ) {
     return queue( config.getComponentId( ).getClass( ), config, NUM_QUEUE_WORKERS ).submit( runnable );
   }
   
   @SuppressWarnings( "unchecked" )
-  public static <C> RunnableFuture<C> enqueue( final ServiceConfiguration config, final Callable<?> callable ) {
-    return ( RunnableFuture<C> ) queue( config.getComponentId( ).getClass( ), config, NUM_QUEUE_WORKERS ).submit( callable );
+  public static <C> Future<C> enqueue( final ServiceConfiguration config, final Callable<?> callable ) {
+    return ( Future<C> ) queue( config.getComponentId( ).getClass( ), config, NUM_QUEUE_WORKERS ).submit( callable );
   }
   
   @SuppressWarnings( "unchecked" )
-  public static <C> RunnableFuture<C> enqueue( final ServiceConfiguration config, final Integer workers, final Callable<?> callable ) {
-    return ( RunnableFuture<C> ) queue( config.getComponentId( ).getClass( ), config, workers ).submit( callable );
+  public static <C> Future<C> enqueue( final ServiceConfiguration config, final Integer workers, final Callable<?> callable ) {
+    return ( Future<C> ) queue( config.getComponentId( ).getClass( ), config, workers ).submit( callable );
   }
 }

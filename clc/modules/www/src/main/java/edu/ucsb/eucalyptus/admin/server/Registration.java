@@ -77,6 +77,7 @@ import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.ServiceUris;
+import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.component.id.Walrus;
@@ -136,8 +137,8 @@ public class Registration extends HttpServlet {
   }
   
   private static String getWalrusUrl( ) {
-    if( Components.lookup( Walrus.class ).hasEnabledService( ) ) {
-      ServiceConfiguration walrusConfig = Components.lookup( Walrus.class ).enabledServices( ).first( );
+    if( Topology.isEnabledLocally( Walrus.class ) ) {
+      ServiceConfiguration walrusConfig = Topology.lookup( Walrus.class );
       return ServiceUris.remote( walrusConfig ).toASCIIString( );
     } else {
       return "NOT REGISTERED.";

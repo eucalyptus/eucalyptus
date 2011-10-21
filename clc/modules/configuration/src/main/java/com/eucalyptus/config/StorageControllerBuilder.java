@@ -11,6 +11,7 @@ import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.id.Storage;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.LogUtil;
 
 
@@ -36,8 +37,14 @@ public class StorageControllerBuilder extends AbstractServiceBuilder<StorageCont
   
   @Override
   public Boolean checkAdd( String partition, String name, String host, Integer port ) throws ServiceRegistrationException {
-    Partition part = Partitions.lookupByName( partition );
-    part.syncKeysToDisk( );
+    try {
+      final Partition part = Partitions.lookup( this.newInstance( partition, name, host, port ) );
+      part.syncKeysToDisk( );
+    } catch ( final Exception ex ) {
+      Logs.extreme( ).error( ex, ex );
+      throw new ServiceRegistrationException( String.format( "Unexpected error caused storage controller registration to fail for: partition=%s name=%s host=%s port=%d",
+                                                             partition, name, host, port ), ex );
+    }
     return super.checkAdd( partition, name, host, port );
   }
 

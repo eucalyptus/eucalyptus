@@ -244,7 +244,7 @@ public class ServiceUris {
         : this.scheme.getScheme( );
       String hostNameString = StackConfiguration.USE_DNS_DELEGATION
         ? this.componentId.name( ) + "." + StackConfiguration.lookupDnsDomain( )
-        : this.address.getCanonicalHostName( );
+        : this.address.getHostAddress( );
       try {
         URI u = new URI( schemeString, null, hostNameString, this.port, ( "/" + this.path ).replaceAll( "^//", "/" ), Lexemes.QUERY.format( this.query ), null );
         u.parseServerAuthority( );

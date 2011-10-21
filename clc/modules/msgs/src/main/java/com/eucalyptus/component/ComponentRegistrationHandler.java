@@ -117,7 +117,7 @@ public class ComponentRegistrationHandler {
       }
       ServiceConfigurations.store( newComponent );
       try {
-        Threads.enqueue( newComponent, Topology.start( newComponent ) );
+        Topology.start( newComponent );
       } catch ( Exception ex ) {
         LOG.info( builder.getClass( ).getSimpleName( ) + ": enable failed because of: " + ex.getMessage( ) );
       }
@@ -144,7 +144,7 @@ public class ComponentRegistrationHandler {
       throw new ServiceRegistrationException( builder.getClass( ).getSimpleName( ) + ": checkRemove failed with message: " + e.getMessage( ), e );
     }
     final ServiceConfiguration conf = ServiceConfigurations.lookupByName( compId.getClass( ), name );
-    Futures.makeListenable( Threads.enqueue( conf, Topology.stop( conf ) ) ).addListener( Topology.destroy( conf ), Threads.currentThreadExecutor( ) );
+    Topology.destroy( conf );
     ServiceConfigurations.remove( conf );
     return true;
   }

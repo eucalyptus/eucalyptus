@@ -138,8 +138,7 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
           return AsyncRequest.this.execute( serviceConfig ).getResponse( );
         }
       };
-      CompletionService<CheckedListenableFuture<R>> service = Threads.lookup( serviceConfig ).getCompletionService( );
-      service.submit( call );
+      Threads.enqueue( serviceConfig, call );
       return this.getResponse( );
     } catch ( Exception ex1 ) {
       Future<CheckedListenableFuture<R>> res = Threads.lookup( Empyrean.class, AsyncRequest.class, serviceConfig.getFullName( ).toString( ) ).limitTo( NUM_WORKERS ).submit( new Callable<CheckedListenableFuture<R>>( ) {
