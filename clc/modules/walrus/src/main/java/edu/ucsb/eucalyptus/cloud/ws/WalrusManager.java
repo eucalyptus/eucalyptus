@@ -423,34 +423,6 @@ public class WalrusManager {
 			}
 		}
 
-		if(false) { //WalrusProperties.enableVirtualHosting) {
-			if(checkDNSNaming(bucketName)) {
-				UpdateARecordType updateARecord = new UpdateARecordType();
-				updateARecord.setUserId(account.getAccountNumber());
-				URI walrusUri;
-				String address = null;
-				try {
-					walrusUri = new URI(SystemConfiguration.getWalrusUrl());
-					address = walrusUri.getHost();
-				} catch (URISyntaxException e) {
-					throw new EucalyptusCloudException("Could not get Walrus URL");
-				}
-				String zone = WalrusProperties.WALRUS_SUBDOMAIN + ".";
-				updateARecord.setAddress(address);
-				updateARecord.setName(bucketName + "." + zone);
-				updateARecord.setTtl(604800);
-				updateARecord.setZone(zone);
-				try {
-					ServiceDispatcher.lookupSingle(Components.lookup(Dns.class)).send(updateARecord);
-					LOG.info("Mapping " + updateARecord.getName() + " to " + address);
-				} catch(Exception ex) {
-					LOG.error("Could not update DNS record", ex);
-				}
-			} else {
-				LOG.error("Bucket: " + bucketName + " fails to meet DNS requirements. Unable to create DNS mapping.");
-			}
-		}
-
 		reply.setBucket(bucketName);
 		return reply;
 	}
@@ -551,6 +523,7 @@ public class WalrusManager {
 								LOG.error(ex);
 							}
 
+<<<<<<< TREE
 							if (false) { //WalrusProperties.enableVirtualHosting) {
 								URI walrusUri;
 								String address;
@@ -577,6 +550,8 @@ public class WalrusManager {
 								}
 							}
 
+=======
+>>>>>>> MERGE-SOURCE
 							Status status = new Status();
 							status.setCode(204);
 							status.setDescription("No Content");

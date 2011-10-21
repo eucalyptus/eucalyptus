@@ -123,7 +123,7 @@ int vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, int
 	  return(1);
 	}
 	if (!network || !netmask || !broadcast || !nameserver || !router) {
-	  logprintfl(EUCAERROR, "vnetInit(): cannot verify network settings (VNET_SUBNET(%s), VNET_NETMASK(%s), VNET_BROADCAST(%s), VNET_NAMESERVER(%s), VNET_ROUTER(%s)), please check parameters\n", SP(network), SP(netmask), SP(broadcast), SP(nameserver), SP(router));
+	  logprintfl(EUCAERROR, "vnetInit(): cannot verify network settings (VNET_SUBNET(%s), VNET_NETMASK(%s), VNET_BROADCAST(%s), VNET_DNS(%s), VNET_ROUTER(%s)), please check parameters\n", SP(network), SP(netmask), SP(broadcast), SP(nameserver), SP(router));
 	  return(1);
 	}
       } else if (role == NC) {
@@ -149,7 +149,7 @@ int vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, int
 	  return(1);
 	}
 	if (!network || !netmask || !nameserver) {
-	  logprintfl(EUCAERROR, "vnetInit(): cannot verify network settings (VNET_SUBNET(%s), VNET_NETMASK(%s), VNET_NAMESERVER(%s), please check parameters\n", SP(network), SP(netmask), SP(nameserver));
+	  logprintfl(EUCAERROR, "vnetInit(): cannot verify network settings (VNET_SUBNET(%s), VNET_NETMASK(%s), VNET_DNS(%s), please check parameters\n", SP(network), SP(netmask), SP(nameserver));
 	  return(1);
 	}
       } else if (role == NC) {
@@ -173,7 +173,7 @@ int vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, int
 	  return(1);
 	}
 	if (!network || !netmask || !nameserver) {
-	  logprintfl(EUCAERROR, "vnetInit(): cannot verify network settings (VNET_SUBNET(%s), VNET_NETMASK(%s), VNET_NAMESERVER(%s)), please check parameters\n", SP(network), SP(netmask), SP(nameserver));
+	  logprintfl(EUCAERROR, "vnetInit(): cannot verify network settings (VNET_SUBNET(%s), VNET_NETMASK(%s), VNET_DNS(%s)), please check parameters\n", SP(network), SP(netmask), SP(nameserver));
 	  return(1);
 	}
       } else if (role == NC) {
