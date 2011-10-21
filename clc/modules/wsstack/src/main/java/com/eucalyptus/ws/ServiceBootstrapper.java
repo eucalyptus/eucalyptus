@@ -76,6 +76,7 @@ import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.Databases;
+import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.bootstrap.SystemBootstrapper;
@@ -191,7 +192,9 @@ public class ServiceBootstrapper extends Bootstrapper {
             try {
               ServiceTransitions.pathTo( config, Component.State.DISABLED ).get( );
               try {
-                Topology.enable( config ).get( );
+                if ( Hosts.isCoordinator( ) ) {
+                  Topology.enable( config ).get( );
+                }
               } catch ( IllegalStateException ex ) {
                 LOG.error( ex, ex );
               } catch ( InterruptedException ex ) {

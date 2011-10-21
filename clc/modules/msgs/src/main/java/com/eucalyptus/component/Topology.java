@@ -632,7 +632,11 @@ public class Topology implements EventListener<Event> {
   }
   
   public static Collection<ServiceConfiguration> enabledServices( final Class<? extends ComponentId> compId ) {
-    return Collections2.filter( Topology.getInstance( ).services.values( ), componentFilter( compId ) ); 
+    return Collections2.filter( enabledServices( ), componentFilter( compId ) ); 
+  }
+  
+  public static Collection<ServiceConfiguration> enabledServices( ) {
+    return Topology.getInstance( ).services.values( );
   }
   
   public static boolean isEnabledLocally( final Class<? extends ComponentId> compClass ) {
