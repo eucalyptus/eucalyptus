@@ -539,6 +539,11 @@ static int open_and_lock (const char * path,
             logprintfl (EUCADEBUG2, "{%u} open_and_lock: locked fd=%d path=%s\n", 
                         (unsigned int)pthread_self(), fd, path);
         }
+        struct stat s;
+        if (fstat (fd, &s) == 0) {
+            logprintfl (EUCADEBUG2, "{%u} open_and_lock: fd=%d path=%s ino=%d mode=%0o\n", 
+                        (unsigned int)pthread_self(), fd, path, s.st_ino, s.st_mode);
+        }
     }
     return fd;
 
