@@ -500,7 +500,7 @@ static int open_and_lock (const char * path,
             // Posix rwlock succeeded, try the file lock
             errno = 0;
             struct flock l;
-            if (fcntl (fd, F_SETLK, flock_whole_file (&l, l_type)) == 0)
+            if (fcntl (fd, F_SETLK, flock_whole_file (&l, l_type)) != -1)
                 break; // success!
             pthread_rwlock_unlock (&(path_lock->lock)); // give up the Posix lock
             if (errno != EAGAIN) { // any error other than inability to get the lock
