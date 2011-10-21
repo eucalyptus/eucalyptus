@@ -140,8 +140,8 @@ public class ServiceTransitions {
           return executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToStopped( configuration.lookupState( ) ) ) );
         case NOTREADY:
           return executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToStarted( configuration.lookupState( ) ) ) );
-        case NONE:
-          return executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToNone( configuration.lookupState( ) ) ) );
+        case PRIMORDIAL:
+          return executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToPrimordial( configuration.lookupState( ) ) ) );
         default:
           return Futures.predestinedFuture( configuration );
       }
@@ -178,8 +178,8 @@ public class ServiceTransitions {
     }
   }
   
-  private static State[] pathToNone( Component.State fromState ) {
-    return ObjectArrays.concat( ServiceTransitions.pathToStopped( fromState ), Component.State.NONE );
+  private static State[] pathToPrimordial( Component.State fromState ) {
+    return ObjectArrays.concat( ServiceTransitions.pathToStopped( fromState ), Component.State.PRIMORDIAL );
   }
   
   private static final State[] pathToStarted( final Component.State fromState ) {

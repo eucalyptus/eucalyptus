@@ -102,7 +102,7 @@ public class Component implements HasName<Component> {
   private final ComponentBootstrapper bootstrapper;
   
   public enum State implements Automata.State<State> {
-    NONE, BROKEN, PRIMORDIAL, INITIALIZED, LOADED, STOPPED, NOTREADY, DISABLED, ENABLED;
+    BROKEN, PRIMORDIAL, INITIALIZED, LOADED, STOPPED, NOTREADY, DISABLED, ENABLED;
   }
   
   public enum Transition implements Automata.Transition<Transition> {
@@ -139,7 +139,7 @@ public class Component implements HasName<Component> {
   public State getState( ) {
     return this.hasLocalService( )
       ? this.getLocalServiceConfiguration( ).lookupState( )
-      : State.NONE;
+      : State.PRIMORDIAL;
   }
   
   /**

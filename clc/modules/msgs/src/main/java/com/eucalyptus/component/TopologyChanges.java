@@ -209,7 +209,7 @@ public class TopologyChanges {
       @Override
       public ServiceConfiguration apply( ServiceConfiguration input ) {
         try {
-          return ServiceTransitions.pathTo( input, Component.State.NONE ).get( );
+          return ServiceTransitions.pathTo( input, Component.State.PRIMORDIAL ).get( );
         } catch ( InterruptedException ex ) {
           Thread.currentThread( ).interrupt( );
           throw Exceptions.toUndeclared( ex );
@@ -354,7 +354,7 @@ public class TopologyChanges {
       @Override
       public ServiceConfiguration apply( ServiceConfiguration input ) {
         try {
-          return ServiceTransitions.pathTo( input, Component.State.NONE ).get( );
+          return ServiceTransitions.pathTo( input, Component.State.PRIMORDIAL ).get( );
         } catch ( InterruptedException ex ) {
           Thread.currentThread( ).interrupt( );
           throw Exceptions.toUndeclared( ex );

@@ -22,10 +22,10 @@ public class TypeMappers {
   private static SortedSetMultimap<Class, Class> knownMappers = TreeMultimap.create( Comparators.classes( ), Comparators.classes( ) );
   private static Map<String, Function>           mappers      = Maps.newHashMap( );
   
-  public static <A,B> B transform( A from, Class<B> to ) {
+  public static <A, B> B transform( A from, Class<B> to ) {
     Class target = from.getClass( );
-    for( Class p : Classes.ancestors( from ) ) {
-      if( !knownMappers.get( p ).isEmpty( ) ) {
+    for ( Class p : Classes.ancestors( from ) ) {
+      if ( knownMappers.containsKey( p ) && !knownMappers.get( p ).isEmpty( ) ) {
         target = p;
         break;
       }

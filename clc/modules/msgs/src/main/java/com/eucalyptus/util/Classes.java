@@ -309,10 +309,11 @@ public class Classes {
     @Override
     public List<Class<?>> apply( final Object input ) {
       final List<Class<?>> ret = Lists.newArrayList( );
-      if ( !input.getClass( ).isEnum( ) ) {
-        ret.addAll( processTypeForGenerics( input.getClass( ).getGenericSuperclass( ) ) );
+      Class<?> inputClass = WhateverAsClass.INSTANCE.apply( input );
+      if ( !inputClass.isEnum( ) ) {
+        ret.addAll( processTypeForGenerics( inputClass.getGenericSuperclass( ) ) );
       }
-      ret.addAll( processTypeForGenerics( input.getClass( ).getGenericInterfaces( ) ) );
+      ret.addAll( processTypeForGenerics( inputClass.getGenericInterfaces( ) ) );
       return ret;
     }
     

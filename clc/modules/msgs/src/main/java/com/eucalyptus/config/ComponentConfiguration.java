@@ -350,7 +350,7 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
     try {
       return this.lookupStateMachine( ).getState( );
     } catch ( NoSuchElementException ex ) {
-      return Component.State.NONE;
+      return Component.State.PRIMORDIAL;
     }
   }
   
