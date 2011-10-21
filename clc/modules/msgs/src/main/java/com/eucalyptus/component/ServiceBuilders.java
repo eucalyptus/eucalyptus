@@ -75,6 +75,7 @@ import com.eucalyptus.system.Ats;
 import com.eucalyptus.util.TypeMapper;
 import com.google.common.base.Function;
 import com.google.common.collect.Maps;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class ServiceBuilders {
   private static Logger                                                           LOG               = Logger.getLogger( ServiceBuilders.class );
@@ -112,12 +113,12 @@ public class ServiceBuilders {
     
   }
   
-  static void addBuilder( Class c, ServiceBuilder b ) {
+  private static void addBuilder( Class<? extends BaseMessage> c, ServiceBuilder b ) {
     LOG.trace( "Registered service builder for " + c.getSimpleName( ) + " -> " + b.getClass( ).getCanonicalName( ) );
     builders.put( c, b );
   }
   
-  public static void addBuilder( ComponentId c, ServiceBuilder b ) {
+  private static void addBuilder( ComponentId c, ServiceBuilder b ) {
     LOG.trace( "Registered service builder for " + c.name( ) + " -> " + b.getClass( ).getCanonicalName( ) );
     componentBuilders.put( c, b );
   }
@@ -126,7 +127,7 @@ public class ServiceBuilders {
     return builders.entrySet( );
   }
   
-  public static ServiceBuilder<? extends ServiceConfiguration> handles( Class handlesType ) {
+  public static ServiceBuilder<? extends ServiceConfiguration> handles( Class<? extends BaseMessage> handlesType ) {
     return builders.get( handlesType );
   }
   

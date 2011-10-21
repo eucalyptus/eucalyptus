@@ -2,6 +2,7 @@ package com.eucalyptus.util;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import org.apache.log4j.Logger;
@@ -17,9 +18,18 @@ import com.google.common.collect.SortedSetMultimap;
 import com.google.common.collect.TreeMultimap;
 
 public class TypeMappers {
-  
+  private enum Classes implements Comparator<Class> {
+    INSTANCE;
+    
+    @Override
+    public int compare( Class o1, Class o2 ) {
+      return o1.getCanonicalName( ).compareTo( o2.getCanonicalName( ) );
+    }
+    
+  }
+
   private static Logger                          LOG          = Logger.getLogger( TypeMappers.class );
-  private static SortedSetMultimap<Class, Class> knownMappers = TreeMultimap.create( Comparators.classes( ), Comparators.classes( ) );
+  private static SortedSetMultimap<Class, Class> knownMappers = TreeMultimap.create( Classes.INSTANCE, Classes.INSTANCE );
   private static Map<String, Function>           mappers      = Maps.newHashMap( );
   
   public static <A, B> B transform( A from, Class<B> to ) {

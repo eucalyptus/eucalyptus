@@ -213,7 +213,7 @@ public class Hosts {
     @Override
     public ServiceConfiguration apply( ServiceConfiguration input ) {
       try {
-        ServiceConfiguration conf = Topology.disable( input ).get( );
+        ServiceConfiguration conf = ServiceTransitions.pathTo( input, Component.State.DISABLED ).get( );
         LOG.info( "Initialized service: " + conf.getFullName( ) );
         return conf;
       } catch ( ExecutionException ex ) {

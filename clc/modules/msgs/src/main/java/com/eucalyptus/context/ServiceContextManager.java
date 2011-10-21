@@ -108,15 +108,15 @@ import static org.hamcrest.Matchers.notNullValue;
 
 public class ServiceContextManager {
   @Provides( Empyrean.class )
-  @RunDuring( Bootstrap.Stage.CloudServiceInit )
-  public class ServiceContextBootstrapper extends Bootstrapper.Simple {
+  @RunDuring( Bootstrap.Stage.RemoteServicesInit )
+  public static class ServiceContextBootstrapper extends Bootstrapper.Simple {
     
     public ServiceContextBootstrapper( ) {}
     
     @Override
     public boolean start( ) throws Exception {
       try {
-        ServiceContextManager.restartSync( );
+        ServiceContextManager.singleton.update( );
         return true;
       } catch ( final Exception ex ) {
         LOG.error( ex, ex );

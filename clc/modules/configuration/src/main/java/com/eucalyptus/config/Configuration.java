@@ -124,7 +124,7 @@ public class Configuration {
   }
   
 
-  public RegisterComponentResponseType registerComponent( final RegisterComponentType request ) throws EucalyptusCloudException {
+  public static RegisterComponentResponseType registerComponent( final RegisterComponentType request ) throws EucalyptusCloudException {
     final ComponentId componentId = ServiceBuilders.oneWhichHandles( request.getClass( ) );
     final RegisterComponentResponseType reply = ( RegisterComponentResponseType ) request.getReply( );
     final String name = request.getName( );
@@ -151,7 +151,7 @@ public class Configuration {
     return reply;
   }
   
-  public DeregisterComponentResponseType deregisterComponent( final DeregisterComponentType request ) throws EucalyptusCloudException {
+  public static DeregisterComponentResponseType deregisterComponent( final DeregisterComponentType request ) throws EucalyptusCloudException {
     final ComponentId component = ServiceBuilders.oneWhichHandles( request.getClass( ) );
     final DeregisterComponentResponseType reply = ( DeregisterComponentResponseType ) request.getReply( );
     try {
@@ -162,7 +162,7 @@ public class Configuration {
     return reply;
   }
   
-  public DescribeNodesResponseType listComponents( final DescribeNodesType request ) throws EucalyptusCloudException {
+  public static DescribeNodesResponseType listComponents( final DescribeNodesType request ) throws EucalyptusCloudException {
     final DescribeNodesResponseType reply = ( DescribeNodesResponseType ) request.getReply( );
     reply.setRegistered( ( ArrayList<NodeComponentInfoType> ) Groovyness.run( "describe_nodes" ) );
     return reply;
@@ -170,13 +170,12 @@ public class Configuration {
   
   private static final Set<String> attributes = Sets.newHashSet( "partition", "state" );
   
-  public ModifyComponentAttributeResponseType modify( final ModifyComponentAttributeType request ) throws EucalyptusCloudException {
+  public static ModifyComponentAttributeResponseType modify( final ModifyComponentAttributeType request ) throws EucalyptusCloudException {
     final ModifyComponentAttributeResponseType reply = request.getReply( );
     if ( !attributes.contains( request.getAttribute( ) ) ) {
       throw new EucalyptusCloudException( "Request to modify unknown attribute: " + request.getAttribute( ) );
     }
-    final ComponentId component = ServiceBuilders.oneWhichHandles( request.getClass( ) );
-    final ServiceBuilder builder = ServiceBuilders.lookup( component );
+    final ServiceBuilder builder = ServiceBuilders.handles( request.getClass( ) );
     LOG.info( "Using builder: " + builder.getClass( ).getSimpleName( ) );
     LOG.error( "Nothing to do while processing: " + request );
     return reply;
