@@ -138,7 +138,7 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
           return AsyncRequest.this.execute( serviceConfig ).getResponse( );
         }
       };
-      CompletionService<CheckedListenableFuture<R>> service = ( CompletionService<CheckedListenableFuture<R>> ) Threads.lookup( serviceConfig ).getCompletionService( );
+      CompletionService<CheckedListenableFuture<R>> service = Threads.lookup( serviceConfig ).getCompletionService( );
       service.submit( call );
       return this.getResponse( );
     } catch ( Exception ex1 ) {

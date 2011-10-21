@@ -108,12 +108,12 @@ import com.google.common.primitives.Ints;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class Topology implements EventListener<Event> {
-  private static Logger                                                                           LOG               = Logger.getLogger( Topology.class );
-  private static Topology                                                                         singleton         = null;                                                                   //TODO:GRZE:handle differently for remote case?
-  private Integer                                                                                 currentEpoch      = 0;                                                                      //TODO:GRZE: get the right initial epoch value from membership bootstrap
-  private final ConcurrentMap<ServiceKey, ServiceConfiguration>                                   services          = new ConcurrentSkipListMap<Topology.ServiceKey, ServiceConfiguration>( );
-  private final ServiceConfiguration                                                              internalQueue;
-  private final ServiceConfiguration                                                              externalQueue;
+  private static Logger                                         LOG          = Logger.getLogger( Topology.class );
+  private static Topology                                       singleton    = null;                                                                   //TODO:GRZE:handle differently for remote case?
+  private Integer                                               currentEpoch = 0;                                                                      //TODO:GRZE: get the right initial epoch value from membership bootstrap
+  private final ConcurrentMap<ServiceKey, ServiceConfiguration> services     = new ConcurrentSkipListMap<Topology.ServiceKey, ServiceConfiguration>( );
+  private final ServiceConfiguration                            internalQueue;
+  private final ServiceConfiguration                            externalQueue;
   
   private Topology( final int i ) {
     super( );
@@ -232,12 +232,12 @@ public class Topology implements EventListener<Event> {
   }
   
   private RunnableFuture<ServiceConfiguration> submitExternal( final ServiceConfiguration config, final Function<ServiceConfiguration, ServiceConfiguration> function ) {
-    final Callable<ServiceConfiguration> call = this.transitionCallable( config, function );
+    final Callable<ServiceConfiguration> call = transitionCallable( config, function );
     return Threads.enqueue( this.externalQueue, 32, call );
   }
   
   private RunnableFuture<ServiceConfiguration> submit( final ServiceConfiguration config, final Function<ServiceConfiguration, ServiceConfiguration> function ) {
-    final Callable<ServiceConfiguration> call = this.transitionCallable( config, function );
+    final Callable<ServiceConfiguration> call = transitionCallable( config, function );
     return Threads.enqueue( this.internalQueue, 1, call );
   }
   

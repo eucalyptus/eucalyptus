@@ -178,7 +178,7 @@ public class Threads {
     private final ThreadGroup                    group;
     private final String                         name;
     private ExecutorService                      pool;
-    private final CompletionService<?>           completionService;
+    private final CompletionService              completionService;
     private Integer                              numThreads = -1;
     private final StackTraceElement[]            creationPoint;
     private final LinkedBlockingQueue<Future<?>> taskQueue  = new LinkedBlockingQueue<Future<?>>( );
@@ -383,8 +383,9 @@ public class Threads {
       thread.setName( base_name );
     }
     
-    public <T> CompletionService<? extends T> getCompletionService( ) {
-      return ( CompletionService<? extends T> ) this.completionService;
+    @SuppressWarnings( "unchecked" )
+    public <T> CompletionService<T> getCompletionService( ) {
+      return this.completionService;
     }
     
     private <T> LinkedBlockingQueue<Future<?>> getTaskQueue( ) {
