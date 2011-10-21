@@ -208,7 +208,7 @@ public class X509Download extends HttpServlet {
       String userNumber = u.getAccount( ).getAccountNumber( );
       sb.append( "EUCA_KEY_DIR=$(dirname $(readlink -f ${BASH_SOURCE}))" );
       sb.append( "\nexport EC2_URL=" + ServiceUris.remote( Eucalyptus.class, Internets.localHostInetAddress( ) ) );
-      if( Topology.isEnabledLocally( Walrus.class ) ) {
+      if( Topology.isEnabled( Walrus.class ) ) {
         ServiceConfiguration walrusConfig = Topology.lookup( Walrus.class );
         String uri = ServiceUris.remote( walrusConfig ).toASCIIString( );
         LOG.debug( "Found walrus uri/configuration: uri=" + uri + " config=" + walrusConfig );

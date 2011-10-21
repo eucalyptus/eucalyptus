@@ -123,7 +123,17 @@ public class Topology implements EventListener<Event> {
                                                                 ServiceUris.internal( Empyrean.INSTANCE ) );
     ListenerRegistry.getInstance( ).register( Hertz.class, this );
   }
+  private static Predicate<ServiceConfiguration> componentFilter( final Class<? extends ComponentId> c ) {
+    return new Predicate<ServiceConfiguration>( ) {
+      
+      @Override
+      public boolean apply( final ServiceConfiguration input ) {
+        return input.getComponentId( ).getClass( ).equals( c );
+      }
+    };
+  }
   
+
   private static Predicate<Partition> partitionFilter( final Partition p ) {
     return new Predicate<Partition>( ) {
       
@@ -622,7 +632,7 @@ public class Topology implements EventListener<Event> {
   }
   
   public static Collection<ServiceConfiguration> enabledServices( final Class<? extends ComponentId> compId ) {
-    return Topology.getInstance( ).services.values( );
+    return Collections2.filter( Topology.getInstance( ).services.values( ), componentFilter( compId ) ); 
   }
   
   public static boolean isEnabledLocally( final Class<? extends ComponentId> compClass ) {
@@ -630,7 +640,7 @@ public class Topology implements EventListener<Event> {
   }
   
   public static boolean isEnabled( final Class<? extends ComponentId> compClass ) {
-    return Iterables.any( Topology.enabledServices( compClass ), ServiceConfigurations.filterHostLocal( ) );
+    return !Topology.enabledServices( compClass ).isEmpty( );
   }
   
   @Override
