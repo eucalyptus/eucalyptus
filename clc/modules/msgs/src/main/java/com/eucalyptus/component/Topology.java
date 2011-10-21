@@ -484,7 +484,7 @@ public class Topology implements EventListener<Event> {
   public void fireEvent( final Event event ) {
     if ( ( event instanceof Hertz ) && ( ( Hertz ) event ).isAsserted( 15l ) ) {
       try {
-        Threads.enqueue( this.internalQueue, RunChecks.INSTANCE ).get( );
+        Threads.enqueue( this.internalQueue, 1, RunChecks.INSTANCE ).get( );
       } catch ( InterruptedException ex ) {
         Thread.currentThread( ).interrupt( );
       } catch ( ExecutionException ex ) {
@@ -506,13 +506,14 @@ public class Topology implements EventListener<Event> {
     
   }
   
+  private static final int EXTERNAL_THREAD_POOL_LIMIT = 32;
   enum SubmitEnable implements Function<ServiceConfiguration, Future<ServiceConfiguration>> {
     INSTANCE;
     
     @Override
     public Future<ServiceConfiguration> apply( final ServiceConfiguration input ) {
       Callable<ServiceConfiguration> call = Topology.transitionCallable( input, TopologyChanges.enableFunction( ) );
-      Future<ServiceConfiguration> future = Threads.enqueue( Topology.getInstance( ).externalQueue, call );
+      Future<ServiceConfiguration> future = Threads.enqueue( Topology.getInstance( ).externalQueue, EXTERNAL_THREAD_POOL_LIMIT, call );
       return future;
     }
     
@@ -524,7 +525,7 @@ public class Topology implements EventListener<Event> {
     @Override
     public Future<ServiceConfiguration> apply( final ServiceConfiguration input ) {
       Callable<ServiceConfiguration> call = Topology.transitionCallable( input, TopologyChanges.checkFunction( ) );
-      Future<ServiceConfiguration> future = Threads.enqueue( Topology.getInstance( ).externalQueue, call );
+      Future<ServiceConfiguration> future = Threads.enqueue( Topology.getInstance( ).externalQueue, EXTERNAL_THREAD_POOL_LIMIT, call );
       return future;
     }
     
