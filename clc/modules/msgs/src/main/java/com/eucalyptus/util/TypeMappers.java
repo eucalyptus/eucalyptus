@@ -26,7 +26,7 @@ public class TypeMappers {
       if ( o1 == null && o2 == null ) {
         return 0;
       } else if ( o1 != null && o2 != null ) {
-        return o1.getCanonicalName( ).compareTo( o2.getCanonicalName( ) );
+        return ( "" + o1.toString( ) ).compareTo( ""+o2.toString( ) );
       } else {
         return ( o1 != null
           ? 1
