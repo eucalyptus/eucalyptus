@@ -260,7 +260,7 @@ public class ServiceConfigurations {
   }
   
   public static ServiceConfiguration createEphemeral( final ComponentId compId, final InetAddress host ) {
-    return new EphemeralConfiguration( compId, compId.getPartition( ), host.getHostAddress( ), ServiceUris.internal( compId ) );
+    return new EphemeralConfiguration( compId, compId.getPartition( ), host.getHostAddress( ), ServiceUris.remote( compId ) );
   }
   
   public static ServiceConfiguration createEphemeral( final Component component, final InetAddress host ) {
