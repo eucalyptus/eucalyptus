@@ -523,35 +523,6 @@ public class WalrusManager {
 								LOG.error(ex);
 							}
 
-<<<<<<< TREE
-							if (false) { //WalrusProperties.enableVirtualHosting) {
-								URI walrusUri;
-								String address;
-								RemoveARecordType removeARecordType = new RemoveARecordType();
-								removeARecordType.setUserId(account.getAccountNumber());
-								String zone = WalrusProperties.WALRUS_SUBDOMAIN + ".";
-								removeARecordType.setName(bucketName + "." + zone);
-								removeARecordType.setZone(zone);
-								try {
-									walrusUri = new URI(SystemConfiguration.getWalrusUrl());
-									address = walrusUri.getHost();
-								} catch (URISyntaxException e) {
-									db.rollback();
-									throw new EucalyptusCloudException("Could not get Walrus URL");
-								}
-								removeARecordType.setAddress(address);
-								try {
-									ServiceDispatcher.lookupSingle(Components.lookup(Dns.class)).send(
-											removeARecordType);
-									LOG.info("Removing mapping for "
-											+ removeARecordType.getName());
-								} catch (Exception ex) {
-									LOG.error("Could not update DNS record", ex);
-								}
-							}
-
-=======
->>>>>>> MERGE-SOURCE
 							Status status = new Status();
 							status.setCode(204);
 							status.setDescription("No Content");

@@ -209,9 +209,7 @@ public class ServiceContextHandler implements ChannelUpstreamHandler, ChannelDow
     this.startTime.set( ctx.getChannel( ), System.currentTimeMillis( ) );
     this.messageType.set( ctx.getChannel( ), msg );
     EventRecord.here( ServiceContextHandler.class, EventType.MSG_RECEIVED, msg.getClass( ).getSimpleName( ) ).trace( );
-    if ( !ServiceOperations.lookup( msg ) ) {
-      ServiceContext.dispatch( RequestQueue.ENDPOINT, msg );
-    }
+    ServiceOperations.dispatch( msg );
   }
   
   private void channelClosed( ChannelHandlerContext ctx, ChannelStateEvent evt ) {

@@ -74,11 +74,15 @@ import com.eucalyptus.bootstrap.ServiceJarDiscovery;
 import com.eucalyptus.component.ComponentId.ServiceOperation;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.context.ServiceContext;
+import com.eucalyptus.context.ServiceDispatchException;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Ats;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Classes;
+import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.ws.util.RequestQueue;
 import com.google.common.base.Function;
 import com.google.common.collect.Maps;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
@@ -120,14 +124,19 @@ public class ServiceOperations {
     
   }
   
-  public static <I extends BaseMessage, O extends BaseMessage> boolean dispatch( final I request ) {
+  public static <I extends BaseMessage, O extends BaseMessage> void dispatch( final I request ) {
+    ServiceConfiguration empyreanConfig = ServiceConfigurations.createEphemeral( Empyrean.INSTANCE );
     if ( !serviceOperations.containsKey( request.getClass( ) ) ) {
-      return false;
+      try {
+        ServiceContext.dispatch( RequestQueue.ENDPOINT, request );
+      } catch ( ServiceDispatchException ex ) {
+        throw Exceptions.toUndeclared( ex );
+      }
     } else {
       try {
         final Context ctx = Contexts.lookup( request.getCorrelationId( ) );
         final Function<I, O> op = ( Function<I, O> ) serviceOperations.get( request.getClass( ) );
-        Threads.enqueue( ServiceConfigurations.createEphemeral( Empyrean.INSTANCE ), new Runnable( ) {
+        Threads.enqueue( empyreanConfig, new Runnable( ) {
           
           @Override
           public void run( ) {
@@ -143,10 +152,8 @@ public class ServiceOperations {
             }
           }
         } );
-        return true;
       } catch ( final Exception ex ) {
         Logs.extreme( ).error( ex, ex );
-        return false;
       }
     }
   }
