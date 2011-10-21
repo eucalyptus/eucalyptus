@@ -117,6 +117,7 @@ public class ComponentRegistrationHandler {
       }
       ServiceConfigurations.store( newComponent );
       try {
+        Components.lookup( newComponent ).loadService( newComponent );
         Topology.enable( newComponent ).get( );
       } catch ( Exception ex ) {
         LOG.info( builder.getClass( ).getSimpleName( ) + ": enable failed because of: " + ex.getMessage( ) );
