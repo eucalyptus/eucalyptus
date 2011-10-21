@@ -531,19 +531,14 @@ static int open_and_lock (const char * path,
     pthread_mutex_unlock (&_blobstore_mutex);
     
     { // print out information about the newly acquired lock
-        struct flock l;
-        if (fcntl (fd, F_GETLK, flock_whole_file (&l, l_type)) == 0) {
-            logprintfl (EUCADEBUG2, "{%u} open_and_lock: locked fd=%d path=%s type=%d whence=%d start=%d length=%d\n", 
-                        (unsigned int)pthread_self(), fd, path, l.l_type, l.l_whence, l.l_start, l.l_len);
-        } else {
-            logprintfl (EUCADEBUG2, "{%u} open_and_lock: locked fd=%d path=%s\n", 
-                        (unsigned int)pthread_self(), fd, path);
-        }
         struct stat s;
-        if (fstat (fd, &s) == 0) {
-            logprintfl (EUCADEBUG2, "{%u} open_and_lock: fd=%d path=%s ino=%d mode=%0o\n", 
-                        (unsigned int)pthread_self(), fd, path, s.st_ino, s.st_mode);
-        }
+        fstat (fd, &s);
+        
+        struct flock l;
+        fcntl (fd, F_GETLK, flock_whole_file (&l, l_type));
+        
+        logprintfl (EUCADEBUG2, "{%u} open_and_lock: locked fd=%d path=%s ino=%d mode=%0o [lock type=%d whence=%d start=%d length=%d]\n", 
+                    (unsigned int)pthread_self(), fd, path, s.st_ino, s.st_mode, l.l_type, l.l_whence, l.l_start, l.l_len);
     }
     return fd;
 
