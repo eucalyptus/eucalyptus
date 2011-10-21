@@ -529,7 +529,17 @@ static int open_and_lock (const char * path,
     pthread_mutex_lock (&_blobstore_mutex);
     _open_success_ctr++;
     pthread_mutex_unlock (&_blobstore_mutex);
-    logprintfl (EUCADEBUG2, "{%u} open_and_lock: locked fd=%d path=%s\n", (unsigned int)pthread_self(), fd, path);
+    
+    { // print out information about the newly acquired lock
+        struct flock l;
+        if (fcntl (fd, F_GETLK, flock_whole_file (&l, l_type)) == 0) {
+            logprintfl (EUCADEBUG2, "{%u} open_and_lock: locked fd=%d path=%s type=%d whence=%d start=%d length=%d\n", 
+                        (unsigned int)pthread_self(), fd, path, l.l_type, l.l_whence, l.l_start, l.l_len);
+        } else {
+            logprintfl (EUCADEBUG2, "{%u} open_and_lock: locked fd=%d path=%s\n", 
+                        (unsigned int)pthread_self(), fd, path);
+        }
+    }
     return fd;
 
  error:
