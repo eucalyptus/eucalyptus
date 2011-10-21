@@ -322,7 +322,7 @@ public class Internets {
     try {
       return InetAddress.getByName( uri.getHost( ) );
     } catch ( UnknownHostException e ) {
-      throw Exceptions.illegalArgument( "Failed to resolve address for host: " + uri.getHost( ), e );
+      throw Exceptions.toUndeclared( "Failed to resolve address for host: " + uri.getHost( ), e );
     }
   }
   
@@ -343,7 +343,7 @@ public class Internets {
     try {
       ret = InetAddress.getByName( hostAddress );
     } catch ( UnknownHostException e1 ) {
-      Exceptions.fatal( "Failed to resolve address for host: " + maybeUrlMaybeHostname, e1 );
+      Exceptions.error( "Failed to resolve address for host: " + maybeUrlMaybeHostname, e1 );
     }
     return ret;
   }

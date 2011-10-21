@@ -64,22 +64,14 @@
  */
 package com.eucalyptus.ws.handlers;
 
-import java.security.PublicKey;
-import java.security.Signature;
-import java.security.cert.X509Certificate;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
-
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
-
 import org.apache.commons.httpclient.util.DateUtil;
 import org.apache.log4j.Logger;
-import org.bouncycastle.util.encoders.Base64;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
@@ -91,24 +83,14 @@ import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
-
-import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.auth.login.AuthenticationException;
 import com.eucalyptus.auth.login.SecurityContext;
 import com.eucalyptus.auth.login.WalrusWrappedComponentCredentials;
 import com.eucalyptus.auth.login.WalrusWrappedCredentials;
-import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.component.auth.AbstractKeyStore;
-import com.eucalyptus.component.auth.EucaKeyStore;
-import com.eucalyptus.auth.util.Hashes;
+import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.util.StorageProperties;
 import com.eucalyptus.util.WalrusProperties;
 import com.eucalyptus.util.WalrusUtil;
-import com.eucalyptus.context.Context;
-import com.eucalyptus.context.Contexts;
-import com.eucalyptus.context.NoSuchContextException;
-import com.eucalyptus.crypto.Hmac;
-import com.eucalyptus.http.MappingHttpRequest;
 
 @ChannelPipelineCoverage("one")
 public class WalrusAuthenticationHandler extends MessageStackHandler {

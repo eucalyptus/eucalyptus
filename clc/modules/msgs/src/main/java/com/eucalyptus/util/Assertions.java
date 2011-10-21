@@ -71,7 +71,7 @@ public class Assertions {
   public static final void assertNotNull( Object arg, String formatString, Object... args ) throws IllegalArgumentException {
     if ( arg == null ) {
       String errMsg = String.format( formatString, args );
-      IllegalArgumentException ex = Exceptions.illegalArgument( "BUG: assertNotNull failed.  " + errMsg );
+      IllegalArgumentException ex = Exceptions.error( "BUG: assertNotNull failed.  " + errMsg );
       LOG.error( ex, ex );
       throw ex;
     }
@@ -79,7 +79,7 @@ public class Assertions {
   
   public static final void assertNotNull( Object arg, String errMsg ) throws IllegalArgumentException {
     if ( arg == null ) {
-      IllegalArgumentException ex = Exceptions.illegalArgument( "BUG: assertNotNull failed.  " + errMsg );
+      IllegalArgumentException ex = Exceptions.error( "BUG: assertNotNull failed.  " + errMsg );
       LOG.error( ex, ex );
       throw ex;
     }

@@ -12,8 +12,10 @@ import com.eucalyptus.component.ServiceChecks.CheckException;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.empyrean.DescribeServicesResponseType;
 import com.eucalyptus.empyrean.DescribeServicesType;
+import com.eucalyptus.empyrean.EnableServiceType;
 import com.eucalyptus.empyrean.ServiceStatusType;
 import com.eucalyptus.system.Threads;
+import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.SubjectMessageCallback;
 import com.eucalyptus.util.fsm.Automata;
 
@@ -42,12 +44,13 @@ public class ServiceStateCallback extends SubjectMessageCallback<Cluster, Descri
             throw new IllegalStateException( ex );
           } else if ( Component.State.NOTREADY.equals( localState )
                       && Component.State.NOTREADY.ordinal( ) < serviceState.ordinal( ) ) {
-            LifecycleEvents.fireExceptionEvent( this.getSubject( ).getConfiguration( ), ServiceChecks.Severity.DEBUG, ex );
             this.getSubject( ).clearExceptions( );
-          } else if ( Component.State.ENABLED.equals( serviceState ) && Component.State.DISABLED.equals( proxyState ) ) {
-            throw new IllegalStateException( ex );
-          } else {
-            LifecycleEvents.fireExceptionEvent( this.getSubject( ).getConfiguration( ), ServiceChecks.Severity.INFO, ex );
+          } else if ( Component.State.ENABLED.equals( serviceState ) && Component.State.DISABLED.ordinal( ) >= proxyState.ordinal( ) ) {
+            try {
+              AsyncRequests.sendSync( config, new EnableServiceType( ) );
+            } catch ( Exception ex1 ) {
+              LOG.error( ex1, ex1 );
+            }
           }
         } else {
           LOG.error( "Found information for unknown service: " + status );

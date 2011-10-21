@@ -80,6 +80,7 @@ import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.reporting.event.StorageEvent;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes.QuantityMetricFunction;
 import com.eucalyptus.util.RestrictedTypes.UsageMetricFunction;
@@ -148,7 +149,7 @@ public class Volumes {
               }
             } catch ( final EucalyptusCloudException ex ) {
               LOG.error( ex, ex );
-              throw new UndeclaredThrowableException( ex, "Failed to update the volume state " + vol.getDisplayName( ) + " not yet ready" );
+              throw Exceptions.toUndeclared( "Failed to update the volume state " + vol.getDisplayName( ) + " not yet ready", ex );
             }
           }
         } );

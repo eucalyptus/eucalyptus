@@ -76,6 +76,7 @@ import com.eucalyptus.component.Service;
 import com.eucalyptus.component.ServiceBuilder;
 import com.eucalyptus.component.ServiceBuilders;
 import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.scripting.Groovyness;
@@ -123,9 +124,8 @@ public class Configuration {
   }
   
 
-  public RegisterComponentResponseType registerComponent( final RegisterComponentType request ) throws EucalyptusCloudException {
-    final Component component = Components.oneWhichHandles( request.getClass( ) );
-    final ComponentId componentId = component.getComponentId( );
+  public static RegisterComponentResponseType registerComponent( final RegisterComponentType request ) throws EucalyptusCloudException {
+    final ComponentId componentId = ServiceBuilders.oneWhichHandles( request.getClass( ) );
     final RegisterComponentResponseType reply = ( RegisterComponentResponseType ) request.getReply( );
     final String name = request.getName( );
     final String hostName = request.getHost( );
@@ -135,34 +135,34 @@ public class Configuration {
     Assertions.assertNotNull( port, "Port must not be null: " + request );
     
     String partition = request.getPartition( );
-    if ( !component.getComponentId( ).isPartitioned( ) ) {//TODO:GRZE: convert to @NotNull
+    if ( !componentId.isPartitioned( ) ) {//TODO:GRZE: convert to @NotNull
       partition = componentId.getPartition( );
-      LOG.error( "Unpartitioned component (" + componentId.getFullName( ) + ") is being registered w/o a partition.  Using fixed partition=" + partition
+      LOG.error( "Unpartitioned component (" + componentId.getName( ) + ") is being registered w/o a partition.  Using fixed partition=" + partition
                  + " for request: " + request );
-    } else if ( component.getComponentId( ).isPartitioned( ) && ( partition == null ) ) {
+    } else if ( componentId.isPartitioned( ) && ( partition == null ) ) {
       partition = name;
       LOG.error( "Partitioned component is being registered w/o a partition.  Using partition=name=" + partition + " for request: " + request );
     }
     try {
-      reply.set_return( ComponentRegistrationHandler.register( component, partition, name, hostName, port ) );
+      reply.set_return( ComponentRegistrationHandler.register( componentId, partition, name, hostName, port ) );
     } catch ( final Throwable ex ) {
       throw new EucalyptusCloudException( "Component registration failed because: " + ex.getMessage( ), ex );
     }
     return reply;
   }
   
-  public DeregisterComponentResponseType deregisterComponent( final DeregisterComponentType request ) throws EucalyptusCloudException {
-    final Component component = Components.oneWhichHandles( request.getClass( ) );
+  public static DeregisterComponentResponseType deregisterComponent( final DeregisterComponentType request ) throws EucalyptusCloudException {
+    final ComponentId component = ServiceBuilders.oneWhichHandles( request.getClass( ) );
     final DeregisterComponentResponseType reply = ( DeregisterComponentResponseType ) request.getReply( );
     try {
-      reply.set_return( ComponentRegistrationHandler.deregister( component, request.getPartition( ), request.getName( ) ) );
+      reply.set_return( ComponentRegistrationHandler.deregister( component, request.getPartition( ) ) );
     } catch ( final Throwable ex ) {
       throw new EucalyptusCloudException( "Component deregistration failed because: " + ex.getMessage( ), ex );
     }
     return reply;
   }
   
-  public DescribeNodesResponseType listComponents( final DescribeNodesType request ) throws EucalyptusCloudException {
+  public static DescribeNodesResponseType listComponents( final DescribeNodesType request ) throws EucalyptusCloudException {
     final DescribeNodesResponseType reply = ( DescribeNodesResponseType ) request.getReply( );
     reply.setRegistered( ( ArrayList<NodeComponentInfoType> ) Groovyness.run( "describe_nodes" ) );
     return reply;
@@ -170,13 +170,12 @@ public class Configuration {
   
   private static final Set<String> attributes = Sets.newHashSet( "partition", "state" );
   
-  public ModifyComponentAttributeResponseType modify( final ModifyComponentAttributeType request ) throws EucalyptusCloudException {
+  public static ModifyComponentAttributeResponseType modify( final ModifyComponentAttributeType request ) throws EucalyptusCloudException {
     final ModifyComponentAttributeResponseType reply = request.getReply( );
     if ( !attributes.contains( request.getAttribute( ) ) ) {
       throw new EucalyptusCloudException( "Request to modify unknown attribute: " + request.getAttribute( ) );
     }
-    final Component component = Components.oneWhichHandles( request.getClass( ) );
-    final ServiceBuilder builder = component.getBuilder( );
+    final ServiceBuilder builder = ServiceBuilders.handles( request.getClass( ) );
     LOG.info( "Using builder: " + builder.getClass( ).getSimpleName( ) );
     LOG.error( "Nothing to do while processing: " + request );
     return reply;
@@ -209,7 +208,8 @@ public class Configuration {
         }
       }
     } else {
-      for ( final ServiceConfiguration config : ServiceBuilders.handles( request.getClass( ) ).list( ) ) {
+      ServiceBuilder<? extends ServiceConfiguration> compId = ServiceBuilders.handles( request.getClass( ) );
+      for ( final ServiceConfiguration config : ServiceConfigurations.list( compId.getComponentId( ).getClass( ) ) ) {
         ComponentInfoType info = TypeMappers.transform( config, ComponentInfoType.class );
         if( !Boolean.TRUE.equals( request.getVerbose( ) ) ) {
           info.setDetail( "" );

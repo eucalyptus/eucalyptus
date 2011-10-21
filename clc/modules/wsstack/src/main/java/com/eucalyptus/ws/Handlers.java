@@ -149,7 +149,7 @@ public class Handlers {
       } else if ( BindingManager.isRegisteredBinding( maybeBindingName = BindingManager.sanitizeNamespace( bindingName ) ) ) {
         bindingHandlers.putIfAbsent( bindingName, new BindingHandler( BindingManager.getBinding( maybeBindingName ) ) );
       } else {
-        throw Exceptions.debug( "Failed to find registerd binding for name: " + bindingName + ".  Also tried looking for sanitized name: " + maybeBindingName );
+        throw Exceptions.trace( "Failed to find registerd binding for name: " + bindingName + ".  Also tried looking for sanitized name: " + maybeBindingName );
       }
       return bindingHandlers.get( bindingName );
     }

@@ -85,15 +85,19 @@ import java.util.List;
 import java.util.concurrent.AbstractExecutorService;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CompletionService;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.RunnableFuture;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -128,11 +132,15 @@ public class Threads {
   private final static ConcurrentMap<String, ThreadPool> execServices      = new ConcurrentHashMap<String, ThreadPool>( );
   
   public static ThreadPool lookup( final Class<? extends ComponentId> group, final Class owningClass ) {
-    return lookup( ComponentIds.lookup( group ).name( ) + "." + owningClass.getSimpleName( ) );
+    return lookup( ComponentIds.lookup( group ).name( ) + ":" + owningClass.getSimpleName( ) );
+  }
+  
+  public static ThreadPool lookup( final ServiceConfiguration config ) {
+    return lookup( config.getComponentId( ).getClass( ), config.getClass( ), config.getFullName( ).toString( ) );
   }
   
   public static ThreadPool lookup( final Class<? extends ComponentId> group, final Class owningClass, final String name ) {
-    return lookup( ComponentIds.lookup( group ).name( ) + "." + owningClass.getSimpleName( ) + "." + name );
+    return lookup( ComponentIds.lookup( group ).name( ) + ":" + owningClass.getSimpleName( ) + ":" + name );
   }
   
   public static ThreadPool lookup( final Class<? extends ComponentId> group ) {
@@ -167,13 +175,13 @@ public class Threads {
   }
   
   public static class ThreadPool implements ThreadFactory, ExecutorService {
-    private final ThreadGroup         group;
-    private final String              clusterName = "";
-    private final String              prefix      = "Eucalyptus.";
-    private final String              name;
-    private ExecutorService           pool;
-    private Integer                   numThreads  = -1;
-    private final StackTraceElement[] creationPoint;
+    private final ThreadGroup                    group;
+    private final String                         name;
+    private ExecutorService                      pool;
+    private final CompletionService              completionService;
+    private Integer                              numThreads = -1;
+    private final StackTraceElement[]            creationPoint;
+    private final LinkedBlockingQueue<Future<?>> taskQueue  = new LinkedBlockingQueue<Future<?>>( );
     
     private ThreadPool( final String groupPrefix, final Integer threadCount ) {
       this( groupPrefix );
@@ -184,7 +192,8 @@ public class Threads {
       this.creationPoint = Thread.currentThread( ).getStackTrace( );
       this.name = groupPrefix;
       this.group = new ThreadGroup( this.name );
-      this.pool = Executors.newCachedThreadPool( this );
+      this.pool = this.makePool( );
+      this.completionService = new ExecutorCompletionService( this.pool );
       OrderedShutdown.register( Eucalyptus.class, new Runnable( ) {
         @Override
         public void run( ) {
@@ -210,11 +219,7 @@ public class Threads {
             if ( oldExec != null ) {
               oldExec.shutdown( );
             }
-            if ( numThreads == -1 ) {
-              this.pool = Executors.newCachedThreadPool( this );
-            } else {
-              this.pool = Executors.newFixedThreadPool( this.numThreads );
-            }
+            this.pool = this.makePool( );
           }
         }
       }
@@ -234,14 +239,22 @@ public class Threads {
         return this.pool;
       } else {
         synchronized ( this ) {
-          if ( ( this.pool == null ) && ( this.numThreads == -1 ) ) {
-            this.pool = Executors.newCachedThreadPool( this );
-          } else {
-            this.pool = Executors.newFixedThreadPool( this.numThreads );
+          if ( ( this.pool == null ) ) {
+            this.pool = makePool( );
           }
         }
         return this;
       }
+    }
+    
+    public ExecutorService makePool( ) {
+      ExecutorService newPool = ( this.numThreads == -1 )
+        ? Executors.newFixedThreadPool( NUM_QUEUE_WORKERS, this )
+        : Executors.newFixedThreadPool( this.numThreads, this );
+      if ( newPool instanceof ThreadPoolExecutor ) {
+        ( ( ThreadPoolExecutor ) newPool ).setRejectedExecutionHandler( new ThreadPoolExecutor.CallerRunsPolicy( ) );
+      }
+      return newPool;
     }
     
     private static final Runnable[] EMPTY = new Runnable[] {};
@@ -365,15 +378,14 @@ public class Threads {
     @Override
     public void setAddress( final String address ) {}
     
-    /**
-     * TODO: DOCUMENT
-     * 
-     * @see org.jgroups.util.ThreadFactory#renameThread(java.lang.String, java.lang.Thread)
-     * @param base_name
-     * @param thread
-     */
     @Override
-    public void renameThread( final String base_name, final Thread thread ) {}
+    public void renameThread( final String base_name, final Thread thread ) {
+      thread.setName( base_name );
+    }
+    
+    private <T> LinkedBlockingQueue<Future<?>> getTaskQueue( ) {
+      return this.taskQueue;
+    }
   }
   
   public static ExecutorService currentThreadExecutor( ) {
@@ -545,19 +557,18 @@ public class Threads {
     }
     
     private String key( ) {
-      return this.componentId.getSimpleName( ) + ":" + this.ownerType.getSimpleName( ) + ":" + this.owner;
+      return this.componentId.getSimpleName( ) + ":" + this.ownerType.getSimpleName( ) + ":" + this.owner + "[workers]";
     }
     
     private void stop( ) {
       this.running.set( false );
-      this.threadPool( ).free( );
     }
     
     private ThreadPool threadPool( ) {
       return Threads.lookup( this.componentId, this.owner.getClass( ), this.name );
     }
     
-    private <C> Future<C> submit( final Runnable run ) {
+    private <C> RunnableFuture<C> submit( final Runnable run ) {
       final GenericCheckedListenableFuture<C> f = new GenericCheckedListenableFuture<C>( );
       final Callable<C> call = new Callable<C>( ) {
         
@@ -571,7 +582,7 @@ public class Threads {
       return submit( call );
     }
     
-    private <C> Future<C> submit( final Callable<C> call ) {
+    private <C> RunnableFuture<C> submit( final Callable<C> call ) {
       FutureTask<C> f = new FutureTask<C>( call );
       this.msgQueue.add( f );
       return f;

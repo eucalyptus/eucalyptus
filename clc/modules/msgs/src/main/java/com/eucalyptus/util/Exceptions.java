@@ -13,6 +13,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.ObjectArrays;
 
 public class Exceptions {
   private static Logger                    LOG                      = Logger.getLogger( Exceptions.class );
@@ -83,12 +84,16 @@ public class Exceptions {
    * @param ex
    * @return
    */
-  public static <T extends Throwable> RuntimeException toUndeclared( String message, T ex ) {
-    if ( ex instanceof RuntimeException ) {
-      return ( RuntimeException ) ex;
+  public static <T extends Throwable> RuntimeException toUndeclared( String message, T... exs ) {
+    Throwable ex = null;
+    if ( exs != null && exs.length > 0 ) {
+      ex = exs[0];
     } else {
-      return new UndeclaredThrowableException( ex, message );
+      ex = ( T ) new RuntimeException( message );
     }
+    return new UndeclaredThrowableException( ex instanceof UndeclaredThrowableException
+      ? ex.getCause( )
+      : ex, message );
   }
   
   /**
@@ -100,34 +105,7 @@ public class Exceptions {
   public static RuntimeException toUndeclared( Throwable cause ) {
     return toUndeclared( cause.getMessage( ), cause );
   }
-  
-  /**
-   * Convert the argument {@link Throwable} into a suitable {@link Exception} (possibly a checked
-   * type) either by type casting or wrapping in an {@link UndeclaredThrowableException}.
-   * 
-   * @param <T>
-   * @param message
-   * @param ex
-   * @return
-   */
-  public static <T extends Throwable> Exception toCatchable( String message, T ex ) {
-    if ( ex instanceof Exception ) {
-      return ( Exception ) ex;
-    } else {
-      return new UndeclaredThrowableException( ex, message );
-    }
-  }
-  
-  /**
-   * {@inheritDoc #toCatchable(String, Throwable)}
-   * 
-   * @param cause
-   * @return
-   */
-  public static Exception toCatchable( Throwable cause ) {
-    return toCatchable( cause.getMessage( ), cause );
-  }
-  
+
   public static <T extends Throwable> T filterStackTrace( T ex, int maxDepth, List<String> fqClassPrefixes, List<String> matchPatterns ) {
     ex.setStackTrace( Exceptions.filterStackTraceElements( ex, maxDepth, fqClassPrefixes, matchPatterns ).toArray( steArrayType ) );
     return ex;
@@ -171,66 +149,6 @@ public class Exceptions {
     return filteredStes;
   }
   
-  public static IllegalArgumentException illegalArgument( String message, Throwable t ) {
-    StackTraceElement ste = Thread.currentThread( ).getStackTrace( )[t == null
-      ? 3
-      : 2];
-    IllegalArgumentException ex = new IllegalArgumentException( "Illegal argument given to " + ste.toString( ) + ": " + message, t );
-    ex.fillInStackTrace( );
-    ex = filterStackTrace( ex );
-    return ex;
-  }
-  
-  public static IllegalArgumentException illegalArgument( String message ) {
-    return illegalArgument( message, null );
-  }
-  
-  public static RuntimeException fatal( String message ) {
-    return fatal( message, null );
-  }
-  
-  public static RuntimeException fatal( Throwable t ) {
-    return fatal( null, t );
-  }
-  
-  public static RuntimeException fatal( String message, Throwable t ) {
-    StackTraceElement ste = Thread.currentThread( ).getStackTrace( )[t == null
-      ? 3
-      : 2];
-    Logger.getLogger( ste.getClassName( ) ).error( "Fatal error occured: " + ste.getClassName( ) + "." + ste.getMethodName( ) + ":" + ste.getLineNumber( ), t );
-    RuntimeException ex = ( t == null
-      ? new RuntimeException( message )
-      : new RuntimeException( t.getMessage( ), t ) );
-    ex.fillInStackTrace( );
-    LOG.fatal( t != null
-      ? t
-      : ex, t != null
-      ? t
-      : ex );
-    return ex;
-  }
-  
-  public static Error uncatchable( String message ) {
-    return uncatchable( message, new Error( message ) );
-  }
-  
-  public static Error uncatchable( String message, Throwable t ) {
-    StackTraceElement ste = Thread.currentThread( ).getStackTrace( )[t == null
-      ? 3
-      : 2];
-    Logger.getLogger( ste.getClassName( ) ).error( "Fatal error occured: " + ste.getClassName( ) + "." + ste.getMethodName( ) + ":" + ste.getLineNumber( ), t );
-    Error ex = ( t == null
-      ? new Error( "Uncatchable exception.  Do not ever do whatever it is you did: " + message )
-      : new Error( "Uncatchable exception.  Do not ever do whatever it is you did: " + t.getMessage( ), t ) );
-    ex.fillInStackTrace( );
-    LOG.error( t != null
-      ? t
-      : ex, t != null
-      ? t
-      : ex );
-    return ex;
-  }
-  
   public static boolean eat( String message ) {
     return eat( message, new Error( message ) );
   }
@@ -251,19 +169,8 @@ public class Exceptions {
     return false;
   }
   
-  public static RuntimeException debug( String message ) {
-    return debug( new RuntimeException( message ) );
-  }
-  
   public static <T extends Throwable> T debug( T t ) {
-    return debug( t.getMessage( ), t );
-  }
-  
-  public static <T extends Throwable> T debug( String message, T t ) {
-    Throwable filtered = new RuntimeException( t.getMessage( ) );
-    filtered.setStackTrace( Exceptions.filterStackTraceElements( t ).toArray( steArrayType ) );
-    LOG.debug( message, filtered );
-    return t;
+    return trace( t.getMessage( ), t );
   }
   
   public static RuntimeException trace( String message ) {
@@ -281,12 +188,16 @@ public class Exceptions {
     return t;
   }
   
+  public static <T extends Throwable> T error( String message ) {
+    return ( T ) error( message, new RuntimeException() );
+  }
+  
   public static <T extends Throwable> T error( T t ) {
     return error( t.getMessage( ), t );
   }
   
   public static <T extends Throwable> T error( String message, T t ) {
-    Throwable filtered = new RuntimeException( t.getMessage( ) );
+    Throwable filtered = new RuntimeException( message );
     filtered.setStackTrace( Exceptions.filterStackTraceElements( t ).toArray( steArrayType ) );
     LOG.error( message, filtered );
     return t;
@@ -309,6 +220,14 @@ public class Exceptions {
     } catch ( NoSuchElementException ex1 ) {
       return null;
     }
+  }
+
+  /**
+   * @param message
+   * @return
+   */
+  public static RuntimeException noSuchElement( String message ) {
+    return new NoSuchElementException( message );
   }
   
 }

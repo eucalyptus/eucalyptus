@@ -75,7 +75,8 @@ import org.xbill.DNS.RRset;
 import org.xbill.DNS.Record;
 import org.xbill.DNS.SOARecord;
 import org.xbill.DNS.TextParseException;
-
+import com.eucalyptus.component.Topology;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.WalrusProperties;
@@ -187,12 +188,12 @@ public class TransientZone extends Zone {
     } else if (name.toString().startsWith("eucalyptus.")) {
         SetResponse resp = new SetResponse(SetResponse.SUCCESSFUL);        
 		try {
-			InetAddress cloudIp = SystemConfiguration.getCloudAddress();
+			InetAddress cloudIp = Topology.lookup( Eucalyptus.class ).getInetAddress( );
 	        if (cloudIp != null) {
 	          resp.addRRset( new RRset( new ARecord( name, 1, ttl, cloudIp ) ) );
 	        }
 	        return resp;
-		} catch (EucalyptusCloudException e) {
+		} catch (Exception e) {
             return super.findRecords( name, type );
 		}
     } else if (name.toString().endsWith(".in-addr.arpa.")) {

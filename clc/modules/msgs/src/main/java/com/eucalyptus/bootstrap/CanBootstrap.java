@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -61,27 +61,75 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.component.id;
+package com.eucalyptus.bootstrap;
 
-import java.util.ArrayList;
-import java.util.List;
-import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.ws.EmpyreanService;
 
-public class Notifications extends ComponentId.Unpartioned {
-  public static Notifications INSTANCE = new Notifications( );
+public interface CanBootstrap {
   
-  @Override
-  public List<Class<? extends ComponentId>> serviceDependencies( ) {
-    return new ArrayList( ) {
-      {
-        this.add( Eucalyptus.class );
-      }
-    };
-  }
+  /**
+   * Check the status of the bootstrapped resource.
+   * 
+   * @note Intended for future use. May become {@code abstract}.
+   * @return true when all is clear
+   * @throws Exception should contain detail any malady which may be present.
+   */
+  public abstract boolean check( ) throws Exception;
   
-  @Override
-  public boolean isUserService( ) {
-    return true;
-  }
+  /**
+   * Initiate a forced shutdown releasing all used resources and effectively unloading the this
+   * bootstrapper.
+   * 
+   * @note Intended for future use. May become {@code abstract}.
+   * @throws Exception
+   */
+  public abstract void destroy( ) throws Exception;
+  
+  /**
+   * Enter an idle/passive state.
+   * 
+   * @return
+   * @throws Exception
+   */
+  public abstract boolean disable( ) throws Exception;
+  
+  /**
+   * Perform the enable phase of bootstrap -- this occurs when the service associated with this
+   * bootstrapper is made active and should bring the resource to an active operational state.
+   * 
+   * @return
+   * @throws Exception
+   */
+  public abstract boolean enable( ) throws Exception;
+  
+  /**
+   * Perform the {@link SystemBootstrapper#load()} phase of bootstrap.
+   * NOTE: The only code which can execute with uid=0 runs during the
+   * {@link EmpyreanService.Stage.PrivilegedConfiguration} stage of the {@link #load()} phase.
+   * 
+   * @see SystemBootstrapper#load()
+   * @return true on successful completion
+   * @throws Exception
+   */
+  public abstract boolean load( ) throws Exception;
+  
+  /**
+   * Perform the {@link SystemBootstrapper#start()} phase of bootstrap.
+   * 
+   * @see SystemBootstrapper#start()
+   * @return true on successful completion
+   * @throws Exception
+   */
+  
+  public abstract boolean start( ) throws Exception;
+  
+  /**
+   * Initiate a graceful shutdown
+   * 
+   * @note Intended for future use. May become {@code abstract}.
+   * @return true on successful completion
+   * @throws Exception
+   */
+  public abstract boolean stop( ) throws Exception;
   
 }

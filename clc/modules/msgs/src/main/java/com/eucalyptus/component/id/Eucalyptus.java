@@ -63,12 +63,25 @@
 
 package com.eucalyptus.component.id;
 
+import java.util.List;
 import org.apache.log4j.Logger;
+import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.component.ComponentId;
-import com.google.common.base.Predicate;
-import com.google.common.base.Predicates;
+import com.eucalyptus.component.ServiceUris;
+import com.eucalyptus.component.ComponentId.GenerateKeys;
+import com.eucalyptus.component.ComponentId.Partition;
+import com.eucalyptus.component.ComponentId.PolicyVendor;
+import com.eucalyptus.component.ComponentId.PublicService;
+import com.eucalyptus.util.Internets;
+import com.eucalyptus.ws.TransportDefinition;
+import com.eucalyptus.ws.StackConfiguration.BasicTransport;
+import com.google.common.collect.Lists;
 
-public class Eucalyptus extends ComponentId.Unpartioned {
+@PublicService
+@GenerateKeys
+@PolicyVendor( "ec2" )
+@Partition( Eucalyptus.class )
+public class Eucalyptus extends ComponentId {
   public static final Eucalyptus INSTANCE = new Eucalyptus( );                   //NOTE: this has a silly name because it is temporary.  do not use it as an example of good form for component ids.
   private static Logger          LOG      = Logger.getLogger( Eucalyptus.class );
   
@@ -77,30 +90,43 @@ public class Eucalyptus extends ComponentId.Unpartioned {
     return "vm://EucalyptusRequestQueue";
   }
   
-  @Override
-  public String getVendorName( ) {
-    return "ec2";
+  @Partition( Eucalyptus.class )
+  @PublicService
+  public static class Notifications extends ComponentId {}
+  
+  @Partition( Eucalyptus.class )
+  @GenerateKeys
+  public static class Database extends ComponentId {
+    
+    public Database( ) {
+      super( "Db" );
+    }
+    
+    @Override
+    public Integer getPort( ) {
+      return 8777;
+    }
+    
+    @Override
+    public String getLocalEndpointName( ) {
+      return ServiceUris.remote( this, Internets.localHostInetAddress( ) ).toASCIIString( );
+    }
+    
+    @Override
+    public String getServicePath( String... pathParts ) {
+      return Databases.getServicePath( pathParts );
+    }
+    
+    @Override
+    public String getInternalServicePath( String... pathParts ) {
+      return this.getServicePath( pathParts );
+    }
+    
+    @Override
+    public List<? extends TransportDefinition> getTransports( ) {
+      return Lists.newArrayList( BasicTransport.JDBC );
+    }
+    
   }
   
-  @Override
-  public Boolean hasCredentials( ) {
-    return true;
-  }
-  
-  @Override
-  public boolean isUserService( ) {
-    return true;
-  }
-  
-//  @Override
-//  public Predicate<ComponentId> isRelated( ) {
-//    return Predicates.and( super.isRelated( ), new Predicate<ComponentId>( ) {
-//      
-//      @Override
-//      public boolean apply( ComponentId input ) {
-//        return Eucalyptus.this.equals( input ) || !input.isRegisterable( );
-//      }
-//    } );
-//  }
-//  
 }

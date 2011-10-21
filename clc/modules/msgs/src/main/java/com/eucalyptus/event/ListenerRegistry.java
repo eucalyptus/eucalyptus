@@ -51,7 +51,7 @@ public class ListenerRegistry {
       }
     }
     if ( illegal ) {
-      throw Exceptions.fatal( new IllegalArgumentException( "Failed to register listener " + listener.getClass( ).getCanonicalName( )
+      throw Exceptions.error( new IllegalArgumentException( "Failed to register listener " + listener.getClass( ).getCanonicalName( )
                                                             + " because the declared generic type " + lookupTypes
                                                             + " is not assignable from the provided event type: " + ( type != null
                                                               ? type.getClass( ).getCanonicalName( )

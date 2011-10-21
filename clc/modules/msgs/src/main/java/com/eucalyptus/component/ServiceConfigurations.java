@@ -1,6 +1,5 @@
 package com.eucalyptus.component;
 
-import java.lang.reflect.UndeclaredThrowableException;
 import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -17,33 +16,38 @@ import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.records.EventClass;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.records.Logs;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
-import com.eucalyptus.ws.StackConfiguration;
+import com.google.common.collect.Lists;
 
 public class ServiceConfigurations {
   static Logger LOG = Logger.getLogger( ServiceConfigurations.class );
   
-  interface Provider {
-    public abstract <T extends ServiceConfiguration> List<T> list( T type );
-    
-    public abstract <T extends ServiceConfiguration> T store( T t );
-    
-    public abstract <T extends ServiceConfiguration> T remove( T t );
-    
-    public abstract <T extends ServiceConfiguration> T lookup( T type );
+  public static <T extends ServiceConfiguration> List<ServiceConfiguration> list( ) throws PersistenceException {
+    Predicate<ServiceConfiguration> alwaysTrue = Predicates.alwaysTrue( );
+    return Lists.newArrayList( filter( alwaysTrue ) );
   }
   
-  private enum DatabaseProvider implements Provider {
+  public static <T extends ServiceConfiguration> Iterable<ServiceConfiguration> filter( final Predicate<T> pred ) throws PersistenceException {
+    List<ServiceConfiguration> configs = Lists.newArrayList( );
+    for ( ComponentId compId : ComponentIds.list( ) ) {
+      Iterables.addAll( configs, filter( compId.getClass( ), pred ) );
+    }
+    return configs;
+  }
+  
+  private enum DatabaseProvider {
     INSTANCE;
     
-    @Override
     public <T extends ServiceConfiguration> List<T> list( final T example ) {
       final EntityWrapper<T> db = EntityWrapper.get( example );
       List<T> componentList;
@@ -62,7 +66,6 @@ public class ServiceConfigurations {
       }
     }
     
-    @Override
     public <T extends ServiceConfiguration> T lookup( final T example ) {
       final EntityTransaction db = Entities.get( example );
       T existingName = null;
@@ -81,28 +84,26 @@ public class ServiceConfigurations {
       }
     }
     
-    @Override
     public <T extends ServiceConfiguration> T store( T config ) {
       final EntityWrapper<T> db = EntityWrapper.get( config );
       try {
         config = db.persist( config );
         db.commit( );
-        EventRecord.here( Provider.class, EventClass.COMPONENT, EventType.COMPONENT_REGISTERED, config.toString( ) ).info( );
+        EventRecord.here( ServiceConfigurations.class, EventClass.COMPONENT, EventType.COMPONENT_REGISTERED, config.toString( ) ).info( );
       } catch ( final PersistenceException ex ) {
         LOG.trace( ex );
-        EventRecord.here( Provider.class, EventClass.COMPONENT, EventType.COMPONENT_REGISTERED, "FAILED", config.toString( ) ).error( );
+        EventRecord.here( ServiceConfigurations.class, EventClass.COMPONENT, EventType.COMPONENT_REGISTERED, "FAILED", config.toString( ) ).error( );
         db.rollback( );
         throw ex;
       } catch ( final Throwable ex ) {
         LOG.trace( ex );
-        EventRecord.here( Provider.class, EventClass.COMPONENT, EventType.COMPONENT_REGISTERED, "FAILED", config.toString( ) ).error( );
+        EventRecord.here( ServiceConfigurations.class, EventClass.COMPONENT, EventType.COMPONENT_REGISTERED, "FAILED", config.toString( ) ).error( );
         db.rollback( );
         throw new PersistenceException( "Service configuration storing failed for: " + LogUtil.dumpObject( config ), ex );
       }
       return config;
     }
     
-    @Override
     public <T extends ServiceConfiguration> T remove( final T config ) {
       final EntityWrapper<T> db = EntityWrapper.get( config );
       try {
@@ -111,21 +112,25 @@ public class ServiceConfigurations {
         final T exists = db.getUnique( searchConfig );
         db.delete( exists );
         db.commit( );
-        EventRecord.here( Provider.class, EventClass.COMPONENT, EventType.COMPONENT_DEREGISTERED, config.toString( ) ).info( );
+        EventRecord.here( ServiceConfigurations.class, EventClass.COMPONENT, EventType.COMPONENT_DEREGISTERED, config.toString( ) ).info( );
       } catch ( final PersistenceException ex ) {
         LOG.trace( ex );
-        EventRecord.here( Provider.class, EventClass.COMPONENT, EventType.COMPONENT_DEREGISTERED, "FAILED", config.toString( ) ).error( );
+        EventRecord.here( ServiceConfigurations.class, EventClass.COMPONENT, EventType.COMPONENT_DEREGISTERED, "FAILED", config.toString( ) ).error( );
         db.rollback( );
         throw ex;
       } catch ( final Throwable ex ) {
         LOG.trace( ex );
-        EventRecord.here( Provider.class, EventClass.COMPONENT, EventType.COMPONENT_DEREGISTERED, "FAILED", config.toString( ) ).error( );
+        EventRecord.here( ServiceConfigurations.class, EventClass.COMPONENT, EventType.COMPONENT_DEREGISTERED, "FAILED", config.toString( ) ).error( );
         db.rollback( );
         throw new PersistenceException( "Service configuration removal failed for: " + LogUtil.dumpObject( config ), ex );
       }
       return config;
     }
     
+  }
+  
+  public static Function<ServiceConfiguration, ServiceStatusType> asServiceStatus( ) {
+    return asServiceStatus( false, false );
   }
   
   public static Function<ServiceConfiguration, ServiceStatusType> asServiceStatus( final boolean showEvents, final boolean showEventStacks ) {
@@ -210,10 +215,7 @@ public class ServiceConfigurations {
           comp.loadService( config );
         } catch ( final URISyntaxException ex ) {
           LOG.error( ex, ex );
-          throw new UndeclaredThrowableException( ex );
-        } catch ( final ServiceRegistrationException ex ) {
-          LOG.error( ex, ex );
-          throw new UndeclaredThrowableException( ex );
+          throw Exceptions.toUndeclared( ex );
         }
       }
       return config;
@@ -249,10 +251,6 @@ public class ServiceConfigurations {
     
   }
   
-  private static Provider getProvider( ) {
-    return DatabaseProvider.INSTANCE;
-  }
-  
   public static ServiceConfiguration createEphemeral( final ComponentId compId, final String partition, final String name, final URI remoteUri ) {
     return new EphemeralConfiguration( compId, partition, name, remoteUri );
   }
@@ -262,7 +260,7 @@ public class ServiceConfigurations {
   }
   
   public static ServiceConfiguration createEphemeral( final ComponentId compId, final InetAddress host ) {
-    return new EphemeralConfiguration( compId, compId.getPartition( ), host.getHostAddress( ), ServiceUris.internal( compId ) );
+    return new EphemeralConfiguration( compId, compId.getPartition( ), host.getHostAddress( ), ServiceUris.remote( compId ) );
   }
   
   public static ServiceConfiguration createEphemeral( final Component component, final InetAddress host ) {
@@ -282,12 +280,14 @@ public class ServiceConfigurations {
     return ( Predicate<T> ) EnabledServiceConfiguration.INSTANCE;
   }
   
-  public static <T extends ServiceConfiguration, C extends ComponentId> Iterable<ServiceConfiguration> enabledServices( final Class<C> type ) throws PersistenceException {
-    return ServiceConfigurations.filter( type, enabledService( ) );
+  public static <T extends ServiceConfiguration, C extends ComponentId> Iterable<T> enabledServices( final Class<C> type ) throws PersistenceException {
+    Predicate<T> enabledService = enabledService( );
+    return ServiceConfigurations.filter( type, enabledService );
   }
   
-  public static <T extends ServiceConfiguration, C extends ComponentId> Iterable<ServiceConfiguration> filter( final Class<C> type, final Predicate<T> pred ) throws PersistenceException {
-    return Iterables.filter( ServiceConfigurations.list( type ), enabledService( ) );
+  public static <T extends ServiceConfiguration, C extends ComponentId> Iterable<T> filter( final Class<C> type, final Predicate<T> pred ) throws PersistenceException {
+    List<T> list = ServiceConfigurations.list( type );
+    return Iterables.filter( list, pred );
   }
   
   public static <T extends ServiceConfiguration, C extends ComponentId> List<T> list( final Class<C> type ) throws PersistenceException {
@@ -336,22 +336,36 @@ public class ServiceConfigurations {
   }
   
   public static <T extends ServiceConfiguration> List<T> list( final T type ) {
-    return getProvider( ).list( type );
+    return DatabaseProvider.INSTANCE.list( type );
   }
   
   public static <T extends ServiceConfiguration> T store( final T t ) {
-    return getProvider( ).store( t );
+    return DatabaseProvider.INSTANCE.store( t );
   }
   
   public static <T extends ServiceConfiguration> T remove( final T t ) {
-    return getProvider( ).remove( t );
+    return DatabaseProvider.INSTANCE.remove( t );
   }
   
   public static <T extends ServiceConfiguration> T lookup( final T type ) {
-    return getProvider( ).lookup( type );
+    return DatabaseProvider.INSTANCE.lookup( type );
   }
   
-  public static Predicate<ServiceConfiguration> serviceInPartition( final Partition partition ) {
+  enum ServiceIsHostLocal implements Predicate<ServiceConfiguration> {
+    INSTANCE;
+    
+    @Override
+    public boolean apply( ServiceConfiguration input ) {
+      return input.isHostLocal( );
+    }
+    
+  }
+  
+  public static Predicate<ServiceConfiguration> filterHostLocal( ) {
+    return ServiceIsHostLocal.INSTANCE;
+  }
+  
+  public static Predicate<ServiceConfiguration> filterByPartition( final Partition partition ) {
     return new Predicate<ServiceConfiguration>( ) {
       
       @Override
@@ -361,4 +375,38 @@ public class ServiceConfigurations {
     };
   }
   
+  @TypeMapper( { ServiceCheckRecord.class, ServiceStatusDetail.class } )
+  public enum ServiceCheckRecordMapper implements Function<ServiceCheckRecord, ServiceStatusDetail> {
+    INSTANCE;
+    @Override
+    public ServiceStatusDetail apply( final ServiceCheckRecord input ) {
+      return new ServiceStatusDetail( ) {
+        {
+          this.setSeverity( input.getSeverity( ).toString( ) );
+          this.setUuid( input.getUuid( ) );
+          this.setTimestamp( input.getTimestamp( ).toString( ) );
+          this.setMessage( input.getMessage( ) != null
+            ? input.getMessage( )
+            : "No summary information available." );
+          this.setStackTrace( input.getStackTrace( ) != null
+            ? input.getStackTrace( )
+            : Exceptions.string( new RuntimeException( "Error while mapping service event record:  No stack information available" ) ) );
+          this.setServiceFullName( input.getServiceFullName( ) );
+          this.setServiceHost( input.getServiceHost( ) );
+          this.setServiceName( input.getServiceName( ) );
+        }
+      };
+    }
+  }
+  
+  @TypeMapper
+  public enum ServiceBuilderMapper implements Function<ServiceConfiguration, ServiceBuilder<? extends ServiceConfiguration>> {
+    INSTANCE;
+    
+    @Override
+    public ServiceBuilder<? extends ServiceConfiguration> apply( final ServiceConfiguration input ) {
+      return ServiceBuilders.lookup( input.getComponentId( ) );
+    }
+    
+  }
 }

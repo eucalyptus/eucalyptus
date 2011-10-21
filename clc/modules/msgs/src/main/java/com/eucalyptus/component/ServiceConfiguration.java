@@ -5,6 +5,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.Collection;
+import com.eucalyptus.bootstrap.CanBootstrap;
 import com.eucalyptus.component.Component.State;
 import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.util.fsm.HasStateMachine;
@@ -40,7 +41,7 @@ public interface ServiceConfiguration extends Serializable, HasFullName<ServiceC
   
   public abstract Partition lookupPartition( );
   
-  public abstract Component lookupComponent( );
+  public abstract CanBootstrap lookupBootstrapper( );
 
   public abstract StateMachine<ServiceConfiguration, Component.State, Component.Transition> lookupStateMachine( );
   
@@ -48,10 +49,6 @@ public interface ServiceConfiguration extends Serializable, HasFullName<ServiceC
 
   public abstract ComponentId getComponentId( );
   
-  public abstract Service lookupService( ) throws NoSuchServiceException;
-  
-  public abstract ServiceBuilder lookupBuilder( );
-
   public abstract Collection<ServiceCheckRecord> lookupDetails( );
 
   public abstract Boolean isHostLocal( );

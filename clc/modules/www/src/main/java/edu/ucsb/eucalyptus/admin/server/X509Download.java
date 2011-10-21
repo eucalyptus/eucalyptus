@@ -84,15 +84,15 @@ import com.eucalyptus.auth.principal.User.RegistrationStatus;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceUris;
+import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.component.id.Euare;
 import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.component.id.Notifications;
+import com.eucalyptus.component.id.Eucalyptus.Notifications;
 import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.crypto.Certs;
 import com.eucalyptus.crypto.util.PEMFiles;
 import com.eucalyptus.util.Internets;
-import com.eucalyptus.ws.StackConfiguration;
 
 public class X509Download extends HttpServlet {
   
@@ -190,7 +190,7 @@ public class X509Download extends HttpServlet {
       x509 = Certs.generateCertificate( keyPair, u.getName( ) );
       x509.checkValidity( );
       u.addCertificate( x509 );
-      cloudCert = SystemCredentials.getCredentialProvider( Eucalyptus.class ).getCertificate( );
+      cloudCert = SystemCredentials.lookup( Eucalyptus.class ).getCertificate( );
     } catch ( Exception e ) {
       LOG.fatal( e, e );
       throw e;
@@ -207,10 +207,9 @@ public class X509Download extends HttpServlet {
       //TODO:GRZE:FIXME velocity
       String userNumber = u.getAccount( ).getAccountNumber( );
       sb.append( "EUCA_KEY_DIR=$(dirname $(readlink -f ${BASH_SOURCE}))" );
-      String localHost = Internets.localHostInetAddress( ).getCanonicalHostName( );
       sb.append( "\nexport EC2_URL=" + ServiceUris.remote( Eucalyptus.class, Internets.localHostInetAddress( ) ) );
-      if( Components.lookup( Walrus.class ).hasEnabledService( ) ) {
-        ServiceConfiguration walrusConfig = Components.lookup( Walrus.class ).enabledServices( ).first( );
+      if( Topology.isEnabledLocally( Walrus.class ) ) {
+        ServiceConfiguration walrusConfig = Topology.lookup( Walrus.class );
         String uri = ServiceUris.remote( walrusConfig ).toASCIIString( );
         LOG.debug( "Found walrus uri/configuration: uri=" + uri + " config=" + walrusConfig );
         sb.append( "\nexport S3_URL=" + uri );

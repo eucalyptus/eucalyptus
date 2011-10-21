@@ -2,8 +2,6 @@ package com.eucalyptus.context;
 
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.log4j.Logger;
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.Channels;
 import org.mule.DefaultMuleEvent;
 import org.mule.DefaultMuleMessage;
 import org.mule.DefaultMuleSession;
@@ -19,25 +17,20 @@ import org.mule.config.spring.SpringXmlConfigurationBuilder;
 import org.mule.module.client.MuleClient;
 import org.mule.transport.AbstractConnector;
 import org.mule.transport.vm.VMMessageDispatcherFactory;
-import com.eucalyptus.BaseException;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapException;
+import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
-import com.eucalyptus.records.EventRecord;
-import com.eucalyptus.records.EventType;
-import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.ws.util.ReplyQueue;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
 
 @ConfigurableClass( root = "bootstrap.servicebus", description = "Parameters having to do with the service bus." )
 public class ServiceContext {
-  private static Logger                        LOG                      = Logger.getLogger( ServiceContext.class );
+  static Logger                                LOG                      = Logger.getLogger( ServiceContext.class );
   private static SpringXmlConfigurationBuilder builder;
   @ConfigurableField( initial = "256", description = "Max queue length allowed per service stage.", changeListener = HupListener.class )
   public static Integer                        MAX_OUTSTANDING_MESSAGES = 256;
@@ -60,7 +53,7 @@ public class ServiceContext {
   private static final BootstrapException          failEx            = new BootstrapException(
                                                                                                     "Attempt to use esb client before the service bus has been started." );
   
-  public static void dispatch( String dest, Object msg ) throws ServiceInitializationException, ServiceDispatchException, ServiceStateException {
+  public static void dispatch( String dest, Object msg ) throws ServiceDispatchException {
     dest = ServiceContextManager.mapServiceToEndpoint( dest );
     MuleContext muleCtx;
     try {
@@ -91,7 +84,6 @@ public class ServiceContext {
       throw new ServiceDispatchException( "Failed to dispatch message to " + dest + " caused by failure to contruct session: " + ex.getMessage( ), ex );
     }
     MuleEvent muleEvent = new DefaultMuleEvent( muleMsg, endpoint, muleSession, false );
-//    LOG.debug( "ServiceContext.dispatch(" + dest + ":" + msg.getClass( ).getCanonicalName( )/*, Exceptions.filterStackTrace( new RuntimeException( ), 3 )*/ );
     final Context ctx = msg instanceof BaseMessage
       ? Contexts.createWrapped( dest, ( BaseMessage ) msg )
       : null;
@@ -120,6 +112,10 @@ public class ServiceContext {
       }*/
   }
   
+  public static <T> T send( ComponentId dest, Object msg ) throws ServiceDispatchException {
+    return send( dest.getLocalEndpointName( ), msg );
+  }
+  
   public static <T> T send( String dest, Object msg ) throws ServiceDispatchException {
     dest = ServiceContextManager.mapEndpointToService( dest );
     MuleEvent context = RequestContext.getEvent( );
@@ -128,7 +124,6 @@ public class ServiceContext {
       ctx = Contexts.createWrapped( dest, ( BaseMessage ) msg );
     }
     try {
-//      LOG.debug( "ServiceContext.send(" + dest + ":" + msg.getClass( ).getCanonicalName( )/*, Exceptions.filterStackTrace( new RuntimeException( ), 3 )*/ );
       MuleMessage reply = ServiceContextManager.getClient( ).sendDirect( dest, null, new DefaultMuleMessage( msg ) );
       
       if ( reply.getExceptionPayload( ) != null ) {
@@ -141,48 +136,10 @@ public class ServiceContext {
       throw Exceptions.trace( new ServiceDispatchException( "Failed to send message " + msg.getClass( ).getSimpleName( ) + " to service " + dest
                                                                   + " because: " + e.getMessage( ), e ) );
     } finally {
-      Contexts.clear( ctx );
-      RequestContext.setEvent( context );
-    }
-  }
-  
-  @SuppressWarnings( "unchecked" )
-  public static void response( BaseMessage responseMessage ) {
-    if ( responseMessage instanceof ExceptionResponseType ) {
-      Logs.exhaust( ).trace( responseMessage );
-    }
-    String corrId = responseMessage.getCorrelationId( );
-    try {
-      Context ctx = Contexts.lookup( corrId );
-      EventRecord.here( ServiceContext.class, EventType.MSG_REPLY, responseMessage.getCorrelationId( ), responseMessage.getClass( ).getSimpleName( ),
-                        String.format( "%.3f ms", ( System.nanoTime( ) - ctx.getCreationTime( ) ) / 1000000.0 ) ).debug( );
-      Channel channel = ctx.getChannel( );
-      Channels.write( channel, responseMessage );
-      Contexts.clear( ctx );
-    } catch ( NoSuchContextException e ) {
-      LOG.warn( "Received a reply for absent client:  No channel to write response message.", e );
-      LOG.debug( responseMessage );
-    } catch ( Exception e ) {
-      LOG.warn( "Error occurred while handling reply: " + responseMessage, e );
-    }
-  }
-  
-  public static void responseError( Throwable cause ) {
-    responseError( Contexts.lookup( ).getCorrelationId( ), cause );
-  }
-  
-  public static void responseError( String corrId, Throwable cause ) {
-    try {
-      Context ctx = Contexts.lookup( corrId );
-      EventRecord.here( ReplyQueue.class, EventType.MSG_REPLY, cause.getClass( ).getCanonicalName( ), cause.getMessage( ),
-                        String.format( "%.3f ms", ( System.nanoTime( ) - ctx.getCreationTime( ) ) / 1000000.0 ) ).debug( );
-      Channels.fireExceptionCaught( ctx.getChannel( ), cause );
-      if ( !( cause instanceof BaseException ) ) {
+      if ( ctx != null ) {
         Contexts.clear( ctx );
       }
-    } catch ( Exception ex ) {
-      LOG.error( ex );
-      LOG.error( cause, cause );
+      RequestContext.setEvent( context );
     }
   }
   

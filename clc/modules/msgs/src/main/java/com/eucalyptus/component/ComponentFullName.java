@@ -91,7 +91,7 @@ public class ComponentFullName implements FullName {
     partition = partition != null
       ? partition
       : "null";
-    boolean hasParentComponent = !this.realComponentId.serviceDependencies( ).isEmpty( );
+    boolean hasParentComponent = this.realComponentId.partitionParent( ) != null;
     ComponentId tempComponentId = Empyrean.INSTANCE;
     String tempPartition = "";
     if ( hasParentComponent || this.realComponentId.isPartitioned( ) ) {
@@ -105,7 +105,7 @@ public class ComponentFullName implements FullName {
       tempComponentId = this.realComponentId;
       tempPartition = this.realComponentId.name( );
     } else if ( !this.realComponentId.isPartitioned( ) && hasParentComponent ) {
-      ComponentId parentId = ComponentIds.lookup( this.realComponentId.serviceDependencies( ).get( 0 ) );
+      ComponentId parentId = this.realComponentId.partitionParent( );
       if ( parentId.getClass( ).equals( Eucalyptus.class ) ) {
         tempComponentId = Eucalyptus.INSTANCE;
         tempPartition = tempComponentId.name( );
@@ -124,7 +124,7 @@ public class ComponentFullName implements FullName {
       ? ""
       : this.realComponentId.name( );
     this.authority = Joiner.on( SEP ).join( PREFIX, this.componentId.name( ), displayPartition, displayCompType, this.name );
-    this.relativeId = Joiner.on( SEP_PATH ).join( pathPartsArray );
+    this.relativeId = ( SEP_PATH + Joiner.on( SEP_PATH ).join( pathPartsArray ) ).replaceAll( "^//", "/" );
     this.qName = this.authority + this.relativeId;
   }
   

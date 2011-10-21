@@ -91,7 +91,7 @@ import com.google.common.collect.Lists;
  * @see SystemBootstrapper#load()
  * @see SystemBootstrapper#start()
  */
-public abstract class Bootstrapper implements Comparable<Bootstrapper> {
+public abstract class Bootstrapper implements Comparable<Bootstrapper>, CanBootstrap {
   public static abstract class Simple extends Bootstrapper {
     
     @Override
@@ -141,6 +141,7 @@ public abstract class Bootstrapper implements Comparable<Bootstrapper> {
    * @return true when all is clear
    * @throws Exception should contain detail any malady which may be present.
    */
+  @Override
   public abstract boolean check( ) throws Exception;
   
   /**
@@ -184,6 +185,7 @@ public abstract class Bootstrapper implements Comparable<Bootstrapper> {
    * @note Intended for future use. May become {@code abstract}.
    * @throws Exception
    */
+  @Override
   public abstract void destroy( ) throws Exception;
   
   /**
@@ -192,6 +194,7 @@ public abstract class Bootstrapper implements Comparable<Bootstrapper> {
    * @return
    * @throws Exception
    */
+  @Override
   public abstract boolean disable( ) throws Exception;
   
   /**
@@ -201,6 +204,7 @@ public abstract class Bootstrapper implements Comparable<Bootstrapper> {
    * @return
    * @throws Exception
    */
+  @Override
   public abstract boolean enable( ) throws Exception;
   
   @Override
@@ -337,6 +341,7 @@ public abstract class Bootstrapper implements Comparable<Bootstrapper> {
    * @return true on successful completion
    * @throws Exception
    */
+  @Override
   public abstract boolean load( ) throws Exception;
   
   /**
@@ -347,6 +352,7 @@ public abstract class Bootstrapper implements Comparable<Bootstrapper> {
    * @throws Exception
    */
   
+  @Override
   public abstract boolean start( ) throws Exception;
   
   /**
@@ -356,6 +362,7 @@ public abstract class Bootstrapper implements Comparable<Bootstrapper> {
    * @return true on successful completion
    * @throws Exception
    */
+  @Override
   public abstract boolean stop( ) throws Exception;
   
   /**

@@ -2,6 +2,7 @@ package com.eucalyptus.util;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import org.apache.log4j.Logger;
@@ -17,15 +18,32 @@ import com.google.common.collect.SortedSetMultimap;
 import com.google.common.collect.TreeMultimap;
 
 public class TypeMappers {
+  private enum CompareClasses implements Comparator<Class> {
+    INSTANCE;
+    
+    @Override
+    public int compare( Class o1, Class o2 ) {
+      if ( o1 == null && o2 == null ) {
+        return 0;
+      } else if ( o1 != null && o2 != null ) {
+        return ( "" + o1.toString( ) ).compareTo( ""+o2.toString( ) );
+      } else {
+        return ( o1 != null
+          ? 1
+          : -1 );
+      }
+    }
+    
+  }
   
   private static Logger                          LOG          = Logger.getLogger( TypeMappers.class );
-  private static SortedSetMultimap<Class, Class> knownMappers = TreeMultimap.create( Comparators.classes( ), Comparators.classes( ) );
+  private static SortedSetMultimap<Class, Class> knownMappers = TreeMultimap.create( CompareClasses.INSTANCE, CompareClasses.INSTANCE );
   private static Map<String, Function>           mappers      = Maps.newHashMap( );
   
-  public static <A,B> B transform( A from, Class<B> to ) {
+  public static <A, B> B transform( A from, Class<B> to ) {
     Class target = from.getClass( );
-    for( Class p : Classes.ancestors( from ) ) {
-      if( !knownMappers.get( p ).isEmpty( ) ) {
+    for ( Class p : Classes.ancestors( from ) ) {
+      if ( knownMappers.containsKey( p ) && !knownMappers.get( p ).isEmpty( ) ) {
         target = p;
         break;
       }

@@ -70,6 +70,7 @@ import java.util.concurrent.ExecutionException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
+import com.eucalyptus.component.Faults;
 import com.eucalyptus.component.LifecycleEvents;
 import com.eucalyptus.component.ServiceChecks;
 import com.eucalyptus.component.id.Eucalyptus;
@@ -173,8 +174,7 @@ public class WalrusControl {
 		String returnValue;
 		returnValue = SystemUtil.run(new String[]{WalrusProperties.eucaHome + WalrusProperties.EUCA_ROOT_WRAPPER, "drbdadm", "status"});
 		if(returnValue.length() == 0) {
-		  LifecycleEvents.fireExceptionEvent(Components.lookup(Walrus.class).getLocalServiceConfiguration(), 
-		                                      ServiceChecks.Severity.INFO, 
+		  Faults.advisory(Components.lookup(Walrus.class).getLocalServiceConfiguration(), 
 		                                      new EucalyptusCloudException("drbdadm not found: Is drbd installed?"));
 		}
 	}	

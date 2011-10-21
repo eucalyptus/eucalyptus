@@ -64,45 +64,14 @@ package edu.ucsb.eucalyptus.cloud.ws;
  * Author: Sunil Soman sunils@cs.ucsb.edu
  */
 
-import edu.ucsb.eucalyptus.cloud.*;
-import edu.ucsb.eucalyptus.cloud.entities.*;
-import edu.ucsb.eucalyptus.msgs.*;
-import edu.ucsb.eucalyptus.storage.StorageManager;
-import edu.ucsb.eucalyptus.util.*;
-import org.apache.log4j.Logger;
-import org.apache.tools.ant.util.DateUtils;
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.ChannelFutureListener;
-import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
-import org.jboss.netty.handler.codec.http.HttpHeaders;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.jboss.netty.handler.codec.http.HttpVersion;
-import org.jboss.netty.handler.stream.ChunkedFile;
-import org.jboss.netty.handler.stream.ChunkedInput;
-
-import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.policy.PolicySpec;
-import com.eucalyptus.auth.principal.Account;
-import com.eucalyptus.auth.principal.Certificate;
-import com.eucalyptus.component.auth.SystemCredentials;
-import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.component.auth.EucaKeyStore;
-import com.eucalyptus.auth.util.Hashes;
-import com.eucalyptus.auth.util.X509CertHelper;
-import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.http.MappingHttpResponse;
-import com.eucalyptus.system.Threads;
-import com.eucalyptus.util.Lookups;
-import com.eucalyptus.util.WalrusProperties;
-
-import javax.crypto.Cipher;
-import javax.crypto.SecretKey;
-import javax.crypto.spec.IvParameterSpec;
-import javax.crypto.spec.SecretKeySpec;
-import java.io.*;
-
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
@@ -120,7 +89,6 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.zip.GZIPInputStream;
-
 import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
@@ -133,30 +101,31 @@ import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
-
 import org.apache.log4j.Logger;
 import org.apache.tools.ant.util.DateUtils;
-import org.apache.xml.dtm.DTMIterator;
-import org.apache.xml.dtm.ref.DTMNodeList;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
-
-import com.eucalyptus.component.auth.SystemCredentials;
+import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.policy.PolicySpec;
+import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.principal.Certificate;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.Hashes;
+import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.crypto.Digest;
 import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.Lookups;
 import com.eucalyptus.util.WalrusProperties;
-
 import edu.ucsb.eucalyptus.cloud.AccessDeniedException;
 import edu.ucsb.eucalyptus.cloud.BucketLogData;
 import edu.ucsb.eucalyptus.cloud.DecryptionFailedException;
@@ -167,6 +136,7 @@ import edu.ucsb.eucalyptus.cloud.WalrusException;
 import edu.ucsb.eucalyptus.cloud.entities.BucketInfo;
 import edu.ucsb.eucalyptus.cloud.entities.ImageCacheInfo;
 import edu.ucsb.eucalyptus.cloud.entities.ObjectInfo;
+import edu.ucsb.eucalyptus.cloud.entities.WalrusInfo;
 import edu.ucsb.eucalyptus.msgs.CacheImageResponseType;
 import edu.ucsb.eucalyptus.msgs.CacheImageType;
 import edu.ucsb.eucalyptus.msgs.CheckImageResponseType;
@@ -252,7 +222,7 @@ public class WalrusImageManager {
 								if(verified) break;
 							}
 							if(!verified) {
-								X509Certificate cert = SystemCredentials.getCredentialProvider(Eucalyptus.class).getCertificate();
+								X509Certificate cert = SystemCredentials.lookup(Eucalyptus.class).getCertificate();
 								if(cert != null)
 									verified = canVerifySignature(sigVerifier, cert, signature, verificationString);
 							}
@@ -285,7 +255,7 @@ public class WalrusImageManager {
 						}
 						if(!signatureVerified) {
 							try {
-								X509Certificate cert = SystemCredentials.getCredentialProvider(Eucalyptus.class).getCertificate();
+								X509Certificate cert = SystemCredentials.lookup(Eucalyptus.class).getCertificate();
 								if(cert != null)
 									signatureVerified = canVerifySignature(sigVerifier, cert, signature, verificationString);
 							} catch(Exception ex) {
@@ -325,7 +295,7 @@ public class WalrusImageManager {
 					byte[] key;
 					byte[] iv;
 					try {
-						PrivateKey pk = SystemCredentials.getCredentialProvider(
+						PrivateKey pk = SystemCredentials.lookup(
 								Eucalyptus.class ).getPrivateKey();
 						Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
 						cipher.init(Cipher.DECRYPT_MODE, pk);
@@ -435,7 +405,7 @@ public class WalrusImageManager {
 							}
 						}
 						if(!signatureVerified) {
-							X509Certificate cert = SystemCredentials.getCredentialProvider(Eucalyptus.class).getCertificate();
+							X509Certificate cert = SystemCredentials.lookup(Eucalyptus.class).getCertificate();
 							if(cert != null)
 								signatureVerified = canVerifySignature(sigVerifier, cert, signature, (machineConfiguration + image));
 						}
@@ -452,7 +422,7 @@ public class WalrusImageManager {
 					byte[] key;
 					byte[] iv;
 					try {
-						PrivateKey pk = SystemCredentials.getCredentialProvider(Eucalyptus.class).getPrivateKey();
+						PrivateKey pk = SystemCredentials.lookup(Eucalyptus.class).getPrivateKey();
 						Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
 						cipher.init(Cipher.DECRYPT_MODE, pk);
 						key = Hashes.hexToBytes(new String(cipher.doFinal(Hashes.hexToBytes(encryptedKey))));
@@ -610,7 +580,7 @@ public class WalrusImageManager {
 
 					FileInputStream fileInputStream = null;
 					try {
-						PrivateKey pk = SystemCredentials.getCredentialProvider(Eucalyptus.class).getPrivateKey();
+						PrivateKey pk = SystemCredentials.lookup(Eucalyptus.class).getPrivateKey();
 						Signature sigCloud = Signature.getInstance("SHA1withRSA");
 						sigCloud.initSign(pk);
 						sigCloud.update(verificationString.getBytes());

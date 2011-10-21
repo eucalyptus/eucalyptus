@@ -16,7 +16,7 @@ public enum Signatures {
   private static Logger LOG = Logger.getLogger( Signatures.class );
 
   public String trySign( Class<? extends ComponentId> component, byte[] data ) {
-    PrivateKey pk = SystemCredentials.getCredentialProvider( component ).getPrivateKey( );
+    PrivateKey pk = SystemCredentials.lookup( component ).getPrivateKey( );
     return trySign( pk, data );
   }
   /**

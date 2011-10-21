@@ -74,6 +74,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.scripting.Groovyness;
@@ -262,9 +263,8 @@ public class WalrusProperties {
 	}
 
 	public static InetAddress getWalrusAddress() throws EucalyptusCloudException {
-		Component walrus = Components.lookup( Walrus.class );
-		if( walrus.hasEnabledService( ) ) {
-			ServiceConfiguration walrusConfig = Components.lookup( Walrus.class ).enabledServices( ).first( );
+		if( Topology.isEnabledLocally( Walrus.class ) ) {
+			ServiceConfiguration walrusConfig = Topology.lookup( Walrus.class );
 			return Internets.toAddress(walrusConfig.getHostName());
 		} 
 		return null;	    

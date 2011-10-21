@@ -75,41 +75,14 @@ public abstract class AbstractServiceBuilder<T extends ServiceConfiguration> imp
   @Override
   public Boolean checkRemove( String partition, String name ) throws ServiceRegistrationException {
     try {
-      this.lookupByName( name );
+      ServiceConfigurations.lookupByName( this.getComponentId( ).getClass( ), name );
       return true;
     } catch ( PersistenceException e ) {
       throw new ServiceRegistrationException( e );
     } catch ( Exception e ) {
       LOG.error( e, e );
-      return false;
+      return true;
     }
-  }
-  
-  @Override
-  public List<T> list( ) throws ServiceRegistrationException {
-    return ServiceConfigurations.list( this.newInstance( ) );
-  }
-  
-  @Override
-  public T lookup( String partition, String name ) throws ServiceRegistrationException {
-    T conf = this.newInstance( );
-    conf.setName( name );
-    conf.setPartition( partition );
-    return ( T ) ServiceConfigurations.lookup( conf );
-  }
-  
-  @Override
-  public T lookupByName( String name ) throws ServiceRegistrationException {//TODO:GRZE:RELEASE fix the name uniqueness checking here.
-    T conf = this.newInstance( );
-    conf.setName( name );
-    return ( T ) ServiceConfigurations.lookup( conf );
-  }
-  
-  @Override
-  public T lookupByHost( String hostName ) throws ServiceRegistrationException {
-    T conf = this.newInstance( );
-    conf.setHostName( hostName );
-    return ( T ) ServiceConfigurations.lookup( conf );
   }
   
   @Override
@@ -125,13 +98,13 @@ public abstract class AbstractServiceBuilder<T extends ServiceConfiguration> imp
     }
     ServiceConfiguration existingName = null;
     try {
-      existingName = this.lookupByName( name );
+      existingName = ServiceConfigurations.lookupByName( this.getComponentId( ).getClass( ), name );
     } catch ( PersistenceException ex1 ) {
       LOG.trace( "Failed to find existing component registration for name: " + name );
     }
     ServiceConfiguration existingHost = null;
     try {
-      existingHost = this.lookupByHost( host );
+      existingHost = ServiceConfigurations.lookupByHost( this.getComponentId( ).getClass( ), host );
     } catch ( PersistenceException ex1 ) {
       LOG.trace( "Failed to find existing component registration for host: " + host );
     }
@@ -146,18 +119,6 @@ public abstract class AbstractServiceBuilder<T extends ServiceConfiguration> imp
     } else {
       throw new ServiceRegistrationException( "BUG: This is a logical impossibility." );
     }
-  }
-  
-  @Override
-  public T add( String partition, String name, String host, Integer port ) throws ServiceRegistrationException {
-    T config = this.newInstance( partition, name, host, port );
-    return ( T ) ServiceConfigurations.store( config );
-  }
-  
-  @Override
-  public T remove( ServiceConfiguration config ) throws ServiceRegistrationException {
-    T removeConf = this.lookupByName( config.getName( ) );
-    return ( T ) ServiceConfigurations.remove( removeConf );
   }
   
 }

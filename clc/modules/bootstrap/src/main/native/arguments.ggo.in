@@ -52,6 +52,7 @@ option "jmx"                   -   "Launch with JMX enabled."                   
 option "debug"                 d   "Launch with debugger enabled."                     flag                              off
 option "verbose"               v   "Launch the JVM w/ verbose output flags."           flag                              off
 option "debug-port"            -   "Set the port to use for the debugger."             int                               default="5005"          no     dependon="debug"
+option "debug-noha"            H   "Launch with CLC in debug mode (no state management)."  flag       					 off
 option "debug-suspend"         -   "Force debugger to wait at main()."                 flag                              off                            dependon="debug"          
 ######                   #       #                                                    #       #                         #                      #      #           
 ######                   #       #                                                    #       #                         #                      #      #           
