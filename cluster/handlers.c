@@ -3439,10 +3439,13 @@ int init_config(void) {
       pubmacmap = configFileValue("VNET_MACMAP");
       pubips = configFileValue("VNET_PUBLICIPS");
 
-      if (!pubSubnet || !pubSubnetMask || !pubBroadcastAddress || !pubRouter || !pubDNS || (!pubmacmap && !pubips)) {
-	logprintfl(EUCAFATAL,"init_config(): in 'STATIC' network modes, you must specify values for 'VNET_SUBNET, VNET_NETMASK, VNET_BROADCAST, VNET_ROUTER, VNET_DNS, and (VNET_MACMAP or VNET_PUBLICIPS)'\n");
+      if (!pubSubnet || !pubSubnetMask || !pubBroadcastAddress || !pubRouter || !pubDNS 
+	  || (!strcmp(pubmode, "STATIC") && !pubmacmap) || (!strcmp(pubmode, "STATIC-DYNMAC") && !pubips)) {
+	logprintfl(EUCAFATAL,"init_config(): in '%s' network mode, you must specify values for 'VNET_SUBNET, VNET_NETMASK, VNET_BROADCAST, VNET_ROUTER, VNET_DNS and %s'\n", 
+		   pubmode, (!strcmp(pubmode, "STATIC")) ? "VNET_MACMAP" : "VNET_PUBLICIPS");
 	initFail = 1;
       }
+
     } else if (pubmode && (!strcmp(pubmode, "MANAGED") || !strcmp(pubmode, "MANAGED-NOVLAN"))) {
       numaddrs = configFileValue("VNET_ADDRSPERNET");
       pubSubnet = configFileValue("VNET_SUBNET");
