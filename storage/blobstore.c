@@ -516,7 +516,7 @@ static int open_and_lock (const char * path,
             pthread_mutex_unlock (&_blobstore_mutex);
             goto error;
         }
-        logprintfl (EUCADEBUG2, "{%u} open_and_lock: sleeping on %s\n", (unsigned int)pthread_self(), path);
+        logprintfl (EUCADEBUG2, "{%u} open_and_lock: could not acquire %s lock, sleeping on %s\n", (unsigned int)pthread_self(), (ret==0)?("file"):("posix"), path);
         
         usleep (BLOBSTORE_SLEEP_INTERVAL_USEC);
     }
