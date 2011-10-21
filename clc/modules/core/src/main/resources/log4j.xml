@@ -169,7 +169,7 @@
     <priority value="${euca.log.level}" />
     <appender-ref ref="cloud-exhaust" />
   </category>
-  <category name="EXTREME" additivity="false">
+  <category name="EXTREME" additivity="true">
     <priority value="TRACE" />
     <appender-ref ref="cloud-extreme" />
   </category>
