@@ -1710,7 +1710,7 @@ public class EuareService {
     result.setIsTruncated( false );
     ArrayList<String> policies = result.getPolicyNames( ).getMemberList( );
     try {
-      for ( Policy p : Privileged.listAccountPolicies( ctx.hasAdministrativePrivileges( ), accountFound ) ) {
+      for ( Policy p : Privileged.listAccountPolicies( requestUser, accountFound ) ) {
         policies.add( p.getName( ) );
       }
     } catch ( Exception e ) {
@@ -1742,7 +1742,7 @@ public class EuareService {
       }
     }
     try {
-      Policy policy = Privileged.getAccountPolicy( ctx.hasAdministrativePrivileges( ), accountFound, request.getPolicyName( ) );
+      Policy policy = Privileged.getAccountPolicy( requestUser, accountFound, request.getPolicyName( ) );
       if ( policy != null ) {
         GetAccountPolicyResultType result = reply.getGetAccountPolicyResult( );
         result.setAccountName( request.getAccountName( ) );
