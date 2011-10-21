@@ -117,6 +117,7 @@ public class ServiceContextManager {
     public boolean start( ) throws Exception {
       try {
         ServiceContextManager.singleton.update( );
+        ServiceContextManager.singleton.getClient( );
         return true;
       } catch ( final Exception ex ) {
         LOG.error( ex, ex );
