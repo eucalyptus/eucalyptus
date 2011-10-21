@@ -622,12 +622,6 @@ public class ServiceTransitions {
         ServiceEvents.fire( config, config.getStateMachine( ).getState( ) );
       }
     },
-    SERVICE_CONTEXT_RESTART {
-      @Override
-      public void fire( final ServiceConfiguration parent ) {
-        ServiceContextManager.restartSync( parent );
-      }
-    },
     PROPERTIES_ADD {
       @Override
       public void fire( final ServiceConfiguration config ) {

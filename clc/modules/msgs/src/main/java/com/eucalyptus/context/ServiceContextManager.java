@@ -161,45 +161,6 @@ public class ServiceContextManager {
       }
       
     } );
-    Threads.lookup( Empyrean.class, ServiceContextManager.class ).submit( new Runnable( ) {
-      @Override
-      public void run( ) {
-        while ( ServiceContextManager.this.running.get( ) ) {
-          ServiceConfiguration event;
-          try {
-            if ( ( event = ServiceContextManager.this.queue.poll( 500, TimeUnit.MILLISECONDS ) ) != null ) {
-              if ( event.isVmLocal( ) ) {
-                if ( ServiceContextManager.this.canHasWrite.tryLock( ) ) {
-                  try {
-                    ServiceContextManager.this.update( );
-                  } catch ( final Exception ex ) {
-                    LOG.error( Exceptions.causeString( ex ) );
-                    LOG.error( ex, ex );
-                  } finally {
-                    ServiceContextManager.this.canHasWrite.unlock( );
-                  }
-                }
-              }
-            }
-          } catch ( final InterruptedException e1 ) {
-            Thread.currentThread( ).interrupt( );
-            ServiceContextManager.this.running.set( false );
-            return;
-          }
-        }
-      }
-    } );
-  }
-  
-  private List<ComponentId> shouldReload( ) {
-    final List<ComponentId> currentComponentIds = ComponentIds.list( );
-    if ( this.context == null ) {
-      return currentComponentIds;
-    } else if ( !this.enabledCompIds.equals( currentComponentIds ) ) {
-      return currentComponentIds;
-    } else {
-      return Lists.newArrayList( );
-    }
   }
   
   public static final void restartSync( ) {
@@ -215,25 +176,13 @@ public class ServiceContextManager {
     }
   }
   
-  public static final void restartSync( final ServiceConfiguration config ) {
-//    singleton.queue.add( config );
-  }
-  
   private void update( ) {
     this.canHasWrite.lock( );
     try {
-      final List<ComponentId> reloadComponentIds = this.shouldReload( );
-      
-      if ( !Bootstrap.isShuttingDown( ) && !reloadComponentIds.isEmpty( ) ) {
-        if ( this.context != null ) {
-          shutdown( );
-        }
+      if ( this.context != null ) {
+        return;
+      } else {
         this.context = this.createContext( );
-        if ( Bootstrap.isShuttingDown( ) ) {
-          this.running.set( false );
-          shutdown( );
-          return;
-        }
         assertThat( this.context, notNullValue( ) );
         try {
           this.context.start( );
@@ -255,11 +204,6 @@ public class ServiceContextManager {
       }
     } finally {
       this.canHasWrite.unlock( );
-    }
-    if ( Bootstrap.isShuttingDown( ) ) {
-      this.running.set( false );
-      shutdown( );
-      return;
     }
   }
   
@@ -283,45 +227,35 @@ public class ServiceContextManager {
                                             "</mule>\n";
   
   private MuleContext createContext( ) {
-    this.canHasWrite.lock( );
-    try {
-      List<ComponentId> currentComponentIds = ComponentIds.list( );
-      LOG.error( "Restarting service context with these enabled services: " + currentComponentIds );
-      final Set<ConfigResource> configs = Sets.newHashSet( );
-      MuleContext muleCtx = null;
-      for ( final ComponentId componentId : currentComponentIds ) {
-        final Component component = Components.lookup( componentId );
-        final String errMsg = "Failed to render model for: " + componentId + " because of: ";
-        if ( Bootstrap.isShuttingDown( ) ) {
-          return null;
-        }
-        LOG.info( "-> Rendering configuration for " + componentId.name( ) );
-        try {
-          final String serviceModel = this.loadModel( componentId );
-          final String outString = Templates.prepare( componentId.getServiceModelFileName( ) )
-                                            .withProperty( "components", currentComponentIds )
-                                            .withProperty( "thisComponent", componentId )
-                                            .evaluate( serviceModel );
-          final ConfigResource configRsc = createConfigResource( componentId, outString );
-          configs.add( configRsc );
-        } catch ( final Exception ex ) {
-          LOG.error( errMsg + ex.getMessage( ), ex );
-          throw Exceptions.toUndeclared( new ServiceInitializationException( errMsg + ex.getMessage( ), ex ) );
-        }
-      }
+    List<ComponentId> currentComponentIds = ComponentIds.list( );
+    LOG.error( "Restarting service context with these enabled services: " + currentComponentIds );
+    final Set<ConfigResource> configs = Sets.newHashSet( );
+    MuleContext muleCtx = null;
+    for ( final ComponentId componentId : currentComponentIds ) {
+      final Component component = Components.lookup( componentId );
+      final String errMsg = "Failed to render model for: " + componentId + " because of: ";
+      LOG.info( "-> Rendering configuration for " + componentId.name( ) );
       try {
-        final SpringXmlConfigurationBuilder builder = new SpringXmlConfigurationBuilder( configs.toArray( new ConfigResource[] {} ) );
-        muleCtx = contextFactory.createMuleContext( builder );
-        this.enabledCompIds.clear( );
-        this.enabledCompIds.addAll( currentComponentIds );
+        final String serviceModel = this.loadModel( componentId );
+        final String outString = Templates.prepare( componentId.getServiceModelFileName( ) )
+                                          .withProperty( "components", currentComponentIds )
+                                          .withProperty( "thisComponent", componentId )
+                                          .evaluate( serviceModel );
+        final ConfigResource configRsc = createConfigResource( componentId, outString );
+        configs.add( configRsc );
       } catch ( final Exception ex ) {
-        LOG.error( ex, ex );
-        throw Exceptions.toUndeclared( new ServiceInitializationException( "Failed to build service context because of: " + ex.getMessage( ), ex ) );
+        LOG.error( errMsg + ex.getMessage( ), ex );
       }
-      return muleCtx;
-    } finally {
-      this.canHasWrite.unlock( );
     }
+    try {
+      final SpringXmlConfigurationBuilder builder = new SpringXmlConfigurationBuilder( configs.toArray( new ConfigResource[] {} ) );
+      muleCtx = contextFactory.createMuleContext( builder );
+      this.enabledCompIds.clear( );
+      this.enabledCompIds.addAll( currentComponentIds );
+    } catch ( final Exception ex ) {
+      LOG.error( ex, ex );
+    }
+    return muleCtx;
   }
   
   private String loadModel( final ComponentId componentId ) {
@@ -344,11 +278,9 @@ public class ServiceContextManager {
   private static String FAIL_MSG = "ESB client not ready because the service bus has not been started.";
   
   public static MuleClient getClient( ) throws MuleException {
+    singleton.update( );
     singleton.canHasRead.lock( );
     try {
-      if ( singleton.context == null ) {
-        singleton.update( );
-      }
       return singleton.client;
     } finally {
       singleton.canHasRead.unlock( );
@@ -356,11 +288,9 @@ public class ServiceContextManager {
   }
   
   public static MuleContext getContext( ) throws MuleException {
+    singleton.update( );
     singleton.canHasRead.lock( );
     try {
-      if ( singleton.context == null ) {
-        singleton.update( );
-      }
       return singleton.context;
     } finally {
       singleton.canHasRead.unlock( );
@@ -397,35 +327,26 @@ public class ServiceContextManager {
   }
   
   public static String mapServiceToEndpoint( final String service ) {
-    singleton.canHasRead.lock( );
-    try {
-      String dest = service;
-      if ( ( !service.startsWith( "vm://" ) && !singleton.serviceToEndpoint.containsKey( service ) ) || ( service == null ) ) {
-        dest = "vm://RequestQueue";
-      } else if ( !service.startsWith( "vm://" ) ) {
-        dest = singleton.serviceToEndpoint.get( dest );
-      }
-      return dest;
-    } finally {
-      singleton.canHasRead.unlock( );
+    singleton.update( );
+    String dest = service;
+    if ( ( !service.startsWith( "vm://" ) && !singleton.serviceToEndpoint.containsKey( service ) ) || ( service == null ) ) {
+      dest = "vm://RequestQueue";
+    } else if ( !service.startsWith( "vm://" ) ) {
+      dest = singleton.serviceToEndpoint.get( dest );
     }
+    return dest;
   }
   
   public static String mapEndpointToService( final String endpoint ) throws ServiceDispatchException {
-    singleton.canHasRead.lock( );
-    try {
-      String dest = endpoint;
-      if ( ( endpoint.startsWith( "vm://" ) && !singleton.endpointToService.containsKey( endpoint ) ) || ( endpoint == null ) ) {
-        throw new ServiceDispatchException( "No such endpoint: " + endpoint + " in endpoints=" + singleton.endpointToService.entrySet( ) );
-        
-      }
-      if ( endpoint.startsWith( "vm://" ) ) {
-        dest = singleton.endpointToService.get( endpoint );
-      }
-      return dest;
-    } finally {
-      singleton.canHasRead.unlock( );
+    String dest = endpoint;
+    if ( ( endpoint.startsWith( "vm://" ) && !singleton.endpointToService.containsKey( endpoint ) ) || ( endpoint == null ) ) {
+      throw new ServiceDispatchException( "No such endpoint: " + endpoint + " in endpoints=" + singleton.endpointToService.entrySet( ) );
+      
     }
+    if ( endpoint.startsWith( "vm://" ) ) {
+      dest = singleton.endpointToService.get( endpoint );
+    }
+    return dest;
   }
   
 }
