@@ -226,7 +226,7 @@ public class ServiceTransitions {
     Throwable lastEx = null;
     try {
 
-      if (System.getProperty("euca..noha.cloud").equals(null) ){	
+      if (System.getProperty("euca.noha.cloud").equals(null) ){	
         T reply = ( T ) AsyncRequests.sendSync( config, msg );
         return reply;
       } else {
