@@ -423,34 +423,6 @@ public class WalrusManager {
 			}
 		}
 
-		if(false) { //WalrusProperties.enableVirtualHosting) {
-			if(checkDNSNaming(bucketName)) {
-				UpdateARecordType updateARecord = new UpdateARecordType();
-				updateARecord.setUserId(account.getAccountNumber());
-				URI walrusUri;
-				String address = null;
-				try {
-					walrusUri = new URI(SystemConfiguration.getWalrusUrl());
-					address = walrusUri.getHost();
-				} catch (URISyntaxException e) {
-					throw new EucalyptusCloudException("Could not get Walrus URL");
-				}
-				String zone = WalrusProperties.WALRUS_SUBDOMAIN + ".";
-				updateARecord.setAddress(address);
-				updateARecord.setName(bucketName + "." + zone);
-				updateARecord.setTtl(604800);
-				updateARecord.setZone(zone);
-				try {
-					ServiceDispatcher.lookupSingle(Components.lookup(Dns.class)).send(updateARecord);
-					LOG.info("Mapping " + updateARecord.getName() + " to " + address);
-				} catch(Exception ex) {
-					LOG.error("Could not update DNS record", ex);
-				}
-			} else {
-				LOG.error("Bucket: " + bucketName + " fails to meet DNS requirements. Unable to create DNS mapping.");
-			}
-		}
-
 		reply.setBucket(bucketName);
 		return reply;
 	}
@@ -549,32 +521,6 @@ public class WalrusManager {
 							} catch (IOException ex) {
 								// set exception code in reply
 								LOG.error(ex);
-							}
-
-							if (false) { //WalrusProperties.enableVirtualHosting) {
-								URI walrusUri;
-								String address;
-								RemoveARecordType removeARecordType = new RemoveARecordType();
-								removeARecordType.setUserId(account.getAccountNumber());
-								String zone = WalrusProperties.WALRUS_SUBDOMAIN + ".";
-								removeARecordType.setName(bucketName + "." + zone);
-								removeARecordType.setZone(zone);
-								try {
-									walrusUri = new URI(SystemConfiguration.getWalrusUrl());
-									address = walrusUri.getHost();
-								} catch (URISyntaxException e) {
-									db.rollback();
-									throw new EucalyptusCloudException("Could not get Walrus URL");
-								}
-								removeARecordType.setAddress(address);
-								try {
-									ServiceDispatcher.lookupSingle(Components.lookup(Dns.class)).send(
-											removeARecordType);
-									LOG.info("Removing mapping for "
-											+ removeARecordType.getName());
-								} catch (Exception ex) {
-									LOG.error("Could not update DNS record", ex);
-								}
 							}
 
 							Status status = new Status();
