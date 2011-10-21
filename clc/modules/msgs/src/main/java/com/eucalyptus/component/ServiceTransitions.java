@@ -259,7 +259,7 @@ public class ServiceTransitions {
     LOG.debug( "Sending request " + msg.getClass( ).getSimpleName( ) + " to " + parent.getFullName( ) );
     try {
 
-      if (System.getProperty("euca.noha.cloud").equals(null) ){	
+      if (System.getProperty("euca..noha.cloud") == null){	
         T reply = ( T ) AsyncRequests.sendSync( config, msg );
         return reply;
       } else {
