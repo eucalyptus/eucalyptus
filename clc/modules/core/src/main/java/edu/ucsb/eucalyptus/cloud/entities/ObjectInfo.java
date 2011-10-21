@@ -302,7 +302,7 @@ public class ObjectInfo extends AbstractPersistent implements Comparable {
     }
 
     public boolean canRead(User user) {
-      return user.isSystemAdmin()||user.isSystemInternal()||canRead(user.getName());
+      return user.isSystemAdmin()||canRead(user.getName());
     }
 
     public boolean canRead(String userId) {

@@ -39,9 +39,9 @@ static void set_debug (boolean yes)
 {
     // so euca libs will log to stdout
     if (yes==TRUE) {
-        logfile (NULL, EUCADEBUG);
+        logfile (NULL, EUCADEBUG, 4);
     } else {
-        logfile (NULL, EUCAWARN);
+        logfile (NULL, EUCAWARN, 4);
     }
 }
 

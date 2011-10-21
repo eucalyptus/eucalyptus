@@ -137,7 +137,7 @@ public class Context {
   }
   
   public boolean hasAdministrativePrivileges( ) {
-    return this.getUser( ).isSystemInternal( ) || Principals.systemFullName( ).equals( this.getEffectiveUserFullName( ) ) || this.getUser( ).isSystemAdmin( );
+    return Principals.systemFullName().equals( this.getEffectiveUserFullName( ) ) || this.getUser( ).isSystemAdmin( );
   }
   
   public User getUser( ) {
