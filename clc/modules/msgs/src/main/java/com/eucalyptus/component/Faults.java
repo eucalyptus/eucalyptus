@@ -312,7 +312,7 @@ public class Faults {
     for ( final Throwable ex : Lists.reverse( exs ) ) {
       if ( ( last != null ) && ( ex instanceof CheckException ) ) {
         last.append( ex );
-      } else if ( last != null ) {
+      } else if ( last == null ) {
         last = new CheckException( config, severity, ex );
       }
     }
