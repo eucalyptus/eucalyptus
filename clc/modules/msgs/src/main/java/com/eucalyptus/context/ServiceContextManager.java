@@ -302,20 +302,11 @@ public class ServiceContextManager {
     try {
       if ( this.context != null ) {
         try {
-//TODO:GRZE: handle draining requests from context -- is it really needed?
-//          for ( int i = 0; i < 10 && Contexts.hasOutstandingRequests( ); i++ ) {
-//            try {
-//              TimeUnit.SECONDS.sleep( 1 );
-//            } catch ( InterruptedException ex ) {
-//              Thread.currentThread( ).interrupt( );
-//            }
-//          }
           this.context.stop( );
           this.context.dispose( );
         } catch ( final MuleException ex ) {
           LOG.error( ex, ex );
         }
-        this.context = null;
       }
     } finally {
       this.canHasWrite.unlock( );

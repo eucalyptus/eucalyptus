@@ -383,8 +383,8 @@ public class Threads {
       thread.setName( base_name );
     }
     
-    public <T> CompletionService<T> getCompletionService( ) {
-      return ( CompletionService<T> ) this.completionService;
+    public <T> CompletionService<? extends T> getCompletionService( ) {
+      return ( CompletionService<? extends T> ) this.completionService;
     }
     
     private <T> LinkedBlockingQueue<Future<?>> getTaskQueue( ) {

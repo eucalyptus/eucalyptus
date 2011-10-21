@@ -2,6 +2,7 @@ package com.eucalyptus.util.async;
 
 import java.util.NoSuchElementException;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CompletionService;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import org.apache.log4j.Logger;
@@ -137,7 +138,8 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
           return AsyncRequest.this.execute( serviceConfig ).getResponse( );
         }
       };
-      Threads.enqueue( serviceConfig, call );
+      CompletionService<CheckedListenableFuture<R>> service = ( CompletionService<CheckedListenableFuture<R>> ) Threads.lookup( serviceConfig ).getCompletionService( );
+      service.submit( call );
       return this.getResponse( );
     } catch ( Exception ex1 ) {
       Future<CheckedListenableFuture<R>> res = Threads.lookup( Empyrean.class, AsyncRequest.class, serviceConfig.getFullName( ).toString( ) ).limitTo( NUM_WORKERS ).submit( new Callable<CheckedListenableFuture<R>>( ) {
