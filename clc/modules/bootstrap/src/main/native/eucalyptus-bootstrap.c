@@ -761,6 +761,11 @@ int java_init(euca_opts *args, java_home_t *data) {
 	if (args->force_remote_bootstrap_flag || args->disable_cloud_flag) {
 		JVM_ARG(opt[++x], "-Deuca.force.remote.bootstrap=true");
 	}
+
+        if (args->debug_noha_flag) {
+                JVM_ARG(opt[++x], "-Deuca.noha.cloud");
+        }
+
 	if (args->debug_flag) {
 		JVM_ARG(opt[++x], "-XX:+HeapDumpOnOutOfMemoryError");
 		JVM_ARG(opt[++x], "-XX:HeapDumpPath=%s/var/log/eucalyptus/", GETARG(args, home));

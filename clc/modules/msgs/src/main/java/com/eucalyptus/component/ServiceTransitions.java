@@ -258,8 +258,14 @@ public class ServiceTransitions {
     ServiceConfiguration config = ServiceConfigurations.createEphemeral( Empyrean.INSTANCE, parent.getInetAddress( ) );
     LOG.debug( "Sending request " + msg.getClass( ).getSimpleName( ) + " to " + parent.getFullName( ) );
     try {
-      T reply = ( T ) AsyncRequests.sendSync( config, msg );
-      return reply;
+
+      if (System.getProperty("euca..noha.cloud").equals(null) ){	
+        T reply = ( T ) AsyncRequests.sendSync( config, msg );
+        return reply;
+      } else {
+        return msg.getReply();
+      }
+
     } catch ( Exception ex ) {
       LOG.error( ex, ex );
       throw ex;
