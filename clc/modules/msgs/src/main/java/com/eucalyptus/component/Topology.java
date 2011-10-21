@@ -112,8 +112,6 @@ public class Topology implements EventListener<Event> {
   private static Topology                                                                         singleton         = null;                                                                   //TODO:GRZE:handle differently for remote case?
   private Integer                                                                                 currentEpoch      = 0;                                                                      //TODO:GRZE: get the right initial epoch value from membership bootstrap
   private final ConcurrentMap<ServiceKey, ServiceConfiguration>                                   services          = new ConcurrentSkipListMap<Topology.ServiceKey, ServiceConfiguration>( );
-  private final Map<Class<? extends ComponentId>, Map<Topology.ServiceKey, ServiceConfiguration>> componentFiltered = Maps.newHashMap( );
-  private final Map<Partition, Map<Topology.ServiceKey, ServiceConfiguration>>                    partitionFiltered = Maps.newConcurrentMap( );
   private final ServiceConfiguration                                                              internalQueue;
   private final ServiceConfiguration                                                              externalQueue;
   
@@ -125,9 +123,6 @@ public class Topology implements EventListener<Event> {
     this.externalQueue = ServiceConfigurations.createEphemeral( Empyrean.INSTANCE, Topology.class.getSimpleName( ), "external",
                                                                 ServiceUris.internal( Empyrean.INSTANCE ) );
     ListenerRegistry.getInstance( ).register( Hertz.class, this );
-    for ( final ComponentId c : ComponentIds.list( ) ) {
-      this.componentFiltered.put( c.getClass( ), Maps.filterEntries( this.getServices( ), componentFilter( c.getClass( ) ) ) );
-    }
   }
   
   private static Predicate<Entry<ServiceKey, ServiceConfiguration>> componentFilter( final Class<? extends ComponentId> compId ) {
@@ -664,7 +659,7 @@ public class Topology implements EventListener<Event> {
   }
   
   public static Collection<ServiceConfiguration> enabledServices( final Class<? extends ComponentId> compId ) {
-    return Topology.getInstance( ).componentFiltered.get( compId ).values( );
+    return Topology.getInstance( ).services.values( );
   }
   
   public static boolean isEnabledLocally( final Class<? extends ComponentId> compClass ) {
