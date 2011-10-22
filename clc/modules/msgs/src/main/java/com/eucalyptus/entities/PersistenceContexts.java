@@ -138,7 +138,6 @@ public class PersistenceContexts {
     if ( MAX_FAIL_SECONDS * 1000L > failInterval ) {
       LOG.fatal( LogUtil.header( "Database connection failure time limit reached (" + MAX_FAIL_SECONDS
                                  + " seconds):  HUPping the system." ) );
-      System.exit( 123 );
     } else if ( failCount.getStamp( ) > 0 ) {
       LOG.warn( "Found database connection errors: # " + failCount.getStamp( )
                 + " over the last "
