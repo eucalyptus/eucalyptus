@@ -206,7 +206,7 @@ public class ServiceConfigurations {
       final Component comp = Components.lookup( arg0.getType( ) );
       ServiceConfiguration config;
       try {
-        config = comp.lookupServiceConfiguration( arg0.getName( ) );
+        config = comp.lookup( arg0.getName( ) );
       } catch ( final NoSuchElementException ex1 ) {
         final ServiceBuilder<? extends ServiceConfiguration> builder = comp.getBuilder( );
         try {

@@ -14,6 +14,8 @@ import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Assertions;
 import com.eucalyptus.ws.util.ReplyQueue;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.notNullValue;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
 import edu.ucsb.eucalyptus.msgs.HasRequest;
@@ -67,7 +69,7 @@ public class Contexts {
   }
   
   public static Context lookup( String correlationId ) throws NoSuchContextException {
-    Assertions.assertNotNull( correlationId );
+    assertThat( "BUG: correlationId is null.", correlationId, notNullValue( ) );
     if ( !uuidContexts.containsKey( correlationId ) ) {
       throw new NoSuchContextException( "Found correlation id " + correlationId + " but no corresponding context." );
     } else {
@@ -112,7 +114,7 @@ public class Contexts {
   }
   
   public static void clear( String corrId ) {
-    Assertions.assertNotNull( corrId );
+    assertThat( "BUG: correlationId is null.", corrId, notNullValue( ) );
     Context ctx = uuidContexts.remove( corrId );
     Channel channel = null;
     if ( ctx != null && ( channel = ctx.getChannel( ) ) != null ) {

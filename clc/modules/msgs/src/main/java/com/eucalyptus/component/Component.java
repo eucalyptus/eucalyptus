@@ -94,6 +94,8 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.Sets;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.*;
 
 public class Component implements HasName<Component> {
   private static Logger               LOG = Logger.getLogger( Component.class );
@@ -197,18 +199,7 @@ public class Component implements HasName<Component> {
     return this.bootstrapper;
   }
   
-  /**
-   * @param config
-   * @return
-   * @throws NoSuchServiceException
-   * @see com.eucalyptus.component.Component.ServiceRegistry#lookup(com.eucalyptus.component.ServiceConfiguration)
-   */
-  public BasicService lookupService( ServiceConfiguration config ) throws NoSuchServiceException {
-    return this.serviceRegistry.lookup( config );
-  }
-  
-  @Deprecated
-  public ServiceConfiguration lookupServiceConfiguration( String name ) {
+  public ServiceConfiguration lookup( String name ) {
     return this.serviceRegistry.getService( name );
   }
   
@@ -470,7 +461,7 @@ public class Component implements HasName<Component> {
      * @deprecated {@link #getServices(ServiceConfiguration)}
      */
     public ServiceConfiguration getService( String name ) throws NoSuchElementException {
-      Assertions.assertNotNull( name );
+      assertThat(name, notNullValue());
       for ( ServiceConfiguration s : this.services.keySet( ) ) {
         if ( s.getName( ).equals( name ) ) {
           return s;
