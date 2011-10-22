@@ -75,6 +75,7 @@ import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Filterable;
 import com.eucalyptus.util.HasName;
+import com.eucalyptus.ws.Handlers;
 
 public abstract class FilteredPipeline implements HasName<FilteredPipeline>, Filterable<HttpRequest> {
   private static Logger LOG = Logger.getLogger( FilteredPipeline.class );
@@ -87,8 +88,8 @@ public abstract class FilteredPipeline implements HasName<FilteredPipeline>, Fil
     
     @Override
     void addSystemHandlers( ChannelPipeline pipeline ) {
-      pipeline.addLast( "internal-only-restriction", InternalOnlyHandler.INSTANCE );
-      pipeline.addLast( "msg-epoch-check", SystemChecksHandler.MESSAGE_EPOCH );
+      pipeline.addLast( "internal-only-restriction", Handlers.internalOnlyHandler( ) );
+      pipeline.addLast( "msg-epoch-check", Handlers.internalEpochHandler( ) );
       super.addSystemHandlers( pipeline );
     }
     
@@ -103,7 +104,7 @@ public abstract class FilteredPipeline implements HasName<FilteredPipeline>, Fil
   public abstract String getName( );
   
   void addSystemHandlers( final ChannelPipeline pipeline ) {
-    pipeline.addLast( "service-state-check", SystemChecksHandler.SERVICE_STATE );
+    pipeline.addLast( "service-state-check", Handlers.internalServiceStateHandler( ) );
     pipeline.addLast( "service-specific-mangling", ServiceHackeryHandler.INSTANCE );
     pipeline.addLast( "service-sink", new ServiceContextHandler( ) );
   }

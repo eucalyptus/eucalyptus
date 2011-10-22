@@ -119,7 +119,6 @@ public class Host implements java.io.Serializable, Comparable<Host> {
     this.bindAddress = Internets.localHostInetAddress( );
     this.epoch = Topology.epoch( );
     this.lastTime = this.timestamp.getAndSet( System.currentTimeMillis( ) );
-    Logs.exhaust( ).debug( "Applying update for host: " + this );
     ImmutableList<InetAddress> newAddrs = ImmutableList.copyOf( Ordering.from( Internets.INET_ADDRESS_COMPARATOR ).sortedCopy( Internets.getAllInetAddresses( ) ) );
     this.hasBootstrapped = Bootstrap.isFinished( );
     this.hasDatabase = BootstrapArgs.isCloudController( );
