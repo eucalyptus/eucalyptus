@@ -168,6 +168,7 @@ public class Exceptions {
   public static <T extends Throwable> T trace( String message, T t ) {
     Throwable filtered = new RuntimeException( t.getMessage( ) );
     filtered.setStackTrace( Exceptions.filterStackTraceElements( t ).toArray( steArrayType ) );
+    LOG.info( message );
     LOG.trace( message, filtered );
     return t;
   }

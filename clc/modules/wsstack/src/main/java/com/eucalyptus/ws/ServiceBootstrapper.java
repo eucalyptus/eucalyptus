@@ -71,6 +71,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapArgs;
@@ -106,15 +107,15 @@ import edu.emory.mathcs.backport.java.util.concurrent.atomic.AtomicBoolean;
 @RunDuring( Bootstrap.Stage.RemoteServicesInit )
 public class ServiceBootstrapper extends Bootstrapper {
   private static Logger LOG = Logger.getLogger( ServiceBootstrapper.class );
-  
+  private static final int NUM_SERVICE_BOOTSTRAP_WORKERS = 40;//TODO:GRZE:@Configurable
   static class ServiceBootstrapWorker implements Runnable {
     private final AtomicBoolean                 running  = new AtomicBoolean( true );
     private final BlockingQueue<Runnable>       msgQueue = new LinkedBlockingQueue<Runnable>( );
-    private final ExecutorService               executor = Executors.newFixedThreadPool( 20 );
+    private final ExecutorService               executor = Executors.newFixedThreadPool( NUM_SERVICE_BOOTSTRAP_WORKERS );
     private static final ServiceBootstrapWorker worker   = new ServiceBootstrapWorker( );
     
     private ServiceBootstrapWorker( ) {
-      for ( int i = 0; i < 20; i++ ) {
+      for ( int i = 0; i < 40; i++ ) {
         this.executor.submit( this );
       }
     }
@@ -132,14 +133,12 @@ public class ServiceBootstrapper extends Bootstrapper {
       while ( !this.msgQueue.isEmpty( ) || this.running.get( ) ) {
         Runnable event;
         try {
-          if ( ( event = this.msgQueue.poll( 2000, TimeUnit.MILLISECONDS ) ) != null ) {
+          if ( ( event = this.msgQueue.poll( 50, TimeUnit.MILLISECONDS ) ) != null ) {
             event.run( );
           }
-        } catch ( InterruptedException e1 ) {
-          Thread.currentThread( ).interrupt( );
-          return;
         } catch ( final Throwable e ) {
-          LOG.error( e, e );
+          Exceptions.maybeInterrupted( e );
+          Exceptions.trace( e );
         }
         LOG.debug( "Shutting down component registration request queue: " + Thread.currentThread( ).getName( ) );
       }
@@ -218,12 +217,16 @@ public class ServiceBootstrapper extends Bootstrapper {
     for ( final ComponentId compId : ComponentIds.list( ) ) {
       Component comp = Components.lookup( compId );
       if ( compId.isRegisterable( ) ) {
-        for ( ServiceConfiguration config : Iterables.filter( ServiceConfigurations.list( compId.getClass( ) ), ShouldLoad.INSTANCE ) ) {
-          try {
-            predicate.apply( config );
-          } catch ( Exception ex ) {
-            LOG.error( ex, ex );
+        try {
+          for ( ServiceConfiguration config : Iterables.filter( ServiceConfigurations.list( compId.getClass( ) ), ShouldLoad.INSTANCE ) ) {
+            try {
+              predicate.apply( config );
+            } catch ( Exception ex ) {
+              LOG.error( ex, ex );
+            }
           }
+        } catch ( PersistenceException ex ) {
+          LOG.error( ex , ex );
         }
       } else if ( comp.hasLocalService( ) ) {
         final ServiceConfiguration config = comp.getLocalServiceConfiguration( );
