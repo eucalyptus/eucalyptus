@@ -173,8 +173,8 @@ public class Exceptions {
     return t;
   }
   
-  public static <T extends Throwable> T error( String message ) {
-    return ( T ) error( message, new RuntimeException( ) );
+  public static RuntimeException error( String message ) {
+    return ( RuntimeException ) error( message, new RuntimeException( ) );
   }
   
   public static <T extends Throwable> T error( T t ) {

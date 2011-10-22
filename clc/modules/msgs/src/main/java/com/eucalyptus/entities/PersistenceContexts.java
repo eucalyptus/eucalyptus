@@ -4,7 +4,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicStampedReference;
 import javax.persistence.Embeddable;
 import javax.persistence.MappedSuperclass;
@@ -22,8 +21,8 @@ import com.eucalyptus.util.LogUtil;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Lists;
-import com.google.common.collect.MapMaker;
-import edu.emory.mathcs.backport.java.util.Collections;
+import com.google.common.collect.Multimap;
+import com.google.common.collect.Multimaps;
 
 @SuppressWarnings( "unchecked" )
 public class PersistenceContexts {
@@ -34,7 +33,7 @@ public class PersistenceContexts {
   private static final ArrayListMultimap<String, Class> entities         = ArrayListMultimap.create( );
   private static final List<Class>                      sharedEntities   = Lists.newArrayList( );
   private static Map<String, EntityManagerFactoryImpl>  emf              = new ConcurrentSkipListMap<String, EntityManagerFactoryImpl>( );
-  private static List<Exception>                        illegalAccesses  = Collections.synchronizedList( Lists.newArrayList( ) );
+  private static Multimap<String, Exception>            illegalAccesses  = ArrayListMultimap.create( );
   
   public static boolean isPersistentClass( Class candidate ) {
     return isSharedEntityClass( candidate ) || isEntityClass( candidate );
@@ -107,23 +106,18 @@ public class PersistenceContexts {
   }
   
   public static EntityManagerFactoryImpl registerPersistenceContext( final String persistenceContext, final Ejb3Configuration config ) {
-    synchronized ( PersistenceContexts.class ) {
-      if ( illegalAccesses != null && !illegalAccesses.isEmpty( ) ) {
-        for ( Exception e : illegalAccesses ) {
-          LOG.fatal( e, e );
-        }
-        LOG.error( Threads.currentStackString( ) );
-        LOG.error( LogUtil.header( "Illegal Access to Persistence Context.  Database not yet configured. This is always a BUG: " + persistenceContext ) );
-      }
-      if ( !emf.containsKey( persistenceContext ) ) {
-        illegalAccesses = null;
-        LOG.trace( "-> Setting up persistence context for : " + persistenceContext );
+    if ( !emf.containsKey( persistenceContext ) ) {
+      try {
+        LOG.trace( "-> Setting up persistence context for: " + persistenceContext );
         EntityManagerFactoryImpl entityManagerFactory = ( EntityManagerFactoryImpl ) config.buildEntityManagerFactory( );
         LOG.trace( LogUtil.subheader( LogUtil.dumpObject( config ) ) );
         emf.put( persistenceContext, entityManagerFactory );
+        LOG.info( "-> Setup done for persistence context: " + persistenceContext );
+      } catch ( Exception ex ) {
+        LOG.error( "-> Error in persistence context setup: " + persistenceContext, ex );
       }
-      return emf.get( persistenceContext );
     }
+    return emf.get( persistenceContext );
   }
   
   public static List<String> list( ) {
@@ -155,19 +149,26 @@ public class PersistenceContexts {
   
   @SuppressWarnings( "deprecation" )
   public static EntityManagerFactoryImpl getEntityManagerFactory( final String persistenceContext ) {
-    for ( int i = 0; i < MAX_EMF_RETRIES && !emf.containsKey( persistenceContext ); ++i ) {
-      Exceptions.trace( persistenceContext
-                        + ": Persistence context has not been configured yet."
-                        + " (see debug logs for details)"
-                        + "\nThe available contexts are: \n"
-                        + Joiner.on( "\n" ).join( emf.keySet( ) ) );
-      try {
-        TimeUnit.SECONDS.sleep( 1 );
-      } catch ( InterruptedException ex ) {
-        throw Exceptions.toUndeclared( Exceptions.maybeInterrupted( ex ) );
+    if ( emf.containsKey( persistenceContext ) ) {
+      return emf.get( persistenceContext );
+    } else {
+      for ( int i = 0; i < MAX_EMF_RETRIES; ++i ) {
+        if ( emf.containsKey( persistenceContext ) ) {
+          return emf.get( persistenceContext );
+        }
+        Exceptions.trace( persistenceContext
+                          + ": Persistence context has not been configured yet."
+                          + " (see debug logs for details)"
+                          + "\nThe available contexts are: \n"
+                          + Joiner.on( "\n" ).join( emf.keySet( ) ) );
+        try {
+          TimeUnit.SECONDS.sleep( 1 );
+        } catch ( InterruptedException ex ) {
+          throw Exceptions.toUndeclared( Exceptions.maybeInterrupted( ex ) );
+        }
       }
     }
-    return emf.get( persistenceContext );
+    throw Exceptions.error( "Failed to lookup persistence context after " + MAX_EMF_RETRIES + "\n" );
   }
   
   public static void shutdown( ) {
