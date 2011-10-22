@@ -114,7 +114,8 @@ public class PersistenceContexts {
         }
         LOG.error( Threads.currentStackString( ) );
         LOG.error( LogUtil.header( "Illegal Access to Persistence Context.  Database not yet configured. This is always a BUG: " + persistenceContext ) );
-      } else if ( !emf.containsKey( persistenceContext ) ) {
+      }
+      if ( !emf.containsKey( persistenceContext ) ) {
         illegalAccesses = null;
         LOG.trace( "-> Setting up persistence context for : " + persistenceContext );
         EntityManagerFactoryImpl entityManagerFactory = ( EntityManagerFactoryImpl ) config.buildEntityManagerFactory( );
