@@ -173,7 +173,7 @@ public class PersistenceContexts {
   
   public static void shutdown( ) {
     for ( String ctx : emf.keySet( ) ) {
-      EntityManagerFactoryImpl em = emf.get( ctx );
+      EntityManagerFactoryImpl em = emf.remove( ctx );
       if ( em.isOpen( ) ) {
         LOG.info( "Closing persistence context: " + ctx );
         em.close( );
