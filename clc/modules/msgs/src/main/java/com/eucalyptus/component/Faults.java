@@ -76,6 +76,7 @@ import com.eucalyptus.component.ServiceChecks.CheckException;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
 

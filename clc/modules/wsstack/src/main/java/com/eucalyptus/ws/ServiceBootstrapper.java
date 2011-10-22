@@ -63,7 +63,6 @@
  */
 package com.eucalyptus.ws;
 
-import java.net.InetAddress;
 import java.util.NoSuchElementException;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutionException;
@@ -75,40 +74,33 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.bootstrap.Bootstrapper;
-import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
-import com.eucalyptus.bootstrap.SystemBootstrapper;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Faults;
-import com.eucalyptus.component.LifecycleEvents;
-import com.eucalyptus.component.ServiceBuilder;
-import com.eucalyptus.component.ServiceChecks;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
-import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.ServiceTransitions;
 import com.eucalyptus.component.Topology;
-import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.util.Internets;
 import com.eucalyptus.ws.util.ChannelUtil;
+import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import edu.emory.mathcs.backport.java.util.concurrent.atomic.AtomicBoolean;
 
 @Provides( Empyrean.class )
 @RunDuring( Bootstrap.Stage.RemoteServicesInit )
-public class ServiceBootstrapper extends Bootstrapper {
+public class ServiceBootstrapper extends Bootstrapper.Simple {
   private static Logger    LOG                           = Logger.getLogger( ServiceBootstrapper.class );
   private static final int NUM_SERVICE_BOOTSTRAP_WORKERS = 40;                                           //TODO:GRZE:@Configurable
                                                                                                           
-  static class ServiceBootstrapWorker implements Runnable {
+  static class ServiceBootstrapWorker {
     private final AtomicBoolean                 running  = new AtomicBoolean( true );
     private final BlockingQueue<Runnable>       msgQueue = new LinkedBlockingQueue<Runnable>( );
     private final ExecutorService               executor = Executors.newFixedThreadPool( NUM_SERVICE_BOOTSTRAP_WORKERS );
@@ -116,34 +108,63 @@ public class ServiceBootstrapper extends Bootstrapper {
     
     private ServiceBootstrapWorker( ) {
       for ( int i = 0; i < 40; i++ ) {
-        this.executor.submit( this );
+        this.executor.submit( new Worker( ) );
       }
     }
     
     public static void markFinished( ) {
       worker.running.set( false );
+      ServiceBootstrapWorker.waitAll( );
     }
     
     public static void submit( Runnable run ) {
+      if ( !worker.running.get( ) ) {
+        throw new IllegalStateException( "Worker has been stopped: " + ServiceBootstrapWorker.class );
+      }
       worker.msgQueue.add( run );
     }
     
-    @Override
-    public void run( ) {
-      while ( !this.msgQueue.isEmpty( ) || this.running.get( ) ) {
-        Runnable event;
-        try {
-          if ( ( event = this.msgQueue.poll( 50, TimeUnit.MILLISECONDS ) ) != null ) {
-            event.run( );
+    class Worker implements Runnable {
+      private String name;
+      
+      @Override
+      public void run( ) {
+        while ( !ServiceBootstrapWorker.this.msgQueue.isEmpty( ) || ServiceBootstrapWorker.this.running.get( ) ) {
+          Runnable event;
+          try {
+            if ( ( event = ServiceBootstrapWorker.this.msgQueue.poll( 50, TimeUnit.MILLISECONDS ) ) != null ) {
+              this.name = Thread.currentThread( ).getName( ) + " => "
+                          + event.toString( );
+              try {
+                event.run( );
+              } finally {
+                this.name = "idle";
+              }
+            }
+          } catch ( final Throwable e ) {
+            Exceptions.maybeInterrupted( e );
+            Exceptions.trace( e );
           }
-        } catch ( final Throwable e ) {
-          Exceptions.maybeInterrupted( e );
-          Exceptions.trace( e );
+          LOG.debug( "Shutting down component registration request queue: " + Thread.currentThread( ).getName( ) );
         }
-        LOG.debug( "Shutting down component registration request queue: " + Thread.currentThread( ).getName( ) );
+        
+      }
+      
+      @Override
+      public String toString( ) {
+        StringBuilder builder = new StringBuilder( );
+        builder.append( "ServiceBootstrapWorker" ).append( " " ).append( this.name );
+        return builder.toString( );
       }
       
     }
+    
+    public static void waitAll( ) {
+      while ( !worker.msgQueue.isEmpty( ) ) {
+        Joiner.on( "\n" ).join( worker.msgQueue );
+      }
+    }
+    
   }
   
   enum ShouldLoad implements Predicate<ServiceConfiguration> {
@@ -167,17 +188,29 @@ public class ServiceBootstrapper extends Bootstrapper {
       
       @Override
       public boolean apply( final ServiceConfiguration config ) {
-        LOG.debug( "load(): " + config );
-        try {
-          Components.lookup( config ).loadService( config );
-          ServiceTransitions.pathTo( config, Component.State.LOADED ).get( );
-          return true;
-        } catch ( Exception ex ) {
-          Faults.failure( config, ex );
-          return false;
-        }
+        ServiceBootstrapWorker.submit( new Runnable( ) {
+          @Override
+          public void run( ) {
+            
+            LOG.debug( "load(): " + config );
+            try {
+              Components.lookup( config ).loadService( config );
+              ServiceTransitions.pathTo( config, Component.State.LOADED ).get( );
+            } catch ( Exception ex ) {
+              Faults.failure( config, ex );
+            }
+          }
+          
+          @Override
+          public String toString( ) {
+            return "ServiceBootstrap.load(): " + config.getFullName( );
+          }
+          
+        } );
+        return true;
       }
     } );
+    ServiceBootstrapWorker.waitAll( );
     return true;
   }
   
@@ -192,21 +225,20 @@ public class ServiceBootstrapper extends Bootstrapper {
           public void run( ) {
             try {
               ServiceTransitions.pathTo( config, Component.State.DISABLED ).get( );
-              try {
-                if ( Hosts.isCoordinator( ) ) {
-                  Topology.enable( config ).get( );
-                }
-              } catch ( IllegalStateException ex ) {
-                LOG.error( ex, ex );
-              } catch ( InterruptedException ex ) {
-                LOG.error( ex, ex );
-              } catch ( ExecutionException ex ) {
-                LOG.error( ex, ex );
+              if ( Hosts.isCoordinator( ) ) {
+                Topology.enable( config );
               }
             } catch ( Exception ex ) {
-              LOG.error( ex, ex );
+              Exceptions.maybeInterrupted( ex );
+              Faults.failure( config, ex );
             }
           }
+          
+          @Override
+          public String toString( ) {
+            return "ServiceBootstrap.start(): " + config.getFullName( );
+          }
+          
         } );
         return true;
       }
@@ -243,43 +275,5 @@ public class ServiceBootstrapper extends Bootstrapper {
         }
       }
     }
-  }
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#enable()
-   */
-  @Override
-  public boolean enable( ) throws Exception {
-    return true;
-  }
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#stop()
-   */
-  @Override
-  public boolean stop( ) throws Exception {
-    return true;
-  }
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#destroy()
-   */
-  @Override
-  public void destroy( ) throws Exception {}
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#disable()
-   */
-  @Override
-  public boolean disable( ) throws Exception {
-    return true;
-  }
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#check()
-   */
-  @Override
-  public boolean check( ) throws Exception {
-    return true;
   }
 }
