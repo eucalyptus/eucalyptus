@@ -114,7 +114,7 @@ public class Component implements HasName<Component> {
   
   public enum Transition implements Automata.Transition<Transition> {
     INITIALIZING,
-    LOADING,
+    LOAD,
     START,
     READY_CHECK,
     STOP,

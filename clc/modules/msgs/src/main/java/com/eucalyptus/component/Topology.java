@@ -276,6 +276,10 @@ public class Topology {
     return transition( State.PRIMORDIAL ).apply( config );
   }
   
+  public static Future<ServiceConfiguration> load( final ServiceConfiguration config ) {
+    return transition( State.LOADED ).apply( config );
+  }
+
   public static Future<ServiceConfiguration> start( final ServiceConfiguration config ) {
     return transition( State.NOTREADY ).apply( config );
   }
