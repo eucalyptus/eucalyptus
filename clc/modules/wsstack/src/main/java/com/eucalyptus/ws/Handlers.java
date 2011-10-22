@@ -65,7 +65,6 @@ package com.eucalyptus.ws;
 
 import java.net.URI;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentHashMap;
@@ -116,10 +115,7 @@ import com.eucalyptus.ws.handlers.SoapMarshallingHandler;
 import com.eucalyptus.ws.handlers.http.NioHttpRequestEncoder;
 import com.eucalyptus.ws.protocol.AddressingHandler;
 import com.eucalyptus.ws.protocol.SoapHandler;
-import com.eucalyptus.ws.server.SystemChecksHandler;
-import com.eucalyptus.ws.server.Pipelines.InternalOnlyHandler;
 import com.eucalyptus.ws.util.HttpUtils;
-import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class Handlers {
