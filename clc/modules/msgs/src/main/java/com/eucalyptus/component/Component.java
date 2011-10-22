@@ -220,11 +220,7 @@ public class Component implements HasName<Component> {
       throw new ServiceRegistrationException( "The component " + this.getName( )
                                               + " is not being loaded automatically." );
     } else {
-      String fakeName = Internets.localHostAddress( );
-      ServiceConfiguration config = this.getBuilder( ).newInstance( this.getComponentId( ).getPartition( ), fakeName,
-                                                                    Internets.localHostAddress( ), this.getComponentId( ).getPort( ) );
-      this.serviceRegistry.register( config );
-      return config;
+      return initRemoteService( Internets.localHostInetAddress( ) );
     }
   }
   
@@ -444,6 +440,20 @@ public class Component implements HasName<Component> {
                               config.toString( ) ).info( );
         } catch ( Exception ex ) {
           Logs.extreme( ).error( ex, ex );
+        }
+      } else {
+        if ( ret.getStateMachine( ).getState( ).ordinal( ) < Component.State.INITIALIZED.ordinal( ) ) {
+          try {
+            config.lookupStateMachine( ).transition( Component.State.INITIALIZED ).get( );
+            EventRecord.caller( Component.class, EventType.COMPONENT_SERVICE_REGISTERED,
+                                Component.this.getName( ),
+                                ( config.isVmLocal( ) || config.isHostLocal( ) )
+                                  ? "local"
+                                  : "remote",
+                                config.toString( ) ).info( );
+          } catch ( Exception ex ) {
+            Logs.extreme( ).error( ex, ex );
+          }
         }
       }
       return ret;
