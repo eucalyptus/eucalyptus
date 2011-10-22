@@ -224,11 +224,11 @@ public class TopologyChanges {
     @Override
     public ServiceConfiguration apply( ServiceConfiguration input ) {
       State nextState = null;
-      
-      if ( ( nextState = findNextCheckState( nextState ) ) == null ) {
+      if ( ( nextState = findNextCheckState( input.lookupState( ) ) ) == null ) {
         return input;
+      } else {
+        return this.doTopologyChange( this, input, nextState );
       }
-      return this.doTopologyChange( this, input, nextState );
     }
     
     private ServiceConfiguration doTopologyChange( TopologyChange tc, ServiceConfiguration input, State nextState ) throws RuntimeException {

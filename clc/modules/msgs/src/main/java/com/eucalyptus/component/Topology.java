@@ -252,16 +252,6 @@ public class Topology implements EventListener<Event> {
     return Threads.enqueue( this.externalQueue, 32, call );
   }
   
-  private static Function<ServiceConfiguration, Callable<ServiceConfiguration>> functionalCallable( final Function<ServiceConfiguration, ServiceConfiguration> function ) {
-    return new Function<ServiceConfiguration, Callable<ServiceConfiguration>>( ) {
-      
-      @Override
-      public Callable<ServiceConfiguration> apply( final ServiceConfiguration input ) {
-        return TopologyChanges.callable( input, function );
-      }
-    };
-  }
-  
   public static Function<ServiceConfiguration, Future<ServiceConfiguration>> transition( final Component.State toState ) {
     final Function<ServiceConfiguration, Future<ServiceConfiguration>> transition = new Function<ServiceConfiguration, Future<ServiceConfiguration>>( ) {
       private final List<Component.State> serializedStates = Lists.newArrayList( Component.State.ENABLED, Component.State.DISABLED );
