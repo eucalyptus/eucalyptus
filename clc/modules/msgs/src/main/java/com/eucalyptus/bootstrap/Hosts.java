@@ -268,7 +268,9 @@ public class Hosts {
     @Override
     public void fireEvent( final Hertz event ) {
       final Host currentHost = Hosts.localHost( );
-      UpdateEntry.INSTANCE.apply( currentHost );
+      if ( event.isAsserted( 15L ) ) {
+        UpdateEntry.INSTANCE.apply( currentHost );
+      }
       InitializeAsCloudController.INSTANCE.apply( currentHost );
     }
   }

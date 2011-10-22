@@ -92,12 +92,11 @@ import com.eucalyptus.empyrean.StartServiceType;
 import com.eucalyptus.empyrean.StopServiceResponseType;
 import com.eucalyptus.empyrean.StopServiceType;
 import com.eucalyptus.records.Logs;
-import com.eucalyptus.scripting.Groovyness;
-import com.eucalyptus.scripting.ScriptExecutionFailedException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Function;
+import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 
@@ -192,11 +191,10 @@ public class EmpyreanService {
     
     @Override
     public boolean apply( ModifyServiceType request ) {
-      final TransitionName transition = TransitionName.valueOf( request.getState( ).toUpperCase( ) );
-      String name = request.getName( );
-      ServiceConfiguration config = findService( name );
-      final Component.State serviceState = config.lookupState( );
       try {
+        final TransitionName transition = TransitionName.valueOf( request.getState( ).toUpperCase( ) );
+        String name = request.getName( );
+        ServiceConfiguration config = findService( name );
         switch ( transition ) {
           case DISABLE:
             Topology.disable( config ).get( );
@@ -247,9 +245,18 @@ public class EmpyreanService {
     if ( NamedTransition.INSTANCE.apply( request ) ) {
       reply.markWinning( );
     } else {
-      Component.State nextState = Component.State.valueOf( request.getState( ) );
-      ServiceConfiguration config = findService( request.getName( ) );
-      Topology.transition( nextState ).apply( config ).get( );
+      try {
+        Component.State nextState = Component.State.valueOf( request.getState( ) );
+        ServiceConfiguration config = findService( request.getName( ) );
+        Topology.transition( nextState ).apply( config ).get( );
+      } catch ( Exception ex ) {
+        Exceptions.maybeInterrupted( ex );
+        throw Exceptions.toUndeclared( "Failed to execute request transition: "
+                                       + request.getState( )
+                                       + "\n(Possible arguments are: "
+                                       + Joiner.on( "\n" ).join( TransitionName.values( ) ),
+                                       ex );
+      }
     }
     return reply;
   }
