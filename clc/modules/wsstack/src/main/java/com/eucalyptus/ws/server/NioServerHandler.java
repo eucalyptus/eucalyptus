@@ -108,11 +108,11 @@ public class NioServerHandler extends SimpleChannelUpstreamHandler {//TODO:GRZE:
       } else if ( e.getMessage( ) instanceof MappingHttpRequest ) {
         MappingHttpRequest httpRequest = ( MappingHttpRequest ) e.getMessage( );
         if ( doKeepAlive( httpRequest ) ) {
+          this.pipeline.set( null );
           ChannelHandler p;
           while ( ( p = ctx.getPipeline( ).getLast( ) ) != this ) {
             ctx.getPipeline( ).remove( p );
           }
-          this.pipeline.set( null );
           lookupPipeline( ctx, e );
         } else {
           LOG.warn( "Hard close the socket on an attempt to do a second request." );
