@@ -135,7 +135,7 @@ public class ServiceOperations {
       try {
         ServiceContext.dispatch( RequestQueue.ENDPOINT, request );
       } catch ( Exception ex ) {
-        throw Exceptions.toUndeclared( ex );
+        Contexts.responseError( request.getCorrelationId( ), ex );
       }
     } else {
       try {
@@ -159,6 +159,7 @@ public class ServiceOperations {
         } );
       } catch ( final Exception ex ) {
         Logs.extreme( ).error( ex, ex );
+        Contexts.responseError( request.getCorrelationId( ), ex );
       }
     }
   }
