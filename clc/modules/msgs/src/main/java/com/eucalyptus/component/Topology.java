@@ -279,7 +279,7 @@ public class Topology {
   public static Future<ServiceConfiguration> load( final ServiceConfiguration config ) {
     return transition( State.LOADED ).apply( config );
   }
-
+  
   public static Future<ServiceConfiguration> start( final ServiceConfiguration config ) {
     return transition( State.NOTREADY ).apply( config );
   }
@@ -622,7 +622,9 @@ public class Topology {
   
   public static ServiceConfiguration lookup( final Class<? extends ComponentId> compClass, final Partition... maybePartition ) {
     final Partition partition = ( ( maybePartition != null ) && ( maybePartition.length > 0 )
-      ? maybePartition[0]
+      ? ( ComponentIds.lookup( compClass ).isPartitioned( )
+        ? maybePartition[0]
+        : null )
       : null );
     return Topology.getInstance( ).getServices( ).get( ServiceKey.create( ComponentIds.lookup( compClass ), partition ) );
     
