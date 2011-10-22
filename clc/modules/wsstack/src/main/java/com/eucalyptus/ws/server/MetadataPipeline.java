@@ -64,6 +64,8 @@ public class MetadataPipeline extends FilteredPipeline implements ChannelUpstrea
       try {
         if ( Bootstrap.isShuttingDown( ) ) {
           reply = "System shutting down".getBytes( );
+        } else if ( !Bootstrap.isFinished( ) ) {
+          reply = "System is still starting up".getBytes( );
         } else {
           reply = ServiceContext.send( "VmMetadata", newUri );
         }
