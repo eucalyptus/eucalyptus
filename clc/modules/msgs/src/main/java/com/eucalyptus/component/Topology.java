@@ -599,7 +599,12 @@ public class Topology {
                                + ": not cloud controller, ignoring promotion for: "
                                    + arg0.getFullName( ) );
         return false;
-      } else if ( !Component.State.DISABLED.equals( arg0.lookupState( ) ) ) {
+      } else if ( !Component.State.ENABLED.equals( arg0.lookupState( ) ) ) {
+        Logs.exhaust( ).debug( "FAILOVER-REJECT: " + arg0.getFullName( )
+                               + ": service is in an invalid state: "
+                               + arg0.lookupState( ) );
+        return false;
+      } else if ( !Component.State.NOTREADY.equals( arg0.lookupState( ) ) ) {
         Logs.exhaust( ).debug( "FAILOVER-REJECT: " + arg0.getFullName( )
                                + ": service is in an invalid state: "
                                + arg0.lookupState( ) );
