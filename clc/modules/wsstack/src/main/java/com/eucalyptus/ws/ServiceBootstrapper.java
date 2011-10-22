@@ -102,10 +102,20 @@ public class ServiceBootstrapper extends Bootstrapper.Simple {
   private static final int NUM_SERVICE_BOOTSTRAP_WORKERS = 40;                                           //TODO:GRZE:@Configurable
                                                                                                           
   static class ServiceBootstrapWorker {
-    private static final AtomicBoolean           running  = new AtomicBoolean( true );
-    private static final BlockingQueue<Runnable> msgQueue = new LinkedBlockingQueue<Runnable>( );
-    private static final ExecutorService         executor = Executors.newFixedThreadPool( NUM_SERVICE_BOOTSTRAP_WORKERS );
-    private static final ServiceBootstrapWorker  worker   = new ServiceBootstrapWorker( );
+    private static final ConcurrentMap<ServiceBootstrapWorker.Worker, Runnable> workers  = Maps.newConcurrentMap( );
+    private static final Runnable                                               IDLE     = new Runnable( ) {
+                                                                                           @Override
+                                                                                           public String toString( ) {
+                                                                                             return "IDLE";
+                                                                                           }
+                                                                                           
+                                                                                           @Override
+                                                                                           public void run( ) {}
+                                                                                         };
+    private static final AtomicBoolean                                          running  = new AtomicBoolean( true );
+    private static final BlockingQueue<Runnable>                                msgQueue = new LinkedBlockingQueue<Runnable>( );
+    private static final ExecutorService                                        executor = Executors.newFixedThreadPool( NUM_SERVICE_BOOTSTRAP_WORKERS );
+    private static final ServiceBootstrapWorker                                 worker   = new ServiceBootstrapWorker( );
     
     private ServiceBootstrapWorker( ) {
       for ( int i = 0; i < 40; i++ ) {
@@ -124,17 +134,6 @@ public class ServiceBootstrapper extends Bootstrapper.Simple {
       }
       worker.msgQueue.add( run );
     }
-    
-    private static final ConcurrentMap<Worker, Runnable> workers = Maps.newConcurrentMap( );
-    private static final Runnable                        IDLE    = new Runnable( ) {
-                                                                   @Override
-                                                                   public String toString( ) {
-                                                                     return "IDLE";
-                                                                   }
-                                                                   
-                                                                   @Override
-                                                                   public void run( ) {}
-                                                                 };
     
     class Worker implements Runnable, Comparable<Worker> {
       private final String name;
@@ -245,7 +244,7 @@ public class ServiceBootstrapper extends Bootstrapper.Simple {
     @Override
     public boolean apply( final ServiceConfiguration config ) {
       final boolean ret = config.getComponentId( ).isAlwaysLocal( ) || config.isVmLocal( )
-                    || ( BootstrapArgs.isCloudController( ) && config.getComponentId( ).isCloudLocal( ) );
+                          || ( BootstrapArgs.isCloudController( ) && config.getComponentId( ).isCloudLocal( ) );
       LOG.debug( "ServiceBootstrapper.shouldLoad(" + config.toString( )
                  + "):"
                  + ret );
