@@ -76,6 +76,7 @@ import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.Topology;
+import com.eucalyptus.component.TopologyChanges;
 import com.eucalyptus.empyrean.DescribeServicesResponseType;
 import com.eucalyptus.empyrean.DescribeServicesType;
 import com.eucalyptus.empyrean.DisableServiceResponseType;
@@ -102,14 +103,6 @@ import com.google.common.base.Predicates;
 
 public class EmpyreanService {
   private static Logger LOG = Logger.getLogger( EmpyreanService.class );
-  
-  private enum TransitionName {
-    START,
-    STOP,
-    ENABLE,
-    DISABLE,
-    RESTART
-  }
   
   @ServiceOperation
   public enum ModifyService implements Function<ModifyServiceType, ModifyServiceResponseType> {
@@ -192,36 +185,25 @@ public class EmpyreanService {
     @Override
     public boolean apply( ModifyServiceType request ) {
       try {
-        final TransitionName transition = TransitionName.valueOf( request.getState( ).toUpperCase( ) );
+        final TopologyChanges.Transitions transition = TopologyChanges.Transitions.valueOf( request.getState( ).toUpperCase( ) );
         String name = request.getName( );
         ServiceConfiguration config = findService( name );
-        switch ( transition ) {
-          case DISABLE:
-            Topology.disable( config ).get( );
-            break;
-          case ENABLE:
-            Topology.enable( config ).get( );
-            break;
-          case STOP:
-            Topology.stop( config ).get( );
-            break;
-          case START:
+        if ( TopologyChanges.Transitions.RESTART.equals( transition ) ) {
+          Topology.stop( config ).get( );
+          try {
             Topology.start( config ).get( );
-            break;
-          case RESTART:
-            Topology.stop( config ).get( );
-            try {
-              Topology.start( config ).get( );
-            } catch ( Exception ex ) {
-              Exceptions.maybeInterrupted( ex );
-              Logs.extreme( ).error( ex, ex );
-            }
-            break;
+          } catch ( Exception ex ) {
+            Exceptions.maybeInterrupted( ex );
+            Logs.extreme( ).error( ex, ex );
+            throw Exceptions.toUndeclared( ex );
+          }
+        } else {
+          Topology.transition( transition.get( ) ).apply( config ).get( );
         }
       } catch ( final Exception ex ) {
         Exceptions.maybeInterrupted( ex );
         Logs.extreme( ).error( ex, ex );
-        return false;
+        throw Exceptions.toUndeclared( ex );
       }
       
       return true;
@@ -255,7 +237,7 @@ public class EmpyreanService {
                                        + request.getState( )
                                        + "\nPossible arguments are: \n"
                                        + "TRANSITIONS\n\t"
-                                       + Joiner.on( "\n\t" ).join( TransitionName.values( ) )
+                                       + Joiner.on( "\n\t" ).join( TopologyChanges.Transitions.values( ) )
                                        + "STATES\n\t"
                                        + Joiner.on( "\n\t" ).join( Component.State.values( ) ),
                                        ex );
@@ -272,7 +254,7 @@ public class EmpyreanService {
         final ServiceConfiguration service = TypeMappers.transform( serviceInfo, ServiceConfiguration.class );
         if ( service.isVmLocal( ) ) {
           try {
-            Topology.start( service );
+            Topology.start( service ).get( );
             reply.getServices( ).add( serviceInfo );
           } catch ( final IllegalStateException ex ) {
             LOG.error( ex, ex );
@@ -295,7 +277,7 @@ public class EmpyreanService {
         final ServiceConfiguration service = TypeMappers.transform( serviceInfo, ServiceConfiguration.class );
         if ( service.isVmLocal( ) ) {
           try {
-            Topology.stop( service );
+            Topology.stop( service ).get( );
             reply.getServices( ).add( serviceInfo );
           } catch ( final IllegalStateException ex ) {
             LOG.error( ex, ex );
@@ -325,7 +307,7 @@ public class EmpyreanService {
         final ServiceConfiguration service = TypeMappers.transform( serviceInfo, ServiceConfiguration.class );
         if ( service.isVmLocal( ) ) {
           try {
-            Topology.enable( service );
+            Topology.enable( service ).get( );
             reply.getServices( ).add( serviceInfo );
           } catch ( final IllegalStateException ex ) {
             LOG.error( ex, ex );
@@ -348,7 +330,7 @@ public class EmpyreanService {
         final ServiceConfiguration service = TypeMappers.transform( serviceInfo, ServiceConfiguration.class );
         if ( service.isVmLocal( ) ) {
           try {
-            Topology.disable( service );
+            Topology.disable( service ).get( );
             reply.getServices( ).add( serviceInfo );
           } catch ( final IllegalStateException ex ) {
             LOG.error( ex, ex );

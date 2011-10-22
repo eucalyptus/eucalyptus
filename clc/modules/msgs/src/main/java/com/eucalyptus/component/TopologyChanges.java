@@ -121,7 +121,7 @@ public class TopologyChanges {
     return call;
   }
   
-  private enum Transitions implements Function<ServiceConfiguration, ServiceConfiguration> {
+  public enum Transitions implements Function<ServiceConfiguration, ServiceConfiguration>, Supplier<Component.State> {
     START( Component.State.NOTREADY ),
     STOP( Component.State.STOPPED ),
     INIT( Component.State.INITIALIZED ),
@@ -176,7 +176,7 @@ public class TopologyChanges {
           return super.apply( config );
         }
       }
-    };
+    }, RESTART;
     
     private final Component.State  state;
     protected final TopologyChange tc;
@@ -204,6 +204,14 @@ public class TopologyChanges {
                  .replaceAll( "^[^\\$]*\\$", "" )
                  .replaceAll( "\\$[^\\$]*$", "" ) + "."
              + this.name( );
+    }
+
+    /**
+     * @see com.google.common.base.Supplier#get()
+     */
+    @Override
+    public State get( ) {
+      return null;
     }
     
   }
