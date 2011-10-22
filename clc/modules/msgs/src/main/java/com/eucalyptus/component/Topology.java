@@ -121,7 +121,7 @@ public class Topology {
       @Override
       ServiceConfiguration queue( ) {
         if ( this.external == null ) {
-          this.external = ServiceConfigurations.createEphemeral( Empyrean.INSTANCE, Topology.class.getSimpleName( ), "internal",
+          this.external = ServiceConfigurations.createEphemeral( Empyrean.INSTANCE, Topology.class.getSimpleName( ), "external",
                                                                  ServiceUris.internal( Empyrean.INSTANCE ) );
         }
         return this.external;

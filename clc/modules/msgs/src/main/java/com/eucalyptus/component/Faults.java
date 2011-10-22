@@ -326,8 +326,8 @@ public class Faults {
     return failure( config, Arrays.asList( exs ) );
   }
   
-  public static CheckException failure( final ServiceConfiguration config, final List<Throwable> exs ) {
-    return chain( config, Severity.ERROR, exs );
+  public static CheckException failure( final ServiceConfiguration config, final List<? extends Throwable> exs ) {
+    return chain( config, Severity.ERROR, ( List<Throwable> ) exs );
   }
   
   public static CheckException advisory( final ServiceConfiguration config, final List<Throwable> exs ) {

@@ -427,7 +427,7 @@ public class ServiceTransitions {
               LOG.error( ex, ex );
             }
           }
-          throw ServiceChecks.chainCheckExceptions( errors );
+          throw Faults.failure( parent, errors );
         }
       }
       
