@@ -10,7 +10,6 @@ import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.bootstrap.Handles;
-import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.bootstrap.SystemIds;
 import com.eucalyptus.component.AbstractServiceBuilder;
 import com.eucalyptus.component.ComponentId;
@@ -28,7 +27,9 @@ import com.eucalyptus.util.Mbeans;
 import com.google.common.collect.ImmutableMap;
 
 @ComponentPart( Eucalyptus.class )
-@Handles( { RegisterEucalyptusType.class, DeregisterEucalyptusType.class, DescribeEucalyptusType.class, EucalyptusConfiguration.class,
+@Handles( { RegisterEucalyptusType.class,
+           DeregisterEucalyptusType.class,
+           DescribeEucalyptusType.class,
            ModifyEucalyptusAttributeType.class } )
 public class EucalyptusBuilder extends AbstractServiceBuilder<EucalyptusConfiguration> {
   static Logger               LOG           = Logger.getLogger( EucalyptusBuilder.class );
@@ -53,7 +54,7 @@ public class EucalyptusBuilder extends AbstractServiceBuilder<EucalyptusConfigur
   public ComponentId getComponentId( ) {
     return Eucalyptus.INSTANCE;
   }
-    
+  
   @Override
   public void fireStart( ServiceConfiguration config ) throws ServiceRegistrationException {
     EventRecord.here( EucalyptusBuilder.class, EventType.COMPONENT_SERVICE_START, config.toString( ) ).info( );
@@ -94,26 +95,26 @@ public class EucalyptusBuilder extends AbstractServiceBuilder<EucalyptusConfigur
   
   @Override
   public void fireCheck( ServiceConfiguration config ) throws ServiceRegistrationException {
-    if( !Bootstrap.isFinished( ) ) {
+    if ( !Bootstrap.isFinished( ) ) {
       return;
     }
     for ( String ctx : PersistenceContexts.list( ) ) {
       try {
         DriverDatabaseClusterMBean cluster = Mbeans.lookup( jdbcJmxDomain, ImmutableMap.builder( ).put( "cluster", ctx ).build( ),
                                                             DriverDatabaseClusterMBean.class );
-        for( String dbId : cluster.getActiveDatabases( ) ) {
+        for ( String dbId : cluster.getActiveDatabases( ) ) {
           cluster.getDatabase( dbId );
-          if( !cluster.isAlive( dbId ) ) {
+          if ( !cluster.isAlive( dbId ) ) {
             cluster.deactivate( dbId );
           }
         }
-        for( String dbId : cluster.getInactiveDatabases( ) ) {
-          if( cluster.isAlive( dbId ) ) {
+        for ( String dbId : cluster.getInactiveDatabases( ) ) {
+          if ( cluster.isAlive( dbId ) ) {
             cluster.activate( dbId );
           }
         }
       } catch ( Exception ex ) {
-        LOG.error( ex , ex );
+        LOG.error( ex, ex );
       }
     }
   }
@@ -155,6 +156,7 @@ public class EucalyptusBuilder extends AbstractServiceBuilder<EucalyptusConfigur
       }
     }
   }
+  
   private void stopDbPool( ServiceConfiguration config ) {
     final String hostName = config.getHostName( );
     
@@ -166,16 +168,16 @@ public class EucalyptusBuilder extends AbstractServiceBuilder<EucalyptusConfigur
       try {
         DriverDatabaseClusterMBean cluster = Mbeans.lookup( jdbcJmxDomain, ImmutableMap.builder( ).put( "cluster", contextName ).build( ),
                                                             DriverDatabaseClusterMBean.class );
-
+        
         try {
-          if( cluster.getActiveDatabases( ).contains( hostName ) ) {
+          if ( cluster.getActiveDatabases( ).contains( hostName ) ) {
             cluster.deactivate( hostName );
           }
-          if( cluster.getInactiveDatabases( ).contains( hostName ) ) {
+          if ( cluster.getInactiveDatabases( ).contains( hostName ) ) {
             cluster.remove( hostName );
           }
         } catch ( Exception ex ) {
-          LOG.error( ex , ex );
+          LOG.error( ex, ex );
         }
       } catch ( NoSuchElementException ex1 ) {
         LOG.error( ex1, ex1 );

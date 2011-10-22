@@ -204,21 +204,20 @@ public class ServiceConfigurations {
     @Override
     public ServiceConfiguration apply( final ServiceId arg0 ) {
       final Component comp = Components.lookup( arg0.getType( ) );
-      ServiceConfiguration config;
       try {
-        config = comp.lookup( arg0.getName( ) );
+        return comp.lookup( arg0.getName( ) );
       } catch ( final NoSuchElementException ex1 ) {
-        final ServiceBuilder<? extends ServiceConfiguration> builder = comp.getBuilder( );
+        final ServiceBuilder<? extends ServiceConfiguration> builder = ServiceBuilders.lookup( comp.getComponentId( ) );
         try {
           final URI uri = new URI( arg0.getUri( ) );
-          config = builder.newInstance( arg0.getPartition( ), arg0.getName( ), uri.getHost( ), uri.getPort( ) );
+          ServiceConfiguration config = builder.newInstance( arg0.getPartition( ), arg0.getName( ), uri.getHost( ), uri.getPort( ) );
           comp.setup( config );
+          return config;
         } catch ( final URISyntaxException ex ) {
           LOG.error( ex, ex );
           throw Exceptions.toUndeclared( ex );
         }
       }
-      return config;
     }
     
   }

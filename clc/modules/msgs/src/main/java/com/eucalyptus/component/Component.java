@@ -160,7 +160,7 @@ public class Component implements HasName<Component> {
   }
   
   public ServiceBuilder<? extends ServiceConfiguration> getBuilder( ) {
-    return ServiceBuilders.lookup( this.identity );
+    return ServiceBuilders.lookup( this.identity.getClass( ) );
   }
   
   /**

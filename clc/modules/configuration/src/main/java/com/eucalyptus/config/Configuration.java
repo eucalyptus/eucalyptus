@@ -117,8 +117,9 @@ public class Configuration {
   }
   
   public static RegisterComponentResponseType registerComponent( final RegisterComponentType request ) throws EucalyptusCloudException {
-    final ComponentId componentId = ServiceBuilders.oneWhichHandles( request.getClass( ) );
-    final RegisterComponentResponseType reply = ( RegisterComponentResponseType ) request.getReply( );
+    ServiceBuilder<? extends ServiceConfiguration> builder = ServiceBuilders.handles( request.getClass( ) );
+    final ComponentId componentId = builder.getComponentId( );
+    final RegisterComponentResponseType reply = request.getReply( );
     final String name = request.getName( );
     final String hostName = request.getHost( );
     final Integer port = request.getPort( );
@@ -149,10 +150,11 @@ public class Configuration {
   }
   
   public static DeregisterComponentResponseType deregisterComponent( final DeregisterComponentType request ) throws EucalyptusCloudException {
-    final ComponentId component = ServiceBuilders.oneWhichHandles( request.getClass( ) );
+    ServiceBuilder<? extends ServiceConfiguration> builder = ServiceBuilders.handles( request.getClass( ) );
+    final ComponentId componentId = builder.getComponentId( );
     final DeregisterComponentResponseType reply = ( DeregisterComponentResponseType ) request.getReply( );
     try {
-      reply.set_return( ComponentRegistrationHandler.deregister( component, request.getPartition( ) ) );
+      reply.set_return( ComponentRegistrationHandler.deregister( componentId, request.getPartition( ) ) );
     } catch ( final Throwable ex ) {
       throw new EucalyptusCloudException( "Component deregistration failed because: " + ex.getMessage( ), ex );
     }

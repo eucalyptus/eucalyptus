@@ -10,7 +10,7 @@ import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.id.Walrus;
 
 @ComponentPart(Walrus.class)
-@Handles( { RegisterWalrusType.class, DeregisterWalrusType.class, DescribeWalrusesType.class, WalrusConfiguration.class, ModifyWalrusAttributeType.class } )
+@Handles( { RegisterWalrusType.class, DeregisterWalrusType.class, DescribeWalrusesType.class, ModifyWalrusAttributeType.class } )
 public class WalrusBuilder extends AbstractServiceBuilder<WalrusConfiguration> {
   
   @Override
