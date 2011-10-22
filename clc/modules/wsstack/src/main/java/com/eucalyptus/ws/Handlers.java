@@ -113,6 +113,9 @@ public class Handlers {
       if ( !Bootstrap.isFinished( ) ) {
         //TODO:GRZE: do nothing for the moment, not envouh info here.
 //        throw new ServiceNotReadyException( "System has not yet completed booting." );
+        ctx.sendUpstream( e );
+      } else {
+        ctx.sendUpstream( e );
       }
     }
     

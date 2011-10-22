@@ -116,8 +116,8 @@ public class ServiceContextManager {
     @Override
     public boolean start( ) throws Exception {
       try {
-        ServiceContextManager.singleton.update( );
-        ServiceContextManager.singleton.getClient( );
+        singleton.update( );
+        singleton.getClient( );
         return true;
       } catch ( final Exception ex ) {
         LOG.error( ex, ex );
@@ -128,7 +128,7 @@ public class ServiceContextManager {
   
   private static Logger                                CONFIG_LOG        = Logger.getLogger( "Configs" );
   private static Logger                                LOG               = Logger.getLogger( ServiceContextManager.class );
-  private static final ServiceContextManager           singleton         = new ServiceContextManager( );
+  private static ServiceContextManager                 singleton         = new ServiceContextManager( );
   
   private static final MuleContextFactory              contextFactory    = new DefaultMuleContextFactory( );
   private final ConcurrentNavigableMap<String, String> endpointToService = new ConcurrentSkipListMap<String, String>( );
@@ -149,12 +149,10 @@ public class ServiceContextManager {
       
       @Override
       public void run( ) {
-        ServiceContextManager.this.running.set( false );
-        ServiceContextManager.this.queue.clear( );
-        if ( ServiceContextManager.this.context != null ) {
+        if ( singleton.context != null ) {
           try {
-            ServiceContextManager.this.context.stop( );
-            ServiceContextManager.this.context.dispose( );
+            singleton.context.stop( );
+            singleton.context.dispose( );
           } catch ( final MuleException ex ) {
             LOG.error( ex, ex );
           }
@@ -165,24 +163,25 @@ public class ServiceContextManager {
   }
   
   public static final void restartSync( ) {
-    if ( ServiceContextManager.singleton.canHasWrite.tryLock( ) ) {
+    if ( singleton.canHasWrite.tryLock( ) ) {
       try {
-        ServiceContextManager.singleton.update( );
+        singleton = null;
+        singleton.update( );
       } catch ( final Exception ex ) {
         LOG.error( Exceptions.causeString( ex ) );
         LOG.error( ex, ex );
       } finally {
-        ServiceContextManager.singleton.canHasWrite.unlock( );
+        singleton.canHasWrite.unlock( );
       }
     }
   }
   
   private void update( ) {
-    this.canHasWrite.lock( );
-    try {
-      if ( this.context != null ) {
-        return;
-      } else {
+    if ( this.context != null ) {
+      return;
+    } else {
+      this.canHasWrite.lock( );
+      try {
         this.context = this.createContext( );
         assertThat( this.context, notNullValue( ) );
         try {
@@ -202,9 +201,9 @@ public class ServiceContextManager {
           LOG.error( e, e );
           throw Exceptions.toUndeclared( new ServiceInitializationException( "Failed to start service this.context.", e ) );
         }
+      } finally {
+        this.canHasWrite.unlock( );
       }
-    } finally {
-      this.canHasWrite.unlock( );
     }
   }
   
@@ -222,9 +221,12 @@ public class ServiceContextManager {
                                             +
                                             "       http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-2.0.xsd\n"
                                             +
-                                            "       http://www.mulesource.org/schema/mule/core/2.0 http://www.mulesource.org/schema/mule/core/2.0/mule.xsd\n" +
-                                            "       http://www.mulesource.org/schema/mule/vm/2.0 http://www.mulesource.org/schema/mule/vm/2.0/mule-vm.xsd\n" +
-                                            "       http://www.eucalyptus.com/schema/cloud/1.6 http://www.eucalyptus.com/schema/cloud/1.6/euca.xsd\">\n" +
+                                            "       http://www.mulesource.org/schema/mule/core/2.0 http://www.mulesource.org/schema/mule/core/2.0/mule.xsd\n"
+                                            +
+                                            "       http://www.mulesource.org/schema/mule/vm/2.0 http://www.mulesource.org/schema/mule/vm/2.0/mule-vm.xsd\n"
+                                            +
+                                            "       http://www.eucalyptus.com/schema/cloud/1.6 http://www.eucalyptus.com/schema/cloud/1.6/euca.xsd\">\n"
+                                            +
                                             "</mule>\n";
   
   private MuleContext createContext( ) {
@@ -234,7 +236,8 @@ public class ServiceContextManager {
     MuleContext muleCtx = null;
     for ( final ComponentId componentId : currentComponentIds ) {
       final Component component = Components.lookup( componentId );
-      final String errMsg = "Failed to render model for: " + componentId + " because of: ";
+      final String errMsg = "Failed to render model for: " + componentId
+                            + " because of: ";
       LOG.info( "-> Rendering configuration for " + componentId.name( ) );
       try {
         final String serviceModel = this.loadModel( componentId );
@@ -278,24 +281,14 @@ public class ServiceContextManager {
   
   private static String FAIL_MSG = "ESB client not ready because the service bus has not been started.";
   
-  public static MuleClient getClient( ) throws MuleException {
+  static MuleClient getClient( ) throws MuleException {
     singleton.update( );
-    singleton.canHasRead.lock( );
-    try {
-      return singleton.client;
-    } finally {
-      singleton.canHasRead.unlock( );
-    }
+    return singleton.client;
   }
   
-  public static MuleContext getContext( ) throws MuleException {
+  static MuleContext getContext( ) throws MuleException {
     singleton.update( );
-    singleton.canHasRead.lock( );
-    try {
-      return singleton.context;
-    } finally {
-      singleton.canHasRead.unlock( );
-    }
+    return singleton.context;
   }
   
   private void stop( ) {
@@ -319,7 +312,6 @@ public class ServiceContextManager {
   }
   
   public static String mapServiceToEndpoint( final String service ) {
-    singleton.update( );
     String dest = service;
     if ( ( !service.startsWith( "vm://" ) && !singleton.serviceToEndpoint.containsKey( service ) ) || ( service == null ) ) {
       dest = "vm://RequestQueue";
@@ -332,7 +324,9 @@ public class ServiceContextManager {
   public static String mapEndpointToService( final String endpoint ) throws ServiceDispatchException {
     String dest = endpoint;
     if ( ( endpoint.startsWith( "vm://" ) && !singleton.endpointToService.containsKey( endpoint ) ) || ( endpoint == null ) ) {
-      throw new ServiceDispatchException( "No such endpoint: " + endpoint + " in endpoints=" + singleton.endpointToService.entrySet( ) );
+      throw new ServiceDispatchException( "No such endpoint: " + endpoint
+                                          + " in endpoints="
+                                          + singleton.endpointToService.entrySet( ) );
       
     }
     if ( endpoint.startsWith( "vm://" ) ) {
