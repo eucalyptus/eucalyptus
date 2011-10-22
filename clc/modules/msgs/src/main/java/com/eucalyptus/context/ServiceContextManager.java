@@ -100,6 +100,7 @@ import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Templates;
+import com.eucalyptus.ws.WebServicesException;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.io.Resources;
@@ -311,28 +312,42 @@ public class ServiceContextManager {
     singleton.stop( );
   }
   
-  public static String mapServiceToEndpoint( final String service ) {
-    String dest = service;
-    if ( ( !service.startsWith( "vm://" ) && !singleton.serviceToEndpoint.containsKey( service ) ) || ( service == null ) ) {
-      dest = "vm://RequestQueue";
-    } else if ( !service.startsWith( "vm://" ) ) {
-      dest = singleton.serviceToEndpoint.get( dest );
+  public static String mapServiceToEndpoint( final String service ) throws Exception {
+    if ( singleton.canHasRead.tryLock( 120, TimeUnit.SECONDS ) ) {
+      try {
+        String dest = service;
+        if ( ( !service.startsWith( "vm://" ) && !singleton.serviceToEndpoint.containsKey( service ) ) || ( service == null ) ) {
+          dest = "vm://RequestQueue";
+        } else if ( !service.startsWith( "vm://" ) ) {
+          dest = singleton.serviceToEndpoint.get( dest );
+        }
+        return dest;
+      } finally {
+        singleton.canHasRead.unlock( );
+      }
     }
-    return dest;
+    throw Exceptions.notFound( "Failed to dispatch: " + service );
   }
   
-  public static String mapEndpointToService( final String endpoint ) throws ServiceDispatchException {
-    String dest = endpoint;
-    if ( ( endpoint.startsWith( "vm://" ) && !singleton.endpointToService.containsKey( endpoint ) ) || ( endpoint == null ) ) {
-      throw new ServiceDispatchException( "No such endpoint: " + endpoint
-                                          + " in endpoints="
-                                          + singleton.endpointToService.entrySet( ) );
-      
+  public static String mapEndpointToService( final String endpoint ) throws Exception {
+    if ( singleton.canHasRead.tryLock( 120, TimeUnit.SECONDS ) ) {
+      try {
+        String dest = endpoint;
+        if ( ( endpoint.startsWith( "vm://" ) && !singleton.endpointToService.containsKey( endpoint ) ) || ( endpoint == null ) ) {
+          throw new ServiceDispatchException( "No such endpoint: " + endpoint
+                                              + " in endpoints="
+                                              + singleton.endpointToService.entrySet( ) );
+          
+        }
+        if ( endpoint.startsWith( "vm://" ) ) {
+          dest = singleton.endpointToService.get( endpoint );
+        }
+        return dest;
+      } finally {
+        singleton.canHasRead.unlock( );
+      }
     }
-    if ( endpoint.startsWith( "vm://" ) ) {
-      dest = singleton.endpointToService.get( endpoint );
-    }
-    return dest;
+    throw Exceptions.notFound( "Failed to dispatch: " + endpoint );
   }
   
 }

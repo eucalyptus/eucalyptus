@@ -10,7 +10,9 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import org.apache.log4j.Logger;
+import com.eucalyptus.context.ServiceDispatchException;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.ws.WebServicesException;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
@@ -26,6 +28,16 @@ public class Exceptions {
   private static final List<String>        DEFAULT_FILTER_MATCHES   = Lists.newArrayList( "com.eucalyptus", "edu.ucsb.eucalyptus" );
   private static final Integer             DEFAULT_FILTER_MAX_DEPTH = 10;
   private static final StackTraceElement[] steArrayType             = new StackTraceElement[1];
+  
+  public static WebServicesException notFound( String message, Throwable... t ) {
+    if ( Logs.isExtrrreeeme( ) && t != null
+         && t.length > 0 ) {
+      return new ServiceDispatchException( message + "\n"
+                                           + string( message, t[0] ) );
+    } else {
+      return new ServiceDispatchException( message );
+    }
+  }
   
   enum ToString implements Function<Object, String> {
     INSTANCE;
@@ -223,11 +235,11 @@ public class Exceptions {
   public static <T extends Throwable> T findCause( Throwable ex, final Class<T> class1 ) {
     try {
       return ( T ) Iterables.find( Exceptions.causes( ex ), new Predicate<Throwable>( ) {
-                                     @Override
-                                     public boolean apply( Throwable input ) {
-                                       return class1.isAssignableFrom( input.getClass( ) );
-                                     }
-                                   } );
+        @Override
+        public boolean apply( Throwable input ) {
+          return class1.isAssignableFrom( input.getClass( ) );
+        }
+      } );
     } catch ( NoSuchElementException ex1 ) {
       return null;
     }

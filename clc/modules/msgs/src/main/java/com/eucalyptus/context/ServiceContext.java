@@ -53,7 +53,7 @@ public class ServiceContext {
   private static final BootstrapException          failEx            = new BootstrapException(
                                                                                                     "Attempt to use esb client before the service bus has been started." );
   
-  public static void dispatch( String dest, Object msg ) throws ServiceDispatchException {
+  public static void dispatch( String dest, Object msg ) throws Exception {
     dest = ServiceContextManager.mapServiceToEndpoint( dest );
     MuleContext muleCtx;
     try {
@@ -112,11 +112,11 @@ public class ServiceContext {
       }*/
   }
   
-  public static <T> T send( ComponentId dest, Object msg ) throws ServiceDispatchException {
+  public static <T> T send( ComponentId dest, Object msg ) throws Exception {
     return send( dest.getLocalEndpointName( ), msg );
   }
   
-  public static <T> T send( String dest, Object msg ) throws ServiceDispatchException {
+  public static <T> T send( String dest, Object msg ) throws Exception {
     dest = ServiceContextManager.mapEndpointToService( dest );
     MuleEvent context = RequestContext.getEvent( );
     Context ctx = null;
