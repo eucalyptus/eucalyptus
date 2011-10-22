@@ -77,7 +77,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Supplier;
 import com.google.common.collect.MapMaker;
 
-public class TopologyChanges {cloudTransitionCallables
+public class TopologyChanges {
   private static Logger                                                                           LOG                      = Logger.getLogger( TopologyChanges.class );
   private static final Map<Component.State, Function<ServiceConfiguration, ServiceConfiguration>> cloudTransitionCallables = new MapMaker( ).makeComputingMap( TopologyFunctionGenerator.INSTANCE ); //TODO:GRZE: CacheBuilder
                                                                                                                                                                                                      
@@ -97,7 +97,7 @@ public class TopologyChanges {cloudTransitionCallables
       @Override
       public ServiceConfiguration call( ) throws Exception {
         if ( Bootstrap.isShuttingDown( ) ) {
-          return null;
+          throw Exceptions.toUndeclared( "System is shutting down." );
         } else {
           final Long serviceStart = System.currentTimeMillis( );
           LOG.trace( EventRecord.here( Topology.class, EventType.DEQUEUE, functionName, config.getFullName( ).toString( ),
