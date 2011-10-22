@@ -134,7 +134,7 @@ public class ServiceOperations {
     if ( !serviceOperations.containsKey( request.getClass( ) ) ) {
       try {
         ServiceContext.dispatch( RequestQueue.ENDPOINT, request );
-      } catch ( ServiceDispatchException ex ) {
+      } catch ( Exception ex ) {
         throw Exceptions.toUndeclared( ex );
       }
     } else {
