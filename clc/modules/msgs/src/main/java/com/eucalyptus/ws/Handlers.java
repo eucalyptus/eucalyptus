@@ -114,9 +114,7 @@ import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.ws.handlers.BindingHandler;
-import com.eucalyptus.ws.handlers.NioHttpResponseDecoder;
 import com.eucalyptus.ws.handlers.SoapMarshallingHandler;
-import com.eucalyptus.ws.handlers.http.NioHttpRequestEncoder;
 import com.eucalyptus.ws.protocol.AddressingHandler;
 import com.eucalyptus.ws.protocol.SoapHandler;
 import com.google.common.collect.Lists;
@@ -263,7 +261,7 @@ public class Handlers {
                                                                      HttpMethod.DELETE.getName( ).substring( 0, 3 ),
                                                                      HttpMethod.TRACE.getName( ).substring( 0, 3 ) );
     
-    private static boolean maybeSsl( ChannelBuffer buffer ) throws HttpException {
+    private static boolean maybeSsl( ChannelBuffer buffer ) {
       buffer.markReaderIndex( );
       StringBuffer sb = new StringBuffer( );
       for ( int lineLength = 0; lineLength++ < 3; sb.append( ( char ) buffer.readByte( ) ) );
