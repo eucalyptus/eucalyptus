@@ -35,9 +35,9 @@ class DescribeArbitrators(eucadmin.describerequest.DescribeRequest):
     ServiceName = 'Arbitrator'
     Description = 'List Arbitrator services.'
     
-    def cli_formatter(self, data):
-        services = getattr(data, 'euca:registered')
-        fmt = '%s\t%s\t%s'
-        for s in services:
-            print fmt % (self.ServiceName.upper(),
-                         a['euca:name'], a['euca:partition'])
+#    def cli_formatter(self, data):
+#        services = getattr(data, 'euca:registered')
+#        fmt = '%s\t%s\t%s'
+#        for s in services:
+#            print fmt % (self.ServiceName.upper(),
+#                         data['euca:name'], data['euca:partition'])
