@@ -15,6 +15,7 @@ import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Callback;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Callback.TwiceChecked;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
@@ -188,23 +189,14 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
           } catch ( Exception t ) {}
         }
       } else {
-        try {
-          this.requestResult.get( );
-        } catch ( ExecutionException ex ) {
-          LOG.error( ex, ex );
-        } catch ( InterruptedException ex ) {
-          LOG.error( ex, ex );
-        }
+        this.requestResult.get( );
       }
-    } catch ( RuntimeException ex ) {
-      LOG.warn( ex );
-      Logs.exhaust( ).error( ex, ex );
-      this.result.setException( ex );
     } catch ( Exception ex ) {
+      Exceptions.maybeInterrupted( ex );
       LOG.warn( ex );
       Logs.exhaust( ).error( ex, ex );
       this.result.setException( ex );
-      throw new RuntimeException( ex );
+      throw Exceptions.toUndeclared( ex );
     }
     return this;
   }

@@ -142,7 +142,7 @@ public class Exceptions {
     } else {
       ex = ( T ) new RuntimeException( message );
     }
-    if ( ex instanceof UndeclaredThrowableException ) {
+    if ( ex instanceof RuntimeException ) {
       return ( RuntimeException ) ex;
     } else if ( ex instanceof ExecutionException ) {
       return new RuntimeException( message, ex.getCause( ) );

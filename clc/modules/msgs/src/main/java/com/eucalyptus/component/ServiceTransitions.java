@@ -63,12 +63,11 @@
 
 package com.eucalyptus.component;
 
-import java.lang.reflect.UndeclaredThrowableException;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.Callable;
 import org.apache.log4j.Logger;
-import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.component.Component.State;
 import com.eucalyptus.component.ServiceChecks.CheckException;
@@ -77,7 +76,6 @@ import com.eucalyptus.configurable.MultiDatabasePropertyEntry;
 import com.eucalyptus.configurable.PropertyDirectory;
 import com.eucalyptus.configurable.SingletonDatabasePropertyEntry;
 import com.eucalyptus.configurable.StaticPropertyEntry;
-import com.eucalyptus.context.ServiceContextManager;
 import com.eucalyptus.empyrean.DescribeServicesResponseType;
 import com.eucalyptus.empyrean.DescribeServicesType;
 import com.eucalyptus.empyrean.DisableServiceResponseType;
@@ -104,14 +102,22 @@ import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Futures;
 import com.eucalyptus.util.fsm.Automata;
 import com.eucalyptus.util.fsm.TransitionAction;
+import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.MapMaker;
 import com.google.common.collect.ObjectArrays;
-import com.google.common.util.concurrent.Callables;
 
 public class ServiceTransitions {
-  static Logger                          LOG   = Logger.getLogger( ServiceTransitions.class );
-  private static final Component.State[] EMPTY = {};
+  static Logger                                     LOG   = Logger.getLogger( ServiceTransitions.class );
+  private static final Component.State[]            EMPTY = {};
+  Map<TransitionActions, ServiceTransitionCallback> hi    = new MapMaker( ).makeComputingMap( new Function<TransitionActions, ServiceTransitionCallback>( ) {
+                                                            
+                                                            @Override
+                                                            public ServiceTransitionCallback apply( TransitionActions input ) {
+                                                              return null;
+                                                            }
+                                                          } );
   
   private static Component.State[] sequence( Component.State... states ) {
     return states;
@@ -146,7 +152,10 @@ public class ServiceTransitions {
       }
     } catch ( RuntimeException ex ) {
       Logs.extreme( ).error( ex, ex );
-      LOG.error( configuration.getFullName( ) + " failed to transition to " + goalState + " because of: " + Exceptions.causeString( ex ) );
+      LOG.error( configuration.getFullName( ) + " failed to transition to "
+                 + goalState
+                 + " because of: "
+                 + Exceptions.causeString( ex ) );
       throw ex;
     }
   }
@@ -255,18 +264,21 @@ public class ServiceTransitions {
   
   private static <T extends EmpyreanMessage> T sendEmpyreanRequest( final ServiceConfiguration parent, final EmpyreanMessage msg ) throws Exception {
     ServiceConfiguration config = ServiceConfigurations.createEphemeral( Empyrean.INSTANCE, parent.getInetAddress( ) );
-    LOG.debug( "Sending request " + msg.getClass( ).getSimpleName( ) + " to " + parent.getFullName( ) );
+    LOG.debug( "Sending request " + msg.getClass( ).getSimpleName( )
+               + " to "
+               + parent.getFullName( ) );
     try {
-
-      if (System.getProperty("euca..noha.cloud") == null){	
+      
+      if ( System.getProperty( "euca..noha.cloud" ) == null ) {
         T reply = ( T ) AsyncRequests.sendSync( config, msg );
         return reply;
       } else {
-        return msg.getReply();
+        return msg.getReply( );
       }
-
+      
     } catch ( Exception ex ) {
-      LOG.error( ex, ex );
+      LOG.error( ex.getMessage( ) );
+      Logs.extreme( ).error( ex, ex );
       throw ex;
     }
   }
@@ -299,7 +311,11 @@ public class ServiceTransitions {
         LOG.debug( "Silentlty accepting remotely inferred state transition for " + parent );
       }
       if ( trans != null ) {
-        Logs.exhaust( ).debug( "Executing transition: " + trans.getClass( ) + "." + transitionAction.name( ) + " for " + parent );
+        Logs.exhaust( ).debug( "Executing transition: " + trans.getClass( )
+                               + "."
+                               + transitionAction.name( )
+                               + " for "
+                               + parent );
         trans.fire( parent );
       }
       transitionCallback.fire( );
@@ -314,7 +330,13 @@ public class ServiceTransitions {
   }
   
   public enum TransitionActions implements TransitionAction<ServiceConfiguration> {
-    ENABLE, CHECK, DISABLE, START, LOAD, STOP, DESTROY;
+    ENABLE,
+    CHECK,
+    DISABLE,
+    START,
+    LOAD,
+    STOP,
+    DESTROY;
     
     @Override
     public boolean before( final ServiceConfiguration parent ) {
@@ -476,6 +498,18 @@ public class ServiceTransitions {
         }
       }
     };
+    private static Function<TransitionActions, ServiceTransitionCallback> mapper = new Function<TransitionActions, ServiceTransitionCallback>( ) {
+                                                                                   
+                                                                                   @Override
+                                                                                   public ServiceTransitionCallback apply( TransitionActions input ) {
+                                                                                     return valueOf( input.name( ) );
+                                                                                   }
+                                                                                 };
+    private static Map<TransitionActions, ServiceTransitionCallback>      map    = new MapMaker( ).makeComputingMap( mapper );
+    
+    public static ServiceTransitionCallback map( TransitionActions transition ) {
+      return map.get( transition );
+    }
     
   }
   
@@ -545,7 +579,18 @@ public class ServiceTransitions {
         ServiceBuilders.lookup( parent.getComponentId( ) ).fireStop( parent );
       }
     };
+    private static Function<TransitionActions, ServiceTransitionCallback> mapper = new Function<TransitionActions, ServiceTransitionCallback>( ) {
+                                                                                   
+                                                                                   @Override
+                                                                                   public ServiceTransitionCallback apply( TransitionActions input ) {
+                                                                                     return ServiceLocalTransitionCallbacks.valueOf( input.name( ) );
+                                                                                   }
+                                                                                 };
+    private static Map<TransitionActions, ServiceTransitionCallback>      map    = new MapMaker( ).makeComputingMap( mapper );
     
+    public static ServiceTransitionCallback map( TransitionActions transition ) {
+      return map.get( transition );
+    }
   }
   
   enum ServiceRemoteTransitionNotification implements ServiceTransitionCallback {
@@ -617,6 +662,18 @@ public class ServiceTransitions {
       }
     };
     
+    private static Function<TransitionActions, ServiceTransitionCallback> mapper = new Function<TransitionActions, ServiceTransitionCallback>( ) {
+                                                                                   
+                                                                                   @Override
+                                                                                   public ServiceTransitionCallback apply( TransitionActions input ) {
+                                                                                     return valueOf( input.name( ) );
+                                                                                   }
+                                                                                 };
+    private static Map<TransitionActions, ServiceTransitionCallback>      map    = new MapMaker( ).makeComputingMap( mapper );
+    
+    public static ServiceTransitionCallback map( TransitionActions transition ) {
+      return map.get( transition );
+    }
   }
   
   public enum StateCallbacks implements Callback<ServiceConfiguration> {
