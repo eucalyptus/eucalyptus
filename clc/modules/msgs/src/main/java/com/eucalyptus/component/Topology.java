@@ -78,8 +78,8 @@ import com.eucalyptus.component.Component.State;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.empyrean.ServiceId;
 import com.eucalyptus.empyrean.ServiceTransitionType;
+import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
-import com.eucalyptus.event.Hertz;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Threads;
@@ -147,13 +147,11 @@ public class Topology {
     
   };
   
-  private enum TopologyTimer implements EventListener<Hertz> {
+  private enum TopologyTimer implements EventListener<ClockTick> {
     INSTANCE;
     @Override
-    public void fireEvent( final Hertz event ) {
-      if ( event.isAsserted( 15l ) ) {
-        Queue.INTERNAL.enqueue( RunChecks.INSTANCE );
-      }
+    public void fireEvent( final ClockTick event ) {
+      Queue.INTERNAL.enqueue( RunChecks.INSTANCE );
     }
     
   }
@@ -161,7 +159,7 @@ public class Topology {
   private Topology( final int i ) {
     super( );
     this.currentEpoch = i;
-    Listeners.register( Hertz.class, TopologyTimer.INSTANCE );
+    Listeners.register( ClockTick.class, TopologyTimer.INSTANCE );
   }
   
   private static Predicate<ServiceConfiguration> componentFilter( final Class<? extends ComponentId> c ) {
