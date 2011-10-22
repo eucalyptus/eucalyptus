@@ -250,7 +250,7 @@ public class ServiceBootstrapper extends Bootstrapper.Simple {
     for ( final ComponentId compId : ComponentIds.list( ) ) {
       Component comp = Components.lookup( compId );
       if ( compId.isRegisterable( ) ) {
-        for ( ServiceConfiguration config : Iterables.filter( ServiceConfigurations.list( compId.getClass( ) ), ShouldLoad.INSTANCE ) ) {
+        for ( ServiceConfiguration config : Iterables.filter( comp.lookupServiceConfigurations( ), ShouldLoad.INSTANCE ) ) {
           try {
             predicate.apply( config );
           } catch ( Exception ex ) {
