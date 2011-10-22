@@ -65,6 +65,7 @@ package com.eucalyptus.ws;
 
 import java.net.URI;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentHashMap;
@@ -87,6 +88,7 @@ import org.jboss.netty.handler.codec.http.HttpChunkAggregator;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMessage;
 import org.jboss.netty.handler.codec.http.HttpMessageEncoder;
+import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
@@ -117,6 +119,7 @@ import com.eucalyptus.ws.handlers.http.NioHttpRequestEncoder;
 import com.eucalyptus.ws.protocol.AddressingHandler;
 import com.eucalyptus.ws.protocol.SoapHandler;
 import com.eucalyptus.ws.util.HttpUtils;
+import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class Handlers {
@@ -127,14 +130,14 @@ public class Handlers {
   private static final ChannelHandler                        addressingHandler      = new AddressingHandler( );
   private static final ConcurrentMap<String, ChannelHandler> bindingHandlers        = new ConcurrentHashMap<String, ChannelHandler>( );
   private static final HashedWheelTimer                      timer                  = new HashedWheelTimer( );                         //TODO:GRZE: configurable
-                                                
-  @ChannelPipelineCoverage("all")
+                                                                                                                                        
+  @ChannelPipelineCoverage( "all" )
   public static class NioHttpRequestEncoder extends HttpMessageEncoder {
-
+    
     public NioHttpRequestEncoder( ) {
       super( );
     }
-
+    
     @Override
     protected void encodeInitialLine( ChannelBuffer buf, HttpMessage message ) throws Exception {
       MappingHttpRequest request = ( MappingHttpRequest ) message;
@@ -146,7 +149,7 @@ public class Handlers {
       buf.writeBytes( HttpUtils.CRLF );
     }
   }
-
+  
   @ChannelPipelineCoverage( "all" )
   enum BootstrapStateCheck implements ChannelUpstreamHandler {
     INSTANCE;
@@ -237,13 +240,30 @@ public class Handlers {
       super( SslSetup.getServerEngine( ) );
     }
     
+    private static List<String> httpVerbPrefix = Lists.newArrayList( HttpMethod.CONNECT.getName( ).substring( 0, 3 ),
+                                                                     HttpMethod.GET.getName( ).substring( 0, 3 ),
+                                                                     HttpMethod.PUT.getName( ).substring( 0, 3 ),
+                                                                     HttpMethod.POST.getName( ).substring( 0, 3 ),
+                                                                     HttpMethod.HEAD.getName( ).substring( 0, 3 ),
+                                                                     HttpMethod.OPTIONS.getName( ).substring( 0, 3 ),
+                                                                     HttpMethod.DELETE.getName( ).substring( 0, 3 ),
+                                                                     HttpMethod.TRACE.getName( ).substring( 0, 3 ) );
+    
+    private static boolean maybeSsl( ChannelBuffer buffer ) throws HttpException {
+      buffer.markReaderIndex( );
+      StringBuffer sb = new StringBuffer( );
+      for ( int lineLength = 0; lineLength++ < 3; sb.append( ( char ) buffer.readByte( ) ) );
+      buffer.resetReaderIndex( );
+      return !httpVerbPrefix.contains( sb.toString( ) );
+    }
+    
     @Override
     public void handleUpstream( ChannelHandlerContext ctx, ChannelEvent e ) throws Exception {
       Object o = null;
       if ( e instanceof MessageEvent
            && this.first.compareAndSet( true, false )
            && ( o = ( ( MessageEvent ) e ).getMessage( ) ) instanceof ChannelBuffer
-           && !HttpUtils.maybeSsl( ( ChannelBuffer ) o ) ) {
+           && !maybeSsl( ( ChannelBuffer ) o ) ) {
         ctx.getPipeline( ).removeFirst( );
         ctx.sendUpstream( e );
       } else {

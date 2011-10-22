@@ -92,23 +92,6 @@ public class HttpUtils {
       }
     }
   }
-  private static List<String> httpVerbPrefix = Lists.newArrayList( HttpMethod.CONNECT.getName( ).substring( 0, 3 ),
-                                                                   HttpMethod.GET.getName( ).substring( 0, 3 ),
-                                                                   HttpMethod.PUT.getName( ).substring( 0, 3 ),
-                                                                   HttpMethod.POST.getName( ).substring( 0, 3 ),
-                                                                   HttpMethod.HEAD.getName( ).substring( 0, 3 ),
-                                                                   HttpMethod.OPTIONS.getName( ).substring( 0, 3 ),
-                                                                   HttpMethod.DELETE.getName( ).substring( 0, 3 ),
-                                                                   HttpMethod.TRACE.getName( ).substring( 0, 3 ) );
-                                                                   
-                                                                   
-  public static boolean maybeSsl( ChannelBuffer buffer ) throws HttpException {
-    buffer.markReaderIndex( );
-    StringBuffer sb = new StringBuffer( );
-    for( int lineLength = 0; lineLength++ < 3; sb.append( (char) buffer.readByte() ) );
-    buffer.resetReaderIndex( );
-    return !httpVerbPrefix.contains( sb.toString( ) );
-  }
 
   
   public static final byte SP = 32;
