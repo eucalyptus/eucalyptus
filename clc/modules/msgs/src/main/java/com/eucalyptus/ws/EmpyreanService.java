@@ -69,7 +69,7 @@ import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.component.ComponentId.ServiceOperation;
+import com.eucalyptus.component.ServiceOperation;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Partitions;
@@ -143,7 +143,7 @@ public class EmpyreanService {
     
   }
   
-  @ComponentId.ServiceOperation
+  @ServiceOperation
   public enum StopService implements Function<StopServiceType, StopServiceResponseType> {
     INSTANCE;
     
@@ -158,7 +158,7 @@ public class EmpyreanService {
     
   }
   
-  @ComponentId.ServiceOperation
+  @ServiceOperation
   public enum EnableService implements Function<EnableServiceType, EnableServiceResponseType> {
     INSTANCE;
     
@@ -173,7 +173,7 @@ public class EmpyreanService {
     
   }
   
-  @ComponentId.ServiceOperation
+  @ServiceOperation
   public enum DisableService implements Function<DisableServiceType, DisableServiceResponseType> {
     INSTANCE;
     

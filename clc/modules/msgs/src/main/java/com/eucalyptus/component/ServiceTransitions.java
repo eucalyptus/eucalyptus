@@ -167,11 +167,18 @@ public class ServiceTransitions {
   private static final State[] pathToLoaded( final Component.State fromState ) {
     switch ( fromState ) {
       case PRIMORDIAL:
-      case BROKEN:
-        return sequence( Component.State.INITIALIZED,
-                         Component.State.LOADED );
-      default:
+      case INITIALIZED:
+      case LOADED:
         return sequence( Component.State.PRIMORDIAL,
+                         Component.State.INITIALIZED,
+                         Component.State.LOADED );
+      case BROKEN:
+        return sequence( Component.State.BROKEN,
+                         Component.State.INITIALIZED,
+                         Component.State.LOADED );
+      case STOPPED:
+      default:
+        return sequence( Component.State.STOPPED,
                          Component.State.INITIALIZED,
                          Component.State.LOADED );
     }
