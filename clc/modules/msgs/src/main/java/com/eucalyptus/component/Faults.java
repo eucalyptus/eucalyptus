@@ -323,6 +323,7 @@ public class Faults {
       : new CheckException( config, severity, new NullPointerException( ) ) );
     LOG.debug( last );
     Logs.extreme( ).error( last, last );
+    return last;
   }
   
   public static CheckException failure( final ServiceConfiguration config, final Throwable... exs ) {

@@ -168,21 +168,21 @@ public class ServiceTransitions {
     switch ( fromState ) {
       case DISABLED:
       case ENABLED:
-        return ServiceTransitions.sequence( Component.State.ENABLED,
-                                            Component.State.DISABLED,
-                                            Component.State.STOPPED,
-                                            Component.State.INITIALIZED,
-                                            Component.State.LOADED );
+        return sequence( Component.State.ENABLED,
+                         Component.State.DISABLED,
+                         Component.State.STOPPED,
+                         Component.State.INITIALIZED,
+                         Component.State.LOADED );
       case NOTREADY:
-        return ServiceTransitions.sequence( Component.State.NOTREADY,
-                                            Component.State.DISABLED,
-                                            Component.State.STOPPED,
-                                            Component.State.INITIALIZED,
-                                            Component.State.LOADED );
+        return sequence( Component.State.NOTREADY,
+                         Component.State.DISABLED,
+                         Component.State.STOPPED,
+                         Component.State.INITIALIZED,
+                         Component.State.LOADED );
       default:
-        return ServiceTransitions.sequence( Component.State.PRIMORDIAL,
-                                            Component.State.INITIALIZED,
-                                            Component.State.LOADED );
+        return sequence( Component.State.PRIMORDIAL,
+                         Component.State.INITIALIZED,
+                         Component.State.LOADED );
     }
   }
   
@@ -193,26 +193,27 @@ public class ServiceTransitions {
   private static final State[] pathToStarted( final Component.State fromState ) {
     switch ( fromState ) {
       case ENABLED:
-        return ServiceTransitions.sequence( Component.State.ENABLED, Component.State.DISABLED );
+        return sequence( Component.State.ENABLED, Component.State.DISABLED );
       case DISABLED:
       case NOTREADY:
-        return ServiceTransitions.sequence( Component.State.NOTREADY, Component.State.DISABLED, Component.State.DISABLED );
+        return sequence( Component.State.NOTREADY, Component.State.DISABLED, Component.State.DISABLED );
       default:
-        return ServiceTransitions.sequence( Component.State.PRIMORDIAL,
-                                            Component.State.BROKEN,
-                                            Component.State.STOPPED,
-                                            Component.State.INITIALIZED,
-                                            Component.State.LOADED,
-                                            Component.State.NOTREADY,
-                                            Component.State.DISABLED );
+        return sequence( Component.State.BROKEN,
+                         Component.State.STOPPED,
+                         Component.State.PRIMORDIAL,
+                         Component.State.INITIALIZED,
+                         Component.State.LOADED,
+                         Component.State.NOTREADY,
+                         Component.State.DISABLED,
+                         Component.State.DISABLED );
     }
   }
   
   private static final State[] pathToEnabled( final Component.State fromState ) {
     switch ( fromState ) {
       case ENABLED:
-        return ServiceTransitions.sequence( Component.State.ENABLED,
-                                            Component.State.ENABLED );
+        return sequence( Component.State.ENABLED,
+                         Component.State.ENABLED );
       default:
         return ObjectArrays.concat( ServiceTransitions.pathToDisabled( fromState ), Component.State.ENABLED );
     }
@@ -221,14 +222,16 @@ public class ServiceTransitions {
   private static final State[] pathToDisabled( final Component.State fromState ) {
     switch ( fromState ) {
       case NOTREADY:
-        return ServiceTransitions.sequence( Component.State.NOTREADY,
-                                            Component.State.DISABLED );
+        return sequence( Component.State.NOTREADY,
+                         Component.State.DISABLED,
+                         Component.State.DISABLED );
       case DISABLED:
-        return ServiceTransitions.sequence( Component.State.DISABLED,
-                                            Component.State.DISABLED );
+        return sequence( Component.State.DISABLED,
+                         Component.State.DISABLED );
       case ENABLED:
-        return ServiceTransitions.sequence( Component.State.ENABLED,
-                                            Component.State.DISABLED );
+        return sequence( Component.State.ENABLED,
+                         Component.State.DISABLED,
+                         Component.State.DISABLED );
       default:
         return ObjectArrays.concat( ServiceTransitions.pathToStarted( fromState ), Component.State.DISABLED );
     }
@@ -238,15 +241,15 @@ public class ServiceTransitions {
     switch ( fromState ) {
       case ENABLED:
       case DISABLED:
-        return ServiceTransitions.sequence( Component.State.ENABLED,
-                                            Component.State.DISABLED,
-                                            Component.State.STOPPED );
+        return sequence( Component.State.ENABLED,
+                         Component.State.DISABLED,
+                         Component.State.STOPPED );
       default:
-        return ServiceTransitions.sequence( Component.State.PRIMORDIAL,
-                                            Component.State.INITIALIZED,
-                                            Component.State.LOADED,
-                                            Component.State.NOTREADY,
-                                            Component.State.STOPPED );
+        return sequence( Component.State.PRIMORDIAL,
+                         Component.State.INITIALIZED,
+                         Component.State.LOADED,
+                         Component.State.NOTREADY,
+                         Component.State.STOPPED );
     }
   }
   
@@ -276,7 +279,8 @@ public class ServiceTransitions {
       }
       
     } catch ( Exception ex ) {
-      LOG.error( parent + " failed request because of: " + ex.getMessage( ) );
+      LOG.error( parent + " failed request because of: "
+                 + ex.getMessage( ) );
       Logs.extreme( ).error( ex, ex );
       throw ex;
     }
@@ -729,16 +733,16 @@ public class ServiceTransitions {
           List<ConfigurableProperty> props = PropertyDirectory.getPropertyEntrySet( config.getComponentId( ).name( ) );
           for ( ConfigurableProperty prop : props ) {
             if ( prop instanceof SingletonDatabasePropertyEntry ) {
-              //GRZE:REVIEW do nothing?
-            } else if ( prop instanceof MultiDatabasePropertyEntry ) {
-              ( ( MultiDatabasePropertyEntry ) prop ).setIdentifierValue( config.getPartition( ) );
-              PropertyDirectory.removeProperty( prop );
-            }
+            //GRZE:REVIEW do nothing?
+          } else if ( prop instanceof MultiDatabasePropertyEntry ) {
+            ( ( MultiDatabasePropertyEntry ) prop ).setIdentifierValue( config.getPartition( ) );
+            PropertyDirectory.removeProperty( prop );
           }
-        } catch ( Exception ex ) {
-          LOG.error( ex, ex );
         }
+      } catch ( Exception ex ) {
+        LOG.error( ex, ex );
       }
+    }
       
     };
     
