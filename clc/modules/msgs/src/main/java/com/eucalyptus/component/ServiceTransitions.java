@@ -190,8 +190,6 @@ public class ServiceTransitions {
   
   private static final State[] pathToStarted( final Component.State fromState ) {
     switch ( fromState ) {
-      case ENABLED:
-        return sequence( Component.State.ENABLED, Component.State.DISABLED );
       case DISABLED:
       case NOTREADY:
         return sequence( Component.State.NOTREADY, Component.State.DISABLED, Component.State.DISABLED );
