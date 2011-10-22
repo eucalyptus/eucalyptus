@@ -99,6 +99,8 @@ import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.ObjectArrays;
 
 public class EmpyreanService {
   private static Logger LOG = Logger.getLogger( EmpyreanService.class );
@@ -253,8 +255,11 @@ public class EmpyreanService {
         Exceptions.maybeInterrupted( ex );
         throw Exceptions.toUndeclared( "Failed to execute request transition: "
                                        + request.getState( )
-                                       + "\n(Possible arguments are: "
-                                       + Joiner.on( "\n" ).join( TransitionName.values( ) ),
+                                       + "\nPossible arguments are: \n"
+                                       + "TRANSITIONS\n\t"
+                                       + Joiner.on( "\n\t" ).join( TransitionName.values( ) )
+                                       + "STATES\n\t"
+                                       + Joiner.on( "\n\t" ).join( Component.State.values( ) ),
                                        ex );
       }
     }
