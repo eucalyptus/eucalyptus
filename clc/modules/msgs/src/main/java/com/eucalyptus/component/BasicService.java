@@ -99,7 +99,7 @@ public class BasicService {
         public void run( ) {
           try {
             LOG.warn( "SHUTDOWN Service: " + BasicService.this.serviceConfiguration.getName( ) );
-            ServiceTransitions.pathTo( BasicService.this.serviceConfiguration, Component.State.PRIMORDIAL ).get( );
+            Topology.destroy( BasicService.this.serviceConfiguration ).get( );
           } catch ( final ExecutionException ex ) {
             Logs.exhaust( ).error( ex, ex );
           } catch ( final InterruptedException ex ) {

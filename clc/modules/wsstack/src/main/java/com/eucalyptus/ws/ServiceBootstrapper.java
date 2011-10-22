@@ -297,7 +297,7 @@ public class ServiceBootstrapper extends Bootstrapper.Simple {
           @Override
           public void run( ) {
             try {
-              ServiceTransitions.pathTo( config, Component.State.DISABLED ).get( );
+              Topology.start( config ).get( );
               if ( Hosts.isCoordinator( ) ) {
                 Topology.enable( config );
               }
