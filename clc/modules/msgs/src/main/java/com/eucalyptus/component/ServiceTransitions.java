@@ -276,7 +276,7 @@ public class ServiceTransitions {
       }
       
     } catch ( Exception ex ) {
-      LOG.error( ex.getMessage( ) );
+      LOG.error( parent + " failed request because of: " + ex.getMessage( ) );
       Logs.extreme( ).error( ex, ex );
       throw ex;
     }

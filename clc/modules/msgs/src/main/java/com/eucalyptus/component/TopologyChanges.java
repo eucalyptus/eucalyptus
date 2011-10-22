@@ -99,9 +99,6 @@ public class TopologyChanges {
         if ( Bootstrap.isShuttingDown( ) ) {
           return null;
         } else {
-          if ( config.isVmLocal( ) ) {
-            Bootstrap.awaitFinished( );
-          }
           final Long serviceStart = System.currentTimeMillis( );
           LOG.trace( EventRecord.here( Topology.class, EventType.DEQUEUE, functionName, config.getFullName( ).toString( ),
                                        Long.toString( serviceStart - queueStart ), "ms" ) );

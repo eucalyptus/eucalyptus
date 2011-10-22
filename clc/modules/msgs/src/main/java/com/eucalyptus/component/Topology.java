@@ -70,6 +70,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.bootstrap.Hosts;
@@ -526,7 +527,7 @@ public class Topology {
     @Override
     public boolean apply( final Future input ) {
       try {
-        final Object conf = input.get( );
+        final Object conf = input.get( 30, TimeUnit.SECONDS );
         LOG.trace( "Operation succeeded for " + conf );
         return true;
       } catch ( final InterruptedException ex ) {

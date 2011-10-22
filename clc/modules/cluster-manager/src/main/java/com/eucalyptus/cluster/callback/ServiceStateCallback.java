@@ -49,7 +49,7 @@ public class ServiceStateCallback extends SubjectMessageCallback<Cluster, Descri
             }
           }
         } else {
-          LOG.error( "Found information for unknown service: " + status );
+          LOG.debug( "Found service info: " + status );
         }
       }
     }
