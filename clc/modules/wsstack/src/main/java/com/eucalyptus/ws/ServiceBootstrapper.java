@@ -63,9 +63,10 @@
  */
 package com.eucalyptus.ws;
 
+import java.util.Map.Entry;
 import java.util.NoSuchElementException;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -89,9 +90,9 @@ import com.eucalyptus.component.Topology;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.ws.util.ChannelUtil;
-import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Maps;
 import edu.emory.mathcs.backport.java.util.concurrent.atomic.AtomicBoolean;
 
 @Provides( Empyrean.class )
@@ -124,8 +125,25 @@ public class ServiceBootstrapper extends Bootstrapper.Simple {
       worker.msgQueue.add( run );
     }
     
-    class Worker implements Runnable {
-      private String name;
+    private static final ConcurrentMap<Worker, Runnable> workers = Maps.newConcurrentMap( );
+    private static final Runnable                        IDLE    = new Runnable( ) {
+                                                                   @Override
+                                                                   public String toString( ) {
+                                                                     return "IDLE";
+                                                                   }
+                                                                   
+                                                                   @Override
+                                                                   public void run( ) {}
+                                                                 };
+    
+    class Worker implements Runnable, Comparable<Worker> {
+      private final String name;
+      
+      Worker( ) {
+        super( );
+        this.name = Thread.currentThread( ).getName( );
+        workers.put( this, IDLE );
+      }
       
       @Override
       public void run( ) {
@@ -133,12 +151,11 @@ public class ServiceBootstrapper extends Bootstrapper.Simple {
           Runnable event;
           try {
             if ( ( event = ServiceBootstrapWorker.this.msgQueue.poll( 50, TimeUnit.MILLISECONDS ) ) != null ) {
-              this.name = Thread.currentThread( ).getName( ) + " => "
-                          + event.toString( );
               try {
+                workers.replace( this, event );
                 event.run( );
               } finally {
-                this.name = "idle";
+                workers.replace( this, IDLE );
               }
             }
           } catch ( final Throwable e ) {
@@ -152,18 +169,74 @@ public class ServiceBootstrapper extends Bootstrapper.Simple {
       @Override
       public String toString( ) {
         StringBuilder builder = new StringBuilder( );
-        builder.append( "ServiceBootstrapWorker" ).append( " " ).append( this.name );
+        builder.append( "ServiceBootstrapWorker" ).append( " " ).append( this.name ).append( " work: " ).append( workers.get( this ) );
         return builder.toString( );
+      }
+      
+      /**
+       * @see java.lang.Comparable#compareTo(java.lang.Object)
+       */
+      @Override
+      public int compareTo( Worker o ) {
+        return this.name.compareTo( o.name );
+      }
+      
+      @Override
+      public int hashCode( ) {
+        final int prime = 31;
+        int result = 1;
+        result = prime * result
+                 + getOuterType( ).hashCode( );
+        result = prime * result
+                 + ( ( this.name == null )
+                   ? 0
+                   : this.name.hashCode( ) );
+        return result;
+      }
+      
+      @Override
+      public boolean equals( Object obj ) {
+        if ( this == obj ) {
+          return true;
+        }
+        if ( obj == null ) {
+          return false;
+        }
+        if ( getClass( ) != obj.getClass( ) ) {
+          return false;
+        }
+        Worker other = ( Worker ) obj;
+        if ( !getOuterType( ).equals( other.getOuterType( ) ) ) {
+          return false;
+        }
+        if ( this.name == null ) {
+          if ( other.name != null ) {
+            return false;
+          }
+        } else if ( !this.name.equals( other.name ) ) {
+          return false;
+        }
+        return true;
+      }
+      
+      private ServiceBootstrapWorker getOuterType( ) {
+        return ServiceBootstrapWorker.this;
       }
       
     }
     
-    public static void waitAll( ) {
-      while ( !worker.msgQueue.isEmpty( ) ) {
-        Joiner.on( "\n" ).join( worker.msgQueue );
+    static void waitAll( ) {
+      try {
+        while ( !worker.msgQueue.isEmpty( ) ) {
+          for ( Worker w : workers.keySet( ) ) {
+            LOG.info( "Waiting for" + w );
+          }
+          TimeUnit.SECONDS.sleep( 1 );
+        }
+      } catch ( InterruptedException ex ) {
+        Thread.currentThread( ).interrupt( );
       }
     }
-    
   }
   
   enum ShouldLoad implements Predicate<ServiceConfiguration> {
