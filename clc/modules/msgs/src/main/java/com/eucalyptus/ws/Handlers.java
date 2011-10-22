@@ -118,7 +118,6 @@ import com.eucalyptus.ws.handlers.SoapMarshallingHandler;
 import com.eucalyptus.ws.handlers.http.NioHttpRequestEncoder;
 import com.eucalyptus.ws.protocol.AddressingHandler;
 import com.eucalyptus.ws.protocol.SoapHandler;
-import com.eucalyptus.ws.util.HttpUtils;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
@@ -138,15 +137,21 @@ public class Handlers {
       super( );
     }
     
+    static final byte   SP   = 32;
+    static final byte   CR   = 13;
+    static final byte   LF   = 10;
+    static final byte[] CRLF = new byte[] { CR,
+                                 LF };
+    
     @Override
     protected void encodeInitialLine( ChannelBuffer buf, HttpMessage message ) throws Exception {
       MappingHttpRequest request = ( MappingHttpRequest ) message;
       buf.writeBytes( request.getMethod( ).toString( ).getBytes( "ASCII" ) );
-      buf.writeByte( HttpUtils.SP );
+      buf.writeByte( SP );
       buf.writeBytes( request.getServicePath( ).getBytes( "ASCII" ) );
-      buf.writeByte( HttpUtils.SP );
+      buf.writeByte( SP );
       buf.writeBytes( request.getProtocolVersion( ).toString( ).getBytes( "ASCII" ) );
-      buf.writeBytes( HttpUtils.CRLF );
+      buf.writeBytes( CRLF );
     }
   }
   
