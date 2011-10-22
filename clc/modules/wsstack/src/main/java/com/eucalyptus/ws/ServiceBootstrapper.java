@@ -89,6 +89,7 @@ import com.eucalyptus.component.ServiceTransitions;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.Internets;
 import com.eucalyptus.ws.util.ChannelUtil;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
@@ -340,7 +341,7 @@ public class ServiceBootstrapper extends Bootstrapper.Simple {
         }
       } else if ( compId.isAlwaysLocal( ) || ( BootstrapArgs.isCloudController( ) && compId.isCloudLocal( ) ) ) {
         try {
-          predicate.apply( ServiceConfigurations.createEphemeral( compId ) );
+          predicate.apply( ServiceConfigurations.createEphemeral( compId, Internets.localHostInetAddress( ) ) );
         } catch ( final Exception ex ) {
           Exceptions.trace( ex );
         }
