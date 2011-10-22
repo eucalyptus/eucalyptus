@@ -90,6 +90,7 @@ import org.jboss.netty.handler.codec.http.HttpMessage;
 import org.jboss.netty.handler.codec.http.HttpMessageEncoder;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponse;
+import org.jboss.netty.handler.codec.http.HttpResponseDecoder;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.jboss.netty.handler.ssl.SslHandler;
@@ -129,7 +130,15 @@ public class Handlers {
   private static final ChannelHandler                        addressingHandler      = new AddressingHandler( );
   private static final ConcurrentMap<String, ChannelHandler> bindingHandlers        = new ConcurrentHashMap<String, ChannelHandler>( );
   private static final HashedWheelTimer                      timer                  = new HashedWheelTimer( );                         //TODO:GRZE: configurable
-                                                                                                                                        
+                                                         
+  public static class NioHttpResponseDecoder extends HttpResponseDecoder {
+
+    @Override
+    protected HttpMessage createMessage( final String[] strings ) {
+      return new MappingHttpResponse( strings );//HttpVersion.valueOf(strings[2]), HttpMethod.valueOf(strings[0]), strings[1] );
+    }
+  }
+
   @ChannelPipelineCoverage( "all" )
   public static class NioHttpRequestEncoder extends HttpMessageEncoder {
     
