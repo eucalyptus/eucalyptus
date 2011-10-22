@@ -248,7 +248,7 @@ public class Topology implements EventListener<Event> {
   }
   
   private Future<ServiceConfiguration> submitExternal( final ServiceConfiguration config, final Function<ServiceConfiguration, ServiceConfiguration> function ) {
-    final Callable<ServiceConfiguration> call = transitionCallable( config, function );
+    final Callable<ServiceConfiguration> call = TopologyChanges.callable( config, function );
     return Threads.enqueue( this.externalQueue, 32, call );
   }
   
@@ -257,43 +257,9 @@ public class Topology implements EventListener<Event> {
       
       @Override
       public Callable<ServiceConfiguration> apply( final ServiceConfiguration input ) {
-        return transitionCallable( input, function );
+        return TopologyChanges.callable( input, function );
       }
     };
-  }
-  
-  private static Callable<ServiceConfiguration> transitionCallable( final ServiceConfiguration config, final Function<ServiceConfiguration, ServiceConfiguration> function ) {
-    final String functionName = function.getClass( ).toString( ).replaceAll( "^.*\\.", "" );
-    final Long queueStart = System.currentTimeMillis( );
-    final Callable<ServiceConfiguration> call = new Callable<ServiceConfiguration>( ) {
-      
-      @Override
-      public ServiceConfiguration call( ) throws Exception {
-        if ( Bootstrap.isShuttingDown( ) ) {
-          return null;
-        } else {
-          if ( config.isVmLocal( ) ) {
-            Bootstrap.awaitFinished( );
-          }
-          final Long serviceStart = System.currentTimeMillis( );
-          LOG.trace( EventRecord.here( Topology.class, EventType.DEQUEUE, functionName, config.getFullName( ).toString( ),
-                                       Long.toString( serviceStart - queueStart ), "ms" ) );
-          
-          try {
-            final ServiceConfiguration result = function.apply( config );
-            LOG.trace( EventRecord.here( Topology.class, EventType.QUEUE, functionName, config.getFullName( ).toString( ),
-                                         Long.toString( System.currentTimeMillis( ) - serviceStart ), "ms" ) );
-            return result;
-          } catch ( Exception ex ) {
-            Throwable t = Exceptions.unwrapCause( ex );
-            Logs.extreme( ).error( t, t );
-            LOG.error( config.getFullName( ) + " failed to transition because of: " + t );
-            throw ex;
-          }
-        }
-      }
-    };
-    return call;
   }
   
   public static Function<ServiceConfiguration, Future<ServiceConfiguration>> transition( final Component.State toState ) {
@@ -302,7 +268,7 @@ public class Topology implements EventListener<Event> {
       
       @Override
       public Future<ServiceConfiguration> apply( final ServiceConfiguration input ) {
-        final Callable<ServiceConfiguration> call = transitionCallable( input, TopologyChanges.get( toState ) );
+        final Callable<ServiceConfiguration> call = TopologyChanges.callable( input, TopologyChanges.get( toState ) );
         Queue workQueue = ( this.serializedStates.contains( toState )
           ? Queue.INTERNAL
           : Queue.EXTERNAL );
@@ -313,7 +279,7 @@ public class Topology implements EventListener<Event> {
   }
 
   public static Future<ServiceConfiguration> check( final ServiceConfiguration config ) {
-    return Queue.EXTERNAL.enqueue( transitionCallable( config, TopologyChanges.checkFunction( ) ) );
+    return Queue.EXTERNAL.enqueue( TopologyChanges.callable( config, TopologyChanges.check( ) ) );
   }
   
   public static Future<ServiceConfiguration> stop( final ServiceConfiguration config ) {
@@ -565,7 +531,7 @@ public class Topology implements EventListener<Event> {
     
     @Override
     public Future<ServiceConfiguration> apply( final ServiceConfiguration input ) {
-      final Callable<ServiceConfiguration> call = Topology.transitionCallable( input, TopologyChanges.get( State.ENABLED ) );
+      final Callable<ServiceConfiguration> call = TopologyChanges.callable( input, TopologyChanges.get( State.ENABLED ) );
       final Future<ServiceConfiguration> future = Threads.enqueue( Topology.getInstance( ).externalQueue, EXTERNAL_THREAD_POOL_LIMIT, call );
       return future;
     }
@@ -577,7 +543,7 @@ public class Topology implements EventListener<Event> {
     
     @Override
     public Future<ServiceConfiguration> apply( final ServiceConfiguration input ) {
-      final Callable<ServiceConfiguration> call = Topology.transitionCallable( input, TopologyChanges.checkFunction( ) );
+      final Callable<ServiceConfiguration> call = TopologyChanges.callable( input, TopologyChanges.check( ) );
       final Future<ServiceConfiguration> future = Threads.enqueue( Topology.getInstance( ).externalQueue, EXTERNAL_THREAD_POOL_LIMIT, call );
       return future;
     }

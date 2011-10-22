@@ -212,7 +212,7 @@ public class ServiceConfigurations {
         try {
           final URI uri = new URI( arg0.getUri( ) );
           config = builder.newInstance( arg0.getPartition( ), arg0.getName( ), uri.getHost( ), uri.getPort( ) );
-          comp.loadService( config );
+          comp.setup( config );
         } catch ( final URISyntaxException ex ) {
           LOG.error( ex, ex );
           throw Exceptions.toUndeclared( ex );

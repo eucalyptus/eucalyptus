@@ -127,7 +127,6 @@ public class ServiceTransitions {
    **/
   @SuppressWarnings( "unchecked" )
   public static CheckedListenableFuture<ServiceConfiguration> pathTo( final ServiceConfiguration configuration, final Component.State goalState ) {
-    Callable<CheckedListenableFuture<ServiceConfiguration>> transition;
     try {
       switch ( goalState ) {
         case LOADED:

@@ -180,7 +180,7 @@ public class Handlers {
     public void handleUpstream( ChannelHandlerContext ctx, ChannelEvent e ) throws Exception {
       Object o = null;
       if ( e instanceof MessageEvent
-          && first.compareAndSet( true, false )
+          && this.first.compareAndSet( true, false )
           && ( o = ( ( MessageEvent ) e ).getMessage( ) ) instanceof ChannelBuffer 
           && !HttpUtils.maybeSsl( ( ChannelBuffer ) o ) ) {
         ctx.getPipeline( ).removeFirst( );

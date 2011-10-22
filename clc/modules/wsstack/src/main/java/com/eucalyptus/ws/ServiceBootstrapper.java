@@ -266,7 +266,7 @@ public class ServiceBootstrapper extends Bootstrapper.Simple {
             
             LOG.debug( "load(): " + config );
             try {
-              Components.lookup( config ).loadService( config );
+              Components.lookup( config.getComponentId( ) ).setup( config );
               ServiceTransitions.pathTo( config, Component.State.LOADED ).get( );
             } catch ( final Exception ex ) {
               Faults.failure( config, ex );
