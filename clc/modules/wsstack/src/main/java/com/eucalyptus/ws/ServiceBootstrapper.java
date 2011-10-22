@@ -237,7 +237,7 @@ public class ServiceBootstrapper extends Bootstrapper {
         }
       } else if ( compId.isAlwaysLocal( ) || ( BootstrapArgs.isCloudController( ) && compId.isCloudLocal( ) ) ) {
         try {
-          predicate.apply( config );
+          predicate.apply( ServiceConfigurations.createEphemeral( compId ) );
         } catch ( Exception ex ) {
           Exceptions.trace( ex );
         }
