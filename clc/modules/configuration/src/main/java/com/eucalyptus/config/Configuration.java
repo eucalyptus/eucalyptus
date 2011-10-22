@@ -65,33 +65,24 @@ package com.eucalyptus.config;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.NoSuchElementException;
 import java.util.Set;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentRegistrationHandler;
 import com.eucalyptus.component.Components;
-import com.eucalyptus.component.Service;
 import com.eucalyptus.component.ServiceBuilder;
 import com.eucalyptus.component.ServiceBuilders;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
-import com.eucalyptus.component.ServiceRegistrationException;
-import com.eucalyptus.component.Topology;
 import com.eucalyptus.scripting.Groovyness;
-import com.eucalyptus.util.Assertions;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Function;
-import com.google.common.base.Functions;
-import com.google.common.base.Joiner;
-import com.google.common.collect.Collections2;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
+import static org.hamcrest.Matchers.notNullValue;
 
 public class Configuration {
   public static Logger LOG                 = Logger.getLogger( Configuration.class );

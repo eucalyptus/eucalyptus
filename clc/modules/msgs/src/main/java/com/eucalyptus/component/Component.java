@@ -76,13 +76,11 @@ import com.eucalyptus.bootstrap.CanBootstrap;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
-import com.eucalyptus.util.Assertions;
 import com.eucalyptus.util.CheckedFunction;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.Internets;
-import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.fsm.Automata;
 import com.eucalyptus.util.fsm.StateMachine;
 import com.eucalyptus.util.fsm.TransitionException;
@@ -95,7 +93,7 @@ import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.Sets;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
+import static org.hamcrest.Matchers.notNullValue;
 
 public class Component implements HasName<Component> {
   private static Logger               LOG = Logger.getLogger( Component.class );

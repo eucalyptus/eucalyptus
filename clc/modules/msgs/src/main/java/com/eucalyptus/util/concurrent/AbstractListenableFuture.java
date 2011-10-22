@@ -49,7 +49,6 @@ import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.system.Threads;
-import com.eucalyptus.util.Assertions;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Futures;
 import com.google.common.util.concurrent.ExecutionList;
