@@ -77,7 +77,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Supplier;
 import com.google.common.collect.MapMaker;
 
-public class TopologyChanges {
+public class TopologyChanges {cloudTransitionCallables
   private static Logger                                                                           LOG                      = Logger.getLogger( TopologyChanges.class );
   private static final Map<Component.State, Function<ServiceConfiguration, ServiceConfiguration>> cloudTransitionCallables = new MapMaker( ).makeComputingMap( TopologyFunctionGenerator.INSTANCE ); //TODO:GRZE: CacheBuilder
                                                                                                                                                                                                      
