@@ -145,18 +145,18 @@ public class AsyncRequestHandler<Q extends BaseMessage, R extends BaseMessage> i
   private void teardown( Throwable t ) {
     if ( t != null && !this.response.isDone( ) ) {
       LOG.debug( "RESULT:" + t.getMessage( ) + ":REQUEST:" + ( ( request.get( ) != null )
-        ? request.get( ).toSimpleString( )
+        ? request.get( ).getClass( )
         : "REQUEST IS NULL" ) );
       if ( t instanceof RetryableConnectionException ) {
-        LOG.error( t.getMessage( ) );
+        LOG.trace( t.getMessage( ) );
       } else if ( t instanceof ConnectionException ) {
-        LOG.error( t.getMessage( ) );
+        LOG.trace( t.getMessage( ) );
       } else if ( t instanceof IOException ) {
-        LOG.error( t.getMessage( ) );
+        LOG.trace( t.getMessage( ) );
       }
       this.response.setException( t );
     } else if ( t != null && this.response.isDone( ) ) {
-      LOG.error( t.getMessage( ) );
+      LOG.trace( t.getMessage( ) );
       this.response.setException( t );
     }
     if ( this.connectFuture != null ) {

@@ -268,8 +268,7 @@ public class ServiceTransitions {
                + " to "
                + parent.getFullName( ) );
     try {
-      
-      if ( System.getProperty( "euca..noha.cloud" ) == null ) {
+      if ( System.getProperty( "euca.noha.cloud" ) == null ) {
         T reply = ( T ) AsyncRequests.sendSync( config, msg );
         return reply;
       } else {
