@@ -11,7 +11,8 @@ import com.eucalyptus.util.Internets;
 @Partition( value = { Eucalyptus.class }, manyToOne = true )
 public class ClusterController extends ComponentId {
   
-  private static final long serialVersionUID = 1L;
+  private static final long       serialVersionUID = 1L;
+  public static final ComponentId INSTANCE         = new ClusterController( );
   
   public ClusterController( ) {
     super( "cluster" );
