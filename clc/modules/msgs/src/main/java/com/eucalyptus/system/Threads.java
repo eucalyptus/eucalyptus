@@ -592,7 +592,7 @@ public class Threads {
     public void run( ) {
       do {
         try {
-          final FutureTask<?> task = this.msgQueue.poll( 50, TimeUnit.MILLISECONDS );
+          final FutureTask<?> task = this.msgQueue.poll( 5000, TimeUnit.MILLISECONDS );
           if ( task != null ) {
             try {
               task.run( );
