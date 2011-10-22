@@ -63,36 +63,25 @@
 
 package com.eucalyptus.component;
 
-import java.lang.reflect.UndeclaredThrowableException;
 import java.net.InetAddress;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.Callable;
-import java.util.concurrent.CompletionService;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
-import java.util.concurrent.RunnableFuture;
-import java.util.concurrent.TimeUnit;
 import org.apache.log4j.Logger;
-import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.component.Component.State;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.empyrean.ServiceId;
 import com.eucalyptus.empyrean.ServiceTransitionType;
-import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Hertz;
-import com.eucalyptus.event.ListenerRegistry;
-import com.eucalyptus.records.EventRecord;
-import com.eucalyptus.records.EventType;
+import com.eucalyptus.event.Listeners;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Threads;
-import com.eucalyptus.system.Threads.ThreadPool;
-import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.TypeMappers;
@@ -100,15 +89,13 @@ import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
-import com.google.common.base.Supplier;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
-import com.google.common.util.concurrent.SettableFuture;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
-public class Topology implements EventListener<Event> {
+public class Topology {
   private static Logger                                         LOG          = Logger.getLogger( Topology.class );
   private static Topology                                       singleton    = null;                                                                   //TODO:GRZE:handle differently for remote case?
   private Integer                                               currentEpoch = 0;                                                                      //TODO:GRZE: get the right initial epoch value from membership bootstrap
@@ -153,14 +140,21 @@ public class Topology implements EventListener<Event> {
     
   };
   
-  private final ServiceConfiguration externalQueue;
+  private enum TopologyTimer implements EventListener<Hertz> {
+    INSTANCE;
+    @Override
+    public void fireEvent( final Hertz event ) {
+      if ( event.isAsserted( 15l ) ) {
+        Queue.INTERNAL.enqueue( RunChecks.INSTANCE );
+      }
+    }
+    
+  }
   
   private Topology( final int i ) {
     super( );
     this.currentEpoch = i;
-    this.externalQueue = ServiceConfigurations.createEphemeral( Empyrean.INSTANCE, Topology.class.getSimpleName( ), "external",
-                                                                ServiceUris.internal( Empyrean.INSTANCE ) );
-    ListenerRegistry.getInstance( ).register( Hertz.class, this );
+    Listeners.register( Hertz.class, TopologyTimer.INSTANCE );
   }
   
   private static Predicate<ServiceConfiguration> componentFilter( final Class<? extends ComponentId> c ) {
@@ -247,11 +241,6 @@ public class Topology implements EventListener<Event> {
     return Lists.transform( Topology.getInstance( ).partitionView( partition ), TypeMappers.lookup( ServiceConfiguration.class, ServiceId.class ) );
   }
   
-  private Future<ServiceConfiguration> submitExternal( final ServiceConfiguration config, final Function<ServiceConfiguration, ServiceConfiguration> function ) {
-    final Callable<ServiceConfiguration> call = TopologyChanges.callable( config, function );
-    return Threads.enqueue( this.externalQueue, 32, call );
-  }
-  
   public static Function<ServiceConfiguration, Future<ServiceConfiguration>> transition( final Component.State toState ) {
     final Function<ServiceConfiguration, Future<ServiceConfiguration>> transition = new Function<ServiceConfiguration, Future<ServiceConfiguration>>( ) {
       private final List<Component.State> serializedStates = Lists.newArrayList( Component.State.ENABLED, Component.State.DISABLED );
@@ -259,7 +248,7 @@ public class Topology implements EventListener<Event> {
       @Override
       public Future<ServiceConfiguration> apply( final ServiceConfiguration input ) {
         final Callable<ServiceConfiguration> call = TopologyChanges.callable( input, TopologyChanges.get( toState ) );
-        Queue workQueue = ( this.serializedStates.contains( toState )
+        final Queue workQueue = ( this.serializedStates.contains( toState )
           ? Queue.INTERNAL
           : Queue.EXTERNAL );
         return workQueue.enqueue( call );
@@ -267,7 +256,7 @@ public class Topology implements EventListener<Event> {
     };
     return transition;
   }
-
+  
   public static Future<ServiceConfiguration> check( final ServiceConfiguration config ) {
     return Queue.EXTERNAL.enqueue( TopologyChanges.callable( config, TopologyChanges.check( ) ) );
   }
@@ -421,12 +410,14 @@ public class Topology implements EventListener<Event> {
     public int hashCode( ) {
       final int prime = 31;
       int result = 1;
-      result = prime * result + ( ( this.componentId == null )
-        ? 0
-        : this.componentId.hashCode( ) );
-      result = prime * result + ( ( this.partition == null )
-        ? 0
-        : this.partition.hashCode( ) );
+      result = prime * result
+               + ( ( this.componentId == null )
+                 ? 0
+                 : this.componentId.hashCode( ) );
+      result = prime * result
+               + ( ( this.partition == null )
+                 ? 0
+                 : this.partition.hashCode( ) );
       return result;
     }
     
@@ -490,17 +481,6 @@ public class Topology implements EventListener<Event> {
     return this.services;
   }
   
-  /**
-   * @throws ExecutionException 
-   * @see com.eucalyptus.event.EventListener#fireEvent(com.eucalyptus.event.Event)
-   */
-  @Override
-  public void fireEvent( final Event event ) {
-    if ( ( event instanceof Hertz ) && ( ( Hertz ) event ).isAsserted( 15l ) ) {
-      Queue.INTERNAL.enqueue( RunChecks.INSTANCE );
-    }
-  }
-  
   enum CheckServiceFilter implements Predicate<ServiceConfiguration> {
     INSTANCE;
     @Override
@@ -522,7 +502,7 @@ public class Topology implements EventListener<Event> {
     @Override
     public Future<ServiceConfiguration> apply( final ServiceConfiguration input ) {
       final Callable<ServiceConfiguration> call = TopologyChanges.callable( input, TopologyChanges.get( State.ENABLED ) );
-      final Future<ServiceConfiguration> future = Threads.enqueue( Topology.getInstance( ).externalQueue, EXTERNAL_THREAD_POOL_LIMIT, call );
+      final Future<ServiceConfiguration> future = Queue.EXTERNAL.enqueue( call );
       return future;
     }
     
@@ -534,7 +514,7 @@ public class Topology implements EventListener<Event> {
     @Override
     public Future<ServiceConfiguration> apply( final ServiceConfiguration input ) {
       final Callable<ServiceConfiguration> call = TopologyChanges.callable( input, TopologyChanges.check( ) );
-      final Future<ServiceConfiguration> future = Threads.enqueue( Topology.getInstance( ).externalQueue, EXTERNAL_THREAD_POOL_LIMIT, call );
+      final Future<ServiceConfiguration> future = Queue.EXTERNAL.enqueue( call );
       return future;
     }
     
@@ -604,17 +584,23 @@ public class Topology implements EventListener<Event> {
     public boolean apply( final ServiceConfiguration arg0 ) {
       final ServiceKey key = ServiceKey.create( arg0 );
       if ( !Hosts.isCoordinator( ) ) {
-        Logs.exhaust( ).debug( "FAILOVER-REJECT: " + Internets.localHostInetAddress( ) + ": not cloud controller, ignoring promotion for: "
+        Logs.exhaust( ).debug( "FAILOVER-REJECT: " + Internets.localHostInetAddress( )
+                               + ": not cloud controller, ignoring promotion for: "
                                    + arg0.getFullName( ) );
         return false;
       } else if ( !Component.State.DISABLED.equals( arg0.lookupState( ) ) ) {
-        Logs.exhaust( ).debug( "FAILOVER-REJECT: " + arg0.getFullName( ) + ": service is in an invalid state: " + arg0.lookupState( ) );
+        Logs.exhaust( ).debug( "FAILOVER-REJECT: " + arg0.getFullName( )
+                               + ": service is in an invalid state: "
+                               + arg0.lookupState( ) );
         return false;
       } else if ( Topology.getInstance( ).getServices( ).containsKey( key ) && arg0.equals( Topology.getInstance( ).getServices( ).get( key ) ) ) {
-        Logs.exhaust( ).debug( "FAILOVER-REJECT: " + arg0.getFullName( ) + ": service is already ENABLED." );
+        Logs.exhaust( ).debug( "FAILOVER-REJECT: " + arg0.getFullName( )
+                               + ": service is already ENABLED." );
         return false;
       } else if ( !Topology.getInstance( ).getServices( ).containsKey( key ) ) {
-        Logs.exhaust( ).debug( "FAILOVER-ACCEPT: " + arg0.getFullName( ) + ": service for partition: " + key );
+        Logs.exhaust( ).debug( "FAILOVER-ACCEPT: " + arg0.getFullName( )
+                               + ": service for partition: "
+                               + key );
         return true;
       } else {
         Logs.exhaust( ).debug( "FAILOVER-ACCEPT: " + arg0 );
@@ -655,5 +641,5 @@ public class Topology implements EventListener<Event> {
       : "remote" );
     return builder.toString( );
   }
-
+  
 }
