@@ -71,7 +71,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
-import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapArgs;
@@ -106,8 +105,9 @@ import edu.emory.mathcs.backport.java.util.concurrent.atomic.AtomicBoolean;
 @Provides( Empyrean.class )
 @RunDuring( Bootstrap.Stage.RemoteServicesInit )
 public class ServiceBootstrapper extends Bootstrapper {
-  private static Logger LOG = Logger.getLogger( ServiceBootstrapper.class );
-  private static final int NUM_SERVICE_BOOTSTRAP_WORKERS = 40;//TODO:GRZE:@Configurable
+  private static Logger    LOG                           = Logger.getLogger( ServiceBootstrapper.class );
+  private static final int NUM_SERVICE_BOOTSTRAP_WORKERS = 40;                                           //TODO:GRZE:@Configurable
+                                                                                                          
   static class ServiceBootstrapWorker implements Runnable {
     private final AtomicBoolean                 running  = new AtomicBoolean( true );
     private final BlockingQueue<Runnable>       msgQueue = new LinkedBlockingQueue<Runnable>( );
@@ -153,7 +153,9 @@ public class ServiceBootstrapper extends Bootstrapper {
     public boolean apply( final ServiceConfiguration config ) {
       boolean ret = config.getComponentId( ).isAlwaysLocal( ) || config.isVmLocal( )
                     || ( BootstrapArgs.isCloudController( ) && config.getComponentId( ).isCloudLocal( ) );
-      LOG.debug( "ServiceBootstrapper.shouldLoad(" + config.toString( ) + "):" + ret );
+      LOG.debug( "ServiceBootstrapper.shouldLoad(" + config.toString( )
+                 + "):"
+                 + ret );
       return ret;
     }
   }
@@ -217,24 +219,28 @@ public class ServiceBootstrapper extends Bootstrapper {
     for ( final ComponentId compId : ComponentIds.list( ) ) {
       Component comp = Components.lookup( compId );
       if ( compId.isRegisterable( ) ) {
-        try {
-          for ( ServiceConfiguration config : Iterables.filter( ServiceConfigurations.list( compId.getClass( ) ), ShouldLoad.INSTANCE ) ) {
-            try {
-              predicate.apply( config );
-            } catch ( Exception ex ) {
-              LOG.error( ex, ex );
-            }
+        for ( ServiceConfiguration config : Iterables.filter( ServiceConfigurations.list( compId.getClass( ) ), ShouldLoad.INSTANCE ) ) {
+          try {
+            predicate.apply( config );
+          } catch ( Exception ex ) {
+            Exceptions.trace( ex );
           }
-        } catch ( PersistenceException ex ) {
-          LOG.error( ex , ex );
         }
       } else if ( comp.hasLocalService( ) ) {
         final ServiceConfiguration config = comp.getLocalServiceConfiguration( );
         if ( config.isVmLocal( ) || ( BootstrapArgs.isCloudController( ) && config.isHostLocal( ) ) ) {
-          predicate.apply( config );
+          try {
+            predicate.apply( config );
+          } catch ( Exception ex ) {
+            Exceptions.trace( ex );
+          }
         }
-      } else if ( compId.isAlwaysLocal( )|| ( BootstrapArgs.isCloudController( ) && comp.identity.isCloudLocal( ) ) ) {
-        
+      } else if ( compId.isAlwaysLocal( ) || ( BootstrapArgs.isCloudController( ) && compId.isCloudLocal( ) ) ) {
+        try {
+          predicate.apply( config );
+        } catch ( Exception ex ) {
+          Exceptions.trace( ex );
+        }
       }
     }
   }
