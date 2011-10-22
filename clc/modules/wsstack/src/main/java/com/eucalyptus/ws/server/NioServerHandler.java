@@ -63,6 +63,7 @@
  */
 package com.eucalyptus.ws.server;
 
+import java.util.concurrent.atomic.AtomicReference;
 import javax.security.auth.login.LoginException;
 import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffers;
@@ -96,13 +97,13 @@ import com.eucalyptus.ws.WebServicesException;
 
 @ChannelPipelineCoverage( "one" )
 public class NioServerHandler extends SimpleChannelUpstreamHandler {//TODO:GRZE: this needs to move up dependency tree.
-  private static Logger LOG   = Logger.getLogger( NioServerHandler.class );
-  private boolean       first = true;
+  private static Logger                     LOG      = Logger.getLogger( NioServerHandler.class );
+  private AtomicReference<FilteredPipeline> pipeline = new AtomicReference<FilteredPipeline>( );
   
   @Override
   public void messageReceived( final ChannelHandlerContext ctx, final MessageEvent e ) throws Exception {
     try {
-      if ( this.first ) {
+      if ( this.pipeline.get( ) == null ) {
         lookupPipeline( ctx, e );
       } else if ( e.getMessage( ) instanceof MappingHttpRequest ) {
         MappingHttpRequest httpRequest = ( MappingHttpRequest ) e.getMessage( );
@@ -111,6 +112,7 @@ public class NioServerHandler extends SimpleChannelUpstreamHandler {//TODO:GRZE:
           while ( ( p = ctx.getPipeline( ).getLast( ) ) != this ) {
             ctx.getPipeline( ).remove( p );
           }
+          this.pipeline.set( null );
           lookupPipeline( ctx, e );
         } else {
           LOG.warn( "Hard close the socket on an attempt to do a second request." );
@@ -136,12 +138,13 @@ public class NioServerHandler extends SimpleChannelUpstreamHandler {//TODO:GRZE:
     try {
       final HttpRequest request = ( HttpRequest ) e.getMessage( );
       if ( Logs.isExtrrreeeme( ) && request instanceof MappingHttpMessage ) {
-        ( ( MappingHttpMessage ) request ).logMessage( );
+        Logs.extreme( ).trace( ( ( MappingHttpMessage ) request ).logMessage( ) );
       }
-      final ChannelPipeline pipeline = ctx.getPipeline( );
+      final ChannelPipeline currentPipeline = ctx.getPipeline( );
       FilteredPipeline filteredPipeline = Pipelines.find( request );
-      filteredPipeline.unroll( pipeline );
-      this.first = false;
+      if ( this.pipeline.compareAndSet( null, filteredPipeline ) ) {
+        this.pipeline.get( ).unroll( currentPipeline );
+      }
     } catch ( DuplicatePipelineException e1 ) {
       LOG.error( "This is a BUG: " + e1, e1 );
       throw e1;

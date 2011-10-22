@@ -87,5 +87,8 @@ public class EnableServiceCallback extends SubjectMessageCallback<Cluster, Enabl
       Clusters.getInstance( ).register( this.getSubject( ) );
     }
   }
+
+  @Override
+  public void initialize( EnableServiceType request ) throws Exception {}
   
 }

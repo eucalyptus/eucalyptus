@@ -66,6 +66,7 @@ package com.eucalyptus.util.async;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.context.ServiceContext;
+import com.eucalyptus.records.Logs;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class AsyncRequests {
@@ -84,7 +85,7 @@ public class AsyncRequests {
           
           @Override
           public void fire( B msg ) {
-            LOG.debug( msg.toSimpleString( ) );
+            Logs.extreme( ).debug( msg.toSimpleString( ) );
           }
         } );
         return req.sendSync( config );
