@@ -63,19 +63,21 @@
 
 package com.eucalyptus.util.fsm;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Callable;
 import org.apache.log4j.Logger;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Futures;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.emptyArray;
+import static org.hamcrest.Matchers.not;
 
 public class Automata {
   public interface EnumMappable {
@@ -137,7 +139,7 @@ public class Automata {
 //              return Futures.predestinedFailedFuture( ex );
             } catch ( final ExistingTransitionException ex ) {
               Logs.exhaust( ).error( ex, ex );
-              throw new UndeclaredThrowableException( ex.getCause( ) );
+              throw Exceptions.toUndeclared( ex.getCause( ) );
             } catch ( final InterruptedException ex ) {
               Thread.currentThread( ).interrupt( );
               throw new RuntimeException( ex );
@@ -146,7 +148,7 @@ public class Automata {
               throw ex;
             } catch ( final Throwable ex ) {
               Logs.exhaust( ).error( ex, ex );
-              throw new UndeclaredThrowableException( ex );
+              throw Exceptions.toUndeclared( ex );
             }
           }
         } );

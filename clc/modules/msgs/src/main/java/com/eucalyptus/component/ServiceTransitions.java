@@ -307,7 +307,7 @@ public class ServiceTransitions {
     } catch ( Exception ex ) {
       if ( Faults.filter( parent, ex ) ) {
         transitionCallback.fireException( ex );
-        throw new UndeclaredThrowableException( ex );
+        throw Exceptions.toUndeclared( ex );
       } else {
         transitionCallback.fire( );
       }

@@ -333,6 +333,7 @@ public class TopologyChanges {
         return endResult;
       } catch ( Exception ex ) {
         Exceptions.maybeInterrupted( ex );
+        RuntimeException ret = Exceptions.toUndeclared( ex );
         LOG.trace( this.toString( endResult, initialState, nextState, ex ) );
         throw Exceptions.toUndeclared( ex );
       }

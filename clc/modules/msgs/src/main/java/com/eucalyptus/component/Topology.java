@@ -63,6 +63,7 @@
 
 package com.eucalyptus.component;
 
+import java.lang.reflect.UndeclaredThrowableException;
 import java.net.InetAddress;
 import java.util.Collection;
 import java.util.List;
@@ -283,9 +284,10 @@ public class Topology implements EventListener<Event> {
             LOG.trace( EventRecord.here( Topology.class, EventType.QUEUE, functionName, config.getFullName( ).toString( ),
                                          Long.toString( System.currentTimeMillis( ) - serviceStart ), "ms" ) );
             return result;
-          } catch ( final Exception ex ) {
-            Logs.exhaust( ).error( ex, ex );
-            LOG.error( config.getFullName( ) + " failed to transition because of: " + ex );
+          } catch ( Exception ex ) {
+            Throwable t = Exceptions.unwrapCause( ex );
+            Logs.extreme( ).error( t, t );
+            LOG.error( config.getFullName( ) + " failed to transition because of: " + t );
             throw ex;
           }
         }
