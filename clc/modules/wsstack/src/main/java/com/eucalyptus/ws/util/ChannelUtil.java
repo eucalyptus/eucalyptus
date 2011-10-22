@@ -45,6 +45,7 @@ public class ChannelUtil {
       pipeline.addLast( "decoder", new NioHttpDecoder( ) );
       pipeline.addLast( "encoder", new HttpResponseEncoder( ) );
       pipeline.addLast( "chunkedWriter", new ChunkedWriteHandler( ) );
+      pipeline.addLast( "bootstrap-fence", Handlers.bootstrapFence( ) );
       pipeline.addLast( "handler", new NioServerHandler( ) );
       return pipeline;
     }

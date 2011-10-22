@@ -75,6 +75,7 @@ import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
+import org.jboss.netty.channel.ChannelUpstreamHandler;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.http.HttpChunkAggregator;
 import org.jboss.netty.handler.ssl.SslHandler;
@@ -83,6 +84,7 @@ import org.jboss.netty.handler.timeout.ReadTimeoutHandler;
 import org.jboss.netty.handler.timeout.WriteTimeoutHandler;
 import org.jboss.netty.util.HashedWheelTimer;
 import com.eucalyptus.binding.BindingManager;
+import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.crypto.util.SslSetup;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.ws.handlers.BindingHandler;
@@ -101,12 +103,24 @@ public class Handlers {
   private static final ChannelHandler                        soapHandler            = new SoapHandler( );
   private static final ChannelHandler                        addressingHandler      = new AddressingHandler( );
   private static final ConcurrentMap<String, ChannelHandler> bindingHandlers        = new ConcurrentHashMap<String, ChannelHandler>( );
-  private static final HashedWheelTimer                      timer                  = new HashedWheelTimer( /**
-                                                                                     * 
-                                                                                     * TODO:GRZE:
-                                                                                     * configurable
-                                                                                     **/
-                                                                                    );
+  private static final HashedWheelTimer                      timer                  = new HashedWheelTimer( );                          //TODO:GRZE: configurable
+                                                                                                                                        
+  enum BootstrapStateCheck implements ChannelUpstreamHandler {
+    INSTANCE;
+    
+    @Override
+    public void handleUpstream( ChannelHandlerContext ctx, ChannelEvent e ) throws Exception {
+      if ( !Bootstrap.isFinished( ) ) {
+        //TODO:GRZE: do nothing for the moment, not envouh info here.
+//        throw new ServiceNotReadyException( "System has not yet completed booting." );
+      }
+    }
+    
+  }
+  
+  public static ChannelHandler bootstrapFence( ) {
+    return BootstrapStateCheck.INSTANCE;
+  }
   
   public static Map<String, ChannelHandler> channelMonitors( final TimeUnit unit, final int timeout ) {
     return new HashMap<String, ChannelHandler>( 4 ) {
@@ -149,7 +163,9 @@ public class Handlers {
       } else if ( BindingManager.isRegisteredBinding( maybeBindingName = BindingManager.sanitizeNamespace( bindingName ) ) ) {
         bindingHandlers.putIfAbsent( bindingName, new BindingHandler( BindingManager.getBinding( maybeBindingName ) ) );
       } else {
-        throw Exceptions.trace( "Failed to find registerd binding for name: " + bindingName + ".  Also tried looking for sanitized name: " + maybeBindingName );
+        throw Exceptions.trace( "Failed to find registerd binding for name: " + bindingName
+                                + ".  Also tried looking for sanitized name: "
+                                + maybeBindingName );
       }
       return bindingHandlers.get( bindingName );
     }
@@ -167,22 +183,21 @@ public class Handlers {
     return soapHandler;
   }
   
-
-  @ChannelPipelineCoverage("one")
+  @ChannelPipelineCoverage( "one" )
   private static class NioSslHandler extends SslHandler {
     private AtomicBoolean first = new AtomicBoolean( true );
     
     NioSslHandler( ) {
       super( SslSetup.getServerEngine( ) );
     }
-      
+    
     @Override
     public void handleUpstream( ChannelHandlerContext ctx, ChannelEvent e ) throws Exception {
       Object o = null;
       if ( e instanceof MessageEvent
-          && this.first.compareAndSet( true, false )
-          && ( o = ( ( MessageEvent ) e ).getMessage( ) ) instanceof ChannelBuffer 
-          && !HttpUtils.maybeSsl( ( ChannelBuffer ) o ) ) {
+           && this.first.compareAndSet( true, false )
+           && ( o = ( ( MessageEvent ) e ).getMessage( ) ) instanceof ChannelBuffer
+           && !HttpUtils.maybeSsl( ( ChannelBuffer ) o ) ) {
         ctx.getPipeline( ).removeFirst( );
         ctx.sendUpstream( e );
       } else {

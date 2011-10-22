@@ -125,14 +125,10 @@ public class TopologyChanges {
   }
   
   private enum Transitions implements Function<ServiceConfiguration, ServiceConfiguration> {
-    START( Component.State.NOTREADY ) {
-      @Override
-      public ServiceConfiguration apply( ServiceConfiguration input ) {
-        Components.lookup( input.getComponentId( ) ).setup( input );
-        return super.apply( input );
-      }
-    },
+    START( Component.State.NOTREADY ),
     STOP( Component.State.STOPPED ),
+    INIT( Component.State.INITIALIZED ),
+    LOAD( Component.State.LOADED ),
     DESTROY( Component.State.PRIMORDIAL ),
     ENABLE( Component.State.ENABLED ) {
       @Override
@@ -200,6 +196,7 @@ public class TopologyChanges {
     
     @Override
     public ServiceConfiguration apply( ServiceConfiguration input ) {
+      Components.lookup( input.getComponentId( ) ).setup( input );
       return this.tc.apply( input );
     }
     

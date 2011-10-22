@@ -76,14 +76,26 @@ import com.eucalyptus.ws.handlers.ClusterWsSecHandler;
 
 @ComponentPart( ClusterController.class )
 public final class ClusterClientPipelineFactory implements ChannelPipelineFactory {
+  /**
+   * 
+   */
+  private static final int CLUSTER_MSG_TIMEOUT = 60;
   private static ChannelHandler bindingHandler;
   private static ChannelHandler wssecHandler;
+  private static ChannelHandler addressingHandler;
   
   private static void setupHandlers( ) {
-    if ( wssecHandler == null ) {
+    if ( wssecHandler == null || bindingHandler == null
+         || addressingHandler == null ) {
       synchronized ( ClusterClientPipelineFactory.class ) {
         if ( wssecHandler == null ) {
           wssecHandler = new ClusterWsSecHandler( );
+        }
+        if ( addressingHandler == null ) {
+          addressingHandler = Handlers.newAddressingHandler( "EucalyptusCC#" );
+        }
+        if ( bindingHandler == null ) {
+          bindingHandler = Handlers.bindingHandler( "eucalyptus_ucsb_edu" );
         }
       }
     }
@@ -96,21 +108,17 @@ public final class ClusterClientPipelineFactory implements ChannelPipelineFactor
   @Override
   public ChannelPipeline getPipeline( ) throws Exception {
     final ChannelPipeline pipeline = Channels.pipeline( );
-    for ( Map.Entry<String, ChannelHandler> e : Handlers.channelMonitors( TimeUnit.SECONDS, 60 /**
-     * 
-     * TODO:GRZE: configurable
-     **/
-    ).entrySet( ) ) {
+    for ( Map.Entry<String, ChannelHandler> e : Handlers.channelMonitors( TimeUnit.SECONDS, CLUSTER_MSG_TIMEOUT ).entrySet( ) ) {
       pipeline.addLast( e.getKey( ), e.getValue( ) );
     }
     pipeline.addLast( "decoder", Handlers.newHttpResponseDecoder( ) );
     pipeline.addLast( "aggregator", Handlers.newHttpChunkAggregator( ) );
     pipeline.addLast( "encoder", Handlers.httpRequestEncoder( ) );
     pipeline.addLast( "serializer", Handlers.soapMarshalling( ) );
-    pipeline.addLast( "wssec", ClusterClientPipelineFactory.wssecHandler );
-    pipeline.addLast( "addressing", Handlers.newAddressingHandler( "EucalyptusCC#" ) );
+    pipeline.addLast( "wssec", wssecHandler );
+    pipeline.addLast( "addressing", addressingHandler );
     pipeline.addLast( "soap", Handlers.soapHandler( ) );
-    pipeline.addLast( "binding", Handlers.bindingHandler( "eucalyptus_ucsb_edu" ) );
+    pipeline.addLast( "binding", bindingHandler );
     return pipeline;
   }
 }
