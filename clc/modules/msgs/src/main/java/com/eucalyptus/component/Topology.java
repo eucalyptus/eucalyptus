@@ -103,7 +103,7 @@ public class Topology {
   private final ConcurrentMap<ServiceKey, ServiceConfiguration> services     = new ConcurrentSkipListMap<Topology.ServiceKey, ServiceConfiguration>( );
   
   private enum Queue implements Function<Callable, Future> {
-    INTERNAL {
+    INTERNAL( 1 ) {
       ServiceConfiguration internal;
       
       @Override
@@ -115,7 +115,7 @@ public class Topology {
         return this.internal;
       }
     },
-    EXTERNAL {
+    EXTERNAL( 32 ) {
       ServiceConfiguration external;
       
       @Override
@@ -127,11 +127,17 @@ public class Topology {
         return this.external;
       }
     };
+    private final int numWorkers;
+    
+    private Queue( int numWorkers ) {
+      this.numWorkers = numWorkers;
+    }
+    
     abstract ServiceConfiguration queue( );
     
     @Override
     public Future apply( final Callable call ) {
-      return Threads.enqueue( this.queue( ), 1, call );
+      return Threads.enqueue( this.queue( ), this.numWorkers, call );
     }
     
     @SuppressWarnings( "unchecked" )
@@ -271,7 +277,7 @@ public class Topology {
   }
   
   public static Future<ServiceConfiguration> start( final ServiceConfiguration config ) {
-    return transition( State.DISABLED ).apply( config );
+    return transition( State.NOTREADY ).apply( config );
   }
   
   public static Future<ServiceConfiguration> enable( final ServiceConfiguration config ) {

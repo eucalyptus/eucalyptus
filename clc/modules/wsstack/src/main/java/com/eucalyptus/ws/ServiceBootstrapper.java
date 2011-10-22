@@ -268,7 +268,7 @@ public class ServiceBootstrapper extends Bootstrapper.Simple {
             LOG.debug( "load(): " + config );
             try {
               Components.lookup( config.getComponentId( ) ).setup( config );
-              ServiceTransitions.pathTo( config, Component.State.LOADED ).get( );
+              Topology.start( config ).get( );
             } catch ( final Exception ex ) {
               Faults.failure( config, ex );
             }
@@ -297,7 +297,7 @@ public class ServiceBootstrapper extends Bootstrapper.Simple {
           @Override
           public void run( ) {
             try {
-              Topology.start( config ).get( );
+              Topology.disable( config ).get( );
               if ( Hosts.isCoordinator( ) ) {
                 Topology.enable( config );
               }

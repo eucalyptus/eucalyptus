@@ -81,7 +81,7 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
 
 public class Faults {
-  
+  private static Logger LOG = Logger.getLogger( Faults.class );
   enum NoopErrorFilter implements Predicate<Throwable> {
     INSTANCE;
     
@@ -94,11 +94,7 @@ public class Faults {
   }
   
   public static class CheckException extends RuntimeException implements Iterable<CheckException> {
-    /**
-     * 
-     */
-    private static final long serialVersionUID = 1L;
-    private static Logger              LOG = Logger.getLogger( CheckException.class );
+    private static final long          serialVersionUID = 1L;
     private final Severity             severity;
     private final ServiceConfiguration config;
     private final Date                 timestamp;
@@ -282,7 +278,12 @@ public class Faults {
    * TODO:GRZE: this behaviour should be @Configurable
    */
   public enum Actions {
-    STORE, LOG, DESCRIBE, UI, NOTIFY, ALERT
+    STORE,
+    LOGGING,
+    DESCRIBE,
+    UI,
+    NOTIFY,
+    ALERT
   }
   
   /**
@@ -317,9 +318,11 @@ public class Faults {
         last = new CheckException( config, severity, ex );
       }
     }
-    return last != null
+    last = ( last != null
       ? last
-      : new CheckException( config, severity, new NullPointerException( ) );
+      : new CheckException( config, severity, new NullPointerException( ) ) );
+    LOG.debug( last );
+    Logs.extreme( ).error( last, last );
   }
   
   public static CheckException failure( final ServiceConfiguration config, final Throwable... exs ) {

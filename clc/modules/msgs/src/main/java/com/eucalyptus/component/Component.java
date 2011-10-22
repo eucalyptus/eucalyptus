@@ -115,18 +115,18 @@ public class Component implements HasName<Component> {
   public enum Transition implements Automata.Transition<Transition> {
     INITIALIZING,
     LOADING,
-    STARTING,
+    START,
     READY_CHECK,
-    STOPPING,
+    STOP,
     STOPPING_NOTREADY,
     STOPPING_BROKEN,
-    ENABLING,
+    ENABLE,
     ENABLED_CHECK,
-    DISABLING,
+    DISABLE,
     DISABLED_CHECK,
-    DESTROYING,
+    DESTROY,
     FAILED_TO_PREPARE,
-    RELOADING,
+    RELOAD,
     REMOVING;
   }
   

@@ -53,9 +53,9 @@ public abstract class MessageCallback<Q extends BaseMessage, R extends BaseMessa
    */
   @Override
   public void initialize( Q request ) throws Exception {
-    LOG.warn( this.getClass( ) + ":"
-              + this.request.get( ).getClass( ).getSimpleName( )
-              + " should implement: initialize( ) to check any preconditions!" );
+    Logs.extreme( ).trace( this.getClass( ) + ":"
+                           + this.request.get( ).getClass( ).getSimpleName( )
+                           + " should implement: initialize( ) to check any preconditions!" );
   }
   
   /**
@@ -71,9 +71,9 @@ public abstract class MessageCallback<Q extends BaseMessage, R extends BaseMessa
    */
   @Override
   public void fireException( Throwable t ) {
-    LOG.warn( this.getClass( ) + ":"
-              + this.request.get( ).getClass( ).getSimpleName( )
-              + " should implement: fireException( Throwable t ) to handle errors!" );
+    Logs.extreme( ).error( this.getClass( ) + ":"
+                           + this.request.get( ).getClass( ).getSimpleName( )
+                           + " should implement: fireException( Throwable t ) to handle errors!" );
     Logs.extreme( ).error( t, t );
   }
   
