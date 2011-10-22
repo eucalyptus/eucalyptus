@@ -245,7 +245,8 @@ public class ServiceBootstrapper extends Bootstrapper.Simple {
     @Override
     public boolean apply( final ServiceConfiguration config ) {
       final boolean ret = config.getComponentId( ).isAlwaysLocal( ) || config.isVmLocal( )
-                          || ( BootstrapArgs.isCloudController( ) && config.getComponentId( ).isCloudLocal( ) );
+                          || ( BootstrapArgs.isCloudController( ) && config.getComponentId( ).isCloudLocal( ) )
+                          || Hosts.isCoordinator( );
       LOG.debug( "ServiceBootstrapper.shouldLoad(" + config.toString( )
                  + "):"
                  + ret );
@@ -340,11 +341,11 @@ public class ServiceBootstrapper extends Bootstrapper.Simple {
           }
         }
       } else if ( compId.isAlwaysLocal( ) || ( BootstrapArgs.isCloudController( ) && compId.isCloudLocal( ) ) ) {
-        try {
-          predicate.apply( ServiceConfigurations.createEphemeral( compId, Internets.localHostInetAddress( ) ) );
-        } catch ( final Exception ex ) {
-          Exceptions.trace( ex );
-        }
+//        try {
+//          predicate.apply( ServiceConfigurations.createEphemeral( compId, Internets.localHostInetAddress( ) ) );
+//        } catch ( final Exception ex ) {
+//          Exceptions.trace( ex );
+//        }
       }
     }
   }
