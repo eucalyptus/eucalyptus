@@ -491,17 +491,17 @@ public class RestrictedTypes {
   }
   
   private static Class<?> findResourceClass( Object allocator ) throws IllegalArgumentException, NoSuchElementException {
-    List<Class<?>> lookupTypes = Classes.genericsToClasses( allocator );
+    List<Class> lookupTypes = Classes.genericsToClasses( allocator );
     if ( lookupTypes.isEmpty( ) ) {
       throw new IllegalArgumentException( "Failed to find required generic type for lookup " + allocator.getClass( )
                                           + " so the policy type for looking up " + allocator + " cannot be determined." );
     }
     Class<?> rscType;
     try {
-      rscType = Iterables.find( lookupTypes, new Predicate<Class<?>>( ) {
+      rscType = Iterables.find( lookupTypes, new Predicate<Class>( ) {
         
         @Override
-        public boolean apply( Class<?> arg0 ) {
+        public boolean apply( Class arg0 ) {
           return RestrictedType.class.isAssignableFrom( arg0 );
         }
       } );

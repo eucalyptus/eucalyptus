@@ -188,9 +188,9 @@ public class BaseMessage {
    */
   public String toString( String namespace ) {
     ByteArrayOutputStream temp = new ByteArrayOutputStream( );
-    Class<?> targetClass = Iterables.find( Classes.classAncestors( this ), new Predicate<Class<?>>( ) {
+    Class targetClass = Iterables.find( Classes.classAncestors( this ), new Predicate<Class>( ) {
       @Override
-      public boolean apply( Class<?> arg0 ) {
+      public boolean apply( Class arg0 ) {
         return !arg0.isAnonymousClass( );
       }
     } );

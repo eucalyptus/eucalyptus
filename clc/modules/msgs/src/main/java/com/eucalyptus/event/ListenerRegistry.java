@@ -48,7 +48,7 @@ public class ListenerRegistry {
   
   @SuppressWarnings( "unchecked" )
   public void register( Object type, final EventListener listener ) {
-    final List<Class<?>> lookupTypes = Classes.genericsToClasses( listener );
+    final List<Class> lookupTypes = Classes.genericsToClasses( listener );
     lookupTypes.remove( Event.class );
     /**
      * GRZE: event type is not specified by the generic type of listeners EventListener decl or is
