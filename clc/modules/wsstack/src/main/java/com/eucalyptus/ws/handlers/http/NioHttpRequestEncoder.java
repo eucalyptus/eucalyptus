@@ -70,6 +70,7 @@ import org.jboss.netty.handler.codec.http.HttpMessage;
 import org.jboss.netty.handler.codec.http.HttpMessageEncoder;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 
+@Deprecated
 public class NioHttpRequestEncoder extends HttpMessageEncoder {
 
   public NioHttpRequestEncoder( ) {

@@ -85,6 +85,8 @@ import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpChunkAggregator;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
+import org.jboss.netty.handler.codec.http.HttpMessage;
+import org.jboss.netty.handler.codec.http.HttpMessageEncoder;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
@@ -109,7 +111,6 @@ import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.ws.handlers.BindingHandler;
-import com.eucalyptus.ws.handlers.ChannelStateMonitor;
 import com.eucalyptus.ws.handlers.NioHttpResponseDecoder;
 import com.eucalyptus.ws.handlers.SoapMarshallingHandler;
 import com.eucalyptus.ws.handlers.http.NioHttpRequestEncoder;
@@ -126,7 +127,26 @@ public class Handlers {
   private static final ChannelHandler                        addressingHandler      = new AddressingHandler( );
   private static final ConcurrentMap<String, ChannelHandler> bindingHandlers        = new ConcurrentHashMap<String, ChannelHandler>( );
   private static final HashedWheelTimer                      timer                  = new HashedWheelTimer( );                         //TODO:GRZE: configurable
-                                                                                                                                        
+                                                
+  @ChannelPipelineCoverage("all")
+  public static class NioHttpRequestEncoder extends HttpMessageEncoder {
+
+    public NioHttpRequestEncoder( ) {
+      super( );
+    }
+
+    @Override
+    protected void encodeInitialLine( ChannelBuffer buf, HttpMessage message ) throws Exception {
+      MappingHttpRequest request = ( MappingHttpRequest ) message;
+      buf.writeBytes( request.getMethod( ).toString( ).getBytes( "ASCII" ) );
+      buf.writeByte( HttpUtils.SP );
+      buf.writeBytes( request.getServicePath( ).getBytes( "ASCII" ) );
+      buf.writeByte( HttpUtils.SP );
+      buf.writeBytes( request.getProtocolVersion( ).toString( ).getBytes( "ASCII" ) );
+      buf.writeBytes( HttpUtils.CRLF );
+    }
+  }
+
   @ChannelPipelineCoverage( "all" )
   enum BootstrapStateCheck implements ChannelUpstreamHandler {
     INSTANCE;
@@ -151,7 +171,7 @@ public class Handlers {
   public static Map<String, ChannelHandler> channelMonitors( final TimeUnit unit, final int timeout ) {
     return new HashMap<String, ChannelHandler>( 4 ) {
       {
-        put( "state-monitor", new ChannelStateMonitor( ) );
+//        put( "state-monitor", new ChannelStateMonitor( ) );
         put( "idlehandler", new IdleStateHandler( Handlers.timer, timeout, timeout, timeout, unit ) );
         put( "readTimeout", new ReadTimeoutHandler( Handlers.timer, timeout, unit ) );
         put( "writeTimeout", new WriteTimeoutHandler( Handlers.timer, timeout, unit ) );
