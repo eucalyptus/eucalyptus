@@ -167,15 +167,7 @@ public class BaseMessage {
     this.userId = msg.userId;
     return ( TYPE ) this;
   }
-  
-  @Deprecated
-  /** this cannot work correctly anymore **/
-  private boolean isAdministrator( ) {
-//    return ( FakePrincipals.SYSTEM_USER_ERN.getUserName( ).equals( this.effectiveUserId ) ) || this.getUser( ).isSystemAdmin( )
-//           || this.getUser( ).isSystemInternal( );
-    throw new RuntimeException( "This method is deprecated: use com.eucalyptus.context.Contexts.lookup().hasAdministrativePrivileges() instead." );
-  }
-  
+    
   public String toString( ) {
     String str = this.toString( "msgs_eucalyptus_com" );
     str = ( str != null )
@@ -266,15 +258,6 @@ public class BaseMessage {
   }
   
   /**
-   * @deprecated use get_services( ) as needed, this old name presents a potential naming conflict
-   * @see #get_services()
-   */
-  @Deprecated
-  public ArrayList<ServiceId> getBaseServices( ) {
-    return this._services;
-  }
-  
-  /**
    * @param services the services to set
    */
   public void set_services( ArrayList<ServiceId> services ) {
@@ -317,25 +300,4 @@ public class BaseMessage {
     return this;
   }
   
-  /**
-   * @deprecated
-   * @see {@link Context#getAccount()}
-   */
-  public Account getAccount( ) {
-    throw new RuntimeException( "This method is deprecated: use com.eucalyptus.context.Contexts.lookup().getAccount() instead." );
-  }
-  
-  /**
-   * @deprecated
-   * @see {@link Context#getUser()}
-   */
-  @Deprecated
-  public User getUser( ) {
-    throw new RuntimeException( "This method is deprecated: use com.eucalyptus.context.Contexts.lookup().getUser() instead." );
-  }
-  
-  @Deprecated
-  private UserFullName getUserErn( ) {
-    throw new RuntimeException( "This method is deprecated: use com.eucalyptus.context.Contexts.lookup().getUserFullName() instead." );
-  }
 }
