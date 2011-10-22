@@ -283,7 +283,7 @@ public class SystemBootstrapper {
     } catch ( Throwable t ) {
       LOG.error( t );
       Logs.extreme( ).error( t, t );
-      throw t;
+      System.exit( 123 );
     }
   }
   
