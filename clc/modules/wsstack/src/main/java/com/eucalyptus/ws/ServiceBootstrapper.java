@@ -102,14 +102,14 @@ public class ServiceBootstrapper extends Bootstrapper.Simple {
   private static final int NUM_SERVICE_BOOTSTRAP_WORKERS = 40;                                           //TODO:GRZE:@Configurable
                                                                                                           
   static class ServiceBootstrapWorker {
-    private final AtomicBoolean                 running  = new AtomicBoolean( true );
-    private final BlockingQueue<Runnable>       msgQueue = new LinkedBlockingQueue<Runnable>( );
-    private final ExecutorService               executor = Executors.newFixedThreadPool( NUM_SERVICE_BOOTSTRAP_WORKERS );
-    private static final ServiceBootstrapWorker worker   = new ServiceBootstrapWorker( );
+    private static final AtomicBoolean           running  = new AtomicBoolean( true );
+    private static final BlockingQueue<Runnable> msgQueue = new LinkedBlockingQueue<Runnable>( );
+    private static final ExecutorService         executor = Executors.newFixedThreadPool( NUM_SERVICE_BOOTSTRAP_WORKERS );
+    private static final ServiceBootstrapWorker  worker   = new ServiceBootstrapWorker( );
     
     private ServiceBootstrapWorker( ) {
       for ( int i = 0; i < 40; i++ ) {
-        this.executor.submit( new Worker( ) );
+        executor.submit( new Worker( ) );
       }
     }
     
@@ -118,7 +118,7 @@ public class ServiceBootstrapper extends Bootstrapper.Simple {
       ServiceBootstrapWorker.waitAll( );
     }
     
-    public static void submit( Runnable run ) {
+    public static void submit( final Runnable run ) {
       if ( !worker.running.get( ) ) {
         throw new IllegalStateException( "Worker has been stopped: " + ServiceBootstrapWorker.class );
       }
@@ -147,10 +147,10 @@ public class ServiceBootstrapper extends Bootstrapper.Simple {
       
       @Override
       public void run( ) {
-        while ( !ServiceBootstrapWorker.this.msgQueue.isEmpty( ) || ServiceBootstrapWorker.this.running.get( ) ) {
+        while ( !worker.msgQueue.isEmpty( ) || worker.running.get( ) ) {
           Runnable event;
           try {
-            if ( ( event = ServiceBootstrapWorker.this.msgQueue.poll( 50, TimeUnit.MILLISECONDS ) ) != null ) {
+            if ( ( event = worker.msgQueue.poll( 50, TimeUnit.MILLISECONDS ) ) != null ) {
               try {
                 workers.replace( this, event );
                 event.run( );
@@ -168,7 +168,7 @@ public class ServiceBootstrapper extends Bootstrapper.Simple {
       
       @Override
       public String toString( ) {
-        StringBuilder builder = new StringBuilder( );
+        final StringBuilder builder = new StringBuilder( );
         builder.append( "ServiceBootstrapWorker" ).append( " " ).append( this.name ).append( " work: " ).append( workers.get( this ) );
         return builder.toString( );
       }
@@ -177,7 +177,7 @@ public class ServiceBootstrapper extends Bootstrapper.Simple {
        * @see java.lang.Comparable#compareTo(java.lang.Object)
        */
       @Override
-      public int compareTo( Worker o ) {
+      public int compareTo( final Worker o ) {
         return this.name.compareTo( o.name );
       }
       
@@ -186,7 +186,7 @@ public class ServiceBootstrapper extends Bootstrapper.Simple {
         final int prime = 31;
         int result = 1;
         result = prime * result
-                 + getOuterType( ).hashCode( );
+                 + this.getOuterType( ).hashCode( );
         result = prime * result
                  + ( ( this.name == null )
                    ? 0
@@ -195,18 +195,18 @@ public class ServiceBootstrapper extends Bootstrapper.Simple {
       }
       
       @Override
-      public boolean equals( Object obj ) {
+      public boolean equals( final Object obj ) {
         if ( this == obj ) {
           return true;
         }
         if ( obj == null ) {
           return false;
         }
-        if ( getClass( ) != obj.getClass( ) ) {
+        if ( this.getClass( ) != obj.getClass( ) ) {
           return false;
         }
-        Worker other = ( Worker ) obj;
-        if ( !getOuterType( ).equals( other.getOuterType( ) ) ) {
+        final Worker other = ( Worker ) obj;
+        if ( !this.getOuterType( ).equals( other.getOuterType( ) ) ) {
           return false;
         }
         if ( this.name == null ) {
@@ -228,12 +228,12 @@ public class ServiceBootstrapper extends Bootstrapper.Simple {
     static void waitAll( ) {
       try {
         while ( !worker.msgQueue.isEmpty( ) ) {
-          for ( Worker w : workers.keySet( ) ) {
+          for ( final Worker w : workers.keySet( ) ) {
             LOG.info( "Waiting for" + w );
           }
           TimeUnit.SECONDS.sleep( 1 );
         }
-      } catch ( InterruptedException ex ) {
+      } catch ( final InterruptedException ex ) {
         Thread.currentThread( ).interrupt( );
       }
     }
@@ -244,7 +244,7 @@ public class ServiceBootstrapper extends Bootstrapper.Simple {
     
     @Override
     public boolean apply( final ServiceConfiguration config ) {
-      boolean ret = config.getComponentId( ).isAlwaysLocal( ) || config.isVmLocal( )
+      final boolean ret = config.getComponentId( ).isAlwaysLocal( ) || config.isVmLocal( )
                     || ( BootstrapArgs.isCloudController( ) && config.getComponentId( ).isCloudLocal( ) );
       LOG.debug( "ServiceBootstrapper.shouldLoad(" + config.toString( )
                  + "):"
@@ -268,7 +268,7 @@ public class ServiceBootstrapper extends Bootstrapper.Simple {
             try {
               Components.lookup( config ).loadService( config );
               ServiceTransitions.pathTo( config, Component.State.LOADED ).get( );
-            } catch ( Exception ex ) {
+            } catch ( final Exception ex ) {
               Faults.failure( config, ex );
             }
           }
@@ -300,7 +300,7 @@ public class ServiceBootstrapper extends Bootstrapper.Simple {
               if ( Hosts.isCoordinator( ) ) {
                 Topology.enable( config );
               }
-            } catch ( Exception ex ) {
+            } catch ( final Exception ex ) {
               Exceptions.maybeInterrupted( ex );
               Faults.failure( config, ex );
             }
@@ -321,12 +321,12 @@ public class ServiceBootstrapper extends Bootstrapper.Simple {
   
   private static void execute( final Predicate<ServiceConfiguration> predicate ) throws NoSuchElementException {
     for ( final ComponentId compId : ComponentIds.list( ) ) {
-      Component comp = Components.lookup( compId );
+      final Component comp = Components.lookup( compId );
       if ( compId.isRegisterable( ) ) {
-        for ( ServiceConfiguration config : Iterables.filter( comp.lookupServiceConfigurations( ), ShouldLoad.INSTANCE ) ) {
+        for ( final ServiceConfiguration config : Iterables.filter( comp.lookupServiceConfigurations( ), ShouldLoad.INSTANCE ) ) {
           try {
             predicate.apply( config );
-          } catch ( Exception ex ) {
+          } catch ( final Exception ex ) {
             Exceptions.trace( ex );
           }
         }
@@ -335,14 +335,14 @@ public class ServiceBootstrapper extends Bootstrapper.Simple {
         if ( config.isVmLocal( ) || ( BootstrapArgs.isCloudController( ) && config.isHostLocal( ) ) ) {
           try {
             predicate.apply( config );
-          } catch ( Exception ex ) {
+          } catch ( final Exception ex ) {
             Exceptions.trace( ex );
           }
         }
       } else if ( compId.isAlwaysLocal( ) || ( BootstrapArgs.isCloudController( ) && compId.isCloudLocal( ) ) ) {
         try {
           predicate.apply( ServiceConfigurations.createEphemeral( compId ) );
-        } catch ( Exception ex ) {
+        } catch ( final Exception ex ) {
           Exceptions.trace( ex );
         }
       }
