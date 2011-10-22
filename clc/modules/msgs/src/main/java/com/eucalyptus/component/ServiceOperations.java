@@ -148,7 +148,7 @@ public class ServiceOperations {
             Contexts.threadLocal( ctx );
             try {
               final O reply = op.apply( request );
-              Contexts.response( request );
+              Contexts.response( reply );
             } catch ( final Exception ex ) {
               Logs.extreme( ).error( ex, ex );
               Contexts.responseError( request.getCorrelationId( ), ex );

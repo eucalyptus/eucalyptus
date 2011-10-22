@@ -156,10 +156,10 @@ public class Contexts {
       Channels.write( channel, responseMessage );
       clear( ctx );
     } catch ( NoSuchContextException e ) {
-      ServiceContext.LOG.warn( "Received a reply for absent client:  No channel to write response message.", e );
-      ServiceContext.LOG.debug( responseMessage );
+      LOG.warn( "Received a reply for absent client:  No channel to write response message.", e );
+      LOG.debug( responseMessage );
     } catch ( Exception e ) {
-      ServiceContext.LOG.warn( "Error occurred while handling reply: " + responseMessage, e );
+      LOG.warn( "Error occurred while handling reply: " + responseMessage, e );
     }
   }
 
@@ -177,8 +177,8 @@ public class Contexts {
         clear( ctx );
       }
     } catch ( Exception ex ) {
-      ServiceContext.LOG.error( ex );
-      ServiceContext.LOG.error( cause, cause );
+      LOG.error( ex );
+      LOG.error( cause, cause );
     }
   }
   
