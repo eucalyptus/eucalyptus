@@ -171,7 +171,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
   private void error( Throwable t ) {
     Logs.exhaust( ).error( "Transition error(): " + this.toString( ) );
     if ( !this.state.isMarked( ) ) {
-      IllegalStateException ex = Exceptions.debug( new IllegalStateException( "error() called when there is no currently pending transition: "
+      IllegalStateException ex = Exceptions.trace( new IllegalStateException( "error() called when there is no currently pending transition: "
                                                                               + this.toString( ), t ) );
       Logs.exhaust( ).error( ex, ex );
       throw ex;
@@ -192,7 +192,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
   private void rollback( Throwable t ) {
     LOG.debug( "Transition rollback(): " + this.toString( ) );
     if ( !this.state.isMarked( ) ) {
-      Exceptions.debug( new IllegalStateException( "rollback() called when there is no currently pending transition: " + this.toString( ) ) );
+      Exceptions.trace( new IllegalStateException( "rollback() called when there is no currently pending transition: " + this.toString( ) ) );
     } else {
       ActiveTransition tr = this.currentTransition.getAndSet( null );
       this.state.set( tr.getTransitionRule( ).getFromState( ), false );
@@ -240,7 +240,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
       return result;
     } catch ( Exception t ) {
       this.error( t );
-      throw Exceptions.debug( new IllegalStateException( String.format( "Failed to apply transition %s because leave() threw an exception: %s",
+      throw Exceptions.trace( new IllegalStateException( String.format( "Failed to apply transition %s because leave() threw an exception: %s",
                                                                         transitionName.toString( ), t.getMessage( ) ), t ) );
     }
   }
@@ -253,7 +253,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
       throw t;
     } catch ( Exception t ) {
       this.rollback( t );
-      throw Exceptions.debug( new IllegalStateException( String.format( "Failed to apply transition %s because request() threw an exception.",
+      throw Exceptions.trace( new IllegalStateException( String.format( "Failed to apply transition %s because request() threw an exception.",
                                                                         transitionName.toString( ) ), t ) );
     }
     return tid;
@@ -340,7 +340,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
       this.transition = transition;
       this.txName = AtomicMarkedState.this.getName( ) + "-" + this.rule.getName( ) + "-" + id;
       if ( Logs.isExtrrreeeme( ) ) {
-        this.startStackTrace = Exceptions.filterStackTrace( new RuntimeException( ), 20 );
+        this.startStackTrace = Exceptions.filterStackTrace( new RuntimeException( ) );
       } else {
         this.startStackTrace = null;
       }

@@ -428,7 +428,6 @@ public class Hosts {
     }
   }
   
-  @HostUpdated
   public enum AdvertiseToRemoteCloudController implements Predicate<Host> {
     INSTANCE;
     
@@ -444,7 +443,7 @@ public class Hosts {
             return true;
           }
         } catch ( final Exception ex ) {
-          if ( Exceptions.causedBy( ex, NoSuchElementException.class ) == null ) {
+          if ( Exceptions.findCause( ex, NoSuchElementException.class ) == null ) {
             Logs.extreme( ).error( ex, ex );
           }
         }
@@ -454,13 +453,18 @@ public class Hosts {
     
   }
   
-  @HostUpdated
   public enum InitializeAsCloudController implements Predicate<Host> {
     INSTANCE;
     
     @Override
     public boolean apply( Host input ) {
-      if ( !BootstrapArgs.isCloudController( ) && input.isLocalHost( ) && input.hasDatabase( ) ) {
+      if ( BootstrapArgs.isCloudController( ) ) {
+        return false;
+      } else if ( !input.isLocalHost( ) ) {
+        return false;
+      } else if ( !input.hasDatabase( ) ) {
+        return false;
+      } else if ( !BootstrapArgs.isCloudController( ) && input.isLocalHost( ) && input.hasDatabase( ) ) {
         try {
           hostMap.stop( );
         } catch ( Exception ex1 ) {
@@ -472,8 +476,10 @@ public class Hosts {
         } catch ( final Exception ex ) {
           System.exit( 123 );
         }
+        return true;
+      } else {
+        return false;
       }
-      return true;
     }
     
   }

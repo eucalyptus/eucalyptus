@@ -108,9 +108,9 @@ public class ArbitratorControl {
                 ArbitratorControl.error.remove( hostName );
               }
             } catch ( final UnknownHostException e ) {
-              ArbitratorControl.error.put( hostName, Exceptions.filterStackTrace( e, 2 ) );
+              ArbitratorControl.error.put( hostName, Exceptions.filterStackTrace( e ) );
             } catch ( final IOException e ) {
-              ArbitratorControl.error.put( hostName, Exceptions.filterStackTrace( e, 2 ) );
+              ArbitratorControl.error.put( hostName, Exceptions.filterStackTrace( e ) );
             }
             EventRecord.here( ArbitratorControl.class, EventType.BOOTSTRAPPER_CHECK, hostName, "errorMap", error.get( hostName ).toString( ) ).debug( );
           }

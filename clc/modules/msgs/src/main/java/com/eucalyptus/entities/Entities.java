@@ -870,7 +870,7 @@ public class Entities {
           } catch ( RuntimeException ex ) {
             db.rollback( );
             if ( Exceptions.isCausedBy( ex, OptimisticLockException.class ) ) {
-              rootCause = Exceptions.causedBy( ex, OptimisticLockException.class );
+              rootCause = Exceptions.findCause( ex, OptimisticLockException.class );
               continue;
             } else {
               rootCause = ex;

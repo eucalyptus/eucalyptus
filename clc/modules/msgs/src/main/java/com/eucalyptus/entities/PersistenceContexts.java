@@ -3,7 +3,9 @@ package com.eucalyptus.entities;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicStampedReference;
 import javax.persistence.Embeddable;
 import javax.persistence.MappedSuperclass;
 import javax.persistence.PersistenceContext;
@@ -11,6 +13,7 @@ import org.apache.log4j.Logger;
 import org.hibernate.ejb.Ejb3Configuration;
 import org.hibernate.ejb.EntityManagerFactoryImpl;
 import com.eucalyptus.bootstrap.BootstrapException;
+import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.system.Ats;
 import com.eucalyptus.system.Threads;
@@ -18,19 +21,18 @@ import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.LogUtil;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Multimaps;
+import com.google.common.collect.MapMaker;
 import edu.emory.mathcs.backport.java.util.Collections;
-import com.eucalyptus.records.EventRecord;
 
 @SuppressWarnings( "unchecked" )
 public class PersistenceContexts {
-  private static int                                     MAX_FAIL        = 5;
-  private static AtomicInteger                          failCount       = new AtomicInteger( 0 );
-  private static Logger                                 LOG             = Logger.getLogger( PersistenceContexts.class );
-  private static final ArrayListMultimap<String, Class> entities        = ArrayListMultimap.create( );
-  private static final List<Class>                      sharedEntities  = Lists.newArrayList( );
-  private static Map<String, EntityManagerFactoryImpl>  emf             = new ConcurrentSkipListMap<String, EntityManagerFactoryImpl>( );
-  private static List<Exception>                        illegalAccesses = Collections.synchronizedList( Lists.newArrayList( ) );
+  private static Logger                                 LOG              = Logger.getLogger( PersistenceContexts.class );
+  private static Long                                   MAX_FAIL_SECONDS = 60L;                                                           //TODO:GRZE:@Configurable
+  private static AtomicStampedReference<Long>           failCount        = new AtomicStampedReference<Long>( 0L, 0 );
+  private static final ArrayListMultimap<String, Class> entities         = ArrayListMultimap.create( );
+  private static final List<Class>                      sharedEntities   = Lists.newArrayList( );
+  private static Map<String, EntityManagerFactoryImpl>  emf              = new ConcurrentSkipListMap<String, EntityManagerFactoryImpl>( );
+  private static List<Exception>                        illegalAccesses  = Collections.synchronizedList( Lists.newArrayList( ) );
   
   public static boolean isPersistentClass( Class candidate ) {
     return isSharedEntityClass( candidate ) || isEntityClass( candidate );
@@ -47,9 +49,9 @@ public class PersistenceContexts {
       } else {
         return true;
       }
-    } else if ( Ats.from( candidate ).has( javax.persistence.Entity.class ) && !Ats.from( candidate ).has( org.hibernate.annotations.Entity.class ) ) { 
+    } else if ( Ats.from( candidate ).has( javax.persistence.Entity.class ) && !Ats.from( candidate ).has( org.hibernate.annotations.Entity.class ) ) {
       throw Exceptions.toUndeclared( "Database entity missing required annotation @org.hibernate.annotations.Entity. Database entities must have BOTH @javax.persistence.Entity and @org.hibernate.annotations.Entity annotations: " + candidate.getCanonicalName( ) );
-    } else if ( Ats.from( candidate ).has( org.hibernate.annotations.Entity.class ) && !Ats.from( candidate ).has( javax.persistence.Entity.class ) ) { 
+    } else if ( Ats.from( candidate ).has( org.hibernate.annotations.Entity.class ) && !Ats.from( candidate ).has( javax.persistence.Entity.class ) ) {
       throw Exceptions.toUndeclared( "Database entity missing required annotation @javax.persistence.Entity. Database entities must have BOTH @javax.persistence.Entity and @org.hibernate.annotations.Entity annotations: " + candidate.getCanonicalName( ) );
     } else {
       return false;
@@ -85,14 +87,17 @@ public class PersistenceContexts {
       LOG.error( "Duplicate entity definition detected: " + entity.getCanonicalName( ) );
       LOG.error( "=> OLD: " + old.getProtectionDomain( ).getCodeSource( ).getLocation( ) );
       LOG.error( "=> NEW: " + entity.getProtectionDomain( ).getCodeSource( ).getLocation( ) );
-      throw BootstrapException.throwFatal( "Duplicate entity definition in shared entities: " + entity.getCanonicalName( ) + ". See error logs for details." );
+      throw BootstrapException.throwFatal( "Duplicate entity definition in shared entities: " + entity.getCanonicalName( )
+                                           + ". See error logs for details." );
     } else if ( entities.get( ctx.name( ) ) != null && entities.get( ctx.name( ) ).contains( entity ) ) {
       List<Class> context = entities.get( ctx.name( ) );
       Class old = context.get( context.indexOf( entity ) );
       LOG.error( "Duplicate entity definition detected: " + entity.getCanonicalName( ) );
       LOG.error( "=> OLD: " + old.getProtectionDomain( ).getCodeSource( ).getLocation( ) );
       LOG.error( "=> NEW: " + entity.getProtectionDomain( ).getCodeSource( ).getLocation( ) );
-      throw BootstrapException.throwFatal( "Duplicate entity definition in '" + ctx.name( ) + "': " + entity.getCanonicalName( )
+      throw BootstrapException.throwFatal( "Duplicate entity definition in '" + ctx.name( )
+                                           + "': "
+                                           + entity.getCanonicalName( )
                                            + ". See error logs for details." );
     } else {
       return false;
@@ -132,11 +137,16 @@ public class PersistenceContexts {
   }
   
   private static void touchDatabase( ) {
-    if ( MAX_FAIL > failCount.getAndIncrement( ) ) {
-      LOG.fatal( LogUtil.header( "Database connection failure limit reached (" + MAX_FAIL + "):  HUPping the system." ) );
-    } else {
-      LOG.warn( LogUtil.subheader( "Error using or obtaining a database connection, fail count is " + failCount.intValue( ) + " (max=" + MAX_FAIL
-                                   + ") more times before reloading." ) );
+    long failInterval = System.currentTimeMillis( ) - failCount.getReference( );
+    if ( MAX_FAIL_SECONDS * 1000L > failInterval ) {
+      LOG.fatal( LogUtil.header( "Database connection failure time limit reached (" + MAX_FAIL_SECONDS
+                                 + " seconds):  HUPping the system." ) );
+      System.exit( 123 );
+    } else if ( failCount.getStamp( ) > 0 ) {
+      LOG.warn( "Found database connection errors: # " + failCount.getStamp( )
+                + " over the last "
+                + failInterval
+                + " seconds." );
     }
   }
   
@@ -144,7 +154,8 @@ public class PersistenceContexts {
   public static EntityManagerFactoryImpl getEntityManagerFactory( final String persistenceContext ) {
     if ( !emf.containsKey( persistenceContext ) ) {
       RuntimeException e = new RuntimeException( "Attempting to access an entity wrapper before the database has been configured: " + persistenceContext
-                                                 + ".  The available contexts are: " + emf.keySet( ) );
+                                                 + ".  The available contexts are: "
+                                                 + emf.keySet( ) );
       illegalAccesses = illegalAccesses == null
         ? Collections.synchronizedList( Lists.newArrayList( ) )
         : illegalAccesses;
@@ -161,7 +172,8 @@ public class PersistenceContexts {
         LOG.info( "Closing persistence context: " + ctx );
         em.close( );
       } else {
-        LOG.info( "Closing persistence context: " + ctx + " (found it closed already)" );
+        LOG.info( "Closing persistence context: " + ctx
+                  + " (found it closed already)" );
       }
     }
   }

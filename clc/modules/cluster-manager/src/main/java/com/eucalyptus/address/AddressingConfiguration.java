@@ -75,6 +75,9 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
+import com.eucalyptus.configurable.ConfigurableProperty;
+import com.eucalyptus.configurable.ConfigurablePropertyException;
+import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.configurable.PropertyChangeListeners;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.EntityWrapper;
@@ -97,7 +100,7 @@ public class AddressingConfiguration extends AbstractPersistent {
   @Column( name = "config_addr_max_per_user", nullable = false )
   private Integer           maxUserPublicAddresses;
   
-  @ConfigurableField( displayName = "dynamic_public_addressing", description = "Public addresses are assigned to instances by the system as available." )
+  @ConfigurableField( displayName = "dynamic_public_addressing", description = "Public addresses are assigned to instances by the system as available.", changeListener = DynamicAddressingListener.class )
   @Column( name = "config_addr_do_dynamic_public_addresses", nullable = false, columnDefinition = "boolean default true" )
   private Boolean           doDynamicPublicAddresses;
   
@@ -109,13 +112,20 @@ public class AddressingConfiguration extends AbstractPersistent {
   @ConfigurableField( displayName = "address_orphan_count", changeListener = PropertyChangeListeners.IsPositiveInteger.class,
                       description = "Number of times an orphaned address is reported by a cluster before it is reclaimed by the system." )
   @Column( name = "config_addr_orphan_ticks" )
-  private Integer           maxKillOrphans      = 10;
-
+  private Integer           maxKillOrphans   = 10;
+  
   @ConfigurableField( displayName = "address_orphan_grace", changeListener = PropertyChangeListeners.IsPositiveInteger.class,
                       description = "Time after the last recorded state change where an orphaned address will not be modified by the system (minutes)." )
   @Column( name = "config_addr_orphan_grace" )
   private Integer           orphanGrace      = 10;
-
+  
+  public static class DynamicAddressingListener implements PropertyChangeListener {
+    @Override
+    public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
+      AddressingConfiguration.getInstance( ).doDynamicPublicAddresses = ( Boolean ) newValue;
+    }
+  };
+  
   public AddressingConfiguration( ) {
     super( );
   }
@@ -137,23 +147,12 @@ public class AddressingConfiguration extends AbstractPersistent {
   
   @PrePersist
   protected void initialize( ) {
-    if ( this.maxUserPublicAddresses == null ) {
-      this.maxUserPublicAddresses = 5;
-    }
     if ( this.doDynamicPublicAddresses == null ) {
       this.doDynamicPublicAddresses = Boolean.TRUE;
     }
     if ( this.systemReservedPublicAddresses == null ) {
       this.systemReservedPublicAddresses = 0;
     }
-  }
-  
-  public Integer getMaxUserPublicAddresses( ) {
-    return this.maxUserPublicAddresses;
-  }
-  
-  public void setMaxUserPublicAddresses( final Integer maxUserPublicAddresses ) {
-    this.maxUserPublicAddresses = maxUserPublicAddresses;
   }
   
   public Boolean getDoDynamicPublicAddresses( ) {
@@ -179,11 +178,11 @@ public class AddressingConfiguration extends AbstractPersistent {
   public void setMaxKillOrphans( Integer maxKillOrphans ) {
     this.maxKillOrphans = maxKillOrphans;
   }
-
+  
   public Integer getOrphanGrace( ) {
     return this.orphanGrace;
   }
-
+  
   public void setOrphanGrace( Integer orphanGrace ) {
     this.orphanGrace = orphanGrace;
   }

@@ -91,6 +91,7 @@ import com.eucalyptus.empyrean.StartServiceResponseType;
 import com.eucalyptus.empyrean.StartServiceType;
 import com.eucalyptus.empyrean.StopServiceResponseType;
 import com.eucalyptus.empyrean.StopServiceType;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.scripting.Groovyness;
 import com.eucalyptus.scripting.ScriptExecutionFailedException;
 import com.eucalyptus.util.Exceptions;
@@ -104,7 +105,11 @@ public class EmpyreanService {
   private static Logger LOG = Logger.getLogger( EmpyreanService.class );
   
   private enum TransitionName {
-    START, STOP, ENABLE, DISABLE, RESTART
+    START,
+    STOP,
+    ENABLE,
+    DISABLE,
+    RESTART
   }
   
   @ServiceOperation
@@ -182,120 +187,71 @@ public class EmpyreanService {
     
   }
   
-  public static ModifyServiceResponseType modifyService( final ModifyServiceType request ) throws Exception {
-    final ModifyServiceResponseType reply = request.getReply( );
-    temporaryDebug( request );
-    final TransitionName transition = TransitionName.valueOf( request.getState( ).toUpperCase( ) );
-    for ( final Component comp : Components.list( ) ) {
-      ServiceConfiguration a;
-      try {
-        a = comp.lookupServiceConfiguration( request.getName( ) );
-      } catch ( final Exception ex1 ) {
-        continue;
-      }
-      final Component.State serviceState = a.lookupState( );
-      reply.set_return( true );
+  enum NamedTransition implements Predicate<ModifyServiceType> {
+    INSTANCE;
+    
+    @Override
+    public boolean apply( ModifyServiceType request ) {
+      final TransitionName transition = TransitionName.valueOf( request.getState( ).toUpperCase( ) );
+      String name = request.getName( );
+      ServiceConfiguration config = findService( name );
+      final Component.State serviceState = config.lookupState( );
       try {
         switch ( transition ) {
           case DISABLE:
-            switch ( a.lookupState( ) ) {
-              case ENABLED:
-                Topology.disable( a ).get( );
-                break;
-              default:
-                return reply;
-            }
+            Topology.disable( config ).get( );
             break;
           case ENABLE:
-            switch ( a.lookupState( ) ) {
-              case INITIALIZED:
-              case PRIMORDIAL:
-              case BROKEN:
-              case LOADED:
-              case STOPPED:
-              case DISABLED:
-              case NOTREADY:
-                Topology.enable( a ).get( );
-                break;
-              case ENABLED:
-              default:
-                return reply;
-            }
+            Topology.enable( config ).get( );
             break;
           case STOP:
-            switch ( a.lookupState( ) ) {
-              case ENABLED:
-                Topology.disable( a ).get( );
-              case INITIALIZED:
-              case PRIMORDIAL:
-              case BROKEN:
-              case STOPPED:
-              case LOADED:
-              case DISABLED:
-              case NOTREADY:
-                Topology.stop( a ).get( );
-                break;
-              default:
-                return reply;
-            }
+            Topology.stop( config ).get( );
             break;
           case START:
-            switch ( a.lookupState( ) ) {
-              case INITIALIZED:
-              case PRIMORDIAL:
-              case BROKEN:
-              case STOPPED:
-              case LOADED:
-              case DISABLED:
-              case NOTREADY:
-                Topology.start( a ).get( );
-                break;
-              case ENABLED:
-              default:
-                return reply;
-            }
+            Topology.start( config ).get( );
             break;
           case RESTART:
-            switch ( a.lookupState( ) ) {
-              case ENABLED:
-                Topology.disable( a ).get( );
-              case DISABLED:
-              case NOTREADY:
-                Topology.stop( a ).get( );
-              case INITIALIZED:
-              case PRIMORDIAL:
-              case BROKEN:
-              case LOADED:
-              default:
-                Topology.start( a ).get( );
-                break;
+            Topology.stop( config ).get( );
+            try {
+              Topology.start( config ).get( );
+            } catch ( Exception ex ) {
+              Exceptions.maybeInterrupted( ex );
+              Logs.extreme( ).error( ex, ex );
             }
             break;
         }
-      } catch ( final InterruptedException ex ) {
-        Thread.currentThread( ).interrupt( );
-        throw ex;
       } catch ( final Exception ex ) {
-        LOG.error( ex, ex );
-        throw ex;
+        Exceptions.maybeInterrupted( ex );
+        Logs.extreme( ).error( ex, ex );
+        return false;
       }
+      
+      return true;
     }
-    return reply;
   }
   
-  public static void temporaryDebug( final ModifyServiceType request ) throws RuntimeException, ScriptExecutionFailedException {
-    if ( request.getName( ).equals( "run" ) ) {
-      final String result = "Running request: %s" +
-                      "\n=======================\n" +
-                      "%s" +
-                      "\n= %7.7s ==================\n";
-      final String scriptResult = "";
+  public static ServiceConfiguration findService( String name ) {
+    for ( final ComponentId compId : ComponentIds.list( ) ) {
+      ServiceConfiguration a;
       try {
-        throw Exceptions.trace( String.format( result, request.getState( ), Groovyness.eval( request.getState( ) ), "WINNING" ) );
-      } catch ( final Exception ex ) {
-        throw Exceptions.trace( String.format( result, request.getState( ), Groovyness.eval( request.getState( ) ), "FAILED" ) + Exceptions.causeString( ex ) );
+        return ServiceConfigurations.lookupByName( compId.getClass( ), name );
+      } catch ( Exception ex1 ) {
+        Exceptions.maybeInterrupted( ex1 );
       }
     }
+    throw new NoSuchElementException( "Failed to lookup service named: " + name );
+  }
+  
+  public static ModifyServiceResponseType modifyService( final ModifyServiceType request ) throws Exception {
+    final ModifyServiceResponseType reply = request.getReply( );
+    if ( NamedTransition.INSTANCE.apply( request ) ) {
+      reply.markWinning( );
+    } else {
+      Component.State nextState = Component.State.valueOf( request.getState( ) );
+      ServiceConfiguration config = findService( request.getName( ) );
+      Topology.transition( nextState ).apply( config ).get( );
+    }
+    return reply;
   }
   
   public static StartServiceResponseType startService( final StartServiceType request ) throws Exception {
@@ -446,7 +402,8 @@ public class EmpyreanService {
         public boolean apply( final ServiceConfiguration input ) {
           if ( listAll ) {
             return true;
-          } else if ( input.getComponentId( ).isInternal( ) && listInternal && ( input.getPort( ) == -1 )
+          } else if ( input.getComponentId( ).isInternal( ) && listInternal
+                      && ( input.getPort( ) == -1 )
               ? true
                 : Internets.testLocal( input.getHostName( ) ) ) {
             return true;
@@ -493,7 +450,7 @@ public class EmpyreanService {
        * 
        */
       private static final long serialVersionUID = 1L;
-
+      
       {
         if ( request.getByPartition( ) != null ) {
           Partitions.exists( request.getByPartition( ) );

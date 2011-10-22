@@ -188,12 +188,9 @@ public class NioServerHandler extends SimpleChannelUpstreamHandler {//TODO:GRZE:
     Logs.exhaust( ).error( t, t );
     final HttpResponse response = new DefaultHttpResponse( HttpVersion.HTTP_1_1, status );
     response.setHeader( HttpHeaders.Names.CONTENT_TYPE, "text/plain; charset=UTF-8" );
-    response.setContent( ChannelBuffers.copiedBuffer( Binding.createRestFault( status.toString( ), t.getMessage( ), Exceptions.createFaultDetails( t ) ), "UTF-8" ) );
-//    if ( Logs.isExtrrreeeme() ) {
-//      response.setContent( ChannelBuffers.copiedBuffer( "Failure: " + status.toString( ) + "\r\n" + t.getMessage( ) + "\r\n" + os.toString( ) + "\r\n", "UTF-8" ) );
-//    } else {
-//      response.setContent( ChannelBuffers.copiedBuffer( "Failure: " + status.toString( ) + "\r\n" + t.getMessage( ), "UTF-8" ) );
-//    }
+    response.setContent( ChannelBuffers.copiedBuffer( Binding.createRestFault( status.toString( ), t.getMessage( ), Logs.isExtrrreeeme( )
+                                                                                 ? Exceptions.string( t )
+                                                                                 : t.getMessage( ) ), "UTF-8" ) );
     ChannelFuture writeFuture = Channels.future( ctx.getChannel( ) );
     writeFuture.addListener( ChannelFutureListener.CLOSE );
     if ( ctx.getChannel( ).isConnected( ) ) {

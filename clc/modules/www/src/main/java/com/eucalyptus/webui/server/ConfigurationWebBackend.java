@@ -163,7 +163,6 @@ public class ConfigurationWebBackend {
 		result.addField( ImageConfiguration.getInstance( ).getDefaultKernelId( ) );           // default kernel
 		result.addField( ImageConfiguration.getInstance( ).getDefaultRamdiskId( ) );          // default ramdisk
 		result.addField( AddressingConfiguration.getInstance( ).getDoDynamicPublicAddresses( ).toString( ) );// enable dynamic public addresses
-		result.addField( AddressingConfiguration.getInstance( ).getMaxUserPublicAddresses( ).toString( ) ); // max public addresses per user
 		result.addField( AddressingConfiguration.getInstance( ).getSystemReservedPublicAddresses( ).toString( ) ); // system reserved addresses
 	}
 
@@ -246,14 +245,6 @@ public class ConfigurationWebBackend {
 				public void fire( AddressingConfiguration t ) {
 					int n = k;
 					t.setDoDynamicPublicAddresses( Boolean.parseBoolean( input.getField( n++ ) ) );
-					try {
-						Integer val = Integer.parseInt( input.getField( n++ ) );
-						if ( val > 0 ) {
-							t.setMaxUserPublicAddresses( val );
-						}
-					} catch ( Exception e ) {
-						LOG.error( e, e );
-					}
 					try {
 						Integer val = Integer.parseInt( input.getField( n++ ) );
 						if ( val > 0 ) {

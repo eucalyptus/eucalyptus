@@ -375,7 +375,7 @@ public class ServiceConfigurations {
     };
   }
   
-  @TypeMapper( { ServiceCheckRecord.class, ServiceStatusDetail.class } )
+  @TypeMapper
   public enum ServiceCheckRecordMapper implements Function<ServiceCheckRecord, ServiceStatusDetail> {
     INSTANCE;
     @Override

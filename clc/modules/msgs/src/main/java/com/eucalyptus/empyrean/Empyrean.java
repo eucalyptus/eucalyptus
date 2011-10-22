@@ -147,6 +147,11 @@ public class Empyrean extends ComponentId {
       Groovyness.run( "setup_dbpool.groovy" );
       return true;
     }
+
+    @Override
+    public boolean check( ) throws Exception {
+      return super.check( );
+    }
     
   }
   

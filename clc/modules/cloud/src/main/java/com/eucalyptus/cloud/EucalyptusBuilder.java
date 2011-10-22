@@ -10,6 +10,7 @@ import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.bootstrap.Handles;
+import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.bootstrap.SystemIds;
 import com.eucalyptus.component.AbstractServiceBuilder;
 import com.eucalyptus.component.ComponentId;
@@ -76,19 +77,32 @@ public class EucalyptusBuilder extends AbstractServiceBuilder<EucalyptusConfigur
     EventRecord.here( EucalyptusBuilder.class, EventType.COMPONENT_SERVICE_STOPPED, config.toString( ) ).info( );
   }
   
+//  static class ConnectionPool {
+//    private static final String HA_JDBC_CLUSTER = "cluster";
+//    enum SyncStrategy {
+//      full,passive;
+//      public static SyncStrategy get( ) {
+//        return ( Hosts.isCoordinator( ) ? full : passive );
+//      }
+//    }
+//    private final String persistenceContext; 
+//    private void getMBean( ) {
+//      DriverDatabaseClusterMBean cluster = Mbeans.lookup( jdbcJmxDomain, ImmutableMap.builder( ).put( HA_JDBC_CLUSTER, this.persistenceContext ).build( ),
+//                                                          DriverDatabaseClusterMBean.class );
+//    }
+//  }
+  
   @Override
   public void fireCheck( ServiceConfiguration config ) throws ServiceRegistrationException {
     if( !Bootstrap.isFinished( ) ) {
       return;
     }
     for ( String ctx : PersistenceContexts.list( ) ) {
-      final String contextName = ctx.startsWith( "eucalyptus_" )
-        ? ctx
-        : "eucalyptus_" + ctx;
       try {
-        DriverDatabaseClusterMBean cluster = Mbeans.lookup( jdbcJmxDomain, ImmutableMap.builder( ).put( "cluster", contextName ).build( ),
+        DriverDatabaseClusterMBean cluster = Mbeans.lookup( jdbcJmxDomain, ImmutableMap.builder( ).put( "cluster", ctx ).build( ),
                                                             DriverDatabaseClusterMBean.class );
         for( String dbId : cluster.getActiveDatabases( ) ) {
+          cluster.getDatabase( dbId );
           if( !cluster.isAlive( dbId ) ) {
             cluster.deactivate( dbId );
           }

@@ -37,7 +37,8 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
   /**
    *
    */
-  @Target( { ElementType.TYPE } )
+  @Target( { ElementType.TYPE,
+      ElementType.FIELD } )
   @Retention( RetentionPolicy.RUNTIME )
   public @interface PolicyVendor {
     String value( );
@@ -47,7 +48,8 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
    * The annotated type provides an implementation of some component specific functionality for the
    * ComponentId indicated.
    */
-  @Target( { ElementType.TYPE, ElementType.FIELD } )
+  @Target( { ElementType.TYPE,
+      ElementType.FIELD } )
   @Retention( RetentionPolicy.RUNTIME )
   public @interface ComponentPart {
     Class<? extends ComponentId> value( );
@@ -56,7 +58,8 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
   /**
    *
    */
-  @Target( { ElementType.TYPE, ElementType.FIELD } )
+  @Target( { ElementType.TYPE,
+      ElementType.FIELD } )
   @Retention( RetentionPolicy.RUNTIME )
   public @interface ComponentMessage {
     Class<? extends ComponentId> value( );
@@ -77,7 +80,8 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
    * 
    * @note for use on Class<? extends ComponentId>
    */
-  @Target( { ElementType.TYPE } )
+  @Target( { ElementType.TYPE,
+      ElementType.FIELD } )
   @Retention( RetentionPolicy.RUNTIME )
   public @interface Partition {
     Class<? extends ComponentId>[] value( ) default {};
@@ -95,7 +99,8 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
    * @value alias to use in the keystore; Component.name() is not specified.
    * @note for use on Class<? extends ComponentId>
    */
-  @Target( { ElementType.TYPE } )
+  @Target( { ElementType.TYPE,
+      ElementType.FIELD } )
   @Retention( RetentionPolicy.RUNTIME )
   public @interface GenerateKeys {
     /**
@@ -109,7 +114,8 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
    * 
    * @note for use on Class<? extends ComponentId>
    */
-  @Target( { ElementType.TYPE } )
+  @Target( { ElementType.TYPE,
+      ElementType.FIELD } )
   @Retention( RetentionPolicy.RUNTIME )
   public @interface PublicService {}
   
@@ -118,18 +124,21 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
    * 
    * @note for use on Class<? extends ComponentId>
    */
-  @Target( { ElementType.TYPE } )
+  @Target( { ElementType.TYPE,
+      ElementType.FIELD } )
   @Retention( RetentionPolicy.RUNTIME )
   public @interface AdminService {}
   
   /**
    * Component should not receive messages.
    */
-  @Target( { ElementType.TYPE } )
+  @Target( { ElementType.TYPE,
+      ElementType.FIELD } )
   @Retention( RetentionPolicy.RUNTIME )
   public @interface InternalService {}
   
-  @Target( { ElementType.TYPE } )
+  @Target( { ElementType.TYPE,
+      ElementType.FIELD } )
   @Retention( RetentionPolicy.RUNTIME )
   public @interface ServiceOperation {
     boolean user( ) default false;
@@ -351,9 +360,10 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
   public final int hashCode( ) {
     final int prime = 31;
     int result = 1;
-    result = prime * result + ( ( this.name( ) == null )
-      ? 0
-      : this.name( ).hashCode( ) );
+    result = prime * result
+             + ( ( this.name( ) == null )
+               ? 0
+               : this.name( ).hashCode( ) );
     return result;
   }
   
@@ -426,7 +436,8 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
    * @return true if the component could be run locally.
    */
   public Boolean isAvailableLocally( ) {
-    return this.isAlwaysLocal( ) || ( this.isCloudLocal( ) && BootstrapArgs.isCloudController( ) ) || this.checkComponentParts( );
+    return this.isAlwaysLocal( ) || ( this.isCloudLocal( ) && BootstrapArgs.isCloudController( ) )
+           || this.checkComponentParts( );
   }
   
   private boolean checkComponentParts( ) {
