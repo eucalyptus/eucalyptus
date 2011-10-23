@@ -199,7 +199,7 @@ public class WebServices {
       @Override
       public ChannelPipeline getPipeline( ) throws Exception {
         ChannelPipeline pipeline = serverPipelineFactory.getPipeline( );
-        pipeline.addFirst( "channel-group-handler", channelGroupHandler );
+        pipeline.addLast( "channel-group-handler", channelGroupHandler );
         return pipeline;
       }
     };
