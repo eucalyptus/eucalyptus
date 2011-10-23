@@ -109,6 +109,7 @@ import org.jboss.netty.util.HashedWheelTimer;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentMessages;
 import com.eucalyptus.component.ServiceUris;
@@ -577,7 +578,8 @@ public class Handlers {
         final BaseMessage msg = BaseMessage.extractMessage( e );
         if ( msg != null ) {
           try {
-            if ( msg instanceof ServiceTransitionType ) {
+            if ( msg instanceof ServiceTransitionType && !Hosts.isCoordinator( ) ) {
+              //TODO:GRZE: extra epoch check and redirect
               Topology.touch( ( ServiceTransitionType ) msg );
               ctx.sendUpstream( e );
             } else if ( Topology.check( msg ) ) {

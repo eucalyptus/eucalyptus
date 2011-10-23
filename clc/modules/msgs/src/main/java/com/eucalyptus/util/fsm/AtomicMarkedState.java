@@ -190,8 +190,6 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
                                                                               + this.toString( ), t ) );
       Logs.extreme( ).error( ex );
       ActiveTransition tr = this.currentTransition.getAndSet( null );
-      Logs.extreme( ).error( "Transition error(): " + this.toString( ) + "Transition error(): START STACK\n" + tr.startStackTrace );
-      Logs.extreme( ).error( "Transition error(): " + this.toString( ) + "Transition error(): END STACK" + tr.endStackTrace );
       if ( tr != null ) {
         tr.getTransitionFuture( ).setException( t );
         this.state.set( tr.getTransitionRule( ).getErrorState( ), false );
@@ -199,6 +197,8 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
 //GRZE: cant throw here as it will come recurse      throw ex;
     } else {
       ActiveTransition tr = this.currentTransition.getAndSet( null );
+      Logs.extreme( ).error( "Transition error(): " + this.toString( ) + "Transition error(): START STACK\n" + tr.startStackTrace );
+      Logs.extreme( ).error( "Transition error(): " + this.toString( ) + "Transition error(): END STACK" + tr.endStackTrace );
       this.state.set( tr.getTransitionRule( ).getErrorState( ), tr.getTransitionRule( ).getErrorStateMark( ) );
       if ( !tr.getTransitionRule( ).getFromState( ).equals( tr.getTransitionRule( ).getErrorState( ) ) ) {
         this.state.set( tr.getTransitionRule( ).getErrorState( ), false );
