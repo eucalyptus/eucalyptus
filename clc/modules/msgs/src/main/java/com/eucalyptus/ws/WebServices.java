@@ -116,7 +116,7 @@ public class WebServices {
     
   }
   
-  class PortListener implements PropertyChangeListener<Integer> {
+  class RestartWebServicesListener implements PropertyChangeListener<Integer> {
     
     @Override
     public void fireChange( ConfigurableProperty t, Integer newValue ) throws ConfigurablePropertyException {
