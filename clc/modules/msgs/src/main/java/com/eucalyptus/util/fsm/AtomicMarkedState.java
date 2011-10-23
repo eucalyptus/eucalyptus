@@ -18,7 +18,6 @@ import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Futures;
 import com.eucalyptus.util.fsm.Automata.State;
-import com.google.common.base.Joiner;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Multimap;
@@ -191,6 +190,8 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
                                                                               + this.toString( ), t ) );
       Logs.extreme( ).error( ex );
       ActiveTransition tr = this.currentTransition.getAndSet( null );
+      Logs.extreme( ).error( "Transition error(): " + this.toString( ) + "Transition error(): START STACK\n" + tr.startStackTrace );
+      Logs.extreme( ).error( "Transition error(): " + this.toString( ) + "Transition error(): END STACK" + tr.endStackTrace );
       if ( tr != null ) {
         tr.getTransitionFuture( ).setException( t );
         this.state.set( tr.getTransitionRule( ).getErrorState( ), false );
