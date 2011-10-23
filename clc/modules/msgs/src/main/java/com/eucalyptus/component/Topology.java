@@ -585,7 +585,7 @@ public class Topology {
         return Lists.newArrayList( Collections2.transform( checkedServiceFutures, ExtractFuture.INSTANCE ) );
       } else {
         /** make promotion decisions **/
-        final Predicate<ServiceConfiguration> canPromote = Predicates.and( Predicates.not( Predicates.in( checkedServices ) ), FailoverPredicate.INSTANCE );
+        final Predicate<ServiceConfiguration> canPromote = Predicates.and( Predicates.in( checkedServices ), FailoverPredicate.INSTANCE );
         final List<ServiceConfiguration> promoteServices = Lists.newArrayList( );
         for ( Component c : Components.list( ) ) {
           promoteServices.addAll( Collections2.filter( c.services( ), canPromote ) );
