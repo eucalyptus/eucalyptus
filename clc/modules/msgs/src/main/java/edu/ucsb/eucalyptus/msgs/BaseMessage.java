@@ -11,11 +11,8 @@ import org.jibx.runtime.BindingDirectory;
 import org.jibx.runtime.IBindingFactory;
 import org.jibx.runtime.IMarshallingContext;
 import org.jibx.runtime.JiBXException;
-import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.auth.principal.UserFullName;
-import com.eucalyptus.context.Context;
 import com.eucalyptus.empyrean.ServiceId;
 import com.eucalyptus.http.MappingHttpMessage;
 import com.eucalyptus.util.Classes;
@@ -229,9 +226,8 @@ public class BaseMessage {
     StringBuilder buf = new StringBuilder( );
     buf.append( this.getClass( ).getSimpleName( ) )
        .append( ":" ).append( this.correlationId )
-       .append( ":" ).append( this.userId )
-       .append( ":" ).append( this.effectiveUserId )
        .append( ":return=" ).append( this.get_return( ) )
+       .append( ":epoch=" ).append( this.get_epoch( ) )
        .append( ":status=" ).append( this.getStatusMessage( ) );
     return buf.toString( );
   }

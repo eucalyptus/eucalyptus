@@ -63,28 +63,28 @@
  */
 package com.eucalyptus.ws.handlers.http;
 
-import com.eucalyptus.http.MappingHttpRequest;
-import com.eucalyptus.ws.util.HttpUtils;
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.handler.codec.http.HttpMessage;
-import org.jboss.netty.handler.codec.http.HttpMessageEncoder;
-import org.jboss.netty.handler.codec.http.HttpRequest;
+import com.eucalyptus.ws.WebServicesException;
 
-@Deprecated
-public class NioHttpRequestEncoder extends HttpMessageEncoder {
+public class HttpException extends WebServicesException {
 
-  public NioHttpRequestEncoder( ) {
+  public HttpException( ) {
     super( );
+    // TODO Auto-generated constructor stub
   }
 
-  @Override
-  protected void encodeInitialLine( ChannelBuffer buf, HttpMessage message ) throws Exception {
-    MappingHttpRequest request = ( MappingHttpRequest ) message;
-    buf.writeBytes( request.getMethod( ).toString( ).getBytes( "ASCII" ) );
-    buf.writeByte( HttpUtils.SP );
-    buf.writeBytes( request.getServicePath( ).getBytes( "ASCII" ) );
-    buf.writeByte( HttpUtils.SP );
-    buf.writeBytes( request.getProtocolVersion( ).toString( ).getBytes( "ASCII" ) );
-    buf.writeBytes( HttpUtils.CRLF );
+  public HttpException( String arg0, Throwable arg1 ) {
+    super( arg0, arg1 );
+    // TODO Auto-generated constructor stub
   }
+
+  public HttpException( String arg0 ) {
+    super( arg0 );
+    // TODO Auto-generated constructor stub
+  }
+
+  public HttpException( Throwable arg0 ) {
+    super( arg0 );
+    // TODO Auto-generated constructor stub
+  }
+
 }

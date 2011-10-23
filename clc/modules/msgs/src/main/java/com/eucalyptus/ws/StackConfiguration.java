@@ -122,8 +122,9 @@ public class StackConfiguration extends AbstractPersistent {
   @ConfigurableField( initial = "500", description = "Service socket select timeout (ms)." )
   public static Long          SERVER_BOSS_POOL_TIMEOUT_MILLIS   = 500L;
   
-  @ConfigurableField( initial = "8773", description = "Web services port." )
-  public static final Integer PORT                              = 8773;
+  @ConfigurableField( description = "Web services port.", changeListener = WebServices.PortListener.class )
+  public static Integer       PORT                              = 8773;
+  public static final Integer INTERNAL_PORT                     = 8773;
   
   @ConfigurableField( initial = "240", description = "Client idle timeout (secs)." )
   public static Long          CLIENT_IDLE_TIMEOUT_SECS          = 240L;
@@ -166,17 +167,17 @@ public class StackConfiguration extends AbstractPersistent {
   public static Boolean       DEFAULT_HTTPS_ENABLED             = Boolean.FALSE;
   
   @ConfigurableField( initial = "http", description = "Default scheme for EC2_URL in eucarc.", changeListener = UriChangeListener.class )
-  public static String        DEFAULT_EC2_URI_SCHEME            = "http";
-  
+  public static String        DEFAULT_EC2_URI_SCHEME            = "http";                                      //GRZE: there references to specific services are not in the right scope here. 
+                                                                                                                
   @ConfigurableField( initial = "http", description = "Default scheme for S3_URL in eucarc.", changeListener = UriChangeListener.class )
-  public static String        DEFAULT_S3_URI_SCHEME             = "http";
-  
+  public static String        DEFAULT_S3_URI_SCHEME             = "http";                                      //GRZE: there references to specific services are not in the right scope here.
+                                                                                                                
   @ConfigurableField( initial = "http", description = "Default scheme for AWS_SNS_URL in eucarc.", changeListener = UriChangeListener.class )
-  public static String        DEFAULT_AWS_SNS_URI_SCHEME        = "http";
-  
+  public static String        DEFAULT_AWS_SNS_URI_SCHEME        = "http";                                      //GRZE: there references to specific services are not in the right scope here.
+                                                                                                                
   @ConfigurableField( initial = "http", description = "Default scheme for EUARE_URL in eucarc.", changeListener = UriChangeListener.class )
-  public static String        DEFAULT_EUARE_URI_SCHEME          = "http";
-  
+  public static String        DEFAULT_EUARE_URI_SCHEME          = "http";                                      //GRZE: there references to specific services are not in the right scope here.
+                                                                                                                
   @ConfigurableField( description = "Use DNS delegation for eucarc." )
   public static Boolean       USE_DNS_DELEGATION                = Boolean.FALSE;
   
@@ -280,7 +281,8 @@ public class StackConfiguration extends AbstractPersistent {
         if ( "http".equals( prefix ) || "https".equals( prefix ) )
           return;
       }
-      throw new ConfigurablePropertyException( "URL prefix for " + t.getFieldName( ) + " has to be 'http' or 'https'" );
+      throw new ConfigurablePropertyException( "URL prefix for " + t.getFieldName( )
+                                               + " has to be 'http' or 'https'" );
       
     }
   }

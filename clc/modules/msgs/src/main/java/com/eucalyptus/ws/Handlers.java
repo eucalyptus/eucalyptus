@@ -79,7 +79,9 @@ import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
+import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.ChannelUpstreamHandler;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.MessageEvent;
@@ -91,9 +93,11 @@ import org.jboss.netty.handler.codec.http.HttpMessageEncoder;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseDecoder;
+import org.jboss.netty.handler.codec.http.HttpResponseEncoder;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.jboss.netty.handler.ssl.SslHandler;
+import org.jboss.netty.handler.stream.ChunkedWriteHandler;
 import org.jboss.netty.handler.timeout.IdleStateHandler;
 import org.jboss.netty.handler.timeout.ReadTimeoutHandler;
 import org.jboss.netty.handler.timeout.WriteTimeoutHandler;
@@ -115,8 +119,10 @@ import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.ws.handlers.BindingHandler;
 import com.eucalyptus.ws.handlers.SoapMarshallingHandler;
+import com.eucalyptus.ws.handlers.http.NioHttpDecoder;
 import com.eucalyptus.ws.protocol.AddressingHandler;
 import com.eucalyptus.ws.protocol.SoapHandler;
+import com.eucalyptus.ws.server.NioServerHandler;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
@@ -128,15 +134,33 @@ public class Handlers {
   private static final ChannelHandler                        addressingHandler      = new AddressingHandler( );
   private static final ConcurrentMap<String, ChannelHandler> bindingHandlers        = new ConcurrentHashMap<String, ChannelHandler>( );
   private static final HashedWheelTimer                      timer                  = new HashedWheelTimer( );                         //TODO:GRZE: configurable
-                                                         
+                                                                                                                                        
+  enum ServerPipelineFactory implements ChannelPipelineFactory {
+    INSTANCE;
+    public ChannelPipeline getPipeline( ) throws Exception {
+      final ChannelPipeline pipeline = Channels.pipeline( );
+      pipeline.addLast( "ssl", Handlers.newSslHandler( ) );
+      pipeline.addLast( "decoder", new NioHttpDecoder( ) );
+      pipeline.addLast( "encoder", new HttpResponseEncoder( ) );
+      pipeline.addLast( "chunkedWriter", new ChunkedWriteHandler( ) );
+      pipeline.addLast( "bootstrap-fence", Handlers.bootstrapFence( ) );
+      pipeline.addLast( "handler", new NioServerHandler( ) );
+      return pipeline;
+    }
+  }
+  
+  public static ChannelPipelineFactory serverPipelineFactory( ) {
+    return ServerPipelineFactory.INSTANCE;
+  }
+  
   public static class NioHttpResponseDecoder extends HttpResponseDecoder {
-
+    
     @Override
     protected HttpMessage createMessage( final String[] strings ) {
       return new MappingHttpResponse( strings );//HttpVersion.valueOf(strings[2]), HttpMethod.valueOf(strings[0]), strings[1] );
     }
   }
-
+  
   @ChannelPipelineCoverage( "all" )
   public static class NioHttpRequestEncoder extends HttpMessageEncoder {
     
@@ -394,4 +418,5 @@ public class Handlers {
     }
     
   }
+
 }

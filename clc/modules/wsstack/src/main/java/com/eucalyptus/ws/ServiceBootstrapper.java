@@ -256,7 +256,7 @@ public class ServiceBootstrapper extends Bootstrapper.Simple {
   
   @Override
   public boolean load( ) {
-    ChannelUtil.getServerChannel( );
+    WebServices.restart( );
     ServiceBootstrapper.execute( new Predicate<ServiceConfiguration>( ) {
       
       @Override

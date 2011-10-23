@@ -142,6 +142,8 @@ import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.MoreExecutors;
 import edu.ucsb.eucalyptus.cloud.NodeInfo;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.NodeCertInfo;
@@ -276,16 +278,35 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
                                                                                                   ExecutionException.class );
   
   public enum State implements Automata.State<State> {
-    BROKEN, /** cannot establish initial contact with cluster because of CLC side errors **/
-    STOPPED, /** Component.State.NOTREADY: cluster unreachable **/
-    PENDING, /** Component.State.NOTREADY: cluster unreachable **/
-    AUTHENTICATING, STARTING, STARTING_NOTREADY, /** Component.State.NOTREADY:enter() **/
-    NOTREADY, /** Component.State.NOTREADY -> Component.State.DISABLED **/
-    DISABLED, /** Component.State.DISABLED -> DISABLED: service ready, not current primary **/
+    BROKEN,
+    /** cannot establish initial contact with cluster because of CLC side errors **/
+    STOPPED,
+    /** Component.State.NOTREADY: cluster unreachable **/
+    PENDING,
+    /** Component.State.NOTREADY: cluster unreachable **/
+    AUTHENTICATING,
+    STARTING,
+    STARTING_NOTREADY,
+    /** Component.State.NOTREADY:enter() **/
+    NOTREADY,
+    /** Component.State.NOTREADY -> Component.State.DISABLED **/
+    DISABLED,
+    /** Component.State.DISABLED -> DISABLED: service ready, not current primary **/
     /** Component.State.DISABLED -> Component.State.ENABLED **/
-    ENABLING, ENABLING_RESOURCES, ENABLING_NET, ENABLING_VMS, ENABLING_ADDRS, ENABLING_VMS_PASS_TWO, ENABLING_ADDRS_PASS_TWO,
+    ENABLING,
+    ENABLING_RESOURCES,
+    ENABLING_NET,
+    ENABLING_VMS,
+    ENABLING_ADDRS,
+    ENABLING_VMS_PASS_TWO,
+    ENABLING_ADDRS_PASS_TWO,
     /** Component.State.ENABLED -> Component.State.ENABLED **/
-    ENABLED, ENABLED_ADDRS, ENABLED_RSC, ENABLED_NET, ENABLED_VMS, ENABLED_SERVICE_CHECK;
+    ENABLED,
+    ENABLED_ADDRS,
+    ENABLED_RSC,
+    ENABLED_NET,
+    ENABLED_VMS,
+    ENABLED_SERVICE_CHECK;
     public Component.State proxyState( ) {
       try {
         return Component.State.valueOf( this.name( ) );
@@ -304,16 +325,32 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
   }
   
   public enum Transition implements Automata.Transition<Transition> {
-    RESTART_BROKEN, PRESTART,
+    RESTART_BROKEN,
+    PRESTART,
     /** pending setup **/
-    AUTHENTICATE, START, START_CHECK, STARTING_SERVICES,
+    AUTHENTICATE,
+    START,
+    START_CHECK,
+    STARTING_SERVICES,
     NOTREADYCHECK,
-    ENABLE, ENABLING_RESOURCES, ENABLING_NET, ENABLING_VMS, ENABLING_ADDRS, ENABLING_VMS_PASS_TWO, ENABLING_ADDRS_PASS_TWO,
-
-    ENABLED, ENABLED_ADDRS, ENABLED_VMS, ENABLED_NET, ENABLED_SERVICES, ENABLED_RSC,
-
-    DISABLE, DISABLEDCHECK,
-
+    ENABLE,
+    ENABLING_RESOURCES,
+    ENABLING_NET,
+    ENABLING_VMS,
+    ENABLING_ADDRS,
+    ENABLING_VMS_PASS_TWO,
+    ENABLING_ADDRS_PASS_TWO,
+    
+    ENABLED,
+    ENABLED_ADDRS,
+    ENABLED_VMS,
+    ENABLED_NET,
+    ENABLED_SERVICES,
+    ENABLED_RSC,
+    
+    DISABLE,
+    DISABLEDCHECK,
+    
     STOP,
     
   }
@@ -391,7 +428,8 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
       this.pendingErrors.drainTo( currentErrors );
       for ( final Throwable t : currentErrors ) {
         final Throwable filtered = Exceptions.filterStackTrace( t );
-        LOG.debug( this.configuration + ": Clearing error: " + filtered.getMessage( ), filtered );
+        LOG.debug( this.configuration + ": Clearing error: "
+                   + filtered.getMessage( ), filtered );
       }
     } else {
       LOG.debug( this.configuration + ": no pending errors to clear." );
@@ -429,7 +467,8 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
             if ( initialized && tick.isAsserted( Clusters.getConfiguration( ).getDisabledInterval( ) )
                  && ( Component.State.DISABLED.equals( systemState ) || Component.State.NOTREADY.equals( systemState ) ) ) {
               transition = Automata.sequenceTransitions( this, State.DISABLED, State.DISABLED );
-            } else if ( initialized && tick.isAsserted( Clusters.getConfiguration( ).getDisabledInterval( ) ) && Component.State.ENABLED.equals( systemState ) ) {
+            } else if ( initialized && tick.isAsserted( Clusters.getConfiguration( ).getDisabledInterval( ) )
+                        && Component.State.ENABLED.equals( systemState ) ) {
               transition = Automata.sequenceTransitions( this, State.ENABLING, State.ENABLING_RESOURCES, State.ENABLING_NET, State.ENABLING_VMS,
                                                          State.ENABLING_ADDRS, State.ENABLING_VMS_PASS_TWO, State.ENABLING_ADDRS_PASS_TWO, State.ENABLED );
             }
@@ -452,8 +491,14 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
         }
         if ( transition != null ) {
           try {
-            Threads.enqueue( this.configuration, transition );
-            this.clearExceptions( );
+            Futures.makeListenable( Threads.enqueue( this.configuration, transition ) ).addListener( new Runnable( ) {
+              
+              @Override
+              public void run( ) {
+                Cluster.this.clearExceptions( );
+              }
+            }, MoreExecutors.sameThreadExecutor( ) );
+            
           } catch ( final Exception ex ) {
             LOG.error( ex, ex );
           }
@@ -465,7 +510,8 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
   }
   
   public Boolean isReady( ) {
-    return this.hasClusterCert && this.hasNodeCert && Bootstrap.isFinished( );
+    return this.hasClusterCert && this.hasNodeCert
+           && Bootstrap.isFinished( );
   }
   
   public X509Certificate getClusterCertificate( ) {
@@ -549,12 +595,12 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
       Clusters.getInstance( ).registerDisabled( this );
       if ( !State.DISABLED.equals( this.stateMachine.getState( ) ) ) {
         final Callable<CheckedListenableFuture<Cluster>> trans = Automata.sequenceTransitions( this,
-                                                                                         State.PENDING,
-                                                                                         State.AUTHENTICATING,
-                                                                                         State.STARTING,
-                                                                                         State.STARTING_NOTREADY,
-                                                                                         State.NOTREADY,
-                                                                                         State.DISABLED );
+                                                                                               State.PENDING,
+                                                                                               State.AUTHENTICATING,
+                                                                                               State.STARTING,
+                                                                                               State.STARTING_NOTREADY,
+                                                                                               State.NOTREADY,
+                                                                                               State.DISABLED );
         Exception lastEx = null;
         for ( int i = 0; i < Clusters.getConfiguration( ).getStartupSyncRetries( ); i++ ) {
           try {
@@ -581,7 +627,9 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
     } catch ( final Exception ex ) {
 //      this.stop( );
       Logs.exhaust( ).debug( ex, ex );
-      throw new ServiceRegistrationException( "Failed to call start() on cluster " + this.configuration + " because of: " + ex.getMessage( ), ex );
+      throw new ServiceRegistrationException( "Failed to call start() on cluster " + this.configuration
+                                              + " because of: "
+                                              + ex.getMessage( ), ex );
     }
   }
   
@@ -589,17 +637,19 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
     if ( State.ENABLING.ordinal( ) > this.stateMachine.getState( ).ordinal( ) ) {
       try {
         final CheckedListenableFuture<Cluster> result = Automata.sequenceTransitions( this, State.PENDING, State.AUTHENTICATING, State.STARTING,
-                                                                                State.STARTING_NOTREADY, State.NOTREADY,
-                                                                                State.DISABLED, State.ENABLING, State.ENABLING_RESOURCES,
-                                                                                State.ENABLING_NET, State.ENABLING_VMS,
-                                                                                State.ENABLING_ADDRS, State.ENABLING_VMS_PASS_TWO,
-                                                                                State.ENABLING_ADDRS_PASS_TWO, State.ENABLED ).call( );
+                                                                                      State.STARTING_NOTREADY, State.NOTREADY,
+                                                                                      State.DISABLED, State.ENABLING, State.ENABLING_RESOURCES,
+                                                                                      State.ENABLING_NET, State.ENABLING_VMS,
+                                                                                      State.ENABLING_ADDRS, State.ENABLING_VMS_PASS_TWO,
+                                                                                      State.ENABLING_ADDRS_PASS_TWO, State.ENABLED ).call( );
         result.get( );
       } catch ( final InterruptedException ex ) {
         Thread.currentThread( ).interrupt( );
       } catch ( final Exception ex ) {
         Logs.exhaust( ).debug( ex, ex );
-        throw new ServiceRegistrationException( "Failed to call enable() on cluster " + this.configuration + " because of: " + ex.getMessage( ), ex );
+        throw new ServiceRegistrationException( "Failed to call enable() on cluster " + this.configuration
+                                                + " because of: "
+                                                + ex.getMessage( ), ex );
       }
     }
   }
@@ -615,7 +665,9 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
       Thread.currentThread( ).interrupt( );
     } catch ( final Exception ex ) {
       Logs.exhaust( ).debug( ex, ex );
-      throw new ServiceRegistrationException( "Failed to call disable() on cluster " + this.configuration + " because of: " + ex.getMessage( ), ex );
+      throw new ServiceRegistrationException( "Failed to call disable() on cluster " + this.configuration
+                                              + " because of: "
+                                              + ex.getMessage( ), ex );
     }
   }
   
@@ -626,7 +678,9 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
       Thread.currentThread( ).interrupt( );
     } catch ( final Exception ex ) {
       Logs.exhaust( ).debug( ex, ex );
-      throw new ServiceRegistrationException( "Failed to call stop() on cluster " + this.configuration + " because of: " + ex.getMessage( ), ex );
+      throw new ServiceRegistrationException( "Failed to call stop() on cluster " + this.configuration
+                                              + " because of: "
+                                              + ex.getMessage( ), ex );
     } finally {
       ListenerRegistry.getInstance( ).deregister( Hertz.class, this );
       ListenerRegistry.getInstance( ).deregister( ClockTick.class, this );
@@ -638,12 +692,14 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
   public int hashCode( ) {
     final int prime = 31;
     int result = 1;
-    result = prime * result + ( ( this.configuration == null )
-      ? 0
-      : this.configuration.hashCode( ) );
-    result = prime * result + ( ( this.state == null )
-      ? 0
-      : this.state.hashCode( ) );
+    result = prime * result
+             + ( ( this.configuration == null )
+               ? 0
+               : this.configuration.hashCode( ) );
+    result = prime * result
+             + ( ( this.state == null )
+               ? 0
+               : this.state.hashCode( ) );
     return result;
   }
   
@@ -778,7 +834,8 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
   }
   
   public boolean checkCerts( final NodeCertInfo certs ) {
-    if ( ( certs == null ) || ( certs.getCcCert( ) == null ) || ( certs.getNcCert( ) == null ) ) {
+    if ( ( certs == null ) || ( certs.getCcCert( ) == null )
+         || ( certs.getNcCert( ) == null ) ) {
       return false;
     }
     
@@ -793,7 +850,9 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
       nodeInfo.setHasNodeCert( this.checkCerts( this.getNodeCertificate( ), nodex509 ) );
       return nodeInfo.getHasClusterCert( ) && nodeInfo.getHasNodeCert( );
     } else {
-      LOG.error( "Cluster " + this.getName( ) + " failed to find cluster/node info for service tag: " + certs.getServiceTag( ) );
+      LOG.error( "Cluster " + this.getName( )
+                 + " failed to find cluster/node info for service tag: "
+                 + certs.getServiceTag( ) );
       return false;
     }
   }
@@ -826,7 +885,8 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
           if ( e.getCause( ) instanceof FailedRequestException ) {
             LOG.error( e.getCause( ).getMessage( ) );
           } else if ( ( e.getCause( ) instanceof ConnectionException ) || ( e.getCause( ) instanceof IOException ) ) {
-            LOG.error( parent.getName( ) + ": Error communicating with cluster: " + e.getCause( ).getMessage( ) );
+            LOG.error( parent.getName( ) + ": Error communicating with cluster: "
+                       + e.getCause( ).getMessage( ) );
           } else {
             LOG.error( e, e );
           }
@@ -888,7 +948,8 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
       LOG.error( fin, fin );
       this.pendingErrors.add( fin );
     } else if ( ( fin instanceof ConnectionException ) || ( fin instanceof IOException ) ) {
-      LOG.error( this.getName( ) + ": Error communicating with cluster: " + fin.getMessage( ) );
+      LOG.error( this.getName( ) + ": Error communicating with cluster: "
+                 + fin.getMessage( ) );
       LOG.trace( fin, fin );
       this.pendingErrors.add( fin );
     } else {
@@ -909,8 +970,10 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
 //      throw ex;
     } else if ( ( currentState.ordinal( ) < State.DISABLED.ordinal( ) )
                 || ( Component.State.ENABLED.equals( externalState ) && ( Cluster.State.ENABLING.ordinal( ) >= currentState.ordinal( ) ) ) ) {
-      final IllegalStateException ex = new IllegalStateException( "Cluster is currently reported as " + externalState + " but is really " + currentState
-                                                            + ":  please see logs for additional information." );
+      final IllegalStateException ex = new IllegalStateException( "Cluster is currently reported as " + externalState
+                                                                  + " but is really "
+                                                                  + currentState
+                                                                  + ":  please see logs for additional information." );
       this.pendingErrors.add( ex );
       throw Faults.failure( this.configuration, currentErrors );
     }

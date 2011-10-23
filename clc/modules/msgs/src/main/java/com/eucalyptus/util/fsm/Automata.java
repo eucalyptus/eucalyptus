@@ -63,7 +63,6 @@
 
 package com.eucalyptus.util.fsm;
 
-import java.lang.reflect.UndeclaredThrowableException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -111,8 +110,11 @@ public class Automata {
     if ( index >= 0 && index < toStates.length ) {
       actualStates = Arrays.copyOfRange( toStates, index + 1, toStates.length );
     }
-    Logs.exhaust( ).debug( "Preparing callback for " + hasFsm.getFullName( ) + " from state " + currentState + " followed by transition sequence: "
-               + Joiner.on( "->" ).join( actualStates ) );
+    Logs.exhaust( ).debug( "Preparing callback for " + hasFsm.getFullName( )
+                           + " from state "
+                           + currentState
+                           + " followed by transition sequence: "
+                           + Joiner.on( "->" ).join( actualStates ) );
     final List<Callable<CheckedListenableFuture<P>>> callables = makeTransitionCallables( hasFsm, actualStates );
     return Futures.sequence( callables.toArray( new Callable[] {} ) );
   }
@@ -123,6 +125,15 @@ public class Automata {
     if ( toStates.length > 0 ) {
       for ( final S toState : toStates ) {
         callables.add( new Callable<CheckedListenableFuture<P>>( ) {
+          @Override
+          public String toString( ) {
+            return Automata.class.getSimpleName( ) + ":"
+                   + hasFsm.getFullName( )
+                   + ":"
+                   + fsm.getState( )
+                   + "->"
+                   + toState;
+          }
           
           @Override
           public CheckedListenableFuture<P> call( ) {
@@ -130,23 +141,23 @@ public class Automata {
             try {
               CheckedListenableFuture<P> res = fsm.transition( toState );
               res.get( );
-              Logs.exhaust( ).debug( fsm.toString( ) + " transitioned from " + fromState + "->" + toState );
+              Logs.extreme( ).debug( fsm.toString( ) + " transitioned from "
+                                     + fromState
+                                     + "->"
+                                     + toState );
               return res;
             } catch ( final IllegalStateException ex ) {
-              Logs.exhaust( ).debug( fsm.toString( ) + " failed transitioned from " + fromState + "->" + toState );
-              Logs.exhaust( ).error( ex, ex );
+              Logs.extreme( ).debug( fsm.toString( ) + " failed transitioned from "
+                                     + fromState
+                                     + "->"
+                                     + toState );
+              Logs.extreme( ).error( ex, ex );
               throw ex;
-//              return Futures.predestinedFailedFuture( ex );
             } catch ( final ExistingTransitionException ex ) {
               Logs.exhaust( ).error( ex, ex );
               throw Exceptions.toUndeclared( ex.getCause( ) );
-            } catch ( final InterruptedException ex ) {
-              Thread.currentThread( ).interrupt( );
-              throw new RuntimeException( ex );
-            } catch ( final UndeclaredThrowableException ex ) {
-              Logs.exhaust( ).error( ex, ex );
-              throw ex;
-            } catch ( final Throwable ex ) {
+            } catch ( final Exception ex ) {
+              Exceptions.maybeInterrupted( ex );
               Logs.exhaust( ).error( ex, ex );
               throw Exceptions.toUndeclared( ex );
             }
@@ -155,6 +166,13 @@ public class Automata {
       }
     } else {
       callables.add( new Callable<CheckedListenableFuture<P>>( ) {
+        @Override
+        public String toString( ) {
+          return Automata.class.getSimpleName( ) + ":"
+                 + hasFsm.getFullName( )
+                 + ":"
+                 + fsm.getState( );
+        }
         
         @Override
         public CheckedListenableFuture<P> call( ) {

@@ -85,18 +85,15 @@ import java.util.List;
 import java.util.concurrent.AbstractExecutorService;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
-import java.util.concurrent.CompletionService;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.RunnableFuture;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -106,12 +103,14 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import org.apache.log4j.Logger;
+import org.jboss.netty.util.internal.LinkedTransferQueue;
 import org.jgroups.util.ThreadFactory;
 import com.eucalyptus.bootstrap.OrderedShutdown;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.empyrean.Empyrean;
+import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.util.concurrent.GenericCheckedListenableFuture;
@@ -132,7 +131,8 @@ public class Threads {
   private final static ConcurrentMap<String, ThreadPool> execServices      = new ConcurrentHashMap<String, ThreadPool>( );
   
   public static ThreadPool lookup( final Class<? extends ComponentId> group, final Class owningClass ) {
-    return lookup( ComponentIds.lookup( group ).name( ) + ":" + owningClass.getSimpleName( ) );
+    return lookup( ComponentIds.lookup( group ).name( ) + ":"
+                   + owningClass.getSimpleName( ) );
   }
   
   public static ThreadPool lookup( final ServiceConfiguration config ) {
@@ -140,7 +140,10 @@ public class Threads {
   }
   
   public static ThreadPool lookup( final Class<? extends ComponentId> group, final Class owningClass, final String name ) {
-    return lookup( ComponentIds.lookup( group ).name( ) + ":" + owningClass.getSimpleName( ) + ":" + name );
+    return lookup( ComponentIds.lookup( group ).name( ) + ":"
+                   + owningClass.getSimpleName( )
+                   + ":"
+                   + name );
   }
   
   public static ThreadPool lookup( final Class<? extends ComponentId> group ) {
@@ -155,7 +158,8 @@ public class Threads {
       LOG.trace( "CREATE thread threadpool named: " + groupName );
       final ThreadPool f = new ThreadPool( groupName );
       if ( execServices.putIfAbsent( f.getName( ), f ) != null ) {
-        LOG.warn( "SHUTDOWN:" + f.getName( ) + " Freeing duplicate thread pool..." );
+        LOG.warn( "SHUTDOWN:" + f.getName( )
+                  + " Freeing duplicate thread pool..." );
         f.free( );
       }
     }
@@ -165,7 +169,9 @@ public class Threads {
   private static final ThreadPool SYSTEM = lookup( "SYSTEM" );
   
   public static Thread newThread( final Runnable r, final String name ) {
-    LOG.debug( "CREATE new thread named: " + name + " using: " + r.getClass( ) );
+    LOG.debug( "CREATE new thread named: " + name
+               + " using: "
+               + r.getClass( ) );
     return new Thread( SYSTEM.getGroup( ), r, name );
   }
   
@@ -178,7 +184,6 @@ public class Threads {
     private final ThreadGroup                    group;
     private final String                         name;
     private ExecutorService                      pool;
-    private final CompletionService              completionService;
     private Integer                              numThreads = -1;
     private final StackTraceElement[]            creationPoint;
     private final LinkedBlockingQueue<Future<?>> taskQueue  = new LinkedBlockingQueue<Future<?>>( );
@@ -193,11 +198,11 @@ public class Threads {
       this.name = groupPrefix;
       this.group = new ThreadGroup( this.name );
       this.pool = this.makePool( );
-      this.completionService = new ExecutorCompletionService( this.pool );
-      OrderedShutdown.register( Eucalyptus.class, new Runnable( ) {
+      OrderedShutdown.register( Empyrean.class, new Runnable( ) {
         @Override
         public void run( ) {
-          LOG.warn( "SHUTDOWN:" + ThreadPool.this.name + " Stopping thread pool..." );
+          LOG.warn( "SHUTDOWN:" + ThreadPool.this.name
+                    + " Stopping thread pool..." );
           if ( ThreadPool.this.pool != null ) {
             ThreadPool.this.free( );
           }
@@ -262,11 +267,17 @@ public class Threads {
     public List<Runnable> free( ) {
       List<Runnable> ret = Lists.newArrayList( );
       for ( final Runnable r : ( ret = this.pool.shutdownNow( ) ) ) {
-        LOG.warn( "SHUTDOWN:" + ThreadPool.this.name + " - Pending task: " + r.getClass( ) + " [" + r.toString( ) + "]" );
+        LOG.warn( "SHUTDOWN:" + ThreadPool.this.name
+                  + " - Pending task: "
+                  + r.getClass( )
+                  + " ["
+                  + r.toString( )
+                  + "]" );
       }
       try {
         for ( int i = 0; ( i < 10 ) && !this.pool.awaitTermination( 1, TimeUnit.SECONDS ); i++ ) {
-          LOG.warn( "SHUTDOWN:" + ThreadPool.this.name + " - Waiting for pool to shutdown." );
+          LOG.warn( "SHUTDOWN:" + ThreadPool.this.name
+                    + " - Waiting for pool to shutdown." );
           if ( i > 2 ) {
             LOG.warn( Joiner.on( "\n\t\t" ).join( this.creationPoint ) );
           }
@@ -280,7 +291,10 @@ public class Threads {
     
     @Override
     public Thread newThread( final Runnable r ) {
-      return new Thread( this.group, r, this.group.getName( ) + "." + r.getClass( ) + "#" + Threads.threadIndex.incrementAndGet( ) );
+      return new Thread( this.group, r, this.group.getName( ) + "."
+                                        + r.getClass( )
+                                        + "#"
+                                        + Threads.threadIndex.incrementAndGet( ) );
     }
     
     @Override
@@ -357,7 +371,12 @@ public class Threads {
     
     @Override
     public Thread newThread( final ThreadGroup group, final Runnable r, final String name ) {
-      return new Thread( group, r, this.group.getName( ) + "." + r.getClass( ).getName( ) + "#" + Threads.threadIndex.incrementAndGet( ) + "#" + name );
+      return new Thread( group, r, this.group.getName( ) + "."
+                                   + r.getClass( ).getName( )
+                                   + "#"
+                                   + Threads.threadIndex.incrementAndGet( )
+                                   + "#"
+                                   + name );
     }
     
     @Override
@@ -526,7 +545,7 @@ public class Threads {
   
   static class Queue<T extends HasFullName<T>> implements Runnable {
     private final AtomicBoolean                running  = new AtomicBoolean( true );
-    private final BlockingQueue<FutureTask<?>> msgQueue = new LinkedBlockingQueue<FutureTask<?>>( );
+    private final BlockingQueue<FutureTask<?>> msgQueue = new LinkedTransferQueue<FutureTask<?>>( );
     private final T                            owner;
     private final Class<?>                     ownerType;
     private final int                          numWorkers;
@@ -557,7 +576,11 @@ public class Threads {
     }
     
     private String key( ) {
-      return this.componentId.getSimpleName( ) + ":" + this.ownerType.getSimpleName( ) + ":" + this.owner + "[workers]";
+      return this.componentId.getSimpleName( ) + ":"
+             + this.ownerType.getSimpleName( )
+             + ":"
+             + this.owner
+             + "[workers]";
     }
     
     private void stop( ) {
@@ -568,7 +591,7 @@ public class Threads {
       return Threads.lookup( this.componentId, this.owner.getClass( ), this.name );
     }
     
-    private <C> RunnableFuture<C> submit( final Runnable run ) {
+    private <C> Future<C> submit( final Runnable run ) {
       final GenericCheckedListenableFuture<C> f = new GenericCheckedListenableFuture<C>( );
       final Callable<C> call = new Callable<C>( ) {
         
@@ -578,12 +601,22 @@ public class Threads {
           f.set( null );
           return null;
         }
+        
+        @Override
+        public String toString( ) {
+          return run.toString( ) + super.toString( );
+        }
       };
       return submit( call );
     }
     
-    private <C> RunnableFuture<C> submit( final Callable<C> call ) {
-      FutureTask<C> f = new FutureTask<C>( call );
+    private <C> Future<C> submit( final Callable<C> call ) {
+      FutureTask<C> f = new FutureTask<C>( call ) {
+        @Override
+        public String toString( ) {
+          return call.toString( ) + super.toString( );
+        }
+      };
       this.msgQueue.add( f );
       return f;
     }
@@ -592,8 +625,12 @@ public class Threads {
     public void run( ) {
       do {
         try {
-          final FutureTask<?> task = this.msgQueue.poll( 5000, TimeUnit.MILLISECONDS );
+          final FutureTask<?> task = this.msgQueue.take( );
           if ( task != null ) {
+            LOG.trace( Thread.currentThread( ).getName( ) + " "
+                       + EventType.QUEUE
+                       + " "
+                       + task );
             try {
               task.run( );
             } catch ( final Exception ex ) {
@@ -604,7 +641,11 @@ public class Threads {
           Thread.currentThread( ).interrupt( );
         }
       } while ( !this.msgQueue.isEmpty( ) || this.running.get( ) );
-      LOG.debug( "Shutting down worker: " + this.owner + ":" + this.name + " in thread " + Thread.currentThread( ).getName( ) );
+      LOG.debug( "Shutting down worker: " + this.owner
+                 + ":"
+                 + this.name
+                 + " in thread "
+                 + Thread.currentThread( ).getName( ) );
     }
     
     private Object getOwner( ) {
@@ -648,7 +689,8 @@ public class Threads {
   
   static String key( final Class<? extends ComponentId> compId, final Object o ) {
     return ( o instanceof HasFullName
-      ? o.getClass( ).toString( ) + ":" + ( ( HasFullName ) o ).getFullName( ).toString( )
+      ? o.getClass( ).toString( ) + ":"
+        + ( ( HasFullName ) o ).getFullName( ).toString( )
       : ( o instanceof Class
         ? ( ( Class ) o ).getCanonicalName( )
         : o.toString( ) ) );
@@ -668,17 +710,17 @@ public class Threads {
     }
   }
   
-  public static <C> Future<C> enqueue( final ServiceConfiguration config, final Runnable runnable ) {
+  public static Future<?> enqueue( final ServiceConfiguration config, final Runnable runnable ) {
     return queue( config.getComponentId( ).getClass( ), config, NUM_QUEUE_WORKERS ).submit( runnable );
   }
   
   @SuppressWarnings( "unchecked" )
-  public static <C> Future<C> enqueue( final ServiceConfiguration config, final Callable<?> callable ) {
+  public static <C> Future<C> enqueue( final ServiceConfiguration config, final Callable<C> callable ) {
     return ( Future<C> ) queue( config.getComponentId( ).getClass( ), config, NUM_QUEUE_WORKERS ).submit( callable );
   }
   
   @SuppressWarnings( "unchecked" )
-  public static <C> Future<C> enqueue( final ServiceConfiguration config, final Integer workers, final Callable<?> callable ) {
+  public static <C> Future<C> enqueue( final ServiceConfiguration config, final Integer workers, final Callable<C> callable ) {
     return ( Future<C> ) queue( config.getComponentId( ).getClass( ), config, workers ).submit( callable );
   }
 }

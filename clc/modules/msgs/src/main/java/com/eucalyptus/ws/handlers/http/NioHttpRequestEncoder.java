@@ -61,49 +61,29 @@
 /*
  * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
-package com.eucalyptus.ws.util;
+package com.eucalyptus.ws.handlers.http;
 
-import java.util.List;
-
+import com.eucalyptus.http.MappingHttpRequest;
 import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.handler.codec.frame.TooLongFrameException;
-import org.jboss.netty.handler.codec.http.HttpMethod;
+import org.jboss.netty.handler.codec.http.HttpMessage;
+import org.jboss.netty.handler.codec.http.HttpMessageEncoder;
+import org.jboss.netty.handler.codec.http.HttpRequest;
 
-import com.eucalyptus.ws.HttpException;
-import com.google.common.collect.Lists;
+@Deprecated
+public class NioHttpRequestEncoder extends HttpMessageEncoder {
 
-
-public class HttpUtils {
-
-  public static String readLine( ChannelBuffer buffer, int maxLineLength ) throws HttpException {
-    StringBuilder sb = new StringBuilder( 64 );
-    int lineLength = 0;
-    while ( true ) {
-      byte nextByte = buffer.readByte( );
-      if ( nextByte == HttpUtils.CR ) {
-        nextByte = buffer.readByte( );
-        if ( nextByte == HttpUtils.LF ) { return sb.toString( ); }
-      } else if ( nextByte == HttpUtils.LF ) {
-        return sb.toString( );
-      } else {
-        if ( lineLength >= maxLineLength ) { throw new HttpException( "HTTP input line longer than " + maxLineLength + " bytes: " + sb.toString( ) ); }
-        lineLength++;
-        sb.append( ( char ) nextByte );
-      }
-    }
+  public NioHttpRequestEncoder( ) {
+    super( );
   }
 
-  
-  public static final byte SP = 32;
-  public static final byte HT = 9;
-  public static final byte CR = 13;
-  public static final byte EQUALS = 61;
-  public static final byte LF = 10;
-  public static final byte[] CRLF = new byte[] { CR, LF };
-  public static final byte COLON = 58;
-  public static final byte SEMICOLON = 59;
-  public static final byte COMMA = 44;
-  public static final byte DOUBLE_QUOTE = '"';
-  public static final String DEFAULT_CHARSET = "UTF-8";
-
+  @Override
+  protected void encodeInitialLine( ChannelBuffer buf, HttpMessage message ) throws Exception {
+    MappingHttpRequest request = ( MappingHttpRequest ) message;
+    buf.writeBytes( request.getMethod( ).toString( ).getBytes( "ASCII" ) );
+    buf.writeByte( HttpUtils.SP );
+    buf.writeBytes( request.getServicePath( ).getBytes( "ASCII" ) );
+    buf.writeByte( HttpUtils.SP );
+    buf.writeBytes( request.getProtocolVersion( ).toString( ).getBytes( "ASCII" ) );
+    buf.writeBytes( HttpUtils.CRLF );
+  }
 }
