@@ -176,6 +176,14 @@ public class ServiceTransitions {
         return sequence( Component.State.BROKEN,
                          Component.State.INITIALIZED,
                          Component.State.LOADED );
+      case ENABLED:
+      case DISABLED:
+        return sequence( Component.State.ENABLED,
+                         Component.State.DISABLED,
+                         Component.State.STOPPED,
+                         Component.State.PRIMORDIAL,
+                         Component.State.INITIALIZED,
+                         Component.State.LOADED );
       case STOPPED:
       default:
         return sequence( Component.State.STOPPED,

@@ -94,8 +94,8 @@ import edu.ucsb.eucalyptus.msgs.BaseMessage;
 public class ServiceOperations {
   private static Logger                                                  LOG               = Logger.getLogger( ServiceOperations.class );
   private static final Map<Class<? extends BaseMessage>, Function<?, ?>> serviceOperations = Maps.newHashMap( );
-  private static Boolean                                                 ASYNCHRONOUS      = Boolean.FALSE;//TODO:GRZE: @Configurable
-  
+  private static Boolean                                                 ASYNCHRONOUS      = Boolean.FALSE;                               //TODO:GRZE: @Configurable
+                                                                                                                                          
   @SuppressWarnings( "unchecked" )
   public static <T extends BaseMessage, I, O> Function<I, O> lookup( final Class<T> msgType ) {
     return ( Function<I, O> ) serviceOperations.get( msgType );
@@ -107,8 +107,7 @@ public class ServiceOperations {
       super( );
     }
     
-    @SuppressWarnings( { "synthetic-access",
-        "unchecked" } )
+    @SuppressWarnings( { "synthetic-access", "unchecked" } )
     @Override
     public boolean processClass( final Class candidate ) throws Exception {
       if ( Ats.from( candidate ).has( ServiceOperation.class ) && Function.class.isAssignableFrom( candidate ) ) {
