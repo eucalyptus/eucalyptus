@@ -89,6 +89,7 @@ import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.ws.util.NioBootstrap;
 
@@ -127,7 +128,7 @@ public class WebServices {
   }
   
   private static NioClientSocketChannelFactory clientChannelFactory( ) {
-    return new NioClientSocketChannelFactory( Executors.newCachedThreadPool( ),
+    return new NioClientSocketChannelFactory( Threads.lookup( Empyrean.class, WebServices.class ),
                                               WebServices.clientWorkerPool( ),
                                               StackConfiguration.CLIENT_POOL_MAX_THREADS );
   }
