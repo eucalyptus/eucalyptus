@@ -63,7 +63,6 @@
  */
 package com.eucalyptus.ws;
 
-import java.util.Map.Entry;
 import java.util.NoSuchElementException;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentMap;
@@ -85,12 +84,9 @@ import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Faults;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
-import com.eucalyptus.component.ServiceTransitions;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.util.Internets;
-import com.eucalyptus.ws.util.ChannelUtil;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
@@ -230,7 +226,7 @@ public class ServiceBootstrapper extends Bootstrapper.Simple {
           for ( final Worker w : workers.keySet( ) ) {
             LOG.info( "Waiting for" + w );
           }
-          TimeUnit.SECONDS.sleep( 200 );
+          TimeUnit.MILLISECONDS.sleep( 200 );
         }
       } catch ( final InterruptedException ex ) {
         Thread.currentThread( ).interrupt( );

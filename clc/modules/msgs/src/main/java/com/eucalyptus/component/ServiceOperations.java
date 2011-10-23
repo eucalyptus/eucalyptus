@@ -94,7 +94,7 @@ import edu.ucsb.eucalyptus.msgs.BaseMessage;
 public class ServiceOperations {
   private static Logger                                                  LOG               = Logger.getLogger( ServiceOperations.class );
   private static final Map<Class<? extends BaseMessage>, Function<?, ?>> serviceOperations = Maps.newHashMap( );
-  private static Boolean                                                 ASYNCHRONOUS      = Boolean.FALSE;
+  private static Boolean                                                 ASYNCHRONOUS      = Boolean.FALSE;//TODO:GRZE: @Configurable
   
   @SuppressWarnings( "unchecked" )
   public static <T extends BaseMessage, I, O> Function<I, O> lookup( final Class<T> msgType ) {
