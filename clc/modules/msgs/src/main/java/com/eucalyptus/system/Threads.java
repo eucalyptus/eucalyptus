@@ -254,7 +254,7 @@ public class Threads {
     
     public ExecutorService makePool( ) {
       ExecutorService newPool = ( this.numThreads == -1 )
-        ? Executors.newFixedThreadPool( NUM_QUEUE_WORKERS, this )
+        ? Executors.newCachedThreadPool( this )
         : Executors.newFixedThreadPool( this.numThreads, this );
       if ( newPool instanceof ThreadPoolExecutor ) {
         ( ( ThreadPoolExecutor ) newPool ).setRejectedExecutionHandler( new ThreadPoolExecutor.CallerRunsPolicy( ) );
