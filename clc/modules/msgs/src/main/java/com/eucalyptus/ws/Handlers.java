@@ -68,12 +68,15 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelDownstreamHandler;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
@@ -82,6 +85,7 @@ import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelPipelineFactory;
+import org.jboss.netty.channel.ChannelSink;
 import org.jboss.netty.channel.ChannelUpstreamHandler;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.MessageEvent;
@@ -117,6 +121,7 @@ import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.Timers;
 import com.eucalyptus.ws.handlers.BindingHandler;
 import com.eucalyptus.ws.handlers.SoapMarshallingHandler;
 import com.eucalyptus.ws.handlers.http.HttpUtils;
@@ -135,11 +140,227 @@ public class Handlers {
   private static final ChannelHandler                        addressingHandler      = new AddressingHandler( );
   private static final ConcurrentMap<String, ChannelHandler> bindingHandlers        = new ConcurrentHashMap<String, ChannelHandler>( );
   private static final HashedWheelTimer                      timer                  = new HashedWheelTimer( );                         //TODO:GRZE: configurable
+  private static Boolean                                     STAGE_HANDLER_LOGGING  = Boolean.TRUE;                                    //GRZE: @Configurable
                                                                                                                                         
+  private static class LoggingHandler implements ChannelUpstreamHandler, ChannelDownstreamHandler {
+    private final ChannelUpstreamHandler   upstream;
+    private final ChannelDownstreamHandler downstream;
+    private final ChannelHandler           handler;
+    
+    private LoggingHandler( final ChannelHandler handler ) {
+      super( );
+      this.handler = handler;
+      this.upstream = ( ChannelUpstreamHandler ) ( ( handler instanceof ChannelUpstreamHandler ) ? handler : null );
+      this.downstream = ( ChannelDownstreamHandler ) ( ( handler instanceof ChannelDownstreamHandler ) ? handler : null );
+    }
+    
+    @SuppressWarnings( { "unchecked", "rawtypes" } )
+    @Override
+    public void handleDownstream( final ChannelHandlerContext ctx, final ChannelEvent e ) throws Exception {
+      if ( e instanceof MessageEvent ) {
+        Timers.loggingWrapper( new Callable( ) {
+          
+          @Override
+          public Object call( ) throws Exception {
+            if ( LoggingHandler.this.downstream != null ) {
+              LoggingHandler.this.downstream.handleDownstream( ctx, e );
+            }
+            return e;
+          }
+          
+        } ).call( );
+      } else {
+        if ( LoggingHandler.this.downstream != null ) {
+          LoggingHandler.this.downstream.handleDownstream( ctx, e );
+        } else {
+          ctx.sendDownstream( e );
+        }
+      }
+    }
+    
+    @SuppressWarnings( { "unchecked", "rawtypes" } )
+    @Override
+    public void handleUpstream( final ChannelHandlerContext ctx, final ChannelEvent e ) throws Exception {
+      if ( e instanceof MessageEvent ) {
+        Timers.loggingWrapper( new Callable( ) {
+          
+          @Override
+          public Object call( ) throws Exception {
+            if ( LoggingHandler.this.upstream != null ) {
+              LoggingHandler.this.upstream.handleUpstream( ctx, e );
+            }
+            return e;
+          }
+          
+        } ).call( );
+      } else {
+        if ( LoggingHandler.this.upstream != null ) {
+          LoggingHandler.this.upstream.handleUpstream( ctx, e );
+        } else {
+          ctx.sendUpstream( e );
+        }
+      }
+      
+    }
+    
+    @Override
+    public int hashCode( ) {
+      return this.handler.hashCode( );
+    }
+    
+    @Override
+    public boolean equals( final Object obj ) {
+      return this.handler.equals( obj );
+    }
+    
+    @Override
+    public String toString( ) {
+      return this.handler.toString( );
+    }
+  }
+  
+  public static ChannelHandler wrapHandler( final ChannelHandler handler ) {
+    return STAGE_HANDLER_LOGGING ? new LoggingHandler( handler ) : handler;
+  }
+  
   enum ServerPipelineFactory implements ChannelPipelineFactory {
     INSTANCE;
+    @Override
     public ChannelPipeline getPipeline( ) throws Exception {
-      final ChannelPipeline pipeline = Channels.pipeline( );
+      final ChannelPipeline pipeline = new ChannelPipeline( ) {
+        private final ChannelPipeline delegate = Channels.pipeline( );
+        
+        @Override
+        public void addFirst( final String name, final ChannelHandler handler ) {
+          this.delegate.addFirst( name, Handlers.wrapHandler( handler ) );
+        }
+        
+        @Override
+        public void addLast( final String name, final ChannelHandler handler ) {
+          this.delegate.addLast( name, Handlers.wrapHandler( handler ) );
+        }
+        
+        @Override
+        public void addBefore( final String baseName, final String name, final ChannelHandler handler ) {
+          this.delegate.addBefore( baseName, name, Handlers.wrapHandler( handler ) );
+        }
+        
+        @Override
+        public void addAfter( final String baseName, final String name, final ChannelHandler handler ) {
+          this.delegate.addAfter( baseName, name, Handlers.wrapHandler( handler ) );
+        }
+        
+        @Override
+        public void remove( final ChannelHandler handler ) {
+          this.delegate.remove( handler );
+        }
+        
+        @Override
+        public ChannelHandler remove( final String name ) {
+          return this.delegate.remove( name );
+        }
+        
+        @Override
+        public <T extends ChannelHandler> T remove( final Class<T> handlerType ) {
+          return this.delegate.remove( handlerType );
+        }
+        
+        @Override
+        public ChannelHandler removeFirst( ) {
+          return this.delegate.removeFirst( );
+        }
+        
+        @Override
+        public ChannelHandler removeLast( ) {
+          return this.delegate.removeLast( );
+        }
+        
+        @Override
+        public void replace( final ChannelHandler oldHandler, final String newName, final ChannelHandler newHandler ) {
+          this.delegate.replace( oldHandler, newName, newHandler );
+        }
+        
+        @Override
+        public ChannelHandler replace( final String oldName, final String newName, final ChannelHandler newHandler ) {
+          return this.delegate.replace( oldName, newName, newHandler );
+        }
+        
+        @Override
+        public <T extends ChannelHandler> T replace( final Class<T> oldHandlerType, final String newName, final ChannelHandler newHandler ) {
+          return this.delegate.replace( oldHandlerType, newName, newHandler );
+        }
+        
+        @Override
+        public ChannelHandler getFirst( ) {
+          return this.delegate.getFirst( );
+        }
+        
+        @Override
+        public ChannelHandler getLast( ) {
+          return this.delegate.getLast( );
+        }
+        
+        @Override
+        public ChannelHandler get( final String name ) {
+          return this.delegate.get( name );
+        }
+        
+        @Override
+        public <T extends ChannelHandler> T get( final Class<T> handlerType ) {
+          return this.delegate.get( handlerType );
+        }
+        
+        @Override
+        public ChannelHandlerContext getContext( final ChannelHandler handler ) {
+          return this.delegate.getContext( Handlers.wrapHandler( handler ) );
+        }
+        
+        @Override
+        public ChannelHandlerContext getContext( final String name ) {
+          return this.delegate.getContext( name );
+        }
+        
+        @Override
+        public ChannelHandlerContext getContext( final Class<? extends ChannelHandler> handlerType ) {
+          return this.delegate.getContext( handlerType );
+        }
+        
+        @Override
+        public void sendUpstream( final ChannelEvent e ) {
+          this.delegate.sendUpstream( e );
+        }
+        
+        @Override
+        public void sendDownstream( final ChannelEvent e ) {
+          this.delegate.sendDownstream( e );
+        }
+        
+        @Override
+        public Channel getChannel( ) {
+          return this.delegate.getChannel( );
+        }
+        
+        @Override
+        public ChannelSink getSink( ) {
+          return this.delegate.getSink( );
+        }
+        
+        @Override
+        public void attach( final Channel channel, final ChannelSink sink ) {
+          this.delegate.attach( channel, sink );
+        }
+        
+        @Override
+        public boolean isAttached( ) {
+          return this.delegate.isAttached( );
+        }
+        
+        @Override
+        public Map<String, ChannelHandler> toMap( ) {
+          return this.delegate.toMap( );
+        }
+        
+      };
       pipeline.addLast( "ssl", Handlers.newSslHandler( ) );
       pipeline.addLast( "decoder", new NioHttpDecoder( ) );
       pipeline.addLast( "encoder", new HttpResponseEncoder( ) );
@@ -170,8 +391,8 @@ public class Handlers {
     }
     
     @Override
-    protected void encodeInitialLine( ChannelBuffer buf, HttpMessage message ) throws Exception {
-      MappingHttpRequest request = ( MappingHttpRequest ) message;
+    protected void encodeInitialLine( final ChannelBuffer buf, final HttpMessage message ) throws Exception {
+      final MappingHttpRequest request = ( MappingHttpRequest ) message;
       buf.writeBytes( request.getMethod( ).toString( ).getBytes( "ASCII" ) );
       buf.writeByte( HttpUtils.SP );
       buf.writeBytes( request.getServicePath( ).getBytes( "ASCII" ) );
@@ -186,7 +407,7 @@ public class Handlers {
     INSTANCE;
     
     @Override
-    public void handleUpstream( ChannelHandlerContext ctx, ChannelEvent e ) throws Exception {
+    public void handleUpstream( final ChannelHandlerContext ctx, final ChannelEvent e ) throws Exception {
       if ( !Bootstrap.isFinished( ) ) {
         //TODO:GRZE: do nothing for the moment, not envouh info here.
 //        throw new ServiceNotReadyException( "System has not yet completed booting." );
@@ -204,11 +425,16 @@ public class Handlers {
   
   public static Map<String, ChannelHandler> channelMonitors( final TimeUnit unit, final int timeout ) {
     return new HashMap<String, ChannelHandler>( 4 ) {
+      /**
+       * 
+       */
+      private static final long serialVersionUID = 1L;
+
       {
 //        put( "state-monitor", new ChannelStateMonitor( ) );
-        put( "idlehandler", new IdleStateHandler( Handlers.timer, timeout, timeout, timeout, unit ) );
-        put( "readTimeout", new ReadTimeoutHandler( Handlers.timer, timeout, unit ) );
-        put( "writeTimeout", new WriteTimeoutHandler( Handlers.timer, timeout, unit ) );
+        this.put( "idlehandler", new IdleStateHandler( Handlers.timer, timeout, timeout, timeout, unit ) );
+        this.put( "readTimeout", new ReadTimeoutHandler( Handlers.timer, timeout, unit ) );
+        this.put( "writeTimeout", new WriteTimeoutHandler( Handlers.timer, timeout, unit ) );
       }
     };
   }
@@ -229,11 +455,11 @@ public class Handlers {
     return addressingHandler;
   }
   
-  public static ChannelHandler newAddressingHandler( String addressingPrefix ) {//caching
+  public static ChannelHandler newAddressingHandler( final String addressingPrefix ) {//caching
     return new AddressingHandler( addressingPrefix );
   }
   
-  public static ChannelHandler bindingHandler( String bindingName ) {
+  public static ChannelHandler bindingHandler( final String bindingName ) {
     if ( bindingHandlers.containsKey( bindingName ) ) {
       return bindingHandlers.get( bindingName );
     } else {
@@ -265,7 +491,7 @@ public class Handlers {
   
   @ChannelPipelineCoverage( "one" )
   private static class NioSslHandler extends SslHandler {
-    private AtomicBoolean first = new AtomicBoolean( true );
+    private final AtomicBoolean first = new AtomicBoolean( true );
     
     NioSslHandler( ) {
       super( SslSetup.getServerEngine( ) );
@@ -280,20 +506,20 @@ public class Handlers {
                                                                      HttpMethod.DELETE.getName( ).substring( 0, 3 ),
                                                                      HttpMethod.TRACE.getName( ).substring( 0, 3 ) );
     
-    private static boolean maybeSsl( ChannelBuffer buffer ) {
+    private static boolean maybeSsl( final ChannelBuffer buffer ) {
       buffer.markReaderIndex( );
-      StringBuffer sb = new StringBuffer( );
+      final StringBuffer sb = new StringBuffer( );
       for ( int lineLength = 0; lineLength++ < 3; sb.append( ( char ) buffer.readByte( ) ) );
       buffer.resetReaderIndex( );
       return !httpVerbPrefix.contains( sb.toString( ) );
     }
     
     @Override
-    public void handleUpstream( ChannelHandlerContext ctx, ChannelEvent e ) throws Exception {
+    public void handleUpstream( final ChannelHandlerContext ctx, final ChannelEvent e ) throws Exception {
       Object o = null;
-      if ( e instanceof MessageEvent
+      if ( ( e instanceof MessageEvent )
            && this.first.compareAndSet( true, false )
-           && ( o = ( ( MessageEvent ) e ).getMessage( ) ) instanceof ChannelBuffer
+           && ( ( o = ( ( MessageEvent ) e ).getMessage( ) ) instanceof ChannelBuffer )
            && !maybeSsl( ( ChannelBuffer ) o ) ) {
         ctx.getPipeline( ).removeFirst( );
         ctx.sendUpstream( e );
@@ -312,21 +538,21 @@ public class Handlers {
   public enum ServiceStateChecksHandler implements ChannelUpstreamHandler {
     INSTANCE {
       @Override
-      public void handleUpstream( ChannelHandlerContext ctx, ChannelEvent e ) throws Exception {
+      public void handleUpstream( final ChannelHandlerContext ctx, final ChannelEvent e ) throws Exception {
         final MappingHttpRequest request = MappingHttpMessage.extractMessage( e );
         final BaseMessage msg = BaseMessage.extractMessage( e );
         if ( msg != null ) {
           try {
-            Class<? extends ComponentId> compClass = ComponentMessages.lookup( msg );
+            final Class<? extends ComponentId> compClass = ComponentMessages.lookup( msg );
             if ( Topology.isEnabledLocally( compClass ) ) {
               ctx.sendUpstream( e );
             } else {
               Handlers.sendError( ctx, e, compClass, request.getServicePath( ) );
             }
-          } catch ( NoSuchElementException ex ) {
+          } catch ( final NoSuchElementException ex ) {
             LOG.warn( "Failed to find reverse component mapping for message type: " + msg.getClass( ) );
             ctx.sendUpstream( e );
-          } catch ( Exception ex ) {
+          } catch ( final Exception ex ) {
             Logs.extreme( ).error( ex, ex );
             ctx.sendUpstream( e );
           }
@@ -346,7 +572,7 @@ public class Handlers {
   enum MessageEpochChecks implements ChannelUpstreamHandler {
     INSTANCE {
       @Override
-      public void handleUpstream( ChannelHandlerContext ctx, ChannelEvent e ) throws Exception {
+      public void handleUpstream( final ChannelHandlerContext ctx, final ChannelEvent e ) throws Exception {
         final MappingHttpRequest request = MappingHttpMessage.extractMessage( e );
         final BaseMessage msg = BaseMessage.extractMessage( e );
         if ( msg != null ) {
@@ -357,10 +583,10 @@ public class Handlers {
             } else if ( Topology.check( msg ) ) {
               ctx.sendUpstream( e );
             } else {
-              Class<? extends ComponentId> compClass = ComponentMessages.lookup( msg );
+              final Class<? extends ComponentId> compClass = ComponentMessages.lookup( msg );
               Handlers.sendError( ctx, e, compClass, request.getServicePath( ) );
             }
-          } catch ( Exception ex ) {
+          } catch ( final Exception ex ) {
             Logs.extreme( ).error( ex, ex );
             ctx.sendUpstream( e );
           }
@@ -370,18 +596,18 @@ public class Handlers {
     
   }
   
-  static void sendError( ChannelHandlerContext ctx, ChannelEvent e, Class<? extends ComponentId> compClass, String originalPath ) {
+  static void sendError( final ChannelHandlerContext ctx, final ChannelEvent e, final Class<? extends ComponentId> compClass, final String originalPath ) {
     e.getFuture( ).cancel( );
     HttpResponse response = null;
     if ( !Topology.enabledServices( compClass ).isEmpty( ) ) {
       response = new DefaultHttpResponse( HttpVersion.HTTP_1_1, HttpResponseStatus.TEMPORARY_REDIRECT );
-      URI serviceUri = ServiceUris.remote( Topology.lookup( compClass ) );
-      String redirectUri = serviceUri.toASCIIString( ) + originalPath.replace( serviceUri.getPath( ), "" );
+      final URI serviceUri = ServiceUris.remote( Topology.lookup( compClass ) );
+      final String redirectUri = serviceUri.toASCIIString( ) + originalPath.replace( serviceUri.getPath( ), "" );
       response.setHeader( HttpHeaders.Names.LOCATION, redirectUri );
     } else {
       response = new DefaultHttpResponse( HttpVersion.HTTP_1_1, HttpResponseStatus.NOT_FOUND );
     }
-    ChannelFuture writeFuture = Channels.future( ctx.getChannel( ) );
+    final ChannelFuture writeFuture = Channels.future( ctx.getChannel( ) );
     writeFuture.addListener( ChannelFutureListener.CLOSE );
     if ( ctx.getChannel( ).isConnected( ) ) {
       Channels.write( ctx, writeFuture, response );

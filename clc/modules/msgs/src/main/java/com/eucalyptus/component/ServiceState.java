@@ -184,5 +184,10 @@ public class ServiceState implements StateMachine<ServiceConfiguration, Componen
   public ServiceConfiguration getParent( ) {
     return this.stateMachine.getParent( );
   }
+
+  @Override
+  public String toString( ) {
+    return this.parent.getFullName( ).toString( );
+  }
   
 }

@@ -17,9 +17,7 @@ import com.eucalyptus.util.Exceptions;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implements Request<Q, R> {
-  private static Logger                     LOG = Logger.getLogger( AsyncRequest.class );
   private final Callback.TwiceChecked<Q, R> wrapperCallback;
-  private final Callback.TwiceChecked<Q, R> cb;
   private final CheckedListenableFuture<R>  requestResult;
   private final CheckedListenableFuture<R>  result;
   private final RequestHandler<Q, R>        handler;
@@ -32,7 +30,6 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
     this.requestResult = new AsyncResponseFuture<R>( );
     this.handler = new AsyncRequestHandler<Q, R>( this.requestResult );
     this.callbackSequence = new CallbackListenerSequence<R>( );
-    this.cb = cb;
     this.wrapperCallback = new TwiceChecked<Q, R>( ) {
       
       @Override
@@ -42,12 +39,12 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
           AsyncRequest.this.result.setException( t );
         } catch ( Exception ex ) {
           AsyncRequest.this.result.setException( t );
-          LOG.error( ex, ex );
+          Logs.extreme( ).error( ex, ex );
         }
         try {
           AsyncRequest.this.callbackSequence.fireException( t );
         } catch ( Exception ex ) {
-          LOG.error( ex, ex );
+          Logs.extreme( ).error( ex, ex );
         }
       }
       
@@ -94,7 +91,7 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
         try {
           cb.initialize( request );
         } catch ( Exception ex ) {
-          LOG.error( ex, ex );
+          Logs.extreme( ).error( ex, ex );
           AsyncRequest.this.result.setException( ex );
           AsyncRequest.this.callbackSequence.fireException( ex );
         }
@@ -188,7 +185,7 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
     try {
       Logs.extreme( ).debug( "fire: endpoint " + config );
       if ( !this.handler.fire( config, this.request ) ) {
-        LOG.error( "Error occurred while trying to send request: " + this.request );
+        Logs.extreme( ).error( "Error occurred while trying to send request: " + this.request );
         if ( !this.requestResult.isDone( ) ) {
           RequestException ex = new RequestException( "Error occured attempting to fire the request.", this.getRequest( ) );
           try {
@@ -200,7 +197,6 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
       }
     } catch ( Exception ex ) {
       Exceptions.maybeInterrupted( ex );
-      LOG.warn( ex );
       Logs.extreme( ).error( ex, ex );
       this.result.setException( ex );
       throw Exceptions.toUndeclared( ex );

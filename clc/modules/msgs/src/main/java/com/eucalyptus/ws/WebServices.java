@@ -204,7 +204,7 @@ public class WebServices {
       }
     };
     final ServerBootstrap bootstrap = serverBootstrap( serverChannelFactory, pipelineFactory );
-    if ( StackConfiguration.PORT != StackConfiguration.INTERNAL_PORT ) {
+    if ( !StackConfiguration.INTERNAL_PORT.equals( StackConfiguration.PORT ) ) {
       final Channel serverChannel = bootstrap.bind( new InetSocketAddress( StackConfiguration.PORT ) );
       serverChannelGroup.add( serverChannel );
     }

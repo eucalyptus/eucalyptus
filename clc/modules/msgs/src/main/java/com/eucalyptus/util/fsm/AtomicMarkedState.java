@@ -164,7 +164,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
     if ( !this.state.isMarked( ) ) {
       IllegalStateException ex = Exceptions.trace( new IllegalStateException( "commit() called when there is no currently pending transition: "
                                                                               + this.toString( ) ) );
-      LOG.error( ex, ex );
+      Logs.extreme( ).error( ex );
       throw ex;
     } else {
       ActiveTransition tr = this.currentTransition.getAndSet( null );
@@ -185,17 +185,17 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
   }
   
   private void error( Throwable t ) {
-    Logs.exhaust( ).error( "Transition error(): " + this.toString( ) );
+    Logs.extreme( ).error( "Transition error(): " + this.toString( ), t );
     if ( !this.state.isMarked( ) ) {
       IllegalStateException ex = Exceptions.trace( new IllegalStateException( "error() called when there is no currently pending transition: "
                                                                               + this.toString( ), t ) );
-      Logs.exhaust( ).error( ex, ex );
+      Logs.extreme( ).error( ex );
       ActiveTransition tr = this.currentTransition.getAndSet( null );
       if ( tr != null ) {
         tr.getTransitionFuture( ).setException( t );
         this.state.set( tr.getTransitionRule( ).getErrorState( ), false );
       }
-      throw ex;
+//GRZE: cant throw here as it will come recurse      throw ex;
     } else {
       ActiveTransition tr = this.currentTransition.getAndSet( null );
       this.state.set( tr.getTransitionRule( ).getErrorState( ), tr.getTransitionRule( ).getErrorStateMark( ) );
@@ -392,8 +392,8 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
     
     public void fireException( Throwable t ) {
       if ( Logs.isExtrrreeeme( ) ) {
-        Logs.exhaust( ).trace( Exceptions.string( this.startStackTrace ) );
-        Logs.exhaust( ).trace( Exceptions.string( this.endStackTrace ) );
+        Logs.extreme( ).trace( Exceptions.string( this.startStackTrace ) );
+        Logs.extreme( ).trace( Exceptions.string( this.endStackTrace ) );
       }
       AtomicMarkedState.this.error( t );
     }

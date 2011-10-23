@@ -39,6 +39,7 @@ import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.records.EventClass;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.ws.WebServices;
 import com.eucalyptus.ws.util.NioBootstrap;
@@ -145,21 +146,21 @@ public class AsyncRequestHandler<Q extends BaseMessage, R extends BaseMessage> i
   
   private void teardown( final Throwable t ) {
     if ( ( t != null ) && !this.response.isDone( ) ) {
-      LOG.debug( "RESULT:" + t.getMessage( )
+      Logs.extreme( ).debug( "RESULT:" + t.getMessage( )
                  + ":REQUEST:"
                  + ( ( this.request.get( ) != null )
                    ? this.request.get( ).getClass( )
                    : "REQUEST IS NULL" ) );
       if ( t instanceof RetryableConnectionException ) {
-        LOG.trace( t.getMessage( ) );
+        Logs.extreme( ).trace( t.getMessage( ) );
       } else if ( t instanceof ConnectionException ) {
-        LOG.trace( t.getMessage( ) );
+        Logs.extreme( ).trace( t.getMessage( ) );
       } else if ( t instanceof IOException ) {
-        LOG.trace( t.getMessage( ) );
+        Logs.extreme( ).trace( t.getMessage( ) );
       }
       this.response.setException( t );
     } else if ( ( t != null ) && this.response.isDone( ) ) {
-      LOG.trace( t.getMessage( ) );
+      Logs.extreme( ).trace( t.getMessage( ) );
       this.response.setException( t );
     }
     if ( this.connectFuture != null ) {
