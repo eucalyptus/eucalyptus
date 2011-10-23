@@ -122,6 +122,7 @@ public class ServiceBootstrapper extends Bootstrapper.Simple {
     
     public static void markFinished( ) {
       worker.running.set( false );
+      executor.shutdownNow( );
     }
     
     public static void submit( final Runnable run ) {
@@ -145,7 +146,7 @@ public class ServiceBootstrapper extends Bootstrapper.Simple {
         while ( !worker.msgQueue.isEmpty( ) || worker.running.get( ) ) {
           Runnable event;
           try {
-            if ( ( event = worker.msgQueue.poll( 50, TimeUnit.MILLISECONDS ) ) != null ) {
+            if ( ( event = worker.msgQueue.poll( Long.MAX_VALUE, TimeUnit.MILLISECONDS ) ) != null ) {
               try {
                 workers.replace( this, event );
                 event.run( );
