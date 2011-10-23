@@ -74,7 +74,7 @@ public abstract class MessageCallback<Q extends BaseMessage, R extends BaseMessa
     Logs.extreme( ).error( this.getClass( ) + ":"
                            + this.request.get( ).getClass( ).getSimpleName( )
                            + " should implement: fireException( Throwable t ) to handle errors!" );
-    Logs.extreme( ).error( t, t );
+    Logs.exhaust( ).error( t, t );
   }
   
 }

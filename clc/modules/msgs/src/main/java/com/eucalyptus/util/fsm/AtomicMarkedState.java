@@ -186,15 +186,14 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
   private void error( Throwable t ) {
     Logs.extreme( ).error( "Transition error(): " + this.toString( ), t );
     if ( !this.state.isMarked( ) ) {
-      IllegalStateException ex = Exceptions.trace( new IllegalStateException( "error() called when there is no currently pending transition: "
-                                                                              + this.toString( ), t ) );
+      IllegalStateException ex = new IllegalStateException( "error() called when there is no currently pending transition: "
+        + this.toString( ), t );
       Logs.extreme( ).error( ex );
       ActiveTransition tr = this.currentTransition.getAndSet( null );
       if ( tr != null ) {
         tr.getTransitionFuture( ).setException( t );
         this.state.set( tr.getTransitionRule( ).getErrorState( ), false );
       }
-//GRZE: cant throw here as it will come recurse      throw ex;
     } else {
       ActiveTransition tr = this.currentTransition.getAndSet( null );
       Logs.extreme( ).error( "Transition error(): " + this.toString( ) + "Transition error(): START STACK\n" + tr.startStackTrace );
