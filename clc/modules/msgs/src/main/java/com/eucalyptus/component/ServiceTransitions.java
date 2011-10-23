@@ -129,27 +129,39 @@ public class ServiceTransitions {
   
   /**
    * GRZE:FIXME: this is a shoddy static method for definining the prefered path from n_0 to n_1 for
-   * n_0,n_1 \in G the state machine.
+   * n_0,n_1 \in G the state machine; think dijkstra.
    **/
   @SuppressWarnings( "unchecked" )
   public static CheckedListenableFuture<ServiceConfiguration> pathTo( final ServiceConfiguration configuration, final Component.State goalState ) {
     try {
+      CheckedListenableFuture<ServiceConfiguration> result = null;
       switch ( goalState ) {
         case LOADED:
-          return executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToLoaded( configuration.lookupState( ) ) ) );
+          result = executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToLoaded( configuration.lookupState( ) ) ) );
+          break;
         case DISABLED:
-          return executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToDisabled( configuration.lookupState( ) ) ) );
+          result = executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToDisabled( configuration.lookupState( ) ) ) );
+          break;
         case ENABLED:
-          return executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToEnabled( configuration.lookupState( ) ) ) );
+          result = executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToEnabled( configuration.lookupState( ) ) ) );
+          break;
         case STOPPED:
-          return executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToStopped( configuration.lookupState( ) ) ) );
+          result = executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToStopped( configuration.lookupState( ) ) ) );
+          break;
         case NOTREADY:
-          return executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToStarted( configuration.lookupState( ) ) ) );
+          result = executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToStarted( configuration.lookupState( ) ) ) );
+          break;
         case PRIMORDIAL:
-          return executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToPrimordial( configuration.lookupState( ) ) ) );
-        default:
-          return Futures.predestinedFuture( configuration );
+          result = executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToPrimordial( configuration.lookupState( ) ) ) );
+          break;
+        case BROKEN:
+          result = executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToBroken( configuration.lookupState( ) ) ) );
+          break;
+        case INITIALIZED:
+          result = executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToInitialized( configuration.lookupState( ) ) ) );
+          break;
       }
+      return result;
     } catch ( RuntimeException ex ) {
       Logs.extreme( ).error( ex, ex );
       LOG.error( configuration.getFullName( ) + " failed to transition to "
@@ -160,101 +172,67 @@ public class ServiceTransitions {
     }
   }
   
-  /**
-   * @param lookupState
-   * @return
-   */
-  private static final State[] pathToLoaded( final Component.State fromState ) {
-    switch ( fromState ) {
-      case PRIMORDIAL:
-      case INITIALIZED:
-      case LOADED:
-        return sequence( Component.State.PRIMORDIAL,
-                         Component.State.INITIALIZED,
-                         Component.State.LOADED );
-      case BROKEN:
-        return sequence( Component.State.BROKEN,
-                         Component.State.INITIALIZED,
-                         Component.State.LOADED );
-      case ENABLED:
-      case DISABLED:
-        return sequence( Component.State.ENABLED,
-                         Component.State.DISABLED,
-                         Component.State.STOPPED,
-                         Component.State.PRIMORDIAL,
-                         Component.State.INITIALIZED,
-                         Component.State.LOADED );
-      case STOPPED:
-      default:
-        return sequence( Component.State.STOPPED,
-                         Component.State.INITIALIZED,
-                         Component.State.LOADED );
-    }
+  private static State[] pathToBroken( Component.State fromState ) {
+    return ObjectArrays.concat( ServiceTransitions.pathToPrimordial( fromState ), Component.State.BROKEN );
   }
   
   private static State[] pathToPrimordial( Component.State fromState ) {
     return ObjectArrays.concat( ServiceTransitions.pathToStopped( fromState ), Component.State.PRIMORDIAL );
   }
   
-  private static final State[] pathToStarted( final Component.State fromState ) {
-    switch ( fromState ) {
-      case DISABLED:
-      case NOTREADY:
-        return sequence( Component.State.NOTREADY, Component.State.DISABLED, Component.State.DISABLED );
-      default:
-        return sequence( Component.State.BROKEN,
-                         Component.State.STOPPED,
-                         Component.State.PRIMORDIAL,
-                         Component.State.INITIALIZED,
-                         Component.State.LOADED,
-                         Component.State.NOTREADY,
-                         Component.State.DISABLED,
-                         Component.State.DISABLED );
-    }
+  private static State[] pathToLoaded( Component.State fromState ) {
+    return ObjectArrays.concat( ServiceTransitions.pathToInitialized( fromState ), Component.State.LOADED );
   }
   
-  private static final State[] pathToEnabled( final Component.State fromState ) {
+  private static final State[] pathToInitialized( final Component.State fromState ) {
+    State[] transition = new State[] { fromState };
     switch ( fromState ) {
+      case LOADED:
+        transition = ObjectArrays.concat( fromState, pathToInitialized( Component.State.NOTREADY ) );
+        //$FALL-THROUGH$
       case ENABLED:
-        return sequence( Component.State.ENABLED,
-                         Component.State.ENABLED );
-      default:
-        return ObjectArrays.concat( ServiceTransitions.pathToDisabled( fromState ), Component.State.ENABLED );
+        transition = ObjectArrays.concat( transition, Component.State.DISABLED );
+        //$FALL-THROUGH$
+      case DISABLED:
+      case NOTREADY:
+        transition = ObjectArrays.concat( transition, Component.State.STOPPED );
+        //$FALL-THROUGH$
+      case BROKEN:
+      case PRIMORDIAL:
+      case STOPPED:
+        transition = ObjectArrays.concat( transition, Component.State.INITIALIZED );
+        //$FALL-THROUGH$
+      case INITIALIZED:
+        break;
     }
+    return transition;
+  }
+  
+  private static State[] pathToStarted( Component.State fromState ) {
+    return ObjectArrays.concat( ServiceTransitions.pathToLoaded( fromState ), Component.State.NOTREADY );
   }
   
   private static final State[] pathToDisabled( final Component.State fromState ) {
-    switch ( fromState ) {
-      case NOTREADY:
-        return sequence( Component.State.NOTREADY,
-                         Component.State.DISABLED,
-                         Component.State.DISABLED );
-      case DISABLED:
-        return sequence( Component.State.DISABLED,
-                         Component.State.DISABLED );
-      case ENABLED:
-        return sequence( Component.State.ENABLED,
-                         Component.State.DISABLED,
-                         Component.State.DISABLED );
-      default:
-        return ObjectArrays.concat( ServiceTransitions.pathToStarted( fromState ), Component.State.DISABLED );
-    }
+    return ObjectArrays.concat( ObjectArrays.concat( ServiceTransitions.pathToStarted( fromState ), Component.State.DISABLED ), Component.State.DISABLED );
+  }
+  
+  private static final State[] pathToEnabled( final Component.State fromState ) {
+    return ObjectArrays.concat( ServiceTransitions.pathToDisabled( fromState ), Component.State.ENABLED );
   }
   
   private static final State[] pathToStopped( final Component.State fromState ) {
+    State[] transition = new State[] { fromState };
     switch ( fromState ) {
       case ENABLED:
+        transition = ObjectArrays.concat( transition, Component.State.DISABLED );
+        //$FALL-THROUGH$
       case DISABLED:
-        return sequence( Component.State.ENABLED,
-                         Component.State.DISABLED,
-                         Component.State.STOPPED );
+        transition = ObjectArrays.concat( transition, Component.State.STOPPED );
+        break;
       default:
-        return sequence( Component.State.PRIMORDIAL,
-                         Component.State.INITIALIZED,
-                         Component.State.LOADED,
-                         Component.State.NOTREADY,
-                         Component.State.STOPPED );
+        transition = ObjectArrays.concat( pathToStarted( fromState ), Component.State.STOPPED );
     }
+    return transition;
   }
   
   private static CheckedListenableFuture<ServiceConfiguration> executeTransition( final ServiceConfiguration config, Callable<CheckedListenableFuture<ServiceConfiguration>> transition ) {

@@ -64,6 +64,7 @@
 package com.eucalyptus.component;
 
 import java.net.InetAddress;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -541,7 +542,7 @@ public class Topology {
       } catch ( final InterruptedException ex ) {
         Thread.currentThread( ).interrupt( );
       } catch ( final Exception ex ) {
-        Logs.exhaust( ).trace( ex, ex );
+        Logs.extreme( ).trace( ex, ex );
       }
       return false;
     }
@@ -557,7 +558,7 @@ public class Topology {
       } catch ( final InterruptedException ex ) {
         Thread.currentThread( ).interrupt( );
       } catch ( final Exception ex ) {
-        Logs.exhaust( ).trace( ex, ex );
+        Logs.extreme( ).trace( ex, ex );
       }
       return null;
     }
@@ -573,17 +574,22 @@ public class Topology {
       final Collection<Future<ServiceConfiguration>> submittedChecks = Collections2.transform( checkServices, SubmitCheck.INSTANCE );
       
       /** consume describe results **/
-      final Collection<Future<ServiceConfiguration>> checkedServices = Collections2.filter( submittedChecks, WaitForResults.INSTANCE );
+      final Collection<Future<ServiceConfiguration>> checkedServiceFutures = Collections2.filter( submittedChecks, WaitForResults.INSTANCE );
+      final List<ServiceConfiguration> checkedServices = Lists.newArrayList( Collections2.transform( checkedServiceFutures, ExtractFuture.INSTANCE ) );
       LOG.trace( LogUtil.subheader( "CHECKED: " + Joiner.on( "\nCHECKED: " ).join( checkedServices ) ) );
       
-      /** make promotion decisions **/
-      final Collection<ServiceConfiguration> excludeForPromotion = Collections2.transform( checkedServices, ExtractFuture.INSTANCE );
-      final Predicate<ServiceConfiguration> canPromote = Predicates.and( Predicates.not( Predicates.in( excludeForPromotion ) ), FailoverPredicate.INSTANCE );
-      final Collection<ServiceConfiguration> promoteServices = Collections2.filter( ServiceConfigurations.list( ), canPromote );
-      final Collection<Future<ServiceConfiguration>> enableCallables = Collections2.transform( promoteServices, SubmitEnable.INSTANCE );
-      final Collection<Future<ServiceConfiguration>> enabledServices = Collections2.filter( enableCallables, WaitForResults.INSTANCE );
-      LOG.trace( LogUtil.subheader( "ENABLED: " + Joiner.on( "\nENABLED: " ).join( enabledServices ) ) );
-      return Lists.transform( Lists.newArrayList( enabledServices ), ExtractFuture.INSTANCE );
+      if ( !Hosts.isCoordinator( ) ) {
+        /** TODO:GRZE: check and disable timeout here **/
+        return Lists.newArrayList( Collections2.transform( checkedServiceFutures, ExtractFuture.INSTANCE ) );
+      } else {
+        /** make promotion decisions **/
+        final Predicate<ServiceConfiguration> canPromote = Predicates.and( Predicates.not( Predicates.in( checkedServices ) ), FailoverPredicate.INSTANCE );
+        final Collection<ServiceConfiguration> promoteServices = Collections2.filter( ServiceConfigurations.list( ), canPromote );
+        final Collection<Future<ServiceConfiguration>> enableCallables = Collections2.transform( promoteServices, SubmitEnable.INSTANCE );
+        final Collection<Future<ServiceConfiguration>> enabledServices = Collections2.filter( enableCallables, WaitForResults.INSTANCE );
+        LOG.trace( LogUtil.subheader( "ENABLED: " + Joiner.on( "\nENABLED: " ).join( enabledServices ) ) );
+        return Lists.transform( Lists.newArrayList( enabledServices ), ExtractFuture.INSTANCE );
+      }
     }
   }
   
@@ -593,31 +599,31 @@ public class Topology {
     public boolean apply( final ServiceConfiguration arg0 ) {
       final ServiceKey key = ServiceKey.create( arg0 );
       if ( !Hosts.isCoordinator( ) ) {
-        Logs.exhaust( ).debug( "FAILOVER-REJECT: " + Internets.localHostInetAddress( )
+        Logs.extreme( ).debug( "FAILOVER-REJECT: " + Internets.localHostInetAddress( )
                                + ": not cloud controller, ignoring promotion for: "
                                    + arg0.getFullName( ) );
         return false;
       } else if ( !Component.State.ENABLED.equals( arg0.lookupState( ) ) ) {
-        Logs.exhaust( ).debug( "FAILOVER-REJECT: " + arg0.getFullName( )
+        Logs.extreme( ).debug( "FAILOVER-REJECT: " + arg0.getFullName( )
                                + ": service is in an invalid state: "
                                + arg0.lookupState( ) );
         return false;
-      } else if ( !Component.State.NOTREADY.equals( arg0.lookupState( ) ) ) {
-        Logs.exhaust( ).debug( "FAILOVER-REJECT: " + arg0.getFullName( )
+      } else if ( Component.State.NOTREADY.equals( arg0.lookupState( ) ) ) {
+        Logs.extreme( ).debug( "FAILOVER-REJECT: " + arg0.getFullName( )
                                + ": service is in an invalid state: "
                                + arg0.lookupState( ) );
         return false;
       } else if ( Topology.getInstance( ).getServices( ).containsKey( key ) && arg0.equals( Topology.getInstance( ).getServices( ).get( key ) ) ) {
-        Logs.exhaust( ).debug( "FAILOVER-REJECT: " + arg0.getFullName( )
+        Logs.extreme( ).debug( "FAILOVER-REJECT: " + arg0.getFullName( )
                                + ": service is already ENABLED." );
         return false;
       } else if ( !Topology.getInstance( ).getServices( ).containsKey( key ) ) {
-        Logs.exhaust( ).debug( "FAILOVER-ACCEPT: " + arg0.getFullName( )
+        Logs.extreme( ).debug( "FAILOVER-ACCEPT: " + arg0.getFullName( )
                                + ": service for partition: "
                                + key );
         return true;
       } else {
-        Logs.exhaust( ).debug( "FAILOVER-ACCEPT: " + arg0 );
+        Logs.extreme( ).debug( "FAILOVER-ACCEPT: " + arg0 );
         return true;
       }
     }
