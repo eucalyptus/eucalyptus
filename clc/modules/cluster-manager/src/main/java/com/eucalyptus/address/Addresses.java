@@ -130,16 +130,6 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
     return systemAddressManager;
   }
   
-  @SuppressWarnings( { "unchecked" } )
-  private static Map<String, Class> managerMap = new HashMap<String, Class>( ) {
-                                                 { //TODO: this is primitive and temporary.
-                                                   this.put( "truetrue", DynamicSystemAddressManager.class );
-                                                   this.put( "falsetrue", StaticSystemAddressManager.class );
-                                                   this.put( "falsefalse", NullSystemAddressManager.class );
-                                                   this.put( "truefalse", NullSystemAddressManager.class );
-                                                 }
-                                               };
-  
   public static Address allocateSystemAddress( final Partition partition ) throws NotEnoughResourcesException {
     return getAddressManager( ).allocateSystemAddresses( partition, 1 ).get( 0 );
   }
@@ -152,9 +142,7 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
       }
     } );
     Class<? extends AbstractSystemAddressManager> newManager = null;
-    if ( !hasAddressing ) {
-      newManager = NullSystemAddressManager.class;
-    } else if ( AddressingConfiguration.getInstance( ).getDoDynamicPublicAddresses( ) ) {
+    if ( AddressingConfiguration.getInstance( ).getDoDynamicPublicAddresses( ) ) {
       newManager = DynamicSystemAddressManager.class;
     } else {
       newManager = StaticSystemAddressManager.class;
@@ -176,7 +164,6 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
     return AddressingConfiguration.getInstance( ).getSystemReservedPublicAddresses( );
   }
   
-  //TODO: add config change event listener ehre.
   public static void updateAddressingMode( ) {
     getProvider( );
   }
