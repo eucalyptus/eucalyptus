@@ -244,7 +244,7 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
   }
   
   public final boolean isPartitioned( ) {
-    return !this.getClass( ).equals( this.partitionParent( ) );
+    return this.isRegisterable( ) && !this.equals( this.partitionParent( ) );
   }
   
   public final Boolean isCloudLocal( ) {
