@@ -111,7 +111,7 @@ public class ServiceBootstrapper extends Bootstrapper.Simple {
                                                                                          };
     private static final AtomicBoolean                                          running  = new AtomicBoolean( true );
     private static final BlockingQueue<Runnable>                                msgQueue = new LinkedBlockingQueue<Runnable>( );
-    private static final ExecutorService                                        executor = Executors.newFixedThreadPool( NUM_SERVICE_BOOTSTRAP_WORKERS );
+    private static final ExecutorService                                        executor = Executors.newCachedThreadPool( );
     private static final ServiceBootstrapWorker                                 worker   = new ServiceBootstrapWorker( );
     
     private ServiceBootstrapWorker( ) {
@@ -159,13 +159,19 @@ public class ServiceBootstrapper extends Bootstrapper.Simple {
             Exceptions.trace( e );
           }
         }
-        LOG.debug( "Shutting down component registration request queue: " + Thread.currentThread( ).getName( ) );
+        LOG.debug( "Finished servicing bootstrap registration request queue: " + this.toString( ) );
       }
       
       @Override
       public String toString( ) {
         final StringBuilder builder = new StringBuilder( );
-        builder.append( "ServiceBootstrapWorker" ).append( " " ).append( this.name ).append( " work: " ).append( workers.get( this ) );
+        builder.append( "ServiceBootstrapWorker" )
+               .append( " " )
+               .append( this.name )
+               .append( " work: " )
+               .append( workers.get( this ) )
+               .append( " thread=" )
+               .append( Thread.currentThread( ).toString( ) );
         return builder.toString( );
       }
       
