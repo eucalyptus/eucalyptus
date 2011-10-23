@@ -192,7 +192,7 @@ public class VmVolumeState {
       }
     } );
     for ( final VmVolumeAttachment v : ncAttachedVolMap.values( ) ) {
-      if( "attached".equals( v.getStatus( ) ) || "detach failed".equals( v.getStatus( ) ) ) {
+      if( "attaching".equals( v.getStatus(  ) ) || "attached".equals( v.getStatus( ) ) || "detach failed".equals( v.getStatus( ) ) ) {
         LOG.warn( "Restoring volume attachment state for " + this.getVmInstance( ).getInstanceId( ) + " with " + v.toString( ) );
         this.addVolumeAttachment( v );
       }
