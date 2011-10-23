@@ -146,17 +146,11 @@ public class Automata {
                                      + "->"
                                      + toState );
               return res;
-            } catch ( final IllegalStateException ex ) {
+            } catch ( final Exception ex ) {
               Logs.extreme( ).debug( fsm.toString( ) + " failed transitioned from "
                                      + fromState
                                      + "->"
                                      + toState );
-              Logs.extreme( ).error( ex, ex );
-              throw ex;
-            } catch ( final ExistingTransitionException ex ) {
-              Logs.exhaust( ).error( ex, ex );
-              throw Exceptions.toUndeclared( ex.getCause( ) );
-            } catch ( final Exception ex ) {
               Exceptions.maybeInterrupted( ex );
               Logs.exhaust( ).error( ex, ex );
               throw Exceptions.toUndeclared( ex );
