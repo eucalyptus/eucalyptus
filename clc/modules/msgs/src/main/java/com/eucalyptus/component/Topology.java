@@ -138,8 +138,8 @@ public class Topology {
     
     @Override
     public Future apply( final Callable call ) {
-      LOG.debug( Topology.class.getSimpleName( ) + ": queueing " + call.toString( ) );
-      LOG.debug( Threads.currentStackRange( 3, 9 ) );
+      Logs.extreme( ).debug( Topology.class.getSimpleName( ) + ": queueing " + call.toString( ) );
+      Logs.extreme( ).debug( Threads.currentStackRange( 3, 9 ) );
       return Threads.enqueue( this.queue( ), this.numWorkers, call );
     }
     
