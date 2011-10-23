@@ -95,11 +95,6 @@ public class AddressingConfiguration extends AbstractPersistent {
   @Transient
   private static Logger     LOG              = Logger.getLogger( AddressingConfiguration.class );
   
-  @ConfigurableField( displayName = "max_addresses_per_user", changeListener = PropertyChangeListeners.IsPositiveInteger.class,
-                      description = "The maximum number of addresses a user can have simultaneiously allocated before the next allocation will fail." )
-  @Column( name = "config_addr_max_per_user", nullable = false )
-  private Integer           maxUserPublicAddresses;
-  
   @ConfigurableField( displayName = "dynamic_public_addressing", description = "Public addresses are assigned to instances by the system as available.", changeListener = DynamicAddressingListener.class )
   @Column( name = "config_addr_do_dynamic_public_addresses", nullable = false, columnDefinition = "boolean default true" )
   private Boolean           doDynamicPublicAddresses;
