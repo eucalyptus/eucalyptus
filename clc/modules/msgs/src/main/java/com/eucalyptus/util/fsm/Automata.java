@@ -152,7 +152,7 @@ public class Automata {
                                      + "->"
                                      + toState );
               Exceptions.maybeInterrupted( ex );
-              Logs.exhaust( ).error( ex, ex );
+              Logs.extreme( ).error( ex, ex );
               throw Exceptions.toUndeclared( ex );
             }
           }
