@@ -76,6 +76,7 @@ import com.eucalyptus.component.ComponentId.Partition;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.scripting.Groovyness;
 import com.eucalyptus.util.Internets;
+import com.eucalyptus.ws.WebServices;
 import com.google.common.base.Predicate;
 
 @Partition( Empyrean.class )
@@ -130,14 +131,6 @@ public class Empyrean extends ComponentId {
     }
   }
   
-  enum ShouldInitialize implements Predicate<ServiceConfiguration> {
-    INST;
-    @Override
-    public boolean apply( final ServiceConfiguration input ) {
-      return !BootstrapArgs.isCloudController( ) && Internets.testLocal( input.getInetAddress( ) );
-    }
-  }
-  
   @Provides( Empyrean.class )
   @RunDuring( Bootstrap.Stage.PoolInit )
   public static class DatabasePoolBootstrapper extends Bootstrapper.Simple {
@@ -154,7 +147,7 @@ public class Empyrean extends ComponentId {
     }
     
   }
-  
+
   @Override
   public String getInternalServicePath( final String... pathParts ) {
     return "/internal/Empyrean";

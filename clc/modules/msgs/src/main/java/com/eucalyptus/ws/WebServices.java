@@ -83,7 +83,11 @@ import org.jboss.netty.channel.group.DefaultChannelGroup;
 import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
 import org.jboss.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;
+import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.OrderedShutdown;
+import com.eucalyptus.bootstrap.Provides;
+import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
@@ -94,6 +98,23 @@ import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.ws.util.NioBootstrap;
 
 public class WebServices {
+  
+  @Provides( Empyrean.class )
+  @RunDuring( Bootstrap.Stage.RemoteServicesInit )
+  public static class WebServicesBootstrapper extends Bootstrapper.Simple {
+    
+    @Override
+    public boolean load( ) throws Exception {
+      WebServices.restart( );
+      return true;
+    }
+    
+    @Override
+    public boolean check( ) throws Exception {
+      return super.check( );//TODO:GRZE: you know what...
+    }
+    
+  }
   
   class PortListener implements PropertyChangeListener<Integer> {
     
@@ -187,20 +208,24 @@ public class WebServices {
       final Channel serverChannel = bootstrap.bind( new InetSocketAddress( StackConfiguration.PORT ) );
       serverChannelGroup.add( serverChannel );
     }
-    final Channel serverChannel = bootstrap.bind( new InetSocketAddress( StackConfiguration.INTERNAL_PORT ) );
-    serverChannelGroup.add( serverChannel );
-    serverShutdown = new Runnable( ) {
-      AtomicBoolean ranned = new AtomicBoolean( false );
-      
-      @Override
-      public void run( ) {
-        if ( this.ranned.compareAndSet( false, true ) ) {
-          serverChannelGroup.close( ).awaitUninterruptibly( );
-          serverChannelFactory.releaseExternalResources( );
+    try {
+      final Channel serverChannel = bootstrap.bind( new InetSocketAddress( StackConfiguration.INTERNAL_PORT ) );
+      serverChannelGroup.add( serverChannel );
+      serverShutdown = new Runnable( ) {
+        AtomicBoolean ranned = new AtomicBoolean( false );
+        
+        @Override
+        public void run( ) {
+          if ( this.ranned.compareAndSet( false, true ) ) {
+            serverChannelGroup.close( ).awaitUninterruptibly( );
+            serverChannelFactory.releaseExternalResources( );
+          }
         }
-      }
-    };
-    OrderedShutdown.register( Empyrean.class, serverShutdown );
+      };
+      OrderedShutdown.register( Empyrean.class, serverShutdown );
+    } catch ( Exception ex ) {
+      LOG.error( ex, ex );
+    }
     
   }
   

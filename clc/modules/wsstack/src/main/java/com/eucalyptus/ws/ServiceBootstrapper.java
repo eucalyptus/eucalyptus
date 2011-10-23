@@ -126,7 +126,6 @@ public class ServiceBootstrapper extends Bootstrapper.Simple {
     
     public static void markFinished( ) {
       worker.running.set( false );
-      ServiceBootstrapWorker.waitAll( );
     }
     
     public static void submit( final Runnable run ) {
@@ -231,7 +230,7 @@ public class ServiceBootstrapper extends Bootstrapper.Simple {
           for ( final Worker w : workers.keySet( ) ) {
             LOG.info( "Waiting for" + w );
           }
-          TimeUnit.SECONDS.sleep( 1 );
+          TimeUnit.SECONDS.sleep( 200 );
         }
       } catch ( final InterruptedException ex ) {
         Thread.currentThread( ).interrupt( );

@@ -82,6 +82,7 @@ import com.google.common.collect.Lists;
 
 public class Faults {
   private static Logger LOG = Logger.getLogger( Faults.class );
+  
   enum NoopErrorFilter implements Predicate<Throwable> {
     INSTANCE;
     
@@ -309,6 +310,12 @@ public class Faults {
     
   }
   
+  public enum Scope {
+    SERVICE,
+    HOST,
+    NETWORK;
+  }
+  
   private static CheckException chain( final ServiceConfiguration config, final Severity severity, final List<Throwable> exs ) {
     CheckException last = null;
     for ( final Throwable ex : Lists.reverse( exs ) ) {
@@ -340,6 +347,10 @@ public class Faults {
   
   public static CheckException advisory( final ServiceConfiguration config, final Throwable... exs ) {
     return advisory( config, Arrays.asList( exs ) );
+  }
+  
+  public static CheckException fatal( final ServiceConfiguration config, final List<? extends Throwable> exs ) {
+    return chain( config, Severity.FATAL, ( List<Throwable> ) exs );
   }
   
 }
