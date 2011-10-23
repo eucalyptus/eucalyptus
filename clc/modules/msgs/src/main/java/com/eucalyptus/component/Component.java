@@ -176,7 +176,7 @@ public class Component implements HasName<Component> {
     return this.identity.runLimitedServices( );
   }
   
-  public NavigableSet<ServiceConfiguration> lookupServiceConfigurations( ) {
+  public NavigableSet<ServiceConfiguration> services( ) {
     return this.serviceRegistry.getServices( );
   }
   

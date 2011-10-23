@@ -242,7 +242,7 @@ public class Components {
         buf.append( "-> " + b.toString( ) ).append( "\n" );
       }
       buf.append( LogUtil.subheader( comp.getName( ) + " services" ) ).append( "\n" );
-      for ( final ServiceConfiguration s : comp.lookupServiceConfigurations( ) ) {
+      for ( final ServiceConfiguration s : comp.services( ) ) {
         try {
           buf.append( "->  Service:          " ).append( s.getFullName( ) ).append( " " ).append( ServiceUris.remote( s ) ).append( "\n" );
           buf.append( "|-> Service config:   " ).append( s ).append( "\n" );
@@ -311,7 +311,7 @@ public class Components {
     ARE_ENABLED {
       @Override
       public boolean apply( final Component c ) {
-        final NavigableSet<ServiceConfiguration> services = c.lookupServiceConfigurations( );
+        final NavigableSet<ServiceConfiguration> services = c.services( );
         return services.isEmpty( )
           ? false
           : Component.State.ENABLED.equals( services.first( ).lookupState( ) );

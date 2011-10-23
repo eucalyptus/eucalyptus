@@ -90,7 +90,6 @@ public class TopologyChanges {
   }
   
   public static Callable<ServiceConfiguration> callable( final ServiceConfiguration config, final Function<ServiceConfiguration, ServiceConfiguration> function ) {
-    final String functionName = function.getClass( ).toString( ).replaceAll( "^.*\\.", "" );
     final Long queueStart = System.currentTimeMillis( );
     final Callable<ServiceConfiguration> call = new Callable<ServiceConfiguration>( ) {
       
@@ -100,12 +99,12 @@ public class TopologyChanges {
           throw Exceptions.toUndeclared( "System is shutting down." );
         } else {
           final Long serviceStart = System.currentTimeMillis( );
-          LOG.trace( EventRecord.here( Topology.class, EventType.DEQUEUE, functionName, config.getFullName( ).toString( ),
+          LOG.debug( EventRecord.here( Topology.class, EventType.DEQUEUE, function.toString( ), config.getFullName( ).toString( ),
                                        Long.toString( serviceStart - queueStart ), "ms" ) );
           
           try {
             final ServiceConfiguration result = function.apply( config );
-            LOG.trace( EventRecord.here( Topology.class, EventType.QUEUE, functionName, config.getFullName( ).toString( ),
+            LOG.debug( EventRecord.here( Topology.class, EventType.QUEUE, function.toString( ), config.getFullName( ).toString( ),
                                          Long.toString( System.currentTimeMillis( ) - serviceStart ), "ms" ) );
             return result;
           } catch ( Exception ex ) {
@@ -116,6 +115,11 @@ public class TopologyChanges {
             throw ex;
           }
         }
+      }
+
+      @Override
+      public String toString( ) {
+        return Topology.class.getSimpleName( ) + ":" + config.getFullName( ) + " " + function.toString( );
       }
     };
     return call;
@@ -199,19 +203,12 @@ public class TopologyChanges {
     
     @Override
     public String toString( ) {
-      return this.getClass( )
-                 .toString( )
-                 .replaceAll( "^[^\\$]*\\$", "" )
-                 .replaceAll( "\\$[^\\$]*$", "" ) + "."
-             + this.name( );
+      return this.name( ) + ":" + this.get( );
     }
 
-    /**
-     * @see com.google.common.base.Supplier#get()
-     */
     @Override
     public State get( ) {
-      return null;
+      return this.state;
     }
     
   }
@@ -256,16 +253,12 @@ public class TopologyChanges {
     
     @Override
     public String toString( ) {
-      return this.getClass( )
-                 .toString( )
-                 .replaceAll( "^[^\\$]*\\$", "" )
-                 .replaceAll( "\\$[^\\$]*$", "" ) + "."
-             + this.transitionName.name( );
+      return this.transitionName.toString( );
     }
     
     @Override
     public State get( ) {
-      return this.transitionName.state;
+      return this.transitionName.get( );
     }
     
     private State findNextCheckState( State initialState ) {

@@ -189,9 +189,9 @@ public class WebServices {
     final ChannelGroup serverChannelGroup = channelGroup( );
     final ChannelHandler channelGroupHandler = new SimpleChannelHandler( ) {
       @Override
-      public void channelOpen( ChannelHandlerContext ctx, ChannelStateEvent e ) {
+      public void channelOpen( ChannelHandlerContext ctx, ChannelStateEvent e ) throws Exception {
         serverChannelGroup.add( ctx.getChannel( ) );
-        ctx.sendUpstream( e );
+        super.channelOpen( ctx, e );
       }
     };
     final ChannelPipelineFactory pipelineFactory = new ChannelPipelineFactory( ) {

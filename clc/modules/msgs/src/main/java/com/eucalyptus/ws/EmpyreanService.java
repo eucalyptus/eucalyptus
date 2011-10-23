@@ -437,12 +437,7 @@ public class EmpyreanService {
     final boolean showEvents = Boolean.TRUE.equals( request.getShowEvents( ) ) || showEventStacks;
     
     final Function<ServiceConfiguration, ServiceStatusType> transformToStatus = ServiceConfigurations.asServiceStatus( showEvents, showEventStacks );
-    final List<Predicate<ServiceConfiguration>> filters = new ArrayList<Predicate<ServiceConfiguration>>( ) {
-      /**
-       * 
-       */
-      private static final long serialVersionUID = 1L;
-      
+    final List<Predicate<ServiceConfiguration>> filters = new ArrayList<Predicate<ServiceConfiguration>>( ) {      
       {
         if ( request.getByPartition( ) != null ) {
           Partitions.exists( request.getByPartition( ) );
@@ -461,7 +456,7 @@ public class EmpyreanService {
     
     for ( final Component comp : Components.list( ) ) {
       if ( componentFilter.apply( comp ) ) {
-        for ( final ServiceConfiguration config : comp.lookupServiceConfigurations( ) ) {
+        for ( final ServiceConfiguration config : comp.services( ) ) {
           if ( configPredicate.apply( config ) ) {
             reply.getServiceStatuses( ).add( transformToStatus.apply( config ) );
           }

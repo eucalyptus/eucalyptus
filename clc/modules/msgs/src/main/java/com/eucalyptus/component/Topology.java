@@ -138,6 +138,8 @@ public class Topology {
     
     @Override
     public Future apply( final Callable call ) {
+      LOG.debug( Topology.class.getSimpleName( ) + ": queueing " + call.toString( ) );
+      LOG.debug( Threads.currentStackRange( 0, 5 ) );
       return Threads.enqueue( this.queue( ), this.numWorkers, call );
     }
     
@@ -584,7 +586,10 @@ public class Topology {
       } else {
         /** make promotion decisions **/
         final Predicate<ServiceConfiguration> canPromote = Predicates.and( Predicates.not( Predicates.in( checkedServices ) ), FailoverPredicate.INSTANCE );
-        final Collection<ServiceConfiguration> promoteServices = Collections2.filter( ServiceConfigurations.list( ), canPromote );
+        final List<ServiceConfiguration> promoteServices = Lists.newArrayList( );
+        for ( Component c : Components.list( ) ) {
+          promoteServices.addAll( Collections2.filter( c.services( ), canPromote ) );
+        }
         final Collection<Future<ServiceConfiguration>> enableCallables = Collections2.transform( promoteServices, SubmitEnable.INSTANCE );
         final Collection<Future<ServiceConfiguration>> enabledServices = Collections2.filter( enableCallables, WaitForResults.INSTANCE );
         LOG.trace( LogUtil.subheader( "ENABLED: " + Joiner.on( "\nENABLED: " ).join( enabledServices ) ) );
@@ -603,12 +608,7 @@ public class Topology {
                                + ": not cloud controller, ignoring promotion for: "
                                    + arg0.getFullName( ) );
         return false;
-      } else if ( !Component.State.ENABLED.equals( arg0.lookupState( ) ) ) {
-        Logs.extreme( ).debug( "FAILOVER-REJECT: " + arg0.getFullName( )
-                               + ": service is in an invalid state: "
-                               + arg0.lookupState( ) );
-        return false;
-      } else if ( Component.State.NOTREADY.equals( arg0.lookupState( ) ) ) {
+      } else if ( !Component.State.DISABLED.equals( arg0.lookupState( ) ) ) {
         Logs.extreme( ).debug( "FAILOVER-REJECT: " + arg0.getFullName( )
                                + ": service is in an invalid state: "
                                + arg0.lookupState( ) );

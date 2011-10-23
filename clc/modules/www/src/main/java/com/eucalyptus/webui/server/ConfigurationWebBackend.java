@@ -172,7 +172,7 @@ public class ConfigurationWebBackend {
 	public static List<SearchResultRow> getCloudConfigurations( ) {
 		List<SearchResultRow> results = Lists.newArrayList( );
 		SystemConfiguration sysConf = SystemConfiguration.getSystemConfiguration( );
-		NavigableSet<ServiceConfiguration> configs = Components.lookup(Eucalyptus.class).lookupServiceConfigurations();
+		NavigableSet<ServiceConfiguration> configs = Components.lookup(Eucalyptus.class).services();
 		for ( ServiceConfiguration c : configs ) {
 			SearchResultRow row = new SearchResultRow( );
 			// Set the extra field descs
@@ -282,7 +282,7 @@ public class ConfigurationWebBackend {
 	public static List<SearchResultRow> getClusterConfigurations( ) {
 		List<SearchResultRow> results = Lists.newArrayList( );
 		HashMap<String, List<String>> configProps = new HashMap<String, List<String>>();
-		NavigableSet<ServiceConfiguration> configs = Components.lookup(ClusterController.class).lookupServiceConfigurations();
+		NavigableSet<ServiceConfiguration> configs = Components.lookup(ClusterController.class).services();
 		for (ServiceConfiguration c : configs ) {
 			if (!configProps.containsKey(c.getPartition())) {
 				//This is bad. We should never directly have to cast
@@ -341,7 +341,7 @@ public class ConfigurationWebBackend {
 	 */
 	public static List<SearchResultRow> getVMwareBrokerConfigurations( ) {
 		List<SearchResultRow> results = Lists.newArrayList( );
-		NavigableSet<ServiceConfiguration> configs = Components.lookup(VMwareBroker.class).lookupServiceConfigurations();
+		NavigableSet<ServiceConfiguration> configs = Components.lookup(VMwareBroker.class).services();
 		for (ServiceConfiguration c : configs ) {
 			SearchResultRow row = new SearchResultRow( );
 			serializeVMwareBrokerConfiguration( c, row );
@@ -359,7 +359,7 @@ public class ConfigurationWebBackend {
 	public static void setClusterConfiguration( final SearchResultRow input ) throws EucalyptusServiceException {
 		try {
 			//set props for all in the same partition
-			NavigableSet<ServiceConfiguration> configs = Components.lookup(ClusterController.class).lookupServiceConfigurations();
+			NavigableSet<ServiceConfiguration> configs = Components.lookup(ClusterController.class).services();
 			for ( ServiceConfiguration c : configs ) {
 				if (input.getField(2).equals(c.getPartition())) {
 					deserializeClusterConfiguration( c, input );
@@ -459,7 +459,7 @@ public class ConfigurationWebBackend {
 		//StorageControllerConfiguration c;
 		HashMap<String, List<ComponentProperty>> configMap = new HashMap<String, List<ComponentProperty>> (); 
 
-		NavigableSet<ServiceConfiguration> configs = Components.lookup(Storage.class).lookupServiceConfigurations();
+		NavigableSet<ServiceConfiguration> configs = Components.lookup(Storage.class).services();
 		for ( ServiceConfiguration c : configs ) {
 			if(Component.State.ENABLED.equals(c.lookupState())) {
 				//send for config and add result row
@@ -516,7 +516,7 @@ public class ConfigurationWebBackend {
 		deserializeComponentProperties( properties, input, i );
 
 		//Get enabled component for partition. Send to enabled component corresponding to partition.
-		NavigableSet<ServiceConfiguration> configs = Components.lookup(Storage.class).lookupServiceConfigurations();
+		NavigableSet<ServiceConfiguration> configs = Components.lookup(Storage.class).services();
 		for ( ServiceConfiguration c : configs ) {
 			if ( partition.equals(c.getPartition()) && Component.State.ENABLED.equals(c.lookupState())) {
 				final UpdateStorageConfigurationType updateStorageConfiguration = new UpdateStorageConfigurationType( );
@@ -548,7 +548,7 @@ public class ConfigurationWebBackend {
 	public static List<SearchResultRow> getWalrusConfigurations( ) {
 		List<SearchResultRow> results = new ArrayList<SearchResultRow>( );
 		HashMap<String, List<ComponentProperty>> configMap = new HashMap<String, List<ComponentProperty>> (); 
-		NavigableSet<ServiceConfiguration> configs = Components.lookup(Walrus.class).lookupServiceConfigurations();
+		NavigableSet<ServiceConfiguration> configs = Components.lookup(Walrus.class).services();
 		for ( ServiceConfiguration c : configs ) {
 			if(Component.State.ENABLED.equals(c.lookupState())) {
 				//send for config and add result row
@@ -584,7 +584,7 @@ public class ConfigurationWebBackend {
 		ArrayList<ComponentProperty> properties = Lists.newArrayList( );
 		deserializeComponentProperties( properties, input, COMMON_FIELD_DESCS.size( ) );
 
-		NavigableSet<ServiceConfiguration> configs = Components.lookup(Walrus.class).lookupServiceConfigurations();
+		NavigableSet<ServiceConfiguration> configs = Components.lookup(Walrus.class).services();
 		for ( ServiceConfiguration c : configs ) {
 			if ( input.getField(2).equals(c.getPartition()) && Component.State.ENABLED.equals(c.lookupState())) {
 				UpdateWalrusConfigurationType updateWalrusConfiguration = new UpdateWalrusConfigurationType( );
