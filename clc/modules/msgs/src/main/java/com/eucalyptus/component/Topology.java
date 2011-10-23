@@ -572,7 +572,10 @@ public class Topology {
     @Override
     public List<ServiceConfiguration> call( ) {
       /** submit describe operations **/
-      final Collection<ServiceConfiguration> checkServices = Collections2.filter( ServiceConfigurations.list( ), CheckServiceFilter.INSTANCE );
+      final List<ServiceConfiguration> checkServices = Lists.newArrayList( );
+      for ( Component c : Components.list( ) ) {
+        checkServices.addAll( Collections2.filter( c.services( ), CheckServiceFilter.INSTANCE ) );
+      }
       final Collection<Future<ServiceConfiguration>> submittedChecks = Collections2.transform( checkServices, SubmitCheck.INSTANCE );
       
       /** consume describe results **/
@@ -608,14 +611,14 @@ public class Topology {
                                + ": not cloud controller, ignoring promotion for: "
                                    + arg0.getFullName( ) );
         return false;
+      } else if ( Topology.getInstance( ).getServices( ).containsKey( key ) && arg0.equals( Topology.getInstance( ).getServices( ).get( key ) ) ) {
+        Logs.extreme( ).debug( "FAILOVER-REJECT: " + arg0.getFullName( )
+                               + ": service is already ENABLED." );
+        return false;
       } else if ( !Component.State.DISABLED.equals( arg0.lookupState( ) ) ) {
         Logs.extreme( ).debug( "FAILOVER-REJECT: " + arg0.getFullName( )
                                + ": service is in an invalid state: "
                                + arg0.lookupState( ) );
-        return false;
-      } else if ( Topology.getInstance( ).getServices( ).containsKey( key ) && arg0.equals( Topology.getInstance( ).getServices( ).get( key ) ) ) {
-        Logs.extreme( ).debug( "FAILOVER-REJECT: " + arg0.getFullName( )
-                               + ": service is already ENABLED." );
         return false;
       } else if ( !Topology.getInstance( ).getServices( ).containsKey( key ) ) {
         Logs.extreme( ).debug( "FAILOVER-ACCEPT: " + arg0.getFullName( )
