@@ -213,11 +213,27 @@ public class ServiceTransitions {
   }
   
   private static final State[] pathToDisabled( final Component.State fromState ) {
-    return ObjectArrays.concat( ObjectArrays.concat( ServiceTransitions.pathToStarted( fromState ), Component.State.DISABLED ), Component.State.DISABLED );
+    State[] transition = new State[] { fromState };
+    switch ( fromState ) {
+      case DISABLED:
+        transition = ObjectArrays.concat( transition, Component.State.DISABLED );
+        break;
+      default:
+        transition = ObjectArrays.concat( pathToStarted( fromState ), Component.State.DISABLED );
+    }
+    return transition;
   }
   
   private static final State[] pathToEnabled( final Component.State fromState ) {
-    return ObjectArrays.concat( ServiceTransitions.pathToDisabled( fromState ), Component.State.ENABLED );
+    State[] transition = new State[] { fromState };
+    switch ( fromState ) {
+      case ENABLED:
+        transition = ObjectArrays.concat( transition, Component.State.ENABLED );
+        break;
+      default:
+        transition = ObjectArrays.concat( pathToDisabled( fromState ), Component.State.ENABLED );
+    }
+    return transition;
   }
   
   private static final State[] pathToStopped( final Component.State fromState ) {
