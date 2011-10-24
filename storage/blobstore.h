@@ -170,7 +170,8 @@ typedef struct _blockblob {
     time_t last_accessed; // timestamp of last access
     time_t last_modified; // timestamp of last modification
     double priority; // priority, for assisting LRU
-    int fd; // file descriptor of the blockblob metadata file
+    int fd_lock; // file descriptor of the blockblob metadata file
+    int fd_blocks; // file descriptor of the blockblob content file
 
     // LL pointers
     struct _blockblob * next;
