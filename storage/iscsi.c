@@ -158,6 +158,8 @@ char * connect_iscsi_target (const char *dev_string)
             kill(pid, SIGKILL);
         }
     }
+    close(filedes[0]);
+    close(filedes[1]);
     return retval;
 }
 
@@ -247,6 +249,8 @@ char * get_iscsi_target (const char *dev_string)
             kill(pid, SIGKILL);
         }
     }
+    close(filedes[0]);
+    close(filedes[1]);
     return retval;
 }
 
