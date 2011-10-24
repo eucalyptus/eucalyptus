@@ -1,7 +1,7 @@
 package com.eucalyptus.bootstrap;
 
 public interface DatabaseBootstrapper {
-  public abstract void init( );
+  public abstract void init( ) throws Exception;
   
   public abstract boolean load( ) throws Exception;
   

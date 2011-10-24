@@ -162,7 +162,11 @@ public class Databases {
     
     @Override
     public void init( ) {
-      this.db.init( );
+      try {
+        this.db.init( );
+      } catch ( Exception ex ) {
+        LOG.error( ex , ex );
+      }
     }
     
     public static DatabaseBootstrapper getInstance( ) {

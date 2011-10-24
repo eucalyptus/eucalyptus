@@ -71,9 +71,12 @@ import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.Channels;
+import com.eucalyptus.component.ComponentId.ComponentPart;
+import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.ws.Handlers;
 import com.eucalyptus.ws.handlers.InternalWsSecHandler;
 
+@ComponentPart( Empyrean.class )
 public class InternalClientPipeline implements ChannelPipelineFactory {
   private static Logger         LOG = Logger.getLogger( InternalClientPipeline.class );
   private static ChannelHandler wssecHandler;

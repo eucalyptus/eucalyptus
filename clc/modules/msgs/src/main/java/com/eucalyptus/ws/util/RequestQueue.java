@@ -64,15 +64,9 @@
 package com.eucalyptus.ws.util;
 
 import org.apache.log4j.Logger;
-import com.eucalyptus.component.Component;
-import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.component.ComponentIds;
-import com.eucalyptus.component.ComponentMessages;
-import com.eucalyptus.component.Components;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
-import com.eucalyptus.util.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class RequestQueue {

@@ -1,29 +1,26 @@
 package com.eucalyptus.config;
 
-import java.util.List;
-import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Handles;
-import com.eucalyptus.component.Component;
-import com.eucalyptus.component.Components;
 import com.eucalyptus.component.AbstractServiceBuilder;
-import com.eucalyptus.component.DiscoverableServiceBuilder;
+import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.ComponentId.ComponentPart;
+import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.ServiceRegistrationException;
-import com.eucalyptus.component.id.Arbitrator;
-import com.eucalyptus.empyrean.Empyrean;
-import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.empyrean.Empyrean.Arbitrator;
 
-@DiscoverableServiceBuilder( Arbitrator.class )
-@Handles( { RegisterArbitratorType.class, DeregisterArbitratorType.class, DescribeArbitratorsType.class, ArbitratorConfiguration.class,
+@ComponentPart( Arbitrator.class )
+@Handles( { RegisterArbitratorType.class,
+           DeregisterArbitratorType.class,
+           DescribeArbitratorsType.class,
            ModifyArbitratorAttributeType.class } )
 public class ArbitratorBuilder extends AbstractServiceBuilder<ArbitratorConfiguration> {
   private static Logger LOG = Logger.getLogger( ArbitratorBuilder.class );
   
   @Override
-  public Component getComponent( ) {
-    return Components.lookup( Empyrean.class );
+  public ComponentId getComponentId( ) {
+    return ComponentIds.lookup( Arbitrator.class );
   }
   
   @Override
@@ -32,42 +29,23 @@ public class ArbitratorBuilder extends AbstractServiceBuilder<ArbitratorConfigur
   }
   
   @Override
-  public ArbitratorConfiguration newInstance( String partition, String name, String host, Integer port ) {
+  public ArbitratorConfiguration newInstance( final String partition, final String name, final String host, final Integer port ) {
     return new ArbitratorConfiguration( partition, name, host, port );
   }
   
   @Override
-  public Boolean checkAdd( String partition, String name, String host, Integer port ) throws ServiceRegistrationException {
-    return super.checkAdd( partition, name, host, port );
-  }
+  public void fireStop( final ServiceConfiguration config ) throws ServiceRegistrationException {}
   
   @Override
-  public List<ArbitratorConfiguration> list( ) throws ServiceRegistrationException {
-    try {
-      return ServiceConfigurations.list( Arbitrator.class );
-    } catch ( PersistenceException e ) {
-      return super.list( );
-    }
-  }
+  public void fireStart( final ServiceConfiguration config ) throws ServiceRegistrationException {}
   
   @Override
-  public Boolean checkRemove( String partition, String name ) throws ServiceRegistrationException {
-    return super.checkRemove( partition, name );
-  }
+  public void fireEnable( final ServiceConfiguration config ) throws ServiceRegistrationException {}
   
   @Override
-  public void fireStop( ServiceConfiguration config ) throws ServiceRegistrationException {}
+  public void fireDisable( final ServiceConfiguration config ) throws ServiceRegistrationException {}
   
   @Override
-  public void fireStart( ServiceConfiguration config ) throws ServiceRegistrationException {}
-  
-  @Override
-  public void fireEnable( ServiceConfiguration config ) throws ServiceRegistrationException {}
-  
-  @Override
-  public void fireDisable( ServiceConfiguration config ) throws ServiceRegistrationException {}
-  
-  @Override
-  public void fireCheck( ServiceConfiguration config ) throws ServiceRegistrationException {}
+  public void fireCheck( final ServiceConfiguration config ) throws ServiceRegistrationException {}
   
 }

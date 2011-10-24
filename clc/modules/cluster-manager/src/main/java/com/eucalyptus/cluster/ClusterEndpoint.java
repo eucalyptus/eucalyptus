@@ -281,7 +281,7 @@ public class ClusterEndpoint implements Startable {
     DescribeRegionsResponseType reply = ( DescribeRegionsResponseType ) request.getReply( );
     try {//TODO:GRZE:wtfugly
       Component euca = Components.lookup( Eucalyptus.class );
-      NavigableSet<ServiceConfiguration> configs = euca.lookupServiceConfigurations( );
+      NavigableSet<ServiceConfiguration> configs = euca.services( );
       if ( !configs.isEmpty( ) && Component.State.ENABLED.equals( configs.first( ).lookupState( ) ) ) {
         reply.getRegionInfo( ).add( new RegionInfoType( euca.getComponentId( ).name( ), ServiceUris.remote( configs.first( ) ).toASCIIString( ) ) );
       }
@@ -290,7 +290,7 @@ public class ClusterEndpoint implements Startable {
     }
     try {//TODO:GRZE:wtfugly
       Component walrus = Components.lookup( Walrus.class );
-      NavigableSet<ServiceConfiguration> configs = walrus.lookupServiceConfigurations( );
+      NavigableSet<ServiceConfiguration> configs = walrus.services( );
       if ( !configs.isEmpty( ) && Component.State.ENABLED.equals( configs.first( ).lookupState( ) ) ) {
         reply.getRegionInfo( ).add( new RegionInfoType( walrus.getComponentId( ).name( ), ServiceUris.remote( configs.first( ) ).toASCIIString( ) ) );
       }

@@ -184,7 +184,7 @@ public class WalrusUtil {
           return true;
         }
       }
-      if ( ImageUtil.verifyManifestSignature( SystemCredentials.getCredentialProvider(Eucalyptus.class).getCertificate(), signature, pad  )) {
+      if ( ImageUtil.verifyManifestSignature( SystemCredentials.lookup(Eucalyptus.class).getCertificate(), signature, pad  )) {
         return true;
       }
       for ( User u : Accounts.listAllUsers( ) ) {

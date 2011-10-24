@@ -63,7 +63,6 @@
 
 package com.eucalyptus.blockstorage;
 
-import java.lang.reflect.UndeclaredThrowableException;
 import java.util.concurrent.ExecutionException;
 import org.apache.log4j.Logger;
 import org.hibernate.criterion.Example;
@@ -82,6 +81,7 @@ import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.reporting.event.StorageEvent;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes.QuantityMetricFunction;
 import com.eucalyptus.ws.client.ServiceDispatcher;
@@ -141,7 +141,7 @@ public class Snapshots {
             CreateStorageSnapshotResponseType scReply = ServiceDispatcher.lookup( sc ).send( scRequest );
             s.setMappedState( scReply.getStatus( ) );
           } catch ( EucalyptusCloudException ex ) {
-            throw new UndeclaredThrowableException( ex );
+            throw Exceptions.toUndeclared( ex );
           }
         }
       } );

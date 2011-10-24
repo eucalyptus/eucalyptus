@@ -63,37 +63,52 @@
 
 package com.eucalyptus.empyrean;
 
-import java.util.ArrayList;
-import java.util.List;
 import org.apache.log4j.Logger;
-import org.logicalcobwebs.proxool.ProxoolFacade;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.component.ServiceBuilders;
+import com.eucalyptus.component.ComponentId.AdminService;
+import com.eucalyptus.component.ComponentId.GenerateKeys;
+import com.eucalyptus.component.ComponentId.Partition;
 import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.ServiceConfigurations;
-import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.scripting.Groovyness;
 import com.eucalyptus.util.Internets;
-import com.eucalyptus.util.UniqueIds;
+import com.eucalyptus.ws.WebServices;
 import com.google.common.base.Predicate;
-import com.google.common.collect.Iterables;
 
-public class Empyrean extends ComponentId.Unpartioned {
-  /**
-   * 
-   */
+@Partition( Empyrean.class )
+@GenerateKeys
+@AdminService
+public class Empyrean extends ComponentId {
   private static final long    serialVersionUID = 1L;
   private static Logger        LOG              = Logger.getLogger( Empyrean.class );
   public static final Empyrean INSTANCE         = new Empyrean( );                   //NOTE: this has a silly name because it is temporary.  do not use it as an example of good form for component ids.
                                                                                       
-  @Override
-  public String getPartition( ) {
-    return this.name( );
+  @Partition( value = { Empyrean.class }, manyToOne = true )
+//  @InternalService
+  public static class Arbitrator extends ComponentId {
+    
+    private static final long serialVersionUID = 1L;
+  }
+  
+  @Partition( Empyrean.class )
+  @AdminService
+  public static class PropertiesService extends ComponentId {
+    
+    private static final long serialVersionUID = 1L;
+    
+    public PropertiesService( ) {
+      super( "Properties" );
+    }
+    
+    @Override
+    public String getLocalEndpointName( ) {
+      return "vm://PropertiesInternal";
+    }
+    
   }
   
   public Empyrean( ) {
@@ -103,30 +118,6 @@ public class Empyrean extends ComponentId.Unpartioned {
   @Override
   public String getServiceModelFileName( ) {
     return "eucalyptus-bootstrap.xml";
-  }
-  
-  @Override
-  public Boolean hasCredentials( ) {
-    return true;
-  }
-  
-  @Override
-  public List<Class<? extends ComponentId>> serviceDependencies( ) {
-    return new ArrayList( ) {
-      /**
-       * 
-       */
-      private static final long serialVersionUID = 1L;
-      
-      {
-        this.add( Empyrean.class );
-      }
-    };
-  }
-  
-  @Override
-  public boolean isAdminService( ) {
-    return true;
   }
   
   @Provides( Empyrean.class )
@@ -140,14 +131,6 @@ public class Empyrean extends ComponentId.Unpartioned {
     }
   }
   
-  enum ShouldInitialize implements Predicate<ServiceConfiguration> {
-    INST;
-    @Override
-    public boolean apply( ServiceConfiguration input ) {
-      return !BootstrapArgs.isCloudController( ) && Internets.testLocal( input.getInetAddress( ) );
-    }
-  }
-  
   @Provides( Empyrean.class )
   @RunDuring( Bootstrap.Stage.PoolInit )
   public static class DatabasePoolBootstrapper extends Bootstrapper.Simple {
@@ -157,16 +140,21 @@ public class Empyrean extends ComponentId.Unpartioned {
       Groovyness.run( "setup_dbpool.groovy" );
       return true;
     }
+
+    @Override
+    public boolean check( ) throws Exception {
+      return super.check( );
+    }
     
   }
-  
+
   @Override
-  public String getInternalServicePath( String... pathParts ) {
+  public String getInternalServicePath( final String... pathParts ) {
     return "/internal/Empyrean";
   }
   
   @Override
-  public String getServicePath( String... pathParts ) {
+  public String getServicePath( final String... pathParts ) {
     return "/services/Empyrean";
   }
 }

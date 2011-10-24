@@ -21,7 +21,7 @@ import javax.net.ssl.TrustManagerFactorySpi;
 import javax.net.ssl.X509ExtendedKeyManager;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.ComponentIds;
-import com.eucalyptus.component.auth.EucaKeyStore;
+import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.system.SubDirectory;
 import com.sun.net.ssl.internal.ssl.X509ExtendedTrustManager;
@@ -155,8 +155,8 @@ public class SslSetup {
     try {
       synchronized ( SslSetup.class ) {
         if ( trusted == null ) {
-          trusted = ( X509Certificate ) EucaKeyStore.getInstance( ).getCertificate( ComponentIds.lookup(Eucalyptus.class).name( ) );
-          trustedKey = EucaKeyStore.getInstance( ).getKeyPair( ComponentIds.lookup(Eucalyptus.class).name( ), ComponentIds.lookup(Eucalyptus.class).name( ) ).getPrivate( );
+          trusted = ( X509Certificate ) SystemCredentials.getKeyStore( ).getCertificate( ComponentIds.lookup(Eucalyptus.class).name( ) );
+          trustedKey = SystemCredentials.getKeyStore( ).getKeyPair( ComponentIds.lookup(Eucalyptus.class).name( ), ComponentIds.lookup(Eucalyptus.class).name( ) ).getPrivate( );
         }
         return trusted;
       }

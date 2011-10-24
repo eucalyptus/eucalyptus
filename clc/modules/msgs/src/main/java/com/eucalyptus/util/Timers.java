@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -63,21 +63,24 @@
 
 package com.eucalyptus.util;
 
-import java.util.Comparator;
+import java.util.concurrent.Callable;
+import org.apache.log4j.Logger;
 
-public class Comparators {
-  private enum Classes implements Comparator<Class> {
-    INSTANCE;
-    
-    @Override
-    public int compare( Class o1, Class o2 ) {
-      return o1.getCanonicalName( ).compareTo( o2.getCanonicalName( ) );
-    }
-    
-  }
+public class Timers {
+  private static Logger LOG = Logger.getLogger( Timers.class );
   
-  public static Comparator<Class> classes( ) {
-    return Classes.INSTANCE;
+  public static <T> Callable<T> loggingWrapper( final Callable<T> call ) {
+    return new Callable<T>( ) {
+      
+      @Override
+      public T call( ) throws Exception {
+        long start = System.currentTimeMillis( );
+        T res = call.call( );
+        LOG.trace( call.toString( ) + ": completed in "
+                   + ( System.currentTimeMillis( ) - start ) );
+        return res;
+      }
+      
+    };
   }
-
 }

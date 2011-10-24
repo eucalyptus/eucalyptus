@@ -68,7 +68,6 @@ import org.mortbay.log.Log;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.ws.StackConfiguration;
-import com.eucalyptus.ws.util.HttpUtils;
 
 public class NioHttpDecoder extends ReplayingDecoder<NioHttpDecoder.State> {
 

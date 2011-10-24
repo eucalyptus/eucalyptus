@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -63,107 +63,14 @@
 
 package com.eucalyptus.component;
 
-import java.io.Serializable;
-import java.util.UUID;
-import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.component.Component.State;
 
 public class ServiceEvents {
-  public enum EventType {
-    DEBUG, INFO, WARNING, ERROR
-  }
-  
-  static class GenericServiceException extends Exception {
-    
-    public GenericServiceException( String message ) {
-      super( message );
-    }
-    
-  }
-  
-  public static ServiceEvent createError( ServiceConfiguration configuration, Throwable exception ) {//TODO:GRZE:OMGFIXME
-    return createError( configuration, exception.getMessage( ), exception );
-  }
-  
-  public static ServiceEvent createError( ServiceConfiguration configuration, String message ) {
-    return createError( configuration, message, new GenericServiceException( message ) );
-  }
-  
-  public static ServiceEvent createError( ServiceConfiguration configuration, String message, Throwable exception ) {
-    return new ServiceEvent( configuration, exception, EventType.ERROR, message );
-  }
-  
-  static class ServiceEvent implements Serializable, Comparable<ServiceEvent> {
-    private final ServiceConfiguration serviceConfiguration;
-    private final Throwable            exception;
-    private final EventType            type;
-    private final String               message;
-    private final Long                 timestamp = System.currentTimeMillis( );
-    private final String               uuid      = timestamp + "-" + UUID.randomUUID( ).toString( );
-    
-    private ServiceEvent( ServiceConfiguration serviceConfiguration, Throwable exception, EventType type, String message ) {
-      super( );
-      this.serviceConfiguration = serviceConfiguration;
-      this.exception = exception;
-      this.type = type;
-      this.message = message;
-    }
-    
-    public final ServiceConfiguration getServiceConfiguration( ) {
-      return this.serviceConfiguration;
-    }
-    
-    public final Throwable getException( ) {
-      return this.exception;
-    }
-    
-    public final String getMessage( ) {
-      return this.message;
-    }
-    
-    public final Long getTimestamp( ) {
-      return this.timestamp;
-    }
-    
-    public final String getUuid( ) {
-      return this.uuid;
-    }
-    
-    @Override
-    public int hashCode( ) {
-      final int prime = 31;
-      int result = 1;
-      result = prime * result + ( ( this.uuid == null )
-        ? 0
-        : this.uuid.hashCode( ) );
-      return result;
-    }
-    
-    @Override
-    public boolean equals( Object obj ) {
-      if ( this == obj ) return true;
-      if ( obj == null ) return false;
-      if ( getClass( ) != obj.getClass( ) ) return false;
-      ServiceEvent other = ( ServiceEvent ) obj;
-      if ( this.uuid == null ) {
-        if ( other.uuid != null ) return false;
-      } else if ( !this.uuid.equals( other.uuid ) ) return false;
-      return true;
-    }
-    
-    @Override
-    public String toString( ) {
-      return String.format( "ServiceEvent %s %s message=%s [id=%s:ex-stack=%s]", this.serviceConfiguration, this.type,
-                            this.message, this.uuid, Exceptions.filterStackTraceElements( this.exception ) );
-    }
-    
-    @Override
-    public int compareTo( ServiceEvent that ) {
-      return ( this.timestamp - that.timestamp ) == 0
-        ? this.uuid.compareTo( that.uuid )
-        : ( this.timestamp - that.timestamp > 0
-          ? 1
-          : -1 );
-    }
-    
-  }
+
+  /**
+   * @param config
+   * @param state
+   */
+  public static void fire( ServiceConfiguration config, State state ) {}
+
 }

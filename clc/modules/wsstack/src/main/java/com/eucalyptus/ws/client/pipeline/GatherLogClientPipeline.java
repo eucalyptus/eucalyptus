@@ -69,8 +69,8 @@ import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.Channels;
-import com.eucalyptus.component.ComponentPart;
-import com.eucalyptus.component.id.GatherLogService;
+import com.eucalyptus.component.ComponentId.ComponentPart;
+import com.eucalyptus.component.id.ClusterController.GatherLogService;
 import com.eucalyptus.ws.Handlers;
 
 @ComponentPart( GatherLogService.class )

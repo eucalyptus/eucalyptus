@@ -70,6 +70,7 @@ import java.util.concurrent.ConcurrentMap;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.OwnerFullName;
 import com.google.common.collect.MapMaker;
@@ -109,7 +110,7 @@ public class UserFullName implements OwnerFullName {
         userIdMap.put( userId, getInstance( Accounts.lookupUserById( userId ), relativePath ) );
         return userIdMap.get( userId );
       } catch ( final AuthException ex ) {
-        throw new UndeclaredThrowableException( ex );
+        throw Exceptions.toUndeclared( ex );
       }
     }
   }
@@ -132,10 +133,10 @@ public class UserFullName implements OwnerFullName {
         return new UserFullName( Principals.nobodyUser( ) );
       } catch ( final AuthException ex1 ) {
         LOG.error( ex1, ex1 );
-        throw new UndeclaredThrowableException( ex );
+        throw Exceptions.toUndeclared( ex );
       }
     } catch ( final Exception ex ) {
-      throw new UndeclaredThrowableException( ex );
+      throw Exceptions.toUndeclared( ex );
     }
   }
   

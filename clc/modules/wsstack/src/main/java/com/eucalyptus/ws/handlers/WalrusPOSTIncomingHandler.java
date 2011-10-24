@@ -60,56 +60,15 @@
  *******************************************************************************/
 package com.eucalyptus.ws.handlers;
 
-import java.io.StringReader;
-import java.net.URLDecoder;
-import java.security.PublicKey;
-import java.security.Signature;
-import java.security.cert.X509Certificate;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeMap;
-
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
-
-import net.sf.json.JSONArray;
-import net.sf.json.JSONObject;
-import net.sf.json.groovy.JsonSlurper;
-
-import org.apache.commons.httpclient.util.DateUtil;
 import org.apache.log4j.Logger;
-import org.apache.tools.ant.util.DateUtils;
-import org.bouncycastle.openssl.PEMReader;
-import org.bouncycastle.util.encoders.Base64;
-import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.ChannelEvent;
-import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
-import org.jboss.netty.channel.DownstreamMessageEvent;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.UpstreamMessageEvent;
 import org.jboss.netty.handler.codec.http.DefaultHttpChunk;
-import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
-import org.jboss.netty.handler.codec.http.HttpHeaders;
-import org.jboss.netty.handler.codec.http.HttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.jboss.netty.handler.codec.http.HttpVersion;
-
-import com.eucalyptus.auth.login.AuthenticationException;
-import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.component.auth.AbstractKeyStore;
-import com.eucalyptus.component.auth.EucaKeyStore;
-import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.http.MappingHttpRequest;
-import com.eucalyptus.util.StorageProperties;
-import com.eucalyptus.util.WalrusProperties;
 
 @ChannelPipelineCoverage("one")
 public class WalrusPOSTIncomingHandler extends MessageStackHandler {

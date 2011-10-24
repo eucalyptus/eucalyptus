@@ -187,11 +187,11 @@ public class ServiceContextHandler implements ChannelUpstreamHandler, ChannelDow
         case CONNECTED:
         case INTEREST_OPS:
         default:
-          LOG.trace( "Channel event: " + evt );
+          Logs.extreme( ).trace( "Channel event: " + evt );
           ctx.sendUpstream( e );
       }
     } else if ( e instanceof IdleStateEvent ) {
-      LOG.warn( "Closing idle connection: " + e );
+      Logs.extreme( ).warn( "Closing idle connection: " + e );
       e.getFuture( ).addListener( ChannelFutureListener.CLOSE );
       ctx.sendUpstream( e );
     } else if ( request != null && msg != null ) {
@@ -205,13 +205,11 @@ public class ServiceContextHandler implements ChannelUpstreamHandler, ChannelDow
     }
   }
   
-  private void messageReceived( final ChannelHandlerContext ctx, final BaseMessage msg ) throws ServiceInitializationException, ServiceDispatchException, ServiceStateException {
+  private void messageReceived( final ChannelHandlerContext ctx, final BaseMessage msg ) throws ServiceDispatchException {
     this.startTime.set( ctx.getChannel( ), System.currentTimeMillis( ) );
     this.messageType.set( ctx.getChannel( ), msg );
     EventRecord.here( ServiceContextHandler.class, EventType.MSG_RECEIVED, msg.getClass( ).getSimpleName( ) ).trace( );
-    if ( !ServiceOperations.dispatch( msg ) ) {
-      ServiceContext.dispatch( RequestQueue.ENDPOINT, msg );
-    }
+    ServiceOperations.dispatch( msg );
   }
   
   private void channelClosed( ChannelHandlerContext ctx, ChannelStateEvent evt ) {
@@ -219,7 +217,7 @@ public class ServiceContextHandler implements ChannelUpstreamHandler, ChannelDow
       try {
         Contexts.clear( Contexts.lookup( ctx.getChannel( ) ) );
       } catch ( NoSuchContextException ex ) {
-        Logs.exhaust( ).debug( "Failed to remove the channel context on connection close.", ex );
+        Logs.extreme( ).debug( "Failed to remove the channel context on connection close.", ex );
       }
     }
     try {
@@ -227,7 +225,7 @@ public class ServiceContextHandler implements ChannelUpstreamHandler, ChannelDow
                         EventClass.MESSAGE, EventType.MSG_SERVICED, "rtt-ms",
                         Long.toString( System.currentTimeMillis( ) - this.openTime.get( ctx.getChannel( ) ) ) ).debug( );
     } catch ( Exception ex ) {
-      LOG.trace( ex, ex );
+      Logs.extreme( ).trace( ex, ex );
     }
   }
   

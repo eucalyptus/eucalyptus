@@ -178,10 +178,6 @@
     <appender-ref ref="upgrade" />
     <appender-ref ref="console-warn" />
   </category>
-  <category name="com.eucalyptus.crypto.util.WSSecurity" additivity="false">
-    <priority value="${euca.log.level}" />
-    <appender-ref ref="cloud-exhaust" />
-  </category>
   <category name="com.eucalyptus.util.fsm.StateMachineBuilder" additivity="false">
     <priority value="${euca.log.level}" />
     <appender-ref ref="cloud-exhaust" />
@@ -252,6 +248,10 @@
   </category>
   <category name="org.apache" additivity="false">
     <priority value="${euca.log.exhaustive.external}" />
+    <appender-ref ref="cloud-exhaust" />
+  </category>
+  <category name="com.eucalyptus.crypto.util.WSSecurity" additivity="false">
+    <priority value="${euca.log.level}" />
     <appender-ref ref="cloud-exhaust" />
   </category>
   <!--
