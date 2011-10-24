@@ -641,8 +641,7 @@ public class Hosts {
   }
   
   public static List<Host> list( ) {
-    final Predicate<Host> trueFilter = Predicates.alwaysTrue( );
-    return Hosts.list( trueFilter );
+    return Lists.newArrayList( hostMap.values( ) );
   }
   
   public static List<Host> list( final Predicate<Host> filter ) {
@@ -650,7 +649,7 @@ public class Hosts {
   }
   
   public static List<Host> listDatabases( ) {
-    return Lists.newArrayList( Iterables.filter( Hosts.list( ), DbFilter.INSTANCE ) );
+    return Hosts.list( DbFilter.INSTANCE );
   }
   
   public static Host localHost( ) {

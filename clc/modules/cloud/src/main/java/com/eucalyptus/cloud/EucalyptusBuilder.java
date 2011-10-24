@@ -28,6 +28,8 @@ import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.Mbeans;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 
 @ComponentPart( Eucalyptus.class )
 @Handles( { RegisterEucalyptusType.class,
@@ -89,44 +91,31 @@ public class EucalyptusBuilder extends AbstractServiceBuilder<EucalyptusConfigur
     if ( !Bootstrap.isFinished( ) ) {
       return;
     }
-    EucalyptusBuilder.updateDatabaseConnections( );
+    this.updateDatabaseConnections( );
   }
-
-  public static void updateDatabaseConnections( ) {
+  
+  private synchronized void updateDatabaseConnections( ) {
     for ( String ctx : PersistenceContexts.list( ) ) {
       try {
-        DriverDatabaseClusterMBean cluster = Mbeans.lookup( jdbcJmxDomain,
-                                                            ImmutableMap.builder( ).put( "cluster", ctx ).build( ),
-                                                            DriverDatabaseClusterMBean.class );
-        for ( Host h : Hosts.listDatabases( ) ) {
-          try {
-            net.sf.hajdbc.Database<Driver> db = cluster.getDatabase( h.getBindAddress( ).getHostAddress( ) );
-            if ( !cluster.isAlive( db.getId( )) ) {
-              cluster.deactivate( db.getId( ) );
-            }
-          } catch ( IllegalArgumentException ex ) {
-            LOG.trace( ex.getMessage( ) );
-          }
-        }
+        DriverDatabaseClusterMBean cluster = findDbClusterMBean( ctx );
         for ( String dbId : cluster.getActiveDatabases( ) ) {
-          cluster.getDatabase( dbId );
-          if ( !cluster.isAlive( dbId ) ) {
+          try {
+            Iterables.find( Hosts.list( ), filterDbHost( dbId ) );
+            if ( !cluster.isAlive( dbId ) ) {
+              cluster.deactivate( dbId );
+            }
+          } catch ( NoSuchElementException ex ) {
             cluster.deactivate( dbId );
           }
         }
         for ( final String dbId : cluster.getInactiveDatabases( ) ) {
-          net.sf.hajdbc.Database<Driver> db = cluster.getDatabase( dbId );
-          Predicate<Host> filter = new Predicate<Host>( ) {
-            
-            @Override
-            public boolean apply( Host input ) {
-              return input.getHostAddresses( ).contains( Internets.toAddress( dbId ) );
-            }
-          };
-          if ( !Hosts.list( filter ).isEmpty( ) ) {
+          try {
+            Iterables.find( Hosts.list( ), filterDbHost( dbId ) );
             if ( cluster.isAlive( dbId ) ) {
               cluster.activate( dbId );
             }
+          } catch ( NoSuchElementException ex ) {
+            cluster.remove( dbId );
           }
         }
       } catch ( Exception ex ) {
@@ -134,11 +123,26 @@ public class EucalyptusBuilder extends AbstractServiceBuilder<EucalyptusConfigur
       }
     }
   }
+
+  private static DriverDatabaseClusterMBean findDbClusterMBean( String ctx ) throws NoSuchElementException {
+    DriverDatabaseClusterMBean cluster = Mbeans.lookup( jdbcJmxDomain,
+                                                        ImmutableMap.builder( ).put( "cluster", ctx ).build( ),
+                                                        DriverDatabaseClusterMBean.class );
+    return cluster;
+  }
   
-  private void startDbPool( ServiceConfiguration config ) {
-    String dbPass = SystemIds.databasePassword( );
-    final String hostName = config.getHostName( );
-    String realJdbcDriver = Databases.getDriverName( );
+  private static Predicate<Host> filterDbHost( final String dbId ) {
+    Predicate<Host> filter = new Predicate<Host>( ) {
+      
+      @Override
+      public boolean apply( Host input ) {
+        return input.getHostAddresses( ).contains( Internets.toAddress( dbId ) );
+      }
+    };
+    return filter;
+  }
+  
+  private synchronized void startDbPool( ServiceConfiguration config ) {
     
     for ( String ctx : PersistenceContexts.list( ) ) {
       final String contextName = ctx.startsWith( "eucalyptus_" )
@@ -148,8 +152,10 @@ public class EucalyptusBuilder extends AbstractServiceBuilder<EucalyptusConfigur
       String dbUrl = "jdbc:" + ServiceUris.remote( Database.class, config.getInetAddress( ), contextName );
       
       try {
-        DriverDatabaseClusterMBean cluster = Mbeans.lookup( jdbcJmxDomain, ImmutableMap.builder( ).put( "cluster", contextName ).build( ),
-                                                            DriverDatabaseClusterMBean.class );
+        DriverDatabaseClusterMBean cluster = findDbClusterMBean( contextName );
+        String dbPass = SystemIds.databasePassword( );
+        final String hostName = config.getHostName( );
+        String realJdbcDriver = Databases.getDriverName( );
         if ( !cluster.getActiveDatabases( ).contains( hostName ) && !cluster.getInactiveDatabases( ).contains( hostName ) ) {
           cluster.add( hostName, realJdbcDriver, dbUrl );
         } else if ( cluster.getActiveDatabases( ).contains( hostName ) ) {
@@ -173,7 +179,7 @@ public class EucalyptusBuilder extends AbstractServiceBuilder<EucalyptusConfigur
     }
   }
   
-  private void stopDbPool( ServiceConfiguration config ) {
+  private synchronized void stopDbPool( ServiceConfiguration config ) {
     final String hostName = config.getHostName( );
     
     for ( String ctx : PersistenceContexts.list( ) ) {
@@ -182,8 +188,7 @@ public class EucalyptusBuilder extends AbstractServiceBuilder<EucalyptusConfigur
         : "eucalyptus_" + ctx;
       
       try {
-        DriverDatabaseClusterMBean cluster = Mbeans.lookup( jdbcJmxDomain, ImmutableMap.builder( ).put( "cluster", contextName ).build( ),
-                                                            DriverDatabaseClusterMBean.class );
+        DriverDatabaseClusterMBean cluster = findDbClusterMBean( contextName );
         
         try {
           if ( cluster.getActiveDatabases( ).contains( hostName ) ) {
