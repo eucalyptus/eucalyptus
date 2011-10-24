@@ -687,7 +687,11 @@ public class Hosts {
   }
   
   public static Host localHost( ) {
-    return hostMap.get( Internets.localHostIdentifier( ) );
+    if ( hostMap == null || !hostMap.containsKey( Internets.localHostIdentifier( ) ) ) {
+      return new Host( );
+    } else {
+      return hostMap.get( Internets.localHostIdentifier( ) );
+    }
   }
   
 }
