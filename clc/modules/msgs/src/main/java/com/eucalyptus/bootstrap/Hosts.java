@@ -251,7 +251,6 @@ public class Hosts {
     @Override
     public void contentsSet( final Map<String, Host> arg0 ) {
       LOG.info( "Hosts.contentsSet(): " + this.printMap( ) );
-      Host coordinator = Coordinator.INSTANCE.apply( arg0.values( ) );
       Coordinator.INSTANCE.initialize( arg0.values( ) );
     }
     
@@ -708,9 +707,6 @@ public class Hosts {
   
   public enum Coordinator implements Predicate<Host>, Supplier<Host>, Function<Collection<Host>, Host> {
     INSTANCE;
-    /**
-     * 
-     */
     private static final long   MAX_COORDINATOR_CLOCK_SKEW = 1000L;
     private final AtomicBoolean currentCoordinator         = new AtomicBoolean( false );
     private final AtomicLong    currentStartTime           = new AtomicLong( );
@@ -725,8 +721,10 @@ public class Hosts {
      * @param values
      */
     public void initialize( Collection<Host> values ) {
-      Host coordinator = this.apply( hostMap.values( ) );
-      long startTime = Longs.max( Longs.toArray( Collections2.transform( hostMap.values( ), StartTimeTransform.INSTANCE ) ) );
+      long startTime = Longs.max( Longs.toArray( Collections2.transform( values, StartTimeTransform.INSTANCE ) ) );
+      this.currentStartTime.set( startTime );
+      Host coordinator = this.apply( values );
+      this.currentCoordinator.set( coordinator.isLocalHost( ) );
     }
     
     /**
