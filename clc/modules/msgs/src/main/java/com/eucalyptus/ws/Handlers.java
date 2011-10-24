@@ -518,9 +518,9 @@ public class Handlers {
   }
   
   public static void addSystemHandlers( final ChannelPipeline pipeline ) {
-    pipeline.addLast( "execution-handler", executionHandler( ) );
     pipeline.addLast( "service-state-check", internalServiceStateHandler( ) );
     pipeline.addLast( "service-specific-mangling", ServiceHackeryHandler.INSTANCE );
+    pipeline.addLast( "execution-handler", executionHandler( ) );
     pipeline.addLast( "service-sink", new ServiceContextHandler( ) );
   }
   
@@ -529,7 +529,7 @@ public class Handlers {
     pipeline.addLast( "msg-epoch-check", internalEpochHandler( ) );
   }
 
-  static ExecutionHandler executionHandler( ) {
+  public static ExecutionHandler executionHandler( ) {
     return executionHandler;
   }
   

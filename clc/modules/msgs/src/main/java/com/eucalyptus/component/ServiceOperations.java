@@ -84,6 +84,7 @@ import com.eucalyptus.system.Ats;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Classes;
 import com.eucalyptus.util.Timers;
+import com.eucalyptus.ws.StackConfiguration;
 import com.eucalyptus.ws.util.RequestQueue;
 import com.google.common.base.Function;
 import com.google.common.base.Supplier;
@@ -94,8 +95,7 @@ import edu.ucsb.eucalyptus.msgs.BaseMessage;
 public class ServiceOperations {
   private static Logger                                                  LOG               = Logger.getLogger( ServiceOperations.class );
   private static final Map<Class<? extends BaseMessage>, Function<?, ?>> serviceOperations = Maps.newHashMap( );
-  private static Boolean                                                 ASYNCHRONOUS      = Boolean.FALSE;                               //TODO:GRZE: @Configurable
-                                                                                                                                          
+  private static Boolean                                                 ASYNCHRONOUS      = Boolean.FALSE;                               //TODO:GRZE: @Configurable  
   @SuppressWarnings( "unchecked" )
   public static <T extends BaseMessage, I, O> Function<I, O> lookup( final Class<T> msgType ) {
     return ( Function<I, O> ) serviceOperations.get( msgType );
@@ -146,7 +146,7 @@ public class ServiceOperations {
   
   @SuppressWarnings( "unchecked" )
   public static <I extends BaseMessage, O extends BaseMessage> void dispatch( final I request ) {
-    if ( !serviceOperations.containsKey( request.getClass( ) ) ) {
+    if ( !serviceOperations.containsKey( request.getClass( ) ) || !StackConfiguration.OOB_INTERNAL_OPERATIONS ) {
       try {
         ServiceContext.dispatch( RequestQueue.ENDPOINT, request );
       } catch ( Exception ex ) {
@@ -160,7 +160,7 @@ public class ServiceOperations {
           
           @Override
           public Object call( ) throws Exception {
-            if ( ASYNCHRONOUS ) {
+            if ( StackConfiguration.ASYNC_INTERNAL_OPERATIONS ) {
               Threads.enqueue( queueConfig.get( ), new Runnable( ) {
                 
                 @Override
@@ -173,6 +173,12 @@ public class ServiceOperations {
             }
             return null;
           }
+
+          @Override
+          public String toString( ) {
+            return super.toString( );
+          }
+          
         } ).call( );
       } catch ( final Exception ex ) {
         Logs.extreme( ).error( ex, ex );

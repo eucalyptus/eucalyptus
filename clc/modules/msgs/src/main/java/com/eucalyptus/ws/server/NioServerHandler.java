@@ -85,6 +85,7 @@ import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
+import org.jboss.netty.handler.execution.ExecutionHandler;
 import org.jboss.netty.handler.timeout.ReadTimeoutException;
 import org.jboss.netty.handler.timeout.WriteTimeoutException;
 import com.eucalyptus.binding.Binding;
@@ -93,6 +94,8 @@ import com.eucalyptus.http.MappingHttpMessage;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.ws.Handlers;
+import com.eucalyptus.ws.StackConfiguration;
 import com.eucalyptus.ws.WebServicesException;
 
 @ChannelPipelineCoverage( "one" )
@@ -143,7 +146,14 @@ public class NioServerHandler extends SimpleChannelUpstreamHandler {//TODO:GRZE:
       final ChannelPipeline currentPipeline = ctx.getPipeline( );
       FilteredPipeline filteredPipeline = Pipelines.find( request );
       if ( this.pipeline.compareAndSet( null, filteredPipeline ) ) {
+        if ( StackConfiguration.ASYNC_PIPELINE ) {
+          currentPipeline.addLast( "async-pipeline-execution-handler", Handlers.executionHandler(  ) );
+        }
         this.pipeline.get( ).unroll( currentPipeline );
+        if ( StackConfiguration.ASYNC_OPERATIONS ) {
+          currentPipeline.addLast( "async-pipeline-execution-handler", Handlers.executionHandler(  ) );
+        }
+        Handlers.addSystemHandlers( currentPipeline );
       }
     } catch ( DuplicatePipelineException e1 ) {
       LOG.error( "This is a BUG: " + e1, e1 );

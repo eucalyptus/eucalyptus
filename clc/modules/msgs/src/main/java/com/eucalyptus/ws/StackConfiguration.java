@@ -87,16 +87,13 @@ import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
                     description = "Parameters controlling the web services endpoint." )
 public class StackConfiguration extends AbstractPersistent {
   
-  @ConfigurableField( initial = "500",
-                      description = "Channel connect timeout (ms).",
+  @ConfigurableField( description = "Channel connect timeout (ms).",
                       changeListener = WebServices.RestartWebServicesListener.class )
   public static Integer       CHANNEL_CONNECT_TIMEOUT           = 500;
-  @ConfigurableField( initial = "3",
-                      changeListener = TimeChangeListener.class,
+  @ConfigurableField( changeListener = TimeChangeListener.class,
                       description = "Time interval duration (in seconds) during which duplicate signatures will be accepted to accomodate collisions for legitimate requests inherent in Query/REST signing protocol." )
   public static Integer       REPLAY_SKEW_WINDOW_SEC            = 3;
-  @ConfigurableField( initial = "300",
-                      description = "A max clock skew value (in seconds) between client and server accepted when validating timestamps in Query/REST protocol.",
+  @ConfigurableField( description = "A max clock skew value (in seconds) between client and server accepted when validating timestamps in Query/REST protocol.",
                       changeListener = TimeChangeListener.class )
   public static Integer       CLOCK_SKEW_SEC                    = 20;
   @ConfigurableField( description = "Server socket reuse address.",
@@ -114,126 +111,115 @@ public class StackConfiguration extends AbstractPersistent {
   @ConfigurableField( description = "Server socket TCP_NODELAY.",
                       changeListener = WebServices.RestartWebServicesListener.class )
   public static final Boolean CHANNEL_NODELAY                   = true;
-  @ConfigurableField( initial = "128",
-                      description = "Server worker thread pool max.",
+  @ConfigurableField( description = "Server worker thread pool max.",
                       changeListener = WebServices.RestartWebServicesListener.class )
   public static Integer       SERVER_POOL_MAX_THREADS           = 128;
-  @ConfigurableField( initial = "0",
-                      description = "Server max worker memory per connection.",
+  @ConfigurableField( description = "Server max worker memory per connection.",
                       changeListener = WebServices.RestartWebServicesListener.class )
   public static Long          SERVER_POOL_MAX_MEM_PER_CONN      = 0L;
-  @ConfigurableField( initial = "0",
-                      description = "Server max worker memory total.",
+  @ConfigurableField( description = "Server max worker memory total.",
                       changeListener = WebServices.RestartWebServicesListener.class )
   public static Long          SERVER_POOL_TOTAL_MEM             = 0L;
   
-  @ConfigurableField( initial = "500",
-                      description = "Service socket select timeout (ms).",
+  @ConfigurableField( description = "Service socket select timeout (ms).",
                       changeListener = WebServices.RestartWebServicesListener.class )
   public static Long          SERVER_POOL_TIMEOUT_MILLIS        = 500L;
   
-  @ConfigurableField( initial = "128",
-                      description = "Server selector thread pool max.",
+  @ConfigurableField( description = "Server selector thread pool max.",
                       changeListener = WebServices.RestartWebServicesListener.class )
   public static Integer       SERVER_BOSS_POOL_MAX_THREADS      = 128;
   
-  @ConfigurableField( initial = "0",
-                      description = "Server max selector memory per connection.",
+  @ConfigurableField( description = "Server max selector memory per connection.",
                       changeListener = WebServices.RestartWebServicesListener.class )
   public static Long          SERVER_BOSS_POOL_MAX_MEM_PER_CONN = 0L;
   
-  @ConfigurableField( initial = "0",
-                      description = "Server worker thread pool max.",
+  @ConfigurableField( description = "Server worker thread pool max.",
                       changeListener = WebServices.RestartWebServicesListener.class )
   public static Long          SERVER_BOSS_POOL_TOTAL_MEM        = 0L;
   
-  @ConfigurableField( initial = "500",
-                      description = "Service socket select timeout (ms).",
+  @ConfigurableField( description = "Service socket select timeout (ms).",
                       changeListener = WebServices.RestartWebServicesListener.class )
   public static Long          SERVER_BOSS_POOL_TIMEOUT_MILLIS   = 500L;
   
-  @ConfigurableField( description = "Web services port.",
+  @ConfigurableField( description = "Port to bind (note: port 8773 is always bound regardless).",
                       changeListener = WebServices.RestartWebServicesListener.class )
   public static Integer       PORT                              = 8773;
   public static final Integer INTERNAL_PORT                     = 8773;
   
-  @ConfigurableField( initial = "240",
-                      description = "Client idle timeout (secs)." )
+  @ConfigurableField( description = "Execute service operations from a separate thread pool (with respect to I/O)." )
+  public static Boolean       ASYNC_OPERATIONS                  = Boolean.FALSE;
+  
+  @ConfigurableField( description = "Execute internal service operations from a separate thread pool (with respect to I/O)." )
+  public static Boolean       ASYNC_INTERNAL_OPERATIONS         = Boolean.FALSE;
+  
+  @ConfigurableField( description = "Execute internal service operations out of band from the normal service bus." )
+  public static Boolean       OOB_INTERNAL_OPERATIONS           = Boolean.TRUE;
+  
+  @ConfigurableField( description = "Execute service specific pipeline handlers from a separate thread pool (with respect to I/O)." )
+  public static Boolean       ASYNC_PIPELINE                    = Boolean.FALSE;
+  
+  @ConfigurableField( description = "Client idle timeout (secs)." )
   public static Long          CLIENT_IDLE_TIMEOUT_SECS          = 240L;
   
-  @ConfigurableField( initial = "240",
-                      description = "Cluster client idle timeout (secs)." )
+  @ConfigurableField( description = "Cluster client idle timeout (secs)." )
   public static Long          CLUSTER_IDLE_TIMEOUT_SECS         = 240L;
   
-  @ConfigurableField( initial = "2000",
-                      description = "Cluster connect timeout (ms)." )
+  @ConfigurableField( description = "Cluster connect timeout (ms)." )
   public static Long          CLUSTER_CONNECT_TIMEOUT_MILLIS    = 2000L;
   
-  @ConfigurableField( initial = "20",
-                      description = "Server socket read time-out." )
+  @ConfigurableField( description = "Server socket read time-out." )
   public static Long          PIPELINE_READ_TIMEOUT_SECONDS     = 20L;
   
-  @ConfigurableField( initial = "20",
-                      description = "Server socket write time-out." )
+  @ConfigurableField( description = "Server socket write time-out." )
   public static Long          PIPELINE_WRITE_TIMEOUT_SECONDS    = 20L;
   
-  @ConfigurableField( initial = "1048576000",
-                      description = "Server http chunk max." )
+  @ConfigurableField( description = "Server http chunk max." )
   public static Integer       CLIENT_HTTP_CHUNK_BUFFER_MAX      = 1048576000;
   
-  @ConfigurableField( initial = "40",
-                      description = "Server worker thread pool max." )
+  @ConfigurableField( description = "Server worker thread pool max." )
   public static Integer       CLIENT_POOL_MAX_THREADS           = 40;
   
-  @ConfigurableField( initial = "0",
-                      description = "Server worker thread pool max." )
+  @ConfigurableField( description = "Server worker thread pool max." )
   public static Long          CLIENT_POOL_MAX_MEM_PER_CONN      = 0L;
   
-  @ConfigurableField( initial = "0",
-                      description = "Server worker thread pool max." )
+  @ConfigurableField( description = "Server worker thread pool max." )
   public static Long          CLIENT_POOL_TOTAL_MEM             = 0L;
   
-  @ConfigurableField( initial = "500",
-                      description = "Client socket select timeout (ms)." )
+  @ConfigurableField( description = "Client socket select timeout (ms)." )
   public static Long          CLIENT_POOL_TIMEOUT_MILLIS        = 500L;
   
-  @ConfigurableField( initial = "102400",
-                      description = "Maximum HTTP chunk size (bytes)." )
+  @ConfigurableField( description = "Maximum HTTP chunk size (bytes)." )
   public static Integer       HTTP_MAX_CHUNK_BYTES              = 10 * 10 * 1024;
-  @ConfigurableField( initial = "4096",
-                      description = "Maximum HTTP initial line size (bytes)." )
+  
+  @ConfigurableField( description = "Maximum HTTP initial line size (bytes)." )
   public static Integer       HTTP_MAX_INITIAL_LINE_BYTES       = 4 * 1024;
-  @ConfigurableField( initial = "8192",
-                      description = "Maximum HTTP headers size (bytes)." )
+  
+  @ConfigurableField( description = "Maximum HTTP headers size (bytes)." )
   public static Integer       HTTP_MAX_HEADER_BYTES             = 8 * 1024;
+  
+  @ConfigurableField( description = "Use DNS delegation for eucarc." )
+  public static Boolean       USE_DNS_DELEGATION                = Boolean.FALSE;
   
   @ConfigurableField( description = "Default scheme prefix in eucarc.",
                       changeListener = TemporarySchemeUpdater.class )
   public static Boolean       DEFAULT_HTTPS_ENABLED             = Boolean.FALSE;
   
-  @ConfigurableField( initial = "http",
-                      description = "Default scheme for EC2_URL in eucarc.",
+  @ConfigurableField( description = "Default scheme for EC2_URL in eucarc.",
                       changeListener = UriChangeListener.class )
   public static String        DEFAULT_EC2_URI_SCHEME            = "http";                                      //GRZE: there references to specific services are not in the right scope here. 
                                                                                                                 
-  @ConfigurableField( initial = "http",
-                      description = "Default scheme for S3_URL in eucarc.",
+  @ConfigurableField( description = "Default scheme for S3_URL in eucarc.",
                       changeListener = UriChangeListener.class )
   public static String        DEFAULT_S3_URI_SCHEME             = "http";                                      //GRZE: there references to specific services are not in the right scope here.
                                                                                                                 
-  @ConfigurableField( initial = "http",
-                      description = "Default scheme for AWS_SNS_URL in eucarc.",
+  @ConfigurableField( description = "Default scheme for AWS_SNS_URL in eucarc.",
                       changeListener = UriChangeListener.class )
   public static String        DEFAULT_AWS_SNS_URI_SCHEME        = "http";                                      //GRZE: there references to specific services are not in the right scope here.
                                                                                                                 
-  @ConfigurableField( initial = "http",
-                      description = "Default scheme for EUARE_URL in eucarc.",
+  @ConfigurableField( description = "Default scheme for EUARE_URL in eucarc.",
                       changeListener = UriChangeListener.class )
   public static String        DEFAULT_EUARE_URI_SCHEME          = "http";                                      //GRZE: there references to specific services are not in the right scope here.
                                                                                                                 
-  @ConfigurableField( description = "Use DNS delegation for eucarc." )
-  public static Boolean       USE_DNS_DELEGATION                = Boolean.FALSE;
-  
   private static Logger       LOG                               = Logger.getLogger( StackConfiguration.class );
   
   public enum BasicTransport implements TransportDefinition {

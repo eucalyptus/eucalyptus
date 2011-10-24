@@ -696,19 +696,18 @@ public class Topology {
           throw Exceptions.toUndeclared( "System is shutting down." );
         } else {
           final Long serviceStart = System.currentTimeMillis( );
-          LOG.debug( EventRecord.here( Topology.class, EventType.DEQUEUE, function.toString( ), config.getFullName( ).toString( ),
-                                       Long.toString( serviceStart - queueStart ), "ms" ) );
+          Logs.extreme( ).debug( EventRecord.here( Topology.class, EventType.DEQUEUE, function.toString( ), config.getFullName( ).toString( ),
+                                                   Long.toString( serviceStart - queueStart ), "ms" ) );
           
           try {
             final ServiceConfiguration result = function.apply( config );
-            LOG.debug( EventRecord.here( Topology.class, EventType.QUEUE, function.toString( ), config.getFullName( ).toString( ),
-                                         Long.toString( System.currentTimeMillis( ) - serviceStart ), "ms" ) );
+            Logs.extreme( ).debug( EventRecord.here( Topology.class, EventType.QUEUE, function.toString( ), config.getFullName( ).toString( ),
+                                                     Long.toString( System.currentTimeMillis( ) - serviceStart ), "ms" ) );
             return result;
           } catch ( Exception ex ) {
             Throwable t = Exceptions.unwrapCause( ex );
             Logs.extreme( ).error( t, t );
-            LOG.error( config.getFullName( ) + " failed to transition because of: "
-                       + t );
+            LOG.error( config.getFullName( ) + " failed to transition because of: " + t );
             throw ex;
           }
         }
