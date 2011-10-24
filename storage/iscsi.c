@@ -116,7 +116,7 @@ char * connect_iscsi_target (const char *dev_string)
     
     pid = fork();
     if (!pid) {
-        close(filedes[0]);
+        close (filedes[0]);
         
         if (strlen(buf)) logprintfl(EUCADEBUG, "connect_iscsi_target(): running command: %s\n", buf);
         if ((retval = system_output(buf)) == NULL) {
@@ -130,14 +130,15 @@ char * connect_iscsi_target (const char *dev_string)
         if (retval) {
             rc = write(filedes[1], retval, sizeof(char) * len);
         }
-        
+        close (filedes[1]);
+
         if (rc == len) {
             exit(0);
         }
         exit(1);
         
     } else {
-        close(filedes[1]);
+        close (filedes[1]);
         
         rbytes = timeread(filedes[0], &len, sizeof(int), 15);
         if (rbytes <= 0) {
@@ -150,7 +151,8 @@ char * connect_iscsi_target (const char *dev_string)
                 kill(pid, SIGKILL);
             }
         }
-        
+        close (filedes[0]);
+
         rc = timewait(pid, &status, 15);
         if (rc) {
             rc = WEXITSTATUS(status);
@@ -158,8 +160,7 @@ char * connect_iscsi_target (const char *dev_string)
             kill(pid, SIGKILL);
         }
     }
-    close(filedes[0]);
-    close(filedes[1]);
+
     return retval;
 }
 
@@ -208,6 +209,7 @@ char * get_iscsi_target (const char *dev_string)
     pid = fork();
     if (!pid) {
         close(filedes[0]);
+
         if (strlen(buf)) logprintfl(EUCADEBUG, "get_iscsi_target(): running command: %s\n", buf);
 
         if ((retval = system_output(buf)) == NULL) {
@@ -221,7 +223,8 @@ char * get_iscsi_target (const char *dev_string)
         if (retval) {
             rc = write(filedes[1], retval, sizeof(char) * len);
         }
-        
+        close(filedes[1]);
+
         if (rc == len) {
             exit(0);
         }
@@ -241,7 +244,8 @@ char * get_iscsi_target (const char *dev_string)
                 kill(pid, SIGKILL);
             }
         }
-        
+        close(filedes[0]);
+
         rc = timewait(pid, &status, 15);
         if (rc) {
             rc = WEXITSTATUS(status);
@@ -249,8 +253,7 @@ char * get_iscsi_target (const char *dev_string)
             kill(pid, SIGKILL);
         }
     }
-    close(filedes[0]);
-    close(filedes[1]);
+
     return retval;
 }
 
