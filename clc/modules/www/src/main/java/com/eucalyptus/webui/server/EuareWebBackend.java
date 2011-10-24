@@ -215,7 +215,7 @@ public class EuareWebBackend {
     }    
   }
   
-  public static User changeUserPassword( User requestUser, String userId, String oldPass, String newPass, String email ) throws EucalyptusServiceException {
+  public static User changeUserPasswordAndEmail( User requestUser, String userId, String oldPass, String newPass, String email ) throws EucalyptusServiceException {
     try {
       User user = Accounts.lookupUserById( userId );
       if ( authenticateWithLdap( user ) ) {
@@ -225,10 +225,7 @@ public class EuareWebBackend {
       if ( Strings.isNullOrEmpty( requestUser.getPassword( ) ) || !requestUser.getPassword( ).equals( Crypto.generateHashedPassword( oldPass ) ) ) {
         throw new EucalyptusServiceException( "You can not be authenticated to change user password" );
       }
-      Privileged.updateLoginProfile( requestUser, user.getAccount( ), user, newPass );
-      if ( !Strings.isNullOrEmpty( email ) ) {
-        Privileged.updateUserInfoItem( requestUser, user.getAccount( ), user, User.EMAIL, email );
-      }
+      Privileged.changeUserPasswordAndEmail( requestUser, user.getAccount( ), user, newPass, email );
       return user;
     } catch ( EucalyptusServiceException e ) {
       LOG.debug( e, e );
