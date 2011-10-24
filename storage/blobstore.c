@@ -913,6 +913,7 @@ static int set_blockblob_metadata_path (blockblob_path_t path_t, const blobstore
     char name [32];
     switch (path_t) {
     case BLOCKBLOB_PATH_BLOCKS:   safe_strncpy (name, blobstore_metadata_suffixes[BLOCKBLOB_PATH_BLOCKS],   sizeof (name)); break;
+    case BLOCKBLOB_PATH_LOCK:     safe_strncpy (name, blobstore_metadata_suffixes[BLOCKBLOB_PATH_LOCK],     sizeof (name)); break;
     case BLOCKBLOB_PATH_DM:       safe_strncpy (name, blobstore_metadata_suffixes[BLOCKBLOB_PATH_DM],       sizeof (name)); break;
     case BLOCKBLOB_PATH_DEPS:     safe_strncpy (name, blobstore_metadata_suffixes[BLOCKBLOB_PATH_DEPS],     sizeof (name)); break;
     case BLOCKBLOB_PATH_LOOPBACK: safe_strncpy (name, blobstore_metadata_suffixes[BLOCKBLOB_PATH_LOOPBACK], sizeof (name)); break;
@@ -1242,9 +1243,9 @@ static unsigned int check_in_use ( blobstore * bs, const char * bb_id, long long
     unsigned int in_use = 0;
     char buf [PATH_MAX];
 
-    set_blockblob_metadata_path (BLOCKBLOB_PATH_BLOCKS, bs, bb_id, buf, sizeof (buf));
+    set_blockblob_metadata_path (BLOCKBLOB_PATH_LOCK, bs, bb_id, buf, sizeof (buf));
 
-    _err_off(); // do not care if blocks file does not exist
+    _err_off(); // do not complain if metadata files do not exist
     int fd = open_and_lock (buf, BLOBSTORE_FLAG_RDWR, timeout_usec, BLOBSTORE_FILE_PERM); // try opening to see what happens
     if (fd != -1) {
         close_and_unlock (fd); 
@@ -1665,11 +1666,25 @@ blockblob * blockblob_open ( blobstore * bs,
         goto clean;
     }
     
-    bb->fd_blocks = open (bb->blocks_path, flags);
+    // convert BLOBSTORE_* flags into standard Posix open() flags and open/create the blocks file
+    int o_flags = 0;
+    if (flags & BLOBSTORE_FLAG_RDONLY) {
+        o_flags |= O_RDONLY;
+    } else if ((flags & BLOBSTORE_FLAG_RDWR) ||
+               (flags & BLOBSTORE_FLAG_CREAT)) {
+        o_flags |= O_RDWR;
+        if (flags & BLOBSTORE_FLAG_CREAT) {
+            o_flags |= O_CREAT;
+            // intentionally ignore _EXCL supplied without _CREAT
+            if (flags & BLOBSTORE_FLAG_EXCL) o_flags |= O_EXCL;
+        }
+    }
+    bb->fd_blocks = open (bb->blocks_path, o_flags, BLOBSTORE_FILE_PERM);
     if (bb->fd_blocks == -1) { // failed to open/create the content file
+        PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
         goto clean;
     }
-
+    
     struct stat sb;
     if (fstat (bb->fd_blocks, &sb)==-1) {
         goto clean;
@@ -3604,6 +3619,7 @@ int main (int argc, char ** argv)
 
     printf ("testing blobstore.c\n");
 
+    /*
     errors += do_file_lock_test ();
     if (errors) goto done; // no point in doing blobstore test if above isn't working
 
@@ -3612,6 +3628,7 @@ int main (int argc, char ** argv)
 
     errors += do_blobstore_test (cwd, "directory-norevoc", BLOBSTORE_FORMAT_DIRECTORY,   BLOBSTORE_REVOCATION_NONE);
     if (errors) goto done; // no point in continuing blobstore test if above isn't working
+    */
 
     errors += do_blobstore_test (cwd, "lru-directory", BLOBSTORE_FORMAT_DIRECTORY,   BLOBSTORE_REVOCATION_LRU);
     if (errors) goto done; // no point in continuing blobstore test if above isn't working
@@ -3634,7 +3651,7 @@ int main (int argc, char ** argv)
  done:
     printf ("done testing blobstore.c (errors=%d)\n", errors);
     blobstore_cleanup();
-    _exit(errors);
+    exit(errors);
 }
 #endif
 
