@@ -11,6 +11,7 @@ import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.async.FailedRequestException;
 import com.google.common.collect.Lists;
+import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 import edu.ucsb.eucalyptus.msgs.DescribeNetworksResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeNetworksType;
 
@@ -23,6 +24,7 @@ public class NetworkStateCallback extends StateUpdateMessageCallback<Cluster, De
         regarding( );
         setClusterControllers( Lists.newArrayList( Clusters.getInstance( ).getClusterAddresses( ) ) );
         setNameserver( Internets.localHostAddress( ) );
+        setDnsDomainName( SystemConfiguration.getSystemConfiguration( ).getDnsDomain( ).replaceAll("^\\.","") );
       }
     } );
   }
