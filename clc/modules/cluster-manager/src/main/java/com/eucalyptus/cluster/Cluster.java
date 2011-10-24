@@ -491,7 +491,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
         }
         if ( transition != null ) {
           try {
-            Threads.enqueue( this.configuration, transition );
+            Threads.enqueue( this.configuration, transition ).get( );
             Cluster.this.clearExceptions( );
           } catch ( final Exception ex ) {
             LOG.error( ex, ex );
