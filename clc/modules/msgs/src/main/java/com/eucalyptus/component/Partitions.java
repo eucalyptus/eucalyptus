@@ -133,7 +133,7 @@ public class Partitions {
           p = Partitions.lookupByName( config.getPartition( ) );
         } catch ( NoSuchElementException ex ) {
           LOG.warn( "Failed to lookup partition for " + config
-                    + ".  Generating new partition configuration." );
+                    + ".  Generating new partition configuration.\nCaused by: " + Exceptions.causeString( ex ) );
           try {
             p = Partitions.generatePartition( config );
           } catch ( ServiceRegistrationException ex1 ) {

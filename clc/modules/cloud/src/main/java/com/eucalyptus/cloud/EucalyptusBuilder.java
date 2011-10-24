@@ -2,6 +2,7 @@ package com.eucalyptus.cloud;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.sql.Driver;
 import java.util.NoSuchElementException;
 import net.sf.hajdbc.InactiveDatabaseMBean;
 import net.sf.hajdbc.sql.DriverDatabaseClusterMBean;
@@ -9,6 +10,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.bootstrap.Handles;
+import com.eucalyptus.bootstrap.Host;
 import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.bootstrap.SystemIds;
 import com.eucalyptus.component.AbstractServiceBuilder;
@@ -24,6 +26,7 @@ import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.Mbeans;
+import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableMap;
 
 @ComponentPart( Eucalyptus.class )
@@ -76,41 +79,54 @@ public class EucalyptusBuilder extends AbstractServiceBuilder<EucalyptusConfigur
   @Override
   public void fireStop( ServiceConfiguration config ) throws ServiceRegistrationException {
     EventRecord.here( EucalyptusBuilder.class, EventType.COMPONENT_SERVICE_STOPPED, config.toString( ) ).info( );
+    if ( !config.isHostLocal( ) ) {
+      stopDbPool( config );
+    }
   }
-  
-//  static class ConnectionPool {
-//    private static final String HA_JDBC_CLUSTER = "cluster";
-//    enum SyncStrategy {
-//      full,passive;
-//      public static SyncStrategy get( ) {
-//        return ( Hosts.isCoordinator( ) ? full : passive );
-//      }
-//    }
-//    private final String persistenceContext; 
-//    private void getMBean( ) {
-//      DriverDatabaseClusterMBean cluster = Mbeans.lookup( jdbcJmxDomain, ImmutableMap.builder( ).put( HA_JDBC_CLUSTER, this.persistenceContext ).build( ),
-//                                                          DriverDatabaseClusterMBean.class );
-//    }
-//  }
   
   @Override
   public void fireCheck( ServiceConfiguration config ) throws ServiceRegistrationException {
     if ( !Bootstrap.isFinished( ) ) {
       return;
     }
+    EucalyptusBuilder.updateDatabaseConnections( );
+  }
+
+  public static void updateDatabaseConnections( ) {
     for ( String ctx : PersistenceContexts.list( ) ) {
       try {
-        DriverDatabaseClusterMBean cluster = Mbeans.lookup( jdbcJmxDomain, ImmutableMap.builder( ).put( "cluster", ctx ).build( ),
+        DriverDatabaseClusterMBean cluster = Mbeans.lookup( jdbcJmxDomain,
+                                                            ImmutableMap.builder( ).put( "cluster", ctx ).build( ),
                                                             DriverDatabaseClusterMBean.class );
+        for ( Host h : Hosts.listDatabases( ) ) {
+          try {
+            net.sf.hajdbc.Database<Driver> db = cluster.getDatabase( h.getBindAddress( ).getHostAddress( ) );
+            if ( !cluster.isAlive( db.getId( )) ) {
+              cluster.deactivate( db.getId( ) );
+            }
+          } catch ( IllegalArgumentException ex ) {
+            LOG.trace( ex.getMessage( ) );
+          }
+        }
         for ( String dbId : cluster.getActiveDatabases( ) ) {
           cluster.getDatabase( dbId );
           if ( !cluster.isAlive( dbId ) ) {
             cluster.deactivate( dbId );
           }
         }
-        for ( String dbId : cluster.getInactiveDatabases( ) ) {
-          if ( cluster.isAlive( dbId ) ) {
-            cluster.activate( dbId );
+        for ( final String dbId : cluster.getInactiveDatabases( ) ) {
+          net.sf.hajdbc.Database<Driver> db = cluster.getDatabase( dbId );
+          Predicate<Host> filter = new Predicate<Host>( ) {
+            
+            @Override
+            public boolean apply( Host input ) {
+              return input.getHostAddresses( ).contains( Internets.toAddress( dbId ) );
+            }
+          };
+          if ( !Hosts.list( filter ).isEmpty( ) ) {
+            if ( cluster.isAlive( dbId ) ) {
+              cluster.activate( dbId );
+            }
           }
         }
       } catch ( Exception ex ) {
