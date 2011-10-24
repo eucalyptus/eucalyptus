@@ -230,6 +230,7 @@ public class EmpyreanService {
         Component.State nextState = Component.State.valueOf( request.getState( ) );
         ServiceConfiguration config = findService( request.getName( ) );
         Topology.transition( nextState ).apply( config ).get( );
+        reply.markWinning( );
       }
     } catch ( Exception ex ) {
       Exceptions.maybeInterrupted( ex );
