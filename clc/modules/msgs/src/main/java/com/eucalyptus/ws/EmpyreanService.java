@@ -199,6 +199,8 @@ public class EmpyreanService {
         } else {
           Topology.transition( transition.get( ) ).apply( config ).get( );
         }
+      } catch ( final IllegalArgumentException ex ) {
+        return false;
       } catch ( final Exception ex ) {
         Exceptions.maybeInterrupted( ex );
         Logs.extreme( ).error( ex, ex );
