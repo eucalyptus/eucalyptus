@@ -169,10 +169,6 @@ public class Components {
     }
   }
   
-  public static Component oneWhichHandles( final Class c ) {
-    return ServiceBuilders.handles( c ).getComponent( );
-  }
-  
   public static String describe( final Component comp ) {
     try {
       return componentToString( ).apply( comp );
@@ -182,7 +178,7 @@ public class Components {
         return "Error attempting to convert component to string: " + comp.toString( ) + " because of: " + ex.getMessage( );
       } catch ( final Exception ex1 ) {
         Logs.extreme( ).error( ex, ex );
-        return "Error attempting to convert component to string: " + comp.name( ) + " because of: " + ex.getMessage( );
+        return "Error attempting to convert component to string: " + comp.getName( ) + " because of: " + ex.getMessage( );
       }
     }
   }
@@ -242,11 +238,11 @@ public class Components {
     public String apply( final Component comp ) {
       final StringBuilder buf = new StringBuilder( );
       buf.append( LogUtil.header( comp.toString( ) ) ).append( "\n" );
-      for ( final Bootstrapper b : comp.getBootstrapper( ).getBootstrappers( ) ) {
+      for ( final Bootstrapper b : comp.getBootstrappers( ) ) {
         buf.append( "-> " + b.toString( ) ).append( "\n" );
       }
       buf.append( LogUtil.subheader( comp.getName( ) + " services" ) ).append( "\n" );
-      for ( final ServiceConfiguration s : comp.lookupServiceConfigurations( ) ) {
+      for ( final ServiceConfiguration s : comp.services( ) ) {
         try {
           buf.append( "->  Service:          " ).append( s.getFullName( ) ).append( " " ).append( ServiceUris.remote( s ) ).append( "\n" );
           buf.append( "|-> Service config:   " ).append( s ).append( "\n" );
@@ -315,13 +311,21 @@ public class Components {
     ARE_ENABLED {
       @Override
       public boolean apply( final Component c ) {
-        final NavigableSet<ServiceConfiguration> services = c.lookupServiceConfigurations( );
+        final NavigableSet<ServiceConfiguration> services = c.services( );
         return services.isEmpty( )
           ? false
           : Component.State.ENABLED.equals( services.first( ).lookupState( ) );
       }
     }
     
+  }
+  
+  /**
+   * @param config
+   * @return
+   */
+  public static Component lookup( ServiceConfiguration config ) {
+    return lookup( config.getComponentId( ) );
   }
   
 }

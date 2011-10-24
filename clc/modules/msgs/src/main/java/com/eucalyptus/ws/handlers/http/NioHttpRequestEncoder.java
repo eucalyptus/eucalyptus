@@ -61,36 +61,29 @@
 /*
  * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
-package com.eucalyptus.ws.server;
+package com.eucalyptus.ws.handlers.http;
 
-import org.apache.log4j.Logger;
-import org.jboss.netty.channel.Channel;
-import com.eucalyptus.ws.util.ChannelUtil;
+import com.eucalyptus.http.MappingHttpRequest;
+import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.handler.codec.http.HttpMessage;
+import org.jboss.netty.handler.codec.http.HttpMessageEncoder;
+import org.jboss.netty.handler.codec.http.HttpRequest;
 
-public class NioServer {
-  private static Logger                 LOG = Logger.getLogger( NioServer.class );
-  private static Channel                       serverChannel;
+@Deprecated
+public class NioHttpRequestEncoder extends HttpMessageEncoder {
 
-  public NioServer( ) {}
-
-  public static void start( ) {
-    if( serverChannel != null ) {
-      return;
-    } else {
-      synchronized(NioServer.class) {
-        if( serverChannel != null ) {
-          return;
-        } else {
-          serverChannel = ChannelUtil.getServerChannel();
-        }
-      }
-    }
+  public NioHttpRequestEncoder( ) {
+    super( );
   }
 
-  public void stop( ) {
-    if( this.serverChannel != null && ( this.serverChannel.isConnected( ) || this.serverChannel.isOpen( ) || this.serverChannel.isBound( ) ) ) {
-      this.serverChannel.close( ).awaitUninterruptibly( );
-    }
+  @Override
+  protected void encodeInitialLine( ChannelBuffer buf, HttpMessage message ) throws Exception {
+    MappingHttpRequest request = ( MappingHttpRequest ) message;
+    buf.writeBytes( request.getMethod( ).toString( ).getBytes( "ASCII" ) );
+    buf.writeByte( HttpUtils.SP );
+    buf.writeBytes( request.getServicePath( ).getBytes( "ASCII" ) );
+    buf.writeByte( HttpUtils.SP );
+    buf.writeBytes( request.getProtocolVersion( ).toString( ).getBytes( "ASCII" ) );
+    buf.writeBytes( HttpUtils.CRLF );
   }
-  
 }

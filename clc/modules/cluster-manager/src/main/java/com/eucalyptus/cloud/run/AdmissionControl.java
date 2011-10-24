@@ -80,6 +80,7 @@ import com.eucalyptus.cluster.ResourceState.VmTypeAvailability;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.context.Context;
@@ -256,7 +257,7 @@ public class AdmissionControl {
             Partition partition = cluster.getConfiguration( ).lookupPartition( );
             if ( allocInfo.getBootSet( ).getMachine( ) instanceof BlockStorageImageInfo ) {
               try {
-                ServiceConfiguration sc = Partitions.lookupService( Storage.class, partition );
+                ServiceConfiguration sc = Topology.lookup( Storage.class, partition );
               } catch ( Exception ex ) {
                 throw new NotEnoughResourcesException( "Not enough resources: " + ex.getMessage( ), ex );
               }

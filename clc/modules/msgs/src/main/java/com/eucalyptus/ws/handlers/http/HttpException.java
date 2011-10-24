@@ -61,52 +61,30 @@
 /*
  * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
-package com.eucalyptus.component.auth;
+package com.eucalyptus.ws.handlers.http;
 
-import java.io.File;
-import java.io.IOException;
-import java.security.GeneralSecurityException;
-import org.apache.log4j.Logger;
-import com.eucalyptus.component.ComponentIds;
-import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.component.id.HttpService;
-import com.eucalyptus.system.SubDirectory;
+import com.eucalyptus.ws.WebServicesException;
 
-public class EucaKeyStore extends AbstractKeyStore {
-  public static String            FORMAT         = "pkcs12";
-  private static String           KEY_STORE_PASS = "eucalyptus";
-  private static String           FILENAME       = "euca.p12";
-  private static Logger           LOG            = Logger.getLogger( EucaKeyStore.class );
+public class HttpException extends WebServicesException {
 
-  private static AbstractKeyStore singleton      = EucaKeyStore.getInstance( );
-
-  public static AbstractKeyStore getInstance( ) {
-    synchronized ( EucaKeyStore.class ) {
-      if ( EucaKeyStore.singleton == null ) {
-        try {
-          singleton = new EucaKeyStore( );
-        } catch ( final Exception e ) {
-          LOG.error( e, e );
-        }
-      }
-    }
-    return EucaKeyStore.singleton;
+  public HttpException( ) {
+    super( );
+    // TODO Auto-generated constructor stub
   }
 
-  public static AbstractKeyStore getCleanInstance( ) throws Exception {
-    synchronized ( EucaKeyStore.class ) {
-      singleton = new EucaKeyStore( );      
-    }
-    return singleton;
+  public HttpException( String arg0, Throwable arg1 ) {
+    super( arg0, arg1 );
+    // TODO Auto-generated constructor stub
   }
 
-  
-  private EucaKeyStore( ) throws GeneralSecurityException, IOException {
-    super( SubDirectory.KEYS.toString( ) + File.separator + EucaKeyStore.FILENAME, EucaKeyStore.KEY_STORE_PASS, EucaKeyStore.FORMAT );
+  public HttpException( String arg0 ) {
+    super( arg0 );
+    // TODO Auto-generated constructor stub
   }
 
-  @Override
-  public boolean check( ) throws GeneralSecurityException {
-    return (this.getCertificate( ComponentIds.lookup(HttpService.class).name() )!= null)&&(this.getCertificate( ComponentIds.lookup(Eucalyptus.class).name() )!=null);
+  public HttpException( Throwable arg0 ) {
+    super( arg0 );
+    // TODO Auto-generated constructor stub
   }
+
 }

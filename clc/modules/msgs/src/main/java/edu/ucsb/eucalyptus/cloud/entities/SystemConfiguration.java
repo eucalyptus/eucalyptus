@@ -79,6 +79,7 @@ import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceUris;
+import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.configurable.ConfigurableClass;
@@ -218,12 +219,4 @@ public class SystemConfiguration extends AbstractPersistent {
     return sysConf;
   }
 
-  public static InetAddress getCloudAddress() throws EucalyptusCloudException {
-	Component cloud = Components.lookup( Eucalyptus.class );
-	if( cloud.hasEnabledService( ) ) {
-	  return Components.lookup( Eucalyptus.class ).enabledServices( ).first( ).getInetAddress( );
-	}
-	return null;
-  }
-  
 }

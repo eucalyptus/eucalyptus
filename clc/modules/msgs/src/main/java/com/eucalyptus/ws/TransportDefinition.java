@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -61,36 +61,12 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.config;
+package com.eucalyptus.ws;
 
-import java.util.ArrayList;
-import java.util.List;
-import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.empyrean.Empyrean;
-
-public class PropertiesService extends ComponentId.Unpartioned {
+public interface TransportDefinition {
   
-  public PropertiesService( ) {
-    super( "Properties" );
-  }
+  public abstract String getScheme( );
   
-  @Override
-  public String getLocalEndpointName( ) {
-    return "vm://PropertiesInternal";
-  }
-  
-  @Override
-  public List<Class<? extends ComponentId>> serviceDependencies( ) {
-    return new ArrayList<Class<? extends ComponentId>>( ) {
-      {
-        this.add( Empyrean.class );
-      }
-    };
-  }
-  
-  @Override
-  public boolean isAdminService( ) {
-    return true;
-  }
+  public abstract String getSecureScheme( );
   
 }

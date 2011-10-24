@@ -78,7 +78,7 @@ import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import com.eucalyptus.component.Component;
-import com.eucalyptus.component.ComponentPart;
+import com.eucalyptus.component.ComponentId.ComponentPart;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.empyrean.Empyrean;

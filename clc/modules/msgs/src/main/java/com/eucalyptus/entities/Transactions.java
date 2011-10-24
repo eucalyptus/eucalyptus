@@ -1,7 +1,5 @@
 package com.eucalyptus.entities;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.notNullValue;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -10,11 +8,14 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.Lists;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.notNullValue;
 
 public class Transactions {
   private static Logger                           LOG      = Logger.getLogger( Transactions.class );
@@ -127,7 +128,7 @@ public class Transactions {
         try {
           c.fire( input );
         } catch ( Exception ex ) {
-          throw new UndeclaredThrowableException( new TransactionCallbackException( ex ) );
+          throw Exceptions.toUndeclared( new TransactionCallbackException( ex ) );
         }
         return input;
       }

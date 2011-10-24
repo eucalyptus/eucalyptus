@@ -68,6 +68,7 @@ import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionService;
 import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
@@ -80,6 +81,7 @@ import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.ServiceTransitions;
+import com.eucalyptus.component.Topology;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
@@ -87,6 +89,7 @@ import com.eucalyptus.records.Logs;
 import com.eucalyptus.scripting.Groovyness;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.system.Threads.ThreadPool;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.ws.EmpyreanService;
 import com.google.common.base.Joiner;
@@ -226,9 +229,11 @@ public class Bootstrap {
     
     private void printAgenda( ) {
       if ( !this.bootstrappers.isEmpty( ) ) {
-        LOG.info( LogUtil.header( "Bootstrap stage: " + this.name( ) + "." + ( Bootstrap.loading
-          ? "load()"
-          : "start()" ) ) );
+        LOG.info( LogUtil.header( "Bootstrap stage: " + this.name( )
+                                  + "."
+                                  + ( Bootstrap.loading
+                                    ? "load()"
+                                    : "start()" ) ) );
         LOG.debug( Joiner.on( " " ).join( this.name( ) + " bootstrappers:  ", this.bootstrappers ) );
       }
     }
@@ -275,7 +280,8 @@ public class Bootstrap {
           }
         } catch ( Exception e ) {
           EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ERROR, this.name( ), b.getClass( ).getCanonicalName( ) ).info( );
-          throw BootstrapException.throwFatal( b.getClass( ).getSimpleName( ) + " threw an error in load( ): " + e.getMessage( ), e );
+          throw BootstrapException.throwFatal( b.getClass( ).getSimpleName( ) + " threw an error in load( ): "
+                                               + e.getMessage( ), e );
         }
       }
     }
@@ -292,7 +298,8 @@ public class Bootstrap {
           }
         } catch ( Exception e ) {
           EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ERROR, this.name( ), b.getClass( ).getCanonicalName( ) ).info( );
-          throw BootstrapException.throwFatal( b.getClass( ).getSimpleName( ) + " threw an error in start( ): " + e.getMessage( ), e );
+          throw BootstrapException.throwFatal( b.getClass( ).getSimpleName( ) + " threw an error in start( ): "
+                                               + e.getMessage( ), e );
         }
       }
     }
@@ -349,9 +356,10 @@ public class Bootstrap {
         Bootstrap.Stage stage = bootstrap.getBootstrapStage( );
         compType = bootstrap.getProvides( );
         EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_INIT, stage.name( ), bc, "component=" + compType.getSimpleName( ) ).info( );
-        if ( ComponentId.class.isAssignableFrom( compType ) && !Empyrean.class.equals( compType ) && !ComponentId.class.equals( compType ) ) {
+        if ( ComponentId.class.isAssignableFrom( compType ) && !Empyrean.class.equals( compType )
+             && !ComponentId.class.equals( compType ) ) {
           EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ADDED, stage.name( ), bc, "component=" + compType.getSimpleName( ) ).info( );
-          Components.lookup( compType ).getBootstrapper( ).addBootstrapper( bootstrap );
+          Components.lookup( compType ).addBootstrapper( bootstrap );
         } else if ( Bootstrap.checkDepends( bootstrap ) ) {
           if ( Empyrean.class.equals( compType ) ) {
             EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ADDED, stage.name( ), bc, "component=" + compType.getSimpleName( ) ).info( );
@@ -359,7 +367,7 @@ public class Bootstrap {
           } else if ( ComponentId.class.equals( compType ) ) {
             for ( Component c : Components.list( ) ) {
               EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ADDED, stage.name( ), bc, "component=" + c.getName( ) ).info( );
-              c.getBootstrapper( ).addBootstrapper( bootstrap );
+              c.addBootstrapper( bootstrap );
             }
           }
         } else {
@@ -405,7 +413,9 @@ public class Bootstrap {
    * @return currentStage either the same as before, or the next {@link Bootstrap.Stage}.
    */
   public static synchronized Stage transition( ) {
-    if ( currentStage == Stage.SystemInit && !loading && !starting && !finished ) {
+    if ( currentStage == Stage.SystemInit && !loading
+         && !starting
+         && !finished ) {
       loading = true;
       starting = false;
       finished = false;
@@ -413,11 +423,13 @@ public class Bootstrap {
       LOG.info( LogUtil.header( "Bootstrap stage completed: " + currentStage.toString( ) ) );
       if ( Stage.Final.equals( currentStage ) ) {
         currentStage = null;
-        if ( loading && !starting && !finished ) {
+        if ( loading && !starting
+             && !finished ) {
           loading = true;
           starting = true;
           finished = false;
-        } else if ( loading && starting && !finished ) {
+        } else if ( loading && starting
+                    && !finished ) {
           loading = true;
           starting = true;
           finished = true;
@@ -491,7 +503,6 @@ public class Bootstrap {
    * <li><b>Print configurations</b>: The configuration is printed for review.</li>
    * </ol>
    * 
-   * @see Component#initService()
    * @see Component#startService(com.eucalyptus.component.ServiceConfiguration)
    * @see ServiceJarDiscovery
    * @see Bootstrap#loadConfigs
@@ -551,45 +562,21 @@ public class Bootstrap {
     }
   }
   
-  private static int INIT_RETRIES = 5;
-  
   static void applyTransition( Component.State state, Iterable<Component> components ) {
     applyTransition( state, Iterables.toArray( components, Component.class ) );
   }
   
   private static void applyTransition( final Component.State state, Component... components ) {
     ThreadPool exec = Threads.lookup( Empyrean.class );
-    CompletionService<ServiceConfiguration> workPool = new ExecutorCompletionService<ServiceConfiguration>( exec );
-    int submitted = 0;
     for ( final Component component : components ) {
-      submitted++;
-      workPool.submit( new Callable<ServiceConfiguration>( ) {
-        
-        @Override
-        public ServiceConfiguration call( ) throws Exception {
-          ServiceConfiguration config = component.getLocalServiceConfiguration( );
-          Exception lastEx = null;
-          for ( int i = 0; i < INIT_RETRIES; i++ ) {
-            try {
-              return ServiceTransitions.pathTo( config, state ).get( );
-            } catch ( Exception ex ) {
-              lastEx = ex;
-              Logs.extreme( ).error( ex );
-            }
-          }
-          throw lastEx;
-        }
-      } );
-    }
-    for ( int i = 0; i < submitted; i++ ) {
-      Future<ServiceConfiguration> future = null;
-      do {
-        try {
-          future = workPool.poll( 50, TimeUnit.MILLISECONDS );
-        } catch ( final InterruptedException e ) {
-          Thread.currentThread( ).interrupt( );
-        }
-      } while ( future == null );
+      ServiceConfiguration config = component.getLocalServiceConfiguration( );
+      try {
+        Topology.transition( state ).apply( config ).get( );
+      } catch ( Exception ex ) {
+        Exceptions.maybeInterrupted( ex );
+        LOG.error( ex );
+        Logs.extreme( ).error( ex, ex );
+      }
     }
   }
   

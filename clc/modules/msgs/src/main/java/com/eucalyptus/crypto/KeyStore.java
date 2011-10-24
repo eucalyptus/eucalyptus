@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -61,27 +61,49 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.component.id;
+package com.eucalyptus.crypto;
 
-import java.util.ArrayList;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.security.GeneralSecurityException;
+import java.security.Key;
+import java.security.KeyPair;
+import java.security.KeyStoreException;
+import java.security.PrivateKey;
+import java.security.cert.X509Certificate;
 import java.util.List;
-import com.eucalyptus.component.ComponentId;
 
-public class Notifications extends ComponentId.Unpartioned {
-  public static Notifications INSTANCE = new Notifications( );
+public interface KeyStore {
   
-  @Override
-  public List<Class<? extends ComponentId>> serviceDependencies( ) {
-    return new ArrayList( ) {
-      {
-        this.add( Eucalyptus.class );
-      }
-    };
-  }
+  public abstract KeyPair getKeyPair( final String alias, final String password ) throws GeneralSecurityException;
   
-  @Override
-  public boolean isUserService( ) {
-    return true;
-  }
+  public abstract boolean check( ) throws GeneralSecurityException;
+  
+  public abstract boolean containsEntry( final String alias );
+  
+  public abstract X509Certificate getCertificate( final String alias ) throws GeneralSecurityException;
+  
+  public abstract Key getKey( final String alias, final String password ) throws GeneralSecurityException;
+  
+  public abstract String getCertificateAlias( final String certPem ) throws GeneralSecurityException;
+  
+  public abstract String getCertificateAlias( final X509Certificate cert ) throws GeneralSecurityException;
+  
+  public abstract void addCertificate( final String alias, final X509Certificate cert ) throws IOException, GeneralSecurityException;
+  
+  public abstract void addKeyPair( final String alias, final X509Certificate cert, final PrivateKey privateKey, final String keyPassword ) throws IOException, GeneralSecurityException;
+  
+  public abstract void store( ) throws IOException, GeneralSecurityException;
+  
+  public abstract List<String> getAliases( ) throws KeyStoreException;
+  
+  public abstract String getFileName( );
+  
+  public abstract void remove( final String alias );
+  
+  public abstract void remove( );
+  
+  public abstract InputStream getAsInputStream( ) throws FileNotFoundException;
   
 }

@@ -119,12 +119,17 @@ public class Host implements java.io.Serializable, Comparable<Host> {
     this.bindAddress = Internets.localHostInetAddress( );
     this.epoch = Topology.epoch( );
     this.lastTime = this.timestamp.getAndSet( System.currentTimeMillis( ) );
-    Logs.exhaust( ).debug( "Applying update for host: " + this );
     ImmutableList<InetAddress> newAddrs = ImmutableList.copyOf( Ordering.from( Internets.INET_ADDRESS_COMPARATOR ).sortedCopy( Internets.getAllInetAddresses( ) ) );
     this.hasBootstrapped = Bootstrap.isFinished( );
     this.hasDatabase = BootstrapArgs.isCloudController( );
     this.hostAddresses = newAddrs;
     LOG.trace( "Updated host: " + this );
+  }
+  
+  Host( Host last ) {
+    this( last.getStartedTime( ) );
+    this.lastTime = last.getTimestamp( ).getTime( );
+    this.timestamp.set( System.currentTimeMillis( ) );
   }
   
   public Address getGroupsId( ) {
@@ -180,25 +185,14 @@ public class Host implements java.io.Serializable, Comparable<Host> {
     return this.getDisplayName( ).compareTo( that.getDisplayName( ) );
   }
   
-  /**
-   * @return new updated instance of this Host if the object is dirty
-   *         return this otherwise
-   */
-  Host checkDirty( ) {
-    Host that = new Host( this.startedTime );
-    boolean result = false;
-    result |= !this.hasBootstrapped.equals( that.hasBootstrapped );
-    result |= !this.hasDatabase.equals( that.hasDatabase );
-    result |= !this.epoch.equals( that.epoch );
-    result |= !this.hostAddresses.equals( that.hostAddresses );
-    if ( result ) {
-      that.lastTime = this.timestamp.get( );
-      that.timestamp.set( System.currentTimeMillis( ) );
-      return that;
-    } else {
-      that.timestamp.set( that.lastTime = System.currentTimeMillis( ) );
-      return this;
-    }
+  void stateUpdate( ) {
+    Logs.exhaust( ).debug( "Applying update for host: " + this );
+    ImmutableList<InetAddress> newAddrs = ImmutableList.copyOf( Ordering.from( Internets.INET_ADDRESS_COMPARATOR ).sortedCopy( Internets.getAllInetAddresses( ) ) );
+    this.hostAddresses = newAddrs;
+    this.hasDatabase = BootstrapArgs.isCloudController( );
+    this.hasBootstrapped = Bootstrap.isFinished( );
+    this.epoch = Topology.epoch( );
+    this.lastTime = this.timestamp.getAndSet( System.currentTimeMillis( ) );
   }
   
   public boolean isLocalHost( ) {
@@ -247,7 +241,7 @@ public class Host implements java.io.Serializable, Comparable<Host> {
   public String getDisplayName( ) {
     return this.displayName;
   }
-
+  
   public Long getStartedTime( ) {
     return this.startedTime;
   }

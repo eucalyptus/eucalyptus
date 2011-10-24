@@ -19,7 +19,7 @@ import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.mule.transport.NullPayload;
 import com.eucalyptus.bootstrap.Bootstrap;
-import com.eucalyptus.component.ComponentPart;
+import com.eucalyptus.component.ComponentId.ComponentPart;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.ServiceContext;
@@ -64,6 +64,8 @@ public class MetadataPipeline extends FilteredPipeline implements ChannelUpstrea
       try {
         if ( Bootstrap.isShuttingDown( ) ) {
           reply = "System shutting down".getBytes( );
+        } else if ( !Bootstrap.isFinished( ) ) {
+          reply = "System is still starting up".getBytes( );
         } else {
           reply = ServiceContext.send( "VmMetadata", newUri );
         }

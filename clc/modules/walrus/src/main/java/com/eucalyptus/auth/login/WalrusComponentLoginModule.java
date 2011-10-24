@@ -95,7 +95,7 @@ public class WalrusComponentLoginModule extends BaseLoginModule<WalrusWrappedCom
 		String signature = credentials.getSignature();
 		try {
 			try {
-				PublicKey publicKey = SystemCredentials.getCredentialProvider(Storage.class).getCertificate().getPublicKey();
+				PublicKey publicKey = SystemCredentials.lookup(Storage.class).getCertificate().getPublicKey();
 				sig = Signature.getInstance("SHA1withRSA");
 				sig.initVerify(publicKey);
 				sig.update(data.getBytes());

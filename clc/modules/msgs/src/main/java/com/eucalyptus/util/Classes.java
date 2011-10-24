@@ -117,35 +117,35 @@ public class Classes {
     }
   }
   
-  enum WhateverAsClass implements Function<Object, Class<?>> {
+  enum WhateverAsClass implements Function<Object, Class> {
     INSTANCE;
     @Override
-    public Class<?> apply( final Object o ) {
+    public Class apply( final Object o ) {
       return ( o instanceof Class
-          ? ( Class<?> ) o
+          ? ( Class ) o
           : ( o != null
             ? o.getClass( )
             : null ) );
     }
   }
   
-  enum ParentClass implements Function<Class<?>, Class<?>> {
+  enum ParentClass implements Function<Class, Class> {
     INSTANCE;
     @Override
-    public Class<?> apply( final Class<?> type ) {
+    public Class apply( final Class type ) {
       return type.getSuperclass( );
     }
   }
   
-  enum TransitiveClosureImplementedInterfaces implements Function<Class<?>[], List<Class<?>>> {
+  enum TransitiveClosureImplementedInterfaces implements Function<Class[], List<Class>> {
     INSTANCE;
     @Override
-    public List<Class<?>> apply( final Class<?>[] types ) {
-      final List<Class<?>> ret = Lists.newArrayList( );
+    public List<Class> apply( final Class[] types ) {
+      final List<Class> ret = Lists.newArrayList( );
       if ( types.length == 0 ) {
         return ret;
       } else {
-        for ( final Class<?> t : types ) {
+        for ( final Class t : types ) {
           if ( t == null || t == Object.class ) {
             continue;
           } else if ( t.isInterface( ) ) {
@@ -154,7 +154,7 @@ public class Classes {
           if ( t.getInterfaces( ).length == 0 ) {
             continue;
           } else {
-            final List<Class<?>> next = TransitiveClosureImplementedInterfaces.INSTANCE.apply( t.getInterfaces( ) );
+            final List<Class> next = TransitiveClosureImplementedInterfaces.INSTANCE.apply( t.getInterfaces( ) );
             ret.addAll( next );
           }
         }
@@ -163,25 +163,25 @@ public class Classes {
     }
   }
   
-  enum BreadthFirstTransitiveClosure implements Function<Object, List<Class<?>>> {
+  enum BreadthFirstTransitiveClosure implements Function<Object, List<Class>> {
     INSTANCE;
     
     @Override
-    public List<Class<?>> apply( final Object input ) {
-      final List<Class<?>> ret = Lists.newArrayList( );
-      final Class<?> type = WhateverAsClass.INSTANCE.apply( input );
+    public List<Class> apply( final Object input ) {
+      final List<Class> ret = Lists.newArrayList( );
+      final Class type = WhateverAsClass.INSTANCE.apply( input );
       if ( type == Object.class || type == null ) {
         return ret;
       } else if ( type.isInterface( ) ) {
         ret.add( type );
-        final List<Class<?>> superInterfaces = TransitiveClosureImplementedInterfaces.INSTANCE.apply( new Class[] { type } );
+        final List<Class> superInterfaces = TransitiveClosureImplementedInterfaces.INSTANCE.apply( new Class[] { type } );
         ret.addAll( superInterfaces );
         return ret;
       } else {
         ret.add( type );
-        final List<Class<?>> superInterfaces = TransitiveClosureImplementedInterfaces.INSTANCE.apply( new Class[] { type } );
+        final List<Class> superInterfaces = TransitiveClosureImplementedInterfaces.INSTANCE.apply( new Class[] { type } );
         ret.addAll( superInterfaces );
-        final List<Class<?>> next = this.apply( type.getSuperclass( ) );
+        final List<Class> next = this.apply( type.getSuperclass( ) );
         ret.addAll( next );
         return ret;
       }
@@ -196,7 +196,7 @@ public class Classes {
    * @param o
    * @return
    */
-  public static Function<Object, List<Class<?>>> ancestors( ) {
+  public static Function<Object, List<Class>> ancestors( ) {
     return BreadthFirstTransitiveClosure.INSTANCE;
   }
   
@@ -207,24 +207,24 @@ public class Classes {
    * @param o
    * @return
    */
-  public static List<Class<?>> ancestors( final Object o ) {
+  public static List<Class> ancestors( final Object o ) {
     return ancestors( ).apply( o );
   }
   
-  enum ClassBreadthFirstTransitiveClosure implements Function<Object, List<Class<?>>> {
+  enum ClassBreadthFirstTransitiveClosure implements Function<Object, List<Class>> {
     INSTANCE;
     
     @Override
-    public List<Class<?>> apply( final Object input ) {
-      final List<Class<?>> ret = Lists.newArrayList( );
-      final Class<?> type = WhateverAsClass.INSTANCE.apply( input );
+    public List<Class> apply( final Object input ) {
+      final List<Class> ret = Lists.newArrayList( );
+      final Class type = WhateverAsClass.INSTANCE.apply( input );
       if ( type == Object.class || type == null ) {
         return ret;
       } else if ( type.isInterface( ) ) {
         return ret;
       } else {
         ret.add( type );
-        final List<Class<?>> next = this.apply( type.getSuperclass( ) );
+        final List<Class> next = this.apply( type.getSuperclass( ) );
         ret.addAll( next );
         return ret;
       }
@@ -240,7 +240,7 @@ public class Classes {
    * @param o
    * @return
    */
-  public static Function<Object, List<Class<?>>> classAncestors( ) {
+  public static Function<Object, List<Class>> classAncestors( ) {
     return ClassBreadthFirstTransitiveClosure.INSTANCE;
   }
   
@@ -251,23 +251,23 @@ public class Classes {
    * @param o
    * @return
    */
-  public static List<Class<?>> classAncestors( final Object o ) {
+  public static List<Class> classAncestors( final Object o ) {
     return ClassBreadthFirstTransitiveClosure.INSTANCE.apply( o );
   }
   
-  enum InterfaceBreadthFirstTransitiveClosure implements Function<Object, List<Class<?>>> {
+  enum InterfaceBreadthFirstTransitiveClosure implements Function<Object, List<Class>> {
     INSTANCE;
     
     @Override
-    public List<Class<?>> apply( final Object input ) {
-      final List<Class<?>> ret = Lists.newArrayList( );
-      final Class<?> type = WhateverAsClass.INSTANCE.apply( input );
+    public List<Class> apply( final Object input ) {
+      final List<Class> ret = Lists.newArrayList( );
+      final Class type = WhateverAsClass.INSTANCE.apply( input );
       if ( type == Object.class || type == null ) {
         return ret;
       } else {
-        final List<Class<?>> superInterfaces = TransitiveClosureImplementedInterfaces.INSTANCE.apply( new Class[] { type } );
+        final List<Class> superInterfaces = TransitiveClosureImplementedInterfaces.INSTANCE.apply( new Class[] { type } );
         ret.addAll( superInterfaces );
-        final List<Class<?>> next = this.apply( type.getSuperclass( ) );
+        final List<Class> next = this.apply( type.getSuperclass( ) );
         ret.addAll( next );
         return ret;
       }
@@ -288,7 +288,7 @@ public class Classes {
    * @param o
    * @return
    */
-  public static Function<Object, List<Class<?>>> interfaceAncestors( ) {
+  public static Function<Object, List<Class>> interfaceAncestors( ) {
     return InterfaceBreadthFirstTransitiveClosure.INSTANCE;
   }
   
@@ -299,37 +299,38 @@ public class Classes {
    * @param o
    * @return
    */
-  public static List<Class<?>> interfaceAncestors( final Object o ) {
+  public static List<Class> interfaceAncestors( final Object o ) {
     return interfaceAncestors( ).apply( o );
   }
   
-  enum GenericsBreadthFirstTransitiveClosure implements Function<Object, List<Class<?>>> {
+  enum GenericsBreadthFirstTransitiveClosure implements Function<Object, List<Class>> {
     INSTANCE;
     
     @Override
-    public List<Class<?>> apply( final Object input ) {
-      final List<Class<?>> ret = Lists.newArrayList( );
-      if ( !input.getClass( ).isEnum( ) ) {
-        ret.addAll( processTypeForGenerics( input.getClass( ).getGenericSuperclass( ) ) );
+    public List<Class> apply( final Object input ) {
+      final List<Class> ret = Lists.newArrayList( );
+      Class inputClass = WhateverAsClass.INSTANCE.apply( input );
+      if ( !inputClass.isEnum( ) ) {
+        ret.addAll( processTypeForGenerics( inputClass.getGenericSuperclass( ) ) );
       }
-      ret.addAll( processTypeForGenerics( input.getClass( ).getGenericInterfaces( ) ) );
+      ret.addAll( processTypeForGenerics( inputClass.getGenericInterfaces( ) ) );
       return ret;
     }
     
-    private static List<Class<?>> processTypeForGenerics( final Type... types ) {
-      final List<Class<?>> ret = Lists.newArrayList( );
+    private static List<Class> processTypeForGenerics( final Type... types ) {
+      final List<Class> ret = Lists.newArrayList( );
       for ( final Type t : types ) {
         if ( t instanceof ParameterizedType ) {
           final ParameterizedType pt = ( ParameterizedType ) t;
           for ( final Type ptType : pt.getActualTypeArguments( ) ) {
             if ( ptType instanceof Class ) {
-              ret.add( ( Class<?> ) ptType );
+              ret.add( ( Class ) ptType );
             }
           }
         }
         if ( t instanceof Class ) {
-          ret.addAll( processTypeForGenerics( ( ( Class<?> ) t ).getGenericSuperclass( ) ) );
-          ret.addAll( processTypeForGenerics( ( ( Class<?> ) t ).getGenericInterfaces( ) ) );
+          ret.addAll( processTypeForGenerics( ( ( Class ) t ).getGenericSuperclass( ) ) );
+          ret.addAll( processTypeForGenerics( ( ( Class ) t ).getGenericInterfaces( ) ) );
         }
       }
       return ret;
@@ -344,7 +345,7 @@ public class Classes {
    * @param o
    * @return
    */
-  public static List<Class<?>> genericsToClasses( final Object o ) {
+  public static List<Class> genericsToClasses( final Object o ) {
     return genericsToClasses( ).apply( o );
   }
   
@@ -355,7 +356,7 @@ public class Classes {
    * @param o
    * @return
    */
-  private static Function<Object, List<Class<?>>> genericsToClasses( ) {
+  private static Function<Object, List<Class>> genericsToClasses( ) {
     return GenericsBreadthFirstTransitiveClosure.INSTANCE;
   }
   

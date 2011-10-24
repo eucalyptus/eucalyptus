@@ -870,7 +870,7 @@ public class Entities {
           } catch ( RuntimeException ex ) {
             db.rollback( );
             if ( Exceptions.isCausedBy( ex, OptimisticLockException.class ) ) {
-              rootCause = Exceptions.causedBy( ex, OptimisticLockException.class );
+              rootCause = Exceptions.findCause( ex, OptimisticLockException.class );
               continue;
             } else {
               rootCause = ex;
@@ -891,7 +891,7 @@ public class Entities {
     if ( function instanceof TransactionalFunction ) {
       return function;
     } else {
-      final List<Class<?>> generics = Classes.genericsToClasses( function );
+      final List<Class> generics = Classes.genericsToClasses( function );
       for ( final Class<?> type : generics ) {
         if ( PersistenceContexts.isPersistentClass( type ) ) {
           return asTransaction( type, function );

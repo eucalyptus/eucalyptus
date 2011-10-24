@@ -42,14 +42,14 @@ public class TransitionImpl<P extends HasName<P>, S extends Automata.State, T ex
    */
   @Override
   public TransitionHandler<P, S, T> addListener( TransitionListener<P> listener ) {
-    Logs.exhaust( ).debug( EventRecord.here( TransitionImpl.class, EventType.TRANSITION, this.toString( ), "addListener", listener.getClass( ).getSimpleName( ) ) );
+    Logs.extreme( ).debug( EventRecord.here( TransitionImpl.class, EventType.TRANSITION, this.toString( ), "addListener", listener.getClass( ).getSimpleName( ) ) );
     this.listeners.put( index.incrementAndGet( ), listener );
     return this;
   }
   
   private void removeListener( Integer key ) {
     TransitionListener<P> listener = this.listeners.remove( key );
-    Logs.exhaust( ).debug( EventRecord.here( TransitionImpl.class, EventType.TRANSITION, this.toString( ), "removeListener", listener.getClass( ).getSimpleName( ) ) );
+    Logs.extreme( ).debug( EventRecord.here( TransitionImpl.class, EventType.TRANSITION, this.toString( ), "removeListener", listener.getClass( ).getSimpleName( ) ) );
   }
   
   /**
@@ -107,7 +107,7 @@ public class TransitionImpl<P extends HasName<P>, S extends Automata.State, T ex
   private boolean fireListeners( final TransitionListener.Phases phase, final Predicate<TransitionListener<P>> pred, P parent ) {
     for ( Entry<Integer, TransitionListener<P>> entry : this.listeners.entrySet( ) ) {
       final TransitionListener<P> tl = entry.getValue( );
-      Logs.exhaust( ).trace( EventRecord.here( TransitionImpl.class, EventType.TRANSITION_LISTENER, "" + parent.getName( ), this.toString( ),
+      Logs.extreme( ).trace( EventRecord.here( TransitionImpl.class, EventType.TRANSITION_LISTENER, "" + parent.getName( ), this.toString( ),
                                                phase.toString( ),//
                                                entry.getKey( ).toString( ), tl.getClass( ).toString( ) ) );
       try {
@@ -115,7 +115,7 @@ public class TransitionImpl<P extends HasName<P>, S extends Automata.State, T ex
           throw new TransitionListenerException( entry.getValue( ).getClass( ).getSimpleName( ) + "." + phase + "( ) returned false." );
         }
       } catch ( Exception t ) {
-        Logs.exhaust( ).error( t, t );
+        Logs.extreme( ).error( t, t );
         return false;
       }
     }
@@ -162,7 +162,7 @@ public class TransitionImpl<P extends HasName<P>, S extends Automata.State, T ex
           }
         }, parent );
       } catch ( Exception ex ) {
-        Logs.exhaust( ).error( ex , ex );
+        Logs.extreme( ).error( ex , ex );
         transitionCallback.fireException( new TransitionException( ex ) );
       }
     }

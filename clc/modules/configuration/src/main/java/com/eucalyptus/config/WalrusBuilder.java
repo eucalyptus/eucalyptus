@@ -1,15 +1,16 @@
 package com.eucalyptus.config;
 
 import com.eucalyptus.bootstrap.Handles;
-import com.eucalyptus.component.Components;
 import com.eucalyptus.component.AbstractServiceBuilder;
-import com.eucalyptus.component.DiscoverableServiceBuilder;
+import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.ComponentId.ComponentPart;
+import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.id.Walrus;
 
-@DiscoverableServiceBuilder(Walrus.class)
-@Handles( { RegisterWalrusType.class, DeregisterWalrusType.class, DescribeWalrusesType.class, WalrusConfiguration.class, ModifyWalrusAttributeType.class } )
+@ComponentPart(Walrus.class)
+@Handles( { RegisterWalrusType.class, DeregisterWalrusType.class, DescribeWalrusesType.class, ModifyWalrusAttributeType.class } )
 public class WalrusBuilder extends AbstractServiceBuilder<WalrusConfiguration> {
   
   @Override
@@ -23,8 +24,8 @@ public class WalrusBuilder extends AbstractServiceBuilder<WalrusConfiguration> {
   }
 
   @Override
-  public com.eucalyptus.component.Component getComponent( ) {
-    return Components.lookup( Walrus.class );
+  public ComponentId getComponentId( ) {
+    return ComponentIds.lookup( Walrus.class );
   }
 
   @Override

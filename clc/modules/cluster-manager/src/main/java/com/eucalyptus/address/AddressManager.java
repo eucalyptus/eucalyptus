@@ -107,7 +107,6 @@ public class AddressManager {
   public ReleaseAddressResponseType release( ReleaseAddressType request ) throws Exception {
     ReleaseAddressResponseType reply = ( ReleaseAddressResponseType ) request.getReply( );
     reply.set_return( false );
-    Addresses.updateAddressingMode( );
     Address address = RestrictedTypes.doPrivileged( request.getPublicIp( ), Address.class );
     Addresses.release( address );
     reply.set_return( true );
@@ -116,7 +115,6 @@ public class AddressManager {
   
   public DescribeAddressesResponseType describe( DescribeAddressesType request ) throws EucalyptusCloudException {
     DescribeAddressesResponseType reply = ( DescribeAddressesResponseType ) request.getReply( );
-    Addresses.updateAddressingMode( );
     Context ctx = Contexts.lookup( );
     boolean isAdmin = ctx.hasAdministrativePrivileges( );
     User requestUser = ctx.getUser( );
@@ -153,7 +151,6 @@ public class AddressManager {
   public AssociateAddressResponseType associate( final AssociateAddressType request ) throws Exception {
     AssociateAddressResponseType reply = ( AssociateAddressResponseType ) request.getReply( );
     reply.set_return( false );
-    Addresses.updateAddressingMode( );
     final Address address = RestrictedTypes.doPrivileged( request.getPublicIp( ), Address.class );
     final VmInstance vm = RestrictedTypes.doPrivileged( request.getInstanceId( ), VmInstance.class );
     final VmInstance oldVm = findCurrentAssignedVm( address );
@@ -220,7 +217,6 @@ public class AddressManager {
   public DisassociateAddressResponseType disassociate( DisassociateAddressType request ) throws Exception {
     DisassociateAddressResponseType reply = ( DisassociateAddressResponseType ) request.getReply( );
     reply.set_return( false );
-    Addresses.updateAddressingMode( );
     Context ctx = Contexts.lookup( );
     final Address address = RestrictedTypes.doPrivileged( request.getPublicIp( ), Address.class );
     reply.set_return( true );

@@ -81,7 +81,7 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Table;
 
-public class Interceptors {
+public class Interceptors {//TODO:GRZE:@Configurable
   private static final Table stringify( Object[] state, final String[] propertyNames, final Type[] types ) {
     return HashBasedTable.create( );
   }

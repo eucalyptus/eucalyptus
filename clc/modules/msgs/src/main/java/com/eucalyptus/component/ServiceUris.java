@@ -63,10 +63,6 @@
 
 package com.eucalyptus.component;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.arrayWithSize;
-import static org.hamcrest.Matchers.notNullValue;
-import static org.hamcrest.Matchers.typeCompatibleWith;
 import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -74,11 +70,16 @@ import java.util.Map;
 import java.util.Map.Entry;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.ws.StackConfiguration;
-import com.eucalyptus.ws.StackConfiguration.Transport;
+import com.eucalyptus.ws.StackConfiguration.BasicTransport;
+import com.eucalyptus.ws.TransportDefinition;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.arrayWithSize;
+import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.typeCompatibleWith;
 
 public class ServiceUris {
   
@@ -180,7 +181,7 @@ public class ServiceUris {
     }
     
     private ComponentId         componentId;
-    private Transport           scheme;
+    private TransportDefinition scheme;
     private InetAddress         address;
     private Integer             port;
     private String              path     = null;
@@ -193,7 +194,7 @@ public class ServiceUris {
       this.componentId = componentId;
     }
     
-    public UriParserBuilder scheme( Transport uriScheme ) {
+    public UriParserBuilder scheme( TransportDefinition uriScheme ) {
       this.scheme = uriScheme;
       return this;
     }
@@ -210,8 +211,8 @@ public class ServiceUris {
     
     public UriParserBuilder path( String... path ) {
       this.path = ( path != null && path.length > 0
-        ? Lexemes.SLASH.format( ) + Joiner.on( Lexemes.SLASH.format( ) ).join( path )
-        : Lexemes.SLASH.format( ) ).replaceAll( "^//*", "/" );
+        ? "/" + Joiner.on( "/" ).join( path )
+        : "/" ).replaceAll( "^//*", "/" );
       return this;
     }
     
@@ -235,7 +236,7 @@ public class ServiceUris {
     public URI get( ) {
       assertThat( this.address, notNullValue( ) );
       assertThat( this.path, notNullValue( ) );
-      if ( this.scheme == null ) this.scheme = Transport.HTTP;
+      if ( this.scheme == null ) this.scheme = BasicTransport.HTTP;
       if ( this.port == null ) this.port = this.componentId.getPort( );
       if ( this.internal ) this.path = this.componentId.getInternalServicePath( this.path );
       String schemeString = StackConfiguration.DEFAULT_HTTPS_ENABLED
@@ -243,9 +244,9 @@ public class ServiceUris {
         : this.scheme.getScheme( );
       String hostNameString = StackConfiguration.USE_DNS_DELEGATION
         ? this.componentId.name( ) + "." + StackConfiguration.lookupDnsDomain( )
-        : this.address.getCanonicalHostName( );
+        : this.address.getHostAddress( );
       try {
-        URI u = new URI( schemeString, null, hostNameString, this.port, this.path, Lexemes.QUERY.format( this.query ), null );
+        URI u = new URI( schemeString, null, hostNameString, this.port, ( "/" + this.path ).replaceAll( "^//", "/" ), Lexemes.QUERY.format( this.query ), null );
         u.parseServerAuthority( );
         return u;
       } catch ( URISyntaxException e ) {
@@ -335,6 +336,6 @@ public class ServiceUris {
   }
   
   private static UriParserBuilder make( ComponentId compId, final InetAddress host, Integer port, String... pathParts ) {
-    return new UriParserBuilder( compId ).scheme( compId.getTransport( ) ).host( host ).port( port ).path( compId.getServicePath( pathParts ) );
+    return new UriParserBuilder( compId ).scheme( compId.getTransports( ).iterator( ).next( ) ).host( host ).port( port ).path( compId.getServicePath( pathParts ) );
   }
 }

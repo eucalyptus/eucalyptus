@@ -63,39 +63,36 @@
 
 package com.eucalyptus.util.async;
 
-import java.util.concurrent.ExecutionException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.context.ServiceContext;
 import com.eucalyptus.records.Logs;
-import com.eucalyptus.util.Exceptions;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class AsyncRequests {
   
   private static Logger LOG = Logger.getLogger( AsyncRequests.class );
+  
   public static <A extends BaseMessage, B extends BaseMessage> B sendSync( ServiceConfiguration config, final A msg ) throws Exception {
-    try {
-      return newRequest( new MessageCallback<A, B>( ) {
-        {
-          this.setRequest( msg );
-        }
-        
-        @Override
-        public void fire( B msg ) {
-          LOG.debug( msg.toSimpleString( ) );
-        }
-      } ).sendSync( config );
-    } catch ( InterruptedException ex ) {
-      Thread.currentThread( ).interrupt( );
-      throw ex;
-    } catch ( ExecutionException ex ) {
-      LOG.warn( ex.getMessage( ) );
-      Logs.exhaust( ).error( ex.getCause( ), ex.getCause( ) );
-      throw Exceptions.toCatchable( ex.getCause( ) );
-    } catch ( Exception ex ) {
-      LOG.warn( ex.getMessage( ) );
-      Logs.exhaust( ).error( ex.getCause( ), ex.getCause( ) );
-      throw Exceptions.toCatchable( ex.getCause( ) );
+    if ( config.isVmLocal( ) ) {
+      return ServiceContext.send( config.getComponentId( ), msg );
+    } else {
+      try {
+        Request<A, B> req = newRequest( new MessageCallback<A, B>( ) {
+          {
+            this.setRequest( msg );
+          }
+          
+          @Override
+          public void fire( B msg ) {
+            Logs.extreme( ).debug( msg.toSimpleString( ) );
+          }
+        } );
+        return req.sendSync( config );
+      } catch ( InterruptedException ex ) {
+        Thread.currentThread( ).interrupt( );
+        throw ex;
+      }
     }
   }
   

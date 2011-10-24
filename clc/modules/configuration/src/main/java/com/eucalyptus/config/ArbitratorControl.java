@@ -73,9 +73,9 @@ import java.util.concurrent.ScheduledExecutorService;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfigurations;
-import com.eucalyptus.component.id.Arbitrator;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Walrus;
+import com.eucalyptus.empyrean.Empyrean.Arbitrator;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.system.Threads;
@@ -98,7 +98,8 @@ public class ArbitratorControl {
     if ( Components.lookup( Walrus.class ).hasLocalService( ) || Components.lookup( Eucalyptus.class ).hasLocalService( ) ) {
       final List<ArbitratorConfiguration> configs = ServiceConfigurations.list( Arbitrator.class );
       for ( final ArbitratorConfiguration config : configs ) {
-        final String hostName = config.getHostName( );
+        final String hostName = config.getGatewayHost();
+        if ( hostName != null ) {
         Threads.lookup( Arbitrator.class, ArbitratorControl.class ).submit( new Runnable( ) {
           @Override
           public void run( ) {
@@ -108,14 +109,15 @@ public class ArbitratorControl {
                 ArbitratorControl.error.remove( hostName );
               }
             } catch ( final UnknownHostException e ) {
-              ArbitratorControl.error.put( hostName, Exceptions.filterStackTrace( e, 2 ) );
+              ArbitratorControl.error.put( hostName, Exceptions.filterStackTrace( e ) );
             } catch ( final IOException e ) {
-              ArbitratorControl.error.put( hostName, Exceptions.filterStackTrace( e, 2 ) );
+              ArbitratorControl.error.put( hostName, Exceptions.filterStackTrace( e ) );
             }
             EventRecord.here( ArbitratorControl.class, EventType.BOOTSTRAPPER_CHECK, hostName, "errorMap", error.get( hostName ).toString( ) ).debug( );
           }
         }
-               );
+        );
+        }
       }
       final Set<String> downArbitrators = Sets.newHashSet( error.keySet( ) );
       if ( downArbitrators.size( ) > 0 ) {

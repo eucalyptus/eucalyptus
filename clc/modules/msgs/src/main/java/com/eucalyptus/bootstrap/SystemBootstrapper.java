@@ -254,16 +254,16 @@ public class SystemBootstrapper {
     } );
     Bootstrap.applyTransition( Component.State.NOTREADY, Components.whichCanLoad( ) );
     Threads.enqueue( ServiceConfigurations.createEphemeral( Empyrean.INSTANCE ), new Runnable( ) {
-      @Override
-      public void run( ) {
-        try {
-          Bootstrap.applyTransition( Component.State.DISABLED, Components.whichCanLoad( ) );
-          Bootstrap.applyTransition( Component.State.ENABLED, Components.whichCanEnable( ) );
-        } catch ( Exception ex ) {
-          LOG.error( ex, ex );
-        }
-      }
-    } );
+                       @Override
+                       public void run( ) {
+                         try {
+                           Bootstrap.applyTransition( Component.State.DISABLED, Components.whichCanLoad( ) );
+                           Bootstrap.applyTransition( Component.State.ENABLED, Components.whichCanEnable( ) );
+                         } catch ( Exception ex ) {
+                           LOG.error( ex, ex );
+                         }
+                       }
+                     } );
     try {
       SystemBootstrapper.printBanner( );
     } catch ( Exception ex ) {
@@ -281,7 +281,9 @@ public class SystemBootstrapper {
         exec.apply( stage );
       } while ( ( stage = Bootstrap.transition( ) ) != null );
     } catch ( Throwable t ) {
-      throw t;
+      LOG.error( t );
+      Logs.extreme( ).error( t, t );
+      System.exit( 123 );
     }
   }
   
@@ -390,39 +392,58 @@ public class SystemBootstrapper {
                     +
                     "[8m-----------------[0;10m[1m|#[0;10m[8m                   [0;10mj[1mn[0;10mf^[8m     [0;10m[1mStarted Eucalyptus       [0;10m[1m#|[0;10m\n"
                     +
-                    "[8m-----------------[0;10m[1m|#___________________[0;10m [1mN[0;10m'[8m [0;10m[1m______________________________#|[0;10m\n" +
-                    "[8m-----------------[0;10m[1m(####################[0;10m [1mv[0;10m'[8m [0;10m[1m###############################)[0;10m\n" +
-                    "[8m----------------     .--------------:I [0;10m^[8m   . .. .. .. .. ..... .. .. ...=v[0;10m\n" +
+                    "[8m-----------------[0;10m[1m|#___________________[0;10m [1mN[0;10m'[8m [0;10m[1m______________________________#|[0;10m\n"
+                    +
+                    "[8m-----------------[0;10m[1m(####################[0;10m [1mv[0;10m'[8m [0;10m[1m###############################)[0;10m\n"
+                    +
+                    "[8m----------------     .--------------:I [0;10m^[8m   . .. .. .. .. ..... .. .. ...=v[0;10m\n"
+                    +
                     "[8m---------------..     ------------------  ................................[0;10m\n";
     
-    banner += "\n[8m-----------------[0;10m[1m Version: " + singleton.getVersion( ) + "\n";
-    banner += headerHeader + String.format( headerFormat, "System Bootstrap Configuration" ) + headerFooter;
+    banner += "\n[8m-----------------[0;10m[1m Version: " + singleton.getVersion( )
+              + "\n";
+    banner += headerHeader + String.format( headerFormat, "System Bootstrap Configuration" )
+              + headerFooter;
     for ( Bootstrap.Stage stage : Bootstrap.Stage.values( ) ) {
-      banner += prefix + stage.name( ) + SEP + stage.describe( ).replaceAll( "(\\w*)\\w\n", "\1\n" + prefix + stage.name( ) + SEP ).replaceAll( "^\\w* ", "" );
+      banner += prefix + stage.name( )
+                + SEP
+                + stage.describe( ).replaceAll( "(\\w*)\\w\n", "\1\n" + prefix
+                                                               + stage.name( )
+                                                               + SEP ).replaceAll( "^\\w* ", "" );
     }
-    banner += headerHeader + String.format( headerFormat, "Component Bootstrap Configuration" ) + headerFooter;
+    banner += headerHeader + String.format( headerFormat, "Component Bootstrap Configuration" )
+              + headerFooter;
     for ( Component c : Components.list( ) ) {
       if ( c.getComponentId( ).isAvailableLocally( ) ) {
-        for ( Bootstrapper b : c.getBootstrapper( ).getBootstrappers( ) ) {
-          banner += prefix + String.format( "%-15.15s", c.getName( ) ) + SEP + b.toString( );
-        }
+        banner += c.getBootstrapper( );
       }
     }
-    banner += headerHeader + String.format( headerFormat, "Local Services" ) + headerFooter;
+    banner += headerHeader + String.format( headerFormat, "Local Services" )
+              + headerFooter;
     for ( Component c : Components.list( ) ) {
       if ( c.hasLocalService( ) ) {
         ServiceConfiguration localConfig = c.getLocalServiceConfiguration( );
-        banner += prefix + c.getName( ) + SEP + localConfig.toString( );
-        banner += prefix + c.getName( ) + SEP + localConfig.lookupBuilder( ).toString( );
-        banner += prefix + c.getName( ) + SEP + localConfig.getComponentId( ).toString( );
-        banner += prefix + c.getName( ) + SEP + localConfig.lookupState( ).toString( );
+        banner += prefix + c.getName( )
+                  + SEP
+                  + localConfig.toString( );
+        banner += prefix + c.getName( )
+                  + SEP
+                  + localConfig.getComponentId( ).toString( );
+        banner += prefix + c.getName( )
+                  + SEP
+                  + localConfig.lookupState( ).toString( );
       }
     }
-    banner += headerHeader + String.format( headerFormat, "Detected Interfaces" ) + headerFooter;
+    banner += headerHeader + String.format( headerFormat, "Detected Interfaces" )
+              + headerFooter;
     for ( NetworkInterface iface : Internets.getNetworkInterfaces( ) ) {
-      banner += prefix + iface.getDisplayName( ) + SEP + Lists.transform( iface.getInterfaceAddresses( ), Functions.toStringFunction( ) );
+      banner += prefix + iface.getDisplayName( )
+                + SEP
+                + Lists.transform( iface.getInterfaceAddresses( ), Functions.toStringFunction( ) );
       for ( InetAddress addr : Lists.newArrayList( Iterators.forEnumeration( iface.getInetAddresses( ) ) ) ) {
-        banner += prefix + iface.getDisplayName( ) + SEP + addr;
+        banner += prefix + iface.getDisplayName( )
+                  + SEP
+                  + addr;
       }
     }
     LOG.info( banner );

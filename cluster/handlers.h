@@ -98,6 +98,7 @@ static configEntry configKeysRestart[] = {
   {"VNET_DHCPDAEMON", "/usr/sbin/dhcpd3"},
   {"VNET_DHCPUSER", "dhcpd"},
   {"VNET_DNS", NULL},
+  {"VNET_DOMAINNAME", "eucalyptus"},
   {"VNET_LOCALIP", NULL},
   {"VNET_MACMAP", NULL},
   {"VNET_MODE", "SYSTEM"},
