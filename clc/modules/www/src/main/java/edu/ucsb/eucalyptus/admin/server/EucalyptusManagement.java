@@ -325,7 +325,6 @@ public class EucalyptusManagement {
         {
           setDefaultKernelId( ImageConfiguration.getInstance().getDefaultRamdiskId( ) );//TODO:GRZE: facade for images config to remove direct reference to impl. class for config
           setDefaultRamdiskId( ImageConfiguration.getInstance().getDefaultRamdiskId( ) );
-          setMaxUserPublicAddresses( AddressingConfiguration.getInstance( ).getMaxUserPublicAddresses( ) );//TODO:GRZE: facade for address config to remove direct reference to impl. class for config
           setDoDynamicPublicAddresses( AddressingConfiguration.getInstance( ).getDoDynamicPublicAddresses( ) );
           setSystemReservedPublicAddresses( AddressingConfiguration.getInstance( ).getSystemReservedPublicAddresses( ) );
           setDnsDomain( input.getDnsDomain( ) );
@@ -352,7 +351,6 @@ public class EucalyptusManagement {
         
         @Override
         public void fire( AddressingConfiguration t ) {
-          t.setMaxUserPublicAddresses( systemConfig.getMaxUserPublicAddresses() );
           t.setDoDynamicPublicAddresses( systemConfig.isDoDynamicPublicAddresses() );
           t.setSystemReservedPublicAddresses( systemConfig.getSystemReservedPublicAddresses() );
         }

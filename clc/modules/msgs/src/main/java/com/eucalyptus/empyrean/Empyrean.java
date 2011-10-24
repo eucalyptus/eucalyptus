@@ -76,6 +76,7 @@ import com.eucalyptus.component.ComponentId.Partition;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.scripting.Groovyness;
 import com.eucalyptus.util.Internets;
+import com.eucalyptus.ws.WebServices;
 import com.google.common.base.Predicate;
 
 @Partition( Empyrean.class )
@@ -87,7 +88,7 @@ public class Empyrean extends ComponentId {
   public static final Empyrean INSTANCE         = new Empyrean( );                   //NOTE: this has a silly name because it is temporary.  do not use it as an example of good form for component ids.
                                                                                       
   @Partition( value = { Empyrean.class }, manyToOne = true )
-  @InternalService
+//  @InternalService
   public static class Arbitrator extends ComponentId {
     
     private static final long serialVersionUID = 1L;
@@ -130,14 +131,6 @@ public class Empyrean extends ComponentId {
     }
   }
   
-  enum ShouldInitialize implements Predicate<ServiceConfiguration> {
-    INST;
-    @Override
-    public boolean apply( final ServiceConfiguration input ) {
-      return !BootstrapArgs.isCloudController( ) && Internets.testLocal( input.getInetAddress( ) );
-    }
-  }
-  
   @Provides( Empyrean.class )
   @RunDuring( Bootstrap.Stage.PoolInit )
   public static class DatabasePoolBootstrapper extends Bootstrapper.Simple {
@@ -147,9 +140,14 @@ public class Empyrean extends ComponentId {
       Groovyness.run( "setup_dbpool.groovy" );
       return true;
     }
+
+    @Override
+    public boolean check( ) throws Exception {
+      return super.check( );
+    }
     
   }
-  
+
   @Override
   public String getInternalServicePath( final String... pathParts ) {
     return "/internal/Empyrean";

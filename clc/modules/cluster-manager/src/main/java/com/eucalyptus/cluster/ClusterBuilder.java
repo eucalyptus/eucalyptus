@@ -23,7 +23,10 @@ import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 
 @ComponentPart( ClusterController.class )
-@Handles( { RegisterClusterType.class, DeregisterClusterType.class, DescribeClustersType.class, ClusterConfiguration.class, ModifyClusterAttributeType.class } )
+@Handles( { RegisterClusterType.class,
+           DeregisterClusterType.class,
+           DescribeClustersType.class,
+           ModifyClusterAttributeType.class } )
 public class ClusterBuilder extends AbstractServiceBuilder<ClusterConfiguration> {
   static Logger LOG = Logger.getLogger( ClusterBuilder.class );
   

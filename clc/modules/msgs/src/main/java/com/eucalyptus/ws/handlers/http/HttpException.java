@@ -61,66 +61,30 @@
 /*
  * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
-package com.eucalyptus.ws.util;
+package com.eucalyptus.ws.handlers.http;
 
-import java.util.List;
+import com.eucalyptus.ws.WebServicesException;
 
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.handler.codec.frame.TooLongFrameException;
-import org.jboss.netty.handler.codec.http.HttpMethod;
+public class HttpException extends WebServicesException {
 
-import com.eucalyptus.ws.HttpException;
-import com.google.common.collect.Lists;
-
-
-public class HttpUtils {
-
-  public static String readLine( ChannelBuffer buffer, int maxLineLength ) throws HttpException {
-    StringBuilder sb = new StringBuilder( 64 );
-    int lineLength = 0;
-    while ( true ) {
-      byte nextByte = buffer.readByte( );
-      if ( nextByte == HttpUtils.CR ) {
-        nextByte = buffer.readByte( );
-        if ( nextByte == HttpUtils.LF ) { return sb.toString( ); }
-      } else if ( nextByte == HttpUtils.LF ) {
-        return sb.toString( );
-      } else {
-        if ( lineLength >= maxLineLength ) { throw new HttpException( "HTTP input line longer than " + maxLineLength + " bytes: " + sb.toString( ) ); }
-        lineLength++;
-        sb.append( ( char ) nextByte );
-      }
-    }
-  }
-  private static List<String> httpVerbPrefix = Lists.newArrayList( HttpMethod.CONNECT.getName( ).substring( 0, 3 ),
-                                                                   HttpMethod.GET.getName( ).substring( 0, 3 ),
-                                                                   HttpMethod.PUT.getName( ).substring( 0, 3 ),
-                                                                   HttpMethod.POST.getName( ).substring( 0, 3 ),
-                                                                   HttpMethod.HEAD.getName( ).substring( 0, 3 ),
-                                                                   HttpMethod.OPTIONS.getName( ).substring( 0, 3 ),
-                                                                   HttpMethod.DELETE.getName( ).substring( 0, 3 ),
-                                                                   HttpMethod.TRACE.getName( ).substring( 0, 3 ) );
-                                                                   
-                                                                   
-  public static boolean maybeSsl( ChannelBuffer buffer ) throws HttpException {
-    buffer.markReaderIndex( );
-    StringBuffer sb = new StringBuffer( );
-    for( int lineLength = 0; lineLength++ < 3; sb.append( (char) buffer.readByte() ) );
-    buffer.resetReaderIndex( );
-    return !httpVerbPrefix.contains( sb.toString( ) );
+  public HttpException( ) {
+    super( );
+    // TODO Auto-generated constructor stub
   }
 
-  
-  public static final byte SP = 32;
-  public static final byte HT = 9;
-  public static final byte CR = 13;
-  public static final byte EQUALS = 61;
-  public static final byte LF = 10;
-  public static final byte[] CRLF = new byte[] { CR, LF };
-  public static final byte COLON = 58;
-  public static final byte SEMICOLON = 59;
-  public static final byte COMMA = 44;
-  public static final byte DOUBLE_QUOTE = '"';
-  public static final String DEFAULT_CHARSET = "UTF-8";
+  public HttpException( String arg0, Throwable arg1 ) {
+    super( arg0, arg1 );
+    // TODO Auto-generated constructor stub
+  }
+
+  public HttpException( String arg0 ) {
+    super( arg0 );
+    // TODO Auto-generated constructor stub
+  }
+
+  public HttpException( Throwable arg0 ) {
+    super( arg0 );
+    // TODO Auto-generated constructor stub
+  }
 
 }

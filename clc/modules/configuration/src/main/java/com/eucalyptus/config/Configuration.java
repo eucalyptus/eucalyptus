@@ -65,41 +65,34 @@ package com.eucalyptus.config;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.NoSuchElementException;
 import java.util.Set;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentRegistrationHandler;
 import com.eucalyptus.component.Components;
-import com.eucalyptus.component.Service;
 import com.eucalyptus.component.ServiceBuilder;
 import com.eucalyptus.component.ServiceBuilders;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
-import com.eucalyptus.component.ServiceRegistrationException;
-import com.eucalyptus.component.Topology;
 import com.eucalyptus.scripting.Groovyness;
-import com.eucalyptus.util.Assertions;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Function;
-import com.google.common.base.Functions;
-import com.google.common.base.Joiner;
-import com.google.common.collect.Collections2;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.notNullValue;
 
 public class Configuration {
   public static Logger LOG                 = Logger.getLogger( Configuration.class );
   static String        CLUSTER_KEY_FSTRING = "cc-%s";
   static String        NODE_KEY_FSTRING    = "nc-%s";
-
+  
   @TypeMapper
-  public enum ComponentInfoMapper implements Function<ServiceConfiguration,ComponentInfoType> {
+  public enum ComponentInfoMapper implements Function<ServiceConfiguration, ComponentInfoType> {
     INSTANCE;
-
+    
     @Override
     public ComponentInfoType apply( final ServiceConfiguration input ) {
       return new ComponentInfoType( ) {
@@ -123,25 +116,30 @@ public class Configuration {
     
   }
   
-
   public static RegisterComponentResponseType registerComponent( final RegisterComponentType request ) throws EucalyptusCloudException {
-    final ComponentId componentId = ServiceBuilders.oneWhichHandles( request.getClass( ) );
-    final RegisterComponentResponseType reply = ( RegisterComponentResponseType ) request.getReply( );
+    ServiceBuilder<? extends ServiceConfiguration> builder = ServiceBuilders.handles( request.getClass( ) );
+    final ComponentId componentId = builder.getComponentId( );
+    final RegisterComponentResponseType reply = request.getReply( );
     final String name = request.getName( );
     final String hostName = request.getHost( );
     final Integer port = request.getPort( );
-    Assertions.assertNotNull( name, "Name must not be null: " + request );
-    Assertions.assertNotNull( hostName, "Hostname must not be null: " + request );
-    Assertions.assertNotNull( port, "Port must not be null: " + request );
+    assertThat( "Name must not be null: " + request, name, notNullValue( ) );
+    assertThat( "Hostname must not be null: " + request, hostName, notNullValue( ) );
+    assertThat( "Port must not be null: " + request, port, notNullValue( ) );
     
     String partition = request.getPartition( );
     if ( !componentId.isPartitioned( ) ) {//TODO:GRZE: convert to @NotNull
       partition = componentId.getPartition( );
-      LOG.error( "Unpartitioned component (" + componentId.getName( ) + ") is being registered w/o a partition.  Using fixed partition=" + partition
-                 + " for request: " + request );
+      LOG.error( "Unpartitioned component (" + componentId.getName( )
+                 + ") is being registered w/o a partition.  Using fixed partition="
+                 + partition
+                 + " for request: "
+                 + request );
     } else if ( componentId.isPartitioned( ) && ( partition == null ) ) {
       partition = name;
-      LOG.error( "Partitioned component is being registered w/o a partition.  Using partition=name=" + partition + " for request: " + request );
+      LOG.error( "Partitioned component is being registered w/o a partition.  Using partition=name=" + partition
+                 + " for request: "
+                 + request );
     }
     try {
       reply.set_return( ComponentRegistrationHandler.register( componentId, partition, name, hostName, port ) );
@@ -152,10 +150,11 @@ public class Configuration {
   }
   
   public static DeregisterComponentResponseType deregisterComponent( final DeregisterComponentType request ) throws EucalyptusCloudException {
-    final ComponentId component = ServiceBuilders.oneWhichHandles( request.getClass( ) );
+    ServiceBuilder<? extends ServiceConfiguration> builder = ServiceBuilders.handles( request.getClass( ) );
+    final ComponentId componentId = builder.getComponentId( );
     final DeregisterComponentResponseType reply = ( DeregisterComponentResponseType ) request.getReply( );
     try {
-      reply.set_return( ComponentRegistrationHandler.deregister( component, request.getPartition( ) ) );
+      reply.set_return( ComponentRegistrationHandler.deregister( componentId, request.getPartition( ) ) );
     } catch ( final Throwable ex ) {
       throw new EucalyptusCloudException( "Component deregistration failed because: " + ex.getMessage( ), ex );
     }
@@ -201,7 +200,7 @@ public class Configuration {
         } else {
           final ServiceConfiguration config = c.getLocalServiceConfiguration( );
           ComponentInfoType info = TypeMappers.transform( config, ComponentInfoType.class );
-          if( !Boolean.TRUE.equals( request.getVerbose( ) ) ) {
+          if ( !Boolean.TRUE.equals( request.getVerbose( ) ) ) {
             info.setDetail( "" );
           }
           listConfigs.add( info );
@@ -211,7 +210,7 @@ public class Configuration {
       ServiceBuilder<? extends ServiceConfiguration> compId = ServiceBuilders.handles( request.getClass( ) );
       for ( final ServiceConfiguration config : ServiceConfigurations.list( compId.getComponentId( ).getClass( ) ) ) {
         ComponentInfoType info = TypeMappers.transform( config, ComponentInfoType.class );
-        if( !Boolean.TRUE.equals( request.getVerbose( ) ) ) {
+        if ( !Boolean.TRUE.equals( request.getVerbose( ) ) ) {
           info.setDetail( "" );
         }
         listConfigs.add( info );

@@ -92,7 +92,7 @@ public class Bundles {
   
   public static MessageCallback createCallback( BundleInstanceType request ) throws AuthException, IllegalContextAccessException, ServiceStateException {
     Component walrus = Components.lookup( Walrus.class );
-    NavigableSet<ServiceConfiguration> configs = walrus.lookupServiceConfigurations( );
+    NavigableSet<ServiceConfiguration> configs = walrus.services( );
     if ( configs.isEmpty( ) || !Component.State.ENABLED.equals( configs.first( ).lookupState( ) ) ) {
       throw new ServiceStateException( "Failed to bundle instance because there is no available walrus service at the moment." );
     }

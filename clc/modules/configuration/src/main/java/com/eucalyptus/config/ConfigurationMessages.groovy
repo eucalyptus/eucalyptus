@@ -70,12 +70,7 @@ import edu.ucsb.eucalyptus.msgs.BaseMessage
 import edu.ucsb.eucalyptus.msgs.EucalyptusData
 
 @ComponentMessage(ConfigurationService.class)
-public class ConfigurationMessage extends BaseMessage {
-  String getComponentName(){
-    String className = this.getClass().getSimpleName();
-    return className.replaceAll("Describe","").replaceAll("Deregister","").replaceAll("Register","").substring(0,6);
-  }
-}
+public class ConfigurationMessage extends BaseMessage {}
 public class ComponentInfoType extends EucalyptusData {
   String type;
   String partition;
@@ -131,14 +126,6 @@ public class ModifyComponentAttributeType extends ConfigurationMessage {
   String value;
 }
 public class ModifyComponentAttributeResponseType extends ConfigurationMessage {}
-
-public class RegisterClusterType extends RegisterComponentType {
-  public RegisterClusterType( ) {}
-  public RegisterClusterType( String partition, String name, String host, Integer port ) {
-    super( partition, name, host, port );
-  }  
-}
-
 
 public class GetComponentLogsType extends DescribeComponentsType {}
 public class GetComponentLogsResponseType extends DescribeComponentsResponseType {}

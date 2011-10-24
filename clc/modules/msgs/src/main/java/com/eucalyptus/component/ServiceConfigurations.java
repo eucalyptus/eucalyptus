@@ -204,21 +204,20 @@ public class ServiceConfigurations {
     @Override
     public ServiceConfiguration apply( final ServiceId arg0 ) {
       final Component comp = Components.lookup( arg0.getType( ) );
-      ServiceConfiguration config;
       try {
-        config = comp.lookupServiceConfiguration( arg0.getName( ) );
+        return comp.lookup( arg0.getName( ) );
       } catch ( final NoSuchElementException ex1 ) {
-        final ServiceBuilder<? extends ServiceConfiguration> builder = comp.getBuilder( );
+        final ServiceBuilder<? extends ServiceConfiguration> builder = ServiceBuilders.lookup( comp.getComponentId( ) );
         try {
           final URI uri = new URI( arg0.getUri( ) );
-          config = builder.newInstance( arg0.getPartition( ), arg0.getName( ), uri.getHost( ), uri.getPort( ) );
-          comp.loadService( config );
+          ServiceConfiguration config = builder.newInstance( arg0.getPartition( ), arg0.getName( ), uri.getHost( ), uri.getPort( ) );
+          comp.setup( config );
+          return config;
         } catch ( final URISyntaxException ex ) {
           LOG.error( ex, ex );
           throw Exceptions.toUndeclared( ex );
         }
       }
-      return config;
     }
     
   }
@@ -260,7 +259,7 @@ public class ServiceConfigurations {
   }
   
   public static ServiceConfiguration createEphemeral( final ComponentId compId, final InetAddress host ) {
-    return new EphemeralConfiguration( compId, compId.getPartition( ), host.getHostAddress( ), ServiceUris.remote( compId ) );
+    return new EphemeralConfiguration( compId, compId.getPartition( ), host.getHostAddress( ), ServiceUris.remote( compId, host ) );
   }
   
   public static ServiceConfiguration createEphemeral( final Component component, final InetAddress host ) {
@@ -375,7 +374,7 @@ public class ServiceConfigurations {
     };
   }
   
-  @TypeMapper( { ServiceCheckRecord.class, ServiceStatusDetail.class } )
+  @TypeMapper
   public enum ServiceCheckRecordMapper implements Function<ServiceCheckRecord, ServiceStatusDetail> {
     INSTANCE;
     @Override

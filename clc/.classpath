@@ -111,7 +111,7 @@
 	<classpathentry kind="lib" path="lib/gwt-servlet-deps-2.2.jar"/>
 	<classpathentry kind="lib" path="lib/gwt-soyc-vis-2.2.jar"/>
 	<classpathentry kind="lib" path="lib/gwt-user-2.2.jar"/>
-	<classpathentry kind="lib" path="lib/ha-jdbc-2.0.16-rc-1-jdk1.6.jar"/>
+	<classpathentry kind="lib" path="lib/ha-jdbc-2.0.16-rc-1-jdk1.6.jar" sourcepath="/bzr/third-party/ha-jdbc-2.0.16-rc-1"/>
 	<classpathentry kind="lib" path="lib/hamcrest-all-1.2.jar"/>
 	<classpathentry kind="lib" path="lib/hibernate-3.5.6-Final.jar"/>
 	<classpathentry kind="lib" path="lib/hsqldb-1.8.0.10.jar"/>
@@ -165,7 +165,7 @@
 	<classpathentry kind="lib" path="lib/mule-module-xml-2.0.1.jar"/>
 	<classpathentry kind="lib" path="lib/mule-transport-vm-2.0.1.jar"/>
 	<classpathentry kind="lib" path="lib/mysql-connector-java-commercial-5.1.11-bin.jar"/>
-	<classpathentry kind="lib" path="lib/netty-3.1.0.CR1.jar"/>
+	<classpathentry kind="lib" path="lib/netty-3.1.0.CR1.jar" sourcepath="/bzr/third-party/netty-3.1.5.GA"/>
 	<classpathentry kind="lib" path="lib/openjdk-crypto.jar"/>
 	<classpathentry kind="lib" path="lib/org.restlet-1.1.5.jar"/>
 	<classpathentry kind="lib" path="lib/org.restlet.ext.velocity-1.1.5.jar"/>

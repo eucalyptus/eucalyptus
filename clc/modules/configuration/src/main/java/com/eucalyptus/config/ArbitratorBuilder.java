@@ -6,13 +6,14 @@ import com.eucalyptus.component.AbstractServiceBuilder;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentId.ComponentPart;
 import com.eucalyptus.component.ComponentIds;
-import com.eucalyptus.component.ServiceBuilder;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.empyrean.Empyrean.Arbitrator;
 
 @ComponentPart( Arbitrator.class )
-@Handles( { RegisterArbitratorType.class, DeregisterArbitratorType.class, DescribeArbitratorsType.class, ArbitratorConfiguration.class,
+@Handles( { RegisterArbitratorType.class,
+           DeregisterArbitratorType.class,
+           DescribeArbitratorsType.class,
            ModifyArbitratorAttributeType.class } )
 public class ArbitratorBuilder extends AbstractServiceBuilder<ArbitratorConfiguration> {
   private static Logger LOG = Logger.getLogger( ArbitratorBuilder.class );

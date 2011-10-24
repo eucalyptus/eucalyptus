@@ -61,28 +61,48 @@
 /*
  * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
-package com.eucalyptus.ws;
+package com.eucalyptus.ws.handlers.http;
 
-public class HttpException extends WebServicesException {
+import java.util.List;
 
-  public HttpException( ) {
-    super( );
-    // TODO Auto-generated constructor stub
+import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.handler.codec.frame.TooLongFrameException;
+import org.jboss.netty.handler.codec.http.HttpMethod;
+
+import com.google.common.collect.Lists;
+
+
+public class HttpUtils {
+
+  public static String readLine( ChannelBuffer buffer, int maxLineLength ) throws HttpException {
+    StringBuilder sb = new StringBuilder( 64 );
+    int lineLength = 0;
+    while ( true ) {
+      byte nextByte = buffer.readByte( );
+      if ( nextByte == HttpUtils.CR ) {
+        nextByte = buffer.readByte( );
+        if ( nextByte == HttpUtils.LF ) { return sb.toString( ); }
+      } else if ( nextByte == HttpUtils.LF ) {
+        return sb.toString( );
+      } else {
+        if ( lineLength >= maxLineLength ) { throw new HttpException( "HTTP input line longer than " + maxLineLength + " bytes: " + sb.toString( ) ); }
+        lineLength++;
+        sb.append( ( char ) nextByte );
+      }
+    }
   }
 
-  public HttpException( String arg0, Throwable arg1 ) {
-    super( arg0, arg1 );
-    // TODO Auto-generated constructor stub
-  }
-
-  public HttpException( String arg0 ) {
-    super( arg0 );
-    // TODO Auto-generated constructor stub
-  }
-
-  public HttpException( Throwable arg0 ) {
-    super( arg0 );
-    // TODO Auto-generated constructor stub
-  }
+  
+  public static final byte SP = 32;
+  public static final byte HT = 9;
+  public static final byte CR = 13;
+  public static final byte EQUALS = 61;
+  public static final byte LF = 10;
+  public static final byte[] CRLF = new byte[] { CR, LF };
+  public static final byte COLON = 58;
+  public static final byte SEMICOLON = 59;
+  public static final byte COMMA = 44;
+  public static final byte DOUBLE_QUOTE = '"';
+  public static final String DEFAULT_CHARSET = "UTF-8";
 
 }

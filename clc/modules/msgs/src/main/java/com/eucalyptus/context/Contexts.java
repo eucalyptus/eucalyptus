@@ -12,11 +12,12 @@ import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
-import com.eucalyptus.util.Assertions;
 import com.eucalyptus.ws.util.ReplyQueue;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
 import edu.ucsb.eucalyptus.msgs.HasRequest;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.notNullValue;
 
 public class Contexts {
   private static Logger                          LOG             = Logger.getLogger( Contexts.class );
@@ -67,7 +68,7 @@ public class Contexts {
   }
   
   public static Context lookup( String correlationId ) throws NoSuchContextException {
-    Assertions.assertNotNull( correlationId );
+    assertThat( "BUG: correlationId is null.", correlationId, notNullValue( ) );
     if ( !uuidContexts.containsKey( correlationId ) ) {
       throw new NoSuchContextException( "Found correlation id " + correlationId + " but no corresponding context." );
     } else {
@@ -112,7 +113,7 @@ public class Contexts {
   }
   
   public static void clear( String corrId ) {
-    Assertions.assertNotNull( corrId );
+    assertThat( "BUG: correlationId is null.", corrId, notNullValue( ) );
     Context ctx = uuidContexts.remove( corrId );
     Channel channel = null;
     if ( ctx != null && ( channel = ctx.getChannel( ) ) != null ) {
@@ -155,10 +156,10 @@ public class Contexts {
       Channels.write( channel, responseMessage );
       clear( ctx );
     } catch ( NoSuchContextException e ) {
-      ServiceContext.LOG.warn( "Received a reply for absent client:  No channel to write response message.", e );
-      ServiceContext.LOG.debug( responseMessage );
+      LOG.warn( "Received a reply for absent client:  No channel to write response message.", e );
+      LOG.debug( responseMessage );
     } catch ( Exception e ) {
-      ServiceContext.LOG.warn( "Error occurred while handling reply: " + responseMessage, e );
+      LOG.warn( "Error occurred while handling reply: " + responseMessage, e );
     }
   }
 
@@ -176,8 +177,8 @@ public class Contexts {
         clear( ctx );
       }
     } catch ( Exception ex ) {
-      ServiceContext.LOG.error( ex );
-      ServiceContext.LOG.error( cause, cause );
+      LOG.error( ex );
+      LOG.error( cause, cause );
     }
   }
   

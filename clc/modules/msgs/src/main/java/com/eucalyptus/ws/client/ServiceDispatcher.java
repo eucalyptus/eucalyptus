@@ -26,10 +26,12 @@ import com.eucalyptus.context.ServiceContext;
 import com.eucalyptus.context.ServiceDispatchException;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.ws.EucalyptusRemoteFault;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
+import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
@@ -125,10 +127,7 @@ public abstract class ServiceDispatcher implements Dispatcher {
         return this.getNioClient( ).send( msg );
       } catch ( Exception e ) {
         LOG.error( e, e );
-        Throwable rootCause = e;
-        while ( rootCause.getCause( ) != null || !( rootCause instanceof EucalyptusRemoteFault ) ) {
-          rootCause = rootCause.getCause( );
-        }
+        Throwable rootCause = Exceptions.findCause( e, EucalyptusRemoteFault.class );
         if ( rootCause instanceof EucalyptusRemoteFault ) {
           EucalyptusRemoteFault remoteFault = ( EucalyptusRemoteFault ) rootCause;
           throw new EucalyptusCloudException( " " + remoteFault.getFaultString( ) );
@@ -167,11 +166,11 @@ public abstract class ServiceDispatcher implements Dispatcher {
     }
     
     @Override
-    public BaseMessage send( BaseMessage msg ) throws EucalyptusCloudException {
+    public BaseMessage send( BaseMessage msg ) {
       try {
         return ServiceContext.send( this.getComponentId( ), msg );
-      } catch ( ServiceDispatchException ex ) {
-        throw new EucalyptusCloudException( ex.getMessage( ), ex );
+      } catch ( Exception ex ) {
+        throw Exceptions.toUndeclared( ex.getMessage( ), ex );
       }
     }
     

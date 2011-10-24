@@ -63,8 +63,7 @@
  */
 package com.eucalyptus.ws.server;
 
-import java.io.ByteArrayOutputStream;
-import java.io.PrintWriter;
+import java.util.concurrent.atomic.AtomicReference;
 import javax.security.auth.login.LoginException;
 import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffers;
@@ -89,33 +88,27 @@ import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.jboss.netty.handler.timeout.ReadTimeoutException;
 import org.jboss.netty.handler.timeout.WriteTimeoutException;
 import com.eucalyptus.binding.Binding;
-import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.http.MappingHttpMessage;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.ws.ServiceNotReadyException;
 import com.eucalyptus.ws.WebServicesException;
 
 @ChannelPipelineCoverage( "one" )
 public class NioServerHandler extends SimpleChannelUpstreamHandler {//TODO:GRZE: this needs to move up dependency tree.
-  private static Logger LOG   = Logger.getLogger( NioServerHandler.class );
-  private boolean       first = true;
+  private static Logger                     LOG      = Logger.getLogger( NioServerHandler.class );
+  private AtomicReference<FilteredPipeline> pipeline = new AtomicReference<FilteredPipeline>( );
   
   @Override
   public void messageReceived( final ChannelHandlerContext ctx, final MessageEvent e ) throws Exception {
     try {
-      if ( !Bootstrap.isFinished( ) ) {
-        throw new ServiceNotReadyException( "System has not yet completed booting." );
-      } else if ( this.first ) {
+      if ( this.pipeline.get( ) == null ) {
         lookupPipeline( ctx, e );
       } else if ( e.getMessage( ) instanceof MappingHttpRequest ) {
         MappingHttpRequest httpRequest = ( MappingHttpRequest ) e.getMessage( );
-        if ( httpRequest.getProtocolVersion( ).equals( HttpVersion.HTTP_1_1 )
-             || ( httpRequest.getProtocolVersion( ).equals( HttpVersion.HTTP_1_0 ) && HttpHeaders.Values.KEEP_ALIVE
-                                                                                                                   .equalsIgnoreCase( httpRequest
-                                                                                                                                                 .getHeader( HttpHeaders.Names.CONNECTION ) ) ) ) {
+        if ( doKeepAlive( httpRequest ) ) {
+          this.pipeline.set( null );
           ChannelHandler p;
           while ( ( p = ctx.getPipeline( ).getLast( ) ) != this ) {
             ctx.getPipeline( ).remove( p );
@@ -129,20 +122,29 @@ public class NioServerHandler extends SimpleChannelUpstreamHandler {//TODO:GRZE:
       }
       ctx.sendUpstream( e );
     } catch ( Exception ex ) {
+      LOG.trace( ex );
+      Logs.extreme( ).error( ex, ex );
       this.sendError( ctx, HttpResponseStatus.NOT_FOUND, ex );
     }
+  }
+  
+  public boolean doKeepAlive( MappingHttpRequest httpRequest ) {
+    return httpRequest.getProtocolVersion( ).equals( HttpVersion.HTTP_1_1 )
+           || ( httpRequest.getProtocolVersion( ).equals( HttpVersion.HTTP_1_0 )
+             && HttpHeaders.Values.KEEP_ALIVE.equalsIgnoreCase( httpRequest.getHeader( HttpHeaders.Names.CONNECTION ) ) );
   }
   
   private void lookupPipeline( final ChannelHandlerContext ctx, final MessageEvent e ) throws DuplicatePipelineException, NoAcceptingPipelineException {
     try {
       final HttpRequest request = ( HttpRequest ) e.getMessage( );
-      if ( Logs.isExtrrreeeme() && request instanceof MappingHttpMessage ) {
-        ( ( MappingHttpMessage ) request ).logMessage( );
+      if ( Logs.isExtrrreeeme( ) && request instanceof MappingHttpMessage ) {
+        Logs.extreme( ).trace( ( ( MappingHttpMessage ) request ).logMessage( ) );
       }
-      final ChannelPipeline pipeline = ctx.getPipeline( );
+      final ChannelPipeline currentPipeline = ctx.getPipeline( );
       FilteredPipeline filteredPipeline = Pipelines.find( request );
-      filteredPipeline.unroll( pipeline );
-      this.first = false;
+      if ( this.pipeline.compareAndSet( null, filteredPipeline ) ) {
+        this.pipeline.get( ).unroll( currentPipeline );
+      }
     } catch ( DuplicatePipelineException e1 ) {
       LOG.error( "This is a BUG: " + e1, e1 );
       throw e1;
@@ -188,12 +190,9 @@ public class NioServerHandler extends SimpleChannelUpstreamHandler {//TODO:GRZE:
     Logs.exhaust( ).error( t, t );
     final HttpResponse response = new DefaultHttpResponse( HttpVersion.HTTP_1_1, status );
     response.setHeader( HttpHeaders.Names.CONTENT_TYPE, "text/plain; charset=UTF-8" );
-    response.setContent( ChannelBuffers.copiedBuffer( Binding.createRestFault( status.toString( ), t.getMessage( ), Exceptions.createFaultDetails( t ) ), "UTF-8" ) );
-//    if ( Logs.isExtrrreeeme() ) {
-//      response.setContent( ChannelBuffers.copiedBuffer( "Failure: " + status.toString( ) + "\r\n" + t.getMessage( ) + "\r\n" + os.toString( ) + "\r\n", "UTF-8" ) );
-//    } else {
-//      response.setContent( ChannelBuffers.copiedBuffer( "Failure: " + status.toString( ) + "\r\n" + t.getMessage( ), "UTF-8" ) );
-//    }
+    response.setContent( ChannelBuffers.copiedBuffer( Binding.createRestFault( status.toString( ), t.getMessage( ), Logs.isExtrrreeeme( )
+                                                                                 ? Exceptions.string( t )
+                                                                                 : t.getMessage( ) ), "UTF-8" ) );
     ChannelFuture writeFuture = Channels.future( ctx.getChannel( ) );
     writeFuture.addListener( ChannelFutureListener.CLOSE );
     if ( ctx.getChannel( ).isConnected( ) ) {

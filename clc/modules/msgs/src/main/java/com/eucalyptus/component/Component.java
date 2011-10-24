@@ -76,13 +76,11 @@ import com.eucalyptus.bootstrap.CanBootstrap;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
-import com.eucalyptus.util.Assertions;
 import com.eucalyptus.util.CheckedFunction;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.Internets;
-import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.fsm.Automata;
 import com.eucalyptus.util.fsm.StateMachine;
 import com.eucalyptus.util.fsm.TransitionException;
@@ -94,6 +92,8 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.Sets;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.notNullValue;
 
 public class Component implements HasName<Component> {
   private static Logger               LOG = Logger.getLogger( Component.class );
@@ -102,24 +102,31 @@ public class Component implements HasName<Component> {
   private final ComponentBootstrapper bootstrapper;
   
   public enum State implements Automata.State<State> {
-    BROKEN, PRIMORDIAL, INITIALIZED, LOADED, STOPPED, NOTREADY, DISABLED, ENABLED;
+    BROKEN,
+    PRIMORDIAL,
+    INITIALIZED,
+    LOADED,
+    STOPPED,
+    NOTREADY,
+    DISABLED,
+    ENABLED;
   }
   
   public enum Transition implements Automata.Transition<Transition> {
     INITIALIZING,
-    LOADING,
-    STARTING,
+    LOAD,
+    START,
     READY_CHECK,
-    STOPPING,
+    STOP,
     STOPPING_NOTREADY,
     STOPPING_BROKEN,
-    ENABLING,
+    ENABLE,
     ENABLED_CHECK,
-    DISABLING,
+    DISABLE,
     DISABLED_CHECK,
-    DESTROYING,
+    DESTROY,
     FAILED_TO_PREPARE,
-    RELOADING,
+    RELOAD,
     REMOVING;
   }
   
@@ -153,7 +160,7 @@ public class Component implements HasName<Component> {
   }
   
   public ServiceBuilder<? extends ServiceConfiguration> getBuilder( ) {
-    return ServiceBuilders.lookup( this.identity );
+    return ServiceBuilders.lookup( this.identity.getClass( ) );
   }
   
   /**
@@ -169,7 +176,7 @@ public class Component implements HasName<Component> {
     return this.identity.runLimitedServices( );
   }
   
-  public NavigableSet<ServiceConfiguration> lookupServiceConfigurations( ) {
+  public NavigableSet<ServiceConfiguration> services( ) {
     return this.serviceRegistry.getServices( );
   }
   
@@ -197,18 +204,7 @@ public class Component implements HasName<Component> {
     return this.bootstrapper;
   }
   
-  /**
-   * @param config
-   * @return
-   * @throws NoSuchServiceException
-   * @see com.eucalyptus.component.Component.ServiceRegistry#lookup(com.eucalyptus.component.ServiceConfiguration)
-   */
-  public BasicService lookupService( ServiceConfiguration config ) throws NoSuchServiceException {
-    return this.serviceRegistry.lookup( config );
-  }
-  
-  @Deprecated
-  public ServiceConfiguration lookupServiceConfiguration( String name ) {
+  public ServiceConfiguration lookup( String name ) {
     return this.serviceRegistry.getService( name );
   }
   
@@ -221,13 +217,10 @@ public class Component implements HasName<Component> {
    */
   public ServiceConfiguration initService( ) throws ServiceRegistrationException {
     if ( !this.identity.isAvailableLocally( ) ) {
-      throw new ServiceRegistrationException( "The component " + this.getName( ) + " is not being loaded automatically." );
+      throw new ServiceRegistrationException( "The component " + this.getName( )
+                                              + " is not being loaded automatically." );
     } else {
-      String fakeName = Internets.localHostAddress( );
-      ServiceConfiguration config = this.getBuilder( ).newInstance( this.getComponentId( ).getPartition( ), fakeName,
-                                                                    Internets.localHostAddress( ), this.getComponentId( ).getPort( ) );
-      this.serviceRegistry.register( config );
-      return config;
+      return initRemoteService( Internets.localHostInetAddress( ) );
     }
   }
   
@@ -241,18 +234,10 @@ public class Component implements HasName<Component> {
     ServiceConfiguration config = this.getBuilder( ).newInstance( this.getComponentId( ).getPartition( ), addr.getHostAddress( ), addr.getHostAddress( ),
                                                                   this.getComponentId( ).getPort( ) );
     BasicService ret = this.serviceRegistry.register( config );
-    LOG.debug( "Initializing remote service for host " + addr + " with configuration: " + config );
+    LOG.debug( "Initializing remote service for host " + addr
+               + " with configuration: "
+               + config );
     return config;
-  }
-  
-  /**
-   * Builds a BasicService instance for this component using the provided service
-   * configuration.
-   * 
-   * @throws ServiceRegistrationException
-   */
-  public void loadService( final ServiceConfiguration config ) {//TODO:GRZE: deprecate either initService, loadService or setup
-    this.lookupRegisteredService( config );
   }
   
   void destroy( final ServiceConfiguration configuration ) throws ServiceRegistrationException {
@@ -266,18 +251,28 @@ public class Component implements HasName<Component> {
                             ServiceUris.remote( configuration ).toASCIIString( ) ).info( );
         this.serviceRegistry.deregister( configuration );
       } catch ( Exception ex ) {
-        throw new ServiceRegistrationException( "Failed to destroy service: " + configuration + " because of: " + ex.getMessage( ), ex );
+        throw new ServiceRegistrationException( "Failed to destroy service: " + configuration
+                                                + " because of: "
+                                                + ex.getMessage( ), ex );
       }
     } catch ( NoSuchElementException ex ) {
       throw new ServiceRegistrationException( "Failed to find service corresponding to: " + configuration, ex );
     }
   }
   
-  void setup( final ServiceConfiguration configuration ) throws IllegalStateException {
-    if ( this.serviceRegistry.hasService( configuration ) ) {
-      this.serviceRegistry.lookup( configuration );
+  /**
+   * Builds a BasicService instance for this component using the provided service
+   * configuration.
+   * 
+   * @throws ServiceRegistrationException
+   */
+  public void setup( final ServiceConfiguration config ) throws IllegalStateException {
+    if ( ( config.isVmLocal( ) || config.isHostLocal( ) ) && !this.serviceRegistry.hasLocalService( ) ) {
+      this.serviceRegistry.register( config );
+    } else if ( this.serviceRegistry.hasService( config ) ) {
+      this.serviceRegistry.lookup( config );
     } else {
-      this.serviceRegistry.register( configuration );
+      this.serviceRegistry.register( config );
     }
   }
   
@@ -322,9 +317,10 @@ public class Component implements HasName<Component> {
   public int hashCode( ) {
     final int prime = 31;
     int result = 1;
-    result = prime * result + ( ( this.identity == null )
-      ? 0
-      : this.identity.hashCode( ) );
+    result = prime * result
+             + ( ( this.identity == null )
+               ? 0
+               : this.identity.hashCode( ) );
     return result;
   }
   
@@ -353,16 +349,6 @@ public class Component implements HasName<Component> {
       return false;
     }
     return true;
-  }
-  
-  private void lookupRegisteredService( final ServiceConfiguration config ) throws NoSuchElementException {
-    if ( ( config.isVmLocal( ) || config.isHostLocal( ) ) && !this.serviceRegistry.hasLocalService( ) ) {
-      this.serviceRegistry.register( config );
-    } else if ( this.serviceRegistry.hasService( config ) ) {
-      this.serviceRegistry.lookup( config );
-    } else {
-      this.serviceRegistry.register( config );
-    }
   }
   
   class ServiceRegistry {
@@ -455,6 +441,20 @@ public class Component implements HasName<Component> {
         } catch ( Exception ex ) {
           Logs.extreme( ).error( ex, ex );
         }
+      } else {
+        if ( ret.getStateMachine( ).getState( ).ordinal( ) < Component.State.INITIALIZED.ordinal( ) ) {
+          try {
+            config.lookupStateMachine( ).transition( Component.State.INITIALIZED ).get( );
+            EventRecord.caller( Component.class, EventType.COMPONENT_SERVICE_REGISTERED,
+                                Component.this.getName( ),
+                                ( config.isVmLocal( ) || config.isHostLocal( ) )
+                                  ? "local"
+                                  : "remote",
+                                config.toString( ) ).info( );
+          } catch ( Exception ex ) {
+            Logs.extreme( ).error( ex, ex );
+          }
+        }
       }
       return ret;
     }
@@ -470,13 +470,15 @@ public class Component implements HasName<Component> {
      * @deprecated {@link #getServices(ServiceConfiguration)}
      */
     public ServiceConfiguration getService( String name ) throws NoSuchElementException {
-      Assertions.assertNotNull( name );
+      assertThat( name, notNullValue( ) );
       for ( ServiceConfiguration s : this.services.keySet( ) ) {
         if ( s.getName( ).equals( name ) ) {
           return s;
         }
       }
-      throw new NoSuchElementException( "No service found matching name: " + name + " for component: " + Component.this.getName( ) );
+      throw new NoSuchElementException( "No service found matching name: " + name
+                                        + " for component: "
+                                        + Component.this.getName( ) );
     }
     
     /**
@@ -610,12 +612,18 @@ public class Component implements HasName<Component> {
           try {
             boolean result = checkedFunction.apply( b );
             if ( !result ) {
-              throw Exceptions.toUndeclared( new TransitionException( b.getClass( ).getSimpleName( ) + " returned 'false' from " + name
-                                                                      + "( ): terminating bootstrap for component: " + this.component.getName( ) ) );
+              throw Exceptions.toUndeclared( new TransitionException( b.getClass( ).getSimpleName( ) + " returned 'false' from "
+                                                                      + name
+                                                                      + "( ): terminating bootstrap for component: "
+                                                                      + this.component.getName( ) ) );
             }
           } catch ( Exception e ) {
-            throw Exceptions.toUndeclared( new TransitionException( b.getClass( ).getSimpleName( ) + " returned '" + e.getMessage( ) + "' from " + name
-                                                                    + "( ): terminating bootstrap for component: " + this.component.getName( ), e ) );
+            throw Exceptions.toUndeclared( new TransitionException( b.getClass( ).getSimpleName( ) + " returned '"
+                                                                    + e.getMessage( )
+                                                                    + "' from "
+                                                                    + name
+                                                                    + "( ): terminating bootstrap for component: "
+                                                                    + this.component.getName( ), e ) );
           }
         }
       }
@@ -625,88 +633,88 @@ public class Component implements HasName<Component> {
     
     public boolean load( ) {
       this.doTransition( EventType.BOOTSTRAPPER_LOAD, new CheckedFunction<Bootstrapper, Boolean>( ) {
-        @Override
-        public Boolean apply( Bootstrapper arg0 ) throws Exception {
-          return arg0.load( );
-        }
-      } );
+                           @Override
+                           public Boolean apply( Bootstrapper arg0 ) throws Exception {
+                             return arg0.load( );
+                           }
+                         } );
       return true;
     }
     
     public boolean start( ) {
       this.doTransition( EventType.BOOTSTRAPPER_START, new CheckedFunction<Bootstrapper, Boolean>( ) {
-        @Override
-        public Boolean apply( Bootstrapper arg0 ) throws Exception {
-          return arg0.start( );
-        }
-      } );
+                           @Override
+                           public Boolean apply( Bootstrapper arg0 ) throws Exception {
+                             return arg0.start( );
+                           }
+                         } );
       return true;
     }
     
     public boolean enable( ) {
       this.doTransition( EventType.BOOTSTRAPPER_ENABLE, new CheckedFunction<Bootstrapper, Boolean>( ) {
-        @Override
-        public Boolean apply( Bootstrapper arg0 ) throws Exception {
-          return arg0.enable( );
-        }
-      } );
+                           @Override
+                           public Boolean apply( Bootstrapper arg0 ) throws Exception {
+                             return arg0.enable( );
+                           }
+                         } );
       return true;
     }
     
     public boolean stop( ) {
       this.doTransition( EventType.BOOTSTRAPPER_STOP, new CheckedFunction<Bootstrapper, Boolean>( ) {
-        @Override
-        public Boolean apply( Bootstrapper arg0 ) throws Exception {
-          try {
-            arg0.stop( );
-          } catch ( Exception ex ) {
-            LOG.error( ex, ex );
-          }
-          return true;
-        }
-      } );
+                           @Override
+                           public Boolean apply( Bootstrapper arg0 ) throws Exception {
+                             try {
+                               arg0.stop( );
+                             } catch ( Exception ex ) {
+                               LOG.error( ex, ex );
+                             }
+                             return true;
+                           }
+                         } );
       return true;
     }
     
     public void destroy( ) {
       this.doTransition( EventType.BOOTSTRAPPER_DESTROY, new CheckedFunction<Bootstrapper, Boolean>( ) {
-        @Override
-        public Boolean apply( Bootstrapper arg0 ) throws Exception {
-          try {
-            arg0.destroy( );
-          } catch ( Exception ex ) {
-            LOG.error( ex, ex );
-          }
-          return true;
-        }
-      } );
+                           @Override
+                           public Boolean apply( Bootstrapper arg0 ) throws Exception {
+                             try {
+                               arg0.destroy( );
+                             } catch ( Exception ex ) {
+                               LOG.error( ex, ex );
+                             }
+                             return true;
+                           }
+                         } );
     }
     
     public boolean disable( ) {
       this.doTransition( EventType.BOOTSTRAPPER_DISABLE, new CheckedFunction<Bootstrapper, Boolean>( ) {
-        @Override
-        public Boolean apply( Bootstrapper arg0 ) throws Exception {
-          return arg0.disable( );
-        }
-      } );
+                           @Override
+                           public Boolean apply( Bootstrapper arg0 ) throws Exception {
+                             return arg0.disable( );
+                           }
+                         } );
       
       return true;
     }
     
     public boolean check( ) {
       this.doTransition( EventType.BOOTSTRAPPER_CHECK, new CheckedFunction<Bootstrapper, Boolean>( ) {
-        @Override
-        public Boolean apply( Bootstrapper arg0 ) throws Exception {
-          return arg0.check( );
-        }
-      } );
+                           @Override
+                           public Boolean apply( Bootstrapper arg0 ) throws Exception {
+                             return arg0.check( );
+                           }
+                         } );
       return true;
     }
     
     public List<Bootstrapper> getBootstrappers( ) {
       return Lists.newArrayList( this.bootstrappers.values( ) );
     }
-
+    
     @Override
     public String toString( ) {
       return Joiner.on( "\n" ).join( this.bootstrappers.values( ) );

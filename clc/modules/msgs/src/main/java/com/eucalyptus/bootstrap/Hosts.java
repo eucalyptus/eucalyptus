@@ -90,14 +90,11 @@ import org.jgroups.conf.ClassConfigurator;
 import org.jgroups.stack.Protocol;
 import org.jgroups.stack.ProtocolStack;
 import com.eucalyptus.bootstrap.Host.DbFilter;
-import com.eucalyptus.component.Component;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
-import com.eucalyptus.component.ServiceRegistrationException;
-import com.eucalyptus.component.ServiceTransitions;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.configurable.ConfigurableClass;
@@ -118,7 +115,6 @@ import com.google.common.base.Predicates;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.net.InetAddresses;
 
 @ConfigurableClass( root = "bootstrap.hosts", description = "Properties controlling the handling of remote host bootstrapping" )
 public class Hosts {
@@ -268,7 +264,9 @@ public class Hosts {
     @Override
     public void fireEvent( final Hertz event ) {
       final Host currentHost = Hosts.localHost( );
-      UpdateEntry.INSTANCE.apply( currentHost );
+      if ( event.isAsserted( 15L ) ) {
+        UpdateEntry.INSTANCE.apply( currentHost );
+      }
       InitializeAsCloudController.INSTANCE.apply( currentHost );
     }
   }
@@ -428,7 +426,6 @@ public class Hosts {
     }
   }
   
-  @HostUpdated
   public enum AdvertiseToRemoteCloudController implements Predicate<Host> {
     INSTANCE;
     
@@ -444,7 +441,7 @@ public class Hosts {
             return true;
           }
         } catch ( final Exception ex ) {
-          if ( Exceptions.causedBy( ex, NoSuchElementException.class ) == null ) {
+          if ( Exceptions.findCause( ex, NoSuchElementException.class ) == null ) {
             Logs.extreme( ).error( ex, ex );
           }
         }
@@ -454,13 +451,18 @@ public class Hosts {
     
   }
   
-  @HostUpdated
   public enum InitializeAsCloudController implements Predicate<Host> {
     INSTANCE;
     
     @Override
     public boolean apply( Host input ) {
-      if ( !BootstrapArgs.isCloudController( ) && input.isLocalHost( ) && input.hasDatabase( ) ) {
+      if ( BootstrapArgs.isCloudController( ) ) {
+        return false;
+      } else if ( !input.isLocalHost( ) ) {
+        return false;
+      } else if ( !input.hasDatabase( ) ) {
+        return false;
+      } else if ( !BootstrapArgs.isCloudController( ) && input.isLocalHost( ) && input.hasDatabase( ) ) {
         try {
           hostMap.stop( );
         } catch ( Exception ex1 ) {
@@ -472,8 +474,10 @@ public class Hosts {
         } catch ( final Exception ex ) {
           System.exit( 123 );
         }
+        return true;
+      } else {
+        return false;
       }
-      return true;
     }
     
   }
@@ -683,7 +687,11 @@ public class Hosts {
   }
   
   public static Host localHost( ) {
-    return hostMap.get( Internets.localHostIdentifier( ) );
+    if ( hostMap == null || !hostMap.containsKey( Internets.localHostIdentifier( ) ) ) {
+      return new Host( );
+    } else {
+      return hostMap.get( Internets.localHostIdentifier( ) );
+    }
   }
   
 }

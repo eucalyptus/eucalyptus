@@ -309,10 +309,10 @@ public class RemoteInfoHandler {
       LOG.info( "-> add: " + addComponents );
       LOG.info( "-> remove: " + removeComponents );
       for ( ComponentConfiguration config : removeComponents ) {
-        ComponentRegistrationHandler.deregister( ServiceBuilders.oneWhichHandles( config.getClass( ) ), config.getHostName( ) );
+        ComponentRegistrationHandler.deregister( config.getComponentId( ), config.getHostName( ) );
       }
       for ( ComponentConfiguration config : addComponents ) {
-        ComponentRegistrationHandler.register( ServiceBuilders.oneWhichHandles( config.getClass( ) ),
+        ComponentRegistrationHandler.register( config.getComponentId( ),
                                                config.getPartition( ),
                                                config.getName( ),
                                                config.getHostName( ),

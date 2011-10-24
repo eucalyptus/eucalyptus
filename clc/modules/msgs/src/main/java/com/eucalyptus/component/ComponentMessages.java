@@ -91,10 +91,10 @@ public class ComponentMessages {
   }
   
   public static <T extends BaseMessage> Class<? extends ComponentId> lookup( T msg ) {
-    Class<?> msgType = Iterables.find( Classes.classAncestors( msg ), new Predicate<Class<?>>( ) {
+    Class<?> msgType = Iterables.find( Classes.classAncestors( msg ), new Predicate<Class>( ) {
       
       @Override
-      public boolean apply( Class<?> arg0 ) {
+      public boolean apply( Class arg0 ) {
         return Ats.from( arg0 ).has( ComponentMessage.class );
       }
     } );

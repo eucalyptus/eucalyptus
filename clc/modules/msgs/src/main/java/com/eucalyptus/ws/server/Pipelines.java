@@ -75,6 +75,7 @@ import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
+import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.ChannelUpstreamHandler;
 import org.jboss.netty.handler.codec.http.HttpMethod;
@@ -351,25 +352,5 @@ public class Pipelines {
     
   }
   
-  enum InternalOnlyHandler implements ChannelUpstreamHandler {
-    INSTANCE;
-    @Override
-    public void handleUpstream( final ChannelHandlerContext ctx, final ChannelEvent e ) throws Exception {
-      final MappingHttpMessage request = MappingHttpMessage.extractMessage( e );
-      final BaseMessage msg = BaseMessage.extractMessage( e );
-      if ( ( request != null ) && ( msg != null ) ) {
-        final User user = Contexts.lookup( request.getCorrelationId( ) ).getUser( );
-        if ( user.isSystemAdmin( ) ) {
-          ctx.sendUpstream( e );
-        } else {
-          Contexts.clear( Contexts.lookup( msg.getCorrelationId( ) ) );
-          ctx.getChannel( ).write( new MappingHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.FORBIDDEN ) );
-        }
-      } else {
-        ctx.sendUpstream( e );
-      }
-    }
-    
-  }
   
 }

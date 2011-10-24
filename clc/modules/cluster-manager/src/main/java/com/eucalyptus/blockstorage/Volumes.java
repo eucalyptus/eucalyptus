@@ -179,7 +179,7 @@ public class Volumes {
           ServiceDispatcher.lookup( sc ).send( req );
         } catch ( final Exception ex ) {
           LOG.error( "Failed to create volume: " + t.toString( ), ex );
-          throw new UndeclaredThrowableException( ex );
+          throw Exceptions.toUndeclared( ex );
         }
       }
     } );

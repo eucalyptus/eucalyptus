@@ -26,7 +26,7 @@ public class TypeMappers {
       if ( o1 == null && o2 == null ) {
         return 0;
       } else if ( o1 != null && o2 != null ) {
-        return ( "" + o1.toString( ) ).compareTo( ""+o2.toString( ) );
+        return ( "" + o1.toString( ) ).compareTo( "" + o2.toString( ) );
       } else {
         return ( o1 != null
           ? 1
@@ -66,25 +66,6 @@ public class TypeMappers {
       if ( Ats.from( candidate ).has( TypeMapper.class ) && Function.class.isAssignableFrom( candidate ) ) {
         TypeMapper mapper = Ats.from( candidate ).get( TypeMapper.class );
         Class[] types = mapper.value( );
-        //first try default @value
-        if ( !types[0].equals( Object.class ) && !types[1].equals( Object.class ) ) {
-          try {
-            registerMapper( types[0], types[1], ( Function ) Classes.newInstance( candidate ) );
-            return true;
-          } catch ( Exception ex1 ) {
-            LOG.error( ex1, ex1 );
-          }
-        }
-        //try from= and to= in the annotation
-        if ( !mapper.from( ).equals( Object.class ) && !mapper.to( ).equals( Object.class ) ) {
-          try {
-            registerMapper( mapper.from( ), mapper.to( ), ( Function ) Classes.newInstance( candidate ) );
-            return true;
-          } catch ( Exception ex1 ) {
-            LOG.error( ex1, ex1 );
-          }
-        }
-        //try generics
         List<Class> generics = Lists.newArrayList( );
         try {
           generics.addAll( Classes.genericsToClasses( Classes.newInstance( candidate ) ) );
@@ -92,6 +73,8 @@ public class TypeMappers {
           LOG.error( ex, ex );
         }
         if ( generics.size( ) != 2 ) {
+          LOG.error( candidate + " looks like it is a @TypeMapper but needs generics: "
+                     + generics );
           return false;
         } else {
           try {

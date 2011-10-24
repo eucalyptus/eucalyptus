@@ -64,12 +64,12 @@
 package com.eucalyptus.ws.handlers.http;
 
 import com.eucalyptus.http.MappingHttpRequest;
-import com.eucalyptus.ws.util.HttpUtils;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.handler.codec.http.HttpMessage;
 import org.jboss.netty.handler.codec.http.HttpMessageEncoder;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 
+@Deprecated
 public class NioHttpRequestEncoder extends HttpMessageEncoder {
 
   public NioHttpRequestEncoder( ) {

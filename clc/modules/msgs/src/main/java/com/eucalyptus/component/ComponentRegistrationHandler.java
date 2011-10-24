@@ -65,21 +65,23 @@ package com.eucalyptus.component;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.concurrent.Future;
 import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.records.Logs;
-import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.MoreExecutors;
 
 public class ComponentRegistrationHandler {
   private static Logger LOG = Logger.getLogger( ComponentRegistrationHandler.class );
   
   public static boolean register( final ComponentId compId, String partitionName, String name, String hostName, Integer port ) throws ServiceRegistrationException {
     if ( !compId.isRegisterable( ) ) {
-      throw new ServiceRegistrationException( "Failed to register component: " + compId.getFullName( ) + " does not support registration." );
+      throw new ServiceRegistrationException( "Failed to register component: " + compId.getFullName( )
+                                              + " does not support registration." );
     }
     final ServiceBuilder builder = ServiceBuilders.lookup( compId );
     String partition = partitionName;
@@ -96,11 +98,23 @@ public class ComponentRegistrationHandler {
     try {
       addr = InetAddress.getByName( hostName );
     } catch ( UnknownHostException ex1 ) {
-      LOG.error( "Inavlid hostname: " + hostName + " failure: " + ex1.getMessage( ), ex1 );
-      throw new ServiceRegistrationException( builder.getClass( ).getSimpleName( ) + ": registration failed because the hostname " + hostName + " is invalid: "
+      LOG.error( "Inavlid hostname: " + hostName
+                 + " failure: "
+                 + ex1.getMessage( ), ex1 );
+      throw new ServiceRegistrationException( builder.getClass( ).getSimpleName( ) + ": registration failed because the hostname "
+                                              + hostName
+                                              + " is invalid: "
                                               + ex1.getMessage( ), ex1 );
     }
-    LOG.info( "Using builder: " + builder.getClass( ).getSimpleName( ) + " for: " + partition + "." + name + "@" + hostName + ":" + port );
+    LOG.info( "Using builder: " + builder.getClass( ).getSimpleName( )
+              + " for: "
+              + partition
+              + "."
+              + name
+              + "@"
+              + hostName
+              + ":"
+              + port );
     if ( !builder.checkAdd( partition, name, hostName, port ) ) {
       LOG.info( builder.getClass( ).getSimpleName( ) + ": checkAdd failed." );
       return false;
@@ -117,17 +131,32 @@ public class ComponentRegistrationHandler {
       }
       ServiceConfigurations.store( newComponent );
       try {
-        Components.lookup( newComponent ).loadService( newComponent );
-        Topology.enable( newComponent ).get( );
+        Components.lookup( newComponent ).setup( newComponent );
+        Future<ServiceConfiguration> res = Topology.start( newComponent );
+        Futures.makeListenable( res ).addListener( new Runnable( ) {
+          
+          @Override
+          public void run( ) {
+            try {
+              Topology.enable( newComponent );
+            } catch ( Exception ex ) {
+              LOG.info( builder.getClass( ).getSimpleName( ) + ": enable failed because of: "
+                        + ex.getMessage( ) );
+            }
+          }
+        }, MoreExecutors.sameThreadExecutor( ) );
       } catch ( Exception ex ) {
-        LOG.info( builder.getClass( ).getSimpleName( ) + ": enable failed because of: " + ex.getMessage( ) );
+        LOG.info( builder.getClass( ).getSimpleName( ) + ": load failed because of: "
+                  + ex.getMessage( ) );
       }
       return true;
     } catch ( Exception e ) {
       e = Exceptions.filterStackTrace( e );
-      LOG.info( builder.getClass( ).getSimpleName( ) + ": registration failed because of: " + e.getMessage( ) );
+      LOG.info( builder.getClass( ).getSimpleName( ) + ": registration failed because of: "
+                + e.getMessage( ) );
       LOG.error( e, e );
-      throw new ServiceRegistrationException( builder.getClass( ).getSimpleName( ) + ": registration failed with message: " + e.getMessage( ), e );
+      throw new ServiceRegistrationException( builder.getClass( ).getSimpleName( ) + ": registration failed with message: "
+                                              + e.getMessage( ), e );
     }
   }
   
@@ -137,12 +166,14 @@ public class ComponentRegistrationHandler {
     try {
       if ( !checkRemove( builder, name ) ) {
         LOG.info( builder.getClass( ).getSimpleName( ) + ": checkRemove failed." );
-        throw new ServiceRegistrationException( builder.getClass( ).getSimpleName( ) + ": checkRemove returned false.  " +
+        throw new ServiceRegistrationException( builder.getClass( ).getSimpleName( ) + ": checkRemove returned false.  "
+                                                +
                                                 "It is unsafe to currently deregister, please check the logs for additional information." );
       }
     } catch ( Exception e ) {
       LOG.info( builder.getClass( ).getSimpleName( ) + ": checkRemove failed." );
-      throw new ServiceRegistrationException( builder.getClass( ).getSimpleName( ) + ": checkRemove failed with message: " + e.getMessage( ), e );
+      throw new ServiceRegistrationException( builder.getClass( ).getSimpleName( ) + ": checkRemove failed with message: "
+                                              + e.getMessage( ), e );
     }
     final ServiceConfiguration conf = ServiceConfigurations.lookupByName( compId.getClass( ), name );
     Topology.destroy( conf );

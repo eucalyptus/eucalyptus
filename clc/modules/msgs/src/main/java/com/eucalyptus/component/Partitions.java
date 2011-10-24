@@ -67,7 +67,6 @@ import java.io.File;
 import java.security.KeyPair;
 import java.security.cert.X509Certificate;
 import java.util.List;
-import java.util.NavigableSet;
 import java.util.NoSuchElementException;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
@@ -76,11 +75,8 @@ import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.crypto.Certs;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.entities.Entities;
-import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.TransactionException;
-import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.SubDirectory;
-import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 
 public class Partitions {
@@ -99,13 +95,13 @@ public class Partitions {
   }
   
   public static boolean exists( final String partitionName ) {
-    EntityWrapper<Partition> db = EntityWrapper.get( Partition.class );
+    EntityTransaction db = Entities.get( Partition.class );
     Partition p = null;
     try {
-      p = db.getUnique( Partition.newInstanceNamed( partitionName ) );
+      p = Entities.uniqueResult( Partition.newInstanceNamed( partitionName ) );
       db.commit( );
       return true;
-    } catch ( EucalyptusCloudException ex1 ) {
+    } catch ( Exception ex ) {
       db.rollback( );
       return false;
     }
@@ -120,7 +116,9 @@ public class Partitions {
       return p;
     } catch ( TransactionException ex ) {
       db.rollback( );
-      throw new NoSuchElementException( "Failed to lookup partition for " + partitionName + " because of: " + ex.getMessage( ) );
+      throw new NoSuchElementException( "Failed to lookup partition for " + partitionName
+                                        + " because of: "
+                                        + ex.getMessage( ) );
     } catch ( RuntimeException ex ) {
       db.rollback( );
       throw ex;
@@ -134,7 +132,8 @@ public class Partitions {
         try {
           p = Partitions.lookupByName( config.getPartition( ) );
         } catch ( NoSuchElementException ex ) {
-          LOG.warn( "Failed to lookup partition for " + config + ".  Generating new partition configuration." );
+          LOG.warn( "Failed to lookup partition for " + config
+                    + ".  Generating new partition configuration." );
           try {
             p = Partitions.generatePartition( config );
           } catch ( ServiceRegistrationException ex1 ) {
@@ -174,9 +173,9 @@ public class Partitions {
       throw new ServiceRegistrationException( "Failed to generate credentials for partition: " + config, ex );
     }
     Partition partition = new Partition( config.getPartition( ), clusterKp, clusterX509, nodeKp, nodeX509 );
-    EntityWrapper<Partition> db = EntityWrapper.get( Partition.class );
+    EntityTransaction db = Entities.get( Partition.class );
     try {
-      db.persist( partition );
+      Entities.persist( partition );
       db.commit( );
       return partition;
     } catch ( Exception ex ) {

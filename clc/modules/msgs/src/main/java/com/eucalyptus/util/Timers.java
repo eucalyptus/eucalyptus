@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -61,37 +61,26 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.ws.server;
+package com.eucalyptus.util;
 
-import org.jboss.netty.channel.ChannelEvent;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
-import org.jboss.netty.channel.ChannelUpstreamHandler;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.context.Contexts;
-import com.eucalyptus.http.MappingHttpMessage;
-import com.eucalyptus.http.MappingHttpResponse;
-import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import java.util.concurrent.Callable;
+import org.apache.log4j.Logger;
 
-@ChannelPipelineCoverage( "all" )
-public enum InternalOnlyHandler implements ChannelUpstreamHandler {
-  INSTANCE;
-  @Override
-  public void handleUpstream( ChannelHandlerContext ctx, ChannelEvent e ) throws Exception {
-    final MappingHttpMessage request = MappingHttpMessage.extractMessage( e );
-    final BaseMessage msg = BaseMessage.extractMessage( e );
-    if ( request != null && msg != null ) {
-      final User user = Contexts.lookup( request.getCorrelationId( ) ).getUser( );
-      if ( user.isSystemAdmin( ) ) {
-        ctx.sendUpstream( e );
-      } else {
-        Contexts.clear( Contexts.lookup( msg.getCorrelationId( ) ) );
-        ctx.getChannel( ).write( new MappingHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.FORBIDDEN ) );
-      }
-    } else {
-      ctx.sendUpstream( e );
-    }
-  }
+public class Timers {
+  private static Logger LOG = Logger.getLogger( Timers.class );
   
+  public static <T> Callable<T> loggingWrapper( final Callable<T> call ) {
+    return new Callable<T>( ) {
+      
+      @Override
+      public T call( ) throws Exception {
+        long start = System.currentTimeMillis( );
+        T res = call.call( );
+        LOG.trace( call.toString( ) + ": completed in "
+                   + ( System.currentTimeMillis( ) - start ) );
+        return res;
+      }
+      
+    };
+  }
 }

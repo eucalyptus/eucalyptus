@@ -76,10 +76,12 @@ import com.eucalyptus.component.ServiceChecks.CheckException;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
 
 public class Faults {
+  private static Logger LOG = Logger.getLogger( Faults.class );
   
   enum NoopErrorFilter implements Predicate<Throwable> {
     INSTANCE;
@@ -93,11 +95,7 @@ public class Faults {
   }
   
   public static class CheckException extends RuntimeException implements Iterable<CheckException> {
-    /**
-     * 
-     */
-    private static final long serialVersionUID = 1L;
-    private static Logger              LOG = Logger.getLogger( CheckException.class );
+    private static final long          serialVersionUID = 1L;
     private final Severity             severity;
     private final ServiceConfiguration config;
     private final Date                 timestamp;
@@ -281,7 +279,12 @@ public class Faults {
    * TODO:GRZE: this behaviour should be @Configurable
    */
   public enum Actions {
-    STORE, LOG, DESCRIBE, UI, NOTIFY, ALERT
+    STORE,
+    LOGGING,
+    DESCRIBE,
+    UI,
+    NOTIFY,
+    ALERT
   }
   
   /**
@@ -307,6 +310,12 @@ public class Faults {
     
   }
   
+  public enum Scope {
+    SERVICE,
+    HOST,
+    NETWORK;
+  }
+  
   private static CheckException chain( final ServiceConfiguration config, final Severity severity, final List<Throwable> exs ) {
     CheckException last = null;
     for ( final Throwable ex : Lists.reverse( exs ) ) {
@@ -316,17 +325,20 @@ public class Faults {
         last = new CheckException( config, severity, ex );
       }
     }
-    return last != null
+    last = ( last != null
       ? last
-      : new CheckException( config, severity, new NullPointerException( ) );
+      : new CheckException( config, severity, new NullPointerException( ) ) );
+    LOG.debug( last );
+    Logs.extreme( ).error( last, last );
+    return last;
   }
   
   public static CheckException failure( final ServiceConfiguration config, final Throwable... exs ) {
     return failure( config, Arrays.asList( exs ) );
   }
   
-  public static CheckException failure( final ServiceConfiguration config, final List<Throwable> exs ) {
-    return chain( config, Severity.ERROR, exs );
+  public static CheckException failure( final ServiceConfiguration config, final List<? extends Throwable> exs ) {
+    return chain( config, Severity.ERROR, ( List<Throwable> ) exs );
   }
   
   public static CheckException advisory( final ServiceConfiguration config, final List<Throwable> exs ) {
@@ -335,6 +347,10 @@ public class Faults {
   
   public static CheckException advisory( final ServiceConfiguration config, final Throwable... exs ) {
     return advisory( config, Arrays.asList( exs ) );
+  }
+  
+  public static CheckException fatal( final ServiceConfiguration config, final List<? extends Throwable> exs ) {
+    return chain( config, Severity.FATAL, ( List<Throwable> ) exs );
   }
   
 }
