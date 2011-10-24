@@ -127,6 +127,7 @@ public class StopNetworkResponseType extends CloudClusterMessage {
 
 public class DescribeNetworksType extends CloudClusterMessage {
   String nameserver;
+  String dnsDomainName;
   ArrayList<String> clusterControllers = new ArrayList<String>();
 }
 

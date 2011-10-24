@@ -137,6 +137,7 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
     result.addRows( ConfigurationWebBackend.getStorageConfigurations( ) );
     result.addRows( ConfigurationWebBackend.getWalrusConfigurations( ) );
     result.addRows( ConfigurationWebBackend.getVMwareBrokerConfigurations( ) );
+    result.addRows( ConfigurationWebBackend.getArbitratorConfigurations( ) );
     result.setTotalSize( result.length( ) );
     result.setRange( range );
     return result;
@@ -165,8 +166,10 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
       ConfigurationWebBackend.setStorageConfiguration( config );
     } else if ( ConfigurationWebBackend.WALRUS_TYPE.equals( type ) ) {
       ConfigurationWebBackend.setWalrusConfiguration( config );
-    } else if ( ConfigurationWebBackend.WALRUS_TYPE.equals( type ) ) {
+    } else if ( ConfigurationWebBackend.VMWARE_BROKER_TYPE.equals( type ) ) {
         ConfigurationWebBackend.setVMwareBrokerConfiguration( config );
+    } else if ( ConfigurationWebBackend.ARBITRATOR_TYPE.equals( type ) ) {
+        ConfigurationWebBackend.setArbitratorConfiguration( config );
     } else {
       throw new EucalyptusServiceException( "Wrong configuration type: " + type );
     }
@@ -470,7 +473,7 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
   @Override
   public void changePassword( Session session, String userId, String oldPass, String newPass, String email ) throws EucalyptusServiceException {
     User requestUser = verifySession( session );
-    User targetUser = EuareWebBackend.changeUserPassword( requestUser, userId, oldPass, newPass, email );
+    User targetUser = EuareWebBackend.changeUserPasswordAndEmail( requestUser, userId, oldPass, newPass, email );
     //invalidateSession( targetUser );
   }
 
