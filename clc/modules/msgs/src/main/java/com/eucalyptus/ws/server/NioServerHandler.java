@@ -63,6 +63,7 @@
  */
 package com.eucalyptus.ws.server;
 
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 import javax.security.auth.login.LoginException;
 import org.apache.log4j.Logger;
@@ -85,7 +86,6 @@ import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
-import org.jboss.netty.handler.execution.ExecutionHandler;
 import org.jboss.netty.handler.timeout.ReadTimeoutException;
 import org.jboss.netty.handler.timeout.WriteTimeoutException;
 import com.eucalyptus.binding.Binding;
@@ -144,17 +144,22 @@ public class NioServerHandler extends SimpleChannelUpstreamHandler {//TODO:GRZE:
       if ( Logs.isExtrrreeeme( ) && request instanceof MappingHttpMessage ) {
         Logs.extreme( ).trace( ( ( MappingHttpMessage ) request ).logMessage( ) );
       }
-      final ChannelPipeline currentPipeline = ctx.getPipeline( );
+      final ChannelPipeline newPipeline = StackConfiguration.STATISTICS ? Channels.pipeline( ) : ctx.getPipeline( );
       FilteredPipeline filteredPipeline = Pipelines.find( request );
       if ( this.pipeline.compareAndSet( null, filteredPipeline ) ) {
         if ( StackConfiguration.ASYNC_PIPELINE ) {
-          currentPipeline.addLast( "async-pipeline-execution-handler", Handlers.executionHandler(  ) );
+          newPipeline.addLast( "async-pipeline-execution-handler", Handlers.executionHandler( ) );
         }
-        this.pipeline.get( ).unroll( currentPipeline );
+        this.pipeline.get( ).unroll( newPipeline );
         if ( StackConfiguration.ASYNC_OPERATIONS ) {
-          currentPipeline.addLast( "async-pipeline-execution-handler", Handlers.executionHandler(  ) );
+          newPipeline.addLast( "async-pipeline-execution-handler", Handlers.executionHandler( ) );
         }
-        Handlers.addSystemHandlers( currentPipeline );
+        Handlers.addSystemHandlers( newPipeline );
+        if ( StackConfiguration.STATISTICS ) {
+          for ( Map.Entry<String, ChannelHandler> entry : Handlers.wrapPipeline( newPipeline ).toMap( ).entrySet( ) ) {
+            ctx.getPipeline( ).addLast( entry.getKey( ), entry.getValue( ) );
+          }
+        }
       }
     } catch ( DuplicatePipelineException e1 ) {
       LOG.error( "This is a BUG: " + e1, e1 );

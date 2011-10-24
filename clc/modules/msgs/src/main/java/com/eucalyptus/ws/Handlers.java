@@ -67,6 +67,7 @@ import java.net.URI;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -106,15 +107,19 @@ import org.jboss.netty.util.HashedWheelTimer;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.ComponentMessages;
 import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.crypto.util.SslSetup;
+import com.eucalyptus.empyrean.ServiceTransitionType;
 import com.eucalyptus.http.MappingHttpMessage;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.http.MappingHttpResponse;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.ws.handlers.BindingHandler;
 import com.eucalyptus.ws.handlers.SoapMarshallingHandler;
@@ -138,18 +143,27 @@ public class Handlers {
   private static final ChannelHandler                        httpRequestEncoder     = new NioHttpRequestEncoder( );
   private static final ChannelHandler                        soapHandler            = new SoapHandler( );
   private static final ChannelHandler                        addressingHandler      = new AddressingHandler( );
-  private static final ConcurrentMap<String, BindingHandler> bindingHandlers        = new MapMaker().makeComputingMap( BindingHandlerLookup.INSTANCE );
+  private static final ConcurrentMap<String, BindingHandler> bindingHandlers        = new MapMaker( ).makeComputingMap( BindingHandlerLookup.INSTANCE );
   private static final HashedWheelTimer                      timer                  = new HashedWheelTimer( );                                                      //TODO:GRZE: configurable
   private static Boolean                                     STAGE_HANDLER_LOGGING  = Boolean.TRUE;                                                                 //GRZE: @Configurable
                                                                                                                                                                      
   private static class LoggingHandler implements ChannelUpstreamHandler, ChannelDownstreamHandler {
     private final ChannelHandler down;
+    
+    private LoggingHandler( ChannelHandler down, ChannelHandler up ) {
+      super( );
+      this.down = down;
+      this.up = up;
+    }
+    
     private final ChannelHandler up;
+    
     @Override
     public void handleDownstream( final ChannelHandlerContext ctx, final ChannelEvent e ) throws Exception {
       if ( e instanceof MessageEvent ) {
         Statistics.startDownstream( ctx.getChannel( ).getId( ), this.down );
       }
+      ctx.sendDownstream( e );
     }
     
     @SuppressWarnings( { "unchecked", "rawtypes" } )
@@ -158,10 +172,29 @@ public class Handlers {
       if ( e instanceof MessageEvent ) {
         Statistics.startUpstream( ctx.getChannel( ).getId( ), this.up );
       }
+      ctx.sendUpstream( e );
     }
     
   }
-    
+  
+  public static ChannelPipeline wrapPipeline( ChannelPipeline pipeline ) {
+    if ( StackConfiguration.STATISTICS ) {
+      Map.Entry<String, ChannelHandler> last = null;
+      ChannelPipeline newPipeline = Channels.pipeline( );
+      for ( Map.Entry<String, ChannelHandler> entry : pipeline.toMap( ).entrySet( ) ) {
+        if ( last == null ) {
+          last = entry;
+        } else {
+          newPipeline.addLast( "timer-" + last.getKey( ), new LoggingHandler( last.getValue( ), entry.getValue( ) ) );
+        }
+        newPipeline.addLast( entry.getKey( ), entry.getValue( ) );
+      }
+      return newPipeline;
+    } else {
+      return pipeline;
+    }
+  }
+  
   enum ServerPipelineFactory implements ChannelPipelineFactory {
     INSTANCE;
     @Override
@@ -183,15 +216,15 @@ public class Handlers {
   }
   
   private static ChannelHandler newChunkedWriteHandler( ) {
-    return new ChunkedWriteHandler( ) );
+    return new ChunkedWriteHandler( );
   }
   
   private static ChannelHandler newHttpResponseEncoder( ) {
-    return new HttpResponseEncoder( ) );
+    return new HttpResponseEncoder( );
   }
   
   private static ChannelHandler newHttpDecoder( ) {
-    return new NioHttpDecoder( ) );
+    return new NioHttpDecoder( );
   }
   
   public static ChannelPipelineFactory serverPipelineFactory( ) {
@@ -268,11 +301,11 @@ public class Handlers {
   }
   
   public static ChannelHandler newHttpResponseDecoder( ) {
-    return  new NioHttpResponseDecoder( );
+    return new NioHttpResponseDecoder( );
   }
   
   public static ChannelHandler newHttpChunkAggregator( ) {
-    return  new HttpChunkAggregator( StackConfiguration.CLIENT_HTTP_CHUNK_BUFFER_MAX );
+    return new HttpChunkAggregator( StackConfiguration.CLIENT_HTTP_CHUNK_BUFFER_MAX );
   }
   
   public static ChannelHandler addressingHandler( ) {//caching
@@ -280,12 +313,12 @@ public class Handlers {
   }
   
   public static ChannelHandler newAddressingHandler( final String addressingPrefix ) {//caching
-    return  new AddressingHandler( addressingPrefix ) );
+    return new AddressingHandler( addressingPrefix );
   }
   
-  enum BindingHandlerLookup implements Function<String,BindingHandler> {
+  enum BindingHandlerLookup implements Function<String, BindingHandler> {
     INSTANCE;
-
+    
     @Override
     public BindingHandler apply( String bindingName ) {
       String maybeBindingName = "";
@@ -303,8 +336,7 @@ public class Handlers {
   }
   
   public static ChannelHandler bindingHandler( final String bindingName ) {
-      return bindingHandlers.get( bindingName );
-    }
+    return bindingHandlers.get( bindingName );
   }
   
   public static ChannelHandler httpRequestEncoder( ) {
