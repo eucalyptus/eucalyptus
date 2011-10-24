@@ -800,7 +800,7 @@ public class Topology {
     
     @Override
     public String toString( ) {
-      return this.name( ) + ":" + this.get( ) + ":" + this.tc.toString( );
+      return this.name( ) + ":" + this.get( ) + " ";
     }
     
     @Override
@@ -832,11 +832,11 @@ public class Topology {
       ServiceConfiguration endResult = input;
       try {
         endResult = ServiceTransitions.pathTo( input, nextState ).get( );
-        LOG.trace( this.toString( endResult, initialState, nextState ) );
+        LOG.debug( this.toString( endResult, initialState, nextState ) );
         return endResult;
       } catch ( Exception ex ) {
         Exceptions.maybeInterrupted( ex );
-        LOG.trace( this.toString( input, initialState, nextState, ex ) );
+        LOG.debug( this.toString( input, initialState, nextState, ex ) );
         throw Exceptions.toUndeclared( ex );
       } finally {
         if ( !Component.State.ENABLED.equals( endResult.lookupState( ) ) ) {
