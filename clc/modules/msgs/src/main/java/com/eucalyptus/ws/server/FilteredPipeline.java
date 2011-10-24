@@ -79,6 +79,7 @@ import com.eucalyptus.ws.Handlers;
 
 public abstract class FilteredPipeline implements HasName<FilteredPipeline>, Filterable<HttpRequest> {
   private static Logger LOG = Logger.getLogger( FilteredPipeline.class );
+  
   protected abstract static class InternalPipeline extends FilteredPipeline {
     private final ComponentId componentId;
     
@@ -87,9 +88,8 @@ public abstract class FilteredPipeline implements HasName<FilteredPipeline>, Fil
     }
     
     @Override
-    void addSystemHandlers( ChannelPipeline pipeline ) {
-      pipeline.addLast( "internal-only-restriction", Handlers.internalOnlyHandler( ) );
-      pipeline.addLast( "msg-epoch-check", Handlers.internalEpochHandler( ) );
+    protected void addSystemHandlers( ChannelPipeline pipeline ) {
+      Handlers.addInternalSystemHandlers( pipeline );
       super.addSystemHandlers( pipeline );
     }
     
@@ -101,18 +101,16 @@ public abstract class FilteredPipeline implements HasName<FilteredPipeline>, Fil
   
   public FilteredPipeline( ) {}
   
-  public abstract String getName( );
-  
-  void addSystemHandlers( final ChannelPipeline pipeline ) {
-    pipeline.addLast( "service-state-check", Handlers.internalServiceStateHandler( ) );
-    pipeline.addLast( "service-specific-mangling", ServiceHackeryHandler.INSTANCE );
-    pipeline.addLast( "service-sink", new ServiceContextHandler( ) );
+  protected void addSystemHandlers( ChannelPipeline pipeline ) {
+    Handlers.addSystemHandlers( pipeline );
   }
+  
+  public abstract String getName( );
   
   public void unroll( final ChannelPipeline pipeline ) {
     try {
       this.addHandlers( pipeline );
-      this.addSystemHandlers( pipeline );
+      Handlers.addSystemHandlers( pipeline );
       if ( Logs.isExtrrreeeme( ) ) {
         for ( final Map.Entry<String, ChannelHandler> e : pipeline.toMap( ).entrySet( ) ) {
           EventRecord.here( this.getClass( ), EventType.PIPELINE_HANDLER, e.getKey( ), e.getValue( ).getClass( ).getSimpleName( ) ).trace( );

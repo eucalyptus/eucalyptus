@@ -31,6 +31,7 @@ import com.eucalyptus.util.FullName;
 import com.eucalyptus.ws.EucalyptusRemoteFault;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
+import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
@@ -126,10 +127,7 @@ public abstract class ServiceDispatcher implements Dispatcher {
         return this.getNioClient( ).send( msg );
       } catch ( Exception e ) {
         LOG.error( e, e );
-        Throwable rootCause = e;
-        while ( rootCause.getCause( ) != null || !( rootCause instanceof EucalyptusRemoteFault ) ) {
-          rootCause = rootCause.getCause( );
-        }
+        Throwable rootCause = Exceptions.findCause( e, EucalyptusRemoteFault.class );
         if ( rootCause instanceof EucalyptusRemoteFault ) {
           EucalyptusRemoteFault remoteFault = ( EucalyptusRemoteFault ) rootCause;
           throw new EucalyptusCloudException( " " + remoteFault.getFaultString( ) );

@@ -71,6 +71,7 @@ import java.util.NoSuchElementException;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.log4j.Logger;
@@ -100,6 +101,8 @@ import org.jboss.netty.handler.codec.http.HttpResponseDecoder;
 import org.jboss.netty.handler.codec.http.HttpResponseEncoder;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
+import org.jboss.netty.handler.execution.ExecutionHandler;
+import org.jboss.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;
 import org.jboss.netty.handler.ssl.SslHandler;
 import org.jboss.netty.handler.stream.ChunkedWriteHandler;
 import org.jboss.netty.handler.timeout.IdleStateHandler;
@@ -130,19 +133,22 @@ import com.eucalyptus.ws.handlers.http.NioHttpDecoder;
 import com.eucalyptus.ws.protocol.AddressingHandler;
 import com.eucalyptus.ws.protocol.SoapHandler;
 import com.eucalyptus.ws.server.NioServerHandler;
+import com.eucalyptus.ws.server.ServiceContextHandler;
+import com.eucalyptus.ws.server.ServiceHackeryHandler;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class Handlers {
   private static Logger                                      LOG                    = Logger.getLogger( Handlers.class );
+  private static final ExecutionHandler                        executionHandler       = new ExecutionHandler( new OrderedMemoryAwareThreadPoolExecutor( 128, 0, 0 ) );
   private static final ChannelHandler                        soapMarshallingHandler = new SoapMarshallingHandler( );
   private static final ChannelHandler                        httpRequestEncoder     = new NioHttpRequestEncoder( );
   private static final ChannelHandler                        soapHandler            = new SoapHandler( );
   private static final ChannelHandler                        addressingHandler      = new AddressingHandler( );
   private static final ConcurrentMap<String, ChannelHandler> bindingHandlers        = new ConcurrentHashMap<String, ChannelHandler>( );
-  private static final HashedWheelTimer                      timer                  = new HashedWheelTimer( );                         //TODO:GRZE: configurable
-  private static Boolean                                     STAGE_HANDLER_LOGGING  = Boolean.TRUE;                                    //GRZE: @Configurable
-                                                                                                                                        
+  private static final HashedWheelTimer                      timer                  = new HashedWheelTimer( );                                                      //TODO:GRZE: configurable
+  private static Boolean                                     STAGE_HANDLER_LOGGING  = Boolean.TRUE;                                                                 //GRZE: @Configurable
+                                                                                                                                                                     
   private static class LoggingHandler implements ChannelUpstreamHandler, ChannelDownstreamHandler {
     private final ChannelUpstreamHandler   upstream;
     private final ChannelDownstreamHandler downstream;
@@ -290,6 +296,7 @@ public class Handlers {
   public static ChannelHandler bootstrapFence( ) {
     return BootstrapStateCheck.INSTANCE;
   }
+  
   //TODO:GRZE: move this crap to Handlers.
   public static Map<String, ChannelHandler> channelMonitors( final TimeUnit unit, final int timeout ) {
     return new HashMap<String, ChannelHandler>( 4 ) {
@@ -297,7 +304,7 @@ public class Handlers {
        * 
        */
       private static final long serialVersionUID = 1L;
-
+      
       {
 //        put( "state-monitor", new ChannelStateMonitor( ) );
         this.put( "idlehandler", new IdleStateHandler( Handlers.timer, timeout, timeout, timeout, unit ) );
@@ -507,6 +514,22 @@ public class Handlers {
       }
     }
     
+  }
+  
+  public static void addSystemHandlers( final ChannelPipeline pipeline ) {
+    pipeline.addLast( "execution-handler", executionHandler( ) );
+    pipeline.addLast( "service-state-check", internalServiceStateHandler( ) );
+    pipeline.addLast( "service-specific-mangling", ServiceHackeryHandler.INSTANCE );
+    pipeline.addLast( "service-sink", new ServiceContextHandler( ) );
+  }
+  
+  public static void addInternalSystemHandlers( ChannelPipeline pipeline ) {
+    pipeline.addLast( "internal-only-restriction", internalOnlyHandler( ) );
+    pipeline.addLast( "msg-epoch-check", internalEpochHandler( ) );
+  }
+
+  static ExecutionHandler executionHandler( ) {
+    return executionHandler;
   }
   
 }

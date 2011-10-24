@@ -234,12 +234,7 @@ public class Exceptions {
   @SuppressWarnings( "unchecked" )
   public static <T extends Throwable> T findCause( Throwable ex, final Class<T> class1 ) {
     try {
-      return ( T ) Iterables.find( Exceptions.causes( ex ), new Predicate<Throwable>( ) {
-        @Override
-        public boolean apply( Throwable input ) {
-          return class1.isAssignableFrom( input.getClass( ) );
-        }
-      } );
+      return ( T ) Iterables.find( Exceptions.causes( ex ), Predicates.instanceOf( class1 ) );
     } catch ( NoSuchElementException ex1 ) {
       return null;
     }

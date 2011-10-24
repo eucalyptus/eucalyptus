@@ -113,6 +113,13 @@ public class WebServices {
     public boolean check( ) throws Exception {
       return super.check( );//TODO:GRZE: you know what...
     }
+
+    @Override
+    public boolean stop( ) throws Exception {
+      Handlers.executionHandler( ).releaseExternalResources( );
+      return true;
+    }
+    
     
   }
   

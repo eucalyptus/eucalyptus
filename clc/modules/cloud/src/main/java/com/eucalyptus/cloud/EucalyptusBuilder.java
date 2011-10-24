@@ -10,6 +10,7 @@ import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.bootstrap.Handles;
+import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.bootstrap.SystemIds;
 import com.eucalyptus.component.AbstractServiceBuilder;
 import com.eucalyptus.component.ComponentId;
@@ -144,7 +145,7 @@ public class EucalyptusBuilder extends AbstractServiceBuilder<EucalyptusConfigur
                                                         InactiveDatabaseMBean.class );
         database.setUser( "eucalyptus" );
         database.setPassword( dbPass );
-        if ( BootstrapArgs.isCloudController( ) ) {
+        if ( Hosts.isCoordinator( ) ) {
           cluster.activate( hostName, "full" );
         } else {
           cluster.activate( hostName, "passive" );
