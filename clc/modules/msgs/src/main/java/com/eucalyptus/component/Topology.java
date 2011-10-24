@@ -800,7 +800,7 @@ public class Topology {
     
     @Override
     public String toString( ) {
-      return this.name( ) + ":" + this.get( );
+      return this.name( ) + ":" + this.get( ) + ":" + this.tc.toString( );
     }
     
     @Override
