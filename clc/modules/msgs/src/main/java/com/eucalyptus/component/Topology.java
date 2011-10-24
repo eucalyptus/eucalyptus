@@ -724,7 +724,7 @@ public class Topology {
   public enum Transitions implements Function<ServiceConfiguration, ServiceConfiguration>, Supplier<Component.State> {
     START( Component.State.NOTREADY ),
     STOP( Component.State.STOPPED ),
-    INIT( Component.State.INITIALIZED ),
+    INITIALIZE( Component.State.INITIALIZED ),
     LOAD( Component.State.LOADED ),
     DESTROY( Component.State.PRIMORDIAL ),
     ENABLE( Component.State.ENABLED ) {

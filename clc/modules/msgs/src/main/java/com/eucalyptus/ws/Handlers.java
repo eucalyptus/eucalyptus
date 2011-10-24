@@ -137,16 +137,15 @@ import com.google.common.collect.MapMaker;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class Handlers {
-  private static Logger                                      LOG                    = Logger.getLogger( Handlers.class );
-  private static final ExecutionHandler                      executionHandler       = new ExecutionHandler( new OrderedMemoryAwareThreadPoolExecutor( 128, 0, 0 ) );
-  private static final ChannelHandler                        soapMarshallingHandler = new SoapMarshallingHandler( );
-  private static final ChannelHandler                        httpRequestEncoder     = new NioHttpRequestEncoder( );
-  private static final ChannelHandler                        soapHandler            = new SoapHandler( );
-  private static final ChannelHandler                        addressingHandler      = new AddressingHandler( );
-  private static final ConcurrentMap<String, BindingHandler> bindingHandlers        = new MapMaker( ).makeComputingMap( BindingHandlerLookup.INSTANCE );
-  private static final HashedWheelTimer                      timer                  = new HashedWheelTimer( );                                                      //TODO:GRZE: configurable
-  private static Boolean                                     STAGE_HANDLER_LOGGING  = Boolean.TRUE;                                                                 //GRZE: @Configurable
-                                                                                                                                                                     
+  private static Logger                                      LOG                        = Logger.getLogger( Handlers.class );
+  private static final ExecutionHandler                      pipelineExecutionHandler   = new ExecutionHandler( new OrderedMemoryAwareThreadPoolExecutor( StackConfiguration.SERVER_POOL_MAX_THREADS, 0, 0 ) );
+  private static final ExecutionHandler                      serviceExecutionHandler = new ExecutionHandler( new OrderedMemoryAwareThreadPoolExecutor( StackConfiguration.SERVER_POOL_MAX_THREADS, 0, 0 ) );
+  private static final ChannelHandler                        soapMarshallingHandler     = new SoapMarshallingHandler( );
+  private static final ChannelHandler                        httpRequestEncoder         = new NioHttpRequestEncoder( );
+  private static final ChannelHandler                        soapHandler                = new SoapHandler( );
+  private static final ChannelHandler                        addressingHandler          = new AddressingHandler( );
+  private static final ConcurrentMap<String, BindingHandler> bindingHandlers            = new MapMaker( ).makeComputingMap( BindingHandlerLookup.INSTANCE );
+  private static final HashedWheelTimer                      timer                      = new HashedWheelTimer( );                                                                                             //TODO:GRZE: configurable
   private static class LoggingHandler implements ChannelUpstreamHandler, ChannelDownstreamHandler {
     private final ChannelHandler down;
     
@@ -204,8 +203,11 @@ public class Handlers {
       pipeline.addLast( "decoder", Handlers.newHttpDecoder( ) );
       pipeline.addLast( "encoder", Handlers.newHttpResponseEncoder( ) );
       pipeline.addLast( "chunkedWriter", Handlers.newChunkedWriteHandler( ) );
-      pipeline.addLast( "bootstrap-fence", Handlers.bootstrapFence( ) );
-      pipeline.addLast( "handler", Handlers.newNioServerHandler( ) );
+      pipeline.addLast( "fence", Handlers.bootstrapFence( ) );
+      pipeline.addLast( "pipeline-filter", Handlers.newNioServerHandler( ) );
+      if ( StackConfiguration.ASYNC_PIPELINE ) {
+        pipeline.addLast( "async-pipeline-execution-handler", Handlers.pipelineExecutionHandler( ) );
+      }
       return pipeline;
     }
     
@@ -508,7 +510,9 @@ public class Handlers {
   public static void addSystemHandlers( final ChannelPipeline pipeline ) {
     pipeline.addLast( "service-state-check", internalServiceStateHandler( ) );
     pipeline.addLast( "service-specific-mangling", ServiceHackeryHandler.INSTANCE );
-    pipeline.addLast( "execution-handler", executionHandler( ) );
+    if ( StackConfiguration.ASYNC_OPERATIONS ) {
+      pipeline.addLast( "async-operations-execution-handler", serviceExecutionHandler( ) );
+    }
     pipeline.addLast( "service-sink", new ServiceContextHandler( ) );
   }
   
@@ -517,8 +521,12 @@ public class Handlers {
     pipeline.addLast( "msg-epoch-check", internalEpochHandler( ) );
   }
   
-  public static ExecutionHandler executionHandler( ) {
-    return executionHandler;
+  public static ExecutionHandler pipelineExecutionHandler( ) {
+    return pipelineExecutionHandler;
+  }
+  
+  public static ExecutionHandler serviceExecutionHandler( ) {
+    return serviceExecutionHandler;
   }
   
 }

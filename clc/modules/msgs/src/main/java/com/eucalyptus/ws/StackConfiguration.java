@@ -149,6 +149,9 @@ public class StackConfiguration extends AbstractPersistent {
   @ConfigurableField( description = "Record and report service times." )
   public static Boolean       STATISTICS                        = Boolean.FALSE;
   
+  @ConfigurableField( description = "Execute service specific pipeline handlers from a separate thread pool (with respect to I/O)." )
+  public static Boolean       ASYNC_PIPELINE                    = Boolean.FALSE;
+  
   @ConfigurableField( description = "Execute service operations from a separate thread pool (with respect to I/O)." )
   public static Boolean       ASYNC_OPERATIONS                  = Boolean.FALSE;
   
@@ -157,9 +160,6 @@ public class StackConfiguration extends AbstractPersistent {
   
   @ConfigurableField( description = "Execute internal service operations out of band from the normal service bus." )
   public static Boolean       OOB_INTERNAL_OPERATIONS           = Boolean.TRUE;
-  
-  @ConfigurableField( description = "Execute service specific pipeline handlers from a separate thread pool (with respect to I/O)." )
-  public static Boolean       ASYNC_PIPELINE                    = Boolean.FALSE;
   
   @ConfigurableField( description = "Client idle timeout (secs)." )
   public static Long          CLIENT_IDLE_TIMEOUT_SECS          = 240L;
@@ -328,5 +328,4 @@ public class StackConfiguration extends AbstractPersistent {
       
     }
   }
-  
 }

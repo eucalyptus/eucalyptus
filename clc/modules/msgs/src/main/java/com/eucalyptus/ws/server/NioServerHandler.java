@@ -147,13 +147,7 @@ public class NioServerHandler extends SimpleChannelUpstreamHandler {//TODO:GRZE:
       final ChannelPipeline newPipeline = StackConfiguration.STATISTICS ? Channels.pipeline( ) : ctx.getPipeline( );
       FilteredPipeline filteredPipeline = Pipelines.find( request );
       if ( this.pipeline.compareAndSet( null, filteredPipeline ) ) {
-        if ( StackConfiguration.ASYNC_PIPELINE ) {
-          newPipeline.addLast( "async-pipeline-execution-handler", Handlers.executionHandler( ) );
-        }
         this.pipeline.get( ).unroll( newPipeline );
-        if ( StackConfiguration.ASYNC_OPERATIONS ) {
-          newPipeline.addLast( "async-pipeline-execution-handler", Handlers.executionHandler( ) );
-        }
         Handlers.addSystemHandlers( newPipeline );
         if ( StackConfiguration.STATISTICS ) {
           for ( Map.Entry<String, ChannelHandler> entry : Handlers.wrapPipeline( newPipeline ).toMap( ).entrySet( ) ) {

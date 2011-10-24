@@ -116,7 +116,8 @@ public class WebServices {
 
     @Override
     public boolean stop( ) throws Exception {
-      Handlers.executionHandler( ).releaseExternalResources( );
+      Handlers.pipelineExecutionHandler( ).releaseExternalResources( );
+      Handlers.serviceExecutionHandler( ).releaseExternalResources( );
       return true;
     }
     
