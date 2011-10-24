@@ -76,7 +76,7 @@ public class Timers {
       public T call( ) throws Exception {
         long start = System.currentTimeMillis( );
         T res = call.call( );
-        LOG.trace( call.toString( ) + ": completed in "
+        LOG.debug( call.toString( ) + ": completed in "
                    + ( System.currentTimeMillis( ) - start ) );
         return res;
       }
