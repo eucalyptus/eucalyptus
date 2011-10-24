@@ -307,7 +307,15 @@ LOOP_AVL="`/bin/ls /dev/loop* 2> /dev/null|wc -l`"
 if [ -z "$LOOP_AVL" -o "$LOOP_AVL" = "0" ]; then
 	echo "Couldn't find loop devices (/dev/loop*): expect problems"
 elif [ $LOOP_AVL -lt 50 ]; then
-	echo "You should have at least 50 loop devices"
+	echo "You should have at least 50 loop devices (in /dev)"
+fi
+
+# try another method for finding loop devices
+LOOP_AVL="`/bin/ls -1d /sys/block/loop* 2>/dev/null | wc -l`"
+if [ -z "$LOOP_AVL" -o "$LOOP_AVL" = "0" ]; then
+        echo "Couldn't find loop devices (/sys/block/loop*): there may be problems"
+elif [ $LOOP_AVL -lt 50 ]; then
+        echo "You should have at least 50 loop devices (in /sys/block)"
 fi
 
 if [ -z "$EUCA_USER" ] ; then

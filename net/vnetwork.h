@@ -209,6 +209,7 @@ int vnetStopNetworkManaged(vnetConfig *vnetconfig, int vlan, char *userName, cha
 int vnetSaveIPTables(vnetConfig *vnetconfig);
 int vnetLoadIPTables(vnetConfig *vnetconfig);
 int vnetApplySingleTableRule(vnetConfig *vnetconfig, char *table, char *rule);
+int vnetApplyArpTableRules(vnetConfig *vnetconfig);
 int vnetApplySingleEBTableRule(vnetConfig *vnetconfig, char *table, char *rule);
 int vnetSetMetadataRedirect(vnetConfig *vnetconfig);
 

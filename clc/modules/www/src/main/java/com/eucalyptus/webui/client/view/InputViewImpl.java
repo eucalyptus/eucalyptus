@@ -152,7 +152,7 @@ public class InputViewImpl extends DialogBox implements InputView {
       if ( field == null ) {
         continue;
       }
-      grid.setHTML( i, 0, field.getTitle( ) );
+      grid.setText( i, 0, field.getTitle( ) );
       
       HasValueWidget widget = getHasValueWidget( field.getType( ), field.getChecker( ) );
       inputs.add( widget );

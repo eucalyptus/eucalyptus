@@ -98,6 +98,7 @@ static configEntry configKeysRestart[] = {
   {"VNET_DHCPDAEMON", "/usr/sbin/dhcpd3"},
   {"VNET_DHCPUSER", "dhcpd"},
   {"VNET_DNS", NULL},
+  {"VNET_DOMAINNAME", "eucalyptus"},
   {"VNET_LOCALIP", NULL},
   {"VNET_MACMAP", NULL},
   {"VNET_MODE", "SYSTEM"},
@@ -114,6 +115,7 @@ static configEntry configKeysRestart[] = {
   {"CC_IMAGE_PROXY_CACHE_SIZE", "32768"},
   {"CC_IMAGE_PROXY_PATH", "$EUCALYPTUS/var/lib/eucalyptus/dynserv/"},
   {"LOGLEVEL", "DEBUG"},
+  {"LOGROLLNUMBER", "4"},
   {NULL, NULL}
 };
 static configEntry configKeysNoRestart[] = {

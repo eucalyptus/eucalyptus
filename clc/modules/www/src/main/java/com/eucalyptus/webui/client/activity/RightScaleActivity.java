@@ -11,6 +11,9 @@ import com.google.common.base.Strings;
 import com.google.gwt.activity.shared.AbstractActivity;
 import com.google.gwt.event.shared.EventBus;
 import com.google.gwt.http.client.URL;
+import com.google.gwt.safehtml.shared.SafeHtml;
+import com.google.gwt.safehtml.shared.SafeHtmlBuilder;
+import com.google.gwt.safehtml.shared.SafeHtmlUtils;
 import com.google.gwt.user.client.Window;
 import com.google.gwt.user.client.rpc.AsyncCallback;
 import com.google.gwt.user.client.ui.AcceptsOneWidget;
@@ -39,17 +42,24 @@ public class RightScaleActivity extends AbstractActivity implements RightScaleVi
     dialog.display( REGISTER_CAPTION, REGISTER_SUBJECT, getPromptHtml( ) );
   }
 
-  private String getPromptHtml( ) {
+  private SafeHtml getPromptHtml( ) {
     String external = cloudInfo.getExternalHostPort( );
     String internal = cloudInfo.getInternalHostPort( );
-    String text = "";
+  
+    SafeHtmlBuilder builder = new SafeHtmlBuilder();
+    builder.append(SafeHtmlUtils.fromTrustedString("<p>You are about to open a new window to Rightscale's Web site, on which you will be able to complete registraton.</p>"));
+    
     if ( Strings.isNullOrEmpty( external )) {
-      text = "<b>Warning:</b> Rightscale could not discover the external IP address of your cloud.  Hence, the pre-filled cloud URL <i>may</i> be incorrect. Check your firewall settings.</p> ";
+      builder.append(SafeHtmlUtils.fromTrustedString("<b>Warning:</b> Rightscale could not discover the external IP address of your cloud.  Hence, the pre-filled cloud URL <i>may</i> be incorrect. Check your firewall settings.</p> "));
     } else if ( !external.equals( internal ) ) {
-      text = "<b>Warning:</b> The external cloud IP discovered by Rightscale (" + external + ") is different from the IP found by Eucalyptus (" + internal + ").  Hence, the pre-filled cloud URL <i>may</i> be incorrect.  Check your firewall settings.</p> ";
+      builder.append(SafeHtmlUtils.fromTrustedString("<b>Warning:</b> The external cloud IP discovered by Rightscale ("));
+      builder.appendEscaped(external);
+      builder.append(SafeHtmlUtils.fromTrustedString(") is different from the IP found by Eucalyptus ("));
+      builder.appendEscaped(internal);
+      builder.append(SafeHtmlUtils.fromTrustedString(").  Hence, the pre-filled cloud URL <i>may</i> be incorrect.  Check your firewall settings.</p> "));
     }
-    String pre = "<p>You are about to open a new window to Rightscale's Web site, on which you will be able to complete registraton.</p>";
-    return pre + text;
+    
+    return builder.toSafeHtml();
   }
   
   private String getRegistrationUrl( ) {
@@ -81,6 +91,7 @@ public class RightScaleActivity extends AbstractActivity implements RightScaleVi
 
       @Override
       public void onFailure( Throwable caught ) {
+        ActivityUtil.logoutForInvalidSession( clientFactory, caught );
         LOG.log( Level.WARNING, "Failed to load cloud info", caught );
       }
 

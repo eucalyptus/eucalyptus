@@ -79,19 +79,27 @@
 #include <libxslt/transform.h>
 #include <libxslt/xsltutils.h>
 
+#include "handlers.h" // nc_state_t
 #include "eucalyptus-config.h"
 #include "backing.h" // umask
-#include "handlers.h" // nc_state
 #include "data.h"
 #include "misc.h"
 #include "xml.h"
 
-extern struct nc_state_t nc_state; // TODO: pass that in?
-
 static int initialized = 0;
+static boolean config_use_virtio_root = 0;
+static boolean config_use_virtio_disk = 0;
+static boolean config_use_virtio_net = 0;
+
+#ifdef __STANDALONE // if compiling as a stand-alone binary (for unit testing)
+#define INIT() if (!initialized) init(NULL)
+#else // if linking against an NC, find nc_state symbol
+extern struct nc_state_t nc_state;
+#define INIT() if (!initialized) init(&nc_state)
+#endif
+
 static void error_handler (void * ctx, const char * fmt, ...);
 static pthread_mutex_t xml_mutex = PTHREAD_MUTEX_INITIALIZER; // process-global mutex
-#define INIT() if (!initialized) init()
 
 // macros for making XML construction a bit more readable
 #define _NODE(P,N) xmlNewChild((P), NULL, BAD_CAST (N), NULL)
@@ -99,7 +107,7 @@ static pthread_mutex_t xml_mutex = PTHREAD_MUTEX_INITIALIZER; // process-global 
 #define _ATTRIBUTE(P,N,V) xmlNewProp((P), BAD_CAST (N), BAD_CAST (V))
 #define _BOOL(S) ((S)?("true"):("false"))
 
-static void init (void)
+static void init (struct nc_state_t * nc_state)
 {
     pthread_mutex_lock (&xml_mutex);
     if (!initialized) {
@@ -108,9 +116,20 @@ static void init (void)
         xmlSubstituteEntitiesDefault (1); // substitute entities while parsing
         xmlSetGenericErrorFunc (NULL, error_handler); // catches errors/warnings that libxml2 writes to stderr
         xsltSetGenericErrorFunc (NULL, error_handler); // catches errors/warnings that libslt writes to stderr
+        if (nc_state!=NULL) {
+            config_use_virtio_root = nc_state->config_use_virtio_root;
+            config_use_virtio_disk = nc_state->config_use_virtio_disk;
+            config_use_virtio_net =  nc_state->config_use_virtio_net;
+        }
         initialized = 1;
     }
     pthread_mutex_unlock (&xml_mutex);
+}
+
+static void cleanup (void)
+{
+    xsltCleanupGlobals();
+    xmlCleanupParser(); // calls xmlCleanupGlobals()
 }
 
 // verify that the path for kernel/ramdisk is reasonable
@@ -145,6 +164,7 @@ int gen_instance_xml (const ncInstance * instance)
         snprintf(bitness, 4,"%d", instance->hypervisorBitness);
         _ATTRIBUTE(hypervisor, "bitness", bitness);
     }
+
     _ELEMENT(instanceNode, "name", instance->instanceId);
     _ELEMENT(instanceNode, "uuid", instance->uuid);
     _ELEMENT(instanceNode, "reservation", instance->reservationId);
@@ -178,9 +198,9 @@ int gen_instance_xml (const ncInstance * instance)
     { // OS-related specs
         xmlNodePtr os = _NODE(instanceNode, "os");
         _ATTRIBUTE(os, "platform", instance->platform);
-        _ATTRIBUTE(os, "virtioRoot", _BOOL(nc_state.config_use_virtio_root));
-        _ATTRIBUTE(os, "virtioDisk", _BOOL(nc_state.config_use_virtio_disk));
-        _ATTRIBUTE(os, "virtioNetwork", _BOOL(nc_state.config_use_virtio_net));
+        _ATTRIBUTE(os, "virtioRoot", _BOOL(config_use_virtio_root));
+        _ATTRIBUTE(os, "virtioDisk", _BOOL(config_use_virtio_disk));
+        _ATTRIBUTE(os, "virtioNetwork", _BOOL(config_use_virtio_net));
     }
 
     { // disks specification
@@ -218,7 +238,7 @@ int gen_instance_xml (const ncInstance * instance)
                _ATTRIBUTE(disk, "targetDeviceName", vbr->guestDeviceName);
                char devstr[SMALL_CHAR_BUFFER_SIZE];
                snprintf(devstr, SMALL_CHAR_BUFFER_SIZE, "%s", vbr->guestDeviceName);             
-               if (nc_state.config_use_virtio_root) {
+               if (config_use_virtio_root) {
                    devstr[0] = 'v';
                    _ATTRIBUTE(disk, "targetDeviceNameVirtio", devstr);
                    _ATTRIBUTE(disk, "targetDeviceBusVirtio", "virtio");     
@@ -351,8 +371,6 @@ static int apply_xslt_stylesheet (const char * xsltStylesheetPath, const char * 
                 logprintfl (EUCAERROR, "ERROR: failed to open and parse XSL-T stylesheet file %s\n", xsltStylesheetPath);
                 err = ERROR;
         }
-        xsltCleanupGlobals();
-        xmlCleanupParser();
 
         return err;
 }
@@ -412,6 +430,7 @@ static void create_dummy_instance (const char * file)
         _ELEMENT(instance, "memoryKB", "512000");
         {
                 xmlNodePtr os = _NODE(instance, "os");
+                _ATTRIBUTE(os, "platform", "linux");
                 _ATTRIBUTE(os, "virtioRoot", "true");
                 _ATTRIBUTE(os, "virtioDisk", "false");
                 _ATTRIBUTE(os, "virtioNetwork", "false");
@@ -469,6 +488,8 @@ int main (int argc, char ** argv)
 out:
         remove (out_path);
         remove (in_path);
+        free (in_path);
+        free (out_path);
         return err;
 }
 #endif
