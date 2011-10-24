@@ -229,9 +229,8 @@ public class Partitions {
                                           SystemCredentials.lookup( Eucalyptus.class ).getCertificate( ) );
       } else {
         if ( !compId.hasCredentials( ) ) {
-          ComponentId p = ComponentIds.lookup( compId.getPartition( ) );
-          return new Partition( ).new Fake( compId.getPartition( ), SystemCredentials.lookup( p ).getKeyPair( ),
-                                            SystemCredentials.lookup( p ).getCertificate( ) );
+          return new Partition( ).new Fake( compId.getPartition( ), SystemCredentials.lookup( Eucalyptus.class ).getKeyPair( ),
+                                            SystemCredentials.lookup( Eucalyptus.class ).getCertificate( ) );
         } else {
           return new Partition( ).new Fake( compId.getPartition( ), SystemCredentials.lookup( compId ).getKeyPair( ),
                                             SystemCredentials.lookup( compId ).getCertificate( ) );
