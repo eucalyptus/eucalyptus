@@ -257,7 +257,7 @@ public class Topology {
   
   public static Function<ServiceConfiguration, Future<ServiceConfiguration>> transition( final Component.State toState ) {
     final Function<ServiceConfiguration, Future<ServiceConfiguration>> transition = new Function<ServiceConfiguration, Future<ServiceConfiguration>>( ) {
-      private final List<Component.State> serializedStates = Lists.newArrayList( Component.State.ENABLED, Component.State.DISABLED );
+      private final List<Component.State> serializedStates = Lists.newArrayList( Component.State.ENABLED );
       
       @Override
       public Future<ServiceConfiguration> apply( final ServiceConfiguration input ) {
@@ -839,6 +839,10 @@ public class Topology {
         Exceptions.maybeInterrupted( ex );
         LOG.trace( this.toString( input, initialState, nextState, ex ) );
         throw Exceptions.toUndeclared( ex );
+      } finally {
+        if ( !Component.State.ENABLED.equals( endResult.lookupState( ) ) ) {
+          Topology.guard( ).tryDisable( endResult );
+        }
       }
     }
     
