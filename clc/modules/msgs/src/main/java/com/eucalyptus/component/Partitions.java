@@ -143,7 +143,7 @@ public class Partitions {
         }
         return p;
       } else if ( config.getComponentId( ).isPartitioned( ) ) {
-        return Partitions.lookupByName( config.getPartition( ) );
+        return Partitions.lookupInternal( config );
       } else {
         return Partitions.lookupInternal( config );
       }
