@@ -724,9 +724,9 @@ public class Hosts {
     public void update( Collection<Host> values ) {
       long currentTime = System.currentTimeMillis( );
       long startTime = Longs.max( Longs.toArray( Collections2.transform( values, StartTimeTransform.INSTANCE ) ) );
-      if ( this.currentStartTime.compareAndSet( 0L, startTime > currentTime ? startTime + MAX_COORDINATOR_CLOCK_SKEW : currentTime ) ) {
-        Host coordinator = this.apply( values );
-        this.currentCoordinator.set( coordinator.isLocalHost( ) );
+      if ( this.currentStartTime.compareAndSet( 0L, startTime > currentTime ? startTime : currentTime ) ) {
+        Host foundCoordinator = this.apply( values );
+        this.currentCoordinator.set( foundCoordinator.isLocalHost( ) );
       } else if ( BootstrapArgs.isCloudController( ) ) {
         Host coordinator = this.apply( values );
         this.currentCoordinator.set( coordinator.isLocalHost( ) );
