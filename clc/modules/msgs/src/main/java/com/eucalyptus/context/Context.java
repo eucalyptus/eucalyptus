@@ -3,7 +3,6 @@ package com.eucalyptus.context;
 import java.lang.ref.WeakReference;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.util.Map;
 import java.util.UUID;
 import javax.security.auth.Subject;
@@ -25,6 +24,7 @@ import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.ws.server.Statistics;
 import com.google.common.collect.Maps;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
@@ -56,6 +56,7 @@ public class Context {
   
   protected Context( MappingHttpRequest httpRequest, Channel channel ) {
     UUID uuid = UUID.randomUUID( );
+    Statistics.startRequest( channel );
     this.correlationId = uuid.toString( );
     this.creationTime = System.nanoTime( );
     this.httpRequest = httpRequest;
@@ -166,13 +167,11 @@ public class Context {
   
   public void setSubject( Subject subject ) {
     if ( subject != null ) {
-      EventRecord.caller( Context.class, EventType.CONTEXT_SUBJECT, this.correlationId, subject.getPrincipals( ).toString( ) ).trace( );
       this.subject = subject;
     }
   }
   
   void clear( ) {
-    EventRecord.caller( Context.class, EventType.CONTEXT_CLEAR, this.correlationId, this.channel.toString( ) ).debug( );
     if ( this.muleEvent != null ) {
       this.muleEvent.clear( );
       this.muleEvent = null;

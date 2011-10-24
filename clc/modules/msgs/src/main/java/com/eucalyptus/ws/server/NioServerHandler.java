@@ -105,6 +105,7 @@ public class NioServerHandler extends SimpleChannelUpstreamHandler {//TODO:GRZE:
   
   @Override
   public void messageReceived( final ChannelHandlerContext ctx, final MessageEvent e ) throws Exception {
+    Statistics.startUpstream( ctx.getChannel( ).getId( ), this );
     try {
       if ( this.pipeline.get( ) == null ) {
         lookupPipeline( ctx, e );

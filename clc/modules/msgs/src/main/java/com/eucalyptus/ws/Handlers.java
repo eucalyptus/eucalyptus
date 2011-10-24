@@ -67,9 +67,6 @@ import java.net.URI;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.NoSuchElementException;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -109,22 +106,16 @@ import org.jboss.netty.util.HashedWheelTimer;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.bootstrap.Bootstrap;
-import com.eucalyptus.bootstrap.Hosts;
-import com.eucalyptus.bootstrap.Hosts.Coordinator;
 import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.component.ComponentMessages;
 import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.crypto.util.SslSetup;
-import com.eucalyptus.empyrean.ServiceTransitionType;
 import com.eucalyptus.http.MappingHttpMessage;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.http.MappingHttpResponse;
-import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.util.Timers;
 import com.eucalyptus.ws.handlers.BindingHandler;
 import com.eucalyptus.ws.handlers.SoapMarshallingHandler;
 import com.eucalyptus.ws.handlers.http.HttpUtils;
@@ -134,114 +125,73 @@ import com.eucalyptus.ws.protocol.SoapHandler;
 import com.eucalyptus.ws.server.NioServerHandler;
 import com.eucalyptus.ws.server.ServiceContextHandler;
 import com.eucalyptus.ws.server.ServiceHackeryHandler;
+import com.eucalyptus.ws.server.Statistics;
+import com.google.common.base.Function;
 import com.google.common.collect.Lists;
+import com.google.common.collect.MapMaker;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class Handlers {
   private static Logger                                      LOG                    = Logger.getLogger( Handlers.class );
-  private static final ExecutionHandler                        executionHandler       = new ExecutionHandler( new OrderedMemoryAwareThreadPoolExecutor( 128, 0, 0 ) );
+  private static final ExecutionHandler                      executionHandler       = new ExecutionHandler( new OrderedMemoryAwareThreadPoolExecutor( 128, 0, 0 ) );
   private static final ChannelHandler                        soapMarshallingHandler = new SoapMarshallingHandler( );
   private static final ChannelHandler                        httpRequestEncoder     = new NioHttpRequestEncoder( );
   private static final ChannelHandler                        soapHandler            = new SoapHandler( );
   private static final ChannelHandler                        addressingHandler      = new AddressingHandler( );
-  private static final ConcurrentMap<String, ChannelHandler> bindingHandlers        = new ConcurrentHashMap<String, ChannelHandler>( );
+  private static final ConcurrentMap<String, BindingHandler> bindingHandlers        = new MapMaker().makeComputingMap( BindingHandlerLookup.INSTANCE );
   private static final HashedWheelTimer                      timer                  = new HashedWheelTimer( );                                                      //TODO:GRZE: configurable
   private static Boolean                                     STAGE_HANDLER_LOGGING  = Boolean.TRUE;                                                                 //GRZE: @Configurable
                                                                                                                                                                      
   private static class LoggingHandler implements ChannelUpstreamHandler, ChannelDownstreamHandler {
-    private final ChannelUpstreamHandler   upstream;
-    private final ChannelDownstreamHandler downstream;
-    private final ChannelHandler           handler;
-    
-    private LoggingHandler( final ChannelHandler handler ) {
-      super( );
-      this.handler = handler;
-      this.upstream = ( ChannelUpstreamHandler ) ( ( handler instanceof ChannelUpstreamHandler ) ? handler : null );
-      this.downstream = ( ChannelDownstreamHandler ) ( ( handler instanceof ChannelDownstreamHandler ) ? handler : null );
-    }
-    
-    @SuppressWarnings( { "unchecked", "rawtypes" } )
+    private final ChannelHandler down;
+    private final ChannelHandler up;
     @Override
     public void handleDownstream( final ChannelHandlerContext ctx, final ChannelEvent e ) throws Exception {
       if ( e instanceof MessageEvent ) {
-        Timers.loggingWrapper( new Callable( ) {
-          
-          @Override
-          public Object call( ) throws Exception {
-            if ( LoggingHandler.this.downstream != null ) {
-              LoggingHandler.this.downstream.handleDownstream( ctx, e );
-            }
-            return e;
-          }
-          
-        } ).call( );
-      } else {
-        if ( LoggingHandler.this.downstream != null ) {
-          LoggingHandler.this.downstream.handleDownstream( ctx, e );
-        } else {
-          ctx.sendDownstream( e );
-        }
+        Statistics.startDownstream( ctx.getChannel( ).getId( ), this.down );
       }
     }
     
     @SuppressWarnings( { "unchecked", "rawtypes" } )
     @Override
-    public void handleUpstream( final ChannelHandlerContext ctx, final ChannelEvent e ) throws Exception {
+    public final void handleUpstream( final ChannelHandlerContext ctx, final ChannelEvent e ) throws Exception {
       if ( e instanceof MessageEvent ) {
-        Timers.loggingWrapper( new Callable( ) {
-          
-          @Override
-          public Object call( ) throws Exception {
-            if ( LoggingHandler.this.upstream != null ) {
-              LoggingHandler.this.upstream.handleUpstream( ctx, e );
-            }
-            return e;
-          }
-          
-        } ).call( );
-      } else {
-        if ( LoggingHandler.this.upstream != null ) {
-          LoggingHandler.this.upstream.handleUpstream( ctx, e );
-        } else {
-          ctx.sendUpstream( e );
-        }
+        Statistics.startUpstream( ctx.getChannel( ).getId( ), this.up );
       }
-      
     }
     
-    @Override
-    public int hashCode( ) {
-      return this.handler.hashCode( );
-    }
-    
-    @Override
-    public boolean equals( final Object obj ) {
-      return this.handler.equals( obj );
-    }
-    
-    @Override
-    public String toString( ) {
-      return this.handler.toString( );
-    }
   }
-  
-  public static ChannelHandler wrapHandler( final ChannelHandler handler ) {
-    return STAGE_HANDLER_LOGGING ? new LoggingHandler( handler ) : handler;
-  }
-  
+    
   enum ServerPipelineFactory implements ChannelPipelineFactory {
     INSTANCE;
     @Override
     public ChannelPipeline getPipeline( ) throws Exception {
       ChannelPipeline pipeline = Channels.pipeline( );
       pipeline.addLast( "ssl", Handlers.newSslHandler( ) );
-      pipeline.addLast( "decoder", new NioHttpDecoder( ) );
-      pipeline.addLast( "encoder", new HttpResponseEncoder( ) );
-      pipeline.addLast( "chunkedWriter", new ChunkedWriteHandler( ) );
+      pipeline.addLast( "decoder", Handlers.newHttpDecoder( ) );
+      pipeline.addLast( "encoder", Handlers.newHttpResponseEncoder( ) );
+      pipeline.addLast( "chunkedWriter", Handlers.newChunkedWriteHandler( ) );
       pipeline.addLast( "bootstrap-fence", Handlers.bootstrapFence( ) );
-      pipeline.addLast( "handler", new NioServerHandler( ) );
+      pipeline.addLast( "handler", Handlers.newNioServerHandler( ) );
       return pipeline;
     }
+    
+  }
+  
+  private static NioServerHandler newNioServerHandler( ) {
+    return new NioServerHandler( );
+  }
+  
+  private static ChannelHandler newChunkedWriteHandler( ) {
+    return new ChunkedWriteHandler( ) );
+  }
+  
+  private static ChannelHandler newHttpResponseEncoder( ) {
+    return new HttpResponseEncoder( ) );
+  }
+  
+  private static ChannelHandler newHttpDecoder( ) {
+    return new NioHttpDecoder( ) );
   }
   
   public static ChannelPipelineFactory serverPipelineFactory( ) {
@@ -318,11 +268,11 @@ public class Handlers {
   }
   
   public static ChannelHandler newHttpResponseDecoder( ) {
-    return new NioHttpResponseDecoder( );
+    return  new NioHttpResponseDecoder( );
   }
   
   public static ChannelHandler newHttpChunkAggregator( ) {
-    return new HttpChunkAggregator( StackConfiguration.CLIENT_HTTP_CHUNK_BUFFER_MAX );
+    return  new HttpChunkAggregator( StackConfiguration.CLIENT_HTTP_CHUNK_BUFFER_MAX );
   }
   
   public static ChannelHandler addressingHandler( ) {//caching
@@ -330,23 +280,29 @@ public class Handlers {
   }
   
   public static ChannelHandler newAddressingHandler( final String addressingPrefix ) {//caching
-    return new AddressingHandler( addressingPrefix );
+    return  new AddressingHandler( addressingPrefix ) );
   }
   
-  public static ChannelHandler bindingHandler( final String bindingName ) {
-    if ( bindingHandlers.containsKey( bindingName ) ) {
-      return bindingHandlers.get( bindingName );
-    } else {
+  enum BindingHandlerLookup implements Function<String,BindingHandler> {
+    INSTANCE;
+
+    @Override
+    public BindingHandler apply( String bindingName ) {
       String maybeBindingName = "";
       if ( BindingManager.isRegisteredBinding( bindingName ) ) {
-        bindingHandlers.putIfAbsent( bindingName, new BindingHandler( BindingManager.getBinding( bindingName ) ) );
+        return new BindingHandler( BindingManager.getBinding( bindingName ) );
       } else if ( BindingManager.isRegisteredBinding( maybeBindingName = BindingManager.sanitizeNamespace( bindingName ) ) ) {
-        bindingHandlers.putIfAbsent( bindingName, new BindingHandler( BindingManager.getBinding( maybeBindingName ) ) );
+        return new BindingHandler( BindingManager.getBinding( maybeBindingName ) );
       } else {
         throw Exceptions.trace( "Failed to find registerd binding for name: " + bindingName
                                 + ".  Also tried looking for sanitized name: "
                                 + maybeBindingName );
       }
+    }
+    
+  }
+  
+  public static ChannelHandler bindingHandler( final String bindingName ) {
       return bindingHandlers.get( bindingName );
     }
   }
@@ -528,7 +484,7 @@ public class Handlers {
     pipeline.addLast( "internal-only-restriction", internalOnlyHandler( ) );
     pipeline.addLast( "msg-epoch-check", internalEpochHandler( ) );
   }
-
+  
   public static ExecutionHandler executionHandler( ) {
     return executionHandler;
   }

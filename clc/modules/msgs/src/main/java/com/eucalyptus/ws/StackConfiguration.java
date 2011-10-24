@@ -146,6 +146,9 @@ public class StackConfiguration extends AbstractPersistent {
   public static Integer       PORT                              = 8773;
   public static final Integer INTERNAL_PORT                     = 8773;
   
+  @ConfigurableField( description = "Record and report service times." )
+  public static Boolean       STATISTICS                        = Boolean.TRUE;
+  
   @ConfigurableField( description = "Execute service operations from a separate thread pool (with respect to I/O)." )
   public static Boolean       ASYNC_OPERATIONS                  = Boolean.FALSE;
   
