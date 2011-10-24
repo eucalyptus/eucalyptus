@@ -470,7 +470,7 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
   @Override
   public void changePassword( Session session, String userId, String oldPass, String newPass, String email ) throws EucalyptusServiceException {
     User requestUser = verifySession( session );
-    User targetUser = EuareWebBackend.changeUserPassword( requestUser, userId, oldPass, newPass, email );
+    User targetUser = EuareWebBackend.changeUserPasswordAndEmail( requestUser, userId, oldPass, newPass, email );
     //invalidateSession( targetUser );
   }
 

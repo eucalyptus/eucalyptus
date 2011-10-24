@@ -703,4 +703,24 @@ public class Privileged {
     user.setPassword( newEncrypted );
     user.setPasswordExpires( System.currentTimeMillis( ) + User.PASSWORD_LIFETIME );
   }
+  
+  // Special case for change password. We should allow a user to do all the stuff here for himself without explicit permission.
+  public static void changeUserPasswordAndEmail( User requestUser, Account account, User user, String newPass, String email ) throws AuthException {
+    if ( !requestUser.isSystemAdmin( ) ) {
+      if ( !requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) ) {
+        throw new AuthException( AuthException.ACCESS_DENIED );
+      }
+      if ( !requestUser.getUserId( ).equals( user.getUserId( ) ) && 
+           ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, PolicySpec.IAM_UPDATELOGINPROFILE, requestUser ) ||
+             ( email != null &&
+               !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, PolicySpec.IAM_UPDATEUSER, requestUser ) ) ) ) {
+        throw new AuthException( AuthException.ACCESS_DENIED );
+      }
+    }
+    setUserPassword( user, newPass );
+    if ( email != null ) {
+      user.setInfo( User.EMAIL, email );
+    }
+  }
+  
 }
