@@ -64,15 +64,16 @@
 package com.eucalyptus.component;
 
 import java.net.InetAddress;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import org.apache.log4j.Logger;
+import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.component.Component.State;
@@ -82,8 +83,11 @@ import com.eucalyptus.empyrean.ServiceTransitionType;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
+import com.eucalyptus.records.EventRecord;
+import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Threads;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.TypeMappers;
@@ -91,9 +95,11 @@ import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
+import com.google.common.base.Supplier;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.MapMaker;
 import com.google.common.primitives.Ints;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
@@ -255,7 +261,7 @@ public class Topology {
       
       @Override
       public Future<ServiceConfiguration> apply( final ServiceConfiguration input ) {
-        final Callable<ServiceConfiguration> call = TopologyChanges.callable( input, TopologyChanges.get( toState ) );
+        final Callable<ServiceConfiguration> call = Topology.callable( input, Topology.get( toState ) );
         final Queue workQueue = ( this.serializedStates.contains( toState )
           ? Queue.INTERNAL
           : Queue.EXTERNAL );
@@ -266,7 +272,7 @@ public class Topology {
   }
   
   public static Future<ServiceConfiguration> check( final ServiceConfiguration config ) {
-    return Queue.EXTERNAL.enqueue( TopologyChanges.callable( config, TopologyChanges.check( ) ) );
+    return Queue.EXTERNAL.enqueue( Topology.callable( config, Topology.check( ) ) );
   }
   
   public static Future<ServiceConfiguration> stop( final ServiceConfiguration config ) {
@@ -297,7 +303,7 @@ public class Topology {
     return this.getServices( ).get( serviceKey );
   }
   
-  interface TransitionGuard {
+  private interface TransitionGuard {
     boolean tryEnable( final ServiceConfiguration config );
     
     boolean nextEpoch( );
@@ -513,7 +519,7 @@ public class Topology {
     
     @Override
     public Future<ServiceConfiguration> apply( final ServiceConfiguration input ) {
-      final Callable<ServiceConfiguration> call = TopologyChanges.callable( input, TopologyChanges.get( State.ENABLED ) );
+      final Callable<ServiceConfiguration> call = Topology.callable( input, Topology.get( State.ENABLED ) );
       final Future<ServiceConfiguration> future = Queue.EXTERNAL.enqueue( call );
       return future;
     }
@@ -525,7 +531,7 @@ public class Topology {
     
     @Override
     public Future<ServiceConfiguration> apply( final ServiceConfiguration input ) {
-      final Callable<ServiceConfiguration> call = TopologyChanges.callable( input, TopologyChanges.check( ) );
+      final Callable<ServiceConfiguration> call = Topology.callable( input, Topology.check( ) );
       final Future<ServiceConfiguration> future = Queue.EXTERNAL.enqueue( call );
       return future;
     }
@@ -667,4 +673,222 @@ public class Topology {
     return builder.toString( );
   }
   
+  //@noformat
+  private static final
+  Map<Component.State, Function<ServiceConfiguration, ServiceConfiguration>> 
+  cloudTransitionCallables = new MapMaker( ).makeComputingMap( TopologyFunctionGenerator.INSTANCE ); //TODO:GRZE: CacheBuilder
+  //@format
+  private static Function<ServiceConfiguration, ServiceConfiguration> get( Component.State state ) {
+    return cloudTransitionCallables.get( state );
+  }
+  
+  private static Function<ServiceConfiguration, ServiceConfiguration> check( ) {
+    return Transitions.CHECK;
+  }
+  
+  private static Callable<ServiceConfiguration> callable( final ServiceConfiguration config, final Function<ServiceConfiguration, ServiceConfiguration> function ) {
+    final Long queueStart = System.currentTimeMillis( );
+    final Callable<ServiceConfiguration> call = new Callable<ServiceConfiguration>( ) {
+      
+      @Override
+      public ServiceConfiguration call( ) throws Exception {
+        if ( Bootstrap.isShuttingDown( ) ) {
+          throw Exceptions.toUndeclared( "System is shutting down." );
+        } else {
+          final Long serviceStart = System.currentTimeMillis( );
+          LOG.debug( EventRecord.here( Topology.class, EventType.DEQUEUE, function.toString( ), config.getFullName( ).toString( ),
+                                       Long.toString( serviceStart - queueStart ), "ms" ) );
+          
+          try {
+            final ServiceConfiguration result = function.apply( config );
+            LOG.debug( EventRecord.here( Topology.class, EventType.QUEUE, function.toString( ), config.getFullName( ).toString( ),
+                                         Long.toString( System.currentTimeMillis( ) - serviceStart ), "ms" ) );
+            return result;
+          } catch ( Exception ex ) {
+            Throwable t = Exceptions.unwrapCause( ex );
+            Logs.extreme( ).error( t, t );
+            LOG.error( config.getFullName( ) + " failed to transition because of: "
+                       + t );
+            throw ex;
+          }
+        }
+      }
+      
+      @Override
+      public String toString( ) {
+        return Topology.class.getSimpleName( ) + ":" + config.getFullName( ) + " " + function.toString( );
+      }
+    };
+    return call;
+  }
+  
+  public enum Transitions implements Function<ServiceConfiguration, ServiceConfiguration>, Supplier<Component.State> {
+    START( Component.State.NOTREADY ),
+    STOP( Component.State.STOPPED ),
+    INIT( Component.State.INITIALIZED ),
+    LOAD( Component.State.LOADED ),
+    DESTROY( Component.State.PRIMORDIAL ),
+    ENABLE( Component.State.ENABLED ) {
+      @Override
+      public ServiceConfiguration apply( ServiceConfiguration config ) {
+        if ( Topology.guard( ).tryEnable( config ) ) {
+          try {
+            return super.apply( config );
+          } catch ( RuntimeException ex ) {
+            Topology.guard( ).tryDisable( config );
+            throw ex;
+          }
+        } else {
+          throw new IllegalStateException( "Failed to ENABLE " + config.getFullName( ) );
+//          try {
+//            return ServiceTransitions.pathTo( config, Component.State.DISABLED ).get( );
+//          } catch ( InterruptedException ex ) {
+//            Thread.currentThread( ).interrupt( );
+//            throw Exceptions.toUndeclared( ex );
+//          } catch ( ExecutionException ex ) {
+//            throw Exceptions.toUndeclared( ex );
+//          }
+        }
+      }
+    },
+    DISABLE( Component.State.DISABLED ) {
+      @Override
+      public ServiceConfiguration apply( ServiceConfiguration config ) {
+        ServiceKey serviceKey = null;
+        try {
+          serviceKey = ServiceKey.create( config );
+          return super.apply( config );
+        } finally {
+          if ( serviceKey != null ) {
+            Topology.guard( ).tryDisable( config );
+          }
+        }
+      }
+    },
+    CHECK {
+      @Override
+      public ServiceConfiguration apply( ServiceConfiguration config ) {
+        if ( !Bootstrap.isFinished( ) ) {
+          LOG.debug( this.toString( )
+                     + " aborted because bootstrap is not complete for service: "
+                     + config );
+          return config;
+        } else {
+          return super.apply( config );
+        }
+      }
+    },
+    RESTART;
+    
+    private final Component.State  state;
+    protected final TopologyChange tc;
+    
+    private Transitions( ) {
+      this.state = null;
+      this.tc = new TopologyChange( this );
+    }
+    
+    private Transitions( State state ) {
+      this.state = state;
+      this.tc = new TopologyChange( this );
+    }
+    
+    @Override
+    public ServiceConfiguration apply( ServiceConfiguration input ) {
+      Components.lookup( input.getComponentId( ) ).setup( input );
+      return this.tc.apply( input );
+    }
+    
+    @Override
+    public String toString( ) {
+      return this.name( ) + ":" + this.get( );
+    }
+    
+    @Override
+    public State get( ) {
+      return this.state;
+    }
+    
+  }
+  
+  private static class TopologyChange implements Function<ServiceConfiguration, ServiceConfiguration>, Supplier<Component.State> {
+    private final Topology.Transitions transitionName;
+    
+    TopologyChange( Transitions transitionName ) {
+      this.transitionName = transitionName;
+    }
+    
+    @Override
+    public ServiceConfiguration apply( ServiceConfiguration input ) {
+      State nextState = null;
+      if ( ( nextState = findNextCheckState( input.lookupState( ) ) ) == null ) {
+        return input;
+      } else {
+        return this.doTopologyChange( this, input, nextState );
+      }
+    }
+    
+    private ServiceConfiguration doTopologyChange( TopologyChange tc, ServiceConfiguration input, State nextState ) throws RuntimeException {
+      State initialState = input.lookupState( );
+      ServiceConfiguration endResult = input;
+      try {
+        endResult = ServiceTransitions.pathTo( input, nextState ).get( );
+        LOG.trace( this.toString( endResult, initialState, nextState ) );
+        return endResult;
+      } catch ( Exception ex ) {
+        Exceptions.maybeInterrupted( ex );
+        LOG.trace( this.toString( input, initialState, nextState, ex ) );
+        throw Exceptions.toUndeclared( ex );
+      }
+    }
+    
+    private String toString( ServiceConfiguration endResult, State initialState, State nextState, Throwable... throwables ) {
+      return String.format( "%s %s %s->%s=%s [%s]", this.toString( ), endResult.getFullName( ), initialState, nextState, endResult.lookupState( ),
+                            ( throwables != null && throwables.length > 0
+                              ? Exceptions.causeString( throwables[0] )
+                              : "WINNING" ) );
+    }
+    
+    @Override
+    public String toString( ) {
+      return this.transitionName.toString( );
+    }
+    
+    @Override
+    public State get( ) {
+      return this.transitionName.get( );
+    }
+    
+    private State findNextCheckState( State initialState ) {
+      if ( this.get( ) == null ) {
+        if ( State.NOTREADY.equals( initialState ) || State.BROKEN.equals( initialState ) ) {
+          return State.DISABLED;
+        } else if ( initialState.ordinal( ) < State.NOTREADY.ordinal( ) ) {
+          return null;
+        } else {
+          return initialState;
+        }
+      } else {
+        return this.get( );
+      }
+    }
+    
+  }
+  
+  private enum TopologyFunctionGenerator implements Function<Component.State, Function<ServiceConfiguration, ServiceConfiguration>> {
+    INSTANCE;
+    
+    @Override
+    public Function<ServiceConfiguration, ServiceConfiguration> apply( State input ) {
+      for ( Transitions c : Transitions.values( ) ) {
+        if ( input.equals( c.state ) ) {
+          return c;
+        } else if ( input.name( ).startsWith( c.name( ) ) ) {
+          return c;
+        }
+      }
+      return Transitions.CHECK;
+    }
+    
+  }
 }

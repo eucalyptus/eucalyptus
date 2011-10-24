@@ -491,14 +491,8 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
         }
         if ( transition != null ) {
           try {
-            Futures.makeListenable( Threads.enqueue( this.configuration, transition ) ).addListener( new Runnable( ) {
-              
-              @Override
-              public void run( ) {
-                Cluster.this.clearExceptions( );
-              }
-            }, MoreExecutors.sameThreadExecutor( ) );
-            
+            Threads.enqueue( this.configuration, transition );
+            Cluster.this.clearExceptions( );
           } catch ( final Exception ex ) {
             LOG.error( ex, ex );
           }

@@ -76,7 +76,6 @@ import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.Topology;
-import com.eucalyptus.component.TopologyChanges;
 import com.eucalyptus.empyrean.DescribeServicesResponseType;
 import com.eucalyptus.empyrean.DescribeServicesType;
 import com.eucalyptus.empyrean.DisableServiceResponseType;
@@ -185,10 +184,10 @@ public class EmpyreanService {
     @Override
     public boolean apply( ModifyServiceType request ) {
       try {
-        final TopologyChanges.Transitions transition = TopologyChanges.Transitions.valueOf( request.getState( ).toUpperCase( ) );
+        final Topology.Transitions transition = Topology.Transitions.valueOf( request.getState( ).toUpperCase( ) );
         String name = request.getName( );
         ServiceConfiguration config = findService( name );
-        if ( TopologyChanges.Transitions.RESTART.equals( transition ) ) {
+        if ( Topology.Transitions.RESTART.equals( transition ) ) {
           Topology.stop( config ).get( );
           try {
             Topology.start( config ).get( );
@@ -237,7 +236,7 @@ public class EmpyreanService {
                                        + request.getState( )
                                        + "\nPossible arguments are: \n"
                                        + "TRANSITIONS\n\t"
-                                       + Joiner.on( "\n\t" ).join( TopologyChanges.Transitions.values( ) )
+                                       + Joiner.on( "\n\t" ).join( Topology.Transitions.values( ) )
                                        + "STATES\n\t"
                                        + Joiner.on( "\n\t" ).join( Component.State.values( ) ),
                                        ex );
@@ -437,7 +436,7 @@ public class EmpyreanService {
     final boolean showEvents = Boolean.TRUE.equals( request.getShowEvents( ) ) || showEventStacks;
     
     final Function<ServiceConfiguration, ServiceStatusType> transformToStatus = ServiceConfigurations.asServiceStatus( showEvents, showEventStacks );
-    final List<Predicate<ServiceConfiguration>> filters = new ArrayList<Predicate<ServiceConfiguration>>( ) {      
+    final List<Predicate<ServiceConfiguration>> filters = new ArrayList<Predicate<ServiceConfiguration>>( ) {
       {
         if ( request.getByPartition( ) != null ) {
           Partitions.exists( request.getByPartition( ) );

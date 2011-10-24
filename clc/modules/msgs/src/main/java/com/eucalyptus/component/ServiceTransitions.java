@@ -104,6 +104,7 @@ import com.eucalyptus.util.fsm.Automata;
 import com.eucalyptus.util.fsm.TransitionAction;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.MapMaker;
 import com.google.common.collect.ObjectArrays;
@@ -534,13 +535,8 @@ public class ServiceTransitions {
       
       @Override
       public void fire( final ServiceConfiguration parent ) throws Exception {
-        try {
-          parent.lookupBootstrapper( ).check( );
-          ServiceBuilders.lookup( parent.getComponentId( ) ).fireCheck( parent );
-        } catch ( Exception ex ) {
-          LOG.error( ex, ex );
-          throw ex;
-        }
+        parent.lookupBootstrapper( ).check( );
+        ServiceBuilders.lookup( parent.getComponentId( ) ).fireCheck( parent );
       }
     },
     START {
@@ -677,7 +673,7 @@ public class ServiceTransitions {
     }
   }
   
-  public enum StateCallbacks implements Callback<ServiceConfiguration> {
+  public enum StateCallbacks implements Callback<ServiceConfiguration> {//TODO:GRZE: make these discoverable
     FIRE_STATE_EVENT {
       
       @Override
@@ -707,16 +703,14 @@ public class ServiceTransitions {
     STATIC_PROPERTIES_ADD {
       @Override
       public void fire( final ServiceConfiguration config ) {
-        for ( Entry<String, ConfigurableProperty> entry : PropertyDirectory.getPendingPropertyEntries( ) ) {
+        for ( Entry<String, ConfigurableProperty> entry : Iterables.filter( PropertyDirectory.getPendingPropertyEntries( ), Predicates.instanceOf( StaticPropertyEntry.class ) ) ) {
           try {
             ConfigurableProperty prop = entry.getValue( );
-            if ( prop instanceof StaticPropertyEntry ) {
-              PropertyDirectory.addProperty( prop );
-              try {
-                prop.getValue( );
-              } catch ( Exception ex ) {
-                Logs.exhaust( ).error( ex );
-              }
+            PropertyDirectory.addProperty( prop );
+            try {
+              prop.getValue( );
+            } catch ( Exception ex ) {
+              Logs.extreme( ).error( ex );
             }
           } catch ( Exception ex ) {
             Logs.extreme( ).error( ex, ex );
