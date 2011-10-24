@@ -75,6 +75,7 @@ import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.Hosts;
+import com.eucalyptus.bootstrap.Hosts.Coordinator;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.component.Component;
@@ -248,7 +249,7 @@ public class ServiceBootstrapper extends Bootstrapper.Simple {
     public boolean apply( final ServiceConfiguration config ) {
       final boolean ret = config.getComponentId( ).isAlwaysLocal( ) || config.isVmLocal( )
                           || ( BootstrapArgs.isCloudController( ) && config.getComponentId( ).isCloudLocal( ) )
-                          || Hosts.isCoordinator( );
+                          || Hosts.Coordinator.INSTANCE.isLocalhost( );
       LOG.debug( "ServiceBootstrapper.shouldLoad(" + config.toString( )
                  + "):"
                  + ret );
@@ -300,7 +301,7 @@ public class ServiceBootstrapper extends Bootstrapper.Simple {
           public void run( ) {
             try {
               Topology.disable( config ).get( );
-              if ( Hosts.isCoordinator( ) ) {
+              if ( Hosts.Coordinator.INSTANCE.isLocalhost( ) ) {
                 Topology.enable( config );
               }
             } catch ( final Exception ex ) {

@@ -7,7 +7,6 @@ import net.sf.hajdbc.InactiveDatabaseMBean;
 import net.sf.hajdbc.sql.DriverDatabaseClusterMBean;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
-import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.bootstrap.Handles;
 import com.eucalyptus.bootstrap.Hosts;
@@ -145,7 +144,7 @@ public class EucalyptusBuilder extends AbstractServiceBuilder<EucalyptusConfigur
                                                         InactiveDatabaseMBean.class );
         database.setUser( "eucalyptus" );
         database.setPassword( dbPass );
-        if ( Hosts.isCoordinator( ) ) {
+        if ( Hosts.Coordinator.INSTANCE.isLocalhost( ) ) {
           cluster.activate( hostName, "full" );
         } else {
           cluster.activate( hostName, "passive" );

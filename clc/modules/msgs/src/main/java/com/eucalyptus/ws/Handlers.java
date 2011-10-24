@@ -71,12 +71,10 @@ import java.util.NoSuchElementException;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelDownstreamHandler;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelFuture;
@@ -86,7 +84,6 @@ import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelPipelineFactory;
-import org.jboss.netty.channel.ChannelSink;
 import org.jboss.netty.channel.ChannelUpstreamHandler;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.MessageEvent;
@@ -113,10 +110,12 @@ import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Hosts;
+import com.eucalyptus.bootstrap.Hosts.Coordinator;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentMessages;
 import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.Topology;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.crypto.util.SslSetup;
 import com.eucalyptus.empyrean.ServiceTransitionType;
@@ -452,7 +451,7 @@ public class Handlers {
         final BaseMessage msg = BaseMessage.extractMessage( e );
         if ( msg != null ) {
           try {
-            if ( msg instanceof ServiceTransitionType && !Hosts.isCoordinator( ) ) {
+            if ( msg instanceof ServiceTransitionType && !Hosts.Coordinator.INSTANCE.isLocalhost( ) ) {
               //TODO:GRZE: extra epoch check and redirect
               Topology.touch( ( ServiceTransitionType ) msg );
               ctx.sendUpstream( e );
@@ -475,14 +474,16 @@ public class Handlers {
   static void sendError( final ChannelHandlerContext ctx, final ChannelEvent e, final Class<? extends ComponentId> compClass, final String originalPath ) {
     e.getFuture( ).cancel( );
     HttpResponse response = null;
-    if ( !Topology.enabledServices( compClass ).isEmpty( ) ) {
-      response = new DefaultHttpResponse( HttpVersion.HTTP_1_1, HttpResponseStatus.TEMPORARY_REDIRECT );
+    response = new DefaultHttpResponse( HttpVersion.HTTP_1_1, HttpResponseStatus.TEMPORARY_REDIRECT );
+    String redirectUri;
+    if ( Topology.isEnabled( compClass ) ) {//have an enabled service, lets use that 
       final URI serviceUri = ServiceUris.remote( Topology.lookup( compClass ) );
-      final String redirectUri = serviceUri.toASCIIString( ) + originalPath.replace( serviceUri.getPath( ), "" );
-      response.setHeader( HttpHeaders.Names.LOCATION, redirectUri );
-    } else {
-      response = new DefaultHttpResponse( HttpVersion.HTTP_1_1, HttpResponseStatus.NOT_FOUND );
+      redirectUri = serviceUri.toASCIIString( ) + originalPath.replace( serviceUri.getPath( ), "" );
+    } else {//can't find service info, redirect via clc master
+      final URI serviceUri = ServiceUris.remote( Topology.lookup( Eucalyptus.class ) );
+      redirectUri = serviceUri.toASCIIString( ) + originalPath.replace( serviceUri.getPath( ), "" );
     }
+    response.setHeader( HttpHeaders.Names.LOCATION, redirectUri );
     final ChannelFuture writeFuture = Channels.future( ctx.getChannel( ) );
     writeFuture.addListener( ChannelFutureListener.CLOSE );
     if ( ctx.getChannel( ).isConnected( ) ) {

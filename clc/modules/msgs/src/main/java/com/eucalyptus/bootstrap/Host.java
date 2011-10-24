@@ -65,36 +65,16 @@ package com.eucalyptus.bootstrap;
 
 import java.net.InetAddress;
 import java.util.Date;
-import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.log4j.Logger;
 import org.jgroups.Address;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Internets;
-import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Ordering;
 
 public class Host implements java.io.Serializable, Comparable<Host> {
-  public enum DbFilter implements Predicate<Host> {
-    INSTANCE;
-    @Override
-    public boolean apply( Host arg0 ) {
-      return arg0.hasDatabase( );
-    }
-    
-  }
-  
-  public enum NonLocalFilter implements Predicate<Host> {
-    INSTANCE;
-    @Override
-    public boolean apply( Host arg0 ) {
-      return !arg0.isLocalHost( );
-    }
-    
-  }
-  
   private static final long          serialVersionUID = 1;
   private static Logger              LOG              = Logger.getLogger( Host.class );
   private final String               displayName;
@@ -113,7 +93,7 @@ public class Host implements java.io.Serializable, Comparable<Host> {
   }
   
   Host( Long startedTime ) {
-    this.startedTime = startedTime;
+    this.startedTime = startedTime == 0 ? System.currentTimeMillis( ) : startedTime;
     this.displayName = Internets.localHostIdentifier( );
     this.groupsId = Hosts.getLocalGroupAddress( );
     this.bindAddress = Internets.localHostInetAddress( );
