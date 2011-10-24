@@ -227,7 +227,7 @@ public class EmpyreanService {
       if ( NamedTransition.INSTANCE.apply( request ) ) {
         reply.markWinning( );
       } else {
-        Component.State nextState = Component.State.valueOf( request.getState( ) );
+        Component.State nextState = Component.State.valueOf( request.getState( ).toUpperCase( ) );
         ServiceConfiguration config = findService( request.getName( ) );
         Topology.transition( nextState ).apply( config ).get( );
         reply.markWinning( );
