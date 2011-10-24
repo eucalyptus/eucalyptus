@@ -32,8 +32,10 @@ import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.component.id.Walrus;
+import com.eucalyptus.config.ArbitratorConfiguration;
 import com.eucalyptus.config.StorageControllerConfiguration;
 import com.eucalyptus.config.WalrusConfiguration;
+import com.eucalyptus.empyrean.Empyrean.Arbitrator;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.event.EventFailedException;
@@ -86,6 +88,7 @@ public class ConfigurationWebBackend {
 	public static final String STORAGE_TYPE = "storage controller";
 	public static final String WALRUS_TYPE = "walrus";
 	public static final String VMWARE_BROKER_TYPE = "vmware broker";
+	public static final String ARBITRATOR_TYPE = "arbitrator";
 
 	public static final String DEFAULT_KERNEL = "Default kernel";
 	public static final String DEFAULT_RAMDISK = "Default ramdisk";
@@ -99,6 +102,8 @@ public class ConfigurationWebBackend {
 	public static final String PORT = "Port";
 	public static final String MAX_VLAN = "Max VLAN tag";
 	public static final String MIN_VLAN = "Min VLAN tag";
+
+	public static final String GATEWAY_HOST = "Gateway Host";
 
 	public static final String COMPONENT_PROPERTY_TYPE_KEY_VALUE = "KEYVALUE";
 	public static final String COMPONENT_PROPERTY_TYPE_KEY_VALUE_HIDDEN = "KEYVALUEHIDDEN";
@@ -135,6 +140,11 @@ public class ConfigurationWebBackend {
 	static {
 		CLUSTER_CONFIG_EXTRA_FIELD_DESCS.add( new SearchResultFieldDesc( "minVlan", MIN_VLAN, false, "0px", TableDisplay.NONE, Type.TEXT, true, false ) );
 		CLUSTER_CONFIG_EXTRA_FIELD_DESCS.add( new SearchResultFieldDesc( "maxVlan", MAX_VLAN, false, "0px", TableDisplay.NONE, Type.TEXT, true, false ) );
+	}
+
+	public static final ArrayList<SearchResultFieldDesc> ARBITRATOR_CONFIG_EXTRA_FIELD_DESCS = Lists.newArrayList( );
+	static {
+		ARBITRATOR_CONFIG_EXTRA_FIELD_DESCS.add( new SearchResultFieldDesc( "gatewayHost", GATEWAY_HOST, false, "0px", TableDisplay.NONE, Type.TEXT, true, false ) );
 	}
 
 	public static final String SC_DEFAULT_NAME = "sc-default";
@@ -324,7 +334,7 @@ public class ConfigurationWebBackend {
 		} catch ( Exception e ) { }
 	}
 
-	
+
 	private static void serializeVMwareBrokerConfiguration( ServiceConfiguration serviceConf, SearchResultRow result ) {
 		// Common
 		result.addField( makeConfigId( serviceConf.getName( ), VMWARE_BROKER_TYPE ) );
@@ -347,6 +357,45 @@ public class ConfigurationWebBackend {
 			serializeVMwareBrokerConfiguration( c, row );
 			results.add( row );
 
+		}
+		return results;
+	}
+
+	private static void serializeArbitratorConfiguration( ServiceConfiguration serviceConf, String gatewayHost, SearchResultRow result ) {
+		// Common
+		result.addField( makeConfigId( serviceConf.getName( ), ARBITRATOR_TYPE ) );
+		result.addField( serviceConf.getName( ) );
+		result.addField( serviceConf.getPartition( ) );
+		result.addField( ARBITRATOR_TYPE );
+		result.addField( serviceConf.getHostName( ) );
+		result.addField( serviceConf.getPort( ) == null ? null : serviceConf.getPort( ).toString( ) );
+		result.addField( serviceConf.lookupState().toString( ) );
+		result.addField( gatewayHost );
+	}
+
+	private static void deserializeArbitratorConfiguration( ServiceConfiguration serviceConf, SearchResultRow input ) {
+		ArbitratorConfiguration arbConfig = ( ArbitratorConfiguration ) serviceConf;//NOTE: depending on referencing the specific configuration type is not a safe assumption as that is a component-private type
+		int i = COMMON_FIELD_DESCS.size( );
+		try {
+			String val = input.getField(i++);
+			arbConfig.setGatewayHost(val);
+		} catch ( Exception e ) { 
+			LOG.error(e, e);
+		}
+	}
+
+	/**
+	 * @return the list of Arbitrator configurations for UI display.
+	 */
+	public static List<SearchResultRow> getArbitratorConfigurations( ) {
+		List<SearchResultRow> results = Lists.newArrayList( );
+		NavigableSet<ServiceConfiguration> configs = Components.lookup(Arbitrator.class).services();
+		for (ServiceConfiguration c : configs ) {
+			ArbitratorConfiguration arbConfig = (ArbitratorConfiguration) c;
+			SearchResultRow row = new SearchResultRow( );
+			row.setExtraFieldDescs( ARBITRATOR_CONFIG_EXTRA_FIELD_DESCS );
+			serializeArbitratorConfiguration( c, arbConfig.getGatewayHost(), row );
+			results.add( row );
 		}
 		return results;
 	}
@@ -380,6 +429,28 @@ public class ConfigurationWebBackend {
 	 */
 	public static void setVMwareBrokerConfiguration( final SearchResultRow input ) throws EucalyptusServiceException {
 		//Do nothing for now. Revisit.
+	}
+
+	/**
+	 * Set the Arbitrator configuration using the UI input.
+	 * 
+	 * @param input
+	 */
+	public static void setArbitratorConfiguration( final SearchResultRow input ) throws EucalyptusServiceException {
+		try {
+			//set props for all in the same partition
+			NavigableSet<ServiceConfiguration> configs = Components.lookup(Arbitrator.class).services();
+			for ( ServiceConfiguration c : configs ) {
+				if (input.getField(2).equals(c.getPartition())) {
+					deserializeArbitratorConfiguration( c, input );
+					EntityWrapper.get( c ).mergeAndCommit( c );
+				}
+			}
+		} catch ( Exception e ) {
+			LOG.error( "Failed to set arbitrator configuration" );
+			LOG.debug( e, e );
+			throw new EucalyptusServiceException( "Failed to set arbitrator configuration", e );
+		}
 	}
 
 	private static Type propertyTypeToFieldType( String propertyType ) {
