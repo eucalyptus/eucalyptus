@@ -839,7 +839,7 @@ public class Topology {
         LOG.debug( this.toString( input, initialState, nextState, ex ) );
         throw Exceptions.toUndeclared( ex );
       } finally {
-        if ( !Component.State.ENABLED.equals( endResult.lookupState( ) ) ) {
+        if ( Bootstrap.isFinished( ) && !Component.State.ENABLED.equals( endResult.lookupState( ) ) ) {
           Topology.guard( ).tryDisable( endResult );
         }
       }

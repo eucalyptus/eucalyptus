@@ -291,11 +291,11 @@ public class Hosts {
           teardown( Empyrean.class, h.getBindAddress( ) );
           if ( h.hasDatabase( ) ) {
             teardown( Eucalyptus.class, h.getBindAddress( ) );
-            Coordinator.INSTANCE.update( hostMap.values( ) );
           }
           LOG.info( "Hosts.viewChange(): -> removed  => " + h );
         }
       }
+      Coordinator.INSTANCE.update( hostMap.values( ) );
     }
     
   }

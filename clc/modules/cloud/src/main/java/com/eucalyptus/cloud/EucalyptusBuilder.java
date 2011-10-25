@@ -4,6 +4,7 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.sql.Driver;
 import java.util.NoSuchElementException;
+import java.util.concurrent.TimeUnit;
 import net.sf.hajdbc.InactiveDatabaseMBean;
 import net.sf.hajdbc.sql.DriverDatabaseClusterMBean;
 import org.apache.log4j.Logger;
@@ -143,7 +144,19 @@ public class EucalyptusBuilder extends AbstractServiceBuilder<EucalyptusConfigur
   }
   
   private synchronized void startDbPool( ServiceConfiguration config ) {
-    
+    while ( !Hosts.Coordinator.INSTANCE.isLocalhost( ) && !Hosts.Coordinator.INSTANCE.get( ).hasBootstrapped( ) ) {
+      LOG.info( "Waiting for primary cloud controller to bootstrap: " + Hosts.Coordinator.INSTANCE.get( ) );
+      try {
+        TimeUnit.SECONDS.sleep( 1 );
+      } catch ( InterruptedException ex ) {
+        Thread.currentThread( ).interrupt( );
+      }
+    }
+    try {
+      Iterables.find( Hosts.list( ), filterDbHost( config.getHostName( ) ) );
+    } catch ( NoSuchElementException ex ) {
+      return;
+    }
     for ( String ctx : PersistenceContexts.list( ) ) {
       final String contextName = ctx.startsWith( "eucalyptus_" )
         ? ctx
