@@ -227,7 +227,7 @@ public class ServiceTransitions {
       default:
         transition = ObjectArrays.concat( pathToStarted( fromState ), Component.State.DISABLED );
     }
-    return transition;
+    return ObjectArrays.concat( transition, Component.State.DISABLED );
   }
   
   private static final State[] pathToEnabled( final Component.State fromState ) {
@@ -239,7 +239,7 @@ public class ServiceTransitions {
       default:
         transition = ObjectArrays.concat( pathToDisabled( fromState ), Component.State.ENABLED );
     }
-    return transition;
+    return ObjectArrays.concat( transition, Component.State.ENABLED );
   }
   
   private static final State[] pathToStopped( final Component.State fromState ) {
