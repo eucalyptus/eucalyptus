@@ -3,7 +3,7 @@
 #
 include ../Makedefs
 
-theme_dir	= ${TOP}/clc/modules/www/src/main/java/edu/ucsb/eucalyptus/admin/public/themes
+theme_dir	= ${TOP}/clc/modules/www/src/main/java/com/eucalyptus/webui/public/themes
 web_prop_dir	= ${TOP}/clc/modules/www/conf
 
 .PHONY: all build update_properties update_theme deps extras install

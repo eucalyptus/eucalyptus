@@ -115,7 +115,7 @@
     <description></description>
     <display-name>X509Downloader</display-name>
     <servlet-name>X509Download</servlet-name>
-    <servlet-class>edu.ucsb.eucalyptus.admin.server.X509Download</servlet-class>
+    <servlet-class>com.eucalyptus.www.X509Download</servlet-class>
     <load-on-startup>1</load-on-startup>
   </servlet>
 
@@ -123,7 +123,7 @@
     <description></description>
     <display-name>CloudRegistration</display-name>
     <servlet-name>CloudRegistration</servlet-name>
-    <servlet-class>edu.ucsb.eucalyptus.admin.server.Registration</servlet-class>
+    <servlet-class>com.eucalyptus.www.Registration</servlet-class>
     <load-on-startup>1</load-on-startup>
   </servlet>
 
@@ -157,18 +157,5 @@
     <servlet-name>CloudRegistration</servlet-name>
     <url-pattern>/register</url-pattern>
   </servlet-mapping>
-
-
-  <!-- store -->
-  <servlet>
-    <servlet-name>imageStoreService</servlet-name>
-    <servlet-class>edu.ucsb.eucalyptus.admin.server.extensions.store.ImageStoreServiceImpl</servlet-class>
-  </servlet>
-
-  <servlet-mapping>
-    <servlet-name>imageStoreService</servlet-name>
-    <url-pattern>/ImageStoreService</url-pattern>
-  </servlet-mapping>
-
 
 </web-app>

@@ -249,6 +249,7 @@ public class ServiceTransitions {
         transition = ObjectArrays.concat( transition, Component.State.DISABLED );
         //$FALL-THROUGH$
       case DISABLED:
+      case NOTREADY:
         transition = ObjectArrays.concat( transition, Component.State.STOPPED );
         break;
       default:
