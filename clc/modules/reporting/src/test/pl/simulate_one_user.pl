@@ -18,9 +18,7 @@
 #   must be running; 3) You must have created and uploaded all the images,
 #   ramdisk images, and kernel images which you pass in; 4) eucarc must
 #   be sourced; 5) A Eucalyptus user corresponding to the credentials
-#   must have been created, accepted, and confirmed; 6) s3curl.pl must be in
-#   the user's path7; 7) Perl must have the Digest/HMAC-SHA1.pm module
-#   installed so s3curl.pl can run.
+#   must have been created, accepted, and confirmed.
 #
 # (c)2011, Eucalyptus Systems, Inc. All Rights Reserved.
 # author: tom.werges
