@@ -72,42 +72,35 @@ import org.jboss.netty.channel.Channels;
 import com.eucalyptus.component.ComponentId.ComponentPart;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.ws.Handlers;
+import com.eucalyptus.ws.StackConfiguration;
 import com.eucalyptus.ws.handlers.ClusterWsSecHandler;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 
 @ComponentPart( ClusterController.class )
 public final class ClusterClientPipelineFactory implements ChannelPipelineFactory {
-  private static ChannelHandler bindingHandler;
-  private static ChannelHandler wssecHandler;
-  
-  private static void setupHandlers( ) {
-    if ( wssecHandler == null ) {
-      synchronized ( ClusterClientPipelineFactory.class ) {
-        if ( wssecHandler == null ) {
-          wssecHandler = new ClusterWsSecHandler( );
-        }
-      }
+  private enum ClusterWsSec implements Supplier<ChannelHandler> {
+    INSTANCE;
+    
+    @Override
+    public ChannelHandler get( ) {
+      return new ClusterWsSecHandler( );
     }
-  }
+  };
   
-  public ClusterClientPipelineFactory( ) {
-    setupHandlers( );
-  }
+  private static final Supplier<ChannelHandler> wsSecHandler = Suppliers.memoize( ClusterWsSec.INSTANCE );
   
   @Override
   public ChannelPipeline getPipeline( ) throws Exception {
     final ChannelPipeline pipeline = Channels.pipeline( );
-    for ( Map.Entry<String, ChannelHandler> e : Handlers.channelMonitors( TimeUnit.SECONDS, 60 /**
-     * 
-     * TODO:GRZE: configurable
-     **/
-    ).entrySet( ) ) {
+    for ( final Map.Entry<String, ChannelHandler> e : Handlers.channelMonitors( TimeUnit.SECONDS, StackConfiguration.CLIENT_INTERNAL_TIMEOUT_SECS ).entrySet( ) ) {
       pipeline.addLast( e.getKey( ), e.getValue( ) );
     }
     pipeline.addLast( "decoder", Handlers.newHttpResponseDecoder( ) );
     pipeline.addLast( "aggregator", Handlers.newHttpChunkAggregator( ) );
     pipeline.addLast( "encoder", Handlers.httpRequestEncoder( ) );
     pipeline.addLast( "serializer", Handlers.soapMarshalling( ) );
-    pipeline.addLast( "wssec", ClusterClientPipelineFactory.wssecHandler );
+    pipeline.addLast( "wssec", wsSecHandler.get( ) );
     pipeline.addLast( "addressing", Handlers.newAddressingHandler( "EucalyptusCC#" ) );
     pipeline.addLast( "soap", Handlers.soapHandler( ) );
     pipeline.addLast( "binding", Handlers.bindingHandler( "eucalyptus_ucsb_edu" ) );
