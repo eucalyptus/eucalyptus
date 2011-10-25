@@ -89,11 +89,11 @@ import com.eucalyptus.ws.WebServicesException;
 import com.eucalyptus.ws.util.CredentialProxy;
 import com.google.common.collect.Lists;
 
-@ChannelPipelineCoverage( "one" )
+@ChannelPipelineCoverage( "all" )
 public class InternalWsSecHandler extends WsSecHandler {
   
   private static Logger LOG = Logger.getLogger( InternalWsSecHandler.class );
-  public InternalWsSecHandler( ) throws GeneralSecurityException {
+  public InternalWsSecHandler( ) {
     super( new CredentialProxy( Eucalyptus.class ) );
   }
   
