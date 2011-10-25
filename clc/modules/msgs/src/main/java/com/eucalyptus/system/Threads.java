@@ -627,7 +627,7 @@ public class Threads {
         try {
           final FutureTask<?> task = this.msgQueue.take( );
           if ( task != null ) {
-            Logs.extreme( ).debug( EventType.QUEUE + " " + task + " " + Thread.currentThread( ).getName( ) );
+            Logs.exhaust( ).debug( EventType.QUEUE + " " + task + " " + Thread.currentThread( ).getName( ) );
             try {
               task.run( );
             } catch ( final Exception ex ) {
