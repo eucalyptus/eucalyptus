@@ -79,6 +79,8 @@ import com.eucalyptus.cluster.callback.VolumeAttachCallback;
 import com.eucalyptus.cluster.callback.VolumeDetachCallback;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.Topology;
+import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
@@ -301,7 +303,7 @@ public class VolumeManager {
       cluster = Clusters.lookup( vm.lookupPartition( ) );
     } catch ( NoSuchElementException e ) {
       LOG.debug( e, e );
-      throw new EucalyptusCloudException( "Cluster does not exist: " + vm.lookupClusterConfiguration( ) );
+      throw new EucalyptusCloudException( "Cluster does not exist: " + Topology.lookup( ClusterController.class, vm.lookupPartition( ) ) );
     }
     final String deviceName = request.getDevice( );
     final String volumeId = request.getVolumeId( );
@@ -413,7 +415,7 @@ public class VolumeManager {
       cluster = Clusters.getInstance( ).lookup( vm.lookupPartition( ) );
     } catch ( NoSuchElementException e ) {
       LOG.debug( e, e );
-      throw new EucalyptusCloudException( "Cluster does not exist: " + vm.lookupClusterConfiguration( ) );
+      throw new EucalyptusCloudException( "Cluster does not exist: " + Topology.lookup( ClusterController.class, vm.lookupPartition( ) ) );
     }
     ServiceConfiguration scVm;
     try {
@@ -435,7 +437,7 @@ public class VolumeManager {
     AsyncRequests.newRequest( new VolumeDetachCallback( request ) ).dispatch( cluster.getConfiguration( ) );
     EventRecord.here( VolumeManager.class, EventClass.VOLUME, EventType.VOLUME_DETACH )
                .withDetails( vm.getOwner( ).toString( ), volume.getVolumeId( ), "instance", vm.getInstanceId( ) ).withDetails( "cluster",
-                                                                                                                               vm.lookupClusterConfiguration( ).toString( ) ).info( );
+                                                                                                                               Topology.lookup( ClusterController.class, vm.lookupPartition( ) ).toString( ) ).info( );
     volume.setStatus( "detaching" );
     reply.setDetachedVolume( volume );
     return reply;

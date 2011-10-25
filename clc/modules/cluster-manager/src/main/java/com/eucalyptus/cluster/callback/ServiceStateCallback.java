@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.cluster.Cluster;
+import com.eucalyptus.cluster.Cluster.State;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.ServiceChecks;
 import com.eucalyptus.component.ServiceChecks.CheckException;
@@ -14,6 +15,7 @@ import com.eucalyptus.empyrean.DisableServiceType;
 import com.eucalyptus.empyrean.ServiceStatusType;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.SubjectMessageCallback;
+import com.eucalyptus.util.fsm.Automata;
 
 public class ServiceStateCallback extends SubjectMessageCallback<Cluster, DescribeServicesType, DescribeServicesResponseType> {
   private static Logger LOG = Logger.getLogger( ServiceStateCallback.class );
@@ -43,7 +45,7 @@ public class ServiceStateCallback extends SubjectMessageCallback<Cluster, Descri
             this.getSubject( ).clearExceptions( );
           } else if ( Component.State.ENABLED.equals( serviceState ) && Component.State.DISABLED.ordinal( ) >= proxyState.ordinal( ) ) {
             try {
-              AsyncRequests.sendSync( config, new DisableServiceType( ) );
+              Automata.sequenceTransitions( this.getSubject( ), State.ENABLED, State.DISABLED ).call( ).get( );
             } catch ( Exception ex1 ) {
               LOG.error( ex1, ex1 );
             }

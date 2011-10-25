@@ -100,10 +100,8 @@ import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Ats;
 import com.eucalyptus.util.Classes;
-import com.eucalyptus.ws.handlers.BindingHandler;
+import com.eucalyptus.ws.Handlers;
 import com.eucalyptus.ws.handlers.HmacHandler;
-import com.eucalyptus.ws.handlers.InternalWsSecHandler;
-import com.eucalyptus.ws.handlers.QueryTimestampHandler;
 import com.eucalyptus.ws.handlers.SoapMarshallingHandler;
 import com.eucalyptus.ws.protocol.AddressingHandler;
 import com.eucalyptus.ws.protocol.BaseQueryBinding;
@@ -244,15 +242,11 @@ public class Pipelines {
     
     @Override
     public ChannelPipeline addHandlers( final ChannelPipeline pipeline ) {
-      pipeline.addLast( "deserialize", new SoapMarshallingHandler( ) );
-      try {
-        pipeline.addLast( "ws-security", new InternalWsSecHandler( ) );
-      } catch ( final GeneralSecurityException e ) {
-        LOG.error( e, e );
-      }
-      pipeline.addLast( "ws-addressing", new AddressingHandler( ) );
-      pipeline.addLast( "build-soap-envelope", new SoapHandler( ) );
-      pipeline.addLast( "binding", new BindingHandler( ) );
+      pipeline.addLast( "deserialize", Handlers.soapMarshalling( ) );
+      pipeline.addLast( "ws-security", Handlers.internalWsSecHandler() );
+      pipeline.addLast( "ws-addressing", Handlers.addressingHandler( ) );
+      pipeline.addLast( "build-soap-envelope", Handlers.soapHandler( ) );
+      pipeline.addLast( "binding", Handlers.bindinghandler() );
       return pipeline;
     }
     
@@ -331,8 +325,8 @@ public class Pipelines {
     
     @Override
     public ChannelPipeline addHandlers( final ChannelPipeline pipeline ) {
-      pipeline.addLast( "hmac-v2-verify", new HmacHandler( true ) );
-      pipeline.addLast( "timestamp-verify", new QueryTimestampHandler( ) );
+      pipeline.addLast( "hmac-v2-verify",  new HmacHandler( true ) );
+      pipeline.addLast( "timestamp-verify", Handlers.queryTimestamphandler() );
       pipeline.addLast( "restful-binding", new InternalQueryBinding( ) );
       return pipeline;
     }

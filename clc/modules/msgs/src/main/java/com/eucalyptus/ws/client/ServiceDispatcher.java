@@ -128,7 +128,9 @@ public abstract class ServiceDispatcher implements Dispatcher {
       } catch ( Exception e ) {
         LOG.error( e, e );
         Throwable rootCause = Exceptions.findCause( e, EucalyptusRemoteFault.class );
-        if ( rootCause instanceof EucalyptusRemoteFault ) {
+        if ( rootCause == null ) {
+          throw new EucalyptusCloudException( e );
+        } else if ( rootCause instanceof EucalyptusRemoteFault ) {
           EucalyptusRemoteFault remoteFault = ( EucalyptusRemoteFault ) rootCause;
           throw new EucalyptusCloudException( " " + remoteFault.getFaultString( ) );
         } else {

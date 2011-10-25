@@ -832,14 +832,14 @@ public class Topology {
       ServiceConfiguration endResult = input;
       try {
         endResult = ServiceTransitions.pathTo( input, nextState ).get( );
-        LOG.debug( this.toString( endResult, initialState, nextState ) );
+        Logs.exhaust( ).debug( this.toString( endResult, initialState, nextState ) );
         return endResult;
       } catch ( Exception ex ) {
         Exceptions.maybeInterrupted( ex );
         LOG.debug( this.toString( input, initialState, nextState, ex ) );
         throw Exceptions.toUndeclared( ex );
       } finally {
-        if ( !Component.State.ENABLED.equals( endResult.lookupState( ) ) ) {
+        if ( Bootstrap.isFinished( ) && !Component.State.ENABLED.equals( endResult.lookupState( ) ) ) {
           Topology.guard( ).tryDisable( endResult );
         }
       }

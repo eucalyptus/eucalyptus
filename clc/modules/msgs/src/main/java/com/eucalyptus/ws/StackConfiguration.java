@@ -162,10 +162,10 @@ public class StackConfiguration extends AbstractPersistent {
   public static Boolean       OOB_INTERNAL_OPERATIONS           = Boolean.TRUE;
   
   @ConfigurableField( description = "Client idle timeout (secs)." )
-  public static Long          CLIENT_IDLE_TIMEOUT_SECS          = 240L;
+  public static Long          CLIENT_IDLE_TIMEOUT_SECS          = 30L;
   
-  @ConfigurableField( description = "Cluster client idle timeout (secs)." )
-  public static Long          CLUSTER_IDLE_TIMEOUT_SECS         = 240L;
+  @ConfigurableField( description = "Client idle timeout (secs)." )
+  public static Integer       CLIENT_INTERNAL_TIMEOUT_SECS      = 60;
   
   @ConfigurableField( description = "Cluster connect timeout (ms)." )
   public static Long          CLUSTER_CONNECT_TIMEOUT_MILLIS    = 2000L;
@@ -328,4 +328,5 @@ public class StackConfiguration extends AbstractPersistent {
       
     }
   }
+  
 }

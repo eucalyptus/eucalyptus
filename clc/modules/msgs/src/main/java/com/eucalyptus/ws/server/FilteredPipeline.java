@@ -90,7 +90,7 @@ public abstract class FilteredPipeline implements HasName<FilteredPipeline>, Fil
     @Override
     protected void addSystemHandlers( ChannelPipeline pipeline ) {
       Handlers.addInternalSystemHandlers( pipeline );
-      super.addSystemHandlers( pipeline );
+      Handlers.addSystemHandlers( pipeline );
     }
     
     private ComponentId getComponentId( ) {
