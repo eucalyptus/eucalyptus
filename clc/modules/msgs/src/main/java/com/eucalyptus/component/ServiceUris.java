@@ -300,7 +300,7 @@ public class ServiceUris {
   }
   
   public static URI internal( ComponentId compId, final InetAddress host, Integer port, String... pathParts ) {
-    return make( compId, host, port, pathParts ).get( );
+    return makeInternal( compId, host, port, pathParts ).get( );
   }
   
   public static URI remote( final Class<? extends ComponentId> idClass, final InetAddress host, String... pathParts ) {
@@ -335,6 +335,10 @@ public class ServiceUris {
     return make( compId, host, port, pathParts ).get( );
   }
   
+  private static UriParserBuilder makeInternal( ComponentId compId, final InetAddress host, Integer port, String... pathParts ) {
+    return new UriParserBuilder( compId ).scheme( compId.getTransports( ).iterator( ).next( ) ).host( host ).port( port ).path( compId.getInternalServicePath( pathParts ) );
+  }
+
   private static UriParserBuilder make( ComponentId compId, final InetAddress host, Integer port, String... pathParts ) {
     return new UriParserBuilder( compId ).scheme( compId.getTransports( ).iterator( ).next( ) ).host( host ).port( port ).path( compId.getServicePath( pathParts ) );
   }
