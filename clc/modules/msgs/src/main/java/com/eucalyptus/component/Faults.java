@@ -341,8 +341,8 @@ public class Faults {
     return chain( config, Severity.ERROR, ( List<Throwable> ) exs );
   }
   
-  public static CheckException advisory( final ServiceConfiguration config, final List<Throwable> exs ) {
-    return chain( config, Severity.INFO, exs );
+  public static CheckException advisory( final ServiceConfiguration config, final List<? extends Throwable> exs ) {
+    return chain( config, Severity.INFO,  ( List<Throwable> ) exs  );
   }
   
   public static CheckException advisory( final ServiceConfiguration config, final Throwable... exs ) {

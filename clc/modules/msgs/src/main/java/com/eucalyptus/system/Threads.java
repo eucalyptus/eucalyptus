@@ -627,10 +627,7 @@ public class Threads {
         try {
           final FutureTask<?> task = this.msgQueue.take( );
           if ( task != null ) {
-            LOG.debug( Thread.currentThread( ).getName( ) + " "
-                       + EventType.QUEUE
-                       + " "
-                       + task );
+            Logs.exhaust( ).debug( EventType.QUEUE + " " + task + " " + Thread.currentThread( ).getName( ) );
             try {
               task.run( );
             } catch ( final Exception ex ) {
@@ -641,7 +638,7 @@ public class Threads {
           Thread.currentThread( ).interrupt( );
         }
       } while ( !this.msgQueue.isEmpty( ) || this.running.get( ) );
-      LOG.debug( "Shutting down worker: " + this.owner
+      Logs.extreme( ).debug( "Shutting down worker: " + this.owner
                  + ":"
                  + this.name
                  + " in thread "

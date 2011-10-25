@@ -215,13 +215,13 @@ public class Topology {
   }
   
   public static void touch( final ServiceTransitionType msg ) {//TODO:GRZE: @Service interceptor
-    if ( !Hosts.isCoordinator( ) && ( msg.get_epoch( ) != null ) ) {
+    if ( !Hosts.Coordinator.INSTANCE.isLocalhost( ) && ( msg.get_epoch( ) != null ) ) {
       Topology.getInstance( ).currentEpoch = Ints.max( Topology.getInstance( ).currentEpoch, msg.get_epoch( ) );
     }
   }
   
   public static boolean check( final BaseMessage msg ) {
-    if ( !Hosts.isCoordinator( ) && ( msg.get_epoch( ) != null ) ) {
+    if ( !Hosts.Coordinator.INSTANCE.isLocalhost( ) && ( msg.get_epoch( ) != null ) ) {
       return Topology.getInstance( ).epoch( ) <= msg.get_epoch( );
     } else {
       return true;
@@ -490,7 +490,7 @@ public class Topology {
   }
   
   public TransitionGuard getGuard( ) {
-    return ( Hosts.isCoordinator( )
+    return ( Hosts.Coordinator.INSTANCE.isLocalhost( )
       ? this.cloudControllerGuard( )
       : this.remoteGuard( ) );
   }
@@ -589,7 +589,7 @@ public class Topology {
       final List<ServiceConfiguration> checkedServices = Lists.newArrayList( Collections2.transform( checkedServiceFutures, ExtractFuture.INSTANCE ) );
       LOG.trace( LogUtil.subheader( "CHECKED: " + Joiner.on( "\nCHECKED: " ).join( checkedServices ) ) );
       
-      if ( !Hosts.isCoordinator( ) ) {
+      if ( !Hosts.Coordinator.INSTANCE.isLocalhost( ) ) {
         /** TODO:GRZE: check and disable timeout here **/
         return Lists.newArrayList( Collections2.transform( checkedServiceFutures, ExtractFuture.INSTANCE ) );
       } else {
@@ -612,7 +612,7 @@ public class Topology {
     @Override
     public boolean apply( final ServiceConfiguration arg0 ) {
       final ServiceKey key = ServiceKey.create( arg0 );
-      if ( !Hosts.isCoordinator( ) ) {
+      if ( !Hosts.Coordinator.INSTANCE.isLocalhost( ) ) {
         Logs.extreme( ).debug( "FAILOVER-REJECT: " + Internets.localHostInetAddress( )
                                + ": not cloud controller, ignoring promotion for: "
                                    + arg0.getFullName( ) );
@@ -667,7 +667,7 @@ public class Topology {
   @Override
   public String toString( ) {
     final StringBuilder builder = new StringBuilder( );
-    builder.append( "Topology:currentEpoch=" ).append( this.currentEpoch ).append( ":guard=" ).append( Hosts.isCoordinator( )
+    builder.append( "Topology:currentEpoch=" ).append( this.currentEpoch ).append( ":guard=" ).append( Hosts.Coordinator.INSTANCE.isLocalhost( )
       ? "cloud"
       : "remote" );
     return builder.toString( );
@@ -696,19 +696,18 @@ public class Topology {
           throw Exceptions.toUndeclared( "System is shutting down." );
         } else {
           final Long serviceStart = System.currentTimeMillis( );
-          LOG.debug( EventRecord.here( Topology.class, EventType.DEQUEUE, function.toString( ), config.getFullName( ).toString( ),
-                                       Long.toString( serviceStart - queueStart ), "ms" ) );
+          Logs.extreme( ).debug( EventRecord.here( Topology.class, EventType.DEQUEUE, function.toString( ), config.getFullName( ).toString( ),
+                                                   Long.toString( serviceStart - queueStart ), "ms" ) );
           
           try {
             final ServiceConfiguration result = function.apply( config );
-            LOG.debug( EventRecord.here( Topology.class, EventType.QUEUE, function.toString( ), config.getFullName( ).toString( ),
-                                         Long.toString( System.currentTimeMillis( ) - serviceStart ), "ms" ) );
+            Logs.extreme( ).debug( EventRecord.here( Topology.class, EventType.QUEUE, function.toString( ), config.getFullName( ).toString( ),
+                                                     Long.toString( System.currentTimeMillis( ) - serviceStart ), "ms" ) );
             return result;
           } catch ( Exception ex ) {
             Throwable t = Exceptions.unwrapCause( ex );
             Logs.extreme( ).error( t, t );
-            LOG.error( config.getFullName( ) + " failed to transition because of: "
-                       + t );
+            LOG.error( config.getFullName( ) + " failed to transition because of: " + t );
             throw ex;
           }
         }
@@ -725,7 +724,7 @@ public class Topology {
   public enum Transitions implements Function<ServiceConfiguration, ServiceConfiguration>, Supplier<Component.State> {
     START( Component.State.NOTREADY ),
     STOP( Component.State.STOPPED ),
-    INIT( Component.State.INITIALIZED ),
+    INITIALIZE( Component.State.INITIALIZED ),
     LOAD( Component.State.LOADED ),
     DESTROY( Component.State.PRIMORDIAL ),
     ENABLE( Component.State.ENABLED ) {
@@ -801,7 +800,7 @@ public class Topology {
     
     @Override
     public String toString( ) {
-      return this.name( ) + ":" + this.get( );
+      return this.name( ) + ":" + this.get( ) + " ";
     }
     
     @Override
@@ -833,14 +832,14 @@ public class Topology {
       ServiceConfiguration endResult = input;
       try {
         endResult = ServiceTransitions.pathTo( input, nextState ).get( );
-        LOG.trace( this.toString( endResult, initialState, nextState ) );
+        Logs.exhaust( ).debug( this.toString( endResult, initialState, nextState ) );
         return endResult;
       } catch ( Exception ex ) {
         Exceptions.maybeInterrupted( ex );
-        LOG.trace( this.toString( input, initialState, nextState, ex ) );
+        LOG.debug( this.toString( input, initialState, nextState, ex ) );
         throw Exceptions.toUndeclared( ex );
       } finally {
-        if ( !Component.State.ENABLED.equals( endResult.lookupState( ) ) ) {
+        if ( Bootstrap.isFinished( ) && !Component.State.ENABLED.equals( endResult.lookupState( ) ) ) {
           Topology.guard( ).tryDisable( endResult );
         }
       }

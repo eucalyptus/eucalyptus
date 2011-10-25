@@ -90,7 +90,7 @@ public abstract class FilteredPipeline implements HasName<FilteredPipeline>, Fil
     @Override
     protected void addSystemHandlers( ChannelPipeline pipeline ) {
       Handlers.addInternalSystemHandlers( pipeline );
-      super.addSystemHandlers( pipeline );
+      Handlers.addSystemHandlers( pipeline );
     }
     
     private ComponentId getComponentId( ) {
@@ -110,7 +110,6 @@ public abstract class FilteredPipeline implements HasName<FilteredPipeline>, Fil
   public void unroll( final ChannelPipeline pipeline ) {
     try {
       this.addHandlers( pipeline );
-      Handlers.addSystemHandlers( pipeline );
       if ( Logs.isExtrrreeeme( ) ) {
         for ( final Map.Entry<String, ChannelHandler> e : pipeline.toMap( ).entrySet( ) ) {
           EventRecord.here( this.getClass( ), EventType.PIPELINE_HANDLER, e.getKey( ), e.getValue( ).getClass( ).getSimpleName( ) ).trace( );

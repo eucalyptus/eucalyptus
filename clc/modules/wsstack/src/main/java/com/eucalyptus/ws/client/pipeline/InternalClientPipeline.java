@@ -74,6 +74,7 @@ import org.jboss.netty.channel.Channels;
 import com.eucalyptus.component.ComponentId.ComponentPart;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.ws.Handlers;
+import com.eucalyptus.ws.StackConfiguration;
 import com.eucalyptus.ws.handlers.InternalWsSecHandler;
 
 @ComponentPart( Empyrean.class )
@@ -83,18 +84,14 @@ public class InternalClientPipeline implements ChannelPipelineFactory {
   
   public InternalClientPipeline( ) {
     if ( wssecHandler == null ) {
-      try {
-        wssecHandler = new InternalWsSecHandler( );
-      } catch ( GeneralSecurityException ex ) {
-        LOG.error( ex, ex );
-      }
+      wssecHandler = new InternalWsSecHandler( );
     }
   }
   
   @Override
   public ChannelPipeline getPipeline( ) throws Exception {
     final ChannelPipeline pipeline = Channels.pipeline( );
-    for ( Map.Entry<String, ChannelHandler> e : Handlers.channelMonitors( TimeUnit.SECONDS, 30 ).entrySet( ) ) { // TODO:GRZE: configurable
+    for ( Map.Entry<String, ChannelHandler> e : Handlers.channelMonitors( TimeUnit.SECONDS, StackConfiguration.CLIENT_INTERNAL_TIMEOUT_SECS ).entrySet( ) ) { // TODO:GRZE: configurable
       pipeline.addLast( e.getKey( ), e.getValue( ) );
     }
     pipeline.addLast( "decoder", Handlers.newHttpResponseDecoder( ) );

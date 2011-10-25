@@ -2,14 +2,16 @@ package com.eucalyptus.cloud;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.sql.Driver;
 import java.util.NoSuchElementException;
+import java.util.concurrent.TimeUnit;
 import net.sf.hajdbc.InactiveDatabaseMBean;
 import net.sf.hajdbc.sql.DriverDatabaseClusterMBean;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
-import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.bootstrap.Handles;
+import com.eucalyptus.bootstrap.Host;
 import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.bootstrap.SystemIds;
 import com.eucalyptus.component.AbstractServiceBuilder;
@@ -25,7 +27,10 @@ import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.Mbeans;
+import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 
 @ComponentPart( Eucalyptus.class )
 @Handles( { RegisterEucalyptusType.class,
@@ -59,9 +64,7 @@ public class EucalyptusBuilder extends AbstractServiceBuilder<EucalyptusConfigur
   @Override
   public void fireStart( ServiceConfiguration config ) throws ServiceRegistrationException {
     EventRecord.here( EucalyptusBuilder.class, EventType.COMPONENT_SERVICE_START, config.toString( ) ).info( );
-    if ( !config.isHostLocal( ) ) {
-      startDbPool( config );
-    }
+    startDbPool( config );
   }
   
   @Override
@@ -77,41 +80,41 @@ public class EucalyptusBuilder extends AbstractServiceBuilder<EucalyptusConfigur
   @Override
   public void fireStop( ServiceConfiguration config ) throws ServiceRegistrationException {
     EventRecord.here( EucalyptusBuilder.class, EventType.COMPONENT_SERVICE_STOPPED, config.toString( ) ).info( );
+    if ( !config.isHostLocal( ) ) {
+      stopDbPool( config );
+    }
   }
-  
-//  static class ConnectionPool {
-//    private static final String HA_JDBC_CLUSTER = "cluster";
-//    enum SyncStrategy {
-//      full,passive;
-//      public static SyncStrategy get( ) {
-//        return ( Hosts.isCoordinator( ) ? full : passive );
-//      }
-//    }
-//    private final String persistenceContext; 
-//    private void getMBean( ) {
-//      DriverDatabaseClusterMBean cluster = Mbeans.lookup( jdbcJmxDomain, ImmutableMap.builder( ).put( HA_JDBC_CLUSTER, this.persistenceContext ).build( ),
-//                                                          DriverDatabaseClusterMBean.class );
-//    }
-//  }
   
   @Override
   public void fireCheck( ServiceConfiguration config ) throws ServiceRegistrationException {
     if ( !Bootstrap.isFinished( ) ) {
       return;
     }
+    this.updateDatabaseConnections( );
+  }
+  
+  private synchronized void updateDatabaseConnections( ) {
     for ( String ctx : PersistenceContexts.list( ) ) {
       try {
-        DriverDatabaseClusterMBean cluster = Mbeans.lookup( jdbcJmxDomain, ImmutableMap.builder( ).put( "cluster", ctx ).build( ),
-                                                            DriverDatabaseClusterMBean.class );
+        DriverDatabaseClusterMBean cluster = findDbClusterMBean( ctx );
         for ( String dbId : cluster.getActiveDatabases( ) ) {
-          cluster.getDatabase( dbId );
-          if ( !cluster.isAlive( dbId ) ) {
-            cluster.deactivate( dbId );
+          try {
+            Iterables.find( Hosts.list( ), filterDbHost( dbId ) );
+            if ( !cluster.isAlive( dbId ) ) {
+              cluster.deactivate( dbId );
+            }
+          } catch ( NoSuchElementException ex ) {
+//            cluster.deactivate( dbId );
           }
         }
-        for ( String dbId : cluster.getInactiveDatabases( ) ) {
-          if ( cluster.isAlive( dbId ) ) {
-            cluster.activate( dbId );
+        for ( final String dbId : cluster.getInactiveDatabases( ) ) {
+          try {
+            Iterables.find( Hosts.list( ), filterDbHost( dbId ) );
+            if ( cluster.isAlive( dbId ) ) {
+              cluster.activate( dbId );
+            }
+          } catch ( NoSuchElementException ex ) {
+//            cluster.remove( dbId );
           }
         }
       } catch ( Exception ex ) {
@@ -119,12 +122,42 @@ public class EucalyptusBuilder extends AbstractServiceBuilder<EucalyptusConfigur
       }
     }
   }
+
+  private static DriverDatabaseClusterMBean findDbClusterMBean( String ctx ) throws NoSuchElementException {
+    DriverDatabaseClusterMBean cluster = Mbeans.lookup( jdbcJmxDomain,
+                                                        ImmutableMap.builder( ).put( "cluster", ctx ).build( ),
+                                                        DriverDatabaseClusterMBean.class );
+    return cluster;
+  }
   
-  private void startDbPool( ServiceConfiguration config ) {
-    String dbPass = SystemIds.databasePassword( );
-    final String hostName = config.getHostName( );
-    String realJdbcDriver = Databases.getDriverName( );
-    
+  private static Predicate<Host> filterDbHost( final String dbId ) {
+    Predicate<Host> filter = new Predicate<Host>( ) {
+      
+      @Override
+      public boolean apply( Host input ) {
+        return input.getHostAddresses( ).contains( Internets.toAddress( dbId ) );
+      }
+    };
+    return filter;
+  }
+  
+  private synchronized void startDbPool( ServiceConfiguration config ) {
+    if ( Hosts.Coordinator.INSTANCE.isLocalhost( ) || config.isHostLocal( ) ) {
+      return;
+    }
+    while ( !Hosts.Coordinator.INSTANCE.isLocalhost( ) && !Hosts.Coordinator.INSTANCE.get( ).hasBootstrapped( ) ) {
+      LOG.info( "Waiting for primary cloud controller to bootstrap: " + Hosts.Coordinator.INSTANCE.get( ) );
+      try {
+        TimeUnit.SECONDS.sleep( 1 );
+      } catch ( InterruptedException ex ) {
+        Thread.currentThread( ).interrupt( );
+      }
+    }
+    try {
+      Iterables.find( Hosts.list( ), filterDbHost( config.getHostName( ) ) );
+    } catch ( NoSuchElementException ex ) {
+      return;
+    }
     for ( String ctx : PersistenceContexts.list( ) ) {
       final String contextName = ctx.startsWith( "eucalyptus_" )
         ? ctx
@@ -133,8 +166,10 @@ public class EucalyptusBuilder extends AbstractServiceBuilder<EucalyptusConfigur
       String dbUrl = "jdbc:" + ServiceUris.remote( Database.class, config.getInetAddress( ), contextName );
       
       try {
-        DriverDatabaseClusterMBean cluster = Mbeans.lookup( jdbcJmxDomain, ImmutableMap.builder( ).put( "cluster", contextName ).build( ),
-                                                            DriverDatabaseClusterMBean.class );
+        DriverDatabaseClusterMBean cluster = findDbClusterMBean( contextName );
+        String dbPass = SystemIds.databasePassword( );
+        final String hostName = config.getHostName( );
+        String realJdbcDriver = Databases.getDriverName( );
         if ( !cluster.getActiveDatabases( ).contains( hostName ) && !cluster.getInactiveDatabases( ).contains( hostName ) ) {
           cluster.add( hostName, realJdbcDriver, dbUrl );
         } else if ( cluster.getActiveDatabases( ).contains( hostName ) ) {
@@ -145,7 +180,7 @@ public class EucalyptusBuilder extends AbstractServiceBuilder<EucalyptusConfigur
                                                         InactiveDatabaseMBean.class );
         database.setUser( "eucalyptus" );
         database.setPassword( dbPass );
-        if ( Hosts.isCoordinator( ) ) {
+        if ( Hosts.Coordinator.INSTANCE.isLocalhost( ) ) {
           cluster.activate( hostName, "full" );
         } else {
           cluster.activate( hostName, "passive" );
@@ -158,7 +193,10 @@ public class EucalyptusBuilder extends AbstractServiceBuilder<EucalyptusConfigur
     }
   }
   
-  private void stopDbPool( ServiceConfiguration config ) {
+  private synchronized void stopDbPool( ServiceConfiguration config ) {
+    if ( Hosts.Coordinator.INSTANCE.isLocalhost( ) || config.isHostLocal( ) ) {
+      return;
+    }
     final String hostName = config.getHostName( );
     
     for ( String ctx : PersistenceContexts.list( ) ) {
@@ -167,8 +205,7 @@ public class EucalyptusBuilder extends AbstractServiceBuilder<EucalyptusConfigur
         : "eucalyptus_" + ctx;
       
       try {
-        DriverDatabaseClusterMBean cluster = Mbeans.lookup( jdbcJmxDomain, ImmutableMap.builder( ).put( "cluster", contextName ).build( ),
-                                                            DriverDatabaseClusterMBean.class );
+        DriverDatabaseClusterMBean cluster = findDbClusterMBean( contextName );
         
         try {
           if ( cluster.getActiveDatabases( ).contains( hostName ) ) {

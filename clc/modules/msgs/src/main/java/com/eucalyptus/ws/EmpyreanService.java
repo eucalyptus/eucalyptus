@@ -199,6 +199,8 @@ public class EmpyreanService {
         } else {
           Topology.transition( transition.get( ) ).apply( config ).get( );
         }
+      } catch ( final IllegalArgumentException ex ) {
+        return false;
       } catch ( final Exception ex ) {
         Exceptions.maybeInterrupted( ex );
         Logs.extreme( ).error( ex, ex );
@@ -223,24 +225,25 @@ public class EmpyreanService {
   
   public static ModifyServiceResponseType modifyService( final ModifyServiceType request ) throws Exception {
     final ModifyServiceResponseType reply = request.getReply( );
-    if ( NamedTransition.INSTANCE.apply( request ) ) {
-      reply.markWinning( );
-    } else {
-      try {
-        Component.State nextState = Component.State.valueOf( request.getState( ) );
+    try {
+      if ( NamedTransition.INSTANCE.apply( request ) ) {
+        reply.markWinning( );
+      } else {
+        Component.State nextState = Component.State.valueOf( request.getState( ).toUpperCase( ) );
         ServiceConfiguration config = findService( request.getName( ) );
         Topology.transition( nextState ).apply( config ).get( );
-      } catch ( Exception ex ) {
-        Exceptions.maybeInterrupted( ex );
-        throw Exceptions.toUndeclared( "Failed to execute request transition: "
-                                       + request.getState( )
-                                       + "\nPossible arguments are: \n"
-                                       + "TRANSITIONS\n\t"
-                                       + Joiner.on( "\n\t" ).join( Topology.Transitions.values( ) )
-                                       + "STATES\n\t"
-                                       + Joiner.on( "\n\t" ).join( Component.State.values( ) ),
-                                       ex );
+        reply.markWinning( );
       }
+    } catch ( Exception ex ) {
+      Exceptions.maybeInterrupted( ex );
+      throw Exceptions.toUndeclared( "Failed to execute request transition: "
+                                     + request.getState( )
+                                     + "\nPossible arguments are: \n"
+                                     + "TRANSITIONS\n\t"
+                                     + Joiner.on( "\n\t" ).join( Topology.Transitions.values( ) )
+                                     + "STATES\n\t"
+                                     + Joiner.on( "\n\t" ).join( Component.State.values( ) ),
+                                     ex );
     }
     return reply;
   }

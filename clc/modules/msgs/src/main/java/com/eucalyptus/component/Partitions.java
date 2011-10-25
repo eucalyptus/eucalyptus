@@ -133,7 +133,7 @@ public class Partitions {
           p = Partitions.lookupByName( config.getPartition( ) );
         } catch ( NoSuchElementException ex ) {
           LOG.warn( "Failed to lookup partition for " + config
-                    + ".  Generating new partition configuration." );
+                    + ".  Generating new partition configuration.\nCaused by: " + Exceptions.causeString( ex ) );
           try {
             p = Partitions.generatePartition( config );
           } catch ( ServiceRegistrationException ex1 ) {
@@ -143,7 +143,7 @@ public class Partitions {
         }
         return p;
       } else if ( config.getComponentId( ).isPartitioned( ) ) {
-        return Partitions.lookupByName( config.getPartition( ) );
+        return Partitions.lookupInternal( config );
       } else {
         return Partitions.lookupInternal( config );
       }
@@ -229,9 +229,8 @@ public class Partitions {
                                           SystemCredentials.lookup( Eucalyptus.class ).getCertificate( ) );
       } else {
         if ( !compId.hasCredentials( ) ) {
-          ComponentId p = ComponentIds.lookup( compId.getPartition( ) );
-          return new Partition( ).new Fake( compId.getPartition( ), SystemCredentials.lookup( p ).getKeyPair( ),
-                                            SystemCredentials.lookup( p ).getCertificate( ) );
+          return new Partition( ).new Fake( compId.getPartition( ), SystemCredentials.lookup( Eucalyptus.class ).getKeyPair( ),
+                                            SystemCredentials.lookup( Eucalyptus.class ).getCertificate( ) );
         } else {
           return new Partition( ).new Fake( compId.getPartition( ), SystemCredentials.lookup( compId ).getKeyPair( ),
                                             SystemCredentials.lookup( compId ).getCertificate( ) );

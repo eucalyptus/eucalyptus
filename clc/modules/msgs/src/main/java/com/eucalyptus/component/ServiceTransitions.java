@@ -134,42 +134,46 @@ public class ServiceTransitions {
    **/
   @SuppressWarnings( "unchecked" )
   public static CheckedListenableFuture<ServiceConfiguration> pathTo( final ServiceConfiguration configuration, final Component.State goalState ) {
-    try {
-      CheckedListenableFuture<ServiceConfiguration> result = null;
-      switch ( goalState ) {
-        case LOADED:
-          result = executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToLoaded( configuration.lookupState( ) ) ) );
-          break;
-        case DISABLED:
-          result = executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToDisabled( configuration.lookupState( ) ) ) );
-          break;
-        case ENABLED:
-          result = executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToEnabled( configuration.lookupState( ) ) ) );
-          break;
-        case STOPPED:
-          result = executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToStopped( configuration.lookupState( ) ) ) );
-          break;
-        case NOTREADY:
-          result = executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToStarted( configuration.lookupState( ) ) ) );
-          break;
-        case PRIMORDIAL:
-          result = executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToPrimordial( configuration.lookupState( ) ) ) );
-          break;
-        case BROKEN:
-          result = executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToBroken( configuration.lookupState( ) ) ) );
-          break;
-        case INITIALIZED:
-          result = executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToInitialized( configuration.lookupState( ) ) ) );
-          break;
+    if ( goalState.equals( configuration.lookupState( ) ) ) {
+      return Futures.predestinedFuture( configuration );
+    } else {
+      try {
+        CheckedListenableFuture<ServiceConfiguration> result = null;
+        switch ( goalState ) {
+          case LOADED:
+            result = executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToLoaded( configuration.lookupState( ) ) ) );
+            break;
+          case DISABLED:
+            result = executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToDisabled( configuration.lookupState( ) ) ) );
+            break;
+          case ENABLED:
+            result = executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToEnabled( configuration.lookupState( ) ) ) );
+            break;
+          case STOPPED:
+            result = executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToStopped( configuration.lookupState( ) ) ) );
+            break;
+          case NOTREADY:
+            result = executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToStarted( configuration.lookupState( ) ) ) );
+            break;
+          case PRIMORDIAL:
+            result = executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToPrimordial( configuration.lookupState( ) ) ) );
+            break;
+          case BROKEN:
+            result = executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToBroken( configuration.lookupState( ) ) ) );
+            break;
+          case INITIALIZED:
+            result = executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToInitialized( configuration.lookupState( ) ) ) );
+            break;
+        }
+        return result;
+      } catch ( RuntimeException ex ) {
+        Logs.extreme( ).error( ex, ex );
+        LOG.error( configuration.getFullName( ) + " failed to transition to "
+                   + goalState
+                   + " because of: "
+                   + Exceptions.causeString( ex ) );
+        throw ex;
       }
-      return result;
-    } catch ( RuntimeException ex ) {
-      Logs.extreme( ).error( ex, ex );
-      LOG.error( configuration.getFullName( ) + " failed to transition to "
-                 + goalState
-                 + " because of: "
-                 + Exceptions.causeString( ex ) );
-      throw ex;
     }
   }
   
@@ -217,6 +221,7 @@ public class ServiceTransitions {
     State[] transition = new State[] { fromState };
     switch ( fromState ) {
       case DISABLED:
+      case NOTREADY:
         transition = ObjectArrays.concat( transition, Component.State.DISABLED );
         break;
       default:
@@ -288,21 +293,21 @@ public class ServiceTransitions {
   private static void processTransition( final ServiceConfiguration parent, final Completion transitionCallback, final TransitionActions transitionAction ) {
     ServiceTransitionCallback trans = null;
     try {
-      if ( parent.isVmLocal( ) || ( parent.isHostLocal( ) && Hosts.isCoordinator( ) ) ) {
+      if ( parent.isVmLocal( ) || ( parent.isHostLocal( ) && Hosts.Coordinator.INSTANCE.isLocalhost( ) ) ) {
         try {
           trans = ServiceLocalTransitionCallbacks.valueOf( transitionAction.name( ) );
         } catch ( Exception ex ) {
           LOG.error( ex, ex );
           throw ex;
         }
-      } else if ( !Hosts.isCoordinator( ) ) {
+      } else if ( !Hosts.Coordinator.INSTANCE.isLocalhost( ) ) {
         try {
           trans = ServiceRemoteTransitionNotification.valueOf( transitionAction.name( ) );
         } catch ( Exception ex ) {
           LOG.error( ex, ex );
           throw ex;
         }
-      } else if ( Hosts.isCoordinator( ) ) {
+      } else if ( Hosts.Coordinator.INSTANCE.isLocalhost( ) ) {
         try {
           trans = CloudRemoteTransitionCallbacks.valueOf( transitionAction.name( ) );
         } catch ( Exception ex ) {

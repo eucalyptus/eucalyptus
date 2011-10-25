@@ -63,6 +63,7 @@
  */
 package com.eucalyptus.ws.server;
 
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 import javax.security.auth.login.LoginException;
 import org.apache.log4j.Logger;
@@ -93,6 +94,8 @@ import com.eucalyptus.http.MappingHttpMessage;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.ws.Handlers;
+import com.eucalyptus.ws.StackConfiguration;
 import com.eucalyptus.ws.WebServicesException;
 
 @ChannelPipelineCoverage( "one" )
@@ -102,6 +105,7 @@ public class NioServerHandler extends SimpleChannelUpstreamHandler {//TODO:GRZE:
   
   @Override
   public void messageReceived( final ChannelHandlerContext ctx, final MessageEvent e ) throws Exception {
+    Statistics.startUpstream( ctx.getChannel( ).getId( ), this );
     try {
       if ( this.pipeline.get( ) == null ) {
         lookupPipeline( ctx, e );
@@ -140,10 +144,11 @@ public class NioServerHandler extends SimpleChannelUpstreamHandler {//TODO:GRZE:
       if ( Logs.isExtrrreeeme( ) && request instanceof MappingHttpMessage ) {
         Logs.extreme( ).trace( ( ( MappingHttpMessage ) request ).logMessage( ) );
       }
-      final ChannelPipeline currentPipeline = ctx.getPipeline( );
+      final ChannelPipeline newPipeline = StackConfiguration.STATISTICS ? Channels.pipeline( ) : ctx.getPipeline( );
       FilteredPipeline filteredPipeline = Pipelines.find( request );
       if ( this.pipeline.compareAndSet( null, filteredPipeline ) ) {
-        this.pipeline.get( ).unroll( currentPipeline );
+        this.pipeline.get( ).unroll( newPipeline );
+        Handlers.addSystemHandlers( newPipeline );
       }
     } catch ( DuplicatePipelineException e1 ) {
       LOG.error( "This is a BUG: " + e1, e1 );

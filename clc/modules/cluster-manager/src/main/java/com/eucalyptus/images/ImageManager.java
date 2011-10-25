@@ -80,6 +80,8 @@ import com.eucalyptus.cloud.CloudMetadatas;
 import com.eucalyptus.cloud.ImageMetadata;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
+import com.eucalyptus.component.Topology;
+import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.IllegalContextAccessException;
@@ -423,7 +425,7 @@ public class ImageManager {
           
         } catch ( NoSuchElementException e ) {
           LOG.debug( e );
-          throw new EucalyptusCloudException( "Cluster does not exist: " + vm.lookupClusterConfiguration( ) );
+          throw new EucalyptusCloudException( "Cluster does not exist: " + Topology.lookup( ClusterController.class, vm.lookupPartition( ) ) );
         }
       }
     } catch ( AuthException ex ) {

@@ -108,6 +108,9 @@ public class AddressManager {
     ReleaseAddressResponseType reply = ( ReleaseAddressResponseType ) request.getReply( );
     reply.set_return( false );
     Address address = RestrictedTypes.doPrivileged( request.getPublicIp( ), Address.class );
+    if ( address.isPending( ) ) {
+      address.clearPending( );
+    }
     Addresses.release( address );
     reply.set_return( true );
     return reply;
