@@ -56,7 +56,7 @@ while ($#ARGV>0) {
 	my $pid = fork();
 	if ($pid==0) {
 		# We must shell out to change users
-		exec("su - $user -c \"./simulate_one_user.pl $num_instances_per_user $interval $duration $user_num $kernel_image $ramdisk_image $image > log\"")
+		exec("su - $user -c \"./simulate_one_user.pl $num_instances_per_user $interval $duration $user_num $kernel_image $ramdisk_image $image > log 2>&1\"")
 			or die ("couldn't exec");
 	}
 	push(@pids, $pid);
