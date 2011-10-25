@@ -58,106 +58,75 @@
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
  *******************************************************************************/
-package edu.ucsb.eucalyptus.admin.client;
+/*
+ *
+ * Author: Dmitrii Zagorodnov dmitrii@cs.ucsb.edu
+ */
 
-import java.util.ArrayList;
+package com.eucalyptus.webui.server;
 
-import com.google.gwt.user.client.rpc.IsSerializable;
+import javax.mail.Message;
+import javax.mail.Session;
+import javax.mail.Transport;
+import javax.mail.internet.InternetAddress;
+import javax.mail.internet.MimeMessage;
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import java.io.IOException;
+import java.net.InetAddress;
+import java.util.Properties;
+import java.util.UUID;
+import org.apache.log4j.Logger;
 
+public class ServletUtils extends HttpServlet {
+	private static Logger LOG = Logger.getLogger(ServletUtils.class);
 
-public class StorageInfoWeb implements IsSerializable {
-	private String name;
-	private String host;
-	private Integer port;
-	private Boolean committed;	
-	private ArrayList<String> storageParams = new ArrayList<String>();
-	public StorageInfoWeb() { }
-	public StorageInfoWeb( final String name, final String host, final Integer port ) {
-		this.name = name;
-		this.host = host;
-		this.port = port;
-		this.committed = StorageInfoWeb.DEFAULT_SC.committed;
-		this.storageParams = new ArrayList<String>();
-	}
-
-	public StorageInfoWeb( final String name,
-			final String host,
-			final Integer port,
-			final ArrayList<String> storageParams) {
-		this.name = name;
-		this.host = host;
-		this.port = port;
-		this.committed = false;
-		this.storageParams = storageParams;
-	}
-
-
-	public final void setCommitted ()
-	{
-		this.committed = true;
-	}
-
-	public final Boolean isCommitted ()
-	{
-		return this.committed;
-	}
-
-	public final String getName() {
-		return name;
-	}
-
-	public final void setName(final String name) {
-		this.name = name;
-	}
-
-	public final String getHost() {
-		return host;
-	}
-
-	public final void setHost(final String host) {
-		this.host = host;
-	}
-
-	public final Integer getPort() {
-		return port;
-	}
-
-	public final void setPort(final Integer port) {
-		this.port = port;
-	}
-
-	public final ArrayList<String> getStorageParams() {
-		return storageParams;
-	}
-
-	public final void setStorageParams(final ArrayList<String> storageParams) {
-		this.storageParams = storageParams;
-	}
-
-	@Override
-	public final boolean equals( final Object o )
-	{
-		if ( this == o ) {
-			return true;
+	public static void sendMail(String from, String to, String subject, String body)
+	throws ServletException, IOException {
+		Properties properties = System.getProperties();
+		String mailHost = properties.getProperty("mail.smtp.host");
+		if(mailHost == null) {
+			properties.setProperty("mail.smtp.host", "localhost");
 		}
-		if ( o == null || getClass() != o.getClass() ) {
-			return false;
+		try {
+			send(from, to, subject, body);
+		} catch(Exception ex) {
+			//try again with mailhost
+			properties.setProperty("mail.smtp.host", "mailhost");
+			try {
+				send(from, to, subject, body);
+			} catch(Exception exception) {
+				LOG.error("Unable to send mail" + exception); 		
+			}
 		}
-
-		StorageInfoWeb that = ( StorageInfoWeb ) o;
-
-		if ( !name.equals( that.name ) ) {
-			return false;
-		}
-
-		return true;
 	}
 
-	@Override
-	public final int hashCode()
-	{
-		return name.hashCode();
+	private static void send(String from, String to, String subject, String body) throws Exception {
+		Properties properties = System.getProperties();
+		Session session = Session.getDefaultInstance(properties);
+		MimeMessage message = new MimeMessage(session);
+		message.setFrom(new InternetAddress(from));
+		message.addRecipient(Message.RecipientType.TO, new InternetAddress(to));
+		message.setSubject(subject);
+		message.setText(body);
+		Transport.send(message);
 	}
 
-	public static StorageInfoWeb DEFAULT_SC = new StorageInfoWeb( "sc-name", "sc-host", 8773 /** FIXME: DRAMATICALLY: URGENTLY **/, new ArrayList<String>());
+	public static String getRequestUrl(HttpServletRequest req) {
+		String scheme = req.getScheme();             // http
+		String serverName = req.getServerName();     // hostname.com
+		int serverPort = req.getServerPort();        // 80
+		String contextPath = req.getContextPath();   // /mywebapp
+		String servletPath = req.getServletPath();   // /servlet/MyServlet - WRONG in case of GWT
+		String pathInfo = req.getPathInfo();         // /a/b;c=123
+		String queryString = req.getQueryString();          // d=789
+		String url = scheme+"://"+serverName+":"+serverPort+contextPath+"/";
+		return url;
+	}
+
+	public static String genGUID() {
+		UUID guid = UUID.randomUUID();
+		return guid.toString();
+	}
 }
