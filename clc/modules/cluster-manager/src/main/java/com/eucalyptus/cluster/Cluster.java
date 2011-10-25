@@ -401,7 +401,6 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
         this.from( State.DISABLED ).to( State.STOPPED ).error( State.PENDING ).on( Transition.STOP ).run( noop );
         
         this.from( State.ENABLED ).to( State.DISABLED ).error( State.NOTREADY ).on( Transition.DISABLE ).run( Cluster.ServiceStateDispatch.DISABLED );
-        this.from( State.ENABLED ).to( State.NOTREADY ).error( State.NOTREADY ).on( Transition.DISABLE ).run( Cluster.ServiceStateDispatch.DISABLED );
         
         this.from( State.ENABLING ).to( State.ENABLING_RESOURCES ).error( State.NOTREADY ).on( Transition.ENABLING_RESOURCES ).run( Refresh.RESOURCES );
         this.from( State.ENABLING_RESOURCES ).to( State.ENABLING_NET ).error( State.NOTREADY ).on( Transition.ENABLING_NET ).run( Refresh.NETWORKS );
@@ -649,9 +648,9 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
   public void disable( ) throws ServiceRegistrationException {
     try {
       if ( State.NOTREADY.equals( this.getStateMachine( ).getState( ) ) ) {
-        Automata.sequenceTransitions( this, State.ENABLED, State.DISABLED ).call( ).get( );
-      } else if ( State.ENABLED.equals( this.getStateMachine( ).getState( ) ) ) {
         Automata.sequenceTransitions( this, State.NOTREADY, State.DISABLED ).call( ).get( );
+      } else if ( State.ENABLED.equals( this.getStateMachine( ).getState( ) ) ) {
+        Automata.sequenceTransitions( this, State.ENABLED, State.DISABLED ).call( ).get( );
       }
     } catch ( final InterruptedException ex ) {
       Thread.currentThread( ).interrupt( );
@@ -956,10 +955,15 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
     final Component.State externalState = this.configuration.lookupState( );
     final List<Throwable> currentErrors = Lists.newArrayList( );
     currentErrors.addAll( this.pendingErrors );
-    if ( !currentErrors.isEmpty( ) ) {
+    if ( Cluster.State.NOTREADY.equals( currentState ) ) {
+      try {
+        Threads.enqueue( this.getConfiguration( ), Automata.sequenceTransitions( this, State.NOTREADY, State.DISABLED ) ).get( );
+      } catch ( Exception ex ) {
+        Exceptions.maybeInterrupted( ex );
+        throw Faults.failure( this.configuration, ex );
+      }
+    } else if ( !currentErrors.isEmpty( ) ) {
       throw Faults.failure( this.configuration, currentErrors );
-//      Faults.CheckException ex = ServiceChecks.Severity.ERROR.transform( this.configuration, currentErrors );
-//      throw ex;
     } else if ( ( currentState.ordinal( ) < State.DISABLED.ordinal( ) )
                 || ( Component.State.ENABLED.equals( externalState ) && ( Cluster.State.ENABLING.ordinal( ) >= currentState.ordinal( ) ) ) ) {
       final IllegalStateException ex = new IllegalStateException( "Cluster is currently reported as " + externalState
