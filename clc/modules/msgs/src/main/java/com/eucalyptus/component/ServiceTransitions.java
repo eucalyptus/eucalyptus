@@ -217,6 +217,7 @@ public class ServiceTransitions {
     State[] transition = new State[] { fromState };
     switch ( fromState ) {
       case DISABLED:
+      case NOTREADY:
         transition = ObjectArrays.concat( transition, Component.State.DISABLED );
         break;
       default:
