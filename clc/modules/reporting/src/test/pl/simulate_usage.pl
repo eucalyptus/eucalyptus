@@ -22,8 +22,7 @@
 #    b. Add the user to the OS using /usr/sbin/useradd
 #    c. Download credentials and put them in his home dir
 #    d. Source eucarc automatically by adding a line to his .bashrc
-#    e. Add s3curl.pl to his path by adding a line to his .bashrc
-#    f. Bundle, upload, and register the associated image
+#    e. Bundle, upload, and register the associated image
 #  4. Bundle and upload the kernel and ramdisk images
 #  5. Run this script as root. This script must run as root because it su's
 #       and changes users.
