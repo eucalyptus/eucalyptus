@@ -37,7 +37,8 @@ if ($#ARGV+1 < 6) {
 # Takes a size (in MB) of dummy data, and returns a path to the resultant file
 sub generate_dummy_file($) {
 	my $size=$_[0];
-	my $path = "dummy-$size-megabyte.txt";
+	my $time = time();
+	my $path = "dummy-$size-megabyte-$time.txt";
 	my $dummy_data = "f00d";
 	unless (-e $path) {
 		open FILE, ">$path" or die ("couldn't open dummy file for writing");
@@ -46,6 +47,7 @@ sub generate_dummy_file($) {
 		}
 		close FILE or die ("couldn't close dummy file");
 	}
+	sleep 2;
 	return $path;
 }
 
@@ -137,12 +139,10 @@ for (my $i=0; ($i*$interval) < $duration; $i++) {
 	print "$i: Created volume\n";
 	my $time = time();
 	my $dummy_data_path = generate_dummy_file($storage_usage_mb);
-	system("s3curl.pl --id $access_key --key $secret_key --put /dev/null -- -s -v $s3_url/mybucket-$user-$i-$time") and die("creating bucket failed");
 	print "$i: Created bucket\n";
-	for (my $j=0; $j<3; $j++) {
-		system("s3curl.pl --id $access_key --key $secret_key --put $dummy_data_path -- -s -v $s3_url/mybucket-$user-$i-$time/obj-$user-$time-$j") and die("creating s3 obj failed");
-		print "$i,$j: Created object\n";
-	}
+	system("euca-bundle-image -i $dummy_data_path");
+	system("euca-upload-bundle -b mybucket -m /tmp/$dummy_data_path.manifest.xml");
+	print "$i: Uploaded bundle\n";
 	sleep $interval;
 }
 
