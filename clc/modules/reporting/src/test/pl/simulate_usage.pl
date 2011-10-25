@@ -39,22 +39,6 @@ if ($#ARGV+1 < 5) {
 	die "Usage: simulate_usage.pl num_instances_per_user interval_secs duration_secs kernel_image ramdisk_image (username image)+\n";
 }
 
-# Returns a list of pids still running among those passed, or an empty list
-#  if none. Does not return zombie processes.
-sub are_any_running(@) {
-	my @result_pids=();
-	my $cmd = "ps o pid,stat " . join(" ",@_);
-	my $output = `$cmd` or die("couldn't ps");
-	my @lines = split("\n",$output);
-	shift @lines; # get rid of ps header line
-	foreach (@lines) {
-		s/^\s*//; # stupid ps output sometimes contains leading spaces
-		my @fields = split("\\s+");
-		push (@result_pids,$fields[0]) if (!($fields[1] =~ /^Z.*/)); #avoid zombie procs
-	}
-	return @result_pids;
-}
-
 my $num_instances_per_user = shift;
 my $interval = shift;
 my $duration = shift;
@@ -71,7 +55,7 @@ while ($#ARGV>0) {
 	# fork and run each simulation as a separate user
 	my $pid = fork();
 	if ($pid==0) {
-		# We must execute this as a separate user so must call to cmd line
+		# We must shell out to change users
 		exec("su - $user -c \"./simulate_one_user.pl $num_instances_per_user $interval $duration $user_num $kernel_image $ramdisk_image $image > log\"")
 			or die ("couldn't exec");
 	}
@@ -82,10 +66,12 @@ while ($#ARGV>0) {
 
 print "Done forking.\n";
 
-# Wait until all forked processes terminate
-for (my @running_pids=are_any_running(@pids); $#running_pids+1>0 ; @running_pids=are_any_running(@pids)) {
-	print "Still running: " . join(",",@running_pids) . "\n";
-	sleep 3;
+foreach (@pids) {
+	print "Waiting for:$_\n";
+	waitpid($_,0);
+	if ($? != 0) {
+		die("Child exited with error code:$_");
+	}
 }
 
 print "Done.\n";
