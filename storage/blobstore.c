@@ -267,7 +267,7 @@ static void gen_id (char * str, unsigned int size)
 struct flock * flock_whole_file (struct flock * l, short type) 
 {
     l->l_type = type;
-    l->l_pid = getpid();
+    l->l_pid = 0;
 
     // set params so as to lock the whole file
     l->l_start = 0;
@@ -1676,7 +1676,8 @@ blockblob * blockblob_open ( blobstore * bs,
         if (flags & BLOBSTORE_FLAG_CREAT) {
             o_flags |= O_CREAT;
             // intentionally ignore _EXCL supplied without _CREAT
-            if (flags & BLOBSTORE_FLAG_EXCL) o_flags |= O_EXCL;
+            if (flags & BLOBSTORE_FLAG_EXCL) 
+                o_flags |= O_EXCL;
         }
     }
     bb->fd_blocks = open (bb->blocks_path, o_flags, BLOBSTORE_FILE_PERM);
