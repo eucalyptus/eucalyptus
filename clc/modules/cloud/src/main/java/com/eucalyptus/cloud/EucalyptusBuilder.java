@@ -64,9 +64,7 @@ public class EucalyptusBuilder extends AbstractServiceBuilder<EucalyptusConfigur
   @Override
   public void fireStart( ServiceConfiguration config ) throws ServiceRegistrationException {
     EventRecord.here( EucalyptusBuilder.class, EventType.COMPONENT_SERVICE_START, config.toString( ) ).info( );
-    if ( !config.isHostLocal( ) ) {
-      startDbPool( config );
-    }
+    startDbPool( config );
   }
   
   @Override
@@ -106,7 +104,7 @@ public class EucalyptusBuilder extends AbstractServiceBuilder<EucalyptusConfigur
               cluster.deactivate( dbId );
             }
           } catch ( NoSuchElementException ex ) {
-            cluster.deactivate( dbId );
+//            cluster.deactivate( dbId );
           }
         }
         for ( final String dbId : cluster.getInactiveDatabases( ) ) {
@@ -116,7 +114,7 @@ public class EucalyptusBuilder extends AbstractServiceBuilder<EucalyptusConfigur
               cluster.activate( dbId );
             }
           } catch ( NoSuchElementException ex ) {
-            cluster.remove( dbId );
+//            cluster.remove( dbId );
           }
         }
       } catch ( Exception ex ) {
@@ -144,6 +142,9 @@ public class EucalyptusBuilder extends AbstractServiceBuilder<EucalyptusConfigur
   }
   
   private synchronized void startDbPool( ServiceConfiguration config ) {
+    if ( Hosts.Coordinator.INSTANCE.isLocalhost( ) || config.isHostLocal( ) ) {
+      return;
+    }
     while ( !Hosts.Coordinator.INSTANCE.isLocalhost( ) && !Hosts.Coordinator.INSTANCE.get( ).hasBootstrapped( ) ) {
       LOG.info( "Waiting for primary cloud controller to bootstrap: " + Hosts.Coordinator.INSTANCE.get( ) );
       try {
@@ -193,6 +194,9 @@ public class EucalyptusBuilder extends AbstractServiceBuilder<EucalyptusConfigur
   }
   
   private synchronized void stopDbPool( ServiceConfiguration config ) {
+    if ( Hosts.Coordinator.INSTANCE.isLocalhost( ) || config.isHostLocal( ) ) {
+      return;
+    }
     final String hostName = config.getHostName( );
     
     for ( String ctx : PersistenceContexts.list( ) ) {
