@@ -110,6 +110,7 @@ import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Hertz;
 import com.eucalyptus.event.ListenerRegistry;
+import com.eucalyptus.event.Listeners;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
@@ -142,8 +143,6 @@ import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.MoreExecutors;
 import edu.ucsb.eucalyptus.cloud.NodeInfo;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.NodeCertInfo;
@@ -611,8 +610,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
             Logs.exhaust( ).debug( ex, ex );
           }
         }
-        ListenerRegistry.getInstance( ).register( ClockTick.class, this );
-        ListenerRegistry.getInstance( ).register( Hertz.class, this );
+        Listeners.register( Hertz.class, this );
       }
     } catch ( final NoSuchElementException ex ) {
 //      this.stop( );

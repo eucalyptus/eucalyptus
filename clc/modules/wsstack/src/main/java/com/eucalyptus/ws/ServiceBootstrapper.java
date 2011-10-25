@@ -258,6 +258,19 @@ public class ServiceBootstrapper extends Bootstrapper.Simple {
     }
   }
   
+  enum ShouldStart implements Predicate<ServiceConfiguration> {
+    INSTANCE;
+    
+    @Override
+    public boolean apply( final ServiceConfiguration config ) {
+      boolean ret = ShouldLoad.INSTANCE.apply( config ) && !( Eucalyptus.class.equals( config.getComponentId( ).getClass( ) ) && !config.isHostLocal( ) );
+      LOG.debug( "ServiceBootstrapper.shouldStart(" + config.toString( )
+                 + "):"
+                 + ret );
+      return ret;
+    }
+  }
+  
   @Override
   public boolean load( ) {
     WebServices.restart( );
