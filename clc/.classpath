@@ -104,14 +104,14 @@
 	<classpathentry kind="lib" path="lib/geronimo-stax-1.0-spec-1.0.1.jar"/>
 	<classpathentry kind="lib" path="lib/groovy-all-1.7.2.jar"/>
 	<classpathentry kind="lib" path="lib/guava-r09-gwt.jar"/>
-	<classpathentry kind="lib" path="lib/guava-r09.jar" sourcepath="/bzr/third-party/guava-libraries"/>
+	<classpathentry kind="lib" path="lib/guava-r09.jar"/>
 	<classpathentry kind="lib" path="lib/gwt-api-checker-2.2.jar"/>
 	<classpathentry kind="lib" path="lib/gwt-dev-2.2.jar"/>
 	<classpathentry kind="lib" path="lib/gwt-servlet-2.2.jar"/>
 	<classpathentry kind="lib" path="lib/gwt-servlet-deps-2.2.jar"/>
 	<classpathentry kind="lib" path="lib/gwt-soyc-vis-2.2.jar"/>
 	<classpathentry kind="lib" path="lib/gwt-user-2.2.jar"/>
-	<classpathentry kind="lib" path="lib/ha-jdbc-2.0.16-rc-1-jdk1.6.jar" sourcepath="/bzr/third-party/ha-jdbc-2.0.16-rc-1"/>
+	<classpathentry kind="lib" path="lib/ha-jdbc-2.0.16-rc-1-jdk1.6.jar"/>
 	<classpathentry kind="lib" path="lib/hamcrest-all-1.2.jar"/>
 	<classpathentry kind="lib" path="lib/hibernate-3.5.6-Final.jar"/>
 	<classpathentry kind="lib" path="lib/hsqldb-1.8.0.10.jar"/>
@@ -141,7 +141,7 @@
 	<classpathentry kind="lib" path="lib/jetty6-servlet-tester-6.1.19.jar"/>
 	<classpathentry kind="lib" path="lib/jetty6-sslengine-6.1.19.jar"/>
 	<classpathentry kind="lib" path="lib/jetty6-util-6.1.19.jar"/>
-	<classpathentry kind="lib" path="lib/jgroups-2.11.1.Final.jar" sourcepath="/bzr/third-party/jgroups-sources-2.11.1.jar"/>
+	<classpathentry kind="lib" path="lib/jgroups-2.11.1.Final.jar"/>
 	<classpathentry kind="lib" path="lib/jibx-bind-1.2.3.jar"/>
 	<classpathentry kind="lib" path="lib/jibx-extras-1.2.3.jar"/>
 	<classpathentry kind="lib" path="lib/jibx-run-1.2.3.jar"/>
@@ -165,7 +165,7 @@
 	<classpathentry kind="lib" path="lib/mule-module-xml-2.0.1.jar"/>
 	<classpathentry kind="lib" path="lib/mule-transport-vm-2.0.1.jar"/>
 	<classpathentry kind="lib" path="lib/mysql-connector-java-commercial-5.1.11-bin.jar"/>
-	<classpathentry kind="lib" path="lib/netty-3.1.0.CR1.jar" sourcepath="/bzr/third-party/netty-3.1.5.GA"/>
+	<classpathentry kind="lib" path="lib/netty-3.1.0.CR1.jar"/>
 	<classpathentry kind="lib" path="lib/openjdk-crypto.jar"/>
 	<classpathentry kind="lib" path="lib/org.restlet-1.1.5.jar"/>
 	<classpathentry kind="lib" path="lib/org.restlet.ext.velocity-1.1.5.jar"/>
@@ -186,7 +186,7 @@
 	<classpathentry kind="lib" path="lib/spring-web-2.5.1.jar"/>
 	<classpathentry kind="lib" path="lib/stax2-api-3.0.1.jar"/>
 	<classpathentry kind="lib" path="lib/velocity-1.7.jar"/>
-	<classpathentry kind="lib" path="lib/vijava-2.1-euca-1303337201.jar"/>
+	<classpathentry kind="lib" path="lib/vijava-2.1-euca-1316109169.jar"/>
 	<classpathentry kind="lib" path="lib/woodstox-core-asl-4.0.6.jar"/>
 	<classpathentry kind="lib" path="lib/wsdl4j-1.6.2.jar"/>
 	<classpathentry kind="lib" path="lib/wss4j-1.5.7.jar"/>
@@ -195,5 +195,6 @@
 	<classpathentry kind="lib" path="lib/xml-security-1.4.2.jar"/>
 	<classpathentry kind="lib" path="lib/xom-1.1.jar"/>
 	<classpathentry kind="lib" path="lib/xpp3-1.1.3.4.O.jar"/>
+	<classpathentry exported="true" kind="con" path="GROOVY_DSL_SUPPORT"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
