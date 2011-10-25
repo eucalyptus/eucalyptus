@@ -109,6 +109,7 @@ import com.eucalyptus.component.Partition;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
+import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.Dns;
 import com.eucalyptus.component.id.Eucalyptus;
@@ -1167,7 +1168,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     final EntityTransaction db = Entities.get( VmInstance.class );
     try {
       final VmInstance entity = Entities.merge( this );
-      this.transientVolumeState.lookupVolumeAttachmentByDevice( volumeDevice );
+      entity.transientVolumeState.lookupVolumeAttachmentByDevice( volumeDevice );
       db.commit( );
     } catch ( final NoSuchElementException ex ) {
       Logs.exhaust( ).error( ex, ex );
@@ -1188,7 +1189,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     final EntityTransaction db = Entities.get( VmInstance.class );
     try {
       final VmInstance entity = Entities.merge( this );
-      final AttachedVolume ret = VmVolumeAttachment.asAttachedVolume( entity ).apply( this.transientVolumeState.lookupVolumeAttachment( volumeId ) );
+      final AttachedVolume ret = VmVolumeAttachment.asAttachedVolume( entity ).apply( entity.transientVolumeState.lookupVolumeAttachment( volumeId ) );
       db.commit( );
       return ret;
     } catch ( final Exception ex ) {
@@ -1206,20 +1207,13 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     try {
       final VmInstance entity = Entities.merge( this );
       vol.setStatus( "attaching" );
-      this.transientVolumeState.addVolumeAttachment( VmVolumeAttachment.fromAttachedVolume( entity ).apply( vol ) );
+      entity.transientVolumeState.addVolumeAttachment( VmVolumeAttachment.fromAttachedVolume( entity ).apply( vol ) );
       db.commit( );
     } catch ( final Exception ex ) {
       Logs.exhaust( ).error( ex, ex );
       db.rollback( );
     }
     
-  }
-  
-  /**
-   * @return
-   */
-  public ServiceConfiguration lookupClusterConfiguration( ) {
-    return Partitions.lookupService( ClusterController.class, this.lookupPartition( ) );
   }
   
   /**
@@ -1230,11 +1224,11 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     final EntityTransaction db = Entities.get( VmInstance.class );
     try {
       final VmInstance entity = Entities.merge( this );
-      final boolean ret = this.transientVolumeState.eachVolumeAttachment( new Predicate<VmVolumeAttachment>( ) {
+      final boolean ret = entity.transientVolumeState.eachVolumeAttachment( new Predicate<VmVolumeAttachment>( ) {
         
         @Override
         public boolean apply( final VmVolumeAttachment arg0 ) {
-          return predicate.apply( VmVolumeAttachment.asAttachedVolume( VmInstance.this ).apply( arg0 ) );
+          return predicate.apply( VmVolumeAttachment.asAttachedVolume( entity ).apply( arg0 ) );
         }
       } );
       db.commit( );
@@ -1255,7 +1249,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     final EntityTransaction db = Entities.get( VmInstance.class );
     try {
       final VmInstance entity = Entities.merge( this );
-      final AttachedVolume ret = VmVolumeAttachment.asAttachedVolume( entity ).apply( this.transientVolumeState.removeVolumeAttachment( volumeId ) );
+      final AttachedVolume ret = VmVolumeAttachment.asAttachedVolume( entity ).apply( entity.transientVolumeState.removeVolumeAttachment( volumeId ) );
       db.commit( );
       return ret;
     } catch ( final Exception ex ) {

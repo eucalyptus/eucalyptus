@@ -122,6 +122,8 @@ import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.ws.handlers.BindingHandler;
+import com.eucalyptus.ws.handlers.InternalWsSecHandler;
+import com.eucalyptus.ws.handlers.QueryTimestampHandler;
 import com.eucalyptus.ws.handlers.SoapMarshallingHandler;
 import com.eucalyptus.ws.handlers.http.HttpUtils;
 import com.eucalyptus.ws.handlers.http.NioHttpDecoder;
@@ -137,15 +139,19 @@ import com.google.common.collect.MapMaker;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class Handlers {
-  private static Logger                                      LOG                        = Logger.getLogger( Handlers.class );
-  private static final ExecutionHandler                      pipelineExecutionHandler   = new ExecutionHandler( new OrderedMemoryAwareThreadPoolExecutor( StackConfiguration.SERVER_POOL_MAX_THREADS, 0, 0 ) );
-  private static final ExecutionHandler                      serviceExecutionHandler = new ExecutionHandler( new OrderedMemoryAwareThreadPoolExecutor( StackConfiguration.SERVER_POOL_MAX_THREADS, 0, 0 ) );
-  private static final ChannelHandler                        soapMarshallingHandler     = new SoapMarshallingHandler( );
-  private static final ChannelHandler                        httpRequestEncoder         = new NioHttpRequestEncoder( );
-  private static final ChannelHandler                        soapHandler                = new SoapHandler( );
-  private static final ChannelHandler                        addressingHandler          = new AddressingHandler( );
-  private static final ConcurrentMap<String, BindingHandler> bindingHandlers            = new MapMaker( ).makeComputingMap( BindingHandlerLookup.INSTANCE );
-  private static final HashedWheelTimer                      timer                      = new HashedWheelTimer( );                                                                                             //TODO:GRZE: configurable
+  private static Logger                                      LOG                      = Logger.getLogger( Handlers.class );
+  private static final ExecutionHandler                      pipelineExecutionHandler = new ExecutionHandler( new OrderedMemoryAwareThreadPoolExecutor( StackConfiguration.SERVER_POOL_MAX_THREADS, 0, 0 ) );
+  private static final ExecutionHandler                      serviceExecutionHandler  = new ExecutionHandler( new OrderedMemoryAwareThreadPoolExecutor( StackConfiguration.SERVER_POOL_MAX_THREADS, 0, 0 ) );
+  private static final ChannelHandler                        queryTimestampHandler    = new QueryTimestampHandler( );
+  private static final ChannelHandler                        soapMarshallingHandler   = new SoapMarshallingHandler( );
+  private static final ChannelHandler                        httpRequestEncoder       = new NioHttpRequestEncoder( );
+  private static final ChannelHandler                        internalWsSecHandler     = new InternalWsSecHandler( );
+  private static final ChannelHandler                        soapHandler              = new SoapHandler( );
+  private static final ChannelHandler                        addressingHandler        = new AddressingHandler( );
+  private static final ConcurrentMap<String, BindingHandler> bindingHandlers          = new MapMaker( ).makeComputingMap( BindingHandlerLookup.INSTANCE );
+  private static final ChannelHandler                        bindingHandler           = new BindingHandler( );
+  private static final HashedWheelTimer                      timer                    = new HashedWheelTimer( );                                                                                             //TODO:GRZE: configurable
+                                                                                                                                                                                                              
   private static class LoggingHandler implements ChannelUpstreamHandler, ChannelDownstreamHandler {
     private final ChannelHandler down;
     
@@ -527,6 +533,18 @@ public class Handlers {
   
   public static ExecutionHandler serviceExecutionHandler( ) {
     return serviceExecutionHandler;
+  }
+  
+  public static ChannelHandler queryTimestamphandler( ) {
+    return queryTimestampHandler;
+  }
+  
+  public static ChannelHandler bindinghandler( ) {
+    return bindingHandler;
+  }
+  
+  public static ChannelHandler internalWsSecHandler( ) {
+    return internalWsSecHandler;
   }
   
 }

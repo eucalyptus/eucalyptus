@@ -1012,6 +1012,13 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
         Exceptions.maybeInterrupted( ex );
         throw Faults.failure( this.configuration, ex );
       }
+    } else if ( Cluster.State.NOTREADY.ordinal( ) > currentState.ordinal( ) ) {
+      try {
+        startingTransition( ).call( ).get( );
+      } catch ( Exception ex ) {
+        Exceptions.maybeInterrupted( ex );
+        throw Faults.failure( this.configuration, ex );
+      }
     } else if ( !currentErrors.isEmpty( ) ) {
       throw Faults.failure( this.configuration, currentErrors );
     } else if ( ( currentState.ordinal( ) < State.DISABLED.ordinal( ) )

@@ -90,6 +90,8 @@ import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.callback.ConsoleOutputCallback;
 import com.eucalyptus.cluster.callback.PasswordDataCallback;
 import com.eucalyptus.cluster.callback.RebootCallback;
+import com.eucalyptus.component.Topology;
+import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.IllegalContextAccessException;
@@ -329,7 +331,7 @@ public class VmControl {
             if ( RestrictedTypes.filterPrivileged( ).apply( v ) ) {
               final Request<RebootInstancesType, RebootInstancesResponseType> req = AsyncRequests.newRequest( new RebootCallback( v.getInstanceId( ) ) );
               req.getRequest( ).regarding( request );
-              req.dispatch( v.lookupClusterConfiguration( ) );
+              req.dispatch( Topology.lookup( ClusterController.class, v.lookupPartition( ) ) );
               return true;
             } else {
               return false;
@@ -612,7 +614,7 @@ public class VmControl {
                           ctx.getUserFullName( ).toString( ),
                           v.getRuntimeState( ).getBundleTask( ).getBundleId( ),
                           v.getInstanceId( ) ).debug( );
-        AsyncRequests.newRequest( Bundles.createCallback( request ) ).dispatch( v.lookupClusterConfiguration( ) );
+        AsyncRequests.newRequest( Bundles.createCallback( request ) ).dispatch( Topology.lookup( ClusterController.class, v.lookupPartition( ) ) );
       } else {
         throw new EucalyptusCloudException( "Failed to find instance: " + request.getInstanceId( ) );
       }
@@ -639,7 +641,7 @@ public class VmControl {
         throw new NoSuchElementException( "Instance " + request.getInstanceId( ) + " is not in a running state." );
       }
       if ( RestrictedTypes.filterPrivileged( ).apply( v ) ) {
-        cluster = Clusters.lookup( v.lookupClusterConfiguration( ) );
+        cluster = Clusters.lookup( Topology.lookup( ClusterController.class, v.lookupPartition( ) ) );
       } else {
         throw new NoSuchElementException( "Instance " + request.getInstanceId( ) + " does not exist." );
       }

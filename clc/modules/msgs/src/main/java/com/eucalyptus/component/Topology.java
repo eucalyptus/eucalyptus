@@ -832,7 +832,7 @@ public class Topology {
       ServiceConfiguration endResult = input;
       try {
         endResult = ServiceTransitions.pathTo( input, nextState ).get( );
-        LOG.debug( this.toString( endResult, initialState, nextState ) );
+        Logs.exhaust( ).debug( this.toString( endResult, initialState, nextState ) );
         return endResult;
       } catch ( Exception ex ) {
         Exceptions.maybeInterrupted( ex );
