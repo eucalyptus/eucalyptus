@@ -35,7 +35,6 @@ import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import edu.ucsb.eucalyptus.admin.server.ServletUtils;
 
 public class EuareWebBackend {
 

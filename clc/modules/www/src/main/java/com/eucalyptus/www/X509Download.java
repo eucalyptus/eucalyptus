@@ -61,7 +61,7 @@
 /*
  */
 
-package edu.ucsb.eucalyptus.admin.server;
+package com.eucalyptus.www;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -92,6 +92,8 @@ import com.eucalyptus.crypto.Certs;
 import com.eucalyptus.crypto.util.PEMFiles;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.ws.StackConfiguration;
+import com.google.gwt.safehtml.shared.SafeHtmlBuilder;
+import com.google.gwt.safehtml.shared.SafeHtmlUtils;
 
 public class X509Download extends HttpServlet {
   
@@ -160,7 +162,7 @@ public class X509Download extends HttpServlet {
   
   public static void hasError( String message, HttpServletResponse response ) {
     try {
-      response.getWriter( ).print( EucalyptusManagement.getError( message ) );
+      response.getWriter( ).print( getError( message ) );
       response.getWriter( ).flush( );
     } catch ( IOException e ) {
       e.printStackTrace( );
@@ -274,6 +276,15 @@ public class X509Download extends HttpServlet {
     /** close the zip output stream and return the bytes **/
     zipOut.close( );
     return byteOut.toByteArray( );
+  }
+  
+  public static String getError( String message )
+  {
+    SafeHtmlBuilder builder = new SafeHtmlBuilder();
+    builder.append(SafeHtmlUtils.fromTrustedString("<html><title>HTTP/1.0 403 Forbidden</title><body><div align=\"center\"><p><h1>403: Forbidden</h1></p><p><img src=\"themes/active/logo.png\" /></p><p><h3 style=\"font-color: red;\">"));
+    builder.appendEscaped(message);
+    builder.append(SafeHtmlUtils.fromTrustedString("</h3></p></div></body></html>"));
+    return builder.toSafeHtml().asString();
   }
   
 }

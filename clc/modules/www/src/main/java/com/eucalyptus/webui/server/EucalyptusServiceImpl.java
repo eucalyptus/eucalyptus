@@ -29,7 +29,6 @@ import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.google.gwt.http.client.URL;
 import com.google.gwt.user.server.rpc.RemoteServiceServlet;
-import edu.ucsb.eucalyptus.admin.server.ServletUtils;
 
 public class EucalyptusServiceImpl extends RemoteServiceServlet implements EucalyptusService {
 
@@ -41,7 +40,7 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
 
   private static final Random RANDOM = new Random( );
   
-  private static User verifySession( Session session ) throws EucalyptusServiceException {
+  public static User verifySession( Session session ) throws EucalyptusServiceException {
     WebSession ws = WebSessionManager.getInstance( ).getSession( session.getId( ) );
     if ( ws == null ) {
       throw new EucalyptusServiceException( EucalyptusServiceException.INVALID_SESSION );

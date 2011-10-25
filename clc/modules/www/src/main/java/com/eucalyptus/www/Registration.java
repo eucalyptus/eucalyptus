@@ -58,7 +58,7 @@
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
  *******************************************************************************/
-package edu.ucsb.eucalyptus.admin.server;
+package com.eucalyptus.www;
 
 import java.io.IOException;
 import java.util.UUID;
