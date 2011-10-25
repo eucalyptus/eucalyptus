@@ -83,11 +83,7 @@ public class InternalClientPipeline implements ChannelPipelineFactory {
   
   public InternalClientPipeline( ) {
     if ( wssecHandler == null ) {
-      try {
-        wssecHandler = new InternalWsSecHandler( );
-      } catch ( GeneralSecurityException ex ) {
-        LOG.error( ex, ex );
-      }
+      wssecHandler = new InternalWsSecHandler( );
     }
   }
   
