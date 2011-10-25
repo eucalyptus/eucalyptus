@@ -94,6 +94,7 @@ my %instance_data = ();  # instance_id => status
 my $access_key = $ENV{"EC2_ACCESS_KEY"};
 my $secret_key = $ENV{"EC2_SECRET_KEY"};
 my $s3_url = $ENV{"S3_URL"};
+my $user = $ENV{"USER"};
 
 print "num_instances:$num_instances interval:$interval duration:$duration kernel:$kernel_image ramdisk:$ramdisk_image s3_url:$s3_url image:$image\n";
 
@@ -128,6 +129,7 @@ $output = `euca-describe-availability-zones` or die("couldn't euca-describe-avai
 my @zones = parse_avail_zones($output);
 print "Using zone:$zones[0]\n";
 
+
 # Allocate storage and s3 for each user, every INTERVAL, sleeping between
 for (my $i=0; ($i*$interval) < $duration; $i++) {
 	print "iter:$i\n";
@@ -135,10 +137,12 @@ for (my $i=0; ($i*$interval) < $duration; $i++) {
 	print "$i: Created volume\n";
 	my $time = time();
 	my $dummy_data_path = generate_dummy_file($storage_usage_mb);
-	system("s3curl.pl --id $access_key --key $secret_key --put /dev/null -- -s -v $url/mybucket-$user") and die("creating bucket failed");
+	system("s3curl.pl --id $access_key --key $secret_key --put /dev/null -- -s -v $s3_url/mybucket-$user-$i-$time") and die("creating bucket failed");
 	print "$i: Created bucket\n";
-	system("s3curl.pl --id $access_key --key $secret_key --put $dummy_data_path -- -s -v $url/mybucket/obj-$user-$time") and die("creating s3 obj failed");
-	print "$i: Created object\n";
+	for (my $j=0; $j<3; $j++) {
+		system("s3curl.pl --id $access_key --key $secret_key --put $dummy_data_path -- -s -v $s3_url/mybucket-$user-$i-$time/obj-$user-$time-$j") and die("creating s3 obj failed");
+		print "$i,$j: Created object\n";
+	}
 	sleep $interval;
 }
 
