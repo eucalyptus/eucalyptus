@@ -81,28 +81,28 @@ import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.User.RegistrationStatus;
-import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.ServiceUris;
+import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.component.id.Euare;
 import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.component.id.Notifications;
+import com.eucalyptus.component.id.Eucalyptus.Notifications;
 import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.crypto.Certs;
 import com.eucalyptus.crypto.util.PEMFiles;
 import com.eucalyptus.util.Internets;
-import com.eucalyptus.ws.StackConfiguration;
 import com.google.gwt.safehtml.shared.SafeHtmlBuilder;
 import com.google.gwt.safehtml.shared.SafeHtmlUtils;
 
 public class X509Download extends HttpServlet {
   
-  private static Logger LOG                = Logger.getLogger( X509Download.class );
-  public static String  NAME_SHORT         = "euca2";
-  public static String  PARAMETER_USERNAME = "user";
+  private static Logger LOG                   = Logger.getLogger( X509Download.class );
+  public static String  NAME_SHORT            = "euca2";
+  public static String  PARAMETER_USERNAME    = "user";
   public static String  PARAMETER_ACCOUNTNAME = "account";
-  public static String  PARAMETER_KEYNAME  = "keyName";
-  public static String  PARAMETER_CODE     = "code";
+  public static String  PARAMETER_KEYNAME     = "keyName";
+  public static String  PARAMETER_CODE        = "code";
   
   public void doGet( HttpServletRequest request, HttpServletResponse response ) {
     String code = request.getParameter( PARAMETER_CODE );
@@ -112,7 +112,7 @@ public class X509Download extends HttpServlet {
     if ( accountName == null || "".equals( accountName ) ) {
       hasError( "No account name provided", response );
       return;
-    }    
+    }
     if ( userName == null || "".equals( userName ) ) {
       hasError( "No user name provided", response );
       return;
@@ -191,7 +191,7 @@ public class X509Download extends HttpServlet {
       x509 = Certs.generateCertificate( keyPair, u.getName( ) );
       x509.checkValidity( );
       u.addCertificate( x509 );
-      cloudCert = SystemCredentials.getCredentialProvider( Eucalyptus.class ).getCertificate( );
+      cloudCert = SystemCredentials.lookup( Eucalyptus.class ).getCertificate( );
     } catch ( Exception e ) {
       LOG.fatal( e, e );
       throw e;
@@ -208,18 +208,17 @@ public class X509Download extends HttpServlet {
       //TODO:GRZE:FIXME velocity
       String userNumber = u.getAccount( ).getAccountNumber( );
       sb.append( "EUCA_KEY_DIR=$(dirname $(readlink -f ${BASH_SOURCE}))" );
-      String localHost = Internets.localHostInetAddress( ).getCanonicalHostName( );
-      sb.append( "\nexport EC2_URL=" + Eucalyptus.INSTANCE.makeExternalRemoteUri( localHost, 8773, StackConfiguration.DEFAULT_EC2_URI_SCHEME ) );
-      if( Components.lookup( Walrus.class ).hasEnabledService( ) ) {
-        ServiceConfiguration walrusConfig = Components.lookup( Walrus.class ).enabledServices( ).first( );
-        String uri = walrusConfig.getUri( StackConfiguration.DEFAULT_S3_URI_SCHEME ).toASCIIString( );
+      sb.append( "\nexport EC2_URL=" + ServiceUris.remote( Eucalyptus.class, Internets.localHostInetAddress( ) ) );
+      if ( Topology.isEnabled( Walrus.class ) ) {
+        ServiceConfiguration walrusConfig = Topology.lookup( Walrus.class );
+        String uri = ServiceUris.remote( walrusConfig ).toASCIIString( );
         LOG.debug( "Found walrus uri/configuration: uri=" + uri + " config=" + walrusConfig );
         sb.append( "\nexport S3_URL=" + uri );
       } else {
         sb.append( "\necho WARN:  Walrus URL is not configured. >&2" );
       }
-      sb.append( "\nexport AWS_SNS_URL=" + Notifications.INSTANCE.makeExternalRemoteUri( localHost, 8773, StackConfiguration.DEFAULT_AWS_SNS_URI_SCHEME ) );
-      sb.append( "\nexport EUARE_URL=" + Euare.INSTANCE.makeExternalRemoteUri( localHost, 8773, StackConfiguration.DEFAULT_EUARE_URI_SCHEME ) );
+      sb.append( "\nexport AWS_SNS_URL=" + ServiceUris.remote( Notifications.class ) );
+      sb.append( "\nexport EUARE_URL=" + ServiceUris.remote( Euare.class ) );
       sb.append( "\nexport EC2_PRIVATE_KEY=${EUCA_KEY_DIR}/" + baseName + "-pk.pem" );
       sb.append( "\nexport EC2_CERT=${EUCA_KEY_DIR}/" + baseName + "-cert.pem" );
       sb.append( "\nexport EC2_JVM_ARGS=-Djavax.net.ssl.trustStore=${EUCA_KEY_DIR}/jssecacerts" );
@@ -278,13 +277,12 @@ public class X509Download extends HttpServlet {
     return byteOut.toByteArray( );
   }
   
-  public static String getError( String message )
-  {
-    SafeHtmlBuilder builder = new SafeHtmlBuilder();
-    builder.append(SafeHtmlUtils.fromTrustedString("<html><title>HTTP/1.0 403 Forbidden</title><body><div align=\"center\"><p><h1>403: Forbidden</h1></p><p><img src=\"themes/active/logo.png\" /></p><p><h3 style=\"font-color: red;\">"));
-    builder.appendEscaped(message);
-    builder.append(SafeHtmlUtils.fromTrustedString("</h3></p></div></body></html>"));
-    return builder.toSafeHtml().asString();
+  public static String getError( String message ) {
+    SafeHtmlBuilder builder = new SafeHtmlBuilder( );
+    builder.append( SafeHtmlUtils.fromTrustedString( "<html><title>HTTP/1.0 403 Forbidden</title><body><div align=\"center\"><p><h1>403: Forbidden</h1></p><p><img src=\"themes/active/logo.png\" /></p><p><h3 style=\"font-color: red;\">" ) );
+    builder.appendEscaped( message );
+    builder.append( SafeHtmlUtils.fromTrustedString( "</h3></p></div></body></html>" ) );
+    return builder.toSafeHtml( ).asString( );
   }
   
 }

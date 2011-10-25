@@ -9,17 +9,12 @@ import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.ConcurrentMap;
 import org.apache.log4j.Logger;
-import org.apache.log4j.Level;
-import org.apache.log4j.ConsoleAppender;
-import org.apache.log4j.FileAppender;
-import org.apache.log4j.SimpleLayout;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.jboss.netty.util.internal.ConcurrentHashMap;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.DatabaseAuthProvider;
 import com.eucalyptus.bootstrap.ServiceJarDiscovery;
 import com.eucalyptus.component.ComponentDiscovery;
-import com.eucalyptus.component.auth.EucaKeyStore;
 import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.entities.PersistenceContextDiscovery;
 import com.eucalyptus.entities.PersistenceContexts;
@@ -144,7 +139,7 @@ public class StandalonePersistence {
   }
   
   public static void setupInitProviders( ) throws Exception {
-    if ( !new File( EucaKeyStore.getInstance( ).getFileName( ) ).exists( ) ) {
+    if ( !new File( SystemCredentials.getKeyStore( ).getFileName( ) ).exists( ) ) {
       throw new RuntimeException( "Database upgrade must be preceded by a key upgrade." );
     }
     SystemCredentials.initialize( );

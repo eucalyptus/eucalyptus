@@ -75,6 +75,7 @@ import com.eucalyptus.cloud.util.DuplicateMetadataException;
 import com.eucalyptus.component.NoSuchComponentException;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
@@ -133,7 +134,7 @@ public class SnapshotManager {
         }
       }
     };
-    Snapshot snap = RestrictedTypes.allocate( allocator );
+    Snapshot snap = RestrictedTypes.allocateUnitlessResource( allocator );
     snap = Snapshots.startCreateSnapshot( volReady, snap );
     
     CreateSnapshotResponseType reply = ( CreateSnapshotResponseType ) request.getReply( );
@@ -172,7 +173,14 @@ public class SnapshotManager {
             try {
               DeleteStorageSnapshotResponseType scReply = ServiceDispatcher.lookup( sc ).send( new DeleteStorageSnapshotType( snap.getDisplayName( ) ) );
               if ( scReply.get_return( ) ) {
-                StorageUtil.dispatchAll( new DeleteStorageSnapshotType( snap.getDisplayName( ) ) );
+                final DeleteStorageSnapshotType deleteMsg = new DeleteStorageSnapshotType( snap.getDisplayName( ) );
+                Iterables.any( Topology.enabledServices( Storage.class ), new Predicate<ServiceConfiguration>() {
+
+                  @Override
+                  public boolean apply( ServiceConfiguration arg0 ) {
+                    ServiceDispatcher.lookup( arg0 ).dispatch( deleteMsg );
+                    return true;
+                  }} );
                 try {
                   ListenerRegistry.getInstance( ).fireEvent( new StorageEvent( StorageEvent.EventType.EbsSnapshot, false, snap.getVolumeSize( ),
                                                                                snap.getOwnerUserId( ), snap.getOwnerUserName( ),

@@ -62,7 +62,7 @@
  */
 package com.eucalyptus.configurable;
 
-public abstract interface PropertyChangeListener {
+public abstract interface PropertyChangeListener<T> {
   
   /**
    * Receiver for setValue events. Invoked before the underlying value has been changed. Throwing an
@@ -72,6 +72,6 @@ public abstract interface PropertyChangeListener {
    * @param newValue new value which will be set
    * @throws ConfigurablePropertyException
    */
-  public abstract void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException;
+  public abstract void fireChange( ConfigurableProperty t, T newValue ) throws ConfigurablePropertyException;
   
 }

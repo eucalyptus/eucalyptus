@@ -63,7 +63,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.channel.Channel;
-import com.eucalyptus.component.ComponentMessage;
+import com.eucalyptus.component.ComponentId.ComponentMessage;
 import com.eucalyptus.component.id.Walrus;
 import edu.ucsb.eucalyptus.cloud.BucketLogData;
 

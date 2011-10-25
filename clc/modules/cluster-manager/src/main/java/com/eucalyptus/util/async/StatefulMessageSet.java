@@ -1,6 +1,8 @@
 package com.eucalyptus.util.async;
 
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
@@ -80,10 +82,16 @@ public class StatefulMessageSet<E extends Enum<E>> {
     E nextState = this.states[currentState.ordinal( ) + 1];
     while ( ( future = this.pendingEvents.poll( ) ) != null ) {
       try {
-        Object o = future.get( );
-        if ( o != null ) {
-          EventRecord.here( StatefulMessageSet.class, EventType.VM_STARTING, currentState.name( ), cluster.getName( ), o.getClass( ).getSimpleName( ) ).info( );
-        }
+        Object o = null;
+        do {
+          try {
+            o = future.get( 50, TimeUnit.MILLISECONDS );
+          } catch ( TimeoutException ex ) {}
+        } while ( o == null );
+        EventRecord.here( StatefulMessageSet.class, EventType.VM_STARTING, currentState.name( ), cluster.getName( ), o.getClass( ).getSimpleName( ) ).info( );
+      } catch ( InterruptedException t ) {
+        Thread.currentThread( ).interrupt( );
+        break;
       } catch ( Exception t ) {
         EventRecord.here( StatefulMessageSet.class, EventType.VM_STARTING, currentState.name( ), cluster.getName( ), t.getClass( ).getSimpleName( ) ).info( );
         LOG.debug( t, t );

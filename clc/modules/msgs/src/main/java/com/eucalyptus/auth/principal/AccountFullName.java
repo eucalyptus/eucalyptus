@@ -63,14 +63,13 @@
 
 package com.eucalyptus.auth.principal;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.util.Assertions;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.OwnerFullName;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.notNullValue;
 
 public class AccountFullName implements OwnerFullName {
   private static Logger       LOG    = Logger.getLogger( UserFullName.class );

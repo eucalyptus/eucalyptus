@@ -64,7 +64,6 @@
 package com.eucalyptus.vm;
 
 import java.util.NavigableSet;
-import java.util.NoSuchElementException;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Accounts;
@@ -73,6 +72,7 @@ import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
+import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
@@ -82,8 +82,6 @@ import com.eucalyptus.entities.Entities;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
-import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.MessageCallback;
 import edu.ucsb.eucalyptus.msgs.CreateBucketType;
@@ -94,11 +92,11 @@ public class Bundles {
   
   public static MessageCallback createCallback( BundleInstanceType request ) throws AuthException, IllegalContextAccessException, ServiceStateException {
     Component walrus = Components.lookup( Walrus.class );
-    NavigableSet<ServiceConfiguration> configs = walrus.lookupServiceConfigurations( );
+    NavigableSet<ServiceConfiguration> configs = walrus.services( );
     if ( configs.isEmpty( ) || !Component.State.ENABLED.equals( configs.first( ).lookupState( ) ) ) {
       throw new ServiceStateException( "Failed to bundle instance because there is no available walrus service at the moment." );
     }
-    final String walrusUrl = configs.first( ).getUri( ).toASCIIString( );
+    final String walrusUrl = ServiceUris.remote( configs.first( ) ).toASCIIString( );
     request.setUrl( walrusUrl );
     request.setAwsAccessKeyId( Accounts.getFirstActiveAccessKeyId( Contexts.lookup( ).getUser( ) ) );
     return new BundleCallback( request );

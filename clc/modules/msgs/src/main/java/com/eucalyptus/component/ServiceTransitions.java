@@ -63,12 +63,12 @@
 
 package com.eucalyptus.component;
 
-import java.lang.reflect.UndeclaredThrowableException;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.Callable;
 import org.apache.log4j.Logger;
-import com.eucalyptus.bootstrap.BootstrapArgs;
+import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.component.Component.State;
 import com.eucalyptus.component.ServiceChecks.CheckException;
 import com.eucalyptus.configurable.ConfigurableProperty;
@@ -76,7 +76,6 @@ import com.eucalyptus.configurable.MultiDatabasePropertyEntry;
 import com.eucalyptus.configurable.PropertyDirectory;
 import com.eucalyptus.configurable.SingletonDatabasePropertyEntry;
 import com.eucalyptus.configurable.StaticPropertyEntry;
-import com.eucalyptus.context.ServiceContextManager;
 import com.eucalyptus.empyrean.DescribeServicesResponseType;
 import com.eucalyptus.empyrean.DescribeServicesType;
 import com.eucalyptus.empyrean.DisableServiceResponseType;
@@ -103,136 +102,160 @@ import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Futures;
 import com.eucalyptus.util.fsm.Automata;
 import com.eucalyptus.util.fsm.TransitionAction;
-import com.eucalyptus.ws.server.Pipelines;
+import com.google.common.base.Function;
 import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
+import com.google.common.collect.MapMaker;
+import com.google.common.collect.ObjectArrays;
 
 public class ServiceTransitions {
-  static Logger LOG = Logger.getLogger( ServiceTransitions.class );
+  static Logger                                     LOG   = Logger.getLogger( ServiceTransitions.class );
+  private static final Component.State[]            EMPTY = {};
+  Map<TransitionActions, ServiceTransitionCallback> hi    = new MapMaker( ).makeComputingMap( new Function<TransitionActions, ServiceTransitionCallback>( ) {
+                                                            
+                                                            @Override
+                                                            public ServiceTransitionCallback apply( TransitionActions input ) {
+                                                              return null;
+                                                            }
+                                                          } );
+  
+  private static Component.State[] sequence( Component.State... states ) {
+    return states;
+  }
   
   interface ServiceTransitionCallback {
     public void fire( ServiceConfiguration parent ) throws Exception;
   }
   
-  public static CheckedListenableFuture<ServiceConfiguration> transitionChain( final ServiceConfiguration configuration, final State goalState ) {
-    switch ( goalState ) {
-      case DISABLED:
-        return disableTransitionChain( configuration );
-      case ENABLED:
-        return enableTransitionChain( configuration );
-      case STOPPED:
-        return stopTransitionChain( configuration );
-      case NOTREADY:
-        return startTransitionChain( configuration );
-      default:
-        break;
-    }
-    return null;
-  }
-  
-  static final CheckedListenableFuture<ServiceConfiguration> startTransitionChain( final ServiceConfiguration config ) {
-    Callable<CheckedListenableFuture<ServiceConfiguration>> transition = null;
-    if ( !State.NOTREADY.equals( config.lookupState( ) ) && !State.DISABLED.equals( config.lookupState( ) ) && !State.ENABLED.equals( config.lookupState( ) ) ) {
-      if ( State.STOPPED.equals( config.lookupState( ) ) ) {
-        transition = Automata.sequenceTransitions( config,
-                                                   Component.State.INITIALIZED,
-                                                   Component.State.LOADED,
-                                                   Component.State.NOTREADY,
-                                                   Component.State.DISABLED );
-      } else if ( State.INITIALIZED.equals( config.lookupState( ) ) ) {
-        transition = Automata.sequenceTransitions( config,
-                                                   Component.State.LOADED,
-                                                   Component.State.NOTREADY,
-                                                   Component.State.DISABLED );
-      } else if ( State.BROKEN.equals( config.lookupState( ) ) ) {
-        transition = Automata.sequenceTransitions( config,
-                                                     Component.State.BROKEN,
-                                                     Component.State.INITIALIZED,
-                                                     Component.State.LOADED,
-                                                     Component.State.NOTREADY,
-                                                     Component.State.DISABLED );
-      } else {
-        transition = Automata.sequenceTransitions( config, config.lookupState( ), Component.State.NOTREADY, Component.State.DISABLED );
+  /**
+   * GRZE:FIXME: this is a shoddy static method for definining the prefered path from n_0 to n_1 for
+   * n_0,n_1 \in G the state machine; think dijkstra.
+   **/
+  @SuppressWarnings( "unchecked" )
+  public static CheckedListenableFuture<ServiceConfiguration> pathTo( final ServiceConfiguration configuration, final Component.State goalState ) {
+    if ( goalState.equals( configuration.lookupState( ) ) ) {
+      return Futures.predestinedFuture( configuration );
+    } else {
+      try {
+        CheckedListenableFuture<ServiceConfiguration> result = null;
+        switch ( goalState ) {
+          case LOADED:
+            result = executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToLoaded( configuration.lookupState( ) ) ) );
+            break;
+          case DISABLED:
+            result = executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToDisabled( configuration.lookupState( ) ) ) );
+            break;
+          case ENABLED:
+            result = executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToEnabled( configuration.lookupState( ) ) ) );
+            break;
+          case STOPPED:
+            result = executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToStopped( configuration.lookupState( ) ) ) );
+            break;
+          case NOTREADY:
+            result = executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToStarted( configuration.lookupState( ) ) ) );
+            break;
+          case PRIMORDIAL:
+            result = executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToPrimordial( configuration.lookupState( ) ) ) );
+            break;
+          case BROKEN:
+            result = executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToBroken( configuration.lookupState( ) ) ) );
+            break;
+          case INITIALIZED:
+            result = executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToInitialized( configuration.lookupState( ) ) ) );
+            break;
+        }
+        return result;
+      } catch ( RuntimeException ex ) {
+        Logs.extreme( ).error( ex, ex );
+        LOG.error( configuration.getFullName( ) + " failed to transition to "
+                   + goalState
+                   + " because of: "
+                   + Exceptions.causeString( ex ) );
+        throw ex;
       }
     }
-    return executeTransition( config, transition );
   }
   
-  static final CheckedListenableFuture<ServiceConfiguration> enableTransitionChain( final ServiceConfiguration config ) {
-    Callable<CheckedListenableFuture<ServiceConfiguration>> transition = null;
-    if ( !State.ENABLED.equals( config.lookupState( ) ) ) {
-      transition = Automata.sequenceTransitions( config,
-                                                 Component.State.BROKEN,
-                                                 Component.State.INITIALIZED,
-                                                 Component.State.LOADED,
-                                                 Component.State.NOTREADY,
-                                                 Component.State.DISABLED,
-                                                 Component.State.DISABLED,
-                                                 Component.State.ENABLED );
-    } else {
-      transition = Automata.sequenceTransitions( config,
-                                                 Component.State.ENABLED,
-                                                 Component.State.ENABLED );
-    }
-    return executeTransition( config, transition );
+  private static State[] pathToBroken( Component.State fromState ) {
+    return ObjectArrays.concat( ServiceTransitions.pathToPrimordial( fromState ), Component.State.BROKEN );
   }
   
-  static final CheckedListenableFuture<ServiceConfiguration> disableTransitionChain( final ServiceConfiguration config ) {
-    Callable<CheckedListenableFuture<ServiceConfiguration>> transition = null;
-    if ( State.ENABLED.equals( config.lookupState( ) ) ) {
-      transition = Automata.sequenceTransitions( config,
-                                                 Component.State.ENABLED,
-                                                 Component.State.DISABLED );
-    } else if ( !State.DISABLED.equals( config.lookupState( ) ) && !State.NOTREADY.equals( config.lookupState( ) ) ) {
-      transition = Automata.sequenceTransitions( config,
-                                                 Component.State.BROKEN,
-                                                 Component.State.INITIALIZED,
-                                                 Component.State.LOADED,
-                                                 Component.State.NOTREADY,
-                                                 Component.State.DISABLED,
-                                                 Component.State.DISABLED );
-    } else if ( State.DISABLED.equals( config.lookupState( ) ) ) {
-      transition = Automata.sequenceTransitions( config,
-                                                 Component.State.DISABLED,
-                                                 Component.State.DISABLED );
-    } else if ( State.NOTREADY.equals( config.lookupState( ) ) ) {
-      transition = Automata.sequenceTransitions( config,
-                                                 Component.State.NOTREADY,
-                                                 Component.State.DISABLED );
-    } else {
-      Exceptions.trace( "Failed to find transition to requested state DISABLED from " + config.lookupState( ) + " for: " + config.toString( ) );
-    }
-    return executeTransition( config, transition );
+  private static State[] pathToPrimordial( Component.State fromState ) {
+    return ObjectArrays.concat( ServiceTransitions.pathToStopped( fromState ), Component.State.PRIMORDIAL );
   }
   
-  static final CheckedListenableFuture<ServiceConfiguration> stopTransitionChain( final ServiceConfiguration config ) {
-    Callable<CheckedListenableFuture<ServiceConfiguration>> transition = null;
-    Component.State currState = config.lookupState( );
-    if ( State.ENABLED.equals( currState ) ) {
-      transition = Automata.sequenceTransitions( config,
-                                                 Component.State.ENABLED,
-                                                 Component.State.DISABLED,
-                                                 Component.State.STOPPED );
-    } else if ( State.DISABLED.equals( currState ) || State.NOTREADY.equals( currState ) ) {
-      transition = Automata.sequenceTransitions( config, currState, Component.State.STOPPED );
-    } else {
-      Exceptions.trace( "Failed to find transition to requested state STOPPED from " + config.lookupState( ) + " for: " + config.toString( ) );
-    }
-    return executeTransition( config, transition );
+  private static State[] pathToLoaded( Component.State fromState ) {
+    return ObjectArrays.concat( ServiceTransitions.pathToInitialized( fromState ), Component.State.LOADED );
   }
   
-  static final CheckedListenableFuture<ServiceConfiguration> destroyTransitionChain( final ServiceConfiguration config ) {
-    Callable<CheckedListenableFuture<ServiceConfiguration>> transition = null;
-    if ( !State.INITIALIZED.equals( config.lookupState( ) ) ) {
-      transition = Automata.sequenceTransitions( config,
-                                                 Component.State.ENABLED,
-                                                 Component.State.DISABLED,
-                                                 Component.State.STOPPED );
-    } else {
-      Exceptions.trace( "Failed to find transition to requested state DESTROY from " + config.lookupState( ) + " for: " + config.toString( ) );
+  private static final State[] pathToInitialized( final Component.State fromState ) {
+    State[] transition = new State[] { fromState };
+    switch ( fromState ) {
+      case LOADED:
+        transition = ObjectArrays.concat( fromState, pathToInitialized( Component.State.NOTREADY ) );
+        //$FALL-THROUGH$
+      case ENABLED:
+        transition = ObjectArrays.concat( transition, Component.State.DISABLED );
+        //$FALL-THROUGH$
+      case DISABLED:
+      case NOTREADY:
+        transition = ObjectArrays.concat( transition, Component.State.STOPPED );
+        //$FALL-THROUGH$
+      case BROKEN:
+      case PRIMORDIAL:
+      case STOPPED:
+        transition = ObjectArrays.concat( transition, Component.State.INITIALIZED );
+        //$FALL-THROUGH$
+      case INITIALIZED:
+        break;
     }
-    return executeTransition( config, transition );
+    return transition;
+  }
+  
+  private static State[] pathToStarted( Component.State fromState ) {
+    return ObjectArrays.concat( ServiceTransitions.pathToLoaded( fromState ), Component.State.NOTREADY );
+  }
+  
+  private static final State[] pathToDisabled( final Component.State fromState ) {
+    State[] transition = new State[] { fromState };
+    switch ( fromState ) {
+      case DISABLED:
+      case NOTREADY:
+        transition = ObjectArrays.concat( transition, Component.State.DISABLED );
+        break;
+      default:
+        transition = ObjectArrays.concat( pathToStarted( fromState ), Component.State.DISABLED );
+    }
+    return transition;
+  }
+  
+  private static final State[] pathToEnabled( final Component.State fromState ) {
+    State[] transition = new State[] { fromState };
+    switch ( fromState ) {
+      case ENABLED:
+        transition = ObjectArrays.concat( transition, Component.State.ENABLED );
+        break;
+      default:
+        transition = ObjectArrays.concat( pathToDisabled( fromState ), Component.State.ENABLED );
+    }
+    return transition;
+  }
+  
+  private static final State[] pathToStopped( final Component.State fromState ) {
+    State[] transition = new State[] { fromState };
+    switch ( fromState ) {
+      case ENABLED:
+        transition = ObjectArrays.concat( transition, Component.State.DISABLED );
+        //$FALL-THROUGH$
+      case DISABLED:
+      case NOTREADY:
+        transition = ObjectArrays.concat( transition, Component.State.STOPPED );
+        break;
+      default:
+        transition = ObjectArrays.concat( pathToStarted( fromState ), Component.State.STOPPED );
+    }
+    return transition;
   }
   
   private static CheckedListenableFuture<ServiceConfiguration> executeTransition( final ServiceConfiguration config, Callable<CheckedListenableFuture<ServiceConfiguration>> transition ) {
@@ -240,7 +263,6 @@ public class ServiceTransitions {
       try {
         return transition.call( );
       } catch ( Exception ex ) {
-        LOG.error( ex, ex );
         return Futures.predestinedFailedFuture( ex );
       }
     } else {
@@ -250,13 +272,21 @@ public class ServiceTransitions {
   
   private static <T extends EmpyreanMessage> T sendEmpyreanRequest( final ServiceConfiguration parent, final EmpyreanMessage msg ) throws Exception {
     ServiceConfiguration config = ServiceConfigurations.createEphemeral( Empyrean.INSTANCE, parent.getInetAddress( ) );
-    LOG.debug( "Sending request " + msg.getClass( ).getSimpleName( ) + " to " + parent.getFullName( ) );
-    Throwable lastEx = null;
+    LOG.debug( "Sending request " + msg.getClass( ).getSimpleName( )
+               + " to "
+               + parent.getFullName( ) );
     try {
-      T reply = ( T ) AsyncRequests.sendSync( config, msg );
-      return reply;
+      if ( System.getProperty( "euca.noha.cloud" ) == null ) {
+        T reply = ( T ) AsyncRequests.sendSync( config, msg );
+        return reply;
+      } else {
+        return msg.getReply( );
+      }
+      
     } catch ( Exception ex ) {
-      LOG.error( ex, ex );
+      LOG.error( parent + " failed request because of: "
+                 + ex.getMessage( ) );
+      Logs.extreme( ).error( ex, ex );
       throw ex;
     }
   }
@@ -264,21 +294,21 @@ public class ServiceTransitions {
   private static void processTransition( final ServiceConfiguration parent, final Completion transitionCallback, final TransitionActions transitionAction ) {
     ServiceTransitionCallback trans = null;
     try {
-      if ( parent.isVmLocal( ) || ( parent.isHostLocal( ) && BootstrapArgs.isCloudController( ) ) ) {
+      if ( parent.isVmLocal( ) || ( parent.isHostLocal( ) && Hosts.Coordinator.INSTANCE.isLocalhost( ) ) ) {
         try {
           trans = ServiceLocalTransitionCallbacks.valueOf( transitionAction.name( ) );
         } catch ( Exception ex ) {
           LOG.error( ex, ex );
           throw ex;
         }
-      } else if ( !BootstrapArgs.isCloudController( ) ) {
+      } else if ( !Hosts.Coordinator.INSTANCE.isLocalhost( ) ) {
         try {
           trans = ServiceRemoteTransitionNotification.valueOf( transitionAction.name( ) );
         } catch ( Exception ex ) {
           LOG.error( ex, ex );
           throw ex;
         }
-      } else if ( BootstrapArgs.isCloudController( ) ) {
+      } else if ( Hosts.Coordinator.INSTANCE.isLocalhost( ) ) {
         try {
           trans = CloudRemoteTransitionCallbacks.valueOf( transitionAction.name( ) );
         } catch ( Exception ex ) {
@@ -289,14 +319,18 @@ public class ServiceTransitions {
         LOG.debug( "Silentlty accepting remotely inferred state transition for " + parent );
       }
       if ( trans != null ) {
-        Logs.exhaust( ).debug( "Executing transition: " + trans.getClass( ) + "." + transitionAction.name( ) + " for " + parent );
+        Logs.exhaust( ).debug( "Executing transition: " + trans.getClass( )
+                               + "."
+                               + transitionAction.name( )
+                               + " for "
+                               + parent );
         trans.fire( parent );
       }
       transitionCallback.fire( );
     } catch ( Exception ex ) {
-      if ( ServiceExceptions.filterExceptions( parent, ex ) ) {
+      if ( Faults.filter( parent, ex ) ) {
         transitionCallback.fireException( ex );
-        throw new UndeclaredThrowableException( ex );
+        throw Exceptions.toUndeclared( ex );
       } else {
         transitionCallback.fire( );
       }
@@ -304,7 +338,13 @@ public class ServiceTransitions {
   }
   
   public enum TransitionActions implements TransitionAction<ServiceConfiguration> {
-    ENABLE, CHECK, DISABLE, START, LOAD, STOP, DESTROY;
+    ENABLE,
+    CHECK,
+    DISABLE,
+    START,
+    LOAD,
+    STOP,
+    DESTROY;
     
     @Override
     public boolean before( final ServiceConfiguration parent ) {
@@ -396,7 +436,7 @@ public class ServiceTransitions {
               LOG.error( ex, ex );
             }
           }
-          throw ServiceChecks.chainCheckExceptions( errors );
+          throw Faults.failure( parent, errors );
         }
       }
       
@@ -411,7 +451,7 @@ public class ServiceTransitions {
           }
         } );
         try {
-          parent.lookupComponent( ).getBuilder( ).fireStart( parent );
+          ServiceBuilders.lookup( parent.getComponentId( ) ).fireStart( parent );
         } catch ( Exception ex ) {
           LOG.error( ex, ex );
         }
@@ -427,7 +467,7 @@ public class ServiceTransitions {
           }
         } );
         try {
-          parent.lookupComponent( ).getBuilder( ).fireEnable( parent );
+          ServiceBuilders.lookup( parent.getComponentId( ) ).fireEnable( parent );
         } catch ( Exception ex ) {
           LOG.error( ex, ex );
         }
@@ -444,7 +484,7 @@ public class ServiceTransitions {
           }
         } );
         try {
-          parent.lookupComponent( ).getBuilder( ).fireDisable( parent );
+          ServiceBuilders.lookup( parent.getComponentId( ) ).fireDisable( parent );
         } catch ( Exception ex ) {
           LOG.error( ex, ex );
         }
@@ -460,12 +500,24 @@ public class ServiceTransitions {
           }
         } );
         try {
-          parent.lookupComponent( ).getBuilder( ).fireStop( parent );
+          ServiceBuilders.lookup( parent.getComponentId( ) ).fireStop( parent );
         } catch ( Exception ex ) {
           LOG.error( ex, ex );
         }
       }
     };
+    private static Function<TransitionActions, ServiceTransitionCallback> mapper = new Function<TransitionActions, ServiceTransitionCallback>( ) {
+                                                                                   
+                                                                                   @Override
+                                                                                   public ServiceTransitionCallback apply( TransitionActions input ) {
+                                                                                     return valueOf( input.name( ) );
+                                                                                   }
+                                                                                 };
+    private static Map<TransitionActions, ServiceTransitionCallback>      map    = new MapMaker( ).makeComputingMap( mapper );
+    
+    public static ServiceTransitionCallback map( TransitionActions transition ) {
+      return map.get( transition );
+    }
     
   }
   
@@ -474,7 +526,7 @@ public class ServiceTransitions {
       
       @Override
       public void fire( final ServiceConfiguration parent ) throws Exception {
-        parent.lookupComponent( ).getBootstrapper( ).load( );
+        parent.lookupBootstrapper( ).load( );
       }
       
     },
@@ -482,28 +534,23 @@ public class ServiceTransitions {
       
       @Override
       public void fire( final ServiceConfiguration parent ) throws Exception {
-        parent.lookupComponent( ).getBootstrapper( ).destroy( );
+        parent.lookupBootstrapper( ).destroy( );
       }
     },
     CHECK {
       
       @Override
       public void fire( final ServiceConfiguration parent ) throws Exception {
-        try {
-          parent.lookupComponent( ).getBootstrapper( ).check( );
-          parent.lookupComponent( ).getBuilder( ).fireCheck( parent );
-        } catch ( Exception ex ) {
-          LOG.error( ex, ex );
-          throw ex;
-        }
+        parent.lookupBootstrapper( ).check( );
+        ServiceBuilders.lookup( parent.getComponentId( ) ).fireCheck( parent );
       }
     },
     START {
       
       @Override
       public void fire( final ServiceConfiguration parent ) throws Exception {
-        parent.lookupComponent( ).getBootstrapper( ).start( );
-        parent.lookupComponent( ).getBuilder( ).fireStart( parent );
+        parent.lookupBootstrapper( ).start( );
+        ServiceBuilders.lookup( parent.getComponentId( ) ).fireStart( parent );
       }
     },
     ENABLE {
@@ -511,8 +558,8 @@ public class ServiceTransitions {
       @Override
       public void fire( final ServiceConfiguration parent ) throws Exception {
         CHECK.fire( parent );
-        parent.lookupComponent( ).getBootstrapper( ).enable( );
-        parent.lookupComponent( ).getBuilder( ).fireEnable( parent );
+        parent.lookupBootstrapper( ).enable( );
+        ServiceBuilders.lookup( parent.getComponentId( ) ).fireEnable( parent );
       }
     },
     DISABLE {
@@ -520,22 +567,33 @@ public class ServiceTransitions {
       @Override
       public void fire( final ServiceConfiguration parent ) throws Exception {
 //        if ( State.NOTREADY.equals( parent.lookupComponent( ).getState( ) ) ) {
-//          parent.lookupComponent( ).getBootstrapper( ).check( );
-//          parent.lookupComponent( ).getBuilder( ).fireCheck( parent );
+//          parent.lookupComponent( ).check( );
+//          ServiceBuilders.lookup( parent.getComponentId( ) ).fireCheck( parent );
 //        }
-        parent.lookupComponent( ).getBootstrapper( ).disable( );
-        parent.lookupComponent( ).getBuilder( ).fireDisable( parent );
+        parent.lookupBootstrapper( ).disable( );
+        ServiceBuilders.lookup( parent.getComponentId( ) ).fireDisable( parent );
       }
     },
     STOP {
       
       @Override
       public void fire( final ServiceConfiguration parent ) throws Exception {
-        parent.lookupComponent( ).getBootstrapper( ).stop( );
-        parent.lookupComponent( ).getBuilder( ).fireStop( parent );
+        parent.lookupBootstrapper( ).stop( );
+        ServiceBuilders.lookup( parent.getComponentId( ) ).fireStop( parent );
       }
     };
+    private static Function<TransitionActions, ServiceTransitionCallback> mapper = new Function<TransitionActions, ServiceTransitionCallback>( ) {
+                                                                                   
+                                                                                   @Override
+                                                                                   public ServiceTransitionCallback apply( TransitionActions input ) {
+                                                                                     return ServiceLocalTransitionCallbacks.valueOf( input.name( ) );
+                                                                                   }
+                                                                                 };
+    private static Map<TransitionActions, ServiceTransitionCallback>      map    = new MapMaker( ).makeComputingMap( mapper );
     
+    public static ServiceTransitionCallback map( TransitionActions transition ) {
+      return map.get( transition );
+    }
   }
   
   enum ServiceRemoteTransitionNotification implements ServiceTransitionCallback {
@@ -554,7 +612,7 @@ public class ServiceTransitions {
       @Override
       public void fire( final ServiceConfiguration parent ) throws Exception {
         try {
-          parent.lookupBuilder( ).fireCheck( parent );
+          ServiceBuilders.lookup( parent.getComponentId( ) ).fireCheck( parent );
         } catch ( Exception ex ) {
           LOG.error( ex, ex );
         }
@@ -566,7 +624,7 @@ public class ServiceTransitions {
       @Override
       public void fire( final ServiceConfiguration parent ) throws Exception {
         try {
-          parent.lookupComponent( ).getBuilder( ).fireStart( parent );
+          ServiceBuilders.lookup( parent.getComponentId( ) ).fireStart( parent );
         } catch ( Exception ex ) {
           LOG.error( ex, ex );
         }
@@ -577,7 +635,7 @@ public class ServiceTransitions {
       @Override
       public void fire( final ServiceConfiguration parent ) throws Exception {
         try {
-          parent.lookupComponent( ).getBuilder( ).fireEnable( parent );
+          ServiceBuilders.lookup( parent.getComponentId( ) ).fireEnable( parent );
         } catch ( Exception ex ) {
           LOG.error( ex, ex );
         }
@@ -589,7 +647,7 @@ public class ServiceTransitions {
       @Override
       public void fire( final ServiceConfiguration parent ) throws Exception {
         try {
-          parent.lookupComponent( ).getBuilder( ).fireDisable( parent );
+          ServiceBuilders.lookup( parent.getComponentId( ) ).fireDisable( parent );
         } catch ( Exception ex ) {
           LOG.error( ex, ex );
         }
@@ -600,78 +658,33 @@ public class ServiceTransitions {
       @Override
       public void fire( final ServiceConfiguration parent ) throws Exception {
         try {
-          parent.lookupComponent( ).getBuilder( ).fireStop( parent );
+          ServiceBuilders.lookup( parent.getComponentId( ) ).fireStop( parent );
         } catch ( Exception ex ) {
           LOG.error( ex, ex );
         }
       }
     };
     
+    private static Function<TransitionActions, ServiceTransitionCallback> mapper = new Function<TransitionActions, ServiceTransitionCallback>( ) {
+                                                                                   
+                                                                                   @Override
+                                                                                   public ServiceTransitionCallback apply( TransitionActions input ) {
+                                                                                     return valueOf( input.name( ) );
+                                                                                   }
+                                                                                 };
+    private static Map<TransitionActions, ServiceTransitionCallback>      map    = new MapMaker( ).makeComputingMap( mapper );
+    
+    public static ServiceTransitionCallback map( TransitionActions transition ) {
+      return map.get( transition );
+    }
   }
   
-  public enum StateCallbacks implements Callback<ServiceConfiguration> {
-    FIRE_START_EVENT {
+  public enum StateCallbacks implements Callback<ServiceConfiguration> {//TODO:GRZE: make these discoverable
+    FIRE_STATE_EVENT {
       
       @Override
       public void fire( final ServiceConfiguration config ) {
-        EventRecord.here( ServiceBuilder.class,
-                          EventType.COMPONENT_SERVICE_START,
-                          config.getFullName( ).toString( ), config.toString( ) ).extreme( );
-        LifecycleEvents.start( config );
-      }
-    },
-    FIRE_STOP_EVENT {
-      @Override
-      public void fire( final ServiceConfiguration config ) {
-        EventRecord.here( ServiceBuilder.class,
-                                         EventType.COMPONENT_SERVICE_STOP,
-                                         config.getFullName( ).toString( ), config.toString( ) ).extreme( );
-        LifecycleEvents.stop( config );
-      }
-    },
-    FIRE_ENABLE_EVENT {
-      @Override
-      public void fire( final ServiceConfiguration config ) {
-        EventRecord.here( ServiceBuilder.class,
-                                         EventType.COMPONENT_SERVICE_ENABLE,
-                                         config.getFullName( ).toString( ), config.toString( ) ).extreme( );
-        LifecycleEvents.enable( config );
-      }
-    },
-    FIRE_DISABLE_EVENT {
-      @Override
-      public void fire( final ServiceConfiguration config ) {
-        EventRecord.here( ServiceBuilder.class,
-                                         EventType.COMPONENT_SERVICE_DISABLE,
-                                         config.getFullName( ).toString( ), config.toString( ) ).extreme( );
-        LifecycleEvents.disable( config );
-      }
-      
-    },
-    ENDPOINT_START {
-      @Override
-      public void fire( final ServiceConfiguration parent ) {
-        try {
-          parent.lookupService( ).start( );
-        } catch ( Exception ex ) {
-          LOG.error( ex, ex );
-        }
-      }
-    },
-    ENDPOINT_STOP {
-      @Override
-      public void fire( final ServiceConfiguration parent ) {
-        try {
-          parent.lookupService( ).stop( );
-        } catch ( Exception ex ) {
-          LOG.error( ex, ex );
-        }
-      }
-    },
-    SERVICE_CONTEXT_RESTART {
-      @Override
-      public void fire( final ServiceConfiguration parent ) {
-        ServiceContextManager.restartSync( parent );
+        ServiceEvents.fire( config, config.getStateMachine( ).getState( ) );
       }
     },
     PROPERTIES_ADD {
@@ -691,15 +704,19 @@ public class ServiceTransitions {
         } catch ( Exception ex ) {
           LOG.error( ex, ex );
         }
-        for ( Entry<String, ConfigurableProperty> entry : PropertyDirectory.getPendingPropertyEntries( ) ) {
+      }
+    },
+    STATIC_PROPERTIES_ADD {
+      @Override
+      public void fire( final ServiceConfiguration config ) {
+        for ( Entry<String, ConfigurableProperty> entry : Iterables.filter( PropertyDirectory.getPendingPropertyEntries( ), Predicates.instanceOf( StaticPropertyEntry.class ) ) ) {
           try {
             ConfigurableProperty prop = entry.getValue( );
-            if ( prop instanceof StaticPropertyEntry && PropertyDirectory.addProperty( prop ) ) {
-              try {
-                prop.getValue( );
-              } catch ( Exception ex ) {
-                Logs.extreme( ).error( ex, ex );
-              }
+            PropertyDirectory.addProperty( prop );
+            try {
+              prop.getValue( );
+            } catch ( Exception ex ) {
+              Logs.extreme( ).error( ex );
             }
           } catch ( Exception ex ) {
             Logs.extreme( ).error( ex, ex );
@@ -714,16 +731,16 @@ public class ServiceTransitions {
           List<ConfigurableProperty> props = PropertyDirectory.getPropertyEntrySet( config.getComponentId( ).name( ) );
           for ( ConfigurableProperty prop : props ) {
             if ( prop instanceof SingletonDatabasePropertyEntry ) {
-              //GRZE:REVIEW do nothing?
-            } else if ( prop instanceof MultiDatabasePropertyEntry ) {
-              ( ( MultiDatabasePropertyEntry ) prop ).setIdentifierValue( config.getPartition( ) );
-              PropertyDirectory.removeProperty( prop );
-            }
+            //GRZE:REVIEW do nothing?
+          } else if ( prop instanceof MultiDatabasePropertyEntry ) {
+            ( ( MultiDatabasePropertyEntry ) prop ).setIdentifierValue( config.getPartition( ) );
+            PropertyDirectory.removeProperty( prop );
           }
-        } catch ( Exception ex ) {
-          LOG.error( ex, ex );
         }
+      } catch ( Exception ex ) {
+        LOG.error( ex, ex );
       }
+    }
       
     };
     

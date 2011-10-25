@@ -70,23 +70,16 @@ import java.util.NavigableSet;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentSkipListSet;
 import org.apache.log4j.Logger;
-import org.mule.RequestContext;
 import org.mule.api.MuleException;
 import org.mule.api.lifecycle.Startable;
-import com.eucalyptus.address.Address;
-import com.eucalyptus.address.Addresses;
-import com.eucalyptus.bootstrap.Bootstrap;
-import com.eucalyptus.cloud.ResourceToken;
-import com.eucalyptus.cloud.run.Allocations.Allocation;
-import com.eucalyptus.cloud.run.ClusterAllocator;
+import com.eucalyptus.cluster.ResourceState.VmTypeAvailability;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.context.Contexts;
-import com.eucalyptus.vm.VmInstance;
-import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.vm.VmType;
 import com.eucalyptus.vm.VmTypes;
 import com.google.common.base.Function;
@@ -126,11 +119,6 @@ public class ClusterEndpoint implements Startable {
   
   public void start( ) throws MuleException {
     Clusters.getInstance( );
-  }
-  
-  public void enqueue( Allocation allocInfo ) {
-    ClusterAllocator.create( allocInfo );
-    RequestContext.getEventContext( ).setStopFurtherProcessing( true );
   }
   
   public DescribeAvailabilityZonesResponseType DescribeAvailabilityZones( DescribeAvailabilityZonesType request ) {
@@ -293,18 +281,18 @@ public class ClusterEndpoint implements Startable {
     DescribeRegionsResponseType reply = ( DescribeRegionsResponseType ) request.getReply( );
     try {//TODO:GRZE:wtfugly
       Component euca = Components.lookup( Eucalyptus.class );
-      NavigableSet<ServiceConfiguration> configs = euca.lookupServiceConfigurations( );
+      NavigableSet<ServiceConfiguration> configs = euca.services( );
       if ( !configs.isEmpty( ) && Component.State.ENABLED.equals( configs.first( ).lookupState( ) ) ) {
-        reply.getRegionInfo( ).add( new RegionInfoType( euca.getComponentId( ).name( ), configs.first( ).getUri( ).toASCIIString( ) ) );
+        reply.getRegionInfo( ).add( new RegionInfoType( euca.getComponentId( ).name( ), ServiceUris.remote( configs.first( ) ).toASCIIString( ) ) );
       }
     } catch ( NoSuchElementException ex ) {
       LOG.error( ex, ex );
     }
     try {//TODO:GRZE:wtfugly
       Component walrus = Components.lookup( Walrus.class );
-      NavigableSet<ServiceConfiguration> configs = walrus.lookupServiceConfigurations( );
+      NavigableSet<ServiceConfiguration> configs = walrus.services( );
       if ( !configs.isEmpty( ) && Component.State.ENABLED.equals( configs.first( ).lookupState( ) ) ) {
-        reply.getRegionInfo( ).add( new RegionInfoType( walrus.getComponentId( ).name( ), configs.first( ).getUri( ).toASCIIString( ) ) );
+        reply.getRegionInfo( ).add( new RegionInfoType( walrus.getComponentId( ).name( ), ServiceUris.remote( configs.first( ) ).toASCIIString( ) ) );
       }
     } catch ( NoSuchElementException ex ) {
       LOG.error( ex, ex );

@@ -101,6 +101,7 @@ import com.eucalyptus.cloud.CloudMetadata.VmInstanceMetadata;
 import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
+import com.eucalyptus.cloud.util.NotEnoughResourcesException;
 import com.eucalyptus.cloud.util.ResourceAllocationException;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.component.ComponentIds;
@@ -108,10 +109,12 @@ import com.eucalyptus.component.Partition;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
+import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.Dns;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.TransactionExecutionException;
 import com.eucalyptus.entities.TransientEntityException;
 import com.eucalyptus.event.EventFailedException;
@@ -331,10 +334,43 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       if ( !VmStateSet.RUN.contains( inputState ) ) {
         return false;
       } else {
+        final UserFullName userFullName = UserFullName.getInstance( input.getOwnerId( ) );
+        final List<NetworkGroup> networks = Lists.newArrayList( );
+        
+        PrivateNetworkIndex index = null;
+        ExtantNetwork exNet;
+        EntityTransaction tx1 = Entities.get( NetworkGroup.class );
+        try {
+          networks.addAll( Lists.transform( input.getGroupNames( ), transformNetworkNames( userFullName ) ) );
+          final NetworkGroup network = ( !networks.isEmpty( )
+              ? networks.get( 0 )
+              : null );
+          try {
+            if ( network != null ) {
+              if ( !network.hasExtantNetwork( ) ) {
+                exNet = network.reclaim( input.getNetParams( ).getVlan( ) );
+              } else {
+                exNet = network.extantNetwork( );
+                if ( !exNet.getTag( ).equals( input.getNetParams( ).getVlan( ) ) ) {
+                  exNet = null;
+                } else {
+                  index = exNet.reclaimNetworkIndex( input.getNetParams( ).getNetworkIndex( ) );
+                }
+              }
+            }
+          } catch ( Exception ex ) {
+            throw Exceptions.toUndeclared( ex );
+          }
+         
+          tx1.commit( );
+        } catch ( Exception ex ) {
+          tx1.rollback( );
+          throw Exceptions.toUndeclared( ex );
+        }
+        
         final EntityTransaction db = Entities.get( VmInstance.class );
         try {
           final VmType vmType = VmTypes.getVmType( input.getInstanceType( ).getName( ) );
-          final UserFullName userFullName = UserFullName.getInstance( input.getOwnerId( ) );
           Partition partition;
           try {
             partition = Partitions.lookupByName( input.getPlacement( ) );
@@ -349,12 +385,12 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
             try {
               kernelId = input.getInstanceType( ).lookupKernel( ).getId( );
             } catch ( Exception ex ) {
-              LOG.error( ex , ex );
+              LOG.error( ex, ex );
             }
             try {
               ramdiskId = input.getInstanceType( ).lookupRamdisk( ).getId( );
             } catch ( Exception ex ) {
-              LOG.error( ex , ex );
+              LOG.error( ex, ex );
             }
           } catch ( final Exception ex2 ) {
             LOG.error( ex2, ex2 );
@@ -387,30 +423,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
             userData = new byte[0];
           }
           
-          final List<NetworkGroup> networks = Lists.newArrayList( );
-          try {
-            networks.addAll( Lists.transform( input.getGroupNames( ), transformNetworkNames( userFullName ) ) );
-          } catch ( final Exception ex ) {
-            LOG.error( ex, ex );
-          }
-          
-          PrivateNetworkIndex index = null;
-          ExtantNetwork exNet;
-          final NetworkGroup network = ( !networks.isEmpty( )
-            ? networks.get( 0 )
-            : null );
-          if ( network != null ) {
-            if ( !network.hasExtantNetwork( ) ) {
-              exNet = network.reclaim( input.getNetParams( ).getVlan( ) );
-            } else {
-              exNet = network.extantNetwork( );
-              if ( !exNet.getTag( ).equals( input.getNetParams( ).getVlan( ) ) ) {
-                exNet = null;
-              } else {
-                index = exNet.reclaimNetworkIndex( input.getNetParams( ).getNetworkIndex( ) );
-              }
-            }
-          }
           final VmInstance vmInst = new VmInstance.Builder( ).owner( userFullName )
                                                              .withIds( input.getInstanceId( ), input.getReservationId( ) )
                                                              .bootRecord( bootSet,
@@ -610,7 +622,8 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           throw ex;
         } catch ( final Exception ex ) {
           db.rollback( );
-          throw new NoSuchElementException( "An error occurred while trying to lookup vm instance " + arg0 + ": " + ex.getMessage( ) + "\n" + Exceptions.causeString( ex ) );
+          throw new NoSuchElementException( "An error occurred while trying to lookup vm instance " + arg0 + ": " + ex.getMessage( ) + "\n"
+                                            + Exceptions.causeString( ex ) );
         }
       }
     };
@@ -855,7 +868,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     final boolean dns = !ComponentIds.lookup( Dns.class ).runLimitedServices( );
     final Map<String, String> m = new HashMap<String, String>( );
     m.put( "ami-id", this.getImageId( ) );
-    if ( !this.bootRecord.getMachine( ).getProductCodes( ).isEmpty()) {
+    if ( !this.bootRecord.getMachine( ).getProductCodes( ).isEmpty( ) ) {
       m.put( "product-codes", this.bootRecord.getMachine( ).getProductCodes( ).toString( ).replaceAll( "[\\Q[]\\E]", "" ).replaceAll( ", ", "\n" ) );
     }
     m.put( "ami-launch-index", "" + this.launchRecord.getLaunchIndex( ) );
@@ -1155,7 +1168,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     final EntityTransaction db = Entities.get( VmInstance.class );
     try {
       final VmInstance entity = Entities.merge( this );
-      this.transientVolumeState.lookupVolumeAttachmentByDevice( volumeDevice );
+      entity.transientVolumeState.lookupVolumeAttachmentByDevice( volumeDevice );
       db.commit( );
     } catch ( final NoSuchElementException ex ) {
       Logs.exhaust( ).error( ex, ex );
@@ -1176,7 +1189,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     final EntityTransaction db = Entities.get( VmInstance.class );
     try {
       final VmInstance entity = Entities.merge( this );
-      final AttachedVolume ret = VmVolumeAttachment.asAttachedVolume( entity ).apply( this.transientVolumeState.lookupVolumeAttachment( volumeId ) );
+      final AttachedVolume ret = VmVolumeAttachment.asAttachedVolume( entity ).apply( entity.transientVolumeState.lookupVolumeAttachment( volumeId ) );
       db.commit( );
       return ret;
     } catch ( final Exception ex ) {
@@ -1193,20 +1206,14 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     final EntityTransaction db = Entities.get( VmInstance.class );
     try {
       final VmInstance entity = Entities.merge( this );
-      this.transientVolumeState.addVolumeAttachment( VmVolumeAttachment.fromAttachedVolume( entity ).apply( vol ) );
+      vol.setStatus( "attaching" );
+      entity.transientVolumeState.addVolumeAttachment( VmVolumeAttachment.fromAttachedVolume( entity ).apply( vol ) );
       db.commit( );
     } catch ( final Exception ex ) {
       Logs.exhaust( ).error( ex, ex );
       db.rollback( );
     }
     
-  }
-  
-  /**
-   * @return
-   */
-  public ServiceConfiguration lookupClusterConfiguration( ) {
-    return Partitions.lookupService( ClusterController.class, this.lookupPartition( ) );
   }
   
   /**
@@ -1217,11 +1224,11 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     final EntityTransaction db = Entities.get( VmInstance.class );
     try {
       final VmInstance entity = Entities.merge( this );
-      final boolean ret = this.transientVolumeState.eachVolumeAttachment( new Predicate<VmVolumeAttachment>( ) {
+      final boolean ret = entity.transientVolumeState.eachVolumeAttachment( new Predicate<VmVolumeAttachment>( ) {
         
         @Override
         public boolean apply( final VmVolumeAttachment arg0 ) {
-          return predicate.apply( VmVolumeAttachment.asAttachedVolume( VmInstance.this ).apply( arg0 ) );
+          return predicate.apply( VmVolumeAttachment.asAttachedVolume( entity ).apply( arg0 ) );
         }
       } );
       db.commit( );
@@ -1242,7 +1249,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     final EntityTransaction db = Entities.get( VmInstance.class );
     try {
       final VmInstance entity = Entities.merge( this );
-      final AttachedVolume ret = VmVolumeAttachment.asAttachedVolume( entity ).apply( this.transientVolumeState.removeVolumeAttachment( volumeId ) );
+      final AttachedVolume ret = VmVolumeAttachment.asAttachedVolume( entity ).apply( entity.transientVolumeState.removeVolumeAttachment( volumeId ) );
       db.commit( );
       return ret;
     } catch ( final Exception ex ) {
@@ -1565,18 +1572,24 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     }
     return true;
   }
-
+  
   /**
    * @return
    */
   public static VmInstance create( ) {
     return new VmInstance( );
   }
-
+  
   /**
    * @param exampleWithPrivateIp
    */
   void setNetworkConfig( VmNetworkConfig networkConfig ) {
     this.networkConfig = networkConfig;
+  }
+  
+  public void release( ) {
+    try {
+      Transitions.DELETE.apply( this );
+    } catch ( Exception ex ) {}
   }
 }

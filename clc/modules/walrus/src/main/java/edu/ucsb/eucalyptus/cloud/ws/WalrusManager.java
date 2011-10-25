@@ -210,6 +210,7 @@ import edu.ucsb.eucalyptus.util.WalrusDataQueue;
 import edu.ucsb.eucalyptus.util.WalrusMonitor;
 import edu.ucsb.eucalyptus.util.SystemUtil;
 import com.eucalyptus.system.Threads;
+import com.eucalyptus.component.id.Dns;
 import com.eucalyptus.component.id.Walrus;
 
 public class WalrusManager {

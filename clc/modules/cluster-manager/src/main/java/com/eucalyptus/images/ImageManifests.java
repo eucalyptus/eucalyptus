@@ -395,7 +395,7 @@ public class ImageManifests {
       try {
         if ( Iterables.any( Lists.transform( user.getCertificates( ), euareToX509 ), tryVerifyWithCert ) ) {
           return true;
-        } else if ( tryVerifyWithCert.apply( SystemCredentials.getCredentialProvider( Eucalyptus.class ).getCertificate( ) ) ) {
+        } else if ( tryVerifyWithCert.apply( SystemCredentials.lookup( Eucalyptus.class ).getCertificate( ) ) ) {
           return true;
         } else {
           for ( User u : Accounts.listAllUsers( ) ) {

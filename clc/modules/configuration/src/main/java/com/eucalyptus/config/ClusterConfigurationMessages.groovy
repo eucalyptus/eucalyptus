@@ -65,6 +65,7 @@ package com.eucalyptus.config
 
 import java.util.ArrayList;
 
+public class RegisterClusterType extends RegisterComponentType {}
 public class RegisterClusterResponseType extends RegisterComponentResponseType {}
 public class DeregisterClusterType extends DeregisterComponentType {}
 public class DeregisterClusterResponseType extends DeregisterComponentResponseType {}

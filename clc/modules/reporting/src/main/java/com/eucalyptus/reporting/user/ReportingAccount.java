@@ -8,7 +8,7 @@ import javax.persistence.Table;
 import org.hibernate.annotations.Entity;
 
 @Entity @javax.persistence.Entity
-@PersistenceContext(name="reporting")
+@PersistenceContext(name="eucalyptus_reporting")
 @Table(name="reporting_account")
 public class ReportingAccount
 {

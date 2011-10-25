@@ -74,7 +74,7 @@ import javax.persistence.Transient
 import org.hibernate.annotations.Cache
 import org.hibernate.annotations.CacheConcurrencyStrategy
 import org.hibernate.annotations.Entity
-import com.eucalyptus.component.ComponentPart
+import com.eucalyptus.component.ComponentId.ComponentPart
 import com.eucalyptus.component.id.Walrus
 
 @Entity @javax.persistence.Entity

@@ -97,16 +97,6 @@ import edu.ucsb.eucalyptus.msgs.StorageVolume;
 public class StorageUtil {
   private static Logger LOG = Logger.getLogger( StorageUtil.class );
     
-  public static void dispatchAll( BaseMessage message ) throws EucalyptusCloudException {
-    for( ServiceConfiguration service : Components.lookup(Storage.class).enabledServices( ) ) {
-      try {
-        service.lookupService( ).getDispatcher( ).dispatch( message );
-      } catch ( NoSuchServiceException ex ) {
-        LOG.error( ex , ex );
-      }
-    }
-  }
-
   public static ArrayList<edu.ucsb.eucalyptus.msgs.Volume> getVolumeReply( Map<String, AttachedVolume> attachedVolumes, List<Volume> volumes ) throws EucalyptusCloudException {
     Multimap<String,Volume> partitionVolumeMap = HashMultimap.create( );
     Map<String,StorageVolume> idStorageVolumeMap = Maps.newHashMap( );
