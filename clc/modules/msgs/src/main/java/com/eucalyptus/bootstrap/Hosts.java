@@ -267,6 +267,7 @@ public class Hosts {
         LOG.info( "Hosts.entryAdded(): Bootstrap  " + ( Bootstrap.isFinished( )
           ? "true"
           : "false" ) + "=> " + arg1 );
+        Coordinator.INSTANCE.update( hostMap.values( ) );
       } else if ( AdvertiseToRemoteCloudController.INSTANCE.apply( arg1 ) ) {
         LOG.info( "Hosts.entryAdded(): Marked as database  => " + arg1 );
       } else if ( BootstrapRemoteComponent.INSTANCE.apply( arg1 ) ) {
