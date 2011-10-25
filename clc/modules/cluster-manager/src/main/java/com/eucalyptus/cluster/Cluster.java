@@ -451,37 +451,33 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
           case AUTHENTICATING:
           case STARTING:
             if ( tick.isAsserted( Clusters.getConfiguration( ).getPendingInterval( ) ) ) {
-              transition = Automata.sequenceTransitions( this, State.STOPPED, State.PENDING, State.AUTHENTICATING, State.STARTING,
-                                                         State.STARTING_NOTREADY,
-                                                         State.NOTREADY, State.DISABLED );
+              transition = startingTransition( );
             }
             break;
           case NOTREADY:
             if ( initialized && tick.isAsserted( Clusters.getConfiguration( ).getNotreadyInterval( ) ) ) {
-              transition = Automata.sequenceTransitions( this, State.NOTREADY, State.DISABLED );
+              transition = notreadyTransition( );
             }
             break;
           case DISABLED:
             if ( initialized && tick.isAsserted( Clusters.getConfiguration( ).getDisabledInterval( ) )
                  && ( Component.State.DISABLED.equals( systemState ) || Component.State.NOTREADY.equals( systemState ) ) ) {
-              transition = Automata.sequenceTransitions( this, State.DISABLED, State.DISABLED );
+              transition = disabledTransition( );
             } else if ( initialized && tick.isAsserted( Clusters.getConfiguration( ).getDisabledInterval( ) )
                         && Component.State.ENABLED.equals( systemState ) ) {
-              transition = Automata.sequenceTransitions( this, State.ENABLING, State.ENABLING_RESOURCES, State.ENABLING_NET, State.ENABLING_VMS,
-                                                         State.ENABLING_ADDRS, State.ENABLING_VMS_PASS_TWO, State.ENABLING_ADDRS_PASS_TWO, State.ENABLED );
+              transition = enablingTransition( );
             }
             break;
           case ENABLED:
             if ( initialized && tick.isAsserted( Clusters.getConfiguration( ).getEnabledInterval( ) )
                  && Component.State.ENABLED.equals( this.configuration.lookupState( ) ) ) {
-              transition = Automata.sequenceTransitions( this, State.ENABLED, State.ENABLED_SERVICE_CHECK, State.ENABLED_ADDRS, State.ENABLED_RSC,
-                                                         State.ENABLED_NET, State.ENABLED_VMS, State.ENABLED );
+              transition = enabledTransition( );
             } else if ( initialized && tick.isAsserted( VmInstances.VOLATILE_STATE_INTERVAL_SEC )
                         && Component.State.ENABLED.equals( this.configuration.lookupState( ) ) ) {
               Refresh.VOLATILE_INSTANCES.apply( this );
             } else if ( ( initialized && Component.State.DISABLED.equals( this.configuration.lookupState( ) ) )
                         || Component.State.NOTREADY.equals( this.configuration.lookupState( ) ) ) {
-              transition = Automata.sequenceTransitions( this, State.ENABLED, State.DISABLED );
+              transition = disableTransition( );
             }
             break;
           default:
@@ -499,6 +495,46 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
     } catch ( final Exception ex ) {
       LOG.error( ex, ex );
     }
+  }
+  
+  public Callable<CheckedListenableFuture<Cluster>> disableTransition( ) {
+    Callable<CheckedListenableFuture<Cluster>> transition;
+    transition = Automata.sequenceTransitions( this, State.ENABLED, State.DISABLED );
+    return transition;
+  }
+  
+  public Callable<CheckedListenableFuture<Cluster>> enabledTransition( ) {
+    Callable<CheckedListenableFuture<Cluster>> transition;
+    transition = Automata.sequenceTransitions( this, State.ENABLED, State.ENABLED_SERVICE_CHECK, State.ENABLED_ADDRS, State.ENABLED_RSC,
+                                               State.ENABLED_NET, State.ENABLED_VMS, State.ENABLED );
+    return transition;
+  }
+  
+  public Callable<CheckedListenableFuture<Cluster>> enablingTransition( ) {
+    Callable<CheckedListenableFuture<Cluster>> transition;
+    transition = Automata.sequenceTransitions( this, State.ENABLING, State.ENABLING_RESOURCES, State.ENABLING_NET, State.ENABLING_VMS,
+                                               State.ENABLING_ADDRS, State.ENABLING_VMS_PASS_TWO, State.ENABLING_ADDRS_PASS_TWO, State.ENABLED );
+    return transition;
+  }
+  
+  public Callable<CheckedListenableFuture<Cluster>> disabledTransition( ) {
+    Callable<CheckedListenableFuture<Cluster>> transition;
+    transition = Automata.sequenceTransitions( this, State.DISABLED, State.DISABLED );
+    return transition;
+  }
+  
+  public Callable<CheckedListenableFuture<Cluster>> notreadyTransition( ) {
+    Callable<CheckedListenableFuture<Cluster>> transition;
+    transition = Automata.sequenceTransitions( this, State.NOTREADY, State.DISABLED );
+    return transition;
+  }
+  
+  public Callable<CheckedListenableFuture<Cluster>> startingTransition( ) {
+    Callable<CheckedListenableFuture<Cluster>> transition;
+    transition = Automata.sequenceTransitions( this, State.STOPPED, State.PENDING, State.AUTHENTICATING, State.STARTING,
+                                               State.STARTING_NOTREADY,
+                                               State.NOTREADY, State.DISABLED );
+    return transition;
   }
   
   public Boolean isReady( ) {
@@ -957,7 +993,21 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
     currentErrors.addAll( this.pendingErrors );
     if ( Cluster.State.NOTREADY.equals( currentState ) ) {
       try {
-        Threads.enqueue( this.getConfiguration( ), Automata.sequenceTransitions( this, State.NOTREADY, State.DISABLED ) ).get( );
+        notreadyTransition( ).call( ).get( );
+      } catch ( Exception ex ) {
+        Exceptions.maybeInterrupted( ex );
+        throw Faults.failure( this.configuration, ex );
+      }
+    } else if ( Cluster.State.ENABLED.equals( currentState ) ) {
+      try {
+        enabledTransition( ).call( ).get( );
+      } catch ( Exception ex ) {
+        Exceptions.maybeInterrupted( ex );
+        throw Faults.failure( this.configuration, ex );
+      }
+    } else if ( Cluster.State.DISABLED.equals( currentState ) ) {
+      try {
+        disabledTransition( ).call( ).get( );
       } catch ( Exception ex ) {
         Exceptions.maybeInterrupted( ex );
         throw Faults.failure( this.configuration, ex );
