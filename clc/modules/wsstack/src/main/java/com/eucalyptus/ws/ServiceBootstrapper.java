@@ -75,7 +75,6 @@ import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.Hosts;
-import com.eucalyptus.bootstrap.Hosts.Coordinator;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.component.Component;
@@ -86,6 +85,7 @@ import com.eucalyptus.component.Faults;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.Topology;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Predicate;
@@ -247,10 +247,24 @@ public class ServiceBootstrapper extends Bootstrapper.Simple {
     
     @Override
     public boolean apply( final ServiceConfiguration config ) {
-      final boolean ret = config.getComponentId( ).isAlwaysLocal( ) || config.isVmLocal( )
+      boolean ret = config.getComponentId( ).isAlwaysLocal( ) || config.isVmLocal( )
                           || ( BootstrapArgs.isCloudController( ) && config.getComponentId( ).isCloudLocal( ) )
                           || Hosts.Coordinator.INSTANCE.isLocalhost( );
+      ret &= !( Eucalyptus.class.equals( config.getComponentId( ).getClass( ) ) && !config.isHostLocal( ) );
       LOG.debug( "ServiceBootstrapper.shouldLoad(" + config.toString( )
+                 + "):"
+                 + ret );
+      return ret;
+    }
+  }
+  
+  enum ShouldStart implements Predicate<ServiceConfiguration> {
+    INSTANCE;
+    
+    @Override
+    public boolean apply( final ServiceConfiguration config ) {
+      boolean ret = ShouldLoad.INSTANCE.apply( config ) && !( Eucalyptus.class.equals( config.getComponentId( ).getClass( ) ) && !config.isHostLocal( ) );
+      LOG.debug( "ServiceBootstrapper.shouldStart(" + config.toString( )
                  + "):"
                  + ret );
       return ret;

@@ -251,7 +251,7 @@ public class Hosts {
     @Override
     public void contentsSet( final Map<String, Host> arg0 ) {
       LOG.info( "Hosts.contentsSet(): " + this.printMap( ) );
-      Coordinator.INSTANCE.initialize( arg0.values( ) );
+      Coordinator.INSTANCE.update( arg0.values( ) );
     }
     
     @Override
@@ -267,6 +267,7 @@ public class Hosts {
         LOG.info( "Hosts.entryAdded(): Bootstrap  " + ( Bootstrap.isFinished( )
           ? "true"
           : "false" ) + "=> " + arg1 );
+        Coordinator.INSTANCE.update( hostMap.values( ) );
       } else if ( AdvertiseToRemoteCloudController.INSTANCE.apply( arg1 ) ) {
         LOG.info( "Hosts.entryAdded(): Marked as database  => " + arg1 );
       } else if ( BootstrapRemoteComponent.INSTANCE.apply( arg1 ) ) {
@@ -295,6 +296,7 @@ public class Hosts {
           LOG.info( "Hosts.viewChange(): -> removed  => " + h );
         }
       }
+      Coordinator.INSTANCE.update( hostMap.values( ) );
     }
     
   }
@@ -307,7 +309,7 @@ public class Hosts {
     public boolean apply( final Host arg1 ) {
       if ( !arg1.isLocalHost( ) && !Bootstrap.isFinished( ) ) {
         doBootstrap( Empyrean.class, arg1.getBindAddress( ) );
-        if ( !BootstrapArgs.isCloudController( ) && !arg1.isLocalHost( ) && arg1.hasDatabase( ) && initialized.compareAndSet( false, true ) ) {
+        if ( arg1.hasDatabase( ) && initialized.compareAndSet( false, true ) ) {
           doBootstrap( Eucalyptus.class, arg1.getBindAddress( ) );
         }
         return true;
@@ -640,8 +642,7 @@ public class Hosts {
   }
   
   public static List<Host> list( ) {
-    final Predicate<Host> trueFilter = Predicates.alwaysTrue( );
-    return Hosts.list( trueFilter );
+    return Lists.newArrayList( hostMap.values( ) );
   }
   
   public static List<Host> list( final Predicate<Host> filter ) {
@@ -649,7 +650,7 @@ public class Hosts {
   }
   
   public static List<Host> listDatabases( ) {
-    return Lists.newArrayList( Iterables.filter( Hosts.list( ), DbFilter.INSTANCE ) );
+    return Hosts.list( DbFilter.INSTANCE );
   }
   
   public static Host localHost( ) {
@@ -709,7 +710,7 @@ public class Hosts {
     INSTANCE;
     private static final long   MAX_COORDINATOR_CLOCK_SKEW = 1000L;
     private final AtomicBoolean currentCoordinator         = new AtomicBoolean( false );
-    private final AtomicLong    currentStartTime           = new AtomicLong( );
+    private final AtomicLong    currentStartTime           = new AtomicLong( 0L );
     
     @Override
     public boolean apply( Host h ) {
@@ -720,11 +721,18 @@ public class Hosts {
     /**
      * @param values
      */
-    public void initialize( Collection<Host> values ) {
+    public void update( Collection<Host> values ) {
+      long currentTime = System.currentTimeMillis( );
       long startTime = Longs.max( Longs.toArray( Collections2.transform( values, StartTimeTransform.INSTANCE ) ) );
-      this.currentStartTime.set( startTime );
-      Host coordinator = this.apply( values );
-      this.currentCoordinator.set( coordinator.isLocalHost( ) );
+      if ( this.currentStartTime.compareAndSet( 0L, startTime > currentTime ? startTime : currentTime ) ) {
+        Host foundCoordinator = this.apply( values );
+        this.currentCoordinator.set( foundCoordinator.isLocalHost( ) );
+      } else if ( BootstrapArgs.isCloudController( ) ) {
+        Host coordinator = this.apply( values );
+        this.currentCoordinator.set( coordinator.isLocalHost( ) );
+      } else {
+        this.currentCoordinator.set( false );
+      }
     }
     
     /**
@@ -748,17 +756,6 @@ public class Hosts {
       return this.currentCoordinator.get( );
     }
     
-    private void updateCoordinator( ) {
-      long currentTime = System.currentTimeMillis( );
-      long startTime = Longs.max( Longs.toArray( Collections2.transform( hostMap.values( ), StartTimeTransform.INSTANCE ) ) );
-      this.currentStartTime.set( startTime > currentTime ? startTime + MAX_COORDINATOR_CLOCK_SKEW : currentTime );
-      if ( BootstrapArgs.isCloudController( ) ) {
-        Host coordinator = this.get( );
-        this.currentCoordinator.set( coordinator.isLocalHost( ) );
-      } else {
-        this.currentCoordinator.set( false );
-      }
-    }
   }
   
   public @interface HostAdded {
