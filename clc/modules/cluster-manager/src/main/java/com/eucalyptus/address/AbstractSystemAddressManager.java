@@ -243,27 +243,29 @@ public abstract class AbstractSystemAddressManager {
     }
     
     private static void ensureAllocated( final Address addr, final VmInstance vm ) {
-      if ( !addr.isAllocated( ) && !addr.isPending( ) && addr.lastUpdateMillis( ) > 60L * 1000 * AddressingConfiguration.getInstance( ).getOrphanGrace( )) {
-        try {
-          if ( !addr.isAssigned( ) && !addr.isPending( ) ) {
-            addr.pendingAssignment( );
-            try {
-              addr.assign( vm ).clearPending( );
-            } catch ( final Exception e1 ) {
-              LOG.debug( e1, e1 );
+      if ( addr.lastUpdateMillis( ) > 60L * 1000 * AddressingConfiguration.getInstance( ).getOrphanGrace( ) ) {
+        if ( !addr.isAllocated( ) && !addr.isPending( ) ) {
+          try {
+            if ( !addr.isAssigned( ) && !addr.isPending( ) ) {
+              addr.pendingAssignment( );
+              try {
+                addr.assign( vm ).clearPending( );
+              } catch ( final Exception e1 ) {
+                LOG.debug( e1, e1 );
+              }
             }
+          } catch ( final Exception e1 ) {
+            LOG.debug( e1, e1 );
           }
-        } catch ( final Exception e1 ) {
-          LOG.debug( e1, e1 );
+        } else if ( !addr.isAssigned( ) ) {
+          try {
+            addr.assign( vm ).clearPending( );
+          } catch ( final Exception e1 ) {
+            LOG.debug( e1, e1 );
+          }
+        } else {
+          LOG.debug( "Address usage checked: " + addr );
         }
-      } else if ( !addr.isAssigned( ) ) {
-        try {
-          addr.assign( vm ).clearPending( );
-        } catch ( final Exception e1 ) {
-          LOG.debug( e1, e1 );
-        }
-      } else {
-        LOG.debug( "Address usage checked: " + addr );
       }
     }
     
