@@ -636,6 +636,7 @@ public class Threads {
           }
         } catch ( final InterruptedException e ) {
           Thread.currentThread( ).interrupt( );
+          return;
         }
       } while ( !this.msgQueue.isEmpty( ) || this.running.get( ) );
       Logs.extreme( ).debug( "Shutting down worker: " + this.owner
