@@ -150,3 +150,5 @@ foreach (keys %instance_data) {
 	print "Terminated instance:$_\n";
 }
 
+# Clean up dummy files
+system("rm -f dummy-*-megabyte*") or die("Couldn't clean up files");
