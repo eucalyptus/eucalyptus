@@ -64,14 +64,13 @@
 package com.eucalyptus.component;
 
 import java.net.URI;
-import java.security.KeyPair;
-import java.security.cert.X509Certificate;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.OrderedShutdown;
 import com.eucalyptus.component.Component.State;
 import com.eucalyptus.component.Component.Transition;
-import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.fsm.StateMachine;
 
@@ -99,12 +98,14 @@ public class BasicService {
         public void run( ) {
           try {
             LOG.warn( "SHUTDOWN Service: " + BasicService.this.serviceConfiguration.getName( ) );
-            ServiceTransitions.pathTo( BasicService.this.serviceConfiguration, Component.State.PRIMORDIAL ).get( );
+            ServiceTransitions.pathTo( BasicService.this.serviceConfiguration, Component.State.PRIMORDIAL ).get( 30000, TimeUnit.SECONDS );
           } catch ( final ExecutionException ex ) {
-            Logs.exhaust( ).error( ex, ex );
+            LOG.error( ex, ex );
           } catch ( final InterruptedException ex ) {
             Logs.exhaust( ).error( ex, ex );
             Thread.currentThread( ).interrupt( );
+          } catch ( TimeoutException ex ) {
+            LOG.error( ex , ex );
           }
         }
       } );
