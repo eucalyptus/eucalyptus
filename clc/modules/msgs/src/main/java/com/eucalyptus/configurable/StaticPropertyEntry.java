@@ -64,6 +64,7 @@ package com.eucalyptus.configurable;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
+import java.util.Date;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.configurable.PropertyDirectory.NoopEventListener;
@@ -74,9 +75,12 @@ import com.eucalyptus.util.Fields;
 public class StaticPropertyEntry extends AbstractConfigurableProperty {
   static Logger LOG = Logger.getLogger( StaticPropertyEntry.class );
   private Field field;
+  private Date  lastLoad;
   
-  private StaticPropertyEntry( Class definingClass, String entrySetName, Field field, String description, String defaultValue, PropertyTypeParser typeParser,
-                              Boolean readOnly, String displayName, ConfigurableFieldType widgetType, String alias, PropertyChangeListener changeListener ) {
+  private StaticPropertyEntry( Class definingClass, String entrySetName, Field field, String description, String defaultValue,
+                                              PropertyTypeParser typeParser,
+                                              Boolean readOnly, String displayName, ConfigurableFieldType widgetType, String alias,
+                                              PropertyChangeListener changeListener ) {
     super( definingClass, entrySetName, field, defaultValue, description, typeParser, readOnly, displayName, widgetType, alias, changeListener );
     this.field = field;
   }
@@ -96,15 +100,25 @@ public class StaticPropertyEntry extends AbstractConfigurableProperty {
   @Override
   public String getValue( ) {
     try {
-      String dbValue = StaticDatabasePropertyEntry.lookup( Fields.canonicalName( this.getField( ) ),
-                                                           this.getQualifiedName( ),
-                                                           this.safeGetFieldValue( )
-                                                           ).getValue( );
-      Object o = super.getTypeParser( ).apply( dbValue );
-      if ( !Modifier.isFinal( this.field.getModifiers( ) ) ) {
-        this.field.set( null, o );
+      StaticDatabasePropertyEntry dbEntry = StaticDatabasePropertyEntry.lookup( Fields.canonicalName( this.getField( ) ),
+                                                                                this.getQualifiedName( ),
+                                                                                this.safeGetFieldValue( )
+                                                                       );
+      if ( this.lastLoad == null || this.lastLoad.before( dbEntry.getLastUpdateTimestamp( ) ) ) {
+        this.lastLoad = dbEntry.getLastUpdateTimestamp( );
+        String fieldValue = this.safeGetFieldValue( );
+        if ( fieldValue.equals( dbEntry.getValue( ) ) ) {
+          return fieldValue;
+        } else {
+          Object o = super.getTypeParser( ).apply( dbEntry.getValue( ) );
+          if ( !Modifier.isFinal( this.field.getModifiers( ) ) ) {
+            this.fireChange( dbEntry.getValue( ) );
+            this.field.set( null, o );
+            Logs.extreme( ).trace( "--> Set property value:  " + super.getQualifiedName( ) + " to " + dbEntry.getValue( ) );
+          }
+        }
       }
-      return dbValue;
+      return dbEntry.getValue( );
     } catch ( IllegalAccessException e ) {
       Logs.exhaust( ).trace( e, e );
       return super.getDefaultValue( );
@@ -209,7 +223,7 @@ public class StaticPropertyEntry extends AbstractConfigurableProperty {
   protected Object getQueryObject( ) throws Exception {
     return null;
   }
-
+  
   @Override
   public boolean isDeferred( ) {
     return true;

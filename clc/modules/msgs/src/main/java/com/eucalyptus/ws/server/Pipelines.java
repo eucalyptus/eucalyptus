@@ -75,6 +75,8 @@ import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
+import org.jboss.netty.channel.ChannelPipelineCoverage;
+import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.ChannelUpstreamHandler;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpRequest;
@@ -87,7 +89,7 @@ import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.bootstrap.ServiceJarDiscovery;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
-import com.eucalyptus.component.ComponentPart;
+import com.eucalyptus.component.ComponentId.ComponentPart;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.http.MappingHttpMessage;
@@ -98,23 +100,26 @@ import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Ats;
 import com.eucalyptus.util.Classes;
-import com.eucalyptus.ws.handlers.BindingHandler;
+import com.eucalyptus.ws.Handlers;
 import com.eucalyptus.ws.handlers.HmacHandler;
-import com.eucalyptus.ws.handlers.InternalWsSecHandler;
-import com.eucalyptus.ws.handlers.QueryTimestampHandler;
 import com.eucalyptus.ws.handlers.SoapMarshallingHandler;
 import com.eucalyptus.ws.protocol.AddressingHandler;
 import com.eucalyptus.ws.protocol.BaseQueryBinding;
 import com.eucalyptus.ws.protocol.OperationParameter;
 import com.eucalyptus.ws.protocol.SoapHandler;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import com.google.common.collect.Table;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class Pipelines {
-  private static final Logger                LOG               = Logger.getLogger( Pipelines.class );
-  private static final Set<FilteredPipeline> internalPipelines = Sets.newHashSet( );
-  private static final Set<FilteredPipeline> pipelines         = Sets.newHashSet( );
+  private static final Logger                                                    LOG               = Logger.getLogger( Pipelines.class );
+  private static final Set<FilteredPipeline>                                     internalPipelines = Sets.newHashSet( );
+  private static final Set<FilteredPipeline>                                     pipelines         = Sets.newHashSet( );
+  private static final Map<Class<? extends ComponentId>, ChannelPipelineFactory> clientPipelines   = Maps.newHashMap( );
+  
+  public static ChannelPipelineFactory lookup( Class<? extends ComponentId> compId ) {
+    return clientPipelines.get( compId );
+  }
   
   static FilteredPipeline find( final HttpRequest request ) throws DuplicatePipelineException, NoAcceptingPipelineException {
     final FilteredPipeline candidate = findAccepting( request );
@@ -133,7 +138,7 @@ public class Pipelines {
       throw new NoAcceptingPipelineException( );
     }
     if ( Logs.isExtrrreeeme( ) ) {
-      EventRecord.here( Pipelines.class, EventType.PIPELINE_UNROLL, candidate.toString( ) ).debug( );
+      EventRecord.here( Pipelines.class, EventType.PIPELINE_UNROLL, candidate.toString( ) ).extreme( );
     }
     return candidate;
   }
@@ -178,7 +183,7 @@ public class Pipelines {
       if ( FilteredPipeline.class.isAssignableFrom( candidate ) && !Modifier.isAbstract( candidate.getModifiers( ) )
            && !Modifier.isInterface( candidate.getModifiers( ) ) && Ats.from( candidate ).has( ComponentPart.class ) ) {
         try {
-          final ComponentId compId = ( ComponentId ) Ats.from( candidate ).get( ComponentPart.class ).value( ).newInstance( );
+          final ComponentId compId = Ats.from( candidate ).get( ComponentPart.class ).value( ).newInstance( );
           final Class<? extends FilteredPipeline> pipelineClass = candidate;
           final FilteredPipeline pipeline = Classes.newInstance( pipelineClass );
           Pipelines.pipelines.add( pipeline );
@@ -187,6 +192,19 @@ public class Pipelines {
           LOG.trace( ex, ex );
           return false;
         }
+      } else if ( ChannelPipelineFactory.class.isAssignableFrom( candidate ) && !Modifier.isAbstract( candidate.getModifiers( ) )
+                  && !Modifier.isInterface( candidate.getModifiers( ) ) && Ats.from( candidate ).has( ComponentPart.class ) ) {
+        try {
+          final ComponentId compId = Ats.from( candidate ).get( ComponentPart.class ).value( ).newInstance( );
+          final Class<? extends ChannelPipelineFactory> pipelineClass = candidate;
+          final ChannelPipelineFactory pipeline = Classes.newInstance( pipelineClass );
+          Pipelines.clientPipelines.put( compId.getClass( ), pipeline );
+          return true;
+        } catch ( final Exception ex ) {
+          LOG.trace( ex, ex );
+          return false;
+        }
+        
       } else {
         return false;
       }
@@ -206,14 +224,15 @@ public class Pipelines {
     
     public InternalSoapPipeline( final ComponentId componentId ) {
       super( componentId );
-      this.servicePath = componentId.makeExternalRemoteUri( "127.0.0.1", 8773, "http" ).getPath( );
-      this.internalServicePath = componentId.makeInternalRemoteUri( "127.0.0.1", 8773 ).getPath( );
+      this.servicePath = componentId.getServicePath( );
+      this.internalServicePath = componentId.getInternalServicePath( );
       this.serviceName = componentId.getFullName( ).toString( );
     }
     
     @Override
     public boolean checkAccepts( final HttpRequest message ) {
-      return ( message.getUri( ).endsWith( this.servicePath ) || message.getUri( ).endsWith( this.internalServicePath ) ) && message.getHeaderNames( ).contains( "SOAPAction" );
+      return ( message.getUri( ).endsWith( this.servicePath ) || message.getUri( ).endsWith( this.internalServicePath ) )
+             && message.getHeaderNames( ).contains( "SOAPAction" );
     }
     
     @Override
@@ -223,15 +242,11 @@ public class Pipelines {
     
     @Override
     public ChannelPipeline addHandlers( final ChannelPipeline pipeline ) {
-      pipeline.addLast( "deserialize", new SoapMarshallingHandler( ) );
-      try {
-        pipeline.addLast( "ws-security", new InternalWsSecHandler( ) );
-      } catch ( final GeneralSecurityException e ) {
-        LOG.error( e, e );
-      }
-      pipeline.addLast( "ws-addressing", new AddressingHandler( ) );
-      pipeline.addLast( "build-soap-envelope", new SoapHandler( ) );
-      pipeline.addLast( "binding", new BindingHandler( ) );
+      pipeline.addLast( "deserialize", Handlers.soapMarshalling( ) );
+      pipeline.addLast( "ws-security", Handlers.internalWsSecHandler() );
+      pipeline.addLast( "ws-addressing", Handlers.addressingHandler( ) );
+      pipeline.addLast( "build-soap-envelope", Handlers.soapHandler( ) );
+      pipeline.addLast( "binding", Handlers.bindinghandler() );
       return pipeline;
     }
     
@@ -254,8 +269,8 @@ public class Pipelines {
     
     public InternalQueryPipeline( final ComponentId componentId ) {
       super( componentId );
-      this.servicePath = componentId.makeExternalRemoteUri( "127.0.0.1", 8773, "http" ).getPath( );
-      this.internalServicePath = componentId.makeInternalRemoteUri( "127.0.0.1", 8773 ).getPath( );
+      this.servicePath = componentId.getServicePath( );
+      this.internalServicePath = componentId.getInternalServicePath( );
       this.serviceName = componentId.getFullName( ).toString( );
     }
     
@@ -310,8 +325,8 @@ public class Pipelines {
     
     @Override
     public ChannelPipeline addHandlers( final ChannelPipeline pipeline ) {
-      pipeline.addLast( "hmac-v2-verify", new HmacHandler( true ) );
-      pipeline.addLast( "timestamp-verify", new QueryTimestampHandler( ) );
+      pipeline.addLast( "hmac-v2-verify",  new HmacHandler( true ) );
+      pipeline.addLast( "timestamp-verify", Handlers.queryTimestamphandler() );
       pipeline.addLast( "restful-binding", new InternalQueryBinding( ) );
       return pipeline;
     }
@@ -331,25 +346,5 @@ public class Pipelines {
     
   }
   
-  enum InternalOnlyHandler implements ChannelUpstreamHandler {
-    INSTANCE;
-    @Override
-    public void handleUpstream( final ChannelHandlerContext ctx, final ChannelEvent e ) throws Exception {
-      final MappingHttpMessage request = MappingHttpMessage.extractMessage( e );
-      final BaseMessage msg = BaseMessage.extractMessage( e );
-      if ( ( request != null ) && ( msg != null ) ) {
-        final User user = Contexts.lookup( request.getCorrelationId( ) ).getUser( );
-        if ( user.isSystemInternal( ) || user.isSystemAdmin( ) ) {
-          ctx.sendUpstream( e );
-        } else {
-          Contexts.clear( Contexts.lookup( msg.getCorrelationId( ) ) );
-          ctx.getChannel( ).write( new MappingHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.FORBIDDEN ) );
-        }
-      } else {
-        ctx.sendUpstream( e );
-      }
-    }
-    
-  }
   
 }

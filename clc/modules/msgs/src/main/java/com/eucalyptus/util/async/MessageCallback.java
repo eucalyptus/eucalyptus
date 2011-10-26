@@ -4,6 +4,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.lang.IllegalStateException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.principal.Principals;
+import com.eucalyptus.records.Logs;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public abstract class MessageCallback<Q extends BaseMessage, R extends BaseMessage> implements RemoteCallback<Q, R> {
@@ -13,11 +14,11 @@ public abstract class MessageCallback<Q extends BaseMessage, R extends BaseMessa
   protected MessageCallback( ) {
     super( );
   }
-
+  
   protected MessageCallback( Q request ) {
     super( );
-    if( request.getUserId( ) == null ) {
-      request.setUser( Principals.systemUser() );
+    if ( request.getUserId( ) == null ) {
+      request.setUser( Principals.systemUser( ) );
     }
     this.request.set( request );
   }
@@ -32,7 +33,8 @@ public abstract class MessageCallback<Q extends BaseMessage, R extends BaseMessa
   }
   
   /**
-   * Optional method for setting the request after using the no-arg constructor. Useful in cases where additional work needs to be done before calling super()
+   * Optional method for setting the request after using the no-arg constructor. Useful in cases
+   * where additional work needs to be done before calling super()
    * in inheriting classes.
    * 
    * @param request
@@ -40,7 +42,7 @@ public abstract class MessageCallback<Q extends BaseMessage, R extends BaseMessa
   protected void setRequest( Q request ) {
     Q oldReq = null;
     if ( ( oldReq = this.request.getAndSet( request ) ) != null ) {
-      LOG.error( "Request has been set twice.  Old message was: " + oldReq, new IllegalStateException( "Request has been set twice." ) );
+      Logs.extreme( ).error( "Request has been set twice.  Old message was: " + oldReq, new IllegalStateException( "Request has been set twice." ) );
     }
   }
   
@@ -51,7 +53,9 @@ public abstract class MessageCallback<Q extends BaseMessage, R extends BaseMessa
    */
   @Override
   public void initialize( Q request ) throws Exception {
-    LOG.trace( this.getClass( ).getCanonicalName( ) + " should implement: initialize( ) to check any preconditions!" );
+    Logs.extreme( ).trace( this.getClass( ) + ":"
+                           + this.request.get( ).getClass( ).getSimpleName( )
+                           + " should implement: initialize( ) to check any preconditions!" );
   }
   
   /**
@@ -67,8 +71,10 @@ public abstract class MessageCallback<Q extends BaseMessage, R extends BaseMessa
    */
   @Override
   public void fireException( Throwable t ) {
-    LOG.warn( this.getClass( ).getCanonicalName( ) + " should implement: fireException( Throwable t ) to handle errors!" );
-    LOG.error( t, t );
+    Logs.extreme( ).error( this.getClass( ) + ":"
+                           + this.request.get( ).getClass( ).getSimpleName( )
+                           + " should implement: fireException( Throwable t ) to handle errors!" );
+    Logs.exhaust( ).error( t, t );
   }
   
 }

@@ -4,12 +4,20 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.Channels;
 import org.mule.RequestContext;
 import org.mule.api.MuleMessage;
+import com.eucalyptus.BaseException;
 import com.eucalyptus.http.MappingHttpRequest;
-import com.eucalyptus.util.Assertions;
+import com.eucalyptus.records.EventRecord;
+import com.eucalyptus.records.EventType;
+import com.eucalyptus.records.Logs;
+import com.eucalyptus.ws.util.ReplyQueue;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
 import edu.ucsb.eucalyptus.msgs.HasRequest;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.notNullValue;
 
 public class Contexts {
   private static Logger                          LOG             = Logger.getLogger( Contexts.class );
@@ -26,9 +34,13 @@ public class Contexts {
   public static Context create( MappingHttpRequest request, Channel channel ) {
     Context ctx = new Context( request, channel );
     request.setCorrelationId( ctx.getCorrelationId( ) );
-    uuidContexts.put( ctx.getCorrelationId( ), ctx );    
+    uuidContexts.put( ctx.getCorrelationId( ), ctx );
     channelContexts.put( channel, ctx );
     return ctx;
+  }
+  
+  public static boolean exists( Channel channel ) {
+    return channelContexts.containsKey( channel );
   }
   
   public static Context lookup( Channel channel ) throws NoSuchContextException {
@@ -45,8 +57,18 @@ public class Contexts {
     return correlationId != null && uuidContexts.containsKey( correlationId );
   }
   
+  private static ThreadLocal<Context> tlContext = new ThreadLocal<Context>( );
+  
+  public static void threadLocal( Context ctx ) {//GRZE: really unhappy these are public.
+    tlContext.set( ctx );
+  }
+  
+  public static void removeThreadLocal( ) {//GRZE: really unhappy these are public.
+    tlContext.remove( );
+  }
+  
   public static Context lookup( String correlationId ) throws NoSuchContextException {
-    Assertions.assertNotNull( correlationId );
+    assertThat( "BUG: correlationId is null.", correlationId, notNullValue( ) );
     if ( !uuidContexts.containsKey( correlationId ) ) {
       throw new NoSuchContextException( "Found correlation id " + correlationId + " but no corresponding context." );
     } else {
@@ -56,7 +78,11 @@ public class Contexts {
     }
   }
   
-  public static Context lookup( ) throws IllegalContextAccessException {
+  public static final Context lookup( ) throws IllegalContextAccessException {
+    Context ctx;
+    if ( ( ctx = tlContext.get( ) ) != null ) {
+      return ctx;
+    }
     BaseMessage parent = null;
     MuleMessage muleMsg = null;
     if ( RequestContext.getEvent( ) != null && RequestContext.getEvent( ).getMessage( ) != null ) {
@@ -75,19 +101,19 @@ public class Contexts {
         throw new IllegalContextAccessException( "Cannot access context implicitly using lookup(V) when not handling a request.", e );
       }
     } else if ( o != null && o instanceof HasRequest ) {
-        try {
-          return Contexts.lookup( ( ( HasRequest ) o ).getRequest( ).getCorrelationId( ) );
-        } catch ( NoSuchContextException e ) {
-          LOG.error( e, e );
-          throw new IllegalContextAccessException( "Cannot access context implicitly using lookup(V) when not handling a request.", e );
-        }
+      try {
+        return Contexts.lookup( ( ( HasRequest ) o ).getRequest( ).getCorrelationId( ) );
+      } catch ( NoSuchContextException e ) {
+        LOG.error( e, e );
+        throw new IllegalContextAccessException( "Cannot access context implicitly using lookup(V) when not handling a request.", e );
+      }
     } else {
       throw new IllegalContextAccessException( "Cannot access context implicitly using lookup(V) when not handling a request." );
     }
   }
   
   public static void clear( String corrId ) {
-    Assertions.assertNotNull( corrId );
+    assertThat( "BUG: correlationId is null.", corrId, notNullValue( ) );
     Context ctx = uuidContexts.remove( corrId );
     Channel channel = null;
     if ( ctx != null && ( channel = ctx.getChannel( ) ) != null ) {
@@ -99,20 +125,60 @@ public class Contexts {
       ctx.clear( );
     }
   }
-
+  
   public static void clear( Context context ) {
-    if( context != null ) {
+    if ( context != null ) {
       clear( context.getCorrelationId( ) );
     }
   }
-
+  
   public static Context createWrapped( String dest, final BaseMessage msg ) {
-    if( uuidContexts.containsKey( msg.getCorrelationId( ) ) ) {
+    if ( uuidContexts.containsKey( msg.getCorrelationId( ) ) ) {
       return null;
     } else {
       Context ctx = new Context( dest, msg );
-      uuidContexts.put( ctx.getCorrelationId( ), ctx );    
+      uuidContexts.put( ctx.getCorrelationId( ), ctx );
       return ctx;
+    }
+  }
+
+  @SuppressWarnings( "unchecked" )
+  public static void response( BaseMessage responseMessage ) {
+    if ( responseMessage instanceof ExceptionResponseType ) {
+      Logs.exhaust( ).trace( responseMessage );
+    }
+    String corrId = responseMessage.getCorrelationId( );
+    try {
+      Context ctx = lookup( corrId );
+      EventRecord.here( ServiceContext.class, EventType.MSG_REPLY, responseMessage.getCorrelationId( ), responseMessage.getClass( ).getSimpleName( ),
+                        String.format( "%.3f ms", ( System.nanoTime( ) - ctx.getCreationTime( ) ) / 1000000.0 ) ).debug( );
+      Channel channel = ctx.getChannel( );
+      Channels.write( channel, responseMessage );
+      clear( ctx );
+    } catch ( NoSuchContextException e ) {
+      LOG.warn( "Received a reply for absent client:  No channel to write response message.", e );
+      LOG.debug( responseMessage );
+    } catch ( Exception e ) {
+      LOG.warn( "Error occurred while handling reply: " + responseMessage, e );
+    }
+  }
+
+  public static void responseError( Throwable cause ) {
+    Contexts.responseError( lookup( ).getCorrelationId( ), cause );
+  }
+
+  public static void responseError( String corrId, Throwable cause ) {
+    try {
+      Context ctx = lookup( corrId );
+      EventRecord.here( ReplyQueue.class, EventType.MSG_REPLY, cause.getClass( ).getCanonicalName( ), cause.getMessage( ),
+                        String.format( "%.3f ms", ( System.nanoTime( ) - ctx.getCreationTime( ) ) / 1000000.0 ) ).debug( );
+      Channels.fireExceptionCaught( ctx.getChannel( ), cause );
+      if ( !( cause instanceof BaseException ) ) {
+        clear( ctx );
+      }
+    } catch ( Exception ex ) {
+      LOG.error( ex );
+      LOG.error( cause, cause );
     }
   }
   

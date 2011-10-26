@@ -67,13 +67,11 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.NoSuchElementException;
 import javax.persistence.Column;
-import javax.persistence.DiscriminatorColumn;
-import javax.persistence.DiscriminatorType;
-import javax.persistence.DiscriminatorValue;
 import javax.persistence.Inheritance;
 import javax.persistence.InheritanceType;
-import javax.persistence.MappedSuperclass;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import javax.persistence.Transient;
@@ -82,32 +80,26 @@ import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
 import org.hibernate.annotations.NaturalId;
+import com.eucalyptus.bootstrap.CanBootstrap;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Component.State;
 import com.eucalyptus.component.Component.Transition;
+import com.eucalyptus.component.ComponentFullName;
 import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.ComponentId.ComponentPart;
 import com.eucalyptus.component.ComponentIds;
-import com.eucalyptus.component.ComponentPart;
 import com.eucalyptus.component.Components;
-import com.eucalyptus.component.LifecycleEvents;
-import com.eucalyptus.component.NoSuchServiceException;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.component.Partitions;
-import com.eucalyptus.component.Service;
-import com.eucalyptus.component.ServiceBuilder;
-import com.eucalyptus.component.ServiceBuilders;
 import com.eucalyptus.component.ServiceCheckRecord;
-import com.eucalyptus.component.ServiceChecks;
 import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.ServiceRegistrationException;
+import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.system.Ats;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.fsm.StateMachine;
-import com.eucalyptus.ws.StackConfiguration;
-import com.google.common.collect.Lists;
 
 @Entity
 @javax.persistence.Entity
@@ -168,19 +160,15 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
     return this.getSocketAddress( ).getAddress( );
   }
   
+  /**
+   * Use the facade instead.
+   * 
+   * @see ServiceUris#remote(ServiceConfiguration, String...)
+   */
   @Override
+  @Deprecated
   public URI getUri( ) {
-    return this.getComponentId( ).makeExternalRemoteUri( this.getHostName( ), this.getPort( ),  "http" );
-  }
-
-
-  @Override
-  public URI getUri( String prefix ) {
-    return this.getComponentId( ).makeExternalRemoteUri( this.getHostName( ), this.getPort( ), prefix );
-  }
-  
-  public URI getInternalUri( ) {
-    return this.getComponentId( ).makeInternalRemoteUri( this.getHostName( ), this.getPort( ) );
+    return ServiceUris.remote( this );
   }
   
   @Override
@@ -203,13 +191,8 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
   }
   
   @Override
-  public final Component lookupComponent( ) {
-    return Components.lookup( this.lookupComponentId( ) );
-  }
-  
-  @Override
-  public final Service lookupService( ) throws NoSuchServiceException {
-    return Components.lookup( this.lookupComponentId( ) ).lookupService( this );
+  public final CanBootstrap lookupBootstrapper( ) {
+    return Components.lookup( this.lookupComponentId( ) ).getBootstrapper( );
   }
   
   @Override
@@ -236,7 +219,7 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
   
   @Override
   public final FullName getFullName( ) {
-    return this.getComponentId( ).makeFullName( this );
+    return ComponentFullName.getInstance( this );
   }
   
   @Override
@@ -343,67 +326,18 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
   }
   
   @Override
-  public ServiceBuilder<? extends ServiceConfiguration> lookupBuilder( ) {
-    return ServiceBuilders.lookup( this.getComponentId( ) );
-  }
-  
-  @Override
   public Partition lookupPartition( ) {
-    try {
-      return Partitions.lookup( this );
-    } catch ( ServiceRegistrationException ex ) {
-      return Partitions.lookupInternal( this );
-    }
+    return Partitions.lookup( this );
   }
   
   @Override
   public Collection<ServiceCheckRecord> lookupDetails( ) {
-    try {
-      return this.lookupService( ).getDetails( );
-    } catch ( NoSuchServiceException ex ) {
-      LOG.error( ex, ex );
-      return Lists.newArrayList( );
-    }
-  }
-  
-  @Override
-  public void error( Throwable t ) {
-    LifecycleEvents.fireExceptionEvent( this, ServiceChecks.Severity.ERROR, t );
-  }
-  
-  @Override
-  public void info( Throwable t ) {
-    LifecycleEvents.fireExceptionEvent( this, ServiceChecks.Severity.INFO, t );
-  }
-  
-  @Override
-  public void fatal( Throwable t ) {
-    LifecycleEvents.fireExceptionEvent( this, ServiceChecks.Severity.FATAL, t );
-  }
-  
-  @Override
-  public void urgent( Throwable t ) {
-    LifecycleEvents.fireExceptionEvent( this, ServiceChecks.Severity.URGENT, t );
-  }
-  
-  @Override
-  public void warning( Throwable t ) {
-    LifecycleEvents.fireExceptionEvent( this, ServiceChecks.Severity.WARNING, t );
-  }
-  
-  @Override
-  public void debug( Throwable t ) {
-    LifecycleEvents.fireExceptionEvent( this, ServiceChecks.Severity.DEBUG, t );
+    return Collections.EMPTY_LIST;//TODO:GRZE: restore gathering details
   }
   
   @Override
   public StateMachine<ServiceConfiguration, Component.State, Component.Transition> getStateMachine( ) {
-    try {
-      return this.lookupService( ).getStateMachine( );
-    } catch ( NoSuchServiceException ex ) {
-      LOG.error( ex, ex );
-      throw new IllegalStateException( "Failed to lookup state machine for: " + this.getName( ), ex );
-    }
+    return Components.lookup( this.lookupComponentId( ) ).getStateMachine( this );
   }
   
   @Override
@@ -413,21 +347,17 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
   
   @Override
   public Component.State lookupState( ) {
-    if ( !this.lookupComponent( ).hasService( this ) ) {
-      return Component.State.NONE;
-    } else {
-      try {
-        return this.lookupService( ).getStateMachine( ).getState( );
-      } catch ( NoSuchServiceException ex ) {
-        return Component.State.NONE;
-      }
+    try {
+      return this.lookupStateMachine( ).getState( );
+    } catch ( NoSuchElementException ex ) {
+      return Component.State.PRIMORDIAL;
     }
   }
-
+  
   public String getSourceHostName( ) {
     return this.sourceHostName;
   }
-
+  
   public void setSourceHostName( String aliasHostName ) {
     this.sourceHostName = aliasHostName;
   }

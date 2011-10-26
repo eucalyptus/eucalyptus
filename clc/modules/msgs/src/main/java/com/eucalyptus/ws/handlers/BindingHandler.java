@@ -122,7 +122,9 @@ public class BindingHandler extends MessageStackHandler {
           try {
             msgType = this.binding.getElementClass( httpMessage.getOmMessage( ).getLocalName( ) );
           } catch ( Exception ex1 ) {
-            throw new WebServicesException( "Failed to find binding for namespace: " + namespace + " due to: " + ex.getMessage( ), ex );
+            throw new WebServicesException( "Failed to find binding for namespace: " + namespace
+                                            + " due to: "
+                                            + ex.getMessage( ), ex );
           }
         }
       } catch ( Exception e1 ) {
@@ -130,7 +132,9 @@ public class BindingHandler extends MessageStackHandler {
         if ( this.binding == null ) {
           throw new WebServicesException( e1 );
         } else {
-          throw new WebServicesException( "Failed to find binding for namespace: " + namespace + " due to: " + e1.getMessage( ), e1 );
+          throw new WebServicesException( "Failed to find binding for namespace: " + namespace
+                                          + " due to: "
+                                          + e1.getMessage( ), e1 );
         }
       }
       try {
@@ -165,7 +169,10 @@ public class BindingHandler extends MessageStackHandler {
         return;
       } else if ( httpMessage.getMessage( ) instanceof ExceptionResponseType ) {
         ExceptionResponseType msg = ( ExceptionResponseType ) httpMessage.getMessage( );
-        omElem = Binding.createFault( msg.getRequestType( ), msg.getMessage( ), Exceptions.createFaultDetails( msg.getException( ) ) );
+        String createFaultDetails = Logs.isExtrrreeeme( )
+          ? Exceptions.string( msg.getException( ) )
+          : msg.getException( ).getMessage( );
+        omElem = Binding.createFault( msg.getRequestType( ), msg.getMessage( ), createFaultDetails );
         if ( httpMessage instanceof MappingHttpResponse ) {
           ( ( MappingHttpResponse ) httpMessage ).setStatus( msg.getHttpStatus( ) );
         }

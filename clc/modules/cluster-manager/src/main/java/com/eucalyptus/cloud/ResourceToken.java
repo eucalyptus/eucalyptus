@@ -69,19 +69,24 @@ import java.util.UUID;
 import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
 import com.eucalyptus.address.Address;
+import com.eucalyptus.cloud.CloudMetadata.VmInstanceMetadata;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.NoSuchTokenException;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.ClusterController;
+import com.eucalyptus.context.Contexts;
 import com.eucalyptus.network.ExtantNetwork;
 import com.eucalyptus.network.PrivateNetworkIndex;
+import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstances;
+import edu.ucsb.eucalyptus.msgs.StartInstancesType;
 
-public class ResourceToken implements Comparable<ResourceToken> {
+public class ResourceToken implements VmInstanceMetadata, Comparable<ResourceToken> {
   private static Logger       LOG    = Logger.getLogger( ResourceToken.class );
   private final Allocation    allocation;
   private final Integer       launchIndex;
@@ -102,7 +107,15 @@ public class ResourceToken implements Comparable<ResourceToken> {
   public ResourceToken( final Allocation allocInfo, final int resourceAllocationSequenceNumber, final int launchIndex ) {
     this.allocation = allocInfo;
     this.launchIndex = launchIndex;
-    this.instanceId = VmInstances.getId( allocInfo.getReservationIndex( ), launchIndex );
+    String tempVmId = VmInstances.getId( allocInfo.getReservationIndex( ), launchIndex );
+    try {//GRZE:ugly hack.
+      if ( Contexts.lookup( ).getRequest( ) instanceof StartInstancesType ) {
+        tempVmId = ( ( StartInstancesType ) Contexts.lookup( ).getRequest( ) ).getInstancesSet( ).get( launchIndex );
+      }
+    } catch ( Exception ex ) {
+      LOG.error( ex , ex );
+    }
+    this.instanceId = tempVmId;
     this.instanceUuid = UUID.randomUUID( ).toString( );
     this.resourceAllocationSequenceNumber = resourceAllocationSequenceNumber;
     this.creationTime = Calendar.getInstance( ).getTime( );
@@ -153,7 +166,7 @@ public class ResourceToken implements Comparable<ResourceToken> {
   
   public void abort( ) {
     try {
-      final ServiceConfiguration config = Partitions.lookupService( ClusterController.class, this.getAllocationInfo( ).getPartition( ) );
+      final ServiceConfiguration config = Topology.lookup( ClusterController.class, this.getAllocationInfo( ).getPartition( ) );
       final Cluster cluster = Clusters.lookup( config );
       cluster.getNodeState( ).releaseToken( this );
     } catch ( final Exception ex ) {
@@ -171,6 +184,13 @@ public class ResourceToken implements Comparable<ResourceToken> {
         this.address.release( );
       } catch ( Exception ex ) {
         LOG.error( ex, ex );
+      }
+    }
+    if ( this.vmInst != null ) {
+      try {
+        this.vmInst.release( );
+      } catch ( Exception ex ) {
+        LOG.error( ex , ex );
       }
     }
   }
@@ -272,6 +292,16 @@ public class ResourceToken implements Comparable<ResourceToken> {
   
   public VmInstance getVmInstance( ) {
     return this.vmInst;
+  }
+  
+  @Override
+  public String getDisplayName( ) {
+    return this.getInstanceId( );
+  }
+  
+  @Override
+  public OwnerFullName getOwner( ) {
+    return this.allocation.getOwnerFullName( );
   }
   
 }

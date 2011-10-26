@@ -80,7 +80,5 @@ public interface StateMachine<P extends HasName<P>, S extends Automata.State, T 
   
   public abstract boolean isBusy( );
   
-  public abstract CheckedListenableFuture<P> transitionByName( T transitionName ) throws IllegalStateException, ExistingTransitionException;
-  
   public abstract CheckedListenableFuture<P> transition( S nextState ) throws IllegalStateException, ExistingTransitionException;
 }

@@ -41,12 +41,14 @@ SyncMethods = ['local', 'rsync', 'scp', 'smb']
 class SyncKeys(object):
 
     def __init__(self, src_dirs, dst_dir, remote_host, file_names,
-                 use_rsync=True, use_scp=True, use_smb=False):
+                 use_rsync=True, use_scp=True, use_smb=False,
+                 remote_user='root'):
         self.src_dirs = mklist(src_dirs)
         self.src_dirs = [os.path.expanduser(sd) for sd in self.src_dirs]
         self.src_dirs = [os.path.expandvars(sd) for sd in self.src_dirs]
         self.dst_dir = dst_dir
         self.remote_host = remote_host
+        self.remote_user = remote_user
         self.file_names = mklist(file_names)
         self.use_rsync = use_rsync
         self.use_scp = use_scp
@@ -98,7 +100,7 @@ class SyncKeys(object):
         print 'Trying rsync to sync keys with %s' % self.remote_host
         cmd = 'rsync -az '
         cmd += ' '.join(self.files)
-        cmd += ' %s:%s' % (self.remote_host, self.dst_dir)
+        cmd += ' %s@%s:%s' % (self.remote_user, self.remote_host, self.dst_dir)
         cmd = Command(cmd)
         if cmd.status == 0:
             print 'done'

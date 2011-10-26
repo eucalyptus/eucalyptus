@@ -71,6 +71,7 @@ import org.jboss.netty.handler.codec.http.HttpVersion;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.http.MappingHttpResponse;
 
+@Deprecated
 public class NioHttpResponseDecoder extends HttpResponseDecoder {
 
   @Override

@@ -57,33 +57,39 @@
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
- *******************************************************************************/
-package com.eucalyptus.address;
-
-/*
- *
- * Author: chris grzegorczyk <grze@eucalyptus.com>
+ *******************************************************************************
+ * @author: chris grzegorczyk <grze@eucalyptus.com>
  */
+package com.eucalyptus.address;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
+import org.hibernate.criterion.Example;
+import com.eucalyptus.blockstorage.Volume;
+import com.eucalyptus.cloud.CloudMetadata.AddressMetadata;
+import com.eucalyptus.cloud.CloudMetadata.VolumeMetadata;
 import com.eucalyptus.cloud.util.NotEnoughResourcesException;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.event.AbstractNamedRegistry;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.event.SystemConfigurationEvent;
+import com.eucalyptus.util.Classes;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.LogUtil;
+import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes;
+import com.eucalyptus.util.RestrictedTypes.QuantityMetricFunction;
 import com.eucalyptus.util.RestrictedTypes.Resolver;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.UnconditionalCallback;
@@ -92,6 +98,7 @@ import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstances;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
+import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import edu.ucsb.eucalyptus.cloud.exceptions.ExceptionList;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
@@ -123,111 +130,103 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
     return systemAddressManager;
   }
   
-  @SuppressWarnings( { "unchecked" } )
-  private static Map<String, Class> managerMap = new HashMap<String, Class>( ) {
-                                                 { //TODO: this is primitive and temporary.
-                                                   put( "truetrue", DynamicSystemAddressManager.class );
-                                                   put( "falsetrue", StaticSystemAddressManager.class );
-                                                   put( "falsefalse", NullSystemAddressManager.class );
-                                                   put( "truefalse", NullSystemAddressManager.class );
-                                                 }
-                                               };
-  
-  public static Address allocateSystemAddress( Partition partition ) throws NotEnoughResourcesException {
+  public static Address allocateSystemAddress( final Partition partition ) throws NotEnoughResourcesException {
     return getAddressManager( ).allocateSystemAddresses( partition, 1 ).get( 0 );
   }
   
   private static AbstractSystemAddressManager getProvider( ) {
-    String provider = "" + AddressingConfiguration.getInstance( ).getDoDynamicPublicAddresses( )
-                      + Iterables.all( Clusters.getInstance( ).listValues( ), new Predicate<Cluster>( ) {
-                        @Override
-                        public boolean apply( Cluster arg0 ) {
-                          return arg0.getState( ).isAddressingInitialized( )
-                            ? arg0.getState( ).hasPublicAddressing( )
-                            : true;
-                        }
-                      } );
-    try {
-      if ( Addresses.systemAddressManager == null ) {
-        Addresses.systemAddressManager = ( AbstractSystemAddressManager ) managerMap.get( provider ).newInstance( );
-        LOG.info( "Setting the address manager to be: " + systemAddressManager.getClass( ).getSimpleName( ) );
-      } else if ( !Addresses.systemAddressManager.getClass( ).equals( managerMap.get( provider ) ) ) {
-        AbstractSystemAddressManager oldMgr = Addresses.systemAddressManager;
-        Addresses.systemAddressManager = ( AbstractSystemAddressManager ) managerMap.get( provider ).newInstance( );
-        Addresses.systemAddressManager.inheritReservedAddresses( oldMgr.getReservedAddresses( ) );
-        LOG.info( "Setting the address manager to be: " + systemAddressManager.getClass( ).getSimpleName( ) );
+    final boolean hasAddressing = Iterables.all( Clusters.getInstance( ).listValues( ), new Predicate<Cluster>( ) {
+      @Override
+      public boolean apply( Cluster arg0 ) {
+        return arg0.getState( ).isAddressingInitialized( ) && arg0.getState( ).hasPublicAddressing( );
       }
-    } catch ( Exception e ) {
-      LOG.debug( e, e );
+    } );
+    Class<? extends AbstractSystemAddressManager> newManager = null;
+    if ( AddressingConfiguration.getInstance( ).getDoDynamicPublicAddresses( ) ) {
+      newManager = DynamicSystemAddressManager.class;
+    } else {
+      newManager = StaticSystemAddressManager.class;
     }
-    return Addresses.systemAddressManager;
+    if ( Addresses.systemAddressManager == null ) {
+      systemAddressManager = Classes.newInstance( newManager );
+    } else if ( !newManager.equals( systemAddressManager.getClass( ) ) ) {
+      final AbstractSystemAddressManager oldMgr = systemAddressManager;
+      systemAddressManager = Classes.newInstance( newManager );
+      systemAddressManager.inheritReservedAddresses( oldMgr.getReservedAddresses( ) );
+    } else {
+      return systemAddressManager;
+    }
+    LOG.info( "Setting the address manager to be: " + newManager.getSimpleName( ) );
+    return systemAddressManager;
   }
   
   public static int getSystemReservedAddressCount( ) {
     return AddressingConfiguration.getInstance( ).getSystemReservedPublicAddresses( );
   }
   
-  public static int getUserMaxAddresses( ) {
-    return AddressingConfiguration.getInstance( ).getMaxUserPublicAddresses( );
-  }
-  
-  //TODO: add config change event listener ehre.
   public static void updateAddressingMode( ) {
     getProvider( );
   }
   
-  private static void policyLimits( FullName userId, boolean isAdministrator ) throws EucalyptusCloudException {
-    int addrCount = 0;
-    for ( Address a : Addresses.getInstance( ).listValues( ) ) {
-      if ( userId.getUniqueId( ).equals( a.getOwner( ).getUniqueId( ) ) ) addrCount++;
-    }
-    if ( addrCount >= Addresses.getUserMaxAddresses( ) && !isAdministrator ) {
-      throw new EucalyptusCloudException( ExceptionList.ERR_SYS_INSUFFICIENT_ADDRESS_CAPACITY );
-    }
-    
-  }
-  @Resolver(Address.class)
-  public enum Lookup implements Function<String,Address> {
+  @Resolver( Address.class )
+  public enum Lookup implements Function<String, Address> {
     INSTANCE;
-
+    
     @Override
-    public Address apply( String input ) {
-      Address address = Addresses.getInstance( ).lookup( input );
-      if ( address.isSystemOwned( ) ) {
-        throw new NoSuchElementException( "Non admin user cannot manipulate system owned address " + input );
-      }
+    public Address apply( final String input ) {
+      final Address address = Addresses.getInstance( ).lookup( input );
       return address;
     }
     
   }
   
-  public static Address restrictedLookup( String addr ) throws EucalyptusCloudException {
-    Address address = null;
-    try {
-      address = Addresses.getInstance( ).lookup( addr );
-    } catch ( NoSuchElementException e ) {
-      throw new EucalyptusCloudException( "Permission denied while trying to release address: " + addr );
+  @QuantityMetricFunction( AddressMetadata.class )
+  public enum CountAddresses implements Function<OwnerFullName, Long> {
+    INSTANCE;
+    
+    @SuppressWarnings( "unchecked" )
+    @Override
+    public Long apply( final OwnerFullName input ) {
+      int i = 0;
+      for ( final Address addr : Addresses.getInstance( ).listValues( ) ) {
+        if ( addr.isAllocated( ) && addr.getOwnerAccountNumber( ).equals( input.getAccountNumber( ) ) ) {
+          i++;
+        }
+      }
+      return ( long ) i;
     }
-    if ( address.isSystemOwned( ) ) {
-      throw new EucalyptusCloudException( "Non admin user cannot manipulate system owned address " + addr );
-    }
-    if ( !RestrictedTypes.filterPrivileged( ).apply( address ) ) {
-      throw new EucalyptusCloudException( "Permission denied while trying to access address " + addr );
-    }
-    return address;
+    
   }
   
-  public static Address allocate( BaseMessage request ) throws EucalyptusCloudException, NotEnoughResourcesException {
-    Context ctx = Contexts.lookup( );
-    return Addresses.getAddressManager( ).allocateNext( ctx.getUserFullName( ) );
-  }
+  public enum Allocator implements Supplier<Address>, Predicate<Address> {
+    INSTANCE;
+    @Override
+    public Address get( ) {
+      final Context ctx = Contexts.lookup( );
+      try {
+        return Addresses.getAddressManager( ).allocateNext( ctx.getUserFullName( ) );
+      } catch ( final Exception ex ) {
+        throw Exceptions.toUndeclared( ex );
+      }
+    }
+    
+    @Override
+    public boolean apply( final Address input ) {
+      try {
+        input.release( );
+      } catch ( final Exception ex ) {
+        LOG.error( ex, ex );
+      }
+      return true;
+    }
+  };
   
-  public static void system( VmInstance vm ) {
+  public static void system( final VmInstance vm ) {
     try {
       if ( VmState.PENDING.equals( vm.getState( ) ) || VmState.RUNNING.equals( vm.getState( ) ) ) {
         Addresses.getInstance( ).getAddressManager( ).assignSystemAddress( vm );
       }
-    } catch ( NotEnoughResourcesException e ) {
+    } catch ( final NotEnoughResourcesException e ) {
       LOG.warn( "No addresses are available to provide a system address for: " + LogUtil.dumpObject( vm ) );
       LOG.debug( e, e );
     }
@@ -243,19 +242,19 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
             try {
               final VmInstance vm = VmInstances.lookup( instanceId );
               Addresses.system( vm );
-            } catch ( NoSuchElementException ex ) {}
+            } catch ( final NoSuchElementException ex ) {}
           }
         } ).dispatch( addr.getPartition( ) );
       } else {
         addr.release( );
       }
-    } catch ( IllegalStateException e ) {
+    } catch ( final IllegalStateException e ) {
       LOG.debug( e, e );
     }
   }
   
   @Override
-  public void fireEvent( Event event ) {
+  public void fireEvent( final Event event ) {
     if ( event instanceof SystemConfigurationEvent ) {
       Addresses.systemAddressManager = Addresses.getProvider( );
     }

@@ -74,6 +74,7 @@ import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
+import com.eucalyptus.configurable.ConfigurableFieldType;
 import com.eucalyptus.configurable.ConfigurableIdentifier;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.EntityWrapper;
@@ -97,7 +98,7 @@ public class StorageInfo extends AbstractPersistent {
 	@ConfigurableField( description = "Max volume size", displayName = "Max volume size" )
 	@Column( name = "system_storage_max_volume_size_gb")
 	private Integer maxVolumeSizeInGB;
-	@ConfigurableField( description = "Should transfer snapshots" )
+	@ConfigurableField( description = "Should transfer snapshots", displayName = "Transfer snapshots to Walrus", type = ConfigurableFieldType.BOOLEAN )
 	@Column( name = "system_storage_transfer_snapshots")
 	private Boolean shouldTransferSnapshots;
 

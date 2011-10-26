@@ -63,12 +63,13 @@
 
 package com.eucalyptus.component.id;
 
-import java.util.ArrayList;
-import java.util.List;
 import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.empyrean.Empyrean;
+import com.eucalyptus.component.ComponentId.Partition;
+import com.eucalyptus.component.ComponentId.PublicService;
 
-public class Dns extends ComponentId.Unpartioned {
+@Partition( Eucalyptus.class )
+@PublicService
+public class Dns extends ComponentId {
   
   @Override
   public String getLocalEndpointName( ) {
@@ -76,18 +77,8 @@ public class Dns extends ComponentId.Unpartioned {
   }
   
   @Override
-  public List<Class<? extends ComponentId>> serviceDependencies( ) {
-    return new ArrayList( ) {
-      {
-        this.add( Eucalyptus.class );
-      }
-    };
-  }
-
-  @Override
   public boolean runLimitedServices( ) {
     return System.getProperty( "euca.remote.dns" ) != null;
   }
-
   
 }
