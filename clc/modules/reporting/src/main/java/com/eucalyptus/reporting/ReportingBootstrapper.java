@@ -4,18 +4,24 @@ import java.util.Timer;
 
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.bootstrap.*;
-import com.eucalyptus.component.id.Reporting;
+import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.bootstrap.Bootstrapper;
+import com.eucalyptus.bootstrap.Provides;
+import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.empyrean.Empyrean;
-import com.eucalyptus.event.*;
+import com.eucalyptus.event.Event;
+import com.eucalyptus.event.EventListener;
+import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.reporting.event.InstanceEvent;
 import com.eucalyptus.reporting.event.StorageEvent;
-import com.eucalyptus.reporting.queue.*;
-import com.eucalyptus.reporting.queue.QueueFactory.QueueIdentifier;
-import com.eucalyptus.reporting.queue.mq.QueueBroker;
 import com.eucalyptus.reporting.modules.instance.InstanceEventListener;
 import com.eucalyptus.reporting.modules.s3.S3EventListener;
 import com.eucalyptus.reporting.modules.storage.StorageEventListener;
+import com.eucalyptus.reporting.queue.QueueFactory;
+import com.eucalyptus.reporting.queue.QueueFactory.QueueIdentifier;
+import com.eucalyptus.reporting.queue.QueueReceiver;
+import com.eucalyptus.reporting.queue.QueueSender;
+import com.eucalyptus.reporting.queue.mq.QueueBroker;
 
 @Provides(Empyrean.class)//NOTE:GRZE: have the bootstrapper run earlier in bootstrap
 @RunDuring(Bootstrap.Stage.RemoteServicesInit)
@@ -202,6 +208,4 @@ public class ReportingBootstrapper
 	}
 
 
-
-	
 }
