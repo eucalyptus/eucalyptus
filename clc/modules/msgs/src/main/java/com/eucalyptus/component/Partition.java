@@ -326,12 +326,6 @@ public class Partition extends AbstractPersistent implements Comparable<Partitio
     if ( this == obj ) {
       return true;
     }
-    if ( !super.equals( obj ) ) {
-      return false;
-    }
-    if ( getClass( ) != obj.getClass( ) ) {
-      return false;
-    }
     Partition other = ( Partition ) obj;
     if ( this.name == null ) {
       if ( other.name != null ) {
