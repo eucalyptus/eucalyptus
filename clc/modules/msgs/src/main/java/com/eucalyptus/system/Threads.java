@@ -112,6 +112,7 @@ import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.util.concurrent.GenericCheckedListenableFuture;
 import com.google.common.base.Joiner;
@@ -631,11 +632,12 @@ public class Threads {
             try {
               task.run( );
             } catch ( final Exception ex ) {
+              Exceptions.maybeInterrupted( ex );
               Logs.extreme( ).error( ex, ex );
             }
           }
         } catch ( final InterruptedException e ) {
-          Thread.currentThread( ).interrupt( );
+          Exceptions.maybeInterrupted( e );
           return;
         }
       } while ( !this.msgQueue.isEmpty( ) || this.running.get( ) );
