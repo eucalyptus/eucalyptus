@@ -4,6 +4,7 @@ import java.util.*;
 
 import org.apache.log4j.*;
 
+import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.event.EventListener;
@@ -11,6 +12,7 @@ import com.eucalyptus.reporting.event.*;
 import com.eucalyptus.reporting.user.ReportingAccountDao;
 import com.eucalyptus.reporting.user.ReportingUserDao;
 
+@ConfigurableClass( root = "reporting", description = "Parameters controlling reporting")
 public class InstanceEventListener
 	implements EventListener<Event>
 {
