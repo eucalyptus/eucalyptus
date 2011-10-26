@@ -94,35 +94,39 @@ public class DeferredPropertiesBootstrapper extends Bootstrapper.Simple {
       
       @Override
       public void run( ) {
-        Bootstrap.awaitFinished( );
-        List<ConfigurableProperty> staticProps = Lists.newArrayList( );
-        for ( Entry<String, ConfigurableProperty> entry : PropertyDirectory.getPendingPropertyEntries( ) ) {
-          ConfigurableProperty prop = entry.getValue( );
-          if ( prop instanceof StaticPropertyEntry ) {
-            staticProps.add( prop );
-          } else {
-            try {
-              ComponentId compId = ComponentIds.lookup( prop.getEntrySetName( ) );
-              for ( ServiceConfiguration s : ServiceConfigurations.list( compId.getClass( ) ) ) {
-                if ( compId.name( ).equals( prop.getEntrySetName( ) ) ) {
-                  if ( prop instanceof SingletonDatabasePropertyEntry ) {
-                    PropertyDirectory.addProperty( prop );
-                  } else if ( prop instanceof MultiDatabasePropertyEntry ) {
-                    PropertyDirectory.addProperty( ( ( MultiDatabasePropertyEntry ) prop ).getClone( s.getPartition( ) ) );
+        if ( Bootstrap.isShuttingDown( ) ) {
+          return;
+        } else {
+          Bootstrap.awaitFinished( );
+          List<ConfigurableProperty> staticProps = Lists.newArrayList( );
+          for ( Entry<String, ConfigurableProperty> entry : PropertyDirectory.getPendingPropertyEntries( ) ) {
+            ConfigurableProperty prop = entry.getValue( );
+            if ( prop instanceof StaticPropertyEntry ) {
+              staticProps.add( prop );
+            } else {
+              try {
+                ComponentId compId = ComponentIds.lookup( prop.getEntrySetName( ) );
+                for ( ServiceConfiguration s : ServiceConfigurations.list( compId.getClass( ) ) ) {
+                  if ( compId.name( ).equals( prop.getEntrySetName( ) ) ) {
+                    if ( prop instanceof SingletonDatabasePropertyEntry ) {
+                      PropertyDirectory.addProperty( prop );
+                    } else if ( prop instanceof MultiDatabasePropertyEntry ) {
+                      PropertyDirectory.addProperty( ( ( MultiDatabasePropertyEntry ) prop ).getClone( s.getPartition( ) ) );
+                    }
                   }
                 }
+              } catch ( Exception ex ) {
+                LOG.error( ex, ex );
               }
-            } catch ( Exception ex ) {
-              LOG.error( ex, ex );
             }
           }
-        }
-        for ( ConfigurableProperty prop : staticProps ) {
-          if ( PropertyDirectory.addProperty( prop ) ) {
-            try {
-              prop.getValue( );
-            } catch ( Exception ex ) {
-              Logs.extreme( ).error( ex, ex );
+          for ( ConfigurableProperty prop : staticProps ) {
+            if ( PropertyDirectory.addProperty( prop ) ) {
+              try {
+                prop.getValue( );
+              } catch ( Exception ex ) {
+                Logs.extreme( ).error( ex, ex );
+              }
             }
           }
         }

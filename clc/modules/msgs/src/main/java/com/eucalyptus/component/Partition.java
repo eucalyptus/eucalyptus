@@ -315,8 +315,7 @@ public class Partition extends AbstractPersistent implements Comparable<Partitio
   @Override
   public int hashCode( ) {
     final int prime = 31;
-    int result = super.hashCode( );
-    result = prime * result + ( ( this.name == null )
+    int result = prime * ( ( this.name == null )
       ? 0
       : this.name.hashCode( ) );
     return result;
@@ -326,12 +325,6 @@ public class Partition extends AbstractPersistent implements Comparable<Partitio
   public boolean equals( Object obj ) {
     if ( this == obj ) {
       return true;
-    }
-    if ( !super.equals( obj ) ) {
-      return false;
-    }
-    if ( getClass( ) != obj.getClass( ) ) {
-      return false;
     }
     Partition other = ( Partition ) obj;
     if ( this.name == null ) {
