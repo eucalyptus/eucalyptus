@@ -990,36 +990,25 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
     final Cluster.State currentState = this.stateMachine.getState( );
     final Component.State externalState = this.configuration.lookupState( );
     final List<Throwable> currentErrors = Lists.newArrayList( );
+    if ( !this.stateMachine.isBusy( ) ) {
+      try {
+        if ( Cluster.State.NOTREADY.equals( currentState ) ) {
+          notreadyTransition( ).call( ).get( );
+        } else if ( Cluster.State.ENABLED.equals( currentState ) ) {
+          enabledTransition( ).call( ).get( );
+        } else if ( Cluster.State.DISABLED.equals( currentState ) ) {
+          disabledTransition( ).call( ).get( );
+        } else if ( Cluster.State.NOTREADY.ordinal( ) > currentState.ordinal( ) ) {
+          startingTransition( ).call( ).get( );
+        }
+        Cluster.this.clearExceptions( );
+      } catch ( Exception ex ) {
+        Exceptions.maybeInterrupted( ex );
+        throw Faults.failure( this.configuration, ex );
+      }
+    }
     currentErrors.addAll( this.pendingErrors );
-    if ( Cluster.State.NOTREADY.equals( currentState ) ) {
-      try {
-        notreadyTransition( ).call( ).get( );
-      } catch ( Exception ex ) {
-        Exceptions.maybeInterrupted( ex );
-        throw Faults.failure( this.configuration, ex );
-      }
-    } else if ( Cluster.State.ENABLED.equals( currentState ) ) {
-      try {
-        enabledTransition( ).call( ).get( );
-      } catch ( Exception ex ) {
-        Exceptions.maybeInterrupted( ex );
-        throw Faults.failure( this.configuration, ex );
-      }
-    } else if ( Cluster.State.DISABLED.equals( currentState ) ) {
-      try {
-        disabledTransition( ).call( ).get( );
-      } catch ( Exception ex ) {
-        Exceptions.maybeInterrupted( ex );
-        throw Faults.failure( this.configuration, ex );
-      }
-    } else if ( Cluster.State.NOTREADY.ordinal( ) > currentState.ordinal( ) ) {
-      try {
-        startingTransition( ).call( ).get( );
-      } catch ( Exception ex ) {
-        Exceptions.maybeInterrupted( ex );
-        throw Faults.failure( this.configuration, ex );
-      }
-    } else if ( !currentErrors.isEmpty( ) ) {
+    if ( !currentErrors.isEmpty( ) ) {
       throw Faults.failure( this.configuration, currentErrors );
     } else if ( ( currentState.ordinal( ) < State.DISABLED.ordinal( ) )
                 || ( Component.State.ENABLED.equals( externalState ) && ( Cluster.State.ENABLING.ordinal( ) >= currentState.ordinal( ) ) ) ) {

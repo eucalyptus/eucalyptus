@@ -96,7 +96,7 @@ public class AbstractPersistent implements Serializable, HasNaturalId {
   }
   
   public long lastUpdateMillis( ) {
-    return System.currentTimeMillis( ) - this.getLastUpdateTimestamp( ).getTime( );
+    return System.currentTimeMillis( ) - ( this.getLastUpdateTimestamp( ) != null ? this.getLastUpdateTimestamp( ).getTime( ) : 0L );
   }
 }
 
