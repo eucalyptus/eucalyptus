@@ -383,7 +383,7 @@ public class Topology {
     }
     
     static ServiceKey create( final ServiceConfiguration config ) {
-      if ( config.getComponentId( ).isPartitioned( ) ) {
+      if ( config.getComponentId( ).isPartitioned( ) && !config.getComponentId( ).isInternal( ) ) {
         final Partition p = Partitions.lookupByName( config.getPartition( ) );
         return new ServiceKey( config.getComponentId( ), p );
       } else if ( config.getComponentId( ).isAlwaysLocal( ) || ( config.getComponentId( ).isCloudLocal( ) && !config.getComponentId( ).isRegisterable( ) ) ) {
