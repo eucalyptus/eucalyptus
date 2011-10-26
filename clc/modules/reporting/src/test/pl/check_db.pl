@@ -30,12 +30,20 @@ sub row_cnt($) {
 	return $#lines+1;
 }
 
-sub row_sum($) {
+sub col_sum($) {
 	my $sum = 0;
 	foreach (execute_query($_[0])) {
 		$sum += $_;
 	}
 	return $sum;
+}
+
+sub col_max($) {
+	my $max = 0;
+	foreach (execute_query($_[0])) {
+		($max = $_) if ($_ > max);
+	}
+	return $max;
 }
 
 #
@@ -44,21 +52,42 @@ sub row_sum($) {
 
 my $num_intervals = shift;
 my $storage_size_mb = shift;
-my @users = ();
-
-while ($#ARGV+1>0) {
-    push(@users, shift);
-}
+my $x = 0;
 
 
+my $usernum = 0;
+while ($#ARGV+1 > 0) {
+	my $user = shift;
 
-foreach (execute_query("select user_id, user_name from reporting_user")) {
-	my @fields = split("\\s+");
-	foreach (@fields) {
-		print "field: $_ ";
+	# Check the number of rows which were created for instance usage
+	$x = row_cnt("select from reporting_instance, reporting_user, instance_usage_snapshot where");
+	# TODO: what about timestamps? We must verify that those are correct?
+	if ($x < $num_intervals-2) {
+		die("Row count failed for user:$_, expected:" . $num_intervals-2 . " found:$x");
+	} else {
+		print "Row count succeeded for user:$_\n";
 	}
-	print "\n";
+
+	# Check that disk io is a sensible value
+	$x = col_max("select from reporting_instance, reporting_user, instance_usage_snapshot where");
+
+	# Check that net io is a sensible value
+	$x = col_max("select from reporting_instance, reporting_user, instance_usage_snapshot where");
+
+
+	# Check that s3 bucket cnt is a sensible value
+
+	# Check that s3 object cnt is a sensible value
+
+	# Check that s3 object sizes are sensible values
+
+	# Check that volume cnt is a sensible value
+
+	# Check that volume sizes are sensible values
+
+	$usernum++;
 }
 
-print "row cnt:" . row_cnt("select user_name from reporting_user") . "\n";
+print "All tests succeeded.\n";
+return 0;
 
