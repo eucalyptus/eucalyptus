@@ -62,6 +62,7 @@
  */
 package com.eucalyptus.bootstrap;
 
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.PriorityBlockingQueue;
@@ -70,6 +71,7 @@ import org.apache.log4j.Logger;
 
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.util.Exceptions;
 
 
 /**
@@ -94,7 +96,13 @@ public class OrderedShutdown {
 			LOG.warn("Executing Shutdown Hooks...");
 			ShutdownHook h;
 			while((h = hooks.poll()) != null) {
-				executor.execute(h.getRunnable());
+				try {
+					executor.submit(h.getRunnable()).get();
+				} catch (InterruptedException e) {
+				  Exceptions.maybeInterrupted(e);
+				} catch (ExecutionException e) {
+					LOG.error(e, e);
+				}
 			}
 		}		 
 	  });

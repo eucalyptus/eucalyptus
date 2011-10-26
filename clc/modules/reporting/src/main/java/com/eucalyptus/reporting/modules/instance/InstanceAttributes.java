@@ -8,7 +8,7 @@ import com.eucalyptus.entities.AbstractPersistent;
 
 @SuppressWarnings("serial")
 @Entity @javax.persistence.Entity
-@PersistenceContext(name="reporting")
+@PersistenceContext(name="eucalyptus_reporting")
 @Table(name="reporting_instance")
 public class InstanceAttributes
 	extends AbstractPersistent

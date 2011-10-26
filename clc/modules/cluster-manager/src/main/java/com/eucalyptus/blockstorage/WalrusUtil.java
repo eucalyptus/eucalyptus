@@ -100,7 +100,7 @@ public class WalrusUtil {
     CacheImageType cache = new CacheImageType( ).regarding( Contexts.lookup( ).getRequest( ) );
     cache.setBucket( parts[0] );
     cache.setKey( parts[1] );
-    ServiceDispatcher.lookupSingle( Components.lookup( "walrus" ) ).dispatch( cache );
+    ServiceDispatcher.lookupSingle( Components.lookup( Walrus.class ) ).dispatch( cache );
   }
   
   public static void invalidate( ImageMetadata.StaticDiskImage imgInfo ) {
@@ -151,7 +151,7 @@ public class WalrusUtil {
     GetObjectResponseType reply = null;
     GetObjectType msg = new GetObjectType( imagePathParts[0], imagePathParts[1], true, false, true ).regarding( );
     try {
-      reply = ( GetObjectResponseType ) ServiceDispatcher.lookupSingle( Components.lookup( "walrus" ) ).send( msg );
+      reply = ( GetObjectResponseType ) ServiceDispatcher.lookupSingle( Components.lookup( Walrus.class ) ).send( msg );
       if ( reply == null || reply.getBase64Data( ) == null ) {
         throw new EucalyptusCloudException( "No data: " + imageLocation );
       } else {
@@ -184,7 +184,7 @@ public class WalrusUtil {
           return true;
         }
       }
-      if ( ImageUtil.verifyManifestSignature( SystemCredentials.getCredentialProvider(Eucalyptus.class).getCertificate(), signature, pad  )) {
+      if ( ImageUtil.verifyManifestSignature( SystemCredentials.lookup(Eucalyptus.class).getCertificate(), signature, pad  )) {
         return true;
       }
       for ( User u : Accounts.listAllUsers( ) ) {

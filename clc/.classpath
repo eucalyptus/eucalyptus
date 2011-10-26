@@ -104,7 +104,7 @@
 	<classpathentry kind="lib" path="lib/geronimo-stax-1.0-spec-1.0.1.jar"/>
 	<classpathentry kind="lib" path="lib/groovy-all-1.7.2.jar"/>
 	<classpathentry kind="lib" path="lib/guava-r09-gwt.jar"/>
-	<classpathentry kind="lib" path="lib/guava-r09.jar" sourcepath="/bzr/third-party/guava-r08/guava-src-r08.zip"/>
+	<classpathentry kind="lib" path="lib/guava-r09.jar"/>
 	<classpathentry kind="lib" path="lib/gwt-api-checker-2.2.jar"/>
 	<classpathentry kind="lib" path="lib/gwt-dev-2.2.jar"/>
 	<classpathentry kind="lib" path="lib/gwt-servlet-2.2.jar"/>
@@ -113,7 +113,7 @@
 	<classpathentry kind="lib" path="lib/gwt-user-2.2.jar"/>
 	<classpathentry kind="lib" path="lib/ha-jdbc-2.0.16-rc-1-jdk1.6.jar"/>
 	<classpathentry kind="lib" path="lib/hamcrest-all-1.2.jar"/>
-	<classpathentry kind="lib" path="lib/hibernate-3.5.6-Final.jar" sourcepath="/bzr/third-party/hibernate-distribution-3.5.6-Final"/>
+	<classpathentry kind="lib" path="lib/hibernate-3.5.6-Final.jar"/>
 	<classpathentry kind="lib" path="lib/hsqldb-1.8.0.10.jar"/>
 	<classpathentry kind="lib" path="lib/hsqldbutil-1.8.0.10.jar"/>
 	<classpathentry kind="lib" path="lib/infinispan-core-4.2.1.CR4.jar"/>
@@ -157,7 +157,7 @@
 	<classpathentry kind="lib" path="lib/kahadb-5.4.1.jar"/>
 	<classpathentry kind="lib" path="lib/log4j-1.2.15.jar"/>
 	<classpathentry kind="lib" path="lib/manageontap.jar"/>
-	<classpathentry kind="lib" path="lib/mule-core-2.0.1.jar" sourcepath="/bzr/third-party/mule-2.0.2"/>
+	<classpathentry kind="lib" path="lib/mule-core-2.0.1.jar"/>
 	<classpathentry kind="lib" path="lib/mule-module-builders-2.0.1.jar"/>
 	<classpathentry kind="lib" path="lib/mule-module-client-2.0.1.jar"/>
 	<classpathentry kind="lib" path="lib/mule-module-management-2.0.1.jar"/>
@@ -170,7 +170,7 @@
 	<classpathentry kind="lib" path="lib/org.restlet-1.1.5.jar"/>
 	<classpathentry kind="lib" path="lib/org.restlet.ext.velocity-1.1.5.jar"/>
 	<classpathentry kind="lib" path="lib/org.simpleframework-3.1.3.jar"/>
-	<classpathentry kind="lib" path="lib/proxool-0.9.1.jar" sourcepath="/bzr/third-party/proxool-0.9.1"/>
+	<classpathentry kind="lib" path="lib/proxool-0.9.1.jar"/>
 	<classpathentry kind="lib" path="lib/proxool-cglib.jar"/>
 	<classpathentry kind="lib" path="lib/quartz-1.6.5.jar"/>
 	<classpathentry kind="lib" path="lib/regexp-1.4.jar"/>
@@ -186,7 +186,7 @@
 	<classpathentry kind="lib" path="lib/spring-web-2.5.1.jar"/>
 	<classpathentry kind="lib" path="lib/stax2-api-3.0.1.jar"/>
 	<classpathentry kind="lib" path="lib/velocity-1.7.jar"/>
-	<classpathentry kind="lib" path="lib/vijava-2.1-euca-1303337201.jar"/>
+	<classpathentry kind="lib" path="lib/vijava-2.1-euca-1316109169.jar"/>
 	<classpathentry kind="lib" path="lib/woodstox-core-asl-4.0.6.jar"/>
 	<classpathentry kind="lib" path="lib/wsdl4j-1.6.2.jar"/>
 	<classpathentry kind="lib" path="lib/wss4j-1.5.7.jar"/>

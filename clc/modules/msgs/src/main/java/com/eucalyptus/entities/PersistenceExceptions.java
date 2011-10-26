@@ -211,7 +211,7 @@ public class PersistenceExceptions {
    */
   @SuppressWarnings( "unchecked" )
   public static RecoverablePersistenceException throwFiltered( final Throwable e ) {
-    ConstraintViolationException cause = Exceptions.causedBy( e, ConstraintViolationException.class );
+    ConstraintViolationException cause = Exceptions.findCause( e, ConstraintViolationException.class );
     if ( cause != null ) {
       throw cause;
     } else {

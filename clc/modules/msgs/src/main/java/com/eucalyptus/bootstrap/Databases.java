@@ -162,7 +162,11 @@ public class Databases {
     
     @Override
     public void init( ) {
-      this.db.init( );
+      try {
+        this.db.init( );
+      } catch ( Exception ex ) {
+        LOG.error( ex , ex );
+      }
     }
     
     public static DatabaseBootstrapper getInstance( ) {
@@ -170,20 +174,24 @@ public class Databases {
     }
     
     @Override
-    public String getUriPattern( ) {
-      return this.db.getUriPattern( );
+    public String getServicePath( String... pathParts ) {
+      return this.db.getServicePath( pathParts );
     }
-
+    
     @Override
     public boolean check( ) throws Exception {
       return this.db.isRunning( );
     }
+
+    /**
+     * @see com.eucalyptus.bootstrap.DatabaseBootstrapper#getJdbcScheme()
+     */
+    @Override
+    public String getJdbcScheme( ) {
+      return this.db.getJdbcScheme( );
+    }
   }
   
-  public static String getUriPattern( ) {
-    return singleton.getUriPattern( );
-  }
-
   public static boolean isRunning( ) {
     try {
       return singleton.check( );
@@ -191,6 +199,14 @@ public class Databases {
       LOG.error( ex , ex );
       return false;
     }
+  }
+
+  public static String getServicePath( String... pathParts ) {
+    return singleton.getServicePath( pathParts );
+  }
+
+  public static String getJdbcScheme( ) {
+    return singleton.getJdbcScheme( );
   }
   
 }

@@ -216,48 +216,6 @@ public class LifecycleEvents {
     
   }
   
-  public static void fireExceptionEvent( ServiceConfiguration config, CheckException ex ) {
-    fireExceptionEvent( config, ex.getSeverity( ), ex );
-  }
-  
-  public static void fireExceptionEvent( ServiceConfiguration config, ServiceChecks.Severity severity, Throwable t ) {
-    LifecycleEvent event = null;
-    String correlationId = null;
-    try {
-      correlationId = Contexts.lookup( ).getCorrelationId( );
-    } catch ( IllegalContextAccessException ex ) {
-      correlationId = UUID.randomUUID( ).toString( );
-    }
-    CheckException checkEx = ( t instanceof CheckException )
-      ? ( CheckException ) t
-      : severity.transform( config, t );
-    switch ( checkEx.getSeverity( ) ) {
-      case DEBUG:
-        event = new ServiceStateEvent( config, checkEx );//TODO:GRZE:OMGFIXME handle persistence of state events
-        break;
-      case INFO:
-        event = new ServiceStateEvent( config, checkEx );
-        break;
-      case WARNING:
-        event = new ServiceStateEvent( config, checkEx );
-        break;
-      case ERROR:
-        event = handleErrorEvent( config, correlationId, checkEx );
-        break;
-      case URGENT:
-        event = handleErrorEvent( config, correlationId, checkEx );
-        break;
-      case FATAL:
-        event = handleErrorEvent( config, correlationId, checkEx );
-        break;
-    }
-    try {
-      config.lookupService( ).fireEvent( event );
-    } catch ( NoSuchServiceException ex ) {
-      LOG.error( ex, ex );
-    }
-  }
-  
   private static ServiceErrorEvent handleErrorEvent( ServiceConfiguration config, String correlationId, CheckException checkEx ) {
     ServiceCheckRecord checkRecord = new ServiceCheckRecord( correlationId, checkEx );
     ServiceErrorEvent errorEvent = new ServiceErrorEvent( config, checkRecord );
@@ -286,13 +244,11 @@ public class LifecycleEvents {
     try {
       ListenerRegistry.getInstance( ).fireEventAsync( config, event );
     } catch ( Exception ex1 ) {
-      config.info( ex1 );
       Logs.exhaust( ).error( ex1, ex1 );
     }
     try {
       ListenerRegistry.getInstance( ).fireEventAsync( componentId, event );
     } catch ( Exception ex1 ) {
-      config.info( ex1 );
       Logs.exhaust( ).error( ex1, ex1 );
     }
   }

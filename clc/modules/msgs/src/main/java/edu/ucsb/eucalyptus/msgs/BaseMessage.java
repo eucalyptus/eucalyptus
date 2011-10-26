@@ -11,11 +11,8 @@ import org.jibx.runtime.BindingDirectory;
 import org.jibx.runtime.IBindingFactory;
 import org.jibx.runtime.IMarshallingContext;
 import org.jibx.runtime.JiBXException;
-import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.auth.principal.UserFullName;
-import com.eucalyptus.context.Context;
 import com.eucalyptus.empyrean.ServiceId;
 import com.eucalyptus.http.MappingHttpMessage;
 import com.eucalyptus.util.Classes;
@@ -167,15 +164,7 @@ public class BaseMessage {
     this.userId = msg.userId;
     return ( TYPE ) this;
   }
-  
-  @Deprecated
-  /** this cannot work correctly anymore **/
-  private boolean isAdministrator( ) {
-//    return ( FakePrincipals.SYSTEM_USER_ERN.getUserName( ).equals( this.effectiveUserId ) ) || this.getUser( ).isSystemAdmin( )
-//           || this.getUser( ).isSystemInternal( );
-    throw new RuntimeException( "This method is deprecated: use com.eucalyptus.context.Contexts.lookup().hasAdministrativePrivileges() instead." );
-  }
-  
+    
   public String toString( ) {
     String str = this.toString( "msgs_eucalyptus_com" );
     str = ( str != null )
@@ -196,9 +185,9 @@ public class BaseMessage {
    */
   public String toString( String namespace ) {
     ByteArrayOutputStream temp = new ByteArrayOutputStream( );
-    Class<?> targetClass = Iterables.find( Classes.classAncestors( this ), new Predicate<Class<?>>( ) {
+    Class targetClass = Iterables.find( Classes.classAncestors( this ), new Predicate<Class>( ) {
       @Override
-      public boolean apply( Class<?> arg0 ) {
+      public boolean apply( Class arg0 ) {
         return !arg0.isAnonymousClass( );
       }
     } );
@@ -237,9 +226,8 @@ public class BaseMessage {
     StringBuilder buf = new StringBuilder( );
     buf.append( this.getClass( ).getSimpleName( ) )
        .append( ":" ).append( this.correlationId )
-       .append( ":" ).append( this.userId )
-       .append( ":" ).append( this.effectiveUserId )
        .append( ":return=" ).append( this.get_return( ) )
+       .append( ":epoch=" ).append( this.get_epoch( ) )
        .append( ":status=" ).append( this.getStatusMessage( ) );
     return buf.toString( );
   }
@@ -262,15 +250,6 @@ public class BaseMessage {
    * @return the services
    */
   public ArrayList<ServiceId> get_services( ) {
-    return this._services;
-  }
-  
-  /**
-   * @deprecated use get_services( ) as needed, this old name presents a potential naming conflict
-   * @see #get_services()
-   */
-  @Deprecated
-  public ArrayList<ServiceId> getBaseServices( ) {
     return this._services;
   }
   
@@ -310,32 +289,11 @@ public class BaseMessage {
       this.setUser( Principals.nobodyUser( ) );
     } else {
       this.userId = user.getName( );
-      this.effectiveUserId = ( user.isSystemAdmin( ) || user.isSystemInternal( ) )
+      this.effectiveUserId = user.isSystemAdmin( )
         ? Principals.systemUser( ).getName( )
         : user.getName( );
     }
     return this;
   }
   
-  /**
-   * @deprecated
-   * @see {@link Context#getAccount()}
-   */
-  public Account getAccount( ) {
-    throw new RuntimeException( "This method is deprecated: use com.eucalyptus.context.Contexts.lookup().getAccount() instead." );
-  }
-  
-  /**
-   * @deprecated
-   * @see {@link Context#getUser()}
-   */
-  @Deprecated
-  public User getUser( ) {
-    throw new RuntimeException( "This method is deprecated: use com.eucalyptus.context.Contexts.lookup().getUser() instead." );
-  }
-  
-  @Deprecated
-  private UserFullName getUserErn( ) {
-    throw new RuntimeException( "This method is deprecated: use com.eucalyptus.context.Contexts.lookup().getUserFullName() instead." );
-  }
 }

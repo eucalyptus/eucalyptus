@@ -298,7 +298,11 @@ public class Logs {
   }
   
   public static Logger exhaust( ) {
-    return Logger.getLogger( "EXHAUST" );
+    if ( isExtrrreeeme( ) ) {
+      return Logger.getLogger( "EXHAUST" );
+    } else {
+      return nullLogger;
+    }
   }
   
   public static Logger bootstrap( ) {

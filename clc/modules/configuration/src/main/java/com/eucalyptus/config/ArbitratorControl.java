@@ -66,62 +66,79 @@ package com.eucalyptus.config;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ScheduledExecutorService;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.Components;
+import com.eucalyptus.component.Faults;
 import com.eucalyptus.component.ServiceConfigurations;
-import com.eucalyptus.component.id.Arbitrator;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Walrus;
+import com.eucalyptus.empyrean.Empyrean.Arbitrator;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.Internets;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
 public class ArbitratorControl {
-  private static Logger                   LOG               = Logger.getLogger( ArbitratorControl.class );
-  private static Map<String, Exception>   error             = Maps.newConcurrentMap( );
-  private static ScheduledExecutorService monitor;
-  private final static int                CHECK_PERIODICITY = 5;
-  
-  public ArbitratorControl( ) {}
-  
-  public static void start( ) {}
-  
-  public static void check( ) throws Exception {
-    if ( Components.lookup( Walrus.class ).hasLocalService( ) || Components.lookup( Eucalyptus.class ).hasLocalService( ) ) {
-      final List<ArbitratorConfiguration> configs = ServiceConfigurations.list( Arbitrator.class );
-      for ( final ArbitratorConfiguration config : configs ) {
-        final String hostName = config.getHostName( );
-        Threads.lookup( Arbitrator.class, ArbitratorControl.class ).submit( new Runnable( ) {
-          @Override
-          public void run( ) {
-            try {
-              final InetAddress addr = InetAddress.getByName( hostName );
-              if ( addr.isReachable( 2000 ) ) {
-                ArbitratorControl.error.remove( hostName );
-              }
-            } catch ( final UnknownHostException e ) {
-              ArbitratorControl.error.put( hostName, Exceptions.filterStackTrace( e, 2 ) );
-            } catch ( final IOException e ) {
-              ArbitratorControl.error.put( hostName, Exceptions.filterStackTrace( e, 2 ) );
-            }
-            EventRecord.here( ArbitratorControl.class, EventType.BOOTSTRAPPER_CHECK, hostName, "errorMap", error.get( hostName ).toString( ) ).debug( );
-          }
-        }
-               );
-      }
-      final Set<String> downArbitrators = Sets.newHashSet( error.keySet( ) );
-      if ( downArbitrators.size( ) > 0 ) {
-        final String errorMessage = "Arbitrators not reachable: " + downArbitrators.toString( );
-        throw new EucalyptusCloudException( errorMessage );
-      }
-    }
-  }
+	private static Logger                   LOG               = Logger.getLogger( ArbitratorControl.class );
+	private static Map<ArbitratorConfiguration, Exception>   error             = Maps.newConcurrentMap( );
+	private static Map<String, ArbitratorConfiguration>   okay              = Maps.newConcurrentMap( );
+	private static ScheduledExecutorService monitor;
+	private final static int                CHECK_PERIODICITY = 5;
+
+	public ArbitratorControl( ) {}
+
+	public static void start( ) {}
+
+	public static void check( ) throws Exception {
+		final List<ArbitratorConfiguration> configs = ServiceConfigurations.list( Arbitrator.class );
+		for ( final ArbitratorConfiguration config : configs ) {
+			if(Internets.localHostInetAddress().equals(Internets.toAddress(config.getHostName()))) {
+				final String hostName = config.getGatewayHost();
+				if ( hostName != null ) {
+					Threads.lookup( Arbitrator.class, ArbitratorControl.class ).submit( new Runnable( ) {
+						@Override
+						public void run( ) {
+							try {
+								final InetAddress addr = InetAddress.getByName( hostName );
+								if ( addr.isReachable( 2000 ) ) {
+									ArbitratorControl.error.remove( hostName );
+									ArbitratorControl.okay.put( hostName, config );
+								}
+							} catch ( final UnknownHostException e ) {
+								ArbitratorControl.error.put( config, Exceptions.filterStackTrace( e ) );
+							} catch ( final IOException e ) {
+								ArbitratorControl.error.put( config, Exceptions.filterStackTrace( e ) );
+							}
+							EventRecord.here( ArbitratorControl.class, EventType.BOOTSTRAPPER_CHECK, hostName, "errorMap", error.get( hostName ).toString( ) ).debug( );
+						}
+					}
+					);
+				}
+			}
+		}
+		final Set<ArbitratorConfiguration> downArbitrators = Sets.newHashSet( error.keySet( ) );
+		if ( downArbitrators.size( ) > 0 ) {
+			ArbitratorConfiguration anyConfig = null;
+			List<Exception> exceptions = new ArrayList<Exception>();
+			for (ArbitratorConfiguration key : downArbitrators) {
+				anyConfig = key;
+				exceptions.add(error.get(key));
+			}
+			if (ArbitratorControl.okay.isEmpty()) {
+				Faults.fatal(anyConfig, exceptions);
+			} else {
+				Faults.advisory(anyConfig, exceptions);
+			}
+		}
+
+	}
 }

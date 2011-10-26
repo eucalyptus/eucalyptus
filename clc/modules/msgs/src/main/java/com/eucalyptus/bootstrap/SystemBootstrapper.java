@@ -72,16 +72,17 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.PriorityBlockingQueue;
-
 import org.apache.log4j.Logger;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import com.eucalyptus.bootstrap.Bootstrap.Stage;
 import com.eucalyptus.component.Component;
+import com.eucalyptus.component.Component.State;
 import com.eucalyptus.component.Component.Transition;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.context.ServiceContextManager;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.EventClass;
@@ -159,7 +160,7 @@ public class SystemBootstrapper {
    * @throws Throwable
    */
   public boolean init( ) throws Throwable {
-    ExpandoMetaClass.enableGlobally();
+    ExpandoMetaClass.enableGlobally( );
     Logs.init( );
     Thread.setDefaultUncaughtExceptionHandler( new UncaughtExceptionHandler( ) {
       
@@ -187,7 +188,7 @@ public class SystemBootstrapper {
         }
       }
     } );
-    OrderedShutdown.initialize();
+    OrderedShutdown.initialize( );
     BootstrapArgs.init( );
     Security.addProvider( new BouncyCastleProvider( ) );
     try {
@@ -211,7 +212,14 @@ public class SystemBootstrapper {
    */
   public boolean load( ) throws Throwable {
     if ( BootstrapArgs.isInitializeSystem( ) ) {
-      SystemBootstrapper.runSystemInitialize( );
+      try {
+        Bootstrap.initializeSystem( );
+        System.exit( 0 );
+      } catch ( Throwable t ) {
+        LOG.error( t, t );
+        System.exit( 1 );
+        throw t;
+      }
     } else {
       SystemBootstrapper.runSystemStages( new Predicate<Stage>( ) {
         
@@ -221,7 +229,7 @@ public class SystemBootstrapper {
           return true;
         }
       } );
-      SystemBootstrapper.runComponentStages( Component.Transition.LOADING, Components.filterWhichCanLoad( ) );
+      Bootstrap.applyTransition( Component.State.LOADED, Components.whichCanLoad( ) );
     }
     return true;
   }
@@ -244,45 +252,24 @@ public class SystemBootstrapper {
         return true;
       }
     } );
-    SystemBootstrapper.runComponentStages( Component.Transition.STARTING, Components.filterWhichCanLoad( ) );
-    Threads.lookup( Empyrean.class ).submit( new Runnable( ) {
-      @Override
-      public void run( ) {
-        try {
-          SystemBootstrapper.runComponentStages( Component.Transition.READY_CHECK, Components.filterWhichCanLoad( ) );
-          SystemBootstrapper.runComponentStages( Component.Transition.ENABLING, Components.filterWhichCanLoad( ) );
-        } catch ( Exception ex ) {
-          LOG.error( ex, ex );
-        }
-      }
-    } );
+    Bootstrap.applyTransition( Component.State.NOTREADY, Components.whichCanLoad( ) );
+    Threads.enqueue( ServiceConfigurations.createEphemeral( Empyrean.INSTANCE ), new Runnable( ) {
+                       @Override
+                       public void run( ) {
+                         try {
+                           Bootstrap.applyTransition( Component.State.DISABLED, Components.whichCanLoad( ) );
+                           Bootstrap.applyTransition( Component.State.ENABLED, Components.whichCanEnable( ) );
+                         } catch ( Exception ex ) {
+                           LOG.error( ex, ex );
+                         }
+                       }
+                     } );
     try {
       SystemBootstrapper.printBanner( );
     } catch ( Exception ex ) {
       LOG.error( ex, ex );
     }
     return true;
-  }
-  
-  private static void runSystemInitialize( ) throws Throwable {
-    try {
-      Bootstrap.initializeSystem( );
-      System.exit( 0 );
-    } catch ( Throwable t ) {
-      LOG.error( t, t );
-      System.exit( 1 );
-      throw t;
-    }
-  }
-  
-  private static void runComponentStages( Transition transition, Predicate<Component> filter ) {
-    for ( Component c : Iterables.filter( Components.list( ), filter ) ) {
-      try {
-        Bootstrap.applyTransition( c, transition );
-      } catch ( Throwable t ) {
-        Thread.getDefaultUncaughtExceptionHandler( ).uncaughtException( Thread.currentThread( ), t );
-      }
-    }
   }
   
   private static void runSystemStages( Predicate<Bootstrap.Stage> exec ) throws Throwable {
@@ -294,7 +281,9 @@ public class SystemBootstrapper {
         exec.apply( stage );
       } while ( ( stage = Bootstrap.transition( ) ) != null );
     } catch ( Throwable t ) {
-      throw t;
+      LOG.error( t );
+      Logs.extreme( ).error( t, t );
+      System.exit( 123 );
     }
   }
   
@@ -403,39 +392,58 @@ public class SystemBootstrapper {
                     +
                     "[8m-----------------[0;10m[1m|#[0;10m[8m                   [0;10mj[1mn[0;10mf^[8m     [0;10m[1mStarted Eucalyptus       [0;10m[1m#|[0;10m\n"
                     +
-                    "[8m-----------------[0;10m[1m|#___________________[0;10m [1mN[0;10m'[8m [0;10m[1m______________________________#|[0;10m\n" +
-                    "[8m-----------------[0;10m[1m(####################[0;10m [1mv[0;10m'[8m [0;10m[1m###############################)[0;10m\n" +
-                    "[8m----------------     .--------------:I [0;10m^[8m   . .. .. .. .. ..... .. .. ...=v[0;10m\n" +
+                    "[8m-----------------[0;10m[1m|#___________________[0;10m [1mN[0;10m'[8m [0;10m[1m______________________________#|[0;10m\n"
+                    +
+                    "[8m-----------------[0;10m[1m(####################[0;10m [1mv[0;10m'[8m [0;10m[1m###############################)[0;10m\n"
+                    +
+                    "[8m----------------     .--------------:I [0;10m^[8m   . .. .. .. .. ..... .. .. ...=v[0;10m\n"
+                    +
                     "[8m---------------..     ------------------  ................................[0;10m\n";
     
-    banner += "\n[8m-----------------[0;10m[1m Version: " + singleton.getVersion( ) + "\n";
-    banner += headerHeader + String.format( headerFormat, "System Bootstrap Configuration" ) + headerFooter;
+    banner += "\n[8m-----------------[0;10m[1m Version: " + singleton.getVersion( )
+              + "\n";
+    banner += headerHeader + String.format( headerFormat, "System Bootstrap Configuration" )
+              + headerFooter;
     for ( Bootstrap.Stage stage : Bootstrap.Stage.values( ) ) {
-      banner += prefix + stage.name( ) + SEP + stage.describe( ).replaceAll( "(\\w*)\\w\n", "\1\n" + prefix + stage.name( ) + SEP ).replaceAll( "^\\w* ", "" );
+      banner += prefix + stage.name( )
+                + SEP
+                + stage.describe( ).replaceAll( "(\\w*)\\w\n", "\1\n" + prefix
+                                                               + stage.name( )
+                                                               + SEP ).replaceAll( "^\\w* ", "" );
     }
-    banner += headerHeader + String.format( headerFormat, "Component Bootstrap Configuration" ) + headerFooter;
+    banner += headerHeader + String.format( headerFormat, "Component Bootstrap Configuration" )
+              + headerFooter;
     for ( Component c : Components.list( ) ) {
-      if ( c.isAvailableLocally( ) ) {
-        for ( Bootstrapper b : c.getBootstrapper( ).getBootstrappers( ) ) {
-          banner += prefix + String.format( "%-15.15s", c.getName( ) ) + SEP + b.toString( );
-        }
+      if ( c.getComponentId( ).isAvailableLocally( ) ) {
+        banner += c.getBootstrapper( );
       }
     }
-    banner += headerHeader + String.format( headerFormat, "Local Services" ) + headerFooter;
+    banner += headerHeader + String.format( headerFormat, "Local Services" )
+              + headerFooter;
     for ( Component c : Components.list( ) ) {
       if ( c.hasLocalService( ) ) {
         ServiceConfiguration localConfig = c.getLocalServiceConfiguration( );
-        banner += prefix + c.getName( ) + SEP + localConfig.toString( );
-        banner += prefix + c.getName( ) + SEP + localConfig.lookupBuilder( ).toString( );
-        banner += prefix + c.getName( ) + SEP + localConfig.getComponentId( ).toString( );
-        banner += prefix + c.getName( ) + SEP + localConfig.lookupState( ).toString( );
+        banner += prefix + c.getName( )
+                  + SEP
+                  + localConfig.toString( );
+        banner += prefix + c.getName( )
+                  + SEP
+                  + localConfig.getComponentId( ).toString( );
+        banner += prefix + c.getName( )
+                  + SEP
+                  + localConfig.lookupState( ).toString( );
       }
     }
-    banner += headerHeader + String.format( headerFormat, "Detected Interfaces" ) + headerFooter;
+    banner += headerHeader + String.format( headerFormat, "Detected Interfaces" )
+              + headerFooter;
     for ( NetworkInterface iface : Internets.getNetworkInterfaces( ) ) {
-      banner += prefix + iface.getDisplayName( ) + SEP + Lists.transform( iface.getInterfaceAddresses( ), Functions.toStringFunction( ) );
+      banner += prefix + iface.getDisplayName( )
+                + SEP
+                + Lists.transform( iface.getInterfaceAddresses( ), Functions.toStringFunction( ) );
       for ( InetAddress addr : Lists.newArrayList( Iterators.forEnumeration( iface.getInetAddresses( ) ) ) ) {
-        banner += prefix + iface.getDisplayName( ) + SEP + addr;
+        banner += prefix + iface.getDisplayName( )
+                  + SEP
+                  + addr;
       }
     }
     LOG.info( banner );

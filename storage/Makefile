@@ -6,7 +6,9 @@ include ../Makedefs
 
 STORAGE_LIBS = $(LDFLAGS) -lcurl -lssl -lcrypto -lpthread -pthread
 IMAGER_LIBS = ../util/euca_auth.o ../util/misc.o ../util/ipc.o cache.o walrus.o cmd_bundle.o cmd_convert.o cmd_upload.o cmd_prepare.o cmd_fsck.o map.o vmdk.o http.o img.o diskfile.o diskutil.o vbr.o blobstore.o iscsi.o
-VDDK_FLAGS = -L${VDDK_HOME}/lib -lvixDiskLib -lvixMntapi -std=gnu99 -UDYNAMIC_LOADING
+ARCH := $(shell getconf LONG_BIT) # will be 32 or 64
+# the flags replicate output of `pkg-config --cflags --libs vix-disklib`, which does not work if VDDK is installed in /opt/packages/vddk
+VDDK_FLAGS = -I$(VDDK_HOME)/lib/vmware-vix-disklib/include  -L$(VDDK_HOME)/lib/vmware-vix-disklib/lib$(ARCH) -lvixDiskLib -lvixMntapi -UDYNAMIC_LOADING
 IMAGER_WRAPPER=euca_imager
 TESTS=test_vbr test_blobstore test
 IMAGER=_euca_imager

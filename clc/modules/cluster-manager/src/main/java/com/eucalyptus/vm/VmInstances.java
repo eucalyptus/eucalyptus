@@ -461,22 +461,6 @@ public class VmInstances {
     VmInstances.stopped( VmInstance.Lookup.INSTANCE.apply( key ) );
   }
   
-  public static void start( final VmInstance vm ) throws Exception {
-    RunInstancesType runRequest = new RunInstancesType( ) {
-      {
-        this.setMinCount( 1 );
-        this.setMaxCount( 1 );
-        this.setImageId( vm.getImageId( ) );
-        this.setAvailabilityZone( vm.getPartition( ) );
-        this.getGroupSet( ).addAll( vm.getNetworkNames( ) );
-        this.setInstanceType( vm.getVmType( ).getName( ) );
-      }
-    };
-    Allocation allocInfo = VerifyMetadata.handle( runRequest );
-    allocInfo = AdmissionControl.handle( allocInfo );
-    ClusterAllocator.create( allocInfo );
-  }
-  
   public static void shutDown( final VmInstance vm ) throws TransactionException {
     if ( !VmStateSet.DONE.apply( vm ) ) {
 //      if ( terminateDescribeCache.containsKey( vm.getDisplayName( ) ) ) {

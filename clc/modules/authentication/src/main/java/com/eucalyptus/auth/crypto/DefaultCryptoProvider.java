@@ -118,7 +118,7 @@ public class DefaultCryptoProvider implements CryptoProvider, CertificateProvide
   public X509Certificate generateServiceCertificate( KeyPair keys, String serviceName ) {
     X500Principal x500 = new X500Principal( String.format( "CN=%s, OU=Eucalyptus, O=Cloud, C=US", serviceName ) );
 //    if( !"eucalyptus".equals( serviceName ) ) {
-//      SystemCredentials sys = SystemCredentials.getCredentialProvider( Eucalyptus.class );
+//      SystemCredentials sys = SystemCredentials.lookup( Eucalyptus.class );
 //      return generateCertificate( keys, x500, sys.getCertificate( ).getSubjectX500Principal( ), sys.getPrivateKey( ) );
 //    } else {
       return generateCertificate( keys, x500, x500, null );
@@ -187,7 +187,7 @@ public class DefaultCryptoProvider implements CryptoProvider, CertificateProvide
 
   @Override
   public String generateSystemToken( byte[] data ) {
-    PrivateKey pk = SystemCredentials.getCredentialProvider( Eucalyptus.class ).getPrivateKey( );
+    PrivateKey pk = SystemCredentials.lookup( Eucalyptus.class ).getPrivateKey( );
     return Signatures.SHA256withRSA.trySign( pk, data );    
   }
 

@@ -72,6 +72,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
+import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.entities.EntityWrapper;
@@ -155,7 +156,7 @@ public class StorageProperties {
 			walrusConfigs = ServiceConfigurations.list( Walrus.class );
 			if(walrusConfigs.size() > 0) {
 			  ServiceConfiguration walrusConfig = walrusConfigs.get(0);
-				WALRUS_URL = walrusConfig.getUri().toASCIIString( );
+				WALRUS_URL = ServiceUris.remote( walrusConfig ).toASCIIString( );
 				StorageProperties.enableSnapshots = true;
 				LOG.info("Setting WALRUS_URL to: " + WALRUS_URL);
 			} else {

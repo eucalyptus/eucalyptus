@@ -75,10 +75,15 @@ import org.xbill.DNS.RRset;
 import org.xbill.DNS.Record;
 import org.xbill.DNS.SOARecord;
 import org.xbill.DNS.TextParseException;
+import com.eucalyptus.component.Topology;
+import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Internets;
+import com.eucalyptus.util.WalrusProperties;
 import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstances;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
+import edu.ucsb.eucalyptus.cloud.ws.WalrusManager;
 
 public class TransientZone extends Zone {
   private static Logger LOG = Logger.getLogger( TransientZone.class );
@@ -112,7 +117,7 @@ public class TransientZone extends Zone {
   }
 
   public static Name getExternalName( ) throws TextParseException {
-    String externalNameString = "eucalyptus." + SystemConfiguration.getSystemConfiguration( ).getDnsDomain( ) + ".";
+    String externalNameString = /*"eucalyptus." +*/SystemConfiguration.getSystemConfiguration( ).getDnsDomain( ) + ".";
     Name externalName = Name.fromString( externalNameString );
     return externalName;
   }
@@ -180,6 +185,17 @@ public class TransientZone extends Zone {
       } catch ( Exception e ) {
         return super.findRecords( name, type );
       }
+    } else if (name.toString().startsWith("eucalyptus.")) {
+        SetResponse resp = new SetResponse(SetResponse.SUCCESSFUL);        
+		try {
+			InetAddress cloudIp = Topology.lookup( Eucalyptus.class ).getInetAddress( );
+	        if (cloudIp != null) {
+	          resp.addRRset( new RRset( new ARecord( name, 1, ttl, cloudIp ) ) );
+	        }
+	        return resp;
+		} catch (Exception e) {
+            return super.findRecords( name, type );
+		}
     } else if (name.toString().endsWith(".in-addr.arpa.")) {
   	  int index = name.toString().indexOf(".in-addr.arpa.");
   	  Name target;
@@ -213,6 +229,29 @@ public class TransientZone extends Zone {
 	  } else {
 	    return super.findRecords( name, type );
 	  }
+    } else if (name.toString().matches(".*\\.walrus\\..*")) {
+    	//Walrus
+    	String bucket = name.toString().substring(0, name.toString().indexOf(".walrus"));
+    	InetAddress ip;
+    	try {
+			ip = WalrusManager.getBucketIp(bucket);
+		} catch (EucalyptusCloudException e1) {
+			return super.findRecords(name, type);
+		}
+        SetResponse resp = new SetResponse(SetResponse.SUCCESSFUL);
+        resp.addRRset( new RRset( new ARecord( name, 1, ttl, ip ) ) );
+        return resp;
+    } else if (name.toString().startsWith("walrus.")) {
+        SetResponse resp = new SetResponse(SetResponse.SUCCESSFUL);
+        try {
+			InetAddress walrusIp = WalrusProperties.getWalrusAddress();
+			if (walrusIp != null) {
+	          resp.addRRset( new RRset( new ARecord( name, 1, ttl, WalrusProperties.getWalrusAddress() ) ) );
+			}
+	        return resp;
+		} catch (EucalyptusCloudException e) {
+		    return super.findRecords( name, type );
+		}
     } else {
       return super.findRecords( name, type );
     }

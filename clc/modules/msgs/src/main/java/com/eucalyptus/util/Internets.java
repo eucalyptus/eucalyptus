@@ -89,6 +89,8 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.net.InetAddresses;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.notNullValue;
 
 public class Internets {
   private static Logger                                   LOG               = Logger.getLogger( Internets.class );
@@ -173,6 +175,19 @@ public class Internets {
       }
     }
     return laddr;
+  }
+  
+  public static InetAddress loopback( ) {
+    try {
+      return InetAddress.getByName( "127.0.0.1" );
+    } catch ( UnknownHostException ex ) {
+      for ( InetAddress i : getAllInetAddresses( ) ) {
+        if ( i.isLoopbackAddress( ) ) {
+          return i;
+        }
+      }
+      return localHostInetAddress( );
+    }
   }
   
   public static InetAddress localHostInetAddress( ) {
@@ -284,7 +299,7 @@ public class Internets {
   public static final Comparator<InetAddress> INET_ADDRESS_COMPARATOR = new Inet4AddressComparator( );
   
   public static boolean testReachability( InetAddress inetAddr ) {
-    Assertions.assertNotNull( inetAddr );
+    assertThat( "BUG: inetAddr is null.", inetAddr, notNullValue( ) );
     try {
       return inetAddr.isReachable( 10000 );
     } catch ( IOException ex ) {
@@ -294,7 +309,7 @@ public class Internets {
   }
   
   public static boolean testReachability( String addr ) {
-    Assertions.assertNotNull( addr );
+    assertThat( "BUG: addr is null.", addr, notNullValue( ) );
     try {
       InetAddress inetAddr = Inet4Address.getByName( addr );
       return testReachability( inetAddr );
@@ -305,16 +320,16 @@ public class Internets {
   }
   
   public static InetAddress toAddress( URI uri ) {
-    Assertions.assertNotNull( uri );
+    assertThat( "BUG: uri is null.", uri, notNullValue( ) );
     try {
       return InetAddress.getByName( uri.getHost( ) );
     } catch ( UnknownHostException e ) {
-      throw Exceptions.illegalArgument( "Failed to resolve address for host: " + uri.getHost( ), e );
+      throw Exceptions.toUndeclared( "Failed to resolve address for host: " + uri.getHost( ), e );
     }
   }
   
   public static InetAddress toAddress( String maybeUrlMaybeHostname ) {
-    Assertions.assertNotNull( maybeUrlMaybeHostname );
+    assertThat( "BUG: maybeUrlMaybeHostname is null.", maybeUrlMaybeHostname, notNullValue( ) );
     if ( maybeUrlMaybeHostname.startsWith( "vm:" ) ) {
       maybeUrlMaybeHostname = "localhost";
     }
@@ -330,7 +345,7 @@ public class Internets {
     try {
       ret = InetAddress.getByName( hostAddress );
     } catch ( UnknownHostException e1 ) {
-      Exceptions.fatal( "Failed to resolve address for host: " + maybeUrlMaybeHostname, e1 );
+      Exceptions.error( "Failed to resolve address for host: " + maybeUrlMaybeHostname, e1 );
     }
     return ret;
   }

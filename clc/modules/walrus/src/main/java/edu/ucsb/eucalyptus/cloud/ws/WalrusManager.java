@@ -87,6 +87,7 @@ import org.jboss.cache.commands.tx.RollbackCommand;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
+import org.xbill.DNS.Name;
 
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
@@ -209,6 +210,7 @@ import edu.ucsb.eucalyptus.util.WalrusDataQueue;
 import edu.ucsb.eucalyptus.util.WalrusMonitor;
 import edu.ucsb.eucalyptus.util.SystemUtil;
 import com.eucalyptus.system.Threads;
+import com.eucalyptus.component.id.Dns;
 import com.eucalyptus.component.id.Walrus;
 
 public class WalrusManager {
@@ -421,34 +423,6 @@ public class WalrusManager {
 			}
 		}
 
-		if(WalrusProperties.enableVirtualHosting) {
-			if(checkDNSNaming(bucketName)) {
-				UpdateARecordType updateARecord = new UpdateARecordType();
-				updateARecord.setUserId(account.getAccountNumber());
-				URI walrusUri;
-				String address = null;
-				try {
-					walrusUri = new URI(SystemConfiguration.getWalrusUrl());
-					address = walrusUri.getHost();
-				} catch (URISyntaxException e) {
-					throw new EucalyptusCloudException("Could not get Walrus URL");
-				}
-				String zone = WalrusProperties.WALRUS_SUBDOMAIN + ".";
-				updateARecord.setAddress(address);
-				updateARecord.setName(bucketName + "." + zone);
-				updateARecord.setTtl(604800);
-				updateARecord.setZone(zone);
-				try {
-					ServiceDispatcher.lookupSingle(Components.lookup("dns")).send(updateARecord);
-					LOG.info("Mapping " + updateARecord.getName() + " to " + address);
-				} catch(Exception ex) {
-					LOG.error("Could not update DNS record", ex);
-				}
-			} else {
-				LOG.error("Bucket: " + bucketName + " fails to meet DNS requirements. Unable to create DNS mapping.");
-			}
-		}
-
 		reply.setBucket(bucketName);
 		return reply;
 	}
@@ -547,32 +521,6 @@ public class WalrusManager {
 							} catch (IOException ex) {
 								// set exception code in reply
 								LOG.error(ex);
-							}
-
-							if (WalrusProperties.enableVirtualHosting) {
-								URI walrusUri;
-								String address;
-								RemoveARecordType removeARecordType = new RemoveARecordType();
-								removeARecordType.setUserId(account.getAccountNumber());
-								String zone = WalrusProperties.WALRUS_SUBDOMAIN + ".";
-								removeARecordType.setName(bucketName + "." + zone);
-								removeARecordType.setZone(zone);
-								try {
-									walrusUri = new URI(SystemConfiguration.getWalrusUrl());
-									address = walrusUri.getHost();
-								} catch (URISyntaxException e) {
-									db.rollback();
-									throw new EucalyptusCloudException("Could not get Walrus URL");
-								}
-								removeARecordType.setAddress(address);
-								try {
-									ServiceDispatcher.lookupSingle(Components.lookup("dns")).send(
-											removeARecordType);
-									LOG.info("Removing mapping for "
-											+ removeARecordType.getName());
-								} catch (Exception ex) {
-									LOG.error("Could not update DNS record", ex);
-								}
 							}
 
 							Status status = new Status();
@@ -3338,5 +3286,18 @@ public class WalrusManager {
 		}
 		db.commit();
 		return reply;
+	}
+
+	public static InetAddress getBucketIp(String bucket) throws EucalyptusCloudException {
+		EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
+		try {
+			BucketInfo searchBucket = new BucketInfo(bucket);
+			db.getUnique(searchBucket);
+			return WalrusProperties.getWalrusAddress();
+		} catch (EucalyptusCloudException ex) {
+			throw ex;
+		} finally {
+			db.rollback();
+		}
 	}
 }

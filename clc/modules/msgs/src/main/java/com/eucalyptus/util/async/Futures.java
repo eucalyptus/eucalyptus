@@ -38,22 +38,28 @@
  */
 package com.eucalyptus.util.async;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.emptyArray;
-import static org.hamcrest.Matchers.not;
 import java.util.Arrays;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import java.util.concurrent.FutureTask;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.RunnableFuture;
 import org.apache.log4j.Logger;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.concurrent.GenericCheckedListenableFuture;
 import com.eucalyptus.util.concurrent.ListenableFuture;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.emptyArray;
+import static org.hamcrest.Matchers.not;
 
 public class Futures {
   private static Logger LOG = Logger.getLogger( Futures.class );
+  
+  public static <T> RunnableFuture<T> resultOf( Callable<T> call ) {
+    return new FutureTask<T>( call );
+  }
   
   public static <T> CheckedListenableFuture<T> newGenericeFuture( ) {
     return new GenericCheckedListenableFuture<T>( );
@@ -76,11 +82,12 @@ public class Futures {
   }
   
   /**
-   * Returns a new {@code Callable} which will execute {@code firstCall} and, if it succeeds, {@code secondCall} in sequence. The resulting {@code resultFuture}
-   * will return one of:
+   * Returns a new {@code Callable} which will execute {@code firstCall} and, if it succeeds,
+   * {@code secondCall} in sequence. The resulting {@code resultFuture} will return one of:
    * <ol>
    * <li>{@link Future#get()} returns the result of {@code secondCall}'s future result.</li>
-   * <li>{@link Future#get()} throws the exception which caused {@code firstCall} to fail -- in this case {@code secondCall} is not executed.</li>
+   * <li>{@link Future#get()} throws the exception which caused {@code firstCall} to fail -- in this
+   * case {@code secondCall} is not executed.</li>
    * <li>{@link Future#get()} throws the exception which caused {@code secondCall} to fail.</li>
    * </ol>
    * 
@@ -94,6 +101,13 @@ public class Futures {
     final CheckedListenableFuture<T> intermediateFuture = Futures.newGenericeFuture( );
     
     final Callable<T> chainingCallable = new Callable<T>( ) {
+      @Override
+      public String toString( ) {
+        return Callable.class.getSimpleName( ) + ":["
+               + firstCall.toString( )
+               + "] ==> "
+               + secondCall.toString( );
+      }
       
       @Override
       public T call( ) {
@@ -106,6 +120,14 @@ public class Futures {
             intermediateFuture.setException( ex );
           }
           Threads.lookup( Empyrean.class, Futures.class ).submit( new Runnable( ) {
+            @Override
+            public String toString( ) {
+              return Runnable.class.getSimpleName( ) + ":"
+                     + firstCall.toString( )
+                     + " ==> ["
+                     + secondCall.toString( )
+                     + "]";
+            }
             
             @Override
             public void run( ) {

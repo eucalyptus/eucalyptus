@@ -123,7 +123,7 @@ int vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, int
 	  return(1);
 	}
 	if (!network || !netmask || !broadcast || !nameserver || !router) {
-	  logprintfl(EUCAERROR, "vnetInit(): cannot verify network settings (VNET_SUBNET(%s), VNET_NETMASK(%s), VNET_BROADCAST(%s), VNET_NAMESERVER(%s), VNET_ROUTER(%s)), please check parameters\n", SP(network), SP(netmask), SP(broadcast), SP(nameserver), SP(router));
+	  logprintfl(EUCAERROR, "vnetInit(): cannot verify network settings (VNET_SUBNET(%s), VNET_NETMASK(%s), VNET_BROADCAST(%s), VNET_DNS(%s), VNET_ROUTER(%s)), please check parameters\n", SP(network), SP(netmask), SP(broadcast), SP(nameserver), SP(router));
 	  return(1);
 	}
       } else if (role == NC) {
@@ -149,7 +149,7 @@ int vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, int
 	  return(1);
 	}
 	if (!network || !netmask || !nameserver) {
-	  logprintfl(EUCAERROR, "vnetInit(): cannot verify network settings (VNET_SUBNET(%s), VNET_NETMASK(%s), VNET_NAMESERVER(%s), please check parameters\n", SP(network), SP(netmask), SP(nameserver));
+	  logprintfl(EUCAERROR, "vnetInit(): cannot verify network settings (VNET_SUBNET(%s), VNET_NETMASK(%s), VNET_DNS(%s), please check parameters\n", SP(network), SP(netmask), SP(nameserver));
 	  return(1);
 	}
       } else if (role == NC) {
@@ -173,7 +173,7 @@ int vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, int
 	  return(1);
 	}
 	if (!network || !netmask || !nameserver) {
-	  logprintfl(EUCAERROR, "vnetInit(): cannot verify network settings (VNET_SUBNET(%s), VNET_NETMASK(%s), VNET_NAMESERVER(%s)), please check parameters\n", SP(network), SP(netmask), SP(nameserver));
+	  logprintfl(EUCAERROR, "vnetInit(): cannot verify network settings (VNET_SUBNET(%s), VNET_NETMASK(%s), VNET_DNS(%s)), please check parameters\n", SP(network), SP(netmask), SP(nameserver));
 	  return(1);
 	}
       } else if (role == NC) {
@@ -285,14 +285,10 @@ int vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, int
 	rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
 
 	snprintf(cmd, 256, "-A POSTROUTING -d ! %s/%d -s %s/%d -j MASQUERADE", network, slashnet, network, slashnet);
-
 	rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
 
-	snprintf(cmd, 256, "-A POSTROUTING -d %s/%d -j MASQUERADE", network, slashnet);
-
-	rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
-
-	//	rc = vnetSetMetadataRedirect(vnetconfig);
+	//	snprintf(cmd, 256, "-A POSTROUTING -d %s/%d -j MASQUERADE", network, slashnet);
+	//	rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
 
 	unm = 0xFFFFFFFF - numaddrs;
 	unw = nw;
@@ -929,7 +925,7 @@ int vnetApplySingleTableRule(vnetConfig *vnetconfig, char *table, char *rule) {
     
   return(ret);
 }
-									 
+								 
 
 int vnetTableRule(vnetConfig *vnetconfig, char *type, char *destUserName, char *destName, char *sourceUserName, char *sourceNet, char *sourceNetName, char *protocol, int minPort, int maxPort) {
   int i, rc, done, destVlan, srcVlan, slashnet;
@@ -1352,6 +1348,7 @@ int vnetGenerateDHCP(vnetConfig *vnetconfig, int *numHosts) {
 	router = hex2dot(vnetconfig->networks[i].router);
       } else {
 	router = hex2dot(vnetconfig->networks[i].router + vnetconfig->tunnels.localIpId);
+	//router = hex2dot(vnetconfig->networks[i].router);
       }
       
       if (vnetconfig->euca_ns != 0) {
@@ -2067,6 +2064,7 @@ int vnetAddGatewayIP(vnetConfig *vnetconfig, int vlan, char *devname, int localI
   }
 
   newip = hex2dot(vnetconfig->networks[vlan].router + localIpId);
+  //  newip = hex2dot(vnetconfig->networks[vlan].router);
   broadcast = hex2dot(vnetconfig->networks[vlan].bc);
   logprintfl(EUCADEBUG, "vnetAddGatewayIP(): adding gateway IP: %s\n", newip);
 
@@ -2098,6 +2096,94 @@ int vnetAddGatewayIP(vnetConfig *vnetconfig, int vlan, char *devname, int localI
   return(0);
 }
 
+
+int vnetApplyArpTableRules(vnetConfig *vnetconfig) {
+  int rc, fd, ret=0, i, j, k, done, slashnet;
+  char *file, cmd[256];
+  FILE *FH;
+  
+  if (!vnetconfig) {
+    logprintfl(EUCAERROR, "vnetApplyArpTableRules(): bad input params (null vnetconfig)\n");
+    return(1);
+  }
+  
+  logprintfl(EUCADEBUG, "vnetApplyArpTableRules(): applying arptable rules\n");
+
+  file = strdup("/tmp/euca-arpt-XXXXXX");
+  if (!file) {
+    return(1);
+  }
+  fd = safe_mkstemp(file);
+  if (fd < 0) {
+    free(file);
+    return(1);
+  }
+  chmod(file, 0644);
+  FH = fdopen(fd, "w");
+  if (!FH) {
+    close(fd);
+    unlink(file);
+    free(file);
+    return(1);
+  }
+  
+  //  fprintf(FH, "%s\n", rule);
+  for (i=0; i<NUMBER_OF_VLANS; i++) {
+    if (vnetconfig->networks[i].active) {
+      char *net=NULL, *gw=NULL;
+      net = hex2dot(vnetconfig->networks[i].nw);
+      gw = hex2dot(vnetconfig->networks[i].router);
+
+      for (j=0; j<NUMBER_OF_HOSTS_PER_VLAN; j++) {
+	if (vnetconfig->networks[i].addrs[j].ip && vnetconfig->networks[i].addrs[j].active) {
+	  done=0;
+	  for (k=0; k<NUMBER_OF_PUBLIC_IPS && !done; k++) {
+	    if (vnetconfig->publicips[k].allocated && (vnetconfig->publicips[k].dstip == vnetconfig->networks[i].addrs[j].ip)) {
+	      char *ip=NULL;
+	      ip = hex2dot(vnetconfig->networks[i].addrs[j].ip);
+	      if (ip && gw) {
+		fprintf(FH, "IP=%s,%s\n", ip,gw);
+		done++;
+		free(ip);
+	      }
+	    }
+	  }
+	}
+      }
+      for (k=0; k<NUMBER_OF_PUBLIC_IPS; k++) {
+	if (vnetconfig->publicips[k].allocated && vnetconfig->publicips[k].dstip) {
+	  char *ip=NULL;
+	  ip = hex2dot(vnetconfig->publicips[k].dstip);
+	  if (ip && gw) {
+	    fprintf(FH, "IP=%s,%s\n", ip,gw);
+	    free(ip);
+	  }
+	}
+      }
+      if (net && gw) {
+	slashnet = 32 - ((int)log2((double)(0xFFFFFFFF - vnetconfig->networks[i].nm)) + 1);
+	fprintf(FH, "NET=%s/%d,%s\n", net, slashnet, gw);
+	free(gw);
+	free(net);
+      }
+    }
+  }
+
+  fclose(FH);
+  close(fd);
+  
+  snprintf(cmd, 256, "%s/usr/lib/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/euca_arpt %s", vnetconfig->eucahome, vnetconfig->eucahome, file);
+  //  logprintfl(EUCADEBUG, "running cmd '%s'\n", cmd);
+  rc = system(cmd);
+  if (rc) {
+    ret = 1;
+  }
+  unlink(file);
+  free(file);
+    
+  return(ret);  
+}
+
 int vnetDelGatewayIP(vnetConfig *vnetconfig, int vlan, char *devname, int localIpId) {
   char *newip, *broadcast;
   int rc;
@@ -2110,6 +2196,7 @@ int vnetDelGatewayIP(vnetConfig *vnetconfig, int vlan, char *devname, int localI
   }
 
   newip = hex2dot(vnetconfig->networks[vlan].router + localIpId);
+  //  newip = hex2dot(vnetconfig->networks[vlan].router);
   broadcast = hex2dot(vnetconfig->networks[vlan].bc);
   logprintfl(EUCADEBUG, "vnetDelGatewayIP(): removing gateway IP: %s\n", newip);  
   //  snprintf(cmd, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap ifconfig %s %s netmask %s up", vnetconfig->eucahome, devname, newip, netmask);
@@ -2398,8 +2485,8 @@ int vnetAssignAddress(vnetConfig *vnetconfig, char *src, char *dst) {
 
     slashnet = 32 - ((int)log2((double)(0xFFFFFFFF - vnetconfig->nm)) + 1);
     network = hex2dot(vnetconfig->nw);
-    snprintf(cmd, 255, "-I POSTROUTING -s %s -d ! %s/%d -j SNAT --to-source %s", dst, network, slashnet, src);
-    //    snprintf(cmd, MAX_PATH, "-I POSTROUTING -s %s -j SNAT --to-source %s", dst, src);
+    //snprintf(cmd, 255, "-I POSTROUTING -s %s -d ! %s/%d -j SNAT --to-source %s", dst, network, slashnet, src);
+    snprintf(cmd, MAX_PATH, "-I POSTROUTING -s %s -j SNAT --to-source %s", dst, src);
     if (network) free(network);
     rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
     if (rc) {
@@ -2461,9 +2548,9 @@ int vnetReassignAddress(vnetConfig *vnetconfig, char *uuid, char *src, char *dst
     return(1);
   }
   
-  if (vnetCheckPublicIP(vnetconfig, src)) {
-    return(0);
-  }
+  //  if (vnetCheckPublicIP(vnetconfig, src)) {
+  //    return(0);
+  //  }
   
   // get the publicIP of interest
   isallocated = 0;
@@ -2556,8 +2643,8 @@ int vnetUnassignAddress(vnetConfig *vnetconfig, char *src, char *dst) {
 
     slashnet = 32 - ((int)log2((double)(0xFFFFFFFF - vnetconfig->nm)) + 1);
     network = hex2dot(vnetconfig->nw);
-    snprintf(cmd, 255, "-D POSTROUTING -s %s -d ! %s/%d -j SNAT --to-source %s", dst, network, slashnet, src);
-    //    snprintf(cmd, MAX_PATH, "-D POSTROUTING -s %s -j SNAT --to-source %s", dst, src);
+    //    snprintf(cmd, 255, "-D POSTROUTING -s %s -d ! %s/%d -j SNAT --to-source %s", dst, network, slashnet, src);
+    snprintf(cmd, MAX_PATH, "-D POSTROUTING -s %s -j SNAT --to-source %s", dst, src);
     if (network) free(network);
     rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
     count=0;

@@ -38,10 +38,16 @@ public class AuthException extends BaseException {
   public static final String NO_SUCH_ACCOUNT = "No such account";
   public static final String USER_GROUP_DELETE = "Can not delete user group";
   public static final String NO_SUCH_CERTIFICATE = "No such certificate";
+  public static final String NO_SUCH_KEY = "No such access key";
   public static final String DELETE_SYSTEM_ACCOUNT = "Can not delete system account";
   public static final String ACCESS_DENIED = "Access to the resource is denied";
   public static final String QUOTA_EXCEEDED = "Resource quota is exceeded";
   public static final String SYSTEM_MODIFICATION = "It is not possible to modify the SYSTEM user or account.";
+  public static final String INVALID_NAME = "Invalid name";
+  public static final String INVALID_PATH = "Invalid path";
+  public static final String INVALID_CERT = "Invalid cert";
+  public static final String INVALID_PASSWORD = "Invalid password";
+  public static final String CONFLICT = "Conflict";
   
   public AuthException( ) {
     super( );

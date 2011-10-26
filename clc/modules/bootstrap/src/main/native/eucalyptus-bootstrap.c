@@ -761,6 +761,11 @@ int java_init(euca_opts *args, java_home_t *data) {
 	if (args->force_remote_bootstrap_flag || args->disable_cloud_flag) {
 		JVM_ARG(opt[++x], "-Deuca.force.remote.bootstrap=true");
 	}
+
+        if (args->debug_noha_flag) {
+                JVM_ARG(opt[++x], "-Deuca.noha.cloud");
+        }
+
 	if (args->debug_flag) {
 		JVM_ARG(opt[++x], "-XX:+HeapDumpOnOutOfMemoryError");
 		JVM_ARG(opt[++x], "-XX:HeapDumpPath=%s/var/log/eucalyptus/", GETARG(args, home));
@@ -771,9 +776,9 @@ int java_init(euca_opts *args, java_home_t *data) {
 				GETARG(args, debug_port),
 				(args->debug_suspend_flag ? "y" : "n"));
 	}
-	if (!args->no_jmx_flag) {
+	if (args->jmx_flag || args->debug_flag) {
 		JVM_ARG(opt[++x], "-Dcom.sun.management.jmxremote");//TODO:GRZE:wrapup jmx stuff here.
-	//		JVM_ARG(opt[++x], "-Dcom.sun.management.jmxremote.port=8772");
+		JVM_ARG(opt[++x], "-Dcom.sun.management.jmxremote.port=8772");
 		JVM_ARG(opt[++x], "-Dcom.sun.management.jmxremote.authenticate=false");//TODO:GRZE:RELEASE FIXME to use ssl
 		JVM_ARG(opt[++x], "-Dcom.sun.management.jmxremote.ssl=false");
 	}

@@ -19,6 +19,8 @@ public abstract class QuotaKey implements Key {
   
   public abstract String value( Scope scope, String id, String resource, Long quantity ) throws AuthException;
   
+  public static final Long MB = 1024 * 1024L;
+  
   @Override
   public final String value( ) throws AuthException {
     throw new RuntimeException( "QuotaKey should not call the default value interface." );
@@ -31,4 +33,7 @@ public abstract class QuotaKey implements Key {
     }
   }
   
+  public static Long toMb( Long sizeInBytes ) {
+    return sizeInBytes / MB;
+  }
 }

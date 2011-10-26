@@ -169,7 +169,7 @@
     <priority value="${euca.log.level}" />
     <appender-ref ref="cloud-exhaust" />
   </category>
-  <category name="EXTREME" additivity="true">
+  <category name="EXTREME" additivity="false">
     <priority value="TRACE" />
     <appender-ref ref="cloud-extreme" />
   </category>
@@ -248,6 +248,10 @@
   </category>
   <category name="org.apache" additivity="false">
     <priority value="${euca.log.exhaustive.external}" />
+    <appender-ref ref="cloud-exhaust" />
+  </category>
+  <category name="com.eucalyptus.crypto.util.WSSecurity" additivity="false">
+    <priority value="${euca.log.level}" />
     <appender-ref ref="cloud-exhaust" />
   </category>
   <!--

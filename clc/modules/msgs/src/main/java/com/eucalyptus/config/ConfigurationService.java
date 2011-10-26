@@ -63,12 +63,14 @@
 
 package com.eucalyptus.config;
 
-import java.util.ArrayList;
-import java.util.List;
 import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.ComponentId.AdminService;
+import com.eucalyptus.component.ComponentId.Partition;
 import com.eucalyptus.component.id.Eucalyptus;
 
-public class ConfigurationService extends ComponentId.Unpartioned {
+@Partition( Eucalyptus.class )
+@AdminService
+public class ConfigurationService extends ComponentId {
   
   public ConfigurationService( ) {
     super( "Configuration" );
@@ -77,20 +79,6 @@ public class ConfigurationService extends ComponentId.Unpartioned {
   @Override
   public String getLocalEndpointName( ) {
     return "vm://ConfigurationInternal";
-  }
-  
-  @Override
-  public List<Class<? extends ComponentId>> serviceDependencies( ) {
-    return new ArrayList<Class<? extends ComponentId>>( ) {
-      {
-        this.add( Eucalyptus.class );
-      }
-    };
-  }
-
-  @Override
-  public boolean isAdminService( ) {
-    return true;
   }
   
 }

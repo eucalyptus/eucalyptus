@@ -195,7 +195,7 @@ public class HttpServerBootstrapper extends Bootstrapper {
     @Override
     public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
       LOG.warn( "Change occurred to property " + t.getQualifiedName( ) + " which will restart the servlet container." );
-      if ( jettyServer == null ) {
+      if ( jettyServer == null || !Bootstrap.isFinished( ) ) {
         return;
       } else if ( jettyServer.isRunning( ) ) {
         try {
