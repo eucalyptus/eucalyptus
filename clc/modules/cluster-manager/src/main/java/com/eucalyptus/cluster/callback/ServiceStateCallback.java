@@ -40,8 +40,7 @@ public class ServiceStateCallback extends SubjectMessageCallback<Cluster, Descri
           CheckException ex = ServiceChecks.chainCheckExceptions( ServiceChecks.Functions.statusToCheckExceptions( this.getRequest( ).getCorrelationId( ) ).apply( status ) );
           if ( Component.State.NOTREADY.equals( serviceState ) ) {
             throw new IllegalStateException( ex );
-          } else if ( Component.State.NOTREADY.equals( localState )
-                      && Component.State.NOTREADY.ordinal( ) < serviceState.ordinal( ) ) {
+          } else if ( Component.State.NOTREADY.ordinal( ) < serviceState.ordinal( ) ) {
             this.getSubject( ).clearExceptions( );
           } else if ( Component.State.ENABLED.equals( serviceState ) && Component.State.DISABLED.ordinal( ) >= proxyState.ordinal( ) ) {
             try {

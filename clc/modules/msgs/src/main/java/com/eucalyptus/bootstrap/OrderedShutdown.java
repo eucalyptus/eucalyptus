@@ -71,6 +71,7 @@ import org.apache.log4j.Logger;
 
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.util.Exceptions;
 
 
 /**
@@ -98,7 +99,7 @@ public class OrderedShutdown {
 				try {
 					executor.submit(h.getRunnable()).get();
 				} catch (InterruptedException e) {
-					LOG.error(e, e);
+				  Exceptions.maybeInterrupted(e);
 				} catch (ExecutionException e) {
 					LOG.error(e, e);
 				}

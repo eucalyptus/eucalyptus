@@ -250,7 +250,6 @@ public class ServiceBootstrapper extends Bootstrapper.Simple {
       boolean ret = config.getComponentId( ).isAlwaysLocal( ) || config.isVmLocal( )
                           || ( BootstrapArgs.isCloudController( ) && config.getComponentId( ).isCloudLocal( ) )
                           || Hosts.Coordinator.INSTANCE.isLocalhost( );
-      ret &= !( Eucalyptus.class.equals( config.getComponentId( ).getClass( ) ) && !config.isHostLocal( ) );
       LOG.debug( "ServiceBootstrapper.shouldLoad(" + config.toString( )
                  + "):"
                  + ret );
