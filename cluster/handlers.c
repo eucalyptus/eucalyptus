@@ -3488,7 +3488,7 @@ int init_config(void) {
     
     sem_mywait(VNET);
     
-    vnetInit(vnetconfig, pubmode, eucahome, netPath, CLC, pubInterface, privInterface, numaddrs, pubSubnet, pubSubnetMask, pubBroadcastAddress, pubDNS, pubDomainname, pubRouter, daemon, dhcpuser, NULL, localIp, macPrefix);
+    int ret = vnetInit(vnetconfig, pubmode, eucahome, netPath, CLC, pubInterface, privInterface, numaddrs, pubSubnet, pubSubnetMask, pubBroadcastAddress, pubDNS, pubDomainname, pubRouter, daemon, dhcpuser, NULL, localIp, macPrefix);
     if (pubSubnet) free(pubSubnet);
     if (pubSubnetMask) free(pubSubnetMask);
     if (pubBroadcastAddress) free(pubBroadcastAddress);
@@ -3503,6 +3503,12 @@ int init_config(void) {
     if (pubInterface) free(pubInterface);
     if (macPrefix) free(macPrefix);
     if (localIp) free(localIp);
+
+    if(ret > 0) {
+      sem_mypost(VNET);
+      sem_mypost(INIT);
+      return(1);
+    }
     
     vnetAddDev(vnetconfig, vnetconfig->privInterface);
 
