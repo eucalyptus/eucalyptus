@@ -384,7 +384,7 @@ public class Topology {
     
     static ServiceKey create( final ServiceConfiguration config ) {
       if ( config.getComponentId( ).isPartitioned( ) ) {
-        final Partition p = Partitions.lookup( config );
+        final Partition p = Partitions.lookupByName( config.getPartition( ) );
         return new ServiceKey( config.getComponentId( ), p );
       } else if ( config.getComponentId( ).isAlwaysLocal( ) || ( config.getComponentId( ).isCloudLocal( ) && !config.getComponentId( ).isRegisterable( ) ) ) {
         final Partition p = Partitions.lookupInternal( config );
