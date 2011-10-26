@@ -178,15 +178,27 @@ public class ServiceTransitions {
   }
   
   private static State[] pathToBroken( Component.State fromState ) {
-    return ObjectArrays.concat( ServiceTransitions.pathToPrimordial( fromState ), Component.State.BROKEN );
+    if ( Component.State.BROKEN.equals( fromState ) ) {
+      return new State[] {};
+    } else {
+      return ObjectArrays.concat( ServiceTransitions.pathToPrimordial( fromState ), Component.State.BROKEN );
+    }
   }
   
   private static State[] pathToPrimordial( Component.State fromState ) {
-    return ObjectArrays.concat( ServiceTransitions.pathToStopped( fromState ), Component.State.PRIMORDIAL );
+    if ( Component.State.PRIMORDIAL.equals( fromState ) ) {
+      return new State[] {};
+    } else {
+      return ObjectArrays.concat( ServiceTransitions.pathToStopped( fromState ), Component.State.PRIMORDIAL );
+    }
   }
   
   private static State[] pathToLoaded( Component.State fromState ) {
-    return ObjectArrays.concat( ServiceTransitions.pathToInitialized( fromState ), Component.State.LOADED );
+    if ( Component.State.LOADED.equals( fromState ) ) {
+      return new State[] {};
+    } else {
+      return ObjectArrays.concat( ServiceTransitions.pathToInitialized( fromState ), Component.State.LOADED );
+    }
   }
   
   private static final State[] pathToInitialized( final Component.State fromState ) {
@@ -214,7 +226,11 @@ public class ServiceTransitions {
   }
   
   private static State[] pathToStarted( Component.State fromState ) {
-    return ObjectArrays.concat( ServiceTransitions.pathToLoaded( fromState ), Component.State.NOTREADY );
+    if ( Component.State.NOTREADY.equals( fromState ) ) {
+      return new State[] {};
+    } else {
+      return ObjectArrays.concat( ServiceTransitions.pathToLoaded( fromState ), Component.State.NOTREADY );
+    }
   }
   
   private static final State[] pathToDisabled( final Component.State fromState ) {
@@ -251,6 +267,9 @@ public class ServiceTransitions {
       case DISABLED:
       case NOTREADY:
         transition = ObjectArrays.concat( transition, Component.State.STOPPED );
+        break;
+      case STOPPED:
+        transition = new State[] {};
         break;
       default:
         transition = ObjectArrays.concat( pathToStarted( fromState ), Component.State.STOPPED );
