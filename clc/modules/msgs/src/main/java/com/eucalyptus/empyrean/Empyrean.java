@@ -88,7 +88,7 @@ public class Empyrean extends ComponentId {
   public static final Empyrean INSTANCE         = new Empyrean( );                   //NOTE: this has a silly name because it is temporary.  do not use it as an example of good form for component ids.
                                                                                       
   @Partition( value = { Empyrean.class }, manyToOne = true )
-  @InternalService
+//  @InternalService
   public static class Arbitrator extends ComponentId {
     
     private static final long serialVersionUID = 1L;
