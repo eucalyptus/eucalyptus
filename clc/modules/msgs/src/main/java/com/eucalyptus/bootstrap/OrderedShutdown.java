@@ -98,7 +98,7 @@ public class OrderedShutdown {
 				try {
 					executor.submit(h.getRunnable()).get();
 				} catch (InterruptedException e) {
-					LOG.error(e, e);
+					Thread.currentThread( ).interrupt( );
 				} catch (ExecutionException e) {
 					LOG.error(e, e);
 				}
