@@ -40,14 +40,14 @@ public class ServiceStateCallback extends SubjectMessageCallback<Cluster, Descri
           CheckException ex = ServiceChecks.chainCheckExceptions( ServiceChecks.Functions.statusToCheckExceptions( this.getRequest( ).getCorrelationId( ) ).apply( status ) );
           if ( Component.State.NOTREADY.equals( serviceState ) ) {
             throw new IllegalStateException( ex );
-          } else if ( Component.State.NOTREADY.ordinal( ) < serviceState.ordinal( ) ) {
-            this.getSubject( ).clearExceptions( );
           } else if ( Component.State.ENABLED.equals( serviceState ) && Component.State.DISABLED.ordinal( ) >= proxyState.ordinal( ) ) {
             try {
-              Automata.sequenceTransitions( this.getSubject( ), State.ENABLED, State.DISABLED ).call( ).get( );
+              AsyncRequests.newRequest( new DisableServiceCallback( this.getSubject( ) ) ).sendSync( this.getSubject( ).getConfiguration( ) );
             } catch ( Exception ex1 ) {
               LOG.error( ex1, ex1 );
             }
+          } else if ( Component.State.NOTREADY.ordinal( ) < serviceState.ordinal( ) ) {
+            this.getSubject( ).clearExceptions( );
           }
         } else {
           LOG.debug( "Found service info: " + status );
