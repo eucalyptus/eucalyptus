@@ -111,6 +111,10 @@ int vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, int
     if (!strcmp(mode, "SYSTEM")) {
       if (role == CLC) {
       } else if (role == NC) {
+	if (!bridgedev || check_bridge(bridgedev)) {
+	  logprintfl (EUCAERROR, "vnetInit(): cannot verify VNET_BRIDGE(%s), please check parameters and bridge device\n", SP(bridgedev));
+	  return(1);
+	}
       }
     } else if (!strcmp(mode, "STATIC") || !strcmp(mode, "STATIC-DYNMAC")) {
       if (role == CLC) {
@@ -179,6 +183,7 @@ int vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, int
       } else if (role == NC) {
       }
     } else {
+      logprintfl(EUCAERROR, "vnetInit(): invalid networking mode %s, please check VNET_MODE parameter\n", SP(mode));
       return(1);
     }
     
