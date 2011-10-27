@@ -228,6 +228,8 @@ public class ServiceTransitions {
   private static State[] pathToStarted( Component.State fromState ) {
     if ( Component.State.NOTREADY.equals( fromState ) ) {
       return new State[] {};
+    } else if ( Component.State.LOADED.equals( fromState ) ) {
+      return new State[] { Component.State.LOADED, Component.State.NOTREADY };
     } else {
       return ObjectArrays.concat( ServiceTransitions.pathToLoaded( fromState ), Component.State.NOTREADY );
     }
@@ -728,7 +730,8 @@ public class ServiceTransitions {
     STATIC_PROPERTIES_ADD {
       @Override
       public void fire( final ServiceConfiguration config ) {
-        for ( Entry<String, ConfigurableProperty> entry : Iterables.filter( PropertyDirectory.getPendingPropertyEntries( ), Predicates.instanceOf( StaticPropertyEntry.class ) ) ) {
+        for ( Entry<String, ConfigurableProperty> entry : Iterables.filter( PropertyDirectory.getPendingPropertyEntries( ),
+                                                                            Predicates.instanceOf( StaticPropertyEntry.class ) ) ) {
           try {
             ConfigurableProperty prop = entry.getValue( );
             PropertyDirectory.addProperty( prop );
