@@ -186,19 +186,29 @@ public class ServiceTransitions {
   }
   
   private static State[] pathToPrimordial( Component.State fromState ) {
-    if ( Component.State.PRIMORDIAL.equals( fromState ) ) {
-      return new State[] {};
-    } else {
-      return ObjectArrays.concat( ServiceTransitions.pathToStopped( fromState ), Component.State.PRIMORDIAL );
+    State[] transition = new State[] { fromState };
+    switch ( fromState ) {
+      case PRIMORDIAL:
+        transition = new State[] {};
+        break;
+      default:
+        transition = ObjectArrays.concat( ServiceTransitions.pathToStopped( fromState ), Component.State.PRIMORDIAL );
+        break;
     }
+    return transition;
   }
   
   private static State[] pathToLoaded( Component.State fromState ) {
-    if ( Component.State.LOADED.equals( fromState ) ) {
-      return new State[] {};
-    } else {
-      return ObjectArrays.concat( ServiceTransitions.pathToInitialized( fromState ), Component.State.LOADED );
+    State[] transition = new State[] { fromState };
+    switch ( fromState ) {
+      case LOADED:
+        transition = new State[] {};
+        break;
+      default:
+        transition = ObjectArrays.concat( ServiceTransitions.pathToInitialized( fromState ), Component.State.LOADED );
+        break;
     }
+    return transition;
   }
   
   private static final State[] pathToInitialized( final Component.State fromState ) {
@@ -206,7 +216,7 @@ public class ServiceTransitions {
     switch ( fromState ) {
       case LOADED:
         transition = ObjectArrays.concat( fromState, pathToInitialized( Component.State.NOTREADY ) );
-        //$FALL-THROUGH$
+        break;
       case ENABLED:
         transition = ObjectArrays.concat( transition, Component.State.DISABLED );
         //$FALL-THROUGH$
