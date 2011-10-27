@@ -22,8 +22,7 @@
 #    b. Add the user to the OS using /usr/sbin/useradd
 #    c. Download credentials and put them in his home dir
 #    d. Source eucarc automatically by adding a line to his .bashrc
-#    e. Add s3curl.pl to his path by adding a line to his .bashrc
-#    f. Bundle, upload, and register the associated image
+#    e. Bundle, upload, and register the associated image
 #  4. Bundle and upload the kernel and ramdisk images
 #  5. Run this script as root. This script must run as root because it su's
 #       and changes users.
@@ -45,19 +44,34 @@ my $duration = shift;
 my $kernel_image = shift;
 my $ramdisk_image = shift;
 
+my @pids = ();
+
 my $user_num = 1;
 while ($#ARGV>0) {
 	my $user = shift;
 	my $image = shift;
-	system("su - $user -c \"./simulate_one_user.pl $num_instances_per_user $interval $duration $user_num $kernel_image $ramdisk_image $image > log\" &")
-		and die("couldn't execute simulate_one_user for user: $user\n");
+
+	# fork and run each simulation as a separate user
+	my $pid = fork();
+	if ($pid==0) {
+		# We must shell out to change users
+		exec("su - $user -c \"\$PWD/simulate_one_user.pl $num_instances_per_user $interval $duration $user_num $kernel_image $ramdisk_image $image > log 2>&1\"")
+			or die ("couldn't exec");
+	}
+	push(@pids, $pid);
+	print "Started pid:$pid\n";
 	$user_num++;
 }
 
-print "Done executing as users.\n";
+print "Done forking.\n";
 
-# Allow enough delay for all background processes to exit.
-#  Duration plus 120 secs for starting instances, 4 secs for each allocation
-#  of s3 and vols, and additional 120 secs as buffer
-sleep $duration + ($interval * 4) + 240;
+foreach (@pids) {
+	print "Waiting for:$_\n";
+	waitpid($_,0);
+	if ($? != 0) {
+		die("Child exited with error code:$_");
+	}
+}
+
+print "Done.\n";
 

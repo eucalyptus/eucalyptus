@@ -18,9 +18,7 @@
 #   must be running; 3) You must have created and uploaded all the images,
 #   ramdisk images, and kernel images which you pass in; 4) eucarc must
 #   be sourced; 5) A Eucalyptus user corresponding to the credentials
-#   must have been created, accepted, and confirmed; 6) s3curl.pl must be in
-#   the user's path7; 7) Perl must have the Digest/HMAC-SHA1.pm module
-#   installed so s3curl.pl can run.
+#   must have been created, accepted, and confirmed.
 #
 # (c)2011, Eucalyptus Systems, Inc. All Rights Reserved.
 # author: tom.werges
@@ -37,7 +35,8 @@ if ($#ARGV+1 < 6) {
 # Takes a size (in MB) of dummy data, and returns a path to the resultant file
 sub generate_dummy_file($) {
 	my $size=$_[0];
-	my $path = "dummy-$size-megabyte.txt";
+	my $time = time();
+	my $path = "dummy-$size-megabyte-$time.txt";
 	my $dummy_data = "f00d";
 	unless (-e $path) {
 		open FILE, ">$path" or die ("couldn't open dummy file for writing");
@@ -46,6 +45,7 @@ sub generate_dummy_file($) {
 		}
 		close FILE or die ("couldn't close dummy file");
 	}
+	sleep 2;
 	return $path;
 }
 
@@ -94,6 +94,7 @@ my %instance_data = ();  # instance_id => status
 my $access_key = $ENV{"EC2_ACCESS_KEY"};
 my $secret_key = $ENV{"EC2_SECRET_KEY"};
 my $s3_url = $ENV{"S3_URL"};
+my $user = $ENV{"USER"};
 
 print "num_instances:$num_instances interval:$interval duration:$duration kernel:$kernel_image ramdisk:$ramdisk_image s3_url:$s3_url image:$image\n";
 
@@ -128,6 +129,7 @@ $output = `euca-describe-availability-zones` or die("couldn't euca-describe-avai
 my @zones = parse_avail_zones($output);
 print "Using zone:$zones[0]\n";
 
+
 # Allocate storage and s3 for each user, every INTERVAL, sleeping between
 for (my $i=0; ($i*$interval) < $duration; $i++) {
 	print "iter:$i\n";
@@ -135,10 +137,10 @@ for (my $i=0; ($i*$interval) < $duration; $i++) {
 	print "$i: Created volume\n";
 	my $time = time();
 	my $dummy_data_path = generate_dummy_file($storage_usage_mb);
-	system("s3curl.pl --id $access_key --key $secret_key --put /dev/null -- -s -v $url/mybucket-$user") and die("creating bucket failed");
 	print "$i: Created bucket\n";
-	system("s3curl.pl --id $access_key --key $secret_key --put $dummy_data_path -- -s -v $url/mybucket/obj-$user-$time") and die("creating s3 obj failed");
-	print "$i: Created object\n";
+	system("euca-bundle-image -i $dummy_data_path");
+	system("euca-upload-bundle -b mybucket -m /tmp/$dummy_data_path.manifest.xml");
+	print "$i: Uploaded bundle\n";
 	sleep $interval;
 }
 
@@ -148,3 +150,5 @@ foreach (keys %instance_data) {
 	print "Terminated instance:$_\n";
 }
 
+# Clean up dummy files
+system("rm -f dummy-*-megabyte*") or die("Couldn't clean up files");
