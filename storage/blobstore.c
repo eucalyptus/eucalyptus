@@ -313,20 +313,21 @@ static int close_and_unlock (int fd)
     int ret = 0;
     { // critical section
         pthread_mutex_lock (&_blobstore_mutex); // grab global lock (we will not block below and we may be deallocating)
-        logprintfl (EUCADEBUG2, "{%u} close_and_unlock: have global lock fd=%d\n", (unsigned int)pthread_self(), fd);
+        logprintfl (EUCADEBUG2, "{%u} close_and_unlock: obtained global lock for closing of fd=%d\n", (unsigned int)pthread_self(), fd);
         
-        blobstore_filelock * l; // lock struct to which this fd belongs
+        blobstore_filelock * path_lock; // lock struct to which this fd belongs
         int index = -1; // index of this fd entry in the lock struct
         int open_fds = 0; // count of other open file descriptors for this lock
         
         // traverse all locks, looking for one with fd,
         // when found, compute index and open_fds
         blobstore_filelock ** next_ptr = &locks_list;
-        for (l = locks_list; l; l=l->next) { // look for the fd 
+        for (blobstore_filelock * l = locks_list; l; l=l->next) { // look for the fd 
             assert (l->next_fd>=0 && l->next_fd<=BLOBSTORE_MAX_CONCURRENT);
             for (int i=0; i<l->next_fd; i++) {
-                if (l->fd [i] == fd) {
-                    index = i; // found it!
+                if (l->fd_status [i] && l->fd [i] == fd) {
+                    path_lock = l; // found it!
+                    index = i; 
                     break;
                 }
             }
@@ -335,44 +336,51 @@ static int close_and_unlock (int fd)
             next_ptr = &(l->next); // list head or prev element
         }
 
-        if (l) { // we found a match
-            assert (* next_ptr == l);
+        if (path_lock) { 
+            assert (* next_ptr == path_lock);
             assert (index>=0 && index<BLOBSTORE_MAX_CONCURRENT);
-            boolean did_close = 0;
+            
+            boolean did_close = FALSE;
+            boolean do_free = FALSE;
+            { // inner critical section to protect changes to 'path_lock', if any
+                pthread_mutex_lock (&(path_lock->mutex)); // grab path-specific mutex
+                if (path_lock->fd_status [index] == 1) { // has not been closed yet
+                    path_lock->fd_status [index] = 0; // set status to 'unused'
+                    did_close = TRUE;
+                    path_lock->refs--;
 
-            { // inner critical section to protect changes to 'l', if any
-                pthread_mutex_lock (&(l->mutex)); // grab path-specific mutex
-                if (l->fd_status [index] == 1) { // has not been closed yet
-                    l->fd_status [index] = 0; // set status to 'unused'
-                    
                     int open_fds = 0;
-                    for (int i=0; i<l->next_fd; i++) {
-                        if (l->fd_status [i]) {
-                            assert (l->fd [i] != fd);
+                    for (int i=0; i<path_lock->next_fd; i++) {
+                        if (path_lock->fd_status [i]) {
+                            assert (path_lock->fd [i] != fd);
                             open_fds++;
                         }
                     }
-                    if (open_fds==0) { // no open blockblob file descriptors in this process
-                        close_filelock (l);
-                        logprintfl (EUCADEBUG2, "{%u} close_and_unlock: closed fd=%d path=%s\n", (unsigned int)pthread_self(), fd, l->path);
+
+                    if (open_fds==0 && path_lock->refs==0) { // no open blockblob file descriptors in this process
+                        close_filelock (path_lock);
+                        * next_ptr = path_lock->next; // remove from LL
+                        do_free = TRUE;
+                        _locks_list_rem_ctr++;
+                        logprintfl (EUCADEBUG2, "{%u} close_and_unlock: unlocked and freed fd=%d path=%s\n", 
+                                    (unsigned int)pthread_self(), fd, path_lock->path);
+                        
+                    } else {
+                        struct flock l;
+                        fcntl (fd, F_SETLK, flock_whole_file (&l, F_UNLCK)); // give up the file lock
+                        pthread_rwlock_unlock (&(path_lock->lock)); // give up the Posix lock
+                        logprintfl (EUCADEBUG2, "{%u} close_and_unlock: unlocked but kept fd=%d path=%d open/refs=%d/%d\n", 
+                                    (unsigned int)pthread_self(), fd, path_lock->path, open_fds, path_lock->refs);
                     }
-                    did_close = 1;
                 }
-                pthread_mutex_unlock (&(l->mutex));
+                
+                pthread_mutex_unlock (&(path_lock->mutex));
             } // end of critical section
             
-            if (did_close) {
-                if (--l->refs==0) { // no references to this struct (from waiting threads)
-                    * next_ptr = l->next; // remove from LL
-                    _locks_list_rem_ctr++;
-                    free_filelock (l);
-                    logprintfl (EUCADEBUG2, "{%u} close_and_unlock: fd=%d freed\n", (unsigned int)pthread_self(), fd);
-                } else {
-                    assert (l->refs>=0);
-                    pthread_rwlock_unlock (&(l->lock)); // give up the Posix lock
-                    logprintfl (EUCADEBUG2, "{%u} close_and_unlock: fd=%d lock has references=%d\n", (unsigned int)pthread_self(), fd, l->refs);
-                }
-            } else {
+            if (do_free)
+                free_filelock (path_lock);
+            
+            if (! did_close) {
                 ERR (BLOBSTORE_ERROR_BADF, "file descriptor already closed");
                 ret = -1;
             }
@@ -386,7 +394,7 @@ static int close_and_unlock (int fd)
         else
             _close_error_ctr++;
         
-        logprintfl (EUCADEBUG2, "{%u} close_and_unlock: releasing global lock fd=%d ret=%d\n", (unsigned int)pthread_self(), fd, ret);
+        logprintfl (EUCADEBUG2, "{%u} close_and_unlock: releasing global lock for closing of fd=%d ret=%d\n", (unsigned int)pthread_self(), fd, ret);
         pthread_mutex_unlock (&_blobstore_mutex);
     } // end of critical section
     
@@ -491,6 +499,33 @@ static int open_and_lock (const char * path,
         PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
         goto error;
     }
+
+    { // critical section
+        pthread_mutex_lock (&(path_lock->mutex)); // grab path-specific mutex for atomic update to the table of descriptors
+
+        // ensure we do not have this file descriptor already
+        int count = 0;
+        for (blobstore_filelock * l = locks_list; l; l=l->next)
+            for (int i=0; i<l->next_fd; i++)
+                if (l->fd [i] == fd)
+                    count++;
+        if (count>0) {
+            ERR (BLOBSTORE_ERROR_INVAL, "blobstore lock closed outside close_and_unlock");
+            pthread_mutex_unlock (&(path_lock->mutex)); // release global mutex
+            goto error;
+        }
+
+        // record the file descriptor in the array regardless of whether
+        // we ultimately succeed in obtaining the lock or not -- we must
+        // ensure we do not close this file descriptor until all users 
+        // of the lock are through
+        path_lock->fd        [path_lock->next_fd] = fd; // record file descriptor to enable future lookups
+        path_lock->fd_status [path_lock->next_fd] = 1;  // mark the slot as in-use
+        path_lock->next_fd++; // move the index up (it only goes up because we close all file descriptors together)
+
+        pthread_mutex_unlock (&(path_lock->mutex)); // release global mutex
+    } // end of critical section
+
     for (;;) {
         // first try getting the Posix rwlock
         int ret;
@@ -522,16 +557,12 @@ static int open_and_lock (const char * path,
         
         usleep (BLOBSTORE_SLEEP_INTERVAL_USEC);
     }
-    pthread_mutex_lock (&(path_lock->mutex)); // grab path-specific mutex for atomic update to the table of descriptors
-    path_lock->fd        [path_lock->next_fd] = fd; // record file descriptor to enable future lookups
-    path_lock->fd_status [path_lock->next_fd] = 1;  // mark the slot as in-use
-    path_lock->next_fd++; // move the index up (it only goes up because we close all file descriptors together)
-    pthread_mutex_unlock (&(path_lock->mutex));
+
+    // successully acquired both file and Posix locks
 
     pthread_mutex_lock (&_blobstore_mutex);
     _open_success_ctr++;
     pthread_mutex_unlock (&_blobstore_mutex);
-    
     { // print out information about the newly acquired lock
         struct stat s;
         fstat (fd, &s);
@@ -568,40 +599,48 @@ static int open_and_lock (const char * path,
         // next_ptr must point at the struct we are looking for,
         // which must be in the list
         assert (* next_ptr == path_lock);
-        
+
+        boolean do_free = FALSE;        
         { // inner critical section 
             pthread_mutex_lock (&(path_lock->mutex)); // grab path-specific mutex for atomic update to the table of descriptors
+            path_lock->refs--;
+
             int open_fds = 0;
             for (int i=0; i<path_lock->next_fd; i++) {
                 if (path_lock->fd_status [i]) {
-                    if (fd>=0) {
-                        assert (path_lock->fd [i] != fd);
+                    if (path_lock->fd [i] == fd) {
+                        path_lock->fd_status [i] = 0; // mark as 'unused'
+                    } else {
+                        open_fds++;
                     }
-                    open_fds++;
                 }
             }
-            if (path_lock->next_fd>0 && open_fds==0) {
+
+            if (open_fds==0 && path_lock->refs==0) { // no open blockblob file descriptors in this process
                 close_filelock (path_lock);
-                logprintfl (EUCADEBUG2, "{%u} open_and_lock: fd=%d closed along with all others\n", (unsigned int)pthread_self(), fd);
+                * next_ptr = path_lock->next; // remove from LL                                                                                                         
+                do_free = TRUE;
+                _locks_list_rem_ctr++;
+                logprintfl (EUCADEBUG2, "{%u} open_and_lock: freed fd=%d path=%s\n",
+                            (unsigned int)pthread_self(), fd, path_lock->path);
+                
+            } else {
+                struct flock l;
+                fcntl (fd, F_SETLK, flock_whole_file (&l, F_UNLCK)); // give up the file lock                                                                           
+                logprintfl (EUCADEBUG2, "{%u} open_and_lock: kept fd=%d path=%d open/refs=%d/%d\n",
+                            (unsigned int)pthread_self(), fd, path_lock->path, open_fds, path_lock->refs);
             }
-
+            
             pthread_mutex_unlock (&(path_lock->mutex));
-        } // end of inner critical section
-
-        if (--path_lock->refs==0) {
-            * next_ptr = path_lock->next;
-            _locks_list_rem_ctr++;
+        } // end of critical section                                                                                                                                        
+        
+        if (do_free)
             free_filelock (path_lock);
-            logprintfl (EUCADEBUG2, "{%u} open_and_lock: fd=%d freed\n", (unsigned int)pthread_self(), fd);
-        } 
         
         _open_error_ctr++;
         pthread_mutex_unlock (&_blobstore_mutex);
     }
-
-    if (fd>=0) // we succeded with open() but failed to get the lock
-        close (fd);
-
+    
     return -1;
 }
 
@@ -1483,6 +1522,7 @@ int blobstore_fsck (blobstore * bs, int (* examiner) (const blockblob * bb))
 int blobstore_search ( blobstore * bs, const char * regex, blockblob_meta ** results )
 {
     blockblob_meta * head = NULL;
+    blockblob * bbs = NULL;
     int ret = 0;
     regex_t re;
 
@@ -1499,7 +1539,7 @@ int blobstore_search ( blobstore * bs, const char * regex, blockblob_meta ** res
     
     // put existing items in the blobstore into a LL
     _blobstore_errno = BLOBSTORE_ERROR_OK;
-    blockblob * bbs = scan_blobstore (bs);
+    bbs = scan_blobstore (bs);
     if (bbs==NULL) {
         if (_blobstore_errno != BLOBSTORE_ERROR_OK) {
             ret = -1;
@@ -1638,6 +1678,8 @@ blockblob * blockblob_open ( blobstore * bs,
     } else {
         gen_id (bb->id, sizeof(bb->id));
     }
+    bb->fd_lock = -1;
+    bb->fd_blocks = -1;
     bb->size_bytes = size_bytes;
     set_blockblob_metadata_path (BLOCKBLOB_PATH_BLOCKS, bs, bb->id, bb->blocks_path, sizeof (bb->blocks_path));
 
@@ -1665,7 +1707,10 @@ blockblob * blockblob_open ( blobstore * bs,
     if (bb->fd_lock == -1) { // failed to open/create and lock the blockblob
         goto clean;
     }
-    
+    char thread_id [512];
+    snprintf (thread_id, sizeof (thread_id), "%d/%u", getpid(), (unsigned int)pthread_self());
+    write (bb->fd_lock, thread_id, strlen (thread_id));
+
     // convert BLOBSTORE_* flags into standard Posix open() flags and open/create the blocks file
     int o_flags = 0;
     if (flags & BLOBSTORE_FLAG_RDONLY) {
@@ -1821,6 +1866,7 @@ blockblob * blockblob_open ( blobstore * bs,
     {
         int saved_errno = _blobstore_errno; // save it because close_and_unlock() or delete_blockblob_files() may reset it
         if (bb->fd_lock!=-1) {
+            ftruncate (bb->fd_lock, 0);
             close_and_unlock (bb->fd_lock); 
         }
         if (bb->fd_blocks!=-1) {
@@ -1900,6 +1946,7 @@ int blockblob_close ( blockblob * bb )
     if ( !(in_use & (BLOCKBLOB_STATUS_MAPPED|BLOCKBLOB_STATUS_BACKED)) ) { 
         ret = loop_remove (bb->store, bb->id);
     }
+    ftruncate (bb->fd_lock, 0);
     ret |= close_and_unlock (bb->fd_lock);
     ret |= close (bb->fd_blocks);
     free (bb); // we free the blob regardless of whether closing succeeds or not
@@ -2197,6 +2244,7 @@ int blockblob_delete ( blockblob * bb, long long timeout_usec )
     if (loop_remove (bs, bb->id) == -1) {
         ret = -1;
     }
+    ftruncate (bb->fd_lock, 0);
     if (close_and_unlock (bb->fd_lock) == -1) {
         ret = -1;
     } else {
@@ -3620,7 +3668,6 @@ int main (int argc, char ** argv)
 
     printf ("testing blobstore.c\n");
 
-    /*
     errors += do_file_lock_test ();
     if (errors) goto done; // no point in doing blobstore test if above isn't working
 
@@ -3629,7 +3676,6 @@ int main (int argc, char ** argv)
 
     errors += do_blobstore_test (cwd, "directory-norevoc", BLOBSTORE_FORMAT_DIRECTORY,   BLOBSTORE_REVOCATION_NONE);
     if (errors) goto done; // no point in continuing blobstore test if above isn't working
-    */
 
     errors += do_blobstore_test (cwd, "lru-directory", BLOBSTORE_FORMAT_DIRECTORY,   BLOBSTORE_REVOCATION_LRU);
     if (errors) goto done; // no point in continuing blobstore test if above isn't working
