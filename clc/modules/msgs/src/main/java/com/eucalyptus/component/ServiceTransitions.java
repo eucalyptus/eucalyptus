@@ -218,8 +218,9 @@ public class ServiceTransitions {
       case PRIMORDIAL:
       case STOPPED:
         transition = ObjectArrays.concat( transition, Component.State.INITIALIZED );
-        //$FALL-THROUGH$
+        break;
       case INITIALIZED:
+        transition = new State[] {};
         break;
     }
     return transition;
