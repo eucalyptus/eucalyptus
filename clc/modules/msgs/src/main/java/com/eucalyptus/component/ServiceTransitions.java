@@ -238,6 +238,7 @@ public class ServiceTransitions {
   private static final State[] pathToDisabled( final Component.State fromState ) {
     State[] transition = new State[] { fromState };
     switch ( fromState ) {
+      case ENABLED:
       case DISABLED:
       case NOTREADY:
         transition = ObjectArrays.concat( transition, Component.State.DISABLED );
