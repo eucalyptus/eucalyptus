@@ -46,6 +46,12 @@ public class ServiceStateCallback extends SubjectMessageCallback<Cluster, Descri
             } catch ( Exception ex1 ) {
               LOG.error( ex1, ex1 );
             }
+          } else if ( Component.State.LOADED.equals( serviceState ) && Component.State.NOTREADY.ordinal( ) >= proxyState.ordinal( ) ) {
+            try {
+              AsyncRequests.newRequest( new StartServiceCallback( this.getSubject( ) ) ).sendSync( this.getSubject( ).getConfiguration( ) );
+            } catch ( Exception ex1 ) {
+              LOG.error( ex1, ex1 );
+            }
           } else if ( Component.State.NOTREADY.ordinal( ) < serviceState.ordinal( ) ) {
             this.getSubject( ).clearExceptions( );
           }
