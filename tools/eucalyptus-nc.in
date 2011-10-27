@@ -303,19 +303,23 @@ if [ "$EUCALYPTUS" = "not_configured" ]; then
 fi
 
 # let's see how many loop devices we have available
-LOOP_AVL="`/bin/ls /dev/loop* 2> /dev/null|wc -l`"
-if [ -z "$LOOP_AVL" -o "$LOOP_AVL" = "0" ]; then
-	echo "Couldn't find loop devices (/dev/loop*): expect problems"
-elif [ $LOOP_AVL -lt 50 ]; then
-	echo "You should have at least 50 loop devices (in /dev)"
-fi
-
-# try another method for finding loop devices
-LOOP_AVL="`/bin/ls -1d /sys/block/loop* 2>/dev/null | wc -l`"
-if [ -z "$LOOP_AVL" -o "$LOOP_AVL" = "0" ]; then
-        echo "Couldn't find loop devices (/sys/block/loop*): there may be problems"
-elif [ $LOOP_AVL -lt 50 ]; then
-        echo "You should have at least 50 loop devices (in /sys/block)"
+LOOP_AVL_DEV="`/bin/ls -1d /dev/loop*       2>/dev/null | wc -l`"
+LOOP_AVL_SYS="`/bin/ls -1d /sys/block/loop* 2>/dev/null | wc -l`"
+if [ -z "$LOOP_AVL_DEV" -o "$LOOP_AVL_DEV" = "0" ]; then
+	echo "warning: no loop devices found in /dev; expect problems" >&2
+elif [ $LOOP_AVL_DEV -lt 50 ]; then
+	echo "warning: found $LOOP_AVL_DEV loop devices in /dev; at least 50 are recommended" >&2
+elif [ -z "$LOOP_AVL_SYS" -o "$LOOP_AVL_SYS" -lt "$LOOP_AVL_DEV" ] && [[ `uname -r` < 2.6.22 ]]; then  # The version comparison does not work in every shell
+	# When then loop driver's max_loop option is not 0, loop device nodes
+	# that are not automatically created by the kernel do not work.  We can
+	# check for this case by looking for too few loop device entries in
+	# sysfs.
+	#
+	# Trying to determine whether or not max_loop is 0 is difficult on
+	# Linux 2, so in general we make no attempt to do so.  However, max_loop
+	# *cannot* be 0 on Linux < 2.6.22, so we perform this check on those
+	# systems so it will hopefully cover the majority of cases.
+	echo "warning: found fewer loop devices in /sys/block than in /dev ($LOOP_AVL_SYS < $LOOP_AVL_DEV); expect problems"
 fi
 
 if [ -z "$EUCA_USER" ] ; then
