@@ -204,6 +204,9 @@ public class ServiceTransitions {
       case LOADED:
         transition = new State[] {};
         break;
+      case INITIALIZED:
+        transition = ObjectArrays.concat( transition, Component.State.LOADED );
+        break;
       default:
         transition = ObjectArrays.concat( ServiceTransitions.pathToInitialized( fromState ), Component.State.LOADED );
         break;
