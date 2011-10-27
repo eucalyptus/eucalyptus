@@ -5,6 +5,15 @@ sub fill_in_state_map {
      %state_map;
 }
 
+sub is_auto_transit {
+    my ($from,$to) = ($_[0], $_[1]);
+    
+    if($from eq "NOTREADY" and $to eq "DISABLED") {
+        1;}
+    else{ 
+        0;}
+}
+
 sub read_output {
     open FH, "$out_file"; # or {print "can't open the file $out_file\n"; return 1};
     my @lines = <FH>;
@@ -71,9 +80,10 @@ sub modify_svc_state {
     #print "$cmd\n";
     my $rc = system($cmd);
     if ($rc) { 
-       $err_str="couldn't modify service\n";
-       if (-e $outfile){ 
-          $err_str += &read_output; 
+       $err_str="Couldn't modify service\n";
+       if (-e $out_file){ 
+          my @output = &read_output; 
+          $err_str .= "@output";
        }       
        return 1;
     }
@@ -162,13 +172,14 @@ foreach $to (@states){
         print ".";
     }
     $now = get_svc_state $component;
-    if (not $now eq $to )
+
+    if ($now eq $to or is_auto_transit($to, $now)){
+        print " [DONE]\n";
+    }else
     {
         print " [FAILED: reported state = $now]\n"; 
         print "Reason: ".$err_str;
         exit 1;
-    }else{
-        print " [DONE]\n";
     }
     $prev_state=$now;
 }
