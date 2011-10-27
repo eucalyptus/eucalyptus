@@ -146,16 +146,6 @@ public class FalseDataGenerator
 		InstanceUsageLog.getInstanceUsageLog().purgeLog(Long.MAX_VALUE);		
 	}
 
-	@ExposedCommand
-	public static void setWriteIntervalMs(String writeIntervalMs)
-	{
-		System.out.println(" ----> SET WRITE INTERVAL");
-		
-		long writeIntervalMsl = Long.parseLong(writeIntervalMs);
-		ReportingBootstrapper.getInstanceListener().setWriteIntervalMs(writeIntervalMsl);
-	}
-
-
 	/**
 	 * <p>containsRecentRows checks if there are recent rows in 
 	 * InstanceUsageSnapshot. This is used for testing: we delete

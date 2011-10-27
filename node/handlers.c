@@ -921,7 +921,7 @@ static int init (void)
                 
 	if (euca_init_cert ()) {
 	  logprintfl (EUCAERROR, "init(): failed to find cryptographic certificates\n");
-	  return 1;
+	  return ERROR_FATAL;
 	}
 
 	/* from now on we have unrecoverable failure, so no point in
@@ -1024,37 +1024,69 @@ static int init (void)
 	nc_state.vnetconfig = malloc(sizeof(vnetConfig));
 	if (!nc_state.vnetconfig) {
 		logprintfl (EUCAFATAL, "Cannot allocate vnetconfig!\n");
-		return 1;
+		return ERROR_FATAL;
 	}
 	snprintf (nc_state.config_network_path, MAX_PATH, NC_NET_PATH_DEFAULT, nc_state.home);
-	hypervisor = getConfString(configFiles, 2, "VNET_PUBINTERFACE");
-	if (!hypervisor) 
-		hypervisor = getConfString(configFiles, 2, "VNET_INTERFACE");
-	bridge = getConfString(configFiles, 2, "VNET_BRIDGE");
+
 	tmp = getConfString(configFiles, 2, "VNET_MODE");
+    if (!tmp) {
+        logprintfl(EUCAWARN,"WARNING: VNET_MODE is not defined, defaulting to 'SYSTEM'\n"); 
+        tmp = strdup("SYSTEM"); 
+        if (!tmp) {
+            logprintfl(EUCAFATAL,"Out of memory\n"); 
+            return ERROR_FATAL;
+        }
+    }     
+
+    int initFail = 0;
+    if(tmp && (!strcmp(tmp, "SYSTEM") || !strcmp(tmp, "STATIC") || !strcmp(tmp, "MANAGED-NOVLAN"))) {
+        bridge = getConfString(configFiles, 2, "VNET_BRIDGE");
+        if(!bridge) {
+            logprintfl(EUCAFATAL,"in 'SYSTEM', 'STATIC' or 'MANAGED-NOVLAN' network mode, you must specify a value for VNET_BRIDGE\n");
+            initFail = 1;
+        }
+    } else if(tmp && !strcmp(tmp, "MANAGED")) {
+        hypervisor = getConfString(configFiles, 2, "VNET_PUBINTERFACE");
+        if (!hypervisor) 
+            hypervisor = getConfString(configFiles, 2, "VNET_INTERFACE");
+
+        if (!hypervisor) {
+            logprintfl(EUCAWARN,"WARNING: VNET_PUBINTERFACE is not defined, defaulting to 'eth0'\n"); 
+            hypervisor = strdup("eth0"); 
+            if (!hypervisor) {
+                logprintfl(EUCAFATAL, "out of memory!\n"); 
+                return ERROR_FATAL; 
+            }
+        } 
+    }
 	
-	vnetInit (nc_state.vnetconfig, 
-              tmp, 
-              nc_state.home, 
-              nc_state.config_network_path, 
-              NC, 
-              hypervisor, 
-              hypervisor, 
-              NULL, 
-              NULL, 
-              NULL, 
-              NULL, 
-              NULL, 
-              NULL, 
-              NULL, 
-              NULL, 
-              NULL, 
-              bridge, 
-              NULL, 
-              NULL);
+    if(!initFail) {
+        initFail = vnetInit (nc_state.vnetconfig, 
+                             tmp, 
+                             nc_state.home, 
+                             nc_state.config_network_path, 
+                             NC, 
+                             hypervisor, 
+                             hypervisor, 
+                             NULL, 
+                             NULL, 
+                             NULL, 
+                             NULL, 
+                             NULL, 
+                             NULL, 
+                             NULL, 
+                             NULL, 
+                             NULL, 
+                             bridge, 
+                             NULL, 
+                             NULL);
+    }
 	if (hypervisor) free(hypervisor);
 	if (bridge) free(bridge);
 	if (tmp) free(tmp);
+
+    if(initFail)
+        return ERROR_FATAL;
     
 	// set NC helper path
 	tmp = getConfString(configFiles, 2, CONFIG_NC_BUNDLE_UPLOAD);
