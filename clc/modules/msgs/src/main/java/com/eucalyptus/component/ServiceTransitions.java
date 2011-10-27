@@ -178,27 +178,39 @@ public class ServiceTransitions {
   }
   
   private static State[] pathToBroken( Component.State fromState ) {
-    if ( Component.State.BROKEN.equals( fromState ) ) {
-      return new State[] {};
-    } else {
-      return ObjectArrays.concat( ServiceTransitions.pathToPrimordial( fromState ), Component.State.BROKEN );
+    State[] transition = new State[] { fromState };
+    switch ( fromState ) {
+      case BROKEN:
+        break;
+      default:
+        transition = ObjectArrays.concat( ServiceTransitions.pathToPrimordial( fromState ), Component.State.BROKEN );
+        break;
     }
+    return transition;
   }
   
   private static State[] pathToPrimordial( Component.State fromState ) {
-    if ( Component.State.PRIMORDIAL.equals( fromState ) ) {
-      return new State[] {};
-    } else {
-      return ObjectArrays.concat( ServiceTransitions.pathToStopped( fromState ), Component.State.PRIMORDIAL );
+    State[] transition = new State[] { fromState };
+    switch ( fromState ) {
+      case PRIMORDIAL:
+        break;
+      default:
+        transition = ObjectArrays.concat( ServiceTransitions.pathToStopped( fromState ), Component.State.PRIMORDIAL );
+        break;
     }
+    return transition;
   }
   
   private static State[] pathToLoaded( Component.State fromState ) {
-    if ( Component.State.LOADED.equals( fromState ) ) {
-      return new State[] {};
-    } else {
-      return ObjectArrays.concat( ServiceTransitions.pathToInitialized( fromState ), Component.State.LOADED );
+    State[] transition = new State[] { fromState };
+    switch ( fromState ) {
+      case LOADED:
+        break;
+      default:
+        transition = ObjectArrays.concat( ServiceTransitions.pathToInitialized( fromState ), Component.State.LOADED );
+        break;
     }
+    return transition;
   }
   
   private static final State[] pathToInitialized( final Component.State fromState ) {
@@ -206,7 +218,7 @@ public class ServiceTransitions {
     switch ( fromState ) {
       case LOADED:
         transition = ObjectArrays.concat( fromState, pathToInitialized( Component.State.NOTREADY ) );
-        //$FALL-THROUGH$
+        break;
       case ENABLED:
         transition = ObjectArrays.concat( transition, Component.State.DISABLED );
         //$FALL-THROUGH$
@@ -218,7 +230,7 @@ public class ServiceTransitions {
       case PRIMORDIAL:
       case STOPPED:
         transition = ObjectArrays.concat( transition, Component.State.INITIALIZED );
-        //$FALL-THROUGH$
+        break;
       case INITIALIZED:
         break;
     }
@@ -226,16 +238,23 @@ public class ServiceTransitions {
   }
   
   private static State[] pathToStarted( Component.State fromState ) {
-    if ( Component.State.NOTREADY.equals( fromState ) ) {
-      return new State[] {};
-    } else {
-      return ObjectArrays.concat( ServiceTransitions.pathToLoaded( fromState ), Component.State.NOTREADY );
+    State[] transition = new State[] { fromState };
+    switch ( fromState ) {
+      case NOTREADY:
+        break;
+      case LOADED:
+        transition = ObjectArrays.concat( transition, Component.State.NOTREADY );
+        break;
+      default:
+        transition = ObjectArrays.concat( pathToLoaded( fromState ), Component.State.NOTREADY );
     }
+    return transition;
   }
   
   private static final State[] pathToDisabled( final Component.State fromState ) {
     State[] transition = new State[] { fromState };
     switch ( fromState ) {
+      case ENABLED:
       case DISABLED:
       case NOTREADY:
         transition = ObjectArrays.concat( transition, Component.State.DISABLED );
@@ -266,10 +285,10 @@ public class ServiceTransitions {
         //$FALL-THROUGH$
       case DISABLED:
       case NOTREADY:
+      case BROKEN:
         transition = ObjectArrays.concat( transition, Component.State.STOPPED );
         break;
       case STOPPED:
-        transition = new State[] {};
         break;
       default:
         transition = ObjectArrays.concat( pathToStarted( fromState ), Component.State.STOPPED );
@@ -728,7 +747,8 @@ public class ServiceTransitions {
     STATIC_PROPERTIES_ADD {
       @Override
       public void fire( final ServiceConfiguration config ) {
-        for ( Entry<String, ConfigurableProperty> entry : Iterables.filter( PropertyDirectory.getPendingPropertyEntries( ), Predicates.instanceOf( StaticPropertyEntry.class ) ) ) {
+        for ( Entry<String, ConfigurableProperty> entry : Iterables.filter( PropertyDirectory.getPendingPropertyEntries( ),
+                                                                            Predicates.instanceOf( StaticPropertyEntry.class ) ) ) {
           try {
             ConfigurableProperty prop = entry.getValue( );
             PropertyDirectory.addProperty( prop );
