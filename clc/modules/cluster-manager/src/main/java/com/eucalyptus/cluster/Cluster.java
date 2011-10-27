@@ -485,7 +485,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
         }
         if ( transition != null ) {
           try {
-            Threads.enqueue( this.configuration, transition ).get( );
+            transition.call( ).get( );
             Cluster.this.clearExceptions( );
           } catch ( final Exception ex ) {
             LOG.error( ex, ex );
@@ -497,39 +497,39 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
     }
   }
   
-  public Callable<CheckedListenableFuture<Cluster>> disableTransition( ) {
+  private Callable<CheckedListenableFuture<Cluster>> disableTransition( ) {
     Callable<CheckedListenableFuture<Cluster>> transition;
     transition = Automata.sequenceTransitions( this, State.ENABLED, State.DISABLED );
     return transition;
   }
   
-  public Callable<CheckedListenableFuture<Cluster>> enabledTransition( ) {
+  private Callable<CheckedListenableFuture<Cluster>> enabledTransition( ) {
     Callable<CheckedListenableFuture<Cluster>> transition;
     transition = Automata.sequenceTransitions( this, State.ENABLED, State.ENABLED_SERVICE_CHECK, State.ENABLED_ADDRS, State.ENABLED_RSC,
                                                State.ENABLED_NET, State.ENABLED_VMS, State.ENABLED );
     return transition;
   }
   
-  public Callable<CheckedListenableFuture<Cluster>> enablingTransition( ) {
+  private Callable<CheckedListenableFuture<Cluster>> enablingTransition( ) {
     Callable<CheckedListenableFuture<Cluster>> transition;
     transition = Automata.sequenceTransitions( this, State.ENABLING, State.ENABLING_RESOURCES, State.ENABLING_NET, State.ENABLING_VMS,
                                                State.ENABLING_ADDRS, State.ENABLING_VMS_PASS_TWO, State.ENABLING_ADDRS_PASS_TWO, State.ENABLED );
     return transition;
   }
   
-  public Callable<CheckedListenableFuture<Cluster>> disabledTransition( ) {
+  private Callable<CheckedListenableFuture<Cluster>> disabledTransition( ) {
     Callable<CheckedListenableFuture<Cluster>> transition;
     transition = Automata.sequenceTransitions( this, State.DISABLED, State.DISABLED );
     return transition;
   }
   
-  public Callable<CheckedListenableFuture<Cluster>> notreadyTransition( ) {
+  private Callable<CheckedListenableFuture<Cluster>> notreadyTransition( ) {
     Callable<CheckedListenableFuture<Cluster>> transition;
     transition = Automata.sequenceTransitions( this, State.NOTREADY, State.DISABLED );
     return transition;
   }
   
-  public Callable<CheckedListenableFuture<Cluster>> startingTransition( ) {
+  private Callable<CheckedListenableFuture<Cluster>> startingTransition( ) {
     Callable<CheckedListenableFuture<Cluster>> transition;
     transition = Automata.sequenceTransitions( this, State.STOPPED, State.PENDING, State.AUTHENTICATING, State.STARTING,
                                                State.STARTING_NOTREADY,
@@ -990,22 +990,10 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
     final Cluster.State currentState = this.stateMachine.getState( );
     final Component.State externalState = this.configuration.lookupState( );
     final List<Throwable> currentErrors = Lists.newArrayList( );
-    if ( !this.stateMachine.isBusy( ) ) {
-      try {
-        if ( Cluster.State.NOTREADY.equals( currentState ) ) {
-          notreadyTransition( ).call( ).get( );
-        } else if ( Cluster.State.ENABLED.equals( currentState ) ) {
-          enabledTransition( ).call( ).get( );
-        } else if ( Cluster.State.DISABLED.equals( currentState ) ) {
-          disabledTransition( ).call( ).get( );
-        } else if ( Cluster.State.NOTREADY.ordinal( ) > currentState.ordinal( ) ) {
-          startingTransition( ).call( ).get( );
-        }
-        Cluster.this.clearExceptions( );
-      } catch ( Exception ex ) {
-        Exceptions.maybeInterrupted( ex );
-        throw Faults.failure( this.configuration, ex );
-      }
+    try {
+      Refresh.SERVICEREADY.apply( this );
+    } catch ( Exception ex ) {
+      throw Faults.failure( this.configuration, ex );
     }
     currentErrors.addAll( this.pendingErrors );
     if ( !currentErrors.isEmpty( ) ) {

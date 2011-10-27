@@ -401,7 +401,7 @@ public class Handlers {
   }
   
   public static ChannelHandler internalServiceStateHandler( ) {
-    return MessageEpochChecks.INSTANCE;
+    return ServiceStateChecksHandler.INSTANCE;
   }
   
   @ChannelPipelineCoverage( "all" )
