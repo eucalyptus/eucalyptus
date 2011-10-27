@@ -828,10 +828,11 @@ static int init (void)
 	int do_warn = 0, i, j;
 	char configFiles[2][MAX_PATH],
 		log[MAX_PATH],
-		*bridge,
-		*hypervisor,
-		*s,
-        *tmp;
+		*bridge=NULL,
+		*hypervisor=NULL,
+		*s=NULL,
+        *tmp=NULL,
+        *pubinterface=NULL;
 	struct stat mystat;
 	struct statfs fs;
 	struct handlers ** h; 
@@ -1046,14 +1047,14 @@ static int init (void)
             initFail = 1;
         }
     } else if(tmp && !strcmp(tmp, "MANAGED")) {
-        hypervisor = getConfString(configFiles, 2, "VNET_PUBINTERFACE");
-        if (!hypervisor) 
-            hypervisor = getConfString(configFiles, 2, "VNET_INTERFACE");
+        pubinterface = getConfString(configFiles, 2, "VNET_PUBINTERFACE");
+        if (!pubinterface) 
+            pubinterface = getConfString(configFiles, 2, "VNET_INTERFACE");
 
-        if (!hypervisor) {
+        if (!pubinterface) {
             logprintfl(EUCAWARN,"WARNING: VNET_PUBINTERFACE is not defined, defaulting to 'eth0'\n"); 
-            hypervisor = strdup("eth0"); 
-            if (!hypervisor) {
+            pubinterface = strdup("eth0"); 
+            if (!pubinterface) {
                 logprintfl(EUCAFATAL, "out of memory!\n"); 
                 return ERROR_FATAL; 
             }
@@ -1066,8 +1067,8 @@ static int init (void)
                              nc_state.home, 
                              nc_state.config_network_path, 
                              NC, 
-                             hypervisor, 
-                             hypervisor, 
+                             pubinterface, 
+                             pubinterface, 
                              NULL, 
                              NULL, 
                              NULL, 
@@ -1081,7 +1082,7 @@ static int init (void)
                              NULL, 
                              NULL);
     }
-	if (hypervisor) free(hypervisor);
+	if (pubinterface) free(pubinterface);
 	if (bridge) free(bridge);
 	if (tmp) free(tmp);
 
