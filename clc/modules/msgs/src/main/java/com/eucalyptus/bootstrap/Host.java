@@ -85,7 +85,7 @@ public class Host implements java.io.Serializable, Comparable<Host> {
   private Boolean                    hasBootstrapped;
   private AtomicLong                 timestamp        = new AtomicLong( System.currentTimeMillis( ) );
   private Long                       lastTime         = 0l;
-  private final Long                 startedTime;
+  private Long                 startedTime;
   private Integer                    epoch;
   
   Host( ) {
@@ -188,6 +188,7 @@ public class Host implements java.io.Serializable, Comparable<Host> {
   }
   
   void markDatabase( ) {
+    this.startedTime = System.currentTimeMillis( );
     this.hasDatabase = true;
   }
   
