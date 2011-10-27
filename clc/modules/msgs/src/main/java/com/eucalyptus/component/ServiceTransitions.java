@@ -178,18 +178,21 @@ public class ServiceTransitions {
   }
   
   private static State[] pathToBroken( Component.State fromState ) {
-    if ( Component.State.BROKEN.equals( fromState ) ) {
-      return new State[] {};
-    } else {
-      return ObjectArrays.concat( ServiceTransitions.pathToPrimordial( fromState ), Component.State.BROKEN );
+    State[] transition = new State[] { fromState };
+    switch ( fromState ) {
+      case BROKEN:
+        break;
+      default:
+        transition = ObjectArrays.concat( ServiceTransitions.pathToPrimordial( fromState ), Component.State.BROKEN );
+        break;
     }
+    return transition;
   }
   
   private static State[] pathToPrimordial( Component.State fromState ) {
     State[] transition = new State[] { fromState };
     switch ( fromState ) {
       case PRIMORDIAL:
-        transition = new State[] {};
         break;
       default:
         transition = ObjectArrays.concat( ServiceTransitions.pathToStopped( fromState ), Component.State.PRIMORDIAL );
@@ -202,10 +205,6 @@ public class ServiceTransitions {
     State[] transition = new State[] { fromState };
     switch ( fromState ) {
       case LOADED:
-        transition = new State[] {};
-        break;
-      case INITIALIZED:
-        transition = ObjectArrays.concat( transition, Component.State.LOADED );
         break;
       default:
         transition = ObjectArrays.concat( ServiceTransitions.pathToInitialized( fromState ), Component.State.LOADED );
@@ -233,20 +232,23 @@ public class ServiceTransitions {
         transition = ObjectArrays.concat( transition, Component.State.INITIALIZED );
         break;
       case INITIALIZED:
-        transition = new State[] {};
         break;
     }
     return transition;
   }
   
   private static State[] pathToStarted( Component.State fromState ) {
-    if ( Component.State.NOTREADY.equals( fromState ) ) {
-      return new State[] {};
-    } else if ( Component.State.LOADED.equals( fromState ) ) {
-      return new State[] { Component.State.LOADED, Component.State.NOTREADY };
-    } else {
-      return ObjectArrays.concat( ServiceTransitions.pathToLoaded( fromState ), Component.State.NOTREADY );
+    State[] transition = new State[] { fromState };
+    switch ( fromState ) {
+      case NOTREADY:
+        break;
+      case LOADED:
+        transition = ObjectArrays.concat( transition, Component.State.NOTREADY );
+        break;
+      default:
+        transition = ObjectArrays.concat( pathToLoaded( fromState ), Component.State.NOTREADY );
     }
+    return transition;
   }
   
   private static final State[] pathToDisabled( final Component.State fromState ) {
@@ -283,10 +285,10 @@ public class ServiceTransitions {
         //$FALL-THROUGH$
       case DISABLED:
       case NOTREADY:
+      case BROKEN:
         transition = ObjectArrays.concat( transition, Component.State.STOPPED );
         break;
       case STOPPED:
-        transition = new State[] {};
         break;
       default:
         transition = ObjectArrays.concat( pathToStarted( fromState ), Component.State.STOPPED );
