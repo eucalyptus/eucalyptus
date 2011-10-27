@@ -824,11 +824,11 @@ public class Topology {
       if ( ( nextState = findNextCheckState( input.lookupState( ) ) ) == null ) {
         return input;
       } else {
-        return this.doTopologyChange( this, input, nextState );
+        return this.doTopologyChange( input, nextState );
       }
     }
     
-    private ServiceConfiguration doTopologyChange( TopologyChange tc, ServiceConfiguration input, State nextState ) throws RuntimeException {
+    private ServiceConfiguration doTopologyChange( ServiceConfiguration input, State nextState ) throws RuntimeException {
       State initialState = input.lookupState( );
       ServiceConfiguration endResult = input;
       try {
