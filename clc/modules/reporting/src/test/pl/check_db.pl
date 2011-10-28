@@ -4,7 +4,7 @@
 # check_db.pl verifies that the data in the database is correct after running
 # the simulate_usage.pl script.
 #
-# Usage: check_db.pl num_intervals storage_size_mb user+
+# Usage: check_db.pl (username/accountname)+
 #
 # NOTE: This script assumes that the db.sh script runs and is in the current
 #  path.
@@ -16,78 +16,98 @@
 
 use strict;
 
-
-#
-# SUBS
-#
-
 sub execute_query($) {
-	return split("\n",`db.sh --execute='$_[0]' -D eucalyptus_reporting --skip-column-names`);
-}
-
-sub row_cnt($) {
-	my @lines = execute_query($_[0]);
-	return $#lines+1;
-}
-
-sub col_sum($) {
-	my $sum = 0;
-	foreach (execute_query($_[0])) {
-		$sum += $_;
-	}
-	return $sum;
-}
-
-sub col_max($) {
-	my $max = 0;
-	foreach (execute_query($_[0])) {
-		($max = $_) if ($_ > max);
-	}
-	return $max;
+	return split("\n",`db.sh --execute="$_[0]" -D eucalyptus_reporting --skip-column-names`);
 }
 
 #
 # MAIN LOGIC
 #
 
-my $num_intervals = shift;
-my $storage_size_mb = shift;
-my $x = 0;
+my @usernames = ();
+my @accountnames = ();
 
-
-my $usernum = 0;
-while ($#ARGV+1 > 0) {
-	my $user = shift;
-
-	# Check the number of rows which were created for instance usage
-	$x = row_cnt("select from reporting_instance, reporting_user, instance_usage_snapshot where");
-	# TODO: what about timestamps? We must verify that those are correct?
-	if ($x < $num_intervals-2) {
-		die("Row count failed for user:$_, expected:" . $num_intervals-2 . " found:$x");
-	} else {
-		print "Row count succeeded for user:$_\n";
-	}
-
-	# Check that disk io is a sensible value
-	$x = col_max("select from reporting_instance, reporting_user, instance_usage_snapshot where");
-
-	# Check that net io is a sensible value
-	$x = col_max("select from reporting_instance, reporting_user, instance_usage_snapshot where");
-
-
-	# Check that s3 bucket cnt is a sensible value
-
-	# Check that s3 object cnt is a sensible value
-
-	# Check that s3 object sizes are sensible values
-
-	# Check that volume cnt is a sensible value
-
-	# Check that volume sizes are sensible values
-
-	$usernum++;
+foreach (@ARGV) {
+	my ($username, $accountname) = split("/");
+	push(@usernames, $username);
+	push(@accountnames, $accountname);
 }
 
-print "All tests succeeded.\n";
-return 0;
+my $username_csv = "'" . join("','",@usernames) . "'";
+my $accountname_csv = "'" . join("','",@accountnames) . "'";
+
+my $instance_num_rows = 0;
+my $s3_num_rows = 0;
+my $storage_num_rows = 0;
+
+
+foreach (execute_query("
+	select
+	  ius.total_disk_io_megs,
+	  ius.total_network_io_megs
+	from
+	  instance_usage_snapshot ius,
+	  reporting_instance ri,
+	  reporting_user ru,
+	  reporting_account ra
+	where
+	  ius.uuid = ri.uuid
+	and ri.user_id = ru.user_id
+	and ri.account_id = ra.account_id
+	and ru.user_name in ($username_csv)
+	and ra.account_name in ($accountname_csv)
+")) {
+	my ($disk_io,$net_io) = split("\\s+");
+	print "disk_io:$disk_io net_io:$net_io\n";
+	$instance_num_rows++;
+}
+
+
+foreach (execute_query("
+	select
+	  s3s.buckets_num,
+	  s3s.objects_num,
+	  s3s.objects_megs
+	from
+	  s3_usage_snapshot s3s,
+	  reporting_user ru,
+	  reporting_account ra
+	where
+	  s3s.owner_id = ru.user_id
+	and s3s.account_id = ra.account_id
+	and ru.user_name in ($username_csv)
+	and ra.account_name in ($accountname_csv)
+")) {
+	my ($buckets_num,$objects_num,$objects_megs) = split("\\s+");
+	print "buckets_num:$buckets_num objects_num:$objects_num objects_megs:$objects_megs\n";
+	$s3_num_rows++;
+}
+
+
+foreach (execute_query("
+	select
+	  sus.snapshot_num,
+	  sus.snapshot_megs,
+	  sus.volumes_num,
+	  sus.volumes_megs
+	from
+	  storage_usage_snapshot sus,
+	  reporting_user ru,
+	  reporting_account ra
+	where
+	  sus.owner_id = ru.user_id
+	and sus.account_id = ra.account_id
+	and ru.user_name in ($username_csv)
+	and ra.account_name in ($accountname_csv)
+")) {
+	my ($snaps_num, $snaps_megs, $vols_num, $vols_megs) = split("\\s+");
+	print "snaps_num:$snaps_num snaps_megs:$snaps_megs vols_num:$vols_num vols_megs:$vols_megs\n";
+	$storage_num_rows++;
+}
+
+
+# Verify num of rows for ius, s3s, sus
+# Verify maxes for s3s, sus
+# What about instance?
+
 
