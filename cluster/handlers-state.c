@@ -248,6 +248,27 @@ int doDisableService(ncMetadata *ccMeta) {
   return(ret);
 }
 
+int doShutdownService(ncMetadata *ccMeta) {
+  int i, rc, ret=0;
+
+  rc = initialize(ccMeta);
+  if (rc) {
+    return(1);
+  }
+
+  logprintfl(EUCAINFO, "ShutdownService(): called\n");
+  logprintfl(EUCADEBUG, "ShutdownService(): params: userId=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"));
+
+  sem_mywait(CONFIG);
+  config->kick_enabled = 0;
+  ccChangeState(SHUTDOWNCC);
+  sem_mypost(CONFIG);
+
+  logprintfl(EUCAINFO, "ShutdownService(): done\n");
+
+  return(ret);
+}
+
 int validCmp(ccInstance *inst, void *in) {
   if (!inst) {
     return(1);

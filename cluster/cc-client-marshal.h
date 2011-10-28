@@ -95,5 +95,6 @@ int cc_startService(axutil_env_t *, axis2_stub_t *);
 int cc_stopService(axutil_env_t *, axis2_stub_t *);
 int cc_enableService(axutil_env_t *, axis2_stub_t *);
 int cc_disableService(axutil_env_t *, axis2_stub_t *);
+int cc_shutdownService(axutil_env_t *, axis2_stub_t *);
 
 #endif
