@@ -211,13 +211,31 @@ foreach (keys %user_stats) {
 # Verify stats
 foreach (keys %user_stats) {
 	my %stats = %{$user_stats{$_}};
-	if ($num_instance_events_per_user < $nn) { die("Wrong num_instance_events for user:$_"); }
-	if ($num_storage_events_per_user < $nn) { die("Wrong num_storage_events for user:$_"); }
-	if ($num_s3_events_per_user < $nn) { die("Wrong num_s3_events for user:$_"); }
-	if ($total_disk_per_user < $nn) { die("Wrong disk_io for user:$_"); }
-	if ($total_net_per_user < $nn) { die("Wrong xx for user:$_"); }
-	if ($total_s3_per_user < $nn) { die("Wrong xx for user:$_"); }
-	if ($total_vol_per_user < $nn) { die("Wrong xx for user:$_"); }
-	if ($total_snap_per_user < $nn) { die("Wrong xx for user:$_"); }
+	if ($num_instance_events_per_user < $stats{'num_instance_events'}) {
+		die("Wrong num_instance_events for user:$_");
+	}
+	if ($num_storage_events_per_user < $stats{'num_storage_events'}) {
+		die("Wrong num_storage_events for user:$_");
+	}
+	if ($num_s3_events_per_user < $stats{'num_s3_events'}) {
+		die("Wrong num_s3_events for user:$_");
+	}
+	if ($total_disk_per_user < $stats{'total_disk'}) {
+		die("Wrong disk_io for user:$_");
+	}
+	if ($total_net_per_user < $stats{'total_net'}) {
+		die("Wrong xx for user:$_");
+	}
+	if ($total_s3_per_user < $stats{'total_s3'}) {
+		die("Wrong xx for user:$_");
+	}
+	if ($total_vol_per_user < $stats{'total_vol'}) {
+		die("Wrong xx for user:$_");
+	}
+	if ($total_snap_per_user < $stats{'total_snap'}) {
+		die("Wrong xx for user:$_");
+	}
 }
+
+exit 0;
 
