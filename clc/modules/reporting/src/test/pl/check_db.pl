@@ -6,6 +6,7 @@
 #
 # Usage: check_db.pl \
 # 	num_instance_events_per_user \
+#   num_instances_per_user \
 # 	num_storage_events_per_user \
 #   num_s3_events_per_user \
 #   total_disk_per_user \
@@ -15,7 +16,7 @@
 #   total_snap_size_per_user \
 #   (username/accountname)+
 #
-# Example: check_db.pl 50 50 50 100 100 200 200 300 user_a/account_a user_b/account_b
+# Example: check_db.pl 50 2 50 50 100 100 200 200 300 user_a/account_a user_b/account_b
 #
 # NOTE: This script assumes that the db.sh script runs and is in the current
 #  path.
@@ -42,10 +43,11 @@ sub set_and_verify_larger($$) {
 # MAIN LOGIC
 #
 
-if ($#ARGV+1 < 9) {
+if ($#ARGV+1 < 10) {
 	print "
  Usage: check_db.pl 
    num_instance_events_per_user 
+   num_instances_per_user 
    num_storage_events_per_user 
    num_s3_events_per_user 
    total_disk_per_user 
@@ -55,13 +57,14 @@ if ($#ARGV+1 < 9) {
    total_snap_size_per_user 
    (username/accountname)+
 
- Example: check_db.pl 50 50 50 100 100 200 200 300 user_a/account_a user_b/account_b\n";
+ Example: check_db.pl 50 2 50 50 100 100 200 200 300 user_a/account_a user_b/account_b\n";
 	die ("Incorrect args");
 }
 
 
 # Parse args
 my $num_instance_events_per_user = shift;
+my $num_instances_per_user = shift;
 my $num_storage_events_per_user = shift;
 my $num_s3_events_per_user = shift;
 my $total_disk_per_user = shift;
@@ -89,6 +92,7 @@ my %user_stats = ();
 foreach (@usernames) {
 	# Braces at right are a _reference_ to a hash
 	$user_stats{$_} = {num_instance_events=>0,
+					    num_instances=>0,
 						num_storage_events=>0,
 						num_s3_events=>0,
 						total_disk=>0,
@@ -102,6 +106,29 @@ foreach (@usernames) {
 						snaps_num=>0};
 }
 
+
+
+# Gather stats for number of instances per user
+foreach (execute_query("
+	select
+	  ri.instance_id,
+	  ru.user_name
+	from
+	  reporting_instance ri,
+	  reporting_user ru,
+	  reporting_account ra
+	where
+	  ri.user_id = ru.user_id
+	and ri.account_id = ra.account_id
+	and ru.user_name in ($username_csv)
+	and ra.account_name in ($accountname_csv)
+")) {
+	my ($instance_id,$user_name) = split("\\s+");
+	if (defined($user_stats{$user_name})) {
+		my $stats = $user_stats{$user_name};
+		$stats->{"num_instances"}++;
+	}
+}
 
 
 # Gather instance event stats per user
@@ -214,6 +241,9 @@ foreach (keys %user_stats) {
 	if ($num_instance_events_per_user < $stats{'num_instance_events'}) {
 		die("Wrong num_instance_events for user:$_");
 	}
+	if ($num_instances_per_user < $stats{'num_instances'}) {
+		die("Wrong num_instances for user:$_");
+	}
 	if ($num_storage_events_per_user < $stats{'num_storage_events'}) {
 		die("Wrong num_storage_events for user:$_");
 	}
@@ -224,16 +254,16 @@ foreach (keys %user_stats) {
 		die("Wrong disk_io for user:$_");
 	}
 	if ($total_net_per_user < $stats{'total_net'}) {
-		die("Wrong xx for user:$_");
+		die("Wrong net_io for user:$_");
 	}
 	if ($total_s3_per_user < $stats{'total_s3'}) {
-		die("Wrong xx for user:$_");
+		die("Wrong s3_obj_size for user:$_");
 	}
 	if ($total_vol_per_user < $stats{'total_vol'}) {
-		die("Wrong xx for user:$_");
+		die("Wrong vol_size for user:$_");
 	}
 	if ($total_snap_per_user < $stats{'total_snap'}) {
-		die("Wrong xx for user:$_");
+		die("Wrong snap_size for user:$_");
 	}
 }
 
