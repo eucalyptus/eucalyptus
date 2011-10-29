@@ -1641,7 +1641,7 @@ find_or_create_artifact ( // finds and opens or creates artifact's blob either i
     return find_or_create_blob (do_create, work_bs, id_work, size_bytes, a->sig, bbp);
 }
 
-#define ARTIFACT_RETRY_SLEEP_USEC 100LL
+#define ARTIFACT_RETRY_SLEEP_USEC 500000LL
 
 // Given a root node in a tree of blob artifacts, unless the root
 // blob already exists and has the right signature, this function:
@@ -1697,7 +1697,8 @@ art_implement_tree ( // traverse artifact tree and create/download/combine artif
                 break;
             case BLOBSTORE_ERROR_NOENT: // doesn't exist yet => ok, create it
                 break; 
-            case BLOBSTORE_ERROR_AGAIN: // timed out
+            case BLOBSTORE_ERROR_AGAIN: // timed out the => competition took too long
+            case BLOBSTORE_ERROR_MFILE: // out of file descriptors for locking => same problem
                 goto retry_or_fail;
                 break;
             default: // all other errors
@@ -1733,7 +1734,8 @@ art_implement_tree ( // traverse artifact tree and create/download/combine artif
                         root->deps[i]->bb = 0; // for debugging
                     }
                     break; // out of the switch statement
-                case BLOBSTORE_ERROR_AGAIN: // timed out
+                case BLOBSTORE_ERROR_AGAIN: // timed out => the competition took too long
+                case BLOBSTORE_ERROR_MFILE: // out of file descriptors for locking => same problem
                     goto retry_or_fail;
                 default: // all other errors
                     logprintfl (EUCAERROR, "[%s] error: failed to provision dependency %s for artifact %s (error=%d)\n", root->instanceId, root->deps[i]->id, root->id, ret);
@@ -1756,6 +1758,7 @@ art_implement_tree ( // traverse artifact tree and create/download/combine artif
                 ret = BLOBSTORE_ERROR_AGAIN;
                 // fall through
             case BLOBSTORE_ERROR_AGAIN: // timed out (but probably exists)
+            case BLOBSTORE_ERROR_MFILE: // out of file descriptors for locking => same problem
                 goto retry_or_fail;
                 break;
             default: // all other errors
@@ -1797,7 +1800,7 @@ art_implement_tree ( // traverse artifact tree and create/download/combine artif
             root->deps[i]->bb = 0; // for debugging
         }
         
-    } while (ret==BLOBSTORE_ERROR_AGAIN // only timeout error causes us to keep trying
+    } while ((ret==BLOBSTORE_ERROR_AGAIN || ret==BLOBSTORE_ERROR_MFILE) // only timeout-type error causes us to keep trying
              && ( timeout_usec==0 // indefinitely if there is no timeout at all
                   || (time_usec()-started)<timeout_usec )); // or until we exceed the timeout
 

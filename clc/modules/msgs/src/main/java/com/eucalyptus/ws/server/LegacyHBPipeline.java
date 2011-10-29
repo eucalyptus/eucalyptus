@@ -78,7 +78,7 @@ import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import com.eucalyptus.component.Component;
-import com.eucalyptus.component.ComponentPart;
+import com.eucalyptus.component.ComponentId.ComponentPart;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.empyrean.Empyrean;
@@ -112,12 +112,14 @@ public class LegacyHBPipeline extends FilteredPipeline {
       if ( e.getMessage( ) instanceof MappingHttpRequest ) {
         MappingHttpRequest request = ( MappingHttpRequest ) e.getMessage( );
         HttpMethod method = request.getMethod( );
-        if( HttpMethod.GET.equals( method ) ) {
+        if ( HttpMethod.GET.equals( method ) ) {
           try {
             HttpResponse response = new DefaultHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.OK );
             String resp = "";
             for ( Component c : Components.list( ) ) {
-              resp += String.format( "name=%-20.20s enabled=%-10.10s local=%-10.10s initialized=%-10.10s\n", c.getName( ), c.isAvailableLocally( ), !c.getComponentId( ).runLimitedServices( ), c.getLocalServiceConfiguration( ).getFullName( ) );
+              resp += String.format( "name=%-20.20s enabled=%-10.10s local=%-10.10s initialized=%-10.10s\n", c.getName( ),
+                                     c.getComponentId( ).isAvailableLocally( ), !c.getComponentId( ).runLimitedServices( ),
+                                     c.getLocalServiceConfiguration( ).getFullName( ) );
             }
             ChannelBuffer buf = ChannelBuffers.copiedBuffer( resp.getBytes( ) );
             response.setContent( buf );

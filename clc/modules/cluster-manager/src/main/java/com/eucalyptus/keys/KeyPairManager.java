@@ -89,7 +89,7 @@ public class KeyPairManager {
         }
       }
     };
-    RestrictedTypes.allocate( allocator );
+    RestrictedTypes.allocateUnitlessResource( allocator );
     return reply;
   }
   
@@ -122,7 +122,7 @@ public class KeyPairManager {
           reply.setKeyName( request.getKeyName( ) );
           return newKey;
         }};
-      RestrictedTypes.allocate( allocator );
+      RestrictedTypes.allocateUnitlessResource( allocator );
     }
     return reply;
   }

@@ -481,7 +481,7 @@ public class Images {
     }
   }
   
-  public static ImageInfo createFromManifest( UserFullName creator, String imageNameArg, String imageDescription, ImageMetadata.Architecture requestArch, ImageMetadata.Platform requestPlatform, String eki, String eri, ImageManifest manifest ) throws EucalyptusCloudException {
+  public static ImageInfo createFromManifest( UserFullName creator, String imageNameArg, String imageDescription, ImageMetadata.Architecture requestArch, String eki, String eri, ImageManifest manifest ) throws EucalyptusCloudException {
     PutGetImageInfo ret = null;
     String imageName = ( imageNameArg != null )
       ? imageNameArg
@@ -501,9 +501,7 @@ public class Images {
     ImageMetadata.Architecture imageArch = ( requestArch != null )
       ? requestArch
       : manifest.getArchitecture( );
-    ImageMetadata.Platform imagePlatform = ( requestPlatform != null )
-      ? requestPlatform
-      : manifest.getPlatform( );
+    ImageMetadata.Platform imagePlatform = manifest.getPlatform( );
     switch ( manifest.getImageType( ) ) {
       case kernel:
         ret = new KernelImageInfo( creator, ImageUtil.newImageId( ImageMetadata.Type.kernel.getTypePrefix( ), manifest.getImageLocation( ) ),

@@ -6,7 +6,6 @@ import com.eucalyptus.auth.AuthenticationProperties.LicChangeListener;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.google.common.collect.Maps;
-import edu.ucsb.eucalyptus.admin.server.ServletUtils;
 
 /**
  * Web session manager, maintaining a web session registrar.

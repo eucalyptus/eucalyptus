@@ -78,9 +78,8 @@ public class ComponentDiscovery extends ServiceJarDiscovery {
          && !Modifier.isInterface( candidate.getModifiers( ) ) ) {
       try {
         EventRecord.here( ComponentDiscovery.class, EventType.BOOTSTRAP_INIT_COMPONENT, candidate.getCanonicalName( ) ).info( );
-        final ComponentId id = ( ComponentId ) candidate.newInstance( );
-        ComponentIds.register( id );
-        
+        final Class<? extends ComponentId> idClass = candidate;
+        ComponentIds.lookup( idClass );
       } catch ( final Throwable ex ) {
         LOG.error( ex, ex );
         LOG.info( "Error occurred while trying to register ComponentId of type: " + ex.getMessage( ), ex );

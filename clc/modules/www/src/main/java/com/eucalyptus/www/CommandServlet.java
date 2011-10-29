@@ -9,9 +9,9 @@ import javax.servlet.http.*;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.util.ExposedCommand;
-import com.google.gwt.user.client.rpc.SerializableException;
-
-import edu.ucsb.eucalyptus.admin.server.EucalyptusWebBackendImpl;
+import com.eucalyptus.webui.client.service.EucalyptusServiceException;
+import com.eucalyptus.webui.client.service.Session;
+import com.eucalyptus.webui.server.EucalyptusServiceImpl;
 
 /**
  * <p>CommandServlet invokes a single static method within a running Eucalyptus
@@ -74,10 +74,10 @@ public class CommandServlet
 
 		/* Verify session id */
 		try {
-			if (EucalyptusWebBackendImpl.verifySession(sessionId) == null) {
+			if (EucalyptusServiceImpl.verifySession(new Session( sessionId) ) == null) {
 				throw new ServletException("Invalid session id");
 			}
-		} catch (SerializableException ex) {
+		} catch (EucalyptusServiceException ex) {
 			LOG.error(ex);
 			throw new ServletException(ex);
 		}

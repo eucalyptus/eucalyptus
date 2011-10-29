@@ -9,7 +9,6 @@ import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.Security;
 import java.util.Arrays;
-
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
@@ -17,20 +16,18 @@ import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
-
 import org.apache.commons.codec.binary.Base64;
-import org.bouncycastle.util.encoders.UrlBase64;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
-
-import com.eucalyptus.component.auth.AbstractKeyStore;
-import com.eucalyptus.component.auth.EucaKeyStore;
+import org.bouncycastle.util.encoders.UrlBase64;
+import com.eucalyptus.component.auth.SystemCredentials;
+import com.eucalyptus.crypto.KeyStore;
 
 public class StringCrypto {
 
 	private final String ALIAS = "eucalyptus"; // TODO: don't hardcode these?
 	private final String PASSWORD = "eucalyptus";
 
-	private static AbstractKeyStore keystore;
+	private static KeyStore keystore;
 	private final String symmetricFormat = "DESede/CBC/PKCS5Padding";
 	private String asymmetricFormat = "RSA/ECB/PKCS1Padding";
 	private String provider = "BC";
@@ -50,7 +47,7 @@ public class StringCrypto {
 		Security.addProvider( new BouncyCastleProvider( ) );
 		if (Security.getProvider (this.provider) == null) 
 			throw new RuntimeException("cannot find security provider " + this.provider);
-		keystore = EucaKeyStore.getInstance();
+		keystore = SystemCredentials.getKeyStore();
 		if (keystore==null) 
 			throw new RuntimeException ("cannot load keystore or find the key");
 	}

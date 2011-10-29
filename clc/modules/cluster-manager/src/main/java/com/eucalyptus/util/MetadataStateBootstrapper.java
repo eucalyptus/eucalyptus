@@ -83,7 +83,8 @@ public class MetadataStateBootstrapper extends Bootstrapper.Simple {
   }
   
   private static void ensureCountersExist( ) {
-    Counters.getNextId( );
+    UniqueIds.nextId( );
+    UniqueIds.nextId( Eucalyptus.class );
   }
   
   private static void ensureVmTypesExist( ) {

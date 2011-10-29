@@ -1,196 +1,306 @@
 package com.eucalyptus.component;
 
-import java.io.IOException;
-import java.io.InputStream;
 import java.io.Serializable;
-import java.io.StringWriter;
-import java.net.InetAddress;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;
-import java.util.MissingFormatArgumentException;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ExecutionException;
-import org.apache.commons.io.IOUtils;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.Channels;
-import com.eucalyptus.bootstrap.BootstrapException;
+import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.empyrean.AnonymousMessage;
 import com.eucalyptus.empyrean.Empyrean;
-import com.eucalyptus.records.Logs;
+import com.eucalyptus.system.Ats;
+import com.eucalyptus.util.Classes;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.util.HasName;
-import com.eucalyptus.util.Internets;
-import com.eucalyptus.ws.StackConfiguration;
-import com.google.common.base.Function;
+import com.eucalyptus.ws.StackConfiguration.BasicTransport;
+import com.eucalyptus.ws.TransportDefinition;
+import com.eucalyptus.ws.server.Pipelines;
+import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-
-import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
+import edu.emory.mathcs.backport.java.util.Arrays;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public abstract class ComponentId implements HasName<ComponentId>, HasFullName<ComponentId>, Serializable {
-  private static Logger       LOG         = Logger.getLogger( ComponentId.class );
-  private static final String EMPTY_MODEL = "  <mule xmlns=\"http://www.mulesource.org/schema/mule/core/2.0\"\n"
-                                            +
-                                            "      xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n"
-                                            +
-                                            "      xmlns:spring=\"http://www.springframework.org/schema/beans\"\n"
-                                            +
-                                            "      xmlns:vm=\"http://www.mulesource.org/schema/mule/vm/2.0\"\n"
-                                            +
-                                            "      xmlns:euca=\"http://www.eucalyptus.com/schema/cloud/1.6\"\n"
-                                            +
-                                            "      xsi:schemaLocation=\"\n"
-                                            +
-                                            "       http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-2.0.xsd\n"
-                                            +
-                                            "       http://www.mulesource.org/schema/mule/core/2.0 http://www.mulesource.org/schema/mule/core/2.0/mule.xsd\n" +
-                                            "       http://www.mulesource.org/schema/mule/vm/2.0 http://www.mulesource.org/schema/mule/vm/2.0/mule-vm.xsd\n" +
-                                            "       http://www.eucalyptus.com/schema/cloud/1.6 http://www.eucalyptus.com/schema/cloud/1.6/euca.xsd\">\n" +
-                                            "</mule>\n";
-  private final String        name;
-  private final String        capitalizedName;
-  private final String        entryPoint;
-  private final Integer       port;
-  private final String        modelContent;
-  private String              uriPattern;
-  private String              externalUriPattern;
-  private String              uriLocal;
   
-  protected ComponentId( String name ) {
-    this.capitalizedName = name;
-    this.name = this.capitalizedName.toLowerCase( );
-    this.entryPoint = this.capitalizedName + "RequestQueueEndpoint";
-    this.port = 8773;
-    this.uriPattern = "http://%s:%d/internal/%s";
-    // NOTE: this pattern is overwritten by some subclasses in getExternalUriPattern()
-    this.externalUriPattern = "%s://%s:%d/services/" + this.capitalizedName;
-    this.uriLocal = String.format( "vm://%sInternal", this.getClass( ).getSimpleName( ) );
-    this.modelContent = loadModel( );
+  /**
+   *
+   */
+  @Target( { ElementType.TYPE,
+      ElementType.FIELD } )
+  @Retention( RetentionPolicy.RUNTIME )
+  public @interface PolicyVendor {
+    String value( );
+  }
+  
+  /**
+   * The annotated type provides an implementation of some component specific functionality for the
+   * ComponentId indicated.
+   */
+  @Target( { ElementType.TYPE,
+      ElementType.FIELD } )
+  @Retention( RetentionPolicy.RUNTIME )
+  public @interface ComponentPart {
+    Class<? extends ComponentId> value( );
+  }
+  
+  /**
+   *
+   */
+  @Target( { ElementType.TYPE,
+      ElementType.FIELD } )
+  @Retention( RetentionPolicy.RUNTIME )
+  public @interface ComponentMessage {
+    Class<? extends ComponentId> value( );
+  }
+  
+  /**
+   * Declares the component which controls the partition of the annotated component type. e.g.,
+   * cluster controllers are in partitions controlled by the cloud controller (Eucalyptus) and is so
+   * annotated.
+   * 
+   * Cases:
+   * 
+   * 1. No annotation ==> in own partition.
+   * 2. @Partition(OWNTYPE.class) ==> OWNTYPE.class in own partition.
+   * 3. @Partition(OTHERTYPE.class) ==> sub-component of OTHERTYPE; one-to-one relationship.
+   * 4. @Partition(value={OTHERTYPE.class}, manyToOne=true) ==> sub-component of OTHERTYPE;
+   * many-to-one relationship.
+   * 
+   * @note for use on Class<? extends ComponentId>
+   */
+  @Target( { ElementType.TYPE,
+      ElementType.FIELD } )
+  @Retention( RetentionPolicy.RUNTIME )
+  public @interface Partition {
+    Class<? extends ComponentId>[] value( ) default {};
+    
+    /**
+     * This service type can have many siblings registered to the same parent w/in a single
+     * partition; e.g., many NCs belong in the same partion as their parent CC
+     */
+    boolean manyToOne( ) default false;
+  }
+  
+  /**
+   * Component needs system-wide credentials (in keystore).
+   * 
+   * @value alias to use in the keystore; Component.name() is not specified.
+   * @note for use on Class<? extends ComponentId>
+   */
+  @Target( { ElementType.TYPE,
+      ElementType.FIELD } )
+  @Retention( RetentionPolicy.RUNTIME )
+  public @interface GenerateKeys {
+    /**
+     * Key store alias
+     */
+    String value( ) default "";
+  }
+  
+  /**
+   * Defines a user-facing service.
+   * 
+   * @note for use on Class<? extends ComponentId>
+   */
+  @Target( { ElementType.TYPE,
+      ElementType.FIELD } )
+  @Retention( RetentionPolicy.RUNTIME )
+  public @interface PublicService {}
+  
+  /**
+   * Annotated ComponentId defines an admin service.
+   * 
+   * @note for use on Class<? extends ComponentId>
+   */
+  @Target( { ElementType.TYPE,
+      ElementType.FIELD } )
+  @Retention( RetentionPolicy.RUNTIME )
+  public @interface AdminService {}
+  
+  /**
+   * Component should not receive messages.
+   */
+  @Target( { ElementType.TYPE,
+      ElementType.FIELD } )
+  @Retention( RetentionPolicy.RUNTIME )
+  public @interface InternalService {}
+  
+  @Target( { ElementType.TYPE,
+      ElementType.FIELD } )
+  @Retention( RetentionPolicy.RUNTIME )
+  public @interface ServiceOperation {
+    boolean user( ) default false;
+  }
+  
+  private static final long  serialVersionUID = 1L;
+  private static Logger      LOG              = Logger.getLogger( ComponentId.class );
+  private String             capitalizedName;
+  private final Ats          ats;
+  private final Partition    partitionInfo;
+  private final GenerateKeys keyInfo;
+  private final String       vendorName;
+  
+  protected ComponentId( final String name ) {
+    this( );
+    this.capitalizedName = ( name == null
+      ? this.getClass( ).getSimpleName( )
+      : name );
   }
   
   protected ComponentId( ) {
     this.capitalizedName = this.getClass( ).getSimpleName( );
-    this.name = this.capitalizedName.toLowerCase( );
-    this.entryPoint = this.capitalizedName + "RequestQueueEndpoint";
-    this.port = 8773;
-    this.uriPattern = "http://%s:%d/internal/%s";
-    // NOTE: this pattern is overwritten by some subclasses in getExternalUriPattern()
-    this.externalUriPattern = "%s://%s:%d/services/" + this.capitalizedName;
-    this.uriLocal = String.format( "vm://%sInternal", this.getClass( ).getSimpleName( ) );
-    this.modelContent = loadModel( );
-  }
-
-  public String getVendorName( ) {
-    return "euca";
+    this.ats = Ats.from( this );
+    this.partitionInfo = this.ats.get( Partition.class );
+    if ( this.ats.has( GenerateKeys.class ) ) {
+      this.keyInfo = this.ats.get( GenerateKeys.class );
+    } else {
+      this.keyInfo = null;
+    }
+    this.vendorName = ( !this.ats.has( PolicyVendor.class )
+        ? "euca"
+          : this.ats.get( PolicyVendor.class ).value( ) );
   }
   
-  private String loadModel( ) {
-    StringWriter out = new StringWriter( );
-    try {
-      InputStream in = Thread.currentThread( ).getContextClassLoader( ).getResourceAsStream( this.getServiceModelFileName( ) );
-      if ( in == null ) {
-        return EMPTY_MODEL;
-      } else {
-        IOUtils.copy( in, out );
-        in.close( );
-        out.flush( );
-        String outString = out.toString( );
-        Logs.extreme( ).trace( "Loaded model for: " + this.name );
-        Logs.extreme( ).trace( outString );
-        return outString;
-      }
-    } catch ( IOException ex ) {
-      LOG.error( ex, ex );
-      throw BootstrapException.throwError( "BUG! BUG! Failed to load configuration specified for Component: " + this.name, ex );
-    }
+  public List<? extends TransportDefinition> getTransports( ) {
+    return Lists.newArrayList( BasicTransport.HTTP );
+  }
+  
+  public String getServicePath( final String... pathParts ) {
+    return "/services/" + this.capitalizedName;
+  }
+  
+  public String getInternalServicePath( final String... pathParts ) {
+    return "/internal/" + this.capitalizedName;
+  }
+  
+  public final String getVendorName( ) {
+    return this.vendorName;
   }
   
   public final String name( ) {
-    return this.name;
+    return this.capitalizedName.toLowerCase( );
   }
   
   @Override
   public final String getName( ) {
-    return this.name;
+    return this.name( );
   }
   
   @Override
   public final FullName getFullName( ) {
-    return new ComponentFullName( this, this.tryForPartionName( ), this.name );
+    return ComponentFullName.getInstance( ServiceConfigurations.createEphemeral( this ), this.getPartition( ), this.name( ) );
   }
   
   @Override
   public String getPartition( ) {
-    return this.tryForPartionName( );//TODO:GRZE:OMGFIXME
-  }
-  
-  private final String tryForPartionName( ) {
-    return ( this.isPartitioned( ) )
-      ? ComponentIds.lookup( Empyrean.class ).name( )
-      : ( ( Unpartioned ) this ).getPartition( );
+    return this.partitionParent( ).name( );
   }
   
   public final boolean isRootService( ) {
-    return this.serviceDependencies( ).isEmpty( );
+    return this.partitionParent( ).equals( this );
+  }
+  
+  public final boolean isAncestor( final Class<? extends ComponentId> compId ) {
+    if ( this.isCloudLocal( ) && Eucalyptus.class.equals( compId ) ) {
+      return true;
+    } else if ( this.isAlwaysLocal( ) && Empyrean.class.equals( compId ) ) {
+      return true;
+    } else {
+      for ( ComponentId deps = this; ( deps != null ) && !deps.equals( deps.partitionParent( ) ); deps = deps.partitionParent( ) ) {
+        if ( compId.equals( deps.getClass( ) ) ) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+  
+  final ComponentId partitionParent( ) {
+    if ( this.partitionInfo == null ) {
+      return this;
+    } else if ( this.partitionInfo.value( ).length == 0 ) {
+      return this;
+    } else if ( Arrays.asList( this.partitionInfo.value( ) ).contains( Empyrean.class ) ) {
+      return Empyrean.INSTANCE;
+    } else if ( Arrays.asList( this.partitionInfo.value( ) ).contains( this.getClass( ) ) ) {
+      return this;
+    } else if ( Arrays.asList( this.partitionInfo.value( ) ).contains( Eucalyptus.class ) && !this.partitionInfo.manyToOne( ) ) {
+      return Eucalyptus.INSTANCE;
+    } else {
+      return ComponentIds.lookup( this.partitionInfo.value( )[0] );
+    }
   }
   
   public final boolean isPartitioned( ) {
-    return !Unpartioned.class.isAssignableFrom( this.getClass( ) );
-  }
-  
-  public FullName makeFullName( ServiceConfiguration config, String... parts ) {
-    return new ComponentFullName( config, parts );
-  }
-
-  public List<Class<? extends ComponentId>> serviceDependencies( ) {
-    return Lists.newArrayList( );
+    return this.isRegisterable( ) && !this.equals( this.partitionParent( ) );
   }
   
   public final Boolean isCloudLocal( ) {
-    return this.serviceDependencies( ).contains( Eucalyptus.class ) || Eucalyptus.class.equals( this.getClass( ) );
+    return Eucalyptus.INSTANCE.isRelated( ).apply( this );
   }
   
   public final Boolean isAlwaysLocal( ) {
-    return this.serviceDependencies( ).contains( Empyrean.class ) || Empyrean.class.equals( this.getClass( ) );
+    return Empyrean.INSTANCE.isRelated( ).apply( this );
+  }
+  
+  public Predicate<ComponentId> isRelated( ) {
+    return new Predicate<ComponentId>( ) {
+      
+      @Override
+      public boolean apply( final ComponentId input ) {
+        return ComponentId.this.equals( input ) || Arrays.asList( input.partitionInfo.value( ) ).contains( ComponentId.this.getClass( ) );
+      }
+    };
   }
   
   public Boolean hasCredentials( ) {
-    return false;
+    return this.ats.has( GenerateKeys.class );
   }
   
   private static final ConcurrentMap<String, Class<ChannelPipelineFactory>> clientPipelines = Maps.newConcurrentMap( );
   
   public ChannelPipelineFactory getClientPipeline( ) {
+    ChannelPipelineFactory factory = null;
+    for ( final Class c : Classes.ancestors( this ) ) {
+      if ( ( factory = Pipelines.lookup( this.getClass( ) ) ) != null ) {
+        return factory;
+      }
+    }
     return helpGetClientPipeline( defaultClientPipelineClass );//TODO:GRZE:URGENT: fix handling of internal pipeline
   }
   
   private static final String defaultClientPipelineClass = "com.eucalyptus.ws.client.pipeline.InternalClientPipeline";
   
-  protected static ChannelPipelineFactory helpGetClientPipeline( String fqName ) {
+  protected static ChannelPipelineFactory helpGetClientPipeline( final String fqName ) {
     if ( clientPipelines.containsKey( fqName ) ) {
       try {
         return clientPipelines.get( fqName ).newInstance( );
-      } catch ( InstantiationException ex ) {
+      } catch ( final InstantiationException ex ) {
         LOG.error( ex, ex );
-      } catch ( IllegalAccessException ex ) {
+      } catch ( final IllegalAccessException ex ) {
         LOG.error( ex, ex );
       }
     } else {
       try {
         clientPipelines.putIfAbsent( fqName, ( Class<ChannelPipelineFactory> ) ClassLoader.getSystemClassLoader( ).loadClass( fqName ) );
         return clientPipelines.get( fqName ).newInstance( );
-      } catch ( InstantiationException ex ) {
+      } catch ( final InstantiationException ex ) {
         LOG.error( ex, ex );
-      } catch ( IllegalAccessException ex ) {
+      } catch ( final IllegalAccessException ex ) {
         LOG.error( ex, ex );
-      } catch ( ClassNotFoundException ex ) {
+      } catch ( final ClassNotFoundException ex ) {
         LOG.error( ex, ex );
       }
     }
@@ -203,16 +313,10 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
     };
   }
   
-  /**
-   * @return the entryPoint
-   */
-  public String getEntryPoint( ) {
-    return this.entryPoint;
+  public final String getEntryPoint( ) {
+    return this.capitalizedName + "RequestQueueEndpoint";
   }
   
-  /**
-   * @return the capitalizedName
-   */
   public final String getCapitalizedName( ) {
     return this.capitalizedName;
   }
@@ -220,174 +324,59 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
   public Class<? extends BaseMessage> lookupBaseMessageType( ) {
     try {
       return ComponentMessages.lookup( this.getClass( ) );
-    } catch ( NoSuchElementException ex ) {
+    } catch ( final NoSuchElementException ex ) {
       return AnonymousMessage.class;
     }
   }
   
   public Integer getPort( ) {
-    return this.port;
+    return 8773;
   }
   
   public String getLocalEndpointName( ) {
-    return this.uriLocal;
+    return String.format( "vm://%sInternal", this.getClass( ).getSimpleName( ) );
   }
   
   public URI getLocalEndpointUri( ) {
-    URI uri = URI.create( this.getLocalEndpointName( ) );
+    final URI uri = URI.create( this.getLocalEndpointName( ) );
     try {
       uri.parseServerAuthority( );
-    } catch ( URISyntaxException ex ) {
+    } catch ( final URISyntaxException ex ) {
       LOG.error( ex, ex );
     }
     return uri;
-  }
-  
-  public final String getServiceModel( ) {
-    return this.modelContent;
   }
   
   public String getServiceModelFileName( ) {
     return String.format( "%s-model.xml", this.getName( ) );
   }
   
-  public String getUriPattern( ) {
-    return this.uriPattern;
-  }
-  
-  /**
-   * Get the HTTP service path
-   */
-  public final URI makeInternalRemoteUri( String hostName, Integer port ) {
-    String uri;
-    try {
-      uri = String.format( this.getUriPattern( ), hostName, port );
-    } catch ( MissingFormatArgumentException e ) {
-      uri = String.format( this.getUriPattern( ) + "Internal", hostName, port, this.getCapitalizedName( ) );
-    }
-    try {
-      URI u = new URI( uri );
-      u.parseServerAuthority( );
-      return u;
-    } catch ( URISyntaxException e ) {
-      return URI.create( uri );
-    }
-  }
-  
-  /**
-   * Create URI for external endpoint
-   * @param scheme URI scheme to be used, see StackConfiguration fields for configurable properties
-   */
-  public final URI makeExternalRemoteUri( String hostName, Integer port, String scheme ) {
-    String uri;
-    URI u = null;
-    String pattern;
-
-    port = ( port == -1 )
-      ? this.getPort( )
-      : port;
-    hostName = ( port == -1 )
-      ? Internets.localHostAddress( )
-      : hostName;
-    pattern = this.getExternalUriPattern();
-
-    try {
-      if(StackConfiguration.USE_DNS_DELEGATION) {
-        if(pattern.startsWith("%s"))
-      	  uri = String.format( this.getExternalUriPattern( ), scheme, this.getName() + "." + SystemConfiguration.getSystemConfiguration().getDnsDomain(), port );
-        else
-      	  uri = String.format( this.getExternalUriPattern( ), this.getName() + "." + SystemConfiguration.getSystemConfiguration().getDnsDomain(), port );
-      } else {
-        if(pattern.startsWith("%s"))
-	      uri = String.format( this.getExternalUriPattern( ), scheme, hostName, port );
-        else
-	      uri = String.format( this.getExternalUriPattern( ), hostName, port );
-      }
-      u = new URI( uri );
-      u.parseServerAuthority( );
-    } catch ( URISyntaxException e ) {
-        if(pattern.startsWith("%s"))
-	    uri = String.format( this.getExternalUriPattern( ), scheme, Internets.localHostAddress( ), this.getPort( ) );
-	else
-	    uri = String.format( this.getExternalUriPattern( ), Internets.localHostAddress( ), this.getPort( ) );
-      try {
-        u = new URI( uri );
-        u.parseServerAuthority( );
-      } catch ( URISyntaxException ex ) {
-        u = URI.create( uri );
-      }
-    } catch ( MissingFormatArgumentException e ) {
-	if(pattern.startsWith("%s"))
-	    uri = String.format( this.getExternalUriPattern( ), scheme, hostName, port, this.getCapitalizedName( ) );
-	else 
-	    uri = String.format( this.getExternalUriPattern( ), hostName, port, this.getCapitalizedName( ) );
-      try {
-        u = new URI( uri );
-        u.parseServerAuthority( );
-      } catch ( URISyntaxException ex ) {
-        u = URI.create( uri );
-      }
-    }
-    return u;
-  }
-  
   @Override
-  public final int compareTo( ComponentId that ) {
-    return this.name.compareTo( that.name );
+  public final int compareTo( final ComponentId that ) {
+    return this.name( ).compareTo( that.name( ) );
   }
   
   @Override
   public final int hashCode( ) {
     final int prime = 31;
     int result = 1;
-    result = prime * result + ( ( this.name == null )
-      ? 0
-      : this.name.hashCode( ) );
+    result = prime * result
+             + ( ( this.name( ) == null )
+               ? 0
+               : this.name( ).hashCode( ) );
     return result;
   }
   
   @Override
-  public final boolean equals( Object obj ) {
+  public final boolean equals( final Object obj ) {
     if ( this == obj ) return true;
     if ( obj == null ) return false;
-    if ( getClass( ) != obj.getClass( ) ) return false;
-    ComponentId other = ( ComponentId ) obj;
-    if ( this.name == null ) {
-      if ( other.name != null ) return false;
-    } else if ( !this.name.equals( other.name ) ) return false;
+    if ( this.getClass( ) != obj.getClass( ) ) return false;
+    final ComponentId other = ( ComponentId ) obj;
+    if ( this.name( ) == null ) {
+      if ( other.name( ) != null ) return false;
+    } else if ( !this.name( ).equals( other.name( ) ) ) return false;
     return true;
-  }
-  
-  public String getExternalUriPattern( ) {
-    return this.externalUriPattern;
-  }
-  
-//  @Override
-//  public String toString( ) {
-//    return String.format( "ComponentId:%s:parent=%s:%spartitioned:disp=%s:alwaysLocal=%s:cloudLocal=%s:creds=%s",
-//                          this.name( ), this.serviceDependencies( ), this.isPartitioned( ) ? "" : "un", this.lookupBaseMessageType( ).getSimpleName( ), this.hasDispatcher( ), this.isAlwaysLocal( ), this.isCloudLocal( ),
-//                          this.isPartitioned( ), this.hasCredentials( ) );
-//  }
-  
-  public static abstract class Unpartioned extends ComponentId {
-    
-    public Unpartioned( ) {
-      super( );
-    }
-    
-    public Unpartioned( String name ) {
-      super( name );
-    }
-    
-    @Override
-    public String getPartition( ) {
-      return this.isCloudLocal( )
-        ? Eucalyptus.INSTANCE.name( )
-        : ( this.isAlwaysLocal( )
-          ? Empyrean.INSTANCE.name( )
-          : this.name( ) );
-    }
-    
   }
   
   public boolean runLimitedServices( ) {
@@ -396,22 +385,13 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
   
   @Override
   public String toString( ) {
-    StringBuilder builder = new StringBuilder( );
+    final StringBuilder builder = new StringBuilder( );
     builder.append( this.getFullName( ) ).append( " " );
     builder.append( this.name( ) ).append( ":" );
     if ( this.isPartitioned( ) ) {
       builder.append( "partitioned:" );
     } else {
       builder.append( "unpartitioned:" );
-    }
-    if ( !this.serviceDependencies( ).isEmpty( ) ) {
-      builder.append( "deps=" ).append( Lists.transform( this.serviceDependencies( ), new Function<Class, String>( ) {
-        
-        @Override
-        public String apply( Class arg0 ) {
-          return arg0.getSimpleName( );
-        }
-      } ) ).append( ":" );
     }
     if ( this.isCloudLocal( ) ) {
       builder.append( "cloudLocal:" );
@@ -425,36 +405,48 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
   }
   
   public final boolean isInternal( ) {
-    return !this.isAdminService( ) && !this.isUserService( );
+    return this.ats.has( InternalService.class ) || ( !this.isAdminService( ) && !this.isPublicService( ) );
   }
   
-  public boolean isUserService( ) {
-    return false;
+  /**
+   * @return true if does not require internal system privileges, false otherwise.
+   */
+  public boolean isPublicService( ) {
+    return this.ats.has( PublicService.class );
   }
   
+  /**
+   * @return true if does not require internal system privileges, false otherwise.
+   */
   public boolean isAdminService( ) {
-    return false;
+    return this.ats.has( AdminService.class );
   }
   
+  /**
+   * @return
+   */
   public boolean isRegisterable( ) {
     return !( ServiceBuilders.lookup( this ) instanceof DummyServiceBuilder );
   }
-
-  protected static ServiceConfiguration setupServiceState( InetAddress addr, ComponentId compId ) throws ServiceRegistrationException, ExecutionException {
-    try {
-      Component comp = Components.lookup( compId );
-      ServiceConfiguration config = ( Internets.testLocal( addr ) )
-        ? comp.initRemoteService( addr )
-        : comp.initRemoteService( addr );//TODO:GRZE:REVIEW: use of initRemote
-      if ( Component.State.INITIALIZED.ordinal( ) >= config.lookupState( ).ordinal( ) ) {
-        comp.loadService( config ).get( );
-      }
-      Topology.enable( config );
-      return config;
-    } catch ( InterruptedException ex ) {
-      Thread.currentThread( ).interrupt( );
-      return null;
-    }
+  
+  /**
+   * Can the component be run locally (i.e., is the needed code available)
+   * 
+   * @param component TODO
+   * @return true if the component could be run locally.
+   */
+  public Boolean isAvailableLocally( ) {
+    return this.isAlwaysLocal( ) || ( this.isCloudLocal( ) && BootstrapArgs.isCloudController( ) )
+           || this.checkComponentParts( );
+  }
+  
+  private boolean checkComponentParts( ) {
+    return true;//TODO:GRZE:add checks to ensure full component state is present
+//  try {
+//    return ComponentMessages.lookup( this.getComponentId( ).getClass( ) ) != null;
+//  } catch ( NoSuchElementException ex ) {
+//    return false;
+//  }
   }
   
 }

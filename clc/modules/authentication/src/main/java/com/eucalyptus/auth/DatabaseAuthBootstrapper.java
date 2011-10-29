@@ -9,6 +9,7 @@ import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
+import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.empyrean.Empyrean;
@@ -26,7 +27,7 @@ public class DatabaseAuthBootstrapper extends Bootstrapper {
   }
   
   public boolean start( ) throws Exception {
-    if(Components.lookup( Eucalyptus.class ).isAvailableLocally( )) {
+    if(ComponentIds.lookup( Eucalyptus.class ).isAvailableLocally()) {
       this.eusureSystemAdminExist( );
       LdapSync.start( );
     }

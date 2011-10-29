@@ -3,8 +3,7 @@ package com.eucalyptus.cluster.callback;
 import java.util.Date;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
-import com.eucalyptus.context.ServiceContext;
-import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.context.Contexts;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.MessageCallback;
 import com.eucalyptus.vm.VmInstance;
@@ -45,7 +44,7 @@ public class PasswordDataCallback extends MessageCallback<GetConsoleOutputType,G
       rep.setOutput( null );
     }
     try {
-      ServiceContext.response( rep );
+      Contexts.response( rep );
     } catch ( Exception ex1 ) {
       LOG.error( ex1 , ex1 );
     }

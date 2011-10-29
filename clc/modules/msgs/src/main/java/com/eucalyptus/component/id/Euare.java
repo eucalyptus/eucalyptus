@@ -63,28 +63,20 @@
 
 package com.eucalyptus.component.id;
 
-import java.util.ArrayList;
-import java.util.List;
 import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.ComponentId.Partition;
+import com.eucalyptus.component.ComponentId.PolicyVendor;
+import com.eucalyptus.component.ComponentId.PublicService;
 
-public class Euare extends ComponentId.Unpartioned {
+@Partition( Eucalyptus.class )
+@PublicService
+@PolicyVendor( "iam" )
+public class Euare extends ComponentId {
   public static Euare INSTANCE = new Euare( );
-  @Override
-  public List<Class<? extends ComponentId>> serviceDependencies( ) {
-    return   new ArrayList( ) {
-      {
-        this.add( Eucalyptus.class );
-      }
-    };
-  }
   
   @Override
-  public boolean isUserService( ) {
+  public boolean isPublicService( ) {
     return true;
   }
   
-  @Override
-  public String getVendorName( ) {
-    return "iam";
-  }
 }

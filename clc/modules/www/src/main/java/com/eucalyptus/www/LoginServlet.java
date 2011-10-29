@@ -7,9 +7,10 @@ import javax.servlet.http.*;
 
 import org.apache.log4j.Logger;
 
-import com.google.gwt.user.client.rpc.SerializableException;
-
-import edu.ucsb.eucalyptus.admin.server.EucalyptusWebBackendImpl;
+import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.webui.client.service.EucalyptusServiceException;
+import com.eucalyptus.webui.server.EucalyptusServiceImpl;
 
 /**
  * <p>Logs into eucalyptus and returns an administrator session id. To be used
@@ -39,8 +40,8 @@ public class LoginServlet
 		/* Verify admin pw */
 		String sessionId;
 		try {
-			sessionId = new EucalyptusWebBackendImpl().getNewSessionID("admin", adminPw);
-		} catch (SerializableException e) {
+			sessionId = (new EucalyptusServiceImpl()).login(Account.SYSTEM_ACCOUNT, User.ACCOUNT_ADMIN, adminPw).getId();
+		} catch (EucalyptusServiceException e) {
 			LOG.error(e);
 			throw new ServletException("Incorrect admin password");
 		}

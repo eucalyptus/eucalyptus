@@ -143,7 +143,7 @@ public class BootstrapArgs {
     return retList;
     
   }
-
+  
   public static Boolean isCloudController( ) {
     return SubDirectory.DB.hasChild( "data", "ibdata1" ) && !Boolean.TRUE.valueOf( System.getProperty( "euca.force.remote.bootstrap" ) );
   }

@@ -3005,7 +3005,7 @@ void *monitor_thread(void *in) {
 
     shawn();
     
-    logprintfl(EUCADEBUG, "monitor_thread(): done\n");
+    logprintfl(EUCADEBUG, "monitor_thread(localState=%s): done\n", config->ccStatus.localState);
     //sleep(config->ncPollingFrequency);
     ncRefresh = clcRefresh = 0;
     sleep(1);
@@ -3439,10 +3439,13 @@ int init_config(void) {
       pubmacmap = configFileValue("VNET_MACMAP");
       pubips = configFileValue("VNET_PUBLICIPS");
 
-      if (!pubSubnet || !pubSubnetMask || !pubBroadcastAddress || !pubRouter || !pubDNS || (!pubmacmap && !pubips)) {
-	logprintfl(EUCAFATAL,"init_config(): in 'STATIC' network modes, you must specify values for 'VNET_SUBNET, VNET_NETMASK, VNET_BROADCAST, VNET_ROUTER, VNET_DNS, and (VNET_MACMAP or VNET_PUBLICIPS)'\n");
+      if (!pubSubnet || !pubSubnetMask || !pubBroadcastAddress || !pubRouter || !pubDNS 
+	  || (!strcmp(pubmode, "STATIC") && !pubmacmap) || (!strcmp(pubmode, "STATIC-DYNMAC") && !pubips)) {
+	logprintfl(EUCAFATAL,"init_config(): in '%s' network mode, you must specify values for 'VNET_SUBNET, VNET_NETMASK, VNET_BROADCAST, VNET_ROUTER, VNET_DNS and %s'\n", 
+		   pubmode, (!strcmp(pubmode, "STATIC")) ? "VNET_MACMAP" : "VNET_PUBLICIPS");
 	initFail = 1;
       }
+
     } else if (pubmode && (!strcmp(pubmode, "MANAGED") || !strcmp(pubmode, "MANAGED-NOVLAN"))) {
       numaddrs = configFileValue("VNET_ADDRSPERNET");
       pubSubnet = configFileValue("VNET_SUBNET");
@@ -3485,7 +3488,7 @@ int init_config(void) {
     
     sem_mywait(VNET);
     
-    vnetInit(vnetconfig, pubmode, eucahome, netPath, CLC, pubInterface, privInterface, numaddrs, pubSubnet, pubSubnetMask, pubBroadcastAddress, pubDNS, pubDomainname, pubRouter, daemon, dhcpuser, NULL, localIp, macPrefix);
+    int ret = vnetInit(vnetconfig, pubmode, eucahome, netPath, CLC, pubInterface, privInterface, numaddrs, pubSubnet, pubSubnetMask, pubBroadcastAddress, pubDNS, pubDomainname, pubRouter, daemon, dhcpuser, NULL, localIp, macPrefix);
     if (pubSubnet) free(pubSubnet);
     if (pubSubnetMask) free(pubSubnetMask);
     if (pubBroadcastAddress) free(pubBroadcastAddress);
@@ -3500,6 +3503,12 @@ int init_config(void) {
     if (pubInterface) free(pubInterface);
     if (macPrefix) free(macPrefix);
     if (localIp) free(localIp);
+
+    if(ret > 0) {
+      sem_mypost(VNET);
+      sem_mypost(INIT);
+      return(1);
+    }
     
     vnetAddDev(vnetconfig, vnetconfig->privInterface);
 

@@ -42,7 +42,7 @@
     <g:ScrollPanel>
         <g:HTMLPanel addStyleNames="{style.panel}">
             <div class="{style.mainText}">
-                <p style="font-size:1.2em;text-align:center;">Always Dan's fault.</p>
+                <p style="font-size:1.2em;text-align:center;">Welcome to your Eucalyptus-Powered Cloud</p>
                 <p>&nbsp;</p>
                 <p style="font-size:0.9em;">Following are some quick guides to the things you can do with your cloud's Web dashboard.</p>
             </div>

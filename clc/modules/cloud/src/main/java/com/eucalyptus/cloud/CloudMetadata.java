@@ -64,7 +64,7 @@
 package com.eucalyptus.cloud;
 
 import com.eucalyptus.auth.policy.PolicyResourceType;
-import com.eucalyptus.auth.policy.PolicyVendor;
+import com.eucalyptus.component.ComponentId.PolicyVendor;
 import com.eucalyptus.util.RestrictedType;
 
 /**
@@ -82,7 +82,7 @@ public interface CloudMetadata extends RestrictedType {
   
   @PolicyResourceType( "availabilityzone" )
   public interface AvailabilityZoneMetadata extends CloudMetadata {}
-
+  
   @PolicyResourceType( "keypair" )
   public interface KeyPairMetadata extends CloudMetadata {}
   

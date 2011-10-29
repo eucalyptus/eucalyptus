@@ -64,13 +64,16 @@
 package com.eucalyptus.component.id;
 
 import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.ComponentId.GenerateKeys;
+import com.eucalyptus.component.ComponentId.Partition;
 
-
+@Partition( value = { Eucalyptus.class }, manyToOne = true )
+@GenerateKeys
 public class Storage extends ComponentId {
   
   @Override
   public Boolean hasCredentials( ) {
     return true;
   }
-
+  
 }
