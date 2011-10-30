@@ -67,7 +67,6 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.InetAddress;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -79,6 +78,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import net.sf.hajdbc.InactiveDatabaseMBean;
+import net.sf.hajdbc.sql.DriverDatabaseClusterMBean;
 import org.apache.log4j.Logger;
 import org.jgroups.Address;
 import org.jgroups.ChannelException;
@@ -96,11 +97,14 @@ import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
+import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.component.id.Eucalyptus.Database;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.empyrean.Empyrean;
+import com.eucalyptus.entities.PersistenceContexts;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Hertz;
 import com.eucalyptus.event.Listeners;
@@ -108,6 +112,7 @@ import com.eucalyptus.records.Logs;
 import com.eucalyptus.scripting.Groovyness;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Internets;
+import com.eucalyptus.util.Mbeans;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Joiner;
@@ -115,9 +120,9 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Collections2;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 
 @ConfigurableClass( root = "bootstrap.hosts",
@@ -270,6 +275,7 @@ public class Hosts {
         Coordinator.INSTANCE.update( hostMap.values( ) );
       } else if ( AdvertiseToRemoteCloudController.INSTANCE.apply( arg1 ) ) {
         LOG.info( "Hosts.entryAdded(): Marked as database  => " + arg1 );
+        Hosts.syncDatabase( arg1 );
       } else if ( BootstrapRemoteComponent.INSTANCE.apply( arg1 ) ) {
         LOG.info( "Hosts.entryAdded(): Bootstrapping host  => " + arg1 );
       } else if ( arg1.hasBootstrapped( ) ) {
@@ -776,4 +782,48 @@ public class Hosts {
     boolean failStop( ) default false;
   }
   
+  private static DriverDatabaseClusterMBean findDbClusterMBean( String ctx ) throws NoSuchElementException {
+    DriverDatabaseClusterMBean cluster = Mbeans.lookup( jdbcJmxDomain,
+                                                        ImmutableMap.builder( ).put( "cluster", ctx ).build( ),
+                                                        DriverDatabaseClusterMBean.class );
+    return cluster;
+  }
+  
+  private static final String jdbcJmxDomain = "net.sf.hajdbc";
+  
+  private static void syncDatabase( Host host ) {
+    for ( String ctx : PersistenceContexts.list( ) ) {
+      final String contextName = ctx.startsWith( "eucalyptus_" )
+        ? ctx
+        : "eucalyptus_" + ctx;
+      
+      String dbUrl = "jdbc:" + ServiceUris.remote( Database.class, host.getBindAddress( ), contextName );
+      
+      try {
+        DriverDatabaseClusterMBean cluster = findDbClusterMBean( contextName );
+        String dbPass = SystemIds.databasePassword( );
+        final String hostName = host.getBindAddress( ).getHostAddress( );
+        String realJdbcDriver = Databases.getDriverName( );
+        if ( !cluster.getActiveDatabases( ).contains( hostName ) && !cluster.getInactiveDatabases( ).contains( hostName ) ) {
+          cluster.add( hostName, realJdbcDriver, dbUrl );
+        } else if ( cluster.getActiveDatabases( ).contains( hostName ) ) {
+          continue;
+        }
+        InactiveDatabaseMBean database = Mbeans.lookup( jdbcJmxDomain,
+                                                        ImmutableMap.builder( ).put( "cluster", contextName ).put( "database", hostName ).build( ),
+                                                        InactiveDatabaseMBean.class );
+        database.setUser( "eucalyptus" );
+        database.setPassword( dbPass );
+        if ( Hosts.Coordinator.INSTANCE.isLocalhost( ) ) {
+          cluster.activate( hostName, "full" );
+        } else {
+          cluster.activate( hostName, "passive" );
+        }
+      } catch ( NoSuchElementException ex1 ) {
+        LOG.error( ex1, ex1 );
+      } catch ( Exception ex1 ) {
+        LOG.error( ex1, ex1 );
+      }
+    }
+  }
 }

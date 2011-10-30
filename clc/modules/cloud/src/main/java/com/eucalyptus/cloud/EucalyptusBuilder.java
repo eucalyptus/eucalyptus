@@ -64,7 +64,7 @@ public class EucalyptusBuilder extends AbstractServiceBuilder<EucalyptusConfigur
   @Override
   public void fireStart( ServiceConfiguration config ) throws ServiceRegistrationException {
     EventRecord.here( EucalyptusBuilder.class, EventType.COMPONENT_SERVICE_START, config.toString( ) ).info( );
-    startDbPool( config );
+//    startDbPool( config );
   }
   
   @Override
