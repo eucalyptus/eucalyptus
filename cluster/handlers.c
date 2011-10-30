@@ -3196,8 +3196,12 @@ int update_config(void) {
     // stat the config file, update modification time
     rc = stat(config->configFiles[i], &statbuf);
     if (!rc) {
-      if (statbuf.st_mtime > configMtime) {
-	configMtime = statbuf.st_mtime;
+      if (statbuf.st_mtime != configMtime || statbuf.st_ctime > configMtime) {
+	if (statbuf.st_ctime > statbuf.st_mtime) {
+	  configMtime = statbuf.st_ctime;
+	} else {
+	  configMtime = statbuf.st_mtime;
+	}
       }
     }
   }
