@@ -285,7 +285,7 @@ do_stop() {
 		fi
 	done
 	if [ $timeout -eq 0 ]; then
-	        echo "WARNING: timed out waiting for eucalyptus-cloud process to shut down (pid=$pid, ppid=$ppid)."
+#	        echo "WARNING: timed out waiting for eucalyptus-cloud process to shut down (pid=$pid, ppid=$ppid)."
 #               explicit kill -9 is dangerous with DB process running,
 #               could lead to loss of data and so we'll print the
 #               above error.
