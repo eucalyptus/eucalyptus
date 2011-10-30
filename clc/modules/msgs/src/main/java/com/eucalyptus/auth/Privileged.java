@@ -65,6 +65,7 @@ public class Privileged {
     }
     try {
       Accounts.lookupAccountByName( newName );
+      throw new AuthException( AuthException.CONFLICT );
     } catch ( AuthException ae ) {
       if ( !requestUser.isSystemAdmin( ) ) {
         if ( !requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) ) {
@@ -76,7 +77,6 @@ public class Privileged {
       }
       account.setName( newName );
     }
-    throw new AuthException( AuthException.CONFLICT );
   }
   
   public static void deleteAccountAlias( User requestUser, Account account, String alias ) throws AuthException {

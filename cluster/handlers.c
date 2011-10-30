@@ -2766,6 +2766,10 @@ int ccIsDisabled() {
 
 int ccChangeState(int newstate) {
   if (config) {
+    if (config->ccState == SHUTDOWNCC) {
+      // CC is to be shut down, there is no transition out of this state
+      return(0);
+    }
     char localState[32];
     config->ccLastState = config->ccState;
     config->ccState = newstate;
@@ -2789,7 +2793,7 @@ int ccGetStateString(char *statestr, int n) {
     snprintf(statestr, n, "INITIALIZED");
   } else if (config->ccState == PRIMORDIAL) {
     snprintf(statestr, n, "PRIMORDIAL");
-  } else if (config->ccState == NOTREADY) {
+  } else if (config->ccState == NOTREADY || config->ccState == SHUTDOWNCC) {
     snprintf(statestr, n, "NOTREADY");
   }
   return(0);
@@ -2804,7 +2808,11 @@ int ccCheckState() {
     return(1);
   }
   // check local configuration
-  
+  if (config->ccState == SHUTDOWNCC) {
+    logprintfl(EUCAINFO, "ccCheckState(): this cluster controller marked as shut down\n");
+    ret++;
+  }
+
   // configuration
   {
     char cmd[MAX_PATH];
@@ -3188,8 +3196,12 @@ int update_config(void) {
     // stat the config file, update modification time
     rc = stat(config->configFiles[i], &statbuf);
     if (!rc) {
-      if (statbuf.st_mtime > configMtime) {
-	configMtime = statbuf.st_mtime;
+      if (statbuf.st_mtime != configMtime || statbuf.st_ctime > configMtime) {
+	if (statbuf.st_ctime > statbuf.st_mtime) {
+	  configMtime = statbuf.st_ctime;
+	} else {
+	  configMtime = statbuf.st_mtime;
+	}
       }
     }
   }

@@ -14,6 +14,7 @@ SERVICE_SO_FAKE=libEucalyptusCCFake.so
 SERVICE_NAME=EucalyptusCC
 CLIENT=CCclient
 CLIENTKILLALL=euca_killall
+SHUTDOWNCC=shutdownCC
 #WSDL2C=${AXIS2C_HOME}/bin/tools/wsdl2c/WSDL2C.sh
 NCLIBS=../util/data.o ../node/client-marshal-adb.o ../util/ipc.o
 NC_FAKE_LIBS=../util/data.o ../node/client-marshal-fake.o ../util/ipc.o
@@ -74,7 +75,10 @@ $(SERVICE_SO): generated/stubs ../storage/storage.o server-marshal.o handlers.o 
 $(SERVICE_SO_FAKE):
 	$(CC) -shared generated/*.o server-marshal.o handlers.o handlers-state.o server-marshal-state.o ../util/windows-bundle.o $(SCLIBS) $(NC_FAKE_LIBS) $(VNLIBS) $(WSSECLIBS) $(CC_LIBS) -o $(SERVICE_SO_FAKE)
 
-client: $(CLIENT)_full $(CLIENTKILLALL)
+client: $(CLIENT)_full $(CLIENTKILLALL) $(SHUTDOWNCC)
+
+$(SHUTDOWNCC): generated/stubs $(SHUTDOWNCC).c cc-client-marshal-adb.c handlers.o handlers-state.o
+	$(CC) -o $(SHUTDOWNCC) $(CFLAGS) $(INCLUDES) $(SHUTDOWNCC).c cc-client-marshal-adb.c -DMODE=1 generated/adb_*.o generated/axis2_stub_*.o ../util/misc.o ../storage/diskutil.o ../util/ipc.o $(WSSECLIBS) $(CC_LIBS)
 
 $(CLIENT)_full: generated/stubs $(CLIENT).c cc-client-marshal-adb.c handlers.o handlers-state.o
 	$(CC) -o $(CLIENT)_full $(CFLAGS) $(INCLUDES) $(CLIENT).c cc-client-marshal-adb.c -DMODE=1 generated/adb_*.o generated/axis2_stub_*.o ../util/misc.o ../storage/diskutil.o ../util/ipc.o $(WSSECLIBS) $(CC_LIBS)
@@ -104,16 +108,16 @@ deploy:
 #	cp $(AXIS2C_SERVICES)/$(SERVICE_NAME)/services_noWS.xml $(AXIS2C_SERVICES)/$(SERVICE_NAME)/services.xml
 
 clean:
-	rm -f $(SERVICE_SO) $(SERVICE_SO_FAKE) *.o $(CLIENTKILLALL) $(CLIENT)_full *~* *#*
+	rm -f $(SERVICE_SO) $(SERVICE_SO_FAKE) *.o $(CLIENTKILLALL) $(CLIENT)_full $(SHUTDOWNCC) *~* *#*
 
 distclean: clean
 	rm -rf generated cc-client-policy.xml
 
 install: deploy
-	@$(INSTALL) -m 0555 $(CLIENTKILLALL) $(DESTDIR)$(sbindir)
+#	@$(INSTALL) -m 0555 $(SHUTDOWNCC) $(DESTDIR)$(sbindir)
 	@$(INSTALL) cc-client-policy.xml $(DESTDIR)$(vardir)/lib/eucalyptus/keys/
 
 uninstall:
-	@$(RM) -f $(DESTDIR)$(sbindir)/$(CLIENTKILLALL)
+#	@$(RM) -f $(DESTDIR)$(sbindir)/$(SHUTDOWNCC)
 	@$(RM) -f $(DESTDIR)$(vardir)/lib/eucalyptus/keys/cc-client-policy.xml
 	@$(RM) -rf $(DESTDIR)$(AXIS2C_SERVICES)/$(SERVICE_NAME)

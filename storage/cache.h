@@ -63,7 +63,7 @@ char * get_cache_dir (void);
 int set_work_limit (long long size);
 long long get_work_limit (void);
 int set_work_dir (const char * path);
-int clean_work_dir (void);
+int clean_work_dir (blobstore * work_bs);
 char * get_work_dir (void);
 
 disk_item * alloc_disk_item (const char * id, const long long content_size, const long long total_size, boolean cache_item);
