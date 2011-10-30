@@ -156,6 +156,11 @@ int doStartService(ncMetadata *ccMeta) {
 
   // this is actually a NOP
   sem_mywait(CONFIG);
+  if (config->ccState == SHUTDOWNCC) {
+    logprintfl(EUCAWARN, "StartService(): attempt to start a shutdown CC, skipping.\n");
+    sem_mypost(CONFIG);  
+    return(ret);
+  }
   config->kick_enabled = 0;
   ccChangeState(DISABLED);
   sem_mypost(CONFIG);
@@ -177,6 +182,11 @@ int doStopService(ncMetadata *ccMeta) {
   logprintfl(EUCADEBUG, "StopService(): params: userId=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"));
   
   sem_mywait(CONFIG);
+  if (config->ccState == SHUTDOWNCC) {
+    logprintfl(EUCAWARN, "StopService(): attempt to stop a shutdown CC, skipping.\n");
+    sem_mypost(CONFIG);  
+    return(ret);
+  }
   config->kick_enabled = 0;
   ccChangeState(STOPPED);
   sem_mypost(CONFIG);
@@ -198,7 +208,11 @@ int doEnableService(ncMetadata *ccMeta) {
   logprintfl(EUCADEBUG, "EnableService(): params: userId=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"));
 
   sem_mywait(CONFIG);
-  if (config->ccState != ENABLED) {
+  if (config->ccState == SHUTDOWNCC) {
+    logprintfl(EUCAWARN, "EnableService(): attempt to enable a shutdown CC, skipping.\n");
+    sem_mypost(CONFIG);  
+    return(ret);
+  } else if (config->ccState != ENABLED) {
     // tell monitor thread to (re)enable  
     config->kick_monitor_running = 0;
     config->kick_network = 1;
@@ -239,6 +253,11 @@ int doDisableService(ncMetadata *ccMeta) {
   logprintfl(EUCADEBUG, "DisableService(): params: userId=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"));
 
   sem_mywait(CONFIG);
+  if (config->ccState == SHUTDOWNCC) {
+    logprintfl(EUCAWARN, "DisableService(): attempt to disable a shutdown CC, skipping.\n");
+    sem_mypost(CONFIG);  
+    return(ret);
+  }
   config->kick_enabled = 0;
   ccChangeState(DISABLED);
   sem_mypost(CONFIG);
