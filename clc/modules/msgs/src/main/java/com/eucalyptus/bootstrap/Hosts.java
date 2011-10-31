@@ -797,6 +797,9 @@ public class Hosts {
   }
   
   private static void syncDatabase( final Host host ) {
+    if ( ! host.hasBootstrapped( ) ) {
+      return;
+    }
     for ( final String ctx : PersistenceContexts.list( ) ) {
       final String contextName = ctx.startsWith( "eucalyptus_" )
         ? ctx
