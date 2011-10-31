@@ -63,14 +63,57 @@
 
 package com.eucalyptus.component;
 
+import org.apache.log4j.Logger;
+import com.eucalyptus.bootstrap.Host;
+import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.component.Component.State;
+import com.eucalyptus.empyrean.DisableServiceType;
+import com.eucalyptus.empyrean.Empyrean;
+import com.eucalyptus.empyrean.EnableServiceType;
+import com.eucalyptus.empyrean.ServiceId;
+import com.eucalyptus.empyrean.ServiceTransitionType;
+import com.eucalyptus.empyrean.StartServiceType;
+import com.eucalyptus.empyrean.StopServiceType;
+import com.eucalyptus.util.TypeMappers;
+import com.eucalyptus.util.async.AsyncRequests;
 
 public class ServiceEvents {
-
+  private static Logger LOG = Logger.getLogger( ServiceEvents.class );
+  
   /**
    * @param config
    * @param state
    */
-  public static void fire( ServiceConfiguration config, State state ) {}
-
+  public static void fire( final ServiceConfiguration config, State state ) {
+    ServiceTransitionType msg = null;
+    switch ( state ) {
+      case ENABLED:
+        msg = new EnableServiceType( );
+        break;
+      case DISABLED:
+        msg = new DisableServiceType( );
+        break;
+      case STOPPED:
+        msg = new StopServiceType( );
+        break;
+      case NOTREADY:
+        msg = new StartServiceType( );
+        break;
+      default:
+        break;
+    }
+    if ( msg != null ) {
+      msg.getServices( ).add( TypeMappers.transform( config, ServiceId.class ) );
+      for ( Host h : Hosts.list( ) ) {
+        if ( !h.isLocalHost( ) ) {
+          try {
+            AsyncRequests.sendSync( ServiceConfigurations.createEphemeral( Empyrean.INSTANCE, config.getInetAddress( ) ), msg );
+          } catch ( Exception ex ) {
+            LOG.error( ex, ex );
+          }
+        }
+      }
+    }
+  }
+  
 }

@@ -76,7 +76,6 @@ import java.util.Vector;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import net.sf.hajdbc.InactiveDatabaseMBean;
 import net.sf.hajdbc.sql.DriverDatabaseClusterMBean;
@@ -86,7 +85,6 @@ import org.jgroups.ChannelException;
 import org.jgroups.Global;
 import org.jgroups.Header;
 import org.jgroups.JChannel;
-import org.jgroups.PhysicalAddress;
 import org.jgroups.View;
 import org.jgroups.blocks.ReplicatedHashMap;
 import org.jgroups.conf.ClassConfigurator;
@@ -616,7 +614,7 @@ public class Hosts {
         hostMap.start( STATE_TRANSFER_TIMEOUT );
         LOG.info( "Added localhost to system state: " + localHost( ) );
         final Host local = Coordinator.INSTANCE.createLocalHost( );
-        hostMap.put( local.getDisplayName( ), local );
+        hostMap.putIfAbsent( local.getDisplayName( ), local );
         Listeners.register( HostBootstrapEventListener.INSTANCE );
         LOG.info( "System view:\n" + HostMapStateListener.INSTANCE.printMap( ) );
         if ( !BootstrapArgs.isCloudController( ) ) {
@@ -713,7 +711,7 @@ public class Hosts {
   public enum Coordinator implements Predicate<Host>, Supplier<Host>, Function<Collection<Host>, Host> {
     INSTANCE;
     private final AtomicBoolean currentCoordinator = new AtomicBoolean( false );
-    private final AtomicLong    currentStartTime   = new AtomicLong( 0L );
+    private final AtomicLong    currentStartTime   = new AtomicLong( Long.MAX_VALUE );
     
     @Override
     public boolean apply( final Host h ) {
@@ -727,7 +725,7 @@ public class Hosts {
     public void update( final Collection<Host> values ) {
       final long currentTime = System.currentTimeMillis( );
       final long startTime = Longs.max( Longs.toArray( Collections2.transform( values, StartTimeTransform.INSTANCE ) ) );
-      if ( this.currentStartTime.compareAndSet( 0L, startTime > currentTime ? startTime : currentTime ) ) {
+      if ( this.currentStartTime.compareAndSet( Long.MAX_VALUE, startTime > currentTime ? startTime : currentTime ) ) {
         final Host foundCoordinator = this.apply( values );
         this.currentCoordinator.set( foundCoordinator.isLocalHost( ) );
       } else if ( BootstrapArgs.isCloudController( ) ) {
@@ -761,6 +759,14 @@ public class Hosts {
     
     public Boolean isLocalhost( ) {
       return this.currentCoordinator.get( );
+    }
+
+    public boolean getCurrentCoordinator( ) {
+      return this.currentCoordinator.get( );
+    }
+
+    public long getCurrentStartTime( ) {
+      return this.currentStartTime.get( );
     }
     
   }
