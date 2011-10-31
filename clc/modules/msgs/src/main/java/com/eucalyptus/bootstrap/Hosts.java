@@ -711,7 +711,7 @@ public class Hosts {
   public enum Coordinator implements Predicate<Host>, Supplier<Host>, Function<Collection<Host>, Host> {
     INSTANCE;
     private final AtomicBoolean currentCoordinator = new AtomicBoolean( false );
-    private final AtomicLong    currentStartTime   = new AtomicLong( 0L );
+    private final AtomicLong    currentStartTime   = new AtomicLong( Long.MAX_VALUE );
     
     @Override
     public boolean apply( final Host h ) {
@@ -725,7 +725,7 @@ public class Hosts {
     public void update( final Collection<Host> values ) {
       final long currentTime = System.currentTimeMillis( );
       final long startTime = Longs.max( Longs.toArray( Collections2.transform( values, StartTimeTransform.INSTANCE ) ) );
-      if ( this.currentStartTime.compareAndSet( 0L, startTime > currentTime ? startTime : currentTime ) ) {
+      if ( this.currentStartTime.compareAndSet( Long.MAX_VALUE, startTime > currentTime ? startTime : currentTime ) ) {
         final Host foundCoordinator = this.apply( values );
         this.currentCoordinator.set( foundCoordinator.isLocalHost( ) );
       } else if ( BootstrapArgs.isCloudController( ) ) {
