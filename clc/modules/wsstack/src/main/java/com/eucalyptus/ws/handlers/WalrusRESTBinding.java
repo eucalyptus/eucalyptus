@@ -100,6 +100,7 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 
 import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.binding.Binding;
@@ -370,7 +371,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 	}
 
 	private void setRequiredParams(final GroovyObject msg, User user) throws Exception {
-		if(user != null) {
+		if(user != null && !user.equals(Principals.nobodyUser())) {
 			// YE TODO: can we just use any key here?
 			msg.setProperty("accessKeyID", Accounts.getFirstActiveAccessKeyId( user ) );
 		}

@@ -142,7 +142,7 @@ public class Hosts {
     return new Predicate<ServiceConfiguration>( ) {
       
       @Override
-      public boolean apply( ServiceConfiguration input ) {
+      public boolean apply( final ServiceConfiguration input ) {
         return input.getInetAddress( ).equals( addr )
                || input.getInetAddress( ).getCanonicalHostName( ).equals( addr.getCanonicalHostName( ) )
                || input.getHostName( ).equals( addr.getCanonicalHostName( ) );
@@ -155,7 +155,7 @@ public class Hosts {
     return new Predicate<ComponentId>( ) {
       
       @Override
-      public boolean apply( ComponentId input ) {
+      public boolean apply( final ComponentId input ) {
         return !Internets.testLocal( addr );
       }
     };
@@ -165,7 +165,7 @@ public class Hosts {
     return new Function<T, ServiceConfiguration>( ) {
       
       @Override
-      public ServiceConfiguration apply( T input ) {
+      public ServiceConfiguration apply( final T input ) {
         final ServiceConfiguration config = Components.lookup( input ).initRemoteService( addr );
         LOG.info( "Initialized remote service: " + config.getFullName( ) );
         return config;
@@ -176,15 +176,15 @@ public class Hosts {
   enum SetupRemoteServiceConfigurations implements Function<ServiceConfiguration, ServiceConfiguration> {
     INSTANCE;
     @Override
-    public ServiceConfiguration apply( ServiceConfiguration input ) {
+    public ServiceConfiguration apply( final ServiceConfiguration input ) {
       try {
-        ServiceConfiguration conf = Topology.start( input ).get( );
+        final ServiceConfiguration conf = Topology.start( input ).get( );
         Topology.enable( conf );
         LOG.info( "Initialized service: " + conf.getFullName( ) );
         return conf;
-      } catch ( ExecutionException ex ) {
+      } catch ( final ExecutionException ex ) {
         Exceptions.trace( ex.getCause( ) );
-      } catch ( InterruptedException ex ) {
+      } catch ( final InterruptedException ex ) {
         Thread.currentThread( ).interrupt( );
         Exceptions.trace( ex.getCause( ) );
       }
@@ -198,12 +198,13 @@ public class Hosts {
     Predicate<ComponentId>       delegate;
     Class<? extends ComponentId> compId;
     
-    private ShouldLoadRemote( Class<? extends ComponentId> compId ) {
+    private ShouldLoadRemote( final Class<? extends ComponentId> compId ) {
       this.delegate = shouldLoadRemote( compId );
       this.compId = compId;
     }
     
-    public boolean apply( ComponentId input ) {
+    @Override
+    public boolean apply( final ComponentId input ) {
       return this.delegate.apply( input );
     }
     
@@ -216,13 +217,13 @@ public class Hosts {
       };
     }
     
-    public static Predicate<ComponentId> getInitFilter( Class<? extends ComponentId> comp, InetAddress addr ) {
+    public static Predicate<ComponentId> getInitFilter( final Class<? extends ComponentId> comp, final InetAddress addr ) {
       return Predicates.and( EMPYREAN.compId.equals( comp )
         ? EMPYREAN
         : EUCALYPTUS, nonLocalAddressFilter( addr ) );
     }
     
-    public static Function<ComponentId, ServiceConfiguration> getInitFunction( InetAddress addr ) {
+    public static Function<ComponentId, ServiceConfiguration> getInitFunction( final InetAddress addr ) {
       return Functions.compose( SetupRemoteServiceConfigurations.INSTANCE,
                                 initRemoteSetupConfigurations( addr ) );
     }
@@ -324,13 +325,13 @@ public class Hosts {
       }
     }
     
-    private static <T extends ComponentId> void doBootstrap( final Class<T> compId, InetAddress addr ) {
+    private static <T extends ComponentId> void doBootstrap( final Class<T> compId, final InetAddress addr ) {
       try {
-        Collection<ComponentId> deps = Collections2.filter( ComponentIds.list( ), ShouldLoadRemote.getInitFilter( compId, addr ) );
-        Function<ComponentId, ServiceConfiguration> initFunc = ShouldLoadRemote.getInitFunction( addr );
+        final Collection<ComponentId> deps = Collections2.filter( ComponentIds.list( ), ShouldLoadRemote.getInitFilter( compId, addr ) );
+        final Function<ComponentId, ServiceConfiguration> initFunc = ShouldLoadRemote.getInitFunction( addr );
         initFunc.apply( ComponentIds.lookup( compId ) );
         Iterables.transform( deps, initFunc );
-      } catch ( Exception ex ) {
+      } catch ( final Exception ex ) {
         LOG.error( ex, ex );
       }
     }
@@ -341,8 +342,8 @@ public class Hosts {
     INSTANCE;
     
     @Override
-    public boolean apply( Host input ) {
-      Host that = new Host( input.getStartedTime( ) );
+    public boolean apply( final Host input ) {
+      final Host that = new Host( input.getStartedTime( ) );
       if ( !input.isLocalHost( ) ) {
         return false;
       } else if ( that.hasBootstrapped( ) && !input.hasBootstrapped( ) ) {
@@ -363,10 +364,10 @@ public class Hosts {
     INSTANCE;
     
     @Override
-    public boolean apply( Host input ) {
+    public boolean apply( final Host input ) {
       if ( input == null ) {
-        Host newHost = Coordinator.INSTANCE.createLocalHost( );
-        Host oldHost = hostMap.putIfAbsent( newHost.getDisplayName( ), newHost );
+        final Host newHost = Coordinator.INSTANCE.createLocalHost( );
+        final Host oldHost = hostMap.putIfAbsent( newHost.getDisplayName( ), newHost );
         if ( oldHost != null ) {
           LOG.info( "Inserted local host information:   " + localHost( ) );
           return true;
@@ -375,8 +376,8 @@ public class Hosts {
         }
       } else if ( input.isLocalHost( ) ) {
         if ( CheckStale.INSTANCE.apply( input ) ) {
-          Host newHost = new Host( input.getStartedTime( ) );
-          Host oldHost = hostMap.replace( newHost.getDisplayName( ), newHost );
+          final Host newHost = new Host( input.getStartedTime( ) );
+          final Host oldHost = hostMap.replace( newHost.getDisplayName( ), newHost );
           if ( oldHost != null ) {
             LOG.info( "Updated local host information:   " + localHost( ) );
             return true;
@@ -385,8 +386,8 @@ public class Hosts {
           }
         } else {
           if ( !hostMap.containsKey( input.getDisplayName( ) ) ) {
-            Host newHost = Coordinator.INSTANCE.createLocalHost( );
-            Host oldHost = hostMap.putIfAbsent( newHost.getDisplayName( ), newHost );
+            final Host newHost = Coordinator.INSTANCE.createLocalHost( );
+            final Host oldHost = hostMap.putIfAbsent( newHost.getDisplayName( ), newHost );
             if ( oldHost == null ) {
               LOG.info( "Updated local host information:   " + localHost( ) );
               return true;
@@ -404,7 +405,7 @@ public class Hosts {
     INSTANCE;
     
     @Override
-    public boolean apply( Host arg1 ) {
+    public boolean apply( final Host arg1 ) {
       if ( !Bootstrap.isFinished( ) || !BootstrapArgs.isCloudController( ) || arg1.isLocalHost( ) || arg1.hasDatabase( ) ) {
         return false;
       } else {
@@ -429,7 +430,7 @@ public class Hosts {
     INSTANCE;
     
     @Override
-    public boolean apply( Host input ) {
+    public boolean apply( final Host input ) {
       if ( BootstrapArgs.isCloudController( ) ) {
         return false;
       } else if ( !input.isLocalHost( ) ) {
@@ -439,7 +440,7 @@ public class Hosts {
       } else if ( !BootstrapArgs.isCloudController( ) && input.isLocalHost( ) && input.hasDatabase( ) ) {
         try {
           hostMap.stop( );
-        } catch ( Exception ex1 ) {
+        } catch ( final Exception ex1 ) {
           LOG.error( ex1, ex1 );
         }
         try {
@@ -660,7 +661,7 @@ public class Hosts {
   }
   
   public static Host localHost( ) {
-    if ( hostMap == null || !hostMap.containsKey( Internets.localHostIdentifier( ) ) ) {
+    if ( ( hostMap == null ) || !hostMap.containsKey( Internets.localHostIdentifier( ) ) ) {
       return Coordinator.INSTANCE.createLocalHost( );
     } else {
       return hostMap.get( Internets.localHostIdentifier( ) );
@@ -670,7 +671,7 @@ public class Hosts {
   enum ModifiedTimeTransform implements Function<Host, Long> {
     INSTANCE;
     @Override
-    public Long apply( Host arg0 ) {
+    public Long apply( final Host arg0 ) {
       return arg0.getTimestamp( ).getTime( );
     }
     
@@ -679,8 +680,8 @@ public class Hosts {
   enum StartTimeTransform implements Function<Host, Long> {
     INSTANCE;
     @Override
-    public Long apply( Host arg0 ) {
-      return arg0.getStartedTime( );
+    public Long apply( final Host arg0 ) {
+      return arg0.isLocalHost( ) ? 0L : arg0.getStartedTime( );
     }
     
   }
@@ -688,7 +689,7 @@ public class Hosts {
   enum EpochTransform implements Function<Host, Integer> {
     INSTANCE;
     @Override
-    public Integer apply( Host arg0 ) {
+    public Integer apply( final Host arg0 ) {
       return arg0.getEpoch( );
     }
     
@@ -697,7 +698,7 @@ public class Hosts {
   enum DbFilter implements Predicate<Host> {
     INSTANCE;
     @Override
-    public boolean apply( Host arg0 ) {
+    public boolean apply( final Host arg0 ) {
       return arg0.hasDatabase( );
     }
     
@@ -706,7 +707,7 @@ public class Hosts {
   enum NonLocalFilter implements Predicate<Host> {
     INSTANCE;
     @Override
-    public boolean apply( Host arg0 ) {
+    public boolean apply( final Host arg0 ) {
       return !arg0.isLocalHost( );
     }
     
@@ -716,25 +717,25 @@ public class Hosts {
     INSTANCE;
     private static final long   MAX_COORDINATOR_CLOCK_SKEW = 1000L;
     private final AtomicBoolean currentCoordinator         = new AtomicBoolean( false );
-    private final AtomicLong    currentStartTime           = new AtomicLong( 0L );
+    private final AtomicLong    currentStartTime           = new AtomicLong( Long.MAX_VALUE );
     
     @Override
-    public boolean apply( Host h ) {
-      Host localHost = Hosts.localHost( );
-      return !h.equals( localHost ) && h.hasDatabase( ) && h.getStartedTime( ) < localHost.getStartedTime( );
+    public boolean apply( final Host h ) {
+      final Host localHost = Hosts.localHost( );
+      return !h.equals( localHost ) && h.hasDatabase( ) && ( h.getStartedTime( ) < this.currentStartTime.get( ) );
     }
     
     /**
      * @param values
      */
-    public void update( Collection<Host> values ) {
-      long currentTime = System.currentTimeMillis( );
-      long startTime = Longs.max( Longs.toArray( Collections2.transform( values, StartTimeTransform.INSTANCE ) ) );
-      if ( this.currentStartTime.compareAndSet( 0L, startTime > currentTime ? startTime : currentTime ) ) {
-        Host foundCoordinator = this.apply( values );
+    public void update( final Collection<Host> values ) {
+      final long currentTime = System.currentTimeMillis( );
+      final long startTime = Longs.max( Longs.toArray( Collections2.transform( values, StartTimeTransform.INSTANCE ) ) );
+      if ( this.currentStartTime.compareAndSet( Long.MAX_VALUE, startTime > currentTime ? startTime : currentTime ) ) {
+        final Host foundCoordinator = this.apply( values );
         this.currentCoordinator.set( foundCoordinator.isLocalHost( ) );
       } else if ( BootstrapArgs.isCloudController( ) ) {
-        Host coordinator = this.apply( values );
+        final Host coordinator = this.apply( values );
         this.currentCoordinator.set( coordinator.isLocalHost( ) );
       } else {
         this.currentCoordinator.set( false );
@@ -754,7 +755,7 @@ public class Hosts {
     }
     
     @Override
-    public Host apply( Collection<Host> input ) {
+    public Host apply( final Collection<Host> input ) {
       return Iterables.find( input, this, Hosts.localHost( ) );
     }
     
@@ -782,8 +783,8 @@ public class Hosts {
     boolean failStop( ) default false;
   }
   
-  private static DriverDatabaseClusterMBean findDbClusterMBean( String ctx ) throws NoSuchElementException {
-    DriverDatabaseClusterMBean cluster = Mbeans.lookup( jdbcJmxDomain,
+  private static DriverDatabaseClusterMBean findDbClusterMBean( final String ctx ) throws NoSuchElementException {
+    final DriverDatabaseClusterMBean cluster = Mbeans.lookup( jdbcJmxDomain,
                                                         ImmutableMap.builder( ).put( "cluster", ctx ).build( ),
                                                         DriverDatabaseClusterMBean.class );
     return cluster;
@@ -791,25 +792,25 @@ public class Hosts {
   
   private static final String jdbcJmxDomain = "net.sf.hajdbc";
   
-  private static void syncDatabase( Host host ) {
-    for ( String ctx : PersistenceContexts.list( ) ) {
+  private static void syncDatabase( final Host host ) {
+    for ( final String ctx : PersistenceContexts.list( ) ) {
       final String contextName = ctx.startsWith( "eucalyptus_" )
         ? ctx
         : "eucalyptus_" + ctx;
       
-      String dbUrl = "jdbc:" + ServiceUris.remote( Database.class, host.getBindAddress( ), contextName );
+      final String dbUrl = "jdbc:" + ServiceUris.remote( Database.class, host.getBindAddress( ), contextName );
       
       try {
-        DriverDatabaseClusterMBean cluster = findDbClusterMBean( contextName );
-        String dbPass = SystemIds.databasePassword( );
+        final DriverDatabaseClusterMBean cluster = findDbClusterMBean( contextName );
+        final String dbPass = SystemIds.databasePassword( );
         final String hostName = host.getBindAddress( ).getHostAddress( );
-        String realJdbcDriver = Databases.getDriverName( );
+        final String realJdbcDriver = Databases.getDriverName( );
         if ( !cluster.getActiveDatabases( ).contains( hostName ) && !cluster.getInactiveDatabases( ).contains( hostName ) ) {
           cluster.add( hostName, realJdbcDriver, dbUrl );
         } else if ( cluster.getActiveDatabases( ).contains( hostName ) ) {
           continue;
         }
-        InactiveDatabaseMBean database = Mbeans.lookup( jdbcJmxDomain,
+        final InactiveDatabaseMBean database = Mbeans.lookup( jdbcJmxDomain,
                                                         ImmutableMap.builder( ).put( "cluster", contextName ).put( "database", hostName ).build( ),
                                                         InactiveDatabaseMBean.class );
         database.setUser( "eucalyptus" );
@@ -819,9 +820,9 @@ public class Hosts {
         } else {
           cluster.activate( hostName, "passive" );
         }
-      } catch ( NoSuchElementException ex1 ) {
+      } catch ( final NoSuchElementException ex1 ) {
         LOG.error( ex1, ex1 );
-      } catch ( Exception ex1 ) {
+      } catch ( final Exception ex1 ) {
         LOG.error( ex1, ex1 );
       }
     }
