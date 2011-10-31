@@ -360,7 +360,7 @@ static boolean work_was_created = FALSE;
 
 int set_work_limit (long long size)
 {
-    if(size<0)
+    if (size<0)
         work_limit = EUCA_SIZE_UNLIMITED;
     else
         work_limit = size;
@@ -393,12 +393,19 @@ char * get_work_dir (void)
     return work_path;
 }
 
-int clean_work_dir (void)
+int clean_work_dir (blobstore * work_bs)
 {
+    char path [EUCA_MAX_PATH];
+    sprintf (path, "%s/imager.pid", get_work_dir());
+    unlink (path);
+    
+    if (work_bs)
+        blobstore_delete (work_bs); // not fully implemented, but will delete artifacts of an empty blobstore
+    
     if (work_was_created)
         return rmdir (work_path);
-    else
-        return 0;
+    
+    return 0;
 }
 
 int reserve_work_path (long long size)
