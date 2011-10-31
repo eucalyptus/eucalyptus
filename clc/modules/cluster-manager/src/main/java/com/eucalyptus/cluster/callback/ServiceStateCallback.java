@@ -40,13 +40,13 @@ public class ServiceStateCallback extends SubjectMessageCallback<Cluster, Descri
           CheckException ex = ServiceChecks.chainCheckExceptions( ServiceChecks.Functions.statusToCheckExceptions( this.getRequest( ).getCorrelationId( ) ).apply( status ) );
           if ( Component.State.NOTREADY.equals( serviceState ) ) {
             throw new IllegalStateException( ex );
-          } else if ( Component.State.ENABLED.equals( serviceState ) && Component.State.DISABLED.ordinal( ) >= proxyState.ordinal( ) ) {
+          } else if ( Component.State.ENABLED.equals( serviceState ) && Component.State.DISABLED.ordinal( ) > proxyState.ordinal( ) ) {
             try {
               AsyncRequests.newRequest( new DisableServiceCallback( this.getSubject( ) ) ).sendSync( this.getSubject( ).getConfiguration( ) );
             } catch ( Exception ex1 ) {
               LOG.error( ex1, ex1 );
             }
-          } else if ( Component.State.LOADED.equals( serviceState ) && Component.State.NOTREADY.ordinal( ) >= proxyState.ordinal( ) ) {
+          } else if ( Component.State.LOADED.equals( serviceState ) && Component.State.NOTREADY.ordinal( ) > proxyState.ordinal( ) ) {
             try {
               AsyncRequests.newRequest( new StartServiceCallback( this.getSubject( ) ) ).sendSync( this.getSubject( ).getConfiguration( ) );
             } catch ( Exception ex1 ) {
