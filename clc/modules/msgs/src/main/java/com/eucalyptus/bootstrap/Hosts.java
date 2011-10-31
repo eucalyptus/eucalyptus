@@ -614,7 +614,7 @@ public class Hosts {
         hostMap.start( STATE_TRANSFER_TIMEOUT );
         LOG.info( "Added localhost to system state: " + localHost( ) );
         final Host local = Coordinator.INSTANCE.createLocalHost( );
-        hostMap.put( local.getDisplayName( ), local );
+        hostMap.putIfAbsent( local.getDisplayName( ), local );
         Listeners.register( HostBootstrapEventListener.INSTANCE );
         LOG.info( "System view:\n" + HostMapStateListener.INSTANCE.printMap( ) );
         if ( !BootstrapArgs.isCloudController( ) ) {
