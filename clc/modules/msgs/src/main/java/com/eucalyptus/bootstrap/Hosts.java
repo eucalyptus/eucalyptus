@@ -333,7 +333,7 @@ public class Hosts {
     }
     
   }
-
+  
   private static <T extends ComponentId> void doBootstrap( final Class<T> compId, final InetAddress addr ) {
     try {
       final Collection<ComponentId> deps = Collections2.filter( ComponentIds.list( ), ShouldLoadRemote.getInitFilter( compId, addr ) );
@@ -345,7 +345,6 @@ public class Hosts {
     }
   }
   
-
   enum CheckStale implements Predicate<Host> {
     INSTANCE;
     
@@ -676,7 +675,8 @@ public class Hosts {
     INSTANCE;
     @Override
     public Long apply( final Host arg0 ) {
-      return arg0.isLocalHost( ) ? 0L : arg0.getStartedTime( );
+      long startTime = arg0.isLocalHost( ) ? 0L : arg0.getStartedTime( );
+      return startTime == Long.MAX_VALUE ? 0L : startTime;
     }
     
   }
@@ -760,11 +760,11 @@ public class Hosts {
     public Boolean isLocalhost( ) {
       return this.currentCoordinator.get( );
     }
-
+    
     public boolean getCurrentCoordinator( ) {
       return this.currentCoordinator.get( );
     }
-
+    
     public long getCurrentStartTime( ) {
       return this.currentStartTime.get( );
     }
