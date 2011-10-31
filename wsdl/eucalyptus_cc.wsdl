@@ -642,6 +642,14 @@
 	  </xs:extension>
 	</xs:complexContent>
       </xs:complexType>
+
+      <xs:complexType name="shutdownServiceType">
+	<xs:complexContent>
+	  <xs:extension base="tns:serviceTransitionType">
+	    <xs:sequence />
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
       
       <xs:complexType name="startServiceResponseType">
 	<xs:complexContent>
@@ -674,6 +682,14 @@
 	  </xs:extension>
 	</xs:complexContent>
       </xs:complexType>
+
+      <xs:complexType name="shutdownServiceResponseType">
+	<xs:complexContent>
+	  <xs:extension base="tns:serviceTransitionType">
+	    <xs:sequence />
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
       
       <xs:element name="DescribeServices" nillable="true" type="tns:describeServicesType"/>
       <xs:element name="DescribeServicesResponse" nillable="true" type="tns:describeServicesResponseType"/>
@@ -689,6 +705,9 @@
       
       <xs:element name="DisableService" nillable="true" type="tns:disableServiceType"/>
       <xs:element name="DisableServiceResponse" nillable="true" type="tns:disableServiceResponseType"/>
+
+      <xs:element name="ShutdownService" nillable="true" type="tns:shutdownServiceType"/>
+      <xs:element name="ShutdownServiceResponse" nillable="true" type="tns:shutdownServiceResponseType"/>
       
       <xs:element name="AttachVolume" nillable="true" type="tns:attachVolumeType"/>
       <xs:element name="AttachVolumeResponse" nillable="true" type="tns:attachVolumeResponseType"/>
@@ -771,6 +790,11 @@
     <wsdl:part element="tns:DisableServiceResponse" name="DisableServiceResponse">
     </wsdl:part>
   </wsdl:message>
+
+  <wsdl:message name="ShutdownServiceResponse">
+    <wsdl:part element="tns:ShutdownServiceResponse" name="ShutdownServiceResponse">
+    </wsdl:part>
+  </wsdl:message>
   
   <wsdl:message name="DescribeServicesResponse">
     <wsdl:part element="tns:DescribeServicesResponse" name="DescribeServicesResponse">
@@ -794,6 +818,11 @@
   
   <wsdl:message name="DisableServiceResponse">
     <wsdl:part element="tns:DisableServiceResponse" name="DisableServiceResponse">
+    </wsdl:part>
+  </wsdl:message>
+
+  <wsdl:message name="ShutdownServiceResponse">
+    <wsdl:part element="tns:ShutdownServiceResponse" name="ShutdownServiceResponse">
     </wsdl:part>
   </wsdl:message>
   
@@ -909,6 +938,11 @@
   
   <wsdl:message name="DisableService">
     <wsdl:part element="tns:DisableService" name="DisableService">
+    </wsdl:part>
+  </wsdl:message>
+
+  <wsdl:message name="ShutdownService">
+    <wsdl:part element="tns:ShutdownService" name="ShutdownService">
     </wsdl:part>
   </wsdl:message>
 
@@ -1043,6 +1077,13 @@
       <wsdl:input message="tns:DisableService" name="DisableService">
       </wsdl:input>
       <wsdl:output message="tns:DisableServiceResponse" name="DisableServiceResponse">
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="ShutdownService">
+      <wsdl:input message="tns:ShutdownService" name="ShutdownService">
+      </wsdl:input>
+      <wsdl:output message="tns:ShutdownServiceResponse" name="ShutdownServiceResponse">
       </wsdl:output>
     </wsdl:operation>
 
@@ -1231,6 +1272,16 @@
 	<soap:body use="literal"/>
       </wsdl:input>
       <wsdl:output name="DisableServiceResponse">
+	<soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="ShutdownService">
+      <soap:operation soapAction="EucalyptusCC#ShutdownService" style="document"/>
+      <wsdl:input name="ShutdownService">
+	<soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output name="ShutdownServiceResponse">
 	<soap:body use="literal"/>
       </wsdl:output>
     </wsdl:operation>
