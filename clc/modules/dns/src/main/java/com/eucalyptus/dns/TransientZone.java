@@ -236,6 +236,7 @@ public class TransientZone extends Zone {
     	try {
 			ip = WalrusManager.getBucketIp(bucket);
 		} catch (EucalyptusCloudException e1) {
+        	LOG.error(e1);
 			return super.findRecords(name, type);
 		}
         SetResponse resp = new SetResponse(SetResponse.SUCCESSFUL);
@@ -243,16 +244,16 @@ public class TransientZone extends Zone {
         return resp;
     } else if (name.toString().startsWith("walrus.")) {
         SetResponse resp = new SetResponse(SetResponse.SUCCESSFUL);
-        try {
-			InetAddress walrusIp = WalrusProperties.getWalrusAddress();
-			if (walrusIp != null) {
-	          resp.addRRset( new RRset( new ARecord( name, 1, ttl, WalrusProperties.getWalrusAddress() ) ) );
-			}
-	        return resp;
-		} catch (EucalyptusCloudException e) {
-		    return super.findRecords( name, type );
-		}
-    } else {
+        InetAddress walrusIp = null;
+          try {
+		    walrusIp = WalrusProperties.getWalrusAddress();
+          } catch (EucalyptusCloudException e) {
+        	LOG.error(e);
+        	return super.findRecords( name, type );
+          }
+		  resp.addRRset( new RRset( new ARecord( name, 1, ttl, walrusIp ) ) );
+		  return resp;
+	} else {
       return super.findRecords( name, type );
     }
   }

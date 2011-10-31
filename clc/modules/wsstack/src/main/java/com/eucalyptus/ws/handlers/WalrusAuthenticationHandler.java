@@ -87,6 +87,10 @@ import com.eucalyptus.auth.login.AuthenticationException;
 import com.eucalyptus.auth.login.SecurityContext;
 import com.eucalyptus.auth.login.WalrusWrappedComponentCredentials;
 import com.eucalyptus.auth.login.WalrusWrappedCredentials;
+import com.eucalyptus.auth.principal.Principals;
+import com.eucalyptus.context.Context;
+import com.eucalyptus.context.Contexts;
+import com.eucalyptus.context.NoSuchContextException;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.util.StorageProperties;
 import com.eucalyptus.util.WalrusProperties;
@@ -227,6 +231,13 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 				}
 			} else{
 				//anonymous request              
+				try {
+					Context ctx = Contexts.lookup(httpRequest.getCorrelationId());
+					ctx.setUser(Principals.nobodyUser());
+				} catch (NoSuchContextException e) {
+					LOG.error(e, e);
+					throw new AuthenticationException(e);
+				}
 			}
 		}
 	}
