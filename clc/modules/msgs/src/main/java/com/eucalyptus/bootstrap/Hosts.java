@@ -740,7 +740,6 @@ public class Hosts {
      * @return
      */
     public Host createLocalHost( ) {
-      update( hostMap.values( ) );
       return new Host( Coordinator.INSTANCE.currentStartTime.get( ) );
     }
     
