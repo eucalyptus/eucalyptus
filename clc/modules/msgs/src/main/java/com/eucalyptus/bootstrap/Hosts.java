@@ -306,7 +306,13 @@ public class Hosts {
           LOG.info( "Hosts.viewChange(): -> removed  => " + h );
         }
       }
-      Coordinator.INSTANCE.update( hostMap.values( ) );
+      if ( BootstrapArgs.isCloudController( ) ) {
+        Coordinator.INSTANCE.update( hostMap.values( ) );
+        Hosts.doBootstrap( Empyrean.class, Hosts.localHost( ).getBindAddress( ) );
+        if ( Hosts.localHost( ).hasDatabase( ) ) {
+          Hosts.doBootstrap( Eucalyptus.class, Hosts.localHost( ).getBindAddress( ) );
+        }
+      }
     }
     
   }
@@ -318,9 +324,9 @@ public class Hosts {
     @Override
     public boolean apply( final Host arg1 ) {
       if ( !arg1.isLocalHost( ) && !Bootstrap.isFinished( ) ) {
-        doBootstrap( Empyrean.class, arg1.getBindAddress( ) );
+        Hosts.doBootstrap( Empyrean.class, arg1.getBindAddress( ) );
         if ( arg1.hasDatabase( ) && initialized.compareAndSet( false, true ) ) {
-          doBootstrap( Eucalyptus.class, arg1.getBindAddress( ) );
+          Hosts.doBootstrap( Eucalyptus.class, arg1.getBindAddress( ) );
         }
         return true;
       } else {
@@ -328,19 +334,20 @@ public class Hosts {
       }
     }
     
-    private static <T extends ComponentId> void doBootstrap( final Class<T> compId, final InetAddress addr ) {
-      try {
-        final Collection<ComponentId> deps = Collections2.filter( ComponentIds.list( ), ShouldLoadRemote.getInitFilter( compId, addr ) );
-        final Function<ComponentId, ServiceConfiguration> initFunc = ShouldLoadRemote.getInitFunction( addr );
-        initFunc.apply( ComponentIds.lookup( compId ) );
-        Iterables.transform( deps, initFunc );
-      } catch ( final Exception ex ) {
-        LOG.error( ex, ex );
-      }
+  }
+
+  private static <T extends ComponentId> void doBootstrap( final Class<T> compId, final InetAddress addr ) {
+    try {
+      final Collection<ComponentId> deps = Collections2.filter( ComponentIds.list( ), ShouldLoadRemote.getInitFilter( compId, addr ) );
+      final Function<ComponentId, ServiceConfiguration> initFunc = ShouldLoadRemote.getInitFunction( addr );
+      initFunc.apply( ComponentIds.lookup( compId ) );
+      Iterables.transform( deps, initFunc );
+    } catch ( final Exception ex ) {
+      LOG.error( ex, ex );
     }
-    
   }
   
+
   enum CheckStale implements Predicate<Host> {
     INSTANCE;
     
@@ -797,7 +804,7 @@ public class Hosts {
   }
   
   private static void syncDatabase( final Host host ) {
-    if ( ! host.hasBootstrapped( ) || ! host.hasDatabase( ) || host.isLocalHost( ) ) {
+    if ( !host.hasBootstrapped( ) || !host.hasDatabase( ) || host.isLocalHost( ) ) {
       return;
     }
     for ( final String ctx : PersistenceContexts.list( ) ) {
