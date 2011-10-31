@@ -740,6 +740,7 @@ public class Hosts {
      * @return
      */
     public Host createLocalHost( ) {
+      update( hostMap.values( ) );
       return new Host( Coordinator.INSTANCE.currentStartTime.get( ) );
     }
     
@@ -750,11 +751,14 @@ public class Hosts {
     
     @Override
     public Host apply( final Collection<Host> input ) {
+      Host ret = null;
       try {
-        return Iterables.find( input, this );
+        ret  = Iterables.find( input, this );
       } catch ( final NoSuchElementException ex ) {
-        return Hosts.localHost( );
+        ret = Hosts.localHost( );
       }
+      LOG.debug( "Found coordinator: " + ret );
+      return ret;
     }
     
     public Boolean isLocalhost( ) {
