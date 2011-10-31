@@ -301,7 +301,6 @@ public class SystemBootstrapper {
   
   public boolean stop( ) throws Exception {
     LOG.warn( "Shutting down Eucalyptus." );
-    ServiceContextManager.shutdown( );
     EventRecord.here( SystemBootstrapper.class, EventClass.SYSTEM, EventType.SYSTEM_STOP, "SHUT DOWN" ).info( );
     return true;
   }

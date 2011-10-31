@@ -99,11 +99,10 @@ public class BasicService {
           try {
             LOG.warn( "SHUTDOWN Service: " + BasicService.this.serviceConfiguration.getName( ) );
             ServiceTransitions.pathTo( BasicService.this.serviceConfiguration, Component.State.PRIMORDIAL ).get( 30000, TimeUnit.SECONDS );
+          } catch ( final InterruptedException ex ) {
+            Thread.currentThread( ).interrupt( );
           } catch ( final ExecutionException ex ) {
             LOG.error( ex, ex );
-          } catch ( final InterruptedException ex ) {
-            Logs.exhaust( ).error( ex, ex );
-            Thread.currentThread( ).interrupt( );
           } catch ( TimeoutException ex ) {
             LOG.error( ex , ex );
           }
