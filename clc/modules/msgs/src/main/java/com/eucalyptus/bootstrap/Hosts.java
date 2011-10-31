@@ -797,7 +797,7 @@ public class Hosts {
   }
   
   private static void syncDatabase( final Host host ) {
-    if ( ! host.hasBootstrapped( ) || ! host.hasDatabase( ) ) {
+    if ( ! host.hasBootstrapped( ) || ! host.hasDatabase( ) || host.isLocalHost( ) ) {
       return;
     }
     for ( final String ctx : PersistenceContexts.list( ) ) {
