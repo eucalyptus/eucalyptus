@@ -76,7 +76,6 @@ import java.util.Vector;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import net.sf.hajdbc.InactiveDatabaseMBean;
 import net.sf.hajdbc.sql.DriverDatabaseClusterMBean;
@@ -86,7 +85,6 @@ import org.jgroups.ChannelException;
 import org.jgroups.Global;
 import org.jgroups.Header;
 import org.jgroups.JChannel;
-import org.jgroups.PhysicalAddress;
 import org.jgroups.View;
 import org.jgroups.blocks.ReplicatedHashMap;
 import org.jgroups.conf.ClassConfigurator;
@@ -761,6 +759,14 @@ public class Hosts {
     
     public Boolean isLocalhost( ) {
       return this.currentCoordinator.get( );
+    }
+
+    public boolean getCurrentCoordinator( ) {
+      return this.currentCoordinator.get( );
+    }
+
+    public long getCurrentStartTime( ) {
+      return this.currentStartTime.get( );
     }
     
   }
