@@ -85,34 +85,38 @@ public class ServiceEvents {
    * @param state
    */
   public static void fire( final ServiceConfiguration config, State state ) {
-    ServiceTransitionType msg = null;
-    switch ( state ) {
-      case ENABLED:
-        msg = new EnableServiceType( );
-        break;
-      case DISABLED:
-        msg = new DisableServiceType( );
-        break;
-      case STOPPED:
-        msg = new StopServiceType( );
-        break;
-      case NOTREADY:
-        msg = new StartServiceType( );
-        break;
-      default:
-        break;
-    }
-    if ( msg != null ) {
-      msg.getServices( ).add( TypeMappers.transform( config, ServiceId.class ) );
-      for ( Host h : Hosts.list( ) ) {
-        if ( !h.isLocalHost( ) ) {
-          try {
-            AsyncRequests.sendSync( ServiceConfigurations.createEphemeral( Empyrean.INSTANCE, config.getInetAddress( ) ), msg );
-          } catch ( Exception ex ) {
-            LOG.error( ex, ex );
+    try {
+      ServiceTransitionType msg = null;
+      switch ( state ) {
+        case ENABLED:
+          msg = new EnableServiceType( );
+          break;
+        case DISABLED:
+          msg = new DisableServiceType( );
+          break;
+        case STOPPED:
+          msg = new StopServiceType( );
+          break;
+        case NOTREADY:
+          msg = new StartServiceType( );
+          break;
+        default:
+          break;
+      }
+      if ( msg != null ) {
+        msg.getServices( ).add( TypeMappers.transform( config, ServiceId.class ) );
+        for ( Host h : Hosts.list( ) ) {
+          if ( !h.isLocalHost( ) ) {
+            try {
+              AsyncRequests.sendSync( ServiceConfigurations.createEphemeral( Empyrean.INSTANCE, h.getBindAddress( ) ), msg );
+            } catch ( Exception ex ) {
+              LOG.error( ex, ex );
+            }
           }
         }
       }
+    } catch ( Exception ex ) {
+      LOG.error( ex , ex );
     }
   }
   
