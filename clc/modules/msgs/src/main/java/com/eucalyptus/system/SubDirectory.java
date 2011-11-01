@@ -95,6 +95,8 @@ public enum SubDirectory {
   	super.assertPermissions();
   	try { 
   	Groovyness.exec( "chmod -R 700 " + this.toString( ) );
+        Groovyness.exec( "chgrp -R -L " + System.getProperty( "euca.user" ) + " " + this.toString( ) );
+        Groovyness.exec( "chown -R -L " + System.getProperty( "euca.user" ) + " " + this.toString( ) );
   	 } catch ( ScriptExecutionFailedException ex ) {
   	      LOG.error( ex , ex );
   	 }
@@ -115,7 +117,7 @@ public enum SubDirectory {
 	super.assertPermissions();
 	try {   
 	  Groovyness.exec( "chmod -R -L +rwX " + this.toString( ) );
-	  Groovyness.exec( "chgrp eucalyptus" + this.toString( ));
+	  Groovyness.exec( "chgrp -R -L " + System.getProperty( "euca.user" ) + " " + this.toString( ) );
 	} catch ( ScriptExecutionFailedException ex ) {
 	      LOG.error( ex , ex );
 	 }
@@ -171,9 +173,9 @@ public enum SubDirectory {
   
   protected void assertPermissions( ) {
     try {
-      Groovyness.exec( "chown -R -L " + System.getProperty( "euca.user" ) + " " + this.toString( ) );
-      Groovyness.exec( "chgrp -R -L " + System.getProperty( "euca.user" ) + " " + this.toString( ) );
-      Groovyness.exec( "chmod -R -L +rwX " + this.toString( ) );
+      Groovyness.exec( "chown -R  " + System.getProperty( "euca.user" ) + " " + this.toString( ) );
+      Groovyness.exec( "chgrp -R  " + System.getProperty( "euca.user" ) + " " + this.toString( ) );
+      Groovyness.exec( "chmod -R  +rwX " + this.toString( ) );
     } catch ( ScriptExecutionFailedException ex ) {
       LOG.error( ex , ex );
     }
