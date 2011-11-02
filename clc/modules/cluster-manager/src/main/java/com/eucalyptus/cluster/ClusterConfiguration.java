@@ -137,7 +137,11 @@ public class ClusterConfiguration extends ComponentConfiguration implements Seri
   @ConfigurableField( description = "IP version used by the cluster's virtual private networking.", displayName = "Virtual network IP version", readonly = true )
   @Column( name = "cluster_vnet_type" )
   private String                vnetType              = "ipv4";
-  
+
+   @ConfigurableField( description = "Alternative address which is the source address for requests made by the component to the cloud controller.", displayName = "Source host name" )
+  @Column( name = "config_component_source_hostname" )
+  private String            sourceHostName;
+
   public ClusterConfiguration( ) {}
   
   public ClusterConfiguration( String partition, String name, String hostName, Integer port ) {
@@ -283,5 +287,14 @@ public class ClusterConfiguration extends ComponentConfiguration implements Seri
     this.setPartition( propertyPrefix.replace( "." + this.getName( ), "" ) );
     this.propertyPrefix = propertyPrefix;
   }
-  
+
+  @Override
+  public String getSourceHostName( ) {
+    return this.sourceHostName;
+  }
+
+  @Override  
+  public void setSourceHostName( String aliasHostName ) {
+    this.sourceHostName = aliasHostName;
+  }
 }
