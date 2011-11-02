@@ -480,7 +480,7 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
   public void signupAccount( String accountName, String password, String email ) throws EucalyptusServiceException {
     // Simple thwart to automatic signup attack.
     randomDelay( );
-    User admin = EuareWebBackend.createAccount( accountName, password, email );
+    User admin = EuareWebBackend.signupAccount( accountName, password, email );
     if ( admin != null ) {
       EuareWebBackend.notifyAccountRegistration( admin, accountName, email, ServletUtils.getRequestUrl( getThreadLocalRequest( ) ) );
     }
