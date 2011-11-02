@@ -383,9 +383,9 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
     this.stateMachine = new StateMachineBuilder<Cluster, State, Transition>( this, State.PENDING ) {
       {
         final TransitionAction<Cluster> noop = Transitions.noop( );
-        this.in( Cluster.State.DISABLED ).run( Cluster.ServiceStateDispatch.DISABLED );
-        this.in( Cluster.State.NOTREADY ).run( Cluster.ServiceStateDispatch.DISABLED );
-        this.in( Cluster.State.ENABLED ).run( Cluster.ServiceStateDispatch.ENABLED );
+//        this.in( Cluster.State.DISABLED ).run( Cluster.ServiceStateDispatch.DISABLED );
+//        this.in( Cluster.State.NOTREADY ).run( Cluster.ServiceStateDispatch.DISABLED );
+//        this.in( Cluster.State.ENABLED ).run( Cluster.ServiceStateDispatch.ENABLED );
         this.from( State.BROKEN ).to( State.PENDING ).error( State.BROKEN ).on( Transition.RESTART_BROKEN ).run( noop );
         
         this.from( State.STOPPED ).to( State.PENDING ).error( State.PENDING ).on( Transition.PRESTART ).run( noop );

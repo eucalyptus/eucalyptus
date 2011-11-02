@@ -77,11 +77,13 @@ public class Lookups {
     Context ctx = Contexts.lookup( );
     User requestUser = ctx.getUser( );
     Account account = null;
-    try {
-      account = Accounts.lookupAccountById( resourceOwnerAccountId );
-    } catch ( AuthException e ) {
-      RestrictedTypes.LOG.error( e, e );
-      return false;
+    if ( resourceOwnerAccountId != null ) {
+      try {
+        account = Accounts.lookupAccountById( resourceOwnerAccountId );
+      } catch ( AuthException e ) {
+        RestrictedTypes.LOG.error( e, e );
+        return false;
+      }
     }
     return Permissions.isAuthorized( vendor, resourceType, resourceId, account, action, requestUser );
   }
