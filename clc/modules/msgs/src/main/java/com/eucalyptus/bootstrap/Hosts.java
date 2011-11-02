@@ -273,9 +273,7 @@ public class Hosts {
         LOG.info( "Hosts.entryAdded(): Bootstrap  " + ( Bootstrap.isFinished( )
           ? "true"
           : "false" ) + "=> " + arg1 );
-        if ( hostMap.values().size() < 2 ) {
-          Coordinator.INSTANCE.update( hostMap.values( ) );
-        }
+        Coordinator.INSTANCE.update( hostMap.values( ) );
       } else if ( AdvertiseToRemoteCloudController.INSTANCE.apply( arg1 ) ) {
         LOG.info( "Hosts.entryAdded(): Marked as database  => " + arg1 );
       } else if ( BootstrapRemoteComponent.INSTANCE.apply( arg1 ) ) {
@@ -613,6 +611,9 @@ public class Hosts {
         hostMap.setBlockingUpdates( true );
         hostMap.addNotifier( HostMapStateListener.INSTANCE );
         hostMap.start( STATE_TRANSFER_TIMEOUT );
+        LOG.info( "Added localhost to system state: " + localHost( ) );
+        final Host local = Coordinator.INSTANCE.createLocalHost( );
+        hostMap.putIfAbsent( local.getDisplayName( ), local );
         Listeners.register( HostBootstrapEventListener.INSTANCE );
         LOG.info( "System view:\n" + HostMapStateListener.INSTANCE.printMap( ) );
         if ( !BootstrapArgs.isCloudController( ) ) {
