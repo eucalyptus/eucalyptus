@@ -64,12 +64,16 @@
 package com.eucalyptus.vm;
 
 import java.util.NoSuchElementException;
+
 import javax.persistence.EntityTransaction;
+
 import org.apache.log4j.Logger;
-import com.eucalyptus.address.Address;
-import com.eucalyptus.address.Addresses;
+import com.eucalyptus.cluster.ClusterConfiguration;
 import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.util.EucalyptusCloudException;
 
 public class MetadataRequest {
   private static Logger LOG = Logger.getLogger( MetadataRequest.class );
@@ -146,6 +150,25 @@ public class MetadataRequest {
   }
   
   public boolean isSystem( ) {
-    return true;
+      
+      ClusterConfiguration cConfig = new ClusterConfiguration();  
+      cConfig.setSourceHostName(this.requestIp);
+      EntityTransaction db = Entities.get( ClusterConfiguration.class );
+    
+      try {
+	  ClusterConfiguration ccAddresses = Entities.uniqueResult(cConfig);
+	  if (ccAddresses.getSourceHostName().equals(this.requestIp) 
+		  && ccAddresses.getHostName().equals(this.requestIp)) {
+	      db.commit();
+	      return true;
+	  } else {
+	      db.commit();
+	  }
+      } catch (Exception e) {
+	  LOG.debug("Unable to find Cluster Controller request addresss.", e);
+	  db.rollback();
+      } 
+      
+      return false;
   }
 }
