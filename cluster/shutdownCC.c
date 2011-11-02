@@ -57,44 +57,61 @@ permission notice:
   WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
   ANY SUCH LICENSES OR RIGHTS.
 */
-#ifndef INCLUDE_CC_CLIENT_MARSHAL_H
-#define INCLUDE_CC_CLIENT_MARSHAL_H
-
 #include <stdio.h>
 #include <time.h>
 #include <misc.h>
+#include <euca_axis.h>
 #include <data.h>
-#include "axis2_stub_EucalyptusCC.h"
+#include <cc-client-marshal.h>
 
-int cc_registerImage(char *imageloc, axutil_env_t *, axis2_stub_t *);
-int cc_describeResources(axutil_env_t *, axis2_stub_t *);
-int cc_startNetwork(int, char *netName, char **ccs, int ccsLen, axutil_env_t *, axis2_stub_t *);
-int cc_describeNetworks(char *nameserver, char **ccs, int ccsLen, axutil_env_t *, axis2_stub_t *);
-int cc_stopNetwork(int, char *netName, axutil_env_t *, axis2_stub_t *);
-int cc_assignAddress(char *src, char *dst, axutil_env_t *, axis2_stub_t *);
-int cc_unassignAddress(char *src, char *dst, axutil_env_t *, axis2_stub_t *);
+ncMetadata mymeta;
 
-int cc_attachVolume(char *volumeId, char *instanceId, char *remoteDev, char *localDev, axutil_env_t *env, axis2_stub_t *stub);
-int cc_detachVolume(char *volumeId, char *instanceId, char *remoteDev, char *localDev, int force, axutil_env_t *env, axis2_stub_t *stub);
+int main(int argc, char **argv) {
+  axutil_env_t * env = NULL;
+  axis2_char_t * client_home = NULL;
+  axis2_char_t endpoint_uri[256], *tmpstr;
+  axis2_stub_t * stub = NULL;
+  int rc, i, port, use_wssec;
+  char *euca_home, configFile[1024], policyFile[1024];
 
-int cc_bundleInstance(char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey, axutil_env_t *env, axis2_stub_t *stub);
+  mymeta.userId = strdup("admin");
+  mymeta.correlationId = strdup("shutdowncorrid");
+  mymeta.epoch = 1;
+  mymeta.servicesLen = 0;
+  euca_home = getenv("EUCALYPTUS");
+  if (!euca_home) {
+    snprintf(configFile, 1024, "/etc/eucalyptus/eucalyptus.conf");
+    snprintf(policyFile, 1024, "/var/lib/eucalyptus/keys/cc-client-policy.xml");
+  } else {
+    snprintf(configFile, 1024, "%s/etc/eucalyptus/eucalyptus.conf", euca_home);
+    snprintf(policyFile, 1024, "%s/var/lib/eucalyptus/keys/cc-client-policy.xml", euca_home);
+  }
 
-int cc_createImage(char *volumeId, char *instanceId, char *remoteDev, axutil_env_t *env, axis2_stub_t *stub);
+  snprintf(endpoint_uri, 256," http://%s/axis2/services/EucalyptusCC", argv[1]);
 
-int cc_describePublicAddresses(axutil_env_t *, axis2_stub_t *);
-int cc_configureNetwork(char *, char *, char *, int, int, char *, axutil_env_t *, axis2_stub_t *);
-int cc_runInstances(char *amiId, char *amiURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, int num, int vlan, char *netName, virtualMachine *vm_type, axutil_env_t *, axis2_stub_t *);
-int cc_describeInstances(char **instIds, int instIdsLen, axutil_env_t *, axis2_stub_t *);
-int cc_getConsoleOutput(char *instId, axutil_env_t *, axis2_stub_t *);
-int cc_rebootInstances(char **instIds, int instIdsLen, axutil_env_t *, axis2_stub_t *);
-int cc_terminateInstances(char **instIds, int instIdsLen, axutil_env_t *, axis2_stub_t *);
-int cc_killallInstances(axutil_env_t *, axis2_stub_t *);
+  env =  axutil_env_create_all("/tmp/fofo", AXIS2_LOG_LEVEL_TRACE);
+  
+  client_home = AXIS2_GETENV("AXIS2C_HOME");
+  if (!client_home) {
+    printf("must have AXIS2C_HOME set\n");
+    exit(1);
+  }
+  stub = axis2_stub_create_EucalyptusCC(env, client_home, endpoint_uri);
+  
+  rc = InitWSSEC(env, stub, policyFile);
+  if (rc) {
+    printf("cannot initialize WS-SEC policy (%s)\n",policyFile);
+    exit(1);
+  } 
+  
+  rc = cc_shutdownService(env, stub);
+  if (rc != 0) {
+    printf("cc_shutdownService() failed\n");
+    exit(1);
+  }
+  
+  exit(0);
+}
 
-int cc_describeServices(axutil_env_t *, axis2_stub_t *);
-int cc_startService(axutil_env_t *, axis2_stub_t *);
-int cc_stopService(axutil_env_t *, axis2_stub_t *);
-int cc_enableService(axutil_env_t *, axis2_stub_t *);
-int cc_disableService(axutil_env_t *, axis2_stub_t *);
-int cc_shutdownService(axutil_env_t *, axis2_stub_t *);
 
-#endif
+

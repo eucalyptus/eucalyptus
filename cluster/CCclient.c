@@ -220,6 +220,12 @@ int main(int argc, char **argv) {
 	printf("cc_disableService() failed\n");
 	exit(1);
       }
+    } else if (!strcmp(argv[2], "shutdownService")) {
+      rc = cc_shutdownService(env, stub);
+      if (rc != 0) {
+	printf("cc_shutdownService() failed\n");
+	exit(1);
+      }
     } else if (!strcmp(argv[2], "getConsoleOutput")) {
       rc = cc_getConsoleOutput(argv[3], env, stub);
       if (rc != 0) {
