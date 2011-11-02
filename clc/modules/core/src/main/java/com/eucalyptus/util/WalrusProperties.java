@@ -264,8 +264,7 @@ public class WalrusProperties {
 
 	public static InetAddress getWalrusAddress() throws EucalyptusCloudException {
 		if( Topology.isEnabled( Walrus.class ) ) {
-			ServiceConfiguration walrusConfig = Topology.lookup( Walrus.class );
-			return Internets.toAddress(walrusConfig.getHostName());
+			return Topology.lookup( Walrus.class ).getInetAddress();
 		} else {
 			throw new EucalyptusCloudException("Walrus not ENABLED");
 		}	    
