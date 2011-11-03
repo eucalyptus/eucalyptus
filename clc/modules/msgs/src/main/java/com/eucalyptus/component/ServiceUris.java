@@ -242,9 +242,9 @@ public class ServiceUris {
       String schemeString = StackConfiguration.DEFAULT_HTTPS_ENABLED
         ? this.scheme.getSecureScheme( )
         : this.scheme.getScheme( );
-      String hostNameString = StackConfiguration.USE_DNS_DELEGATION
+      String hostNameString = this.componentId.isPublicService() ? (StackConfiguration.USE_DNS_DELEGATION
         ? this.componentId.name( ) + "." + StackConfiguration.lookupDnsDomain( )
-        : this.address.getHostAddress( );
+        : this.address.getHostAddress( )) : this.address.getHostAddress();
       try {
         URI u = new URI( schemeString, null, hostNameString, this.port, ( "/" + this.path ).replaceAll( "^//", "/" ), Lexemes.QUERY.format( this.query ), null );
         u.parseServerAuthority( );
