@@ -37,13 +37,13 @@
 
 from boto.roboto.awsqueryrequest import AWSQueryRequest
 from boto.roboto.param import Param
-from eucadmin.command import Command
 from eucadmin.describeproperties import DescribeProperties
 from eucadmin.modifypropertyvalue import ModifyPropertyValue
 import eucadmin
 import os
 import sys
 import tempfile
+import subprocess
 
 VMwareConfigDefault = ''
 VMwareConfigPropSuffix = '.vmwarebroker.configxml'
@@ -89,7 +89,7 @@ class ConfigureVMware(AWSQueryRequest):
             sys.exit(1)
         return name_found
 
-    def get_current_value(self, prop):
+    def get_current_value(self, prop_name):
         """
         Reads the current value from the system and stores it to
         a temp file.  Returns the path to the temp file.
@@ -99,7 +99,7 @@ class ConfigureVMware(AWSQueryRequest):
         data = obj.main()
         props = getattr(data, 'euca:properties')
         for prop in props:
-            if prop['euca:name'] == prop:
+            if prop['euca:name'] == prop_name:
                 value = prop['euca:value']
                 if value == VMwareConfigDefault:
                     value = ''
@@ -119,8 +119,8 @@ class ConfigureVMware(AWSQueryRequest):
         if editor:
             cmd_string = '%s %s' % (editor, path)
             print '---running command %s' % cmd_string
-            cmd = Command(cmd_string)
-            if cmd.status != 0:
+            status = subprocess.call(cmd_string, shell=True)
+            if status != 0:
                 print 'Edit operation failed'
                 sys.exit(1)
         else:
@@ -131,8 +131,8 @@ class ConfigureVMware(AWSQueryRequest):
         validate_path = os.path.join(euca_home, VMwareCommand)
         cmd_string = '%s --config %s --prompt --force' % (validate_path, path)
         print '---running command %s' % cmd_string
-        cmd = Command(cmd_string)
-        if cmd.status != 0:
+        status = subprocess.call(cmd_string, shell=True)
+        if status != 0:
             print 'An error occured creating the file.'
             print cmd.stderr
             sys.exit(1)
@@ -141,15 +141,15 @@ class ConfigureVMware(AWSQueryRequest):
         validate_path = os.path.join(euca_home, VMwareCommand)
         cmd_string = '%s --config %s' % (validate_path, path)
         print '---running command %s' % cmd_string
-        cmd = Command(cmd_string)
-        if cmd.status != 0:
+        status = subprocess.call(cmd_string, shell=True)
+        if status != 0:
             print 'A validation error occured.'
             print cmd.stderr
             sys.exit(1)
 
     def save_new_value(self, path, prop):
         print '---saving new property value from %s' % path
-        obj = ModifyProperty()
+        obj = ModifyPropertyValue()
         obj.main(property_from_file='%s=%s' % (prop, path))
 
     def cli_formatter(self, data):
