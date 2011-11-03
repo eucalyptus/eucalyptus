@@ -285,8 +285,6 @@ public class ClusterConfiguration extends ComponentConfiguration implements Seri
   }
   
   public void setPropertyPrefix( String propertyPrefix ) {
-    this.setName( propertyPrefix.replaceAll( "\\s*\\.", "." ) );
-    this.setPartition( propertyPrefix.replace( "." + this.getName( ), "" ) );
     this.propertyPrefix = propertyPrefix;
   }
 
