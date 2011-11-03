@@ -711,7 +711,7 @@ public class Hosts {
     @Override
     public boolean apply( final Host h ) {
       final Host localHost = Hosts.localHost( );
-      boolean ret = !h.equals( localHost ) && h.hasDatabase( ) && ( h.getStartedTime( ) < localHost.getStartedTime( ) );
+      boolean ret = h.hasDatabase( ) && ( h.getStartedTime( ) <= localHost.getStartedTime( ) );
       LOG.debug( "Is coordinator=" + ret + " for host: " + h ); 
       return ret;
     }
