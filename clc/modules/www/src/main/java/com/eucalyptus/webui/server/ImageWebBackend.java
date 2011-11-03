@@ -11,6 +11,7 @@ import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.images.ImageInfo;
 import com.eucalyptus.images.Images;
 import com.eucalyptus.images.MachineImageInfo;
+import com.eucalyptus.images.PutGetImageInfo;
 import com.eucalyptus.webui.client.service.EucalyptusServiceException;
 import com.eucalyptus.webui.client.service.SearchResultFieldDesc;
 import com.eucalyptus.webui.client.service.SearchResultFieldDesc.TableDisplay;
@@ -74,13 +75,19 @@ public class ImageWebBackend {
     SearchResultRow result = new SearchResultRow( );
     result.addField( image.getDisplayName( ) );
     result.addField( image.getImageName( ) );
-    if ( image instanceof MachineImageInfo ) {
-      result.addField( ( ( MachineImageInfo ) image ).getManifestLocation( ) );
-      result.addField( ( ( MachineImageInfo ) image ).getKernelId( ) );
-      result.addField( ( ( MachineImageInfo ) image ).getRamdiskId( ) );
+    if ( image instanceof PutGetImageInfo ) {
+      result.addField( ( ( PutGetImageInfo ) image ).getManifestLocation( ) );
     } else {
       result.addField( "" );
+    }
+    if ( image instanceof MachineImageInfo ) {
+      result.addField( ( ( MachineImageInfo ) image ).getKernelId( ) );
+    } else {
       result.addField( "" );
+    }
+    if ( image instanceof MachineImageInfo ) {
+      result.addField( ( ( MachineImageInfo ) image ).getRamdiskId( ) );
+    } else {
       result.addField( "" );
     }
     result.addField( image.getState( ).toString( ) );

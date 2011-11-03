@@ -45,8 +45,8 @@ import os
 import sys
 import tempfile
 
-VMwareConfigProp = 'vmwarebroker.vmware_configuration_xml'
-VMwareConfigDefault = '<configuration><vsphere></vsphere></configuration>'
+VMwareConfigDefault = ''
+VMwareConfigPropSuffix = '.vmwarebroker.configxml'
 VMwareCommand = 'usr/share/eucalyptus/euca_vmware'
 
 class ConfigureVMware(AWSQueryRequest):
@@ -59,12 +59,37 @@ class ConfigureVMware(AWSQueryRequest):
                     doc='Eucalyptus install dir, default is $EUCALYPTUS'),
               Param(name='edit', short_name='E', long_name='edit',
                     ptype='boolean', optional=True,
-                    doc='Edit the current config file using $EDITOR')]
+                    doc='Edit the current config file using $EDITOR'),
+              Param(name='Partition', short_name='P', long_name='partition',
+                    ptype='string', optional=True,
+                    doc='Partition name for the service')]
     Args = [Param(name='configfile', long_name='configfile',
                   ptype='string', optional=True,
                   doc='The path to the input config file')]
 
-    def get_current_value(self):
+    def get_prop_name(self, part):
+        num_found = 0
+        name_found = None
+        obj = DescribeProperties()
+        data = obj.main()
+        props = getattr(data, 'euca:properties')
+        for prop in props:
+            pname = prop['euca:name']
+            if (part and pname == (part + VMwareConfigPropSuffix)) or (not part and pname.endswith(VMwareConfigPropSuffix)):
+                name_found = pname
+                num_found += 1
+        if num_found < 1:
+            if part:
+                print 'Failed to find partition %s.' % part
+            else:
+                print 'Failed to find any partitions: is VMwareBroker registered?'
+            sys.exit(1)
+        elif num_found > 1:
+            print 'Multiple partitions detected. Please, use the --partition option.'
+            sys.exit(1)
+        return name_found
+
+    def get_current_value(self, prop):
         """
         Reads the current value from the system and stores it to
         a temp file.  Returns the path to the temp file.
@@ -74,7 +99,7 @@ class ConfigureVMware(AWSQueryRequest):
         data = obj.main()
         props = getattr(data, 'euca:properties')
         for prop in props:
-            if prop['euca:name'] == VMwareConfigProp:
+            if prop['euca:name'] == prop:
                 value = prop['euca:value']
                 if value == VMwareConfigDefault:
                     value = ''
@@ -86,7 +111,7 @@ class ConfigureVMware(AWSQueryRequest):
         fd, path = tempfile.mkstemp(suffix='.xml', prefix='euca_vmware')
         os.write(fd, value)
         os.close(fd)
-        print '---Saving to %s' % path
+        print '---saving to %s' % path
         return path
 
     def edit_file(self, path):
@@ -122,10 +147,10 @@ class ConfigureVMware(AWSQueryRequest):
             print cmd.stderr
             sys.exit(1)
 
-    def save_new_value(self, path):
-        print '--- saving new property value from %s' % path
+    def save_new_value(self, path, prop):
+        print '---saving new property value from %s' % path
         obj = ModifyProperty()
-        obj.main(property_from_file='%s=%s' % (VMwareConfigProp, path))
+        obj.main(property_from_file='%s=%s' % (prop, path))
 
     def cli_formatter(self, data):
         pass
@@ -136,6 +161,8 @@ class ConfigureVMware(AWSQueryRequest):
         euca_home = self.request_params.get('euca_home', None)
         cfg_file = self.request_params.get('configfile', None)
         edit_flg = self.request_params.get('edit', False)
+        prop = self.get_prop_name(self.request_params.get('Partition',None))
+
         if not euca_home:
             euca_home = os.environ.get('EUCALYPTUS', None)
             if not euca_home:
@@ -144,21 +171,22 @@ class ConfigureVMware(AWSQueryRequest):
         # if a configfile was passed as an option, validate it and upload it
         if cfg_file:
             self.validate_file(euca_home, cfg_file)
-            self.save_new_value(cfg_file)
+            self.save_new_value(cfg_file, prop)
         # if no configfile was passed and edit_flg is True
         # edit the current value and then upload
         elif edit_flg:
-            value = self.get_current_value()
+            value = self.get_current_value(prop)
             path = self.save_to_file(value)
             self.edit_file(path)
             self.validate_file(euca_home, path)
-            self.save_new_value(path)
+            self.save_new_value(path, prop)
         # if no configfile was passed and edit_flg is False
         # create a new file and then upload it
         else:
             path = self.save_to_file('')
             self.create_file(euca_home, path)
-            self.save_new_value(path)
+            self.validate_file(euca_home, path)
+            self.save_new_value(path, prop)
         
     def main_cli(self):
         self.do_cli()
