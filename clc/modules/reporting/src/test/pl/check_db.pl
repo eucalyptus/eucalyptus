@@ -1,22 +1,20 @@
 #!/usr/bin/perl
 
 #
-# check_db.pl verifies that the data in the database is correct after running
-# the simulate_usage.pl script.
+# check_db.pl runs a sanity check of the database after events have been
+#   stored. It verifies that the event counts are correct for all users
+#   and that the events are plausible (meaning that increments of vols,
+#   snapshots, buckets, and objects include plausible increments of the
+#   associated values only).
 #
 # Usage: check_db.pl \
 # 	num_instance_events_per_user \
 #   num_instances_per_user \
 # 	num_storage_events_per_user \
 #   num_s3_events_per_user \
-#   total_disk_per_user \
-#   total_net_per_user \
-#   total_s3_obj_size_per_user \
-#   total_vol_size_per_user \
-#   total_snap_size_per_user \
 #   (username/accountname)+
 #
-# Example: check_db.pl 50 2 50 50 100 100 200 200 300 user_a/account_a user_b/account_b
+# Example: check_db.pl 50 2 50 50 user_a/account_a user_b/account_b
 #
 # NOTE: This script assumes that the db.sh script runs and is in the current
 #  path.
@@ -32,32 +30,21 @@ sub execute_query($) {
 	return split("\n",`db.sh --execute="$_[0]" -D eucalyptus_reporting --skip-column-names`);
 }
 
-sub set_and_verify_larger($$) {
-	my ($val, $hashref) = @_;
-	my %hsh = %{$hashref};
-
-}
-
 
 #
 # MAIN LOGIC
 #
 
-if ($#ARGV+1 < 10) {
+if ($#ARGV+1 < 5) {
 	print "
  Usage: check_db.pl 
    num_instance_events_per_user 
    num_instances_per_user 
    num_storage_events_per_user 
    num_s3_events_per_user 
-   total_disk_per_user 
-   total_net_per_user 
-   total_s3_obj_size_per_user 
-   total_vol_size_per_user 
-   total_snap_size_per_user 
    (username/accountname)+
 
- Example: check_db.pl 50 2 50 50 100 100 200 200 300 user_a/account_a user_b/account_b\n";
+ Example: check_db.pl 50 2 50 50 user_a/account_a user_b/account_b\n";
 	die ("Incorrect args");
 }
 
@@ -67,11 +54,6 @@ my $num_instance_events_per_user = shift;
 my $num_instances_per_user = shift;
 my $num_storage_events_per_user = shift;
 my $num_s3_events_per_user = shift;
-my $total_disk_per_user = shift;
-my $total_net_per_user = shift;
-my $total_s3_per_user = shift;
-my $total_vol_per_user = shift;
-my $total_snap_per_user = shift;
 
 my @usernames = ();
 my @accountnames = ();
@@ -85,34 +67,11 @@ my $username_csv = "'" . join("','",@usernames) . "'";
 my $accountname_csv = "'" . join("','",@accountnames) . "'";
 
 
-
-
-# Establish hashes to keep track of event stats per user
-my %user_stats = ();
-foreach (@usernames) {
-	# Braces at right are a _reference_ to a hash
-	$user_stats{$_} = {num_instance_events=>0,
-					    num_instances=>0,
-						num_storage_events=>0,
-						num_s3_events=>0,
-						total_disk=>0,
-						total_net=>0,
-						total_s3=>0,
-						total_vol=>0,
-						total_snap=>0,
-						buckets_num=>0,
-						objs_num=>0,
-						vols_num=>0,
-						snaps_num=>0};
-}
-
-
-
-# Gather stats for number of instances per user
+# Count number of instances per user to verify it's correct
 foreach (execute_query("
 	select
-	  ri.instance_id,
-	  ru.user_name
+	  ri.user_id as user_id,
+	  count(ri.instance_id) as cnt
 	from
 	  reporting_instance ri,
 	  reporting_user ru,
@@ -122,20 +81,22 @@ foreach (execute_query("
 	and ri.account_id = ra.account_id
 	and ru.user_name in ($username_csv)
 	and ra.account_name in ($accountname_csv)
+	group by ri.user_id
 ")) {
-	my ($instance_id,$user_name) = split("\\s+");
-	if (defined($user_stats{$user_name})) {
-		my $stats = $user_stats{$user_name};
-		$stats->{"num_instances"}++;
+	my ($user_name,$count) = split("\\s+");
+	print "Found instances user:$user_name #:$count\n";
+	if ($count != $num_instances_per_user) {
+		die ("Incorrect ins count, expected:$num_instances_per_user found:$count for user:$user_name";
 	}
 }
 
 
-# Gather instance event stats per user
+# Count instance events per user and verify that disk and net are not zero
 foreach (execute_query("
 	select
-	  ius.total_disk_io_megs,
-	  ius.total_network_io_megs,
+	  count(ius.total_disk_io_megs),
+	  sum(ius.total_disk_io_megs),
+	  sum(ius.total_network_io_megs),
 	  ru.user_name
 	from
 	  instance_usage_snapshot ius,
@@ -148,20 +109,58 @@ foreach (execute_query("
 	and ri.account_id = ra.account_id
 	and ru.user_name in ($username_csv)
 	and ra.account_name in ($accountname_csv)
-	order by ius.timestamp_ms
+	group by ru.user_name
 ")) {
-	my ($disk_io,$net_io,$user_name) = split("\\s+");
-	if (defined($user_stats{$user_name})) {
-		my $stats = $user_stats{$user_name};
-		$stats->{"num_instance_events"}++;
-		#TODO: verify greater
-		$stats->{"total_disk"} = $disk_io;
-		$stats->{"total_net"} = $net_io;
+	my ($count,$disk_io,$net_io,$user_name) = split("\\s+");
+	print "Found instance events user:$user_name #:$count disk:$disk_io net:$net_io\n";
+	if ($count != $num_instance_events_per_user) {
+		die ("Incorrect ins event count, expected:$num_instance_events_per_user found:$count for user:$user_name";
+	}
+	if ($disk_io==0 || $net_io==0) {
+		die ("Disk or net == 0, user:$user_name";
 	}
 }
 
 
-# Gather s3 event stats per user
+
+# Count s3 events and verify totals
+foreach (execute_query("
+	select
+	  cnt(s3s.buckets_num) as cnt,
+	  max(s3s.buckets_num) as max_buckets,
+	  max(s3s.objects_num) as max_objects,
+	  max(s3s.objects_megs) as max_size,
+	  ru.user_name
+	from
+	  s3_usage_snapshot s3s,
+	  reporting_user ru,
+	  reporting_account ra
+	where
+	  s3s.owner_id = ru.user_id
+	and s3s.account_id = ra.account_id
+	and ru.user_name in ($username_csv)
+	and ra.account_name in ($accountname_csv)
+	group by s3s.timestamp_ms
+")) {
+	my ($count,$max_buckets,$max_objects,$max_size,$user_name) = split("\\s+");
+	print "Found s3 events user:$user_name #:$count max_buckets:$max_buckets max_objects:$max_objects max_size:$max_size\n";
+	if ($count != $num_s3_events_per_user) {
+		die ("Incorrect s3 event count, expected:$num_s3_events_per_user found:$count for user:$user_name";
+	}
+	if ($max_buckets == 0 || $max_objects == 0 || $max_size == 0) {
+		die ("max_buckets or max_objects or max_size == 0, user:$user_name";
+	}
+}
+
+
+
+
+
+# Verify that s3 event properties increment properly: always an additional bucket, or object with size
+my $old_user = "";
+my $old_buckets_num = 0;
+my $old_objects_num = 0;
+my $old_objects_megs = 0;
 foreach (execute_query("
 	select
 	  s3s.buckets_num,
@@ -177,21 +176,68 @@ foreach (execute_query("
 	and s3s.account_id = ra.account_id
 	and ru.user_name in ($username_csv)
 	and ra.account_name in ($accountname_csv)
-	order by s3s.timestamp_ms
+	order by user_name, timestamp_ms ASC
 ")) {
-	my ($buckets_num,$objects_num,$objects_megs,$user_name) = split("\\s+");
-	if (defined($user_stats{$user_name})) {
-		my $stats = $user_stats{$user_name};
-		$stats->{"num_s3_events"}++;
-		#TODO: verify greater
-		$stats->{"buckets_num"} = $buckets_num;
-		$stats->{"objects_num"} = $objects_num;
-		$stats->{"total_s3"} = $objects_megs;
+	my ($num_buckets,$num_objects,$obj_megs,$user_name) = split("\\s+");
+	if ($old_user eq $user_name) {
+		# Verify that either total buckets or objects has incremented by one for this event
+		if (($num_buckets != $old_buckets_num+1) || ($num_objects != $old_objects_num+1)) {
+			die ("buckets or objects not incremented for user:$user_name";
+		}
+		# Verify that bucket events don't lead to size changes
+		if (($num_objects == $old_objects_num) && ($obj_megs != $old_objects_megs)) {
+			die ("objects size changed without additional object for user:$user_name";
+		}
+		# Verify that object count events do lead to size changes in the correct direction
+		if (($num_objects != $old_objects_num) && !($obj_megs > $old_objects_megs)) {
+			die ("objects size increased without additional size allocation for user:$user_name";
+		}
+	}
+	$old_buckets_num = $num_buckets;
+	$old_objects_num = $num_objects;
+	$old_objects_megs = $obj_megs;
+	$old_user = $user_name;
+}
+
+
+# Count storage events and verify totals
+foreach (execute_query("
+	select
+	  count(sus.snapshot_num) as cnt,
+	  max(sus.snapshot_num) as max_snapshot,
+	  max(sus.snapshot_megs) as max_snap_size,
+	  max(sus.volumes_num) as max_vols,
+	  max(sus.volumes_megs) as max_vol_size,
+	  ru.user_name
+	from
+	  storage_usage_snapshot sus,
+	  reporting_user ru,
+	  reporting_account ra
+	where
+	  sus.owner_id = ru.user_id
+	and sus.account_id = ra.account_id
+	and ru.user_name in ($username_csv)
+	and ra.account_name in ($accountname_csv)
+	group by ru.user_name
+")) {
+	my ($count, $max_snap, $max_snap_size, $max_vols, $max_vol_size, $user_name) = split("\\s+");
+	print "Found storage events user:$user_name #:$count max_snap:$max_snap max_snap_size:$max_snap_size max_vols:$max_vols max_vol_size:$max_vol_size\n";
+	if ($count != $num_storage_events_per_user) {
+		die ("Incorrect storage event count, expected:$num_storage_events_per_user found:$count for user:$user_name";
+	}
+	if ($max_snap == 0 || $max_snap_size == 0 || $max_vols == 0 || $max_vol_size == 0) {
+		die ("max_snap || max_snap_size || max_vols || max_vol_size == 0, user:$user_name";
 	}
 }
 
 
-# Gather storage event stats per user
+
+# Verify that storage event properties increment properly: always an additional volume or snapshot, with appropriate size incremented
+$old_user = "";
+my $old_vol_num = 0;
+my $old_vol_size = 0;
+my $old_snap_num = 0;
+my $old_snap_size = 0;
 foreach (execute_query("
 	select
 	  sus.snapshot_num,
@@ -208,64 +254,30 @@ foreach (execute_query("
 	and sus.account_id = ra.account_id
 	and ru.user_name in ($username_csv)
 	and ra.account_name in ($accountname_csv)
-	order by sus.timestamp_ms
+	order by user_name, timestamp_ms ASC
 ")) {
-	my ($snaps_num, $snaps_megs, $vols_num, $vols_megs,$user_name) = split("\\s+");
-	my $stats = $user_stats{$user_name};
-	if (defined($user_stats{$user_name})) {
-		$stats->{"num_storage_events"}++;
-		# TODO: verify greater
-		$stats->{"snaps_num"} = $snaps_num;
-		$stats->{"vols_num"} = $vols_num;
-		$stats->{"total_snap"} = $snaps_megs;
-		$stats->{"total_vol"} = $vols_megs;
+	my ($snap_num, $snap_size, $vol_num, $vol_size, $user_name) = split("\\s+");
+	if ($old_user eq $user_name) {
+		# Verify that either total buckets or objects has incremented by one for this event
+		if (($snap_num != $old_snap_num+1) || ($vol_num != $old_vol_num+1)) {
+			die ("snaps or vols not incremented for user:$user_name";
+		}
+		# Verify that additional size is allocated if snap event
+		if (($snap_num == $old_snap_num+1) && !($snap_size > $old_snap_size)) {
+			die ("snaps num increased without additional size allocation for user:$user_name");
+		}
+		# Verify that additional size is allocated if vol event
+		if (($vol_num == $old_vol_num+1) && !($vol_size > $old_vol_size)) {
+			die ("vols num increased without additional size allocation for user:$user_name");
+		}
 	}
+	$old_vol_num = $vol_num;
+	$old_vol_size = $vol_size;
+	$old_snap_num = $snap_num;
+	$old_snap_size = $snap_size;
+	$old_user = $user_name;
 }
 
-
-
-# Print gathered stats
-foreach (keys %user_stats) {
-	my %stats = %{$user_stats{$_}};
-	print "user:$_\n";
-	foreach (keys %stats) {
-		print "  prop:$_ val:$stats{$_}\n";
-	}
-}
-
-
-
-# Verify stats
-foreach (keys %user_stats) {
-	my %stats = %{$user_stats{$_}};
-	if ($num_instance_events_per_user < $stats{'num_instance_events'}) {
-		die("Wrong num_instance_events for user:$_");
-	}
-	if ($num_instances_per_user < $stats{'num_instances'}) {
-		die("Wrong num_instances for user:$_");
-	}
-	if ($num_storage_events_per_user < $stats{'num_storage_events'}) {
-		die("Wrong num_storage_events for user:$_");
-	}
-	if ($num_s3_events_per_user < $stats{'num_s3_events'}) {
-		die("Wrong num_s3_events for user:$_");
-	}
-	if ($total_disk_per_user < $stats{'total_disk'}) {
-		die("Wrong disk_io for user:$_");
-	}
-	if ($total_net_per_user < $stats{'total_net'}) {
-		die("Wrong net_io for user:$_");
-	}
-	if ($total_s3_per_user < $stats{'total_s3'}) {
-		die("Wrong s3_obj_size for user:$_");
-	}
-	if ($total_vol_per_user < $stats{'total_vol'}) {
-		die("Wrong vol_size for user:$_");
-	}
-	if ($total_snap_per_user < $stats{'total_snap'}) {
-		die("Wrong snap_size for user:$_");
-	}
-}
 
 exit 0;
 
