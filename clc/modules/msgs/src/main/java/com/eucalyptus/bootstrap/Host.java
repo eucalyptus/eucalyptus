@@ -85,7 +85,7 @@ public class Host implements java.io.Serializable, Comparable<Host> {
   private Boolean                    hasBootstrapped;
   private AtomicLong                 timestamp        = new AtomicLong( System.currentTimeMillis( ) );
   private Long                       lastTime         = 0l;
-  private final Long                 startedTime;
+  private Long                 startedTime;
   private Integer                    epoch;
   
   Host( ) {
@@ -188,6 +188,7 @@ public class Host implements java.io.Serializable, Comparable<Host> {
   }
   
   void markDatabase( ) {
+    this.startedTime = System.currentTimeMillis( );
     this.hasDatabase = true;
   }
   
@@ -199,7 +200,7 @@ public class Host implements java.io.Serializable, Comparable<Host> {
   public String toString( ) {
     StringBuilder builder = new StringBuilder( );
     builder.append( "Host:" );
-    if ( this.groupsId != null ) builder.append( " " ).append( this.groupsId ).append( ":" );
+    if ( this.groupsId != null ) builder.append( " " ).append( this.groupsId ).append( " " );
     if ( this.epoch != null ) builder.append( "epoch=" ).append( this.epoch ).append( " " );
     if ( this.bindAddress != null ) builder.append( this.bindAddress ).append( " " );
     if ( this.hasDatabase != null ) builder.append( "db=" ).append( this.hasDatabase ).append( " " );
@@ -207,6 +208,8 @@ public class Host implements java.io.Serializable, Comparable<Host> {
     if ( this.timestamp != null ) builder.append( "ats=" ).append( new Date( this.timestamp.get( ) ) ).append( " " );
     if ( this.lastTime != null ) builder.append( "mts=" ).append( new Date( this.lastTime ) ).append( " " );
     if ( this.hostAddresses != null ) builder.append( this.hostAddresses );
+    builder.append( " startTime=" ).append( Hosts.Coordinator.INSTANCE.getCurrentStartTime( ) ); 
+    if ( this.isLocalHost( ) && Hosts.Coordinator.INSTANCE.getCurrentCoordinator( ) ) builder.append( " coordinator" ); 
     return builder.toString( );
   }
   

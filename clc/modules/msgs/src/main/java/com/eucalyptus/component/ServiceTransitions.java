@@ -134,59 +134,79 @@ public class ServiceTransitions {
    **/
   @SuppressWarnings( "unchecked" )
   public static CheckedListenableFuture<ServiceConfiguration> pathTo( final ServiceConfiguration configuration, final Component.State goalState ) {
-    if ( goalState.equals( configuration.lookupState( ) ) ) {
-      return Futures.predestinedFuture( configuration );
-    } else {
-      try {
-        CheckedListenableFuture<ServiceConfiguration> result = null;
-        switch ( goalState ) {
-          case LOADED:
-            result = executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToLoaded( configuration.lookupState( ) ) ) );
-            break;
-          case DISABLED:
-            result = executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToDisabled( configuration.lookupState( ) ) ) );
-            break;
-          case ENABLED:
-            result = executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToEnabled( configuration.lookupState( ) ) ) );
-            break;
-          case STOPPED:
-            result = executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToStopped( configuration.lookupState( ) ) ) );
-            break;
-          case NOTREADY:
-            result = executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToStarted( configuration.lookupState( ) ) ) );
-            break;
-          case PRIMORDIAL:
-            result = executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToPrimordial( configuration.lookupState( ) ) ) );
-            break;
-          case BROKEN:
-            result = executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToBroken( configuration.lookupState( ) ) ) );
-            break;
-          case INITIALIZED:
-            result = executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToInitialized( configuration.lookupState( ) ) ) );
-            break;
-        }
-        return result;
-      } catch ( RuntimeException ex ) {
-        Logs.extreme( ).error( ex, ex );
-        LOG.error( configuration.getFullName( ) + " failed to transition to "
+    try {
+      CheckedListenableFuture<ServiceConfiguration> result = null;
+      switch ( goalState ) {
+        case LOADED:
+          result = executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToLoaded( configuration.lookupState( ) ) ) );
+          break;
+        case DISABLED:
+          result = executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToDisabled( configuration.lookupState( ) ) ) );
+          break;
+        case ENABLED:
+          result = executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToEnabled( configuration.lookupState( ) ) ) );
+          break;
+        case STOPPED:
+          result = executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToStopped( configuration.lookupState( ) ) ) );
+          break;
+        case NOTREADY:
+          result = executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToStarted( configuration.lookupState( ) ) ) );
+          break;
+        case PRIMORDIAL:
+          result = executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToPrimordial( configuration.lookupState( ) ) ) );
+          break;
+        case BROKEN:
+          result = executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToBroken( configuration.lookupState( ) ) ) );
+          break;
+        case INITIALIZED:
+          result = executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToInitialized( configuration.lookupState( ) ) ) );
+          break;
+      }
+      return result;
+    } catch ( RuntimeException ex ) {
+      Logs.extreme( ).error( ex, ex );
+      LOG.error( configuration.getFullName( ) + " failed to transition to "
                    + goalState
                    + " because of: "
                    + Exceptions.causeString( ex ) );
-        throw ex;
-      }
+      throw ex;
     }
   }
   
   private static State[] pathToBroken( Component.State fromState ) {
-    return ObjectArrays.concat( ServiceTransitions.pathToPrimordial( fromState ), Component.State.BROKEN );
+    State[] transition = new State[] { fromState };
+    switch ( fromState ) {
+      case BROKEN:
+        break;
+      default:
+        transition = ObjectArrays.concat( ServiceTransitions.pathToPrimordial( fromState ), Component.State.BROKEN );
+        break;
+    }
+    return transition;
   }
   
   private static State[] pathToPrimordial( Component.State fromState ) {
-    return ObjectArrays.concat( ServiceTransitions.pathToStopped( fromState ), Component.State.PRIMORDIAL );
+    State[] transition = new State[] { fromState };
+    switch ( fromState ) {
+      case PRIMORDIAL:
+        break;
+      default:
+        transition = ObjectArrays.concat( ServiceTransitions.pathToStopped( fromState ), Component.State.PRIMORDIAL );
+        break;
+    }
+    return transition;
   }
   
   private static State[] pathToLoaded( Component.State fromState ) {
-    return ObjectArrays.concat( ServiceTransitions.pathToInitialized( fromState ), Component.State.LOADED );
+    State[] transition = new State[] { fromState };
+    switch ( fromState ) {
+      case LOADED:
+        break;
+      default:
+        transition = ObjectArrays.concat( ServiceTransitions.pathToInitialized( fromState ), Component.State.LOADED );
+        break;
+    }
+    return transition;
   }
   
   private static final State[] pathToInitialized( final Component.State fromState ) {
@@ -194,7 +214,7 @@ public class ServiceTransitions {
     switch ( fromState ) {
       case LOADED:
         transition = ObjectArrays.concat( fromState, pathToInitialized( Component.State.NOTREADY ) );
-        //$FALL-THROUGH$
+        break;
       case ENABLED:
         transition = ObjectArrays.concat( transition, Component.State.DISABLED );
         //$FALL-THROUGH$
@@ -206,7 +226,7 @@ public class ServiceTransitions {
       case PRIMORDIAL:
       case STOPPED:
         transition = ObjectArrays.concat( transition, Component.State.INITIALIZED );
-        //$FALL-THROUGH$
+        break;
       case INITIALIZED:
         break;
     }
@@ -214,12 +234,23 @@ public class ServiceTransitions {
   }
   
   private static State[] pathToStarted( Component.State fromState ) {
-    return ObjectArrays.concat( ServiceTransitions.pathToLoaded( fromState ), Component.State.NOTREADY );
+    State[] transition = new State[] { fromState };
+    switch ( fromState ) {
+      case NOTREADY:
+        break;
+      case LOADED:
+        transition = ObjectArrays.concat( transition, Component.State.NOTREADY );
+        break;
+      default:
+        transition = ObjectArrays.concat( pathToLoaded( fromState ), Component.State.NOTREADY );
+    }
+    return transition;
   }
   
   private static final State[] pathToDisabled( final Component.State fromState ) {
     State[] transition = new State[] { fromState };
     switch ( fromState ) {
+      case ENABLED:
       case DISABLED:
       case NOTREADY:
         transition = ObjectArrays.concat( transition, Component.State.DISABLED );
@@ -227,7 +258,7 @@ public class ServiceTransitions {
       default:
         transition = ObjectArrays.concat( pathToStarted( fromState ), Component.State.DISABLED );
     }
-    return ObjectArrays.concat( transition, Component.State.DISABLED );
+    return transition;
   }
   
   private static final State[] pathToEnabled( final Component.State fromState ) {
@@ -239,7 +270,7 @@ public class ServiceTransitions {
       default:
         transition = ObjectArrays.concat( pathToDisabled( fromState ), Component.State.ENABLED );
     }
-    return ObjectArrays.concat( transition, Component.State.ENABLED );
+    return transition;
   }
   
   private static final State[] pathToStopped( final Component.State fromState ) {
@@ -250,7 +281,10 @@ public class ServiceTransitions {
         //$FALL-THROUGH$
       case DISABLED:
       case NOTREADY:
+      case BROKEN:
         transition = ObjectArrays.concat( transition, Component.State.STOPPED );
+        break;
+      case STOPPED:
         break;
       default:
         transition = ObjectArrays.concat( pathToStarted( fromState ), Component.State.STOPPED );
@@ -709,7 +743,8 @@ public class ServiceTransitions {
     STATIC_PROPERTIES_ADD {
       @Override
       public void fire( final ServiceConfiguration config ) {
-        for ( Entry<String, ConfigurableProperty> entry : Iterables.filter( PropertyDirectory.getPendingPropertyEntries( ), Predicates.instanceOf( StaticPropertyEntry.class ) ) ) {
+        for ( Entry<String, ConfigurableProperty> entry : Iterables.filter( PropertyDirectory.getPendingPropertyEntries( ),
+                                                                            Predicates.instanceOf( StaticPropertyEntry.class ) ) ) {
           try {
             ConfigurableProperty prop = entry.getValue( );
             PropertyDirectory.addProperty( prop );

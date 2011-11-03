@@ -70,6 +70,7 @@ import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import org.apache.log4j.Logger;
@@ -738,15 +739,15 @@ public class Topology {
             throw ex;
           }
         } else {
-          throw new IllegalStateException( "Failed to ENABLE " + config.getFullName( ) );
-//          try {
-//            return ServiceTransitions.pathTo( config, Component.State.DISABLED ).get( );
-//          } catch ( InterruptedException ex ) {
-//            Thread.currentThread( ).interrupt( );
-//            throw Exceptions.toUndeclared( ex );
-//          } catch ( ExecutionException ex ) {
-//            throw Exceptions.toUndeclared( ex );
-//          }
+//          throw new IllegalStateException( "Failed to ENABLE " + config.getFullName( ) );
+          try {
+            return ServiceTransitions.pathTo( config, Component.State.DISABLED ).get( );
+          } catch ( InterruptedException ex ) {
+            Thread.currentThread( ).interrupt( );
+            throw Exceptions.toUndeclared( ex );
+          } catch ( ExecutionException ex ) {
+            throw Exceptions.toUndeclared( ex );
+          }
         }
       }
     },
@@ -823,11 +824,11 @@ public class Topology {
       if ( ( nextState = findNextCheckState( input.lookupState( ) ) ) == null ) {
         return input;
       } else {
-        return this.doTopologyChange( this, input, nextState );
+        return this.doTopologyChange( input, nextState );
       }
     }
     
-    private ServiceConfiguration doTopologyChange( TopologyChange tc, ServiceConfiguration input, State nextState ) throws RuntimeException {
+    private ServiceConfiguration doTopologyChange( ServiceConfiguration input, State nextState ) throws RuntimeException {
       State initialState = input.lookupState( );
       ServiceConfiguration endResult = input;
       try {

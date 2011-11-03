@@ -21,7 +21,7 @@ import com.google.common.collect.Maps;
 
 public class Privileged {
   
-  public static Account createAccount( boolean hasAdministrativePrivilege, String accountName, String password, String email ) throws AuthException {
+  public static Account createAccount( boolean hasAdministrativePrivilege, String accountName, String password, String email, boolean skipRegistration ) throws AuthException {
     if ( !hasAdministrativePrivilege ) {
       throw new AuthException( AuthException.ACCESS_DENIED );
     }
@@ -31,7 +31,7 @@ public class Privileged {
       info = Maps.newHashMap( );
       info.put( User.EMAIL, email );
     }
-    User admin = newAccount.addUser( User.ACCOUNT_ADMIN, "/", true/*skipRegistration*/, true/*enabled*/, info );
+    User admin = newAccount.addUser( User.ACCOUNT_ADMIN, "/", skipRegistration, true/*enabled*/, info );
     admin.resetToken( );
     admin.createConfirmationCode( );
     if ( password != null ) {
@@ -65,6 +65,7 @@ public class Privileged {
     }
     try {
       Accounts.lookupAccountByName( newName );
+      throw new AuthException( AuthException.CONFLICT );
     } catch ( AuthException ae ) {
       if ( !requestUser.isSystemAdmin( ) ) {
         if ( !requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) ) {
@@ -76,7 +77,6 @@ public class Privileged {
       }
       account.setName( newName );
     }
-    throw new AuthException( AuthException.CONFLICT );
   }
   
   public static void deleteAccountAlias( User requestUser, Account account, String alias ) throws AuthException {

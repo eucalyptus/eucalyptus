@@ -263,10 +263,10 @@ public class WalrusProperties {
 	}
 
 	public static InetAddress getWalrusAddress() throws EucalyptusCloudException {
-		if( Topology.isEnabledLocally( Walrus.class ) ) {
-			ServiceConfiguration walrusConfig = Topology.lookup( Walrus.class );
-			return Internets.toAddress(walrusConfig.getHostName());
-		} 
-		return null;	    
+		if( Topology.isEnabled( Walrus.class ) ) {
+			return Topology.lookup( Walrus.class ).getInetAddress();
+		} else {
+			throw new EucalyptusCloudException("Walrus not ENABLED");
+		}	    
 	}
 }
