@@ -3326,10 +3326,7 @@ int init_config(void) {
   logprintfl(EUCADEBUG, "init_config(): called.\n");
   logprintfl(EUCADEBUG, "init_config(): initializing CC configuration\n");  
 
-  rc = readConfigFile(configFiles, 2);
-  if (rc) {
-    logprintfl(EUCAERROR, "init_config(): cannot read config file!\n");
-  }
+  readConfigFile(configFiles, 2);
   
   // DHCP configuration section
   {
@@ -4955,6 +4952,7 @@ int readConfigFile(char configFiles[][MAX_PATH], int numFiles) {
       logprintfl(EUCAINFO, "readConfigFile(): read (%s=%s, default=%s)\n", configKeysRestart[i].key, SP(new), SP(configKeysRestart[i].defaultValue));
       if (configValuesRestart[i]) free(configValuesRestart[i]);
       configValuesRestart[i] = new;
+      ret++;
     }
   }
   configRestartLen = i;
@@ -4976,6 +4974,7 @@ int readConfigFile(char configFiles[][MAX_PATH], int numFiles) {
       logprintfl(EUCAINFO, "readConfigFile(): read (%s=%s, default=%s)\n", configKeysNoRestart[i].key, SP(new), SP(configKeysNoRestart[i].defaultValue));
       if (configValuesNoRestart[i]) free(configValuesNoRestart[i]);
       configValuesNoRestart[i] = new;
+      ret++;
     }
   }
   configNoRestartLen = i;
