@@ -1,20 +1,21 @@
 #!/usr/bin/perl
 
 #
-# check_db.pl runs a sanity check of the database after events have been
-#   stored. It verifies that the event counts are correct for all users
-#   and that the events are plausible (meaning that increments of vols,
-#   snapshots, buckets, and objects include plausible increments of the
-#   associated values only).
+# check_db.pl runs a sanity check of the database, after events have been
+#   stored. It verifies that there is an event stored in the database
+#   for every event which was supposed to have been sent, and that the
+#   events are plausible (meaning that increments of vols, snapshots,
+#   buckets, and objects include plausible increments of the associated
+#   values only).
 #
 # Usage: check_db.pl \
-# 	num_instance_events_per_user \
-#   num_instances_per_user \
-# 	num_storage_events_per_user \
-#   num_s3_events_per_user \
+#   num_instances_per_user 
+#   range_num_instance_events_per_user (nn-nn)
+#   range_num_storage_events_per_user (nn-nn)
+#   range_num_s3_events_per_user (nn-nn)
 #   (username/accountname)+
 #
-# Example: check_db.pl 50 2 50 50 user_a/account_a user_b/account_b
+# Example: check_db.pl 2 50-80 50-80 50-80 user_a/account_a user_b/account_b\n";
 #
 # NOTE: This script assumes that the db.sh script runs and is in the current
 #  path.
@@ -38,22 +39,22 @@ sub execute_query($) {
 if ($#ARGV+1 < 5) {
 	print "
  Usage: check_db.pl 
-   num_instance_events_per_user 
    num_instances_per_user 
-   num_storage_events_per_user 
-   num_s3_events_per_user 
+   range_num_instance_events_per_user (nn-nn)
+   range_num_storage_events_per_user (nn-nn)
+   range_num_s3_events_per_user (nn-nn)
    (username/accountname)+
 
- Example: check_db.pl 50 2 50 50 user_a/account_a user_b/account_b\n";
+ Example: check_db.pl 2 50-80 50-80 50-80 user_a/account_a user_b/account_b\n";
 	die ("Incorrect args");
 }
 
 
 # Parse args
-my $num_instance_events_per_user = shift;
 my $num_instances_per_user = shift;
-my $num_storage_events_per_user = shift;
-my $num_s3_events_per_user = shift;
+my ($min_instance_events,$max_instance_events) = split("-",shift);
+my ($min_storage_events,$max_storage_events) = split("-",shift);
+my ($min_s3_events,$max_s3_events) = split("-",shift);
 
 my @usernames = ();
 my @accountnames = ();
@@ -113,8 +114,8 @@ foreach (execute_query("
 ")) {
 	my ($count,$disk_io,$net_io,$user_name) = split("\\s+");
 	print "Found instance events user:$user_name #:$count disk:$disk_io net:$net_io\n";
-	if ($count != $num_instance_events_per_user) {
-		die ("Incorrect ins event count, expected:$num_instance_events_per_user found:$count for user:$user_name";
+	if ($count < $min_instance_events || $count > $max_instance_events) {
+		die ("Incorrect ins event count, expected:$min_instance_events - $max_instance_events , found:$count for user:$user_name";
 	}
 	if ($disk_io==0 || $net_io==0) {
 		die ("Disk or net == 0, user:$user_name";
@@ -144,8 +145,8 @@ foreach (execute_query("
 ")) {
 	my ($count,$max_buckets,$max_objects,$max_size,$user_name) = split("\\s+");
 	print "Found s3 events user:$user_name #:$count max_buckets:$max_buckets max_objects:$max_objects max_size:$max_size\n";
-	if ($count != $num_s3_events_per_user) {
-		die ("Incorrect s3 event count, expected:$num_s3_events_per_user found:$count for user:$user_name";
+	if ($count < $min_s3_events || $count > $max_s3_events) {
+		die ("Incorrect s3 event count, expected:$min_s3_events - $max_s3_events , found:$count for user:$user_name";
 	}
 	if ($max_buckets == 0 || $max_objects == 0 || $max_size == 0) {
 		die ("max_buckets or max_objects or max_size == 0, user:$user_name";
@@ -179,6 +180,7 @@ foreach (execute_query("
 	order by user_name, timestamp_ms ASC
 ")) {
 	my ($num_buckets,$num_objects,$obj_megs,$user_name) = split("\\s+");
+	print "Found s3 event user:$user_name num_buckets:$num_buckets num_objects:$num_objects obj_megs:$obj_megs\n";
 	if ($old_user eq $user_name) {
 		# Verify that either total buckets or objects has incremented by one for this event
 		if (($num_buckets != $old_buckets_num+1) || ($num_objects != $old_objects_num+1)) {
@@ -189,7 +191,7 @@ foreach (execute_query("
 			die ("objects size changed without additional object for user:$user_name";
 		}
 		# Verify that object count events do lead to size changes in the correct direction
-		if (($num_objects != $old_objects_num) && !($obj_megs > $old_objects_megs)) {
+		if (($num_objects != $old_objects_num) && ($obj_megs <= $old_objects_megs)) {
 			die ("objects size increased without additional size allocation for user:$user_name";
 		}
 	}
@@ -222,7 +224,7 @@ foreach (execute_query("
 ")) {
 	my ($count, $max_snap, $max_snap_size, $max_vols, $max_vol_size, $user_name) = split("\\s+");
 	print "Found storage events user:$user_name #:$count max_snap:$max_snap max_snap_size:$max_snap_size max_vols:$max_vols max_vol_size:$max_vol_size\n";
-	if ($count != $num_storage_events_per_user) {
+	if ($count < $num_storage_events_per_user) {
 		die ("Incorrect storage event count, expected:$num_storage_events_per_user found:$count for user:$user_name";
 	}
 	if ($max_snap == 0 || $max_snap_size == 0 || $max_vols == 0 || $max_vol_size == 0) {
@@ -257,17 +259,18 @@ foreach (execute_query("
 	order by user_name, timestamp_ms ASC
 ")) {
 	my ($snap_num, $snap_size, $vol_num, $vol_size, $user_name) = split("\\s+");
+	print "Found storage event, username:$user_name snap_num:$snap_num snap_size:$snap_size vol_num:$vol_num vol_size:$vol_size\n";
 	if ($old_user eq $user_name) {
 		# Verify that either total buckets or objects has incremented by one for this event
 		if (($snap_num != $old_snap_num+1) || ($vol_num != $old_vol_num+1)) {
 			die ("snaps or vols not incremented for user:$user_name";
 		}
 		# Verify that additional size is allocated if snap event
-		if (($snap_num == $old_snap_num+1) && !($snap_size > $old_snap_size)) {
+		if (($snap_num == $old_snap_num+1) && ($snap_size <= $old_snap_size)) {
 			die ("snaps num increased without additional size allocation for user:$user_name");
 		}
 		# Verify that additional size is allocated if vol event
-		if (($vol_num == $old_vol_num+1) && !($vol_size > $old_vol_size)) {
+		if (($vol_num == $old_vol_num+1) && ($vol_size <= $old_vol_size)) {
 			die ("vols num increased without additional size allocation for user:$user_name");
 		}
 	}
