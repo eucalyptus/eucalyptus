@@ -30,7 +30,6 @@ public class LogoutActivity extends AbstractActivity {
   
   @Override
   public void start( AcceptsOneWidget container, EventBus eventBus ) {
-    this.clientFactory.getShellView( ).getLogView( ).clear( );
     this.clientFactory.getLifecyclePlaceController( ).goTo( new LoginPlace( LoginPlace.DEFAULT_PROMPT ) );
   }
   
