@@ -158,7 +158,7 @@ public class MetadataRequest {
       try {
 	  ClusterConfiguration ccAddresses = Entities.uniqueResult(cConfig);
 	  if (ccAddresses.getSourceHostName().equals(this.requestIp) 
-		  && ccAddresses.getHostName().equals(this.requestIp)) {
+		  || ccAddresses.getHostName().equals(this.requestIp)) {
 	      db.commit();
 	      return true;
 	  } else {
