@@ -203,6 +203,9 @@ public class StackConfiguration extends AbstractPersistent {
   @ConfigurableField( description = "Use DNS delegation for eucarc." )
   public static Boolean       USE_DNS_DELEGATION                = Boolean.FALSE;
   
+  @ConfigurableField( description = "Use DNS names for instances." )
+  public static Boolean       USE_INSTANCE_DNS                = Boolean.FALSE;
+
   @ConfigurableField( description = "Default scheme prefix in eucarc.",
                       changeListener = TemporarySchemeUpdater.class )
   public static Boolean       DEFAULT_HTTPS_ENABLED             = Boolean.FALSE;
