@@ -82,6 +82,8 @@ import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.WalrusProperties;
 import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstances;
+import com.eucalyptus.ws.StackConfiguration;
+
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 import edu.ucsb.eucalyptus.cloud.ws.WalrusManager;
 
@@ -158,9 +160,12 @@ public class TransientZone extends Zone {
     }
   }
 
-  @Override
+  /* (non-Javadoc)
+ * @see com.eucalyptus.dns.Zone#findRecords(org.xbill.DNS.Name, int)
+ */
+@Override
   public SetResponse findRecords( Name name, int type ) {
-    if( name.toString( ).matches("euca-.+{3}-.+{3}-.+{3}-.+{3}\\..*") ) {
+    if( StackConfiguration.USE_INSTANCE_DNS && name.toString( ).matches("euca-.+{3}-.+{3}-.+{3}-.+{3}\\..*") ) {
       try {
         String[] tryIp = name.toString( ).replaceAll( "euca-", "" ).replaceAll("\\.eucalyptus.*","").split("-");
         if( tryIp.length < 4 ) return super.findRecords( name, type );
@@ -196,7 +201,7 @@ public class TransientZone extends Zone {
 		} catch (Exception e) {
             return super.findRecords( name, type );
 		}
-    } else if (name.toString().endsWith(".in-addr.arpa.")) {
+    } else if (StackConfiguration.USE_INSTANCE_DNS && name.toString().endsWith(".in-addr.arpa.")) {
   	  int index = name.toString().indexOf(".in-addr.arpa.");
   	  Name target;
 	  if ( index > 0 ) {
