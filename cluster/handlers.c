@@ -3196,7 +3196,7 @@ int update_config(void) {
     // stat the config file, update modification time
     rc = stat(config->configFiles[i], &statbuf);
     if (!rc) {
-      if (statbuf.st_mtime != configMtime || statbuf.st_ctime > configMtime) {
+      if (statbuf.st_mtime > 0 || statbuf.st_ctime > 0) {
 	if (statbuf.st_ctime > statbuf.st_mtime) {
 	  configMtime = statbuf.st_ctime;
 	} else {
@@ -3212,6 +3212,7 @@ int update_config(void) {
   }
   
   // check to see if the configfile has changed
+  logprintfl(EUCADEBUG, "update_config(): current mtime=%d, stored mtime=%d\n", configMtime, config->configMtime);
   if (config->configMtime != configMtime) {
     rc = readConfigFile(config->configFiles, 2);
     if (rc) {
