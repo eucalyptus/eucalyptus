@@ -441,7 +441,7 @@ public class Privileged {
   }
 
   public static List<Policy> listUserPolicies( User requestUser, Account account, User user ) throws AuthException {
-    if ( !allowListOrReadUserPolicy( requestUser, account, user ) ) {
+    if ( !allowListUserPolicy( requestUser, account, user ) ) {
       throw new AuthException( AuthException.ACCESS_DENIED );
     }
     return user.getPolicies( );
@@ -477,7 +477,7 @@ public class Privileged {
   }
   
   public static Policy getUserPolicy( User requestUser, Account account, User user, String policyName ) throws AuthException {
-    if ( !allowListOrReadUserPolicy( requestUser, account, user ) ) {
+    if ( !allowReadUserPolicy( requestUser, account, user ) ) {
       throw new AuthException( AuthException.ACCESS_DENIED );
     }
     Policy policy = null;
@@ -496,14 +496,31 @@ public class Privileged {
              Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_GROUP, Accounts.getGroupFullName( group ), account, PolicySpec.IAM_GETGROUPPOLICY, requestUser ) );
   }
 
-  public static boolean allowListOrReadUserPolicy( User requestUser, Account account, User user ) throws AuthException {
+  public static boolean allowListUserPolicy( User requestUser, Account account, User user ) throws AuthException {
+    return requestUser.isSystemAdmin( ) || // system admin or ...
+           ( requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) && // in the same account and ...
+             ( requestUser.isAccountAdmin( ) || // is the account admin or ...
+               ( !user.isAccountAdmin( ) && // we are not looking at account admin's policies and authorized
+                 Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, PolicySpec.IAM_LISTUSERPOLICIES, requestUser ) ) ) );
+  }
+
+  public static boolean allowReadUserPolicy( User requestUser, Account account, User user ) throws AuthException {
     return requestUser.isSystemAdmin( ) || // system admin or ...
            ( requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) && // in the same account and ...
              ( requestUser.isAccountAdmin( ) || // is the account admin or ...
                ( !user.isAccountAdmin( ) && // we are not looking at account admin's policies and authorized
                  Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, PolicySpec.IAM_GETUSERPOLICY, requestUser ) ) ) );
   }
-  
+
+  public static boolean allowListAndReadUserPolicy( User requestUser, Account account, User user ) throws AuthException {
+    return requestUser.isSystemAdmin( ) || // system admin or ...
+           ( requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) && // in the same account and ...
+             ( requestUser.isAccountAdmin( ) || // is the account admin or ...
+               ( !user.isAccountAdmin( ) && // we are not looking at account admin's policies and authorized
+                 Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, PolicySpec.IAM_LISTUSERPOLICIES, requestUser ) && 
+                 Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, PolicySpec.IAM_GETUSERPOLICY, requestUser ) ) ) );
+  }
+
   public static AccessKey createAccessKey( User requestUser, Account account, User user ) throws AuthException {
     if ( !requestUser.isSystemAdmin( ) ) {
       if ( !requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) ) {
