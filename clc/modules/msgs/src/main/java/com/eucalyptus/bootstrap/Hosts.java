@@ -257,7 +257,6 @@ public class Hosts {
     @Override
     public void contentsSet( final Map<String, Host> arg0 ) {
       LOG.info( "Hosts.contentsSet(): " + this.printMap( ) );
-      Coordinator.INSTANCE.update( arg0.values( ) );
     }
     
     @Override
@@ -269,12 +268,7 @@ public class Hosts {
     @Override
     public void entrySet( final String arg0, final Host arg1 ) {
       LOG.info( "Hosts.entryAdded(): " + arg0 + " => " + arg1 );
-      if ( arg1.isLocalHost( ) ) {
-        LOG.info( "Hosts.entryAdded(): Bootstrap  " + ( Bootstrap.isFinished( )
-          ? "true"
-          : "false" ) + "=> " + arg1 );
-        Coordinator.INSTANCE.update( hostMap.values( ) );
-      } else if ( AdvertiseToRemoteCloudController.INSTANCE.apply( arg1 ) ) {
+      if ( AdvertiseToRemoteCloudController.INSTANCE.apply( arg1 ) ) {
         LOG.info( "Hosts.entryAdded(): Marked as database  => " + arg1 );
       } else if ( BootstrapRemoteComponent.INSTANCE.apply( arg1 ) ) {
         LOG.info( "Hosts.entryAdded(): Bootstrapping host  => " + arg1 );
@@ -612,6 +606,7 @@ public class Hosts {
         hostMap.addNotifier( HostMapStateListener.INSTANCE );
         hostMap.start( STATE_TRANSFER_TIMEOUT );
         LOG.info( "Added localhost to system state: " + localHost( ) );
+        Coordinator.INSTANCE.update( hostMap.values( ) );
         final Host local = Coordinator.INSTANCE.createLocalHost( );
         hostMap.putIfAbsent( local.getDisplayName( ), local );
         Listeners.register( HostBootstrapEventListener.INSTANCE );
@@ -724,7 +719,7 @@ public class Hosts {
      */
     public void update( final Collection<Host> values ) {
       final long currentTime = System.currentTimeMillis( );
-      final long startTime = Longs.max( Longs.toArray( Collections2.transform( values, StartTimeTransform.INSTANCE ) ) );
+      final long startTime = values.isEmpty( ) ? currentTime : Longs.max( Longs.toArray( Collections2.transform( values, StartTimeTransform.INSTANCE ) ) );
       if ( this.currentStartTime.compareAndSet( Long.MAX_VALUE, startTime > currentTime ? startTime : currentTime ) ) {
         final Host foundCoordinator = this.apply( values );
         this.currentCoordinator.set( foundCoordinator.isLocalHost( ) );
@@ -752,7 +747,7 @@ public class Hosts {
     public Host apply( final Collection<Host> input ) {
       Host ret = null;
       try {
-        ret  = Iterables.find( input, this );
+        ret = Iterables.find( input, this );
       } catch ( final NoSuchElementException ex ) {
         ret = Hosts.localHost( );
       }
@@ -761,11 +756,11 @@ public class Hosts {
     }
     
     public Boolean isLocalhost( ) {
-      return this.currentCoordinator.get( );
+      return this.apply( hostMap.values( ) ).isLocalHost( );
     }
     
     public boolean getCurrentCoordinator( ) {
-      return this.currentCoordinator.get( );
+      return this.isLocalhost( );
     }
     
     public long getCurrentStartTime( ) {
