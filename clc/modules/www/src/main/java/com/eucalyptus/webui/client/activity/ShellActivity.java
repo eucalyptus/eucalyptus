@@ -230,7 +230,8 @@ public class ShellActivity extends AbstractActivity
         LOG.log( Level.INFO, "User signed out." );
       }
     } );
-    this.clientFactory.getLocalSession( ).clearSession( );    
+    this.clientFactory.getLocalSession( ).clearSession( );
+    this.clientFactory.getShellView( ).getLogView( ).clear( );
     this.clientFactory.getMainPlaceController( ).goTo( new LogoutPlace( ) );
   }
 
