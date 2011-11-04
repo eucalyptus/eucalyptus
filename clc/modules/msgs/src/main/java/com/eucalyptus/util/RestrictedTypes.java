@@ -176,10 +176,13 @@ public class RestrictedTypes {
   private static <T> List<T> runAllocator( int quantity, Supplier<T> allocator, Predicate<T> rollback ) {
     List<T> res = Lists.newArrayList( );
     try {
-      for ( int i = 0; i < quantity; i++ ) {
-        res.add( allocator.get( ) );
-      }
-    } catch ( Exception ex ) {
+         for ( int i = 0; i < quantity; i++ ) {
+    		 T rsc = allocator.get( );         
+    		 if ( rsc == null ) 
+    			 throw new NoSuchElementException( "Attempt to allocate " + quantity + " resources failed." );
+    		 res.add(rsc);
+         }
+    }catch ( Exception ex ) {
       for ( T rsc : res ) {
         try {
           rollback.apply( rsc );
@@ -187,6 +190,10 @@ public class RestrictedTypes {
           LOG.trace( ex1, ex1 );
         }
       }
+      if(ex.getCause()!=null)
+    	  throw Exceptions.toUndeclared(ex.getCause());
+      else
+    	  throw Exceptions.toUndeclared(ex);
     }
     return res;
   }
@@ -242,7 +249,7 @@ public class RestrictedTypes {
     Context ctx = Contexts.lookup( );
     Class<?> rscType = findResourceClass( allocator );
     if ( ctx.hasAdministrativePrivileges( ) ) {
-      return runAllocator( quantity, allocator, rollback );
+      return runAllocator( quantity, allocator, rollback ); // may throw RuntimeException
     } else {
       Class<? extends BaseMessage> msgType = ctx.getRequest( ).getClass( );
       Ats ats = findPolicyAnnotations( rscType, msgType );

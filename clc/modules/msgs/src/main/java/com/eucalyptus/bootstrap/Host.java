@@ -103,7 +103,6 @@ public class Host implements java.io.Serializable, Comparable<Host> {
     this.hasBootstrapped = Bootstrap.isFinished( );
     this.hasDatabase = BootstrapArgs.isCloudController( );
     this.hostAddresses = newAddrs;
-    LOG.trace( "Updated host: " + this );
   }
   
   Host( Host last ) {
@@ -200,14 +199,16 @@ public class Host implements java.io.Serializable, Comparable<Host> {
   public String toString( ) {
     StringBuilder builder = new StringBuilder( );
     builder.append( "Host:" );
-    if ( this.groupsId != null ) builder.append( " " ).append( this.groupsId ).append( ":" );
+    if ( this.groupsId != null ) builder.append( " " ).append( this.groupsId ).append( " " );
     if ( this.epoch != null ) builder.append( "epoch=" ).append( this.epoch ).append( " " );
     if ( this.bindAddress != null ) builder.append( this.bindAddress ).append( " " );
     if ( this.hasDatabase != null ) builder.append( "db=" ).append( this.hasDatabase ).append( " " );
     if ( this.hasBootstrapped != null ) builder.append( "up=" ).append( this.hasBootstrapped ).append( " " );
-    if ( this.timestamp != null ) builder.append( "ats=" ).append( new Date( this.timestamp.get( ) ) ).append( " " );
-    if ( this.lastTime != null ) builder.append( "mts=" ).append( new Date( this.lastTime ) ).append( " " );
+    if ( this.timestamp != null ) builder.append( "cts=" ).append( this.startedTime ).append( " " );
+    if ( this.lastTime != null ) builder.append( "mts=" ).append( this.timestamp.get( ) ).append( " " );
     if ( this.hostAddresses != null ) builder.append( this.hostAddresses );
+    builder.append( " startTime=" ).append( Hosts.Coordinator.INSTANCE.getCurrentStartTime( ) ); 
+//    if ( this.isLocalHost( ) && Hosts.Coordinator.INSTANCE.isLocalhost( ) ) builder.append( " coordinator" ); 
     return builder.toString( );
   }
   

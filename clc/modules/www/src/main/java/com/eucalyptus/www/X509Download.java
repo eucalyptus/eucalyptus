@@ -208,10 +208,10 @@ public class X509Download extends HttpServlet {
       //TODO:GRZE:FIXME velocity
       String userNumber = u.getAccount( ).getAccountNumber( );
       sb.append( "EUCA_KEY_DIR=$(dirname $(readlink -f ${BASH_SOURCE}))" );
-      sb.append( "\nexport EC2_URL=" + ServiceUris.remote( Eucalyptus.class, Internets.localHostInetAddress( ) ) );
+      sb.append( "\nexport EC2_URL=" + ServiceUris.remotePublicify( Eucalyptus.class ) );
       if ( Topology.isEnabled( Walrus.class ) ) {
         ServiceConfiguration walrusConfig = Topology.lookup( Walrus.class );
-        String uri = ServiceUris.remote( walrusConfig ).toASCIIString( );
+        String uri = ServiceUris.remotePublicify( walrusConfig ).toASCIIString( );
         LOG.debug( "Found walrus uri/configuration: uri=" + uri + " config=" + walrusConfig );
         sb.append( "\nexport S3_URL=" + uri );
       } else {

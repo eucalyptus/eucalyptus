@@ -122,7 +122,7 @@ public class EuareService {
     Context ctx = Contexts.lookup( );
     User requestUser = ctx.getUser( );
     try {
-      Account newAccount = Privileged.createAccount( ctx.hasAdministrativePrivileges( ), request.getAccountName( ), null, null );
+      Account newAccount = Privileged.createAccount( ctx.hasAdministrativePrivileges( ), request.getAccountName( ), null/*password*/, null/*email*/, true/*skipRegistration*/ );
       AccountType account = reply.getCreateAccountResult( ).getAccount( );
       account.setAccountName( newAccount.getName( ) );
       account.setAccountId( newAccount.getAccountNumber( ) );
