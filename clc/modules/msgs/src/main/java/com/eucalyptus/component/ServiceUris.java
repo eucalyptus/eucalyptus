@@ -242,9 +242,7 @@ public class ServiceUris {
       String schemeString = StackConfiguration.DEFAULT_HTTPS_ENABLED
         ? this.scheme.getSecureScheme( )
         : this.scheme.getScheme( );
-      String hostNameString = StackConfiguration.USE_DNS_DELEGATION
-        ? this.componentId.name( ) + "." + StackConfiguration.lookupDnsDomain( )
-        : this.address.getHostAddress( );
+      String hostNameString = this.address.getHostAddress();
       try {
         URI u = new URI( schemeString, null, hostNameString, this.port, ( "/" + this.path ).replaceAll( "^//", "/" ), Lexemes.QUERY.format( this.query ), null );
         u.parseServerAuthority( );
@@ -254,6 +252,27 @@ public class ServiceUris {
       }
     }
     
+    public URI getPublicify( ) {
+      assertThat( this.address, notNullValue( ) );
+      assertThat( this.path, notNullValue( ) );
+      if ( this.scheme == null ) this.scheme = BasicTransport.HTTP;
+      if ( this.port == null ) this.port = this.componentId.getPort( );
+      if ( this.internal ) this.path = this.componentId.getInternalServicePath( this.path );
+      String schemeString = StackConfiguration.DEFAULT_HTTPS_ENABLED
+        ? this.scheme.getSecureScheme( )
+        : this.scheme.getScheme( );
+      String hostNameString = this.componentId.isPublicService() ? (StackConfiguration.USE_DNS_DELEGATION
+        ? this.componentId.name( ) + "." + StackConfiguration.lookupDnsDomain( )
+        : this.address.getHostAddress( )) : this.address.getHostAddress();
+      try {
+        URI u = new URI( schemeString, null, hostNameString, this.port, ( "/" + this.path ).replaceAll( "^//", "/" ), Lexemes.QUERY.format( this.query ), null );
+        u.parseServerAuthority( );
+        return u;
+      } catch ( URISyntaxException e ) {
+        throw new RuntimeException( "Failed to construct URI: " + this.toString( ) + " because of: " + e, e );
+      }
+    }
+
     @Override
     public String toString( ) {
       StringBuilder builder = new StringBuilder( );
@@ -334,7 +353,15 @@ public class ServiceUris {
   public static URI remote( ComponentId compId, final InetAddress host, Integer port, String... pathParts ) {
     return make( compId, host, port, pathParts ).get( );
   }
-  
+
+  public static URI remotePublicify( final Class<? extends ComponentId> idClass, String... pathParts ) {
+	return remotePublicify( Topology.lookup(idClass), pathParts );
+  }
+
+  public static URI remotePublicify( ServiceConfiguration config, String... pathParts ) {
+	return make( config.getComponentId( ), config.getInetAddress( ), config.getPort( ), pathParts ).getPublicify( );
+  }
+
   private static UriParserBuilder makeInternal( ComponentId compId, final InetAddress host, Integer port, String... pathParts ) {
     return new UriParserBuilder( compId ).scheme( compId.getTransports( ).iterator( ).next( ) ).host( host ).port( port ).path( compId.getInternalServicePath( pathParts ) );
   }

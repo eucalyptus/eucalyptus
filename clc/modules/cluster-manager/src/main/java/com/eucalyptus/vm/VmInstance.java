@@ -136,6 +136,7 @@ import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.vm.VmBundleTask.BundleState;
 import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstances.Timeout;
+import com.eucalyptus.ws.StackConfiguration;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
@@ -865,7 +866,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   }
   
   private Map<String, String> getMetadataMap( ) {
-    final boolean dns = !ComponentIds.lookup( Dns.class ).runLimitedServices( );
+    final boolean dns = StackConfiguration.USE_INSTANCE_DNS && !ComponentIds.lookup( Dns.class ).runLimitedServices( );
     final Map<String, String> m = new HashMap<String, String>( );
     m.put( "ami-id", this.getImageId( ) );
     if ( !this.bootRecord.getMachine( ).getProductCodes( ).isEmpty( ) ) {
@@ -1399,7 +1400,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         try {
           final VmInstance input = Entities.merge( v );
           RunningInstancesItemType runningInstance;
-          final boolean dns = !ComponentIds.lookup( Dns.class ).runLimitedServices( );
+          final boolean dns = StackConfiguration.USE_INSTANCE_DNS && !ComponentIds.lookup( Dns.class ).runLimitedServices( );
           runningInstance = new RunningInstancesItemType( );
           
           runningInstance.setAmiLaunchIndex( Integer.toString( input.getLaunchRecord( ).getLaunchIndex( ) ) );
