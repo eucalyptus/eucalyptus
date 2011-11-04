@@ -71,7 +71,6 @@ permission notice:
 #define LIBVIRT_QUERY_RETRIES 5
 #define MAXDOMS 1024
 #define BYTES_PER_DISK_UNIT 1073741824 /* disk stats are in Gigs */
-#define SWAP_SIZE 512 /* for now, the only possible swap size, in MBs */
 
 /* NC state */
 struct nc_state_t {
