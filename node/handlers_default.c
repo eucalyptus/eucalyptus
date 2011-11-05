@@ -411,7 +411,7 @@ doDescribeResource(	struct nc_state_t *nc,
     while ((inst=get_instance(&global_instances))!=NULL) {
         if (inst->state == TEARDOWN) continue; // they don't take up resources
         sum_mem += inst->params.mem;
-        sum_disk += (inst->params.disk + SWAP_SIZE);
+        sum_disk += (inst->params.disk);
         sum_cores += inst->params.cores;
     }
     sem_v (inst_sem);

@@ -641,7 +641,7 @@ public class EuareWebBackend {
         // Optimization for a single user's policies
         User user = Accounts.lookupUserById( query.getSingle( USERID ).getValue( ) );
         Account account = user.getAccount( );
-        if ( Privileged.allowListOrReadUserPolicy( requestUser, account, user ) ) {
+        if ( Privileged.allowListAndReadUserPolicy( requestUser, account, user ) ) {
           for ( Policy policy : user.getPolicies( ) ) {
             results.add( serializePolicy( policy, account, null, user ) );
           }
@@ -668,7 +668,7 @@ public class EuareWebBackend {
           try {
             for ( User user : getUsers( account, query ) ) {
               try {
-                if ( Privileged.allowListOrReadUserPolicy( requestUser, account, user ) ) {
+                if ( Privileged.allowListAndReadUserPolicy( requestUser, account, user ) ) {
                   for ( Policy policy : user.getPolicies( ) ) {
                     if ( policyMatchQuery( policy, query ) ) {
                       results.add( serializePolicy( policy, account, null, user ) );
