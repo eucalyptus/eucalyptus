@@ -27,8 +27,8 @@
 use strict;
 use warnings;
 
-if ($#ARGV+1 < 6) {
-	die "Usage: simulate_one_user.pl num_instances interval duration storage_usage_mb kernel_image ramdisk_image image\n";
+if ($#ARGV+1 < 5) {
+	die "Usage: simulate_one_user.pl num_instances instance_type duration storage_usage_mb image\n";
 }
 
 # SUB: generate_dummy_file -- Returns a path to a dummy-data file of n megabytes; creates if necessary
@@ -83,11 +83,10 @@ sub parse_avail_zones($) {
 #
 
 my $num_instances = shift;
-my $interval = shift;
+my $instance_type = shift;
 my $duration = shift;
+my $interval = 15; # 15 secs, same as events are received from CCs
 my $storage_usage_mb = shift;
-my $kernel_image = shift;
-my $ramdisk_image = shift;
 my $image = shift;
 
 my %instance_data = ();  # instance_id => status
@@ -96,10 +95,10 @@ my $secret_key = $ENV{"EC2_SECRET_KEY"};
 my $s3_url = $ENV{"S3_URL"};
 my $user = $ENV{"USER"};
 
-print "num_instances:$num_instances interval:$interval duration:$duration kernel:$kernel_image ramdisk:$ramdisk_image s3_url:$s3_url image:$image\n";
+print "num_instances:$num_instances duration:$duration s3_url:$s3_url image:$image\n";
 
 # Run instances
-my $output = `euca-run-instances -n $num_instances --kernel $kernel_image --ramdisk $ramdisk_image $image` or die("starting instance failed");
+my $output = `euca-run-instances -t $instance_type -n $num_instances $image` or die("starting instance failed");
 %instance_data = parse_instance_ids($output);
 foreach (keys %instance_data) {
 	print "Started instance id:$_\n";
