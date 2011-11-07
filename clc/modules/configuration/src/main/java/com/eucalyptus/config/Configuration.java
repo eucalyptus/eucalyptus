@@ -154,7 +154,7 @@ public class Configuration {
     final ComponentId componentId = builder.getComponentId( );
     final DeregisterComponentResponseType reply = ( DeregisterComponentResponseType ) request.getReply( );
     try {
-      reply.set_return( ComponentRegistrationHandler.deregister( componentId, request.getPartition( ) ) );
+      reply.set_return( ComponentRegistrationHandler.deregister( componentId, request.getName() ) );
     } catch ( final Throwable ex ) {
       throw new EucalyptusCloudException( "Component deregistration failed because: " + ex.getMessage( ), ex );
     }
