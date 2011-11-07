@@ -702,7 +702,7 @@ public class Hosts {
     
   }
   
-  public enum Coordinator implements Predicate<Host>, Supplier<Host>, Function<Collection<Host>, Host> {
+  public enum Coordinator implements Predicate<Host> {
     INSTANCE;
     private final AtomicLong    currentStartTime   = new AtomicLong( Long.MAX_VALUE );
     
@@ -730,29 +730,22 @@ public class Hosts {
       return new Host( Coordinator.INSTANCE.currentStartTime.get( ) );
     }
     
-    @Override
-    public Host get( ) {
-      return this.apply( Hosts.hostMap.values( ) );
-    }
-    
-    @Override
     public Host apply( final Collection<Host> input ) {
       Host ret = null;
       try {
         ret = Iterables.find( input, this );
       } catch ( final NoSuchElementException ex ) {
-        ret = Hosts.localHost( );
       }
       LOG.debug( "Found coordinator: " + ret );
       return ret;
     }
     
     public Boolean isLocalhost( ) {
-      return this.apply( hostMap.values( ) ).isLocalHost( );
-    }
-    
-    public boolean getCurrentCoordinator( ) {
-      return this.isLocalhost( );
+      try {
+        return Iterables.find( hostMap.values( ), this ).isLocalHost( );
+      } catch ( final NoSuchElementException ex ) {
+        return false;
+      }
     }
     
     public long getCurrentStartTime( ) {
