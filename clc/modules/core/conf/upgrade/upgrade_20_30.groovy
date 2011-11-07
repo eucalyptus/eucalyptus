@@ -120,7 +120,6 @@ import com.eucalyptus.entities.PersistenceContexts;
 import com.eucalyptus.upgrade.AbstractUpgradeScript;
 import com.eucalyptus.upgrade.StandalonePersistence;
 import com.eucalyptus.upgrade.UpgradeScript;
-import com.eucalyptus.util.Counters;
 
 class upgrade_20_30 extends AbstractUpgradeScript {
     static final List<String> FROM_VERSION = ["eee-2.0.2", "eee-2.0.1", "2.0.2", "2.0.3"];
