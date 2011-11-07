@@ -1801,7 +1801,7 @@ int ccInstance_to_ncInstance(ccInstance *dst, ncInstance *src) {
   safe_strncpy(dst->platform, src->platform, 64);
   safe_strncpy(dst->bundleTaskStateName, src->bundleTaskStateName, 64);
   safe_strncpy(dst->createImageTaskStateName, src->createImageTaskStateName, 64);
-  safe_strncpy(dst->userData, src->userData, 4096);
+  safe_strncpy(dst->userData, src->userData, 16384);
   safe_strncpy(dst->state, src->stateName, 16);
   dst->ts = src->launchTime;
 
@@ -4333,7 +4333,7 @@ int allocate_ccInstance(ccInstance *out, char *id, char *amiId, char *kernelId, 
     out->ts = ts;
     out->ncHostIdx = ncHostIdx;
     if (serviceTag) safe_strncpy(out->serviceTag, serviceTag, 64);
-    if (userData) safe_strncpy(out->userData, userData, 4096);
+    if (userData) safe_strncpy(out->userData, userData, 16384);
     if (launchIndex) safe_strncpy(out->launchIndex, launchIndex, 64);
     if (platform) safe_strncpy(out->platform, platform, 64);
     if (bundleTaskStateName) safe_strncpy(out->bundleTaskStateName, bundleTaskStateName, 64);
