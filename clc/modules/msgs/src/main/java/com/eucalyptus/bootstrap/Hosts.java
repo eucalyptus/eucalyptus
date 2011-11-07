@@ -299,7 +299,6 @@ public class Hosts {
         }
       }
       if ( BootstrapArgs.isCloudController( ) ) {
-        Coordinator.INSTANCE.update( hostMap.values( ) );
         Hosts.doBootstrap( Empyrean.class, Hosts.localHost( ).getBindAddress( ) );
         if ( Hosts.localHost( ).hasDatabase( ) ) {
           Hosts.doBootstrap( Eucalyptus.class, Hosts.localHost( ).getBindAddress( ) );
@@ -606,7 +605,7 @@ public class Hosts {
         hostMap.addNotifier( HostMapStateListener.INSTANCE );
         hostMap.start( STATE_TRANSFER_TIMEOUT );
         LOG.info( "Added localhost to system state: " + localHost( ) );
-        Coordinator.INSTANCE.update( hostMap.values( ) );
+        Coordinator.INSTANCE.initialize( hostMap.values( ) );
         final Host local = Coordinator.INSTANCE.createLocalHost( );
         hostMap.putIfAbsent( local.getDisplayName( ), local );
         Listeners.register( HostBootstrapEventListener.INSTANCE );
@@ -705,7 +704,6 @@ public class Hosts {
   
   public enum Coordinator implements Predicate<Host>, Supplier<Host>, Function<Collection<Host>, Host> {
     INSTANCE;
-    private final AtomicBoolean currentCoordinator = new AtomicBoolean( false );
     private final AtomicLong    currentStartTime   = new AtomicLong( Long.MAX_VALUE );
     
     @Override
@@ -719,18 +717,10 @@ public class Hosts {
     /**
      * @param values
      */
-    public void update( final Collection<Host> values ) {
+    public void initialize( final Collection<Host> values ) {
       final long currentTime = System.currentTimeMillis( );
       final long startTime = values.isEmpty( ) ? currentTime : Longs.max( Longs.toArray( Collections2.transform( values, StartTimeTransform.INSTANCE ) ) );
-      if ( this.currentStartTime.compareAndSet( Long.MAX_VALUE, startTime > currentTime ? startTime : currentTime ) ) {
-        final Host foundCoordinator = this.apply( values );
-        this.currentCoordinator.set( foundCoordinator.isLocalHost( ) );
-      } else if ( BootstrapArgs.isCloudController( ) ) {
-        final Host coordinator = this.apply( values );
-        this.currentCoordinator.set( coordinator.isLocalHost( ) );
-      } else {
-        this.currentCoordinator.set( false );
-      }
+      this.currentStartTime.compareAndSet( Long.MAX_VALUE, startTime > currentTime ? startTime : currentTime );
     }
     
     /**
