@@ -162,6 +162,7 @@ public class X509Download extends HttpServlet {
   
   public static void hasError( String message, HttpServletResponse response ) {
     try {
+      response.setStatus( HttpServletResponse.SC_FORBIDDEN );
       response.getWriter( ).print( getError( message ) );
       response.getWriter( ).flush( );
     } catch ( IOException e ) {
