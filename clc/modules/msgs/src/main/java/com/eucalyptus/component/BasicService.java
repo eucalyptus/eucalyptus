@@ -92,11 +92,11 @@ public class BasicService {
     }
     
     if ( this.serviceConfiguration.isVmLocal( ) ) {
-      Class<? extends ComponentId> compId = BasicService.this.serviceConfiguration.getComponentId( ).getClass( );
-      if ( compId.equals( Empyrean.class ) ) {//NOTE:GRZE: this is hack omfg; deals w/ the cyclic dependency between Threads and Topology.
-        compId = Eucalyptus.class;
+      ComponentId compId = BasicService.this.serviceConfiguration.getComponentId( );
+      if ( compId.isAlwaysLocal( ) ) {//NOTE:GRZE: this is hack omfg; deals w/ the cyclic dependency between Threads and Topology.
+        compId = Eucalyptus.INSTANCE;
       }
-      OrderedShutdown.register( compId, new Runnable( ) {
+      OrderedShutdown.register( compId.getClass( ), new Runnable( ) {
         @Override
         public void run( ) {
           try {
