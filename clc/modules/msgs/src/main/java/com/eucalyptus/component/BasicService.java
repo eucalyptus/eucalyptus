@@ -98,13 +98,11 @@ public class BasicService {
         public void run( ) {
           try {
             LOG.warn( "SHUTDOWN Service: " + BasicService.this.serviceConfiguration.getName( ) );
-            ServiceTransitions.pathTo( BasicService.this.serviceConfiguration, Component.State.PRIMORDIAL ).get( 30000, TimeUnit.SECONDS );
+            ServiceTransitions.pathTo( BasicService.this.serviceConfiguration, Component.State.PRIMORDIAL ).get( );
           } catch ( final InterruptedException ex ) {
             Thread.currentThread( ).interrupt( );
           } catch ( final ExecutionException ex ) {
             LOG.error( ex, ex );
-          } catch ( TimeoutException ex ) {
-            LOG.error( ex , ex );
           }
         }
       } );
