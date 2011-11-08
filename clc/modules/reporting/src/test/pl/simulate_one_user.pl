@@ -95,10 +95,12 @@ my $secret_key = $ENV{"EC2_SECRET_KEY"};
 my $s3_url = $ENV{"S3_URL"};
 my $user = $ENV{"USER"};
 
-print "num_instances:$num_instances duration:$duration s3_url:$s3_url image:$image\n";
+print "num_instances:$num_instances type:$instance_type duration:$duration s3_url:$s3_url image:$image\n";
 
 # Run instances
+print "euca-run-instances -t $instance_type -n $num_instances $image";
 my $output = `euca-run-instances -t $instance_type -n $num_instances $image` or die("starting instance failed");
+print "output:$output\n";
 %instance_data = parse_instance_ids($output);
 foreach (keys %instance_data) {
 	print "Started instance id:$_\n";
