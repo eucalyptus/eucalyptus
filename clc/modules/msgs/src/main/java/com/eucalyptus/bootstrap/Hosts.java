@@ -589,7 +589,11 @@ public class Hosts {
           @Override
           public void run( ) {
             try {
-              hostMap.remove( Internets.localHostIdentifier( ) );
+              try {
+                hostMap.remove( Internets.localHostIdentifier( ) );
+              } catch ( Exception ex ) {
+                LOG.error( ex , ex );
+              }
               hostMap.stop( );
             } catch ( Exception ex ) {
               LOG.error( ex, ex );
