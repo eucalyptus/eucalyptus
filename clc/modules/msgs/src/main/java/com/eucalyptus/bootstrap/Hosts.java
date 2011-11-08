@@ -265,16 +265,6 @@ public class Hosts {
     public void entryRemoved( final String arg0 ) {
       LOG.info( "Hosts.entryRemoved(): " + arg0 );
       LOG.info( "Hosts.entryRemoved(): " + hostMap.keySet( ) );
-      try {
-        Host h = hostMap.get( arg0 );
-        teardown( Empyrean.class, h.getBindAddress( ) );
-        if ( h.hasDatabase( ) ) {
-          Hosts.stopDbPool( h );
-          teardown( Eucalyptus.class, h.getBindAddress( ) );
-        }
-      } catch ( Exception ex ) {
-        LOG.error( ex, ex );
-      }
     }
     
     @Override
@@ -299,8 +289,22 @@ public class Hosts {
       if ( !partMembers.isEmpty( ) ) LOG.info( "Hosts.viewChange(): parted   => " + Joiner.on( ", " ).join( partMembers ) );
       for ( final Host h : Hosts.list( ) ) {
         if ( Iterables.contains( partMembers, h.getGroupsId( ) ) ) {
-          hostMap.remove( h.getDisplayName( ) );
-          LOG.info( "Hosts.viewChange(): -> removed  => " + h );
+          try {
+            teardown( Empyrean.class, h.getBindAddress( ) );
+            if ( h.hasDatabase( ) ) {
+              Hosts.stopDbPool( h );
+              teardown( Eucalyptus.class, h.getBindAddress( ) );
+            }
+          } catch ( Exception ex ) {
+            LOG.error( ex, ex );
+          }
+          if ( Hosts.Coordinator.INSTANCE.isLocalhost( ) ) {
+            hostMap.remove( h.getDisplayName( ) );
+            LOG.info( "Hosts.viewChange(): -> removed  => " + h );
+          } else if ( h.hasDatabase( ) && BootstrapArgs.isCloudController( ) ) {
+            hostMap.remove( h.getDisplayName( ) );
+            LOG.info( "Hosts.viewChange(): -> removed  => " + h );
+          }
         }
       }
       if ( BootstrapArgs.isCloudController( ) ) {
