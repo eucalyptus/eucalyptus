@@ -2,33 +2,19 @@ package com.eucalyptus.cloud;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.NoSuchElementException;
-import java.util.concurrent.TimeUnit;
-import net.sf.hajdbc.InactiveDatabaseMBean;
-import net.sf.hajdbc.sql.DriverDatabaseClusterMBean;
 import org.apache.log4j.Logger;
-import com.eucalyptus.bootstrap.Bootstrap;
-import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.bootstrap.Handles;
 import com.eucalyptus.bootstrap.Host;
 import com.eucalyptus.bootstrap.Hosts;
-import com.eucalyptus.bootstrap.SystemIds;
 import com.eucalyptus.component.AbstractServiceBuilder;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentId.ComponentPart;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceRegistrationException;
-import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.component.id.Eucalyptus.Database;
-import com.eucalyptus.entities.PersistenceContexts;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.Internets;
-import com.eucalyptus.util.Mbeans;
-import com.google.common.base.Predicate;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Iterables;
 
 @ComponentPart( Eucalyptus.class )
 @Handles( { RegisterEucalyptusType.class,
@@ -66,7 +52,18 @@ public class EucalyptusBuilder extends AbstractServiceBuilder<EucalyptusConfigur
   
   @Override
   public void fireEnable( ServiceConfiguration config ) throws ServiceRegistrationException {
-    EventRecord.here( EucalyptusBuilder.class, EventType.COMPONENT_SERVICE_ENABLED, config.toString( ) ).info( );
+    if ( !config.isVmLocal( ) ) {
+      for ( Host h : Hosts.list( ) ) {
+        if ( h.getHostAddresses( ).contains( config.getInetAddress( ) ) ) {
+          EventRecord.here( EucalyptusBuilder.class, EventType.COMPONENT_SERVICE_ENABLED, config.toString( ) ).info( );
+          return;
+        }
+      }
+      throw new ServiceRegistrationException( "There is no host in the system (yet) for the given cloud controller configuration: "
+                                              + config.getFullName( )
+                                              + ".\nHosts are: "
+                                              + Hosts.list( ) );
+    }
   }
   
   @Override

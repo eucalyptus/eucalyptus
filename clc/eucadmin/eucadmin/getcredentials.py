@@ -100,7 +100,8 @@ called, new X.509 certificates will be created for the specified user."""
     def get_credentials(self):
         data = boto.utils.retry_url(GetCertURL % (self.account,
                                                   self.user,
-                                                  self.token))
+                                                  self.token),
+                                    num_retries=1)
         fp = open(self.zipfile, 'wb')
         fp.write(data)
         fp.close()

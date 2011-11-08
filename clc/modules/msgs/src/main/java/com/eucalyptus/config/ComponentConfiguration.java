@@ -256,7 +256,7 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
   @Override
   public int hashCode( ) {
     final int prime = 31;
-    int result = super.hashCode( );
+    int result = 0; //super.hashCode( );
     result = prime * result + ( ( this.name == null )
         ? 0
         : this.name.hashCode( ) );

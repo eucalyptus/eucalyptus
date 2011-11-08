@@ -65,13 +65,12 @@ package com.eucalyptus.component;
 
 import java.net.URI;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.OrderedShutdown;
 import com.eucalyptus.component.Component.State;
 import com.eucalyptus.component.Component.Transition;
-import com.eucalyptus.records.Logs;
+import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.util.fsm.StateMachine;
 
 public class BasicService {
@@ -93,18 +92,20 @@ public class BasicService {
     }
     
     if ( this.serviceConfiguration.isVmLocal( ) ) {
-      OrderedShutdown.register( BasicService.this.serviceConfiguration.getComponentId( ).getClass( ), new Runnable( ) {
+      ComponentId compId = BasicService.this.serviceConfiguration.getComponentId( );
+      if ( compId.isAlwaysLocal( ) ) {//NOTE:GRZE: this is hack omfg; deals w/ the cyclic dependency between Threads and Topology.
+        compId = Eucalyptus.INSTANCE;
+      }
+      OrderedShutdown.register( compId.getClass( ), new Runnable( ) {
         @Override
         public void run( ) {
           try {
             LOG.warn( "SHUTDOWN Service: " + BasicService.this.serviceConfiguration.getName( ) );
-            ServiceTransitions.pathTo( BasicService.this.serviceConfiguration, Component.State.PRIMORDIAL ).get( 30000, TimeUnit.SECONDS );
+            ServiceTransitions.pathTo( BasicService.this.serviceConfiguration, Component.State.PRIMORDIAL ).get( );
           } catch ( final InterruptedException ex ) {
             Thread.currentThread( ).interrupt( );
           } catch ( final ExecutionException ex ) {
             LOG.error( ex, ex );
-          } catch ( TimeoutException ex ) {
-            LOG.error( ex , ex );
           }
         }
       } );
