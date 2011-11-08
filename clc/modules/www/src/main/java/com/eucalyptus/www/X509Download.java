@@ -110,15 +110,15 @@ public class X509Download extends HttpServlet {
     String accountName = request.getParameter( PARAMETER_ACCOUNTNAME );
     String mimetype = "application/zip";
     if ( accountName == null || "".equals( accountName ) ) {
-      hasError( "No account name provided", response );
+      hasError( HttpServletResponse.SC_BAD_REQUEST, "No account name provided", response );
       return;
     }
     if ( userName == null || "".equals( userName ) ) {
-      hasError( "No user name provided", response );
+      hasError( HttpServletResponse.SC_BAD_REQUEST, "No user name provided", response );
       return;
     }
     if ( code == null || "".equals( code ) ) {
-      hasError( "Wrong user security code", response );
+      hasError( HttpServletResponse.SC_BAD_REQUEST, "Wrong user security code", response );
       return;
     }
     
@@ -127,27 +127,37 @@ public class X509Download extends HttpServlet {
       Account account = Accounts.lookupAccountByName( accountName );
       user = account.lookupUserByName( userName );
       if ( !user.isEnabled( ) || !RegistrationStatus.CONFIRMED.equals( user.getRegistrationStatus( ) ) ) {
-        throw new AuthException( "User is not enabled or confirmed" );
+        hasError( HttpServletResponse.SC_FORBIDDEN, "Access is not authorized", response );
+        return;
       }
-    } catch ( Exception e ) {
-      hasError( "User does not exist", response );
+    } catch ( AuthException e ) {
+      hasError( HttpServletResponse.SC_BAD_REQUEST, "User does not exist", response );
       return;
+    } catch ( Exception e ) {
+      hasError( HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Fail to retrieve user data", response );
+      return;      
     }
     try {
       if ( !code.equals( user.resetToken( ) ) ) {
-        hasError( "Token is invalid", response );
+        hasError( HttpServletResponse.SC_FORBIDDEN, "Access is not authorized", response );
         return;
       }
     } catch ( Exception e ) {
-      hasError( "Can not reset user security code", response );
+      hasError( HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Can not reset user security code", response );
       return;
     }
     response.setContentType( mimetype );
     response.setHeader( "Content-Disposition", "attachment; filename=\"" + X509Download.NAME_SHORT + "-" + userName + "-x509.zip\"" );
     LOG.info( "pushing out the X509 certificate for user " + userName );
     
+    byte[] x509zip = null;
     try {
-      byte[] x509zip = getX509Zip( user );
+      x509zip = getX509Zip( user );
+    } catch ( Exception e ) {
+      hasError( HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Fail to return user credentials", response );
+      return;
+    }
+    try {
       ServletOutputStream op = response.getOutputStream( );
       
       response.setContentLength( x509zip.length );
@@ -160,9 +170,9 @@ public class X509Download extends HttpServlet {
     }
   }
   
-  public static void hasError( String message, HttpServletResponse response ) {
+  public static void hasError( int statusCode, String message, HttpServletResponse response ) {
     try {
-      response.setStatus( HttpServletResponse.SC_FORBIDDEN );
+      response.setStatus( statusCode );
       response.getWriter( ).print( getError( message ) );
       response.getWriter( ).flush( );
     } catch ( IOException e ) {
@@ -280,7 +290,7 @@ public class X509Download extends HttpServlet {
   
   public static String getError( String message ) {
     SafeHtmlBuilder builder = new SafeHtmlBuilder( );
-    builder.append( SafeHtmlUtils.fromTrustedString( "<html><title>HTTP/1.0 403 Forbidden</title><body><div align=\"center\"><p><h1>403: Forbidden</h1></p><p><img src=\"themes/active/logo.png\" /></p><p><h3 style=\"font-color: red;\">" ) );
+    builder.append( SafeHtmlUtils.fromTrustedString( "<html><title>Getting credentials failed</title><body><div align=\"center\"><p><h1>Getting credentails failed</h1></p><p><img src=\"themes/active/logo.png\" /></p><p><h3 style=\"font-color: red;\">" ) );
     builder.appendEscaped( message );
     builder.append( SafeHtmlUtils.fromTrustedString( "</h3></p></div></body></html>" ) );
     return builder.toSafeHtml( ).asString( );
