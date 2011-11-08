@@ -191,12 +191,15 @@ public class UniqueIds implements Serializable {
       db.commit( );
       return entity;
     } catch ( final Exception ex ) {
+      LOG.error( ex, ex );
+      db.rollback( );
+      final EntityTransaction saveDb = Entities.get( PersistedCounter.class );
       try {
         final PersistedCounter entity = Entities.persist( new PersistedCounter( 0L, counterName ) );
-        db.commit( );
+        saveDb.commit( );
         return entity;
       } catch ( final Exception ex1 ) {
-        db.rollback( );
+        saveDb.rollback( );
         LOG.error( ex1, ex1 );
         throw Exceptions.toUndeclared( "Failed to initialize counter for: " + counterName + " because of: " + ex.getMessage( ), ex );
       }
