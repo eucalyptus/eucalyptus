@@ -62,16 +62,16 @@
  */
 package com.eucalyptus.bootstrap;
 
+import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.PriorityBlockingQueue;
-
 import org.apache.log4j.Logger;
-
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.util.Exceptions;
+import com.google.common.collect.Lists;
 
 
 /**
@@ -94,8 +94,9 @@ public class OrderedShutdown {
 		@Override
 		public void run() {
 			LOG.warn("Executing Shutdown Hooks...");
-			ShutdownHook h;
-			while((h = hooks.poll()) != null) {
+			List<ShutdownHook> runHooks = Lists.newArrayList( );
+			hooks.drainTo( runHooks );
+			for(ShutdownHook h : runHooks ) {
 				try {
 					executor.submit(h.getRunnable()).get();
 				} catch (InterruptedException e) {
