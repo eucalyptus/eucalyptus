@@ -75,8 +75,8 @@ public class VmTypeWebBackend {
     try {
       VmTypes.update( newVms );
     } catch ( EucalyptusCloudException e ) {
-      LOG.error( "Failed to update VmType", e );
-      throw new EucalyptusServiceException( "Failed to update VmType: " + row, e );
+      LOG.error( "Failed to update VmType for row " + row, e );
+      throw new EucalyptusServiceException( e.getMessage( ), e );
     }
   }
 
