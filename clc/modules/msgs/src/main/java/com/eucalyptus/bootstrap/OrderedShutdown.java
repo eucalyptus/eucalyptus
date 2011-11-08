@@ -81,7 +81,6 @@ public class OrderedShutdown {
   
   static Logger                     LOG = Logger.getLogger( OrderedShutdown.class );
   static PriorityBlockingQueue<ShutdownHook> hooks = new PriorityBlockingQueue<ShutdownHook>();
-  static ExecutorService executor;
 
   public static <T extends ComponentId> void register(Class<T> id, Runnable r) {
 	  ShutdownHook hook = new ShutdownHook(ComponentIds.lookup(id), r);
@@ -89,7 +88,6 @@ public class OrderedShutdown {
   }
   
   public static void initialize() {
-	  executor = Executors.newFixedThreadPool(1);
 	  Runtime.getRuntime().addShutdownHook(new Thread() {
 		@Override
 		public void run() {
@@ -97,11 +95,9 @@ public class OrderedShutdown {
 			ShutdownHook h;
 			while((h = hooks.poll()) != null) {
 				try {
-					executor.submit(h.getRunnable()).get();
-				} catch (InterruptedException e) {
+					h.getRunnable().run();
+				} catch (Exception e) {
 				  Exceptions.maybeInterrupted(e);
-				} catch (ExecutionException e) {
-					LOG.error(e, e);
 				}
 			}
 		}		 
