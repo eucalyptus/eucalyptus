@@ -262,7 +262,7 @@ public class ServiceBootstrapper extends Bootstrapper.Simple {
     
     @Override
     public boolean apply( final ServiceConfiguration config ) {
-      boolean ret = ShouldLoad.INSTANCE.apply( config ) && !( Eucalyptus.class.equals( config.getComponentId( ).getClass( ) ) && !config.isHostLocal( ) );
+      boolean ret = ShouldLoad.INSTANCE.apply( config ) || ( Eucalyptus.class.equals( config.getComponentId( ).getClass( ) ) && config.isHostLocal( ) );
       LOG.debug( "ServiceBootstrapper.shouldStart(" + config.toString( )
                  + "):"
                  + ret );

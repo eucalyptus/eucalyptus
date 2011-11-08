@@ -67,6 +67,8 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.InetAddress;
+import java.sql.Connection;
+import java.sql.DriverManager;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -118,12 +120,12 @@ import com.google.common.base.Functions;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
-import com.google.common.base.Supplier;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Longs;
+import com.mysql.management.util.QueryUtil;
 
 @ConfigurableClass( root = "bootstrap.hosts",
                     description = "Properties controlling the handling of remote host bootstrapping" )
@@ -238,7 +240,6 @@ public class Hosts {
       if ( event.isAsserted( 15L ) ) {
         UpdateEntry.INSTANCE.apply( currentHost );
       }
-      InitializeAsCloudController.INSTANCE.apply( currentHost );
     }
   }
   
@@ -278,9 +279,7 @@ public class Hosts {
     @Override
     public void entrySet( final String arg0, final Host arg1 ) {
       LOG.info( "Hosts.entryAdded(): " + arg0 + " => " + arg1 );
-      if ( AdvertiseToRemoteCloudController.INSTANCE.apply( arg1 ) ) {
-        LOG.info( "Hosts.entryAdded(): Marked as database  => " + arg1 );
-      } else if ( BootstrapRemoteComponent.INSTANCE.apply( arg1 ) ) {
+      if ( BootstrapRemoteComponent.INSTANCE.apply( arg1 ) ) {
         LOG.info( "Hosts.entryAdded(): Bootstrapping host  => " + arg1 );
       } else if ( arg1.hasBootstrapped( ) ) {
         LOG.info( "Hosts.entryAdded(): Host is operational => " + arg1 );
@@ -404,31 +403,6 @@ public class Hosts {
       }
       return true;
     }
-  }
-  
-  public enum AdvertiseToRemoteCloudController implements Predicate<Host> {
-    INSTANCE;
-    
-    @Override
-    public boolean apply( final Host arg1 ) {
-      if ( !Bootstrap.isFinished( ) || !BootstrapArgs.isCloudController( ) || arg1.isLocalHost( ) || arg1.hasDatabase( ) ) {
-        return false;
-      } else {
-        try {
-          if ( !Iterables.isEmpty( ServiceConfigurations.filter( Eucalyptus.class, nonLocalAddressMatch( arg1.getBindAddress( ) ) ) ) ) {
-            arg1.markDatabase( );
-            hostMap.replace( arg1.getDisplayName( ), arg1 );
-            return true;
-          }
-        } catch ( final Exception ex ) {
-          if ( Exceptions.findCause( ex, NoSuchElementException.class ) == null ) {
-            Logs.extreme( ).error( ex, ex );
-          }
-        }
-        return false;
-      }
-    }
-    
   }
   
   public enum InitializeAsCloudController implements Predicate<Host> {
@@ -632,6 +606,9 @@ public class Hosts {
             TimeUnit.SECONDS.sleep( 5 );
             LOG.info( "Waiting for system view with database..." );
           }
+          if ( shouldInitialize( ) ) {
+            doInitialize( );
+          }
         } else {
           //TODO:GRZE:handle check and merge of db here!!!!
         }
@@ -643,6 +620,22 @@ public class Hosts {
         return false;
       }
     }
+    
+  }
+  
+  private static void doInitialize( ) {
+    try {
+      hostMap.stop( );
+    } catch ( final Exception ex1 ) {
+      LOG.error( ex1, ex1 );
+    }
+    try {
+      Bootstrap.initializeSystem( );
+      System.exit( 123 );
+    } catch ( final Exception ex ) {
+      LOG.error( ex, ex );
+      System.exit( 123 );
+    }
   }
   
   public static int maxEpoch( ) {
@@ -651,6 +644,28 @@ public class Hosts {
     } catch ( final Exception ex ) {
       return 0;
     }
+  }
+  
+  private static boolean shouldInitialize( ) {//GRZE:WARNING:HACKHACKHACK do not duplicate pls thanks.
+    for ( Host h : Hosts.listDatabases( ) ) {
+      final String url = String.format( "jdbc:%s", ServiceUris.remote( Database.class, h.getBindAddress( ), "eucalyptus_config" ) );
+      try {
+        Connection conn = DriverManager.getConnection( url, Databases.getUserName( ), Databases.getPassword( ) );
+        try {
+          List<Map<String,String>> res = new QueryUtil( conn ).executeQuery( "select config_component_hostname from eucalyptus_config.config_component_base where config_component_partition='eucalyptus';" );
+          for ( Map<String,String> resultMap : res ) {
+            if ( Internets.testLocal( resultMap.get( "config_component_hostname" ) ) ) {
+              return true;
+            }
+          }
+        } finally {
+          conn.close( );
+        }
+      } catch ( Exception ex ) {
+        LOG.error( ex , ex );
+      }
+    }
+    return false;
   }
   
   public static List<Host> list( ) {
@@ -745,7 +760,7 @@ public class Hosts {
       try {
         Host minHost = null;
         for ( Host h : Hosts.listDatabases( ) ) {
-          minHost = ( minHost == null ? h : ( minHost.getStartedTime( ) > h.getStartedTime( ) ? h : minHost ) ); 
+          minHost = ( minHost == null ? h : ( minHost.getStartedTime( ) > h.getStartedTime( ) ? h : minHost ) );
         }
         return minHost != null ? minHost.isLocalHost( ) : false;
       } catch ( final NoSuchElementException ex ) {
