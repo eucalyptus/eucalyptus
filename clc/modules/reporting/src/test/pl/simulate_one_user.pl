@@ -28,7 +28,7 @@ use strict;
 use warnings;
 
 if ($#ARGV+1 < 5) {
-	die "Usage: simulate_one_user.pl num_instances instance_type duration storage_usage_mb image\n";
+	die "Usage: simulate_one_user.pl num_instances instance_type interval duration storage_usage_mb image\n";
 }
 
 # SUB: generate_dummy_file -- Returns a path to a dummy-data file of n megabytes; creates if necessary
@@ -84,8 +84,8 @@ sub parse_avail_zones($) {
 
 my $num_instances = shift;
 my $instance_type = shift;
+my $interval = shift;
 my $duration = shift;
-my $interval = 15; # 15 secs, same as events are received from CCs
 my $storage_usage_mb = shift;
 my $image = shift;
 
