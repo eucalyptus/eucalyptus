@@ -263,6 +263,16 @@ public class Hosts {
     public void entryRemoved( final String arg0 ) {
       LOG.info( "Hosts.entryRemoved(): " + arg0 );
       LOG.info( "Hosts.entryRemoved(): " + hostMap.keySet( ) );
+      try {
+        Host h = hostMap.get( arg0 );
+        teardown( Empyrean.class, h.getBindAddress( ) );
+        if ( h.hasDatabase( ) ) {
+          Hosts.stopDbPool( h );
+          teardown( Eucalyptus.class, h.getBindAddress( ) );
+        }
+      } catch ( Exception ex ) {
+        LOG.error( ex, ex );
+      }
     }
     
     @Override
@@ -290,11 +300,6 @@ public class Hosts {
       for ( final Host h : Hosts.list( ) ) {
         if ( Iterables.contains( partMembers, h.getGroupsId( ) ) ) {
           hostMap.remove( h.getDisplayName( ) );
-          teardown( Empyrean.class, h.getBindAddress( ) );
-          if ( h.hasDatabase( ) ) {
-            Hosts.stopDbPool( h );
-            teardown( Eucalyptus.class, h.getBindAddress( ) );
-          }
           LOG.info( "Hosts.viewChange(): -> removed  => " + h );
         }
       }
@@ -604,6 +609,18 @@ public class Hosts {
         hostMap.setBlockingUpdates( true );
         hostMap.addNotifier( HostMapStateListener.INSTANCE );
         hostMap.start( STATE_TRANSFER_TIMEOUT );
+        OrderedShutdown.register( Empyrean.class, new Runnable( ) {
+          
+          @Override
+          public void run( ) {
+            try {
+              hostMap.remove( Internets.localHostIdentifier( ) );
+              hostMap.stop( );
+            } catch ( Exception ex ) {
+              LOG.error( ex, ex );
+            }
+          }
+        } );
         LOG.info( "Added localhost to system state: " + localHost( ) );
         Coordinator.INSTANCE.initialize( hostMap.values( ) );
         final Host local = Coordinator.INSTANCE.createLocalHost( );
@@ -704,13 +721,12 @@ public class Hosts {
   
   public enum Coordinator implements Predicate<Host> {
     INSTANCE;
-    private final AtomicLong    currentStartTime   = new AtomicLong( Long.MAX_VALUE );
+    private final AtomicLong currentStartTime = new AtomicLong( Long.MAX_VALUE );
     
     @Override
     public boolean apply( final Host h ) {
-      final Host localHost = Hosts.localHost( );
-      boolean ret = h.hasDatabase( ) && ( h.getStartedTime( ) <= localHost.getStartedTime( ) );
-      LOG.debug( "Is coordinator=" + ret + " for host: " + h ); 
+      boolean ret = h.hasDatabase( ) && ( h.getStartedTime( ) < this.currentStartTime.get( ) );
+      LOG.debug( "Is coordinator=" + ret + " for host: " + h );
       return ret;
     }
     
@@ -719,8 +735,10 @@ public class Hosts {
      */
     public void initialize( final Collection<Host> values ) {
       final long currentTime = System.currentTimeMillis( );
-      final long startTime = values.isEmpty( ) ? currentTime : Longs.max( Longs.toArray( Collections2.transform( values, StartTimeTransform.INSTANCE ) ) );
-      this.currentStartTime.compareAndSet( Long.MAX_VALUE, startTime > currentTime ? startTime : currentTime );
+      long startTime = values.isEmpty( ) ? currentTime : Longs.max( Longs.toArray( Collections2.transform( values, StartTimeTransform.INSTANCE ) ) );
+      startTime = startTime > currentTime ? startTime : currentTime;
+      startTime += 30000;
+      this.currentStartTime.compareAndSet( Long.MAX_VALUE, startTime );
     }
     
     /**
@@ -728,16 +746,6 @@ public class Hosts {
      */
     public Host createLocalHost( ) {
       return new Host( Coordinator.INSTANCE.currentStartTime.get( ) );
-    }
-    
-    public Host apply( final Collection<Host> input ) {
-      Host ret = null;
-      try {
-        ret = Iterables.find( input, this );
-      } catch ( final NoSuchElementException ex ) {
-      }
-      LOG.debug( "Found coordinator: " + ret );
-      return ret;
     }
     
     public Boolean isLocalhost( ) {
