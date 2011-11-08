@@ -719,16 +719,9 @@ public class Hosts {
     
   }
   
-  public enum Coordinator implements Predicate<Host> {
+  public enum Coordinator {
     INSTANCE;
     private final AtomicLong currentStartTime = new AtomicLong( Long.MAX_VALUE );
-    
-    @Override
-    public boolean apply( final Host h ) {
-      boolean ret = h.hasDatabase( ) && ( h.getStartedTime( ) < this.currentStartTime.get( ) );
-      LOG.debug( "Is coordinator=" + ret + " for host: " + h );
-      return ret;
-    }
     
     /**
      * @param values
@@ -750,7 +743,11 @@ public class Hosts {
     
     public Boolean isLocalhost( ) {
       try {
-        return Iterables.find( hostMap.values( ), this ).isLocalHost( );
+        Host maxHost = null;
+        for ( Host h : Hosts.listDatabases( ) ) {
+          maxHost = ( maxHost == null ? h : ( maxHost.getStartedTime( ) < h.getStartedTime( ) ? h : maxHost ) ); 
+        }
+        return maxHost != null ? maxHost.isLocalHost( ) : false;
       } catch ( final NoSuchElementException ex ) {
         return false;
       }
