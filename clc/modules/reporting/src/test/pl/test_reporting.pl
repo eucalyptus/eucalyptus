@@ -81,8 +81,11 @@ sub generate_report($$$$$) {
 #
 my $account_num = "";
 my $account_name = "";
+my $group_name = "";
 my $type = "";
 my @pids = ();
+
+
 
 runcmd("euca-modify-property -p reporting.default_write_interval_secs=90") and die("Couldn't set write interval");
 
@@ -90,7 +93,10 @@ for (my $i=0; $i<$num_users; $i++) {
 	if ($i % $num_users_per_account == 0) {
 		$account_num = rand_str(16);
 		$account_name = "account-$account_num";
+		$group_name = "group-$account_num";
 		runcmd("euare-accountcreate -a $account_name") and die("Couldn't create account:$account_name");
+		runcmd("euare-groupcreate --delegate $account_name -g $group_name") and die("Couldn't create group:$account_name");
+		runcmd("euare-groupuploadpolicy --delegate $account_name -g $group_name -p policy-$account_num -o '{ \"Statement\": [ { \"Sid\": \"Stmt1320458221062\", \"Action\": \"*\", \"Effect\": \"Allow\", \"Resource\": \"*\" } ] }'") and die("Couldn't upload policy:$account_name");
 	}
 	push(@accountnames, $account_name);
 	my $user_name = "user-$account_num-" . rand_str(32);
