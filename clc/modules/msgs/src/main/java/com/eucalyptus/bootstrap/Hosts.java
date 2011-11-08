@@ -69,8 +69,13 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -652,9 +657,11 @@ public class Hosts {
       try {
         Connection conn = DriverManager.getConnection( url, Databases.getUserName( ), Databases.getPassword( ) );
         try {
-          List<Map<String,String>> res = new QueryUtil( conn ).executeQuery( "select config_component_hostname from eucalyptus_config.config_component_base where config_component_partition='eucalyptus';" );
-          for ( Map<String,String> resultMap : res ) {
-            if ( Internets.testLocal( resultMap.get( "config_component_hostname" ) ) ) {
+          PreparedStatement statement = conn.prepareStatement( "select config_component_hostname from eucalyptus_config.config_component_base where config_component_partition='eucalyptus';" );
+          ResultSet result = statement.executeQuery( );
+          while ( result.next( ) ) {
+            Object columnValue = result.getObject( 1 );
+            if ( Internets.testLocal( columnValue.toString( ) ) ) {
               return true;
             }
           }
@@ -662,7 +669,7 @@ public class Hosts {
           conn.close( );
         }
       } catch ( Exception ex ) {
-        LOG.error( ex , ex );
+        LOG.error( ex, ex );
       }
     }
     return false;
