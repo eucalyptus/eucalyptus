@@ -125,7 +125,7 @@
   <appender name="cloud-extreme" class="org.apache.log4j.RollingFileAppender">
     <param name="File" value="${euca.log.dir}/cloud-extreme.log" />
     <param name="MaxFileSize" value="10MB" />
-    <param name="MaxBackupIndex" value="100" />
+    <param name="MaxBackupIndex" value="10" />
     <param name="Threshold" value="${euca.exhaust.level}" />
     <layout class="org.apache.log4j.PatternLayout">
       <param name="ConversionPattern" value="%d{EEE MMM d HH:mm:ss yyyy} %5p [%C.%M(%F):%L] %m%n" />
