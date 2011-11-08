@@ -62,13 +62,9 @@
  */
 package com.eucalyptus.bootstrap;
 
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.PriorityBlockingQueue;
-
+import org.apache.commons.collections.ComparatorUtils;
 import org.apache.log4j.Logger;
-
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.util.Exceptions;
@@ -80,7 +76,7 @@ import com.eucalyptus.util.Exceptions;
 public class OrderedShutdown {
   
   static Logger                     LOG = Logger.getLogger( OrderedShutdown.class );
-  static PriorityBlockingQueue<ShutdownHook> hooks = new PriorityBlockingQueue<ShutdownHook>();
+  static PriorityBlockingQueue<ShutdownHook> hooks = new PriorityBlockingQueue<ShutdownHook>(100,ComparatorUtils.reversedComparator(ComparatorUtils.naturalComparator()));
 
   public static <T extends ComponentId> void register(Class<T> id, Runnable r) {
 	  ShutdownHook hook = new ShutdownHook(ComponentIds.lookup(id), r);
