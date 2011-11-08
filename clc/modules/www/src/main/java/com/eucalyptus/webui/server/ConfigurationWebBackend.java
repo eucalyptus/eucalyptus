@@ -132,7 +132,7 @@ public class ConfigurationWebBackend {
 		CLOUD_CONFIG_EXTRA_FIELD_DESCS.add( new SearchResultFieldDesc( "defaultKernel", DEFAULT_KERNEL, false, "0px", TableDisplay.NONE, Type.TEXT, true, false ) );
 		CLOUD_CONFIG_EXTRA_FIELD_DESCS.add( new SearchResultFieldDesc( "defaultRamdisk", DEFAULT_RAMDISK, false, "0px", TableDisplay.NONE, Type.TEXT, true, false ) );
 		CLOUD_CONFIG_EXTRA_FIELD_DESCS.add( new SearchResultFieldDesc( "doDynamicPublicAddresses", ENABLE_DYNAMIC_PUBLIC_ADDRESSES, false, "0px", TableDisplay.NONE, Type.BOOLEAN, true, false ) );
-		CLOUD_CONFIG_EXTRA_FIELD_DESCS.add( new SearchResultFieldDesc( "maxUserPublicAddresses", MAX_USER_PUBLIC_ADDRESSES, false, "0px", TableDisplay.NONE, Type.TEXT, true, false ) );
+		//CLOUD_CONFIG_EXTRA_FIELD_DESCS.add( new SearchResultFieldDesc( "maxUserPublicAddresses", MAX_USER_PUBLIC_ADDRESSES, false, "0px", TableDisplay.NONE, Type.TEXT, true, false ) );
 		CLOUD_CONFIG_EXTRA_FIELD_DESCS.add( new SearchResultFieldDesc( "systemReservedPublicAddresses", SYSTEM_RESERVED_PUBLIC_ADDRESSES, false, "0px", TableDisplay.NONE, Type.TEXT, true, false ) );
 	}
 	// Cluster config extra fields
