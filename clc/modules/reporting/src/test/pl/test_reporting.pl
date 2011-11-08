@@ -27,6 +27,7 @@ my $num_users = shift;
 my $num_users_per_account = shift;
 my $num_instances_per_user = shift;
 my $duration_secs = shift;
+my $write_interval = 40;
 my @images = ();
 my @types = ("m1.small","c1.medium","m1.large");
 my %types_num = (); # type=>n
@@ -42,7 +43,10 @@ sub rand_str($) {
 }
 
 sub execute_query($) {
-	return split("\n",`db.sh --execute="$_[0]" -D eucalyptus_reporting --skip-column-names`);
+	print "Executing query:$_[0]\n";
+	my $output = `./db.sh --execute="$_[0]" -D eucalyptus_reporting --skip-column-names`;
+	print "Output:$output\n";
+	return split("\n",$output);
 }
 
 sub runcmd($) {
@@ -87,7 +91,7 @@ my @pids = ();
 
 
 
-runcmd("euca-modify-property -p reporting.default_write_interval_secs=90") and die("Couldn't set write interval");
+runcmd("euca-modify-property -p reporting.default_write_interval_secs=$write_interval") and die("Couldn't set write interval");
 
 for (my $i=0; $i<$num_users; $i++) {
 	if ($i % $num_users_per_account == 0) {
@@ -111,7 +115,7 @@ for (my $i=0; $i<$num_users; $i++) {
 		# Run usage simulation as euca user within subshell within separate process; rotate thru images and types
 		#exec("(cd \$PWD/credsdir-$user_name; \$PWD/simulate_one_user.pl $num_instances_per_user " . $types[$i % ($#types+1)] . " $duration_secs $num_users " . $images[$i % ($#images+1)] . " > log-$user_name 2>&1)") and die ("Couldn't exec simulate_one_user for: $user_name");
 		$types_num{$types[$i % ($#types+1)]}++; # Keep track of num of instance types started
-		runcmd("(. \$PWD/credsdir-$user_name/eucarc; . \$PWD/credsdir-$user_name/iamrc; \$PWD/simulate_one_user.pl $num_instances_per_user " . $types[$i % ($#types+1)] . " $duration_secs $num_users " . $images[$i % ($#images+1)] . ") > log-$user_name 2>&1") and die ("Couldn't exec simulate_one_user for: $user_name"); exit(0);
+		runcmd("(. \$PWD/credsdir-$user_name/eucarc; . \$PWD/credsdir-$user_name/iamrc; \$PWD/simulate_one_user.pl $num_instances_per_user " . $types[$i % ($#types+1)] . " $write_interval $duration_secs $num_users " . $images[$i % ($#images+1)] . ") > log-$user_name 2>&1") and die ("Couldn't exec simulate_one_user for: $user_name"); exit(0);
 	}
 	push(@pids, $pid);
 }
@@ -127,9 +131,6 @@ foreach (@pids) {
 
 
 
-die("done");
-
-
 
 #
 # Verify that all events were propagated and that events were written to
@@ -142,6 +143,7 @@ my $accountname_csv = "'" . join("','",@accountnames) . "'";
 
 my $username = "";
 my $count = 0;
+my $num_rows = 0;
 
 # Count number of instances per user to verify it's correct
 foreach (execute_query("
@@ -164,11 +166,17 @@ foreach (execute_query("
 	if ($count != $num_instances_per_user) {
 		die ("Incorrect ins count, expected:$num_instances_per_user found:$count for user:$username");
 	}
+	$num_rows++;
 }
+if ($num_rows != $num_users) {
+	die ("Incorrect rows count, expected:$num_users found:$num_rows");
+}
+$num_rows=0;
 
-
-my $min_instance_events = ($duration_secs / 15) - 2;
-my $max_instance_events = ($duration_secs / 15) + 2;
+use integer;
+my $min_instance_events = ($duration_secs / $write_interval) - 2;
+my $max_instance_events = ($duration_secs / $write_interval) + 2;
+print "min_instance_events:$min_instance_events max_instance_events:$max_instance_events\n";
 
 # Count instance events per user and verify that disk and net are not zero
 foreach (execute_query("
@@ -199,15 +207,22 @@ foreach (execute_query("
 	if ($disk_io==0 || $net_io==0) {
 		die ("Disk or net == 0, user:$username");
 	}
+	$num_rows++;
 }
+if ($num_rows != $num_users) {
+	die ("Incorrect rows count, expected:$num_users found:$num_rows");
+}
+$num_rows=0;
 
-my $min_s3_events = ($duration_secs / 15) - 2;
-my $max_s3_events = ($duration_secs / 15) + 2;
+
+my $min_s3_events = ($duration_secs / $write_interval) - 2;
+my $max_s3_events = ($duration_secs / $write_interval) + 2;
+print "min_s3_events:$min_s3_events max_s3_events:$max_s3_events\n";
 
 # Count s3 events and verify totals
 foreach (execute_query("
 	select
-	  cnt(s3s.buckets_num) as cnt,
+	  count(s3s.buckets_num) as cnt,
 	  max(s3s.buckets_num) as max_buckets,
 	  max(s3s.objects_num) as max_objects,
 	  max(s3s.objects_megs) as max_size,
@@ -232,7 +247,15 @@ foreach (execute_query("
 	if ($max_buckets == 0 || $max_objects == 0 || $max_size == 0) {
 		die ("max_buckets or max_objects or max_size == 0, user:$username");
 	}
+	$num_rows++;
 }
+if ($num_rows != $num_users) {
+	die ("Incorrect rows count, expected:$num_users found:$num_rows");
+}
+$num_rows=0;
+
+die("done");
+
 
 # Verify that s3 event properties increment properly: always an additional bucket, or object with size
 my $old_user = "";
