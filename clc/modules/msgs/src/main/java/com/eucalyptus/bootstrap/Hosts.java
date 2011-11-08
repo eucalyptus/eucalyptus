@@ -743,11 +743,11 @@ public class Hosts {
     
     public Boolean isLocalhost( ) {
       try {
-        Host maxHost = null;
+        Host minHost = null;
         for ( Host h : Hosts.listDatabases( ) ) {
-          maxHost = ( maxHost == null ? h : ( maxHost.getStartedTime( ) < h.getStartedTime( ) ? h : maxHost ) ); 
+          minHost = ( minHost == null ? h : ( minHost.getStartedTime( ) > h.getStartedTime( ) ? h : minHost ) ); 
         }
-        return maxHost != null ? maxHost.isLocalHost( ) : false;
+        return minHost != null ? minHost.isLocalHost( ) : false;
       } catch ( final NoSuchElementException ex ) {
         return false;
       }
