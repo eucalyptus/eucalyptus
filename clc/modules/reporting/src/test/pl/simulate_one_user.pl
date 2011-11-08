@@ -152,4 +152,5 @@ foreach (keys %instance_data) {
 }
 
 # Clean up dummy files
-system("rm -f dummy-*-megabyte*") or die("Couldn't clean up files");
+system("rm -f dummy-*-megabyte*") and die("Couldn't clean up files");
+
