@@ -852,10 +852,12 @@ public class Hosts {
                                                               InactiveDatabaseMBean.class );
         database.setUser( "eucalyptus" );
         database.setPassword( dbPass );
-        if ( Hosts.Coordinator.INSTANCE.isLocalhost( ) ) {
-          cluster.activate( hostName, "full" );
-        } else {
-          cluster.activate( hostName, "passive" );
+        if ( !cluster.getActiveDatabases( ).contains( hostName ) ) {
+          if ( Hosts.Coordinator.INSTANCE.isLocalhost( ) ) {
+            cluster.activate( hostName, "full" );
+          } else {
+            cluster.activate( hostName, "passive" );
+          }
         }
       } catch ( final NoSuchElementException ex1 ) {
         LOG.error( ex1, ex1 );
