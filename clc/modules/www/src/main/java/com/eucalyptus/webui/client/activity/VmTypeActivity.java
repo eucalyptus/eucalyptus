@@ -67,8 +67,8 @@ public class VmTypeActivity extends AbstractSearchActivity implements VmTypeView
       @Override
       public void onFailure( Throwable cause ) {
         ActivityUtil.logoutForInvalidSession( clientFactory, cause );
-        clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.ERROR, "Failed to change VM type", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
-        clientFactory.getShellView( ).getLogView( ).log( LogType.ERROR, "Failed to change VM type: " + result );
+        clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.ERROR, "Failed to change VM type: " + cause.getMessage( ), FooterView.DEFAULT_STATUS_CLEAR_DELAY );
+        clientFactory.getShellView( ).getLogView( ).log( LogType.ERROR, "Failed to change VM type: " + cause.getMessage( ) );
       }
 
       @Override
