@@ -480,6 +480,10 @@ public class DetailViewImpl extends Composite implements DetailView {
     int row = 0;
     for ( int i = 0; i < descs.size( ); i++ ) {
       SearchResultFieldDesc desc = descs.get( i );
+      if ( i >= vals.size( ) ) {
+        LOG.log( Level.WARNING, "Search result row column size does not match value size" );
+        break;
+      }
       String val = vals.get( i );
       if ( desc != null && !desc.getHidden( ) ) {
         if ( desc.getType( ).equals( Type.NEWKEYVAL ) ) {

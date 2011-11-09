@@ -3196,7 +3196,7 @@ int update_config(void) {
     // stat the config file, update modification time
     rc = stat(config->configFiles[i], &statbuf);
     if (!rc) {
-      if (statbuf.st_mtime != configMtime || statbuf.st_ctime > configMtime) {
+      if (statbuf.st_mtime > 0 || statbuf.st_ctime > 0) {
 	if (statbuf.st_ctime > statbuf.st_mtime) {
 	  configMtime = statbuf.st_ctime;
 	} else {
@@ -3212,6 +3212,7 @@ int update_config(void) {
   }
   
   // check to see if the configfile has changed
+  logprintfl(EUCADEBUG, "update_config(): current mtime=%d, stored mtime=%d\n", configMtime, config->configMtime);
   if (config->configMtime != configMtime) {
     rc = readConfigFile(config->configFiles, 2);
     if (rc) {
@@ -3326,10 +3327,7 @@ int init_config(void) {
   logprintfl(EUCADEBUG, "init_config(): called.\n");
   logprintfl(EUCADEBUG, "init_config(): initializing CC configuration\n");  
 
-  rc = readConfigFile(configFiles, 2);
-  if (rc) {
-    logprintfl(EUCAERROR, "init_config(): cannot read config file!\n");
-  }
+  readConfigFile(configFiles, 2);
   
   // DHCP configuration section
   {
@@ -4955,6 +4953,7 @@ int readConfigFile(char configFiles[][MAX_PATH], int numFiles) {
       logprintfl(EUCAINFO, "readConfigFile(): read (%s=%s, default=%s)\n", configKeysRestart[i].key, SP(new), SP(configKeysRestart[i].defaultValue));
       if (configValuesRestart[i]) free(configValuesRestart[i]);
       configValuesRestart[i] = new;
+      ret++;
     }
   }
   configRestartLen = i;
@@ -4976,6 +4975,7 @@ int readConfigFile(char configFiles[][MAX_PATH], int numFiles) {
       logprintfl(EUCAINFO, "readConfigFile(): read (%s=%s, default=%s)\n", configKeysNoRestart[i].key, SP(new), SP(configKeysNoRestart[i].defaultValue));
       if (configValuesNoRestart[i]) free(configValuesNoRestart[i]);
       configValuesNoRestart[i] = new;
+      ret++;
     }
   }
   configNoRestartLen = i;

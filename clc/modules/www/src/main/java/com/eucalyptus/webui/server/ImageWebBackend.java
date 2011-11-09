@@ -57,11 +57,13 @@ public class ImageWebBackend {
     try {
       Account requestAccount = requestUser.getAccount( );
       for ( ImageInfo image : Images.listAllImages( ) ) {
-    	if ( requestUser.isSystemAdmin( ) ||
-    		 ( image.checkPermission( requestAccount.getAccountNumber( ) ) &&
-    		   Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_IMAGE, image.getDisplayName( ), null, PolicySpec.EC2_DESCRIBEIMAGES, requestUser ) ) ) {
-    	  results.add( serializeImage( image ) );
-    	}
+        if ( requestUser.isSystemAdmin( ) ||
+    		     ( ( image.getImagePublic( ) ||
+    		         image.getOwnerAccountNumber( ).equals( requestAccount.getAccountNumber( ) ) ||
+    		         image.hasPermission( requestAccount.getAccountNumber( ), requestAccount.getName( ) ) ) &&
+    		       Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_IMAGE, image.getDisplayName( ), null, PolicySpec.EC2_DESCRIBEIMAGES, requestUser ) ) ) {
+          results.add( serializeImage( image ) );
+        }
       }
     } catch ( Exception e ) {
       LOG.error( "Failed to get image info", e );
