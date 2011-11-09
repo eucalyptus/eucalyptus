@@ -718,9 +718,9 @@ public class ServiceTransitions {
       
       @Override
       public void fire( final ServiceConfiguration config ) {
-//        if ( Hosts.Coordinator.INSTANCE.isLocalhost( ) && !config.isVmLocal( ) ) {
-//          ServiceEvents.fire( config, config.getStateMachine( ).getState( ) );
-//        }
+        if ( Hosts.Coordinator.INSTANCE.isLocalhost( ) && !config.isVmLocal( ) ) {
+          ServiceEvents.fire( config, config.getStateMachine( ).getState( ) );
+        }
       }
     },
     PROPERTIES_ADD {
