@@ -137,17 +137,23 @@ public class ClusterConfiguration extends ComponentConfiguration implements Seri
   @ConfigurableField( description = "IP version used by the cluster's virtual private networking.", displayName = "Virtual network IP version", readonly = true )
   @Column( name = "cluster_vnet_type" )
   private String                vnetType              = "ipv4";
-  
+
+  @ConfigurableField( description = "Alternative address which is the source address for requests made by the component to the cloud controller.", displayName = "Source host name" )
+  @Column( name = "cluster_alt_source_hostname" )
+  private String            sourceHostName;
+
   public ClusterConfiguration( ) {}
   
   public ClusterConfiguration( String partition, String name, String hostName, Integer port ) {
     super( partition, name, hostName, port, DEFAULT_SERVICE_PATH );
+    this.sourceHostName = hostName;
   }
   
   public ClusterConfiguration( String partition, String name, String hostName, Integer port, Integer minVlan, Integer maxVlan ) {
     super( partition, name, hostName, port, DEFAULT_SERVICE_PATH );
     this.minNetworkTag = minVlan;
     this.maxNetworkTag = maxVlan;
+    this.sourceHostName = hostName;
   }
   
   @PostLoad
@@ -279,9 +285,14 @@ public class ClusterConfiguration extends ComponentConfiguration implements Seri
   }
   
   public void setPropertyPrefix( String propertyPrefix ) {
-    this.setName( propertyPrefix.replaceAll( "\\s*\\.", "." ) );
-    this.setPartition( propertyPrefix.replace( "." + this.getName( ), "" ) );
     this.propertyPrefix = propertyPrefix;
   }
-  
+
+  public String getSourceHostName( ) {
+    return this.sourceHostName;
+  }
+
+  public void setSourceHostName( String aliasHostName ) {
+    this.sourceHostName = aliasHostName;
+  }
 }
