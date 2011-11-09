@@ -17,17 +17,19 @@
 use strict;
 use warnings;
 
-if ($#ARGV+1 < 5) {
-	die "Usage: test_reporting.pl admin_pw num_users num_users_per_account num_instances_per_user duration_secs_secs image+";
+if ($#ARGV+1 < 6) {
+	die "Usage: test_reporting.pl admin_pw upload_file num_users num_users_per_account num_instances_per_user duration_secs_secs image+";
 }
 
 
 my $admin_pw = shift;
+my $upload_file = shift;
 my $num_users = shift;
 my $num_users_per_account = shift;
 my $num_instances_per_user = shift;
 my $duration_secs = shift;
 my $write_interval = 40;
+my $storage_usage_mb = 2;
 my @images = ();
 my @types = ("m1.small","c1.medium","m1.large");
 my %types_num = (); # type=>n
@@ -89,8 +91,6 @@ my $group_name = "";
 my $type = "";
 my @pids = ();
 
-
-
 runcmd("euca-modify-property -p reporting.default_write_interval_secs=$write_interval") and die("Couldn't set write interval");
 
 for (my $i=0; $i<$num_users; $i++) {
@@ -115,7 +115,7 @@ for (my $i=0; $i<$num_users; $i++) {
 		# Run usage simulation as euca user within subshell within separate process; rotate thru images and types
 		#exec("(cd \$PWD/credsdir-$user_name; \$PWD/simulate_one_user.pl $num_instances_per_user " . $types[$i % ($#types+1)] . " $duration_secs $num_users " . $images[$i % ($#images+1)] . " > log-$user_name 2>&1)") and die ("Couldn't exec simulate_one_user for: $user_name");
 		$types_num{$types[$i % ($#types+1)]}++; # Keep track of num of instance types started
-		runcmd("(. \$PWD/credsdir-$user_name/eucarc; . \$PWD/credsdir-$user_name/iamrc; \$PWD/simulate_one_user.pl $num_instances_per_user " . $types[$i % ($#types+1)] . " $write_interval $duration_secs $num_users " . $images[$i % ($#images+1)] . ") > log-$user_name 2>&1") and die ("Couldn't exec simulate_one_user for: $user_name"); exit(0);
+		runcmd("(. \$PWD/credsdir-$user_name/eucarc; . \$PWD/credsdir-$user_name/iamrc; \$PWD/simulate_one_user.pl $num_instances_per_user " . $types[$i % ($#types+1)] . " $write_interval $duration_secs $upload_file $storage_usage_mb " . $images[$i % ($#images+1)] . ") > log-$user_name 2>&1") and die ("Couldn't exec simulate_one_user for: $user_name"); exit(0);
 	}
 	push(@pids, $pid);
 }
@@ -134,9 +134,7 @@ foreach (@pids) {
 
 #
 # Verify that all events were propagated and that events were written to
-#  database properly. This involves counting the number of rows for the
-#  recently-created test users in the event history tables, and also
-#  verifying that the rows have plausible values.
+#  database properly, by summing db columns and counting rows
 #
 my $username_csv = "'" . join("','",@usernames) . "'";
 my $accountname_csv = "'" . join("','",@accountnames) . "'";
@@ -148,7 +146,7 @@ my $num_rows = 0;
 # Count number of instances per user to verify it's correct
 foreach (execute_query("
 	select
-	  ri.user_id as user_id,
+	  ru.user_name as user_name,
 	  count(ri.instance_id) as cnt
 	from
 	  reporting_instance ri,
@@ -159,31 +157,29 @@ foreach (execute_query("
 	and ri.account_id = ra.account_id
 	and ru.user_name in ($username_csv)
 	and ra.account_name in ($accountname_csv)
-	group by ri.user_id
+	group by ru.user_name
 ")) {
 	($username,$count) = split("\\s+");
 	print "Found instances user:$username #:$count\n";
 	if ($count != $num_instances_per_user) {
-		die ("Incorrect ins count, expected:$num_instances_per_user found:$count for user:$username");
+		die ("ins count, expected:$num_instances_per_user found:$count");
 	}
 	$num_rows++;
 }
 if ($num_rows != $num_users) {
-	die ("Incorrect rows count, expected:$num_users found:$num_rows");
+	die ("rows count, expected:$num_users found:$num_rows");
 }
 $num_rows=0;
 
 use integer;
-my $min_instance_events = ($duration_secs / $write_interval) - 2;
-my $max_instance_events = ($duration_secs / $write_interval) + 2;
-print "min_instance_events:$min_instance_events max_instance_events:$max_instance_events\n";
+my $interval_cnt = $duration_secs / $write_interval;
 
 # Count instance events per user and verify that disk and net are not zero
 foreach (execute_query("
 	select
 	  count(ius.total_disk_io_megs),
-	  sum(ius.total_disk_io_megs),
-	  sum(ius.total_network_io_megs),
+	  max(ius.total_disk_io_megs),
+	  max(ius.total_network_io_megs),
 	  ru.user_name
 	from
 	  instance_usage_snapshot ius,
@@ -201,25 +197,23 @@ foreach (execute_query("
 	my ($disk_io,$net_io) = (0,0);
 	($count,$disk_io,$net_io,$username) = split("\\s+");
 	print "Found instance events user:$username #:$count disk:$disk_io net:$net_io\n";
-	if ($count < $min_instance_events || $count > $max_instance_events) {
-		die ("Incorrect ins event count, expected:$min_instance_events - $max_instance_events , found:$count for user:$username");
+	if ($count < $interval_cnt - 1 || $count > $interval_cnt + 1) {
+		die ("ins event count, expected:$interval_cnt +/- 1, found:$count");
 	}
 	if ($disk_io==0 || $net_io==0) {
-		die ("Disk or net == 0, user:$username");
+		die ("Disk or net == 0");
 	}
 	$num_rows++;
 }
 if ($num_rows != $num_users) {
-	die ("Incorrect rows count, expected:$num_users found:$num_rows");
+	die ("rows count, expected:$num_users found:$num_rows");
 }
 $num_rows=0;
 
 
-my $min_s3_events = ($duration_secs / $write_interval) - 2;
-my $max_s3_events = ($duration_secs / $write_interval) + 2;
-print "min_s3_events:$min_s3_events max_s3_events:$max_s3_events\n";
 
 # Count s3 events and verify totals
+my $object_size = (-s $upload_file)/1024/1024;
 foreach (execute_query("
 	select
 	  count(s3s.buckets_num) as cnt,
@@ -236,74 +230,29 @@ foreach (execute_query("
 	and s3s.account_id = ra.account_id
 	and ru.user_name in ($username_csv)
 	and ra.account_name in ($accountname_csv)
-	group by s3s.timestamp_ms
+	group by ru.user_name
 ")) {
 	my ($max_buckets,$max_objects,$max_size)=(0,0,0);
 	($count,$max_buckets,$max_objects,$max_size,$username) = split("\\s+");
 	print "Found s3 events user:$username #:$count max_buckets:$max_buckets max_objects:$max_objects max_size:$max_size\n";
-	if ($count < $min_s3_events || $count > $max_s3_events) {
-		die ("Incorrect s3 event count, expected:$min_s3_events - $max_s3_events , found:$count for user:$username");
+	if ($count < $interval_cnt - 1 || $count > $interval_cnt + 1) {
+		die ("s3 event count, expected:$interval_cnt +/- 1, found:$count");
 	}
-	if ($max_buckets == 0 || $max_objects == 0 || $max_size == 0) {
-		die ("max_buckets or max_objects or max_size == 0, user:$username");
+	if ($max_buckets < ($interval_cnt-1) || $max_buckets > ($interval_cnt+1)) {
+		die("max_buckets expected:$interval_cnt +/-1, got:$max_buckets");
+	}
+	if ($max_objects < ($interval_cnt-1)*$object_size || $max_objects > ($interval_cnt+1)*$object_size) {
+		die("max_objects expected:" . $interval_cnt*$object_size . " +/- " . $object_Size . ", got:$max_objects");
+	}
+	if ($max_size < (($interval_cnt-1)*$object_size) || $max_size > (($interval_cnt+1)*$object_size)) {
+		die("max_size expected:" . $interval_cnt * $object_size . " +/- " . $object_size . ", got:$max_size");
 	}
 	$num_rows++;
 }
 if ($num_rows != $num_users) {
-	die ("Incorrect rows count, expected:$num_users found:$num_rows");
+	die ("rows count, expected:$num_users found:$num_rows");
 }
 $num_rows=0;
-
-die("done");
-
-
-# Verify that s3 event properties increment properly: always an additional bucket, or object with size
-my $old_user = "";
-my $old_buckets_num = 0;
-my $old_objects_num = 0;
-my $old_objects_megs = 0;
-foreach (execute_query("
-	select
-	  s3s.buckets_num,
-	  s3s.objects_num,
-	  s3s.objects_megs,
-	  ru.user_name
-	from
-	  s3_usage_snapshot s3s,
-	  reporting_user ru,
-	  reporting_account ra
-	where
-	  s3s.owner_id = ru.user_id
-	and s3s.account_id = ra.account_id
-	and ru.user_name in ($username_csv)
-	and ra.account_name in ($accountname_csv)
-	order by user_name, timestamp_ms ASC
-")) {
-	my ($num_buckets,$num_objects,$obj_megs) = (0,0,0);
-	($num_buckets,$num_objects,$obj_megs,$username) = split("\\s+");
-	print "Found s3 event user:$username num_buckets:$num_buckets num_objects:$num_objects obj_megs:$obj_megs\n";
-	if ($old_user eq $username) {
-		# Verify that either total buckets or objects has incremented by one for this event
-		if (($num_buckets != $old_buckets_num+1) || ($num_objects != $old_objects_num+1)) {
-			die ("buckets or objects not incremented for user:$username");
-		}
-		# Verify that bucket events don't lead to size changes
-		if (($num_objects == $old_objects_num) && ($obj_megs != $old_objects_megs)) {
-			die ("objects size changed without additional object for user:$username");
-		}
-		# Verify that object count events do lead to size changes in the correct direction
-		if (($num_objects != $old_objects_num) && ($obj_megs <= $old_objects_megs)) {
-			die ("objects size increased without additional size allocation for user:$username");
-		}
-	}
-	$old_buckets_num = $num_buckets;
-	$old_objects_num = $num_objects;
-	$old_objects_megs = $obj_megs;
-	$old_user = $username;
-}
-
-my $min_storage_events = ($duration_secs / 15) - 2;
-my $max_storage_events = ($duration_secs / 15) - 2;
 
 
 # Count storage events and verify totals
@@ -329,61 +278,28 @@ foreach (execute_query("
 	my ($max_snap,$max_snap_size,$max_vols,$max_vol_size) = (0,0,0,0);
 	($count, $max_snap, $max_snap_size, $max_vols, $max_vol_size, $username) = split("\\s+");
 	print "Found storage events user:$username #:$count max_snap:$max_snap max_snap_size:$max_snap_size max_vols:$max_vols max_vol_size:$max_vol_size\n";
-	if ($count < $min_storage_events || $count > $max_storage_events) {
-		die ("Incorrect storage event count, expected:$min_storage_events - $max_storage_events , found:$count for user:$username");
+	if ($count < $interval_cnt - 1 || $count > $interval_cnt + 1) {
+		die ("storage event count, expected:$interval_cnt +/- 1, found:$count");
 	}
-	if ($max_snap == 0 || $max_snap_size == 0 || $max_vols == 0 || $max_vol_size == 0) {
-		die ("max_snap || max_snap_size || max_vols || max_vol_size == 0, user:$username");
+	if ($max_snap < $interval_cnt - 1 || $max_snap > $interval_cnt + 1) {
+		die ("max snap expected:$interval_cnt +/- 1, got:$max_snap");
+	}
+	# TODO: how do we determine what this should be???
+	if ($max_snap_size < 1) {
+		die ("max snap size expected: >1, got:$max_snap_size");
+	}
+	if ($max_vols < $interval_cnt - 1 || $max_vols > $interval_cnt + 1) {
+		die ("max vols expected:$interval_cnt +/- 1, got:$max_vols");
+	}
+	if ($max_vol_size < ($interval_cnt-1)*$storage_usage_mb || $max_vol_size > ($interval_cnt+1)*$storage_usage_mb) {
+		die ("max vol size expected:" . $interval_cnt*$storage_usage_mb . " +/- " . $storage_usage_mb . ", got:$max_vol_size");
 	}
 }
 
-# Verify that storage event properties increment properly: always an additional volume or snapshot, with appropriate size incremented
-$old_user = "";
-my $old_vol_num = 0;
-my $old_vol_size = 0;
-my $old_snap_num = 0;
-my $old_snap_size = 0;
-foreach (execute_query("
-	select
-	  sus.snapshot_num,
-	  sus.snapshot_megs,
-	  sus.volumes_num,
-	  sus.volumes_megs,
-	  ru.user_name
-	from
-	  storage_usage_snapshot sus,
-	  reporting_user ru,
-	  reporting_account ra
-	where
-	  sus.owner_id = ru.user_id
-	and sus.account_id = ra.account_id
-	and ru.user_name in ($username_csv)
-	and ra.account_name in ($accountname_csv)
-	order by user_name, timestamp_ms ASC
-")) {
-	my ($snap_num, $snap_size, $vol_num, $vol_size) = (0,0,0,0);
-	($snap_num, $snap_size, $vol_num, $vol_size, $username) = split("\\s+");
-	print "Found storage event, username:$username snap_num:$snap_num snap_size:$snap_size vol_num:$vol_num vol_size:$vol_size\n";
-	if ($old_user eq $username) {
-		# Verify that either total buckets or objects has incremented by one for this event
-		if (($snap_num != $old_snap_num+1) || ($vol_num != $old_vol_num+1)) {
-			die ("snaps or vols not incremented for user:$username");
-		}
-		# Verify that additional size is allocated if snap event
-		if (($snap_num == $old_snap_num+1) && ($snap_size <= $old_snap_size)) {
-			die ("snaps num increased without additional size allocation for user:$username");
-		}
-		# Verify that additional size is allocated if vol event
-		if (($vol_num == $old_vol_num+1) && ($vol_size <= $old_vol_size)) {
-			die ("vols num increased without additional size allocation for user:$username");
-		}
-	}
-	$old_vol_num = $vol_num;
-	$old_vol_size = $vol_size;
-	$old_snap_num = $snap_num;
-	$old_snap_size = $snap_size;
-	$old_user = $username;
-}
+
+
+
+
 
 # Generate CSV reports
 #   Verify instance CSV
