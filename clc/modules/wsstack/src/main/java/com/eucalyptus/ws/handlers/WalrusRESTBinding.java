@@ -566,6 +566,9 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 						String contentDisposition = httpRequest.getHeader("Content-Disposition");
 						if(contentDisposition != null)
 							operationParams.put("ContentDisposition", contentDisposition);
+						String contentMD5 = httpRequest.getHeader(WalrusProperties.CONTENT_MD5);
+						if(contentMD5 != null)
+							operationParams.put("ContentMD5", contentMD5);
 						if(contentLengthString != null)
 							operationParams.put("ContentLength", (new Long(contentLength).toString()));
 						operationParams.put(WalrusProperties.Headers.RandomKey.toString(), randomKey);
