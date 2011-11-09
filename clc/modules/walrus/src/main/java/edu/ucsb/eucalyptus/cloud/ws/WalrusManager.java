@@ -835,7 +835,7 @@ public class WalrusManager {
 											ctx.getAccount().getAccountNumber());
 									Threads.lookup(Walrus.class, WalrusManager.ObjectDeleter.class).limitTo(10).submit(objectDeleter);
 									messenger.removeQueue(key, randomKey);
-									throw new ContentMismatchException(bucketName + "/" + objectName);
+									throw new ContentMismatchException(bucketName + "/" + objectKey);
 								}
 							}
 							// commit object
