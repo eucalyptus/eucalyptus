@@ -352,6 +352,7 @@ public class UpdateUserType extends EuareMessage {
   String userName;
   String newPath;
   String newUserName;
+  String enabled;
   public UpdateUserType() {  }
 }
 @PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_PUTUSERPOLICY )
@@ -393,6 +394,7 @@ public class UserType extends EuareMessage {
   String userName;
   String userId;
   String arn;
+  String enabled;
   public UserType() {  }
 }
 @PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_GETUSERPOLICY )
