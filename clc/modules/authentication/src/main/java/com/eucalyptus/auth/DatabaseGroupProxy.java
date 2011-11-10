@@ -143,7 +143,7 @@ public class DatabaseGroupProxy implements Group {
       GroupEntity groupEntity = db.getUnique( GroupEntity.newInstanceWithGroupId( this.delegate.getGroupId( ) ) );
       UserEntity userEntity = DatabaseAuthUtils.getUniqueUser( db, userName, groupEntity.getAccount( ).getName( ) );
       groupEntity.getUsers( ).add( userEntity );
-      //userEntity.addGroup( groupEntity );
+      userEntity.getGroups( ).add( groupEntity );
       db.commit( );
     } catch ( Exception e ) {
       db.rollback( );
