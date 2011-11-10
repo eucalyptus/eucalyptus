@@ -219,12 +219,16 @@ public class X509Download extends HttpServlet {
       //TODO:GRZE:FIXME velocity
       String userNumber = u.getAccount( ).getAccountNumber( );
       sb.append( "EUCA_KEY_DIR=$(dirname $(readlink -f ${BASH_SOURCE}))" );
-      sb.append( "\nexport EC2_URL=" + ServiceUris.remotePublicify( Eucalyptus.class ) );
+      sb.append( "\nexport EC2_URL=" + ServiceUris.remotePublicify( Topology.lookup( Eucalyptus.class ) ) );
       if ( Topology.isEnabled( Walrus.class ) ) {
         ServiceConfiguration walrusConfig = Topology.lookup( Walrus.class );
-        String uri = ServiceUris.remotePublicify( walrusConfig ).toASCIIString( );
-        LOG.debug( "Found walrus uri/configuration: uri=" + uri + " config=" + walrusConfig );
-        sb.append( "\nexport S3_URL=" + uri );
+        try {
+          String uri = ServiceUris.remotePublicify( walrusConfig ).toASCIIString( );
+          LOG.debug( "Found walrus uri/configuration: uri=" + uri + " config=" + walrusConfig );
+          sb.append( "\nexport S3_URL=" + uri );
+        } catch (Exception e) {
+          LOG.error("Failed to set Walrus URL: " + walrusConfig, e);	
+        }
       } else {
         sb.append( "\necho WARN:  Walrus URL is not configured. >&2" );
       }
