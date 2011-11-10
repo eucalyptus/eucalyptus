@@ -27,7 +27,7 @@
 use strict;
 use warnings;
 
-if ($#ARGV+1 < 5) {
+if ($#ARGV+1 < 7) {
 	die "Usage: simulate_one_user.pl num_instances instance_type interval duration upload_file storage_usage_mb image\n";
 }
 
@@ -60,6 +60,12 @@ sub parse_avail_zones($) {
 
 sub rand_str($) {
 	return sprintf("%x",rand(2<<$_[0]));
+}
+
+sub cmd($) {
+	print "Executing command:$_[0]\n";
+	my $output = `$_[0]`;
+	print "Output:$output\n";
 }
 
 
@@ -125,16 +131,11 @@ my $itime = 0; # Iteration start time
 for (my $i=0; (time()-$start_time) < $duration; $i++) {
 	$itime = time();
 	print "iter:$i\n";
-	$output = `euca-create-volume --size $storage_usage_mb --zone $zones[0]`;
-	print "OUTPUT:$output\n";
+	cmd("euca-create-volume --size $storage_usage_mb --zone $zones[0]");
 	print "$i: Created volume\n";
-	my $time = time();
-	print "$i: Created bucket\n";
-	$output = `euca-bundle-image -i $upload_file`;
+	cmd("euca-bundle-image -i $upload_file");
 	#TODO: grab manifest path from this
-	print "OUTPUT:$output\n";
-	$output = `euca-upload-bundle -b mybucket -m /tmp/$upload_file.manifest.xml`;
-	print "OUTPUT:$output\n";
+	cmd("euca-upload-bundle -b $bucketname -m /tmp/$upload_file.manifest.xml");
 	print "$i: Uploaded bundle\n";
 	sleep $interval - (time() - $itime);
 }
