@@ -16,6 +16,8 @@ import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.ClusterState;
 import com.eucalyptus.cluster.callback.UnassignAddressCallback;
 import com.eucalyptus.component.Partition;
+import com.eucalyptus.configurable.ConfigurableProperty;
+import com.eucalyptus.configurable.PropertyDirectory;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
@@ -69,16 +71,32 @@ public abstract class AbstractSystemAddressManager {
       orphans.remove( address );
     }
   }
-  
+
   public Address allocateNext( final OwnerFullName userId ) throws NotEnoughResourcesException {
-    Predicate<Address> predicate = RestrictedTypes.filterPrivileged( );
-    final Address addr = Addresses.getInstance( ).enableFirst( predicate ).allocate( userId );
-    LOG.debug( "Allocated address for public addressing: " + addr.toString( ) );
-    if ( addr == null ) {
-      LOG.debug( LogUtil.header( Addresses.getInstance( ).toString( ) ) );
-      throw new NotEnoughResourcesException( ExceptionList.ERR_SYS_INSUFFICIENT_ADDRESS_CAPACITY );
-    }
-    return addr;
+	  int numSystemReserved=0;
+	  try{
+		  ConfigurableProperty p =
+				  PropertyDirectory.getPropertyEntry("cloud.addresses.systemreservedpublicaddresses");
+		  if(p!=null)
+			  numSystemReserved= Integer.parseInt(p.getValue());
+	  }catch(IllegalAccessException e)
+	  {
+		  LOG.error("Can't find the 'systemreservedpublicaddresses' property");
+		  numSystemReserved=0;
+	  }
+	  if ( (Addresses.getInstance( ).listDisabledValues( ).size( ) - numSystemReserved ) < 1 ) {
+		  throw new NotEnoughResourcesException( ExceptionList.ERR_SYS_INSUFFICIENT_ADDRESS_CAPACITY );
+	  }	    
+
+	  Predicate<Address> predicate = RestrictedTypes.filterPrivileged( );    
+	  final Address addr = Addresses.getInstance( ).enableFirst( predicate ).allocate( userId );   
+
+	  LOG.debug( "Allocated address for public addressing: " + addr.toString( ) );
+	  if ( addr == null ) {
+		  LOG.debug( LogUtil.header( Addresses.getInstance( ).toString( ) ) );
+		  throw new NotEnoughResourcesException( ExceptionList.ERR_SYS_INSUFFICIENT_ADDRESS_CAPACITY );
+	  }
+	  return addr;
   }
   
   public abstract void assignSystemAddress( final VmInstance vm ) throws NotEnoughResourcesException;

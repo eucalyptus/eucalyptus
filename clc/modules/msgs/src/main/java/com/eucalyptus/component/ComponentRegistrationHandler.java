@@ -116,8 +116,8 @@ public class ComponentRegistrationHandler {
               + ":"
               + port );
     if ( !builder.checkAdd( partition, name, hostName, port ) ) {
-      LOG.info( builder.getClass( ).getSimpleName( ) + ": checkAdd failed." );
-      return false;
+      LOG.info( builder.getClass( ).getSimpleName( ) + ": checkAdd failed." );      
+      throw new ServiceRegistrationException( builder.getClass( ).getSimpleName( ) + ": checkAdd failed");
     }
     
     try {
@@ -173,11 +173,17 @@ public class ComponentRegistrationHandler {
     } catch ( Exception e ) {
       LOG.info( builder.getClass( ).getSimpleName( ) + ": checkRemove failed." );
       throw new ServiceRegistrationException( builder.getClass( ).getSimpleName( ) + ": checkRemove failed with message: "
-                                              + e.getMessage( ), e );
+                                             + e.getMessage( ), e );
     }
-    final ServiceConfiguration conf = ServiceConfigurations.lookupByName( compId.getClass( ), name );
-    Topology.destroy( conf );
-    ServiceConfigurations.remove( conf );
+    try{
+	    final ServiceConfiguration conf = ServiceConfigurations.lookupByName( compId.getClass( ), name );
+	    Topology.destroy( conf );
+	    Components.lookup(compId).destroy(conf);    
+	    ServiceConfigurations.remove( conf );
+    }catch(Exception e){
+    	LOG.info(builder.getClass().getSimpleName() + ": deregistration failed because of" + e.getMessage());
+    	throw new ServiceRegistrationException(builder.getClass().getSimpleName() + ": deregistration failed because of" + e.getMessage(), e);
+    }
     return true;
   }
   

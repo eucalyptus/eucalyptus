@@ -66,6 +66,7 @@ package com.eucalyptus.util;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
+import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.component.id.Eucalyptus;
@@ -80,8 +81,10 @@ public class MetadataStateBootstrapper extends Bootstrapper.Simple {
   @Override
   public boolean start( ) throws Exception {
     try {
-      ensureCountersExist( );
-      ensureVmTypesExist( );
+      if ( Hosts.Coordinator.INSTANCE.isLocalhost( ) ) {
+        ensureCountersExist( );
+        ensureVmTypesExist( );
+      }
     } catch ( Exception ex ) {
       LOG.error( ex, ex );
     }

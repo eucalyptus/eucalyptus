@@ -150,14 +150,7 @@ public class ServiceContextManager {
       
       @Override
       public void run( ) {
-        if ( singleton.context != null ) {
-          try {
-            singleton.context.stop( );
-            singleton.context.dispose( );
-          } catch ( final MuleException ex ) {
-            LOG.error( ex, ex );
-          }
-        }
+        ServiceContextManager.shutdown( );
       }
       
     } );

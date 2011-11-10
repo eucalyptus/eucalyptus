@@ -29,8 +29,8 @@ help:
 
 tags:
 	@echo making tags for emacs and vi
-	find cluster net node storage tools util -regex ".*\.\(h\|c\|py\)" | xargs etags
-	find cluster net node storage tools util -regex ".*\.\(h\|c\|py\)" | xargs ctags 
+	find cluster net node storage tools util -name "*.[chCH]" -print | xargs ctags 
+	find cluster net node storage tools util -name "*.[chCH]" -print | xargs etags
 
 build: Makedefs 
 	@for subdir in $(SUBDIRS); do \
@@ -66,6 +66,7 @@ uninstall:
 clean:
 	@for subdir in $(SUBDIRS); do \
 		(cd $$subdir && $(MAKE) $@) || exit $$? ; done
+	@rm -f tags TAGS
 
 distclean: clean
 	@for subdir in $(SUBDIRS); do \
