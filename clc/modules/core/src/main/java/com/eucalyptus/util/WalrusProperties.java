@@ -119,6 +119,7 @@ public class WalrusProperties {
 	public static final String CONTENT_LEN = "Content-Length";
 	public static final String CONTENT_TYPE = "Content-Type";
 	public static final String CONTENT_DISPOSITION = "Content-Disposition";
+	public static final String CONTENT_MD5 = "Content-MD5";
 	public static final String MULTIFORM_DATA_TYPE = "multipart/form-data";
 
 	public static final String URL_PROPERTY = "euca.walrus.url";
