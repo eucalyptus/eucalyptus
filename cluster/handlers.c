@@ -3891,10 +3891,14 @@ int maintainNetworkState() {
     free(cloudIp2);
     
     if (config->cloudIp && (config->cloudIp != vnetconfig->cloudIp)) {
+      rc = vnetUnsetMetadataRedirect(vnetconfig);
+      if (rc) {
+	logprintfl(EUCAWARN, "maintainNetworkState(): failed to unset old metadata redirect\n");
+      }
       vnetconfig->cloudIp = config->cloudIp;
       rc = vnetSetMetadataRedirect(vnetconfig);
       if (rc) {
-	logprintfl(EUCAWARN, "maintainNetworkState(): failed to set metadata redirect\n");
+	logprintfl(EUCAWARN, "maintainNetworkState(): failed to set new metadata redirect\n");
       }
     }
 
