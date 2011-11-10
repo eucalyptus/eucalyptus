@@ -17,7 +17,7 @@
 use strict;
 use warnings;
 
-if ($#ARGV+1 < 6) {
+if ($#ARGV+1 < 7) {
 	die "Usage: test_reporting.pl admin_pw upload_file num_users num_users_per_account num_instances_per_user duration_secs_secs image+";
 }
 
@@ -56,6 +56,27 @@ sub runcmd($) {
 	my $ret = system($_[0]);
 	return $ret;
 }
+
+# TEST_RANGE
+#  var_name, expected, value, error
+sub test_range($$$$) {
+	my ($name,$expected,$val,$error) = @_;
+	print "test:$name, expected:$expected +/- $error, val:$val\n";
+	if ($val < $expected-$error || $val > $expected+$error) {
+		print " FAILED: test $name\n";
+	}
+}
+
+# TEST_EQ
+#  var_name, expected, value
+sub test_eq($$$) {
+	my ($name,$expected,$val) = @_;
+	print "test:$name, expected:$expected val:$val\n";
+	if ($val != $expected) {
+		print " FAILED: test $name\n";
+	}
+}
+
 
 # Takes a PW and returns a session id
 sub login($) {
@@ -161,14 +182,10 @@ foreach (execute_query("
 ")) {
 	($username,$count) = split("\\s+");
 	print "Found instances user:$username #:$count\n";
-	if ($count != $num_instances_per_user) {
-		die ("ins count, expected:$num_instances_per_user found:$count");
-	}
+	test_eq("ins count", $num_instances_per_user, $count);
 	$num_rows++;
 }
-if ($num_rows != $num_users) {
-	die ("rows count, expected:$num_users found:$num_rows");
-}
+test_eq("rows count", $num_users, $num_rows);
 $num_rows=0;
 
 use integer;
@@ -196,18 +213,13 @@ foreach (execute_query("
 ")) {
 	my ($disk_io,$net_io) = (0,0);
 	($count,$disk_io,$net_io,$username) = split("\\s+");
-	print "Found instance events user:$username #:$count disk:$disk_io net:$net_io\n";
-	if ($count < $interval_cnt - 1 || $count > $interval_cnt + 1) {
-		die ("ins event count, expected:$interval_cnt +/- 1, found:$count");
-	}
-	if ($disk_io==0 || $net_io==0) {
-		die ("Disk or net == 0");
+	test_range("ins event count", $interval_cnt, $count, 1);
+	if ($disk_io==0) {
+		die ("Disk == 0");
 	}
 	$num_rows++;
 }
-if ($num_rows != $num_users) {
-	die ("rows count, expected:$num_users found:$num_rows");
-}
+test_eq("rows count", $num_users, $num_rows);
 $num_rows=0;
 
 
@@ -234,24 +246,13 @@ foreach (execute_query("
 ")) {
 	my ($max_buckets,$max_objects,$max_size)=(0,0,0);
 	($count,$max_buckets,$max_objects,$max_size,$username) = split("\\s+");
-	print "Found s3 events user:$username #:$count max_buckets:$max_buckets max_objects:$max_objects max_size:$max_size\n";
-	if ($count < $interval_cnt - 1 || $count > $interval_cnt + 1) {
-		die ("s3 event count, expected:$interval_cnt +/- 1, found:$count");
-	}
-	if ($max_buckets < ($interval_cnt-1) || $max_buckets > ($interval_cnt+1)) {
-		die("max_buckets expected:$interval_cnt +/-1, got:$max_buckets");
-	}
-	if ($max_objects < ($interval_cnt-1)*$object_size || $max_objects > ($interval_cnt+1)*$object_size) {
-		die("max_objects expected:" . $interval_cnt*$object_size . " +/- " . $object_Size . ", got:$max_objects");
-	}
-	if ($max_size < (($interval_cnt-1)*$object_size) || $max_size > (($interval_cnt+1)*$object_size)) {
-		die("max_size expected:" . $interval_cnt * $object_size . " +/- " . $object_size . ", got:$max_size");
-	}
+	test_range("count", $interval_cnt, $count, 1);
+	test_eq("max_buckets", $interval_cnt, 1);
+	test_range("max_objects", $interval_cnt, $max_size, 1);
+	test_range("max_size", $interval_cnt*$object_size, $max_size, $object_size);
 	$num_rows++;
 }
-if ($num_rows != $num_users) {
-	die ("rows count, expected:$num_users found:$num_rows");
-}
+test_eq("rows count", $num_users, $num_rows);
 $num_rows=0;
 
 
@@ -277,24 +278,17 @@ foreach (execute_query("
 ")) {
 	my ($max_snap,$max_snap_size,$max_vols,$max_vol_size) = (0,0,0,0);
 	($count, $max_snap, $max_snap_size, $max_vols, $max_vol_size, $username) = split("\\s+");
-	print "Found storage events user:$username #:$count max_snap:$max_snap max_snap_size:$max_snap_size max_vols:$max_vols max_vol_size:$max_vol_size\n";
-	if ($count < $interval_cnt - 1 || $count > $interval_cnt + 1) {
-		die ("storage event count, expected:$interval_cnt +/- 1, found:$count");
-	}
-	if ($max_snap < $interval_cnt - 1 || $max_snap > $interval_cnt + 1) {
-		die ("max snap expected:$interval_cnt +/- 1, got:$max_snap");
-	}
+	test_range("count", $interval_cnt, $count, 1);
+	test_range("max_snap", $interval_cnt, $max_snap, 1);
+	test_range("max_vols", $interval_cnt, $max_vols, 1);
+	test_range("max_vol_size", $interval_cnt*$storage_usage_mb, $max_vol_size, $storage_usage_mb);
 	# TODO: how do we determine what this should be???
 	if ($max_snap_size < 1) {
 		die ("max snap size expected: >1, got:$max_snap_size");
 	}
-	if ($max_vols < $interval_cnt - 1 || $max_vols > $interval_cnt + 1) {
-		die ("max vols expected:$interval_cnt +/- 1, got:$max_vols");
-	}
-	if ($max_vol_size < ($interval_cnt-1)*$storage_usage_mb || $max_vol_size > ($interval_cnt+1)*$storage_usage_mb) {
-		die ("max vol size expected:" . $interval_cnt*$storage_usage_mb . " +/- " . $storage_usage_mb . ", got:$max_vol_size");
-	}
+	$num_rows++;
 }
+test_eq("rows count", $num_users, $num_rows);
 
 
 
