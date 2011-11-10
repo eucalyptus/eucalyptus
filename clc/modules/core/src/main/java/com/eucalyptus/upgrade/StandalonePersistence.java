@@ -204,7 +204,9 @@ public class StandalonePersistence {
         UpgradeScript u = Groovyness.newInstance( script.getAbsolutePath( ) );
         registerUpgradeScript( u );
       } catch ( ScriptExecutionFailedException e ) {
-        LOG.debug( e, e );
+        LOG.error( e, e );
+        e.printStackTrace( );
+        System.exit( -1 );
       }
     }
   }
