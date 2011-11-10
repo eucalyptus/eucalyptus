@@ -48,6 +48,11 @@ public class AuthException extends BaseException {
   public static final String INVALID_CERT = "Invalid cert";
   public static final String INVALID_PASSWORD = "Invalid password";
   public static final String CONFLICT = "Conflict";
+  public static final String EMPTY_POLICY_NAME = "Empty policy name";
+  public static final String EMPTY_CERT = "Empty certificate";
+  public static final String EMPTY_KEY_ID = "Empty access key id";
+  public static final String EMPTY_STATUS = "Empty status";
+  public static final String EMPTY_CERT_ID = "Empty certificate id";
   
   public AuthException( ) {
     super( );

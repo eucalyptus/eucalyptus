@@ -398,6 +398,31 @@ int vnetSetMetadataRedirect(vnetConfig *vnetconfig) {
   return(0);
 }
 
+int vnetUnsetMetadataRedirect(vnetConfig *vnetconfig) {
+  char cmd[256];
+  int rc;
+
+  if (!vnetconfig) {
+    logprintfl(EUCAERROR, "vnetUnsetMetadataRedirect(): bad input params\n");
+    return(1);
+  }
+
+  snprintf(cmd, 256, "%s/usr/lib/eucalyptus/euca_rootwrap ip addr del 169.254.169.254 scope link dev %s", vnetconfig->eucahome, vnetconfig->privInterface);
+  rc = system(cmd);
+  
+  if (vnetconfig->cloudIp != 0) {
+    char *ipbuf;
+    ipbuf = hex2dot(vnetconfig->cloudIp);
+    snprintf(cmd, 256, "-D PREROUTING -d 169.254.169.254 -p tcp -m tcp --dport 80 -j DNAT --to-destination %s:8773", ipbuf);
+    if (ipbuf) free(ipbuf);
+    rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
+  } else {
+    logprintfl(EUCAWARN, "vnetUnsetMetadataRedirect(): cloudIp is not yet set, not installing redirect rule\n");
+  }
+
+  return(0);
+}
+
 int vnetInitTunnels(vnetConfig *vnetconfig) {
   int done=0, ret=0, rc=0;
   char file[MAX_PATH], *template=NULL, *pass=NULL;
