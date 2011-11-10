@@ -2347,7 +2347,7 @@ public class WalrusManager {
 						}
 					} else {
 						db.rollback();
-						throw new NoSuchEntityException(objectKey, logData);
+						throw new AccessDeniedException("Key", objectKey, logData);
 					}
 		} else {
 			db.rollback();
@@ -2512,11 +2512,11 @@ public class WalrusManager {
 							}
 						} else {
 							db.rollback();
-							throw new AccessDeniedException("Key", objectKey);
+							throw new AccessDeniedException("Key", objectKey, logData);
 						}
 					} else {
 						db.rollback();
-						throw new NoSuchEntityException(objectKey);
+						throw new AccessDeniedException("Key", objectKey, logData);
 					}
 		} else {
 			db.rollback();
