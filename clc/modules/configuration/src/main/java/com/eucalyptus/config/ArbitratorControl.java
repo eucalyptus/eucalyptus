@@ -115,8 +115,10 @@ public class ArbitratorControl {
 								}
 							} catch ( final UnknownHostException e ) {
 								ArbitratorControl.error.put( config, Exceptions.filterStackTrace( e ) );
+								ArbitratorControl.okay.remove(hostName);
 							} catch ( final IOException e ) {
 								ArbitratorControl.error.put( config, Exceptions.filterStackTrace( e ) );
+								ArbitratorControl.okay.remove(hostName);
 							}
 							EventRecord.here( ArbitratorControl.class, EventType.BOOTSTRAPPER_CHECK, hostName, "errorMap", error.get( hostName ).toString( ) ).debug( );
 						}
@@ -134,9 +136,9 @@ public class ArbitratorControl {
 				exceptions.add(error.get(key));
 			}
 			if (ArbitratorControl.okay.isEmpty()) {
-				Faults.fatal(anyConfig, exceptions);
+				throw Faults.fatal(anyConfig, exceptions);
 			} else {
-				Faults.advisory(anyConfig, exceptions);
+				throw Faults.advisory(anyConfig, exceptions);
 			}
 		}
 
