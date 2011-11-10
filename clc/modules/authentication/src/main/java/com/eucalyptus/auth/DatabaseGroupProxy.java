@@ -243,7 +243,7 @@ public class DatabaseGroupProxy implements Group {
   @Override
   public void removePolicy( String name ) throws AuthException {
     if ( name == null ) {
-      throw new AuthException( "Empty policy name" );
+      throw new AuthException( AuthException.EMPTY_POLICY_NAME );
     }
     EntityWrapper<GroupEntity> db = EntityWrapper.get( GroupEntity.class );
     try {

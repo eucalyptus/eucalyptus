@@ -103,7 +103,11 @@ public class PolicyEngineImpl implements PolicyEngine {
 
       // System admin can do everything
       if ( !requestUser.isSystemAdmin( ) ) {
-        String userId = requestUser.getUserId( );
+        // Disabled user can't do anything
+        if ( !requestUser.isEnabled( ) ) {
+          LOG.debug( "Request user is rejected because he/she is not enabled yet" );
+          throw new AuthException( AuthException.ACCESS_DENIED );
+        }
         Account account = requestUser.getAccount( );
         
         // Check global (inter-account) authorizations first
