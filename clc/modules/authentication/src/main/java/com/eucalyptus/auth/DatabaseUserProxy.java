@@ -596,7 +596,7 @@ public class DatabaseUserProxy implements User {
   
   @Override
   public void removePolicy( String name ) throws AuthException {
-    if ( name == null ) {
+    if ( Strings.isNullOrEmpty( name ) ) {
       throw new AuthException( AuthException.EMPTY_POLICY_NAME );
     }
     EntityWrapper<UserEntity> db = EntityWrapper.get( UserEntity.class );

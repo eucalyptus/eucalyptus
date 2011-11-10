@@ -1273,7 +1273,7 @@ public class EuareService {
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     User userFound = requestUser;
     if ( !Strings.isNullOrEmpty( request.getUserName( ) ) ) {
-      lookupUserByName( account, request.getUserName( ) );
+      userFound = lookupUserByName( account, request.getUserName( ) );
     }
     try {
       KeyPair keyPair = Certs.generateKeyPair( );
