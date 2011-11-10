@@ -145,7 +145,7 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 			}
 		}  else {
 			//external user request
-			String content_md5 = httpRequest.getAndRemoveHeader("Content-MD5");
+			String content_md5 = httpRequest.getHeader("Content-MD5");
 			content_md5 = content_md5 == null ? "" : content_md5;
 			String content_type = httpRequest.getHeader(WalrusProperties.CONTENT_TYPE);
 			content_type = content_type == null ? "" : content_type;

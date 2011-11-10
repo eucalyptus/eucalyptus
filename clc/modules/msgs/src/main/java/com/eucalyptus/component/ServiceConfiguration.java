@@ -21,12 +21,8 @@ public interface ServiceConfiguration extends Serializable, HasFullName<ServiceC
   
   public abstract String getHostName( );
 
-  public abstract String getSourceHostName( );
-  
   public abstract void setHostName( String hostName );
 
-  public abstract void setSourceHostName( String aliasHostName );
-  
   public abstract Integer getPort( );
   
   public abstract void setPort( Integer port );

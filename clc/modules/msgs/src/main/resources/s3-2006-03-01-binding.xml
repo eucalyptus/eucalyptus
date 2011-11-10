@@ -355,6 +355,8 @@
 		<value name="ContentType" field="contentType" usage="optional" />
 		<value name="ContentDisposition" field="contentDisposition"
 			usage="optional" />
+		<value name="ContentMD5" field="contentMD5"
+			usage="optional" />			
 		<structure map-as="edu.ucsb.eucalyptus.msgs.WalrusRequestType"
 			usage="optional" />
 	</mapping>
