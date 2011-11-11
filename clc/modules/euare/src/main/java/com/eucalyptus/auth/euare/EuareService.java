@@ -450,8 +450,8 @@ public class EuareService {
     try {
       String newPath = request.getNewPath( ) != null ? sanitizePath( request.getNewPath( ) ) : null;
       Boolean enabled = request.getEnabled( ) != null ? "true".equalsIgnoreCase( request.getEnabled( ) ) : null;
-      Date passwordExpiration = request.getPasswordExpiration( ) != null ? Iso8601DateParser.parse( request.getPasswordExpiration( ) ) : null;
-      Privileged.modifyUser( requestUser, account, userFound, request.getNewUserName( ), newPath, enabled, passwordExpiration.getTime( ), null/*info*/ );
+      Long passwordExpiration = request.getPasswordExpiration( ) != null ? Iso8601DateParser.parse( request.getPasswordExpiration( ) ).getTime( ) : null;
+      Privileged.modifyUser( requestUser, account, userFound, request.getNewUserName( ), newPath, enabled, passwordExpiration, null/*info*/ );
       if ( request.getRegStatus( ) != null ) {
         for ( RegistrationStatus stat : RegistrationStatus.values( ) ) {
           if ( stat.name( ).equalsIgnoreCase( request.getRegStatus( ) ) ) {
