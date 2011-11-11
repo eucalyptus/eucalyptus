@@ -336,16 +336,16 @@ public class ServiceTransitions {
           LOG.error( ex, ex );
           throw ex;
         }
-      } else if ( !Hosts.Coordinator.INSTANCE.isLocalhost( ) ) {
+      } else if ( Hosts.Coordinator.INSTANCE.isLocalhost( ) ) {
         try {
-          trans = ServiceRemoteTransitionNotification.valueOf( transitionAction.name( ) );
+          trans = CloudRemoteTransitionCallbacks.valueOf( transitionAction.name( ) );
         } catch ( Exception ex ) {
           LOG.error( ex, ex );
           throw ex;
         }
       } else {
         try {
-          trans = CloudRemoteTransitionCallbacks.valueOf( transitionAction.name( ) );
+          trans = ServiceRemoteTransitionNotification.valueOf( transitionAction.name( ) );
         } catch ( Exception ex ) {
           LOG.error( ex, ex );
           throw ex;
