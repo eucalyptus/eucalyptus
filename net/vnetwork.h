@@ -212,6 +212,7 @@ int vnetApplySingleTableRule(vnetConfig *vnetconfig, char *table, char *rule);
 int vnetApplyArpTableRules(vnetConfig *vnetconfig);
 int vnetApplySingleEBTableRule(vnetConfig *vnetconfig, char *table, char *rule);
 int vnetSetMetadataRedirect(vnetConfig *vnetconfig);
+int vnetUnsetMetadataRedirect(vnetConfig *vnetconfig);
 
 char *host2ip(char *host);
 char *hex2dot(uint32_t in);

@@ -1,4 +1,5 @@
 import java.io.File;
+import java.io.BufferedInputStream;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -102,6 +103,10 @@ import com.eucalyptus.network.NetworkGroup;
 import com.eucalyptus.keys.SshKeyPair;
 import com.eucalyptus.vm.VmType;
 
+// VMware Broker
+import com.eucalyptus.broker.vmware.VMwareBrokerConfiguration;
+import com.eucalyptus.broker.vmware.VMwareBrokerInfo;
+
 // Other
 import edu.ucsb.eucalyptus.cloud.entities.LVMVolumeInfo;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
@@ -173,7 +178,8 @@ class upgrade_20_30 extends AbstractUpgradeScript {
     @Override
     public void upgrade(File oldEucaHome, File newEucaHome) {
         // Do this in stages and bail out if something goes seriously wrong.
-        def parts = [ 'Cluster', 'Auth', 'KeyPairs', 'Network', 'Walrus', 'Storage', 'SAN' ]
+        def parts = [ 'Cluster', 'Auth', 'KeyPairs', 'Network', 'Walrus', 'Storage', 'SAN',
+                      'VMwareBroker' ]
         buildConnectionMap();
         parts.each { this."upgrade${it}"(); }
                 
@@ -604,6 +610,45 @@ class upgrade_20_30 extends AbstractUpgradeScript {
          */
         return (user_name =~ /([^a-zA-Z0-9+=.,@-])/).replaceAll("-")
     }
+
+    public boolean upgradeVMwareBroker() {
+        def oldHome = System.getProperty( "euca.upgrade.old.dir" );
+        def newHome = System.getProperty( "euca.upgrade.new.dir" );
+
+        connMap['eucalyptus_config'].rows('SELECT * FROM  config_vmwarebroker').each{
+            EntityWrapper<VMwareBrokerConfiguration> dbcfg = EntityWrapper.get(VMwareBrokerConfiguration.class);
+            VMwareBrokerConfiguration broker = new VMwareBrokerConfiguration(it.config_component_name, it.config_component_name + '_vmbroker', it.config_component_hostname, it.config_component_port);
+            dbcfg.add(broker);
+            dbcfg.commit();
+
+            /* This only works for a broker on the same system as the CLC */ 
+            def configxml = "";
+            if (Internets.testLocal(it.config_component_hostname)) {
+                byte[] buffer = new byte[(int) new File("${ newHome }/etc/eucalyptus/vmware_conf.xml").length()];
+                BufferedInputStream f = new BufferedInputStream(new FileInputStream("${ newHome }/etc/eucalyptus/vmware_conf.xml"));
+                f.read(buffer);
+                f.close();
+                configxml = new String(buffer);
+            }
+
+            /*  We can't do this because we probably don't have passwordless ssh as the eucalyptus user 
+             * 
+             * def process = ["ssh", it.config_component_hostname, "cat ${ newHome }/etc/eucalyptus/vmware_conf.xml" ].execute()
+             * process.waitFor() 
+             * def configxml = process.text;
+             * LOG.info("setting vmware config xml for ${ it.config_component_name } to:  ${ configxml }");
+             */
+
+            EntityWrapper<VMwareBrokerInfo> dbinfo = EntityWrapper.get(VMwareBrokerInfo.class);
+            if (configxml == "") {
+                LOG.warn("Could not inject vmwarebroker configuration for partition ${ it.config_component_name }.  This must be done manually.");
+            }
+            VMwareBrokerInfo brokerInfo = new VMwareBrokerInfo(it.config_component_name, configxml );
+            dbinfo.add(brokerInfo);
+            dbinfo.commit();
+        }
+    }
+
 
     public boolean upgradeWalrus() {
         connMap['eucalyptus_config'].rows('SELECT * FROM config_walrus').each{

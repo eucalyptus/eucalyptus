@@ -354,10 +354,6 @@ public class ServiceUris {
     return make( compId, host, port, pathParts ).get( );
   }
 
-  public static URI remotePublicify( final Class<? extends ComponentId> idClass, String... pathParts ) {
-	return remotePublicify( Topology.lookup(idClass), pathParts );
-  }
-
   public static URI remotePublicify( ServiceConfiguration config, String... pathParts ) {
 	return make( config.getComponentId( ), config.getInetAddress( ), config.getPort( ), pathParts ).getPublicify( );
   }

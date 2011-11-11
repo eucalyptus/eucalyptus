@@ -143,7 +143,7 @@ public class DatabaseGroupProxy implements Group {
       GroupEntity groupEntity = db.getUnique( GroupEntity.newInstanceWithGroupId( this.delegate.getGroupId( ) ) );
       UserEntity userEntity = DatabaseAuthUtils.getUniqueUser( db, userName, groupEntity.getAccount( ).getName( ) );
       groupEntity.getUsers( ).add( userEntity );
-      //userEntity.addGroup( groupEntity );
+      userEntity.getGroups( ).add( groupEntity );
       db.commit( );
     } catch ( Exception e ) {
       db.rollback( );
@@ -159,7 +159,7 @@ public class DatabaseGroupProxy implements Group {
       GroupEntity groupEntity = db.getUnique( GroupEntity.newInstanceWithGroupId( this.delegate.getGroupId( ) ) );
       UserEntity userEntity = DatabaseAuthUtils.getUniqueUser( db, userName, groupEntity.getAccount( ).getName( ) );
       groupEntity.getUsers( ).remove( userEntity );
-      //userEntity.getGroups( ).remove( groupEntity );
+      userEntity.getGroups( ).remove( groupEntity );
       db.commit( );
     } catch ( Exception e ) {
       db.rollback( );
@@ -243,7 +243,7 @@ public class DatabaseGroupProxy implements Group {
   @Override
   public void removePolicy( String name ) throws AuthException {
     if ( name == null ) {
-      throw new AuthException( "Empty policy name" );
+      throw new AuthException( AuthException.EMPTY_POLICY_NAME );
     }
     EntityWrapper<GroupEntity> db = EntityWrapper.get( GroupEntity.class );
     try {

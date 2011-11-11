@@ -70,6 +70,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.cloud.ImageMetadata;
+import com.eucalyptus.cloud.ImageMetadata.Platform;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.cloud.util.IllegalMetadataAccessException;
 import com.eucalyptus.cloud.util.InvalidMetadataException;
@@ -189,7 +190,7 @@ public class VerifyMetadata {
         allocInfo.setBootableSet( bootSet );
         
         // Add (1024L * 1024L * 10) to handle NTFS min requirements.
-        if ( !bootSet.hasRamdisk() && bootSet.getMachine( ).getImageSizeBytes( ) > ( ( 1024L * 1024L * 1024L * vmType.getDisk( ) ) + ( 1024L * 1024L * 10 ) ) ) {
+        if ( Platform.windows.equals( bootSet.getMachine( ).getPlatform( ) ) && bootSet.getMachine( ).getImageSizeBytes( ) > ( ( 1024L * 1024L * 1024L * vmType.getDisk( ) ) + ( 1024L * 1024L * 10 ) ) ) {
           throw new VerificationException( "Unable to run instance " + bootSet.getMachine( ).getDisplayName( ) +
                                            " in which the size " + bootSet.getMachine( ).getImageSizeBytes( ) +
                                            " bytes of the instance is greater than the vmType " + vmType.getDisplayName( ) + " size " + vmType.getDisk( )

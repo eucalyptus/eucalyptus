@@ -34,6 +34,7 @@ import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.Transactions;
 import java.util.concurrent.ExecutionException;
 import com.eucalyptus.util.Tx;
+import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
@@ -364,6 +365,9 @@ public class DatabaseUserProxy implements User {
 
   @Override
   public void removeKey( final String keyId ) throws AuthException {
+    if ( Strings.isNullOrEmpty( keyId ) ) {
+      throw new AuthException( AuthException.EMPTY_KEY_ID );
+    }
     EntityWrapper<UserEntity> db = EntityWrapper.get( UserEntity.class );
     try {
       UserEntity user = db.getUnique( UserEntity.newInstanceWithUserId( this.delegate.getUserId( ) ) );
@@ -450,6 +454,9 @@ public class DatabaseUserProxy implements User {
   
   @Override
   public void removeCertificate( final String certficateId ) throws AuthException {
+    if ( Strings.isNullOrEmpty( certficateId ) ) {
+      throw new AuthException( AuthException.EMPTY_CERT_ID );
+    }
     EntityWrapper<CertificateEntity> db = EntityWrapper.get( CertificateEntity.class );
     try {
       CertificateEntity certificateEntity = db.getUnique( CertificateEntity.newInstanceWithId( certficateId ) );
@@ -589,8 +596,8 @@ public class DatabaseUserProxy implements User {
   
   @Override
   public void removePolicy( String name ) throws AuthException {
-    if ( name == null ) {
-      throw new AuthException( "Empty policy ID" );
+    if ( Strings.isNullOrEmpty( name ) ) {
+      throw new AuthException( AuthException.EMPTY_POLICY_NAME );
     }
     EntityWrapper<UserEntity> db = EntityWrapper.get( UserEntity.class );
     try {

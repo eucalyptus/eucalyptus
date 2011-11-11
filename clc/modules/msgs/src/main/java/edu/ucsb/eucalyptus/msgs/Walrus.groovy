@@ -415,6 +415,7 @@ public class PutObjectType extends WalrusDataRequestType {
 	String storageClass;
 	String contentType;
 	String contentDisposition;
+	String contentMD5;
 
 	def PutObjectType() {}
 }
