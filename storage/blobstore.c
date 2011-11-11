@@ -570,8 +570,8 @@ static int open_and_lock (const char * path,
         struct flock l;
         fcntl (fd, F_GETLK, flock_whole_file (&l, l_type));
         
-        logprintfl (EUCADEBUG2, "{%u} open_and_lock: locked fd=%d path=%s ino=%d mode=%0o [lock type=%d whence=%d start=%d length=%d]\n", 
-                    (unsigned int)pthread_self(), fd, path, s.st_ino, s.st_mode, l.l_type, l.l_whence, l.l_start, l.l_len);
+        logprintfl (EUCADEBUG2, "{%u} open_and_lock: locked fd=%d path=%s flags=%d ino=%d mode=%0o [lock type=%d whence=%d start=%d length=%d]\n", 
+                    (unsigned int)pthread_self(), fd, path, o_flags, s.st_ino, s.st_mode, l.l_type, l.l_whence, l.l_start, l.l_len);
     }
     return fd;
 
@@ -3667,23 +3667,32 @@ int main (int argc, char ** argv)
     blobstore_set_error_function (dummy_err_fn);    
 
     // if an argument is specified, it is treated as a blob name to create 
-    if (argc > 0) {
-        blobstore * bs = blobstore_open (".", BS_SIZE, BLOBSTORE_FORMAT_FILES, BLOBSTORE_REVOCATION_ANY, BLOBSTORE_SNAPSHOT_ANY);
+    // this allows two simultaneous invocations of test_blobstore to compete
+    // for the same blob so as to test the inter-process locks manually
+    if (argc > 1) {
+        blobstore * bs = blobstore_open (".", 1000, BLOBSTORE_FORMAT_FILES, BLOBSTORE_REVOCATION_ANY, BLOBSTORE_SNAPSHOT_ANY);
         if (bs==NULL) {
-            printf ("ERROR: %s\n", blobstore_get_error_str(blobstore_get_error()));
+            printf ("ERROR: when opening blobstore: %s\n", blobstore_get_error_str(blobstore_get_error()));
             return 1;
         }
         char * id = argv [1];
         printf ("---------> opening blob %s\n", id);
-        blockblob * bb = blockblob_open (bs, id, 10, BLOBSTORE_FLAG_CREAT | BLOBSTORE_FLAG_EXCL, NULL, 1000);
-        if (bb==NULL) {
-            if (blobstore_get_error()==BLOBSTORE_ERROR_EXIST) {
-                bb = blockblob_open (bs, id, 10, 0, NULL, 1000);
-            }
-            assert (bb);
+        blockblob * bb = blockblob_open (bs, id, 20, BLOBSTORE_FLAG_CREAT, NULL, 1000);
+        if (bs==NULL) {
+            printf ("ERROR: when opening blockblob: %s\n", blobstore_get_error_str(blobstore_get_error()));
+            return 1;
         }
-                
-        printf ("---------> opened blob %s, sleeping...\n", id);
+
+        printf ("---------> writing to %s\n", blockblob_get_file(bb));
+        int fd = open (blockblob_get_file(bb), O_RDWR);
+        assert (fd>=0);
+        char buf [32];
+        bzero (buf, sizeof (buf));
+        snprintf (buf, sizeof (buf), "%lld\n", (long long)time(NULL));
+        write (fd, buf, strlen (buf));
+        close (fd);
+
+        printf ("---------> sleeping while holding blob %s\n", id);
         sleep (15);
         printf ("----------> closing blob %s\n", id);
         blockblob_close (bb);
