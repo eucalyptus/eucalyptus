@@ -2,6 +2,7 @@ package com.eucalyptus.auth;
 
 import java.security.KeyPair;
 import java.security.cert.X509Certificate;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import com.eucalyptus.auth.policy.PolicySpec;
@@ -268,7 +269,7 @@ public class Privileged {
       user.setEnabled( enabled );
     }
     if ( passwordExpires != null ) {
-      if ( passwordExpires > user.getPasswordExpires( ) ) {
+      if ( passwordExpires > new Date( ).getTime( ) ) {
         user.setPasswordExpires( passwordExpires );
       }
     }
