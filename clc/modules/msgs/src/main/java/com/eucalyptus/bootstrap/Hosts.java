@@ -183,12 +183,14 @@ public class Hosts {
         ServiceConfiguration conf = null;
         if ( !input.isVmLocal( ) && !Hosts.Coordinator.INSTANCE.isLocalhost( ) ) {
           conf = ServiceTransitions.pathTo( input, State.ENABLED ).get( );          
+          LOG.info( "Initialized enabled service: " + conf.getFullName( ) );
         } else if ( input.isVmLocal( ) && Hosts.Coordinator.INSTANCE.isLocalhost( ) ) {
           conf = ServiceTransitions.pathTo( input, State.ENABLED ).get( );          
+          LOG.info( "Initialized enabled service: " + conf.getFullName( ) );
         } else {
           conf = ServiceTransitions.pathTo( input, State.DISABLED ).get( );          
+          LOG.info( "Initialized disabled service: " + conf.getFullName( ) );
         }
-        LOG.info( "Initialized service: " + conf.getFullName( ) );
         return conf;
       } catch ( final ExecutionException ex ) {
         Exceptions.trace( ex.getCause( ) );
@@ -300,7 +302,11 @@ public class Hosts {
           try {
             teardown( Empyrean.class, h.getBindAddress( ) );
             if ( h.hasDatabase( ) ) {
-              Hosts.stopDbPool( h );
+              try {
+                Hosts.stopDbPool( h );
+              } catch ( Exception ex ) {
+                LOG.error( ex , ex );
+              }
               teardown( Eucalyptus.class, h.getBindAddress( ) );
             }
           } catch ( Exception ex ) {
@@ -312,13 +318,11 @@ public class Hosts {
           } else if ( h.hasDatabase( ) && BootstrapArgs.isCloudController( ) ) {
             hostMap.remove( h.getDisplayName( ) );
             LOG.info( "Hosts.viewChange(): -> removed  => " + h );
+            Hosts.doBootstrap( Empyrean.class, Hosts.localHost( ).getBindAddress( ) );
+            if ( Hosts.localHost( ).hasDatabase( ) ) {
+              Hosts.doBootstrap( Eucalyptus.class, Hosts.localHost( ).getBindAddress( ) );
+            }
           }
-        }
-      }
-      if ( BootstrapArgs.isCloudController( ) ) {
-        Hosts.doBootstrap( Empyrean.class, Hosts.localHost( ).getBindAddress( ) );
-        if ( Hosts.localHost( ).hasDatabase( ) ) {
-          Hosts.doBootstrap( Eucalyptus.class, Hosts.localHost( ).getBindAddress( ) );
         }
       }
     }
