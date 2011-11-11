@@ -453,16 +453,11 @@ public class EuareService {
       Long passwordExpiration = request.getPasswordExpiration( ) != null ? Iso8601DateParser.parse( request.getPasswordExpiration( ) ).getTime( ) : null;
       Privileged.modifyUser( requestUser, account, userFound, request.getNewUserName( ), newPath, enabled, passwordExpiration, null/*info*/ );
       if ( request.getRegStatus( ) != null ) {
-        for ( RegistrationStatus stat : RegistrationStatus.values( ) ) {
-          if ( stat.name( ).equalsIgnoreCase( request.getRegStatus( ) ) ) {
-            userFound.setRegistrationStatus( stat );
-          }
-        }
-        throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_VALUE, "Invalid registration status " + request.getRegStatus( ) );
+        userFound.setRegistrationStatus( parseRegStatIgnoreCase( request.getRegStatus( ) ) );
       }
-    } catch ( EuareException e ) {
+    } catch ( IllegalArgumentException e ) {
       LOG.error( e, e );
-      throw e;
+      throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_VALUE, "Invalid registration status " + request.getRegStatus( ) );
     } catch ( ParseException e ) {
       LOG.error( e, e );
       throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_VALUE, "Invalid password expiration " + request.getPasswordExpiration( ) );
@@ -1595,6 +1590,15 @@ public class EuareService {
       }
       throw new EucalyptusCloudException( e );
     }
+  }
+  
+  private static RegistrationStatus parseRegStatIgnoreCase( String value ) throws IllegalArgumentException {
+    for ( RegistrationStatus stat : RegistrationStatus.values( ) ) {
+      if ( stat.toString( ).equalsIgnoreCase( value ) ) {
+        return stat;
+      }
+    }
+    throw new IllegalArgumentException( "Invalid registration status value" );
   }
   
 }
