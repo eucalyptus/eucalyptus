@@ -268,7 +268,9 @@ public class Privileged {
       user.setEnabled( enabled );
     }
     if ( passwordExpires != null ) {
-      user.setPasswordExpires( passwordExpires );
+      if ( passwordExpires > user.getPasswordExpires( ) ) {
+        user.setPasswordExpires( passwordExpires );
+      }
     }
     if ( info != null ) {
       user.setInfo( info );

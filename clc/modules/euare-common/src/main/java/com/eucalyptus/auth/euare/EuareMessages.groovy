@@ -353,6 +353,8 @@ public class UpdateUserType extends EuareMessage {
   String newPath;
   String newUserName;
   String enabled;
+  String passwordExpiration;
+  String regStatus;
   public UpdateUserType() {  }
 }
 @PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_PUTUSERPOLICY )

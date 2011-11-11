@@ -2,6 +2,7 @@ package com.eucalyptus.auth.euare;
 
 import java.math.BigInteger;
 import java.security.KeyPair;
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -99,12 +100,14 @@ import com.eucalyptus.auth.euare.UploadSigningCertificateType;
 import com.eucalyptus.auth.ldap.LdapSync;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.policy.ern.EuareResourceName;
+import com.eucalyptus.auth.policy.key.Iso8601DateParser;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.Certificate;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.Policy;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.auth.principal.User.RegistrationStatus;
 import com.eucalyptus.auth.util.X509CertHelper;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
@@ -447,7 +450,22 @@ public class EuareService {
     try {
       String newPath = request.getNewPath( ) != null ? sanitizePath( request.getNewPath( ) ) : null;
       Boolean enabled = request.getEnabled( ) != null ? "true".equalsIgnoreCase( request.getEnabled( ) ) : null;
-      Privileged.modifyUser( requestUser, account, userFound, request.getNewUserName( ), newPath, enabled, null/*passwordExpires*/, null/*info*/ );
+      Date passwordExpiration = request.getPasswordExpiration( ) != null ? Iso8601DateParser.parse( request.getPasswordExpiration( ) ) : null;
+      Privileged.modifyUser( requestUser, account, userFound, request.getNewUserName( ), newPath, enabled, passwordExpiration.getTime( ), null/*info*/ );
+      if ( request.getRegStatus( ) != null ) {
+        for ( RegistrationStatus stat : RegistrationStatus.values( ) ) {
+          if ( stat.name( ).equalsIgnoreCase( request.getRegStatus( ) ) ) {
+            userFound.setRegistrationStatus( stat );
+          }
+        }
+        throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_VALUE, "Invalid registration status " + request.getRegStatus( ) );
+      }
+    } catch ( EuareException e ) {
+      LOG.error( e, e );
+      throw e;
+    } catch ( ParseException e ) {
+      LOG.error( e, e );
+      throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_VALUE, "Invalid password expiration " + request.getPasswordExpiration( ) );
     } catch ( Exception e ) {
       LOG.error( e, e );
       if ( e instanceof AuthException ) {
