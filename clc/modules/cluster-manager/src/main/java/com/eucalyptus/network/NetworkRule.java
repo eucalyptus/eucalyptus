@@ -189,36 +189,39 @@ public class NetworkRule extends AbstractPersistent {
   @Override
   public int hashCode( ) {
     final int prime = 31;
-    int result = 1;
-    result = prime * result + ( ( this.highPort == null )
-      ? 0
-      : this.highPort.hashCode( ) );
-    result = prime * result + ( ( this.lowPort == null )
-      ? 0
-      : this.lowPort.hashCode( ) );
-    result = prime * result + ( ( this.protocol == null )
-      ? 0
-      : this.protocol.hashCode( ) );
+    int result = super.hashCode( );
+    result = prime * result + ( ( this.highPort == null ) ? 0 : this.highPort.hashCode( ) );
+    result = prime * result + ( ( this.ipRanges == null ) ? 0 : this.ipRanges.hashCode( ) );
+    result = prime * result + ( ( this.lowPort == null ) ? 0 : this.lowPort.hashCode( ) );
+    result = prime * result + ( ( this.networkPeers == null ) ? 0 : this.networkPeers.hashCode( ) );
+    result = prime * result + ( ( this.protocol == null ) ? 0 : this.protocol.hashCode( ) );
     return result;
   }
-  
+
   @Override
-  public boolean equals( final Object obj ) {
+  public boolean equals( Object obj ) {
     if ( this == obj ) {
       return true;
     }
-    if ( obj == null ) {
+    if ( !super.equals( obj ) ) {
       return false;
     }
-    if ( !this.getClass( ).equals( obj.getClass( ) ) ) {
+    if ( getClass( ) != obj.getClass( ) ) {
       return false;
     }
-    final NetworkRule other = ( NetworkRule ) obj;
+    NetworkRule other = ( NetworkRule ) obj;
     if ( this.highPort == null ) {
       if ( other.highPort != null ) {
         return false;
       }
     } else if ( !this.highPort.equals( other.highPort ) ) {
+      return false;
+    }
+    if ( this.ipRanges == null ) {
+      if ( other.ipRanges != null ) {
+        return false;
+      }
+    } else if ( !this.ipRanges.equals( other.ipRanges ) ) {
       return false;
     }
     if ( this.lowPort == null ) {
@@ -228,30 +231,19 @@ public class NetworkRule extends AbstractPersistent {
     } else if ( !this.lowPort.equals( other.lowPort ) ) {
       return false;
     }
-    if ( this.protocol == null ) {
-      if ( other.protocol != null ) {
-        return false;
-      }
-    } else if ( !this.protocol.equals( other.protocol ) ) {
-      return false;
-    }
-    if ( this.ipRanges == null || this.ipRanges.isEmpty( ) ) {
-      if ( other.ipRanges != null && !other.ipRanges.isEmpty( ) ) {
-        return false;
-      }
-    } else if ( !this.ipRanges.equals( other.ipRanges ) ) {
-      return false;
-    }
-    if ( this.networkPeers == null || this.networkPeers.isEmpty( ) ) {
-      if ( other.networkPeers != null && !other.networkPeers.isEmpty( ) ) {
+    if ( this.networkPeers == null ) {
+      if ( other.networkPeers != null ) {
         return false;
       }
     } else if ( !this.networkPeers.equals( other.networkPeers ) ) {
       return false;
     }
+    if ( this.protocol != other.protocol ) {
+      return false;
+    }
     return true;
   }
-  
+
   @Override
   public String toString( ) {
     return String.format( "NetworkRule:%s:%d:%d:ipRanges=%s:networkPeers=%s:",
