@@ -396,6 +396,7 @@ public class UserType extends EuareMessage {
   String arn;
   String enabled;
   String regStatus;
+  String passwordExpiration;
   public UserType() {  }
 }
 @PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_GETUSERPOLICY )

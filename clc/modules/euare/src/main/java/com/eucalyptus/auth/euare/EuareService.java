@@ -3,6 +3,7 @@ package com.eucalyptus.auth.euare;
 import java.math.BigInteger;
 import java.security.KeyPair;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import org.apache.log4j.Logger;
@@ -1495,6 +1496,7 @@ public class EuareService {
   private void fillUserResultExtra( UserType u, User userFound ) {
     u.setEnabled( userFound.isEnabled( ).toString( ) );
     u.setRegStatus( userFound.getRegistrationStatus( ).toString( ) );
+    u.setPasswordExpiration( new Date( userFound.getPasswordExpires( ) ).toString( ) );
   }
   
   private void fillGroupResult( GroupType g, Group groupFound, Account account ) {

@@ -592,6 +592,7 @@
     <value name="Arn" field="arn" usage="required"/>
     <value name="Enabled" field="enabled" usage="optional"/>
     <value name="RegStatus" field="regStatus" usage="optional"/>
+    <value name="PasswordExpiration" field="passwordExpiration" usage="optional"/>
   </mapping>
   <mapping class="com.eucalyptus.auth.euare.SigningCertificateType" abstract="true" extends="com.eucalyptus.auth.euare.EuareMessage">
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
