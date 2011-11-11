@@ -322,6 +322,9 @@ public class Hosts {
             if ( Hosts.localHost( ).hasDatabase( ) ) {
               Hosts.doBootstrap( Eucalyptus.class, Hosts.localHost( ).getBindAddress( ) );
             }
+          } else if ( h.hasDatabase( ) && Hosts.listDatabases( ).size( ) <= 1 ) {
+            hostMap.remove( h.getDisplayName( ) );
+            LOG.info( "Hosts.viewChange(): -> removed  => " + h );
           }
         }
       }
