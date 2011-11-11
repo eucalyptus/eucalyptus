@@ -102,7 +102,6 @@ import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.ServiceTransitions;
 import com.eucalyptus.component.ServiceUris;
-import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Eucalyptus.Database;
 import com.eucalyptus.configurable.ConfigurableClass;
@@ -181,9 +180,17 @@ public class Hosts {
     @Override
     public ServiceConfiguration apply( final ServiceConfiguration input ) {
       try {
-        final ServiceConfiguration conf = ServiceTransitions.pathTo( input, State.DISABLED ).get( );
-        Topology.enable( conf );
-        LOG.info( "Initialized service: " + conf.getFullName( ) );
+        ServiceConfiguration conf = null;
+        if ( !input.isVmLocal( ) && !Hosts.Coordinator.INSTANCE.isLocalhost( ) ) {
+          conf = ServiceTransitions.pathTo( input, State.ENABLED ).get( );          
+          LOG.info( "Initialized enabled service: " + conf.getFullName( ) );
+        } else if ( input.isVmLocal( ) && Hosts.Coordinator.INSTANCE.isLocalhost( ) ) {
+          conf = ServiceTransitions.pathTo( input, State.ENABLED ).get( );          
+          LOG.info( "Initialized enabled service: " + conf.getFullName( ) );
+        } else {
+          conf = ServiceTransitions.pathTo( input, State.DISABLED ).get( );          
+          LOG.info( "Initialized disabled service: " + conf.getFullName( ) );
+        }
         return conf;
       } catch ( final ExecutionException ex ) {
         Exceptions.trace( ex.getCause( ) );
@@ -238,6 +245,9 @@ public class Hosts {
     @Override
     public void fireEvent( final Hertz event ) {
       final Host currentHost = Hosts.localHost( );
+      if ( !BootstrapArgs.isCloudController( ) && currentHost.hasBootstrapped( ) && shouldInitialize( ) ) {
+        System.exit( 123 );
+      }
       if ( event.isAsserted( 15L ) ) {
         UpdateEntry.INSTANCE.apply( currentHost );
       }
@@ -292,7 +302,11 @@ public class Hosts {
           try {
             teardown( Empyrean.class, h.getBindAddress( ) );
             if ( h.hasDatabase( ) ) {
-              Hosts.stopDbPool( h );
+              try {
+                Hosts.stopDbPool( h );
+              } catch ( Exception ex ) {
+                LOG.error( ex , ex );
+              }
               teardown( Eucalyptus.class, h.getBindAddress( ) );
             }
           } catch ( Exception ex ) {
@@ -304,13 +318,14 @@ public class Hosts {
           } else if ( h.hasDatabase( ) && BootstrapArgs.isCloudController( ) ) {
             hostMap.remove( h.getDisplayName( ) );
             LOG.info( "Hosts.viewChange(): -> removed  => " + h );
+            Hosts.doBootstrap( Empyrean.class, Hosts.localHost( ).getBindAddress( ) );
+            if ( Hosts.localHost( ).hasDatabase( ) ) {
+              Hosts.doBootstrap( Eucalyptus.class, Hosts.localHost( ).getBindAddress( ) );
+            }
+          } else if ( h.hasDatabase( ) && Hosts.listDatabases( ).size( ) <= 1 ) {
+            hostMap.remove( h.getDisplayName( ) );
+            LOG.info( "Hosts.viewChange(): -> removed  => " + h );
           }
-        }
-      }
-      if ( BootstrapArgs.isCloudController( ) ) {
-        Hosts.doBootstrap( Empyrean.class, Hosts.localHost( ).getBindAddress( ) );
-        if ( Hosts.localHost( ).hasDatabase( ) ) {
-          Hosts.doBootstrap( Eucalyptus.class, Hosts.localHost( ).getBindAddress( ) );
         }
       }
     }

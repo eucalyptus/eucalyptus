@@ -207,8 +207,12 @@ public class Host implements java.io.Serializable, Comparable<Host> {
     if ( this.timestamp != null ) builder.append( "cts=" ).append( this.startedTime ).append( " " );
     if ( this.lastTime != null ) builder.append( "mts=" ).append( this.timestamp.get( ) ).append( " " );
     if ( this.hostAddresses != null ) builder.append( this.hostAddresses );
-    builder.append( " startTime=" ).append( Hosts.Coordinator.INSTANCE.getCurrentStartTime( ) ); 
-//    if ( this.isLocalHost( ) && Hosts.Coordinator.INSTANCE.isLocalhost( ) ) builder.append( " coordinator" ); 
+    builder.append( " startTime=" ).append( Hosts.Coordinator.INSTANCE.getCurrentStartTime( ) );
+    try {
+      if ( this.isLocalHost( ) && Hosts.Coordinator.INSTANCE.isLocalhost( ) ) builder.append( " coordinator" );
+    } catch ( Exception ex ) {
+      LOG.error( ex , ex );
+    } 
     return builder.toString( );
   }
   
