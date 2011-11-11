@@ -52,10 +52,12 @@ sub ssh_stdout {
     my $cmd=$_[1];
    
     if($source_eucarc){
-       $cmd="source $root_dir/eucarc >/dev/null 2>&1; ".$cmd; 
+       my $ec2_url="http://".$host.":8773/services/Eucalyptus";
+       $cmd="source $root_dir/eucarc >/dev/null 2>&1; export EC2_URL=$ec2_url;".$cmd; 
     }
   
     my $sshcmd = "ssh "."root\@$host"." \"".$cmd."\" > ".$out_file." 2>&1";
+
     $rc = system("rm -f $out_file");
     $rc = system($sshcmd);
     if($rc){
