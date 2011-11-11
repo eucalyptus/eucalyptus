@@ -68,6 +68,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.Callable;
 import org.apache.log4j.Logger;
+import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.component.Component.State;
 import com.eucalyptus.component.ServiceChecks.CheckException;
@@ -342,15 +343,13 @@ public class ServiceTransitions {
           LOG.error( ex, ex );
           throw ex;
         }
-      } else if ( Hosts.Coordinator.INSTANCE.isLocalhost( ) ) {
+      } else {
         try {
           trans = CloudRemoteTransitionCallbacks.valueOf( transitionAction.name( ) );
         } catch ( Exception ex ) {
           LOG.error( ex, ex );
           throw ex;
         }
-      } else {
-        LOG.debug( "Silentlty accepting remotely inferred state transition for " + parent );
       }
       if ( trans != null ) {
         Logs.exhaust( ).debug( "Executing transition: " + trans.getClass( )
