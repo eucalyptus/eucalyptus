@@ -3666,6 +3666,31 @@ int main (int argc, char ** argv)
     logfile (NULL, EUCADEBUG2, 4);
     blobstore_set_error_function (dummy_err_fn);    
 
+    // if an argument is specified, it is treated as a blob name to create 
+    if (argc > 0) {
+        blobstore * bs = blobstore_open (".", BS_SIZE, BLOBSTORE_FORMAT_FILES, BLOBSTORE_REVOCATION_ANY, BLOBSTORE_SNAPSHOT_ANY);
+        if (bs==NULL) {
+            printf ("ERROR: %s\n", blobstore_get_error_str(blobstore_get_error()));
+            return 1;
+        }
+        char * id = argv [1];
+        printf ("---------> opening blob %s\n", id);
+        blockblob * bb = blockblob_open (bs, id, 10, BLOBSTORE_FLAG_CREAT | BLOBSTORE_FLAG_EXCL, NULL, 1000);
+        if (bb==NULL) {
+            if (blobstore_get_error()==BLOBSTORE_ERROR_EXIST) {
+                bb = blockblob_open (bs, id, 10, 0, NULL, 1000);
+            }
+            assert (bb);
+        }
+                
+        printf ("---------> opened blob %s, sleeping...\n", id);
+        sleep (15);
+        printf ("----------> closing blob %s\n", id);
+        blockblob_close (bb);
+        blobstore_close (bs);
+        return 0;
+    }
+
     printf ("testing blobstore.c\n");
 
     errors += do_file_lock_test ();
