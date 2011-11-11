@@ -1329,7 +1329,7 @@ static void set_device_path (blockblob * bb)
     }
 }
 
-static blockblob ** walk_bs (blobstore * bs, const char * dir_path, blockblob ** tail_bb) 
+static blockblob ** walk_bs (blobstore * bs, const char * dir_path, blockblob ** tail_bb, const blockblob * bb_to_avoid) 
 {
     int ret = 0;
     DIR * dir;
@@ -1355,7 +1355,7 @@ static blockblob ** walk_bs (blobstore * bs, const char * dir_path, blockblob **
 
         // recurse if this is a directory
         if (S_ISDIR (sb.st_mode)) {
-            tail_bb = walk_bs (bs, entry_path, tail_bb);
+            tail_bb = walk_bs (bs, entry_path, tail_bb, bb_to_avoid);
             if (tail_bb == NULL) {
                 closedir(dir);
                 return NULL;
@@ -1366,6 +1366,9 @@ static blockblob ** walk_bs (blobstore * bs, const char * dir_path, blockblob **
         char blob_id [BLOBSTORE_MAX_PATH];
         if (typeof_blockblob_metadata_path (bs, entry_path, blob_id, sizeof(blob_id)) != BLOCKBLOB_PATH_BLOCKS)
             continue; // ignore all files except .blocks file
+
+        if (bb_to_avoid!=NULL && strncmp (blob_id, bb_to_avoid->id, sizeof (blob_id))==0)
+            continue; // avoid that particular blockblob
 
         blockblob * bb = calloc (1, sizeof (blockblob));
         if (bb==NULL) {
@@ -1393,10 +1396,10 @@ static blockblob ** walk_bs (blobstore * bs, const char * dir_path, blockblob **
 
 // runs through the blobstore and puts all found blockblobs 
 // into a linked list, returning its head
-static blockblob * scan_blobstore ( blobstore * bs )
+static blockblob * scan_blobstore ( blobstore * bs, const blockblob * bb_to_avoid )
 {
     blockblob * bbs = NULL;
-    if (walk_bs (bs, bs->path, &bbs)==NULL) {
+    if (walk_bs (bs, bs->path, &bbs, bb_to_avoid)==NULL) {
         if (bbs) 
             free_bbs (bbs);
         bbs = NULL;
@@ -1465,7 +1468,7 @@ int blobstore_fsck (blobstore * bs, int (* examiner) (const blockblob * bb))
     
     // put existing items in the blobstore into a LL
     _blobstore_errno = BLOBSTORE_ERROR_OK;
-    blockblob * bbs = scan_blobstore (bs);
+    blockblob * bbs = scan_blobstore (bs, NULL);
 
     if (blobstore_unlock (bs)==-1) {
         ERR (BLOBSTORE_ERROR_UNKNOWN, "failed to unlock the blobstore");
@@ -1539,7 +1542,7 @@ int blobstore_search ( blobstore * bs, const char * regex, blockblob_meta ** res
     
     // put existing items in the blobstore into a LL
     _blobstore_errno = BLOBSTORE_ERROR_OK;
-    bbs = scan_blobstore (bs);
+    bbs = scan_blobstore (bs, NULL);
     if (bbs==NULL) {
         if (_blobstore_errno != BLOBSTORE_ERROR_OK) {
             ret = -1;
@@ -1747,7 +1750,7 @@ blockblob * blockblob_open ( blobstore * bs,
         
         // put existing items in the blobstore into a LL
         _blobstore_errno = BLOBSTORE_ERROR_OK;
-        bbs = scan_blobstore (bs);
+        bbs = scan_blobstore (bs, bb);
         if (bbs==NULL) {
             if (_blobstore_errno != BLOBSTORE_ERROR_OK) {
                 goto clean;
