@@ -24,6 +24,7 @@ import com.eucalyptus.auth.principal.Condition;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.Authorization.EffectType;
+import com.eucalyptus.auth.principal.User.RegistrationStatus;
 import com.google.common.collect.Lists;
 
 /**
@@ -104,8 +105,8 @@ public class PolicyEngineImpl implements PolicyEngine {
       // System admin can do everything
       if ( !requestUser.isSystemAdmin( ) ) {
         // Disabled user can't do anything
-        if ( !requestUser.isEnabled( ) ) {
-          LOG.debug( "Request user is rejected because he/she is not enabled yet" );
+        if ( !requestUser.isEnabled( ) || !RegistrationStatus.CONFIRMED.equals( requestUser.getRegistrationStatus( ) ) ) {
+          LOG.debug( "Request user is rejected because he/she is not enabled or confirmed yet" );
           throw new AuthException( AuthException.ACCESS_DENIED );
         }
         Account account = requestUser.getAccount( );
