@@ -102,7 +102,6 @@ import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.ServiceTransitions;
 import com.eucalyptus.component.ServiceUris;
-import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Eucalyptus.Database;
 import com.eucalyptus.configurable.ConfigurableClass;
@@ -181,8 +180,14 @@ public class Hosts {
     @Override
     public ServiceConfiguration apply( final ServiceConfiguration input ) {
       try {
-        final ServiceConfiguration conf = ServiceTransitions.pathTo( input, State.DISABLED ).get( );
-        Topology.enable( conf );
+        ServiceConfiguration conf = null;
+        if ( !input.isVmLocal( ) && !Hosts.Coordinator.INSTANCE.isLocalhost( ) ) {
+          conf = ServiceTransitions.pathTo( input, State.ENABLED ).get( );          
+        } else if ( input.isVmLocal( ) && Hosts.Coordinator.INSTANCE.isLocalhost( ) ) {
+          conf = ServiceTransitions.pathTo( input, State.ENABLED ).get( );          
+        } else {
+          conf = ServiceTransitions.pathTo( input, State.DISABLED ).get( );          
+        }
         LOG.info( "Initialized service: " + conf.getFullName( ) );
         return conf;
       } catch ( final ExecutionException ex ) {
