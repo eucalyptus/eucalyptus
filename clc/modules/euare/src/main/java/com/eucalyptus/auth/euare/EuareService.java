@@ -1038,6 +1038,9 @@ public class EuareService {
       }
       UserType u = reply.getGetUserResult( ).getUser( );
       fillUserResult( u, userFound, account );
+      if ( request.getShowExtra( ) != null && request.getShowExtra( ) ) {
+        fillUserResultExtra( u, userFound );
+      }
       return reply;
     } catch ( EuareException e ) {
       LOG.error( e, e );
@@ -1487,7 +1490,11 @@ public class EuareService {
     u.setUserId( userFound.getUserId( ) );
     u.setPath( userFound.getPath( ) );
     u.setArn( ( new EuareResourceName( account.getName( ), PolicySpec.IAM_RESOURCE_USER, userFound.getPath( ), userFound.getName( ) ) ).toString( ) );
+  }
+  
+  private void fillUserResultExtra( UserType u, User userFound ) {
     u.setEnabled( userFound.isEnabled( ).toString( ) );
+    u.setRegStatus( userFound.getRegistrationStatus( ).toString( ) );
   }
   
   private void fillGroupResult( GroupType g, Group groupFound, Account account ) {

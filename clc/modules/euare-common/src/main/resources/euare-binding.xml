@@ -475,6 +475,7 @@
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
     <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
     <value name="UserName" field="userName" usage="optional"/>
+    <value name="ShowExtra" field="showExtra" usage="optional"/>
   </mapping>
   <mapping name="GetUserResponse" class="com.eucalyptus.auth.euare.GetUserResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
@@ -590,6 +591,7 @@
     <value name="UserId" field="userId" usage="required"/>
     <value name="Arn" field="arn" usage="required"/>
     <value name="Enabled" field="enabled" usage="optional"/>
+    <value name="RegStatus" field="regStatus" usage="optional"/>
   </mapping>
   <mapping class="com.eucalyptus.auth.euare.SigningCertificateType" abstract="true" extends="com.eucalyptus.auth.euare.EuareMessage">
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
