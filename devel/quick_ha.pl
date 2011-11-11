@@ -136,16 +136,41 @@ sub run_on {
     }
 }
 
+sub check_on {
+    my $cmd=$_[0];
+    my %map=%{$_[1]};
+
+    foreach $h (keys %map) {
+      if (not defined $map{$h}){ next;}
+      ($rc, $stdout) = &ssh_stdout($h,$cmd);
+      if($rc){
+           print "[$h] FAILED\n";
+      }else{
+           print "[$h] SUCCESS\n";
+      }
+    }
+}
+
+
 sub run_on_clc {
     &run_on($_[0],$_[1],\%host_cloud_map);
+}
+sub check_on_clc {
+    &check_on($_[0],\%host_cloud_map);
 }
 
 sub run_on_cc {
     &run_on($_[0],$_[1],\%host_cc_map);
 }
+sub check_on_cc {
+    &check_on($_[0], \%host_cc_map);
+}
 
 sub run_on_nc {
     &run_on($_[0],$_[1],\%host_nc_map);
+}
+sub check_on_nc {
+    &check_on($_[0], \%host_nc_map);
 }
 
 ######## MAIN #############
