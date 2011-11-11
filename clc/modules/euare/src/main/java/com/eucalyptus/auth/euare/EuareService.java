@@ -159,6 +159,8 @@ public class EuareService {
           throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.DELETE_CONFLICT, "Account " + request.getAccountName( ) + " can not be deleted." );
         } else if ( AuthException.DELETE_SYSTEM_ACCOUNT.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.DELETE_CONFLICT, "System account can not be deleted." );
+        } else if ( AuthException.EMPTY_ACCOUNT_NAME.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Empty account name" );
         }
       }
       throw new EucalyptusCloudException( e );
@@ -224,16 +226,9 @@ public class EuareService {
     Context ctx = Contexts.lookup( );
     User requestUser = ctx.getUser( );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
-    User userFound = null;
-    try {
-      userFound = account.lookupUserByName( request.getUserName( ) );
-    } catch ( Exception e ) {
-      LOG.error( e, e );
-      if ( e instanceof AuthException && AuthException.NO_SUCH_USER.equals( e.getMessage( ) ) ) {
-        throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find user " + request.getUserName( ) );
-      } else {
-        throw new EucalyptusCloudException( e );
-      }
+    User userFound = requestUser;
+    if ( !Strings.isNullOrEmpty( request.getUserName( ) ) ) {
+      userFound = lookupUserByName( account, request.getUserName( ) );
     }
     try {
       Privileged.deleteAccessKey( requestUser, account, userFound, request.getAccessKeyId( ) );
@@ -242,6 +237,8 @@ public class EuareService {
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to delete access key of " + request.getUserName( ) + "by " + requestUser.getName( ) );
+        } else if ( AuthException.EMPTY_KEY_ID.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_ID, "Empty key id" );
         }
       }
       throw new EucalyptusCloudException( e );
@@ -256,17 +253,8 @@ public class EuareService {
     User requestUser = ctx.getUser( );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     User userFound = requestUser;
-    if ( request.getUserName( ) != null ) {
-      try {
-        userFound = account.lookupUserByName( request.getUserName( ) );
-      } catch ( Exception e ) {
-        LOG.error( e, e );
-        if ( e instanceof AuthException && AuthException.NO_SUCH_USER.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find user " + request.getUserName( ) );
-        } else {
-          throw new EucalyptusCloudException( e );
-        }
-      }
+    if ( !Strings.isNullOrEmpty( request.getUserName( ) ) ) {
+      userFound = lookupUserByName( account, request.getUserName( ) );
     }
     // TODO(Ye Wen, 01/26/2011): support pagination
     ListSigningCertificatesResultType result = reply.getListSigningCertificatesResult( );
@@ -300,16 +288,9 @@ public class EuareService {
     Context ctx = Contexts.lookup( );
     User requestUser = ctx.getUser( );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
-    User userFound = null;
-    try {
-      userFound = account.lookupUserByName( request.getUserName( ) );
-    } catch ( Exception e ) {
-      LOG.error( e, e );
-      if ( e instanceof AuthException && AuthException.NO_SUCH_USER.equals( e.getMessage( ) ) ) {
-        throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find user " + request.getUserName( ) );
-      } else {
-        throw new EucalyptusCloudException( e );
-      }
+    User userFound = requestUser;
+    if ( !Strings.isNullOrEmpty( request.getUserName( ) ) ) {
+      userFound = lookupUserByName( account, request.getUserName( ) );
     }
     try {
       Certificate cert = Privileged.uploadSigningCertificate( requestUser, account, userFound, request.getCertificateBody( ) );
@@ -328,6 +309,8 @@ public class EuareService {
           throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.DUPLICATE_CERTIFICATE, "Trying to upload duplicate certificate" );          
         } else if ( AuthException.INVALID_CERT.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_CERTIFICATE, "Invalid certificate " + request.getCertificateBody( ) );
+        } else if ( AuthException.EMPTY_CERT.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.MALFORMED_CERTIFICATE, "Empty certificate body" );
         }
       }
       throw new EucalyptusCloudException( e );
@@ -341,17 +324,7 @@ public class EuareService {
     Context ctx = Contexts.lookup( );
     User requestUser = ctx.getUser( );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
-    User userFound = null;
-    try {
-      userFound = account.lookupUserByName( request.getUserName( ) );
-    } catch ( Exception e ) {
-      LOG.error( e, e );
-      if ( e instanceof AuthException && AuthException.NO_SUCH_USER.equals( e.getMessage( ) ) ) {
-        throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find user " + request.getUserName( ) );
-      } else {
-        throw new EucalyptusCloudException( e );
-      }
-    }
+    User userFound = lookupUserByName( account, request.getUserName( ) );
     try {
       Privileged.deleteUserPolicy( requestUser, account, userFound, request.getPolicyName( ) );
     } catch ( Exception e ) {
@@ -359,6 +332,8 @@ public class EuareService {
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to delete policy for user " + request.getUserName( ) + " by " + requestUser.getName( ) );
+        } else if ( AuthException.EMPTY_POLICY_NAME.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Empty policy name" );
         }
       }
       throw new EucalyptusCloudException( e );
@@ -372,17 +347,7 @@ public class EuareService {
     Context ctx = Contexts.lookup( );
     User requestUser = ctx.getUser( );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
-    User userFound = null;
-    try {
-      userFound = account.lookupUserByName( request.getUserName( ) );
-    } catch ( Exception e ) {
-      LOG.error( e, e );
-      if ( e instanceof AuthException && AuthException.NO_SUCH_USER.equals( e.getMessage( ) ) ) {
-        throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find user " + request.getUserName( ) );
-      } else {
-        throw new EucalyptusCloudException( e );
-      }
-    }
+    User userFound = lookupUserByName( account, request.getUserName( ) );
     try {
       Privileged.putUserPolicy( requestUser, account, userFound, request.getPolicyName( ), request.getPolicyDocument( ) );
     } catch ( PolicyParseException e ) {
@@ -414,17 +379,7 @@ public class EuareService {
     Context ctx = Contexts.lookup( );
     User requestUser = ctx.getUser( );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
-    User userFound = null;
-    try {
-      userFound = account.lookupUserByName( request.getUserName( ) );
-    } catch ( Exception e ) {
-      LOG.error( e, e );
-      if ( e instanceof AuthException && AuthException.NO_SUCH_USER.equals( e.getMessage( ) ) ) {
-        throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find user " + request.getUserName( ) );
-      } else {
-        throw new EucalyptusCloudException( e );
-      }
-    }
+    User userFound = lookupUserByName( account, request.getUserName( ) );
     try {
       Policy policy = Privileged.getUserPolicy( requestUser, account, userFound, request.getPolicyName( ) );
       if ( policy != null ) {
@@ -435,13 +390,17 @@ public class EuareService {
       } else {
         throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find policy " + request.getPolicyName( ) );
       }
+    } catch ( EuareException e ) {
+      LOG.error( e, e );
+      throw e;
     } catch ( Exception e ) {
       LOG.error( e, e );
-      if ( e instanceof EuareException ) {
-        throw ( EuareException ) e;
-      }
       if ( e instanceof AuthException ) {
-        throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to get user policies for " + request.getUserName( ) + " by " + requestUser.getName( ) );
+        if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to get user policies for " + request.getUserName( ) + " by " + requestUser.getName( ) );
+        } else if ( AuthException.EMPTY_POLICY_NAME.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Empty policy name" );
+        }
       }
       throw new EucalyptusCloudException( e );
     }
@@ -454,17 +413,7 @@ public class EuareService {
     Context ctx = Contexts.lookup( );
     User requestUser = ctx.getUser( );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
-    User userFound = null;
-    try {
-      userFound = account.lookupUserByName( request.getUserName( ) );
-    } catch ( Exception e ) {
-      LOG.error( e, e );
-      if ( e instanceof AuthException && AuthException.NO_SUCH_USER.equals( e.getMessage( ) ) ) {
-        throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find user " + request.getUserName( ) );
-      } else {
-        throw new EucalyptusCloudException( e );
-      }
-    }
+    User userFound = lookupUserByName( account, request.getUserName( ) );
     try {
       Privileged.updateLoginProfile( requestUser, account, userFound, request.getPassword( ) );
     } catch ( Exception e ) {
@@ -493,20 +442,11 @@ public class EuareService {
     Context ctx = Contexts.lookup( );
     User requestUser = ctx.getUser( );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
-    User userFound = null;
-    try {
-      userFound = account.lookupUserByName( request.getUserName( ) );
-    } catch ( Exception e ) {
-      LOG.error( e, e );
-      if ( e instanceof AuthException && AuthException.NO_SUCH_USER.equals( e.getMessage( ) ) ) {
-        throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find user " + request.getUserName( ) );
-      } else {
-        throw new EucalyptusCloudException( e );
-      }
-    }
+    User userFound = lookupUserByName( account, request.getUserName( ) );
     try {
       String newPath = request.getNewPath( ) != null ? sanitizePath( request.getNewPath( ) ) : null;
-      Privileged.modifyUser( requestUser, account, userFound, request.getNewUserName( ), newPath, null/*enabled*/, null/*passwordExpires*/, null/*info*/ );
+      Boolean enabled = request.getEnabled( ) != null ? "true".equalsIgnoreCase( request.getEnabled( ) ) : null;
+      Privileged.modifyUser( requestUser, account, userFound, request.getNewUserName( ), newPath, enabled, null/*passwordExpires*/, null/*info*/ );
     } catch ( Exception e ) {
       LOG.error( e, e );
       if ( e instanceof AuthException ) {
@@ -531,17 +471,7 @@ public class EuareService {
     Context ctx = Contexts.lookup( );
     User requestUser = ctx.getUser( );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
-    User userFound = null;
-    try {
-      userFound = account.lookupUserByName( request.getUserName( ) );
-    } catch ( Exception e ) {
-      LOG.error( e, e );
-      if ( e instanceof AuthException && AuthException.NO_SUCH_USER.equals( e.getMessage( ) ) ) {
-        throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find user " + request.getUserName( ) );
-      } else {
-        throw new EucalyptusCloudException( e );
-      }
-    }
+    User userFound = lookupUserByName( account, request.getUserName( ) );
     try {
       Privileged.deleteLoginProfile( requestUser, account, userFound );
     } catch ( Exception e ) {
@@ -562,16 +492,9 @@ public class EuareService {
     Context ctx = Contexts.lookup( );
     User requestUser = ctx.getUser( );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
-    User userFound = null;
-    try {
-      userFound = account.lookupUserByName( request.getUserName( ) );
-    } catch ( Exception e ) {
-      LOG.error( e, e );
-      if ( e instanceof AuthException && AuthException.NO_SUCH_USER.equals( e.getMessage( ) ) ) {
-        throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find user " + request.getUserName( ) );
-      } else {
-        throw new EucalyptusCloudException( e );
-      }
+    User userFound = requestUser;
+    if ( !Strings.isNullOrEmpty( request.getUserName( ) ) ) {
+      userFound = lookupUserByName( account, request.getUserName( ) );
     }
     try {
       Privileged.modifySigningCertificate( requestUser, account, userFound, request.getCertificateId( ), request.getStatus( ) );
@@ -582,6 +505,10 @@ public class EuareService {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to update signing certificate of " + request.getUserName( ) + "by " + requestUser.getName( ) );
         } else if ( AuthException.NO_SUCH_CERTIFICATE.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find the certificate " + request.getCertificateId( ) );
+        } else if ( AuthException.EMPTY_STATUS.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_VALUE, "Empty status" );
+        } else if ( AuthException.EMPTY_CERT_ID.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_ID, "Empty certificate id" );
         }
       }
       throw new EucalyptusCloudException( e );
@@ -595,17 +522,7 @@ public class EuareService {
     Context ctx = Contexts.lookup( );
     User requestUser = ctx.getUser( );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
-    Group groupFound = null;
-    try {
-      groupFound = account.lookupGroupByName( request.getGroupName( ) );
-    } catch ( Exception e ) {
-      LOG.error( e, e );
-      if ( e instanceof AuthException && AuthException.NO_SUCH_GROUP.equals( e.getMessage( ) ) ) {
-        throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find group " + request.getGroupName( ) );
-      } else {
-        throw new EucalyptusCloudException( e );
-      }
-    }
+    Group groupFound = lookupGroupByName( account, request.getGroupName( ) );
     try {
       Privileged.deleteGroupPolicy( requestUser, account, groupFound, request.getPolicyName( ) );
     } catch ( Exception e ) {
@@ -613,6 +530,8 @@ public class EuareService {
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to delete group policy of " + request.getGroupName( ) + " by " + requestUser.getName( ) );
+        } else if ( AuthException.EMPTY_POLICY_NAME.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Empty policy name" );
         }
       }
       throw new EucalyptusCloudException( e );
@@ -657,17 +576,7 @@ public class EuareService {
     Context ctx = Contexts.lookup( );
     User requestUser = ctx.getUser( );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
-    Group groupFound = null;
-    try {
-      groupFound = account.lookupGroupByName( request.getGroupName( ) );
-    } catch ( Exception e ) {
-      LOG.error( e, e );
-      if ( e instanceof AuthException && AuthException.NO_SUCH_GROUP.equals( e.getMessage( ) ) ) {
-        throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find group " + request.getGroupName( ) );
-      } else {
-        throw new EucalyptusCloudException( e );
-      }
-    }
+    Group groupFound = lookupGroupByName( account, request.getGroupName( ) );
     try {
       String newPath = request.getNewPath( ) != null ? sanitizePath( request.getNewPath( ) ) : null;
       Privileged.modifyGroup( requestUser, account, groupFound, request.getNewGroupName( ), newPath );
@@ -701,17 +610,7 @@ public class EuareService {
     Context ctx = Contexts.lookup( );
     User requestUser = ctx.getUser( );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
-    Group groupFound = null;
-    try {
-      groupFound = account.lookupGroupByName( request.getGroupName( ) );
-    } catch ( Exception e ) {
-      LOG.error( e, e );
-      if ( e instanceof AuthException && AuthException.NO_SUCH_GROUP.equals( e.getMessage( ) ) ) {
-        throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find group " + request.getGroupName( ) );
-      } else {
-        throw new EucalyptusCloudException( e );
-      }
-    }
+    Group groupFound = lookupGroupByName( account, request.getGroupName( ) );
     try {
       Privileged.putGroupPolicy( requestUser, account, groupFound, request.getPolicyName( ), request.getPolicyDocument( ) );
     } catch ( PolicyParseException e ) {
@@ -767,16 +666,9 @@ public class EuareService {
     Context ctx = Contexts.lookup( );
     User requestUser = ctx.getUser( );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
-    User userFound = null;
-    try {
-      userFound = account.lookupUserByName( request.getUserName( ) );
-    } catch ( Exception e ) {
-      LOG.error( e, e );
-      if ( e instanceof AuthException && AuthException.NO_SUCH_USER.equals( e.getMessage( ) ) ) {
-        throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find user " + request.getUserName( ) );
-      } else {
-        throw new EucalyptusCloudException( e );
-      }
+    User userFound = requestUser;
+    if ( !Strings.isNullOrEmpty( request.getUserName( ) ) ) {
+      userFound = lookupUserByName( account, request.getUserName( ) );
     }
     try {
       Privileged.deleteSigningCertificate( requestUser, account, userFound, request.getCertificateId( ) );
@@ -786,6 +678,8 @@ public class EuareService {
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to delete cert for user " + request.getUserName( ) + " by " + requestUser.getName( ) );
+        } else if ( AuthException.EMPTY_CERT_ID.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_ID, "Empty certificate id" );
         }
       }
       throw new EucalyptusCloudException( e );
@@ -804,17 +698,7 @@ public class EuareService {
     Context ctx = Contexts.lookup( );
     User requestUser = ctx.getUser( );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
-    User userFound = null;
-    try {
-      userFound = account.lookupUserByName( request.getUserName( ) );
-    } catch ( Exception e ) {
-      LOG.error( e, e );
-      if ( e instanceof AuthException && AuthException.NO_SUCH_USER.equals( e.getMessage( ) ) ) {
-        throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find user " + request.getUserName( ) );
-      } else {
-        throw new EucalyptusCloudException( e );
-      }
-    }
+    User userFound = lookupUserByName( account, request.getUserName( ) );
     // TODO(Ye Wen, 01/26/2011): support pagination
     ListUserPoliciesResultType result = reply.getListUserPoliciesResult( );
     result.setIsTruncated( false );
@@ -842,17 +726,8 @@ public class EuareService {
     User requestUser = ctx.getUser( );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     User userFound = requestUser;
-    if ( request.getUserName( ) != null ) {
-      try {
-        userFound = account.lookupUserByName( request.getUserName( ) );
-      } catch ( Exception e ) {
-        LOG.error( e, e );
-        if ( e instanceof AuthException && AuthException.NO_SUCH_USER.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find user " + request.getUserName( ) );
-        } else {
-          throw new EucalyptusCloudException( e );
-        }
-      }
+    if ( !Strings.isNullOrEmpty( request.getUserName( ) ) ) {
+      userFound = lookupUserByName( account, request.getUserName( ) );
     }
     // TODO(Ye Wen, 01/26/2011): add pagination support
     ListAccessKeysResultType result = reply.getListAccessKeysResult( );
@@ -884,17 +759,7 @@ public class EuareService {
     Context ctx = Contexts.lookup( );
     User requestUser = ctx.getUser( );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
-    User userFound = null;
-    try {
-      userFound = account.lookupUserByName( request.getUserName( ) );
-    } catch ( Exception e ) {
-      LOG.error( e, e );
-      if ( e instanceof AuthException && AuthException.NO_SUCH_USER.equals( e.getMessage( ) ) ) {
-        throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find user " + request.getUserName( ) );
-      } else {
-        throw new EucalyptusCloudException( e );
-      }
-    }
+    User userFound = lookupUserByName( account, request.getUserName( ) );
     if ( userFound.getPassword( ) == null ) {
       throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find login profile for " + request.getUserName( ) );
     }
@@ -920,17 +785,7 @@ public class EuareService {
     Context ctx = Contexts.lookup( );
     User requestUser = ctx.getUser( );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
-    User userFound = null;
-    try {
-      userFound = account.lookupUserByName( request.getUserName( ) );
-    } catch ( Exception e ) {
-      LOG.error( e, e );
-      if ( e instanceof AuthException && AuthException.NO_SUCH_USER.equals( e.getMessage( ) ) ) {
-        throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find user " + request.getUserName( ) );
-      } else {
-        throw new EucalyptusCloudException( e );
-      }
-    }
+    User userFound = lookupUserByName( account, request.getUserName( ) );
     // TODO(Ye Wen, 01/16/2011): support pagination
     reply.getListGroupsForUserResult( ).setIsTruncated( false );
     ArrayList<GroupType> groups = reply.getListGroupsForUserResult( ).getGroups( ).getMemberList( );
@@ -995,17 +850,7 @@ public class EuareService {
     Context ctx = Contexts.lookup( );
     User requestUser = ctx.getUser( );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
-    Group groupFound = null;
-    try {
-      groupFound = account.lookupGroupByName( request.getGroupName( ) );
-    } catch ( Exception e ) {
-      LOG.error( e, e );
-      if ( e instanceof AuthException && AuthException.NO_SUCH_GROUP.equals( e.getMessage( ) ) ) {
-        throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find group " + request.getGroupName( ) );
-      } else {
-        throw new EucalyptusCloudException( e );
-      }
-    }
+    Group groupFound = lookupGroupByName( account, request.getGroupName( ) );
     try {
       Policy policy = Privileged.getGroupPolicy( requestUser, account, groupFound, request.getPolicyName( ) );
       if ( policy != null ) {
@@ -1016,14 +861,16 @@ public class EuareService {
       } else {
         throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find policy " + request.getPolicyName( ) );
       }
+    } catch ( EuareException e ) {
+      LOG.error( e, e );
+      throw e;
     } catch ( Exception e ) {
       LOG.error( e, e );
-      if ( e instanceof EuareException ) {
-        throw ( EuareException ) e;
-      }
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to get group policy for " + request.getGroupName( ) + " by " + requestUser.getName( ) );
+        } else if ( AuthException.EMPTY_POLICY_NAME.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Empty policy name" );
         }
       }
       throw new EucalyptusCloudException( e );
@@ -1037,20 +884,7 @@ public class EuareService {
     Context ctx = Contexts.lookup( );
     User requestUser = ctx.getUser( );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
-    User userToDelete = null;
-    try {
-      userToDelete = account.lookupUserByName( request.getUserName( ) );
-      if ( userToDelete.isSystemAdmin( ) && userToDelete.isAccountAdmin( ) ) {
-        throw new AuthException( "admin@eucalyptus can not be deleted" );
-      }
-    } catch ( Exception e ) {
-      LOG.error( e, e );
-      if ( e instanceof AuthException && AuthException.NO_SUCH_USER.equals( e.getMessage( ) ) ) {
-        throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find user " + request.getUserName( ) );
-      } else {
-        throw new EucalyptusCloudException( e );
-      }
-    }
+    User userToDelete = lookupUserByName( account, request.getUserName( ) );
     try {
       boolean recursive = request.getIsRecursive( ) != null && request.getIsRecursive( );
       Privileged.deleteUser( requestUser, account, userToDelete, recursive );
@@ -1080,28 +914,8 @@ public class EuareService {
     Context ctx = Contexts.lookup( );
     User requestUser = ctx.getUser( );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
-    User userFound = null;
-    try {
-      userFound = account.lookupUserByName( request.getUserName( ) );
-    } catch ( Exception e ) {
-      LOG.error( e, e );
-      if ( e instanceof AuthException && AuthException.NO_SUCH_USER.equals( e.getMessage( ) ) ) {
-        throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find user " + request.getUserName( ) );
-      } else {
-        throw new EucalyptusCloudException( e );
-      }
-    }
-    Group groupFound = null;
-    try {
-      groupFound = account.lookupGroupByName( request.getGroupName( ) );
-    } catch ( Exception e ) {
-      LOG.error( e, e );
-      if ( e instanceof AuthException && AuthException.NO_SUCH_GROUP.equals( e.getMessage( ) ) ) {
-        throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find group " + request.getGroupName( ) );
-      } else {
-        throw new EucalyptusCloudException( e );
-      }
-    }
+    User userFound = lookupUserByName( account, request.getUserName( ) );
+    Group groupFound = lookupGroupByName( account, request.getGroupName( ) );
     try {
       Privileged.removeUserFromGroup( requestUser, account, userFound, groupFound );
     } catch ( Exception e ) {
@@ -1130,17 +944,7 @@ public class EuareService {
     Context ctx = Contexts.lookup( );
     User requestUser = ctx.getUser( );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
-    Group groupFound = null;
-    try {
-      groupFound = account.lookupGroupByName( request.getGroupName( ) );
-    } catch ( Exception e ) {
-      LOG.error( e, e );
-      if ( e instanceof AuthException && AuthException.NO_SUCH_GROUP.equals( e.getMessage( ) ) ) {
-        throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find group " + request.getGroupName( ) );
-      } else {
-        throw new EucalyptusCloudException( e );
-      }
-    }
+    Group groupFound = lookupGroupByName( account, request.getGroupName( ) );
     // TODO(Ye Wen, 01/26/2011): support pagination
     ListGroupPoliciesResultType result = reply.getListGroupPoliciesResult( );
     result.setIsTruncated( false );
@@ -1167,17 +971,7 @@ public class EuareService {
     Context ctx = Contexts.lookup( );
     User requestUser = ctx.getUser( );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
-    User userFound = null;
-    try {
-      userFound = account.lookupUserByName( request.getUserName( ) );
-    } catch ( Exception e ) {
-      LOG.error( e, e );
-      if ( e instanceof AuthException && AuthException.NO_SUCH_USER.equals( e.getMessage( ) ) ) {
-        throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find user " + request.getUserName( ) );
-      } else {
-        throw new EucalyptusCloudException( e );
-      }
-    }
+    User userFound = lookupUserByName( account, request.getUserName( ) );
     if ( userFound.getPassword( ) != null ) {
       throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.ENTITY_ALREADY_EXISTS, "User " + userFound.getName( ) + " already has a login profile" );
     }
@@ -1204,16 +998,9 @@ public class EuareService {
     Context ctx = Contexts.lookup( );
     User requestUser = ctx.getUser( );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
-    User userFound = null;
-    try {
-      userFound = account.lookupUserByName( request.getUserName( ) );
-    } catch ( Exception e ) {
-      LOG.error( e, e );
-      if ( e instanceof AuthException && AuthException.NO_SUCH_USER.equals( e.getMessage( ) ) ) {
-        throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find user " + request.getUserName( ) );
-      } else {
-        throw new EucalyptusCloudException( e );
-      }
+    User userFound = requestUser;
+    if ( !Strings.isNullOrEmpty( request.getUserName( ) ) ) {
+      userFound = lookupUserByName( account, request.getUserName( ) );
     }
     try {
       AccessKey key = Privileged.createAccessKey( requestUser, account, userFound );
@@ -1242,17 +1029,8 @@ public class EuareService {
     User requestUser = ctx.getUser( );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     User userFound = requestUser;
-    if ( request.getUserName( ) != null ) {
-      try {
-        userFound = account.lookupUserByName( request.getUserName( ) );
-      } catch ( Exception e ) {
-        LOG.error( e, e );
-        if ( e instanceof AuthException && AuthException.NO_SUCH_USER.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find user " + request.getUserName( ) );
-        } else {
-          throw new EucalyptusCloudException( e );
-        }
-      }
+    if ( !Strings.isNullOrEmpty( request.getUserName( ) ) ) {
+      userFound = lookupUserByName( account, request.getUserName( ) );
     }
     try {
       if ( !Privileged.allowReadUser( requestUser, account, userFound ) ) {
@@ -1288,16 +1066,9 @@ public class EuareService {
     Context ctx = Contexts.lookup( );
     User requestUser = ctx.getUser( );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
-    User userFound = null;
-    try {
-      userFound = account.lookupUserByName( request.getUserName( ) );
-    } catch ( Exception e ) {
-      LOG.error( e, e );
-      if ( e instanceof AuthException && AuthException.NO_SUCH_USER.equals( e.getMessage( ) ) ) {
-        throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find user " + request.getUserName( ) );
-      } else {
-        throw new EucalyptusCloudException( e );
-      }
+    User userFound = requestUser;
+    if ( !Strings.isNullOrEmpty( request.getUserName( ) ) ) {
+      userFound = lookupUserByName( account, request.getUserName( ) );
     }
     try {
       Privileged.modifyAccessKey( requestUser, account, userFound, request.getAccessKeyId( ), request.getStatus( ) );
@@ -1306,6 +1077,10 @@ public class EuareService {
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to update access key of " + request.getUserName( ) + "by " + requestUser.getName( ) );
+        } else if ( AuthException.EMPTY_KEY_ID.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_ID, "Empty access key id" );
+        } else if ( AuthException.EMPTY_STATUS.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_VALUE, "Empty status" );
         }
       }
       throw new EucalyptusCloudException( e );
@@ -1319,28 +1094,8 @@ public class EuareService {
     Context ctx = Contexts.lookup( );
     User requestUser = ctx.getUser( );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
-    User userFound = null;
-    try {
-      userFound = account.lookupUserByName( request.getUserName( ) );
-    } catch ( Exception e ) {
-      LOG.error( e, e );
-      if ( e instanceof AuthException && AuthException.NO_SUCH_USER.equals( e.getMessage( ) ) ) {
-        throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find user " + request.getUserName( ) );
-      } else {
-        throw new EucalyptusCloudException( e );
-      }
-    }
-    Group groupFound = null;
-    try {
-      groupFound = account.lookupGroupByName( request.getGroupName( ) );
-    } catch ( Exception e ) {
-      LOG.error( e, e );
-      if ( e instanceof AuthException && AuthException.NO_SUCH_GROUP.equals( e.getMessage( ) ) ) {
-        throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find group " + request.getGroupName( ) );
-      } else {
-        throw new EucalyptusCloudException( e );
-      }
-    }
+    User userFound = lookupUserByName( account, request.getUserName( ) );
+    Group groupFound = lookupGroupByName( account, request.getGroupName( ) );
     // TODO(Ye Wen, 01/22/2011): add group level quota?
     try {
       Privileged.addUserToGroup( requestUser, account, userFound, groupFound );
@@ -1364,17 +1119,7 @@ public class EuareService {
     Context ctx = Contexts.lookup( );
     User requestUser = ctx.getUser( );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
-    Group groupFound = null;
-    try {
-      groupFound = account.lookupGroupByName( request.getGroupName( ) );
-    } catch ( Exception e ) {
-      LOG.error( e, e );
-      if ( e instanceof AuthException && AuthException.NO_SUCH_GROUP.equals( e.getMessage( ) ) ) {
-        throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find group " + request.getGroupName( ) );
-      } else {
-        throw new EucalyptusCloudException( e );
-      }
-    }
+    Group groupFound = lookupGroupByName( account, request.getGroupName( ) );
     // TODO(Ye Wen, 01/26/2011): Consider pagination
     try {
       if ( !Privileged.allowReadGroup( requestUser, account, groupFound ) ) {
@@ -1404,17 +1149,7 @@ public class EuareService {
     Context ctx = Contexts.lookup( );
     User requestUser = ctx.getUser( );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
-    Group groupFound = null;
-    try {
-      groupFound = account.lookupGroupByName( request.getGroupName( ) );
-    } catch ( Exception e ) {
-      LOG.error( e, e );
-      if ( e instanceof AuthException && AuthException.NO_SUCH_GROUP.equals( e.getMessage( ) ) ) {
-        throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find group " + request.getGroupName( ) );
-      } else {
-        throw new EucalyptusCloudException( e );
-      }
-    }
+    Group groupFound = lookupGroupByName( account, request.getGroupName( ) );
     try {
       boolean recursive = request.getIsRecursive( ) != null && request.getIsRecursive( );
       Privileged.deleteGroup( requestUser, account, groupFound, recursive );
@@ -1472,6 +1207,8 @@ public class EuareService {
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to delete account alias by " + requestUser.getName( ) );          
+        } else if ( AuthException.EMPTY_ACCOUNT_NAME.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_VALUE, "Empty account alias" );
         }
       }
       throw new EucalyptusCloudException( e );
@@ -1534,16 +1271,9 @@ public class EuareService {
     Context ctx = Contexts.lookup( );
     User requestUser = ctx.getUser( );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
-    User userFound = null;
-    try {
-      userFound = account.lookupUserByName( request.getUserName( ) );
-    } catch ( Exception e ) {
-      LOG.error( e, e );
-      if ( e instanceof AuthException && AuthException.NO_SUCH_USER.equals( e.getMessage( ) ) ) {
-        throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find user " + request.getUserName( ) );
-      } else {
-        throw new EucalyptusCloudException( e );
-      }
+    User userFound = requestUser;
+    if ( !Strings.isNullOrEmpty( request.getUserName( ) ) ) {
+      userFound = lookupUserByName( account, request.getUserName( ) );
     }
     try {
       KeyPair keyPair = Certs.generateKeyPair( );
@@ -1574,17 +1304,8 @@ public class EuareService {
     User requestUser = ctx.getUser( );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     User userFound = requestUser;
-    if ( request.getUserName( ) != null ) {
-      try {
-        userFound = account.lookupUserByName( request.getUserName( ) );
-      } catch ( Exception e ) {
-        LOG.error( e, e );
-        if ( e instanceof AuthException && AuthException.NO_SUCH_USER.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find user " + request.getUserName( ) );
-        } else {
-          throw new EucalyptusCloudException( e );
-        }
-      }
+    if ( !Strings.isNullOrEmpty( request.getUserName( ) ) ) {
+      userFound = lookupUserByName( account, request.getUserName( ) );
     }
     try {
       if ( !Privileged.allowReadUser( requestUser, account, userFound ) ) {
@@ -1592,7 +1313,7 @@ public class EuareService {
       }
       ArrayList<UserInfoType> infos = reply.getGetUserInfoResult( ).getInfos( ).getMemberList( );
       Map<String, String> infoMap = userFound.getInfo( );
-      if ( request.getInfoKey( ) != null ) {
+      if ( !Strings.isNullOrEmpty( request.getInfoKey( ) ) ) {
         String value = infoMap.get( request.getInfoKey( ) );
         if ( value != null ) {
           UserInfoType ui = new UserInfoType( );
@@ -1624,21 +1345,9 @@ public class EuareService {
     Context ctx = Contexts.lookup( );
     User requestUser = ctx.getUser( );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
-    User userFound = requestUser;
-    if ( request.getUserName( ) != null ) {
-      try {
-        userFound = account.lookupUserByName( request.getUserName( ) );
-      } catch ( Exception e ) {
-        LOG.error( e, e );
-        if ( e instanceof AuthException && AuthException.NO_SUCH_USER.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find user " + request.getUserName( ) );
-        } else {
-          throw new EucalyptusCloudException( e );
-        }
-      }
-    }
-    if ( request.getInfoKey( ) == null ) {
-      throw new EuareException( HttpResponseStatus.BAD_REQUEST, "Empty key name", "Empty key name" );
+    User userFound = lookupUserByName( account, request.getUserName( ) );
+    if ( Strings.isNullOrEmpty( request.getInfoKey( ) ) ) {
+      throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Empty key name" );
     }
     try {
       Privileged.updateUserInfoItem( requestUser, account, userFound, request.getInfoKey( ), request.getInfoValue( ) );
@@ -1659,17 +1368,7 @@ public class EuareService {
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
     User requestUser = ctx.getUser( );
-    Account accountFound = null;
-    try {
-      accountFound = Accounts.lookupAccountByName( request.getAccountName( ) );
-    } catch ( Exception e ) {
-      LOG.error( e, e );
-      if ( e instanceof AuthException && AuthException.NO_SUCH_ACCOUNT.equals( e.getMessage( ) ) ) {
-        throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find account " + request.getAccountName( ) );
-      } else {
-        throw new EucalyptusCloudException( e );
-      }
-    }
+    Account accountFound = lookupAccountByName( request.getAccountName( ) );
     try {
       Privileged.putAccountPolicy( ctx.hasAdministrativePrivileges( ), accountFound, request.getPolicyName( ), request.getPolicyDocument( ) );
     } catch ( PolicyParseException e ) {
@@ -1694,17 +1393,7 @@ public class EuareService {
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
     User requestUser = ctx.getUser( );
-    Account accountFound = null;
-    try {
-      accountFound = Accounts.lookupAccountByName( request.getAccountName( ) );
-    } catch ( Exception e ) {
-      LOG.error( e, e );
-      if ( e instanceof AuthException && AuthException.NO_SUCH_ACCOUNT.equals( e.getMessage( ) ) ) {
-        throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find account " + request.getAccountName( ) );
-      } else {
-        throw new EucalyptusCloudException( e );
-      }
-    }
+    Account accountFound = lookupAccountByName( request.getAccountName( ) );
     // TODO(Ye Wen, 04/02/2011): support pagination
     ListAccountPoliciesResultType result = reply.getListAccountPoliciesResult( );
     result.setIsTruncated( false );
@@ -1730,17 +1419,7 @@ public class EuareService {
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
     User requestUser = ctx.getUser( );
-    Account accountFound = null;
-    try {
-      accountFound = Accounts.lookupAccountByName( request.getAccountName( ) );
-    } catch ( Exception e ) {
-      LOG.error( e, e );
-      if ( e instanceof AuthException && AuthException.NO_SUCH_ACCOUNT.equals( e.getMessage( ) ) ) {
-        throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find account " + request.getAccountName( ) );
-      } else {
-        throw new EucalyptusCloudException( e );
-      }
-    }
+    Account accountFound = lookupAccountByName( request.getAccountName( ) );
     try {
       Policy policy = Privileged.getAccountPolicy( requestUser, accountFound, request.getPolicyName( ) );
       if ( policy != null ) {
@@ -1751,14 +1430,16 @@ public class EuareService {
       } else {
         throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find policy " + request.getPolicyName( ) );
       }
+    } catch ( EuareException e ) {
+      LOG.error( e, e );
+      throw e;
     } catch ( Exception e ) {
       LOG.error( e, e );
-      if ( e instanceof EuareException ) {
-        throw ( EuareException ) e;
-      }
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to put account policy for " + accountFound.getName( ) + " by " + requestUser.getName( ) );
+        } else if ( AuthException.EMPTY_POLICY_NAME.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Empty policy name" );
         }
       }
       throw new EucalyptusCloudException( e );
@@ -1771,17 +1452,7 @@ public class EuareService {
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
     User requestUser = ctx.getUser( );
-    Account accountFound = null;
-    try {
-      accountFound = Accounts.lookupAccountByName( request.getAccountName( ) );
-    } catch ( Exception e ) {
-      LOG.error( e, e );
-      if ( e instanceof AuthException && AuthException.NO_SUCH_ACCOUNT.equals( e.getMessage( ) ) ) {
-        throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find account " + request.getAccountName( ) );
-      } else {
-        throw new EucalyptusCloudException( e );
-      }
-    }
+    Account accountFound = lookupAccountByName( request.getAccountName( ) );
     try {
       Privileged.deleteAccountPolicy( ctx.hasAdministrativePrivileges( ), accountFound, request.getPolicyName( ) );
     } catch ( Exception e ) {
@@ -1789,6 +1460,8 @@ public class EuareService {
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to delete account policy for " + accountFound.getName( ) + " by " + requestUser.getName( ) );
+        } else if ( AuthException.EMPTY_POLICY_NAME.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Empty policy name" );
         }
       }
       throw new EucalyptusCloudException( e );
@@ -1798,6 +1471,11 @@ public class EuareService {
   
   public GetLdapSyncStatusResponseType getLdapSyncStatus(GetLdapSyncStatusType request) throws EucalyptusCloudException {
     GetLdapSyncStatusResponseType reply = request.getReply( );
+    Context ctx = Contexts.lookup( );
+    User requestUser = ctx.getUser( );
+    if ( !requestUser.isSystemAdmin( ) ) {
+      throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to get LDAP sync status by " + requestUser.getName( ) );
+    }
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     reply.getGetLdapSyncStatusResult( ).setSyncEnabled( LdapSync.getLic( ).isSyncEnabled( ) );
     reply.getGetLdapSyncStatusResult( ).setInSync( LdapSync.inSync( ) );
@@ -1809,6 +1487,7 @@ public class EuareService {
     u.setUserId( userFound.getUserId( ) );
     u.setPath( userFound.getPath( ) );
     u.setArn( ( new EuareResourceName( account.getName( ), PolicySpec.IAM_RESOURCE_USER, userFound.getPath( ), userFound.getName( ) ) ).toString( ) );
+    u.setEnabled( userFound.isEnabled( ).toString( ) );
   }
   
   private void fillGroupResult( GroupType g, Group groupFound, Account account ) {
@@ -1842,5 +1521,53 @@ public class EuareService {
     }
     return path;
   }
+  
+  private static User lookupUserByName( Account account, String userName ) throws EucalyptusCloudException  {
+    try {
+      return account.lookupUserByName( userName );
+    } catch ( Exception e ) {
+      LOG.error( e, e );
+      if ( e instanceof AuthException ) { 
+        if ( AuthException.NO_SUCH_USER.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find user " + userName );
+        } else if ( AuthException.EMPTY_USER_NAME.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Empty user name" );
+        }
+      }
+      throw new EucalyptusCloudException( e );
+    }
+  }
 
+  private static Group lookupGroupByName( Account account, String groupName ) throws EucalyptusCloudException {
+    try {
+      return account.lookupGroupByName( groupName );
+    } catch ( Exception e ) {
+      LOG.error( e, e );
+      if ( e instanceof AuthException ) {
+        if ( AuthException.NO_SUCH_GROUP.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find group " + groupName );
+        } else if ( AuthException.EMPTY_GROUP_NAME.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Empty group name" );
+        }
+      }
+      throw new EucalyptusCloudException( e );
+    }
+  }
+  
+  private static Account lookupAccountByName( String accountName ) throws EucalyptusCloudException {
+    try {
+      return Accounts.lookupAccountByName( accountName );
+    } catch ( Exception e ) {
+      LOG.error( e, e );
+      if ( e instanceof AuthException ) {
+        if ( AuthException.NO_SUCH_ACCOUNT.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find account " + accountName );
+        } else if ( AuthException.EMPTY_ACCOUNT_NAME.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Empty account name" );
+        }
+      }
+      throw new EucalyptusCloudException( e );
+    }
+  }
+  
 }

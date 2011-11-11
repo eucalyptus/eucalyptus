@@ -155,7 +155,7 @@ typedef struct instance_t {
   char serviceTag[64];
   char uuid[48];
 
-  char userData[4096];
+  char userData[16384];
   char launchIndex[64];
 
   char platform[64];
