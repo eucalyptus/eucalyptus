@@ -338,9 +338,9 @@ public class Hosts {
     
     @Override
     public boolean apply( final Host arg1 ) {
-      if ( !arg1.isLocalHost( ) && !Bootstrap.isFinished( ) ) {
+      if ( !arg1.isLocalHost( ) && initialized.compareAndSet( false, true ) ) {
         Hosts.doBootstrap( Empyrean.class, arg1.getBindAddress( ) );
-        if ( arg1.hasDatabase( ) && initialized.compareAndSet( false, true ) ) {
+        if ( arg1.hasDatabase( ) ) {
           Hosts.doBootstrap( Eucalyptus.class, arg1.getBindAddress( ) );
         }
         return true;
