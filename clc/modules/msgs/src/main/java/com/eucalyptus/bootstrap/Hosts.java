@@ -287,9 +287,10 @@ public class Hosts {
       LOG.info( "Hosts.entryAdded(): " + arg0 + " => " + arg1 );
       if ( BootstrapRemoteComponent.INSTANCE.apply( arg1 ) ) {
         LOG.info( "Hosts.entryAdded(): Bootstrapping host  => " + arg1 );
-      } else if ( arg1.hasBootstrapped( ) ) {
-        LOG.info( "Hosts.entryAdded(): Host is operational => " + arg1 );
-        Hosts.syncDatabase( arg1 );
+        if ( arg1.hasBootstrapped( ) ) {
+          LOG.info( "Hosts.entryAdded(): Host is operational => " + arg1 );
+          Hosts.syncDatabase( arg1 );
+        }
       } else if ( InitializeAsCloudController.INSTANCE.apply( arg1 ) ) {
         LOG.info( "Hosts.entryAdded(): Initialized as clc  => " + arg1 );
       } else {
