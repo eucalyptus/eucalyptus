@@ -188,6 +188,7 @@ public class Hosts {
           conf = ServiceTransitions.pathTo( input, State.ENABLED ).get( );          
           LOG.info( "Initialized enabled service: " + conf.getFullName( ) );
         } else if ( false/** should be handling non-clc remote bootstrap of coordinator clc **/ ) { 
+          conf = input;
         } else {
           conf = ServiceTransitions.pathTo( input, State.DISABLED ).get( );          
           LOG.info( "Initialized disabled service: " + conf.getFullName( ) );
