@@ -115,7 +115,7 @@ static pthread_mutex_t wreq_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 /* downloads a decrypted image from Walrus based on the manifest URL,
  * saves it to outfile */
-static int walrus_request (const char * walrus_op, const char * verb, const char * requested_url, const char * outfile, const int do_compress)
+static int walrus_request_timeout (const char * walrus_op, const char * verb, const char * requested_url, const char * outfile, const int do_compress, int connect_timeout, int total_timeout)
 {
     int code = ERROR;
     char url [BUFSIZE];
@@ -181,6 +181,13 @@ static int walrus_request (const char * walrus_op, const char * verb, const char
         pthread_mutex_unlock(&wreq_mutex);
         return ERROR; /* TODO: dealloc structs before returning! */
     }
+
+	if (connect_timeout > 0) {
+        curl_easy_setopt (curl, CURLOPT_CONNECTTIMEOUT, connect_timeout);
+	}
+	if (total_timeout > 0) {
+        curl_easy_setopt (curl, CURLOPT_TIMEOUT, total_timeout);
+	}
 
     /* set up the default write function, but possibly override
      * it below, if compression is desired and possible */
@@ -332,11 +339,14 @@ static int walrus_request (const char * walrus_op, const char * verb, const char
     pthread_mutex_unlock(&wreq_mutex);
     return code;
 }
+static int walrus_request (const char * walrus_op, const char * verb, const char * requested_url, const char * outfile, const int do_compress) {
+    return (walrus_request_timeout(walrus_op, verb, requested_url, outfile, do_compress, 0, 0));
+}
 
 /* downloads a Walrus object from the URL, saves it to outfile */
 int walrus_object_by_url (const char * url, const char * outfile, const int do_compress)
 {
-    return walrus_request (NULL, "GET", url, outfile, do_compress);
+    return walrus_request_timeout (NULL, "GET", url, outfile, do_compress, 120, 0);
 }
 
 /* downloads a Walrus object from the default Walrus endpoint,
@@ -352,7 +362,7 @@ int walrus_object_by_path (const char * path, const char * outfile, const int do
  * saves it to outfile */
 int walrus_image_by_manifest_url (const char * url, const char * outfile, const int do_compress)
 {
-    return walrus_request (GET_IMAGE_CMD, "GET", url, outfile, do_compress);
+    return walrus_request_timeout (GET_IMAGE_CMD, "GET", url, outfile, do_compress, 120, 0);
 }
 
 /* gets a decrypted image from the default Walrus endpoint,
