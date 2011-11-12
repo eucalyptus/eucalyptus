@@ -2,6 +2,7 @@ package com.eucalyptus.auth;
 
 import java.security.KeyPair;
 import java.security.cert.X509Certificate;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import com.eucalyptus.auth.policy.PolicySpec;
@@ -90,6 +91,9 @@ public class Privileged {
       if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.ALL_RESOURCE, PolicySpec.ALL_RESOURCE, account, PolicySpec.IAM_DELETEACCOUNTALIAS, requestUser ) ) {
         throw new AuthException( AuthException.ACCESS_DENIED );
       }
+    }
+    if ( Strings.isNullOrEmpty( alias ) ) {
+      throw new AuthException( AuthException.EMPTY_ACCOUNT_NAME );
     }
     // Only one alias is allowed by AWS IAM spec. Overwrite the current alias if matches.
     if ( account.getName( ).equals( alias ) ) {
@@ -265,7 +269,9 @@ public class Privileged {
       user.setEnabled( enabled );
     }
     if ( passwordExpires != null ) {
-      user.setPasswordExpires( passwordExpires );
+      if ( passwordExpires > new Date( ).getTime( ) ) {
+        user.setPasswordExpires( passwordExpires );
+      }
     }
     if ( info != null ) {
       user.setInfo( info );
@@ -451,6 +457,9 @@ public class Privileged {
     if ( !allowListOrReadAccountPolicy( requestUser, account ) ) {
       throw new AuthException( AuthException.ACCESS_DENIED );
     }
+    if ( Strings.isNullOrEmpty( policyName ) ) {
+      throw new AuthException( AuthException.EMPTY_POLICY_NAME );
+    }
     User admin = account.lookupUserByName( User.ACCOUNT_ADMIN );
     Policy policy = null;
     for ( Policy p : admin.getPolicies( ) ) {
@@ -466,6 +475,9 @@ public class Privileged {
     if ( !allowReadGroupPolicy( requestUser, account, group ) ) {
       throw new AuthException( AuthException.ACCESS_DENIED );
     }
+    if ( Strings.isNullOrEmpty( policyName ) ) {
+      throw new AuthException( AuthException.EMPTY_POLICY_NAME );
+    }
     Policy policy = null;
     for ( Policy p : group.getPolicies( ) ) {
       if ( p.getName( ).equals( policyName ) ) {
@@ -479,6 +491,9 @@ public class Privileged {
   public static Policy getUserPolicy( User requestUser, Account account, User user, String policyName ) throws AuthException {
     if ( !allowReadUserPolicy( requestUser, account, user ) ) {
       throw new AuthException( AuthException.ACCESS_DENIED );
+    }
+    if ( Strings.isNullOrEmpty( policyName ) ) {
+      throw new AuthException( AuthException.EMPTY_POLICY_NAME );
     }
     Policy policy = null;
     for ( Policy p : user.getPolicies( ) ) {
@@ -565,7 +580,13 @@ public class Privileged {
       if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, PolicySpec.IAM_UPDATEACCESSKEY, requestUser ) ) {
         throw new AuthException( AuthException.ACCESS_DENIED );
       }
-    }  
+    }
+    if ( Strings.isNullOrEmpty( keyId ) ) {
+      throw new AuthException( AuthException.EMPTY_KEY_ID );
+    }
+    if ( Strings.isNullOrEmpty( status ) ) {
+      throw new AuthException( AuthException.EMPTY_STATUS );
+    }
     AccessKey key = user.getKey( keyId );
     key.setActive( "Active".equalsIgnoreCase( status ) );
   }
@@ -597,6 +618,9 @@ public class Privileged {
       if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, PolicySpec.IAM_UPLOADSIGNINGCERTIFICATE, requestUser ) ) {
         throw new AuthException( AuthException.ACCESS_DENIED );
       }
+    }
+    if ( Strings.isNullOrEmpty( certBody ) ) {
+      throw new AuthException( AuthException.EMPTY_CERT );
     }
     String encodedPem = B64.url.encString( certBody );
     for ( Certificate c : user.getCertificates( ) ) {
@@ -653,7 +677,13 @@ public class Privileged {
       if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, PolicySpec.IAM_UPDATESIGNINGCERTIFICATE, requestUser ) ) {
         throw new AuthException( AuthException.ACCESS_DENIED );
       }
-    }  
+    }
+    if ( Strings.isNullOrEmpty( status ) ) {
+      throw new AuthException( AuthException.EMPTY_STATUS );
+    }
+    if ( Strings.isNullOrEmpty( certId ) ) {
+      throw new AuthException( AuthException.EMPTY_CERT_ID );
+    }
     Certificate cert = user.getCertificate( certId );
     if ( cert.isRevoked( ) ) {
       throw new AuthException( AuthException.NO_SUCH_CERTIFICATE );
