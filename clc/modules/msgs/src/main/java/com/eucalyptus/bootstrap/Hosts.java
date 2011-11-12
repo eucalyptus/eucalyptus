@@ -269,6 +269,9 @@ public class Hosts {
     @Override
     public void contentsSet( final Map<String, Host> arg0 ) {
       LOG.info( "Hosts.contentsSet(): " + this.printMap( ) );
+      for ( Host h : arg0.values( ) ) {
+        BootstrapRemoteComponent.INSTANCE.apply( h );
+      }
     }
     
     @Override
@@ -334,13 +337,12 @@ public class Hosts {
   
   enum BootstrapRemoteComponent implements Predicate<Host> {
     INSTANCE;
-    private static final AtomicBoolean initialized = new AtomicBoolean( false );
     
     @Override
     public boolean apply( final Host arg1 ) {
-      if ( !arg1.isLocalHost( ) && !Bootstrap.isFinished( ) ) {
+      if ( !arg1.isLocalHost( ) && arg1.hasBootstrapped( ) ) {
         Hosts.doBootstrap( Empyrean.class, arg1.getBindAddress( ) );
-        if ( arg1.hasDatabase( ) && initialized.compareAndSet( false, true ) ) {
+        if ( arg1.hasDatabase( ) ) {
           Hosts.doBootstrap( Eucalyptus.class, arg1.getBindAddress( ) );
         }
         return true;
