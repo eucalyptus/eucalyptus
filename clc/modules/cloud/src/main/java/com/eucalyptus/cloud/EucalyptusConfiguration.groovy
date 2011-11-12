@@ -92,8 +92,4 @@ public class EucalyptusConfiguration extends ComponentConfiguration implements S
   public EucalyptusConfiguration( String name, String hostName ) {
     super( "eucalyptus", name, hostName, 8773, DEFAULT_SERVICE_PATH );
   }
-  @Override
-  public Boolean isVmLocal( ) {
-    return BootstrapArgs.isCloudController( );
-  }
 }
