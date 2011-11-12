@@ -181,12 +181,13 @@ public class Hosts {
     public ServiceConfiguration apply( final ServiceConfiguration input ) {
       try {
         ServiceConfiguration conf = null;
-        if ( !input.isVmLocal( ) && !Hosts.Coordinator.INSTANCE.isLocalhost( ) ) {
+        if ( Internets.testLocal( input.getHostName( ) ) && Hosts.Coordinator.INSTANCE.isLocalhost( ) ) {
           conf = ServiceTransitions.pathTo( input, State.ENABLED ).get( );          
           LOG.info( "Initialized enabled service: " + conf.getFullName( ) );
-        } else if ( input.isVmLocal( ) && Hosts.Coordinator.INSTANCE.isLocalhost( ) ) {
+        } else if ( !Internets.testLocal( input.getHostName( ) ) && !Hosts.Coordinator.INSTANCE.isLocalhost( ) && BootstrapArgs.isCloudController( ) ) {
           conf = ServiceTransitions.pathTo( input, State.ENABLED ).get( );          
           LOG.info( "Initialized enabled service: " + conf.getFullName( ) );
+        } else if ( false/** should be handling non-clc remote bootstrap of coordinator clc **/ ) { 
         } else {
           conf = ServiceTransitions.pathTo( input, State.DISABLED ).get( );          
           LOG.info( "Initialized disabled service: " + conf.getFullName( ) );
