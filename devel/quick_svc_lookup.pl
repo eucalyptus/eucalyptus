@@ -47,6 +47,8 @@ sub include{
    return 0;
 }
 sub print_state {
+   test_start("Service-State Comparison");
+
     my %line_map = undef; # key==>svctype:comp_id, val==>state separated by IP
     $header = "COMPONENTS";
     foreach $ip (keys %svc_state_map){  ## column --> ip
@@ -64,6 +66,8 @@ sub print_state {
     foreach $key (sort (keys %line_map)){
          print $key." ".$line_map{$key}."\n"; 
     }
+
+    test_end();
 }
 
 &read_svc_state;
