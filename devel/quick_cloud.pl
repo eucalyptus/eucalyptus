@@ -21,13 +21,13 @@ sub disabled_clusters {
 
 sub drbd_dstate {
    test_start("drbd dstate");
-   run_on_clc("drbdadm dstate all", "drbdadm failed");
+   run_on_clc("drbdadm dstate all", "drbdadm dstate failed");
    test_end();
 }
 
 sub drbd_cstate {
    test_start("drbd cstate");
-   run_on_clc("drbdadm state all", "drbdadm failed");
+   run_on_clc("drbdadm state all", "drbdadm cstate failed");
    test_end();
 }
 
@@ -43,6 +43,11 @@ sub coordinator_local {
    test_end();
 }
 
+sub drbd_role {
+   test_start("drbdadm role all");
+   run_on_clc("drbdadm role all", "rbdadm role all failed");
+   test_end(); 
+}
 
 &describe_services;
 &enabled_clusters;
@@ -51,3 +56,4 @@ sub coordinator_local {
 &drbd_cstate;
 &check_mysqld;
 &coordinator_local;
+&drbd_role;
