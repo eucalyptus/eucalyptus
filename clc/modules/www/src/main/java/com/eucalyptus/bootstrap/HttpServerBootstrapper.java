@@ -79,6 +79,7 @@ import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.system.BaseDirectory;
 import com.eucalyptus.system.Threads;
 import java.util.concurrent.TimeUnit;
+import com.google.common.io.Files;
 
 @Provides( Empyrean.class )
 @RunDuring( Bootstrap.Stage.UserCredentialsInit )
@@ -120,12 +121,9 @@ public class HttpServerBootstrapper extends Bootstrapper {
           
           String path = "/var/run/eucalyptus/webapp";
           File dir = new File(BaseDirectory.HOME + path);
-          if(dir.exists() && dir.listFiles().length == 0) {
-              boolean status = dir.delete();
-              if (status != true) {
-        	  LOG.error("Unable to delete the webapp directory");
-        	  throw new Exception("Unable to delete the webapp directory");
-              }
+          if ( dir.exists( ) ) {
+            Files.deleteDirectoryContents(dir);
+            dir.delete( ); 
           }
         
           jettyServer.start( );
