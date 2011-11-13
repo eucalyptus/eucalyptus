@@ -220,9 +220,9 @@ if( not $answer =~ /yes/){
 
 if(not defined($cmd) or $cmd =~ /all/){
    require "./quick_cloud.pl";
+   require "./quick_svc_lookup.pl";
    require "./quick_cc.pl";
    require "./quick_nc.pl";
-   require "./quick_svc_lookup.pl";
 }elsif ($cmd =~ /svc/){
    require "./quick_svc_lookup.pl";
 }

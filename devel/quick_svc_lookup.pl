@@ -73,6 +73,3 @@ sub print_state {
 &read_svc_state;
 &print_state;
 
-exit 0;
-
-
