@@ -176,8 +176,8 @@ public abstract class AccountMetadata<STATE extends Enum<STATE>> extends Abstrac
   }
   
   private String createUniqueName( ) {
-    return ( this.ownerAccountName != null && this.getDisplayName( ) != null )
-      ? this.ownerAccountName + ":" + this.getDisplayName( )
+    return ( this.ownerAccountNumber != null && this.getDisplayName( ) != null )
+      ? this.ownerAccountNumber + ":" + this.getDisplayName( )
       : null;
   }
   

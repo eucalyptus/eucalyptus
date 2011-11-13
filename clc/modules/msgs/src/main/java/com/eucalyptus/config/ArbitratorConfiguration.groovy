@@ -92,11 +92,11 @@ public class ArbitratorConfiguration extends ComponentConfiguration implements S
   @Transient
   @ConfigurableIdentifier
   private String                propertyPrefix;
-
+  
   @ConfigurableField( description = "Gateway Host for Arbitrator to ping.", displayName = "Arbitrator Gateway Host" )
   @Column( name = "arbitrator_gateway_host" )
   private String                gatewayHost;
-
+  
   public ArbitratorConfiguration( ) {
   }
   public ArbitratorConfiguration( String partition, String name, String hostName, Integer port ) {
@@ -112,17 +112,22 @@ public class ArbitratorConfiguration extends ComponentConfiguration implements S
   public String getPropertyPrefix( ) {
     return this.propertyPrefix;
   }
-	  
+  
   public void setPropertyPrefix( String propertyPrefix ) {
-	this.propertyPrefix = propertyPrefix;
+    this.propertyPrefix = propertyPrefix;
   }
   
   public String getGatewayHost( ) {
-	return this.gatewayHost;
+    return this.gatewayHost;
   }
-	  
+  
   public void setGatewayHost( String gatewayHost ) {
     this.gatewayHost = gatewayHost;
+  }
+  
+  @Override
+  public Boolean isVmLocal( ) {
+    return true;
   }
 }
 

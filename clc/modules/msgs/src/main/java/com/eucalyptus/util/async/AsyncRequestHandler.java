@@ -32,6 +32,7 @@ import org.jboss.netty.handler.timeout.IdleStateHandler;
 import org.jboss.netty.handler.timeout.ReadTimeoutHandler;
 import org.jboss.netty.handler.timeout.WriteTimeoutHandler;
 import org.jboss.netty.util.HashedWheelTimer;
+import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.http.MappingHttpRequest;
@@ -101,7 +102,7 @@ public class AsyncRequestHandler<Q extends BaseMessage, R extends BaseMessage> i
               if ( future.isSuccess( ) ) {
 //TODO:GRZE: better logging here                LOG.debug( "Connected as: " + future.getChannel( ).getLocalAddress( ) );
                 final InetAddress localAddr = ( ( InetSocketAddress ) future.getChannel( ).getLocalAddress( ) ).getAddress( );
-                if ( !factory.getClass( ).getSimpleName( ).startsWith( "GatherLog" ) ) {
+                if ( !factory.getClass( ).getSimpleName( ).startsWith( "GatherLog" ) && Hosts.Coordinator.INSTANCE.isLocalhost( ) ) {
                   AsyncRequestHandler.this.request.get( ).set_epoch( Topology.epoch( ) );
                   AsyncRequestHandler.this.request.get( ).get_services( ).addAll( Topology.partitionRelativeView( config, localAddr ) );
                 }
