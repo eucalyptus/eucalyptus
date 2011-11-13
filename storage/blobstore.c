@@ -570,8 +570,8 @@ static int open_and_lock (const char * path,
         struct flock l;
         fcntl (fd, F_GETLK, flock_whole_file (&l, l_type));
         
-        logprintfl (EUCADEBUG2, "{%u} open_and_lock: locked fd=%d path=%s ino=%d mode=%0o [lock type=%d whence=%d start=%d length=%d]\n", 
-                    (unsigned int)pthread_self(), fd, path, s.st_ino, s.st_mode, l.l_type, l.l_whence, l.l_start, l.l_len);
+        logprintfl (EUCADEBUG2, "{%u} open_and_lock: locked fd=%d path=%s flags=%d ino=%d mode=%0o [lock type=%d whence=%d start=%d length=%d]\n", 
+                    (unsigned int)pthread_self(), fd, path, o_flags, s.st_ino, s.st_mode, l.l_type, l.l_whence, l.l_start, l.l_len);
     }
     return fd;
 
@@ -1329,7 +1329,7 @@ static void set_device_path (blockblob * bb)
     }
 }
 
-static blockblob ** walk_bs (blobstore * bs, const char * dir_path, blockblob ** tail_bb) 
+static blockblob ** walk_bs (blobstore * bs, const char * dir_path, blockblob ** tail_bb, const blockblob * bb_to_avoid) 
 {
     int ret = 0;
     DIR * dir;
@@ -1355,7 +1355,7 @@ static blockblob ** walk_bs (blobstore * bs, const char * dir_path, blockblob **
 
         // recurse if this is a directory
         if (S_ISDIR (sb.st_mode)) {
-            tail_bb = walk_bs (bs, entry_path, tail_bb);
+            tail_bb = walk_bs (bs, entry_path, tail_bb, bb_to_avoid);
             if (tail_bb == NULL) {
                 closedir(dir);
                 return NULL;
@@ -1366,6 +1366,9 @@ static blockblob ** walk_bs (blobstore * bs, const char * dir_path, blockblob **
         char blob_id [BLOBSTORE_MAX_PATH];
         if (typeof_blockblob_metadata_path (bs, entry_path, blob_id, sizeof(blob_id)) != BLOCKBLOB_PATH_BLOCKS)
             continue; // ignore all files except .blocks file
+
+        if (bb_to_avoid!=NULL && strncmp (blob_id, bb_to_avoid->id, sizeof (blob_id))==0)
+            continue; // avoid that particular blockblob
 
         blockblob * bb = calloc (1, sizeof (blockblob));
         if (bb==NULL) {
@@ -1393,10 +1396,10 @@ static blockblob ** walk_bs (blobstore * bs, const char * dir_path, blockblob **
 
 // runs through the blobstore and puts all found blockblobs 
 // into a linked list, returning its head
-static blockblob * scan_blobstore ( blobstore * bs )
+static blockblob * scan_blobstore ( blobstore * bs, const blockblob * bb_to_avoid )
 {
     blockblob * bbs = NULL;
-    if (walk_bs (bs, bs->path, &bbs)==NULL) {
+    if (walk_bs (bs, bs->path, &bbs, bb_to_avoid)==NULL) {
         if (bbs) 
             free_bbs (bbs);
         bbs = NULL;
@@ -1465,7 +1468,7 @@ int blobstore_fsck (blobstore * bs, int (* examiner) (const blockblob * bb))
     
     // put existing items in the blobstore into a LL
     _blobstore_errno = BLOBSTORE_ERROR_OK;
-    blockblob * bbs = scan_blobstore (bs);
+    blockblob * bbs = scan_blobstore (bs, NULL);
 
     if (blobstore_unlock (bs)==-1) {
         ERR (BLOBSTORE_ERROR_UNKNOWN, "failed to unlock the blobstore");
@@ -1539,7 +1542,7 @@ int blobstore_search ( blobstore * bs, const char * regex, blockblob_meta ** res
     
     // put existing items in the blobstore into a LL
     _blobstore_errno = BLOBSTORE_ERROR_OK;
-    bbs = scan_blobstore (bs);
+    bbs = scan_blobstore (bs, NULL);
     if (bbs==NULL) {
         if (_blobstore_errno != BLOBSTORE_ERROR_OK) {
             ret = -1;
@@ -1747,7 +1750,7 @@ blockblob * blockblob_open ( blobstore * bs,
         
         // put existing items in the blobstore into a LL
         _blobstore_errno = BLOBSTORE_ERROR_OK;
-        bbs = scan_blobstore (bs);
+        bbs = scan_blobstore (bs, bb);
         if (bbs==NULL) {
             if (_blobstore_errno != BLOBSTORE_ERROR_OK) {
                 goto clean;
@@ -3665,6 +3668,40 @@ int main (int argc, char ** argv)
 
     logfile (NULL, EUCADEBUG2, 4);
     blobstore_set_error_function (dummy_err_fn);    
+
+    // if an argument is specified, it is treated as a blob name to create 
+    // this allows two simultaneous invocations of test_blobstore to compete
+    // for the same blob so as to test the inter-process locks manually
+    if (argc > 1) {
+        blobstore * bs = blobstore_open (".", 1000, BLOBSTORE_FORMAT_FILES, BLOBSTORE_REVOCATION_ANY, BLOBSTORE_SNAPSHOT_ANY);
+        if (bs==NULL) {
+            printf ("ERROR: when opening blobstore: %s\n", blobstore_get_error_str(blobstore_get_error()));
+            return 1;
+        }
+        char * id = argv [1];
+        printf ("---------> opening blob %s\n", id);
+        blockblob * bb = blockblob_open (bs, id, 20, BLOBSTORE_FLAG_CREAT, NULL, 1000);
+        if (bs==NULL) {
+            printf ("ERROR: when opening blockblob: %s\n", blobstore_get_error_str(blobstore_get_error()));
+            return 1;
+        }
+
+        printf ("---------> writing to %s\n", blockblob_get_file(bb));
+        int fd = open (blockblob_get_file(bb), O_RDWR);
+        assert (fd>=0);
+        char buf [32];
+        bzero (buf, sizeof (buf));
+        snprintf (buf, sizeof (buf), "%lld\n", (long long)time(NULL));
+        write (fd, buf, strlen (buf));
+        close (fd);
+
+        printf ("---------> sleeping while holding blob %s\n", id);
+        sleep (15);
+        printf ("----------> closing blob %s\n", id);
+        blockblob_close (bb);
+        blobstore_close (bs);
+        return 0;
+    }
 
     printf ("testing blobstore.c\n");
 

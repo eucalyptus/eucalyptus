@@ -7,21 +7,43 @@
 $out_file="/tmp/quick_ha.out";
 $err_str=undef;
 $root_dir="/root"; $euca_dir="/opt/eucalyptus";
+$cmd=undef;
+@cmd_candidates= qw(all svc);
 
 sub print_usage {
-   print "./quick_ha.pl [list of hosts to test]\n";
-   print "example: ./quick_ha.pl 192.168.23.71 192.168.23.73\n";
+   print "./quick_ha.pl [all|svc] [list of hosts to test]\n";
+   print "example: ./quick_ha.pl all 192.168.23.71 192.168.23.73\n";
+   print "./quick_ha.pl svc 192.168.23.71 192.168.23.73\n";
 }
 
 sub parse_args {
+    if(defined($_[0]))
+    {
+       foreach $opt (@cmd_candidates){
+          if ($_[0]=~/$opt/){
+             $cmd = $opt;
+             last;
+          }
+       }
+    } 
+    if(defined($cmd)){
+        shift(@_);
+    }
+        
     @hosts=split(/[\s]/,"@_");
 }
 
-sub read_output {
-    open FH, "$out_file"; # or {print "can't open the file $out_file\n"; return 1};
+sub read_file {
+    my $file = undef;
+    if (defined($_[0])){
+       $file = $_[0];
+    }else{
+       $file = $out_file;
+    } 
+    open FH, "$file"; # or {print "can't open the file $out_file\n"; return 1};
     my @lines = <FH>;
     close FH;
-    @lines = "@lines"."\n";
+    return @lines;
 }
 
 sub ssh_success {
@@ -52,22 +74,24 @@ sub ssh_stdout {
     my $cmd=$_[1];
    
     if($source_eucarc){
-       $cmd="source $root_dir/eucarc >/dev/null 2>&1; ".$cmd; 
+       my $ec2_url="http://".$host.":8773/services/Eucalyptus";
+       $cmd="source $root_dir/eucarc >/dev/null 2>&1; export EC2_URL=$ec2_url;".$cmd; 
     }
   
     my $sshcmd = "ssh "."root\@$host"." \"".$cmd."\" > ".$out_file." 2>&1";
+
     $rc = system("rm -f $out_file");
     $rc = system($sshcmd);
     if($rc){
        if (-e $out_file){
-          my @output = &read_output;
+          my @output = &read_file();
           return ($rc, "@output");
        }else{
           return ($rc, "");
        }
     }else
     {
-          my @output= &read_output;
+          my @output= &read_file();
           return (0, "@output");
     }
 }
@@ -131,7 +155,7 @@ sub run_on {
       if($rc){
            print "[$h] $err_msg\n";
       }else{
-           print "[$h] =>\n".$stdout;
+           print "[$h] =>\n ".$stdout;
       }
     }
 }
@@ -180,14 +204,24 @@ if(not defined($hosts[0] ))
    &print_usage;
    exit 1;
 }
+
+if(defined($cmd))
+{
+    print "command: $cmd\n";
+}
+
 get_topology;
 print "Do you want to continue? (yes/no)\n";
 chomp($answer=<STDIN>);
 if( not $answer =~ /yes/){
     print "bye bye \n";
-    return 1;
+    exit 1;
 }
 
-require "./quick_cloud.pl";
-require "./quick_cc.pl";
-require "./quick_nc.pl";
+if(not defined($cmd) or $cmd =~ /all/){
+   require "./quick_cloud.pl";
+   require "./quick_cc.pl";
+   require "./quick_nc.pl";
+}elsif ($cmd =~ /svc/){
+   require "./quick_svc_lookup.pl";
+}
