@@ -330,7 +330,7 @@ public class ServiceConfigurations {
       throw new PersistenceException( "Unknown configuration type passed: " + type.getCanonicalName( ) );
     }
     final T example = ( T ) ServiceBuilders.lookup( type ).newInstance( );
-    example.setSourceHostName( host );
+    example.setHostName( host ); 
     return lookup( example );
   }
   

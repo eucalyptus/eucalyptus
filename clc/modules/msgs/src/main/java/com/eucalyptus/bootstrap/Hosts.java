@@ -102,7 +102,6 @@ import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.ServiceTransitions;
 import com.eucalyptus.component.ServiceUris;
-import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Eucalyptus.Database;
 import com.eucalyptus.configurable.ConfigurableClass;
@@ -181,9 +180,19 @@ public class Hosts {
     @Override
     public ServiceConfiguration apply( final ServiceConfiguration input ) {
       try {
-        final ServiceConfiguration conf = ServiceTransitions.pathTo( input, State.DISABLED ).get( );
-        Topology.enable( conf );
-        LOG.info( "Initialized service: " + conf.getFullName( ) );
+        ServiceConfiguration conf = null;
+        if ( Internets.testLocal( input.getHostName( ) ) && Hosts.Coordinator.INSTANCE.isLocalhost( ) ) {
+          conf = ServiceTransitions.pathTo( input, State.ENABLED ).get( );          
+          LOG.info( "Initialized enabled service: " + conf.getFullName( ) );
+        } else if ( !Internets.testLocal( input.getHostName( ) ) && !Hosts.Coordinator.INSTANCE.isLocalhost( ) && BootstrapArgs.isCloudController( ) ) {
+          conf = ServiceTransitions.pathTo( input, State.ENABLED ).get( );          
+          LOG.info( "Initialized enabled service: " + conf.getFullName( ) );
+        } else if ( false/** should be handling non-clc remote bootstrap of coordinator clc **/ ) { 
+          conf = input;
+        } else {
+          conf = ServiceTransitions.pathTo( input, State.DISABLED ).get( );          
+          LOG.info( "Initialized disabled service: " + conf.getFullName( ) );
+        }
         return conf;
       } catch ( final ExecutionException ex ) {
         Exceptions.trace( ex.getCause( ) );
@@ -238,6 +247,9 @@ public class Hosts {
     @Override
     public void fireEvent( final Hertz event ) {
       final Host currentHost = Hosts.localHost( );
+      if ( !BootstrapArgs.isCloudController( ) && currentHost.hasBootstrapped( ) && shouldInitialize( ) ) {
+        System.exit( 123 );
+      }
       if ( event.isAsserted( 15L ) ) {
         UpdateEntry.INSTANCE.apply( currentHost );
       }
@@ -259,6 +271,9 @@ public class Hosts {
     @Override
     public void contentsSet( final Map<String, Host> arg0 ) {
       LOG.info( "Hosts.contentsSet(): " + this.printMap( ) );
+      for ( Host h : arg0.values( ) ) {
+        BootstrapRemoteComponent.INSTANCE.apply( h );
+      }
     }
     
     @Override
@@ -272,9 +287,10 @@ public class Hosts {
       LOG.info( "Hosts.entryAdded(): " + arg0 + " => " + arg1 );
       if ( BootstrapRemoteComponent.INSTANCE.apply( arg1 ) ) {
         LOG.info( "Hosts.entryAdded(): Bootstrapping host  => " + arg1 );
-      } else if ( arg1.hasBootstrapped( ) ) {
-        LOG.info( "Hosts.entryAdded(): Host is operational => " + arg1 );
-        Hosts.syncDatabase( arg1 );
+        if ( arg1.hasBootstrapped( ) ) {
+          LOG.info( "Hosts.entryAdded(): Host is operational => " + arg1 );
+          Hosts.syncDatabase( arg1 );
+        }
       } else if ( InitializeAsCloudController.INSTANCE.apply( arg1 ) ) {
         LOG.info( "Hosts.entryAdded(): Initialized as clc  => " + arg1 );
       } else {
@@ -292,7 +308,11 @@ public class Hosts {
           try {
             teardown( Empyrean.class, h.getBindAddress( ) );
             if ( h.hasDatabase( ) ) {
-              Hosts.stopDbPool( h );
+              try {
+                Hosts.stopDbPool( h );
+              } catch ( Exception ex ) {
+                LOG.error( ex , ex );
+              }
               teardown( Eucalyptus.class, h.getBindAddress( ) );
             }
           } catch ( Exception ex ) {
@@ -304,13 +324,14 @@ public class Hosts {
           } else if ( h.hasDatabase( ) && BootstrapArgs.isCloudController( ) ) {
             hostMap.remove( h.getDisplayName( ) );
             LOG.info( "Hosts.viewChange(): -> removed  => " + h );
+            Hosts.doBootstrap( Empyrean.class, Hosts.localHost( ).getBindAddress( ) );
+            if ( Hosts.localHost( ).hasDatabase( ) ) {
+              Hosts.doBootstrap( Eucalyptus.class, Hosts.localHost( ).getBindAddress( ) );
+            }
+          } else if ( h.hasDatabase( ) && Hosts.listDatabases( ).size( ) <= 1 ) {
+            hostMap.remove( h.getDisplayName( ) );
+            LOG.info( "Hosts.viewChange(): -> removed  => " + h );
           }
-        }
-      }
-      if ( BootstrapArgs.isCloudController( ) ) {
-        Hosts.doBootstrap( Empyrean.class, Hosts.localHost( ).getBindAddress( ) );
-        if ( Hosts.localHost( ).hasDatabase( ) ) {
-          Hosts.doBootstrap( Eucalyptus.class, Hosts.localHost( ).getBindAddress( ) );
         }
       }
     }
@@ -319,13 +340,12 @@ public class Hosts {
   
   enum BootstrapRemoteComponent implements Predicate<Host> {
     INSTANCE;
-    private static final AtomicBoolean initialized = new AtomicBoolean( false );
     
     @Override
     public boolean apply( final Host arg1 ) {
-      if ( !arg1.isLocalHost( ) && !Bootstrap.isFinished( ) ) {
+      if ( !arg1.isLocalHost( ) && arg1.hasBootstrapped( ) ) {
         Hosts.doBootstrap( Empyrean.class, arg1.getBindAddress( ) );
-        if ( arg1.hasDatabase( ) && initialized.compareAndSet( false, true ) ) {
+        if ( arg1.hasDatabase( ) ) {
           Hosts.doBootstrap( Eucalyptus.class, arg1.getBindAddress( ) );
         }
         return true;
