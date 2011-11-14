@@ -527,6 +527,18 @@ public class Topology {
     
   }
   
+  enum SubmitDisable implements Function<ServiceConfiguration, Future<ServiceConfiguration>> {
+    INSTANCE;
+    
+    @Override
+    public Future<ServiceConfiguration> apply( final ServiceConfiguration input ) {
+      final Callable<ServiceConfiguration> call = Topology.callable( input, Topology.get( State.DISABLED ) );
+      final Future<ServiceConfiguration> future = Queue.EXTERNAL.enqueue( call );
+      return future;
+    }
+    
+  }
+  
   enum SubmitCheck implements Function<ServiceConfiguration, Future<ServiceConfiguration>> {
     INSTANCE;
     
@@ -596,6 +608,7 @@ public class Topology {
       } else {
         /** make promotion decisions **/
         final Predicate<ServiceConfiguration> canPromote = Predicates.and( Predicates.in( checkedServices ), FailoverPredicate.INSTANCE );
+        
         final List<ServiceConfiguration> promoteServices = Lists.newArrayList( );
         for ( Component c : Components.list( ) ) {
           promoteServices.addAll( Collections2.filter( c.services( ), canPromote ) );
@@ -603,7 +616,18 @@ public class Topology {
         final Collection<Future<ServiceConfiguration>> enableCallables = Collections2.transform( promoteServices, SubmitEnable.INSTANCE );
         final Collection<Future<ServiceConfiguration>> enabledServices = Collections2.filter( enableCallables, WaitForResults.INSTANCE );
         LOG.trace( LogUtil.subheader( "ENABLED: " + Joiner.on( "\nENABLED: " ).join( enabledServices ) ) );
-        return Lists.transform( Lists.newArrayList( enabledServices ), ExtractFuture.INSTANCE );
+        List<ServiceConfiguration> result = Lists.transform( Lists.newArrayList( enabledServices ), ExtractFuture.INSTANCE );
+        
+        /** advance other components as needed **/
+        final Predicate<ServiceConfiguration> progressToDisabled = Predicates.not( canPromote );
+        final List<ServiceConfiguration> disableServices = Lists.newArrayList( );
+        for ( Component c : Components.list( ) ) {
+          disableServices.addAll( Collections2.filter( c.services( ), progressToDisabled ) );
+        }
+        final Collection<Future<ServiceConfiguration>> disableCallables = Collections2.transform( disableServices, SubmitDisable.INSTANCE );
+        final Collection<Future<ServiceConfiguration>> disabledServices = Collections2.filter( disableCallables, WaitForResults.INSTANCE );
+        LOG.trace( LogUtil.subheader( "DISABLED: " + Joiner.on( "\nDISABLED: " ).join( disabledServices ) ) );
+        return result;
       }
     }
   }
