@@ -117,7 +117,7 @@ PersistenceContexts.list( ).each { String ctx_simplename ->
       sync('class':'net.sf.hajdbc.sync.PassiveSynchronizationStrategy', id:'passive');
       cluster(id:context_pool_alias,
           'auto-activate-schedule':'0 * * ? * *',
-          balancer:'load', //(simple|random|round-robin|load)
+          balancer:'round-robin', //(simple|random|round-robin|load)
           'default-sync': 'passive',
           dialect:Databases.getJdbcDialect( ),
           'failure-detect-schedule':'0 * * ? * *',
@@ -130,7 +130,7 @@ PersistenceContexts.list( ).each { String ctx_simplename ->
           'eval-current-timestamp':'true',
           'eval-rand':'true'
           ) {
-            Hosts.listDatabases( ).each{ Host host ->
+            Hosts.listActiveDatabases( ).each{ Host host ->
               database(id:host.getBindAddress().getHostAddress( ),local:host.isLocalHost( )) {
                 driver(real_jdbc_driver)
                 url("jdbc:${ServiceUris.remote(Database.class,host.getBindAddress( ), context_pool_alias ).toASCIIString( )}")

@@ -75,40 +75,30 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Ordering;
 
 public class Host implements java.io.Serializable, Comparable<Host> {
-  private static final long          serialVersionUID = 1;
-  private static Logger              LOG              = Logger.getLogger( Host.class );
-  private final String               displayName;
-  private final Address              groupsId;
-  private final InetAddress          bindAddress;
-  private ImmutableList<InetAddress> hostAddresses;
-  private Boolean                    hasDatabase;
-  private Boolean                    hasBootstrapped;
-  private AtomicLong                 timestamp        = new AtomicLong( System.currentTimeMillis( ) );
-  private Long                       lastTime         = 0l;
-  private Long                 startedTime;
-  private Integer                    epoch;
+  private static final long                serialVersionUID = 1;
+  private static Logger                    LOG              = Logger.getLogger( Host.class );
+  private final String                     displayName;
+  private final Address                    groupsId;
+  private final InetAddress                bindAddress;
+  private final ImmutableList<InetAddress> hostAddresses;
+  private final Boolean                    hasDatabase;
+  private final Boolean                    hasSynced;
+  private final Boolean                    hasBootstrapped;
+  private final AtomicLong                 timestamp        = new AtomicLong( System.currentTimeMillis( ) );
+  private final Long                       startedTime;
+  private final Integer                    epoch;
   
   Host( ) {
-    this( System.currentTimeMillis( ) );
-  }
-  
-  Host( Long startedTime ) {
-    this.startedTime = startedTime == 0 ? System.currentTimeMillis( ) : startedTime;
+    this.startedTime = Hosts.Coordinator.INSTANCE.getCurrentStartTime( );
     this.displayName = Internets.localHostIdentifier( );
     this.groupsId = Hosts.getLocalGroupAddress( );
     this.bindAddress = Internets.localHostInetAddress( );
     this.epoch = Topology.epoch( );
-    this.lastTime = this.timestamp.getAndSet( System.currentTimeMillis( ) );
     ImmutableList<InetAddress> newAddrs = ImmutableList.copyOf( Ordering.from( Internets.INET_ADDRESS_COMPARATOR ).sortedCopy( Internets.getAllInetAddresses( ) ) );
     this.hasBootstrapped = Bootstrap.isFinished( );
     this.hasDatabase = BootstrapArgs.isCloudController( );
+    this.hasSynced = Databases.isSynchronized( );
     this.hostAddresses = newAddrs;
-  }
-  
-  Host( Host last ) {
-    this( last.getStartedTime( ) );
-    this.lastTime = last.getTimestamp( ).getTime( );
-    this.timestamp.set( System.currentTimeMillis( ) );
   }
   
   public Address getGroupsId( ) {
@@ -164,31 +154,12 @@ public class Host implements java.io.Serializable, Comparable<Host> {
     return this.getDisplayName( ).compareTo( that.getDisplayName( ) );
   }
   
-  void stateUpdate( ) {
-    Logs.exhaust( ).debug( "Applying update for host: " + this );
-    ImmutableList<InetAddress> newAddrs = ImmutableList.copyOf( Ordering.from( Internets.INET_ADDRESS_COMPARATOR ).sortedCopy( Internets.getAllInetAddresses( ) ) );
-    this.hostAddresses = newAddrs;
-    this.hasDatabase = BootstrapArgs.isCloudController( );
-    this.hasBootstrapped = Bootstrap.isFinished( );
-    this.epoch = Topology.epoch( );
-    this.lastTime = this.timestamp.getAndSet( System.currentTimeMillis( ) );
-  }
-  
   public boolean isLocalHost( ) {
     return Internets.testLocal( this.getBindAddress( ) );
   }
   
   public Boolean hasBootstrapped( ) {
     return this.hasBootstrapped;
-  }
-  
-  void markBootstrapped( ) {
-    this.hasBootstrapped = true;
-  }
-  
-  void markDatabase( ) {
-    this.startedTime = System.currentTimeMillis( );
-    this.hasDatabase = true;
   }
   
   public Integer getEpoch( ) {
@@ -198,30 +169,28 @@ public class Host implements java.io.Serializable, Comparable<Host> {
   @Override
   public String toString( ) {
     StringBuilder builder = new StringBuilder( );
-    builder.append( "Host:" );
-    if ( this.groupsId != null ) builder.append( " " ).append( this.groupsId ).append( " " );
-    if ( this.epoch != null ) builder.append( "epoch=" ).append( this.epoch ).append( " " );
-    if ( this.bindAddress != null ) builder.append( this.bindAddress ).append( " " );
-    if ( this.hasDatabase != null ) builder.append( "db=" ).append( this.hasDatabase ).append( " " );
-    if ( this.hasBootstrapped != null ) builder.append( "up=" ).append( this.hasBootstrapped ).append( " " );
-    if ( this.timestamp != null ) builder.append( "cts=" ).append( this.startedTime ).append( " " );
-    if ( this.lastTime != null ) builder.append( "mts=" ).append( this.timestamp.get( ) ).append( " " );
-    if ( this.hostAddresses != null ) builder.append( this.hostAddresses );
-    builder.append( " startTime=" ).append( Hosts.Coordinator.INSTANCE.getCurrentStartTime( ) );
+    builder.append( "Host " )
+           .append( this.groupsId ).append( " " )
+           .append( "#" ).append( this.epoch ).append( " " )
+           .append( this.bindAddress ).append( " " );
     try {
-      if ( this.isLocalHost( ) && Hosts.Coordinator.INSTANCE.isLocalhost( ) ) builder.append( " coordinator" );
+      if ( this.isLocalHost( ) && Hosts.Coordinator.INSTANCE.isLocalhost( ) ) {
+        builder.append( "coordinator " );
+      } else {
+        Hosts.Coordinator.INSTANCE.findCoordinator( );
+      }
     } catch ( Exception ex ) {
-      LOG.error( ex , ex );
-    } 
+      LOG.error( ex, ex );
+    }
+    builder.append( this.hasBootstrapped ? "booted " : "booting " )
+           .append( this.hasDatabase ? ( this.hasSynced ? "db:synched " : "db:outofdate " ) : "nodb " )
+           .append( "started=" ).append( this.startedTime ).append( " " )
+           .append( this.hostAddresses );
     return builder.toString( );
   }
   
   public Date getTimestamp( ) {
     return new Date( this.timestamp.get( ) );
-  }
-  
-  public Long getLastTime( ) {
-    return this.lastTime;
   }
   
   public String getDisplayName( ) {
@@ -230,6 +199,10 @@ public class Host implements java.io.Serializable, Comparable<Host> {
   
   public Long getStartedTime( ) {
     return this.startedTime;
+  }
+  
+  public Boolean hasSynced( ) {
+    return this.hasSynced;
   }
   
 }
