@@ -2,7 +2,9 @@ package com.eucalyptus.auth.euare;
 
 import java.math.BigInteger;
 import java.security.KeyPair;
+import java.text.ParseException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import org.apache.log4j.Logger;
@@ -98,12 +100,14 @@ import com.eucalyptus.auth.euare.UploadSigningCertificateType;
 import com.eucalyptus.auth.ldap.LdapSync;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.policy.ern.EuareResourceName;
+import com.eucalyptus.auth.policy.key.Iso8601DateParser;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.Certificate;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.Policy;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.auth.principal.User.RegistrationStatus;
 import com.eucalyptus.auth.util.X509CertHelper;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
@@ -446,7 +450,17 @@ public class EuareService {
     try {
       String newPath = request.getNewPath( ) != null ? sanitizePath( request.getNewPath( ) ) : null;
       Boolean enabled = request.getEnabled( ) != null ? "true".equalsIgnoreCase( request.getEnabled( ) ) : null;
-      Privileged.modifyUser( requestUser, account, userFound, request.getNewUserName( ), newPath, enabled, null/*passwordExpires*/, null/*info*/ );
+      Long passwordExpiration = request.getPasswordExpiration( ) != null ? Iso8601DateParser.parse( request.getPasswordExpiration( ) ).getTime( ) : null;
+      Privileged.modifyUser( requestUser, account, userFound, request.getNewUserName( ), newPath, enabled, passwordExpiration, null/*info*/ );
+      if ( request.getRegStatus( ) != null ) {
+        userFound.setRegistrationStatus( parseRegStatIgnoreCase( request.getRegStatus( ) ) );
+      }
+    } catch ( IllegalArgumentException e ) {
+      LOG.error( e, e );
+      throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_VALUE, "Invalid registration status " + request.getRegStatus( ) );
+    } catch ( ParseException e ) {
+      LOG.error( e, e );
+      throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_VALUE, "Invalid password expiration " + request.getPasswordExpiration( ) );
     } catch ( Exception e ) {
       LOG.error( e, e );
       if ( e instanceof AuthException ) {
@@ -1038,6 +1052,9 @@ public class EuareService {
       }
       UserType u = reply.getGetUserResult( ).getUser( );
       fillUserResult( u, userFound, account );
+      if ( request.getShowExtra( ) != null && request.getShowExtra( ) ) {
+        fillUserResultExtra( u, userFound );
+      }
       return reply;
     } catch ( EuareException e ) {
       LOG.error( e, e );
@@ -1487,7 +1504,12 @@ public class EuareService {
     u.setUserId( userFound.getUserId( ) );
     u.setPath( userFound.getPath( ) );
     u.setArn( ( new EuareResourceName( account.getName( ), PolicySpec.IAM_RESOURCE_USER, userFound.getPath( ), userFound.getName( ) ) ).toString( ) );
+  }
+  
+  private void fillUserResultExtra( UserType u, User userFound ) {
     u.setEnabled( userFound.isEnabled( ).toString( ) );
+    u.setRegStatus( userFound.getRegistrationStatus( ).toString( ) );
+    u.setPasswordExpiration( new Date( userFound.getPasswordExpires( ) ).toString( ) );
   }
   
   private void fillGroupResult( GroupType g, Group groupFound, Account account ) {
@@ -1568,6 +1590,15 @@ public class EuareService {
       }
       throw new EucalyptusCloudException( e );
     }
+  }
+  
+  private static RegistrationStatus parseRegStatIgnoreCase( String value ) throws IllegalArgumentException {
+    for ( RegistrationStatus stat : RegistrationStatus.values( ) ) {
+      if ( stat.toString( ).equalsIgnoreCase( value ) ) {
+        return stat;
+      }
+    }
+    throw new IllegalArgumentException( "Invalid registration status value" );
   }
   
 }
