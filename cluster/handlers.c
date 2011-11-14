@@ -2195,7 +2195,7 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
 	
 	pid = fork();
 	if (pid == 0) {
-	  time_t startRun;
+	  time_t startRun, ncRunTimeout;
 
 	  sem_mywait(RESCACHE);
 	  if (res->running > 0) {
@@ -2205,11 +2205,18 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
 
 	  ret=0;
 	  logprintfl(EUCAINFO,"RunInstances(): sending run instance: node=%s instanceId=%s emiId=%s mac=%s privIp=%s pubIp=%s vlan=%d networkIdx=%d key=%.32s... mem=%d disk=%d cores=%d\n", res->ncURL, instId, SP(amiId), ncnet.privateMac, ncnet.privateIp, ncnet.publicIp, ncnet.vlan, ncnet.networkIndex, SP(keyName), ncvm.mem, ncvm.disk, ncvm.cores);
+
 	  rc = 1;
 	  startRun = time(NULL);
-	  while(rc && ((time(NULL) - startRun) < config->wakeThresh)){
-            int clientpid;
+          if (config->schedPolicy == SCHEDPOWERSAVE) {
+            ncRunTimeout = config->wakeThresh;
+          } else {
+            ncRunTimeout = 15;
+          }
 
+          while(rc && ((time(NULL) - startRun) < ncRunTimeout)) {
+            int clientpid;
+	    
 	    // if we're running windows, and are an NC, create the pw/floppy locally
 	    if (strstr(platform, "windows") && !strstr(res->ncURL, "EucalyptusNC")) {
 	      //if (strstr(platform, "windows")) {
