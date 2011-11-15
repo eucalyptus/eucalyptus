@@ -733,13 +733,12 @@ public class ServiceTransitions {
         try {
           List<ConfigurableProperty> props = PropertyDirectory.getPendingPropertyEntrySet( config.getComponentId( ).name( ) );
           for ( ConfigurableProperty prop : props ) {
-            ConfigurableProperty addProp = null;
             if ( prop instanceof SingletonDatabasePropertyEntry ) {
-              addProp = prop;
+              PropertyDirectory.addProperty( prop );
             } else if ( prop instanceof MultiDatabasePropertyEntry ) {
-              addProp = ( ( MultiDatabasePropertyEntry ) prop ).getClone( config.getPartition( ) );
+              MultiDatabasePropertyEntry addProp = ( ( MultiDatabasePropertyEntry ) prop ).getClone( config.getPartition( ) );
+              PropertyDirectory.addProperty( addProp );
             }
-            PropertyDirectory.addProperty( addProp );
           }
         } catch ( Exception ex ) {
           LOG.error( ex, ex );
