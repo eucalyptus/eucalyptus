@@ -50,21 +50,21 @@ sub print_state {
    test_start("Service-State Comparison");
 
     my %line_map = undef; # key==>svctype:comp_id, val==>state separated by IP
-    $header = "COMPONENTS";
+    $header = sprintf("%-18.18s","COMPONENTS");
     foreach $ip (keys %svc_state_map){  ## column --> ip
-        $header.="               $ip";
+        $header.=sprintf("   %-10.10s",$ip);
         %map = %{$svc_state_map{$ip}};
        
         foreach $key (keys %map){  # key=SVC_TYPE:COMP_NAME, val=state;
              $state = $map{$key};
              if(&include($key)){
-                  $line_map{$key} .="                     ".$state; 
+                  $line_map{$key} .= sprintf("   %-10.10s",$state); 
              }  
         }  
     }
     print $header."\n";
     foreach $key (sort (keys %line_map)){
-         print $key." ".$line_map{$key}."\n"; 
+         print sprintf("%-30.30s %s\n", $key, $line_map{$key}); 
     }
 
     test_end();
