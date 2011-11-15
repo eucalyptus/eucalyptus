@@ -282,6 +282,9 @@ public class Hosts {
       LOG.info( "Hosts.entrySet(): " + arg0 + " => " + arg1 );
       if ( BootstrapRemoteComponent.INSTANCE.apply( arg1 ) ) {
         LOG.info( "Hosts.entrySet(): BOOTSTRAPPED HOST => " + arg1 );
+        if ( SyncDatabases.INSTANCE.apply( arg1 ) ) {
+          LOG.info( "Hosts.entrySet(): SYNCING HOST => " + arg1 );
+        } 
       } else if ( SyncDatabases.INSTANCE.apply( arg1 ) ) {
         LOG.info( "Hosts.entrySet(): SYNCING HOST => " + arg1 );
       } else if ( InitializeAsCloudController.INSTANCE.apply( arg1 ) ) {
@@ -339,7 +342,7 @@ public class Hosts {
     
     @Override
     public boolean apply( final Host arg1 ) {
-      if ( arg1.isLocalHost( ) && arg1.hasBootstrapped( ) && arg1.hasDatabase( ) ) {
+      if ( arg1.hasBootstrapped( ) && arg1.hasDatabase( ) ) {
         return Databases.enable( arg1 );
       } else {
         return false;
