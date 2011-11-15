@@ -8,6 +8,7 @@ $out_file="/tmp/quick_ha.out";
 $err_str=undef;
 $root_dir="/root"; $euca_dir="/opt/eucalyptus";
 $cmd=undef;
+$force=0;
 @cmd_candidates= qw(all svc);
 
 sub print_usage {
@@ -19,6 +20,10 @@ sub print_usage {
 sub parse_args {
     if(defined($_[0]))
     {
+       if ($_[0]=~/-f/){
+	  $force=1;
+	  shift(@_);
+       }
        foreach $opt (@cmd_candidates){
           if ($_[0]=~/$opt/){
              $cmd = $opt;
@@ -29,7 +34,11 @@ sub parse_args {
     if(defined($cmd)){
         shift(@_);
     }
-        
+    if ($_[0]=~/-f/){
+        $force=1;
+	shift(@_);
+    }
+
     @hosts=split(/[\s]/,"@_");
 }
 
@@ -153,7 +162,7 @@ sub run_on {
       ($rc, $stdout) = &ssh_stdout($h,$cmd);
 
       if($rc){
-           print "[$h] $err_msg\n";
+           print "[$h] $err_msg\n".$stderr;
       }else{
            print "[$h] =>\n ".$stdout;
       }
@@ -211,11 +220,13 @@ if(defined($cmd))
 }
 
 get_topology;
+if(!$force){
 print "Do you want to continue? (yes/no)\n";
 chomp($answer=<STDIN>);
 if( not $answer =~ /yes/){
     print "bye bye \n";
     exit 1;
+}
 }
 
 if(not defined($cmd) or $cmd =~ /all/){

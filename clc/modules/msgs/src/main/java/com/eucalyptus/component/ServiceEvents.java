@@ -97,6 +97,9 @@ public class ServiceEvents {
         case STOPPED:
           msg = new StopServiceType( );
           break;
+//TODO:GRZE: Handle other state transitions here.
+//        case INITIALIZED:
+//        case LOADED:
         case NOTREADY:
           msg = new StartServiceType( );
           break;

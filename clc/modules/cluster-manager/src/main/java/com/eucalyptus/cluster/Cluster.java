@@ -161,6 +161,24 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
   private boolean                                        hasClusterCert = false;
   private boolean                                        hasNodeCert    = false;
   
+  enum ZoneRegistration implements Predicate<Cluster> {
+    REGISTER {
+      @Override
+      public boolean apply( final Cluster input ) {
+        Clusters.getInstance( ).register( input );
+        return true;
+      }
+    },
+    DEREGISTER {
+      @Override
+      public boolean apply( final Cluster input ) {
+        Clusters.getInstance( ).registerDisabled( input );
+        return true;
+      }
+    };
+    
+  }
+  
   enum ServiceStateDispatch implements Predicate<Cluster> {
     STARTED {
       
@@ -181,15 +199,9 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
           if ( State.ENABLED.ordinal( ) > input.stateMachine.getState( ).ordinal( ) ) {
             AsyncRequests.newRequest( new EnableServiceCallback( input ) ).sendSync( input.configuration );
           }
-          Clusters.getInstance( ).register( input );
           return true;
         } catch ( final Exception t ) {
-          if ( !input.filterExceptions( t ) ) {
-            return false;
-          } else {
-            Clusters.getInstance( ).register( input );
-            return true;
-          }
+          return input.filterExceptions( t );
         }
       }
     },
@@ -203,8 +215,6 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
           return true;
         } catch ( final Exception t ) {
           return input.filterExceptions( t );
-        } finally {
-          Clusters.getInstance( ).registerDisabled( input );
         }
       }
     };
@@ -383,9 +393,9 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
     this.stateMachine = new StateMachineBuilder<Cluster, State, Transition>( this, State.PENDING ) {
       {
         final TransitionAction<Cluster> noop = Transitions.noop( );
-//        this.in( Cluster.State.DISABLED ).run( Cluster.ServiceStateDispatch.DISABLED );
-//        this.in( Cluster.State.NOTREADY ).run( Cluster.ServiceStateDispatch.DISABLED );
-//        this.in( Cluster.State.ENABLED ).run( Cluster.ServiceStateDispatch.ENABLED );
+        this.in( Cluster.State.DISABLED ).run( Cluster.ZoneRegistration.DEREGISTER );
+        this.in( Cluster.State.NOTREADY ).run( Cluster.ZoneRegistration.DEREGISTER );
+        this.in( Cluster.State.ENABLED ).run( Cluster.ZoneRegistration.REGISTER );
         this.from( State.BROKEN ).to( State.PENDING ).error( State.BROKEN ).on( Transition.RESTART_BROKEN ).run( noop );
         
         this.from( State.STOPPED ).to( State.PENDING ).error( State.PENDING ).on( Transition.PRESTART ).run( noop );
