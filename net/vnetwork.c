@@ -260,8 +260,8 @@ int vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, int
 	  // not big enough
 	  vnetconfig->max_vlan = (0xFFFFFFFF - nm) / (numaddrs+1);
 	  logprintfl(EUCAWARN, "vnetInit(): private network is not large enough to support all vlans, restricting to max vlan '%d'\n", vnetconfig->max_vlan);
-	  if (vnetconfig->max_vlan < 10) {
-	    logprintfl(EUCAWARN, "vnetInit(): default eucalyptus cloud controller starts networks at vlan 10, instances will not run with current max vlan '%d'.  Either increase the size of your private subnet (SUBNET/NETMASK) or decrease the number of addrs per group (NUMADDRS).\n", vnetconfig->max_vlan);
+	  if (vnetconfig->max_vlan < 2) {
+	    logprintfl(EUCAWARN, "vnetInit(): Instances will not run with current max vlan '%d'.  Either increase the size of your private subnet (VNET_SUBNET/VNET_NETMASK) or decrease the number of addrs per group (VNET_ADDRSPERNET).\n", vnetconfig->max_vlan);
 	  }
 	} else {
 	  vnetconfig->max_vlan = NUMBER_OF_VLANS;

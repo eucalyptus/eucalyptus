@@ -447,7 +447,7 @@ public class Handlers {
         final BaseMessage msg = BaseMessage.extractMessage( e );
         if ( msg != null ) {
           try {
-            if ( msg instanceof ServiceTransitionType && !Hosts.Coordinator.INSTANCE.isLocalhost( ) ) {
+            if ( msg instanceof ServiceTransitionType && !Hosts.isCoordinator( ) ) {
               //TODO:GRZE: extra epoch check and redirect
               Topology.touch( ( ServiceTransitionType ) msg );
               ctx.sendUpstream( e );

@@ -249,7 +249,7 @@ public class ServiceBootstrapper extends Bootstrapper.Simple {
     public boolean apply( final ServiceConfiguration config ) {
       boolean ret = config.getComponentId( ).isAlwaysLocal( ) || config.isVmLocal( )
                           || ( BootstrapArgs.isCloudController( ) && config.getComponentId( ).isCloudLocal( ) )
-                          || Hosts.Coordinator.INSTANCE.isLocalhost( );
+                          || Hosts.isCoordinator( );
       LOG.debug( "ServiceBootstrapper.shouldLoad(" + config.toString( )
                  + "):"
                  + ret );
@@ -314,7 +314,7 @@ public class ServiceBootstrapper extends Bootstrapper.Simple {
           public void run( ) {
             try {
               Topology.disable( config ).get( );
-              if ( Hosts.Coordinator.INSTANCE.isLocalhost( ) ) {
+              if ( Hosts.isCoordinator( ) ) {
                 Topology.enable( config );
               }
             } catch ( final Exception ex ) {
