@@ -14,7 +14,7 @@ sub cluster_proxy_state {
 
 sub db_connections {
   test_start("check database connection states");
-  run_on_clc("$euca_dir/usr/sbin/euca-modify-property -p euca=\'com.eucalyptus.entities.PersistenceContexts.list().collect{ \\\"\\\\n\\\" + it + \\\"=> ENABLED \\\" + com.eucalyptus.bootstrap.Databases.lookup(it).getActiveDatabases() + \\\"\\\\n\\\" + it + \\\"=> DISABLED \\\" + com.eucalyptus.bootstrap.Databases.lookup(it).getInactiveDatabases()  }\'","failed to get database connection pool info.");
+  run_on_clc("$euca_dir/usr/sbin/euca-modify-property -p euca=\'com.eucalyptus.entities.PersistenceContexts.list().collect{ \\\"\\\\n\\\" + it + \\\"=> ENABLED \\\" + com.eucalyptus.bootstrap.Databases.lookup(it).getActiveDatabases() + \\\" DISABLED \\\" + com.eucalyptus.bootstrap.Databases.lookup(it).getInactiveDatabases()  }\'","failed to get database connection pool info.");
   test_end();
 }
 
@@ -38,7 +38,7 @@ sub check_mysqld {
 
 sub coordinator_local {
    test_start("is coordinator?");
-   run_on_clc("$euca_dir/usr/sbin/euca-modify-property -p euca=\'com.eucalyptus.bootstrap.Hosts.isLocalHost() + \\\" => \\\" + com.eucalyptus.bootstrap.Hosts.getCoordinator()\'");
+   run_on_clc("$euca_dir/usr/sbin/euca-modify-property -p euca=\'com.eucalyptus.bootstrap.Hosts.isCoordinator() + \\\" => \\\" + com.eucalyptus.bootstrap.Hosts.getCoordinator()\'");
    test_end();
 }
 
