@@ -139,6 +139,10 @@ public class PersistenceContexts {
     return emf.get( persistenceContext );
   }
   
+  public static void flush( String ctx ) {
+    emf.get( ctx ).getCache( ).evictAll( );
+  }
+  
   public static List<String> list( ) {
     return Lists.newArrayList( entities.keySet( ) );
   }
