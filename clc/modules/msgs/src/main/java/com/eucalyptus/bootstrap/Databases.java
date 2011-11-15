@@ -98,7 +98,7 @@ public class Databases {
   private static final ScriptedDbBootstrapper     singleton       = new ScriptedDbBootstrapper( );
   private static Logger                           LOG             = Logger.getLogger( Databases.class );
   private static final String                     DB_NAME         = "eucalyptus";
-  private static final String                      DB_USERNAME     = DB_NAME;
+  private static final String                     DB_USERNAME     = DB_NAME;
   private static final String                     jdbcJmxDomain   = "net.sf.hajdbc";
   private static final ExecutorService            dbSyncExecutors = Executors.newCachedThreadPool( );                     //NOTE:GRZE:special case thread handling.
   private static final AtomicReference<SyncState> syncState       = new AtomicReference<SyncState>( SyncState.NOTSYNCED );
@@ -115,6 +115,7 @@ public class Databases {
     
     @Override
     public Future<Runnable> apply( Runnable input ) {
+      LOG.debug( "SUBMIT: " + input );
       return dbSyncExecutors.submit( input, input );
     }
   }
@@ -144,20 +145,19 @@ public class Databases {
   }
   
   private static void runDbStateChange( Function<String, Runnable> runnableFunction ) {
+    LOG.debug( "DB STATE CHANGE: " + runnableFunction );
     Map<Runnable, Future<Runnable>> runnables = Maps.newHashMap( );
     for ( final String ctx : PersistenceContexts.list( ) ) {
       Runnable run = runnableFunction.apply( ctx );
       runnables.put( run, ExecuteRunnable.INSTANCE.apply( run ) );
-      LOG.debug( "RUNNING: " + run );
     }
     Map<Runnable, Future<Runnable>> succeeded = Futures.waitAll( runnables );
     MapDifference<Runnable, Future<Runnable>> failed = Maps.difference( runnables, succeeded );
     StringBuilder builder = new StringBuilder( );
     builder.append( Joiner.on( "\nSUCCESS: " ).join( succeeded.keySet( ) ) );
     builder.append( Joiner.on( "\nFAILED:  " ).join( failed.entriesOnlyOnLeft( ).keySet( ) ) );
-    if ( failed.entriesOnlyOnLeft( ).isEmpty( ) ) {
-      LOG.info( builder.toString( ) );
-    } else {
+    LOG.debug( builder.toString( ) );
+    if ( !failed.entriesOnlyOnLeft( ).isEmpty( ) ) {
       throw Exceptions.toUndeclared( builder.toString( ) );
     }
   }
@@ -242,7 +242,7 @@ public class Databases {
                 } else if ( cluster.getActiveDatabases( ).contains( hostName ) ) {
                   cluster.deactivate( hostName );
                 }
-                final InactiveDatabaseMBean database = Databases.lookupDisabled( contextName, hostName );
+                final InactiveDatabaseMBean database = Databases.lookupInactiveDatabase( contextName, hostName );
                 database.setUser( "eucalyptus" );
                 database.setPassword( dbPass );
                 if ( !Hosts.isCoordinator( ) && host.isLocalHost( ) && BootstrapArgs.isCloudController( ) && !Databases.isSynchronized( ) ) {
@@ -269,7 +269,7 @@ public class Databases {
     }
   }
   
-  private static InactiveDatabaseMBean lookupDisabled( final String contextName, final String hostName ) throws NoSuchElementException {
+  private static InactiveDatabaseMBean lookupInactiveDatabase( final String contextName, final String hostName ) throws NoSuchElementException {
     final InactiveDatabaseMBean database = Mbeans.lookup( jdbcJmxDomain,
                                                           ImmutableMap.builder( )
                                                                       .put( "cluster", contextName )

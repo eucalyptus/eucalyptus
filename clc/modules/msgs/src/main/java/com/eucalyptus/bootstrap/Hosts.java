@@ -642,8 +642,8 @@ public class Hosts {
           if ( Databases.shouldInitialize( ) ) {
             doInitialize( );
           }
-        } else {
-          //TODO:GRZE:handle check and merge of db here!!!!
+        } else if ( !Hosts.isCoordinator( ) ) {
+          Databases.enable( local );
         }
         LOG.info( "Membership address for localhost: " + Hosts.localHost( ) );
         return true;

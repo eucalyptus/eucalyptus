@@ -78,6 +78,7 @@ import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.component.Component.State;
+import com.eucalyptus.component.Topology.ServiceString;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.empyrean.ServiceId;
 import com.eucalyptus.empyrean.ServiceTransitionType;
@@ -620,7 +621,9 @@ public class Topology {
       /** consume describe results **/
       final Collection<Future<ServiceConfiguration>> checkedServiceFutures = Collections2.filter( submittedChecks, WaitForResults.INSTANCE );
       final List<ServiceConfiguration> checkedServices = Lists.newArrayList( Collections2.transform( checkedServiceFutures, ExtractFuture.INSTANCE ) );
-      printCheckInfo( "CHECKED", checkedServices );
+      if ( !checkedServices.isEmpty( ) ) {
+        Logs.extreme( ).debug( "CHECKED" + ": " + Joiner.on( "\n" + "CHECKED" + ": " ).join( Collections2.transform( checkedServices, ServiceString.INSTANCE ) ) );
+      }
       
       if ( !Hosts.isCoordinator( ) ) {
         /** TODO:GRZE: check and disable timeout here **/
