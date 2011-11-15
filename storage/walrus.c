@@ -132,18 +132,18 @@ static int walrus_request_timeout (const char * walrus_op, const char * verb, co
     /* isolate the PATH in the URL as it will be needed for signing */
     char * url_path;
     if (strncasecmp (url, "http://", 7)!=0) {
-        logprintfl (EUCAERROR, "{%u} walrus_request: URL must start with http://...\n");
+        logprintfl (EUCAERROR, "{%u} walrus_request: URL must start with http://...\n",(unsigned int)pthread_self());
         pthread_mutex_unlock(&wreq_mutex);
         return code;
     }
     if ((url_path=strchr(url+7, '/'))==NULL) { /* find first '/' after hostname */
-        logprintfl (EUCAERROR, "{%u} walrus_request: URL has no path\n");
+        logprintfl (EUCAERROR, "{%u} walrus_request: URL has no path\n",(unsigned int)pthread_self());
         pthread_mutex_unlock(&wreq_mutex);
         return code;
     }
 
     if (euca_init_cert()) {
-        logprintfl (EUCAERROR, "{%u} walrus_request: failed to initialize certificate\n");
+        logprintfl (EUCAERROR, "{%u} walrus_request: failed to initialize certificate\n",(unsigned int)pthread_self());
         pthread_mutex_unlock(&wreq_mutex);
         return code;
     }
@@ -155,11 +155,13 @@ static int walrus_request_timeout (const char * walrus_op, const char * verb, co
         return code;
     }
 
+    logprintfl(EUCADEBUG, "{%u} walrus_request: calling URL=%s\n", (unsigned int)pthread_self(), url);
+
     CURL * curl;
     CURLcode result;
     curl = curl_easy_init ();
     if (curl==NULL) {
-        logprintfl (EUCAERROR, "{%u} walrus_request: could not initialize libcurl\n");
+        logprintfl (EUCAERROR, "{%u} walrus_request: could not initialize libcurl\n",(unsigned int)pthread_self());
         close(fd);
         pthread_mutex_unlock(&wreq_mutex);
         return code;
