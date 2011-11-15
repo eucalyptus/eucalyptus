@@ -81,7 +81,7 @@ public class MetadataStateBootstrapper extends Bootstrapper.Simple {
   @Override
   public boolean start( ) throws Exception {
     try {
-      if ( Hosts.Coordinator.INSTANCE.isLocalhost( ) ) {
+      if ( Hosts.isCoordinator( ) ) {
         ensureCountersExist( );
         ensureVmTypesExist( );
       }

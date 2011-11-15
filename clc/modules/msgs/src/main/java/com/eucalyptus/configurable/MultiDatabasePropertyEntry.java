@@ -134,10 +134,10 @@ public class MultiDatabasePropertyEntry extends AbstractConfigurableProperty imp
     else return super.getQualifiedName( );
   }
   
-  public MultiDatabasePropertyEntry getClone( String identifierValue ) {
+  public MultiDatabasePropertyEntry getClone( String idValue ) {
     return new MultiDatabasePropertyEntry( this.getDefiningClass( ), this.getEntrySetName( ), this.getField( ), identifierField, this.getDescription( ),
                                            this.getDefaultValue( ), this.getTypeParser( ), this.getReadOnly( ),
-                                           this.getDisplayName( ), this.getWidgetType( ), this.getAlias( ), identifierValue );
+                                           this.getDisplayName( ), this.getWidgetType( ), this.getAlias( ), idValue );
   }
   
   /**

@@ -78,6 +78,7 @@ import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.component.Component.State;
+import com.eucalyptus.component.Topology.ServiceString;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.empyrean.ServiceId;
 import com.eucalyptus.empyrean.ServiceTransitionType;
@@ -137,7 +138,7 @@ public class Topology {
     };
     private final int numWorkers;
     
-    private Queue( int numWorkers ) {
+    private Queue( final int numWorkers ) {
       this.numWorkers = numWorkers;
     }
     
@@ -215,14 +216,30 @@ public class Topology {
     };
   }
   
+  public static void populateServices( ServiceConfiguration config, BaseMessage msg ) {
+    if ( Hosts.isCoordinator( ) ) {
+      msg.set_epoch( Topology.epoch( ) );
+      if ( config.getComponentId( ).isAlwaysLocal( ) ) {
+        Collection<ServiceId> serviceList = Collections2.transform( Topology.getInstance( ).getServices( ).values( ),
+                                                                    TypeMappers.lookup( ServiceConfiguration.class, ServiceId.class ) );
+        msg.get_services( ).addAll( serviceList );
+      } else {
+        msg.get_services( ).addAll( Topology.partitionRelativeView( config ) );
+      }
+    }
+  }
+  
   public static void touch( final ServiceTransitionType msg ) {//TODO:GRZE: @Service interceptor
-    if ( !Hosts.Coordinator.INSTANCE.isLocalhost( ) && ( msg.get_epoch( ) != null ) ) {
+    if ( !Hosts.isCoordinator( ) && ( msg.get_epoch( ) != null ) ) {
+      for ( ServiceConfiguration conf : Lists.transform( msg.get_services( ), ServiceConfigurations.ServiceIdToServiceConfiguration.INSTANCE ) ) {
+        enable( conf );
+      }
       Topology.getInstance( ).currentEpoch = Ints.max( Topology.getInstance( ).currentEpoch, msg.get_epoch( ) );
     }
   }
   
   public static boolean check( final BaseMessage msg ) {
-    if ( !Hosts.Coordinator.INSTANCE.isLocalhost( ) && ( msg.get_epoch( ) != null ) ) {
+    if ( !Hosts.isCoordinator( ) && ( msg.get_epoch( ) != null ) ) {
       return Topology.getInstance( ).epoch( ) <= msg.get_epoch( );
     } else {
       return true;
@@ -251,7 +268,7 @@ public class Topology {
     return Topology.getInstance( ).getEpoch( );
   }
   
-  public static List<ServiceId> partitionRelativeView( final ServiceConfiguration config, final InetAddress localAddr ) {
+  private static Collection<ServiceId> partitionRelativeView( final ServiceConfiguration config ) {
     final Partition partition = Partitions.lookup( config );
     return Lists.transform( Topology.getInstance( ).partitionView( partition ), TypeMappers.lookup( ServiceConfiguration.class, ServiceId.class ) );
   }
@@ -358,6 +375,7 @@ public class Topology {
         final ServiceKey serviceKey = ServiceKey.create( config );
         final ServiceConfiguration curr = Topology.this.getServices( ).put( serviceKey, config );
         if ( ( curr != null ) && !curr.equals( config ) ) {
+          transition( State.DISABLED ).apply( curr );
           return false;
         } else if ( ( curr != null ) && curr.equals( config ) ) {
           return true;
@@ -491,13 +509,22 @@ public class Topology {
   }
   
   public TransitionGuard getGuard( ) {
-    return ( Hosts.Coordinator.INSTANCE.isLocalhost( )
+    return ( Hosts.isCoordinator( )
       ? this.cloudControllerGuard( )
       : this.remoteGuard( ) );
   }
   
   private ConcurrentMap<ServiceKey, ServiceConfiguration> getServices( ) {
     return this.services;
+  }
+  
+  enum ProceedToDisabledServiceFilter implements Predicate<ServiceConfiguration> {
+    INSTANCE;
+    @Override
+    public boolean apply( final ServiceConfiguration arg0 ) {
+      return arg0.lookupState( ).ordinal( ) < Component.State.DISABLED.ordinal( );
+    }
+    
   }
   
   enum CheckServiceFilter implements Predicate<ServiceConfiguration> {
@@ -521,6 +548,18 @@ public class Topology {
     @Override
     public Future<ServiceConfiguration> apply( final ServiceConfiguration input ) {
       final Callable<ServiceConfiguration> call = Topology.callable( input, Topology.get( State.ENABLED ) );
+      final Future<ServiceConfiguration> future = Queue.EXTERNAL.enqueue( call );
+      return future;
+    }
+    
+  }
+  
+  enum SubmitDisable implements Function<ServiceConfiguration, Future<ServiceConfiguration>> {
+    INSTANCE;
+    
+    @Override
+    public Future<ServiceConfiguration> apply( final ServiceConfiguration input ) {
+      final Callable<ServiceConfiguration> call = Topology.callable( input, Topology.get( State.DISABLED ) );
       final Future<ServiceConfiguration> future = Queue.EXTERNAL.enqueue( call );
       return future;
     }
@@ -558,6 +597,14 @@ public class Topology {
     
   }
   
+  enum ServiceString implements Function<ServiceConfiguration, String> {
+    INSTANCE;
+    @Override
+    public String apply( final ServiceConfiguration input ) {
+      return input.getFullName( ) + ":" + input.lookupState( );
+    }
+  }
+  
   enum ExtractFuture implements Function<Future<ServiceConfiguration>, ServiceConfiguration> {
     INSTANCE;
     @Override
@@ -579,31 +626,49 @@ public class Topology {
     @Override
     public List<ServiceConfiguration> call( ) {
       /** submit describe operations **/
-      final List<ServiceConfiguration> checkServices = Lists.newArrayList( );
-      for ( Component c : Components.list( ) ) {
-        checkServices.addAll( Collections2.filter( c.services( ), CheckServiceFilter.INSTANCE ) );
+      final List<ServiceConfiguration> allServices = Lists.newArrayList( );
+      for ( final Component c : Components.list( ) ) {
+        allServices.addAll( c.services( ) );
       }
+      
+      final Collection<ServiceConfiguration> checkServices = Collections2.filter( allServices, CheckServiceFilter.INSTANCE );
+      
       final Collection<Future<ServiceConfiguration>> submittedChecks = Collections2.transform( checkServices, SubmitCheck.INSTANCE );
       
       /** consume describe results **/
       final Collection<Future<ServiceConfiguration>> checkedServiceFutures = Collections2.filter( submittedChecks, WaitForResults.INSTANCE );
       final List<ServiceConfiguration> checkedServices = Lists.newArrayList( Collections2.transform( checkedServiceFutures, ExtractFuture.INSTANCE ) );
-      LOG.trace( LogUtil.subheader( "CHECKED: " + Joiner.on( "\nCHECKED: " ).join( checkedServices ) ) );
+      if ( !checkedServices.isEmpty( ) ) {
+        Logs.extreme( ).debug( "CHECKED" + ": " + Joiner.on( "\n" + "CHECKED" + ": " ).join( Collections2.transform( checkedServices, ServiceString.INSTANCE ) ) );
+      }
       
-      if ( !Hosts.Coordinator.INSTANCE.isLocalhost( ) ) {
+      if ( !Hosts.isCoordinator( ) ) {
         /** TODO:GRZE: check and disable timeout here **/
         return Lists.newArrayList( Collections2.transform( checkedServiceFutures, ExtractFuture.INSTANCE ) );
       } else {
         /** make promotion decisions **/
         final Predicate<ServiceConfiguration> canPromote = Predicates.and( Predicates.in( checkedServices ), FailoverPredicate.INSTANCE );
-        final List<ServiceConfiguration> promoteServices = Lists.newArrayList( );
-        for ( Component c : Components.list( ) ) {
-          promoteServices.addAll( Collections2.filter( c.services( ), canPromote ) );
-        }
+        
+        final Collection<ServiceConfiguration> promoteServices = Collections2.filter( allServices, canPromote );
         final Collection<Future<ServiceConfiguration>> enableCallables = Collections2.transform( promoteServices, SubmitEnable.INSTANCE );
         final Collection<Future<ServiceConfiguration>> enabledServices = Collections2.filter( enableCallables, WaitForResults.INSTANCE );
-        LOG.trace( LogUtil.subheader( "ENABLED: " + Joiner.on( "\nENABLED: " ).join( enabledServices ) ) );
-        return Lists.transform( Lists.newArrayList( enabledServices ), ExtractFuture.INSTANCE );
+        final List<ServiceConfiguration> result = Lists.transform( Lists.newArrayList( enabledServices ), ExtractFuture.INSTANCE );
+        printCheckInfo( "ENABLED", result );
+        
+        /** advance other components as needed **/
+        final Predicate<ServiceConfiguration> proceedToDisableFilter = Predicates.and( Predicates.not( Predicates.in( promoteServices ) ),
+                                                                                       ProceedToDisabledServiceFilter.INSTANCE );
+        final Collection<ServiceConfiguration> disableServices = Collections2.filter( allServices, proceedToDisableFilter );
+        final Collection<Future<ServiceConfiguration>> disableCallables = Collections2.transform( disableServices, SubmitDisable.INSTANCE );
+        final Collection<Future<ServiceConfiguration>> disabledServices = Collections2.filter( disableCallables, WaitForResults.INSTANCE );
+        printCheckInfo( "DISABLED", Collections2.transform( disabledServices, ExtractFuture.INSTANCE ) );
+        return result;
+      }
+    }
+    
+    private static void printCheckInfo( final String action, final Collection<ServiceConfiguration> result ) {
+      if ( !result.isEmpty( ) ) {
+        LOG.debug( action + ": " + Joiner.on( "\n" + action + ": " ).join( Collections2.transform( result, ServiceString.INSTANCE ) ) );
       }
     }
   }
@@ -613,7 +678,7 @@ public class Topology {
     @Override
     public boolean apply( final ServiceConfiguration arg0 ) {
       final ServiceKey key = ServiceKey.create( arg0 );
-      if ( !Hosts.Coordinator.INSTANCE.isLocalhost( ) ) {
+      if ( !Hosts.isCoordinator( ) ) {
         Logs.extreme( ).debug( "FAILOVER-REJECT: " + Internets.localHostInetAddress( )
                                + ": not cloud controller, ignoring promotion for: "
                                    + arg0.getFullName( ) );
@@ -668,7 +733,7 @@ public class Topology {
   @Override
   public String toString( ) {
     final StringBuilder builder = new StringBuilder( );
-    builder.append( "Topology:currentEpoch=" ).append( this.currentEpoch ).append( ":guard=" ).append( Hosts.Coordinator.INSTANCE.isLocalhost( )
+    builder.append( "Topology:currentEpoch=" ).append( this.currentEpoch ).append( ":guard=" ).append( Hosts.isCoordinator( )
       ? "cloud"
       : "remote" );
     return builder.toString( );
@@ -679,7 +744,7 @@ public class Topology {
   Map<Component.State, Function<ServiceConfiguration, ServiceConfiguration>> 
   cloudTransitionCallables = new MapMaker( ).makeComputingMap( TopologyFunctionGenerator.INSTANCE ); //TODO:GRZE: CacheBuilder
   //@format
-  private static Function<ServiceConfiguration, ServiceConfiguration> get( Component.State state ) {
+  private static Function<ServiceConfiguration, ServiceConfiguration> get( final Component.State state ) {
     return cloudTransitionCallables.get( state );
   }
   
@@ -705,8 +770,8 @@ public class Topology {
             Logs.extreme( ).debug( EventRecord.here( Topology.class, EventType.QUEUE, function.toString( ), config.getFullName( ).toString( ),
                                                      Long.toString( System.currentTimeMillis( ) - serviceStart ), "ms" ) );
             return result;
-          } catch ( Exception ex ) {
-            Throwable t = Exceptions.unwrapCause( ex );
+          } catch ( final Exception ex ) {
+            final Throwable t = Exceptions.unwrapCause( ex );
             Logs.extreme( ).error( t, t );
             LOG.error( config.getFullName( ) + " failed to transition because of: " + t );
             throw ex;
@@ -730,11 +795,11 @@ public class Topology {
     DESTROY( Component.State.PRIMORDIAL ),
     ENABLE( Component.State.ENABLED ) {
       @Override
-      public ServiceConfiguration apply( ServiceConfiguration config ) {
+      public ServiceConfiguration apply( final ServiceConfiguration config ) {
         if ( Topology.guard( ).tryEnable( config ) ) {
           try {
             return super.apply( config );
-          } catch ( RuntimeException ex ) {
+          } catch ( final RuntimeException ex ) {
             Topology.guard( ).tryDisable( config );
             throw ex;
           }
@@ -742,10 +807,10 @@ public class Topology {
 //          throw new IllegalStateException( "Failed to ENABLE " + config.getFullName( ) );
           try {
             return ServiceTransitions.pathTo( config, Component.State.DISABLED ).get( );
-          } catch ( InterruptedException ex ) {
+          } catch ( final InterruptedException ex ) {
             Thread.currentThread( ).interrupt( );
             throw Exceptions.toUndeclared( ex );
-          } catch ( ExecutionException ex ) {
+          } catch ( final ExecutionException ex ) {
             throw Exceptions.toUndeclared( ex );
           }
         }
@@ -753,7 +818,7 @@ public class Topology {
     },
     DISABLE( Component.State.DISABLED ) {
       @Override
-      public ServiceConfiguration apply( ServiceConfiguration config ) {
+      public ServiceConfiguration apply( final ServiceConfiguration config ) {
         ServiceKey serviceKey = null;
         try {
           serviceKey = ServiceKey.create( config );
@@ -767,7 +832,7 @@ public class Topology {
     },
     CHECK {
       @Override
-      public ServiceConfiguration apply( ServiceConfiguration config ) {
+      public ServiceConfiguration apply( final ServiceConfiguration config ) {
         if ( !Bootstrap.isFinished( ) ) {
           LOG.debug( this.toString( )
                      + " aborted because bootstrap is not complete for service: "
@@ -788,13 +853,13 @@ public class Topology {
       this.tc = new TopologyChange( this );
     }
     
-    private Transitions( State state ) {
+    private Transitions( final State state ) {
       this.state = state;
       this.tc = new TopologyChange( this );
     }
     
     @Override
-    public ServiceConfiguration apply( ServiceConfiguration input ) {
+    public ServiceConfiguration apply( final ServiceConfiguration input ) {
       Components.lookup( input.getComponentId( ) ).setup( input );
       return this.tc.apply( input );
     }
@@ -814,28 +879,28 @@ public class Topology {
   private static class TopologyChange implements Function<ServiceConfiguration, ServiceConfiguration>, Supplier<Component.State> {
     private final Topology.Transitions transitionName;
     
-    TopologyChange( Transitions transitionName ) {
+    TopologyChange( final Transitions transitionName ) {
       this.transitionName = transitionName;
     }
     
     @Override
-    public ServiceConfiguration apply( ServiceConfiguration input ) {
+    public ServiceConfiguration apply( final ServiceConfiguration input ) {
       State nextState = null;
-      if ( ( nextState = findNextCheckState( input.lookupState( ) ) ) == null ) {
+      if ( ( nextState = this.findNextCheckState( input.lookupState( ) ) ) == null ) {
         return input;
       } else {
         return this.doTopologyChange( input, nextState );
       }
     }
     
-    private ServiceConfiguration doTopologyChange( ServiceConfiguration input, State nextState ) throws RuntimeException {
-      State initialState = input.lookupState( );
+    private ServiceConfiguration doTopologyChange( final ServiceConfiguration input, final State nextState ) throws RuntimeException {
+      final State initialState = input.lookupState( );
       ServiceConfiguration endResult = input;
       try {
         endResult = ServiceTransitions.pathTo( input, nextState ).get( );
         Logs.exhaust( ).debug( this.toString( endResult, initialState, nextState ) );
         return endResult;
-      } catch ( Exception ex ) {
+      } catch ( final Exception ex ) {
         Exceptions.maybeInterrupted( ex );
         LOG.debug( this.toString( input, initialState, nextState, ex ) );
         throw Exceptions.toUndeclared( ex );
@@ -846,9 +911,9 @@ public class Topology {
       }
     }
     
-    private String toString( ServiceConfiguration endResult, State initialState, State nextState, Throwable... throwables ) {
+    private String toString( final ServiceConfiguration endResult, final State initialState, final State nextState, final Throwable... throwables ) {
       return String.format( "%s %s %s->%s=%s [%s]", this.toString( ), endResult.getFullName( ), initialState, nextState, endResult.lookupState( ),
-                            ( throwables != null && throwables.length > 0
+                            ( ( throwables != null ) && ( throwables.length > 0 )
                               ? Exceptions.causeString( throwables[0] )
                               : "WINNING" ) );
     }
@@ -863,7 +928,7 @@ public class Topology {
       return this.transitionName.get( );
     }
     
-    private State findNextCheckState( State initialState ) {
+    private State findNextCheckState( final State initialState ) {
       if ( this.get( ) == null ) {
         if ( State.NOTREADY.equals( initialState ) || State.BROKEN.equals( initialState ) ) {
           return State.DISABLED;
@@ -883,8 +948,8 @@ public class Topology {
     INSTANCE;
     
     @Override
-    public Function<ServiceConfiguration, ServiceConfiguration> apply( State input ) {
-      for ( Transitions c : Transitions.values( ) ) {
+    public Function<ServiceConfiguration, ServiceConfiguration> apply( final State input ) {
+      for ( final Transitions c : Transitions.values( ) ) {
         if ( input.equals( c.state ) ) {
           return c;
         } else if ( input.name( ).startsWith( c.name( ) ) ) {

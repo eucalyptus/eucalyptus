@@ -87,12 +87,10 @@ public class Empyrean extends ComponentId {
   private static Logger        LOG              = Logger.getLogger( Empyrean.class );
   public static final Empyrean INSTANCE         = new Empyrean( );                   //NOTE: this has a silly name because it is temporary.  do not use it as an example of good form for component ids.
                                                                                       
-  @Partition( value = { Empyrean.class }, manyToOne = true )
+  @Partition( value = { Empyrean.class },
+              manyToOne = true )
 //  @InternalService
-  public static class Arbitrator extends ComponentId {
-    
-    private static final long serialVersionUID = 1L;
-  }
+  public static class Arbitrator extends ComponentId {}
   
   @Partition( Empyrean.class )
   @AdminService
@@ -120,34 +118,6 @@ public class Empyrean extends ComponentId {
     return "eucalyptus-bootstrap.xml";
   }
   
-  @Provides( Empyrean.class )
-  @RunDuring( Bootstrap.Stage.PersistenceInit )
-  public static class PersistenceContextBootstrapper extends Bootstrapper.Simple {
-    
-    @Override
-    public boolean load( ) throws Exception {
-      Groovyness.run( "setup_persistence.groovy" );
-      return true;
-    }
-  }
-  
-  @Provides( Empyrean.class )
-  @RunDuring( Bootstrap.Stage.PoolInit )
-  public static class DatabasePoolBootstrapper extends Bootstrapper.Simple {
-    
-    @Override
-    public boolean load( ) throws Exception {
-      Groovyness.run( "setup_dbpool.groovy" );
-      return true;
-    }
-
-    @Override
-    public boolean check( ) throws Exception {
-      return super.check( );
-    }
-    
-  }
-
   @Override
   public String getInternalServicePath( final String... pathParts ) {
     return "/internal/Empyrean";
