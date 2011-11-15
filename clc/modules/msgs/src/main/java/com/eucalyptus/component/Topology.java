@@ -216,6 +216,19 @@ public class Topology {
     };
   }
   
+  public static void populateServices( ServiceConfiguration config, BaseMessage msg ) {
+    if ( Hosts.isCoordinator( ) ) {
+      msg.set_epoch( Topology.epoch( ) );
+      if ( config.getComponentId( ).isAlwaysLocal( ) ) {
+        Collection<ServiceId> serviceList = Collections2.transform( Topology.getInstance( ).getServices( ).values( ),
+                                                                    TypeMappers.lookup( ServiceConfiguration.class, ServiceId.class ) );
+        msg.get_services( ).addAll( serviceList );
+      } else {
+        msg.get_services( ).addAll( Topology.partitionRelativeView( config ) );
+      }
+    }
+  }
+  
   public static void touch( final ServiceTransitionType msg ) {//TODO:GRZE: @Service interceptor
     if ( !Hosts.isCoordinator( ) && ( msg.get_epoch( ) != null ) ) {
       for ( ServiceConfiguration conf : Lists.transform( msg.get_services( ), ServiceConfigurations.ServiceIdToServiceConfiguration.INSTANCE ) ) {
@@ -255,7 +268,7 @@ public class Topology {
     return Topology.getInstance( ).getEpoch( );
   }
   
-  public static List<ServiceId> partitionRelativeView( final ServiceConfiguration config, final InetAddress localAddr ) {
+  private static Collection<ServiceId> partitionRelativeView( final ServiceConfiguration config ) {
     final Partition partition = Partitions.lookup( config );
     return Lists.transform( Topology.getInstance( ).partitionView( partition ), TypeMappers.lookup( ServiceConfiguration.class, ServiceId.class ) );
   }

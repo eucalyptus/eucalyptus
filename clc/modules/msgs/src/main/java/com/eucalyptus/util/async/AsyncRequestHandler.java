@@ -42,6 +42,7 @@ import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.LogUtil;
+import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.ws.WebServices;
 import com.eucalyptus.ws.util.NioBootstrap;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
@@ -102,9 +103,8 @@ public class AsyncRequestHandler<Q extends BaseMessage, R extends BaseMessage> i
               if ( future.isSuccess( ) ) {
 //TODO:GRZE: better logging here                LOG.debug( "Connected as: " + future.getChannel( ).getLocalAddress( ) );
                 final InetAddress localAddr = ( ( InetSocketAddress ) future.getChannel( ).getLocalAddress( ) ).getAddress( );
-                if ( !factory.getClass( ).getSimpleName( ).startsWith( "GatherLog" ) && Hosts.isCoordinator( ) ) {
-                  AsyncRequestHandler.this.request.get( ).set_epoch( Topology.epoch( ) );
-                  AsyncRequestHandler.this.request.get( ).get_services( ).addAll( Topology.partitionRelativeView( config, localAddr ) );
+                if ( !factory.getClass( ).getSimpleName( ).startsWith( "GatherLog" ) ) {
+                  Topology.populateServices( config, AsyncRequestHandler.this.request.get( ) );
                 }
                 EventRecord.here( request.getClass( ), EventClass.SYSTEM_REQUEST, EventType.CHANNEL_OPEN, request.getClass( ).getSimpleName( ),
                                   request.getCorrelationId( ), serviceSocketAddress.toString( ), "" + future.getChannel( ).getLocalAddress( ),
