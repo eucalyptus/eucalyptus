@@ -276,10 +276,6 @@ public class Component implements HasName<Component> {
     }
   }
   
-  public NavigableSet<ServiceConfiguration> enabledServices( ) {
-    return Sets.newTreeSet( Iterables.filter( this.serviceRegistry.getServices( ), ServiceConfigurations.enabledService( ) ) );
-  }
-  
   public boolean hasService( ServiceConfiguration config ) {
     return this.serviceRegistry.hasService( config );
   }
