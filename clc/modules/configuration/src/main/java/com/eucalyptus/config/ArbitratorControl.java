@@ -101,7 +101,7 @@ public class ArbitratorControl {
 	public static void check( ) throws Exception {
 		final List<ArbitratorConfiguration> configs = ServiceConfigurations.list( Arbitrator.class );
 		for ( final ArbitratorConfiguration config : configs ) {
-			if(Internets.localHostInetAddress().equals(Internets.toAddress(config.getHostName()))) {
+			if(Internets.testLocal(config.getHostName())) {
 				final String hostName = config.getGatewayHost();
 				if ( hostName != null ) {
 					Threads.lookup( Arbitrator.class, ArbitratorControl.class ).submit( new Runnable( ) {
