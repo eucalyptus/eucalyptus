@@ -38,7 +38,7 @@ sub check_mysqld {
 
 sub coordinator_local {
    test_start("is coordinator?");
-   run_on_clc("$euca_dir/usr/sbin/euca-modify-property -p euca=\'com.eucalyptus.bootstrap.Hosts.Coordinator.INSTANCE.isLocalhost( )\'");
+   run_on_clc("$euca_dir/usr/sbin/euca-modify-property -p euca=\'com.eucalyptus.bootstrap.Hosts.isLocalHost() + \\\" => \\\" + com.eucalyptus.bootstrap.Hosts.getCoordinator()\'");
    test_end();
 }
 
