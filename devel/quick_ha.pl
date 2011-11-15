@@ -162,7 +162,7 @@ sub run_on {
       ($rc, $stdout) = &ssh_stdout($h,$cmd);
 
       if($rc){
-           print "[$h] $err_msg\n";
+           print "[$h] $err_msg\n".$stderr;
       }else{
            print "[$h] =>\n ".$stdout;
       }
