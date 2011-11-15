@@ -46,9 +46,7 @@ public class EucalyptusBuilder extends AbstractServiceBuilder<EucalyptusConfigur
   }
   
   @Override
-  public void fireStart( ServiceConfiguration config ) throws ServiceRegistrationException {
-    EventRecord.here( EucalyptusBuilder.class, EventType.COMPONENT_SERVICE_START, config.toString( ) ).info( );
-  }
+  public void fireStart( ServiceConfiguration config ) throws ServiceRegistrationException {}
   
   @Override
   public void fireEnable( ServiceConfiguration config ) throws ServiceRegistrationException {
@@ -72,14 +70,10 @@ public class EucalyptusBuilder extends AbstractServiceBuilder<EucalyptusConfigur
   }
   
   @Override
-  public void fireDisable( ServiceConfiguration config ) throws ServiceRegistrationException {
-    EventRecord.here( EucalyptusBuilder.class, EventType.COMPONENT_SERVICE_DISABLED, config.toString( ) ).info( );
-  }
+  public void fireDisable( ServiceConfiguration config ) throws ServiceRegistrationException {}
   
   @Override
-  public void fireStop( ServiceConfiguration config ) throws ServiceRegistrationException {
-    EventRecord.here( EucalyptusBuilder.class, EventType.COMPONENT_SERVICE_STOPPED, config.toString( ) ).info( );
-  }
+  public void fireStop( ServiceConfiguration config ) throws ServiceRegistrationException {}
   
   @Override
   public void fireCheck( ServiceConfiguration config ) throws ServiceRegistrationException {}

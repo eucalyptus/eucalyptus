@@ -63,6 +63,7 @@
 
 package com.eucalyptus.component;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -136,33 +137,35 @@ public class ServiceTransitions {
   @SuppressWarnings( "unchecked" )
   public static CheckedListenableFuture<ServiceConfiguration> pathTo( final ServiceConfiguration configuration, final Component.State goalState ) {
     try {
-      CheckedListenableFuture<ServiceConfiguration> result = null;
+      State[] path = null;
       switch ( goalState ) {
         case LOADED:
-          result = executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToLoaded( configuration.lookupState( ) ) ) );
+          path = pathToLoaded( configuration.lookupState( ) );
           break;
         case DISABLED:
-          result = executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToDisabled( configuration.lookupState( ) ) ) );
+          path = pathToDisabled( configuration.lookupState( ) );
           break;
         case ENABLED:
-          result = executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToEnabled( configuration.lookupState( ) ) ) );
+          path = pathToEnabled( configuration.lookupState( ) );
           break;
         case STOPPED:
-          result = executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToStopped( configuration.lookupState( ) ) ) );
+          path = pathToStopped( configuration.lookupState( ) );
           break;
         case NOTREADY:
-          result = executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToStarted( configuration.lookupState( ) ) ) );
+          path = pathToStarted( configuration.lookupState( ) );
           break;
         case PRIMORDIAL:
-          result = executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToPrimordial( configuration.lookupState( ) ) ) );
+          path = pathToPrimordial( configuration.lookupState( ) );
           break;
         case BROKEN:
-          result = executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToBroken( configuration.lookupState( ) ) ) );
+          path = pathToBroken( configuration.lookupState( ) );
           break;
         case INITIALIZED:
-          result = executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToInitialized( configuration.lookupState( ) ) ) );
+          path = pathToInitialized( configuration.lookupState( ) );
           break;
       }
+      LOG.debug( configuration.getFullName( ) + " transitioning => " + Arrays.toString( path ) );
+      CheckedListenableFuture<ServiceConfiguration> result = executeTransition( configuration, Automata.sequenceTransitions( configuration, path ) );
       return result;
     } catch ( RuntimeException ex ) {
       Logs.extreme( ).error( ex, ex );
