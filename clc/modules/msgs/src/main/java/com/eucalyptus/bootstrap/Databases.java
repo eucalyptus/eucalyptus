@@ -299,24 +299,29 @@ public class Databases {
     }
   }
   
-  static void enable( final Host host ) {
+  static boolean enable( final Host host ) {
     if ( !host.hasBootstrapped( ) || !host.hasDatabase( ) ) {
-      return;
+      return false;
     } else {
       if ( host.isLocalHost( ) ) {
         if ( syncState.compareAndSet( SyncState.NOTSYNCED, SyncState.SYNCING ) ) {
           try {
             runDbStateChange( ActivateHostFunction.INSTANCE.apply( host ) );
             syncState.set( SyncState.SYNCED );
+            return true;
           } catch ( Exception ex ) {
             runDbStateChange( DeactivateHostFunction.INSTANCE.apply( host ) );
             LOG.error( ex );
             Logs.extreme( ).error( ex, ex );
             syncState.set( SyncState.NOTSYNCED );
+            return false;
           }
+        } else {
+          return false;
         }
       } else {
         runDbStateChange( ActivateHostFunction.INSTANCE.apply( host ) );
+        return true;
       }
     }
   }

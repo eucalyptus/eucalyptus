@@ -340,8 +340,7 @@ public class Hosts {
     @Override
     public boolean apply( final Host arg1 ) {
       if ( arg1.isLocalHost( ) && arg1.hasBootstrapped( ) && arg1.hasDatabase( ) ) {
-        Databases.enable( arg1 );
-        return true;
+        return Databases.enable( arg1 );
       } else {
         return false;
       }
