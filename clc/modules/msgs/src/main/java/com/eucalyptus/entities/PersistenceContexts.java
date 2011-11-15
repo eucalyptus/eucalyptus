@@ -11,9 +11,15 @@ import javax.persistence.PersistenceContext;
 import org.apache.log4j.Logger;
 import org.hibernate.ejb.Ejb3Configuration;
 import org.hibernate.ejb.EntityManagerFactoryImpl;
+import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapException;
+import com.eucalyptus.bootstrap.Bootstrapper;
+import com.eucalyptus.bootstrap.Provides;
+import com.eucalyptus.bootstrap.RunDuring;
+import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.scripting.Groovyness;
 import com.eucalyptus.system.Ats;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Exceptions;
@@ -35,6 +41,17 @@ public class PersistenceContexts {
   private static Map<String, EntityManagerFactoryImpl>  emf              = new ConcurrentSkipListMap<String, EntityManagerFactoryImpl>( );
   private static Multimap<String, Exception>            illegalAccesses  = ArrayListMultimap.create( );
   
+  @Provides( Empyrean.class )
+  @RunDuring( Bootstrap.Stage.PersistenceInit )
+  public static class PersistenceContextBootstrapper extends Bootstrapper.Simple {
+    
+    @Override
+    public boolean load( ) throws Exception {
+      Groovyness.run( "setup_persistence.groovy" );
+      return true;
+    }
+  }
+  
   public static boolean isPersistentClass( Class candidate ) {
     return isSharedEntityClass( candidate ) || isEntityClass( candidate );
   }
@@ -51,9 +68,11 @@ public class PersistenceContexts {
         return true;
       }
     } else if ( Ats.from( candidate ).has( javax.persistence.Entity.class ) && !Ats.from( candidate ).has( org.hibernate.annotations.Entity.class ) ) {
-      throw Exceptions.toUndeclared( "Database entity missing required annotation @org.hibernate.annotations.Entity. Database entities must have BOTH @javax.persistence.Entity and @org.hibernate.annotations.Entity annotations: " + candidate.getCanonicalName( ) );
+      throw Exceptions.toUndeclared( "Database entity missing required annotation @org.hibernate.annotations.Entity. Database entities must have BOTH @javax.persistence.Entity and @org.hibernate.annotations.Entity annotations: "
+        + candidate.getCanonicalName( ) );
     } else if ( Ats.from( candidate ).has( org.hibernate.annotations.Entity.class ) && !Ats.from( candidate ).has( javax.persistence.Entity.class ) ) {
-      throw Exceptions.toUndeclared( "Database entity missing required annotation @javax.persistence.Entity. Database entities must have BOTH @javax.persistence.Entity and @org.hibernate.annotations.Entity annotations: " + candidate.getCanonicalName( ) );
+      throw Exceptions.toUndeclared( "Database entity missing required annotation @javax.persistence.Entity. Database entities must have BOTH @javax.persistence.Entity and @org.hibernate.annotations.Entity annotations: "
+        + candidate.getCanonicalName( ) );
     } else {
       return false;
     }
@@ -118,6 +137,10 @@ public class PersistenceContexts {
       }
     }
     return emf.get( persistenceContext );
+  }
+  
+  public static void flush( String ctx ) {
+    emf.get( ctx ).getCache( ).evictAll( );
   }
   
   public static List<String> list( ) {
