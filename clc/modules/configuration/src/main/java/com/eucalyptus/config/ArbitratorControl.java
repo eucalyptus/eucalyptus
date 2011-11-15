@@ -65,6 +65,7 @@ package com.eucalyptus.config;
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.net.NoRouteToHostException;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
@@ -109,17 +110,20 @@ public class ArbitratorControl {
 						public void run( ) {
 							try {
 								final InetAddress addr = InetAddress.getByName( hostName );
-								if ( addr.isReachable( 2000 ) ) {
+								if ( Internets.isReachable( addr, 2000 ) ) {
 									ArbitratorControl.error.remove( hostName );
 									ArbitratorControl.okay.put( hostName, config );
+								} else {
+	                ArbitratorControl.error.put( config, Exceptions.filterStackTrace( new NoRouteToHostException( addr.toString( ) ) ) );
+	                ArbitratorControl.okay.remove(hostName);
 								}
 							} catch ( final UnknownHostException e ) {
 								ArbitratorControl.error.put( config, Exceptions.filterStackTrace( e ) );
 								ArbitratorControl.okay.remove(hostName);
-							} catch ( final IOException e ) {
-								ArbitratorControl.error.put( config, Exceptions.filterStackTrace( e ) );
-								ArbitratorControl.okay.remove(hostName);
-							}
+              } catch ( final IOException e ) {
+                ArbitratorControl.error.put( config, Exceptions.filterStackTrace( e ) );
+                ArbitratorControl.okay.remove(hostName);
+              }
 							EventRecord.here( ArbitratorControl.class, EventType.BOOTSTRAPPER_CHECK, hostName, "errorMap", error.get( hostName ).toString( ) ).debug( );
 						}
 					}
