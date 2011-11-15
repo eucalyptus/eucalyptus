@@ -1521,13 +1521,15 @@ public class EuareService {
   
   private Account getRealAccount( Context ctx, String delegateAccount ) throws EuareException {
     Account requestAccount = ctx.getAccount( );
-    if ( Account.SYSTEM_ACCOUNT.equals( requestAccount.getName( ) ) ) {
-      if ( delegateAccount != null ) {
+    if ( delegateAccount != null ) {
+      if ( Account.SYSTEM_ACCOUNT.equals( requestAccount.getName( ) ) ) {
         try {
           return Accounts.lookupAccountByName( delegateAccount );
         } catch ( AuthException e ) {
-          throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find delegate account " + delegateAccount );
-        }
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Can not find delegation account " + delegateAccount );
+        }        
+      } else {
+        throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Non-sysadmin can not have delegation access to " + delegateAccount );
       }
     }
     return requestAccount;
