@@ -303,7 +303,6 @@ public class Databases {
     if ( !host.hasBootstrapped( ) || !host.hasDatabase( ) ) {
       return;
     } else {
-      LOG.info( "Hosts.entryAdded(): Host is operational => " + host );
       if ( host.isLocalHost( ) ) {
         if ( syncState.compareAndSet( SyncState.NOTSYNCED, SyncState.SYNCING ) ) {
           try {

@@ -282,12 +282,12 @@ public class Hosts {
       LOG.info( "Hosts.entrySet(): " + arg0 + " => " + arg1 );
       if ( BootstrapRemoteComponent.INSTANCE.apply( arg1 ) ) {
         LOG.info( "Hosts.entrySet(): BOOTSTRAPPED HOST => " + arg1 );
+      } else if ( SyncDatabases.INSTANCE.apply( arg1 ) ) {
+        LOG.info( "Hosts.entrySet(): SYNCING HOST => " + arg1 );
       } else if ( InitializeAsCloudController.INSTANCE.apply( arg1 ) ) {
         LOG.info( "Hosts.entrySet(): INITIALIZED CLC => " + arg1 );
       } else if ( !arg1.hasBootstrapped( ) ) {
         LOG.info( "Hosts.entrySet(): BOOTING HOST => " + arg1 );
-      } else if ( arg1.hasBootstrapped( ) && arg1.hasDatabase( ) && !arg1.hasSynced( ) ) {
-        LOG.info( "Hosts.entrySet(): SYNCING HOST => " + arg1 );
       } else {
         LOG.info( "Hosts.entrySet(): UPDATED HOST => " + arg1 );
       }
@@ -648,8 +648,6 @@ public class Hosts {
           if ( Databases.shouldInitialize( ) ) {
             doInitialize( );
           }
-        } else if ( !Hosts.isCoordinator( ) ) {
-          Databases.enable( local );
         }
         LOG.info( "Membership address for localhost: " + Hosts.localHost( ) );
         return true;
