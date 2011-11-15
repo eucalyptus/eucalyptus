@@ -277,9 +277,9 @@ public class Hosts {
       if ( BootstrapRemoteComponent.INSTANCE.apply( arg1 ) ) {
         LOG.info( "Hosts.entrySet(): BOOTSTRAPPED HOST => " + arg1 );
       } else if ( InitializeAsCloudController.INSTANCE.apply( arg1 ) ) {
-        LOG.info( "Hosts.entrySet(): INITIALIZED CLC   => " + arg1 );
+        LOG.info( "Hosts.entrySet(): INITIALIZED CLC => " + arg1 );
       } else {
-        LOG.info( "Hosts.entrySet(): WAITING FOR HOST  => " + arg1 );
+        LOG.info( "Hosts.entrySet(): BOOTING HOST => " + arg1 );
       }
       LOG.info( "Hosts.entrySet(): " + printMap( ) );
     }
