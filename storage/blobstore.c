@@ -87,6 +87,7 @@
 #include <regex.h>
 #include "misc.h" // ensure_...
 #include "eucalyptus.h" // euca user
+#include "ipc.h"
 
 #define BLOBSTORE_METADATA_FILE ".blobstore"
 #define BLOBSTORE_METADATA_TIMEOUT_USEC 9999999LL
@@ -137,6 +138,7 @@ typedef struct _blobstore_filelock {
     int fd_status [BLOBSTORE_MAX_CONCURRENT]; // 0 = unused, 1 = open
     pthread_rwlock_t lock; // reader/writer lock for controlling intra-process access
     pthread_mutex_t mutex; // for locking this specific struct during manipulations
+    sem * sem; /// semaphore for debugging
     struct _blobstore_filelock * next; // pointer for constructing a LL
 } blobstore_filelock;
 
@@ -375,7 +377,7 @@ static int close_and_unlock (int fd)
                 }
                 
                 pthread_mutex_unlock (&(path_lock->mutex));
-            } // end of critical section
+            } // end of inner critical section
             
             if (do_free)
                 free_filelock (path_lock);
@@ -399,6 +401,11 @@ static int close_and_unlock (int fd)
     } // end of critical section
     
     return ret;
+}
+
+static char * path_to_name (const char * path, char * name, int name_size) 
+{
+    return NULL;
 }
 
 // This function creates or opens a file and locks it; the lock is 
@@ -478,6 +485,8 @@ static int open_and_lock (const char * path,
             safe_strncpy (path_lock->path, path, sizeof(path_lock->path));
             pthread_rwlock_init (&(path_lock->lock), NULL);
             pthread_mutex_init (&(path_lock->mutex), NULL);
+            char sem_name [512];
+//            path_lock->sem = sem_alloc (1, path_to_name (path, sem_name, sizeof (sem_name)));
             * next_ptr = path_lock; // add at the end of LL
             _locks_list_add_ctr++;
         } else {
@@ -490,7 +499,7 @@ static int open_and_lock (const char * path,
         }
         path_lock->refs++; // increase the reference count while still under lock
         pthread_mutex_unlock (&_blobstore_mutex); // release global mutex
-    }
+    } // end of critical section
 
     // open/create the file, using Posix file locks for inter-process locking
     int fd = open (path, o_flags, mode);
@@ -501,7 +510,7 @@ static int open_and_lock (const char * path,
     }
 
     { // critical section
-        pthread_mutex_lock (&(path_lock->mutex)); // grab path-specific mutex for atomic update to the table of descriptors
+        pthread_mutex_lock (&_blobstore_mutex); // grab the global mutex
 
         // ensure we do not have this file descriptor already
         int count = 0;
@@ -511,21 +520,26 @@ static int open_and_lock (const char * path,
                     count++;
         if (count>0) {
             ERR (BLOBSTORE_ERROR_INVAL, "blobstore lock closed outside close_and_unlock");
-            pthread_mutex_unlock (&(path_lock->mutex)); // release global mutex
+            pthread_mutex_unlock (&_blobstore_mutex); // release global mutex
             goto error;
         }
-
-        // record the file descriptor in the array regardless of whether
-        // we ultimately succeed in obtaining the lock or not -- we must
-        // ensure we do not close this file descriptor until all users 
-        // of the lock are through
-        path_lock->fd        [path_lock->next_fd] = fd; // record file descriptor to enable future lookups
-        path_lock->fd_status [path_lock->next_fd] = 1;  // mark the slot as in-use
-        path_lock->next_fd++; // move the index up (it only goes up because we close all file descriptors together)
-
-        pthread_mutex_unlock (&(path_lock->mutex)); // release global mutex
+        
+        { // inner critical section
+            pthread_mutex_lock (&(path_lock->mutex)); // grab path-specific mutex for atomic update to the table of descriptors
+            
+            // record the file descriptor in the array regardless of whether
+            // we ultimately succeed in obtaining the lock or not -- we must
+            // ensure we do not close this file descriptor until all users 
+            // of the lock are through
+            path_lock->fd        [path_lock->next_fd] = fd; // record file descriptor to enable future lookups
+            path_lock->fd_status [path_lock->next_fd] = 1;  // mark the slot as in-use
+            path_lock->next_fd++; // move the index up (it only goes up because we close all file descriptors together)
+            
+            pthread_mutex_unlock (&(path_lock->mutex)); // release global mutex
+        } // end of outer critical section
+        pthread_mutex_unlock (&_blobstore_mutex); // release global mutex
     } // end of critical section
-
+    
     for (;;) {
         // first try getting the Posix rwlock
         int ret;
@@ -632,14 +646,14 @@ static int open_and_lock (const char * path,
             }
             
             pthread_mutex_unlock (&(path_lock->mutex));
-        } // end of critical section                                                                                                                                        
+        } // end of inner critical section
         
         if (do_free)
             free_filelock (path_lock);
         
         _open_error_ctr++;
         pthread_mutex_unlock (&_blobstore_mutex);
-    }
+    } // end of critical section
     
     return -1;
 }
@@ -1280,23 +1294,24 @@ static void free_bbs ( blockblob * bbs )
 static unsigned int check_in_use ( blobstore * bs, const char * bb_id, long long timeout_usec)
 {
     unsigned int in_use = 0;
-    char buf [PATH_MAX];
+    char path [PATH_MAX];
 
-    set_blockblob_metadata_path (BLOCKBLOB_PATH_LOCK, bs, bb_id, buf, sizeof (buf));
+    // determine the path of the .lock file for this blob
+    set_blockblob_metadata_path (BLOCKBLOB_PATH_LOCK, bs, bb_id, path, sizeof (path));
 
     _err_off(); // do not complain if metadata files do not exist
-    int fd = open_and_lock (buf, BLOBSTORE_FLAG_RDWR, timeout_usec, BLOBSTORE_FILE_PERM); // try opening to see what happens
+    int fd = open_and_lock (path, BLOBSTORE_FLAG_RDWR, timeout_usec, BLOBSTORE_FILE_PERM); // try opening to see what happens
     if (fd != -1) {
         close_and_unlock (fd); 
     } else {
         in_use |= BLOCKBLOB_STATUS_OPENED; // TODO: check if open failed for other reason?
     }
     
-    if (read_blockblob_metadata_path (BLOCKBLOB_PATH_REFS, bs, bb_id, buf, sizeof (buf))>0) {
+    if (read_blockblob_metadata_path (BLOCKBLOB_PATH_REFS, bs, bb_id, path, sizeof (path))>0) {
         in_use |= BLOCKBLOB_STATUS_MAPPED;
     }
 
-    if (read_blockblob_metadata_path (BLOCKBLOB_PATH_DEPS, bs, bb_id, buf, sizeof (buf))>0) {
+    if (read_blockblob_metadata_path (BLOCKBLOB_PATH_DEPS, bs, bb_id, path, sizeof (path))>0) {
         in_use |= BLOCKBLOB_STATUS_BACKED;
     }
     _err_on();
@@ -1944,14 +1959,15 @@ int blockblob_close ( blockblob * bb )
     logprintfl (EUCADEBUG2, "{%u} blockblob_close: closing blob id=%s\n", (unsigned int)pthread_self(), bb->id);
 
     // do not remove /dev/loop* if it is used by device mapper 
-    // (mapped to other blobs or as backing for this one)
+    // (we do not care about BLOCKBLOB_STATUS_OPENED because 
+    // it should be only this thread that has the blob open)
     int in_use = check_in_use (bb->store, bb->id, 0);
-    if ( !(in_use & (BLOCKBLOB_STATUS_MAPPED|BLOCKBLOB_STATUS_BACKED)) ) { 
+    if ( !(in_use & (BLOCKBLOB_STATUS_MAPPED|BLOCKBLOB_STATUS_BACKED)) ) {
         ret = loop_remove (bb->store, bb->id);
     }
+    ret |= close (bb->fd_blocks);
     ftruncate (bb->fd_lock, 0);
     ret |= close_and_unlock (bb->fd_lock);
-    ret |= close (bb->fd_blocks);
     free (bb); // we free the blob regardless of whether closing succeeds or not
     return ret;
 }

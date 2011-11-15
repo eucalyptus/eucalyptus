@@ -69,6 +69,7 @@
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/wait.h> // waitpid
 #include <stdarg.h>
 #include <fcntl.h>
 #include <errno.h>
@@ -1890,6 +1891,7 @@ static pthread_mutex_t competitors_mutex = PTHREAD_MUTEX_INITIALIZER; // process
 #define VBR_SIZE ( 2LL * MEGABYTE ) / VBR_SIZE_SCALING
 static virtualMachine vm_slots [TOTAL_VMS];
 static char vm_ids [TOTAL_VMS][PATH_MAX];
+static boolean do_fork = 0;
 
 static int provision_vm (const char * id, const char * sshkey, const char * eki, const char * eri, const char * emi, blobstore * cache_bs, blobstore * work_bs, boolean do_make_work_copy)
 {
@@ -1957,17 +1959,38 @@ static char * gen_id (char * id, unsigned int id_len, const char * prefix)
 static void * competitor_function (void * ptr)
 {
     int errors = 0;
+    pid_t pid = -1;
 
-    printf ("%u/%u: competitor running (provisioned=%d)\n", (unsigned int)pthread_self(), (int)getpid(), provisioned_instances);
-    
-    for (int i=0; i<COMPETITIVE_ITERATIONS; i++) {
-        char id [32];
-        errors += provision_vm (GEN_ID, KEY1, EKI1, ERI1, EMI2, cache_bs, work_bs, TRUE);
-        usleep ((long long)(100*((double)random()/RAND_MAX)));
+    if (do_fork) {
+        pid = fork();
+        if (pid < 0) { // fork problem
+            * (long long *) ptr = 1;
+            return NULL;
+
+        } else if (pid > 0) { // parent
+            int status;
+            waitpid (pid, &status, 0);
+            * (long long *) ptr = WEXITSTATUS(status);
+            return NULL;
+        }
     }
 
-    printf ("%u/%u: competitor done (provisioned=%d errors=%d)\n", (unsigned int)pthread_self(), (int)getpid(), provisioned_instances, errors);
+    if (pid<1) {
+        printf ("%u/%u: competitor running (provisioned=%d)\n", (unsigned int)pthread_self(), (int)getpid(), provisioned_instances);
+        
+        for (int i=0; i<COMPETITIVE_ITERATIONS; i++) {
+            char id [32];
+            errors += provision_vm (GEN_ID, KEY1, EKI1, ERI1, EMI2, cache_bs, work_bs, TRUE);
+            usleep ((long long)(100*((double)random()/RAND_MAX)));
+        }
+        
+        printf ("%u/%u: competitor done (provisioned=%d errors=%d)\n", (unsigned int)pthread_self(), (int)getpid(), provisioned_instances, errors);
+    }    
     
+    if (pid==0) {
+        exit (errors);
+    }
+
     * (long long *) ptr = errors;
     return NULL;
 }
@@ -2062,7 +2085,7 @@ int main (int argc, char ** argv)
     check_blob (cache_bs, "blocks", 0);
 
     printf ("done with vbr.c cache-only test errors=%d warnings=%d\n", errors, warnings);
-    _exit (errors);
+    exit (errors);
 
  skip_cache_only:
 
@@ -2088,25 +2111,33 @@ int main (int argc, char ** argv)
     warnings += cleanup_vms();
     CHECK_BLOBS;
 
-    printf ("spawning %d competing threads\n", COMPETITIVE_PARTICIPANTS);
-    emis_in_use ++; // we'll have threads creating a new EMI
-    pthread_t threads [COMPETITIVE_PARTICIPANTS];
-    long long thread_par [COMPETITIVE_PARTICIPANTS];
-    int thread_par_sum = 0;
-    for (int j=0; j<COMPETITIVE_PARTICIPANTS; j++) {
-        pthread_create (&threads[j], NULL, competitor_function, (void *)&thread_par[j]);
+    for (int i=0; i<2; i++) {
+        if (i%1) {
+            do_fork = 0;
+        } else {
+            do_fork = 1;
+        }
+        printf ("===============================================\n");
+        printf ("spawning %d competing %s\n", COMPETITIVE_PARTICIPANTS, (do_fork)?("processes"):("threads"));
+        emis_in_use++; // we'll have threads creating a new EMI
+        pthread_t threads [COMPETITIVE_PARTICIPANTS];
+        long long thread_par [COMPETITIVE_PARTICIPANTS];
+        int thread_par_sum = 0;
+        for (int j=0; j<COMPETITIVE_PARTICIPANTS; j++) {
+            pthread_create (&threads[j], NULL, competitor_function, (void *)&thread_par[j]);
+        }
+        for (int j=0; j<COMPETITIVE_PARTICIPANTS; j++) {
+            pthread_join (threads[j], NULL);
+            thread_par_sum += (int)thread_par [j];
+        }
+        printf ("waited for all competing threads (returned sum=%d)\n", thread_par_sum);
+        if (errors += thread_par_sum) {
+            printf ("error: failed parallel instance provisioning test\n");
+        }
+        CHECK_BLOBS;
+        warnings += cleanup_vms();
+        CHECK_BLOBS;
     }
-    for (int j=0; j<COMPETITIVE_PARTICIPANTS; j++) {
-        pthread_join (threads[j], NULL);
-        thread_par_sum += (int)thread_par [j];
-    }
-    printf ("waited for all competing threads (returned sum=%d)\n", thread_par_sum);
-    if (errors += thread_par_sum) {
-        printf ("error: failed parallel instance provisioning test\n");
-    }
-    CHECK_BLOBS;
-    warnings += cleanup_vms();
-    CHECK_BLOBS;
 
 out:
     printf ("\nfinal check of work blobstore\n");
@@ -2116,7 +2147,7 @@ out:
     check_blob (cache_bs, "blocks", 0);
 
     printf ("done with vbr.c errors=%d warnings=%d\n", errors, warnings);
-    _exit(errors);
+    exit(errors);
 }
 
 #endif
