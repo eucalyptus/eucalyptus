@@ -178,7 +178,9 @@ public class Host implements java.io.Serializable, Comparable<Host> {
            .append( "#" ).append( this.epoch ).append( " " )
            .append( this.bindAddress ).append( " " );
     try {
-      builder.append( "coordinator=" ).append( Hosts.getCoordinator( ).getDisplayName( ) );
+      Host coordinator = Hosts.getCoordinator( );
+      String coordinatorName = ( coordinator != null ? coordinator.getDisplayName( ) : "pending" );
+      builder.append( "coordinator=" ).append( coordinatorName );
     } catch ( Exception ex ) {
       LOG.error( ex, ex );
     }
