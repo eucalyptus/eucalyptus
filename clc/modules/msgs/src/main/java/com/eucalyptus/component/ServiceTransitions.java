@@ -575,6 +575,7 @@ public class ServiceTransitions {
       @Override
       public void fire( final ServiceConfiguration parent ) throws Exception {
         parent.lookupBootstrapper( ).destroy( );
+        Components.lookup( parent.getComponentId( ) ).destroy( parent );
       }
     },
     CHECK {

@@ -124,7 +124,7 @@ public class ServiceState implements StateMachine<ServiceConfiguration, Componen
         from( State.STOPPED ).to( State.INITIALIZED ).error( State.BROKEN ).on( Transition.DESTROY ).run( ServiceTransitions.TransitionActions.DESTROY );
         from( State.BROKEN ).to( State.STOPPED ).error( State.BROKEN ).on( Transition.STOPPING_BROKEN ).run( noop );
         from( State.BROKEN ).to( State.INITIALIZED ).error( State.BROKEN ).on( Transition.RELOAD ).run( noop );
-        from( State.STOPPED ).to( State.PRIMORDIAL ).error( State.BROKEN ).on( Transition.REMOVING ).run( noop );//TODO:GRZE: handle deregistering transition here.
+        from( State.STOPPED ).to( State.PRIMORDIAL ).error( State.BROKEN ).on( Transition.REMOVING ).run( ServiceTransitions.TransitionActions.DESTROY );//TODO:GRZE: handle deregistering transition here.
       }
     }.newAtomicMarkedState( );
   }
