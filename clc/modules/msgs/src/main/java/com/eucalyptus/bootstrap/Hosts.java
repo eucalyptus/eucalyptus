@@ -619,7 +619,7 @@ public class Hosts {
         hostMap.setBlockingUpdates( true );
         hostMap.addNotifier( HostMapStateListener.INSTANCE );
         hostMap.start( STATE_TRANSFER_TIMEOUT );
-        OrderedShutdown.register( Empyrean.class, new Runnable( ) {
+        OrderedShutdown.register( Eucalyptus.class, new Runnable( ) {
           
           @Override
           public void run( ) {

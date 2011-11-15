@@ -172,7 +172,7 @@ public class Databases {
       return new Function<String, Runnable>( ) {
         
         @Override
-        public Runnable apply( String ctx ) {
+        public Runnable apply( final String ctx ) {
           final String hostName = host.getBindAddress( ).getHostAddress( );
           final String contextName = ctx.startsWith( "eucalyptus_" )
             ? ctx
@@ -223,7 +223,7 @@ public class Databases {
       return new Function<String, Runnable>( ) {
         
         @Override
-        public Runnable apply( String ctx ) {
+        public Runnable apply( final String ctx ) {
           final String hostName = host.getBindAddress( ).getHostAddress( );
           final String contextName = ctx.startsWith( "eucalyptus_" )
             ? ctx
