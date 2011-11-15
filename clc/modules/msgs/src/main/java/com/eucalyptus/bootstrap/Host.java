@@ -88,7 +88,7 @@ public class Host implements java.io.Serializable, Comparable<Host> {
   private final Long                       startedTime;
   private final Integer                    epoch;
   
-  Host( ) {
+  private Host( ) {
     this.startedTime = Hosts.Coordinator.INSTANCE.getCurrentStartTime( );
     this.displayName = Internets.localHostIdentifier( );
     this.groupsId = Hosts.getLocalGroupAddress( );
@@ -99,6 +99,10 @@ public class Host implements java.io.Serializable, Comparable<Host> {
     this.hasDatabase = BootstrapArgs.isCloudController( );
     this.hasSynced = Databases.isSynchronized( );
     this.hostAddresses = newAddrs;
+  }
+  
+  public static Host create( ) {
+    return new Host( );
   }
   
   public Address getGroupsId( ) {

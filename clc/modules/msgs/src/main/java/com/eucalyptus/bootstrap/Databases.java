@@ -96,14 +96,21 @@ import com.google.common.collect.MapDifference;
 import com.google.common.collect.Maps;
 
 public class Databases {
-  private static final ScriptedDbBootstrapper singleton       = new ScriptedDbBootstrapper( );
-  private static Logger                       LOG             = Logger.getLogger( Databases.class );
-  private static final String                 DB_NAME         = "eucalyptus";
-  public static final String                  DB_USERNAME     = DB_NAME;
+  private static final ScriptedDbBootstrapper     singleton       = new ScriptedDbBootstrapper( );
+  private static Logger                           LOG             = Logger.getLogger( Databases.class );
+  private static final String                     DB_NAME         = "eucalyptus";
+  private static final String                      DB_USERNAME     = DB_NAME;
+  private static final String                     jdbcJmxDomain   = "net.sf.hajdbc";
+  private static final ExecutorService            dbSyncExecutors = Executors.newCachedThreadPool( );                     //NOTE:GRZE:special case thread handling.
+  private static final AtomicReference<SyncState> syncState       = new AtomicReference<SyncState>( SyncState.NOTSYNCED );
   
-  private static final String                 jdbcJmxDomain   = "net.sf.hajdbc";
-  private static final ExecutorService        dbSyncExecutors = Executors.newCachedThreadPool( );   //NOTE:GRZE:special case thread handling.
-                                                                                                     
+  enum SyncState {
+    NOTSYNCED,
+    SYNCING,
+    DESYNCING,
+    SYNCED
+  }
+  
   enum ExecuteRunnable implements Function<Runnable, Future<Runnable>> {
     INSTANCE;
     
@@ -351,15 +358,6 @@ public class Databases {
     }
     return false;
   }
-  
-  enum SyncState {
-    NOTSYNCED,
-    SYNCING,
-    DESYNCING,
-    SYNCED
-  }
-  
-  private static final AtomicReference<SyncState> syncState = new AtomicReference<SyncState>( SyncState.NOTSYNCED );
   
   /**
    * @return

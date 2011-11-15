@@ -249,12 +249,12 @@ public class Hosts {
     INSTANCE;
     
     private String printMap( ) {
-      return "\n" + Joiner.on( "\n=> " ).join( hostMap.values( ) );
+      return "Current System View\n" + Joiner.on( "\nhostMap.entrySet(): " ).join( hostMap.entrySet( ) );
     }
     
     @Override
     public void contentsCleared( ) {
-      LOG.info( "Hosts.contentsCleared(): " + this.printMap( ) );
+      LOG.info( "Hosts.contentsCleared(): " + printMap( ) );
     }
     
     @Override
@@ -268,19 +268,20 @@ public class Hosts {
     @Override
     public void entryRemoved( final String arg0 ) {
       LOG.info( "Hosts.entryRemoved(): " + arg0 );
-      LOG.info( "Hosts.entryRemoved(): " + hostMap.keySet( ) );
+      LOG.info( "Hosts.entryRemoved(): " + printMap( ) );
     }
     
     @Override
     public void entrySet( final String arg0, final Host arg1 ) {
-      LOG.info( "Hosts.entryAdded(): " + arg0 + " => " + arg1 );
+      LOG.info( "Hosts.entrySet(): " + arg0 + " => " + arg1 );
       if ( BootstrapRemoteComponent.INSTANCE.apply( arg1 ) ) {
-        LOG.info( "Hosts.entryAdded(): BOOTSTRAPPED HOST => " + arg1 );
+        LOG.info( "Hosts.entrySet(): BOOTSTRAPPED HOST => " + arg1 );
       } else if ( InitializeAsCloudController.INSTANCE.apply( arg1 ) ) {
-        LOG.info( "Hosts.entryAdded(): INITIALIZED CLC   => " + arg1 );
+        LOG.info( "Hosts.entrySet(): INITIALIZED CLC   => " + arg1 );
       } else {
-        LOG.info( "Hosts.entryAdded(): WAITING FOR HOST  => " + arg1 );
+        LOG.info( "Hosts.entrySet(): WAITING FOR HOST  => " + arg1 );
       }
+      LOG.info( "Hosts.entrySet(): " + printMap( ) );
     }
     
     @Override
@@ -318,6 +319,7 @@ public class Hosts {
           }
         }
       }
+      LOG.info( "Hosts.viewChange(): " + printMap( ) );
     }
     
   }
@@ -374,7 +376,7 @@ public class Hosts {
       if ( !input.isLocalHost( ) ) {
         return false;
       } else {
-        final Host that = new Host( );
+        final Host that = Host.create( );
         if ( that.hasBootstrapped( ) && !input.hasBootstrapped( ) ) {
           return true;
         } else if ( that.hasDatabase( ) && !input.hasDatabase( ) ) {
@@ -398,7 +400,7 @@ public class Hosts {
     @Override
     public boolean apply( final Host input ) {
       if ( input == null ) {
-        final Host newHost = Coordinator.INSTANCE.createLocalHost( );
+        final Host newHost = Host.create( );
         final Host oldHost = hostMap.putIfAbsent( newHost.getDisplayName( ), newHost );
         if ( oldHost != null ) {
           LOG.info( "Inserted local host information:   " + localHost( ) );
@@ -408,7 +410,7 @@ public class Hosts {
         }
       } else if ( input.isLocalHost( ) ) {
         if ( CheckStale.INSTANCE.apply( input ) ) {
-          final Host newHost = new Host( );
+          final Host newHost = Host.create( );
           final Host oldHost = hostMap.replace( newHost.getDisplayName( ), newHost );
           if ( oldHost != null ) {
             LOG.info( "Updated local host information:   " + localHost( ) );
@@ -623,7 +625,8 @@ public class Hosts {
         } );
         LOG.info( "Added localhost to system state: " + localHost( ) );
         Coordinator.INSTANCE.initialize( hostMap.values( ) );
-        final Host local = Coordinator.INSTANCE.createLocalHost( );
+        final Host local = Host.create( );
+        LOG.info( "Created local host entry: " + local );
         hostMap.putIfAbsent( local.getDisplayName( ), local );
         Listeners.register( HostBootstrapEventListener.INSTANCE );
         LOG.info( "System view:\n" + HostMapStateListener.INSTANCE.printMap( ) );
@@ -692,7 +695,7 @@ public class Hosts {
   
   public static Host localHost( ) {
     if ( ( hostMap == null ) || !hostMap.containsKey( Internets.localHostIdentifier( ) ) ) {
-      return Coordinator.INSTANCE.createLocalHost( );
+      return Host.create( );
     } else {
       return hostMap.get( Internets.localHostIdentifier( ) );
     }
@@ -766,13 +769,6 @@ public class Hosts {
       startTime = startTime > currentTime ? startTime : currentTime;
       startTime += 30000;
       this.currentStartTime.compareAndSet( Long.MAX_VALUE, startTime );
-    }
-    
-    /**
-     * @return
-     */
-    public Host createLocalHost( ) {
-      return new Host( );
     }
     
     public Boolean isLocalhost( ) {
