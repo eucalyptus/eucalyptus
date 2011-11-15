@@ -171,16 +171,22 @@ public class Hosts {
         ServiceConfiguration conf = null;
         if ( Internets.testLocal( input.getHostName( ) ) && Hosts.isCoordinator( ) ) {
           conf = ServiceTransitions.pathTo( input, State.ENABLED ).get( );
-          LOG.info( "Initialized enabled service: " + conf.getFullName( ) );
+          LOG.info( "Enabled local coordinator service: " + conf.getFullName( ) );
         } else if ( !Internets.testLocal( input.getHostName( ) ) && !Hosts.isCoordinator( ) && BootstrapArgs.isCloudController( ) ) {
           conf = ServiceTransitions.pathTo( input, State.ENABLED ).get( );
-          LOG.info( "Initialized enabled service: " + conf.getFullName( ) );
-        } else if ( false/** should be handling non-clc remote bootstrap of coordinator clc **/
-        ) {
-          conf = input;
+          LOG.info( "Enabled remote coordinator service: " + conf.getFullName( ) );
+        } else if ( !Internets.testLocal( input.getHostName( ) ) && !BootstrapArgs.isCloudController( ) ) {
+          Host coordinator = Hosts.getCoordinator( );
+          if ( coordinator != null && coordinator.getBindAddress( ).equals( input.getInetAddress( ) ) ) {
+            conf = ServiceTransitions.pathTo( input, State.ENABLED ).get( );
+            LOG.info( "Enabled remote coordinator service: " + conf.getFullName( ) );
+          } else {
+            conf = ServiceTransitions.pathTo( input, State.DISABLED ).get( );
+            LOG.info( "Disabled remote service: " + conf.getFullName( ) );
+          }
         } else {
           conf = ServiceTransitions.pathTo( input, State.DISABLED ).get( );
-          LOG.info( "Initialized disabled service: " + conf.getFullName( ) );
+          LOG.info( "Disabled remote service: " + conf.getFullName( ) );
         }
         return conf;
       } catch ( final ExecutionException ex ) {
