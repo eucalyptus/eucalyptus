@@ -370,12 +370,18 @@ static int close_and_unlock (int fd)
                     } else {
                         struct flock l;
                         fcntl (fd, F_SETLK, flock_whole_file (&l, F_UNLCK)); // give up the file lock
-                        pthread_rwlock_unlock (&(path_lock->lock)); // give up the Posix lock
                         logprintfl (EUCADEBUG2, "{%u} close_and_unlock: unlocked but kept fd=%d path=%d open/refs=%d/%d\n", 
                                     (unsigned int)pthread_self(), fd, path_lock->path, open_fds, path_lock->refs);
                     }
+                    pthread_rwlock_unlock (&(path_lock->lock)); // give up the Posix lock
+                    /* lock testing code
+                    if (path_lock->sem) {
+                        sem_v (path_lock->sem);
+                        sem_free (path_lock->sem);
+                        path_lock->sem = NULL;
+                    }
+                    */
                 }
-                
                 pthread_mutex_unlock (&(path_lock->mutex));
             } // end of inner critical section
             
@@ -403,9 +409,13 @@ static int close_and_unlock (int fd)
     return ret;
 }
 
-static char * path_to_name (const char * path, char * name, int name_size) 
+static char * path_to_sem_name (const char * path, char * name, int name_size) 
 {
-    return NULL;
+    snprintf (name, name_size, "euca%s", path);
+    for (int i=0; i<name_size && name [i]; i++)
+        if (name [i] == '/')
+            name [i] = '-';
+    return name;
 }
 
 // This function creates or opens a file and locks it; the lock is 
@@ -485,8 +495,6 @@ static int open_and_lock (const char * path,
             safe_strncpy (path_lock->path, path, sizeof(path_lock->path));
             pthread_rwlock_init (&(path_lock->lock), NULL);
             pthread_mutex_init (&(path_lock->mutex), NULL);
-            char sem_name [512];
-//            path_lock->sem = sem_alloc (1, path_to_name (path, sem_name, sizeof (sem_name)));
             * next_ptr = path_lock; // add at the end of LL
             _locks_list_add_ctr++;
         } else {
@@ -511,7 +519,7 @@ static int open_and_lock (const char * path,
 
     { // critical section
         pthread_mutex_lock (&_blobstore_mutex); // grab the global mutex
-
+        
         // ensure we do not have this file descriptor already
         int count = 0;
         for (blobstore_filelock * l = locks_list; l; l=l->next)
@@ -520,6 +528,7 @@ static int open_and_lock (const char * path,
                     count++;
         if (count>0) {
             ERR (BLOBSTORE_ERROR_INVAL, "blobstore lock closed outside close_and_unlock");
+            pthread_mutex_unlock (&(path_lock->mutex)); // release global mutex
             pthread_mutex_unlock (&_blobstore_mutex); // release global mutex
             goto error;
         }
@@ -535,8 +544,9 @@ static int open_and_lock (const char * path,
             path_lock->fd_status [path_lock->next_fd] = 1;  // mark the slot as in-use
             path_lock->next_fd++; // move the index up (it only goes up because we close all file descriptors together)
             
-            pthread_mutex_unlock (&(path_lock->mutex)); // release global mutex
-        } // end of outer critical section
+            pthread_mutex_unlock (&(path_lock->mutex)); // release path-specific mutex
+        } // end of inner critical section
+
         pthread_mutex_unlock (&_blobstore_mutex); // release global mutex
     } // end of critical section
     
@@ -573,6 +583,14 @@ static int open_and_lock (const char * path,
     }
 
     // successully acquired both file and Posix locks
+
+    /* lock testing code
+    if (l_type == F_WRLCK) {
+        char sem_name [512];
+        path_lock->sem = sem_alloc (1, path_to_sem_name (path, sem_name, sizeof (sem_name)));
+        sem_p (path_lock->sem);
+    }
+    */
 
     pthread_mutex_lock (&_blobstore_mutex);
     _open_success_ctr++;
