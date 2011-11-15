@@ -194,7 +194,6 @@ public class Databases {
                 } catch ( final Exception ex ) {
                   LOG.error( ex, ex );
                 }
-                PersistenceContexts.flush( ctx );
               } catch ( final NoSuchElementException ex1 ) {
                 LOG.error( ex1, ex1 );
               } catch ( final Exception ex1 ) {
@@ -251,7 +250,6 @@ public class Databases {
                 } else if ( host.hasSynced( ) ) {
                   cluster.activate( hostName, "passive" );
                 }
-                PersistenceContexts.flush( ctx );
               } catch ( final NoSuchElementException ex1 ) {
                 LOG.error( ex1, ex1 );
               } catch ( final Exception ex1 ) {
