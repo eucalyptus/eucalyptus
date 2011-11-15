@@ -647,7 +647,9 @@ public class Topology {
     }
     
     private static void printCheckInfo( final String action, final Collection<ServiceConfiguration> result ) {
-      LOG.debug( action + ": " + Joiner.on( "\n" + action + ": " ).join( Collections2.transform( result, ServiceString.INSTANCE ) ) );
+      if ( !result.isEmpty( ) ) {
+        LOG.debug( action + ": " + Joiner.on( "\n" + action + ": " ).join( Collections2.transform( result, ServiceString.INSTANCE ) ) );
+      }
     }
   }
   
