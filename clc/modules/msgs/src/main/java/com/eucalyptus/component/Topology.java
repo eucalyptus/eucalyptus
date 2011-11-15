@@ -218,6 +218,9 @@ public class Topology {
   
   public static void touch( final ServiceTransitionType msg ) {//TODO:GRZE: @Service interceptor
     if ( !Hosts.isCoordinator( ) && ( msg.get_epoch( ) != null ) ) {
+      for ( ServiceConfiguration conf : Lists.transform( msg.get_services( ), ServiceConfigurations.ServiceIdToServiceConfiguration.INSTANCE ) ) {
+        enable( conf );
+      }
       Topology.getInstance( ).currentEpoch = Ints.max( Topology.getInstance( ).currentEpoch, msg.get_epoch( ) );
     }
   }
