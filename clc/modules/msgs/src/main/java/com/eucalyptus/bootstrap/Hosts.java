@@ -169,10 +169,10 @@ public class Hosts {
     public ServiceConfiguration apply( final ServiceConfiguration input ) {
       try {
         ServiceConfiguration conf = null;
-        if ( Internets.testLocal( input.getHostName( ) ) && Hosts.Coordinator.INSTANCE.isLocalhost( ) ) {
+        if ( Internets.testLocal( input.getHostName( ) ) && Hosts.isCoordinator( ) ) {
           conf = ServiceTransitions.pathTo( input, State.ENABLED ).get( );
           LOG.info( "Initialized enabled service: " + conf.getFullName( ) );
-        } else if ( !Internets.testLocal( input.getHostName( ) ) && !Hosts.Coordinator.INSTANCE.isLocalhost( ) && BootstrapArgs.isCloudController( ) ) {
+        } else if ( !Internets.testLocal( input.getHostName( ) ) && !Hosts.isCoordinator( ) && BootstrapArgs.isCloudController( ) ) {
           conf = ServiceTransitions.pathTo( input, State.ENABLED ).get( );
           LOG.info( "Initialized enabled service: " + conf.getFullName( ) );
         } else if ( false/** should be handling non-clc remote bootstrap of coordinator clc **/
@@ -303,7 +303,7 @@ public class Hosts {
           } catch ( final Exception ex ) {
             LOG.error( ex, ex );
           }
-          if ( Hosts.Coordinator.INSTANCE.isLocalhost( ) ) {
+          if ( Hosts.isCoordinator( ) ) {
             hostMap.remove( h.getDisplayName( ) );
             LOG.info( "Hosts.viewChange(): -> removed  => " + h );
           } else if ( h.hasDatabase( ) && BootstrapArgs.isCloudController( ) ) {
@@ -420,7 +420,7 @@ public class Hosts {
           }
         } else {
           if ( !hostMap.containsKey( input.getDisplayName( ) ) ) {
-            final Host newHost = Coordinator.INSTANCE.createLocalHost( );
+            final Host newHost = Host.create( );
             final Host oldHost = hostMap.putIfAbsent( newHost.getDisplayName( ), newHost );
             if ( oldHost == null ) {
               LOG.info( "Updated local host information:   " + localHost( ) );
@@ -756,7 +756,19 @@ public class Hosts {
     
   }
   
-  public enum Coordinator {
+  public static Long getStartTime( ) {
+    return Coordinator.INSTANCE.getCurrentStartTime( );
+  }
+  
+  public static boolean isCoordinator( ) {
+    return Coordinator.INSTANCE.isLocalhost( );
+  }
+  
+  public static Host getCoordinator( ) {
+    return Coordinator.INSTANCE.get( );
+  }
+  
+  private enum Coordinator {
     INSTANCE;
     private final AtomicLong currentStartTime = new AtomicLong( Long.MAX_VALUE );
     
@@ -772,17 +784,20 @@ public class Hosts {
     }
     
     public Boolean isLocalhost( ) {
-      try {
-        Host minHost = findCoordinator( );
-        return minHost != null ? minHost.isLocalHost( ) : false;
-      } catch ( final NoSuchElementException ex ) {
+      Host minHost = get( );
+      if ( minHost == null && BootstrapArgs.isCloudController( ) ) {
+        return true;
+      } else if ( minHost != null ) {
+        return minHost.isLocalHost( );
+      } else {
         return false;
       }
     }
-
-    public Host findCoordinator( ) {
+    
+    public Host get( ) {
       Host minHost = null;
-      for ( final Host h : Hosts.listDatabases( ) ) {
+      List<Host> dbHosts = Hosts.listDatabases( );
+      for ( final Host h : dbHosts ) {
         minHost = ( minHost == null ? h : ( minHost.getStartedTime( ) > h.getStartedTime( ) ? h : minHost ) );
       }
       return minHost;

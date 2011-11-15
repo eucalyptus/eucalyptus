@@ -89,7 +89,7 @@ public class Host implements java.io.Serializable, Comparable<Host> {
   private final Integer                    epoch;
   
   private Host( ) {
-    this.startedTime = Hosts.Coordinator.INSTANCE.getCurrentStartTime( );
+    this.startedTime = Hosts.getStartTime( );
     this.displayName = Internets.localHostIdentifier( );
     this.groupsId = Hosts.getLocalGroupAddress( );
     this.bindAddress = Internets.localHostInetAddress( );
@@ -178,11 +178,7 @@ public class Host implements java.io.Serializable, Comparable<Host> {
            .append( "#" ).append( this.epoch ).append( " " )
            .append( this.bindAddress ).append( " " );
     try {
-      if ( this.isLocalHost( ) && Hosts.Coordinator.INSTANCE.isLocalhost( ) ) {
-        builder.append( "coordinator " );
-      } else {
-        Hosts.Coordinator.INSTANCE.findCoordinator( );
-      }
+      builder.append( "coordinator=" ).append( Hosts.getCoordinator( ).getDisplayName( ) );
     } catch ( Exception ex ) {
       LOG.error( ex, ex );
     }

@@ -102,7 +102,7 @@ public class AsyncRequestHandler<Q extends BaseMessage, R extends BaseMessage> i
               if ( future.isSuccess( ) ) {
 //TODO:GRZE: better logging here                LOG.debug( "Connected as: " + future.getChannel( ).getLocalAddress( ) );
                 final InetAddress localAddr = ( ( InetSocketAddress ) future.getChannel( ).getLocalAddress( ) ).getAddress( );
-                if ( !factory.getClass( ).getSimpleName( ).startsWith( "GatherLog" ) && Hosts.Coordinator.INSTANCE.isLocalhost( ) ) {
+                if ( !factory.getClass( ).getSimpleName( ).startsWith( "GatherLog" ) && Hosts.isCoordinator( ) ) {
                   AsyncRequestHandler.this.request.get( ).set_epoch( Topology.epoch( ) );
                   AsyncRequestHandler.this.request.get( ).get_services( ).addAll( Topology.partitionRelativeView( config, localAddr ) );
                 }

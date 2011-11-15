@@ -216,13 +216,13 @@ public class Topology {
   }
   
   public static void touch( final ServiceTransitionType msg ) {//TODO:GRZE: @Service interceptor
-    if ( !Hosts.Coordinator.INSTANCE.isLocalhost( ) && ( msg.get_epoch( ) != null ) ) {
+    if ( !Hosts.isCoordinator( ) && ( msg.get_epoch( ) != null ) ) {
       Topology.getInstance( ).currentEpoch = Ints.max( Topology.getInstance( ).currentEpoch, msg.get_epoch( ) );
     }
   }
   
   public static boolean check( final BaseMessage msg ) {
-    if ( !Hosts.Coordinator.INSTANCE.isLocalhost( ) && ( msg.get_epoch( ) != null ) ) {
+    if ( !Hosts.isCoordinator( ) && ( msg.get_epoch( ) != null ) ) {
       return Topology.getInstance( ).epoch( ) <= msg.get_epoch( );
     } else {
       return true;
@@ -491,7 +491,7 @@ public class Topology {
   }
   
   public TransitionGuard getGuard( ) {
-    return ( Hosts.Coordinator.INSTANCE.isLocalhost( )
+    return ( Hosts.isCoordinator( )
       ? this.cloudControllerGuard( )
       : this.remoteGuard( ) );
   }
@@ -602,7 +602,7 @@ public class Topology {
       final List<ServiceConfiguration> checkedServices = Lists.newArrayList( Collections2.transform( checkedServiceFutures, ExtractFuture.INSTANCE ) );
       LOG.trace( LogUtil.subheader( "CHECKED: " + Joiner.on( "\nCHECKED: " ).join( checkedServices ) ) );
       
-      if ( !Hosts.Coordinator.INSTANCE.isLocalhost( ) ) {
+      if ( !Hosts.isCoordinator( ) ) {
         /** TODO:GRZE: check and disable timeout here **/
         return Lists.newArrayList( Collections2.transform( checkedServiceFutures, ExtractFuture.INSTANCE ) );
       } else {
@@ -637,7 +637,7 @@ public class Topology {
     @Override
     public boolean apply( final ServiceConfiguration arg0 ) {
       final ServiceKey key = ServiceKey.create( arg0 );
-      if ( !Hosts.Coordinator.INSTANCE.isLocalhost( ) ) {
+      if ( !Hosts.isCoordinator( ) ) {
         Logs.extreme( ).debug( "FAILOVER-REJECT: " + Internets.localHostInetAddress( )
                                + ": not cloud controller, ignoring promotion for: "
                                    + arg0.getFullName( ) );
@@ -692,7 +692,7 @@ public class Topology {
   @Override
   public String toString( ) {
     final StringBuilder builder = new StringBuilder( );
-    builder.append( "Topology:currentEpoch=" ).append( this.currentEpoch ).append( ":guard=" ).append( Hosts.Coordinator.INSTANCE.isLocalhost( )
+    builder.append( "Topology:currentEpoch=" ).append( this.currentEpoch ).append( ":guard=" ).append( Hosts.isCoordinator( )
       ? "cloud"
       : "remote" );
     return builder.toString( );

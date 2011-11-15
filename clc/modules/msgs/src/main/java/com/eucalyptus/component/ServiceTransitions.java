@@ -329,14 +329,14 @@ public class ServiceTransitions {
   private static void processTransition( final ServiceConfiguration parent, final Completion transitionCallback, final TransitionActions transitionAction ) {
     ServiceTransitionCallback trans = null;
     try {
-      if ( parent.isVmLocal( ) || ( parent.isHostLocal( ) && Hosts.Coordinator.INSTANCE.isLocalhost( ) ) ) {
+      if ( parent.isVmLocal( ) || ( parent.isHostLocal( ) && Hosts.isCoordinator( ) ) ) {
         try {
           trans = ServiceLocalTransitionCallbacks.valueOf( transitionAction.name( ) );
         } catch ( Exception ex ) {
           LOG.error( ex, ex );
           throw ex;
         }
-      } else if ( Hosts.Coordinator.INSTANCE.isLocalhost( ) ) {
+      } else if ( Hosts.isCoordinator( ) ) {
         try {
           trans = CloudRemoteTransitionCallbacks.valueOf( transitionAction.name( ) );
         } catch ( Exception ex ) {
@@ -717,7 +717,7 @@ public class ServiceTransitions {
       
       @Override
       public void fire( final ServiceConfiguration config ) {
-        if ( Hosts.Coordinator.INSTANCE.isLocalhost( ) && !config.isVmLocal( ) ) {
+        if ( Hosts.isCoordinator( ) && !config.isVmLocal( ) ) {
           ServiceEvents.fire( config, config.getStateMachine( ).getState( ) );
         }
       }

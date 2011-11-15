@@ -76,7 +76,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import net.sf.hajdbc.InactiveDatabaseMBean;
 import net.sf.hajdbc.sql.DriverDatabaseClusterMBean;
 import org.apache.log4j.Logger;
-import com.eucalyptus.bootstrap.Hosts.Coordinator;
 import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Eucalyptus.Database;
@@ -246,7 +245,7 @@ public class Databases {
                 final InactiveDatabaseMBean database = Databases.lookupDisabled( contextName, hostName );
                 database.setUser( "eucalyptus" );
                 database.setPassword( dbPass );
-                if ( !Coordinator.INSTANCE.isLocalhost( ) && host.isLocalHost( ) && BootstrapArgs.isCloudController( ) && !Databases.isSynchronized( ) ) {
+                if ( !Hosts.isCoordinator( ) && host.isLocalHost( ) && BootstrapArgs.isCloudController( ) && !Databases.isSynchronized( ) ) {
                   cluster.activate( hostName, "full" );
                 } else if ( host.hasSynced( ) ) {
                   cluster.activate( hostName, "passive" );
@@ -363,7 +362,7 @@ public class Databases {
    * @return
    */
   public static Boolean isSynchronized( ) {
-    if ( Hosts.Coordinator.INSTANCE.isLocalhost( ) ) {
+    if ( Hosts.isCoordinator( ) ) {
       syncState.set( SyncState.SYNCED );
     }
     return SyncState.SYNCED.equals( syncState.get( ) );

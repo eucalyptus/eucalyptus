@@ -63,7 +63,7 @@ public class EucalyptusBuilder extends AbstractServiceBuilder<EucalyptusConfigur
                                               + config.getFullName( )
                                               + ".\nHosts are: "
                                               + Hosts.list( ) );
-    } else if ( !Hosts.Coordinator.INSTANCE.isLocalhost( ) ) {
+    } else if ( !Hosts.isCoordinator( ) ) {
       throw new ServiceRegistrationException( "This cloud controller "
                                               + config.getFullName( )
                                               + " is not currently the coordinator "
