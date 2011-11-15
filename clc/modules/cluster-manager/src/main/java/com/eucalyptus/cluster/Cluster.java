@@ -198,6 +198,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
         try {
           if ( State.ENABLED.ordinal( ) > input.stateMachine.getState( ).ordinal( ) ) {
             AsyncRequests.newRequest( new EnableServiceCallback( input ) ).sendSync( input.configuration );
+            ZoneRegistration.REGISTER.apply( input );
           }
           return true;
         } catch ( final Exception t ) {
