@@ -164,9 +164,11 @@ public class ServiceTransitions {
           path = pathToInitialized( initialState );
           break;
       }
-      LOG.debug( configuration.getFullName( ) + " transitioning "
-                 + initialState + "->" + goalState
-                 + " using path " + Joiner.on( "->" ).join( path ) );
+      if ( !initialState.equals( goalState ) ) {
+        LOG.debug( configuration.getFullName( ) + " transitioning "
+                   + initialState + "->" + goalState
+                   + " using path " + Joiner.on( "->" ).join( path ) );
+      }      
       CheckedListenableFuture<ServiceConfiguration> result = executeTransition( configuration, Automata.sequenceTransitions( configuration, path ) );
       return result;
     } catch ( RuntimeException ex ) {
