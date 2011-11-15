@@ -172,7 +172,7 @@ public class Databases {
       return new Function<String, Runnable>( ) {
         
         @Override
-        public Runnable apply( String ctx ) {
+        public Runnable apply( final String ctx ) {
           final String hostName = host.getBindAddress( ).getHostAddress( );
           final String contextName = ctx.startsWith( "eucalyptus_" )
             ? ctx
@@ -194,6 +194,7 @@ public class Databases {
                 } catch ( final Exception ex ) {
                   LOG.error( ex, ex );
                 }
+                PersistenceContexts.flush( ctx );
               } catch ( final NoSuchElementException ex1 ) {
                 LOG.error( ex1, ex1 );
               } catch ( final Exception ex1 ) {
@@ -223,7 +224,7 @@ public class Databases {
       return new Function<String, Runnable>( ) {
         
         @Override
-        public Runnable apply( String ctx ) {
+        public Runnable apply( final String ctx ) {
           final String hostName = host.getBindAddress( ).getHostAddress( );
           final String contextName = ctx.startsWith( "eucalyptus_" )
             ? ctx
@@ -250,6 +251,7 @@ public class Databases {
                 } else if ( host.hasSynced( ) ) {
                   cluster.activate( hostName, "passive" );
                 }
+                PersistenceContexts.flush( ctx );
               } catch ( final NoSuchElementException ex1 ) {
                 LOG.error( ex1, ex1 );
               } catch ( final Exception ex1 ) {
