@@ -72,17 +72,18 @@ foreach (execute_query("
 }
 
 # Generate report WITHIN
-$report_file = "/tmp/report-" . time();
 $start_ms++;
 $end_ms--;
-runcmd("wget -O \"$report_file\" --no-check-certificate \"https://localhost:8443/reports?session=$session_id&name=instance&type=CSV&page=0&flush=false&start=$start_ms&end=$end_ms&criterionId=User&groupById=None\"");
-
-
-# Parse report
-open(REPORT, $report_file);
-
-while (<REPORT>) {
-	print "Report line:$_\n";
+foreach (("instance","storage","s3")) {
+	$report_file = "/tmp/report-$_-" . time();
+	runcmd("wget -O \"$report_file\" --no-check-certificate \"https://localhost:8443/reportservlet?session=$session_id&type=instance&page=0&format=csv&flush=false&start=$start_ms&end=$end_ms&criterion=User&groupByCriterion=None\"");
+	# Parse report
+	open(REPORT, $report_file);
+	print "Report: $_\n";
+	while (my $rl = <REPORT>) {
+		print "  line:$rl\n";
+	}
+	close(REPORT);
 }
 
 # Compare report against total number of instances, instance-hours, instance types
