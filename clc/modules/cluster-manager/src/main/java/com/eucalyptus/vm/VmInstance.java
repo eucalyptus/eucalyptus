@@ -706,16 +706,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       return this;
     }
     
-    private ServiceConfiguration lookupServiceConfiguration( final String name ) {
-      ServiceConfiguration config = null;
-      try {
-        config = ServiceConfigurations.lookupByName( ClusterController.class, name );
-      } catch ( final PersistenceException ex ) {
-        LOG.debug( "Failed to find cluster configuration named: " + name + " using that as the partition name." );
-      }
-      return config;
-    }
-    
     public VmInstance build( final Integer launchndex ) throws ResourceAllocationException {
       return new VmInstance( this.owner, this.vmId, this.vmBootRecord, new VmLaunchRecord( launchndex, new Date( ) ), this.vmPlacement,
                              this.networkRulesGroups, this.networkIndex );
