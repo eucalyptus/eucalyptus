@@ -112,15 +112,15 @@ PersistenceContexts.list( ).each { String ctx_simplename ->
     xml.'ha-jdbc'() {
       sync('class':'net.sf.hajdbc.sync.FullSynchronizationStrategy', id:'full') {
         'property'(name:'fetchSize', '1000')
-        'property'(name:'maxBatchSize', '100')
+        'property'(name:'maxBatchSize', '1000')
       }
       sync('class':'net.sf.hajdbc.sync.PassiveSynchronizationStrategy', id:'passive');
       cluster(id:context_pool_alias,
-          'auto-activate-schedule':'0 * * ? * *',
-          balancer:'round-robin', //(simple|random|round-robin|load)
+//          'auto-activate-schedule':'0 * * ? * *',
+          balancer:'simple', //(simple|random|round-robin|load)
           'default-sync': 'passive',
           dialect:Databases.getJdbcDialect( ),
-          'failure-detect-schedule':'0 * * ? * *',
+          'failure-detect-schedule':'0/15 * * ? * *',
           'meta-data-cache':'none',//(none|lazy|eager)
           'transaction-mode':'serial',//(parallel|serial)
           'detect-sequences':'false',
@@ -131,12 +131,15 @@ PersistenceContexts.list( ).each { String ctx_simplename ->
           'eval-rand':'true'
           ) {
             Hosts.listActiveDatabases( ).each{ Host host ->
-              database(id:host.getBindAddress().getHostAddress( ),local:host.isLocalHost( )) {
-                driver(real_jdbc_driver)
-                url("jdbc:${ServiceUris.remote(Database.class,host.getBindAddress( ), context_pool_alias ).toASCIIString( )}")
-                user('eucalyptus')
-                password(db_pass)
-              }
+              database(id:host.getBindAddress().getHostAddress( ),
+                  local:host.isLocalHost( ),
+                  weight:(host.equals(Hosts.getCoordinator())?100:1)
+                  ) {
+                    driver(real_jdbc_driver)
+                    url("jdbc:${ServiceUris.remote(Database.class,host.getBindAddress( ), context_pool_alias ).toASCIIString( )}")
+                    user('eucalyptus')
+                    password(db_pass)
+                  }
             }
           }
     }
