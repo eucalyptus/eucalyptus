@@ -604,6 +604,10 @@ public class WalrusManager {
 					}
 				}
 				accessControlList.setGrants(grants);
+			} else {
+        LOG.error( "Not authorized to get bucket ACL by " + ctx.getUserFullName( ) );
+        db.rollback();
+        throw new AccessDeniedException("Bucket", bucketName, logData);
 			}
 		} else {
 			db.rollback();
@@ -2969,6 +2973,10 @@ public class WalrusManager {
 					else
 						reply.setVersioningStatus(status);
 				}
+			} else {
+        LOG.error( "Not authorized to get bucket version status by " + ctx.getUserFullName( ) );
+        db.rollback();
+        throw new AccessDeniedException("Bucket", bucketInfo.getBucketName( ) );			  
 			}
 		} catch (EucalyptusCloudException ex) {
 			db.rollback();
