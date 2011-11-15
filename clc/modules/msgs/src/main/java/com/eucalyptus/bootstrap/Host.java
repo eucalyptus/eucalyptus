@@ -180,7 +180,7 @@ public class Host implements java.io.Serializable, Comparable<Host> {
     try {
       Host coordinator = Hosts.getCoordinator( );
       String coordinatorName = ( coordinator != null ? coordinator.getDisplayName( ) : "pending" );
-      builder.append( "coordinator=" ).append( coordinatorName );
+      builder.append( "coordinator=" ).append( coordinatorName ).append( " " );
     } catch ( Exception ex ) {
       LOG.error( ex, ex );
     }
