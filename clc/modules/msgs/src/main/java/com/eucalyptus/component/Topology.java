@@ -375,6 +375,7 @@ public class Topology {
         final ServiceKey serviceKey = ServiceKey.create( config );
         final ServiceConfiguration curr = Topology.this.getServices( ).put( serviceKey, config );
         if ( ( curr != null ) && !curr.equals( config ) ) {
+          transition( State.DISABLED ).apply( curr );
           return false;
         } else if ( ( curr != null ) && curr.equals( config ) ) {
           return true;
