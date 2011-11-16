@@ -310,7 +310,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
               Cluster.ServiceStateDispatch.DISABLED.apply( parent );
             } else if ( Component.State.DISABLED.equals( serviceState ) && Component.State.ENABLED.equals( localState ) ) {
               Cluster.ServiceStateDispatch.ENABLED.apply( parent );
-            } else if ( Component.State.LOADED.equals( serviceState ) && Component.State.NOTREADY.ordinal( ) >= localState.ordinal( ) ) {
+            } else if ( Component.State.LOADED.equals( serviceState ) && Component.State.NOTREADY.ordinal( ) <= localState.ordinal( ) ) {
               Cluster.ServiceStateDispatch.STARTED.apply( parent );
             } else if ( Component.State.NOTREADY.ordinal( ) < serviceState.ordinal( ) ) {
               parent.clearExceptions( );
