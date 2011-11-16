@@ -188,7 +188,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
           AsyncRequests.newRequest( new StartServiceCallback( input ) ).sendSync( input.configuration );
           return true;
         } catch ( final Exception t ) {
-          return input.filterExceptions( t );
+          return input.swallowException( t );
         }
       }
     },
@@ -202,7 +202,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
           }
           return true;
         } catch ( final Exception t ) {
-          return input.filterExceptions( t );
+          return input.swallowException( t );
         }
       }
     },
@@ -215,7 +215,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
           }
           return true;
         } catch ( final Exception t ) {
-          return input.filterExceptions( t );
+          return input.swallowException( t );
         }
       }
     };
@@ -238,11 +238,17 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
         @Override
         public final void leave( final Cluster parent, final Callback.Completion transitionCallback ) {
           try {
-            AsyncRequests.newRequest( factory.newInstance( ) ).then( transitionCallback ).dispatch( parent.getLogServiceConfiguration( ) ).get( );
+            AsyncRequests.newRequest( factory.newInstance( ) ).dispatch( parent.getLogServiceConfiguration( ) ).get( );
+            transitionCallback.fire( );
           } catch ( final InterruptedException t ) {
             Thread.currentThread( ).interrupt( );
+            transitionCallback.fireException( t );
           } catch ( final Exception t ) {
-            parent.filterExceptions( t );
+            if ( !parent.swallowException( t ) ) {
+              transitionCallback.fireException( t );
+            } else {
+              transitionCallback.fire( );
+            }
           }
         }
       };
@@ -277,7 +283,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
             Exceptions.trace( ex );
             transitionCallback.fire( );
           } catch ( final Exception t ) {
-            if ( parent.filterExceptions( t ) ) {
+            if ( !parent.swallowException( t ) ) {
               transitionCallback.fireException( t );
             } else {
               transitionCallback.fire( );
@@ -990,26 +996,26 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
     };
   }
   
-  private <T extends Throwable> boolean filterExceptions( final T t ) {
+  private <T extends Throwable> boolean swallowException( final T t ) {
     Throwable fin = t;
     if ( t instanceof ExecutionException ) {
       fin = t.getCause( ) != null
         ? t.getCause( )
         : t;
     }
-    if ( t instanceof InterruptedException ) {
+    LOG.error( t );
+    if ( Exceptions.isCausedBy( t, InterruptedException.class ) ) {
       Thread.currentThread( ).interrupt( );
-      LOG.error( t );
-    } else if ( fin instanceof FailedRequestException ) {
-      LOG.error( fin, fin );
+    } else if ( Exceptions.isCausedBy( t, FailedRequestException.class ) ) {
+      Logs.extreme( ).debug( fin, fin );
       this.pendingErrors.add( fin );
-    } else if ( ( fin instanceof ConnectionException ) || ( fin instanceof IOException ) ) {
+    } else if ( Exceptions.isCausedBy( t, ConnectionException.class ) || Exceptions.isCausedBy( t, IOException.class ) ) {
       LOG.error( this.getName( ) + ": Error communicating with cluster: "
                  + fin.getMessage( ) );
-      LOG.trace( fin, fin );
+      Logs.extreme( ).debug( fin, fin );
       this.pendingErrors.add( fin );
     } else {
-      LOG.error( fin, fin );
+      Logs.extreme( ).debug( fin, fin );
       this.pendingErrors.add( fin );
     }
     return false;
