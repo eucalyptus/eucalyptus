@@ -103,14 +103,15 @@ public class Internets {
 //  }
 //  
   
-  public static boolean isReachable( InetAddress addr, int timeout ) throws IOException {
+  public static boolean isReachable( InetAddress addr, int timeoutMillis ) throws IOException {
     try {
+      timeoutMillis = timeoutMillis / 1000;
       return ( Boolean ) Groovyness.eval( String.format( "ret = \"/bin/ping -W %d -c 1 %s\".execute( ); ret.waitFor(); ret.exitValue() == 0;",
-                                                         timeout / 1000.0,
+                                                         timeoutMillis,
                                                          addr.getHostAddress( ) ) );
     } catch ( ScriptExecutionFailedException ex ) {
       Logs.extreme( ).error( ex, ex );
-      return addr.isReachable( timeout );
+      return addr.isReachable( timeoutMillis );
     }
   }
   
