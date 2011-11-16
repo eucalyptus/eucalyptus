@@ -259,15 +259,15 @@ public class Hosts {
       if ( event.isAsserted( 15L ) ) {
         UpdateEntry.INSTANCE.apply( currentHost );
       }
-      Set<Address> currentMembers = Sets.newHashSet( hostMap.getChannel( ).getView( ).getMembers( ) );
-      Map<String, Host> hostCopy = Maps.newHashMap( hostMap );
-      Set<Address> currentHosts = Sets.newHashSet( Collections2.transform( hostCopy.values( ), GroupAddressTransform.INSTANCE ) );
-      Set<Address> strayHosts = Sets.difference( currentHosts, currentMembers );
-      for ( Address strayHost : strayHosts ) {
-        Host h = hostCopy.get( strayHost );
-        BootstrapComponent.TEARDOWN.apply( h );
-        hostMap.remove( strayHost );
-      }
+//      Set<Address> currentMembers = Sets.newHashSet( hostMap.getChannel( ).getView( ).getMembers( ) );
+//      Map<String, Host> hostCopy = Maps.newHashMap( hostMap );
+//      Set<Address> currentHosts = Sets.newHashSet( Collections2.transform( hostCopy.values( ), GroupAddressTransform.INSTANCE ) );
+//      Set<Address> strayHosts = Sets.difference( currentHosts, currentMembers );
+//      for ( Address strayHost : strayHosts ) {
+//        Host h = hostCopy.get( strayHost );
+//        BootstrapComponent.TEARDOWN.apply( h );
+//        hostMap.remove( strayHost );
+//      }
     }
   }
   
