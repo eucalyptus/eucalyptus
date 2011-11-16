@@ -73,6 +73,7 @@ import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.ServiceUris;
+import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.entities.EntityWrapper;
@@ -151,11 +152,9 @@ public class StorageProperties {
 	}
 
 	public static void updateWalrusUrl() {
-		List<ServiceConfiguration> walrusConfigs;
 		try {
-			walrusConfigs = ServiceConfigurations.list( Walrus.class );
-			if(walrusConfigs.size() > 0) {
-			  ServiceConfiguration walrusConfig = walrusConfigs.get(0);
+			if(Topology.isEnabled(Walrus.class)) {
+			  ServiceConfiguration walrusConfig = Topology.lookup(Walrus.class);
 				WALRUS_URL = ServiceUris.remote( walrusConfig ).toASCIIString( );
 				StorageProperties.enableSnapshots = true;
 				LOG.info("Setting WALRUS_URL to: " + WALRUS_URL);
