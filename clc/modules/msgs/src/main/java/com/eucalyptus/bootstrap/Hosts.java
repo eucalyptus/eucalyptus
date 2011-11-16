@@ -714,11 +714,15 @@ public class Hosts {
   }
   
   public static List<Host> list( ) {
-    return Lists.newArrayList( hostMap.values( ) );
+    List<Host> hosts = Lists.newArrayList( );
+    if ( hostMap != null ) {
+      hosts.addAll( hostMap.values( ) );
+    }
+    return hosts;
   }
   
   public static List<Host> list( final Predicate<Host> filter ) {
-    return Lists.newArrayList( Iterables.filter( hostMap.values( ), filter ) );
+    return Lists.newArrayList( Iterables.filter( list( ), filter ) );
   }
   
   public static List<Host> listDatabases( ) {
