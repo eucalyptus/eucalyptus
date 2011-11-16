@@ -842,6 +842,22 @@ class upgrade_20_30 extends AbstractUpgradeScript {
             dbIvi.add(ivi);
         }
         dbIvi.commit();
+
+        EntityWrapper<StorageInfo> dbSI = EntityWrapper.get(StorageInfo.class);
+        def rowResults = connMap['eucalyptus_storage'].rows('SELECT * FROM storage_info');
+        for (GroovyRowResult rowResult : rowResults) {
+            Set<String> columns = rowResult.keySet();
+            boolean xferSnaps = true;
+            if (columns.contains('system_storage_transfer_snapshots')) {
+                xferSnaps = rowResult.system_storage_transfer_snapshots;
+            }
+            StorageInfo si = new StorageInfo(rowResult.storage_name,
+                                             rowResult.system_storage_volume_size_gb,
+                                             rowResult.system_storage_max_volume_size_gb,
+                                             xferSnaps);
+            dbSI.add(si);
+        }
+        dbSI.commit();
         return true;
     }
 
@@ -966,7 +982,6 @@ class upgrade_20_30 extends AbstractUpgradeScript {
         entities.add(SnapshotInfo.class);
         entities.add(VolumeInfo.class);
         entities.add(DirectStorageInfo.class);
-        entities.add(StorageInfo.class);
         entities.add(StorageStatsInfo.class);
         // Below are for enterprise only
         entities.add(NetappInfo.class);
