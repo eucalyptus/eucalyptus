@@ -306,11 +306,7 @@ public class Hosts {
       LOG.info( "Hosts.entrySet(): " + hostKey + " => " + host );
       try {
         if ( host.isLocalHost( ) && Bootstrap.isFinished( ) ) {
-          LOG.info( "Hosts.entrySet(): BOOTSTRAPPED HOST => " + host );
-          BootstrapComponent.SETUP.apply( host );
-          if ( SyncDatabases.INSTANCE.apply( host ) ) {
-            LOG.info( "Hosts.entrySet(): SYNCING HOST => " + host );
-          }
+          SyncDatabases.INSTANCE.apply( host );
         } else if ( BootstrapComponent.REMOTESETUP.apply( host ) ) {
           LOG.info( "Hosts.entrySet(): BOOTSTRAPPED HOST => " + host );
           if ( SyncDatabases.INSTANCE.apply( host ) ) {
@@ -324,7 +320,6 @@ public class Hosts {
       } catch ( Exception ex ) {
         LOG.error( ex, ex );
       }
-      LOG.info( "Hosts.entrySet(): " + printMap( ) );
     }
     
     @Override
