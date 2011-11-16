@@ -68,6 +68,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.Callable;
 import org.apache.log4j.Logger;
+import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.component.Component.State;
 import com.eucalyptus.component.ServiceChecks.CheckException;
@@ -575,7 +576,9 @@ public class ServiceTransitions {
       @Override
       public void fire( final ServiceConfiguration parent ) throws Exception {
         parent.lookupBootstrapper( ).destroy( );
-        Components.lookup( parent.getComponentId( ) ).destroy( parent );
+        if ( Bootstrap.isFinished( ) ) {
+          Components.lookup( parent.getComponentId( ) ).destroy( parent );
+        }
       }
     },
     CHECK {

@@ -289,7 +289,7 @@ public class Topology {
     return transition;
   }
   
-  public static Future<ServiceConfiguration> check( final ServiceConfiguration config ) {
+  private static Future<ServiceConfiguration> check( final ServiceConfiguration config ) {
     return Queue.EXTERNAL.enqueue( Topology.callable( config, Topology.check( ) ) );
   }
   

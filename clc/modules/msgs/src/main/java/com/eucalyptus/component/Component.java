@@ -184,11 +184,6 @@ public class Component implements HasName<Component> {
     return this.serviceRegistry.hasLocalService( );
   }
   
-  @Deprecated
-  public Boolean hasEnabledService( ) {
-    return !Topology.enabledServices( this.getComponentId( ).getClass( ) ).isEmpty( );
-  }
-  
   public Boolean isEnabledLocally( ) {
     return this.serviceRegistry.hasLocalService( ) && State.ENABLED.equals( this.getLocalServiceConfiguration( ).lookupState( ) );
   }
