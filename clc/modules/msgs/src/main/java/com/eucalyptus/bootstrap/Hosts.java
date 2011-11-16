@@ -124,7 +124,8 @@ import com.google.common.collect.Sets;
 import com.google.common.primitives.Longs;
 
 /**
- *egrep 'contentsSet|entrySet|entryRemoved|viewChange|Hosts.values' /disk1/storage/hi.log | sed 's/INFO .*\(Hosts.*\)(): /\1(): /g' | less
+ * egrep 'contentsSet|entrySet|entryRemoved|viewChange|Hosts.values' /disk1/storage/hi.log | sed
+ * 's/INFO .*\(Hosts.*\)(): /\1(): /g' | less
  */
 @ConfigurableClass( root = "bootstrap.hosts",
                     description = "Properties controlling the handling of remote host bootstrapping" )
@@ -289,13 +290,6 @@ public class Hosts {
     @Override
     public void contentsSet( final Map<String, Host> input ) {
       LOG.info( "Hosts.contentsSet(): " + this.printMap( ) );
-      try {
-        for ( final Host h : input.values( ) ) {
-          BootstrapComponent.REMOTESETUP.apply( h );
-        }
-      } catch ( Exception ex ) {
-        LOG.error( ex, ex );
-      }
     }
     
     @Override
@@ -371,17 +365,17 @@ public class Hosts {
       @Override
       public boolean apply( final Host input ) {
         try {
-          hostMap.remove( input.getDisplayName( ) );
+          Hosts.remove( input.getDisplayName( ) );
           teardown( Empyrean.class, input.getBindAddress( ) );
           if ( input.hasDatabase( ) ) {
             teardown( Eucalyptus.class, input.getBindAddress( ) );
           }
-          if ( !input.isLocalHost( ) && input.hasDatabase( ) && BootstrapArgs.isCloudController( ) ) {
-            BootstrapComponent.SETUP.apply( Hosts.localHost( ) );
-            UpdateEntry.INSTANCE.apply( Hosts.localHost( ) );
-          }
-          if ( input.hasDatabase( ) ) {
+          if ( !input.isLocalHost( ) && input.hasDatabase( ) ) {
             Databases.disable( input );
+            if ( BootstrapArgs.isCloudController( ) ) {
+              BootstrapComponent.SETUP.apply( Hosts.localHost( ) );
+              UpdateEntry.INSTANCE.apply( Hosts.localHost( ) );
+            }
           }
           return true;
         } catch ( Exception ex ) {
@@ -472,7 +466,7 @@ public class Hosts {
     public boolean apply( final Host input ) {
       if ( input == null ) {
         final Host newHost = Host.create( );
-        final Host oldHost = hostMap.putIfAbsent( newHost.getDisplayName( ), newHost );
+        final Host oldHost = Hosts.putIfAbsent( newHost );
         if ( oldHost != null ) {
           LOG.info( "Inserted local host information:   " + localHost( ) );
           return true;
@@ -482,7 +476,7 @@ public class Hosts {
       } else if ( input.isLocalHost( ) ) {
         if ( CheckStale.INSTANCE.apply( input ) ) {
           final Host newHost = Host.create( );
-          final Host oldHost = hostMap.replace( newHost.getDisplayName( ), newHost );
+          final Host oldHost = Hosts.put( newHost );
           if ( oldHost != null ) {
             LOG.info( "Updated local host information:   " + localHost( ) );
             return true;
@@ -490,9 +484,9 @@ public class Hosts {
             return false;
           }
         } else {
-          if ( !hostMap.containsKey( input.getDisplayName( ) ) ) {
+          if ( !contains( input ) ) {
             final Host newHost = Host.create( );
-            final Host oldHost = hostMap.putIfAbsent( newHost.getDisplayName( ), newHost );
+            final Host oldHost = putIfAbsent( newHost );
             if ( oldHost == null ) {
               LOG.info( "Updated local host information:   " + localHost( ) );
               return true;
@@ -665,7 +659,7 @@ public class Hosts {
                 public void run( ) {
                   try {
                     try {
-                      hostMap.remove( Internets.localHostIdentifier( ) );
+                      Hosts.remove( Internets.localHostIdentifier( ) );
                     } catch ( final Exception ex ) {
                       LOG.error( ex, ex );
                     }
@@ -685,11 +679,11 @@ public class Hosts {
         Timers.loggingWrapper( runMap, hostMap ).call( );
         LOG.info( "Initial view:\n" + HostMapStateListener.INSTANCE.printMap( ) );
         LOG.info( "Initial coordinator:\n" + Hosts.getCoordinator( ) );
-        Coordinator.INSTANCE.initialize( hostMap.values( ) );
-        final Host local = Host.create( );
-        LOG.info( "Created local host entry: " + local );
-        hostMap.put( local.getDisplayName( ), local );
         Listeners.register( HostBootstrapEventListener.INSTANCE );
+        Coordinator.INSTANCE.initialize( hostMap.values( ) );
+        final Host local = Hosts.localHost( );
+        LOG.info( "Created local host entry: " + local );
+        UpdateEntry.INSTANCE.apply( local );
         LOG.info( "System view:\n" + HostMapStateListener.INSTANCE.printMap( ) );
         LOG.info( "System coordinator:\n" + Hosts.getCoordinator( ) );
         if ( !BootstrapArgs.isCloudController( ) ) {
@@ -702,6 +696,13 @@ public class Hosts {
           }
         }
         LOG.info( "Membership address for localhost: " + Hosts.localHost( ) );
+        try {
+          for ( final Host h : hostMap.values( ) ) {
+            BootstrapComponent.REMOTESETUP.apply( h );
+          }
+        } catch ( Exception ex ) {
+          LOG.error( ex , ex );
+        }
         return true;
       } catch ( final Exception ex ) {
         LOG.fatal( ex, ex );
@@ -755,6 +756,30 @@ public class Hosts {
   
   public static List<Host> listActiveDatabases( ) {
     return Hosts.list( filterSyncedDbs );
+  }
+  
+  private static Host put( final Host newHost ) {
+    return hostMap.put( newHost.getDisplayName( ), newHost );
+  }
+
+  private static Host putIfAbsent( final Host host ) {
+    return hostMap.putIfAbsent( host.getDisplayName( ), host );
+  }
+
+  public static boolean contains( final String hostDisplayName ) {
+    return hostMap.containsKey( hostDisplayName );
+  }
+
+  private static boolean contains( final Host host ) {
+    return contains( host.getDisplayName( ) );
+  }
+
+  private static Host remove( Host host ) {
+    return remove( host.getDisplayName( ) );
+  }
+
+  private static Host remove( String hostDisplayName ) {
+    return hostMap.remove( hostDisplayName );
   }
   
   public static Host localHost( ) {
@@ -886,4 +911,5 @@ public class Hosts {
     }
     
   }
+
 }
