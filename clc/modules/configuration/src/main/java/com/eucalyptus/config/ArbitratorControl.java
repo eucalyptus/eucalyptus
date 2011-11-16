@@ -111,19 +111,19 @@ public class ArbitratorControl {
 							try {
 								final InetAddress addr = InetAddress.getByName( hostName );
 								if ( Internets.isReachable( addr, 2000 ) ) {
-									ArbitratorControl.error.remove( hostName );
+									ArbitratorControl.error.remove( config );
 									ArbitratorControl.okay.put( hostName, config );
 								} else {
-	                ArbitratorControl.error.put( config, Exceptions.filterStackTrace( new NoRouteToHostException( addr.toString( ) ) ) );
-	                ArbitratorControl.okay.remove(hostName);
+									ArbitratorControl.error.put( config, Exceptions.filterStackTrace( new NoRouteToHostException( addr.toString( ) ) ) );
+									ArbitratorControl.okay.remove(hostName);
 								}
 							} catch ( final UnknownHostException e ) {
 								ArbitratorControl.error.put( config, Exceptions.filterStackTrace( e ) );
 								ArbitratorControl.okay.remove(hostName);
-              } catch ( final IOException e ) {
-                ArbitratorControl.error.put( config, Exceptions.filterStackTrace( e ) );
-                ArbitratorControl.okay.remove(hostName);
-              }
+							} catch ( final IOException e ) {
+								ArbitratorControl.error.put( config, Exceptions.filterStackTrace( e ) );
+								ArbitratorControl.okay.remove(hostName);
+							}
 							EventRecord.here( ArbitratorControl.class, EventType.BOOTSTRAPPER_CHECK, hostName, "errorMap", error.get( hostName ).toString( ) ).debug( );
 						}
 					}
