@@ -154,6 +154,7 @@ public class X509Download extends HttpServlet {
     try {
       x509zip = getX509Zip( user );
     } catch ( Exception e ) {
+      LOG.debug( e, e );
       hasError( HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Fail to return user credentials", response );
       return;
     }
