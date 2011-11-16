@@ -665,6 +665,7 @@ public class Hosts {
         final Host local = Host.create( );
         LOG.info( "Created local host entry: " + local );
         hostMap.putIfAbsent( local.getDisplayName( ), local );
+        BootstrapComponent.SETUP.apply( local );
         Listeners.register( HostBootstrapEventListener.INSTANCE );
         LOG.info( "System view:\n" + HostMapStateListener.INSTANCE.printMap( ) );
         if ( !BootstrapArgs.isCloudController( ) ) {
