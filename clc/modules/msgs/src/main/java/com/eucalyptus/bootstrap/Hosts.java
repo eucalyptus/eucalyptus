@@ -654,7 +654,6 @@ public class Hosts {
         hostMap = new ReplicatedHashMap<String, Host>( HostManager.getMembershipChannel( ) );
         hostMap.setDeadlockDetection( true );
         hostMap.setBlockingUpdates( true );
-        hostMap.addNotifier( HostMapStateListener.INSTANCE );
         Runnable runMap = new Runnable( ) {
           public void run( ) {
             try {
@@ -687,6 +686,7 @@ public class Hosts {
         LOG.info( "Initial coordinator:\n" + Hosts.getCoordinator( ) );
         Listeners.register( HostBootstrapEventListener.INSTANCE );
         Coordinator.INSTANCE.initialize( hostMap.values( ) );
+        hostMap.addNotifier( HostMapStateListener.INSTANCE );
         final Host local = Hosts.localHost( );
         LOG.info( "Created local host entry: " + local );
         UpdateEntry.INSTANCE.apply( local );
