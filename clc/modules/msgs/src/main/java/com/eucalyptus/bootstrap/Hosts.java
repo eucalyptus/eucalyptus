@@ -284,7 +284,7 @@ public class Hosts {
     
     @Override
     public void contentsCleared( ) {
-      LOG.info( "Hosts.contentsCleared(): " + printMap( ) );
+      LOG.info( "Hosts.contentsCleared(): " + this.printMap( ) );
     }
     
     @Override
@@ -313,6 +313,7 @@ public class Hosts {
       } catch ( Exception ex ) {
         LOG.error( ex, ex );
       }
+      LOG.info( "Hosts.entrySet(): " + hostKey + " finished." );
     }
     
     @Override
@@ -327,6 +328,7 @@ public class Hosts {
           LOG.info( "Hosts.viewChange(): -> removed  => " + h );
         }
       }
+      LOG.info( "Hosts.viewChange(): new view finished." );
     }
     
   }
@@ -349,14 +351,18 @@ public class Hosts {
     SETUP {
       @Override
       public boolean apply( final Host input ) {
-        try {
-          setup( Empyrean.class, input.getBindAddress( ) );
-          if ( input.hasDatabase( ) ) {
-            setup( Eucalyptus.class, input.getBindAddress( ) );
+        if ( input.hasBootstrapped( ) ) {
+          try {
+            setup( Empyrean.class, input.getBindAddress( ) );
+            if ( input.hasDatabase( ) ) {
+              setup( Eucalyptus.class, input.getBindAddress( ) );
+            }
+            return true;
+          } catch ( Exception ex ) {
+            LOG.error( ex, ex );
+            return false;
           }
-          return true;
-        } catch ( Exception ex ) {
-          LOG.error( ex, ex );
+        } else {
           return false;
         }
       }
@@ -388,7 +394,7 @@ public class Hosts {
       
       @Override
       public boolean apply( Host input ) {
-        if ( !input.isLocalHost( ) && input.hasBootstrapped( ) ) {
+        if ( !input.isLocalHost( ) ) {
           return BootstrapComponent.SETUP.apply( input );
         } else {
           return false;
@@ -696,12 +702,8 @@ public class Hosts {
           }
         }
         LOG.info( "Membership address for localhost: " + Hosts.localHost( ) );
-        try {
-          for ( final Host h : hostMap.values( ) ) {
-            BootstrapComponent.REMOTESETUP.apply( h );
-          }
-        } catch ( Exception ex ) {
-          LOG.error( ex , ex );
+        for ( final Host h : hostMap.values( ) ) {
+          BootstrapComponent.REMOTESETUP.apply( h );
         }
         return true;
       } catch ( final Exception ex ) {
