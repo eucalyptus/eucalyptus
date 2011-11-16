@@ -850,7 +850,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
                                                                     this.getOwner( ).getAccountNumber( ), this.getOwnerAccountName( ),
                                                                     this.placement.getClusterName( ), this.placement.getPartitionName( ),
                                                                     this.usageStats.getNetworkBytes( ), this.usageStats.getBlockBytes( ) ) );
-    } catch ( final EventFailedException ex ) {
+    } catch ( final Exception ex ) {
       LOG.error( ex, ex );
     }
   }
@@ -1330,6 +1330,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
             } else {
               this.updateState( runVm );
             }
+            VmInstance.this.fireUsageEvent( );
             db.commit( );
           } catch ( final Exception ex ) {
             Logs.exhaust( ).error( ex, ex );
