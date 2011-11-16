@@ -194,7 +194,8 @@ public class Hosts {
       } else {
         goalState = State.DISABLED;
       }
-      LOG.info( ( State.ENABLED.equals( goalState ) ? "Enabling" : "Disabling" )
+      LOG.info( "SetupRemoteServiceConfigurations: "
+                + ( State.ENABLED.equals( goalState ) ? "Enabling" : "Disabling" )
                 + " "
                 + ( inputIsLocal ? "local" : "remote" )
                 + " "
