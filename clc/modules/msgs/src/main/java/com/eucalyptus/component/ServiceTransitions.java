@@ -69,6 +69,7 @@ import java.util.Map.Entry;
 import java.util.concurrent.Callable;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.component.Component.State;
 import com.eucalyptus.component.ServiceChecks.CheckException;
@@ -315,11 +316,9 @@ public class ServiceTransitions {
   
   private static <T extends EmpyreanMessage> T sendEmpyreanRequest( final ServiceConfiguration parent, final EmpyreanMessage msg ) throws Exception {
     ServiceConfiguration config = ServiceConfigurations.createEphemeral( Empyrean.INSTANCE, parent.getInetAddress( ) );
-    LOG.debug( "Sending request " + msg.getClass( ).getSimpleName( )
-               + " to "
-               + parent.getFullName( ) );
+    Logs.extreme( ).debug( "Sending request " + msg.getClass( ).getSimpleName( ) + " to " + parent.getFullName( ) );
     try {
-      if ( System.getProperty( "euca.noha.cloud" ) == null ) {
+      if ( BootstrapArgs.debugTopology( ) == null ) {
         T reply = ( T ) AsyncRequests.sendSync( config, msg );
         return reply;
       } else {
@@ -327,13 +326,12 @@ public class ServiceTransitions {
       }
       
     } catch ( Exception ex ) {
-      LOG.error( parent + " failed request because of: "
-                 + ex.getMessage( ) );
+      LOG.error( parent.getFullName( ) + " failed request because of: " + ex.getMessage( ) );
       Logs.extreme( ).error( ex, ex );
       throw ex;
     }
   }
-  
+
   private static void processTransition( final ServiceConfiguration parent, final Completion transitionCallback, final TransitionActions transitionAction ) {
     ServiceTransitionCallback trans = null;
     try {

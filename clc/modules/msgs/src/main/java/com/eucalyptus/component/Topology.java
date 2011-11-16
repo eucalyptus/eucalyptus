@@ -772,8 +772,8 @@ public class Topology {
             return result;
           } catch ( final Exception ex ) {
             final Throwable t = Exceptions.unwrapCause( ex );
+            LOG.error( config.getFullName( ) + " failed to transition because of:\n" + t.getMessage( ) );
             Logs.extreme( ).error( t, t );
-            LOG.error( config.getFullName( ) + " failed to transition because of: " + t );
             throw ex;
           }
         }
@@ -902,7 +902,7 @@ public class Topology {
         return endResult;
       } catch ( final Exception ex ) {
         Exceptions.maybeInterrupted( ex );
-        LOG.debug( this.toString( input, initialState, nextState, ex ) );
+        LOG.error( this.toString( input, initialState, nextState, ex ) );
         throw Exceptions.toUndeclared( ex );
       } finally {
         if ( Bootstrap.isFinished( ) && !Component.State.ENABLED.equals( endResult.lookupState( ) ) ) {
@@ -912,7 +912,7 @@ public class Topology {
     }
     
     private String toString( final ServiceConfiguration endResult, final State initialState, final State nextState, final Throwable... throwables ) {
-      return String.format( "%s %s %s->%s=%s [%s]", this.toString( ), endResult.getFullName( ), initialState, nextState, endResult.lookupState( ),
+      return String.format( "%s %s %s->%s=%s \n[%s]\n", this.toString( ), endResult.getFullName( ), initialState, nextState, endResult.lookupState( ),
                             ( ( throwables != null ) && ( throwables.length > 0 )
                               ? Exceptions.causeString( throwables[0] )
                               : "WINNING" ) );
