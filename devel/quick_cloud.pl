@@ -38,7 +38,7 @@ sub check_mysqld {
 
 sub host_membership {
    test_start("is coordinator?");
-   run_on_clc("$euca_dir/usr/sbin/euca-modify-property -p euca=\'com.eucalyptus.bootstrap.Hosts.keySet()\'");
+   run_on_clc("$euca_dir/usr/sbin/euca-modify-property -p euca=\'com.eucalyptus.bootstrap.Hosts.hostMap.keySet()\'");
    test_end();
 }
 sub coordinator_local {
