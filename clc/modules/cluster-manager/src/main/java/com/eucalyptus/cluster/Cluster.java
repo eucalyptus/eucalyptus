@@ -124,6 +124,7 @@ import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Callback;
+import com.eucalyptus.util.Classes;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.HasFullName;
@@ -188,65 +189,46 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
   }
   
   private enum ServiceStateDispatch implements Predicate<Cluster>, RemoteCallback<ServiceTransitionType, ServiceTransitionType> {
-    STARTED {
-      @Override
-      public ServiceTransitionType getRequest( ) {
-        return new StartServiceType( );
-      }
-      
-      @Override
-      public void fire( ServiceTransitionType msg ) {
-        LOG.debug( "Started service: " + msg );
-      }
-    },
-    ENABLED {
+    STARTED( StartServiceType.class ),
+    ENABLED( EnableServiceType.class ) {
       @Override
       public boolean apply( final Cluster input ) {
         try {
-          if ( State.ENABLED.ordinal( ) > input.stateMachine.getState( ).ordinal( ) ) {
-            super.apply( input );
-            ZoneRegistration.REGISTER.apply( input );
-          }
+          super.apply( input );
+          ZoneRegistration.REGISTER.apply( input );
           return true;
         } catch ( final Exception t ) {
           return input.swallowException( t );
         }
       }
-      
-      @Override
-      public ServiceTransitionType getRequest( ) {
-        return new EnableServiceType( );
-      }
-      
-      @Override
-      public void fire( ServiceTransitionType msg ) {
-        LOG.debug( "Disabled service: " + msg );
-      }
     },
-    DISABLED {
+    DISABLED( DisableServiceType.class ) {
       @Override
       public boolean apply( final Cluster input ) {
         try {
-          if ( State.ENABLED.equals( input.getConfiguration( ).getStateMachine( ) ) || State.NOTREADY.equals( input.getConfiguration( ).getStateMachine( ) ) ) {
-            AsyncRequests.newRequest( this ).sendSync( input.configuration );
-            ZoneRegistration.DEREGISTER.apply( input );
-          }
+          super.apply( input );
+          ZoneRegistration.DEREGISTER.apply( input );
           return true;
-        } catch ( final Exception t ) {
-          return input.swallowException( t );
+        } catch ( Exception ex ) {
+          return false;
         }
-      }
-      
-      @Override
-      public ServiceTransitionType getRequest( ) {
-        return new DisableServiceType( );
-      }
-      
-      @Override
-      public void fire( ServiceTransitionType msg ) {
-        LOG.debug( "Disabled service: " + msg );
       }
     };
+    final Class<? extends ServiceTransitionType> msgClass;
+    
+    private ServiceStateDispatch( Class<? extends ServiceTransitionType> msgClass ) {
+      this.msgClass = msgClass;
+    }
+    
+    @Override
+    public ServiceTransitionType getRequest( ) {
+      return Classes.newInstance( this.msgClass );
+    }
+    
+    @Override
+    public void fire( ServiceTransitionType msg ) {
+      LOG.debug( this.name( ) + " service: " + msg );
+    }
     
     @Override
     public boolean apply( final Cluster input ) {
@@ -262,7 +244,9 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
     public void initialize( ServiceTransitionType request ) throws Exception {}
     
     @Override
-    public void fireException( Throwable t ) {}
+    public void fireException( Throwable t ) {
+      Logs.extreme( ).error( t, t );
+    }
   }
   
   enum LogRefresh implements Function<Cluster, TransitionAction<Cluster>> {
@@ -341,7 +325,6 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
     }
   }
   
-
   enum Refresh implements Function<Cluster, TransitionAction<Cluster>> {
     RESOURCES( ResourceStateCallback.class ),
     NETWORKS( NetworkStateCallback.class ),
@@ -494,7 +477,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
       {
         final TransitionAction<Cluster> noop = Transitions.noop( );
         this.in( Cluster.State.DISABLED ).run( Cluster.ZoneRegistration.DEREGISTER );
-        this.in( Cluster.State.NOTREADY ).run( Cluster.ZoneRegistration.DEREGISTER );
+        this.in( Cluster.State.NOTREADY ).run( Cluster.ServiceStateDispatch.DISABLED );
         this.in( Cluster.State.ENABLED ).run( Cluster.ZoneRegistration.REGISTER );
         this.from( State.BROKEN ).to( State.PENDING ).error( State.BROKEN ).on( Transition.RESTART_BROKEN ).run( noop );
         
