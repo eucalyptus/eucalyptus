@@ -4,18 +4,15 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.cluster.Cluster;
-import com.eucalyptus.cluster.Cluster.State;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.ServiceChecks;
 import com.eucalyptus.component.ServiceChecks.CheckException;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.empyrean.DescribeServicesResponseType;
 import com.eucalyptus.empyrean.DescribeServicesType;
-import com.eucalyptus.empyrean.DisableServiceType;
 import com.eucalyptus.empyrean.ServiceStatusType;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.SubjectMessageCallback;
-import com.eucalyptus.util.fsm.Automata;
 
 public class ServiceStateCallback extends SubjectMessageCallback<Cluster, DescribeServicesType, DescribeServicesResponseType> {
   private static Logger LOG = Logger.getLogger( ServiceStateCallback.class );
@@ -32,7 +29,7 @@ public class ServiceStateCallback extends SubjectMessageCallback<Cluster, Descri
     } else {
       ServiceConfiguration config = this.getSubject( ).getConfiguration( );
       for ( ServiceStatusType status : serviceStatuses ) {
-        if ( config.getName( ).equals( status.getServiceId( ).getName( ) ) ) {
+        if ( "self".equals( status.getServiceId( ).getName( ) ) || config.getName( ).equals( status.getServiceId( ).getName( ) ) ) {
           LOG.debug( "Found service info: " + status );
           Component.State serviceState = Component.State.valueOf( status.getLocalState( ) );
           Component.State localState = this.getSubject( ).getConfiguration( ).lookupState( );
