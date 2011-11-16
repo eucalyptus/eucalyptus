@@ -115,7 +115,7 @@ public class Databases {
     
     @Override
     public Future<Runnable> apply( Runnable input ) {
-      LOG.debug( "SUBMIT: " + input );
+      Logs.extreme( ).debug( "SUBMIT: " + input );
       return dbSyncExecutors.submit( input, input );
     }
   }
@@ -263,11 +263,12 @@ public class Databases {
                   } else {
                     LOG.info( "Skipping passive activation of extant database: " + host );
                   }
+                } else {
+                  throw Exceptions.toUndeclared( "Host is not ready to be activated: " + host );
                 }
-              } catch ( final NoSuchElementException ex1 ) {
-                LOG.error( ex1, ex1 );
               } catch ( final Exception ex1 ) {
-                LOG.error( ex1, ex1 );
+                Logs.extreme( ).error( ex1, ex1 );
+                throw Exceptions.toUndeclared( "Failed to activate host " + host + " because of: " + ex1.getMessage( ), ex1 );
               }
             }
             
