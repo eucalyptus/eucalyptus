@@ -87,6 +87,7 @@ import org.jgroups.blocks.ReplicatedHashMap;
 import org.jgroups.conf.ClassConfigurator;
 import org.jgroups.stack.Protocol;
 import org.jgroups.stack.ProtocolStack;
+import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Component.State;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
@@ -159,8 +160,9 @@ public class Hosts {
       
       @Override
       public ServiceConfiguration apply( final T input ) {
-        final ServiceConfiguration config = Components.lookup( input ).initRemoteService( addr );
-        LOG.info( "Initialized remote service: " + config.getFullName( ) );
+        Component component = Components.lookup( input );
+        final ServiceConfiguration config = Internets.testLocal( addr ) ? component.initRemoteService( addr ) : component.initService( );
+        LOG.info( "Initialized service: " + config.getFullName( ) );
         return config;
       }
     };
@@ -170,28 +172,32 @@ public class Hosts {
     INSTANCE;
     @Override
     public ServiceConfiguration apply( final ServiceConfiguration input ) {
-      try {
-        ServiceConfiguration conf = null;
-        if ( Internets.testLocal( input.getHostName( ) ) && Hosts.isCoordinator( ) ) {
-          conf = ServiceTransitions.pathTo( input, State.ENABLED ).get( );
-          LOG.info( "Enabled local coordinator service: " + conf.getFullName( ) );
-        } else if ( !Internets.testLocal( input.getHostName( ) ) && !Hosts.isCoordinator( ) && BootstrapArgs.isCloudController( ) ) {
-          conf = ServiceTransitions.pathTo( input, State.ENABLED ).get( );
-          LOG.info( "Enabled remote coordinator service: " + conf.getFullName( ) );
-        } else if ( !Internets.testLocal( input.getHostName( ) ) && !BootstrapArgs.isCloudController( ) ) {
-          Host coordinator = Hosts.getCoordinator( );
-          if ( coordinator != null && coordinator.getBindAddress( ).equals( input.getInetAddress( ) ) ) {
-            conf = ServiceTransitions.pathTo( input, State.ENABLED ).get( );
-            LOG.info( "Enabled remote coordinator service: " + conf.getFullName( ) );
-          } else {
-            conf = ServiceTransitions.pathTo( input, State.DISABLED ).get( );
-            LOG.info( "Disabled remote service: " + conf.getFullName( ) );
-          }
+      boolean inputIsLocal = Internets.testLocal( input.getHostName( ) );
+      State goalState;
+      if ( input.getComponentId( ).isAlwaysLocal( ) ) {
+        goalState = State.ENABLED;
+      } else if ( BootstrapArgs.isCloudController( ) ) {
+        if ( inputIsLocal && Hosts.isCoordinator( ) ) {
+          goalState = State.ENABLED;
+        } else if ( !inputIsLocal && !Hosts.isCoordinator( ) ) {
+          goalState = State.ENABLED;
         } else {
-          conf = ServiceTransitions.pathTo( input, State.DISABLED ).get( );
-          LOG.info( "Disabled remote service: " + conf.getFullName( ) );
+          goalState = State.DISABLED;
         }
-        return conf;
+      } else if ( Hosts.isCoordinator( input.getInetAddress( ) ) ) {
+        goalState = State.ENABLED;
+      } else {
+        goalState = State.DISABLED;
+      }
+      LOG.info( ( State.ENABLED.equals( goalState ) ? "Enabling" : "Disabling" )
+                + " "
+                + ( inputIsLocal ? "local" : "remote" )
+                + " "
+                + ( input.getComponentId( ).isAlwaysLocal( ) ? "bootstrap" : "cloud" )
+                + " services" + ( Hosts.isCoordinator( input.getInetAddress( ) ) ? " (coordinator)" : "" )
+                + ": " + input.getFullName( ) );
+      try {
+        return ServiceTransitions.pathTo( input, goalState ).get( );
       } catch ( final ExecutionException ex ) {
         Exceptions.trace( ex.getCause( ) );
       } catch ( final InterruptedException ex ) {
@@ -209,7 +215,12 @@ public class Hosts {
     Class<? extends ComponentId> compId;
     
     private ShouldLoadRemote( final Class<? extends ComponentId> compId ) {
-      this.delegate = shouldLoadRemote( compId );
+      this.delegate = new Predicate<ComponentId>( ) {
+        @Override
+        public boolean apply( final ComponentId input ) {
+          return input.isAncestor( compId ) && !input.isRegisterable( );
+        }
+      };
       this.compId = compId;
     }
     
@@ -218,25 +229,12 @@ public class Hosts {
       return this.delegate.apply( input );
     }
     
-    private static <T extends ComponentId> Predicate<T> shouldLoadRemote( final Class<? extends ComponentId> compId ) {
-      return new Predicate<T>( ) {
-        @Override
-        public boolean apply( final T input ) {
-          return input.isAncestor( compId ) && !input.isRegisterable( );
-        }
-      };
-    }
-    
-    public static Predicate<ComponentId> getInitFilter( final Class<? extends ComponentId> comp, final InetAddress addr ) {
-      return Predicates.and( EMPYREAN.compId.equals( comp )
+    public static Collection<ComponentId> findDependentComponents( final Class<? extends ComponentId> comp, final InetAddress addr ) {
+      return Collections2.filter( ComponentIds.list( ), Predicates.and( EMPYREAN.compId.equals( comp )
         ? EMPYREAN
-        : EUCALYPTUS, nonLocalAddressFilter( addr ) );
+        : EUCALYPTUS, nonLocalAddressFilter( addr ) ) );
     }
     
-    public static Function<ComponentId, ServiceConfiguration> getInitFunction( final InetAddress addr ) {
-      return Functions.compose( SetupRemoteServiceConfigurations.INSTANCE,
-                                initRemoteSetupConfigurations( addr ) );
-    }
   }
   
   enum HostBootstrapEventListener implements EventListener<Hertz> {
@@ -292,7 +290,7 @@ public class Hosts {
     @Override
     public void entrySet( final String hostKey, final Host host ) {
       LOG.info( "Hosts.entrySet(): " + hostKey + " => " + host );
-      if ( host.isLocalHost( ) ) {
+      if ( host.isLocalHost( ) && Bootstrap.isFinished( ) ) {
         BootstrapComponent.SETUP.apply( host );
       }
       if ( BootstrapComponent.REMOTESETUP.apply( host ) ) {
@@ -399,7 +397,7 @@ public class Hosts {
         return false;
       } else {
         try {
-          for ( final ComponentId c : Iterables.filter( ComponentIds.list( ), ShouldLoadRemote.getInitFilter( compClass, addr ) ) ) {
+          for ( final ComponentId c : ShouldLoadRemote.findDependentComponents( compClass, addr ) ) {
             try {
               final ServiceConfiguration dependsConfig = ServiceConfigurations.lookupByName( c.getClass( ), addr.getHostAddress( ) );
 //              ServiceTransitions.pathTo( dependsConfig, State.PRIMORDIAL ).get( );
@@ -419,15 +417,15 @@ public class Hosts {
     
     private static <T extends ComponentId> void setup( final Class<T> compId, final InetAddress addr ) {
       try {
-        final Collection<ComponentId> deps = Collections2.filter( ComponentIds.list( ), ShouldLoadRemote.getInitFilter( compId, addr ) );
-        final Function<ComponentId, ServiceConfiguration> initFunc = ShouldLoadRemote.getInitFunction( addr );
+        final Function<ComponentId, ServiceConfiguration> initFunc = Functions.compose( SetupRemoteServiceConfigurations.INSTANCE,
+                                                                                        initRemoteSetupConfigurations( addr ) );
         initFunc.apply( ComponentIds.lookup( compId ) );
+        final Collection<ComponentId> deps = ShouldLoadRemote.findDependentComponents( compId, addr );
         Iterables.transform( deps, initFunc );
       } catch ( final Exception ex ) {
         LOG.error( ex, ex );
       }
     }
-    
   }
   
   enum CheckStale implements Predicate<Host> {
@@ -809,6 +807,11 @@ public class Hosts {
   
   public static Long getStartTime( ) {
     return Coordinator.INSTANCE.getCurrentStartTime( );
+  }
+  
+  public static boolean isCoordinator( InetAddress addr ) {
+    Host coordinator = Hosts.getCoordinator( );
+    return coordinator != null && coordinator.getBindAddress( ).equals( addr );
   }
   
   public static boolean isCoordinator( ) {
