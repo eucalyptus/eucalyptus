@@ -170,7 +170,7 @@ public class Hosts {
       @Override
       public ServiceConfiguration apply( final T input ) {
         Component component = Components.lookup( input );
-        final ServiceConfiguration config = Internets.testLocal( addr ) ? component.initRemoteService( addr ) : component.initService( );
+        final ServiceConfiguration config = !Internets.testLocal( addr ) ? component.initRemoteService( addr ) : component.initService( );
         LOG.info( "Initialized service: " + config.getFullName( ) );
         return config;
       }
@@ -299,21 +299,25 @@ public class Hosts {
     
     @Override
     public void entrySet( final String hostKey, final Host host ) {
-      LOG.info( "Hosts.entrySet(): " + hostKey + " => " + host );
-      try {
-        if ( host.isLocalHost( ) && Bootstrap.isFinished( ) ) {
-          SyncDatabases.INSTANCE.apply( host );
-        } else if ( BootstrapComponent.REMOTESETUP.apply( host ) ) {
-          SyncDatabases.INSTANCE.apply( host );
-        } else if ( InitializeAsCloudController.INSTANCE.apply( host ) ) {
-          LOG.info( "Hosts.entrySet(): INITIALIZED CLC => " + host );
-        } else {
-          LOG.debug( "Hosts.entrySet(): UPDATED HOST => " + host );
+      if ( Bootstrap.isShuttingDown( ) ) {
+        return;
+      } else {
+        LOG.info( "Hosts.entrySet(): " + hostKey + " => " + host );
+        try {
+          if ( host.isLocalHost( ) && Bootstrap.isFinished( ) ) {
+            SyncDatabases.INSTANCE.apply( host );
+          } else if ( BootstrapComponent.REMOTESETUP.apply( host ) ) {
+            SyncDatabases.INSTANCE.apply( host );
+          } else if ( InitializeAsCloudController.INSTANCE.apply( host ) ) {
+            LOG.info( "Hosts.entrySet(): INITIALIZED CLC => " + host );
+          } else {
+            LOG.debug( "Hosts.entrySet(): UPDATED HOST => " + host );
+          }
+        } catch ( Exception ex ) {
+          LOG.error( ex, ex );
         }
-      } catch ( Exception ex ) {
-        LOG.error( ex, ex );
+        LOG.info( "Hosts.entrySet(): " + hostKey + " finished." );
       }
-      LOG.info( "Hosts.entrySet(): " + hostKey + " finished." );
     }
     
     @Override
@@ -351,42 +355,50 @@ public class Hosts {
     SETUP {
       @Override
       public boolean apply( final Host input ) {
-        if ( input.hasBootstrapped( ) ) {
-          try {
-            setup( Empyrean.class, input.getBindAddress( ) );
-            if ( input.hasDatabase( ) ) {
-              setup( Eucalyptus.class, input.getBindAddress( ) );
+        if ( Bootstrap.isShuttingDown( ) ) {
+          return false;
+        } else {
+          if ( input.hasBootstrapped( ) ) {
+            try {
+              setup( Empyrean.class, input.getBindAddress( ) );
+              if ( input.hasDatabase( ) ) {
+                setup( Eucalyptus.class, input.getBindAddress( ) );
+              }
+              return true;
+            } catch ( Exception ex ) {
+              LOG.error( ex, ex );
+              return false;
             }
-            return true;
-          } catch ( Exception ex ) {
-            LOG.error( ex, ex );
+          } else {
             return false;
           }
-        } else {
-          return false;
         }
       }
     },
     TEARDOWN {
       @Override
       public boolean apply( final Host input ) {
-        try {
-          Hosts.remove( input.getDisplayName( ) );
-          teardown( Empyrean.class, input.getBindAddress( ) );
-          if ( input.hasDatabase( ) ) {
-            teardown( Eucalyptus.class, input.getBindAddress( ) );
-          }
-          if ( !input.isLocalHost( ) && input.hasDatabase( ) ) {
-            Databases.disable( input );
-            if ( BootstrapArgs.isCloudController( ) ) {
-              BootstrapComponent.SETUP.apply( Hosts.localHost( ) );
-              UpdateEntry.INSTANCE.apply( Hosts.localHost( ) );
-            }
-          }
-          return true;
-        } catch ( Exception ex ) {
-          LOG.error( ex, ex );
+        if ( Bootstrap.isShuttingDown( ) ) {
           return false;
+        } else {
+          try {
+            Hosts.remove( input.getDisplayName( ) );
+            teardown( Empyrean.class, input.getBindAddress( ) );
+            if ( input.hasDatabase( ) ) {
+              teardown( Eucalyptus.class, input.getBindAddress( ) );
+            }
+            if ( !input.isLocalHost( ) && input.hasDatabase( ) ) {
+              Databases.disable( input );
+              if ( BootstrapArgs.isCloudController( ) ) {
+                BootstrapComponent.SETUP.apply( Hosts.localHost( ) );
+                UpdateEntry.INSTANCE.apply( Hosts.localHost( ) );
+              }
+            }
+            return true;
+          } catch ( Exception ex ) {
+            LOG.error( ex, ex );
+            return false;
+          }
         }
       }
     },
@@ -763,23 +775,23 @@ public class Hosts {
   private static Host put( final Host newHost ) {
     return hostMap.put( newHost.getDisplayName( ), newHost );
   }
-
+  
   private static Host putIfAbsent( final Host host ) {
     return hostMap.putIfAbsent( host.getDisplayName( ), host );
   }
-
+  
   public static boolean contains( final String hostDisplayName ) {
     return hostMap.containsKey( hostDisplayName );
   }
-
+  
   private static boolean contains( final Host host ) {
     return contains( host.getDisplayName( ) );
   }
-
+  
   private static Host remove( Host host ) {
     return remove( host.getDisplayName( ) );
   }
-
+  
   private static Host remove( String hostDisplayName ) {
     return hostMap.remove( hostDisplayName );
   }
@@ -901,7 +913,7 @@ public class Hosts {
     
     public Host get( ) {
       Host minHost = null;
-      List<Host> dbHosts = Hosts.listDatabases( );
+      List<Host> dbHosts = Hosts.listActiveDatabases( );
       for ( final Host h : dbHosts ) {
         minHost = ( minHost == null ? h : ( minHost.getStartedTime( ) > h.getStartedTime( ) ? h : minHost ) );
       }
@@ -913,5 +925,5 @@ public class Hosts {
     }
     
   }
-
+  
 }
