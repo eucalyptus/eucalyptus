@@ -358,7 +358,7 @@ public class Component implements HasName<Component> {
     public BasicService getLocalService( ) {
       BasicService ret = this.localService.get( );
       if ( ret == null ) {
-        throw new NoSuchElementException( "Attempt to access a local service reference when none exists for: " + Component.this.toString( ) );
+        throw Exceptions.error( new NoSuchElementException( "Attempt to access a local service reference when none exists for: " + Component.this.toString( ) ) );
       } else {
         return ret;
       }
