@@ -69,8 +69,9 @@ import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.empyrean.Empyrean;
+import com.eucalyptus.empyrean.Empyrean.Arbitrator;
 
-@Provides( Empyrean.class )
+@Provides( Arbitrator.class )
 @RunDuring( Bootstrap.Stage.CloudServiceInit )
 public class ArbitratorBootstrapper extends Bootstrapper {
   private static Logger LOG = Logger.getLogger( ArbitratorBootstrapper.class );

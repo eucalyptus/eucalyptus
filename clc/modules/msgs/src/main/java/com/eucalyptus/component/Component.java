@@ -423,7 +423,7 @@ public class Component implements HasName<Component> {
      * @throws ServiceRegistrationException
      */
     BasicService register( ServiceConfiguration config ) {
-      BasicService service = new BasicService( config );
+      BasicService service = this.services.containsKey( config ) ? this.services.get( config ) : new BasicService( config );
       if ( config.isVmLocal( ) || config.isHostLocal( ) ) {
         this.localService.set( service );
       }

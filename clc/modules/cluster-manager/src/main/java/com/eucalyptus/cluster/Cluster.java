@@ -270,12 +270,18 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
         @Override
         public final void leave( final Cluster parent, final Callback.Completion transitionCallback ) {
           try {
-            AsyncRequests.newRequest( factory.newInstance( ) ).then( transitionCallback ).sendSync( parent.getConfiguration( ) );
+            AsyncRequests.newRequest( factory.newInstance( ) ).sendSync( parent.getConfiguration( ) );
+            transitionCallback.fire( );
           } catch ( final InterruptedException ex ) {
             Thread.currentThread( ).interrupt( );
             Exceptions.trace( ex );
+            transitionCallback.fire( );
           } catch ( final Exception t ) {
-            parent.filterExceptions( t );
+            if ( parent.filterExceptions( t ) ) {
+              transitionCallback.fireException( t );
+            } else {
+              transitionCallback.fire( );
+            }
           }
         }
       };
@@ -479,7 +485,19 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
               transition = enablingTransition( );
             }
             break;
+          case ENABLING:
+          case ENABLING_RESOURCES:
+          case ENABLING_NET:
+          case ENABLING_VMS:
+          case ENABLING_ADDRS:
+          case ENABLING_VMS_PASS_TWO:
+          case ENABLING_ADDRS_PASS_TWO:
           case ENABLED:
+          case ENABLED_ADDRS:
+          case ENABLED_RSC:
+          case ENABLED_NET:
+          case ENABLED_VMS:
+          case ENABLED_SERVICE_CHECK:
             if ( initialized && tick.isAsserted( Clusters.getConfiguration( ).getEnabledInterval( ) )
                  && Component.State.ENABLED.equals( this.configuration.lookupState( ) ) ) {
               transition = enabledTransition( );
