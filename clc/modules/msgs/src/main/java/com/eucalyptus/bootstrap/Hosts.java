@@ -265,7 +265,7 @@ public class Hosts {
     INSTANCE;
     
     private String printMap( ) {
-      return "Current System View\n" + Joiner.on( "\nhostMap.entrySet(): " ).join( hostMap.entrySet( ) );
+      return "Current System View\n" + Joiner.on( "\nhostMap.values(): " ).join( hostMap.values( ) );
     }
     
     @Override
