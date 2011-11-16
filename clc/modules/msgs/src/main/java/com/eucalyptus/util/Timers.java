@@ -70,18 +70,15 @@ public class Timers {
   private static Logger LOG = Logger.getLogger( Timers.class );
   
   public static <T> Callable<T> loggingWrapper( final Runnable run, final T returnValue ) {
-    return new Callable<T>( ) {
+    return loggingWrapper( new Callable<T>( ) {
       
       @Override
       public T call( ) throws Exception {
-        long start = System.currentTimeMillis( );
         run.run( );
-        LOG.debug( run.toString( ) + ": completed in "
-                   + ( System.currentTimeMillis( ) - start ) );
         return returnValue;
       }
       
-    };
+    } );
   }
 
   public static <T> Callable<T> loggingWrapper( final Callable<T> call ) {
@@ -92,7 +89,7 @@ public class Timers {
         long start = System.currentTimeMillis( );
         T res = call.call( );
         LOG.debug( call.toString( ) + ": completed in "
-                   + ( System.currentTimeMillis( ) - start ) );
+                   + ( System.currentTimeMillis( ) - start ) + " msec." );
         return res;
       }
       
