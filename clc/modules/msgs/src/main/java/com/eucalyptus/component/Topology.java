@@ -306,7 +306,7 @@ public class Topology {
   }
   
   public static Future<ServiceConfiguration> start( final ServiceConfiguration config ) {
-    return transition( State.NOTREADY ).apply( config );
+    return transition( State.DISABLED ).apply( config );
   }
   
   public static Future<ServiceConfiguration> enable( final ServiceConfiguration config ) {
@@ -788,7 +788,7 @@ public class Topology {
   }
   
   public enum Transitions implements Function<ServiceConfiguration, ServiceConfiguration>, Supplier<Component.State> {
-    START( Component.State.NOTREADY ),
+    START( Component.State.DISABLED ),
     STOP( Component.State.STOPPED ),
     INITIALIZE( Component.State.INITIALIZED ),
     LOAD( Component.State.LOADED ),

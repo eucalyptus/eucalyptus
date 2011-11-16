@@ -252,12 +252,11 @@ public class SystemBootstrapper {
         return true;
       }
     } );
-    Bootstrap.applyTransition( Component.State.NOTREADY, Components.whichCanLoad( ) );
+    Bootstrap.applyTransition( Component.State.DISABLED, Components.whichCanLoad( ) );
     Threads.enqueue( ServiceConfigurations.createEphemeral( Empyrean.INSTANCE ), new Runnable( ) {
                        @Override
                        public void run( ) {
                          try {
-                           Bootstrap.applyTransition( Component.State.DISABLED, Components.whichCanLoad( ) );
                            Bootstrap.applyTransition( Component.State.ENABLED, Components.whichCanEnable( ) );
                          } catch ( Exception ex ) {
                            LOG.error( ex, ex );
