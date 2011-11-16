@@ -275,7 +275,7 @@ public class Hosts {
     INSTANCE;
     
     private String printMap( ) {
-      return "Current System View\n" + Joiner.on( "\nhostMap.values(): " ).join( hostMap.values( ) );
+      return "\n" + Joiner.on( "\nHosts.values(): " ).join( hostMap.values( ) );
     }
     
     @Override
@@ -298,7 +298,6 @@ public class Hosts {
     @Override
     public void entryRemoved( final String input ) {
       LOG.info( "Hosts.entryRemoved(): " + input );
-      LOG.info( "Hosts.entryRemoved(): " + printMap( ) );
     }
     
     @Override
@@ -321,6 +320,7 @@ public class Hosts {
     
     @Override
     public void viewChange( final View currentView, final Vector<Address> joinMembers, final Vector<Address> partMembers ) {
+      LOG.info( "Hosts.viewChange(): " + printMap( ) );
       LOG.info( "Hosts.viewChange(): new view => " + Joiner.on( ", " ).join( currentView.getMembers( ) ) );
       if ( !joinMembers.isEmpty( ) ) LOG.info( "Hosts.viewChange(): joined   => " + Joiner.on( ", " ).join( joinMembers ) );
       if ( !partMembers.isEmpty( ) ) LOG.info( "Hosts.viewChange(): parted   => " + Joiner.on( ", " ).join( partMembers ) );
@@ -330,7 +330,6 @@ public class Hosts {
           LOG.info( "Hosts.viewChange(): -> removed  => " + h );
         }
       }
-      LOG.info( "Hosts.viewChange(): " + printMap( ) );
     }
     
   }
