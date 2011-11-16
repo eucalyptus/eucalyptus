@@ -308,10 +308,7 @@ public class Hosts {
         if ( host.isLocalHost( ) && Bootstrap.isFinished( ) ) {
           SyncDatabases.INSTANCE.apply( host );
         } else if ( BootstrapComponent.REMOTESETUP.apply( host ) ) {
-          LOG.info( "Hosts.entrySet(): BOOTSTRAPPED HOST => " + host );
-          if ( SyncDatabases.INSTANCE.apply( host ) ) {
-            LOG.info( "Hosts.entrySet(): SYNCING HOST => " + host );
-          }
+          SyncDatabases.INSTANCE.apply( host );
         } else if ( InitializeAsCloudController.INSTANCE.apply( host ) ) {
           LOG.info( "Hosts.entrySet(): INITIALIZED CLC => " + host );
         } else {
