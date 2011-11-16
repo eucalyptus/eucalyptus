@@ -129,22 +129,22 @@ public class StorageProperties {
 	static { Groovyness.loadConfig("storageprops.groovy"); }
 
 	public static void updateName() {
-	  try {
-      StorageProperties.NAME = Components.lookup( Storage.class ).getLocalServiceConfiguration( ).getPartition( );
-    } catch ( NoSuchElementException ex ) {
-      LOG.error( ex , ex );
-      LOG.error( "Failed to configure Storage Controller NAME." );
-      throw ex;
-    }
+		try {
+			StorageProperties.NAME = Components.lookup( Storage.class ).getLocalServiceConfiguration( ).getPartition( );
+		} catch ( NoSuchElementException ex ) {
+			LOG.error( ex , ex );
+			LOG.error( "Failed to configure Storage Controller NAME." );
+			throw ex;
+		}
 	}
 
 	public static void updateStorageHost() {
-    try {
-      STORAGE_HOST = Components.lookup( Storage.class ).getLocalServiceConfiguration( ).getHostName( );
-    } catch ( NoSuchElementException ex ) {
-      LOG.error( ex , ex );
-      LOG.error( "Failed to configure Storage Controller HOST (given the name " + StorageProperties.NAME + "." );
-    }
+		try {
+			STORAGE_HOST = Components.lookup( Storage.class ).getLocalServiceConfiguration( ).getHostName( );
+		} catch ( NoSuchElementException ex ) {
+			LOG.error( ex , ex );
+			LOG.error( "Failed to configure Storage Controller HOST (given the name " + StorageProperties.NAME + "." );
+		}
 	}
 
 	public static void updateStorageHost(String hostName) {
@@ -153,16 +153,11 @@ public class StorageProperties {
 
 	public static void updateWalrusUrl() {
 		try {
-			if(Topology.isEnabled(Walrus.class)) {
-			  ServiceConfiguration walrusConfig = Topology.lookup(Walrus.class);
-				WALRUS_URL = ServiceUris.remote( walrusConfig ).toASCIIString( );
-				StorageProperties.enableSnapshots = true;
-				LOG.info("Setting WALRUS_URL to: " + WALRUS_URL);
-			} else {
-				LOG.warn("Could not obtain walrus information. Snapshot functionality may be unavailable. Have you registered Walrus?");
-				StorageProperties.enableSnapshots = false;
-			}
-		} catch (PersistenceException e) {
+			ServiceConfiguration walrusConfig = Topology.lookup(Walrus.class);
+			WALRUS_URL = ServiceUris.remote( walrusConfig ).toASCIIString( );
+			StorageProperties.enableSnapshots = true;
+			LOG.info("Setting WALRUS_URL to: " + WALRUS_URL);
+		} catch (Exception e) {
 			LOG.warn("Could not obtain walrus information. Snapshot functionality may be unavailable. Have you registered Walrus?");
 			StorageProperties.enableSnapshots = false;
 		}		

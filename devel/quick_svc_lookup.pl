@@ -52,19 +52,19 @@ sub print_state {
     my %line_map = undef; # key==>svctype:comp_id, val==>state separated by IP
     $header = sprintf("%-18.18s","COMPONENTS");
     foreach $ip (keys %svc_state_map){  ## column --> ip
-        $header.=sprintf("   %-16.16s",$ip);
+        $header.=sprintf("%-15.15s",$ip);
         %map = %{$svc_state_map{$ip}};
        
         foreach $key (keys %map){  # key=SVC_TYPE:COMP_NAME, val=state;
              $state = $map{$key};
              if(&include($key)){
-                  $line_map{$key} .= sprintf("   %-16.16s",$state); 
+                  $line_map{$key} .= sprintf("%-15.15s",$state); 
              }  
         }  
     }
     print $header."\n";
     foreach $key (sort (keys %line_map)){
-         print sprintf("%-30.30s %s\n", $key, $line_map{$key}); 
+         print sprintf("%-32.30s %s\n", $key, $line_map{$key}); 
     }
 
     test_end();
