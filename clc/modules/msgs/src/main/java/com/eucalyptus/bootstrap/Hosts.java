@@ -75,6 +75,7 @@ import java.util.Set;
 import java.util.Vector;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.log4j.Logger;
 import org.jgroups.Address;
@@ -128,11 +129,12 @@ public class Hosts {
   
   @ConfigurableField( description = "Timeout for state transfers (in msec).",
                       readonly = true )
-  public static final Long                       STATE_TRANSFER_TIMEOUT   = 10000L;
+  public static final Long                       STATE_TRANSFER_TIMEOUT     = 10000L;
   @ConfigurableField( description = "Timeout for state initialization (in msec).",
                       readonly = true )
-  public static final Long                       STATE_INITIALIZE_TIMEOUT = 120000L;
-  static final Logger                            LOG                      = Logger.getLogger( Hosts.class );
+  public static final Long                       STATE_INITIALIZE_TIMEOUT   = 120000L;
+  static final Logger                            LOG                        = Logger.getLogger( Hosts.class );
+  public static final long                       SERVICE_INITIALIZE_TIMEOUT = 10000L;
   private static ReplicatedHashMap<String, Host> hostMap;
   
   public static Predicate<ServiceConfiguration> nonLocalAddressMatch( final InetAddress addr ) {
@@ -200,12 +202,16 @@ public class Hosts {
                 + " services" + ( Hosts.isCoordinator( input.getInetAddress( ) ) ? " (coordinator)" : "" )
                 + ": " + input.getFullName( ) );
       try {
-        return ServiceTransitions.pathTo( input, goalState ).get( );
+        return ServiceTransitions.pathTo( input, goalState ).get( SERVICE_INITIALIZE_TIMEOUT, TimeUnit.MILLISECONDS );
       } catch ( final ExecutionException ex ) {
-        Exceptions.trace( ex.getCause( ) );
+        LOG.error( ex );
+        Logs.extreme( ).error( ex, ex );
       } catch ( final InterruptedException ex ) {
         Thread.currentThread( ).interrupt( );
         Exceptions.trace( ex.getCause( ) );
+      } catch ( TimeoutException ex ) {
+        LOG.error( ex );
+        Logs.extreme( ).error( ex, ex );
       }
       return input;
     }
@@ -284,7 +290,7 @@ public class Hosts {
           BootstrapComponent.REMOTESETUP.apply( h );
         }
       } catch ( Exception ex ) {
-        LOG.error( ex , ex );
+        LOG.error( ex, ex );
       }
     }
     
@@ -315,7 +321,7 @@ public class Hosts {
           LOG.debug( "Hosts.entrySet(): UPDATED HOST => " + host );
         }
       } catch ( Exception ex ) {
-        LOG.error( ex , ex );
+        LOG.error( ex, ex );
       }
       LOG.info( "Hosts.entrySet(): " + printMap( ) );
     }
