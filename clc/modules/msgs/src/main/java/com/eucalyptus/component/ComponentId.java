@@ -405,7 +405,9 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
   }
   
   public final boolean isInternal( ) {
-    return this.ats.has( InternalService.class ) || ( !this.isAdminService( ) && !this.isPublicService( ) );
+    return this.ats.has( InternalService.class )
+      || ( !this.isAdminService( ) && !this.isPublicService( ) )
+      || ( this.partitionParent( ).equals( Empyrean.INSTANCE ) && !this.isRegisterable( ) ); 
   }
   
   /**
