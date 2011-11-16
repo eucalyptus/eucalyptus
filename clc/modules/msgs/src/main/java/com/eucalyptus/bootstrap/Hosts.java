@@ -492,9 +492,9 @@ public class Hosts {
         } else {
           if ( !contains( input ) ) {
             final Host newHost = Host.create( );
-            final Host oldHost = putIfAbsent( newHost );
+            final Host oldHost = Hosts.putIfAbsent( newHost );
             if ( oldHost == null ) {
-              LOG.info( "Updated local host information:   " + localHost( ) );
+              LOG.info( "Inserted local host information:   " + localHost( ) );
               return true;
             } else {
               return false;
