@@ -210,10 +210,9 @@ public class Component implements HasName<Component> {
    * @return BasicService instance of the service
    * @throws ServiceRegistrationException
    */
-  public ServiceConfiguration initService( ) throws ServiceRegistrationException {
+  public ServiceConfiguration initService( ) {
     if ( !this.identity.isAvailableLocally( ) ) {
-      throw new ServiceRegistrationException( "The component " + this.getName( )
-                                              + " is not being loaded automatically." );
+      throw Exceptions.toUndeclared( "The component " + this.getName( ) + " is not being loaded automatically." );
     } else {
       return initRemoteService( Internets.localHostInetAddress( ) );
     }
@@ -624,81 +623,81 @@ public class Component implements HasName<Component> {
     
     public boolean load( ) {
       this.doTransition( EventType.BOOTSTRAPPER_LOAD, new CheckedFunction<Bootstrapper, Boolean>( ) {
-                           @Override
-                           public Boolean apply( Bootstrapper arg0 ) throws Exception {
-                             return arg0.load( );
-                           }
-                         } );
+        @Override
+        public Boolean apply( Bootstrapper arg0 ) throws Exception {
+          return arg0.load( );
+        }
+      } );
       return true;
     }
     
     public boolean start( ) {
       this.doTransition( EventType.BOOTSTRAPPER_START, new CheckedFunction<Bootstrapper, Boolean>( ) {
-                           @Override
-                           public Boolean apply( Bootstrapper arg0 ) throws Exception {
-                             return arg0.start( );
-                           }
-                         } );
+        @Override
+        public Boolean apply( Bootstrapper arg0 ) throws Exception {
+          return arg0.start( );
+        }
+      } );
       return true;
     }
     
     public boolean enable( ) {
       this.doTransition( EventType.BOOTSTRAPPER_ENABLE, new CheckedFunction<Bootstrapper, Boolean>( ) {
-                           @Override
-                           public Boolean apply( Bootstrapper arg0 ) throws Exception {
-                             return arg0.enable( );
-                           }
-                         } );
+        @Override
+        public Boolean apply( Bootstrapper arg0 ) throws Exception {
+          return arg0.enable( );
+        }
+      } );
       return true;
     }
     
     public boolean stop( ) {
       this.doTransition( EventType.BOOTSTRAPPER_STOP, new CheckedFunction<Bootstrapper, Boolean>( ) {
-                           @Override
-                           public Boolean apply( Bootstrapper arg0 ) throws Exception {
-                             try {
-                               arg0.stop( );
-                             } catch ( Exception ex ) {
-                               LOG.error( ex, ex );
-                             }
-                             return true;
-                           }
-                         } );
+        @Override
+        public Boolean apply( Bootstrapper arg0 ) throws Exception {
+          try {
+            arg0.stop( );
+          } catch ( Exception ex ) {
+            LOG.error( ex, ex );
+          }
+          return true;
+        }
+      } );
       return true;
     }
     
     public void destroy( ) {
       this.doTransition( EventType.BOOTSTRAPPER_DESTROY, new CheckedFunction<Bootstrapper, Boolean>( ) {
-                           @Override
-                           public Boolean apply( Bootstrapper arg0 ) throws Exception {
-                             try {
-                               arg0.destroy( );
-                             } catch ( Exception ex ) {
-                               LOG.error( ex, ex );
-                             }
-                             return true;
-                           }
-                         } );
+        @Override
+        public Boolean apply( Bootstrapper arg0 ) throws Exception {
+          try {
+            arg0.destroy( );
+          } catch ( Exception ex ) {
+            LOG.error( ex, ex );
+          }
+          return true;
+        }
+      } );
     }
     
     public boolean disable( ) {
       this.doTransition( EventType.BOOTSTRAPPER_DISABLE, new CheckedFunction<Bootstrapper, Boolean>( ) {
-                           @Override
-                           public Boolean apply( Bootstrapper arg0 ) throws Exception {
-                             return arg0.disable( );
-                           }
-                         } );
+        @Override
+        public Boolean apply( Bootstrapper arg0 ) throws Exception {
+          return arg0.disable( );
+        }
+      } );
       
       return true;
     }
     
     public boolean check( ) {
       this.doTransition( EventType.BOOTSTRAPPER_CHECK, new CheckedFunction<Bootstrapper, Boolean>( ) {
-                           @Override
-                           public Boolean apply( Bootstrapper arg0 ) throws Exception {
-                             return arg0.check( );
-                           }
-                         } );
+        @Override
+        public Boolean apply( Bootstrapper arg0 ) throws Exception {
+          return arg0.check( );
+        }
+      } );
       return true;
     }
     
