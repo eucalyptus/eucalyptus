@@ -292,6 +292,9 @@ public class Hosts {
     @Override
     public void entrySet( final String hostKey, final Host host ) {
       LOG.info( "Hosts.entrySet(): " + hostKey + " => " + host );
+      if ( host.isLocalHost( ) ) {
+        BootstrapComponent.SETUP.apply( host );
+      }
       if ( BootstrapComponent.REMOTESETUP.apply( host ) ) {
         LOG.info( "Hosts.entrySet(): BOOTSTRAPPED HOST => " + host );
         if ( SyncDatabases.INSTANCE.apply( host ) ) {
@@ -676,7 +679,6 @@ public class Hosts {
             doInitialize( );
           }
         }
-        BootstrapComponent.SETUP.apply( local );
         LOG.info( "Membership address for localhost: " + Hosts.localHost( ) );
         return true;
       } catch ( final Exception ex ) {
