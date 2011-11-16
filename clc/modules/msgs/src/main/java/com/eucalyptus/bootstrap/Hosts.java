@@ -369,11 +369,11 @@ public class Hosts {
       @Override
       public boolean apply( final Host input ) {
         try {
+          hostMap.remove( input.getDisplayName( ) );
           teardown( Empyrean.class, input.getBindAddress( ) );
           if ( input.hasDatabase( ) ) {
             teardown( Eucalyptus.class, input.getBindAddress( ) );
           }
-          hostMap.remove( input.getDisplayName( ) );
           if ( !input.isLocalHost( ) && input.hasDatabase( ) && BootstrapArgs.isCloudController( ) ) {
             BootstrapComponent.SETUP.apply( Hosts.localHost( ) );
             UpdateEntry.INSTANCE.apply( Hosts.localHost( ) );
