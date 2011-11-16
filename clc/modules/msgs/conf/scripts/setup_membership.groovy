@@ -109,9 +109,9 @@ GMS groupMembership = new GMS( );
 //  groupMembership.setValue( "disable_initial_coord", true );
 //}
 groupMembership.setPrintLocalAddress( true );
-groupMembership.setJoinTimeout( 3000 );
+groupMembership.setJoinTimeout( 30000 );
 groupMembership.setShun( false );
-groupMembership.setViewBundling( true );
+groupMembership.setViewBundling( false );
 
 FC flowControl = new FC( );
 flowControl.setMaxCredits( 20000000 );

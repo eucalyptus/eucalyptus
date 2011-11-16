@@ -69,6 +69,21 @@ import org.apache.log4j.Logger;
 public class Timers {
   private static Logger LOG = Logger.getLogger( Timers.class );
   
+  public static <T> Callable<T> loggingWrapper( final Runnable run, final T returnValue ) {
+    return new Callable<T>( ) {
+      
+      @Override
+      public T call( ) throws Exception {
+        long start = System.currentTimeMillis( );
+        run.run( );
+        LOG.debug( run.toString( ) + ": completed in "
+                   + ( System.currentTimeMillis( ) - start ) );
+        return returnValue;
+      }
+      
+    };
+  }
+
   public static <T> Callable<T> loggingWrapper( final Callable<T> call ) {
     return new Callable<T>( ) {
       

@@ -78,7 +78,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.log4j.Logger;
 import org.jgroups.Address;
+import org.jgroups.ChannelClosedException;
 import org.jgroups.ChannelException;
+import org.jgroups.ChannelNotConnectedException;
 import org.jgroups.Global;
 import org.jgroups.Header;
 import org.jgroups.JChannel;
@@ -107,6 +109,7 @@ import com.eucalyptus.records.Logs;
 import com.eucalyptus.scripting.Groovyness;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Internets;
+import com.eucalyptus.util.Timers;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Joiner;
@@ -128,7 +131,7 @@ public class Hosts {
   public static final Long                       STATE_TRANSFER_TIMEOUT   = 10000L;
   @ConfigurableField( description = "Timeout for state initialization (in msec).",
                       readonly = true )
-  public static final Long                       STATE_INITIALIZE_TIMEOUT = 30000L;
+  public static final Long                       STATE_INITIALIZE_TIMEOUT = 120000L;
   static final Logger                            LOG                      = Logger.getLogger( Hosts.class );
   private static ReplicatedHashMap<String, Host> hostMap;
   
@@ -276,8 +279,12 @@ public class Hosts {
     @Override
     public void contentsSet( final Map<String, Host> input ) {
       LOG.info( "Hosts.contentsSet(): " + this.printMap( ) );
-      for ( final Host h : input.values( ) ) {
-        BootstrapComponent.REMOTESETUP.apply( h );
+      try {
+        for ( final Host h : input.values( ) ) {
+          BootstrapComponent.REMOTESETUP.apply( h );
+        }
+      } catch ( Exception ex ) {
+        LOG.error( ex , ex );
       }
     }
     
@@ -290,22 +297,25 @@ public class Hosts {
     @Override
     public void entrySet( final String hostKey, final Host host ) {
       LOG.info( "Hosts.entrySet(): " + hostKey + " => " + host );
-      if ( host.isLocalHost( ) && Bootstrap.isFinished( ) ) {
-        BootstrapComponent.SETUP.apply( host );
-      }
-      if ( BootstrapComponent.REMOTESETUP.apply( host ) ) {
-        LOG.info( "Hosts.entrySet(): BOOTSTRAPPED HOST => " + host );
-        if ( SyncDatabases.INSTANCE.apply( host ) ) {
-          LOG.info( "Hosts.entrySet(): SYNCING HOST => " + host );
+      try {
+        if ( host.isLocalHost( ) && Bootstrap.isFinished( ) ) {
+          LOG.info( "Hosts.entrySet(): BOOTSTRAPPED HOST => " + host );
+          BootstrapComponent.SETUP.apply( host );
+          if ( SyncDatabases.INSTANCE.apply( host ) ) {
+            LOG.info( "Hosts.entrySet(): SYNCING HOST => " + host );
+          }
+        } else if ( BootstrapComponent.REMOTESETUP.apply( host ) ) {
+          LOG.info( "Hosts.entrySet(): BOOTSTRAPPED HOST => " + host );
+          if ( SyncDatabases.INSTANCE.apply( host ) ) {
+            LOG.info( "Hosts.entrySet(): SYNCING HOST => " + host );
+          }
+        } else if ( InitializeAsCloudController.INSTANCE.apply( host ) ) {
+          LOG.info( "Hosts.entrySet(): INITIALIZED CLC => " + host );
+        } else {
+          LOG.debug( "Hosts.entrySet(): UPDATED HOST => " + host );
         }
-      } else if ( SyncDatabases.INSTANCE.apply( host ) ) {
-        LOG.info( "Hosts.entrySet(): SYNCING HOST => " + host );
-      } else if ( InitializeAsCloudController.INSTANCE.apply( host ) ) {
-        LOG.info( "Hosts.entrySet(): INITIALIZED CLC => " + host );
-      } else if ( !host.hasBootstrapped( ) ) {
-        LOG.info( "Hosts.entrySet(): BOOTING HOST => " + host );
-      } else {
-        LOG.info( "Hosts.entrySet(): UPDATED HOST => " + host );
+      } catch ( Exception ex ) {
+        LOG.error( ex , ex );
       }
       LOG.info( "Hosts.entrySet(): " + printMap( ) );
     }
@@ -643,31 +653,44 @@ public class Hosts {
         hostMap = new ReplicatedHashMap<String, Host>( HostManager.getMembershipChannel( ) );
         hostMap.setDeadlockDetection( true );
         hostMap.setBlockingUpdates( true );
-        hostMap.addNotifier( HostMapStateListener.INSTANCE );
-        hostMap.start( STATE_TRANSFER_TIMEOUT );
-        OrderedShutdown.register( Eucalyptus.class, new Runnable( ) {
-          
-          @Override
+        Runnable runMap = new Runnable( ) {
           public void run( ) {
             try {
-              try {
-                hostMap.remove( Internets.localHostIdentifier( ) );
-              } catch ( final Exception ex ) {
-                LOG.error( ex, ex );
-              }
-              hostMap.stop( );
-            } catch ( final Exception ex ) {
+              hostMap.start( STATE_INITIALIZE_TIMEOUT );
+              OrderedShutdown.register( Eucalyptus.class, new Runnable( ) {
+                
+                @Override
+                public void run( ) {
+                  try {
+                    try {
+                      hostMap.remove( Internets.localHostIdentifier( ) );
+                    } catch ( final Exception ex ) {
+                      LOG.error( ex, ex );
+                    }
+                    hostMap.stop( );
+                  } catch ( final Exception ex ) {
+                    LOG.error( ex, ex );
+                  }
+                }
+              } );
+            } catch ( Exception ex ) {
               LOG.error( ex, ex );
+              Exceptions.maybeInterrupted( ex );
+              System.exit( 123 );
             }
           }
-        } );
-        LOG.info( "Added localhost to system state: " + localHost( ) );
+        };
+        hostMap.addNotifier( HostMapStateListener.INSTANCE );
+        Timers.loggingWrapper( runMap, hostMap ).call( );
+        LOG.info( "Initial view:\n" + HostMapStateListener.INSTANCE.printMap( ) );
+        LOG.info( "Initial coordinator:\n" + Hosts.getCoordinator( ) );
         Coordinator.INSTANCE.initialize( hostMap.values( ) );
         final Host local = Host.create( );
         LOG.info( "Created local host entry: " + local );
-        hostMap.putIfAbsent( local.getDisplayName( ), local );
+        hostMap.put( local.getDisplayName( ), local );
         Listeners.register( HostBootstrapEventListener.INSTANCE );
         LOG.info( "System view:\n" + HostMapStateListener.INSTANCE.printMap( ) );
+        LOG.info( "System coordinator:\n" + Hosts.getCoordinator( ) );
         if ( !BootstrapArgs.isCloudController( ) ) {
           while ( Hosts.listActiveDatabases( ).isEmpty( ) ) {
             TimeUnit.SECONDS.sleep( 5 );
