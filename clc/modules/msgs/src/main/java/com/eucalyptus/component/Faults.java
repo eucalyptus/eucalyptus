@@ -328,8 +328,9 @@ public class Faults {
     last = ( last != null
       ? last
       : new CheckException( config, severity, new NullPointerException( ) ) );
-    LOG.debug( last );
     Logs.extreme( ).error( last, last );
+    LOG.debug( last );
+    LOG.debug( Exceptions.causeString( last ) );
     return last;
   }
   

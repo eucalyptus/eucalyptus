@@ -183,7 +183,9 @@ public class Hosts {
     public ServiceConfiguration apply( final ServiceConfiguration input ) {
       boolean inputIsLocal = Internets.testLocal( input.getHostName( ) );
       State goalState;
-      if ( input.getComponentId( ).isAlwaysLocal( ) ) {
+      if ( !Bootstrap.isFinished( ) ) {
+        goalState = ( State.LOADED.ordinal( ) < input.lookupState( ).ordinal( ) ? State.DISABLED : State.LOADED );
+      } else if ( input.getComponentId( ).isAlwaysLocal( ) ) {
         goalState = State.ENABLED;
       } else if ( BootstrapArgs.isCloudController( ) ) {
         if ( inputIsLocal && Hosts.isCoordinator( ) ) {
