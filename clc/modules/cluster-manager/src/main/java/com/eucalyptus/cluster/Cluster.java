@@ -105,13 +105,11 @@ import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.crypto.util.PEMFiles;
 import com.eucalyptus.empyrean.DescribeServicesResponseType;
 import com.eucalyptus.empyrean.DescribeServicesType;
-import com.eucalyptus.empyrean.DisableServiceResponseType;
 import com.eucalyptus.empyrean.DisableServiceType;
-import com.eucalyptus.empyrean.EnableServiceResponseType;
 import com.eucalyptus.empyrean.EnableServiceType;
+import com.eucalyptus.empyrean.ServiceId;
 import com.eucalyptus.empyrean.ServiceStatusType;
 import com.eucalyptus.empyrean.ServiceTransitionType;
-import com.eucalyptus.empyrean.StartServiceResponseType;
 import com.eucalyptus.empyrean.StartServiceType;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.Event;
@@ -130,6 +128,7 @@ import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.ConnectionException;
@@ -298,7 +297,10 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
       } else {
         ServiceConfiguration config = parent.getConfiguration( );
         for ( ServiceStatusType status : serviceStatuses ) {
-          if ( "self".equals( status.getServiceId( ).getName( ) ) || config.getName( ).equals( status.getServiceId( ).getName( ) ) ) {
+          if ( "self".equals( status.getServiceId( ).getName( ) ) ) {
+            status.setServiceId( TypeMappers.transform( parent.getConfiguration( ), ServiceId.class ) );
+          } 
+          if ( config.getName( ).equals( status.getServiceId( ).getName( ) ) ) {
             LOG.debug( "Found service info: " + status );
             Component.State serviceState = Component.State.valueOf( status.getLocalState( ) );
             Component.State localState = parent.getConfiguration( ).lookupState( );
