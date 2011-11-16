@@ -65,6 +65,7 @@ package com.eucalyptus.config;
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.net.NoRouteToHostException;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
@@ -101,7 +102,7 @@ public class ArbitratorControl {
 	public static void check( ) throws Exception {
 		final List<ArbitratorConfiguration> configs = ServiceConfigurations.list( Arbitrator.class );
 		for ( final ArbitratorConfiguration config : configs ) {
-			if(Internets.localHostInetAddress().equals(Internets.toAddress(config.getHostName()))) {
+			if(Internets.testLocal(config.getHostName())) {
 				final String hostName = config.getGatewayHost();
 				if ( hostName != null ) {
 					Threads.lookup( Arbitrator.class, ArbitratorControl.class ).submit( new Runnable( ) {
@@ -109,14 +110,19 @@ public class ArbitratorControl {
 						public void run( ) {
 							try {
 								final InetAddress addr = InetAddress.getByName( hostName );
-								if ( addr.isReachable( 2000 ) ) {
-									ArbitratorControl.error.remove( hostName );
+								if ( Internets.isReachable( addr, 2000 ) ) {
+									ArbitratorControl.error.remove( config );
 									ArbitratorControl.okay.put( hostName, config );
+								} else {
+									ArbitratorControl.error.put( config, Exceptions.filterStackTrace( new NoRouteToHostException( addr.toString( ) ) ) );
+									ArbitratorControl.okay.remove(hostName);
 								}
 							} catch ( final UnknownHostException e ) {
 								ArbitratorControl.error.put( config, Exceptions.filterStackTrace( e ) );
+								ArbitratorControl.okay.remove(hostName);
 							} catch ( final IOException e ) {
 								ArbitratorControl.error.put( config, Exceptions.filterStackTrace( e ) );
+								ArbitratorControl.okay.remove(hostName);
 							}
 							EventRecord.here( ArbitratorControl.class, EventType.BOOTSTRAPPER_CHECK, hostName, "errorMap", error.get( hostName ).toString( ) ).debug( );
 						}
@@ -134,9 +140,9 @@ public class ArbitratorControl {
 				exceptions.add(error.get(key));
 			}
 			if (ArbitratorControl.okay.isEmpty()) {
-				Faults.fatal(anyConfig, exceptions);
+				throw Faults.fatal(anyConfig, exceptions);
 			} else {
-				Faults.advisory(anyConfig, exceptions);
+				throw Faults.advisory(anyConfig, exceptions);
 			}
 		}
 

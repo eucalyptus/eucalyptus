@@ -103,6 +103,7 @@ import com.eucalyptus.util.async.Futures;
 import com.eucalyptus.util.fsm.Automata;
 import com.eucalyptus.util.fsm.TransitionAction;
 import com.google.common.base.Function;
+import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.Iterables;
@@ -135,33 +136,40 @@ public class ServiceTransitions {
   @SuppressWarnings( "unchecked" )
   public static CheckedListenableFuture<ServiceConfiguration> pathTo( final ServiceConfiguration configuration, final Component.State goalState ) {
     try {
-      CheckedListenableFuture<ServiceConfiguration> result = null;
+      State[] path = null;
+      State initialState = configuration.lookupState( );
       switch ( goalState ) {
         case LOADED:
-          result = executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToLoaded( configuration.lookupState( ) ) ) );
+          path = pathToLoaded( initialState );
           break;
         case DISABLED:
-          result = executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToDisabled( configuration.lookupState( ) ) ) );
+          path = pathToDisabled( initialState );
           break;
         case ENABLED:
-          result = executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToEnabled( configuration.lookupState( ) ) ) );
+          path = pathToEnabled( initialState );
           break;
         case STOPPED:
-          result = executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToStopped( configuration.lookupState( ) ) ) );
+          path = pathToStopped( initialState );
           break;
         case NOTREADY:
-          result = executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToStarted( configuration.lookupState( ) ) ) );
+          path = pathToStarted( initialState );
           break;
         case PRIMORDIAL:
-          result = executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToPrimordial( configuration.lookupState( ) ) ) );
+          path = pathToPrimordial( initialState );
           break;
         case BROKEN:
-          result = executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToBroken( configuration.lookupState( ) ) ) );
+          path = pathToBroken( initialState );
           break;
         case INITIALIZED:
-          result = executeTransition( configuration, Automata.sequenceTransitions( configuration, pathToInitialized( configuration.lookupState( ) ) ) );
+          path = pathToInitialized( initialState );
           break;
       }
+      if ( !initialState.equals( goalState ) ) {
+        LOG.debug( configuration.getFullName( ) + " transitioning "
+                   + initialState + "->" + goalState
+                   + " using path " + Joiner.on( "->" ).join( path ) );
+      }      
+      CheckedListenableFuture<ServiceConfiguration> result = executeTransition( configuration, Automata.sequenceTransitions( configuration, path ) );
       return result;
     } catch ( RuntimeException ex ) {
       Logs.extreme( ).error( ex, ex );
@@ -328,21 +336,14 @@ public class ServiceTransitions {
   private static void processTransition( final ServiceConfiguration parent, final Completion transitionCallback, final TransitionActions transitionAction ) {
     ServiceTransitionCallback trans = null;
     try {
-      if ( parent.isVmLocal( ) || ( parent.isHostLocal( ) && Hosts.Coordinator.INSTANCE.isLocalhost( ) ) ) {
+      if ( parent.isVmLocal( ) || ( parent.isHostLocal( ) && Hosts.isCoordinator( ) ) ) {
         try {
           trans = ServiceLocalTransitionCallbacks.valueOf( transitionAction.name( ) );
         } catch ( Exception ex ) {
           LOG.error( ex, ex );
           throw ex;
         }
-      } else if ( !Hosts.Coordinator.INSTANCE.isLocalhost( ) ) {
-        try {
-          trans = ServiceRemoteTransitionNotification.valueOf( transitionAction.name( ) );
-        } catch ( Exception ex ) {
-          LOG.error( ex, ex );
-          throw ex;
-        }
-      } else if ( Hosts.Coordinator.INSTANCE.isLocalhost( ) ) {
+      } else if ( Hosts.isCoordinator( ) ) {
         try {
           trans = CloudRemoteTransitionCallbacks.valueOf( transitionAction.name( ) );
         } catch ( Exception ex ) {
@@ -350,7 +351,12 @@ public class ServiceTransitions {
           throw ex;
         }
       } else {
-        LOG.debug( "Silentlty accepting remotely inferred state transition for " + parent );
+        try {
+          trans = ServiceRemoteTransitionNotification.valueOf( transitionAction.name( ) );
+        } catch ( Exception ex ) {
+          LOG.error( ex, ex );
+          throw ex;
+        }
       }
       if ( trans != null ) {
         Logs.exhaust( ).debug( "Executing transition: " + trans.getClass( )
@@ -718,9 +724,9 @@ public class ServiceTransitions {
       
       @Override
       public void fire( final ServiceConfiguration config ) {
-//        if ( Hosts.Coordinator.INSTANCE.isLocalhost( ) && !config.isVmLocal( ) ) {
-//          ServiceEvents.fire( config, config.getStateMachine( ).getState( ) );
-//        }
+        if ( Hosts.isCoordinator( ) && !config.isVmLocal( ) ) {
+          ServiceEvents.fire( config, config.getStateMachine( ).getState( ) );
+        }
       }
     },
     PROPERTIES_ADD {
@@ -729,13 +735,12 @@ public class ServiceTransitions {
         try {
           List<ConfigurableProperty> props = PropertyDirectory.getPendingPropertyEntrySet( config.getComponentId( ).name( ) );
           for ( ConfigurableProperty prop : props ) {
-            ConfigurableProperty addProp = null;
             if ( prop instanceof SingletonDatabasePropertyEntry ) {
-              addProp = prop;
+              PropertyDirectory.addProperty( prop );
             } else if ( prop instanceof MultiDatabasePropertyEntry ) {
-              addProp = ( ( MultiDatabasePropertyEntry ) prop ).getClone( config.getPartition( ) );
+              MultiDatabasePropertyEntry addProp = ( ( MultiDatabasePropertyEntry ) prop ).getClone( config.getPartition( ) );
+              PropertyDirectory.addProperty( addProp );
             }
-            PropertyDirectory.addProperty( addProp );
           }
         } catch ( Exception ex ) {
           LOG.error( ex, ex );

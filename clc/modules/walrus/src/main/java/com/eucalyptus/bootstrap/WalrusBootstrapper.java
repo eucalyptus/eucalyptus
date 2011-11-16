@@ -111,7 +111,6 @@ public class WalrusBootstrapper extends Bootstrapper {
   @Override
   public boolean stop( ) throws Exception {
     WalrusControl.stop( );
-    Exceptions.trace( "HAI" );
     return true;
   }
   

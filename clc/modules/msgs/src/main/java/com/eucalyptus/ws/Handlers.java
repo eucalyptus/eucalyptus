@@ -109,6 +109,7 @@ import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.ComponentMessages;
 import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.Topology;
@@ -414,7 +415,8 @@ public class Handlers {
         if ( msg != null ) {
           try {
             final Class<? extends ComponentId> compClass = ComponentMessages.lookup( msg );
-            if ( Topology.isEnabledLocally( compClass ) ) {
+            ComponentId compId = ComponentIds.lookup( compClass );
+            if ( compId.isAlwaysLocal( ) || Topology.isEnabledLocally( compClass ) ) {
               ctx.sendUpstream( e );
             } else {
               Handlers.sendError( ctx, e, compClass, request.getServicePath( ) );
@@ -447,7 +449,7 @@ public class Handlers {
         final BaseMessage msg = BaseMessage.extractMessage( e );
         if ( msg != null ) {
           try {
-            if ( msg instanceof ServiceTransitionType && !Hosts.Coordinator.INSTANCE.isLocalhost( ) ) {
+            if ( msg instanceof ServiceTransitionType && !Hosts.isCoordinator( ) ) {
               //TODO:GRZE: extra epoch check and redirect
               Topology.touch( ( ServiceTransitionType ) msg );
               ctx.sendUpstream( e );

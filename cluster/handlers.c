@@ -1801,7 +1801,7 @@ int ccInstance_to_ncInstance(ccInstance *dst, ncInstance *src) {
   safe_strncpy(dst->platform, src->platform, 64);
   safe_strncpy(dst->bundleTaskStateName, src->bundleTaskStateName, 64);
   safe_strncpy(dst->createImageTaskStateName, src->createImageTaskStateName, 64);
-  safe_strncpy(dst->userData, src->userData, 4096);
+  safe_strncpy(dst->userData, src->userData, 16384);
   safe_strncpy(dst->state, src->stateName, 16);
   dst->ts = src->launchTime;
 
@@ -2195,7 +2195,7 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
 	
 	pid = fork();
 	if (pid == 0) {
-	  time_t startRun;
+	  time_t startRun, ncRunTimeout;
 
 	  sem_mywait(RESCACHE);
 	  if (res->running > 0) {
@@ -2205,11 +2205,18 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
 
 	  ret=0;
 	  logprintfl(EUCAINFO,"RunInstances(): sending run instance: node=%s instanceId=%s emiId=%s mac=%s privIp=%s pubIp=%s vlan=%d networkIdx=%d key=%.32s... mem=%d disk=%d cores=%d\n", res->ncURL, instId, SP(amiId), ncnet.privateMac, ncnet.privateIp, ncnet.publicIp, ncnet.vlan, ncnet.networkIndex, SP(keyName), ncvm.mem, ncvm.disk, ncvm.cores);
+
 	  rc = 1;
 	  startRun = time(NULL);
-	  while(rc && ((time(NULL) - startRun) < config->wakeThresh)){
-            int clientpid;
+          if (config->schedPolicy == SCHEDPOWERSAVE) {
+            ncRunTimeout = config->wakeThresh;
+          } else {
+            ncRunTimeout = 15;
+          }
 
+          while(rc && ((time(NULL) - startRun) < ncRunTimeout)) {
+            int clientpid;
+	    
 	    // if we're running windows, and are an NC, create the pw/floppy locally
 	    if (strstr(platform, "windows") && !strstr(res->ncURL, "EucalyptusNC")) {
 	      //if (strstr(platform, "windows")) {
@@ -3891,10 +3898,14 @@ int maintainNetworkState() {
     free(cloudIp2);
     
     if (config->cloudIp && (config->cloudIp != vnetconfig->cloudIp)) {
+      rc = vnetUnsetMetadataRedirect(vnetconfig);
+      if (rc) {
+	logprintfl(EUCAWARN, "maintainNetworkState(): failed to unset old metadata redirect\n");
+      }
       vnetconfig->cloudIp = config->cloudIp;
       rc = vnetSetMetadataRedirect(vnetconfig);
       if (rc) {
-	logprintfl(EUCAWARN, "maintainNetworkState(): failed to set metadata redirect\n");
+	logprintfl(EUCAWARN, "maintainNetworkState(): failed to set new metadata redirect\n");
       }
     }
 
@@ -4333,7 +4344,7 @@ int allocate_ccInstance(ccInstance *out, char *id, char *amiId, char *kernelId, 
     out->ts = ts;
     out->ncHostIdx = ncHostIdx;
     if (serviceTag) safe_strncpy(out->serviceTag, serviceTag, 64);
-    if (userData) safe_strncpy(out->userData, userData, 4096);
+    if (userData) safe_strncpy(out->userData, userData, 16384);
     if (launchIndex) safe_strncpy(out->launchIndex, launchIndex, 64);
     if (platform) safe_strncpy(out->platform, platform, 64);
     if (bundleTaskStateName) safe_strncpy(out->bundleTaskStateName, bundleTaskStateName, 64);

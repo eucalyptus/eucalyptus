@@ -352,6 +352,9 @@ public class UpdateUserType extends EuareMessage {
   String userName;
   String newPath;
   String newUserName;
+  String enabled;
+  String passwordExpiration;
+  String regStatus;
   public UpdateUserType() {  }
 }
 @PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_PUTUSERPOLICY )
@@ -393,6 +396,9 @@ public class UserType extends EuareMessage {
   String userName;
   String userId;
   String arn;
+  String enabled;
+  String regStatus;
+  String passwordExpiration;
   public UserType() {  }
 }
 @PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_GETUSERPOLICY )
@@ -630,6 +636,7 @@ public class PolicyNameListTypeType extends EucalyptusData {
 public class GetUserType extends EuareMessage {
   String delegateAccount;
   String userName;
+  Boolean showExtra;
   public GetUserType() {  }
 }
 public class ServerCertificateMetadataType extends EucalyptusData {

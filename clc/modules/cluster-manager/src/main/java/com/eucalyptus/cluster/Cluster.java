@@ -161,6 +161,24 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
   private boolean                                        hasClusterCert = false;
   private boolean                                        hasNodeCert    = false;
   
+  enum ZoneRegistration implements Predicate<Cluster> {
+    REGISTER {
+      @Override
+      public boolean apply( final Cluster input ) {
+        Clusters.getInstance( ).register( input );
+        return true;
+      }
+    },
+    DEREGISTER {
+      @Override
+      public boolean apply( final Cluster input ) {
+        Clusters.getInstance( ).registerDisabled( input );
+        return true;
+      }
+    };
+    
+  }
+  
   enum ServiceStateDispatch implements Predicate<Cluster> {
     STARTED {
       
@@ -180,16 +198,11 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
         try {
           if ( State.ENABLED.ordinal( ) > input.stateMachine.getState( ).ordinal( ) ) {
             AsyncRequests.newRequest( new EnableServiceCallback( input ) ).sendSync( input.configuration );
+            ZoneRegistration.REGISTER.apply( input );
           }
-          Clusters.getInstance( ).register( input );
           return true;
         } catch ( final Exception t ) {
-          if ( !input.filterExceptions( t ) ) {
-            return false;
-          } else {
-            Clusters.getInstance( ).register( input );
-            return true;
-          }
+          return input.filterExceptions( t );
         }
       }
     },
@@ -203,8 +216,6 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
           return true;
         } catch ( final Exception t ) {
           return input.filterExceptions( t );
-        } finally {
-          Clusters.getInstance( ).registerDisabled( input );
         }
       }
     };
@@ -259,12 +270,18 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
         @Override
         public final void leave( final Cluster parent, final Callback.Completion transitionCallback ) {
           try {
-            AsyncRequests.newRequest( factory.newInstance( ) ).then( transitionCallback ).sendSync( parent.getConfiguration( ) );
+            AsyncRequests.newRequest( factory.newInstance( ) ).sendSync( parent.getConfiguration( ) );
+            transitionCallback.fire( );
           } catch ( final InterruptedException ex ) {
             Thread.currentThread( ).interrupt( );
             Exceptions.trace( ex );
+            transitionCallback.fire( );
           } catch ( final Exception t ) {
-            parent.filterExceptions( t );
+            if ( parent.filterExceptions( t ) ) {
+              transitionCallback.fireException( t );
+            } else {
+              transitionCallback.fire( );
+            }
           }
         }
       };
@@ -383,9 +400,9 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
     this.stateMachine = new StateMachineBuilder<Cluster, State, Transition>( this, State.PENDING ) {
       {
         final TransitionAction<Cluster> noop = Transitions.noop( );
-//        this.in( Cluster.State.DISABLED ).run( Cluster.ServiceStateDispatch.DISABLED );
-//        this.in( Cluster.State.NOTREADY ).run( Cluster.ServiceStateDispatch.DISABLED );
-//        this.in( Cluster.State.ENABLED ).run( Cluster.ServiceStateDispatch.ENABLED );
+        this.in( Cluster.State.DISABLED ).run( Cluster.ZoneRegistration.DEREGISTER );
+        this.in( Cluster.State.NOTREADY ).run( Cluster.ZoneRegistration.DEREGISTER );
+        this.in( Cluster.State.ENABLED ).run( Cluster.ZoneRegistration.REGISTER );
         this.from( State.BROKEN ).to( State.PENDING ).error( State.BROKEN ).on( Transition.RESTART_BROKEN ).run( noop );
         
         this.from( State.STOPPED ).to( State.PENDING ).error( State.PENDING ).on( Transition.PRESTART ).run( noop );
@@ -468,7 +485,19 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
               transition = enablingTransition( );
             }
             break;
+          case ENABLING:
+          case ENABLING_RESOURCES:
+          case ENABLING_NET:
+          case ENABLING_VMS:
+          case ENABLING_ADDRS:
+          case ENABLING_VMS_PASS_TWO:
+          case ENABLING_ADDRS_PASS_TWO:
           case ENABLED:
+          case ENABLED_ADDRS:
+          case ENABLED_RSC:
+          case ENABLED_NET:
+          case ENABLED_VMS:
+          case ENABLED_SERVICE_CHECK:
             if ( initialized && tick.isAsserted( Clusters.getConfiguration( ).getEnabledInterval( ) )
                  && Component.State.ENABLED.equals( this.configuration.lookupState( ) ) ) {
               transition = enabledTransition( );
