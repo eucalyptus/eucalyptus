@@ -660,6 +660,7 @@ public class Hosts {
         hostMap = new ReplicatedHashMap<String, Host>( HostManager.getMembershipChannel( ) );
         hostMap.setDeadlockDetection( true );
         hostMap.setBlockingUpdates( true );
+        hostMap.addNotifier( HostMapStateListener.INSTANCE );
         Runnable runMap = new Runnable( ) {
           public void run( ) {
             try {
@@ -687,7 +688,6 @@ public class Hosts {
             }
           }
         };
-        hostMap.addNotifier( HostMapStateListener.INSTANCE );
         Timers.loggingWrapper( runMap, hostMap ).call( );
         LOG.info( "Initial view:\n" + HostMapStateListener.INSTANCE.printMap( ) );
         LOG.info( "Initial coordinator:\n" + Hosts.getCoordinator( ) );
