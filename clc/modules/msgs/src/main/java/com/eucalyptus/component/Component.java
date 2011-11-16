@@ -279,7 +279,7 @@ public class Component implements HasName<Component> {
    */
   @Override
   public String toString( ) {
-    return String.format( "Component %s =%s service=%s\n",
+    return String.format( "Component %s=%s service=%s\n",
                           this.identity.name( ),
                           ( this.identity.isAvailableLocally( )
                             ? ""
