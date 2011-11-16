@@ -569,12 +569,7 @@ public class Bootstrap {
   private static void applyTransition( final Component.State state, Component... components ) {
     ThreadPool exec = Threads.lookup( Empyrean.class );
     for ( final Component component : components ) {
-      ServiceConfiguration config;
-      try {
-        config = component.getLocalServiceConfiguration( );
-      } catch ( Exception ex1 ) {
-        LOG.error( ex1 , ex1 );
-      }
+      ServiceConfiguration config = component.getLocalServiceConfiguration( );
       try {
         Topology.transition( state ).apply( config ).get( );
       } catch ( Exception ex ) {

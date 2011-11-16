@@ -169,7 +169,7 @@ public class ServiceTransitions {
         LOG.debug( configuration.getFullName( ) + " transitioning "
                    + initialState + "->" + goalState
                    + " using path " + Joiner.on( "->" ).join( path ) );
-      }      
+      }
       CheckedListenableFuture<ServiceConfiguration> result = executeTransition( configuration, Automata.sequenceTransitions( configuration, path ) );
       return result;
     } catch ( RuntimeException ex ) {
@@ -736,36 +736,40 @@ public class ServiceTransitions {
     PROPERTIES_ADD {
       @Override
       public void fire( final ServiceConfiguration config ) {
-        try {
-          List<ConfigurableProperty> props = PropertyDirectory.getPendingPropertyEntrySet( config.getComponentId( ).name( ) );
-          for ( ConfigurableProperty prop : props ) {
-            if ( prop instanceof SingletonDatabasePropertyEntry ) {
-              PropertyDirectory.addProperty( prop );
-            } else if ( prop instanceof MultiDatabasePropertyEntry ) {
-              MultiDatabasePropertyEntry addProp = ( ( MultiDatabasePropertyEntry ) prop ).getClone( config.getPartition( ) );
-              PropertyDirectory.addProperty( addProp );
+        if ( Bootstrap.isFinished( ) ) {
+          try {
+            List<ConfigurableProperty> props = PropertyDirectory.getPendingPropertyEntrySet( config.getComponentId( ).name( ) );
+            for ( ConfigurableProperty prop : props ) {
+              if ( prop instanceof SingletonDatabasePropertyEntry ) {
+                PropertyDirectory.addProperty( prop );
+              } else if ( prop instanceof MultiDatabasePropertyEntry ) {
+                MultiDatabasePropertyEntry addProp = ( ( MultiDatabasePropertyEntry ) prop ).getClone( config.getPartition( ) );
+                PropertyDirectory.addProperty( addProp );
+              }
             }
+          } catch ( Exception ex ) {
+            LOG.error( ex, ex );
           }
-        } catch ( Exception ex ) {
-          LOG.error( ex, ex );
         }
       }
     },
     STATIC_PROPERTIES_ADD {
       @Override
       public void fire( final ServiceConfiguration config ) {
-        for ( Entry<String, ConfigurableProperty> entry : Iterables.filter( PropertyDirectory.getPendingPropertyEntries( ),
-                                                                            Predicates.instanceOf( StaticPropertyEntry.class ) ) ) {
-          try {
-            ConfigurableProperty prop = entry.getValue( );
-            PropertyDirectory.addProperty( prop );
+        if ( Bootstrap.isFinished( ) ) {
+          for ( Entry<String, ConfigurableProperty> entry : Iterables.filter( PropertyDirectory.getPendingPropertyEntries( ),
+                                                                              Predicates.instanceOf( StaticPropertyEntry.class ) ) ) {
             try {
-              prop.getValue( );
+              ConfigurableProperty prop = entry.getValue( );
+              PropertyDirectory.addProperty( prop );
+              try {
+                prop.getValue( );
+              } catch ( Exception ex ) {
+                Logs.extreme( ).error( ex );
+              }
             } catch ( Exception ex ) {
-              Logs.extreme( ).error( ex );
+              Logs.extreme( ).error( ex, ex );
             }
-          } catch ( Exception ex ) {
-            Logs.extreme( ).error( ex, ex );
           }
         }
       }
