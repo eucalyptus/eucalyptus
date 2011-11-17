@@ -104,44 +104,47 @@ public class NetworkGroupManager {
   }
   
   public RevokeSecurityGroupIngressResponseType revoke( final RevokeSecurityGroupIngressType request ) throws EucalyptusCloudException, MetadataException {
-    final Context ctx = Contexts.lookup( );
-    final RevokeSecurityGroupIngressResponseType reply = request.getReply( );
-    reply.markFailed( );
-    final List<IpPermissionType> ipPermissions = request.getIpPermissions( );
-    final List<NetworkRule> ruleList = NetworkGroups.ipPermissionsAsNetworkRules( ipPermissions );
-    final Predicate<NetworkRule> filterContainsRule = new Predicate<NetworkRule>( ) {
-      @Override
-      public boolean apply( final NetworkRule rule ) {
-        return ruleList.contains( rule );
-      }
-    };
-    EntityTransaction db = Entities.get( NetworkGroup.class );
-    try {
-      final NetworkGroup ruleGroup = NetworkGroups.lookup( ctx.getUserFullName( ).asAccountFullName( ), request.getGroupName( ) );
-      Predicate<NetworkRule> removeFailedPredicate = new Predicate<NetworkRule>( ) {
+      final Context ctx = Contexts.lookup( );
+      final RevokeSecurityGroupIngressResponseType reply = request.getReply( );
+      reply.markFailed( );
+      final List<IpPermissionType> ipPermissions = request.getIpPermissions( );
+      EntityTransaction db = Entities.get( NetworkGroup.class );
+      try {
         
-        @Override
-        public boolean apply( NetworkRule rule ) {
-          return !ruleGroup.getNetworkRules( ).remove( rule );
-        }
-      };
-      if ( !RestrictedTypes.filterPrivileged( ).apply( ruleGroup ) ) {
-        throw new EucalyptusCloudException( "Not authorized to revoke network group " + request.getGroupName( ) + " for " + ctx.getUser( ) );
+	  final List<NetworkGroup> ruleGroupList = NetworkGroups.lookupAll( ctx.getUserFullName( ).asAccountFullName( ), request.getGroupName( ) );
+            outerloop:
+  	    for (final NetworkGroup group : ruleGroupList) {		
+  		if (group.getName().equals(request.getGroupName())) {
+  		    for (final NetworkRule rule : group.getNetworkRules()) {
+  			LOG.debug("NetworkRule Name : " + group.getName());
+  			for (final String ipRange : rule.getIpRanges()) {		 
+  			    if (ipPermissions.get(0).getIpRanges().contains(ipRange)) {
+  			      LOG.debug(" : ipRange : " + ipRange);	      
+  			      
+			      if ( !RestrictedTypes.filterPrivileged( ).apply( group ) ) {
+	                         throw new EucalyptusCloudException( "Not authorized to revoke" + 
+                                     "network group " + request.getGroupName( ) + " for " + ctx.getUser( ) );
+      			      }
+
+
+
+                              group.getNetworkRules().remove(rule);
+  			      reply.set_return(true);
+  			      break outerloop;
+  			    }
+  			}
+  		    }
+  		}
+  	    }
+  	    
+        db.commit( );
+      } catch ( Exception ex ) {
+        Logs.exhaust( ).error( ex, ex );
+        db.rollback( );
+        throw new EucalyptusCloudException( "RevokeSecurityGroupIngress failed because: " + ex.getMessage( ), ex );
       }
-      final List<NetworkRule> filtered = Lists.newArrayList( Iterables.filter( ruleGroup.getNetworkRules( ), filterContainsRule ) );
-      if ( filtered.size( ) == ruleList.size( ) ) {
-        reply.set_return( !Iterables.all( filtered, removeFailedPredicate ) );
-      } else if ( ( ipPermissions.size( ) == 1 ) && ( ipPermissions.get( 0 ).getIpProtocol( ) == null ) ) {
-        reply.set_return( !Iterables.all( ruleList, removeFailedPredicate ) );
-      }
-      db.commit( );
-    } catch ( Exception ex ) {
-      Logs.exhaust( ).error( ex, ex );
-      db.rollback( );
-      throw new EucalyptusCloudException( "RevokeSecurityGroupIngress failed because: " + ex.getMessage( ), ex );
+      return reply;
     }
-    return reply;
-  }
   
   public AuthorizeSecurityGroupIngressResponseType authorize( final AuthorizeSecurityGroupIngressType request ) throws Exception {
     final Context ctx = Contexts.lookup( );
