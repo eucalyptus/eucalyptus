@@ -503,15 +503,13 @@ public class Hosts {
             return false;
           }
         } else {
-          if ( !contains( input ) ) {
-            final Host newHost = Host.create( );
-            final Host oldHost = Hosts.put( newHost );
-            if ( oldHost == null ) {
-              LOG.info( "Inserted local host information:   " + localHost( ) );
-              return true;
-            } else {
-              return false;
-            }
+          final Host newHost = Host.create( );
+          final Host oldHost = Hosts.putIfAbsent( newHost );
+          if ( oldHost == null ) {
+            LOG.info( "Inserted local host information:   " + localHost( ) );
+            return true;
+          } else {
+            return false;
           }
         }
       }
