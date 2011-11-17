@@ -63,7 +63,7 @@
  */
 package com.eucalyptus.ws.server;
 
-import java.util.Map;
+import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicReference;
 import javax.security.auth.login.LoginException;
 import org.apache.log4j.Logger;
@@ -105,7 +105,7 @@ public class NioServerHandler extends SimpleChannelUpstreamHandler {//TODO:GRZE:
   
   @Override
   public void messageReceived( final ChannelHandlerContext ctx, final MessageEvent e ) throws Exception {
-    Statistics.startUpstream( ctx.getChannel( ).getId( ), this );
+    Callable<Long> stat = Statistics.startUpstream( ctx.getChannel( ), this );
     try {
       if ( this.pipeline.get( ) == null ) {
         lookupPipeline( ctx, e );
@@ -124,10 +124,12 @@ public class NioServerHandler extends SimpleChannelUpstreamHandler {//TODO:GRZE:
           return;
         }
       }
+      stat.call( );
       ctx.sendUpstream( e );
     } catch ( Exception ex ) {
       LOG.trace( ex );
       Logs.extreme( ).error( ex, ex );
+      stat.call( );
       this.sendError( ctx, HttpResponseStatus.NOT_FOUND, ex );
     }
   }
