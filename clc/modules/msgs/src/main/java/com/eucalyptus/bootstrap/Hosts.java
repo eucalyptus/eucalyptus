@@ -361,7 +361,7 @@ public class Hosts {
           return false;
         } else {
           if ( input.hasBootstrapped( ) ) {
-            if ( input.hasDatabase( ) ) {
+            if ( input.hasDatabase( ) && !input.isLocalHost( ) ) {
               return setup( Empyrean.class, input.getBindAddress( ) ) && setup( Eucalyptus.class, input.getBindAddress( ) );
             } else {
               return setup( Empyrean.class, input.getBindAddress( ) );
