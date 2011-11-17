@@ -313,9 +313,10 @@ public class ServiceBootstrapper extends Bootstrapper.Simple {
           @Override
           public void run( ) {
             try {
-              Topology.disable( config ).get( );
               if ( Hosts.isCoordinator( ) ) {
                 Topology.enable( config );
+              } else {
+                Topology.disable( config );
               }
             } catch ( final Exception ex ) {
               Exceptions.maybeInterrupted( ex );

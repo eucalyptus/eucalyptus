@@ -266,24 +266,6 @@ public class ServiceConfigurations {
     return createEphemeral( component.getComponentId( ), host );
   }
   
-  enum EnabledServiceConfiguration implements Predicate<ServiceConfiguration> {
-    INSTANCE;
-    @Override
-    public boolean apply( final ServiceConfiguration arg0 ) {
-      return Component.State.ENABLED.equals( arg0.lookupState( ) );
-    }
-  };
-  
-  @SuppressWarnings( "unchecked" )
-  public static final <T extends ServiceConfiguration> Predicate<T> enabledService( ) {
-    return ( Predicate<T> ) EnabledServiceConfiguration.INSTANCE;
-  }
-  
-  public static <T extends ServiceConfiguration, C extends ComponentId> Iterable<T> enabledServices( final Class<C> type ) throws PersistenceException {
-    Predicate<T> enabledService = enabledService( );
-    return ServiceConfigurations.filter( type, enabledService );
-  }
-  
   public static <T extends ServiceConfiguration, C extends ComponentId> Iterable<T> filter( final Class<C> type, final Predicate<T> pred ) throws PersistenceException {
     List<T> list = ServiceConfigurations.list( type );
     return Iterables.filter( list, pred );
@@ -330,7 +312,7 @@ public class ServiceConfigurations {
       throw new PersistenceException( "Unknown configuration type passed: " + type.getCanonicalName( ) );
     }
     final T example = ( T ) ServiceBuilders.lookup( type ).newInstance( );
-    example.setHostName( host ); 
+    example.setHostName( host );
     return lookup( example );
   }
   
@@ -358,6 +340,19 @@ public class ServiceConfigurations {
       return input.isHostLocal( );
     }
     
+  }
+  
+  enum EnabledServiceConfiguration implements Predicate<ServiceConfiguration> {
+    INSTANCE;
+    @Override
+    public boolean apply( final ServiceConfiguration arg0 ) {
+      return Component.State.ENABLED.equals( arg0.lookupState( ) );
+    }
+  };
+  
+  @SuppressWarnings( "unchecked" )
+  public static final <T extends ServiceConfiguration> Predicate<T> filterEnabled( ) {
+    return ( Predicate<T> ) EnabledServiceConfiguration.INSTANCE;
   }
   
   public static Predicate<ServiceConfiguration> filterHostLocal( ) {
