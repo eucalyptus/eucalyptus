@@ -699,8 +699,9 @@ public class Hosts {
         
         /** create host entry for localhost **/
         LOG.info( "Created local host entry: " + Hosts.localHost( ) );
-        UpdateEntry.INSTANCE.apply( Hosts.localHost( ) );
+        hostMap.addNotifier( HostMapStateListener.INSTANCE );
         LOG.info( "System view: " + HostMapStateListener.INSTANCE.printMap( ) );
+        UpdateEntry.INSTANCE.apply( Hosts.localHost( ) );
         LOG.info( "System coordinator: " + Hosts.getCoordinator( ) );
         
         /** wait for db if needed **/
@@ -713,7 +714,6 @@ public class Hosts {
         }
         
         /** setup host map handling **/
-        hostMap.addNotifier( HostMapStateListener.INSTANCE );
         Listeners.register( HostBootstrapEventListener.INSTANCE );
         
         return true;
