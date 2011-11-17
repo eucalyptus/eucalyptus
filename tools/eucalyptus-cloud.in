@@ -272,7 +272,7 @@ do_stop() {
 		return
 	fi
 
-	timeout=300
+	timeout=40
 	while [ $timeout -gt 0 ]; do
 		if do_status ; then
 			sleep 1
