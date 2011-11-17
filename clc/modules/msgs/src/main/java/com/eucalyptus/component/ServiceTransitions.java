@@ -331,11 +331,11 @@ public class ServiceTransitions {
       throw ex;
     }
   }
-
+  
   private static void processTransition( final ServiceConfiguration parent, final Completion transitionCallback, final TransitionActions transitionAction ) {
     ServiceTransitionCallback trans = null;
     try {
-      if ( parent.isVmLocal( ) || ( parent.isHostLocal( ) && Hosts.isCoordinator( ) ) ) {
+      if ( Hosts.isServiceLocal( parent ) ) {
         try {
           trans = ServiceLocalTransitionCallbacks.valueOf( transitionAction.name( ) );
         } catch ( Exception ex ) {
@@ -375,7 +375,7 @@ public class ServiceTransitions {
       }
     }
   }
-  
+
   public enum TransitionActions implements TransitionAction<ServiceConfiguration> {
     ENABLE,
     CHECK,
@@ -608,12 +608,12 @@ public class ServiceTransitions {
       
       @Override
       public void fire( final ServiceConfiguration parent ) throws Exception {
-//        if ( State.NOTREADY.equals( parent.lookupComponent( ).getState( ) ) ) {
-//          parent.lookupComponent( ).check( );
-//          ServiceBuilders.lookup( parent.getComponentId( ) ).fireCheck( parent );
-//        }
-        parent.lookupBootstrapper( ).disable( );
-        ServiceBuilders.lookup( parent.getComponentId( ) ).fireDisable( parent );
+        try {//GRZE: disable transition must always succeed to avoid ambigious/duplicate invocation from in( State.NOTREADY )
+          parent.lookupBootstrapper( ).disable( );
+          ServiceBuilders.lookup( parent.getComponentId( ) ).fireDisable( parent );
+        } catch ( Exception ex ) {
+          LOG.error( ex, ex );
+        }
       }
     },
     STOP {
@@ -789,6 +789,21 @@ public class ServiceTransitions {
         LOG.error( ex, ex );
       }
     }
+      
+    },
+    ENSURE_DISABLED {
+      
+      @Override
+      public void fire( ServiceConfiguration input ) {
+        if ( State.ENABLED.apply( input ) && Hosts.isServiceLocal( input ) ) {
+          try {
+            LOG.debug( "Ensuring .disable()/.fireDisable() have been called for service entering NOTREADY: " + input.getFullName( ) );
+            ServiceLocalTransitionCallbacks.DISABLE.fire( input );
+          } catch ( Exception ex ) {
+            LOG.error( ex, ex );
+          }
+        }
+      }
       
     };
     
