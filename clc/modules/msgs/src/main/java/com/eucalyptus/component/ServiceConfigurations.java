@@ -153,7 +153,7 @@ public class ServiceConfigurations {
               this.setLocalState( "n/a: " + ex.getMessage( ) );
             }
             if ( showEvents ) {
-              this.getStatusDetails( ).addAll( Collections2.transform( config.lookupDetails( ),
+              this.getStatusDetails( ).addAll( Collections2.transform( Faults.lookup( config ),
                                                                        TypeMappers.lookup( ServiceCheckRecord.class, ServiceStatusDetail.class ) ) );
               if ( !showEventStacks ) {
                 for ( final ServiceStatusDetail a : this.getStatusDetails( ) ) {
@@ -187,7 +187,7 @@ public class ServiceConfigurations {
           } catch ( final Exception ex ) {
             this.setLocalState( "n/a: " + ex.getMessage( ) );
           }
-          this.getStatusDetails( ).addAll( Collections2.transform( config.lookupDetails( ),
+          this.getStatusDetails( ).addAll( Collections2.transform( Faults.lookup( config ),
                                                                    TypeMappers.lookup( ServiceCheckRecord.class, ServiceStatusDetail.class ) ) );
           for ( final ServiceStatusDetail a : this.getStatusDetails( ) ) {
             a.setStackTrace( "" );
@@ -289,6 +289,17 @@ public class ServiceConfigurations {
     return list( example );
   }
   
+  public static <T extends ServiceConfiguration> T lookupByName( final String name ) {
+    for ( ComponentId c : ComponentIds.list( ) ) {
+      ServiceConfiguration example = ServiceBuilders.lookup( c.getClass( ) ).newInstance( );
+      example.setName( name );
+      try {
+        return ( T ) lookup( example );
+      } catch ( Exception ex ) {
+      }
+    }
+    throw new NoSuchElementException( "Failed to lookup any registered component with the name: " + name );
+  }
   public static <T extends ServiceConfiguration, C extends ComponentId> T lookupByName( final Class<C> type, final String name ) {
     if ( !ComponentId.class.isAssignableFrom( type ) ) {
       throw new PersistenceException( "Unknown configuration type passed: " + type.getCanonicalName( ) );

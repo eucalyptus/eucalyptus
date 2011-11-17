@@ -91,10 +91,9 @@ import com.eucalyptus.component.Component;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Faults;
+import com.eucalyptus.component.Faults.CheckException;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.component.Partitions;
-import com.eucalyptus.component.ServiceChecks;
-import com.eucalyptus.component.ServiceChecks.CheckException;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.ServiceRegistrationException;
@@ -305,7 +304,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
             Component.State serviceState = Component.State.valueOf( status.getLocalState( ) );
             Component.State localState = parent.getConfiguration( ).lookupState( );
             Component.State proxyState = parent.getStateMachine( ).getState( ).proxyState( );
-            CheckException ex = ServiceChecks.chainCheckExceptions( ServiceChecks.Functions.statusToCheckExceptions( this.getRequest( ).getCorrelationId( ) ).apply( status ) );
+            CheckException ex = Faults.statusToCheckExceptions( ).apply( status );
             if ( Component.State.NOTREADY.equals( serviceState ) ) {
               throw new IllegalStateException( ex );
             } else if ( Component.State.ENABLED.equals( serviceState ) && Component.State.DISABLED.ordinal( ) >= localState.ordinal( ) ) {

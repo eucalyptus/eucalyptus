@@ -64,6 +64,7 @@
 package com.eucalyptus.config;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import org.apache.log4j.Logger;
@@ -71,8 +72,10 @@ import com.eucalyptus.component.Component;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentRegistrationHandler;
 import com.eucalyptus.component.Components;
+import com.eucalyptus.component.Faults;
 import com.eucalyptus.component.ServiceBuilder;
 import com.eucalyptus.component.ServiceBuilders;
+import com.eucalyptus.component.ServiceCheckRecord;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.scripting.Groovyness;
@@ -107,9 +110,10 @@ public class Configuration {
           } catch ( Exception ex ) {
             this.setState( "n/a: " + ex.getMessage( ) );
           }
-          this.setDetail( input.lookupDetails( ).isEmpty( )
+          Collection<ServiceCheckRecord> faults = Faults.lookup( input );
+          this.setDetail( faults.isEmpty( )
                      ? ""
-                     : input.lookupDetails( ).iterator( ).next( ).toString( ) );
+                     : faults.iterator( ).next( ).toString( ) );
         }
       };
     }

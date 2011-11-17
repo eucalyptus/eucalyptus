@@ -45,8 +45,6 @@ public interface ServiceConfiguration extends Serializable, HasFullName<ServiceC
 
   public abstract ComponentId getComponentId( );
   
-  public abstract Collection<ServiceCheckRecord> lookupDetails( );
-
   public abstract Boolean isHostLocal( );
 
   public abstract InetAddress getInetAddress( );

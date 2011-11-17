@@ -72,7 +72,7 @@ import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.component.Component.State;
-import com.eucalyptus.component.ServiceChecks.CheckException;
+import com.eucalyptus.component.Faults.CheckException;
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.MultiDatabasePropertyEntry;
 import com.eucalyptus.configurable.PropertyDirectory;
@@ -465,9 +465,8 @@ public class ServiceTransitions {
             return parent.getName( ).equals( arg0.getServiceId( ).getName( ) );
           }
         } );
-        String corrId = response.getCorrelationId( );
-        List<CheckException> errors = ServiceChecks.Functions.statusToCheckExceptions( corrId ).apply( status );
-        if ( !errors.isEmpty( ) ) {
+        CheckException errors = Faults.statusToCheckExceptions( ).apply( status );
+        if ( errors != null ) {
           if ( Component.State.ENABLED.equals( parent.lookupState( ) ) ) {
             try {
               DISABLE.fire( parent );
@@ -475,7 +474,7 @@ public class ServiceTransitions {
               LOG.error( ex, ex );
             }
           }
-          throw Faults.failure( parent, errors );
+          throw errors;
         }
       }
       
