@@ -75,7 +75,7 @@ import org.hibernate.annotations.Cache
 import org.hibernate.annotations.CacheConcurrencyStrategy
 import org.hibernate.annotations.Entity
 import com.eucalyptus.bootstrap.BootstrapArgs
-import com.eucalyptus.component.ComponentPart
+import com.eucalyptus.component.ComponentId.ComponentPart
 import com.eucalyptus.component.id.Eucalyptus
 import com.eucalyptus.config.ComponentConfiguration
 
@@ -91,9 +91,5 @@ public class EucalyptusConfiguration extends ComponentConfiguration implements S
   }
   public EucalyptusConfiguration( String name, String hostName ) {
     super( "eucalyptus", name, hostName, 8773, DEFAULT_SERVICE_PATH );
-  }
-  @Override
-  public Boolean isVmLocal( ) {
-    return BootstrapArgs.isCloudController( );
   }
 }

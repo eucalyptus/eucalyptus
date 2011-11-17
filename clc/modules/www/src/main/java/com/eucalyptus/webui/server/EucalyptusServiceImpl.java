@@ -29,7 +29,6 @@ import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.google.gwt.http.client.URL;
 import com.google.gwt.user.server.rpc.RemoteServiceServlet;
-import edu.ucsb.eucalyptus.admin.server.ServletUtils;
 
 public class EucalyptusServiceImpl extends RemoteServiceServlet implements EucalyptusService {
 
@@ -41,7 +40,7 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
 
   private static final Random RANDOM = new Random( );
   
-  private static User verifySession( Session session ) throws EucalyptusServiceException {
+  public static User verifySession( Session session ) throws EucalyptusServiceException {
     WebSession ws = WebSessionManager.getInstance( ).getSession( session.getId( ) );
     if ( ws == null ) {
       throw new EucalyptusServiceException( EucalyptusServiceException.INVALID_SESSION );
@@ -137,6 +136,7 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
     result.addRows( ConfigurationWebBackend.getStorageConfigurations( ) );
     result.addRows( ConfigurationWebBackend.getWalrusConfigurations( ) );
     result.addRows( ConfigurationWebBackend.getVMwareBrokerConfigurations( ) );
+    result.addRows( ConfigurationWebBackend.getArbitratorConfigurations( ) );
     result.setTotalSize( result.length( ) );
     result.setRange( range );
     return result;
@@ -165,8 +165,10 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
       ConfigurationWebBackend.setStorageConfiguration( config );
     } else if ( ConfigurationWebBackend.WALRUS_TYPE.equals( type ) ) {
       ConfigurationWebBackend.setWalrusConfiguration( config );
-    } else if ( ConfigurationWebBackend.WALRUS_TYPE.equals( type ) ) {
+    } else if ( ConfigurationWebBackend.VMWARE_BROKER_TYPE.equals( type ) ) {
         ConfigurationWebBackend.setVMwareBrokerConfiguration( config );
+    } else if ( ConfigurationWebBackend.ARBITRATOR_TYPE.equals( type ) ) {
+        ConfigurationWebBackend.setArbitratorConfiguration( config );
     } else {
       throw new EucalyptusServiceException( "Wrong configuration type: " + type );
     }
@@ -478,7 +480,7 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
   public void signupAccount( String accountName, String password, String email ) throws EucalyptusServiceException {
     // Simple thwart to automatic signup attack.
     randomDelay( );
-    User admin = EuareWebBackend.createAccount( accountName, password, email );
+    User admin = EuareWebBackend.signupAccount( accountName, password, email );
     if ( admin != null ) {
       EuareWebBackend.notifyAccountRegistration( admin, accountName, email, ServletUtils.getRequestUrl( getThreadLocalRequest( ) ) );
     }

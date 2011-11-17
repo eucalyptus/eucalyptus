@@ -37,9 +37,9 @@ public class Permissions {
       policyEngine.evaluateAuthorization( vendor + ":" + resourceType, resourceName, resourceAccount, vendor + ":" + action, requestUser, contracts );
       return true;
     } catch ( AuthException e ) {
-      LOG.error( "Denied resource access to " + resourceType + ":" + resourceName + " of " + resourceAccount.getName( ) + " for " + requestUser.getName( ), e );
+      LOG.error( "Denied resource access to " + resourceType + ":" + resourceName + " of " + resourceAccount + " for " + requestUser, e );
     } catch ( Exception e ) {
-      LOG.debug( "Exception in resource access to " + resourceType + ":" + resourceName + " of " + resourceAccount.getName( ) + " for " + requestUser.getName( ), e );      
+      LOG.debug( "Exception in resource access to " + resourceType + ":" + resourceName + " of " + resourceAccount + " for " + requestUser, e );      
     }
     return false;
   }
@@ -49,7 +49,7 @@ public class Permissions {
       policyEngine.evaluateQuota( vendor + ":" + resourceType, resourceName, vendor + ":" + action, requestUser, quantity );
       return true;
     } catch ( AuthException e ) {
-      LOG.debug( "Denied resource allocation of " + resourceType + ":" + resourceName + " by " + quantity + " for " + requestUser.getName( ), e );
+      LOG.debug( "Denied resource allocation of " + resourceType + ":" + resourceName + " by " + quantity + " for " + requestUser, e );
     }
     return false;
   }

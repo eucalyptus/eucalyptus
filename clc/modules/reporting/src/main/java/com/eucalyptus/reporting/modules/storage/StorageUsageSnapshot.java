@@ -13,7 +13,7 @@ import com.eucalyptus.entities.AbstractPersistent;
  * @author tom.werges
  */
 @Entity @javax.persistence.Entity
-@PersistenceContext(name="reporting")
+@PersistenceContext(name="eucalyptus_reporting")
 @Table(name="storage_usage_snapshot")
 public class StorageUsageSnapshot
 	extends AbstractPersistent

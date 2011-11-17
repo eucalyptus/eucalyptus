@@ -90,5 +90,12 @@ public class LogViewImpl extends Composite implements LogView {
       this.currentGrid.removeRow( this.currentGrid.getRowCount( ) - 1 );
     }
   }
+
+  @Override
+  public void clear( ) {
+    while ( this.currentGrid.getRowCount( ) > 0 ) {
+      this.currentGrid.removeRow( 0 );
+    }
+  }
   
 }

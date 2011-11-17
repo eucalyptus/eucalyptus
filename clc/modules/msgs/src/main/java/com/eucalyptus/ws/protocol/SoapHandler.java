@@ -81,6 +81,7 @@ import com.eucalyptus.binding.Binding;
 import com.eucalyptus.binding.HoldMe;
 import com.eucalyptus.http.MappingHttpMessage;
 import com.eucalyptus.http.MappingHttpResponse;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.ws.EucalyptusRemoteFault;
 import com.eucalyptus.ws.handlers.MessageStackHandler;
@@ -143,8 +144,12 @@ public class SoapHandler extends MessageStackHandler {
         }
       } else if ( httpMessage.getMessage( ) instanceof ExceptionResponseType ) {
         ExceptionResponseType errMsg = ( ExceptionResponseType ) httpMessage.getMessage( );
-        httpMessage.setSoapEnvelope( Binding.createFault( errMsg.getRequestType( ), errMsg.getMessage( ),
-                                                          Exceptions.createFaultDetails( errMsg.getException( ) ) ) );
+        String createFaultDetails = Logs.isExtrrreeeme( )
+          ? Exceptions.string( errMsg.getException( ) )
+          : errMsg.getException( ).getMessage( );
+        httpMessage.setSoapEnvelope( Binding.createFault( errMsg.getRequestType( ), 
+                                                          errMsg.getMessage( ),
+                                                          createFaultDetails ) );
         if ( httpMessage instanceof MappingHttpResponse ) {
           ( ( MappingHttpResponse ) httpMessage ).setStatus( errMsg.getHttpStatus( ) );
         }
@@ -154,7 +159,6 @@ public class SoapHandler extends MessageStackHandler {
       }
     }
   }
-  
 //TODO:GRZE: services specific error handling  
 //  @Override
 //  public void handleDownstream( ChannelHandlerContext ctx, ChannelEvent channelEvent ) throws Exception {

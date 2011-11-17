@@ -35,7 +35,6 @@ import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import edu.ucsb.eucalyptus.admin.server.ServletUtils;
 
 public class EuareWebBackend {
 
@@ -642,7 +641,7 @@ public class EuareWebBackend {
         // Optimization for a single user's policies
         User user = Accounts.lookupUserById( query.getSingle( USERID ).getValue( ) );
         Account account = user.getAccount( );
-        if ( Privileged.allowListOrReadUserPolicy( requestUser, account, user ) ) {
+        if ( Privileged.allowListAndReadUserPolicy( requestUser, account, user ) ) {
           for ( Policy policy : user.getPolicies( ) ) {
             results.add( serializePolicy( policy, account, null, user ) );
           }
@@ -669,7 +668,7 @@ public class EuareWebBackend {
           try {
             for ( User user : getUsers( account, query ) ) {
               try {
-                if ( Privileged.allowListOrReadUserPolicy( requestUser, account, user ) ) {
+                if ( Privileged.allowListAndReadUserPolicy( requestUser, account, user ) ) {
                   for ( Policy policy : user.getPolicies( ) ) {
                     if ( policyMatchQuery( policy, query ) ) {
                       results.add( serializePolicy( policy, account, null, user ) );
@@ -859,7 +858,7 @@ public class EuareWebBackend {
 
   public static String createAccount( User requestUser, String accountName, String password ) throws EucalyptusServiceException {
     try {
-      Account account = Privileged.createAccount( requestUser.isSystemAdmin( ), accountName, password, null );
+      Account account = Privileged.createAccount( requestUser.isSystemAdmin( ), accountName, password, null/*email*/, true/*skipRegistration*/ );
       return account.getAccountNumber( );
     } catch ( Exception e ) {
       LOG.error( "Failed to create account " + accountName, e );
@@ -868,14 +867,14 @@ public class EuareWebBackend {
     }
   }
   
-  public static User createAccount( String accountName, String password, String email ) {
+  public static User signupAccount( String accountName, String password, String email ) throws EucalyptusServiceException {
     try {
-      Account account = Privileged.createAccount( true, accountName, password, email );
+      Account account = Privileged.createAccount( true, accountName, password, email, false/*skipRegistration*/ );
       return account.lookupUserByName( User.ACCOUNT_ADMIN );
     } catch ( Exception e ) {
-      LOG.error( "Failed to create account " + accountName, e );
+      LOG.error( "Failed to signup account " + accountName, e );
       LOG.debug( e, e );
-      return null;
+      throw new EucalyptusServiceException( "Failed to signup account " + accountName );
     }
   }
 

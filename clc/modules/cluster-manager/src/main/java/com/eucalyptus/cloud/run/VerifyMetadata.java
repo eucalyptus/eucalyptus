@@ -65,14 +65,12 @@ package com.eucalyptus.cloud.run;
 
 import java.util.ArrayList;
 import java.util.Map;
-import java.util.NoSuchElementException;
 import java.util.Set;
-import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.cloud.CloudMetadatas;
 import com.eucalyptus.cloud.ImageMetadata;
+import com.eucalyptus.cloud.ImageMetadata.Platform;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.cloud.util.IllegalMetadataAccessException;
 import com.eucalyptus.cloud.util.InvalidMetadataException;
@@ -84,19 +82,19 @@ import com.eucalyptus.component.Partition;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.context.Context;
-import com.eucalyptus.context.IllegalContextAccessException;
 import com.eucalyptus.images.Emis;
 import com.eucalyptus.images.Emis.BootableSet;
-import com.eucalyptus.images.ImageInfo;
-import com.eucalyptus.images.Images;
 import com.eucalyptus.keys.KeyPairs;
 import com.eucalyptus.keys.SshKeyPair;
 import com.eucalyptus.network.NetworkGroup;
 import com.eucalyptus.network.NetworkGroups;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.vm.VmType;
 import com.eucalyptus.vm.VmTypes;
+import com.google.common.base.Function;
 import com.google.common.base.Joiner;
+import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -105,8 +103,12 @@ import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 
 public class VerifyMetadata {
   private static Logger LOG = Logger.getLogger( VerifyMetadata.class );
+  public static Predicate<Allocation> get( ) {
+    return Predicates.and( Lists.transform( verifiers, AsPredicate.INSTANCE ) );
+  }
   
-  interface MetadataVerifier {
+
+  private interface MetadataVerifier {
     public abstract boolean apply( Allocation allocInfo ) throws MetadataException, AuthException;
   }
   
@@ -114,12 +116,22 @@ public class VerifyMetadata {
                                                                                                 ImageVerifier.INSTANCE, KeyPairVerifier.INSTANCE,
                                                                                                 NetworkGroupVerifier.INSTANCE );
   
-  public static Allocation handle( RunInstancesType request ) throws MetadataException, AuthException {
-    Allocation alloc = Allocations.begin( request );
-    for ( MetadataVerifier v : verifiers ) {
-      v.apply( alloc );
+  private enum AsPredicate implements Function<MetadataVerifier, Predicate<Allocation>> {
+    INSTANCE;
+    @Override
+    public Predicate<Allocation> apply( final MetadataVerifier arg0 ) {
+      return new Predicate<Allocation>( ) {
+        
+        @Override
+        public boolean apply( Allocation allocInfo ) {
+          try {
+            return arg0.apply( allocInfo );
+          } catch ( Exception ex ) {
+            throw Exceptions.toUndeclared( ex );
+          }
+        }
+      };
     }
-    return alloc;
   }
   
   enum VmTypeVerifier implements MetadataVerifier {
@@ -178,11 +190,16 @@ public class VerifyMetadata {
         allocInfo.setBootableSet( bootSet );
         
         // Add (1024L * 1024L * 10) to handle NTFS min requirements.
-        if ( bootSet.getMachine( ).getImageSizeBytes( ) > ( (1024L * 1024L * 1024L * vmType.getDisk( ) ) + (1024L * 1024L * 10) )) {
+        if ( Platform.windows.equals( bootSet.getMachine( ).getPlatform( ) ) && bootSet.getMachine( ).getImageSizeBytes( ) > ( ( 1024L * 1024L * 1024L * vmType.getDisk( ) ) + ( 1024L * 1024L * 10 ) ) ) {
           throw new VerificationException( "Unable to run instance " + bootSet.getMachine( ).getDisplayName( ) +
                                            " in which the size " + bootSet.getMachine( ).getImageSizeBytes( ) +
                                            " bytes of the instance is greater than the vmType " + vmType.getDisplayName( ) + " size " + vmType.getDisk( )
                                            + " GB." );
+        } else if ( bootSet.getMachine( ).getImageSizeBytes( ) >= ( ( 1024L * 1024L * 1024L * vmType.getDisk( ) ) ) ) {
+            throw new VerificationException( "Unable to run instance " + bootSet.getMachine( ).getDisplayName( ) +
+                    " in which the size " + bootSet.getMachine( ).getImageSizeBytes( ) +
+                    " bytes of the instance is greater than the vmType " + vmType.getDisplayName( ) + " size " + vmType.getDisk( )
+                    + " GB." );
         }
       } catch ( AuthException ex ) {
         LOG.error( ex );

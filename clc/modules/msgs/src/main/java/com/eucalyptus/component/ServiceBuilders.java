@@ -65,18 +65,23 @@ package com.eucalyptus.component;
 
 import java.lang.reflect.Modifier;
 import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Handles;
 import com.eucalyptus.bootstrap.ServiceJarDiscovery;
+import com.eucalyptus.component.ComponentId.ComponentPart;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Ats;
+import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.TypeMapper;
+import com.google.common.base.Function;
 import com.google.common.collect.Maps;
-public class ServiceBuilders {
-  private static Logger LOG = Logger.getLogger( ServiceBuilders.class );
-  private static Map<Class,ServiceBuilder<? extends ServiceConfiguration>> builders = Maps.newConcurrentMap( );
-  private static Map<ComponentId,ServiceBuilder<? extends ServiceConfiguration>> componentBuilders = Maps.newConcurrentMap( );
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
+public class ServiceBuilders {
+  private static Logger                                                                            LOG               = Logger.getLogger( ServiceBuilders.class );
+  private static Map<Class<? extends BaseMessage>, ServiceBuilder<? extends ServiceConfiguration>> builders          = Maps.newConcurrentMap( );
+  private static Map<Class<? extends ComponentId>, ServiceBuilder<? extends ServiceConfiguration>> componentBuilders = Maps.newConcurrentMap( );
+  
   public static class ServiceBuilderDiscovery extends ServiceJarDiscovery {
     
     @Override
@@ -86,19 +91,26 @@ public class ServiceBuilders {
     
     @Override
     public boolean processClass( Class candidate ) throws Exception {
-      if( ServiceBuilder.class.isAssignableFrom( candidate ) && !Modifier.isAbstract( candidate.getModifiers( ) ) && !Modifier.isInterface( candidate.getModifiers( ) ) ) {
+      if ( ServiceBuilder.class.isAssignableFrom( candidate ) && !Modifier.isAbstract( candidate.getModifiers( ) )
+           && !Modifier.isInterface( candidate.getModifiers( ) ) ) {
         /** GRZE: this implies that service builder is a singleton **/
         ServiceBuilder b = ( ServiceBuilder ) candidate.newInstance( );
-        if( Ats.from( candidate ).has( DiscoverableServiceBuilder.class ) ) {
-          DiscoverableServiceBuilder at = Ats.from( candidate ).get( DiscoverableServiceBuilder.class );
-          for( Class c : at.value( ) ) {
-            ComponentId compId = (ComponentId) c.newInstance( );
-            ServiceBuilders.addBuilder( compId, b );
-          }
+        Ats ats = Ats.from( candidate );
+        if ( !ats.has( ComponentPart.class ) ) {
+          Exception ex = Exceptions.noSuchElement( "@ComponentPart(Class<? extends ComponentId>) is missing: " + candidate );
+          LOG.error( ex.getMessage( ) );
+          Logs.extreme( ).error( ex, ex );
+        } else {
+          ComponentPart at = ats.get( ComponentPart.class );
+          ServiceBuilders.addComponentBuilder( at.value( ), b );
         }
-        if( Ats.from( candidate ).has( Handles.class ) ) {
-          for( Class c : Ats.from( candidate ).get( Handles.class ).value( ) ) {
-            ServiceBuilders.addBuilder( c, b );
+        if ( !ats.has( Handles.class ) ) {
+          Exception ex = Exceptions.noSuchElement( "@Handles(Class<? extends BaseMessage>) is missing: " + candidate );
+          LOG.error( ex.getMessage( ) );
+          Logs.extreme( ).error( ex, ex );
+        } else {
+          for ( Class<? extends BaseMessage> c : ats.get( Handles.class ).value( ) ) {
+            ServiceBuilders.addMessageBuilder( c, b );
           }
         }
         return true;
@@ -108,40 +120,51 @@ public class ServiceBuilders {
     }
     
   }
-
   
-  static void addBuilder( Class c, ServiceBuilder b ) {
-    LOG.trace( "Registered service builder for " + c.getSimpleName( ) + " -> " + b.getClass( ).getCanonicalName( ) );
+  private static void addMessageBuilder( Class<? extends BaseMessage> c, ServiceBuilder b ) {
+    LOG.trace( "Registered service builder for " + c.getSimpleName( )
+               + " -> "
+               + b.getClass( ).getCanonicalName( ) );
     builders.put( c, b );
   }
-
-  public static void addBuilder( ComponentId c, ServiceBuilder b ) {
-    LOG.trace( "Registered service builder for " + c.name( ) + " -> " + b.getClass( ).getCanonicalName( ) );
+  
+  private static void addComponentBuilder( Class<? extends ComponentId> c, ServiceBuilder b ) {
+    LOG.trace( "Registered service builder for " + c.getSimpleName( )
+               + " -> "
+               + b.getClass( ).getCanonicalName( ) );
     componentBuilders.put( c, b );
   }
-
-  public static Set<Entry<Class,ServiceBuilder<? extends ServiceConfiguration>>> entrySet( ) {
-    return builders.entrySet( );
-  }
-
-  public static ServiceBuilder<? extends ServiceConfiguration> handles( Class handlesType ) {
+  
+  public static ServiceBuilder<? extends ServiceConfiguration> handles( Class<? extends BaseMessage> handlesType ) {
     return builders.get( handlesType );
   }
-
+  
   public static ServiceBuilder<? extends ServiceConfiguration> lookup( ComponentId componentId ) {
-    if( !componentBuilders.containsKey( componentId ) ) {
-      Component comp = Components.lookup( componentId );
-      componentBuilders.put( componentId, new DummyServiceBuilder( comp ) );
-    }
-    return componentBuilders.get( componentId );
-  }  
-
-  public static ServiceBuilder<? extends ServiceConfiguration> lookup( Class<? extends ComponentId> componentIdClass ) {
     try {
-      return lookup( componentIdClass.newInstance( ) );
+      return lookup( componentId.getClass( ) );
     } catch ( Exception ex ) {
-      LOG.error( ex , ex );
+      LOG.error( ex, ex );
       throw new RuntimeException( ex );
     }
-  }  
+  }
+  
+  public static ServiceBuilder<? extends ServiceConfiguration> lookup( Class<? extends ComponentId> componentId ) {
+    if ( !componentBuilders.containsKey( componentId ) ) {
+      Component comp = Components.lookup( componentId );
+      componentBuilders.put( componentId, new DummyServiceBuilder( comp.getComponentId( ) ) );
+    }
+    return componentBuilders.get( componentId );
+  }
+  
+  @TypeMapper
+  public enum ServiceBuilderMapper implements Function<ServiceConfiguration, ServiceBuilder<? extends ServiceConfiguration>> {
+    INSTANCE;
+    
+    @Override
+    public ServiceBuilder<? extends ServiceConfiguration> apply( final ServiceConfiguration input ) {
+      return ServiceBuilders.lookup( input.getComponentId( ) );
+    }
+    
+  }
+  
 }

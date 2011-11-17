@@ -176,15 +176,15 @@ public abstract class AccountMetadata<STATE extends Enum<STATE>> extends Abstrac
   }
   
   private String createUniqueName( ) {
-    return ( this.ownerAccountName != null && this.getDisplayName( ) != null )
-      ? this.ownerAccountName + ":" + this.getDisplayName( )
+    return ( this.ownerAccountNumber != null && this.getDisplayName( ) != null )
+      ? this.ownerAccountNumber + ":" + this.getDisplayName( )
       : null;
   }
   
   @Override
   public int hashCode( ) {
     final int prime = 31;
-    int result = super.hashCode( );
+    int result = 0;
     result = prime * result + ( ( this.uniqueName == null )
       ? 0
       : this.uniqueName.hashCode( ) );
@@ -195,9 +195,6 @@ public abstract class AccountMetadata<STATE extends Enum<STATE>> extends Abstrac
   public boolean equals( Object obj ) {
     if ( this == obj ) {
       return true;
-    }
-    if ( !super.equals( obj ) ) {
-      return false;
     }
     if ( getClass( ) != obj.getClass( ) ) {
       return false;

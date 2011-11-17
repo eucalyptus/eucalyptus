@@ -41,4 +41,14 @@ foreach $iface (@ifaces) {
     close(RFH);
 }
 
-print "OUTPUT $blkbytes $ifbytes\n";
+if ($blkbytes) {
+    $blkmbytes = int($blkbytes / 1024000);
+} else {
+    $blkmbytes = 0;
+}
+if ($ifbytes) {
+    $ifmbytes = int($ifbytes / 1024000);
+} else {
+    $ifmbytes = 0;
+}
+print "OUTPUT $blkmbytes $ifmbytes\n";

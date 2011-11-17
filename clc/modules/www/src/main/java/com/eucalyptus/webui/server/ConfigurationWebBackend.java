@@ -32,8 +32,10 @@ import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.component.id.Walrus;
+import com.eucalyptus.config.ArbitratorConfiguration;
 import com.eucalyptus.config.StorageControllerConfiguration;
 import com.eucalyptus.config.WalrusConfiguration;
+import com.eucalyptus.empyrean.Empyrean.Arbitrator;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.event.EventFailedException;
@@ -86,6 +88,7 @@ public class ConfigurationWebBackend {
 	public static final String STORAGE_TYPE = "storage controller";
 	public static final String WALRUS_TYPE = "walrus";
 	public static final String VMWARE_BROKER_TYPE = "vmware broker";
+	public static final String ARBITRATOR_TYPE = "arbitrator";
 
 	public static final String DEFAULT_KERNEL = "Default kernel";
 	public static final String DEFAULT_RAMDISK = "Default ramdisk";
@@ -99,6 +102,8 @@ public class ConfigurationWebBackend {
 	public static final String PORT = "Port";
 	public static final String MAX_VLAN = "Max VLAN tag";
 	public static final String MIN_VLAN = "Min VLAN tag";
+
+	public static final String GATEWAY_HOST = "Gateway Host";
 
 	public static final String COMPONENT_PROPERTY_TYPE_KEY_VALUE = "KEYVALUE";
 	public static final String COMPONENT_PROPERTY_TYPE_KEY_VALUE_HIDDEN = "KEYVALUEHIDDEN";
@@ -127,7 +132,7 @@ public class ConfigurationWebBackend {
 		CLOUD_CONFIG_EXTRA_FIELD_DESCS.add( new SearchResultFieldDesc( "defaultKernel", DEFAULT_KERNEL, false, "0px", TableDisplay.NONE, Type.TEXT, true, false ) );
 		CLOUD_CONFIG_EXTRA_FIELD_DESCS.add( new SearchResultFieldDesc( "defaultRamdisk", DEFAULT_RAMDISK, false, "0px", TableDisplay.NONE, Type.TEXT, true, false ) );
 		CLOUD_CONFIG_EXTRA_FIELD_DESCS.add( new SearchResultFieldDesc( "doDynamicPublicAddresses", ENABLE_DYNAMIC_PUBLIC_ADDRESSES, false, "0px", TableDisplay.NONE, Type.BOOLEAN, true, false ) );
-		CLOUD_CONFIG_EXTRA_FIELD_DESCS.add( new SearchResultFieldDesc( "maxUserPublicAddresses", MAX_USER_PUBLIC_ADDRESSES, false, "0px", TableDisplay.NONE, Type.TEXT, true, false ) );
+		//CLOUD_CONFIG_EXTRA_FIELD_DESCS.add( new SearchResultFieldDesc( "maxUserPublicAddresses", MAX_USER_PUBLIC_ADDRESSES, false, "0px", TableDisplay.NONE, Type.TEXT, true, false ) );
 		CLOUD_CONFIG_EXTRA_FIELD_DESCS.add( new SearchResultFieldDesc( "systemReservedPublicAddresses", SYSTEM_RESERVED_PUBLIC_ADDRESSES, false, "0px", TableDisplay.NONE, Type.TEXT, true, false ) );
 	}
 	// Cluster config extra fields
@@ -135,6 +140,11 @@ public class ConfigurationWebBackend {
 	static {
 		CLUSTER_CONFIG_EXTRA_FIELD_DESCS.add( new SearchResultFieldDesc( "minVlan", MIN_VLAN, false, "0px", TableDisplay.NONE, Type.TEXT, true, false ) );
 		CLUSTER_CONFIG_EXTRA_FIELD_DESCS.add( new SearchResultFieldDesc( "maxVlan", MAX_VLAN, false, "0px", TableDisplay.NONE, Type.TEXT, true, false ) );
+	}
+
+	public static final ArrayList<SearchResultFieldDesc> ARBITRATOR_CONFIG_EXTRA_FIELD_DESCS = Lists.newArrayList( );
+	static {
+		ARBITRATOR_CONFIG_EXTRA_FIELD_DESCS.add( new SearchResultFieldDesc( "gatewayHost", GATEWAY_HOST, false, "0px", TableDisplay.NONE, Type.TEXT, true, false ) );
 	}
 
 	public static final String SC_DEFAULT_NAME = "sc-default";
@@ -163,7 +173,6 @@ public class ConfigurationWebBackend {
 		result.addField( ImageConfiguration.getInstance( ).getDefaultKernelId( ) );           // default kernel
 		result.addField( ImageConfiguration.getInstance( ).getDefaultRamdiskId( ) );          // default ramdisk
 		result.addField( AddressingConfiguration.getInstance( ).getDoDynamicPublicAddresses( ).toString( ) );// enable dynamic public addresses
-		result.addField( AddressingConfiguration.getInstance( ).getMaxUserPublicAddresses( ).toString( ) ); // max public addresses per user
 		result.addField( AddressingConfiguration.getInstance( ).getSystemReservedPublicAddresses( ).toString( ) ); // system reserved addresses
 	}
 
@@ -173,7 +182,7 @@ public class ConfigurationWebBackend {
 	public static List<SearchResultRow> getCloudConfigurations( ) {
 		List<SearchResultRow> results = Lists.newArrayList( );
 		SystemConfiguration sysConf = SystemConfiguration.getSystemConfiguration( );
-		NavigableSet<ServiceConfiguration> configs = Components.lookup(Eucalyptus.class).lookupServiceConfigurations();
+		NavigableSet<ServiceConfiguration> configs = Components.lookup(Eucalyptus.class).services();
 		for ( ServiceConfiguration c : configs ) {
 			SearchResultRow row = new SearchResultRow( );
 			// Set the extra field descs
@@ -249,14 +258,6 @@ public class ConfigurationWebBackend {
 					try {
 						Integer val = Integer.parseInt( input.getField( n++ ) );
 						if ( val > 0 ) {
-							t.setMaxUserPublicAddresses( val );
-						}
-					} catch ( Exception e ) {
-						LOG.error( e, e );
-					}
-					try {
-						Integer val = Integer.parseInt( input.getField( n++ ) );
-						if ( val > 0 ) {
 							t.setSystemReservedPublicAddresses( val );
 						}
 					} catch ( Exception e ) {
@@ -291,7 +292,7 @@ public class ConfigurationWebBackend {
 	public static List<SearchResultRow> getClusterConfigurations( ) {
 		List<SearchResultRow> results = Lists.newArrayList( );
 		HashMap<String, List<String>> configProps = new HashMap<String, List<String>>();
-		NavigableSet<ServiceConfiguration> configs = Components.lookup(ClusterController.class).lookupServiceConfigurations();
+		NavigableSet<ServiceConfiguration> configs = Components.lookup(ClusterController.class).services();
 		for (ServiceConfiguration c : configs ) {
 			if (!configProps.containsKey(c.getPartition())) {
 				//This is bad. We should never directly have to cast
@@ -333,7 +334,7 @@ public class ConfigurationWebBackend {
 		} catch ( Exception e ) { }
 	}
 
-	
+
 	private static void serializeVMwareBrokerConfiguration( ServiceConfiguration serviceConf, SearchResultRow result ) {
 		// Common
 		result.addField( makeConfigId( serviceConf.getName( ), VMWARE_BROKER_TYPE ) );
@@ -350,12 +351,51 @@ public class ConfigurationWebBackend {
 	 */
 	public static List<SearchResultRow> getVMwareBrokerConfigurations( ) {
 		List<SearchResultRow> results = Lists.newArrayList( );
-		NavigableSet<ServiceConfiguration> configs = Components.lookup(VMwareBroker.class).lookupServiceConfigurations();
+		NavigableSet<ServiceConfiguration> configs = Components.lookup(VMwareBroker.class).services();
 		for (ServiceConfiguration c : configs ) {
 			SearchResultRow row = new SearchResultRow( );
 			serializeVMwareBrokerConfiguration( c, row );
 			results.add( row );
 
+		}
+		return results;
+	}
+
+	private static void serializeArbitratorConfiguration( ServiceConfiguration serviceConf, String gatewayHost, SearchResultRow result ) {
+		// Common
+		result.addField( makeConfigId( serviceConf.getName( ), ARBITRATOR_TYPE ) );
+		result.addField( serviceConf.getName( ) );
+		result.addField( serviceConf.getPartition( ) );
+		result.addField( ARBITRATOR_TYPE );
+		result.addField( serviceConf.getHostName( ) );
+		result.addField( serviceConf.getPort( ) == null ? null : serviceConf.getPort( ).toString( ) );
+		result.addField( serviceConf.lookupState().toString( ) );
+		result.addField( gatewayHost );
+	}
+
+	private static void deserializeArbitratorConfiguration( ServiceConfiguration serviceConf, SearchResultRow input ) {
+		ArbitratorConfiguration arbConfig = ( ArbitratorConfiguration ) serviceConf;//NOTE: depending on referencing the specific configuration type is not a safe assumption as that is a component-private type
+		int i = COMMON_FIELD_DESCS.size( );
+		try {
+			String val = input.getField(i++);
+			arbConfig.setGatewayHost(val);
+		} catch ( Exception e ) { 
+			LOG.error(e, e);
+		}
+	}
+
+	/**
+	 * @return the list of Arbitrator configurations for UI display.
+	 */
+	public static List<SearchResultRow> getArbitratorConfigurations( ) {
+		List<SearchResultRow> results = Lists.newArrayList( );
+		NavigableSet<ServiceConfiguration> configs = Components.lookup(Arbitrator.class).services();
+		for (ServiceConfiguration c : configs ) {
+			ArbitratorConfiguration arbConfig = (ArbitratorConfiguration) c;
+			SearchResultRow row = new SearchResultRow( );
+			row.setExtraFieldDescs( ARBITRATOR_CONFIG_EXTRA_FIELD_DESCS );
+			serializeArbitratorConfiguration( c, arbConfig.getGatewayHost(), row );
+			results.add( row );
 		}
 		return results;
 	}
@@ -368,7 +408,7 @@ public class ConfigurationWebBackend {
 	public static void setClusterConfiguration( final SearchResultRow input ) throws EucalyptusServiceException {
 		try {
 			//set props for all in the same partition
-			NavigableSet<ServiceConfiguration> configs = Components.lookup(ClusterController.class).lookupServiceConfigurations();
+			NavigableSet<ServiceConfiguration> configs = Components.lookup(ClusterController.class).services();
 			for ( ServiceConfiguration c : configs ) {
 				if (input.getField(2).equals(c.getPartition())) {
 					deserializeClusterConfiguration( c, input );
@@ -389,6 +429,28 @@ public class ConfigurationWebBackend {
 	 */
 	public static void setVMwareBrokerConfiguration( final SearchResultRow input ) throws EucalyptusServiceException {
 		//Do nothing for now. Revisit.
+	}
+
+	/**
+	 * Set the Arbitrator configuration using the UI input.
+	 * 
+	 * @param input
+	 */
+	public static void setArbitratorConfiguration( final SearchResultRow input ) throws EucalyptusServiceException {
+		try {
+			//set props for all in the same partition
+			NavigableSet<ServiceConfiguration> configs = Components.lookup(Arbitrator.class).services();
+			for ( ServiceConfiguration c : configs ) {
+				if (input.getField(2).equals(c.getPartition())) {
+					deserializeArbitratorConfiguration( c, input );
+					EntityWrapper.get( c ).mergeAndCommit( c );
+				}
+			}
+		} catch ( Exception e ) {
+			LOG.error( "Failed to set arbitrator configuration" );
+			LOG.debug( e, e );
+			throw new EucalyptusServiceException( "Failed to set arbitrator configuration", e );
+		}
 	}
 
 	private static Type propertyTypeToFieldType( String propertyType ) {
@@ -468,7 +530,7 @@ public class ConfigurationWebBackend {
 		//StorageControllerConfiguration c;
 		HashMap<String, List<ComponentProperty>> configMap = new HashMap<String, List<ComponentProperty>> (); 
 
-		NavigableSet<ServiceConfiguration> configs = Components.lookup(Storage.class).lookupServiceConfigurations();
+		NavigableSet<ServiceConfiguration> configs = Components.lookup(Storage.class).services();
 		for ( ServiceConfiguration c : configs ) {
 			if(Component.State.ENABLED.equals(c.lookupState())) {
 				//send for config and add result row
@@ -525,7 +587,7 @@ public class ConfigurationWebBackend {
 		deserializeComponentProperties( properties, input, i );
 
 		//Get enabled component for partition. Send to enabled component corresponding to partition.
-		NavigableSet<ServiceConfiguration> configs = Components.lookup(Storage.class).lookupServiceConfigurations();
+		NavigableSet<ServiceConfiguration> configs = Components.lookup(Storage.class).services();
 		for ( ServiceConfiguration c : configs ) {
 			if ( partition.equals(c.getPartition()) && Component.State.ENABLED.equals(c.lookupState())) {
 				final UpdateStorageConfigurationType updateStorageConfiguration = new UpdateStorageConfigurationType( );
@@ -557,7 +619,7 @@ public class ConfigurationWebBackend {
 	public static List<SearchResultRow> getWalrusConfigurations( ) {
 		List<SearchResultRow> results = new ArrayList<SearchResultRow>( );
 		HashMap<String, List<ComponentProperty>> configMap = new HashMap<String, List<ComponentProperty>> (); 
-		NavigableSet<ServiceConfiguration> configs = Components.lookup(Walrus.class).lookupServiceConfigurations();
+		NavigableSet<ServiceConfiguration> configs = Components.lookup(Walrus.class).services();
 		for ( ServiceConfiguration c : configs ) {
 			if(Component.State.ENABLED.equals(c.lookupState())) {
 				//send for config and add result row
@@ -593,7 +655,7 @@ public class ConfigurationWebBackend {
 		ArrayList<ComponentProperty> properties = Lists.newArrayList( );
 		deserializeComponentProperties( properties, input, COMMON_FIELD_DESCS.size( ) );
 
-		NavigableSet<ServiceConfiguration> configs = Components.lookup(Walrus.class).lookupServiceConfigurations();
+		NavigableSet<ServiceConfiguration> configs = Components.lookup(Walrus.class).services();
 		for ( ServiceConfiguration c : configs ) {
 			if ( input.getField(2).equals(c.getPartition()) && Component.State.ENABLED.equals(c.lookupState())) {
 				UpdateWalrusConfigurationType updateWalrusConfiguration = new UpdateWalrusConfigurationType( );

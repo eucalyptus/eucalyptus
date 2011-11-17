@@ -174,6 +174,17 @@ class EucaConf(object):
                                action='append', type='string',
                                dest='dereg_nodes', metavar='"host host..."',
                                help='Remove nodes from EUCALYPTUS.')
+        self.parser.add_option('--register-arbitrator',
+                               action='callback',  callback=self.reg_callback,
+                               callback_kwargs={'needs' : ['partition_name',
+                                                           'component_name',
+                                                           'host_name']},
+                               help='Add new arbitrator to EUCALYPTUS.')
+        self.parser.add_option('--deregister-arbitrator',
+                               action='callback', callback=self.reg_callback,
+                               callback_kwargs={'needs' : ['partition_name',
+                                                           'component_name']},
+                               help='Remove arbitrator from EUCALYPTUS.')
         self.parser.add_option('--register-cloud',
                                action='callback',  callback=self.reg_callback,
                                callback_kwargs={'needs' : ['partition_name',
@@ -240,6 +251,9 @@ class EucaConf(object):
         self.parser.add_option('--list-clusters', action='store_true',
                                dest='list_clusters', default=False,
                                help='List registered CCs.')
+        self.parser.add_option('--list-arbitrators', action='store_true',
+                               dest='list_arbitrators', default=False,
+                               help='List registered arbitrators.')
         self.parser.add_option('--list-vmwarebrokers', action='store_true',
                                dest='list_vmwarebrokers', default=False,
                                help='List registered VMware brokers.')
@@ -380,7 +394,7 @@ class EucaConf(object):
         try:
             self.config = eucadmin.configfile.ConfigFile(filepath)
         except IOError:
-            self.warn('Unable to find config file: %s' % filepath)
+            self.warn('Unable to read config file: %s' % filepath)
             sys.exit(1)
 
     def warn(self, msg):
@@ -598,6 +612,11 @@ class EucaConf(object):
                       'eucadmin.describewalruses',
                       'DescribeWalruses')
 
+    def do_list_arbitrators(self):
+        self._do_list('list_arbitrators',
+                      'eucadmin.describearbitrators',
+                      'DescribeArbitrators')
+
     def do_list_clouds(self):
         self._do_list('list_clouds',
                       'eucadmin.describeeucalyptus',
@@ -673,10 +692,17 @@ class EucaConf(object):
                 path2 = os.path.join(path1, self.options.partition_name)
                 cls = boto.utils.find_class('eucadmin.synckeys', 'SyncKeys')
                 req = cls([path1, path2], path1,
-                          self.options.host_name, ['euca.p12'],
+                          self.options.host_name, ['euca.p12',
+                                                   'cloud-cert.pem',
+                                                   'cloud-pk.pem'],
                           use_rsync=(not self.options.no_rsync),
                           use_scp=(not self.options.no_scp))
                 req.sync()
+
+    def do_register_arbitrator(self):
+        if hasattr(self.options, 'register_arbitrator'):
+            self._do_register('eucadmin.registerarbitrator',
+                              'RegisterArbitrator', None)
 
     def do_register_cluster(self):
         if hasattr(self.options, 'register_cluster'):
@@ -775,6 +801,11 @@ class EucaConf(object):
         self._do_deregister('deregister_cloud',
                             'eucadmin.deregistereucalyptus',
                             'DeregisterEucalyptus')
+
+    def do_deregister_arbitrator(self):
+        self._do_deregister('deregister_arbitrator',
+                            'eucadmin.deregisterarbitrator',
+                            'DeregisterArbitrator')
 
     def do_deregister_cluster(self):
         self._do_deregister('deregister_cluster',

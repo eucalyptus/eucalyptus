@@ -1,4 +1,5 @@
-clc/modules/bootstrap/arguments.ggo
+clc/modules/bootstrap/src/main/native/arguments.ggo
+clc/modules/bootstrap/src/main/native/eucalyptus-cloud
 clc/target
 clc/bin
 clc/deps
@@ -10,6 +11,11 @@ autom4te.cache
 Makedefs
 config.log
 config.status
+clc/eucadmin/build/
+clc/eucadmin/setup.cfg
+clc/eucadmin/setup.cfg.template
+clc/eucadmin/bin/euca_conf
+clc/modules/authentication/conf/
 tools/euca_conf
 tools/eucalyptus-cloud
 tools/eucalyptus-nc
@@ -37,6 +43,8 @@ clc/modules/bootstrap/eucalyptus-cloud
 clc/modules/msgs/src/main/resources/msgs-binding.xml
 clc/modules/storage-controller/include/**
 clc/modules/storage-controller/lib
+clc/modules/storage-san/include/**
+clc/modules/storage-san/lib/
 clc/modules/www/build-war
 clc/modules/www/webapps
 clc/modules/www/conf/eucalyptus-web.properties

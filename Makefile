@@ -66,6 +66,7 @@ uninstall:
 clean:
 	@for subdir in $(SUBDIRS); do \
 		(cd $$subdir && $(MAKE) $@) || exit $$? ; done
+	@rm -f tags TAGS
 
 distclean: clean
 	@for subdir in $(SUBDIRS); do \

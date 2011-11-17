@@ -60,83 +60,82 @@
  *******************************************************************************/
 package com.eucalyptus.bootstrap;
 
-
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.id.Walrus;
-
+import com.eucalyptus.util.Exceptions;
 import edu.ucsb.eucalyptus.cloud.ws.WalrusControl;
 
-@Provides(Walrus.class)
-@RunDuring(Bootstrap.Stage.DatabaseInit)
-@DependsLocal(Walrus.class)
+@Provides( Walrus.class )
+@RunDuring( Bootstrap.Stage.DatabaseInit )
+@DependsLocal( Walrus.class )
 public class WalrusBootstrapper extends Bootstrapper {
-	private static Logger LOG = Logger.getLogger( WalrusBootstrapper.class );
-	private static WalrusBootstrapper singleton;
-
-	public static Bootstrapper getInstance( ) {
-		synchronized ( WalrusBootstrapper.class ) {
-			if ( singleton == null ) {
-				singleton = new WalrusBootstrapper( );
-				LOG.info( "Creating Walrus Bootstrapper instance." );
-			} else {
-				LOG.info( "Returning Walrus Bootstrapper instance." );
-			}
-		}
-		return singleton;
-	}
-
-	@Override
-	public boolean load() throws Exception {
-		WalrusControl.checkPreconditions();
-		return true;
-	}
-
-	@Override
-	public boolean start( ) throws Exception {
-		WalrusControl.configure();
-		return true;
-	}
-
-	/**
-	 * @see com.eucalyptus.bootstrap.Bootstrapper#enable()
-	 */
-	@Override
-	public boolean enable( ) throws Exception {
-		WalrusControl.enable();
-		return true;
-	}
-
-	/**
-	 * @see com.eucalyptus.bootstrap.Bootstrapper#stop()
-	 */
-	@Override
-	public boolean stop( ) throws Exception {
-		WalrusControl.stop();
-		return true;
-	}
-
-	/**
-	 * @see com.eucalyptus.bootstrap.Bootstrapper#destroy()
-	 */
-	@Override
-	public void destroy( ) throws Exception {}
-
-	/**
-	 * @see com.eucalyptus.bootstrap.Bootstrapper#disable()
-	 */
-	@Override
-	public boolean disable( ) throws Exception {
-		WalrusControl.disable();
-		return true;
-	}
-
-	/**
-	 * @see com.eucalyptus.bootstrap.Bootstrapper#check()
-	 */
-	@Override
-	public boolean check( ) throws Exception {
-		//check local storage
-		WalrusControl.check();
-		return true;
-	}
+  private static Logger             LOG = Logger.getLogger( WalrusBootstrapper.class );
+  private static WalrusBootstrapper singleton;
+  
+  public static Bootstrapper getInstance( ) {
+    synchronized ( WalrusBootstrapper.class ) {
+      if ( singleton == null ) {
+        singleton = new WalrusBootstrapper( );
+        LOG.info( "Creating Walrus Bootstrapper instance." );
+      } else {
+        LOG.info( "Returning Walrus Bootstrapper instance." );
+      }
+    }
+    return singleton;
+  }
+  
+  @Override
+  public boolean load( ) throws Exception {
+    WalrusControl.checkPreconditions( );
+    return true;
+  }
+  
+  @Override
+  public boolean start( ) throws Exception {
+    WalrusControl.configure( );
+    return true;
+  }
+  
+  /**
+   * @see com.eucalyptus.bootstrap.Bootstrapper#enable()
+   */
+  @Override
+  public boolean enable( ) throws Exception {
+    WalrusControl.enable( );
+    return true;
+  }
+  
+  /**
+   * @see com.eucalyptus.bootstrap.Bootstrapper#stop()
+   */
+  @Override
+  public boolean stop( ) throws Exception {
+    WalrusControl.stop( );
+    return true;
+  }
+  
+  /**
+   * @see com.eucalyptus.bootstrap.Bootstrapper#destroy()
+   */
+  @Override
+  public void destroy( ) throws Exception {}
+  
+  /**
+   * @see com.eucalyptus.bootstrap.Bootstrapper#disable()
+   */
+  @Override
+  public boolean disable( ) throws Exception {
+    WalrusControl.disable( );
+    return true;
+  }
+  
+  /**
+   * @see com.eucalyptus.bootstrap.Bootstrapper#check()
+   */
+  @Override
+  public boolean check( ) throws Exception {
+    //check local storage
+    WalrusControl.check( );
+    return true;
+  }
 }

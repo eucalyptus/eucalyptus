@@ -105,44 +105,28 @@ public class ServiceState implements StateMachine<ServiceConfiguration, Componen
     final TransitionAction<ServiceConfiguration> noop = Transitions.noop( );
     return new StateMachineBuilder<ServiceConfiguration, State, Transition>( this.parent, State.PRIMORDIAL ) {
       {
-        in( State.LOADED ).run( ServiceTransitions.StateCallbacks.ENDPOINT_START );
-        in( State.STOPPED ).run( ServiceTransitions.StateCallbacks.ENDPOINT_STOP );
-        /** GRZE:TODO: there seems to be a missing case for cleaning up deregistered components: e.g., in( State.STOPPED ).run( ServiceTransitions.StateCallbacks.PROPERTIES_REMOVE ) ) ?!?!? but not that. **/
+        /**
+         * GRZE:TODO: there seems to be a missing case for cleaning up deregistered components:
+         * e.g., in( State.STOPPED ).run( ServiceTransitions.StateCallbacks.PROPERTIES_REMOVE ) )
+         * ?!?!? but not that.
+         **/
         from( State.PRIMORDIAL ).to( State.INITIALIZED ).error( State.BROKEN ).on( Transition.INITIALIZING ).run( noop );
         from( State.PRIMORDIAL ).to( State.BROKEN ).error( State.BROKEN ).on( Transition.FAILED_TO_PREPARE ).run( noop );
-        from( State.INITIALIZED ).to( State.LOADED ).error( State.BROKEN ).on( Transition.LOADING ).run( ServiceTransitions.TransitionActions.LOAD );
-        from( State.LOADED ).to( State.NOTREADY ).error( State.BROKEN ).on( Transition.STARTING ).addListener( ServiceTransitions.StateCallbacks.FIRE_START_EVENT ).run( ServiceTransitions.TransitionActions.START );
-        from( State.NOTREADY ).to( State.DISABLED ).error( State.NOTREADY ).on( Transition.READY_CHECK ).addListener( ServiceTransitions.StateCallbacks.PROPERTIES_ADD ).run( ServiceTransitions.TransitionActions.CHECK );
-        from( State.DISABLED ).to( State.ENABLED ).error( State.NOTREADY ).on( Transition.ENABLING ).addListener( ServiceTransitions.StateCallbacks.SERVICE_CONTEXT_RESTART ).addListener( ServiceTransitions.StateCallbacks.FIRE_ENABLE_EVENT ).run( ServiceTransitions.TransitionActions.ENABLE );
-        from( State.DISABLED ).to( State.STOPPED ).error( State.NOTREADY ).on( Transition.STOPPING ).addListener( ServiceTransitions.StateCallbacks.FIRE_STOP_EVENT ).run( ServiceTransitions.TransitionActions.STOP );
-        from( State.NOTREADY ).to( State.STOPPED ).error( State.NOTREADY ).on( Transition.STOPPING_NOTREADY ).addListener( ServiceTransitions.StateCallbacks.FIRE_STOP_EVENT ).run( ServiceTransitions.TransitionActions.STOP );
-        from( State.DISABLED ).to( State.DISABLED ).error( State.NOTREADY ).on( Transition.DISABLED_CHECK ).addListener( ServiceTransitions.StateCallbacks.PROPERTIES_ADD ).run( ServiceTransitions.TransitionActions.CHECK );
-        from( State.ENABLED ).to( State.DISABLED ).error( State.NOTREADY ).on( Transition.DISABLING ).addListener( ServiceTransitions.StateCallbacks.SERVICE_CONTEXT_RESTART ).addListener( ServiceTransitions.StateCallbacks.FIRE_DISABLE_EVENT ).run( ServiceTransitions.TransitionActions.DISABLE );
-        from( State.ENABLED ).to( State.ENABLED ).error( State.NOTREADY ).on( Transition.ENABLED_CHECK ).addListener( ServiceTransitions.StateCallbacks.PROPERTIES_ADD ).run( ServiceTransitions.TransitionActions.CHECK );
-        from( State.STOPPED ).to( State.INITIALIZED ).error( State.BROKEN ).on( Transition.DESTROYING ).run( ServiceTransitions.TransitionActions.DESTROY );
-        from( State.BROKEN ).to( State.INITIALIZED ).error( State.BROKEN ).on( Transition.RELOADING ).run( noop );
+        from( State.INITIALIZED ).to( State.LOADED ).error( State.BROKEN ).on( Transition.LOAD ).run( ServiceTransitions.TransitionActions.LOAD );
+        from( State.LOADED ).to( State.NOTREADY ).error( State.BROKEN ).on( Transition.START ).addListener( ServiceTransitions.StateCallbacks.FIRE_STATE_EVENT ).addListener( ServiceTransitions.StateCallbacks.PROPERTIES_ADD ).run( ServiceTransitions.TransitionActions.START );
+        from( State.NOTREADY ).to( State.DISABLED ).error( State.NOTREADY ).on( Transition.READY_CHECK ).addListener( ServiceTransitions.StateCallbacks.STATIC_PROPERTIES_ADD ).addListener( ServiceTransitions.StateCallbacks.PROPERTIES_ADD ).run( ServiceTransitions.TransitionActions.CHECK );
+        from( State.DISABLED ).to( State.ENABLED ).error( State.NOTREADY ).on( Transition.ENABLE ).addListener( ServiceTransitions.StateCallbacks.FIRE_STATE_EVENT ).run( ServiceTransitions.TransitionActions.ENABLE );
+        from( State.DISABLED ).to( State.STOPPED ).error( State.NOTREADY ).on( Transition.STOP ).addListener( ServiceTransitions.StateCallbacks.FIRE_STATE_EVENT ).run( ServiceTransitions.TransitionActions.STOP );
+        from( State.NOTREADY ).to( State.STOPPED ).error( State.NOTREADY ).on( Transition.STOPPING_NOTREADY ).addListener( ServiceTransitions.StateCallbacks.FIRE_STATE_EVENT ).run( ServiceTransitions.TransitionActions.STOP );
+        from( State.DISABLED ).to( State.DISABLED ).error( State.NOTREADY ).on( Transition.DISABLED_CHECK ).addListener( ServiceTransitions.StateCallbacks.STATIC_PROPERTIES_ADD ).run( ServiceTransitions.TransitionActions.CHECK );
+        from( State.ENABLED ).to( State.DISABLED ).error( State.NOTREADY ).on( Transition.DISABLE ).addListener( ServiceTransitions.StateCallbacks.FIRE_STATE_EVENT ).run( ServiceTransitions.TransitionActions.DISABLE );
+        from( State.ENABLED ).to( State.ENABLED ).error( State.NOTREADY ).on( Transition.ENABLED_CHECK ).addListener( ServiceTransitions.StateCallbacks.STATIC_PROPERTIES_ADD ).run( ServiceTransitions.TransitionActions.CHECK );
+        from( State.STOPPED ).to( State.INITIALIZED ).error( State.BROKEN ).on( Transition.DESTROY ).run( ServiceTransitions.TransitionActions.DESTROY );
+        from( State.BROKEN ).to( State.STOPPED ).error( State.BROKEN ).on( Transition.STOPPING_BROKEN ).run( noop );
+        from( State.BROKEN ).to( State.INITIALIZED ).error( State.BROKEN ).on( Transition.RELOAD ).run( noop );
+        from( State.STOPPED ).to( State.PRIMORDIAL ).error( State.BROKEN ).on( Transition.REMOVING ).run( noop );//TODO:GRZE: handle deregistering transition here.
       }
     }.newAtomicMarkedState( );
-  }
-  
-  @Override
-  public CheckedListenableFuture<ServiceConfiguration> transitionByName( Transition transition ) throws IllegalStateException, NoSuchElementException, ExistingTransitionException {
-    if ( !this.parent.lookupComponent( ).isAvailableLocally( ) ) {
-      throw new IllegalStateException( "Failed to perform service transition " + transition + " for " + this.parent.getName( )
-                                       + " because it is not available locally." );
-    }
-    try {
-      return this.stateMachine.transitionByName( transition );
-    } catch ( IllegalStateException ex ) {
-      throw Exceptions.trace( ex );
-    } catch ( NoSuchElementException ex ) {
-      throw Exceptions.trace( ex );
-    } catch ( ExistingTransitionException ex ) {
-      throw ex;
-    } catch ( Exception ex ) {
-      throw Exceptions.trace( new RuntimeException( "Failed to perform service transition " + transition + " for " + this.parent.getName( ) + ".\nCAUSE: "
-                                                    + ex.getMessage( ) + "\nSTATE: " + this.stateMachine.toString( ), ex ) );
-    }
   }
   
   @Override
@@ -159,21 +143,6 @@ public class ServiceState implements StateMachine<ServiceConfiguration, Componen
       throw Exceptions.trace( new RuntimeException( "Failed to perform transition from " + this.getState( ) + " to " + state + " for " + this.parent.getName( )
                                                     + ".\nCAUSE: " + ex.getMessage( ) + "\nSTATE: " + this.stateMachine.toString( ), ex ) );
     }
-  }
-  
-  public CheckedListenableFuture<ServiceConfiguration> transitionSelf( ) {
-    try {
-      if ( this.checkTransition( Transition.READY_CHECK ) ) {//this is a special case of a transition which does not return to itself on a successful check
-        return this.transitionByName( Transition.READY_CHECK );
-      } else {
-        return this.transition( this.getState( ) );
-      }
-    } catch ( IllegalStateException ex ) {
-      LOG.error( Exceptions.filterStackTrace( ex ) );
-    } catch ( NoSuchElementException ex ) {
-      LOG.error( Exceptions.filterStackTrace( ex ) );
-    } catch ( ExistingTransitionException ex ) {}
-    return Futures.predestinedFuture( this.parent );
   }
   
   /**
@@ -193,7 +162,7 @@ public class ServiceState implements StateMachine<ServiceConfiguration, Componen
   }
   
   protected boolean checkTransition( Transition transition ) {
-    return this.parent.lookupComponent( ).isAvailableLocally( ) && this.stateMachine.isLegalTransition( transition );
+    return this.parent.getComponentId( ).isAvailableLocally( ) && this.stateMachine.isLegalTransition( transition );
   }
   
   @Override
@@ -214,6 +183,11 @@ public class ServiceState implements StateMachine<ServiceConfiguration, Componen
   @Override
   public ServiceConfiguration getParent( ) {
     return this.stateMachine.getParent( );
+  }
+
+  @Override
+  public String toString( ) {
+    return this.parent.getFullName( ).toString( );
   }
   
 }

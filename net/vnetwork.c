@@ -111,6 +111,10 @@ int vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, int
     if (!strcmp(mode, "SYSTEM")) {
       if (role == CLC) {
       } else if (role == NC) {
+	if (!bridgedev || check_bridge(bridgedev)) {
+	  logprintfl (EUCAERROR, "vnetInit(): cannot verify VNET_BRIDGE(%s), please check parameters and bridge device\n", SP(bridgedev));
+	  return(1);
+	}
       }
     } else if (!strcmp(mode, "STATIC") || !strcmp(mode, "STATIC-DYNMAC")) {
       if (role == CLC) {
@@ -179,6 +183,7 @@ int vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, int
       } else if (role == NC) {
       }
     } else {
+      logprintfl(EUCAERROR, "vnetInit(): invalid networking mode %s, please check VNET_MODE parameter\n", SP(mode));
       return(1);
     }
     
@@ -255,8 +260,8 @@ int vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, int
 	  // not big enough
 	  vnetconfig->max_vlan = (0xFFFFFFFF - nm) / (numaddrs+1);
 	  logprintfl(EUCAWARN, "vnetInit(): private network is not large enough to support all vlans, restricting to max vlan '%d'\n", vnetconfig->max_vlan);
-	  if (vnetconfig->max_vlan < 10) {
-	    logprintfl(EUCAWARN, "vnetInit(): default eucalyptus cloud controller starts networks at vlan 10, instances will not run with current max vlan '%d'.  Either increase the size of your private subnet (SUBNET/NETMASK) or decrease the number of addrs per group (NUMADDRS).\n", vnetconfig->max_vlan);
+	  if (vnetconfig->max_vlan < 2) {
+	    logprintfl(EUCAWARN, "vnetInit(): Instances will not run with current max vlan '%d'.  Either increase the size of your private subnet (VNET_SUBNET/VNET_NETMASK) or decrease the number of addrs per group (VNET_ADDRSPERNET).\n", vnetconfig->max_vlan);
 	  }
 	} else {
 	  vnetconfig->max_vlan = NUMBER_OF_VLANS;
@@ -389,6 +394,31 @@ int vnetSetMetadataRedirect(vnetConfig *vnetconfig) {
   }
   
   //  if (network) free(network);
+
+  return(0);
+}
+
+int vnetUnsetMetadataRedirect(vnetConfig *vnetconfig) {
+  char cmd[256];
+  int rc;
+
+  if (!vnetconfig) {
+    logprintfl(EUCAERROR, "vnetUnsetMetadataRedirect(): bad input params\n");
+    return(1);
+  }
+
+  snprintf(cmd, 256, "%s/usr/lib/eucalyptus/euca_rootwrap ip addr del 169.254.169.254 scope link dev %s", vnetconfig->eucahome, vnetconfig->privInterface);
+  rc = system(cmd);
+  
+  if (vnetconfig->cloudIp != 0) {
+    char *ipbuf;
+    ipbuf = hex2dot(vnetconfig->cloudIp);
+    snprintf(cmd, 256, "-D PREROUTING -d 169.254.169.254 -p tcp -m tcp --dport 80 -j DNAT --to-destination %s:8773", ipbuf);
+    if (ipbuf) free(ipbuf);
+    rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
+  } else {
+    logprintfl(EUCAWARN, "vnetUnsetMetadataRedirect(): cloudIp is not yet set, not installing redirect rule\n");
+  }
 
   return(0);
 }
@@ -1782,7 +1812,9 @@ int vnetStartNetworkManaged(vnetConfig *vnetconfig, int vlan, char *uuid, char *
           logprintfl(EUCAERROR, "vnetStartNetworkManaged(): could not create new bridge %s\n", newbrname);
           return(1);
         }
-        snprintf(cmd, MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap brctl stp %s on", vnetconfig->eucahome, newbrname);
+	// DAN temporary
+	//        snprintf(cmd, MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap brctl stp %s on", vnetconfig->eucahome, newbrname);
+        snprintf(cmd, MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap brctl stp %s off", vnetconfig->eucahome, newbrname);
         rc = system(cmd);
         if (rc) {
           logprintfl(EUCAWARN, "vnetStartNetworkManaged(): could not enable stp on bridge %s\n", newbrname);
@@ -2241,7 +2273,8 @@ int vnetStopNetworkManaged(vnetConfig *vnetconfig, int vlan, char *userName, cha
 
     snprintf(newdevname, 32, "%s.%d", vnetconfig->privInterface, vlan);
     rc = check_device(newdevname);
-    if (!rc) {
+    // DAN temporary for QA
+    if (0 && !rc) {
       snprintf(cmd, MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap ip link set dev %s down", vnetconfig->eucahome, newdevname);
       rc = system(cmd);
       if (rc) {

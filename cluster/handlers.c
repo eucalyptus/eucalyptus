@@ -1801,7 +1801,7 @@ int ccInstance_to_ncInstance(ccInstance *dst, ncInstance *src) {
   safe_strncpy(dst->platform, src->platform, 64);
   safe_strncpy(dst->bundleTaskStateName, src->bundleTaskStateName, 64);
   safe_strncpy(dst->createImageTaskStateName, src->createImageTaskStateName, 64);
-  safe_strncpy(dst->userData, src->userData, 4096);
+  safe_strncpy(dst->userData, src->userData, 16384);
   safe_strncpy(dst->state, src->stateName, 16);
   dst->ts = src->launchTime;
 
@@ -2195,7 +2195,7 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
 	
 	pid = fork();
 	if (pid == 0) {
-	  time_t startRun;
+	  time_t startRun, ncRunTimeout;
 
 	  sem_mywait(RESCACHE);
 	  if (res->running > 0) {
@@ -2205,11 +2205,18 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
 
 	  ret=0;
 	  logprintfl(EUCAINFO,"RunInstances(): sending run instance: node=%s instanceId=%s emiId=%s mac=%s privIp=%s pubIp=%s vlan=%d networkIdx=%d key=%.32s... mem=%d disk=%d cores=%d\n", res->ncURL, instId, SP(amiId), ncnet.privateMac, ncnet.privateIp, ncnet.publicIp, ncnet.vlan, ncnet.networkIndex, SP(keyName), ncvm.mem, ncvm.disk, ncvm.cores);
+
 	  rc = 1;
 	  startRun = time(NULL);
-	  while(rc && ((time(NULL) - startRun) < config->wakeThresh)){
-            int clientpid;
+          if (config->schedPolicy == SCHEDPOWERSAVE) {
+            ncRunTimeout = config->wakeThresh;
+          } else {
+            ncRunTimeout = 15;
+          }
 
+          while(rc && ((time(NULL) - startRun) < ncRunTimeout)) {
+            int clientpid;
+	    
 	    // if we're running windows, and are an NC, create the pw/floppy locally
 	    if (strstr(platform, "windows") && !strstr(res->ncURL, "EucalyptusNC")) {
 	      //if (strstr(platform, "windows")) {
@@ -2766,6 +2773,10 @@ int ccIsDisabled() {
 
 int ccChangeState(int newstate) {
   if (config) {
+    if (config->ccState == SHUTDOWNCC) {
+      // CC is to be shut down, there is no transition out of this state
+      return(0);
+    }
     char localState[32];
     config->ccLastState = config->ccState;
     config->ccState = newstate;
@@ -2789,7 +2800,7 @@ int ccGetStateString(char *statestr, int n) {
     snprintf(statestr, n, "INITIALIZED");
   } else if (config->ccState == PRIMORDIAL) {
     snprintf(statestr, n, "PRIMORDIAL");
-  } else if (config->ccState == NOTREADY) {
+  } else if (config->ccState == NOTREADY || config->ccState == SHUTDOWNCC) {
     snprintf(statestr, n, "NOTREADY");
   }
   return(0);
@@ -2804,7 +2815,11 @@ int ccCheckState() {
     return(1);
   }
   // check local configuration
-  
+  if (config->ccState == SHUTDOWNCC) {
+    logprintfl(EUCAINFO, "ccCheckState(): this cluster controller marked as shut down\n");
+    ret++;
+  }
+
   // configuration
   {
     char cmd[MAX_PATH];
@@ -3005,7 +3020,7 @@ void *monitor_thread(void *in) {
 
     shawn();
     
-    logprintfl(EUCADEBUG, "monitor_thread(): done\n");
+    logprintfl(EUCADEBUG, "monitor_thread(localState=%s): done\n", config->ccStatus.localState);
     //sleep(config->ncPollingFrequency);
     ncRefresh = clcRefresh = 0;
     sleep(1);
@@ -3188,8 +3203,12 @@ int update_config(void) {
     // stat the config file, update modification time
     rc = stat(config->configFiles[i], &statbuf);
     if (!rc) {
-      if (statbuf.st_mtime > configMtime) {
-	configMtime = statbuf.st_mtime;
+      if (statbuf.st_mtime > 0 || statbuf.st_ctime > 0) {
+	if (statbuf.st_ctime > statbuf.st_mtime) {
+	  configMtime = statbuf.st_ctime;
+	} else {
+	  configMtime = statbuf.st_mtime;
+	}
       }
     }
   }
@@ -3200,6 +3219,7 @@ int update_config(void) {
   }
   
   // check to see if the configfile has changed
+  logprintfl(EUCADEBUG, "update_config(): current mtime=%d, stored mtime=%d\n", configMtime, config->configMtime);
   if (config->configMtime != configMtime) {
     rc = readConfigFile(config->configFiles, 2);
     if (rc) {
@@ -3314,10 +3334,7 @@ int init_config(void) {
   logprintfl(EUCADEBUG, "init_config(): called.\n");
   logprintfl(EUCADEBUG, "init_config(): initializing CC configuration\n");  
 
-  rc = readConfigFile(configFiles, 2);
-  if (rc) {
-    logprintfl(EUCAERROR, "init_config(): cannot read config file!\n");
-  }
+  readConfigFile(configFiles, 2);
   
   // DHCP configuration section
   {
@@ -3488,7 +3505,7 @@ int init_config(void) {
     
     sem_mywait(VNET);
     
-    vnetInit(vnetconfig, pubmode, eucahome, netPath, CLC, pubInterface, privInterface, numaddrs, pubSubnet, pubSubnetMask, pubBroadcastAddress, pubDNS, pubDomainname, pubRouter, daemon, dhcpuser, NULL, localIp, macPrefix);
+    int ret = vnetInit(vnetconfig, pubmode, eucahome, netPath, CLC, pubInterface, privInterface, numaddrs, pubSubnet, pubSubnetMask, pubBroadcastAddress, pubDNS, pubDomainname, pubRouter, daemon, dhcpuser, NULL, localIp, macPrefix);
     if (pubSubnet) free(pubSubnet);
     if (pubSubnetMask) free(pubSubnetMask);
     if (pubBroadcastAddress) free(pubBroadcastAddress);
@@ -3503,6 +3520,12 @@ int init_config(void) {
     if (pubInterface) free(pubInterface);
     if (macPrefix) free(macPrefix);
     if (localIp) free(localIp);
+
+    if(ret > 0) {
+      sem_mypost(VNET);
+      sem_mypost(INIT);
+      return(1);
+    }
     
     vnetAddDev(vnetconfig, vnetconfig->privInterface);
 
@@ -3875,10 +3898,14 @@ int maintainNetworkState() {
     free(cloudIp2);
     
     if (config->cloudIp && (config->cloudIp != vnetconfig->cloudIp)) {
+      rc = vnetUnsetMetadataRedirect(vnetconfig);
+      if (rc) {
+	logprintfl(EUCAWARN, "maintainNetworkState(): failed to unset old metadata redirect\n");
+      }
       vnetconfig->cloudIp = config->cloudIp;
       rc = vnetSetMetadataRedirect(vnetconfig);
       if (rc) {
-	logprintfl(EUCAWARN, "maintainNetworkState(): failed to set metadata redirect\n");
+	logprintfl(EUCAWARN, "maintainNetworkState(): failed to set new metadata redirect\n");
       }
     }
 
@@ -4317,7 +4344,7 @@ int allocate_ccInstance(ccInstance *out, char *id, char *amiId, char *kernelId, 
     out->ts = ts;
     out->ncHostIdx = ncHostIdx;
     if (serviceTag) safe_strncpy(out->serviceTag, serviceTag, 64);
-    if (userData) safe_strncpy(out->userData, userData, 4096);
+    if (userData) safe_strncpy(out->userData, userData, 16384);
     if (launchIndex) safe_strncpy(out->launchIndex, launchIndex, 64);
     if (platform) safe_strncpy(out->platform, platform, 64);
     if (bundleTaskStateName) safe_strncpy(out->bundleTaskStateName, bundleTaskStateName, 64);
@@ -4937,6 +4964,7 @@ int readConfigFile(char configFiles[][MAX_PATH], int numFiles) {
       logprintfl(EUCAINFO, "readConfigFile(): read (%s=%s, default=%s)\n", configKeysRestart[i].key, SP(new), SP(configKeysRestart[i].defaultValue));
       if (configValuesRestart[i]) free(configValuesRestart[i]);
       configValuesRestart[i] = new;
+      ret++;
     }
   }
   configRestartLen = i;
@@ -4958,6 +4986,7 @@ int readConfigFile(char configFiles[][MAX_PATH], int numFiles) {
       logprintfl(EUCAINFO, "readConfigFile(): read (%s=%s, default=%s)\n", configKeysNoRestart[i].key, SP(new), SP(configKeysNoRestart[i].defaultValue));
       if (configValuesNoRestart[i]) free(configValuesNoRestart[i]);
       configValuesNoRestart[i] = new;
+      ret++;
     }
   }
   configNoRestartLen = i;

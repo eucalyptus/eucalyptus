@@ -64,10 +64,12 @@
 package com.eucalyptus.bootstrap;
 
 import java.net.InetAddress;
+import java.net.NetworkInterface;
 import java.net.UnknownHostException;
 import java.util.List;
 import org.apache.log4j.Logger;
 import com.eucalyptus.system.SubDirectory;
+import com.eucalyptus.util.Internets;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
 
@@ -108,6 +110,11 @@ public class BootstrapArgs {
   }
   
   static void init( ) {
+    try {
+      InetAddress.getByName( "eucalyptus.com" ).isReachable( NetworkInterface.getByInetAddress(Internets.localHostInetAddress( )), 64, 10000 );//GRZE:attempted hack to allocate raw socket
+    } catch ( Exception ex2 ) {
+      LOG.error( ex2 , ex2 );
+    }
     bindAddrs.addAll( BootstrapArgs.parseMultipleArgs( "euca.bind.addr", BindAddressValidator.INSTANCE ) );
     bootstrapHosts.addAll( BootstrapArgs.parseMultipleArgs( "euca.bootstrap.host", BindAddressValidator.INSTANCE ) );
     initSystem = System.getProperty( "euca.initialize" ) != null;
@@ -143,7 +150,7 @@ public class BootstrapArgs {
     return retList;
     
   }
-
+  
   public static Boolean isCloudController( ) {
     return SubDirectory.DB.hasChild( "data", "ibdata1" ) && !Boolean.TRUE.valueOf( System.getProperty( "euca.force.remote.bootstrap" ) );
   }

@@ -8,5 +8,6 @@ public interface LogView {
   }
   
   void log( LogType type, String content );
+  void clear( );
   
 }
