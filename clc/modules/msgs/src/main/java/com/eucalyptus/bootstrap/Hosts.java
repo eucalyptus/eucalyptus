@@ -208,19 +208,22 @@ public class Hosts {
                 + ( input.getComponentId( ).isAlwaysLocal( ) ? "bootstrap" : "cloud" )
                 + " services" + ( Hosts.isCoordinator( input.getInetAddress( ) ) ? " (coordinator)" : "" )
                 + ": " + input.getFullName( ) );
-      try {
-        return Topology.transition( goalState ).apply( input ).get( SERVICE_INITIALIZE_TIMEOUT, TimeUnit.MILLISECONDS );
-      } catch ( final ExecutionException ex ) {
-        LOG.error( ex );
-        Logs.extreme( ).error( ex, ex );
-      } catch ( final InterruptedException ex ) {
-        Thread.currentThread( ).interrupt( );
-        Exceptions.trace( ex.getCause( ) );
-      } catch ( TimeoutException ex ) {
-        LOG.error( ex );
-        Logs.extreme( ).error( ex, ex );
+      if ( State.ENABLED.apply( input ) && !State.ENABLED.equals( goalState ) ) {
+        return input;
+      } else if ( State.DISABLED.equals( goalState ) && input.lookupState( ).ordinal( ) >= State.DISABLED.ordinal( ) ) {
+        return input;
+      } else {
+        try {
+          return ServiceTransitions.pathTo( input, goalState ).get( );
+        } catch ( final ExecutionException ex ) {
+          LOG.error( ex );
+          Logs.extreme( ).error( ex, ex );
+        } catch ( final InterruptedException ex ) {
+          Thread.currentThread( ).interrupt( );
+          Exceptions.trace( ex.getCause( ) );
+        }
+        return input;
       }
-      return input;
     }
   }
   
@@ -929,7 +932,7 @@ public class Hosts {
     }
     
   }
-
+  
   public static boolean isServiceLocal( final ServiceConfiguration parent ) {
     return parent.isVmLocal( ) || ( parent.isHostLocal( ) && isCoordinator( ) );
   }
