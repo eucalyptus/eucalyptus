@@ -262,6 +262,9 @@ public class Hosts {
       if ( !BootstrapArgs.isCloudController( ) && currentHost.hasBootstrapped( ) && Databases.shouldInitialize( ) ) {
         System.exit( 123 );
       }
+      if ( !Topology.isEnabled( Eucalyptus.class ) && Hosts.getCoordinator( ) != null ) {
+        BootstrapComponent.setup( Eucalyptus.class, Hosts.getCoordinator( ).getBindAddress( ) );
+      }
       if ( event.isAsserted( 15L ) ) {
         UpdateEntry.INSTANCE.apply( currentHost );
       }
@@ -361,15 +364,11 @@ public class Hosts {
           return false;
         } else {
           if ( input.hasBootstrapped( ) ) {
-            try {
-              setup( Empyrean.class, input.getBindAddress( ) );
-              if ( input.hasDatabase( ) ) {
-                setup( Eucalyptus.class, input.getBindAddress( ) );
-              }
-              return true;
-            } catch ( Exception ex ) {
-              LOG.error( ex, ex );
-              return false;
+            if ( input.hasDatabase( ) ) {
+              return setup( Empyrean.class, input.getBindAddress( ) )
+                && setup( Eucalyptus.class, input.getBindAddress( ) );
+            } else {
+              return setup( Empyrean.class, input.getBindAddress( ) );
             }
           } else {
             return false;
@@ -440,15 +439,18 @@ public class Hosts {
       }
     }
     
-    private static <T extends ComponentId> void setup( final Class<T> compId, final InetAddress addr ) {
+    private static <T extends ComponentId> boolean setup( final Class<T> compId, final InetAddress addr ) {
       try {
         final Function<ComponentId, ServiceConfiguration> initFunc = Functions.compose( SetupRemoteServiceConfigurations.INSTANCE,
                                                                                         initRemoteSetupConfigurations( addr ) );
         initFunc.apply( ComponentIds.lookup( compId ) );
         final Collection<ComponentId> deps = ShouldLoadRemote.findDependentComponents( compId, addr );
         Iterables.transform( deps, initFunc );
+        return true;
       } catch ( final Exception ex ) {
-        LOG.error( ex, ex );
+        LOG.error( ex );
+        Logs.extreme( ).error( ex, ex );
+        return false;
       }
     }
   }

@@ -608,10 +608,10 @@ public class ServiceTransitions {
       
       @Override
       public void fire( final ServiceConfiguration parent ) throws Exception {
-//        if ( State.NOTREADY.equals( parent.lookupComponent( ).getState( ) ) ) {
-//          parent.lookupComponent( ).check( );
-//          ServiceBuilders.lookup( parent.getComponentId( ) ).fireCheck( parent );
-//        }
+        if ( State.NOTREADY.equals( parent.lookupComponent( ).getState( ) ) ) {
+          parent.lookupComponent( ).check( );
+          ServiceBuilders.lookup( parent.getComponentId( ) ).fireCheck( parent );
+        }
         parent.lookupBootstrapper( ).disable( );
         ServiceBuilders.lookup( parent.getComponentId( ) ).fireDisable( parent );
       }
