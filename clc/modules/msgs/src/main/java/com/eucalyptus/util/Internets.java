@@ -102,6 +102,19 @@ public class Internets {
 //    return localHostAddrList;
 //  }
 //  
+  
+  public static boolean isReachable( InetAddress addr, int timeoutMillis ) throws IOException {
+    try {
+      timeoutMillis = timeoutMillis / 1000;
+      return ( Boolean ) Groovyness.eval( String.format( "ret = \"/bin/ping -W %d -c 1 %s\".execute( ); ret.waitFor(); ret.exitValue() == 0;",
+                                                         timeoutMillis,
+                                                         addr.getHostAddress( ) ) );
+    } catch ( ScriptExecutionFailedException ex ) {
+      Logs.extreme( ).error( ex, ex );
+      return addr.isReachable( timeoutMillis );
+    }
+  }
+  
   private static InetAddress determineLocalAddress( ) {
     InetAddress laddr = null;
     LOG.info( "Trying to determine local bind address based on cli (--bind-addr)... " );

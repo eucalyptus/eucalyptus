@@ -265,7 +265,7 @@ public class Components {
         final ComponentId c = component.getComponentId( );
         final boolean cloudLocal = BootstrapArgs.isCloudController( ) && c.isCloudLocal( ) && !c.isRegisterable( );
         final boolean isCloudItself = BootstrapArgs.isCloudController( ) && Eucalyptus.class.equals( c.getClass( ) );
-        final boolean alwaysLocal = c.isAlwaysLocal( );
+        final boolean alwaysLocal = c.isAlwaysLocal( ) && !c.isRegisterable( );
         final boolean isBootrapperItself = Empyrean.class.equals( c.getClass( ) );
         return cloudLocal || alwaysLocal || isBootrapperItself || isCloudItself;
       }
@@ -273,11 +273,11 @@ public class Components {
     BOOTSTRAP_ENABLE_LOCAL {
       @Override
       public boolean apply( final Component component ) {
-        final ComponentId compId = component.getComponentId( );
-        final boolean cloudLocal = BootstrapArgs.isCloudController( ) && compId.isCloudLocal( ) && !compId.isRegisterable( );
-        final boolean isCloudItself = BootstrapArgs.isCloudController( ) && Eucalyptus.class.equals( compId.getClass( ) );
-        final boolean alwaysLocal = compId.isAlwaysLocal( );
-        final boolean isBootrapperItself = Empyrean.class.equals( compId.getClass( ) );
+        final ComponentId c = component.getComponentId( );
+        final boolean cloudLocal = BootstrapArgs.isCloudController( ) && c.isCloudLocal( ) && !c.isRegisterable( );
+        final boolean isCloudItself = BootstrapArgs.isCloudController( ) && Eucalyptus.class.equals( c.getClass( ) );
+        final boolean alwaysLocal = c.isAlwaysLocal( ) && !c.isRegisterable( );
+        final boolean isBootrapperItself = Empyrean.class.equals( c.getClass( ) );
         return cloudLocal || alwaysLocal || isBootrapperItself || isCloudItself;
       }
     },
@@ -287,7 +287,7 @@ public class Components {
         final ComponentId c = component.getComponentId( );
         final boolean cloudLocal = c.isCloudLocal( ) && !c.isRegisterable( );
         final boolean isCloudItself = Eucalyptus.class.equals( c.getClass( ) );
-        final boolean alwaysLocal = c.isAlwaysLocal( );
+        final boolean alwaysLocal = c.isAlwaysLocal( ) && !c.isRegisterable( );
         final boolean isBootrapperItself = Empyrean.class.equals( c.getClass( ) );
         return cloudLocal || alwaysLocal || isBootrapperItself || isCloudItself;
       }

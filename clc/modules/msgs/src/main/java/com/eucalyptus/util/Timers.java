@@ -69,6 +69,18 @@ import org.apache.log4j.Logger;
 public class Timers {
   private static Logger LOG = Logger.getLogger( Timers.class );
   
+  public static <T> Callable<T> loggingWrapper( final Runnable run, final T returnValue ) {
+    return loggingWrapper( new Callable<T>( ) {
+      
+      @Override
+      public T call( ) throws Exception {
+        run.run( );
+        return returnValue;
+      }
+      
+    } );
+  }
+
   public static <T> Callable<T> loggingWrapper( final Callable<T> call ) {
     return new Callable<T>( ) {
       
@@ -77,7 +89,7 @@ public class Timers {
         long start = System.currentTimeMillis( );
         T res = call.call( );
         LOG.debug( call.toString( ) + ": completed in "
-                   + ( System.currentTimeMillis( ) - start ) );
+                   + ( System.currentTimeMillis( ) - start ) + " msec." );
         return res;
       }
       
