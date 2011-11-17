@@ -396,11 +396,8 @@ public class EmpyreanService {
         public boolean apply( final ServiceConfiguration input ) {
           if ( listAll ) {
             return true;
-          } else if ( input.getComponentId( ).isInternal( ) && listInternal
-                      && ( input.getPort( ) == -1 )
-              ? true
-                : Internets.testLocal( input.getHostName( ) ) ) {
-            return true;
+          } else if ( input.getComponentId( ).isInternal( ) && listInternal ) {
+            return Internets.testLocal( input.getHostName( ) );
           } else if ( input.getComponentId( ).isPublicService( ) ) {
             return true;
           } else if ( input.getComponentId( ).isAdminService( ) ) {
