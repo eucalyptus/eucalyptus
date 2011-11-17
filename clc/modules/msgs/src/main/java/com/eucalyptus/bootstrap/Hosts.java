@@ -97,7 +97,6 @@ import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
-import com.eucalyptus.component.ServiceTransitions;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.configurable.ConfigurableClass;
@@ -169,7 +168,7 @@ public class Hosts {
       @Override
       public ServiceConfiguration apply( final T input ) {
         Component component = Components.lookup( input );
-        final ServiceConfiguration config = !Internets.testLocal( addr ) ? component.initRemoteService( addr ) : component.initService( );
+        final ServiceConfiguration config = !Internets.testLocal( addr.getHostAddress( ) ) ? component.initRemoteService( addr ) : component.initService( );
         LOG.info( "Initialized service: " + config.getFullName( ) );
         return config;
       }
@@ -182,9 +181,7 @@ public class Hosts {
     public ServiceConfiguration apply( final ServiceConfiguration input ) {
       boolean inputIsLocal = Internets.testLocal( input.getHostName( ) );
       State goalState;
-      if ( !Bootstrap.isFinished( ) && input.isVmLocal( ) ) {
-        return input;
-      } else if ( !Bootstrap.isFinished( ) ) {
+      if ( !Bootstrap.isFinished( ) ) {
         goalState = ( State.LOADED.ordinal( ) < input.lookupState( ).ordinal( ) ? State.DISABLED : State.NOTREADY );
       } else if ( input.getComponentId( ).isAlwaysLocal( ) ) {
         goalState = State.ENABLED;
@@ -211,7 +208,7 @@ public class Hosts {
         return input;
       } else {
         try {
-          return ServiceTransitions.pathTo( input, goalState ).get( );
+          return Topology.transition( goalState ).apply( input ).get( );
         } catch ( final ExecutionException ex ) {
           LOG.error( ex );
           Logs.extreme( ).error( ex, ex );
@@ -421,7 +418,6 @@ public class Hosts {
           for ( final ComponentId c : ShouldLoadRemote.findDependentComponents( compClass, addr ) ) {
             try {
               final ServiceConfiguration dependsConfig = ServiceConfigurations.lookupByName( c.getClass( ), addr.getHostAddress( ) );
-//              ServiceTransitions.pathTo( dependsConfig, State.PRIMORDIAL ).get( );
               Topology.destroy( dependsConfig ).get( );
             } catch ( final Exception ex ) {
               LOG.error( ex );
