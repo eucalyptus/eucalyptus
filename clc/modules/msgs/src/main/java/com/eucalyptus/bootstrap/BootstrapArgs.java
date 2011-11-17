@@ -154,5 +154,9 @@ public class BootstrapArgs {
   public static Boolean isCloudController( ) {
     return SubDirectory.DB.hasChild( "data", "ibdata1" ) && !Boolean.TRUE.valueOf( System.getProperty( "euca.force.remote.bootstrap" ) );
   }
+
+  public static String debugTopology( ) {
+    return System.getProperty( "euca.noha.cloud" );
+  }
   
 }

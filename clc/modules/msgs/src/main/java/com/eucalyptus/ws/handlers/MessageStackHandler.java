@@ -63,40 +63,33 @@
  */
 package com.eucalyptus.ws.handlers;
 
-import java.io.IOException;
-import org.apache.log4j.Logger;
+import java.util.concurrent.Callable;
 import org.jboss.netty.channel.ChannelDownstreamHandler;
 import org.jboss.netty.channel.ChannelEvent;
+import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelUpstreamHandler;
-import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import com.eucalyptus.records.Logs;
-import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.ws.WebServicesException;
+import com.eucalyptus.ws.server.Statistics;
 
 public abstract class MessageStackHandler implements ChannelDownstreamHandler, ChannelUpstreamHandler {
-  private final Logger LOG = Logger.getLogger( this.getClass( ) );
   
   @Override
   public void handleDownstream( final ChannelHandlerContext ctx, final ChannelEvent channelEvent ) throws Exception {
-    if ( Logs.isExtrrreeeme() ) {
-      LOG.trace( LogUtil.dumpObject( channelEvent ) );
-    }
     try {
       if ( channelEvent instanceof MessageEvent ) {
         final MessageEvent msgEvent = ( MessageEvent ) channelEvent;
         if ( msgEvent.getMessage( ) != null ) {
+          Callable<Long> stat = Statistics.startDownstream( ctx.getChannel( ), this );
           this.outgoingMessage( ctx, msgEvent );
-        } else {
-          LOG.warn( "==> Outbound message is null!: " + LogUtil.dumpObject( channelEvent ) );
+          stat.call( );
         }
       }
       ctx.sendDownstream( channelEvent );
     } catch ( Exception e ) {
-      LOG.error( e, e );
-      throw new WebServicesException( e.getMessage( ), HttpResponseStatus.BAD_REQUEST );
+      throw new WebServicesException( e.getMessage( ), HttpResponseStatus.BAD_REQUEST );//TODO:GRZE: this is not right; needs to propagate in the right direction wrt server vs. client
     }
   }
   
@@ -107,24 +100,13 @@ public abstract class MessageStackHandler implements ChannelDownstreamHandler, C
   }
   public void incomingMessage( MessageEvent event ) throws Exception {}
   
-  public void exceptionCaught( final ChannelHandlerContext ctx, final ExceptionEvent exceptionEvent ) throws Exception {//FIXME: handle exceptions cleanly.
-    Throwable t = exceptionEvent.getCause( );
-    if ( t != null && IOException.class.isAssignableFrom( t.getClass( ) ) ) {
-      LOG.debug( t, t );
-    } else {
-      LOG.debug( t, t );
-    }
-    ctx.sendUpstream( exceptionEvent );
-  }
-  
   @Override
   public void handleUpstream( final ChannelHandlerContext ctx, final ChannelEvent channelEvent ) throws Exception {
-    if ( Logs.isExtrrreeeme() ) {
-      LOG.trace( LogUtil.dumpObject( channelEvent ) );
-    }
     if ( channelEvent instanceof MessageEvent ) {
       final MessageEvent msgEvent = ( MessageEvent ) channelEvent;
+      Callable<Long> stat = Statistics.startUpstream( ctx.getChannel( ), this );
       this.incomingMessage( ctx, msgEvent );
+      stat.call( );
       ctx.sendUpstream( channelEvent );
     } else {
       ctx.sendUpstream( channelEvent );

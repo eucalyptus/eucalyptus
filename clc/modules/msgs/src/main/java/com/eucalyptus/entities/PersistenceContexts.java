@@ -184,13 +184,13 @@ public class PersistenceContexts {
                           + "\nThe available contexts are: \n"
                           + Joiner.on( "\n" ).join( emf.keySet( ) ) );
         try {
-          TimeUnit.SECONDS.sleep( 1 );
+          TimeUnit.MILLISECONDS.sleep( 100 );
         } catch ( InterruptedException ex ) {
           throw Exceptions.toUndeclared( Exceptions.maybeInterrupted( ex ) );
         }
       }
     }
-    throw Exceptions.error( "Failed to lookup persistence context after " + MAX_EMF_RETRIES + "\n" );
+    throw Exceptions.error( "Failed to lookup persistence context after " + MAX_EMF_RETRIES + " tries.\n" );
   }
   
   public static void shutdown( ) {

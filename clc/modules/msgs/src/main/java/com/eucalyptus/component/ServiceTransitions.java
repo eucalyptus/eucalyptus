@@ -68,6 +68,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.Callable;
 import org.apache.log4j.Logger;
+import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.component.Component.State;
 import com.eucalyptus.component.ServiceChecks.CheckException;
@@ -168,7 +170,7 @@ public class ServiceTransitions {
         LOG.debug( configuration.getFullName( ) + " transitioning "
                    + initialState + "->" + goalState
                    + " using path " + Joiner.on( "->" ).join( path ) );
-      }      
+      }
       CheckedListenableFuture<ServiceConfiguration> result = executeTransition( configuration, Automata.sequenceTransitions( configuration, path ) );
       return result;
     } catch ( RuntimeException ex ) {
@@ -314,11 +316,9 @@ public class ServiceTransitions {
   
   private static <T extends EmpyreanMessage> T sendEmpyreanRequest( final ServiceConfiguration parent, final EmpyreanMessage msg ) throws Exception {
     ServiceConfiguration config = ServiceConfigurations.createEphemeral( Empyrean.INSTANCE, parent.getInetAddress( ) );
-    LOG.debug( "Sending request " + msg.getClass( ).getSimpleName( )
-               + " to "
-               + parent.getFullName( ) );
+    Logs.extreme( ).debug( "Sending request " + msg.getClass( ).getSimpleName( ) + " to " + parent.getFullName( ) );
     try {
-      if ( System.getProperty( "euca.noha.cloud" ) == null ) {
+      if ( BootstrapArgs.debugTopology( ) == null ) {
         T reply = ( T ) AsyncRequests.sendSync( config, msg );
         return reply;
       } else {
@@ -326,8 +326,7 @@ public class ServiceTransitions {
       }
       
     } catch ( Exception ex ) {
-      LOG.error( parent + " failed request because of: "
-                 + ex.getMessage( ) );
+      LOG.error( parent.getFullName( ) + " failed request because of: " + ex.getMessage( ) );
       Logs.extreme( ).error( ex, ex );
       throw ex;
     }
@@ -336,7 +335,7 @@ public class ServiceTransitions {
   private static void processTransition( final ServiceConfiguration parent, final Completion transitionCallback, final TransitionActions transitionAction ) {
     ServiceTransitionCallback trans = null;
     try {
-      if ( parent.isVmLocal( ) || ( parent.isHostLocal( ) && Hosts.isCoordinator( ) ) ) {
+      if ( Hosts.isServiceLocal( parent ) ) {
         try {
           trans = ServiceLocalTransitionCallbacks.valueOf( transitionAction.name( ) );
         } catch ( Exception ex ) {
@@ -376,7 +375,7 @@ public class ServiceTransitions {
       }
     }
   }
-  
+
   public enum TransitionActions implements TransitionAction<ServiceConfiguration> {
     ENABLE,
     CHECK,
@@ -575,6 +574,9 @@ public class ServiceTransitions {
       @Override
       public void fire( final ServiceConfiguration parent ) throws Exception {
         parent.lookupBootstrapper( ).destroy( );
+        if ( Bootstrap.isFinished( ) ) {
+          Components.lookup( parent.getComponentId( ) ).destroy( parent );
+        }
       }
     },
     CHECK {
@@ -606,12 +608,12 @@ public class ServiceTransitions {
       
       @Override
       public void fire( final ServiceConfiguration parent ) throws Exception {
-//        if ( State.NOTREADY.equals( parent.lookupComponent( ).getState( ) ) ) {
-//          parent.lookupComponent( ).check( );
-//          ServiceBuilders.lookup( parent.getComponentId( ) ).fireCheck( parent );
-//        }
-        parent.lookupBootstrapper( ).disable( );
-        ServiceBuilders.lookup( parent.getComponentId( ) ).fireDisable( parent );
+        try {//GRZE: disable transition must always succeed to avoid ambigious/duplicate invocation from in( State.NOTREADY )
+          parent.lookupBootstrapper( ).disable( );
+          ServiceBuilders.lookup( parent.getComponentId( ) ).fireDisable( parent );
+        } catch ( Exception ex ) {
+          LOG.error( ex, ex );
+        }
       }
     },
     STOP {
@@ -732,36 +734,40 @@ public class ServiceTransitions {
     PROPERTIES_ADD {
       @Override
       public void fire( final ServiceConfiguration config ) {
-        try {
-          List<ConfigurableProperty> props = PropertyDirectory.getPendingPropertyEntrySet( config.getComponentId( ).name( ) );
-          for ( ConfigurableProperty prop : props ) {
-            if ( prop instanceof SingletonDatabasePropertyEntry ) {
-              PropertyDirectory.addProperty( prop );
-            } else if ( prop instanceof MultiDatabasePropertyEntry ) {
-              MultiDatabasePropertyEntry addProp = ( ( MultiDatabasePropertyEntry ) prop ).getClone( config.getPartition( ) );
-              PropertyDirectory.addProperty( addProp );
+        if ( Bootstrap.isFinished( ) ) {
+          try {
+            List<ConfigurableProperty> props = PropertyDirectory.getPendingPropertyEntrySet( config.getComponentId( ).name( ) );
+            for ( ConfigurableProperty prop : props ) {
+              if ( prop instanceof SingletonDatabasePropertyEntry ) {
+                PropertyDirectory.addProperty( prop );
+              } else if ( prop instanceof MultiDatabasePropertyEntry ) {
+                MultiDatabasePropertyEntry addProp = ( ( MultiDatabasePropertyEntry ) prop ).getClone( config.getPartition( ) );
+                PropertyDirectory.addProperty( addProp );
+              }
             }
+          } catch ( Exception ex ) {
+            LOG.error( ex, ex );
           }
-        } catch ( Exception ex ) {
-          LOG.error( ex, ex );
         }
       }
     },
     STATIC_PROPERTIES_ADD {
       @Override
       public void fire( final ServiceConfiguration config ) {
-        for ( Entry<String, ConfigurableProperty> entry : Iterables.filter( PropertyDirectory.getPendingPropertyEntries( ),
-                                                                            Predicates.instanceOf( StaticPropertyEntry.class ) ) ) {
-          try {
-            ConfigurableProperty prop = entry.getValue( );
-            PropertyDirectory.addProperty( prop );
+        if ( Bootstrap.isFinished( ) ) {
+          for ( Entry<String, ConfigurableProperty> entry : Iterables.filter( PropertyDirectory.getPendingPropertyEntries( ),
+                                                                              Predicates.instanceOf( StaticPropertyEntry.class ) ) ) {
             try {
-              prop.getValue( );
+              ConfigurableProperty prop = entry.getValue( );
+              PropertyDirectory.addProperty( prop );
+              try {
+                prop.getValue( );
+              } catch ( Exception ex ) {
+                Logs.extreme( ).error( ex );
+              }
             } catch ( Exception ex ) {
-              Logs.extreme( ).error( ex );
+              Logs.extreme( ).error( ex, ex );
             }
-          } catch ( Exception ex ) {
-            Logs.extreme( ).error( ex, ex );
           }
         }
       }
@@ -783,6 +789,21 @@ public class ServiceTransitions {
         LOG.error( ex, ex );
       }
     }
+      
+    },
+    ENSURE_DISABLED {
+      
+      @Override
+      public void fire( ServiceConfiguration input ) {
+        if ( State.ENABLED.apply( input ) && Hosts.isServiceLocal( input ) ) {
+          try {
+            LOG.debug( "Ensuring .disable()/.fireDisable() have been called for service entering NOTREADY: " + input.getFullName( ) );
+            ServiceLocalTransitionCallbacks.DISABLE.fire( input );
+          } catch ( Exception ex ) {
+            LOG.error( ex, ex );
+          }
+        }
+      }
       
     };
     

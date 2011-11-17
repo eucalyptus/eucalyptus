@@ -60,6 +60,7 @@
  *******************************************************************************/
 package com.eucalyptus.ws.handlers;
 
+import java.io.IOException;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelHandlerContext;
@@ -92,6 +93,16 @@ public class WalrusPOSTIncomingHandler extends MessageStackHandler {
 		if(processedFirstChunk)
 			waitForNext = false;
 	}
+	
+  public void exceptionCaught( final ChannelHandlerContext ctx, final ExceptionEvent exceptionEvent ) throws Exception {
+    Throwable t = exceptionEvent.getCause( );
+    if ( t != null && IOException.class.isAssignableFrom( t.getClass( ) ) ) {
+      LOG.debug( t, t );
+    } else {
+      LOG.debug( t, t );
+    }
+    ctx.sendUpstream( exceptionEvent );
+  }
 
 	@Override
 	public void incomingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {

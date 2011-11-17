@@ -93,6 +93,7 @@ import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.TypeMappers;
+import com.eucalyptus.util.async.Futures;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
@@ -280,16 +281,24 @@ public class Topology {
       @Override
       public Future<ServiceConfiguration> apply( final ServiceConfiguration input ) {
         final Callable<ServiceConfiguration> call = Topology.callable( input, Topology.get( toState ) );
-        final Queue workQueue = ( this.serializedStates.contains( toState )
-          ? Queue.INTERNAL
-          : Queue.EXTERNAL );
-        return workQueue.enqueue( call );
+        if ( Bootstrap.isOperational( ) ) {
+          final Queue workQueue = ( this.serializedStates.contains( toState )
+            ? Queue.INTERNAL
+            : Queue.EXTERNAL );
+          return workQueue.enqueue( call );
+        } else {
+          try {
+            return Futures.predestinedFuture( call.call( ) );
+          } catch ( Exception ex ) {
+            return Futures.predestinedFuture( input );
+          }
+        }
       }
     };
     return transition;
   }
   
-  public static Future<ServiceConfiguration> check( final ServiceConfiguration config ) {
+  private static Future<ServiceConfiguration> check( final ServiceConfiguration config ) {
     return Queue.EXTERNAL.enqueue( Topology.callable( config, Topology.check( ) ) );
   }
   
@@ -306,7 +315,7 @@ public class Topology {
   }
   
   public static Future<ServiceConfiguration> start( final ServiceConfiguration config ) {
-    return transition( State.NOTREADY ).apply( config );
+    return transition( State.DISABLED ).apply( config );
   }
   
   public static Future<ServiceConfiguration> enable( final ServiceConfiguration config ) {
@@ -772,8 +781,8 @@ public class Topology {
             return result;
           } catch ( final Exception ex ) {
             final Throwable t = Exceptions.unwrapCause( ex );
+            LOG.error( config.getFullName( ) + " failed to transition because of:\n" + t.getMessage( ) );
             Logs.extreme( ).error( t, t );
-            LOG.error( config.getFullName( ) + " failed to transition because of: " + t );
             throw ex;
           }
         }
@@ -788,7 +797,7 @@ public class Topology {
   }
   
   public enum Transitions implements Function<ServiceConfiguration, ServiceConfiguration>, Supplier<Component.State> {
-    START( Component.State.NOTREADY ),
+    START( Component.State.DISABLED ),
     STOP( Component.State.STOPPED ),
     INITIALIZE( Component.State.INITIALIZED ),
     LOAD( Component.State.LOADED ),
@@ -902,7 +911,7 @@ public class Topology {
         return endResult;
       } catch ( final Exception ex ) {
         Exceptions.maybeInterrupted( ex );
-        LOG.debug( this.toString( input, initialState, nextState, ex ) );
+        LOG.error( this.toString( input, initialState, nextState, ex ) );
         throw Exceptions.toUndeclared( ex );
       } finally {
         if ( Bootstrap.isFinished( ) && !Component.State.ENABLED.equals( endResult.lookupState( ) ) ) {
@@ -912,7 +921,7 @@ public class Topology {
     }
     
     private String toString( final ServiceConfiguration endResult, final State initialState, final State nextState, final Throwable... throwables ) {
-      return String.format( "%s %s %s->%s=%s [%s]", this.toString( ), endResult.getFullName( ), initialState, nextState, endResult.lookupState( ),
+      return String.format( "%s %s %s->%s=%s \n[%s]\n", this.toString( ), endResult.getFullName( ), initialState, nextState, endResult.lookupState( ),
                             ( ( throwables != null ) && ( throwables.length > 0 )
                               ? Exceptions.causeString( throwables[0] )
                               : "WINNING" ) );
