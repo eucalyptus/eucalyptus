@@ -199,12 +199,13 @@ public class Hosts {
       } else {
         goalState = State.DISABLED;
       }
-      LOG.info( "SetupRemoteServiceConfigurations: " + ( State.ENABLED.equals( goalState ) ? "Enabling" : "Disabling" ) + " "
-        + ( inputIsLocal ? "local" : "remote" ) + " " + ( input.getComponentId( ).isAlwaysLocal( ) ? "bootstrap" : "cloud" ) + " services"
+      LOG.info( "SetupRemoteServiceConfigurations: " + goalState + " "
+        + ( inputIsLocal ? "local" : "remote" ) + " "
+        + ( input.getComponentId( ).isAlwaysLocal( ) ? "bootstrap" : "cloud" ) + " services"
         + ( Hosts.isCoordinator( input.getInetAddress( ) ) ? " (coordinator)" : "" ) + ": " + input.getFullName( ) );
-      if ( State.ENABLED.apply( input ) && !State.ENABLED.equals( goalState ) ) {
+      if ( State.ENABLED.apply( input ) && State.ENABLED.equals( goalState ) ) {
         return input;
-      } else if ( State.DISABLED.equals( goalState ) && input.lookupState( ).ordinal( ) >= State.DISABLED.ordinal( ) ) {
+      } else if ( State.DISABLED.apply( input ) && State.DISABLED.equals( goalState ) ) {
         return input;
       } else {
         try {
@@ -924,7 +925,8 @@ public class Hosts {
       } else if ( findCoordinator( Hosts.listDatabases( ) ) == null && BootstrapArgs.isCloudController( ) ) {
         return Hosts.localHost( );
       } else {//implies initially findCoordinator()!=null
-        for ( Host h = findCoordinator( Hosts.listDatabases( ) ); h != null && ( !h.hasBootstrapped( ) || !h.hasSynced( ) ); h = findCoordinator( Hosts.listDatabases( ) ) ) {
+        for ( Host h = findCoordinator( Hosts.listDatabases( ) ); h != null && ( !h.hasBootstrapped( ) || !h.hasSynced( ) ); h =
+          findCoordinator( Hosts.listDatabases( ) ) ) {
           try {
             LOG.info( "Waiting for cloud coordinator to become ready: " + h );
             TimeUnit.MILLISECONDS.sleep( 1000 );
