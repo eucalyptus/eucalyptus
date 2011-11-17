@@ -146,11 +146,10 @@ public class NioServerHandler extends SimpleChannelUpstreamHandler {//TODO:GRZE:
       if ( Logs.isExtrrreeeme( ) && request instanceof MappingHttpMessage ) {
         Logs.extreme( ).trace( ( ( MappingHttpMessage ) request ).logMessage( ) );
       }
-      final ChannelPipeline newPipeline = StackConfiguration.STATISTICS ? Channels.pipeline( ) : ctx.getPipeline( );
       FilteredPipeline filteredPipeline = Pipelines.find( request );
       if ( this.pipeline.compareAndSet( null, filteredPipeline ) ) {
-        this.pipeline.get( ).unroll( newPipeline );
-        Handlers.addSystemHandlers( newPipeline );
+        this.pipeline.get( ).unroll( ctx.getPipeline( ) );
+        Handlers.addSystemHandlers( ctx.getPipeline( ) );
       }
     } catch ( DuplicatePipelineException e1 ) {
       LOG.error( "This is a BUG: " + e1, e1 );
