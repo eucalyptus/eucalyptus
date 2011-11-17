@@ -182,7 +182,9 @@ public class Hosts {
     public ServiceConfiguration apply( final ServiceConfiguration input ) {
       boolean inputIsLocal = Internets.testLocal( input.getHostName( ) );
       State goalState;
-      if ( !Bootstrap.isFinished( ) ) {
+      if ( !Bootstrap.isFinished( ) && input.isVmLocal( ) ) {
+        return input;
+      } else if ( !Bootstrap.isFinished( ) ) {
         goalState = ( State.LOADED.ordinal( ) < input.lookupState( ).ordinal( ) ? State.DISABLED : State.NOTREADY );
       } else if ( input.getComponentId( ).isAlwaysLocal( ) ) {
         goalState = State.ENABLED;
