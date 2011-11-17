@@ -209,7 +209,7 @@ public class Hosts {
                 + " services" + ( Hosts.isCoordinator( input.getInetAddress( ) ) ? " (coordinator)" : "" )
                 + ": " + input.getFullName( ) );
       try {
-        return ServiceTransitions.pathTo( input, goalState ).get( SERVICE_INITIALIZE_TIMEOUT, TimeUnit.MILLISECONDS );
+        return Topology.transition( goalState ).apply( input ).get( SERVICE_INITIALIZE_TIMEOUT, TimeUnit.MILLISECONDS );
       } catch ( final ExecutionException ex ) {
         LOG.error( ex );
         Logs.extreme( ).error( ex, ex );
