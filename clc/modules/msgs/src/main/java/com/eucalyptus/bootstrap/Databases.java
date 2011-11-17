@@ -115,7 +115,7 @@ public class Databases {
     
     @Override
     public Future<Runnable> apply( Runnable input ) {
-      LOG.debug( "SUBMIT: " + input );
+      Logs.extreme( ).debug( "SUBMIT: " + input );
       return dbSyncExecutors.submit( input, input );
     }
   }
@@ -233,27 +233,42 @@ public class Databases {
             @Override
             public void run( ) {
               try {
+                final boolean fullSync = !Hosts.isCoordinator( ) && host.isLocalHost( ) && BootstrapArgs.isCloudController( ) && !Databases.isSynchronized( );
+                final boolean passiveSync = !fullSync && host.hasSynced( );
+
                 DriverDatabaseClusterMBean cluster = LookupPersistenceContextDatabaseCluster.INSTANCE.apply( contextName );
                 final String dbUrl = "jdbc:" + ServiceUris.remote( Database.class, host.getBindAddress( ), contextName );
                 final String dbPass = SystemIds.databasePassword( );
                 final String realJdbcDriver = Databases.getDriverName( );
+
                 if ( !cluster.getActiveDatabases( ).contains( hostName ) && !cluster.getInactiveDatabases( ).contains( hostName ) ) {
+                  LOG.info( "Creating database connections for: " + host );
                   cluster.add( hostName, realJdbcDriver, dbUrl );
-                } else if ( cluster.getActiveDatabases( ).contains( hostName ) ) {
-                  cluster.deactivate( hostName );
+                  final InactiveDatabaseMBean database = Databases.lookupInactiveDatabase( contextName, hostName );
+                  database.setUser( "eucalyptus" );
+                  database.setPassword( dbPass );
                 }
-                final InactiveDatabaseMBean database = Databases.lookupInactiveDatabase( contextName, hostName );
-                database.setUser( "eucalyptus" );
-                database.setPassword( dbPass );
-                if ( !Hosts.isCoordinator( ) && host.isLocalHost( ) && BootstrapArgs.isCloudController( ) && !Databases.isSynchronized( ) ) {
+
+                if ( fullSync ) {
+                  if ( cluster.getActiveDatabases( ).contains( hostName ) ) {
+                    LOG.info( "Deactivating existing database connections to: " + host );
+                    cluster.deactivate( hostName );
+                  }
+                  LOG.info( "Full sync of database on: " + host + " using " + cluster.getActiveDatabases( ) );
                   cluster.activate( hostName, "full" );
-                } else if ( host.hasSynced( ) ) {
-                  cluster.activate( hostName, "passive" );
+                } else if ( passiveSync ) {
+                  if ( !cluster.getActiveDatabases( ).contains( hostName ) ) {
+                    LOG.info( "Passively activating database connections to: " + host );
+                    cluster.activate( hostName, "passive" );
+                  } else {
+                    LOG.info( "Skipping passive activation of extant database: " + host );
+                  }
+                } else {
+                  throw Exceptions.toUndeclared( "Host is not ready to be activated: " + host );
                 }
-              } catch ( final NoSuchElementException ex1 ) {
-                LOG.error( ex1, ex1 );
               } catch ( final Exception ex1 ) {
-                LOG.error( ex1, ex1 );
+                Logs.extreme( ).error( ex1, ex1 );
+                throw Exceptions.toUndeclared( "Failed to activate host " + host + " because of: " + ex1.getMessage( ), ex1 );
               }
             }
             

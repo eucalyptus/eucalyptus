@@ -706,16 +706,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       return this;
     }
     
-    private ServiceConfiguration lookupServiceConfiguration( final String name ) {
-      ServiceConfiguration config = null;
-      try {
-        config = ServiceConfigurations.lookupByName( ClusterController.class, name );
-      } catch ( final PersistenceException ex ) {
-        LOG.debug( "Failed to find cluster configuration named: " + name + " using that as the partition name." );
-      }
-      return config;
-    }
-    
     public VmInstance build( final Integer launchndex ) throws ResourceAllocationException {
       return new VmInstance( this.owner, this.vmId, this.vmBootRecord, new VmLaunchRecord( launchndex, new Date( ) ), this.vmPlacement,
                              this.networkRulesGroups, this.networkIndex );
@@ -850,7 +840,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
                                                                     this.getOwner( ).getAccountNumber( ), this.getOwnerAccountName( ),
                                                                     this.placement.getClusterName( ), this.placement.getPartitionName( ),
                                                                     this.usageStats.getNetworkBytes( ), this.usageStats.getBlockBytes( ) ) );
-    } catch ( final EventFailedException ex ) {
+    } catch ( final Exception ex ) {
       LOG.error( ex, ex );
     }
   }
@@ -1330,6 +1320,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
             } else {
               this.updateState( runVm );
             }
+            VmInstance.this.fireUsageEvent( );
             db.commit( );
           } catch ( final Exception ex ) {
             Logs.exhaust( ).error( ex, ex );

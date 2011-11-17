@@ -9,11 +9,14 @@ import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.component.AbstractServiceBuilder;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentId.ComponentPart;
+import com.eucalyptus.component.Faults;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceRegistrationException;
+import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Internets;
 
 @ComponentPart( Eucalyptus.class )
@@ -57,15 +60,15 @@ public class EucalyptusBuilder extends AbstractServiceBuilder<EucalyptusConfigur
           return;
         }
       }
-      throw new ServiceRegistrationException( "There is no host in the system (yet) for the given cloud controller configuration: "
-                                              + config.getFullName( )
-                                              + ".\nHosts are: "
-                                              + Hosts.list( ) );
-    } else if ( !Hosts.isCoordinator( ) ) {
-      throw new ServiceRegistrationException( "This cloud controller "
-                                              + config.getFullName( )
-                                              + " is not currently the coordinator "
-                                              + Hosts.list( ) );
+      throw Faults.failure( config, Exceptions.error( "There is no host in the system (yet) for the given cloud controller configuration: "
+        + config.getFullName( )
+        + ".\nHosts are: "
+        + Hosts.list( ) ) );
+    } else if ( config.isVmLocal( ) && !Hosts.isCoordinator( ) ) {
+      throw Faults.failure( config, Exceptions.error( "This cloud controller "
+        + config.getFullName( )
+        + " is not currently the coordinator "
+        + Hosts.list( ) ) );
     }
   }
   
@@ -76,6 +79,31 @@ public class EucalyptusBuilder extends AbstractServiceBuilder<EucalyptusConfigur
   public void fireStop( ServiceConfiguration config ) throws ServiceRegistrationException {}
   
   @Override
-  public void fireCheck( ServiceConfiguration config ) throws ServiceRegistrationException {}
+  public void fireCheck( ServiceConfiguration config ) throws ServiceRegistrationException {
+    Host coordinator = Hosts.getCoordinator( );
+    if ( coordinator == null ) {
+      throw Faults.failure( config, Exceptions.error( config.getFullName( ) + ":fireCheck(): failed to lookup coordinator (" + coordinator + ")." ) );
+    } else if ( coordinator.isLocalHost( ) && !Topology.isEnabledLocally( Eucalyptus.class ) && !config.isVmLocal( ) ) {
+      throw Faults.failure( config,
+                            Exceptions.error( config.getFullName( )
+                              + ":fireCheck(): cloud controller depends upon ENABLED coordinator service for: "
+                              + coordinator ) );
+    } else if ( !coordinator.isLocalHost( ) && config.isVmLocal( ) ) {
+      if ( !Topology.isEnabled( Eucalyptus.class ) ) {
+        throw Faults.failure( config,
+                              Exceptions.error( config.getFullName( )
+                                + ":fireCheck(): local cloud controller service isn't coordinator and is missing ENABLED cloud controller service: "
+                                + coordinator ) );
+      } else if ( Topology.lookup( Eucalyptus.class ).isVmLocal( ) ) {
+        throw Faults.failure( config,
+                              Exceptions.error( config.getFullName( )
+                                + ":fireCheck(): local cloud controller service cant be enabled when it is not the coordinator: "
+                                + coordinator ) );
+      } else {
+        LOG.debug( config.getFullName( ) + ":fireCheck() completed with coordinator currently: " + coordinator );
+      }
+      
+    }
+  }
   
 }

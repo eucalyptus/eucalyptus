@@ -178,7 +178,6 @@ public class ComponentRegistrationHandler {
     try{
 	    final ServiceConfiguration conf = ServiceConfigurations.lookupByName( compId.getClass( ), name );
 	    Topology.destroy( conf );
-	    Components.lookup(compId).destroy(conf);    
 	    ServiceConfigurations.remove( conf );
     }catch(Exception e){
     	LOG.info(builder.getClass().getSimpleName() + ": deregistration failed because of" + e.getMessage());
