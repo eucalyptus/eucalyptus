@@ -182,7 +182,7 @@ public class Hosts {
       boolean inputIsLocal = Internets.testLocal( input.getHostName( ) );
       State goalState;
       if ( !Bootstrap.isFinished( ) ) {
-        goalState = ( State.LOADED.ordinal( ) < input.lookupState( ).ordinal( ) ? State.DISABLED : State.NOTREADY );
+        return input;
       } else if ( input.getComponentId( ).isAlwaysLocal( ) ) {
         goalState = State.ENABLED;
       } else if ( BootstrapArgs.isCloudController( ) ) {
