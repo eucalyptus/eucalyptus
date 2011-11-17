@@ -260,7 +260,9 @@ public class Hosts {
       if ( !Topology.isEnabled( Eucalyptus.class ) && Hosts.getCoordinator( ) != null ) {
         BootstrapComponent.setup( Eucalyptus.class, Hosts.getCoordinator( ).getBindAddress( ) );
       }
-      if ( event.isAsserted( 15L ) ) {
+      if ( event.isAsserted( 3L ) && Bootstrap.isFinished( ) && !Hosts.list( Predicates.not( BootedFilter.INSTANCE ) ).isEmpty( ) ) {
+        UpdateEntry.INSTANCE.apply( currentHost );
+      } else if ( event.isAsserted( 15L ) ) {
         UpdateEntry.INSTANCE.apply( currentHost );
       }
 //      Set<Address> currentMembers = Sets.newHashSet( hostMap.getChannel( ).getView( ).getMembers( ) );
@@ -836,6 +838,15 @@ public class Hosts {
     @Override
     public Integer apply( final Host input ) {
       return input.getEpoch( );
+    }
+    
+  }
+  
+  enum BootedFilter implements Predicate<Host> {
+    INSTANCE;
+    @Override
+    public boolean apply( final Host input ) {
+      return input.hasBootstrapped( );
     }
     
   }
