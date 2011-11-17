@@ -93,6 +93,7 @@ import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.TypeMappers;
+import com.eucalyptus.util.async.Futures;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
@@ -280,10 +281,18 @@ public class Topology {
       @Override
       public Future<ServiceConfiguration> apply( final ServiceConfiguration input ) {
         final Callable<ServiceConfiguration> call = Topology.callable( input, Topology.get( toState ) );
-        final Queue workQueue = ( this.serializedStates.contains( toState )
-          ? Queue.INTERNAL
-          : Queue.EXTERNAL );
-        return workQueue.enqueue( call );
+        if ( Bootstrap.isOperational( ) ) {
+          final Queue workQueue = ( this.serializedStates.contains( toState )
+            ? Queue.INTERNAL
+            : Queue.EXTERNAL );
+          return workQueue.enqueue( call );
+        } else {
+          try {
+            return Futures.predestinedFuture( call.call( ) );
+          } catch ( Exception ex ) {
+            return Futures.predestinedFuture( input );
+          }
+        }
       }
     };
     return transition;
