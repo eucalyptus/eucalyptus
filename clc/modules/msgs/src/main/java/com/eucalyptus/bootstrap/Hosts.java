@@ -929,5 +929,9 @@ public class Hosts {
     }
     
   }
+
+  public static boolean isServiceLocal( final ServiceConfiguration parent ) {
+    return parent.isVmLocal( ) || ( parent.isHostLocal( ) && isCoordinator( ) );
+  }
   
 }

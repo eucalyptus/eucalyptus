@@ -85,6 +85,7 @@ import com.eucalyptus.util.fsm.Automata;
 import com.eucalyptus.util.fsm.StateMachine;
 import com.eucalyptus.util.fsm.TransitionException;
 import com.google.common.base.Joiner;
+import com.google.common.base.Predicate;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -101,7 +102,7 @@ public class Component implements HasName<Component> {
   private final ServiceRegistry       serviceRegistry;
   private final ComponentBootstrapper bootstrapper;
   
-  public enum State implements Automata.State<State> {
+  public enum State implements Automata.State<State>, Predicate<ServiceConfiguration> {
     BROKEN,
     PRIMORDIAL,
     INITIALIZED,
@@ -110,6 +111,11 @@ public class Component implements HasName<Component> {
     NOTREADY,
     DISABLED,
     ENABLED;
+
+    @Override
+    public boolean apply( ServiceConfiguration input ) {
+      return this.equals( input.lookupState( ) );
+    }
   }
   
   public enum Transition implements Automata.Transition<Transition> {
