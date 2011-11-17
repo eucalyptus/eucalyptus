@@ -72,6 +72,8 @@ import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandler;
+import com.eucalyptus.context.Contexts;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.ws.StackConfiguration;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Maps;
@@ -102,7 +104,8 @@ public class Statistics {
     
     @Override
     public Long call( ) throws Exception {
-      return ( this.endTime == null ? this.endTime = System.currentTimeMillis( ) : this.endTime ) - this.startTime;
+      Logs.extreme( ).debug( "HandlerRecord:" + this.handlerClassName + " " + ( ( this.endTime == null ? this.endTime = System.currentTimeMillis( ) : this.endTime ) - this.startTime ) + "msec" );
+      return this.endTime;
     }
     
   }
@@ -123,17 +126,15 @@ public class Statistics {
       if ( this.type != null ) {
         builder.append( this.type ).append( " " ).append( Joiner.on( "\n" + this.type ).join( this.handlerUpstreamStats.values( ) ) );
         builder.append( this.type ).append( " " ).append( Joiner.on( "\n" + this.type ).join( this.handlerDownstreamStats.values( ) ) );
+        builder.append( this.type ).append( " " ).append( System.currentTimeMillis( ) - this.creationTime ).append( " msec" );
       }
-      builder.append( this.type ).append( " " ).append( System.currentTimeMillis( ) - this.creationTime ).append( " msec" );
       return builder.toString( );
     }
     
   }
   
   public static final void startRequest( final Channel channel ) {
-    if ( !StackConfiguration.STATISTICS ) {
-      return;
-    } else {
+    if ( StackConfiguration.STATISTICS ) {
       final RequestRecord record = new RequestRecord( );
       requestStatistics.put( channel.getId( ), record );
       channel.getCloseFuture( ).addListener( new ChannelFutureListener( ) {
@@ -147,9 +148,16 @@ public class Statistics {
     }
   }
   
-  public static final <T extends ChannelHandler> Callable<Long> startUpstream( Integer correlationId, T handler ) {
+  public static final <T extends ChannelHandler> Callable<Long> startUpstream( Channel channel, T handler ) {
+    Integer correlationId = channel.getId( );
     if ( StackConfiguration.STATISTICS && requestStatistics.containsKey( correlationId ) ) {
       RequestRecord record = requestStatistics.get( correlationId );
+      if ( record.type == null ) {
+        try {
+          record.type = Contexts.lookup( channel ).getRequest( ).getClass( ).getSimpleName( );
+        } catch ( Exception ex ) {
+        }
+      }
       HandlerRecord handlerRecord = new HandlerRecord( handler.getClass( ) );
       record.handlerUpstreamStats.put( handler.getClass( ), handlerRecord );
       return handlerRecord;
@@ -158,7 +166,8 @@ public class Statistics {
     }
   }
   
-  public static final <T extends ChannelHandler> Callable<Long> startDownstream( Integer correlationId, T handler ) {
+  public static final <T extends ChannelHandler> Callable<Long> startDownstream( Channel channel, T handler ) {
+    Integer correlationId = channel.getId( );
     if ( StackConfiguration.STATISTICS && requestStatistics.containsKey( correlationId ) ) {
       RequestRecord record = requestStatistics.get( correlationId );
       HandlerRecord handlerRecord = new HandlerRecord( handler.getClass( ) );

@@ -82,7 +82,7 @@ public abstract class MessageStackHandler implements ChannelDownstreamHandler, C
       if ( channelEvent instanceof MessageEvent ) {
         final MessageEvent msgEvent = ( MessageEvent ) channelEvent;
         if ( msgEvent.getMessage( ) != null ) {
-          Callable<Long> stat = Statistics.startDownstream( ctx.getChannel( ).getId( ), this );
+          Callable<Long> stat = Statistics.startDownstream( ctx.getChannel( ), this );
           this.outgoingMessage( ctx, msgEvent );
           stat.call( );
         }
@@ -104,7 +104,7 @@ public abstract class MessageStackHandler implements ChannelDownstreamHandler, C
   public void handleUpstream( final ChannelHandlerContext ctx, final ChannelEvent channelEvent ) throws Exception {
     if ( channelEvent instanceof MessageEvent ) {
       final MessageEvent msgEvent = ( MessageEvent ) channelEvent;
-      Callable<Long> stat = Statistics.startUpstream( ctx.getChannel( ).getId( ), this );
+      Callable<Long> stat = Statistics.startUpstream( ctx.getChannel( ), this );
       this.incomingMessage( ctx, msgEvent );
       stat.call( );
       ctx.sendUpstream( channelEvent );
