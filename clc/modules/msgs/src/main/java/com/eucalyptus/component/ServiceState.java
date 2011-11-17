@@ -110,7 +110,7 @@ public class ServiceState implements StateMachine<ServiceConfiguration, Componen
          * e.g., in( State.STOPPED ).run( ServiceTransitions.StateCallbacks.PROPERTIES_REMOVE ) )
          * ?!?!? but not that.
          **/
-        in( State.NOTREADY ).run( ServiceTransitions.StateCallbacks.ENSURE_DISABLED );
+        in( State.NOTREADY ).run( ServiceTransitions.StateCallbacks.ENSURE_DISABLED ).run( ServiceTransitions.StateCallbacks.FIRE_STATE_EVENT );
         from( State.PRIMORDIAL ).to( State.INITIALIZED ).error( State.BROKEN ).on( Transition.INITIALIZING ).run( noop );
         from( State.PRIMORDIAL ).to( State.BROKEN ).error( State.BROKEN ).on( Transition.FAILED_TO_PREPARE ).run( noop );
         from( State.INITIALIZED ).to( State.LOADED ).error( State.BROKEN ).on( Transition.LOAD ).run( ServiceTransitions.TransitionActions.LOAD );
