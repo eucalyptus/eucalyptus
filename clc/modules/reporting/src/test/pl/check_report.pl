@@ -51,8 +51,8 @@ my $username="";
 # Get first and last times for instance events
 foreach (execute_query("
 	select
-	  max(ius.timestamp_ms) as max_time,
 	  min(ius.timestamp_ms) as min_time,
+	  max(ius.timestamp_ms) as max_time,
 	  ru.user_name
 	from
 	  reporting_instance ri,
