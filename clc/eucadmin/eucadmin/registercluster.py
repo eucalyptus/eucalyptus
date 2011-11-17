@@ -34,4 +34,5 @@ class RegisterCluster(eucadmin.registerrequest.RegisterRequest):
 
     ServiceName = 'Cluster'
     Description = 'Register a Cluster service.'
+    DefaultPort = 8774
     
