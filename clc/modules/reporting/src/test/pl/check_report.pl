@@ -70,6 +70,9 @@ foreach (execute_query("
 	($start_ms,$end_ms,$username) = split("\\s+");
 	print "Found times $start_ms - $end_ms for user:$username\n";
 }
+if ($end_ms==0) {
+	die ("unreasonable end_ms value found; need to make db.sh executable?");
+}
 
 # Generate report WITHIN
 $start_ms++;
