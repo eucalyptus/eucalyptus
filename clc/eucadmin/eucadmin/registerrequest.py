@@ -32,11 +32,34 @@ from boto.roboto.awsqueryrequest import AWSQueryRequest
 from boto.roboto.param import Param
 import eucadmin
 
+class FixPortMetaClass(type):
+    """
+    I generally avoid metaclasses.  They can be confusing.
+    However, I wanted to find a clean way to allow the
+    DefaultPort class attribute to be "overridden" and
+    have the new value make it's way into Port parameter
+    in a seamless way.  This is the best I could come up with.
+    """
+
+    def __new__(cls, name, bases, attrs):
+        if 'DefaultPort' in attrs:
+            for base in bases:
+                if hasattr(base, 'Params'):
+                    for param in getattr(base, 'Params'):
+                        if param.name == 'Port':
+                            port = attrs['DefaultPort']
+                            param.default = port
+                            param.doc = 'Port for service (default=%d)' % port
+        return type.__new__(cls, name, bases, attrs)
+    
 class RegisterRequest(AWSQueryRequest):
+
+    __metaclass__ = FixPortMetaClass
 
     ServiceName = ''
     ServicePath = '/services/Configuration'
     ServiceClass = eucadmin.EucAdmin
+    DefaultPort = 8773
 
     Params = [
               Param(name='Partition',
@@ -55,15 +78,29 @@ class RegisterRequest(AWSQueryRequest):
                     short_name='p',
                     long_name='port',
                     ptype='integer',
-                    default=8773,
+                    default=DefaultPort,
                     optional=True,
-                    doc='Port for the service')
+                    doc='Port for the service (Default: %d)' % DefaultPort)
               ]
     Args = [Param(name='Name',
                   long_name='name',
                   ptype='string',
                   optional=False,
                   doc='The name of the service')]
+
+    def __init__(self, **args):
+        self._update_port()
+        AWSQueryRequest.__init__(self, **args)
+
+    def _update_port(self):
+        port_param = None
+        for param in self.Params:
+            if param.name == 'Port':
+                port_param = param
+                break
+        if port_param:
+            port_param.default = self.DefaultPort
+            port_param.doc = 'Port for the service (default=%d)' % self.DefaultPort
 
     def get_connection(self, **args):
         if self.connection is None:
