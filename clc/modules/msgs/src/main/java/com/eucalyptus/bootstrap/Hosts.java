@@ -502,7 +502,7 @@ public class Hosts {
         } else {
           if ( !contains( input ) ) {
             final Host newHost = Host.create( );
-            final Host oldHost = Hosts.putIfAbsent( newHost );
+            final Host oldHost = Hosts.put( newHost );
             if ( oldHost == null ) {
               LOG.info( "Inserted local host information:   " + localHost( ) );
               return true;
@@ -672,7 +672,9 @@ public class Hosts {
                 public void run( ) {
                   try {
                     try {
-                      Hosts.remove( Internets.localHostIdentifier( ) );
+                      if ( Hosts.contains( Internets.localHostIdentifier( ) ) ) {
+                        Hosts.remove( Internets.localHostIdentifier( ) );
+                      }
                     } catch ( final Exception ex ) {
                       LOG.error( ex, ex );
                     }
