@@ -109,7 +109,7 @@ public class ResourceToken implements VmInstanceMetadata, Comparable<ResourceTok
   public ResourceToken( final Allocation allocInfo, final int resourceAllocationSequenceNumber, final int launchIndex ) {
     this.allocation = allocInfo;
     Contract<Date> expiry = allocInfo.getContext( ).getContracts( ).get( Contract.Type.EXPIRATION );
-    this.expirationTime = expiry.getValue( );
+    this.expirationTime = ( expiry == null ? new Date( 32503708800000l ) : expiry.getValue( ) );
     this.launchIndex = launchIndex;
     String tempVmId = VmInstances.getId( allocInfo.getReservationIndex( ), launchIndex );
     try {//GRZE:ugly hack.
