@@ -466,6 +466,7 @@ public class ServiceTransitions {
           }
         } );
         CheckException errors = Faults.transformToExceptions( ).apply( status );
+        Faults.persist( errors );
         if ( errors != null ) {
           if ( Faults.Severity.FATAL.equals( errors.getSeverity( ) ) ) {
             //TODO:GRZE: handle remote fatal error.
@@ -480,7 +481,6 @@ public class ServiceTransitions {
               }
             }
           }
-          Faults.persist( errors );
           throw errors;
         }
       }
