@@ -82,11 +82,12 @@
 #include "misc.h"
 #include "walrus.h"
 
-#define TOTAL_RETRIES 10 /* download is retried in case of connection problems */
-#define FIRST_TIMEOUT 4 /* in seconds, goes in powers of two afterwards */
-#define CHUNK 262144 /* buffer size for decompression operations */
-#define BUFSIZE 4096 /* should be big enough for CERT and the signature */
-#define STRSIZE 245 /* for short strings: files, hosts, URLs */
+#define TOTAL_RETRIES 10 // download is retried in case of connection problems
+#define FIRST_TIMEOUT 4 // in seconds, goes in powers of two afterwards
+#define MAX_TIMEOUT 300 // in seconds, the cap for growing timeout values
+#define CHUNK 262144 // buffer size for decompression operations
+#define BUFSIZE 4096 // should be big enough for CERT and the signature
+#define STRSIZE 245 // for short strings: files, hosts, URLs
 #define WALRUS_ENDPOINT "/services/Walrus"
 #define DEFAULT_HOST_PORT "localhost:8773"
 #define GET_IMAGE_CMD "GetDecryptedImage"
@@ -324,6 +325,8 @@ static int walrus_request_timeout (const char * walrus_op, const char * verb, co
             sleep (timeout);
             lseek (fd, 0L, SEEK_SET);
             timeout <<= 1;
+            if (timeout > MAX_TIMEOUT)
+                timeout = MAX_TIMEOUT;
         }
 
         retries--;
