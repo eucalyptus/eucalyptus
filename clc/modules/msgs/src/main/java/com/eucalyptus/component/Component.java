@@ -76,7 +76,6 @@ import com.eucalyptus.bootstrap.CanBootstrap;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
-import com.eucalyptus.util.CheckedFunction;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.HasName;
@@ -84,8 +83,11 @@ import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.fsm.Automata;
 import com.eucalyptus.util.fsm.StateMachine;
 import com.eucalyptus.util.fsm.TransitionException;
+import com.google.common.base.Function;
+import com.google.common.base.Functions;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -111,7 +113,7 @@ public class Component implements HasName<Component> {
     NOTREADY,
     DISABLED,
     ENABLED;
-
+    
     @Override
     public boolean apply( ServiceConfiguration input ) {
       return this.equals( input.lookupState( ) );
@@ -598,69 +600,82 @@ public class Component implements HasName<Component> {
       this.disabledBootstrappers.put( stage, bootstrapper );
     }
     
-    private boolean doTransition( EventType transition, CheckedFunction<Bootstrapper, Boolean> checkedFunction ) {
+    private boolean doTransition( EventType transition, Function<Bootstrapper, Boolean> checkedFunction ) {
+      return doTransition( transition, checkedFunction, Functions.forPredicate( ( Predicate ) Predicates.alwaysTrue( ) ) );
+    }
+    
+    private boolean doTransition( EventType transition, Function<Bootstrapper, Boolean> checkedFunction, Function<Bootstrapper, Boolean> rollbackFunction ) {
       String name = transition.name( ).replaceAll( ".*_", "" ).toLowerCase( );
+      List<Bootstrapper> rollbackBootstrappers = Lists.newArrayList( );
       this.updateBootstrapDependencies( );
       for ( Stage s : Bootstrap.Stage.values( ) ) {
         for ( Bootstrapper b : Lists.newArrayList( this.bootstrappers.get( s ) ) ) {
           EventRecord.here( this.component.getClass( ), transition, this.component.getComponentId( ).name( ), "stage", s.name( ),
                             b.getClass( ).getCanonicalName( ) ).extreme( );
+          TransitionException ex = null;
           try {
-            boolean result = checkedFunction.apply( b );
-            if ( !result ) {
-              throw Exceptions.toUndeclared( new TransitionException( b.getClass( ).getSimpleName( ) + " returned 'false' from "
-                                                                      + name
-                                                                      + "( ): terminating bootstrap for component: "
-                                                                      + this.component.getName( ) ) );
+            if ( checkedFunction.apply( b ) ) {
+              rollbackBootstrappers.add( b );
+            } else {
+              ex = new TransitionException( b.getClass( ).getSimpleName( ) + "."
+                + name
+                + "( ): returned false, terminating bootstrap for component: "
+                + this.component.getName( ) );
             }
           } catch ( Exception e ) {
-            throw Exceptions.toUndeclared( new TransitionException( b.getClass( ).getSimpleName( ) + " returned '"
-                                                                    + e.getMessage( )
-                                                                    + "' from "
-                                                                    + name
-                                                                    + "( ): terminating bootstrap for component: "
-                                                                    + this.component.getName( ), e ) );
+            LOG.error( e );
+            Logs.extreme( ).error( e, e );
+            ex = new TransitionException( b.getClass( ).getSimpleName( ) + "."
+              + name
+              + "( ): failed because of: "
+              + e.getMessage( )
+              + ", terminating bootstrap for component: "
+              + this.component.getName( ), e );
+          }
+          if ( ex != null ) {
+            for ( Bootstrapper rollback : Lists.reverse( rollbackBootstrappers ) ) {
+              try {
+                rollbackFunction.apply( rollback );
+              } catch ( Exception ex1 ) {
+                LOG.error( ex1 );
+                Logs.extreme( ).error( ex1, ex1 );
+              }
+            }
+            throw ex;
           }
         }
       }
       return true;
-      
     }
     
-    public boolean load( ) {
-      this.doTransition( EventType.BOOTSTRAPPER_LOAD, new CheckedFunction<Bootstrapper, Boolean>( ) {
+    enum BootstrapperTransition implements Function<Bootstrapper, Boolean> {
+      LOAD {
         @Override
-        public Boolean apply( Bootstrapper arg0 ) throws Exception {
+        public Boolean runBootstrapper( Bootstrapper arg0 ) throws Exception {
           return arg0.load( );
         }
-      } );
-      return true;
-    }
-    
-    public boolean start( ) {
-      this.doTransition( EventType.BOOTSTRAPPER_START, new CheckedFunction<Bootstrapper, Boolean>( ) {
+      },
+      START {
         @Override
-        public Boolean apply( Bootstrapper arg0 ) throws Exception {
+        public Boolean runBootstrapper( Bootstrapper arg0 ) throws Exception {
           return arg0.start( );
         }
-      } );
-      return true;
-    }
-    
-    public boolean enable( ) {
-      this.doTransition( EventType.BOOTSTRAPPER_ENABLE, new CheckedFunction<Bootstrapper, Boolean>( ) {
+      },
+      ENABLE {
         @Override
-        public Boolean apply( Bootstrapper arg0 ) throws Exception {
+        public Boolean runBootstrapper( Bootstrapper arg0 ) throws Exception {
           return arg0.enable( );
         }
-      } );
-      return true;
-    }
-    
-    public boolean stop( ) {
-      this.doTransition( EventType.BOOTSTRAPPER_STOP, new CheckedFunction<Bootstrapper, Boolean>( ) {
+      },
+      DISABLE {
         @Override
-        public Boolean apply( Bootstrapper arg0 ) throws Exception {
+        public Boolean runBootstrapper( Bootstrapper arg0 ) throws Exception {
+          return arg0.disable( );
+        }
+      },
+      STOP {
+        @Override
+        public Boolean runBootstrapper( Bootstrapper arg0 ) throws Exception {
           try {
             arg0.stop( );
           } catch ( Exception ex ) {
@@ -668,14 +683,10 @@ public class Component implements HasName<Component> {
           }
           return true;
         }
-      } );
-      return true;
-    }
-    
-    public void destroy( ) {
-      this.doTransition( EventType.BOOTSTRAPPER_DESTROY, new CheckedFunction<Bootstrapper, Boolean>( ) {
+      },
+      DESTROY {
         @Override
-        public Boolean apply( Bootstrapper arg0 ) throws Exception {
+        public Boolean runBootstrapper( Bootstrapper arg0 ) throws Exception {
           try {
             arg0.destroy( );
           } catch ( Exception ex ) {
@@ -683,28 +694,59 @@ public class Component implements HasName<Component> {
           }
           return true;
         }
-      } );
-    }
-    
-    public boolean disable( ) {
-      this.doTransition( EventType.BOOTSTRAPPER_DISABLE, new CheckedFunction<Bootstrapper, Boolean>( ) {
+      },
+      CHECK {
         @Override
-        public Boolean apply( Bootstrapper arg0 ) throws Exception {
-          return arg0.disable( );
-        }
-      } );
-      
-      return true;
-    }
-    
-    public boolean check( ) {
-      this.doTransition( EventType.BOOTSTRAPPER_CHECK, new CheckedFunction<Bootstrapper, Boolean>( ) {
-        @Override
-        public Boolean apply( Bootstrapper arg0 ) throws Exception {
+        public Boolean runBootstrapper( Bootstrapper arg0 ) throws Exception {
           return arg0.check( );
         }
-      } );
-      return true;
+      };
+      
+      public abstract Boolean runBootstrapper( Bootstrapper arg0 ) throws Exception;
+      
+      @Override
+      public Boolean apply( Bootstrapper input ) {
+        try {
+          return this.runBootstrapper( input );
+        } catch ( Exception ex ) {
+          throw Exceptions.toUndeclared( ex );
+        }
+      }
+    }
+    
+    @Override
+    public boolean load( ) {
+      return this.doTransition( EventType.BOOTSTRAPPER_LOAD, BootstrapperTransition.LOAD, BootstrapperTransition.DESTROY );
+    }
+    
+    @Override
+    public boolean start( ) {
+      return this.doTransition( EventType.BOOTSTRAPPER_START, BootstrapperTransition.START, BootstrapperTransition.STOP );
+    }
+    
+    @Override
+    public boolean enable( ) {
+      return this.doTransition( EventType.BOOTSTRAPPER_ENABLE, BootstrapperTransition.ENABLE, BootstrapperTransition.DISABLE );
+    }
+    
+    @Override
+    public boolean stop( ) {
+      return this.doTransition( EventType.BOOTSTRAPPER_ENABLE, BootstrapperTransition.STOP );
+    }
+    
+    @Override
+    public void destroy( ) {
+      this.doTransition( EventType.BOOTSTRAPPER_ENABLE, BootstrapperTransition.DESTROY );
+    }
+    
+    @Override
+    public boolean disable( ) {
+      return this.doTransition( EventType.BOOTSTRAPPER_ENABLE, BootstrapperTransition.DISABLE );
+    }
+    
+    @Override
+    public boolean check( ) {
+      return this.doTransition( EventType.BOOTSTRAPPER_ENABLE, BootstrapperTransition.CHECK );
     }
     
     public List<Bootstrapper> getBootstrappers( ) {

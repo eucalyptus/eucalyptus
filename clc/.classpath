@@ -37,6 +37,7 @@
 	<classpathentry kind="src" output="modules/www/build" path="modules/www/src/main/java"/>
 	<classpathentry kind="src" path="modules/www/conf/reports"/>
 	<classpathentry kind="src" path="modules/www/conf/www"/>
+	<classpathentry kind="src" path="modules/msgs/src/test/java"/>
 	<classpathentry kind="con" path="GROOVY_SUPPORT"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry kind="lib" path="lib/activemq-core-5.4.1.jar"/>

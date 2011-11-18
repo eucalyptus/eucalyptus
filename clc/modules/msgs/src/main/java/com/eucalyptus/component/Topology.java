@@ -99,6 +99,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
+import com.google.common.base.Throwables;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -315,7 +316,7 @@ public class Topology {
   }
   
   public static Future<ServiceConfiguration> start( final ServiceConfiguration config ) {
-    return transition( State.DISABLED ).apply( config );
+    return transition( State.NOTREADY ).apply( config );
   }
   
   public static Future<ServiceConfiguration> enable( final ServiceConfiguration config ) {
@@ -911,7 +912,9 @@ public class Topology {
         return endResult;
       } catch ( final Exception ex ) {
         Exceptions.maybeInterrupted( ex );
+        LOG.error( ex, Throwables.getRootCause( ex ) );
         LOG.error( this.toString( input, initialState, nextState, ex ) );
+        Logs.extreme( ).error( ex, ex );
         throw Exceptions.toUndeclared( ex );
       } finally {
         if ( Bootstrap.isFinished( ) && !Component.State.ENABLED.equals( endResult.lookupState( ) ) ) {

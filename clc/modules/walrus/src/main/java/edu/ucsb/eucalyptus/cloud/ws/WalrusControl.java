@@ -71,8 +71,6 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Faults;
-import com.eucalyptus.component.LifecycleEvents;
-import com.eucalyptus.component.ServiceChecks;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.configurable.ConfigurableClass;
