@@ -100,6 +100,8 @@ import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.*;
 
 public class Faults {
   private static Logger LOG = Logger.getLogger( Faults.class );
@@ -429,7 +431,7 @@ public class Faults {
     }
     last = ( last != null
       ? last
-      : new CheckException( config, severity, new NullPointerException( ) ) );
+      : new CheckException( config, Severity.DEBUG, new NullPointerException( "Faults.chain called w/ empty list: " + exs ) ) );
     Logs.extreme( ).error( last, last );
     LOG.debug( last );
     LOG.debug( Exceptions.causeString( last ) );

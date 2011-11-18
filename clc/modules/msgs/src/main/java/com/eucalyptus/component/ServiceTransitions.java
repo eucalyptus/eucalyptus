@@ -467,11 +467,17 @@ public class ServiceTransitions {
         } );
         CheckException errors = Faults.transformToExceptions( ).apply( status );
         if ( errors != null ) {
-          if ( Component.State.ENABLED.equals( parent.lookupState( ) ) ) {
-            try {
-              DISABLE.fire( parent );
-            } catch ( Exception ex ) {
-              LOG.error( ex, ex );
+          if ( Faults.Severity.FATAL.equals( errors.getSeverity( ) ) ) {
+            //TODO:GRZE: handle remote fatal error.
+          } else if ( errors.getSeverity( ).ordinal( ) < Faults.Severity.ERROR.ordinal( ) ) {
+            Logs.extreme( ).error( errors, errors );
+          } else {
+            if ( Component.State.ENABLED.equals( parent.lookupState( ) ) ) {
+              try {
+                DISABLE.fire( parent );
+              } catch ( Exception ex ) {
+                LOG.error( ex, ex );
+              }
             }
           }
           Faults.persist( errors );
