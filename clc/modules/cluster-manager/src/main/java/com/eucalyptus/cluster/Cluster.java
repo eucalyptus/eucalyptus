@@ -304,7 +304,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
             Component.State serviceState = Component.State.valueOf( status.getLocalState( ) );
             Component.State localState = parent.getConfiguration( ).lookupState( );
             Component.State proxyState = parent.getStateMachine( ).getState( ).proxyState( );
-            CheckException ex = Faults.statusToCheckExceptions( ).apply( status );
+            CheckException ex = Faults.transformToExceptions( ).apply( status );
             if ( Component.State.NOTREADY.equals( serviceState ) ) {
               throw new IllegalStateException( ex );
             } else if ( Component.State.ENABLED.equals( serviceState ) && Component.State.DISABLED.ordinal( ) >= localState.ordinal( ) ) {

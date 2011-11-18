@@ -465,7 +465,7 @@ public class ServiceTransitions {
             return parent.getName( ).equals( arg0.getServiceId( ).getName( ) );
           }
         } );
-        CheckException errors = Faults.statusToCheckExceptions( ).apply( status );
+        CheckException errors = Faults.transformToExceptions( ).apply( status );
         if ( errors != null ) {
           if ( Component.State.ENABLED.equals( parent.lookupState( ) ) ) {
             try {
@@ -474,6 +474,7 @@ public class ServiceTransitions {
               LOG.error( ex, ex );
             }
           }
+          Faults.persist( errors );
           throw errors;
         }
       }
