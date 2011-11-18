@@ -70,6 +70,7 @@ import com.eucalyptus.address.Address.Transition;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
@@ -164,7 +165,7 @@ public class UnassignAddressCallback extends MessageCallback<UnassignAddressType
       VmInstance vm = VmInstances.lookupByPrivateIp( super.getRequest( ).getDestination( ) );
       if ( !vm.getPartition( ).equals( this.address.getPartition( ) ) ) {
         Partition partition = Partitions.lookupByName( vm.getPartition( ) );
-        ServiceConfiguration config = Partitions.lookupService( ClusterController.class, partition );
+        ServiceConfiguration config = Topology.lookup( ClusterController.class, partition );
         UnassignAddressType request = new UnassignAddressType( this.address.getDisplayName( ), this.address.getInstanceAddress( ) );
         try {
           AsyncRequests.sendSync( config, request );

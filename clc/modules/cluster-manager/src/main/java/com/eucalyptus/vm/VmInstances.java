@@ -77,16 +77,12 @@ import org.hibernate.criterion.MatchMode;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
 import com.eucalyptus.cloud.CloudMetadata.VmInstanceMetadata;
-import com.eucalyptus.cloud.run.AdmissionControl;
-import com.eucalyptus.cloud.run.Allocations.Allocation;
-import com.eucalyptus.cloud.run.ClusterAllocator;
-import com.eucalyptus.cloud.run.VerifyMetadata;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.callback.TerminateCallback;
 import com.eucalyptus.component.Dispatcher;
-import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
@@ -100,7 +96,6 @@ import com.eucalyptus.network.NetworkGroups;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
-import com.eucalyptus.scripting.Groovyness;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes.QuantityMetricFunction;
@@ -119,7 +114,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
 import edu.ucsb.eucalyptus.msgs.DetachStorageVolumeType;
-import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
 import edu.ucsb.eucalyptus.msgs.TerminateInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.TerminateInstancesType;
@@ -399,7 +393,7 @@ public class VmInstances {
         @Override
         public boolean apply( final AttachedVolume arg0 ) {
           try {
-            final ServiceConfiguration sc = Partitions.lookupService( Storage.class, vm.lookupPartition( ) );
+            final ServiceConfiguration sc = Topology.lookup( Storage.class, vm.lookupPartition( ) );
             vm.removeVolumeAttachment( arg0.getVolumeId( ) );
             final Dispatcher scDispatcher = ServiceDispatcher.lookup( sc );
             scDispatcher.send( new DetachStorageVolumeType( cluster.getNode( vm.getServiceTag( ) ).getIqn( ), arg0.getVolumeId( ) ) );

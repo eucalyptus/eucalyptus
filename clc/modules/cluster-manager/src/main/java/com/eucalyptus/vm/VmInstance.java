@@ -716,7 +716,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     }
     
     public Builder placement( final Partition partition, final String clusterName ) {
-      final ServiceConfiguration config = Partitions.lookupService( ClusterController.class, partition );
+      final ServiceConfiguration config = Topology.lookup( ClusterController.class, partition );
       this.vmPlacement = new VmPlacement( config.getName( ), config.getPartition( ) );
       return this;
     }
