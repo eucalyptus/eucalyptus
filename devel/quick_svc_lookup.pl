@@ -48,6 +48,14 @@ sub include{
 }
 sub print_state {
    test_start("Service-State Comparison");
+    foreach $ip (keys %svc_state_map){  ## column --> ip
+      foreach $ip2 (keys %svc_state_map){  ## column --> ip
+        %map = %{$svc_state_map{$ip2}};
+        foreach $key (keys %map){  # key=SVC_TYPE:COMP_NAME, val=state;
+          $svc_state_map{$ip}->{$key} = "------" if ! defined $svc_state_map{$ip}->{$key} && exists $svc_state_map{$ip2}->{$key};
+        }
+      }
+    }
 
     my %line_map = undef; # key==>svctype:comp_id, val==>state separated by IP
     $header = sprintf("%-18.18s","COMPONENTS");
@@ -57,7 +65,7 @@ sub print_state {
        
         foreach $key (keys %map){  # key=SVC_TYPE:COMP_NAME, val=state;
              $state = $map{$key};
-             if(&include($key)){
+             if(&include($key) && $ip !~ /^$/ ){
                   $line_map{$key} .= sprintf("%-15.15s",$state); 
              }  
         }  

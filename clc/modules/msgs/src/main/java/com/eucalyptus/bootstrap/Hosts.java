@@ -97,7 +97,6 @@ import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
-import com.eucalyptus.component.ServiceTransitions;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.configurable.ConfigurableClass;
@@ -146,9 +145,8 @@ public class Hosts {
       
       @Override
       public boolean apply( final ServiceConfiguration input ) {
-        return input.getInetAddress( ).equals( addr )
-               || input.getInetAddress( ).getCanonicalHostName( ).equals( addr.getCanonicalHostName( ) )
-               || input.getHostName( ).equals( addr.getCanonicalHostName( ) );
+        return input.getInetAddress( ).equals( addr ) || input.getInetAddress( ).getCanonicalHostName( ).equals( addr.getCanonicalHostName( ) )
+          || input.getHostName( ).equals( addr.getCanonicalHostName( ) );
       }
       
     };
@@ -170,7 +168,7 @@ public class Hosts {
       @Override
       public ServiceConfiguration apply( final T input ) {
         Component component = Components.lookup( input );
-        final ServiceConfiguration config = !Internets.testLocal( addr ) ? component.initRemoteService( addr ) : component.initService( );
+        final ServiceConfiguration config = !Internets.testLocal( addr.getHostAddress( ) ) ? component.initRemoteService( addr ) : component.initService( );
         LOG.info( "Initialized service: " + config.getFullName( ) );
         return config;
       }
@@ -184,7 +182,7 @@ public class Hosts {
       boolean inputIsLocal = Internets.testLocal( input.getHostName( ) );
       State goalState;
       if ( !Bootstrap.isFinished( ) ) {
-        goalState = ( State.LOADED.ordinal( ) < input.lookupState( ).ordinal( ) ? State.DISABLED : State.LOADED );
+        return input;
       } else if ( input.getComponentId( ).isAlwaysLocal( ) ) {
         goalState = State.ENABLED;
       } else if ( BootstrapArgs.isCloudController( ) ) {
@@ -200,21 +198,17 @@ public class Hosts {
       } else {
         goalState = State.DISABLED;
       }
-      LOG.info( "SetupRemoteServiceConfigurations: "
-                + ( State.ENABLED.equals( goalState ) ? "Enabling" : "Disabling" )
-                + " "
-                + ( inputIsLocal ? "local" : "remote" )
-                + " "
-                + ( input.getComponentId( ).isAlwaysLocal( ) ? "bootstrap" : "cloud" )
-                + " services" + ( Hosts.isCoordinator( input.getInetAddress( ) ) ? " (coordinator)" : "" )
-                + ": " + input.getFullName( ) );
-      if ( State.ENABLED.apply( input ) && !State.ENABLED.equals( goalState ) ) {
+      LOG.info( "SetupRemoteServiceConfigurations: " + goalState + " "
+        + ( inputIsLocal ? "local" : "remote" ) + " "
+        + ( input.getComponentId( ).isAlwaysLocal( ) ? "bootstrap" : "cloud" ) + " services"
+        + ( Hosts.isCoordinator( input.getInetAddress( ) ) ? " (coordinator)" : "" ) + ": " + input.getFullName( ) );
+      if ( State.ENABLED.apply( input ) && State.ENABLED.equals( goalState ) ) {
         return input;
-      } else if ( State.DISABLED.equals( goalState ) && input.lookupState( ).ordinal( ) >= State.DISABLED.ordinal( ) ) {
+      } else if ( State.DISABLED.apply( input ) && State.DISABLED.equals( goalState ) ) {
         return input;
       } else {
         try {
-          return ServiceTransitions.pathTo( input, goalState ).get( );
+          return Topology.transition( goalState ).apply( input ).get( );
         } catch ( final ExecutionException ex ) {
           LOG.error( ex );
           Logs.extreme( ).error( ex, ex );
@@ -249,9 +243,7 @@ public class Hosts {
     }
     
     public static Collection<ComponentId> findDependentComponents( final Class<? extends ComponentId> comp, final InetAddress addr ) {
-      return Collections2.filter( ComponentIds.list( ), Predicates.and( EMPYREAN.compId.equals( comp )
-        ? EMPYREAN
-        : EUCALYPTUS, nonLocalAddressFilter( addr ) ) );
+      return Collections2.filter( ComponentIds.list( ), Predicates.and( EMPYREAN.compId.equals( comp ) ? EMPYREAN : EUCALYPTUS, nonLocalAddressFilter( addr ) ) );
     }
     
   }
@@ -268,7 +260,9 @@ public class Hosts {
       if ( !Topology.isEnabled( Eucalyptus.class ) && Hosts.getCoordinator( ) != null ) {
         BootstrapComponent.setup( Eucalyptus.class, Hosts.getCoordinator( ).getBindAddress( ) );
       }
-      if ( event.isAsserted( 15L ) ) {
+      if ( event.isAsserted( 3L ) && Bootstrap.isFinished( ) && !Hosts.list( Predicates.not( BootedFilter.INSTANCE ) ).isEmpty( ) ) {
+        UpdateEntry.INSTANCE.apply( currentHost );
+      } else if ( event.isAsserted( 15L ) ) {
         UpdateEntry.INSTANCE.apply( currentHost );
       }
 //      Set<Address> currentMembers = Sets.newHashSet( hostMap.getChannel( ).getView( ).getMembers( ) );
@@ -367,9 +361,8 @@ public class Hosts {
           return false;
         } else {
           if ( input.hasBootstrapped( ) ) {
-            if ( input.hasDatabase( ) ) {
-              return setup( Empyrean.class, input.getBindAddress( ) )
-                && setup( Eucalyptus.class, input.getBindAddress( ) );
+            if ( input.hasDatabase( ) && !input.isLocalHost( ) ) {
+              return setup( Empyrean.class, input.getBindAddress( ) ) && setup( Eucalyptus.class, input.getBindAddress( ) );
             } else {
               return setup( Empyrean.class, input.getBindAddress( ) );
             }
@@ -427,7 +420,6 @@ public class Hosts {
           for ( final ComponentId c : ShouldLoadRemote.findDependentComponents( compClass, addr ) ) {
             try {
               final ServiceConfiguration dependsConfig = ServiceConfigurations.lookupByName( c.getClass( ), addr.getHostAddress( ) );
-//              ServiceTransitions.pathTo( dependsConfig, State.PRIMORDIAL ).get( );
               Topology.destroy( dependsConfig ).get( );
             } catch ( final Exception ex ) {
               LOG.error( ex );
@@ -509,15 +501,13 @@ public class Hosts {
             return false;
           }
         } else {
-          if ( !contains( input ) ) {
-            final Host newHost = Host.create( );
-            final Host oldHost = Hosts.putIfAbsent( newHost );
-            if ( oldHost == null ) {
-              LOG.info( "Inserted local host information:   " + localHost( ) );
-              return true;
-            } else {
-              return false;
-            }
+          final Host newHost = Host.create( );
+          final Host oldHost = Hosts.putIfAbsent( newHost );
+          if ( oldHost == null ) {
+            LOG.info( "Inserted local host information:   " + localHost( ) );
+            return true;
+          } else {
+            return false;
           }
         }
       }
@@ -584,9 +574,7 @@ public class Hosts {
       if ( ClassConfigurator.getMagicNumber( h ) == -1 ) {
         ClassConfigurator.add( ++HEADER_ID, h );
       }
-      return "euca-" + ( h.isAnonymousClass( )
-        ? h.getSuperclass( ).getSimpleName( ).toLowerCase( )
-        : h.getSimpleName( ).toLowerCase( ) ) + "-header";
+      return "euca-" + ( h.isAnonymousClass( ) ? h.getSuperclass( ).getSimpleName( ).toLowerCase( ) : h.getSimpleName( ).toLowerCase( ) ) + "-header";
     }
     
     private static List<Protocol> getMembershipProtocolStack( ) {
@@ -683,7 +671,9 @@ public class Hosts {
                 public void run( ) {
                   try {
                     try {
-                      Hosts.remove( Internets.localHostIdentifier( ) );
+                      if ( Hosts.contains( Internets.localHostIdentifier( ) ) ) {
+                        Hosts.remove( Internets.localHostIdentifier( ) );
+                      }
                     } catch ( final Exception ex ) {
                       LOG.error( ex, ex );
                     }
@@ -701,29 +691,33 @@ public class Hosts {
           }
         };
         Timers.loggingWrapper( runMap, hostMap ).call( );
-        LOG.info( "Initial view:\n" + HostMapStateListener.INSTANCE.printMap( ) );
-        LOG.info( "Initial coordinator:\n" + Hosts.getCoordinator( ) );
-        Listeners.register( HostBootstrapEventListener.INSTANCE );
+        
+        /** initialize distributed system host state **/
+        LOG.info( "Initial view: " + HostMapStateListener.INSTANCE.printMap( ) );
+        LOG.info( "Searching for potential coordinator: " + Hosts.getCoordinator( ) );
+        Hosts.Coordinator.INSTANCE.await( );
         Coordinator.INSTANCE.initialize( hostMap.values( ) );
+        LOG.info( "Initial coordinator:\n" + Hosts.getCoordinator( ) );
+        
+        /** create host entry for localhost **/
+        LOG.info( "Created local host entry: " + Hosts.localHost( ) );
         hostMap.addNotifier( HostMapStateListener.INSTANCE );
-        final Host local = Hosts.localHost( );
-        LOG.info( "Created local host entry: " + local );
-        UpdateEntry.INSTANCE.apply( local );
-        LOG.info( "System view:\n" + HostMapStateListener.INSTANCE.printMap( ) );
-        LOG.info( "System coordinator:\n" + Hosts.getCoordinator( ) );
-        if ( !BootstrapArgs.isCloudController( ) ) {
-          while ( Hosts.listActiveDatabases( ).isEmpty( ) ) {
-            TimeUnit.SECONDS.sleep( 5 );
-            LOG.info( "Waiting for system view with database..." );
-          }
-          if ( Databases.shouldInitialize( ) ) {
-            doInitialize( );
-          }
-        }
+        LOG.info( "System view: " + HostMapStateListener.INSTANCE.printMap( ) );
+        UpdateEntry.INSTANCE.apply( Hosts.localHost( ) );
+        LOG.info( "System coordinator: " + Hosts.getCoordinator( ) );
+        
+        /** wait for db if needed **/
+        Hosts.awaitDatabases( );
         LOG.info( "Membership address for localhost: " + Hosts.localHost( ) );
+        
+        /** setup remote host states **/
         for ( final Host h : hostMap.values( ) ) {
           BootstrapComponent.REMOTESETUP.apply( h );
         }
+        
+        /** setup host map handling **/
+        Listeners.register( HostBootstrapEventListener.INSTANCE );
+        
         return true;
       } catch ( final Exception ex ) {
         LOG.fatal( ex, ex );
@@ -848,6 +842,15 @@ public class Hosts {
     
   }
   
+  enum BootedFilter implements Predicate<Host> {
+    INSTANCE;
+    @Override
+    public boolean apply( final Host input ) {
+      return input.hasBootstrapped( );
+    }
+    
+  }
+  
   enum DbFilter implements Predicate<Host> {
     INSTANCE;
     @Override
@@ -918,9 +921,38 @@ public class Hosts {
       }
     }
     
-    public Host get( ) {
-      Host minHost = null;
+    public Host get( ) {//GRZE: this needs to use active DBs to avoid db-sync race.
       List<Host> dbHosts = Hosts.listActiveDatabases( );
+      return findCoordinator( dbHosts );
+    }
+    
+    public Host await( ) {//GRZE: this needs to use all DBs to ensure waiting for booting coordinator
+      if ( get( ) != null ) {
+        return get( );
+      } else if ( findCoordinator( Hosts.listDatabases( ) ) == null && BootstrapArgs.isCloudController( ) ) {
+        return Hosts.localHost( );
+      } else {//implies initially findCoordinator()!=null
+        for ( Host h = findCoordinator( Hosts.listDatabases( ) ); h != null && ( !h.hasBootstrapped( ) || !h.hasSynced( ) ); h =
+          findCoordinator( Hosts.listDatabases( ) ) ) {
+          try {
+            LOG.info( "Waiting for cloud coordinator to become ready: " + h );
+            TimeUnit.MILLISECONDS.sleep( 1000 );
+          } catch ( InterruptedException ex ) {
+            Exceptions.maybeInterrupted( ex );
+          }
+        }
+        Host initCoordinator = findCoordinator( Hosts.listDatabases( ) );
+        if ( initCoordinator == null ) {
+          return Hosts.localHost( );
+        } else {
+          return initCoordinator;
+        }
+        
+      }
+    }
+    
+    private static Host findCoordinator( List<Host> dbHosts ) {
+      Host minHost = null;
       for ( final Host h : dbHosts ) {
         minHost = ( minHost == null ? h : ( minHost.getStartedTime( ) > h.getStartedTime( ) ? h : minHost ) );
       }
@@ -935,6 +967,18 @@ public class Hosts {
   
   public static boolean isServiceLocal( final ServiceConfiguration parent ) {
     return parent.isVmLocal( ) || ( parent.isHostLocal( ) && isCoordinator( ) );
+  }
+  
+  static void awaitDatabases( ) throws InterruptedException {
+    if ( !BootstrapArgs.isCloudController( ) ) {
+      while ( listActiveDatabases( ).isEmpty( ) ) {
+        TimeUnit.SECONDS.sleep( 5 );
+        LOG.info( "Waiting for system view with database..." );
+      }
+      if ( Databases.shouldInitialize( ) ) {
+        doInitialize( );
+      }
+    }
   }
   
 }

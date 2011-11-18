@@ -692,7 +692,9 @@ class EucaConf(object):
                 path2 = os.path.join(path1, self.options.partition_name)
                 cls = boto.utils.find_class('eucadmin.synckeys', 'SyncKeys')
                 req = cls([path1, path2], path1,
-                          self.options.host_name, ['euca.p12'],
+                          self.options.host_name, ['euca.p12',
+                                                   'cloud-cert.pem',
+                                                   'cloud-pk.pem'],
                           use_rsync=(not self.options.no_rsync),
                           use_scp=(not self.options.no_scp))
                 req.sync()

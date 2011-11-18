@@ -153,54 +153,6 @@ public class Handlers {
   private static final ChannelHandler                        bindingHandler           = new BindingHandler( );
   private static final HashedWheelTimer                      timer                    = new HashedWheelTimer( );                                                                                             //TODO:GRZE: configurable
                                                                                                                                                                                                               
-  private static class LoggingHandler implements ChannelUpstreamHandler, ChannelDownstreamHandler {
-    private final ChannelHandler down;
-    
-    private LoggingHandler( ChannelHandler down, ChannelHandler up ) {
-      super( );
-      this.down = down;
-      this.up = up;
-    }
-    
-    private final ChannelHandler up;
-    
-    @Override
-    public void handleDownstream( final ChannelHandlerContext ctx, final ChannelEvent e ) throws Exception {
-      if ( e instanceof MessageEvent ) {
-        Statistics.startDownstream( ctx.getChannel( ).getId( ), this.down );
-      }
-      ctx.sendDownstream( e );
-    }
-    
-    @SuppressWarnings( { "unchecked", "rawtypes" } )
-    @Override
-    public final void handleUpstream( final ChannelHandlerContext ctx, final ChannelEvent e ) throws Exception {
-      if ( e instanceof MessageEvent ) {
-        Statistics.startUpstream( ctx.getChannel( ).getId( ), this.up );
-      }
-      ctx.sendUpstream( e );
-    }
-    
-  }
-  
-  public static ChannelPipeline wrapPipeline( ChannelPipeline pipeline ) {
-    if ( StackConfiguration.STATISTICS ) {
-      Map.Entry<String, ChannelHandler> last = null;
-      ChannelPipeline newPipeline = Channels.pipeline( );
-      for ( Map.Entry<String, ChannelHandler> entry : pipeline.toMap( ).entrySet( ) ) {
-        if ( last == null ) {
-          last = entry;
-        } else {
-          newPipeline.addLast( "timer-" + last.getKey( ), new LoggingHandler( last.getValue( ), entry.getValue( ) ) );
-        }
-        newPipeline.addLast( entry.getKey( ), entry.getValue( ) );
-      }
-      return newPipeline;
-    } else {
-      return pipeline;
-    }
-  }
-  
   enum ServerPipelineFactory implements ChannelPipelineFactory {
     INSTANCE;
     @Override

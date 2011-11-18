@@ -417,6 +417,8 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                            "user_project_description":"ProjectDescription",
                            "user_project_pi_name":"ProjectPI" ];
 
+        Map<String, Integer> volumeSizeMap = new HashMap<String, Integer>(); 
+
         connMap['eucalyptus_auth'].rows('SELECT * FROM auth_users').each {
             def account = null;
             def accountProxy = null;
@@ -550,12 +552,13 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                     vol.cluster = System.getProperty("euca.storage.name");
                 }
                 // Second "vol.cluster" is partition name
-                Volume v = new Volume( ufn, vol.displayname, vol.size, vol.cluster, vol.cluster, vol.parentsnapshot );
+                Volume v = new Volume( ufn, vol.displayname, vol.size, vol.cluster + '_sc', vol.cluster, vol.parentsnapshot );
                 initMetaClass(v, v.class);
                 v.setState(State.valueOf(vol.state));
                 v.setLocalDevice(vol.localdevice);
                 v.setRemoteDevice(vol.remotedevice);
                 v.setSize(vol.size);
+                volumeSizeMap.put(vol.displayname, vol.size);
                 LOG.debug("Adding volume ${ vol.displayname } for ${ it.auth_user_name }");
                 dbVol.add(v);
                 dbVol.commit();
@@ -565,9 +568,10 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                 def snap_meta = connMap['eucalyptus_storage'].firstRow("SELECT * FROM Snapshots WHERE snapshot_name=?", [ snap.displayname ]);
                 def scName = (snap_meta == null) ? null :  snap_meta.sc_name;
                 // Second scName is partition
-                Snapshot s = new Snapshot( ufn, snap.displayname, snap.parentvolume, scName, scName);
+                Snapshot s = new Snapshot( ufn, snap.displayname, snap.parentvolume, scName + '_sc', scName);
                 initMetaClass(s, s.class);
                 s.setState(State.valueOf(snap.state));
+                s.setVolumeSize(volumeSizeMap.get(snap.parentvolume));
                 LOG.debug("Adding snapshot ${ snap.displayname } for ${ it.auth_user_name }");
                 dbSnap.add(s);
                 dbSnap.commit();
@@ -838,6 +842,22 @@ class upgrade_20_30 extends AbstractUpgradeScript {
             dbIvi.add(ivi);
         }
         dbIvi.commit();
+
+        EntityWrapper<StorageInfo> dbSI = EntityWrapper.get(StorageInfo.class);
+        def rowResults = connMap['eucalyptus_storage'].rows('SELECT * FROM storage_info');
+        for (GroovyRowResult rowResult : rowResults) {
+            Set<String> columns = rowResult.keySet();
+            boolean xferSnaps = true;
+            if (columns.contains('system_storage_transfer_snapshots')) {
+                xferSnaps = rowResult.system_storage_transfer_snapshots;
+            }
+            StorageInfo si = new StorageInfo(rowResult.storage_name,
+                                             rowResult.system_storage_volume_size_gb,
+                                             rowResult.system_storage_max_volume_size_gb,
+                                             xferSnaps);
+            dbSI.add(si);
+        }
+        dbSI.commit();
         return true;
     }
 
@@ -962,7 +982,6 @@ class upgrade_20_30 extends AbstractUpgradeScript {
         entities.add(SnapshotInfo.class);
         entities.add(VolumeInfo.class);
         entities.add(DirectStorageInfo.class);
-        entities.add(StorageInfo.class);
         entities.add(StorageStatsInfo.class);
         // Below are for enterprise only
         entities.add(NetappInfo.class);

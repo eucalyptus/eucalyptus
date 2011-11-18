@@ -313,10 +313,11 @@ public class ServiceBootstrapper extends Bootstrapper.Simple {
           @Override
           public void run( ) {
             try {
-              if ( Hosts.isCoordinator( ) ) {
-                Topology.enable( config );
+//              boolean notRemoteCloud = !config.getComponentId( ).isCloudLocal( ) || ( config.getComponentId( ).isCloudLocal( ) && config.isVmLocal( ) );
+              if ( Hosts.isCoordinator( ) && config.isVmLocal( ) ) {
+                Topology.enable( config ).get( );
               } else {
-                Topology.disable( config );
+                Topology.disable( config ).get( );
               }
             } catch ( final Exception ex ) {
               Exceptions.maybeInterrupted( ex );
