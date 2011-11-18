@@ -46,7 +46,8 @@
                 (1 << CAP_DAC_OVERRIDE)
 #define CAPS    (1 << CAP_NET_BIND_SERVICE)+ \
                 (1 << CAP_SETUID)+ \
-                (1 << CAP_SETGID)
+                (1 << CAP_SETGID)+ \
+                (1 << CAP_SYS_RESOURCE)
 #define CAPSMIN (1 << CAP_NET_BIND_SERVICE)
 typedef struct eucalyptus_opts euca_opts;
 typedef struct {
