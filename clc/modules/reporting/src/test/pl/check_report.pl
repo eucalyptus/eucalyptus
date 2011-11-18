@@ -77,17 +77,66 @@ if ($end_ms==0) {
 # Generate report WITHIN
 $start_ms++;
 $end_ms--;
-foreach (("instance","storage","s3")) {
-	$report_file = "/tmp/report-$_-" . time();
-	runcmd("wget -O \"$report_file\" --no-check-certificate \"https://localhost:8443/reportservlet?session=$session_id&type=$_&page=0&format=csv&flush=false&start=$start_ms&end=$end_ms&criterion=User&groupByCriterion=None\"");
-	# Parse report
-	open(REPORT, $report_file);
-	print "Report: $_\n";
-	while (my $rl = <REPORT>) {
-		print "  line:$rl\n";
-	}
-	close(REPORT);
-}
 
-# Compare report against total number of instances, instance-hours, instance types
+# Generate and verify instance report
+$report_file = "/tmp/report-instance-" . time();
+runcmd("wget -O \"$report_file\" --no-check-certificate \"https://localhost:8443/" .
+		"reportservlet?session=$session_id&type=instance&page=0&format=csv&flush=false" .
+		"&start=$start_ms&end=$end_ms&criterion=User&groupByCriterion=None\"");
+# Parse report
+open(REPORT, $report_file);
+print "Report: instance\n";
+while (my $rl = <REPORT>) {
+	my ($blank,$user,$m1Small,$m1SmallTime,$c1Medium,$c1MediumTime,$m1Large,$m1LargeTime,
+			$m1XLarge,$m1XLargeTime,$blank2,$c1XLarge,$c1XLargeTime,$net,$disk)
+		= split(",",$rl);
+	if ($user !~ /^user-/) {
+		next;
+	}
+	print "user:$user m1Small:$m1Small m1SmallTime:$m1SmallTime c1Medium:$c1Medium " .
+		"c1MediumTime:$c1MediumTime m1Large:$m1Large m1LargeTime:$m1LargeTime " .
+		"m1Xlarge:$m1XLarge m1XLargeTime:$m1XLargeTime c1XLarge:$c1XLarge " .
+		"c1XLargeTime:$c1XLargeTime net:$net disk:$disk\n";
+}
+print "\n\n";
+close(REPORT);
+
+# Generate and verify storage report
+$report_file = "/tmp/report-storage-" . time();
+runcmd("wget -O \"$report_file\" --no-check-certificate \"https://localhost:8443/" .
+		"reportservlet?session=$session_id&type=storage&page=0&format=csv&flush=false" .
+		"&start=$start_ms&end=$end_ms&criterion=User&groupByCriterion=None\"");
+# Parse report
+open(REPORT, $report_file);
+print "Report: storage\n";
+while (my $rl = <REPORT>) {
+	my ($blank,$user,$volMaxSize,$volSizeTime,$snapMaxSize,$blank2,$snapSizeTime)
+		= split(",",$rl);
+	if ($user !~ /^user-/) {
+		next;
+	}
+	print "user:$user volMaxSize:$volMaxSize volSizeTime:$volSizeTime " .
+			"snapMaxSize:$snapMaxSize snapSizeTime:$snapSizeTime\n";
+}
+print "\n\n";
+close(REPORT);
+
+# Generate and verify s3 report
+$report_file = "/tmp/report-s3-" . time();
+runcmd("wget -O \"$report_file\" --no-check-certificate \"https://localhost:8443/" .
+		"reportservlet?session=$session_id&type=s3&page=0&format=csv&flush=false" .
+		"&start=$start_ms&end=$end_ms&criterion=User&groupByCriterion=None\"");
+# Parse report
+open(REPORT, $report_file);
+print "Report: s3\n";
+while (my $rl = <REPORT>) {
+	my ($blank,$user,$bucketsMaxNum,$objectsMaxSize,$blank2,$objectsMaxTime) = split(",",$rl);
+	if ($user !~ /^user-/) {
+		next;
+	}
+	print "user:$user bucketsMaxNum:$bucketsMaxNum objectsMaxSize:$objectsMaxSize " .
+		"objectsMaxTime:$objectsMaxTime\n";
+}
+close(REPORT);
+
 
