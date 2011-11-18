@@ -81,8 +81,6 @@ public interface Service extends EventListener<Event>, HasFullName<ServiceConfig
   
   public abstract String toString( );
   
-  public Collection<ServiceCheckRecord> getDetails( );
-  
   public abstract void enqueue( Request request );
   
   public abstract Boolean isLocal( );
