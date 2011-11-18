@@ -120,7 +120,7 @@ PersistenceContexts.list( ).each { String ctx_simplename ->
           balancer:'simple', //(simple|random|round-robin|load)
           'default-sync': 'passive',
           dialect:Databases.getJdbcDialect( ),
-          'failure-detect-schedule':'0/15 * * ? * *',
+//          'failure-detect-schedule':'0/15 * * ? * *',
           'meta-data-cache':'none',//(none|lazy|eager)
           'transaction-mode':'serial',//(parallel|serial)
           'detect-sequences':'false',
