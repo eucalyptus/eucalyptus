@@ -157,7 +157,11 @@ public class Exceptions {
     if ( ex instanceof RuntimeException ) {
       return ( RuntimeException ) ex;
     } else if ( ex instanceof ExecutionException ) {
-      return new RuntimeException( message, ex.getCause( ) );
+      if ( ex.getCause( ) instanceof RuntimeException ) {
+        return ( RuntimeException ) ex.getCause( );
+      } else {
+        return new RuntimeException( message, ex.getCause( ) );
+      }
     } else {
       return new RuntimeException( message, ex );
     }

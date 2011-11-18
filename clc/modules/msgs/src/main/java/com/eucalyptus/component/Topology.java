@@ -912,6 +912,7 @@ public class Topology {
       } catch ( final Exception ex ) {
         Exceptions.maybeInterrupted( ex );
         LOG.error( this.toString( input, initialState, nextState, ex ) );
+        Logs.extreme( ).error( ex, ex );
         throw Exceptions.toUndeclared( ex );
       } finally {
         if ( Bootstrap.isFinished( ) && !Component.State.ENABLED.equals( endResult.lookupState( ) ) ) {
