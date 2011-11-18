@@ -159,7 +159,7 @@ public class SnapshotManager {
     final Context ctx = Contexts.lookup( );
     boolean result = false;
     try {
-      result = Transactions.delete( Snapshot.named( ctx.getUserFullName( ), request.getSnapshotId( ) ), new Predicate<Snapshot>( ) {
+      result = Transactions.delete( Snapshot.named( ctx.getUserFullName( ).asAccountFullName( ), request.getSnapshotId( ) ), new Predicate<Snapshot>( ) {
         
         @Override
         public boolean apply( Snapshot snap ) {
