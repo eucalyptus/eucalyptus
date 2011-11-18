@@ -474,7 +474,8 @@ public class Faults {
         final CheckException ex = failure( config, new ServiceStateException( detail ) );
         exs.add( ex );
       }
-      return Faults.chain( config, Severity.ERROR, exs );
+      return !exs.isEmpty( ) ? Faults.chain( config, Severity.ERROR, exs )
+        : new CheckException( config, Severity.DEBUG, new Exception( input.toString( ) ) );
     }
     
   }
