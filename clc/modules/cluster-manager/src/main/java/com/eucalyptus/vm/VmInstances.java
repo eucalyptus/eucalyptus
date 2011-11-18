@@ -124,7 +124,8 @@ import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
 import edu.ucsb.eucalyptus.msgs.TerminateInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.TerminateInstancesType;
 
-@ConfigurableClass( root = "cloud.vmstate", description = "Parameters controlling the lifecycle of virtual machines." )
+@ConfigurableClass( root = "cloud.vmstate",
+                    description = "Parameters controlling the lifecycle of virtual machines." )
 public class VmInstances {
   public static class TerminatedInstanceException extends NoSuchElementException {
     
@@ -140,6 +141,17 @@ public class VmInstances {
   }
   
   public enum Timeout implements Predicate<VmInstance> {
+    EXPIRED( VmState.RUNNING ) {
+      @Override
+      public Integer getMinutes( ) {
+        return 0;
+      }
+      
+      @Override
+      public boolean apply( VmInstance arg0 ) {
+        return VmState.RUNNING.apply( arg0 ) && ( System.currentTimeMillis( ) > arg0.getExpiration( ).getTime( ) );
+      }
+    },
     UNREPORTED( VmState.PENDING, VmState.RUNNING ) {
       @Override
       public Integer getMinutes( ) {
@@ -185,23 +197,33 @@ public class VmInstances {
     
   }
   
-  @ConfigurableField( description = "Amount of time (in minutes) before a previously running instance which is not reported will be marked as terminated.", initial = "60" )
+  @ConfigurableField( description = "Amount of time (in minutes) before a previously running instance which is not reported will be marked as terminated.",
+                      initial = "60" )
   public static Integer INSTANCE_TIMEOUT              = 60;
-  @ConfigurableField( description = "Amount of time (in minutes) before a VM which is not reported by a cluster will be marked as terminated.", initial = "10" )
+  @ConfigurableField( description = "Amount of time (in minutes) before a VM which is not reported by a cluster will be marked as terminated.",
+                      initial = "10" )
   public static Integer SHUT_DOWN_TIME                = 10;
-  @ConfigurableField( description = "Amount of time (in minutes) that a terminated VM will continue to be reported.", initial = "60" )
+  @ConfigurableField( description = "Amount of time (in minutes) that a terminated VM will continue to be reported.",
+                      initial = "60" )
   public static Integer TERMINATED_TIME               = 60;
-  @ConfigurableField( description = "Maximum amount of time (in seconds) that the network topology service takes to propagate state changes.", initial = "" + 60 * 60 * 1000 )
+  @ConfigurableField( description = "Maximum amount of time (in seconds) that the network topology service takes to propagate state changes.",
+                      initial = "" + 60 * 60 * 1000 )
   public static Long    NETWORK_METADATA_REFRESH_TIME = 15l;
-  @ConfigurableField( description = "Prefix to use for instance MAC addresses.", initial = "d0:0d" )
+  @ConfigurableField( description = "Prefix to use for instance MAC addresses.",
+                      initial = "d0:0d" )
   public static String  MAC_PREFIX                    = "d0:0d";
-  @ConfigurableField( description = "Subdomain to use for instance DNS.", initial = ".eucalyptus", changeListener = SubdomainListener.class )
+  @ConfigurableField( description = "Subdomain to use for instance DNS.",
+                      initial = ".eucalyptus",
+                      changeListener = SubdomainListener.class )
   public static String  INSTANCE_SUBDOMAIN            = ".eucalyptus";
-  @ConfigurableField( description = "Period (in seconds) between state updates for actively changing state.", initial = "3" )
+  @ConfigurableField( description = "Period (in seconds) between state updates for actively changing state.",
+                      initial = "3" )
   public static Long    VOLATILE_STATE_INTERVAL_SEC   = 3l;
-  @ConfigurableField( description = "Timeout (in seconds) before a requested instance terminate will be repeated.", initial = "60" )
+  @ConfigurableField( description = "Timeout (in seconds) before a requested instance terminate will be repeated.",
+                      initial = "60" )
   public static Long    VOLATILE_STATE_TIMEOUT_SEC    = 60l;
-  @ConfigurableField( description = "Maximum number of threads the system will use to service blocking state changes.", initial = "16" )
+  @ConfigurableField( description = "Maximum number of threads the system will use to service blocking state changes.",
+                      initial = "16" )
   public static Integer MAX_STATE_THREADS             = 16;
   
   public static class SubdomainListener implements PropertyChangeListener {

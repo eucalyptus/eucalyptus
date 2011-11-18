@@ -1328,10 +1328,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
             if ( VmInstance.this.getRuntimeState( ).isBundling( ) ) {
               BundleState bundleState = BundleState.mapper.apply( runVm.getBundleTaskStateName( ) );
               VmInstance.this.getRuntimeState( ).updateBundleTaskState( bundleState );
-            } else if ( VmState.RUNNING.apply( VmInstance.this ) && System.currentTimeMillis( ) > VmInstance.this.expiration.getTime( ) ) {
-              VmInstance.this.setState( VmState.SHUTTING_DOWN, Reason.EXPIRED, "Expired at " + new Date( )
-                + " due to policy expiration of "
-                + VmInstance.this.expiration );
             } else if ( VmStateSet.RUN.apply( VmInstance.this ) && VmStateSet.RUN.contains( runVmState ) ) {
               VmInstance.this.setState( runVmState, Reason.APPEND, "UPDATE" );
               this.updateState( runVm );
@@ -1611,5 +1607,9 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     try {
       Transitions.DELETE.apply( this );
     } catch ( Exception ex ) {}
+  }
+
+  Date getExpiration( ) {
+    return this.expiration;
   }
 }
