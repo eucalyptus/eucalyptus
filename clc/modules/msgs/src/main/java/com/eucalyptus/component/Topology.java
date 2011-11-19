@@ -259,13 +259,19 @@ public class Topology {
   public static void touch( final ServiceTransitionType msg ) {//TODO:GRZE: @Service interceptor
     if ( !Hosts.isCoordinator( ) && ( msg.get_epoch( ) != null ) ) {
       for ( ServiceConfiguration conf : Lists.transform( msg.get_services( ), ServiceConfigurations.ServiceIdToServiceConfiguration.INSTANCE ) ) {
-        enable( conf );
+        if ( !conf.isVmLocal( ) ) {
+          enable( conf );
+        }
       }
       for ( ServiceConfiguration conf : Lists.transform( msg.get_disabledServices( ), ServiceConfigurations.ServiceIdToServiceConfiguration.INSTANCE ) ) {
-        disable( conf );
+        if ( !conf.isVmLocal( ) ) {
+          disable( conf );
+        }
       }
       for ( ServiceConfiguration conf : Lists.transform( msg.get_notreadyServices( ), ServiceConfigurations.ServiceIdToServiceConfiguration.INSTANCE ) ) {
-        start( conf );
+        if ( !conf.isVmLocal( ) ) {
+          start( conf );
+        }
       }
       Topology.getInstance( ).currentEpoch = Ints.max( Topology.getInstance( ).currentEpoch, msg.get_epoch( ) );
     }
