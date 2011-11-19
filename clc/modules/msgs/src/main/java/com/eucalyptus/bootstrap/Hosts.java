@@ -413,9 +413,10 @@ public class Hosts {
           return false;
         }
       }
-      
     };
     
+    public abstract boolean apply( Host input );
+
     private static <T extends ComponentId> boolean teardown( final Class<T> compClass, final InetAddress addr ) {
       if ( Internets.testLocal( addr ) ) {
         return false;

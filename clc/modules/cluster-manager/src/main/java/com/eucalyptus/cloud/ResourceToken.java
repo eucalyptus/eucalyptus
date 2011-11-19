@@ -69,6 +69,7 @@ import java.util.UUID;
 import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
 import com.eucalyptus.address.Address;
+import com.eucalyptus.auth.Contract;
 import com.eucalyptus.cloud.CloudMetadata.VmInstanceMetadata;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.cluster.Cluster;
@@ -101,11 +102,14 @@ public class ResourceToken implements VmInstanceMetadata, Comparable<ResourceTok
   private final Date          creationTime;
   private final Integer       resourceAllocationSequenceNumber;
   private final Integer       amount = 1;
+  private final Date          expirationTime;
   @Nullable
   private VmInstance          vmInst;
   
   public ResourceToken( final Allocation allocInfo, final int resourceAllocationSequenceNumber, final int launchIndex ) {
     this.allocation = allocInfo;
+    Contract<Date> expiry = allocInfo.getContext( ).getContracts( ).get( Contract.Type.EXPIRATION );
+    this.expirationTime = ( expiry == null ? new Date( 32503708800000l ) : expiry.getValue( ) );
     this.launchIndex = launchIndex;
     String tempVmId = VmInstances.getId( allocInfo.getReservationIndex( ), launchIndex );
     try {//GRZE:ugly hack.
@@ -113,7 +117,7 @@ public class ResourceToken implements VmInstanceMetadata, Comparable<ResourceTok
         tempVmId = ( ( StartInstancesType ) Contexts.lookup( ).getRequest( ) ).getInstancesSet( ).get( launchIndex );
       }
     } catch ( Exception ex ) {
-      LOG.error( ex , ex );
+      LOG.error( ex, ex );
     }
     this.instanceId = tempVmId;
     this.instanceUuid = UUID.randomUUID( ).toString( );
@@ -190,7 +194,7 @@ public class ResourceToken implements VmInstanceMetadata, Comparable<ResourceTok
       try {
         this.vmInst.release( );
       } catch ( Exception ex ) {
-        LOG.error( ex , ex );
+        LOG.error( ex, ex );
       }
     }
   }
@@ -302,6 +306,10 @@ public class ResourceToken implements VmInstanceMetadata, Comparable<ResourceTok
   @Override
   public OwnerFullName getOwner( ) {
     return this.allocation.getOwnerFullName( );
+  }
+
+  public Date getExpirationTime( ) {
+    return this.expirationTime;
   }
   
 }

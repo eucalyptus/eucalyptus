@@ -151,7 +151,7 @@ public class VolumeManager {
     Exception lastEx = null;
     for ( int i = 0; i < VOL_CREATE_RETRIES; i++ ) {
       try {
-        final ServiceConfiguration sc = Partitions.lookupService( Storage.class, partition );
+        final ServiceConfiguration sc = Topology.lookup( Storage.class, Partitions.lookupByName( partition ) );
         final UserFullName owner = ctx.getUserFullName( );
         Function<Long,Volume> allocator = new Function<Long,Volume>() {
 
