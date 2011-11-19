@@ -108,36 +108,26 @@ public class NetworkGroupManager {
       final RevokeSecurityGroupIngressResponseType reply = request.getReply( );
       reply.markFailed( );
       final List<IpPermissionType> ipPermissions = request.getIpPermissions( );
+      final List<NetworkRule> ruleList = NetworkGroups.ipPermissionsAsNetworkRules( ipPermissions );
       EntityTransaction db = Entities.get( NetworkGroup.class );
       try {      
 	  final List<NetworkGroup> ruleGroupList = NetworkGroups.lookupAll( ctx.getUserFullName( ).asAccountFullName( ), request.getGroupName( ) );
-	    outerloop: for (final NetworkGroup group : ruleGroupList) {
+	    for (final NetworkGroup group : ruleGroupList) {
 		if (group.getName().equals(request.getGroupName())) {
 		    for (final NetworkRule rule : group.getNetworkRules()) {
-			LOG.debug("NetworkRule Name : " + group.getName());
-			for (final String ipRange : rule.getIpRanges()) {
-			    if (ipPermissions.get(0).getIpRanges()
-				    .contains(ipRange)) {
-				LOG.debug(" : ipRange : " + ipRange);
-
-				if (!RestrictedTypes.filterPrivileged().apply(
-					group)) {
-				    throw new EucalyptusCloudException(
-					    "Not authorized to revoke"
-						    + "network group "
-						    + request.getGroupName()
-						    + " for " + ctx.getUser());
-				}
-
-				group.getNetworkRules().remove(rule);
-				reply.set_return(true);
-				break outerloop;
-			    }
+			if (!RestrictedTypes.filterPrivileged().apply(group)) {
+			    throw new EucalyptusCloudException(
+				    "Not authorized to revoke"
+					    + "network group "
+					    + request.getGroupName() + " for "
+					    + ctx.getUser());
+			} else if (ruleList.contains(rule)) {
+			    group.getNetworkRules().remove(rule);
+			    reply.set_return(true);
 			}
 		    }
 		}
 	    }
-  	    
         db.commit( );
       } catch ( Exception ex ) {
         Logs.exhaust( ).error( ex, ex );
