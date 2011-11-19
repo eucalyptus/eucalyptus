@@ -313,11 +313,11 @@ public class ServiceBootstrapper extends Bootstrapper.Simple {
           @Override
           public void run( ) {
             try {
-              if ( Hosts.isCoordinator( ) && config.isVmLocal( ) ) {
-                Topology.enable( config ).get( );
-              } else {
+//              if ( Hosts.isCoordinator( ) && config.isVmLocal( ) ) {
+//                Topology.enable( config ).get( );
+//              } else {
                 Topology.disable( config ).get( );//GRZE:NOTE: ensure handling remote config push to NOTREADY
-              }
+//              }
             } catch ( final Exception ex ) {
               Exceptions.maybeInterrupted( ex );
               Faults.failure( config, ex );

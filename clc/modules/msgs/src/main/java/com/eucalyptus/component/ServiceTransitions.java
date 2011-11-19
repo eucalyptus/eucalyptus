@@ -607,7 +607,11 @@ public class ServiceTransitions {
       public void fire( final ServiceConfiguration parent ) throws Exception {
         CHECK.fire( parent );
         parent.lookupBootstrapper( ).enable( );
-        ServiceBuilders.lookup( parent.getComponentId( ) ).fireEnable( parent );
+        try {
+          ServiceBuilders.lookup( parent.getComponentId( ) ).fireEnable( parent );
+        } catch ( Exception ex ) {
+          parent.lookupBootstrapper( ).disable( );
+        }
       }
     },
     DISABLE {

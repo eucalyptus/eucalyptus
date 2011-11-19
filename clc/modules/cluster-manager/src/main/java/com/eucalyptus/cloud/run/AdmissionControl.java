@@ -208,7 +208,7 @@ public class AdmissionControl {
   enum NodeResourceAllocator implements ResourceAllocator {
     INSTANCE;
     private List<ResourceToken> requestResourceToken( final Allocation allocInfo, final int tryAmount, final int maxAmount ) throws Exception {
-      ServiceConfiguration config = Partitions.lookupService( ClusterController.class, allocInfo.getPartition( ) );
+      ServiceConfiguration config = Topology.lookup( ClusterController.class, allocInfo.getPartition( ) );
       Cluster cluster = Clusters.lookup( config );
       final ResourceState state = cluster.getNodeState( );
       final List<ResourceToken> tokens = state.requestResourceAllocation( allocInfo, tryAmount, maxAmount );
