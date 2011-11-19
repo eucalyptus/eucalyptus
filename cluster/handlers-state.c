@@ -107,12 +107,33 @@ int doDescribeServices(ncMetadata *ccMeta, serviceInfoType *serviceIds, int serv
   logprintfl(EUCADEBUG, "DescribeServices(): params: userId=%s, serviceIdsLen=%d\n", SP(ccMeta ? ccMeta->userId : "UNSET"), serviceIdsLen);
 
   // TODO: for now, return error if list of services is passed in as parameter
+  /*
   if (serviceIdsLen > 0) {
     logprintfl(EUCAERROR, "DescribeServices(): received non-zero number of input services, returning fail\n");
     *outStatusesLen = 0;
     *outStatuses = NULL;
     return(1);
   }
+  */
+  sem_mywait(CONFIG);
+  if (!strlen(config->ccStatus.serviceId.type)) {
+    for (i=0; i<serviceIdsLen; i++) {
+      logprintfl(EUCADEBUG, "DescribeServices(): received input serviceId[%d]\n", i);
+      if (strlen(serviceIds[i].type)) {
+	if (!strcmp(serviceIds[i].type, "cluster")) {
+	  char uri[MAX_PATH], uriType[32], host[MAX_PATH], path[MAX_PATH];
+	  int port;
+	  snprintf(uri, MAX_PATH, "%s", serviceIds[i].uris[0]);
+	  rc = tokenize_uri(uri, uriType, host, &port, path);
+	  if (strlen(host)) {
+	    logprintfl(EUCADEBUG, "DescribeServices(): setting local serviceId to input serviceId (type=%s name=%s)\n", SP(serviceIds[i].type), SP(serviceIds[i].name));
+	    memcpy(&(config->ccStatus.serviceId), &(serviceIds[i]), sizeof(serviceInfoType));
+	  }
+	}
+      }
+    }
+  }
+  sem_mypost(CONFIG);
 
   for (i=0; i<16; i++) {
     int j;

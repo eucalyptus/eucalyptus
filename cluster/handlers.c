@@ -2714,9 +2714,9 @@ int initialize(ncMetadata *ccMeta) {
       
       for (i=0; i<16; i++) {
 	int j;
-	if (strlen(config->services[i].type)) {
+		if (strlen(config->services[i].type)) {
 	  // search for this CCs serviceInfoType
-	  if (!strcmp(config->services[i].type, "cluster")) {
+		  /*  if (!strcmp(config->services[i].type, "cluster")) {
 	    char uri[MAX_PATH], uriType[32], host[MAX_PATH], path[MAX_PATH];
 	    int port, done;
 	    snprintf(uri, MAX_PATH, "%s", config->services[i].uris[0]);
@@ -2733,7 +2733,8 @@ int initialize(ncMetadata *ccMeta) {
 		}
 	      }
 	    }
-	  } else if (!strcmp(config->services[i].type, "eucalyptus")) {
+	    } else */
+	  if (!strcmp(config->services[i].type, "eucalyptus")) {
 	    char uri[MAX_PATH], uriType[32], host[MAX_PATH], path[MAX_PATH];
 	    int port, done;
 	    // this is the cloud controller serviceInfo
