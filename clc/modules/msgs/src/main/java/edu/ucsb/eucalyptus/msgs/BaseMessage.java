@@ -31,7 +31,9 @@ public class BaseMessage {
   private String               statusMessage;
   private Integer              _epoch;                                           //NOTE:GRZE: intentionally violating naming conventions to avoid shadowing/conflicts
   private ArrayList<ServiceId> _services = Lists.newArrayList( );                //NOTE:GRZE: intentionally violating naming conventions to avoid shadowing/conflicts
-                                                                                  
+  private ArrayList<ServiceId> _disabledServices = Lists.newArrayList( );                //NOTE:GRZE: intentionally violating naming conventions to avoid shadowing/conflicts
+  private ArrayList<ServiceId> _notreadyServices = Lists.newArrayList( );                //NOTE:GRZE: intentionally violating naming conventions to avoid shadowing/conflicts
+
   public BaseMessage( ) {
     super( );
     this.correlationId = UUID.randomUUID( ).toString( );
@@ -294,6 +296,22 @@ public class BaseMessage {
         : user.getName( );
     }
     return this;
+  }
+
+  public ArrayList<ServiceId> get_disabledServices( ) {
+    return this._disabledServices;
+  }
+
+  public void set_disabledServices( ArrayList<ServiceId> _disabledServices ) {
+    this._disabledServices = _disabledServices;
+  }
+
+  public ArrayList<ServiceId> get_notreadyServices( ) {
+    return this._notreadyServices;
+  }
+
+  public void set_notreadyServices( ArrayList<ServiceId> _notreadyServices ) {
+    this._notreadyServices = _notreadyServices;
   }
   
 }
