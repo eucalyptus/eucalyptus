@@ -125,6 +125,30 @@ int doDescribeServices(ncMetadata *ccMeta, serviceInfoType *serviceIds, int serv
       }
     }
   }
+
+  for (i=0; i<16; i++) {
+    int j;
+    if (strlen(config->disabledServices[i].type)) {
+      logprintfl(EUCADEBUG, "DescribeServices(): internal disabled serviceInfos type=%s name=%s urisLen=%d\n", config->disabledServices[i].type, config->disabledServices[i].name, config->disabledServices[i].urisLen);
+      for (j=0; j<8; j++) {
+	if (strlen(config->disabledServices[i].uris[j])) {
+	  logprintfl(EUCADEBUG, "DescribeServices(): internal disabled serviceInfos\t uri[%d]:%s\n", j, config->disabledServices[i].uris[j]);
+	}
+      }
+    }
+  }
+
+  for (i=0; i<16; i++) {
+    int j;
+    if (strlen(config->notreadyServices[i].type)) {
+      logprintfl(EUCADEBUG, "DescribeServices(): internal not ready serviceInfos type=%s name=%s urisLen=%d\n", config->notreadyServices[i].type, config->notreadyServices[i].name, config->notreadyServices[i].urisLen);
+      for (j=0; j<8; j++) {
+	if (strlen(config->notreadyServices[i].uris[j])) {
+	  logprintfl(EUCADEBUG, "DescribeServices(): internal not ready serviceInfos\t uri[%d]:%s\n", j, config->notreadyServices[i].uris[j]);
+	}
+      }
+    }
+  }
   
   *outStatusesLen = 1;
   *outStatuses = malloc(sizeof(serviceStatusType));

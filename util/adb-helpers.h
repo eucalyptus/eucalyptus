@@ -19,6 +19,26 @@
 	snprintf(themeta->services[i].uris[j], 512, "%s",adb_serviceInfoType_get_uris_at(sit, env, j)); \
       }									\
     }									\
+    themeta->disabledServicesLen = adb_##thefunc##_sizeof_disabledServices(theadb, env); \
+    for (i=0; i<themeta->disabledServicesLen && i < 16; i++) {			\
+      sit = adb_##thefunc##_get_disabledServices_at(theadb, env, i);		\
+      snprintf(themeta->disabledServices[i].type,32,"%s",adb_serviceInfoType_get_type(sit, env)); \
+      snprintf(themeta->disabledServices[i].name,32,"%s",adb_serviceInfoType_get_name(sit, env)); \
+      themeta->disabledServices[i].urisLen = adb_serviceInfoType_sizeof_uris(sit, env);	\
+      for (j=0; j<themeta->disabledServices[i].urisLen && j < 8; j++) {		\
+	snprintf(themeta->disabledServices[i].uris[j], 512, "%s",adb_serviceInfoType_get_uris_at(sit, env, j)); \
+      }									\
+    }									\
+    themeta->notreadyServicesLen = adb_##thefunc##_sizeof_notreadyServices(theadb, env); \
+    for (i=0; i<themeta->notreadyServicesLen && i < 16; i++) {			\
+      sit = adb_##thefunc##_get_notreadyServices_at(theadb, env, i);		\
+      snprintf(themeta->notreadyServices[i].type,32,"%s",adb_serviceInfoType_get_type(sit, env)); \
+      snprintf(themeta->notreadyServices[i].name,32,"%s",adb_serviceInfoType_get_name(sit, env)); \
+      themeta->notreadyServices[i].urisLen = adb_serviceInfoType_sizeof_uris(sit, env);	\
+      for (j=0; j<themeta->notreadyServices[i].urisLen && j < 8; j++) {		\
+	snprintf(themeta->notreadyServices[i].uris[j], 512, "%s",adb_serviceInfoType_get_uris_at(sit, env, j)); \
+      }									\
+    }									\
   }
 
 

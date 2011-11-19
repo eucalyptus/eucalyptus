@@ -2709,6 +2709,8 @@ int initialize(ncMetadata *ccMeta) {
       int i;
       sem_mywait(CONFIG);
       memcpy(config->services, ccMeta->services, sizeof(serviceInfoType) * 16);
+      memcpy(config->disabledServices, ccMeta->disabledServices, sizeof(serviceInfoType) * 16);
+      memcpy(config->notreadyServices, ccMeta->notreadyServices, sizeof(serviceInfoType) * 16);
       
       for (i=0; i<16; i++) {
 	int j;
