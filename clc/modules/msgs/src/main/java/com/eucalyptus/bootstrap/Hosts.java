@@ -292,7 +292,7 @@ public class Hosts {
             Host h = hostCopy.get( strayHost.toString( ) );
             if ( h == null ) {
               LOG.debug( "Pruning failed to find host copy for orphan host: " + h );
-              h = hostMap.get( strayHost );
+              h = hostMap.get( strayHost.toString( ) );
               LOG.debug( "Pruning fell back to underlying host map for orphan host: " + h );
             }
             if ( h != null ) {
