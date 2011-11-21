@@ -686,7 +686,7 @@ static int disk_creator (artifact * a) // creates a 'raw' disk based on partitio
                     map_entries, 
                     blockblob_get_dev (a->deps[i]->bb), 
                     map [map_entries].first_block_dst, 
-                    map [map_entries].first_block_dst + map [map_entries].len_blocks);
+                    map [map_entries].first_block_dst + map [map_entries].len_blocks - 1);
         offset_bytes+=dep->size_bytes;
         if (p->type==NC_RESOURCE_IMAGE && root_entry==-1) {
             root_entry = map_entries;
