@@ -30,7 +30,7 @@ public class GroupActivity extends AbstractSearchActivity
   public static final String TITLE = "GROUPS";
   
   public static final String DELETE_GROUPS_CAPTION = "Delete selected groups";
-  public static final String DELETE_GROUPS_SUBJECT = "Are you sure to delete following selected groups?";
+  public static final String DELETE_GROUPS_SUBJECT = "Are you sure you want to delete following selected groups?";
   
   public static final String ADD_USERS_CAPTION = "Add users to selected groups";
   public static final String ADD_USERS_SUBJECT = "Enter users to add to selected groups (using space to separate names):";
