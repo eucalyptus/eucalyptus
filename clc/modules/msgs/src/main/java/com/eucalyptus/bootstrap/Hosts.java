@@ -107,6 +107,7 @@ import com.eucalyptus.event.Hertz;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.scripting.Groovyness;
+import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.Timers;
@@ -257,22 +258,44 @@ public class Hosts {
       if ( !BootstrapArgs.isCloudController( ) && currentHost.hasBootstrapped( ) && Databases.shouldInitialize( ) ) {
         System.exit( 123 );
       }
-      if ( !Topology.isEnabled( Eucalyptus.class ) && Hosts.getCoordinator( ) != null ) {
-        BootstrapComponent.setup( Eucalyptus.class, Hosts.getCoordinator( ).getBindAddress( ) );
+      try {
+        if ( !Topology.isEnabled( Eucalyptus.class ) && Hosts.getCoordinator( ) != null ) {
+          LOG.info( "Setting up new coordinator: " + Hosts.getCoordinator( ) );
+          BootstrapComponent.setup( Eucalyptus.class, Hosts.getCoordinator( ).getBindAddress( ) );
+        }
+      } catch ( Exception ex ) {
+        LOG.debug( ex );
+        Logs.extreme( ).debug( ex, ex );
       }
-      if ( event.isAsserted( 3L ) && Bootstrap.isFinished( ) && !Hosts.list( Predicates.not( BootedFilter.INSTANCE ) ).isEmpty( ) ) {
-        UpdateEntry.INSTANCE.apply( currentHost );
-      } else if ( event.isAsserted( 15L ) ) {
-        UpdateEntry.INSTANCE.apply( currentHost );
+      try {
+        if ( event.isAsserted( 3L ) && Bootstrap.isFinished( ) && !Hosts.list( Predicates.not( BootedFilter.INSTANCE ) ).isEmpty( ) ) {
+          LOG.info( "Updating current host entry: " + currentHost );
+          UpdateEntry.INSTANCE.apply( currentHost );
+        } else if ( event.isAsserted( 15L ) ) {
+          LOG.info( "Updating current host entry: " + currentHost );
+          UpdateEntry.INSTANCE.apply( currentHost );
+        }
+      } catch ( Exception ex ) {
+        LOG.debug( ex );
+        Logs.extreme( ).debug( ex, ex );
       }
-      Set<Address> currentMembers = Sets.newHashSet( hostMap.getChannel( ).getView( ).getMembers( ) );
-      Map<String, Host> hostCopy = Maps.newHashMap( hostMap );
-      Set<Address> currentHosts = Sets.newHashSet( Collections2.transform( hostCopy.values( ), GroupAddressTransform.INSTANCE ) );
-      Set<Address> strayHosts = Sets.difference( currentHosts, currentMembers );
-      for ( Address strayHost : strayHosts ) {
-        Host h = hostCopy.get( strayHost );
-        BootstrapComponent.TEARDOWN.apply( h );
-        hostMap.remove( strayHost );
+      try {
+        Set<Address> currentMembers = Sets.newHashSet( hostMap.getChannel( ).getView( ).getMembers( ) );
+        Map<String, Host> hostCopy = Maps.newHashMap( hostMap );
+        Set<Address> currentHosts = Sets.newHashSet( Collections2.transform( hostCopy.values( ), GroupAddressTransform.INSTANCE ) );
+        Set<Address> strayHosts = Sets.difference( currentHosts, currentMembers );
+        if ( !strayHosts.isEmpty( ) ) {
+          LOG.info( "Pruning orphan host entries: " + strayHosts );
+        }
+        for ( Address strayHost : strayHosts ) {
+          Host h = hostCopy.get( strayHost );
+          LOG.info( "Pruning orphan host: " + h );
+          hostMap.remove( strayHost );
+          BootstrapComponent.TEARDOWN.apply( h );
+        }
+      } catch ( Exception ex ) {
+        LOG.debug( ex );
+        Logs.extreme( ).debug( ex, ex );
       }
     }
   }
@@ -330,12 +353,16 @@ public class Hosts {
       if ( !partMembers.isEmpty( ) ) LOG.info( "Hosts.viewChange(): parted   => " + Joiner.on( ", " ).join( partMembers ) );
       for ( final Host h : Hosts.list( ) ) {
         if ( Iterables.contains( partMembers, h.getGroupsId( ) ) ) {
-          try {
-            BootstrapComponent.TEARDOWN.apply( h );
-          } catch ( Exception ex ) {
-            LOG.error( ex , ex );
-          }
-          LOG.info( "Hosts.viewChange(): -> removed  => " + h );
+          Threads.enqueue( ServiceConfigurations.createEphemeral( Empyrean.INSTANCE ), new Runnable( ) {
+            public void run( ) {
+              try {
+                BootstrapComponent.TEARDOWN.apply( h );
+              } catch ( Exception ex ) {
+                LOG.error( ex, ex );
+              }
+              LOG.info( "Hosts.viewChange(): -> removed  => " + h );
+            }
+          } );
         }
       }
       LOG.info( "Hosts.viewChange(): new view finished." );
@@ -420,7 +447,7 @@ public class Hosts {
     };
     
     public abstract boolean apply( Host input );
-
+    
     private static <T extends ComponentId> boolean teardown( final Class<T> compClass, final InetAddress addr ) {
       if ( Internets.testLocal( addr ) ) {
         return false;
