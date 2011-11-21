@@ -241,7 +241,15 @@ public class Databases {
                 final String dbPass = SystemIds.databasePassword( );
                 final String realJdbcDriver = Databases.getDriverName( );
                 
-                if ( !cluster.getActiveDatabases( ).contains( hostName ) && !cluster.getInactiveDatabases( ).contains( hostName ) ) {
+                if ( fullSync ) {
+                  if ( cluster.getActiveDatabases( ).contains( hostName ) ) {
+                    LOG.info( "Deactivating existing database connections to: " + host );
+                    cluster.deactivate( hostName );
+                  }
+                  if ( cluster.getInactiveDatabases( ).contains( hostName ) ) {
+                    LOG.info( "Deactivating existing database connections to: " + host );
+                    cluster.remove( hostName );
+                  }
                   LOG.info( "Creating database connections for: " + host );
                   cluster.add( hostName, realJdbcDriver, dbUrl );
                   final InactiveDatabaseMBean database = Databases.lookupInactiveDatabase( contextName, hostName );
@@ -249,13 +257,6 @@ public class Databases {
                   database.setPassword( dbPass );
                   database.setWeight( Hosts.isCoordinator( host ) ? 100 : 1 );
                   database.setLocal( host.isLocalHost( ) );
-                }
-                
-                if ( fullSync ) {
-                  if ( cluster.getActiveDatabases( ).contains( hostName ) ) {
-                    LOG.info( "Deactivating existing database connections to: " + host );
-                    cluster.deactivate( hostName );
-                  }
                   LOG.info( "Full sync of database on: " + host + " using " + cluster.getActiveDatabases( ) );
                   net.sf.hajdbc.Database<Driver> db = cluster.getDatabase( hostName );
                   db.setWeight( Hosts.isCoordinator( host ) ? 100 : 1 );

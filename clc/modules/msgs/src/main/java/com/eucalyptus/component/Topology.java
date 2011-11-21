@@ -227,11 +227,13 @@ public class Topology {
                                                                     typeMapper );
         msg.get_services( ).addAll( serviceList );
         for ( Component c : Components.list( ) ) {
-          for ( ServiceConfiguration s : c.services( ) ) {
-            if ( !serviceList.contains( s ) && State.DISABLED.apply( s ) ) {
-              msg.get_disabledServices( ).add( typeMapper.apply( s ) );
-            } else if ( !serviceList.contains( s ) && State.DISABLED.apply( s ) ) {
-              msg.get_notreadyServices( ).add( typeMapper.apply( s ) );
+          if ( !c.getComponentId( ).isAlwaysLocal( ) && !c.getComponentId( ).isCloudLocal( ) ) {
+            for ( ServiceConfiguration s : c.services( ) ) {
+              if ( !serviceList.contains( s ) && State.DISABLED.apply( s ) ) {
+                msg.get_disabledServices( ).add( typeMapper.apply( s ) );
+              } else if ( !serviceList.contains( s ) && State.DISABLED.apply( s ) ) {
+                msg.get_notreadyServices( ).add( typeMapper.apply( s ) );
+              }
             }
           }
         }
