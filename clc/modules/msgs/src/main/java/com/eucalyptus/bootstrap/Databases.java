@@ -271,6 +271,8 @@ public class Databases {
                 } else {
                   throw Exceptions.toUndeclared( "Host is not ready to be activated: " + host );
                 }
+              } catch ( final NoSuchElementException ex1 ) {
+                return;
               } catch ( final Exception ex1 ) {
                 Logs.extreme( ).error( ex1, ex1 );
                 throw Exceptions.toUndeclared( "Failed to activate host " + host + " because of: " + ex1.getMessage( ), ex1 );
