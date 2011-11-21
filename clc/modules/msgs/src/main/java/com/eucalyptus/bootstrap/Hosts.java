@@ -289,10 +289,21 @@ public class Hosts {
             LOG.info( "Pruning orphan host entries: " + strayHosts );
           }
           for ( Address strayHost : strayHosts ) {
-            Host h = hostCopy.get( strayHost );
-            LOG.info( "Pruning orphan host: " + h );
-            hostMap.remove( strayHost );
-            BootstrapComponent.TEARDOWN.apply( h );
+            Host h = hostCopy.get( strayHost.toString( ) );
+            if ( h == null ) {
+              LOG.debug( "Pruning failed to find host copy for orphan host: " + h );
+              h = hostMap.get( strayHost );
+              LOG.debug( "Pruning fell back to underlying host map for orphan host: " + h );
+              LOG.info( "Pruning orphan host: " + h );
+              LOG.info( "Pruned orphan host: " + hostMap.remove( strayHost ) );
+              BootstrapComponent.TEARDOWN.apply( h );
+            } else {
+              LOG.info( "Pruning failed for orphan host: " + strayHost
+                + " with local-copy value: "
+                + hostCopy.get( strayHost.toString( ) )
+                + " and underlying host map value: "
+                + hostMap.get( strayHost ) );
+            }
           }
         }
       } catch ( Exception ex ) {
