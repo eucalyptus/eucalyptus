@@ -172,7 +172,7 @@ static int walrus_request_timeout (const char * walrus_op, const char * verb, co
     curl_easy_setopt (curl, CURLOPT_ERRORBUFFER, error_msg);
     curl_easy_setopt (curl, CURLOPT_URL, url);
     curl_easy_setopt (curl, CURLOPT_HEADERFUNCTION, write_header);
-    curl_easy_setopt (curl, CURLOPT_FOLLOWLOCATION, 1);
+    // curl_easy_setopt (curl, CURLOPT_FOLLOWLOCATION, 1); // TODO: remove the comment once we want to follow redirects (e.g., on HTTP 407)
 
     if (strncmp (verb, "GET", 4)==0) {
         curl_easy_setopt (curl, CURLOPT_HTTPGET, 1L);
