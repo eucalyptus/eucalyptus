@@ -295,14 +295,14 @@ public class Hosts {
               h = hostMap.get( strayHost );
               LOG.debug( "Pruning fell back to underlying host map for orphan host: " + h );
               LOG.info( "Pruning orphan host: " + h );
-              LOG.info( "Pruned orphan host: " + hostMap.remove( strayHost ) );
+              LOG.info( "Pruned orphan host: " + hostMap.remove( strayHost.toString( ) ) );
               BootstrapComponent.TEARDOWN.apply( h );
             } else {
               LOG.info( "Pruning failed for orphan host: " + strayHost
                 + " with local-copy value: "
                 + hostCopy.get( strayHost.toString( ) )
                 + " and underlying host map value: "
-                + hostMap.get( strayHost ) );
+                + hostMap.get( strayHost.toString( ) ) );
             }
           }
         }
