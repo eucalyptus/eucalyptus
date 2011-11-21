@@ -736,7 +736,7 @@ public class ServiceTransitions {
       
       @Override
       public void fire( final ServiceConfiguration config ) {
-        if ( Hosts.isCoordinator( ) && !config.isVmLocal( ) ) {
+        if ( Hosts.isCoordinator( ) && !config.isVmLocal( ) && !( config.getComponentId( ).isAlwaysLocal( ) || config.getComponentId( ).isCloudLocal( ) ) ) {
           ServiceEvents.fire( config, config.getStateMachine( ).getState( ) );
         }
       }

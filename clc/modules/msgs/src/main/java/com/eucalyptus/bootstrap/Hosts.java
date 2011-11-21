@@ -265,15 +265,15 @@ public class Hosts {
       } else if ( event.isAsserted( 15L ) ) {
         UpdateEntry.INSTANCE.apply( currentHost );
       }
-//      Set<Address> currentMembers = Sets.newHashSet( hostMap.getChannel( ).getView( ).getMembers( ) );
-//      Map<String, Host> hostCopy = Maps.newHashMap( hostMap );
-//      Set<Address> currentHosts = Sets.newHashSet( Collections2.transform( hostCopy.values( ), GroupAddressTransform.INSTANCE ) );
-//      Set<Address> strayHosts = Sets.difference( currentHosts, currentMembers );
-//      for ( Address strayHost : strayHosts ) {
-//        Host h = hostCopy.get( strayHost );
-//        BootstrapComponent.TEARDOWN.apply( h );
-//        hostMap.remove( strayHost );
-//      }
+      Set<Address> currentMembers = Sets.newHashSet( hostMap.getChannel( ).getView( ).getMembers( ) );
+      Map<String, Host> hostCopy = Maps.newHashMap( hostMap );
+      Set<Address> currentHosts = Sets.newHashSet( Collections2.transform( hostCopy.values( ), GroupAddressTransform.INSTANCE ) );
+      Set<Address> strayHosts = Sets.difference( currentHosts, currentMembers );
+      for ( Address strayHost : strayHosts ) {
+        Host h = hostCopy.get( strayHost );
+        BootstrapComponent.TEARDOWN.apply( h );
+        hostMap.remove( strayHost );
+      }
     }
   }
   
@@ -375,7 +375,7 @@ public class Hosts {
     TEARDOWN {
       @Override
       public boolean apply( final Host input ) {
-        if ( Bootstrap.isShuttingDown( ) ) {
+        if ( Bootstrap.isShuttingDown( ) || input.isLocalHost( ) ) {
           return false;
         } else {
           try {
@@ -384,7 +384,7 @@ public class Hosts {
             }
             if ( input.hasDatabase( ) && Hosts.isCoordinator( ) ) {
               Hosts.remove( input.getDisplayName( ) );
-            } else if ( input.hasDatabase( ) && Hosts.getCoordinator( ) == null ) {
+            } else if ( input.hasDatabase( ) && ( Hosts.getCoordinator( ) == null || Hosts.isCoordinator( input ) ) ) {
               Hosts.remove( input.getDisplayName( ) );
             }
             teardown( Empyrean.class, input.getBindAddress( ) );
@@ -675,6 +675,8 @@ public class Hosts {
                 @Override
                 public void run( ) {
                   try {
+                    Listeners.deregister( HostBootstrapEventListener.INSTANCE );
+                    hostMap.removeNotifier( HostMapStateListener.INSTANCE );
                     try {
                       if ( Hosts.contains( Internets.localHostIdentifier( ) ) ) {
                         Hosts.remove( Internets.localHostIdentifier( ) );

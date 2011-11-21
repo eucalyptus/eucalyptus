@@ -324,6 +324,12 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
         + serviceStatuses );
       throw new NoSuchElementException( "Failed to find service info for cluster: " + parent.getFullName( ) );
     }
+
+    @Override
+    public void setSubject( Cluster subject ) {
+      this.getRequest( ).getServices( ).add( TypeMappers.transform( subject.getConfiguration( ), ServiceId.class ) );
+      super.setSubject( subject );
+    }
   }
   
   enum Refresh implements Function<Cluster, TransitionAction<Cluster>> {

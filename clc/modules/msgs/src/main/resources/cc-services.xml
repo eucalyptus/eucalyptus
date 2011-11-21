@@ -88,7 +88,7 @@
   <mapping class="com.eucalyptus.empyrean.ServiceTransitionType" abstract="true" extends="com.eucalyptus.empyrean.EmpyreanMessage">
     <structure map-as="com.eucalyptus.empyrean.EmpyreanMessage" />
     <collection field="services" factory="org.jibx.runtime.Utility.arrayListFactory">
-      <structure name="servicesIds" map-as="com.eucalyptus.empyrean.ServiceId" />
+      <structure name="serviceIds" map-as="com.eucalyptus.empyrean.ServiceId" />
     </collection>
   </mapping>
   <mapping name="DescribeServices" class="com.eucalyptus.empyrean.DescribeServicesType" extends="com.eucalyptus.empyrean.ServiceTransitionType">

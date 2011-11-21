@@ -219,14 +219,41 @@ public class Topology {
   }
   
   public static void populateServices( ServiceConfiguration config, BaseMessage msg ) {
+    Function<ServiceConfiguration, ServiceId> typeMapper = TypeMappers.lookup( ServiceConfiguration.class, ServiceId.class );
     if ( Hosts.isCoordinator( ) ) {
       msg.set_epoch( Topology.epoch( ) );
       if ( config.getComponentId( ).isAlwaysLocal( ) ) {
         Collection<ServiceId> serviceList = Collections2.transform( Topology.getInstance( ).getServices( ).values( ),
-                                                                    TypeMappers.lookup( ServiceConfiguration.class, ServiceId.class ) );
+                                                                    typeMapper );
         msg.get_services( ).addAll( serviceList );
+        for ( Component c : Components.list( ) ) {
+          if ( !c.getComponentId( ).isAlwaysLocal( ) && !c.getComponentId( ).isCloudLocal( ) ) {
+            for ( ServiceConfiguration s : c.services( ) ) {
+              if ( !serviceList.contains( s ) && State.DISABLED.apply( s ) ) {
+                msg.get_disabledServices( ).add( typeMapper.apply( s ) );
+              } else if ( !serviceList.contains( s ) && State.DISABLED.apply( s ) ) {
+                msg.get_notreadyServices( ).add( typeMapper.apply( s ) );
+              }
+            }
+          }
+        }
       } else {
-        msg.get_services( ).addAll( Topology.partitionRelativeView( config ) );
+        Collection<ServiceId> serviceList = Topology.partitionRelativeView( config );
+        msg.get_services( ).addAll( serviceList );
+        final Partition partition = Partitions.lookup( config );
+        for ( Component c : Components.list( ) ) {
+          for ( ServiceConfiguration s : c.services( ) ) {
+            if ( !partitionViewFilter( partition ).apply( s ) ) {
+              continue;
+            } else {
+              if ( !serviceList.contains( s ) && State.DISABLED.apply( s ) ) {
+                msg.get_disabledServices( ).add( typeMapper.apply( s ) );
+              } else if ( !serviceList.contains( s ) && State.DISABLED.apply( s ) ) {
+                msg.get_notreadyServices( ).add( typeMapper.apply( s ) );
+              }
+            }
+          }
+        }
       }
     }
   }
@@ -234,7 +261,19 @@ public class Topology {
   public static void touch( final ServiceTransitionType msg ) {//TODO:GRZE: @Service interceptor
     if ( !Hosts.isCoordinator( ) && ( msg.get_epoch( ) != null ) ) {
       for ( ServiceConfiguration conf : Lists.transform( msg.get_services( ), ServiceConfigurations.ServiceIdToServiceConfiguration.INSTANCE ) ) {
-        enable( conf );
+        if ( !conf.isVmLocal( ) ) {
+          enable( conf );
+        }
+      }
+      for ( ServiceConfiguration conf : Lists.transform( msg.get_disabledServices( ), ServiceConfigurations.ServiceIdToServiceConfiguration.INSTANCE ) ) {
+        if ( !conf.isVmLocal( ) ) {
+          disable( conf );
+        }
+      }
+      for ( ServiceConfiguration conf : Lists.transform( msg.get_notreadyServices( ), ServiceConfigurations.ServiceIdToServiceConfiguration.INSTANCE ) ) {
+        if ( !conf.isVmLocal( ) ) {
+          start( conf );
+        }
       }
       Topology.getInstance( ).currentEpoch = Ints.max( Topology.getInstance( ).currentEpoch, msg.get_epoch( ) );
     }
