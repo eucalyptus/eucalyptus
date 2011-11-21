@@ -330,7 +330,11 @@ public class Hosts {
       if ( !partMembers.isEmpty( ) ) LOG.info( "Hosts.viewChange(): parted   => " + Joiner.on( ", " ).join( partMembers ) );
       for ( final Host h : Hosts.list( ) ) {
         if ( Iterables.contains( partMembers, h.getGroupsId( ) ) ) {
-          BootstrapComponent.TEARDOWN.apply( h );
+          try {
+            BootstrapComponent.TEARDOWN.apply( h );
+          } catch ( Exception ex ) {
+            LOG.error( ex , ex );
+          }
           LOG.info( "Hosts.viewChange(): -> removed  => " + h );
         }
       }
