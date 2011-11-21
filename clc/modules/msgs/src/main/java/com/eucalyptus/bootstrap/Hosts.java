@@ -280,18 +280,20 @@ public class Hosts {
         Logs.extreme( ).debug( ex, ex );
       }
       try {
-        Set<Address> currentMembers = Sets.newHashSet( hostMap.getChannel( ).getView( ).getMembers( ) );
-        Map<String, Host> hostCopy = Maps.newHashMap( hostMap );
-        Set<Address> currentHosts = Sets.newHashSet( Collections2.transform( hostCopy.values( ), GroupAddressTransform.INSTANCE ) );
-        Set<Address> strayHosts = Sets.difference( currentHosts, currentMembers );
-        if ( !strayHosts.isEmpty( ) ) {
-          LOG.info( "Pruning orphan host entries: " + strayHosts );
-        }
-        for ( Address strayHost : strayHosts ) {
-          Host h = hostCopy.get( strayHost );
-          LOG.info( "Pruning orphan host: " + h );
-          hostMap.remove( strayHost );
-          BootstrapComponent.TEARDOWN.apply( h );
+        if ( event.isAsserted( 15L ) ) {
+          Set<Address> currentMembers = Sets.newHashSet( hostMap.getChannel( ).getView( ).getMembers( ) );
+          Map<String, Host> hostCopy = Maps.newHashMap( hostMap );
+          Set<Address> currentHosts = Sets.newHashSet( Collections2.transform( hostCopy.values( ), GroupAddressTransform.INSTANCE ) );
+          Set<Address> strayHosts = Sets.difference( currentHosts, currentMembers );
+          if ( !strayHosts.isEmpty( ) ) {
+            LOG.info( "Pruning orphan host entries: " + strayHosts );
+          }
+          for ( Address strayHost : strayHosts ) {
+            Host h = hostCopy.get( strayHost );
+            LOG.info( "Pruning orphan host: " + h );
+            hostMap.remove( strayHost );
+            BootstrapComponent.TEARDOWN.apply( h );
+          }
         }
       } catch ( Exception ex ) {
         LOG.debug( ex );
