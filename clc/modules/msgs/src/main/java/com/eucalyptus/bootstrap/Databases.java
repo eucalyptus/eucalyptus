@@ -183,19 +183,39 @@ public class Databases {
             public void run( ) {
               try {
                 final DriverDatabaseClusterMBean cluster = lookup( contextName );
-                
+                LOG.debug( "Tearing down database connections for: " + hostName + " to context: " + contextName );
                 try {
-                  if ( cluster.getActiveDatabases( ).contains( hostName ) ) {
-                    LOG.debug( "Deactivating database connections for: " + hostName + " to context: " + contextName );
-                    cluster.deactivate( hostName );
-                  }
                   LOG.debug( "Removing database connections for: " + hostName + " to context: " + contextName );
                   cluster.remove( hostName );
-                } catch ( final Exception ex ) {
-                  LOG.error( ex, ex );
+                  LOG.debug( "Removed database connections for: " + hostName + " to context: " + contextName );
+                } catch ( IllegalStateException ex ) {
+                  LOG.debug( ex );
+                  Logs.extreme( ).debug( ex, ex );
+                }
+                try {
+                  LOG.debug( "Deactivating database connections for: " + hostName + " to context: " + contextName );
+                  cluster.deactivate( hostName );
+                  LOG.debug( "Deactived database connections for: " + hostName + " to context: " + contextName );
+                } catch ( Exception ex ) {
+                  LOG.debug( ex );
+                  Logs.extreme( ).debug( ex, ex );
+                }
+                try {
+                  LOG.debug( "Removing database connections for: " + hostName + " to context: " + contextName );
+                  cluster.remove( hostName );
+                  LOG.debug( "Removed database connections for: " + hostName + " to context: " + contextName );
+                } catch ( Exception ex ) {
+                  LOG.debug( ex );
+                  Logs.extreme( ).debug( ex, ex );
                 }
               } catch ( final NoSuchElementException ex1 ) {
-                LOG.error( ex1, ex1 );
+                LOG.debug( ex1 );
+                Logs.extreme( ).debug( ex1, ex1 );
+                return;
+              } catch ( final IllegalStateException ex1 ) {
+                LOG.debug( ex1 );
+                Logs.extreme( ).debug( ex1, ex1 );
+                return;
               } catch ( final Exception ex1 ) {
                 LOG.error( ex1, ex1 );
               }
@@ -272,6 +292,12 @@ public class Databases {
                   throw Exceptions.toUndeclared( "Host is not ready to be activated: " + host );
                 }
               } catch ( final NoSuchElementException ex1 ) {
+                LOG.debug( ex1 );
+                Logs.extreme( ).debug( ex1, ex1 );
+                return;
+              } catch ( final IllegalStateException ex1 ) {
+                LOG.debug( ex1 );
+                Logs.extreme( ).debug( ex1, ex1 );
                 return;
               } catch ( final Exception ex1 ) {
                 Logs.extreme( ).error( ex1, ex1 );
@@ -309,11 +335,16 @@ public class Databases {
         syncState.set( SyncState.NOTSYNCED );
       } catch ( Exception ex ) {
         LOG.error( ex );
-        Logs.exhaust( ).error( ex, ex );
+        Logs.extreme( ).error( ex, ex );
         syncState.set( SyncState.NOTSYNCED );
       }
     } else {
-      runDbStateChange( DeactivateHostFunction.INSTANCE.apply( hostName ) );
+      try {
+        runDbStateChange( DeactivateHostFunction.INSTANCE.apply( hostName ) );
+      } catch ( Exception ex ) {
+        LOG.error( ex );
+        Logs.extreme( ).error( ex, ex );
+      }
     }
   }
   
@@ -338,8 +369,14 @@ public class Databases {
           return false;
         }
       } else {
-        runDbStateChange( ActivateHostFunction.INSTANCE.apply( host ) );
-        return true;
+        try {
+          runDbStateChange( ActivateHostFunction.INSTANCE.apply( host ) );
+          return true;
+        } catch ( Exception ex ) {
+          LOG.error( ex );
+          Logs.extreme( ).error( ex, ex );
+          return false;
+        }
       }
     }
   }

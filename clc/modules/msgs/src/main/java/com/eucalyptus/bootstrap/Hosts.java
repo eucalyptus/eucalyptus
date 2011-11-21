@@ -107,6 +107,7 @@ import com.eucalyptus.event.Hertz;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.scripting.Groovyness;
+import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.Timers;
@@ -330,12 +331,16 @@ public class Hosts {
       if ( !partMembers.isEmpty( ) ) LOG.info( "Hosts.viewChange(): parted   => " + Joiner.on( ", " ).join( partMembers ) );
       for ( final Host h : Hosts.list( ) ) {
         if ( Iterables.contains( partMembers, h.getGroupsId( ) ) ) {
-          try {
-            BootstrapComponent.TEARDOWN.apply( h );
-          } catch ( Exception ex ) {
-            LOG.error( ex , ex );
-          }
-          LOG.info( "Hosts.viewChange(): -> removed  => " + h );
+          Threads.enqueue( ServiceConfigurations.createEphemeral( Empyrean.INSTANCE ), new Runnable( ) {
+            public void run( ) {
+              try {
+                BootstrapComponent.TEARDOWN.apply( h );
+              } catch ( Exception ex ) {
+                LOG.error( ex, ex );
+              }
+              LOG.info( "Hosts.viewChange(): -> removed  => " + h );
+            }
+          } );
         }
       }
       LOG.info( "Hosts.viewChange(): new view finished." );
@@ -420,7 +425,7 @@ public class Hosts {
     };
     
     public abstract boolean apply( Host input );
-
+    
     private static <T extends ComponentId> boolean teardown( final Class<T> compClass, final InetAddress addr ) {
       if ( Internets.testLocal( addr ) ) {
         return false;
