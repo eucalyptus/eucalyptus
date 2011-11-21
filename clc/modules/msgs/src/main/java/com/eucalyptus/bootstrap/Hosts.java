@@ -294,6 +294,8 @@ public class Hosts {
               LOG.debug( "Pruning failed to find host copy for orphan host: " + h );
               h = hostMap.get( strayHost );
               LOG.debug( "Pruning fell back to underlying host map for orphan host: " + h );
+            }
+            if ( h != null ) {
               LOG.info( "Pruning orphan host: " + h );
               LOG.info( "Pruned orphan host: " + hostMap.remove( strayHost.toString( ) ) );
               BootstrapComponent.TEARDOWN.apply( h );
