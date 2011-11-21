@@ -64,13 +64,10 @@
 package edu.ucsb.eucalyptus.cloud.ws;
 
 import org.apache.log4j.Logger;
-
-import com.eucalyptus.component.LifecycleEvents;
 import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.ListenerRegistry;
-import com.eucalyptus.util.EucalyptusCloudException;
 
 public class BlockStorageEventListener implements EventListener {
 	private static Logger LOG  = Logger.getLogger( BlockStorageEventListener.class );
@@ -81,7 +78,7 @@ public class BlockStorageEventListener implements EventListener {
 
 	@Override
 	public void fireEvent(Event event) {
-		if(event instanceof LifecycleEvents.Start) {			
+//		if(event instanceof LifecycleEvents.Start) {			
 			//TODO: This needs to be moved to a Bootstrapper
 //			if(((StartComponentEvent) event).isLocal())
 //				try {
@@ -89,6 +86,6 @@ public class BlockStorageEventListener implements EventListener {
 //				} catch (EucalyptusCloudException e) {
 //					LOG.error(e);
 //				}
-		} 
+//		} 
 	}
 }

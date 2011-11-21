@@ -72,7 +72,7 @@ import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.component.Component.State;
-import com.eucalyptus.component.ServiceChecks.CheckException;
+import com.eucalyptus.component.Faults.CheckException;
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.MultiDatabasePropertyEntry;
 import com.eucalyptus.configurable.PropertyDirectory;
@@ -465,17 +465,23 @@ public class ServiceTransitions {
             return parent.getName( ).equals( arg0.getServiceId( ).getName( ) );
           }
         } );
-        String corrId = response.getCorrelationId( );
-        List<CheckException> errors = ServiceChecks.Functions.statusToCheckExceptions( corrId ).apply( status );
-        if ( !errors.isEmpty( ) ) {
-          if ( Component.State.ENABLED.equals( parent.lookupState( ) ) ) {
-            try {
-              DISABLE.fire( parent );
-            } catch ( Exception ex ) {
-              LOG.error( ex, ex );
+        CheckException errors = Faults.transformToExceptions( ).apply( status );
+        Faults.persist( errors );
+        if ( errors != null ) {
+          if ( Faults.Severity.FATAL.equals( errors.getSeverity( ) ) ) {
+            //TODO:GRZE: handle remote fatal error.
+          } else if ( errors.getSeverity( ).ordinal( ) < Faults.Severity.ERROR.ordinal( ) ) {
+            Logs.extreme( ).error( errors, errors );
+          } else {
+            if ( Component.State.ENABLED.equals( parent.lookupState( ) ) ) {
+              try {
+                DISABLE.fire( parent );
+              } catch ( Exception ex ) {
+                LOG.error( ex, ex );
+              }
             }
           }
-          throw Faults.failure( parent, errors );
+          throw errors;
         }
       }
       
@@ -601,7 +607,11 @@ public class ServiceTransitions {
       public void fire( final ServiceConfiguration parent ) throws Exception {
         CHECK.fire( parent );
         parent.lookupBootstrapper( ).enable( );
-        ServiceBuilders.lookup( parent.getComponentId( ) ).fireEnable( parent );
+        try {
+          ServiceBuilders.lookup( parent.getComponentId( ) ).fireEnable( parent );
+        } catch ( Exception ex ) {
+          parent.lookupBootstrapper( ).disable( );
+        }
       }
     },
     DISABLE {

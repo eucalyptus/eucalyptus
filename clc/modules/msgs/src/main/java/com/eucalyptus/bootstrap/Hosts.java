@@ -379,17 +379,21 @@ public class Hosts {
           return false;
         } else {
           try {
-            Hosts.remove( input.getDisplayName( ) );
+            if ( !input.isLocalHost( ) && input.hasDatabase( ) ) {//GRZE:NOTE:maybe handle in entryRemoved()
+              Databases.disable( input.getDisplayName( ) );
+            }
+            if ( input.hasDatabase( ) && Hosts.isCoordinator( ) ) {
+              Hosts.remove( input.getDisplayName( ) );
+            } else if ( input.hasDatabase( ) && Hosts.getCoordinator( ) == null ) {
+              Hosts.remove( input.getDisplayName( ) );
+            }
             teardown( Empyrean.class, input.getBindAddress( ) );
             if ( input.hasDatabase( ) ) {
               teardown( Eucalyptus.class, input.getBindAddress( ) );
             }
-            if ( !input.isLocalHost( ) && input.hasDatabase( ) ) {
-              Databases.disable( input );
-              if ( BootstrapArgs.isCloudController( ) ) {
-                BootstrapComponent.SETUP.apply( Hosts.localHost( ) );
-                UpdateEntry.INSTANCE.apply( Hosts.localHost( ) );
-              }
+            if ( input.hasDatabase( ) && BootstrapArgs.isCloudController( ) ) {//GRZE:NOTE:promote
+              BootstrapComponent.SETUP.apply( Hosts.localHost( ) );
+              UpdateEntry.INSTANCE.apply( Hosts.localHost( ) );
             }
             return true;
           } catch ( Exception ex ) {
@@ -409,9 +413,10 @@ public class Hosts {
           return false;
         }
       }
-      
     };
     
+    public abstract boolean apply( Host input );
+
     private static <T extends ComponentId> boolean teardown( final Class<T> compClass, final InetAddress addr ) {
       if ( Internets.testLocal( addr ) ) {
         return false;
@@ -880,6 +885,10 @@ public class Hosts {
   
   public static Long getStartTime( ) {
     return Coordinator.INSTANCE.getCurrentStartTime( );
+  }
+  
+  public static boolean isCoordinator( Host host ) {
+    return isCoordinator( host.getBindAddress( ) );
   }
   
   public static boolean isCoordinator( InetAddress addr ) {

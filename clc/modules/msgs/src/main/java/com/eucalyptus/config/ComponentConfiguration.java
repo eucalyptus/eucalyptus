@@ -326,11 +326,6 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
   }
   
   @Override
-  public Collection<ServiceCheckRecord> lookupDetails( ) {
-    return Collections.EMPTY_LIST;//TODO:GRZE: restore gathering details
-  }
-  
-  @Override
   public StateMachine<ServiceConfiguration, Component.State, Component.Transition> getStateMachine( ) {
     return Components.lookup( this.lookupComponentId( ) ).getStateMachine( this );
   }
