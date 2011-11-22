@@ -260,6 +260,11 @@ public class Hosts {
       if ( Hosts.pruneHosts( ) ) {
         Hosts.updateServices( );
       }
+      for ( Host h : Hosts.listActiveDatabases( ) ) {
+        if ( !h.isLocalHost( ) && Bootstrap.isFinished( ) ) {
+          Databases.enable( currentHost );
+        }
+      }
       try {
         if ( event.isAsserted( 3L ) && Bootstrap.isFinished( ) && !Hosts.list( Predicates.not( BootedFilter.INSTANCE ) ).isEmpty( ) ) {
           if ( UpdateEntry.INSTANCE.apply( currentHost ) ) {
