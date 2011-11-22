@@ -582,6 +582,8 @@ public class Topology {
     public boolean apply( final ServiceConfiguration arg0 ) {
       if ( Hosts.isCoordinator( ) && arg0.getComponentId( ).isDistributedService( ) ) {
         return true;
+      } else if ( arg0.isHostLocal( ) && BootstrapArgs.isCloudController( ) ) {
+        return true;
       } else {
         return arg0.isVmLocal( );
       }
