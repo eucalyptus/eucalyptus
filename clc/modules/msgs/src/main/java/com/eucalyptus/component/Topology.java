@@ -355,7 +355,7 @@ public class Topology {
   }
   
   public static Future<ServiceConfiguration> start( final ServiceConfiguration config ) {
-    return transition( State.NOTREADY ).apply( config );
+    return transition( State.DISABLED ).apply( config );
   }
   
   public static Future<ServiceConfiguration> enable( final ServiceConfiguration config ) {
