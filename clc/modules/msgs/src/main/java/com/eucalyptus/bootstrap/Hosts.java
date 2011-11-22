@@ -876,6 +876,7 @@ public class Hosts {
   }
   
   private static final Predicate<Host> filterSyncedDbs = Predicates.and( DbFilter.INSTANCE, SyncedDbFilter.INSTANCE );
+  private static final Predicate<Host> filterBooedSyncedDbs = Predicates.and( filterSyncedDbs, BootedFilter.INSTANCE );
   
   public static List<Host> listActiveDatabases( ) {
     return Hosts.list( filterSyncedDbs );
@@ -1126,7 +1127,7 @@ public class Hosts {
   
   static void awaitDatabases( ) throws InterruptedException {
     if ( !BootstrapArgs.isCloudController( ) ) {
-      while ( listActiveDatabases( ).isEmpty( ) ) {
+      while ( list( filterBooedSyncedDbs ).isEmpty( ) ) {
         TimeUnit.SECONDS.sleep( 3 );
         LOG.info( "Waiting for system view with database..." );
       }
@@ -1134,7 +1135,7 @@ public class Hosts {
         doInitialize( );
       }
     } else if ( BootstrapArgs.isCloudController( ) ) {
-      while ( !Hosts.isCoordinator( ) && Hosts.getCoordinator( ).hasBootstrapped( ) ) {
+      for( Host coordinator = Hosts.getCoordinator( ); !coordinator.hasSynced( ) && !coordinator.hasBootstrapped( ) && !coordinator.isLocalHost( ); coordinator = Hosts.getCoordinator( ) ) {
         TimeUnit.SECONDS.sleep( 3 );
         LOG.info( "Waiting for system view with database..." );
       }
