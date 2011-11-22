@@ -396,6 +396,7 @@ public class Databases {
       } catch ( Exception ex ) {
         LOG.error( ex );
         Logs.extreme( ).error( ex, ex );
+        //GRZE:TODO: host-wide failure case here.
         return false;
       }
     }
