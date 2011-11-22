@@ -336,26 +336,11 @@ public class ServiceTransitions {
     ServiceTransitionCallback trans = null;
     try {
       if ( Hosts.isServiceLocal( parent ) ) {
-        try {
-          trans = ServiceLocalTransitionCallbacks.valueOf( transitionAction.name( ) );
-        } catch ( Exception ex ) {
-          LOG.error( ex, ex );
-          throw ex;
-        }
+        trans = ServiceLocalTransitionCallbacks.valueOf( transitionAction.name( ) );
       } else if ( Hosts.isCoordinator( ) ) {
-        try {
-          trans = CloudRemoteTransitionCallbacks.valueOf( transitionAction.name( ) );
-        } catch ( Exception ex ) {
-          LOG.error( ex, ex );
-          throw ex;
-        }
+        trans = CloudRemoteTransitionCallbacks.valueOf( transitionAction.name( ) );
       } else {
-        try {
-          trans = ServiceRemoteTransitionNotification.valueOf( transitionAction.name( ) );
-        } catch ( Exception ex ) {
-          LOG.error( ex, ex );
-          throw ex;
-        }
+        trans = ServiceRemoteTransitionNotification.valueOf( transitionAction.name( ) );
       }
       if ( trans != null ) {
         Logs.exhaust( ).debug( "Executing transition: " + trans.getClass( )
@@ -367,6 +352,7 @@ public class ServiceTransitions {
       }
       transitionCallback.fire( );
     } catch ( Exception ex ) {
+      LOG.error( ex );
       if ( Faults.filter( parent, ex ) ) {
         transitionCallback.fireException( ex );
         throw Exceptions.toUndeclared( ex );
@@ -457,31 +443,35 @@ public class ServiceTransitions {
       
       @Override
       public void fire( final ServiceConfiguration parent ) throws Exception {
-        DescribeServicesResponseType response = ServiceTransitions.sendEmpyreanRequest( parent, new DescribeServicesType( ) );
-        ServiceStatusType status = Iterables.find( response.getServiceStatuses( ), new Predicate<ServiceStatusType>( ) {
-          
-          @Override
-          public boolean apply( final ServiceStatusType arg0 ) {
-            return parent.getName( ).equals( arg0.getServiceId( ).getName( ) );
-          }
-        } );
-        CheckException errors = Faults.transformToExceptions( ).apply( status );
-        Faults.persist( errors );
-        if ( errors != null ) {
-          if ( Faults.Severity.FATAL.equals( errors.getSeverity( ) ) ) {
-            //TODO:GRZE: handle remote fatal error.
-          } else if ( errors.getSeverity( ).ordinal( ) < Faults.Severity.ERROR.ordinal( ) ) {
-            Logs.extreme( ).error( errors, errors );
-          } else {
-            if ( Component.State.ENABLED.equals( parent.lookupState( ) ) ) {
-              try {
-                DISABLE.fire( parent );
-              } catch ( Exception ex ) {
-                LOG.error( ex, ex );
+        if ( parent.getComponentId( ).isAlwaysLocal( ) || parent.getComponentId( ).isCloudLocal( ) ) {
+          return;
+        } else {
+          DescribeServicesResponseType response = ServiceTransitions.sendEmpyreanRequest( parent, new DescribeServicesType( ) );
+          ServiceStatusType status = Iterables.find( response.getServiceStatuses( ), new Predicate<ServiceStatusType>( ) {
+            
+            @Override
+            public boolean apply( final ServiceStatusType arg0 ) {
+              return parent.getName( ).equals( arg0.getServiceId( ).getName( ) );
+            }
+          } );
+          CheckException errors = Faults.transformToExceptions( ).apply( status );
+          Faults.persist( errors );
+          if ( errors != null ) {
+            if ( Faults.Severity.FATAL.equals( errors.getSeverity( ) ) ) {
+              //TODO:GRZE: handle remote fatal error.
+            } else if ( errors.getSeverity( ).ordinal( ) < Faults.Severity.ERROR.ordinal( ) ) {
+              Logs.extreme( ).error( errors, errors );
+            } else {
+              if ( Component.State.ENABLED.equals( parent.lookupState( ) ) ) {
+                try {
+                  DISABLE.fire( parent );
+                } catch ( Exception ex ) {
+                  LOG.error( ex, ex );
+                }
               }
             }
+            throw errors;
           }
-          throw errors;
         }
       }
       

@@ -23,6 +23,7 @@ import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Function;
+import com.google.common.base.Functions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.Collections2;
@@ -197,6 +198,17 @@ public class ServiceConfigurations {
     }
   };
   
+  @TypeMapper
+  public enum ServiceIdToServiceStatus implements Function<ServiceId, ServiceStatusType> {
+    INSTANCE;
+    private final Function<ServiceId, ServiceStatusType> transform = Functions.compose( ServiceConfigurationToStatus.INSTANCE, ServiceIdToServiceConfiguration.INSTANCE );
+
+    @Override
+    public ServiceStatusType apply( ServiceId input ) {
+      return transform.apply( input );
+    }
+    
+  }
   @TypeMapper
   public enum ServiceIdToServiceConfiguration implements Function<ServiceId, ServiceConfiguration> {
     INSTANCE;
