@@ -76,6 +76,7 @@ import java.util.Vector;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.log4j.Logger;
 import org.jgroups.Address;
 import org.jgroups.ChannelException;
@@ -137,6 +138,7 @@ public class Hosts {
   static final Logger                            LOG                        = Logger.getLogger( Hosts.class );
   public static final long                       SERVICE_INITIALIZE_TIMEOUT = 10000L;
   private static ReplicatedHashMap<String, Host> hostMap;
+  private static final ReentrantReadWriteLock    canHas                     = new ReentrantReadWriteLock( );
   
   public static Predicate<ServiceConfiguration> nonLocalAddressMatch( final InetAddress addr ) {
     return new Predicate<ServiceConfiguration>( ) {
@@ -256,7 +258,7 @@ public class Hosts {
         System.exit( 123 );
       }
       if ( event.isAsserted( 15L ) ) {
-        this.pruneHosts( );
+        Hosts.pruneHosts( );
       }
       try {
         if ( event.isAsserted( 3L ) && Bootstrap.isFinished( ) && !Hosts.list( Predicates.not( BootedFilter.INSTANCE ) ).isEmpty( ) ) {
@@ -310,7 +312,7 @@ public class Hosts {
     try {
       if ( !Topology.isEnabled( Eucalyptus.class ) && Hosts.getCoordinator( ) != null ) {
         LOG.info( "Setting up new coordinator: " + Hosts.getCoordinator( ) );
-        BootstrapComponent.setup( Eucalyptus.class, Hosts.getCoordinator( ).getBindAddress( ) );
+        BootstrapComponent.SETUP.apply( Hosts.getCoordinator( ) );
       }
     } catch ( Exception ex ) {
       LOG.debug( ex );
@@ -353,13 +355,17 @@ public class Hosts {
               
               @Override
               public void run( ) {
-                SyncDatabases.INSTANCE.apply( host );
-                if ( !wasSynched && Databases.isSynchronized( ) ) {
-                  UpdateEntry.INSTANCE.apply( host );
+                Host currentHost = Hosts.lookup( hostKey );
+                if ( currentHost != null ) {
+                  SyncDatabases.INSTANCE.apply( currentHost );
+                  BootstrapComponent.SETUP.apply( currentHost );
+                  if ( !wasSynched && Databases.isSynchronized( ) ) {
+                    UpdateEntry.INSTANCE.apply( currentHost );
+                  }
                 }
               }
             } );
-          } else if ( BootstrapComponent.REMOTESETUP.apply( host ) && host.hasSynced( ) ) {
+          } else if ( !host.isLocalHost( ) && BootstrapComponent.REMOTESETUP.apply( host ) && host.hasSynced( ) ) {
             SyncDatabases.INSTANCE.apply( host );
           } else if ( InitializeAsCloudController.INSTANCE.apply( host ) ) {
             LOG.info( "Hosts.entrySet(): INITIALIZED CLC => " + host );
@@ -421,7 +427,7 @@ public class Hosts {
           return false;
         } else {
           if ( input.hasBootstrapped( ) ) {
-            if ( input.hasDatabase( ) && !input.isLocalHost( ) ) {
+            if ( input.hasDatabase( ) && input.hasSynced( ) ) {
               return setup( Empyrean.class, input.getBindAddress( ) ) && setup( Eucalyptus.class, input.getBindAddress( ) );
             } else {
               return setup( Empyrean.class, input.getBindAddress( ) );
