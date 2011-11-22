@@ -368,9 +368,7 @@ static int close_and_unlock (int fd)
                                     (unsigned int)pthread_self(), fd, path_lock->path);
                         
                     } else {
-                        struct flock l;
-                        fcntl (fd, F_SETLK, flock_whole_file (&l, F_UNLCK)); // give up the file lock
-                        logprintfl (EUCADEBUG2, "{%u} close_and_unlock: unlocked but kept fd=%d path=%d open/refs=%d/%d\n", 
+                        logprintfl (EUCADEBUG2, "{%u} close_and_unlock: kept fd=%d path=%d open/refs=%d/%d\n", 
                                     (unsigned int)pthread_self(), fd, path_lock->path, open_fds, path_lock->refs);
                     }
                     pthread_rwlock_unlock (&(path_lock->lock)); // give up the Posix lock
@@ -657,8 +655,6 @@ static int open_and_lock (const char * path,
                             (unsigned int)pthread_self(), fd, path_lock->path);
                 
             } else {
-                struct flock l;
-                fcntl (fd, F_SETLK, flock_whole_file (&l, F_UNLCK)); // give up the file lock                                                                           
                 logprintfl (EUCADEBUG2, "{%u} open_and_lock: kept fd=%d path=%d open/refs=%d/%d\n",
                             (unsigned int)pthread_self(), fd, path_lock->path, open_fds, path_lock->refs);
             }
