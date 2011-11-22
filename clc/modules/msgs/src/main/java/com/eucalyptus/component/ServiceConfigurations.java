@@ -8,6 +8,7 @@ import java.util.NoSuchElementException;
 import javax.persistence.EntityTransaction;
 import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
+import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.component.Faults.CheckException;
 import com.eucalyptus.empyrean.ServiceId;
 import com.eucalyptus.empyrean.ServiceStatusDetail;
@@ -360,7 +361,7 @@ public class ServiceConfigurations {
     
     @Override
     public boolean apply( ServiceConfiguration input ) {
-      return input.isHostLocal( );
+      return Hosts.isServiceLocal( input );
     }
     
   }
