@@ -106,8 +106,8 @@ public class Databases {
   private static final String                     jdbcJmxDomain   = "net.sf.hajdbc";
   private static final ExecutorService            dbSyncExecutors = Executors.newCachedThreadPool( );                     //NOTE:GRZE:special case thread handling.
   private static final AtomicReference<SyncState> syncState       = new AtomicReference<SyncState>( SyncState.NOTSYNCED );
-  private static final ReentrantReadWriteLock canHas = new ReentrantReadWriteLock( );
-
+  private static final ReentrantReadWriteLock     canHas          = new ReentrantReadWriteLock( );
+  
   enum SyncState {
     NOTSYNCED,
     SYNCING,
@@ -277,25 +277,25 @@ public class Databases {
                 final String dbPass = SystemIds.databasePassword( );
                 final String realJdbcDriver = Databases.getDriverName( );
                 
+                if ( cluster.getActiveDatabases( ).contains( hostName ) ) {
+                  LOG.info( "Deactivating existing database connections to: " + host );
+                  cluster.deactivate( hostName );
+                }
+                if ( cluster.getInactiveDatabases( ).contains( hostName ) ) {
+                  LOG.info( "Deactivating existing database connections to: " + host );
+                  cluster.remove( hostName );
+                }
+                LOG.info( "Creating database connections for: " + host );
+                cluster.add( hostName, realJdbcDriver, dbUrl );
+                final InactiveDatabaseMBean database = Databases.lookupInactiveDatabase( contextName, hostName );
+                database.setUser( "eucalyptus" );
+                database.setPassword( dbPass );
+                database.setWeight( Hosts.isCoordinator( host ) ? 100 : 1 );
+                database.setLocal( host.isLocalHost( ) );
+                LOG.info( "Full sync of database on: " + host + " using " + cluster.getActiveDatabases( ) );
+                net.sf.hajdbc.Database<Driver> db = cluster.getDatabase( hostName );
+                db.setWeight( Hosts.isCoordinator( host ) ? 100 : 1 );
                 if ( fullSync ) {
-                  if ( cluster.getActiveDatabases( ).contains( hostName ) ) {
-                    LOG.info( "Deactivating existing database connections to: " + host );
-                    cluster.deactivate( hostName );
-                  }
-                  if ( cluster.getInactiveDatabases( ).contains( hostName ) ) {
-                    LOG.info( "Deactivating existing database connections to: " + host );
-                    cluster.remove( hostName );
-                  }
-                  LOG.info( "Creating database connections for: " + host );
-                  cluster.add( hostName, realJdbcDriver, dbUrl );
-                  final InactiveDatabaseMBean database = Databases.lookupInactiveDatabase( contextName, hostName );
-                  database.setUser( "eucalyptus" );
-                  database.setPassword( dbPass );
-                  database.setWeight( Hosts.isCoordinator( host ) ? 100 : 1 );
-                  database.setLocal( host.isLocalHost( ) );
-                  LOG.info( "Full sync of database on: " + host + " using " + cluster.getActiveDatabases( ) );
-                  net.sf.hajdbc.Database<Driver> db = cluster.getDatabase( hostName );
-                  db.setWeight( Hosts.isCoordinator( host ) ? 100 : 1 );
                   cluster.activate( hostName, "full" );
                 } else if ( passiveSync ) {
                   if ( !cluster.getActiveDatabases( ).contains( hostName ) ) {
