@@ -63,6 +63,7 @@
 
 package com.eucalyptus.component;
 
+import java.net.UnknownHostException;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -70,6 +71,7 @@ import java.util.concurrent.Callable;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapArgs;
+import com.eucalyptus.bootstrap.Host;
 import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.component.Component.State;
 import com.eucalyptus.component.Faults.CheckException;
@@ -361,7 +363,7 @@ public class ServiceTransitions {
       }
     }
   }
-
+  
   public enum TransitionActions implements TransitionAction<ServiceConfiguration> {
     ENABLE,
     CHECK,
@@ -443,24 +445,41 @@ public class ServiceTransitions {
       
       @Override
       public void fire( final ServiceConfiguration parent ) throws Exception {
-        if ( parent.getComponentId( ).isAlwaysLocal( ) || parent.getComponentId( ).isCloudLocal( ) ) {
+        if ( !parent.getComponentId( ).isDistributedService( ) ) {
           return;
         } else {
-          DescribeServicesResponseType response = ServiceTransitions.sendEmpyreanRequest( parent, new DescribeServicesType( ){
-            {
-              this.getServices( ).add( TypeMappers.transform( parent, ServiceId.class ) );
-            }
-          } );
-          ServiceStatusType status = Iterables.find( response.getServiceStatuses( ), new Predicate<ServiceStatusType>( ) {
-            
-            @Override
-            public boolean apply( final ServiceStatusType arg0 ) {
-              return parent.getName( ).equals( arg0.getServiceId( ).getName( ) );
-            }
-          } );
-          CheckException errors = Faults.transformToExceptions( ).apply( status );
-          Faults.persist( errors );
+          CheckException errors = null;
+          Host h = Hosts.lookup( parent.getHostName( ) );
+          if ( h == null ) {
+            UnknownHostException ex = new UnknownHostException( "Failed to lookup host " + parent.getHostName( )
+              + " for service "
+              + parent.getFullName( )
+              + ".  Current hosts are: "
+              + Hosts.list( ) );
+            errors = Faults.failure( parent, ex );
+          } else if ( !h.hasBootstrapped( ) ) {
+            UnknownHostException ex = new UnknownHostException( "Host " + parent.getHostName( )
+              + " not yet bootstrapped for service "
+              + parent.getFullName( )
+              + "." );
+            errors = Faults.failure( parent, ex );
+          } else {
+            DescribeServicesResponseType response = ServiceTransitions.sendEmpyreanRequest( parent, new DescribeServicesType( ) {
+              {
+                this.getServices( ).add( TypeMappers.transform( parent, ServiceId.class ) );
+              }
+            } );
+            ServiceStatusType status = Iterables.find( response.getServiceStatuses( ), new Predicate<ServiceStatusType>( ) {
+              
+              @Override
+              public boolean apply( final ServiceStatusType arg0 ) {
+                return parent.getName( ).equals( arg0.getServiceId( ).getName( ) );
+              }
+            } );
+            errors = Faults.transformToExceptions( ).apply( status );
+          }
           if ( errors != null ) {
+            Faults.persist( errors );
             if ( Faults.Severity.FATAL.equals( errors.getSeverity( ) ) ) {
               //TODO:GRZE: handle remote fatal error.
               throw errors;
@@ -724,7 +743,9 @@ public class ServiceTransitions {
       
       @Override
       public void fire( final ServiceConfiguration config ) {
-        if ( Hosts.isCoordinator( ) && !config.isVmLocal( ) && !( config.getComponentId( ).isAlwaysLocal( ) || config.getComponentId( ).isCloudLocal( ) ) ) {
+        if ( Hosts.isCoordinator( ) && !config.isVmLocal( )
+          && config.getComponentId( ).isRegisterable( )
+          && !( config.getComponentId( ).isAlwaysLocal( ) || config.getComponentId( ).isCloudLocal( ) ) ) {
           ServiceEvents.fire( config, config.getStateMachine( ).getState( ) );
         }
       }

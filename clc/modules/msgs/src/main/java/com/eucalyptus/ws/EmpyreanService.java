@@ -392,20 +392,21 @@ public class EmpyreanService {
       };
     }
     
-    static Predicate<ServiceConfiguration> listAllOrInternal( final Boolean listAllArg, final Boolean listInternalArg ) {
+    static Predicate<ServiceConfiguration> listAllOrInternal( final Boolean listAllArg, final Boolean listUserServicesArg, final Boolean listInternalArg ) {
       final boolean listAll = Boolean.TRUE.equals( listAllArg );
       final boolean listInternal = Boolean.TRUE.equals( listInternalArg );
+      final boolean listUserServices = Boolean.TRUE.equals( listUserServicesArg );
       return new Predicate<ServiceConfiguration>( ) {
         @Override
         public boolean apply( final ServiceConfiguration input ) {
           if ( listAll ) {
             return true;
-          } else if ( input.getComponentId( ).isPublicService( ) ) {
+          } else if ( input.getComponentId( ).isDistributedService( ) || Empyrean.class.equals( input.getComponentId( ) ) ) {
             return true;
-          } else if ( input.getComponentId( ).isAdminService( ) ) {
-            return true;
-          } else if ( input.getComponentId( ).isRegisterable( ) ) {
-            return true;
+          } else if ( input.getComponentId( ).isPublicService( ) && listUserServices ) {
+            return Internets.testLocal( input.getHostName( ) );
+          } else if ( input.getComponentId( ).isAdminService( ) && listUserServices ) {
+            return Internets.testLocal( input.getHostName( ) );
           } else if ( input.getComponentId( ).isInternal( ) && listInternal ) {
             return Internets.testLocal( input.getHostName( ) );
           } else {
@@ -452,7 +453,7 @@ public class EmpyreanService {
             this.add( Filters.state( stateFilter ) );
           }
           this.add( Filters.host( request.getByHost( ) ) );
-          this.add( Filters.listAllOrInternal( request.getListAll( ), request.getListInternal( ) ) );
+          this.add( Filters.listAllOrInternal( request.getListAll( ), request.getListUserServices( ), request.getListInternal( ) ) );
         }
       };
       final Predicate<Component> componentFilter = Filters.componentType( compId );

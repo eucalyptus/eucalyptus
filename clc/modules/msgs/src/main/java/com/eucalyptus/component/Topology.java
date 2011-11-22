@@ -580,7 +580,7 @@ public class Topology {
     INSTANCE;
     @Override
     public boolean apply( final ServiceConfiguration arg0 ) {
-      if ( BootstrapArgs.isCloudController( ) ) {
+      if ( Hosts.isCoordinator( ) && arg0.getComponentId( ).isDistributedService( ) ) {
         return true;
       } else {
         return arg0.isVmLocal( );
@@ -588,8 +588,6 @@ public class Topology {
     }
     
   }
-  
-  private static final int EXTERNAL_THREAD_POOL_LIMIT = 32;
   
   enum SubmitEnable implements Function<ServiceConfiguration, Future<ServiceConfiguration>> {
     INSTANCE;

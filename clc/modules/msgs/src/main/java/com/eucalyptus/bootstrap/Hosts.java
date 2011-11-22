@@ -75,13 +75,10 @@ import java.util.Set;
 import java.util.Vector;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.log4j.Logger;
 import org.jgroups.Address;
-import org.jgroups.ChannelClosedException;
 import org.jgroups.ChannelException;
-import org.jgroups.ChannelNotConnectedException;
 import org.jgroups.Global;
 import org.jgroups.Header;
 import org.jgroups.JChannel;
@@ -455,14 +452,14 @@ public class Hosts {
           }
         }
       }
-
+      
       private void tryPromoteSelf( final Host input ) {
         if ( input.hasDatabase( ) && BootstrapArgs.isCloudController( ) ) {
           BootstrapComponent.SETUP.apply( Hosts.localHost( ) );
           UpdateEntry.INSTANCE.apply( Hosts.localHost( ) );
         }
       }
-
+      
       private void removeHost( final Host input ) {
         if ( Hosts.isCoordinator( ) ) {
           Hosts.remove( input.getDisplayName( ) );
@@ -867,7 +864,25 @@ public class Hosts {
   }
   
   public static Host lookup( final String hostDisplayName ) {
-    return hostMap.get( hostDisplayName );
+    if ( hostMap.containsKey( hostDisplayName ) ) {
+      return hostMap.get( hostDisplayName );
+    } else {
+      final InetAddress addr = Internets.toAddress( hostDisplayName );
+      Hosts.list( new Predicate<Host>( ) {
+        
+        @Override
+        public boolean apply( Host input ) {
+          if ( input.getBindAddress( ).equals( addr ) ) {
+            return true;
+          } else if ( input.getHostAddresses( ).contains( addr ) ) {
+            return true;
+          } else {
+            return false;
+          }
+        }
+      } );
+    }
+    return null;
   }
   
   public static boolean contains( final String hostDisplayName ) {
@@ -990,7 +1005,6 @@ public class Hosts {
     return Coordinator.INSTANCE.get( ) != null;
   }
   
-
   public static boolean isCoordinator( ) {
     return Coordinator.INSTANCE.isLocalhost( );
   }
