@@ -74,6 +74,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Vector;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -248,39 +250,102 @@ public class Hosts {
     
   }
   
-  enum HostBootstrapEventListener implements EventListener<Hertz> {
-    INSTANCE;
+  enum PeriodicMembershipChecks implements Runnable {
+    ENTRYUPDATE( 3 ) {
+      private volatile int counter = 0;
+      
+      @Override
+      public void run( ) {
+        final Host currentHost = Hosts.localHost( );
+        ++this.counter;
+        try {
+          if ( Bootstrap.isFinished( ) && !Hosts.list( Predicates.not( BootedFilter.INSTANCE ) ).isEmpty( ) ) {
+            if ( UpdateEntry.INSTANCE.apply( currentHost ) ) {
+              LOG.info( "Updated local host entry: " + currentHost );
+            }
+          } else if ( this.counter % 2 == 0 ) {
+            if ( UpdateEntry.INSTANCE.apply( currentHost ) ) {
+              LOG.info( "Updated local host entry: " + currentHost );
+            }
+          }
+        } catch ( Exception ex ) {
+          LOG.debug( ex );
+          Logs.extreme( ).debug( ex, ex );
+        }
+      }
+      
+    },
+    ENABLEDB( 1 ) {
+      
+      @Override
+      public void run( ) {
+        for ( Host h : Hosts.listActiveDatabases( ) ) {
+          if ( !h.isLocalHost( ) && Bootstrap.isFinished( ) && h.hasSynced( ) ) {
+            Databases.enable( h );
+          }
+        }
+      }
+      
+    },
+    PRUNING( 1 ) {
+      
+      @Override
+      public void run( ) {
+        if ( Hosts.pruneHosts( ) ) {
+          Hosts.updateServices( );
+        }
+      }
+      
+    },
+    INITIALIZE( 1 ) {
+      
+      @Override
+      public void run( ) {
+        final Host currentHost = Hosts.localHost( );
+        if ( !BootstrapArgs.isCloudController( ) && currentHost.hasBootstrapped( ) && Databases.shouldInitialize( ) ) {
+          System.exit( 123 );
+        }
+      }
+      
+    };
+    private final long                            interval;
+    private static final ScheduledExecutorService hostPruner = Executors.newScheduledThreadPool( 32 );
     
-    @Override
-    public void fireEvent( final Hertz event ) {
-      final Host currentHost = Hosts.localHost( );
-      if ( !BootstrapArgs.isCloudController( ) && currentHost.hasBootstrapped( ) && Databases.shouldInitialize( ) ) {
-        System.exit( 123 );
-      }
-      if ( Hosts.pruneHosts( ) ) {
-        Hosts.updateServices( );
-      }
-      for ( Host h : Hosts.listActiveDatabases( ) ) {
-        if ( !h.isLocalHost( ) && Bootstrap.isFinished( ) ) {
-          Databases.enable( currentHost );
-        }
-      }
-      try {
-        if ( event.isAsserted( 3L ) && Bootstrap.isFinished( ) && !Hosts.list( Predicates.not( BootedFilter.INSTANCE ) ).isEmpty( ) ) {
-          if ( UpdateEntry.INSTANCE.apply( currentHost ) ) {
-            LOG.info( "Updated local host entry: " + currentHost );
+    private PeriodicMembershipChecks( long interval ) {
+      this.interval = interval;
+    }
+    
+    public static void setup( ) {
+      for ( final PeriodicMembershipChecks runner : PeriodicMembershipChecks.values( ) ) {
+        Runnable safeRunner = new Runnable( ) {
+          
+          @Override
+          public void run( ) {
+            try {
+              runner.run( );
+            } catch ( Exception ex ) {
+              Logs.extreme( ).error( "Failed running: " + runner + " because of: " + ex, ex );
+              LOG.error( "Failed running: " + runner + " because of: " + ex );
+            }
           }
-        } else if ( event.isAsserted( 5L ) ) {
-          if ( UpdateEntry.INSTANCE.apply( currentHost ) ) {
-            LOG.info( "Updated local host entry: " + currentHost );
-          }
-        }
-      } catch ( Exception ex ) {
-        LOG.debug( ex );
-        Logs.extreme( ).debug( ex, ex );
+        };
+        hostPruner.scheduleAtFixedRate( safeRunner, 0L, runner.getInterval( ), TimeUnit.SECONDS );
       }
     }
     
+    private long getInterval( ) {
+      return this.interval;
+    }
+    
+    @Override
+    public String toString( ) {
+      return this.getClass( ).toString( );
+    }
+
+    public static List<Runnable> shutdownNow( ) {
+      return hostPruner.shutdownNow( );
+    }
+
   }
   
   private static boolean pruneHosts( ) {
@@ -381,7 +446,7 @@ public class Hosts {
                 }
               }
             } );
-          } else if ( Bootstrap.isFinished() && !host.isLocalHost( ) && host.hasSynced( ) ) {
+          } else if ( Bootstrap.isFinished( ) && !host.isLocalHost( ) && host.hasSynced( ) ) {
             BootstrapComponent.REMOTESETUP.apply( host );
           } else if ( InitializeAsCloudController.INSTANCE.apply( host ) ) {
             LOG.info( "Hosts.entrySet(): INITIALIZED CLC => " + host );
@@ -777,7 +842,14 @@ public class Hosts {
                 @Override
                 public void run( ) {
                   try {
-                    Listeners.deregister( HostBootstrapEventListener.INSTANCE );
+                    for ( Runnable r : PeriodicMembershipChecks.shutdownNow( ) ) {
+                      LOG.info( "SHUTDOWN: Pending host pruning task: " + r );
+                    }
+                  } catch ( Exception ex1 ) {
+                    LOG.error( ex1, ex1 );
+                  }
+                  try {
+//                    Listeners.deregister( HostBootstrapEventListener.INSTANCE );
                     hostMap.removeNotifier( HostMapStateListener.INSTANCE );
                     try {
                       if ( Hosts.contains( Internets.localHostIdentifier( ) ) ) {
@@ -825,7 +897,7 @@ public class Hosts {
         }
         
         /** setup host map handling **/
-        Listeners.register( HostBootstrapEventListener.INSTANCE );
+        PeriodicMembershipChecks.setup( );
         
         return true;
       } catch ( final Exception ex ) {
@@ -876,7 +948,7 @@ public class Hosts {
     return Hosts.list( DbFilter.INSTANCE );
   }
   
-  private static final Predicate<Host> filterSyncedDbs = Predicates.and( DbFilter.INSTANCE, SyncedDbFilter.INSTANCE );
+  private static final Predicate<Host> filterSyncedDbs      = Predicates.and( DbFilter.INSTANCE, SyncedDbFilter.INSTANCE );
   private static final Predicate<Host> filterBooedSyncedDbs = Predicates.and( filterSyncedDbs, BootedFilter.INSTANCE );
   
   public static List<Host> listActiveDatabases( ) {
@@ -1136,7 +1208,7 @@ public class Hosts {
         doInitialize( );
       }
     } else if ( BootstrapArgs.isCloudController( ) ) {
-      for( Host coordinator = Hosts.getCoordinator( ); !coordinator.hasSynced( ) && !coordinator.hasBootstrapped( ) && !coordinator.isLocalHost( ); coordinator = Hosts.getCoordinator( ) ) {
+      for ( Host coordinator = Hosts.getCoordinator( ); !coordinator.hasSynced( ) && !coordinator.hasBootstrapped( ) && !coordinator.isLocalHost( ); coordinator = Hosts.getCoordinator( ) ) {
         TimeUnit.SECONDS.sleep( 3 );
         LOG.info( "Waiting for system view with database..." );
       }
