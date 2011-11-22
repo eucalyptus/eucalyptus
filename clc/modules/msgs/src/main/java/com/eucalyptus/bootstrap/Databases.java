@@ -152,7 +152,7 @@ public class Databases {
   private static void runDbStateChange( Function<String, Runnable> runnableFunction ) {
     LOG.debug( "DB STATE CHANGE: " + runnableFunction );
     try {
-      if ( canHas.writeLock( ).tryLock( 15000L, TimeUnit.MILLISECONDS ) ) {
+      if ( canHas.writeLock( ).tryLock( 30000L, TimeUnit.MILLISECONDS ) ) {
         try {
           Map<Runnable, Future<Runnable>> runnables = Maps.newHashMap( );
           for ( final String ctx : PersistenceContexts.list( ) ) {
@@ -176,6 +176,33 @@ public class Databases {
       }
     } catch ( InterruptedException ex ) {
       Exceptions.maybeInterrupted( ex );
+    }
+  }
+  
+  enum LivenessCheckHostFunction implements Function<String, Function<String, Runnable>> {
+    INSTANCE;
+    
+    public Function<String, Runnable> apply( final String hostName ) {
+      return new Function<String, Runnable>( ) {
+        
+        @Override
+        public Runnable apply( final String ctx ) {
+          final String contextName = ctx.startsWith( "eucalyptus_" )
+            ? ctx
+            : "eucalyptus_" + ctx;
+          Runnable removeRunner = new Runnable( ) {
+            
+            @Override
+            public void run( ) {
+              DriverDatabaseClusterMBean cluster = lookup( ctx );
+              if ( !cluster.isAlive( contextName ) ) {
+                throw Exceptions.toUndeclared( "Database on host " + hostName + " failed liveness check and will be deactived." );
+              }
+            }
+          };
+          return removeRunner;
+        }
+      };
     }
   }
   
@@ -335,6 +362,28 @@ public class Databases {
                                                                       .build( ),
                                                           InactiveDatabaseMBean.class );
     return database;
+  }
+  
+  static boolean isAlive( final String hostName ) {
+    if ( !Internets.testLocal( hostName ) ) {
+      try {
+        runDbStateChange( LivenessCheckHostFunction.INSTANCE.apply( hostName ) );
+        return true;
+      } catch ( Exception ex ) {
+        LOG.error( ex );
+        Logs.extreme( ).error( ex, ex );
+        return disable( hostName );
+      }
+    } else {
+      try {
+        runDbStateChange( LivenessCheckHostFunction.INSTANCE.apply( hostName ) );
+        return true;
+      } catch ( Exception ex ) {
+        LOG.error( ex );
+        Logs.extreme( ).error( ex, ex );
+        return false;
+      }
+    }
   }
   
   static boolean disable( final String hostName ) {
