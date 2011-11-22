@@ -49,7 +49,7 @@ sub gms_members {
 sub coordinator_local {
    test_start("is coordinator?");
    run_on_clc("$euca_dir/usr/sbin/euca-modify-property -p euca=\'\\\"Coordinator: \\\" + com.eucalyptus.bootstrap.Hosts.isCoordinator() + \\\" => \\\" + com.eucalyptus.bootstrap.Hosts.getCoordinator()\'");
-   run_on_clc("$euca_dir/usr/sbin/euca-modify-property -p euca=\'\\\"Localhost:      => \\\" + com.eucalyptus.bootstrap.Hosts.localHost()\'");
+   run_on_clc("$euca_dir/usr/sbin/euca-modify-property -p euca=\'\\\"Localhost:         => \\\" + com.eucalyptus.bootstrap.Hosts.localHost()\'");
    test_end();
 }
 

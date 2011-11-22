@@ -198,15 +198,15 @@ public class Hosts {
       } else {
         goalState = State.DISABLED;
       }
-      LOG.info( "SetupRemoteServiceConfigurations: " + goalState + " "
-        + ( inputIsLocal ? "local" : "remote" ) + " "
-        + ( input.getComponentId( ).isAlwaysLocal( ) ? "bootstrap" : "cloud" ) + " services"
-        + ( Hosts.isCoordinator( input.getInetAddress( ) ) ? " (coordinator)" : "" ) + ": " + input.getFullName( ) );
       if ( State.ENABLED.apply( input ) && State.ENABLED.equals( goalState ) ) {
         return input;
       } else if ( State.DISABLED.apply( input ) && State.DISABLED.equals( goalState ) ) {
         return input;
       } else {
+        LOG.info( "SetupRemoteServiceConfigurations: " + goalState + " "
+                  + ( inputIsLocal ? "local" : "remote" ) + " "
+                  + ( input.getComponentId( ).isAlwaysLocal( ) ? "bootstrap" : "cloud" ) + " services"
+                  + ( Hosts.isCoordinator( input.getInetAddress( ) ) ? " (coordinator)" : "" ) + ": " + input.getFullName( ) );
         try {
           return Topology.transition( goalState ).apply( input ).get( );
         } catch ( final ExecutionException ex ) {
@@ -257,8 +257,8 @@ public class Hosts {
       if ( !BootstrapArgs.isCloudController( ) && currentHost.hasBootstrapped( ) && Databases.shouldInitialize( ) ) {
         System.exit( 123 );
       }
-      if ( event.isAsserted( 15L ) ) {
-        Hosts.pruneHosts( );
+      if ( Hosts.pruneHosts( ) ) {
+        Hosts.updateServices( );
       }
       try {
         if ( event.isAsserted( 3L ) && Bootstrap.isFinished( ) && !Hosts.list( Predicates.not( BootedFilter.INSTANCE ) ).isEmpty( ) ) {
@@ -278,7 +278,7 @@ public class Hosts {
     
   }
   
-  private static void pruneHosts( ) {
+  private static boolean pruneHosts( ) {
     try {
       Set<Address> currentMembers = Sets.newHashSet( hostMap.getChannel( ).getView( ).getMembers( ) );
       Map<String, Host> hostCopy = Maps.newHashMap( hostMap );
@@ -286,33 +286,41 @@ public class Hosts {
       Set<Address> strayHosts = Sets.difference( currentHosts, currentMembers );
       if ( !strayHosts.isEmpty( ) ) {
         LOG.info( "Pruning orphan host entries: " + strayHosts );
-      }
-      for ( Address strayHost : strayHosts ) {
-        Host h = hostCopy.get( strayHost.toString( ) );
-        if ( h == null ) {
-          LOG.debug( "Pruning failed to find host copy for orphan host: " + h );
-          h = Hosts.lookup( strayHost.toString( ) );
-          LOG.debug( "Pruning fell back to underlying host map for orphan host: " + h );
+        for ( Address strayHost : strayHosts ) {
+          Host h = hostCopy.get( strayHost.toString( ) );
+          if ( h == null ) {
+            LOG.debug( "Pruning failed to find host copy for orphan host: " + h );
+            h = Hosts.lookup( strayHost.toString( ) );
+            LOG.debug( "Pruning fell back to underlying host map for orphan host: " + h );
+          }
+          if ( h != null ) {
+            LOG.info( "Pruning orphan host: " + h );
+            BootstrapComponent.TEARDOWN.apply( h );
+          } else {
+            LOG.info( "Pruning failed for orphan host: " + strayHost
+                + " with local-copy value: "
+                + hostCopy.get( strayHost.toString( ) )
+                + " and underlying host map value: "
+                + Hosts.lookup( strayHost ) );
+          }
         }
-        if ( h != null ) {
-          LOG.info( "Pruning orphan host: " + h );
-          BootstrapComponent.TEARDOWN.apply( h );
-        } else {
-          LOG.info( "Pruning failed for orphan host: " + strayHost
-              + " with local-copy value: "
-              + hostCopy.get( strayHost.toString( ) )
-              + " and underlying host map value: "
-              + Hosts.lookup( strayHost ) );
-        }
+      } else {
+        return false;
       }
     } catch ( Exception ex ) {
       LOG.debug( ex );
       Logs.extreme( ).debug( ex, ex );
     }
+    return true;
+  }
+  
+  private static void updateServices( ) {
     try {
       if ( !Topology.isEnabled( Eucalyptus.class ) && Hosts.getCoordinator( ) != null ) {
         LOG.info( "Setting up new coordinator: " + Hosts.getCoordinator( ) );
         BootstrapComponent.SETUP.apply( Hosts.getCoordinator( ) );
+      } else if ( !Hosts.isCoordinator( ) ) {
+        BootstrapComponent.SETUP.apply( Hosts.localHost( ) );
       }
     } catch ( Exception ex ) {
       LOG.debug( ex );
@@ -357,7 +365,6 @@ public class Hosts {
               public void run( ) {
                 Host currentHost = Hosts.lookup( hostKey );
                 if ( currentHost != null ) {
-                  SyncDatabases.INSTANCE.apply( currentHost );
                   BootstrapComponent.SETUP.apply( currentHost );
                   if ( !wasSynched && Databases.isSynchronized( ) ) {
                     UpdateEntry.INSTANCE.apply( currentHost );
@@ -425,16 +432,17 @@ public class Hosts {
       public boolean apply( final Host input ) {
         if ( Bootstrap.isShuttingDown( ) ) {
           return false;
-        } else {
-          if ( input.hasBootstrapped( ) ) {
-            if ( input.hasDatabase( ) && input.hasSynced( ) ) {
-              return setup( Empyrean.class, input.getBindAddress( ) ) && setup( Eucalyptus.class, input.getBindAddress( ) );
-            } else {
-              return setup( Empyrean.class, input.getBindAddress( ) );
-            }
-          } else {
-            return false;
+        } else if ( input.hasBootstrapped( ) ) {
+          if ( input.hasDatabase( ) && !input.hasSynced( ) ) {
+            SyncDatabases.INSTANCE.apply( input );
           }
+          if ( input.hasDatabase( ) ) {
+            return setup( Empyrean.class, input.getBindAddress( ) ) && setup( Eucalyptus.class, input.getBindAddress( ) );
+          } else {
+            return setup( Empyrean.class, input.getBindAddress( ) );
+          }
+        } else {
+          return false;
         }
       }
     },
