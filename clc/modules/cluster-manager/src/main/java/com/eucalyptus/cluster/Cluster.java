@@ -78,7 +78,6 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.log4j.Logger;
-import org.jibx.runtime.JiBXException;
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Hosts;
@@ -1096,33 +1095,26 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
   }
   
   private <T extends Throwable> boolean swallowException( final T t ) {
-    try {
-      Throwable fin = t;
-      if ( t instanceof ExecutionException ) {
-        fin = t.getCause( ) != null
-          ? t.getCause( )
-          : t;
-      }
-      LOG.error( t );
-      if ( Exceptions.isCausedBy( t, InterruptedException.class ) ) {
-        Thread.currentThread( ).interrupt( );
-      } else if ( Exceptions.isCausedBy( t, FailedRequestException.class ) ) {
-        Logs.extreme( ).debug( fin, fin );
-        this.pendingErrors.add( fin );
-      } else if ( Exceptions.isCausedBy( t, JiBXException.class ) ) {
-        Logs.extreme( ).debug( fin, fin );
-        this.pendingErrors.add( fin );
-      } else if ( Exceptions.isCausedBy( t, ConnectionException.class ) || Exceptions.isCausedBy( t, IOException.class ) ) {
-        LOG.error( this.getName( ) + ": Error communicating with cluster: "
-                   + fin.getMessage( ) );
-        Logs.extreme( ).debug( fin, fin );
-        this.pendingErrors.add( fin );
-      } else {
-        Logs.extreme( ).debug( fin, fin );
-        this.pendingErrors.add( fin );
-      }
-    } catch ( Exception ex ) {
-      LOG.error( ex , ex );
+    Throwable fin = t;
+    if ( t instanceof ExecutionException ) {
+      fin = t.getCause( ) != null
+        ? t.getCause( )
+        : t;
+    }
+    LOG.error( t );
+    if ( Exceptions.isCausedBy( t, InterruptedException.class ) ) {
+      Thread.currentThread( ).interrupt( );
+    } else if ( Exceptions.isCausedBy( t, FailedRequestException.class ) ) {
+      Logs.extreme( ).debug( fin, fin );
+      this.pendingErrors.add( fin );
+    } else if ( Exceptions.isCausedBy( t, ConnectionException.class ) || Exceptions.isCausedBy( t, IOException.class ) ) {
+      LOG.error( this.getName( ) + ": Error communicating with cluster: "
+                 + fin.getMessage( ) );
+      Logs.extreme( ).debug( fin, fin );
+      this.pendingErrors.add( fin );
+    } else {
+      Logs.extreme( ).debug( fin, fin );
+      this.pendingErrors.add( fin );
     }
     return false;
   }
