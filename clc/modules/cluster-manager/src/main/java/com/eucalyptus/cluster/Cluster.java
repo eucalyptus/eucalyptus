@@ -411,11 +411,11 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
       try {
         return Component.State.valueOf( this.name( ) );
       } catch ( final Exception ex ) {
-        if ( this.name( ).startsWith( "ENABL" ) ) {
+        if ( this.equals( DISABLED ) ) {
           return Component.State.DISABLED;
         } else if ( this.ordinal( ) < DISABLED.ordinal( ) ) {
           return Component.State.NOTREADY;
-        } else if ( this.ordinal( ) > ENABLED.ordinal( ) ) {
+        } else if ( this.ordinal( ) >= ENABLING.ordinal( ) ) {
           return Component.State.ENABLED;
         } else {
           return Component.State.INITIALIZED;

@@ -168,22 +168,16 @@ doStateChange() {
 }
 
 for((a=0;a<100;a++)); do
-  echo "Running trail ${a}"
+  echo "Running cluster trail ${a}"
   doStateChange cluster FAILOVER ENABLED DISABLED | tee -a failover.log
   sleep 1
-done
-for((a=0;a<100;a++)); do
-  echo "Running trail ${a}"
+  echo "Running eucalyptus trail ${a}"
   doStateChange eucalyptus FAILOVER ENABLED DISABLED | tee -a failover.log
   sleep 1
-done
-for((a=0;a<100;a++)); do
-  echo "Running trail ${a}"
+  echo "Running storage trail ${a}"
   doStateChange storage FAILOVER ENABLED DISABLED | tee -a failover.log
   sleep 1
-done
-for((a=0;a<100;a++)); do
-  echo "Running trail ${a}"
+  echo "Running walrus trail ${a}"
   doStateChange walrus FAILOVER ENABLED DISABLED | tee -a failover.log
   sleep 1
 done
