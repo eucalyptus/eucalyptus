@@ -82,7 +82,7 @@ public interface User extends /*HasId, */BasePrincipal, Serializable {
   public static final String ACCOUNT_ADMIN = "admin";
   public static final String ACCOUNT_NOBODY = "nobody";
   
-  public static final String EMAIL = "Email";
+  public static final String EMAIL = "email";
   // LDAP user full DN
   public static final String DN = "Dn";
   

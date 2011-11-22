@@ -276,7 +276,7 @@ public class DatabaseUserProxy implements User {
     try {
       Transactions.one( UserEntity.newInstanceWithUserId( this.delegate.getUserId( ) ), new Tx<UserEntity>( ) {
         public void fire( UserEntity t ) {
-          results.add( t.getInfo( ).get( key ) );
+          results.add( t.getInfo( ).get( key.toLowerCase( ) ) );
         }
       } );
     } catch ( ExecutionException e ) {
@@ -304,10 +304,13 @@ public class DatabaseUserProxy implements User {
 
   @Override
   public void setInfo( final String key, final String value ) throws AuthException {
+    if ( Strings.isNullOrEmpty( key ) ) {
+      throw new AuthException( "Empty key" );
+    }
     try {
       Transactions.one( UserEntity.newInstanceWithUserId( this.delegate.getUserId( ) ), new Tx<UserEntity>( ) {
         public void fire( UserEntity t ) {
-          t.getInfo( ).put( key, value );
+          t.getInfo( ).put( key.toLowerCase( ), value );
         }
       } );
     } catch ( ExecutionException e ) {
@@ -318,11 +321,16 @@ public class DatabaseUserProxy implements User {
 
   @Override
   public void setInfo( final Map<String, String> newInfo ) throws AuthException {
+    if ( newInfo == null ) {
+      throw new AuthException( "Empty user info map" );
+    }
     try {
       Transactions.one( UserEntity.newInstanceWithUserId( this.delegate.getUserId( ) ), new Tx<UserEntity>( ) {
         public void fire( UserEntity t ) {
           t.getInfo( ).clear( );
-          t.getInfo( ).putAll( newInfo );
+          for ( Map.Entry<String, String> entry : newInfo.entrySet( ) ) {
+            t.getInfo( ).put( entry.getKey( ).toLowerCase( ), entry.getValue( ) );
+          }
         }
       } );
     } catch ( ExecutionException e ) {
