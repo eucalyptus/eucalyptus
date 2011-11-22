@@ -1110,7 +1110,7 @@ public class Hosts {
   }
   
   static void awaitDatabases( ) throws InterruptedException {
-    if ( !BootstrapArgs.isCloudController( ) ) {
+    if ( !BootstrapArgs.isCloudController( ) || ( !Hosts.isCoordinator( ) && !Hosts.getCoordinator( ).hasBootstrapped( ) ) ) {
       while ( listActiveDatabases( ).isEmpty( ) ) {
         TimeUnit.SECONDS.sleep( 5 );
         LOG.info( "Waiting for system view with database..." );
