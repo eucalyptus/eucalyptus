@@ -319,8 +319,9 @@ public class Hosts {
       if ( !Topology.isEnabled( Eucalyptus.class ) && Hosts.getCoordinator( ) != null ) {
         LOG.info( "Setting up new coordinator: " + Hosts.getCoordinator( ) );
         BootstrapComponent.SETUP.apply( Hosts.getCoordinator( ) );
-      } else if ( !Hosts.isCoordinator( ) ) {
+      } else if ( !Hosts.isCoordinator( ) && Bootstrap.isFinished( ) ) {
         BootstrapComponent.SETUP.apply( Hosts.localHost( ) );
+        UpdateEntry.INSTANCE.apply( Hosts.localHost( ) );
       }
     } catch ( Exception ex ) {
       LOG.debug( ex );
@@ -436,10 +437,11 @@ public class Hosts {
           if ( input.hasDatabase( ) && !input.hasSynced( ) ) {
             SyncDatabases.INSTANCE.apply( input );
           }
+          setup( Empyrean.class, input.getBindAddress( ) );
           if ( input.hasDatabase( ) ) {
-            return setup( Empyrean.class, input.getBindAddress( ) ) && setup( Eucalyptus.class, input.getBindAddress( ) );
+            return setup( Eucalyptus.class, input.getBindAddress( ) );
           } else {
-            return setup( Empyrean.class, input.getBindAddress( ) );
+            return true;
           }
         } else {
           return false;
