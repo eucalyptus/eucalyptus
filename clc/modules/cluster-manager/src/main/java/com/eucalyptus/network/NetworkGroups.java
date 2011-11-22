@@ -110,7 +110,8 @@ import edu.ucsb.eucalyptus.msgs.IpPermissionType;
 import edu.ucsb.eucalyptus.msgs.SecurityGroupItemType;
 import edu.ucsb.eucalyptus.msgs.UserIdGroupPairType;
 
-@ConfigurableClass( root = "cloud.network", description = "Default values used to bootstrap networking state discovery." )
+@ConfigurableClass( root = "cloud.network",
+                    description = "Default values used to bootstrap networking state discovery." )
 public class NetworkGroups {
   private static final String DEFAULT_NETWORK_NAME          = "default";
   private static Logger       LOG                           = Logger.getLogger( NetworkGroups.class );
@@ -207,13 +208,31 @@ public class NetworkGroups {
     netConfig.setUseNetworkTags( netTagging.get( ) );
     try {
       Properties.lookup( NetworkGroups.class, "GLOBAL_MAX_NETWORK_INDEX" ).setValue( netConfig.getMaxNetworkIndex( ).toString( ) );
+    } catch ( IllegalAccessException ex ) {
+      Logs.extreme( ).error( ex );
+    } catch ( NoSuchFieldException ex ) {
+      Logs.extreme( ).error( ex );
+    }
+    try {
       Properties.lookup( NetworkGroups.class, "GLOBAL_MIN_NETWORK_INDEX" ).setValue( netConfig.getMinNetworkIndex( ).toString( ) );
+    } catch ( IllegalAccessException ex ) {
+      Logs.extreme( ).error( ex );
+    } catch ( NoSuchFieldException ex ) {
+      Logs.extreme( ).error( ex );
+    }
+    try {
       Properties.lookup( NetworkGroups.class, "GLOBAL_MAX_NETWORK_TAG" ).setValue( netConfig.getMaxNetworkTag( ).toString( ) );
+    } catch ( IllegalAccessException ex ) {
+      Logs.extreme( ).error( ex );
+    } catch ( NoSuchFieldException ex ) {
+      Logs.extreme( ).error( ex );
+    }
+    try {
       Properties.lookup( NetworkGroups.class, "GLOBAL_MIN_NETWORK_TAG" ).setValue( netConfig.getMinNetworkTag( ).toString( ) );
     } catch ( IllegalAccessException ex ) {
-      LOG.error( ex, ex );
+      Logs.extreme( ).error( ex );
     } catch ( NoSuchFieldException ex ) {
-      LOG.error( ex, ex );
+      Logs.extreme( ).error( ex );
     }
   }
   
