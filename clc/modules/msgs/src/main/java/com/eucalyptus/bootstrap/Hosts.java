@@ -75,13 +75,11 @@ import java.util.Set;
 import java.util.Vector;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.log4j.Logger;
 import org.jgroups.Address;
-import org.jgroups.ChannelClosedException;
 import org.jgroups.ChannelException;
-import org.jgroups.ChannelNotConnectedException;
 import org.jgroups.Global;
 import org.jgroups.Header;
 import org.jgroups.JChannel;
@@ -140,6 +138,7 @@ public class Hosts {
   static final Logger                            LOG                        = Logger.getLogger( Hosts.class );
   public static final long                       SERVICE_INITIALIZE_TIMEOUT = 10000L;
   private static ReplicatedHashMap<String, Host> hostMap;
+  private static final ReentrantReadWriteLock    canHas                     = new ReentrantReadWriteLock( );
   
   public static Predicate<ServiceConfiguration> nonLocalAddressMatch( final InetAddress addr ) {
     return new Predicate<ServiceConfiguration>( ) {
@@ -199,15 +198,15 @@ public class Hosts {
       } else {
         goalState = State.DISABLED;
       }
-      LOG.info( "SetupRemoteServiceConfigurations: " + goalState + " "
-        + ( inputIsLocal ? "local" : "remote" ) + " "
-        + ( input.getComponentId( ).isAlwaysLocal( ) ? "bootstrap" : "cloud" ) + " services"
-        + ( Hosts.isCoordinator( input.getInetAddress( ) ) ? " (coordinator)" : "" ) + ": " + input.getFullName( ) );
       if ( State.ENABLED.apply( input ) && State.ENABLED.equals( goalState ) ) {
         return input;
       } else if ( State.DISABLED.apply( input ) && State.DISABLED.equals( goalState ) ) {
         return input;
       } else {
+        LOG.info( "SetupRemoteServiceConfigurations: " + goalState + " "
+                  + ( inputIsLocal ? "local" : "remote" ) + " "
+                  + ( input.getComponentId( ).isAlwaysLocal( ) ? "bootstrap" : "cloud" ) + " services"
+                  + ( Hosts.isCoordinator( input.getInetAddress( ) ) ? " (coordinator)" : "" ) + ": " + input.getFullName( ) );
         try {
           return Topology.transition( goalState ).apply( input ).get( );
         } catch ( final ExecutionException ex ) {
@@ -258,60 +257,80 @@ public class Hosts {
       if ( !BootstrapArgs.isCloudController( ) && currentHost.hasBootstrapped( ) && Databases.shouldInitialize( ) ) {
         System.exit( 123 );
       }
-      try {
-        if ( !Topology.isEnabled( Eucalyptus.class ) && Hosts.getCoordinator( ) != null ) {
-          LOG.info( "Setting up new coordinator: " + Hosts.getCoordinator( ) );
-          BootstrapComponent.setup( Eucalyptus.class, Hosts.getCoordinator( ).getBindAddress( ) );
+      if ( Hosts.pruneHosts( ) ) {
+        Hosts.updateServices( );
+      }
+      for ( Host h : Hosts.listActiveDatabases( ) ) {
+        if ( !h.isLocalHost( ) && Bootstrap.isFinished( ) ) {
+          Databases.enable( currentHost );
         }
-      } catch ( Exception ex ) {
-        LOG.debug( ex );
-        Logs.extreme( ).debug( ex, ex );
       }
       try {
         if ( event.isAsserted( 3L ) && Bootstrap.isFinished( ) && !Hosts.list( Predicates.not( BootedFilter.INSTANCE ) ).isEmpty( ) ) {
-          LOG.info( "Updating current host entry: " + currentHost );
-          UpdateEntry.INSTANCE.apply( currentHost );
-        } else if ( event.isAsserted( 15L ) ) {
-          LOG.info( "Updating current host entry: " + currentHost );
-          UpdateEntry.INSTANCE.apply( currentHost );
+          if ( UpdateEntry.INSTANCE.apply( currentHost ) ) {
+            LOG.info( "Updated local host entry: " + currentHost );
+          }
+        } else if ( event.isAsserted( 5L ) ) {
+          if ( UpdateEntry.INSTANCE.apply( currentHost ) ) {
+            LOG.info( "Updated local host entry: " + currentHost );
+          }
         }
       } catch ( Exception ex ) {
         LOG.debug( ex );
         Logs.extreme( ).debug( ex, ex );
       }
-      try {
-        if ( event.isAsserted( 15L ) ) {
-          Set<Address> currentMembers = Sets.newHashSet( hostMap.getChannel( ).getView( ).getMembers( ) );
-          Map<String, Host> hostCopy = Maps.newHashMap( hostMap );
-          Set<Address> currentHosts = Sets.newHashSet( Collections2.transform( hostCopy.values( ), GroupAddressTransform.INSTANCE ) );
-          Set<Address> strayHosts = Sets.difference( currentHosts, currentMembers );
-          if ( !strayHosts.isEmpty( ) ) {
-            LOG.info( "Pruning orphan host entries: " + strayHosts );
+    }
+    
+  }
+  
+  private static boolean pruneHosts( ) {
+    try {
+      Set<Address> currentMembers = Sets.newHashSet( hostMap.getChannel( ).getView( ).getMembers( ) );
+      Map<String, Host> hostCopy = Maps.newHashMap( hostMap );
+      Set<Address> currentHosts = Sets.newHashSet( Collections2.transform( hostCopy.values( ), GroupAddressTransform.INSTANCE ) );
+      Set<Address> strayHosts = Sets.difference( currentHosts, currentMembers );
+      if ( !strayHosts.isEmpty( ) ) {
+        LOG.info( "Pruning orphan host entries: " + strayHosts );
+        for ( Address strayHost : strayHosts ) {
+          Host h = hostCopy.get( strayHost.toString( ) );
+          if ( h == null ) {
+            LOG.debug( "Pruning failed to find host copy for orphan host: " + h );
+            h = Hosts.lookup( strayHost.toString( ) );
+            LOG.debug( "Pruning fell back to underlying host map for orphan host: " + h );
           }
-          for ( Address strayHost : strayHosts ) {
-            Host h = hostCopy.get( strayHost.toString( ) );
-            if ( h == null ) {
-              LOG.debug( "Pruning failed to find host copy for orphan host: " + h );
-              h = hostMap.get( strayHost );
-              LOG.debug( "Pruning fell back to underlying host map for orphan host: " + h );
-            }
-            if ( h != null ) {
-              LOG.info( "Pruning orphan host: " + h );
-              LOG.info( "Pruned orphan host: " + hostMap.remove( strayHost.toString( ) ) );
-              BootstrapComponent.TEARDOWN.apply( h );
-            } else {
-              LOG.info( "Pruning failed for orphan host: " + strayHost
+          if ( h != null ) {
+            LOG.info( "Pruning orphan host: " + h );
+            BootstrapComponent.TEARDOWN.apply( h );
+          } else {
+            LOG.info( "Pruning failed for orphan host: " + strayHost
                 + " with local-copy value: "
                 + hostCopy.get( strayHost.toString( ) )
                 + " and underlying host map value: "
-                + hostMap.get( strayHost.toString( ) ) );
-            }
+                + Hosts.lookup( strayHost ) );
           }
         }
-      } catch ( Exception ex ) {
-        LOG.debug( ex );
-        Logs.extreme( ).debug( ex, ex );
+      } else {
+        return false;
       }
+    } catch ( Exception ex ) {
+      LOG.debug( ex );
+      Logs.extreme( ).debug( ex, ex );
+    }
+    return true;
+  }
+  
+  private static void updateServices( ) {
+    try {
+      if ( !Topology.isEnabled( Eucalyptus.class ) && Hosts.getCoordinator( ) != null ) {
+        LOG.info( "Setting up new coordinator: " + Hosts.getCoordinator( ) );
+        BootstrapComponent.SETUP.apply( Hosts.getCoordinator( ) );
+      } else if ( !Hosts.isCoordinator( ) && Bootstrap.isFinished( ) ) {
+        BootstrapComponent.SETUP.apply( Hosts.localHost( ) );
+        UpdateEntry.INSTANCE.apply( Hosts.localHost( ) );
+      }
+    } catch ( Exception ex ) {
+      LOG.debug( ex );
+      Logs.extreme( ).debug( ex, ex );
     }
   }
   
@@ -335,6 +354,9 @@ public class Hosts {
     @Override
     public void entryRemoved( final String input ) {
       LOG.info( "Hosts.entryRemoved(): " + input );
+      if ( !BootstrapArgs.isCloudController( ) ) {
+        Databases.disable( input );
+      }
     }
     
     @Override
@@ -345,9 +367,22 @@ public class Hosts {
         LOG.info( "Hosts.entrySet(): " + hostKey + " => " + host );
         try {
           if ( host.isLocalHost( ) && Bootstrap.isFinished( ) ) {
-            SyncDatabases.INSTANCE.apply( host );
-          } else if ( BootstrapComponent.REMOTESETUP.apply( host ) ) {
-            SyncDatabases.INSTANCE.apply( host );
+            final boolean wasSynched = Databases.isSynchronized( );
+            Threads.enqueue( ServiceConfigurations.createEphemeral( Empyrean.INSTANCE ), new Runnable( ) {
+              
+              @Override
+              public void run( ) {
+                Host currentHost = Hosts.lookup( hostKey );
+                if ( currentHost != null ) {
+                  BootstrapComponent.SETUP.apply( currentHost );
+                  if ( !wasSynched && Databases.isSynchronized( ) ) {
+                    UpdateEntry.INSTANCE.apply( currentHost );
+                  }
+                }
+              }
+            } );
+          } else if ( Bootstrap.isFinished() && !host.isLocalHost( ) && host.hasSynced( ) ) {
+            BootstrapComponent.REMOTESETUP.apply( host );
           } else if ( InitializeAsCloudController.INSTANCE.apply( host ) ) {
             LOG.info( "Hosts.entrySet(): INITIALIZED CLC => " + host );
           } else {
@@ -366,19 +401,21 @@ public class Hosts {
       LOG.info( "Hosts.viewChange(): new view => " + Joiner.on( ", " ).join( currentView.getMembers( ) ) );
       if ( !joinMembers.isEmpty( ) ) LOG.info( "Hosts.viewChange(): joined   => " + Joiner.on( ", " ).join( joinMembers ) );
       if ( !partMembers.isEmpty( ) ) LOG.info( "Hosts.viewChange(): parted   => " + Joiner.on( ", " ).join( partMembers ) );
-      for ( final Host h : Hosts.list( ) ) {
-        if ( Iterables.contains( partMembers, h.getGroupsId( ) ) ) {
-          Threads.enqueue( ServiceConfigurations.createEphemeral( Empyrean.INSTANCE ), new Runnable( ) {
-            public void run( ) {
-              try {
-                BootstrapComponent.TEARDOWN.apply( h );
-              } catch ( Exception ex ) {
-                LOG.error( ex, ex );
-              }
-              LOG.info( "Hosts.viewChange(): -> removed  => " + h );
-            }
-          } );
+      boolean prune = false;
+      for ( final Address hostAddress : Lists.transform( Hosts.list( ), GroupAddressTransform.INSTANCE ) ) {
+        if ( Iterables.contains( partMembers, hostAddress ) ) {
+          LOG.info( "Hosts.viewChange(): -> removed  => " + hostAddress );
+          prune = true;
         }
+      }
+      if ( prune ) {
+        Threads.enqueue( ServiceConfigurations.createEphemeral( Empyrean.INSTANCE ), new Runnable( ) {
+          public void run( ) {
+            if ( Hosts.pruneHosts( ) ) {
+              Hosts.updateServices( );
+            }
+          }
+        } );
       }
       LOG.info( "Hosts.viewChange(): new view finished." );
     }
@@ -405,16 +442,18 @@ public class Hosts {
       public boolean apply( final Host input ) {
         if ( Bootstrap.isShuttingDown( ) ) {
           return false;
-        } else {
-          if ( input.hasBootstrapped( ) ) {
-            if ( input.hasDatabase( ) && !input.isLocalHost( ) ) {
-              return setup( Empyrean.class, input.getBindAddress( ) ) && setup( Eucalyptus.class, input.getBindAddress( ) );
-            } else {
-              return setup( Empyrean.class, input.getBindAddress( ) );
-            }
-          } else {
-            return false;
+        } else if ( input.hasBootstrapped( ) ) {
+          if ( !input.isLocalHost( ) && input.hasDatabase( ) && input.hasSynced( ) ) {
+            SyncDatabases.INSTANCE.apply( input );
           }
+          setup( Empyrean.class, input.getBindAddress( ) );
+          if ( input.hasDatabase( ) ) {
+            return setup( Eucalyptus.class, input.getBindAddress( ) );
+          } else {
+            return true;
+          }
+        } else {
+          return false;
         }
       }
     },
@@ -425,27 +464,44 @@ public class Hosts {
           return false;
         } else {
           try {
-            if ( !input.isLocalHost( ) && input.hasDatabase( ) ) {//GRZE:NOTE:maybe handle in entryRemoved()
-              Databases.disable( input.getDisplayName( ) );
-            }
-            if ( input.hasDatabase( ) && Hosts.isCoordinator( ) ) {
-              Hosts.remove( input.getDisplayName( ) );
-            } else if ( input.hasDatabase( ) && ( Hosts.getCoordinator( ) == null || Hosts.isCoordinator( input ) ) ) {
-              Hosts.remove( input.getDisplayName( ) );
-            }
-            teardown( Empyrean.class, input.getBindAddress( ) );
             if ( input.hasDatabase( ) ) {
-              teardown( Eucalyptus.class, input.getBindAddress( ) );
+              Databases.disable( input.getDisplayName( ) );
+              this.removeHost( input );
+            } else {
+              this.removeHost( input );
             }
-            if ( input.hasDatabase( ) && BootstrapArgs.isCloudController( ) ) {//GRZE:NOTE:promote
-              BootstrapComponent.SETUP.apply( Hosts.localHost( ) );
-              UpdateEntry.INSTANCE.apply( Hosts.localHost( ) );
-            }
+          } catch ( Exception ex ) {
+            LOG.error( ex, ex );
+            return false;
+          }
+          try {
+            this.tryPromoteSelf( input );
             return true;
           } catch ( Exception ex ) {
             LOG.error( ex, ex );
             return false;
           }
+        }
+      }
+      
+      private void tryPromoteSelf( final Host input ) {
+        if ( input.hasDatabase( ) && BootstrapArgs.isCloudController( ) ) {
+          BootstrapComponent.SETUP.apply( Hosts.localHost( ) );
+          UpdateEntry.INSTANCE.apply( Hosts.localHost( ) );
+        }
+      }
+      
+      private void removeHost( final Host input ) {
+        if ( Hosts.isCoordinator( ) ) {
+          Hosts.remove( input.getDisplayName( ) );
+        } else if ( !Hosts.hasCoordinator( ) || Hosts.isCoordinator( input ) ) {
+          Hosts.remove( input.getDisplayName( ) );
+        } else {
+          //GRZE:NOTE: this case is a remote non-coordinator in a system which has a coordinator.
+        }
+        teardown( Empyrean.class, input.getBindAddress( ) );
+        if ( input.hasDatabase( ) ) {
+          teardown( Eucalyptus.class, input.getBindAddress( ) );
         }
       }
     },
@@ -821,6 +877,7 @@ public class Hosts {
   }
   
   private static final Predicate<Host> filterSyncedDbs = Predicates.and( DbFilter.INSTANCE, SyncedDbFilter.INSTANCE );
+  private static final Predicate<Host> filterBooedSyncedDbs = Predicates.and( filterSyncedDbs, BootedFilter.INSTANCE );
   
   public static List<Host> listActiveDatabases( ) {
     return Hosts.list( filterSyncedDbs );
@@ -834,8 +891,38 @@ public class Hosts {
     return hostMap.putIfAbsent( host.getDisplayName( ), host );
   }
   
+  public static Host lookup( final Address hostGroupAddress ) {
+    return lookup( hostGroupAddress.toString( ) );
+  }
+  
+  public static Host lookup( final String hostDisplayName ) {
+    if ( hostMap.containsKey( hostDisplayName ) ) {
+      return hostMap.get( hostDisplayName );
+    } else {
+      final InetAddress addr = Internets.toAddress( hostDisplayName );
+      Hosts.list( new Predicate<Host>( ) {
+        
+        @Override
+        public boolean apply( Host input ) {
+          if ( input.getBindAddress( ).equals( addr ) ) {
+            return true;
+          } else if ( input.getHostAddresses( ).contains( addr ) ) {
+            return true;
+          } else {
+            return false;
+          }
+        }
+      } );
+    }
+    return null;
+  }
+  
   public static boolean contains( final String hostDisplayName ) {
     return hostMap.containsKey( hostDisplayName );
+  }
+  
+  private static boolean contains( final Address hostGroupAddress ) {
+    return contains( hostGroupAddress.toString( ) );
   }
   
   private static boolean contains( final Host host ) {
@@ -847,14 +934,16 @@ public class Hosts {
   }
   
   private static Host remove( String hostDisplayName ) {
-    return hostMap.remove( hostDisplayName );
+    Host ret = hostMap.remove( hostDisplayName );
+    LOG.info( "Removing host map entry for: " + hostDisplayName + " => " + ret );
+    return ret;
   }
   
   public static Host localHost( ) {
     if ( ( hostMap == null ) || !hostMap.containsKey( Internets.localHostIdentifier( ) ) ) {
       return Host.create( );
     } else {
-      return hostMap.get( Internets.localHostIdentifier( ) );
+      return lookup( Internets.localHostIdentifier( ) );
     }
   }
   
@@ -944,6 +1033,10 @@ public class Hosts {
     return coordinator != null && coordinator.getBindAddress( ).equals( addr );
   }
   
+  public static boolean hasCoordinator( ) {
+    return Coordinator.INSTANCE.get( ) != null;
+  }
+  
   public static boolean isCoordinator( ) {
     return Coordinator.INSTANCE.isLocalhost( );
   }
@@ -962,9 +1055,10 @@ public class Hosts {
     public void initialize( final Collection<Host> values ) {
       final long currentTime = System.currentTimeMillis( );
       long startTime = values.isEmpty( ) ? currentTime : Longs.max( Longs.toArray( Collections2.transform( values, StartTimeTransform.INSTANCE ) ) );
-      startTime = startTime > currentTime ? startTime : currentTime;
-      startTime += 30000;
-      this.currentStartTime.compareAndSet( Long.MAX_VALUE, startTime );
+      startTime = startTime > currentTime ? startTime + 30000 : currentTime;
+      if ( this.currentStartTime.compareAndSet( Long.MAX_VALUE, startTime ) ) {
+        Hosts.put( Hosts.localHost( ) );
+      }
     }
     
     public Boolean isLocalhost( ) {
@@ -1011,7 +1105,13 @@ public class Hosts {
     private static Host findCoordinator( List<Host> dbHosts ) {
       Host minHost = null;
       for ( final Host h : dbHosts ) {
-        minHost = ( minHost == null ? h : ( minHost.getStartedTime( ) > h.getStartedTime( ) ? h : minHost ) );
+        if ( minHost == null ) {
+          minHost = h;
+        } else if ( minHost.getStartedTime( ) > h.getStartedTime( ) ) {
+          minHost = h;
+        } else if ( minHost.getStartedTime( ) == h.getStartedTime( ) && !minHost.getDisplayName( ).equals( h.getDisplayName( ) ) ) {
+          minHost = ( minHost.getDisplayName( ).compareTo( h.getDisplayName( ) ) == -1 ? minHost : h );
+        }
       }
       return minHost;
     }
@@ -1028,12 +1128,17 @@ public class Hosts {
   
   static void awaitDatabases( ) throws InterruptedException {
     if ( !BootstrapArgs.isCloudController( ) ) {
-      while ( listActiveDatabases( ).isEmpty( ) ) {
-        TimeUnit.SECONDS.sleep( 5 );
+      while ( list( filterBooedSyncedDbs ).isEmpty( ) ) {
+        TimeUnit.SECONDS.sleep( 3 );
         LOG.info( "Waiting for system view with database..." );
       }
       if ( Databases.shouldInitialize( ) ) {
         doInitialize( );
+      }
+    } else if ( BootstrapArgs.isCloudController( ) ) {
+      for( Host coordinator = Hosts.getCoordinator( ); !coordinator.hasSynced( ) && !coordinator.hasBootstrapped( ) && !coordinator.isLocalHost( ); coordinator = Hosts.getCoordinator( ) ) {
+        TimeUnit.SECONDS.sleep( 3 );
+        LOG.info( "Waiting for system view with database..." );
       }
     }
   }

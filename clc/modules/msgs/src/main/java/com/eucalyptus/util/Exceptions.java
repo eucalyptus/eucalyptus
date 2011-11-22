@@ -82,9 +82,7 @@ public class Exceptions {
     INSTANCE;
     @Override
     public List<Throwable> apply( Throwable input ) {
-      if ( input == null || input.getClass( ).equals( Exception.class )
-           || input.getClass( ).equals( Exception.class )
-           || input.getClass( ).equals( Exception.class ) ) {
+      if ( input == null || input.getClass( ).equals( Exception.class ) ) {
         return Lists.newArrayList( );
       } else {
         List<Throwable> ret = Lists.newArrayList( input );

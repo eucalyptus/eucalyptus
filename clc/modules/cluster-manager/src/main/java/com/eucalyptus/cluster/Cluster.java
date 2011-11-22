@@ -75,10 +75,12 @@ import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.cloud.CloudMetadata.AvailabilityZoneMetadata;
 import com.eucalyptus.cluster.ResourceState.VmTypeAvailability;
 import com.eucalyptus.cluster.callback.ClusterCertsCallback;
@@ -230,11 +232,15 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
     
     @Override
     public boolean apply( final Cluster input ) {
-      try {
-        AsyncRequests.newRequest( this ).sendSync( input.configuration );
+      if ( Hosts.isCoordinator( ) ) {
+        try {
+          AsyncRequests.newRequest( this ).sendSync( input.configuration );
+          return true;
+        } catch ( final Exception t ) {
+          return input.swallowException( t );
+        }
+      } else {
         return true;
-      } catch ( final Exception t ) {
-        return input.swallowException( t );
       }
     }
     
@@ -410,11 +416,11 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
       try {
         return Component.State.valueOf( this.name( ) );
       } catch ( final Exception ex ) {
-        if ( this.name( ).startsWith( "ENABL" ) ) {
+        if ( this.equals( DISABLED ) ) {
           return Component.State.DISABLED;
         } else if ( this.ordinal( ) < DISABLED.ordinal( ) ) {
           return Component.State.NOTREADY;
-        } else if ( this.ordinal( ) > ENABLED.ordinal( ) ) {
+        } else if ( this.ordinal( ) >= ENABLING.ordinal( ) ) {
           return Component.State.ENABLED;
         } else {
           return Component.State.INITIALIZED;
@@ -779,7 +785,24 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
                                                                                       State.ENABLING_NET, State.ENABLING_VMS,
                                                                                       State.ENABLING_ADDRS, State.ENABLING_VMS_PASS_TWO,
                                                                                       State.ENABLING_ADDRS_PASS_TWO, State.ENABLED ).call( );
-        result.get( );
+        RuntimeException fail = null;
+        for ( int i = 0; i < Clusters.getConfiguration( ).getStartupSyncRetries( ); i++ ) {
+          try {
+            result.get( );
+            fail = null;
+            break;
+          } catch ( Exception ex ) {
+            try {
+              TimeUnit.SECONDS.sleep( 1 );
+            } catch ( Exception ex1 ) {
+              LOG.error( ex1 , ex1 );
+            }
+            fail = Exceptions.toUndeclared( ex );
+          }
+        }
+        if ( fail != null ) {
+          throw fail;
+        }
       } catch ( final InterruptedException ex ) {
         Thread.currentThread( ).interrupt( );
       } catch ( final Exception ex ) {

@@ -204,12 +204,7 @@ public class Topology {
       
       @Override
       public boolean apply( final ServiceConfiguration config ) {
-        if ( config.getComponentId( ).isPublicService( ) ) {
-          return true;
-        } else if ( config.getComponentId( ).isRootService( ) && !config.getComponentId( ).isPartitioned( ) ) {
-          return true;
-        } else if ( ( config.getComponentId( ).isRootService( ) || config.getComponentId( ).isRegisterable( ) ) && config.getComponentId( ).isPartitioned( )
-                    && p.getName( ).equals( config.getPartition( ) ) ) {
+        if ( config.getComponentId( ).isDistributedService( ) ) {
           return true;
         } else {
           return false;
@@ -227,7 +222,7 @@ public class Topology {
                                                                     typeMapper );
         msg.get_services( ).addAll( serviceList );
         for ( Component c : Components.list( ) ) {
-          if ( !c.getComponentId( ).isAlwaysLocal( ) && !c.getComponentId( ).isCloudLocal( ) ) {
+          if ( c.getComponentId( ).isDistributedService( ) ) {
             for ( ServiceConfiguration s : c.services( ) ) {
               if ( !serviceList.contains( s ) && State.DISABLED.apply( s ) ) {
                 msg.get_disabledServices( ).add( typeMapper.apply( s ) );
@@ -272,7 +267,7 @@ public class Topology {
       }
       for ( ServiceConfiguration conf : Lists.transform( msg.get_notreadyServices( ), ServiceConfigurations.ServiceIdToServiceConfiguration.INSTANCE ) ) {
         if ( !conf.isVmLocal( ) ) {
-          start( conf );
+          transition( State.NOTREADY ).apply( conf );
         }
       }
       Topology.getInstance( ).currentEpoch = Ints.max( Topology.getInstance( ).currentEpoch, msg.get_epoch( ) );
@@ -355,7 +350,7 @@ public class Topology {
   }
   
   public static Future<ServiceConfiguration> start( final ServiceConfiguration config ) {
-    return transition( State.NOTREADY ).apply( config );
+    return transition( State.DISABLED ).apply( config );
   }
   
   public static Future<ServiceConfiguration> enable( final ServiceConfiguration config ) {
@@ -580,7 +575,9 @@ public class Topology {
     INSTANCE;
     @Override
     public boolean apply( final ServiceConfiguration arg0 ) {
-      if ( BootstrapArgs.isCloudController( ) ) {
+      if ( Hosts.isCoordinator( ) && arg0.getComponentId( ).isDistributedService( ) ) {
+        return true;
+      } else if ( arg0.isHostLocal( ) && BootstrapArgs.isCloudController( ) ) {
         return true;
       } else {
         return arg0.isVmLocal( );
@@ -588,8 +585,6 @@ public class Topology {
     }
     
   }
-  
-  private static final int EXTERNAL_THREAD_POOL_LIMIT = 32;
   
   enum SubmitEnable implements Function<ServiceConfiguration, Future<ServiceConfiguration>> {
     INSTANCE;
@@ -601,6 +596,10 @@ public class Topology {
       return future;
     }
     
+    @Override
+    public String toString( ) {
+      return "ENABLED";
+    }
   }
   
   enum SubmitDisable implements Function<ServiceConfiguration, Future<ServiceConfiguration>> {
@@ -611,6 +610,11 @@ public class Topology {
       final Callable<ServiceConfiguration> call = Topology.callable( input, Topology.get( State.DISABLED ) );
       final Future<ServiceConfiguration> future = Queue.EXTERNAL.enqueue( call );
       return future;
+    }
+    
+    @Override
+    public String toString( ) {
+      return "DISABLED";
     }
     
   }
@@ -625,6 +629,10 @@ public class Topology {
       return future;
     }
     
+    @Override
+    public String toString( ) {
+      return "CHECKED";
+    }
   }
   
   enum WaitForResults implements Predicate<Future> {
@@ -679,40 +687,39 @@ public class Topology {
       for ( final Component c : Components.list( ) ) {
         allServices.addAll( c.services( ) );
       }
-      
-      final Collection<ServiceConfiguration> checkServices = Collections2.filter( allServices, CheckServiceFilter.INSTANCE );
-      
-      final Collection<Future<ServiceConfiguration>> submittedChecks = Collections2.transform( checkServices, SubmitCheck.INSTANCE );
-      
-      /** consume describe results **/
-      final Collection<Future<ServiceConfiguration>> checkedServiceFutures = Collections2.filter( submittedChecks, WaitForResults.INSTANCE );
-      final List<ServiceConfiguration> checkedServices = Lists.newArrayList( Collections2.transform( checkedServiceFutures, ExtractFuture.INSTANCE ) );
+      List<ServiceConfiguration> checkedServices = submitTransitions( allServices, CheckServiceFilter.INSTANCE, SubmitCheck.INSTANCE );      
       if ( !checkedServices.isEmpty( ) ) {
         Logs.extreme( ).debug( "CHECKED" + ": " + Joiner.on( "\n" + "CHECKED" + ": " ).join( Collections2.transform( checkedServices, ServiceString.INSTANCE ) ) );
       }
-      
       if ( !Hosts.isCoordinator( ) ) {
+        final Predicate<ServiceConfiguration> proceedToDisableFilter = Predicates.and( ServiceConfigurations.filterHostLocal( ),
+                                                                                       ProceedToDisabledServiceFilter.INSTANCE );
+        submitTransitions( allServices, proceedToDisableFilter, SubmitDisable.INSTANCE );
         /** TODO:GRZE: check and disable timeout here **/
-        return Lists.newArrayList( Collections2.transform( checkedServiceFutures, ExtractFuture.INSTANCE ) );
+        return checkedServices;
       } else {
         /** make promotion decisions **/
         final Predicate<ServiceConfiguration> canPromote = Predicates.and( Predicates.in( checkedServices ), FailoverPredicate.INSTANCE );
-        
         final Collection<ServiceConfiguration> promoteServices = Collections2.filter( allServices, canPromote );
-        final Collection<Future<ServiceConfiguration>> enableCallables = Collections2.transform( promoteServices, SubmitEnable.INSTANCE );
-        final Collection<Future<ServiceConfiguration>> enabledServices = Collections2.filter( enableCallables, WaitForResults.INSTANCE );
-        final List<ServiceConfiguration> result = Lists.transform( Lists.newArrayList( enabledServices ), ExtractFuture.INSTANCE );
-        printCheckInfo( "ENABLED", result );
+        List<ServiceConfiguration> result = submitTransitions( allServices, canPromote, SubmitEnable.INSTANCE );
         
         /** advance other components as needed **/
         final Predicate<ServiceConfiguration> proceedToDisableFilter = Predicates.and( Predicates.not( Predicates.in( promoteServices ) ),
                                                                                        ProceedToDisabledServiceFilter.INSTANCE );
-        final Collection<ServiceConfiguration> disableServices = Collections2.filter( allServices, proceedToDisableFilter );
-        final Collection<Future<ServiceConfiguration>> disableCallables = Collections2.transform( disableServices, SubmitDisable.INSTANCE );
-        final Collection<Future<ServiceConfiguration>> disabledServices = Collections2.filter( disableCallables, WaitForResults.INSTANCE );
-        printCheckInfo( "DISABLED", Collections2.transform( disabledServices, ExtractFuture.INSTANCE ) );
+        submitTransitions( allServices, proceedToDisableFilter, SubmitDisable.INSTANCE );
         return result;
       }
+    }
+    
+    private static List<ServiceConfiguration> submitTransitions( final List<ServiceConfiguration> allServices,
+                                                                       final Predicate<ServiceConfiguration> proceedToDisableFilter,
+                                                                       final Function<ServiceConfiguration, Future<ServiceConfiguration>> submitFunction ) {
+      final Collection<ServiceConfiguration> filteredServices = Collections2.filter( allServices, proceedToDisableFilter );
+      final Collection<Future<ServiceConfiguration>> submittedCallables = Collections2.transform( filteredServices, submitFunction );
+      final Collection<Future<ServiceConfiguration>> completedServices = Collections2.filter( submittedCallables, WaitForResults.INSTANCE );
+      List<ServiceConfiguration> results = Lists.newArrayList( Collections2.transform( completedServices, ExtractFuture.INSTANCE ) );
+      printCheckInfo( submitFunction.toString( ), results );
+      return results;
     }
     
     private static void printCheckInfo( final String action, final Collection<ServiceConfiguration> result ) {

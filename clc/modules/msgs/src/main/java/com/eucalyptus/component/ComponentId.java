@@ -434,6 +434,16 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
   }
   
   /**
+   * Temporarily this includes only a registerability check.
+   * 
+   * @param config
+   * @return
+   */
+  public boolean isDistributedService( ) {
+    return this.isRegisterable( );
+  }
+  
+  /**
    * Can the component be run locally (i.e., is the needed code available)
    * 
    * @param component TODO
