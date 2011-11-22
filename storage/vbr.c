@@ -950,8 +950,11 @@ static int copy_creator (artifact * a)
 // Currently each artifact tree is used within a single
 // thread (startup thread), so these do not need to be thread safe.
 
-static int art_add_dep (artifact * a, artifact * dep) 
+int art_add_dep (artifact * a, artifact * dep)
 {
+    if (dep==NULL)
+        return OK;
+
     for (int i = 0; i < MAX_ARTIFACT_DEPS; i++) {
         if (a->deps[i] == NULL) {
             logprintfl (EUCADEBUG, "[%s] added to artifact %03d|%s artifact %03d|%s\n", 
@@ -1691,7 +1694,7 @@ art_implement_tree ( // traverse artifact tree and create/download/combine artif
             // try to open the artifact
             switch (ret = find_or_create_artifact (FIND, root, work_bs, cache_bs, work_prefix, &(root->bb))) {
             case OK:
-                logprintfl (EUCADEBUG, "[%s] found existing artifact %03d|%s\n", root->instanceId, root->seq, root->id);
+                logprintfl (EUCADEBUG, "[%s] found existing artifact %03d|%s on try %d\n", root->instanceId, root->seq, root->id, tries);
                 update_vbr_with_backing_info (root);
                 do_deps = FALSE;
                 do_create = FALSE;
@@ -1703,7 +1706,7 @@ art_implement_tree ( // traverse artifact tree and create/download/combine artif
                 goto retry_or_fail;
                 break;
             default: // all other errors
-                logprintfl (EUCAERROR, "[%s] error: failed to provision artifact %03d|%s (error=%d)\n", root->instanceId, root->seq, root->id, ret);
+                logprintfl (EUCAERROR, "[%s] error: failed to provision artifact %03d|%s (error=%d) on try %d\n", root->instanceId, root->seq, root->id, ret, tries);
                 goto retry_or_fail;
             }
         }
@@ -1729,8 +1732,8 @@ art_implement_tree ( // traverse artifact tree and create/download/combine artif
                         num_opened_deps++;
                     } else { // this is a sentinel, we're not creating anything, so release the dep immediately
                         if (blockblob_close (root->deps[i]->bb) == -1) {
-                            logprintfl (EUCAERROR, "[%s] error: failed to close dependency of %s: %d %s (potential resource leak!)\n",
-                                        root->instanceId, root->id, blobstore_get_error(), blobstore_get_last_msg());                            
+                            logprintfl (EUCAERROR, "[%s] error: failed to close dependency of %s: %d %s (potential resource leak!) on try %d\n",
+                                        root->instanceId, root->id, blobstore_get_error(), blobstore_get_last_msg(), tries);
                         }
                         root->deps[i]->bb = 0; // for debugging
                     }
@@ -1739,7 +1742,8 @@ art_implement_tree ( // traverse artifact tree and create/download/combine artif
                 case BLOBSTORE_ERROR_MFILE: // out of file descriptors for locking => same problem
                     goto retry_or_fail;
                 default: // all other errors
-                    logprintfl (EUCAERROR, "[%s] error: failed to provision dependency %s for artifact %s (error=%d)\n", root->instanceId, root->deps[i]->id, root->id, ret);
+                    logprintfl (EUCAERROR, "[%s] error: failed to provision dependency %s for artifact %s (error=%d) on try %d\n", 
+                                root->instanceId, root->deps[i]->id, root->id, ret, tries);
                     goto retry_or_fail;
                 }
             }
@@ -1753,7 +1757,7 @@ art_implement_tree ( // traverse artifact tree and create/download/combine artif
             // try to create the artifact since last time we checked it did not exist
             switch (ret = find_or_create_artifact (CREATE, root, work_bs, cache_bs, work_prefix, &(root->bb))) {
             case OK:
-                logprintfl (EUCADEBUG, "[%s] created a blob for an artifact %03d|%s\n", root->instanceId,  root->seq, root->id);
+                logprintfl (EUCADEBUG, "[%s] created a blob for an artifact %03d|%s on try %d\n", root->instanceId,  root->seq, root->id, tries);
                 break;
             case BLOBSTORE_ERROR_EXIST: // someone else created it => loop back and open it
                 ret = BLOBSTORE_ERROR_AGAIN;
@@ -1763,14 +1767,14 @@ art_implement_tree ( // traverse artifact tree and create/download/combine artif
                 goto retry_or_fail;
                 break;
             default: // all other errors
-                logprintfl (EUCAERROR, "[%s] error: failed to allocate artifact %s (error=%d)\n", root->instanceId, root->id, ret);
+                logprintfl (EUCAERROR, "[%s] error: failed to allocate artifact %s (error=%d) on try %d\n", root->instanceId, root->id, ret, tries);
                 goto retry_or_fail;
             }
 
         create:
             ret = root->creator (root); // create and open this artifact for exclusive use
             if (ret != OK) {
-                logprintfl (EUCAERROR, "[%s] error: failed to create artifact %s (may retry)\n", root->instanceId, root->id, ret);
+                logprintfl (EUCAERROR, "[%s] error: failed to create artifact %s (may retry) on try %d\n", root->instanceId, root->id, ret, tries);
                 // delete the partially created artifact so we can retry with a clean slate
                 if (root->id_is_path) { // artifact is not a blob, but a file
                     unlink (root->id); // attempt to delete, but it may not even exist
@@ -1780,11 +1784,11 @@ art_implement_tree ( // traverse artifact tree and create/download/combine artif
                         // failure of 'delete' is bad, since we may have an open blob
                         // that will prevent others from ever opening it again, so at
                         // least try to close it
-                        logprintfl (EUCAERROR, "[%s] error: failed to remove partially created artifact %s: %d %s (potential resource leak!)\n",
-                                    root->instanceId, root->id, blobstore_get_error(), blobstore_get_last_msg());
+                        logprintfl (EUCAERROR, "[%s] error: failed to remove partially created artifact %s: %d %s (potential resource leak!) on try %d\n",
+                                    root->instanceId, root->id, blobstore_get_error(), blobstore_get_last_msg(), tries);
                         if (blockblob_close (root->bb) == -1) {
-                            logprintfl (EUCAERROR, "[%s] error: failed to close partially created artifact %s: %d %s (potential deadlock!)\n",
-                                        root->instanceId, root->id, blobstore_get_error(), blobstore_get_last_msg());
+                            logprintfl (EUCAERROR, "[%s] error: failed to close partially created artifact %s: %d %s (potential deadlock!) on try %d\n",
+                                        root->instanceId, root->id, blobstore_get_error(), blobstore_get_last_msg(), tries);
                         }
                     }
                 }
@@ -1806,9 +1810,9 @@ art_implement_tree ( // traverse artifact tree and create/download/combine artif
                   || (time_usec()-started)<timeout_usec )); // or until we exceed the timeout
 
     if (ret!=OK) {
-        logprintfl (EUCADEBUG, "[%s] error: failed to implement artifact %03d|%s\n", root->instanceId, root->seq, root->id);
+        logprintfl (EUCADEBUG, "[%s] error: failed to implement artifact %03d|%s on try %d\n", root->instanceId, root->seq, root->id, tries);
     } else {
-        logprintfl (EUCADEBUG, "[%s] implemented artifact %03d|%s\n", root->instanceId, root->seq, root->id);        
+        logprintfl (EUCADEBUG, "[%s] implemented artifact %03d|%s on try %d\n", root->instanceId, root->seq, root->id, tries);
     }
     
     return ret;
