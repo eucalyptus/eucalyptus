@@ -465,8 +465,8 @@ public class Hosts {
         } else {
           try {
             if ( input.hasDatabase( ) ) {
-              this.removeHost( input );
               Databases.disable( input.getDisplayName( ) );
+              this.removeHost( input );
             } else {
               this.removeHost( input );
             }
