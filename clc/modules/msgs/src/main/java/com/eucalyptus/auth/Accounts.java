@@ -157,4 +157,17 @@ public class Accounts {
     }
   }
   
+  public static void normalizeUserInfo( ) throws AuthException {
+    for ( User user : listAllUsers( ) ) {
+      try {
+        // In old code the info key is case sensitive
+        // In new code User.setInfo(Map<String,String) converts all keys to lower case
+        user.setInfo( user.getInfo( ) );
+      } catch ( AuthException e ) {
+        LOG.error( e, e );
+        continue;
+      }
+    }
+  }
+  
 }
