@@ -1050,7 +1050,9 @@ public class Hosts {
       long startTime = values.isEmpty( ) ? currentTime : Longs.max( Longs.toArray( Collections2.transform( values, StartTimeTransform.INSTANCE ) ) );
       startTime = startTime > currentTime ? startTime : currentTime;
       startTime += 30000;
-      this.currentStartTime.compareAndSet( Long.MAX_VALUE, startTime );
+      if( this.currentStartTime.compareAndSet( Long.MAX_VALUE, startTime ) ) {
+        Hosts.put( Hosts.localHost( ) );
+      }
     }
     
     public Boolean isLocalhost( ) {
