@@ -349,6 +349,9 @@ public class Hosts {
     @Override
     public void entryRemoved( final String input ) {
       LOG.info( "Hosts.entryRemoved(): " + input );
+      if ( !BootstrapArgs.isCloudController( ) ) {
+        Databases.disable( input );
+      }
     }
     
     @Override
@@ -373,9 +376,9 @@ public class Hosts {
                 }
               }
             } );
-          } else if ( !host.isLocalHost( ) && BootstrapComponent.REMOTESETUP.apply( host ) && host.hasSynced( ) ) {
-            SyncDatabases.INSTANCE.apply( host );
-          } else if ( InitializeAsCloudController.INSTANCE.apply( host ) ) {
+          } else if ( !host.isLocalHost( ) && host.hasSynced( ) ) {
+            BootstrapComponent.REMOTESETUP.apply( host ) 
+            } else if ( InitializeAsCloudController.INSTANCE.apply( host ) ) {
             LOG.info( "Hosts.entrySet(): INITIALIZED CLC => " + host );
           } else {
             LOG.debug( "Hosts.entrySet(): UPDATED HOST => " + host );

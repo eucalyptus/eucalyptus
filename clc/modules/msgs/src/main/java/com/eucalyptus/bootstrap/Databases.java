@@ -200,6 +200,7 @@ public class Databases {
               try {
                 final DriverDatabaseClusterMBean cluster = lookup( contextName );
                 LOG.debug( "Tearing down database connections for: " + hostName + " to context: " + contextName );
+                cluster.getDatabase( hostName );
                 try {
                   LOG.debug( "Removing database connections for: " + hostName + " to context: " + contextName );
                   cluster.remove( hostName );
@@ -224,16 +225,9 @@ public class Databases {
                   LOG.debug( ex );
                   Logs.extreme( ).debug( ex, ex );
                 }
-              } catch ( final NoSuchElementException ex1 ) {
-                LOG.debug( ex1 );
-                Logs.extreme( ).debug( ex1, ex1 );
-                return;
-              } catch ( final IllegalStateException ex1 ) {
-                LOG.debug( ex1 );
-                Logs.extreme( ).debug( ex1, ex1 );
-                return;
               } catch ( final Exception ex1 ) {
-                LOG.error( ex1, ex1 );
+                LOG.debug( ex1 );
+                Logs.extreme( ).debug( ex1, ex1 );
               }
             }
             
