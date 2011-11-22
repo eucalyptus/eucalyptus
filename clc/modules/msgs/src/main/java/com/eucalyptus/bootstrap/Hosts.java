@@ -377,8 +377,8 @@ public class Hosts {
               }
             } );
           } else if ( !host.isLocalHost( ) && host.hasSynced( ) ) {
-            BootstrapComponent.REMOTESETUP.apply( host ) 
-            } else if ( InitializeAsCloudController.INSTANCE.apply( host ) ) {
+            BootstrapComponent.REMOTESETUP.apply( host );
+          } else if ( InitializeAsCloudController.INSTANCE.apply( host ) ) {
             LOG.info( "Hosts.entrySet(): INITIALIZED CLC => " + host );
           } else {
             LOG.debug( "Hosts.entrySet(): UPDATED HOST => " + host );
@@ -437,7 +437,7 @@ public class Hosts {
         if ( Bootstrap.isShuttingDown( ) ) {
           return false;
         } else if ( input.hasBootstrapped( ) ) {
-          if ( input.hasDatabase( ) && !input.hasSynced( ) ) {
+          if ( !input.isLocalHost( ) && input.hasDatabase( ) && input.hasSynced( ) ) {
             SyncDatabases.INSTANCE.apply( input );
           }
           setup( Empyrean.class, input.getBindAddress( ) );
@@ -1113,13 +1113,18 @@ public class Hosts {
   }
   
   static void awaitDatabases( ) throws InterruptedException {
-    if ( !BootstrapArgs.isCloudController( ) || ( !Hosts.isCoordinator( ) && !Hosts.getCoordinator( ).hasBootstrapped( ) ) ) {
+    if ( !BootstrapArgs.isCloudController( ) ) {
       while ( listActiveDatabases( ).isEmpty( ) ) {
-        TimeUnit.SECONDS.sleep( 5 );
+        TimeUnit.SECONDS.sleep( 3 );
         LOG.info( "Waiting for system view with database..." );
       }
       if ( Databases.shouldInitialize( ) ) {
         doInitialize( );
+      }
+    } else if ( BootstrapArgs.isCloudController( ) ) {
+      while ( !Hosts.isCoordinator( ) && Hosts.getCoordinator( ).hasBootstrapped( ) ) {
+        TimeUnit.SECONDS.sleep( 3 );
+        LOG.info( "Waiting for system view with database..." );
       }
     }
   }
