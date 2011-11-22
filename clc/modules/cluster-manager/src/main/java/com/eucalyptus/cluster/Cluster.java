@@ -779,7 +779,19 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
                                                                                       State.ENABLING_NET, State.ENABLING_VMS,
                                                                                       State.ENABLING_ADDRS, State.ENABLING_VMS_PASS_TWO,
                                                                                       State.ENABLING_ADDRS_PASS_TWO, State.ENABLED ).call( );
-        result.get( );
+        RuntimeException fail = null;
+        for ( int i = 0; i < Clusters.getConfiguration( ).getStartupSyncRetries( ); i++ ) {
+          try {
+            result.get( );
+            fail = null;
+            break;
+          } catch ( Exception ex ) {
+            fail = Exceptions.toUndeclared( ex );
+          }
+        }
+        if ( fail != null ) {
+          throw fail;
+        }
       } catch ( final InterruptedException ex ) {
         Thread.currentThread( ).interrupt( );
       } catch ( final Exception ex ) {
