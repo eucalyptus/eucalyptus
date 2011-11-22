@@ -292,41 +292,56 @@ public class Databases {
               try {
                 final boolean fullSync = !Hosts.isCoordinator( ) && host.isLocalHost( ) && BootstrapArgs.isCloudController( ) && !Databases.isSynchronized( );
                 final boolean passiveSync = !fullSync && host.hasSynced( );
-                
-                DriverDatabaseClusterMBean cluster = LookupPersistenceContextDatabaseCluster.INSTANCE.apply( contextName );
-                final String dbUrl = "jdbc:" + ServiceUris.remote( Database.class, host.getBindAddress( ), contextName );
-                final String dbPass = SystemIds.databasePassword( );
-                final String realJdbcDriver = Databases.getDriverName( );
-                
-                if ( cluster.getActiveDatabases( ).contains( hostName ) ) {
-                  LOG.info( "Deactivating existing database connections to: " + host );
-                  cluster.deactivate( hostName );
-                }
-                if ( cluster.getInactiveDatabases( ).contains( hostName ) ) {
-                  LOG.info( "Deactivating existing database connections to: " + host );
-                  cluster.remove( hostName );
-                }
-                LOG.info( "Creating database connections for: " + host );
-                cluster.add( hostName, realJdbcDriver, dbUrl );
-                final InactiveDatabaseMBean database = Databases.lookupInactiveDatabase( contextName, hostName );
-                database.setUser( "eucalyptus" );
-                database.setPassword( dbPass );
-                database.setWeight( Hosts.isCoordinator( host ) ? 100 : 1 );
-                database.setLocal( host.isLocalHost( ) );
-                LOG.info( "Full sync of database on: " + host + " using " + cluster.getActiveDatabases( ) );
-                net.sf.hajdbc.Database<Driver> db = cluster.getDatabase( hostName );
-                db.setWeight( Hosts.isCoordinator( host ) ? 100 : 1 );
-                if ( fullSync ) {
-                  cluster.activate( hostName, "full" );
-                } else if ( passiveSync ) {
-                  if ( !cluster.getActiveDatabases( ).contains( hostName ) ) {
-                    LOG.info( "Passively activating database connections to: " + host );
-                    cluster.activate( hostName, "passive" );
-                  } else {
-                    LOG.info( "Skipping passive activation of extant database: " + host );
-                  }
-                } else {
+                if ( !fullSync && !passiveSync ) {
                   throw Exceptions.toUndeclared( "Host is not ready to be activated: " + host );
+                } else {
+                  DriverDatabaseClusterMBean cluster = LookupPersistenceContextDatabaseCluster.INSTANCE.apply( contextName );
+                  final String dbUrl = "jdbc:" + ServiceUris.remote( Database.class, host.getBindAddress( ), contextName );
+                  final String dbPass = SystemIds.databasePassword( );
+                  final String realJdbcDriver = Databases.getDriverName( );
+                  
+                  try {
+                    if ( cluster.getActiveDatabases( ).contains( hostName ) ) {
+                      LOG.info( "Deactivating existing database connections to: " + host );
+                      cluster.deactivate( hostName );
+                    }
+                    if ( cluster.getInactiveDatabases( ).contains( hostName ) ) {
+                      LOG.info( "Deactivating existing database connections to: " + host );
+                      cluster.remove( hostName );
+                    }
+                    LOG.info( "Creating database connections for: " + host );
+                    cluster.add( hostName, realJdbcDriver, dbUrl );
+                    final InactiveDatabaseMBean database = Databases.lookupInactiveDatabase( contextName, hostName );
+                    database.setUser( "eucalyptus" );
+                    database.setPassword( dbPass );
+                    database.setWeight( Hosts.isCoordinator( host ) ? 100 : 1 );
+                    database.setLocal( host.isLocalHost( ) );
+                    if ( fullSync ) {
+                      LOG.info( "Full sync of database on: " + host + " using " + cluster.getActiveDatabases( ) );
+                      cluster.activate( hostName, "full" );
+                    } else if ( passiveSync ) {
+                      if ( !cluster.getActiveDatabases( ).contains( hostName ) ) {
+                        LOG.info( "Passive activation of database connections to: " + host );
+                        cluster.activate( hostName, "passive" );
+                      } else {
+                        LOG.trace( "Skipping passive activation of extant database: " + host );
+                      }
+                    }
+                    net.sf.hajdbc.Database<Driver> activeDatabase = cluster.getDatabase( hostName );
+                    activeDatabase.setWeight( Hosts.isCoordinator( host ) ? 100 : 1 );
+                  } catch ( Exception ex ) {
+                    try {
+                      try {
+                        cluster.deactivate( hostName );
+                      } catch ( Exception ex1 ) {
+                        LOG.debug( ex1 );
+                      }
+                      cluster.remove( hostName );
+                    } catch ( Exception ex1 ) {
+                      LOG.debug( ex1 );
+                    }
+                    throw Exceptions.toUndeclared( ex );
+                  }
                 }
               } catch ( final NoSuchElementException ex1 ) {
                 LOG.debug( ex1 );
