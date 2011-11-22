@@ -467,13 +467,6 @@ public class ServiceTransitions {
             } else if ( errors.getSeverity( ).ordinal( ) < Faults.Severity.ERROR.ordinal( ) ) {
               Logs.extreme( ).error( errors, errors );
             } else {
-              if ( Component.State.ENABLED.equals( parent.lookupState( ) ) ) {
-                try {
-                  DISABLE.fire( parent );
-                } catch ( Exception ex ) {
-                  LOG.error( ex, ex );
-                }
-              }
               throw errors;
             }
           }
