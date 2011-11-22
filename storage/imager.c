@@ -39,7 +39,7 @@ static void set_debug (boolean yes)
 {
     // so euca libs will log to stdout
     if (yes==TRUE) {
-        logfile (NULL, EUCADEBUG2, 4);
+        logfile (NULL, EUCADEBUG, 4);
     } else {
         logfile (NULL, EUCAWARN, 4);
     }
@@ -263,7 +263,7 @@ int main (int argc, char * argv[])
                 err ("failed while verifying requirements");
         }
     }
-    // it OK for root to be NULL at this point
+    // it is OK for root to be NULL at this point
     
     // see if work blobstore will be needed at any stage
     // and open or create the work blobstore
