@@ -2608,7 +2608,6 @@ int vnetReassignAddress(vnetConfig *vnetconfig, char *uuid, char *src, char *dst
   // determine if reassign must happen
   if ( isallocated && strcmp(currdst, dst) ) {
     rc = vnetUnassignAddress(vnetconfig, src, currdst);
-    //if (currdst) free(currdst);
     if (rc) {
        if (currdst) free(currdst);
        return(1);
