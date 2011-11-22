@@ -283,7 +283,9 @@ public class Hosts {
           if ( !h.isLocalHost( ) && Bootstrap.isFinished( ) && h.hasSynced( ) ) {
             Databases.enable( h );
           }
-          Databases.isAlive( h.getDisplayName( ) );
+          if ( h.hasSynced( ) ) {
+            Databases.isAlive( h.getDisplayName( ) );
+          }
         }
       }
       
