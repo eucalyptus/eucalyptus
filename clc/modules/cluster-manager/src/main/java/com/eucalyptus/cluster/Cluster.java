@@ -80,6 +80,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.cloud.CloudMetadata.AvailabilityZoneMetadata;
 import com.eucalyptus.cluster.ResourceState.VmTypeAvailability;
 import com.eucalyptus.cluster.callback.ClusterCertsCallback;
@@ -231,11 +232,15 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
     
     @Override
     public boolean apply( final Cluster input ) {
-      try {
-        AsyncRequests.newRequest( this ).sendSync( input.configuration );
+      if ( Hosts.isCoordinator( ) ) {
+        try {
+          AsyncRequests.newRequest( this ).sendSync( input.configuration );
+          return true;
+        } catch ( final Exception t ) {
+          return input.swallowException( t );
+        }
+      } else {
         return true;
-      } catch ( final Exception t ) {
-        return input.swallowException( t );
       }
     }
     
