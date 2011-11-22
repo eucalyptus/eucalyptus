@@ -255,21 +255,15 @@ public class Hosts {
       if ( !BootstrapArgs.isCloudController( ) && currentHost.hasBootstrapped( ) && Databases.shouldInitialize( ) ) {
         System.exit( 123 );
       }
-      try {
-        if ( !Topology.isEnabled( Eucalyptus.class ) && Hosts.getCoordinator( ) != null ) {
-          LOG.info( "Setting up new coordinator: " + Hosts.getCoordinator( ) );
-          BootstrapComponent.setup( Eucalyptus.class, Hosts.getCoordinator( ).getBindAddress( ) );
-        }
-      } catch ( Exception ex ) {
-        LOG.debug( ex );
-        Logs.extreme( ).debug( ex, ex );
+      if ( event.isAsserted( 15L ) ) {
+        this.pruneHosts( );
       }
       try {
         if ( event.isAsserted( 3L ) && Bootstrap.isFinished( ) && !Hosts.list( Predicates.not( BootedFilter.INSTANCE ) ).isEmpty( ) ) {
           if ( UpdateEntry.INSTANCE.apply( currentHost ) ) {
             LOG.info( "Updated local host entry: " + currentHost );
           }
-        } else if ( event.isAsserted( 15L ) ) {
+        } else if ( event.isAsserted( 5L ) ) {
           if ( UpdateEntry.INSTANCE.apply( currentHost ) ) {
             LOG.info( "Updated local host entry: " + currentHost );
           }
@@ -278,38 +272,49 @@ public class Hosts {
         LOG.debug( ex );
         Logs.extreme( ).debug( ex, ex );
       }
-      try {
-        if ( event.isAsserted( 15L ) ) {
-          Set<Address> currentMembers = Sets.newHashSet( hostMap.getChannel( ).getView( ).getMembers( ) );
-          Map<String, Host> hostCopy = Maps.newHashMap( hostMap );
-          Set<Address> currentHosts = Sets.newHashSet( Collections2.transform( hostCopy.values( ), GroupAddressTransform.INSTANCE ) );
-          Set<Address> strayHosts = Sets.difference( currentHosts, currentMembers );
-          if ( !strayHosts.isEmpty( ) ) {
-            LOG.info( "Pruning orphan host entries: " + strayHosts );
-          }
-          for ( Address strayHost : strayHosts ) {
-            Host h = hostCopy.get( strayHost.toString( ) );
-            if ( h == null ) {
-              LOG.debug( "Pruning failed to find host copy for orphan host: " + h );
-              h = Hosts.lookup( strayHost.toString( ) );
-              LOG.debug( "Pruning fell back to underlying host map for orphan host: " + h );
-            }
-            if ( h != null ) {
-              LOG.info( "Pruning orphan host: " + h );
-              BootstrapComponent.TEARDOWN.apply( h );
-            } else {
-              LOG.info( "Pruning failed for orphan host: " + strayHost
-                + " with local-copy value: "
-                + hostCopy.get( strayHost.toString( ) )
-                + " and underlying host map value: "
-                + Hosts.lookup( strayHost ) );
-            }
-          }
-        }
-      } catch ( Exception ex ) {
-        LOG.debug( ex );
-        Logs.extreme( ).debug( ex, ex );
+    }
+    
+  }
+  
+  private static void pruneHosts( ) {
+    try {
+      Set<Address> currentMembers = Sets.newHashSet( hostMap.getChannel( ).getView( ).getMembers( ) );
+      Map<String, Host> hostCopy = Maps.newHashMap( hostMap );
+      Set<Address> currentHosts = Sets.newHashSet( Collections2.transform( hostCopy.values( ), GroupAddressTransform.INSTANCE ) );
+      Set<Address> strayHosts = Sets.difference( currentHosts, currentMembers );
+      if ( !strayHosts.isEmpty( ) ) {
+        LOG.info( "Pruning orphan host entries: " + strayHosts );
       }
+      for ( Address strayHost : strayHosts ) {
+        Host h = hostCopy.get( strayHost.toString( ) );
+        if ( h == null ) {
+          LOG.debug( "Pruning failed to find host copy for orphan host: " + h );
+          h = Hosts.lookup( strayHost.toString( ) );
+          LOG.debug( "Pruning fell back to underlying host map for orphan host: " + h );
+        }
+        if ( h != null ) {
+          LOG.info( "Pruning orphan host: " + h );
+          BootstrapComponent.TEARDOWN.apply( h );
+        } else {
+          LOG.info( "Pruning failed for orphan host: " + strayHost
+              + " with local-copy value: "
+              + hostCopy.get( strayHost.toString( ) )
+              + " and underlying host map value: "
+              + Hosts.lookup( strayHost ) );
+        }
+      }
+    } catch ( Exception ex ) {
+      LOG.debug( ex );
+      Logs.extreme( ).debug( ex, ex );
+    }
+    try {
+      if ( !Topology.isEnabled( Eucalyptus.class ) && Hosts.getCoordinator( ) != null ) {
+        LOG.info( "Setting up new coordinator: " + Hosts.getCoordinator( ) );
+        BootstrapComponent.setup( Eucalyptus.class, Hosts.getCoordinator( ).getBindAddress( ) );
+      }
+    } catch ( Exception ex ) {
+      LOG.debug( ex );
+      Logs.extreme( ).debug( ex, ex );
     }
   }
   
@@ -378,11 +383,12 @@ public class Hosts {
         if ( Iterables.contains( partMembers, h.getGroupsId( ) ) ) {
           Threads.enqueue( ServiceConfigurations.createEphemeral( Empyrean.INSTANCE ), new Runnable( ) {
             public void run( ) {
-              try {
-                BootstrapComponent.TEARDOWN.apply( h );
-              } catch ( Exception ex ) {
-                LOG.error( ex, ex );
-              }
+//              try {
+//                BootstrapComponent.TEARDOWN.apply( h );
+//              } catch ( Exception ex ) {
+//                LOG.error( ex, ex );
+//              }
+              Hosts.pruneHosts( );
               LOG.info( "Hosts.viewChange(): -> removed  => " + h );
             }
           } );
