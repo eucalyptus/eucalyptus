@@ -320,6 +320,23 @@ public class DatabaseUserProxy implements User {
   }
 
   @Override
+  public void removeInfo( final String key ) throws AuthException {
+    if ( Strings.isNullOrEmpty( key ) ) {
+      throw new AuthException( "Empty key" );
+    }
+    try {
+      Transactions.one( UserEntity.newInstanceWithUserId( this.delegate.getUserId( ) ), new Tx<UserEntity>( ) {
+        public void fire( UserEntity t ) {
+          t.getInfo( ).remove( key.toLowerCase( ) );
+        }
+      } );
+    } catch ( ExecutionException e ) {
+      Debugging.logError( LOG, e, "Failed to removeInfo for " + this.delegate );
+      throw new AuthException( e );
+    }
+  }
+
+  @Override
   public void setInfo( final Map<String, String> newInfo ) throws AuthException {
     if ( newInfo == null ) {
       throw new AuthException( "Empty user info map" );

@@ -438,7 +438,10 @@ public class Principals {
                                                 public void removeCertificate( String certficateId ) throws AuthException {}
                                                 
                                                 @Override
-                                                public void removePolicy( String name ) throws AuthException {};
+                                                public void removePolicy( String name ) throws AuthException {}
+
+                                                @Override
+                                                public void removeInfo(String key) throws AuthException {}
                                               };
   
   private static final User    NOBODY_USER    = new User( ) {
@@ -668,7 +671,10 @@ public class Principals {
                                                 public void removeCertificate( String certficateId ) throws AuthException {}
                                                 
                                                 @Override
-                                                public void removePolicy( String name ) throws AuthException {};
+                                                public void removePolicy( String name ) throws AuthException {}
+
+                                                @Override
+                                                public void removeInfo(String key) throws AuthException {}
                                               };
   
   public static User systemUser( ) {

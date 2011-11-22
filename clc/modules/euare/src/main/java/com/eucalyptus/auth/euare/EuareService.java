@@ -1333,7 +1333,7 @@ public class EuareService {
         String value = userFound.getInfo( request.getInfoKey( ) );
         if ( value != null ) {
           UserInfoType ui = new UserInfoType( );
-          ui.setKey( request.getInfoKey( ) );
+          ui.setKey( request.getInfoKey( ).toLowerCase( ) );
           ui.setValue( value );
           infos.add( ui );
         }
