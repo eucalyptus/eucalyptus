@@ -204,12 +204,7 @@ public class Topology {
       
       @Override
       public boolean apply( final ServiceConfiguration config ) {
-        if ( config.getComponentId( ).isPublicService( ) ) {
-          return true;
-        } else if ( config.getComponentId( ).isRootService( ) && !config.getComponentId( ).isPartitioned( ) ) {
-          return true;
-        } else if ( ( config.getComponentId( ).isRootService( ) || config.getComponentId( ).isRegisterable( ) ) && config.getComponentId( ).isPartitioned( )
-                    && p.getName( ).equals( config.getPartition( ) ) ) {
+        if ( config.getComponentId( ).isDistributedService( ) ) {
           return true;
         } else {
           return false;
@@ -227,7 +222,7 @@ public class Topology {
                                                                     typeMapper );
         msg.get_services( ).addAll( serviceList );
         for ( Component c : Components.list( ) ) {
-          if ( !c.getComponentId( ).isAlwaysLocal( ) && !c.getComponentId( ).isCloudLocal( ) ) {
+          if ( c.getComponentId( ).isDistributedService( ) ) {
             for ( ServiceConfiguration s : c.services( ) ) {
               if ( !serviceList.contains( s ) && State.DISABLED.apply( s ) ) {
                 msg.get_disabledServices( ).add( typeMapper.apply( s ) );
@@ -272,7 +267,7 @@ public class Topology {
       }
       for ( ServiceConfiguration conf : Lists.transform( msg.get_notreadyServices( ), ServiceConfigurations.ServiceIdToServiceConfiguration.INSTANCE ) ) {
         if ( !conf.isVmLocal( ) ) {
-          start( conf );
+          transition( State.NOTREADY ).apply( conf );
         }
       }
       Topology.getInstance( ).currentEpoch = Ints.max( Topology.getInstance( ).currentEpoch, msg.get_epoch( ) );
