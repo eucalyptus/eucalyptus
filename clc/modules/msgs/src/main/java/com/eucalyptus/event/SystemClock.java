@@ -65,6 +65,7 @@ package com.eucalyptus.event;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.TimeUnit;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
@@ -74,15 +75,19 @@ import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.empyrean.Empyrean;
 
 public class SystemClock extends TimerTask implements UncaughtExceptionHandler {
-  private static Logger      LOG   = Logger.getLogger( SystemClock.class );
+  private static Logger      LOG           = Logger.getLogger( SystemClock.class );
   
-  private static final long  RATE  = 10000;
+  private static final long  RATE          = 10000;
   
   private static SystemClock clock;
   private static Timer       timer;
   private static Timer       hzTimer;
   private static HzClock     hertz;
-  private int                phase = 0;
+  private int                phase         = 0;
+  
+  private static final long  SYSTEM_CLOCK_TICK = 10000L;
+  private static final long  SYSTEM_HERTZ_TICK = 1000L;
+  private static final long  EVENT_TIMEOUT = 15000L;
   
   public SystemClock( ) {
     super( );
@@ -101,8 +106,8 @@ public class SystemClock extends TimerTask implements UncaughtExceptionHandler {
         hertz = new HzClock( );
         ListenerRegistry.getInstance( ).register( ClockTick.class, new Dummy( ) );
         ListenerRegistry.getInstance( ).register( Hertz.class, new Dummy( ) );
-        timer.scheduleAtFixedRate( clock, 0, 10000 );//TODO: make configurable
-        hzTimer.scheduleAtFixedRate( hertz, 0, 1000 );
+        timer.scheduleAtFixedRate( clock, 0, SYSTEM_CLOCK_TICK );
+        hzTimer.scheduleAtFixedRate( hertz, 0, SYSTEM_HERTZ_TICK );
         OrderedShutdown.register( Empyrean.class, new Runnable( ) {
           @Override
           public void run( ) {
@@ -125,8 +130,9 @@ public class SystemClock extends TimerTask implements UncaughtExceptionHandler {
     Thread.currentThread( ).setUncaughtExceptionHandler( ( UncaughtExceptionHandler ) this );
     try {
       long sign = ( long ) ( Math.pow( -1f, ( float ) ( ++phase % 2 ) ) );
-      ListenerRegistry.getInstance( ).fireEvent( new ClockTick( ).setMessage( sign * System.currentTimeMillis( ) ) );
-    } catch ( EventFailedException e ) {} catch ( Exception t ) {
+      ListenerRegistry.getInstance( ).fireEventAsync( ClockTick.class, new ClockTick( ).setMessage( sign * System.currentTimeMillis( ) ) ).get( EVENT_TIMEOUT,
+                                                                                                                                                TimeUnit.SECONDS );
+    } catch ( Exception t ) {
       LOG.error( t, t );
     }
   }
@@ -193,8 +199,8 @@ public class SystemClock extends TimerTask implements UncaughtExceptionHandler {
     public void run( ) {
       Thread.currentThread( ).setUncaughtExceptionHandler( ( UncaughtExceptionHandler ) this );
       try {
-        ListenerRegistry.getInstance( ).fireEvent( new Hertz( ) );
-      } catch ( EventFailedException e ) {} catch ( Exception t ) {
+        ListenerRegistry.getInstance( ).fireEventAsync( Hertz.class, new Hertz( ) ).get( SystemClock.EVENT_TIMEOUT, TimeUnit.SECONDS );
+      } catch ( Exception t ) {
         LOG.error( t, t );
       }
     }
