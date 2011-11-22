@@ -158,7 +158,7 @@ public class Clusters extends AbstractNamedRegistry<Cluster> {
     private Long    enabledInterval    = 15l;
     @ConfigurableField( description = "The number of times a request will be retried while bootstrapping a Cluster Controller." )
     @Column( name = "config_cluster_startup_sync_retries", nullable = false )
-    private Integer startupSyncRetries = 10;
+    private Integer startupSyncRetries = 5;
     
     public Configuration( ) {
     }

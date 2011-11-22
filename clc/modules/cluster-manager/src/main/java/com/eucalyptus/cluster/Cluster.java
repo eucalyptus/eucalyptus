@@ -75,6 +75,7 @@ import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.principal.Principals;
@@ -786,6 +787,11 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
             fail = null;
             break;
           } catch ( Exception ex ) {
+            try {
+              TimeUnit.SECONDS.sleep( 1 );
+            } catch ( Exception ex1 ) {
+              LOG.error( ex1 , ex1 );
+            }
             fail = Exceptions.toUndeclared( ex );
           }
         }
