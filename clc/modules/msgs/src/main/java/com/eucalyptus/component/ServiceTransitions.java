@@ -446,7 +446,11 @@ public class ServiceTransitions {
         if ( parent.getComponentId( ).isAlwaysLocal( ) || parent.getComponentId( ).isCloudLocal( ) ) {
           return;
         } else {
-          DescribeServicesResponseType response = ServiceTransitions.sendEmpyreanRequest( parent, new DescribeServicesType( ) );
+          DescribeServicesResponseType response = ServiceTransitions.sendEmpyreanRequest( parent, new DescribeServicesType( ){
+            {
+              this.getServices( ).add( TypeMappers.transform( parent, ServiceId.class ) );
+            }
+          } );
           ServiceStatusType status = Iterables.find( response.getServiceStatuses( ), new Predicate<ServiceStatusType>( ) {
             
             @Override
