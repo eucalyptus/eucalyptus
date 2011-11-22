@@ -269,11 +269,13 @@ public class Hosts {
       }
       try {
         if ( event.isAsserted( 3L ) && Bootstrap.isFinished( ) && !Hosts.list( Predicates.not( BootedFilter.INSTANCE ) ).isEmpty( ) ) {
-          LOG.info( "Updating current host entry: " + currentHost );
-          UpdateEntry.INSTANCE.apply( currentHost );
+          if ( UpdateEntry.INSTANCE.apply( currentHost ) ) {
+            LOG.info( "Updated local host entry: " + currentHost );
+          }
         } else if ( event.isAsserted( 15L ) ) {
-          LOG.info( "Updating current host entry: " + currentHost );
-          UpdateEntry.INSTANCE.apply( currentHost );
+          if ( UpdateEntry.INSTANCE.apply( currentHost ) ) {
+            LOG.info( "Updated local host entry: " + currentHost );
+          }
         }
       } catch ( Exception ex ) {
         LOG.debug( ex );
@@ -292,19 +294,18 @@ public class Hosts {
             Host h = hostCopy.get( strayHost.toString( ) );
             if ( h == null ) {
               LOG.debug( "Pruning failed to find host copy for orphan host: " + h );
-              h = hostMap.get( strayHost.toString( ) );
+              h = Hosts.lookup( strayHost.toString( ) );
               LOG.debug( "Pruning fell back to underlying host map for orphan host: " + h );
             }
             if ( h != null ) {
               LOG.info( "Pruning orphan host: " + h );
-              LOG.info( "Pruned orphan host: " + hostMap.remove( strayHost.toString( ) ) );
               BootstrapComponent.TEARDOWN.apply( h );
             } else {
               LOG.info( "Pruning failed for orphan host: " + strayHost
                 + " with local-copy value: "
                 + hostCopy.get( strayHost.toString( ) )
                 + " and underlying host map value: "
-                + hostMap.get( strayHost.toString( ) ) );
+                + Hosts.lookup( strayHost ) );
             }
           }
         }
@@ -345,8 +346,18 @@ public class Hosts {
         LOG.info( "Hosts.entrySet(): " + hostKey + " => " + host );
         try {
           if ( host.isLocalHost( ) && Bootstrap.isFinished( ) ) {
-            SyncDatabases.INSTANCE.apply( host );
-          } else if ( BootstrapComponent.REMOTESETUP.apply( host ) ) {
+            final boolean wasSynched = Databases.isSynchronized( );
+            Threads.enqueue( ServiceConfigurations.createEphemeral( Empyrean.INSTANCE ), new Runnable( ) {
+              
+              @Override
+              public void run( ) {
+                SyncDatabases.INSTANCE.apply( host );
+                if ( !wasSynched && Databases.isSynchronized( ) ) {
+                  UpdateEntry.INSTANCE.apply( host );
+                }
+              }
+            } );
+          } else if ( BootstrapComponent.REMOTESETUP.apply( host ) && host.hasSynced( ) ) {
             SyncDatabases.INSTANCE.apply( host );
           } else if ( InitializeAsCloudController.INSTANCE.apply( host ) ) {
             LOG.info( "Hosts.entrySet(): INITIALIZED CLC => " + host );
@@ -425,27 +436,44 @@ public class Hosts {
           return false;
         } else {
           try {
-            if ( !input.isLocalHost( ) && input.hasDatabase( ) ) {//GRZE:NOTE:maybe handle in entryRemoved()
-              Databases.disable( input.getDisplayName( ) );
-            }
-            if ( input.hasDatabase( ) && Hosts.isCoordinator( ) ) {
-              Hosts.remove( input.getDisplayName( ) );
-            } else if ( input.hasDatabase( ) && ( Hosts.getCoordinator( ) == null || Hosts.isCoordinator( input ) ) ) {
-              Hosts.remove( input.getDisplayName( ) );
-            }
-            teardown( Empyrean.class, input.getBindAddress( ) );
             if ( input.hasDatabase( ) ) {
-              teardown( Eucalyptus.class, input.getBindAddress( ) );
+              Databases.disable( input.getDisplayName( ) );
+              this.removeHost( input );
+            } else {
+              this.removeHost( input );
             }
-            if ( input.hasDatabase( ) && BootstrapArgs.isCloudController( ) ) {//GRZE:NOTE:promote
-              BootstrapComponent.SETUP.apply( Hosts.localHost( ) );
-              UpdateEntry.INSTANCE.apply( Hosts.localHost( ) );
-            }
+          } catch ( Exception ex ) {
+            LOG.error( ex, ex );
+            return false;
+          }
+          try {
+            this.tryPromoteSelf( input );
             return true;
           } catch ( Exception ex ) {
             LOG.error( ex, ex );
             return false;
           }
+        }
+      }
+
+      private void tryPromoteSelf( final Host input ) {
+        if ( input.hasDatabase( ) && BootstrapArgs.isCloudController( ) ) {
+          BootstrapComponent.SETUP.apply( Hosts.localHost( ) );
+          UpdateEntry.INSTANCE.apply( Hosts.localHost( ) );
+        }
+      }
+
+      private void removeHost( final Host input ) {
+        if ( Hosts.isCoordinator( ) ) {
+          Hosts.remove( input.getDisplayName( ) );
+        } else if ( !Hosts.hasCoordinator( ) || Hosts.isCoordinator( input ) ) {
+          Hosts.remove( input.getDisplayName( ) );
+        } else {
+          //GRZE:NOTE: this case is a remote non-coordinator in a system which has a coordinator.
+        }
+        teardown( Empyrean.class, input.getBindAddress( ) );
+        if ( input.hasDatabase( ) ) {
+          teardown( Eucalyptus.class, input.getBindAddress( ) );
         }
       }
     },
@@ -834,8 +862,20 @@ public class Hosts {
     return hostMap.putIfAbsent( host.getDisplayName( ), host );
   }
   
+  public static Host lookup( final Address hostGroupAddress ) {
+    return lookup( hostGroupAddress.toString( ) );
+  }
+  
+  public static Host lookup( final String hostDisplayName ) {
+    return hostMap.get( hostDisplayName );
+  }
+  
   public static boolean contains( final String hostDisplayName ) {
     return hostMap.containsKey( hostDisplayName );
+  }
+  
+  private static boolean contains( final Address hostGroupAddress ) {
+    return contains( hostGroupAddress.toString( ) );
   }
   
   private static boolean contains( final Host host ) {
@@ -847,14 +887,16 @@ public class Hosts {
   }
   
   private static Host remove( String hostDisplayName ) {
-    return hostMap.remove( hostDisplayName );
+    Host ret = hostMap.remove( hostDisplayName );
+    LOG.info( "Removing host map entry for: " + hostDisplayName + " => " + ret );
+    return ret;
   }
   
   public static Host localHost( ) {
     if ( ( hostMap == null ) || !hostMap.containsKey( Internets.localHostIdentifier( ) ) ) {
       return Host.create( );
     } else {
-      return hostMap.get( Internets.localHostIdentifier( ) );
+      return lookup( Internets.localHostIdentifier( ) );
     }
   }
   
@@ -944,6 +986,11 @@ public class Hosts {
     return coordinator != null && coordinator.getBindAddress( ).equals( addr );
   }
   
+  public static boolean hasCoordinator( ) {
+    return Coordinator.INSTANCE.get( ) != null;
+  }
+  
+
   public static boolean isCoordinator( ) {
     return Coordinator.INSTANCE.isLocalhost( );
   }
