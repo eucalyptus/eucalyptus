@@ -75,19 +75,19 @@ import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.empyrean.Empyrean;
 
 public class SystemClock extends TimerTask implements UncaughtExceptionHandler {
-  private static Logger      LOG           = Logger.getLogger( SystemClock.class );
+  private static Logger      LOG               = Logger.getLogger( SystemClock.class );
   
-  private static final long  RATE          = 10000;
+  private static final long  RATE              = 10000;
   
   private static SystemClock clock;
   private static Timer       timer;
   private static Timer       hzTimer;
   private static HzClock     hertz;
-  private int                phase         = 0;
+  private int                phase             = 0;
   
   private static final long  SYSTEM_CLOCK_TICK = 10000L;
   private static final long  SYSTEM_HERTZ_TICK = 1000L;
-  private static final long  EVENT_TIMEOUT = 15000L;
+  private static final long  EVENT_TIMEOUT     = 120000L;
   
   public SystemClock( ) {
     super( );
@@ -130,8 +130,9 @@ public class SystemClock extends TimerTask implements UncaughtExceptionHandler {
     Thread.currentThread( ).setUncaughtExceptionHandler( ( UncaughtExceptionHandler ) this );
     try {
       long sign = ( long ) ( Math.pow( -1f, ( float ) ( ++phase % 2 ) ) );
-      ListenerRegistry.getInstance( ).fireEventAsync( ClockTick.class, new ClockTick( ).setMessage( sign * System.currentTimeMillis( ) ) ).get( EVENT_TIMEOUT,
-                                                                                                                                                TimeUnit.SECONDS );
+      ListenerRegistry.getInstance( ).fireEventAsync( ClockTick.class,
+                                                      new ClockTick( ).setMessage( sign * System.currentTimeMillis( ) )
+                                                      ).get( EVENT_TIMEOUT, TimeUnit.MILLISECONDS );
     } catch ( Exception t ) {
       LOG.error( t, t );
     }
@@ -199,7 +200,7 @@ public class SystemClock extends TimerTask implements UncaughtExceptionHandler {
     public void run( ) {
       Thread.currentThread( ).setUncaughtExceptionHandler( ( UncaughtExceptionHandler ) this );
       try {
-        ListenerRegistry.getInstance( ).fireEventAsync( Hertz.class, new Hertz( ) ).get( SystemClock.EVENT_TIMEOUT, TimeUnit.SECONDS );
+        ListenerRegistry.getInstance( ).fireEventAsync( Hertz.class, new Hertz( ) ).get( SystemClock.EVENT_TIMEOUT, TimeUnit.MILLISECONDS );
       } catch ( Exception t ) {
         LOG.error( t, t );
       }

@@ -11,6 +11,7 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
@@ -147,7 +148,7 @@ public class ListenerRegistry {
   }
   
   public Future<Throwable> fireEventAsync( final Object type, final Event e ) {
-    return Threads.lookup( Empyrean.class, ListenerRegistry.class, type.getClass( ).getCanonicalName( ) ).submit( new Callable<Throwable>( ) {
+    return Threads.enqueue( ServiceConfigurations.createEphemeral( Empyrean.INSTANCE ), new Callable<Throwable>( ) {
       
       @Override
       public Throwable call( ) throws Exception {

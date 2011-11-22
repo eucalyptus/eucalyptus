@@ -604,7 +604,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
         }
         if ( transition != null ) {
           try {
-            transition.call( ).get( );
+            transition.call( ).get( 30000L, TimeUnit.MILLISECONDS );
             Cluster.this.clearExceptions( );
           } catch ( final Exception ex ) {
             LOG.error( ex, ex );
