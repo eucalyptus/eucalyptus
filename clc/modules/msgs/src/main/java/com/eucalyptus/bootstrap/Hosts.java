@@ -381,7 +381,7 @@ public class Hosts {
                 }
               }
             } );
-          } else if ( !host.isLocalHost( ) && host.hasSynced( ) ) {
+          } else if ( Bootstrap.isFinished() && !host.isLocalHost( ) && host.hasSynced( ) ) {
             BootstrapComponent.REMOTESETUP.apply( host );
           } else if ( InitializeAsCloudController.INSTANCE.apply( host ) ) {
             LOG.info( "Hosts.entrySet(): INITIALIZED CLC => " + host );
