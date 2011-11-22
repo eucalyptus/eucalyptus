@@ -130,9 +130,9 @@ public class SystemClock extends TimerTask implements UncaughtExceptionHandler {
     Thread.currentThread( ).setUncaughtExceptionHandler( ( UncaughtExceptionHandler ) this );
     try {
       long sign = ( long ) ( Math.pow( -1f, ( float ) ( ++phase % 2 ) ) );
-      ListenerRegistry.getInstance( ).fireEventAsync( ClockTick.class,
+      ListenerRegistry.getInstance( ).fireEvent( ClockTick.class,
                                                       new ClockTick( ).setMessage( sign * System.currentTimeMillis( ) )
-                                                      ).get( EVENT_TIMEOUT, TimeUnit.MILLISECONDS );
+                                                      );
     } catch ( Exception t ) {
       LOG.error( t, t );
     }
@@ -200,7 +200,7 @@ public class SystemClock extends TimerTask implements UncaughtExceptionHandler {
     public void run( ) {
       Thread.currentThread( ).setUncaughtExceptionHandler( ( UncaughtExceptionHandler ) this );
       try {
-        ListenerRegistry.getInstance( ).fireEventAsync( Hertz.class, new Hertz( ) ).get( SystemClock.EVENT_TIMEOUT, TimeUnit.MILLISECONDS );
+        ListenerRegistry.getInstance( ).fireEvent( Hertz.class, new Hertz( ) );
       } catch ( Exception t ) {
         LOG.error( t, t );
       }
