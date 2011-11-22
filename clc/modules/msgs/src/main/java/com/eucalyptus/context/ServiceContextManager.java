@@ -146,7 +146,7 @@ public class ServiceContextManager {
   private ServiceContextManager( ) {
     this.canHasRead = this.canHas.readLock( );
     this.canHasWrite = this.canHas.writeLock( );
-    OrderedShutdown.register( Empyrean.class, new Runnable( ) {
+    OrderedShutdown.registerShutdownHook( Empyrean.class, new Runnable( ) {
       
       @Override
       public void run( ) {

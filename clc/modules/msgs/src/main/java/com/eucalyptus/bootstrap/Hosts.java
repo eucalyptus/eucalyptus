@@ -670,7 +670,7 @@ public class Hosts {
           public void run( ) {
             try {
               hostMap.start( STATE_INITIALIZE_TIMEOUT );
-              OrderedShutdown.register( Eucalyptus.class, new Runnable( ) {
+              OrderedShutdown.registerShutdownHook( Eucalyptus.class, new Runnable( ) {
                 
                 @Override
                 public void run( ) {
