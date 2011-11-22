@@ -128,7 +128,8 @@ public class BindingHandler extends MessageStackHandler {
           }
         }
       } catch ( Exception e1 ) {
-        LOG.error( httpMessage.getSoapEnvelope( ).toString( ), e1 );
+        LOG.error( e1.getMessage( ) + " while attempting to bind: " + httpMessage.getOmMessage( ) );
+        Logs.extreme( ).error( httpMessage.getSoapEnvelope( ).toString( ), e1 );
         if ( this.binding == null ) {
           throw new WebServicesException( e1 );
         } else {

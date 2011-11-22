@@ -71,6 +71,7 @@ import com.eucalyptus.address.Addresses;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
@@ -151,7 +152,7 @@ public class AssignAddressCallback extends MessageCallback<AssignAddressType, As
       VmInstance vm = VmInstances.lookup( super.getRequest( ).getInstanceId( ) );
       if ( !vm.getPartition( ).equals( this.address.getPartition( ) ) ) {
         Partition partition = Partitions.lookupByName( vm.getPartition( ) );
-        ServiceConfiguration config = Partitions.lookupService( ClusterController.class, partition );
+        ServiceConfiguration config = Topology.lookup( ClusterController.class, partition );
         AssignAddressType request = new AssignAddressType( this.address.getStateUuid( ), this.address.getDisplayName( ), vm.getPrivateAddress( ), vm.getDisplayName( ) );
         try {
           AsyncRequests.sendSync( config, request );

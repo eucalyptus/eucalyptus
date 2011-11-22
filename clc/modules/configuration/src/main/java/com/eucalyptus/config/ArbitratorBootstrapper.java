@@ -92,6 +92,7 @@ public class ArbitratorBootstrapper extends Bootstrapper {
    */
   @Override
   public boolean enable( ) throws Exception {
+    ArbitratorControl.check();
     return true;
   }
 

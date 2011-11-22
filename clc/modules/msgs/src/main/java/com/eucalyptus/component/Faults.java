@@ -64,21 +64,44 @@
 package com.eucalyptus.component;
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
+import javax.persistence.Column;
+import javax.persistence.EntityTransaction;
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
+import javax.persistence.GeneratedValue;
+import javax.persistence.Id;
+import javax.persistence.PersistenceContext;
+import javax.persistence.PrePersist;
+import javax.persistence.PreUpdate;
+import javax.persistence.Table;
+import javax.persistence.Temporal;
+import javax.persistence.TemporalType;
+import javax.persistence.Transient;
+import javax.persistence.Version;
 import org.apache.log4j.Logger;
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.hibernate.annotations.Entity;
+import org.hibernate.annotations.GenericGenerator;
+import org.hibernate.annotations.NaturalId;
 import com.eucalyptus.bootstrap.Bootstrapper;
-import com.eucalyptus.component.Faults.NoopErrorFilter;
-import com.eucalyptus.component.Faults.Severity;
-import com.eucalyptus.component.ServiceChecks.CheckException;
+import com.eucalyptus.context.ServiceStateException;
+import com.eucalyptus.empyrean.ServiceStatusType;
+import com.eucalyptus.entities.Entities;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Threads;
-import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.TypeMappers;
+import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.*;
 
 public class Faults {
   private static Logger LOG = Logger.getLogger( Faults.class );
@@ -94,23 +117,60 @@ public class Faults {
     
   }
   
+  @Entity
+  @javax.persistence.Entity
+  @PersistenceContext( name = "eucalyptus_faults" )
+  @Table( name = "faults_records" )
+  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   public static class CheckException extends RuntimeException implements Iterable<CheckException> {
-    private static final long          serialVersionUID = 1L;
-    private final Severity             severity;
-    private final ServiceConfiguration config;
-    private final Date                 timestamp;
-    private final String               uuid;
-    private final String               correlationId;
-    private final int                  eventEpoch;
-    private final Component.State      eventState;
-    private CheckException             other;
+    @Id
+    @GeneratedValue( generator = "system-uuid" )
+    @GenericGenerator( name = "system-uuid",
+                       strategy = "uuid" )
+    @Column( name = "id" )
+    String                        id;
+    @Version
+    @Column( name = "version" )
+    Integer                       version;
+    @Temporal( TemporalType.TIMESTAMP )
+    @Column( name = "creation_timestamp" )
+    Date                          creationTimestamp;
+    @Temporal( TemporalType.TIMESTAMP )
+    @Column( name = "last_update_timestamp" )
+    Date                          lastUpdateTimestamp;
+    @NaturalId
+    @Column( name = "metadata_perm_uuid",
+             unique = true,
+             updatable = false,
+             nullable = false )
+    private String                naturalId;
+    @Transient
+    private static final long     serialVersionUID = 1L;
+    @Enumerated( EnumType.STRING )
+    private final Severity        severity;
+    @Column( name = "fault_service_name" )
+    private final String          serviceName;
+    @Column( name = "fault_timestamp" )
+    private final Date            timestamp;
+    @Column( name = "fault_msg_correlation_id" )
+    private final String          correlationId;
+    @Column( name = "fault_event_epoch" )
+    private final Integer         eventEpoch;
+    @Column( name = "fault_service_state" )
+    private final Component.State eventState;
+    @Column( name = "fault_stack_trace" )
+    private final String          stackString;
+    @Transient
+    private CheckException        other;
     
-    CheckException( final ServiceConfiguration config, final Severity severity, final String message ) {
-      this( config, severity, message, null );
-    }
-    
-    CheckException( final ServiceConfiguration config, final Severity severity, final String message, final Throwable cause ) {
-      this( config, severity, message, cause, null );
+    private CheckException( final String serviceName ) {
+      this.serviceName = serviceName;
+      this.severity = null;
+      this.timestamp = null;
+      this.correlationId = null;
+      this.eventEpoch = null;
+      this.eventState = null;
+      this.stackString = null;
     }
     
     CheckException( final ServiceConfiguration config, final Severity severity, final Throwable cause ) {
@@ -133,42 +193,30 @@ public class Faults {
         this.initCause( cause );
       }
       this.severity = severity;
-      this.config = config;
-      this.uuid = uuid( cause );
+      this.serviceName = config.getName( );
       this.correlationId = ( correlationId == null
-        ? this.uuid
+        ? UUID.randomUUID( ).toString( )
         : correlationId );
       this.timestamp = new Date( );
       this.eventState = config.lookupState( );
       this.eventEpoch = Topology.epoch( );
+      this.stackString = Exceptions.string( this );
     }
     
-    private static String uuid( final Throwable cause ) {
-      if ( ( cause != null ) && ( cause instanceof CheckException ) ) {
-        return ( ( CheckException ) cause ).getUuid( );
-      } else {
-        return UUID.randomUUID( ).toString( );
+    @PreUpdate
+    @PrePersist
+    public void updateTimeStamps( ) {
+      this.lastUpdateTimestamp = new Date( );
+      if ( this.creationTimestamp == null ) {
+        this.creationTimestamp = new Date( );
+      }
+      if ( this.naturalId == null ) {
+        this.naturalId = UUID.randomUUID( ).toString( );
       }
     }
     
     public Severity getSeverity( ) {
       return this.severity;
-    }
-    
-    static CheckException wrap( final CheckException ex, final Throwable throwable ) {
-      return ( CheckException ) ( throwable instanceof CheckException
-        ? throwable
-        : new CheckException( ex.correlationId, throwable, ex.severity, ex.config ) );
-    }
-    
-    CheckException append( final Throwable ex ) {
-      if ( this.other != null ) {
-        this.other.append( ex );
-        return this;
-      } else {
-        this.other = wrap( this, ex );
-        return this;
-      }
     }
     
     @Override
@@ -196,20 +244,76 @@ public class Faults {
       };
     }
     
-    protected ServiceConfiguration getConfig( ) {
-      return this.config;
-    }
-    
     public Date getTimestamp( ) {
       return this.timestamp;
     }
     
-    public String getUuid( ) {
-      return this.uuid;
-    }
-    
     public String getCorrelationId( ) {
       return this.correlationId;
+    }
+    
+    public String getServiceName( ) {
+      return this.serviceName;
+    }
+    
+    public int getEventEpoch( ) {
+      return this.eventEpoch;
+    }
+    
+    public Component.State getEventState( ) {
+      return this.eventState;
+    }
+    
+    public String getId( ) {
+      return this.id;
+    }
+    
+    public void setId( final String id ) {
+      this.id = id;
+    }
+    
+    public Integer getVersion( ) {
+      return this.version;
+    }
+    
+    public void setVersion( final Integer version ) {
+      this.version = version;
+    }
+    
+    public Date getCreationTimestamp( ) {
+      return this.creationTimestamp;
+    }
+    
+    public void setCreationTimestamp( final Date creationTimestamp ) {
+      this.creationTimestamp = creationTimestamp;
+    }
+    
+    public Date getLastUpdateTimestamp( ) {
+      return this.lastUpdateTimestamp;
+    }
+    
+    public void setLastUpdateTimestamp( final Date lastUpdateTimestamp ) {
+      this.lastUpdateTimestamp = lastUpdateTimestamp;
+    }
+    
+    public String getNaturalId( ) {
+      return this.naturalId;
+    }
+    
+    public void setNaturalId( final String naturalId ) {
+      this.naturalId = naturalId;
+    }
+    
+    private CheckException getOther( ) {
+      return this.other;
+    }
+    
+    private void setOther( final CheckException other ) {
+      this.other = other;
+    }
+    
+    public String getStackString( ) {
+      return this.stackString;
     }
     
   }
@@ -316,20 +420,21 @@ public class Faults {
     NETWORK;
   }
   
-  private static CheckException chain( final ServiceConfiguration config, final Severity severity, final List<Throwable> exs ) {
+  private static CheckException chain( final ServiceConfiguration config, final Severity severity, final List<? extends Throwable> exs ) {
     CheckException last = null;
     for ( final Throwable ex : Lists.reverse( exs ) ) {
       if ( ( last != null ) && ( ex instanceof CheckException ) ) {
-        last.append( ex );
+        last.other = ( CheckException ) ex;
       } else if ( last == null ) {
         last = new CheckException( config, severity, ex );
       }
     }
     last = ( last != null
       ? last
-      : new CheckException( config, severity, new NullPointerException( ) ) );
-    LOG.debug( last );
+      : new CheckException( config, Severity.DEBUG, new NullPointerException( "Faults.chain called w/ empty list: " + exs ) ) );
     Logs.extreme( ).error( last, last );
+    LOG.debug( last );
+    LOG.debug( Exceptions.causeString( last ) );
     return last;
   }
   
@@ -342,7 +447,7 @@ public class Faults {
   }
   
   public static CheckException advisory( final ServiceConfiguration config, final List<? extends Throwable> exs ) {
-    return chain( config, Severity.INFO,  ( List<Throwable> ) exs  );
+    return chain( config, Severity.INFO, ( List<Throwable> ) exs );
   }
   
   public static CheckException advisory( final ServiceConfiguration config, final Throwable... exs ) {
@@ -353,4 +458,59 @@ public class Faults {
     return chain( config, Severity.FATAL, ( List<Throwable> ) exs );
   }
   
+  enum StatusToCheckException implements Function<ServiceStatusType, CheckException> {
+    INSTANCE;
+    
+    @Override
+    public CheckException apply( final ServiceStatusType input ) {
+      final List<CheckException> exs = Lists.newArrayList( );
+      final ServiceConfiguration config = TypeMappers.transform( input.getServiceId( ), ServiceConfiguration.class );
+      final Component.State serviceState = Component.State.valueOf( input.getLocalState( ) );
+      final Component.State localState = config.lookupState( );
+      if ( Component.State.ENABLED.equals( localState ) && !localState.equals( serviceState ) ) {
+        exs.add( failure( config, new IllegalStateException( "State mismatch: local state is " + localState + " and remote state is: " + serviceState ) ) );
+      }
+      for ( final String detail : input.getDetails( ) ) {
+        final CheckException ex = failure( config, new ServiceStateException( detail ) );
+        exs.add( ex );
+      }
+      return !exs.isEmpty( ) ? Faults.chain( config, Severity.ERROR, exs )
+        : new CheckException( config, Severity.DEBUG, new Exception( input.toString( ) ) );
+    }
+    
+  }
+  
+  public static Function<ServiceStatusType, CheckException> transformToExceptions( ) {
+    return StatusToCheckException.INSTANCE;
+  }
+  
+  /**
+   * @param config
+   * @return
+   */
+  public static Collection<CheckException> lookup( final ServiceConfiguration config ) {
+    final EntityTransaction db = Entities.get( CheckException.class );
+    try {
+      final List<CheckException> res = Entities.query( new CheckException( config.getName( ) ) );
+      db.commit( );
+      return res;
+    } catch ( final Exception ex ) {
+      LOG.error( "Failed to lookup error information for: " + config.getFullName( ), ex );
+      db.rollback( );
+    }
+    return null;
+  }
+  
+  public static void persist( final CheckException errors ) {
+    for ( final CheckException e : errors ) {
+      final EntityTransaction db = Entities.get( CheckException.class );
+      try {
+        Entities.persist( e );
+        db.commit( );
+      } catch ( final Exception ex ) {
+        LOG.error( "Failed to persist error information for: " + ex, ex );
+        db.rollback( );
+      }
+    }
+  }
 }

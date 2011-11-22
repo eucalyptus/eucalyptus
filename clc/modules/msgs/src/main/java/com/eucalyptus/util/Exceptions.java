@@ -17,6 +17,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
+import com.google.common.base.Throwables;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -157,7 +158,11 @@ public class Exceptions {
     if ( ex instanceof RuntimeException ) {
       return ( RuntimeException ) ex;
     } else if ( ex instanceof ExecutionException ) {
-      return new RuntimeException( message, ex.getCause( ) );
+      if ( ex.getCause( ) != null && ex.getCause( ).getClass( ).equals( RuntimeException.class ) ) {
+        return ( RuntimeException ) ex.getCause( );
+      } else {
+        return new RuntimeException( message, ex.getCause( ) );
+      }
     } else {
       return new RuntimeException( message, ex );
     }

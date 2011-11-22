@@ -191,7 +191,6 @@ public class UniqueIds implements Serializable {
       db.commit( );
       return entity;
     } catch ( final Exception ex ) {
-      LOG.error( ex, ex );
       db.rollback( );
       final EntityTransaction saveDb = Entities.get( PersistedCounter.class );
       try {
