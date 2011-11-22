@@ -401,20 +401,21 @@ public class Hosts {
       LOG.info( "Hosts.viewChange(): new view => " + Joiner.on( ", " ).join( currentView.getMembers( ) ) );
       if ( !joinMembers.isEmpty( ) ) LOG.info( "Hosts.viewChange(): joined   => " + Joiner.on( ", " ).join( joinMembers ) );
       if ( !partMembers.isEmpty( ) ) LOG.info( "Hosts.viewChange(): parted   => " + Joiner.on( ", " ).join( partMembers ) );
-      for ( final Host h : Hosts.list( ) ) {
-        if ( Iterables.contains( partMembers, h.getGroupsId( ) ) ) {
-          Threads.enqueue( ServiceConfigurations.createEphemeral( Empyrean.INSTANCE ), new Runnable( ) {
-            public void run( ) {
-//              try {
-//                BootstrapComponent.TEARDOWN.apply( h );
-//              } catch ( Exception ex ) {
-//                LOG.error( ex, ex );
-//              }
-              Hosts.pruneHosts( );
-              LOG.info( "Hosts.viewChange(): -> removed  => " + h );
-            }
-          } );
+      boolean prune = false;
+      for ( final Address hostAddress : Lists.transform( Hosts.list( ), GroupAddressTransform.INSTANCE ) ) {
+        if ( Iterables.contains( partMembers, hostAddress ) ) {
+          LOG.info( "Hosts.viewChange(): -> removed  => " + hostAddress );
+          prune = true;
         }
+      }
+      if ( prune ) {
+        Threads.enqueue( ServiceConfigurations.createEphemeral( Empyrean.INSTANCE ), new Runnable( ) {
+          public void run( ) {
+            if ( Hosts.pruneHosts( ) ) {
+              Hosts.updateServices( );
+            }
+          }
+        } );
       }
       LOG.info( "Hosts.viewChange(): new view finished." );
     }
