@@ -1048,9 +1048,8 @@ public class Hosts {
     public void initialize( final Collection<Host> values ) {
       final long currentTime = System.currentTimeMillis( );
       long startTime = values.isEmpty( ) ? currentTime : Longs.max( Longs.toArray( Collections2.transform( values, StartTimeTransform.INSTANCE ) ) );
-      startTime = startTime > currentTime ? startTime : currentTime;
-      startTime += 30000;
-      if( this.currentStartTime.compareAndSet( Long.MAX_VALUE, startTime ) ) {
+      startTime = startTime > currentTime ? startTime + 30000 : currentTime;
+      if ( this.currentStartTime.compareAndSet( Long.MAX_VALUE, startTime ) ) {
         Hosts.put( Hosts.localHost( ) );
       }
     }
@@ -1099,7 +1098,13 @@ public class Hosts {
     private static Host findCoordinator( List<Host> dbHosts ) {
       Host minHost = null;
       for ( final Host h : dbHosts ) {
-        minHost = ( minHost == null ? h : ( minHost.getStartedTime( ) > h.getStartedTime( ) ? h : minHost ) );
+        if ( minHost == null ) {
+          minHost = h;
+        } else if ( minHost.getStartedTime( ) > h.getStartedTime( ) ) {
+          minHost = h;
+        } else if ( minHost.getStartedTime( ) == h.getStartedTime( ) && !minHost.getDisplayName( ).equals( h.getDisplayName( ) ) ) {
+          minHost = ( minHost.getDisplayName( ).compareTo( h.getDisplayName( ) ) == -1 ? minHost : h );
+        }
       }
       return minHost;
     }
