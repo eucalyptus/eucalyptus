@@ -282,7 +282,7 @@ public class Hosts {
         for ( Host h : Hosts.listDatabases( ) ) {
           if ( !h.isLocalHost( ) && Bootstrap.isFinished( ) && h.hasSynced( ) ) {
             Databases.enable( h );
-          } 
+          }
           Databases.isAlive( h.getDisplayName( ) );
         }
       }
@@ -322,14 +322,16 @@ public class Hosts {
           
           @Override
           public void run( ) {
+            LOG.debug( runner.toString( ) + ": RUNNING" );
             try {
               runner.run( );
             } catch ( Exception ex ) {
-              Logs.extreme( ).error( "Failed running: " + runner + " because of: " + ex, ex );
-              LOG.error( "Failed running: " + runner + " because of: " + ex );
+              LOG.error( runner.toString( ) + ": FAILED because of: " + ex.getMessage( ) );
+              Logs.extreme( ).error( runner.toString( ) + ": FAILED because of: " + ex.getMessage( ), ex );
             }
           }
         };
+        LOG.info( "Registering " + runner + " for execution every " + runner.getInterval( ) + " seconds" );
         hostPruner.scheduleAtFixedRate( safeRunner, 0L, runner.getInterval( ), TimeUnit.SECONDS );
       }
     }
@@ -340,13 +342,13 @@ public class Hosts {
     
     @Override
     public String toString( ) {
-      return this.getClass( ).toString( );
+      return "Hosts.PeriodicMembershipChecks." + this.name( );
     }
-
+    
     public static List<Runnable> shutdownNow( ) {
       return hostPruner.shutdownNow( );
     }
-
+    
   }
   
   private static boolean pruneHosts( ) {
