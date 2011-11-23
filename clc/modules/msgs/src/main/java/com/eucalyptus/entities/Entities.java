@@ -574,8 +574,10 @@ public class Entities {
       try {
         this.txState.begin( );
       } catch ( final RecoverablePersistenceException ex ) {
+        PersistenceExceptions.throwFiltered( ex );
         removeTransaction( this );
       } catch ( final RuntimeException ex ) {
+        PersistenceExceptions.throwFiltered( ex );
         removeTransaction( this );
         throw ex;
       }
