@@ -275,7 +275,7 @@ public class Hosts {
       }
       
     },
-    PRUNING( 10 ) {
+    PRUNING( 5 ) {
       
       @Override
       public void run( ) {
