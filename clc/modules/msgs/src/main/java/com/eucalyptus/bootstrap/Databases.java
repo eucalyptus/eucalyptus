@@ -436,7 +436,7 @@ public class Databases {
   }
   
   static boolean enable( final Host host ) {
-    if ( !host.hasBootstrapped( ) || !host.hasDatabase( ) || !Bootstrap.isFinished( ) || !host.hasSynced( ) ) {
+    if ( !host.hasBootstrapped( ) || !host.hasDatabase( ) || !Bootstrap.isFinished( ) ) {
       return false;
     } else {
       if ( host.isLocalHost( ) ) {
