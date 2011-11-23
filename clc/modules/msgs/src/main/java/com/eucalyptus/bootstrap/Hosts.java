@@ -281,7 +281,7 @@ public class Hosts {
       public void run( ) {
         
         for ( Host h : Hosts.listDatabases( ) ) {
-          if ( h.hasSynced( ) ) {
+          if ( !h.isLocalHost( ) && h.hasSynced( ) ) {
             Databases.enable( h );
           } else if ( h.isLocalHost( ) ) {
             Databases.enable( h );
