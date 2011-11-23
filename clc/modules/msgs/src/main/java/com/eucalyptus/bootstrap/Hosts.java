@@ -275,27 +275,19 @@ public class Hosts {
       }
       
     },
-    ENABLEDB( 5 ) {
-      
-      @Override
-      public void run( ) {
-        
-        for ( Host h : Hosts.listDatabases( ) ) {
-          if ( !h.isLocalHost( ) && h.hasSynced( ) ) {
-            Databases.enable( h );
-          } else if ( h.isLocalHost( ) ) {
-            Databases.enable( h );
-          }
-        }
-      }
-      
-    },
     PRUNING( 10 ) {
       
       @Override
       public void run( ) {
         if ( Hosts.pruneHosts( ) ) {
           Hosts.updateServices( );
+        }
+        for ( Host h : Hosts.listDatabases( ) ) {
+          if ( !h.isLocalHost( ) && h.hasSynced( ) ) {
+            Databases.enable( h );
+          } else if ( h.isLocalHost( ) ) {
+            Databases.enable( h );
+          }
         }
       }
       
