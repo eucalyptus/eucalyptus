@@ -126,7 +126,7 @@ public class OrderedShutdown {
 			
 			LOG.info("Executing Post-Shutdown Hooks...");
 			ShutdownHook posthook;
-			while((posthook = preShutdownHooks.poll()) != null) {
+			while((posthook = postShutdownHooks.poll()) != null) {
 				try {
 					posthook.getRunnable().run();
 				} catch (Exception e) {
