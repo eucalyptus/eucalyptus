@@ -126,7 +126,6 @@ public class NetworkGroupManager {
 
 		if (RestrictedTypes.filterPrivileged().apply(networkGroup)) {
 
-		 
 		    for (Iterator< NetworkRule > it = networkGroup.getNetworkRules().iterator(); it.hasNext() ;) {
 			
 			NetworkRule rule = it.next();
@@ -143,7 +142,7 @@ public class NetworkGroupManager {
 
 		}
 	    }
-	reply.set_return(true);    
+        reply.set_return(true);    
         db.commit( );
       } catch ( Exception ex ) {
         Logs.exhaust( ).error( ex, ex );
