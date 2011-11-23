@@ -266,9 +266,16 @@ public class Databases {
   
   enum ActivateHostFunction implements Function<Host, Function<String, Runnable>> {
     INSTANCE;
-    /**
-     * @see com.google.common.base.Function#apply(java.lang.Object)
-     */
+
+
+    private static void prepareInactiveConnections( final Host host, final String hostName, final String contextName, final String dbPass ) throws NoSuchElementException {
+      final InactiveDatabaseMBean database = Databases.lookupInactiveDatabase( contextName, hostName );
+      database.setUser( "eucalyptus" );
+      database.setPassword( dbPass );
+      database.setWeight( Hosts.isCoordinator( host ) ? 100 : 1 );
+      database.setLocal( host.isLocalHost( ) );
+    }
+    
     @Override
     public Function<String, Runnable> apply( final Host host ) {
       return new Function<String, Runnable>( ) {
@@ -295,34 +302,38 @@ public class Databases {
                   final String realJdbcDriver = Databases.getDriverName( );
                   
                   try {
-                    if ( cluster.getActiveDatabases( ).contains( hostName ) ) {
-                      LOG.info( "Deactivating existing database connections to: " + host );
-                      cluster.deactivate( hostName );
-                    }
-                    if ( cluster.getInactiveDatabases( ).contains( hostName ) ) {
-                      LOG.info( "Deactivating existing database connections to: " + host );
-                      cluster.remove( hostName );
-                    }
-                    LOG.info( "Creating database connections for: " + host );
-                    cluster.add( hostName, realJdbcDriver, dbUrl );
-                    final InactiveDatabaseMBean database = Databases.lookupInactiveDatabase( contextName, hostName );
-                    database.setUser( "eucalyptus" );
-                    database.setPassword( dbPass );
-                    database.setWeight( Hosts.isCoordinator( host ) ? 100 : 1 );
-                    database.setLocal( host.isLocalHost( ) );
                     if ( fullSync ) {
+                      if ( cluster.getActiveDatabases( ).contains( hostName ) ) {
+                        LOG.info( "Deactivating existing database connections to: " + host );
+                        cluster.deactivate( hostName );
+                      }
+                      if ( cluster.getInactiveDatabases( ).contains( hostName ) ) {
+                        LOG.info( "Deactivating existing database connections to: " + host );
+                        cluster.remove( hostName );
+                      }
+                      LOG.info( "Creating database connections for: " + host );
+                      cluster.add( hostName, realJdbcDriver, dbUrl );
+                      ActivateHostFunction.prepareInactiveConnections( host, hostName, contextName, dbPass );
                       LOG.info( "Full sync of database on: " + host + " using " + cluster.getActiveDatabases( ) );
                       cluster.activate( hostName, "full" );
+                      return;
                     } else if ( passiveSync ) {
-                      if ( !cluster.getActiveDatabases( ).contains( hostName ) ) {
+                      if ( cluster.getActiveDatabases( ).contains( hostName ) ) {
+                        return;
+                      } else if ( cluster.getInactiveDatabases( ).contains( hostName ) ) {
                         LOG.info( "Passive activation of database connections to: " + host );
+                        ActivateHostFunction.prepareInactiveConnections( host, hostName, contextName, dbPass );
                         cluster.activate( hostName, "passive" );
+                        return;
                       } else {
-                        LOG.trace( "Skipping passive activation of extant database: " + host );
+                        LOG.info( "Creating database connections for: " + host );
+                        cluster.add( hostName, realJdbcDriver, dbUrl );
+                        ActivateHostFunction.prepareInactiveConnections( host, hostName, contextName, dbPass );
+                        cluster.activate( hostName, "passive" );
                       }
+                    } else {
+                      Logs.extreme( ).info( "Skipping activation of already present database for: " + contextName + " on " + hostName );
                     }
-                    net.sf.hajdbc.Database<Driver> activeDatabase = cluster.getDatabase( hostName );
-                    activeDatabase.setWeight( Hosts.isCoordinator( host ) ? 100 : 1 );
                   } catch ( Exception ex ) {
                     try {
                       try {
