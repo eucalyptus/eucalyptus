@@ -324,12 +324,16 @@ public class Hosts {
           
           @Override
           public void run( ) {
-            LOG.debug( runner.toString( ) + ": RUNNING" );
-            try {
-              runner.run( );
-            } catch ( Exception ex ) {
-              LOG.error( runner.toString( ) + ": FAILED because of: " + ex.getMessage( ) );
-              Logs.extreme( ).error( runner.toString( ) + ": FAILED because of: " + ex.getMessage( ), ex );
+            if ( !Bootstrap.isFinished( ) || Bootstrap.isShuttingDown( ) ) {
+              return;
+            } else {
+              LOG.debug( runner.toString( ) + ": RUNNING" );
+              try {
+                runner.run( );
+              } catch ( Exception ex ) {
+                LOG.error( runner.toString( ) + ": FAILED because of: " + ex.getMessage( ) );
+                Logs.extreme( ).error( runner.toString( ) + ": FAILED because of: " + ex.getMessage( ), ex );
+              }
             }
           }
         };
