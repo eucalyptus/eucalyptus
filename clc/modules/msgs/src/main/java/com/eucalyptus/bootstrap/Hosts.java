@@ -251,7 +251,7 @@ public class Hosts {
   }
   
   enum PeriodicMembershipChecks implements Runnable {
-    ENTRYUPDATE( 5 ) {
+    ENTRYUPDATE( 2 ) {
       private volatile int counter = 0;
       
       @Override
@@ -259,11 +259,11 @@ public class Hosts {
         final Host currentHost = Hosts.localHost( );
         ++this.counter;
         try {
-          if ( Bootstrap.isFinished( ) && !Hosts.list( Predicates.not( BootedFilter.INSTANCE ) ).isEmpty( ) ) {
+          if ( !Hosts.list( Predicates.not( BootedFilter.INSTANCE ) ).isEmpty( ) ) {
             if ( UpdateEntry.INSTANCE.apply( currentHost ) ) {
               LOG.info( "Updated local host entry: " + currentHost );
             }
-          } else if ( this.counter % 2 == 0 ) {
+          } else if ( this.counter % 5 == 0 ) {
             if ( UpdateEntry.INSTANCE.apply( currentHost ) ) {
               LOG.info( "Updated local host entry: " + currentHost );
             }
@@ -279,20 +279,21 @@ public class Hosts {
       
       @Override
       public void run( ) {
+        if ( Hosts.localHost( ).hasDatabase( ) ) {
+          Databases.enable( Hosts.localHost( ) );
+        }
         if ( Hosts.pruneHosts( ) ) {
           Hosts.updateServices( );
         }
         for ( Host h : Hosts.listDatabases( ) ) {
           if ( !h.isLocalHost( ) && h.hasSynced( ) ) {
             Databases.enable( h );
-          } else if ( h.isLocalHost( ) ) {
-            Databases.enable( h );
           }
         }
       }
       
     },
-    INITIALIZE( 15 ) {
+    INITIALIZE( 5 ) {
       
       @Override
       public void run( ) {
@@ -491,7 +492,7 @@ public class Hosts {
     
     @Override
     public boolean apply( final Host input ) {
-      if ( input.hasBootstrapped( ) && input.hasDatabase( ) ) {
+      if ( ( input.hasBootstrapped( ) || input.isLocalHost( ) ) && input.hasDatabase( ) ) {
         return Databases.enable( input );
       } else {
         return false;
@@ -507,9 +508,7 @@ public class Hosts {
         if ( Bootstrap.isShuttingDown( ) ) {
           return false;
         } else if ( input.hasBootstrapped( ) ) {
-          if ( !input.isLocalHost( ) && input.hasDatabase( ) && input.hasSynced( ) ) {
-            SyncDatabases.INSTANCE.apply( input );
-          }
+          SyncDatabases.INSTANCE.apply( input );
           setup( Empyrean.class, input.getBindAddress( ) );
           if ( input.hasDatabase( ) ) {
             return setup( Eucalyptus.class, input.getBindAddress( ) );
