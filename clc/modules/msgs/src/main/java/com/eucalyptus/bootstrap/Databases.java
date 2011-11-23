@@ -202,7 +202,7 @@ public class Databases {
             
             @Override
             public String toString( ) {
-              return "Databases.disable(): " + hostName + " " + contextName;
+              return "Databases.isAlive(): " + hostName + " " + contextName;
             }
           };
           return removeRunner;
