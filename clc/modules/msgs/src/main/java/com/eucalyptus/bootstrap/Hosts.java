@@ -279,7 +279,7 @@ public class Hosts {
       
       @Override
       public void run( ) {
-        for ( Host h : Hosts.listDatabases( ) ) {
+        for ( Host h : Hosts.listActiveDatabases( ) ) {
           if ( !h.isLocalHost( ) && Bootstrap.isFinished( ) ) {
             Databases.enable( h );
 //            if ( h.hasBootstrapped( ) ) {
