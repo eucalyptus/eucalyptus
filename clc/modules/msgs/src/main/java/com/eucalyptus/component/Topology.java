@@ -67,6 +67,7 @@ import java.net.InetAddress;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
@@ -642,7 +643,6 @@ public class Topology {
     public boolean apply( final Future input ) {
       try {
         final Object conf = input.get( 30, TimeUnit.SECONDS );
-        LOG.trace( "Operation succeeded for " + conf );
         return true;
       } catch ( final InterruptedException ex ) {
         Thread.currentThread( ).interrupt( );
@@ -724,7 +724,7 @@ public class Topology {
     
     private static void printCheckInfo( final String action, final Collection<ServiceConfiguration> result ) {
       if ( !result.isEmpty( ) ) {
-        LOG.debug( action + ": " + Joiner.on( "\n" + action + ": " ).join( Collections2.transform( result, ServiceString.INSTANCE ) ) );
+        Logs.extreme( ).debug( action + ": " + Joiner.on( "\n" + action + ": " ).join( Collections2.transform( result, ServiceString.INSTANCE ) ) );
       }
     }
   }
@@ -766,8 +766,12 @@ public class Topology {
         ? maybePartition[0]
         : null )
       : null );
-    return Topology.getInstance( ).getServices( ).get( ServiceKey.create( ComponentIds.lookup( compClass ), partition ) );
-    
+    ServiceConfiguration res = Topology.getInstance( ).getServices( ).get( ServiceKey.create( ComponentIds.lookup( compClass ), partition ) );
+    if ( res == null ) {
+      throw new NoSuchElementException( "Failed to lookup ENABLED service of type " + compClass.getSimpleName( ) + ( partition != null ? " in partition " + partition : "." ) );
+    } else {
+      return res;
+    }
   }
   
   public static Collection<ServiceConfiguration> enabledServices( final Class<? extends ComponentId> compId ) {

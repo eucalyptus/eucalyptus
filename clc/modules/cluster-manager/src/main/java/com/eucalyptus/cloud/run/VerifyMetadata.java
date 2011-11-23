@@ -163,11 +163,11 @@ public class VerifyMetadata {
         LOG.debug( "disabled values: " + Joiner.on( "\n" ).join( Clusters.getInstance( ).listValues( ) ) );
         throw new VerificationException( "Not enough resources: no cluster controller is currently available to run instances." );
       } else if ( Partitions.exists( zoneName ) ) {
-        Partition partition = Partitions.lookupService( ClusterController.class, zoneName ).lookupPartition( );
+        Partition partition = Partitions.lookupByName( zoneName );
         allocInfo.setPartition( partition );
       } else if ( "default".equals( zoneName ) ) {
         String defaultZone = Clusters.getInstance( ).listValues( ).get( 0 ).getPartition( );
-        Partition partition = Partitions.lookupService( ClusterController.class, defaultZone ).lookupPartition( );
+        Partition partition = Partitions.lookupByName( defaultZone );
         allocInfo.setPartition( partition );
       } else {
         throw new VerificationException( "Not enough resources: no cluster controller is currently available to run instances." );
@@ -232,7 +232,7 @@ public class VerifyMetadata {
       if ( !ctx.hasAdministrativePrivileges( ) && !RestrictedTypes.filterPrivileged( ).apply( key ) ) {
         throw new IllegalMetadataAccessException( "Not authorized to use keypair " + keyName + " by " + ctx.getUser( ).getName( ) );
       }
-      allocInfo.setSshKeyPair( KeyPairs.lookup( ctx.getUserFullName( ), keyName ) );
+      allocInfo.setSshKeyPair( key );
       return true;
     }
   }

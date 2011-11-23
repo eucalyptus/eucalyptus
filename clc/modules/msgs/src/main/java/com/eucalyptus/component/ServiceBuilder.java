@@ -1,8 +1,6 @@
 package com.eucalyptus.component;
 
-import java.net.URI;
-import java.util.List;
-import com.eucalyptus.component.ServiceChecks.CheckException;
+import com.eucalyptus.component.Faults.CheckException;
 
 
 /**

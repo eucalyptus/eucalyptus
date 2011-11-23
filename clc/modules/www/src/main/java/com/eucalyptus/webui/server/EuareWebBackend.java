@@ -1074,7 +1074,7 @@ public class EuareWebBackend {
     }
   }
 
-  public static void addUserToGroupByName( User requestUser, String userName, String groupId ) {
+  public static void addUserToGroupByName( User requestUser, String userName, String groupId ) throws EucalyptusServiceException {
     try {
       Group group = Accounts.lookupGroupById( groupId );
       Account account = group.getAccount( );
@@ -1083,10 +1083,11 @@ public class EuareWebBackend {
     } catch ( Exception e ) {
       LOG.error( "Failed to add user " + userName + " to group " + groupId, e );
       LOG.debug( e, e );
+      throw new EucalyptusServiceException( "Failed to add user" + userName + ": " + e.getMessage( ) + ". Operation interrupted." );
     }    
   }
 
-  public static void addUserToGroupById( User requestUser, String userId, String groupName ) {
+  public static void addUserToGroupById( User requestUser, String userId, String groupName ) throws EucalyptusServiceException {
     try {
       User user = Accounts.lookupUserById( userId );
       Account account = user.getAccount( );
@@ -1095,10 +1096,11 @@ public class EuareWebBackend {
     } catch ( Exception e ) {
       LOG.error( "Failed to add user " + userId + " to group " + groupName, e );
       LOG.debug( e, e );
+      throw new EucalyptusServiceException( "Failed to add user" + userId + ": " + e.getMessage( ) + ". Operation interrupted." );
     }    
   }
 
-  public static void removeUserFromGroupByName( User requestUser, String userName, String groupId ) {
+  public static void removeUserFromGroupByName( User requestUser, String userName, String groupId ) throws EucalyptusServiceException {
     try {
       Group group = Accounts.lookupGroupById( groupId );
       Account account = group.getAccount( );
@@ -1107,10 +1109,11 @@ public class EuareWebBackend {
     } catch ( Exception e ) {
       LOG.error( "Failed to remove user " + userName + " from group " + groupId, e );
       LOG.debug( e, e );
+      throw new EucalyptusServiceException( "Failed to remove user" + userName + ": " + e.getMessage( ) + ". Operation interrupted." );
     }
   }
 
-  public static void removeUserFromGroupById( User requestUser, String userId, String groupName ) {
+  public static void removeUserFromGroupById( User requestUser, String userId, String groupName ) throws EucalyptusServiceException {
     try {
       User user = Accounts.lookupUserById( userId );
       Account account = user.getAccount( );
@@ -1119,6 +1122,7 @@ public class EuareWebBackend {
     } catch ( Exception e ) {
       LOG.error( "Failed to remove user " + userId + " from group " + groupName, e );
       LOG.debug( e, e );
+      throw new EucalyptusServiceException( "Failed to remove user" + userId + ": " + e.getMessage( ) + ". Operation interrupted." );
     }
   }
 
@@ -1333,7 +1337,7 @@ public class EuareWebBackend {
       throw new IllegalArgumentException( "Can not find email to send approval notification for account " + accountName );
     }
     String confirmLink = QueryBuilder.get( ).start( QueryType.confirm ).add( CONFIRMATIONCODE, admin.getConfirmationCode( ) ).url( backendUrl );
-    String emailMessage = "You account '" + accountName + "' application was approved. Click the following link to login and confirm your account:" + 
+    String emailMessage = "Your account '" + accountName + "' application was approved. Click the following link to login and confirm your account:" + 
                           "\n\n" +
                           confirmLink +
                           "\n\n" +
