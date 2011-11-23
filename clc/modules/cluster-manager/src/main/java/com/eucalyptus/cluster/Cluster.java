@@ -1100,10 +1100,6 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
         ? t.getCause( )
         : t;
     }
-    /// Ill-formed responses to DescribeNetworks are OK  
-    if( Exceptions.isCausedBy(t, org.jibx.runtime.JiBXException.class) || t instanceof org.jibx.runtime.JiBXException)
-    	return true;
-    
     LOG.error( t );
     if ( Exceptions.isCausedBy( t, InterruptedException.class ) ) {
       Thread.currentThread( ).interrupt( );
