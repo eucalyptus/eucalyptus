@@ -8,6 +8,8 @@ import java.util.NoSuchElementException;
 import javax.persistence.EntityTransaction;
 import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
+import com.eucalyptus.bootstrap.Hosts;
+import com.eucalyptus.component.Faults.CheckException;
 import com.eucalyptus.empyrean.ServiceId;
 import com.eucalyptus.empyrean.ServiceStatusDetail;
 import com.eucalyptus.empyrean.ServiceStatusType;
@@ -16,13 +18,13 @@ import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.records.EventClass;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
-import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Function;
+import com.google.common.base.Functions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.Collections2;
@@ -153,8 +155,8 @@ public class ServiceConfigurations {
               this.setLocalState( "n/a: " + ex.getMessage( ) );
             }
             if ( showEvents ) {
-              this.getStatusDetails( ).addAll( Collections2.transform( config.lookupDetails( ),
-                                                                       TypeMappers.lookup( ServiceCheckRecord.class, ServiceStatusDetail.class ) ) );
+              this.getStatusDetails( ).addAll( Collections2.transform( Faults.lookup( config ),
+                                                                       TypeMappers.lookup( CheckException.class, ServiceStatusDetail.class ) ) );
               if ( !showEventStacks ) {
                 for ( final ServiceStatusDetail a : this.getStatusDetails( ) ) {
                   a.setStackTrace( "" );
@@ -187,8 +189,8 @@ public class ServiceConfigurations {
           } catch ( final Exception ex ) {
             this.setLocalState( "n/a: " + ex.getMessage( ) );
           }
-          this.getStatusDetails( ).addAll( Collections2.transform( config.lookupDetails( ),
-                                                                   TypeMappers.lookup( ServiceCheckRecord.class, ServiceStatusDetail.class ) ) );
+          this.getStatusDetails( ).addAll( Collections2.transform( Faults.lookup( config ),
+                                                                   TypeMappers.lookup( CheckException.class, ServiceStatusDetail.class ) ) );
           for ( final ServiceStatusDetail a : this.getStatusDetails( ) ) {
             a.setStackTrace( "" );
           }
@@ -197,6 +199,17 @@ public class ServiceConfigurations {
     }
   };
   
+  @TypeMapper
+  public enum ServiceIdToServiceStatus implements Function<ServiceId, ServiceStatusType> {
+    INSTANCE;
+    private final Function<ServiceId, ServiceStatusType> transform = Functions.compose( ServiceConfigurationToStatus.INSTANCE, ServiceIdToServiceConfiguration.INSTANCE );
+
+    @Override
+    public ServiceStatusType apply( ServiceId input ) {
+      return transform.apply( input );
+    }
+    
+  }
   @TypeMapper
   public enum ServiceIdToServiceConfiguration implements Function<ServiceId, ServiceConfiguration> {
     INSTANCE;
@@ -289,6 +302,17 @@ public class ServiceConfigurations {
     return list( example );
   }
   
+  public static <T extends ServiceConfiguration> T lookupByName( final String name ) {
+    for ( ComponentId c : ComponentIds.list( ) ) {
+      ServiceConfiguration example = ServiceBuilders.lookup( c.getClass( ) ).newInstance( );
+      example.setName( name );
+      try {
+        return ( T ) lookup( example );
+      } catch ( Exception ex ) {}
+    }
+    throw new NoSuchElementException( "Failed to lookup any registered component with the name: " + name );
+  }
+  
   public static <T extends ServiceConfiguration, C extends ComponentId> T lookupByName( final Class<C> type, final String name ) {
     if ( !ComponentId.class.isAssignableFrom( type ) ) {
       throw new PersistenceException( "Unknown configuration type passed: " + type.getCanonicalName( ) );
@@ -337,7 +361,7 @@ public class ServiceConfigurations {
     
     @Override
     public boolean apply( ServiceConfiguration input ) {
-      return input.isHostLocal( );
+      return Hosts.isServiceLocal( input );
     }
     
   }
@@ -370,23 +394,24 @@ public class ServiceConfigurations {
   }
   
   @TypeMapper
-  public enum ServiceCheckRecordMapper implements Function<ServiceCheckRecord, ServiceStatusDetail> {
+  public enum CheckExceptionRecordMapper implements Function<CheckException, ServiceStatusDetail> {
     INSTANCE;
     @Override
-    public ServiceStatusDetail apply( final ServiceCheckRecord input ) {
+    public ServiceStatusDetail apply( final CheckException input ) {
+      final ServiceConfiguration config = ServiceConfigurations.lookupByName( input.getServiceName( ) );
       return new ServiceStatusDetail( ) {
         {
           this.setSeverity( input.getSeverity( ).toString( ) );
-          this.setUuid( input.getUuid( ) );
+          this.setUuid( input.getCorrelationId( ) );
           this.setTimestamp( input.getTimestamp( ).toString( ) );
           this.setMessage( input.getMessage( ) != null
             ? input.getMessage( )
             : "No summary information available." );
-          this.setStackTrace( input.getStackTrace( ) != null
-            ? input.getStackTrace( )
+          this.setStackTrace( input.getStackString( ) != null
+            ? input.getStackString( )
             : Exceptions.string( new RuntimeException( "Error while mapping service event record:  No stack information available" ) ) );
-          this.setServiceFullName( input.getServiceFullName( ) );
-          this.setServiceHost( input.getServiceHost( ) );
+          this.setServiceFullName( config.getFullName( ).toString( ) );
+          this.setServiceHost( config.getHostName( ) );
           this.setServiceName( input.getServiceName( ) );
         }
       };

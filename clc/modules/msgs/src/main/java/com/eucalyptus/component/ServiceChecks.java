@@ -69,9 +69,7 @@ import java.util.List;
 import java.util.UUID;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrapper;
-import com.eucalyptus.context.ServiceStateException;
 import com.eucalyptus.empyrean.ServiceStatusType;
-import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import edu.emory.mathcs.backport.java.util.Arrays;
@@ -152,74 +150,11 @@ public class ServiceChecks {
     return last;
   }
   
-  public static class Functions {
-    private static final Function<CheckException, ServiceCheckRecord> CHECK_EX_TO_RECORD = new Function<CheckException, ServiceCheckRecord>( ) {
-                                                                                           
-                                                                                           @Override
-                                                                                           public ServiceCheckRecord apply( final CheckException input ) {
-                                                                                             return new ServiceCheckRecord( input );
-                                                                                           }
-                                                                                           
-                                                                                         };
-    
-    public static Function<ServiceStatusType, List<CheckException>> statusToCheckExceptions( final String correlationId ) {
-      return new Function<ServiceStatusType, List<CheckException>>( ) {
-        @Override
-        public List<CheckException> apply( final ServiceStatusType input ) {
-          final List<CheckException> exs = Lists.newArrayList( );
-          final ServiceConfiguration config = TypeMappers.transform( input.getServiceId( ), ServiceConfiguration.class );
-          final Component.State serviceState = Component.State.valueOf( input.getLocalState( ) );
-          final Component.State localState = config.lookupState( );
-          if ( Component.State.ENABLED.equals( localState ) && !localState.equals( serviceState ) ) {
-            exs.add( newServiceCheckException( Severity.ERROR, config, new IllegalStateException( "State mismatch: local state is " + localState + " and remote state is: " + serviceState ) ) );
-          }
-          for ( final String detail : input.getDetails( ) ) {
-            final CheckException ex = newServiceCheckException( correlationId, Severity.ERROR, config, new ServiceStateException( detail ) );
-            exs.add( ex );
-          }
-          return exs;
-        }
-      };
-    }
-    
-    public static Function<CheckException, ServiceCheckRecord> checkExToRecord( ) {
-      return CHECK_EX_TO_RECORD;
-    }
-    
-    public static Function<ServiceStatusType, List<ServiceCheckRecord>> statusToEvents( final String correlationId ) {
-      return new Function<ServiceStatusType, List<ServiceCheckRecord>>( ) {
-        
-        @Override
-        public List<ServiceCheckRecord> apply( final ServiceStatusType input ) {
-          final List<ServiceCheckRecord> events = Lists.newArrayList( );
-          for ( final CheckException ex : statusToCheckExceptions( correlationId ).apply( input ) ) {
-            events.add( new ServiceCheckRecord( ex ) );
-          }
-          return events;
-        }
-      };
-    }
-    
-  }
-  
-  static ServiceCheckRecord createRecord( final ServiceConfiguration config, final String message ) {
-    return createRecord( UUID.randomUUID( ).toString( ), config, new RuntimeException( message ) );
-  }
-  
-  static ServiceCheckRecord createRecord( final ServiceConfiguration config, final Throwable t ) {
-    return createRecord( UUID.randomUUID( ).toString( ), config, t );
-  }
-  
-  public static ServiceCheckRecord createRecord( final String correlationId, final ServiceConfiguration config, final Throwable t ) {//TODO:GRZE:FIX VISIBILITY HERE?!?!?!
-    //TODO:GRZE: exception filtering here
-    return new ServiceCheckRecord( correlationId, Severity.ERROR.transform( config, t ) );
-  }
-  
-  private static CheckException newServiceCheckException( final Severity severity, final ServiceConfiguration config, final Throwable t ) {
+  static CheckException newServiceCheckException( final Severity severity, final ServiceConfiguration config, final Throwable t ) {
     return newServiceCheckException( null, severity, config, t );
   }
   
-  private static CheckException newServiceCheckException( final String correlationId, final Severity severity, final ServiceConfiguration config, final Throwable t ) {
+  static CheckException newServiceCheckException( final String correlationId, final Severity severity, final ServiceConfiguration config, final Throwable t ) {
     if ( t instanceof Error ) {
       return new CheckException( correlationId, t, Severity.FATAL, config );
     } else if ( ( Severity.WARNING.ordinal( ) > severity.ordinal( ) ) && ( t instanceof RuntimeException ) ) {

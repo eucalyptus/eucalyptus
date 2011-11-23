@@ -41,9 +41,15 @@ sub host_membership {
    run_on_clc("$euca_dir/usr/sbin/euca-modify-property -p euca=\'com.eucalyptus.bootstrap.Hosts.hostMap.keySet()\'");
    test_end();
 }
+sub gms_members {
+   test_start("GMS membership list");
+   run_on_clc("$euca_dir/usr/sbin/euca-modify-property -p euca=\'com.eucalyptus.bootstrap.Hosts.hostMap.getChannel( ).getView( ).getMembers( )\'");
+   test_end();
+}
 sub coordinator_local {
    test_start("is coordinator?");
    run_on_clc("$euca_dir/usr/sbin/euca-modify-property -p euca=\'\\\"Coordinator: \\\" + com.eucalyptus.bootstrap.Hosts.isCoordinator() + \\\" => \\\" + com.eucalyptus.bootstrap.Hosts.getCoordinator()\'");
+   run_on_clc("$euca_dir/usr/sbin/euca-modify-property -p euca=\'\\\"Localhost:         => \\\" + com.eucalyptus.bootstrap.Hosts.localHost()\'");
    test_end();
 }
 
@@ -53,6 +59,7 @@ sub drbd_role {
    test_end(); 
 }
 &host_membership;
+&gms_members;
 &coordinator_local;
 &describe_services;
 &cluster_proxy_state;

@@ -75,10 +75,12 @@ import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.cloud.CloudMetadata.AvailabilityZoneMetadata;
 import com.eucalyptus.cluster.ResourceState.VmTypeAvailability;
 import com.eucalyptus.cluster.callback.ClusterCertsCallback;
@@ -91,10 +93,9 @@ import com.eucalyptus.component.Component;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Faults;
+import com.eucalyptus.component.Faults.CheckException;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.component.Partitions;
-import com.eucalyptus.component.ServiceChecks;
-import com.eucalyptus.component.ServiceChecks.CheckException;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.ServiceRegistrationException;
@@ -231,11 +232,15 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
     
     @Override
     public boolean apply( final Cluster input ) {
-      try {
-        AsyncRequests.newRequest( this ).sendSync( input.configuration );
+      if ( Hosts.isCoordinator( ) ) {
+        try {
+          AsyncRequests.newRequest( this ).sendSync( input.configuration );
+          return true;
+        } catch ( final Exception t ) {
+          return input.swallowException( t );
+        }
+      } else {
         return true;
-      } catch ( final Exception t ) {
-        return input.swallowException( t );
       }
     }
     
@@ -305,7 +310,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
             Component.State serviceState = Component.State.valueOf( status.getLocalState( ) );
             Component.State localState = parent.getConfiguration( ).lookupState( );
             Component.State proxyState = parent.getStateMachine( ).getState( ).proxyState( );
-            CheckException ex = ServiceChecks.chainCheckExceptions( ServiceChecks.Functions.statusToCheckExceptions( this.getRequest( ).getCorrelationId( ) ).apply( status ) );
+            CheckException ex = Faults.transformToExceptions( ).apply( status );
             if ( Component.State.NOTREADY.equals( serviceState ) ) {
               throw new IllegalStateException( ex );
             } else if ( Component.State.ENABLED.equals( serviceState ) && Component.State.DISABLED.ordinal( ) >= localState.ordinal( ) ) {
@@ -324,6 +329,12 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
       LOG.error( "Failed to find service info for cluster: " + parent.getFullName( ) + " instead found service status for: "
         + serviceStatuses );
       throw new NoSuchElementException( "Failed to find service info for cluster: " + parent.getFullName( ) );
+    }
+
+    @Override
+    public void setSubject( Cluster subject ) {
+      this.getRequest( ).getServices( ).add( TypeMappers.transform( subject.getConfiguration( ), ServiceId.class ) );
+      super.setSubject( subject );
     }
   }
   
@@ -348,8 +359,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
         @Override
         public final void leave( final Cluster parent, final Callback.Completion transitionCallback ) {
           try {
-            AsyncRequests.newRequest( factory.newInstance( ) ).sendSync( parent.getConfiguration( ) );
-            transitionCallback.fire( );
+            AsyncRequests.newRequest( factory.newInstance( ) ).then( transitionCallback ).sendSync( parent.getConfiguration( ) );
           } catch ( final InterruptedException ex ) {
             Thread.currentThread( ).interrupt( );
             Exceptions.trace( ex );
@@ -405,11 +415,11 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
       try {
         return Component.State.valueOf( this.name( ) );
       } catch ( final Exception ex ) {
-        if ( this.name( ).startsWith( "ENABL" ) ) {
+        if ( this.equals( DISABLED ) ) {
           return Component.State.DISABLED;
         } else if ( this.ordinal( ) < DISABLED.ordinal( ) ) {
           return Component.State.NOTREADY;
-        } else if ( this.ordinal( ) > ENABLED.ordinal( ) ) {
+        } else if ( this.ordinal( ) >= ENABLING.ordinal( ) ) {
           return Component.State.ENABLED;
         } else {
           return Component.State.INITIALIZED;
@@ -592,7 +602,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
         }
         if ( transition != null ) {
           try {
-            transition.call( ).get( );
+            transition.call( ).get( 30000L, TimeUnit.MILLISECONDS );
             Cluster.this.clearExceptions( );
           } catch ( final Exception ex ) {
             LOG.error( ex, ex );
@@ -774,7 +784,24 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
                                                                                       State.ENABLING_NET, State.ENABLING_VMS,
                                                                                       State.ENABLING_ADDRS, State.ENABLING_VMS_PASS_TWO,
                                                                                       State.ENABLING_ADDRS_PASS_TWO, State.ENABLED ).call( );
-        result.get( );
+        RuntimeException fail = null;
+        for ( int i = 0; i < Clusters.getConfiguration( ).getStartupSyncRetries( ); i++ ) {
+          try {
+            result.get( );
+            fail = null;
+            break;
+          } catch ( Exception ex ) {
+            try {
+              TimeUnit.SECONDS.sleep( 1 );
+            } catch ( Exception ex1 ) {
+              LOG.error( ex1 , ex1 );
+            }
+            fail = Exceptions.toUndeclared( ex );
+          }
+        }
+        if ( fail != null ) {
+          throw fail;
+        }
       } catch ( final InterruptedException ex ) {
         Thread.currentThread( ).interrupt( );
       } catch ( final Exception ex ) {

@@ -63,6 +63,7 @@
 
 package com.eucalyptus.component;
 
+import java.net.UnknownHostException;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -70,9 +71,10 @@ import java.util.concurrent.Callable;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapArgs;
+import com.eucalyptus.bootstrap.Host;
 import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.component.Component.State;
-import com.eucalyptus.component.ServiceChecks.CheckException;
+import com.eucalyptus.component.Faults.CheckException;
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.MultiDatabasePropertyEntry;
 import com.eucalyptus.configurable.PropertyDirectory;
@@ -336,26 +338,11 @@ public class ServiceTransitions {
     ServiceTransitionCallback trans = null;
     try {
       if ( Hosts.isServiceLocal( parent ) ) {
-        try {
-          trans = ServiceLocalTransitionCallbacks.valueOf( transitionAction.name( ) );
-        } catch ( Exception ex ) {
-          LOG.error( ex, ex );
-          throw ex;
-        }
+        trans = ServiceLocalTransitionCallbacks.valueOf( transitionAction.name( ) );
       } else if ( Hosts.isCoordinator( ) ) {
-        try {
-          trans = CloudRemoteTransitionCallbacks.valueOf( transitionAction.name( ) );
-        } catch ( Exception ex ) {
-          LOG.error( ex, ex );
-          throw ex;
-        }
+        trans = CloudRemoteTransitionCallbacks.valueOf( transitionAction.name( ) );
       } else {
-        try {
-          trans = ServiceRemoteTransitionNotification.valueOf( transitionAction.name( ) );
-        } catch ( Exception ex ) {
-          LOG.error( ex, ex );
-          throw ex;
-        }
+        trans = ServiceRemoteTransitionNotification.valueOf( transitionAction.name( ) );
       }
       if ( trans != null ) {
         Logs.exhaust( ).debug( "Executing transition: " + trans.getClass( )
@@ -367,6 +354,7 @@ public class ServiceTransitions {
       }
       transitionCallback.fire( );
     } catch ( Exception ex ) {
+      LOG.error( ex );
       if ( Faults.filter( parent, ex ) ) {
         transitionCallback.fireException( ex );
         throw Exceptions.toUndeclared( ex );
@@ -375,7 +363,7 @@ public class ServiceTransitions {
       }
     }
   }
-
+  
   public enum TransitionActions implements TransitionAction<ServiceConfiguration> {
     ENABLE,
     CHECK,
@@ -457,25 +445,50 @@ public class ServiceTransitions {
       
       @Override
       public void fire( final ServiceConfiguration parent ) throws Exception {
-        DescribeServicesResponseType response = ServiceTransitions.sendEmpyreanRequest( parent, new DescribeServicesType( ) );
-        ServiceStatusType status = Iterables.find( response.getServiceStatuses( ), new Predicate<ServiceStatusType>( ) {
-          
-          @Override
-          public boolean apply( final ServiceStatusType arg0 ) {
-            return parent.getName( ).equals( arg0.getServiceId( ).getName( ) );
+        if ( !parent.getComponentId( ).isDistributedService( ) ) {
+          return;
+        } else {
+          CheckException errors = null;
+          Host h = Hosts.lookup( parent.getHostName( ) );
+          if ( h == null ) {
+            UnknownHostException ex = new UnknownHostException( "Failed to lookup host " + parent.getHostName( )
+              + " for service "
+              + parent.getFullName( )
+              + ".  Current hosts are: "
+              + Hosts.list( ) );
+            errors = Faults.failure( parent, ex );
+          } else if ( !h.hasBootstrapped( ) ) {
+            UnknownHostException ex = new UnknownHostException( "Host " + parent.getHostName( )
+              + " not yet bootstrapped for service "
+              + parent.getFullName( )
+              + "." );
+            errors = Faults.failure( parent, ex );
+          } else {
+            DescribeServicesResponseType response = ServiceTransitions.sendEmpyreanRequest( parent, new DescribeServicesType( ) {
+              {
+                this.getServices( ).add( TypeMappers.transform( parent, ServiceId.class ) );
+              }
+            } );
+            ServiceStatusType status = Iterables.find( response.getServiceStatuses( ), new Predicate<ServiceStatusType>( ) {
+              
+              @Override
+              public boolean apply( final ServiceStatusType arg0 ) {
+                return parent.getName( ).equals( arg0.getServiceId( ).getName( ) );
+              }
+            } );
+            errors = Faults.transformToExceptions( ).apply( status );
           }
-        } );
-        String corrId = response.getCorrelationId( );
-        List<CheckException> errors = ServiceChecks.Functions.statusToCheckExceptions( corrId ).apply( status );
-        if ( !errors.isEmpty( ) ) {
-          if ( Component.State.ENABLED.equals( parent.lookupState( ) ) ) {
-            try {
-              DISABLE.fire( parent );
-            } catch ( Exception ex ) {
-              LOG.error( ex, ex );
+          if ( errors != null ) {
+            Faults.persist( errors );
+            if ( Faults.Severity.FATAL.equals( errors.getSeverity( ) ) ) {
+              //TODO:GRZE: handle remote fatal error.
+              throw errors;
+            } else if ( errors.getSeverity( ).ordinal( ) < Faults.Severity.ERROR.ordinal( ) ) {
+              Logs.extreme( ).error( errors, errors );
+            } else {
+              throw errors;
             }
           }
-          throw Faults.failure( parent, errors );
         }
       }
       
@@ -601,7 +614,11 @@ public class ServiceTransitions {
       public void fire( final ServiceConfiguration parent ) throws Exception {
         CHECK.fire( parent );
         parent.lookupBootstrapper( ).enable( );
-        ServiceBuilders.lookup( parent.getComponentId( ) ).fireEnable( parent );
+        try {
+          ServiceBuilders.lookup( parent.getComponentId( ) ).fireEnable( parent );
+        } catch ( Exception ex ) {
+          parent.lookupBootstrapper( ).disable( );
+        }
       }
     },
     DISABLE {
@@ -726,7 +743,9 @@ public class ServiceTransitions {
       
       @Override
       public void fire( final ServiceConfiguration config ) {
-        if ( Hosts.isCoordinator( ) && !config.isVmLocal( ) ) {
+        if ( Hosts.isCoordinator( ) && !config.isVmLocal( )
+          && config.getComponentId( ).isRegisterable( )
+          && !( config.getComponentId( ).isAlwaysLocal( ) || config.getComponentId( ).isCloudLocal( ) ) ) {
           ServiceEvents.fire( config, config.getStateMachine( ).getState( ) );
         }
       }
