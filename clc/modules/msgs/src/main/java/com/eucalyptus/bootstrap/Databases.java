@@ -199,6 +199,11 @@ public class Databases {
                 throw Exceptions.toUndeclared( "Database on host " + hostName + " failed liveness check and will be deactived." );
               }
             }
+            
+            @Override
+            public String toString( ) {
+              return "Databases.disable(): " + hostName + " " + contextName;
+            }
           };
           return removeRunner;
         }
