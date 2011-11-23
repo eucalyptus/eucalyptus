@@ -279,16 +279,12 @@ public class Hosts {
       
       @Override
       public void run( ) {
-        if ( Hosts.localHost( ).hasDatabase( ) ) {
-          Databases.enable( Hosts.localHost( ) );
-        }
+        SyncDatabases.INSTANCE.apply( Hosts.localHost( ) );
         if ( Hosts.pruneHosts( ) ) {
           Hosts.updateServices( );
         }
         for ( Host h : Hosts.listDatabases( ) ) {
-          if ( !h.isLocalHost( ) && h.hasSynced( ) ) {
-            Databases.enable( h );
-          }
+          SyncDatabases.INSTANCE.apply( h );
         }
       }
       
@@ -492,7 +488,11 @@ public class Hosts {
     
     @Override
     public boolean apply( final Host input ) {
-      if ( ( input.hasBootstrapped( ) || input.isLocalHost( ) ) && input.hasDatabase( ) ) {
+      if ( Hosts.isCoordinator( input ) && input.hasBootstrapped( ) && !input.isLocalHost( ) ) {
+        return Databases.enable( input );
+      } else if ( input.hasDatabase( ) && input.hasSynced( ) && !input.isLocalHost( ) ) {
+        return Databases.enable( input );
+      } else if ( input.isLocalHost( ) ) {
         return Databases.enable( input );
       } else {
         return false;

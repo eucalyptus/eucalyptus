@@ -354,11 +354,13 @@ public class ServiceTransitions {
       }
       transitionCallback.fire( );
     } catch ( Exception ex ) {
-      LOG.error( ex );
+      LOG.error( parent.getFullName( ) + " failed transition " + transitionAction.name( ) + " because of " + ex.getMessage( ) );
       if ( Faults.filter( parent, ex ) ) {
         transitionCallback.fireException( ex );
+        Faults.persist( Faults.failure( parent, ex ) );
         throw Exceptions.toUndeclared( ex );
       } else {
+        Faults.persist( Faults.advisory( parent, ex ) );
         transitionCallback.fire( );
       }
     }
@@ -478,16 +480,14 @@ public class ServiceTransitions {
             } );
             errors = Faults.transformToExceptions( ).apply( status );
           }
-          if ( errors != null ) {
-            Faults.persist( errors );
-            if ( Faults.Severity.FATAL.equals( errors.getSeverity( ) ) ) {
-              //TODO:GRZE: handle remote fatal error.
-              throw errors;
-            } else if ( errors.getSeverity( ).ordinal( ) < Faults.Severity.ERROR.ordinal( ) ) {
-              Logs.extreme( ).error( errors, errors );
-            } else {
-              throw errors;
-            }
+          Faults.persist( errors );
+          if ( Faults.Severity.FATAL.equals( errors.getSeverity( ) ) ) {
+            //TODO:GRZE: handle remote fatal error.
+            throw errors;
+          } else if ( errors.getSeverity( ).ordinal( ) < Faults.Severity.ERROR.ordinal( ) ) {
+            Logs.extreme( ).error( errors, errors );
+          } else {
+            throw errors;
           }
         }
       }
