@@ -83,8 +83,8 @@ import com.eucalyptus.component.Dispatcher;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
+import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.ClusterController;
-import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.images.BlockStorageImageInfo;
@@ -157,7 +157,7 @@ public class ClusterAllocator implements Runnable {
     this.allocInfo = allocInfo;
     EntityTransaction db = Entities.get( VmInstance.class );
     try {
-      this.cluster = Clusters.lookup( allocInfo.getPartition( ) );
+      this.cluster = Clusters.lookup( Topology.lookup( ClusterController.class, allocInfo.getPartition( ) ) );
       this.messages = new StatefulMessageSet<State>( this.cluster, State.values( ) );
       this.setupVolumeMessages( );
       this.setupNetworkMessages( );
@@ -182,7 +182,7 @@ public class ClusterAllocator implements Runnable {
   
   private void setupVolumeMessages( ) throws NoSuchElementException, MetadataException, ExecutionException {
     if ( this.allocInfo.getBootSet( ).getMachine( ) instanceof BlockStorageImageInfo ) {
-      final ServiceConfiguration sc = Partitions.lookupService( Storage.class, this.cluster.getPartition( ) );
+      final ServiceConfiguration sc = Topology.lookup( Storage.class, this.cluster.getConfiguration( ).lookupPartition( ) );
       final VirtualBootRecord root = this.allocInfo.getVmTypeInfo( ).lookupRoot( );
       if ( root.isBlockStorage( ) ) {
         for ( int i = 0; i < this.allocInfo.getAllocationTokens( ).size( ); i++ ) {
@@ -234,7 +234,7 @@ public class ClusterAllocator implements Runnable {
     if ( root.isBlockStorage( ) ) {
       childVmInfo = vmInfo.child( );
       final Volume vol = this.allocInfo.getPersistentVolumes( ).get( index );
-      final Dispatcher sc = ServiceDispatcher.lookup( Partitions.lookupService( Storage.class, vol.getPartition( ) ) );
+      final Dispatcher sc = ServiceDispatcher.lookup( Topology.lookup( Storage.class, Partitions.lookupByName( vol.getPartition( ) ) ) );
       for ( int i = 0; i < 60; i++ ) {
         try {
           final DescribeStorageVolumesResponseType volState = sc.send( new DescribeStorageVolumesType( Lists.newArrayList( vol.getDisplayName( ) ) ) );

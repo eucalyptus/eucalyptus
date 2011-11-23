@@ -259,7 +259,7 @@ public class AdmissionControl {
               try {
                 ServiceConfiguration sc = Topology.lookup( Storage.class, partition );
               } catch ( Exception ex ) {
-                throw new NotEnoughResourcesException( "Not enough resources: " + ex.getMessage( ), ex );
+                throw new NotEnoughResourcesException( "Not enough resources: Cannot run EBS instances in partition w/o a storage controller: " + ex.getMessage( ), ex );
               }
             }
             try {
@@ -307,7 +307,8 @@ public class AdmissionControl {
           return Lists.newArrayList( sorted.values( ) );
         }
       } else {
-        Cluster cluster = Clusters.getInstance( ).lookup( Partitions.lookupService( ClusterController.class, partitionName ) );
+        ServiceConfiguration ccConfig = Topology.lookup( ClusterController.class, Partitions.lookupByName( partitionName ) );
+        Cluster cluster = Clusters.lookup( ccConfig );
         if ( cluster == null ) {
           throw new NotEnoughResourcesException( "Can't find cluster " + partitionName );
         }

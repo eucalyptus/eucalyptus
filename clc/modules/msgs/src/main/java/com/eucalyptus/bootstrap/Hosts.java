@@ -259,7 +259,7 @@ public class Hosts {
         final Host currentHost = Hosts.localHost( );
         ++this.counter;
         try {
-          if ( !Hosts.list( Predicates.not( BootedFilter.INSTANCE ) ).isEmpty( ) && currentHost.hasDatabase( ) && currentHost.hasBootstrapped( ) ) {
+          if ( !Hosts.list( Predicates.not( BootedFilter.INSTANCE ) ).isEmpty( ) && currentHost.hasDatabase( ) ) {
             if ( UpdateEntry.INSTANCE.apply( currentHost ) ) {
               LOG.info( "Updated local host entry: " + currentHost );
             }

@@ -121,7 +121,7 @@ public class SnapshotManager {
     final Context ctx = Contexts.lookup( );
     EntityWrapper<Snapshot> db = EntityWrapper.get( Snapshot.class );
     Volume vol = Transactions.find( Volume.named( ctx.getUserFullName( ).asAccountFullName( ), request.getVolumeId( ) ) );
-    final ServiceConfiguration sc = Partitions.lookupService( Storage.class, vol.getPartition( ) );
+    final ServiceConfiguration sc = Topology.lookup( Storage.class, Partitions.lookupByName( vol.getPartition( ) ) );
     final Volume volReady = Volumes.checkVolumeReady( vol );
     Supplier<Snapshot> allocator = new Supplier<Snapshot>( ) {
       
@@ -169,7 +169,7 @@ public class SnapshotManager {
             throw Exceptions.toUndeclared( "Not authorized to delete snapshot " + request.getSnapshotId( ) + " by " + ctx.getUser( ).getName( ),
                                            new EucalyptusCloudException( ) );
           } else {
-            ServiceConfiguration sc = Partitions.lookupService( Storage.class, snap.getVolumePartition( ) );
+            ServiceConfiguration sc = Topology.lookup( Storage.class, Partitions.lookupByName( snap.getPartition( ) ) );
             try {
               DeleteStorageSnapshotResponseType scReply = ServiceDispatcher.lookup( sc ).send( new DeleteStorageSnapshotType( snap.getDisplayName( ) ) );
               if ( scReply.get_return( ) ) {
@@ -218,7 +218,7 @@ public class SnapshotManager {
         DescribeStorageSnapshotsType scRequest = new DescribeStorageSnapshotsType( Lists.newArrayList( snap.getDisplayName( ) ) );
         if ( request.getSnapshotSet( ).isEmpty( ) || request.getSnapshotSet( ).contains( snap.getDisplayName( ) ) ) {
           try {
-            ServiceConfiguration sc = Partitions.lookupService( Storage.class, snap.getPartition( ) );
+            ServiceConfiguration sc = Topology.lookup( Storage.class, Partitions.lookupByName( snap.getPartition( ) ) );
             DescribeStorageSnapshotsResponseType snapshotInfo = ServiceDispatcher.lookup( sc ).send( scRequest );
             for ( StorageSnapshot storageSnapshot : snapshotInfo.getSnapshotSet( ) ) {
               snap.setMappedState( storageSnapshot.getStatus( ) );
