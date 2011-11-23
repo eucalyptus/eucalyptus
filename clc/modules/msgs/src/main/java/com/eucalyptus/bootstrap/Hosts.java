@@ -420,9 +420,7 @@ public class Hosts {
     @Override
     public void entryRemoved( final String input ) {
       LOG.info( "Hosts.entryRemoved(): " + input );
-      if ( !BootstrapArgs.isCloudController( ) ) {
-        Databases.disable( input );
-      }
+      Databases.disable( input );
     }
     
     @Override
@@ -950,7 +948,7 @@ public class Hosts {
   }
   
   private static final Predicate<Host> filterSyncedDbs      = Predicates.and( DbFilter.INSTANCE, SyncedDbFilter.INSTANCE );
-  private static final Predicate<Host> filterBooedSyncedDbs = Predicates.and( filterSyncedDbs, BootedFilter.INSTANCE );
+  private static final Predicate<Host> filterBootedSyncedDbs = Predicates.and( filterSyncedDbs, BootedFilter.INSTANCE );
   
   public static List<Host> listActiveDatabases( ) {
     return Hosts.list( filterSyncedDbs );
@@ -1201,7 +1199,7 @@ public class Hosts {
   
   static void awaitDatabases( ) throws InterruptedException {
     if ( !BootstrapArgs.isCloudController( ) ) {
-      while ( list( filterBooedSyncedDbs ).isEmpty( ) ) {
+      while ( list( filterBootedSyncedDbs ).isEmpty( ) ) {
         TimeUnit.SECONDS.sleep( 3 );
         LOG.info( "Waiting for system view with database..." );
       }
