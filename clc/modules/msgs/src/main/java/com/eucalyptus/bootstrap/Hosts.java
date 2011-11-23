@@ -251,7 +251,7 @@ public class Hosts {
   }
   
   enum PeriodicMembershipChecks implements Runnable {
-    ENTRYUPDATE( 3 ) {
+    ENTRYUPDATE( 5 ) {
       private volatile int counter = 0;
       
       @Override
@@ -275,22 +275,19 @@ public class Hosts {
       }
       
     },
-    ENABLEDB( 1 ) {
+    ENABLEDB( 5 ) {
       
       @Override
       public void run( ) {
         for ( Host h : Hosts.listActiveDatabases( ) ) {
           if ( !h.isLocalHost( ) && Bootstrap.isFinished( ) ) {
             Databases.enable( h );
-//            if ( h.hasBootstrapped( ) ) {
-//              Databases.isAlive( h.getDisplayName( ) );
-//            }
           }
         }
       }
       
     },
-    PRUNING( 1 ) {
+    PRUNING( 10 ) {
       
       @Override
       public void run( ) {
@@ -300,7 +297,7 @@ public class Hosts {
       }
       
     },
-    INITIALIZE( 1 ) {
+    INITIALIZE( 15 ) {
       
       @Override
       public void run( ) {
