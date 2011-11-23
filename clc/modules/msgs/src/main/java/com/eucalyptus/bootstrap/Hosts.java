@@ -259,7 +259,7 @@ public class Hosts {
         final Host currentHost = Hosts.localHost( );
         ++this.counter;
         try {
-          if ( !Hosts.list( Predicates.not( BootedFilter.INSTANCE ) ).isEmpty( ) ) {
+          if ( !Hosts.list( Predicates.not( BootedFilter.INSTANCE ) ).isEmpty( ) && currentHost.hasDatabase( ) && currentHost.hasBootstrapped( )) {
             if ( UpdateEntry.INSTANCE.apply( currentHost ) ) {
               LOG.info( "Updated local host entry: " + currentHost );
             }
@@ -279,10 +279,10 @@ public class Hosts {
       
       @Override
       public void run( ) {
-        SyncDatabases.INSTANCE.apply( Hosts.localHost( ) );
         if ( Hosts.pruneHosts( ) ) {
           Hosts.updateServices( );
         }
+        SyncDatabases.INSTANCE.apply( Hosts.localHost( ) );
         for ( Host h : Hosts.listDatabases( ) ) {
           SyncDatabases.INSTANCE.apply( h );
         }
