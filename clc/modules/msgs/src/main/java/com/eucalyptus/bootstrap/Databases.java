@@ -268,7 +268,9 @@ public class Databases {
     INSTANCE;
 
 
-    private static void prepareInactiveConnections( final Host host, final String hostName, final String contextName, final String dbPass ) throws NoSuchElementException {
+    private static void prepareConnections( final Host host, final String contextName ) throws NoSuchElementException {
+      final String hostName = host.getDisplayName( );
+      final String dbPass = SystemIds.databasePassword( );
       final InactiveDatabaseMBean database = Databases.lookupInactiveDatabase( contextName, hostName );
       database.setUser( "eucalyptus" );
       database.setPassword( dbPass );
@@ -298,7 +300,6 @@ public class Databases {
                 } else {
                   DriverDatabaseClusterMBean cluster = LookupPersistenceContextDatabaseCluster.INSTANCE.apply( contextName );
                   final String dbUrl = "jdbc:" + ServiceUris.remote( Database.class, host.getBindAddress( ), contextName );
-                  final String dbPass = SystemIds.databasePassword( );
                   final String realJdbcDriver = Databases.getDriverName( );
                   
                   try {
@@ -313,22 +314,19 @@ public class Databases {
                       }
                       LOG.info( "Creating database connections for: " + host );
                       cluster.add( hostName, realJdbcDriver, dbUrl );
-                      ActivateHostFunction.prepareInactiveConnections( host, hostName, contextName, dbPass );
+                      ActivateHostFunction.prepareConnections( host, contextName );
                       LOG.info( "Full sync of database on: " + host + " using " + cluster.getActiveDatabases( ) );
                       cluster.activate( hostName, "full" );
                       return;
                     } else if ( passiveSync ) {
-                      if ( cluster.getActiveDatabases( ).contains( hostName ) ) {
-                        return;
-                      } else if ( cluster.getInactiveDatabases( ).contains( hostName ) ) {
-                        LOG.info( "Passive activation of database connections to: " + host );
-                        ActivateHostFunction.prepareInactiveConnections( host, hostName, contextName, dbPass );
-                        cluster.activate( hostName, "passive" );
-                        return;
-                      } else {
-                        LOG.info( "Creating database connections for: " + host );
+                      try {
+                        cluster.getDatabase( hostName );
+                      } catch ( IllegalArgumentException ex ) {
                         cluster.add( hostName, realJdbcDriver, dbUrl );
-                        ActivateHostFunction.prepareInactiveConnections( host, hostName, contextName, dbPass );
+                      }
+                      if ( !cluster.getActiveDatabases( ).contains( hostName ) ) {
+                        ActivateHostFunction.prepareConnections( host, contextName );
+                        LOG.info( "Passive activation of database connections to: " + host );
                         cluster.activate( hostName, "passive" );
                       }
                     } else {
