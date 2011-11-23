@@ -165,7 +165,7 @@ public class Databases {
           StringBuilder builder = new StringBuilder( );
           builder.append( Joiner.on( "\nSUCCESS: " ).join( succeeded.keySet( ) ) );
           builder.append( Joiner.on( "\nFAILED:  " ).join( failed.entriesOnlyOnLeft( ).keySet( ) ) );
-          LOG.debug( builder.toString( ) );
+          Logs.extreme( ).debug( builder.toString( ) );
           if ( !failed.entriesOnlyOnLeft( ).isEmpty( ) ) {
             throw Exceptions.toUndeclared( builder.toString( ) );
           }
@@ -278,6 +278,11 @@ public class Databases {
         }
       };
     }
+
+    @Override
+    public String toString( ) {
+      return "Databases.disable()";
+    }
   }
   
   enum ActivateHostFunction implements Function<Host, Function<String, Runnable>> {
@@ -374,6 +379,11 @@ public class Databases {
           return removeRunner;
         }
       };
+    }
+
+    @Override
+    public String toString( ) {
+      return "Databases.enable()";
     }
   }
   
