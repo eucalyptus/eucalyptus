@@ -173,7 +173,7 @@ public class Databases {
           canHas.writeLock( ).unlock( );
         }
       } else {
-        LOG.debug( "DB STATE CHANGE ABORTED (failed to get lock): " + runnableFunction );
+        throw Exceptions.toUndeclared( "DB STATE CHANGE ABORTED (failed to get lock): " + runnableFunction );
       }
     } catch ( InterruptedException ex ) {
       Exceptions.maybeInterrupted( ex );
@@ -436,7 +436,7 @@ public class Databases {
   }
   
   static boolean enable( final Host host ) {
-    if ( !host.hasBootstrapped( ) || !host.hasDatabase( ) || !Bootstrap.isFinished( ) || !host.hasSynced( ) ) {
+    if ( !host.hasBootstrapped( ) || !host.hasDatabase( ) || !Bootstrap.isFinished( ) ) {
       return false;
     } else {
       if ( host.isLocalHost( ) ) {
