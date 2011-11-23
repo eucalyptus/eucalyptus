@@ -497,26 +497,16 @@ public class ServiceTransitions {
       
       @Override
       public void fire( final ServiceConfiguration parent ) throws Exception {
-    	  try{
-    		  StartServiceResponseType msg = ServiceTransitions.sendEmpyreanRequest( parent, new StartServiceType( ) {
-    			  {
-    				  this.getServices( ).add( TypeMappers.transform( parent, ServiceId.class ) );
-    			  }
-    		  } );
-    	  }catch(Exception ex){
-    		  /// *SPARK hack: special case for reloading VmwareBroker's xmlconfig properties
-    		  if(parent.getComponentId().getClass().getSimpleName().equals("VMwareBroker")){
-    			  try{
-    				  ServiceBuilders.lookup( parent.getComponentId( ) ).fireStart( parent );
-    			  }catch(Exception iex){  ;  }    			  
-    		  }
-    		  throw ex;
-    	  }
-    	  try {
-    		  ServiceBuilders.lookup( parent.getComponentId( ) ).fireStart( parent );
-    	  } catch ( Exception ex ) {
-    		  LOG.error( ex, ex );
-    	  }
+        StartServiceResponseType msg = ServiceTransitions.sendEmpyreanRequest( parent, new StartServiceType( ) {
+          {
+            this.getServices( ).add( TypeMappers.transform( parent, ServiceId.class ) );
+          }
+        } );
+        try {
+          ServiceBuilders.lookup( parent.getComponentId( ) ).fireStart( parent );
+        } catch ( Exception ex ) {
+          LOG.error( ex, ex );
+        }
       }
     },
     ENABLE {
