@@ -280,7 +280,7 @@ public class Hosts {
       @Override
       public void run( ) {
         for ( Host h : Hosts.listDatabases( ) ) {
-          if ( !h.isLocalHost( ) && Bootstrap.isFinished( ) && h.hasSynced( ) ) {
+          if ( !h.isLocalHost( ) && Bootstrap.isFinished( ) ) {
             Databases.enable( h );
 //            if ( h.hasBootstrapped( ) ) {
 //              Databases.isAlive( h.getDisplayName( ) );
