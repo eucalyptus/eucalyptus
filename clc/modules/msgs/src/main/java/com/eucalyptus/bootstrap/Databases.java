@@ -177,6 +177,10 @@ public class Databases {
       }
     } catch ( InterruptedException ex ) {
       Exceptions.maybeInterrupted( ex );
+    } catch ( RuntimeException ex ) {
+      LOG.error( ex );
+      Logs.extreme( ).error( ex, ex );
+      throw ex;
     }
   }
   
@@ -417,8 +421,6 @@ public class Databases {
           syncState.set( SyncState.NOTSYNCED );
           return true;
         } catch ( Exception ex ) {
-          LOG.error( ex );
-          Logs.extreme( ).error( ex, ex );
           syncState.set( SyncState.NOTSYNCED );
           return false;
         }
@@ -427,8 +429,6 @@ public class Databases {
           runDbStateChange( DeactivateHostFunction.INSTANCE.apply( hostName ) );
           return true;
         } catch ( Exception ex ) {
-          LOG.error( ex );
-          Logs.extreme( ).error( ex, ex );
           return false;
         }
       }
@@ -447,21 +447,22 @@ public class Databases {
             return true;
           } catch ( Exception ex ) {
             runDbStateChange( DeactivateHostFunction.INSTANCE.apply( host.getDisplayName( ) ) );
-            LOG.error( ex );
-            Logs.extreme( ).error( ex, ex );
             syncState.set( SyncState.NOTSYNCED );
             return false;
           }
         } else {
-          return false;
+          try {
+            runDbStateChange( ActivateHostFunction.INSTANCE.apply( host ) );
+            return true;
+          } catch ( Exception ex ) {
+            return false;
+          }
         }
       } else {
         try {
           runDbStateChange( ActivateHostFunction.INSTANCE.apply( host ) );
           return true;
         } catch ( Exception ex ) {
-          LOG.error( ex );
-          Logs.extreme( ).error( ex, ex );
           return false;
         }
       }
