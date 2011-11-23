@@ -333,16 +333,6 @@ public class Databases {
                       Logs.extreme( ).info( "Skipping activation of already present database for: " + contextName + " on " + hostName );
                     }
                   } catch ( Exception ex ) {
-                    try {
-                      try {
-                        cluster.deactivate( hostName );
-                      } catch ( Exception ex1 ) {
-                        LOG.debug( ex1 );
-                      }
-                      cluster.remove( hostName );
-                    } catch ( Exception ex1 ) {
-                      LOG.debug( ex1 );
-                    }
                     throw Exceptions.toUndeclared( ex );
                   }
                 }
