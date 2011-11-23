@@ -8,6 +8,7 @@ import java.util.NoSuchElementException;
 import javax.persistence.EntityTransaction;
 import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
+import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.component.Faults.CheckException;
 import com.eucalyptus.empyrean.ServiceId;
 import com.eucalyptus.empyrean.ServiceStatusDetail;
@@ -23,6 +24,7 @@ import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Function;
+import com.google.common.base.Functions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.Collections2;
@@ -198,6 +200,17 @@ public class ServiceConfigurations {
   };
   
   @TypeMapper
+  public enum ServiceIdToServiceStatus implements Function<ServiceId, ServiceStatusType> {
+    INSTANCE;
+    private final Function<ServiceId, ServiceStatusType> transform = Functions.compose( ServiceConfigurationToStatus.INSTANCE, ServiceIdToServiceConfiguration.INSTANCE );
+
+    @Override
+    public ServiceStatusType apply( ServiceId input ) {
+      return transform.apply( input );
+    }
+    
+  }
+  @TypeMapper
   public enum ServiceIdToServiceConfiguration implements Function<ServiceId, ServiceConfiguration> {
     INSTANCE;
     
@@ -348,7 +361,7 @@ public class ServiceConfigurations {
     
     @Override
     public boolean apply( ServiceConfiguration input ) {
-      return input.isHostLocal( );
+      return Hosts.isServiceLocal( input );
     }
     
   }

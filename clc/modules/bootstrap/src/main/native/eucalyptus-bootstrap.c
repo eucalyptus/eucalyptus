@@ -317,24 +317,30 @@ static int stop_child(euca_opts *args) {
 	}
 	return 0;
 }
-static int set_limits(int resource) {
+static int __update_limit(int resource,long long value) {
 	struct rlimit r;
 	__abort(1,getrlimit(resource, &r) == -1,"Failed to get rlimit for resource=%d",resource);
-	printf("previous limits: resource=%d soft=%lld hard=%lld\n",resource,(long long) r.rlim_cur, (long long) r.rlim_max);
-	r.rlim_cur = 65535;
-	r.rlim_max = 65535;
-	__abort(1,setrlimit(resource, &r) == -1,"Failed to set rlimit for resource=%d",resource);
-	__abort(1,getrlimit(resource, &r) == -1,"Failed to set rlimit for resource=%d",resource);
-	printf("adjusted limits: resource=%d soft=%lld hard=%lld\n",resource,(long long) r.rlim_cur, (long long) r.rlim_max);
+	printf("ulimit: resource=%d soft=%lld hard=%lld\n",resource,(long long) r.rlim_cur, (long long) r.rlim_max);
+	if(r.rlim_cur==RLIM_INFINITY||r.rlim_cur<value) {
+		r.rlim_cur = value;
+		r.rlim_max = value;
+		__abort(1,setrlimit(resource, &r) == -1,"Failed to set rlimit for resource=%d",resource);
+		__abort(1,getrlimit(resource, &r) == -1,"Failed to set rlimit for resource=%d",resource);
+		printf("ulimit: resource=%d soft=%lld hard=%lld\n",resource,(long long) r.rlim_cur, (long long) r.rlim_max);
+	}
 	return 0;
 }
+static void __limits() {
+	__update_limit(RLIMIT_NOFILE,LIMIT_FILENO);
+	__update_limit(RLIMIT_NPROC,LIMIT_NPROC);
+}
+
 static int child(euca_opts *args, java_home_t *data, uid_t uid, gid_t gid) {
 	int ret = 0;
 	jboolean r = 0;
 	__write_pid(GETARG(args, pidfile));
 	setpgrp();
-	set_limits(RLIMIT_NOFILE);
-	set_limits(RLIMIT_NPROC);
+	__limits();
 	__die(java_init(args, data) != 1, "Failed to initialize Eucalyptus.");
 	__die_jni((r = (*env)->CallBooleanMethod(env, bootstrap.instance,
 			bootstrap.init)) == 0, "Failed to init Eucalyptus.");
@@ -342,7 +348,6 @@ static int child(euca_opts *args, java_home_t *data, uid_t uid, gid_t gid) {
 			"Setting ownership of keyfile failed.");
 	__abort(4, linuxset_user_group(GETARG(args, user), uid, gid) != 0,
 			"Setting the user failed.");
-	__abort(4, (set_caps(0) != 0), "set_caps (0) failed");
 	__die_jni((r = (*env)->CallBooleanMethod(env, bootstrap.instance,
 			bootstrap.load)) == 0, "Failed to load Eucalyptus.");
 	__die_jni((r = (*env)->CallBooleanMethod(env, bootstrap.instance,

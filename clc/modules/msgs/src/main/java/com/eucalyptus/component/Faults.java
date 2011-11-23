@@ -90,6 +90,7 @@ import org.hibernate.annotations.Entity;
 import org.hibernate.annotations.GenericGenerator;
 import org.hibernate.annotations.NaturalId;
 import com.eucalyptus.bootstrap.Bootstrapper;
+import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.context.ServiceStateException;
 import com.eucalyptus.empyrean.ServiceStatusType;
 import com.eucalyptus.entities.Entities;
@@ -432,9 +433,6 @@ public class Faults {
     last = ( last != null
       ? last
       : new CheckException( config, Severity.DEBUG, new NullPointerException( "Faults.chain called w/ empty list: " + exs ) ) );
-    Logs.extreme( ).error( last, last );
-    LOG.debug( last );
-    LOG.debug( Exceptions.causeString( last ) );
     return last;
   }
   
@@ -502,14 +500,20 @@ public class Faults {
   }
   
   public static void persist( final CheckException errors ) {
-    for ( final CheckException e : errors ) {
-      final EntityTransaction db = Entities.get( CheckException.class );
+    if ( errors != null && Hosts.isCoordinator( ) ) {
       try {
-        Entities.persist( e );
-        db.commit( );
-      } catch ( final Exception ex ) {
-        LOG.error( "Failed to persist error information for: " + ex, ex );
-        db.rollback( );
+        for ( final CheckException e : errors ) {
+          final EntityTransaction db = Entities.get( CheckException.class );
+          try {
+            Entities.persist( e );
+            db.commit( );
+          } catch ( final Exception ex ) {
+            LOG.error( "Failed to persist error information for: " + ex, ex );
+            db.rollback( );
+          }
+        }
+      } catch ( Exception ex ) {
+        Logs.extreme( ).error( ex , ex );
       }
     }
   }

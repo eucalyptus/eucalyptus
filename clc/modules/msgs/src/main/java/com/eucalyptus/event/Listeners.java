@@ -81,6 +81,11 @@ public class Listeners {
     ListenerRegistry.getInstance( ).register( type, listener );
   }
   
+  public static void deregister( EventListener listener ) {
+    deregister( null, listener );
+  }
+  
+
   public static void deregister( Object type, EventListener listener ) {
     ListenerRegistry.getInstance( ).deregister( type, listener );
   }
