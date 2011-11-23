@@ -109,7 +109,7 @@ public class ServiceEvents {
       if ( msg != null ) {
         msg.getServices( ).add( TypeMappers.transform( config, ServiceId.class ) );
         for ( Host h : Hosts.list( ) ) {
-          if ( !h.isLocalHost( ) ) {
+          if ( !h.isLocalHost( ) && !h.getHostAddresses( ).contains( config.getInetAddress( ) ) ) {
             try {
               AsyncRequests.sendSync( ServiceConfigurations.createEphemeral( Empyrean.INSTANCE, h.getBindAddress( ) ), msg );
             } catch ( Exception ex ) {

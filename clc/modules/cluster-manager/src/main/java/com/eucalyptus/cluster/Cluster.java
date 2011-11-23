@@ -75,10 +75,12 @@ import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.cloud.CloudMetadata.AvailabilityZoneMetadata;
 import com.eucalyptus.cluster.ResourceState.VmTypeAvailability;
 import com.eucalyptus.cluster.callback.ClusterCertsCallback;
@@ -230,11 +232,15 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
     
     @Override
     public boolean apply( final Cluster input ) {
-      try {
-        AsyncRequests.newRequest( this ).sendSync( input.configuration );
+      if ( Hosts.isCoordinator( ) ) {
+        try {
+          AsyncRequests.newRequest( this ).sendSync( input.configuration );
+          return true;
+        } catch ( final Exception t ) {
+          return input.swallowException( t );
+        }
+      } else {
         return true;
-      } catch ( final Exception t ) {
-        return input.swallowException( t );
       }
     }
     
@@ -324,6 +330,12 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
         + serviceStatuses );
       throw new NoSuchElementException( "Failed to find service info for cluster: " + parent.getFullName( ) );
     }
+
+    @Override
+    public void setSubject( Cluster subject ) {
+      this.getRequest( ).getServices( ).add( TypeMappers.transform( subject.getConfiguration( ), ServiceId.class ) );
+      super.setSubject( subject );
+    }
   }
   
   enum Refresh implements Function<Cluster, TransitionAction<Cluster>> {
@@ -347,8 +359,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
         @Override
         public final void leave( final Cluster parent, final Callback.Completion transitionCallback ) {
           try {
-            AsyncRequests.newRequest( factory.newInstance( ) ).sendSync( parent.getConfiguration( ) );
-            transitionCallback.fire( );
+            AsyncRequests.newRequest( factory.newInstance( ) ).then( transitionCallback ).sendSync( parent.getConfiguration( ) );
           } catch ( final InterruptedException ex ) {
             Thread.currentThread( ).interrupt( );
             Exceptions.trace( ex );
@@ -404,11 +415,11 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
       try {
         return Component.State.valueOf( this.name( ) );
       } catch ( final Exception ex ) {
-        if ( this.name( ).startsWith( "ENABL" ) ) {
+        if ( this.equals( DISABLED ) ) {
           return Component.State.DISABLED;
         } else if ( this.ordinal( ) < DISABLED.ordinal( ) ) {
           return Component.State.NOTREADY;
-        } else if ( this.ordinal( ) > ENABLED.ordinal( ) ) {
+        } else if ( this.ordinal( ) >= ENABLING.ordinal( ) ) {
           return Component.State.ENABLED;
         } else {
           return Component.State.INITIALIZED;
@@ -591,7 +602,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
         }
         if ( transition != null ) {
           try {
-            transition.call( ).get( );
+            transition.call( ).get( 30000L, TimeUnit.MILLISECONDS );
             Cluster.this.clearExceptions( );
           } catch ( final Exception ex ) {
             LOG.error( ex, ex );
@@ -773,7 +784,24 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
                                                                                       State.ENABLING_NET, State.ENABLING_VMS,
                                                                                       State.ENABLING_ADDRS, State.ENABLING_VMS_PASS_TWO,
                                                                                       State.ENABLING_ADDRS_PASS_TWO, State.ENABLED ).call( );
-        result.get( );
+        RuntimeException fail = null;
+        for ( int i = 0; i < Clusters.getConfiguration( ).getStartupSyncRetries( ); i++ ) {
+          try {
+            result.get( );
+            fail = null;
+            break;
+          } catch ( Exception ex ) {
+            try {
+              TimeUnit.SECONDS.sleep( 1 );
+            } catch ( Exception ex1 ) {
+              LOG.error( ex1 , ex1 );
+            }
+            fail = Exceptions.toUndeclared( ex );
+          }
+        }
+        if ( fail != null ) {
+          throw fail;
+        }
       } catch ( final InterruptedException ex ) {
         Thread.currentThread( ).interrupt( );
       } catch ( final Exception ex ) {
@@ -1101,7 +1129,9 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
     try {
       Refresh.SERVICEREADY.apply( this );
     } catch ( Exception ex ) {
-      throw Faults.failure( this.configuration, ex );
+      CheckException fail = Faults.failure( this.configuration, ex );
+      currentErrors.add( fail );
+      throw fail;
     }
     currentErrors.addAll( this.pendingErrors );
     if ( !currentErrors.isEmpty( ) ) {

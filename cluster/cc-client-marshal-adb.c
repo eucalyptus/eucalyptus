@@ -1255,11 +1255,11 @@ int cc_describeServices(axutil_env_t *env, axis2_stub_t *stub) {
   
   sit = adb_serviceInfoType_create(env);
   
-  //  adb_serviceInfoType_set_type(sit, env, "cc");
-  //  adb_serviceInfoType_set_name(sit, env, "self");
-  //  adb_serviceInfoType_add_uris(sit, env, "http://localhost:8774");
+    adb_serviceInfoType_set_type(sit, env, "cc");
+    adb_serviceInfoType_set_name(sit, env, "self");
+    adb_serviceInfoType_add_uris(sit, env, "http://localhost:8774");
   
-  //  adb_describeServicesType_add_serviceIds(adbinput, env, sit);
+    adb_describeServicesType_add_serviceIds(adbinput, env, sit);
 
   adbrequest = adb_DescribeServices_create(env);
   adb_DescribeServices_set_DescribeServices(adbrequest, env, adbinput);
