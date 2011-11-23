@@ -124,7 +124,7 @@ public class OrderedShutdown {
 				}
 			}
 			
-			LOG.info("Executing Pre-Shutdown Hooks...");
+			LOG.info("Executing Post-Shutdown Hooks...");
 			ShutdownHook posthook;
 			while((posthook = preShutdownHooks.poll()) != null) {
 				try {
