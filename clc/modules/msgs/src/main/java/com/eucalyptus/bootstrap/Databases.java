@@ -131,6 +131,7 @@ public class Databases {
     
     @Override
     public boolean load( ) throws Exception {
+      Hosts.awaitDatabases( );
       Groovyness.run( "setup_dbpool.groovy" );
       return true;
     }
@@ -234,17 +235,28 @@ public class Databases {
                 LOG.debug( "Tearing down database connections for: " + hostName + " to context: " + contextName );
                 cluster.getDatabase( hostName );
                 try {
-                  try {
-                    cluster.deactivate( hostName );
-                    LOG.info( "Deactived database connections for: " + hostName + " to context: " + contextName );
-                  } catch ( Exception ex ) {
-                    LOG.debug( ex );
-                  }
+                  LOG.debug( "Removing database connections for: " + hostName + " to context: " + contextName );
                   cluster.remove( hostName );
-                  LOG.info( "Removed database connections for: " + hostName + " to context: " + contextName );
-                  return;
-                } catch ( Exception ex1 ) {
-                  LOG.debug( ex1 );
+                  LOG.debug( "Removed database connections for: " + hostName + " to context: " + contextName );
+                } catch ( IllegalStateException ex ) {
+                  LOG.debug( ex );
+                  Logs.extreme( ).debug( ex, ex );
+                }
+                try {
+                  LOG.debug( "Deactivating database connections for: " + hostName + " to context: " + contextName );
+                  cluster.deactivate( hostName );
+                  LOG.debug( "Deactived database connections for: " + hostName + " to context: " + contextName );
+                } catch ( Exception ex ) {
+                  LOG.debug( ex );
+                  Logs.extreme( ).debug( ex, ex );
+                }
+                try {
+                  LOG.debug( "Removing database connections for: " + hostName + " to context: " + contextName );
+                  cluster.remove( hostName );
+                  LOG.debug( "Removed database connections for: " + hostName + " to context: " + contextName );
+                } catch ( Exception ex ) {
+                  LOG.debug( ex );
+                  Logs.extreme( ).debug( ex, ex );
                 }
               } catch ( final Exception ex1 ) {
                 LOG.debug( ex1 );
@@ -266,8 +278,7 @@ public class Databases {
   
   enum ActivateHostFunction implements Function<Host, Function<String, Runnable>> {
     INSTANCE;
-
-
+    
     private static void prepareConnections( final Host host, final String contextName ) throws NoSuchElementException {
       final String hostName = host.getDisplayName( );
       final String dbPass = SystemIds.databasePassword( );
@@ -635,6 +646,22 @@ public class Databases {
   
   public static String getJdbcScheme( ) {
     return singleton.getJdbcScheme( );
+  }
+
+  public static void check( ) {
+    for ( String ctx : PersistenceContexts.list( ) ) {
+      try {
+        DriverDatabaseClusterMBean db = lookup( ctx );
+        for ( String host : db.getActiveDatabases( ) ) {
+          if ( Hosts.lookup( host ) == null ) {
+            disable( host );
+          }
+        }
+      } catch ( NoSuchElementException ex ) {
+        LOG.error( ex , ex );
+      }
+      return;
+    }
   }
   
 }
