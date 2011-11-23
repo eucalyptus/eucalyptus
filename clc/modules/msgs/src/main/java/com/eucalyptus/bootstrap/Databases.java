@@ -234,28 +234,17 @@ public class Databases {
                 LOG.debug( "Tearing down database connections for: " + hostName + " to context: " + contextName );
                 cluster.getDatabase( hostName );
                 try {
-                  LOG.debug( "Removing database connections for: " + hostName + " to context: " + contextName );
+                  try {
+                    cluster.deactivate( hostName );
+                    LOG.info( "Deactived database connections for: " + hostName + " to context: " + contextName );
+                  } catch ( Exception ex ) {
+                    LOG.debug( ex );
+                  }
                   cluster.remove( hostName );
-                  LOG.debug( "Removed database connections for: " + hostName + " to context: " + contextName );
-                } catch ( IllegalStateException ex ) {
-                  LOG.debug( ex );
-                  Logs.extreme( ).debug( ex, ex );
-                }
-                try {
-                  LOG.debug( "Deactivating database connections for: " + hostName + " to context: " + contextName );
-                  cluster.deactivate( hostName );
-                  LOG.debug( "Deactived database connections for: " + hostName + " to context: " + contextName );
-                } catch ( Exception ex ) {
-                  LOG.debug( ex );
-                  Logs.extreme( ).debug( ex, ex );
-                }
-                try {
-                  LOG.debug( "Removing database connections for: " + hostName + " to context: " + contextName );
-                  cluster.remove( hostName );
-                  LOG.debug( "Removed database connections for: " + hostName + " to context: " + contextName );
-                } catch ( Exception ex ) {
-                  LOG.debug( ex );
-                  Logs.extreme( ).debug( ex, ex );
+                  LOG.info( "Removed database connections for: " + hostName + " to context: " + contextName );
+                  return;
+                } catch ( Exception ex1 ) {
+                  LOG.debug( ex1 );
                 }
               } catch ( final Exception ex1 ) {
                 LOG.debug( ex1 );

@@ -282,9 +282,9 @@ public class Hosts {
         for ( Host h : Hosts.listDatabases( ) ) {
           if ( !h.isLocalHost( ) && Bootstrap.isFinished( ) && h.hasSynced( ) ) {
             Databases.enable( h );
-          }
-          if ( h.hasSynced( ) ) {
-            Databases.isAlive( h.getDisplayName( ) );
+            if ( h.hasBootstrapped( ) ) {
+              Databases.isAlive( h.getDisplayName( ) );
+            }
           }
         }
       }
