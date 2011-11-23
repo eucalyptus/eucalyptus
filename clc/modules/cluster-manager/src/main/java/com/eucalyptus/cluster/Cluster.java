@@ -1125,7 +1125,9 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
     try {
       Refresh.SERVICEREADY.apply( this );
     } catch ( Exception ex ) {
-      throw Faults.failure( this.configuration, ex );
+      CheckException fail = Faults.failure( this.configuration, ex );
+      currentErrors.add( fail );
+      throw fail;
     }
     currentErrors.addAll( this.pendingErrors );
     if ( !currentErrors.isEmpty( ) ) {

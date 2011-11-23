@@ -165,7 +165,7 @@ public class Databases {
           StringBuilder builder = new StringBuilder( );
           builder.append( Joiner.on( "\nSUCCESS: " ).join( succeeded.keySet( ) ) );
           builder.append( Joiner.on( "\nFAILED:  " ).join( failed.entriesOnlyOnLeft( ).keySet( ) ) );
-          LOG.debug( builder.toString( ) );
+          Logs.extreme( ).debug( builder.toString( ) );
           if ( !failed.entriesOnlyOnLeft( ).isEmpty( ) ) {
             throw Exceptions.toUndeclared( builder.toString( ) );
           }
@@ -173,10 +173,14 @@ public class Databases {
           canHas.writeLock( ).unlock( );
         }
       } else {
-        LOG.debug( "DB STATE CHANGE ABORTED (failed to get lock): " + runnableFunction );
+        throw Exceptions.toUndeclared( "DB STATE CHANGE ABORTED (failed to get lock): " + runnableFunction );
       }
     } catch ( InterruptedException ex ) {
       Exceptions.maybeInterrupted( ex );
+    } catch ( RuntimeException ex ) {
+      LOG.error( ex );
+      Logs.extreme( ).error( ex, ex );
+      throw ex;
     }
   }
   
@@ -273,6 +277,11 @@ public class Databases {
           return removeRunner;
         }
       };
+    }
+
+    @Override
+    public String toString( ) {
+      return "Databases.disable()";
     }
   }
   
@@ -371,6 +380,11 @@ public class Databases {
         }
       };
     }
+
+    @Override
+    public String toString( ) {
+      return "Databases.enable()";
+    }
   }
   
   private static InactiveDatabaseMBean lookupInactiveDatabase( final String contextName, final String hostName ) throws NoSuchElementException {
@@ -417,8 +431,6 @@ public class Databases {
           syncState.set( SyncState.NOTSYNCED );
           return true;
         } catch ( Exception ex ) {
-          LOG.error( ex );
-          Logs.extreme( ).error( ex, ex );
           syncState.set( SyncState.NOTSYNCED );
           return false;
         }
@@ -427,8 +439,6 @@ public class Databases {
           runDbStateChange( DeactivateHostFunction.INSTANCE.apply( hostName ) );
           return true;
         } catch ( Exception ex ) {
-          LOG.error( ex );
-          Logs.extreme( ).error( ex, ex );
           return false;
         }
       }
@@ -436,7 +446,7 @@ public class Databases {
   }
   
   static boolean enable( final Host host ) {
-    if ( !host.hasBootstrapped( ) || !host.hasDatabase( ) || !Bootstrap.isFinished( ) || !host.hasSynced( ) ) {
+    if ( !host.hasBootstrapped( ) || !host.hasDatabase( ) || !Bootstrap.isFinished( ) ) {
       return false;
     } else {
       if ( host.isLocalHost( ) ) {
@@ -447,21 +457,22 @@ public class Databases {
             return true;
           } catch ( Exception ex ) {
             runDbStateChange( DeactivateHostFunction.INSTANCE.apply( host.getDisplayName( ) ) );
-            LOG.error( ex );
-            Logs.extreme( ).error( ex, ex );
             syncState.set( SyncState.NOTSYNCED );
             return false;
           }
         } else {
-          return false;
+          try {
+            runDbStateChange( ActivateHostFunction.INSTANCE.apply( host ) );
+            return true;
+          } catch ( Exception ex ) {
+            return false;
+          }
         }
       } else {
         try {
           runDbStateChange( ActivateHostFunction.INSTANCE.apply( host ) );
           return true;
         } catch ( Exception ex ) {
-          LOG.error( ex );
-          Logs.extreme( ).error( ex, ex );
           return false;
         }
       }

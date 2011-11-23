@@ -251,7 +251,7 @@ public class Hosts {
   }
   
   enum PeriodicMembershipChecks implements Runnable {
-    ENTRYUPDATE( 5 ) {
+    ENTRYUPDATE( 2 ) {
       private volatile int counter = 0;
       
       @Override
@@ -259,11 +259,11 @@ public class Hosts {
         final Host currentHost = Hosts.localHost( );
         ++this.counter;
         try {
-          if ( Bootstrap.isFinished( ) && !Hosts.list( Predicates.not( BootedFilter.INSTANCE ) ).isEmpty( ) ) {
+          if ( !Hosts.list( Predicates.not( BootedFilter.INSTANCE ) ).isEmpty( ) && currentHost.hasDatabase( ) && currentHost.hasBootstrapped( ) ) {
             if ( UpdateEntry.INSTANCE.apply( currentHost ) ) {
               LOG.info( "Updated local host entry: " + currentHost );
             }
-          } else if ( this.counter % 2 == 0 ) {
+          } else if ( this.counter % 5 == 0 ) {
             if ( UpdateEntry.INSTANCE.apply( currentHost ) ) {
               LOG.info( "Updated local host entry: " + currentHost );
             }
@@ -275,21 +275,6 @@ public class Hosts {
       }
       
     },
-    ENABLEDB( 5 ) {
-      
-      @Override
-      public void run( ) {
-        
-        for ( Host h : Hosts.listDatabases( ) ) {
-          if ( !h.isLocalHost( ) && h.hasSynced( ) ) {
-            Databases.enable( h );
-          } else if ( h.isLocalHost( ) ) {
-            Databases.enable( h );
-          }
-        }
-      }
-      
-    },
     PRUNING( 10 ) {
       
       @Override
@@ -297,10 +282,14 @@ public class Hosts {
         if ( Hosts.pruneHosts( ) ) {
           Hosts.updateServices( );
         }
+        SyncDatabases.INSTANCE.apply( Hosts.localHost( ) );
+        for ( Host h : Hosts.listDatabases( ) ) {
+          SyncDatabases.INSTANCE.apply( h );
+        }
       }
       
     },
-    INITIALIZE( 15 ) {
+    INITIALIZE( 5 ) {
       
       @Override
       public void run( ) {
@@ -353,6 +342,10 @@ public class Hosts {
     
     public static List<Runnable> shutdownNow( ) {
       return hostPruner.shutdownNow( );
+    }
+    
+    public void submit( ) {
+      hostPruner.execute( this );
     }
     
   }
@@ -428,9 +421,7 @@ public class Hosts {
     @Override
     public void entryRemoved( final String input ) {
       LOG.info( "Hosts.entryRemoved(): " + input );
-      if ( !BootstrapArgs.isCloudController( ) ) {
-        Databases.disable( input );
-      }
+      Databases.disable( input );
     }
     
     @Override
@@ -475,21 +466,13 @@ public class Hosts {
       LOG.info( "Hosts.viewChange(): new view => " + Joiner.on( ", " ).join( currentView.getMembers( ) ) );
       if ( !joinMembers.isEmpty( ) ) LOG.info( "Hosts.viewChange(): joined   => " + Joiner.on( ", " ).join( joinMembers ) );
       if ( !partMembers.isEmpty( ) ) LOG.info( "Hosts.viewChange(): parted   => " + Joiner.on( ", " ).join( partMembers ) );
-      boolean prune = false;
-      for ( final Address hostAddress : Lists.transform( Hosts.list( ), GroupAddressTransform.INSTANCE ) ) {
-        if ( Iterables.contains( partMembers, hostAddress ) ) {
-          LOG.info( "Hosts.viewChange(): -> removed  => " + hostAddress );
-          prune = true;
-        }
+      List<Address> allHostAddresses = Lists.transform( Hosts.list( ), GroupAddressTransform.INSTANCE );
+      Collection<Address> partedHosts = Collections2.filter( allHostAddresses, Predicates.in( partMembers ) );
+      for ( final Address hostAddress : partedHosts ) {
+        LOG.info( "Hosts.viewChange(): -> removed  => " + hostAddress );
       }
-      if ( prune ) {
-        Threads.enqueue( ServiceConfigurations.createEphemeral( Empyrean.INSTANCE ), new Runnable( ) {
-          public void run( ) {
-            if ( Hosts.pruneHosts( ) ) {
-              Hosts.updateServices( );
-            }
-          }
-        } );
+      if ( !partedHosts.isEmpty( ) ) {
+        PeriodicMembershipChecks.PRUNING.submit( );
       }
       LOG.info( "Hosts.viewChange(): new view finished." );
     }
@@ -501,7 +484,11 @@ public class Hosts {
     
     @Override
     public boolean apply( final Host input ) {
-      if ( input.hasBootstrapped( ) && input.hasDatabase( ) ) {
+      if ( Hosts.isCoordinator( input ) && input.hasBootstrapped( ) && !input.isLocalHost( ) ) {
+        return Databases.enable( input );
+      } else if ( input.hasDatabase( ) && input.hasSynced( ) && !input.isLocalHost( ) ) {
+        return Databases.enable( input );
+      } else if ( input.isLocalHost( ) ) {
         return Databases.enable( input );
       } else {
         return false;
@@ -517,9 +504,7 @@ public class Hosts {
         if ( Bootstrap.isShuttingDown( ) ) {
           return false;
         } else if ( input.hasBootstrapped( ) ) {
-          if ( !input.isLocalHost( ) && input.hasDatabase( ) && input.hasSynced( ) ) {
-            SyncDatabases.INSTANCE.apply( input );
-          }
+          SyncDatabases.INSTANCE.apply( input );
           setup( Empyrean.class, input.getBindAddress( ) );
           if ( input.hasDatabase( ) ) {
             return setup( Eucalyptus.class, input.getBindAddress( ) );
@@ -957,8 +942,8 @@ public class Hosts {
     return Hosts.list( DbFilter.INSTANCE );
   }
   
-  private static final Predicate<Host> filterSyncedDbs      = Predicates.and( DbFilter.INSTANCE, SyncedDbFilter.INSTANCE );
-  private static final Predicate<Host> filterBooedSyncedDbs = Predicates.and( filterSyncedDbs, BootedFilter.INSTANCE );
+  private static final Predicate<Host> filterSyncedDbs       = Predicates.and( DbFilter.INSTANCE, SyncedDbFilter.INSTANCE );
+  private static final Predicate<Host> filterBootedSyncedDbs = Predicates.and( filterSyncedDbs, BootedFilter.INSTANCE );
   
   public static List<Host> listActiveDatabases( ) {
     return Hosts.list( filterSyncedDbs );
@@ -1209,15 +1194,15 @@ public class Hosts {
   
   static void awaitDatabases( ) throws InterruptedException {
     if ( !BootstrapArgs.isCloudController( ) ) {
-      while ( list( filterBooedSyncedDbs ).isEmpty( ) ) {
+      while ( list( filterBootedSyncedDbs ).isEmpty( ) ) {
         TimeUnit.SECONDS.sleep( 3 );
         LOG.info( "Waiting for system view with database..." );
       }
       if ( Databases.shouldInitialize( ) ) {
         doInitialize( );
       }
-    } else if ( BootstrapArgs.isCloudController( ) ) {
-      for ( Host coordinator = Hosts.getCoordinator( ); !coordinator.hasSynced( ) && !coordinator.hasBootstrapped( ) && !coordinator.isLocalHost( ); coordinator = Hosts.getCoordinator( ) ) {
+    } else if ( BootstrapArgs.isCloudController( ) && !Hosts.isCoordinator( ) ) {
+      for ( Host coordinator = Hosts.getCoordinator( ); coordinator == null || ( ( !coordinator.hasSynced( ) || !coordinator.hasBootstrapped( ) ) && !coordinator.isLocalHost( ) ); coordinator = Hosts.getCoordinator( ) ) {
         TimeUnit.SECONDS.sleep( 3 );
         LOG.info( "Waiting for system view with database..." );
       }

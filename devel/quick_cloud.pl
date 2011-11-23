@@ -38,7 +38,7 @@ sub check_mysqld {
 
 sub host_membership {
    test_start("host membership map");
-   run_on_clc("$euca_dir/usr/sbin/euca-modify-property -p euca=\'com.eucalyptus.bootstrap.Hosts.hostMap.keySet()\'");
+   run_on_clc("$euca_dir/usr/sbin/euca-modify-property -p euca=\'com.eucalyptus.bootstrap.Hosts.hostMap.values().collect{ it }\'");
    test_end();
 }
 sub gms_members {
