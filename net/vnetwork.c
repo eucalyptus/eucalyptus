@@ -2604,10 +2604,10 @@ int vnetReassignAddress(vnetConfig *vnetconfig, char *uuid, char *src, char *dst
     return(1);
   }
 
+  logprintfl(EUCADEBUG, "vnetReassignAddress(): deciding what to do: src=%s dst=%s allocated=%d currdst=%s\n", SP(src), SP(dst), isallocated, SP(currdst));
   // determine if reassign must happen
-  if (isallocated) {
+  if ( isallocated && strcmp(currdst, dst) ) {
     rc = vnetUnassignAddress(vnetconfig, src, currdst);
-    //if (currdst) free(currdst);
     if (rc) {
        if (currdst) free(currdst);
        return(1);

@@ -673,7 +673,7 @@ public class ServiceTransitions {
         try {
           ServiceBuilders.lookup( parent.getComponentId( ) ).fireCheck( parent );
         } catch ( Exception ex ) {
-          LOG.error( ex, ex );
+          Logs.extreme( ).error( ex, ex );
         }
       }
       
@@ -685,7 +685,7 @@ public class ServiceTransitions {
         try {
           ServiceBuilders.lookup( parent.getComponentId( ) ).fireStart( parent );
         } catch ( Exception ex ) {
-          LOG.error( ex, ex );
+          Logs.extreme( ).error( ex, ex );
         }
       }
     },
@@ -708,7 +708,7 @@ public class ServiceTransitions {
         try {
           ServiceBuilders.lookup( parent.getComponentId( ) ).fireDisable( parent );
         } catch ( Exception ex ) {
-          LOG.error( ex, ex );
+          Logs.extreme( ).error( ex, ex );
         }
       }
     },
@@ -719,7 +719,7 @@ public class ServiceTransitions {
         try {
           ServiceBuilders.lookup( parent.getComponentId( ) ).fireStop( parent );
         } catch ( Exception ex ) {
-          LOG.error( ex, ex );
+          Logs.extreme( ).error( ex, ex );
         }
       }
     };

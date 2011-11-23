@@ -25,7 +25,7 @@ public class PolicyActivity extends AbstractSearchActivity implements PolicyView
   public static final String TITLE = "ACCESS POLICIES";
   
   public static final String DELETE_POLICY_CAPTION = "Delete selected policy";
-  public static final String DELETE_POLICY_SUBJECT = "Are you sure to delete the following selected policy?";
+  public static final String DELETE_POLICY_SUBJECT = "Are you sure you want to delete the following selected policy?";
   
   private static final Logger LOG = Logger.getLogger( PolicyActivity.class.getName( ) );
   

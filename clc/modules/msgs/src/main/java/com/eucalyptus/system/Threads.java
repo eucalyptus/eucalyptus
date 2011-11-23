@@ -199,7 +199,7 @@ public class Threads {
       this.name = groupPrefix;
       this.group = new ThreadGroup( this.name );
       this.pool = this.makePool( );
-      OrderedShutdown.register( Empyrean.class, new Runnable( ) {
+      OrderedShutdown.registerShutdownHook( Empyrean.class, new Runnable( ) {
         @Override
         public void run( ) {
           LOG.warn( "SHUTDOWN:" + ThreadPool.this.name
