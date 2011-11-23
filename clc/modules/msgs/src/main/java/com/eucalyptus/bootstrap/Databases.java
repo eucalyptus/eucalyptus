@@ -173,7 +173,7 @@ public class Databases {
           canHas.writeLock( ).unlock( );
         }
       } else {
-        LOG.debug( "DB STATE CHANGE ABORTED (failed to get lock): " + runnableFunction );
+        throw Exceptions.toUndeclared( "DB STATE CHANGE ABORTED (failed to get lock): " + runnableFunction );
       }
     } catch ( InterruptedException ex ) {
       Exceptions.maybeInterrupted( ex );
