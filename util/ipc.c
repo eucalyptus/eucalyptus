@@ -133,6 +133,9 @@ sem * sem_realloc (const int val, const char * name, int flags)
 int sem_p (sem * s)
 {
     int rc;
+    
+    logprintfl (EUCADEBUG2, "sem_p() %s\n", (s->name)?(s->name):(""));
+
     if (s && s->usemutex) {
         rc = pthread_mutex_lock(&(s->mutex));
 	s->mutwaiters++;
@@ -160,6 +163,9 @@ int sem_p (sem * s)
 int sem_v (sem * s)
 {
     int rc;
+
+    logprintfl (EUCADEBUG2, "sem_v() %s\n", (s->name)?(s->name):(""));
+
     if (s && s->usemutex) {
         rc = pthread_mutex_lock(&(s->mutex));
         if (s->mutwaiters > 0) {

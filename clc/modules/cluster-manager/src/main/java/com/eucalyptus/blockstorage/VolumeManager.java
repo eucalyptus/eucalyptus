@@ -188,7 +188,7 @@ public class VolumeManager {
     EntityWrapper<Volume> db = EntityWrapper.get( Volume.class );
     boolean reallyFailed = false;
     try {
-      Volume vol = db.getUnique( Volume.named( ctx.getUserFullName( ), request.getVolumeId( ) ) );
+      Volume vol = db.getUnique( Volume.named( ctx.getUserFullName( ).asAccountFullName( ), request.getVolumeId( ) ) );
       if ( !RestrictedTypes.filterPrivileged( ).apply( vol ) ) {
         throw new EucalyptusCloudException( "Not authorized to delete volume by " + ctx.getUser( ).getName( ) );
       }
@@ -327,7 +327,7 @@ public class VolumeManager {
     EntityWrapper<Volume> db = EntityWrapper.get( Volume.class );
     Volume volume = null;
     try {
-      volume = db.getUnique( Volume.named( ctx.getUserFullName( ), request.getVolumeId( ) ) );
+      volume = db.getUnique( Volume.named( ctx.getUserFullName( ).asAccountFullName( ), request.getVolumeId( ) ) );
       if ( volume.getRemoteDevice( ) == null ) {
         StorageUtil.getVolumeReply( new HashMap<String, AttachedVolume>( ), Lists.newArrayList( volume ) );
       }
@@ -379,7 +379,7 @@ public class VolumeManager {
     Volume vol = null;
     EntityWrapper<Volume> db = EntityWrapper.get( Volume.class );
     try {
-      vol = db.getUnique( Volume.named( ctx.getUserFullName( ), request.getVolumeId( ) ) );
+      vol = db.getUnique( Volume.named( ctx.getUserFullName( ).asAccountFullName( ), request.getVolumeId( ) ) );
     } catch ( EucalyptusCloudException e ) {
       LOG.debug( e, e );
       db.rollback( );

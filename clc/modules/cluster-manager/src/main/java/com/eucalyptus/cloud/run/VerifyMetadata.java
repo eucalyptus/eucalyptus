@@ -232,7 +232,7 @@ public class VerifyMetadata {
       if ( !ctx.hasAdministrativePrivileges( ) && !RestrictedTypes.filterPrivileged( ).apply( key ) ) {
         throw new IllegalMetadataAccessException( "Not authorized to use keypair " + keyName + " by " + ctx.getUser( ).getName( ) );
       }
-      allocInfo.setSshKeyPair( KeyPairs.lookup( ctx.getUserFullName( ), keyName ) );
+      allocInfo.setSshKeyPair( key );
       return true;
     }
   }
