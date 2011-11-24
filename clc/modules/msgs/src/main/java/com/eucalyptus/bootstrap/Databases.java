@@ -70,8 +70,11 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.concurrent.Callable;
@@ -89,11 +92,14 @@ import net.sf.hajdbc.Messages;
 import net.sf.hajdbc.SynchronizationContext;
 import net.sf.hajdbc.SynchronizationStrategy;
 import net.sf.hajdbc.TableProperties;
+import net.sf.hajdbc.UniqueConstraint;
 import net.sf.hajdbc.sql.DriverDatabaseClusterMBean;
+import net.sf.hajdbc.sync.DifferentialSynchronizationStrategy;
 import net.sf.hajdbc.sync.SynchronizationSupport;
 import net.sf.hajdbc.util.SQLExceptionFactory;
 import net.sf.hajdbc.util.Strings;
 import org.apache.log4j.Logger;
+import org.slf4j.LoggerFactory;
 import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Eucalyptus.Database;
@@ -906,6 +912,397 @@ public class Databases {
 
     /**
      * @param maxBatchSize the maxBatchSize to set.
+     */
+    public void setMaxBatchSize(int maxBatchSize)
+    {
+      this.maxBatchSize = maxBatchSize;
+    }
+  }
+  public class PassiveSynchronizationStrategy implements SynchronizationStrategy
+  {
+    @Override
+    public <D> void synchronize(SynchronizationContext<D> context)
+    {
+      // Do nothing
+    }
+  }
+  public class DifferentialSynchronizationStrategy implements SynchronizationStrategy
+  {
+    private int fetchSize = 0;
+    private int maxBatchSize = 100;
+    
+    /**
+     * @see net.sf.hajdbc.SynchronizationStrategy#synchronize(net.sf.hajdbc.SynchronizationContext)
+     */
+    @Override
+    public <D> void synchronize(SynchronizationContext<D> context) throws SQLException
+    {
+      Connection sourceConnection = context.getConnection(context.getSourceDatabase());
+      Connection targetConnection = context.getConnection(context.getTargetDatabase());
+
+      Dialect dialect = context.getDialect();
+      ExecutorService executor = context.getExecutor();
+      
+      boolean autoCommit = targetConnection.getAutoCommit();
+      
+      targetConnection.setAutoCommit(true);
+      
+      SynchronizationSupport.dropForeignKeys(context);
+      SynchronizationSupport.dropUniqueConstraints(context);
+      
+      targetConnection.setAutoCommit(false);
+      
+      try
+      {
+        for (TableProperties table: context.getSourceDatabaseProperties().getTables())
+        {
+          String tableName = table.getName();
+          
+          UniqueConstraint primaryKey = table.getPrimaryKey();
+          
+          if (primaryKey == null)
+          {
+            throw new SQLException(Messages.getMessage(Messages.PRIMARY_KEY_REQUIRED, this.getClass().getName(), tableName));
+          }
+          
+          List<String> primaryKeyColumnList = primaryKey.getColumnList();
+          
+          Collection<String> columns = table.getColumns();
+          
+          // List of colums for select statement - starting with primary key
+          List<String> columnList = new ArrayList<String>(columns.size());
+          
+          columnList.addAll(primaryKeyColumnList);
+          
+          for (String column: columns)
+          {
+            if (!primaryKeyColumnList.contains(column))
+            {
+              columnList.add(column);
+            }
+          }
+          
+          List<String> nonPrimaryKeyColumnList = columnList.subList(primaryKeyColumnList.size(), columnList.size());
+          
+          String commaDelimitedColumns = Strings.join(columnList, Strings.PADDED_COMMA);
+          
+          // Retrieve table rows in primary key order
+          final String selectSQL = "SELECT " + commaDelimitedColumns + " FROM " + tableName + " ORDER BY " + Strings.join(primaryKeyColumnList, Strings.PADDED_COMMA); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+          
+          final Statement targetStatement = targetConnection.createStatement();
+
+          targetStatement.setFetchSize(this.fetchSize);
+    
+          LOG.debug(selectSQL);
+          
+          Callable<ResultSet> callable = new Callable<ResultSet>()
+          {
+            public ResultSet call() throws SQLException
+            {
+              return targetStatement.executeQuery(selectSQL);
+            }
+          };
+    
+          Future<ResultSet> future = executor.submit(callable);
+          
+          Statement sourceStatement = sourceConnection.createStatement();
+          sourceStatement.setFetchSize(this.fetchSize);
+          
+          ResultSet sourceResultSet = sourceStatement.executeQuery(selectSQL);
+
+          ResultSet inactiveResultSet = future.get();
+          
+          String primaryKeyWhereClause = " WHERE " + Strings.join(primaryKeyColumnList, " = ? AND ") + " = ?"; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+          
+          // Construct DELETE SQL
+          String deleteSQL = "DELETE FROM " + tableName + primaryKeyWhereClause; //$NON-NLS-1$
+          
+          LOG.debug(deleteSQL);
+          
+          PreparedStatement deleteStatement = targetConnection.prepareStatement(deleteSQL);
+          
+          // Construct INSERT SQL
+          String insertSQL = "INSERT INTO " + tableName + " (" + commaDelimitedColumns + ") VALUES (" + Strings.join(Collections.nCopies(columnList.size(), Strings.QUESTION), Strings.PADDED_COMMA) + ")"; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
+          
+          LOG.debug(insertSQL);
+          
+          PreparedStatement insertStatement = targetConnection.prepareStatement(insertSQL);
+          
+          // Construct UPDATE SQL
+          PreparedStatement updateStatement = null;
+          
+          if (!nonPrimaryKeyColumnList.isEmpty())
+          {
+            String updateSQL = "UPDATE " + tableName + " SET " + Strings.join(nonPrimaryKeyColumnList, " = ?, ") + " = ?" + primaryKeyWhereClause; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
+            
+            LOG.debug(updateSQL);
+            
+            updateStatement = targetConnection.prepareStatement(updateSQL);
+          }
+          
+          boolean hasMoreActiveResults = sourceResultSet.next();
+          boolean hasMoreInactiveResults = inactiveResultSet.next();
+          
+          int insertCount = 0;
+          int updateCount = 0;
+          int deleteCount = 0;
+          
+          while (hasMoreActiveResults || hasMoreInactiveResults)
+          {
+            int compare = 0;
+            
+            if (!hasMoreActiveResults)
+            {
+              compare = 1;
+            }
+            else if (!hasMoreInactiveResults)
+            {
+              compare = -1;
+            }
+            else
+            {
+              for (int i = 1; i <= primaryKeyColumnList.size(); ++i)
+              {
+                Object activeObject = sourceResultSet.getObject(i);
+                Object inactiveObject = inactiveResultSet.getObject(i);
+                
+                // We assume that the primary keys column types are Comparable
+                compare = this.compare(activeObject, inactiveObject);
+                
+                if (compare != 0)
+                {
+                  break;
+                }
+              }
+            }
+            
+            if (compare > 0)
+            {
+              deleteStatement.clearParameters();
+              
+              for (int i = 1; i <= primaryKeyColumnList.size(); ++i)
+              {
+                int type = dialect.getColumnType(table.getColumnProperties(columnList.get(i - 1)));
+                
+                deleteStatement.setObject(i, inactiveResultSet.getObject(i), type);
+              }
+              
+              deleteStatement.addBatch();
+              
+              deleteCount += 1;
+              
+              if ((deleteCount % this.maxBatchSize) == 0)
+              {
+                deleteStatement.executeBatch();
+                deleteStatement.clearBatch();
+              }
+            }
+            else if (compare < 0)
+            {
+              insertStatement.clearParameters();
+
+              for (int i = 1; i <= columnList.size(); ++i)
+              {
+                int type = dialect.getColumnType(table.getColumnProperties(columnList.get(i - 1)));
+
+                Object object = SynchronizationSupport.getObject(sourceResultSet, i, type);
+                
+                if (sourceResultSet.wasNull())
+                {
+                  insertStatement.setNull(i, type);
+                }
+                else
+                {
+                  insertStatement.setObject(i, object, type);
+                }
+              }
+              
+              insertStatement.addBatch();
+              
+              insertCount += 1;
+              
+              if ((insertCount % this.maxBatchSize) == 0)
+              {
+                insertStatement.executeBatch();
+                insertStatement.clearBatch();
+              }
+            }
+            else if (updateStatement != null) // if (compare == 0)
+            {
+              updateStatement.clearParameters();
+              
+              boolean updated = false;
+              
+              for (int i = primaryKeyColumnList.size() + 1; i <= columnList.size(); ++i)
+              {
+                int type = dialect.getColumnType(table.getColumnProperties(columnList.get(i - 1)));
+                
+                Object activeObject = SynchronizationSupport.getObject(sourceResultSet, i, type);
+                Object inactiveObject = SynchronizationSupport.getObject(inactiveResultSet, i, type);
+                
+                int index = i - primaryKeyColumnList.size();
+                
+                if (sourceResultSet.wasNull())
+                {
+                  updateStatement.setNull(index, type);
+                  
+                  updated |= !inactiveResultSet.wasNull();
+                }
+                else
+                {
+                  updateStatement.setObject(index, activeObject, type);
+                  
+                  updated |= inactiveResultSet.wasNull();
+                  updated |= !equals(activeObject, inactiveObject);
+                }
+              }
+              
+              if (updated)
+              {
+                for (int i = 1; i <= primaryKeyColumnList.size(); ++i)
+                {
+                  int type = dialect.getColumnType(table.getColumnProperties(columnList.get(i - 1)));
+                  
+                  updateStatement.setObject(i + nonPrimaryKeyColumnList.size(), inactiveResultSet.getObject(i), type);
+                }
+                
+                updateStatement.addBatch();
+                
+                updateCount += 1;
+                
+                if ((updateCount % this.maxBatchSize) == 0)
+                {
+                  updateStatement.executeBatch();
+                  updateStatement.clearBatch();
+                }
+              }
+            }
+            
+            if (hasMoreActiveResults && (compare <= 0))
+            {
+              hasMoreActiveResults = sourceResultSet.next();
+            }
+            
+            if (hasMoreInactiveResults && (compare >= 0))
+            {
+              hasMoreInactiveResults = inactiveResultSet.next();
+            }
+          }
+          
+          if ((deleteCount % this.maxBatchSize) > 0)
+          {
+            deleteStatement.executeBatch();
+          }
+          
+          deleteStatement.close();
+          
+          if ((insertCount % this.maxBatchSize) > 0)
+          {
+            insertStatement.executeBatch();
+          }
+          
+          insertStatement.close();
+          
+          if (updateStatement != null)
+          {
+            if ((updateCount % this.maxBatchSize) > 0)
+            {
+              updateStatement.executeBatch();
+            }
+            
+            updateStatement.close();
+          }
+          
+          targetStatement.close();
+          sourceStatement.close();
+          
+          targetConnection.commit();
+          
+          LOG.info(Messages.getMessage(Messages.INSERT_COUNT, insertCount, tableName));
+          LOG.info(Messages.getMessage(Messages.UPDATE_COUNT, updateCount, tableName));
+          LOG.info(Messages.getMessage(Messages.DELETE_COUNT, deleteCount, tableName));      
+        }
+      }
+      catch (ExecutionException e)
+      {
+        SynchronizationSupport.rollback(targetConnection);
+        
+        throw SQLExceptionFactory.createSQLException(e.getCause());
+      }
+      catch (InterruptedException e)
+      {
+        SynchronizationSupport.rollback(targetConnection);
+        
+        throw SQLExceptionFactory.createSQLException(e.getCause());
+      }
+      catch (SQLException e)
+      {
+        SynchronizationSupport.rollback(targetConnection);
+        
+        throw e;
+      }
+      
+      targetConnection.setAutoCommit(true);
+      
+      SynchronizationSupport.restoreUniqueConstraints(context);
+      SynchronizationSupport.restoreForeignKeys(context);
+      
+      SynchronizationSupport.synchronizeIdentityColumns(context);
+      SynchronizationSupport.synchronizeSequences(context);
+      
+      targetConnection.setAutoCommit(autoCommit);
+    }
+
+    private boolean equals(Object object1, Object object2)
+    {
+      if ((object1 instanceof byte[]) && (object2 instanceof byte[]))
+      {
+        byte[] bytes1 = (byte[]) object1;
+        byte[] bytes2 = (byte[]) object2;
+        
+        if (bytes1.length != bytes2.length)
+        {
+          return false;
+        }
+        
+        return Arrays.equals(bytes1, bytes2);
+      }
+      
+      return object1.equals(object2);
+    }
+    
+    @SuppressWarnings("unchecked")
+    private int compare(Object object1, Object object2)
+    {
+      return ((Comparable) object1).compareTo(object2);
+    }
+
+    /**
+     * @return the fetchSize.
+     */
+    public int getFetchSize()
+    {
+      return this.fetchSize;
+    }
+
+    /**
+     * @param fetchSize the fetchSize to set.
+     */
+    public void setFetchSize(int fetchSize)
+    {
+      this.fetchSize = fetchSize;
+    }
+
+    /**
+     * @return Returns the maxBatchSize.
+     */
+    public int getMaxBatchSize()
+    {
+      return this.maxBatchSize;
+    }
+
+    /**
+     * @param maxBatchSize The maxBatchSize to set.
      */
     public void setMaxBatchSize(int maxBatchSize)
     {

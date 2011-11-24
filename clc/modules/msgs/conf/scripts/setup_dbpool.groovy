@@ -114,7 +114,11 @@ PersistenceContexts.list( ).each { String ctx_simplename ->
         'property'(name:'fetchSize', '1000')
         'property'(name:'maxBatchSize', '1000')
       }
-      sync('class':'net.sf.hajdbc.sync.PassiveSynchronizationStrategy', id:'passive');
+      sync('class':'com.eucalyptus.bootstrap.Databases.DifferentialSynchronizationStrategy', id:'diff') {
+        'property'(name:'fetchSize', '1000')
+        'property'(name:'maxBatchSize', '1000')
+      }
+      sync('class':'com.eucalyptus.bootstrap.Databases.PassiveSynchronizationStrategy', id:'passive');
       cluster(id:context_pool_alias,
 //          'auto-activate-schedule':'0 * * ? * *',
           balancer:'simple', //(simple|random|round-robin|load)
