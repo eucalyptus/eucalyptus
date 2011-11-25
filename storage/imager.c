@@ -39,7 +39,7 @@ static void set_debug (boolean yes)
 {
     // so euca libs will log to stdout
     if (yes==TRUE) {
-        logfile (NULL, EUCADEBUG2, 4);
+        logfile (NULL, EUCADEBUG, 4);
     } else {
         logfile (NULL, EUCAWARN, 4);
     }
