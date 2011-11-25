@@ -229,7 +229,7 @@ typedef struct ccConfig_t {
   int ccState, ccLastState, kick_network, kick_enabled, kick_monitor_running;
   uint32_t cloudIp;
   serviceStatusType ccStatus;
-  serviceInfoType services[16];
+  serviceInfoType services[16], disabledServices[16], notreadyServices[16];
 } ccConfig;
 
 enum {SCHEDGREEDY, SCHEDROUNDROBIN, SCHEDPOWERSAVE, SCHEDLAST};

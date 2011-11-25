@@ -263,7 +263,7 @@ public class SystemBootstrapper {
                            LOG.error( ex, ex );
                          }
                        }
-                     } );
+                     } ).get( );
     try {
       SystemBootstrapper.printBanner( );
     } catch ( Exception ex ) {

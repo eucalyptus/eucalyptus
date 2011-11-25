@@ -153,7 +153,8 @@ public class Automata {
                                      + toState );
               Exceptions.maybeInterrupted( ex );
               Logs.extreme( ).error( ex, ex );
-              throw Exceptions.toUndeclared( ex );
+              return Futures.predestinedFailedFuture( ex );
+//              throw Exceptions.toUndeclared( ex );
             }
           }
         } );

@@ -25,7 +25,7 @@ public class CertActivity extends AbstractSearchActivity implements CertView.Pre
   public static final String TITLE = "X509 CERTIFICATES";
   
   public static final String DELETE_CERT_CAPTION = "Delete selected certificate";
-  public static final String DELETE_CERT_SUBJECT = "Are you sure to delete the following selected certificate?";
+  public static final String DELETE_CERT_SUBJECT = "Are you sure you want to delete the following selected certificate?";
   
   private static final Logger LOG = Logger.getLogger( CertActivity.class.getName( ) );
   

@@ -89,13 +89,36 @@ public class ListenerRegistry {
   
   @SuppressWarnings( "unchecked" )
   public void deregister( final Object type, final EventListener listener ) {
-    if ( ( type instanceof Class ) && Event.class.isAssignableFrom( ( Class ) type ) ) {
-      this.eventMap.deregister( ( Class ) type, listener );
-    } else {
-      if ( !this.registryMap.containsKey( type.getClass( ) ) ) {
-        this.registryMap.put( type.getClass( ), new ReentrantListenerRegistry( ) );
+    final List<Class> lookupTypes = Classes.genericsToClasses( listener );
+    lookupTypes.remove( Event.class );
+    /**
+     * GRZE: event type is not specified by the generic type of listeners EventListener decl or is
+     * <Event>
+     **/
+    boolean illegal = ( type == null && lookupTypes.isEmpty( ) );
+    for ( Class<?> c : lookupTypes ) {
+      if ( type != null && c.isAssignableFrom( ( type instanceof Class )
+        ? ( Class ) type
+        : type.getClass( ) ) ) {
+        illegal = false;
+        break;
       }
-      this.registryMap.get( type.getClass( ) ).deregister( type, listener );
+    }
+    if ( illegal ) {
+      throw Exceptions.error( new IllegalArgumentException( "Failed to register listener " + listener.getClass( ).getCanonicalName( )
+                                                            + " because the declared generic type " + lookupTypes
+                                                            + " is not assignable from the provided event type: " + ( type != null
+                                                              ? type.getClass( ).getCanonicalName( )
+                                                              : "null" ) ) );
+    } else {
+      if ( ( type instanceof Class ) && Event.class.isAssignableFrom( ( Class ) type ) ) {
+        this.eventMap.deregister( ( Class ) type, listener );
+      } else {
+        if ( !this.registryMap.containsKey( type.getClass( ) ) ) {
+          this.registryMap.put( type.getClass( ), new ReentrantListenerRegistry( ) );
+        }
+        this.registryMap.get( type.getClass( ) ).deregister( type, listener );
+      }
     }
   }
   

@@ -50,13 +50,13 @@ public class AccountActivity extends AbstractSearchActivity
   public static final String POLICY_CONTENT_INPUT_TITLE = "Policy content";
   
   public static final String DELETE_ACCOUNTS_CAPTION = "Delete selected accounts";
-  public static final String DELETE_ACCOUNTS_SUBJECT = "Are you sure to delete following selected accounts?";
+  public static final String DELETE_ACCOUNTS_SUBJECT = "Are you sure you want to delete following selected accounts?";
 
   public static final String APPROVE_ACCOUNTS_CAPTION = "Approve selected accounts";
-  public static final String APPROVE_ACCOUNTS_SUBJECT = "Are you sure to approve following selected accounts?";
+  public static final String APPROVE_ACCOUNTS_SUBJECT = "Are you sure you want to approve following selected accounts?";
 
   public static final String REJECT_ACCOUNTS_CAPTION = "Reject selected accounts";
-  public static final String REJECT_ACCOUNTS_SUBJECT = "Are you sure to reject following selected accounts?";
+  public static final String REJECT_ACCOUNTS_SUBJECT = "Are you sure you want to reject following selected accounts?";
 
   public static final String PASSWORD_INPUT_TITLE = "Admin password";
   public static final String PASSWORD2_INPUT_TITLE = "Type again";
