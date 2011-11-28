@@ -185,7 +185,7 @@ public class EntityWrapper<TYPE> {
     final Example qbe = Example.create( example ).enableLike( MatchMode.EXACT );
     final List<T> resultList = this.getSession( )
                                    .createCriteria( example.getClass( ) )
-                                   .setLockMode( LockMode.NONE )
+//                                   .setLockMode( LockMode.NONE )
                                    .setResultTransformer( Criteria.DISTINCT_ROOT_ENTITY )
                                    .setCacheable( true )
                                    .add( qbe )
@@ -233,7 +233,7 @@ public class EntityWrapper<TYPE> {
       } else if ( ( example instanceof HasNaturalId ) && ( ( ( HasNaturalId ) example ).getNaturalId( ) != null ) ) {
         final String natId = ( ( HasNaturalId ) example ).getNaturalId( );
         final T ret = ( T ) this.createCriteria( example.getClass( ) )
-                                .setLockMode( LockMode.NONE )
+//                                .setLockMode( LockMode.NONE )
                                 .setCacheable( true )
                                 .setMaxResults( 1 )
                                 .setFetchSize( 1 )
@@ -246,7 +246,7 @@ public class EntityWrapper<TYPE> {
         return ret;
       } else {
         final T ret = ( T ) this.createCriteria( example.getClass( ) )
-                                .setLockMode( LockMode.NONE )
+//                                .setLockMode( LockMode.NONE )
                                 .setCacheable( true )
                                 .setMaxResults( 1 )
                                 .setFetchSize( 1 )
