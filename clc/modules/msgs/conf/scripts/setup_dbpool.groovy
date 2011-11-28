@@ -110,15 +110,15 @@ PersistenceContexts.list( ).each { String ctx_simplename ->
   new File( ha_jdbc_config_file_name ).withWriter{ writer ->
     def xml = new MarkupBuilder(writer);
     xml.'ha-jdbc'() {
-      sync('class':'com.eucalyptus.bootstrap.Databases.FullSynchronizationStrategy', id:'full') {
+      sync('class':'com.eucalyptus.bootstrap.Databases\$FullSynchronizationStrategy', id:'full') {
         'property'(name:'fetchSize', '1000')
         'property'(name:'maxBatchSize', '1000')
       }
-      sync('class':'com.eucalyptus.bootstrap.Databases.DifferentialSynchronizationStrategy', id:'diff') {
+      sync('class':'com.eucalyptus.bootstrap.Databases\$DifferentialSynchronizationStrategy', id:'diff') {
         'property'(name:'fetchSize', '1000')
         'property'(name:'maxBatchSize', '1000')
       }
-      sync('class':'com.eucalyptus.bootstrap.Databases.PassiveSynchronizationStrategy', id:'passive');
+      sync('class':'com.eucalyptus.bootstrap.Databases\$PassiveSynchronizationStrategy', id:'passive');
       cluster(id:context_pool_alias,
 //          'auto-activate-schedule':'0 * * ? * *',
           balancer:'simple', //(simple|random|round-robin|load)
