@@ -957,7 +957,7 @@ public class Databases {
    * </ol>
    * * @author Paul Ferraro
    */
-  public class FullSynchronizationStrategy implements SynchronizationStrategy {
+  public static class FullSynchronizationStrategy implements SynchronizationStrategy {
     private int maxBatchSize = 100;
     private int fetchSize    = 0;
     
@@ -1060,14 +1060,14 @@ public class Databases {
     }
   }
   
-  public class PassiveSynchronizationStrategy implements SynchronizationStrategy {
+  public static class PassiveSynchronizationStrategy implements SynchronizationStrategy {
     @Override
     public <D> void synchronize( SynchronizationContext<D> context ) {
       // Do nothing
     }
   }
   
-  public class DifferentialSynchronizationStrategy implements SynchronizationStrategy {
+  public static class DifferentialSynchronizationStrategy implements SynchronizationStrategy {
     private int fetchSize    = 0;
     private int maxBatchSize = 100;
     
