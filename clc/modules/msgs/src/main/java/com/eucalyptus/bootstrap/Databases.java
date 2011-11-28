@@ -191,7 +191,7 @@ public class Databases {
   }
   
   private static void runDbStateChange( Function<String, Runnable> runnableFunction ) {
-    LOG.debug( "DB STATE CHANGE: " + runnableFunction );
+    LOG.info( "DB STATE CHANGE: " + runnableFunction );
     try {
       if ( canHas.writeLock( ).tryLock( 30000L, TimeUnit.MILLISECONDS ) ) {
         try {
@@ -271,34 +271,34 @@ public class Databases {
             public void run( ) {
               try {
                 final DriverDatabaseClusterMBean cluster = lookup( contextName );
-                LOG.debug( "Tearing down database connections for: " + hostName + " to context: " + contextName );
+                LOG.info( "Tearing down database connections for: " + hostName + " to context: " + contextName );
                 cluster.getDatabase( hostName );
                 try {
-                  LOG.debug( "Removing database connections for: " + hostName + " to context: " + contextName );
+                  LOG.info( "Removing database connections for: " + hostName + " to context: " + contextName );
                   cluster.remove( hostName );
-                  LOG.debug( "Removed database connections for: " + hostName + " to context: " + contextName );
+                  LOG.info( "Removed database connections for: " + hostName + " to context: " + contextName );
                 } catch ( IllegalStateException ex ) {
-                  LOG.debug( ex );
+                  LOG.info( ex );
                   Logs.extreme( ).debug( ex, ex );
                 }
                 try {
-                  LOG.debug( "Deactivating database connections for: " + hostName + " to context: " + contextName );
+                  LOG.info( "Deactivating database connections for: " + hostName + " to context: " + contextName );
                   cluster.deactivate( hostName );
-                  LOG.debug( "Deactived database connections for: " + hostName + " to context: " + contextName );
+                  LOG.info( "Deactived database connections for: " + hostName + " to context: " + contextName );
                 } catch ( Exception ex ) {
-                  LOG.debug( ex );
+                  LOG.info( ex );
                   Logs.extreme( ).debug( ex, ex );
                 }
                 try {
-                  LOG.debug( "Removing database connections for: " + hostName + " to context: " + contextName );
+                  LOG.info( "Removing database connections for: " + hostName + " to context: " + contextName );
                   cluster.remove( hostName );
-                  LOG.debug( "Removed database connections for: " + hostName + " to context: " + contextName );
+                  LOG.info( "Removed database connections for: " + hostName + " to context: " + contextName );
                 } catch ( Exception ex ) {
-                  LOG.debug( ex );
+                  LOG.info( ex );
                   Logs.extreme( ).debug( ex, ex );
                 }
               } catch ( final Exception ex1 ) {
-                LOG.debug( ex1 );
+                LOG.info( ex1 );
                 Logs.extreme( ).debug( ex1, ex1 );
               }
             }
@@ -387,11 +387,11 @@ public class Databases {
                   }
                 }
               } catch ( final NoSuchElementException ex1 ) {
-                LOG.debug( ex1 );
+                LOG.info( ex1 );
                 Logs.extreme( ).debug( ex1, ex1 );
                 return;
               } catch ( final IllegalStateException ex1 ) {
-                LOG.debug( ex1 );
+                LOG.info( ex1 );
                 Logs.extreme( ).debug( ex1, ex1 );
                 return;
               } catch ( final Exception ex1 ) {
@@ -723,7 +723,7 @@ public class Databases {
       for ( TableProperties table : context.getTargetDatabaseProperties( ).getTables( ) ) {
         for ( ForeignKeyConstraint constraint : table.getForeignKeyConstraints( ) ) {
           String sql = dialect.getDropForeignKeyConstraintSQL( constraint );
-          LOG.debug( sql );
+          LOG.info( sql );
           statement.addBatch( sql );
         }
       }
@@ -745,7 +745,7 @@ public class Databases {
       for ( TableProperties table : context.getSourceDatabaseProperties( ).getTables( ) ) {
         for ( ForeignKeyConstraint constraint : table.getForeignKeyConstraints( ) ) {
           String sql = dialect.getCreateForeignKeyConstraintSQL( constraint );
-          LOG.debug( sql );
+          LOG.info( sql );
           statement.addBatch( sql );
         }
       }
@@ -771,7 +771,7 @@ public class Databases {
         Map<net.sf.hajdbc.Database<D>, Future<Long>> futureMap = new HashMap<net.sf.hajdbc.Database<D>, Future<Long>>( );
         for ( SequenceProperties sequence : sequences ) {
           final String sql = dialect.getNextSequenceValueSQL( sequence );
-          LOG.debug( sql );
+          LOG.info( sql );
           for ( final net.sf.hajdbc.Database<D> database : databases ) {
             Callable<Long> task = new Callable<Long>( )
             {
@@ -808,7 +808,7 @@ public class Databases {
         Statement targetStatement = targetConnection.createStatement( );
         for ( SequenceProperties sequence : sequences ) {
           String sql = dialect.getAlterSequenceSQL( sequence, sequenceMap.get( sequence ) + 1 );
-          LOG.debug( sql );
+          LOG.info( sql );
           targetStatement.addBatch( sql );
         }
         targetStatement.executeBatch( );
@@ -829,7 +829,7 @@ public class Databases {
         Collection<String> columns = table.getIdentityColumns( );
         if ( !columns.isEmpty( ) ) {
           String selectSQL = MessageFormat.format( "SELECT max({0}) FROM {1}", Strings.join( columns, "), max(" ), table.getName( ) ); //$NON-NLS-1$ //$NON-NLS-2$
-          LOG.debug( selectSQL );
+          LOG.info( selectSQL );
           Map<String, Long> map = new HashMap<String, Long>( );
           ResultSet resultSet = sourceStatement.executeQuery( selectSQL );
           if ( resultSet.next( ) ) {
@@ -843,7 +843,7 @@ public class Databases {
             for ( Map.Entry<String, Long> mapEntry : map.entrySet( ) ) {
               String alterSQL = dialect.getAlterIdentityColumnSQL( table, table.getColumnProperties( mapEntry.getKey( ) ), mapEntry.getValue( ) + 1 );
               if ( alterSQL != null ) {
-                LOG.debug( alterSQL );
+                LOG.info( alterSQL );
                 targetStatement.addBatch( alterSQL );
               }
             }
@@ -867,7 +867,7 @@ public class Databases {
       for ( TableProperties table : context.getTargetDatabaseProperties( ).getTables( ) ) {
         for ( UniqueConstraint constraint : table.getUniqueConstraints( ) ) {
           String sql = dialect.getDropUniqueConstraintSQL( constraint );
-          LOG.debug( sql );
+          LOG.info( sql );
           statement.addBatch( sql );
         }
       }
@@ -888,7 +888,7 @@ public class Databases {
         // Drop unique constraints on the current table
         for ( UniqueConstraint constraint : table.getUniqueConstraints( ) ) {
           String sql = dialect.getCreateUniqueConstraintSQL( constraint );
-          LOG.debug( sql );
+          LOG.info( sql );
           statement.addBatch( sql );
         }
       }
@@ -988,14 +988,14 @@ public class Databases {
           };
           Future<ResultSet> future = executor.submit( callable );
           String deleteSQL = dialect.getTruncateTableSQL( table );
-          LOG.debug( deleteSQL );
+          LOG.info( deleteSQL );
           Statement deleteStatement = targetConnection.createStatement( );
           int deletedRows = deleteStatement.executeUpdate( deleteSQL );
           LOG.info( Messages.getMessage( Messages.DELETE_COUNT, deletedRows, tableName ) );
           deleteStatement.close( );
           ResultSet resultSet = future.get( );
           String insertSQL = "INSERT INTO " + tableName + " (" + commaDelimitedColumns + ") VALUES (" + Strings.join( Collections.nCopies( columns.size( ), Strings.QUESTION ), Strings.PADDED_COMMA ) + ")"; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
-          LOG.debug( insertSQL );
+          LOG.info( insertSQL );
           PreparedStatement insertStatement = targetConnection.prepareStatement( insertSQL );
           int statementCount = 0;
           while ( resultSet.next( ) ) {
@@ -1105,7 +1105,7 @@ public class Databases {
           final String selectSQL = "SELECT " + commaDelimitedColumns + " FROM " + tableName + " ORDER BY " + Strings.join( primaryKeyColumnList, Strings.PADDED_COMMA ); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
           final Statement targetStatement = targetConnection.createStatement( );
           targetStatement.setFetchSize( this.fetchSize );
-          LOG.debug( selectSQL );
+          LOG.info( selectSQL );
           Callable<ResultSet> callable = new Callable<ResultSet>( )
           {
             public ResultSet call( ) throws SQLException
@@ -1121,17 +1121,17 @@ public class Databases {
           String primaryKeyWhereClause = " WHERE " + Strings.join( primaryKeyColumnList, " = ? AND " ) + " = ?"; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
           // Construct DELETE SQL
           String deleteSQL = "DELETE FROM " + tableName + primaryKeyWhereClause; //$NON-NLS-1$
-          LOG.debug( deleteSQL );
+          LOG.info( deleteSQL );
           PreparedStatement deleteStatement = targetConnection.prepareStatement( deleteSQL );
           // Construct INSERT SQL
           String insertSQL = "INSERT INTO " + tableName + " (" + commaDelimitedColumns + ") VALUES (" + Strings.join( Collections.nCopies( columnList.size( ), Strings.QUESTION ), Strings.PADDED_COMMA ) + ")"; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
-          LOG.debug( insertSQL );
+          LOG.info( insertSQL );
           PreparedStatement insertStatement = targetConnection.prepareStatement( insertSQL );
           // Construct UPDATE SQL
           PreparedStatement updateStatement = null;
           if ( !nonPrimaryKeyColumnList.isEmpty( ) ) {
             String updateSQL = "UPDATE " + tableName + " SET " + Strings.join( nonPrimaryKeyColumnList, " = ?, " ) + " = ?" + primaryKeyWhereClause; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
-            LOG.debug( updateSQL );
+            LOG.info( updateSQL );
             updateStatement = targetConnection.prepareStatement( updateSQL );
           }
           boolean hasMoreActiveResults = sourceResultSet.next( );
