@@ -405,7 +405,11 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
   }
   
   public final boolean isInternal( ) {
-    return this.ats.has( InternalService.class ) || ( !this.isAdminService( ) && !this.isPublicService( ) );
+    return this.ats.has( InternalService.class )
+      || !this.isAdminService( )
+      || !this.isPublicService( )
+      || ( this.partitionParent( ).equals( Empyrean.INSTANCE ) && !this.isRegisterable( ) )
+      || ( this.partitionParent( ).equals( Eucalyptus.INSTANCE ) && !this.isRegisterable( ) );
   }
   
   /**
@@ -427,6 +431,16 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
    */
   public boolean isRegisterable( ) {
     return !( ServiceBuilders.lookup( this ) instanceof DummyServiceBuilder );
+  }
+  
+  /**
+   * Temporarily this includes only a registerability check.
+   * 
+   * @param config
+   * @return
+   */
+  public boolean isDistributedService( ) {
+    return this.isRegisterable( );
   }
   
   /**

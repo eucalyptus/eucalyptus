@@ -64,6 +64,7 @@
 package com.eucalyptus.config;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import org.apache.log4j.Logger;
@@ -71,8 +72,10 @@ import com.eucalyptus.component.Component;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentRegistrationHandler;
 import com.eucalyptus.component.Components;
+import com.eucalyptus.component.Faults;
 import com.eucalyptus.component.ServiceBuilder;
 import com.eucalyptus.component.ServiceBuilders;
+import com.eucalyptus.component.ServiceCheckRecord;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.scripting.Groovyness;
@@ -107,9 +110,7 @@ public class Configuration {
           } catch ( Exception ex ) {
             this.setState( "n/a: " + ex.getMessage( ) );
           }
-          this.setDetail( input.lookupDetails( ).isEmpty( )
-                     ? ""
-                     : input.lookupDetails( ).iterator( ).next( ).toString( ) );
+          this.setDetail( "" );
         }
       };
     }
@@ -144,10 +145,10 @@ public class Configuration {
     try {
       reply.set_return( ComponentRegistrationHandler.register( componentId, partition, name, hostName, port ) );
     } catch ( final Throwable ex ) {
-    //  throw new EucalyptusCloudException( "Component registration failed because: " + ex.getMessage( ), ex );
-    	reply.set_return(false);
-    	reply.setStatusMessage(ex.getMessage());
-    	
+      //  throw new EucalyptusCloudException( "Component registration failed because: " + ex.getMessage( ), ex );
+      reply.set_return( false );
+      reply.setStatusMessage( ex.getMessage( ) );
+      
     }
     return reply;
   }
@@ -157,11 +158,11 @@ public class Configuration {
     final ComponentId componentId = builder.getComponentId( );
     final DeregisterComponentResponseType reply = ( DeregisterComponentResponseType ) request.getReply( );
     try {
-    	reply.set_return( ComponentRegistrationHandler.deregister( componentId, request.getName() ) );
+      reply.set_return( ComponentRegistrationHandler.deregister( componentId, request.getName( ) ) );
     } catch ( final Throwable ex ) {
       //throw new EucalyptusCloudException( "Component deregistration failed because: " + ex.getMessage( ), ex );
-    	reply.set_return(false);
-    	reply.setStatusMessage(ex.getMessage());
+      reply.set_return( false );
+      reply.setStatusMessage( ex.getMessage( ) );
     }
     return reply;
   }

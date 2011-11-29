@@ -65,6 +65,7 @@ package com.eucalyptus.bootstrap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.PriorityBlockingQueue;
 
 import org.apache.log4j.Logger;
@@ -80,22 +81,54 @@ import com.eucalyptus.util.Exceptions;
 public class OrderedShutdown {
   
   static Logger                     LOG = Logger.getLogger( OrderedShutdown.class );
-  static PriorityBlockingQueue<ShutdownHook> hooks = new PriorityBlockingQueue<ShutdownHook>();
+  static LinkedBlockingQueue<ShutdownHook> preShutdownHooks = new LinkedBlockingQueue<ShutdownHook>();
+  static PriorityBlockingQueue<ShutdownHook> shutdownHooks = new PriorityBlockingQueue<ShutdownHook>();
+  static LinkedBlockingQueue<ShutdownHook> postShutdownHooks = new LinkedBlockingQueue<ShutdownHook>();
 
-  public static <T extends ComponentId> void register(Class<T> id, Runnable r) {
+  public static <T extends ComponentId> void registerShutdownHook(Class<T> id, Runnable r) {
 	  ShutdownHook hook = new ShutdownHook(ComponentIds.lookup(id), r);
-	  hooks.offer(hook);
+	  shutdownHooks.offer(hook);
+  }
+  
+  public static void registerPreShutdownHook(Runnable r) {
+	  ShutdownHook hook = new ShutdownHook(r);
+	  preShutdownHooks.offer(hook);
+  }
+  
+  public static void registerPostShutdownHook(Runnable r) {
+	  ShutdownHook hook = new ShutdownHook(r);
+	  postShutdownHooks.offer(hook);
   }
   
   public static void initialize() {
 	  Runtime.getRuntime().addShutdownHook(new Thread() {
 		@Override
 		public void run() {
-			LOG.warn("Executing Shutdown Hooks...");
+			LOG.info("Executing Pre-Shutdown Hooks...");
+			ShutdownHook prehook;
+			while((prehook = preShutdownHooks.poll()) != null) {
+				try {
+					prehook.getRunnable().run();
+				} catch (Exception e) {
+				  Exceptions.maybeInterrupted(e);
+				}
+			}
+			
+			LOG.info("Executing Shutdown Hooks...");
 			ShutdownHook h;
-			while((h = hooks.poll()) != null) {
+			while((h = shutdownHooks.poll()) != null) {
 				try {
 					h.getRunnable().run();
+				} catch (Exception e) {
+				  Exceptions.maybeInterrupted(e);
+				}
+			}
+			
+			LOG.info("Executing Post-Shutdown Hooks...");
+			ShutdownHook posthook;
+			while((posthook = postShutdownHooks.poll()) != null) {
+				try {
+					posthook.getRunnable().run();
 				} catch (Exception e) {
 				  Exceptions.maybeInterrupted(e);
 				}

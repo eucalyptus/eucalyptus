@@ -542,9 +542,6 @@ public class Bootstrap {
     for ( Component comp : Components.whichCanLoad( ) ) {
       try {
         comp.initService( );
-      } catch ( ServiceRegistrationException ex ) {
-        LOG.error( ex.getMessage( ) );
-        Logs.extreme( ).error( ex, ex );
       } catch ( Exception ex ) {
         LOG.error( ex, ex );
       }

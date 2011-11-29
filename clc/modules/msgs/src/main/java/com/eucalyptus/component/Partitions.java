@@ -203,7 +203,7 @@ public class Partitions {
    */
   @Deprecated
   public static <T extends ServiceConfiguration> T lookupService( Class<? extends ComponentId> compClass, String partition ) {
-    return lookupService( compClass, Partitions.lookupByName( partition ) );
+    return ( T ) Topology.lookup( compClass, Partitions.lookupByName( partition ) );
   }
   
   /**

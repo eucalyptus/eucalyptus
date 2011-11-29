@@ -73,19 +73,6 @@ public abstract class AbstractServiceBuilder<T extends ServiceConfiguration> imp
   private static Logger LOG = Logger.getLogger( AbstractServiceBuilder.class );
   
   @Override
-  public Boolean checkRemove( String partition, String name ) throws ServiceRegistrationException {
-    try {
-      ServiceConfigurations.lookupByName( this.getComponentId( ).getClass( ), name );
-      return true;
-    } catch ( PersistenceException e ) {
-      throw new ServiceRegistrationException( e );
-    } catch ( Exception e ) {
-      LOG.error( e, e );
-      return true;
-    }
-  }
-  
-  @Override
   public Boolean checkAdd( String partition, String name, String host, Integer port ) throws ServiceRegistrationException {
     try {
       if ( !Internets.testGoodAddress( host ) ) {

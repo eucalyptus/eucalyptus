@@ -69,6 +69,7 @@
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/wait.h> // waitpid
 #include <stdarg.h>
 #include <fcntl.h>
 #include <errno.h>
@@ -685,7 +686,7 @@ static int disk_creator (artifact * a) // creates a 'raw' disk based on partitio
                     map_entries, 
                     blockblob_get_dev (a->deps[i]->bb), 
                     map [map_entries].first_block_dst, 
-                    map [map_entries].first_block_dst + map [map_entries].len_blocks);
+                    map [map_entries].first_block_dst + map [map_entries].len_blocks - 1);
         offset_bytes+=dep->size_bytes;
         if (p->type==NC_RESOURCE_IMAGE && root_entry==-1) {
             root_entry = map_entries;
@@ -949,8 +950,11 @@ static int copy_creator (artifact * a)
 // Currently each artifact tree is used within a single
 // thread (startup thread), so these do not need to be thread safe.
 
-static int art_add_dep (artifact * a, artifact * dep) 
+int art_add_dep (artifact * a, artifact * dep)
 {
+    if (dep==NULL)
+        return OK;
+
     for (int i = 0; i < MAX_ARTIFACT_DEPS; i++) {
         if (a->deps[i] == NULL) {
             logprintfl (EUCADEBUG, "[%s] added to artifact %03d|%s artifact %03d|%s\n", 
@@ -1690,7 +1694,7 @@ art_implement_tree ( // traverse artifact tree and create/download/combine artif
             // try to open the artifact
             switch (ret = find_or_create_artifact (FIND, root, work_bs, cache_bs, work_prefix, &(root->bb))) {
             case OK:
-                logprintfl (EUCADEBUG, "[%s] found existing artifact %03d|%s\n", root->instanceId, root->seq, root->id);
+                logprintfl (EUCADEBUG, "[%s] found existing artifact %03d|%s on try %d\n", root->instanceId, root->seq, root->id, tries);
                 update_vbr_with_backing_info (root);
                 do_deps = FALSE;
                 do_create = FALSE;
@@ -1702,7 +1706,7 @@ art_implement_tree ( // traverse artifact tree and create/download/combine artif
                 goto retry_or_fail;
                 break;
             default: // all other errors
-                logprintfl (EUCAERROR, "[%s] error: failed to provision artifact %03d|%s (error=%d)\n", root->instanceId, root->seq, root->id, ret);
+                logprintfl (EUCAERROR, "[%s] error: failed to provision artifact %03d|%s (error=%d) on try %d\n", root->instanceId, root->seq, root->id, ret, tries);
                 goto retry_or_fail;
             }
         }
@@ -1728,8 +1732,8 @@ art_implement_tree ( // traverse artifact tree and create/download/combine artif
                         num_opened_deps++;
                     } else { // this is a sentinel, we're not creating anything, so release the dep immediately
                         if (blockblob_close (root->deps[i]->bb) == -1) {
-                            logprintfl (EUCAERROR, "[%s] error: failed to close dependency of %s: %d %s (potential resource leak!)\n",
-                                        root->instanceId, root->id, blobstore_get_error(), blobstore_get_last_msg());                            
+                            logprintfl (EUCAERROR, "[%s] error: failed to close dependency of %s: %d %s (potential resource leak!) on try %d\n",
+                                        root->instanceId, root->id, blobstore_get_error(), blobstore_get_last_msg(), tries);
                         }
                         root->deps[i]->bb = 0; // for debugging
                     }
@@ -1738,7 +1742,8 @@ art_implement_tree ( // traverse artifact tree and create/download/combine artif
                 case BLOBSTORE_ERROR_MFILE: // out of file descriptors for locking => same problem
                     goto retry_or_fail;
                 default: // all other errors
-                    logprintfl (EUCAERROR, "[%s] error: failed to provision dependency %s for artifact %s (error=%d)\n", root->instanceId, root->deps[i]->id, root->id, ret);
+                    logprintfl (EUCAERROR, "[%s] error: failed to provision dependency %s for artifact %s (error=%d) on try %d\n", 
+                                root->instanceId, root->deps[i]->id, root->id, ret, tries);
                     goto retry_or_fail;
                 }
             }
@@ -1752,7 +1757,7 @@ art_implement_tree ( // traverse artifact tree and create/download/combine artif
             // try to create the artifact since last time we checked it did not exist
             switch (ret = find_or_create_artifact (CREATE, root, work_bs, cache_bs, work_prefix, &(root->bb))) {
             case OK:
-                logprintfl (EUCADEBUG, "[%s] created a blob for an artifact %03d|%s\n", root->instanceId,  root->seq, root->id);
+                logprintfl (EUCADEBUG, "[%s] created a blob for an artifact %03d|%s on try %d\n", root->instanceId,  root->seq, root->id, tries);
                 break;
             case BLOBSTORE_ERROR_EXIST: // someone else created it => loop back and open it
                 ret = BLOBSTORE_ERROR_AGAIN;
@@ -1762,14 +1767,14 @@ art_implement_tree ( // traverse artifact tree and create/download/combine artif
                 goto retry_or_fail;
                 break;
             default: // all other errors
-                logprintfl (EUCAERROR, "[%s] error: failed to allocate artifact %s (error=%d)\n", root->instanceId, root->id, ret);
+                logprintfl (EUCAERROR, "[%s] error: failed to allocate artifact %s (error=%d) on try %d\n", root->instanceId, root->id, ret, tries);
                 goto retry_or_fail;
             }
 
         create:
             ret = root->creator (root); // create and open this artifact for exclusive use
             if (ret != OK) {
-                logprintfl (EUCAERROR, "[%s] error: failed to create artifact %s (may retry)\n", root->instanceId, root->id, ret);
+                logprintfl (EUCAERROR, "[%s] error: failed to create artifact %s (may retry) on try %d\n", root->instanceId, root->id, ret, tries);
                 // delete the partially created artifact so we can retry with a clean slate
                 if (root->id_is_path) { // artifact is not a blob, but a file
                     unlink (root->id); // attempt to delete, but it may not even exist
@@ -1779,11 +1784,11 @@ art_implement_tree ( // traverse artifact tree and create/download/combine artif
                         // failure of 'delete' is bad, since we may have an open blob
                         // that will prevent others from ever opening it again, so at
                         // least try to close it
-                        logprintfl (EUCAERROR, "[%s] error: failed to remove partially created artifact %s: %d %s (potential resource leak!)\n",
-                                    root->instanceId, root->id, blobstore_get_error(), blobstore_get_last_msg());
+                        logprintfl (EUCAERROR, "[%s] error: failed to remove partially created artifact %s: %d %s (potential resource leak!) on try %d\n",
+                                    root->instanceId, root->id, blobstore_get_error(), blobstore_get_last_msg(), tries);
                         if (blockblob_close (root->bb) == -1) {
-                            logprintfl (EUCAERROR, "[%s] error: failed to close partially created artifact %s: %d %s (potential deadlock!)\n",
-                                        root->instanceId, root->id, blobstore_get_error(), blobstore_get_last_msg());
+                            logprintfl (EUCAERROR, "[%s] error: failed to close partially created artifact %s: %d %s (potential deadlock!) on try %d\n",
+                                        root->instanceId, root->id, blobstore_get_error(), blobstore_get_last_msg(), tries);
                         }
                     }
                 }
@@ -1805,9 +1810,9 @@ art_implement_tree ( // traverse artifact tree and create/download/combine artif
                   || (time_usec()-started)<timeout_usec )); // or until we exceed the timeout
 
     if (ret!=OK) {
-        logprintfl (EUCADEBUG, "[%s] error: failed to implement artifact %03d|%s\n", root->instanceId, root->seq, root->id);
+        logprintfl (EUCADEBUG, "[%s] error: failed to implement artifact %03d|%s on try %d\n", root->instanceId, root->seq, root->id, tries);
     } else {
-        logprintfl (EUCADEBUG, "[%s] implemented artifact %03d|%s\n", root->instanceId, root->seq, root->id);        
+        logprintfl (EUCADEBUG, "[%s] implemented artifact %03d|%s on try %d\n", root->instanceId, root->seq, root->id, tries);
     }
     
     return ret;
@@ -1890,6 +1895,7 @@ static pthread_mutex_t competitors_mutex = PTHREAD_MUTEX_INITIALIZER; // process
 #define VBR_SIZE ( 2LL * MEGABYTE ) / VBR_SIZE_SCALING
 static virtualMachine vm_slots [TOTAL_VMS];
 static char vm_ids [TOTAL_VMS][PATH_MAX];
+static boolean do_fork = 0;
 
 static int provision_vm (const char * id, const char * sshkey, const char * eki, const char * eri, const char * emi, blobstore * cache_bs, blobstore * work_bs, boolean do_make_work_copy)
 {
@@ -1957,17 +1963,38 @@ static char * gen_id (char * id, unsigned int id_len, const char * prefix)
 static void * competitor_function (void * ptr)
 {
     int errors = 0;
+    pid_t pid = -1;
 
-    printf ("%u/%u: competitor running (provisioned=%d)\n", (unsigned int)pthread_self(), (int)getpid(), provisioned_instances);
-    
-    for (int i=0; i<COMPETITIVE_ITERATIONS; i++) {
-        char id [32];
-        errors += provision_vm (GEN_ID, KEY1, EKI1, ERI1, EMI2, cache_bs, work_bs, TRUE);
-        usleep ((long long)(100*((double)random()/RAND_MAX)));
+    if (do_fork) {
+        pid = fork();
+        if (pid < 0) { // fork problem
+            * (long long *) ptr = 1;
+            return NULL;
+
+        } else if (pid > 0) { // parent
+            int status;
+            waitpid (pid, &status, 0);
+            * (long long *) ptr = WEXITSTATUS(status);
+            return NULL;
+        }
     }
 
-    printf ("%u/%u: competitor done (provisioned=%d errors=%d)\n", (unsigned int)pthread_self(), (int)getpid(), provisioned_instances, errors);
+    if (pid<1) {
+        printf ("%u/%u: competitor running (provisioned=%d)\n", (unsigned int)pthread_self(), (int)getpid(), provisioned_instances);
+        
+        for (int i=0; i<COMPETITIVE_ITERATIONS; i++) {
+            char id [32];
+            errors += provision_vm (GEN_ID, KEY1, EKI1, ERI1, EMI2, cache_bs, work_bs, TRUE);
+            usleep ((long long)(100*((double)random()/RAND_MAX)));
+        }
+        
+        printf ("%u/%u: competitor done (provisioned=%d errors=%d)\n", (unsigned int)pthread_self(), (int)getpid(), provisioned_instances, errors);
+    }    
     
+    if (pid==0) {
+        exit (errors);
+    }
+
     * (long long *) ptr = errors;
     return NULL;
 }
@@ -2062,7 +2089,7 @@ int main (int argc, char ** argv)
     check_blob (cache_bs, "blocks", 0);
 
     printf ("done with vbr.c cache-only test errors=%d warnings=%d\n", errors, warnings);
-    _exit (errors);
+    exit (errors);
 
  skip_cache_only:
 
@@ -2088,25 +2115,33 @@ int main (int argc, char ** argv)
     warnings += cleanup_vms();
     CHECK_BLOBS;
 
-    printf ("spawning %d competing threads\n", COMPETITIVE_PARTICIPANTS);
-    emis_in_use ++; // we'll have threads creating a new EMI
-    pthread_t threads [COMPETITIVE_PARTICIPANTS];
-    long long thread_par [COMPETITIVE_PARTICIPANTS];
-    int thread_par_sum = 0;
-    for (int j=0; j<COMPETITIVE_PARTICIPANTS; j++) {
-        pthread_create (&threads[j], NULL, competitor_function, (void *)&thread_par[j]);
+    for (int i=0; i<2; i++) {
+        if (i%1) {
+            do_fork = 0;
+        } else {
+            do_fork = 1;
+        }
+        printf ("===============================================\n");
+        printf ("spawning %d competing %s\n", COMPETITIVE_PARTICIPANTS, (do_fork)?("processes"):("threads"));
+        emis_in_use++; // we'll have threads creating a new EMI
+        pthread_t threads [COMPETITIVE_PARTICIPANTS];
+        long long thread_par [COMPETITIVE_PARTICIPANTS];
+        int thread_par_sum = 0;
+        for (int j=0; j<COMPETITIVE_PARTICIPANTS; j++) {
+            pthread_create (&threads[j], NULL, competitor_function, (void *)&thread_par[j]);
+        }
+        for (int j=0; j<COMPETITIVE_PARTICIPANTS; j++) {
+            pthread_join (threads[j], NULL);
+            thread_par_sum += (int)thread_par [j];
+        }
+        printf ("waited for all competing threads (returned sum=%d)\n", thread_par_sum);
+        if (errors += thread_par_sum) {
+            printf ("error: failed parallel instance provisioning test\n");
+        }
+        CHECK_BLOBS;
+        warnings += cleanup_vms();
+        CHECK_BLOBS;
     }
-    for (int j=0; j<COMPETITIVE_PARTICIPANTS; j++) {
-        pthread_join (threads[j], NULL);
-        thread_par_sum += (int)thread_par [j];
-    }
-    printf ("waited for all competing threads (returned sum=%d)\n", thread_par_sum);
-    if (errors += thread_par_sum) {
-        printf ("error: failed parallel instance provisioning test\n");
-    }
-    CHECK_BLOBS;
-    warnings += cleanup_vms();
-    CHECK_BLOBS;
 
 out:
     printf ("\nfinal check of work blobstore\n");
@@ -2116,7 +2151,7 @@ out:
     check_blob (cache_bs, "blocks", 0);
 
     printf ("done with vbr.c errors=%d warnings=%d\n", errors, warnings);
-    _exit(errors);
+    exit(errors);
 }
 
 #endif

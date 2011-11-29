@@ -75,26 +75,25 @@ import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.cloud.CloudMetadata.AvailabilityZoneMetadata;
 import com.eucalyptus.cluster.ResourceState.VmTypeAvailability;
 import com.eucalyptus.cluster.callback.ClusterCertsCallback;
-import com.eucalyptus.cluster.callback.DisableServiceCallback;
-import com.eucalyptus.cluster.callback.EnableServiceCallback;
 import com.eucalyptus.cluster.callback.LogDataCallback;
 import com.eucalyptus.cluster.callback.NetworkStateCallback;
 import com.eucalyptus.cluster.callback.PublicAddressStateCallback;
 import com.eucalyptus.cluster.callback.ResourceStateCallback;
-import com.eucalyptus.cluster.callback.ServiceStateCallback;
-import com.eucalyptus.cluster.callback.StartServiceCallback;
 import com.eucalyptus.cluster.callback.VmStateCallback;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Faults;
+import com.eucalyptus.component.Faults.CheckException;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
@@ -105,6 +104,14 @@ import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.ClusterController.GatherLogService;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.crypto.util.PEMFiles;
+import com.eucalyptus.empyrean.DescribeServicesResponseType;
+import com.eucalyptus.empyrean.DescribeServicesType;
+import com.eucalyptus.empyrean.DisableServiceType;
+import com.eucalyptus.empyrean.EnableServiceType;
+import com.eucalyptus.empyrean.ServiceId;
+import com.eucalyptus.empyrean.ServiceStatusType;
+import com.eucalyptus.empyrean.ServiceTransitionType;
+import com.eucalyptus.empyrean.StartServiceType;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
@@ -116,11 +123,13 @@ import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Callback;
+import com.eucalyptus.util.Classes;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.ConnectionException;
@@ -179,46 +188,69 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
     
   }
   
-  enum ServiceStateDispatch implements Predicate<Cluster> {
-    STARTED {
-      
+  private enum ServiceStateDispatch implements Predicate<Cluster>, RemoteCallback<ServiceTransitionType, ServiceTransitionType> {
+    STARTED( StartServiceType.class ),
+    ENABLED( EnableServiceType.class ) {
       @Override
       public boolean apply( final Cluster input ) {
         try {
-          AsyncRequests.newRequest( new StartServiceCallback( input ) ).sendSync( input.configuration );
+          super.apply( input );
+          ZoneRegistration.REGISTER.apply( input );
           return true;
         } catch ( final Exception t ) {
-          return input.filterExceptions( t );
+          return input.swallowException( t );
         }
       }
     },
-    ENABLED {
+    DISABLED( DisableServiceType.class ) {
       @Override
       public boolean apply( final Cluster input ) {
         try {
-          if ( State.ENABLED.ordinal( ) > input.stateMachine.getState( ).ordinal( ) ) {
-            AsyncRequests.newRequest( new EnableServiceCallback( input ) ).sendSync( input.configuration );
-            ZoneRegistration.REGISTER.apply( input );
-          }
+          super.apply( input );
+          ZoneRegistration.DEREGISTER.apply( input );
           return true;
-        } catch ( final Exception t ) {
-          return input.filterExceptions( t );
-        }
-      }
-    },
-    DISABLED {
-      @Override
-      public boolean apply( final Cluster input ) {
-        try {
-          if ( State.ENABLED.equals( input.getConfiguration( ).getStateMachine( ) ) || State.NOTREADY.equals( input.getConfiguration( ).getStateMachine( ) ) ) {
-            AsyncRequests.newRequest( new DisableServiceCallback( input ) ).sendSync( input.configuration );
-          }
-          return true;
-        } catch ( final Exception t ) {
-          return input.filterExceptions( t );
+        } catch ( Exception ex ) {
+          return false;
         }
       }
     };
+    final Class<? extends ServiceTransitionType> msgClass;
+    
+    private ServiceStateDispatch( Class<? extends ServiceTransitionType> msgClass ) {
+      this.msgClass = msgClass;
+    }
+    
+    @Override
+    public ServiceTransitionType getRequest( ) {
+      return Classes.newInstance( this.msgClass );
+    }
+    
+    @Override
+    public void fire( ServiceTransitionType msg ) {
+      LOG.debug( this.name( ) + " service: " + msg );
+    }
+    
+    @Override
+    public boolean apply( final Cluster input ) {
+      if ( Hosts.isCoordinator( ) ) {
+        try {
+          AsyncRequests.newRequest( this ).sendSync( input.configuration );
+          return true;
+        } catch ( final Exception t ) {
+          return input.swallowException( t );
+        }
+      } else {
+        return true;
+      }
+    }
+    
+    @Override
+    public void initialize( ServiceTransitionType request ) throws Exception {}
+    
+    @Override
+    public void fireException( Throwable t ) {
+      Logs.extreme( ).error( t, t );
+    }
   }
   
   enum LogRefresh implements Function<Cluster, TransitionAction<Cluster>> {
@@ -238,14 +270,71 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
         @Override
         public final void leave( final Cluster parent, final Callback.Completion transitionCallback ) {
           try {
-            AsyncRequests.newRequest( factory.newInstance( ) ).then( transitionCallback ).dispatch( parent.getLogServiceConfiguration( ) ).get( );
+            AsyncRequests.newRequest( factory.newInstance( ) ).dispatch( parent.getLogServiceConfiguration( ) ).get( );
+            transitionCallback.fire( );
           } catch ( final InterruptedException t ) {
             Thread.currentThread( ).interrupt( );
+            transitionCallback.fireException( t );
           } catch ( final Exception t ) {
-            parent.filterExceptions( t );
+            if ( !parent.swallowException( t ) ) {
+              transitionCallback.fireException( t );
+            } else {
+              transitionCallback.fire( );
+            }
           }
         }
       };
+    }
+  }
+  
+  private static class ServiceStateCallback extends SubjectMessageCallback<Cluster, DescribeServicesType, DescribeServicesResponseType> {
+    public ServiceStateCallback( ) {
+      this.setRequest( new DescribeServicesType( ) );
+    }
+    
+    @Override
+    public void fire( DescribeServicesResponseType msg ) {
+      List<ServiceStatusType> serviceStatuses = msg.getServiceStatuses( );
+      Cluster parent = this.getSubject( );
+      LOG.debug( "DescribeServices for " + parent.getFullName( ) );
+      if ( serviceStatuses.isEmpty( ) ) {
+        throw new NoSuchElementException( "Failed to find service info for cluster: " + parent.getFullName( ) );
+      } else {
+        ServiceConfiguration config = parent.getConfiguration( );
+        for ( ServiceStatusType status : serviceStatuses ) {
+          if ( "self".equals( status.getServiceId( ).getName( ) ) ) {
+            status.setServiceId( TypeMappers.transform( parent.getConfiguration( ), ServiceId.class ) );
+          } 
+          if ( config.getName( ).equals( status.getServiceId( ).getName( ) ) ) {
+            LOG.debug( "Found service info: " + status );
+            Component.State serviceState = Component.State.valueOf( status.getLocalState( ) );
+            Component.State localState = parent.getConfiguration( ).lookupState( );
+            Component.State proxyState = parent.getStateMachine( ).getState( ).proxyState( );
+            CheckException ex = Faults.transformToExceptions( ).apply( status );
+            if ( Component.State.NOTREADY.equals( serviceState ) ) {
+              throw new IllegalStateException( ex );
+            } else if ( Component.State.ENABLED.equals( serviceState ) && Component.State.DISABLED.ordinal( ) >= localState.ordinal( ) ) {
+              Cluster.ServiceStateDispatch.DISABLED.apply( parent );
+            } else if ( Component.State.DISABLED.equals( serviceState ) && Component.State.ENABLED.equals( localState ) ) {
+              Cluster.ServiceStateDispatch.ENABLED.apply( parent );
+            } else if ( Component.State.LOADED.equals( serviceState ) && Component.State.NOTREADY.ordinal( ) <= localState.ordinal( ) ) {
+              Cluster.ServiceStateDispatch.STARTED.apply( parent );
+            } else if ( Component.State.NOTREADY.ordinal( ) < serviceState.ordinal( ) ) {
+              parent.clearExceptions( );
+            }
+            return;
+          }
+        }
+      }
+      LOG.error( "Failed to find service info for cluster: " + parent.getFullName( ) + " instead found service status for: "
+        + serviceStatuses );
+      throw new NoSuchElementException( "Failed to find service info for cluster: " + parent.getFullName( ) );
+    }
+
+    @Override
+    public void setSubject( Cluster subject ) {
+      this.getRequest( ).getServices( ).add( TypeMappers.transform( subject.getConfiguration( ), ServiceId.class ) );
+      super.setSubject( subject );
     }
   }
   
@@ -270,14 +359,13 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
         @Override
         public final void leave( final Cluster parent, final Callback.Completion transitionCallback ) {
           try {
-            AsyncRequests.newRequest( factory.newInstance( ) ).sendSync( parent.getConfiguration( ) );
-            transitionCallback.fire( );
+            AsyncRequests.newRequest( factory.newInstance( ) ).then( transitionCallback ).sendSync( parent.getConfiguration( ) );
           } catch ( final InterruptedException ex ) {
             Thread.currentThread( ).interrupt( );
             Exceptions.trace( ex );
             transitionCallback.fire( );
           } catch ( final Exception t ) {
-            if ( parent.filterExceptions( t ) ) {
+            if ( !parent.swallowException( t ) ) {
               transitionCallback.fireException( t );
             } else {
               transitionCallback.fire( );
@@ -327,11 +415,11 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
       try {
         return Component.State.valueOf( this.name( ) );
       } catch ( final Exception ex ) {
-        if ( this.name( ).startsWith( "ENABL" ) ) {
+        if ( this.equals( DISABLED ) ) {
           return Component.State.DISABLED;
         } else if ( this.ordinal( ) < DISABLED.ordinal( ) ) {
           return Component.State.NOTREADY;
-        } else if ( this.ordinal( ) > ENABLED.ordinal( ) ) {
+        } else if ( this.ordinal( ) >= ENABLING.ordinal( ) ) {
           return Component.State.ENABLED;
         } else {
           return Component.State.INITIALIZED;
@@ -401,7 +489,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
       {
         final TransitionAction<Cluster> noop = Transitions.noop( );
         this.in( Cluster.State.DISABLED ).run( Cluster.ZoneRegistration.DEREGISTER );
-        this.in( Cluster.State.NOTREADY ).run( Cluster.ZoneRegistration.DEREGISTER );
+        this.in( Cluster.State.NOTREADY ).run( Cluster.ServiceStateDispatch.DISABLED );
         this.in( Cluster.State.ENABLED ).run( Cluster.ZoneRegistration.REGISTER );
         this.from( State.BROKEN ).to( State.PENDING ).error( State.BROKEN ).on( Transition.RESTART_BROKEN ).run( noop );
         
@@ -514,7 +602,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
         }
         if ( transition != null ) {
           try {
-            transition.call( ).get( );
+            transition.call( ).get( 30000L, TimeUnit.MILLISECONDS );
             Cluster.this.clearExceptions( );
           } catch ( final Exception ex ) {
             LOG.error( ex, ex );
@@ -677,11 +765,9 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
         Listeners.register( Hertz.class, this );
       }
     } catch ( final NoSuchElementException ex ) {
-//      this.stop( );
       Logs.exhaust( ).debug( ex, ex );
       throw ex;
     } catch ( final Exception ex ) {
-//      this.stop( );
       Logs.exhaust( ).debug( ex, ex );
       throw new ServiceRegistrationException( "Failed to call start() on cluster " + this.configuration
                                               + " because of: "
@@ -698,7 +784,24 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
                                                                                       State.ENABLING_NET, State.ENABLING_VMS,
                                                                                       State.ENABLING_ADDRS, State.ENABLING_VMS_PASS_TWO,
                                                                                       State.ENABLING_ADDRS_PASS_TWO, State.ENABLED ).call( );
-        result.get( );
+        RuntimeException fail = null;
+        for ( int i = 0; i < Clusters.getConfiguration( ).getStartupSyncRetries( ); i++ ) {
+          try {
+            result.get( );
+            fail = null;
+            break;
+          } catch ( Exception ex ) {
+            try {
+              TimeUnit.SECONDS.sleep( 1 );
+            } catch ( Exception ex1 ) {
+              LOG.error( ex1 , ex1 );
+            }
+            fail = Exceptions.toUndeclared( ex );
+          }
+        }
+        if ( fail != null ) {
+          throw fail;
+        }
       } catch ( final InterruptedException ex ) {
         Thread.currentThread( ).interrupt( );
       } catch ( final Exception ex ) {
@@ -963,7 +1066,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
   @Override
   public void fireEvent( final Event event ) {
     if ( !Bootstrap.isFinished( ) ) {
-      LOG.info( this.getConfiguration( ).getFullName( ) + " skipping clock event because bootstrap isn't finished" );
+      LOG.info( this.getFullName( ) + " skipping clock event because bootstrap isn't finished" );
     } else if ( event instanceof Hertz ) {
       this.fireClockTick( ( Hertz ) event );
     }
@@ -990,26 +1093,30 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
     };
   }
   
-  private <T extends Throwable> boolean filterExceptions( final T t ) {
+  private <T extends Throwable> boolean swallowException( final T t ) {
     Throwable fin = t;
     if ( t instanceof ExecutionException ) {
       fin = t.getCause( ) != null
         ? t.getCause( )
         : t;
     }
-    if ( t instanceof InterruptedException ) {
+    /// Ill-formed responses to DescribeNetworks are OK  
+    if( Exceptions.isCausedBy(t, org.jibx.runtime.JiBXException.class) || t instanceof org.jibx.runtime.JiBXException)
+    	return true;
+    
+    LOG.error( t );
+    if ( Exceptions.isCausedBy( t, InterruptedException.class ) ) {
       Thread.currentThread( ).interrupt( );
-      LOG.error( t );
-    } else if ( fin instanceof FailedRequestException ) {
-      LOG.error( fin, fin );
+    } else if ( Exceptions.isCausedBy( t, FailedRequestException.class ) ) {
+      Logs.extreme( ).debug( fin, fin );
       this.pendingErrors.add( fin );
-    } else if ( ( fin instanceof ConnectionException ) || ( fin instanceof IOException ) ) {
+    } else if ( Exceptions.isCausedBy( t, ConnectionException.class ) || Exceptions.isCausedBy( t, IOException.class ) ) {
       LOG.error( this.getName( ) + ": Error communicating with cluster: "
                  + fin.getMessage( ) );
-      LOG.trace( fin, fin );
+      Logs.extreme( ).debug( fin, fin );
       this.pendingErrors.add( fin );
     } else {
-      LOG.error( fin, fin );
+      Logs.extreme( ).debug( fin, fin );
       this.pendingErrors.add( fin );
     }
     return false;
@@ -1022,7 +1129,9 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
     try {
       Refresh.SERVICEREADY.apply( this );
     } catch ( Exception ex ) {
-      throw Faults.failure( this.configuration, ex );
+      CheckException fail = Faults.failure( this.configuration, ex );
+      currentErrors.add( fail );
+      throw fail;
     }
     currentErrors.addAll( this.pendingErrors );
     if ( !currentErrors.isEmpty( ) ) {

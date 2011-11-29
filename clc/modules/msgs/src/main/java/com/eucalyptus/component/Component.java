@@ -76,7 +76,6 @@ import com.eucalyptus.bootstrap.CanBootstrap;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
-import com.eucalyptus.util.CheckedFunction;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.HasName;
@@ -84,7 +83,11 @@ import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.fsm.Automata;
 import com.eucalyptus.util.fsm.StateMachine;
 import com.eucalyptus.util.fsm.TransitionException;
+import com.google.common.base.Function;
+import com.google.common.base.Functions;
 import com.google.common.base.Joiner;
+import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -101,7 +104,7 @@ public class Component implements HasName<Component> {
   private final ServiceRegistry       serviceRegistry;
   private final ComponentBootstrapper bootstrapper;
   
-  public enum State implements Automata.State<State> {
+  public enum State implements Automata.State<State>, Predicate<ServiceConfiguration> {
     BROKEN,
     PRIMORDIAL,
     INITIALIZED,
@@ -110,6 +113,11 @@ public class Component implements HasName<Component> {
     NOTREADY,
     DISABLED,
     ENABLED;
+    
+    @Override
+    public boolean apply( ServiceConfiguration input ) {
+      return this.equals( input.lookupState( ) );
+    }
   }
   
   public enum Transition implements Automata.Transition<Transition> {
@@ -184,11 +192,6 @@ public class Component implements HasName<Component> {
     return this.serviceRegistry.hasLocalService( );
   }
   
-  @Deprecated
-  public Boolean hasEnabledService( ) {
-    return !Topology.enabledServices( this.getComponentId( ).getClass( ) ).isEmpty( );
-  }
-  
   public Boolean isEnabledLocally( ) {
     return this.serviceRegistry.hasLocalService( ) && State.ENABLED.equals( this.getLocalServiceConfiguration( ).lookupState( ) );
   }
@@ -215,10 +218,9 @@ public class Component implements HasName<Component> {
    * @return BasicService instance of the service
    * @throws ServiceRegistrationException
    */
-  public ServiceConfiguration initService( ) throws ServiceRegistrationException {
+  public ServiceConfiguration initService( ) {
     if ( !this.identity.isAvailableLocally( ) ) {
-      throw new ServiceRegistrationException( "The component " + this.getName( )
-                                              + " is not being loaded automatically." );
+      throw Exceptions.toUndeclared( "The component " + this.getName( ) + " is not being loaded automatically." );
     } else {
       return initRemoteService( Internets.localHostInetAddress( ) );
     }
@@ -276,10 +278,6 @@ public class Component implements HasName<Component> {
     }
   }
   
-  public NavigableSet<ServiceConfiguration> enabledServices( ) {
-    return Sets.newTreeSet( Iterables.filter( this.serviceRegistry.getServices( ), ServiceConfigurations.enabledService( ) ) );
-  }
-  
   public boolean hasService( ServiceConfiguration config ) {
     return this.serviceRegistry.hasService( config );
   }
@@ -289,7 +287,7 @@ public class Component implements HasName<Component> {
    */
   @Override
   public String toString( ) {
-    return String.format( "Component %s =%s service=%s\n",
+    return String.format( "Component %s=%s service=%s\n",
                           this.identity.name( ),
                           ( this.identity.isAvailableLocally( )
                             ? ""
@@ -362,7 +360,7 @@ public class Component implements HasName<Component> {
     public BasicService getLocalService( ) {
       BasicService ret = this.localService.get( );
       if ( ret == null ) {
-        throw new NoSuchElementException( "Attempt to access a local service reference when none exists for: " + Component.this.toString( ) );
+        throw Exceptions.error( new NoSuchElementException( "Attempt to access a local service reference when none exists for: " + Component.this.toString( ) ) );
       } else {
         return ret;
       }
@@ -602,113 +600,153 @@ public class Component implements HasName<Component> {
       this.disabledBootstrappers.put( stage, bootstrapper );
     }
     
-    private boolean doTransition( EventType transition, CheckedFunction<Bootstrapper, Boolean> checkedFunction ) {
+    private boolean doTransition( EventType transition, Function<Bootstrapper, Boolean> checkedFunction ) {
+      return doTransition( transition, checkedFunction, Functions.forPredicate( ( Predicate ) Predicates.alwaysTrue( ) ) );
+    }
+    
+    private boolean doTransition( EventType transition, Function<Bootstrapper, Boolean> checkedFunction, Function<Bootstrapper, Boolean> rollbackFunction ) {
       String name = transition.name( ).replaceAll( ".*_", "" ).toLowerCase( );
+      List<Bootstrapper> rollbackBootstrappers = Lists.newArrayList( );
       this.updateBootstrapDependencies( );
       for ( Stage s : Bootstrap.Stage.values( ) ) {
         for ( Bootstrapper b : Lists.newArrayList( this.bootstrappers.get( s ) ) ) {
           EventRecord.here( this.component.getClass( ), transition, this.component.getComponentId( ).name( ), "stage", s.name( ),
                             b.getClass( ).getCanonicalName( ) ).extreme( );
+          TransitionException ex = null;
           try {
-            boolean result = checkedFunction.apply( b );
-            if ( !result ) {
-              throw Exceptions.toUndeclared( new TransitionException( b.getClass( ).getSimpleName( ) + " returned 'false' from "
-                                                                      + name
-                                                                      + "( ): terminating bootstrap for component: "
-                                                                      + this.component.getName( ) ) );
+            if ( checkedFunction.apply( b ) ) {
+              rollbackBootstrappers.add( b );
+            } else {
+              ex = new TransitionException( b.getClass( ).getSimpleName( ) + "."
+                + name
+                + "( ): returned false, terminating bootstrap for component: "
+                + this.component.getName( ) );
             }
           } catch ( Exception e ) {
-            throw Exceptions.toUndeclared( new TransitionException( b.getClass( ).getSimpleName( ) + " returned '"
-                                                                    + e.getMessage( )
-                                                                    + "' from "
-                                                                    + name
-                                                                    + "( ): terminating bootstrap for component: "
-                                                                    + this.component.getName( ), e ) );
+            LOG.error( e );
+            Logs.extreme( ).error( e, e );
+            ex = new TransitionException( b.getClass( ).getSimpleName( ) + "."
+              + name
+              + "( ): failed because of: "
+              + e.getMessage( )
+              + ", terminating bootstrap for component: "
+              + this.component.getName( ), e );
+          }
+          if ( ex != null ) {
+            for ( Bootstrapper rollback : Lists.reverse( rollbackBootstrappers ) ) {
+              try {
+                rollbackFunction.apply( rollback );
+              } catch ( Exception ex1 ) {
+                LOG.error( ex1 );
+                Logs.extreme( ).error( ex1, ex1 );
+              }
+            }
+            throw ex;
           }
         }
       }
       return true;
-      
     }
     
+    enum BootstrapperTransition implements Function<Bootstrapper, Boolean> {
+      LOAD {
+        @Override
+        public Boolean runBootstrapper( Bootstrapper arg0 ) throws Exception {
+          return arg0.load( );
+        }
+      },
+      START {
+        @Override
+        public Boolean runBootstrapper( Bootstrapper arg0 ) throws Exception {
+          return arg0.start( );
+        }
+      },
+      ENABLE {
+        @Override
+        public Boolean runBootstrapper( Bootstrapper arg0 ) throws Exception {
+          return arg0.enable( );
+        }
+      },
+      DISABLE {
+        @Override
+        public Boolean runBootstrapper( Bootstrapper arg0 ) throws Exception {
+          return arg0.disable( );
+        }
+      },
+      STOP {
+        @Override
+        public Boolean runBootstrapper( Bootstrapper arg0 ) throws Exception {
+          try {
+            arg0.stop( );
+          } catch ( Exception ex ) {
+            LOG.error( ex, ex );
+          }
+          return true;
+        }
+      },
+      DESTROY {
+        @Override
+        public Boolean runBootstrapper( Bootstrapper arg0 ) throws Exception {
+          try {
+            arg0.destroy( );
+          } catch ( Exception ex ) {
+            LOG.error( ex, ex );
+          }
+          return true;
+        }
+      },
+      CHECK {
+        @Override
+        public Boolean runBootstrapper( Bootstrapper arg0 ) throws Exception {
+          return arg0.check( );
+        }
+      };
+      
+      public abstract Boolean runBootstrapper( Bootstrapper arg0 ) throws Exception;
+      
+      @Override
+      public Boolean apply( Bootstrapper input ) {
+        try {
+          return this.runBootstrapper( input );
+        } catch ( Exception ex ) {
+          throw Exceptions.toUndeclared( ex );
+        }
+      }
+    }
+    
+    @Override
     public boolean load( ) {
-      this.doTransition( EventType.BOOTSTRAPPER_LOAD, new CheckedFunction<Bootstrapper, Boolean>( ) {
-                           @Override
-                           public Boolean apply( Bootstrapper arg0 ) throws Exception {
-                             return arg0.load( );
-                           }
-                         } );
-      return true;
+      return this.doTransition( EventType.BOOTSTRAPPER_LOAD, BootstrapperTransition.LOAD, BootstrapperTransition.DESTROY );
     }
     
+    @Override
     public boolean start( ) {
-      this.doTransition( EventType.BOOTSTRAPPER_START, new CheckedFunction<Bootstrapper, Boolean>( ) {
-                           @Override
-                           public Boolean apply( Bootstrapper arg0 ) throws Exception {
-                             return arg0.start( );
-                           }
-                         } );
-      return true;
+      return this.doTransition( EventType.BOOTSTRAPPER_START, BootstrapperTransition.START, BootstrapperTransition.STOP );
     }
     
+    @Override
     public boolean enable( ) {
-      this.doTransition( EventType.BOOTSTRAPPER_ENABLE, new CheckedFunction<Bootstrapper, Boolean>( ) {
-                           @Override
-                           public Boolean apply( Bootstrapper arg0 ) throws Exception {
-                             return arg0.enable( );
-                           }
-                         } );
-      return true;
+      return this.doTransition( EventType.BOOTSTRAPPER_ENABLE, BootstrapperTransition.ENABLE, BootstrapperTransition.DISABLE );
     }
     
+    @Override
     public boolean stop( ) {
-      this.doTransition( EventType.BOOTSTRAPPER_STOP, new CheckedFunction<Bootstrapper, Boolean>( ) {
-                           @Override
-                           public Boolean apply( Bootstrapper arg0 ) throws Exception {
-                             try {
-                               arg0.stop( );
-                             } catch ( Exception ex ) {
-                               LOG.error( ex, ex );
-                             }
-                             return true;
-                           }
-                         } );
-      return true;
+      return this.doTransition( EventType.BOOTSTRAPPER_ENABLE, BootstrapperTransition.STOP );
     }
     
+    @Override
     public void destroy( ) {
-      this.doTransition( EventType.BOOTSTRAPPER_DESTROY, new CheckedFunction<Bootstrapper, Boolean>( ) {
-                           @Override
-                           public Boolean apply( Bootstrapper arg0 ) throws Exception {
-                             try {
-                               arg0.destroy( );
-                             } catch ( Exception ex ) {
-                               LOG.error( ex, ex );
-                             }
-                             return true;
-                           }
-                         } );
+      this.doTransition( EventType.BOOTSTRAPPER_ENABLE, BootstrapperTransition.DESTROY );
     }
     
+    @Override
     public boolean disable( ) {
-      this.doTransition( EventType.BOOTSTRAPPER_DISABLE, new CheckedFunction<Bootstrapper, Boolean>( ) {
-                           @Override
-                           public Boolean apply( Bootstrapper arg0 ) throws Exception {
-                             return arg0.disable( );
-                           }
-                         } );
-      
-      return true;
+      return this.doTransition( EventType.BOOTSTRAPPER_ENABLE, BootstrapperTransition.DISABLE );
     }
     
+    @Override
     public boolean check( ) {
-      this.doTransition( EventType.BOOTSTRAPPER_CHECK, new CheckedFunction<Bootstrapper, Boolean>( ) {
-                           @Override
-                           public Boolean apply( Bootstrapper arg0 ) throws Exception {
-                             return arg0.check( );
-                           }
-                         } );
-      return true;
+      return this.doTransition( EventType.BOOTSTRAPPER_ENABLE, BootstrapperTransition.CHECK );
     }
     
     public List<Bootstrapper> getBootstrappers( ) {

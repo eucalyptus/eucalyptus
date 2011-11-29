@@ -96,7 +96,7 @@ public class BasicService {
       if ( compId.isAlwaysLocal( ) ) {//NOTE:GRZE: this is hack omfg; deals w/ the cyclic dependency between Threads and Topology.
         compId = Eucalyptus.INSTANCE;
       }
-      OrderedShutdown.register( compId.getClass( ), new Runnable( ) {
+      OrderedShutdown.registerShutdownHook( compId.getClass( ), new Runnable( ) {
         @Override
         public void run( ) {
           try {

@@ -30,7 +30,7 @@ public class UserActivity extends AbstractSearchActivity
   public static final String TITLE = "USERS";
   
   public static final String DELETE_USERS_CAPTION = "Delete selected users";
-  public static final String DELETE_USERS_SUBJECT = "Are you sure to delete following selected users?";
+  public static final String DELETE_USERS_SUBJECT = "Are you sure you want to delete following selected users?";
 
   public static final String ADD_KEY_CAPTION = "Add access key for the selected user";
   public static final String ADD_KEY_SUBJECT = "Are you sure to add key for the following selected user?";
@@ -58,10 +58,10 @@ public class UserActivity extends AbstractSearchActivity
   public static final String NEW_PASSWORD2_INPUT_TITLE = "New password again";
   
   public static final String APPROVE_USERS_CAPTION = "Approve selected users";
-  public static final String APPROVE_USERS_SUBJECT = "Are you sure to approve following selected users?";
+  public static final String APPROVE_USERS_SUBJECT = "Are you sure you want to approve following selected users?";
 
   public static final String REJECT_USERS_CAPTION = "Reject selected users";
-  public static final String REJECT_USERS_SUBJECT = "Are you sure to reject following selected users?";
+  public static final String REJECT_USERS_SUBJECT = "Are you sure you want to reject following selected users?";
 
   private static final String ACTION_PASSWORD = "password";
   

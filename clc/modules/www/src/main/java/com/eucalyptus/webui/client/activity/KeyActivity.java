@@ -25,7 +25,7 @@ public class KeyActivity extends AbstractSearchActivity implements KeyView.Prese
   public static final String TITLE = "ACCESS KEYS";
   
   public static final String DELETE_KEY_CAPTION = "Delete selected access key";
-  public static final String DELETE_KEY_SUBJECT = "Are you sure to delete the following selected access key?";
+  public static final String DELETE_KEY_SUBJECT = "Are you sure you want to delete the following selected access key?";
   
   private static final Logger LOG = Logger.getLogger( KeyActivity.class.getName( ) );
   

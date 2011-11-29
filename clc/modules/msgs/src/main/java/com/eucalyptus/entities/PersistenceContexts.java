@@ -14,6 +14,7 @@ import org.hibernate.ejb.EntityManagerFactoryImpl;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapException;
 import com.eucalyptus.bootstrap.Bootstrapper;
+import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.empyrean.Empyrean;
@@ -21,14 +22,12 @@ import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.scripting.Groovyness;
 import com.eucalyptus.system.Ats;
-import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.LogUtil;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
-import com.google.common.collect.Multimaps;
 
 @SuppressWarnings( "unchecked" )
 public class PersistenceContexts {
@@ -151,11 +150,6 @@ public class PersistenceContexts {
     return entities.get( persistenceContext );
   }
   
-  public static void handleConnectionError( Throwable cause ) {
-    LOG.error( cause, cause );
-    touchDatabase( );
-  }
-  
   private static void touchDatabase( ) {
     long failInterval = System.currentTimeMillis( ) - failCount.getReference( );
     if ( MAX_FAIL_SECONDS * 1000L > failInterval ) {
@@ -184,13 +178,13 @@ public class PersistenceContexts {
                           + "\nThe available contexts are: \n"
                           + Joiner.on( "\n" ).join( emf.keySet( ) ) );
         try {
-          TimeUnit.SECONDS.sleep( 1 );
+          TimeUnit.MILLISECONDS.sleep( 100 );
         } catch ( InterruptedException ex ) {
           throw Exceptions.toUndeclared( Exceptions.maybeInterrupted( ex ) );
         }
       }
     }
-    throw Exceptions.error( "Failed to lookup persistence context after " + MAX_EMF_RETRIES + "\n" );
+    throw Exceptions.error( "Failed to lookup persistence context after " + MAX_EMF_RETRIES + " tries.\n" );
   }
   
   public static void shutdown( ) {

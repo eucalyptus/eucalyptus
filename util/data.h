@@ -96,8 +96,8 @@ typedef struct ncMetadata_t {
     char *correlationId;
     char *userId;
     int epoch;
-    serviceInfoType services[16];
-    int servicesLen;
+    serviceInfoType services[16], disabledServices[16], notreadyServices[16];
+    int servicesLen, disabledServicesLen, notreadyServicesLen;
 } ncMetadata;
 
 typedef enum _hypervisorCapabilityType { // TODO: make bit field?

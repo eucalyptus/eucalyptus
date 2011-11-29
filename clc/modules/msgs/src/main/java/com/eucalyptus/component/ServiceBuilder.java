@@ -28,7 +28,6 @@ public interface ServiceBuilder<T extends ServiceConfiguration> {
    * @throws ServiceRegistrationException
    */
   public abstract Boolean checkAdd( String partition, String name, String host, Integer port ) throws ServiceRegistrationException;
-  public abstract Boolean checkRemove( String partition, String name ) throws ServiceRegistrationException;
   public abstract void fireStart( ServiceConfiguration config ) throws ServiceRegistrationException;
   public abstract void fireStop( ServiceConfiguration config ) throws ServiceRegistrationException;
   public abstract void fireEnable( ServiceConfiguration config ) throws ServiceRegistrationException;
