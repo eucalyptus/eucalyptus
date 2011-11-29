@@ -358,18 +358,22 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
         
         @Override
         public final void leave( final Cluster parent, final Callback.Completion transitionCallback ) {
-          try {
-            AsyncRequests.newRequest( factory.newInstance( ) ).then( transitionCallback ).sendSync( parent.getConfiguration( ) );
-          } catch ( final InterruptedException ex ) {
-            Thread.currentThread( ).interrupt( );
-            Exceptions.trace( ex );
-            transitionCallback.fire( );
-          } catch ( final Exception t ) {
-            if ( !parent.swallowException( t ) ) {
-              transitionCallback.fireException( t );
-            } else {
+          if ( Hosts.isCoordinator( ) ) {
+            try {
+              AsyncRequests.newRequest( factory.newInstance( ) ).then( transitionCallback ).sendSync( parent.getConfiguration( ) );
+            } catch ( final InterruptedException ex ) {
+              Thread.currentThread( ).interrupt( );
+              Exceptions.trace( ex );
               transitionCallback.fire( );
+            } catch ( final Exception t ) {
+              if ( !parent.swallowException( t ) ) {
+                transitionCallback.fireException( t );
+              } else {
+                transitionCallback.fire( );
+              }
             }
+          } else {
+            transitionCallback.fire( );
           }
         }
       };

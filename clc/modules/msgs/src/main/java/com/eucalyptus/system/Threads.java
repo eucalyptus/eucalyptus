@@ -127,7 +127,7 @@ import edu.emory.mathcs.backport.java.util.concurrent.atomic.AtomicBoolean;
 public class Threads {
   private static Logger                                  LOG               = Logger.getLogger( Threads.class );
   private final static String                            PREFIX            = "Eucalyptus.";
-  private final static Integer                           NUM_QUEUE_WORKERS = Runtime.getRuntime( ).availableProcessors( ); //TODO:GRZE: discover on per-service basis.;
+  private final static Integer                           NUM_QUEUE_WORKERS = 32; //TODO:GRZE: discover on per-service basis.;
   private final static AtomicInteger                     threadIndex       = new AtomicInteger( 0 );
   private final static ConcurrentMap<String, ThreadPool> execServices      = new ConcurrentHashMap<String, ThreadPool>( );
   
@@ -553,6 +553,7 @@ public class Threads {
     private final String                       creationStack;
     private final Class<? extends ComponentId> componentId;
     private final String                       name;
+    private FutureTask<?> task;
     
     Queue( final Class<? extends ComponentId> componentId, final T owner, final int numWorkers ) {
       this.componentId = componentId;
@@ -626,11 +627,11 @@ public class Threads {
     public void run( ) {
       do {
         try {
-          final FutureTask<?> task = this.msgQueue.take( );
-          if ( task != null ) {
-            Logs.exhaust( ).debug( EventType.QUEUE + " " + task + " " + Thread.currentThread( ).getName( ) );
+          this.task = this.msgQueue.take( );
+          if ( this.task != null ) {
+            Logs.exhaust( ).debug( EventType.QUEUE + " " + this.task + " " + Thread.currentThread( ).getName( ) );
             try {
-              task.run( );
+              this.task.run( );
             } catch ( final Exception ex ) {
               Exceptions.maybeInterrupted( ex );
               Logs.extreme( ).error( ex, ex );
@@ -719,6 +720,11 @@ public class Threads {
     return ( Future<C> ) queue( config.getComponentId( ).getClass( ), config, NUM_QUEUE_WORKERS ).submit( callable );
   }
   
+  @SuppressWarnings( "unchecked" )
+  public static <C> Future<C> enqueue( final ServiceConfiguration config, final Integer workers, final Runnable runnable ) {
+    return ( Future<C> ) queue( config.getComponentId( ).getClass( ), config, workers ).submit( runnable );
+  }
+
   @SuppressWarnings( "unchecked" )
   public static <C> Future<C> enqueue( final ServiceConfiguration config, final Integer workers, final Callable<C> callable ) {
     return ( Future<C> ) queue( config.getComponentId( ).getClass( ), config, workers ).submit( callable );
