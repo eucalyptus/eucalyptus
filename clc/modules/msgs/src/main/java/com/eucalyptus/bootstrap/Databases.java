@@ -583,16 +583,20 @@ public class Databases {
   }
   
   public static void awaitSynchronized( ) {
-    for ( int i = 0; i < MAX_TX_START_SYNC_RETRIES && isSynchronizing( ); i++ ) {
-      try {
-        TimeUnit.MILLISECONDS.sleep( 1000 );
-        LOG.debug( "Transaction blocked on sync: " + Thread.currentThread( ).getStackTrace( )[3] );
-      } catch ( InterruptedException ex ) {
-        Exceptions.maybeInterrupted( ex );
-        return;
+    if ( !isSynchronizing( ) ) {
+      return;
+    } else {
+      for ( int i = 0; i < MAX_TX_START_SYNC_RETRIES && isSynchronizing( ); i++ ) {
+        try {
+          TimeUnit.MILLISECONDS.sleep( 1000 );
+          LOG.debug( "Transaction blocked on sync: " + Thread.currentThread( ).getStackTrace( )[3] );
+        } catch ( InterruptedException ex ) {
+          Exceptions.maybeInterrupted( ex );
+          return;
+        }
       }
+      throw new RuntimeException( "Transaction begin failed due to concurrent database synchronization: " + Hosts.listDatabases( ) );
     }
-    throw new RuntimeException( "Transaction begin failed due to concurrent database synchronization: " + Hosts.listDatabases( ) );
   }
   
   public static String getUserName( ) {
