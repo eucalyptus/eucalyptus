@@ -553,6 +553,7 @@ public class Threads {
     private final String                       creationStack;
     private final Class<? extends ComponentId> componentId;
     private final String                       name;
+    private FutureTask<?> task;
     
     Queue( final Class<? extends ComponentId> componentId, final T owner, final int numWorkers ) {
       this.componentId = componentId;
@@ -626,11 +627,11 @@ public class Threads {
     public void run( ) {
       do {
         try {
-          final FutureTask<?> task = this.msgQueue.take( );
-          if ( task != null ) {
-            Logs.exhaust( ).debug( EventType.QUEUE + " " + task + " " + Thread.currentThread( ).getName( ) );
+          this.task = this.msgQueue.take( );
+          if ( this.task != null ) {
+            Logs.exhaust( ).debug( EventType.QUEUE + " " + this.task + " " + Thread.currentThread( ).getName( ) );
             try {
-              task.run( );
+              this.task.run( );
             } catch ( final Exception ex ) {
               Exceptions.maybeInterrupted( ex );
               Logs.extreme( ).error( ex, ex );
