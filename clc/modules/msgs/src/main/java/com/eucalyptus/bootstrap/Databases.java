@@ -573,7 +573,7 @@ public class Databases {
   }
   
   private static Boolean isSynchronizing( ) {
-    if ( !Bootstrap.isFinished( ) ) {
+    if ( !Bootstrap.isFinished( ) || BootstrapArgs.isInitializeSystem( ) ) {
       return false;
     } else if ( !Hosts.isCoordinator( ) && BootstrapArgs.isCloudController( ) ) {
       return isSynchronized( );
