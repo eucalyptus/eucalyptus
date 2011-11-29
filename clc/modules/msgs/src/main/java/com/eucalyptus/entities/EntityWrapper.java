@@ -95,6 +95,7 @@ import org.hibernate.criterion.MatchMode;
 import org.hibernate.criterion.Restrictions;
 import org.hibernate.ejb.EntityManagerFactoryImpl;
 import org.hibernate.exception.ConstraintViolationException;
+import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
@@ -155,6 +156,7 @@ public class EntityWrapper<TYPE> {
    */
   @Deprecated
   public static <T> EntityWrapper<T> get( final Class<T> type ) {
+    Databases.awaitSynchronized( );
     return new EntityWrapper( Entities.lookatPersistenceContext( type ) );
   }
   
@@ -165,6 +167,7 @@ public class EntityWrapper<TYPE> {
   @SuppressWarnings( "unchecked" )
   @Deprecated
   public static <T> EntityWrapper<T> get( final T obj ) {
+    Databases.awaitSynchronized( );
     return new EntityWrapper( Entities.lookatPersistenceContext( obj ) );
   }
   

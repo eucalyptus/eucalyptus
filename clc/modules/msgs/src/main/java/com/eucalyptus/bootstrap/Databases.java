@@ -565,6 +565,17 @@ public class Databases {
     return SyncState.SYNCED.equals( syncState.get( ) );
   }
   
+  public static void awaitSynchronized( ) {
+    while( Hosts.listActiveDatabases( ).size( ) != Hosts.listDatabases( ).size( ) ) {
+      try {
+        TimeUnit.SECONDS.sleep( 1 );
+      } catch ( InterruptedException ex ) {
+        Exceptions.maybeInterrupted( ex );
+        return;
+      }
+    }
+  }
+  
   public static String getUserName( ) {
     return DB_USERNAME;
   }
@@ -977,7 +988,6 @@ public class Databases {
       Connection sourceConnection = context.getConnection( context.getSourceDatabase( ) );
       Connection targetConnection = context.getConnection( context.getTargetDatabase( ) );
       Dialect dialect = context.getDialect( );
-      ExecutorService executor = context.getExecutor( );
       boolean autoCommit = targetConnection.getAutoCommit( );
       targetConnection.setAutoCommit( true );
       SynchronizationSupport.dropForeignKeys( context );
@@ -990,14 +1000,6 @@ public class Databases {
           final String selectSQL = "SELECT " + commaDelimitedColumns + " FROM " + tableName; //$NON-NLS-1$ //$NON-NLS-2$
           final Statement selectStatement = sourceConnection.createStatement( );
           selectStatement.setFetchSize( this.fetchSize );
-//          Callable<ResultSet> callable = new Callable<ResultSet>( )
-//          {
-//            public ResultSet call( ) throws SQLException
-//            {
-//              return selectStatement.executeQuery( selectSQL );
-//            }
-//          };
-//          Future<ResultSet> future = executor.submit( callable );
           String deleteSQL = dialect.getTruncateTableSQL( table );
           LOG.info( deleteSQL );
           Statement deleteStatement = targetConnection.createStatement( );
@@ -1012,7 +1014,7 @@ public class Databases {
             LOG.info( insertSQL );
             PreparedStatement insertStatement = targetConnection.prepareStatement( insertSQL );
             int index = 0;
-            String selected = "SELECT... " + resultSet.getRow( ) + " ";
+            String selected = "SELECT * FROM " + tableName + ": " + resultSet.getRow( ) + " ";
             for ( String column : columns ) {
               index += 1;
               int type = dialect.getColumnType( table.getColumnProperties( column ) );
@@ -1303,14 +1305,5 @@ public class Databases {
     public void setMaxBatchSize( int maxBatchSize ) {
       this.maxBatchSize = maxBatchSize;
     }
-  }
-  
-  public static class MySQLDialect extends net.sf.hajdbc.dialect.MySQLDialect {
-
-    @Override
-    protected String createForeignKeyConstraintFormat( ) {
-      return "ALTER TABLE {1} ADD CONSTRAINT {0} FOREIGN KEY ({2}) REFERENCES {3} ({4}) ON DELETE {5,choice,0#RESTRICT|1#RESTRICT|2#RESTRICT|3#RESTRICT|4#RESTRICT} ON UPDATE {6,choice,0#RESTRICT|1#RESTRICT|2#RESTRICT|3#RESTRICT|4#RESTRICT}";
-    }
-    
   }
 }
