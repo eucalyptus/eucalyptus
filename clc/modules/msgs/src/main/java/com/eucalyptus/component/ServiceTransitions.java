@@ -596,8 +596,26 @@ public class ServiceTransitions {
       
       @Override
       public void fire( final ServiceConfiguration parent ) throws Exception {
-        parent.lookupBootstrapper( ).check( );
-        ServiceBuilders.lookup( parent.getComponentId( ) ).fireCheck( parent );
+        if ( Component.State.ENABLED.apply( parent ) ) {
+          try {
+            parent.lookupBootstrapper( ).check( );
+            ServiceBuilders.lookup( parent.getComponentId( ) ).fireCheck( parent );
+          } catch ( Exception ex ) {
+            try {
+              DISABLE.fire( parent );
+            } catch ( Exception ex1 ) {
+              LOG.error( "Failed to call DISABLE on an ENABLED service after CHECK failure: " + parent.getFullName( )
+                + " due to: "
+                + ex.getMessage( )
+                + ". With current service info: "
+                + parent );
+              Logs.extreme( ).error( ex1, ex1 );
+            }
+          }
+        } else {
+          parent.lookupBootstrapper( ).check( );
+          ServiceBuilders.lookup( parent.getComponentId( ) ).fireCheck( parent );
+        }
       }
     },
     START {
