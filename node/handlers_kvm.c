@@ -83,6 +83,7 @@ permission notice:
 #include "backing.h"
 #include "xml.h"
 #include "diskutil.h"
+#include "iscsi.h"
 
 /* coming from handlers.c */
 extern sem * hyp_sem;
@@ -179,6 +180,7 @@ static void * rebooting_thread (void *arg)
     sem_v (hyp_sem);
     free (xml);
 
+    char *remoteDevStr=NULL;
     // re-attach each volume previously attached
     for (int i=0; i < EUCA_MAX_VOLUMES; ++i) {
         ncVolume * volume = &instance->volumes[i];
@@ -187,12 +189,24 @@ static void * rebooting_thread (void *arg)
             continue; // skip the entry unless attached or attaching
         
         char attach_xml[1024];
-        int rc = gen_libvirt_attach_xml (instance, 
+        int rc=1;
+        // get credentials, decrypt them
+        remoteDevStr = get_iscsi_target (volume->remoteDev);
+        if (!remoteDevStr || !strstr(remoteDevStr, "/dev")) {
+            logprintfl(EUCAERROR, "Reattach-volume: failed to get local name of host iscsi device\n");
+            rc=1;
+        }else{
+            rc = gen_libvirt_attach_xml (instance, 
                                          volume->localDevReal, 
-                                         volume->remoteDev, 
+                                         remoteDevStr, 
                                          nc_state.config_use_virtio_disk, 
                                          attach_xml, 
                                          sizeof(attach_xml));
+        }
+
+        if(remoteDevStr)
+            free(remoteDevStr);
+
         if (!rc) {
             int err;
             sem_p (hyp_sem);
