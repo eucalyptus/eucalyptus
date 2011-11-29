@@ -943,7 +943,12 @@ public class Hosts {
   }
   
   private static final Predicate<Host> filterSyncedDbs       = Predicates.and( DbFilter.INSTANCE, SyncedDbFilter.INSTANCE );
+  private static final Predicate<Host> filterSyncingDbs      = Predicates.and( DbFilter.INSTANCE, Predicates.not( SyncedDbFilter.INSTANCE ) );
   private static final Predicate<Host> filterBootedSyncedDbs = Predicates.and( filterSyncedDbs, BootedFilter.INSTANCE );
+  
+  public static List<Host> listSyncingDatabases( ) {
+    return Hosts.list( filterSyncingDbs );
+  }
   
   public static List<Host> listActiveDatabases( ) {
     return Hosts.list( filterSyncedDbs );
