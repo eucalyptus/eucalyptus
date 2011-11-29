@@ -103,7 +103,7 @@ static int doInitialize (struct nc_state_t *nc)
 	snprintf (nc->get_info_cmd_path, MAX_PATH, EUCALYPTUS_GET_KVM_INFO,  nc->home, nc->home);
 	strcpy(nc->uri, HYPERVISOR_URI);
 	nc->convert_to_disk = 1;
-        nc->capability = HYPERVISOR_HARDWARE; // TODO: indicate virtio support?
+    nc->capability = HYPERVISOR_HARDWARE; // TODO: indicate virtio support?
 
 	s = system_output (nc->get_info_cmd_path);
 #define GET_VALUE(name,var) \
@@ -187,10 +187,10 @@ static void * rebooting_thread (void *arg)
             continue; // skip the entry unless attached or attaching
         
         char attach_xml[1024];
-        int rc = gen_libvirt_attach_xml (instance, 
+        int rc = gen_libvirt_attach_xml (volume->volumeId,
+                                         instance, 
                                          volume->localDevReal, 
                                          volume->remoteDev, 
-                                         nc_state.config_use_virtio_disk, 
                                          attach_xml, 
                                          sizeof(attach_xml));
         if (!rc) {

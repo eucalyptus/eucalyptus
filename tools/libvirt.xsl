@@ -1,14 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-This XSL-T file is used to construct an XML document that 
-libvirt can use to launch a Eucalyptus instance (the job 
-formerly performed by gen_*libvirt_xml Perl scripts). As input
+This XSL-T file is used to construct two types of XML documents:
+
+- one that libvirt can use to launch a Eucalyptus instance (the 
+job formerly performed by gen_*libvirt_xml Perl scripts). As input
 it assumes an XML document produced the the Node Controller
 that describes a Eucalyptus instance to be launched.
+
+- one that libvirt can use to attach a disk to an instance 
 -->
 <xsl:transform xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
     <xsl:output encoding="UTF-8" indent="yes" method="xml"/>
-    <xsl:template match="/">
+
+    <xsl:template match="/instance">
         <!-- sanity check on the hypervisor type - we only know 'kvm' and 'xen' -->
         <xsl:if test="/instance/hypervisor/@type != 'kvm' and /instance/hypervisor/@type != 'xen'"> 
            <xsl:message terminate="yes">ERROR: invalid or unset /instance/hypervisor/@type parameter</xsl:message>
@@ -223,6 +227,37 @@ that describes a Eucalyptus instance to be launched.
             </devices>
         </domain>
     </xsl:template>
+
+    <xsl:template match="/volume">
+      <disk type="block">
+	<driver>
+	  <xsl:choose> 
+	    <xsl:when test="/volume/hypervisor/@type='xen'">
+	      <xsl:attribute name="name">phy</xsl:attribute>
+	    </xsl:when>
+	    <xsl:when test="/volume/hypervisor/@type='kvm'">
+	      <xsl:attribute name="name">qemu</xsl:attribute>
+	    </xsl:when>
+	  </xsl:choose>
+	</driver>
+	<source>
+	  <xsl:attribute name="dev">
+	    <xsl:value-of select="/volume/diskPath"/>
+	  </xsl:attribute>
+	</source>
+	<target>
+	  <xsl:attribute name="dev">
+	    <xsl:value-of select="/volume/diskPath/@targetDeviceName"/>
+	  </xsl:attribute>
+	  <xsl:if test="/volume/hypervisor/@type = 'kvm'">
+	    <xsl:if test="( /volume/os/@virtioDisk = 'true' and contains(/volume/diskPath/@targetDeviceName, 'vd') ) or /volume/os/@platform = 'windows'">
+	      <xsl:attribute name="bus">virtio</xsl:attribute>
+	    </xsl:if>
+	  </xsl:if>
+	</target>
+      </disk>
+    </xsl:template>
+
     <xsl:template name="string-replace-all">
         <xsl:param name="text" />
         <xsl:param name="replace" />

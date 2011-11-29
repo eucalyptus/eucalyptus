@@ -668,7 +668,7 @@ doAttachVolume (	struct nc_state_t *nc,
      
      // generate XML for libvirt attachment request
      char xml [1024];
-     if (gen_libvirt_attach_xml (instance, localDevReal, remoteDevReal, nc->config_use_virtio_disk, xml, sizeof(xml))) {
+     if (gen_libvirt_attach_xml (volumeId, instance, localDevReal, remoteDevReal, xml, sizeof(xml))) {
          logprintfl(EUCAERROR, "AttachVolume(): could not produce attach device xml\n");
          ret = ERROR;
          goto release;
@@ -832,7 +832,7 @@ doDetachVolume (	struct nc_state_t *nc,
 
     // generate XML for libvirt detachment request
     char xml [1024];
-    if (gen_libvirt_attach_xml (instance, localDevReal, remoteDevReal, nc->config_use_virtio_disk, xml, sizeof(xml))) {
+    if (gen_libvirt_attach_xml (volumeId, instance, localDevReal, remoteDevReal, xml, sizeof(xml))) {
         logprintfl(EUCAERROR, "DetachVolume(): could not produce detach device xml\n");
         ret = ERROR;
         goto release;
