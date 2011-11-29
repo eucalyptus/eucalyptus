@@ -211,7 +211,7 @@ public class Databases {
   private static void runDbStateChange( Function<String, Runnable> runnableFunction ) {
     LOG.info( "DB STATE CHANGE: " + runnableFunction );
     try {
-      if ( canHas.writeLock( ).tryLock( 30000L, TimeUnit.MILLISECONDS ) ) {
+      if ( canHas.writeLock( ).tryLock( ) ) {
         try {
           Map<Runnable, Future<Runnable>> runnables = Maps.newHashMap( );
           for ( final String ctx : PersistenceContexts.list( ) ) {
@@ -233,8 +233,6 @@ public class Databases {
       } else {
         throw Exceptions.toUndeclared( "DB STATE CHANGE ABORTED (failed to get lock): " + runnableFunction );
       }
-    } catch ( InterruptedException ex ) {
-      Exceptions.maybeInterrupted( ex );
     } catch ( RuntimeException ex ) {
       LOG.error( ex );
       Logs.extreme( ).error( ex, ex );
@@ -1079,15 +1077,12 @@ public class Databases {
           selectStatement.close( );
           targetConnection.commit( );
         }
-//      } catch ( InterruptedException e ) {
-//        SynchronizationSupport.rollback( targetConnection );
-//        throw SQLExceptionFactory.createSQLException( e );
-//      } catch ( ExecutionException e ) {
-//        SynchronizationSupport.rollback( targetConnection );
-//        throw SQLExceptionFactory.createSQLException( e.getCause( ) );
       } catch ( SQLException e ) {
         SynchronizationSupport.rollback( targetConnection );
         throw e;
+      } catch ( Exception e ) {
+        SynchronizationSupport.rollback( targetConnection );
+        throw new RuntimeException( e );
       }
       targetConnection.setAutoCommit( true );
       SynchronizationSupport.restoreForeignKeys( context );
