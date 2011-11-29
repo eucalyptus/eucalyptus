@@ -127,7 +127,7 @@ import edu.emory.mathcs.backport.java.util.concurrent.atomic.AtomicBoolean;
 public class Threads {
   private static Logger                                  LOG               = Logger.getLogger( Threads.class );
   private final static String                            PREFIX            = "Eucalyptus.";
-  private final static Integer                           NUM_QUEUE_WORKERS = Runtime.getRuntime( ).availableProcessors( ); //TODO:GRZE: discover on per-service basis.;
+  private final static Integer                           NUM_QUEUE_WORKERS = 32; //TODO:GRZE: discover on per-service basis.;
   private final static AtomicInteger                     threadIndex       = new AtomicInteger( 0 );
   private final static ConcurrentMap<String, ThreadPool> execServices      = new ConcurrentHashMap<String, ThreadPool>( );
   
@@ -719,6 +719,11 @@ public class Threads {
     return ( Future<C> ) queue( config.getComponentId( ).getClass( ), config, NUM_QUEUE_WORKERS ).submit( callable );
   }
   
+  @SuppressWarnings( "unchecked" )
+  public static <C> Future<C> enqueue( final ServiceConfiguration config, final Integer workers, final Runnable runnable ) {
+    return ( Future<C> ) queue( config.getComponentId( ).getClass( ), config, workers ).submit( runnable );
+  }
+
   @SuppressWarnings( "unchecked" )
   public static <C> Future<C> enqueue( final ServiceConfiguration config, final Integer workers, final Callable<C> callable ) {
     return ( Future<C> ) queue( config.getComponentId( ).getClass( ), config, workers ).submit( callable );

@@ -113,8 +113,12 @@ public class StatefulMessageSet<E extends Enum<E>> {
   
   public void run( ) {
     do {
-      this.queueEvents( this.state );
-      this.state = this.transition( this.state );
+      try {
+        this.queueEvents( this.state );
+        this.state = this.transition( this.state );
+      } catch ( Exception ex ) {
+        LOG.error( ex , ex );
+      }
     } while ( !this.isFinished( ) );
     LOG.info( EventRecord.here( StatefulMessageSet.class, this.isSuccessful( )
       ? EventType.VM_START_COMPLETED

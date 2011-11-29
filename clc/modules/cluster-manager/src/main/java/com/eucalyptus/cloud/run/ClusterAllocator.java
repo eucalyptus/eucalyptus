@@ -125,7 +125,16 @@ public class ClusterAllocator implements Runnable {
   private static Logger LOG = Logger.getLogger( ClusterAllocator.class );
   
   enum State {
-    START, CREATE_VOLS, CREATE_IGROUPS, CREATE_NETWORK, CREATE_NETWORK_RULES, CREATE_VMS, ATTACH_VOLS, ASSIGN_ADDRESSES, FINISHED, ROLLBACK;
+    START,
+    CREATE_VOLS,
+    CREATE_IGROUPS,
+    CREATE_NETWORK,
+    CREATE_NETWORK_RULES,
+    CREATE_VMS,
+    ATTACH_VOLS,
+    ASSIGN_ADDRESSES,
+    FINISHED,
+    ROLLBACK;
   }
   
   public static Boolean             SPLIT_REQUESTS = true; //TODO:GRZE:@Configurable
@@ -137,10 +146,20 @@ public class ClusterAllocator implements Runnable {
     INSTANCE;
     
     @Override
-    public boolean apply( Allocation allocInfo ) {
+    public boolean apply( final Allocation allocInfo ) {
       try {
         EventRecord.here( ClusterAllocator.class, EventType.VM_PREPARE, LogUtil.dumpObject( allocInfo ) ).trace( );
-        Threads.enqueue( ServiceConfigurations.createEphemeral( ClusterController.INSTANCE ), new ClusterAllocator( allocInfo ) );
+        ServiceConfiguration config = Topology.lookup( ClusterController.class, allocInfo.getPartition( ) );
+        Runnable runnable = new Runnable( ) {
+          public void run( ) {
+            try {
+              new ClusterAllocator( allocInfo ).run( );
+            } catch ( Exception ex ) {
+              LOG.error( ex , ex );
+            }
+          }
+        };
+        Threads.enqueue( config, 32, runnable );
         return true;
       } catch ( Exception ex ) {
         throw Exceptions.toUndeclared( ex );
