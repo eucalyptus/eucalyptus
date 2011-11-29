@@ -108,7 +108,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import net.sf.hajdbc.Dialect;
@@ -134,6 +133,7 @@ import com.eucalyptus.entities.PersistenceContexts;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.scripting.Groovyness;
 import com.eucalyptus.scripting.ScriptExecutionFailedException;
+import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.Mbeans;
@@ -147,7 +147,18 @@ import com.google.common.collect.MapDifference;
 import com.google.common.collect.Maps;
 
 public class Databases {
-  private static final int                        MAX_TX_START_SYNC_RETRIES = 20;
+  public static class DatabaseStateException extends IllegalStateException {
+    
+    /**
+     * @param string
+     */
+    public DatabaseStateException( String string ) {
+      super( string );
+    }
+    
+  }
+  
+  private static final int                        MAX_TX_START_SYNC_RETRIES = 120;
   private static final Predicate<Host>            FILTER_SYNCING_DBS        = Predicates.and( DbFilter.INSTANCE, Predicates.not( SyncedDbFilter.INSTANCE ) );
   private static final ScriptedDbBootstrapper     singleton                 = new ScriptedDbBootstrapper( );
   private static Logger                           LOG                       = Logger.getLogger( Databases.class );
@@ -565,37 +576,44 @@ public class Databases {
   /**
    * @return
    */
-  static Boolean isSynchronized( ) {
+  public static Boolean isSynchronized( ) {
     if ( Hosts.isCoordinator( ) ) {
       syncState.set( SyncState.SYNCED );
     }
     return SyncState.SYNCED.equals( syncState.get( ) );
   }
   
-  private static Boolean isSynchronizing( ) {
+  public static Boolean isSynchronizing( ) {
     if ( !Bootstrap.isFinished( ) || BootstrapArgs.isInitializeSystem( ) ) {
       return false;
     } else if ( !Hosts.isCoordinator( ) && BootstrapArgs.isCloudController( ) ) {
-      return isSynchronized( );
+      return !isSynchronized( );
     } else {
       return !Hosts.list( FILTER_SYNCING_DBS ).isEmpty( );
     }
   }
   
+  private static Predicate<StackTraceElement> stackFilter = Predicates.not( Predicates.or( Threads.filterStackByQualifiedName( "com\\.eucalyptus\\.entities\\..*" ),
+                                                                                           Threads.filterStackByQualifiedName( "com\\.eucalyptus\\.bootstrap\\.Databases.*" ) ) );
+  
   public static void awaitSynchronized( ) {
     if ( !isSynchronizing( ) ) {
       return;
     } else {
+      Collection<StackTraceElement> stack = Threads.filteredStack( stackFilter );
+      String caller = ( stack.isEmpty( ) ? "" : stack.iterator( ).next( ).toString( ) );
       for ( int i = 0; i < MAX_TX_START_SYNC_RETRIES && isSynchronizing( ); i++ ) {
         try {
           TimeUnit.MILLISECONDS.sleep( 1000 );
-          LOG.debug( "Transaction blocked on sync: " + Thread.currentThread( ).getStackTrace( )[3] );
+          LOG.debug( "Transaction blocked on sync: " + caller );
         } catch ( InterruptedException ex ) {
           Exceptions.maybeInterrupted( ex );
           return;
         }
       }
-      throw new RuntimeException( "Transaction begin failed due to concurrent database synchronization: " + Hosts.listDatabases( ) );
+      throw new DatabaseStateException( "Transaction begin failed due to concurrent database synchronization: " + Hosts.listDatabases( )
+        + " for caller:\n"
+        + Joiner.on( "\n\tat " ).join( stack ) );
     }
   }
   
