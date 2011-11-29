@@ -8,6 +8,7 @@ import java.util.concurrent.atomic.AtomicStampedReference;
 import javax.persistence.Embeddable;
 import javax.persistence.MappedSuperclass;
 import javax.persistence.PersistenceContext;
+import org.apache.commons.collections.ComparatorUtils;
 import org.apache.log4j.Logger;
 import org.hibernate.ejb.Ejb3Configuration;
 import org.hibernate.ejb.EntityManagerFactoryImpl;
@@ -28,6 +29,8 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
+import com.google.common.collect.Ordering;
+import edu.emory.mathcs.backport.java.util.Collections;
 
 @SuppressWarnings( "unchecked" )
 public class PersistenceContexts {
@@ -147,7 +150,9 @@ public class PersistenceContexts {
   }
   
   public static List<Class> listEntities( String persistenceContext ) {
-    return entities.get( persistenceContext );
+    List<Class> ctxEntities = Lists.newArrayList( entities.get( persistenceContext ) );
+    Collections.sort( ctxEntities, Ordering.usingToString( ) );
+    return ctxEntities;
   }
   
   private static void touchDatabase( ) {
