@@ -578,7 +578,7 @@ public class Databases {
     } else if ( !Hosts.isCoordinator( ) && BootstrapArgs.isCloudController( ) ) {
       return isSynchronized( );
     } else {
-      return Hosts.list( FILTER_SYNCING_DBS ).isEmpty( );
+      return !Hosts.list( FILTER_SYNCING_DBS ).isEmpty( );
     }
   }
   
