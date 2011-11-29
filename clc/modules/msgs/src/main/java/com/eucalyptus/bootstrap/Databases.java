@@ -591,9 +591,10 @@ public class Databases {
     }
   }
   
-  private static Predicate<StackTraceElement> stackFilter = ( Predicate<StackTraceElement> ) Predicates.not( Predicates.or( Threads.filterStackByQualifiedName( "com\\.eucalyptus\\.entities\\..*" ),
-                                                                                                                            Threads.filterStackByQualifiedName( "java\\.lang\\.Thread.*" ),
-                                                                                                                            Threads.filterStackByQualifiedName( "com\\.eucalyptus\\.bootstrap\\.Databases.*" ) ) );
+  private static Predicate<StackTraceElement> notStackFilterYouAreLookingFor = Predicates.or( Threads.filterStackByQualifiedName( "com\\.eucalyptus\\.entities\\..*" ),
+                                                                                              Threads.filterStackByQualifiedName( "java\\.lang\\.Thread.*" ),
+                                                                                              Threads.filterStackByQualifiedName( "com\\.eucalyptus\\.bootstrap\\.Databases.*" ) );
+  private static Predicate<StackTraceElement> stackFilter                    = Predicates.not( notStackFilterYouAreLookingFor );
   
   public static void awaitSynchronized( ) {
     if ( !isSynchronizing( ) ) {
