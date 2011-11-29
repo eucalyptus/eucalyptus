@@ -611,6 +611,7 @@ public class ServiceTransitions {
                 + parent );
               Logs.extreme( ).error( ex1, ex1 );
             }
+            throw ex;
           }
         } else {
           parent.lookupBootstrapper( ).check( );
