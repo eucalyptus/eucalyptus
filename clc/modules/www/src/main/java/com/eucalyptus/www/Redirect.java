@@ -41,12 +41,14 @@ public class Redirect extends Rule {
     // Then check if the request is plain HTTP
     // If true, redirect to the HTTPS service
     String urlStr = req.getRequestURL( ).toString( );
-    if ( !urlStr.startsWith( "https" ) ) {
+    if ( redirectHost == null && !urlStr.startsWith( "https" ) ) {
       redirectHost = ( new URL( urlStr ) ).getHost( );
     }
     if ( redirectHost != null ) {
       // A redirect is required
-      resp.sendRedirect( getRedirectUrl( redirectHost, req ) );
+      String redirectUrl = getRedirectUrl( redirectHost, req );
+      LOG.debug( "Redirecting request to " + redirectUrl );
+      resp.sendRedirect( redirectUrl );
     }
     return target;
   }
