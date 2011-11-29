@@ -63,8 +63,8 @@ public class Redirect extends Rule {
    */
   private static String getRedirectUrl(String redirectHost, HttpServletRequest req) throws MalformedURLException {
     URL url = new URL( req.getRequestURL( ).toString( ) );
-    return String.format( "https://%s:%d/%s", redirectHost, HttpServerBootstrapper.HTTPS_PORT, 
-        url.getPath( ) + ( ( req.getQueryString( ) != null ) ? "?" + req.getQueryString( ) : "" ) );
+    return "https://" + String.format( "%s:%d/%s", redirectHost, HttpServerBootstrapper.HTTPS_PORT, 
+        url.getPath( ) + ( ( req.getQueryString( ) != null ) ? "?" + req.getQueryString( ) : "" ) ).replaceAll("//","/");
   }
   
 }
