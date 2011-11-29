@@ -1,7 +1,13 @@
 #!/usr/bin/perl
 
 #
-# check_db.pl
+# test_reporting.pl runs a test of the reporting system. It simulates usage
+#   of several users simultaneously by spawning processes and generating usage
+#   as various users simultaneously. Then it verifies that events were sent and
+#   recorded in the database correctly and that reports are generated correctly.
+#
+# Usage: test_reporting.pl admin_pw num_users num_users_per_Account
+#             num_instances_per_user duration_secs_secs image+
 #
 # author: tom.werges
 #
@@ -11,30 +17,28 @@
 use strict;
 use warnings;
 
-if ($#ARGV+1 < 4) {
-	die "Usage: check_db.pl num_instances_per_user duration_secs upload_file (account:user,user,user)+";
+if ($#ARGV+1 < 7) {
+	die "Usage: test_reporting.pl admin_pw upload_file num_users num_users_per_account num_instances_per_user duration_secs_secs image+";
 }
 
 
+my $admin_pw = shift;
+my $upload_file = shift;
+my $num_users = shift;
+my $num_users_per_account = shift;
 my $num_instances_per_user = shift;
 my $duration_secs = shift;
-my $upload_file = shift;
 my $write_interval = 40;
 my $storage_usage_mb = 2;
-my $num_users = 0;
-my $account = "";
-my $username_arg = "";
+my @images = ();
+my @types = ("m1.small","c1.medium","m1.large");
+my %types_num = (); # type=>n
+while ($#ARGV+1>0) {
+	push(@images,shift);
+}
+
 my @usernames = ();
 my @accountnames = ();
-
-while ($#ARGV+1>0) {
-	($account,$username_arg) = split(":",shift);
-	push(@accountnames, $account);
-	foreach (split(",",$username_arg)) {
-		push(@usernames, $_);
-		$num_users++;
-	}
-}
 
 sub rand_str($) {
 	return sprintf("%x",rand(2<<$_[0]));
@@ -74,10 +78,79 @@ sub test_eq($$$) {
 }
 
 
+# Takes a PW and returns a session id
+sub login($) {
+	my $password = $_[0];
+	runcmd("wget -O /tmp/sessionId --no-check-certificate \"https://localhost:8443/loginservlet?adminPw=$password\"") and die("couldn't login thru wget");
+	my $session_id = `cat /tmp/sessionId`;
+	return $session_id;
+}
+
+sub generate_report($$$$$) {
+	my ($session_id, $type, $criterion, $start_ms, $end_ms) = @_;
+	my $outfile = "/tmp/out-" . time();
+	sleep 1;
+	runcmd("wget -O \"$outfile\" --no-check-certificate \"https://localhost:8443/reports?session=$session_id&name=$type&type=CSV&page=0&flush=false&start=$start_ms&end=$end_ms&criterionId=$criterion&groupById=None\"") and die("Couldn't generate CSV report");
+	return $outfile;
+}
+
 
 #
 # MAIN LOGIC
 #
+
+#
+# For each user: create an account/user within eucalyptus, download
+#  credentials for that account/user, setup credentials dir, and fork a
+#  process to run a simulation as that user. Simultaneously run N
+#  forked processes of "simulate_one_user.pl" which performs
+#  various instance/s3/EBS operations to simulate usage.
+#
+my $account_num = "";
+my $account_name = "";
+my $group_name = "";
+my $type = "";
+my @pids = ();
+
+runcmd("euca-modify-property -p reporting.default_write_interval_secs=$write_interval") and die("Couldn't set write interval");
+
+for (my $i=0; $i<$num_users; $i++) {
+	if ($i % $num_users_per_account == 0) {
+		$account_num = rand_str(16);
+		$account_name = "account-$account_num";
+		$group_name = "group-$account_num";
+		runcmd("euare-accountcreate -a $account_name") and die("Couldn't create account:$account_name");
+		runcmd("euare-groupcreate --delegate $account_name -g $group_name") and die("Couldn't create group:$account_name");
+		runcmd("euare-groupuploadpolicy --delegate $account_name -g $group_name -p policy-$account_num -o '{ \"Statement\": [ { \"Sid\": \"Stmt1320458221062\", \"Action\": \"*\", \"Effect\": \"Allow\", \"Resource\": \"*\" } ] }'") and die("Couldn't upload policy:$account_name");
+	}
+	push(@accountnames, $account_name);
+	my $user_name = "user-$account_num-" . rand_str(32);
+	push(@usernames, $user_name);
+	runcmd("euare-usercreate --delegate $account_name -p / -u $user_name") and die("Couldn't create user:$user_name");
+	runcmd("euare-groupadduser --delegate $account_name -g $group_name -u $user_name") and die("Couldn't add user:$user_name to group:$group_name");
+	runcmd("euca-get-credentials -a $account_name -u $user_name creds-$user_name.zip") and die("Couldn't get credentials:$user_name");
+	runcmd("(mkdir credsdir-$user_name; cd credsdir-$user_name; unzip ../creds-$user_name.zip)") and die("Couldn't unzip credentials:$user_name");
+	my $pid = fork();
+	# Fork and run simulate_one_user.pl as this euca user
+	if ($pid==0) {
+		# Run usage simulation as euca user within subshell within separate process; rotate thru images and types
+		#exec("(cd \$PWD/credsdir-$user_name; \$PWD/simulate_one_user.pl $num_instances_per_user " . $types[$i % ($#types+1)] . " $duration_secs $num_users " . $images[$i % ($#images+1)] . " > log-$user_name 2>&1)") and die ("Couldn't exec simulate_one_user for: $user_name");
+		$types_num{$types[$i % ($#types+1)]}++; # Keep track of num of instance types started
+		runcmd("(. \$PWD/credsdir-$user_name/eucarc; . \$PWD/credsdir-$user_name/iamrc; \$PWD/simulate_one_user.pl $num_instances_per_user " . $types[$i % ($#types+1)] . " $write_interval $duration_secs $upload_file $storage_usage_mb " . $images[$i % ($#images+1)] . ") > log-$user_name 2>&1") and die ("Couldn't exec simulate_one_user for: $user_name"); exit(0);
+	}
+	push(@pids, $pid);
+}
+
+print "Done forking.\n";
+foreach (@pids) {
+	print "Waiting for:$_\n";
+	waitpid($_,0);
+	if ($? != 0) {
+		die("Child exited with error code:$_");
+	}
+}
+
+
 
 
 #
@@ -216,4 +289,27 @@ foreach (execute_query("
 	$num_rows++;
 }
 test_eq("rows count", $num_users, $num_rows);
+
+
+
+
+
+
+# Generate CSV reports
+#   Verify instance CSV
+#   Verify S3 CSV
+#   Verify Storage CSV
+#   How to get correct values?
+#
+# Record intervals?
+# Generate CSV reports at various intervals for all report types
+# Surrounding, within, before beginning, after end
+# TODO: replace /tmp/sessionId?
+
+
+# Run simulate_negative_usage with value
+# Gather timestamp
+
+# Run negative_check_db with values
+# Use timestamp
 
