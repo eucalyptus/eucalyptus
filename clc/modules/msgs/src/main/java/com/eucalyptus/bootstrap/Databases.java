@@ -566,7 +566,7 @@ public class Databases {
   }
   
   public static void awaitSynchronized( ) {
-    while( Hosts.listActiveDatabases( ).size( ) != Hosts.listDatabases( ).size( ) ) {
+    while( Bootstrap.isFinished( ) && Hosts.listActiveDatabases( ).size( ) != Hosts.listDatabases( ).size( ) ) {
       try {
         TimeUnit.SECONDS.sleep( 1 );
       } catch ( InterruptedException ex ) {
