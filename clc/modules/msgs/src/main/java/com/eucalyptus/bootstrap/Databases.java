@@ -568,7 +568,7 @@ public class Databases {
   public static void awaitSynchronized( ) {
     while( Bootstrap.isFinished( ) && !Hosts.listSyncingDatabases( ).isEmpty( ) ) {
       try {
-        TimeUnit.SECONDS.sleep( 1 );
+        TimeUnit.MILLISECONDS.sleep( 100 );
       } catch ( InterruptedException ex ) {
         Exceptions.maybeInterrupted( ex );
         return;
