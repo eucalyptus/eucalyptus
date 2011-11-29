@@ -310,6 +310,11 @@ public class Databases {
           };
           return removeRunner;
         }
+
+        @Override
+        public String toString( ) {
+          return "Databases.disable(): " + hostName;
+        }
       };
     }
     
@@ -407,6 +412,12 @@ public class Databases {
           };
           return removeRunner;
         }
+        
+        @Override
+        public String toString( ) {
+          return "Databases.enable(): " + host;
+        }
+
       };
     }
     
@@ -979,59 +990,57 @@ public class Databases {
           final String selectSQL = "SELECT " + commaDelimitedColumns + " FROM " + tableName; //$NON-NLS-1$ //$NON-NLS-2$
           final Statement selectStatement = sourceConnection.createStatement( );
           selectStatement.setFetchSize( this.fetchSize );
-          Callable<ResultSet> callable = new Callable<ResultSet>( )
-          {
-            public ResultSet call( ) throws SQLException
-            {
-              return selectStatement.executeQuery( selectSQL );
-            }
-          };
-          Future<ResultSet> future = executor.submit( callable );
+//          Callable<ResultSet> callable = new Callable<ResultSet>( )
+//          {
+//            public ResultSet call( ) throws SQLException
+//            {
+//              return selectStatement.executeQuery( selectSQL );
+//            }
+//          };
+//          Future<ResultSet> future = executor.submit( callable );
           String deleteSQL = dialect.getTruncateTableSQL( table );
           LOG.info( deleteSQL );
           Statement deleteStatement = targetConnection.createStatement( );
           int deletedRows = deleteStatement.executeUpdate( deleteSQL );
           LOG.info( Messages.getMessage( Messages.DELETE_COUNT, deletedRows, tableName ) );
           deleteStatement.close( );
-          ResultSet resultSet = future.get( );
-          String insertSQL = "INSERT INTO " + tableName + " (" + commaDelimitedColumns + ") VALUES (" + Strings.join( Collections.nCopies( columns.size( ), Strings.QUESTION ), Strings.PADDED_COMMA ) + ")"; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
-          LOG.info( insertSQL );
-          PreparedStatement insertStatement = targetConnection.prepareStatement( insertSQL );
+          ResultSet resultSet = selectStatement.executeQuery( selectSQL );
+          LOG.info( selectSQL );
           int statementCount = 0;
           while ( resultSet.next( ) ) {
+            String insertSQL = "INSERT INTO " + tableName + " (" + commaDelimitedColumns + ") VALUES (" + Strings.join( Collections.nCopies( columns.size( ), Strings.QUESTION ), Strings.PADDED_COMMA ) + ")"; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
+            LOG.info( insertSQL );
+            PreparedStatement insertStatement = targetConnection.prepareStatement( insertSQL );
             int index = 0;
+            String selected = "SELECT... " + resultSet.getRow( ) + " ";
             for ( String column : columns ) {
               index += 1;
               int type = dialect.getColumnType( table.getColumnProperties( column ) );
               Object object = SynchronizationSupport.getObject( resultSet, index, type );
+              selected += "\n\t" + column + "=" + object + " ";
               if ( resultSet.wasNull( ) ) {
                 insertStatement.setNull( index, type );
               } else {
                 insertStatement.setObject( index, object, type );
               }
             }
+            LOG.info( selected );
             insertStatement.addBatch( );
-            statementCount += 1;
-            if ( ( statementCount % this.maxBatchSize ) == 0 ) {
-              insertStatement.executeBatch( );
-              insertStatement.clearBatch( );
-            }
-            insertStatement.clearParameters( );
-          }
-          if ( ( statementCount % this.maxBatchSize ) > 0 ) {
             insertStatement.executeBatch( );
+            insertStatement.clearBatch( );
+            insertStatement.clearParameters( );
+            insertStatement.close( );
           }
           LOG.info( Messages.getMessage( Messages.INSERT_COUNT, statementCount, tableName ) );
-          insertStatement.close( );
           selectStatement.close( );
           targetConnection.commit( );
         }
-      } catch ( InterruptedException e ) {
-        SynchronizationSupport.rollback( targetConnection );
-        throw SQLExceptionFactory.createSQLException( e );
-      } catch ( ExecutionException e ) {
-        SynchronizationSupport.rollback( targetConnection );
-        throw SQLExceptionFactory.createSQLException( e.getCause( ) );
+//      } catch ( InterruptedException e ) {
+//        SynchronizationSupport.rollback( targetConnection );
+//        throw SQLExceptionFactory.createSQLException( e );
+//      } catch ( ExecutionException e ) {
+//        SynchronizationSupport.rollback( targetConnection );
+//        throw SQLExceptionFactory.createSQLException( e.getCause( ) );
       } catch ( SQLException e ) {
         SynchronizationSupport.rollback( targetConnection );
         throw e;
