@@ -942,16 +942,11 @@ public class Hosts {
     return Hosts.list( DbFilter.INSTANCE );
   }
   
-  private static final Predicate<Host> filterSyncedDbs       = Predicates.and( DbFilter.INSTANCE, SyncedDbFilter.INSTANCE );
-  private static final Predicate<Host> filterSyncingDbs      = Predicates.and( DbFilter.INSTANCE, Predicates.not( SyncedDbFilter.INSTANCE ) );
-  private static final Predicate<Host> filterBootedSyncedDbs = Predicates.and( filterSyncedDbs, BootedFilter.INSTANCE );
-  
-  public static List<Host> listSyncingDatabases( ) {
-    return Hosts.list( filterSyncingDbs );
-  }
+  private static final Predicate<Host> FILTER_SYNCED_DBS        = Predicates.and( DbFilter.INSTANCE, SyncedDbFilter.INSTANCE );
+  private static final Predicate<Host> FILTER_BOOTED_SYNCED_DBS = Predicates.and( FILTER_SYNCED_DBS, BootedFilter.INSTANCE );
   
   public static List<Host> listActiveDatabases( ) {
-    return Hosts.list( filterSyncedDbs );
+    return Hosts.list( FILTER_SYNCED_DBS );
   }
   
   private static Host put( final Host newHost ) {
@@ -1199,7 +1194,7 @@ public class Hosts {
   
   static void awaitDatabases( ) throws InterruptedException {
     if ( !BootstrapArgs.isCloudController( ) ) {
-      while ( list( filterBootedSyncedDbs ).isEmpty( ) ) {
+      while ( list( FILTER_BOOTED_SYNCED_DBS ).isEmpty( ) ) {
         TimeUnit.SECONDS.sleep( 3 );
         LOG.info( "Waiting for system view with database..." );
       }

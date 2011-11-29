@@ -203,7 +203,6 @@ public class Entities {
   }
   
   public static EntityTransaction get( final Object obj ) {
-    Databases.awaitSynchronized( );
     if ( hasTransaction( obj ) ) {
       final CascadingTx tx = getTransaction( obj );
       final EntityTransaction etx = tx.join( );

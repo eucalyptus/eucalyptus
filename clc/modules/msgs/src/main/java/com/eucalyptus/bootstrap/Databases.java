@@ -108,6 +108,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import net.sf.hajdbc.Dialect;
@@ -123,6 +124,8 @@ import net.sf.hajdbc.sql.DriverDatabaseClusterMBean;
 import net.sf.hajdbc.util.SQLExceptionFactory;
 import net.sf.hajdbc.util.Strings;
 import org.apache.log4j.Logger;
+import com.eucalyptus.bootstrap.Hosts.DbFilter;
+import com.eucalyptus.bootstrap.Hosts.SyncedDbFilter;
 import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Eucalyptus.Database;
@@ -137,19 +140,23 @@ import com.eucalyptus.util.Mbeans;
 import com.eucalyptus.util.async.Futures;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
+import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.MapDifference;
 import com.google.common.collect.Maps;
 
 public class Databases {
-  private static final ScriptedDbBootstrapper     singleton       = new ScriptedDbBootstrapper( );
-  private static Logger                           LOG             = Logger.getLogger( Databases.class );
-  private static final String                     DB_NAME         = "eucalyptus";
-  private static final String                     DB_USERNAME     = DB_NAME;
-  private static final String                     jdbcJmxDomain   = "net.sf.hajdbc";
-  private static final ExecutorService            dbSyncExecutors = Executors.newCachedThreadPool( );                     //NOTE:GRZE:special case thread handling.
-  private static final AtomicReference<SyncState> syncState       = new AtomicReference<SyncState>( SyncState.NOTSYNCED );
-  private static final ReentrantReadWriteLock     canHas          = new ReentrantReadWriteLock( );
+  private static final int                        MAX_TX_START_SYNC_RETRIES = 20;
+  private static final Predicate<Host>            FILTER_SYNCING_DBS        = Predicates.and( DbFilter.INSTANCE, Predicates.not( SyncedDbFilter.INSTANCE ) );
+  private static final ScriptedDbBootstrapper     singleton                 = new ScriptedDbBootstrapper( );
+  private static Logger                           LOG                       = Logger.getLogger( Databases.class );
+  private static final String                     DB_NAME                   = "eucalyptus";
+  private static final String                     DB_USERNAME               = DB_NAME;
+  private static final String                     jdbcJmxDomain             = "net.sf.hajdbc";
+  private static final ExecutorService            dbSyncExecutors           = Executors.newCachedThreadPool( );                                              //NOTE:GRZE:special case thread handling.
+  private static final AtomicReference<SyncState> syncState                 = new AtomicReference<SyncState>( SyncState.NOTSYNCED );
+  private static final ReentrantReadWriteLock     canHas                    = new ReentrantReadWriteLock( );
   
   enum SyncState {
     NOTSYNCED,
@@ -310,7 +317,7 @@ public class Databases {
           };
           return removeRunner;
         }
-
+        
         @Override
         public String toString( ) {
           return "Databases.disable(): " + hostName;
@@ -417,7 +424,7 @@ public class Databases {
         public String toString( ) {
           return "Databases.enable(): " + host;
         }
-
+        
       };
     }
     
@@ -558,22 +565,34 @@ public class Databases {
   /**
    * @return
    */
-  public static Boolean isSynchronized( ) {
+  static Boolean isSynchronized( ) {
     if ( Hosts.isCoordinator( ) ) {
       syncState.set( SyncState.SYNCED );
     }
     return SyncState.SYNCED.equals( syncState.get( ) );
   }
   
+  private static Boolean isSynchronizing( ) {
+    if ( !Bootstrap.isFinished( ) ) {
+      return false;
+    } else if ( !Hosts.isCoordinator( ) && BootstrapArgs.isCloudController( ) ) {
+      return isSynchronized( );
+    } else {
+      return Hosts.list( FILTER_SYNCING_DBS ).isEmpty( );
+    }
+  }
+  
   public static void awaitSynchronized( ) {
-    while( Bootstrap.isFinished( ) && !Hosts.listSyncingDatabases( ).isEmpty( ) ) {
+    for ( int i = 0; i < MAX_TX_START_SYNC_RETRIES && isSynchronizing( ); i++ ) {
       try {
-        TimeUnit.MILLISECONDS.sleep( 100 );
+        TimeUnit.MILLISECONDS.sleep( 1000 );
+        LOG.debug( "Transaction blocked on sync: " + Thread.currentThread( ).getStackTrace( )[3] );
       } catch ( InterruptedException ex ) {
         Exceptions.maybeInterrupted( ex );
         return;
       }
     }
+    throw new RuntimeException( "Transaction begin failed due to concurrent database synchronization: " + Hosts.listDatabases( ) );
   }
   
   public static String getUserName( ) {

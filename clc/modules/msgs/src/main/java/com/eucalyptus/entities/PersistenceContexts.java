@@ -170,6 +170,7 @@ public class PersistenceContexts {
   
   @SuppressWarnings( "deprecation" )
   public static EntityManagerFactoryImpl getEntityManagerFactory( final String persistenceContext ) {
+    Databases.awaitSynchronized( );
     if ( emf.containsKey( persistenceContext ) ) {
       return emf.get( persistenceContext );
     } else {
