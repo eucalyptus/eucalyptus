@@ -68,6 +68,7 @@ foreach (execute_query("
 	group by ru.user_name
 ")) {
 	($start_ms,$end_ms,$username) = split("\\s+");
+	# TODO: all users
 	print "Found times $start_ms - $end_ms for user:$username\n";
 }
 if ($end_ms==0) {
