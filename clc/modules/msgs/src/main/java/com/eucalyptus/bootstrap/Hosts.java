@@ -311,7 +311,7 @@ public class Hosts {
           
           @Override
           public void run( ) {
-            if ( !Bootstrap.isFinished( ) || Bootstrap.isShuttingDown( ) ) {
+            if ( !Bootstrap.isLoaded( ) || Bootstrap.isShuttingDown( ) ) {
               return;
             } else {
               LOG.debug( runner.toString( ) + ": RUNNING" );
