@@ -192,6 +192,29 @@ public class Databases {
     public boolean load( ) throws Exception {
       Hosts.awaitDatabases( );
       Groovyness.run( "setup_dbpool.groovy" );
+      OrderedShutdown.registerShutdownHook( Empyrean.class, new Runnable( ) {
+        
+        @Override
+        public void run( ) {
+          try {
+            for ( String ctx : PersistenceContexts.list( ) ) {
+              try {
+                DriverDatabaseClusterMBean db = Databases.lookup( ctx );
+                for ( String host : db.getInactiveDatabases( ) ) {
+                  Databases.disable( host );
+                }
+                for ( String host : db.getActiveDatabases( ) ) {
+                  Databases.disable( host );
+                }
+              } catch ( Exception ex ) {
+                LOG.error( ex );
+              }
+            }
+          } catch ( NoSuchElementException ex ) {
+            LOG.error( ex );
+          }
+        }
+      } );
       return true;
     }
     
