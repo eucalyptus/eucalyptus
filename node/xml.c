@@ -385,6 +385,7 @@ static int apply_xslt_stylesheet (const char * xsltStylesheetPath, const char * 
                                             char pc = (i>0) ? ((char) buf [i-1]) : '\0'; // previous char
                                             if (c == '?' && pc == '<') {
                                                 in_header = 1;
+                                                j--;
                                                 continue;
                                             }
                                             if (c == '>' && pc == '?') {
