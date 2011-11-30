@@ -90,6 +90,7 @@ permission notice:
 #include "vbr.h"
 #include "iscsi.h"
 #include "xml.h"
+#include "hooks.h"
 
 #include "windows-bundle.h"
 
@@ -673,6 +674,15 @@ doAttachVolume (	struct nc_state_t *nc,
          ret = ERROR;
          goto release;
      }
+
+     // invoke hooks
+     char path [MAX_PATH];
+     snprintf (path, sizeof (path), EUCALYPTUS_VOLUME_XML_PATH_FORMAT, instance->instancePath, volumeId);
+     if (call_hooks (NC_EVENT_PRE_ATTACH, path)) {
+         logprintfl (EUCAERROR, "[%s] cancelled volume attachment via hooks\n", instance->instanceId);
+         ret = ERROR;
+         goto release;
+     }
      
      // protect libvirt calls, just in case
      sem_p (hyp_sem);
@@ -854,7 +864,8 @@ doDetachVolume (	struct nc_state_t *nc,
     } else {
         char path [MAX_PATH];
         snprintf (path, sizeof (path), EUCALYPTUS_VOLUME_XML_PATH_FORMAT, instance->instancePath, volumeId);
-        unlink (path);
+        call_hooks (NC_EVENT_POST_DETACH, path); // invoke hooks, but do not do anything if they return error
+        unlink (path); // remove vol-XXXX.xml file
     }
     
  release:
