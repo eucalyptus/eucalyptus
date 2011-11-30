@@ -192,6 +192,29 @@ public class Databases {
     public boolean load( ) throws Exception {
       Hosts.awaitDatabases( );
       Groovyness.run( "setup_dbpool.groovy" );
+      OrderedShutdown.registerShutdownHook( Empyrean.class, new Runnable( ) {
+        
+        @Override
+        public void run( ) {
+          try {
+            for ( String ctx : PersistenceContexts.list( ) ) {
+              try {
+                DriverDatabaseClusterMBean db = Databases.lookup( ctx );
+                for ( String host : db.getInactiveDatabases( ) ) {
+                  Databases.disable( host );
+                }
+                for ( String host : db.getActiveDatabases( ) ) {
+                  Databases.disable( host );
+                }
+              } catch ( Exception ex ) {
+                LOG.error( ex );
+              }
+            }
+          } catch ( NoSuchElementException ex ) {
+            LOG.error( ex );
+          }
+        }
+      } );
       return true;
     }
     
@@ -618,9 +641,11 @@ public class Databases {
           return;
         }
       }
-      throw new DatabaseStateException( "Transaction begin failed due to concurrent database synchronization: " + Hosts.listDatabases( )
-        + " for caller:\n"
-        + Joiner.on( "\n\tat " ).join( stack ) );
+      if ( !isSynchronized( ) ) {
+        throw new DatabaseStateException( "Transaction begin failed due to concurrent database synchronization: " + Hosts.listDatabases( )
+          + " for caller:\n"
+          + Joiner.on( "\n\tat " ).join( stack ) );
+      }
     }
   }
   
