@@ -102,8 +102,6 @@ import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.empyrean.Empyrean;
-import com.eucalyptus.event.EventListener;
-import com.eucalyptus.event.Hertz;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.scripting.Groovyness;
@@ -831,7 +829,7 @@ public class Hosts {
           public void run( ) {
             try {
               hostMap.start( STATE_INITIALIZE_TIMEOUT );
-              OrderedShutdown.registerShutdownHook( Eucalyptus.class, new Runnable( ) {
+              OrderedShutdown.registerPreShutdownHook( new Runnable( ) {
                 
                 @Override
                 public void run( ) {
@@ -843,7 +841,6 @@ public class Hosts {
                     LOG.error( ex1, ex1 );
                   }
                   try {
-//                    Listeners.deregister( HostBootstrapEventListener.INSTANCE );
                     hostMap.removeNotifier( HostMapStateListener.INSTANCE );
                     try {
                       if ( Hosts.contains( Internets.localHostIdentifier( ) ) ) {

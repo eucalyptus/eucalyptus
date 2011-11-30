@@ -512,8 +512,14 @@ public class Databases {
             syncState.set( SyncState.SYNCED );
             return true;
           } catch ( Exception ex ) {
-            runDbStateChange( DeactivateHostFunction.INSTANCE.apply( host.getDisplayName( ) ) );
-            syncState.set( SyncState.NOTSYNCED );
+            try {
+              runDbStateChange( DeactivateHostFunction.INSTANCE.apply( host.getDisplayName( ) ) );
+            } catch ( Exception ex1 ) {
+              LOG.error( "Databases.enable(): failed because of: " + ex.getMessage( ) );
+              Logs.extreme( ).error( ex, ex );
+            } finally {
+              syncState.set( SyncState.NOTSYNCED );
+            }
             return false;
           }
         } else {

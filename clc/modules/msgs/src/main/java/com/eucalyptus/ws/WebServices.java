@@ -230,7 +230,7 @@ public class WebServices {
           }
         }
       };
-      OrderedShutdown.registerShutdownHook( Empyrean.class, serverShutdown );
+      OrderedShutdown.registerPreShutdownHook( serverShutdown );
     } catch ( Exception ex ) {
       LOG.error( ex, ex );
     }
