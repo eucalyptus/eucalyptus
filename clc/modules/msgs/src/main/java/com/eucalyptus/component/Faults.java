@@ -91,6 +91,7 @@ import org.hibernate.annotations.GenericGenerator;
 import org.hibernate.annotations.NaturalId;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.Hosts;
+import com.eucalyptus.component.Faults.CheckException;
 import com.eucalyptus.context.ServiceStateException;
 import com.eucalyptus.empyrean.ServiceStatusType;
 import com.eucalyptus.entities.Entities;
@@ -223,19 +224,21 @@ public class Faults {
     @Override
     public Iterator<CheckException> iterator( ) {
       return new Iterator<CheckException>( ) {
-        CheckException curr;
+        CheckException next;
         {
-          this.curr = CheckException.this.other;
+          this.next = CheckException.this;
         }
         
         @Override
         public boolean hasNext( ) {
-          return ( this.curr != null ) && ( this.curr.other != null );
+          return this.next != null;
         }
         
         @Override
         public CheckException next( ) {
-          return this.curr = this.curr.other;
+          CheckException ret = this.next;
+          this.next = ( ret != null ? ret.other : null );
+          return ret;
         }
         
         @Override
@@ -333,19 +336,7 @@ public class Faults {
       failureAction = NoopErrorFilter.INSTANCE;
     }
     if ( ex instanceof CheckException ) {//go through all the exceptions and look for things with Severity greater than or equal to ERROR
-      final CheckException checkExHead = ( CheckException ) ex;
-      for ( final CheckException checkEx : checkExHead ) {
-//        ServiceEvents.fireExceptionEvent( parent, checkEx.getSeverity( ), checkEx );
-      }
-      if ( checkExHead.getSeverity( ).ordinal( ) >= Severity.ERROR.ordinal( ) ) {
-        try {
-          failureAction.apply( ex );
-        } catch ( final Exception ex1 ) {
-          Logs.extreme( ).error( ex1, ex1 );
-        }
-        return true;
-      }
-      for ( final CheckException checkEx : checkExHead ) {
+      for ( final CheckException checkEx : ( CheckException ) ex ) {
         if ( checkEx.getSeverity( ).ordinal( ) >= Severity.ERROR.ordinal( ) ) {
           try {
             failureAction.apply( ex );
@@ -357,7 +348,6 @@ public class Faults {
       }
       return false;
     } else {//treat generic exceptions as always being Severity.ERROR
-//      ServiceEvents.fireExceptionEvent( parent, Severity.ERROR, ex );
       try {
         failureAction.apply( ex );
       } catch ( final Exception ex1 ) {
@@ -422,18 +412,24 @@ public class Faults {
   }
   
   private static CheckException chain( final ServiceConfiguration config, final Severity severity, final List<? extends Throwable> exs ) {
-    CheckException last = null;
-    for ( final Throwable ex : Lists.reverse( exs ) ) {
-      if ( ( last != null ) && ( ex instanceof CheckException ) ) {
-        last.other = ( CheckException ) ex;
-      } else if ( last == null ) {
-        last = new CheckException( config, severity, ex );
+    try {
+      CheckException last = null;
+      for ( final Throwable ex : Lists.reverse( exs ) ) {
+        if ( ( last != null ) && ( ex instanceof CheckException ) ) {
+          last.other = ( CheckException ) ex;
+        } else if ( last == null ) {
+          last = new CheckException( config, severity, ex );
+        }
       }
+      last = ( last != null
+        ? last
+        : new CheckException( config, Severity.DEBUG, new NullPointerException( "Faults.chain called w/ empty list: " + exs ) ) );
+      return last;
+    } catch ( Exception ex ) {
+      LOG.error( "Faults: error in processing previous error: " + ex );
+      Logs.extreme( ).error( ex , ex );
+      return new CheckException( config, Severity.ERROR, ex );
     }
-    last = ( last != null
-      ? last
-      : new CheckException( config, Severity.DEBUG, new NullPointerException( "Faults.chain called w/ empty list: " + exs ) ) );
-    return last;
   }
   
   public static CheckException failure( final ServiceConfiguration config, final Throwable... exs ) {
@@ -513,6 +509,7 @@ public class Faults {
           }
         }
       } catch ( Exception ex ) {
+        LOG.error( "Faults: error in processing previous error: " + errors );
         Logs.extreme( ).error( ex , ex );
       }
     }

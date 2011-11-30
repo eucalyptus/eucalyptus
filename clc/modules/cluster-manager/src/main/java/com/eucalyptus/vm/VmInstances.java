@@ -83,6 +83,7 @@ import com.eucalyptus.cluster.callback.TerminateCallback;
 import com.eucalyptus.component.Dispatcher;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
+import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
@@ -360,7 +361,7 @@ public class VmInstances {
     LOG.trace( Logs.dump( vm ) );
     LOG.trace( Threads.currentStackString( ) );
     try {
-      final Cluster cluster = Clusters.getInstance( ).lookup( vm.lookupPartition( ) );
+      final Cluster cluster = Clusters.lookup( Topology.lookup( ClusterController.class, vm.lookupPartition( ) ) );
       VmInstances.cleanUpAttachedVolumes( vm );
       
       Address address = null;
@@ -388,7 +389,8 @@ public class VmInstances {
   
   private static void cleanUpAttachedVolumes( final VmInstance vm ) {
     try {
-      final Cluster cluster = Clusters.getInstance( ).lookup( vm.lookupPartition( ) );
+      ServiceConfiguration ccConfig = Topology.lookup( ClusterController.class, vm.lookupPartition( ) );
+      final Cluster cluster = Clusters.lookup( ccConfig );
       vm.eachVolumeAttachment( new Predicate<AttachedVolume>( ) {
         @Override
         public boolean apply( final AttachedVolume arg0 ) {

@@ -360,8 +360,8 @@ public class ServiceTransitions {
         Faults.persist( Faults.failure( parent, ex ) );
         throw Exceptions.toUndeclared( ex );
       } else {
-        Faults.persist( Faults.advisory( parent, ex ) );
         transitionCallback.fire( );
+        Faults.persist( Faults.advisory( parent, ex ) );
       }
     }
   }
@@ -480,12 +480,12 @@ public class ServiceTransitions {
             } );
             errors = Faults.transformToExceptions( ).apply( status );
           }
-          Faults.persist( errors );
           if ( Faults.Severity.FATAL.equals( errors.getSeverity( ) ) ) {
             //TODO:GRZE: handle remote fatal error.
             throw errors;
           } else if ( errors.getSeverity( ).ordinal( ) < Faults.Severity.ERROR.ordinal( ) ) {
             Logs.extreme( ).error( errors, errors );
+            Faults.persist( errors );
           } else {
             throw errors;
           }
@@ -497,26 +497,16 @@ public class ServiceTransitions {
       
       @Override
       public void fire( final ServiceConfiguration parent ) throws Exception {
-    	  try{
-    		  StartServiceResponseType msg = ServiceTransitions.sendEmpyreanRequest( parent, new StartServiceType( ) {
-    			  {
-    				  this.getServices( ).add( TypeMappers.transform( parent, ServiceId.class ) );
-    			  }
-    		  } );
-    	  }catch(Exception ex){
-    		  /// *SPARK hack: special case for reloading VmwareBroker's xmlconfig properties
-    		  if(parent.getComponentId().getClass().getSimpleName().equals("VMwareBroker")){
-    			  try{
-    				  ServiceBuilders.lookup( parent.getComponentId( ) ).fireStart( parent );
-    			  }catch(Exception iex){  ;  }    			  
-    		  }
-    		  throw ex;
-    	  }
-    	  try {
-    		  ServiceBuilders.lookup( parent.getComponentId( ) ).fireStart( parent );
-    	  } catch ( Exception ex ) {
-    		  LOG.error( ex, ex );
-    	  }
+        StartServiceResponseType msg = ServiceTransitions.sendEmpyreanRequest( parent, new StartServiceType( ) {
+          {
+            this.getServices( ).add( TypeMappers.transform( parent, ServiceId.class ) );
+          }
+        } );
+        try {
+          ServiceBuilders.lookup( parent.getComponentId( ) ).fireStart( parent );
+        } catch ( Exception ex ) {
+          LOG.error( ex, ex );
+        }
       }
     },
     ENABLE {
@@ -606,8 +596,31 @@ public class ServiceTransitions {
       
       @Override
       public void fire( final ServiceConfiguration parent ) throws Exception {
-        parent.lookupBootstrapper( ).check( );
-        ServiceBuilders.lookup( parent.getComponentId( ) ).fireCheck( parent );
+        if ( Component.State.ENABLED.apply( parent ) ) {
+          try {
+            parent.lookupBootstrapper( ).check( );
+            ServiceBuilders.lookup( parent.getComponentId( ) ).fireCheck( parent );
+          } catch ( Exception ex ) {
+            if ( Faults.filter( parent, ex ) ) {
+              try {
+                DISABLE.fire( parent );
+              } catch ( Exception ex1 ) {
+                LOG.error( "Failed to call DISABLE on an ENABLED service after CHECK failure: " + parent.getFullName( )
+                  + " due to: "
+                  + ex.getMessage( )
+                  + ". With current service info: "
+                  + parent );
+                Logs.extreme( ).error( ex1, ex1 );
+              }
+              throw ex;
+            } else {
+              throw ex;
+            }
+          }
+        } else {
+          parent.lookupBootstrapper( ).check( );
+          ServiceBuilders.lookup( parent.getComponentId( ) ).fireCheck( parent );
+        }
       }
     },
     START {
@@ -622,7 +635,6 @@ public class ServiceTransitions {
       
       @Override
       public void fire( final ServiceConfiguration parent ) throws Exception {
-        CHECK.fire( parent );
         parent.lookupBootstrapper( ).enable( );
         try {
           ServiceBuilders.lookup( parent.getComponentId( ) ).fireEnable( parent );
@@ -683,7 +695,7 @@ public class ServiceTransitions {
         try {
           ServiceBuilders.lookup( parent.getComponentId( ) ).fireCheck( parent );
         } catch ( Exception ex ) {
-          LOG.error( ex, ex );
+          Logs.extreme( ).error( ex, ex );
         }
       }
       
@@ -695,7 +707,7 @@ public class ServiceTransitions {
         try {
           ServiceBuilders.lookup( parent.getComponentId( ) ).fireStart( parent );
         } catch ( Exception ex ) {
-          LOG.error( ex, ex );
+          Logs.extreme( ).error( ex, ex );
         }
       }
     },
@@ -718,7 +730,7 @@ public class ServiceTransitions {
         try {
           ServiceBuilders.lookup( parent.getComponentId( ) ).fireDisable( parent );
         } catch ( Exception ex ) {
-          LOG.error( ex, ex );
+          Logs.extreme( ).error( ex, ex );
         }
       }
     },
@@ -729,7 +741,7 @@ public class ServiceTransitions {
         try {
           ServiceBuilders.lookup( parent.getComponentId( ) ).fireStop( parent );
         } catch ( Exception ex ) {
-          LOG.error( ex, ex );
+          Logs.extreme( ).error( ex, ex );
         }
       }
     };
