@@ -167,6 +167,8 @@ public class Faults {
     @Transient
     private CheckException        other;
     
+    private CheckException( ) {}
+    
     private CheckException( final String serviceName ) {
       this.serviceName = serviceName;
       this.severity = null;
@@ -429,7 +431,7 @@ public class Faults {
       return last;
     } catch ( Exception ex ) {
       LOG.error( "Faults: error in processing previous error: " + ex );
-      Logs.extreme( ).error( ex , ex );
+      Logs.extreme( ).error( ex, ex );
       return new CheckException( config, Severity.ERROR, ex );
     }
   }
@@ -512,7 +514,7 @@ public class Faults {
         }
       } catch ( Exception ex ) {
         LOG.error( "Faults: error in processing previous error: " + errors );
-        Logs.extreme( ).error( ex , ex );
+        Logs.extreme( ).error( ex, ex );
       }
     }
   }
