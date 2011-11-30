@@ -167,6 +167,11 @@ public class Faults {
     @Transient
     private CheckException        other;
     
+    @SuppressWarnings( "unused" )
+    public CheckException( ) {
+      this( null );
+    }
+    
     private CheckException( final String serviceName ) {
       this.serviceName = serviceName;
       this.severity = null;
@@ -429,7 +434,7 @@ public class Faults {
       return last;
     } catch ( Exception ex ) {
       LOG.error( "Faults: error in processing previous error: " + ex );
-      Logs.extreme( ).error( ex , ex );
+      Logs.extreme( ).error( ex, ex );
       return new CheckException( config, Severity.ERROR, ex );
     }
   }
@@ -494,7 +499,7 @@ public class Faults {
       LOG.error( "Failed to lookup error information for: " + config.getFullName( ), ex );
       db.rollback( );
     }
-    return null;
+    return Lists.newArrayList( );
   }
   
   public static void persist( final CheckException errors ) {
@@ -512,7 +517,7 @@ public class Faults {
         }
       } catch ( Exception ex ) {
         LOG.error( "Faults: error in processing previous error: " + errors );
-        Logs.extreme( ).error( ex , ex );
+        Logs.extreme( ).error( ex, ex );
       }
     }
   }
