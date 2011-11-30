@@ -380,7 +380,9 @@ static int apply_xslt_stylesheet (const char * xsltStylesheetPath, const char * 
                                     if (buf_size < outputXmlBufferSize) {
                                         bzero (outputXmlBuffer, outputXmlBufferSize);
                                         for (int i=0; i<buf_size; i++) {
-                                            outputXmlBuffer [i] = (char) buf [i];   
+                                            char c = (char) buf [i];
+                                            if (c != '\n')
+                                                outputXmlBuffer [i] = c;
                                         }
                                     } else {
                                         logprintfl (EUCAERROR, "ERROR: XML string buffer is too small (%d > %d)\n", buf_size, outputXmlBufferSize);
