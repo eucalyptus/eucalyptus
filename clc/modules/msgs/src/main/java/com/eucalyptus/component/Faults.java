@@ -167,7 +167,10 @@ public class Faults {
     @Transient
     private CheckException        other;
     
-    private CheckException( ) {}
+    @SuppressWarnings( "unused" )
+    public CheckException( ) {
+      this( null );
+    }
     
     private CheckException( final String serviceName ) {
       this.serviceName = serviceName;
@@ -496,7 +499,7 @@ public class Faults {
       LOG.error( "Failed to lookup error information for: " + config.getFullName( ), ex );
       db.rollback( );
     }
-    return null;
+    return Lists.newArrayList( );
   }
   
   public static void persist( final CheckException errors ) {
