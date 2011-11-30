@@ -456,9 +456,9 @@ int gen_libvirt_attach_xml (const char *volumeId, const ncInstance *instance, co
     }
 
     { // volume information
-        xmlNodePtr disk = _ELEMENT(volumeNode, "diskPath", localDevReal);
+        xmlNodePtr disk = _ELEMENT(volumeNode, "diskPath", remoteDev);
         _ATTRIBUTE(disk, "targetDeviceType", "disk");
-        _ATTRIBUTE(disk, "targetDeviceName", remoteDev);
+        _ATTRIBUTE(disk, "targetDeviceName", localDevReal);
         _ATTRIBUTE(disk, "targetDeviceBus", "scsi");
         _ATTRIBUTE(disk, "sourceType", "block");
         
