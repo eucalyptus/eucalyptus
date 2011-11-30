@@ -102,8 +102,6 @@ import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.empyrean.Empyrean;
-import com.eucalyptus.event.EventListener;
-import com.eucalyptus.event.Hertz;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.scripting.Groovyness;
@@ -831,7 +829,7 @@ public class Hosts {
           public void run( ) {
             try {
               hostMap.start( STATE_INITIALIZE_TIMEOUT );
-              OrderedShutdown.registerShutdownHook( Eucalyptus.class, new Runnable( ) {
+              OrderedShutdown.registerPreShutdownHook( new Runnable( ) {
                 
                 @Override
                 public void run( ) {
@@ -843,7 +841,6 @@ public class Hosts {
                     LOG.error( ex1, ex1 );
                   }
                   try {
-//                    Listeners.deregister( HostBootstrapEventListener.INSTANCE );
                     hostMap.removeNotifier( HostMapStateListener.INSTANCE );
                     try {
                       if ( Hosts.contains( Internets.localHostIdentifier( ) ) ) {
@@ -942,16 +939,11 @@ public class Hosts {
     return Hosts.list( DbFilter.INSTANCE );
   }
   
-  private static final Predicate<Host> filterSyncedDbs       = Predicates.and( DbFilter.INSTANCE, SyncedDbFilter.INSTANCE );
-  private static final Predicate<Host> filterSyncingDbs      = Predicates.and( DbFilter.INSTANCE, Predicates.not( SyncedDbFilter.INSTANCE ) );
-  private static final Predicate<Host> filterBootedSyncedDbs = Predicates.and( filterSyncedDbs, BootedFilter.INSTANCE );
-  
-  public static List<Host> listSyncingDatabases( ) {
-    return Hosts.list( filterSyncingDbs );
-  }
+  private static final Predicate<Host> FILTER_SYNCED_DBS        = Predicates.and( DbFilter.INSTANCE, SyncedDbFilter.INSTANCE );
+  private static final Predicate<Host> FILTER_BOOTED_SYNCED_DBS = Predicates.and( FILTER_SYNCED_DBS, BootedFilter.INSTANCE );
   
   public static List<Host> listActiveDatabases( ) {
-    return Hosts.list( filterSyncedDbs );
+    return Hosts.list( FILTER_SYNCED_DBS );
   }
   
   private static Host put( final Host newHost ) {
@@ -1199,7 +1191,7 @@ public class Hosts {
   
   static void awaitDatabases( ) throws InterruptedException {
     if ( !BootstrapArgs.isCloudController( ) ) {
-      while ( list( filterBootedSyncedDbs ).isEmpty( ) ) {
+      while ( list( FILTER_BOOTED_SYNCED_DBS ).isEmpty( ) ) {
         TimeUnit.SECONDS.sleep( 3 );
         LOG.info( "Waiting for system view with database..." );
       }

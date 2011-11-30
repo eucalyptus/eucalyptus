@@ -156,7 +156,6 @@ public class EntityWrapper<TYPE> {
    */
   @Deprecated
   public static <T> EntityWrapper<T> get( final Class<T> type ) {
-    Databases.awaitSynchronized( );
     return new EntityWrapper( Entities.lookatPersistenceContext( type ) );
   }
   
@@ -167,7 +166,6 @@ public class EntityWrapper<TYPE> {
   @SuppressWarnings( "unchecked" )
   @Deprecated
   public static <T> EntityWrapper<T> get( final T obj ) {
-    Databases.awaitSynchronized( );
     return new EntityWrapper( Entities.lookatPersistenceContext( obj ) );
   }
   

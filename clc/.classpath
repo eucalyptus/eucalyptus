@@ -158,7 +158,7 @@
 	<classpathentry kind="lib" path="lib/kahadb-5.4.1.jar"/>
 	<classpathentry kind="lib" path="lib/log4j-1.2.15.jar"/>
 	<classpathentry kind="lib" path="lib/manageontap.jar"/>
-	<classpathentry kind="lib" path="lib/mule-core-2.0.1.jar"/>
+	<classpathentry kind="lib" path="lib/mule-core-2.0.1.jar" sourcepath="/bzr/third-party/mule-2.0.1.orig"/>
 	<classpathentry kind="lib" path="lib/mule-module-builders-2.0.1.jar"/>
 	<classpathentry kind="lib" path="lib/mule-module-client-2.0.1.jar"/>
 	<classpathentry kind="lib" path="lib/mule-module-management-2.0.1.jar"/>

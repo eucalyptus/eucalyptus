@@ -77,6 +77,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapArgs;
+import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.component.Component.State;
 import com.eucalyptus.component.Topology.ServiceString;
@@ -682,6 +683,9 @@ public class Topology {
     
     @Override
     public List<ServiceConfiguration> call( ) {
+      if ( Databases.isSynchronizing( ) ) {
+        return Lists.newArrayList( );
+      }
       /** submit describe operations **/
       final List<ServiceConfiguration> allServices = Lists.newArrayList( );
       for ( final Component c : Components.list( ) ) {
