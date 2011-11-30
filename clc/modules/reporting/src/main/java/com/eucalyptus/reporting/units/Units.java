@@ -1,15 +1,45 @@
 package com.eucalyptus.reporting.units;
 
+import com.eucalyptus.configurable.ConfigurableClass;
+import com.eucalyptus.configurable.ConfigurableField;
+
+@ConfigurableClass(root = "reporting", description = "Parameters controlling reporting units")
 public class Units
 {
-	public static final Units DEFAULT_DISPLAY_UNITS =
-		new Units(TimeUnit.DAYS, SizeUnit.GB, TimeUnit.DAYS, SizeUnit.GB);
+	@ConfigurableField(initial = "DAYS", description = "Default time unit")
+	public static String DEFAULT_TIME_UNIT = "DAYS";
+	@ConfigurableField(initial = "GB", description = "Default size unit")
+	public static String DEFAULT_SIZE_UNIT = "GB";
+	@ConfigurableField(initial = "DAYS", description = "Default size-time time unit (GB-days, etc)")
+	public static String DEFAULT_SIZE_TIME_TIME_UNIT = "DAYS";
+	@ConfigurableField(initial = "GB", description = "Default size-time size unit (GB-days, etc)")
+	public static String DEFAULT_SIZE_TIME_SIZE_UNIT = "GB";
+
+	public static Units getDefaultDisplayUnits()
+	{
+		return new Units(TimeUnit.valueOf(DEFAULT_TIME_UNIT),
+						SizeUnit.valueOf(DEFAULT_SIZE_UNIT),
+						TimeUnit.valueOf(DEFAULT_SIZE_TIME_TIME_UNIT),
+						SizeUnit.valueOf(DEFAULT_SIZE_TIME_SIZE_UNIT));
+	}
 	
 	private final TimeUnit timeUnit;
 	private final SizeUnit sizeUnit;
 	private final TimeUnit sizeTimeTimeUnit;
 	private final SizeUnit sizeTimeSizeUnit;
 
+	/**
+	 * Default no-arg ctor is required for euca to set dynamic properties
+	 * above. Please don't use this; it may go away.
+	 */
+	public Units()
+	{
+		this(TimeUnit.valueOf(DEFAULT_TIME_UNIT),
+			SizeUnit.valueOf(DEFAULT_SIZE_UNIT),
+			TimeUnit.valueOf(DEFAULT_SIZE_TIME_TIME_UNIT),
+			SizeUnit.valueOf(DEFAULT_SIZE_TIME_SIZE_UNIT));
+	}
+	
 	public Units(TimeUnit timeUnit, SizeUnit sizeUnit,
 			TimeUnit sizeTimeTimeUnit, SizeUnit sizeTimeSizeUnit)
 	{
