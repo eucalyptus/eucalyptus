@@ -91,6 +91,7 @@ import org.hibernate.annotations.GenericGenerator;
 import org.hibernate.annotations.NaturalId;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.Hosts;
+import com.eucalyptus.component.Faults.CheckException;
 import com.eucalyptus.context.ServiceStateException;
 import com.eucalyptus.empyrean.ServiceStatusType;
 import com.eucalyptus.entities.Entities;
@@ -223,19 +224,21 @@ public class Faults {
     @Override
     public Iterator<CheckException> iterator( ) {
       return new Iterator<CheckException>( ) {
-        CheckException curr;
+        CheckException next;
         {
-          this.curr = CheckException.this;
+          this.next = CheckException.this;
         }
         
         @Override
         public boolean hasNext( ) {
-          return ( this.curr != null ) && ( this.curr.other != null );
+          return this.next != null;
         }
         
         @Override
         public CheckException next( ) {
-          return this.curr = this.curr.other;
+          CheckException ret = this.next;
+          this.next = ( ret != null ? ret.other : null );
+          return ret;
         }
         
         @Override
