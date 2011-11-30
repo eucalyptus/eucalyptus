@@ -492,7 +492,7 @@ public class Faults {
   public static Collection<CheckException> lookup( final ServiceConfiguration config ) {
     final EntityTransaction db = Entities.get( CheckException.class );
     try {
-      final List<CheckException> res = Entities.query( new CheckException( config.getName( ) ) );
+      final List<CheckException> res = Entities.query( new CheckException( config.getName( ) ), true, 1 );
       db.commit( );
       return res;
     } catch ( final Exception ex ) {
