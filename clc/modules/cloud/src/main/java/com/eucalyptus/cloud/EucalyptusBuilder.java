@@ -111,7 +111,7 @@ public class EucalyptusBuilder extends AbstractServiceBuilder<EucalyptusConfigur
                                   Exceptions.error( config.getFullName( )
                                     + ":fireCheck(): eucalyptus service " + config.getFullName( ) + " is currently synchronizing: "
                                     + Hosts.getCoordinator( ) ) );
-          } else if ( Topology.lookup( Eucalyptus.class ).isVmLocal( ) ) {
+          } else if ( Topology.isEnabledLocally( Eucalyptus.class ) ) {
             throw Faults.failure( config,
                                   Exceptions.error( config.getFullName( )
                                     + ":fireCheck(): eucalyptus service " + config.getFullName( ) + " cant be enabled when it is not the coordinator: "
