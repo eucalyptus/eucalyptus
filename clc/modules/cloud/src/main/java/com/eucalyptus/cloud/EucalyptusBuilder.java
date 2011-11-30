@@ -97,12 +97,7 @@ public class EucalyptusBuilder extends AbstractServiceBuilder<EucalyptusConfigur
       
       @Override
       public boolean apply( ServiceConfiguration config ) {
-        if ( !Topology.isEnabledLocally( Eucalyptus.class ) && !config.isVmLocal( ) ) {
-          throw Faults.failure( config,
-                                Exceptions.error( config.getFullName( )
-                                  + ":fireCheck(): cloud controller depends upon ENABLED coordinator service for: "
-                                  + Hosts.getCoordinator( ) ) );
-        }
+//GRZE: No service check makes sense here.
         return true;
       }
     },
@@ -111,22 +106,15 @@ public class EucalyptusBuilder extends AbstractServiceBuilder<EucalyptusConfigur
       @Override
       public boolean apply( ServiceConfiguration config ) {
         if ( config.isVmLocal( ) ) {
-          if ( !Topology.isEnabled( Eucalyptus.class ) ) {
+          if ( !Databases.isSynchronized( ) ) {
             throw Faults.failure( config,
                                   Exceptions.error( config.getFullName( )
-                                    + ":fireCheck(): cloud controller service "
-                                    + config.getFullName( )
-                                    + " isn't coordinator and is missing ENABLED cloud controller service: "
+                                    + ":fireCheck(): eucalyptus service " + config.getFullName( ) + " is currently synchronizing: "
                                     + Hosts.getCoordinator( ) ) );
           } else if ( Topology.lookup( Eucalyptus.class ).isVmLocal( ) ) {
             throw Faults.failure( config,
                                   Exceptions.error( config.getFullName( )
-                                    + ":fireCheck(): cloud controller service " + config.getFullName( ) + " cant be enabled when it is not the coordinator: "
-                                    + Hosts.getCoordinator( ) ) );
-          } else if ( !Databases.isSynchronized( ) ) {
-            throw Faults.failure( config,
-                                  Exceptions.error( config.getFullName( )
-                                    + ":fireCheck(): cloud controller service " + config.getFullName( ) + " is currently synchronizing: "
+                                    + ":fireCheck(): eucalyptus service " + config.getFullName( ) + " cant be enabled when it is not the coordinator: "
                                     + Hosts.getCoordinator( ) ) );
           } else {
             LOG.debug( config.getFullName( ) + ":fireCheck() completed with coordinator currently: " + Hosts.getCoordinator( ) );
