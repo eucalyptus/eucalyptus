@@ -641,9 +641,11 @@ public class Databases {
           return;
         }
       }
-      throw new DatabaseStateException( "Transaction begin failed due to concurrent database synchronization: " + Hosts.listDatabases( )
-        + " for caller:\n"
-        + Joiner.on( "\n\tat " ).join( stack ) );
+      if ( !isSynchronized( ) ) {
+        throw new DatabaseStateException( "Transaction begin failed due to concurrent database synchronization: " + Hosts.listDatabases( )
+          + " for caller:\n"
+          + Joiner.on( "\n\tat " ).join( stack ) );
+      }
     }
   }
   
