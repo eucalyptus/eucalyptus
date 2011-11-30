@@ -472,6 +472,12 @@ int gen_libvirt_attach_xml (const char *volumeId, const ncInstance *instance, co
     xmlFreeDoc(doc);
     pthread_mutex_unlock (&xml_mutex);
     
+    // for debugging
+
+    snprintf (xml, xml_size, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s'/></disk>", 
+              remoteDev, 
+              localDevReal);
+
     return ret;
 }
 
