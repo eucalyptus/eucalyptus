@@ -356,18 +356,12 @@ public class ServiceTransitions {
     } catch ( Exception ex ) {
       LOG.error( parent.getFullName( ) + " failed transition " + transitionAction.name( ) + " because of " + ex.getMessage( ) );
       if ( Faults.filter( parent, ex ) ) {
-        try {
-          Faults.persist( Faults.failure( parent, ex ) );
-        } finally {
-          transitionCallback.fireException( ex );
-        }
+        transitionCallback.fireException( ex );
+        Faults.persist( Faults.failure( parent, ex ) );
         throw Exceptions.toUndeclared( ex );
       } else {
-        try {
-          Faults.persist( Faults.advisory( parent, ex ) );
-        } finally {
-          transitionCallback.fire( );
-        }
+        transitionCallback.fire( );
+        Faults.persist( Faults.advisory( parent, ex ) );
       }
     }
   }

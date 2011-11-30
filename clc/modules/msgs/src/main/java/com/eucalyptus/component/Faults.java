@@ -409,18 +409,24 @@ public class Faults {
   }
   
   private static CheckException chain( final ServiceConfiguration config, final Severity severity, final List<? extends Throwable> exs ) {
-    CheckException last = null;
-    for ( final Throwable ex : Lists.reverse( exs ) ) {
-      if ( ( last != null ) && ( ex instanceof CheckException ) ) {
-        last.other = ( CheckException ) ex;
-      } else if ( last == null ) {
-        last = new CheckException( config, severity, ex );
+    try {
+      CheckException last = null;
+      for ( final Throwable ex : Lists.reverse( exs ) ) {
+        if ( ( last != null ) && ( ex instanceof CheckException ) ) {
+          last.other = ( CheckException ) ex;
+        } else if ( last == null ) {
+          last = new CheckException( config, severity, ex );
+        }
       }
+      last = ( last != null
+        ? last
+        : new CheckException( config, Severity.DEBUG, new NullPointerException( "Faults.chain called w/ empty list: " + exs ) ) );
+      return last;
+    } catch ( Exception ex ) {
+      LOG.error( "Faults: error in processing previous error: " + ex );
+      Logs.extreme( ).error( ex , ex );
+      return new CheckException( config, Severity.ERROR, ex );
     }
-    last = ( last != null
-      ? last
-      : new CheckException( config, Severity.DEBUG, new NullPointerException( "Faults.chain called w/ empty list: " + exs ) ) );
-    return last;
   }
   
   public static CheckException failure( final ServiceConfiguration config, final Throwable... exs ) {
@@ -500,6 +506,7 @@ public class Faults {
           }
         }
       } catch ( Exception ex ) {
+        LOG.error( "Faults: error in processing previous error: " + errors );
         Logs.extreme( ).error( ex , ex );
       }
     }
