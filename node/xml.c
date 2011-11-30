@@ -379,9 +379,19 @@ static int apply_xslt_stylesheet (const char * xsltStylesheetPath, const char * 
                                 if (xsltSaveResultToString (&buf, &buf_size, res, cur)==0) { // success
                                     if (buf_size < outputXmlBufferSize) {
                                         bzero (outputXmlBuffer, outputXmlBufferSize);
+                                        char in_header = 0;
                                         for (int i=0, j=0; i<buf_size; i++) {
                                             char c = (char) buf [i];
-                                            if (c != '\n')
+                                            char pc = (i>0) ? ((char) buf [i-1]) : '\0'; // previous char
+                                            if (c == '?' && pc == '<') {
+                                                in_header = 1;
+                                                continue;
+                                            }
+                                            if (c == '>' && pc == '?') {
+                                                in_header = 0;
+                                                continue;
+                                            }
+                                            if (c != '\n' && !in_header)
                                                 outputXmlBuffer [j++] = c;
                                         }
                                     } else {
