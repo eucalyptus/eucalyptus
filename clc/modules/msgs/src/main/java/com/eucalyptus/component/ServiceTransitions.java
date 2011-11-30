@@ -356,12 +356,18 @@ public class ServiceTransitions {
     } catch ( Exception ex ) {
       LOG.error( parent.getFullName( ) + " failed transition " + transitionAction.name( ) + " because of " + ex.getMessage( ) );
       if ( Faults.filter( parent, ex ) ) {
-        transitionCallback.fireException( ex );
-        Faults.persist( Faults.failure( parent, ex ) );
+        try {
+          Faults.persist( Faults.failure( parent, ex ) );
+        } finally {
+          transitionCallback.fireException( ex );
+        }
         throw Exceptions.toUndeclared( ex );
       } else {
-        Faults.persist( Faults.advisory( parent, ex ) );
-        transitionCallback.fire( );
+        try {
+          Faults.persist( Faults.advisory( parent, ex ) );
+        } finally {
+          transitionCallback.fire( );
+        }
       }
     }
   }
@@ -480,12 +486,12 @@ public class ServiceTransitions {
             } );
             errors = Faults.transformToExceptions( ).apply( status );
           }
-          Faults.persist( errors );
           if ( Faults.Severity.FATAL.equals( errors.getSeverity( ) ) ) {
             //TODO:GRZE: handle remote fatal error.
             throw errors;
           } else if ( errors.getSeverity( ).ordinal( ) < Faults.Severity.ERROR.ordinal( ) ) {
             Logs.extreme( ).error( errors, errors );
+            Faults.persist( errors );
           } else {
             throw errors;
           }
@@ -601,17 +607,21 @@ public class ServiceTransitions {
             parent.lookupBootstrapper( ).check( );
             ServiceBuilders.lookup( parent.getComponentId( ) ).fireCheck( parent );
           } catch ( Exception ex ) {
-            try {
-              DISABLE.fire( parent );
-            } catch ( Exception ex1 ) {
-              LOG.error( "Failed to call DISABLE on an ENABLED service after CHECK failure: " + parent.getFullName( )
-                + " due to: "
-                + ex.getMessage( )
-                + ". With current service info: "
-                + parent );
-              Logs.extreme( ).error( ex1, ex1 );
+            if ( Faults.filter( parent, ex ) ) {
+              try {
+                DISABLE.fire( parent );
+              } catch ( Exception ex1 ) {
+                LOG.error( "Failed to call DISABLE on an ENABLED service after CHECK failure: " + parent.getFullName( )
+                  + " due to: "
+                  + ex.getMessage( )
+                  + ". With current service info: "
+                  + parent );
+                Logs.extreme( ).error( ex1, ex1 );
+              }
+              throw ex;
+            } else {
+              throw ex;
             }
-            throw ex;
           }
         } else {
           parent.lookupBootstrapper( ).check( );
@@ -631,7 +641,6 @@ public class ServiceTransitions {
       
       @Override
       public void fire( final ServiceConfiguration parent ) throws Exception {
-        CHECK.fire( parent );
         parent.lookupBootstrapper( ).enable( );
         try {
           ServiceBuilders.lookup( parent.getComponentId( ) ).fireEnable( parent );

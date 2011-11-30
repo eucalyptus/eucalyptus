@@ -225,7 +225,7 @@ public class Faults {
       return new Iterator<CheckException>( ) {
         CheckException curr;
         {
-          this.curr = CheckException.this.other;
+          this.curr = CheckException.this;
         }
         
         @Override
@@ -333,19 +333,7 @@ public class Faults {
       failureAction = NoopErrorFilter.INSTANCE;
     }
     if ( ex instanceof CheckException ) {//go through all the exceptions and look for things with Severity greater than or equal to ERROR
-      final CheckException checkExHead = ( CheckException ) ex;
-      for ( final CheckException checkEx : checkExHead ) {
-//        ServiceEvents.fireExceptionEvent( parent, checkEx.getSeverity( ), checkEx );
-      }
-      if ( checkExHead.getSeverity( ).ordinal( ) >= Severity.ERROR.ordinal( ) ) {
-        try {
-          failureAction.apply( ex );
-        } catch ( final Exception ex1 ) {
-          Logs.extreme( ).error( ex1, ex1 );
-        }
-        return true;
-      }
-      for ( final CheckException checkEx : checkExHead ) {
+      for ( final CheckException checkEx : ( CheckException ) ex ) {
         if ( checkEx.getSeverity( ).ordinal( ) >= Severity.ERROR.ordinal( ) ) {
           try {
             failureAction.apply( ex );
@@ -357,7 +345,6 @@ public class Faults {
       }
       return false;
     } else {//treat generic exceptions as always being Severity.ERROR
-//      ServiceEvents.fireExceptionEvent( parent, Severity.ERROR, ex );
       try {
         failureAction.apply( ex );
       } catch ( final Exception ex1 ) {
