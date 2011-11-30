@@ -66,6 +66,8 @@ permission notice:
 /* file paths relative to $EUCALYPTUS */
 #define EUCALYPTUS_CONF_LOCATION   "%s/etc/eucalyptus/eucalyptus.conf"
 #define EUCALYPTUS_CONF_OVERRIDE_LOCATION   "%s/etc/eucalyptus/eucalyptus.local.conf"
+#define EUCALYPTUS_LIBVIRT_XSLT    "%s/etc/eucalyptus/libvirt.xsl"
+#define EUCALYPTUS_VOLUME_XML_PATH_FORMAT "%s/%s.xml"
 #define EUCALYPTUS_ROOTWRAP        "%s/usr/lib/eucalyptus/euca_rootwrap"
 #define EUCALYPTUS_ADD_KEY         "%s/usr/lib/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/add_key.pl %s/usr/lib/eucalyptus/euca_mountwrap"
 #define EUCALYPTUS_GEN_LIBVIRT_XML "%s/usr/lib/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/gen_libvirt_xml"
@@ -138,10 +140,12 @@ permission notice:
 #define MAX_PATH_SIZE 4096 // TODO: remove
 
 // NC hook events
-#define NC_EVENT_INIT      "euca-nc-post-init"   // p1: NULL
-#define NC_EVENT_PRE_BOOT  "euca-nc-pre-boot"    // p1: instancePath
-#define NC_EVENT_ADOPTING  "euca-nc-pre-adopt"   // p1: instancePath
-#define NC_EVENT_PRE_CLEAN "euca-nc-pre-clean"   // p1: instancePath
+#define NC_EVENT_INIT        "euca-nc-post-init"    // p1: NULL
+#define NC_EVENT_PRE_BOOT    "euca-nc-pre-boot"     // p1: instancePath
+#define NC_EVENT_ADOPTING    "euca-nc-pre-adopt"    // p1: instancePath
+#define NC_EVENT_PRE_CLEAN   "euca-nc-pre-clean"    // p1: instancePath
+#define NC_EVENT_PRE_ATTACH  "euca-nc-pre-attach"   // p1: volumeXmlPath
+#define NC_EVENT_POST_DETACH "euca-nc-post-detach"  // p1: volumeXmlPath
 
 #define MEGABYTE 1048576
 

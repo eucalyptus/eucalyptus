@@ -104,7 +104,7 @@ static int doInitialize (struct nc_state_t *nc)
 	snprintf (nc->get_info_cmd_path, MAX_PATH, EUCALYPTUS_GET_KVM_INFO,  nc->home, nc->home);
 	strcpy(nc->uri, HYPERVISOR_URI);
 	nc->convert_to_disk = 1;
-        nc->capability = HYPERVISOR_HARDWARE; // TODO: indicate virtio support?
+    nc->capability = HYPERVISOR_HARDWARE; // TODO: indicate virtio support?
 
 	s = system_output (nc->get_info_cmd_path);
 #define GET_VALUE(name,var) \
@@ -189,23 +189,23 @@ static void * rebooting_thread (void *arg)
             continue; // skip the entry unless attached or attaching
         
         char attach_xml[1024];
-        int rc=1;
+        int rc;
         // get credentials, decrypt them
         remoteDevStr = get_iscsi_target (volume->remoteDev);
         if (!remoteDevStr || !strstr(remoteDevStr, "/dev")) {
             logprintfl(EUCAERROR, "Reattach-volume: failed to get local name of host iscsi device\n");
-            rc=1;
-        }else{
-            rc = gen_libvirt_attach_xml (instance, 
+            rc = 1;
+        } else {
+            rc = gen_libvirt_attach_xml (volume->volumeId,
+                                         instance, 
                                          volume->localDevReal, 
                                          remoteDevStr, 
-                                         nc_state.config_use_virtio_disk, 
                                          attach_xml, 
                                          sizeof(attach_xml));
         }
 
-        if(remoteDevStr)
-            free(remoteDevStr);
+        if (remoteDevStr)
+            free (remoteDevStr);
 
         if (!rc) {
             int err;
