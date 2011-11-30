@@ -851,6 +851,10 @@ doDetachVolume (	struct nc_state_t *nc,
         logprintfl (EUCAERROR, "DetachVolume(): virDomainDetachDevice() or 'virsh detach' failed (err=%d) XML='%s'\n", err, xml);
         if (!force) 
             ret = ERROR;
+    } else {
+        char path [MAX_PATH];
+        snprintf (path, sizeof (path), EUCALYPTUS_VOLUME_XML_PATH_FORMAT, instance->instancePath, volumeId);
+        unlink (path);
     }
     
  release:

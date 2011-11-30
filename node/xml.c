@@ -150,9 +150,9 @@ static int write_xml_file (const xmlDocPtr doc, const char * instanceId, const c
     chmod (path, BACKING_FILE_PERM); // ensure perms in case when XML file exists
     int ret = xmlSaveFormatFileEnc (path, doc, "UTF-8", 1);
     if (ret > 0) {
-        logprintfl (EUCAINFO, "[%s] wrote %s XML to %s\n", instanceId, path, type);
+        logprintfl (EUCAINFO, "[%s] wrote %s XML to %s\n", instanceId, type, path);
     } else {
-        logprintfl (EUCAERROR, "[%s] failed to write %s XML to %s\n", instanceId, path, type);
+        logprintfl (EUCAERROR, "[%s] failed to write %s XML to %s\n", instanceId, type, path);
     }
     umask (old_umask);
 
@@ -377,7 +377,8 @@ static int apply_xslt_stylesheet (const char * xsltStylesheetPath, const char * 
                                 xmlChar * buf;
                                 int buf_size;
                                 if (xsltSaveResultToString (&buf, &buf_size, res, cur)==0) { // success
-                                    if (buf_size <= outputXmlBufferSize) {
+                                    if (buf_size < outputXmlBufferSize) {
+                                        bzero (outputXmlBuffer, outputXmlBufferSize);
                                         for (int i=0; i<buf_size; i++) {
                                             outputXmlBuffer [i] = (char) buf [i];   
                                         }
