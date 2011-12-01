@@ -1,11 +1,11 @@
 package com.eucalyptus.notifications;
 
-import com.eucalyptus.component.id.Notifications;
-
-import com.eucalyptus.component.ComponentMessage;
-import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import edu.ucsb.eucalyptus.msgs.EucalyptusData;
-import java.util.ArrayList;
+import java.util.ArrayList
+import com.eucalyptus.component.ComponentId.ComponentMessage
+import com.eucalyptus.component.id.Eucalyptus
+import com.eucalyptus.component.id.Eucalyptus.Notifications
+import edu.ucsb.eucalyptus.msgs.BaseMessage
+import edu.ucsb.eucalyptus.msgs.EucalyptusData
 
 @ComponentMessage(Notifications.class)
 public class NotificationMessage extends BaseMessage {

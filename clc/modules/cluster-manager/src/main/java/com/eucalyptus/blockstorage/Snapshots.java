@@ -63,7 +63,6 @@
 
 package com.eucalyptus.blockstorage;
 
-import java.lang.reflect.UndeclaredThrowableException;
 import java.util.concurrent.ExecutionException;
 import org.apache.log4j.Logger;
 import org.hibernate.criterion.Example;
@@ -73,6 +72,7 @@ import com.eucalyptus.cloud.CloudMetadata.SnapshotMetadata;
 import com.eucalyptus.cloud.util.DuplicateMetadataException;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.entities.EntityWrapper;
@@ -82,6 +82,7 @@ import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.reporting.event.StorageEvent;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes.QuantityMetricFunction;
 import com.eucalyptus.ws.client.ServiceDispatcher;
@@ -130,7 +131,7 @@ public class Snapshots {
   }
   
   static Snapshot startCreateSnapshot( final Volume vol, final Snapshot snap ) throws EucalyptusCloudException, DuplicateMetadataException {
-    final ServiceConfiguration sc = Partitions.lookupService( Storage.class, vol.getPartition( ) );
+    final ServiceConfiguration sc = Topology.lookup( Storage.class, Partitions.lookupByName( vol.getPartition( ) ) );
     try {
       Snapshot snapState = Transactions.save( snap, new Callback<Snapshot>( ) {
         
@@ -141,7 +142,7 @@ public class Snapshots {
             CreateStorageSnapshotResponseType scReply = ServiceDispatcher.lookup( sc ).send( scRequest );
             s.setMappedState( scReply.getStatus( ) );
           } catch ( EucalyptusCloudException ex ) {
-            throw new UndeclaredThrowableException( ex );
+            throw Exceptions.toUndeclared( ex );
           }
         }
       } );

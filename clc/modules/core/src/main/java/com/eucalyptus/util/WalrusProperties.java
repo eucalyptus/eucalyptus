@@ -71,6 +71,11 @@ import edu.ucsb.eucalyptus.msgs.UpdateWalrusConfigurationType;
 
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.component.Component;
+import com.eucalyptus.component.Components;
+import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.Topology;
+import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.scripting.Groovyness;
 import com.eucalyptus.system.BaseDirectory;
@@ -92,7 +97,7 @@ public class WalrusProperties {
 	public static String WALRUS_SUBDOMAIN = "walrus";
 
 	public static final String bucketRootDirectory = BaseDirectory.VAR.toString() + "/bukkits";
-	public static int MAX_BUCKETS_PER_USER = 5;
+	public static int MAX_BUCKETS_PER_ACCOUNT = 5;
 	public static long MAX_BUCKET_SIZE = 5 * G;
 	public static long IMAGE_CACHE_SIZE = 30 * G;
 	public static String WALRUS_URL;
@@ -114,6 +119,7 @@ public class WalrusProperties {
 	public static final String CONTENT_LEN = "Content-Length";
 	public static final String CONTENT_TYPE = "Content-Type";
 	public static final String CONTENT_DISPOSITION = "Content-Disposition";
+	public static final String CONTENT_MD5 = "Content-MD5";
 	public static final String MULTIFORM_DATA_TYPE = "multipart/form-data";
 
 	public static final String URL_PROPERTY = "euca.walrus.url";
@@ -228,7 +234,7 @@ public class WalrusProperties {
 
 	public enum ServiceParameter {
 	}
-	
+
 	public enum BucketParameter {
 		acl, location, prefix, maxkeys, delimiter, marker, torrent, logging, versioning, versions;
 	}
@@ -255,5 +261,13 @@ public class WalrusProperties {
 			LOG.error(e);
 		}
 		return TRACKER_URL;
+	}
+
+	public static InetAddress getWalrusAddress() throws EucalyptusCloudException {
+		if( Topology.isEnabled( Walrus.class ) ) {
+			return Topology.lookup( Walrus.class ).getInetAddress();
+		} else {
+			throw new EucalyptusCloudException("Walrus not ENABLED");
+		}	    
 	}
 }

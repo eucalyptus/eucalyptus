@@ -296,3 +296,43 @@ adb_DisableServiceResponse_t *DisableServiceMarshal(adb_DisableService_t *disabl
   return(ret);
 }
 
+adb_ShutdownServiceResponse_t *ShutdownServiceMarshal(adb_ShutdownService_t *shutdownService, const axutil_env_t *env) {
+  adb_ShutdownServiceResponse_t *ret=NULL;
+  adb_shutdownServiceResponseType_t *adbresp=NULL;
+  adb_shutdownServiceType_t *adbinput=NULL;
+  
+  int rc, i;
+  axis2_bool_t status=AXIS2_TRUE;
+  char statusMessage[256];
+  ncMetadata ccMeta;
+  
+  adbinput = adb_ShutdownService_get_ShutdownService(shutdownService, env);
+  adbresp = adb_shutdownServiceResponseType_create(env);
+  
+  // unmarshal eucalyptusMessage into ccMeta
+  EUCA_MESSAGE_UNMARSHAL(shutdownServiceType, adbinput, (&ccMeta));
+
+  // set the fields that are simply carried through between input and output messages
+  adb_shutdownServiceResponseType_set_correlationId(adbresp, env, adb_shutdownServiceType_get_correlationId(adbinput, env));
+  adb_shutdownServiceResponseType_set_userId(adbresp, env, adb_shutdownServiceType_get_userId(adbinput, env));
+  for (i=0; i<adb_shutdownServiceType_sizeof_serviceIds(adbinput, env); i++) { adb_shutdownServiceResponseType_add_serviceIds(adbresp, env, adb_shutdownServiceType_get_serviceIds_at(adbinput, env, i)); }
+  
+  status = AXIS2_TRUE;
+  rc = doShutdownService(&ccMeta);
+  if (rc) {
+    logprintf("ERROR: doShutdownService() returned FAIL\n");
+    status = AXIS2_FALSE;
+    snprintf(statusMessage, 255, "ERROR");
+  }
+
+  adb_shutdownServiceResponseType_set_return(adbresp, env, status);
+  if (status == AXIS2_FALSE) {
+    adb_shutdownServiceResponseType_set_statusMessage(adbresp, env, statusMessage);
+  }
+
+  ret = adb_ShutdownServiceResponse_create(env);
+  adb_ShutdownServiceResponse_set_ShutdownServiceResponse(ret, env, adbresp);
+
+  return(ret);
+}
+

@@ -62,44 +62,34 @@
  */
 package com.eucalyptus.component;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
 import java.util.NavigableSet;
 import java.util.NoSuchElementException;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapArgs;
-import com.eucalyptus.bootstrap.BootstrapException;
 import com.eucalyptus.bootstrap.Bootstrapper;
-import com.eucalyptus.empyrean.ServiceId;
+import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
-import com.eucalyptus.util.HasName;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.Mbeans;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 
 public class Components {
-  private static Logger                    LOG                  = Logger
-                                                                                                                                      .getLogger( Components.class );
-  private static ConcurrentMap<Class, Map> componentInformation = new ConcurrentHashMap<Class, Map>( ) {
-                                                                  {
-                                                                    put( MessagableService.class, new ConcurrentHashMap<String, MessagableService>( ) );
-                                                                    put( Component.class, new ConcurrentHashMap<String, Component>( ) );
-                                                                    put( ComponentId.class, new ConcurrentHashMap<String, ComponentId>( ) );
-                                                                  }
-                                                                };
+  private static Logger                                                 LOG        = Logger.getLogger( Components.class );
+  private static ConcurrentMap<Class<? extends ComponentId>, Component> components = Maps.newConcurrentMap( );
   
-  public static List<ComponentId> toIds( List<Component> components ) {
-    return Lists.transform( components, Functions.COMPONENT_TO_COMPONENTID );
+  public static List<ComponentId> toIds( final List<Component> components ) {
+    return Lists.transform( components, ToComponentId.INSTANCE );
   }
   
   /**
@@ -109,12 +99,20 @@ public class Components {
    * 
    * @return
    */
-  public static List<Component> whichCanLoad( ) {
-    return Lists.newArrayList( Iterables.filter( Components.list( ), filterWhichCanLoad( ) ) );
+  public static Iterable<Component> whichCanLoad( ) {
+    return Iterables.filter( Components.list( ), Predicates.BOOTSTRAP_LOAD_LOCAL );
   }
-
-  public static Predicate<Component> filterWhichCanLoad( ) {
-    return Predicates.BOOTSTRAP_LOCALS;
+  
+  public static Iterable<Component> whichCanEnable( ) {
+    return Iterables.filter( Components.list( ), Predicates.BOOTSTRAP_ENABLE_LOCAL );
+  }
+  
+  public static Iterable<Component> whichCanLoadOnRemoteHost( ) {
+    return Iterables.filter( Components.list( ), Predicates.BOOTSTRAP_LOAD_REMOTE );
+  }
+  
+  public static Iterable<Component> whichCanEnabledOnRemoteHost( ) {
+    return Iterables.filter( Components.list( ), Predicates.BOOTSTRAP_ENABLE_REMOTE );
   }
   
   /**
@@ -123,11 +121,7 @@ public class Components {
    * @return
    */
   public static List<Component> whichAreEnabledLocally( ) {
-    return Lists.newArrayList( Iterables.filter( Components.list( ), filterWhichAreEnabledLocally( ) ) );
-  }
-
-  public static Predicate<Component> filterWhichAreEnabledLocally( ) {
-    return Predicates.ARE_ENABLED_LOCAL;
+    return Lists.newArrayList( Iterables.filter( Components.list( ), Predicates.ARE_ENABLED_LOCAL ) );
   }
   
   /**
@@ -136,195 +130,202 @@ public class Components {
    * @return
    */
   public static List<Component> whichAreEnabled( ) {
-    return Lists.newArrayList( Iterables.filter( Components.list( ), filterWhichAreEnabled( ) ) );
-  }
-
-  public static Predicate<Component> filterWhichAreEnabled( ) {
-    return Predicates.ARE_ENABLED;
+    return Lists.newArrayList( Iterables.filter( Components.list( ), Predicates.ARE_ENABLED ) );
   }
   
-  @SuppressWarnings( "unchecked" )
-  public static List<Component> list( ) {//TODO:GRZE:ASAP: review all usage of this and replace with Components.whichAre...
-    return new ArrayList( Components.lookupMap( Component.class ).values( ) );
+  public static List<Component> list( ) {//TODO:GRZE: review all usage of this and replace with Components.whichAre...
+    return ImmutableList.copyOf( components.values( ) );
   }
   
-  private static <T extends HasName<T>> Class getRealType( Class<T> maybeSubclass ) {
-    Class type = null;
-    for ( Class c : componentInformation.keySet( ) ) {
-      if ( c.isAssignableFrom( maybeSubclass ) ) {
-        type = c;
-        return type;
-      }
-    }
-    Components.dumpState( );
-    throw BootstrapException.throwFatal( "Failed bootstrapping component registry.  Missing entry for component info type: " + maybeSubclass.getSimpleName( ) );
+  /**
+   * GRZE:NOTE: this should only ever be applied to user input and /never/ called with a hardcoded
+   * string.
+   */
+  public static <T extends ComponentId> Component lookup( final String componentIdName ) throws NoSuchElementException {
+    return lookup( IdNameToId.INSTANCE.apply( componentIdName ) );
   }
   
-  static <T> Map<String, T> lookupMap( Class type ) {
-    return ( Map<String, T> ) componentInformation.get( getRealType( type ) );
+  public static <T extends ComponentId> Component lookup( final Class<T> componentId ) throws NoSuchElementException {
+    return lookup( IdClassToId.INSTANCE.apply( componentId ) );
   }
   
-  static void dumpState( ) {
-    for ( Class c : componentInformation.keySet( ) ) {
-      for ( Entry<String, ComponentInformation> e : ( Set<Entry<String, ComponentInformation>> ) componentInformation.get( c ).entrySet( ) ) {
-        LOG.info( EventRecord.here( Bootstrap.class, EventType.COMPONENT_REGISTRY_DUMP, c.getSimpleName( ), e.getKey( ), e.getValue( ).getClass( )
-                                                                                                                          .getCanonicalName( ) ) );
-      }
-    }
+  public static Component lookup( final ComponentId componentId ) throws NoSuchElementException {
+    return IdToComponent.INSTANCE.apply( componentId );
   }
   
-  public static <T extends HasName<T>> boolean contains( Class<T> type, String name ) {
-    return Components.lookupMap( type ).containsKey( name );
+  public static boolean contains( final ComponentId component ) {
+    return components.containsKey( component );
   }
   
-  private static <T extends HasName<T>> void remove( T componentInfo ) {
-    Map<String, T> infoMap = lookupMap( componentInfo.getClass( ) );
-    infoMap.remove( componentInfo.getName( ) );
-  }
-  
-  private static <T extends HasName<T>> void put( T componentInfo ) {
-    Map<String, T> infoMap = lookupMap( componentInfo.getClass( ) );
-    if ( infoMap.containsKey( componentInfo.getName( ) ) ) {
-      throw BootstrapException.throwFatal( "Failed bootstrapping component registry.  Duplicate information for component '" + componentInfo.getName( ) + "': "
-                                           + componentInfo.getClass( ).getSimpleName( ) + " as " + getRealType( componentInfo.getClass( ) ) );
+  public static Component create( final ComponentId id ) throws ServiceRegistrationException {
+    if ( !components.containsKey( id ) ) {
+      final Component c = new Component( id );
+      components.put( id.getClass( ), c );
+      EventRecord.here( Bootstrap.class, EventType.COMPONENT_REGISTERED, c.toString( ) ).info( );
+      Mbeans.register( c );
+      return c;
     } else {
-      infoMap.put( componentInfo.getName( ), componentInfo );
+      return components.get( id.getClass( ) );
     }
   }
   
-  public static <T extends HasName<T>> void deregister( T componentInfo ) {
-    remove( componentInfo );
-    if ( Component.class.isAssignableFrom( componentInfo.getClass( ) ) ) {
-      EventRecord.here( Bootstrap.class, EventType.COMPONENT_DEREGISTERED, componentInfo.toString( ) ).info( );
-    } else {
-      EventRecord.here( Bootstrap.class, EventType.COMPONENT_DEREGISTERED, componentInfo.getName( ), componentInfo.getClass( ).getSimpleName( ) ).trace( );
-    }
-  }
-  
-  static <T extends HasName<T>> void register( T componentInfo ) {
-    if ( !contains( componentInfo.getClass( ), componentInfo.getName( ) ) ) {
-      if ( Component.class.isAssignableFrom( componentInfo.getClass( ) ) ) {
-        EventRecord.here( Bootstrap.class, EventType.COMPONENT_REGISTERED, componentInfo.toString( ) ).info( );
-      } else {
-        EventRecord.here( Bootstrap.class, EventType.COMPONENT_REGISTERED, componentInfo.getName( ), componentInfo.getClass( ).getSimpleName( ) ).trace( );
-      }
-      Components.put( componentInfo );
-    }
-  }
-  
-  public static <T extends HasName<T>> T lookup( Class<T> type, String name ) throws NoSuchElementException {
-    if ( !contains( type, name ) ) {
+  public static String describe( final Component comp ) {
+    try {
+      return componentToString( ).apply( comp );
+    } catch ( final Exception ex ) {
+      Logs.extreme( ).error( ex, ex );
       try {
-        ComponentId compId = ComponentIds.lookup( name );
-        Components.create( compId );
-        return Components.lookup( type, name );
-      } catch ( ServiceRegistrationException ex ) {
-        throw new NoSuchElementException( "Missing entry for component '" + name + "' info type: " + type.getSimpleName( ) + " ("
-                                          + getRealType( type ).getCanonicalName( ) );
+        return "Error attempting to convert component to string: " + comp.toString( ) + " because of: " + ex.getMessage( );
+      } catch ( final Exception ex1 ) {
+        Logs.extreme( ).error( ex, ex );
+        return "Error attempting to convert component to string: " + comp.getName( ) + " because of: " + ex.getMessage( );
       }
-    } else {
-      return ( T ) Components.lookupMap( type ).get( name );
     }
   }
   
-  public static Component lookup( String componentName ) throws NoSuchElementException {
-    return Components.lookup( Component.class, componentName );
-  }
-  
-  public static <T extends ComponentId> Component lookup( Class<T> componentId ) throws NoSuchElementException {
-    return Components.lookup( ComponentIds.lookup( componentId ) );
-  }
-  
-  public static Component lookup( ComponentId componentId ) throws NoSuchElementException {
-    return Components.lookup( Component.class, componentId.getName( ) );
-  }
-  
-  public static boolean contains( String componentName ) {
-    return Components.contains( Component.class, componentName );
-  }
-  
-  public static Component create( ComponentId id ) throws ServiceRegistrationException {
-    Component c = new Component( id );
-    register( c );
-    Mbeans.register( c );
-    return c;
-  }
-  
-  public static Component oneWhichHandles( Class c ) {
-    return ServiceBuilders.handles( c ).getComponent( );
-  }
-  
-  public static class Functions {
-    public static Function<Component, ComponentId> COMPONENT_TO_COMPONENTID = new Function<Component, ComponentId>( ) {
-                                                                              
-                                                                              @Override
-                                                                              public ComponentId apply( Component input ) {
-                                                                                return input.getComponentId( );
-                                                                              }
-                                                                            };
-    
-    public static Function<Component, ComponentId> componentToId( ) {
-      return COMPONENT_TO_COMPONENTID;
+  enum ToComponentId implements Function<Component, ComponentId> {
+    INSTANCE;
+    @Override
+    public ComponentId apply( final Component input ) {
+      return input.getComponentId( );
     }
-    
-    public static Function<Component, String> componentToString = componentToString( );
-    
-    public static Function<Component, String> componentToString( ) {
-      if ( componentToString != null ) {
-        return componentToString;
+  }
+  
+  enum IdNameToId implements Function<String, ComponentId> {
+    INSTANCE;
+    @Override
+    public ComponentId apply( final String input ) {
+      return ComponentIds.lookup( input );
+    }
+  }
+  
+  enum IdClassToId implements Function<Class<? extends ComponentId>, ComponentId> {
+    INSTANCE;
+    @Override
+    public ComponentId apply( final Class<? extends ComponentId> input ) {
+      return ComponentIds.lookup( input );
+    }
+  }
+  
+  enum IdToComponent implements Function<ComponentId, Component> {
+    INSTANCE;
+    @Override
+    public Component apply( final ComponentId input ) {
+      if ( !components.containsKey( input.getClass( ) ) ) {
+        try {
+          Components.create( input );
+          return Components.lookup( input );
+        } catch ( ServiceRegistrationException ex ) {
+          throw new NoSuchElementException( "Missing entry for component '" + input );
+        }
       } else {
-        synchronized ( Components.class ) {
-          return new Function<Component, String>( ) {
-            
-            @Override
-            public String apply( Component comp ) {
-              final StringBuilder buf = new StringBuilder( );
-              buf.append( LogUtil.header( comp.toString( ) ) ).append( "\n" );
-              for ( Bootstrapper b : comp.getBootstrapper( ).getBootstrappers( ) ) {
-                buf.append( "-> " + b.toString( ) ).append( "\n" );
-              }
-              buf.append( LogUtil.subheader( comp.getName( ) + " services" ) ).append( "\n" );
-              for ( ServiceConfiguration s : comp.lookupServiceConfigurations( ) ) {
-                try {
-                  buf.append( "->  Service:          " ).append( s.getFullName( ) ).append( " " ).append( s.getUri( ) ).append( "\n" );
-                  buf.append( "|-> Service config:   " ).append( s ).append( "\n" );
-                } catch ( Exception ex ) {
-                  LOG.error( ex, ex );
-                }
-              }
-              return buf.toString( );
-            }
-          };
+        return components.get( input.getClass( ) );
+      }
+    }
+  }
+  
+  enum ComponentToLocalService implements Function<Component, ServiceConfiguration> {
+    INSTANCE;
+    @Override
+    public ServiceConfiguration apply( final Component input ) {
+      return input.getLocalServiceConfiguration( );
+    }
+  }
+  
+  enum ToString implements Function<Component, String> {
+    INSTANCE;
+    @Override
+    public String apply( final Component comp ) {
+      final StringBuilder buf = new StringBuilder( );
+      buf.append( LogUtil.header( comp.toString( ) ) ).append( "\n" );
+      for ( final Bootstrapper b : comp.getBootstrappers( ) ) {
+        buf.append( "-> " + b.toString( ) ).append( "\n" );
+      }
+      buf.append( LogUtil.subheader( comp.getName( ) + " services" ) ).append( "\n" );
+      for ( final ServiceConfiguration s : comp.services( ) ) {
+        try {
+          buf.append( "->  Service:          " ).append( s.getFullName( ) ).append( " " ).append( ServiceUris.remote( s ) ).append( "\n" );
+          buf.append( "|-> Service config:   " ).append( s ).append( "\n" );
+        } catch ( final Exception ex ) {
+          LOG.error( ex, ex );
         }
       }
+      return buf.toString( );
     }
-    
-    
+  }
+  
+  public static Function<Component, String> componentToString( ) {
+    return ToString.INSTANCE;
   }
   
   private enum Predicates implements Predicate<Component> {
-    BOOTSTRAP_LOCALS {
+    BOOTSTRAP_LOAD_LOCAL {
       @Override
-      public boolean apply( Component c ) {
-        return ComponentIds.shouldBootstrapLocally( c.getComponentId( ) );
+      public boolean apply( final Component component ) {
+        final ComponentId c = component.getComponentId( );
+        final boolean cloudLocal = BootstrapArgs.isCloudController( ) && c.isCloudLocal( ) && !c.isRegisterable( );
+        final boolean isCloudItself = BootstrapArgs.isCloudController( ) && Eucalyptus.class.equals( c.getClass( ) );
+        final boolean alwaysLocal = c.isAlwaysLocal( ) && !c.isRegisterable( );
+        final boolean isBootrapperItself = Empyrean.class.equals( c.getClass( ) );
+        return cloudLocal || alwaysLocal || isBootrapperItself || isCloudItself;
+      }
+    },
+    BOOTSTRAP_ENABLE_LOCAL {
+      @Override
+      public boolean apply( final Component component ) {
+        final ComponentId c = component.getComponentId( );
+        final boolean cloudLocal = BootstrapArgs.isCloudController( ) && c.isCloudLocal( ) && !c.isRegisterable( );
+        final boolean isCloudItself = BootstrapArgs.isCloudController( ) && Eucalyptus.class.equals( c.getClass( ) );
+        final boolean alwaysLocal = c.isAlwaysLocal( ) && !c.isRegisterable( );
+        final boolean isBootrapperItself = Empyrean.class.equals( c.getClass( ) );
+        return cloudLocal || alwaysLocal || isBootrapperItself || isCloudItself;
+      }
+    },
+    BOOTSTRAP_LOAD_REMOTE {
+      @Override
+      public boolean apply( final Component component ) {
+        final ComponentId c = component.getComponentId( );
+        final boolean cloudLocal = c.isCloudLocal( ) && !c.isRegisterable( );
+        final boolean isCloudItself = Eucalyptus.class.equals( c.getClass( ) );
+        final boolean alwaysLocal = c.isAlwaysLocal( ) && !c.isRegisterable( );
+        final boolean isBootrapperItself = Empyrean.class.equals( c.getClass( ) );
+        return cloudLocal || alwaysLocal || isBootrapperItself || isCloudItself;
+      }
+    },
+    BOOTSTRAP_ENABLE_REMOTE {
+      @Override
+      public boolean apply( final Component component ) {
+        return BOOTSTRAP_LOAD_REMOTE.apply( component );
       }
     },
     ARE_ENABLED_LOCAL {
       @Override
-      public boolean apply( Component c ) {
-        boolean cloudLocal = BootstrapArgs.isCloudController( ) && c.getComponentId( ).isCloudLocal( );
-        boolean alwaysLocal = c.getComponentId( ).isAlwaysLocal( );
-        boolean runningLocal = c.isEnabledLocally( );
+      public boolean apply( final Component component ) {
+        final ComponentId compId = component.getComponentId( );
+        final boolean cloudLocal = BootstrapArgs.isCloudController( ) && compId.isCloudLocal( ) && !compId.isRegisterable( );
+        final boolean alwaysLocal = compId.isAlwaysLocal( );
+        final boolean runningLocal = component.isEnabledLocally( );
         return cloudLocal || alwaysLocal || runningLocal;
       }
-    }, ARE_ENABLED{ 
+    },
+    ARE_ENABLED {
       @Override
-      public boolean apply( Component c ) {
-        NavigableSet<ServiceConfiguration> services = c.lookupServiceConfigurations( );
-        return services.isEmpty( ) ? false : Component.State.ENABLED.equals( services.first( ).lookupState( ) );
+      public boolean apply( final Component c ) {
+        final NavigableSet<ServiceConfiguration> services = c.services( );
+        return services.isEmpty( )
+          ? false
+          : Component.State.ENABLED.equals( services.first( ).lookupState( ) );
       }
     }
-
+    
+  }
+  
+  /**
+   * @param config
+   * @return
+   */
+  public static Component lookup( ServiceConfiguration config ) {
+    return lookup( config.getComponentId( ) );
   }
   
 }

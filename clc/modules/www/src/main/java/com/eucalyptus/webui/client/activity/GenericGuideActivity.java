@@ -30,7 +30,8 @@ public class GenericGuideActivity extends AbstractActivity {
     clientFactory.getBackendService( ).getGuide( clientFactory.getLocalSession( ).getSession( ), snippet, new AsyncCallback<ArrayList<GuideItem>>( ) {
 
       @Override
-      public void onFailure( Throwable caught ) {        
+      public void onFailure( Throwable caught ) {       
+        ActivityUtil.logoutForInvalidSession( clientFactory, caught );
       }
 
       @Override

@@ -63,9 +63,10 @@
 
 package com.eucalyptus.config
 
-import com.eucalyptus.component.ComponentMessage;
-import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import edu.ucsb.eucalyptus.msgs.EucalyptusData;
+import com.eucalyptus.component.ComponentId.ComponentMessage
+import com.eucalyptus.empyrean.Empyrean.PropertiesService
+import edu.ucsb.eucalyptus.msgs.BaseMessage
+import edu.ucsb.eucalyptus.msgs.EucalyptusData
 
 public class Property extends EucalyptusData {
   String name;

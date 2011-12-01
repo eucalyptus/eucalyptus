@@ -63,12 +63,14 @@
 
 package com.eucalyptus.component.id;
 
-import java.util.ArrayList;
-import java.util.List;
 import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.ComponentId.AdminService;
+import com.eucalyptus.component.ComponentId.Partition;
 import com.eucalyptus.empyrean.Empyrean;
 
-public class ComponentService extends ComponentId.Unpartioned {
+@Partition( Empyrean.class )
+@AdminService
+public class ComponentService extends ComponentId {
   
   public ComponentService( ) {
     super( "Component" );
@@ -78,20 +80,5 @@ public class ComponentService extends ComponentId.Unpartioned {
   public String getLocalEndpointName( ) {
     return "vm://ComponentInternal";
   }
-  
-  @Override
-  public List<Class<? extends ComponentId>> serviceDependencies( ) {
-    return new ArrayList( ) {
-      {
-        this.add( Empyrean.class );
-      }
-    };
-  }
-
-  @Override
-  public boolean isAdminService( ) {
-    return true;
-  }
-  
   
 }

@@ -59,28 +59,22 @@
  *    ANY SUCH LICENSES OR RIGHTS.
  *******************************************************************************/
 
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.SQLException;
-import java.sql.Statement;
-import java.lang.Runtime;
-import java.lang.Process;
-import java.lang.ProcessBuilder;
-import org.apache.log4j.Logger;
-import java.net.Socket;
-import java.io.File;
-import java.util.List;
-
-import com.eucalyptus.bootstrap.Bootstrapper;
-import com.eucalyptus.bootstrap.DatabaseBootstrapper;
-import com.eucalyptus.bootstrap.Databases;
-import com.eucalyptus.bootstrap.SystemIds;
-import com.eucalyptus.component.Component;
-import com.eucalyptus.component.ComponentIds;
-import com.eucalyptus.component.Components;
-import com.eucalyptus.component.id.Database;
-import com.eucalyptus.entities.PersistenceContexts;
-import com.eucalyptus.system.SubDirectory;
+import java.io.File
+import java.sql.Connection
+import java.sql.DriverManager
+import java.sql.Statement
+import org.apache.log4j.Logger
+import com.eucalyptus.bootstrap.Bootstrapper
+import com.eucalyptus.bootstrap.DatabaseBootstrapper
+import com.eucalyptus.bootstrap.Databases
+import com.eucalyptus.component.Component
+import com.eucalyptus.component.Components
+import com.eucalyptus.component.ServiceUris
+import com.eucalyptus.component.id.Eucalyptus.Database
+import com.eucalyptus.entities.PersistenceContexts
+import com.eucalyptus.system.SubDirectory
+import com.eucalyptus.util.Internets
+import com.google.common.base.Joiner
 
 /*
  * REQUIREMENTS : Postgres 8.4 and Postgres jdbc driver
@@ -324,10 +318,7 @@ public class PostgresqlBootstrapper extends Bootstrapper.Simple implements Datab
 		Connection conn = null;
 
 		try {
-			String url = String.format( "jdbc:%s_%s",
-					ComponentIds.lookup( Database.class ).makeInternalRemoteUri( "127.0.0.1" ,
-					ComponentIds.lookup( Database.class ).getPort( ) ).toString( ),
-					context.replaceAll( "eucalyptus_", "" ) );
+      String url = String.format( "jdbc:%s", ServiceUris.remote( Database.class, Internets.localHostInetAddress( ), context ) );
 
 			LOG.debug("connecting url : " + url);
 
@@ -349,7 +340,7 @@ public class PostgresqlBootstrapper extends Bootstrapper.Simple implements Datab
 		}
 	}
 
-	public boolean isRunning() throws Exception {
+	public boolean isRunning() {
 
 		String chmodCmd = "/bin/chmod -R 700 " + EUCA_DB_DIR;
 
@@ -487,9 +478,16 @@ public class PostgresqlBootstrapper extends Bootstrapper.Simple implements Datab
 		return "net.sf.hajdbc.dialect.PostgreSQLDialect";
 	}
 
-	@Override
-	public String getUriPattern() {
-		return "postgresql://%s:%d/eucalyptus";
-	}
+
+  @Override
+  public String getServicePath( String... pathParts ) {
+    return pathParts != null && pathParts.length > 0 ? Joiner.on("/").join(pathParts) : "eucalyptus";
+  }  
+
+  @Override
+  public String getJdbcScheme( ) {
+    return "postgresql";
+  }  
+
 }
 

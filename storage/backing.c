@@ -85,9 +85,10 @@
 #include "iscsi.h"
 #include "vbr.h"
 
-#define CACHE_TIMEOUT_USEC 1000000LL*60*60*2 
-#define STORE_TIMEOUT_USEC 1000000LL*60*2
+#define CACHE_TIMEOUT_USEC  1000000LL*60*60*2 
+#define STORE_TIMEOUT_USEC  1000000LL*60*2
 #define DELETE_TIMEOUT_USEC 1000000LL*10
+#define FIND_TIMEOUT_USEC   50000LL // TODO: use 1000LL or less to induce rare timeouts
 
 static char instances_path [MAX_PATH];
 static blobstore * cache_bs = NULL;
@@ -337,7 +338,6 @@ int create_instance_backing (ncInstance * instance)
     return ret;
 }
 
-#define BLOBSTORE_FIND_TIMEOUT_USEC 1000LL
 int clone_bundling_backing (ncInstance *instance, const char* filePrefix, char* blockPath)
 {
     char path[MAX_PATH];
@@ -358,7 +358,7 @@ int clone_bundling_backing (ncInstance *instance, const char* filePrefix, char* 
     }
     
     for (blockblob_meta * bm = matches; bm; bm=bm->next) {
-        blockblob * bb = blockblob_open (work_bs, bm->id, 0, 0, NULL, BLOBSTORE_FIND_TIMEOUT_USEC);
+        blockblob * bb = blockblob_open (work_bs, bm->id, 0, 0, NULL, FIND_TIMEOUT_USEC);
         if (bb!=NULL && bb->snapshot_type == BLOBSTORE_SNAPSHOT_DM && strstr(bb->blocks_path,"emi-") != NULL) { // root image contains substr 'emi-'
             src_blob = bb;
             break;
@@ -374,7 +374,7 @@ int clone_bundling_backing (ncInstance *instance, const char* filePrefix, char* 
     snprintf (id, sizeof(id), "%s/%s", workPath, filePrefix);
     
     // open destination blob 
-    dest_blob = blockblob_open (work_bs, id, src_blob->size_bytes, BLOBSTORE_FLAG_CREAT | BLOBSTORE_FLAG_EXCL, NULL, BLOBSTORE_FIND_TIMEOUT_USEC); 
+    dest_blob = blockblob_open (work_bs, id, src_blob->size_bytes, BLOBSTORE_FLAG_CREAT | BLOBSTORE_FLAG_EXCL, NULL, FIND_TIMEOUT_USEC); 
     if (!dest_blob) {
         logprintfl (EUCAERROR, "[%s] couldn't create the destination blob for bundling (%s)", instance->instanceId, id);
         goto error;
@@ -454,7 +454,11 @@ int destroy_instance_backing (ncInstance * instance, int do_destroy_files)
         }
         set_path (path, sizeof (path), instance, "instance.checkpoint");
         unlink (path);
-
+        for (int i=0; i < EUCA_MAX_VOLUMES; ++i) {
+            ncVolume * volume = &instance->volumes[i];
+            snprintf (path, sizeof (path), EUCALYPTUS_VOLUME_XML_PATH_FORMAT, instance->instancePath, volume->volumeId);
+            unlink (path);
+        }
         // bundle instance will leave additional files
         // let's delete every file in the directory
         struct dirent **files;

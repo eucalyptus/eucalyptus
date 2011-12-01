@@ -237,7 +237,7 @@ public class Principals {
                                                                                         
                                                                                         @Override
                                                                                         public X509Certificate getX509Certificate( ) {
-                                                                                          return SystemCredentials.getCredentialProvider( Eucalyptus.class ).getCertificate( );
+                                                                                          return SystemCredentials.lookup( Eucalyptus.class ).getCertificate( );
                                                                                         }
                                                                                         
                                                                                         @Override
@@ -245,7 +245,7 @@ public class Principals {
                                                                                         
                                                                                         @Override
                                                                                         public Date getCreateDate( ) {
-                                                                                          return SystemCredentials.getCredentialProvider( Eucalyptus.class ).getCertificate( ).getNotBefore( );
+                                                                                          return SystemCredentials.lookup( Eucalyptus.class ).getCertificate( ).getNotBefore( );
                                                                                         }
                                                                                         
                                                                                         @Override
@@ -366,12 +366,7 @@ public class Principals {
                                                 public boolean isSystemAdmin( ) {
                                                   return true;
                                                 }
-                                                
-                                                @Override
-                                                public boolean isSystemInternal( ) {
-                                                  return true;
-                                                }
-                                                
+                                                                                                
                                                 @Override
                                                 public boolean isAccountAdmin( ) {
                                                   return true;
@@ -443,7 +438,10 @@ public class Principals {
                                                 public void removeCertificate( String certficateId ) throws AuthException {}
                                                 
                                                 @Override
-                                                public void removePolicy( String name ) throws AuthException {};
+                                                public void removePolicy( String name ) throws AuthException {}
+
+                                                @Override
+                                                public void removeInfo(String key) throws AuthException {}
                                               };
   
   private static final User    NOBODY_USER    = new User( ) {
@@ -472,7 +470,7 @@ public class Principals {
                                                                                         
                                                                                         @Override
                                                                                         public X509Certificate getX509Certificate( ) {
-                                                                                          return SystemCredentials.getCredentialProvider( Eucalyptus.class ).getCertificate( );
+                                                                                          return SystemCredentials.lookup( Eucalyptus.class ).getCertificate( );
                                                                                         }
                                                                                         
                                                                                         @Override
@@ -599,17 +597,12 @@ public class Principals {
                                                 
                                                 @Override
                                                 public boolean isSystemAdmin( ) {
-                                                  return true;
-                                                }
-                                                
-                                                @Override
-                                                public boolean isSystemInternal( ) {
-                                                  return true;
+                                                  return false;
                                                 }
                                                 
                                                 @Override
                                                 public boolean isAccountAdmin( ) {
-                                                  return true;
+                                                  return false;
                                                 }
                                                 
                                                 @Override
@@ -678,7 +671,10 @@ public class Principals {
                                                 public void removeCertificate( String certficateId ) throws AuthException {}
                                                 
                                                 @Override
-                                                public void removePolicy( String name ) throws AuthException {};
+                                                public void removePolicy( String name ) throws AuthException {}
+
+                                                @Override
+                                                public void removeInfo(String key) throws AuthException {}
                                               };
   
   public static User systemUser( ) {

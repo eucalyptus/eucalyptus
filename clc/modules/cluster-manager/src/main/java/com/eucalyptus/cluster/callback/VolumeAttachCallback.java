@@ -68,8 +68,11 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.component.Dispatcher;
+import com.eucalyptus.component.Partition;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.Topology;
+import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.async.AsyncRequests;
@@ -126,8 +129,10 @@ public class VolumeAttachCallback extends MessageCallback<AttachVolumeType, Atta
     LOG.debug( "Trying to remove invalid volume attachment " + this.getRequest( ).getVolumeId( ) + " from instance " + this.getRequest( ).getInstanceId( ) );
     try {
       VmInstance vm = VmInstances.lookup( this.getRequest( ).getInstanceId( ) );
-      Cluster cluster = Clusters.lookup( vm.lookupClusterConfiguration( ) );
-      ServiceConfiguration sc = Partitions.lookupService( Storage.class, cluster.getConfiguration( ).getPartition( ) );
+      Partition partition = vm.lookupPartition( );
+      ServiceConfiguration cc = Topology.lookup( ClusterController.class, partition );
+      Cluster cluster = Clusters.lookup( cc );
+      ServiceConfiguration sc = Topology.lookup( Storage.class, partition );
       /** clean up SC session state **/
       try {
         Dispatcher dispatcher = ServiceDispatcher.lookup( sc );

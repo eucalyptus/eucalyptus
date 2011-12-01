@@ -289,7 +289,9 @@ public class ObjectInfo extends AbstractPersistent implements Comparable {
         if (globalWrite) {
             return true;
         }
-        
+        if (ownerId.equals(userId)) {
+          return true;
+        }
         for (GrantInfo grantInfo: grants) {
             if (grantInfo.getUserId().equals(userId)) {
                 if (grantInfo.canWrite()) {
@@ -302,7 +304,7 @@ public class ObjectInfo extends AbstractPersistent implements Comparable {
     }
 
     public boolean canRead(User user) {
-      return user.isSystemAdmin()||user.isSystemInternal()||canRead(user.getName());
+      return user.isSystemAdmin()||canRead(user.getName());
     }
 
     public boolean canRead(String userId) {
@@ -313,7 +315,9 @@ public class ObjectInfo extends AbstractPersistent implements Comparable {
         if (globalRead) {
             return true;
         }
-
+        if (ownerId.equals(userId)) {
+          return true;
+        }
         for (GrantInfo grantInfo: grants) {
             if(grantInfo.getGrantGroup() != null) {
                 String groupUri = grantInfo.getGrantGroup();
@@ -355,7 +359,10 @@ public class ObjectInfo extends AbstractPersistent implements Comparable {
         if (globalWriteACP) {
             return true;
         }
-
+        if (ownerId.equals(userId)) {
+          return true;
+        }
+        
         for (GrantInfo grantInfo: grants) {
             if (grantInfo.getUserId().equals(userId)) {
                 if (grantInfo.isWriteACP()) {

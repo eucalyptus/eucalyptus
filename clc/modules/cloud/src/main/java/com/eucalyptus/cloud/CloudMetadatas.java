@@ -65,10 +65,21 @@ package com.eucalyptus.cloud;
 
 import java.util.Collection;
 import com.eucalyptus.util.RestrictedTypes;
+import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 
 public class CloudMetadatas {
+  public static <T extends CloudMetadata> Function<T, String> toDisplayName( ) {
+    return new Function<T, String>( ) {
+      
+      @Override
+      public String apply( T arg0 ) {
+        return arg0.getDisplayName( );
+      }
+    };
+  }
+  
   public static <T extends CloudMetadata> Predicate<T> filterById( final Collection<String> requestedIdentifiers ) {
     return new Predicate<T>( ) {
       
@@ -79,6 +90,7 @@ public class CloudMetadatas {
     };
     
   }
+  
   public static <T extends CloudMetadata> Predicate<T> filterPrivilegesById( final Collection<String> requestedIdentifiers ) {
     return Predicates.and( filterById( requestedIdentifiers ), RestrictedTypes.filterPrivileged( ) );
     
@@ -94,6 +106,7 @@ public class CloudMetadatas {
     };
     
   }
+  
   public static <T extends CloudMetadata> Predicate<T> filterPrivilegesByOwningAccount( final Collection<String> requestedIdentifiers ) {
     return Predicates.and( filterByOwningAccount( requestedIdentifiers ), RestrictedTypes.filterPrivileged( ) );
     

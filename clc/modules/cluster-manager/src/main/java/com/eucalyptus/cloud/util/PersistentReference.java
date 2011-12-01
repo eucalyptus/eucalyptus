@@ -130,9 +130,10 @@ public abstract class PersistentReference<T extends PersistentReference<T, R>, R
    * @see Reference#teardown()
    */
   @Override
-  public final void teardown( ) throws ResourceAllocationException {
+  public final boolean teardown( ) throws ResourceAllocationException {
     Entities.delete( this );
     this.setId( null );
+    return true;
   }
   
   /**
@@ -145,7 +146,7 @@ public abstract class PersistentReference<T extends PersistentReference<T, R>, R
    */
   @Override
   public final T reclaim( final R referer ) throws ResourceAllocationException {
-    final T ret = PersistentReference.this.doSetReferer( referer, Reference.State.FREE, Reference.State.EXTANT );
+    final T ret = PersistentReference.this.doSetReferer( referer, null, Reference.State.EXTANT );
     return ret;
   }
   

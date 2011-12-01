@@ -48,8 +48,7 @@ public class ReportServlet
 		final Period period = new Period(start, end);
 		final ReportingCriterion criterion =
 			ReportingCriterion.valueOf(Param.criterion.get(req));
-		// TODO: configurable
-		final Units displayUnits = Units.DEFAULT_DISPLAY_UNITS;
+		final Units displayUnits = Units.getDefaultDisplayUnits();
 		
 		ReportingCriterion groupByCriterion = null;
 		//GroupByCriterion can optionally have value "None"; check for it

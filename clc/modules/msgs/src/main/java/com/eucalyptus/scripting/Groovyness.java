@@ -21,6 +21,7 @@ import javax.script.SimpleScriptContext;
 import org.apache.log4j.Logger;
 import org.codehaus.groovy.control.CompilerConfiguration;
 import com.eucalyptus.system.SubDirectory;
+import com.eucalyptus.util.Exceptions;
 
 public class Groovyness {
   private static Logger      LOG          = Logger.getLogger( Groovyness.class );
@@ -130,7 +131,11 @@ public class Groovyness {
       return ( T ) getGroovyEngine( ).eval( code, scriptContext );
     } catch ( Exception e ) {
       LOG.debug( e, e );
-      throw new ScriptExecutionFailedException( "Executing the requested script failed: " + code, e );
+      throw new ScriptExecutionFailedException( "Executing the requested script failed:\n" 
+                                                + "============================\n" 
+                                                + code 
+                                                + "============================\n" 
+                                                + "\nbecause of:\n" + Exceptions.causeString( e ), e );
     }
   }
   
@@ -139,7 +144,11 @@ public class Groovyness {
       return ( T ) getGroovyEngine( ).eval( code );
     } catch ( Exception e ) {
       LOG.debug( e, e );
-      throw new ScriptExecutionFailedException( "Executing the requested script failed: " + code, e );
+      throw new ScriptExecutionFailedException( "Executing the requested script failed:\n" 
+                                                + "============================\n" 
+                                                + code 
+                                                + "============================\n" 
+                                                + "\nbecause of:\n" + Exceptions.causeString( e ), e );
     }
   }
   

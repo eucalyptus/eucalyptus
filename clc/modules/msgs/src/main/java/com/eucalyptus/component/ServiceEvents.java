@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -63,107 +63,64 @@
 
 package com.eucalyptus.component;
 
-import java.io.Serializable;
-import java.util.UUID;
-import com.eucalyptus.util.Exceptions;
+import org.apache.log4j.Logger;
+import com.eucalyptus.bootstrap.Host;
+import com.eucalyptus.bootstrap.Hosts;
+import com.eucalyptus.component.Component.State;
+import com.eucalyptus.empyrean.DisableServiceType;
+import com.eucalyptus.empyrean.Empyrean;
+import com.eucalyptus.empyrean.EnableServiceType;
+import com.eucalyptus.empyrean.ServiceId;
+import com.eucalyptus.empyrean.ServiceTransitionType;
+import com.eucalyptus.empyrean.StartServiceType;
+import com.eucalyptus.empyrean.StopServiceType;
+import com.eucalyptus.util.TypeMappers;
+import com.eucalyptus.util.async.AsyncRequests;
 
 public class ServiceEvents {
-  public enum EventType {
-    DEBUG, INFO, WARNING, ERROR
+  private static Logger LOG = Logger.getLogger( ServiceEvents.class );
+  
+  /**
+   * @param config
+   * @param state
+   */
+  public static void fire( final ServiceConfiguration config, State state ) {
+    try {
+      ServiceTransitionType msg = null;
+      switch ( state ) {
+        case ENABLED:
+          msg = new EnableServiceType( );
+          break;
+        case DISABLED:
+          msg = new DisableServiceType( );
+          break;
+        case STOPPED:
+          msg = new StopServiceType( );
+          break;
+//TODO:GRZE: Handle other state transitions here.
+//        case INITIALIZED:
+//        case LOADED:
+        case NOTREADY:
+          msg = new StartServiceType( );
+          break;
+        default:
+          break;
+      }
+      if ( msg != null ) {
+        msg.getServices( ).add( TypeMappers.transform( config, ServiceId.class ) );
+        for ( Host h : Hosts.list( ) ) {
+          if ( !h.isLocalHost( ) && !h.getHostAddresses( ).contains( config.getInetAddress( ) ) ) {
+            try {
+              AsyncRequests.sendSync( ServiceConfigurations.createEphemeral( Empyrean.INSTANCE, h.getBindAddress( ) ), msg );
+            } catch ( Exception ex ) {
+              LOG.error( ex, ex );
+            }
+          }
+        }
+      }
+    } catch ( Exception ex ) {
+      LOG.error( ex , ex );
+    }
   }
   
-  static class GenericServiceException extends Exception {
-    
-    public GenericServiceException( String message ) {
-      super( message );
-    }
-    
-  }
-  
-  public static ServiceEvent createError( ServiceConfiguration configuration, Throwable exception ) {//TODO:GRZE:OMGFIXME
-    return createError( configuration, exception.getMessage( ), exception );
-  }
-  
-  public static ServiceEvent createError( ServiceConfiguration configuration, String message ) {
-    return createError( configuration, message, new GenericServiceException( message ) );
-  }
-  
-  public static ServiceEvent createError( ServiceConfiguration configuration, String message, Throwable exception ) {
-    return new ServiceEvent( configuration, exception, EventType.ERROR, message );
-  }
-  
-  static class ServiceEvent implements Serializable, Comparable<ServiceEvent> {
-    private final ServiceConfiguration serviceConfiguration;
-    private final Throwable            exception;
-    private final EventType            type;
-    private final String               message;
-    private final Long                 timestamp = System.currentTimeMillis( );
-    private final String               uuid      = timestamp + "-" + UUID.randomUUID( ).toString( );
-    
-    private ServiceEvent( ServiceConfiguration serviceConfiguration, Throwable exception, EventType type, String message ) {
-      super( );
-      this.serviceConfiguration = serviceConfiguration;
-      this.exception = exception;
-      this.type = type;
-      this.message = message;
-    }
-    
-    public final ServiceConfiguration getServiceConfiguration( ) {
-      return this.serviceConfiguration;
-    }
-    
-    public final Throwable getException( ) {
-      return this.exception;
-    }
-    
-    public final String getMessage( ) {
-      return this.message;
-    }
-    
-    public final Long getTimestamp( ) {
-      return this.timestamp;
-    }
-    
-    public final String getUuid( ) {
-      return this.uuid;
-    }
-    
-    @Override
-    public int hashCode( ) {
-      final int prime = 31;
-      int result = 1;
-      result = prime * result + ( ( this.uuid == null )
-        ? 0
-        : this.uuid.hashCode( ) );
-      return result;
-    }
-    
-    @Override
-    public boolean equals( Object obj ) {
-      if ( this == obj ) return true;
-      if ( obj == null ) return false;
-      if ( getClass( ) != obj.getClass( ) ) return false;
-      ServiceEvent other = ( ServiceEvent ) obj;
-      if ( this.uuid == null ) {
-        if ( other.uuid != null ) return false;
-      } else if ( !this.uuid.equals( other.uuid ) ) return false;
-      return true;
-    }
-    
-    @Override
-    public String toString( ) {
-      return String.format( "ServiceEvent %s %s message=%s [id=%s:ex-stack=%s]", this.serviceConfiguration, this.type,
-                            this.message, this.uuid, Exceptions.filterStackTraceElements( this.exception ) );
-    }
-    
-    @Override
-    public int compareTo( ServiceEvent that ) {
-      return ( this.timestamp - that.timestamp ) == 0
-        ? this.uuid.compareTo( that.uuid )
-        : ( this.timestamp - that.timestamp > 0
-          ? 1
-          : -1 );
-    }
-    
-  }
 }

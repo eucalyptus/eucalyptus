@@ -66,8 +66,10 @@ package com.eucalyptus.network;
 import java.util.HashSet;
 import java.util.NoSuchElementException;
 import java.util.Set;
+import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.EntityTransaction;
+import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
 import javax.persistence.OneToMany;
 import javax.persistence.OneToOne;
@@ -80,6 +82,7 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
 import org.hibernate.annotations.NotFound;
 import org.hibernate.annotations.NotFoundAction;
+import org.hibernate.exception.ConstraintViolationException;
 import com.eucalyptus.cloud.AccountMetadata;
 import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.cloud.util.Reference;
@@ -108,12 +111,12 @@ public class ExtantNetwork extends UserMetadata<Reference.State> {
   private Integer                        tag;
   
   @NotFound( action = NotFoundAction.IGNORE )
-  @OneToMany
+  @OneToMany( fetch = FetchType.EAGER, orphanRemoval = true, cascade = CascadeType.ALL )
   @JoinColumn( name = "metadata_extant_network_index_fk" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private final Set<PrivateNetworkIndex> indexes          = new HashSet<PrivateNetworkIndex>( );
   
-  @OneToOne
+  @OneToOne( fetch = FetchType.EAGER )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private NetworkGroup                   networkGroup;
   
@@ -162,7 +165,7 @@ public class ExtantNetwork extends UserMetadata<Reference.State> {
     this.tag = tag;
   }
   
-  public PrivateNetworkIndex reclaimNetworkIndex( final Long idx ) throws TransactionException {
+  public PrivateNetworkIndex reclaimNetworkIndex( final Long idx ) throws Exception {
     if ( !NetworkGroups.networkingConfiguration( ).hasNetworking( ) ) {
       try {
         return PrivateNetworkIndex.bogus( ).allocate( );
@@ -172,33 +175,10 @@ public class ExtantNetwork extends UserMetadata<Reference.State> {
     } else if ( !Entities.isPersistent( this ) ) {
       throw new TransientEntityException( this.toString( ) );
     } else {
-      final EntityTransaction db = Entities.get( PrivateNetworkIndex.class );
       try {
-        try {
-          final PrivateNetworkIndex netIdx = Entities.uniqueResult( PrivateNetworkIndex.named( this, idx ) );
-          if ( Reference.State.FREE.equals( netIdx.getState( ) ) ) {
-            final PrivateNetworkIndex ref = netIdx.allocate( );
-            db.commit( );
-            return ref;
-          } else {
-            try {
-              netIdx.teardown( );
-            } catch ( final Exception ex ) {
-              LOG.error( ex, ex );
-            }
-            final PrivateNetworkIndex ref = Entities.persist( PrivateNetworkIndex.create( this, idx ) ).allocate( );
-            db.commit( );
-            return ref;
-          }
-        } catch ( final Exception ex ) {
-          final PrivateNetworkIndex ref = Entities.persist( PrivateNetworkIndex.create( this, idx ) ).allocate( );
-          db.commit( );
-          return ref;
-        }
+        return Entities.uniqueResult( PrivateNetworkIndex.named( this, idx ) );
       } catch ( final Exception ex ) {
-        Logs.exhaust( ).error( ex, ex );
-        db.rollback( );
-        throw new TransactionExecutionException( "Failed to allocate a private network index in network: " + this.displayName, ex );
+        return Entities.persist( PrivateNetworkIndex.create( this, idx ) ).allocate( );
       }
     }
   }
@@ -316,5 +296,44 @@ public class ExtantNetwork extends UserMetadata<Reference.State> {
                           .namespace( this.getOwnerAccountNumber( ) )
                           .relativeId( "security-group", this.getNetworkGroup( ).getDisplayName( ),
                                        "tag", this.getTag( ).toString( ) );
+  }
+  
+  boolean teardown( ) {
+    if ( !this.indexes.isEmpty( ) ) {
+      for ( PrivateNetworkIndex index : this.indexes ) {
+        switch ( index.getState( ) ) {
+          case PENDING:
+            if ( System.currentTimeMillis( ) - index.lastUpdateMillis( ) < 60L * 1000 * NetworkGroups.NETWORK_INDEX_PENDING_TIMEOUT ) {
+              LOG.warn( "Failing teardown of extant network " + this + ": Found pending index " + index + " which is within the timeout window." );
+              return false;
+            } else {
+              this.indexes.remove( index );
+              try {
+                index.release( );
+                index.teardown( );
+              } catch ( ResourceAllocationException ex ) {
+                LOG.error( ex, ex );
+              }
+              break;
+            }
+          case EXTANT:
+            LOG.warn( "Failing teardown of extant network " + this + ": Found pending index " + index + " which is within the timeout window." );
+            return false;
+          case UNKNOWN:
+          case FREE:
+          case RELEASING:
+            this.indexes.remove( index );
+            try {
+              index.release( );
+              index.teardown( );
+            } catch ( ResourceAllocationException ex ) {
+              LOG.error( ex, ex );
+            }
+            break;
+        }
+      }
+    }
+    this.indexes.clear( );
+    return true;
   }
 }

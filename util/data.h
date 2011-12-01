@@ -96,8 +96,8 @@ typedef struct ncMetadata_t {
     char *correlationId;
     char *userId;
     int epoch;
-    serviceInfoType services[16];
-    int servicesLen;
+    serviceInfoType services[16], disabledServices[16], notreadyServices[16];
+    int servicesLen, disabledServicesLen, notreadyServicesLen;
 } ncMetadata;
 
 typedef enum _hypervisorCapabilityType { // TODO: make bit field?
@@ -305,7 +305,7 @@ typedef struct ncInstance_t {
     boolean do_inject_key; // whether or not NC injects SSH key into this instance (eucalyptus.conf option)
 
     // passed into NC via runInstances for safekeeping
-    char userData[CHAR_BUFFER_SIZE*10];
+    char userData[CHAR_BUFFER_SIZE*32];
     char launchIndex[CHAR_BUFFER_SIZE];
     char platform[CHAR_BUFFER_SIZE];
     char groupNames[EUCA_MAX_GROUPS][CHAR_BUFFER_SIZE];

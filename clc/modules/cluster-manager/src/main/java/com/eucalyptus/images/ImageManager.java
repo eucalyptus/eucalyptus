@@ -80,6 +80,9 @@ import com.eucalyptus.cloud.CloudMetadatas;
 import com.eucalyptus.cloud.ImageMetadata;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
+import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.Topology;
+import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.IllegalContextAccessException;
@@ -87,7 +90,9 @@ import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.images.ImageManifests.ImageManifest;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstance.VmState;
@@ -134,7 +139,7 @@ public class ImageManager {
     Predicate<ImageInfo> rangeFilter = Predicates.and( CloudMetadatas.filterById( request.getImagesSet( ) ),
                                                        CloudMetadatas.filterByOwningAccount( request.getOwnersSet( ) ),
                                                        Images.filterExecutableBy( ownersSet ) );
-    Predicate<ImageInfo> privilegesFilter = Predicates.or( Images.FilterPermissions.INSTANCE, RestrictedTypes.filterPrivileged( ) );
+    Predicate<ImageInfo> privilegesFilter = Predicates.and( Images.FilterPermissions.INSTANCE, RestrictedTypes.filterPrivilegedWithoutOwner( ) );
     Predicate<ImageInfo> filter = Predicates.and( privilegesFilter, rangeFilter );
     List<ImageDetails> imageDetailsList = Transactions.filteredTransform( new ImageInfo( ), filter, Images.TO_IMAGE_DETAILS );
     reply.getImagesSet( ).addAll( imageDetailsList );
@@ -151,14 +156,26 @@ public class ImageManager {
     final String eki = request.getKernelId( );
     final String eri = request.getRamdiskId( );
     if ( request.getImageLocation( ) != null ) {
-      ImageManifest manifest = ImageManifests.lookup( request.getImageLocation( ) );
+      final ImageManifest manifest = ImageManifests.lookup( request.getImageLocation( ) );
       LOG.debug( "Obtained manifest information for requested image registration: " + manifest );
       List<DeviceMapping> vbr = Lists.transform( request.getBlockDeviceMappings( ), Images.deviceMappingGenerator( imageInfo ) );
-      ImageMetadata.Architecture arch = ( request.getArchitecture( ) == null
+      final ImageMetadata.Architecture arch = ( request.getArchitecture( ) == null
         ? null
         : ImageMetadata.Architecture.valueOf( request.getArchitecture( ) ) );
-      imageInfo = Images.createFromManifest( ctx.getUserFullName( ), request.getName( ), request.getDescription( ), arch, null, eki, eri,
-                                             manifest );
+      Supplier<ImageInfo> allocator = new Supplier<ImageInfo>( ) {
+        
+        @Override
+        public ImageInfo get( ) {
+          try {
+            return Images.createFromManifest( ctx.getUserFullName( ), request.getName( ), request.getDescription( ), arch, eki, eri, manifest );
+          } catch ( Exception ex ) {
+            LOG.error( ex );
+            Logs.extreme( ).error( ex, ex );
+            throw Exceptions.toUndeclared( ex );
+          }
+        }
+      };
+      imageInfo = RestrictedTypes.allocateUnitlessResource( allocator );
       imageInfo.getDeviceMappings( ).addAll( vbr );
     } else if ( rootDevName != null && Iterables.any( request.getBlockDeviceMappings( ), Images.findEbsRoot( rootDevName ) ) ) {
       Supplier<ImageInfo> allocator = new Supplier<ImageInfo>( ) {
@@ -174,7 +191,7 @@ public class ImageManager {
           }
         }
       };
-      imageInfo = RestrictedTypes.allocate( allocator );
+      imageInfo = RestrictedTypes.allocateUnitlessResource( allocator );
     } else {
       throw new EucalyptusCloudException( "Malformed registration. A request must specify either " +
                                           "a manifest path or a snapshot to use for BFE. Provided values are: imageLocation="
@@ -409,11 +426,11 @@ public class ImageManager {
       } else {
         Cluster cluster = null;
         try {
-          cluster = Clusters.getInstance( ).lookup( vm.lookupPartition( ) );
-          
+          ServiceConfiguration ccConfig = Topology.lookup( ClusterController.class, vm.lookupPartition( ) );
+          cluster = Clusters.lookup( ccConfig );
         } catch ( NoSuchElementException e ) {
           LOG.debug( e );
-          throw new EucalyptusCloudException( "Cluster does not exist: " + vm.lookupClusterConfiguration( ) );
+          throw new EucalyptusCloudException( "Cluster does not exist: " + vm.getPartition( )  );
         }
       }
     } catch ( AuthException ex ) {

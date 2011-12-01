@@ -98,6 +98,7 @@ import org.hibernate.exception.SQLGrammarException;
 import org.hibernate.jdbc.TooManyRowsAffectedException;
 import org.hibernate.loader.MultipleBagFetchException;
 import org.hibernate.type.SerializationException;
+import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Classes;
 import com.eucalyptus.util.Exceptions;
@@ -125,7 +126,8 @@ public class PersistenceExceptions {
     CONNECTION {
       @Override
       public RuntimeException handleException( final RuntimeException e ) {
-        PersistenceContexts.handleConnectionError( e );
+        Databases.check( );
+        Logs.extreme( ).error( e, e );
         return super.handleException( e );
       }
       
@@ -211,7 +213,7 @@ public class PersistenceExceptions {
    */
   @SuppressWarnings( "unchecked" )
   public static RecoverablePersistenceException throwFiltered( final Throwable e ) {
-    ConstraintViolationException cause = Exceptions.causedBy( e, ConstraintViolationException.class );
+    ConstraintViolationException cause = Exceptions.findCause( e, ConstraintViolationException.class );
     if ( cause != null ) {
       throw cause;
     } else {

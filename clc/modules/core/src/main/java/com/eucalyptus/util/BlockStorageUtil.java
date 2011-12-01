@@ -108,7 +108,7 @@ public class BlockStorageUtil {
 	}
 
 	public static String encryptSCTargetPassword(String password) throws EucalyptusCloudException {
-		PublicKey scPublicKey = SystemCredentials.getCredentialProvider(Storage.class).getKeyPair().getPublic();
+		PublicKey scPublicKey = SystemCredentials.lookup(Storage.class).getKeyPair().getPublic();
 		Cipher cipher;
 		try {
 			cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
@@ -121,7 +121,7 @@ public class BlockStorageUtil {
 	}
 
 	public static String decryptSCTargetPassword(String encryptedPassword) throws EucalyptusCloudException {
-		PrivateKey scPrivateKey = SystemCredentials.getCredentialProvider(Storage.class).getPrivateKey();
+		PrivateKey scPrivateKey = SystemCredentials.lookup(Storage.class).getPrivateKey();
 		try {
 			Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
 			cipher.init(Cipher.DECRYPT_MODE, scPrivateKey);

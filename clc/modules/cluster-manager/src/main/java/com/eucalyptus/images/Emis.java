@@ -383,7 +383,7 @@ public class Emis {
   
   public static <T extends ImageInfo> T resolveDiskImage( String imageId, Function<String, T> resolver ) throws IllegalMetadataAccessException {
     T img = resolver.apply( imageId );
-    Predicate<T> filter = Predicates.or( Images.FilterPermissions.INSTANCE, RestrictedTypes.filterPrivileged( ) );
+    Predicate<T> filter = Predicates.and( Images.FilterPermissions.INSTANCE, RestrictedTypes.filterPrivilegedWithoutOwner( ) );
     if ( filter.apply( img ) ) {
       return img;
     } else {
@@ -395,7 +395,7 @@ public class Emis {
     String kernelId = determineKernelId( bootSet );
     LOG.debug( "Determined the appropriate kernelId to be " + kernelId + " for " + bootSet.toString( ) );
     try {
-      KernelImageInfo kernel = RestrictedTypes.doPrivileged( kernelId, LookupKernel.INSTANCE );
+      KernelImageInfo kernel = RestrictedTypes.doPrivilegedWithoutOwner( kernelId, LookupKernel.INSTANCE );
       return new NoRamdiskBootableSet( bootSet.getMachine( ), kernel );
     } catch ( Exception ex ) {
       throw new NoSuchMetadataException( "Failed to lookup kernel image information: " + kernelId + " because of: " + ex.getMessage( ), ex );
@@ -409,7 +409,7 @@ public class Emis {
       return bootSet;
     } else {
       try {
-        RamdiskImageInfo ramdisk = RestrictedTypes.doPrivileged( ramdiskId, LookupRamdisk.INSTANCE );
+        RamdiskImageInfo ramdisk = RestrictedTypes.doPrivilegedWithoutOwner( ramdiskId, LookupRamdisk.INSTANCE );
         return new TrifectaBootableSet( bootSet.getMachine( ), bootSet.getKernel( ), ramdisk );
       } catch ( Exception ex ) {
         throw new NoSuchMetadataException( "Failed to lookup ramdisk image information: " + ramdiskId + " because of: " + ex.getMessage( ), ex );
@@ -450,40 +450,22 @@ public class Emis {
     if ( !bootSet.hasKernel( ) ) {
       throw new InvalidMetadataException( "Image specified does not have a kernel: " + bootSet );
     }
-    boolean skipRamdisk = false;
-    String ramdiskId = null;
-    Context ctx = null;
-    try {
-      ctx = Contexts.lookup( );
-      if ( ctx.getRequest( ) instanceof RunInstancesType ) {
-        RunInstancesType msg = ( RunInstancesType ) ctx.getRequest( );
-        if ( ImageUtil.isSet( msg.getKernelId( ) ) ) {
-          skipRamdisk |= ( !ImageUtil.isSet( msg.getRamdiskId( ) ) );//explicit kernel given w/o rd
-        } else {
-          skipRamdisk |= ( ImageUtil.isSet( bootSet.getMachine( ).getKernelId( ) )
-                           && !ImageUtil.isSet( bootSet.getMachine( ).getRamdiskId( ) )
-                         && !ImageUtil.isSet( msg.getRamdiskId( ) ) );//no explicit kernel, skip default ramdiskId if none other given
-        }
-        ramdiskId = ( ( RunInstancesType ) ctx.getRequest( ) ).getRamdiskId( );
+    String ramdiskId = bootSet.getMachine( ).getRamdiskId( );//GRZE: use the ramdisk that is part of the registered image definition to start.
+    Context ctx = Contexts.lookup( );
+    if ( ctx.getRequest( ) instanceof RunInstancesType ) {
+      RunInstancesType msg = ( RunInstancesType ) ctx.getRequest( );
+      if ( msg.getRamdiskId( ) != null && !"".equals( msg.getRamdiskId( ) ) ) {
+        ramdiskId = msg.getRamdiskId( );//GRZE: maybe update w/ a specific ramdisk user requests
       }
-    } catch ( IllegalContextAccessException ex ) {
-      LOG.error( ex, ex );
     }
-    if ( ramdiskId == null || "".equals( ramdiskId ) ) {
-      ramdiskId = bootSet.getMachine( ).getRamdiskId( );
-    }
-    if ( ramdiskId == null || "".equals( ramdiskId ) ) {
-      ramdiskId = ImageConfiguration.getInstance( ).getDefaultRamdiskId( );
-    }
-    Preconditions.checkNotNull( ramdiskId, "Attempt to resolve a ramdiskId for " + bootSet.toString( ) + " during request " + ( ctx != null
-        ? ctx.getRequest( ).toSimpleString( )
-        : "UNKNOWN" ) );
+    //GRZE: perfectly legitimate for there to be no ramdisk, carry on. **/
     if ( ramdiskId == null ) {
-      throw new InvalidMetadataException( "Unable to determine required ramdisk image for " + bootSet.toString( ) );
+      return ramdiskId;
     } else if ( !ramdiskId.startsWith( ImageMetadata.Type.ramdisk.getTypePrefix( ) ) ) {
       throw new InvalidMetadataException( "Image specified is not a ramdisk: " + ramdiskId );
+    } else {
+      return ramdiskId;
     }
-    return ramdiskId;
   }
   
   public static void checkStoredImage( BootableSet bootSet ) {

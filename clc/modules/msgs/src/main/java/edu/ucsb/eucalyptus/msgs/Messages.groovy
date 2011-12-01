@@ -64,7 +64,7 @@ package edu.ucsb.eucalyptus.msgs;
 
 import org.jboss.netty.handler.codec.http.HttpResponseStatus
 import com.eucalyptus.component.ComponentId
-import com.eucalyptus.component.ComponentMessage
+import com.eucalyptus.component.ComponentId.ComponentMessage
 import com.eucalyptus.component.ServiceConfiguration
 import com.eucalyptus.component.ServiceConfigurations
 import com.eucalyptus.component.id.ComponentService
@@ -330,8 +330,8 @@ public class VmTypeInfo extends EucalyptusData implements Cloneable {
     this.virtualBootRecord.add( new VirtualBootRecord( guestDeviceName : deviceName, size : sizeBytes/1024l, , type : "swap", format : "swap" ) );
   }
   
-  public void setEphemeral( Integer index, String deviceName, Long sizeBytes ) {
-    this.virtualBootRecord.add( new VirtualBootRecord( type : "ephemeral" + index, guestDeviceName : deviceName, size : sizeBytes/1024l ) );
+  public void setEphemeral( Integer index, String deviceName, Long sizeBytes, String formatName ) {
+    this.virtualBootRecord.add( new VirtualBootRecord( guestDeviceName : deviceName, size : sizeBytes/1024l, , type : "ephemeral", format : formatName ) );
   }
   
   public VirtualBootRecord lookupRoot( ) throws NoSuchElementException {

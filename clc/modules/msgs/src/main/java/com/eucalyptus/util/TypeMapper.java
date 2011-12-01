@@ -37,8 +37,4 @@ import com.google.common.base.Function;
 @Retention( RetentionPolicy.RUNTIME )
 public @interface TypeMapper {
   Class[] value( ) default { Object.class, Object.class };
-  
-  Class from( ) default Object.class;
-  
-  Class to( ) default Object.class;
 }

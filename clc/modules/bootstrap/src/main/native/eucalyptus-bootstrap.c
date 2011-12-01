@@ -60,6 +60,8 @@
 #include <sys/syscall.h>
 #include <limits.h>
 #include <stdlib.h>
+#include <sys/time.h>
+#include <sys/resource.h>
 
 #define _LINUX_FS_H 
 
@@ -315,12 +317,30 @@ static int stop_child(euca_opts *args) {
 	}
 	return 0;
 }
+static int __update_limit(int resource,long long value) {
+	struct rlimit r;
+	__abort(1,getrlimit(resource, &r) == -1,"Failed to get rlimit for resource=%d",resource);
+	printf("ulimit: resource=%d soft=%lld hard=%lld\n",resource,(long long) r.rlim_cur, (long long) r.rlim_max);
+	if(r.rlim_cur==RLIM_INFINITY||r.rlim_cur<value) {
+		r.rlim_cur = value;
+		r.rlim_max = value;
+		__abort(1,setrlimit(resource, &r) == -1,"Failed to set rlimit for resource=%d",resource);
+		__abort(1,getrlimit(resource, &r) == -1,"Failed to set rlimit for resource=%d",resource);
+		printf("ulimit: resource=%d soft=%lld hard=%lld\n",resource,(long long) r.rlim_cur, (long long) r.rlim_max);
+	}
+	return 0;
+}
+static void __limits() {
+	__update_limit(RLIMIT_NOFILE,LIMIT_FILENO);
+	__update_limit(RLIMIT_NPROC,LIMIT_NPROC);
+}
 
 static int child(euca_opts *args, java_home_t *data, uid_t uid, gid_t gid) {
 	int ret = 0;
 	jboolean r = 0;
 	__write_pid(GETARG(args, pidfile));
 	setpgrp();
+	__limits();
 	__die(java_init(args, data) != 1, "Failed to initialize Eucalyptus.");
 	__die_jni((r = (*env)->CallBooleanMethod(env, bootstrap.instance,
 			bootstrap.init)) == 0, "Failed to init Eucalyptus.");
@@ -328,7 +348,6 @@ static int child(euca_opts *args, java_home_t *data, uid_t uid, gid_t gid) {
 			"Setting ownership of keyfile failed.");
 	__abort(4, linuxset_user_group(GETARG(args, user), uid, gid) != 0,
 			"Setting the user failed.");
-	__abort(4, (set_caps(0) != 0), "set_caps (0) failed");
 	__die_jni((r = (*env)->CallBooleanMethod(env, bootstrap.instance,
 			bootstrap.load)) == 0, "Failed to load Eucalyptus.");
 	__die_jni((r = (*env)->CallBooleanMethod(env, bootstrap.instance,
@@ -761,6 +780,11 @@ int java_init(euca_opts *args, java_home_t *data) {
 	if (args->force_remote_bootstrap_flag || args->disable_cloud_flag) {
 		JVM_ARG(opt[++x], "-Deuca.force.remote.bootstrap=true");
 	}
+
+        if (args->debug_noha_flag) {
+                JVM_ARG(opt[++x], "-Deuca.noha.cloud");
+        }
+
 	if (args->debug_flag) {
 		JVM_ARG(opt[++x], "-XX:+HeapDumpOnOutOfMemoryError");
 		JVM_ARG(opt[++x], "-XX:HeapDumpPath=%s/var/log/eucalyptus/", GETARG(args, home));
@@ -771,9 +795,9 @@ int java_init(euca_opts *args, java_home_t *data) {
 				GETARG(args, debug_port),
 				(args->debug_suspend_flag ? "y" : "n"));
 	}
-	if (args->jmx_flag) {
+	if (args->jmx_flag || args->debug_flag) {
 		JVM_ARG(opt[++x], "-Dcom.sun.management.jmxremote");//TODO:GRZE:wrapup jmx stuff here.
-	//		JVM_ARG(opt[++x], "-Dcom.sun.management.jmxremote.port=8772");
+		JVM_ARG(opt[++x], "-Dcom.sun.management.jmxremote.port=8772");
 		JVM_ARG(opt[++x], "-Dcom.sun.management.jmxremote.authenticate=false");//TODO:GRZE:RELEASE FIXME to use ssl
 		JVM_ARG(opt[++x], "-Dcom.sun.management.jmxremote.ssl=false");
 	}

@@ -230,7 +230,8 @@ public class ShellActivity extends AbstractActivity
         LOG.log( Level.INFO, "User signed out." );
       }
     } );
-    this.clientFactory.getLocalSession( ).clearSession( );    
+    this.clientFactory.getLocalSession( ).clearSession( );
+    this.clientFactory.getShellView( ).getLogView( ).clear( );
     this.clientFactory.getMainPlaceController( ).goTo( new LogoutPlace( ) );
   }
 
@@ -412,6 +413,7 @@ public class ShellActivity extends AbstractActivity
 
       @Override
       public void onFailure( Throwable caught ) {
+        ActivityUtil.logoutForInvalidSession( clientFactory, caught );
         clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.ERROR, "Failed to change password", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
         clientFactory.getShellView( ).getLogView( ).log( LogType.ERROR, "Failed to change password for user " + userId + ": " + caught.getMessage( ) );
         // Password change failure is the same as cancelling the dialog
@@ -451,6 +453,7 @@ public class ShellActivity extends AbstractActivity
 
       @Override
       public void onFailure( Throwable caught ) {
+        ActivityUtil.logoutForInvalidSession( clientFactory, caught );
         clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.ERROR, "Failed to initiate credential download", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
         clientFactory.getShellView( ).getLogView( ).log( LogType.ERROR, "Failed to initiate credential download: " + caught.getMessage( ) );
       }

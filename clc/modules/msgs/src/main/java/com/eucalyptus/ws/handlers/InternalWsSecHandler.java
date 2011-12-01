@@ -89,11 +89,11 @@ import com.eucalyptus.ws.WebServicesException;
 import com.eucalyptus.ws.util.CredentialProxy;
 import com.google.common.collect.Lists;
 
-@ChannelPipelineCoverage( "one" )
+@ChannelPipelineCoverage( "all" )
 public class InternalWsSecHandler extends WsSecHandler {
   
   private static Logger LOG = Logger.getLogger( InternalWsSecHandler.class );
-  public InternalWsSecHandler( ) throws GeneralSecurityException {
+  public InternalWsSecHandler( ) {
     super( new CredentialProxy( Eucalyptus.class ) );
   }
   
@@ -121,7 +121,7 @@ public class InternalWsSecHandler extends WsSecHandler {
       try {
         X509Certificate cert = WSSecurity.verifySignature( secNode, sig );
         Logs.exhaust( ).debug( cert );
-        if ( cert == null || !cert.equals( SystemCredentials.getCredentialProvider( Eucalyptus.class ).getCertificate( ) ) ) {
+        if ( cert == null || !cert.equals( SystemCredentials.lookup( Eucalyptus.class ).getCertificate( ) ) ) {
           throw new WebServicesException( "Authentication failed: The following certificate is not trusted:\n " + cert );
         }
       } catch ( Exception ex ) {

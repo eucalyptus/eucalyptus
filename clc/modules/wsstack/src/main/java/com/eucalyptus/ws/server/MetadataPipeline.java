@@ -19,7 +19,7 @@ import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.mule.transport.NullPayload;
 import com.eucalyptus.bootstrap.Bootstrap;
-import com.eucalyptus.component.ComponentPart;
+import com.eucalyptus.component.ComponentId.ComponentPart;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.ServiceContext;
@@ -32,6 +32,10 @@ import com.eucalyptus.ws.stages.UnrollableStage;
 public class MetadataPipeline extends FilteredPipeline implements ChannelUpstreamHandler {
   private static Logger LOG = Logger.getLogger( MetadataPipeline.class );
   
+  public MetadataPipeline( ) {
+    super( );
+  }
+
   @Override
   public boolean checkAccepts( HttpRequest message ) {
     return message.getUri( ).matches( "/latest(/.*)*" ) || message.getUri( ).matches( "/\\d\\d\\d\\d-\\d\\d-\\d\\d/.*" );
@@ -39,7 +43,7 @@ public class MetadataPipeline extends FilteredPipeline implements ChannelUpstrea
   
   @Override
   public String getName( ) {
-    return "instance-metadata";
+    return "metadata-pipeline";
   }
   
   @Override
@@ -60,6 +64,8 @@ public class MetadataPipeline extends FilteredPipeline implements ChannelUpstrea
       try {
         if ( Bootstrap.isShuttingDown( ) ) {
           reply = "System shutting down".getBytes( );
+        } else if ( !Bootstrap.isFinished( ) ) {
+          reply = "System is still starting up".getBytes( );
         } else {
           reply = ServiceContext.send( "VmMetadata", newUri );
         }

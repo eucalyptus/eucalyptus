@@ -77,7 +77,7 @@ permission notice:
 
 enum {SHARED_MEM, SHARED_FILE};
 enum {INIT, CONFIG, VNET, INSTCACHE, RESCACHE, RESCACHESTAGE, REFRESHLOCK, BUNDLECACHE, NCCALL0, NCCALL1, NCCALL2, NCCALL3, NCCALL4, NCCALL5, NCCALL6, NCCALL7, NCCALL8, NCCALL9, NCCALL10, NCCALL11, NCCALL12, NCCALL13, NCCALL14, NCCALL15, NCCALL16, NCCALL17, NCCALL18, NCCALL19, NCCALL20, NCCALL21, NCCALL22, NCCALL23, NCCALL24, NCCALL25, NCCALL26, NCCALL27, NCCALL28, NCCALL29, NCCALL30, NCCALL31, ENDLOCK};
-enum {PRIMORDIAL, INITIALIZED, LOADED, DISABLED, ENABLED, STOPPED, NOTREADY};
+enum {PRIMORDIAL, INITIALIZED, LOADED, DISABLED, ENABLED, STOPPED, NOTREADY, SHUTDOWNCC};
 
 typedef struct configEntry_t {
   char *key;
@@ -98,6 +98,7 @@ static configEntry configKeysRestart[] = {
   {"VNET_DHCPDAEMON", "/usr/sbin/dhcpd3"},
   {"VNET_DHCPUSER", "dhcpd"},
   {"VNET_DNS", NULL},
+  {"VNET_DOMAINNAME", "eucalyptus"},
   {"VNET_LOCALIP", NULL},
   {"VNET_MACMAP", NULL},
   {"VNET_MODE", "SYSTEM"},
@@ -114,6 +115,7 @@ static configEntry configKeysRestart[] = {
   {"CC_IMAGE_PROXY_CACHE_SIZE", "32768"},
   {"CC_IMAGE_PROXY_PATH", "$EUCALYPTUS/var/lib/eucalyptus/dynserv/"},
   {"LOGLEVEL", "DEBUG"},
+  {"LOGROLLNUMBER", "4"},
   {NULL, NULL}
 };
 static configEntry configKeysNoRestart[] = {
@@ -153,7 +155,7 @@ typedef struct instance_t {
   char serviceTag[64];
   char uuid[48];
 
-  char userData[4096];
+  char userData[16384];
   char launchIndex[64];
 
   char platform[64];
@@ -227,7 +229,7 @@ typedef struct ccConfig_t {
   int ccState, ccLastState, kick_network, kick_enabled, kick_monitor_running;
   uint32_t cloudIp;
   serviceStatusType ccStatus;
-  serviceInfoType services[16];
+  serviceInfoType services[16], disabledServices[16], notreadyServices[16];
 } ccConfig;
 
 enum {SCHEDGREEDY, SCHEDROUNDROBIN, SCHEDPOWERSAVE, SCHEDLAST};
@@ -311,6 +313,7 @@ int refreshNodes(ccConfig *config, ccResource **res, int *numHosts);
 int syncNetworkState();
 int restoreNetworkState();
 int maintainNetworkState();
+int checkActiveNetworks();
 int reconfigureNetworkFromCLC();
 
 int powerDown(ncMetadata *ccMeta, ccResource *node);

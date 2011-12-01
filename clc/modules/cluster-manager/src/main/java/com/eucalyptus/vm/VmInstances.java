@@ -77,16 +77,13 @@ import org.hibernate.criterion.MatchMode;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
 import com.eucalyptus.cloud.CloudMetadata.VmInstanceMetadata;
-import com.eucalyptus.cloud.run.AdmissionControl;
-import com.eucalyptus.cloud.run.Allocations.Allocation;
-import com.eucalyptus.cloud.run.ClusterAllocator;
-import com.eucalyptus.cloud.run.VerifyMetadata;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.callback.TerminateCallback;
 import com.eucalyptus.component.Dispatcher;
-import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.Topology;
+import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
@@ -100,7 +97,6 @@ import com.eucalyptus.network.NetworkGroups;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
-import com.eucalyptus.scripting.Groovyness;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes.QuantityMetricFunction;
@@ -119,12 +115,12 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
 import edu.ucsb.eucalyptus.msgs.DetachStorageVolumeType;
-import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
 import edu.ucsb.eucalyptus.msgs.TerminateInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.TerminateInstancesType;
 
-@ConfigurableClass( root = "cloud.vmstate", description = "Parameters controlling the lifecycle of virtual machines." )
+@ConfigurableClass( root = "cloud.vmstate",
+                    description = "Parameters controlling the lifecycle of virtual machines." )
 public class VmInstances {
   public static class TerminatedInstanceException extends NoSuchElementException {
     
@@ -140,6 +136,17 @@ public class VmInstances {
   }
   
   public enum Timeout implements Predicate<VmInstance> {
+    EXPIRED( VmState.RUNNING ) {
+      @Override
+      public Integer getMinutes( ) {
+        return 0;
+      }
+      
+      @Override
+      public boolean apply( VmInstance arg0 ) {
+        return VmState.RUNNING.apply( arg0 ) && ( System.currentTimeMillis( ) > arg0.getExpiration( ).getTime( ) );
+      }
+    },
     UNREPORTED( VmState.PENDING, VmState.RUNNING ) {
       @Override
       public Integer getMinutes( ) {
@@ -185,23 +192,33 @@ public class VmInstances {
     
   }
   
-  @ConfigurableField( description = "Amount of time (in minutes) before a previously running instance which is not reported will be marked as terminated.", initial = "60" )
+  @ConfigurableField( description = "Amount of time (in minutes) before a previously running instance which is not reported will be marked as terminated.",
+                      initial = "60" )
   public static Integer INSTANCE_TIMEOUT              = 60;
-  @ConfigurableField( description = "Amount of time (in minutes) before a VM which is not reported by a cluster will be marked as terminated.", initial = "10" )
+  @ConfigurableField( description = "Amount of time (in minutes) before a VM which is not reported by a cluster will be marked as terminated.",
+                      initial = "10" )
   public static Integer SHUT_DOWN_TIME                = 10;
-  @ConfigurableField( description = "Amount of time (in minutes) that a terminated VM will continue to be reported.", initial = "60" )
+  @ConfigurableField( description = "Amount of time (in minutes) that a terminated VM will continue to be reported.",
+                      initial = "60" )
   public static Integer TERMINATED_TIME               = 60;
-  @ConfigurableField( description = "Maximum amount of time (in seconds) that the network topology service takes to propagate state changes.", initial = "" + 60 * 60 * 1000 )
+  @ConfigurableField( description = "Maximum amount of time (in seconds) that the network topology service takes to propagate state changes.",
+                      initial = "" + 60 * 60 * 1000 )
   public static Long    NETWORK_METADATA_REFRESH_TIME = 15l;
-  @ConfigurableField( description = "Prefix to use for instance MAC addresses.", initial = "d0:0d" )
+  @ConfigurableField( description = "Prefix to use for instance MAC addresses.",
+                      initial = "d0:0d" )
   public static String  MAC_PREFIX                    = "d0:0d";
-  @ConfigurableField( description = "Subdomain to use for instance DNS.", initial = ".eucalyptus", changeListener = SubdomainListener.class )
+  @ConfigurableField( description = "Subdomain to use for instance DNS.",
+                      initial = ".eucalyptus",
+                      changeListener = SubdomainListener.class )
   public static String  INSTANCE_SUBDOMAIN            = ".eucalyptus";
-  @ConfigurableField( description = "Period (in seconds) between state updates for actively changing state.", initial = "3" )
+  @ConfigurableField( description = "Period (in seconds) between state updates for actively changing state.",
+                      initial = "3" )
   public static Long    VOLATILE_STATE_INTERVAL_SEC   = 3l;
-  @ConfigurableField( description = "Timeout (in seconds) before a requested instance terminate will be repeated.", initial = "60" )
+  @ConfigurableField( description = "Timeout (in seconds) before a requested instance terminate will be repeated.",
+                      initial = "60" )
   public static Long    VOLATILE_STATE_TIMEOUT_SEC    = 60l;
-  @ConfigurableField( description = "Maximum number of threads the system will use to service blocking state changes.", initial = "16" )
+  @ConfigurableField( description = "Maximum number of threads the system will use to service blocking state changes.",
+                      initial = "16" )
   public static Integer MAX_STATE_THREADS             = 16;
   
   public static class SubdomainListener implements PropertyChangeListener {
@@ -344,7 +361,7 @@ public class VmInstances {
     LOG.trace( Logs.dump( vm ) );
     LOG.trace( Threads.currentStackString( ) );
     try {
-      final Cluster cluster = Clusters.getInstance( ).lookup( vm.lookupPartition( ) );
+      final Cluster cluster = Clusters.lookup( Topology.lookup( ClusterController.class, vm.lookupPartition( ) ) );
       VmInstances.cleanUpAttachedVolumes( vm );
       
       Address address = null;
@@ -372,12 +389,13 @@ public class VmInstances {
   
   private static void cleanUpAttachedVolumes( final VmInstance vm ) {
     try {
-      final Cluster cluster = Clusters.getInstance( ).lookup( vm.lookupPartition( ) );
+      ServiceConfiguration ccConfig = Topology.lookup( ClusterController.class, vm.lookupPartition( ) );
+      final Cluster cluster = Clusters.lookup( ccConfig );
       vm.eachVolumeAttachment( new Predicate<AttachedVolume>( ) {
         @Override
         public boolean apply( final AttachedVolume arg0 ) {
           try {
-            final ServiceConfiguration sc = Partitions.lookupService( Storage.class, vm.lookupPartition( ) );
+            final ServiceConfiguration sc = Topology.lookup( Storage.class, vm.lookupPartition( ) );
             vm.removeVolumeAttachment( arg0.getVolumeId( ) );
             final Dispatcher scDispatcher = ServiceDispatcher.lookup( sc );
             scDispatcher.send( new DetachStorageVolumeType( cluster.getNode( vm.getServiceTag( ) ).getIqn( ), arg0.getVolumeId( ) ) );
@@ -459,22 +477,6 @@ public class VmInstances {
   
   public static void stopped( final String key ) throws NoSuchElementException, TransactionException {
     VmInstances.stopped( VmInstance.Lookup.INSTANCE.apply( key ) );
-  }
-  
-  public static void start( final VmInstance vm ) throws Exception {
-    RunInstancesType runRequest = new RunInstancesType( ) {
-      {
-        this.setMinCount( 1 );
-        this.setMaxCount( 1 );
-        this.setImageId( vm.getImageId( ) );
-        this.setAvailabilityZone( vm.getPartition( ) );
-        this.getGroupSet( ).addAll( vm.getNetworkNames( ) );
-        this.setInstanceType( vm.getVmType( ).getName( ) );
-      }
-    };
-    Allocation allocInfo = VerifyMetadata.handle( runRequest );
-    allocInfo = AdmissionControl.handle( allocInfo );
-    ClusterAllocator.create( allocInfo );
   }
   
   public static void shutDown( final VmInstance vm ) throws TransactionException {

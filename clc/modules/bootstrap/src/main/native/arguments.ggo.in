@@ -32,6 +32,10 @@ option "err"                   e   "Redirect standard error to file."           
 ###### long-opt          # short # description                                        # type  # type desc.              # default value        # req. # extras... 
 section "Disable Features"       #                                                    #       #                         #                      #      #
 option "remote-dns"            -   "eucalyptus-cloud will not try to bind port 53."    flag                              off                                   # TODO: this needs to be removed
+option "remote-cloud"          -   "DEPRECATED DO NOT USE. IT DOES NOTHING."           flag                              off                            hidden # DEPRECATED
+option "remote-walrus"         -   "DEPRECATED DO NOT USE. IT DOES NOTHING."           flag                              off                            hidden # DEPRECATED
+option "remote-storage"        -   "DEPRECATED DO NOT USE. IT DOES NOTHING."           flag                              off                            hidden # DEPRECATED
+option "remote-vmwarebroker"   -   "DEPRECATED DO NOT USE. IT DOES NOTHING."           flag                              off                            hidden # DEPRECATED
 option "disable-iscsi"         -   "Disable ISCSI support for dynamic block storage."  flag                              off                                   # TODO: this needs to be removed
 option "disable-cloud"         -   "DEPRECATED DO NOT USE. IT DOES NOTHING."           flag                              off                            hidden # DEPRECATED
 option "disable-walrus"        -   "DEPRECATED DO NOT USE. IT DOES NOTHING."           flag                              off                            hidden # DEPRECATED
@@ -44,10 +48,11 @@ section "Java Options"   #       #                                              
 option "java-home"             j   "Alternative way to specify JAVA_HOME."             string  optional multiple typestr="DIRECTORY"       default="@JAVA_HOME@"
 option "jvm-name"              -   "Which JVM type to run (see jvm.cfg)."              string  typestr="JVMNAME"         default="-server"       no     hidden
 option "jvm-args"              X   "Arguments to pass to the JVM."                     string                                                  optional multiple
-option "jmx"                   -   "Launch with JMX enabled."                          flag                              off
+option "jmx"                   -   "Launch with JMX enabled."                          flag                              on
 option "debug"                 d   "Launch with debugger enabled."                     flag                              off
 option "verbose"               v   "Launch the JVM w/ verbose output flags."           flag                              off
 option "debug-port"            -   "Set the port to use for the debugger."             int                               default="5005"          no     dependon="debug"
+option "debug-noha"            H   "Launch with CLC in debug mode (no state management)."  flag       					 off
 option "debug-suspend"         -   "Force debugger to wait at main()."                 flag                              off                            dependon="debug"          
 ######                   #       #                                                    #       #                         #                      #      #           
 ######                   #       #                                                    #       #                         #                      #      #           

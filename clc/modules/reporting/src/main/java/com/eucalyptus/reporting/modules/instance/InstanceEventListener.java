@@ -4,30 +4,32 @@ import java.util.*;
 
 import org.apache.log4j.*;
 
+import com.eucalyptus.configurable.ConfigurableClass;
+import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.reporting.event.*;
 import com.eucalyptus.reporting.user.ReportingAccountDao;
 import com.eucalyptus.reporting.user.ReportingUserDao;
 
+@ConfigurableClass( root = "reporting", description = "Parameters controlling reporting")
 public class InstanceEventListener
 	implements EventListener<Event>
 {
 	private static Logger log = Logger.getLogger( InstanceEventListener.class );
 
-	private static final long DEFAULT_WRITE_INTERVAL_SECS = 60 * 20; //TODO: configurable
+	@ConfigurableField( initial = "1200", description = "How often the reporting system writes instance snapshots" )
+	public static long DEFAULT_WRITE_INTERVAL_SECS = 1200;
 
 	private final Set<String> recentlySeenUuids;
 	private final Map<String, InstanceUsageSnapshot> recentUsageSnapshots;
 	private long lastWriteMs;
-	private long writeIntervalMs;
 	
 	public InstanceEventListener()
 	{
 		this.recentlySeenUuids = new HashSet<String>();
 		this.recentUsageSnapshots = new HashMap<String, InstanceUsageSnapshot>();
 		this.lastWriteMs = 0l;
-		this.writeIntervalMs = DEFAULT_WRITE_INTERVAL_SECS * 1000;
 	}
 
 	public void fireEvent( Event e )
@@ -35,7 +37,7 @@ public class InstanceEventListener
 	  final long receivedEventMs = this.getCurrentTimeMillis();
 	  if (e instanceof InstanceEvent) {
 		  InstanceEvent event = (InstanceEvent) e;
-		  log.debug("Received instance event:" + event);
+		  log.info("Received instance event:" + event);
 
 		  final String uuid = event.getUuid();
 		  if (uuid == null) {
@@ -111,7 +113,7 @@ public class InstanceEventListener
 		  EntityWrapper<InstanceUsageSnapshot> entityWrapper =
 			  EntityWrapper.get(InstanceUsageSnapshot.class);
 		  try {
-			  if (receivedEventMs > (lastWriteMs + getWriteIntervalMs())) {
+			  if (receivedEventMs > (lastWriteMs + DEFAULT_WRITE_INTERVAL_SECS*1000)) {
 				  for (String key: recentUsageSnapshots.keySet()) {
 					  InstanceUsageSnapshot ius = recentUsageSnapshots.get(key);
 					  entityWrapper.add(ius);
@@ -159,14 +161,4 @@ public class InstanceEventListener
 	}
 
 	
-	public long getWriteIntervalMs()
-	{
-		return writeIntervalMs;
-	}
-
-	public void setWriteIntervalMs(long writeIntervalMs)
-	{
-		this.writeIntervalMs = writeIntervalMs;
-	}
-
 }

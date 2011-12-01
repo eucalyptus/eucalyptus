@@ -60,6 +60,7 @@
  *******************************************************************************/
 package com.eucalyptus.bootstrap;
 
+import java.io.File;
 import java.net.URL;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -75,8 +76,10 @@ import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.empyrean.Empyrean;
+import com.eucalyptus.system.BaseDirectory;
 import com.eucalyptus.system.Threads;
 import java.util.concurrent.TimeUnit;
+import com.google.common.io.Files;
 
 @Provides( Empyrean.class )
 @RunDuring( Bootstrap.Stage.UserCredentialsInit )
@@ -115,6 +118,14 @@ public class HttpServerBootstrapper extends Bootstrapper {
       @Override
       public void run( ) {
         try {
+          
+          String path = "/var/run/eucalyptus/webapp";
+          File dir = new File(BaseDirectory.HOME + path);
+          if ( dir.exists( ) ) {
+            Files.deleteDirectoryContents(dir);
+            dir.delete( ); 
+          }
+        
           jettyServer.start( );
         } catch ( Exception e ) {
           LOG.debug( e, e );
@@ -182,7 +193,7 @@ public class HttpServerBootstrapper extends Bootstrapper {
     @Override
     public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
       LOG.warn( "Change occurred to property " + t.getQualifiedName( ) + " which will restart the servlet container." );
-      if ( jettyServer == null ) {
+      if ( jettyServer == null || !Bootstrap.isFinished( ) ) {
         return;
       } else if ( jettyServer.isRunning( ) ) {
         try {

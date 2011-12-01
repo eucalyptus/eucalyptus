@@ -69,19 +69,25 @@ import java.util.UUID;
 import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
 import com.eucalyptus.address.Address;
+import com.eucalyptus.auth.Contract;
+import com.eucalyptus.cloud.CloudMetadata.VmInstanceMetadata;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.NoSuchTokenException;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.ClusterController;
+import com.eucalyptus.context.Contexts;
 import com.eucalyptus.network.ExtantNetwork;
 import com.eucalyptus.network.PrivateNetworkIndex;
+import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstances;
+import edu.ucsb.eucalyptus.msgs.StartInstancesType;
 
-public class ResourceToken implements Comparable<ResourceToken> {
+public class ResourceToken implements VmInstanceMetadata, Comparable<ResourceToken> {
   private static Logger       LOG    = Logger.getLogger( ResourceToken.class );
   private final Allocation    allocation;
   private final Integer       launchIndex;
@@ -96,13 +102,24 @@ public class ResourceToken implements Comparable<ResourceToken> {
   private final Date          creationTime;
   private final Integer       resourceAllocationSequenceNumber;
   private final Integer       amount = 1;
+  private final Date          expirationTime;
   @Nullable
   private VmInstance          vmInst;
   
   public ResourceToken( final Allocation allocInfo, final int resourceAllocationSequenceNumber, final int launchIndex ) {
     this.allocation = allocInfo;
+    Contract<Date> expiry = allocInfo.getContext( ).getContracts( ).get( Contract.Type.EXPIRATION );
+    this.expirationTime = ( expiry == null ? new Date( 32503708800000l ) : expiry.getValue( ) );
     this.launchIndex = launchIndex;
-    this.instanceId = VmInstances.getId( allocInfo.getReservationIndex( ), launchIndex );
+    String tempVmId = VmInstances.getId( allocInfo.getReservationIndex( ), launchIndex );
+    try {//GRZE:ugly hack.
+      if ( Contexts.lookup( ).getRequest( ) instanceof StartInstancesType ) {
+        tempVmId = ( ( StartInstancesType ) Contexts.lookup( ).getRequest( ) ).getInstancesSet( ).get( launchIndex );
+      }
+    } catch ( Exception ex ) {
+      LOG.error( ex, ex );
+    }
+    this.instanceId = tempVmId;
     this.instanceUuid = UUID.randomUUID( ).toString( );
     this.resourceAllocationSequenceNumber = resourceAllocationSequenceNumber;
     this.creationTime = Calendar.getInstance( ).getTime( );
@@ -153,7 +170,7 @@ public class ResourceToken implements Comparable<ResourceToken> {
   
   public void abort( ) {
     try {
-      final ServiceConfiguration config = Partitions.lookupService( ClusterController.class, this.getAllocationInfo( ).getPartition( ) );
+      final ServiceConfiguration config = Topology.lookup( ClusterController.class, this.getAllocationInfo( ).getPartition( ) );
       final Cluster cluster = Clusters.lookup( config );
       cluster.getNodeState( ).releaseToken( this );
     } catch ( final Exception ex ) {
@@ -169,6 +186,13 @@ public class ResourceToken implements Comparable<ResourceToken> {
     if ( this.address != null ) {
       try {
         this.address.release( );
+      } catch ( Exception ex ) {
+        LOG.error( ex, ex );
+      }
+    }
+    if ( this.vmInst != null ) {
+      try {
+        this.vmInst.release( );
       } catch ( Exception ex ) {
         LOG.error( ex, ex );
       }
@@ -220,15 +244,15 @@ public class ResourceToken implements Comparable<ResourceToken> {
   }
   
   public void submit( ) throws NoSuchTokenException {
-    Clusters.lookup( this.getAllocationInfo( ).getPartition( ) ).getNodeState( ).submitToken( this );
+    Clusters.lookup( Topology.lookup( ClusterController.class, this.getAllocationInfo( ).getPartition( ) ) ).getNodeState( ).submitToken( this );
   }
   
   public void redeem( ) throws NoSuchTokenException {
-    Clusters.lookup( this.getAllocationInfo( ).getPartition( ) ).getNodeState( ).redeemToken( this );
+    Clusters.lookup( Topology.lookup( ClusterController.class, this.getAllocationInfo( ).getPartition( ) ) ).getNodeState( ).redeemToken( this );
   }
   
   public void release( ) throws NoSuchTokenException {
-    Clusters.lookup( this.getAllocationInfo( ).getPartition( ) ).getNodeState( ).releaseToken( this );
+    Clusters.lookup( Topology.lookup( ClusterController.class, this.getAllocationInfo( ).getPartition( ) ) ).getNodeState( ).releaseToken( this );
   }
   
   public void setNetworkIndex( PrivateNetworkIndex networkIndex ) {
@@ -272,6 +296,20 @@ public class ResourceToken implements Comparable<ResourceToken> {
   
   public VmInstance getVmInstance( ) {
     return this.vmInst;
+  }
+  
+  @Override
+  public String getDisplayName( ) {
+    return this.getInstanceId( );
+  }
+  
+  @Override
+  public OwnerFullName getOwner( ) {
+    return this.allocation.getOwnerFullName( );
+  }
+
+  public Date getExpirationTime( ) {
+    return this.expirationTime;
   }
   
 }

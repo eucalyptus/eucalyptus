@@ -70,8 +70,7 @@ permission notice:
 
 #define LIBVIRT_QUERY_RETRIES 5
 #define MAXDOMS 1024
-#define BYTES_PER_DISK_UNIT 1048576 /* disk stats are in Gigs */
-#define SWAP_SIZE 512 /* for now, the only possible swap size, in MBs */
+#define BYTES_PER_DISK_UNIT 1073741824 /* disk stats are in Gigs */
 
 /* NC state */
 struct nc_state_t {
@@ -100,6 +99,7 @@ struct nc_state_t {
 	char home[MAX_PATH];
 	char config_network_path [MAX_PATH];
 	char gen_libvirt_cmd_path[MAX_PATH];
+        char libvirt_xslt_path[MAX_PATH];
 	char get_info_cmd_path[MAX_PATH];
 	char rootwrap_cmd_path[MAX_PATH];
 	char virsh_cmd_path[MAX_PATH];

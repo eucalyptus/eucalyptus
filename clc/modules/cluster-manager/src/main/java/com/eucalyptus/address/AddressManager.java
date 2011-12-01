@@ -64,8 +64,6 @@
  */
 package com.eucalyptus.address;
 
-import java.util.NoSuchElementException;
-import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
@@ -73,10 +71,8 @@ import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.cloud.util.NotEnoughResourcesException;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
-import com.eucalyptus.context.IllegalContextAccessException;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.RestrictedTypes;
@@ -84,7 +80,6 @@ import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.UnconditionalCallback;
 import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstances;
-import com.google.common.base.Supplier;
 import edu.ucsb.eucalyptus.msgs.AddressInfoType;
 import edu.ucsb.eucalyptus.msgs.AllocateAddressResponseType;
 import edu.ucsb.eucalyptus.msgs.AllocateAddressType;
@@ -102,35 +97,29 @@ public class AddressManager {
   
   public static Logger LOG = Logger.getLogger( AddressManager.class );
   
-  public AllocateAddressResponseType allocate( final AllocateAddressType request ) throws EucalyptusCloudException {
+  public AllocateAddressResponseType allocate( final AllocateAddressType request ) throws Exception {
     AllocateAddressResponseType reply = ( AllocateAddressResponseType ) request.getReply( );
-    Address address;
-    try {
-      Supplier<Address> allocator = new Supplier<Address>( ) {
-        
-        @Override
-        public Address get( ) {
-          try {
-            return Addresses.allocate( request );
-          } catch ( Exception ex ) {
-            throw new RuntimeException( ex );
-          }
-        }
-      };
-      address = RestrictedTypes.allocate( allocator );
-    } catch ( Exception e ) {
-      LOG.debug( e, e );
-      throw new EucalyptusCloudException( e );
+    try{
+	    Address address = RestrictedTypes.allocateNamedUnitlessResources( 1, Addresses.Allocator.INSTANCE, Addresses.Allocator.INSTANCE ).get( 0 );	    
+	    reply.setPublicIp( address.getName( ) );
+    }catch(RuntimeException e){
+    	if(e.getCause()!=null)
+    		throw new EucalyptusCloudException(e.getCause());
+    	else
+    		throw new EucalyptusCloudException("couldn't allocate addresses");    		
+    }catch(Exception e){
+    	throw e;
     }
-    reply.setPublicIp( address.getName( ) );
     return reply;
   }
   
   public ReleaseAddressResponseType release( ReleaseAddressType request ) throws Exception {
     ReleaseAddressResponseType reply = ( ReleaseAddressResponseType ) request.getReply( );
     reply.set_return( false );
-    Addresses.updateAddressingMode( );
     Address address = RestrictedTypes.doPrivileged( request.getPublicIp( ), Address.class );
+    if ( address.isPending( ) ) {
+      address.clearPending( );
+    }
     Addresses.release( address );
     reply.set_return( true );
     return reply;
@@ -138,7 +127,6 @@ public class AddressManager {
   
   public DescribeAddressesResponseType describe( DescribeAddressesType request ) throws EucalyptusCloudException {
     DescribeAddressesResponseType reply = ( DescribeAddressesResponseType ) request.getReply( );
-    Addresses.updateAddressingMode( );
     Context ctx = Contexts.lookup( );
     boolean isAdmin = ctx.hasAdministrativePrivileges( );
     User requestUser = ctx.getUser( );
@@ -175,7 +163,6 @@ public class AddressManager {
   public AssociateAddressResponseType associate( final AssociateAddressType request ) throws Exception {
     AssociateAddressResponseType reply = ( AssociateAddressResponseType ) request.getReply( );
     reply.set_return( false );
-    Addresses.updateAddressingMode( );
     final Address address = RestrictedTypes.doPrivileged( request.getPublicIp( ), Address.class );
     final VmInstance vm = RestrictedTypes.doPrivileged( request.getInstanceId( ), VmInstance.class );
     final VmInstance oldVm = findCurrentAssignedVm( address );
@@ -242,7 +229,6 @@ public class AddressManager {
   public DisassociateAddressResponseType disassociate( DisassociateAddressType request ) throws Exception {
     DisassociateAddressResponseType reply = ( DisassociateAddressResponseType ) request.getReply( );
     reply.set_return( false );
-    Addresses.updateAddressingMode( );
     Context ctx = Contexts.lookup( );
     final Address address = RestrictedTypes.doPrivileged( request.getPublicIp( ), Address.class );
     reply.set_return( true );

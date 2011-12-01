@@ -78,91 +78,60 @@ import com.eucalyptus.configurable.MultiDatabasePropertyEntry;
 import com.eucalyptus.configurable.PropertyDirectory;
 import com.eucalyptus.configurable.SingletonDatabasePropertyEntry;
 import com.eucalyptus.configurable.StaticPropertyEntry;
+import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.system.Threads;
 import com.google.common.collect.Lists;
 
 @Provides( ComponentId.class )
 @RunDuring( Bootstrap.Stage.RemoteServicesInit )
-public class DeferredPropertiesBootstrapper extends Bootstrapper {
+public class DeferredPropertiesBootstrapper extends Bootstrapper.Simple {
   private static Logger LOG = Logger.getLogger( DeferredPropertiesBootstrapper.class );
   
   @Override
   public boolean load( ) throws Exception {
-    List<ConfigurableProperty> staticProps = Lists.newArrayList( );
-    for ( Entry<String, ConfigurableProperty> entry : PropertyDirectory.getPendingPropertyEntries( ) ) {
-      ConfigurableProperty prop = entry.getValue( );
-      if ( prop instanceof StaticPropertyEntry ) {
-        staticProps.add( prop );
-      } else {
-        try {
-          ComponentId compId = ComponentIds.lookup( prop.getEntrySetName( ) );
-          for ( ServiceConfiguration s : ServiceConfigurations.list( compId.getClass( ) ) ) {
-            if ( compId.name( ).equals( prop.getEntrySetName( ) ) ) {
-              if ( prop instanceof SingletonDatabasePropertyEntry ) {
-                PropertyDirectory.addProperty( prop );
-              } else if ( prop instanceof MultiDatabasePropertyEntry ) {
-                PropertyDirectory.addProperty( ( ( MultiDatabasePropertyEntry ) prop ).getClone( s.getPartition( ) ) );
+    Threads.lookup( Empyrean.class, DeferredPropertiesBootstrapper.class ).submit( new Runnable( ) {
+      
+      @Override
+      public void run( ) {
+        if ( Bootstrap.isShuttingDown( ) ) {
+          return;
+        } else {
+          Bootstrap.awaitFinished( );
+          List<ConfigurableProperty> staticProps = Lists.newArrayList( );
+          for ( Entry<String, ConfigurableProperty> entry : PropertyDirectory.getPendingPropertyEntries( ) ) {
+            ConfigurableProperty prop = entry.getValue( );
+            if ( prop instanceof StaticPropertyEntry ) {
+              staticProps.add( prop );
+            } else {
+              try {
+                ComponentId compId = ComponentIds.lookup( prop.getEntrySetName( ) );
+                for ( ServiceConfiguration s : ServiceConfigurations.list( compId.getClass( ) ) ) {
+                  if ( compId.name( ).equals( prop.getEntrySetName( ) ) ) {
+                    if ( prop instanceof SingletonDatabasePropertyEntry ) {
+                      PropertyDirectory.addProperty( prop );
+                    } else if ( prop instanceof MultiDatabasePropertyEntry ) {
+                      PropertyDirectory.addProperty( ( ( MultiDatabasePropertyEntry ) prop ).getClone( s.getPartition( ) ) );
+                    }
+                  }
+                }
+              } catch ( Exception ex ) {
+                LOG.error( ex, ex );
               }
             }
           }
-        } catch ( Exception ex ) {
-          LOG.error( ex, ex );
+          for ( ConfigurableProperty prop : staticProps ) {
+            if ( PropertyDirectory.addProperty( prop ) ) {
+              try {
+                prop.getValue( );
+              } catch ( Exception ex ) {
+                Logs.extreme( ).error( ex, ex );
+              }
+            }
+          }
         }
       }
-    }
-    for ( ConfigurableProperty prop : staticProps ) {
-      if ( PropertyDirectory.addProperty( prop ) ) {
-        try {
-          prop.getValue( );
-        } catch ( Exception ex ) {
-          Logs.extreme( ).error( ex, ex );
-        }
-      }
-    }
-    return true;
-  }
-  
-  @Override
-  public boolean start( ) throws Exception {
-    return true;
-  }
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#enable()
-   */
-  @Override
-  public boolean enable( ) throws Exception {
-    return true;
-  }
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#stop()
-   */
-  @Override
-  public boolean stop( ) throws Exception {
-    //unload properties
-    return true;
-  }
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#destroy()
-   */
-  @Override
-  public void destroy( ) throws Exception {}
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#disable()
-   */
-  @Override
-  public boolean disable( ) throws Exception {
-    return true;
-  }
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#check()
-   */
-  @Override
-  public boolean check( ) throws Exception {
+    } );
     return true;
   }
 }

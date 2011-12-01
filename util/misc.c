@@ -98,6 +98,10 @@ permission notice:
 int verify_helpers (char **helpers, char **helpers_path, int num_helpers) 
 {
     int missing_helpers = 0;
+    char **tmp_helpers_path = helpers_path;
+
+    if(helpers_path==NULL)
+        tmp_helpers_path = (char**) calloc (num_helpers, sizeof(char*));
     
     for (int i=0; i<num_helpers; i++) {
         struct stat statbuf;
@@ -112,8 +116,6 @@ int verify_helpers (char **helpers, char **helpers_path, int num_helpers)
 
         } else { // no full path was given, so search $PATH
             char *tok, *toka, *path, *helper, *save, *savea;
-            if(helpers_path==NULL)
-		 helpers_path = (char**) calloc (num_helpers, sizeof(char*));
 
             tok = getenv("PATH");
             if (!tok) return -1;
@@ -134,7 +136,7 @@ int verify_helpers (char **helpers, char **helpers_path, int num_helpers)
                     int rc = stat(file, &statbuf);
                     if (!rc) {
                         if (S_ISREG(statbuf.st_mode)) {
-                            helpers_path[i] = strdup(file);
+                            tmp_helpers_path[i] = strdup(file);
                             done++;
                         }
                     }
@@ -150,10 +152,17 @@ int verify_helpers (char **helpers, char **helpers_path, int num_helpers)
             missing_helpers++;
             logprintfl (EUCAINFO, "did not find '%s' in path\n", helpers[i]);
         } else {
-            logprintfl (EUCAINFO, "found '%s' at '%s'\n", helpers[i], helpers_path[i]);
+            logprintfl (EUCAINFO, "found '%s' at '%s'\n", helpers[i], tmp_helpers_path[i]);
         }
     }
     
+    if(helpers_path == NULL) { 
+        for(int i = 0; i < num_helpers; i++) 
+            if(tmp_helpers_path[i])
+                free(tmp_helpers_path[i]);
+        free(tmp_helpers_path);
+    }
+
     return missing_helpers;
 }
 
@@ -205,29 +214,42 @@ int add_euca_to_path (const char * euca_home_supplied)
     return setenv ("PATH", new_path, TRUE);
 }
 
-pid_t timewait(pid_t pid, int *status, int timeout) {
-  time_t timer=0;
-  int rc;
+// Wrapper around waitpid() that retries waiting until
+// a timeout, specified in seconds, occurs. Return value 
+// is that of waitpid():
+//
+//  -1 means there was an error
+//   0 means there was a timeout
+//   N is the PID of the process 
+// 
+// When a positive value is returned, status is set
+// to the exit status of the process
 
-  if (timeout <= 0) timeout = 1;
-
-  *status = 1;
-  rc = waitpid(pid, status, WNOHANG);
-  while(rc == 0 && timer < (timeout * 1000000)) {
-    usleep(10000);
-    timer += 10000;
-    rc = waitpid(pid, status, WNOHANG);
-  }
-  if (rc == 0) {
-    logprintfl(EUCAERROR, "waitpid() timed out: pid=%d\n", pid);
-  }
-  return(rc);
+pid_t timewait (pid_t pid, int *status, int timeout_sec) 
+{    
+    if (timeout_sec < 0) // do not allow negative timeouts
+        timeout_sec = 0;
+    
+    *status = 1; // TODO: remove this once we know that no callers rely on status to detect timeout
+    
+    int rc = waitpid (pid, status, WNOHANG);
+    time_t elapsed_usec = 0;
+    while (rc == 0 && elapsed_usec < (timeout_sec * 1000000)) {
+        usleep (10000);
+        elapsed_usec += 10000;
+        rc = waitpid(pid, status, WNOHANG);
+    }
+    if (rc == 0) {
+        logprintfl(EUCAERROR, "waitpid() timed out: pid=%d\n", pid);
+    }
+    return (rc);
 }
 
 int timelog=0; /* change to 1 for TIMELOG entries */
 
 int logging=0;
 int loglevel=EUCADEBUG;
+int logrollnumber=4;
 FILE *LOGFH=NULL;
 char logFile[MAX_PATH];
 
@@ -798,7 +820,7 @@ from_var_to_char_list(	const char *v) {
 	return tmp;
 }
 
-int logfile(char *file, int in_loglevel) {
+int logfile(char *file, int in_loglevel, int in_logrollnumber) {
   logging = 0;
   if (in_loglevel >= EUCADEBUG2 && in_loglevel <= EUCAFATAL) {
     loglevel = in_loglevel;
@@ -817,6 +839,9 @@ int logfile(char *file, int in_loglevel) {
     if (LOGFH) {
       logging=1;
     }
+  }
+  if (in_logrollnumber > 0 && in_logrollnumber < 100) {
+      logrollnumber = in_logrollnumber;
   }
   return(1-logging);
 }
@@ -902,7 +927,7 @@ int logprintfl(int level, const char *format, ...) {
 	
 	rc = stat(logFile, &statbuf);
 	if (!rc && ((int)statbuf.st_size > MAXLOGFILESIZE)) {
-	  for (i=4; i>=0; i--) {
+	  for (i=logrollnumber; i>=0; i--) {
 	    snprintf(oldFile, MAX_PATH, "%s.%d", logFile, i);
 	    snprintf(newFile, MAX_PATH, "%s.%d", logFile, i+1);
 	    rename(oldFile, newFile);

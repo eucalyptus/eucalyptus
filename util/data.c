@@ -137,7 +137,7 @@ ncInstance * allocate_instance (char *uuid,
     if (!inst) return(NULL);
 
     if (userData) {
-        safe_strncpy(inst->userData, userData, CHAR_BUFFER_SIZE*10);
+        safe_strncpy(inst->userData, userData, CHAR_BUFFER_SIZE*32);
     }
 
     if (launchIndex) {
@@ -151,7 +151,7 @@ ncInstance * allocate_instance (char *uuid,
     inst->groupNamesSize = groupNamesSize;
     if (groupNames && groupNamesSize) {
         int i;
-        for (i=0; groupNames[i] && i<groupNamesSize; i++) {
+        for (i=0; i<groupNamesSize && groupNames[i]; i++) {
             safe_strncpy(inst->groupNames[i], groupNames[i], CHAR_BUFFER_SIZE);
         }
     }

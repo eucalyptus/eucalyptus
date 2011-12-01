@@ -75,9 +75,11 @@ import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Filterable;
 import com.eucalyptus.util.HasName;
+import com.eucalyptus.ws.Handlers;
 
 public abstract class FilteredPipeline implements HasName<FilteredPipeline>, Filterable<HttpRequest> {
   private static Logger LOG = Logger.getLogger( FilteredPipeline.class );
+  
   protected abstract static class InternalPipeline extends FilteredPipeline {
     private final ComponentId componentId;
     
@@ -86,10 +88,9 @@ public abstract class FilteredPipeline implements HasName<FilteredPipeline>, Fil
     }
     
     @Override
-    void addSystemHandlers( ChannelPipeline pipeline ) {
-      pipeline.addLast( "internal-only-restriction", InternalOnlyHandler.INSTANCE );
-      pipeline.addLast( "msg-epoch-check", SystemChecksHandler.MESSAGE_EPOCH );
-      super.addSystemHandlers( pipeline );
+    protected void addSystemHandlers( ChannelPipeline pipeline ) {
+      Handlers.addInternalSystemHandlers( pipeline );
+      Handlers.addSystemHandlers( pipeline );
     }
     
     private ComponentId getComponentId( ) {
@@ -100,18 +101,15 @@ public abstract class FilteredPipeline implements HasName<FilteredPipeline>, Fil
   
   public FilteredPipeline( ) {}
   
-  public abstract String getName( );
-  
-  void addSystemHandlers( final ChannelPipeline pipeline ) {
-    pipeline.addLast( "service-state-check", SystemChecksHandler.SERVICE_STATE );
-    pipeline.addLast( "service-specific-mangling", ServiceHackeryHandler.INSTANCE );
-    pipeline.addLast( "service-sink", new ServiceContextHandler( ) );
+  protected void addSystemHandlers( ChannelPipeline pipeline ) {
+    Handlers.addSystemHandlers( pipeline );
   }
+  
+  public abstract String getName( );
   
   public void unroll( final ChannelPipeline pipeline ) {
     try {
       this.addHandlers( pipeline );
-      this.addSystemHandlers( pipeline );
       if ( Logs.isExtrrreeeme( ) ) {
         for ( final Map.Entry<String, ChannelHandler> e : pipeline.toMap( ).entrySet( ) ) {
           EventRecord.here( this.getClass( ), EventType.PIPELINE_HANDLER, e.getKey( ), e.getValue( ).getClass( ).getSimpleName( ) ).trace( );
