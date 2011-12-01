@@ -196,19 +196,21 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
       }
     } else {
       ActiveTransition tr = this.currentTransition.getAndSet( null );
-      Logs.extreme( ).error( "Transition error(): " + this.toString( ) + "Transition error(): START STACK\n" + tr.startStackTrace );
-      Logs.extreme( ).error( "Transition error(): " + this.toString( ) + "Transition error(): END STACK" + tr.endStackTrace );
-      this.state.set( tr.getTransitionRule( ).getErrorState( ), tr.getTransitionRule( ).getErrorStateMark( ) );
-      if ( !tr.getTransitionRule( ).getFromState( ).equals( tr.getTransitionRule( ).getErrorState( ) ) ) {
-        this.state.set( tr.getTransitionRule( ).getErrorState( ), false );
-        this.fireInListeners( tr.getTransitionRule( ).getErrorState( ) );
-      } else {
-        this.state.set( tr.getTransitionRule( ).getErrorState( ), false );
+      if ( tr != null ) {
+        Logs.extreme( ).error( "Transition error(): " + this.toString( ) + "Transition error(): START STACK\n" + tr.startStackTrace );
+        Logs.extreme( ).error( "Transition error(): " + this.toString( ) + "Transition error(): END STACK" + tr.endStackTrace );
+        this.state.set( tr.getTransitionRule( ).getErrorState( ), tr.getTransitionRule( ).getErrorStateMark( ) );
+        if ( !tr.getTransitionRule( ).getFromState( ).equals( tr.getTransitionRule( ).getErrorState( ) ) ) {
+          this.state.set( tr.getTransitionRule( ).getErrorState( ), false );
+          this.fireInListeners( tr.getTransitionRule( ).getErrorState( ) );
+        } else {
+          this.state.set( tr.getTransitionRule( ).getErrorState( ), false );
+        }
+        EventRecord.caller( this.getClass( ), EventType.TRANSITION_FUTURE, "setException(" + t.getClass( ).getCanonicalName( )
+                                                                           + "): "
+                                                                           + t.getMessage( ) ).trace( );
+        tr.getTransitionFuture( ).setException( t );
       }
-      EventRecord.caller( this.getClass( ), EventType.TRANSITION_FUTURE, "setException(" + t.getClass( ).getCanonicalName( )
-                                                                         + "): "
-                                                                         + t.getMessage( ) ).trace( );
-      tr.getTransitionFuture( ).setException( t );
     }
   }
   
@@ -218,7 +220,9 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
       Exceptions.trace( new IllegalStateException( "rollback() called when there is no currently pending transition: " + this.toString( ) ) );
     } else {
       ActiveTransition tr = this.currentTransition.getAndSet( null );
-      this.state.set( tr.getTransitionRule( ).getFromState( ), false );
+      if ( tr != null ) {
+        this.state.set( tr.getTransitionRule( ).getFromState( ), false );
+      }
     }
   }
   

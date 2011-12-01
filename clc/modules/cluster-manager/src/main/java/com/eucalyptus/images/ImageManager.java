@@ -80,6 +80,7 @@ import com.eucalyptus.cloud.CloudMetadatas;
 import com.eucalyptus.cloud.ImageMetadata;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
+import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.context.Context;
@@ -89,7 +90,9 @@ import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.images.ImageManifests.ImageManifest;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstance.VmState;
@@ -165,8 +168,10 @@ public class ImageManager {
         public ImageInfo get( ) {
           try {
             return Images.createFromManifest( ctx.getUserFullName( ), request.getName( ), request.getDescription( ), arch, eki, eri, manifest );
-          } catch ( EucalyptusCloudException ex ) {
-            throw new RuntimeException( ex );
+          } catch ( Exception ex ) {
+            LOG.error( ex );
+            Logs.extreme( ).error( ex, ex );
+            throw Exceptions.toUndeclared( ex );
           }
         }
       };
@@ -421,11 +426,11 @@ public class ImageManager {
       } else {
         Cluster cluster = null;
         try {
-          cluster = Clusters.getInstance( ).lookup( vm.lookupPartition( ) );
-          
+          ServiceConfiguration ccConfig = Topology.lookup( ClusterController.class, vm.lookupPartition( ) );
+          cluster = Clusters.lookup( ccConfig );
         } catch ( NoSuchElementException e ) {
           LOG.debug( e );
-          throw new EucalyptusCloudException( "Cluster does not exist: " + Topology.lookup( ClusterController.class, vm.lookupPartition( ) ) );
+          throw new EucalyptusCloudException( "Cluster does not exist: " + vm.getPartition( )  );
         }
       }
     } catch ( AuthException ex ) {

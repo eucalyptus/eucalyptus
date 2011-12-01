@@ -102,6 +102,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.regex.Pattern;
 import org.apache.log4j.Logger;
 import org.jboss.netty.util.internal.LinkedTransferQueue;
 import org.jgroups.util.ThreadFactory;
@@ -115,7 +116,11 @@ import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.util.concurrent.GenericCheckedListenableFuture;
+import com.google.common.base.Function;
 import com.google.common.base.Joiner;
+import com.google.common.base.Predicate;
+import com.google.common.base.Supplier;
+import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
@@ -127,7 +132,7 @@ import edu.emory.mathcs.backport.java.util.concurrent.atomic.AtomicBoolean;
 public class Threads {
   private static Logger                                  LOG               = Logger.getLogger( Threads.class );
   private final static String                            PREFIX            = "Eucalyptus.";
-  private final static Integer                           NUM_QUEUE_WORKERS = Runtime.getRuntime( ).availableProcessors( ); //TODO:GRZE: discover on per-service basis.;
+  private final static Integer                           NUM_QUEUE_WORKERS = 32;                                          //TODO:GRZE: discover on per-service basis.;
   private final static AtomicInteger                     threadIndex       = new AtomicInteger( 0 );
   private final static ConcurrentMap<String, ThreadPool> execServices      = new ConcurrentHashMap<String, ThreadPool>( );
   
@@ -199,7 +204,7 @@ public class Threads {
       this.name = groupPrefix;
       this.group = new ThreadGroup( this.name );
       this.pool = this.makePool( );
-      OrderedShutdown.registerShutdownHook( Empyrean.class, new Runnable( ) {
+      OrderedShutdown.registerPostShutdownHook( new Runnable( ) {
         @Override
         public void run( ) {
           LOG.warn( "SHUTDOWN:" + ThreadPool.this.name
@@ -521,6 +526,45 @@ public class Threads {
     };
   }
   
+  enum StackTraceElementTransform implements Function<StackTraceElement, CharSequence> {
+    FQNAME {
+      @Override
+      public CharSequence apply( StackTraceElement input ) {
+        return input.getClassName( );
+      }
+    },
+    FILENAME {
+      @Override
+      public CharSequence apply( StackTraceElement input ) {
+        return input.getFileName( );
+      }
+    };
+    public abstract CharSequence apply( StackTraceElement input );
+  }
+  
+  public static Predicate<StackTraceElement> filterStackByQualifiedName( final String pattern ) {
+    return filterStack( pattern, StackTraceElementTransform.FQNAME );
+  }
+  
+  public static Predicate<StackTraceElement> filterStackByFileName( final String pattern ) {
+    return filterStack( pattern, StackTraceElementTransform.FQNAME );
+  }
+  
+  public static Predicate<StackTraceElement> filterStack( final String pattern, final Function<StackTraceElement, CharSequence> toMatch ) {
+    return new Predicate<StackTraceElement>( ) {
+      final Pattern p = Pattern.compile( pattern );
+      
+      @Override
+      public boolean apply( StackTraceElement input ) {
+        return p.matcher( toMatch.apply( input ) ).matches( );
+      }
+    };
+  }
+  
+  public static Collection<StackTraceElement> filteredStack( Predicate<StackTraceElement> filter ) {
+    return Collections2.filter( Arrays.asList( Thread.currentThread( ).getStackTrace( ) ), filter );
+  }
+  
   public static StackTraceElement currentStackFrame( final int offset ) {
     return Thread.currentThread( ).getStackTrace( )[2 + offset];
   }
@@ -553,6 +597,7 @@ public class Threads {
     private final String                       creationStack;
     private final Class<? extends ComponentId> componentId;
     private final String                       name;
+    private FutureTask<?>                      task;
     
     Queue( final Class<? extends ComponentId> componentId, final T owner, final int numWorkers ) {
       this.componentId = componentId;
@@ -626,11 +671,11 @@ public class Threads {
     public void run( ) {
       do {
         try {
-          final FutureTask<?> task = this.msgQueue.take( );
-          if ( task != null ) {
-            Logs.exhaust( ).debug( EventType.QUEUE + " " + task + " " + Thread.currentThread( ).getName( ) );
+          this.task = this.msgQueue.take( );
+          if ( this.task != null ) {
+            Logs.exhaust( ).debug( EventType.QUEUE + " " + this.task + " " + Thread.currentThread( ).getName( ) );
             try {
-              task.run( );
+              this.task.run( );
             } catch ( final Exception ex ) {
               Exceptions.maybeInterrupted( ex );
               Logs.extreme( ).error( ex, ex );
@@ -717,6 +762,11 @@ public class Threads {
   @SuppressWarnings( "unchecked" )
   public static <C> Future<C> enqueue( final ServiceConfiguration config, final Callable<C> callable ) {
     return ( Future<C> ) queue( config.getComponentId( ).getClass( ), config, NUM_QUEUE_WORKERS ).submit( callable );
+  }
+  
+  @SuppressWarnings( "unchecked" )
+  public static <C> Future<C> enqueue( final ServiceConfiguration config, final Integer workers, final Runnable runnable ) {
+    return ( Future<C> ) queue( config.getComponentId( ).getClass( ), config, workers ).submit( runnable );
   }
   
   @SuppressWarnings( "unchecked" )

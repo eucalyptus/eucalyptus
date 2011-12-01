@@ -244,15 +244,15 @@ public class ResourceToken implements VmInstanceMetadata, Comparable<ResourceTok
   }
   
   public void submit( ) throws NoSuchTokenException {
-    Clusters.lookup( this.getAllocationInfo( ).getPartition( ) ).getNodeState( ).submitToken( this );
+    Clusters.lookup( Topology.lookup( ClusterController.class, this.getAllocationInfo( ).getPartition( ) ) ).getNodeState( ).submitToken( this );
   }
   
   public void redeem( ) throws NoSuchTokenException {
-    Clusters.lookup( this.getAllocationInfo( ).getPartition( ) ).getNodeState( ).redeemToken( this );
+    Clusters.lookup( Topology.lookup( ClusterController.class, this.getAllocationInfo( ).getPartition( ) ) ).getNodeState( ).redeemToken( this );
   }
   
   public void release( ) throws NoSuchTokenException {
-    Clusters.lookup( this.getAllocationInfo( ).getPartition( ) ).getNodeState( ).releaseToken( this );
+    Clusters.lookup( Topology.lookup( ClusterController.class, this.getAllocationInfo( ).getPartition( ) ) ).getNodeState( ).releaseToken( this );
   }
   
   public void setNetworkIndex( PrivateNetworkIndex networkIndex ) {

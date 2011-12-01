@@ -113,7 +113,7 @@ public class ServiceState implements StateMachine<ServiceConfiguration, Componen
         in( State.NOTREADY ).run( ServiceTransitions.StateCallbacks.ENSURE_DISABLED ).run( ServiceTransitions.StateCallbacks.FIRE_STATE_EVENT );
         from( State.PRIMORDIAL ).to( State.INITIALIZED ).error( State.BROKEN ).on( Transition.INITIALIZING ).run( noop );
         from( State.PRIMORDIAL ).to( State.BROKEN ).error( State.BROKEN ).on( Transition.FAILED_TO_PREPARE ).run( noop );
-        from( State.INITIALIZED ).to( State.LOADED ).error( State.BROKEN ).on( Transition.LOAD ).run( ServiceTransitions.TransitionActions.LOAD );
+        from( State.INITIALIZED ).to( State.LOADED ).error( State.BROKEN ).on( Transition.LOAD ).addListener( ServiceTransitions.StateCallbacks.STATIC_PROPERTIES_ADD ).addListener( ServiceTransitions.StateCallbacks.PROPERTIES_ADD ).run( ServiceTransitions.TransitionActions.LOAD );
         from( State.LOADED ).to( State.NOTREADY ).error( State.BROKEN ).on( Transition.START ).addListener( ServiceTransitions.StateCallbacks.FIRE_STATE_EVENT ).addListener( ServiceTransitions.StateCallbacks.STATIC_PROPERTIES_ADD ).addListener( ServiceTransitions.StateCallbacks.PROPERTIES_ADD ).run( ServiceTransitions.TransitionActions.START );
         from( State.NOTREADY ).to( State.DISABLED ).error( State.NOTREADY ).on( Transition.READY_CHECK ).addListener( ServiceTransitions.StateCallbacks.STATIC_PROPERTIES_ADD ).addListener( ServiceTransitions.StateCallbacks.PROPERTIES_ADD ).run( ServiceTransitions.TransitionActions.CHECK );
         from( State.DISABLED ).to( State.ENABLED ).error( State.NOTREADY ).on( Transition.ENABLE ).addListener( ServiceTransitions.StateCallbacks.FIRE_STATE_EVENT ).run( ServiceTransitions.TransitionActions.ENABLE );

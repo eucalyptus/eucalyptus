@@ -176,13 +176,14 @@ public class RestrictedTypes {
   private static <T> List<T> runAllocator( int quantity, Supplier<T> allocator, Predicate<T> rollback ) {
     List<T> res = Lists.newArrayList( );
     try {
-         for ( int i = 0; i < quantity; i++ ) {
-    		 T rsc = allocator.get( );         
-    		 if ( rsc == null ) 
-    			 throw new NoSuchElementException( "Attempt to allocate " + quantity + " resources failed." );
-    		 res.add(rsc);
-         }
-    }catch ( Exception ex ) {
+      for ( int i = 0; i < quantity; i++ ) {
+        T rsc = allocator.get( );
+        if ( rsc == null ) {
+          throw new NoSuchElementException( "Attempt to allocate " + quantity + " resources failed." );
+        }
+        res.add( rsc );
+      }
+    } catch ( Exception ex ) {
       for ( T rsc : res ) {
         try {
           rollback.apply( rsc );
@@ -190,10 +191,11 @@ public class RestrictedTypes {
           LOG.trace( ex1, ex1 );
         }
       }
-      if(ex.getCause()!=null)
-    	  throw Exceptions.toUndeclared(ex.getCause());
-      else
-    	  throw Exceptions.toUndeclared(ex);
+      if ( ex.getCause( ) != null ) {
+        throw Exceptions.toUndeclared( ex.getCause( ) );
+      } else {
+        throw Exceptions.toUndeclared( ex );
+      }
     }
     return res;
   }
@@ -335,6 +337,7 @@ public class RestrictedTypes {
   public static <T extends RestrictedType> T doPrivilegedWithoutOwner( String identifier, Function<String, T> resolverFunction ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
     return doPrivileged( identifier, resolverFunction, true );
   }
+  
   /**
    * Uses the provided {@code lookupFunction} to resolve the {@code identifier} to the underlying
    * object {@code T} with privileges determined by the current messaging context.

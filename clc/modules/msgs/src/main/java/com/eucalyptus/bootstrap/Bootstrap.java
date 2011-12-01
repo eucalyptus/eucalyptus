@@ -452,6 +452,10 @@ public class Bootstrap {
     return currentStage;
   }
   
+  public static Boolean isLoaded( ) {
+    return starting;
+  }
+
   public static Boolean isOperational( ) {
     return isFinished( ) && !isShuttingDown( );
   }
