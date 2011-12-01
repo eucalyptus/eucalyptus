@@ -105,13 +105,13 @@ static int doInitialize (struct nc_state_t *nc)
 	snprintf (nc->detach_cmd_path, MAX_PATH, EUCALYPTUS_DETACH, nc->home, nc->home);
 	strcpy(nc->uri, HYPERVISOR_URI);
 	nc->convert_to_disk = 0;
-        nc->capability = HYPERVISOR_XEN_AND_HARDWARE; // TODO: set to XEN_PARAVIRTUALIZED if on older Xen kernel
-
-        /* check connection is fresh */
-        if (!check_hypervisor_conn()) {
-          return ERROR_FATAL;
+    nc->capability = HYPERVISOR_XEN_AND_HARDWARE; // TODO: set to XEN_PARAVIRTUALIZED if on older Xen kernel
+    
+    /* check connection is fresh */
+    if (!check_hypervisor_conn()) {
+        return ERROR_FATAL;
 	}
-
+    
 	/* get resources */
 	if (virNodeGetInfo(nc->conn, &ni)) {
 		logprintfl (EUCAFATAL, "error: failed to discover resources\n");

@@ -90,6 +90,7 @@ permission notice:
 #include "vbr.h"
 #include "iscsi.h"
 #include "xml.h"
+#include "hooks.h"
 
 #include "windows-bundle.h"
 
@@ -668,8 +669,17 @@ doAttachVolume (	struct nc_state_t *nc,
      
      // generate XML for libvirt attachment request
      char xml [1024];
-     if (gen_libvirt_attach_xml (instance, localDevReal, remoteDevReal, nc->config_use_virtio_disk, xml, sizeof(xml))) {
+     if (gen_libvirt_attach_xml (volumeId, instance, localDevReal, remoteDevReal, xml, sizeof(xml))) {
          logprintfl(EUCAERROR, "AttachVolume(): could not produce attach device xml\n");
+         ret = ERROR;
+         goto release;
+     }
+
+     // invoke hooks
+     char path [MAX_PATH];
+     snprintf (path, sizeof (path), EUCALYPTUS_VOLUME_XML_PATH_FORMAT, instance->instancePath, volumeId);
+     if (call_hooks (NC_EVENT_PRE_ATTACH, path)) {
+         logprintfl (EUCAERROR, "[%s] cancelled volume attachment via hooks\n", instance->instanceId);
          ret = ERROR;
          goto release;
      }
@@ -832,7 +842,7 @@ doDetachVolume (	struct nc_state_t *nc,
 
     // generate XML for libvirt detachment request
     char xml [1024];
-    if (gen_libvirt_attach_xml (instance, localDevReal, remoteDevReal, nc->config_use_virtio_disk, xml, sizeof(xml))) {
+    if (gen_libvirt_attach_xml (volumeId, instance, localDevReal, remoteDevReal, xml, sizeof(xml))) {
         logprintfl(EUCAERROR, "DetachVolume(): could not produce detach device xml\n");
         ret = ERROR;
         goto release;
@@ -851,6 +861,11 @@ doDetachVolume (	struct nc_state_t *nc,
         logprintfl (EUCAERROR, "DetachVolume(): virDomainDetachDevice() or 'virsh detach' failed (err=%d) XML='%s'\n", err, xml);
         if (!force) 
             ret = ERROR;
+    } else {
+        char path [MAX_PATH];
+        snprintf (path, sizeof (path), EUCALYPTUS_VOLUME_XML_PATH_FORMAT, instance->instancePath, volumeId);
+        call_hooks (NC_EVENT_POST_DETACH, path); // invoke hooks, but do not do anything if they return error
+        unlink (path); // remove vol-XXXX.xml file
     }
     
  release:
