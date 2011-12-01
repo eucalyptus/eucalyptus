@@ -99,6 +99,7 @@ struct nc_state_t {
 	char home[MAX_PATH];
 	char config_network_path [MAX_PATH];
 	char gen_libvirt_cmd_path[MAX_PATH];
+        char libvirt_xslt_path[MAX_PATH];
 	char get_info_cmd_path[MAX_PATH];
 	char rootwrap_cmd_path[MAX_PATH];
 	char virsh_cmd_path[MAX_PATH];

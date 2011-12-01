@@ -37,7 +37,7 @@ public class InstanceEventListener
 	  final long receivedEventMs = this.getCurrentTimeMillis();
 	  if (e instanceof InstanceEvent) {
 		  InstanceEvent event = (InstanceEvent) e;
-		  log.debug("Received instance event:" + event);
+		  log.info("Received instance event:" + event);
 
 		  final String uuid = event.getUuid();
 		  if (uuid == null) {

@@ -94,16 +94,16 @@ public class VmTypes {
     if ( img instanceof StaticDiskImage ) {
       if( ImageMetadata.Platform.windows.equals( img.getPlatform( ) ) ) {
         vmTypeInfo  = VmTypes.InstanceStoreWindowsVmTypeInfoMapper.INSTANCE.apply( vmType );
-        vmTypeInfo.setEphemeral( 0, "sdb", vmType.getDisk( )*1024l*1024l*1024l - imgSize /**bytes**/ );
+        vmTypeInfo.setEphemeral( 0, "sdb", vmType.getDisk( )*1024l*1024l*1024l - imgSize /**bytes**/, "none" );
       } else {
         vmTypeInfo = VmTypes.InstanceStoreVmTypeInfoMapper.INSTANCE.apply( vmType );
-        vmTypeInfo.setEphemeral( 0, "sda2", vmType.getDisk( )*1024l*1024l*1024l - imgSize /**bytes**/ );
+        vmTypeInfo.setEphemeral( 0, "sda2", vmType.getDisk( )*1024l*1024l*1024l - imgSize /**bytes**/, "ext3" );
       }
       vmTypeInfo.setRoot( img.getDisplayName( ), ( ( StaticDiskImage ) img ).getManifestLocation( ), imgSize );
     } else if ( img instanceof BlockStorageImageInfo ) {
       vmTypeInfo = VmTypes.BlockStorageVmTypeInfoMapper.INSTANCE.apply( vmType );
       vmTypeInfo.setEbsRoot( img.getDisplayName( ), null, imgSize );
-      vmTypeInfo.setEphemeral( 0, "sdb", vmType.getDisk( )*1024l*1024l*1024l /**bytes**/ );
+      vmTypeInfo.setEphemeral( 0, "sdb", vmType.getDisk( )*1024l*1024l*1024l /**bytes**/, "none" );
     } else {
       throw new InvalidMetadataException( "Failed to identify the root machine image type: " + img );
     }

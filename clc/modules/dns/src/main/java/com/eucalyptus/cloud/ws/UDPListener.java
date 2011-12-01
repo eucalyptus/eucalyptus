@@ -94,4 +94,11 @@ public class UDPListener extends Thread {
 		else
 			LOG.error("Cannot start service. Invalid socket.");
 	}
+
+	public void close() {
+		if (socket != null) {
+			socket.close();
+			socket = null;
+		}
+	}
 }

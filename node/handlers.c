@@ -605,11 +605,9 @@ void *startup_thread (void * arg)
     instance->combinePartitions = nc_state.convert_to_disk; 
     instance->do_inject_key = nc_state.do_inject_key;
 
-    char xslt_path [1024];
-    snprintf (xslt_path, sizeof (xslt_path), "%s/etc/eucalyptus/libvirt.xsl", nc_state.home);
-    if ((error = create_instance_backing (instance))
-        || (error = gen_instance_xml (instance))
-        || (error = gen_libvirt_xml (instance, xslt_path))) {
+    if ((error = create_instance_backing (instance)) // do the heavy lifting on the disk
+        || (error = gen_instance_xml (instance)) // create euca-specific instance XML file
+        || (error = gen_libvirt_instance_xml (instance))) { // transform euca-specific XML into libvirt XML
         
         logprintfl (EUCAERROR, "[%s] error: failed to prepare images for instance (error=%d)\n", instance->instanceId, error);
         goto shutoff;
@@ -950,6 +948,7 @@ static int init (void)
 	nc_state.xm_cmd_path[0] = '\0';
 	nc_state.virsh_cmd_path[0] = '\0';
 	nc_state.get_info_cmd_path[0] = '\0';
+	snprintf (nc_state.libvirt_xslt_path, MAX_PATH, EUCALYPTUS_LIBVIRT_XSLT, nc_state.home);
 	snprintf (nc_state.rootwrap_cmd_path, MAX_PATH, EUCALYPTUS_ROOTWRAP, nc_state.home);
 
     // backing store configuration
