@@ -3,6 +3,7 @@ package com.eucalyptus.cloud;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import org.apache.log4j.Logger;
+import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.bootstrap.Handles;
 import com.eucalyptus.bootstrap.Host;
 import com.eucalyptus.bootstrap.Hosts;
@@ -18,6 +19,7 @@ import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Internets;
+import com.google.common.base.Predicate;
 
 @ComponentPart( Eucalyptus.class )
 @Handles( { RegisterEucalyptusType.class,
@@ -83,27 +85,46 @@ public class EucalyptusBuilder extends AbstractServiceBuilder<EucalyptusConfigur
     Host coordinator = Hosts.getCoordinator( );
     if ( coordinator == null ) {
       throw Faults.failure( config, Exceptions.error( config.getFullName( ) + ":fireCheck(): failed to lookup coordinator (" + coordinator + ")." ) );
-    } else if ( coordinator.isLocalHost( ) && !Topology.isEnabledLocally( Eucalyptus.class ) && !config.isVmLocal( ) ) {
-      throw Faults.failure( config,
-                            Exceptions.error( config.getFullName( )
-                              + ":fireCheck(): cloud controller depends upon ENABLED coordinator service for: "
-                              + coordinator ) );
-    } else if ( !coordinator.isLocalHost( ) && config.isVmLocal( ) ) {
-      if ( !Topology.isEnabled( Eucalyptus.class ) ) {
-        throw Faults.failure( config,
-                              Exceptions.error( config.getFullName( )
-                                + ":fireCheck(): local cloud controller service isn't coordinator and is missing ENABLED cloud controller service: "
-                                + coordinator ) );
-      } else if ( Topology.lookup( Eucalyptus.class ).isVmLocal( ) ) {
-        throw Faults.failure( config,
-                              Exceptions.error( config.getFullName( )
-                                + ":fireCheck(): local cloud controller service cant be enabled when it is not the coordinator: "
-                                + coordinator ) );
-      } else {
-        LOG.debug( config.getFullName( ) + ":fireCheck() completed with coordinator currently: " + coordinator );
-      }
-      
+    } else if ( coordinator.isLocalHost( ) ) {
+      Check.COORDINATOR.apply( config );
+    } else if ( !coordinator.isLocalHost( ) ) {
+      Check.SECONDARY.apply( config );
     }
   }
   
+  enum Check implements Predicate<ServiceConfiguration> {
+    COORDINATOR {
+      
+      @Override
+      public boolean apply( ServiceConfiguration config ) {
+//GRZE: No service check makes sense here.
+        return true;
+      }
+    },
+    SECONDARY {
+      
+      @Override
+      public boolean apply( ServiceConfiguration config ) {
+        if ( config.isVmLocal( ) ) {
+          if ( !Databases.isSynchronized( ) ) {
+            throw Faults.failure( config,
+                                  Exceptions.error( config.getFullName( )
+                                    + ":fireCheck(): eucalyptus service " + config.getFullName( ) + " is currently synchronizing: "
+                                    + Hosts.getCoordinator( ) ) );
+          } else if ( Topology.isEnabledLocally( Eucalyptus.class ) ) {
+            throw Faults.failure( config,
+                                  Exceptions.error( config.getFullName( )
+                                    + ":fireCheck(): eucalyptus service " + config.getFullName( ) + " cant be enabled when it is not the coordinator: "
+                                    + Hosts.getCoordinator( ) ) );
+          } else {
+            LOG.debug( config.getFullName( ) + ":fireCheck() completed with coordinator currently: " + Hosts.getCoordinator( ) );
+          }
+        }
+        return true;
+      }
+    };
+    
+    @Override
+    public abstract boolean apply( ServiceConfiguration input );
+  }
 }

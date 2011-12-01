@@ -82,7 +82,7 @@ cluster_check() {
   ssh root@$1 "awk '/localState=/{val=\$4\":\"\$7}END{print val}' /opt/eucalyptus/var/log/eucalyptus/cc.log | sed 's/:monitor.*locaState=//g'"
 }
 cluster_restore() {
-  echo "/opt/eucalyptus/etc/init.d/eucalyptus-cc cleanstart"
+  echo "/opt/eucalyptus/etc/init.d/eucalyptus-cc start"
 }
 cluster_failure() {
   echo "/opt/eucalyptus/etc/init.d/eucalyptus-cc stop"
@@ -167,24 +167,10 @@ doStateChange() {
   done
 }
 
-for((a=0;a<25;a++)); do
-  echo "Running eucalyptus trail ${a}"
-  doStateChange eucalyptus FAILOVER ENABLED DISABLED | tee -a failover.log
-  sleep 1
+for s in storage walrus; do
+  for((a=0;a<5;a++)); do
+    echo "Running ${s} trail ${a}"| tee -a failover.log
+    doStateChange ${s} FAILOVER ENABLED DISABLED 2>&1 | tee -a failover.log
+    sleep 1
+  done
 done
-for((a=0;a<25;a++)); do
-  echo "Running cluster trail ${a}"
-  doStateChange cluster FAILOVER ENABLED DISABLED | tee -a failover.log
-  sleep 1
-done
-for((a=0;a<25;a++)); do
-  echo "Running storage trail ${a}"
-  doStateChange storage FAILOVER ENABLED DISABLED | tee -a failover.log
-  sleep 1
-done
-for((a=0;a<25;a++)); do
-  echo "Running walrus trail ${a}"
-  doStateChange walrus FAILOVER ENABLED DISABLED | tee -a failover.log
-  sleep 1
-done
-

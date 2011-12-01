@@ -74,7 +74,7 @@ public class ReportGenerator
 		if (criterion == null)
 			throw new IllegalArgumentException("Criterion can't be null");
 		if (displayUnits == null)
-			displayUnits = Units.DEFAULT_DISPLAY_UNITS;
+			displayUnits = Units.getDefaultDisplayUnits();
 
 		if (! modules.containsKey(reportType)) {
 			try {

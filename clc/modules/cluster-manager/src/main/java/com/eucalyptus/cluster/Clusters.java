@@ -106,10 +106,6 @@ public class Clusters extends AbstractNamedRegistry<Cluster> {
     return Lists.newArrayList( hostOrdered );
   }
   
-  public static Cluster lookup( final Partition partition ) {
-    return Clusters.lookup( Topology.lookup( ClusterController.class, partition ) );
-  }
-  
   public static Cluster lookup( final ServiceConfiguration clusterConfig ) {
     try {
       return Clusters.getInstance( ).lookup( clusterConfig.getName( ) );

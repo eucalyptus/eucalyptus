@@ -86,6 +86,7 @@ import org.hibernate.criterion.MatchMode;
 import org.hibernate.criterion.Restrictions;
 import org.hibernate.ejb.EntityManagerFactoryImpl;
 import org.hibernate.exception.ConstraintViolationException;
+import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.records.Logs;
@@ -228,6 +229,21 @@ public class Entities {
                                                                     .setResultTransformer( Criteria.DISTINCT_ROOT_ENTITY )
                                                                     .setCacheable( true )
                                                                     .add( qbe )
+                                                                    .list( );
+    return Lists.newArrayList( Sets.newHashSet( resultList ) );
+  }
+  
+  @SuppressWarnings( { "unchecked", "cast" } )
+  public static <T> List<T> query( final T example, final boolean readOnly, final int maxResults ) {
+    final Example qbe = Example.create( example ).enableLike( MatchMode.EXACT );
+    final List<T> resultList = ( List<T> ) getTransaction( example ).getTxState( ).getSession( )
+                                                                    .createCriteria( example.getClass( ) )
+                                                                    .setReadOnly( readOnly )
+                                                                    .setResultTransformer( Criteria.DISTINCT_ROOT_ENTITY )
+                                                                    .setCacheable( true )
+                                                                    .add( qbe )
+                                                                    .setMaxResults( maxResults )
+                                                                    .setFetchSize( maxResults )
                                                                     .list( );
     return Lists.newArrayList( Sets.newHashSet( resultList ) );
   }

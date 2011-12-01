@@ -32,7 +32,7 @@ static boolean print_argv = FALSE;
 
 static void bs_errors (const char * msg) { 
     // we normally do not care to print all messages from blobstore as many are errors that we can handle
-    logprintfl (EUCADEBUG, "{%u} blobstore: %s", (unsigned int)pthread_self(), msg);
+    logprintfl (EUCADEBUG2, "{%u} blobstore: %s", (unsigned int)pthread_self(), msg);
 } 
 
 static void set_debug (boolean yes)

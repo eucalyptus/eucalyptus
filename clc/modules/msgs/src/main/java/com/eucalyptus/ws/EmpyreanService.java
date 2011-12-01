@@ -217,10 +217,11 @@ public class EmpyreanService {
       try {
         a = Components.lookup( compId ).lookup( name );
       } catch ( NoSuchElementException ex ) {
-        try {
-          return ServiceConfigurations.lookupByName( compId.getClass( ), name );
-        } catch ( Exception ex1 ) {
-          throw Exceptions.toUndeclared( Exceptions.maybeInterrupted( ex1 ) );
+        if ( compId.isRegisterable( ) ) {
+          try {
+            return ServiceConfigurations.lookupByName( compId.getClass( ), name );
+          } catch ( Exception ex1 ) {
+          }
         }
       }
     }

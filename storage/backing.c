@@ -454,7 +454,11 @@ int destroy_instance_backing (ncInstance * instance, int do_destroy_files)
         }
         set_path (path, sizeof (path), instance, "instance.checkpoint");
         unlink (path);
-
+        for (int i=0; i < EUCA_MAX_VOLUMES; ++i) {
+            ncVolume * volume = &instance->volumes[i];
+            snprintf (path, sizeof (path), EUCALYPTUS_VOLUME_XML_PATH_FORMAT, instance->instancePath, volume->volumeId);
+            unlink (path);
+        }
         // bundle instance will leave additional files
         // let's delete every file in the directory
         struct dirent **files;

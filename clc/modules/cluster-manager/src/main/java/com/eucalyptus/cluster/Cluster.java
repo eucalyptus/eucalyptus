@@ -358,18 +358,22 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
         
         @Override
         public final void leave( final Cluster parent, final Callback.Completion transitionCallback ) {
-          try {
-            AsyncRequests.newRequest( factory.newInstance( ) ).then( transitionCallback ).sendSync( parent.getConfiguration( ) );
-          } catch ( final InterruptedException ex ) {
-            Thread.currentThread( ).interrupt( );
-            Exceptions.trace( ex );
-            transitionCallback.fire( );
-          } catch ( final Exception t ) {
-            if ( !parent.swallowException( t ) ) {
-              transitionCallback.fireException( t );
-            } else {
+          if ( Hosts.isCoordinator( ) ) {
+            try {
+              AsyncRequests.newRequest( factory.newInstance( ) ).then( transitionCallback ).sendSync( parent.getConfiguration( ) );
+            } catch ( final InterruptedException ex ) {
+              Thread.currentThread( ).interrupt( );
+              Exceptions.trace( ex );
               transitionCallback.fire( );
+            } catch ( final Exception t ) {
+              if ( !parent.swallowException( t ) ) {
+                transitionCallback.fireException( t );
+              } else {
+                transitionCallback.fire( );
+              }
             }
+          } else {
+            transitionCallback.fire( );
           }
         }
       };
@@ -1100,10 +1104,6 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
         ? t.getCause( )
         : t;
     }
-    /// Ill-formed responses to DescribeNetworks are OK  
-    if( Exceptions.isCausedBy(t, org.jibx.runtime.JiBXException.class) || t instanceof org.jibx.runtime.JiBXException)
-    	return true;
-    
     LOG.error( t );
     if ( Exceptions.isCausedBy( t, InterruptedException.class ) ) {
       Thread.currentThread( ).interrupt( );

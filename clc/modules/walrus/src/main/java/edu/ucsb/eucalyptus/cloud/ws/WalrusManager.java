@@ -256,16 +256,6 @@ public class WalrusManager {
 		} catch (EucalyptusCloudException ex) {
 			LOG.fatal(ex);
 		}
-		EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
-		BucketInfo bucketInfo = new BucketInfo();
-		List<BucketInfo> bucketInfos = db.query(bucketInfo);
-		for (BucketInfo bucket : bucketInfos) {
-			if (!storageManager.bucketExists(bucket.getBucketName()))
-				bucket.setHidden(true);
-			else
-				bucket.setHidden(false);
-		}
-		db.commit();
 	}
 
 	public ListAllMyBucketsResponseType listAllMyBuckets(
