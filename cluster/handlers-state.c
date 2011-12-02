@@ -116,7 +116,6 @@ int doDescribeServices(ncMetadata *ccMeta, serviceInfoType *serviceIds, int serv
   }
   */
   sem_mywait(CONFIG);
-  logprintfl(EUCADEBUG, "MEH: %s\n", config->ccStatus.serviceId.name);
   if (!strcmp(config->ccStatus.serviceId.name, "self")) {
     for (i=0; i<serviceIdsLen; i++) {
       logprintfl(EUCADEBUG, "DescribeServices(): received input serviceId[%d]\n", i);
