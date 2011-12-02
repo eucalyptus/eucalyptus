@@ -31,7 +31,7 @@ my $accountname_csv = "'" . join("','",@accountnames) . "'";
 
 sub execute_query($) {
 	print "Executing query:$_[0]\n";
-	my $output = `./db.sh --execute="$_[0]" -D eucalyptus_reporting --skip-column-names`;
+	my $output = `db.sh --execute="$_[0]" -D eucalyptus_reporting --skip-column-names`;
 	print "Output:$output\n";
 	return split("\n",$output);
 }
