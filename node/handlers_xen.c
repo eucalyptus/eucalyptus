@@ -98,7 +98,6 @@ static int doInitialize (struct nc_state_t *nc)
 	logprintfl(EUCADEBUG, "doInitialized() invoked\n");
 
 	/* set up paths of Eucalyptus commands NC relies on */
-	snprintf (nc->gen_libvirt_cmd_path, MAX_PATH, EUCALYPTUS_GEN_LIBVIRT_XML, nc->home, nc->home);
 	snprintf (nc->get_info_cmd_path, MAX_PATH, EUCALYPTUS_GET_XEN_INFO, nc->home, nc->home);
 	snprintf (nc->virsh_cmd_path, MAX_PATH, EUCALYPTUS_VIRSH, nc->home);
 	snprintf (nc->xm_cmd_path, MAX_PATH, EUCALYPTUS_XM);
