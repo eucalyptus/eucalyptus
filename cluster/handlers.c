@@ -2876,7 +2876,7 @@ int ccCheckState() {
 	    bzero(chost, sizeof(char) * MAX_PATH);
 	    rc = tokenize_uri(curi, uriType, chost, &port, path);
 	    if (!strcmp(curi, buri)) {
-	      logprintfl(EUCAWARN, "ccCheckState(): detected local broker in not ready state\n");
+	      logprintfl(EUCAWARN, "ccCheckState(): detected local broker (%s) matching local CC (%s) in NOTREADY state\n", config->notreadyServices[i].uris[j], config->ccStatus.serviceId.uris[0]);
 	    }
 	  }
 	}
@@ -2885,9 +2885,8 @@ int ccCheckState() {
   }
 
   snprintf(localDetails, 1023, "ERRORS=%d", ret);
-  sem_mywait(CONFIG);
   snprintf(config->ccStatus.details, 1023, "%s", localDetails);
-  sem_mypost(CONFIG);
+  
   return(ret);
 }
 
@@ -3036,18 +3035,16 @@ void *monitor_thread(void *in) {
       }
     }
 
+    // do state checks under CONFIG lock
+    sem_mywait(CONFIG);
     if (ccCheckState()) {
       logprintfl(EUCAERROR, "monitor_thread(): ccCheckState() returned failures\n");
-      sem_mywait(CONFIG);
       config->kick_enabled = 0;
       ccChangeState(NOTREADY);
-      sem_mypost(CONFIG);
     } else if (config->ccState == NOTREADY) {
-      sem_mywait(CONFIG);
       ccChangeState(DISABLED);
-      sem_mypost(CONFIG);
     }
-
+    sem_mypost(CONFIG);
     shawn();
     
     logprintfl(EUCADEBUG, "monitor_thread(localState=%s): done\n", config->ccStatus.localState);
