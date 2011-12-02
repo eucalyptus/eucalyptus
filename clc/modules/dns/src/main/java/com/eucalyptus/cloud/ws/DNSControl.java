@@ -85,10 +85,14 @@ public class DNSControl {
 
 	private static Logger LOG = Logger.getLogger( DNSControl.class );
 
+	static UDPListener udpListener;
+	static TCPListener tcpListener;
 	private static void initializeUDP() throws Exception {
 		try {
-			UDPListener udpListener = new UDPListener(Address.getByAddress(DNSProperties.ADDRESS), DNSProperties.PORT);
-			udpListener.start();
+			if (udpListener == null) {
+				udpListener = new UDPListener(Address.getByAddress(DNSProperties.ADDRESS), DNSProperties.PORT);
+				udpListener.start();
+			}
 		} catch(UnknownHostException ex) {
 			LOG.error(ex);
 			throw ex;
@@ -97,8 +101,10 @@ public class DNSControl {
 
 	private static void initializeTCP() throws Exception {
 		try {
-			TCPListener tcpListener = new TCPListener(Address.getByAddress(DNSProperties.ADDRESS), DNSProperties.PORT);
-			tcpListener.start();
+			if (tcpListener == null) {
+				tcpListener = new TCPListener(Address.getByAddress(DNSProperties.ADDRESS), DNSProperties.PORT);
+				tcpListener.start();
+			}
 		} catch(UnknownHostException ex) {
 			LOG.error(ex);
 			throw ex;
@@ -149,6 +155,17 @@ public class DNSControl {
 		}
 	}
 
+	public static void stop() throws Exception {
+		if (udpListener != null) {
+			udpListener.close();
+			udpListener = null;
+		}
+		if (tcpListener != null) {
+			tcpListener.close();
+			tcpListener = null;
+		}
+	}
+	
 	public DNSControl() {}
 
 	public UpdateARecordResponseType UpdateARecord(UpdateARecordType request)  throws EucalyptusCloudException {

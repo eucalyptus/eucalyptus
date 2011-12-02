@@ -63,7 +63,6 @@
 
 package com.eucalyptus.blockstorage;
 
-import java.lang.reflect.UndeclaredThrowableException;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import org.apache.log4j.Logger;
@@ -72,6 +71,7 @@ import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.CloudMetadata.VolumeMetadata;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.entities.EntityWrapper;
@@ -135,7 +135,7 @@ public class Volumes {
       return vol;
     } else {
       //TODO:GRZE:REMOVE temporary workaround to update the volume state.
-      final ServiceConfiguration sc = Partitions.lookupService( Storage.class, vol.getPartition( ) );
+      final ServiceConfiguration sc = Topology.lookup( Storage.class, Partitions.lookupByName( vol.getPartition( ) ) );
       final DescribeStorageVolumesType descVols = new DescribeStorageVolumesType( Lists.newArrayList( vol.getDisplayName( ) ) );
       try {
         Transactions.one( Volume.named( null, vol.getDisplayName( ) ), new Callback<Volume>( ) {

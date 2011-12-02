@@ -72,6 +72,7 @@ import com.eucalyptus.cloud.CloudMetadata.SnapshotMetadata;
 import com.eucalyptus.cloud.util.DuplicateMetadataException;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.entities.EntityWrapper;
@@ -130,7 +131,7 @@ public class Snapshots {
   }
   
   static Snapshot startCreateSnapshot( final Volume vol, final Snapshot snap ) throws EucalyptusCloudException, DuplicateMetadataException {
-    final ServiceConfiguration sc = Partitions.lookupService( Storage.class, vol.getPartition( ) );
+    final ServiceConfiguration sc = Topology.lookup( Storage.class, Partitions.lookupByName( vol.getPartition( ) ) );
     try {
       Snapshot snapState = Transactions.save( snap, new Callback<Snapshot>( ) {
         

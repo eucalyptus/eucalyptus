@@ -109,6 +109,7 @@ import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.ComponentMessages;
 import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.Topology;
@@ -152,54 +153,6 @@ public class Handlers {
   private static final ChannelHandler                        bindingHandler           = new BindingHandler( );
   private static final HashedWheelTimer                      timer                    = new HashedWheelTimer( );                                                                                             //TODO:GRZE: configurable
                                                                                                                                                                                                               
-  private static class LoggingHandler implements ChannelUpstreamHandler, ChannelDownstreamHandler {
-    private final ChannelHandler down;
-    
-    private LoggingHandler( ChannelHandler down, ChannelHandler up ) {
-      super( );
-      this.down = down;
-      this.up = up;
-    }
-    
-    private final ChannelHandler up;
-    
-    @Override
-    public void handleDownstream( final ChannelHandlerContext ctx, final ChannelEvent e ) throws Exception {
-      if ( e instanceof MessageEvent ) {
-        Statistics.startDownstream( ctx.getChannel( ).getId( ), this.down );
-      }
-      ctx.sendDownstream( e );
-    }
-    
-    @SuppressWarnings( { "unchecked", "rawtypes" } )
-    @Override
-    public final void handleUpstream( final ChannelHandlerContext ctx, final ChannelEvent e ) throws Exception {
-      if ( e instanceof MessageEvent ) {
-        Statistics.startUpstream( ctx.getChannel( ).getId( ), this.up );
-      }
-      ctx.sendUpstream( e );
-    }
-    
-  }
-  
-  public static ChannelPipeline wrapPipeline( ChannelPipeline pipeline ) {
-    if ( StackConfiguration.STATISTICS ) {
-      Map.Entry<String, ChannelHandler> last = null;
-      ChannelPipeline newPipeline = Channels.pipeline( );
-      for ( Map.Entry<String, ChannelHandler> entry : pipeline.toMap( ).entrySet( ) ) {
-        if ( last == null ) {
-          last = entry;
-        } else {
-          newPipeline.addLast( "timer-" + last.getKey( ), new LoggingHandler( last.getValue( ), entry.getValue( ) ) );
-        }
-        newPipeline.addLast( entry.getKey( ), entry.getValue( ) );
-      }
-      return newPipeline;
-    } else {
-      return pipeline;
-    }
-  }
-  
   enum ServerPipelineFactory implements ChannelPipelineFactory {
     INSTANCE;
     @Override
@@ -414,7 +367,8 @@ public class Handlers {
         if ( msg != null ) {
           try {
             final Class<? extends ComponentId> compClass = ComponentMessages.lookup( msg );
-            if ( Topology.isEnabledLocally( compClass ) ) {
+            ComponentId compId = ComponentIds.lookup( compClass );
+            if ( compId.isAlwaysLocal( ) || Topology.isEnabledLocally( compClass ) ) {
               ctx.sendUpstream( e );
             } else {
               Handlers.sendError( ctx, e, compClass, request.getServicePath( ) );
@@ -447,7 +401,7 @@ public class Handlers {
         final BaseMessage msg = BaseMessage.extractMessage( e );
         if ( msg != null ) {
           try {
-            if ( msg instanceof ServiceTransitionType && !Hosts.Coordinator.INSTANCE.isLocalhost( ) ) {
+            if ( msg instanceof ServiceTransitionType && !Hosts.isCoordinator( ) ) {
               //TODO:GRZE: extra epoch check and redirect
               Topology.touch( ( ServiceTransitionType ) msg );
               ctx.sendUpstream( e );

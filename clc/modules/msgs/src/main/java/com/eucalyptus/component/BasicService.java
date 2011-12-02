@@ -93,10 +93,7 @@ public class BasicService {
     
     if ( this.serviceConfiguration.isVmLocal( ) ) {
       ComponentId compId = BasicService.this.serviceConfiguration.getComponentId( );
-      if ( compId.isAlwaysLocal( ) ) {//NOTE:GRZE: this is hack omfg; deals w/ the cyclic dependency between Threads and Topology.
-        compId = Eucalyptus.INSTANCE;
-      }
-      OrderedShutdown.register( compId.getClass( ), new Runnable( ) {
+      OrderedShutdown.registerShutdownHook( compId.getClass( ), new Runnable( ) {
         @Override
         public void run( ) {
           try {

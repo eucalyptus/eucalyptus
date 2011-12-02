@@ -87,13 +87,13 @@ String db_pass = SystemIds.databasePassword( );
 
 default_pool_props = [
       'proxool.simultaneous-build-throttle': '16',
-      'proxool.minimum-connection-count': '16',
-      'proxool.maximum-connection-count': '128',
+      'proxool.minimum-connection-count': '8',
+      'proxool.maximum-connection-count': '64',
       'proxool.prototype-count': '8',
       'proxool.house-keeping-test-sql': 'SELECT 1=1;',
       'proxool.house-keeping-sleep-time': '5000',
       'proxool.test-before-use': 'false',
-      'proxool.test-after-use': 'true',
+      'proxool.test-after-use': 'false',
       'proxool.trace': 'false',
       'user': 'eucalyptus',
       'password': db_pass,
@@ -110,17 +110,21 @@ PersistenceContexts.list( ).each { String ctx_simplename ->
   new File( ha_jdbc_config_file_name ).withWriter{ writer ->
     def xml = new MarkupBuilder(writer);
     xml.'ha-jdbc'() {
-      sync('class':'net.sf.hajdbc.sync.FullSynchronizationStrategy', id:'full') {
+      sync('class':'com.eucalyptus.bootstrap.Databases\$FullSynchronizationStrategy', id:'full') {
         'property'(name:'fetchSize', '1000')
-        'property'(name:'maxBatchSize', '100')
+        'property'(name:'maxBatchSize', '1000')
       }
-      sync('class':'net.sf.hajdbc.sync.PassiveSynchronizationStrategy', id:'passive');
+      sync('class':'com.eucalyptus.bootstrap.Databases\$DifferentialSynchronizationStrategy', id:'diff') {
+        'property'(name:'fetchSize', '1000')
+        'property'(name:'maxBatchSize', '1000')
+      }
+      sync('class':'com.eucalyptus.bootstrap.Databases\$PassiveSynchronizationStrategy', id:'passive');
       cluster(id:context_pool_alias,
-          'auto-activate-schedule':'0 * * ? * *',
-          balancer:'load', //(simple|random|round-robin|load)
+//          'auto-activate-schedule':'0 * * ? * *',
+          balancer:'simple', //(simple|random|round-robin|load)
           'default-sync': 'passive',
           dialect:Databases.getJdbcDialect( ),
-          'failure-detect-schedule':'0 * * ? * *',
+          'failure-detect-schedule':'0/15 * * ? * *',
           'meta-data-cache':'none',//(none|lazy|eager)
           'transaction-mode':'serial',//(parallel|serial)
           'detect-sequences':'false',
@@ -130,13 +134,16 @@ PersistenceContexts.list( ).each { String ctx_simplename ->
           'eval-current-timestamp':'true',
           'eval-rand':'true'
           ) {
-            Hosts.listDatabases( ).each{ Host host ->
-              database(id:host.getBindAddress().getHostAddress( ),local:host.isLocalHost( )) {
-                driver(real_jdbc_driver)
-                url("jdbc:${ServiceUris.remote(Database.class,host.getBindAddress( ), context_pool_alias ).toASCIIString( )}")
-                user('eucalyptus')
-                password(db_pass)
-              }
+            Hosts.listActiveDatabases( ).each{ Host host ->
+              database(id:host.getBindAddress().getHostAddress( ),
+                  local:host.isLocalHost( ),
+                  weight:(host.equals(Hosts.getCoordinator())?100:1)
+                  ) {
+                    driver(real_jdbc_driver)
+                    url("jdbc:${ServiceUris.remote(Database.class,host.getBindAddress( ), context_pool_alias ).toASCIIString( )}")
+                    user('eucalyptus')
+                    password(db_pass)
+                  }
             }
           }
     }

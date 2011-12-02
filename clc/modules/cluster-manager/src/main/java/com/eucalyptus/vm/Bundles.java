@@ -73,6 +73,7 @@ import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.ServiceUris;
+import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
@@ -218,17 +219,12 @@ public class Bundles {
         setBucket( bucketName );
       }
     }.regardingUserRequest( ctx.getRequest( ) );
-    ServiceConfiguration walrusConfig = ServiceConfigurations.enabledServices( Walrus.class ).iterator( ).next( );
-    if ( walrusConfig != null ) {
-      try {
-        AsyncRequests.sendSync( walrusConfig, createBucket );
-        AsyncRequests.sendSync( walrusConfig, deleteBucket );
-      } catch ( Exception ex ) {
-        Logs.extreme( ).error( ex );
-      }
-    } else {
-      throw new RuntimeException( "Failed to lookup active service configuration for walrus." );
-    }
-    
+    ServiceConfiguration walrusConfig = Topology.lookup( Walrus.class );
+    try {
+      AsyncRequests.sendSync( walrusConfig, createBucket );
+      AsyncRequests.sendSync( walrusConfig, deleteBucket );
+    } catch ( Exception ex ) {
+      Logs.extreme( ).error( ex );
+    }    
   }
 }

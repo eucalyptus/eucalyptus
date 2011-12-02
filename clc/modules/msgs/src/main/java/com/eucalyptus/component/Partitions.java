@@ -197,25 +197,6 @@ public class Partitions {
     }
   }
   
-  /**
-   * @deprecated
-   * @see Topology#lookup(Class, Partition...)
-   */
-  @Deprecated
-  public static <T extends ServiceConfiguration> T lookupService( Class<? extends ComponentId> compClass, String partition ) {
-    return lookupService( compClass, Partitions.lookupByName( partition ) );
-  }
-  
-  /**
-   * @deprecated
-   * @see Topology#lookup(Class, Partition...)
-   */
-  @SuppressWarnings( "unchecked" )
-  @Deprecated
-  public static <T extends ServiceConfiguration> T lookupService( Class<? extends ComponentId> compClass, Partition partition ) {
-    return ( T ) Topology.lookup( compClass, partition );
-  }
-  
   public static Partition lookupInternal( final ServiceConfiguration config ) {
     ComponentId compId = config.getComponentId( );
     if ( compId.isRegisterable( ) ) {

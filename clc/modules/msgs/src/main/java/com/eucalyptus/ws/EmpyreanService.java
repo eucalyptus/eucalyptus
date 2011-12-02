@@ -215,9 +215,14 @@ public class EmpyreanService {
     for ( final ComponentId compId : ComponentIds.list( ) ) {
       ServiceConfiguration a;
       try {
-        return ServiceConfigurations.lookupByName( compId.getClass( ), name );
-      } catch ( Exception ex1 ) {
-        Exceptions.maybeInterrupted( ex1 );
+        a = Components.lookup( compId ).lookup( name );
+      } catch ( NoSuchElementException ex ) {
+        if ( compId.isRegisterable( ) ) {
+          try {
+            return ServiceConfigurations.lookupByName( compId.getClass( ), name );
+          } catch ( Exception ex1 ) {
+          }
+        }
       }
     }
     throw new NoSuchElementException( "Failed to lookup service named: " + name );
@@ -388,25 +393,23 @@ public class EmpyreanService {
       };
     }
     
-    static Predicate<ServiceConfiguration> listAllOrInternal( final Boolean listAllArg, final Boolean listInternalArg ) {
+    static Predicate<ServiceConfiguration> listAllOrInternal( final Boolean listAllArg, final Boolean listUserServicesArg, final Boolean listInternalArg ) {
       final boolean listAll = Boolean.TRUE.equals( listAllArg );
       final boolean listInternal = Boolean.TRUE.equals( listInternalArg );
+      final boolean listUserServices = Boolean.TRUE.equals( listUserServicesArg );
       return new Predicate<ServiceConfiguration>( ) {
         @Override
         public boolean apply( final ServiceConfiguration input ) {
           if ( listAll ) {
             return true;
-          } else if ( input.getComponentId( ).isInternal( ) && listInternal
-                      && ( input.getPort( ) == -1 )
-              ? true
-                : Internets.testLocal( input.getHostName( ) ) ) {
+          } else if ( input.getComponentId( ).isDistributedService( ) || Empyrean.class.equals( input.getComponentId( ) ) ) {
             return true;
-          } else if ( input.getComponentId( ).isPublicService( ) ) {
-            return true;
-          } else if ( input.getComponentId( ).isAdminService( ) ) {
-            return true;
-          } else if ( input.getComponentId( ).isRegisterable( ) ) {
-            return true;
+          } else if ( input.getComponentId( ).isPublicService( ) && listUserServices ) {
+            return Internets.testLocal( input.getHostName( ) );
+          } else if ( input.getComponentId( ).isAdminService( ) && listUserServices ) {
+            return Internets.testLocal( input.getHostName( ) );
+          } else if ( input.getComponentId( ).isInternal( ) && listInternal ) {
+            return Internets.testLocal( input.getHostName( ) );
           } else {
             return false;
           }
@@ -432,37 +435,43 @@ public class EmpyreanService {
   public static DescribeServicesResponseType describeService( final DescribeServicesType request ) {
     final DescribeServicesResponseType reply = request.getReply( );
     Topology.touch( request );
-    final ComponentId compId = ( request.getByServiceType( ) != null )
-      ? ComponentIds.lookup( request.getByServiceType( ).toLowerCase( ) )
-      : Empyrean.INSTANCE;
-    final boolean showEventStacks = Boolean.TRUE.equals( request.getShowEventStacks( ) );
-    final boolean showEvents = Boolean.TRUE.equals( request.getShowEvents( ) ) || showEventStacks;
-    
-    final Function<ServiceConfiguration, ServiceStatusType> transformToStatus = ServiceConfigurations.asServiceStatus( showEvents, showEventStacks );
-    final List<Predicate<ServiceConfiguration>> filters = new ArrayList<Predicate<ServiceConfiguration>>( ) {
-      {
-        if ( request.getByPartition( ) != null ) {
-          Partitions.exists( request.getByPartition( ) );
-          this.add( Filters.host( request.getByPartition( ) ) );
+    if ( request.getServices( ).isEmpty( ) ) {
+      final ComponentId compId = ( request.getByServiceType( ) != null )
+        ? ComponentIds.lookup( request.getByServiceType( ).toLowerCase( ) )
+        : Empyrean.INSTANCE;
+      final boolean showEventStacks = Boolean.TRUE.equals( request.getShowEventStacks( ) );
+      final boolean showEvents = Boolean.TRUE.equals( request.getShowEvents( ) ) || showEventStacks;
+      
+      final Function<ServiceConfiguration, ServiceStatusType> transformToStatus = ServiceConfigurations.asServiceStatus( showEvents, showEventStacks );
+      final List<Predicate<ServiceConfiguration>> filters = new ArrayList<Predicate<ServiceConfiguration>>( ) {
+        {
+          if ( request.getByPartition( ) != null ) {
+            Partitions.exists( request.getByPartition( ) );
+            this.add( Filters.host( request.getByPartition( ) ) );
+          }
+          if ( request.getByState( ) != null ) {
+            final Component.State stateFilter = Component.State.valueOf( request.getByState( ).toUpperCase( ) );
+            this.add( Filters.state( stateFilter ) );
+          }
+          this.add( Filters.host( request.getByHost( ) ) );
+          this.add( Filters.listAllOrInternal( request.getListAll( ), request.getListUserServices( ), request.getListInternal( ) ) );
         }
-        if ( request.getByState( ) != null ) {
-          final Component.State stateFilter = Component.State.valueOf( request.getByState( ).toUpperCase( ) );
-          this.add( Filters.state( stateFilter ) );
-        }
-        this.add( Filters.host( request.getByHost( ) ) );
-        this.add( Filters.listAllOrInternal( request.getListAll( ), request.getListInternal( ) ) );
-      }
-    };
-    final Predicate<Component> componentFilter = Filters.componentType( compId );
-    final Predicate<ServiceConfiguration> configPredicate = Predicates.and( filters );
-    
-    for ( final Component comp : Components.list( ) ) {
-      if ( componentFilter.apply( comp ) ) {
-        for ( final ServiceConfiguration config : comp.services( ) ) {
-          if ( configPredicate.apply( config ) ) {
-            reply.getServiceStatuses( ).add( transformToStatus.apply( config ) );
+      };
+      final Predicate<Component> componentFilter = Filters.componentType( compId );
+      final Predicate<ServiceConfiguration> configPredicate = Predicates.and( filters );
+      
+      for ( final Component comp : Components.list( ) ) {
+        if ( componentFilter.apply( comp ) ) {
+          for ( final ServiceConfiguration config : comp.services( ) ) {
+            if ( configPredicate.apply( config ) ) {
+              reply.getServiceStatuses( ).add( transformToStatus.apply( config ) );
+            }
           }
         }
+      }
+    } else {
+      for ( ServiceId s : request.getServices( ) ) {
+        reply.getServiceStatuses( ).add( TypeMappers.transform( s, ServiceStatusType.class ) );
       }
     }
     return reply;

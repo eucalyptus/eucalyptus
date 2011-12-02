@@ -27,26 +27,8 @@
 use strict;
 use warnings;
 
-if ($#ARGV+1 < 6) {
-	die "Usage: simulate_one_user.pl num_instances interval duration storage_usage_mb kernel_image ramdisk_image image\n";
-}
-
-# SUB: generate_dummy_file -- Returns a path to a dummy-data file of n megabytes; creates if necessary
-# Takes a size (in MB) of dummy data, and returns a path to the resultant file
-sub generate_dummy_file($) {
-	my $size=$_[0];
-	my $time = time();
-	my $path = "dummy-$size-megabyte-$time.txt";
-	my $dummy_data = "f00d";
-	unless (-e $path) {
-		open FILE, ">$path" or die ("couldn't open dummy file for writing");
-		for (my $i=0; $i < $size<<20; $i+=length($dummy_data)) {
-			print FILE $dummy_data;
-		}
-		close FILE or die ("couldn't close dummy file");
-	}
-	sleep 2;
-	return $path;
+if ($#ARGV+1 < 7) {
+	die "Usage: simulate_one_user.pl num_instances instance_type interval duration upload_file storage_usage_mb image\n";
 }
 
 # SUB: parse_instance_ids -- parse the output of euca-run-instances or euca-describe-instances
@@ -76,6 +58,16 @@ sub parse_avail_zones($) {
 }
 
 
+sub rand_str($) {
+	return sprintf("%x",rand(2<<$_[0]));
+}
+
+sub cmd($) {
+	print "Executing command:$_[0]\n";
+	my $output = `$_[0]`;
+	print "Output:$output\n";
+}
+
 
 
 #
@@ -83,23 +75,24 @@ sub parse_avail_zones($) {
 #
 
 my $num_instances = shift;
+my $instance_type = shift;
 my $interval = shift;
 my $duration = shift;
+my $upload_file = shift;
 my $storage_usage_mb = shift;
-my $kernel_image = shift;
-my $ramdisk_image = shift;
 my $image = shift;
 
 my %instance_data = ();  # instance_id => status
 my $access_key = $ENV{"EC2_ACCESS_KEY"};
 my $secret_key = $ENV{"EC2_SECRET_KEY"};
 my $s3_url = $ENV{"S3_URL"};
-my $user = $ENV{"USER"};
 
-print "num_instances:$num_instances interval:$interval duration:$duration kernel:$kernel_image ramdisk:$ramdisk_image s3_url:$s3_url image:$image\n";
+print "num_instances:$num_instances type:$instance_type interval:$interval duration:$duration upload_file:$upload_file storage_usage_mb:$storage_usage_mb s3_url:$s3_url image:$image\n";
 
 # Run instances
-my $output = `euca-run-instances -n $num_instances --kernel $kernel_image --ramdisk $ramdisk_image $image` or die("starting instance failed");
+print "euca-run-instances -t $instance_type -n $num_instances $image";
+my $output = `euca-run-instances -t $instance_type -n $num_instances $image` or die("starting instance failed");
+print "output:$output\n";
 %instance_data = parse_instance_ids($output);
 foreach (keys %instance_data) {
 	print "Started instance id:$_\n";
@@ -129,19 +122,22 @@ $output = `euca-describe-availability-zones` or die("couldn't euca-describe-avai
 my @zones = parse_avail_zones($output);
 print "Using zone:$zones[0]\n";
 
+my $bucketname = "b-" . rand_str(32);
 
 # Allocate storage and s3 for each user, every INTERVAL, sleeping between
-for (my $i=0; ($i*$interval) < $duration; $i++) {
+#   Iterations should be as close to the INTERVAL time as possible, so subtract running time
+my $start_time = time(); # All storage start time
+my $itime = 0; # Iteration start time
+for (my $i=0; (time()-$start_time) < $duration; $i++) {
+	$itime = time();
 	print "iter:$i\n";
-	system("euca-create-volume --size $storage_usage_mb --zone $zones[0]") and die("creating volume failed");
+	cmd("euca-create-volume --size $storage_usage_mb --zone $zones[0]");
 	print "$i: Created volume\n";
-	my $time = time();
-	my $dummy_data_path = generate_dummy_file($storage_usage_mb);
-	print "$i: Created bucket\n";
-	system("euca-bundle-image -i $dummy_data_path");
-	system("euca-upload-bundle -b mybucket -m /tmp/$dummy_data_path.manifest.xml");
+	cmd("euca-bundle-image -i $upload_file");
+	#TODO: grab manifest path from this
+	cmd("euca-upload-bundle -b $bucketname -m /tmp/$upload_file.manifest.xml");
 	print "$i: Uploaded bundle\n";
-	sleep $interval;
+	sleep $interval - (time() - $itime);
 }
 
 # Terminate instances
@@ -150,5 +146,3 @@ foreach (keys %instance_data) {
 	print "Terminated instance:$_\n";
 }
 
-# Clean up dummy files
-system("rm -f dummy-*-megabyte*") or die("Couldn't clean up files");

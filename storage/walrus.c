@@ -82,11 +82,12 @@
 #include "misc.h"
 #include "walrus.h"
 
-#define TOTAL_RETRIES 10 /* download is retried in case of connection problems */
-#define FIRST_TIMEOUT 4 /* in seconds, goes in powers of two afterwards */
-#define CHUNK 262144 /* buffer size for decompression operations */
-#define BUFSIZE 4096 /* should be big enough for CERT and the signature */
-#define STRSIZE 245 /* for short strings: files, hosts, URLs */
+#define TOTAL_RETRIES 10 // download is retried in case of connection problems
+#define FIRST_TIMEOUT 4 // in seconds, goes in powers of two afterwards
+#define MAX_TIMEOUT 300 // in seconds, the cap for growing timeout values
+#define CHUNK 262144 // buffer size for decompression operations
+#define BUFSIZE 4096 // should be big enough for CERT and the signature
+#define STRSIZE 245 // for short strings: files, hosts, URLs
 #define WALRUS_ENDPOINT "/services/Walrus"
 #define DEFAULT_HOST_PORT "localhost:8773"
 #define GET_IMAGE_CMD "GetDecryptedImage"
@@ -132,18 +133,18 @@ static int walrus_request_timeout (const char * walrus_op, const char * verb, co
     /* isolate the PATH in the URL as it will be needed for signing */
     char * url_path;
     if (strncasecmp (url, "http://", 7)!=0) {
-        logprintfl (EUCAERROR, "{%u} walrus_request: URL must start with http://...\n");
+        logprintfl (EUCAERROR, "{%u} walrus_request: URL must start with http://...\n",(unsigned int)pthread_self());
         pthread_mutex_unlock(&wreq_mutex);
         return code;
     }
     if ((url_path=strchr(url+7, '/'))==NULL) { /* find first '/' after hostname */
-        logprintfl (EUCAERROR, "{%u} walrus_request: URL has no path\n");
+        logprintfl (EUCAERROR, "{%u} walrus_request: URL has no path\n",(unsigned int)pthread_self());
         pthread_mutex_unlock(&wreq_mutex);
         return code;
     }
 
     if (euca_init_cert()) {
-        logprintfl (EUCAERROR, "{%u} walrus_request: failed to initialize certificate\n");
+        logprintfl (EUCAERROR, "{%u} walrus_request: failed to initialize certificate\n",(unsigned int)pthread_self());
         pthread_mutex_unlock(&wreq_mutex);
         return code;
     }
@@ -155,11 +156,13 @@ static int walrus_request_timeout (const char * walrus_op, const char * verb, co
         return code;
     }
 
+    logprintfl(EUCADEBUG, "{%u} walrus_request: calling URL=%s\n", (unsigned int)pthread_self(), url);
+
     CURL * curl;
     CURLcode result;
     curl = curl_easy_init ();
     if (curl==NULL) {
-        logprintfl (EUCAERROR, "{%u} walrus_request: could not initialize libcurl\n");
+        logprintfl (EUCAERROR, "{%u} walrus_request: could not initialize libcurl\n",(unsigned int)pthread_self());
         close(fd);
         pthread_mutex_unlock(&wreq_mutex);
         return code;
@@ -169,6 +172,7 @@ static int walrus_request_timeout (const char * walrus_op, const char * verb, co
     curl_easy_setopt (curl, CURLOPT_ERRORBUFFER, error_msg);
     curl_easy_setopt (curl, CURLOPT_URL, url);
     curl_easy_setopt (curl, CURLOPT_HEADERFUNCTION, write_header);
+    // curl_easy_setopt (curl, CURLOPT_FOLLOWLOCATION, 1); // TODO: remove the comment once we want to follow redirects (e.g., on HTTP 407)
 
     if (strncmp (verb, "GET", 4)==0) {
         curl_easy_setopt (curl, CURLOPT_HTTPGET, 1L);
@@ -322,6 +326,8 @@ static int walrus_request_timeout (const char * walrus_op, const char * verb, co
             sleep (timeout);
             lseek (fd, 0L, SEEK_SET);
             timeout <<= 1;
+            if (timeout > MAX_TIMEOUT)
+                timeout = MAX_TIMEOUT;
         }
 
         retries--;
@@ -339,6 +345,7 @@ static int walrus_request_timeout (const char * walrus_op, const char * verb, co
     pthread_mutex_unlock(&wreq_mutex);
     return code;
 }
+
 static int walrus_request (const char * walrus_op, const char * verb, const char * requested_url, const char * outfile, const int do_compress) {
     return (walrus_request_timeout(walrus_op, verb, requested_url, outfile, do_compress, 0, 0));
 }

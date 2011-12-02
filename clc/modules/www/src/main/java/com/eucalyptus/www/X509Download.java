@@ -81,6 +81,8 @@ import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.User.RegistrationStatus;
+import com.eucalyptus.component.ServiceBuilder;
+import com.eucalyptus.component.ServiceBuilders;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.Topology;
@@ -154,6 +156,7 @@ public class X509Download extends HttpServlet {
     try {
       x509zip = getX509Zip( user );
     } catch ( Exception e ) {
+      LOG.debug( e, e );
       hasError( HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Fail to return user credentials", response );
       return;
     }
@@ -219,7 +222,17 @@ public class X509Download extends HttpServlet {
       //TODO:GRZE:FIXME velocity
       String userNumber = u.getAccount( ).getAccountNumber( );
       sb.append( "EUCA_KEY_DIR=$(dirname $(readlink -f ${BASH_SOURCE}))" );
-      sb.append( "\nexport EC2_URL=" + ServiceUris.remotePublicify( Topology.lookup( Eucalyptus.class ) ) );
+      if ( Topology.isEnabled( Eucalyptus.class ) ) {//GRZE:NOTE: this is temporary
+        sb.append( "\nexport EC2_URL=" + ServiceUris.remotePublicify( Topology.lookup( Eucalyptus.class ) ) );
+      } else {
+        sb.append( "\necho WARN:  Eucalyptus URL is not configured. >&2" );
+        ServiceBuilder<? extends ServiceConfiguration> builder = ServiceBuilders.lookup( Eucalyptus.class );
+        ServiceConfiguration localConfig = builder.newInstance( Internets.localHostAddress( ), 
+                                                                Internets.localHostAddress( ), 
+                                                                Internets.localHostAddress( ), 
+                                                                Eucalyptus.INSTANCE.getPort( ) );
+        sb.append( "\nexport EC2_URL=" + ServiceUris.remotePublicify( localConfig ) );
+      }
       if ( Topology.isEnabled( Walrus.class ) ) {
         ServiceConfiguration walrusConfig = Topology.lookup( Walrus.class );
         try {

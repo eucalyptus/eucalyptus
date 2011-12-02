@@ -103,13 +103,13 @@ public class SystemClock extends TimerTask implements UncaughtExceptionHandler {
         ListenerRegistry.getInstance( ).register( Hertz.class, new Dummy( ) );
         timer.scheduleAtFixedRate( clock, 0, 10000 );//TODO: make configurable
         hzTimer.scheduleAtFixedRate( hertz, 0, 1000 );
-        OrderedShutdown.register( Empyrean.class, new Runnable( ) {
+        OrderedShutdown.registerPreShutdownHook( new Runnable( ) {
           @Override
           public void run( ) {
             timer.cancel( );
           }
         } );
-        OrderedShutdown.register( Empyrean.class, new Runnable( ) {
+        OrderedShutdown.registerPreShutdownHook( new Runnable( ) {
           
           @Override
           public void run( ) {

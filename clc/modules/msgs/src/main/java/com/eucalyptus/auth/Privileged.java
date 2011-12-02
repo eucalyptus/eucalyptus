@@ -262,9 +262,12 @@ public class Privileged {
       user.setPath( newPath );
     }
     if ( enabled != null ) {
-      // Not allowed to modify admin user
-      if ( user.isAccountAdmin( ) ) {
+      // Not allowed to disable system account user
+      // Only system admin can disable account admin
+      if ( user.isSystemAdmin( ) ) {
         throw new AuthException( AuthException.ACCESS_DENIED );
+      } else if ( user.isAccountAdmin( ) && !requestUser.isSystemAdmin( ) ) {
+        throw new AuthException( AuthException.ACCESS_DENIED );  
       }
       user.setEnabled( enabled );
     }
@@ -290,9 +293,7 @@ public class Privileged {
     if ( value != null ) {
       user.setInfo( key, value );
     } else {
-      Map<String, String> infoMap = user.getInfo( );
-      infoMap.remove( key );
-      user.setInfo( infoMap );
+      user.removeInfo( key );
     }
   }
   

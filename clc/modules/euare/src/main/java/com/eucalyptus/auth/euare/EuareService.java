@@ -1329,17 +1329,16 @@ public class EuareService {
         throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to get user info by " + requestUser.getName( ) );
       }
       ArrayList<UserInfoType> infos = reply.getGetUserInfoResult( ).getInfos( ).getMemberList( );
-      Map<String, String> infoMap = userFound.getInfo( );
       if ( !Strings.isNullOrEmpty( request.getInfoKey( ) ) ) {
-        String value = infoMap.get( request.getInfoKey( ) );
+        String value = userFound.getInfo( request.getInfoKey( ) );
         if ( value != null ) {
           UserInfoType ui = new UserInfoType( );
-          ui.setKey( request.getInfoKey( ) );
+          ui.setKey( request.getInfoKey( ).toLowerCase( ) );
           ui.setValue( value );
           infos.add( ui );
         }
       } else {
-        for ( Map.Entry<String, String> entry : infoMap.entrySet( ) ) {
+        for ( Map.Entry<String, String> entry : userFound.getInfo( ).entrySet( ) ) {
           UserInfoType ui = new UserInfoType();
           ui.setKey( entry.getKey( ) );
           ui.setValue( entry.getValue( ) );
@@ -1521,13 +1520,15 @@ public class EuareService {
   
   private Account getRealAccount( Context ctx, String delegateAccount ) throws EuareException {
     Account requestAccount = ctx.getAccount( );
-    if ( Account.SYSTEM_ACCOUNT.equals( requestAccount.getName( ) ) ) {
-      if ( delegateAccount != null ) {
+    if ( delegateAccount != null ) {
+      if ( Account.SYSTEM_ACCOUNT.equals( requestAccount.getName( ) ) ) {
         try {
           return Accounts.lookupAccountByName( delegateAccount );
         } catch ( AuthException e ) {
-          throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find delegate account " + delegateAccount );
-        }
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Can not find delegation account " + delegateAccount );
+        }        
+      } else {
+        throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Non-sysadmin can not have delegation access to " + delegateAccount );
       }
     }
     return requestAccount;

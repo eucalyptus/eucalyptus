@@ -90,6 +90,7 @@ import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.callback.ConsoleOutputCallback;
 import com.eucalyptus.cluster.callback.PasswordDataCallback;
 import com.eucalyptus.cluster.callback.RebootCallback;
+import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.context.Context;
@@ -331,7 +332,8 @@ public class VmControl {
             if ( RestrictedTypes.filterPrivileged( ).apply( v ) ) {
               final Request<RebootInstancesType, RebootInstancesResponseType> req = AsyncRequests.newRequest( new RebootCallback( v.getInstanceId( ) ) );
               req.getRequest( ).regarding( request );
-              req.dispatch( Topology.lookup( ClusterController.class, v.lookupPartition( ) ) );
+              ServiceConfiguration ccConfig = Topology.lookup( ClusterController.class, v.lookupPartition( ) );
+              req.dispatch( ccConfig );
               return true;
             } else {
               return false;
@@ -377,9 +379,10 @@ public class VmControl {
     } else {
       Cluster cluster = null;
       try {
-        cluster = Clusters.getInstance( ).lookup( v.lookupPartition( ) );
+        ServiceConfiguration ccConfig = Topology.lookup( ClusterController.class, v.lookupPartition( ) );
+        cluster = Clusters.lookup( ccConfig );
       } catch ( final NoSuchElementException e1 ) {
-        throw new EucalyptusCloudException( "Failed to find cluster info for '" + v.lookupPartition( ) + "' related to vm: " + request.getInstanceId( ) );
+        throw new EucalyptusCloudException( "Failed to find cluster info for '" + v.getPartition( ) + "' related to vm: " + request.getInstanceId( ) );
       }
       RequestContext.getEventContext( ).setStopFurtherProcessing( true );
       AsyncRequests.newRequest( new ConsoleOutputCallback( request ) ).dispatch( cluster.getConfiguration( ) );
@@ -565,7 +568,8 @@ public class VmControl {
                                       v.getRuntimeState( ).getBundleTask( ).getBundleId( ),
                                       v.getInstanceId( ) ) );
         
-        final Cluster cluster = Clusters.lookup( v.lookupPartition( ) );
+        ServiceConfiguration ccConfig = Topology.lookup( ClusterController.class, v.lookupPartition( ) );
+        final Cluster cluster = Clusters.lookup( ccConfig );
         
         request.setInstanceId( v.getInstanceId( ) );
         reply.setTask( Bundles.transform( v.getRuntimeState( ).getBundleTask( ) ) );
@@ -614,7 +618,8 @@ public class VmControl {
                           ctx.getUserFullName( ).toString( ),
                           v.getRuntimeState( ).getBundleTask( ).getBundleId( ),
                           v.getInstanceId( ) ).debug( );
-        AsyncRequests.newRequest( Bundles.createCallback( request ) ).dispatch( Topology.lookup( ClusterController.class, v.lookupPartition( ) ) );
+        ServiceConfiguration cluster = Topology.lookup( ClusterController.class, v.lookupPartition( ) );
+        AsyncRequests.newRequest( Bundles.createCallback( request ) ).dispatch( cluster );
       } else {
         throw new EucalyptusCloudException( "Failed to find instance: " + request.getInstanceId( ) );
       }
@@ -641,7 +646,8 @@ public class VmControl {
         throw new NoSuchElementException( "Instance " + request.getInstanceId( ) + " is not in a running state." );
       }
       if ( RestrictedTypes.filterPrivileged( ).apply( v ) ) {
-        cluster = Clusters.lookup( Topology.lookup( ClusterController.class, v.lookupPartition( ) ) );
+        ServiceConfiguration ccConfig = Topology.lookup( ClusterController.class, v.lookupPartition( ) );
+        cluster = Clusters.lookup( ccConfig );
       } else {
         throw new NoSuchElementException( "Instance " + request.getInstanceId( ) + " does not exist." );
       }

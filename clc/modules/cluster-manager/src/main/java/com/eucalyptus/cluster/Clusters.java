@@ -76,6 +76,7 @@ import org.hibernate.annotations.Entity;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
@@ -103,10 +104,6 @@ public class Clusters extends AbstractNamedRegistry<Cluster> {
       hostOrdered.add( c.getConfiguration( ).getHostName( ) );
     }
     return Lists.newArrayList( hostOrdered );
-  }
-  
-  public static Cluster lookup( final Partition partition ) {
-    return Clusters.lookup( Partitions.lookupService( ClusterController.class, partition ) );
   }
   
   public static Cluster lookup( final ServiceConfiguration clusterConfig ) {

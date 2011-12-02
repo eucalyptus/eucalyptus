@@ -110,21 +110,22 @@ import edu.ucsb.eucalyptus.msgs.IpPermissionType;
 import edu.ucsb.eucalyptus.msgs.SecurityGroupItemType;
 import edu.ucsb.eucalyptus.msgs.UserIdGroupPairType;
 
-@ConfigurableClass( root = "cloud.network", description = "Default values used to bootstrap networking state discovery." )
+@ConfigurableClass( root = "cloud.network",
+                    description = "Default values used to bootstrap networking state discovery." )
 public class NetworkGroups {
   private static final String DEFAULT_NETWORK_NAME          = "default";
   private static Logger       LOG                           = Logger.getLogger( NetworkGroups.class );
   private static String       NETWORK_DEFAULT_NAME          = "default";
   
-  @ConfigurableField( initial = "4096", description = "Default max network index." )
+  @ConfigurableField( description = "Default max network index." )
   public static Long          GLOBAL_MAX_NETWORK_INDEX      = 4096l;
-  @ConfigurableField( initial = "1", description = "Default min network index." )
+  @ConfigurableField( description = "Default min network index." )
   public static Long          GLOBAL_MIN_NETWORK_INDEX      = 2l;
-  @ConfigurableField( initial = "" + 4096, description = "Default max vlan tag." )
+  @ConfigurableField( description = "Default max vlan tag." )
   public static Integer       GLOBAL_MAX_NETWORK_TAG        = 4096;
-  @ConfigurableField( initial = "1", description = "Default min vlan tag." )
+  @ConfigurableField( description = "Default min vlan tag." )
   public static Integer       GLOBAL_MIN_NETWORK_TAG        = 1;
-  @ConfigurableField( initial = "5", description = "Minutes before a pending index allocation timesout and is released." )
+  @ConfigurableField( description = "Minutes before a pending index allocation timesout and is released." )
   public static Integer       NETWORK_INDEX_PENDING_TIMEOUT = 5;
   
   public static class NetworkRangeConfiguration {
@@ -207,13 +208,31 @@ public class NetworkGroups {
     netConfig.setUseNetworkTags( netTagging.get( ) );
     try {
       Properties.lookup( NetworkGroups.class, "GLOBAL_MAX_NETWORK_INDEX" ).setValue( netConfig.getMaxNetworkIndex( ).toString( ) );
+    } catch ( IllegalAccessException ex ) {
+      Logs.extreme( ).error( ex );
+    } catch ( NoSuchFieldException ex ) {
+      Logs.extreme( ).error( ex );
+    }
+    try {
       Properties.lookup( NetworkGroups.class, "GLOBAL_MIN_NETWORK_INDEX" ).setValue( netConfig.getMinNetworkIndex( ).toString( ) );
+    } catch ( IllegalAccessException ex ) {
+      Logs.extreme( ).error( ex );
+    } catch ( NoSuchFieldException ex ) {
+      Logs.extreme( ).error( ex );
+    }
+    try {
       Properties.lookup( NetworkGroups.class, "GLOBAL_MAX_NETWORK_TAG" ).setValue( netConfig.getMaxNetworkTag( ).toString( ) );
+    } catch ( IllegalAccessException ex ) {
+      Logs.extreme( ).error( ex );
+    } catch ( NoSuchFieldException ex ) {
+      Logs.extreme( ).error( ex );
+    }
+    try {
       Properties.lookup( NetworkGroups.class, "GLOBAL_MIN_NETWORK_TAG" ).setValue( netConfig.getMinNetworkTag( ).toString( ) );
     } catch ( IllegalAccessException ex ) {
-      LOG.error( ex, ex );
+      Logs.extreme( ).error( ex );
     } catch ( NoSuchFieldException ex ) {
-      LOG.error( ex, ex );
+      Logs.extreme( ).error( ex );
     }
   }
   

@@ -208,7 +208,7 @@ public class AdmissionControl {
   enum NodeResourceAllocator implements ResourceAllocator {
     INSTANCE;
     private List<ResourceToken> requestResourceToken( final Allocation allocInfo, final int tryAmount, final int maxAmount ) throws Exception {
-      ServiceConfiguration config = Partitions.lookupService( ClusterController.class, allocInfo.getPartition( ) );
+      ServiceConfiguration config = Topology.lookup( ClusterController.class, allocInfo.getPartition( ) );
       Cluster cluster = Clusters.lookup( config );
       final ResourceState state = cluster.getNodeState( );
       final List<ResourceToken> tokens = state.requestResourceAllocation( allocInfo, tryAmount, maxAmount );
@@ -259,7 +259,7 @@ public class AdmissionControl {
               try {
                 ServiceConfiguration sc = Topology.lookup( Storage.class, partition );
               } catch ( Exception ex ) {
-                throw new NotEnoughResourcesException( "Not enough resources: " + ex.getMessage( ), ex );
+                throw new NotEnoughResourcesException( "Not enough resources: Cannot run EBS instances in partition w/o a storage controller: " + ex.getMessage( ), ex );
               }
             }
             try {
@@ -307,7 +307,8 @@ public class AdmissionControl {
           return Lists.newArrayList( sorted.values( ) );
         }
       } else {
-        Cluster cluster = Clusters.getInstance( ).lookup( Partitions.lookupService( ClusterController.class, partitionName ) );
+        ServiceConfiguration ccConfig = Topology.lookup( ClusterController.class, Partitions.lookupByName( partitionName ) );
+        Cluster cluster = Clusters.lookup( ccConfig );
         if ( cluster == null ) {
           throw new NotEnoughResourcesException( "Can't find cluster " + partitionName );
         }

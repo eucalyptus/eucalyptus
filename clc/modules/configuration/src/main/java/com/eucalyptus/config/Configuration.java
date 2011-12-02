@@ -96,6 +96,11 @@ public class Configuration {
     @Override
     public ComponentInfoType apply( final ServiceConfiguration input ) {
       return new ComponentInfoType( ) {
+        /**
+         * 
+         */
+        private static final long serialVersionUID = 1L;
+
         {
           this.setType( input.getComponentId( ).name( ) );
           this.setPartition( input.getPartition( ) );
@@ -104,12 +109,10 @@ public class Configuration {
           this.setFullName( input.getFullName( ).toString( ) );
           try {
             this.setState( input.lookupState( ).toString( ) );
-          } catch ( Exception ex ) {
+          } catch ( final Exception ex ) {
             this.setState( "n/a: " + ex.getMessage( ) );
           }
-          this.setDetail( input.lookupDetails( ).isEmpty( )
-                     ? ""
-                     : input.lookupDetails( ).iterator( ).next( ).toString( ) );
+          this.setDetail( "" );
         }
       };
     }
@@ -117,7 +120,7 @@ public class Configuration {
   }
   
   public static RegisterComponentResponseType registerComponent( final RegisterComponentType request ) throws EucalyptusCloudException {
-    ServiceBuilder<? extends ServiceConfiguration> builder = ServiceBuilders.handles( request.getClass( ) );
+    final ServiceBuilder<? extends ServiceConfiguration> builder = ServiceBuilders.handles( request.getClass( ) );
     final ComponentId componentId = builder.getComponentId( );
     final RegisterComponentResponseType reply = request.getReply( );
     final String name = request.getName( );
@@ -144,24 +147,24 @@ public class Configuration {
     try {
       reply.set_return( ComponentRegistrationHandler.register( componentId, partition, name, hostName, port ) );
     } catch ( final Throwable ex ) {
-    //  throw new EucalyptusCloudException( "Component registration failed because: " + ex.getMessage( ), ex );
-    	reply.set_return(false);
-    	reply.setStatusMessage(ex.getMessage());
-    	
+      //  throw new EucalyptusCloudException( "Component registration failed because: " + ex.getMessage( ), ex );
+      reply.set_return( false );
+      reply.setStatusMessage( ex.getMessage( ) );
+      
     }
     return reply;
   }
   
   public static DeregisterComponentResponseType deregisterComponent( final DeregisterComponentType request ) throws EucalyptusCloudException {
-    ServiceBuilder<? extends ServiceConfiguration> builder = ServiceBuilders.handles( request.getClass( ) );
+    final ServiceBuilder<? extends ServiceConfiguration> builder = ServiceBuilders.handles( request.getClass( ) );
     final ComponentId componentId = builder.getComponentId( );
     final DeregisterComponentResponseType reply = ( DeregisterComponentResponseType ) request.getReply( );
     try {
-    	reply.set_return( ComponentRegistrationHandler.deregister( componentId, request.getName() ) );
+      reply.set_return( ComponentRegistrationHandler.deregister( componentId, request.getName( ) ) );
     } catch ( final Throwable ex ) {
       //throw new EucalyptusCloudException( "Component deregistration failed because: " + ex.getMessage( ), ex );
-    	reply.set_return(false);
-    	reply.setStatusMessage(ex.getMessage());
+      reply.set_return( false );
+      reply.setStatusMessage( ex.getMessage( ) );
     }
     return reply;
   }
@@ -192,6 +195,11 @@ public class Configuration {
       for ( final Component c : Components.list( ) ) {
         if ( !c.hasLocalService( ) ) {
           listConfigs.add( new ComponentInfoType( ) {
+            /**
+             * 
+             */
+            private static final long serialVersionUID = 1L;
+
             {
               this.setType( c.getComponentId( ).name( ) );
               this.setPartition( c.getComponentId( ).getPartition( ) );
@@ -204,7 +212,7 @@ public class Configuration {
           } );
         } else {
           final ServiceConfiguration config = c.getLocalServiceConfiguration( );
-          ComponentInfoType info = TypeMappers.transform( config, ComponentInfoType.class );
+          final ComponentInfoType info = TypeMappers.transform( config, ComponentInfoType.class );
           if ( !Boolean.TRUE.equals( request.getVerbose( ) ) ) {
             info.setDetail( "" );
           }
@@ -212,9 +220,9 @@ public class Configuration {
         }
       }
     } else {
-      ServiceBuilder<? extends ServiceConfiguration> compId = ServiceBuilders.handles( request.getClass( ) );
+      final ServiceBuilder<? extends ServiceConfiguration> compId = ServiceBuilders.handles( request.getClass( ) );
       for ( final ServiceConfiguration config : ServiceConfigurations.list( compId.getComponentId( ).getClass( ) ) ) {
-        ComponentInfoType info = TypeMappers.transform( config, ComponentInfoType.class );
+        final ComponentInfoType info = TypeMappers.transform( config, ComponentInfoType.class );
         if ( !Boolean.TRUE.equals( request.getVerbose( ) ) ) {
           info.setDetail( "" );
         }

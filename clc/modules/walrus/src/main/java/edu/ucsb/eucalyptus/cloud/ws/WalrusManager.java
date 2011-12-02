@@ -256,16 +256,6 @@ public class WalrusManager {
 		} catch (EucalyptusCloudException ex) {
 			LOG.fatal(ex);
 		}
-		EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
-		BucketInfo bucketInfo = new BucketInfo();
-		List<BucketInfo> bucketInfos = db.query(bucketInfo);
-		for (BucketInfo bucket : bucketInfos) {
-			if (!storageManager.bucketExists(bucket.getBucketName()))
-				bucket.setHidden(true);
-			else
-				bucket.setHidden(false);
-		}
-		db.commit();
 	}
 
 	public ListAllMyBucketsResponseType listAllMyBuckets(
@@ -383,48 +373,52 @@ public class WalrusManager {
 			// bucket already exists
 			db.rollback();
 			throw new BucketAlreadyExistsException(bucketName);
-		} else if (ctx.hasAdministrativePrivileges() || (
-				Permissions.isAuthorized(PolicySpec.VENDOR_S3,
-						PolicySpec.S3_RESOURCE_BUCKET,
-						"",
-						ctx.getAccount(),
-						PolicySpec.S3_CREATEBUCKET,
-						ctx.getUser()) &&
-						Permissions.canAllocate(PolicySpec.VENDOR_S3,
-								PolicySpec.S3_RESOURCE_BUCKET,
-								"",
-								PolicySpec.S3_CREATEBUCKET,
-								ctx.getUser(),
-								1L))){
-			// create bucket and set its acl
-			BucketInfo bucket = new BucketInfo(account.getAccountNumber(), ctx.getUser( ).getUserId( ), bucketName, new Date());
-			ArrayList<GrantInfo> grantInfos = new ArrayList<GrantInfo>();
-			bucket.addGrants(account.getAccountNumber(), grantInfos, accessControlList);
-			bucket.setGrants(grantInfos);
-			bucket.setBucketSize(0L);
-			bucket.setLoggingEnabled(false);
-			bucket.setVersioning(WalrusProperties.VersioningStatus.Disabled
-					.toString());
-			bucket.setHidden(false);
-			if (locationConstraint != null)
-				bucket.setLocation(locationConstraint);
-			else
-				bucket.setLocation("US");
-			db.add(bucket);
-			// call the storage manager to save the bucket to disk
-			try {
-				storageManager.createBucket(bucketName);
-				if (WalrusProperties.trackUsageStatistics)
-					walrusStatistics.incrementBucketCount();
-				db.commit();
-			} catch (IOException ex) {
-				LOG.error(ex);
-				db.rollback();
-				throw new EucalyptusCloudException("Unable to create bucket: "
-						+ bucketName);
-			}
+		} else {
+		  if (ctx.hasAdministrativePrivileges() || (
+		      Permissions.isAuthorized(PolicySpec.VENDOR_S3,
+		                               PolicySpec.S3_RESOURCE_BUCKET,
+		                               "",
+		                               ctx.getAccount(),
+		                               PolicySpec.S3_CREATEBUCKET,
+		                               ctx.getUser()) &&
+		                               Permissions.canAllocate(PolicySpec.VENDOR_S3,
+		                                                       PolicySpec.S3_RESOURCE_BUCKET,
+		                                                       "",
+		                                                       PolicySpec.S3_CREATEBUCKET,
+		                                                       ctx.getUser(),
+		                                                       1L))) {
+		    // create bucket and set its acl
+		    BucketInfo bucket = new BucketInfo(account.getAccountNumber(), ctx.getUser( ).getUserId( ), bucketName, new Date());
+		    ArrayList<GrantInfo> grantInfos = new ArrayList<GrantInfo>();
+		    bucket.addGrants(account.getAccountNumber(), grantInfos, accessControlList);
+		    bucket.setGrants(grantInfos);
+		    bucket.setBucketSize(0L);
+		    bucket.setLoggingEnabled(false);
+		    bucket.setVersioning(WalrusProperties.VersioningStatus.Disabled
+		                         .toString());
+		    bucket.setHidden(false);
+		    if (locationConstraint != null)
+		      bucket.setLocation(locationConstraint);
+		    else
+		      bucket.setLocation("US");
+		    db.add(bucket);
+		    // call the storage manager to save the bucket to disk
+		    try {
+		      storageManager.createBucket(bucketName);
+		      if (WalrusProperties.trackUsageStatistics)
+		        walrusStatistics.incrementBucketCount();
+		      db.commit();
+		    } catch (IOException ex) {
+		      LOG.error(ex);
+		      db.rollback();
+		      throw new EucalyptusCloudException("Unable to create bucket: " + bucketName);
+		    }
+		  } else {
+		    LOG.error( "Not authorized to create bucket by " + ctx.getUserFullName( ) );
+        db.rollback();
+        throw new AccessDeniedException("Bucket", bucketName);
+		  }
 		}
-
 		reply.setBucket(bucketName);
 		return reply;
 	}
@@ -600,6 +594,10 @@ public class WalrusManager {
 					}
 				}
 				accessControlList.setGrants(grants);
+			} else {
+        LOG.error( "Not authorized to get bucket ACL by " + ctx.getUserFullName( ) );
+        db.rollback();
+        throw new AccessDeniedException("Bucket", bucketName, logData);
 			}
 		} else {
 			db.rollback();
@@ -2965,6 +2963,10 @@ public class WalrusManager {
 					else
 						reply.setVersioningStatus(status);
 				}
+			} else {
+        LOG.error( "Not authorized to get bucket version status by " + ctx.getUserFullName( ) );
+        db.rollback();
+        throw new AccessDeniedException("Bucket", bucketInfo.getBucketName( ) );			  
 			}
 		} catch (EucalyptusCloudException ex) {
 			db.rollback();
