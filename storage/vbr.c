@@ -1851,7 +1851,7 @@ static blobstore * create_teststore (int size_blocks, const char * base, const c
         return NULL;
     }
     printf ("created %s\n", bs_path);
-    blobstore * bs = blobstore_open (bs_path, size_blocks, format, revocation, snapshot);
+    blobstore * bs = blobstore_open (bs_path, size_blocks, BLOBSTORE_FLAG_CREAT, format, revocation, snapshot);
     if (bs==NULL) {
         printf ("ERROR: %s\n", blobstore_get_error_str(blobstore_get_error()));
         return NULL;
