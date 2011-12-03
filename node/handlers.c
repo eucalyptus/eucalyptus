@@ -915,7 +915,7 @@ static int init (void)
 	GET_VAR_INT(nc_state.config_max_mem,      CONFIG_MAX_MEM, 0);
 	GET_VAR_INT(nc_state.config_max_cores,    CONFIG_MAX_CORES, 0);
 	GET_VAR_INT(nc_state.save_instance_files, CONFIG_SAVE_INSTANCES, 0);
-    GET_VAR_INT(nc_state.concurrent_disk_ops, CONFIG_CONCURRENT_DISK_OPS, 1);
+    GET_VAR_INT(nc_state.concurrent_disk_ops, CONFIG_CONCURRENT_DISK_OPS, 4);
     int disable_injection; GET_VAR_INT(disable_injection, CONFIG_DISABLE_KEY_INJECTION, 0); 
     nc_state.do_inject_key = !disable_injection;
     strcpy(nc_state.admin_user_id, EUCALYPTUS_ADMIN);
