@@ -1147,7 +1147,6 @@ static int init (void)
 	logprintfl(EUCAINFO, "physical memory available for instances: %lldMB\n", nc_state.mem_max);
 	logprintfl(EUCAINFO, "virtual cpu cores available for instances: %lld\n", nc_state.cores_max);
 
-
 	// adopt running instances
 	adopt_instances();
 

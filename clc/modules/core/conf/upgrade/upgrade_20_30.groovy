@@ -619,6 +619,10 @@ class upgrade_20_30 extends AbstractUpgradeScript {
         def oldHome = System.getProperty( "euca.upgrade.old.dir" );
         def newHome = System.getProperty( "euca.upgrade.new.dir" );
 
+        if (!has_table('eucalyptus_config', 'config_vmwarebroker')) {
+            return true;
+        }
+
         connMap['eucalyptus_config'].rows('SELECT * FROM  config_vmwarebroker').each{
             EntityWrapper<VMwareBrokerConfiguration> dbcfg = EntityWrapper.get(VMwareBrokerConfiguration.class);
             VMwareBrokerConfiguration broker = new VMwareBrokerConfiguration(it.config_component_name, it.config_component_name + '_vmbroker', it.config_component_hostname, it.config_component_port);
