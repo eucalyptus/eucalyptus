@@ -978,14 +978,16 @@ static int init (void)
         // determine how much is used/available in work and cache areas on the backing store
         blobstore_meta work_meta, cache_meta;
         stat_backing_store (instance_path, &work_meta, &cache_meta); // will zero-out work_ and cache_meta
-        long long work_bs_size_mb   = work_meta.blocks_limit  ? (work_meta.blocks_limit / 2048) : -1; // convert sectors->MB
-        long long work_bs_used_mb  = work_meta.blocks_limit  ? ((work_meta.blocks_allocated + work_meta.blocks_used) / 2048) : 0;
-        long long cache_bs_size_mb  = cache_meta.blocks_limit ? (cache_meta.blocks_limit / 2048) : -1;
-        long long cache_bs_used_mb = cache_meta.blocks_limit ? ((cache_meta.blocks_allocated + cache_meta.blocks_used) / 2048) : 0;
+        long long work_bs_size_mb       = work_meta.blocks_limit  ? (work_meta.blocks_limit / 2048) : (-1L); // convert sectors->MB
+        long long work_bs_allocated_mb  = work_meta.blocks_limit  ? (work_meta.blocks_allocated / 2048) : 0;
+        long long work_bs_reserved_mb   = work_meta.blocks_limit  ? ((work_meta.blocks_locked + work_meta.blocks_unlocked) / 2048) : 0;
+        long long cache_bs_size_mb      = cache_meta.blocks_limit ? (cache_meta.blocks_limit / 2048) : (-1L);
+        long long cache_bs_allocated_mb = cache_meta.blocks_limit ? (cache_meta.blocks_allocated / 2048) : 0;
+        long long cache_bs_reserved_mb  = cache_meta.blocks_limit ? ((cache_meta.blocks_locked + cache_meta.blocks_unlocked) / 2048) : 0;
 
         // look up configuration file settings for work and cache size
-        int conf_work_size_mb  = -1; GET_VAR_INT(conf_work_size_mb,  CONFIG_NC_WORK_SIZE);
-        int conf_cache_size_mb = -1; GET_VAR_INT(conf_cache_size_mb, CONFIG_NC_CACHE_SIZE);
+        long long conf_work_size_mb  = -1; GET_VAR_INT(conf_work_size_mb,  CONFIG_NC_WORK_SIZE);
+        long long conf_cache_size_mb = -1; GET_VAR_INT(conf_cache_size_mb, CONFIG_NC_CACHE_SIZE);
         { // accommodate legacy MAX_DISK setting by converting it
             int max_disk_gb = -1; GET_VAR_INT(max_disk_gb, CONFIG_MAX_DISK);        
             if (max_disk_gb != -1) {
@@ -999,8 +1001,8 @@ static int init (void)
         }
 
         // decide what work and cache sizes should be, based on all the inputs
-        int work_size_mb = -1;
-        int cache_size_mb = -1;
+        long long work_size_mb = -1;
+        long long cache_size_mb = -1;
 
         // above all, try to respect user-specified limits for work and cache
         if (conf_work_size_mb != -1) {
@@ -1009,7 +1011,7 @@ static int init (void)
                             CONFIG_NC_WORK_SIZE, conf_work_size_mb, MIN_BLOBSTORE_SIZE_MB);
             } else {
                 if (work_bs_size_mb != -1 && work_bs_size_mb != conf_work_size_mb) {
-                    logprintfl (EUCAWARN, "warning: specified work size (%s=%d) differs from existing work limits (%d), will try resizing\n",
+                    logprintfl (EUCAWARN, "warning: specified work size (%s=%d) differs from existing work size (%d), will try resizing\n",
                                 CONFIG_NC_WORK_SIZE, conf_work_size_mb, work_bs_size_mb);
                 }
                 work_size_mb = conf_work_size_mb;
@@ -1020,7 +1022,7 @@ static int init (void)
                 cache_size_mb = 0; // so it won't be used
             } else {
                 if (cache_bs_size_mb != -1 && cache_bs_size_mb != conf_cache_size_mb) {
-                    logprintfl (EUCAWARN, "warning: specified cache size (%s=%d) differs from existing cache limits (%d), will try resizing\n",
+                    logprintfl (EUCAWARN, "warning: specified cache size (%s=%d) differs from existing cache size (%d), will try resizing\n",
                                 CONFIG_NC_CACHE_SIZE, conf_cache_size_mb, cache_bs_size_mb);
                 }
                 cache_size_mb = conf_cache_size_mb;
@@ -1040,20 +1042,21 @@ static int init (void)
             work_size_mb = (long long)((double)(fs_avail_mb - FS_BUFFER_MB) * WORK_BS_PERCENT);
             cache_size_mb = fs_avail_mb - FS_BUFFER_MB - work_size_mb;
         } else if (work_size_mb == -1) {
-            work_size_mb = fs_avail_mb - FS_BUFFER_MB - cache_size_mb + cache_bs_used_mb;
+            work_size_mb = fs_avail_mb - FS_BUFFER_MB - cache_size_mb + cache_bs_allocated_mb;
         } else if (cache_size_mb == -1) {
-            cache_size_mb = fs_avail_mb - FS_BUFFER_MB - work_size_mb + work_bs_used_mb;
+            cache_size_mb = fs_avail_mb - FS_BUFFER_MB - work_size_mb + work_bs_allocated_mb;
         }
 
         // sanity-check final results
         if (cache_size_mb < MIN_BLOBSTORE_SIZE_MB)
             cache_size_mb = 0;
         if (work_size_mb < MIN_BLOBSTORE_SIZE_MB) {
-            logprintfl (EUCAERROR, "error: insufficient disk space (%d) for virtual machines\n", work_size_mb);
+            logprintfl (EUCAERROR, "error: insufficient disk space for virtual machines (free space: %dMB, reserved for cache: %dMB)\n", 
+                        work_size_mb, (fs_avail_mb - FS_BUFFER_MB), cache_size_mb);
             free (instance_path);
             return ERROR_FATAL;
         }
-        if ((cache_size_mb + work_size_mb - cache_bs_used_mb - work_bs_used_mb) > fs_avail_mb) {
+        if ((cache_size_mb + work_size_mb - cache_bs_allocated_mb - work_bs_allocated_mb) > fs_avail_mb) {
             logprintfl (EUCAWARN, "warning: sum of work and cache sizes exceeds available disk space\n");
         }
 
@@ -1067,12 +1070,28 @@ static int init (void)
         nc_state.disk_max = (long long)(work_size_mb / MB_PER_DISK_UNIT);
 
         logprintfl (EUCAINFO, "disk space for instances: %s/work\n", instance_path);
-        logprintfl (EUCAINFO, "                          %06lldMB allocated (%03.1f% of the file system)\n", work_size_mb, (work_size_mb/fs_size_mb)*100.0 );
-        logprintfl (EUCAINFO, "                          %06lldMB in use (%03.1% of allocated)\n", work_bs_used_mb, (work_bs_used_mb/work_size_mb)*100.0 );
+        logprintfl (EUCAINFO, "                          %06lldMB limit (%.1f%% of the file system)\n", 
+                    work_size_mb, 
+                    ((double)work_size_mb/(double)fs_size_mb)*100.0 );
+        logprintfl (EUCAINFO, "                          %06lldMB reserved for use (%.1f%% of limit)\n", 
+                    work_bs_reserved_mb, 
+                    ((double)work_bs_reserved_mb/(double)work_size_mb)*100.0 );
+        logprintfl (EUCAINFO, "                          %06lldMB allocated for use (%.1f%% of limit, %.1f%% of file system)\n", 
+                    work_bs_allocated_mb, 
+                    ((double)work_bs_allocated_mb/(double)work_size_mb)*100.0,
+                    ((double)work_bs_allocated_mb/(double)fs_size_mb)*100.0 );
         if (cache_size_mb) {
             logprintfl (EUCAINFO, "    disk space for cache: %s/cache\n", instance_path);
-            logprintfl (EUCAINFO, "                          %06lldMB allocated (%03.1f% of the file system)\n", cache_size_mb, (cache_size_mb/fs_size_mb)*100.0 );
-            logprintfl (EUCAINFO, "                          %06lldMB in use (%03.1% of allocated)\n", cache_bs_used_mb, (cache_bs_used_mb/cache_size_mb)*100.0 );
+            logprintfl (EUCAINFO, "                          %06lldMB limit (%.1f%% of the file system)\n", 
+                        cache_size_mb, 
+                        ((double)cache_size_mb/(double)fs_size_mb)*100.0 );
+            logprintfl (EUCAINFO, "                          %06lldMB reserved for use (%.1f%% of limit)\n", 
+                        cache_bs_reserved_mb,
+                        ((double)cache_bs_reserved_mb/(double)cache_size_mb)*100.0 );
+            logprintfl (EUCAINFO, "                          %06lldMB allocated for use (%.1f%% of limit, %.1f%% of file system)\n", 
+                        cache_bs_allocated_mb, 
+                        ((double)cache_bs_allocated_mb/(double)cache_size_mb)*100.0,
+                        ((double)cache_bs_allocated_mb/(double)fs_size_mb)*100.0 );
         } else {
             logprintfl (EUCAWARN, "warning: disk cache will not be used\n");
         }
@@ -1118,6 +1137,16 @@ static int init (void)
 		logprintfl(EUCAFATAL, "ERROR: failed to initialized hypervisor driver!\n");
 		return ERROR_FATAL;
 	}
+
+	// now that hypervisor-specific initializers have discovered mem_max and cores_max,
+    // adjust the values based on configuration parameters, if any
+	if (nc_state.config_max_mem && nc_state.config_max_mem < nc_state.mem_max)
+		nc_state.mem_max = nc_state.config_max_mem;
+	if (nc_state.config_max_cores)
+		nc_state.cores_max = nc_state.config_max_cores;
+	logprintfl(EUCAINFO, "physical memory available for instances: %lldMB\n", nc_state.mem_max);
+	logprintfl(EUCAINFO, "virtual cpu cores available for instances: %lld\n", nc_state.cores_max);
+
 
 	// adopt running instances
 	adopt_instances();
