@@ -166,6 +166,7 @@ typedef struct _blockblob {
     char device_path [BLOBSTORE_MAX_PATH]; // full path of a block device on which blob can be accessed
     char dm_name [MAX_DM_NAME]; // name of the main device mapper device if this is a clone
     unsigned long long size_bytes; // size of the blob in bytes
+    unsigned long long blocks_allocated; // actual number of blocks on disk taken by the blob
     blobstore_snapshot_t snapshot_type; // ANY = not initialized/known, NONE = not a snapshot, DM = DM-based snapshot
     unsigned int in_use; // flags showing how the blockblob is being used (OPENED, LOCKED, LINKED)
     time_t last_accessed; // timestamp of last access
@@ -205,8 +206,9 @@ typedef struct _blockblob_meta {
 typedef struct _blobstore_meta {
     char id [BLOBSTORE_MAX_PATH]; // ID of the blobstore, to handle directory moving
     unsigned long long blocks_limit; // max size of the blobstore, in blocks
-    unsigned long long blocks_allocated; // number of blocks in blobstore allocated to a blob that is not in use and is not mapped
-    unsigned long long blocks_used; // number of blocks in blobstore allocated to a blob that is in use or is mapped (a dependency)
+    unsigned long long blocks_unlocked;  // number of blocks in blobstore allocated to blobs that are not in use and is not mapped
+    unsigned long long blocks_locked;    // number of blocks in blobstore allocated to blobs that are in use or is mapped (a dependency)
+    unsigned long long blocks_allocated; // number of blocks in blobstore that have been allocated on disk
     unsigned int num_blobs; // count of blobs in the blobstore
     blobstore_revocation_t revocation_policy; 
     blobstore_snapshot_t snapshot_policy;

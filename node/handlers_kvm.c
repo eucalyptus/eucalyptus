@@ -97,9 +97,7 @@ static int doInitialize (struct nc_state_t *nc)
 {
 	char *s = NULL;
         
-	logprintfl(EUCADEBUG, "doInitialized() invoked\n");
-
-	/* set up paths of Eucalyptus commands NC relies on */
+	// set up paths of Eucalyptus commands NC relies on
 	snprintf (nc->get_info_cmd_path, MAX_PATH, EUCALYPTUS_GET_KVM_INFO,  nc->home, nc->home);
 	strcpy(nc->uri, HYPERVISOR_URI);
 	nc->convert_to_disk = 1;
@@ -117,17 +115,8 @@ static int doInitialize (struct nc_state_t *nc)
 	GET_VALUE("total_memory", nc->mem_max);
 	if (s) free(s);
 
-	/* we leave 256M to the host  */
+	// we leave 256M to the host
 	nc->mem_max -= 256;
-
-	/* let's adjust the values based on the config values */
-	if (nc->config_max_mem && nc->config_max_mem < nc->mem_max)
-		nc->mem_max = nc->config_max_mem;
-	if (nc->config_max_cores)
-		nc->cores_max = nc->config_max_cores;
-
-	logprintfl(EUCAINFO, "Using %lld cores\n", nc->cores_max);
-	logprintfl(EUCAINFO, "Using %lld memory\n", nc->mem_max);
 
 	return OK;
 }

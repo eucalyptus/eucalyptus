@@ -736,12 +736,11 @@ static int read_store_metadata (blobstore * bs)
 
     if (size == -1)
         return -1;
-
     if (size<30) { 
         ERR (BLOBSTORE_ERROR_NOENT, "metadata size is too small"); 
         return -1; 
     }
-    
+
     char * val;
     if ((val = get_val (buf, "id"))==NULL) 
         return -1; 
@@ -766,6 +765,8 @@ static int write_store_metadata (blobstore * bs)
 {
     if (ftruncate (bs->fd, 0)==-1)
         { ERR (BLOBSTORE_ERROR_NOENT, "failed to truncate the metadata file"); return -1; }
+    if (lseek (bs->fd, 0, SEEK_SET)==-1) 
+        { ERR (BLOBSTORE_ERROR_ACCES, "failed to seek in metadata file"); return -1; }
     char buf [1024];
     snprintf (buf, sizeof (buf), 
               "id: %s\n"      \
@@ -778,8 +779,9 @@ static int write_store_metadata (blobstore * bs)
               bs->revocation_policy,
               bs->snapshot_policy,
               bs->format);
-    int len = write (bs->fd, buf, strlen (buf));
-    if (len != strlen (buf))
+    int slen = strlen (buf);
+    int len = write (bs->fd, buf, slen);
+    if (len != slen)
         { ERR (BLOBSTORE_ERROR_NOENT, "failed to write to the metadata file"); return -1; }
         
     return 0;
@@ -833,6 +835,8 @@ blobstore * blobstore_open ( const char * path,
                              blobstore_revocation_t revocation_policy,
                              blobstore_snapshot_t snapshot_policy)
 {
+    int saved_errno;
+
     if (blobstore_init()) 
         return NULL;
 
@@ -906,7 +910,9 @@ blobstore * blobstore_open ( const char * path,
             ERR (BLOBSTORE_ERROR_INVAL, "'limit_blocks' does not match existing blobstore");
             goto free;
         } else {
+            logprintfl (EUCAINFO, "adjusting blobstore limit from %d to %d\n", bs->limit_blocks, limit_blocks);
             write_flags = BLOBSTORE_FLAG_RDWR;
+            close_and_unlock (bs->fd);
             goto write_metadata;
         }
     }
@@ -927,6 +933,7 @@ blobstore * blobstore_open ( const char * path,
             goto free;
         } else {
             write_flags = BLOBSTORE_FLAG_RDWR;
+            close_and_unlock (bs->fd);
             goto write_metadata;
         }
     }
@@ -936,11 +943,14 @@ blobstore * blobstore_open ( const char * path,
     goto out;
 
  free:
+    saved_errno = _blobstore_errno;
     close_and_unlock (bs->fd);
     if (bs) {
         free (bs);
         bs = NULL;
     }
+    _blobstore_errno = saved_errno;
+
  out:
     return bs;
 }
@@ -1445,6 +1455,7 @@ static blockblob ** walk_bs (blobstore * bs, const char * dir_path, blockblob **
         safe_strncpy (bb->blocks_path, entry_path, sizeof(bb->blocks_path));
         set_device_path (bb); // read .dm and .loopback and set bb->device_path accordingly
         bb->size_bytes = sb.st_size;
+        bb->blocks_allocated = sb.st_blocks;
         bb->last_accessed = sb.st_atime;
         bb->last_modified = sb.st_mtime;
         bb->snapshot_type = BLOBSTORE_FORMAT_ANY; // it is not necessary to know whether this is a snapshot
@@ -1534,15 +1545,17 @@ int blobstore_stat (blobstore * bs, blobstore_meta * meta)
     
     // analyze the LL, calculating sizes
     meta->blocks_allocated = 0;
-    meta->blocks_used = 0;
+    meta->blocks_unlocked = 0;
+    meta->blocks_locked = 0;
     meta->num_blobs = 0;
     for (blockblob * abb = bbs; abb; abb=abb->next) {
         long long abb_size_blocks = round_up_sec (abb->size_bytes) / 512;
         if (abb->in_use & ~BLOCKBLOB_STATUS_BACKED) {
-            meta->blocks_used += abb_size_blocks; // these can't be purged if we need space (TODO: look into recursive purging of unused references?)
+            meta->blocks_locked += abb_size_blocks; // these can't be purged if we need space (TODO: look into recursive purging of unused references?)
         } else {
-            meta->blocks_allocated += abb_size_blocks; // these can be purged
+            meta->blocks_unlocked += abb_size_blocks; // these can be purged
         }
+        meta->blocks_allocated += abb->blocks_allocated;
         meta->num_blobs++;
     }
     
@@ -1866,24 +1879,24 @@ blockblob * blockblob_open ( blobstore * bs,
         }
         
         // analyze the LL, calculating sizes
-        long long blocks_allocated = 0;
-        long long blocks_used = 0;
+        long long blocks_unlocked = 0;
+        long long blocks_locked = 0;
         unsigned int num_blobs = 0;
         for (blockblob * abb = bbs; abb; abb=abb->next) {
             long long abb_size_blocks = round_up_sec (abb->size_bytes) / 512;
             if (abb->in_use & ~BLOCKBLOB_STATUS_BACKED) {
-                blocks_used += abb_size_blocks; // these can't be purged if we need space (TODO: look into recursive purging of unused references?)
+                blocks_locked += abb_size_blocks; // these can't be purged if we need space (TODO: look into recursive purging of unused references?)
             } else {
-                blocks_allocated += abb_size_blocks; // these can be purged
+                blocks_unlocked += abb_size_blocks; // these can be purged
             }
             num_blobs++;
         }
         
-        long long blocks_free = bs->limit_blocks - (blocks_allocated + blocks_used);
+        long long blocks_free = bs->limit_blocks - (blocks_unlocked + blocks_locked);
         if (blocks_free < size_blocks) {
             if (!(bs->revocation_policy==BLOBSTORE_REVOCATION_LRU) // not allowed to purge
                 ||
-                (blocks_free+blocks_allocated) < size_blocks) { // not enough purgeable material
+                (blocks_free+blocks_unlocked) < size_blocks) { // not enough purgeable material
                 ERR (BLOBSTORE_ERROR_NOSPC, NULL);
                 goto clean;
             } 

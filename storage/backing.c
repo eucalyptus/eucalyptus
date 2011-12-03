@@ -102,7 +102,7 @@ static void bs_errors (const char * msg) {
 
 static void stat_blobstore (const char * conf_instances_path, const char * name, blobstore_meta * meta)
 {
-    bzero (meta, sizeof (meta));
+    bzero (meta, sizeof (blobstore_meta));
     char path [MAX_PATH]; 
     snprintf (path, sizeof (path), "%s/%s", conf_instances_path, name);
     blobstore * bs = blobstore_open (path, 
@@ -151,7 +151,7 @@ int init_backing_store (const char * conf_instances_path, unsigned int conf_work
     if (cache_limit_blocks) {
         cache_bs = blobstore_open (cache_path, cache_limit_blocks, BLOBSTORE_FLAG_CREAT, BLOBSTORE_FORMAT_DIRECTORY, BLOBSTORE_REVOCATION_LRU, BLOBSTORE_SNAPSHOT_ANY);
         if (cache_bs==NULL) {
-            logprintfl (EUCAERROR, "ERROR: %s\n", blobstore_get_error_str(blobstore_get_error()));
+            logprintfl (EUCAERROR, "ERROR: failed to open/create cache blobstore: %s\n", blobstore_get_error_str(blobstore_get_error()));
             return ERROR;
         }
         if (blobstore_fsck (cache_bs, NULL)) { // TODO: verify checksums?
@@ -161,7 +161,8 @@ int init_backing_store (const char * conf_instances_path, unsigned int conf_work
     }
     work_bs = blobstore_open (work_path, work_limit_blocks, BLOBSTORE_FLAG_CREAT, BLOBSTORE_FORMAT_FILES, BLOBSTORE_REVOCATION_NONE, BLOBSTORE_SNAPSHOT_ANY);
     if (work_bs==NULL) {
-        logprintfl (EUCAERROR, "ERROR: %s\n", blobstore_get_error_str(blobstore_get_error()));
+        logprintfl (EUCAERROR, "ERROR: failed to open/create work blobstore: %s\n", blobstore_get_error_str(blobstore_get_error()));
+        logprintfl (EUCAERROR, "ERROR: %s\n", blobstore_get_last_trace());
         blobstore_close (cache_bs);
         return ERROR;
     }
