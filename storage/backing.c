@@ -84,6 +84,7 @@
 #include "backing.h"
 #include "iscsi.h"
 #include "vbr.h"
+#include "ipc.h" // sem
 
 #define CACHE_TIMEOUT_USEC  1000000LL*60*60*2 
 #define STORE_TIMEOUT_USEC  1000000LL*60*2
@@ -93,6 +94,8 @@
 static char instances_path [MAX_PATH];
 static blobstore * cache_bs = NULL;
 static blobstore * work_bs;
+static sem * disk_sem = NULL;
+
 extern struct nc_state_t nc_state;
 
 static void bs_errors (const char * msg) { 
@@ -169,6 +172,13 @@ int init_backing_store (const char * conf_instances_path, unsigned int conf_work
     if (blobstore_fsck (work_bs, NULL)) {
         logprintfl (EUCAERROR, "ERROR: work directory failed integrity check: %s\n", blobstore_get_error_str(blobstore_get_error()));
         blobstore_close (cache_bs);
+        return ERROR;
+    }
+
+    // set the initial value of the semaphore to the number of 
+    // disk-intensive operations that can run in parallel on this node
+    if (nc_state.concurrent_disk_ops && (disk_sem = sem_alloc (nc_state.concurrent_disk_ops, "mutex")) == NULL) {
+        logprintfl (EUCAERROR, "failed to create and initialize disk semaphore\n");
         return ERROR;
     }
 
@@ -347,12 +357,21 @@ int create_instance_backing (ncInstance * instance)
                                           TRUE, // make working copy of runtime-modifiable files
                                           (instance->do_inject_key)?(instance->keyName):(NULL), // the SSH key
                                           instance->instanceId); // ID is for logging
-    if (sentinel == NULL ||
-        art_implement_tree (sentinel, work_bs, cache_bs, work_prefix, INSTANCE_PREP_TIMEOUT_USEC) != OK) { // download/create/combine the dependencies
+    if (sentinel == NULL) {
         logprintfl (EUCAERROR, "[%s] error: failed to prepare backing for instance\n", instance->instanceId);
         goto out;
     }
-    
+
+    sem_p (disk_sem);
+    // download/create/combine the dependencies
+    int rc = art_implement_tree (sentinel, work_bs, cache_bs, work_prefix, INSTANCE_PREP_TIMEOUT_USEC);
+    sem_v (disk_sem);
+
+    if (rc != OK) {
+        logprintfl (EUCAERROR, "[%s] error: failed to implement backing for instance\n", instance->instanceId);
+        goto out;
+    }
+
     if (save_instance_struct (instance)) // update instance checkpoint now that the struct got updated
         goto out;
 

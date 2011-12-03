@@ -2388,7 +2388,7 @@ int blockblob_delete ( blockblob * bb, long long timeout_usec )
     
     int saved_errno = 0;
  unlock:
-    saved_errno = _blobstore_errno; // save it because 
+    saved_errno = _blobstore_errno; // save it because blobstore_unlock may overwrite it
     if (blobstore_unlock (bs)==-1) {
         ERR (BLOBSTORE_ERROR_UNKNOWN, "failed to unlock the blobstore");
     }
@@ -2745,7 +2745,12 @@ int blockblob_clone ( blockblob * bb, // destination blob, which blocks may be u
 
     goto free;
 
- cleanup:
+    int saved_errno;
+ cleanup: // this is failure cleanup code path
+
+    saved_errno = _blobstore_errno; // save it because dm_delete_devices may overwrite it
+    logprintfl (EUCAERROR, "error: blockblob_clone: %s (%d)\n", blobstore_get_last_msg(), _blobstore_errno);
+    
     // remove dm devices that may have been created
     if (dm_delete_devices (dev_names, devices)==0) {
         
@@ -2755,7 +2760,8 @@ int blockblob_clone ( blockblob * bb, // destination blob, which blocks may be u
         set_blockblob_metadata_path (BLOCKBLOB_PATH_DM, bb->store, bb->id, path, sizeof (path));
         unlink (path);
     }
-    
+    _blobstore_errno = saved_errno;
+
  free:
     for (int i=0; i<devices; i++) {
         free (dev_names[i]);
