@@ -369,7 +369,7 @@ vbr_parse ( // parses and verifies all VBR entries in the virtual machine defini
                 vm->root=vbr;
             }
         } else {
-            if (vbr->type==NC_RESOURCE_IMAGE) {
+            if (vm->root!=vbr && vbr->type==NC_RESOURCE_IMAGE) {
                 logprintfl (EUCAERROR, "Error: more than one EMI specified in the boot record\n");
                 return ERROR;
             }
