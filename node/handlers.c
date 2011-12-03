@@ -995,7 +995,11 @@ static int init (void)
             if (max_disk_gb != -1) {
                 if (conf_work_size_mb == -1) {
                     logprintfl (EUCAWARN, "warning: using deprecated setting %s for the new setting %s\n", CONFIG_MAX_DISK, CONFIG_NC_WORK_SIZE);
-                    conf_work_size_mb = max_disk_gb * 1024;
+                    if (max_disk_gb == 0) {
+                        conf_work_size_mb = -1; // change in semantics: 0 used to mean 'unlimited', now 'unset' or -1 means that
+                    } else {
+                        conf_work_size_mb = max_disk_gb * 1024;
+                    }
                 } else {
                     logprintfl (EUCAWARN, "warning: ignoring deprecated setting %s in favor of the new setting %s\n", CONFIG_MAX_DISK, CONFIG_NC_WORK_SIZE);
                 }
