@@ -904,17 +904,19 @@ static int init (void)
         }
     }
 
-#define GET_VAR_INT(var,name) \
+#define GET_VAR_INT(var,name,def)                   \
         s = getConfString(configFiles, 2, name); \
 	if (s){					\
 		var = atoi(s);\
 		free (s);\
-	}
-	GET_VAR_INT(nc_state.config_max_mem,      CONFIG_MAX_MEM);
-	GET_VAR_INT(nc_state.config_max_cores,    CONFIG_MAX_CORES);
-	GET_VAR_INT(nc_state.save_instance_files, CONFIG_SAVE_INSTANCES);
-    int disable_injection = 0;
-    GET_VAR_INT(disable_injection, CONFIG_DISABLE_KEY_INJECTION); 
+	} else { \
+        var = def; \
+    }
+	GET_VAR_INT(nc_state.config_max_mem,      CONFIG_MAX_MEM, 0);
+	GET_VAR_INT(nc_state.config_max_cores,    CONFIG_MAX_CORES, 0);
+	GET_VAR_INT(nc_state.save_instance_files, CONFIG_SAVE_INSTANCES, 0);
+    GET_VAR_INT(nc_state.concurrent_disk_ops, CONFIG_CONCURRENT_DISK_OPS, 1);
+    int disable_injection; GET_VAR_INT(disable_injection, CONFIG_DISABLE_KEY_INJECTION, 0); 
     nc_state.do_inject_key = !disable_injection;
     strcpy(nc_state.admin_user_id, EUCALYPTUS_ADMIN);
                
@@ -986,10 +988,10 @@ static int init (void)
         long long cache_bs_reserved_mb  = cache_meta.blocks_limit ? ((cache_meta.blocks_locked + cache_meta.blocks_unlocked) / 2048) : 0;
 
         // look up configuration file settings for work and cache size
-        long long conf_work_size_mb  = -1; GET_VAR_INT(conf_work_size_mb,  CONFIG_NC_WORK_SIZE);
-        long long conf_cache_size_mb = -1; GET_VAR_INT(conf_cache_size_mb, CONFIG_NC_CACHE_SIZE);
+        long long conf_work_size_mb; GET_VAR_INT(conf_work_size_mb,  CONFIG_NC_WORK_SIZE, -1);
+        long long conf_cache_size_mb; GET_VAR_INT(conf_cache_size_mb, CONFIG_NC_CACHE_SIZE, -1);
         { // accommodate legacy MAX_DISK setting by converting it
-            int max_disk_gb = -1; GET_VAR_INT(max_disk_gb, CONFIG_MAX_DISK);        
+            int max_disk_gb; GET_VAR_INT(max_disk_gb, CONFIG_MAX_DISK, -1);
             if (max_disk_gb != -1) {
                 if (conf_work_size_mb == -1) {
                     logprintfl (EUCAWARN, "warning: using deprecated setting %s for the new setting %s\n", CONFIG_MAX_DISK, CONFIG_NC_WORK_SIZE);
@@ -1121,9 +1123,9 @@ static int init (void)
 	// only load virtio config for kvm
 	if (!strncmp("kvm", hypervisor, CHAR_BUFFER_SIZE) ||
 		!strncmp("KVM", hypervisor, CHAR_BUFFER_SIZE)) {
-		GET_VAR_INT(nc_state.config_use_virtio_net, CONFIG_USE_VIRTIO_NET);
-		GET_VAR_INT(nc_state.config_use_virtio_disk, CONFIG_USE_VIRTIO_DISK);
-		GET_VAR_INT(nc_state.config_use_virtio_root, CONFIG_USE_VIRTIO_ROOT);
+		GET_VAR_INT(nc_state.config_use_virtio_net, CONFIG_USE_VIRTIO_NET, 0);
+		GET_VAR_INT(nc_state.config_use_virtio_disk, CONFIG_USE_VIRTIO_DISK, 0);
+		GET_VAR_INT(nc_state.config_use_virtio_root, CONFIG_USE_VIRTIO_ROOT, 0);
 	}
 	free (hypervisor);
 
@@ -1147,6 +1149,7 @@ static int init (void)
 	logprintfl(EUCAINFO, "physical memory available for instances: %lldMB\n", nc_state.mem_max);
 	logprintfl(EUCAINFO, "virtual cpu cores available for instances: %lld\n", nc_state.cores_max);
 
+    
 	// adopt running instances
 	adopt_instances();
 

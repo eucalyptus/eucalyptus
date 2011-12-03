@@ -87,6 +87,7 @@ struct nc_state_t {
 	virConnectPtr conn;
 	boolean convert_to_disk;
         boolean do_inject_key;
+        int concurrent_disk_ops;
 	// defined max
 	long long config_max_mem;
 	long long config_max_cores;
