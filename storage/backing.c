@@ -84,6 +84,7 @@
 #include "backing.h"
 #include "iscsi.h"
 #include "vbr.h"
+#include "ipc.h" // sem
 
 #define CACHE_TIMEOUT_USEC  1000000LL*60*60*2 
 #define STORE_TIMEOUT_USEC  1000000LL*60*2
@@ -93,12 +94,38 @@
 static char instances_path [MAX_PATH];
 static blobstore * cache_bs = NULL;
 static blobstore * work_bs;
+static sem * disk_sem = NULL;
+
 extern struct nc_state_t nc_state;
 
 static void bs_errors (const char * msg) { 
     // we normally do not care to print all messages from blobstore as many are errors that we can handle
     logprintfl (EUCADEBUG2, "{%u} blobstore: %s", (unsigned int)pthread_self(), msg);
 } 
+
+static void stat_blobstore (const char * conf_instances_path, const char * name, blobstore_meta * meta)
+{
+    bzero (meta, sizeof (blobstore_meta));
+    char path [MAX_PATH]; 
+    snprintf (path, sizeof (path), "%s/%s", conf_instances_path, name);
+    blobstore * bs = blobstore_open (path, 
+                                     0, // any size
+                                     0, // no flags = do not create it
+                                     BLOBSTORE_FORMAT_ANY, 
+                                     BLOBSTORE_REVOCATION_ANY, 
+                                     BLOBSTORE_SNAPSHOT_ANY);
+    if (bs == NULL)
+        return;
+    blobstore_stat (bs, meta);
+    blobstore_close (bs);
+}
+
+void stat_backing_store (const char * conf_instances_path, blobstore_meta * work_meta, blobstore_meta * cache_meta)
+{
+    assert (conf_instances_path);
+    stat_blobstore (conf_instances_path, "work",  work_meta);
+    stat_blobstore (conf_instances_path, "cache", cache_meta);
+}
 
 int init_backing_store (const char * conf_instances_path, unsigned int conf_work_size_mb, unsigned int conf_cache_size_mb)
 {
@@ -125,9 +152,9 @@ int init_backing_store (const char * conf_instances_path, unsigned int conf_work
 
     blobstore_set_error_function ( &bs_errors );
     if (cache_limit_blocks) {
-        cache_bs = blobstore_open (cache_path, cache_limit_blocks, BLOBSTORE_FORMAT_DIRECTORY, BLOBSTORE_REVOCATION_LRU, BLOBSTORE_SNAPSHOT_ANY);
+        cache_bs = blobstore_open (cache_path, cache_limit_blocks, BLOBSTORE_FLAG_CREAT, BLOBSTORE_FORMAT_DIRECTORY, BLOBSTORE_REVOCATION_LRU, BLOBSTORE_SNAPSHOT_ANY);
         if (cache_bs==NULL) {
-            logprintfl (EUCAERROR, "ERROR: %s\n", blobstore_get_error_str(blobstore_get_error()));
+            logprintfl (EUCAERROR, "ERROR: failed to open/create cache blobstore: %s\n", blobstore_get_error_str(blobstore_get_error()));
             return ERROR;
         }
         if (blobstore_fsck (cache_bs, NULL)) { // TODO: verify checksums?
@@ -135,15 +162,23 @@ int init_backing_store (const char * conf_instances_path, unsigned int conf_work
             return ERROR;
         }
     }
-    work_bs = blobstore_open (work_path, work_limit_blocks, BLOBSTORE_FORMAT_FILES, BLOBSTORE_REVOCATION_NONE, BLOBSTORE_SNAPSHOT_ANY);
+    work_bs = blobstore_open (work_path, work_limit_blocks, BLOBSTORE_FLAG_CREAT, BLOBSTORE_FORMAT_FILES, BLOBSTORE_REVOCATION_NONE, BLOBSTORE_SNAPSHOT_ANY);
     if (work_bs==NULL) {
-        logprintfl (EUCAERROR, "ERROR: %s\n", blobstore_get_error_str(blobstore_get_error()));
+        logprintfl (EUCAERROR, "ERROR: failed to open/create work blobstore: %s\n", blobstore_get_error_str(blobstore_get_error()));
+        logprintfl (EUCAERROR, "ERROR: %s\n", blobstore_get_last_trace());
         blobstore_close (cache_bs);
         return ERROR;
     }
     if (blobstore_fsck (work_bs, NULL)) {
         logprintfl (EUCAERROR, "ERROR: work directory failed integrity check: %s\n", blobstore_get_error_str(blobstore_get_error()));
         blobstore_close (cache_bs);
+        return ERROR;
+    }
+
+    // set the initial value of the semaphore to the number of 
+    // disk-intensive operations that can run in parallel on this node
+    if (nc_state.concurrent_disk_ops && (disk_sem = sem_alloc (nc_state.concurrent_disk_ops, "mutex")) == NULL) {
+        logprintfl (EUCAERROR, "failed to create and initialize disk semaphore\n");
         return ERROR;
     }
 
@@ -322,12 +357,21 @@ int create_instance_backing (ncInstance * instance)
                                           TRUE, // make working copy of runtime-modifiable files
                                           (instance->do_inject_key)?(instance->keyName):(NULL), // the SSH key
                                           instance->instanceId); // ID is for logging
-    if (sentinel == NULL ||
-        art_implement_tree (sentinel, work_bs, cache_bs, work_prefix, INSTANCE_PREP_TIMEOUT_USEC) != OK) { // download/create/combine the dependencies
+    if (sentinel == NULL) {
         logprintfl (EUCAERROR, "[%s] error: failed to prepare backing for instance\n", instance->instanceId);
         goto out;
     }
-    
+
+    sem_p (disk_sem);
+    // download/create/combine the dependencies
+    int rc = art_implement_tree (sentinel, work_bs, cache_bs, work_prefix, INSTANCE_PREP_TIMEOUT_USEC);
+    sem_v (disk_sem);
+
+    if (rc != OK) {
+        logprintfl (EUCAERROR, "[%s] error: failed to implement backing for instance\n", instance->instanceId);
+        goto out;
+    }
+
     if (save_instance_struct (instance)) // update instance checkpoint now that the struct got updated
         goto out;
 

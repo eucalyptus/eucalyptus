@@ -14,8 +14,8 @@ TESTS=test_vbr test_blobstore test
 IMAGER=_euca_imager
 #EFENCE=-lefence
 
-all: vbr.o backing.o storage.o storage-windows.o walrus.o diskutil.o Wclient $(IMAGER) test_blobstore test_vbr
-#all: storage.o storage-windows.o walrus.o test_blobstore
+all: vbr.o backing.o storage-windows.o walrus.o diskutil.o Wclient $(IMAGER) test_blobstore test_vbr
+#all: storage-windows.o walrus.o test_blobstore
 
 build: all
 
@@ -28,8 +28,8 @@ Wclient: Makefile Wclient.c ../util/euca_auth.o ../util/misc.o walrus.o http.o
 walrus.o: walrus.c walrus.h
 	$(CC) $(CFLAGS) $(INCLUDES) -c walrus.c 
 
-test: test.c storage.h storage.o storage-windows.o ../util/misc.o ../util/data.o ../util/ipc.o ../util/euca_auth.o walrus.o
-	$(CC) $(CFLAGS) $(INCLUDES) test.c storage.o storage-windows.o ../util/misc.o diskutil.o ../util/data.o ../util/ipc.o ../util/euca_auth.o walrus.o $(STORAGE_LIBS) -o test
+test: test.c blobstore.o storage-windows.o ../util/misc.o ../util/data.o ../util/ipc.o ../util/euca_auth.o walrus.o
+	$(CC) $(CFLAGS) $(INCLUDES) test.c blobstore.o storage-windows.o ../util/misc.o diskutil.o ../util/data.o ../util/ipc.o ../util/euca_auth.o walrus.o $(STORAGE_LIBS) -o test
 
 test_blobstore: blobstore.o blobstore.c blobstore.h map.o diskutil.o ../util/misc.o
 	$(CC) -g -rdynamic $(CFLAGS) $(INCLUDES) -D_UNIT_TEST blobstore.c -o test_blobstore map.o diskutil.o ../util/misc.o ../util/ipc.o $(STORAGE_LIBS) $(EFENCE) ../util/euca_auth.o
