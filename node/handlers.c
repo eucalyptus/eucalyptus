@@ -1082,7 +1082,7 @@ static int init (void)
         logprintfl (EUCAINFO, "                          %06lldMB reserved for use (%.1f%% of limit)\n", 
                     work_bs_reserved_mb, 
                     ((double)work_bs_reserved_mb/(double)work_size_mb)*100.0 );
-        logprintfl (EUCAINFO, "                          %06lldMB allocated for use (%.1f%% of limit, %.1f%% of file system)\n", 
+        logprintfl (EUCAINFO, "                          %06lldMB allocated for use (%.1f%% of limit, %.1f%% of the file system)\n", 
                     work_bs_allocated_mb, 
                     ((double)work_bs_allocated_mb/(double)work_size_mb)*100.0,
                     ((double)work_bs_allocated_mb/(double)fs_size_mb)*100.0 );
@@ -1094,7 +1094,7 @@ static int init (void)
             logprintfl (EUCAINFO, "                          %06lldMB reserved for use (%.1f%% of limit)\n", 
                         cache_bs_reserved_mb,
                         ((double)cache_bs_reserved_mb/(double)cache_size_mb)*100.0 );
-            logprintfl (EUCAINFO, "                          %06lldMB allocated for use (%.1f%% of limit, %.1f%% of file system)\n", 
+            logprintfl (EUCAINFO, "                          %06lldMB allocated for use (%.1f%% of limit, %.1f%% of the file system)\n", 
                         cache_bs_allocated_mb, 
                         ((double)cache_bs_allocated_mb/(double)cache_size_mb)*100.0,
                         ((double)cache_bs_allocated_mb/(double)fs_size_mb)*100.0 );
