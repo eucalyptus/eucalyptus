@@ -74,7 +74,6 @@ permission notice:
 
 #include <server-marshal.h>
 #include <handlers.h>
-#include <storage.h>
 #include <vnetwork.h>
 #include <misc.h>
 #include <ipc.h>

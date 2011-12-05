@@ -736,12 +736,11 @@ static int read_store_metadata (blobstore * bs)
 
     if (size == -1)
         return -1;
-
     if (size<30) { 
         ERR (BLOBSTORE_ERROR_NOENT, "metadata size is too small"); 
         return -1; 
     }
-    
+
     char * val;
     if ((val = get_val (buf, "id"))==NULL) 
         return -1; 
@@ -766,6 +765,8 @@ static int write_store_metadata (blobstore * bs)
 {
     if (ftruncate (bs->fd, 0)==-1)
         { ERR (BLOBSTORE_ERROR_NOENT, "failed to truncate the metadata file"); return -1; }
+    if (lseek (bs->fd, 0, SEEK_SET)==-1) 
+        { ERR (BLOBSTORE_ERROR_ACCES, "failed to seek in metadata file"); return -1; }
     char buf [1024];
     snprintf (buf, sizeof (buf), 
               "id: %s\n"      \
@@ -778,8 +779,9 @@ static int write_store_metadata (blobstore * bs)
               bs->revocation_policy,
               bs->snapshot_policy,
               bs->format);
-    int len = write (bs->fd, buf, strlen (buf));
-    if (len != strlen (buf))
+    int slen = strlen (buf);
+    int len = write (bs->fd, buf, slen);
+    if (len != slen)
         { ERR (BLOBSTORE_ERROR_NOENT, "failed to write to the metadata file"); return -1; }
         
     return 0;
@@ -828,10 +830,13 @@ int blobstore_cleanup (void)
 
 blobstore * blobstore_open ( const char * path, 
                              unsigned long long limit_blocks,
+                             unsigned int flags, // BLOBSTORE_FLAG_CREAT - same semantcs as for open() flags
                              blobstore_format_t format,
                              blobstore_revocation_t revocation_policy,
                              blobstore_snapshot_t snapshot_policy)
 {
+    int saved_errno;
+
     if (blobstore_init()) 
         return NULL;
 
@@ -844,29 +849,51 @@ blobstore * blobstore_open ( const char * path,
     char meta_path [PATH_MAX];
     snprintf (meta_path, sizeof(meta_path), "%s/%s", bs->path, BLOBSTORE_METADATA_FILE);
 
-    _blobstore_errno = BLOBSTORE_ERROR_OK;
-    _err_off();
-    bs->fd = open_and_lock (meta_path, BLOBSTORE_FLAG_CREAT | BLOBSTORE_FLAG_EXCL, 0, BLOBSTORE_FILE_PERM);
-    _err_on();
-    if (bs->fd != -1) { // managed to create blobstore metadata file and got exclusive lock
+    int write_flags = 0;
+    if (flags & BLOBSTORE_FLAG_CREAT) {
+        write_flags = BLOBSTORE_FLAG_CREAT | BLOBSTORE_FLAG_EXCL;
+    };
 
-        gen_id (bs->id, sizeof(bs->id));
-        bs->limit_blocks = limit_blocks;
-        bs->revocation_policy = (revocation_policy==BLOBSTORE_REVOCATION_ANY) ? BLOBSTORE_REVOCATION_NONE : revocation_policy;
-        bs->snapshot_policy = (snapshot_policy==BLOBSTORE_SNAPSHOT_ANY) ? BLOBSTORE_SNAPSHOT_DM : snapshot_policy; // TODO: verify that DM is available?
-        bs->format = (format==BLOBSTORE_FORMAT_ANY) ? BLOBSTORE_FORMAT_FILES : format;
-
-        // write metadata to disk
-        write_store_metadata (bs);
-        close_and_unlock (bs->fd); // try to close, thus giving up the exclusive lock
-    }
-    if (_blobstore_errno != BLOBSTORE_ERROR_OK && // either open or write failed
-        _blobstore_errno != BLOBSTORE_ERROR_EXIST && // it is OK if file already exists
-        _blobstore_errno != BLOBSTORE_ERROR_AGAIN ) { // it is OK if we lost the race for the write lock
-        ERR (_blobstore_errno, "failed to open or create blobstore");
-        goto free;
-    }
+ write_metadata:
     
+    if (write_flags) {
+        _blobstore_errno = BLOBSTORE_ERROR_OK;
+        _err_off();
+        bs->fd = open_and_lock (meta_path, write_flags, 0, BLOBSTORE_FILE_PERM);
+        _err_on();
+        if (bs->fd != -1) { // managed to create or open blobstore metadata file and got exclusive lock
+            
+            // the intention is to create the blobstore for the first time
+            if (write_flags & BLOBSTORE_FLAG_CREAT) {
+                gen_id (bs->id, sizeof(bs->id));
+                bs->limit_blocks = limit_blocks;
+                bs->revocation_policy = (revocation_policy==BLOBSTORE_REVOCATION_ANY) ? BLOBSTORE_REVOCATION_NONE : revocation_policy;
+                bs->snapshot_policy = (snapshot_policy==BLOBSTORE_SNAPSHOT_ANY) ? BLOBSTORE_SNAPSHOT_DM : snapshot_policy; // TODO: verify that DM is available?
+                bs->format = (format==BLOBSTORE_FORMAT_ANY) ? BLOBSTORE_FORMAT_FILES : format;
+                
+                // write metadata to disk
+                write_store_metadata (bs);
+
+            } else if (write_flags & BLOBSTORE_FLAG_RDWR) { // the intention is to adjust metadata
+                if (read_store_metadata (bs))
+                    goto free;
+                assert (bs->id);
+                if (limit_blocks) 
+                    bs->limit_blocks = limit_blocks;
+                if (revocation_policy != BLOBSTORE_REVOCATION_ANY)
+                    bs->revocation_policy = revocation_policy;
+                write_store_metadata (bs);
+            }
+            close_and_unlock (bs->fd); // try to close, thus giving up the exclusive lock
+        }
+        if (_blobstore_errno != BLOBSTORE_ERROR_OK && // either open or write failed
+            _blobstore_errno != BLOBSTORE_ERROR_EXIST && // it is OK if file already exists
+            _blobstore_errno != BLOBSTORE_ERROR_AGAIN ) { // it is OK if we lost the race for the write lock
+            ERR (_blobstore_errno, "failed to open or create blobstore");
+            goto free;
+        }
+    }
+
     // now (re)open, with a shared read lock
     bs->fd = open_and_lock (meta_path, BLOBSTORE_FLAG_RDONLY, BLOBSTORE_METADATA_TIMEOUT_USEC, BLOBSTORE_FILE_PERM);
     if (bs->fd == -1) {
@@ -879,8 +906,15 @@ blobstore * blobstore_open ( const char * path,
     // verify that parameters are not being changed
     if (limit_blocks && 
         limit_blocks != bs->limit_blocks) {
-        ERR (BLOBSTORE_ERROR_INVAL, "'limit_blocks' does not match existing blobstore");
-        goto free;
+        if (flags & BLOBSTORE_FLAG_STRICT ) {
+            ERR (BLOBSTORE_ERROR_INVAL, "'limit_blocks' does not match existing blobstore");
+            goto free;
+        } else {
+            logprintfl (EUCAINFO, "adjusting blobstore limit from %d to %d\n", bs->limit_blocks, limit_blocks);
+            write_flags = BLOBSTORE_FLAG_RDWR;
+            close_and_unlock (bs->fd);
+            goto write_metadata;
+        }
     }
     if (snapshot_policy != BLOBSTORE_SNAPSHOT_ANY && 
         snapshot_policy != bs->snapshot_policy) {
@@ -894,8 +928,14 @@ blobstore * blobstore_open ( const char * path,
     } 
     if (revocation_policy != BLOBSTORE_REVOCATION_ANY &&
         revocation_policy != bs->revocation_policy) {
-        ERR (BLOBSTORE_ERROR_INVAL, "'revocation_policy' does not match existing blobstore"); // TODO: maybe make revocation_policy changeable after creation
-        goto free;
+        if (flags & BLOBSTORE_FLAG_STRICT) {
+            ERR (BLOBSTORE_ERROR_INVAL, "'revocation_policy' does not match existing blobstore"); // TODO: maybe make revocation_policy changeable after creation
+            goto free;
+        } else {
+            write_flags = BLOBSTORE_FLAG_RDWR;
+            close_and_unlock (bs->fd);
+            goto write_metadata;
+        }
     }
     int fd = bs->fd;
     bs->fd = -1;
@@ -903,11 +943,14 @@ blobstore * blobstore_open ( const char * path,
     goto out;
 
  free:
+    saved_errno = _blobstore_errno;
     close_and_unlock (bs->fd);
     if (bs) {
         free (bs);
         bs = NULL;
     }
+    _blobstore_errno = saved_errno;
+
  out:
     return bs;
 }
@@ -1412,6 +1455,7 @@ static blockblob ** walk_bs (blobstore * bs, const char * dir_path, blockblob **
         safe_strncpy (bb->blocks_path, entry_path, sizeof(bb->blocks_path));
         set_device_path (bb); // read .dm and .loopback and set bb->device_path accordingly
         bb->size_bytes = sb.st_size;
+        bb->blocks_allocated = sb.st_blocks;
         bb->last_accessed = sb.st_atime;
         bb->last_modified = sb.st_mtime;
         bb->snapshot_type = BLOBSTORE_FORMAT_ANY; // it is not necessary to know whether this is a snapshot
@@ -1482,6 +1526,54 @@ static long long purge_blockblobs_lru ( blobstore * bs, blockblob * bb_list, lon
     return purged;
 }
 
+int blobstore_stat (blobstore * bs, blobstore_meta * meta)
+{
+    int ret = 0;
+
+    if (blobstore_lock(bs, BLOBSTORE_LOCK_TIMEOUT_USEC)==-1) { // lock it so we can traverse blobstore safely
+        return ERROR;
+    }
+    
+    // put existing items in the blobstore into a LL
+    _blobstore_errno = BLOBSTORE_ERROR_OK;
+    blockblob * bbs = scan_blobstore (bs, NULL);
+    if (bbs==NULL) {
+        if (_blobstore_errno != BLOBSTORE_ERROR_OK) {
+            goto unlock;
+        }
+    }
+    
+    // analyze the LL, calculating sizes
+    meta->blocks_allocated = 0;
+    meta->blocks_unlocked = 0;
+    meta->blocks_locked = 0;
+    meta->num_blobs = 0;
+    for (blockblob * abb = bbs; abb; abb=abb->next) {
+        long long abb_size_blocks = round_up_sec (abb->size_bytes) / 512;
+        if (abb->in_use & ~BLOCKBLOB_STATUS_BACKED) {
+            meta->blocks_locked += abb_size_blocks; // these can't be purged if we need space (TODO: look into recursive purging of unused references?)
+        } else {
+            meta->blocks_unlocked += abb_size_blocks; // these can be purged
+        }
+        meta->blocks_allocated += abb->blocks_allocated;
+        meta->num_blobs++;
+    }
+    
+ unlock:
+
+    if (blobstore_unlock(bs)==-1) {
+        ERR (BLOBSTORE_ERROR_UNKNOWN, "failed to unlock the blobstore");
+    }
+
+    safe_strncpy (meta->id, bs->id, sizeof (meta->id));
+    meta->revocation_policy = bs->revocation_policy;
+    meta->snapshot_policy = bs->snapshot_policy;
+    meta->format = bs->format;
+    meta->blocks_limit = bs->limit_blocks;
+
+    return ret;
+}
+
 // integrity check of the blobstore
 // 
 // with a non-NULL examiner(), each found blob is passed to it
@@ -1513,10 +1605,10 @@ int blobstore_fsck (blobstore * bs, int (* examiner) (const blockblob * bb))
     }
     
     // run through LL, examining each blockblob
-    unsigned int blobs_total = 0;
+    unsigned int num_blobs = 0;
     unsigned int blobs_deleted = 0;
     for (blockblob * abb = bbs; abb; abb=abb->next) {
-        blobs_total++;
+        num_blobs++;
         
         // examiner(), if specified, tell us whether to delete the blob
         if (examiner && examiner (abb)) {
@@ -1543,7 +1635,7 @@ int blobstore_fsck (blobstore * bs, int (* examiner) (const blockblob * bb))
         set_blockblob_metadata_path (BLOCKBLOB_PATH_LOOPBACK, bs, abb->id, path, sizeof(path)); // load path of .../loopback file
         unlink (path);
     }
-    logprintfl (EUCAINFO, "fsck deleted %d of %d blobs\n", blobs_deleted, blobs_total);   
+    logprintfl (EUCAINFO, "fsck deleted %d of %d blobs\n", blobs_deleted, num_blobs);   
 
  free:
     if (bbs)
@@ -1580,11 +1672,11 @@ int blobstore_search ( blobstore * bs, const char * regex, blockblob_meta ** res
     }
     
     // run through LL, looking for matches
-    unsigned int blobs_total = 0;
+    unsigned int num_blobs = 0;
     unsigned int blobs_matched = 0;
     blockblob_meta * prev = NULL;
     for (blockblob * abb = bbs; abb; abb=abb->next) {
-        blobs_total++;
+        num_blobs++;
         if (regexec (&re, abb->id, 0, NULL, 0) != 0)
             continue;
         blobs_matched++;
@@ -1787,24 +1879,24 @@ blockblob * blockblob_open ( blobstore * bs,
         }
         
         // analyze the LL, calculating sizes
-        long long blocks_allocated = 0;
-        long long blocks_inuse = 0;
-        unsigned int blobs_total = 0;
+        long long blocks_unlocked = 0;
+        long long blocks_locked = 0;
+        unsigned int num_blobs = 0;
         for (blockblob * abb = bbs; abb; abb=abb->next) {
             long long abb_size_blocks = round_up_sec (abb->size_bytes) / 512;
             if (abb->in_use & ~BLOCKBLOB_STATUS_BACKED) {
-                blocks_inuse += abb_size_blocks; // these can't be purged if we need space (TODO: look into recursive purging of unused references?)
+                blocks_locked += abb_size_blocks; // these can't be purged if we need space (TODO: look into recursive purging of unused references?)
             } else {
-                blocks_allocated += abb_size_blocks; // these can be purged
+                blocks_unlocked += abb_size_blocks; // these can be purged
             }
-            blobs_total++;
+            num_blobs++;
         }
         
-        long long blocks_free = bs->limit_blocks - (blocks_allocated + blocks_inuse);
+        long long blocks_free = bs->limit_blocks - (blocks_unlocked + blocks_locked);
         if (blocks_free < size_blocks) {
             if (!(bs->revocation_policy==BLOBSTORE_REVOCATION_LRU) // not allowed to purge
                 ||
-                (blocks_free+blocks_allocated) < size_blocks) { // not enough purgeable material
+                (blocks_free+blocks_unlocked) < size_blocks) { // not enough purgeable material
                 ERR (BLOBSTORE_ERROR_NOSPC, NULL);
                 goto clean;
             } 
@@ -2251,7 +2343,7 @@ int blockblob_delete ( blockblob * bb, long long timeout_usec )
         blobstore * dep_bs = bs;
         if (strcmp (bs->path, store_path)) { // if deleting reference in a different blobstore
             // need to open it
-            dep_bs = blobstore_open (store_path, 0, BLOBSTORE_FORMAT_ANY, BLOBSTORE_REVOCATION_ANY, BLOBSTORE_SNAPSHOT_ANY);
+            dep_bs = blobstore_open (store_path, 0, BLOBSTORE_FLAG_CREAT, BLOBSTORE_FORMAT_ANY, BLOBSTORE_REVOCATION_ANY, BLOBSTORE_SNAPSHOT_ANY);
             if (dep_bs == NULL)
                 continue; // TODO: print a warning about store/blob corruption?
             if (blobstore_lock (dep_bs, timeout_usec)==-1) { // lock this (different) blobstore, too, so .refs are updated atomically
@@ -2296,7 +2388,7 @@ int blockblob_delete ( blockblob * bb, long long timeout_usec )
     
     int saved_errno = 0;
  unlock:
-    saved_errno = _blobstore_errno; // save it because 
+    saved_errno = _blobstore_errno; // save it because blobstore_unlock may overwrite it
     if (blobstore_unlock (bs)==-1) {
         ERR (BLOBSTORE_ERROR_UNKNOWN, "failed to unlock the blobstore");
     }
@@ -2653,7 +2745,12 @@ int blockblob_clone ( blockblob * bb, // destination blob, which blocks may be u
 
     goto free;
 
- cleanup:
+    int saved_errno;
+ cleanup: // this is failure cleanup code path
+
+    saved_errno = _blobstore_errno; // save it because dm_delete_devices may overwrite it
+    logprintfl (EUCAERROR, "error: blockblob_clone: %s (%d)\n", blobstore_get_last_msg(), _blobstore_errno);
+    
     // remove dm devices that may have been created
     if (dm_delete_devices (dev_names, devices)==0) {
         
@@ -2663,7 +2760,8 @@ int blockblob_clone ( blockblob * bb, // destination blob, which blocks may be u
         set_blockblob_metadata_path (BLOCKBLOB_PATH_DM, bb->store, bb->id, path, sizeof (path));
         unlink (path);
     }
-    
+    _blobstore_errno = saved_errno;
+
  free:
     for (int i=0; i<devices; i++) {
         free (dev_names[i]);
@@ -2867,7 +2965,7 @@ static blobstore * create_teststore (int size_blocks, const char * base, const c
         return NULL;
     }
     printf ("created %s\n", bs_path);
-    blobstore * bs = blobstore_open (bs_path, size_blocks, format, revocation, snapshot);
+    blobstore * bs = blobstore_open (bs_path, size_blocks, BLOBSTORE_FLAG_CREAT, format, revocation, snapshot);
     if (bs==NULL) {
         printf ("ERROR: %s\n", blobstore_get_error_str(blobstore_get_error()));
         return NULL;
@@ -3075,13 +3173,10 @@ static int do_clone_stresstest (const char * base, const char * name, blobstore_
         _DELWARN(bbs2[i+STRESS_BLOBS]);
     }
 
-    //    blobstore_close (bs1);
-    //  blobstore_close (bs2);
-
     printf ("completed cloning stress-test\n");
  done:
-    if(bs1 != NULL) blobstore_close (bs1);
-    if(bs2 != NULL) blobstore_close (bs2);
+    if (bs1 != NULL) blobstore_close (bs1);
+    if (bs2 != NULL) blobstore_close (bs2);
     return errors;
 }
 
@@ -3703,7 +3798,7 @@ int main (int argc, char ** argv)
     // this allows two simultaneous invocations of test_blobstore to compete
     // for the same blob so as to test the inter-process locks manually
     if (argc > 1) {
-        blobstore * bs = blobstore_open (".", 1000, BLOBSTORE_FORMAT_FILES, BLOBSTORE_REVOCATION_ANY, BLOBSTORE_SNAPSHOT_ANY);
+        blobstore * bs = blobstore_open (".", 1000, BLOBSTORE_FLAG_CREAT, BLOBSTORE_FORMAT_FILES, BLOBSTORE_REVOCATION_ANY, BLOBSTORE_SNAPSHOT_ANY);
         if (bs==NULL) {
             printf ("ERROR: when opening blobstore: %s\n", blobstore_get_error_str(blobstore_get_error()));
             return 1;
