@@ -501,7 +501,9 @@ public class Faults {
     }
     return Lists.newArrayList( );
   }
-  
+  public static void persist( final CheckException errors ) {
+  }
+/*
   public static void persist( final CheckException errors ) {
     if ( errors != null && Hosts.isCoordinator( ) ) {
       try {
@@ -521,4 +523,5 @@ public class Faults {
       }
     }
   }
+*/
 }
