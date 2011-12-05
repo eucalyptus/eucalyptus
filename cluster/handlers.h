@@ -323,6 +323,7 @@ int changeState(ccResource *in, int newstate);
 int ccIsEnabled(void);
 int ccIsDisabled(void);
 int ccChangeState(int newstate);
+int ccCheckState();
 int ccGetStateString(char *outstr, int n);
 
 int readConfigFile(char configFiles[][MAX_PATH], int numFiles);

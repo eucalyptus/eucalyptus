@@ -228,7 +228,7 @@ public class Topology {
             for ( ServiceConfiguration s : c.services( ) ) {
               if ( !serviceList.contains( s ) && State.DISABLED.apply( s ) ) {
                 msg.get_disabledServices( ).add( typeMapper.apply( s ) );
-              } else if ( !serviceList.contains( s ) && State.DISABLED.apply( s ) ) {
+              } else if ( !serviceList.contains( s ) && State.NOTREADY.apply( s ) ) {
                 msg.get_notreadyServices( ).add( typeMapper.apply( s ) );
               }
             }
@@ -245,7 +245,7 @@ public class Topology {
             } else {
               if ( !serviceList.contains( s ) && State.DISABLED.apply( s ) ) {
                 msg.get_disabledServices( ).add( typeMapper.apply( s ) );
-              } else if ( !serviceList.contains( s ) && State.DISABLED.apply( s ) ) {
+              } else if ( !serviceList.contains( s ) && State.NOTREADY.apply( s ) ) {
                 msg.get_notreadyServices( ).add( typeMapper.apply( s ) );
               }
             }
