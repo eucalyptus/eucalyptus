@@ -105,7 +105,8 @@ public class TransientZone extends Zone {
       long refresh = 86400;
       long retry = ttl;
       long expires = 2419200;
-      long minimum = ttl;
+      //This is the negative cache TTL
+      long minimum = 600;
       Record soarec = new SOARecord( name, DClass.IN, ttl, name, Name.fromString( "root." + name.toString( ) ), serial,
         refresh, retry, expires, minimum );
       long nsTTL = 604800;
@@ -131,7 +132,8 @@ public class TransientZone extends Zone {
       long refresh = 86400;
       long retry = ttl;
       long expires = 2419200;
-      long minimum = ttl;
+      //This is the negative cache TTL
+      long minimum = 600;
       Record soarec = new SOARecord( name, DClass.IN, ttl, name, Name.fromString( "root." + name.toString( ) ), serial,
         refresh, retry, expires, minimum );
       long nsTTL = 604800;
@@ -285,7 +287,8 @@ public class TransientZone extends Zone {
 	  long refresh = 86400;
 	  long retry = ttl;
 	  long expires = 2419200;
-	  long minimum = ttl;
+          //This is the negative cache TTL
+          long minimum = 600;
 	  Record soarec = new SOARecord( name, DClass.IN, ttl, name, Name.fromString( "root." + name.toString( ) ), serial,
 	    refresh, retry, expires, minimum );
 	  long nsTTL = 604800;
