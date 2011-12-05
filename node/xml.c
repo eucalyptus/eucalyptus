@@ -182,6 +182,13 @@ int gen_instance_xml (const ncInstance * instance)
         _ATTRIBUTE(hypervisor, "bitness", bitness);
     }
 
+    { // backing specification (TODO: maybe expand this with device maps or whatnot?)
+        xmlNodePtr backing = xmlNewChild (instanceNode, NULL, BAD_CAST "backing", NULL);
+        xmlNodePtr root = xmlNewChild (backing, NULL, BAD_CAST "root", NULL);
+        assert (instance->params.root);
+        _ATTRIBUTE(root, "type", ncResourceTypeName[instance->params.root->type]);
+    }
+
     _ELEMENT(instanceNode, "name", instance->instanceId);
     _ELEMENT(instanceNode, "uuid", instance->uuid);
     _ELEMENT(instanceNode, "reservation", instance->reservationId);
@@ -240,7 +247,7 @@ int gen_instance_xml (const ncInstance * instance)
                if (!strcmp ("none", vbr->guestDeviceName)) 
                    continue;
                // for Linux instances on Xen, partitions can be used directly, so disks can be skipped
-               if (strstr (instance->platform, "linux") && strstr (instance->hypervisorType, "xen")) {
+               if (strstr (instance->platform, "linux") && strstr (instance->hypervisorType, "xen") && (vbr->type == NC_RESOURCE_IMAGE)) {
                    if (vbr->partitionNumber == 0) {
                        continue;
                    }

@@ -174,6 +174,15 @@ typedef enum _ncResourceType {
     NC_RESOURCE_EBS 
 } ncResourceType;
 
+static char * ncResourceTypeName [] = {
+    "image",
+    "ramdisk",
+    "kernel",
+    "ephemeral",
+    "swap",
+    "ebs"
+};
+
 typedef enum _ncResourceLocationType {
     NC_LOCATION_URL,
     NC_LOCATION_WALRUS,
@@ -217,7 +226,7 @@ typedef struct virtualBootRecord_t {
 typedef struct virtualMachine_t {
     int mem, cores, disk;
     char name[64];
-    virtualBootRecord * image;
+    virtualBootRecord * root;
     virtualBootRecord * kernel;
     virtualBootRecord * ramdisk;
     virtualBootRecord * swap;
