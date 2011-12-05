@@ -5,6 +5,7 @@ import java.util.NoSuchElementException;
 import java.util.concurrent.CancellationException;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
+import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
@@ -97,7 +98,11 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
         } else if ( VmInstances.Timeout.TERMINATED.apply( vm ) ) {
           VmInstances.delete( vm );
         }
-        db1.commit( );
+        if ( Databases.isSynchronizing( ) ) {
+          db1.rollback( );
+        } else {
+          db1.commit( );
+        }
       } catch ( final Exception ex ) {
         Logs.extreme( ).error( ex, ex );
         db1.rollback( );
@@ -121,7 +126,11 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
                     && vm.lastUpdateMillis( ) > ( VmInstances.VOLATILE_STATE_TIMEOUT_SEC * 1000l ) ) {
           vm.doUpdate( ).apply( runVm );
         }
-        db.commit( );
+        if ( Databases.isSynchronizing( ) ) {
+          db.rollback( );
+        } else {
+          db.commit( );
+        }
       } catch ( Exception ex ) {
         LOG.trace( ex, ex );
         db.rollback( );
@@ -213,7 +222,11 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
             for ( VmInstance vm : Iterables.filter( VmInstances.list( ), VmPendingCallback.this.filter ) ) {
               this.getInstancesSet( ).add( vm.getInstanceId( ) );
             }
-            db.commit( );
+            if ( Databases.isSynchronizing( ) ) {
+              db.rollback( );
+            } else {
+              db.commit( );
+            }
           } catch ( Exception ex ) {
             Logs.exhaust( ).error( ex, ex );
             db.rollback( );

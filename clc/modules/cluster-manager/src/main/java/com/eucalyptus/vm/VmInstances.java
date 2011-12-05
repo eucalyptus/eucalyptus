@@ -93,6 +93,7 @@ import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.crypto.Digest;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
+import com.eucalyptus.images.BlockStorageImageInfo;
 import com.eucalyptus.network.NetworkGroups;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
@@ -476,7 +477,10 @@ public class VmInstances {
   }
   
   public static void stopped( final String key ) throws NoSuchElementException, TransactionException {
-    VmInstances.stopped( VmInstance.Lookup.INSTANCE.apply( key ) );
+    VmInstance vm = VmInstance.Lookup.INSTANCE.apply( key );
+    if ( vm.getBootRecord( ).getMachine( ) instanceof BlockStorageImageInfo ) {
+      VmInstances.stopped( vm );
+    }
   }
   
   public static void shutDown( final VmInstance vm ) throws TransactionException {
