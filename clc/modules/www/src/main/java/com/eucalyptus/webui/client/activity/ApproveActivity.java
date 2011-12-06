@@ -42,6 +42,7 @@ public class ApproveActivity extends AbstractActionActivity implements ActionRes
 
       @Override
       public void onFailure( Throwable caught ) {
+        ActivityUtil.logoutForInvalidSession( clientFactory, caught );
         clientFactory.getActionResultView( ).display( ResultType.ERROR, APPROVAL_FAILURE_MESSAGE + ": " + caught.getMessage( ), false );
       }
 
@@ -64,6 +65,7 @@ public class ApproveActivity extends AbstractActionActivity implements ActionRes
 
       @Override
       public void onFailure( Throwable caught ) {
+        ActivityUtil.logoutForInvalidSession( clientFactory, caught );
         clientFactory.getActionResultView( ).display( ResultType.ERROR, APPROVAL_FAILURE_MESSAGE + ": " + caught.getMessage( ), false );
       }
 

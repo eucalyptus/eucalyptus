@@ -64,28 +64,70 @@
 package com.eucalyptus.config
 
 import java.io.Serializable
-import javax.persistence.DiscriminatorValue;
+
+import javax.persistence.Column;
 import javax.persistence.PersistenceContext
+import javax.persistence.PostLoad;
 import javax.persistence.Table
 import javax.persistence.Transient
 import org.hibernate.annotations.Cache
 import org.hibernate.annotations.CacheConcurrencyStrategy
 import org.hibernate.annotations.Entity
-import com.eucalyptus.component.ComponentPart
-import com.eucalyptus.component.id.Arbitrator
+import com.eucalyptus.component.ComponentId.ComponentPart
+import com.eucalyptus.configurable.ConfigurableClass;
+import com.eucalyptus.configurable.ConfigurableField;
+import com.eucalyptus.configurable.ConfigurableIdentifier;
+import com.eucalyptus.empyrean.Empyrean.Arbitrator
 
 @Entity @javax.persistence.Entity
 @PersistenceContext(name="eucalyptus_config")
 @Table( name = "config_arbitrator" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @ComponentPart(Arbitrator.class)
+@ConfigurableClass( root = "arbitrator", alias = "basic", description = "Basic arbitrator configuration.", singleton = false, deferred = true )
 public class ArbitratorConfiguration extends ComponentConfiguration implements Serializable {
   @Transient
   private static String DEFAULT_SERVICE_PATH = "/services/Arbitrator";
+  
+  @Transient
+  @ConfigurableIdentifier
+  private String                propertyPrefix;
+  
+  @ConfigurableField( description = "Gateway Host for Arbitrator to ping.", displayName = "Arbitrator Gateway Host" )
+  @Column( name = "arbitrator_gateway_host" )
+  private String                gatewayHost;
+  
   public ArbitratorConfiguration( ) {
   }
   public ArbitratorConfiguration( String partition, String name, String hostName, Integer port ) {
     super( partition, name, hostName, port, DEFAULT_SERVICE_PATH );
+  }
+  @PostLoad
+  private void initOnLoad( ) {
+    if ( this.propertyPrefix == null ) {
+      this.propertyPrefix = this.getName( );
+    }
+  }
+  
+  public String getPropertyPrefix( ) {
+    return this.propertyPrefix;
+  }
+  
+  public void setPropertyPrefix( String propertyPrefix ) {
+    this.propertyPrefix = propertyPrefix;
+  }
+  
+  public String getGatewayHost( ) {
+    return this.gatewayHost;
+  }
+  
+  public void setGatewayHost( String gatewayHost ) {
+    this.gatewayHost = gatewayHost;
+  }
+  
+  @Override
+  public Boolean isVmLocal( ) {
+    return true;
   }
 }
 

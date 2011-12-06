@@ -75,6 +75,9 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
+import com.eucalyptus.configurable.ConfigurableProperty;
+import com.eucalyptus.configurable.ConfigurablePropertyException;
+import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.configurable.PropertyChangeListeners;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.EntityWrapper;
@@ -85,31 +88,46 @@ import com.eucalyptus.records.Logs;
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "cloud_address_configuration" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-@ConfigurableClass( root = "cloud.addresses", description = "Configuration options controlling the handling of public/elastic addresses." )
+@ConfigurableClass( root = "cloud.addresses",
+                    description = "Configuration options controlling the handling of public/elastic addresses." )
 public class AddressingConfiguration extends AbstractPersistent {
   private static final long serialVersionUID = 1L;
   
   @Transient
   private static Logger     LOG              = Logger.getLogger( AddressingConfiguration.class );
   
-  @ConfigurableField( displayName = "max_addresses_per_user", changeListener = PropertyChangeListeners.IsPositiveInteger.class,
-                      description = "The maximum number of addresses a user can have simultaneiously allocated before the next allocation will fail." )
-  @Column( name = "config_addr_max_per_user", nullable = false )
-  private Integer           maxUserPublicAddresses;
-  
-  @ConfigurableField( displayName = "dynamic_public_addressing", description = "Public addresses are assigned to instances by the system as available." )
-  @Column( name = "config_addr_do_dynamic_public_addresses", nullable = false, columnDefinition = "boolean default true" )
+  @ConfigurableField( displayName = "dynamic_public_addressing",
+                      description = "Public addresses are assigned to instances by the system as available.",
+                      changeListener = DynamicAddressingListener.class )
+  @Column( name = "config_addr_do_dynamic_public_addresses",
+           nullable = false,
+           columnDefinition = "boolean default true" )
   private Boolean           doDynamicPublicAddresses;
   
-  @ConfigurableField( displayName = "static_address_pool", changeListener = PropertyChangeListeners.IsPositiveInteger.class,
+  @ConfigurableField( displayName = "static_address_pool",
+                      changeListener = PropertyChangeListeners.IsPositiveInteger.class,
                       description = "Public addresses are assigned to instances by the system only from a pool of reserved instances whose size is determined by this value." )
   @Column( name = "config_addr_reserved_public_addresses" )
   private Integer           systemReservedPublicAddresses;
   
-  @ConfigurableField( displayName = "address_orphan_count", changeListener = PropertyChangeListeners.IsPositiveInteger.class,
+  @ConfigurableField( displayName = "address_orphan_count",
+                      changeListener = PropertyChangeListeners.IsPositiveInteger.class,
                       description = "Number of times an orphaned address is reported by a cluster before it is reclaimed by the system." )
-  @Column( name = "config_addr_orphan_ticks" )
-  private Integer           maxKillOrphans      = 10;
+  @Column( name = "config_addr_orphan_ticks", nullable = false )
+  private Integer           maxKillOrphans;
+  
+  @ConfigurableField( displayName = "address_orphan_grace",
+                      changeListener = PropertyChangeListeners.IsPositiveInteger.class,
+                      description = "Time after the last recorded state change where an orphaned address will not be modified by the system (minutes)." )
+  @Column( name = "config_addr_orphan_grace", nullable = false )
+  private Integer           orphanGrace;
+  
+  public static class DynamicAddressingListener implements PropertyChangeListener {
+    @Override
+    public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
+      AddressingConfiguration.getInstance( ).doDynamicPublicAddresses = ( Boolean ) newValue;
+    }
+  };
   
   public AddressingConfiguration( ) {
     super( );
@@ -132,23 +150,18 @@ public class AddressingConfiguration extends AbstractPersistent {
   
   @PrePersist
   protected void initialize( ) {
-    if ( this.maxUserPublicAddresses == null ) {
-      this.maxUserPublicAddresses = 5;
-    }
     if ( this.doDynamicPublicAddresses == null ) {
       this.doDynamicPublicAddresses = Boolean.TRUE;
     }
     if ( this.systemReservedPublicAddresses == null ) {
       this.systemReservedPublicAddresses = 0;
     }
-  }
-  
-  public Integer getMaxUserPublicAddresses( ) {
-    return this.maxUserPublicAddresses;
-  }
-  
-  public void setMaxUserPublicAddresses( final Integer maxUserPublicAddresses ) {
-    this.maxUserPublicAddresses = maxUserPublicAddresses;
+    if ( this.maxKillOrphans == null ) {
+      this.maxKillOrphans = 10;
+    }
+    if ( this.orphanGrace == null ) {
+      this.orphanGrace = 10;
+    }
   }
   
   public Boolean getDoDynamicPublicAddresses( ) {
@@ -173,5 +186,13 @@ public class AddressingConfiguration extends AbstractPersistent {
   
   public void setMaxKillOrphans( Integer maxKillOrphans ) {
     this.maxKillOrphans = maxKillOrphans;
+  }
+  
+  public Integer getOrphanGrace( ) {
+    return this.orphanGrace;
+  }
+  
+  public void setOrphanGrace( Integer orphanGrace ) {
+    this.orphanGrace = orphanGrace;
   }
 }

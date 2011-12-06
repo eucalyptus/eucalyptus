@@ -45,7 +45,9 @@ CloudPKFile = '%s/var/lib/eucalyptus/keys/cloud-pk.pem'
 class GetCredentials(AWSQueryRequest):
     
     ServiceClass = eucadmin.EucAdmin
-    Description = 'Get credentials zip file.'
+    Description = """Download credentials to <zipfile>.  Each time this is \
+called, new X.509 certificates will be created for the specified user."""
+
     Params = [Param(name='euca_home',
                     short_name='e', long_name='euca-home',
                     ptype='string', optional=True,
@@ -79,7 +81,7 @@ class GetCredentials(AWSQueryRequest):
         cmd_string = get_cmdstring('openssl')
         cmd = Command(cmd_string % (self.eucap12_file, self.cloudpk_file))
                       
-    def query_mysql(self, query, num_retries=10):
+    def query_mysql(self, query, num_retries=2):
         result = None
         i = 0
         while i < num_retries:
@@ -87,17 +89,19 @@ class GetCredentials(AWSQueryRequest):
             result = cmd.stdout.strip()
             if result:
                 break
-            print 'waiting for MySQL to respond'
-            time.sleep(10)
+            time.sleep(1)
             i += 1
         if not result:
-            raise ValueError('cannot find code in database')
+            msg = 'The MySQL server is not responding.\n'
+            msg += 'Please make sure MySQL is up and running.'
+            raise ValueError(msg)
         return result
 
     def get_credentials(self):
         data = boto.utils.retry_url(GetCertURL % (self.account,
                                                   self.user,
-                                                  self.token))
+                                                  self.token),
+                                    num_retries=1)
         fp = open(self.zipfile, 'wb')
         fp.write(data)
         fp.close()

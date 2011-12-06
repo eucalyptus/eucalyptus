@@ -71,8 +71,8 @@ import org.mule.api.MuleException;
 import org.mule.api.MuleMessage;
 import org.mule.message.ExceptionMessage;
 import com.eucalyptus.binding.BindingManager;
+import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.IllegalContextAccessException;
-import com.eucalyptus.context.ServiceContext;
 import com.eucalyptus.ws.WebServicesException;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
@@ -82,7 +82,7 @@ public class ReplyQueue {
   private static Logger LOG = Logger.getLogger( ReplyQueue.class );
   
   public void handle( BaseMessage responseMessage ) {
-    ServiceContext.response( responseMessage );
+    Contexts.response( responseMessage );
   }
   
   public void handle( ExceptionMessage exMsg ) {
@@ -95,19 +95,19 @@ public class ReplyQueue {
       Object payload = muleMsg.getPayload( );
       BaseMessage msg = convert( payload );
       if( msg != null ) {
-        ServiceContext.response( new ExceptionResponseType( msg, cause.getMessage( ), HttpResponseStatus.NOT_ACCEPTABLE, cause )  );
+        Contexts.response( new ExceptionResponseType( msg, cause.getMessage( ), HttpResponseStatus.NOT_ACCEPTABLE, cause )  );
         return;
       } else {
         LOG.error( "Failed to identify request context for recieved error: " + exMsg.toString( ) );
         cause = new WebServicesException( "Failed to identify request context for recieved error: " + exMsg.toString( ) + " while handling error: " + cause.getMessage( ), cause, HttpResponseStatus.NOT_ACCEPTABLE );
-        ServiceContext.responseError( cause );
+        Contexts.responseError( cause );
       }
     } else if ( cause instanceof MuleException ) {
       LOG.error( "Error service request: " + cause.getMessage( ), cause );
       cause = new WebServicesException( cause.getMessage( ), cause, HttpResponseStatus.NOT_FOUND );
-      ServiceContext.responseError( cause );
+      Contexts.responseError( cause );
     } else {
-      ServiceContext.responseError( cause );
+      Contexts.responseError( cause );
     }
   }
 

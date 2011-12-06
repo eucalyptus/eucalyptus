@@ -63,7 +63,6 @@
 
 package com.eucalyptus.blockstorage;
 
-import java.lang.reflect.UndeclaredThrowableException;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import org.apache.log4j.Logger;
@@ -72,6 +71,7 @@ import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.CloudMetadata.VolumeMetadata;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.entities.EntityWrapper;
@@ -80,6 +80,7 @@ import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.reporting.event.StorageEvent;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes.QuantityMetricFunction;
 import com.eucalyptus.util.RestrictedTypes.UsageMetricFunction;
@@ -134,7 +135,7 @@ public class Volumes {
       return vol;
     } else {
       //TODO:GRZE:REMOVE temporary workaround to update the volume state.
-      final ServiceConfiguration sc = Partitions.lookupService( Storage.class, vol.getPartition( ) );
+      final ServiceConfiguration sc = Topology.lookup( Storage.class, Partitions.lookupByName( vol.getPartition( ) ) );
       final DescribeStorageVolumesType descVols = new DescribeStorageVolumesType( Lists.newArrayList( vol.getDisplayName( ) ) );
       try {
         Transactions.one( Volume.named( null, vol.getDisplayName( ) ), new Callback<Volume>( ) {
@@ -148,7 +149,7 @@ public class Volumes {
               }
             } catch ( final EucalyptusCloudException ex ) {
               LOG.error( ex, ex );
-              throw new UndeclaredThrowableException( ex, "Failed to update the volume state " + vol.getDisplayName( ) + " not yet ready" );
+              throw Exceptions.toUndeclared( "Failed to update the volume state " + vol.getDisplayName( ) + " not yet ready", ex );
             }
           }
         } );
@@ -178,7 +179,7 @@ public class Volumes {
           ServiceDispatcher.lookup( sc ).send( req );
         } catch ( final Exception ex ) {
           LOG.error( "Failed to create volume: " + t.toString( ), ex );
-          throw new UndeclaredThrowableException( ex );
+          throw Exceptions.toUndeclared( ex );
         }
       }
     } );

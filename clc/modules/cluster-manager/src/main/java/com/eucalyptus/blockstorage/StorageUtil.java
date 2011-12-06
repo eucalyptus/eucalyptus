@@ -78,6 +78,7 @@ import com.eucalyptus.component.NoSuchComponentException;
 import com.eucalyptus.component.NoSuchServiceException;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -97,16 +98,6 @@ import edu.ucsb.eucalyptus.msgs.StorageVolume;
 public class StorageUtil {
   private static Logger LOG = Logger.getLogger( StorageUtil.class );
     
-  public static void dispatchAll( BaseMessage message ) throws EucalyptusCloudException {
-    for( ServiceConfiguration service : Components.lookup(Storage.class).enabledServices( ) ) {
-      try {
-        service.lookupService( ).getDispatcher( ).dispatch( message );
-      } catch ( NoSuchServiceException ex ) {
-        LOG.error( ex , ex );
-      }
-    }
-  }
-
   public static ArrayList<edu.ucsb.eucalyptus.msgs.Volume> getVolumeReply( Map<String, AttachedVolume> attachedVolumes, List<Volume> volumes ) throws EucalyptusCloudException {
     Multimap<String,Volume> partitionVolumeMap = HashMultimap.create( );
     Map<String,StorageVolume> idStorageVolumeMap = Maps.newHashMap( );
@@ -116,7 +107,7 @@ public class StorageUtil {
     ArrayList<edu.ucsb.eucalyptus.msgs.Volume> reply = Lists.newArrayList( );
     for( String partition : partitionVolumeMap.keySet( ) ) {
       try {
-        ServiceConfiguration scConfig = Partitions.lookupService( Storage.class, partition );
+        ServiceConfiguration scConfig = Topology.lookup( Storage.class, Partitions.lookupByName( partition ) );
         Iterator<String> volumeNames = Iterators.transform( partitionVolumeMap.get( partition ).iterator( ), new Function<Volume,String>() {
           @Override
           public String apply( Volume arg0 ) {

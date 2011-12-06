@@ -65,7 +65,7 @@ package com.eucalyptus.empyrean
 
 import java.io.Serializable
 import java.util.ArrayList
-import com.eucalyptus.component.ComponentMessage
+import com.eucalyptus.component.ComponentId.ComponentMessage
 import com.eucalyptus.util.HasSideEffect
 import edu.ucsb.eucalyptus.msgs.BaseMessage
 import edu.ucsb.eucalyptus.msgs.EucalyptusData
@@ -137,6 +137,7 @@ public class ServiceStatusDetail extends EucalyptusData {
 public class DescribeServicesType extends ServiceTransitionType {
   Boolean listAll;
   Boolean listInternal;
+  Boolean listUserServices;
   Boolean showEvents;
   Boolean showEventStacks;
   String byServiceType;

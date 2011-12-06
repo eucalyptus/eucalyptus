@@ -184,7 +184,7 @@ public class NioBootstrap extends Bootstrap {
       }
     } while ( future == null );
     pipeline.remove( "connector" );
-
+    
     return future;
   }
 }

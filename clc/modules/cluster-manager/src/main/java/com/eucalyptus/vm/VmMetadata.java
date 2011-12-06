@@ -109,8 +109,15 @@ public class VmMetadata {
                                                                                                            put( "",
                                                                                                                 new Function<MetadataRequest, ByteArray>( ) {
                                                                                                                   public ByteArray apply( MetadataRequest arg0 ) {
-                                                                                                                    return ByteArray.newInstance( Joiner.on( "\n" ).join(
-                                                                                                                                                                          keySet( ) ) );
+                                                                                                                    String listing = "";
+                                                                                                                    for ( String key : keySet( ) ) {
+                                                                                                                      if ( !"".equals( key )
+                                                                                                                           && get( key ).apply( arg0 ) != null ) {
+                                                                                                                        listing += key + "\n";
+                                                                                                                      }
+                                                                                                                    }
+                                                                                                                    listing = listing.replaceAll( "\n$", "" );
+                                                                                                                    return ByteArray.newInstance( listing );
                                                                                                                   }
                                                                                                                 } );
                                                                                                            put( "dynamic", dynamicFunc );
@@ -145,7 +152,7 @@ public class VmMetadata {
       } else if ( publicMetadataEndpoints.containsKey( request.getMetadataName( ) ) ) {
         return publicMetadataEndpoints.get( request.getMetadataName( ) ).apply( request ).getBytes( );
       } else {
-        return null;
+        return "".getBytes( );
       }
     } catch ( Exception ex ) {
       String errorMsg = "Metadata request failed: " + path + ( Logs.isExtrrreeeme( )

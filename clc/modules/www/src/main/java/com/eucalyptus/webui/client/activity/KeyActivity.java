@@ -25,7 +25,7 @@ public class KeyActivity extends AbstractSearchActivity implements KeyView.Prese
   public static final String TITLE = "ACCESS KEYS";
   
   public static final String DELETE_KEY_CAPTION = "Delete selected access key";
-  public static final String DELETE_KEY_SUBJECT = "Are you sure to delete the following selected access key?";
+  public static final String DELETE_KEY_SUBJECT = "Are you sure you want to delete the following selected access key?";
   
   private static final Logger LOG = Logger.getLogger( KeyActivity.class.getName( ) );
   
@@ -42,6 +42,7 @@ public class KeyActivity extends AbstractSearchActivity implements KeyView.Prese
       
       @Override
       public void onFailure( Throwable caught ) {
+        ActivityUtil.logoutForInvalidSession( clientFactory, caught );
         LOG.log( Level.WARNING, "Search failed: " + caught );
         displayData( null );
       }
@@ -83,6 +84,7 @@ public class KeyActivity extends AbstractSearchActivity implements KeyView.Prese
 
       @Override
       public void onFailure( Throwable caught ) {
+        ActivityUtil.logoutForInvalidSession( clientFactory, caught );
         clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.ERROR, "Failed to modify key", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
         clientFactory.getShellView( ).getLogView( ).log( LogType.ERROR, "Failed to modify key " + keyId  + ": " + caught.getMessage( ) );
       }
@@ -91,6 +93,7 @@ public class KeyActivity extends AbstractSearchActivity implements KeyView.Prese
       public void onSuccess( Void arg0 ) {
         clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.NONE, "Successfully modified key", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
         clientFactory.getShellView( ).getLogView( ).log( LogType.INFO, "Modified key " + keyId );
+        clientFactory.getShellView( ).getDetailView( ).disableSave( );
         reloadCurrentRange( );
       }
       
@@ -133,6 +136,7 @@ public class KeyActivity extends AbstractSearchActivity implements KeyView.Prese
 
       @Override
       public void onFailure( Throwable caught ) {
+        ActivityUtil.logoutForInvalidSession( clientFactory, caught );
         clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.ERROR, "Failed to delete key", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
         clientFactory.getShellView( ).getLogView( ).log( LogType.ERROR, "Failed to delete key " + keyId + ": " + caught.getMessage( ) );
       }

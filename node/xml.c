@@ -79,19 +79,28 @@
 #include <libxslt/transform.h>
 #include <libxslt/xsltutils.h>
 
+#include "handlers.h" // nc_state_t
 #include "eucalyptus-config.h"
 #include "backing.h" // umask
-#include "handlers.h" // nc_state
 #include "data.h"
 #include "misc.h"
 #include "xml.h"
 
-extern struct nc_state_t nc_state; // TODO: pass that in?
-
 static int initialized = 0;
+static boolean config_use_virtio_root = 0;
+static boolean config_use_virtio_disk = 0;
+static boolean config_use_virtio_net = 0;
+static char xslt_path [MAX_PATH];
+
+#ifdef __STANDALONE // if compiling as a stand-alone binary (for unit testing)
+#define INIT() if (!initialized) init(NULL)
+#else // if linking against an NC, find nc_state symbol
+extern struct nc_state_t nc_state;
+#define INIT() if (!initialized) init(&nc_state)
+#endif
+
 static void error_handler (void * ctx, const char * fmt, ...);
 static pthread_mutex_t xml_mutex = PTHREAD_MUTEX_INITIALIZER; // process-global mutex
-#define INIT() if (!initialized) init()
 
 // macros for making XML construction a bit more readable
 #define _NODE(P,N) xmlNewChild((P), NULL, BAD_CAST (N), NULL)
@@ -99,7 +108,7 @@ static pthread_mutex_t xml_mutex = PTHREAD_MUTEX_INITIALIZER; // process-global 
 #define _ATTRIBUTE(P,N,V) xmlNewProp((P), BAD_CAST (N), BAD_CAST (V))
 #define _BOOL(S) ((S)?("true"):("false"))
 
-static void init (void)
+static void init (struct nc_state_t * nc_state)
 {
     pthread_mutex_lock (&xml_mutex);
     if (!initialized) {
@@ -108,9 +117,21 @@ static void init (void)
         xmlSubstituteEntitiesDefault (1); // substitute entities while parsing
         xmlSetGenericErrorFunc (NULL, error_handler); // catches errors/warnings that libxml2 writes to stderr
         xsltSetGenericErrorFunc (NULL, error_handler); // catches errors/warnings that libslt writes to stderr
+        if (nc_state!=NULL) {
+            config_use_virtio_root = nc_state->config_use_virtio_root;
+            config_use_virtio_disk = nc_state->config_use_virtio_disk;
+            config_use_virtio_net =  nc_state->config_use_virtio_net;
+            strncpy (xslt_path, nc_state->libvirt_xslt_path, sizeof (xslt_path));
+        }
         initialized = 1;
     }
     pthread_mutex_unlock (&xml_mutex);
+}
+
+static void cleanup (void)
+{
+    xsltCleanupGlobals();
+    xmlCleanupParser(); // calls xmlCleanupGlobals()
 }
 
 // verify that the path for kernel/ramdisk is reasonable
@@ -121,6 +142,21 @@ static int path_check (const char * path, const char * name) // TODO: further ch
         return 1;
     }
     return 0;
+}
+
+static int write_xml_file (const xmlDocPtr doc, const char * instanceId, const char * path, const char * type)
+{
+    mode_t old_umask = umask (~BACKING_FILE_PERM); // ensure the generated XML file has the right perms
+    chmod (path, BACKING_FILE_PERM); // ensure perms in case when XML file exists
+    int ret = xmlSaveFormatFileEnc (path, doc, "UTF-8", 1);
+    if (ret > 0) {
+        logprintfl (EUCAINFO, "[%s] wrote %s XML to %s\n", instanceId, type, path);
+    } else {
+        logprintfl (EUCAERROR, "[%s] failed to write %s XML to %s\n", instanceId, type, path);
+    }
+    umask (old_umask);
+
+    return (ret > 0) ? (OK) : (ERROR);
 }
 
 // Encodes instance metadata (contained in ncInstance struct) in XML
@@ -145,6 +181,14 @@ int gen_instance_xml (const ncInstance * instance)
         snprintf(bitness, 4,"%d", instance->hypervisorBitness);
         _ATTRIBUTE(hypervisor, "bitness", bitness);
     }
+
+    { // backing specification (TODO: maybe expand this with device maps or whatnot?)
+        xmlNodePtr backing = xmlNewChild (instanceNode, NULL, BAD_CAST "backing", NULL);
+        xmlNodePtr root = xmlNewChild (backing, NULL, BAD_CAST "root", NULL);
+        assert (instance->params.root);
+        _ATTRIBUTE(root, "type", ncResourceTypeName[instance->params.root->type]);
+    }
+
     _ELEMENT(instanceNode, "name", instance->instanceId);
     _ELEMENT(instanceNode, "uuid", instance->uuid);
     _ELEMENT(instanceNode, "reservation", instance->reservationId);
@@ -178,9 +222,9 @@ int gen_instance_xml (const ncInstance * instance)
     { // OS-related specs
         xmlNodePtr os = _NODE(instanceNode, "os");
         _ATTRIBUTE(os, "platform", instance->platform);
-        _ATTRIBUTE(os, "virtioRoot", _BOOL(nc_state.config_use_virtio_root));
-        _ATTRIBUTE(os, "virtioDisk", _BOOL(nc_state.config_use_virtio_disk));
-        _ATTRIBUTE(os, "virtioNetwork", _BOOL(nc_state.config_use_virtio_net));
+        _ATTRIBUTE(os, "virtioRoot", _BOOL(config_use_virtio_root));
+        _ATTRIBUTE(os, "virtioDisk", _BOOL(config_use_virtio_disk));
+        _ATTRIBUTE(os, "virtioNetwork", _BOOL(config_use_virtio_net));
     }
 
     { // disks specification
@@ -203,7 +247,7 @@ int gen_instance_xml (const ncInstance * instance)
                if (!strcmp ("none", vbr->guestDeviceName)) 
                    continue;
                // for Linux instances on Xen, partitions can be used directly, so disks can be skipped
-               if (strstr (instance->platform, "linux") && strstr (instance->hypervisorType, "xen")) {
+               if (strstr (instance->platform, "linux") && strstr (instance->hypervisorType, "xen") && (vbr->type == NC_RESOURCE_IMAGE)) {
                    if (vbr->partitionNumber == 0) {
                        continue;
                    }
@@ -218,7 +262,7 @@ int gen_instance_xml (const ncInstance * instance)
                _ATTRIBUTE(disk, "targetDeviceName", vbr->guestDeviceName);
                char devstr[SMALL_CHAR_BUFFER_SIZE];
                snprintf(devstr, SMALL_CHAR_BUFFER_SIZE, "%s", vbr->guestDeviceName);             
-               if (nc_state.config_use_virtio_root) {
+               if (config_use_virtio_root) {
                    devstr[0] = 'v';
                    _ATTRIBUTE(disk, "targetDeviceNameVirtio", devstr);
                    _ATTRIBUTE(disk, "targetDeviceBusVirtio", "virtio");     
@@ -249,13 +293,7 @@ int gen_instance_xml (const ncInstance * instance)
         _ATTRIBUTE(nic, "mac", instance->ncnet.privateMac);
     }
 
-    mode_t old_umask = umask (~BACKING_FILE_PERM); // ensure the generated XML file has the right perms
-    chmod (instance->xmlFilePath, BACKING_FILE_PERM); // ensure perms in case when XML file exists
-    xmlSaveFormatFileEnc (instance->xmlFilePath, doc, "UTF-8", 1);
-    umask (old_umask);
-
-    logprintfl (EUCAINFO, "[%s] wrote instance XML to %s\n", instance->instanceId, instance->xmlFilePath);
-    ret = 0;
+    ret = write_xml_file (doc, instance->instanceId, instance->xmlFilePath, "instance");
  free:
     xmlFreeDoc(doc);
     pthread_mutex_unlock (&xml_mutex);
@@ -263,16 +301,16 @@ int gen_instance_xml (const ncInstance * instance)
     return ret;
 }
 
-static int apply_xslt_stylesheet (const char * xsltStylesheetPath, const char * inputXmlPath, const char * outputXmlPath);
+static int apply_xslt_stylesheet (const char * xsltStylesheetPath, const char * inputXmlPath, const char * outputXmlPath, char * outputXmlBuffer, int outputXmlBufferSize);
 
 // Given a file with instance metadata in XML (instance->xmlFilePath)
 // and an XSL-T stylesheet, produces XML document suitable for libvirt
-int gen_libvirt_xml (const ncInstance * instance, const char * libvirtXsltPath) 
+int gen_libvirt_instance_xml (const ncInstance * instance)
 {
         INIT();
 
         pthread_mutex_lock (&xml_mutex);
-        int ret = apply_xslt_stylesheet (libvirtXsltPath, instance->xmlFilePath, instance->libvirtFilePath);
+        int ret = apply_xslt_stylesheet (xslt_path, instance->xmlFilePath, instance->libvirtFilePath, NULL, 0);
         pthread_mutex_unlock (&xml_mutex);
 
         return ret;
@@ -306,9 +344,9 @@ static void error_handler (void * ctx, const char * fmt, ...)
         }
 }
 
-// Processes input XML (e.g., instance metadata) into output XML (e.g., for libvirt)
-// using XSL-T specification (e.g., libvirt.xsl)
-static int apply_xslt_stylesheet (const char * xsltStylesheetPath, const char * inputXmlPath, const char * outputXmlPath)
+// Processes input XML file (e.g., instance metadata) into output XML file or string (e.g., for libvirt)
+// using XSL-T specification file (e.g., libvirt.xsl)
+static int apply_xslt_stylesheet (const char * xsltStylesheetPath, const char * inputXmlPath, const char * outputXmlPath, char * outputXmlBuffer, int outputXmlBufferSize)
 {
         int err = OK;
 
@@ -324,21 +362,48 @@ static int apply_xslt_stylesheet (const char * xsltStylesheetPath, const char * 
                         xsltFreeTransformContext (ctxt);
                         
                         if (res && applied_ok) {
+
+                            // save to a file, if path was provied
+                            if (outputXmlPath!=NULL) {
                                 FILE * fp = fopen (outputXmlPath, "w");
                                 if (fp) {
-                                        int bytes = xsltSaveResultToFile (fp, res, cur);
-                                        if (bytes==-1) {
-                                                logprintfl (EUCAERROR, "ERROR: failed to save XML document to %s\n", outputXmlPath);
-                                                err = ERROR;
-                                        }
-                                        fclose (fp);
-                                } else {
-                                        logprintfl (EUCAERROR, "ERROR: failed to create file %s\n", outputXmlPath);
+                                    int bytes = xsltSaveResultToFile (fp, res, cur);
+                                    if (bytes==-1) {
+                                        logprintfl (EUCAERROR, "ERROR: failed to save XML document to %s\n", outputXmlPath);
                                         err = ERROR;
+                                    }
+                                    fclose (fp);
+                                } else {
+                                    logprintfl (EUCAERROR, "ERROR: failed to create file %s\n", outputXmlPath);
+                                    err = ERROR;
                                 }                                
+                            }
+
+                            // convert to an ASCII buffer, if such was provided
+                            if (err==OK && outputXmlBuffer!=NULL && outputXmlBufferSize > 0) {
+                                xmlChar * buf;
+                                int buf_size;
+                                if (xsltSaveResultToString (&buf, &buf_size, res, cur)==0) { // success
+                                    if (buf_size < outputXmlBufferSize) {
+                                        bzero (outputXmlBuffer, outputXmlBufferSize);
+                                        for (int i=0, j=0; i<buf_size; i++) {
+                                            char c = (char) buf [i];
+                                            if (c != '\n') // remove newlines
+                                                outputXmlBuffer [j++] = c;
+                                        }
+                                    } else {
+                                        logprintfl (EUCAERROR, "ERROR: XML string buffer is too small (%d > %d)\n", buf_size, outputXmlBufferSize);
+                                        err = ERROR;
+                                    }
+                                    xmlFree (buf);
+                                } else {
+                                    logprintfl (EUCAERROR, "ERROR: failed to save XML document to a string\n");
+                                    err = ERROR;
+                                }
+                            }
                         } else {
-                                logprintfl (EUCAERROR, "ERROR: failed to apply stylesheet %s to %s\n", xsltStylesheetPath, inputXmlPath);
-                                err = ERROR;
+                            logprintfl (EUCAERROR, "ERROR: failed to apply stylesheet %s to %s\n", xsltStylesheetPath, inputXmlPath);
+                            err = ERROR;
                         }
                         if (res!=NULL) xmlFreeDoc(res);
                         xmlFreeDoc(doc);
@@ -351,40 +416,59 @@ static int apply_xslt_stylesheet (const char * xsltStylesheetPath, const char * 
                 logprintfl (EUCAERROR, "ERROR: failed to open and parse XSL-T stylesheet file %s\n", xsltStylesheetPath);
                 err = ERROR;
         }
-        xsltCleanupGlobals();
-        xmlCleanupParser();
 
         return err;
 }
 
-int gen_libvirt_attach_xml (const ncInstance *instance, const char * localDevReal, const char * remoteDev, int use_virtio_disk, char * xml, unsigned int xml_size)
+int gen_libvirt_attach_xml (const char *volumeId, const ncInstance *instance, const char * localDevReal, const char * remoteDev, char * xml, unsigned int xml_size)
 {
-    int virtio_dev = 0;
-    
-	if (strncmp (instance->hypervisorType, "kvm", 3) == 0) { 
-	    if (strncmp(instance->platform, "windows", 7) == 0) {
-            // always use virtio for windows instances
-	        virtio_dev = 1; 
+    INIT();
 
-        } else if (localDevReal[5] == 'v' && localDevReal[6] == 'd' && use_virtio_disk) {
-            // only attach using virtio when the device is /dev/vdXX
-            virtio_dev = 1;
-        }
-	}
-    
-    snprintf (xml, xml_size, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s'%s/></disk>", 
-              remoteDev, 
-              localDevReal,
-              virtio_dev ? " bus='virtio'" : "");
-    
-    struct stat statbuf;
-    int rc = 0;
-    rc = stat (remoteDev, &statbuf);
-    if (rc) {
-        logprintfl(EUCAERROR, "AttachVolume(): cannot locate local block device file '%s'\n", remoteDev);
-        rc = 1;
+    int ret = 1;
+    pthread_mutex_lock (&xml_mutex);
+    xmlDocPtr doc = xmlNewDoc (BAD_CAST "1.0");
+    xmlNodePtr volumeNode = xmlNewNode (NULL, BAD_CAST "volume");
+    xmlDocSetRootElement (doc, volumeNode);
+
+    { // hypervisor-related specs
+        xmlNodePtr hypervisor = xmlNewChild (volumeNode, NULL, BAD_CAST "hypervisor", NULL);
+        _ATTRIBUTE(hypervisor, "type", instance->hypervisorType);
+        _ATTRIBUTE(hypervisor, "capability", hypervsorCapabilityTypeNames[instance->hypervisorCapability]);
+        char bitness[4];
+        snprintf(bitness, 4,"%d", instance->hypervisorBitness);
+        _ATTRIBUTE(hypervisor, "bitness", bitness);
     }
-    return rc;
+
+    _ELEMENT(volumeNode, "id", volumeId);
+    _ELEMENT(volumeNode, "user", instance->userId);
+    _ELEMENT(volumeNode, "instancePath", instance->instancePath);
+
+    { // OS-related specs
+        xmlNodePtr os = _NODE(volumeNode, "os");
+        _ATTRIBUTE(os, "platform", instance->platform);
+        _ATTRIBUTE(os, "virtioRoot", _BOOL(config_use_virtio_root));
+        _ATTRIBUTE(os, "virtioDisk", _BOOL(config_use_virtio_disk));
+        _ATTRIBUTE(os, "virtioNetwork", _BOOL(config_use_virtio_net));
+    }
+
+    { // volume information
+        xmlNodePtr disk = _ELEMENT(volumeNode, "diskPath", remoteDev);
+        _ATTRIBUTE(disk, "targetDeviceType", "disk");
+        _ATTRIBUTE(disk, "targetDeviceName", localDevReal);
+        _ATTRIBUTE(disk, "targetDeviceBus", "scsi");
+        _ATTRIBUTE(disk, "sourceType", "block");
+        
+    }
+
+    char path [MAX_PATH];
+    snprintf (path, sizeof (path), EUCALYPTUS_VOLUME_XML_PATH_FORMAT, instance->instancePath, volumeId);
+    ret = write_xml_file (doc, instance->instanceId, path, "volume")
+        || apply_xslt_stylesheet (xslt_path, path, NULL, xml, xml_size);
+        
+    xmlFreeDoc(doc);
+    pthread_mutex_unlock (&xml_mutex);
+
+    return ret;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -412,6 +496,7 @@ static void create_dummy_instance (const char * file)
         _ELEMENT(instance, "memoryKB", "512000");
         {
                 xmlNodePtr os = _NODE(instance, "os");
+                _ATTRIBUTE(os, "platform", "linux");
                 _ATTRIBUTE(os, "virtioRoot", "true");
                 _ATTRIBUTE(os, "virtioDisk", "false");
                 _ATTRIBUTE(os, "virtioNetwork", "false");
@@ -450,25 +535,33 @@ int main (int argc, char ** argv)
                 logprintfl (EUCAERROR, "ERROR: required parameters are <XSLT stylesheet path>\n");
                 return 1;
         }
-        char * xsl_path = argv[1];
+        strncpy (xslt_path, argv[1], sizeof (xslt_path));
         char * in_path = tempnam (NULL, "xml-");
         char * out_path = tempnam (NULL, "xml-");
 
         create_dummy_instance (in_path);
 
-        logprintfl (EUCAINFO, "parsing stylesheet %s\n", xsl_path);
-        int err = apply_xslt_stylesheet (xsl_path, in_path, out_path);
+        logprintfl (EUCAINFO, "parsing stylesheet %s\n", xslt_path);
+        int err = apply_xslt_stylesheet (xslt_path, in_path, out_path, NULL, 0);
         if (err!=OK) 
                 goto out;
-        logprintfl (EUCAINFO, "parsing stylesheet %s again\n", xsl_path);
-        err = apply_xslt_stylesheet (xsl_path, in_path, out_path);
+        logprintfl (EUCAINFO, "parsing stylesheet %s again\n", xslt_path);
+        char xml_buf [2048];
+        err = apply_xslt_stylesheet (xslt_path, in_path, out_path, xml_buf, sizeof (xml_buf));
         if (err!=OK) 
                 goto out;
         logprintfl (EUCAINFO, "wrote XML to %s\n", out_path);
+        if (strlen (xml_buf) < 1) {
+            err = ERROR;
+            logprintfl (EUCAERROR, "failed to see XML in buffer\n");
+            goto out;
+        }
         cat (out_path);
 out:
         remove (out_path);
         remove (in_path);
+        free (in_path);
+        free (out_path);
         return err;
 }
 #endif

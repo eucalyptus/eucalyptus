@@ -82,11 +82,12 @@
 #include "misc.h"
 #include "walrus.h"
 
-#define TOTAL_RETRIES 10 /* download is retried in case of connection problems */
-#define FIRST_TIMEOUT 4 /* in seconds, goes in powers of two afterwards */
-#define CHUNK 262144 /* buffer size for decompression operations */
-#define BUFSIZE 4096 /* should be big enough for CERT and the signature */
-#define STRSIZE 245 /* for short strings: files, hosts, URLs */
+#define TOTAL_RETRIES 10 // download is retried in case of connection problems
+#define FIRST_TIMEOUT 4 // in seconds, goes in powers of two afterwards
+#define MAX_TIMEOUT 300 // in seconds, the cap for growing timeout values
+#define CHUNK 262144 // buffer size for decompression operations
+#define BUFSIZE 4096 // should be big enough for CERT and the signature
+#define STRSIZE 245 // for short strings: files, hosts, URLs
 #define WALRUS_ENDPOINT "/services/Walrus"
 #define DEFAULT_HOST_PORT "localhost:8773"
 #define GET_IMAGE_CMD "GetDecryptedImage"
@@ -110,12 +111,18 @@ struct request {
 #endif
 };
 
+/* walrus_request internal lock to prevent apparent race in curl ssl dependency */
+static pthread_mutex_t wreq_mutex = PTHREAD_MUTEX_INITIALIZER;
+
 /* downloads a decrypted image from Walrus based on the manifest URL,
  * saves it to outfile */
-static int walrus_request (const char * walrus_op, const char * verb, const char * requested_url, const char * outfile, const int do_compress)
+static int walrus_request_timeout (const char * walrus_op, const char * verb, const char * requested_url, const char * outfile, const int do_compress, int connect_timeout, int total_timeout)
 {
     int code = ERROR;
     char url [BUFSIZE];
+
+    
+    pthread_mutex_lock(&wreq_mutex); /* lock for curl construction */
 
     safe_strncpy (url, requested_url, BUFSIZE);
 #if defined(CAN_GZIP)
@@ -126,31 +133,38 @@ static int walrus_request (const char * walrus_op, const char * verb, const char
     /* isolate the PATH in the URL as it will be needed for signing */
     char * url_path;
     if (strncasecmp (url, "http://", 7)!=0) {
-        logprintfl (EUCAERROR, "{%u} walrus_request: URL must start with http://...\n");
+        logprintfl (EUCAERROR, "{%u} walrus_request: URL must start with http://...\n",(unsigned int)pthread_self());
+        pthread_mutex_unlock(&wreq_mutex);
         return code;
     }
     if ((url_path=strchr(url+7, '/'))==NULL) { /* find first '/' after hostname */
-        logprintfl (EUCAERROR, "{%u} walrus_request: URL has no path\n");
+        logprintfl (EUCAERROR, "{%u} walrus_request: URL has no path\n",(unsigned int)pthread_self());
+        pthread_mutex_unlock(&wreq_mutex);
         return code;
     }
 
     if (euca_init_cert()) {
-        logprintfl (EUCAERROR, "{%u} walrus_request: failed to initialize certificate\n");
+        logprintfl (EUCAERROR, "{%u} walrus_request: failed to initialize certificate\n",(unsigned int)pthread_self());
+        pthread_mutex_unlock(&wreq_mutex);
         return code;
     }
 
     int fd = open (outfile, O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR); // we do not truncate the file
     if (fd==-1 || lseek (fd, 0, SEEK_SET)==-1) {
         logprintfl (EUCAERROR, "{%u} walrus_request: failed to open %s for writing\n", (unsigned int)pthread_self(), outfile);
+        pthread_mutex_unlock(&wreq_mutex);
         return code;
     }
+
+    logprintfl(EUCADEBUG, "{%u} walrus_request: calling URL=%s\n", (unsigned int)pthread_self(), url);
 
     CURL * curl;
     CURLcode result;
     curl = curl_easy_init ();
     if (curl==NULL) {
-        logprintfl (EUCAERROR, "{%u} walrus_request: could not initialize libcurl\n");
+        logprintfl (EUCAERROR, "{%u} walrus_request: could not initialize libcurl\n",(unsigned int)pthread_self());
         close(fd);
+        pthread_mutex_unlock(&wreq_mutex);
         return code;
     }
 
@@ -158,6 +172,7 @@ static int walrus_request (const char * walrus_op, const char * verb, const char
     curl_easy_setopt (curl, CURLOPT_ERRORBUFFER, error_msg);
     curl_easy_setopt (curl, CURLOPT_URL, url);
     curl_easy_setopt (curl, CURLOPT_HEADERFUNCTION, write_header);
+    // curl_easy_setopt (curl, CURLOPT_FOLLOWLOCATION, 1); // TODO: remove the comment once we want to follow redirects (e.g., on HTTP 407)
 
     if (strncmp (verb, "GET", 4)==0) {
         curl_easy_setopt (curl, CURLOPT_HTTPGET, 1L);
@@ -167,8 +182,16 @@ static int walrus_request (const char * walrus_op, const char * verb, const char
     } else {
         close(fd);
         logprintfl (EUCAERROR, "{%u} walrus_request: invalid HTTP verb %s\n", (unsigned int)pthread_self(), verb);
+        pthread_mutex_unlock(&wreq_mutex);
         return ERROR; /* TODO: dealloc structs before returning! */
     }
+
+	if (connect_timeout > 0) {
+        curl_easy_setopt (curl, CURLOPT_CONNECTTIMEOUT, connect_timeout);
+	}
+	if (total_timeout > 0) {
+        curl_easy_setopt (curl, CURLOPT_TIMEOUT, total_timeout);
+	}
 
     /* set up the default write function, but possibly override
      * it below, if compression is desired and possible */
@@ -195,6 +218,7 @@ static int walrus_request (const char * walrus_op, const char * verb, const char
     char date_str [26];
     if (ctime_r(&t, date_str)==NULL) {
         close(fd);
+        pthread_mutex_unlock(&wreq_mutex);
         return ERROR;
     }
     assert (strlen(date_str)+7<=STRSIZE);
@@ -207,6 +231,7 @@ static int walrus_request (const char * walrus_op, const char * verb, const char
     char * cert_str = euca_get_cert (0); /* read the cloud-wide cert */
     if (cert_str==NULL) {
         close(fd);
+        pthread_mutex_unlock(&wreq_mutex);
         return ERROR;
     }
     char * cert64_str = base64_enc ((unsigned char *)cert_str, strlen(cert_str));
@@ -221,6 +246,7 @@ static int walrus_request (const char * walrus_op, const char * verb, const char
     char * sig_str = euca_sign_url (verb, date_str, url_path); /* create Walrus-compliant sig */
     if (sig_str==NULL) {
         close(fd);
+        pthread_mutex_unlock(&wreq_mutex);
         return ERROR;
     }
     assert (strlen(sig_str)+16<=BUFSIZE);
@@ -257,7 +283,9 @@ static int walrus_request (const char * walrus_op, const char * verb, const char
         }
 #endif
 
+        pthread_mutex_unlock(&wreq_mutex); /* unlock for message exchange */
         result = curl_easy_perform (curl); /* do it */
+        pthread_mutex_lock(&wreq_mutex); /* relock for curl teardown */
         logprintfl (EUCADEBUG, "{%u} walrus_request: wrote %lld bytes in %ld writes\n", (unsigned int)pthread_self(), params.total_wrote, params.total_calls);
 
 #if defined(CAN_GZIP)
@@ -298,6 +326,8 @@ static int walrus_request (const char * walrus_op, const char * verb, const char
             sleep (timeout);
             lseek (fd, 0L, SEEK_SET);
             timeout <<= 1;
+            if (timeout > MAX_TIMEOUT)
+                timeout = MAX_TIMEOUT;
         }
 
         retries--;
@@ -312,13 +342,18 @@ static int walrus_request (const char * walrus_op, const char * verb, const char
     free (sig_str);
     curl_slist_free_all (headers);
     curl_easy_cleanup (curl);
+    pthread_mutex_unlock(&wreq_mutex);
     return code;
+}
+
+static int walrus_request (const char * walrus_op, const char * verb, const char * requested_url, const char * outfile, const int do_compress) {
+    return (walrus_request_timeout(walrus_op, verb, requested_url, outfile, do_compress, 0, 0));
 }
 
 /* downloads a Walrus object from the URL, saves it to outfile */
 int walrus_object_by_url (const char * url, const char * outfile, const int do_compress)
 {
-    return walrus_request (NULL, "GET", url, outfile, do_compress);
+    return walrus_request_timeout (NULL, "GET", url, outfile, do_compress, 120, 0);
 }
 
 /* downloads a Walrus object from the default Walrus endpoint,
@@ -334,7 +369,7 @@ int walrus_object_by_path (const char * path, const char * outfile, const int do
  * saves it to outfile */
 int walrus_image_by_manifest_url (const char * url, const char * outfile, const int do_compress)
 {
-    return walrus_request (GET_IMAGE_CMD, "GET", url, outfile, do_compress);
+    return walrus_request_timeout (GET_IMAGE_CMD, "GET", url, outfile, do_compress, 120, 0);
 }
 
 /* gets a decrypted image from the default Walrus endpoint,

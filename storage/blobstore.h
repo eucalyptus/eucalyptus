@@ -83,6 +83,7 @@
 #define BLOBSTORE_FLAG_RDONLY   00002
 #define BLOBSTORE_FLAG_CREAT    00004
 #define BLOBSTORE_FLAG_EXCL     00010
+#define BLOBSTORE_FLAG_STRICT   01000
 
 // in-use flags for blockblobs
 #define BLOCKBLOB_STATUS_OPENED 00002 // currently opened by someone (read or write)
@@ -90,7 +91,7 @@
 #define BLOCKBLOB_STATUS_MAPPED 00010 // loopback device dm-mapped by one or more other blobs
 #define BLOCKBLOB_STATUS_BACKED 00020 // loopback device used as a backing by device mapper
 
-typedef enum {
+typedef enum { // make sure these match up with _blobstore_error_strings[] entries below
     BLOBSTORE_ERROR_OK = 0,
     BLOBSTORE_ERROR_GENERAL, // here for compatibility with 'ERROR' elsewhere in Eucalyptus
 
@@ -110,9 +111,11 @@ typedef enum {
     BLOBSTORE_ERROR_UNKNOWN,
 } blobstore_error_t;
 
-static char * _blobstore_error_strings [] = {
+static char * _blobstore_error_strings [] = { // make sure these match up with blobstore_error_t enums above
     "success",
+    "general error",
 
+    // system errno equivalents
     "no such entity",
     "bad file descriptor",
     "out of memory",
@@ -123,6 +126,7 @@ static char * _blobstore_error_strings [] = {
     "timeout",
     "too many files open",
 
+    // blobstore-specific errors
     "wrong signature",
     "unknown error"
 };
@@ -162,12 +166,14 @@ typedef struct _blockblob {
     char device_path [BLOBSTORE_MAX_PATH]; // full path of a block device on which blob can be accessed
     char dm_name [MAX_DM_NAME]; // name of the main device mapper device if this is a clone
     unsigned long long size_bytes; // size of the blob in bytes
+    unsigned long long blocks_allocated; // actual number of blocks on disk taken by the blob
     blobstore_snapshot_t snapshot_type; // ANY = not initialized/known, NONE = not a snapshot, DM = DM-based snapshot
     unsigned int in_use; // flags showing how the blockblob is being used (OPENED, LOCKED, LINKED)
     time_t last_accessed; // timestamp of last access
     time_t last_modified; // timestamp of last modification
     double priority; // priority, for assisting LRU
-    int fd; // file descriptor of the blockblob metadata file
+    int fd_lock; // file descriptor of the blockblob lock file
+    int fd_blocks; // file descriptor of the blockblob content file
 
     // LL pointers
     struct _blockblob * next;
@@ -197,13 +203,27 @@ typedef struct _blockblob_meta {
     struct _blockblob_meta * prev;
 } blockblob_meta;
 
+typedef struct _blobstore_meta {
+    char id [BLOBSTORE_MAX_PATH]; // ID of the blobstore, to handle directory moving
+    unsigned long long blocks_limit; // max size of the blobstore, in blocks
+    unsigned long long blocks_unlocked;  // number of blocks in blobstore allocated to blobs that are not in use and is not mapped
+    unsigned long long blocks_locked;    // number of blocks in blobstore allocated to blobs that are in use or is mapped (a dependency)
+    unsigned long long blocks_allocated; // number of blocks in blobstore that have been allocated on disk
+    unsigned int num_blobs; // count of blobs in the blobstore
+    blobstore_revocation_t revocation_policy; 
+    blobstore_snapshot_t snapshot_policy;
+    blobstore_format_t format;    
+} blobstore_meta;
+
 // blobstore operations
 
 blobstore * blobstore_open ( const char * path, 
                              unsigned long long limit_blocks, // on create: 0 is not valid; on open: 0 = any size
+                             unsigned int flags,
                              blobstore_format_t format,
                              blobstore_revocation_t revocation_policy,
                              blobstore_snapshot_t snapshot_policy);
+int blobstore_stat (blobstore * bs, blobstore_meta * meta);
 int blobstore_fsck (blobstore * bs, int (* examiner) (const blockblob * bb));
 int blobstore_search ( blobstore * bs, const char * regex, blockblob_meta ** results ); // returns a list of blockblobs matching an expression
 int blobstore_delete_regex (blobstore * bs, const char * regex); // delete all blobs in blobstore that match regex, return number deleted or -1 if error

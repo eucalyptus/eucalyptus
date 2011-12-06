@@ -1255,11 +1255,11 @@ int cc_describeServices(axutil_env_t *env, axis2_stub_t *stub) {
   
   sit = adb_serviceInfoType_create(env);
   
-  //  adb_serviceInfoType_set_type(sit, env, "cc");
-  //  adb_serviceInfoType_set_name(sit, env, "self");
-  //  adb_serviceInfoType_add_uris(sit, env, "http://localhost:8774");
+    adb_serviceInfoType_set_type(sit, env, "cc");
+    adb_serviceInfoType_set_name(sit, env, "self");
+    adb_serviceInfoType_add_uris(sit, env, "http://localhost:8774");
   
-  //  adb_describeServicesType_add_serviceIds(adbinput, env, sit);
+    adb_describeServicesType_add_serviceIds(adbinput, env, sit);
 
   adbrequest = adb_DescribeServices_create(env);
   adb_DescribeServices_set_DescribeServices(adbrequest, env, adbinput);
@@ -1413,6 +1413,37 @@ int cc_disableService(axutil_env_t *env, axis2_stub_t *stub) {
     status = adb_disableServiceResponseType_get_return(adboutput, env);
     if (status == AXIS2_FALSE) {
       printf("operation fault '%s'\n", adb_disableServiceResponseType_get_statusMessage(adboutput, env));
+    } else {
+    }
+  }
+  return(!status);  
+}
+
+int cc_shutdownService(axutil_env_t *env, axis2_stub_t *stub) {
+  adb_ShutdownService_t *adbrequest;
+  adb_shutdownServiceType_t *adbinput;
+
+  adb_ShutdownServiceResponse_t *adbresponse;
+  adb_shutdownServiceResponseType_t *adboutput;
+  int i;
+  axis2_bool_t status;
+
+  adbinput = adb_shutdownServiceType_create(env);
+
+  EUCA_MESSAGE_MARSHAL(shutdownServiceType, adbinput, (&mymeta));
+  
+  adbrequest = adb_ShutdownService_create(env);
+  adb_ShutdownService_set_ShutdownService(adbrequest, env, adbinput);
+  
+  adbresponse = axis2_stub_op_EucalyptusCC_ShutdownService(stub, env, adbrequest);
+  if (!adbresponse) {
+    printf("ERROR: ShutdownService failed NULL\n");
+    return(1);
+  } else {
+    adboutput = adb_ShutdownServiceResponse_get_ShutdownServiceResponse(adbresponse, env);
+    status = adb_shutdownServiceResponseType_get_return(adboutput, env);
+    if (status == AXIS2_FALSE) {
+      printf("operation fault '%s'\n", adb_shutdownServiceResponseType_get_statusMessage(adboutput, env));
     } else {
     }
   }

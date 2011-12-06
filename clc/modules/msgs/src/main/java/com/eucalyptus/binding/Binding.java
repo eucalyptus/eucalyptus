@@ -85,6 +85,7 @@ import org.apache.axiom.soap.SOAPFaultCode;
 import org.apache.axiom.soap.SOAPFaultDetail;
 import org.apache.axiom.soap.SOAPFaultReason;
 import org.apache.log4j.Logger;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jibx.runtime.BindingDirectory;
 import org.jibx.runtime.IBindingFactory;
 import org.jibx.runtime.IMarshallable;
@@ -115,6 +116,7 @@ public class Binding {
     return this.elementToClassMap.containsKey( elementName );
     
   }
+  
   public Class getElementClass( String elementName ) throws BindingException {
     if ( !this.elementToClassMap.containsKey( elementName ) ) {
       BindingException ex = new BindingException( "Failed to find corresponding class mapping for element: " + elementName + " in namespace: " + this.name );
@@ -276,7 +278,7 @@ public class Binding {
     }
   }
   
-  public Object fromOM( final OMElement param, final String namespace ) throws WebServicesException { 
+  public Object fromOM( final OMElement param, final String namespace ) throws WebServicesException {
     StringWriter out = new StringWriter( );
     try {
       param.serialize( out );
@@ -298,6 +300,15 @@ public class Binding {
   }
   
   public static String createRestFault( String faultCode, String faultReason, String faultDetails ) {
+    faultCode = ( faultCode != null
+      ? faultCode
+      : HttpResponseStatus.INTERNAL_SERVER_ERROR.toString( ) );
+    faultReason = ( faultReason != null
+      ? faultReason
+      : "unknown" );
+    faultDetails = ( faultDetails != null
+      ? faultDetails
+      : "unknown" );
     return new StringBuffer( ).append( "<?xml version=\"1.0\"?><Response><Errors><Error><Code>" )
                               .append( faultCode.replaceAll( "<", "&lt;" ).replaceAll( ">", "&gt;" ) )
                               .append( "</Code><Message>" ).append( faultReason.replaceAll( "<", "&lt;" ).replaceAll( ">", "&gt;" ) )

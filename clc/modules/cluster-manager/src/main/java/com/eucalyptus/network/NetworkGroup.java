@@ -77,6 +77,7 @@ import javax.persistence.OneToMany;
 import javax.persistence.OneToOne;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PrePersist;
+import javax.persistence.PreRemove;
 import javax.persistence.PreUpdate;
 import javax.persistence.Table;
 import javax.persistence.Transient;
@@ -91,6 +92,7 @@ import org.hibernate.annotations.NotFoundAction;
 import com.eucalyptus.cloud.CloudMetadata.NetworkGroupMetadata;
 import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.cloud.util.NotEnoughResourcesException;
+import com.eucalyptus.cloud.util.ResourceAllocationException;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.entities.Entities;
@@ -123,7 +125,7 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
   @Column( name = "metadata_network_group_description" )
   private String           description;
   
-  @OneToMany( cascade = CascadeType.ALL, orphanRemoval = true )
+  @OneToMany( cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER )
   @JoinColumn( name = "metadata_network_group_rule_fk" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Set<NetworkRule> networkRules = new HashSet<NetworkRule>( );
@@ -165,6 +167,14 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
     this.setNaturalId( naturalId );
   }
   
+  @PreRemove
+  private void preRemove( ) {
+    if ( this.extantNetwork != null && this.extantNetwork.teardown( ) ) {
+      Entities.delete( this.extantNetwork );
+      this.extantNetwork = null;
+    }
+  }
+  
   @PrePersist
   @PreUpdate
   private void prePersist( ) {
@@ -188,23 +198,6 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
   
   private void setNetworkRules( final Set<NetworkRule> networkRules ) {
     this.networkRules = networkRules;
-  }
-  
-  //GRZE:NET
-//  public Network getVmNetwork( ) {
-//    Network asNet;
-//    try {
-//      asNet = Networks.getInstance( ).lookup( this );
-//    } catch ( Exception ex ) {
-//      Network vmNetwork = new Network( this );
-//      asNet = Networks.getInstance( ).register( vmNetwork, Networks.State.ACTIVE );
-//    }
-//    return asNet;
-//  }
-  
-  public Collection<PacketFilterRule> lookupPacketFilterRules( ) {
-    final Collection<PacketFilterRule> pfRules = Collections2.transform( this.getNetworkRules( ), this.ruleTransform );
-    return pfRules;
   }
   
   @Override

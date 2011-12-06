@@ -63,11 +63,15 @@
 
 package com.eucalyptus.component.id;
 
-import java.util.ArrayList;
-import java.util.List;
 import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.ComponentId.GenerateKeys;
+import com.eucalyptus.component.ComponentId.Partition;
+import com.eucalyptus.component.ComponentId.PublicService;
 
-public class HttpService extends ComponentId.Unpartioned {
+@Partition( Eucalyptus.class )
+@PublicService
+@GenerateKeys
+public class HttpService extends ComponentId {
   
   public HttpService( ) {
     super( "Jetty" );
@@ -81,26 +85,6 @@ public class HttpService extends ComponentId.Unpartioned {
   @Override
   public String getServiceModelFileName( ) {
     return "eucalyptus-www.xml";
-  }
-  
-  @Override
-  public Boolean hasCredentials( ) {
-    return true;
-  }
-  
-  @Override
-  public List<Class<? extends ComponentId>> serviceDependencies( ) {
-    return new ArrayList( ) {
-      {
-        this.add( Eucalyptus.class );
-      }
-    };
-    
-  }
-  
-  @Override
-  public boolean isAdminService( ) {
-    return true;
   }
   
 }

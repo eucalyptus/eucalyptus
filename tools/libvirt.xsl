@@ -1,14 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-This XSL-T file is used to construct an XML document that 
-libvirt can use to launch a Eucalyptus instance (the job 
-formerly performed by gen_*libvirt_xml Perl scripts). As input
+This XSL-T file is used to construct two types of XML documents:
+
+- one that libvirt can use to launch a Eucalyptus instance (the 
+job formerly performed by gen_*libvirt_xml Perl scripts). As input
 it assumes an XML document produced the the Node Controller
 that describes a Eucalyptus instance to be launched.
+
+- one that libvirt can use to attach a disk to an instance 
 -->
 <xsl:transform xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
     <xsl:output encoding="UTF-8" indent="yes" method="xml"/>
-    <xsl:template match="/">
+
+    <xsl:template match="/instance">
         <!-- sanity check on the hypervisor type - we only know 'kvm' and 'xen' -->
         <xsl:if test="/instance/hypervisor/@type != 'kvm' and /instance/hypervisor/@type != 'xen'"> 
            <xsl:message terminate="yes">ERROR: invalid or unset /instance/hypervisor/@type parameter</xsl:message>
@@ -23,8 +27,8 @@ that describes a Eucalyptus instance to be launched.
             <description>Eucalyptus instance <xsl:value-of select="/instance/name"/></description>
             <os>
                 <xsl:choose>
-                    <xsl:when test="/instance/os/@platform = 'linux'">
-                        <!-- Linux-specific configuration -->
+                    <xsl:when test="/instance/os/@platform = 'linux' and /instance/backing/root/@type = 'image'">
+                        <!-- for Linux image-store-based instances -->
                         <xsl:if test="/instance/hypervisor/@type = 'xen'">
                             <type>linux</type>
                         </xsl:if>
@@ -52,21 +56,21 @@ that describes a Eucalyptus instance to be launched.
                             </xsl:otherwise>
                         </xsl:choose>
                     </xsl:when>
-                    <xsl:when test="/instance/os/@platform = 'windows'">
-                        <!-- Windows-specific configuration -->
+                    <xsl:when test="/instance/os/@platform = 'windows' or /instance/backing/root/@type = 'ebs'">
+                        <!-- for all Windows and EBS-backed-root Linux instances -->
                         <type>hvm</type>
                         <xsl:if test="/instance/hypervisor/@type = 'xen'">
                             <loader>/usr/lib/xen/boot/hvmloader</loader>
                         </xsl:if>
                     </xsl:when>
                     <xsl:otherwise>
-                        <xsl:message terminate="yes">ERROR: invalid or unset /instance/os/@platform parameter</xsl:message>
+                        <xsl:message terminate="yes">ERROR: invalid or unset /instance/os/@platform or /instance/backing/root/@type parameter</xsl:message>
                     </xsl:otherwise>
                 </xsl:choose>
             </os>
             <features>
                 <acpi/>
-                <xsl:if test="/instance/hypervisor/@type = 'xen' and /instance/os/@platform = 'windows'">
+                <xsl:if test="/instance/hypervisor/@type = 'xen' and ( /instance/os/@platform = 'windows' or /instance/backing/root/@type = 'ebs' )">
                     <apic/>
                     <pae/>
                 </xsl:if>
@@ -82,7 +86,7 @@ that describes a Eucalyptus instance to be launched.
                 <xsl:value-of select="/instance/memoryKB"/>
             </memory>
             <devices> 
-                <xsl:if test="/instance/hypervisor/@type = 'xen' and /instance/os/@platform = 'windows'">
+                <xsl:if test="/instance/hypervisor/@type = 'xen' and ( /instance/os/@platform = 'windows' or /instance/backing/root/@type = 'ebs' )">
                     <xsl:choose>
                         <xsl:when test="/instance/hypervisor/@bitness = '32'">
                             <emulator>/usr/lib/xen/bin/qemu-dm</emulator>
@@ -92,7 +96,9 @@ that describes a Eucalyptus instance to be launched.
                         </xsl:otherwise>
                     </xsl:choose>
                 </xsl:if>
-                <!-- disks -->
+
+                <!-- disks or partitions (Xen) -->
+
                 <xsl:for-each select="/instance/disks/diskPath">
                     <disk>
                         <xsl:attribute name="device">
@@ -130,7 +136,7 @@ that describes a Eucalyptus instance to be launched.
  				        </xsl:call-template>
                                    </xsl:attribute>
 	                       </xsl:when>
-			       <xsl:when test="/instance/hypervisor/@type='xen' and /instance/os/@platform='windows'"> 
+			       <xsl:when test="/instance/hypervisor/@type='xen' and ( /instance/os/@platform='windows' or /instance/backing/root/@type = 'ebs' )"> 
                                   <xsl:attribute name="bus">xen</xsl:attribute>
 				  <xsl:attribute name="dev">
 					<xsl:call-template name="string-replace-all">
@@ -172,7 +178,9 @@ that describes a Eucalyptus instance to be launched.
                         <target dev="fda"/>
                     </disk>
                 </xsl:if>
+
                 <!-- network cards -->
+
                 <xsl:for-each select="/instance/nics/nic">
                     <interface type="bridge">
                         <source>
@@ -201,7 +209,11 @@ that describes a Eucalyptus instance to be launched.
                         </xsl:if>
                     </interface>
                 </xsl:for-each>
-                <xsl:if test="/instance/hypervisor/@type = 'kvm'">
+
+		<!-- console -->
+
+	<xsl:choose>
+                <xsl:when test="/instance/hypervisor/@type = 'kvm'">
                     <serial type="file">
                         <source>
                             <xsl:attribute name="path">
@@ -210,19 +222,54 @@ that describes a Eucalyptus instance to be launched.
                         </source>
                         <target port="1"/>
                     </serial>
-                </xsl:if>
-                <xsl:if test="/instance/hypervisor/@type = 'xen' and /instance/os/@platform = 'windows'">
+                </xsl:when>
+                <xsl:when test="/instance/hypervisor/@type = 'xen' and /instance/os/@platform = 'windows'">
                     <serial type="pty">
                         <source path="/dev/pts/3"/>
                         <target port="0"/>
                     </serial>
                     <input type="tablet" bus="usb"/>
                     <input type="mouse" bus="ps2"/>
-                </xsl:if>
+                </xsl:when>
+                <xsl:when test="/instance/hypervisor/@type = 'xen' and /instance/backing/root/@type = 'ebs'">
+                    <console type="pty"/>
+                </xsl:when>
+	</xsl:choose>
                 <!-- <graphics type='vnc' port='-1' autoport='yes' keymap='en-us' listen='0.0.0.0'/> -->
             </devices>
         </domain>
     </xsl:template>
+
+    <xsl:template match="/volume">
+      <disk type="block">
+	<driver>
+	  <xsl:choose> 
+	    <xsl:when test="/volume/hypervisor/@type='xen'">
+	      <xsl:attribute name="name">phy</xsl:attribute>
+	    </xsl:when>
+	    <xsl:when test="/volume/hypervisor/@type='kvm'">
+	      <xsl:attribute name="name">qemu</xsl:attribute>
+	    </xsl:when>
+	  </xsl:choose>
+	</driver>
+	<source>
+	  <xsl:attribute name="dev">
+	    <xsl:value-of select="/volume/diskPath"/>
+	  </xsl:attribute>
+	</source>
+	<target>
+	  <xsl:attribute name="dev">
+	    <xsl:value-of select="/volume/diskPath/@targetDeviceName"/>
+	  </xsl:attribute>
+	  <xsl:if test="/volume/hypervisor/@type = 'kvm'">
+	    <xsl:if test="( /volume/os/@virtioDisk = 'true' and contains(/volume/diskPath/@targetDeviceName, 'vd') ) or /volume/os/@platform = 'windows'">
+	      <xsl:attribute name="bus">virtio</xsl:attribute>
+	    </xsl:if>
+	  </xsl:if>
+	</target>
+      </disk>
+    </xsl:template>
+
     <xsl:template name="string-replace-all">
         <xsl:param name="text" />
         <xsl:param name="replace" />

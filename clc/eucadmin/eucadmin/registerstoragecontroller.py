@@ -33,4 +33,5 @@ import eucadmin.registerrequest
 class RegisterStorageController(eucadmin.registerrequest.RegisterRequest):
 
     ServiceName = 'Storage Controller'
+    Description = 'Register a StorageController service.'
     

@@ -82,7 +82,7 @@ public interface User extends /*HasId, */BasePrincipal, Serializable {
   public static final String ACCOUNT_ADMIN = "admin";
   public static final String ACCOUNT_NOBODY = "nobody";
   
-  public static final String EMAIL = "Email";
+  public static final String EMAIL = "email";
   // LDAP user full DN
   public static final String DN = "Dn";
   
@@ -126,6 +126,7 @@ public interface User extends /*HasId, */BasePrincipal, Serializable {
   public Map<String, String> getInfo( ) throws AuthException;
   public void setInfo( String key, String value ) throws AuthException;  
   public void setInfo( Map<String, String> newInfo ) throws AuthException;
+  public void removeInfo( String key ) throws AuthException;
   
   public List<AccessKey> getKeys( ) throws AuthException;
   public AccessKey getKey( String keyId ) throws AuthException;
@@ -143,7 +144,6 @@ public interface User extends /*HasId, */BasePrincipal, Serializable {
   public Account getAccount( ) throws AuthException;
   
   public boolean isSystemAdmin( );
-  public boolean isSystemInternal( );
   
   public boolean isAccountAdmin( );
   

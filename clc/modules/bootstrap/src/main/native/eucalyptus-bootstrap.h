@@ -36,18 +36,19 @@
 #include <linux/capability.h>
 #include "eucalyptus-opts.h"
 #define PRINT_NULL(x) ((x) == NULL ? "null" : (x))
-#define CAPSALL (1 << CAP_NET_BIND_SERVICE)+ \
-                (1 << CAP_SETUID)+ \
+#define LIMIT_FILENO 65535
+#define LIMIT_NPROC RLIM_INFINITY
+#define CAPS \
+				(1 << CAP_SETUID)+ \
                 (1 << CAP_SETGID)+ \
-                (1 << CAP_DAC_READ_SEARCH)+ \
-                (1 << CAP_DAC_OVERRIDE)
-#define CAPSMAX (1 << CAP_NET_BIND_SERVICE)+ \
-                (1 << CAP_DAC_READ_SEARCH)+ \
-                (1 << CAP_DAC_OVERRIDE)
-#define CAPS    (1 << CAP_NET_BIND_SERVICE)+ \
-                (1 << CAP_SETUID)+ \
-                (1 << CAP_SETGID)
-#define CAPSMIN (1 << CAP_NET_BIND_SERVICE)
+                (1 << CAP_NET_BIND_SERVICE)+ \
+                (1 << CAP_NET_RAW)+ \
+                (1 << CAP_SYS_RESOURCE)
+#define CAPSMIN \
+				(1 << CAP_NET_BIND_SERVICE)+ \
+                (1 << CAP_NET_RAW)+ \
+                (1 << CAP_SYS_RESOURCE)
+
 typedef struct eucalyptus_opts euca_opts;
 typedef struct {
 	char *name;

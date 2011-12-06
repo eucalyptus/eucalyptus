@@ -9,9 +9,11 @@ import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
+import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.empyrean.Empyrean;
+import com.eucalyptus.system.Threads;
 
 @Provides( Empyrean.class )
 @RunDuring( Bootstrap.Stage.UserCredentialsInit )
@@ -26,13 +28,41 @@ public class DatabaseAuthBootstrapper extends Bootstrapper {
   }
   
   public boolean start( ) throws Exception {
-    if(Components.lookup( Eucalyptus.class ).isAvailableLocally( )) {
-      this.eusureSystemAdminExist( );
+    if(ComponentIds.lookup( Eucalyptus.class ).isAvailableLocally()) {
+      this.ensureSystemAdminExists( );
+      // User info map key is case insensitive.
+      // Older code may produce non-lowercase keys.
+      // Normalize them if there is any.
+      this.ensureUserInfoNormalized( );
       LdapSync.start( );
     }
     return true;
   }
   
+  private void ensureUserInfoNormalized() {
+    try {
+      Account account = Accounts.lookupAccountByName( Account.SYSTEM_ACCOUNT );
+      User sysadmin = account.lookupUserByName( User.ACCOUNT_ADMIN );
+      if ( sysadmin.getInfo( ).containsKey( "Email" ) ) {
+        Threads.newThread( new Runnable( ) {
+
+          @Override
+          public void run() {
+            try {
+              LOG.debug( "Starting to normalize user info for all users" );
+              Accounts.normalizeUserInfo( );
+            } catch ( Exception e ) {
+              LOG.error( e, e );
+            }
+          }
+          
+        } ).start( ); 
+      }
+    } catch ( Exception e ) {
+      LOG.error( e, e );
+    }
+  }
+
   /**
    * @see com.eucalyptus.bootstrap.Bootstrapper#enable()
    */
@@ -72,7 +102,7 @@ public class DatabaseAuthBootstrapper extends Bootstrapper {
     return LdapSync.check( );
   }
   
-  private void eusureSystemAdminExist( ) throws Exception {
+  private void ensureSystemAdminExists( ) throws Exception {
     try {
       Account account = Accounts.lookupAccountByName( Account.SYSTEM_ACCOUNT );
       account.lookupUserByName( User.ACCOUNT_ADMIN );

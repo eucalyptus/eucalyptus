@@ -80,13 +80,15 @@ import com.eucalyptus.ws.StackConfiguration;
 @ChannelPipelineCoverage( "one" )
 public class QueryTimestampHandler extends MessageStackHandler {
   private static Logger LOG = Logger.getLogger( QueryTimestampHandler.class );
+  
   @Override
   public void incomingMessage( MessageEvent event ) throws AuthenticationException {
     if ( event.getMessage( ) instanceof MappingHttpRequest ) {
       MappingHttpRequest httpRequest = ( MappingHttpRequest ) event.getMessage( );
       Map<String, String> parameters = httpRequest.getParameters( );
       if ( !parameters.containsKey( SecurityParameter.Timestamp.toString( ) ) && !parameters.containsKey( SecurityParameter.Expires.toString( ) ) ) {
-        throw new AuthenticationException( "One of the following parameters must be specified: " + SecurityParameter.Timestamp + " OR " + SecurityParameter.Expires );
+        throw new AuthenticationException( "One of the following parameters must be specified: " + SecurityParameter.Timestamp + " OR "
+          + SecurityParameter.Expires );
       }
       Calendar now = null;
       Calendar expires = null;
@@ -102,13 +104,13 @@ public class QueryTimestampHandler extends MessageStackHandler {
           } catch ( Exception e ) {
             expires = Timestamps.parseTimestamp( URLDecoder.decode( timestamp ) );
           }
-	  // allow 20 secs for clock drift
-	  now.add( Calendar.SECOND, StackConfiguration.CLOCK_SKEW_SEC );
-	  // make sure that the message wasn't generated in the future
-          if( now.before( expires )) {
-              throw new AuthenticationException( "Message was generated in the future (times in UTC): Timestamp=" + timestamp);
+          // allow 20 secs for clock drift
+          now.add( Calendar.SECOND, StackConfiguration.CLOCK_SKEW_SEC );
+          // make sure that the message wasn't generated in the future
+          if ( now.before( expires ) ) {
+            throw new AuthenticationException( "Message was generated in the future (times in UTC): Timestamp=" + timestamp );
           }
-	  // allow caching for 15 mins + 20 secs for clock drift
+          // allow caching for 15 mins + 20 secs for clock drift
           expires.add( Calendar.SECOND, 900 + StackConfiguration.CLOCK_SKEW_SEC );
         } else {
           exp = parameters.remove( SecurityParameter.Expires.toString( ) );
@@ -117,12 +119,15 @@ public class QueryTimestampHandler extends MessageStackHandler {
           } catch ( Exception e ) {
             expires = Timestamps.parseTimestamp( URLDecoder.decode( exp ) );
           }
-	  // in case of Expires, for now, we accept arbitrary time in the future
-	  Calendar cacheExpire = ( Calendar )now.clone();
+          // in case of Expires, for now, we accept arbitrary time in the future
+          Calendar cacheExpire = ( Calendar ) now.clone( );
           cacheExpire.add( Calendar.MINUTE, 15 );
-          if( expires.after(cacheExpire) )
-	      LOG.warn("[security] Message expiration date " + expires + " is further in the future that replay cache expiration");
+          if ( expires.after( cacheExpire ) )
+            LOG.warn( "[security] Message expiration date " + expires + " is further in the future that replay cache expiration" );
         }
+      } catch ( AuthenticationException a ) {
+        LOG.debug( a, a );
+        throw a;
       } catch ( Exception t ) {
         LOG.debug( t, t );
         throw new AuthenticationException( "Failure to parse timestamp: Timestamp=" + timestamp + " Expires=" + exp );
@@ -130,13 +135,19 @@ public class QueryTimestampHandler extends MessageStackHandler {
       
       if ( now.after( expires ) ) {
         expires.setTimeZone( TimeZone.getTimeZone( "GMT" ) );
-        String expiryTime = String.format( "%4d-%02d-%02d'T'%02d:%02d:%02d", expires.get( Calendar.YEAR ), expires.get( Calendar.MONTH ) + 1, expires.get( Calendar.DAY_OF_MONTH ) + 1, expires.get( Calendar.HOUR_OF_DAY ), expires.get( Calendar.MINUTE ), expires.get( Calendar.SECOND ) );
+        String expiryTime = String.format( "%4d-%02d-%02d'T'%02d:%02d:%02d",
+                                           expires.get( Calendar.YEAR ),
+                                           expires.get( Calendar.MONTH ) + 1,
+                                           expires.get( Calendar.DAY_OF_MONTH ) + 1,
+                                           expires.get( Calendar.HOUR_OF_DAY ),
+                                           expires.get( Calendar.MINUTE ),
+                                           expires.get( Calendar.SECOND ) );
         throw new AuthenticationException( "Message has expired (times in UTC): Timestamp=" + timestamp + " Expires=" + exp + " Deadline=" + expiryTime );
       }
     }
   }
-
+  
   @Override
   public void outgoingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {}
-
+  
 }

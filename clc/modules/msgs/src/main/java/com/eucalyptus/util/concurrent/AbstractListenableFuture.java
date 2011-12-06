@@ -49,10 +49,11 @@ import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.system.Threads;
-import com.eucalyptus.util.Assertions;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Futures;
 import com.google.common.util.concurrent.ExecutionList;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.notNullValue;
 
 /**
  * <p>
@@ -77,27 +78,32 @@ public abstract class AbstractListenableFuture<V> extends AbstractFuture<V> impl
   protected final ConcurrentLinkedQueue<Runnable> listeners = new ConcurrentLinkedQueue<Runnable>( );
   private final AtomicBoolean                     finished  = new AtomicBoolean( false );
   private static final Runnable                   DONE      = new Runnable( ) {
+                                                              @Override
                                                               public void run( ) {}
                                                             };
   
-  protected <T> void add( ExecPair<T> pair ) {
+  protected <T> void add( final ExecPair<T> pair ) {
     this.listeners.add( pair );
     if ( this.finished.get( ) ) {
-      EventRecord.here( pair.getClass( ), EventType.FUTURE, "run(" + pair.toString( ) + ")" ).exhaust( );
+      EventRecord.here( pair.getClass( ), EventType.FUTURE, "run(" + pair.toString( )
+                                                            + ")" ).exhaust( );
       this.listeners.remove( pair );
       pair.run( );
     } else {
-      EventRecord.here( pair.getClass( ), EventType.FUTURE, "add(" + pair.toString( ) + ")" ).exhaust( );
+      EventRecord.here( pair.getClass( ), EventType.FUTURE, "add(" + pair.toString( )
+                                                            + ")" ).exhaust( );
     }
   }
   
-  public void addListener( final Runnable listener, ExecutorService exec ) {
-    ExecPair<Object> pair = new ExecPair<Object>( listener, exec );
-    add( pair );
+  @Override
+  public void addListener( final Runnable listener, final ExecutorService exec ) {
+    final ExecPair<Object> pair = new ExecPair<Object>( listener, exec );
+    this.add( pair );
   }
   
-  public void addListener( Runnable listener ) {
-    addListener( listener, Threads.lookup( Empyrean.class, AbstractListenableFuture.class ) );
+  @Override
+  public void addListener( final Runnable listener ) {
+    this.addListener( listener, Threads.lookup( Empyrean.class, AbstractListenableFuture.class ) );
   }
   
   /**
@@ -105,8 +111,8 @@ public abstract class AbstractListenableFuture<V> extends AbstractFuture<V> impl
    *      ExecutorService)
    */
   @Override
-  public <T> CheckedListenableFuture<T> addListener( Callable<T> listener, ExecutorService executor ) {
-    ExecPair<T> pair = new ExecPair<T>( listener, executor );
+  public <T> CheckedListenableFuture<T> addListener( final Callable<T> listener, final ExecutorService executor ) {
+    final ExecPair<T> pair = new ExecPair<T>( listener, executor );
     this.add( pair );
     return pair.getFuture( );
   }
@@ -115,8 +121,8 @@ public abstract class AbstractListenableFuture<V> extends AbstractFuture<V> impl
    * @see com.eucalyptus.util.concurrent.ListenableFuture#addListener(java.util.concurrent.Callable)
    */
   @Override
-  public <T> CheckedListenableFuture<T> addListener( Callable<T> listener ) {
-    return addListener( listener, Threads.lookup( Empyrean.class, AbstractListenableFuture.class ) );
+  public <T> CheckedListenableFuture<T> addListener( final Callable<T> listener ) {
+    return this.addListener( listener, Threads.lookup( Empyrean.class, AbstractListenableFuture.class ) );
   }
   
   @Override
@@ -130,12 +136,12 @@ public abstract class AbstractListenableFuture<V> extends AbstractFuture<V> impl
   }
   
   @Override
-  public boolean set( V value ) {
+  public boolean set( final V value ) {
     return super.set( value );
   }
   
   @Override
-  public boolean setException( Throwable throwable ) {
+  public boolean setException( final Throwable throwable ) {
     return super.setException( throwable );
   }
   
@@ -145,17 +151,16 @@ public abstract class AbstractListenableFuture<V> extends AbstractFuture<V> impl
     private final CheckedListenableFuture<C> future = Futures.newGenericeFuture( );
     private final ExecutorService            executor;
     
-    ExecPair( Callable callable, ExecutorService executor ) {
-      Assertions.assertNotNull( callable, "Callable was null." );
-      Assertions.assertNotNull( executor, "ExecutorService was null." );
-      
+    ExecPair( final Callable callable, final ExecutorService executor ) {
+      assertThat( "BUG: callable is null.", callable, notNullValue( ) );
+      assertThat( "BUG: executor is null.", executor, notNullValue( ) );
       this.callable = callable;
       this.executor = executor;
     }
     
-    ExecPair( final Runnable runnable, ExecutorService executor ) {
-      Assertions.assertNotNull( runnable, "Runnable was null." );
-      Assertions.assertNotNull( executor, "ExecutorService was null." );
+    ExecPair( final Runnable runnable, final ExecutorService executor ) {
+      assertThat( "BUG: runnable is null.", runnable, notNullValue( ) );
+      assertThat( "BUG: executor is null.", executor, notNullValue( ) );
       
       this.runnable = runnable;
       this.executor = executor;
@@ -165,21 +170,23 @@ public abstract class AbstractListenableFuture<V> extends AbstractFuture<V> impl
     public void run( ) {
       try {
         if ( this.runnable != null ) {
-          EventRecord.here( runnable.getClass( ), EventType.FUTURE, "run(" + runnable.toString( ) + ")" ).exhaust( );
+          EventRecord.here( this.runnable.getClass( ), EventType.FUTURE, "run(" + this.runnable.toString( )
+                                                                    + ")" ).exhaust( );
           this.executor.submit( this.runnable, null ).get( );
           this.future.set( null );
         } else {
-          EventRecord.here( callable.getClass( ), EventType.FUTURE, "call(" + callable.toString( ) + ")" ).exhaust( );
-          this.future.set( this.executor.submit( callable ).get( ) );
+          EventRecord.here( this.callable.getClass( ), EventType.FUTURE, "call(" + this.callable.toString( )
+                                                                    + ")" ).exhaust( );
+          this.future.set( this.executor.submit( this.callable ).get( ) );
         }
-      } catch ( InterruptedException ex ) {
+      } catch ( final InterruptedException ex ) {
         LOG.error( ex, ex );
         Thread.currentThread( ).interrupt( );
         this.future.setException( ex );
-      } catch ( ExecutionException ex ) {
+      } catch ( final ExecutionException ex ) {
         LOG.error( ex, ex );
         this.future.setException( ex.getCause( ) );
-      } catch ( Exception ex ) {
+      } catch ( final Exception ex ) {
         LOG.error( ex, ex );
         this.future.setException( ex.getCause( ) );
       }

@@ -34,22 +34,22 @@ public class Permissions {
       // If we are not in a request context, e.g. the UI, use a dummy contract map.
       // TODO(wenye): we should consider how to handle this if we allow the EC2 operations in the UI.
       Map<Contract.Type, Contract> contracts = context != null ? context.getContracts( ) : new HashMap<Contract.Type, Contract>( );
-      policyEngine.evaluateAuthorization( vendor + ":" + resourceType, resourceName, resourceAccount, action, requestUser, contracts );
+      policyEngine.evaluateAuthorization( vendor + ":" + resourceType, resourceName, resourceAccount, vendor + ":" + action, requestUser, contracts );
       return true;
     } catch ( AuthException e ) {
-      LOG.error( "Denied resource access to " + resourceType + ":" + resourceName + " of " + resourceAccount.getName( ) + " for " + requestUser.getName( ), e );
+      LOG.error( "Denied resource access to " + resourceType + ":" + resourceName + " of " + resourceAccount + " for " + requestUser, e );
     } catch ( Exception e ) {
-      LOG.debug( "Exception in resource access to " + resourceType + ":" + resourceName + " of " + resourceAccount.getName( ) + " for " + requestUser.getName( ), e );      
+      LOG.debug( "Exception in resource access to " + resourceType + ":" + resourceName + " of " + resourceAccount + " for " + requestUser, e );      
     }
     return false;
   }
   
   public static boolean canAllocate( String vendor, String resourceType, String resourceName, String action, User requestUser, Long quantity ) {
     try {
-      policyEngine.evaluateQuota( vendor + ":" + resourceType, resourceName, action, requestUser, quantity );
+      policyEngine.evaluateQuota( vendor + ":" + resourceType, resourceName, vendor + ":" + action, requestUser, quantity );
       return true;
     } catch ( AuthException e ) {
-      LOG.debug( "Denied resource allocation of " + resourceType + ":" + resourceName + " by " + quantity + " for " + requestUser.getName( ), e );
+      LOG.debug( "Denied resource allocation of " + resourceType + ":" + resourceName + " by " + quantity + " for " + requestUser, e );
     }
     return false;
   }

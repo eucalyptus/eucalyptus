@@ -64,29 +64,20 @@
 package com.eucalyptus.component.id;
 
 import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.ComponentId.GenerateKeys;
+import com.eucalyptus.component.ComponentId.Partition;
+import com.eucalyptus.component.ComponentId.PolicyVendor;
+import com.eucalyptus.component.ComponentId.PublicService;
 
-
-public class Walrus extends ComponentId.Unpartioned {
-
+@PublicService
+@GenerateKeys
+@PolicyVendor( "s3" )
+@Partition( Walrus.class )
+public class Walrus extends ComponentId {
+  
   @Override
   public String getLocalEndpointName( ) {
     return "vm://BukkitInternal";
   }
   
-  @Override
-  public Boolean hasCredentials( ) {
-    return true;
-  }
-  
-  @Override
-  public boolean isUserService( ) {
-    return true;
-  }
-
-  @Override
-  public String getVendorName( ) {
-    return "s3";
-  }
-
-
 }

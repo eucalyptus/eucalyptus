@@ -36,8 +36,12 @@ install: euca_admin
 	@sed -e 's://*:/:g' setup.cfg.template > setup.cfg
 	$(PYTHON) setup.py install --root=$(DESTDIR)
 
+tags:
+	find bin eucadmin -regex ".*\.\(h\|c\|py\|in\)" | xargs etags
+	find bin eucadmin -regex ".*\.\(h\|c\|py\|in\)" | xargs ctags
+
 clean:
-	@$(RM) -fr ./dist ./build 
+	@$(RM) -fr ./dist ./build tags TAGS
 
 distclean: clean
 	@$(RM) -f setup.cfg setup.cfg.template bin/euca_conf

@@ -27,7 +27,7 @@ public class CallbackListenerSequence<R extends BaseMessage> implements Callback
    * @return <tt>this</tt>
    */
   public CallbackListenerSequence<R> addCallback( final UnconditionalCallback c ) {
-    EventRecord.caller( CallbackListenerSequence.class, EventType.CALLBACK, UnconditionalCallback.class.getSimpleName( ), c.getClass( ) ).exhaust( );
+    EventRecord.caller( CallbackListenerSequence.class, EventType.CALLBACK, UnconditionalCallback.class.getSimpleName( ), c.getClass( ) ).extreme( );
     this.successCallbacks.add( c );
     this.failureCallbacks.add( new Callback.Failure() {
       @Override
@@ -46,7 +46,7 @@ public class CallbackListenerSequence<R extends BaseMessage> implements Callback
    * @return <tt>this</tt>
    */
   public CallbackListenerSequence<R> addCallback( Callback.Checked c ) {
-    EventRecord.caller( CallbackListenerSequence.class, EventType.CALLBACK, Callback.Checked.class.getSimpleName( ), c.getClass( ) ).exhaust( );
+    EventRecord.caller( CallbackListenerSequence.class, EventType.CALLBACK, Callback.Checked.class.getSimpleName( ), c.getClass( ) ).extreme( );
     this.successCallbacks.add( c );
     this.failureCallbacks.add( c );
     return this;
@@ -61,7 +61,7 @@ public class CallbackListenerSequence<R extends BaseMessage> implements Callback
    */
   @SuppressWarnings( "unchecked" )
   public CallbackListenerSequence<R> addSuccessCallback( Callback.Success<R> c ) {
-    EventRecord.caller( CallbackListenerSequence.class, EventType.CALLBACK, Callback.Success.class.getSimpleName( ), c.getClass( ) ).exhaust( );
+    EventRecord.caller( CallbackListenerSequence.class, EventType.CALLBACK, Callback.Success.class.getSimpleName( ), c.getClass( ) ).extreme( );
     this.successCallbacks.add( c );
     return this;
   }
@@ -74,7 +74,7 @@ public class CallbackListenerSequence<R extends BaseMessage> implements Callback
    * @return <tt>this</tt>
    */
   public CallbackListenerSequence<R> addFailureCallback( Callback.Failure c ) {
-    EventRecord.caller( CallbackListenerSequence.class, EventType.CALLBACK, Callback.Failure.class.getSimpleName( ), c.getClass( ) ).exhaust( );
+    EventRecord.caller( CallbackListenerSequence.class, EventType.CALLBACK, Callback.Failure.class.getSimpleName( ), c.getClass( ) ).extreme( );
     this.failureCallbacks.add( c );
     return this;
   }
@@ -86,10 +86,10 @@ public class CallbackListenerSequence<R extends BaseMessage> implements Callback
    */
   @Override
   public void fire( R response ) {
-    EventRecord.here( CallbackListenerSequence.class, EventType.CALLBACK, "fire(" + response.getClass( ).getName( ) + ")" ).exhaust( );
+    EventRecord.here( CallbackListenerSequence.class, EventType.CALLBACK, "fire(" + response.getClass( ).getName( ) + ")" ).extreme( );
     for ( Callback<R> cb : this.successCallbacks ) {
       try {
-        EventRecord.here( this.getClass( ), EventType.CALLBACK, "" + cb.getClass( ), "fire(" + response.getClass( ).getCanonicalName( ) + ")" ).exhaust( );
+        EventRecord.here( this.getClass( ), EventType.CALLBACK, "" + cb.getClass( ), "fire(" + response.getClass( ).getCanonicalName( ) + ")" ).extreme( );
         cb.fire( response );
       } catch ( Exception t ) {
         this.LOG.error( "Exception occurred while trying to call: " + cb.getClass( ) + ".apply( " + t.getMessage( ) + " )" );
@@ -105,10 +105,10 @@ public class CallbackListenerSequence<R extends BaseMessage> implements Callback
    */
   @Override
   public void fireException( Throwable t ) {
-    EventRecord.here( CallbackListenerSequence.class, EventType.CALLBACK, "fireException(" + t.getClass( ).getName( ) + ")" ).debug( );
+    EventRecord.here( CallbackListenerSequence.class, EventType.CALLBACK, "fireException(" + t.getClass( ).getName( ) + ")" ).extreme( );
     for ( Callback.Checked<R> cb : this.failureCallbacks ) {
       try {
-        EventRecord.here( this.getClass( ), EventType.CALLBACK, "" + cb.getClass( ), "fireException(" + t.getClass( ).getCanonicalName( ) + ")" ).debug( );
+        EventRecord.here( this.getClass( ), EventType.CALLBACK, "" + cb.getClass( ), "fireException(" + t.getClass( ).getCanonicalName( ) + ")" ).extreme( );
         cb.fireException( t );
       } catch ( Exception t2 ) {
         this.LOG.error( "Exception occurred while trying to call: " + cb.getClass( ) + ".failure( " + t.getMessage( ) + " )" );

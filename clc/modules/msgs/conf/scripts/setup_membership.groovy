@@ -22,7 +22,7 @@ import org.jgroups.protocols.pbcast.NAKACK
 import org.jgroups.protocols.pbcast.STABLE
 import org.jgroups.protocols.pbcast.STATE_TRANSFER
 import com.eucalyptus.bootstrap.BootstrapArgs
-import com.eucalyptus.bootstrap.HostManager
+import com.eucalyptus.bootstrap.Hosts
 import com.eucalyptus.bootstrap.SystemIds
 import com.eucalyptus.empyrean.Empyrean
 import com.eucalyptus.system.Threads
@@ -43,17 +43,17 @@ Integer       oobThreadPoolMaxThreads    = 25;
 Integer       oobThreadPoolMinThreads    = 2;
 Integer       oobThreadPoolKeepAliveTime = 5000;
 
-defaultThreads = Threads.lookup( Empyrean.class, HostManager.class );
-normalThreads = Threads.lookup( Empyrean.class, HostManager.class, "normal-pool" );
-oobThreads = Threads.lookup( Empyrean.class, HostManager.class, "oob-pool" );
+defaultThreads = Threads.lookup( Empyrean.class, Hosts.class );
+normalThreads = Threads.lookup( Empyrean.class, Hosts.class, "normal-pool" );
+oobThreads = Threads.lookup( Empyrean.class, Hosts.class, "oob-pool" );
 
 
 UDP udp = new UDP( );
-udp.setValue( "singleton_name", SystemIds.membershipUdpMcastTransportName( ) );
 try {
+  LOG.info( "Setting membership addres: " + Internets.localHostAddress( ) );
   udp.setBindAddress( Internets.localHostAddress( ) );
   udp.setBindPort( 8773 );
-  udp.setBindToAllInterfaces( false );
+  udp.setBindToAllInterfaces( false );//this sets receive_on_all_interfaces
 } catch ( UnknownHostException ex ) {
   LOG.error( ex, ex );
 }
@@ -63,6 +63,7 @@ udp.setDiscardIncompatiblePackets( true );
 udp.setLogDiscardMessages( false );
 udp.setMaxBundleSize( 60000 );
 udp.setMaxBundleTimeout( 30 );
+udp.setValue( "singleton_name", SystemIds.membershipUdpMcastTransportName( ) );
 
 //udp.setDefaultThreadPool( defaultThreads );
 udp.setDefaultThreadPoolThreadFactory( defaultThreads );
@@ -89,6 +90,9 @@ MERGE2 mergeHandler = new MERGE2( );
 mergeHandler.setMaxInterval( 30000 );
 mergeHandler.setMinInterval( 10000 );
 
+FD_SOCK fdSocket = new FD_SOCK();
+fdSocket.setValue("bind_addr", Internets.localHostInetAddress( ) )
+
 NAKACK negackBroadcast = new NAKACK( );
 negackBroadcast.setUseMcastXmit( false );
 negackBroadcast.setDiscardDeliveredMsgs( true );
@@ -97,13 +101,13 @@ negackBroadcast.setGcLag( 20 );
 UNICAST reliableUnicast = new UNICAST( );
 
 STABLE stableBroadcast = new STABLE( );
-stableBroadcast.setDesiredAverageGossip( 50000 );
+//stableBroadcast.setDesiredAverageGossip( 20000 );
 stableBroadcast.setMaxBytes( 400000 );
 
 GMS groupMembership = new GMS( );
-if( !BootstrapArgs.isCloudController( ) ) {
-  groupMembership.setValue( "disable_initial_coord", true );
-}
+//if( !BootstrapArgs.isCloudController( ) ) {
+//  groupMembership.setValue( "disable_initial_coord", true );
+//}
 groupMembership.setPrintLocalAddress( true );
 groupMembership.setJoinTimeout( 3000 );
 groupMembership.setShun( false );
@@ -113,16 +117,15 @@ FC flowControl = new FC( );
 flowControl.setMaxCredits( 20000000 );
 flowControl.setMinThreshold( 0.1 );
 
-
-
 return [
   udp,
   pingDiscovery,
   mergeHandler,
-  new FD_SOCK(),
+  fdSocket,
   new FD(),
   new VERIFY_SUSPECT(),
-  negackBroadcast, new UNICAST(),
+  negackBroadcast, 
+  new UNICAST(),
   stableBroadcast,
   groupMembership,
   flowControl,

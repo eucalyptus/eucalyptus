@@ -9,6 +9,8 @@ import com.eucalyptus.auth.principal.Account;
 
 public abstract class QuotaKey implements Key {
 
+  public static final String NOT_SUPPORTED = "Not supported";
+  
   public static enum Scope {
     ACCOUNT,
     GROUP,
@@ -16,6 +18,8 @@ public abstract class QuotaKey implements Key {
   }
   
   public abstract String value( Scope scope, String id, String resource, Long quantity ) throws AuthException;
+  
+  public static final Long MB = 1024 * 1024L;
   
   @Override
   public final String value( ) throws AuthException {
@@ -29,4 +33,7 @@ public abstract class QuotaKey implements Key {
     }
   }
   
+  public static Long toMb( Long sizeInBytes ) {
+    return sizeInBytes / MB;
+  }
 }

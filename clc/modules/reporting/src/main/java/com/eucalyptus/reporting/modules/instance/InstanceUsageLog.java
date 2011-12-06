@@ -156,6 +156,7 @@ public class InstanceUsageLog
 				findLatestAllSnapshotBefore(period.getBeginningMs());
 			long afterEnd = period.getEndingMs() 
 					+ ((period.getBeginningMs()-latestSnapshotBeforeMs)*2);
+			log.debug("latestSnapshotBeforeMs:" + latestSnapshotBeforeMs + " afterEndMs:" + afterEnd);
 
 			
 			@SuppressWarnings("rawtypes")

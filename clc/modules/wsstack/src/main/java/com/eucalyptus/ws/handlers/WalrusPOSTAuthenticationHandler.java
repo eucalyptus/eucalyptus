@@ -381,7 +381,6 @@ public class WalrusPOSTAuthenticationHandler extends MessageStackHandler {
 		return lastIndex;
 	}
 
-	@Override
 	public void exceptionCaught( final ChannelHandlerContext ctx, final ExceptionEvent exceptionEvent ) throws Exception {
 		LOG.info("[exception " + exceptionEvent + "]");
 		final HttpResponse response = new DefaultHttpResponse( HttpVersion.HTTP_1_1, HttpResponseStatus.INTERNAL_SERVER_ERROR );

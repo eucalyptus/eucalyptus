@@ -25,7 +25,7 @@ public class PolicyActivity extends AbstractSearchActivity implements PolicyView
   public static final String TITLE = "ACCESS POLICIES";
   
   public static final String DELETE_POLICY_CAPTION = "Delete selected policy";
-  public static final String DELETE_POLICY_SUBJECT = "Are you sure to delete the following selected policy?";
+  public static final String DELETE_POLICY_SUBJECT = "Are you sure you want to delete the following selected policy?";
   
   private static final Logger LOG = Logger.getLogger( PolicyActivity.class.getName( ) );
   
@@ -42,6 +42,7 @@ public class PolicyActivity extends AbstractSearchActivity implements PolicyView
       
       @Override
       public void onFailure( Throwable caught ) {
+        ActivityUtil.logoutForInvalidSession( clientFactory, caught );
         LOG.log( Level.WARNING, "Search failed: " + caught );
         displayData( null );
       }
@@ -120,6 +121,7 @@ public class PolicyActivity extends AbstractSearchActivity implements PolicyView
 
       @Override
       public void onFailure( Throwable caught ) {
+        ActivityUtil.logoutForInvalidSession( clientFactory, caught );
         clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.ERROR, "Failed to delete policy", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
         clientFactory.getShellView( ).getLogView( ).log( LogType.ERROR, "Failed to delete policy " + policyId + ": " + caught.getMessage( ) );
       }

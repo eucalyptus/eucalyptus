@@ -111,6 +111,10 @@ int vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, int
     if (!strcmp(mode, "SYSTEM")) {
       if (role == CLC) {
       } else if (role == NC) {
+	if (!bridgedev || check_bridge(bridgedev)) {
+	  logprintfl (EUCAERROR, "vnetInit(): cannot verify VNET_BRIDGE(%s), please check parameters and bridge device\n", SP(bridgedev));
+	  return(1);
+	}
       }
     } else if (!strcmp(mode, "STATIC") || !strcmp(mode, "STATIC-DYNMAC")) {
       if (role == CLC) {
@@ -123,7 +127,7 @@ int vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, int
 	  return(1);
 	}
 	if (!network || !netmask || !broadcast || !nameserver || !router) {
-	  logprintfl(EUCAERROR, "vnetInit(): cannot verify network settings (VNET_SUBNET(%s), VNET_NETMASK(%s), VNET_BROADCAST(%s), VNET_NAMESERVER(%s), VNET_ROUTER(%s)), please check parameters\n", SP(network), SP(netmask), SP(broadcast), SP(nameserver), SP(router));
+	  logprintfl(EUCAERROR, "vnetInit(): cannot verify network settings (VNET_SUBNET(%s), VNET_NETMASK(%s), VNET_BROADCAST(%s), VNET_DNS(%s), VNET_ROUTER(%s)), please check parameters\n", SP(network), SP(netmask), SP(broadcast), SP(nameserver), SP(router));
 	  return(1);
 	}
       } else if (role == NC) {
@@ -149,7 +153,7 @@ int vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, int
 	  return(1);
 	}
 	if (!network || !netmask || !nameserver) {
-	  logprintfl(EUCAERROR, "vnetInit(): cannot verify network settings (VNET_SUBNET(%s), VNET_NETMASK(%s), VNET_NAMESERVER(%s), please check parameters\n", SP(network), SP(netmask), SP(nameserver));
+	  logprintfl(EUCAERROR, "vnetInit(): cannot verify network settings (VNET_SUBNET(%s), VNET_NETMASK(%s), VNET_DNS(%s), please check parameters\n", SP(network), SP(netmask), SP(nameserver));
 	  return(1);
 	}
       } else if (role == NC) {
@@ -173,12 +177,13 @@ int vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, int
 	  return(1);
 	}
 	if (!network || !netmask || !nameserver) {
-	  logprintfl(EUCAERROR, "vnetInit(): cannot verify network settings (VNET_SUBNET(%s), VNET_NETMASK(%s), VNET_NAMESERVER(%s)), please check parameters\n", SP(network), SP(netmask), SP(nameserver));
+	  logprintfl(EUCAERROR, "vnetInit(): cannot verify network settings (VNET_SUBNET(%s), VNET_NETMASK(%s), VNET_DNS(%s)), please check parameters\n", SP(network), SP(netmask), SP(nameserver));
 	  return(1);
 	}
       } else if (role == NC) {
       }
     } else {
+      logprintfl(EUCAERROR, "vnetInit(): invalid networking mode %s, please check VNET_MODE parameter\n", SP(mode));
       return(1);
     }
     
@@ -255,8 +260,8 @@ int vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, int
 	  // not big enough
 	  vnetconfig->max_vlan = (0xFFFFFFFF - nm) / (numaddrs+1);
 	  logprintfl(EUCAWARN, "vnetInit(): private network is not large enough to support all vlans, restricting to max vlan '%d'\n", vnetconfig->max_vlan);
-	  if (vnetconfig->max_vlan < 10) {
-	    logprintfl(EUCAWARN, "vnetInit(): default eucalyptus cloud controller starts networks at vlan 10, instances will not run with current max vlan '%d'.  Either increase the size of your private subnet (SUBNET/NETMASK) or decrease the number of addrs per group (NUMADDRS).\n", vnetconfig->max_vlan);
+	  if (vnetconfig->max_vlan < 2) {
+	    logprintfl(EUCAWARN, "vnetInit(): Instances will not run with current max vlan '%d'.  Either increase the size of your private subnet (VNET_SUBNET/VNET_NETMASK) or decrease the number of addrs per group (VNET_ADDRSPERNET).\n", vnetconfig->max_vlan);
 	  }
 	} else {
 	  vnetconfig->max_vlan = NUMBER_OF_VLANS;
@@ -285,10 +290,10 @@ int vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, int
 	rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
 
 	snprintf(cmd, 256, "-A POSTROUTING -d ! %s/%d -s %s/%d -j MASQUERADE", network, slashnet, network, slashnet);
-
 	rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
 
-	//	rc = vnetSetMetadataRedirect(vnetconfig);
+	//	snprintf(cmd, 256, "-A POSTROUTING -d %s/%d -j MASQUERADE", network, slashnet);
+	//	rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
 
 	unm = 0xFFFFFFFF - numaddrs;
 	unw = nw;
@@ -389,6 +394,31 @@ int vnetSetMetadataRedirect(vnetConfig *vnetconfig) {
   }
   
   //  if (network) free(network);
+
+  return(0);
+}
+
+int vnetUnsetMetadataRedirect(vnetConfig *vnetconfig) {
+  char cmd[256];
+  int rc;
+
+  if (!vnetconfig) {
+    logprintfl(EUCAERROR, "vnetUnsetMetadataRedirect(): bad input params\n");
+    return(1);
+  }
+
+  snprintf(cmd, 256, "%s/usr/lib/eucalyptus/euca_rootwrap ip addr del 169.254.169.254 scope link dev %s", vnetconfig->eucahome, vnetconfig->privInterface);
+  rc = system(cmd);
+  
+  if (vnetconfig->cloudIp != 0) {
+    char *ipbuf;
+    ipbuf = hex2dot(vnetconfig->cloudIp);
+    snprintf(cmd, 256, "-D PREROUTING -d 169.254.169.254 -p tcp -m tcp --dport 80 -j DNAT --to-destination %s:8773", ipbuf);
+    if (ipbuf) free(ipbuf);
+    rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
+  } else {
+    logprintfl(EUCAWARN, "vnetUnsetMetadataRedirect(): cloudIp is not yet set, not installing redirect rule\n");
+  }
 
   return(0);
 }
@@ -925,7 +955,7 @@ int vnetApplySingleTableRule(vnetConfig *vnetconfig, char *table, char *rule) {
     
   return(ret);
 }
-									 
+								 
 
 int vnetTableRule(vnetConfig *vnetconfig, char *type, char *destUserName, char *destName, char *sourceUserName, char *sourceNet, char *sourceNetName, char *protocol, int minPort, int maxPort) {
   int i, rc, done, destVlan, srcVlan, slashnet;
@@ -1348,6 +1378,7 @@ int vnetGenerateDHCP(vnetConfig *vnetconfig, int *numHosts) {
 	router = hex2dot(vnetconfig->networks[i].router);
       } else {
 	router = hex2dot(vnetconfig->networks[i].router + vnetconfig->tunnels.localIpId);
+	//router = hex2dot(vnetconfig->networks[i].router);
       }
       
       if (vnetconfig->euca_ns != 0) {
@@ -1781,7 +1812,9 @@ int vnetStartNetworkManaged(vnetConfig *vnetconfig, int vlan, char *uuid, char *
           logprintfl(EUCAERROR, "vnetStartNetworkManaged(): could not create new bridge %s\n", newbrname);
           return(1);
         }
-        snprintf(cmd, MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap brctl stp %s on", vnetconfig->eucahome, newbrname);
+	// DAN temporary
+	//        snprintf(cmd, MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap brctl stp %s on", vnetconfig->eucahome, newbrname);
+        snprintf(cmd, MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap brctl stp %s off", vnetconfig->eucahome, newbrname);
         rc = system(cmd);
         if (rc) {
           logprintfl(EUCAWARN, "vnetStartNetworkManaged(): could not enable stp on bridge %s\n", newbrname);
@@ -2063,6 +2096,7 @@ int vnetAddGatewayIP(vnetConfig *vnetconfig, int vlan, char *devname, int localI
   }
 
   newip = hex2dot(vnetconfig->networks[vlan].router + localIpId);
+  //  newip = hex2dot(vnetconfig->networks[vlan].router);
   broadcast = hex2dot(vnetconfig->networks[vlan].bc);
   logprintfl(EUCADEBUG, "vnetAddGatewayIP(): adding gateway IP: %s\n", newip);
 
@@ -2094,6 +2128,94 @@ int vnetAddGatewayIP(vnetConfig *vnetconfig, int vlan, char *devname, int localI
   return(0);
 }
 
+
+int vnetApplyArpTableRules(vnetConfig *vnetconfig) {
+  int rc, fd, ret=0, i, j, k, done, slashnet;
+  char *file, cmd[256];
+  FILE *FH;
+  
+  if (!vnetconfig) {
+    logprintfl(EUCAERROR, "vnetApplyArpTableRules(): bad input params (null vnetconfig)\n");
+    return(1);
+  }
+  
+  logprintfl(EUCADEBUG, "vnetApplyArpTableRules(): applying arptable rules\n");
+
+  file = strdup("/tmp/euca-arpt-XXXXXX");
+  if (!file) {
+    return(1);
+  }
+  fd = safe_mkstemp(file);
+  if (fd < 0) {
+    free(file);
+    return(1);
+  }
+  chmod(file, 0644);
+  FH = fdopen(fd, "w");
+  if (!FH) {
+    close(fd);
+    unlink(file);
+    free(file);
+    return(1);
+  }
+  
+  //  fprintf(FH, "%s\n", rule);
+  for (i=0; i<NUMBER_OF_VLANS; i++) {
+    if (vnetconfig->networks[i].active) {
+      char *net=NULL, *gw=NULL;
+      net = hex2dot(vnetconfig->networks[i].nw);
+      gw = hex2dot(vnetconfig->networks[i].router);
+
+      for (j=0; j<NUMBER_OF_HOSTS_PER_VLAN; j++) {
+	if (vnetconfig->networks[i].addrs[j].ip && vnetconfig->networks[i].addrs[j].active) {
+	  done=0;
+	  for (k=0; k<NUMBER_OF_PUBLIC_IPS && !done; k++) {
+	    if (vnetconfig->publicips[k].allocated && (vnetconfig->publicips[k].dstip == vnetconfig->networks[i].addrs[j].ip)) {
+	      char *ip=NULL;
+	      ip = hex2dot(vnetconfig->networks[i].addrs[j].ip);
+	      if (ip && gw) {
+		fprintf(FH, "IP=%s,%s\n", ip,gw);
+		done++;
+		free(ip);
+	      }
+	    }
+	  }
+	}
+      }
+      for (k=0; k<NUMBER_OF_PUBLIC_IPS; k++) {
+	if (vnetconfig->publicips[k].allocated && vnetconfig->publicips[k].dstip) {
+	  char *ip=NULL;
+	  ip = hex2dot(vnetconfig->publicips[k].dstip);
+	  if (ip && gw) {
+	    fprintf(FH, "IP=%s,%s\n", ip,gw);
+	    free(ip);
+	  }
+	}
+      }
+      if (net && gw) {
+	slashnet = 32 - ((int)log2((double)(0xFFFFFFFF - vnetconfig->networks[i].nm)) + 1);
+	fprintf(FH, "NET=%s/%d,%s\n", net, slashnet, gw);
+	free(gw);
+	free(net);
+      }
+    }
+  }
+
+  fclose(FH);
+  close(fd);
+  
+  snprintf(cmd, 256, "%s/usr/lib/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/euca_arpt %s", vnetconfig->eucahome, vnetconfig->eucahome, file);
+  //  logprintfl(EUCADEBUG, "running cmd '%s'\n", cmd);
+  rc = system(cmd);
+  if (rc) {
+    ret = 1;
+  }
+  unlink(file);
+  free(file);
+    
+  return(ret);  
+}
+
 int vnetDelGatewayIP(vnetConfig *vnetconfig, int vlan, char *devname, int localIpId) {
   char *newip, *broadcast;
   int rc;
@@ -2106,6 +2228,7 @@ int vnetDelGatewayIP(vnetConfig *vnetconfig, int vlan, char *devname, int localI
   }
 
   newip = hex2dot(vnetconfig->networks[vlan].router + localIpId);
+  //  newip = hex2dot(vnetconfig->networks[vlan].router);
   broadcast = hex2dot(vnetconfig->networks[vlan].bc);
   logprintfl(EUCADEBUG, "vnetDelGatewayIP(): removing gateway IP: %s\n", newip);  
   //  snprintf(cmd, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap ifconfig %s %s netmask %s up", vnetconfig->eucahome, devname, newip, netmask);
@@ -2150,7 +2273,8 @@ int vnetStopNetworkManaged(vnetConfig *vnetconfig, int vlan, char *userName, cha
 
     snprintf(newdevname, 32, "%s.%d", vnetconfig->privInterface, vlan);
     rc = check_device(newdevname);
-    if (!rc) {
+    // DAN temporary for QA
+    if (0 && !rc) {
       snprintf(cmd, MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap ip link set dev %s down", vnetconfig->eucahome, newdevname);
       rc = system(cmd);
       if (rc) {
@@ -2394,7 +2518,7 @@ int vnetAssignAddress(vnetConfig *vnetconfig, char *src, char *dst) {
 
     slashnet = 32 - ((int)log2((double)(0xFFFFFFFF - vnetconfig->nm)) + 1);
     network = hex2dot(vnetconfig->nw);
-    //    snprintf(cmd, 255, "-I POSTROUTING -s %s -d ! %s/%d -j SNAT --to-source %s", dst, network, slashnet, src);
+    //snprintf(cmd, 255, "-I POSTROUTING -s %s -d ! %s/%d -j SNAT --to-source %s", dst, network, slashnet, src);
     snprintf(cmd, MAX_PATH, "-I POSTROUTING -s %s -j SNAT --to-source %s", dst, src);
     if (network) free(network);
     rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
@@ -2457,9 +2581,9 @@ int vnetReassignAddress(vnetConfig *vnetconfig, char *uuid, char *src, char *dst
     return(1);
   }
   
-  if (vnetCheckPublicIP(vnetconfig, src)) {
-    return(0);
-  }
+  //  if (vnetCheckPublicIP(vnetconfig, src)) {
+  //    return(0);
+  //  }
   
   // get the publicIP of interest
   isallocated = 0;
@@ -2480,10 +2604,10 @@ int vnetReassignAddress(vnetConfig *vnetconfig, char *uuid, char *src, char *dst
     return(1);
   }
 
+  logprintfl(EUCADEBUG, "vnetReassignAddress(): deciding what to do: src=%s dst=%s allocated=%d currdst=%s\n", SP(src), SP(dst), isallocated, SP(currdst));
   // determine if reassign must happen
-  if (isallocated) {
+  if ( isallocated && strcmp(currdst, dst) ) {
     rc = vnetUnassignAddress(vnetconfig, src, currdst);
-    //if (currdst) free(currdst);
     if (rc) {
        if (currdst) free(currdst);
        return(1);

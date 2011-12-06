@@ -65,26 +65,32 @@ package com.eucalyptus.bootstrap;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CompletionService;
 import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorCompletionService;
+import java.util.concurrent.Future;
+import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.Component;
-import com.eucalyptus.component.Component.State;
-import com.eucalyptus.component.Component.Transition;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
-import com.eucalyptus.component.Hosts;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceRegistrationException;
+import com.eucalyptus.component.ServiceTransitions;
+import com.eucalyptus.component.Topology;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.scripting.Groovyness;
+import com.eucalyptus.system.Threads;
+import com.eucalyptus.system.Threads.ThreadPool;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.LogUtil;
-import com.eucalyptus.util.fsm.ExistingTransitionException;
-import com.eucalyptus.util.fsm.StateMachine;
 import com.eucalyptus.ws.EmpyreanService;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Iterables;
@@ -223,9 +229,11 @@ public class Bootstrap {
     
     private void printAgenda( ) {
       if ( !this.bootstrappers.isEmpty( ) ) {
-        LOG.info( LogUtil.header( "Bootstrap stage: " + this.name( ) + "." + ( Bootstrap.loading
-          ? "load()"
-          : "start()" ) ) );
+        LOG.info( LogUtil.header( "Bootstrap stage: " + this.name( )
+                                  + "."
+                                  + ( Bootstrap.loading
+                                    ? "load()"
+                                    : "start()" ) ) );
         LOG.debug( Joiner.on( " " ).join( this.name( ) + " bootstrappers:  ", this.bootstrappers ) );
       }
     }
@@ -272,7 +280,8 @@ public class Bootstrap {
           }
         } catch ( Exception e ) {
           EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ERROR, this.name( ), b.getClass( ).getCanonicalName( ) ).info( );
-          throw BootstrapException.throwFatal( b.getClass( ).getSimpleName( ) + " threw an error in load( ): " + e.getMessage( ), e );
+          throw BootstrapException.throwFatal( b.getClass( ).getSimpleName( ) + " threw an error in load( ): "
+                                               + e.getMessage( ), e );
         }
       }
     }
@@ -289,7 +298,8 @@ public class Bootstrap {
           }
         } catch ( Exception e ) {
           EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ERROR, this.name( ), b.getClass( ).getCanonicalName( ) ).info( );
-          throw BootstrapException.throwFatal( b.getClass( ).getSimpleName( ) + " threw an error in start( ): " + e.getMessage( ), e );
+          throw BootstrapException.throwFatal( b.getClass( ).getSimpleName( ) + " threw an error in start( ): "
+                                               + e.getMessage( ), e );
         }
       }
     }
@@ -346,9 +356,10 @@ public class Bootstrap {
         Bootstrap.Stage stage = bootstrap.getBootstrapStage( );
         compType = bootstrap.getProvides( );
         EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_INIT, stage.name( ), bc, "component=" + compType.getSimpleName( ) ).info( );
-        if ( ComponentId.class.isAssignableFrom( compType ) && !Empyrean.class.equals( compType ) && !ComponentId.class.equals( compType ) ) {
+        if ( ComponentId.class.isAssignableFrom( compType ) && !Empyrean.class.equals( compType )
+             && !ComponentId.class.equals( compType ) ) {
           EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ADDED, stage.name( ), bc, "component=" + compType.getSimpleName( ) ).info( );
-          Components.lookup( compType ).getBootstrapper( ).addBootstrapper( bootstrap );
+          Components.lookup( compType ).addBootstrapper( bootstrap );
         } else if ( Bootstrap.checkDepends( bootstrap ) ) {
           if ( Empyrean.class.equals( compType ) ) {
             EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ADDED, stage.name( ), bc, "component=" + compType.getSimpleName( ) ).info( );
@@ -356,7 +367,7 @@ public class Bootstrap {
           } else if ( ComponentId.class.equals( compType ) ) {
             for ( Component c : Components.list( ) ) {
               EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ADDED, stage.name( ), bc, "component=" + c.getName( ) ).info( );
-              c.getBootstrapper( ).addBootstrapper( bootstrap );
+              c.addBootstrapper( bootstrap );
             }
           }
         } else {
@@ -402,7 +413,9 @@ public class Bootstrap {
    * @return currentStage either the same as before, or the next {@link Bootstrap.Stage}.
    */
   public static synchronized Stage transition( ) {
-    if ( currentStage == Stage.SystemInit && !loading && !starting && !finished ) {
+    if ( currentStage == Stage.SystemInit && !loading
+         && !starting
+         && !finished ) {
       loading = true;
       starting = false;
       finished = false;
@@ -410,15 +423,16 @@ public class Bootstrap {
       LOG.info( LogUtil.header( "Bootstrap stage completed: " + currentStage.toString( ) ) );
       if ( Stage.Final.equals( currentStage ) ) {
         currentStage = null;
-        if ( loading && !starting && !finished ) {
+        if ( loading && !starting
+             && !finished ) {
           loading = true;
           starting = true;
           finished = false;
-        } else if ( loading && starting && !finished ) {
+        } else if ( loading && starting
+                    && !finished ) {
           loading = true;
           starting = true;
           finished = true;
-          Hosts.localHost( ).markBootstrapped( );
         }
         return currentStage;
       }
@@ -438,6 +452,10 @@ public class Bootstrap {
     return currentStage;
   }
   
+  public static Boolean isLoaded( ) {
+    return starting;
+  }
+
   public static Boolean isOperational( ) {
     return isFinished( ) && !isShuttingDown( );
   }
@@ -489,7 +507,6 @@ public class Bootstrap {
    * <li><b>Print configurations</b>: The configuration is printed for review.</li>
    * </ol>
    * 
-   * @see Component#initService()
    * @see Component#startService(com.eucalyptus.component.ServiceConfiguration)
    * @see ServiceJarDiscovery
    * @see Bootstrap#loadConfigs
@@ -526,21 +543,16 @@ public class Bootstrap {
      * and satisfy any forward references from bootstrappers.
      */
     LOG.info( LogUtil.header( "Building core local services: cloudLocal=" + BootstrapArgs.isCloudController( ) ) );
-    List<Component> components = Components.whichCanLoad( );
-    for ( Component comp : components ) {
+    for ( Component comp : Components.whichCanLoad( ) ) {
       try {
         comp.initService( );
-      } catch ( ServiceRegistrationException ex ) {
-        LOG.info( ex.getMessage( ) );
       } catch ( Exception ex ) {
         LOG.error( ex, ex );
       }
     }
     
     LOG.info( LogUtil.header( "Initializing component resources:" ) );
-    for ( Component c : Components.whichCanLoad( ) ) {
-      Bootstrap.applyTransition( c, Component.Transition.INITIALIZING );
-    }
+    Bootstrap.applyTransition( Component.State.INITIALIZED, Components.whichCanLoad( ) );
     
     LOG.info( LogUtil.header( "Initializing bootstrappers." ) );
     Bootstrap.initBootstrappers( );
@@ -551,33 +563,25 @@ public class Bootstrap {
     }
   }
   
-  public static int INIT_RETRIES = 5;
-  
-  public static void applyTransition( Component component, Component.Transition transition ) {
-    StateMachine<ServiceConfiguration, State, Transition> fsm = component.getLocalServiceConfiguration( ).getStateMachine( );
-    if ( fsm.isLegalTransition( transition ) ) {
-      for ( int i = 0; i < INIT_RETRIES; i++ ) {
-        try {
-          EventRecord.caller( Bootstrap.class, EventType.COMPONENT_INFO, transition.name( ), component.getName( ), component.getComponentId( ) ).info( );
-          fsm.transitionByName( transition ).get( );
-          break;
-        } catch ( ExistingTransitionException ex ) {
-          Logs.extreme( ).error( ex );
-        } catch ( Exception ex ) {
-          Logs.extreme( ).error( ex );
-        }
-//        try {
-//          TimeUnit.MILLISECONDS.sleep( 50 );
-//        } catch ( InterruptedException ex ) {
-//          Thread.currentThread( ).interrupt( );
-//          throw new RuntimeException( ex );
-//        }
-      }
-    }
-    
+  static void applyTransition( Component.State state, Iterable<Component> components ) {
+    applyTransition( state, Iterables.toArray( components, Component.class ) );
   }
   
-  static void initializeSystem( ) throws Exception {
+  private static void applyTransition( final Component.State state, Component... components ) {
+    ThreadPool exec = Threads.lookup( Empyrean.class );
+    for ( final Component component : components ) {
+      ServiceConfiguration config = component.getLocalServiceConfiguration( );
+      try {
+        Topology.transition( state ).apply( config ).get( );
+      } catch ( Exception ex ) {
+        Exceptions.maybeInterrupted( ex );
+        LOG.error( ex );
+        Logs.extreme( ).error( ex, ex );
+      }
+    }
+  }
+  
+  public static void initializeSystem( ) throws Exception {
     Groovyness.run( "initialize_cloud.groovy" );
   }
 }

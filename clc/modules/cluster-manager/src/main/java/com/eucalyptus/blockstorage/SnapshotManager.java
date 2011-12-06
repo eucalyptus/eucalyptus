@@ -75,6 +75,7 @@ import com.eucalyptus.cloud.util.DuplicateMetadataException;
 import com.eucalyptus.component.NoSuchComponentException;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
@@ -120,7 +121,7 @@ public class SnapshotManager {
     final Context ctx = Contexts.lookup( );
     EntityWrapper<Snapshot> db = EntityWrapper.get( Snapshot.class );
     Volume vol = Transactions.find( Volume.named( ctx.getUserFullName( ).asAccountFullName( ), request.getVolumeId( ) ) );
-    final ServiceConfiguration sc = Partitions.lookupService( Storage.class, vol.getPartition( ) );
+    final ServiceConfiguration sc = Topology.lookup( Storage.class, Partitions.lookupByName( vol.getPartition( ) ) );
     final Volume volReady = Volumes.checkVolumeReady( vol );
     Supplier<Snapshot> allocator = new Supplier<Snapshot>( ) {
       
@@ -133,7 +134,7 @@ public class SnapshotManager {
         }
       }
     };
-    Snapshot snap = RestrictedTypes.allocate( allocator );
+    Snapshot snap = RestrictedTypes.allocateUnitlessResource( allocator );
     snap = Snapshots.startCreateSnapshot( volReady, snap );
     
     CreateSnapshotResponseType reply = ( CreateSnapshotResponseType ) request.getReply( );
@@ -158,7 +159,7 @@ public class SnapshotManager {
     final Context ctx = Contexts.lookup( );
     boolean result = false;
     try {
-      result = Transactions.delete( Snapshot.named( ctx.getUserFullName( ), request.getSnapshotId( ) ), new Predicate<Snapshot>( ) {
+      result = Transactions.delete( Snapshot.named( ctx.getUserFullName( ).asAccountFullName( ), request.getSnapshotId( ) ), new Predicate<Snapshot>( ) {
         
         @Override
         public boolean apply( Snapshot snap ) {
@@ -168,11 +169,18 @@ public class SnapshotManager {
             throw Exceptions.toUndeclared( "Not authorized to delete snapshot " + request.getSnapshotId( ) + " by " + ctx.getUser( ).getName( ),
                                            new EucalyptusCloudException( ) );
           } else {
-            ServiceConfiguration sc = Partitions.lookupService( Storage.class, snap.getVolumePartition( ) );
+            ServiceConfiguration sc = Topology.lookup( Storage.class, Partitions.lookupByName( snap.getPartition( ) ) );
             try {
               DeleteStorageSnapshotResponseType scReply = ServiceDispatcher.lookup( sc ).send( new DeleteStorageSnapshotType( snap.getDisplayName( ) ) );
               if ( scReply.get_return( ) ) {
-                StorageUtil.dispatchAll( new DeleteStorageSnapshotType( snap.getDisplayName( ) ) );
+                final DeleteStorageSnapshotType deleteMsg = new DeleteStorageSnapshotType( snap.getDisplayName( ) );
+                Iterables.any( Topology.enabledServices( Storage.class ), new Predicate<ServiceConfiguration>() {
+
+                  @Override
+                  public boolean apply( ServiceConfiguration arg0 ) {
+                    ServiceDispatcher.lookup( arg0 ).dispatch( deleteMsg );
+                    return true;
+                  }} );
                 try {
                   ListenerRegistry.getInstance( ).fireEvent( new StorageEvent( StorageEvent.EventType.EbsSnapshot, false, snap.getVolumeSize( ),
                                                                                snap.getOwnerUserId( ), snap.getOwnerUserName( ),
@@ -210,7 +218,7 @@ public class SnapshotManager {
         DescribeStorageSnapshotsType scRequest = new DescribeStorageSnapshotsType( Lists.newArrayList( snap.getDisplayName( ) ) );
         if ( request.getSnapshotSet( ).isEmpty( ) || request.getSnapshotSet( ).contains( snap.getDisplayName( ) ) ) {
           try {
-            ServiceConfiguration sc = Partitions.lookupService( Storage.class, snap.getPartition( ) );
+            ServiceConfiguration sc = Topology.lookup( Storage.class, Partitions.lookupByName( snap.getPartition( ) ) );
             DescribeStorageSnapshotsResponseType snapshotInfo = ServiceDispatcher.lookup( sc ).send( scRequest );
             for ( StorageSnapshot storageSnapshot : snapshotInfo.getSnapshotSet( ) ) {
               snap.setMappedState( storageSnapshot.getStatus( ) );

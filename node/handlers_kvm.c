@@ -83,6 +83,7 @@ permission notice:
 #include "backing.h"
 #include "xml.h"
 #include "diskutil.h"
+#include "iscsi.h"
 
 /* coming from handlers.c */
 extern sem * hyp_sem;
@@ -96,14 +97,11 @@ static int doInitialize (struct nc_state_t *nc)
 {
 	char *s = NULL;
         
-	logprintfl(EUCADEBUG, "doInitialized() invoked\n");
-
-	/* set up paths of Eucalyptus commands NC relies on */
-	snprintf (nc->gen_libvirt_cmd_path, MAX_PATH, EUCALYPTUS_GEN_KVM_LIBVIRT_XML, nc->home, nc->home);
+	// set up paths of Eucalyptus commands NC relies on
 	snprintf (nc->get_info_cmd_path, MAX_PATH, EUCALYPTUS_GET_KVM_INFO,  nc->home, nc->home);
 	strcpy(nc->uri, HYPERVISOR_URI);
 	nc->convert_to_disk = 1;
-        nc->capability = HYPERVISOR_HARDWARE; // TODO: indicate virtio support?
+    nc->capability = HYPERVISOR_HARDWARE; // TODO: indicate virtio support?
 
 	s = system_output (nc->get_info_cmd_path);
 #define GET_VALUE(name,var) \
@@ -117,17 +115,8 @@ static int doInitialize (struct nc_state_t *nc)
 	GET_VALUE("total_memory", nc->mem_max);
 	if (s) free(s);
 
-	/* we leave 256M to the host  */
+	// we leave 256M to the host
 	nc->mem_max -= 256;
-
-	/* let's adjust the values based on the config values */
-	if (nc->config_max_mem && nc->config_max_mem < nc->mem_max)
-		nc->mem_max = nc->config_max_mem;
-	if (nc->config_max_cores)
-		nc->cores_max = nc->config_max_cores;
-
-	logprintfl(EUCAINFO, "Using %lld cores\n", nc->cores_max);
-	logprintfl(EUCAINFO, "Using %lld memory\n", nc->mem_max);
 
 	return OK;
 }
@@ -179,6 +168,7 @@ static void * rebooting_thread (void *arg)
     sem_v (hyp_sem);
     free (xml);
 
+    char *remoteDevStr=NULL;
     // re-attach each volume previously attached
     for (int i=0; i < EUCA_MAX_VOLUMES; ++i) {
         ncVolume * volume = &instance->volumes[i];
@@ -187,12 +177,24 @@ static void * rebooting_thread (void *arg)
             continue; // skip the entry unless attached or attaching
         
         char attach_xml[1024];
-        int rc = gen_libvirt_attach_xml (instance, 
+        int rc;
+        // get credentials, decrypt them
+        remoteDevStr = get_iscsi_target (volume->remoteDev);
+        if (!remoteDevStr || !strstr(remoteDevStr, "/dev")) {
+            logprintfl(EUCAERROR, "Reattach-volume: failed to get local name of host iscsi device\n");
+            rc = 1;
+        } else {
+            rc = gen_libvirt_attach_xml (volume->volumeId,
+                                         instance, 
                                          volume->localDevReal, 
-                                         volume->remoteDev, 
-                                         nc_state.config_use_virtio_disk, 
+                                         remoteDevStr, 
                                          attach_xml, 
                                          sizeof(attach_xml));
+        }
+
+        if (remoteDevStr)
+            free (remoteDevStr);
+
         if (!rc) {
             int err;
             sem_p (hyp_sem);

@@ -70,8 +70,8 @@ permission notice:
 
 #define LIBVIRT_QUERY_RETRIES 5
 #define MAXDOMS 1024
-#define BYTES_PER_DISK_UNIT 1048576 /* disk stats are in Gigs */
-#define SWAP_SIZE 512 /* for now, the only possible swap size, in MBs */
+#define BYTES_PER_DISK_UNIT 1073741824 // describeResource disk units are GBs
+#define MB_PER_DISK_UNIT    1024       // describeResource disk units are GBs
 
 /* NC state */
 struct nc_state_t {
@@ -80,7 +80,6 @@ struct nc_state_t {
         hypervisorCapabilityType capability;
 	vnetConfig *vnetconfig;		// network config
 	// globals
-	int  config_network_port;
 	char admin_user_id[CHAR_BUFFER_SIZE];
 	int save_instance_files;
 	char uri[CHAR_BUFFER_SIZE];
@@ -88,8 +87,8 @@ struct nc_state_t {
 	virConnectPtr conn;
 	boolean convert_to_disk;
         boolean do_inject_key;
+        int concurrent_disk_ops;
 	// defined max
-	long long config_max_disk;
 	long long config_max_mem;
 	long long config_max_cores;
 	// current max
@@ -99,7 +98,7 @@ struct nc_state_t {
 	// paths
 	char home[MAX_PATH];
 	char config_network_path [MAX_PATH];
-	char gen_libvirt_cmd_path[MAX_PATH];
+        char libvirt_xslt_path[MAX_PATH];
 	char get_info_cmd_path[MAX_PATH];
 	char rootwrap_cmd_path[MAX_PATH];
 	char virsh_cmd_path[MAX_PATH];

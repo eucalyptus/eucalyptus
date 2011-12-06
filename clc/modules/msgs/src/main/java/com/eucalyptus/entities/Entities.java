@@ -86,6 +86,7 @@ import org.hibernate.criterion.MatchMode;
 import org.hibernate.criterion.Restrictions;
 import org.hibernate.ejb.EntityManagerFactoryImpl;
 import org.hibernate.exception.ConstraintViolationException;
+import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.records.Logs;
@@ -96,6 +97,7 @@ import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.HasNaturalId;
 import com.eucalyptus.util.LogUtil;
 import com.google.common.base.Function;
+import com.google.common.base.Functions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
 import com.google.common.collect.MapMaker;
@@ -105,7 +107,7 @@ import com.google.common.collect.Sets;
 @ConfigurableClass( root = "bootstrap.tx", description = "Parameters controlling transaction behaviour." )
 public class Entities {
   @ConfigurableField( description = "Maximum number of times a transaction may be retried before giving up.", initial = "5" )
-  public static Long                                             CONCURRENT_UPDATE_RETRIES = 5l;
+  public static Integer                                          CONCURRENT_UPDATE_RETRIES = 5;
   private static ConcurrentMap<String, String>                   txLog                     = new MapMaker( ).softKeys( ).softValues( ).makeMap( );
   private static Logger                                          LOG                       = Logger.getLogger( Entities.class );
   private static ThreadLocal<String>                             txRootThreadLocal         = new ThreadLocal<String>( );
@@ -128,7 +130,7 @@ public class Entities {
     final Ats ats = Ats.inClassHierarchy( type );
     PersistenceContext persistenceContext = null;
     if ( !ats.has( PersistenceContext.class ) ) {
-      throw new RuntimeException( "Attempting to create an entity wrapper instance for non persistent type: " + type.getCanonicalName( )
+      throw new RuntimeException( "Attempting to create an entity wrapper instance for non persistent type: " + type
                                   + ".  Class hierarchy contains: \n" + ats.toString( ) );
     } else {
       persistenceContext = ats.get( PersistenceContext.class );
@@ -142,7 +144,7 @@ public class Entities {
   
   public static boolean hasTransaction( final Object obj ) {
     final String ctx = lookatPersistenceContext( obj );
-    CascadingTx tx = txStateThreadLocal.get( ).get( ctx );
+    final CascadingTx tx = txStateThreadLocal.get( ).get( ctx );
     if ( tx == null ) {
       return false;
     } else if ( tx.isActive( ) ) {
@@ -161,12 +163,12 @@ public class Entities {
     }
   }
   
-  public static void removeTransaction( CascadingTx tx ) {
-    String txId = makeTxRootName( tx );
+  public static void removeTransaction( final CascadingTx tx ) {
+    final String txId = makeTxRootName( tx );
     txLog.remove( txStateThreadLocal.toString( ) + tx.getRecord( ).getPersistenceContext( ) );
     txStateThreadLocal.get( ).remove( tx.getRecord( ).getPersistenceContext( ) );
     if ( txId.equals( txStateThreadLocal.get( ) ) ) {
-      for ( Entry<String, CascadingTx> e : txStateThreadLocal.get( ).entrySet( ) ) {
+      for ( final Entry<String, CascadingTx> e : txStateThreadLocal.get( ).entrySet( ) ) {
         cleanStrandedTx( e.getValue( ) );
       }
       txStateThreadLocal.get( ).clear( );
@@ -174,16 +176,16 @@ public class Entities {
     }
   }
   
-  private static void cleanStrandedTx( CascadingTx txValue ) {
+  private static void cleanStrandedTx( final CascadingTx txValue ) {
     LOG.error( "Found stranded transaction: " + txValue.getRecord( ).getPersistenceContext( ) + " started at: " + txValue.getRecord( ).getStack( ) );
     try {
       txValue.rollback( );
-    } catch ( Exception ex ) {
+    } catch ( final Exception ex ) {
       LOG.trace( ex, ex );
     }
   }
   
-  private static String makeTxRootName( CascadingTx tx ) {
+  private static String makeTxRootName( final CascadingTx tx ) {
     return txStateThreadLocal.toString( ) + tx.getRecord( ).getPersistenceContext( );
   }
   
@@ -192,7 +194,7 @@ public class Entities {
     final CascadingTx ret = new CascadingTx( ctx );
     ret.begin( );
     if ( txRootThreadLocal.get( ) == null ) {
-      String txId = makeTxRootName( ret );
+      final String txId = makeTxRootName( ret );
       LOG.trace( "Creating root entry for transaction tree: " + txId + " at: \n" + Threads.currentStackString( ) );
       txRootThreadLocal.set( txId );
     }
@@ -210,7 +212,7 @@ public class Entities {
     }
   }
   
-  public static <T> void flush( T object ) {
+  public static <T> void flush( final T object ) {
     getTransaction( object ).txState.getEntityManager( ).flush( );
   }
   
@@ -219,7 +221,7 @@ public class Entities {
   }
   
   @SuppressWarnings( { "unchecked", "cast" } )
-  public static <T> List<T> query( final T example, boolean readOnly ) {
+  public static <T> List<T> query( final T example, final boolean readOnly ) {
     final Example qbe = Example.create( example ).enableLike( MatchMode.EXACT );
     final List<T> resultList = ( List<T> ) getTransaction( example ).getTxState( ).getSession( )
                                                                     .createCriteria( example.getClass( ) )
@@ -227,6 +229,21 @@ public class Entities {
                                                                     .setResultTransformer( Criteria.DISTINCT_ROOT_ENTITY )
                                                                     .setCacheable( true )
                                                                     .add( qbe )
+                                                                    .list( );
+    return Lists.newArrayList( Sets.newHashSet( resultList ) );
+  }
+  
+  @SuppressWarnings( { "unchecked", "cast" } )
+  public static <T> List<T> query( final T example, final boolean readOnly, final int maxResults ) {
+    final Example qbe = Example.create( example ).enableLike( MatchMode.EXACT );
+    final List<T> resultList = ( List<T> ) getTransaction( example ).getTxState( ).getSession( )
+                                                                    .createCriteria( example.getClass( ) )
+                                                                    .setReadOnly( readOnly )
+                                                                    .setResultTransformer( Criteria.DISTINCT_ROOT_ENTITY )
+                                                                    .setCacheable( true )
+                                                                    .add( qbe )
+                                                                    .setMaxResults( maxResults )
+                                                                    .setFetchSize( maxResults )
                                                                     .list( );
     return Lists.newArrayList( Sets.newHashSet( resultList ) );
   }
@@ -390,12 +407,12 @@ public class Entities {
     if ( !isPersistent( newObject ) ) {
       try {
         return uniqueResult( newObject );
-      } catch ( Exception ex ) {
+      } catch ( final Exception ex ) {
         return persist( newObject );
       }
     } else {
       try {
-        T persistedObject = getTransaction( newObject ).getTxState( ).getEntityManager( ).merge( newObject );
+        final T persistedObject = getTransaction( newObject ).getTxState( ).getEntityManager( ).merge( newObject );
         return persistedObject == newObject
           ? newObject
           : persistedObject;
@@ -418,7 +435,7 @@ public class Entities {
     try {
       ret = uniqueResult( example );
       db.commit( );
-    } catch ( TransactionException ex ) {
+    } catch ( final TransactionException ex ) {
       db.rollback( );
       throw new NoSuchElementException( ex.getMessage( ) );
     }
@@ -429,7 +446,7 @@ public class Entities {
     return new Function<T, T>( ) {
       
       @Override
-      public T apply( T arg0 ) {
+      public T apply( final T arg0 ) {
         return Entities.merge( arg0 );
       }
     };
@@ -459,7 +476,7 @@ public class Entities {
    * @param obj
    * @return
    */
-  public static boolean isPersistent( Object obj ) {
+  public static boolean isPersistent( final Object obj ) {
     if ( !hasTransaction( ) ) {
       return false;
     } else {
@@ -572,9 +589,11 @@ public class Entities {
     public void begin( ) throws RecoverablePersistenceException {
       try {
         this.txState.begin( );
-      } catch ( RecoverablePersistenceException ex ) {
+      } catch ( final RecoverablePersistenceException ex ) {
+        PersistenceExceptions.throwFiltered( ex );
         removeTransaction( this );
-      } catch ( RuntimeException ex ) {
+      } catch ( final RuntimeException ex ) {
+        PersistenceExceptions.throwFiltered( ex );
         removeTransaction( this );
         throw ex;
       }
@@ -842,24 +861,78 @@ public class Entities {
     
   }
   
-  public static <T> boolean retry( T arg, Predicate<T> predicate ) {
-    RuntimeException rootCause = null;
-    for ( int i = 0; i < CONCURRENT_UPDATE_RETRIES; i++ ) {
-      try {
-        return predicate.apply( arg );
-      } catch ( RuntimeException ex ) {
-        if ( Exceptions.isCausedBy( ex, OptimisticLockException.class ) ) {
-          rootCause = Exceptions.causedBy( ex, OptimisticLockException.class );
-          continue;
-        } else {
-          rootCause = ex;
-          Logs.extreme( ).error( ex, ex );
-          throw ex;
+  private static class TransactionalFunction<E, D, R> implements Function<D, R> {
+    private Class<E>       entityType;
+    private Function<D, R> function;
+    private Integer        retries = CONCURRENT_UPDATE_RETRIES;
+    
+    TransactionalFunction( Class<E> entityType, Function<D, R> function, Integer retries ) {
+      this.entityType = entityType;
+      this.function = function;
+      this.retries = retries;
+    }
+    
+    @Override
+    public R apply( final D input ) {
+      if ( Entities.hasTransaction( ) ) {
+        throw new RuntimeException( "Failed to execute retryable transaction because of a nested transaction: "
+                                    + Entities.getTransaction( input.getClass( ) ).getRecord( ).stack );
+      } else {
+        RuntimeException rootCause = null;
+        for ( int i = 0; i < retries; i++ ) {
+          EntityTransaction db = Entities.get( entityType );
+          try {
+            R ret = this.function.apply( input );
+            db.commit( );
+            return ret;
+          } catch ( RuntimeException ex ) {
+            db.rollback( );
+            if ( Exceptions.isCausedBy( ex, OptimisticLockException.class ) ) {
+              rootCause = Exceptions.findCause( ex, OptimisticLockException.class );
+              continue;
+            } else {
+              rootCause = ex;
+              Logs.extreme( ).error( ex, ex );
+              throw ex;
+            }
+          }
         }
+        throw ( rootCause != null
+                ? rootCause
+                : new NullPointerException( "BUG: Transaction retry failed but root cause exception is unknown!" ) );
       }
     }
-    throw ( rootCause != null
-            ? rootCause
-            : new NullPointerException( "BUG: Transaction retry failed but root cause exception is unknown!" ) );
+    
   }
+  
+  public static <T, R> Function<T, R> asTransaction( final Function<T, R> function ) {
+    if ( function instanceof TransactionalFunction ) {
+      return function;
+    } else {
+      final List<Class> generics = Classes.genericsToClasses( function );
+      for ( final Class<?> type : generics ) {
+        if ( PersistenceContexts.isPersistentClass( type ) ) {
+          return asTransaction( type, function );
+        }
+      }
+      throw new IllegalArgumentException( "Failed to find generics for provided function, cannot make into transaction: " + Threads.currentStackString( ) );
+    }
+  }
+  
+  public static <E, T, R> Function<T, R> asTransaction( final Class<E> type, final Function<T, R> function ) {
+    if ( function instanceof TransactionalFunction ) {
+      return function;
+    } else {
+      return asTransaction( type, function, CONCURRENT_UPDATE_RETRIES );
+    }
+  }
+  
+  public static <E, T, R> Function<T, R> asTransaction( final Class<E> type, final Function<T, R> function, final int retries ) {
+    if ( function instanceof TransactionalFunction ) {
+      return function;
+    } else {
+      return new TransactionalFunction<E, T, R>( type, function, retries );
+    }
+  }
+  
 }

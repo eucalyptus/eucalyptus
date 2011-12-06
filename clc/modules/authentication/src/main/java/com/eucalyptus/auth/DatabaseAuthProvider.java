@@ -71,6 +71,9 @@ import org.hibernate.criterion.Example;
 import org.hibernate.criterion.MatchMode;
 import org.hibernate.criterion.Restrictions;
 import com.eucalyptus.auth.api.AccountProvider;
+import com.eucalyptus.auth.checker.InvalidValueException;
+import com.eucalyptus.auth.checker.ValueChecker;
+import com.eucalyptus.auth.checker.ValueCheckerFactory;
 import com.eucalyptus.auth.entities.AccessKeyEntity;
 import com.eucalyptus.auth.entities.AccountEntity;
 import com.eucalyptus.auth.entities.CertificateEntity;
@@ -95,6 +98,8 @@ import com.google.common.collect.Lists;
 public class DatabaseAuthProvider implements AccountProvider {
   
   private static Logger LOG = Logger.getLogger( DatabaseAuthProvider.class );
+  
+  private static final ValueChecker ACCOUNT_NAME_CHECKER = ValueCheckerFactory.createAccountNameChecker( );
   
   public DatabaseAuthProvider( ) {
   }
@@ -229,8 +234,11 @@ public class DatabaseAuthProvider implements AccountProvider {
    */
   @Override
   public Account addAccount( String accountName ) throws AuthException {
-    if ( accountName == null ) {
-      throw new AuthException( AuthException.EMPTY_ACCOUNT_NAME );
+    try {
+      ACCOUNT_NAME_CHECKER.check( accountName );
+    } catch ( InvalidValueException e ) {
+      Debugging.logError( LOG, e, "Invalid account name " + accountName );
+      throw new AuthException( AuthException.INVALID_NAME, e );
     }
     if ( DatabaseAuthUtils.checkAccountExists( accountName ) ) {
       throw new AuthException( AuthException.ACCOUNT_ALREADY_EXISTS );

@@ -66,7 +66,7 @@ package com.eucalyptus.cluster.callback;
 import java.util.Date;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
-import com.eucalyptus.context.ServiceContext;
+import com.eucalyptus.context.Contexts;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.MessageCallback;
 import com.eucalyptus.vm.VmInstance;
@@ -100,7 +100,7 @@ public class ConsoleOutputCallback extends MessageCallback<GetConsoleOutputType,
     reply.setTimestamp( new Date( ) );
     reply.setOutput( vm.getConsoleOutputString( ) );
     LOG.debug( reply.toSimpleString( ) );
-    ServiceContext.response( reply );
+    Contexts.response( reply );
   }
 
 

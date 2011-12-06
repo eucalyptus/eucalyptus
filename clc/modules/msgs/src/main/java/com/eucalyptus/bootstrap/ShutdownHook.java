@@ -62,14 +62,8 @@
  */
 package com.eucalyptus.bootstrap;
 
-import org.apache.log4j.Logger;
-
 import com.eucalyptus.component.ComponentId;
 
-
-/**
- * Executes shutdown hooks in order
- */
 public class ShutdownHook implements Comparable<ShutdownHook>{
 
 	private Runnable runnable;
@@ -79,9 +73,16 @@ public class ShutdownHook implements Comparable<ShutdownHook>{
 		componentId = id;
 		runnable = r;
 	}
+	
+	public ShutdownHook(Runnable r) {		
+		runnable = r;
+	}
 
 	@Override
 	public int compareTo(ShutdownHook o) {
+		if (o.getComponentId() == null) {
+			return -1;
+		}
 		ComponentId id = o.getComponentId();
 		if(!componentId.isAlwaysLocal() && !componentId.isCloudLocal())
 			return -1;

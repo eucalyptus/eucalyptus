@@ -11,6 +11,7 @@ import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.images.ImageInfo;
 import com.eucalyptus.images.Images;
 import com.eucalyptus.images.MachineImageInfo;
+import com.eucalyptus.images.PutGetImageInfo;
 import com.eucalyptus.webui.client.service.EucalyptusServiceException;
 import com.eucalyptus.webui.client.service.SearchResultFieldDesc;
 import com.eucalyptus.webui.client.service.SearchResultFieldDesc.TableDisplay;
@@ -24,6 +25,7 @@ public class ImageWebBackend {
   
   public static final String ID = "id";
   public static final String NAME = "Name";
+  public static final String MANIFEST = "Manifest";
   public static final String DESC = "Description";
   public static final String OWNER = "owner";
   public static final String ARCH = "architecture";
@@ -38,7 +40,7 @@ public class ImageWebBackend {
   static {
     COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( ID, "ID", false, "10%", TableDisplay.MANDATORY, Type.TEXT, false, false ) );
     COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( NAME, "Name", false, "20%", TableDisplay.MANDATORY, Type.TEXT, false, false ) );
-    COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( DESC, "Description", false, "30%", TableDisplay.MANDATORY, Type.TEXT, false, false ) );
+    COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( MANIFEST, "Manifest Location", false, "30%", TableDisplay.MANDATORY, Type.TEXT, false, false ) );
     COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( KERNEL, "Kernel", false, "10%", TableDisplay.MANDATORY, Type.TEXT, false, false ) );
     COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( RAMDISK, "Ramdisk", false, "10%", TableDisplay.MANDATORY, Type.TEXT, false, false ) );
     COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( STATE, "State", false, "20%", TableDisplay.MANDATORY, Type.TEXT, false, false ) );
@@ -47,6 +49,7 @@ public class ImageWebBackend {
     COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( ARCH, "Architecture", false, "0px", TableDisplay.NONE, Type.TEXT, false, false ) );
     COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( PUBLIC, "Public", false, "0px", TableDisplay.NONE, Type.TEXT, false, false ) );
     COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( PLATFORM, "Platform", false, "0px", TableDisplay.NONE, Type.TEXT, false, false ) );
+    COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( DESC, "Description", false, "0px", TableDisplay.NONE, Type.TEXT, false, false ) );
   }
   
   public static List<SearchResultRow> searchImages( User requestUser, String query ) throws EucalyptusServiceException {
@@ -54,11 +57,13 @@ public class ImageWebBackend {
     try {
       Account requestAccount = requestUser.getAccount( );
       for ( ImageInfo image : Images.listAllImages( ) ) {
-    	if ( requestUser.isSystemAdmin( ) ||
-    		 ( image.checkPermission( requestAccount.getAccountNumber( ) ) &&
-    		   Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_IMAGE, image.getDisplayName( ), null, PolicySpec.EC2_DESCRIBEIMAGES, requestUser ) ) ) {
-    	  results.add( serializeImage( image ) );
-    	}
+        if ( requestUser.isSystemAdmin( ) ||
+    		     ( ( image.getImagePublic( ) ||
+    		         image.getOwnerAccountNumber( ).equals( requestAccount.getAccountNumber( ) ) ||
+    		         image.hasPermission( requestAccount.getAccountNumber( ), requestAccount.getName( ) ) ) &&
+    		       Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_IMAGE, image.getDisplayName( ), null, PolicySpec.EC2_DESCRIBEIMAGES, requestUser ) ) ) {
+          results.add( serializeImage( image ) );
+        }
       }
     } catch ( Exception e ) {
       LOG.error( "Failed to get image info", e );
@@ -72,14 +77,18 @@ public class ImageWebBackend {
     SearchResultRow result = new SearchResultRow( );
     result.addField( image.getDisplayName( ) );
     result.addField( image.getImageName( ) );
-    result.addField( image.getDescription( ) );
-    if ( image instanceof MachineImageInfo ) {
-      result.addField( ( ( MachineImageInfo ) image ).getKernelId( ) ); 
+    if ( image instanceof PutGetImageInfo ) {
+      result.addField( ( ( PutGetImageInfo ) image ).getManifestLocation( ) );
     } else {
       result.addField( "" );
     }
     if ( image instanceof MachineImageInfo ) {
-      result.addField( ( ( MachineImageInfo ) image ).getRamdiskId( ) ); 
+      result.addField( ( ( MachineImageInfo ) image ).getKernelId( ) );
+    } else {
+      result.addField( "" );
+    }
+    if ( image instanceof MachineImageInfo ) {
+      result.addField( ( ( MachineImageInfo ) image ).getRamdiskId( ) );
     } else {
       result.addField( "" );
     }
@@ -89,6 +98,7 @@ public class ImageWebBackend {
     result.addField( image.getArchitecture( ).toString( ) );
     result.addField( image.getImagePublic( ).toString( ) );
     result.addField( image.getPlatform( ).toString( ) );
+    result.addField( image.getDescription( ) );
     return result;
   }
   

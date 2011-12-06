@@ -166,7 +166,7 @@ public class PolicyParser {
     // Group actions by vendor
     Map<String, Set<String>> actionMap = Maps.newHashMap( );
     for ( String action : actions ) {
-      action = action.toLowerCase( );
+      action = normalize( action );
       String vendor = checkAction( action );
       addToSetMap( actionMap, vendor, action );
     }
@@ -233,7 +233,7 @@ public class PolicyParser {
           String key = ( String ) k;
           Set<String> values = Sets.newHashSet( );
           values.addAll( JsonUtils.parseStringOrStringList( paramsObj, key ) );
-          key = key.toLowerCase( );
+          key = normalize( key );
           checkConditionKeyAndValues( key, values, typeClass, isQuota );
           results.add( new ConditionEntity( type, key, values ) );
         }
@@ -331,6 +331,10 @@ public class PolicyParser {
     if ( effect != null && !PolicySpec.EFFECTS.contains( effect ) ) {
       throw new JSONException( "Invalid Effect value: " + effect );
     }
+  }
+  
+  private String normalize( String value ) {
+    return ( value != null ) ? value.trim( ).toLowerCase( ) : null;
   }
 
 }
