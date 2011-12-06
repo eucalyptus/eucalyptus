@@ -103,11 +103,8 @@ while (my $rl = <REPORT>) {
 	my ($blank,$user,$m1Small,$m1SmallTime,$c1Medium,$c1MediumTime,$m1Large,$m1LargeTime,
 			$m1XLarge,$m1XLargeTime,$blank2,$c1XLarge,$c1XLargeTime,$net,$disk)
 		= split(",",$rl);
-	if ($user !~ /^user-/) {
+	if (($user !~ /^user-/) or (!$userhash{$user})) {
 		next;
-	}
-	if ($userhash{$user}) {
-		print "-> ";
 	}
 	print "user:$user m1Small:$m1Small m1SmallTime:$m1SmallTime c1Medium:$c1Medium " .
 		"c1MediumTime:$c1MediumTime m1Large:$m1Large m1LargeTime:$m1LargeTime " .
@@ -128,11 +125,8 @@ print "Report: storage\n";
 while (my $rl = <REPORT>) {
 	my ($blank,$user,$volMaxSize,$volSizeTime,$snapMaxSize,$blank2,$snapSizeTime)
 		= split(",",$rl);
-	if ($user !~ /^user-/) {
+	if (($user !~ /^user-/) or (!$userhash{$user})) {
 		next;
-	}
-	if ($userhash{$user}) {
-		print "-> ";
 	}
 	print "user:$user volMaxSize:$volMaxSize volSizeTime:$volSizeTime " .
 			"snapMaxSize:$snapMaxSize snapSizeTime:$snapSizeTime\n";
@@ -150,11 +144,8 @@ open(REPORT, $report_file);
 print "Report: s3\n";
 while (my $rl = <REPORT>) {
 	my ($blank,$user,$bucketsMaxNum,$objectsMaxSize,$blank2,$objectsMaxTime) = split(",",$rl);
-	if ($user !~ /^user-/) {
+	if (($user !~ /^user-/) or (!$userhash{$user})) {
 		next;
-	}
-	if ($userhash{$user}) {
-		print "-> ";
 	}
 	print "user:$user bucketsMaxNum:$bucketsMaxNum objectsMaxSize:$objectsMaxSize " .
 		"objectsMaxTime:$objectsMaxTime\n";
