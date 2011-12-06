@@ -26,6 +26,7 @@ my $account = "";
 my $username_arg = "";
 my @usernames = ();
 my @accountnames = ();
+my $return_code = 0;
 
 while ($#ARGV+1>0) {
 	($account,$username_arg) = split(":",shift);
@@ -60,6 +61,7 @@ sub test_range($$$$) {
 	print "test:$name, expected:$expected +/- $error, val:$val\n";
 	if ($val < $expected-$error || $val > $expected+$error) {
 		print " FAILED: test $name\n";
+		$return_code = 127;
 	}
 }
 
@@ -70,6 +72,7 @@ sub test_eq($$$) {
 	print "test:$name, expected:$expected val:$val\n";
 	if ($val != $expected) {
 		print " FAILED: test $name\n";
+		$return_code = 127;
 	}
 }
 
@@ -217,3 +220,4 @@ foreach (execute_query("
 }
 test_eq("rows count", $num_users, $num_rows);
 
+exit($return_code);
