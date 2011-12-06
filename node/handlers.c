@@ -955,6 +955,58 @@ static int init (void)
 	snprintf (nc_state.libvirt_xslt_path, MAX_PATH, EUCALYPTUS_LIBVIRT_XSLT, nc_state.home);
 	snprintf (nc_state.rootwrap_cmd_path, MAX_PATH, EUCALYPTUS_ROOTWRAP, nc_state.home);
 
+	// determine the hypervisor to use
+	hypervisor = getConfString(configFiles, 2, CONFIG_HYPERVISOR);
+	if (!hypervisor) {
+		logprintfl (EUCAFATAL, "value %s is not set in the config file\n", CONFIG_HYPERVISOR);
+		return ERROR_FATAL;
+	}
+
+	// let's look for the right hypervisor driver
+	for (h = available_handlers; *h; h++ ) {
+		if (!strncmp ((*h)->name, "default", CHAR_BUFFER_SIZE))
+			nc_state.D = *h; 
+		if (!strncmp ((*h)->name, hypervisor, CHAR_BUFFER_SIZE))
+			nc_state.H = *h; 
+	}
+	if (nc_state.H == NULL) {
+		logprintfl (EUCAFATAL, "requested hypervisor type (%s) is not available\n", hypervisor);
+		free (hypervisor);
+		return ERROR_FATAL;
+	}
+	
+	// only load virtio config for kvm
+	if (!strncmp("kvm", hypervisor, CHAR_BUFFER_SIZE) ||
+		!strncmp("KVM", hypervisor, CHAR_BUFFER_SIZE)) {
+		GET_VAR_INT(nc_state.config_use_virtio_net, CONFIG_USE_VIRTIO_NET, 0);
+		GET_VAR_INT(nc_state.config_use_virtio_disk, CONFIG_USE_VIRTIO_DISK, 0);
+		GET_VAR_INT(nc_state.config_use_virtio_root, CONFIG_USE_VIRTIO_ROOT, 0);
+	}
+	free (hypervisor);
+
+	// NOTE: this is the only call which needs to be called on both
+	// the default and the specific handler! All the others will be
+	// either or
+	i = nc_state.D->doInitialize(&nc_state);
+	if (nc_state.H->doInitialize)
+		i += nc_state.H->doInitialize(&nc_state);
+	if (i) {
+		logprintfl(EUCAFATAL, "ERROR: failed to initialized hypervisor driver!\n");
+		return ERROR_FATAL;
+	}
+
+	// now that hypervisor-specific initializers have discovered mem_max and cores_max,
+    // adjust the values based on configuration parameters, if any
+	if (nc_state.config_max_mem && nc_state.config_max_mem < nc_state.mem_max)
+		nc_state.mem_max = nc_state.config_max_mem;
+	if (nc_state.config_max_cores)
+		nc_state.cores_max = nc_state.config_max_cores;
+	logprintfl(EUCAINFO, "physical memory available for instances: %lldMB\n", nc_state.mem_max);
+	logprintfl(EUCAINFO, "virtual cpu cores available for instances: %lld\n", nc_state.cores_max);
+    
+	// adopt running instances -- do this before disk integrity check so we know what can be purged
+	adopt_instances();
+
     { // backing store configuration
         char * instance_path = getConfString(configFiles, 2, INSTANCE_PATH);
 
@@ -1103,59 +1155,6 @@ static int init (void)
         }
         free (instance_path);
     }
-
-	// determine the hypervisor to use
-	hypervisor = getConfString(configFiles, 2, CONFIG_HYPERVISOR);
-	if (!hypervisor) {
-		logprintfl (EUCAFATAL, "value %s is not set in the config file\n", CONFIG_HYPERVISOR);
-		return ERROR_FATAL;
-	}
-
-	// let's look for the right hypervisor driver
-	for (h = available_handlers; *h; h++ ) {
-		if (!strncmp ((*h)->name, "default", CHAR_BUFFER_SIZE))
-			nc_state.D = *h; 
-		if (!strncmp ((*h)->name, hypervisor, CHAR_BUFFER_SIZE))
-			nc_state.H = *h; 
-	}
-	if (nc_state.H == NULL) {
-		logprintfl (EUCAFATAL, "requested hypervisor type (%s) is not available\n", hypervisor);
-		free (hypervisor);
-		return ERROR_FATAL;
-	}
-	
-	// only load virtio config for kvm
-	if (!strncmp("kvm", hypervisor, CHAR_BUFFER_SIZE) ||
-		!strncmp("KVM", hypervisor, CHAR_BUFFER_SIZE)) {
-		GET_VAR_INT(nc_state.config_use_virtio_net, CONFIG_USE_VIRTIO_NET, 0);
-		GET_VAR_INT(nc_state.config_use_virtio_disk, CONFIG_USE_VIRTIO_DISK, 0);
-		GET_VAR_INT(nc_state.config_use_virtio_root, CONFIG_USE_VIRTIO_ROOT, 0);
-	}
-	free (hypervisor);
-
-	// NOTE: this is the only call which needs to be called on both
-	// the default and the specific handler! All the others will be
-	// either or
-	i = nc_state.D->doInitialize(&nc_state);
-	if (nc_state.H->doInitialize)
-		i += nc_state.H->doInitialize(&nc_state);
-	if (i) {
-		logprintfl(EUCAFATAL, "ERROR: failed to initialized hypervisor driver!\n");
-		return ERROR_FATAL;
-	}
-
-	// now that hypervisor-specific initializers have discovered mem_max and cores_max,
-    // adjust the values based on configuration parameters, if any
-	if (nc_state.config_max_mem && nc_state.config_max_mem < nc_state.mem_max)
-		nc_state.mem_max = nc_state.config_max_mem;
-	if (nc_state.config_max_cores)
-		nc_state.cores_max = nc_state.config_max_cores;
-	logprintfl(EUCAINFO, "physical memory available for instances: %lldMB\n", nc_state.mem_max);
-	logprintfl(EUCAINFO, "virtual cpu cores available for instances: %lld\n", nc_state.cores_max);
-
-    
-	// adopt running instances
-	adopt_instances();
 
 	// setup the network
 	nc_state.vnetconfig = malloc(sizeof(vnetConfig));
