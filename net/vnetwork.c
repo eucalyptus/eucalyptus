@@ -2176,8 +2176,8 @@ int vnetApplyArpTableRules(vnetConfig *vnetconfig) {
 	      if (ip && gw) {
 		fprintf(FH, "IP=%s,%s\n", ip,gw);
 		done++;
-		free(ip);
 	      }
+	      if (ip) free(ip);
 	    }
 	  }
 	}

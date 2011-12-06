@@ -1192,7 +1192,7 @@ static int init (void)
             pubinterface = strdup("eth0"); 
             if (!pubinterface) {
                 logprintfl(EUCAFATAL, "out of memory!\n"); 
-                return ERROR_FATAL; 
+                initFail = 1;
             }
         } 
     }

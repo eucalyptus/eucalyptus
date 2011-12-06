@@ -134,7 +134,7 @@ int sem_p (sem * s)
 {
     int rc;
     
-    logprintfl (EUCADEBUG2, "sem_p() %s\n", (s->name)?(s->name):(""));
+    logprintfl (EUCADEBUG2, "sem_p() %s\n", (s && s->name)?(s->name):(""));
 
     if (s && s->usemutex) {
         rc = pthread_mutex_lock(&(s->mutex));
@@ -164,7 +164,7 @@ int sem_v (sem * s)
 {
     int rc;
 
-    logprintfl (EUCADEBUG2, "sem_v() %s\n", (s->name)?(s->name):(""));
+    logprintfl (EUCADEBUG2, "sem_v() %s\n", (s && s->name)?(s->name):(""));
 
     if (s && s->usemutex) {
         rc = pthread_mutex_lock(&(s->mutex));
