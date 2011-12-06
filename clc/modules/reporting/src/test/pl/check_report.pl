@@ -116,12 +116,12 @@ $end_ms--;
 # Find number of intervals
 
 
-# Generate and verify instance report
+# Generate and verify instance report, by calling the report servlet using wget
+#   and comparing results with expected values.
 $report_file = "/tmp/report-instance-" . time();
 runcmd("wget -O \"$report_file\" --no-check-certificate \"https://localhost:8443/" .
 		"reportservlet?session=$session_id&type=instance&page=0&format=csv&flush=false" .
 		"&start=$start_ms&end=$end_ms&criterion=User&groupByCriterion=None\"");
-# Parse report
 open(REPORT, $report_file);
 print "Report: instance\n";
 while (my $rl = <REPORT>) {
@@ -147,7 +147,6 @@ $report_file = "/tmp/report-storage-" . time();
 runcmd("wget -O \"$report_file\" --no-check-certificate \"https://localhost:8443/" .
 		"reportservlet?session=$session_id&type=storage&page=0&format=csv&flush=false" .
 		"&start=$start_ms&end=$end_ms&criterion=User&groupByCriterion=None\"");
-# Parse report
 open(REPORT, $report_file);
 print "Report: storage\n";
 while (my $rl = <REPORT>) {
@@ -169,7 +168,6 @@ $report_file = "/tmp/report-s3-" . time();
 runcmd("wget -O \"$report_file\" --no-check-certificate \"https://localhost:8443/" .
 		"reportservlet?session=$session_id&type=s3&page=0&format=csv&flush=false" .
 		"&start=$start_ms&end=$end_ms&criterion=User&groupByCriterion=None\"");
-# Parse report
 open(REPORT, $report_file);
 print "Report: s3\n";
 while (my $rl = <REPORT>) {
