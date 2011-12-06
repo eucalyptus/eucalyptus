@@ -16,12 +16,17 @@ my $end_ms = 0;
 my $num_users = 0;
 my @usernames = ();
 my @accountnames = ();
+my $return_code = 0;
+# userhash is used to determine quickly if a user is contained in the users list;
+#   if ($userhash{$user}) { ... }
+my %userhash = ();
 
 while ($#ARGV+1>0) {
 	my ($account,$username_arg) = split(":",shift);
 	push(@accountnames, $account);
 	foreach (split(",",$username_arg)) {
 		push(@usernames, $_);
+		$userhash{$_}=1;
 		$num_users++;
 	}
 }
@@ -41,6 +46,13 @@ sub runcmd($) {
 	my $output = `$_[0]`;
 	print "Output:$output\n";
 }
+
+
+# set report units to smaller units for test; GB-days would not show up at all
+system("euca-modify-property -p reporting.default_size_time_size_unit=MB") and die("Couldn't set size time size unit");
+system("euca-modify-property -p reporting.default_size_time_time_unit=SECS") and die("Couldn't set size time time unit");
+system("euca-modify-property -p reporting.default_size_unit=MB") and die("Couldn't set size unit");
+system("euca-modify-property -p reporting.default_time_unit=SECS") and die("Couldn't set time unit");
 
 
 # login and gather session id
@@ -94,6 +106,9 @@ while (my $rl = <REPORT>) {
 	if ($user !~ /^user-/) {
 		next;
 	}
+	if ($userhash{$user}) {
+		print "-> ";
+	}
 	print "user:$user m1Small:$m1Small m1SmallTime:$m1SmallTime c1Medium:$c1Medium " .
 		"c1MediumTime:$c1MediumTime m1Large:$m1Large m1LargeTime:$m1LargeTime " .
 		"m1Xlarge:$m1XLarge m1XLargeTime:$m1XLargeTime c1XLarge:$c1XLarge " .
@@ -116,6 +131,9 @@ while (my $rl = <REPORT>) {
 	if ($user !~ /^user-/) {
 		next;
 	}
+	if ($userhash{$user}) {
+		print "-> ";
+	}
 	print "user:$user volMaxSize:$volMaxSize volSizeTime:$volSizeTime " .
 			"snapMaxSize:$snapMaxSize snapSizeTime:$snapSizeTime\n";
 }
@@ -135,9 +153,13 @@ while (my $rl = <REPORT>) {
 	if ($user !~ /^user-/) {
 		next;
 	}
+	if ($userhash{$user}) {
+		print "-> ";
+	}
 	print "user:$user bucketsMaxNum:$bucketsMaxNum objectsMaxSize:$objectsMaxSize " .
 		"objectsMaxTime:$objectsMaxTime\n";
 }
 close(REPORT);
 
+exit($return_code);
 
