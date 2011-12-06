@@ -66,6 +66,8 @@ package com.eucalyptus.component;
 import java.util.List;
 import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
+import com.eucalyptus.component.ComponentId.Partition;
+import com.eucalyptus.system.Ats;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Internets;
 
@@ -95,6 +97,8 @@ public abstract class AbstractServiceBuilder<T extends ServiceConfiguration> imp
     } catch ( PersistenceException ex1 ) {
       LOG.trace( "Failed to find existing component registration for host: " + host );
     }
+    Partition partitionAnnotation = Ats.from( this.getComponentId( ) ).get( Partition.class );
+    existingHost = ( partitionAnnotation != null && partitionAnnotation.manyToOne( ) ? null : existingHost ); 
     if ( existingName != null && existingHost != null ) {
       return false;
     } else if ( existingName == null && existingHost == null ) {
