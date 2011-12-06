@@ -163,7 +163,7 @@ parse_rec ( // parses the VBR as supplied by a client or user, checks values, an
     if (strstr (vbr->typeName, "machine") == vbr->typeName) { 
         vbr->type = NC_RESOURCE_IMAGE; 
         if (vm)
-            vm->image = vbr;
+            vm->root = vbr;
     } else if (strstr (vbr->typeName, "kernel") == vbr->typeName) { 
         vbr->type = NC_RESOURCE_KERNEL; 
         if (vm)
@@ -353,7 +353,7 @@ vbr_parse ( // parses and verifies all VBR entries in the virtual machine defini
            virtualMachine * vm, // vm definition containing VBR records
            ncMetadata * meta) // OPTIONAL parameter for translating, e.g., walrus:// URI into http:// URI
 {
-    unsigned char partitions [BUS_TYPES_TOTAL][EUCA_MAX_DISKS][EUCA_MAX_PARTITIONS]; // for validating partitions
+    virtualBootRecord * partitions [BUS_TYPES_TOTAL][EUCA_MAX_DISKS][EUCA_MAX_PARTITIONS]; // for validating partitions
     bzero (partitions, sizeof (partitions));
     for (int i=0, j=0; i<EUCA_MAX_VBRS && i<vm->virtualBootRecordLen; i++) {
         virtualBootRecord * vbr = &(vm->virtualBootRecord[i]);
@@ -362,7 +362,18 @@ vbr_parse ( // parses and verifies all VBR entries in the virtual machine defini
             return ERROR;
         
         if (vbr->type!=NC_RESOURCE_KERNEL && vbr->type!=NC_RESOURCE_RAMDISK)
-            partitions [vbr->guestDeviceBus][vbr->diskNumber][vbr->partitionNumber] = 1;            
+            partitions [vbr->guestDeviceBus][vbr->diskNumber][vbr->partitionNumber] = vbr;
+        
+        if (vm->root==NULL) { // we have not identified the EMI yet
+            if (vbr->type==NC_RESOURCE_IMAGE) {
+                vm->root=vbr;
+            }
+        } else {
+            if (vm->root!=vbr && vbr->type==NC_RESOURCE_IMAGE) {
+                logprintfl (EUCAERROR, "Error: more than one EMI specified in the boot record\n");
+                return ERROR;
+            }
+        }
     }
     
     // ensure that partitions are contiguous and that partitions and disks are not mixed
@@ -382,8 +393,22 @@ vbr_parse ( // parses and verifies all VBR entries in the virtual machine defini
                         return ERROR;
                     }
                 }
+                if (vm->root==NULL) { // root partition or disk have not been found yet (no NC_RESOURCE_IMAGE)
+                    virtualBootRecord * vbr;
+                    if (has_partitions)
+                        vbr = partitions [i][j][1];
+                    else
+                        vbr = partitions [i][j][0];
+                    if (vbr && (vbr->type == NC_RESOURCE_EBS))
+                        vm->root = vbr;
+                }
             }
         }
+    }
+
+    if (vm->root==NULL) {
+        logprintfl (EUCAERROR, "Error: no root partition or disk have been found\n");
+        return ERROR;
     }
 
     return OK;
@@ -1851,7 +1876,7 @@ static blobstore * create_teststore (int size_blocks, const char * base, const c
         return NULL;
     }
     printf ("created %s\n", bs_path);
-    blobstore * bs = blobstore_open (bs_path, size_blocks, format, revocation, snapshot);
+    blobstore * bs = blobstore_open (bs_path, size_blocks, BLOBSTORE_FLAG_CREAT, format, revocation, snapshot);
     if (bs==NULL) {
         printf ("ERROR: %s\n", blobstore_get_error_str(blobstore_get_error()));
         return NULL;

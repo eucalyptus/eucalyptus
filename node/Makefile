@@ -59,9 +59,6 @@ server: $(SERVICE_SO)
 ../storage/blobstore.o: ../storage/blobstore.c ../util/misc.o ../util/data.o
 	make -C ../storage
 
-../storage/storage.o: ../storage/storage.c ../util/misc.o ../util/data.o
-	make -C ../storage
-
 ../storage/walrus.o: ../storage/walrus.c ../util/misc.o ../util/data.o
 	make -C ../storage
 

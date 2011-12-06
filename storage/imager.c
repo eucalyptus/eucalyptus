@@ -275,7 +275,7 @@ int main (int argc, char * argv[])
 
         if (ensure_directories_exist (get_work_dir(), 0, NULL, NULL, BLOBSTORE_DIRECTORY_PERM) == -1)
             err ("failed to open or create work directory");
-        work_bs = blobstore_open (get_work_dir(), get_work_limit()/512, BLOBSTORE_FORMAT_FILES, BLOBSTORE_REVOCATION_NONE, BLOBSTORE_SNAPSHOT_ANY);
+        work_bs = blobstore_open (get_work_dir(), get_work_limit()/512, BLOBSTORE_FLAG_CREAT, BLOBSTORE_FORMAT_FILES, BLOBSTORE_REVOCATION_NONE, BLOBSTORE_SNAPSHOT_ANY);
         if (work_bs==NULL) {
             logprintfl (EUCAERROR, "ERROR: %s\n", blobstore_get_error_str(blobstore_get_error()));
             err ("failed to open work blobstore");
@@ -287,7 +287,7 @@ int main (int argc, char * argv[])
     if (root && tree_uses_cache (root)) {
         if (ensure_directories_exist (get_cache_dir(), 0, NULL, NULL, BLOBSTORE_DIRECTORY_PERM) == -1)
             err ("failed to open or create cache directory");
-        cache_bs = blobstore_open (get_cache_dir(), get_cache_limit()/512, BLOBSTORE_FORMAT_DIRECTORY, BLOBSTORE_REVOCATION_LRU, BLOBSTORE_SNAPSHOT_ANY);
+        cache_bs = blobstore_open (get_cache_dir(), get_cache_limit()/512, BLOBSTORE_FLAG_CREAT, BLOBSTORE_FORMAT_DIRECTORY, BLOBSTORE_REVOCATION_LRU, BLOBSTORE_SNAPSHOT_ANY);
         if (cache_bs==NULL) {
             logprintfl (EUCAERROR, "ERROR: %s\n", blobstore_get_error_str(blobstore_get_error()));
             blobstore_close (work_bs);            

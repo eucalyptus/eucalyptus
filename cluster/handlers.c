@@ -75,7 +75,6 @@ permission notice:
 
 #include <server-marshal.h>
 #include <handlers.h>
-#include <storage.h>
 #include <vnetwork.h>
 #include <misc.h>
 #include <ipc.h>
@@ -2813,6 +2812,8 @@ int ccCheckState() {
   char localDetails[1024];
   int ret=0;
   char cmd[MAX_PATH];
+  char buri[MAX_PATH], uriType[32], bhost[MAX_PATH], path[MAX_PATH], curi[MAX_PATH], chost[MAX_PATH];
+  int port, done=0, i, j, rc;
 
   if (!config) {
     return(1);
@@ -2857,10 +2858,34 @@ int ccCheckState() {
   
   // network
 
+  // broker pairing algo
+  for (i=0; i<16; i++) {
+    int j;
+    if (strlen(config->notreadyServices[i].type)) {
+      if (!strcmp(config->notreadyServices[i].type, "vmwarebroker")) {
+	for (j=0; j<8; j++) {
+	  if (strlen(config->notreadyServices[i].uris[j])) {
+	    logprintfl(EUCADEBUG, "ccCheckState(): found broker - %s\n", config->notreadyServices[i].uris[j]);
+	    
+	    snprintf(buri, MAX_PATH, "%s", config->notreadyServices[i].uris[j]);
+	    bzero(bhost, sizeof(char) * MAX_PATH);
+	    rc = tokenize_uri(buri, uriType, bhost, &port, path);
+	    
+	    snprintf(curi, MAX_PATH, "%s", config->ccStatus.serviceId.uris[0]);
+	    bzero(chost, sizeof(char) * MAX_PATH);
+	    rc = tokenize_uri(curi, uriType, chost, &port, path);
+	    if (!strcmp(curi, buri)) {
+	      logprintfl(EUCAWARN, "ccCheckState(): detected local broker (%s) matching local CC (%s) in NOTREADY state\n", config->notreadyServices[i].uris[j], config->ccStatus.serviceId.uris[0]);
+	    }
+	  }
+	}
+      }
+    }
+  }
+
   snprintf(localDetails, 1023, "ERRORS=%d", ret);
-  sem_mywait(CONFIG);
   snprintf(config->ccStatus.details, 1023, "%s", localDetails);
-  sem_mypost(CONFIG);
+  
   return(ret);
 }
 
@@ -3009,18 +3034,16 @@ void *monitor_thread(void *in) {
       }
     }
 
+    // do state checks under CONFIG lock
+    sem_mywait(CONFIG);
     if (ccCheckState()) {
       logprintfl(EUCAERROR, "monitor_thread(): ccCheckState() returned failures\n");
-      sem_mywait(CONFIG);
       config->kick_enabled = 0;
       ccChangeState(NOTREADY);
-      sem_mypost(CONFIG);
     } else if (config->ccState == NOTREADY) {
-      sem_mywait(CONFIG);
       ccChangeState(DISABLED);
-      sem_mypost(CONFIG);
     }
-
+    sem_mypost(CONFIG);
     shawn();
     
     logprintfl(EUCADEBUG, "monitor_thread(localState=%s): done\n", config->ccStatus.localState);

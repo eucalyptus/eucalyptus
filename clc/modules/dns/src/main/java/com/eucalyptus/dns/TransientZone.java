@@ -105,7 +105,8 @@ public class TransientZone extends Zone {
       long refresh = 86400;
       long retry = ttl;
       long expires = 2419200;
-      long minimum = ttl;
+      //This is the negative cache TTL
+      long minimum = 600;
       Record soarec = new SOARecord( name, DClass.IN, ttl, name, Name.fromString( "root." + name.toString( ) ), serial,
         refresh, retry, expires, minimum );
       long nsTTL = 604800;
@@ -131,7 +132,8 @@ public class TransientZone extends Zone {
       long refresh = 86400;
       long retry = ttl;
       long expires = 2419200;
-      long minimum = ttl;
+      //This is the negative cache TTL
+      long minimum = 600;
       Record soarec = new SOARecord( name, DClass.IN, ttl, name, Name.fromString( "root." + name.toString( ) ), serial,
         refresh, retry, expires, minimum );
       long nsTTL = 604800;
@@ -195,7 +197,7 @@ public class TransientZone extends Zone {
 		try {
 			InetAddress cloudIp = Topology.lookup( Eucalyptus.class ).getInetAddress( );
 	        if (cloudIp != null) {
-	          resp.addRRset( new RRset( new ARecord( name, 1, ttl, cloudIp ) ) );
+	          resp.addRRset( new RRset( new ARecord( name, 1, 20/*ttl*/, cloudIp ) ) );
 	        }
 	        return resp;
 		} catch (Exception e) {
@@ -256,7 +258,7 @@ public class TransientZone extends Zone {
         	LOG.error(e);
         	return super.findRecords( name, type );
           }
-		  resp.addRRset( new RRset( new ARecord( name, 1, ttl, walrusIp ) ) );
+		  resp.addRRset( new RRset( new ARecord( name, 1, 20/*ttl*/, walrusIp ) ) );
 		  return resp;
 	} else {
       return super.findRecords( name, type );
@@ -285,7 +287,8 @@ public class TransientZone extends Zone {
 	  long refresh = 86400;
 	  long retry = ttl;
 	  long expires = 2419200;
-	  long minimum = ttl;
+          //This is the negative cache TTL
+          long minimum = 600;
 	  Record soarec = new SOARecord( name, DClass.IN, ttl, name, Name.fromString( "root." + name.toString( ) ), serial,
 	    refresh, retry, expires, minimum );
 	  long nsTTL = 604800;
