@@ -58,9 +58,7 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
     }
     
     for ( final VmInfo runVm : reply.getVms( ) ) {
-      if ( !VmState.PENDING.equals( VmState.Mapper.get( runVm.getStateName( ) ) ) ) {
-        VmStateCallback.handleReportedState( runVm );
-      }
+      VmStateCallback.handleReportedState( runVm );
     }
     
     final List<String> unreportedVms = VmStateCallback.findUnreported( reply );
@@ -243,9 +241,7 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
     @Override
     public void fire( VmDescribeResponseType reply ) {
       for ( final VmInfo runVm : reply.getVms( ) ) {
-        if ( !VmState.PENDING.equals( VmState.Mapper.get( runVm.getStateName( ) ) ) ) {
-          VmStateCallback.handleReportedState( runVm );
-        }
+        VmStateCallback.handleReportedState( runVm );
       }
     }
     
