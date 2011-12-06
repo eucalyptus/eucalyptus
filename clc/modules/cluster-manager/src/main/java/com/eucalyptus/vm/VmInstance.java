@@ -832,16 +832,9 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   }
   
   void store( ) {
-    Entities.asTransaction( VmInstance.class, new Function<VmInstance, Boolean>( ) {
-      
-      @Override
-      public Boolean apply( VmInstance arg0 ) {
-        VmInstance.this.updateTimeStamps( );
-        VmInstance.this.fireUsageEvent( );
-        VmInstance.this.firePersist( );
-        return true;
-      }
-    } ).apply( this );
+    this.updateTimeStamps( );
+    this.fireUsageEvent( );
+    this.firePersist( );
   }
   
   private void firePersist( ) {
@@ -1617,7 +1610,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       Transitions.DELETE.apply( this );
     } catch ( Exception ex ) {}
   }
-  
+
   Date getExpiration( ) {
     return this.expiration;
   }
