@@ -48,6 +48,28 @@ sub runcmd($) {
 }
 
 
+#
+# Calculate the number of resources used over i intervals, where new resources are allocated 
+# each interval and no resources from previous intervals are released.
+#
+# For example, if 10 new resources are allocated in each of 6 intervals, the total number 
+# is equal to (10+20+30+40+50+60). This total can be calculated using the more general
+# formula: ((i+1)*a)/(i/2).
+#
+# This formula can be inferred by re-arranging terms:
+#  (10+20+30+40+50+60)
+#  = (60+10)+(50+20)+(40+30)
+#  = 70+70+70
+#  = 70*3
+#  ...but 70 is equal to (i+1)*a, and 3 is the number of intervals / 2.
+#
+# This arithmetic trick was suggested by Gauss' solution to adding all numbers in a range.
+#
+sub calculate_total_acc_usage($$) {
+	my ($i, $a) = @_;
+	return (($i+1)*$a)/($i/2);
+}
+
 # set report units to smaller units for test; GB-days would not show up at all
 system("euca-modify-property -p reporting.default_size_time_size_unit=MB") and die("Couldn't set size time size unit");
 system("euca-modify-property -p reporting.default_size_time_time_unit=SECS") and die("Couldn't set size time time unit");
@@ -91,6 +113,9 @@ if ($end_ms==0) {
 $start_ms++;
 $end_ms--;
 
+# Find number of intervals
+
+
 # Generate and verify instance report
 $report_file = "/tmp/report-instance-" . time();
 runcmd("wget -O \"$report_file\" --no-check-certificate \"https://localhost:8443/" .
@@ -104,12 +129,15 @@ while (my $rl = <REPORT>) {
 			$m1XLarge,$m1XLargeTime,$blank2,$c1XLarge,$c1XLargeTime,$net,$disk)
 		= split(",",$rl);
 	if (($user !~ /^user-/) or (!$userhash{$user})) {
-		next;
+		next; #skip rows in the report which are column headers or for other users
 	}
 	print "user:$user m1Small:$m1Small m1SmallTime:$m1SmallTime c1Medium:$c1Medium " .
 		"c1MediumTime:$c1MediumTime m1Large:$m1Large m1LargeTime:$m1LargeTime " .
 		"m1Xlarge:$m1XLarge m1XLargeTime:$m1XLargeTime c1XLarge:$c1XLarge " .
 		"c1XLargeTime:$c1XLargeTime net:$net disk:$disk\n";
+	# Number should be 2 small instances per user or 
+	# Net and disk should be above zero
+	# Time should be 2 small instances times duration
 }
 print "\n\n";
 close(REPORT);
@@ -126,10 +154,12 @@ while (my $rl = <REPORT>) {
 	my ($blank,$user,$volMaxSize,$volSizeTime,$snapMaxSize,$blank2,$snapSizeTime)
 		= split(",",$rl);
 	if (($user !~ /^user-/) or (!$userhash{$user})) {
-		next;
+		next; #skip rows in the report which are column headers or for other users
 	}
 	print "user:$user volMaxSize:$volMaxSize volSizeTime:$volSizeTime " .
 			"snapMaxSize:$snapMaxSize snapSizeTime:$snapSizeTime\n";
+	# VolMaxSize and snapMaxSize should be total amount accumulated, intervals * allocation amount
+	# VolSizeTime and snapSizeTime should be a math algorithm
 }
 print "\n\n";
 close(REPORT);
@@ -145,10 +175,13 @@ print "Report: s3\n";
 while (my $rl = <REPORT>) {
 	my ($blank,$user,$bucketsMaxNum,$objectsMaxSize,$blank2,$objectsMaxTime) = split(",",$rl);
 	if (($user !~ /^user-/) or (!$userhash{$user})) {
-		next;
+		next; #skip rows in the report which are column headers or for other users
 	}
 	print "user:$user bucketsMaxNum:$bucketsMaxNum objectsMaxSize:$objectsMaxSize " .
 		"objectsMaxTime:$objectsMaxTime\n";
+	# BucketsNumMax should be equal to number of intervals?
+	# ObjectsMaxSize should be equal to intervals*objectSize
+	# objectsMaxTime should be math alg
 }
 close(REPORT);
 
