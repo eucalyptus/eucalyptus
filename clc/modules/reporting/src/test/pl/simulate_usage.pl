@@ -17,8 +17,8 @@
 use strict;
 use warnings;
 
-if ($#ARGV+1 < 6) {
-	die "Usage: simulate_usage.pl upload_file num_users num_users_per_account num_instances_per_user duration_secs image+";
+if ($#ARGV+1 < 8) {
+	die "Usage: simulate_usage.pl upload_file num_users num_users_per_account num_instances_per_user duration_secs write_interval storage_usage_mb image+";
 }
 
 
@@ -27,8 +27,8 @@ my $num_users = shift;
 my $num_users_per_account = shift;
 my $num_instances_per_user = shift;
 my $duration_secs = shift;
-my $write_interval = 40;
-my $storage_usage_mb = 2;
+my $write_interval = shift;
+my $storage_usage_mb = shift;
 my @images = ();
 my @types = ("m1.small","c1.medium","m1.large");
 my %types_num = (); # type=>n

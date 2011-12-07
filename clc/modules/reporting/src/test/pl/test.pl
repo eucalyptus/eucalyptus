@@ -29,12 +29,20 @@
 # Parse cmd-line args.
 #
 my $duration_secs = 400;
+my $write_interval = 40;
+my $storage_usage_mb = 2;
 my $num_users = 1;
 my $num_users_per_account = 1;
 my $num_instances_per_user = 1;
 my $image = "";
 if ($#ARGV>-1) {
 	$duration_secs = shift;
+}
+if ($#ARGV>-1) {
+	$write_interval = shift;
+}
+if ($#ARGV>-1) {
+	$storage_usage_mb = shift;
 }
 if ($#ARGV>-1) {
 	$num_users = shift;
@@ -48,7 +56,7 @@ if ($#ARGV>-1) {
 if ($#ARGV>-1) {
 	$image = shift;
 }
-print "Using args: duration:$duration_secs users:$num_users num_users_per_account:$num_users_per_account num_instances_per_user:$num_instances_per_user image:" . (($image eq "") ? "(none)" : $image) . "\n";
+print "Using args: duration:$duration_secs write_interval:$write_interval storage_usage_mb:$storage_usage_mb users:$num_users num_users_per_account:$num_users_per_account num_instances_per_user:$num_instances_per_user image:" . (($image eq "") ? "(none)" : $image) . "\n";
 
 
 #
@@ -107,6 +115,6 @@ print "using image:$image\n";
 my $output=`./simulate_usage.pl $initrd_file $num_users $num_users_per_account $num_instances_per_user $duration_secs $image`;
 chomp($output);
 print "Found output:[$output]\n";
-system("./check_db.pl $num_instances_per_user $duration_secs $upload_file $output");
-system("./check_report.pl admin $output");
+system("./check_db.pl $num_instances_per_user $duration_secs $upload_file $write_interval $storage_usage_mb $output");
+system("./check_report.pl admin $storage_usage_mb $write_interval $output");
 

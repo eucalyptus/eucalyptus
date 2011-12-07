@@ -4,15 +4,17 @@
 use strict;
 use warnings;
 
-if ($#ARGV+1 < 2) {
-	die ("Usage: check_report.pl admin_pw (account:user+)+");
+if ($#ARGV+1 < 4) {
+	die ("Usage: check_report.pl admin_pw storage_usage_mb write_interval (account:user+)+");
 }
 
 my $password = shift;
+my $storage_usage_mb = shift;
 my $session_id = "";
 my $report_file = "";
 my $start_ms = 0;
 my $end_ms = 0;
+my $write_interval = shift;
 my $num_users = 0;
 my @usernames = ();
 my @accountnames = ();
@@ -115,6 +117,7 @@ $start_ms++;
 $end_ms--;
 
 # Find number of intervals
+my $num_intervals = ($end_ms - $start_ms) / ($write_interval*1000);
 
 
 # Generate and verify instance report, by calling the report servlet using wget

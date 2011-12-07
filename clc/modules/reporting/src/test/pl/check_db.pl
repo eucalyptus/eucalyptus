@@ -11,16 +11,16 @@
 use strict;
 use warnings;
 
-if ($#ARGV+1 < 4) {
-	die "Usage: check_db.pl num_instances_per_user duration_secs upload_file (account:user,user,user)+";
+if ($#ARGV+1 < 6) {
+	die "Usage: check_db.pl num_instances_per_user duration_secs upload_file write_interval storage_usage_mb (account:user,user,user)+";
 }
 
 
 my $num_instances_per_user = shift;
 my $duration_secs = shift;
 my $upload_file = shift;
-my $write_interval = 40;
-my $storage_usage_mb = 2;
+my $write_interval = shift;
+my $storage_usage_mb = shift;
 my $num_users = 0;
 my $account = "";
 my $username_arg = "";
