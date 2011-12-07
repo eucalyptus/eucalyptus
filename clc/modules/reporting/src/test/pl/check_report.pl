@@ -1,20 +1,29 @@
 #!/usr/bin/perl
 
 
+#
+# check_report.pl
+#
+# author: tom.werges
+#
+# (c)2011, Eucalyptus Systems, Inc. All Rights Reserved.
+#
 use strict;
 use warnings;
+require "test_common.pl";
 
-if ($#ARGV+1 < 4) {
-	die ("Usage: check_report.pl admin_pw storage_usage_mb write_interval (account:user+)+");
+if ($#ARGV+1 < 5) {
+	die ("Usage: check_report.pl admin_pw storage_usage_mb write_interval num_instances_per_user (account:user+)+");
 }
 
 my $password = shift;
 my $storage_usage_mb = shift;
+my $write_interval = shift;
+my $num_instances_per_user = shift;
 my $session_id = "";
 my $report_file = "";
 my $start_ms = 0;
 my $end_ms = 0;
-my $write_interval = shift;
 my $num_users = 0;
 my @usernames = ();
 my @accountnames = ();
@@ -35,19 +44,6 @@ while ($#ARGV+1>0) {
 
 my $username_csv = "'" . join("','",@usernames) . "'";
 my $accountname_csv = "'" . join("','",@accountnames) . "'";
-
-sub execute_query($) {
-	print "Executing query:$_[0]\n";
-	my $output = `db.sh --execute="$_[0]" -D eucalyptus_reporting --skip-column-names`;
-	print "Output:$output\n";
-	return split("\n",$output);
-}
-
-sub runcmd($) {
-	print "Running cmd:$_[0]\n";
-	my $output = `$_[0]`;
-	print "Output:$output\n";
-}
 
 
 #
@@ -139,9 +135,10 @@ while (my $rl = <REPORT>) {
 		"c1MediumTime:$c1MediumTime m1Large:$m1Large m1LargeTime:$m1LargeTime " .
 		"m1Xlarge:$m1XLarge m1XLargeTime:$m1XLargeTime c1XLarge:$c1XLarge " .
 		"c1XLargeTime:$c1XLargeTime net:$net disk:$disk\n";
-	# Number should be 2 small instances per user or 
+	my $num_instances = ($m1small+$c1Medium+$m1Large+$m1XLarge+$c1XLarge));
+	test_eq("num_instances",$num_instances_per_user, $num_instances);
 	# Net and disk should be above zero
-	# Time should be 2 small instances times duration
+	# Time should be instance times duration for each type
 }
 print "\n\n";
 close(REPORT);
@@ -161,8 +158,13 @@ while (my $rl = <REPORT>) {
 	}
 	print "user:$user volMaxSize:$volMaxSize volSizeTime:$volSizeTime " .
 			"snapMaxSize:$snapMaxSize snapSizeTime:$snapSizeTime\n";
-	# VolMaxSize and snapMaxSize should be total amount accumulated, intervals * allocation amount
-	# VolSizeTime and snapSizeTime should be a math algorithm
+	test_range("volMaxSize", ($num_intervals*$storage_usage_mb), $volMaxSize, $storage_usage_mb+1);
+	test_range("snapMaxSize", ($num_intervals*$storage_usage_mb), $snapMaxSize, $storage_usage_mb+1);
+	# What is an appropriate error range? What about storage_usage_mb?
+	test_range("volSizeTime", calculate_total_acc_usage($num_intervals,$storage_usage_mb),
+				$volSizeTime, $volMaxSize);
+	test_range("snapSizeTime", calculate_total_acc_usage($num_intervals,$storage_usage_mb),
+				$snapSizeTime, $snapMaxSize);
 }
 print "\n\n";
 close(REPORT);
@@ -181,7 +183,7 @@ while (my $rl = <REPORT>) {
 	}
 	print "user:$user bucketsMaxNum:$bucketsMaxNum objectsMaxSize:$objectsMaxSize " .
 		"objectsMaxTime:$objectsMaxTime\n";
-	# BucketsNumMax should be equal to number of intervals?
+	# BucketsNumMax should be equal to number of users, ==1
 	# ObjectsMaxSize should be equal to intervals*objectSize
 	# objectsMaxTime should be math alg
 }

@@ -3,11 +3,7 @@
 #
 # simulate_usage.pl runs a test of the reporting system. It simulates usage
 #   of several users simultaneously by spawning processes and generating usage
-#   as various users simultaneously. Then it verifies that events were sent and
-#   recorded in the database correctly and that reports are generated correctly.
-#
-# Usage: simulate_usage.pl admin_pw num_users num_users_per_Account
-#             num_instances_per_user duration_secs_secs image+
+#   as various users simultaneously.
 #
 # author: tom.werges
 #
@@ -16,9 +12,10 @@
 
 use strict;
 use warnings;
+require "test_common.pl";
 
-if ($#ARGV+1 < 8) {
-	die "Usage: simulate_usage.pl upload_file num_users num_users_per_account num_instances_per_user duration_secs write_interval storage_usage_mb image+";
+if ($#ARGV+1 < 7) {
+	die "Usage: simulate_usage.pl upload_file num_users num_users_per_account num_instances_per_user duration_secs write_interval image+";
 }
 
 
@@ -28,24 +25,12 @@ my $num_users_per_account = shift;
 my $num_instances_per_user = shift;
 my $duration_secs = shift;
 my $write_interval = shift;
-my $storage_usage_mb = shift;
 my @images = ();
 my @types = ("m1.small","c1.medium","m1.large");
 my %types_num = (); # type=>n
 while ($#ARGV+1>0) {
 	push(@images,shift);
 }
-
-sub rand_str($) {
-	return sprintf("%x",rand(2<<$_[0]));
-}
-
-sub runcmd($) {
-	print STDERR "Running cmd:$_[0]\n";
-	my $ret = system("$_[0] 1>&2");
-	return $ret;
-}
-
 
 #
 # MAIN LOGIC

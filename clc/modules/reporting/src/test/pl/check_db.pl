@@ -10,9 +10,10 @@
 
 use strict;
 use warnings;
+require "test_common.pl";
 
-if ($#ARGV+1 < 6) {
-	die "Usage: check_db.pl num_instances_per_user duration_secs upload_file write_interval storage_usage_mb (account:user,user,user)+";
+if ($#ARGV+1 < 5) {
+	die "Usage: check_db.pl num_instances_per_user duration_secs upload_file write_interval (account:user,user,user)+";
 }
 
 
@@ -20,7 +21,6 @@ my $num_instances_per_user = shift;
 my $duration_secs = shift;
 my $upload_file = shift;
 my $write_interval = shift;
-my $storage_usage_mb = shift;
 my $num_users = 0;
 my $account = "";
 my $username_arg = "";
@@ -36,51 +36,6 @@ while ($#ARGV+1>0) {
 		$num_users++;
 	}
 }
-
-sub rand_str($) {
-	return sprintf("%x",rand(2<<$_[0]));
-}
-
-sub execute_query($) {
-	print "Executing query:$_[0]\n";
-	my $output = `db.sh --execute="$_[0]" -D eucalyptus_reporting --skip-column-names`;
-	print "Output:$output\n";
-	return split("\n",$output);
-}
-
-sub runcmd($) {
-	print "Running cmd:$_[0]\n";
-	my $ret = system($_[0]);
-	return $ret;
-}
-
-# TEST_RANGE
-#  var_name, expected, value, error
-sub test_range($$$$) {
-	my ($name,$expected,$val,$error) = @_;
-	print "test:$name, expected:$expected +/- $error, val:$val\n";
-	if ($val < $expected-$error || $val > $expected+$error) {
-		print " FAILED: test $name\n";
-		$return_code = 127;
-	}
-}
-
-# TEST_EQ
-#  var_name, expected, value
-sub test_eq($$$) {
-	my ($name,$expected,$val) = @_;
-	print "test:$name, expected:$expected val:$val\n";
-	if ($val != $expected) {
-		print " FAILED: test $name\n";
-		$return_code = 127;
-	}
-}
-
-
-
-#
-# MAIN LOGIC
-#
 
 
 #
