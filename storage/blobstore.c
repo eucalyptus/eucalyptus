@@ -317,7 +317,7 @@ static int close_and_unlock (int fd)
         pthread_mutex_lock (&_blobstore_mutex); // grab global lock (we will not block below and we may be deallocating)
         logprintfl (EUCADEBUG2, "{%u} close_and_unlock: obtained global lock for closing of fd=%d\n", (unsigned int)pthread_self(), fd);
         
-        blobstore_filelock * path_lock; // lock struct to which this fd belongs
+        blobstore_filelock * path_lock = NULL; // lock struct to which this fd belongs
         int index = -1; // index of this fd entry in the lock struct
         int open_fds = 0; // count of other open file descriptors for this lock
         
@@ -1460,6 +1460,24 @@ static blockblob ** walk_bs (blobstore * bs, const char * dir_path, blockblob **
         bb->last_modified = sb.st_mtime;
         bb->snapshot_type = BLOBSTORE_FORMAT_ANY; // it is not necessary to know whether this is a snapshot
         bb->in_use = check_in_use (bs, bb->id, 0);
+
+        // if there is a .refs file, subtract the mapped blocks, if any, from the size
+        char ** array = NULL;
+        int array_size = 0;
+        if (read_array_blockblob_metadata_path (BLOCKBLOB_PATH_DEPS, bb->store, bb->id, &array, &array_size)!=-1) {
+            for (int i=0; i<array_size; i++) {
+                char * store_path  = strtok (array [i], " ");
+                char * blob_id     = strtok (NULL, " "); 
+                char * rel_type    = strtok (NULL, " ");
+                char * start_block = strtok (NULL, " ");
+                char * len_blocks  = strtok (NULL, " ");
+                if (rel_type && len_blocks && strcmp (rel_type, blobstore_relation_type_name [BLOBSTORE_MAP])==0) {
+                    bb->size_bytes -= strtoull (len_blocks, NULL, 0) * 512LL;
+                }
+            }
+        }
+        if (array)
+            free (array);
     }
 
  free:
@@ -2331,12 +2349,9 @@ int blockblob_delete ( blockblob * bb, long long timeout_usec )
     char my_ref [BLOBSTORE_MAX_PATH+MAX_DM_NAME+1];
     snprintf (my_ref, sizeof (my_ref), "%s %s", bb->store->path, bb->id);
     for (int i=0; i<array_size; i++) {
-        char * store_path = array [i];
-        char * blob_id = strrchr (array [i], ' ');
-        if (blob_id) {
-            * blob_id = '\0';
-            blob_id++;
-        }
+        char * store_path = strtok (array [i], " ");
+        char * blob_id    = strtok (NULL, " "); // the remaining entries in array[i] are ignored
+        
         if (strlen (store_path)<1 || strlen (blob_id)<1)
             continue; // TODO: print a warning about store/blob corruption?
 
@@ -2733,7 +2748,8 @@ int blockblob_clone ( blockblob * bb, // destination blob, which blocks may be u
 
             // record the dependency in .deps (redundant entries will be filtered out)
             char dep_ref [BLOBSTORE_MAX_PATH+MAX_DM_NAME+1];
-            snprintf (dep_ref, sizeof (dep_ref), "%s %s", sbb->store->path, sbb->id);
+            snprintf (dep_ref, sizeof (dep_ref), "%s %s %s %llu %llu", 
+                      sbb->store->path, sbb->id, blobstore_relation_type_name[m->relation_type], m->first_block_dst, m->len_blocks);
             if (update_entry_blockblob_metadata_path (BLOCKBLOB_PATH_DEPS, bb->store, bb->id, dep_ref, 0)==-1) {
                 ret = -1;
                 goto cleanup; // ditto
@@ -3806,7 +3822,7 @@ int main (int argc, char ** argv)
         char * id = argv [1];
         printf ("---------> opening blob %s\n", id);
         blockblob * bb = blockblob_open (bs, id, 20, BLOBSTORE_FLAG_CREAT, NULL, 1000);
-        if (bs==NULL) {
+        if (bb==NULL) {
             printf ("ERROR: when opening blockblob: %s\n", blobstore_get_error_str(blobstore_get_error()));
             return 1;
         }

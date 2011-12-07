@@ -1,3 +1,5 @@
+// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-                                                                                                     // vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
+
 /*
 Copyright (c) 2009  Eucalyptus Systems, Inc.	
 
@@ -68,6 +70,7 @@ permission notice:
 #include <fcntl.h> /* For O_* */
 #include <string.h>
 #include <strings.h>
+#include <assert.h>
 
 #include "misc.h" /* logprintfl */
 #include "ipc.h"
@@ -85,19 +88,21 @@ sem * sem_alloc (const int val, const char * name)
 sem * sem_realloc (const int val, const char * name, int flags) 
 {
     DECLARE_ARG;
-
+    
+    assert (name);
     sem * s = malloc (sizeof (sem));
-    if (s==NULL) return NULL;
+    if (s==NULL) 
+        return NULL;
     bzero (s, sizeof (sem));
     s->sysv = -1;
     s->flags = flags;
     
     if (name && !strcmp(name, "mutex")) { /* use pthread mutex */
-      s->usemutex = 1;
-      s->mutcount = val;
-      s->mutwaiters = 0;
-      pthread_mutex_init(&(s->mutex), NULL);
-      pthread_cond_init(&(s->cond), NULL);
+        s->usemutex = 1;
+        s->mutcount = val;
+        s->mutwaiters = 0;
+        pthread_mutex_init(&(s->mutex), NULL);
+        pthread_cond_init(&(s->cond), NULL);
     } else if (name) { /* named semaphores */
         if (s->flags & O_EXCL) {
             if ( sem_unlink (name) == 0) { /* clean up in case previous sem holder crashed */
@@ -134,8 +139,9 @@ int sem_p (sem * s)
 {
     int rc;
     
-    logprintfl (EUCADEBUG2, "sem_p() %s\n", (s->name)?(s->name):(""));
-
+    if (s)
+        logprintfl (EUCADEBUG2, "sem_p() %s\n", (s->name)?(s->name):(""));
+    
     if (s && s->usemutex) {
         rc = pthread_mutex_lock(&(s->mutex));
 	s->mutwaiters++;
@@ -164,18 +170,19 @@ int sem_v (sem * s)
 {
     int rc;
 
-    logprintfl (EUCADEBUG2, "sem_v() %s\n", (s->name)?(s->name):(""));
-
+    if (s)
+        logprintfl (EUCADEBUG2, "sem_v() %s\n", (s->name)?(s->name):(""));
+    
     if (s && s->usemutex) {
         rc = pthread_mutex_lock(&(s->mutex));
         if (s->mutwaiters > 0) {
-	  rc = pthread_cond_signal(&(s->cond));
-	}
-	s->mutcount++;
+            rc = pthread_cond_signal(&(s->cond));
+        }
+        s->mutcount++;
         rc = pthread_mutex_unlock(&(s->mutex));
-	return(rc);
+        return(rc);
     }
-
+    
     if (s && s->posix) {
         return sem_post (s->posix);
     }
@@ -204,5 +211,6 @@ void sem_free (sem * s)
         semctl (s->sysv, 0, IPC_RMID, arg); /* TODO: check return */
     }
     
-    free (s);
+    if (s)
+        free (s);
 }
