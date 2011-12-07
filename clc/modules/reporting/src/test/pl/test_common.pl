@@ -1,7 +1,7 @@
 
 
 #
-# test_common.pl contains constants and functions which are used by all the
+# test_common.pl contains constants and functions which are used by multiple
 #   testing perl scripts.
 #
 # author: tom.werges
