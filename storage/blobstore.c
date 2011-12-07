@@ -1728,21 +1728,19 @@ int blobstore_search ( blobstore * bs, const char * regex, blockblob_meta ** res
     if (bbs)
         free_bbs (bbs); // free the blockblobs LL returned by the search function
 
-    if (ret > 0) // all is well above and we have results
-        goto unlock;
-
-    // there were problems above, so free the results linked list, too
-    for (blockblob_meta * bm = head; bm;) {
-        blockblob_meta * next = bm->next;
-        free (bm);
-        bm = next;
-    }
-
- unlock:
     if (blobstore_unlock (bs)==-1) {
         ERR (BLOBSTORE_ERROR_UNKNOWN, "failed to unlock the blobstore");
         ret = -1;
     }    
+
+    if (ret < 0) { // there were problems, so free the partial linked list, if any
+        for (blockblob_meta * bm = head; bm;) {
+            blockblob_meta * next = bm->next;
+            free (bm);
+            bm = next;
+        }
+    }
+    
     return ret;
 }
 
