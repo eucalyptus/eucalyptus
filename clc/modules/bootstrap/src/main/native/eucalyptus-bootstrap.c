@@ -441,7 +441,7 @@ int main(int argc, char *argv[]) {
 	}
 	if (data == NULL && CHECK_ISREG("/usr/bin/java")) {
 		char * javapath = (char *) calloc(PATH_MAX, sizeof(char));
-		realpath("/usr/bin/java", javapath);
+		javapath = realpath("/usr/bin/java", javapath);
 		if (javapath != NULL) {
 			javapath[strlen(javapath)-strlen("jre/bin/java")] = '\0';
 			__debug("Trying system java home: %s", javapath);

@@ -121,6 +121,12 @@ int verify_helpers (char **helpers, char **helpers_path, int num_helpers)
             if (!tok) return -1;
             path = strdup(tok);
             if (!path) {
+                if(helpers_path == NULL) { 
+                    for(int i = 0; i < num_helpers; i++) 
+                        if(tmp_helpers_path[i])
+                            free(tmp_helpers_path[i]);
+                    free(tmp_helpers_path);
+                }
                 return -1;
             }
             
