@@ -99,6 +99,7 @@ import com.eucalyptus.context.IllegalContextAccessException;
 import com.eucalyptus.context.ServiceContext;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
+import com.eucalyptus.images.BlockStorageImageInfo;
 import com.eucalyptus.network.NetworkGroup;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
@@ -472,11 +473,15 @@ public class VmControl {
           try {
             final VmInstance v = VmInstances.lookup( instanceId );
             if ( RestrictedTypes.filterPrivileged( ).apply( v ) ) {
-              final int oldCode = v.getState( ).getCode( ), newCode = VmState.STOPPING.getCode( );
-              final String oldState = v.getState( ).getName( ), newState = VmState.STOPPING.getName( );
-              results.add( new TerminateInstancesItemType( v.getInstanceId( ), oldCode, oldState, newCode, newState ) );
-              if ( VmState.RUNNING.equals( v.getState( ) ) || VmState.PENDING.equals( v.getState( ) ) ) {
-                v.setState( VmState.STOPPING, Reason.USER_STOPPED );
+              if ( v.getBootRecord( ).getMachine( ) instanceof BlockStorageImageInfo ) {
+                final int oldCode = v.getState( ).getCode( ), newCode = VmState.STOPPING.getCode( );
+                final String oldState = v.getState( ).getName( ), newState = VmState.STOPPING.getName( );
+                results.add( new TerminateInstancesItemType( v.getInstanceId( ), oldCode, oldState, newCode, newState ) );
+                if ( VmState.RUNNING.equals( v.getState( ) ) || VmState.PENDING.equals( v.getState( ) ) ) {
+                  v.setState( VmState.STOPPING, Reason.USER_STOPPED );
+                }
+              } else {
+                return false;
               }
             }
             return true;
