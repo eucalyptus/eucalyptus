@@ -68,7 +68,7 @@ sub runcmd($) {
 #
 sub calculate_total_acc_usage($$) {
 	my ($i, $a) = @_;
-	return (($i+1)*$a)/($i/2);
+	return (($i+1)*$a)*($i/2);
 }
 
 # set report units to smaller units for test; GB-days would not show up at all
