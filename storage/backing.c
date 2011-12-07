@@ -93,7 +93,7 @@
 
 static char instances_path [MAX_PATH];
 static blobstore * cache_bs = NULL;
-static blobstore * work_bs;
+static blobstore * work_bs = NULL;
 static sem * disk_sem = NULL;
 
 extern struct nc_state_t nc_state;
@@ -118,6 +118,24 @@ static void stat_blobstore (const char * conf_instances_path, const char * name,
         return;
     blobstore_stat (bs, meta);
     blobstore_close (bs);
+}
+
+int check_backing_store ()
+{
+    if (work_bs) {
+        if (blobstore_fsck (work_bs, NULL)) {
+            logprintfl (EUCAERROR, "ERROR: work directory failed integrity check: %s\n", blobstore_get_error_str(blobstore_get_error()));
+            blobstore_close (cache_bs);
+            return ERROR;
+        }
+    }
+    if (cache_bs) {
+        if (blobstore_fsck (cache_bs, NULL)) { // TODO: verify checksums?
+            logprintfl (EUCAERROR, "ERROR: cache failed integrity check: %s\n", blobstore_get_error_str(blobstore_get_error()));
+            return ERROR;
+        }
+    }
+    return OK;
 }
 
 void stat_backing_store (const char * conf_instances_path, blobstore_meta * work_meta, blobstore_meta * cache_meta)
@@ -157,20 +175,11 @@ int init_backing_store (const char * conf_instances_path, unsigned int conf_work
             logprintfl (EUCAERROR, "ERROR: failed to open/create cache blobstore: %s\n", blobstore_get_error_str(blobstore_get_error()));
             return ERROR;
         }
-        if (blobstore_fsck (cache_bs, NULL)) { // TODO: verify checksums?
-            logprintfl (EUCAERROR, "ERROR: cache failed integrity check: %s\n", blobstore_get_error_str(blobstore_get_error()));
-            return ERROR;
-        }
     }
     work_bs = blobstore_open (work_path, work_limit_blocks, BLOBSTORE_FLAG_CREAT, BLOBSTORE_FORMAT_FILES, BLOBSTORE_REVOCATION_NONE, BLOBSTORE_SNAPSHOT_ANY);
     if (work_bs==NULL) {
         logprintfl (EUCAERROR, "ERROR: failed to open/create work blobstore: %s\n", blobstore_get_error_str(blobstore_get_error()));
         logprintfl (EUCAERROR, "ERROR: %s\n", blobstore_get_last_trace());
-        blobstore_close (cache_bs);
-        return ERROR;
-    }
-    if (blobstore_fsck (work_bs, NULL)) {
-        logprintfl (EUCAERROR, "ERROR: work directory failed integrity check: %s\n", blobstore_get_error_str(blobstore_get_error()));
         blobstore_close (cache_bs);
         return ERROR;
     }

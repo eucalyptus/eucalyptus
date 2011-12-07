@@ -192,6 +192,10 @@ typedef struct _blockmap {
     unsigned long long len_blocks;
 } blockmap;
 
+static char * blobstore_relation_type_name [] = {
+    "copy", "map", "snapshot"
+};
+
 typedef struct _blockblob_meta {
     char id [BLOBSTORE_MAX_PATH]; // ID of the blob (used as part of file/directory name)
     unsigned long long size_bytes; // size of the blob in bytes
