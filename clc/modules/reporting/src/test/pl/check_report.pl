@@ -54,7 +54,7 @@ sub runcmd($) {
 #
 # For example, if 10 new resources are allocated in each of 6 intervals, the total number 
 # is equal to (10+20+30+40+50+60). This total can be calculated using the more general
-# formula: ((i+1)*a)/(i/2), where i is the number of intervals and a is the amount of
+# formula: ((i+1)*a)*(i/2), where i is the number of intervals and a is the amount of
 # resource allocated in each interval.
 #
 # This formula can be inferred by re-arranging terms:
