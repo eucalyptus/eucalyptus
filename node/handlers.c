@@ -1004,9 +1004,6 @@ static int init (void)
 	logprintfl(EUCAINFO, "physical memory available for instances: %lldMB\n", nc_state.mem_max);
 	logprintfl(EUCAINFO, "virtual cpu cores available for instances: %lld\n", nc_state.cores_max);
     
-	// adopt running instances -- do this before disk integrity check so we know what can be purged
-	adopt_instances();
-
     { // backing store configuration
         char * instance_path = getConfString(configFiles, 2, INSTANCE_PATH);
 
@@ -1154,6 +1151,14 @@ static int init (void)
             logprintfl (EUCAWARN, "warning: disk cache will not be used\n");
         }
         free (instance_path);
+    }
+
+	// adopt running instances -- do this before disk integrity check so we know what can be purged
+	adopt_instances();
+
+    if (check_backing_store()!=OK) { // integrity check, cleanup of unused instances and shrinking of cache
+        logprintfl (EUCAFATAL, "error: integrity check of the backing store failed");
+        return ERROR_FATAL;
     }
 
 	// setup the network

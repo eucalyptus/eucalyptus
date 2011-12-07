@@ -69,6 +69,7 @@
 
 void stat_backing_store (const char * conf_instances_path, blobstore_meta * work_meta, blobstore_meta * cache_meta);
 int init_backing_store (const char * conf_instances_path, unsigned int conf_work_size_mb, unsigned int conf_cache_size_mb);
+int check_backing_store ();
 int create_instance_backing (ncInstance * instance);
 int clone_bundling_backing (ncInstance * instance, const char * filePrefix, char * blockPath);
 int save_instance_struct (const ncInstance * instance);

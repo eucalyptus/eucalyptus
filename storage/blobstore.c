@@ -2748,7 +2748,7 @@ int blockblob_clone ( blockblob * bb, // destination blob, which blocks may be u
 
             // record the dependency in .deps (redundant entries will be filtered out)
             char dep_ref [BLOBSTORE_MAX_PATH+MAX_DM_NAME+1];
-            snprintf (dep_ref, sizeof (dep_ref), "%s %s %s %llud %llud", 
+            snprintf (dep_ref, sizeof (dep_ref), "%s %s %s %llu %llu", 
                       sbb->store->path, sbb->id, blobstore_relation_type_name[m->relation_type], m->first_block_dst, m->len_blocks);
             if (update_entry_blockblob_metadata_path (BLOCKBLOB_PATH_DEPS, bb->store, bb->id, dep_ref, 0)==-1) {
                 ret = -1;
