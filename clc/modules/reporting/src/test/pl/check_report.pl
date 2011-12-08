@@ -2,11 +2,14 @@
 
 
 #
-# check_report.pl
+# check_report.pl generates reports and verifies that report values are
+#  correct, based upon simulated usage from simulate_usage.pl.
 #
-# author: tom.werges
+# This script is called by test.pl; see test.pl for comprehensive documentation
+# of the perl test suite.
 #
 # (c)2011, Eucalyptus Systems, Inc. All Rights Reserved.
+# author: tom.werges
 #
 use strict;
 use warnings;

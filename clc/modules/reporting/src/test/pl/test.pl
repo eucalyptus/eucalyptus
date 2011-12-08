@@ -1,25 +1,22 @@
 #!/usr/bin/perl
 
 #
-# test.pl
+# test.pl tests the reporting system, by simulating resource usage and then verifying
+# that results are correct.
 #
-# Executes a test of the reporting system which runs instances and allocates storage, then
-# then verifies that events were stored and that reports generate correctly.
+# This script delegates much of its functionality to other perl scripts which it calls.
+# It calls "simulate_usage.pl" which simulates resource usage. Then it calls "check_db.pl"
+# which verifies that the values in the database are correct according to the simulated
+# usage. Then it calls "check_report.pl" which verifies that generated reports are correct
+# according to the simulated usage. Those commands can be called manually and separately
+# if desired; however running those commands manually will require setting up images
+# etc which this script does automatically.
 #
-# This test is broken down into multiple stages, which are implemented as different perl sub-scripts
-# and which are called from this script. Most functionality is found in the sub-scripts:
-# simulate_usage.pl, check_db.pl, and check_reports.pl. This script exists only to satisfy
-# prerequisites for those scripts and then call them in sequence, using the output of one as
-# arguments for the others. The sub-scripts are full command-line commands and can be run
-# individually and separately if desired.
+# This script accepts several optional arguments: duration_secs, write_interval, num_users,
+# num_users_per_account, num_instances_per_user, and image.
 #
-# This script optionally takes the following args: duration_secs num_users num_users_per_account
-# 					num_instances_per_user image
-# You can omit any trailing args and the earlier args specified will still take effect.
-#
-# This script has dependencies which must be satisfied before it's run. The following things
-#   must be in the path: all euca2ools and euca commands, db.sh, and dbPass.sh. Also, the
-#   env vars in eucarc must be set.
+# This script has dependencies which must be satisfied for it to run. Those dependencies
+# can be satisfied by first sourcing the "test.sh" file.
 #
 # (c)2011 Eucalyptus Systems, Inc. All Rights Reserved
 # author: tom.werges

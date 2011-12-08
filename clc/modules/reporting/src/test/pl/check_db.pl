@@ -1,11 +1,14 @@
 #!/usr/bin/perl
 
 #
-# check_db.pl
+# check_db.pl verifies that simulated usage results in correct events stored
+#  in the database.
 #
-# author: tom.werges
+# This script is called by test.pl; see test.pl for comprehensive documentation
+# of the perl test suite.
 #
 # (c)2011, Eucalyptus Systems, Inc. All Rights Reserved.
+# author: tom.werges
 #
 
 use strict;

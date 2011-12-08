@@ -1,13 +1,17 @@
 #!/usr/bin/perl
 
 #
-# simulate_usage.pl runs a test of the reporting system. It simulates usage
-#   of several users simultaneously by spawning processes and generating usage
-#   as various users simultaneously.
+# simulate_usage.pl simulates usage of the reporting system, by spawning
+#  processes and generating usage as various users simultaneously.
 #
-# author: tom.werges
+# This script generates different users, then forks and calls
+# simulate_one_user.pl repeatedly.
+#
+# This script is called by test.pl; see test.pl for comprehensive documentation
+# of the perl test suite.
 #
 # (c)2011, Eucalyptus Systems, Inc. All Rights Reserved.
+# author: tom.werges
 #
 
 use strict;

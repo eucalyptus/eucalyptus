@@ -6,6 +6,9 @@
 # objects and storage every INTERVAL, until DURATION is reached, at which
 # point it terminates every instance it started and stops running.
 #
+# This script is called by test.pl; see test.pl for comprehensive documentation
+# of the perl test suite.
+#
 # (c)2011, Eucalyptus Systems, Inc. All Rights Reserved.
 # author: tom.werges
 #
