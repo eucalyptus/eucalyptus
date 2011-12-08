@@ -75,6 +75,7 @@ import com.eucalyptus.entities.PersistenceContexts
 import com.eucalyptus.system.SubDirectory
 import com.eucalyptus.util.Internets
 import com.google.common.base.Joiner
+import java.util.regex.Pattern
 
 /*
  * REQUIREMENTS : Postgres 8.4 and Postgres jdbc driver
@@ -182,6 +183,7 @@ public class PostgresqlBootstrapper extends Bootstrapper.Simple implements Datab
 		try {
 			cmdTouch.execute();
 			initPGHBA();
+			initPGCONF();
 		} catch (Exception e ) {
 			LOG.debug("Unable to create the configuration files");
 			System.exit(1);
@@ -204,6 +206,19 @@ public class PostgresqlBootstrapper extends Bootstrapper.Simple implements Datab
 		}
 	}
 
+        private void initPGCONF() throws Exception {
+            try {
+                    File orgPGCONF = new File(EUCA_DB_DIR + File.separator +  "postgresql.conf");
+                    File bakPGCONF = new File(EUCA_DB_DIR + File.separator + "postgresql.conf.org");
+                    String pgconfText = orgPGCONF.getText();
+                    bakPGCONF.write(pgconfText);
+                    Pattern p = ~/max_connections\s+=\s+\d+/;
+                    orgPGCONF.setText(pgconfText.replaceAll(p, "max_connections = 150"));
+                } catch (Exception e) {
+                    LOG.debug("Unable to modify the postgresql.conf file", e);
+                }
+        }  
+                  
 	public boolean createDBSql() throws Exception {
 
 		if (!isRunning()) {
