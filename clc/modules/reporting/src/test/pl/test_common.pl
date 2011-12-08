@@ -44,8 +44,9 @@ sub test_range($$$$) {
 	print "test:$name, expected:$expected +/- $error, val:$val\n";
 	if ($val < $expected-$error || $val > $expected+$error) {
 		print " FAILED: test $name\n";
-		$return_code = 127;
+		return 127;
 	}
+	return 0;
 }
 
 # TEST_EQ
@@ -55,8 +56,9 @@ sub test_eq($$$) {
 	print "test:$name, expected:$expected val:$val\n";
 	if ($val != $expected) {
 		print " FAILED: test $name\n";
-		$return_code = 127;
+		return 127;
 	}
+	return 0;
 }
 
 1;

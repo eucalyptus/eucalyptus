@@ -70,10 +70,10 @@ foreach (execute_query("
 ")) {
 	($username,$count) = split("\\s+");
 	print "Found instances user:$username #:$count\n";
-	test_eq("ins count", $num_instances_per_user, $count);
+	$return_code = $return_code = test_eq("ins count", $num_instances_per_user, $count) || $return_code;
 	$num_rows++;
 }
-test_eq("rows count", $num_users, $num_rows);
+$return_code = test_eq("rows count", $num_users, $num_rows) || $return_code;
 $num_rows=0;
 
 use integer;
@@ -101,13 +101,13 @@ foreach (execute_query("
 ")) {
 	my ($disk_io,$net_io) = (0,0);
 	($count,$disk_io,$net_io,$username) = split("\\s+");
-	test_range("ins event count", $interval_cnt, $count, 1);
+	$return_code = test_range("ins event count", $interval_cnt, $count, 1) || $return_code;
 	if ($disk_io==0) {
 		die ("Disk == 0");
 	}
 	$num_rows++;
 }
-test_eq("rows count", $num_users, $num_rows);
+$return_code = test_eq("rows count", $num_users, $num_rows) || $return_code;
 $num_rows=0;
 
 
@@ -134,13 +134,13 @@ foreach (execute_query("
 ")) {
 	my ($max_buckets,$max_objects,$max_size)=(0,0,0);
 	($count,$max_buckets,$max_objects,$max_size,$username) = split("\\s+");
-	test_range("count", $interval_cnt, $count, 1);
-	test_eq("max_buckets", $interval_cnt, 1);
-	test_range("max_objects", $interval_cnt, $max_size, 1);
-	test_range("max_size", $interval_cnt*$object_size, $max_size, $object_size);
+	$return_code = test_range("count", $interval_cnt, $count, 1) || $return_code;
+	$return_code = $return_code = test_eq("max_buckets", $interval_cnt, 1) || $return_code;
+	$return_code = test_range("max_objects", $interval_cnt, $max_size, 1) || $return_code;
+	$return_code = test_range("max_size", $interval_cnt*$object_size, $max_size, $object_size) || $return_code;
 	$num_rows++;
 }
-test_eq("rows count", $num_users, $num_rows);
+$return_code = test_eq("rows count", $num_users, $num_rows) || $return_code;
 $num_rows=0;
 
 
@@ -166,16 +166,16 @@ foreach (execute_query("
 ")) {
 	my ($max_snap,$max_snap_size,$max_vols,$max_vol_size) = (0,0,0,0);
 	($count, $max_snap, $max_snap_size, $max_vols, $max_vol_size, $username) = split("\\s+");
-	test_range("count", $interval_cnt, $count, 1);
-	test_range("max_snap", $interval_cnt, $max_snap, 1);
-	test_range("max_vols", $interval_cnt, $max_vols, 1);
-	test_range("max_vol_size", $interval_cnt*storage_usage_mb(), $max_vol_size, storage_usage_mb());
+	$return_code = test_range("count", $interval_cnt, $count, 1) || $return_code;
+	$return_code = test_range("max_snap", $interval_cnt, $max_snap, 1) || $return_code;
+	$return_code = test_range("max_vols", $interval_cnt, $max_vols, 1) || $return_code;
+	$return_code = test_range("max_vol_size", $interval_cnt*storage_usage_mb(), $max_vol_size, storage_usage_mb()) || $return_code;
 	# TODO: how do we determine what this should be???
 	if ($max_snap_size < 1) {
 		die ("max snap size expected: >1, got:$max_snap_size");
 	}
 	$num_rows++;
 }
-test_eq("rows count", $num_users, $num_rows);
+$return_code = test_eq("rows count", $num_users, $num_rows) || $return_code;
 
 exit($return_code);

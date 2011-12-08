@@ -138,7 +138,7 @@ while (my $rl = <REPORT>) {
 		"m1Xlarge:$m1XLarge m1XLargeTime:$m1XLargeTime c1XLarge:$c1XLarge " .
 		"c1XLargeTime:$c1XLargeTime net:$net disk:$disk\n";
 	my $num_instances = ($m1Small+$c1Medium+$m1Large+$m1XLarge+$c1XLarge);
-	test_eq("num_instances",$num_instances_per_user, $num_instances);
+	$return_code = test_eq("num_instances",$num_instances_per_user, $num_instances) || $return_code
 	# Net and disk should be above zero
 	# Time should be instance times duration for each type
 }
@@ -160,13 +160,13 @@ while (my $rl = <REPORT>) {
 	}
 	print "user:$user volMaxSize:$volMaxSize volSizeTime:$volSizeTime " .
 			"snapMaxSize:$snapMaxSize snapSizeTime:$snapSizeTime\n";
-	test_range("volMaxSize", ($num_intervals*storage_usage_mb()), $volMaxSize, storage_usage_mb()+1);
-	test_range("snapMaxSize", ($num_intervals*storage_usage_mb()), $snapMaxSize, storage_usage_mb()+1);
+	$return_code = test_range("volMaxSize", ($num_intervals*storage_usage_mb()), $volMaxSize, storage_usage_mb()+1) || $return_code
+	$return_code = test_range("snapMaxSize", ($num_intervals*storage_usage_mb()), $snapMaxSize, storage_usage_mb()+1) || $return_code
 	# What is an appropriate error range? What about storage_usage_mb()?
-	test_range("volSizeTime", calculate_total_acc_usage($num_intervals,storage_usage_mb()),
-				$volSizeTime, $volMaxSize);
-	test_range("snapSizeTime", calculate_total_acc_usage($num_intervals,storage_usage_mb()),
-				$snapSizeTime, $snapMaxSize);
+	$return_code = test_range("volSizeTime", calculate_total_acc_usage($num_intervals,storage_usage_mb()),
+				$volSizeTime, $volMaxSize) || $return_code
+	$return_code = test_range("snapSizeTime", calculate_total_acc_usage($num_intervals,storage_usage_mb()),
+				$snapSizeTime, $snapMaxSize) || $return_code
 }
 print "\n\n";
 close(REPORT);
