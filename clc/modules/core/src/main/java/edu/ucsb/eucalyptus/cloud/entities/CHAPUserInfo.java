@@ -79,6 +79,7 @@ import com.eucalyptus.entities.AbstractPersistent;
 @Table( name = "CHAPUserInfo" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class CHAPUserInfo extends AbstractPersistent {
+    @Column( name = "username" )
     private String user;
     @Lob
     private String encryptedPassword;
