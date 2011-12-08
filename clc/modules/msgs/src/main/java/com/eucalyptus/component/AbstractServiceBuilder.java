@@ -66,6 +66,8 @@ package com.eucalyptus.component;
 import java.util.List;
 import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
+import com.eucalyptus.component.ComponentId.Partition;
+import com.eucalyptus.system.Ats;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Internets;
 
@@ -89,6 +91,42 @@ public abstract class AbstractServiceBuilder<T extends ServiceConfiguration> imp
     } catch ( PersistenceException ex1 ) {
       LOG.trace( "Failed to find existing component registration for name: " + name );
     }
+	try {
+	    ServiceConfiguration foundService = null;
+	    foundService = (ServiceConfiguration) ServiceConfigurations
+		    .lookup(this.newInstance());
+
+	    if (foundService != null) {
+
+		int counter = 0;
+		for (ServiceConfiguration serviceConfiguration : ServiceConfigurations
+			.list()) {
+
+		    if (foundService.getPartition().equals(
+			    serviceConfiguration.getPartition())
+			    && foundService
+				    .getClass()
+				    .getName()
+				    .equals(serviceConfiguration.getClass()
+					    .getName())) {
+			LOG.debug("Found Component Name : "
+				+ serviceConfiguration.getClass().getName());
+			counter++;
+		    }
+		}
+
+		Partition partitionAnnotation = Ats.from( this.getComponentId( ) ).get( Partition.class );
+		if (counter >= 2 && ( partitionAnnotation != null && !partitionAnnotation.manyToOne() ) ) {
+		    throw new ServiceRegistrationException(
+			    "Unable to register more than one slave to a partition");
+		}
+	    }
+
+	} catch (PersistenceException ex1) {
+	    LOG.trace("Failed to find existing component registration for partition name: "
+		    + partition);
+	}
+
     ServiceConfiguration existingHost = null;
     try {
       existingHost = ServiceConfigurations.lookupByHost( this.getComponentId( ).getClass( ), host );

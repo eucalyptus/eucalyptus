@@ -317,7 +317,7 @@ static int close_and_unlock (int fd)
         pthread_mutex_lock (&_blobstore_mutex); // grab global lock (we will not block below and we may be deallocating)
         logprintfl (EUCADEBUG2, "{%u} close_and_unlock: obtained global lock for closing of fd=%d\n", (unsigned int)pthread_self(), fd);
         
-        blobstore_filelock * path_lock; // lock struct to which this fd belongs
+        blobstore_filelock * path_lock = NULL; // lock struct to which this fd belongs
         int index = -1; // index of this fd entry in the lock struct
         int open_fds = 0; // count of other open file descriptors for this lock
         
@@ -3820,7 +3820,7 @@ int main (int argc, char ** argv)
         char * id = argv [1];
         printf ("---------> opening blob %s\n", id);
         blockblob * bb = blockblob_open (bs, id, 20, BLOBSTORE_FLAG_CREAT, NULL, 1000);
-        if (bs==NULL) {
+        if (bb==NULL) {
             printf ("ERROR: when opening blockblob: %s\n", blobstore_get_error_str(blobstore_get_error()));
             return 1;
         }

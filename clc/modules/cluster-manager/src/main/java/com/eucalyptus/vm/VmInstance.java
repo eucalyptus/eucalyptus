@@ -857,15 +857,17 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   }
   
   private void fireUsageEvent( ) {
-    try {
-      ListenerRegistry.getInstance( ).fireEvent( new InstanceEvent( this.getInstanceUuid( ), this.getDisplayName( ),
-                                                                    this.bootRecord.getVmType( ).getName( ),
-                                                                    this.getOwner( ).getUserId( ), this.getOwnerUserName( ),
-                                                                    this.getOwner( ).getAccountNumber( ), this.getOwnerAccountName( ),
-                                                                    this.placement.getClusterName( ), this.placement.getPartitionName( ),
-                                                                    this.usageStats.getNetworkBytes( ), this.usageStats.getBlockBytes( ) ) );
-    } catch ( final Exception ex ) {
-      LOG.error( ex, ex );
+    if ( VmState.RUNNING.equals( this.getState( ) ) ) {
+      try {
+        ListenerRegistry.getInstance( ).fireEvent( new InstanceEvent( this.getInstanceUuid( ), this.getDisplayName( ),
+                                                                      this.bootRecord.getVmType( ).getName( ),
+                                                                      this.getOwner( ).getUserId( ), this.getOwnerUserName( ),
+                                                                      this.getOwner( ).getAccountNumber( ), this.getOwnerAccountName( ),
+                                                                      this.placement.getClusterName( ), this.placement.getPartitionName( ),
+                                                                      this.usageStats.getNetworkBytes( ), this.usageStats.getBlockBytes( ) ) );
+      } catch ( final Exception ex ) {
+        LOG.error( ex, ex );
+      }
     }
   }
   
