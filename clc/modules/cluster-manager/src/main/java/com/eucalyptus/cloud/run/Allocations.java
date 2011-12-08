@@ -136,15 +136,14 @@ public class Allocations {
       }
       this.reservationIndex = UniqueIds.nextIndex( VmInstance.class, ( long ) request.getMaxCount( ) );
       this.reservationId = VmInstances.getId( this.reservationIndex, 0 ).replaceAll( "i-", "r-" );
-      byte[] tmpData = new byte[0];
       if ( this.request.getUserData( ) != null ) {
         try {
           this.userData = Base64.decode( this.request.getUserData( ) );
-          this.request.setUserData( new String( Base64.encode( tmpData ) ) );
+          this.request.setUserData( new String( Base64.encode( this.userData) ) );
         } catch ( Exception e ) {}
       } else {
         try {
-          this.request.setUserData( new String( Base64.encode( tmpData ) ) );
+          this.request.setUserData( new String( Base64.encode(  new byte[0] ) ) );
         } catch ( Exception ex ) {
           LOG.error( ex, ex );
         }
