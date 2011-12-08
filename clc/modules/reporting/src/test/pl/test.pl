@@ -108,9 +108,12 @@ print "using image:$image\n";
 #
 # Run simulate_usage, then check results
 #
-my $output=`./simulate_usage.pl $initrd_file $num_users $num_users_per_account $num_instances_per_user $duration_secs $image`;
+print "Executing:./simulate_usage.pl $initrd_file $num_users $num_users_per_account $num_instances_per_user $duration_secs $write_interval $image\n";
+my $output=`./simulate_usage.pl $initrd_file $num_users $num_users_per_account $num_instances_per_user $duration_secs $write_interval $image`;
 chomp($output);
 print "Found output:[$output]\n";
-system("./check_db.pl $num_instances_per_user $duration_secs $upload_file $write_interval $output");
+print "Executing: ./check_db.pl $num_instances_per_user $duration_secs $initrd_file $write_interval $output\n";
+system("./check_db.pl $num_instances_per_user $duration_secs $initrd_file $write_interval $output");
+print "Executing: ./check_report.pl admin $write_interval $num_instances_per_user $output\n";
 system("./check_report.pl admin $write_interval $num_instances_per_user $output");
 

@@ -166,7 +166,7 @@ foreach (execute_query("
 	test_range("count", $interval_cnt, $count, 1);
 	test_range("max_snap", $interval_cnt, $max_snap, 1);
 	test_range("max_vols", $interval_cnt, $max_vols, 1);
-	test_range("max_vol_size", $interval_cnt*$storage_usage_mb, $max_vol_size, $storage_usage_mb);
+	test_range("max_vol_size", $interval_cnt*storage_usage_mb(), $max_vol_size, storage_usage_mb());
 	# TODO: how do we determine what this should be???
 	if ($max_snap_size < 1) {
 		die ("max snap size expected: >1, got:$max_snap_size");

@@ -12,12 +12,11 @@ use strict;
 use warnings;
 require "test_common.pl";
 
-if ($#ARGV+1 < 5) {
-	die ("Usage: check_report.pl admin_pw storage_usage_mb write_interval num_instances_per_user (account:user+)+");
+if ($#ARGV+1 < 4) {
+	die ("Usage: check_report.pl admin_pw write_interval num_instances_per_user (account:user+)+");
 }
 
 my $password = shift;
-my $storage_usage_mb = shift;
 my $write_interval = shift;
 my $num_instances_per_user = shift;
 my $session_id = "";
@@ -135,7 +134,7 @@ while (my $rl = <REPORT>) {
 		"c1MediumTime:$c1MediumTime m1Large:$m1Large m1LargeTime:$m1LargeTime " .
 		"m1Xlarge:$m1XLarge m1XLargeTime:$m1XLargeTime c1XLarge:$c1XLarge " .
 		"c1XLargeTime:$c1XLargeTime net:$net disk:$disk\n";
-	my $num_instances = ($m1small+$c1Medium+$m1Large+$m1XLarge+$c1XLarge));
+	my $num_instances = ($m1Small+$c1Medium+$m1Large+$m1XLarge+$c1XLarge);
 	test_eq("num_instances",$num_instances_per_user, $num_instances);
 	# Net and disk should be above zero
 	# Time should be instance times duration for each type
@@ -158,12 +157,12 @@ while (my $rl = <REPORT>) {
 	}
 	print "user:$user volMaxSize:$volMaxSize volSizeTime:$volSizeTime " .
 			"snapMaxSize:$snapMaxSize snapSizeTime:$snapSizeTime\n";
-	test_range("volMaxSize", ($num_intervals*$storage_usage_mb), $volMaxSize, $storage_usage_mb+1);
-	test_range("snapMaxSize", ($num_intervals*$storage_usage_mb), $snapMaxSize, $storage_usage_mb+1);
-	# What is an appropriate error range? What about storage_usage_mb?
-	test_range("volSizeTime", calculate_total_acc_usage($num_intervals,$storage_usage_mb),
+	test_range("volMaxSize", ($num_intervals*storage_usage_mb()), $volMaxSize, storage_usage_mb()+1);
+	test_range("snapMaxSize", ($num_intervals*storage_usage_mb()), $snapMaxSize, storage_usage_mb()+1);
+	# What is an appropriate error range? What about storage_usage_mb()?
+	test_range("volSizeTime", calculate_total_acc_usage($num_intervals,storage_usage_mb()),
 				$volSizeTime, $volMaxSize);
-	test_range("snapSizeTime", calculate_total_acc_usage($num_intervals,$storage_usage_mb),
+	test_range("snapSizeTime", calculate_total_acc_usage($num_intervals,storage_usage_mb()),
 				$snapSizeTime, $snapMaxSize);
 }
 print "\n\n";

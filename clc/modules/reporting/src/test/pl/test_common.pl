@@ -13,7 +13,7 @@
 # Constants defined across files. These are infrequently-used parameters which
 #   you can modify if you wish.
 #
-my $storage_usage_mb = 2;
+sub storage_usage_mb() { 2 }
 
 
 #
@@ -32,7 +32,7 @@ sub runcmd($) {
 
 sub execute_query($) {
 	print "Executing query:$_[0]\n";
-	my $output = `db.sh --execute="$_[0]" -D eucalyptus_reporting --skip-column-names`;
+	my $output = `./db.sh --execute="$_[0]" -D eucalyptus_reporting --skip-column-names`;
 	print "Output:$output\n";
 	return split("\n",$output);
 }
@@ -59,4 +59,5 @@ sub test_eq($$$) {
 	}
 }
 
+1;
 

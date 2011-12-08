@@ -55,7 +55,6 @@ my $instance_type = shift;
 my $interval = shift;
 my $duration = shift;
 my $upload_file = shift;
-my $storage_usage_mb = shift;
 my $image = shift;
 
 my %instance_data = ();  # instance_id => status
@@ -63,7 +62,7 @@ my $access_key = $ENV{"EC2_ACCESS_KEY"};
 my $secret_key = $ENV{"EC2_SECRET_KEY"};
 my $s3_url = $ENV{"S3_URL"};
 
-print "num_instances:$num_instances type:$instance_type interval:$interval duration:$duration upload_file:$upload_file storage_usage_mb:$storage_usage_mb s3_url:$s3_url image:$image\n";
+print "num_instances:$num_instances type:$instance_type interval:$interval duration:$duration upload_file:$upload_file s3_url:$s3_url image:$image\n";
 
 # Run instances
 print "euca-run-instances -t $instance_type -n $num_instances $image";
@@ -107,7 +106,7 @@ my $itime = 0; # Iteration start time
 for (my $i=0; (time()-$start_time) < $duration; $i++) {
 	$itime = time();
 	print "iter:$i\n";
-	runcmd("euca-create-volume --size $storage_usage_mb --zone $zones[0]");
+	runcmd("euca-create-volume --size " . storage_usage_mb() . " --zone $zones[0]");
 	print "$i: Created volume\n";
 	runcmd("euca-bundle-image -i $upload_file");
 	#TODO: grab manifest path from this
