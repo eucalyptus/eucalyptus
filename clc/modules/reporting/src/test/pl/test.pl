@@ -2,21 +2,21 @@
 
 #
 # test.pl tests the reporting system, by simulating resource usage and then verifying
-# that results are correct.
+# that resultant reports are correct.
 #
-# This script delegates much of its functionality to other perl scripts which it calls.
-# It calls "simulate_usage.pl" which simulates resource usage. Then it calls "check_db.pl"
-# which verifies that the values in the database are correct according to the simulated
-# usage. Then it calls "check_report.pl" which verifies that generated reports are correct
-# according to the simulated usage. Those commands can be called manually and separately
-# if desired; however running those commands manually will require setting up images
-# etc which this script does automatically.
+# This script decomposes the test into a series of phases. Each phase is implemented as a
+# separate perl script which this script calls in order. First this calls
+# "simulate_usage.pl" which simulates resource usage. Then it calls "check_db.pl" which
+# verifies that the values in the database are correct according to the simulated usage.
+# Then it calls "check_report.pl" which verifies that generated reports are correct
+# according to the simulated usage. Those commands can be run manually and separately
+# if desired, however running those commands manually would require setting up images etc
+# which this script does automatically.
 #
 # This script accepts several optional arguments: duration_secs, write_interval, num_users,
 # num_users_per_account, num_instances_per_user, and image.
 #
-# This script has dependencies which must be satisfied for it to run. Those dependencies
-# can be satisfied by first sourcing the "test.sh" file.
+# This script has dependencies which can be satisfied by sourcing the "test.sh" file.
 #
 # (c)2011 Eucalyptus Systems, Inc. All Rights Reserved
 # author: tom.werges
