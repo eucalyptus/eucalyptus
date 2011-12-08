@@ -49,6 +49,7 @@ if ($#ARGV>-1) {
 if ($#ARGV>-1) {
 	$image = shift;
 }
+my $return_code = 0;
 print "Using args: duration:$duration_secs write_interval:$write_interval users:$num_users num_users_per_account:$num_users_per_account num_instances_per_user:$num_instances_per_user image:" . (($image eq "") ? "(none)" : $image) . "\n";
 
 
@@ -110,7 +111,9 @@ my $output=`./simulate_usage.pl $initrd_file $num_users $num_users_per_account $
 chomp($output);
 print "Found output:[$output]\n";
 print "Executing: ./check_db.pl $num_instances_per_user $duration_secs $initrd_file $write_interval $output\n";
-system("./check_db.pl $num_instances_per_user $duration_secs $initrd_file $write_interval $output");
+$return_code |= (system("./check_db.pl $num_instances_per_user $duration_secs $initrd_file $write_interval $output")/256);
 print "Executing: ./check_report.pl admin $write_interval $num_instances_per_user $output\n";
-system("./check_report.pl admin $write_interval $num_instances_per_user $output");
+$return_code |= (system("./check_report.pl admin $write_interval $num_instances_per_user $output")/256);
+
+exit($return_code);
 
