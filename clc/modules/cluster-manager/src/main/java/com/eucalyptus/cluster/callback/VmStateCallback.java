@@ -97,6 +97,9 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
           VmInstances.terminated( vm );
         } else if ( VmInstances.Timeout.TERMINATED.apply( vm ) ) {
           VmInstances.delete( vm );
+        } else {
+          db1.rollback( );
+          return;
         }
         if ( Databases.isSynchronizing( ) ) {
           db1.rollback( );
@@ -125,6 +128,9 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
         } else if ( !VmStateSet.RUN.apply( vm ) && VmStateSet.RUN.contains( runVmState )
                     && vm.lastUpdateMillis( ) > ( VmInstances.VOLATILE_STATE_TIMEOUT_SEC * 1000l ) ) {
           vm.doUpdate( ).apply( runVm );
+        } else {
+          db.rollback( );
+          return;
         }
         if ( Databases.isSynchronizing( ) ) {
           db.rollback( );
@@ -220,7 +226,9 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
           EntityTransaction db = Entities.get( VmInstance.class );
           try {
             for ( VmInstance vm : Iterables.filter( VmInstances.list( ), VmPendingCallback.this.filter ) ) {
-              this.getInstancesSet( ).add( vm.getInstanceId( ) );
+              if ( ( System.currentTimeMillis( ) - vm.getCreationTimestamp( ).getTime( ) ) > 5000 ) {
+                this.getInstancesSet( ).add( vm.getInstanceId( ) );
+              }
             }
             if ( Databases.isSynchronizing( ) ) {
               db.rollback( );
