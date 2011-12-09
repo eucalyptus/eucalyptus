@@ -3897,7 +3897,7 @@ int main (int argc, char ** argv)
 #define MAX_ARGS 5
 
 static char show_debug = FALSE;
-static char show_extras = TRUE;
+static char show_extras = FALSE;
 static char show_children = FALSE;
 static char show_parents = FALSE;
 static char * euca_home = NULL;
@@ -4165,7 +4165,22 @@ int main (int argc, char * argv[])
 
     } else if (strcmp (command, "list") == 0) {
         open_blobstores ();
-        int found = do_list (args[0]); // argument may be NULL
+        char * regexp = NULL;
+        for (int i = 0; i<nargs; i++) {
+            regexp = args [i];
+            if (regexp==NULL || regexp[0]!='-' || regexp[1]=='\0')
+                break;
+            switch (regexp[1]) {
+            case 'l': show_extras = TRUE; break;
+            case 'p': show_parents = TRUE; break;
+            case 'c': show_children = TRUE; break;
+            default:
+                fprintf (stderr, "error: unknown flag '-%c'\n", regexp[1]);
+                exit (1);
+            }
+            regexp = NULL;
+        }
+        int found = do_list (regexp); // argument may be NULL
         if (show_debug)
             fprintf (stderr, "found %d blobs\n", found);
         close_blobstores ();
