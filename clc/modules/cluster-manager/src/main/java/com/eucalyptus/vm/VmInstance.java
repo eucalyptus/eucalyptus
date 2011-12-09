@@ -1193,13 +1193,20 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   
   /**
    * @param predicate
+   * @return 
    */
-  public void lookupVolumeAttachmentByDevice( final String volumeDevice ) {
+  public VmVolumeAttachment lookupVolumeAttachmentByDevice( final String volumeDevice ) {
     final EntityTransaction db = Entities.get( VmInstance.class );
     try {
       final VmInstance entity = Entities.merge( this );
-      entity.transientVolumeState.lookupVolumeAttachmentByDevice( volumeDevice );
+      VmVolumeAttachment ret;
+      try {
+        ret = entity.getTransientVolumeState( ).lookupVolumeAttachmentByDevice( volumeDevice );
+      } catch ( Exception ex ) {
+        ret = entity.getPersistentVolumeState( ).lookupVolumeAttachmentByDevice( volumeDevice );
+      }
       db.commit( );
+      return ret;
     } catch ( final NoSuchElementException ex ) {
       Logs.exhaust( ).error( ex, ex );
       db.rollback( );
@@ -1219,7 +1226,12 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     final EntityTransaction db = Entities.get( VmInstance.class );
     try {
       final VmInstance entity = Entities.merge( this );
-      final AttachedVolume ret = VmVolumeAttachment.asAttachedVolume( entity ).apply( entity.transientVolumeState.lookupVolumeAttachment( volumeId ) );
+      AttachedVolume ret = null;
+      try {
+        ret = VmVolumeAttachment.asAttachedVolume( entity ).apply( entity.getTransientVolumeState( ).lookupVolumeAttachment( volumeId ) );
+      } catch ( NoSuchElementException ex ) {
+        ret = VmVolumeAttachment.asAttachedVolume( entity ).apply( entity.getPersistentVolumeState( ).lookupVolumeAttachment( volumeId ) );
+      }
       db.commit( );
       return ret;
     } catch ( final Exception ex ) {
@@ -1237,7 +1249,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     try {
       final VmInstance entity = Entities.merge( this );
       vol.setStatus( "attaching" );
-      entity.transientVolumeState.addVolumeAttachment( VmVolumeAttachment.fromAttachedVolume( entity ).apply( vol ) );
+      entity.getTransientVolumeState( ).addVolumeAttachment( VmVolumeAttachment.fromAttachedVolume( entity ).apply( vol ) );
       db.commit( );
     } catch ( final Exception ex ) {
       Logs.exhaust( ).error( ex, ex );
@@ -1252,6 +1264,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       final VmInstance entity = Entities.merge( this );
       VmVolumeAttachment volumeAttachment = new VmVolumeAttachment( entity, vol.getDisplayName( ), vol.getLocalDevice( ), vol.getRemoteDevice( ), "attached", new Date( ) );
       entity.bootRecord.getPersistentVolumes( ).add( volumeAttachment );
+      entity.persistentVolumeState.addVolumeAttachment( volumeAttachment );
       db.commit( );
     } catch ( final Exception ex ) {
       Logs.exhaust( ).error( ex, ex );
@@ -1267,7 +1280,14 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     final EntityTransaction db = Entities.get( VmInstance.class );
     try {
       final VmInstance entity = Entities.merge( this );
-      final boolean ret = entity.transientVolumeState.eachVolumeAttachment( new Predicate<VmVolumeAttachment>( ) {
+      boolean ret = entity.getTransientVolumeState( ).eachVolumeAttachment( new Predicate<VmVolumeAttachment>( ) {
+        
+        @Override
+        public boolean apply( final VmVolumeAttachment arg0 ) {
+          return predicate.apply( VmVolumeAttachment.asAttachedVolume( entity ).apply( arg0 ) );
+        }
+      } );
+      ret |= entity.getPersistentVolumeState( ).eachVolumeAttachment( new Predicate<VmVolumeAttachment>( ) {
         
         @Override
         public boolean apply( final VmVolumeAttachment arg0 ) {
@@ -1509,6 +1529,11 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           runningInstance.setLaunchTime( input.getLaunchRecord( ).getLaunchTime( ) );
           
           runningInstance.getBlockDevices( ).add( new InstanceBlockDeviceMapping( "/dev/sda1" ) );
+          for ( final VmVolumeAttachment attachedVol : input.getPersistentVolumeState( ).getAttachments( ) ) {
+            runningInstance.getBlockDevices( ).add( new InstanceBlockDeviceMapping( attachedVol.getDevice( ), attachedVol.getVolumeId( ),
+                                                                                    attachedVol.getStatus( ),
+                                                                                    attachedVol.getAttachTime( ) ) );
+          }
           for ( final VmVolumeAttachment attachedVol : input.getTransientVolumeState( ).getAttachments( ) ) {
             runningInstance.getBlockDevices( ).add( new InstanceBlockDeviceMapping( attachedVol.getDevice( ), attachedVol.getVolumeId( ),
                                                                                     attachedVol.getStatus( ),
