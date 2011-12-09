@@ -105,29 +105,29 @@ public class Allocations {
   
   public static class Allocation implements HasRequest {
     /** to be eliminated **/
-    private final Context             context;
-    private final RunInstancesType    request;
+    private final Context              context;
+    private final RunInstancesType     request;
     /** values determined by the request **/
-    private final UserFullName        ownerFullName;
-    private byte[]                    userData;
-    private final int                 minCount;
-    private final int                 maxCount;
+    private final UserFullName         ownerFullName;
+    private byte[]                     userData;
+    private final int                  minCount;
+    private final int                  maxCount;
     /** verified references determined by the request **/
-    private Partition                 partition;
-    private final List<Volume>        persistentVolumes = Lists.newArrayList( );
-    private final List<Volume>        transientVolumes  = Lists.newArrayList( );
-    private SshKeyPair                sshKeyPair;
-    private BootableSet               bootSet;
-    private VmType                    vmType;
-    private NetworkGroup              primaryNetwork;
-    private Map<String, NetworkGroup> networkGroups;
+    private Partition                  partition;
+    private final List<Volume>         persistentVolumes = Lists.newArrayList( );
+    private final List<Volume>         transientVolumes  = Lists.newArrayList( );
+    private SshKeyPair                 sshKeyPair;
+    private BootableSet                bootSet;
+    private VmType                     vmType;
+    private NetworkGroup               primaryNetwork;
+    private Map<String, NetworkGroup>  networkGroups;
     
     /** intermediate allocation state **/
-    private final String              reservationId;
-    private final List<ResourceToken> allocationTokens  = Lists.newArrayList( );
-    private final Long                reservationIndex;
-    private final Map<Integer, String>      instanceIds;
-    private final Date                      expiration;
+    private final String               reservationId;
+    private final List<ResourceToken>  allocationTokens  = Lists.newArrayList( );
+    private final Long                 reservationIndex;
+    private final Map<Integer, String> instanceIds;
+    private final Date                 expiration;
     
     private Allocation( final RunInstancesType request ) {
       super( );
@@ -159,12 +159,12 @@ public class Allocations {
       }
     }
     
-    private Allocation( final String reservationId, 
-                        final Integer launchIndex, 
-                        final String instanceId, 
-                        final byte[] userData, 
+    private Allocation( final String reservationId,
+                        final Integer launchIndex,
+                        final String instanceId,
+                        final byte[] userData,
                         final Date expiration,
-                        final Partition partition, 
+                        final Partition partition,
                         final SshKeyPair sshKeyPair,
                         final BootableSet bootSet,
                         final VmType vmType,
@@ -187,6 +187,9 @@ public class Allocations {
       this.networkGroups = new HashMap<String, NetworkGroup>( ) {
         {
           for ( NetworkGroup g : networkGroups ) {
+            if ( Allocation.this.primaryNetwork == null ) {
+              Allocation.this.primaryNetwork = g;
+            }
             put( g.getDisplayName( ), g );
           }
         }
@@ -360,7 +363,7 @@ public class Allocations {
   public static Allocation start( final VmInstance vm ) {
     BootableSet bootSet = Emis.recreateBootableSet( vm );
     return new Allocation( vm.getReservationId( ),
-                           vm.getLaunchIndex( ), 
+                           vm.getLaunchIndex( ),
                            vm.getInstanceId( ),
                            vm.getUserData( ),
                            vm.getExpiration( ),
