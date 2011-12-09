@@ -134,8 +134,13 @@ doRunInstance(	struct nc_state_t *nc,
     instance = find_instance (&global_instances, instanceId);
     sem_v (inst_sem);
     if (instance) {
-        logprintfl (EUCAERROR, "[%s] error: instance already running\n", instanceId);
-        return 1; /* TODO: return meaningful error codes? */
+        if (instance->state==TEARDOWN) { // fully cleaned up, so OK to revive it, e.g., with euca-start-instance
+            remove_instance (&global_instances, instance);
+            free_instance (&instance);
+        } else {
+            logprintfl (EUCAERROR, "[%s] error: instance already running\n", instanceId);
+            return 1; /* TODO: return meaningful error codes? */
+        }
     }
     if (!(instance = allocate_instance (uuid,
                                         instanceId, 
