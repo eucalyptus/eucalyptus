@@ -97,22 +97,25 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
   
   @Override
   public void initialize( final VmRunType msg ) {
+    try {
+      this.token.submit( );
+    } catch ( final NoSuchTokenException e2 ) {
+      LOG.debug( e2, e2 );
+    }
     EntityTransaction db = Entities.get( VmInstance.class );
     try {
       final VmInstance vm = VmInstances.lookup( msg.getInstanceId( ) );
       msg.setUserId( vm.getOwnerUserId( ) );
       msg.setOwnerId( vm.getOwnerUserId( ) );
       msg.setAccountId( vm.getOwnerAccountNumber( ) );
-      if ( !VmState.PENDING.equals( vm.getState( ) ) ) {
+      if ( VmState.STOPPED.equals( vm.getState( ) ) ) {
+        vm.setState( VmState.PENDING );
+      } else if ( !VmState.PENDING.equals( vm.getState( ) ) ) {
         throw new EucalyptusClusterException( "Intercepted a RunInstances request for an instance which has meanwhile been terminated." );
-      }
-      try {
-        this.token.submit( );
-      } catch ( final NoSuchTokenException e2 ) {
-        LOG.debug( e2, e2 );
       }
       db.commit( );
     } catch ( final Exception e ) {
+      this.token.abort( );
       db.rollback( );
       LOG.debug( e, e );
       throw new EucalyptusClusterException( "Error while initializing request state: " + this.getRequest( ), e );
