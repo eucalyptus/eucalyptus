@@ -812,6 +812,10 @@ int blobstore_init (void)
         } else {
             ret = verify_helpers (helpers, helpers_path, LASTHELPER);
             if (ret) {
+                for (int i=0; i<LASTHELPER; i++) {
+                    if (helpers_path [i] == NULL)
+                        logprintfl (EUCAERROR, "ERROR: missing a required handler: \n");
+                }
                 ERR (BLOBSTORE_ERROR_UNKNOWN, "failed to initialize blobstore library");
             } else {
                 initialized = 1;

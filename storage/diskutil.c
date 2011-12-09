@@ -169,7 +169,10 @@ int diskutil_init (void)
 
                 // flag missing handlers
                 if (missing_handlers) {
-                    logprintfl (EUCAERROR, "ERROR: missing a required handler\n");
+                    for (int i=0; i<LASTHELPER; i++) {
+                        if (helpers_path [i] == NULL && i!=GRUB && i!=GRUB_SETUP)
+                            logprintfl (EUCAERROR, "ERROR: missing a required handler: \n");
+                    }
                     ret = 1;
                 }
             } else {

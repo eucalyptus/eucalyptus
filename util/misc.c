@@ -156,9 +156,9 @@ int verify_helpers (char **helpers, char **helpers_path, int num_helpers)
 
         if (!done) {
             missing_helpers++;
-            logprintfl (EUCAINFO, "did not find '%s' in path\n", helpers[i]);
+            logprintfl (EUCADEBUG2, "did not find '%s' in path\n", helpers[i]);
         } else {
-            logprintfl (EUCAINFO, "found '%s' at '%s'\n", helpers[i], tmp_helpers_path[i]);
+            logprintfl (EUCADEBUG2, "found '%s' at '%s'\n", helpers[i], tmp_helpers_path[i]);
         }
     }
     
