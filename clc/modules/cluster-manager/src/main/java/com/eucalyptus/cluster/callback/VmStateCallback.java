@@ -39,7 +39,7 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
   private static final int  VM_INITIAL_REPORT_TIMEOUT = 20000;
   private static final int  VM_STATE_SETTLE_TIME      = 5000;
   private final Set<String> initialInstances;
-  
+
   public VmStateCallback( ) {
     super( new VmDescribeType( ) {
       {
@@ -68,10 +68,11 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
     for ( final VmInfo runVm : reply.getVms( ) ) {
       if ( this.initialInstances.contains( runVm.getInstanceId( ) ) ) {
         VmStateCallback.handleReportedState( runVm );
+        this.initialInstances.remove( runVm.getInstanceId( ) );
       }
     }
     
-    final Set<String> unreportedVms = this.findUnreported( reply );
+    final Set<String> unreportedVms = Sets.newHashSet( this.initialInstances );
     
     VmStateCallback.handleUnreported( unreportedVms );
   }
@@ -106,7 +107,7 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
           VmInstances.delete( vm );
         } else {
           db1.rollback( );
-          return;
+          continue;
         }
         if ( Databases.isSynchronizing( ) ) {
           db1.rollback( );
