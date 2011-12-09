@@ -269,9 +269,9 @@ public class VmControl {
                 oldCode = vm.getState( ).getCode( );
                 oldState = vm.getState( ).getName( );
                 if ( VmState.STOPPED.apply( vm ) ) {
-                  newCode = VmState.STOPPED.getCode( );
-                  newState = VmState.STOPPED.getName( );
-                  VmInstances.stopped( vm );
+                  newCode = VmState.TERMINATED.getCode( );
+                  newState = VmState.TERMINATED.getName( );
+                  VmInstances.delete( vm );
                 } else if ( VmStateSet.RUN.apply( vm ) ) {
                   newCode = VmState.SHUTTING_DOWN.getCode( );
                   newState = VmState.SHUTTING_DOWN.getName( );
