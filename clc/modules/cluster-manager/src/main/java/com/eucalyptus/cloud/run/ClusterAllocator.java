@@ -225,11 +225,11 @@ public class ClusterAllocator implements Runnable {
           VmInstance vm = VmInstances.lookup( token.getInstanceId( ) );
           if ( !vm.getBootRecord( ).hasPersistentVolumes( ) ) {
             vm.addPersistentVolume( "/dev/sda1", vol );
-            if ( deleteOnTerminate ) {
-              this.allocInfo.getTransientVolumes( ).add( vol );
-            } else {
-              this.allocInfo.getPersistentVolumes( ).add( vol );
-            }
+          }
+          if ( deleteOnTerminate ) {
+            this.allocInfo.getTransientVolumes( ).add( vol );
+          } else {
+            this.allocInfo.getPersistentVolumes( ).add( vol );
           }
         }
       }
