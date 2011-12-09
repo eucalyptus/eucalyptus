@@ -38,8 +38,9 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
   private static Logger     LOG                       = Logger.getLogger( VmStateCallback.class );
   private static final int  VM_INITIAL_REPORT_TIMEOUT = 20000;
   private static final int  VM_STATE_SETTLE_TIME      = 5000;
+  private static final int  VM_NC_TEARDOWN_TIMEOUT    = ( ( 3 * 60 ) + 20 ) * 1000;
   private final Set<String> initialInstances;
-
+  
   public VmStateCallback( ) {
     super( new VmDescribeType( ) {
       {
@@ -52,8 +53,9 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
   @Override
   public void fire( VmDescribeResponseType reply ) {
     reply.setOriginCluster( this.getSubject( ).getConfiguration( ).getName( ) );
-    
+    final Set<String> reportedInstances = Sets.newHashSet( );
     for ( VmInfo vmInfo : reply.getVms( ) ) {
+      reportedInstances.add( vmInfo.getInstanceId( ) );
       vmInfo.setPlacement( this.getSubject( ).getConfiguration( ).getName( ) );
       VmTypeInfo typeInfo = vmInfo.getInstanceType( );
       if ( typeInfo.getName( ) == null || "".equals( typeInfo.getName( ) ) ) {
@@ -65,21 +67,23 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
       }
     }
     
+    final Set<String> unreportedInstances = Sets.newHashSet( Sets.difference( this.initialInstances, reportedInstances ) );
+    final Set<String> restoreInstances = Sets.newHashSet( Sets.difference( reportedInstances, this.initialInstances ) );
     for ( final VmInfo runVm : reply.getVms( ) ) {
       if ( this.initialInstances.contains( runVm.getInstanceId( ) ) ) {
         VmStateCallback.handleReportedState( runVm );
         this.initialInstances.remove( runVm.getInstanceId( ) );
+      } else if ( restoreInstances.contains( runVm.getInstanceId( ) ) ) {
+        VmStateCallback.handleRestore( runVm );
       }
     }
-    
-    final Set<String> unreportedVms = Sets.newHashSet( this.initialInstances );
-    
-    for ( final String vmId : unreportedVms ) {
+    for ( final String vmId : unreportedInstances ) {
       VmStateCallback.handleUnreported( vmId );
     }
+    
   }
   
-  public static void handleUnreported( final String vmId ) {
+  private static void handleUnreported( final String vmId ) {
     EntityTransaction db1 = Entities.get( VmInstance.class );
     try {
       VmInstance vm = VmInstances.cachedLookup( vmId );
@@ -141,27 +145,30 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
     } catch ( TerminatedInstanceException ex1 ) {
       LOG.trace( "Ignore state update to terminated instance: " + runVm.getInstanceId( ) );
     } catch ( NoSuchElementException ex1 ) {
-      if ( VmStateSet.RUN.contains( runVmState ) ) {
-        VmStateCallback.handleRestore( runVm );
-      }
+//      VmStateCallback.handleRestore( runVm );
     } catch ( Exception ex1 ) {
       LOG.error( ex1 );
       Logs.extreme( ).error( ex1, ex1 );
     }
   }
   
-  public static void handleRestore( final VmInfo runVm ) {
-    try {
-      if ( VmInstances.cachedLookup( runVm.getInstanceId( ) ) != null ) {
-        return;
+  private static void handleRestore( final VmInfo runVm ) {
+    final VmState runVmState = VmState.Mapper.get( runVm.getStateName( ) );
+    if ( VmStateSet.RUN.contains( runVmState ) ) {
+      try {
+        if ( VmInstances.cachedLookup( runVm.getInstanceId( ) ) != null ) {
+          return;
+        }
+      } catch ( Exception ex ) {
+        LOG.error( ex );
+        Logs.extreme( ).error( ex, ex );
       }
-    } catch ( Exception ex2 ) {
-      LOG.trace( ex2, ex2 );
-    }
-    try {
-      VmInstance.RestoreAllocation.INSTANCE.apply( runVm );
-    } catch ( Exception ex ) {
-      LOG.error( ex, ex );
+      try {
+        VmInstance.RestoreAllocation.INSTANCE.apply( runVm );
+      } catch ( Exception ex ) {
+        LOG.error( ex );
+        Logs.extreme( ).error( ex, ex );
+      }
     }
   }
   
@@ -174,9 +181,11 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
     if ( !BundleState.none.equals( bundleState ) ) {
       vm.getRuntimeState( ).updateBundleTaskState( bundleState );
       VmInstances.terminated( vm );
+    } else if ( VmState.STOPPING.apply( vm ) && vm.getSplitTime( ) > VM_NC_TEARDOWN_TIMEOUT ) {
+      VmInstances.stopped( vm );
     } else if ( VmState.SHUTTING_DOWN.apply( vm ) ) {
       VmInstances.terminated( vm );
-    } else if ( VmStateSet.RUN.apply( vm ) && ( vm.getSplitTime( ) > VM_STATE_SETTLE_TIME ) ) {
+    } else if ( VmStateSet.RUN.apply( vm ) && vm.getSplitTime( ) > VM_STATE_SETTLE_TIME ) {
       VmInstances.shutDown( vm );
     }
   }
