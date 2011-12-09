@@ -72,7 +72,6 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
     for ( final VmInfo runVm : reply.getVms( ) ) {
       if ( this.initialInstances.contains( runVm.getInstanceId( ) ) ) {
         VmStateCallback.handleReportedState( runVm );
-        this.initialInstances.remove( runVm.getInstanceId( ) );
       } else if ( restoreInstances.contains( runVm.getInstanceId( ) ) ) {
         VmStateCallback.handleRestore( runVm );
       }
