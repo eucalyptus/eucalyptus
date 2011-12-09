@@ -95,6 +95,7 @@ import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.vm.VmType;
 import com.eucalyptus.vm.VmTypes;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import edu.ucsb.eucalyptus.msgs.HasRequest;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
@@ -125,12 +126,13 @@ public class Allocations {
     private final String              reservationId;
     private final List<ResourceToken> allocationTokens  = Lists.newArrayList( );
     private final Long                reservationIndex;
-    private Map<Integer, String>      instanceIds;
-    private Date                      expiration;
+    private final Map<Integer, String>      instanceIds;
+    private final Date                      expiration;
     
     private Allocation( final RunInstancesType request ) {
       super( );
       this.context = Contexts.lookup( );
+      this.instanceIds = Maps.newHashMap( );
       this.request = request;
       this.minCount = request.getMinCount( );
       this.maxCount = request.getMaxCount( );
@@ -141,6 +143,8 @@ public class Allocations {
       this.reservationIndex = UniqueIds.nextIndex( VmInstance.class, ( long ) request.getMaxCount( ) );
       this.reservationId = VmInstances.getId( this.reservationIndex, 0 ).replaceAll( "i-", "r-" );
       final byte[] tmpData = new byte[0];
+      Contract<Date> expiry = this.getContext( ).getContracts( ).get( Contract.Type.EXPIRATION );
+      this.expiration = ( expiry == null ? new Date( 32503708800000l ) : expiry.getValue( ) );
       if ( this.request.getUserData( ) != null ) {
         try {
           this.userData = Base64.decode( this.request.getUserData( ) );
@@ -172,6 +176,7 @@ public class Allocations {
       this.ownerFullName = this.context.getUserFullName( );
       this.reservationId = reservationId;
       this.reservationIndex = UniqueIds.nextIndex( VmInstance.class, ( long ) this.maxCount );
+      this.instanceIds = Maps.newHashMap( );
       this.instanceIds.put( launchIndex, instanceId );
       this.userData = userData;
       this.partition = partition;
@@ -344,10 +349,6 @@ public class Allocations {
     }
     
     public Date getExpiration( ) {
-      if ( this.expiration == null ) {
-        Contract<Date> expiry = this.getContext( ).getContracts( ).get( Contract.Type.EXPIRATION );
-        this.expiration = ( expiry == null ? new Date( 32503708800000l ) : expiry.getValue( ) );
-      }
       return this.expiration;
     }
   }
