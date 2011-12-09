@@ -1339,8 +1339,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
             } else if ( VmStateSet.RUN.apply( VmInstance.this ) && VmStateSet.RUN.contains( runVmState ) ) {
               VmInstance.this.setState( runVmState, Reason.APPEND, "UPDATE" );
               this.updateState( runVm );
-            } else if ( VmState.STOPPING.apply( VmInstance.this ) && VmState.SHUTTING_DOWN.equals( runVmState ) ) {
-              VmInstance.this.setState( VmState.STOPPED, Reason.APPEND, "STOPPED" );
             } else if ( VmState.SHUTTING_DOWN.apply( VmInstance.this ) && VmState.SHUTTING_DOWN.equals( runVmState ) ) {
               VmInstance.this.setState( VmState.TERMINATED, Reason.APPEND, "DONE" );
             } else if ( VmState.STOPPING.apply( VmInstance.this ) && VmInstances.Timeout.SHUTTING_DOWN.apply( VmInstance.this ) ) {
