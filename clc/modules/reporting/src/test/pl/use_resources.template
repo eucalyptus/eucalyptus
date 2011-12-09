@@ -25,6 +25,7 @@ my $filename = "";
 sub write_random_file($$);
 
 # Mount volume
+mkdir("/mnt/volume");
 system("mount $device /mnt/volume") or die("couldn't mount $device");
 
 # Periodically use local disk and ebs volume to simulate reporting usage
