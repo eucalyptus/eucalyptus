@@ -93,6 +93,8 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
         VmInstance vm = VmInstances.cachedLookup( vmId );
         if ( VmInstances.Timeout.UNREPORTED.apply( vm ) ) {
           VmInstances.terminated( vm );
+        } else if ( VmState.STOPPING.apply( vm ) ) {
+          VmInstances.stopped( vm );
         } else if ( VmInstances.Timeout.SHUTTING_DOWN.apply( vm ) ) {
           VmInstances.terminated( vm );
         } else if ( VmInstances.Timeout.TERMINATED.apply( vm ) ) {
@@ -179,8 +181,6 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
       VmInstances.terminated( vm );
     } else if ( VmState.SHUTTING_DOWN.apply( vm ) ) {
       VmInstances.terminated( vm );
-    } else if ( VmState.STOPPING.apply( vm ) ) {
-      VmInstances.stopped( vm );
     } else if ( VmStateSet.RUN.apply( vm ) ) {
       VmInstances.shutDown( vm );
     }
