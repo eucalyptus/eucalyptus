@@ -21,11 +21,12 @@ my $executable_file = shift;
 
 sub cmd($);
 
-mkdir("/tmp/image");
+mkdir("/mnt/image");
 cmd("losetup /dev/loop6 $image_file");
-cmd("mount /dev/loop6 /tmp/image");
-cmd("cp $executable_file /tmp/image/usr/bin");
-symlink("/tmp/image/usr/bin","/etc/init.d/"); #Fix this
+cmd("mount /dev/loop6 /mnt/image");
+cmd("cp $executable_file /mnt/image/etc/init.d");
+chmod(755, "/mnt/image/etc/init.d/$executable_file");
+cmd("(chroot /mnt/image; ln -s /usr/bin/$executable_file /etc/init.d/rc3.d/S99$executable_file)");
 cmd("umount /dev/loop6");
 cmd("losetup -d /dev/loop6");
 
