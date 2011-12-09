@@ -165,7 +165,7 @@ public class VmBootRecord {
     return this.platform;
   }
   
-  Set<VmVolumeAttachment> getPersistentVolumes( ) {
+  public Set<VmVolumeAttachment> getPersistentVolumes( ) {
     return this.persistentVolumes;
   }
   

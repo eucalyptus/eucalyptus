@@ -133,7 +133,7 @@ public class VmVolumeAttachment implements Comparable<VmVolumeAttachment> {
     return this.vmInstance;
   }
   
-  String getVolumeId( ) {
+  public String getVolumeId( ) {
     return this.volumeId;
   }
   

@@ -82,7 +82,6 @@ import com.eucalyptus.cluster.callback.VmRunCallback;
 import com.eucalyptus.component.Dispatcher;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.Storage;
@@ -107,8 +106,8 @@ import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstance.Reason;
 import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstances;
+import com.eucalyptus.vm.VmVolumeAttachment;
 import com.eucalyptus.ws.client.ServiceDispatcher;
-import com.google.common.base.Functions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
 import edu.emory.mathcs.backport.java.util.concurrent.TimeUnit;
@@ -221,10 +220,14 @@ public class ClusterAllocator implements Runnable {
           }
           final int sizeGb = ( int ) Math.ceil( volSizeBytes / BYTES_PER_GB );          
           LOG.debug( "About to prepare root volume using bootable block storage: " + imgInfo + " and vbr: " + root );
-          final Volume vol = Volumes.createStorageVolume( sc, this.allocInfo.getOwnerFullName( ), imgInfo.getSnapshotId( ), sizeGb, this.allocInfo.getRequest( ) );
           VmInstance vm = VmInstances.lookup( token.getInstanceId( ) );
+          Volume vol = null;
           if ( !vm.getBootRecord( ).hasPersistentVolumes( ) ) {
+            vol = Volumes.createStorageVolume( sc, this.allocInfo.getOwnerFullName( ), imgInfo.getSnapshotId( ), sizeGb, this.allocInfo.getRequest( ) );
             vm.addPersistentVolume( "/dev/sda1", vol );
+          } else {
+            VmVolumeAttachment volumeAttachment = vm.getBootRecord( ).getPersistentVolumes( ).iterator( ).next( );
+            vol = Volumes.lookup( null, volumeAttachment.getVolumeId( ) );
           }
           if ( deleteOnTerminate ) {
             this.allocInfo.getTransientVolumes( ).add( vol );
