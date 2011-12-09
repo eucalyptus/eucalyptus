@@ -115,9 +115,15 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
       }
       db.commit( );
     } catch ( final Exception e ) {
-      this.token.abort( );
+      LOG.error( e );
+      Logs.extreme( ).error( e, e );
       db.rollback( );
-      LOG.debug( e, e );
+      try {
+        this.token.abort( );
+      } catch ( Exception ex ) {
+        LOG.error( ex );
+        Logs.extreme( ).error( ex, ex );
+      }
       throw new EucalyptusClusterException( "Error while initializing request state: " + this.getRequest( ), e );
     }
   }
