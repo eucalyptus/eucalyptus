@@ -85,6 +85,7 @@ import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransientEntityException;
 import com.eucalyptus.images.Emis;
 import com.eucalyptus.images.Emis.BootableSet;
+import com.eucalyptus.keys.KeyPairs;
 import com.eucalyptus.keys.SshKeyPair;
 import com.eucalyptus.network.ExtantNetwork;
 import com.eucalyptus.network.NetworkGroup;
@@ -180,7 +181,7 @@ public class Allocations {
       this.instanceIds.put( launchIndex, instanceId );
       this.userData = userData;
       this.partition = partition;
-      this.sshKeyPair = sshKeyPair;
+      this.sshKeyPair = ( sshKeyPair != null ? sshKeyPair : KeyPairs.noKey( ) );
       this.bootSet = bootSet;
       this.expiration = expiration;
       this.vmType = vmType;
