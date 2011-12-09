@@ -271,11 +271,12 @@ public class AdmissionControl {
               remaining -= tokens.size( );
               allocInfo.setPartition( partition );
             } catch ( Exception t ) {
+              LOG.error( t );
+              Logs.extreme( ).error( t, t );
               if ( ( ( available = checkAvailability( vmTypeName, authorizedClusters ) ) < remaining ) || remaining > 0 ) {
                 allocInfo.abort( );
                 throw new NotEnoughResourcesException( "Not enough resources (" + available + " in " + zoneName + " < " + minAmount + "): vm instances." );
               } else {
-                LOG.error( t, t );
                 throw new NotEnoughResourcesException( "Not enough resources (" + available + " in " + zoneName + " < " + minAmount + "): vm instances." );
               }
             }
