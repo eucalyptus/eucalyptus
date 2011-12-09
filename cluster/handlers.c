@@ -3601,7 +3601,8 @@ int init_config(void) {
   // powersave options
   tmpstr = configFileValue("POWER_IDLETHRESH");
   if (!tmpstr) {
-    logprintfl(EUCAWARN,"init_config(): parsing config file (%s) for POWER_IDLETHRESH, defaulting to 300 seconds\n", configFiles[0]);
+    if (SCHEDPOWERSAVE == schedPolicy)
+      logprintfl(EUCAWARN,"init_config(): parsing config file (%s) for POWER_IDLETHRESH, defaulting to 300 seconds\n", configFiles[0]);
     idleThresh = 300;
     tmpstr = NULL;
   } else {
@@ -3615,7 +3616,8 @@ int init_config(void) {
 
   tmpstr = configFileValue("POWER_WAKETHRESH");
   if (!tmpstr) {
-    logprintfl(EUCAWARN,"init_config(): parsing config file (%s) for POWER_WAKETHRESH, defaulting to 300 seconds\n", configFiles[0]);
+    if (SCHEDPOWERSAVE == schedPolicy)
+      logprintfl(EUCAWARN,"init_config(): parsing config file (%s) for POWER_WAKETHRESH, defaulting to 300 seconds\n", configFiles[0]);
     wakeThresh = 300;
     tmpstr = NULL;
   } else {
