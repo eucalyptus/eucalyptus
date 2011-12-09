@@ -184,9 +184,8 @@ public class VerifyMetadata {
       RunInstancesType msg = allocInfo.getRequest( );
       String imageId = msg.getImageId( );
       VmType vmType = allocInfo.getVmType( );
-      Partition partition = allocInfo.getPartition( );
       try {
-        BootableSet bootSet = Emis.newBootableSet( vmType, partition, imageId );
+        BootableSet bootSet = Emis.newBootableSet( imageId );
         allocInfo.setBootableSet( bootSet );
         
         // Add (1024L * 1024L * 10) to handle NTFS min requirements.
@@ -201,12 +200,12 @@ public class VerifyMetadata {
                     " bytes of the instance is greater than the vmType " + vmType.getDisplayName( ) + " size " + vmType.getDisk( )
                     + " GB." );
         }
-      } catch ( AuthException ex ) {
-        LOG.error( ex );
-        throw new VerificationException( ex );
       } catch ( MetadataException ex ) {
         LOG.error( ex );
-        throw new VerificationException( ex );
+        throw ex;
+      } catch ( RuntimeException ex ) {
+        LOG.error( ex );
+        throw new VerificationException( "Failed to verify references for request: " + msg.toSimpleString( ) + " because of: " + ex.getMessage( ), ex );
       }
       return true;
     }
