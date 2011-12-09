@@ -1,0 +1,49 @@
+#!/usr/bin/perl
+
+#
+# use_resources.template is a template used to generate a perl file which is inserted
+#  into a bundled image. The generated perl file is then executed from within the
+#  instance once it's started. Then the perl script writes random data to the local disk
+#  and to a mounted EBS volume, from within a running instance, in order to simulate
+#  resource usage from that instance.
+#
+# This template is converted into a perl file using the fill_template.pl script.
+#
+# (c)2011, Eucalyptus Systems, Inc. All Rights Reserved.
+# author: tom.werges
+#
+
+use warnings;
+use strict;
+
+# These values are automatically inserted by the templating mechanism
+my $interval = [INTERVAL];
+my $io_megs = [IO_MEGS];
+my $host_path = "[HOST_PATH]";
+my $host_pw = "[HOST_PW]";
+my $device = "[DEVICE]"; # should be /dev/sda1 or something similar
+my $filename = "";
+
+sub write_random_file($$);
+
+# Mount volume
+system("mount $device /mnt/volume") or die("couldn't mount $device");
+
+# Periodically use local disk and ebs volume to simulate reporting usage
+while (1) {
+	$filename = "dummy_file_" . time();
+	write_random_file("/tmp/$filename", $io_megs);
+	write_random_file("/mnt/volume/$filename", $io_megs);
+	sleep($interval);
+}
+
+my @chars = ('a'..'z','A'..'Z',0..9);
+sub write_random_file($$) {
+	my ($filename, $size_megs) = @_;
+	open (FILE, ">$filename") or die("couldn't open $filename");
+	for (my $i=0; $i<($size_megs<<20);$i++) {
+		print FILE $chars[int(rand($#chars))];
+	}
+	close (FILE) or die("couldn't close $filename");
+}
+
