@@ -2128,9 +2128,6 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
     
     strncpy(pubip, "0.0.0.0", 32);
     strncpy(privip, "0.0.0.0", 32);
-    //    if (macAddrsLen >= maxCount) {
-    //      strncpy(mac, macAddrs[i], 32);
-    //    }      
 
     sem_mywait(VNET);
     if (nidx == -1) {
@@ -2287,7 +2284,8 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
 	  sem_mypost(CONFIG);
 
 	  // add the instance to the cache, and continue on
-	  add_instanceCache(myInstance->instanceId, myInstance);
+	  //	  add_instanceCache(myInstance->instanceId, myInstance);
+	  refresh_instanceCache(myInstance->instanceId, myInstance);
 	  print_ccInstance("RunInstances(): ", myInstance);
 	  
 	  runCount++;

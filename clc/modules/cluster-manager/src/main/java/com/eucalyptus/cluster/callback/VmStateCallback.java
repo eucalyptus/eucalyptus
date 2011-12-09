@@ -38,7 +38,6 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
   private static Logger     LOG                       = Logger.getLogger( VmStateCallback.class );
   private static final int  VM_INITIAL_REPORT_TIMEOUT = 20000;
   private static final int  VM_STATE_SETTLE_TIME      = 5000;
-  private static final int  VM_NC_TEARDOWN_TIMEOUT    = ( ( 3 * 60 ) + 20 ) * 1000;
   private final Set<String> initialInstances;
   
   public VmStateCallback( ) {
@@ -180,7 +179,7 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
     if ( !BundleState.none.equals( bundleState ) ) {
       vm.getRuntimeState( ).updateBundleTaskState( bundleState );
       VmInstances.terminated( vm );
-    } else if ( VmState.STOPPING.apply( vm ) && vm.getSplitTime( ) > VM_NC_TEARDOWN_TIMEOUT ) {
+    } else if ( VmState.STOPPING.apply( vm ) ) {
       VmInstances.stopped( vm );
     } else if ( VmState.SHUTTING_DOWN.apply( vm ) ) {
       VmInstances.terminated( vm );
