@@ -4028,14 +4028,14 @@ static int do_list (const char * regex)
                           (bm->in_use & BLOCKBLOB_STATUS_MAPPED) ? ('c') : ('-'), // c = has children
                           bm->size_bytes / 512L, // size is in sectors
                           ctime (&(bm->last_modified)));
-                extras [strlen (extras)-1] = '\0'; // remove the newline from date
+                extras [strlen (extras)-1] = ' '; // remove the newline from date
             }
             fprintf (stdout, "%s%s\n", extras, mp->key);
             if (show_parents) {
-                print_tree ("depends on:\t", bm, BLOCKBLOB_PATH_DEPS);
+                print_tree ("                           depends on: ", bm, BLOCKBLOB_PATH_DEPS);
             }
             if (show_children) {
-                print_tree ("depended by:\t", bm, BLOCKBLOB_PATH_REFS);
+                print_tree ("                          depended by: ", bm, BLOCKBLOB_PATH_REFS);
             }
         }
     }
