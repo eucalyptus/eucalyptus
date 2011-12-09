@@ -117,11 +117,13 @@ import edu.ucsb.eucalyptus.cloud.VmRunResponseType;
 import edu.ucsb.eucalyptus.msgs.AttachStorageVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.AttachStorageVolumeType;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType;
 import edu.ucsb.eucalyptus.msgs.DescribeStorageVolumesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeStorageVolumesType;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
 public class ClusterAllocator implements Runnable {
+  private static final long BYTES_PER_GB = ( 1024L * 1024L * 1024L );
   private static Logger LOG = Logger.getLogger( ClusterAllocator.class );
   
   enum State {
@@ -204,12 +206,24 @@ public class ClusterAllocator implements Runnable {
       final ServiceConfiguration sc = Topology.lookup( Storage.class, this.cluster.getConfiguration( ).lookupPartition( ) );
       final VirtualBootRecord root = this.allocInfo.getVmTypeInfo( ).lookupRoot( );
       if ( root.isBlockStorage( ) ) {
-        for ( int i = 0; i < this.allocInfo.getAllocationTokens( ).size( ); i++ ) {
+        for ( ResourceToken token : this.allocInfo.getAllocationTokens( ) ) {
           final BlockStorageImageInfo imgInfo = ( ( BlockStorageImageInfo ) this.allocInfo.getBootSet( ).getMachine( ) );
-          final int sizeGb = ( int ) Math.ceil( imgInfo.getImageSizeBytes( ) / ( 1024l * 1024l * 1024l ) );
+          Long volSizeBytes = imgInfo.getImageSizeBytes( );
+          Boolean deleteOnTerminate = imgInfo.getDeleteOnTerminate( );
+          for ( BlockDeviceMappingItemType blockDevMapping : this.allocInfo.getRequest( ).getBlockDeviceMapping( ) ) {
+            if ( "root".equals( blockDevMapping.getVirtualName( ) ) && blockDevMapping.getEbs( ) != null ) {
+              deleteOnTerminate |= blockDevMapping.getEbs( ).getDeleteOnTermination( );
+              if ( blockDevMapping.getEbs( ).getVolumeSize( ) != null ) {
+                volSizeBytes = BYTES_PER_GB * blockDevMapping.getEbs( ).getVolumeSize( ); 
+              }
+            }
+          }
+          final int sizeGb = ( int ) Math.ceil( volSizeBytes / BYTES_PER_GB );          
           LOG.debug( "About to prepare root volume using bootable block storage: " + imgInfo + " and vbr: " + root );
           final Volume vol = Volumes.createStorageVolume( sc, this.allocInfo.getOwnerFullName( ), imgInfo.getSnapshotId( ), sizeGb, this.allocInfo.getRequest( ) );
-          if ( imgInfo.getDeleteOnTerminate( ) ) {
+          VmInstance vm = VmInstances.lookup( token.getInstanceId( ) );
+          vm.addPersistentVolume( vol );
+          if ( deleteOnTerminate ) {
             this.allocInfo.getTransientVolumes( ).add( vol );
           } else {
             this.allocInfo.getPersistentVolumes( ).add( vol );

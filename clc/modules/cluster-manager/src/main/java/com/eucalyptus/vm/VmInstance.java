@@ -96,6 +96,7 @@ import org.hibernate.criterion.Restrictions;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
 import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.blockstorage.Volume;
 import com.eucalyptus.cloud.CloudMetadata.VmInstanceMetadata;
 import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.UserMetadata;
@@ -967,11 +968,11 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   public String getRamdiskId( ) {
     return this.bootRecord.getRamdisk( ).getDisplayName( );
   }
-
+  
   public String getKernelId( ) {
     return this.bootRecord.getKernel( ).getDisplayName( );
   }
-
+  
   public boolean hasPublicAddress( ) {
     return ( this.networkConfig != null )
            && !( VmNetworkConfig.DEFAULT_IP.equals( this.getNetworkConfig( ).getPublicAddress( ) ) || this.getNetworkConfig( ).getPrivateAddress( ).equals( this.getNetworkConfig( ).getPublicAddress( ) ) );
@@ -1243,6 +1244,19 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       db.rollback( );
     }
     
+  }
+  
+  public void addPersistentVolume( Volume vol ) {
+    final EntityTransaction db = Entities.get( VmInstance.class );
+    try {
+      final VmInstance entity = Entities.merge( this );
+      VmVolumeAttachment volumeAttachment = new VmVolumeAttachment( entity, vol.getDisplayName( ), vol.getLocalDevice( ), vol.getRemoteDevice( ), "attached", new Date( ) );
+      entity.bootRecord.getPersistentVolumes( ).add( volumeAttachment );
+      db.commit( );
+    } catch ( final Exception ex ) {
+      Logs.exhaust( ).error( ex, ex );
+      db.rollback( );
+    }
   }
   
   /**
@@ -1632,5 +1646,5 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   public SshKeyPair getKeyPair( ) {
     return this.getBootRecord( ).getSshKeyPair( );
   }
-
+  
 }
