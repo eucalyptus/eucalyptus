@@ -108,6 +108,7 @@ import com.eucalyptus.vm.VmInstance.Reason;
 import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.ws.client.ServiceDispatcher;
+import com.google.common.base.Functions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
 import edu.emory.mathcs.backport.java.util.concurrent.TimeUnit;
@@ -222,11 +223,13 @@ public class ClusterAllocator implements Runnable {
           LOG.debug( "About to prepare root volume using bootable block storage: " + imgInfo + " and vbr: " + root );
           final Volume vol = Volumes.createStorageVolume( sc, this.allocInfo.getOwnerFullName( ), imgInfo.getSnapshotId( ), sizeGb, this.allocInfo.getRequest( ) );
           VmInstance vm = VmInstances.lookup( token.getInstanceId( ) );
-          vm.addPersistentVolume( vol );
-          if ( deleteOnTerminate ) {
-            this.allocInfo.getTransientVolumes( ).add( vol );
-          } else {
-            this.allocInfo.getPersistentVolumes( ).add( vol );
+          if ( !vm.getBootRecord( ).hasPersistentVolumes( ) ) {
+            vm.addPersistentVolume( "/dev/sda1", vol );
+            if ( deleteOnTerminate ) {
+              this.allocInfo.getTransientVolumes( ).add( vol );
+            } else {
+              this.allocInfo.getPersistentVolumes( ).add( vol );
+            }
           }
         }
       }

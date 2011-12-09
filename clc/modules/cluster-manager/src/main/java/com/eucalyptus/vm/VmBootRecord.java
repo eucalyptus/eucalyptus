@@ -169,6 +169,10 @@ public class VmBootRecord {
     return this.persistentVolumes;
   }
   
+  public boolean hasPersistentVolumes( ) {
+    return !this.persistentVolumes.isEmpty( );
+  }
+  
   byte[] getUserData( ) {
     return this.userData;
   }

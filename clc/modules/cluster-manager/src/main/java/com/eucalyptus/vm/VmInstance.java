@@ -73,6 +73,8 @@ import java.util.NavigableSet;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.TreeSet;
+import javax.persistence.AttributeOverride;
+import javax.persistence.AttributeOverrides;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Embedded;
@@ -137,6 +139,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.Collections2;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import edu.ucsb.eucalyptus.cloud.VmInfo;
@@ -170,8 +173,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   private VmRuntimeState       runtimeState;
   @Embedded
   private VmVolumeState        transientVolumeState;
-  @Embedded
-  private VmVolumeState        persistentVolumeState;
   @Embedded
   private final VmPlacement    placement;
   
@@ -750,7 +751,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     this.usageStats = new VmUsageStats( this );
     this.runtimeState = new VmRuntimeState( this );
     this.transientVolumeState = new VmVolumeState( this );
-    this.persistentVolumeState = new VmVolumeState( this );
     this.networkConfig = new VmNetworkConfig( this );
     final Function<NetworkGroup, NetworkGroup> func = Entities.merge( );
     this.networkGroups.addAll( Collections2.transform( networkRulesGroups, func ) );
@@ -772,7 +772,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     this.usageStats = null;
     this.networkConfig = null;
     this.transientVolumeState = null;
-    this.persistentVolumeState = null;
   }
   
   protected VmInstance( ) {
@@ -787,7 +786,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     this.runtimeState = null;
     this.networkConfig = null;
     this.transientVolumeState = null;
-    this.persistentVolumeState = null;
   }
   
   public void updateBlockBytes( final long blkbytes ) {
@@ -1193,7 +1191,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   
   /**
    * @param predicate
-   * @return 
+   * @return
    */
   public VmVolumeAttachment lookupVolumeAttachmentByDevice( final String volumeDevice ) {
     final EntityTransaction db = Entities.get( VmInstance.class );
@@ -1203,7 +1201,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       try {
         ret = entity.getTransientVolumeState( ).lookupVolumeAttachmentByDevice( volumeDevice );
       } catch ( Exception ex ) {
-        ret = entity.getPersistentVolumeState( ).lookupVolumeAttachmentByDevice( volumeDevice );
+        ret = Iterables.find( entity.getBootRecord( ).getPersistentVolumes( ), VmVolumeAttachment.volumeDeviceFilter( volumeDevice ) );
       }
       db.commit( );
       return ret;
@@ -1226,12 +1224,14 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     final EntityTransaction db = Entities.get( VmInstance.class );
     try {
       final VmInstance entity = Entities.merge( this );
+      VmVolumeAttachment volumeAttachment = null;
       AttachedVolume ret = null;
       try {
-        ret = VmVolumeAttachment.asAttachedVolume( entity ).apply( entity.getTransientVolumeState( ).lookupVolumeAttachment( volumeId ) );
+        volumeAttachment = entity.getTransientVolumeState( ).lookupVolumeAttachment( volumeId );
       } catch ( NoSuchElementException ex ) {
-        ret = VmVolumeAttachment.asAttachedVolume( entity ).apply( entity.getPersistentVolumeState( ).lookupVolumeAttachment( volumeId ) );
+        volumeAttachment = Iterables.find( entity.getBootRecord( ).getPersistentVolumes( ), VmVolumeAttachment.volumeIdFilter( volumeId ) );
       }
+      ret = VmVolumeAttachment.asAttachedVolume( entity ).apply( volumeAttachment );
       db.commit( );
       return ret;
     } catch ( final Exception ex ) {
@@ -1258,13 +1258,12 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     
   }
   
-  public void addPersistentVolume( Volume vol ) {
+  public void addPersistentVolume( String deviceName, Volume vol ) {
     final EntityTransaction db = Entities.get( VmInstance.class );
     try {
       final VmInstance entity = Entities.merge( this );
-      VmVolumeAttachment volumeAttachment = new VmVolumeAttachment( entity, vol.getDisplayName( ), vol.getLocalDevice( ), vol.getRemoteDevice( ), "attached", new Date( ) );
+      VmVolumeAttachment volumeAttachment = new VmVolumeAttachment( entity, vol.getDisplayName( ), deviceName, vol.getRemoteDevice( ), "attached", new Date( ) );
       entity.bootRecord.getPersistentVolumes( ).add( volumeAttachment );
-      entity.persistentVolumeState.addVolumeAttachment( volumeAttachment );
       db.commit( );
     } catch ( final Exception ex ) {
       Logs.exhaust( ).error( ex, ex );
@@ -1287,7 +1286,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           return predicate.apply( VmVolumeAttachment.asAttachedVolume( entity ).apply( arg0 ) );
         }
       } );
-      ret |= entity.getPersistentVolumeState( ).eachVolumeAttachment( new Predicate<VmVolumeAttachment>( ) {
+      ret |= Iterables.all( entity.getBootRecord( ).getPersistentVolumes( ), new Predicate<VmVolumeAttachment>( ) {
         
         @Override
         public boolean apply( final VmVolumeAttachment arg0 ) {
@@ -1528,11 +1527,14 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           
           runningInstance.setLaunchTime( input.getLaunchRecord( ).getLaunchTime( ) );
           
-          runningInstance.getBlockDevices( ).add( new InstanceBlockDeviceMapping( "/dev/sda1" ) );
-          for ( final VmVolumeAttachment attachedVol : input.getPersistentVolumeState( ).getAttachments( ) ) {
-            runningInstance.getBlockDevices( ).add( new InstanceBlockDeviceMapping( attachedVol.getDevice( ), attachedVol.getVolumeId( ),
-                                                                                    attachedVol.getStatus( ),
-                                                                                    attachedVol.getAttachTime( ) ) );
+          if ( !input.getBootRecord( ).hasPersistentVolumes( ) ) {
+            runningInstance.getBlockDevices( ).add( new InstanceBlockDeviceMapping( "/dev/sda1" ) );
+          } else {
+            for ( final VmVolumeAttachment attachedVol : input.getBootRecord( ).getPersistentVolumes( ) ) {
+              runningInstance.getBlockDevices( ).add( new InstanceBlockDeviceMapping( attachedVol.getDevice( ), attachedVol.getVolumeId( ),
+                                                                                      attachedVol.getStatus( ),
+                                                                                      attachedVol.getAttachTime( ) ) );
+            }
           }
           for ( final VmVolumeAttachment attachedVol : input.getTransientVolumeState( ).getAttachments( ) ) {
             runningInstance.getBlockDevices( ).add( new InstanceBlockDeviceMapping( attachedVol.getDevice( ), attachedVol.getVolumeId( ),
@@ -1582,7 +1584,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     if ( this.launchRecord != null ) builder2.append( "launchRecord=" ).append( this.launchRecord ).append( ":" );
     if ( this.runtimeState != null ) builder2.append( "runtimeState=" ).append( this.runtimeState ).append( ":" );
     if ( this.transientVolumeState != null ) builder2.append( "transientVolumeState=" ).append( this.transientVolumeState ).append( ":" );
-    if ( this.persistentVolumeState != null ) builder2.append( "persistentVolumeState=" ).append( this.persistentVolumeState ).append( ":" );
     if ( this.placement != null ) builder2.append( "placement=" ).append( this.placement ).append( ":" );
     if ( this.privateNetwork != null ) builder2.append( "privateNetwork=" ).append( this.privateNetwork ).append( ":" );
     if ( this.networkGroups != null ) builder2.append( "networkGroups=" ).append( this.networkGroups ).append( ":" );
@@ -1595,13 +1596,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       this.networkConfig = new VmNetworkConfig( this );
     }
     return this.networkConfig;
-  }
-  
-  private VmVolumeState getPersistentVolumeState( ) {
-    if ( this.persistentVolumeState == null ) {
-      this.persistentVolumeState = new VmVolumeState( this );
-    }
-    return this.persistentVolumeState;
   }
   
   private void setNetworkGroups( final Set<NetworkGroup> networkGroups ) {
