@@ -271,7 +271,7 @@ public class VmControl {
                 if ( VmState.STOPPED.apply( vm ) ) {
                   newCode = VmState.TERMINATED.getCode( );
                   newState = VmState.TERMINATED.getName( );
-                  VmInstances.delete( vm );
+                  VmInstances.terminated( vm );
                 } else if ( VmStateSet.RUN.apply( vm ) ) {
                   newCode = VmState.SHUTTING_DOWN.getCode( );
                   newState = VmState.SHUTTING_DOWN.getName( );
