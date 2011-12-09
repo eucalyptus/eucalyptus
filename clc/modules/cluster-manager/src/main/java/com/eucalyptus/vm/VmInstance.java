@@ -82,7 +82,6 @@ import javax.persistence.JoinColumn;
 import javax.persistence.ManyToMany;
 import javax.persistence.OneToOne;
 import javax.persistence.PersistenceContext;
-import javax.persistence.PersistenceException;
 import javax.persistence.PreRemove;
 import javax.persistence.Table;
 import javax.persistence.Transient;
@@ -101,23 +100,19 @@ import com.eucalyptus.cloud.CloudMetadata.VmInstanceMetadata;
 import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
-import com.eucalyptus.cloud.util.NotEnoughResourcesException;
 import com.eucalyptus.cloud.util.ResourceAllocationException;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.Dns;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.entities.Entities;
-import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.TransactionExecutionException;
 import com.eucalyptus.entities.TransientEntityException;
-import com.eucalyptus.event.EventFailedException;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.images.Emis;
 import com.eucalyptus.images.Emis.BootableSet;
@@ -374,6 +369,8 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           
           tx1.commit( );
         } catch ( Exception ex ) {
+          LOG.error( ex );
+          Logs.extreme( ).error( ex, ex );
           tx1.rollback( );
           throw Exceptions.toUndeclared( ex );
         }
@@ -407,7 +404,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           }
           BootableSet bootSet = null;
           if ( imageId != null ) {
-            bootSet = Emis.newBootableSet( vmType, partition, imageId, kernelId, ramdiskId );
+            bootSet = Emis.recreateBootableSet( imageId, kernelId, ramdiskId );
           } else {
             //TODO:GRZE: handle the case where an instance is running and it's root emi has been deregistered.
           }
@@ -461,6 +458,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           db.commit( );
           return true;
         } catch ( final Exception ex ) {
+          LOG.error( ex );
           Logs.extreme( ).error( ex, ex );
           db.rollback( );
           return false;
@@ -960,6 +958,14 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     return this.bootRecord.getMachine( ).getDisplayName( );
   }
   
+  public String getRamdiskId( ) {
+    return this.bootRecord.getRamdisk( ).getDisplayName( );
+  }
+
+  public String getKernelId( ) {
+    return this.bootRecord.getKernel( ).getDisplayName( );
+  }
+
   public boolean hasPublicAddress( ) {
     return ( this.networkConfig != null )
            && !( VmNetworkConfig.DEFAULT_IP.equals( this.getNetworkConfig( ).getPublicAddress( ) ) || this.getNetworkConfig( ).getPrivateAddress( ).equals( this.getNetworkConfig( ).getPublicAddress( ) ) );
@@ -1137,7 +1143,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     return this.vmId;
   }
   
-  VmBootRecord getBootRecord( ) {
+  public VmBootRecord getBootRecord( ) {
     return this.bootRecord;
   }
   
@@ -1610,8 +1616,17 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       Transitions.DELETE.apply( this );
     } catch ( Exception ex ) {}
   }
-
-  Date getExpiration( ) {
+  
+  public Date getExpiration( ) {
     return this.expiration;
   }
+  
+  public Integer getLaunchIndex( ) {
+    return this.getLaunchRecord( ).getLaunchIndex( );
+  }
+  
+  public SshKeyPair getKeyPair( ) {
+    return this.getBootRecord( ).getSshKeyPair( );
+  }
+
 }

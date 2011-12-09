@@ -173,10 +173,10 @@ public class VmControl {
   
   public static RunInstancesResponseType runInstances( RunInstancesType request ) throws Exception {
     RunInstancesResponseType reply = request.getReply( );
-    Allocation allocInfo = Allocations.begin( request );
+    Allocation allocInfo = Allocations.run( request );
     EntityTransaction db = Entities.get( VmInstance.class );
     try {
-      Predicates.and( VerifyMetadata.get( ), AdmissionControl.get( ) ).apply( allocInfo );
+      Predicates.and( VerifyMetadata.get( ), AdmissionControl.run( ) ).apply( allocInfo );
       allocInfo.commit( );
       
       ReservationInfoType reservation = new ReservationInfoType( allocInfo.getReservationId( ),
@@ -430,19 +430,9 @@ public class VmControl {
       EntityTransaction db = Entities.get( VmInstance.class );
       try {//scope for transaction
         final VmInstance vm = RestrictedTypes.doPrivileged( instanceId, VmInstance.class );
-        RunInstancesType runRequest = new RunInstancesType( ) {
-          {
-            this.setMinCount( 1 );
-            this.setMaxCount( 1 );
-            this.setImageId( vm.getImageId( ) );
-            this.setAvailabilityZone( vm.getPartition( ) );
-            this.getGroupSet( ).addAll( vm.getNetworkNames( ) );
-            this.setInstanceType( vm.getVmType( ).getName( ) );
-          }
-        };
-        Allocation allocInfo = Allocations.begin( runRequest );
+        Allocation allocInfo = Allocations.start( vm );
         try {//scope for allocInfo
-          Predicates.and( VerifyMetadata.get( ), AdmissionControl.get( ) ).apply( allocInfo );
+          AdmissionControl.run( ).apply( allocInfo );
           ClusterAllocator.get( ).apply( allocInfo );
           final int oldCode = vm.getState( ).getCode( ), newCode = VmState.PENDING.getCode( );
           final String oldState = vm.getState( ).getName( ), newState = VmState.PENDING.getName( );
