@@ -425,6 +425,7 @@ public class VmControl {
         Allocation allocInfo = Allocations.start( vm );
         try {//scope for allocInfo
           AdmissionControl.run( ).apply( allocInfo );
+          vm.setState( VmState.PENDING );
           ClusterAllocator.get( ).apply( allocInfo );
           final int oldCode = vm.getState( ).getCode( ), newCode = VmState.PENDING.getCode( );
           final String oldState = vm.getState( ).getName( ), newState = VmState.PENDING.getName( );
