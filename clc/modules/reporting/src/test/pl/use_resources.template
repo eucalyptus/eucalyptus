@@ -28,16 +28,19 @@ sub write_random_file($$);
 system("mount $device /mnt/volume") or die("couldn't mount $device");
 
 # Periodically use local disk and ebs volume to simulate reporting usage
+my $start_time = 0;
 while (1) {
+	$start_time = time();
 	$filename = "dummy_file_" . time();
 	write_random_file("/tmp/$filename", $io_megs);
 	write_random_file("/mnt/volume/$filename", $io_megs);
-	sleep($interval);
+	print "sleep:" . ($interval-(time()-$start_time)) . "\n";
+	sleep(($interval-(time()-$start_time)));
 }
 
-my @chars = ('a'..'z','A'..'Z',0..9);
 sub write_random_file($$) {
 	my ($filename, $size_megs) = @_;
+	my @chars = ('a'..'z','A'..'Z',0..9);
 	open (FILE, ">$filename") or die("couldn't open $filename");
 	for (my $i=0; $i<($size_megs<<20);$i++) {
 		print FILE $chars[int(rand($#chars))];
