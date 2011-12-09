@@ -2874,8 +2874,10 @@ int ccCheckState() {
 	    snprintf(curi, MAX_PATH, "%s", config->ccStatus.serviceId.uris[0]);
 	    bzero(chost, sizeof(char) * MAX_PATH);
 	    rc = tokenize_uri(curi, uriType, chost, &port, path);
-	    if (!strcmp(curi, buri)) {
-	      logprintfl(EUCAWARN, "ccCheckState(): detected local broker (%s) matching local CC (%s) in NOTREADY state\n", config->notreadyServices[i].uris[j], config->ccStatus.serviceId.uris[0]);
+	    logprintfl(EUCADEBUG, "ccCheckState(): comparing found not ready broker host (%s) with local CC host (%s)\n", bhost, chost);
+	    if (!strcmp(chost, bhost)) {
+	      logprintfl(EUCAWARN, "ccCheckState(): detected local broker (%s) matching local CC (%s) in NOTREADY state\n", bhost, chost);
+	      ret++;
 	    }
 	  }
 	}

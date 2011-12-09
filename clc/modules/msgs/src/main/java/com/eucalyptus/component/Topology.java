@@ -245,7 +245,7 @@ public class Topology {
             } else {
               if ( !serviceList.contains( s ) && State.DISABLED.apply( s ) ) {
                 msg.get_disabledServices( ).add( typeMapper.apply( s ) );
-              } else if ( !serviceList.contains( s ) && State.NOTREADY.apply( s ) ) {
+              } else if ( !serviceList.contains( s ) && State.NOTREADY.ordinal( ) >= s.getStateMachine( ).getState( ).ordinal( ) ) {
                 msg.get_notreadyServices( ).add( typeMapper.apply( s ) );
               }
             }
