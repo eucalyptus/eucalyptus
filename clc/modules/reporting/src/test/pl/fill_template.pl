@@ -35,6 +35,9 @@ while ($#ARGV+1>0) {
 
 open(INFILE, $template_file) or die("couldn't open $template_file");
 while (<INFILE>) {
+	if (/^# .*/) {
+		next;
+	}
 	foreach my $k (keys(%template_vals)) {
 		s/\[$k\]/$template_vals{$k}/;
 	}
