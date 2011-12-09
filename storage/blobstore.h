@@ -202,6 +202,7 @@ typedef struct _blockblob_meta {
     unsigned int in_use; // flags showing how the blockblob is being used (OPENED, LOCKED, LINKED)
     time_t last_accessed; // timestamp of last access
     time_t last_modified; // timestamp of last modification
+    blobstore * bs; // pointer to blobstore, if one is open
 
     struct _blockblob_meta * next;
     struct _blockblob_meta * prev;
