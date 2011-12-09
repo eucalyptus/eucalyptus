@@ -2,10 +2,12 @@ package com.eucalyptus.cluster.callback;
 
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Set;
 import java.util.concurrent.CancellationException;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Databases;
+import com.eucalyptus.cloud.CloudMetadatas;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
@@ -15,15 +17,17 @@ import com.eucalyptus.vm.VmBundleTask.BundleState;
 import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstance.VmStateSet;
-import com.eucalyptus.vm.VmInstances.TerminatedInstanceException;
 import com.eucalyptus.vm.VmInstances;
+import com.eucalyptus.vm.VmInstances.TerminatedInstanceException;
 import com.eucalyptus.vm.VmType;
 import com.eucalyptus.vm.VmTypes;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
+import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import edu.ucsb.eucalyptus.cloud.VmDescribeResponseType;
 import edu.ucsb.eucalyptus.cloud.VmDescribeType;
 import edu.ucsb.eucalyptus.cloud.VmInfo;
@@ -31,7 +35,10 @@ import edu.ucsb.eucalyptus.msgs.AttachedVolume;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
 public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescribeType, VmDescribeResponseType> {
-  private static Logger LOG = Logger.getLogger( VmStateCallback.class );
+  private static Logger     LOG                       = Logger.getLogger( VmStateCallback.class );
+  private static final int  VM_INITIAL_REPORT_TIMEOUT = 20000;
+  private static final int  VM_STATE_SETTLE_TIME      = 5000;
+  private final Set<String> initialInstances;
   
   public VmStateCallback( ) {
     super( new VmDescribeType( ) {
@@ -39,6 +46,7 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
         regarding( );
       }
     } );
+    this.initialInstances = Sets.newHashSet( Collections2.transform( VmInstances.list( ), CloudMetadatas.toDisplayName( ) ) );
   }
   
   @Override
@@ -58,23 +66,18 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
     }
     
     for ( final VmInfo runVm : reply.getVms( ) ) {
-      VmStateCallback.handleReportedState( runVm );
+      if ( this.initialInstances.contains( runVm.getInstanceId( ) ) ) {
+        VmStateCallback.handleReportedState( runVm );
+      }
     }
     
-    final List<String> unreportedVms = VmStateCallback.findUnreported( reply );
+    final Set<String> unreportedVms = this.findUnreported( reply );
     
     VmStateCallback.handleUnreported( unreportedVms );
   }
   
-  public static List<String> findUnreported( VmDescribeResponseType reply ) {
-    final List<String> unreportedVms = Lists.transform( VmInstances.list( ), new Function<VmInstance, String>( ) {
-      
-      @Override
-      public String apply( final VmInstance input ) {
-        return input.getInstanceId( );
-      }
-    } );
-    
+  public Set<String> findUnreported( VmDescribeResponseType reply ) {
+    final Set<String> unreportedVms = Sets.newHashSet( this.initialInstances );
     final List<String> runningVmIds = Lists.transform( reply.getVms( ), new Function<VmInfo, String>( ) {
       @Override
       public String apply( final VmInfo arg0 ) {
@@ -86,12 +89,14 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
     return unreportedVms;
   }
   
-  public static void handleUnreported( final List<String> unreportedVms ) {
+  public static void handleUnreported( final Set<String> unreportedVms ) {
     for ( final String vmId : unreportedVms ) {
       EntityTransaction db1 = Entities.get( VmInstance.class );
       try {
         VmInstance vm = VmInstances.cachedLookup( vmId );
-        if ( VmInstances.Timeout.UNREPORTED.apply( vm ) ) {
+        if ( vm.getCreationSplitTime( ) < VM_INITIAL_REPORT_TIMEOUT ) {
+          //do nothing during first VM_INITIAL_REPORT_TIMEOUT millis of instance life
+        } else if ( VmInstances.Timeout.UNREPORTED.apply( vm ) ) {
           VmInstances.terminated( vm );
         } else if ( VmState.STOPPING.apply( vm ) ) {
           VmInstances.stopped( vm );
@@ -181,7 +186,7 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
       VmInstances.terminated( vm );
     } else if ( VmState.SHUTTING_DOWN.apply( vm ) ) {
       VmInstances.terminated( vm );
-    } else if ( VmStateSet.RUN.apply( vm ) ) {
+    } else if ( VmStateSet.RUN.apply( vm ) && ( vm.getSplitTime( ) > VM_STATE_SETTLE_TIME ) ) {
       VmInstances.shutDown( vm );
     }
   }
@@ -226,7 +231,7 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
           EntityTransaction db = Entities.get( VmInstance.class );
           try {
             for ( VmInstance vm : Iterables.filter( VmInstances.list( ), VmPendingCallback.this.filter ) ) {
-              if ( ( System.currentTimeMillis( ) - vm.getCreationTimestamp( ).getTime( ) ) > 5000 ) {
+              if ( vm.getCreationSplitTime( ) > VM_STATE_SETTLE_TIME ) {
                 this.getInstancesSet( ).add( vm.getInstanceId( ) );
               }
             }

@@ -950,6 +950,12 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     return split;
   }
   
+  public synchronized long getCreationSplitTime( ) {
+    final long time = System.currentTimeMillis( );
+    final long split = time - super.getCreationTimestamp( ).getTime( );
+    return split;
+  }
+  
   public VmBundleTask resetBundleTask( ) {
     return this.getRuntimeState( ).resetBundleTask( );
   }
