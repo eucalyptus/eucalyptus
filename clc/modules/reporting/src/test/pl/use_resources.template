@@ -16,6 +16,9 @@
 use warnings;
 use strict;
 
+my $pid = fork();
+exit(0) if ($pid != 0);
+
 # These values are automatically inserted by the templating mechanism
 my $interval = [INTERVAL];
 my $io_megs = [IO_MEGS];
