@@ -133,7 +133,7 @@ doRunInstance(	struct nc_state_t *nc,
     sem_p (inst_sem);
     instance = find_instance (&global_instances, instanceId);
     sem_v (inst_sem);
-    if (instance) 
+    if (instance) {
         if (instance->state==TEARDOWN) { // fully cleaned up, so OK to revive it, e.g., with euca-start-instance
             remove_instance (&global_instances, instance);
             free_instance (&instance);
