@@ -269,6 +269,10 @@ public class Emis {
       }
     }
     
+    public boolean isBlockStorage( ) {
+      return this.getMachine( ) instanceof BlockStorageImageInfo;
+    }
+
     public boolean isLinux( ) {
       return ImageMetadata.Platform.linux.equals( this.getMachine( ).getPlatform( ) ) || this.getMachine( ).getPlatform( ) == null;
     }
@@ -297,6 +301,7 @@ public class Emis {
       }
       return vmTypeInfo;
     }
+
   }
   
   static class NoRamdiskBootableSet extends BootableSet {
@@ -473,7 +478,7 @@ public class Emis {
     
     @Override
     public BootableSet apply( BootableSet input ) {
-      if ( ImageMetadata.Platform.windows.equals( input.getMachine( ).getPlatform( ) ) ) {
+      if ( !input.isLinux( ) ) {
         return input;
       } else {
         String ramdiskId = null;
@@ -489,9 +494,13 @@ public class Emis {
         } catch ( InvalidMetadataException ex ) {
           return input;
         } catch ( Exception ex ) {
-          throw Exceptions.toUndeclared( new NoSuchMetadataException( "Failed to lookup ramdisk image information: " + ramdiskId
-            + " because of: "
-            + ex.getMessage( ), ex ) );
+          if ( input.isBlockStorage( ) ) {
+            return input;
+          } else {
+            throw Exceptions.toUndeclared( new NoSuchMetadataException( "Failed to lookup ramdisk image information: " + ramdiskId
+              + " because of: "
+              + ex.getMessage( ), ex ) );
+          }
         }
       }
     }
@@ -502,7 +511,7 @@ public class Emis {
     
     @Override
     public BootableSet apply( BootableSet input ) {
-      if ( ImageMetadata.Platform.windows.equals( input.getMachine( ).getPlatform( ) ) ) {
+      if ( !input.isLinux( ) ) {
         return input;
       } else {
         String kernelId = "unknown";
@@ -512,9 +521,13 @@ public class Emis {
           KernelImageInfo kernel = RestrictedTypes.doPrivilegedWithoutOwner( kernelId, LookupKernel.INSTANCE );
           return new NoRamdiskBootableSet( input.getMachine( ), kernel );
         } catch ( Exception ex ) {
-          throw Exceptions.toUndeclared( new NoSuchMetadataException( "Failed to lookup kernel image information " + kernelId
-            + " because of: "
-            + ex.getMessage( ), ex ) );
+          if ( input.isBlockStorage( ) ) {
+            return input;
+          } else {
+            throw Exceptions.toUndeclared( new NoSuchMetadataException( "Failed to lookup kernel image information " + kernelId
+              + " because of: "
+              + ex.getMessage( ), ex ) );
+          }
         }
       }
     }
