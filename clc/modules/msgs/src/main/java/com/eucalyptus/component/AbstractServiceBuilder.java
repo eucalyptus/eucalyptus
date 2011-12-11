@@ -102,10 +102,12 @@ public abstract class AbstractServiceBuilder<T extends ServiceConfiguration> imp
     }
     
     ServiceConfiguration existingHost = null;
-    try {
-      existingHost = ServiceConfigurations.lookupByHost( this.getComponentId( ).getClass( ), host );
-    } catch ( PersistenceException ex1 ) {
-      LOG.trace( "Failed to find existing component registration for host: " + host );
+    if ( !manyToOne ) {
+      try {
+        existingHost = ServiceConfigurations.lookupByHost( this.getComponentId( ).getClass( ), host );
+      } catch ( PersistenceException ex1 ) {
+        LOG.trace( "Failed to find existing component registration for host: " + host );
+      }
     }
     if ( existingName != null && existingHost != null ) {
       return false;
@@ -113,7 +115,7 @@ public abstract class AbstractServiceBuilder<T extends ServiceConfiguration> imp
       return true;
     } else if ( existingName != null ) {
       throw new ServiceRegistrationException( "Component with name=" + name + " already exists with host=" + existingName.getHostName( ) );
-    } else if ( !manyToOne && existingHost != null ) {
+    } else if ( existingHost != null ) {
       throw new ServiceRegistrationException( "Component with host=" + host + " already exists with name=" + existingHost.getName( ) );
     } else {
       throw new ServiceRegistrationException( "BUG: This is a logical impossibility." );
