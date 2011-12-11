@@ -143,18 +143,17 @@ public class Allocations {
       }
       this.reservationIndex = UniqueIds.nextIndex( VmInstance.class, ( long ) request.getMaxCount( ) );
       this.reservationId = VmInstances.getId( this.reservationIndex, 0 ).replaceAll( "i-", "r-" );
-      final byte[] tmpData = new byte[0];
       Contract<Date> expiry = this.getContext( ).getContracts( ).get( Contract.Type.EXPIRATION );
       this.expiration = ( expiry == null ? new Date( 32503708800000l ) : expiry.getValue( ) );
       if ( this.request.getUserData( ) != null ) {
         try {
           this.userData = Base64.decode( this.request.getUserData( ) );
-          this.request.setUserData( new String( Base64.encode( tmpData ) ) );
-        } catch ( final Exception e ) {}
+          this.request.setUserData( new String( Base64.encode( this.userData ) ) );
+        } catch ( Exception e ) {}
       } else {
         try {
-          this.request.setUserData( new String( Base64.encode( tmpData ) ) );
-        } catch ( final Exception ex ) {
+          this.request.setUserData( new String( Base64.encode(  new byte[0] ) ) );
+        } catch ( Exception ex ) {
           LOG.error( ex, ex );
         }
       }
