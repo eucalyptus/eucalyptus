@@ -63,7 +63,6 @@
 
 package com.eucalyptus.vm;
 
-import java.security.AccessControlException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
@@ -71,20 +70,17 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import javax.persistence.EntityTransaction;
-import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 import org.mule.RequestContext;
-import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.cloud.CloudMetadatas;
 import com.eucalyptus.cloud.ImageMetadata;
 import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.run.AdmissionControl;
 import com.eucalyptus.cloud.run.Allocations;
+import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.cloud.run.ClusterAllocator;
 import com.eucalyptus.cloud.run.VerifyMetadata;
-import com.eucalyptus.cloud.run.Allocations.Allocation;
-import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.callback.ConsoleOutputCallback;
@@ -95,17 +91,14 @@ import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
-import com.eucalyptus.context.IllegalContextAccessException;
 import com.eucalyptus.context.ServiceContext;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.images.BlockStorageImageInfo;
-import com.eucalyptus.network.NetworkGroup;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.async.AsyncRequests;
@@ -116,7 +109,6 @@ import com.eucalyptus.vm.VmInstance.Reason;
 import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstance.VmStateSet;
 import com.eucalyptus.vm.VmInstances.TerminatedInstanceException;
-import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.Iterables;
@@ -173,10 +165,10 @@ public class VmControl {
   
   public static RunInstancesResponseType runInstances( RunInstancesType request ) throws Exception {
     RunInstancesResponseType reply = request.getReply( );
-    Allocation allocInfo = Allocations.begin( request );
+    Allocation allocInfo = Allocations.run( request );
     EntityTransaction db = Entities.get( VmInstance.class );
     try {
-      Predicates.and( VerifyMetadata.get( ), AdmissionControl.get( ) ).apply( allocInfo );
+      Predicates.and( VerifyMetadata.get( ), AdmissionControl.run( ) ).apply( allocInfo );
       allocInfo.commit( );
       
       ReservationInfoType reservation = new ReservationInfoType( allocInfo.getReservationId( ),
@@ -277,9 +269,9 @@ public class VmControl {
                 oldCode = vm.getState( ).getCode( );
                 oldState = vm.getState( ).getName( );
                 if ( VmState.STOPPED.apply( vm ) ) {
-                  newCode = VmState.STOPPED.getCode( );
-                  newState = VmState.STOPPED.getName( );
-                  VmInstances.stopped( vm );
+                  newCode = VmState.TERMINATED.getCode( );
+                  newState = VmState.TERMINATED.getName( );
+                  VmInstances.terminated( vm );
                 } else if ( VmStateSet.RUN.apply( vm ) ) {
                   newCode = VmState.SHUTTING_DOWN.getCode( );
                   newState = VmState.SHUTTING_DOWN.getName( );
@@ -430,19 +422,10 @@ public class VmControl {
       EntityTransaction db = Entities.get( VmInstance.class );
       try {//scope for transaction
         final VmInstance vm = RestrictedTypes.doPrivileged( instanceId, VmInstance.class );
-        RunInstancesType runRequest = new RunInstancesType( ) {
-          {
-            this.setMinCount( 1 );
-            this.setMaxCount( 1 );
-            this.setImageId( vm.getImageId( ) );
-            this.setAvailabilityZone( vm.getPartition( ) );
-            this.getGroupSet( ).addAll( vm.getNetworkNames( ) );
-            this.setInstanceType( vm.getVmType( ).getName( ) );
-          }
-        };
-        Allocation allocInfo = Allocations.begin( runRequest );
+        Allocation allocInfo = Allocations.start( vm );
         try {//scope for allocInfo
-          Predicates.and( VerifyMetadata.get( ), AdmissionControl.get( ) ).apply( allocInfo );
+          AdmissionControl.run( ).apply( allocInfo );
+          vm.setState( VmState.PENDING );
           ClusterAllocator.get( ).apply( allocInfo );
           final int oldCode = vm.getState( ).getCode( ), newCode = VmState.PENDING.getCode( );
           final String oldState = vm.getState( ).getName( ), newState = VmState.PENDING.getName( );

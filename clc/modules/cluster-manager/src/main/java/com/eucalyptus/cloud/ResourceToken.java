@@ -82,6 +82,7 @@ import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.network.ExtantNetwork;
 import com.eucalyptus.network.PrivateNetworkIndex;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstances;
@@ -108,18 +109,9 @@ public class ResourceToken implements VmInstanceMetadata, Comparable<ResourceTok
   
   public ResourceToken( final Allocation allocInfo, final int resourceAllocationSequenceNumber, final int launchIndex ) {
     this.allocation = allocInfo;
-    Contract<Date> expiry = allocInfo.getContext( ).getContracts( ).get( Contract.Type.EXPIRATION );
-    this.expirationTime = ( expiry == null ? new Date( 32503708800000l ) : expiry.getValue( ) );
+    this.expirationTime = allocInfo.getExpiration( );
     this.launchIndex = launchIndex;
-    String tempVmId = VmInstances.getId( allocInfo.getReservationIndex( ), launchIndex );
-    try {//GRZE:ugly hack.
-      if ( Contexts.lookup( ).getRequest( ) instanceof StartInstancesType ) {
-        tempVmId = ( ( StartInstancesType ) Contexts.lookup( ).getRequest( ) ).getInstancesSet( ).get( launchIndex );
-      }
-    } catch ( Exception ex ) {
-      LOG.error( ex, ex );
-    }
-    this.instanceId = tempVmId;
+    this.instanceId = allocInfo.getInstanceId( launchIndex );
     this.instanceUuid = UUID.randomUUID( ).toString( );
     this.resourceAllocationSequenceNumber = resourceAllocationSequenceNumber;
     this.creationTime = Calendar.getInstance( ).getTime( );
@@ -307,7 +299,7 @@ public class ResourceToken implements VmInstanceMetadata, Comparable<ResourceTok
   public OwnerFullName getOwner( ) {
     return this.allocation.getOwnerFullName( );
   }
-
+  
   public Date getExpirationTime( ) {
     return this.expirationTime;
   }

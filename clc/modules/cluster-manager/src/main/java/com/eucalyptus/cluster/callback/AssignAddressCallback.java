@@ -75,6 +75,7 @@ import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.MessageCallback;
@@ -116,8 +117,21 @@ public class AssignAddressCallback extends MessageCallback<AssignAddressType, As
   
   @Override
   public void fireException( Throwable e ) {
-    LOG.debug( e, e );
-    this.cleanupState( );
+    LOG.error( e );
+    Logs.extreme( ).error( e, e );
+    EventRecord.here( AssignAddressCallback.class, EventType.ADDRESS_ASSIGNING, Transition.assigning.toString( ), LogUtil.FAIL, this.address.toString( ) ).debug( );
+    LOG.debug( LogUtil.subheader( this.getRequest( ).toString( ) ) );
+    if ( this.address.isPending( ) ) {
+      try {
+        this.address.clearPending( );
+      } catch ( Exception ex ) {
+      }
+    } 
+    if ( this.address.isSystemOwned( ) ) {
+      Addresses.release( this.address );
+    } else if ( this.address.isAssigned( ) ) {
+      AsyncRequests.newRequest( this.address.unassign( ).getCallback( ) ).dispatch( this.address.getPartition( ) );
+    }
   }
   
   private boolean checkVmState( ) {
@@ -164,18 +178,6 @@ public class AssignAddressCallback extends MessageCallback<AssignAddressType, As
       LOG.error( ex, ex );
     } catch ( NoSuchElementException ex ) {
       LOG.error( ex, ex );
-    }
-  }
-  
-  private void cleanupState( ) {
-    EventRecord.here( AssignAddressCallback.class, EventType.ADDRESS_ASSIGNING, Transition.assigning.toString( ), LogUtil.FAIL, address.toString( ) ).debug( );
-    LOG.debug( LogUtil.subheader( this.getRequest( ).toString( ) ) );
-    if ( this.address.isPending( ) ) {
-      this.address.clearPending( );
-    } else if ( this.address.isSystemOwned( ) ) {
-      Addresses.release( address );
-    } else if ( this.address.isAssigned( ) ) {
-      AsyncRequests.newRequest( address.unassign( ).getCallback( ) ).dispatch( address.getPartition( ) );
     }
   }
   
