@@ -215,7 +215,7 @@ public class EmpyreanService {
     for ( final ComponentId compId : ComponentIds.list( ) ) {
       ServiceConfiguration a;
       try {
-        a = Components.lookup( compId ).lookup( name );
+        return Components.lookup( compId ).lookup( name );
       } catch ( NoSuchElementException ex ) {
         if ( compId.isRegisterable( ) ) {
           try {

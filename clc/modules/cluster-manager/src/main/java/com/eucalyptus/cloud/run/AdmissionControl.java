@@ -113,7 +113,7 @@ import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 public class AdmissionControl {
   private static Logger LOG = Logger.getLogger( AdmissionControl.class );
   
-  public static Predicate<Allocation> get( ) {
+  public static Predicate<Allocation> run( ) {
     return RunAdmissionControl.INSTANCE;
   }
   
@@ -126,7 +126,7 @@ public class AdmissionControl {
       List<ResourceAllocator> finished = Lists.newArrayList( );
       EntityTransaction db = Entities.get( NetworkGroup.class );
       try {
-        for ( ResourceAllocator allocator : pending ) {
+        for ( ResourceAllocator allocator : allocators ) {
           runAllocatorSafely( allocInfo, allocator );
           finished.add( allocator );
         }
@@ -179,7 +179,7 @@ public class AdmissionControl {
     
   }
   
-  private static final List<ResourceAllocator> pending = new ArrayList<ResourceAllocator>( ) {
+  private static final List<ResourceAllocator> allocators = new ArrayList<ResourceAllocator>( ) {
                                                          {
                                                            this.add( NodeResourceAllocator.INSTANCE );
                                                            this.add( VmTypePrivAllocator.INSTANCE );
@@ -271,12 +271,13 @@ public class AdmissionControl {
               remaining -= tokens.size( );
               allocInfo.setPartition( partition );
             } catch ( Exception t ) {
+              LOG.error( t );
+              Logs.extreme( ).error( t, t );
               if ( ( ( available = checkAvailability( vmTypeName, authorizedClusters ) ) < remaining ) || remaining > 0 ) {
                 allocInfo.abort( );
-                throw new NotEnoughResourcesException( "Not enough resources (" + available + " in " + zoneName + " < " + minAmount + "): vm instances." );
+                throw new NotEnoughResourcesException( "Not enough resources (" + available + " in " + zoneName + " < " + minAmount + "): vm instances.", t );
               } else {
-                LOG.error( t, t );
-                throw new NotEnoughResourcesException( "Not enough resources (" + available + " in " + zoneName + " < " + minAmount + "): vm instances." );
+                throw new NotEnoughResourcesException( "Not enough resources (" + available + " in " + zoneName + " < " + minAmount + "): vm instances.", t );
               }
             }
           }

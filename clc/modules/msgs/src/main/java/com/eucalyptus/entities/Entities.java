@@ -874,13 +874,13 @@ public class Entities {
     
     @Override
     public R apply( final D input ) {
-      if ( Entities.hasTransaction( ) ) {
-        throw new RuntimeException( "Failed to execute retryable transaction because of a nested transaction: "
-                                    + Entities.getTransaction( input.getClass( ) ).getRecord( ).stack );
-      } else {
+//      if ( Entities.hasTransaction( this.entityType ) ) {
+//        throw new RuntimeException( "Failed to execute retryable transaction because of a nested transaction: "
+//                                    + Entities.getTransaction( input.getClass( ) ).getRecord( ).stack );
+//      } else {
         RuntimeException rootCause = null;
         for ( int i = 0; i < retries; i++ ) {
-          EntityTransaction db = Entities.get( entityType );
+          EntityTransaction db = Entities.get( this.entityType );
           try {
             R ret = this.function.apply( input );
             db.commit( );
@@ -900,7 +900,7 @@ public class Entities {
         throw ( rootCause != null
                 ? rootCause
                 : new NullPointerException( "BUG: Transaction retry failed but root cause exception is unknown!" ) );
-      }
+//      }
     }
     
   }
