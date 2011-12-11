@@ -77,6 +77,7 @@ import javax.persistence.PreRemove;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Parent;
+import com.eucalyptus.blockstorage.Volume;
 import com.eucalyptus.cloud.ImageMetadata;
 import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.images.BlockStorageImageInfo;
@@ -164,8 +165,12 @@ public class VmBootRecord {
     return this.platform;
   }
   
-  Set<VmVolumeAttachment> getPersistentVolumes( ) {
+  public Set<VmVolumeAttachment> getPersistentVolumes( ) {
     return this.persistentVolumes;
+  }
+  
+  public boolean hasPersistentVolumes( ) {
+    return !this.persistentVolumes.isEmpty( );
   }
   
   byte[] getUserData( ) {
