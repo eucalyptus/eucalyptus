@@ -39,6 +39,14 @@ public class Contexts {
     return ctx;
   }
   
+  public static boolean exists( ) {
+    try {
+      lookup( );
+      return true;
+    } catch ( IllegalContextAccessException ex ) {
+      return false;
+    }
+  }
   public static boolean exists( Channel channel ) {
     return channelContexts.containsKey( channel );
   }

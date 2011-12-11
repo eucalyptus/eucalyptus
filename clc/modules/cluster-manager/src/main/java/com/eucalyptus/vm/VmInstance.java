@@ -379,84 +379,33 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         
         final EntityTransaction db = Entities.get( VmInstance.class );
         try {
-          final VmType vmType = VmTypes.getVmType( input.getInstanceType( ).getName( ) );
-          Partition partition;
+          VmType vmType = RestoreAllocation.restoreVmType( input );
+          Partition partition = RestoreAllocation.restorePartition( input );
+          String imageId = RestoreAllocation.restoreImage( input );
+          String kernelId = RestoreAllocation.restoreKernel( input );
+          String ramdiskId = RestoreAllocation.restoreRamdisk( input );
+          BootableSet bootSet = RestoreAllocation.restoreBootSet( input, imageId, kernelId, ramdiskId );
+          int launchIndex = RestoreAllocation.restoreLaunchIndex( input );
+          SshKeyPair keyPair = RestoreAllocation.restoreSshKeyPair( input, userFullName );
+          byte[] userData = RestoreAllocation.restoreUserData( input );
+          VmInstance vmInst;
           try {
-            partition = Partitions.lookupByName( input.getPlacement( ) );
-          } catch ( final Exception ex2 ) {
-            partition = Partitions.lookupByName( Clusters.getInstance( ).lookup( input.getPlacement( ) ).getPartition( ) );
+            vmInst = new VmInstance.Builder( ).owner( userFullName )
+                                              .withIds( input.getInstanceId( ), input.getReservationId( ) )
+                                              .bootRecord( bootSet,
+                                                           userData,
+                                                           keyPair,
+                                                           vmType )
+                                              .placement( partition, partition.getName( ) )
+                                              .networking( networks, index )
+                                              .build( launchIndex );
+            vmInst.setNaturalId( input.getUuid( ) );
+            RestoreAllocation.restoreAddress( input, vmInst );
+            Entities.persist( vmInst );
+          } catch ( Exception ex1 ) {
+            LOG.error( "Failed to restore instance " + input.getInstanceId( ) + " because of: " + ex1.getMessage( ) );
+            Logs.extreme( ).error( ex1, ex1 );
           }
-          String imageId = null;
-          String kernelId = null;
-          String ramdiskId = null;
-          try {
-            imageId = input.getInstanceType( ).lookupRoot( ).getId( );
-            try {
-              kernelId = input.getInstanceType( ).lookupKernel( ).getId( );
-            } catch ( Exception ex ) {
-              LOG.error( ex, ex );
-            }
-            try {
-              ramdiskId = input.getInstanceType( ).lookupRamdisk( ).getId( );
-            } catch ( Exception ex ) {
-              LOG.error( ex, ex );
-            }
-          } catch ( final Exception ex2 ) {
-            LOG.error( ex2, ex2 );
-          }
-          BootableSet bootSet = null;
-          if ( imageId != null ) {
-            bootSet = Emis.recreateBootableSet( imageId, kernelId, ramdiskId );
-          } else {
-            //TODO:GRZE: handle the case where an instance is running and it's root emi has been deregistered.
-          }
-          
-          int launchIndex;
-          try {
-            launchIndex = Integer.parseInt( input.getLaunchIndex( ) );
-          } catch ( final Exception ex1 ) {
-            launchIndex = 1;
-          }
-          
-          SshKeyPair keyPair = null;
-          try {
-            keyPair = KeyPairs.lookup( userFullName, input.getKeyValue( ) );
-          } catch ( final Exception ex ) {
-            keyPair = KeyPairs.noKey( );
-          }
-          
-          byte[] userData = null;
-          try {
-            userData = Base64.decode( input.getUserData( ) );
-          } catch ( final Exception ex ) {
-            userData = new byte[0];
-          }
-          
-          final VmInstance vmInst = new VmInstance.Builder( ).owner( userFullName )
-                                                             .withIds( input.getInstanceId( ), input.getReservationId( ) )
-                                                             .bootRecord( bootSet,
-                                                                          userData,
-                                                                          keyPair,
-                                                                          vmType )
-                                                             .placement( partition, partition.getName( ) )
-                                                             .networking( networks, index )
-                                                             .build( launchIndex );
-          vmInst.setNaturalId( input.getUuid( ) );
-          try {
-            Address addr = Addresses.getInstance( ).lookup( input.getNetParams( ).getIgnoredPublicIp( ) );
-            if ( addr.isAssigned( ) &&
-                 addr.getInstanceAddress( ).equals( input.getNetParams( ).getIpAddress( ) ) &&
-                 addr.getInstanceId( ).equals( input.getInstanceId( ) ) ) {
-              vmInst.updateAddresses( input.getNetParams( ).getIpAddress( ), input.getNetParams( ).getIgnoredPublicIp( ) );
-            } else if ( !addr.isAssigned( ) && addr.isAllocated( ) && ( addr.isSystemOwned( ) || addr.getOwner( ).equals( userFullName ) ) ) {
-              vmInst.updateAddresses( input.getNetParams( ).getIpAddress( ), input.getNetParams( ).getIgnoredPublicIp( ) );
-            } else {
-              vmInst.updateAddresses( input.getNetParams( ).getIpAddress( ), input.getNetParams( ).getIpAddress( ) );
-            }
-          } catch ( final Exception ex ) {
-            LOG.error( ex );
-          }
-          Entities.persist( vmInst );
           db.commit( );
           return true;
         } catch ( final Exception ex ) {
@@ -470,6 +419,141 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
 //      } catch ( NoSuchElementException e ) {
 //        ClusterConfiguration config = Clusters.getInstance( ).lookup( runVm.getPlacement( ) ).getConfiguration( );
 //        AsyncRequests.newRequest( new TerminateCallback( runVm.getInstanceId( ) ) ).dispatch( runVm.getPlacement( ) );
+    }
+
+    private static void restoreAddress( final VmInfo input, VmInstance vmInst ) {
+      try {
+        final UserFullName userFullName = UserFullName.getInstance( input.getOwnerId( ) );
+        Address addr = Addresses.getInstance( ).lookup( input.getNetParams( ).getIgnoredPublicIp( ) );
+        if ( addr.isAssigned( ) &&
+             addr.getInstanceAddress( ).equals( input.getNetParams( ).getIpAddress( ) ) &&
+             addr.getInstanceId( ).equals( input.getInstanceId( ) ) ) {
+          vmInst.updateAddresses( input.getNetParams( ).getIpAddress( ), input.getNetParams( ).getIgnoredPublicIp( ) );
+        } else if ( !addr.isAssigned( ) && addr.isAllocated( ) && ( addr.isSystemOwned( ) || addr.getOwner( ).equals( userFullName ) ) ) {
+          vmInst.updateAddresses( input.getNetParams( ).getIpAddress( ), input.getNetParams( ).getIgnoredPublicIp( ) );
+        } else {
+          vmInst.updateAddresses( input.getNetParams( ).getIpAddress( ), input.getNetParams( ).getIpAddress( ) );
+        }
+      } catch ( final Exception ex2 ) {
+        LOG.error( "Failed to restore address state " + input.getNetParams( )
+          + " for instance "
+          + input.getInstanceId( )
+          + " because of: "
+          + ex2.getMessage( ) );
+        Logs.extreme( ).error( ex2, ex2 );
+      }
+    }
+    
+    private static byte[] restoreUserData( final VmInfo input ) {
+      byte[] userData = null;
+      try {
+        userData = Base64.decode( input.getUserData( ) );
+      } catch ( final Exception ex ) {
+        userData = new byte[0];
+      }
+      return userData;
+    }
+    
+    private static SshKeyPair restoreSshKeyPair( final VmInfo input, final UserFullName userFullName ) {
+      SshKeyPair keyPair = null;
+      try {
+        keyPair = KeyPairs.lookup( userFullName, input.getKeyValue( ) );
+      } catch ( final Exception ex ) {
+        keyPair = KeyPairs.noKey( );
+      }
+      return keyPair;
+    }
+    
+    private static int restoreLaunchIndex( final VmInfo input ) {
+      int launchIndex = 1;
+      try {
+        launchIndex = Integer.parseInt( input.getLaunchIndex( ) );
+      } catch ( final Exception ex1 ) {
+        launchIndex = 1;
+      }
+      return launchIndex;
+    }
+    
+    private static BootableSet restoreBootSet( final VmInfo input, String imageId, String kernelId, String ramdiskId ) {
+      BootableSet bootSet = null;
+      if ( imageId != null ) {
+        try {
+          bootSet = Emis.recreateBootableSet( imageId, kernelId, ramdiskId );
+        } catch ( Exception ex ) {
+          LOG.error( "Failed to recreate bootset with imageId " + imageId
+            + ", kernelId "
+            + kernelId
+            + " ramdiskId "
+            + ramdiskId
+            + " for: "
+            + input.getInstanceId( )
+            + " because of: "
+            + ex.getMessage( ) );
+          Logs.extreme( ).error( ex, ex );
+        }
+      } else {
+        //TODO:GRZE: handle the case where an instance is running and it's root emi has been deregistered.
+      }
+      return bootSet;
+    }
+    
+    private static String restoreRamdisk( final VmInfo input ) {
+      String ramdiskId = null;
+      try {
+        ramdiskId = input.getInstanceType( ).lookupRamdisk( ).getId( );
+      } catch ( Exception ex ) {
+        LOG.error( "Failed to lookup ramdiskId " + input.getInstanceType( ) + " for: " + input.getInstanceId( ) + " because of: " + ex.getMessage( ) );
+        Logs.extreme( ).error( ex, ex );
+      }
+      return ramdiskId;
+    }
+    
+    private static String restoreKernel( final VmInfo input ) {
+      String kernelId = null;
+      try {
+        kernelId = input.getInstanceType( ).lookupKernel( ).getId( );
+      } catch ( Exception ex ) {
+        LOG.error( "Failed to lookup kernelId " + input.getInstanceType( ) + " for: " + input.getInstanceId( ) + " because of: " + ex.getMessage( ) );
+        Logs.extreme( ).error( ex, ex );
+      }
+      return kernelId;
+    }
+    
+    private static String restoreImage( final VmInfo input ) {
+      String imageId = null;
+      try {
+        imageId = input.getInstanceType( ).lookupRoot( ).getId( );
+      } catch ( final Exception ex2 ) {
+        LOG.error( "Failed to lookup imageId " + input.getInstanceType( ) + " for: " + input.getInstanceId( ) + " because of: " + ex2.getMessage( ) );
+        Logs.extreme( ).error( ex2, ex2 );
+      }
+      return imageId;
+    }
+    
+    private static Partition restorePartition( final VmInfo input ) {
+      Partition partition = null;
+      try {
+        partition = Partitions.lookupByName( input.getPlacement( ) );
+      } catch ( final Exception ex2 ) {
+        try {
+          partition = Partitions.lookupByName( Clusters.getInstance( ).lookup( input.getPlacement( ) ).getPartition( ) );
+        } catch ( Exception ex ) {
+          LOG.error( "Failed to lookup partition " + input.getPlacement( ) + " for: " + input.getInstanceId( ) + " because of: " + ex.getMessage( ) );
+          Logs.extreme( ).error( ex, ex );
+        }
+      }
+      return partition;
+    }
+    
+    private static VmType restoreVmType( final VmInfo input ) {
+      VmType vmType = null;
+      try {
+        vmType = VmTypes.getVmType( input.getInstanceType( ).getName( ) );
+      } catch ( Exception ex ) {
+        LOG.error( "Failed to lookup vm type " + input.getInstanceType( ).getName( ) + " for: " + input.getInstanceId( ) + " because of: " + ex.getMessage( ) );
+        Logs.extreme( ).error( ex, ex );
+      }
+      return vmType;
     }
     
   }

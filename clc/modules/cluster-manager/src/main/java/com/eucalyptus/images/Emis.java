@@ -435,11 +435,15 @@ public class Emis {
   
   private static <T extends ImageInfo> T resolveDiskImage( String imageId, Function<String, T> resolver ) throws IllegalMetadataAccessException {
     T img = resolver.apply( imageId );
-    Predicate<T> filter = Predicates.and( Images.FilterPermissions.INSTANCE, RestrictedTypes.filterPrivilegedWithoutOwner( ) );
-    if ( filter.apply( img ) ) {
-      return img;
+    if ( Contexts.exists( ) ) { 
+      Predicate<T> filter = Predicates.and( Images.FilterPermissions.INSTANCE, RestrictedTypes.filterPrivilegedWithoutOwner( ) );
+      if ( filter.apply( img ) ) {
+        return img;
+      } else {
+        throw new IllegalMetadataAccessException( imageId + ": permission denied." );
+      }
     } else {
-      throw new IllegalMetadataAccessException( imageId + ": permission denied." );
+      return img;
     }
   }
   
