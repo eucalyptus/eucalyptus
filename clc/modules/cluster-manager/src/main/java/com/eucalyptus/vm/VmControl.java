@@ -212,7 +212,7 @@ public class VmControl {
           if ( instanceMap.put( v.getReservationId( ), VmInstances.transform( v ) ) && !reservations.containsKey( v.getReservationId( ) ) ) {
             reservations.put( v.getReservationId( ), new ReservationInfoType( v.getReservationId( ), v.getOwner( ).getAccountNumber( ), v.getNetworkNames( ) ) );
           }
-          db.commit( );
+          db.rollback( );
         } catch ( Exception ex ) {
           Logs.exhaust( ).error( ex, ex );
           db.rollback( );
