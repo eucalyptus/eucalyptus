@@ -78,6 +78,9 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.log4j.Logger;
 import org.jgroups.Address;
@@ -102,7 +105,6 @@ import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.empyrean.Empyrean;
-import com.eucalyptus.event.Listeners;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.scripting.Groovyness;
 import com.eucalyptus.system.Threads;
@@ -300,6 +302,7 @@ public class Hosts {
     };
     private final long                            interval;
     private static final ScheduledExecutorService hostPruner = Executors.newScheduledThreadPool( 32 );
+    private static final Lock                     canHasChecks     = new ReentrantLock( );
     
     private PeriodicMembershipChecks( long interval ) {
       this.interval = interval;
@@ -313,13 +316,17 @@ public class Hosts {
           public void run( ) {
             if ( !Bootstrap.isLoaded( ) || Bootstrap.isShuttingDown( ) ) {
               return;
-            } else {
-              LOG.debug( runner.toString( ) + ": RUNNING" );
+            } else if ( PeriodicMembershipChecks.canHasChecks.tryLock( ) ) {
               try {
-                runner.run( );
-              } catch ( Exception ex ) {
-                LOG.error( runner.toString( ) + ": FAILED because of: " + ex.getMessage( ) );
-                Logs.extreme( ).error( runner.toString( ) + ": FAILED because of: " + ex.getMessage( ), ex );
+                LOG.debug( runner.toString( ) + ": RUNNING" );
+                try {
+                  runner.run( );
+                } catch ( Exception ex ) {
+                  LOG.error( runner.toString( ) + ": FAILED because of: " + ex.getMessage( ) );
+                  Logs.extreme( ).error( runner.toString( ) + ": FAILED because of: " + ex.getMessage( ), ex );
+                }
+              } finally {
+                PeriodicMembershipChecks.canHasChecks.unlock( );
               }
             }
           }

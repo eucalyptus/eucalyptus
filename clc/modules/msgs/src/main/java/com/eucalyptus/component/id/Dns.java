@@ -77,11 +77,6 @@ public class Dns extends ComponentId {
   }
   
   @Override
-  public boolean runLimitedServices( ) {
-    return System.getProperty( "euca.remote.dns" ) != null;
-  }
-
-  @Override
   public boolean isDistributedService( ) {
     return true;
   }

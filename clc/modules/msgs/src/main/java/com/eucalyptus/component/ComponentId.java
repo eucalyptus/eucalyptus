@@ -398,9 +398,6 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
     } else if ( this.isAlwaysLocal( ) ) {
       builder.append( "alwaysLocal:" );
     }
-    if ( this.runLimitedServices( ) ) {
-      builder.append( "runs-limited-services:" );
-    }
     return builder.toString( );
   }
   
