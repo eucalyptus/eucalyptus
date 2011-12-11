@@ -93,16 +93,17 @@ public abstract class AbstractServiceBuilder<T extends ServiceConfiguration> imp
     }
     Partition partitionAnnotation = Ats.from( this.getComponentId( ) ).get( Partition.class );
     boolean manyToOne = partitionAnnotation != null && partitionAnnotation.manyToOne( );
-    try {
-      if ( ServiceConfigurations.listPartition( this.getComponentId( ).getClass( ), partition ).size( ) >= 2 && !manyToOne ) {
-        throw new ServiceRegistrationException( "Unable to register more than two services in a partition for component type: " + this.getComponentId( ).getName( ) );
-      }
-    } catch ( PersistenceException ex1 ) {
-      LOG.trace( "Failed to find existing component registration for partition name: " + partition );
-    }
-    
     ServiceConfiguration existingHost = null;
     if ( !manyToOne ) {
+      if ( this.getComponentId( ).isPartitioned( ) ) {
+        if ( ServiceConfigurations.listPartition( this.getComponentId( ).getClass( ), partition ).size( ) >= 2 ) {
+          throw new ServiceRegistrationException( "Unable to register more than two services in a partition for component type: " + this.getComponentId( ).getName( ) );
+        }
+      } else {
+        if ( ServiceConfigurations.list( this.getComponentId( ).getClass( ) ).size( ) >= 2 ) {
+          throw new ServiceRegistrationException( "Unable to register more than two services in a partition for component type: " + this.getComponentId( ).getName( ) );
+        }
+      }
       try {
         existingHost = ServiceConfigurations.lookupByHost( this.getComponentId( ).getClass( ), host );
       } catch ( PersistenceException ex1 ) {
