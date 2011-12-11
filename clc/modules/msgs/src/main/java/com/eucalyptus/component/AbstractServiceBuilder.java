@@ -91,42 +91,16 @@ public abstract class AbstractServiceBuilder<T extends ServiceConfiguration> imp
     } catch ( PersistenceException ex1 ) {
       LOG.trace( "Failed to find existing component registration for name: " + name );
     }
-	try {
-	    ServiceConfiguration foundService = null;
-	    foundService = (ServiceConfiguration) ServiceConfigurations
-		    .lookup(this.newInstance());
-
-	    if (foundService != null) {
-
-		int counter = 0;
-		for (ServiceConfiguration serviceConfiguration : ServiceConfigurations
-			.list()) {
-
-		    if (foundService.getPartition().equals(
-			    serviceConfiguration.getPartition())
-			    && foundService
-				    .getClass()
-				    .getName()
-				    .equals(serviceConfiguration.getClass()
-					    .getName())) {
-			LOG.debug("Found Component Name : "
-				+ serviceConfiguration.getClass().getName());
-			counter++;
-		    }
-		}
-
-		Partition partitionAnnotation = Ats.from( this.getComponentId( ) ).get( Partition.class );
-		if (counter >= 2 && ( partitionAnnotation != null && !partitionAnnotation.manyToOne() ) ) {
-		    throw new ServiceRegistrationException(
-			    "Unable to register more than one slave to a partition");
-		}
-	    }
-
-	} catch (PersistenceException ex1) {
-	    LOG.trace("Failed to find existing component registration for partition name: "
-		    + partition);
-	}
-
+    Partition partitionAnnotation = Ats.from( this.getComponentId( ) ).get( Partition.class );
+    boolean manyToOne = partitionAnnotation != null && partitionAnnotation.manyToOne( );
+    try {
+      if ( ServiceConfigurations.listPartition( this.getComponentId( ).getClass( ), partition ).size( ) >= 2 && !manyToOne ) {
+        throw new ServiceRegistrationException( "Unable to register more than two services in a partition for component type: " + this.getComponentId( ).getName( ) );
+      }
+    } catch ( PersistenceException ex1 ) {
+      LOG.trace( "Failed to find existing component registration for partition name: " + partition );
+    }
+    
     ServiceConfiguration existingHost = null;
     try {
       existingHost = ServiceConfigurations.lookupByHost( this.getComponentId( ).getClass( ), host );
@@ -139,7 +113,7 @@ public abstract class AbstractServiceBuilder<T extends ServiceConfiguration> imp
       return true;
     } else if ( existingName != null ) {
       throw new ServiceRegistrationException( "Component with name=" + name + " already exists with host=" + existingName.getHostName( ) );
-    } else if ( existingHost != null ) {
+    } else if ( !manyToOne && existingHost != null ) {
       throw new ServiceRegistrationException( "Component with host=" + host + " already exists with name=" + existingHost.getName( ) );
     } else {
       throw new ServiceRegistrationException( "BUG: This is a logical impossibility." );
