@@ -232,7 +232,7 @@ public class Databases {
   }
   
   private static void runDbStateChange( Function<String, Runnable> runnableFunction ) {
-    LOG.info( "DB STATE CHANGE: " + runnableFunction );
+    Logs.extreme( ).info( "DB STATE CHANGE: " + runnableFunction );
     try {
       if ( canHas.writeLock( ).tryLock( ) ) {
         try {
@@ -616,9 +616,11 @@ public class Databases {
     return SyncState.SYNCED.equals( syncState.get( ) );
   }
   
-  public static Boolean isSynchronizing( ) {
+  public static Boolean isVolatile( ) {
     if ( !Bootstrap.isFinished( ) || BootstrapArgs.isInitializeSystem( ) ) {
       return false;
+    } else if ( Hosts.listActiveDatabases( ).size( ) != Databases.lookup( "eucalyptus_config" ).getActiveDatabases( ).size( ) ) {
+      return true;
     } else if ( !Hosts.isCoordinator( ) && BootstrapArgs.isCloudController( ) ) {
       return !isSynchronized( );
     } else {
@@ -633,12 +635,12 @@ public class Databases {
   private static Predicate<StackTraceElement> stackFilter                    = Predicates.not( notStackFilterYouAreLookingFor );
   
   public static void awaitSynchronized( ) {
-    if ( !isSynchronizing( ) ) {
+    if ( !isVolatile( ) ) {
       return;
     } else {
       Collection<StackTraceElement> stack = Threads.filteredStack( stackFilter );
       String caller = ( stack.isEmpty( ) ? "" : stack.iterator( ).next( ).toString( ) );
-      for ( int i = 0; i < MAX_TX_START_SYNC_RETRIES && isSynchronizing( ); i++ ) {
+      for ( int i = 0; i < MAX_TX_START_SYNC_RETRIES && isVolatile( ); i++ ) {
         try {
           TimeUnit.MILLISECONDS.sleep( 1000 );
           LOG.debug( "Transaction blocked on sync: " + caller );
