@@ -935,4 +935,14 @@ public class Entities {
     }
   }
   
+  public static void commit( EntityTransaction tx ) {
+    if ( tx.getRollbackOnly( ) ) {
+      tx.rollback( );
+    } else if ( Databases.isSynchronizing( ) ) {
+      tx.rollback( );
+    } else {
+      tx.commit( );
+    }
+  }
+  
 }

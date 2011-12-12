@@ -1,6 +1,7 @@
 package com.eucalyptus.cluster.callback;
 
-import java.util.List;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.CancellationException;
@@ -21,12 +22,10 @@ import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.vm.VmInstances.TerminatedInstanceException;
 import com.eucalyptus.vm.VmType;
 import com.eucalyptus.vm.VmTypes;
-import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import edu.ucsb.eucalyptus.cloud.VmDescribeResponseType;
 import edu.ucsb.eucalyptus.cloud.VmDescribeType;
@@ -46,39 +45,51 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
         regarding( );
       }
     } );
-    this.initialInstances = Sets.newHashSet( Collections2.transform( VmInstances.list( ), CloudMetadatas.toDisplayName( ) ) );
+    Predicate<VmInstance> partitionFilter = new Predicate<VmInstance>( ) {
+      
+      @Override
+      public boolean apply( VmInstance input ) {
+        return input.getPartition( ).equals( VmStateCallback.this.getSubject( ).getPartition( ) ) || "default".equals( input.getPartition( ) );
+      }
+    };
+    Collection<VmInstance> clusterInstances = Collections2.filter( VmInstances.list( ), partitionFilter );
+    Collection<String> instanceNames = Collections2.transform( clusterInstances, CloudMetadatas.toDisplayName( ) );
+    this.initialInstances = Sets.newHashSet( instanceNames );
   }
   
   @Override
   public void fire( VmDescribeResponseType reply ) {
-    reply.setOriginCluster( this.getSubject( ).getConfiguration( ).getName( ) );
-    final Set<String> reportedInstances = Sets.newHashSet( );
-    for ( VmInfo vmInfo : reply.getVms( ) ) {
-      reportedInstances.add( vmInfo.getInstanceId( ) );
-      vmInfo.setPlacement( this.getSubject( ).getConfiguration( ).getName( ) );
-      VmTypeInfo typeInfo = vmInfo.getInstanceType( );
-      if ( typeInfo.getName( ) == null || "".equals( typeInfo.getName( ) ) ) {
-        for ( VmType t : VmTypes.list( ) ) {
-          if ( t.getCpu( ).equals( typeInfo.getCores( ) ) && t.getDisk( ).equals( typeInfo.getDisk( ) ) && t.getMemory( ).equals( typeInfo.getMemory( ) ) ) {
-            typeInfo.setName( t.getName( ) );
+    if ( Databases.isSynchronizing( ) ) {
+      return;
+    } else {
+      reply.setOriginCluster( this.getSubject( ).getConfiguration( ).getName( ) );
+      final Set<String> reportedInstances = Sets.newHashSet( );
+      for ( VmInfo vmInfo : reply.getVms( ) ) {
+        reportedInstances.add( vmInfo.getInstanceId( ) );
+        vmInfo.setPlacement( this.getSubject( ).getConfiguration( ).getName( ) );
+        VmTypeInfo typeInfo = vmInfo.getInstanceType( );
+        if ( typeInfo.getName( ) == null || "".equals( typeInfo.getName( ) ) ) {
+          for ( VmType t : VmTypes.list( ) ) {
+            if ( t.getCpu( ).equals( typeInfo.getCores( ) ) && t.getDisk( ).equals( typeInfo.getDisk( ) ) && t.getMemory( ).equals( typeInfo.getMemory( ) ) ) {
+              typeInfo.setName( t.getName( ) );
+            }
           }
         }
       }
-    }
-    
-    final Set<String> unreportedInstances = Sets.newHashSet( Sets.difference( this.initialInstances, reportedInstances ) );
-    final Set<String> restoreInstances = Sets.newHashSet( Sets.difference( reportedInstances, this.initialInstances ) );
-    for ( final VmInfo runVm : reply.getVms( ) ) {
-      if ( this.initialInstances.contains( runVm.getInstanceId( ) ) ) {
-        VmStateCallback.handleReportedState( runVm );
-      } else if ( restoreInstances.contains( runVm.getInstanceId( ) ) ) {
-        VmStateCallback.handleRestore( runVm );
+      
+      final Set<String> unreportedInstances = Sets.newHashSet( Sets.difference( this.initialInstances, reportedInstances ) );
+      final Set<String> restoreInstances = Sets.newHashSet( Sets.difference( reportedInstances, this.initialInstances ) );
+      for ( final VmInfo runVm : reply.getVms( ) ) {
+        if ( this.initialInstances.contains( runVm.getInstanceId( ) ) ) {
+          VmStateCallback.handleReportedState( runVm );
+        } else if ( restoreInstances.contains( runVm.getInstanceId( ) ) ) {
+          VmStateCallback.handleRestore( runVm );
+        }
+      }
+      for ( final String vmId : unreportedInstances ) {
+        VmStateCallback.handleUnreported( vmId );
       }
     }
-    for ( final String vmId : unreportedInstances ) {
-      VmStateCallback.handleUnreported( vmId );
-    }
-    
   }
   
   private static void handleUnreported( final String vmId ) {
@@ -99,11 +110,7 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
         db1.rollback( );
         return;
       }
-      if ( Databases.isSynchronizing( ) ) {
-        db1.rollback( );
-      } else {
-        db1.commit( );
-      }
+      Entities.commit( db1 );
     } catch ( final Exception ex ) {
       Logs.extreme( ).error( ex, ex );
       db1.rollback( );
@@ -129,11 +136,7 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
           db.rollback( );
           return;
         }
-        if ( Databases.isSynchronizing( ) ) {
-          db.rollback( );
-        } else {
-          db.commit( );
-        }
+        Entities.commit( db );
       } catch ( Exception ex ) {
         LOG.error( ex );
         Logs.extreme( ).error( ex, ex );
@@ -219,9 +222,20 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
                                                        }
                                                      };
     private final Predicate<VmInstance> filter       = Predicates.and( Predicates.or( VmStateSet.CHANGING, this.volumeState ), this.clusterMatch );
+    private Set<String>                 initialInstances;
     
     public VmPendingCallback( Cluster cluster ) {
       super( cluster );
+      Predicate<VmInstance> partitionFilter = new Predicate<VmInstance>( ) {
+        
+        @Override
+        public boolean apply( VmInstance input ) {
+          return input.getPartition( ).equals( VmPendingCallback.this.getSubject( ).getPartition( ) ) || "default".equals( input.getPartition( ) );
+        }
+      };
+      Collection<VmInstance> clusterInstances = Collections2.filter( VmInstances.list( ), partitionFilter );
+      Collection<String> instanceNames = Collections2.transform( clusterInstances, CloudMetadatas.toDisplayName( ) );
+      this.initialInstances = Sets.newHashSet( instanceNames );
       super.setRequest( new VmDescribeType( ) {
         {
           regarding( );
@@ -232,11 +246,7 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
                 this.getInstancesSet( ).add( vm.getInstanceId( ) );
               }
             }
-            if ( Databases.isSynchronizing( ) ) {
-              db.rollback( );
-            } else {
-              db.commit( );
-            }
+            Entities.commit( db );
           } catch ( Exception ex ) {
             Logs.exhaust( ).error( ex, ex );
             db.rollback( );
@@ -250,8 +260,14 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
     
     @Override
     public void fire( VmDescribeResponseType reply ) {
-      for ( final VmInfo runVm : reply.getVms( ) ) {
-        VmStateCallback.handleReportedState( runVm );
+      if ( Databases.isSynchronizing( ) ) {
+        return;
+      } else {
+        for ( final VmInfo runVm : reply.getVms( ) ) {
+          if ( this.initialInstances.contains( runVm.getInstanceId( ) ) ) {
+            VmStateCallback.handleReportedState( runVm );
+          }
+        }
       }
     }
     
