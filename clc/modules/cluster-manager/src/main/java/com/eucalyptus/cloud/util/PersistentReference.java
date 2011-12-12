@@ -174,7 +174,7 @@ public abstract class PersistentReference<T extends PersistentReference<T, R>, R
     State currentState = this.getState( );
     boolean matchPrecondition = preconditionState == null || ( currentState != null && preconditionState.equals( currentState ) );
     boolean matchFinal = ( finalState == null && currentState == null ) || ( finalState != null && currentState != null && finalState.equals( currentState ) );
-    boolean matchReferer = ( referer == null && this.getReference( ) == null ) || ( referer != null && this.getReference( ) != null && referer.equals( this.getReference( ) ) );
+    boolean matchReferer = ( this.getReference( ) == null ) || ( referer != null && this.getReference( ) != null && referer.equals( this.getReference( ) ) );
     if ( ( matchFinal && matchReferer ) || matchPrecondition ) {
       return;
     } else {
