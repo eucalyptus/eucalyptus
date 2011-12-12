@@ -1143,6 +1143,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
                                                                   + currentState
                                                                   + ":  please see logs for additional information." );
       this.pendingErrors.add( ex );
+      currentErrors.add( ex );
       throw Faults.failure( this.configuration, currentErrors );
     }
   }
