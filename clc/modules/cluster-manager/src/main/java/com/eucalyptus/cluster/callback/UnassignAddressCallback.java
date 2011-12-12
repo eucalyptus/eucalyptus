@@ -138,11 +138,6 @@ public class UnassignAddressCallback extends MessageCallback<UnassignAddressType
   
   @Override
   public void fire( UnassignAddressResponseType reply ) {
-    if ( reply.get_return( ) ) {
-      EventRecord.here( UnassignAddressCallback.class, EventType.ADDRESS_UNASSIGN, this.address.toString( ) ).info( );
-    } else {
-      EventRecord.here( UnassignAddressCallback.class, EventType.ADDRESS_STATE, "broken", this.address.toString( ) ).warn( );
-    }
     try {
       this.sendSecondaryUnassign( );
       this.clearVmAddress( );
@@ -151,7 +146,7 @@ public class UnassignAddressCallback extends MessageCallback<UnassignAddressType
       LOG.debug( t );
     } catch ( Exception t ) {
       LOG.warn( t.getMessage( ) );
-      EventRecord.here( UnassignAddressCallback.class, EventType.ADDRESS_STATE, "broken", address.toString( ) ).warn( );
+      EventRecord.here( UnassignAddressCallback.class, EventType.ADDRESS_STATE, "broken", this.address.toString( ) ).warn( );
       LOG.trace( t, t );
     } finally {
       if ( this.system ) {

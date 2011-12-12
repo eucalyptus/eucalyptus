@@ -85,9 +85,9 @@ import com.eucalyptus.cluster.callback.UnassignAddressCallback;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.records.EventClass;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.OwnerFullName;
@@ -104,7 +104,11 @@ import edu.ucsb.eucalyptus.msgs.AddressInfoType;
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class Address extends UserMetadata<Address.State> implements AddressMetadata {
   public enum State {
-    broken, unallocated, allocated, assigned, impending;
+    broken,
+    unallocated,
+    allocated,
+    assigned,
+    impending;
   }
   
   public enum Transition {
@@ -141,6 +145,12 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
       }
     };
     public abstract Class getCallback( );
+    
+    @Override
+    public String toString( ) {
+      return this.name( );
+    }
+    
   }
   
   private static Logger                   LOG                     = Logger.getLogger( Address.class );
@@ -237,15 +247,19 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
   
   private boolean transition( State expectedState, State newState, boolean expectedMark, boolean newMark, SplitTransition transition ) {
     this.transition = transition;
-    EventRecord.caller( this.getClass( ), EventType.ADDRESS_STATE, this.atomicState.getReference( ), this.toString( ) ).debug( );
     if ( !this.atomicState.compareAndSet( expectedState, newState, expectedMark, newMark ) ) {
       throw new IllegalStateException( String.format( "Cannot mark address as %s[%s.%s->%s.%s] when it is %s.%s: %s", transition.getName( ), expectedState,
                                                       expectedMark, newState, newMark, this.atomicState.getReference( ), this.atomicState.isMarked( ),
                                                       this.toString( ) ) );
     }
-    EventRecord.caller( this.getClass( ), EventType.ADDRESS_STATE, this.atomicState.getReference( ), "TOP", this.transition.getName( ).name( ), this.toString( ) )
-               .debug( );
-    this.transition.top( );
+    EventRecord.caller( this.getClass( ), EventType.ADDRESS_STATE, "TOP", this.toString( ) ).info( );
+    try {
+      this.transition.top( );
+    } catch ( RuntimeException ex ) {
+      LOG.error( ex );
+      Logs.extreme( ).error( ex, ex );
+      throw ex;
+    }
     return true;
   }
   
@@ -261,16 +275,12 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
         } catch ( NoSuchElementException e ) {
           LOG.debug( e );
         }
-        EventRecord.here( Address.class, EventClass.ADDRESS, EventType.ADDRESS_ALLOCATE ).withDetails( Address.this.getOwner( ).toString( ),
-                                                                                                       Address.this.getDisplayName( ), "type",
-                                                                                                       Address.this.isSystemOwned( )
-                                                                                                         ? "SYSTEM"
-                                                                                                         : "USER" ).info( );
         Address.this.stateUuid = UUID.randomUUID( ).toString( );
         Address.this.atomicState.attemptMark( State.allocated, false );
       }
       
       public void bottom( ) {}
+      
     } );
     return this;
   }
@@ -278,11 +288,6 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
   public Address release( ) {
     SplitTransition release = new SplitTransition( Transition.unallocating ) {
       public void top( ) {
-        EventRecord.here( Address.class, EventClass.ADDRESS, EventType.ADDRESS_RELEASE ).withDetails( Address.this.getOwner( ).toString( ),
-                                                                                                      Address.this.getDisplayName( ), "type",
-                                                                                                      Address.this.isSystemOwned( )
-                                                                                                        ? "SYSTEM"
-                                                                                                        : "USER" ).info( );
         Address.this.instanceId = UNASSIGNED_INSTANCEID;
         Address.this.instanceAddress = UNASSIGNED_INSTANCEADDR;
         Address.this.setOwner( Principals.nobodyFullName( ) );
@@ -322,18 +327,9 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
       public void top( ) {
         try {
           VmInstance vm = VmInstances.lookup( Address.this.getInstanceId( ) );
-          EventRecord.here( Address.class, EventClass.ADDRESS, EventType.ADDRESS_UNASSIGNING )
-                     .withDetails( vm.getOwner( ).toString( ), Address.this.getName( ), "instanceid", vm.getInstanceId( ) )
-                     .withDetails( "type", Address.this.isSystemOwned( )
-                       ? "SYSTEM"
-                       : "USER" )
-                     .withDetails( "cluster", Address.this.getPartition( ) ).info( );
-        } catch ( NoSuchElementException e ) {}
-        EventRecord.here( Address.class, EventClass.ADDRESS, EventType.ADDRESS_ASSIGN )
-                   .withDetails( Address.this.getOwner( ).toString( ), Address.this.getDisplayName( ), "instance", Address.this.instanceId )
-                   .withDetails( "instance-address", Address.this.instanceAddress ).withDetails( "type", Address.this.isSystemOwned( )
-                     ? "SYSTEM"
-                     : "USER" ).info( );
+        } catch ( NoSuchElementException e ) {
+          LOG.debug( e );
+        }
       }
       
       public void bottom( ) {
@@ -363,11 +359,6 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
                          } catch ( NoSuchElementException e ) {
                            LOG.debug( e );
                          }
-                         EventRecord.here( Address.class, EventClass.ADDRESS, EventType.ADDRESS_ALLOCATE ).withDetails( Address.this.getOwner( ).toString( ),
-                                                                                                                        Address.this.getDisplayName( ),
-                                                                                                                        "type", Address.this.isSystemOwned( )
-                                                                                                                          ? "SYSTEM"
-                                                                                                                          : "USER" ).info( );
                        }
                        
                        public void bottom( ) {}
@@ -378,25 +369,12 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
   public Address assign( final VmInstance vm ) {
     SplitTransition assign = new SplitTransition( Transition.assigning ) {
       public void top( ) {
-        EventRecord.here( Address.class, EventClass.ADDRESS, EventType.ADDRESS_ASSIGNING )
-                   .withDetails( vm.getOwner( ).toString( ), Address.this.getName( ), "instanceid", vm.getInstanceId( ) )
-                   .withDetails( "type", Address.this.isSystemOwned( )
-                     ? "SYSTEM"
-                     : "USER" )
-                   .withDetails( "cluster", Address.this.getPartition( ) ).info( );
         Address.this.setInstanceId( vm.getInstanceId( ) );
         Address.this.setInstanceAddress( vm.getPrivateAddress( ) );
         Address.this.stateUuid = UUID.randomUUID( ).toString( );
       }
       
-      public void bottom( ) {
-        String userId = Address.this.getOwner( ).toString( );
-        EventRecord.here( Address.class, EventClass.ADDRESS, EventType.ADDRESS_ASSIGN )
-                   .withDetails( userId, Address.this.getDisplayName( ), "instance", Address.this.instanceId )
-                   .withDetails( "instance-address", Address.this.instanceAddress ).withDetails( "type", Address.this.isSystemOwned( )
-                     ? "SYSTEM"
-                     : "USER" ).info( );
-      }
+      public void bottom( ) {}
     };
     if ( State.impending.equals( this.atomicState.getReference( ) ) ) {
       this.transition( State.impending, State.assigned, true, true, assign );
@@ -425,12 +403,12 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
     if ( !this.atomicState.isMarked( ) ) {
       throw new IllegalStateException( "Trying to clear an address which is not currently pending." );
     } else {
-      EventRecord
-                 .caller( this.getClass( ), EventType.ADDRESS_STATE, this.atomicState.getReference( ), "BOTTOM", this.transition.getName( ).name( ),
-                          this.toString( ) )
-                 .debug( );
+      EventRecord.caller( this.getClass( ), EventType.ADDRESS_STATE, "BOTTOM", this.toString( ) ).info( );
       try {
         this.transition.bottom( );
+      } catch ( RuntimeException ex ) {
+        LOG.error( ex );
+        Logs.extreme( ).error( ex, ex );
       } finally {
         this.transition = this.QUIESCENT;
         this.atomicState.set( this.atomicState.getReference( ), false );
@@ -569,9 +547,12 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
     
     @Override
     public String toString( ) {
-      return String.format( "[SplitTransition previous=%s, transition=%s, next=%s, pending=%s]", this.previous, this.t,
-                            Address.this.atomicState.getReference( ),
-                            Address.this.atomicState.isMarked( ) );
+      State curr = Address.this.atomicState.getReference( );
+      boolean mark = Address.this.atomicState.isMarked( );
+      return String.format( "AddressTransition %s:%s(%s)",
+                            this.t,
+                            this.previous != curr ? this.previous + "->" + curr : this.previous,
+                            mark );
     }
   }
   
@@ -585,7 +566,7 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
     return FullName.create.vendor( "euca" ).region( ComponentIds.lookup( ClusterController.class ).name( ) ).namespace( this.getPartition( ) ).relativeId( "public-address",
                                                                                                                                                            this.getName( ) );
   }
-
+  
   @Override
   public int compareTo( AccountMetadata that ) {
     if ( that instanceof Address ) {
