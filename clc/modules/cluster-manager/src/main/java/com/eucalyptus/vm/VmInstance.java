@@ -520,7 +520,11 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       try {
         ramdiskId = input.getInstanceType( ).lookupRamdisk( ).getId( );
       } catch ( final NoSuchElementException ex ) {
-        LOG.debug( "No ramdiskId " + input.getRamdiskId( ) + " for: " + input.getInstanceId( ) + " because vbr does not contain a ramdisk: " + input.getInstanceType( ).getVirtualBootRecord( ) );
+        LOG.debug( "No ramdiskId " + input.getRamdiskId( )
+          + " for: "
+          + input.getInstanceId( )
+          + " because vbr does not contain a ramdisk: "
+          + input.getInstanceType( ).getVirtualBootRecord( ) );
         Logs.extreme( ).error( ex, ex );
       } catch ( final Exception ex ) {
         LOG.error( "Failed to lookup ramdiskId " + input.getRamdiskId( ) + " for: " + input.getInstanceId( ) + " because of: " + ex.getMessage( ) );
@@ -534,7 +538,11 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       try {
         kernelId = input.getInstanceType( ).lookupKernel( ).getId( );
       } catch ( final NoSuchElementException ex ) {
-        LOG.debug( "No kernelId " + input.getKernelId( ) + " for: " + input.getInstanceId( ) + " because vbr does not contain a kernel: " + input.getInstanceType( ).getVirtualBootRecord( ) );
+        LOG.debug( "No kernelId " + input.getKernelId( )
+          + " for: "
+          + input.getInstanceId( )
+          + " because vbr does not contain a kernel: "
+          + input.getInstanceType( ).getVirtualBootRecord( ) );
         Logs.extreme( ).error( ex, ex );
       } catch ( final Exception ex ) {
         LOG.error( "Failed to lookup kernelId " + input.getKernelId( ) + " for: " + input.getInstanceId( ) + " because of: " + ex.getMessage( ) );
@@ -864,9 +872,8 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     this.networkConfig = new VmNetworkConfig( this );
     final Function<NetworkGroup, NetworkGroup> func = Entities.merge( );
     this.networkGroups.addAll( Collections2.transform( networkRulesGroups, func ) );
-    this.networkIndex = networkIndex != PrivateNetworkIndex.bogus( )
-      ? Entities.merge( networkIndex.set( this ) )
-      : null;
+    PrivateNetworkIndex tempIndex = networkIndex != PrivateNetworkIndex.bogus( ) ? ( networkIndex ) : null;
+    this.networkIndex = !tempIndex.isAllocated( ) ? Entities.merge( tempIndex.set( this ) ) : tempIndex;
     this.store( );
   }
   

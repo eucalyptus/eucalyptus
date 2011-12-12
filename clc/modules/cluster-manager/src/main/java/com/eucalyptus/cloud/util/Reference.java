@@ -88,7 +88,7 @@ public interface Reference<T extends Reference<T, R>, R extends HasNaturalId> {
    * {@link Reference#teardown()} resets the state to that before the reference change.
    */
   public T allocate( ) throws ResourceAllocationException;
-  
+  public boolean isAllocated( );
   /**
    * The procedure for gracefully releasing the resource is pending a submitted in-flight request.
    * Potential references to stale state may exist and should be disregarded until in-flight

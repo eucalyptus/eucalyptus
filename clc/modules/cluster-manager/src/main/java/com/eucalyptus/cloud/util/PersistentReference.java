@@ -72,6 +72,7 @@ import com.eucalyptus.cloud.util.Reference.State;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Threads;
+import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.HasNaturalId;
 import com.eucalyptus.util.OwnerFullName;
 
@@ -192,5 +193,20 @@ public abstract class PersistentReference<T extends PersistentReference<T, R>, R
   public T set( final R referer ) throws ResourceAllocationException {
     final T ret = PersistentReference.this.doSetReferer( referer, Reference.State.PENDING, Reference.State.EXTANT );
     return ret;
+  }
+
+  @Override
+  public String getPartition( ) {
+    return null;
+  }
+
+  @Override
+  public FullName getFullName( ) {
+    return null;
+  }
+
+  @Override
+  public boolean isAllocated( ) {
+    return State.EXTANT.equals( this.getState( ) );
   }
 }
