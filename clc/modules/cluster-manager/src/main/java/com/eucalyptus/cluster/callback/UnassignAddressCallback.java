@@ -140,27 +140,27 @@ public class UnassignAddressCallback extends MessageCallback<UnassignAddressType
   public void fire( UnassignAddressResponseType reply ) {
     if ( reply.get_return( ) ) {
       EventRecord.here( UnassignAddressCallback.class, EventType.ADDRESS_UNASSIGN, this.address.toString( ) ).info( );
-      try {
-        this.sendSecondaryUnassign( );
-        this.clearVmAddress( );
-        this.address.clearPending( );
-      } catch ( IllegalStateException t ) {
-        LOG.debug( t );
-      } catch ( Exception t ) {
-        LOG.warn( t.getMessage( ) );
-        EventRecord.here( UnassignAddressCallback.class, EventType.ADDRESS_STATE, "broken", address.toString( ) ).warn( );
-        LOG.trace( t, t );
-      } finally {
-        if ( this.system ) {
-          try {
-            this.address.release( );
-          } catch ( Exception t ) {
-            LOG.warn( "Failed to release orphan address: " + this.address, t);
-          }
-        }
-      }
     } else {
       EventRecord.here( UnassignAddressCallback.class, EventType.ADDRESS_STATE, "broken", this.address.toString( ) ).warn( );
+    }
+    try {
+      this.sendSecondaryUnassign( );
+      this.clearVmAddress( );
+      this.address.clearPending( );
+    } catch ( IllegalStateException t ) {
+      LOG.debug( t );
+    } catch ( Exception t ) {
+      LOG.warn( t.getMessage( ) );
+      EventRecord.here( UnassignAddressCallback.class, EventType.ADDRESS_STATE, "broken", address.toString( ) ).warn( );
+      LOG.trace( t, t );
+    } finally {
+      if ( this.system ) {
+        try {
+          this.address.release( );
+        } catch ( Exception t ) {
+          LOG.warn( "Failed to release orphan address: " + this.address, t);
+        }
+      }
     }
   }
 
