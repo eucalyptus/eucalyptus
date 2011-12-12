@@ -63,9 +63,7 @@
   -->
 
 <!DOCTYPE log4j:configuration SYSTEM "log4j.dtd">
-
 <log4j:configuration xmlns:log4j="http://jakarta.apache.org/log4j/">
-
   <appender name="console" class="org.apache.log4j.ConsoleAppender">
     <param name="Target" value="System.out" />
     <param name="Threshold" value="${euca.log.level}" />
@@ -90,9 +88,7 @@
     <param name="MaxFileSize" value="10MB" />
     <param name="MaxBackupIndex" value="10" />
     <layout class="org.apache.log4j.PatternLayout">
-      <param name="ConversionPattern" value="%d{EEE MMM d HH:mm:ss yyyy} %5p [%c{1}:%t] [%C.%M(%F):%L] %m%n" /><!--
-      <param name="ConversionPattern" value="%d{HH:mm:ss} %5p [%c{1}:%t] %m%n" />
-    -->
+      <param name="ConversionPattern" value="${euca.log.pattern}" />
     </layout>
   </appender>
   <appender name="errorlog" class="org.apache.log4j.RollingFileAppender">
@@ -101,7 +97,8 @@
     <param name="MaxBackupIndex" value="10" />
     <param name="Threshold" value="ERROR" />
     <layout class="org.apache.log4j.PatternLayout">
-      <param name="ConversionPattern" value="%d{EEE MMM d HH:mm:ss yyyy} %5p [%C.%M(%F):%L] %m%n" />
+      <param name="ConversionPattern"
+        value="%d{EEE MMM d HH:mm:ss yyyy} %5p [%c{1}:%t] %m%n%d{EEE MMM d HH:mm:ss yyyy} %5p [%C.%M(%F):%L] %m%n" />
     </layout>
   </appender>
   <appender name="cloud-cluster" class="org.apache.log4j.RollingFileAppender">
@@ -110,7 +107,7 @@
     <param name="MaxBackupIndex" value="2" />
     <param name="Threshold" value="${euca.log.level}" />
     <layout class="org.apache.log4j.PatternLayout">
-      <param name="ConversionPattern" value="%d{EEE MMM d HH:mm:ss yyyy} %5p [%c{1}:%t] %m%n" />
+      <param name="ConversionPattern" value="${euca.log.pattern}" />
     </layout>
   </appender>
   <appender name="cloud-exhaust" class="org.apache.log4j.RollingFileAppender">
@@ -119,7 +116,7 @@
     <param name="MaxBackupIndex" value="2" />
     <param name="Threshold" value="${euca.exhaust.level}" />
     <layout class="org.apache.log4j.PatternLayout">
-      <param name="ConversionPattern" value="%d{EEE MMM d HH:mm:ss yyyy} %5p [%C.%M(%F):%L] %m%n" />
+      <param name="ConversionPattern" value="${euca.log.pattern}" />
     </layout>
   </appender>
   <appender name="cloud-extreme" class="org.apache.log4j.RollingFileAppender">
@@ -128,7 +125,7 @@
     <param name="MaxBackupIndex" value="10" />
     <param name="Threshold" value="${euca.exhaust.level}" />
     <layout class="org.apache.log4j.PatternLayout">
-      <param name="ConversionPattern" value="%d{EEE MMM d HH:mm:ss yyyy} %5p [%C.%M(%F):%L] %m%n" />
+      <param name="ConversionPattern" value="${euca.log.pattern}" />
     </layout>
   </appender>
   <appender name="walrus-stats-log" class="org.apache.log4j.RollingFileAppender">
@@ -332,5 +329,4 @@
     <appender-ref ref="${euca.log.appender}" />
     <appender-ref ref="errorlog" />
   </root>
-
 </log4j:configuration>
