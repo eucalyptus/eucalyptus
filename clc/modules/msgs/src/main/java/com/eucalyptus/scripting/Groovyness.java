@@ -20,6 +20,7 @@ import javax.script.SimpleBindings;
 import javax.script.SimpleScriptContext;
 import org.apache.log4j.Logger;
 import org.codehaus.groovy.control.CompilerConfiguration;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.SubDirectory;
 import com.eucalyptus.util.Exceptions;
 
@@ -29,7 +30,7 @@ public class Groovyness {
   
   public static <T extends GroovyObject> T expandoMetaClass( T obj ) {
     ExpandoMetaClass emc = new ExpandoMetaClass( obj.getClass( ), false );
-    emc.initialize();
+    emc.initialize( );
     obj.setMetaClass( emc );
     return obj;
   }
@@ -45,7 +46,6 @@ public class Groovyness {
     return loader;
   }
   
-
   private static ScriptEngine getGroovyEngine( ) {
     synchronized ( Groovyness.class ) {
       if ( groovyEngine == null ) {
@@ -70,17 +70,19 @@ public class Groovyness {
       Class groovyClass = loader.parseClass( f );
       groovyObject = ( GroovyObject ) groovyClass.newInstance( );
     } catch ( Exception e ) {
-      LOG.error( e, e );
+      LOG.error( e );
+      Logs.extreme( ).error( e, e );
       throw new ScriptExecutionFailedException( e );
     }
     try {
       return ( T ) groovyObject;
     } catch ( ClassCastException e ) {
-      LOG.debug( e, e );
+      LOG.error( e );
+      Logs.extreme( ).error( e, e );
       throw new ScriptExecutionFailedException( e.getMessage( ), e );
     }
   }
-
+  
   public static <T> T run( SubDirectory dir, String fileName ) {
     fileName = dir + File.separator + fileName;
     String fileNameWExt = fileName + ".groovy";
@@ -93,14 +95,15 @@ public class Groovyness {
       T ret = ( T ) getGroovyEngine( ).eval( fileReader );
       return ret;
     } catch ( Exception e ) {
-      LOG.debug( e, e );
+      LOG.error( e );
+      Logs.extreme( ).error( e, e );
       throw new RuntimeException( "Executing the requested script failed: " + fileName, e );
     } finally {
       if ( fileReader != null )
         try {
-        fileReader.close( );
+          fileReader.close( );
         } catch ( IOException e ) {
-        LOG.error( e );
+          Logs.extreme( ).error( e );
         }
     }
   }
@@ -118,7 +121,8 @@ public class Groovyness {
                                                     }
                                                   } );
     } catch ( Exception e ) {
-      LOG.debug( e, e );
+      LOG.error( e );
+      Logs.extreme( ).error( e, e );
       throw new ScriptExecutionFailedException( "Executing the requested script failed: " + code, e );
     }
   }
@@ -130,11 +134,11 @@ public class Groovyness {
       scriptContext.setBindings( bindings, SimpleScriptContext.ENGINE_SCOPE );
       return ( T ) getGroovyEngine( ).eval( code, scriptContext );
     } catch ( Exception e ) {
-      LOG.debug( e, e );
-      throw new ScriptExecutionFailedException( "Executing the requested script failed:\n" 
-                                                + "============================\n" 
-                                                + code 
-                                                + "============================\n" 
+      Logs.exhaust( ).debug( e, e );
+      throw new ScriptExecutionFailedException( "Executing the requested script failed:\n"
+                                                + "============================\n"
+                                                + code
+                                                + "============================\n"
                                                 + "\nbecause of:\n" + Exceptions.causeString( e ), e );
     }
   }
@@ -143,11 +147,11 @@ public class Groovyness {
     try {
       return ( T ) getGroovyEngine( ).eval( code );
     } catch ( Exception e ) {
-      LOG.debug( e, e );
-      throw new ScriptExecutionFailedException( "Executing the requested script failed:\n" 
-                                                + "============================\n" 
-                                                + code 
-                                                + "============================\n" 
+      Logs.exhaust( ).debug( e, e );
+      throw new ScriptExecutionFailedException( "Executing the requested script failed:\n"
+                                                + "============================\n"
+                                                + code
+                                                + "============================\n"
                                                 + "\nbecause of:\n" + Exceptions.causeString( e ), e );
     }
   }

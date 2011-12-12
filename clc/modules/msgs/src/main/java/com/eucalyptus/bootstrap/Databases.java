@@ -232,7 +232,7 @@ public class Databases {
   }
   
   private static void runDbStateChange( Function<String, Runnable> runnableFunction ) {
-    LOG.info( "DB STATE CHANGE: " + runnableFunction );
+    Logs.extreme( ).info( "DB STATE CHANGE: " + runnableFunction );
     try {
       if ( canHas.writeLock( ).tryLock( ) ) {
         try {

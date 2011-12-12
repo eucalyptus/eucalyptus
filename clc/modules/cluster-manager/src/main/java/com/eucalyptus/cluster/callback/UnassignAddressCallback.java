@@ -74,6 +74,7 @@ import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Expendable;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.AsyncRequests;
@@ -174,9 +175,9 @@ public class UnassignAddressCallback extends MessageCallback<UnassignAddressType
         }
       }
     } catch ( TerminatedInstanceException ex ) {
-      LOG.error( ex, ex );
+      Logs.extreme( ).error( ex, ex );
     } catch ( NoSuchElementException ex ) {
-      LOG.error( ex, ex );
+      Logs.extreme( ).error( ex, ex );
     }
   }
   
