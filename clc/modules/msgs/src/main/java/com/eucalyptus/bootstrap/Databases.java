@@ -619,6 +619,8 @@ public class Databases {
   public static Boolean isVolatile( ) {
     if ( !Bootstrap.isFinished( ) || BootstrapArgs.isInitializeSystem( ) ) {
       return false;
+    } else if ( Hosts.listActiveDatabases( ).size( ) != Databases.lookup( "eucalyptus_config" ).getActiveDatabases( ).size( ) ) {
+      return true;
     } else if ( !Hosts.isCoordinator( ) && BootstrapArgs.isCloudController( ) ) {
       return !isSynchronized( );
     } else {
