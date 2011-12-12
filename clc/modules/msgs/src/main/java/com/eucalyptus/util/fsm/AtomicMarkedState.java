@@ -384,6 +384,12 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
       return this.transitionFuture;
     }
     
+    @Override
+    public boolean isDone( ) {
+      return this.transitionFuture.isDone( );
+    }
+    
+
     public void fire( ) {
       try {
         this.transition.enter( AtomicMarkedState.this.parent );

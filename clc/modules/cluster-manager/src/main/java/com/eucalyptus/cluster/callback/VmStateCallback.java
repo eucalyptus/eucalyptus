@@ -1,7 +1,6 @@
 package com.eucalyptus.cluster.callback;
 
 import java.util.Collection;
-import java.util.HashSet;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.CancellationException;
@@ -10,6 +9,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.cloud.CloudMetadatas;
 import com.eucalyptus.cluster.Cluster;
+import com.eucalyptus.component.Partition;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.records.Logs;
@@ -24,6 +24,8 @@ import com.eucalyptus.vm.VmType;
 import com.eucalyptus.vm.VmTypes;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
@@ -34,10 +36,10 @@ import edu.ucsb.eucalyptus.msgs.AttachedVolume;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
 public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescribeType, VmDescribeResponseType> {
-  private static Logger     LOG                       = Logger.getLogger( VmStateCallback.class );
-  private static final int  VM_INITIAL_REPORT_TIMEOUT = 20000;
-  private static final int  VM_STATE_SETTLE_TIME      = 5000;
-  private final Set<String> initialInstances;
+  private static Logger               LOG                       = Logger.getLogger( VmStateCallback.class );
+  private static final int            VM_INITIAL_REPORT_TIMEOUT = 20000;
+  private static final int            VM_STATE_SETTLE_TIME      = 5000;
+  private final Supplier<Set<String>> initialInstances;
   
   public VmStateCallback( ) {
     super( new VmDescribeType( ) {
@@ -45,16 +47,28 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
         regarding( );
       }
     } );
-    Predicate<VmInstance> partitionFilter = new Predicate<VmInstance>( ) {
+    this.initialInstances = createInstanceSupplier( this );
+  }
+
+  private static Supplier<Set<String>> createInstanceSupplier( final StateUpdateMessageCallback<Cluster, ?, ?> cb ) {
+    return Suppliers.memoize( new Supplier<Set<String>>( ) {
       
       @Override
-      public boolean apply( VmInstance input ) {
-        return input.getPartition( ).equals( VmStateCallback.this.getSubject( ).getPartition( ) ) || "default".equals( input.getPartition( ) );
+      public Set<String> get( ) {
+        Predicate<VmInstance> partitionFilter = new Predicate<VmInstance>( ) {
+          
+          @Override
+          public boolean apply( VmInstance input ) {
+            return input.getPartition( ).equals( cb.getSubject( ).getPartition( ) ) || "default".equals( input.getPartition( ) );
+          }
+        };
+        Collection<VmInstance> clusterInstances = Collections2.filter( VmInstances.list( ),
+                                                                       partitionFilter );
+        Collection<String> instanceNames = Collections2.transform( clusterInstances,
+                                                                   CloudMetadatas.toDisplayName( ) );
+        return Sets.newHashSet( instanceNames );
       }
-    };
-    Collection<VmInstance> clusterInstances = Collections2.filter( VmInstances.list( ), partitionFilter );
-    Collection<String> instanceNames = Collections2.transform( clusterInstances, CloudMetadatas.toDisplayName( ) );
-    this.initialInstances = Sets.newHashSet( instanceNames );
+    } );
   }
   
   @Override
@@ -280,5 +294,11 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
       LOG.debug( "Request to " + this.getSubject( ).getName( ) + " failed: " + t.getMessage( ) );
     }
     
+  }
+
+  @Override
+  public void setSubject( Cluster subject ) {
+    super.setSubject( subject );
+    this.initialInstances.get( );
   }
 }

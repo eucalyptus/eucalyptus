@@ -159,5 +159,12 @@ public interface Callback<R> {
     }
 
     public abstract void fire( );
+
+    /**
+     * @return
+     */
+    public boolean isDone( ) {
+      return false;
+    }
   }
 }
