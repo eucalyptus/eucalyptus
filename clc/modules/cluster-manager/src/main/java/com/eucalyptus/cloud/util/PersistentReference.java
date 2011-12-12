@@ -181,11 +181,17 @@ public abstract class PersistentReference<T extends PersistentReference<T, R>, R
       throw new RuntimeException( "Error allocating resource " + PersistentReference.this.getClass( ).getSimpleName( )
         + " with id "
         + this.getDisplayName( )
-        + " as the state is not "
+        + " as the state is not either the precondition "
         + preconditionState.name( )
+        + " or the final state "
+        + finalState.name( )
         + " (currently "
-        + this.getState( )
-        + ")." );
+        + currentState.name( )
+        + ", referer "
+        + this.getReference( )
+        + ", passed referer "
+        + referer
+        + ")" );
     }
   }
   
@@ -194,17 +200,17 @@ public abstract class PersistentReference<T extends PersistentReference<T, R>, R
     final T ret = PersistentReference.this.doSetReferer( referer, Reference.State.PENDING, Reference.State.EXTANT );
     return ret;
   }
-
+  
   @Override
   public String getPartition( ) {
     return null;
   }
-
+  
   @Override
   public FullName getFullName( ) {
     return null;
   }
-
+  
   @Override
   public boolean isAllocated( ) {
     return State.EXTANT.equals( this.getState( ) );
