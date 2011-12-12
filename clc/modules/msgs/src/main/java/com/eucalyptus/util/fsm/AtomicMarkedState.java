@@ -161,10 +161,8 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
   private void commit( ) {
     Logs.exhaust( ).trace( "Transition commit(): " + this.currentTransition.get( ) );
     if ( !this.state.isMarked( ) ) {
-      IllegalStateException ex = Exceptions.trace( new IllegalStateException( "commit() called when there is no currently pending transition: "
-                                                                              + this.toString( ) ) );
-      Logs.extreme( ).error( ex );
-      throw ex;
+      IllegalStateException ex = new IllegalStateException( "commit() called when there is no currently pending transition: "+ this.toString( ) );
+      Logs.exhaust( ).error( ex, ex );
     } else {
       ActiveTransition tr = this.currentTransition.getAndSet( null );
       this.state.set( tr.getTransitionRule( ).getToState( ), tr.getTransitionRule( ).getToStateMark( ) );
@@ -392,9 +390,11 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
 
     public void fire( ) {
       try {
-        this.transition.enter( AtomicMarkedState.this.parent );
-        this.transition.after( AtomicMarkedState.this.parent );
-        AtomicMarkedState.this.commit( );
+        if ( !this.isDone( ) ) {
+          this.transition.enter( AtomicMarkedState.this.parent );
+          this.transition.after( AtomicMarkedState.this.parent );
+          AtomicMarkedState.this.commit( );
+        }
       } catch ( Exception t ) {
         this.fireException( t );
       }
