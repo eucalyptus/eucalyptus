@@ -318,7 +318,7 @@ public class Hosts {
               return;
             } else if ( PeriodicMembershipChecks.canHasChecks.tryLock( ) ) {
               try {
-                LOG.debug( runner.toString( ) + ": RUNNING" );
+                Logs.extreme( ).debug( runner.toString( ) + ": RUNNING" );
                 try {
                   runner.run( );
                 } catch ( Exception ex ) {
