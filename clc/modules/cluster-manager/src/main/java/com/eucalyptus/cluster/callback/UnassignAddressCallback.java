@@ -62,6 +62,7 @@
 package com.eucalyptus.cluster.callback;
 
 import java.util.NoSuchElementException;
+import java.util.concurrent.CancellationException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
@@ -91,14 +92,20 @@ public class UnassignAddressCallback extends MessageCallback<UnassignAddressType
   
   private static Logger LOG = Logger.getLogger( UnassignAddressCallback.class );
   private Address       address;
+  private final boolean system;
   
   public UnassignAddressCallback( String addr, String vmIp ) {
     super( new UnassignAddressType( addr, vmIp ) );
     try {
       this.address = Addresses.getInstance( ).lookup( addr );
     } catch ( Exception e ) {
-      this.address = Addresses.getInstance( ).lookupDisabled( addr );
+      try {
+        this.address = Addresses.getInstance( ).lookupDisabled( addr );
+      } catch ( NoSuchElementException ex ) {
+        throw new CancellationException( ex.getMessage( ) );
+      }
     }
+    this.system = this.address.isSystemOwned( );
   }
   
   public UnassignAddressCallback( String addr ) {
@@ -115,9 +122,7 @@ public class UnassignAddressCallback extends MessageCallback<UnassignAddressType
   
   @Override
   public void initialize( UnassignAddressType msg ) throws Exception {
-    if ( this.address.isAssigned( ) && this.address.isPending( ) ) {
-      EventRecord.here( UnassignAddressCallback.class, EventType.ADDRESS_UNASSIGNING, Transition.unassigning.toString( ), address.toString( ) ).info( );
-    }
+    EventRecord.here( UnassignAddressCallback.class, EventType.ADDRESS_UNASSIGNING, Transition.unassigning.toString( ), address.toString( ) ).info( );
   }
   
   public void clearVmAddress( ) {
@@ -133,29 +138,31 @@ public class UnassignAddressCallback extends MessageCallback<UnassignAddressType
   
   @Override
   public void fire( UnassignAddressResponseType reply ) {
-    this.sendSecondaryUnassign( );
-    this.clearVmAddress( );
     if ( reply.get_return( ) ) {
-      EventRecord.here( UnassignAddressCallback.class, EventType.ADDRESS_UNASSIGN, address.toString( ) ).info( );
-    } else {
-      EventRecord.here( UnassignAddressCallback.class, EventType.ADDRESS_STATE, "broken", address.toString( ) ).warn( );
-    }
-    try {
-      this.address.clearPending( );
-    } catch ( IllegalStateException t ) {
-      LOG.debug( t );
-    } catch ( Exception t ) {
-      LOG.warn( t.getMessage( ) );
-      EventRecord.here( UnassignAddressCallback.class, EventType.ADDRESS_STATE, "broken", address.toString( ) ).warn( );
-      LOG.trace( t, t );
-    } finally {
-      if ( !this.address.isPending( ) && this.address.isSystemOwned( ) && Address.UNASSIGNED_INSTANCEID.equals( this.address.getInstanceId( ) ) ) {
-        try {
-          this.address.release( );
-        } catch ( Exception t ) {
-          LOG.warn( "Failed to release orphan address: " + this.address );
+      EventRecord.here( UnassignAddressCallback.class, EventType.ADDRESS_UNASSIGN, this.address.toString( ) ).info( );
+      try {
+        this.sendSecondaryUnassign( );
+        this.clearVmAddress( );
+        this.address.clearPending( );
+      } catch ( IllegalStateException t ) {
+        LOG.debug( t );
+      } catch ( Exception t ) {
+        LOG.warn( t.getMessage( ) );
+        EventRecord.here( UnassignAddressCallback.class, EventType.ADDRESS_STATE, "broken", address.toString( ) ).warn( );
+        LOG.trace( t, t );
+      } finally {
+        if ( this.system ) {
+          try {
+            this.address.release( );
+          } catch ( Exception t ) {
+            LOG.warn( "Failed to release orphan address: " + this.address, t);
+          }
+        }
+        if ( !this.address.isPending( ) && this.address.isSystemOwned( ) && Address.UNASSIGNED_INSTANCEID.equals( this.address.getInstanceId( ) ) ) {
         }
       }
+    } else {
+      EventRecord.here( UnassignAddressCallback.class, EventType.ADDRESS_STATE, "broken", this.address.toString( ) ).warn( );
     }
   }
 
@@ -188,7 +195,17 @@ public class UnassignAddressCallback extends MessageCallback<UnassignAddressType
       LOG.debug( t, t );
     } finally {
       if ( this.address.isPending( ) ) {
-        this.address.clearPending( );
+        try {
+          this.address.clearPending( );
+        } catch ( Exception ex ) {
+        }
+      }
+      if ( this.system ) {
+        try {
+          VmInstances.lookupByPublicIp( this.address.getDisplayName( ) );
+        } catch ( NoSuchElementException ex ) {
+          this.address.release( );
+        }
       }
     }
     LOG.error( e, e );
