@@ -326,11 +326,21 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         
         @Override
         public NetworkGroup apply( final String arg0 ) {
-          final NetworkGroup result = ( NetworkGroup ) Entities.createCriteria( NetworkGroup.class ).setReadOnly( true )
-                                                               .add( Restrictions.like( "naturalId", arg0.replace( userFullName.getAccountNumber( ) + "-", "" )
-                                                                                                     + "%" ) )
-                                                               .uniqueResult( );
-          return result;
+          
+          EntityTransaction db = Entities.get( NetworkGroup.class );
+          try {
+            final NetworkGroup result = ( NetworkGroup ) Entities.createCriteria( NetworkGroup.class )
+                                                                 .setReadOnly( true )
+                                                                 .add( Restrictions.like( "naturalId",
+                                                                                          arg0.replace( userFullName.getAccountNumber( ) + "-", "" ) + "%" ) )
+                                                                 .uniqueResult( );
+            db.rollback( );
+            return result;
+          } catch ( Exception ex ) {
+            Logs.exhaust( ).error( ex, ex );
+            db.rollback( );
+            throw Exceptions.toUndeclared( ex );
+          }
         }
       };
     }
