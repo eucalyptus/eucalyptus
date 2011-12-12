@@ -318,7 +318,7 @@ public class Hosts {
               return;
             } else if ( PeriodicMembershipChecks.canHasChecks.tryLock( ) ) {
               try {
-                Logs.extreme( ).debug( runner.toString( ) + ": RUNNING" );
+                LOG.debug( runner.toString( ) + ": RUNNING" );
                 try {
                   runner.run( );
                 } catch ( Exception ex ) {
@@ -434,7 +434,7 @@ public class Hosts {
       if ( Bootstrap.isShuttingDown( ) ) {
         return;
       } else {
-        Logs.extreme( ).info( "Hosts.entrySet(): " + hostKey + " => " + host );
+        LOG.info( "Hosts.entrySet(): " + hostKey + " => " + host );
         try {
           if ( host.isLocalHost( ) && Bootstrap.isFinished( ) ) {
             final boolean wasSynched = Databases.isSynchronized( );
@@ -459,10 +459,9 @@ public class Hosts {
             LOG.debug( "Hosts.entrySet(): UPDATED HOST => " + host );
           }
         } catch ( Exception ex ) {
-          LOG.error( ex );
-          Logs.extreme( ).error( ex, ex );
+          LOG.error( ex, ex );
         }
-        Logs.extreme( ).info( "Hosts.entrySet(): " + hostKey + " finished." );
+        LOG.info( "Hosts.entrySet(): " + hostKey + " finished." );
       }
     }
     
