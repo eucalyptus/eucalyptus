@@ -294,7 +294,7 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
       public void bottom( ) {}
     };
     if ( State.impending.equals( this.atomicState.getReference( ) ) ) {
-      this.transition( State.impending, State.unallocated, true, true, release );
+      this.transition( State.impending, State.unallocated, this.isPending( ), true, release );
     } else {
       this.transition( State.allocated, State.unallocated, false, true, release );
     }
@@ -343,7 +343,7 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
       }
     };
     if ( State.impending.equals( this.atomicState.getReference( ) ) ) {
-      this.transition( State.impending, State.allocated, true, true, unassign );
+      this.transition( State.impending, State.allocated, this.isPending( ), true, unassign );
     } else {
       this.transition( State.assigned, State.allocated, false, true, unassign );
     }
