@@ -1162,8 +1162,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
     final Component.State externalState = this.configuration.lookupState( );
     if ( !currentErrors.isEmpty( ) ) {
       throw Faults.failure( this.configuration, currentErrors );
-    } else if ( ( currentState.ordinal( ) < State.DISABLED.ordinal( ) )
-                || ( Component.State.ENABLED.equals( externalState ) && ( Cluster.State.ENABLING.ordinal( ) >= currentState.ordinal( ) ) ) ) {
+    } else if ( Component.State.ENABLED.equals( externalState ) && ( Cluster.State.ENABLING.ordinal( ) >= currentState.ordinal( ) ) ) {
       final IllegalStateException ex = new IllegalStateException( "Cluster is currently reported as " + externalState
                                                                   + " but is really "
                                                                   + currentState
