@@ -69,7 +69,7 @@ public class Logs {
                                                                  ? "INFO"
                                                                  : System.getProperty( "euca.log.level" ).toUpperCase( ) );
   private static final String          DEBUG_LOG_PATTERN       = "%d{EEE MMM d HH:mm:ss yyyy} %5p [%c{1}:%C{1}.%M(%F):%L:%t] %m%n";
-  private static final String          EXTREME_LOG_PATTERN     = "%d{EEE MMM d HH:mm:ss yyyy} %5p [%c{1}:%t] %m%n%d{EEE MMM d HH:mm:ss yyyy} %5p [%C.%M(%F):%L] %m%n";
+  private static final String          EXTREME_LOG_PATTERN     = "%d{EEE MMM d HH:mm:ss yyyy} %5p [%c{1}:%C{1}.%M(%F):%L:%t] %m%n";
   private static final String          DEFAULT_LOG_PATTERN     = "%d{EEE MMM d HH:mm:ss yyyy} %5p [%c{1}:%t] %m%n";
   private static final String          DEFAULT_LOG_MAX_BACKUPS = "25";
   private static final String          DEFAULT_LOG_MAX_SIZE    = "10MB";
@@ -333,17 +333,11 @@ public class Logs {
       System.setProperty( "euca.log.exhaustive.db", "TRACE" );
       System.setProperty( "euca.log.exhaustive.external", "TRACE" );
       System.setProperty( "euca.log.exhaustive.user", "TRACE" );
-      if ( !System.getProperties( ).contains( LOG_PATTERN_PROPERTY ) ) {
-        System.setProperty( LOG_PATTERN_PROPERTY, EXTREME_LOG_PATTERN );
-      }
+      System.setProperty( LOG_PATTERN_PROPERTY, EXTREME_LOG_PATTERN );
     } else if ( Logs.isDesbug( ) ) {
-      if ( !System.getProperties( ).contains( LOG_PATTERN_PROPERTY ) ) {
-        System.setProperty( LOG_PATTERN_PROPERTY, DEBUG_LOG_PATTERN );
-      }
+      System.setProperty( LOG_PATTERN_PROPERTY, DEBUG_LOG_PATTERN );
     } else {
-      if ( !System.getProperties( ).contains( LOG_PATTERN_PROPERTY ) ) {
-        System.setProperty( LOG_PATTERN_PROPERTY, DEFAULT_LOG_PATTERN );
-      }
+      System.setProperty( LOG_PATTERN_PROPERTY, DEFAULT_LOG_PATTERN );
     }
     //    System.setProperty( "log4j.configurationClass", "com.eucalyptus.util.Logs.LogConfigurator" );
     try {

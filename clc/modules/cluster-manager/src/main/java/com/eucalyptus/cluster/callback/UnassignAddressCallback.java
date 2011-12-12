@@ -140,22 +140,20 @@ public class UnassignAddressCallback extends MessageCallback<UnassignAddressType
     } else {
       EventRecord.here( UnassignAddressCallback.class, EventType.ADDRESS_STATE, "broken", address.toString( ) ).warn( );
     }
-    if ( !Transition.system.equals( this.address.getTransition( ) ) ) {
-      try {
-        this.address.clearPending( );
-      } catch ( IllegalStateException t ) {
-        LOG.debug( t );
-      } catch ( Exception t ) {
-        LOG.warn( t.getMessage( ) );
-        EventRecord.here( UnassignAddressCallback.class, EventType.ADDRESS_STATE, "broken", address.toString( ) ).warn( );
-        LOG.trace( t, t );
-      } finally {
-        if ( !this.address.isPending( ) && this.address.isSystemOwned( ) && Address.UNASSIGNED_INSTANCEID.equals( this.address.getInstanceId( ) ) ) {
-          try {
-            this.address.release( );
-          } catch ( Exception t ) {
-            LOG.warn( "Failed to release orphan address: " + this.address );
-          }
+    try {
+      this.address.clearPending( );
+    } catch ( IllegalStateException t ) {
+      LOG.debug( t );
+    } catch ( Exception t ) {
+      LOG.warn( t.getMessage( ) );
+      EventRecord.here( UnassignAddressCallback.class, EventType.ADDRESS_STATE, "broken", address.toString( ) ).warn( );
+      LOG.trace( t, t );
+    } finally {
+      if ( !this.address.isPending( ) && this.address.isSystemOwned( ) && Address.UNASSIGNED_INSTANCEID.equals( this.address.getInstanceId( ) ) ) {
+        try {
+          this.address.release( );
+        } catch ( Exception t ) {
+          LOG.warn( "Failed to release orphan address: " + this.address );
         }
       }
     }
