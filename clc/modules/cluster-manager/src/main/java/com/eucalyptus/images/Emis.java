@@ -347,7 +347,14 @@ public class Emis {
   
   public static BootableSet recreateBootableSet( String imageId, String kernelId, String ramdiskId ) throws MetadataException {
     try {
-      BootableSet bootSet = new BootsetBuilder( ).imageId( imageId ).kernelId( kernelId ).ramdiskId( ramdiskId ).start( );
+      BootsetBuilder builder = new BootsetBuilder( ).imageId( imageId );
+      if ( kernelId != null ) {
+        builder.kernelId( kernelId );
+        if ( ramdiskId != null ) {
+          builder.ramdiskId( ramdiskId );
+        }
+      }
+      BootableSet bootSet = builder.start( );
       Emis.checkStoredImage( bootSet );
       return bootSet;
     } catch ( MetadataException ex ) {

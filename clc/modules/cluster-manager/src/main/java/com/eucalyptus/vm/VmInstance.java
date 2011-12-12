@@ -519,8 +519,11 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       String ramdiskId = null;
       try {
         ramdiskId = input.getInstanceType( ).lookupRamdisk( ).getId( );
+      } catch ( final NoSuchElementException ex ) {
+        LOG.debug( "No ramdiskId " + input.getRamdiskId( ) + " for: " + input.getInstanceId( ) + " because vbr does not contain a ramdisk: " + input.getInstanceType( ).getVirtualBootRecord( ) );
+        Logs.extreme( ).error( ex, ex );
       } catch ( final Exception ex ) {
-        LOG.error( "Failed to lookup ramdiskId " + input.getInstanceType( ) + " for: " + input.getInstanceId( ) + " because of: " + ex.getMessage( ) );
+        LOG.error( "Failed to lookup ramdiskId " + input.getRamdiskId( ) + " for: " + input.getInstanceId( ) + " because of: " + ex.getMessage( ) );
         Logs.extreme( ).error( ex, ex );
       }
       return ramdiskId;
@@ -530,8 +533,11 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       String kernelId = null;
       try {
         kernelId = input.getInstanceType( ).lookupKernel( ).getId( );
+      } catch ( final NoSuchElementException ex ) {
+        LOG.debug( "No kernelId " + input.getKernelId( ) + " for: " + input.getInstanceId( ) + " because vbr does not contain a kernel: " + input.getInstanceType( ).getVirtualBootRecord( ) );
+        Logs.extreme( ).error( ex, ex );
       } catch ( final Exception ex ) {
-        LOG.error( "Failed to lookup kernelId " + input.getInstanceType( ) + " for: " + input.getInstanceId( ) + " because of: " + ex.getMessage( ) );
+        LOG.error( "Failed to lookup kernelId " + input.getKernelId( ) + " for: " + input.getInstanceId( ) + " because of: " + ex.getMessage( ) );
         Logs.extreme( ).error( ex, ex );
       }
       return kernelId;
@@ -542,7 +548,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       try {
         imageId = input.getInstanceType( ).lookupRoot( ).getId( );
       } catch ( final Exception ex2 ) {
-        LOG.error( "Failed to lookup imageId " + input.getInstanceType( ) + " for: " + input.getInstanceId( ) + " because of: " + ex2.getMessage( ) );
+        LOG.error( "Failed to lookup imageId " + input.getImageId( ) + " for: " + input.getInstanceId( ) + " because of: " + ex2.getMessage( ) );
         Logs.extreme( ).error( ex2, ex2 );
       }
       return imageId;

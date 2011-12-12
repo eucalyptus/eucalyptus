@@ -171,9 +171,9 @@ public abstract class PersistentReference<T extends PersistentReference<T, R>, R
                                   + this.getDisplayName( ) + " as there is no ongoing transaction." );
     }
     State currentState = this.getState( );
-    boolean matchPrecondition = preconditionState == null || preconditionState.equals( this.getState( ) );
-    boolean matchFinal = ( finalState == null && currentState == null ) || ( finalState != null && finalState.equals( currentState ) );
-    boolean matchReferer = ( referer == null && this.getReference( ) == null ) || referer.equals( this.getReference( ) );
+    boolean matchPrecondition = preconditionState == null || ( currentState != null && preconditionState.equals( currentState ) );
+    boolean matchFinal = ( finalState == null && currentState == null ) || ( finalState != null && currentState != null && finalState.equals( currentState ) );
+    boolean matchReferer = ( referer == null && this.getReference( ) == null ) || ( referer != null && this.getReference( ) != null && referer.equals( this.getReference( ) ) );
     if ( ( matchFinal && matchReferer ) || matchPrecondition ) {
       return;
     } else {

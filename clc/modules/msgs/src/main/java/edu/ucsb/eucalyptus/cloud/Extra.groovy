@@ -90,19 +90,29 @@ public class Pair {
 public class VmDescribeType extends CloudClusterMessage {
   
   ArrayList<String> instancesSet = new ArrayList<String>();
+  
+  @Override
+  public String toSimpleString( ) {
+    return instancesSet.join(":");
+  }
 }
 public class VmDescribeResponseType extends CloudClusterMessage {
   
   String originCluster;
   ArrayList<VmInfo> vms = new ArrayList<VmInfo>();
-  public String toString() {
-    return "${this.getClass().getSimpleName()} " + vms*.toString().join("\n${this.getClass().getSimpleName()} ");
+  public String toSimpleString() {
+    return vms.collect{"VmInfo ${this.originCluster} ${it}" }.join( ":" );
   }
 }
 
 public class VmRunResponseType extends CloudClusterMessage {
   
   ArrayList<VmInfo> vms = new ArrayList<VmInfo>();
+  
+  @Override
+  public String toSimpleString( ) {
+    return vms.collect{"vm=(${it})" }.join( ":" );
+  }
 }
 
 public class VmInfo extends EucalyptusData {
@@ -135,7 +145,16 @@ public class VmInfo extends EucalyptusData {
   
   @Override
   public String toString( ) {
-    return "VmInfo ${reservationId} ${instanceId} ${ownerId} ${stateName} ${instanceType} ${imageId} ${kernelId} ${ramdiskId} ${launchIndex} ${serviceTag} ${netParams} ${volumes}";
+    String prefix = "\n${this.instanceId} ${this.stateName}"
+    + ( !this.bundleTaskStateName?.equals("none") ? ":" + this.bundleTaskStateName : "" )
+    + ( !this.createImageStateName?.equals("none") ? ":" + this.createImageStateName : "" ) + " ";
+    def details = [
+      "${this.uuid} ${this.accountId}.${this.ownerId} ${this.keyValue?.replaceAll('.*@','').replace('.eucalyptus','')} ${this.reservationId} ${this.launchIndex} ${this.launchTime} ${this.serviceTag?.replace('http://', '' ).replaceAll(':877./.*','')}",
+      "${this.groupNames} ${this.netParams.getVlan( )}/${this.netParams.getNetworkIndex( )} ${this.netParams.getIpAddress( )}/${this.netParams.getIgnoredPublicIp( )} ${this.netParams.getPrivateDnsName( )}/${this.netParams.getPublicDnsName( )}",
+      this.volumes?.collect { it.getVolumeId( ) +"="+ it.getStatus( ) },
+      "${this.instanceType.getName( )} ${this.instanceType.getRootDeviceName( )} ${this.instanceType.getVirtualBootRecord( )}"
+    ];
+    return details.collect{ prefix + it }.join('');
   }
 }
 
@@ -167,6 +186,11 @@ public class VirtualBootRecord extends EucalyptusData implements Cloneable {
   public Object clone( ) {
     return super.clone();
   }
+  
+  @Override
+  public String toString( ) {
+    return "vbr(${this.id}:${this.type})";
+  }
 }
 
 public class VmKeyInfo extends EucalyptusData {
@@ -186,7 +210,7 @@ public class VmKeyInfo extends EucalyptusData {
   
   @Override
   public String toString( ) {
-    return String.format( "VmKeyInfo [fingerprint=%s, name=%s, value=%s]", this.fingerprint, this.name, this.value );
+    return "VmKeyInfo ${this.name} fingerprint=${this.fingerprint} value=${this.value}";
   }
 }
 

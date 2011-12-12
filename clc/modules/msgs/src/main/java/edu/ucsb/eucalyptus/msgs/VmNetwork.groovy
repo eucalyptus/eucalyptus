@@ -77,6 +77,15 @@ public class CloudClusterMessage extends EucalyptusMessage {
   public CloudClusterMessage( String userId ) {
     super( userId );
   }
+  
+  @Override
+  public String toString( ) {
+    return "${this.getClass().getSimpleName()} ${this.getUserId( )} ${this.toSimpleString( )}";
+  }
+  
+  public String toSimpleString( ) {
+    return "${this.getCorrelationId( )} ${this.get_return( )}";
+  }
 }
 public class StartNetworkType extends CloudClusterMessage {
   String networkUuid;
@@ -100,35 +109,14 @@ public class StartNetworkType extends CloudClusterMessage {
 
 public class StartNetworkResponseType extends CloudClusterMessage {
 }
-public class StopNetworkType extends CloudClusterMessage {
-  Integer vlan;
-  String netName;
-  String accountId;
-  
-  public StopNetworkType(){
-  }
-  
-  public StopNetworkType(final String accountId, final String userId, final String netName, final Integer vlan) {
-    super( userId );
-    this.vlan = vlan;
-    this.netName = netName;
-    this.accountId = accountId;
-  }
-  
-  public StopNetworkType(final StartNetworkType msg) {
-    super(msg);
-    this.vlan = msg.vlan;
-    this.netName = msg.netName;
-  }
-}
-
-public class StopNetworkResponseType extends CloudClusterMessage {
-}
-
 public class DescribeNetworksType extends CloudClusterMessage {
   String nameserver;
   String dnsDomainName;
   ArrayList<String> clusterControllers = new ArrayList<String>();
+  @Override
+  public String toSimpleString( ) {
+    return "ns=${nameserver}/${this.dnsDomainName} ccs="+clusterControllers.join(":");
+  }
 }
 
 public class DescribeNetworksResponseType extends CloudClusterMessage {
@@ -143,9 +131,12 @@ public class DescribeNetworksResponseType extends CloudClusterMessage {
   Integer addrsPerNet;
   ArrayList<NetworkInfoType> activeNetworks = new ArrayList<NetworkInfoType>();
   
-  public String toString() {
-    return "${this.getClass().getSimpleName()} mode=${mode} addrsPerNet=${addrsPerNet} " \
-      + "\n${this.getClass().getSimpleName()} " + this.activeNetworks*.toString().join( "\n${this.getClass().getSimpleName()} " );
+  @Override
+  public String toSimpleString() {
+    return "mode/tagged=${mode}/${useVlans==1}"
+    + (useVlans==1?"(${vlanMin->vlanMax}) ":" " )
+    + "privateNetwork=${addrsPerNet}(${addrIndexMin->addrIndexMax})/${vnetSubnet}/${vnetNetmask} "
+    + this.activeNetworks.collect { "\nNetwork ${it}" };
   }
 }
 public class AddressMappingInfoType extends EucalyptusData {
@@ -161,7 +152,7 @@ public class NetworkInfoType extends EucalyptusData {
   String userId;
   ArrayList<String> allocatedAddresses = new ArrayList<String>();
   public String toString( ) {
-    return "NetworkInfoType ${userId} ${networkName} ${vlan} ${allocatedAddresses}";
+    return "net(${this.uuid}:${this.userId}.${this.networkName}:${vlan}:" + allocatedAddresses.join(",")+")";
   }
 }
 
@@ -201,9 +192,8 @@ public class ClusterAddressInfo extends EucalyptusData implements Comparable<Clu
     } else if ( !this.address.equals( other.address ) ) return false;
     return true;
   }
-  
   public String toString( ) {
-    return String.format( "ClusterAddressInfo %s %s", this.address, this.instanceIp );
+    return "addr=(${this.uuid},${this.address}->${this.instanceIp})";
   }
 }
 
@@ -231,6 +221,11 @@ public class AssignAddressType extends CloudClusterMessage {
   
   def AssignAddressType() {
   }
+  
+  @Override
+  public String toSimpleString( ) {
+    return "${this.instanceId} ${this.source} ${this.destination}";
+  }
 }
 public class AssignAddressResponseType extends CloudClusterMessage {
 }
@@ -253,6 +248,10 @@ public class UnassignAddressType extends CloudClusterMessage {
   
   def UnassignAddressType() {
   }
+  @Override
+  public String toSimpleString( ) {
+    return "${this.source} ${this.destination}";
+  }
 }
 public class UnassignAddressResponseType extends CloudClusterMessage {
 }
@@ -260,26 +259,8 @@ public class DescribePublicAddressesType extends CloudClusterMessage {
 }
 public class DescribePublicAddressesResponseType extends CloudClusterMessage {
   ArrayList<ClusterAddressInfo> addresses = new ArrayList<ClusterAddressInfo>();
-  public String toString() {
-    return "${this.getClass().getSimpleName()} " + addresses.each{ it -> "${it}" }.join("\n${this.getClass().getSimpleName()} ");
+  @Override
+  public String toSimpleString( ) {
+    return addresses.collect{ "${it}" };
   }
-}
-
-public class ConfigureNetworkType extends CloudClusterMessage {
-  
-  ArrayList<PacketFilterRule> rules = new ArrayList<PacketFilterRule>();
-  
-  def ConfigureNetworkType(final EucalyptusMessage msg, final ArrayList<PacketFilterRule> rules) {
-    super(msg);
-    this.rules = rules;
-  }
-  
-  def ConfigureNetworkType(final ArrayList<PacketFilterRule> rules) {
-    this.rules = rules;
-  }
-  
-  def ConfigureNetworkType(){
-  }
-}
-public class ConfigureNetworkResponseType extends CloudClusterMessage {
 }

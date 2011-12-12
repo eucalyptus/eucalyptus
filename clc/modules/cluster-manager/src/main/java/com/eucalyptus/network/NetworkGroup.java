@@ -102,7 +102,6 @@ import com.eucalyptus.util.Numbers;
 import com.eucalyptus.util.OwnerFullName;
 import com.google.common.base.Function;
 import com.google.common.collect.Collections2;
-import edu.ucsb.eucalyptus.msgs.PacketFilterRule;
 
 @Entity
 @javax.persistence.Entity
@@ -239,24 +238,6 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
   public String toString( ) {
     return String.format( "NetworkRulesGroup:%s:description=%s:networkRules=%s", this.getUniqueName( ), this.description, this.networkRules );
   }
-  
-  @Transient
-  private final Function<NetworkRule, PacketFilterRule> ruleTransform = new Function<NetworkRule, PacketFilterRule>( ) {
-                                                                        
-                                                                        @Override
-                                                                        public PacketFilterRule apply( final NetworkRule from ) {
-                                                                          final PacketFilterRule pfrule = new PacketFilterRule(
-                                                                                                                                NetworkGroup.this.getOwnerAccountNumber( ),
-                                                                                                                                NetworkGroup.this.getDisplayName( ),
-                                                                                                                                from.getProtocol( ),
-                                                                                                                                from.getLowPort( ),
-                                                                                                                                from.getHighPort( ) );
-                                                                          pfrule.getSourceCidrs( ).addAll( from.getIpRanges( ) );
-                                                                          for ( final NetworkPeer peer : from.getNetworkPeers( ) )
-                                                                            pfrule.addPeer( peer.getUserQueryKey( ), peer.getGroupName( ) );
-                                                                          return pfrule;
-                                                                        }
-                                                                      };
   
   public String getClusterNetworkName( ) {
     return this.getOwnerAccountNumber( ) + "-" + this.getNaturalId( );
