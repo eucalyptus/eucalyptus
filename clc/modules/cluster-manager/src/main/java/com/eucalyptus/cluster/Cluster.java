@@ -636,10 +636,11 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
         }
         if ( transition != null ) {
           try {
-            transition.call( ).get( 30000L, TimeUnit.MILLISECONDS );
+            transition.call( ).get( );
             Cluster.this.clearExceptions( );
           } catch ( final Exception ex ) {
-            LOG.error( ex, ex );
+            LOG.error( ex );
+            Logs.extreme( ).error( ex, ex );
           }
         }
       }
@@ -1149,7 +1150,6 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
   
   public void check( ) throws Faults.CheckException, IllegalStateException {
     final Cluster.State currentState = this.stateMachine.getState( );
-    final Component.State externalState = this.configuration.lookupState( );
     final List<Throwable> currentErrors = Lists.newArrayList( );
     try {
       Refresh.SERVICEREADY.apply( this );
@@ -1159,6 +1159,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
       throw fail;
     }
     currentErrors.addAll( this.pendingErrors );
+    final Component.State externalState = this.configuration.lookupState( );
     if ( !currentErrors.isEmpty( ) ) {
       throw Faults.failure( this.configuration, currentErrors );
     } else if ( ( currentState.ordinal( ) < State.DISABLED.ordinal( ) )
