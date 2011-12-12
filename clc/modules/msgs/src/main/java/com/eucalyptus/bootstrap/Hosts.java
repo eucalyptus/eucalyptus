@@ -434,7 +434,7 @@ public class Hosts {
       if ( Bootstrap.isShuttingDown( ) ) {
         return;
       } else {
-        LOG.info( "Hosts.entrySet(): " + hostKey + " => " + host );
+        Logs.extreme( ).info( "Hosts.entrySet(): " + hostKey + " => " + host );
         try {
           if ( host.isLocalHost( ) && Bootstrap.isFinished( ) ) {
             final boolean wasSynched = Databases.isSynchronized( );
@@ -459,9 +459,10 @@ public class Hosts {
             LOG.debug( "Hosts.entrySet(): UPDATED HOST => " + host );
           }
         } catch ( Exception ex ) {
-          LOG.error( ex, ex );
+          LOG.error( ex );
+          Logs.extreme( ).error( ex, ex );
         }
-        LOG.info( "Hosts.entrySet(): " + hostKey + " finished." );
+        Logs.extreme( ).info( "Hosts.entrySet(): " + hostKey + " finished." );
       }
     }
     

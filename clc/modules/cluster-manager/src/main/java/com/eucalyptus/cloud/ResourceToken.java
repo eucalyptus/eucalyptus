@@ -213,11 +213,11 @@ public class ResourceToken implements VmInstanceMetadata, Comparable<ResourceTok
       return false;
     }
     ResourceToken other = ( ResourceToken ) obj;
-    if ( this.instanceUuid == null ) {
-      if ( other.instanceUuid != null ) {
+    if ( this.instanceId == null ) {
+      if ( other.instanceId != null ) {
         return false;
       }
-    } else if ( !this.instanceUuid.equals( other.instanceUuid ) ) {
+    } else if ( !this.instanceId.equals( other.instanceId ) ) {
       return false;
     }
     return true;
