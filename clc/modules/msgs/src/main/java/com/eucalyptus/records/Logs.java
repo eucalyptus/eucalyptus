@@ -28,10 +28,6 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Objects;
 
 public class Logs {
-  /**
-   * 
-   */
-  private static final String LOG_PATTERN_PROPERTY = "euca.log.pattern";
   private static Logger                LOG                     = Logger.getLogger( Logs.class );
   /**
    * <pre>
@@ -68,26 +64,16 @@ public class Logs {
   private static final String          DEFAULT_LOG_LEVEL       = ( ( System.getProperty( "euca.log.level" ) == null )
                                                                  ? "INFO"
                                                                  : System.getProperty( "euca.log.level" ).toUpperCase( ) );
-  private static final String          DEBUG_LOG_PATTERN       = "%d{EEE MMM d HH:mm:ss yyyy} %5p [%c{1}:%C{1}.%M(%F):%L:%t] %m%n";
-  private static final String          EXTREME_LOG_PATTERN     = "%d{EEE MMM d HH:mm:ss yyyy} %5p [%c{1}:%C{1}.%M(%F):%L:%t] %m%n";
   private static final String          DEFAULT_LOG_PATTERN     = "%d{EEE MMM d HH:mm:ss yyyy} %5p [%c{1}:%t] %m%n";
   private static final String          DEFAULT_LOG_MAX_BACKUPS = "25";
   private static final String          DEFAULT_LOG_MAX_SIZE    = "10MB";
   
   private enum LogProps {
-    threshold,
-    pattern,
-    filesize,
-    maxbackups;
+    threshold, pattern, filesize, maxbackups;
   }
   
   private enum Appenders {
-    OUTPUT,
-    ERROR,
-    EXHAUST,
-    CLUSTER,
-    DEBUG,
-    BOOTSTRAP;
+    OUTPUT, ERROR, EXHAUST, CLUSTER, DEBUG, BOOTSTRAP;
     private final String  prop;
     private final String  threshold;
     private final String  pattern;
@@ -333,13 +319,7 @@ public class Logs {
       System.setProperty( "euca.log.exhaustive.db", "TRACE" );
       System.setProperty( "euca.log.exhaustive.external", "TRACE" );
       System.setProperty( "euca.log.exhaustive.user", "TRACE" );
-      System.setProperty( LOG_PATTERN_PROPERTY, EXTREME_LOG_PATTERN );
-    } else if ( Logs.isDesbug( ) ) {
-      System.setProperty( LOG_PATTERN_PROPERTY, DEBUG_LOG_PATTERN );
-    } else {
-      System.setProperty( LOG_PATTERN_PROPERTY, DEFAULT_LOG_PATTERN );
-    }
-    //    System.setProperty( "log4j.configurationClass", "com.eucalyptus.util.Logs.LogConfigurator" );
+    }//    System.setProperty( "log4j.configurationClass", "com.eucalyptus.util.Logs.LogConfigurator" );
     try {
       final PrintStream oldOut = System.out;
       final ByteArrayOutputStream bos = new ByteArrayOutputStream( );

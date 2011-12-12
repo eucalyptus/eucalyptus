@@ -201,18 +201,4 @@ public abstract class PersistentReference<T extends PersistentReference<T, R>, R
     return ret;
   }
   
-  @Override
-  public String getPartition( ) {
-    return null;
-  }
-  
-  @Override
-  public FullName getFullName( ) {
-    return null;
-  }
-  
-  @Override
-  public boolean isAllocated( ) {
-    return State.EXTANT.equals( this.getState( ) );
-  }
 }
