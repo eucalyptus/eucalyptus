@@ -95,6 +95,7 @@ import org.hibernate.annotations.Entity;
 import org.hibernate.annotations.NotFound;
 import org.hibernate.annotations.NotFoundAction;
 import org.hibernate.criterion.Restrictions;
+import org.hibernate.criterion.SimpleExpression;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
 import com.eucalyptus.auth.principal.UserFullName;
@@ -329,12 +330,11 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           
           EntityTransaction db = Entities.get( NetworkGroup.class );
           try {
+            SimpleExpression naturalId = Restrictions.like( "naturalId", arg0.replace( userFullName.getAccountNumber( ) + "-", "" ) + "%" );
             final NetworkGroup result = ( NetworkGroup ) Entities.createCriteria( NetworkGroup.class )
-                                                                 .setReadOnly( true )
-                                                                 .add( Restrictions.like( "naturalId",
-                                                                                          arg0.replace( userFullName.getAccountNumber( ) + "-", "" ) + "%" ) )
+                                                                 .add( naturalId )
                                                                  .uniqueResult( );
-            db.rollback( );
+            db.commit( );
             return result;
           } catch ( Exception ex ) {
             Logs.exhaust( ).error( ex, ex );
@@ -520,7 +520,11 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       try {
         ramdiskId = input.getInstanceType( ).lookupRamdisk( ).getId( );
       } catch ( final NoSuchElementException ex ) {
-        LOG.debug( "No ramdiskId " + input.getRamdiskId( ) + " for: " + input.getInstanceId( ) + " because vbr does not contain a ramdisk: " + input.getInstanceType( ).getVirtualBootRecord( ) );
+        LOG.debug( "No ramdiskId " + input.getRamdiskId( )
+          + " for: "
+          + input.getInstanceId( )
+          + " because vbr does not contain a ramdisk: "
+          + input.getInstanceType( ).getVirtualBootRecord( ) );
         Logs.extreme( ).error( ex, ex );
       } catch ( final Exception ex ) {
         LOG.error( "Failed to lookup ramdiskId " + input.getRamdiskId( ) + " for: " + input.getInstanceId( ) + " because of: " + ex.getMessage( ) );
@@ -534,7 +538,11 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       try {
         kernelId = input.getInstanceType( ).lookupKernel( ).getId( );
       } catch ( final NoSuchElementException ex ) {
-        LOG.debug( "No kernelId " + input.getKernelId( ) + " for: " + input.getInstanceId( ) + " because vbr does not contain a kernel: " + input.getInstanceType( ).getVirtualBootRecord( ) );
+        LOG.debug( "No kernelId " + input.getKernelId( )
+          + " for: "
+          + input.getInstanceId( )
+          + " because vbr does not contain a kernel: "
+          + input.getInstanceType( ).getVirtualBootRecord( ) );
         Logs.extreme( ).error( ex, ex );
       } catch ( final Exception ex ) {
         LOG.error( "Failed to lookup kernelId " + input.getKernelId( ) + " for: " + input.getInstanceId( ) + " because of: " + ex.getMessage( ) );
