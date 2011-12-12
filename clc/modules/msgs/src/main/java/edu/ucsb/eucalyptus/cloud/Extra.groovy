@@ -146,8 +146,8 @@ public class VmInfo extends EucalyptusData {
   @Override
   public String toString( ) {
     String prefix = "\n${this.instanceId} ${this.stateName}"
-    + ( !this.bundleTaskStateName?.equals("none") ? ":" + this.bundleTaskStateName : "" )
-    + ( !this.createImageStateName?.equals("none") ? ":" + this.createImageStateName : "" ) + " ";
+    + ( this.bundleTaskStateName != null || !this.bundleTaskStateName.equals("none") ? ":" + this.bundleTaskStateName : "" )
+    + ( this.createImageStateName != null || !this.createImageStateName?.equals("none") ? ":" + this.createImageStateName : "" ) + " ";
     def details = [
       "${this.uuid} ${this.accountId}.${this.ownerId} ${this.keyValue?.replaceAll('.*@','').replace('.eucalyptus','')} ${this.reservationId} ${this.launchIndex} ${this.launchTime} ${this.serviceTag?.replace('http://', '' ).replaceAll(':877./.*','')}",
       "${this.groupNames} ${this.netParams.getVlan( )}/${this.netParams.getNetworkIndex( )} ${this.netParams.getIpAddress( )}/${this.netParams.getIgnoredPublicIp( )} ${this.netParams.getPrivateDnsName( )}/${this.netParams.getPublicDnsName( )}",
