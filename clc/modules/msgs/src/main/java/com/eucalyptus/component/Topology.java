@@ -683,7 +683,7 @@ public class Topology {
     
     @Override
     public List<ServiceConfiguration> call( ) {
-      if ( Databases.isSynchronizing( ) ) {
+      if ( Databases.isVolatile( ) ) {
         return Lists.newArrayList( );
       }
       /** submit describe operations **/

@@ -9,11 +9,11 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.cloud.CloudMetadatas;
 import com.eucalyptus.cluster.Cluster;
-import com.eucalyptus.component.Partition;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.async.FailedRequestException;
+import com.eucalyptus.util.async.SubjectMessageCallback;
 import com.eucalyptus.vm.VmBundleTask.BundleState;
 import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstance.VmState;
@@ -47,33 +47,33 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
         regarding( );
       }
     } );
-    this.initialInstances = createInstanceSupplier( this );
+    this.initialInstances = createInstanceSupplier( this, partitionFilter( this ) );
   }
-
-  private static Supplier<Set<String>> createInstanceSupplier( final StateUpdateMessageCallback<Cluster, ?, ?> cb ) {
+  
+  private static Supplier<Set<String>> createInstanceSupplier( final StateUpdateMessageCallback<Cluster, ?, ?> cb, final Predicate<VmInstance> filter ) {
     return Suppliers.memoize( new Supplier<Set<String>>( ) {
       
       @Override
       public Set<String> get( ) {
-        Predicate<VmInstance> partitionFilter = new Predicate<VmInstance>( ) {
-          
-          @Override
-          public boolean apply( VmInstance input ) {
-            return input.getPartition( ).equals( cb.getSubject( ).getPartition( ) ) || "default".equals( input.getPartition( ) );
-          }
-        };
-        Collection<VmInstance> clusterInstances = Collections2.filter( VmInstances.list( ),
-                                                                       partitionFilter );
-        Collection<String> instanceNames = Collections2.transform( clusterInstances,
-                                                                   CloudMetadatas.toDisplayName( ) );
+        Collection<VmInstance> clusterInstances = Collections2.filter( VmInstances.list( ), filter );
+        Collection<String> instanceNames = Collections2.transform( clusterInstances, CloudMetadatas.toDisplayName( ) );
         return Sets.newHashSet( instanceNames );
       }
     } );
   }
   
+  /**
+   * @see com.eucalyptus.cluster.callback.StateUpdateMessageCallback#fireException(com.eucalyptus.util.async.FailedRequestException)
+   * @param t
+   */
+  @Override
+  public void fireException( FailedRequestException t ) {
+    LOG.debug( "Request to " + this.getSubject( ).getName( ) + " failed: " + t.getMessage( ) );
+  }
+  
   @Override
   public void fire( VmDescribeResponseType reply ) {
-    if ( Databases.isSynchronizing( ) ) {
+    if ( Databases.isVolatile( ) ) {
       return;
     } else {
       reply.setOriginCluster( this.getSubject( ).getConfiguration( ).getName( ) );
@@ -91,17 +91,23 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
         }
       }
       
-      final Set<String> unreportedInstances = Sets.newHashSet( Sets.difference( this.initialInstances, reportedInstances ) );
-      final Set<String> restoreInstances = Sets.newHashSet( Sets.difference( reportedInstances, this.initialInstances ) );
+      final Set<String> unreportedInstances = Sets.newHashSet( Sets.difference( this.initialInstances.get( ), reportedInstances ) );
+      final Set<String> restoreInstances = Sets.newHashSet( Sets.difference( reportedInstances, this.initialInstances.get( ) ) );
       for ( final VmInfo runVm : reply.getVms( ) ) {
-        if ( this.initialInstances.contains( runVm.getInstanceId( ) ) ) {
+        if ( Databases.isVolatile( ) ) {
+          return;
+        } else if ( this.initialInstances.get( ).contains( runVm.getInstanceId( ) ) ) {
           VmStateCallback.handleReportedState( runVm );
         } else if ( restoreInstances.contains( runVm.getInstanceId( ) ) ) {
           VmStateCallback.handleRestore( runVm );
         }
       }
       for ( final String vmId : unreportedInstances ) {
-        VmStateCallback.handleUnreported( vmId );
+        if ( Databases.isVolatile( ) ) {
+          return;
+        } else {
+          VmStateCallback.handleUnreported( vmId );
+        }
       }
     }
   }
@@ -205,60 +211,58 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
     }
   }
   
-  /**
-   * @see com.eucalyptus.cluster.callback.StateUpdateMessageCallback#fireException(com.eucalyptus.util.async.FailedRequestException)
-   * @param t
-   */
-  @Override
-  public void fireException( FailedRequestException t ) {
-    LOG.debug( "Request to " + this.getSubject( ).getName( ) + " failed: " + t.getMessage( ) );
+  private static Predicate<VmInstance> volumeFilter( ) {
+    return new Predicate<VmInstance>( ) {
+      
+      @Override
+      public boolean apply( VmInstance input ) {
+        return input.eachVolumeAttachment( new Predicate<AttachedVolume>( ) {
+          @Override
+          public boolean apply( AttachedVolume arg0 ) {
+            return arg0.getStatus( ).endsWith( "ing" );
+          }
+        } );
+      }
+    };
+  }
+  
+  private static Predicate<VmInstance> stateSettleFilter( ) {
+    return new Predicate<VmInstance>( ) {
+      
+      @Override
+      public boolean apply( VmInstance input ) {
+        return input.getCreationSplitTime( ) > VM_STATE_SETTLE_TIME;
+      }
+    };
+  }
+  
+  private static Predicate<VmInstance> partitionFilter( final SubjectMessageCallback<Cluster, ?, ?> cb ) {
+    return new Predicate<VmInstance>( ) {
+      
+      @Override
+      public boolean apply( VmInstance arg0 ) {
+        return arg0.getPartition( ).equals( cb.getSubject( ).getConfiguration( ).getPartition( ) );
+      }
+    };
   }
   
   public static class VmPendingCallback extends StateUpdateMessageCallback<Cluster, VmDescribeType, VmDescribeResponseType> {
-    private final Predicate<VmInstance> clusterMatch = new Predicate<VmInstance>( ) {
-                                                       
-                                                       @Override
-                                                       public boolean apply( VmInstance arg0 ) {
-                                                         return arg0.getPartition( ).equals( VmPendingCallback.this.getSubject( ).getConfiguration( ).getPartition( ) )
-                                                       ;
-                                                     }
-                                                     };
-    private final Predicate<VmInstance> volumeState  = new Predicate<VmInstance>( ) {
-                                                       
-                                                       @Override
-                                                       public boolean apply( VmInstance input ) {
-                                                         return input.eachVolumeAttachment( new Predicate<AttachedVolume>( ) {
-                                                           @Override
-                                                           public boolean apply( AttachedVolume arg0 ) {
-                                                             return !arg0.getStatus( ).endsWith( "ing" );
-                                                           }
-                                                         } );
-                                                       }
-                                                     };
-    private final Predicate<VmInstance> filter       = Predicates.and( Predicates.or( VmStateSet.CHANGING, this.volumeState ), this.clusterMatch );
-    private Set<String>                 initialInstances;
+    @SuppressWarnings( "unchecked" )
+    private final Predicate<VmInstance> filter = Predicates.and( Predicates.or( VmStateSet.CHANGING, volumeFilter( ) ),
+                                                                 partitionFilter( this ),
+                                                                 stateSettleFilter( ) );
+    private final Supplier<Set<String>> initialInstances;
     
     public VmPendingCallback( Cluster cluster ) {
       super( cluster );
-      Predicate<VmInstance> partitionFilter = new Predicate<VmInstance>( ) {
-        
-        @Override
-        public boolean apply( VmInstance input ) {
-          return input.getPartition( ).equals( VmPendingCallback.this.getSubject( ).getPartition( ) ) || "default".equals( input.getPartition( ) );
-        }
-      };
-      Collection<VmInstance> clusterInstances = Collections2.filter( VmInstances.list( ), partitionFilter );
-      Collection<String> instanceNames = Collections2.transform( clusterInstances, CloudMetadatas.toDisplayName( ) );
-      this.initialInstances = Sets.newHashSet( instanceNames );
-      super.setRequest( new VmDescribeType( ) {
+      this.initialInstances = createInstanceSupplier( this, this.filter );
+      this.setRequest( new VmDescribeType( ) {
         {
           regarding( );
           EntityTransaction db = Entities.get( VmInstance.class );
           try {
             for ( VmInstance vm : Iterables.filter( VmInstances.list( ), VmPendingCallback.this.filter ) ) {
-              if ( vm.getCreationSplitTime( ) > VM_STATE_SETTLE_TIME ) {
-                this.getInstancesSet( ).add( vm.getInstanceId( ) );
-              }
+              this.getInstancesSet( ).add( vm.getInstanceId( ) );
             }
             Entities.commit( db );
           } catch ( Exception ex ) {
@@ -274,13 +278,11 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
     
     @Override
     public void fire( VmDescribeResponseType reply ) {
-      if ( Databases.isSynchronizing( ) ) {
-        return;
-      } else {
-        for ( final VmInfo runVm : reply.getVms( ) ) {
-          if ( this.initialInstances.contains( runVm.getInstanceId( ) ) ) {
-            VmStateCallback.handleReportedState( runVm );
-          }
+      for ( final VmInfo runVm : reply.getVms( ) ) {
+        if ( Databases.isVolatile( ) ) {
+          return;
+        } else if ( this.initialInstances.get( ).contains( runVm.getInstanceId( ) ) ) {
+          VmStateCallback.handleReportedState( runVm );
         }
       }
     }
@@ -295,7 +297,7 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
     }
     
   }
-
+  
   @Override
   public void setSubject( Cluster subject ) {
     super.setSubject( subject );

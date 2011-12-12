@@ -938,7 +938,7 @@ public class Entities {
   public static void commit( EntityTransaction tx ) {
     if ( tx.getRollbackOnly( ) ) {
       tx.rollback( );
-    } else if ( Databases.isSynchronizing( ) ) {
+    } else if ( Databases.isVolatile( ) ) {
       tx.rollback( );
     } else {
       tx.commit( );
