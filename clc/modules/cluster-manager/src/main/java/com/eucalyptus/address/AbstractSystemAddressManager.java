@@ -64,7 +64,7 @@ public abstract class AbstractSystemAddressManager {
         final Address addr = Addresses.getInstance( ).lookup( address.getAddress( ) );
         if ( addr.isAssigned( ) ) {
           AsyncRequests.newRequest( new UnassignAddressCallback( address ) ).dispatch( cluster.getConfiguration( ) );
-        } else if ( !addr.isAssigned( ) && addr.isAllocated( ) && addr.isSystemOwned( ) ) {
+        } else if ( addr.isSystemOwned( ) ) {
           addr.release( );
         }
       } catch ( NoSuchElementException e ) {}

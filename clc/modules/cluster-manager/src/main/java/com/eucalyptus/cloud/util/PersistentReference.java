@@ -68,11 +68,9 @@ import javax.persistence.EntityTransaction;
 import javax.persistence.MappedSuperclass;
 import org.apache.log4j.Logger;
 import com.eucalyptus.cloud.UserMetadata;
-import com.eucalyptus.cloud.util.Reference.State;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Threads;
-import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.HasNaturalId;
 import com.eucalyptus.util.OwnerFullName;
 
@@ -154,7 +152,7 @@ public abstract class PersistentReference<T extends PersistentReference<T, R>, R
   
   @SuppressWarnings( "unchecked" )
   T doSetReferer( final R referer, final Reference.State preconditionState, final Reference.State finalState ) throws ResourceAllocationException {
-    this.checkPreconditions( referer, preconditionState, finalState );
+    this.checkPreconditions( preconditionState );
     if ( ( referer != null ) && !Reference.State.PENDING.equals( finalState ) ) {
       final R refererEntity = referer;
       this.setReference( refererEntity );
@@ -166,32 +164,15 @@ public abstract class PersistentReference<T extends PersistentReference<T, R>, R
     return ( T ) this;
   }
   
-  private void checkPreconditions( R referer, final Reference.State preconditionState, Reference.State finalState ) throws RuntimeException {
+  private void checkPreconditions( final Reference.State preconditionState ) throws RuntimeException {
     if ( ( !Entities.hasTransaction( this ) ) ) {
       throw new RuntimeException( "Error allocating resource " + PersistentReference.this.getClass( ).getSimpleName( ) + " with id "
                                   + this.getDisplayName( ) + " as there is no ongoing transaction." );
     }
-    State currentState = this.getState( );
-    boolean matchPrecondition = preconditionState == null || ( currentState != null && preconditionState.equals( currentState ) );
-    boolean matchFinal = ( finalState == null && currentState == null ) || ( finalState != null && currentState != null && finalState.equals( currentState ) );
-    boolean matchReferer = ( this.getReference( ) == null ) || ( referer != null && this.getReference( ) != null && referer.equals( this.getReference( ) ) );
-    if ( ( matchFinal && matchReferer ) || matchPrecondition ) {
-      return;
-    } else {
-      throw new RuntimeException( "Error allocating resource " + PersistentReference.this.getClass( ).getSimpleName( )
-        + " with id "
-        + this.getDisplayName( )
-        + " as the state is not either the precondition "
-        + preconditionState.name( )
-        + " or the final state "
-        + finalState.name( )
-        + " (currently "
-        + currentState.name( )
-        + ", referer "
-        + this.getReference( )
-        + ", passed referer "
-        + referer
-        + ")" );
+    if ( ( this.getState( ) != null ) && ( preconditionState != null ) && !preconditionState.equals( this.getState( ) ) ) {
+      throw new RuntimeException( "Error allocating resource " + PersistentReference.this.getClass( ).getSimpleName( ) + " with id "
+                                  + this.getDisplayName( ) + " as the state is not " + preconditionState.name( ) + " (currently "
+                                  + this.getState( ) + ")." );
     }
   }
   
@@ -200,5 +181,4 @@ public abstract class PersistentReference<T extends PersistentReference<T, R>, R
     final T ret = PersistentReference.this.doSetReferer( referer, Reference.State.PENDING, Reference.State.EXTANT );
     return ret;
   }
-  
 }

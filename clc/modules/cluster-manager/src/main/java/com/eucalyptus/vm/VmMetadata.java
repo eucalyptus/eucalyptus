@@ -159,7 +159,7 @@ public class VmMetadata {
         ? " cause: " + ex.getMessage( )
         : "" );
       LOG.error( errorMsg, ex );
-      throw Exceptions.toUndeclared( ex );
+      return "".getBytes( );
     }
   }
   

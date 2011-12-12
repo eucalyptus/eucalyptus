@@ -25,8 +25,6 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.ServiceContext;
 import com.eucalyptus.context.ServiceDispatchException;
 import com.eucalyptus.http.MappingHttpRequest;
-import com.eucalyptus.records.Logs;
-import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.ws.stages.UnrollableStage;
 
 @ChannelPipelineCoverage( "one" )
@@ -63,7 +61,6 @@ public class MetadataPipeline extends FilteredPipeline implements ChannelUpstrea
       HttpResponse response = null;
       LOG.trace( "Trying to get metadata: " + newUri );
       Object reply = "".getBytes( );
-      Exception replyEx = null;
       try {
         if ( Bootstrap.isShuttingDown( ) ) {
           reply = "System shutting down".getBytes( );
@@ -74,29 +71,20 @@ public class MetadataPipeline extends FilteredPipeline implements ChannelUpstrea
         }
       } catch ( ServiceDispatchException e1 ) {
         LOG.debug( e1, e1 );
-        replyEx = e1;
+        reply = e1.getMessage( ).getBytes( );
       } catch ( Exception e1 ) {
         LOG.debug( e1, e1 );
-        replyEx = e1;
+        reply = e1.getMessage( ).getBytes( );
       } finally {
         Contexts.clear( request.getCorrelationId( ) );
       }
-      Logs.extreme( ).debug( "VmMetadata reply info: " + reply + " " + replyEx );
-      if ( replyEx != null || reply == null || reply instanceof NullPayload ) {
-        response = new DefaultHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.NOT_FOUND );
-        if ( Logs.isDesbug( ) ) {
-          response.setHeader( HttpHeaders.Names.CONTENT_TYPE, "text/plain" );
-          ChannelBuffer buffer = ChannelBuffers.wrappedBuffer( Exceptions.string( replyEx ).getBytes( ) );
-          response.setContent( buffer );
-          response.addHeader( HttpHeaders.Names.CONTENT_LENGTH, Integer.toString( buffer.readableBytes( ) ) );
-        }
-      } else {
+      if ( reply != null && !( reply instanceof NullPayload ) ) {
         response = new DefaultHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.OK );
         response.setHeader( HttpHeaders.Names.CONTENT_TYPE, "text/plain" );
         ChannelBuffer buffer = ChannelBuffers.wrappedBuffer( ( byte[] ) reply );
         response.setContent( buffer );
         response.addHeader( HttpHeaders.Names.CONTENT_LENGTH, Integer.toString( buffer.readableBytes( ) ) );
-      }
+      } else response = new DefaultHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.NOT_FOUND );
       ctx.getChannel( ).write( response ).addListener( ChannelFutureListener.CLOSE );
     } else {
       ctx.sendUpstream( e );

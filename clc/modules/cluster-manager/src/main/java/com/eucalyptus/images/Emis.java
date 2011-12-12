@@ -347,14 +347,7 @@ public class Emis {
   
   public static BootableSet recreateBootableSet( String imageId, String kernelId, String ramdiskId ) throws MetadataException {
     try {
-      BootsetBuilder builder = new BootsetBuilder( ).imageId( imageId );
-      if ( kernelId != null ) {
-        builder.kernelId( kernelId );
-        if ( ramdiskId != null ) {
-          builder.ramdiskId( ramdiskId );
-        }
-      }
-      BootableSet bootSet = builder.start( );
+      BootableSet bootSet = new BootsetBuilder( ).imageId( imageId ).kernelId( kernelId ).ramdiskId( ramdiskId ).start( );
       Emis.checkStoredImage( bootSet );
       return bootSet;
     } catch ( MetadataException ex ) {
@@ -442,15 +435,11 @@ public class Emis {
   
   private static <T extends ImageInfo> T resolveDiskImage( String imageId, Function<String, T> resolver ) throws IllegalMetadataAccessException {
     T img = resolver.apply( imageId );
-    if ( Contexts.exists( ) ) { 
-      Predicate<T> filter = Predicates.and( Images.FilterPermissions.INSTANCE, RestrictedTypes.filterPrivilegedWithoutOwner( ) );
-      if ( filter.apply( img ) ) {
-        return img;
-      } else {
-        throw new IllegalMetadataAccessException( imageId + ": permission denied." );
-      }
-    } else {
+    Predicate<T> filter = Predicates.and( Images.FilterPermissions.INSTANCE, RestrictedTypes.filterPrivilegedWithoutOwner( ) );
+    if ( filter.apply( img ) ) {
       return img;
+    } else {
+      throw new IllegalMetadataAccessException( imageId + ": permission denied." );
     }
   }
   

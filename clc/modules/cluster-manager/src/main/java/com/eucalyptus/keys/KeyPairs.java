@@ -137,7 +137,7 @@ public class KeyPairs {
     KeyPair newKeys = null;
     try {
       newKeys = Certs.generateKeyPair( );
-      String authKeyString = KeyPairs.getAuthKeyString( userName, keyName, newKeys );
+      String authKeyString = KeyPairs.getAuthKeyString( userName, newKeys );
       newKey.setPublicKey( authKeyString );
       newKey.setFingerPrint( Certs.getFingerPrint( newKeys.getPrivate( ) ) );
     } catch ( Exception e ) {
@@ -151,7 +151,7 @@ public class KeyPairs {
     return newKeys.getPrivate( );
   }
   
-  private static String getAuthKeyString( UserFullName userName, String keyName, KeyPair newKeys ) {
+  private static String getAuthKeyString( UserFullName userName, KeyPair newKeys ) {
     RSAPublicKey publicKey = ( RSAPublicKey ) newKeys.getPublic( );
     byte[] keyType = "ssh-rsa".getBytes( );
     byte[] expBlob = publicKey.getPublicExponent( ).toByteArray( );
@@ -171,7 +171,7 @@ public class KeyPairs {
     System.arraycopy( lenArray, 0, authKeyBlob, 4 + expBlob.length + 4 + keyType.length + 4 - lenArray.length, lenArray.length );
     System.arraycopy( modBlob, 0, authKeyBlob, 4 + ( 4 + expBlob.length + ( 4 + keyType.length ) ), modBlob.length );
     
-    String authKeyString = String.format( "%s %s %s@%s.eucalyptus", new String( keyType ), new String( Base64.encode( authKeyBlob ) ), keyName, userName.toString( ) );
+    String authKeyString = String.format( "%s %s %s@eucalyptus", new String( keyType ), new String( Base64.encode( authKeyBlob ) ), userName.toString( ) );
     return authKeyString;
   }
 
