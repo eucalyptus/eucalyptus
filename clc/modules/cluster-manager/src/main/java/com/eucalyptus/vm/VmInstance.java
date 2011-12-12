@@ -337,57 +337,26 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     
     @Override
     public boolean apply( final VmInfo input ) {
-      VmState inputState = VmState.Mapper.get( input.getStateName( ) );
+      final VmState inputState = VmState.Mapper.get( input.getStateName( ) );
       if ( !VmStateSet.RUN.contains( inputState ) ) {
         return false;
       } else {
         final UserFullName userFullName = UserFullName.getInstance( input.getOwnerId( ) );
-        final List<NetworkGroup> networks = Lists.newArrayList( );
         
-        PrivateNetworkIndex index = null;
-        ExtantNetwork exNet;
-        EntityTransaction tx1 = Entities.get( NetworkGroup.class );
-        try {
-          networks.addAll( Lists.transform( input.getGroupNames( ), transformNetworkNames( userFullName ) ) );
-          final NetworkGroup network = ( !networks.isEmpty( )
-              ? networks.get( 0 )
-              : null );
-          try {
-            if ( network != null ) {
-              if ( !network.hasExtantNetwork( ) ) {
-                exNet = network.reclaim( input.getNetParams( ).getVlan( ) );
-              } else {
-                exNet = network.extantNetwork( );
-                if ( !exNet.getTag( ).equals( input.getNetParams( ).getVlan( ) ) ) {
-                  exNet = null;
-                } else {
-                  index = exNet.reclaimNetworkIndex( input.getNetParams( ).getNetworkIndex( ) );
-                }
-              }
-            }
-          } catch ( Exception ex ) {
-            throw Exceptions.toUndeclared( ex );
-          }
-          
-          tx1.commit( );
-        } catch ( Exception ex ) {
-          LOG.error( ex );
-          Logs.extreme( ).error( ex, ex );
-          tx1.rollback( );
-          throw Exceptions.toUndeclared( ex );
-        }
+        final List<NetworkGroup> networks = RestoreAllocation.restoreNetworks( input, userFullName );
+        final PrivateNetworkIndex index = RestoreAllocation.restoreNetworkIndex( input, networks );
         
         final EntityTransaction db = Entities.get( VmInstance.class );
         try {
-          VmType vmType = RestoreAllocation.restoreVmType( input );
-          Partition partition = RestoreAllocation.restorePartition( input );
-          String imageId = RestoreAllocation.restoreImage( input );
-          String kernelId = RestoreAllocation.restoreKernel( input );
-          String ramdiskId = RestoreAllocation.restoreRamdisk( input );
-          BootableSet bootSet = RestoreAllocation.restoreBootSet( input, imageId, kernelId, ramdiskId );
-          int launchIndex = RestoreAllocation.restoreLaunchIndex( input );
-          SshKeyPair keyPair = RestoreAllocation.restoreSshKeyPair( input, userFullName );
-          byte[] userData = RestoreAllocation.restoreUserData( input );
+          final VmType vmType = RestoreAllocation.restoreVmType( input );
+          final Partition partition = RestoreAllocation.restorePartition( input );
+          final String imageId = RestoreAllocation.restoreImage( input );
+          final String kernelId = RestoreAllocation.restoreKernel( input );
+          final String ramdiskId = RestoreAllocation.restoreRamdisk( input );
+          final BootableSet bootSet = RestoreAllocation.restoreBootSet( input, imageId, kernelId, ramdiskId );
+          final int launchIndex = RestoreAllocation.restoreLaunchIndex( input );
+          final SshKeyPair keyPair = RestoreAllocation.restoreSshKeyPair( input, userFullName );
+          final byte[] userData = RestoreAllocation.restoreUserData( input );
           VmInstance vmInst;
           try {
             vmInst = new VmInstance.Builder( ).owner( userFullName )
@@ -402,7 +371,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
             vmInst.setNaturalId( input.getUuid( ) );
             RestoreAllocation.restoreAddress( input, vmInst );
             Entities.persist( vmInst );
-          } catch ( Exception ex1 ) {
+          } catch ( final Exception ex1 ) {
             LOG.error( "Failed to restore instance " + input.getInstanceId( ) + " because of: " + ex1.getMessage( ) );
             Logs.extreme( ).error( ex1, ex1 );
           }
@@ -420,11 +389,50 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
 //        ClusterConfiguration config = Clusters.getInstance( ).lookup( runVm.getPlacement( ) ).getConfiguration( );
 //        AsyncRequests.newRequest( new TerminateCallback( runVm.getInstanceId( ) ) ).dispatch( runVm.getPlacement( ) );
     }
-
-    private static void restoreAddress( final VmInfo input, VmInstance vmInst ) {
+    
+    private static PrivateNetworkIndex restoreNetworkIndex( final VmInfo input, final List<NetworkGroup> networks ) {
+      PrivateNetworkIndex index = null;
+      if ( networks.isEmpty( ) ) {
+        LOG.warn( "Failed to recover network index for " + input.getInstanceId( )
+          + " because no network group information is available: "
+          + input.getGroupNames( ) );
+      } else {
+        final EntityTransaction db = Entities.get( NetworkGroup.class );
+        try {
+          final NetworkGroup network = networks.get( 0 );
+          final NetworkGroup entity = Entities.merge( network );
+          ExtantNetwork exNet = null;
+          if ( entity.hasExtantNetwork( ) && entity.extantNetwork( ).getTag( ).equals( input.getNetParams( ).getVlan( ) ) ) {
+            LOG.info( "Found matching extant network for " + input.getInstanceId( ) + ": " + entity.extantNetwork( ) );
+            index = entity.extantNetwork( ).reclaimNetworkIndex( input.getNetParams( ).getNetworkIndex( ) );
+          } else if ( entity.hasExtantNetwork( ) && !entity.extantNetwork( ).getTag( ).equals( input.getNetParams( ).getVlan( ) ) ) {
+            LOG.warn( "Found conflicting extant network for " + input.getInstanceId( ) + ": " + entity.extantNetwork( ) );
+          } else {
+            LOG.debug( "Restoring extant network for " + input.getInstanceId( ) + ": " + input.getNetParams( ).getVlan( ) );
+            exNet = entity.reclaim( input.getNetParams( ).getVlan( ) );
+            LOG.info( "Restore extant network for " + input.getInstanceId( ) + ": " + entity.extantNetwork( ) );
+            LOG.debug( "Restoring private network index for " + input.getInstanceId( ) + ": " + input.getNetParams( ).getNetworkIndex( ) );
+            index = exNet.reclaimNetworkIndex( input.getNetParams( ).getNetworkIndex( ) );
+          }
+          db.commit( );
+        } catch ( final Exception ex ) {
+          Logs.exhaust( ).error( ex, ex );
+          db.rollback( );
+        }
+      }
+      return index;
+    }
+    
+    private static List<NetworkGroup> restoreNetworks( final VmInfo input, final UserFullName userFullName ) {
+      final List<NetworkGroup> networks = Lists.newArrayList( );
+      networks.addAll( Lists.transform( input.getGroupNames( ), transformNetworkNames( userFullName ) ) );
+      return networks;
+    }
+    
+    private static void restoreAddress( final VmInfo input, final VmInstance vmInst ) {
       try {
         final UserFullName userFullName = UserFullName.getInstance( input.getOwnerId( ) );
-        Address addr = Addresses.getInstance( ).lookup( input.getNetParams( ).getIgnoredPublicIp( ) );
+        final Address addr = Addresses.getInstance( ).lookup( input.getNetParams( ).getIgnoredPublicIp( ) );
         if ( addr.isAssigned( ) &&
              addr.getInstanceAddress( ).equals( input.getNetParams( ).getIpAddress( ) ) &&
              addr.getInstanceId( ).equals( input.getInstanceId( ) ) ) {
@@ -474,12 +482,12 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       return launchIndex;
     }
     
-    private static BootableSet restoreBootSet( final VmInfo input, String imageId, String kernelId, String ramdiskId ) {
+    private static BootableSet restoreBootSet( final VmInfo input, final String imageId, final String kernelId, final String ramdiskId ) {
       BootableSet bootSet = null;
       if ( imageId != null ) {
         try {
           bootSet = Emis.recreateBootableSet( imageId, kernelId, ramdiskId );
-        } catch ( Exception ex ) {
+        } catch ( final Exception ex ) {
           LOG.error( "Failed to recreate bootset with imageId " + imageId
             + ", kernelId "
             + kernelId
@@ -501,7 +509,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       String ramdiskId = null;
       try {
         ramdiskId = input.getInstanceType( ).lookupRamdisk( ).getId( );
-      } catch ( Exception ex ) {
+      } catch ( final Exception ex ) {
         LOG.error( "Failed to lookup ramdiskId " + input.getInstanceType( ) + " for: " + input.getInstanceId( ) + " because of: " + ex.getMessage( ) );
         Logs.extreme( ).error( ex, ex );
       }
@@ -512,7 +520,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       String kernelId = null;
       try {
         kernelId = input.getInstanceType( ).lookupKernel( ).getId( );
-      } catch ( Exception ex ) {
+      } catch ( final Exception ex ) {
         LOG.error( "Failed to lookup kernelId " + input.getInstanceType( ) + " for: " + input.getInstanceId( ) + " because of: " + ex.getMessage( ) );
         Logs.extreme( ).error( ex, ex );
       }
@@ -537,7 +545,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       } catch ( final Exception ex2 ) {
         try {
           partition = Partitions.lookupByName( Clusters.getInstance( ).lookup( input.getPlacement( ) ).getPartition( ) );
-        } catch ( Exception ex ) {
+        } catch ( final Exception ex ) {
           LOG.error( "Failed to lookup partition " + input.getPlacement( ) + " for: " + input.getInstanceId( ) + " because of: " + ex.getMessage( ) );
           Logs.extreme( ).error( ex, ex );
         }
@@ -549,7 +557,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       VmType vmType = null;
       try {
         vmType = VmTypes.getVmType( input.getInstanceType( ).getName( ) );
-      } catch ( Exception ex ) {
+      } catch ( final Exception ex ) {
         LOG.error( "Failed to lookup vm type " + input.getInstanceType( ).getName( ) + " for: " + input.getInstanceId( ) + " because of: " + ex.getMessage( ) );
         Logs.extreme( ).error( ex, ex );
       }
@@ -691,6 +699,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         }
       }
     };
+    @Override
     public abstract VmInstance apply( final VmInstance v );
   }
   
@@ -721,6 +730,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         }
       }
     };
+    @Override
     public abstract VmInstance apply( final String arg0 );
   }
   
@@ -783,7 +793,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
      * @param expirationTime
      * @return
      */
-    public Builder expiresOn( Date expirationTime ) {
+    public Builder expiresOn( final Date expirationTime ) {
       this.expiration = expirationTime;
       return this;
     }
@@ -932,7 +942,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           LOG.debug( ex );
         }
       }
-    } catch ( Exception ex ) {
+    } catch ( final Exception ex ) {
       db.rollback( );
     }
   }
@@ -1284,7 +1294,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       VmVolumeAttachment ret;
       try {
         ret = entity.getTransientVolumeState( ).lookupVolumeAttachmentByDevice( volumeDevice );
-      } catch ( Exception ex ) {
+      } catch ( final Exception ex ) {
         ret = Iterables.find( entity.getBootRecord( ).getPersistentVolumes( ), VmVolumeAttachment.volumeDeviceFilter( volumeDevice ) );
       }
       db.commit( );
@@ -1312,7 +1322,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       AttachedVolume ret = null;
       try {
         volumeAttachment = entity.getTransientVolumeState( ).lookupVolumeAttachment( volumeId );
-      } catch ( NoSuchElementException ex ) {
+      } catch ( final NoSuchElementException ex ) {
         volumeAttachment = Iterables.find( entity.getBootRecord( ).getPersistentVolumes( ), VmVolumeAttachment.volumeIdFilter( volumeId ) );
       }
       ret = VmVolumeAttachment.asAttachedVolume( entity ).apply( volumeAttachment );
@@ -1342,11 +1352,11 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     
   }
   
-  public void addPersistentVolume( String deviceName, Volume vol ) {
+  public void addPersistentVolume( final String deviceName, final Volume vol ) {
     final EntityTransaction db = Entities.get( VmInstance.class );
     try {
       final VmInstance entity = Entities.merge( this );
-      VmVolumeAttachment volumeAttachment = new VmVolumeAttachment( entity, vol.getDisplayName( ), deviceName, vol.getRemoteDevice( ), "attached", new Date( ) );
+      final VmVolumeAttachment volumeAttachment = new VmVolumeAttachment( entity, vol.getDisplayName( ), deviceName, vol.getRemoteDevice( ), "attached", new Date( ) );
       entity.bootRecord.getPersistentVolumes( ).add( volumeAttachment );
       db.commit( );
     } catch ( final Exception ex ) {
@@ -1457,7 +1467,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           try {
             final VmState runVmState = VmState.Mapper.get( runVm.getStateName( ) );
             if ( VmInstance.this.getRuntimeState( ).isBundling( ) ) {
-              BundleState bundleState = BundleState.mapper.apply( runVm.getBundleTaskStateName( ) );
+              final BundleState bundleState = BundleState.mapper.apply( runVm.getBundleTaskStateName( ) );
               VmInstance.this.getRuntimeState( ).updateBundleTaskState( bundleState );
             } else if ( VmStateSet.RUN.apply( VmInstance.this ) && VmStateSet.RUN.contains( runVmState ) ) {
               VmInstance.this.setState( runVmState, Reason.APPEND, "UPDATE" );
@@ -1697,17 +1707,17 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   }
   
   @Override
-  public boolean equals( Object obj ) {
+  public boolean equals( final Object obj ) {
     if ( this == obj ) {
       return true;
     }
     if ( !super.equals( obj ) ) {
       return false;
     }
-    if ( getClass( ) != obj.getClass( ) ) {
+    if ( this.getClass( ) != obj.getClass( ) ) {
       return false;
     }
-    VmInstance other = ( VmInstance ) obj;
+    final VmInstance other = ( VmInstance ) obj;
     if ( this.vmId == null ) {
       if ( other.vmId != null ) {
         return false;
@@ -1728,14 +1738,14 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   /**
    * @param exampleWithPrivateIp
    */
-  void setNetworkConfig( VmNetworkConfig networkConfig ) {
+  void setNetworkConfig( final VmNetworkConfig networkConfig ) {
     this.networkConfig = networkConfig;
   }
   
   public void release( ) {
     try {
       Transitions.DELETE.apply( this );
-    } catch ( Exception ex ) {}
+    } catch ( final Exception ex ) {}
   }
   
   public Date getExpiration( ) {
