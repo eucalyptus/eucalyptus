@@ -369,7 +369,8 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
         try {
           messageCallback = factory.newInstance( );
           try {
-            BaseMessage baseMessage = AsyncRequests.newRequest( messageCallback ).then( transitionCallback ).sendSync( config );
+            BaseMessage baseMessage = AsyncRequests.newRequest( messageCallback ).sendSync( config );
+            transitionCallback.fire( );
             if ( Logs.isExtrrreeeme( ) ) {
               Logs.extreme( ).debug( baseMessage );
             }
