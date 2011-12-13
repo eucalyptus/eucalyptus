@@ -2676,7 +2676,11 @@ int blockblob_clone ( blockblob * bb, // destination blob, which blocks may be u
             snprintf (buf, sizeof(buf), "%s-p%d-snap", dm_base, i);
             dev_names [devices] = strdup (buf);
             dev = dev_names [devices];
-            snprintf (buf, sizeof(buf), "0 %lld snapshot %s%s " DM_PATH "%s p %d\n", m->len_blocks, snapshotted_dev[0]=='e'?DM_PATH:"", snapshotted_dev, backing_dev, granularity);
+            // We use 'n' for a non-persistent snapshot, which will not persist across a reboot.
+            // With 'p' we could get a persistent snapshot at the cost of 0.2-3.0% overhead in
+            // disk space, depending on chunksize [1-16], but then we would need to rebuild 
+            // device mapper entries and change space management to accommodate the overhead.
+            snprintf (buf, sizeof(buf), "0 %lld snapshot %s%s " DM_PATH "%s n %d\n", m->len_blocks, snapshotted_dev[0]=='e'?DM_PATH:"", snapshotted_dev, backing_dev, granularity);
             dm_tables [devices] = strdup (buf);
             devices++;
             
