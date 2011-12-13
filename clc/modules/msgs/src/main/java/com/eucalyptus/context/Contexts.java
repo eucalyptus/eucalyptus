@@ -105,14 +105,14 @@ public class Contexts {
       try {
         return Contexts.lookup( ( ( BaseMessage ) o ).getCorrelationId( ) );
       } catch ( NoSuchContextException e ) {
-        LOG.error( e, e );
+        Logs.exhaust( ).error( e, e );
         throw new IllegalContextAccessException( "Cannot access context implicitly using lookup(V) when not handling a request.", e );
       }
     } else if ( o != null && o instanceof HasRequest ) {
       try {
         return Contexts.lookup( ( ( HasRequest ) o ).getRequest( ).getCorrelationId( ) );
       } catch ( NoSuchContextException e ) {
-        LOG.error( e, e );
+        Logs.exhaust( ).error( e, e );
         throw new IllegalContextAccessException( "Cannot access context implicitly using lookup(V) when not handling a request.", e );
       }
     } else {
@@ -164,10 +164,11 @@ public class Contexts {
       Channels.write( channel, responseMessage );
       clear( ctx );
     } catch ( NoSuchContextException e ) {
-      LOG.warn( "Received a reply for absent client:  No channel to write response message.", e );
-      LOG.debug( responseMessage );
+      LOG.warn( "Received a reply for absent client:  No channel to write response message: " + e.getMessage( ) );
+      Logs.extreme( ).debug( responseMessage, e );
     } catch ( Exception e ) {
-      LOG.warn( "Error occurred while handling reply: " + responseMessage, e );
+      LOG.warn( "Error occurred while handling reply: " + responseMessage );
+      Logs.extreme( ).debug( responseMessage, e );
     }
   }
 
@@ -186,7 +187,7 @@ public class Contexts {
       }
     } catch ( Exception ex ) {
       LOG.error( ex );
-      LOG.error( cause, cause );
+      Logs.extreme( ).error( cause, cause );
     }
   }
   
