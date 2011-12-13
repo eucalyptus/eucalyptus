@@ -283,8 +283,6 @@ public class ServiceBootstrapper extends Bootstrapper.Simple {
         ServiceBootstrapWorker.submit( new Runnable( ) {
           @Override
           public void run( ) {
-            
-            LOG.debug( "load(): " + config );
             try {
               Components.lookup( config.getComponentId( ) ).setup( config );
               if ( config.lookupState( ).ordinal( ) < State.LOADED.ordinal( ) ) {

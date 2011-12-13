@@ -231,7 +231,7 @@ public class Bootstrap {
       if ( !this.bootstrappers.isEmpty( ) ) {
         LOG.info( LogUtil.header( "Bootstrap stage: " + this.name( )
                                   + "."
-                                  + ( Bootstrap.loading
+                                  + ( !Bootstrap.starting
                                     ? "load()"
                                     : "start()" ) ) );
         LOG.debug( Joiner.on( " " ).join( this.name( ) + " bootstrappers:  ", this.bootstrappers ) );
