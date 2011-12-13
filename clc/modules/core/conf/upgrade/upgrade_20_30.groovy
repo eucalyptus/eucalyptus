@@ -260,6 +260,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                         
             for (GroovyRowResult rowResult : rowResults) {
                 Set<String> columns = rowResult.keySet();
+                columns.each{ c -> LOG.debug("column: " + c); }
                 Object dest;
                 try {
                     dest = ClassLoader.getSystemClassLoader().loadClass(entityMap.get(entityKey).getCanonicalName()).newInstance();
@@ -275,6 +276,11 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                 }
                 for (String column : columns) {
                     Method setter = setterMap.get(column);
+                    if(setter == null) {
+                        def loweredColumn = column.toLowerCase();
+                        LOG.debug("No setter for " + column + ", trying " + loweredColumn);
+                        setter = setterMap.get(loweredColumn);
+                    }
                     if(setter != null) {
                         Object o = rowResult.get(column);
                         if(o != null) {
@@ -291,7 +297,11 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                             } catch (InvocationTargetException e) {
                                 LOG.error(dest.getClass().getName()  + " " + column + " " + e);
                             }
+                        } else {
+                            LOG.debug("Column " + column + " was NULL");
                         }
+                    } else {
+                        LOG.debug("Setter for " + column + " was NULL");
                     }
                 }
                 db.add(dest);
@@ -321,8 +331,8 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                     vm_type_memory:'metadata_vm_type_memory',
                     vm_type_name:'metadata_vm_type_name' ];
                 Set<String> origColumns = ((Map) firstRow).keySet();
-                Set<String> columnNames = origColumns.findAll{ columnMap.containsKey(it) }.collect{ columnMap[it] } +
-                    origColumns.findAll{ !columnMap.containsKey(it) }.collect{ it };
+                Set<String> columnNames = origColumns.findAll{ columnMap.containsKey(it.toLowerCase()) }.collect{ columnMap[it.toLowerCase()] } +
+                    origColumns.findAll{ !columnMap.containsKey(it.toLowerCase()) }.collect{ it };
                 Class definingClass = entityMap.get(entityKey);
                 Field[] fields = definingClass.getDeclaredFields();
                 //special case. Do this better.
@@ -338,7 +348,6 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                 }
                 for (String column : columnNames) {
                     if(!setterMap.containsKey(column) && !unmappedColumns.contains("${entityKey}.${column}".toString()) ) {
-                        print unmappedColumns;
                         LOG.warn("No corresponding field for column: ${entityKey}.${column} found");
                     }
                 }
@@ -379,9 +388,9 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                     }
                 }
             }
-            /* if(setterMap.containsKey(column)) {
+            if(setterMap.containsKey(column)) {
                 LOG.debug(column + " is set by: " + setterMap.get(column).getName());
-            } */
+            } 
         }
     }
 
