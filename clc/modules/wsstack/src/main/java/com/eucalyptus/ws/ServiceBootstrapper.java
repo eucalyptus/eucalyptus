@@ -285,7 +285,9 @@ public class ServiceBootstrapper extends Bootstrapper.Simple {
             LOG.debug( "load(): " + config );
             try {
               Components.lookup( config.getComponentId( ) ).setup( config );
-              Topology.start( config ).get( );
+              if ( config.lookupState( ).ordinal( ) < State.LOADED.ordinal( ) ) {
+                Topology.transition( State.LOADED ).apply( config ).get( );
+              }
             } catch ( final Exception ex ) {
               Faults.failure( config, ex );
             }
