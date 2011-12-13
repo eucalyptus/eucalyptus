@@ -428,9 +428,12 @@ public class Images {
   public static ImageInfo createFromDeviceMapping( UserFullName userFullName, String imageName, String imageDescription,
                                                    String eki, String eri,
                                                    String rootDeviceName, final List<BlockDeviceMappingItemType> blockDeviceMappings ) throws EucalyptusCloudException {
-    Context ctx = Contexts.lookup( );
     ImageMetadata.Architecture imageArch = ImageMetadata.Architecture.x86_64;//TODO:GRZE:OMGFIXME: track parent vol info; needed here 
-    ImageMetadata.Platform imagePlatform = ImageMetadata.Platform.linux;//TODO:GRZE:OMGFIXME: track parent vol info; needed here
+    ImageMetadata.Platform imagePlatform = ImageMetadata.Platform.linux;
+    if ( "windows".equals( eki ) ) {
+      imagePlatform = ImageMetadata.Platform.windows;
+      eki = null;
+    }
     BlockDeviceMappingItemType rootBlockDevice = Iterables.find( blockDeviceMappings, findEbsRoot( rootDeviceName ) );
     String snapshotId = rootBlockDevice.getEbs( ).getSnapshotId( );
     try {
@@ -452,9 +455,6 @@ public class Images {
       Long imageSizeBytes = targetVolumeSizeGB * 1024l * 1024l * 1024l;
       Boolean targetDeleteOnTermination = Boolean.TRUE.equals( rootBlockDevice.getEbs( ).getDeleteOnTermination( ) );
       String imageId = generateImageId( ImageMetadata.Type.machine.getTypePrefix( ), snapshotId );
-//GRZE:REVIEW: almost certainly do not want to assert a default kernel/ramdisk for bfe.
-//      eki = ( eki != null ) ? eki : ImageConfiguration.getInstance( ).getDefaultKernelId( );
-//      eri = ( eri != null ) ? eri : ImageConfiguration.getInstance( ).getDefaultRamdiskId( );
       
       BlockStorageImageInfo ret = new BlockStorageImageInfo( userFullName, imageId, imageName, imageDescription, imageSizeBytes,
                                                              imageArch, imagePlatform,
