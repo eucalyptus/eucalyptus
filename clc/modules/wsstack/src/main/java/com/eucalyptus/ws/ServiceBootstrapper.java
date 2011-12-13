@@ -286,7 +286,7 @@ public class ServiceBootstrapper extends Bootstrapper.Simple {
             try {
               Components.lookup( config.getComponentId( ) ).setup( config );
               if ( config.lookupState( ).ordinal( ) < State.LOADED.ordinal( ) ) {
-                Topology.transition( State.LOADED ).apply( config ).get( );
+                Topology.transition( State.LOADED ).apply( config );
               }
             } catch ( final Exception ex ) {
               Faults.failure( config, ex );
@@ -316,7 +316,7 @@ public class ServiceBootstrapper extends Bootstrapper.Simple {
           @Override
           public void run( ) {
             try {
-              Topology.transition( State.DISABLED ).apply( config ).get( );
+              Topology.transition( State.DISABLED ).apply( config );
             } catch ( final Exception ex ) {
               Exceptions.maybeInterrupted( ex );
             }
