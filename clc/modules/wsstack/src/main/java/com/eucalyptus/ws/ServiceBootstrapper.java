@@ -128,10 +128,12 @@ public class ServiceBootstrapper extends Bootstrapper.Simple {
     }
     
     public static void submit( final Runnable run ) {
+      LOG.info( run );
       if ( !worker.running.get( ) ) {
         throw new IllegalStateException( "Worker has been stopped: " + ServiceBootstrapWorker.class );
+      } else {
+        worker.msgQueue.add( run );
       }
-      worker.msgQueue.add( run );
     }
     
     class Worker implements Runnable, Comparable<Worker> {
