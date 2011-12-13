@@ -313,6 +313,9 @@ public class Databases {
           Runnable removeRunner = new Runnable( ) {
             @Override
             public void run( ) {
+              if ( Internets.testLocal( hostName ) ) {
+                return;
+              }
               try {
                 final DriverDatabaseClusterMBean cluster = lookup( contextName );
                 LOG.info( "Tearing down database connections for: " + hostName + " to context: " + contextName );
