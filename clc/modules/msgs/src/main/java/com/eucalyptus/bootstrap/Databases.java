@@ -622,7 +622,7 @@ public class Databases {
       return false;
     } else if ( !Hosts.isCoordinator( ) && BootstrapArgs.isCloudController( ) ) {
       return !isSynchronized( ) || !activeHosts.get( ).containsAll( hostDatabases.get( ) );
-    } else if ( activeHosts.get( ).containsAll( hostDatabases.get( ) ) ) {
+    } else if ( !activeHosts.get( ).containsAll( hostDatabases.get( ) ) ) {
       return true;
     } else {
       return !Hosts.list( FILTER_SYNCING_DBS ).isEmpty( );
