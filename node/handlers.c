@@ -893,8 +893,13 @@ static int init (void)
 	logfile(log, i, j);
 
     { 
-        // Initialize libvirtd.conf, since some buggy versions of libvirt
-        // require it.
+        /* Initialize libvirtd.conf, since some buggy versions of libvirt
+         * require it.  At least two versions of libvirt have had this issue,
+         * most recently the version in RHEL 6.1.  Note that this happens
+         * at each startup of the NC mainly because the location of the
+         * required file depends on the process owner's home directory, which
+         * may change after the initial installation.
+         */
         char libVirtConf [MAX_PATH];
         uid_t uid = geteuid();
         struct passwd *pw;
