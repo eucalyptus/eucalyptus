@@ -65,7 +65,6 @@ package com.eucalyptus.event;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.Timer;
 import java.util.TimerTask;
-import java.util.concurrent.TimeUnit;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
@@ -73,7 +72,6 @@ import com.eucalyptus.bootstrap.OrderedShutdown;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.empyrean.Empyrean;
-import com.eucalyptus.records.Logs;
 
 public class SystemClock extends TimerTask implements UncaughtExceptionHandler {
   private static Logger      LOG   = Logger.getLogger( SystemClock.class );
@@ -127,13 +125,9 @@ public class SystemClock extends TimerTask implements UncaughtExceptionHandler {
     Thread.currentThread( ).setUncaughtExceptionHandler( ( UncaughtExceptionHandler ) this );
     try {
       long sign = ( long ) ( Math.pow( -1f, ( float ) ( ++phase % 2 ) ) );
-      ListenerRegistry.getInstance( )
-                      .fireEventAsync( ClockTick.class,
-                                       new ClockTick( ).setMessage( sign * System.currentTimeMillis( ) ) )
-                       .get( 2, TimeUnit.MINUTES );
-    } catch ( Exception t ) {
-      LOG.error( t );
-      Logs.extreme( ).error( t, t );
+      ListenerRegistry.getInstance( ).fireEvent( new ClockTick( ).setMessage( sign * System.currentTimeMillis( ) ) );
+    } catch ( EventFailedException e ) {} catch ( Exception t ) {
+      LOG.error( t, t );
     }
   }
   
@@ -199,10 +193,9 @@ public class SystemClock extends TimerTask implements UncaughtExceptionHandler {
     public void run( ) {
       Thread.currentThread( ).setUncaughtExceptionHandler( ( UncaughtExceptionHandler ) this );
       try {
-        ListenerRegistry.getInstance( ).fireEventAsync( Hertz.class, new Hertz( ) ).get( 2, TimeUnit.MINUTES );
-      } catch ( Exception t ) {
-        LOG.error( t );
-        Logs.extreme( ).error( t, t );
+        ListenerRegistry.getInstance( ).fireEvent( new Hertz( ) );
+      } catch ( EventFailedException e ) {} catch ( Exception t ) {
+        LOG.error( t, t );
       }
     }
   }
