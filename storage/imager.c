@@ -181,7 +181,6 @@ int main (int argc, char * argv[])
         strncat (argv_str, argv[i], sizeof (argv_str) - strlen(argv_str) - 1);
         strncat (argv_str, "\" ", sizeof (argv_str) - strlen(argv_str) - 1);
     }
-    
 
     // parse command-line parameters
     char * cmd_name = NULL;
@@ -332,28 +331,6 @@ void print_req (imager_request * req)
     for (imager_param * p = req->params; p!=NULL && p->key!=NULL; p++) {
         logprintfl (EUCAINFO, "\t%s=%s\n", p->key, p->val);
     }
-}
-
-// turn a string into a boolean (returned as a char)
-
-char parse_boolean (const char * s)
-{
-    char * lc = strduplc (s);
-    char val;
-
-    if (strcmp (lc, "y")==0 ||
-        strcmp (lc, "yes")==0 ||
-        strcmp (lc, "t")==0 ||
-        strcmp (lc, "true")==0) { val = 1; }
-    else if (strcmp (lc, "n")==0 ||
-             strcmp (lc, "no")==0 ||
-             strcmp (lc, "f")==0 ||
-             strcmp (lc, "false")==0) { val = 0; }
-    else
-        err ("failed to parse value '%s' as boolean", lc);
-    free (lc);
-
-    return val;
 }
 
 // read in login or password from command line or from a file

@@ -161,6 +161,7 @@ int safe_mkstemp(char *);
 char* safe_strncpy(char *s1, const char *s2, size_t len);
 
 int get_blkid (const char * dev_path, char * uuid, unsigned int uuid_size);
+char parse_boolean (const char * s);
 
 // argument checker
 int param_check(char *func, ...);
