@@ -90,7 +90,9 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
 import org.hibernate.annotations.GenericGenerator;
 import org.hibernate.annotations.NaturalId;
+import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
+import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.component.Faults.CheckException;
 import com.eucalyptus.context.ServiceStateException;
@@ -520,7 +522,7 @@ public class Faults {
   }
   
   public static void persist( final CheckException errors ) {
-    if ( errors != null && Hosts.isCoordinator( ) ) {
+    if ( errors != null && Bootstrap.isFinished( ) && !Databases.isVolatile( ) && Hosts.isCoordinator( ) ) {
       try {
         for ( final CheckException e : errors ) {
           final EntityTransaction db = Entities.get( CheckException.class );
@@ -534,14 +536,14 @@ public class Faults {
             Entities.persist( e );
             db.commit( );
           } catch ( final Exception ex ) {
-            LOG.error( "Failed to persist error information for: " + ex, ex );
+            LOG.error( "Failed to persist error information for: " + errors, ex );
             db.rollback( );
             final EntityTransaction db2 = Entities.get( CheckException.class );
             try {
               Entities.persist( e );
               db2.commit( );
             } catch ( final Exception ex2 ) {
-              LOG.error( "Failed to persist error information for: " + ex, ex );
+              LOG.error( "Failed to persist error information for: " + errors, ex2 );
               db2.rollback( );
             }
           }
