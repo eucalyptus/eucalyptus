@@ -393,7 +393,10 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
         if ( !this.isDone( ) ) {
           this.transition.enter( AtomicMarkedState.this.parent );
           this.transition.after( AtomicMarkedState.this.parent );
-          AtomicMarkedState.this.commit( );
+          try {
+            AtomicMarkedState.this.commit( );
+          } catch ( Exception ex ) {
+          }
         }
       } catch ( Exception t ) {
         this.fireException( t );
