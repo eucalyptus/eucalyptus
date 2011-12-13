@@ -151,7 +151,11 @@ public class UnassignAddressCallback extends MessageCallback<UnassignAddressType
     } finally {
       if ( this.system ) {
         try {
-          this.address.release( );
+          if ( !this.address.isPending( ) && this.address.isAssigned( ) ) {
+            this.address.unassign( ).clearPending( ).release( );
+          } else {
+            this.address.release( );
+          }
         } catch ( Exception t ) {
           LOG.warn( "Failed to release orphan address: " + this.address, t);
         }
