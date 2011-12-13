@@ -142,9 +142,14 @@ import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
+import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.MapDifference;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
+import com.google.common.collect.Sets.SetView;
 
 public class Databases {
   public static class DatabaseStateException extends IllegalStateException {
@@ -416,39 +421,35 @@ public class Databases {
                       cluster.activate( hostName, "full" );
                       return;
                     } else if ( passiveSync ) {
-                      try {
-                        cluster.getDatabase( hostName );
-                      } catch ( IllegalArgumentException ex ) {
+                      if ( !cluster.getActiveDatabases( ).contains( hostName ) ) {
+                        LOG.info( "Passive activation of database connections to: " + host );
                         try {
                           cluster.add( hostName, realJdbcDriver, dbUrl );
                         } catch ( Exception ex1 ) {
                         }
-                      }
-                      if ( !cluster.getActiveDatabases( ).contains( hostName ) ) {
-                        ActivateHostFunction.prepareConnections( host, contextName );
-                        LOG.info( "Passive activation of database connections to: " + host );
-                        cluster.activate( hostName, "passive" );
-                      }
-                    } else {
-                      Logs.extreme( ).info( "Skipping activation of already present database for: " + contextName + " on " + hostName );
+                      ActivateHostFunction.prepareConnections( host, contextName );
+                      cluster.activate( hostName, "passive" );
                     }
-                  } catch ( Exception ex ) {
-                    throw Exceptions.toUndeclared( ex );
+                  } else {
+                    Logs.extreme( ).info( "Skipping activation of already present database for: " + contextName + " on " + hostName );
                   }
+                } catch ( Exception ex ) {
+                  throw Exceptions.toUndeclared( ex );
                 }
-              } catch ( final NoSuchElementException ex1 ) {
-                LOG.info( ex1 );
-                Logs.extreme( ).debug( ex1, ex1 );
-                return;
-              } catch ( final IllegalStateException ex1 ) {
-                LOG.info( ex1 );
-                Logs.extreme( ).debug( ex1, ex1 );
-                return;
-              } catch ( final Exception ex1 ) {
-                Logs.extreme( ).error( ex1, ex1 );
-                throw Exceptions.toUndeclared( "Failed to activate host " + host + " because of: " + ex1.getMessage( ), ex1 );
               }
+            } catch ( final NoSuchElementException ex1 ) {
+              LOG.info( ex1 );
+              Logs.extreme( ).debug( ex1, ex1 );
+              return;
+            } catch ( final IllegalStateException ex1 ) {
+              LOG.info( ex1 );
+              Logs.extreme( ).debug( ex1, ex1 );
+              return;
+            } catch ( final Exception ex1 ) {
+              Logs.extreme( ).error( ex1, ex1 );
+              throw Exceptions.toUndeclared( "Failed to activate host " + host + " because of: " + ex1.getMessage( ), ex1 );
             }
+          }
             
             @Override
             public String toString( ) {
@@ -619,14 +620,46 @@ public class Databases {
   public static Boolean isVolatile( ) {
     if ( !Bootstrap.isFinished( ) || BootstrapArgs.isInitializeSystem( ) ) {
       return false;
-    } else if ( Hosts.listActiveDatabases( ).size( ) != Databases.lookup( "eucalyptus_config" ).getActiveDatabases( ).size( ) ) {
-      return true;
     } else if ( !Hosts.isCoordinator( ) && BootstrapArgs.isCloudController( ) ) {
-      return !isSynchronized( );
+      return !isSynchronized( ) || !activeHosts.get( ).containsAll( hostDatabases.get( ) );
+    } else if ( activeHosts.get( ).containsAll( hostDatabases.get( ) ) ) {
+      return true;
     } else {
       return !Hosts.list( FILTER_SYNCING_DBS ).isEmpty( );
     }
   }
+  
+  enum ActiveHostSet implements Supplier<Set<String>> {
+    ACTIVATED {},
+    HOSTS {
+      
+      @Override
+      public Set<String> get( ) {
+        return Sets.newHashSet( Collections2.transform( Hosts.listActiveDatabases( ), Hosts.NameTransform.INSTANCE ) );
+      }
+    };
+    
+    @Override
+    public Set<String> get( ) {
+      Set<String> hosts = HOSTS.get( );
+      Set<String> union = Sets.newHashSet( );
+      Set<String> intersection = Sets.newHashSet( hosts );
+      LOG.debug( "ActiveHostSet: universe of db hosts: " + hosts );
+      for ( String ctx : PersistenceContexts.list( ) ) {
+        Set<String> activeDatabases = Databases.lookup( ctx ).getActiveDatabases( );
+        union.addAll( activeDatabases );
+        intersection.retainAll( activeDatabases );
+      }
+      LOG.debug( "ActiveHostSet: union of activated db connections: " + union );
+      LOG.debug( "ActiveHostSet: intersection of db hosts and activated db connections: " + intersection );
+      LOG.debug( "ActiveHostSet: volatile: " + !hosts.containsAll( intersection ) );
+      return intersection;
+    }
+    
+  }
+  
+  private static Supplier<Set<String>> activeHosts   = Suppliers.memoizeWithExpiration( ActiveHostSet.ACTIVATED, 2, TimeUnit.SECONDS );
+  private static Supplier<Set<String>> hostDatabases = Suppliers.memoizeWithExpiration( ActiveHostSet.HOSTS, 1, TimeUnit.SECONDS );
   
   private static Predicate<StackTraceElement> notStackFilterYouAreLookingFor = Predicates.or( Threads.filterStackByQualifiedName( "com\\.eucalyptus\\.entities\\..*" ),
                                                                                               Threads.filterStackByQualifiedName( "java\\.lang\\.Thread.*" ),

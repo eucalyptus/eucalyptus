@@ -1036,6 +1036,17 @@ public class Hosts {
     
   }
   
+  enum NameTransform implements Function<Host, String> {
+    INSTANCE;
+    @Override
+    public String apply( final Host input ) {
+      return input.getDisplayName( );
+    }
+    
+  }
+  
+
+  
   enum GroupAddressTransform implements Function<Host, Address> {
     INSTANCE;
     @Override
