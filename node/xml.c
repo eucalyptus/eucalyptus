@@ -246,9 +246,9 @@ int gen_instance_xml (const ncInstance * instance)
                // skip anything without a device on the guest, e.g., kernel and ramdisk
                if (!strcmp ("none", vbr->guestDeviceName)) 
                    continue;
-               // for Linux instances on Xen, partitions can be used directly, so disks can be skipped
-               if (strstr (instance->platform, "linux") && strstr (instance->hypervisorType, "xen") && (vbr->type == NC_RESOURCE_IMAGE)) {
-                   if (vbr->partitionNumber == 0) {
+               // for Linux instances on Xen, partitions can be used directly, so disks can be skipped unless booting from EBS
+               if (strstr (instance->platform, "linux") && strstr (instance->hypervisorType, "xen")) {
+                   if (vbr->partitionNumber == 0 && vbr->type == NC_RESOURCE_IMAGE) {
                        continue;
                    }
                } else { // on all other os + hypervisor combinations, disks are used, so partitions must be skipped
