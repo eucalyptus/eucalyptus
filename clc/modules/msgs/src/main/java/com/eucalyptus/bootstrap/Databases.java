@@ -630,36 +630,34 @@ public class Databases {
   }
   
   enum ActiveHostSet implements Supplier<Set<String>> {
-    ACTIVATED {},
+    ACTIVATED {
+      @Override
+      public Set<String> get( ) {
+        Set<String> hosts = HOSTS.get( );
+        Set<String> union = Sets.newHashSet( );
+        Set<String> intersection = Sets.newHashSet( hosts );
+        LOG.debug( "ActiveHostSet: universe of db hosts: " + hosts );
+        for ( String ctx : PersistenceContexts.list( ) ) {
+          Set<String> activeDatabases = Databases.lookup( ctx ).getActiveDatabases( );
+          union.addAll( activeDatabases );
+          intersection.retainAll( activeDatabases );
+        }
+        LOG.debug( "ActiveHostSet: union of activated db connections: " + union );
+        LOG.debug( "ActiveHostSet: intersection of db hosts and activated db connections: " + intersection );
+        LOG.debug( "ActiveHostSet: volatile: " + !hosts.containsAll( intersection ) );
+        return intersection;
+      }
+    },
     HOSTS {
-      
       @Override
       public Set<String> get( ) {
         return Sets.newHashSet( Collections2.transform( Hosts.listActiveDatabases( ), Hosts.NameTransform.INSTANCE ) );
       }
     };
-    
-    @Override
-    public Set<String> get( ) {
-      Set<String> hosts = HOSTS.get( );
-      Set<String> union = Sets.newHashSet( );
-      Set<String> intersection = Sets.newHashSet( hosts );
-      LOG.debug( "ActiveHostSet: universe of db hosts: " + hosts );
-      for ( String ctx : PersistenceContexts.list( ) ) {
-        Set<String> activeDatabases = Databases.lookup( ctx ).getActiveDatabases( );
-        union.addAll( activeDatabases );
-        intersection.retainAll( activeDatabases );
-      }
-      LOG.debug( "ActiveHostSet: union of activated db connections: " + union );
-      LOG.debug( "ActiveHostSet: intersection of db hosts and activated db connections: " + intersection );
-      LOG.debug( "ActiveHostSet: volatile: " + !hosts.containsAll( intersection ) );
-      return intersection;
-    }
-    
   }
   
-  private static Supplier<Set<String>> activeHosts   = Suppliers.memoizeWithExpiration( ActiveHostSet.ACTIVATED, 2, TimeUnit.SECONDS );
-  private static Supplier<Set<String>> hostDatabases = Suppliers.memoizeWithExpiration( ActiveHostSet.HOSTS, 1, TimeUnit.SECONDS );
+  private static Supplier<Set<String>>        activeHosts                    = Suppliers.memoizeWithExpiration( ActiveHostSet.ACTIVATED, 2, TimeUnit.SECONDS );
+  private static Supplier<Set<String>>        hostDatabases                  = Suppliers.memoizeWithExpiration( ActiveHostSet.HOSTS, 1, TimeUnit.SECONDS );
   
   private static Predicate<StackTraceElement> notStackFilterYouAreLookingFor = Predicates.or( Threads.filterStackByQualifiedName( "com\\.eucalyptus\\.entities\\..*" ),
                                                                                               Threads.filterStackByQualifiedName( "java\\.lang\\.Thread.*" ),
