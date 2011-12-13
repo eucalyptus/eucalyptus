@@ -78,6 +78,7 @@ import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.component.Component;
+import com.eucalyptus.component.Component.State;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
@@ -313,14 +314,9 @@ public class ServiceBootstrapper extends Bootstrapper.Simple {
           @Override
           public void run( ) {
             try {
-//              if ( Hosts.isCoordinator( ) && config.isVmLocal( ) ) {
-//                Topology.enable( config ).get( );
-//              } else {
-                Topology.disable( config ).get( );//GRZE:NOTE: ensure handling remote config push to NOTREADY
-//              }
+              Topology.transition( State.DISABLED ).apply( config ).get( );
             } catch ( final Exception ex ) {
               Exceptions.maybeInterrupted( ex );
-              Faults.failure( config, ex );
             }
           }
           

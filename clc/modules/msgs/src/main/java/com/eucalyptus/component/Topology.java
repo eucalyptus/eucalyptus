@@ -325,7 +325,7 @@ public class Topology {
           return workQueue.enqueue( call );
         } else {
           try {
-            return Futures.predestinedFuture( call.call( ) );
+            return Futures.predestinedFuture( input );
           } catch ( Exception ex ) {
             return Futures.predestinedFuture( input );
           }
