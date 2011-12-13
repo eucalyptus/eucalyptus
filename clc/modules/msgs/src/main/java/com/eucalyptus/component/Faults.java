@@ -94,17 +94,18 @@ import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.component.Faults.CheckException;
 import com.eucalyptus.context.ServiceStateException;
+import com.eucalyptus.empyrean.ServiceStatusDetail;
 import com.eucalyptus.empyrean.ServiceStatusType;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Function;
+import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
 
 public class Faults {
   private static Logger LOG = Logger.getLogger( Faults.class );
@@ -163,7 +164,7 @@ public class Faults {
     private final Component.State eventState;
     @Column( name = "fault_stack_trace" )
     @Lob
-    private final String          stackString;
+    private String                stackString;
     @Transient
     private CheckException        other;
     
@@ -183,26 +184,25 @@ public class Faults {
     }
     
     CheckException( final ServiceConfiguration config, final Severity severity, final Throwable cause ) {
-      this( config, severity, cause.getMessage( ), cause, null );
+      this( config, severity, cause, null );
     }
     
-    CheckException( final String correlationId, final Throwable cause, final Severity severity, final ServiceConfiguration config ) {
-      this( config, severity, cause.getMessage( ), cause, correlationId );
-    }
-    
-    CheckException( final ServiceConfiguration config, final Severity severity, final String message, final Throwable cause, final String correlationId ) {
-      super( message != null
-        ? message
-        : ( cause != null
-          ? cause.getMessage( )
-          : Threads.currentStackRange( 1, 5 ) ) );
+//    CheckException( final String correlationId, final Throwable cause, final Severity severity, final ServiceConfiguration config ) {
+//      this( config, severity, cause, correlationId );
+//    }
+//    
+    CheckException( final ServiceConfiguration config, final Severity severity, final Throwable cause, final String correlationId ) {
+      super( cause != null ? cause.getMessage( )
+          : Threads.currentStackRange( 1, 5 ) );
       if ( cause instanceof CheckException ) {
+        this.initCause( cause );
         this.setStackTrace( cause.getStackTrace( ) );
       } else if ( cause != null ) {
         this.initCause( cause );
+        this.fillInStackTrace( );
       }
       this.severity = severity;
-      this.serviceName = config.getName( );
+      this.serviceName = config.getFullName( ).toString( );
       this.correlationId = ( correlationId == null
         ? UUID.randomUUID( ).toString( )
         : correlationId );
@@ -459,6 +459,22 @@ public class Faults {
     return chain( config, Severity.FATAL, ( List<Throwable> ) exs );
   }
   
+  @TypeMapper
+  public enum StatusDetailExceptionRecordMapper implements Function<ServiceStatusDetail, CheckException> {
+    INSTANCE;
+    @Override
+    public CheckException apply( final ServiceStatusDetail input ) {
+      final ServiceConfiguration config = ServiceConfigurations.lookupByName( input.getServiceName( ) );
+      Severity severity = Severity.DEBUG;
+      if ( input.getSeverity( ) != null ) {
+        severity = Severity.valueOf( input.getSeverity( ) );
+      }
+      CheckException ex = new CheckException( config, severity, new Exception( input.toString( ) ), input.getUuid( ) );
+      ex.stackString = input.getStackTrace( );
+      return ex;
+    }
+  }
+  
   enum StatusToCheckException implements Function<ServiceStatusType, CheckException> {
     INSTANCE;
     
@@ -471,14 +487,15 @@ public class Faults {
       if ( Component.State.ENABLED.equals( localState ) && !localState.equals( serviceState ) ) {
         exs.add( failure( config, new IllegalStateException( "State mismatch: local state is " + localState + " and remote state is: " + serviceState ) ) );
       }
-      for ( final String detail : input.getDetails( ) ) {
-        final CheckException ex = failure( config, new ServiceStateException( detail ) );
+      for ( final ServiceStatusDetail detail : input.getStatusDetails( ) ) {
+        final CheckException ex = TypeMappers.transform( detail, CheckException.class );
         exs.add( ex );
       }
-      return !exs.isEmpty( ) ? Faults.chain( config, Severity.ERROR, exs )
-        : new CheckException( config, Severity.DEBUG, new Exception( input.toString( ) ) );
+      if ( exs.isEmpty( ) ) {
+        exs.add( new CheckException( config, Severity.DEBUG, new Exception( input.toString( ) ) ) );
+      }
+      return Faults.chain( config, Severity.ERROR, exs );
     }
-    
   }
   
   public static Function<ServiceStatusType, CheckException> transformToExceptions( ) {
@@ -501,20 +518,32 @@ public class Faults {
     }
     return Lists.newArrayList( );
   }
-  public static void persist( final CheckException errors ) {
-  }
-/*
+  
   public static void persist( final CheckException errors ) {
     if ( errors != null && Hosts.isCoordinator( ) ) {
       try {
         for ( final CheckException e : errors ) {
           final EntityTransaction db = Entities.get( CheckException.class );
           try {
+            List<CheckException> list = Entities.query( new CheckException( e.getServiceName( ) ) );
+            for ( CheckException old : list ) {
+              LOG.debug( "Purging fault: " + old.getMessage( ) );
+              Logs.extreme( ).debug( "Purging fault: " + old, old );
+              Entities.delete( old );
+            }
             Entities.persist( e );
             db.commit( );
           } catch ( final Exception ex ) {
             LOG.error( "Failed to persist error information for: " + ex, ex );
             db.rollback( );
+            final EntityTransaction db2 = Entities.get( CheckException.class );
+            try {
+              Entities.persist( e );
+              db2.commit( );
+            } catch ( final Exception ex2 ) {
+              LOG.error( "Failed to persist error information for: " + ex, ex );
+              db2.rollback( );
+            }
           }
         }
       } catch ( Exception ex ) {
@@ -523,5 +552,4 @@ public class Faults {
       }
     }
   }
-*/
 }

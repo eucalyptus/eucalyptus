@@ -331,7 +331,6 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
     RESOURCES( ResourceStateCallback.class ),
     NETWORKS( NetworkStateCallback.class ),
     INSTANCES( VmStateCallback.class ),
-    VOLATILE_INSTANCES( VmStateCallback.VmPendingCallback.class ),
     ADDRESSES( PublicAddressStateCallback.class ),
     SERVICEREADY( ServiceStateCallback.class );
     Class refresh;
@@ -359,10 +358,10 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
     fireCallback( parent, parent.getConfiguration( ), true, factory, transitionCallback );
   }
   
-  private static void fireCallback( final Cluster parent, 
+  private static void fireCallback( final Cluster parent,
                                     final ServiceConfiguration config,
                                     final boolean doCoordinatorCheck,
-                                    final SubjectRemoteCallbackFactory<RemoteCallback, Cluster> factory, 
+                                    final SubjectRemoteCallbackFactory<RemoteCallback, Cluster> factory,
                                     final Callback.Completion transitionCallback ) {
     RemoteCallback messageCallback = null;
     try {
@@ -619,29 +618,23 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
           case ENABLED_NET:
           case ENABLED_VMS:
           case ENABLED_SERVICE_CHECK:
-            if ( initialized && tick.isAsserted( Clusters.getConfiguration( ).getEnabledInterval( ) )
-                 && Component.State.ENABLED.equals( this.configuration.lookupState( ) ) ) {
-              transition = enabledTransition( );
-            } else if ( initialized && tick.isAsserted( VmInstances.VOLATILE_STATE_INTERVAL_SEC )
-                        && Component.State.ENABLED.equals( this.configuration.lookupState( ) ) ) {
-              Refresh.VOLATILE_INSTANCES.apply( this );
-            } else if ( ( initialized && Component.State.DISABLED.equals( this.configuration.lookupState( ) ) )
-                        || Component.State.NOTREADY.equals( this.configuration.lookupState( ) ) ) {
-              transition = disableTransition( );
+            if ( initialized && tick.isAsserted( VmInstances.VOLATILE_STATE_INTERVAL_SEC )
+                && Component.State.ENABLED.equals( this.configuration.lookupState( ) ) ) {
+              AsyncRequests.newRequest( new VmStateCallback.VmPendingCallback( this ) ).sendSync( this.configuration );
             }
             break;
           default:
             break;
         }
-        if ( transition != null ) {
-          try {
-            transition.call( ).get( );
-            Cluster.this.clearExceptions( );
-          } catch ( final Exception ex ) {
-            LOG.error( ex );
-            Logs.extreme( ).error( ex, ex );
-          }
-        }
+//        if ( transition != null ) {
+//          try {
+//            transition.call( );
+//            Cluster.this.clearExceptions( );
+//          } catch ( final Exception ex ) {
+//            LOG.error( ex );
+//            Logs.extreme( ).error( ex, ex );
+//          }
+//        }
       }
     } catch ( final Exception ex ) {
       LOG.error( ex, ex );
@@ -663,7 +656,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
   
   private Callable<CheckedListenableFuture<Cluster>> enablingTransition( ) {
     Callable<CheckedListenableFuture<Cluster>> transition;
-    transition = Automata.sequenceTransitions( this, State.ENABLING, State.ENABLING_RESOURCES, State.ENABLING_NET, State.ENABLING_VMS,
+    transition = Automata.sequenceTransitions( this, State.DISABLED, State.ENABLING, State.ENABLING_RESOURCES, State.ENABLING_NET, State.ENABLING_VMS,
                                                State.ENABLING_ADDRS, State.ENABLING_VMS_PASS_TWO, State.ENABLING_ADDRS_PASS_TWO, State.ENABLED );
     return transition;
   }
@@ -682,7 +675,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
   
   private Callable<CheckedListenableFuture<Cluster>> startingTransition( ) {
     Callable<CheckedListenableFuture<Cluster>> transition;
-    transition = Automata.sequenceTransitions( this, State.STOPPED, State.PENDING, State.AUTHENTICATING, State.STARTING,
+    transition = Automata.sequenceTransitions( this, State.PENDING, State.AUTHENTICATING, State.STARTING,
                                                State.STARTING_NOTREADY,
                                                State.NOTREADY, State.DISABLED );
     return transition;
@@ -773,13 +766,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
     try {
       Clusters.getInstance( ).registerDisabled( this );
       if ( !State.DISABLED.equals( this.stateMachine.getState( ) ) ) {
-        final Callable<CheckedListenableFuture<Cluster>> trans = Automata.sequenceTransitions( this,
-                                                                                               State.PENDING,
-                                                                                               State.AUTHENTICATING,
-                                                                                               State.STARTING,
-                                                                                               State.STARTING_NOTREADY,
-                                                                                               State.NOTREADY,
-                                                                                               State.DISABLED );
+        final Callable<CheckedListenableFuture<Cluster>> trans = startingTransition( );
         Exception lastEx = null;
         for ( int i = 0; i < Clusters.getConfiguration( ).getStartupSyncRetries( ); i++ ) {
           try {
@@ -812,16 +799,11 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
   public void enable( ) throws ServiceRegistrationException {
     if ( State.ENABLING.ordinal( ) > this.stateMachine.getState( ).ordinal( ) ) {
       try {
-        final CheckedListenableFuture<Cluster> result = Automata.sequenceTransitions( this, State.PENDING, State.AUTHENTICATING, State.STARTING,
-                                                                                      State.STARTING_NOTREADY, State.NOTREADY,
-                                                                                      State.DISABLED, State.ENABLING, State.ENABLING_RESOURCES,
-                                                                                      State.ENABLING_NET, State.ENABLING_VMS,
-                                                                                      State.ENABLING_ADDRS, State.ENABLING_VMS_PASS_TWO,
-                                                                                      State.ENABLING_ADDRS_PASS_TWO, State.ENABLED ).call( );
+        final Callable<CheckedListenableFuture<Cluster>> trans = enablingTransition( );
         RuntimeException fail = null;
         for ( int i = 0; i < Clusters.getConfiguration( ).getStartupSyncRetries( ); i++ ) {
           try {
-            result.get( );
+            trans.call( ).get( );
             fail = null;
             break;
           } catch ( Exception ex ) {
@@ -836,8 +818,6 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
         if ( fail != null ) {
           throw fail;
         }
-      } catch ( final InterruptedException ex ) {
-        Thread.currentThread( ).interrupt( );
       } catch ( final Exception ex ) {
         Logs.exhaust( ).debug( ex, ex );
         throw new ServiceRegistrationException( "Failed to call enable() on cluster " + this.configuration
@@ -861,6 +841,11 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
       throw new ServiceRegistrationException( "Failed to call disable() on cluster " + this.configuration
                                               + " because of: "
                                               + ex.getMessage( ), ex );
+    } finally {
+      try {
+        Clusters.getInstance( ).deregister( this.getName( ) );
+      } catch ( Exception ex ) {
+      }
     }
   }
   
@@ -875,8 +860,11 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
                                               + " because of: "
                                               + ex.getMessage( ), ex );
     } finally {
-      ListenerRegistry.getInstance( ).deregister( Hertz.class, this );
-      ListenerRegistry.getInstance( ).deregister( ClockTick.class, this );
+      try {
+        ListenerRegistry.getInstance( ).deregister( Hertz.class, this );
+        ListenerRegistry.getInstance( ).deregister( ClockTick.class, this );
+      } catch ( Exception ex ) {
+      }
       Clusters.getInstance( ).deregister( this.getName( ) );
     }
   }

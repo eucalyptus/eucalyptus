@@ -407,7 +407,7 @@ public class ServiceConfigurations {
           this.setMessage( input.getMessage( ) != null
             ? input.getMessage( )
             : "No summary information available." );
-          this.setStackTrace( input.getStackString( ) != null
+          this.setStackTrace( input.getStackString( ) == null
             ? input.getStackString( )
             : Exceptions.string( new RuntimeException( "Error while mapping service event record:  No stack information available" ) ) );
           this.setServiceFullName( config.getFullName( ).toString( ) );
