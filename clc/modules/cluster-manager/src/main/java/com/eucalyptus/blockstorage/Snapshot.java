@@ -100,11 +100,12 @@ public class Snapshot extends UserMetadata<State> implements SnapshotMetadata {
     super( ownerFullName, displayName );
   }
   
-  Snapshot( final OwnerFullName ownerFullName, final String displayName, final String parentVolume, final String volumeScName, final String volumePartition ) {
+  Snapshot( final OwnerFullName ownerFullName, final String displayName, final String parentVolume, Integer volumeSize, final String volumeScName, final String volumePartition ) {
     this( ownerFullName, displayName );
     this.parentVolume = parentVolume;
     this.volumeSc = volumeScName;
     this.volumePartition = volumePartition;
+    this.volumeSize = volumeSize;
     super.setState( State.NIHIL );
   }
   

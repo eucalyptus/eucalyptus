@@ -327,7 +327,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
     }
   }
   
-  enum Refresh implements Function<Cluster, TransitionAction<Cluster>>, Callback<Cluster> {
+  enum Refresh implements Function<Cluster, TransitionAction<Cluster>> {
     RESOURCES( ResourceStateCallback.class ),
     NETWORKS( NetworkStateCallback.class ),
     INSTANCES( VmStateCallback.class ),
@@ -354,7 +354,6 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
       };
     }
 
-    @Override
     public void fire( Cluster input ) {
       final SubjectRemoteCallbackFactory<RemoteCallback, Cluster> factory = newSubjectMessageFactory( this.refresh, input );
       try {
