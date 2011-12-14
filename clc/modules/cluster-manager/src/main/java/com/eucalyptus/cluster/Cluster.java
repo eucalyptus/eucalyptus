@@ -1229,7 +1229,8 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
   
   public void check( ) throws Faults.CheckException, IllegalStateException {
     final Cluster.State currentState = this.stateMachine.getState( );
-    final List<Throwable> currentErrors = Lists.newArrayList( );
+    final List<Throwable> currentErrors = Lists.newArrayList( this.pendingErrors );
+    this.pendingErrors.clear( );
     try {
       if ( Component.State.ENABLED.equals( this.configuration.lookupState( ) ) ) {
         enabledTransition( ).call( ).get( );
@@ -1244,10 +1245,9 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
       if ( ex.getCause( ) instanceof CancellationException ) {
         //ignore cancellation errors.
       } else {
-        this.pendingErrors.add( ex );
+        currentErrors.add( ex );
       }
     }
-    currentErrors.addAll( this.pendingErrors );
     final Component.State externalState = this.configuration.lookupState( );
     if ( !currentErrors.isEmpty( ) ) {
       throw Faults.failure( this.configuration, currentErrors );
@@ -1256,7 +1256,6 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
                                                                   + " but is really "
                                                                   + currentState
                                                                   + ":  please see logs for additional information." );
-      this.pendingErrors.add( ex );
       currentErrors.add( ex );
       throw Faults.failure( this.configuration, currentErrors );
     }
