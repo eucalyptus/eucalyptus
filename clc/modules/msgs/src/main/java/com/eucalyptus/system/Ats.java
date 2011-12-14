@@ -157,7 +157,7 @@ public class Ats implements Predicate<Class> {
   }
   
   private static final Map<Object, Ats> atsCache          = new MapMaker( ).makeComputingMap( AtsBuilder.INSTANCE );
-  private static final Map<Object, Ats> atsHierarchyCache = new MapMaker( ).makeComputingMap( AtsBuilder.INSTANCE );
+  private static final Map<Object, Ats> atsHierarchyCache = new MapMaker( ).makeComputingMap( AtsHierarchyBuilder.INSTANCE );
   
   public static Ats from( Object o ) {
     return atsCache.get( o );
