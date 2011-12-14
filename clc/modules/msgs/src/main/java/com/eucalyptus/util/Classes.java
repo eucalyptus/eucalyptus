@@ -63,6 +63,7 @@
 
 package com.eucalyptus.util;
 
+import java.lang.reflect.Constructor;
 import java.lang.reflect.GenericDeclaration;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.ParameterizedType;
@@ -184,7 +185,7 @@ public class Classes {
      *           {@link InvocationTargetException} the value of
      *           {@link InvocationTargetException#getCause()} is rethrown as
      *           {@link UndeclaredThrowableException#UndeclaredThrowableException(Throwable)}.
-     *           {@link NoSuchMethodException} it rethrown as
+     *           {@link NoSuchMethodException} is rethrown as
      *           {@link UndeclaredThrowableException#UndeclaredThrowableException(Throwable)}.
      */
     public T newInstance( ) throws UndeclaredThrowableException {
@@ -192,8 +193,11 @@ public class Classes {
         return this.type.getEnumConstants( )[0];
       } else {
         try {
-          return ( T ) this.type.getConstructor( this.argTypes.toArray( new Class<?>[] {} ) )
-                                .newInstance( this.args.toArray( ) );
+          Constructor<T> constructor = this.type.getConstructor( this.argTypes.toArray( new Class<?>[] {} ) );
+          if ( !constructor.isAccessible( ) ) {
+            constructor.setAccessible( true );
+          }
+          return ( T ) constructor.newInstance( this.args.toArray( ) );
         } catch ( final InvocationTargetException ex ) {
           throw new UndeclaredThrowableException( ex.getCause( ), errorMessage( ex ) );
         } catch ( final NoSuchMethodException ex ) {
