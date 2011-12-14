@@ -111,6 +111,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import javax.persistence.LockTimeoutException;
 import net.sf.hajdbc.Dialect;
 import net.sf.hajdbc.ForeignKeyConstraint;
 import net.sf.hajdbc.InactiveDatabaseMBean;
@@ -163,22 +164,52 @@ public class Databases {
     
   }
   
-  private static final int                        MAX_TX_START_SYNC_RETRIES = 120;
-  private static final Predicate<Host>            FILTER_SYNCING_DBS        = Predicates.and( DbFilter.INSTANCE, Predicates.not( SyncedDbFilter.INSTANCE ) );
-  private static final ScriptedDbBootstrapper     singleton                 = new ScriptedDbBootstrapper( );
-  private static Logger                           LOG                       = Logger.getLogger( Databases.class );
-  private static final String                     DB_NAME                   = "eucalyptus";
-  private static final String                     DB_USERNAME               = DB_NAME;
-  private static final String                     jdbcJmxDomain             = "net.sf.hajdbc";
-  private static final ExecutorService            dbSyncExecutors           = Executors.newCachedThreadPool( );                                              //NOTE:GRZE:special case thread handling.
-  private static final AtomicReference<SyncState> syncState                 = new AtomicReference<SyncState>( SyncState.NOTSYNCED );
-  private static final ReentrantReadWriteLock     canHas                    = new ReentrantReadWriteLock( );
+  private static final int                    MAX_TX_START_SYNC_RETRIES = 120;
+  private static final Predicate<Host>        FILTER_SYNCING_DBS        = Predicates.and( DbFilter.INSTANCE, Predicates.not( SyncedDbFilter.INSTANCE ) );
+  private static final ScriptedDbBootstrapper singleton                 = new ScriptedDbBootstrapper( );
+  private static Logger                       LOG                       = Logger.getLogger( Databases.class );
+  private static final String                 DB_NAME                   = "eucalyptus";
+  private static final String                 DB_USERNAME               = DB_NAME;
+  private static final String                 jdbcJmxDomain             = "net.sf.hajdbc";
+  private static final ExecutorService        dbSyncExecutors           = Executors.newCachedThreadPool( );                                              //NOTE:GRZE:special case thread handling.
+  private static final ReentrantReadWriteLock canHas                    = new ReentrantReadWriteLock( );
   
   enum SyncState {
+    IRRELEVANT,
     NOTSYNCED,
-    SYNCING,
+    SYNCING {
+      
+      @Override
+      public boolean set( ) {
+        return syncState.compareAndSet( NOTSYNCED, SYNCING );
+      }
+    },
     DESYNCING,
-    SYNCED
+    SYNCED {
+      
+      @Override
+      public boolean isCurrent( ) {
+        if ( Hosts.isCoordinator( ) ) {
+          syncState.set( this );
+        }
+        return super.isCurrent( );
+      }
+      
+    };
+    private static final AtomicReference<SyncState> syncState = new AtomicReference<SyncState>( SyncState.NOTSYNCED );
+    
+    public static SyncState get( ) {
+      return syncState.get( );
+    }
+    
+    public boolean set( ) {
+      syncState.set( this );
+      return true;
+    }
+    
+    public boolean isCurrent( ) {
+      return this.equals( syncState.get( ) );
+    }
   }
   
   enum ExecuteRunnable implements Function<Runnable, Future<Runnable>> {
@@ -259,7 +290,7 @@ public class Databases {
           canHas.writeLock( ).unlock( );
         }
       } else {
-        throw Exceptions.toUndeclared( "DB STATE CHANGE ABORTED (failed to get lock): " + runnableFunction );
+        throw new LockTimeoutException( "DB STATE CHANGE ABORTED (failed to get lock): " + runnableFunction );
       }
     } catch ( RuntimeException ex ) {
       LOG.error( ex );
@@ -274,9 +305,7 @@ public class Databases {
       return new Function<String, Runnable>( ) {
         @Override
         public Runnable apply( final String ctx ) {
-          final String contextName = ctx.startsWith( "eucalyptus_" )
-            ? ctx
-            : "eucalyptus_" + ctx;
+          final String contextName = ctx.startsWith( "eucalyptus_" ) ? ctx : "eucalyptus_" + ctx;
           Runnable removeRunner = new Runnable( ) {
             @Override
             public void run( ) {
@@ -307,9 +336,7 @@ public class Databases {
       return new Function<String, Runnable>( ) {
         @Override
         public Runnable apply( final String ctx ) {
-          final String contextName = ctx.startsWith( "eucalyptus_" )
-            ? ctx
-            : "eucalyptus_" + ctx;
+          final String contextName = ctx.startsWith( "eucalyptus_" ) ? ctx : "eucalyptus_" + ctx;
           Runnable removeRunner = new Runnable( ) {
             @Override
             public void run( ) {
@@ -392,9 +419,7 @@ public class Databases {
         @Override
         public Runnable apply( final String ctx ) {
           final String hostName = host.getBindAddress( ).getHostAddress( );
-          final String contextName = ctx.startsWith( "eucalyptus_" )
-            ? ctx
-            : "eucalyptus_" + ctx;
+          final String contextName = ctx.startsWith( "eucalyptus_" ) ? ctx : "eucalyptus_" + ctx;
           Runnable removeRunner = new Runnable( ) {
             @Override
             public void run( ) {
@@ -474,6 +499,17 @@ public class Databases {
     public String toString( ) {
       return "Databases.enable()";
     }
+    
+    private static void rollback( final Host host, Exception ex ) {
+      try {
+        Databases.runDbStateChange( Databases.DeactivateHostFunction.INSTANCE.apply( host.getDisplayName( ) ) );
+      } catch ( LockTimeoutException ex1 ) {
+        Databases.LOG.error( "Databases.enable(): failed because of: " + ex.getMessage( ) );
+      } catch ( Exception ex1 ) {
+        Databases.LOG.error( "Databases.enable(): failed because of: " + ex.getMessage( ) );
+        Logs.extreme( ).error( ex, ex );
+      }
+    }
   }
   
   private static InactiveDatabaseMBean lookupInactiveDatabase( final String contextName, final String hostName ) throws NoSuchElementException {
@@ -512,24 +548,34 @@ public class Databases {
   static boolean disable( final String hostName ) {
     if ( !Bootstrap.isFinished( ) ) {
       return false;
+    } else if ( Internets.testLocal( hostName ) && !BootstrapArgs.isCloudController( ) ) {
+      return true;
+    } else if ( Internets.testLocal( hostName ) && BootstrapArgs.isCloudController( ) ) {
+      SyncState.DESYNCING.set( );
+      try {
+        runDbStateChange( DeactivateHostFunction.INSTANCE.apply( hostName ) );
+        SyncState.NOTSYNCED.set( );
+        return true;
+      } catch ( Exception ex ) {
+        SyncState.NOTSYNCED.set( );
+        Logs.extreme( ).debug( ex );
+        return false;
+      }
+    } else if ( ActiveHostSet.ACTIVATED.get( ).contains( hostName ) ) {
+      try {
+        runDbStateChange( DeactivateHostFunction.INSTANCE.apply( hostName ) );
+        return true;
+      } catch ( Exception ex ) {
+        Logs.extreme( ).debug( ex );
+        return false;
+      }
     } else {
-      if ( Internets.testLocal( hostName ) ) {
-        syncState.set( SyncState.DESYNCING );
-        try {
-          runDbStateChange( DeactivateHostFunction.INSTANCE.apply( hostName ) );
-          syncState.set( SyncState.NOTSYNCED );
-          return true;
-        } catch ( Exception ex ) {
-          syncState.set( SyncState.NOTSYNCED );
-          return false;
-        }
-      } else {
-        try {
-          runDbStateChange( DeactivateHostFunction.INSTANCE.apply( hostName ) );
-          return true;
-        } catch ( Exception ex ) {
-          return false;
-        }
+      try {
+        runDbStateChange( DeactivateHostFunction.INSTANCE.apply( hostName ) );
+        return true;
+      } catch ( Exception ex ) {
+        Logs.extreme( ).debug( ex );
+        return false;
       }
     }
   }
@@ -539,37 +585,31 @@ public class Databases {
       return false;
     } else {
       if ( host.isLocalHost( ) ) {
-        if ( syncState.compareAndSet( SyncState.NOTSYNCED, SyncState.SYNCING ) ) {
+        if ( SyncState.SYNCING.set( ) ) {
           try {
             runDbStateChange( ActivateHostFunction.INSTANCE.apply( host ) );
-            syncState.set( SyncState.SYNCED );
+            SyncState.SYNCED.set( );
             return true;
           } catch ( Exception ex ) {
-            try {
-              runDbStateChange( DeactivateHostFunction.INSTANCE.apply( host.getDisplayName( ) ) );
-            } catch ( Exception ex1 ) {
-              LOG.error( "Databases.enable(): failed because of: " + ex.getMessage( ) );
-              Logs.extreme( ).error( ex, ex );
-            } finally {
-              syncState.set( SyncState.NOTSYNCED );
-            }
+            SyncState.NOTSYNCED.set( );
+            Logs.extreme( ).debug( ex );
+            ActivateHostFunction.rollback( host, ex );
             return false;
           }
         } else {
-          try {
-            runDbStateChange( ActivateHostFunction.INSTANCE.apply( host ) );
-            return true;
-          } catch ( Exception ex ) {
-            return false;
-          }
+          return false;
         }
-      } else {
+      } else if ( !ActiveHostSet.ACTIVATED.get( ).contains( host.getDisplayName( ) ) ) {
         try {
           runDbStateChange( ActivateHostFunction.INSTANCE.apply( host ) );
           return true;
         } catch ( Exception ex ) {
+          Logs.extreme( ).debug( ex );
+          ActivateHostFunction.rollback( host, ex );
           return false;
         }
+      } else {
+        return ActiveHostSet.ACTIVATED.get( ).contains( host.getDisplayName( ) );
       }
     }
   }
@@ -578,9 +618,7 @@ public class Databases {
     INSTANCE;
     @Override
     public DriverDatabaseClusterMBean apply( String ctx ) {
-      final String contextName = ctx.startsWith( "eucalyptus_" )
-        ? ctx
-        : "eucalyptus_" + ctx;
+      final String contextName = ctx.startsWith( "eucalyptus_" ) ? ctx : "eucalyptus_" + ctx;
       final DriverDatabaseClusterMBean cluster = lookup( contextName );
       return cluster;
     }
@@ -612,12 +650,10 @@ public class Databases {
   
   /**
    * @return
+   *         LockTimeoutException
    */
   public static Boolean isSynchronized( ) {
-    if ( Hosts.isCoordinator( ) ) {
-      syncState.set( SyncState.SYNCED );
-    }
-    return SyncState.SYNCED.equals( syncState.get( ) );
+    return SyncState.SYNCED.isCurrent( );
   }
   
   public static Boolean isVolatile( ) {
@@ -677,7 +713,8 @@ public class Databases {
   private static Supplier<Set<String>>        activeHosts                    = Suppliers.memoizeWithExpiration( ActiveHostSet.ACTIVATED, 2, TimeUnit.SECONDS );
   private static Supplier<Set<String>>        hostDatabases                  = Suppliers.memoizeWithExpiration( ActiveHostSet.DBHOSTS, 1, TimeUnit.SECONDS );
   
-  private static Predicate<StackTraceElement> notStackFilterYouAreLookingFor = Predicates.or( Threads.filterStackByQualifiedName( "com\\.eucalyptus\\.entities\\..*" ),
+  private static Predicate<StackTraceElement> notStackFilterYouAreLookingFor = Predicates.or(
+                                                                               Threads.filterStackByQualifiedName( "com\\.eucalyptus\\.entities\\..*" ),
                                                                                               Threads.filterStackByQualifiedName( "java\\.lang\\.Thread.*" ),
                                                                                               Threads.filterStackByQualifiedName( "com\\.eucalyptus\\.system\\.Threads.*" ),
                                                                                               Threads.filterStackByQualifiedName( "com\\.eucalyptus\\.bootstrap\\.Databases.*" ) );
@@ -700,8 +737,8 @@ public class Databases {
       }
       if ( !isSynchronized( ) ) {
         throw new DatabaseStateException( "Transaction begin failed due to concurrent database synchronization: " + Hosts.listDatabases( )
-          + " for caller:\n"
-          + Joiner.on( "\n\tat " ).join( stack ) );
+                                          + " for caller:\n"
+                                          + Joiner.on( "\n\tat " ).join( stack ) );
       }
     }
   }

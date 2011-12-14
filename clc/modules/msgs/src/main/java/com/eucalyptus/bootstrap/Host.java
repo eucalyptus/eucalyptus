@@ -68,6 +68,7 @@ import java.util.Date;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.log4j.Logger;
 import org.jgroups.Address;
+import com.eucalyptus.bootstrap.Databases.SyncState;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Internets;
@@ -125,9 +126,7 @@ public class Host implements java.io.Serializable, Comparable<Host> {
   public int hashCode( ) {
     final int prime = 31;
     int result = 1;
-    result = prime * result + ( ( this.displayName == null )
-      ? 0
-      : this.displayName.hashCode( ) );
+    result = prime * result + ( ( this.displayName == null ) ? 0 : this.displayName.hashCode( ) );
     return result;
   }
   
@@ -184,9 +183,15 @@ public class Host implements java.io.Serializable, Comparable<Host> {
     } catch ( Exception ex ) {
       LOG.error( ex, ex );
     }
+    SyncState synched = Databases.SyncState.get( );
+    boolean volat = Databases.isVolatile( );
     builder.append( this.hasBootstrapped ? "booted " : "booting " )
-           .append( this.hasDatabase ? ( this.hasSynced ? "db:synched " : "db:outofdate " ) : "nodb " )
-           .append( "started=" ).append( this.startedTime ).append( " " )
+           .append( this.hasDatabase ? ( this.hasSynced ? "db:synched" : "db:outofdate" ) : "nodb" );
+    if ( this.isLocalHost( ) ) {
+      builder.append( "(" ).append( synched.name( ).toLowerCase( ) ).append( ") " )
+             .append( volat ? "dbpool:volatile" : "dbpool:ok" );
+    }
+    builder.append( "started=" ).append( this.startedTime ).append( " " )
            .append( this.hostAddresses );
     return builder.toString( );
   }
