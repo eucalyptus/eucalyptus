@@ -92,7 +92,7 @@ public class ComponentDiscovery extends ServiceJarDiscovery {
   
   @Override
   public Double getPriority( ) {
-    return -0.1d;
+    return -1.0d;
   }
   
 }

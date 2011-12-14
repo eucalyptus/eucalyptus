@@ -105,23 +105,22 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
             }
           } else if ( Ats.from( candidate ).has( Bootstrap.Discovery.class ) && Predicate.class.isAssignableFrom( candidate ) ) {
             try {
-              final Bootstrap.Discovery annote = Ats.from( candidate ).get( Bootstrap.Discovery.class );
               @SuppressWarnings( { "rawtypes",
                   "unchecked" } )
-              final Predicate<Class> instance = ( Predicate<Class> ) Classes.builder( candidate ).newInstance( );
               final ServiceJarDiscovery discover = new ServiceJarDiscovery( ) {
-                
+                final Bootstrap.Discovery annote = Ats.from( candidate ).get( Bootstrap.Discovery.class );
+                final Predicate<Class> instance = ( Predicate<Class> ) Classes.builder( candidate ).newInstance( );
                 @Override
                 public boolean processClass( Class discoveryCandidate ) throws Exception {
                   boolean classFiltered =
-                    annote.value( ).length != 0 ? Iterables.any( Arrays.asList( annote.value( ) ), Classes.assignableTo( discoveryCandidate ) )
+                    this.annote.value( ).length != 0 ? Iterables.any( Arrays.asList( this.annote.value( ) ), Classes.assignableTo( discoveryCandidate ) )
                                                : true;
                   if ( classFiltered ) {
                     boolean annotationFiltered =
-                      annote.annotations( ).length != 0 ? Iterables.any( Arrays.asList( annote.annotations( ) ), Ats.from( discoveryCandidate ) )
+                      this.annote.annotations( ).length != 0 ? Iterables.any( Arrays.asList( this.annote.annotations( ) ), Ats.from( discoveryCandidate ) )
                                                        : true;
                     if ( annotationFiltered ) {
-                      return instance.apply( discoveryCandidate );
+                      return this.instance.apply( discoveryCandidate );
                     } else {
                       return false;
                     }
@@ -132,7 +131,7 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
                 
                 @Override
                 public Double getPriority( ) {
-                  return annote.priority( );
+                  return this.annote.priority( );
                 }
               };
               discovery.add( discover );
