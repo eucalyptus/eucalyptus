@@ -95,7 +95,7 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
         try {
           final Class candidate = ClassLoader.getSystemClassLoader( ).loadClass( classGuess );
           classList.put( candidate, f.getAbsolutePath( ) );
-          if ( ServiceJarDiscovery.class.isAssignableFrom( candidate ) && !ServiceJarDiscovery.class.equals( candidate ) ) {
+          if ( ServiceJarDiscovery.class.isAssignableFrom( candidate ) && !ServiceJarDiscovery.class.equals( candidate ) && !candidate.isAnonymousClass( ) ) {
             try {
               final ServiceJarDiscovery discover = ( ServiceJarDiscovery ) candidate.newInstance( );
               discovery.add( discover );
