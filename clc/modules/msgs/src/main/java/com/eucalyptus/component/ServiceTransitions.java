@@ -483,6 +483,9 @@ public class ServiceTransitions {
           if ( Faults.Severity.FATAL.equals( errors.getSeverity( ) ) ) {
             //TODO:GRZE: handle remote fatal error.
             throw errors;
+          } else if ( Faults.Severity.TRACE.equals( errors.getSeverity( ) ) ) {
+            Logs.extreme( ).error( errors, errors );
+            return;
           } else if ( errors.getSeverity( ).ordinal( ) < Faults.Severity.ERROR.ordinal( ) ) {
             Logs.extreme( ).error( errors, errors );
             Faults.persist( errors );

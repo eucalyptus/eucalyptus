@@ -429,7 +429,11 @@ public class Faults {
         for ( final Throwable ex : Lists.reverse( exs ) ) {
           if ( ( last != null ) && ( ex instanceof CheckException ) ) {
             last.other = ( CheckException ) ex;
-          } else if ( last == null ) {
+          } else if ( ( last != null ) && !( ex instanceof CheckException ) ) {
+              last.other = new CheckException( config, severity, ex );
+          } else if ( last == null && ( ex instanceof CheckException ) ) {
+            last = ( CheckException ) ex;
+          } else {
             last = new CheckException( config, severity, ex );
           }
         }
