@@ -1195,7 +1195,15 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
     final Cluster.State currentState = this.stateMachine.getState( );
     final List<Throwable> currentErrors = Lists.newArrayList( );
     try {
-      Refresh.SERVICEREADY.fire( this );
+      if ( Component.State.ENABLED.equals( this.configuration.lookupState( ) ) ) {
+        enabledTransition( ).call( ).get( );
+      } else if ( Component.State.DISABLED.equals( this.configuration.lookupState( ) ) ) {
+        disabledTransition( ).call( ).get( );        
+      } else if ( Component.State.NOTREADY.equals( this.configuration.lookupState( ) ) ) {
+        notreadyTransition( ).call( ).get( );
+      } else {
+        Refresh.SERVICEREADY.fire( this );
+      }
     } catch ( Exception ex ) {
       if ( ex.getCause( ) instanceof CancellationException ) {
         //ignore cancellation errors.
