@@ -494,9 +494,10 @@ public class Faults {
         exs.add( ex );
       }
       if ( exs.isEmpty( ) ) {
-        exs.add( new CheckException( config, Severity.DEBUG, new Exception( input.toString( ) ) ) );
+        return new CheckException( config, Severity.DEBUG, new Exception( input.toString( ) ) );
+      } else {
+        return Faults.chain( config, Severity.ERROR, exs );
       }
-      return Faults.chain( config, Severity.ERROR, exs );
     }
   }
   
