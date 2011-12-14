@@ -86,6 +86,7 @@
 package com.eucalyptus.bootstrap;
 
 import java.sql.Connection;
+import java.sql.Driver;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -345,34 +346,41 @@ public class Databases {
               }
               try {
                 final DriverDatabaseClusterMBean cluster = lookup( contextName );
-                LOG.info( "Tearing down database connections for: " + hostName + " to context: " + contextName );
                 try {
                   cluster.getDatabase( hostName );
                 } catch ( Exception ex1 ) {
                   return;
                 }
-                try {
-                  LOG.info( "Removing database connections for: " + hostName + " to context: " + contextName );
-                  cluster.remove( hostName );
-                  LOG.info( "Removed database connections for: " + hostName + " to context: " + contextName );
-                } catch ( IllegalStateException ex ) {
-                  Logs.extreme( ).debug( ex, ex );
-                }
-                try {
-                  LOG.info( "Deactivating database connections for: " + hostName + " to context: " + contextName );
-                  cluster.deactivate( hostName );
-                  LOG.info( "Deactived database connections for: " + hostName + " to context: " + contextName );
-                } catch ( Exception ex ) {
-                  LOG.info( ex );
-                  Logs.extreme( ).debug( ex, ex );
-                }
-                try {
-                  LOG.info( "Removing database connections for: " + hostName + " to context: " + contextName );
-                  cluster.remove( hostName );
-                  LOG.info( "Removed database connections for: " + hostName + " to context: " + contextName );
-                } catch ( Exception ex ) {
-                  LOG.info( ex );
-                  Logs.extreme( ).debug( ex, ex );
+                LOG.info( "Tearing down database connections for: " + hostName + " to context: " + contextName );
+                for ( int i = 0; i < 10; i ++ ) {
+                  if ( cluster.getActiveDatabases( ).contains( hostName ) ) {
+                    try {
+                      LOG.info( "Deactivating database connections for: " + hostName + " to context: " + contextName );
+                      cluster.deactivate( hostName );
+                      LOG.info( "Deactived database connections for: " + hostName + " to context: " + contextName );
+                      try {
+                        LOG.info( "Removing database connections for: " + hostName + " to context: " + contextName );
+                        cluster.remove( hostName );
+                        LOG.info( "Removed database connections for: " + hostName + " to context: " + contextName );
+                        return;
+                      } catch ( IllegalStateException ex ) {
+                        Logs.extreme( ).debug( ex, ex );
+                      }
+                    } catch ( Exception ex ) {
+                      LOG.info( ex );
+                      Logs.extreme( ).debug( ex, ex );
+                    }
+                  } else if ( cluster.getInactiveDatabases( ).contains( hostName ) ) {                  
+                    try {
+                      LOG.info( "Removing database connections for: " + hostName + " to context: " + contextName );
+                      cluster.remove( hostName );
+                      LOG.info( "Removed database connections for: " + hostName + " to context: " + contextName );
+                      return;
+                    } catch ( Exception ex ) {
+                      LOG.info( ex );
+                      Logs.extreme( ).debug( ex, ex );
+                    }
+                  }
                 }
               } catch ( final Exception ex1 ) {
                 LOG.info( ex1 );
