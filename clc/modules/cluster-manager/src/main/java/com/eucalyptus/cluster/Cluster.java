@@ -61,7 +61,6 @@
 package com.eucalyptus.cluster;
 
 import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.net.URI;
 import java.security.cert.X509Certificate;
@@ -152,8 +151,13 @@ import com.eucalyptus.vm.VmTypes;
 import com.eucalyptus.ws.WebServicesException;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.ObjectArrays;
+import com.google.common.collect.Table;
+import com.google.common.collect.Tables;
 import edu.ucsb.eucalyptus.cloud.NodeInfo;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.NodeCertInfo;
@@ -370,6 +374,11 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
         throw Exceptions.toUndeclared( ex );
       }
     }
+    
+    @Override
+    public String toString( ) {
+      return this.name( ) + ":" + this.refresh.getSimpleName( );
+    }
   }
   
   private static void fireCallback( final Cluster parent, final SubjectRemoteCallbackFactory<RemoteCallback, Cluster> factory, final Callback.Completion transitionCallback ) {
@@ -430,9 +439,9 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
   }
   
   private static final List<Class<? extends Exception>> communicationErrors = Lists.newArrayList( ConnectionException.class, IOException.class,
-                                                                                                  WebServicesException.class );
+                                                                              WebServicesException.class );
   private static final List<Class<? extends Exception>> executionErrors     = Lists.newArrayList( UndeclaredThrowableException.class,
-                                                                                                  ExecutionException.class );
+                                                                              ExecutionException.class );
   
   public enum State implements Automata.State<State> {
     BROKEN,
@@ -666,44 +675,71 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
     }
   }
   
+  private static final State[] PATH_NOTREADY      = new State[] { State.PENDING,
+                                                                  State.AUTHENTICATING,
+                                                                  State.STARTING,
+                                                                  State.STARTING_NOTREADY,
+                                                                  State.NOTREADY };
+  private static final State[] PATH_DISABLED      = ObjectArrays.concat( PATH_NOTREADY, State.DISABLED );
+  private static final State[] PATH_ENABLED       = new State[] { State.PENDING,
+                                                                  State.AUTHENTICATING,
+                                                                  State.STARTING,
+                                                                  State.STARTING_NOTREADY,
+                                                                  State.NOTREADY,
+                                                                  State.DISABLED,
+                                                                  State.ENABLING,
+                                                                  State.ENABLING_RESOURCES,
+                                                                  State.ENABLING_NET,
+                                                                  State.ENABLING_VMS,
+                                                                  State.ENABLING_ADDRS,
+                                                                  State.ENABLING_VMS_PASS_TWO,
+                                                                  State.ENABLING_ADDRS_PASS_TWO,
+                                                                  State.ENABLED };
+  
+  private static final State[] PATH_ENABLED_CHECK = new State[] { State.ENABLED,
+                                                                  State.ENABLED_ADDRS,
+                                                                  State.ENABLED_RSC,
+                                                                  State.ENABLED_NET,
+                                                                  State.ENABLED_VMS,
+                                                                  State.ENABLED_SERVICE_CHECK,
+                                                                  State.ENABLED };
+  
   private Callable<CheckedListenableFuture<Cluster>> disableTransition( ) {
     Callable<CheckedListenableFuture<Cluster>> transition;
-    transition = Automata.sequenceTransitions( this, State.ENABLED, State.DISABLED );
-    return transition;
+    if ( this.stateMachine.getState( ).ordinal( ) >= State.ENABLED.ordinal( ) ) {
+      return Automata.sequenceTransitions( this, State.ENABLED, State.DISABLED );
+    } else {
+      return Automata.sequenceTransitions( this, PATH_DISABLED );
+    }
   }
   
   private Callable<CheckedListenableFuture<Cluster>> enabledTransition( ) {
     Callable<CheckedListenableFuture<Cluster>> transition;
-    transition = Automata.sequenceTransitions( this, State.ENABLED, State.ENABLED_SERVICE_CHECK, State.ENABLED_ADDRS, State.ENABLED_RSC,
-                                               State.ENABLED_NET, State.ENABLED_VMS, State.ENABLED );
-    return transition;
+    if ( this.stateMachine.getState( ).ordinal( ) >= State.ENABLED.ordinal( ) ) {
+      return Automata.sequenceTransitions( this, PATH_ENABLED_CHECK );
+    } else {
+      return Automata.sequenceTransitions( this, PATH_ENABLED );
+    }
   }
   
   private Callable<CheckedListenableFuture<Cluster>> enablingTransition( ) {
-    Callable<CheckedListenableFuture<Cluster>> transition;
-    transition = Automata.sequenceTransitions( this, State.DISABLED, State.ENABLING, State.ENABLING_RESOURCES, State.ENABLING_NET, State.ENABLING_VMS,
-                                               State.ENABLING_ADDRS, State.ENABLING_VMS_PASS_TWO, State.ENABLING_ADDRS_PASS_TWO, State.ENABLED );
-    return transition;
+    return Automata.sequenceTransitions( this, PATH_ENABLED );
   }
   
   private Callable<CheckedListenableFuture<Cluster>> disabledTransition( ) {
-    Callable<CheckedListenableFuture<Cluster>> transition;
-    transition = Automata.sequenceTransitions( this, State.DISABLED, State.DISABLED );
-    return transition;
+    if ( this.stateMachine.getState( ).ordinal( ) >= State.ENABLED.ordinal( ) ) {
+      return Automata.sequenceTransitions( this, ObjectArrays.concat( PATH_ENABLED_CHECK, State.DISABLED ) );
+    } else {
+      return Automata.sequenceTransitions( this, ObjectArrays.concat( PATH_DISABLED, State.DISABLED ) );
+    }
   }
   
   private Callable<CheckedListenableFuture<Cluster>> notreadyTransition( ) {
-    Callable<CheckedListenableFuture<Cluster>> transition;
-    transition = Automata.sequenceTransitions( this, State.NOTREADY, State.DISABLED );
-    return transition;
+    return Automata.sequenceTransitions( this, PATH_DISABLED );
   }
   
   private Callable<CheckedListenableFuture<Cluster>> startingTransition( ) {
-    Callable<CheckedListenableFuture<Cluster>> transition;
-    transition = Automata.sequenceTransitions( this, State.PENDING, State.AUTHENTICATING, State.STARTING,
-                                               State.STARTING_NOTREADY,
-                                               State.NOTREADY, State.DISABLED );
-    return transition;
+    return Automata.sequenceTransitions( this, PATH_DISABLED );
   }
   
   public Boolean isReady( ) {
@@ -1198,7 +1234,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
       if ( Component.State.ENABLED.equals( this.configuration.lookupState( ) ) ) {
         enabledTransition( ).call( ).get( );
       } else if ( Component.State.DISABLED.equals( this.configuration.lookupState( ) ) ) {
-        disabledTransition( ).call( ).get( );        
+        disabledTransition( ).call( ).get( );
       } else if ( Component.State.NOTREADY.equals( this.configuration.lookupState( ) ) ) {
         notreadyTransition( ).call( ).get( );
       } else {
