@@ -1120,10 +1120,18 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
                   T callback = Classes.builder( callbackClass ).newInstance( );
                   callback.setSubject( subject );
                   return callback;
-                } catch ( Exception ex1 ) {
-                  if ( ex.getCause( ) instanceof CancellationException ) {
+                } catch ( UndeclaredThrowableException ex1 ) {
+                  if ( ex1.getCause( ) instanceof CancellationException ) {
                     throw ( CancellationException ) ex.getCause( );
-                  } else if ( ex.getCause( ) instanceof NoSuchMethodException ) {
+                  } else if ( ex1.getCause( ) instanceof NoSuchMethodException ) {
+                    throw ex1;
+                  } else {
+                    throw ex1;
+                  }
+                } catch ( Exception ex1 ) {
+                  if ( ex1.getCause( ) instanceof CancellationException ) {
+                    throw ( CancellationException ) ex.getCause( );
+                  } else if ( ex1.getCause( ) instanceof NoSuchMethodException ) {
                     throw ex;
                   } else {
                     throw Exceptions.toUndeclared( ex1 );
@@ -1134,6 +1142,10 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
                 LOG.error( "Creating uninitialized callback (subject=" + subject + ") for type: " + callbackClass.getCanonicalName( ) );
                 return callback;
               }
+            } catch ( RuntimeException ex ) {
+              LOG.error( "Failed to create instance of: " + callbackClass );
+              Logs.extreme( ).error( ex, ex );
+              throw ex;
             }
           } else {
             T callback = callbackClass.newInstance( );

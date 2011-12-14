@@ -439,7 +439,7 @@ public class Handlers {
     HttpResponse response = null;
     if ( redirectUri == null ) {
       response = new DefaultHttpResponse( HttpVersion.HTTP_1_1, HttpResponseStatus.SERVICE_UNAVAILABLE );
-      if ( Logs.isDesbug( ) ) {
+      if ( Logs.isDebug( ) ) {
         String errorMessage = "Failed to lookup service for " + Components.lookup( compClass ).getName( )
           + " for path "
           + originalPath

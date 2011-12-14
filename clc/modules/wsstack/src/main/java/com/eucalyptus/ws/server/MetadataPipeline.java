@@ -84,7 +84,7 @@ public class MetadataPipeline extends FilteredPipeline implements ChannelUpstrea
       Logs.extreme( ).debug( "VmMetadata reply info: " + reply + " " + replyEx );
       if ( replyEx != null || reply == null || reply instanceof NullPayload ) {
         response = new DefaultHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.NOT_FOUND );
-        if ( Logs.isDesbug( ) ) {
+        if ( Logs.isDebug( ) ) {
           response.setHeader( HttpHeaders.Names.CONTENT_TYPE, "text/plain" );
           ChannelBuffer buffer = ChannelBuffers.wrappedBuffer( Exceptions.string( replyEx ).getBytes( ) );
           response.setContent( buffer );
