@@ -27,9 +27,12 @@ import com.eucalyptus.records.EventType;
 import com.eucalyptus.system.Ats;
 import com.eucalyptus.system.BaseDirectory;
 import com.eucalyptus.system.SubDirectory;
+import com.eucalyptus.util.Classes;
 import com.eucalyptus.util.LogUtil;
 import com.google.common.base.Function;
+import com.google.common.base.Predicate;
 import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
@@ -95,6 +98,43 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
           if ( ServiceJarDiscovery.class.isAssignableFrom( candidate ) && !ServiceJarDiscovery.class.equals( candidate ) ) {
             try {
               final ServiceJarDiscovery discover = ( ServiceJarDiscovery ) candidate.newInstance( );
+              discovery.add( discover );
+            } catch ( final Exception e ) {
+              LOG.fatal( e, e );
+              throw new RuntimeException( e );
+            }
+          } else if ( Ats.from( candidate ).has( Bootstrap.Discovery.class ) && Predicate.class.isAssignableFrom( candidate ) ) {
+            try {
+              final Bootstrap.Discovery annote = Ats.from( candidate ).get( Bootstrap.Discovery.class );
+              @SuppressWarnings( { "rawtypes",
+                  "unchecked" } )
+              final Predicate<Class> instance = ( Predicate<Class> ) Classes.builder( candidate ).newInstance( );
+              final ServiceJarDiscovery discover = new ServiceJarDiscovery( ) {
+                
+                @Override
+                public boolean processClass( Class discoveryCandidate ) throws Exception {
+                  boolean classFiltered =
+                    annote.value( ).length != 0 ? Iterables.any( Arrays.asList( annote.value( ) ), Classes.assignableTo( discoveryCandidate ) )
+                                               : true;
+                  if ( classFiltered ) {
+                    boolean annotationFiltered =
+                      annote.annotations( ).length != 0 ? Iterables.any( Arrays.asList( annote.annotations( ) ), Ats.from( discoveryCandidate ) )
+                                                       : true;
+                    if ( annotationFiltered ) {
+                      return instance.apply( discoveryCandidate );
+                    } else {
+                      return false;
+                    }
+                  } else {
+                    return false;
+                  }
+                }
+                
+                @Override
+                public Double getPriority( ) {
+                  return annote.priority( );
+                }
+              };
               discovery.add( discover );
             } catch ( final Exception e ) {
               LOG.fatal( e, e );
@@ -227,7 +267,7 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
     }
     try {
       for ( String binding : bindingList ) {
-        jibxLoader.loadResourceBinding( binding ); 
+        jibxLoader.loadResourceBinding( binding );
       }
       jibxLoader.processBindings( );
     } catch ( JiBXException ex ) {

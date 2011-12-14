@@ -195,7 +195,7 @@ public class Faults {
 //    
     CheckException( final ServiceConfiguration config, final Severity severity, final Throwable cause, final String correlationId ) {
       super( cause != null ? cause.getMessage( )
-          : Threads.currentStackRange( 1, 5 ) );
+                          : Exceptions.causeString( cause ) );
       if ( cause instanceof CheckException ) {
         this.initCause( cause );
         this.setStackTrace( cause.getStackTrace( ) );
@@ -206,8 +206,8 @@ public class Faults {
       this.severity = severity;
       this.serviceName = config.getFullName( ).toString( );
       this.correlationId = ( correlationId == null
-        ? UUID.randomUUID( ).toString( )
-        : correlationId );
+                                                  ? UUID.randomUUID( ).toString( )
+                                                  : correlationId );
       this.timestamp = new Date( );
       this.eventState = config.lookupState( );
       this.eventEpoch = Topology.epoch( );
@@ -246,7 +246,8 @@ public class Faults {
         @Override
         public CheckException next( ) {
           CheckException ret = this.next;
-          this.next = ( ret != null ? ret.other : null );
+          this.next = ( ret != null ? ret.other
+                                   : null );
           return ret;
         }
         
@@ -430,7 +431,7 @@ public class Faults {
           if ( ( last != null ) && ( ex instanceof CheckException ) ) {
             last.other = ( CheckException ) ex;
           } else if ( ( last != null ) && !( ex instanceof CheckException ) ) {
-              last.other = new CheckException( config, severity, ex );
+            last.other = new CheckException( config, severity, ex );
           } else if ( last == null && ( ex instanceof CheckException ) ) {
             last = ( CheckException ) ex;
           } else {
@@ -438,8 +439,8 @@ public class Faults {
           }
         }
         last = ( last != null
-          ? last
-          : new CheckException( config, Severity.TRACE, new NullPointerException( "Faults.chain called w/ empty list: " + exs ) ) );
+                             ? last
+                             : new CheckException( config, Severity.TRACE, new NullPointerException( "Faults.chain called w/ empty list: " + exs ) ) );
         return last;
       } catch ( Exception ex ) {
         LOG.error( "Faults: error in processing previous error: " + ex );

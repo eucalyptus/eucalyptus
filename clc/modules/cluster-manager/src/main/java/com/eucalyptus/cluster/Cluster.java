@@ -61,6 +61,7 @@
 package com.eucalyptus.cluster;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.net.URI;
 import java.security.cert.X509Certificate;
@@ -70,6 +71,7 @@ import java.util.NavigableSet;
 import java.util.NoSuchElementException;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ExecutionException;
@@ -150,7 +152,6 @@ import com.eucalyptus.vm.VmTypes;
 import com.eucalyptus.ws.WebServicesException;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
-import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.NodeInfo;
@@ -316,7 +317,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
         }
       }
       LOG.error( "Failed to find service info for cluster: " + parent.getFullName( ) + " instead found service status for: "
-        + serviceStatuses );
+                 + serviceStatuses );
       throw new NoSuchElementException( "Failed to find service info for cluster: " + parent.getFullName( ) );
     }
     
@@ -340,7 +341,8 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
       this.refresh = refresh;
     }
     
-    @SuppressWarnings( { "rawtypes", "unchecked" } )
+    @SuppressWarnings( { "rawtypes",
+        "unchecked" } )
     @Override
     public TransitionAction<Cluster> apply( final Cluster cluster ) {
       final SubjectRemoteCallbackFactory<RemoteCallback, Cluster> factory = newSubjectMessageFactory( this.refresh, cluster );
@@ -353,7 +355,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
         }
       };
     }
-
+    
     public void fire( Cluster input ) {
       final SubjectRemoteCallbackFactory<RemoteCallback, Cluster> factory = newSubjectMessageFactory( this.refresh, input );
       try {
@@ -395,6 +397,8 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
               transitionCallback.fire( );
             }
           }
+        } catch ( CancellationException ex ) {
+          transitionCallback.fire( );
         } catch ( Exception ex ) {
           transitionCallback.fireException( ex );
         }
@@ -548,7 +552,8 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
         
         this.from( State.NOTREADY ).to( State.DISABLED ).error( State.NOTREADY ).on( Transition.NOTREADYCHECK ).run( Refresh.SERVICEREADY );
         
-        this.from( State.DISABLED ).to( State.DISABLED ).error( State.NOTREADY ).on( Transition.DISABLEDCHECK ).addListener( ErrorStateListeners.FLUSHPENDING ).run( Refresh.SERVICEREADY );
+        this.from( State.DISABLED ).to( State.DISABLED ).error( State.NOTREADY ).on( Transition.DISABLEDCHECK ).addListener( ErrorStateListeners.FLUSHPENDING ).run(
+          Refresh.SERVICEREADY );
         this.from( State.DISABLED ).to( State.ENABLING ).error( State.DISABLED ).on( Transition.ENABLE ).run( Cluster.ServiceStateDispatch.ENABLED );
         this.from( State.DISABLED ).to( State.STOPPED ).error( State.PENDING ).on( Transition.STOP ).run( noop );
         
@@ -558,8 +563,10 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
         this.from( State.ENABLING_RESOURCES ).to( State.ENABLING_NET ).error( State.NOTREADY ).on( Transition.ENABLING_NET ).run( Refresh.NETWORKS );
         this.from( State.ENABLING_NET ).to( State.ENABLING_VMS ).error( State.NOTREADY ).on( Transition.ENABLING_VMS ).run( Refresh.INSTANCES );
         this.from( State.ENABLING_VMS ).to( State.ENABLING_ADDRS ).error( State.NOTREADY ).on( Transition.ENABLING_ADDRS ).run( Refresh.ADDRESSES );
-        this.from( State.ENABLING_ADDRS ).to( State.ENABLING_VMS_PASS_TWO ).error( State.NOTREADY ).on( Transition.ENABLING_VMS_PASS_TWO ).run( Refresh.INSTANCES );
-        this.from( State.ENABLING_VMS_PASS_TWO ).to( State.ENABLING_ADDRS_PASS_TWO ).error( State.NOTREADY ).on( Transition.ENABLING_ADDRS_PASS_TWO ).run( Refresh.ADDRESSES );
+        this.from( State.ENABLING_ADDRS ).to( State.ENABLING_VMS_PASS_TWO ).error( State.NOTREADY ).on( Transition.ENABLING_VMS_PASS_TWO ).run(
+          Refresh.INSTANCES );
+        this.from( State.ENABLING_VMS_PASS_TWO ).to( State.ENABLING_ADDRS_PASS_TWO ).error( State.NOTREADY ).on( Transition.ENABLING_ADDRS_PASS_TWO ).run(
+          Refresh.ADDRESSES );
         this.from( State.ENABLING_ADDRS_PASS_TWO ).to( State.ENABLED ).error( State.NOTREADY ).on( Transition.ENABLING_ADDRS_PASS_TWO ).run( Refresh.ADDRESSES );
         
         this.from( State.ENABLED ).to( State.ENABLED_SERVICE_CHECK ).error( State.NOTREADY ).on( Transition.ENABLED_SERVICES ).run( Refresh.SERVICEREADY );
@@ -635,7 +642,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
           case ENABLED_VMS:
           case ENABLED_SERVICE_CHECK:
             if ( initialized && tick.isAsserted( VmInstances.VOLATILE_STATE_INTERVAL_SEC )
-                && Component.State.ENABLED.equals( this.configuration.lookupState( ) ) ) {
+                 && Component.State.ENABLED.equals( this.configuration.lookupState( ) ) ) {
               Refresh.VOLATILEINSTANCES.fire( this );
             }
             break;
@@ -860,8 +867,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
     } finally {
       try {
         Clusters.getInstance( ).deregister( this.getName( ) );
-      } catch ( Exception ex ) {
-      }
+      } catch ( Exception ex ) {}
     }
   }
   
@@ -879,8 +885,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
       try {
         ListenerRegistry.getInstance( ).deregister( Hertz.class, this );
         ListenerRegistry.getInstance( ).deregister( ClockTick.class, this );
-      } catch ( Exception ex ) {
-      }
+      } catch ( Exception ex ) {}
       Clusters.getInstance( ).deregister( this.getName( ) );
     }
   }
@@ -891,12 +896,12 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
     int result = 1;
     result = prime * result
              + ( ( this.configuration == null )
-               ? 0
-               : this.configuration.hashCode( ) );
+                                               ? 0
+                                               : this.configuration.hashCode( ) );
     result = prime * result
              + ( ( this.state == null )
-               ? 0
-               : this.state.hashCode( ) );
+                                       ? 0
+                                       : this.state.hashCode( ) );
     return result;
   }
   
@@ -1096,29 +1101,50 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
     }
   }
   
-  private static <P, T extends SubjectMessageCallback<P, Q, R>, Q extends BaseMessage, R extends BaseMessage> SubjectRemoteCallbackFactory<T, P> newSubjectMessageFactory( final Class<T> callbackClass, final P subject ) {
+  private static <P, T extends SubjectMessageCallback<P, Q, R>, Q extends BaseMessage, R extends BaseMessage> SubjectRemoteCallbackFactory<T, P> newSubjectMessageFactory( final Class<T> callbackClass, final P subject ) throws CancellationException {
     return new SubjectRemoteCallbackFactory<T, P>( ) {
       @Override
       public T newInstance( ) {
         try {
           if ( subject != null ) {
             try {
-              T callback = callbackClass.getConstructor( subject.getClass( ) ).newInstance( subject );
+              T callback = Classes.builder( callbackClass ).arg( subject ).newInstance( );
               return callback;
-            } catch ( NoSuchMethodException nsmex ) {
-              T callback = callbackClass.newInstance( );
-              callback.setSubject( subject );
-              return callback;
+            } catch ( UndeclaredThrowableException ex ) {
+              if ( ex.getCause( ) instanceof CancellationException ) {
+                throw ( CancellationException ) ex.getCause( );
+              } else if ( ex.getCause( ) instanceof NoSuchMethodException ) {
+                try {
+                  T callback = Classes.builder( callbackClass ).newInstance( );
+                  callback.setSubject( subject );
+                  return callback;
+                } catch ( Exception ex1 ) {
+                  if ( ex.getCause( ) instanceof CancellationException ) {
+                    throw ( CancellationException ) ex.getCause( );
+                  } else if ( ex.getCause( ) instanceof NoSuchMethodException ) {
+                    throw ex;
+                  } else {
+                    throw Exceptions.toUndeclared( ex1 );
+                  }
+                }
+              } else {
+                T callback = callbackClass.newInstance( );
+                LOG.error( "Creating uninitialized callback (subject=" + subject + ") for type: " + callbackClass.getCanonicalName( ) );
+                return callback;
+              }
             }
           } else {
             T callback = callbackClass.newInstance( );
             LOG.error( "Creating uninitialized callback (subject=" + subject + ") for type: " + callbackClass.getCanonicalName( ) );
             return callback;
           }
+        } catch ( final CancellationException ex ) {
+          LOG.debug( ex );
+          throw ex;
         } catch ( final Exception ex ) {
           LOG.error( ex );
           Logs.exhaust( ).error( ex, ex );
-          throw new RuntimeException( ex );
+          throw Exceptions.toUndeclared( ex );
         }
       }
       
@@ -1157,6 +1183,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
     try {
       Refresh.SERVICEREADY.fire( this );
     } catch ( Exception ex ) {
+      
     }
     currentErrors.addAll( this.pendingErrors );
     final Component.State externalState = this.configuration.lookupState( );
