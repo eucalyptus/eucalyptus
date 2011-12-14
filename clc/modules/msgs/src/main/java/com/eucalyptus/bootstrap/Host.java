@@ -191,7 +191,7 @@ public class Host implements java.io.Serializable, Comparable<Host> {
       builder.append( "(" ).append( synched.name( ).toLowerCase( ) ).append( ") " )
              .append( volat ? "dbpool:volatile" : "dbpool:ok" );
     }
-    builder.append( "started=" ).append( this.startedTime ).append( " " )
+    builder.append( " started=" ).append( this.startedTime ).append( " " )
            .append( this.hostAddresses );
     return builder.toString( );
   }
