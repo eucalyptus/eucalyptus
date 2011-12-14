@@ -70,6 +70,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.cloud.ImageMetadata;
+import com.eucalyptus.cloud.ImageMetadata.Platform;
 import com.eucalyptus.cloud.ImageMetadata.StaticDiskImage;
 import com.eucalyptus.cloud.util.IllegalMetadataAccessException;
 import com.eucalyptus.cloud.util.InvalidMetadataException;
@@ -149,6 +150,9 @@ public class Emis {
       EntityTransaction db = Entities.get( BlockStorageImageInfo.class );
       try {
         BlockStorageImageInfo ret = Entities.uniqueResult( Images.exampleBlockStorageWithImageId( identifier ) );
+        if(ret.getKernelId().equals("windows") || ret.getImageName().startsWith("windows"))
+        	ret.setPlatform(Platform.windows);
+        
         if ( !ImageMetadata.State.available.equals( ret.getState( ) ) ) {
           db.rollback( );
           throw new NoSuchElementException( "Unable to start instance with deregistered image : " + ret );

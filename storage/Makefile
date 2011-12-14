@@ -14,13 +14,16 @@ TESTS=test_vbr test_blobstore test
 IMAGER=_euca_imager
 #EFENCE=-lefence
 
-all: vbr.o backing.o storage-windows.o walrus.o diskutil.o Wclient $(IMAGER) test_blobstore test_vbr
+all: vbr.o backing.o storage-windows.o walrus.o diskutil.o Wclient $(IMAGER) test_blobstore test_vbr euca-blobs
 #all: storage-windows.o walrus.o test_blobstore
 
 build: all
 
 $(IMAGER): Makefile imager.c imager.h cmd.h $(IMAGER_LIBS)
 	$(CC) $(CFLAGS) $(INCLUDES) imager.c -o $(IMAGER) $(IMAGER_LIBS) $(VDDK_FLAGS) $(STORAGE_LIBS) -lrt $(EFENCE)
+
+euca-blobs: Makefile blobstore.c blobstore.h
+	$(CC) $(CFLAGS) $(INCLUDES) -D_EUCA_BLOBS blobstore.c -o euca-blobs map.o diskutil.o ../util/misc.o ../util/ipc.o ../util/euca_auth.o $(STORAGE_LIBS) $(EFENCE)
 
 Wclient: Makefile Wclient.c ../util/euca_auth.o ../util/misc.o walrus.o http.o
 	$(CC) $(CFLAGS) $(INCLUDES) Wclient.c -o Wclient ../util/euca_auth.o ../util/misc.o ../util/ipc.o diskutil.o walrus.o http.o $(STORAGE_LIBS)

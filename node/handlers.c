@@ -79,6 +79,7 @@ permission notice:
 #include <sys/vfs.h> /* statfs */
 #include <signal.h> /* SIGINT */
 #include <linux/limits.h>
+#include <pwd.h> /* getpwuid_r */
 #ifndef MAX_PATH
 #define MAX_PATH 4096
 #endif
@@ -890,6 +891,47 @@ static int init (void)
 		free(tmp);
 	}
 	logfile(log, i, j);
+
+    { 
+        /* Initialize libvirtd.conf, since some buggy versions of libvirt
+         * require it.  At least two versions of libvirt have had this issue,
+         * most recently the version in RHEL 6.1.  Note that this happens
+         * at each startup of the NC mainly because the location of the
+         * required file depends on the process owner's home directory, which
+         * may change after the initial installation.
+         */
+        char libVirtConf [MAX_PATH];
+        uid_t uid = geteuid();
+        struct passwd *pw;
+        FILE * fd;
+        struct stat lvcstat;
+        pw = getpwuid(uid);
+        errno = 0;
+        if (pw != NULL) {
+            snprintf(libVirtConf, MAX_PATH, "%s/.libvirt/libvirtd.conf", pw->pw_dir);
+            if (access(libVirtConf, R_OK) == -1 && errno == ENOENT) {
+                libVirtConf[strlen(libVirtConf)-strlen("/libvirtd.conf")] = '\0';
+                errno = 0;
+                if (stat(libVirtConf, &lvcstat) == -1 && errno == ENOENT) {
+                    mkdir(libVirtConf, 0755);
+                } else if (errno) {
+                     logprintfl (EUCAINFO, "Failed to stat %s/.libvirt\n", pw->pw_dir);
+                }
+                libVirtConf[strlen(libVirtConf)] = '/';
+                errno = 0;
+                fd = fopen(libVirtConf, "a");
+                if (fd == NULL) {
+                    logprintfl (EUCAINFO, "Failed to open %s, error code %d\n", libVirtConf, errno);
+                } else {
+                    fclose(fd);
+                }
+            } else if (errno) {
+                logprintfl (EUCAINFO, "Failed to access libvirtd.conf, error code %d\n", errno);
+            }
+        } else {
+             logprintfl (EUCAINFO, "Cannot get EUID, not creating libvirtd.conf\n");
+        }
+    }
 
     { // initialize hooks if their directory looks ok
         char dir [MAX_PATH];
