@@ -468,11 +468,11 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
     ENABLING_ADDRS_PASS_TWO,
     /** Component.State.ENABLED -> Component.State.ENABLED **/
     ENABLED,
+    ENABLED_SERVICE_CHECK,
     ENABLED_ADDRS,
     ENABLED_RSC,
     ENABLED_NET,
-    ENABLED_VMS,
-    ENABLED_SERVICE_CHECK;
+    ENABLED_VMS;
     public Component.State proxyState( ) {
       try {
         return Component.State.valueOf( this.name( ) );
@@ -697,11 +697,11 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
                                                                   State.ENABLED };
   
   private static final State[] PATH_ENABLED_CHECK = new State[] { State.ENABLED,
+                                                                  State.ENABLED_SERVICE_CHECK,
                                                                   State.ENABLED_ADDRS,
                                                                   State.ENABLED_RSC,
                                                                   State.ENABLED_NET,
                                                                   State.ENABLED_VMS,
-                                                                  State.ENABLED_SERVICE_CHECK,
                                                                   State.ENABLED };
   
   private Callable<CheckedListenableFuture<Cluster>> disableTransition( ) {
