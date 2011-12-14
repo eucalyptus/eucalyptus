@@ -661,7 +661,7 @@ public class Databases {
       return false;
     } else if ( !Hosts.isCoordinator( ) && BootstrapArgs.isCloudController( ) ) {
       return !isSynchronized( ) || !activeHosts.get( ).containsAll( hostDatabases.get( ) );
-    } else if ( !activeHosts.get( ).containsAll( hostDatabases.get( ) ) ) {
+    } else if ( !activeHosts.get( ).equals( hostDatabases.get( ) ) ) {
       return true;
     } else {
       return !Hosts.list( FILTER_SYNCING_DBS ).isEmpty( );
@@ -683,7 +683,7 @@ public class Databases {
         }
         Logs.extreme( ).debug( "ActiveHostSet: union of activated db connections: " + union );
         Logs.extreme( ).debug( "ActiveHostSet: intersection of db hosts and activated db connections: " + intersection );
-        boolean dbVolatile = !hosts.containsAll( intersection );
+        boolean dbVolatile = !hosts.equals( intersection );
         String msg = String.format( "ActiveHostSet: %-14.14s %s%s%s", dbVolatile ? "volatile" : "synchronized", hosts, dbVolatile ? "!=" : "=", intersection );
         if ( dbVolatile ) {
           if ( last.compareAndSet( false, dbVolatile ) ) {
