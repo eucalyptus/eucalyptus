@@ -1183,7 +1183,11 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
     try {
       Refresh.SERVICEREADY.fire( this );
     } catch ( Exception ex ) {
-      
+      if ( ex.getCause( ) instanceof CancellationException ) {
+        //ignore cancellation errors.
+      } else {
+        this.pendingErrors.add( ex );
+      }
     }
     currentErrors.addAll( this.pendingErrors );
     final Component.State externalState = this.configuration.lookupState( );
