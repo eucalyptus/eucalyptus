@@ -327,10 +327,11 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
     }
   }
   
-  enum Refresh implements Function<Cluster, TransitionAction<Cluster>> {
+  enum Refresh implements Function<Cluster, TransitionAction<Cluster>>, Callback<Cluster> {
     RESOURCES( ResourceStateCallback.class ),
     NETWORKS( NetworkStateCallback.class ),
     INSTANCES( VmStateCallback.class ),
+    VOLATILEINSTANCES( VmStateCallback.VmPendingCallback.class ),
     ADDRESSES( PublicAddressStateCallback.class ),
     SERVICEREADY( ServiceStateCallback.class );
     Class refresh;
@@ -351,6 +352,20 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
           Cluster.fireCallback( parent, factory, transitionCallback );
         }
       };
+    }
+
+    @Override
+    public void fire( Cluster input ) {
+      final SubjectRemoteCallbackFactory<RemoteCallback, Cluster> factory = newSubjectMessageFactory( this.refresh, input );
+      try {
+        RemoteCallback messageCallback = factory.newInstance( );
+        BaseMessage baseMessage = AsyncRequests.newRequest( messageCallback ).sendSync( input.getConfiguration( ) );
+        Logs.extreme( ).debug( "Response to " + messageCallback + ": " + baseMessage );
+      } catch ( Exception ex ) {
+        LOG.error( ex );
+        Logs.extreme( ).error( ex );
+        throw Exceptions.toUndeclared( ex );
+      }
     }
   }
   
@@ -613,6 +628,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
           case ENABLING_ADDRS:
           case ENABLING_VMS_PASS_TWO:
           case ENABLING_ADDRS_PASS_TWO:
+            break;
           case ENABLED:
           case ENABLED_ADDRS:
           case ENABLED_RSC:
@@ -621,7 +637,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
           case ENABLED_SERVICE_CHECK:
             if ( initialized && tick.isAsserted( VmInstances.VOLATILE_STATE_INTERVAL_SEC )
                 && Component.State.ENABLED.equals( this.configuration.lookupState( ) ) ) {
-              AsyncRequests.newRequest( new VmStateCallback.VmPendingCallback( this ) ).sendSync( this.configuration );
+              Refresh.VOLATILEINSTANCES.fire( this );
             }
             break;
           default:
@@ -1140,11 +1156,8 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
     final Cluster.State currentState = this.stateMachine.getState( );
     final List<Throwable> currentErrors = Lists.newArrayList( );
     try {
-      Refresh.SERVICEREADY.apply( this );
+      Refresh.SERVICEREADY.fire( this );
     } catch ( Exception ex ) {
-      CheckException fail = Faults.failure( this.configuration, ex );
-      currentErrors.add( fail );
-      throw fail;
     }
     currentErrors.addAll( this.pendingErrors );
     final Component.State externalState = this.configuration.lookupState( );
