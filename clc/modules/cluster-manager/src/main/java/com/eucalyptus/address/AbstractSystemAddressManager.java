@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.ExecutionException;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.principal.Principals;
@@ -22,6 +23,7 @@ import com.eucalyptus.entities.Entities;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes;
@@ -62,13 +64,23 @@ public abstract class AbstractSystemAddressManager {
                           "Unassigning orphaned public ip address: " + LogUtil.dumpObject( address ) + " count=" + orphanCount ).warn( );
       try {
         final Address addr = Addresses.getInstance( ).lookup( address.getAddress( ) );
-        if ( addr.isAssigned( ) ) {
-          AsyncRequests.newRequest( new UnassignAddressCallback( address ) ).dispatch( cluster.getConfiguration( ) );
-        } else if ( !addr.isAssigned( ) && addr.isAllocated( ) && addr.isSystemOwned( ) ) {
-          addr.release( );
+        try {
+          if ( addr.isAssigned( ) ) {
+            AsyncRequests.newRequest( new UnassignAddressCallback( address ) ).sendSync( cluster.getConfiguration( ) );
+          } else if ( !addr.isAssigned( ) && addr.isAllocated( ) && addr.isSystemOwned( ) ) {
+            addr.release( );
+          }
+        } catch ( ExecutionException ex ) {
+          if ( !addr.isAssigned( ) && addr.isAllocated( ) && addr.isSystemOwned( ) ) {
+            addr.release( );
+          }
         }
-      } catch ( NoSuchElementException e ) {}
-      orphans.remove( address );
+      } catch ( InterruptedException ex ) {
+        Exceptions.maybeInterrupted( ex );
+      } catch ( NoSuchElementException ex ) {
+      } finally {
+        orphans.remove( address );
+      }
     }
   }
 

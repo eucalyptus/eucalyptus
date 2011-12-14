@@ -107,8 +107,8 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
     broken,
     unallocated,
     allocated,
-    assigned,
-    impending;
+    impending,
+    assigned;
   }
   
   public enum Transition {
