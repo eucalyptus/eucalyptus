@@ -422,7 +422,7 @@ public class Faults {
   
   private static CheckException chain( final ServiceConfiguration config, final Severity severity, final List<? extends Throwable> exs ) {
     if ( exs == null || exs.isEmpty( ) ) {
-      return new CheckException( config, Severity.TRACE, new NullPointerException( "Faults.chain called w/ empty list: " + exs ) ) );
+      return new CheckException( config, Severity.TRACE, new NullPointerException( "Faults.chain called w/ empty list: " + exs ) );
     } else {
       try {
         CheckException last = null;
