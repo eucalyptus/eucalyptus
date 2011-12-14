@@ -108,6 +108,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import net.sf.hajdbc.Dialect;
@@ -149,7 +150,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.MapDifference;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import com.google.common.collect.Sets.SetView;
 
 public class Databases {
   public static class DatabaseStateException extends IllegalStateException {
@@ -636,31 +636,46 @@ public class Databases {
     ACTIVATED {
       @Override
       public Set<String> get( ) {
-        Set<String> hosts = HOSTS.get( );
+        Set<String> hosts = DBHOSTS.get( );
         Set<String> union = Sets.newHashSet( );
         Set<String> intersection = Sets.newHashSet( hosts );
-        LOG.debug( "ActiveHostSet: universe of db hosts: " + hosts );
+        Logs.extreme( ).debug( "ActiveHostSet: universe of db hosts: " + hosts );
         for ( String ctx : PersistenceContexts.list( ) ) {
           Set<String> activeDatabases = Databases.lookup( ctx ).getActiveDatabases( );
           union.addAll( activeDatabases );
           intersection.retainAll( activeDatabases );
         }
-        LOG.debug( "ActiveHostSet: union of activated db connections: " + union );
-        LOG.debug( "ActiveHostSet: intersection of db hosts and activated db connections: " + intersection );
-        LOG.debug( "ActiveHostSet: volatile: " + !hosts.containsAll( intersection ) );
+        Logs.extreme( ).debug( "ActiveHostSet: union of activated db connections: " + union );
+        Logs.extreme( ).debug( "ActiveHostSet: intersection of db hosts and activated db connections: " + intersection );
+        boolean dbVolatile = !hosts.containsAll( intersection );
+        String msg = String.format( "ActiveHostSet: %-14.14s %s%s%s", dbVolatile ? "volatile" : "synchronized", hosts, dbVolatile ? "!=" : "=", intersection );
+        if ( dbVolatile ) {
+          if ( last.compareAndSet( false, dbVolatile ) ) {
+            LOG.warn( msg );
+          } else {
+            LOG.debug( msg );
+          }
+        } else {
+          if ( last.compareAndSet( true, dbVolatile ) ) {
+            LOG.warn( msg );
+          } else {
+            LOG.debug( msg );
+          }
+        }
         return intersection;
       }
     },
-    HOSTS {
+    DBHOSTS {
       @Override
       public Set<String> get( ) {
-        return Sets.newHashSet( Collections2.transform( Hosts.listActiveDatabases( ), Hosts.NameTransform.INSTANCE ) );
+        return Sets.newHashSet( Collections2.transform( Hosts.listDatabases( ), Hosts.NameTransform.INSTANCE ) );
       }
     };
+    private static final AtomicBoolean last = new AtomicBoolean( false );
   }
   
   private static Supplier<Set<String>>        activeHosts                    = Suppliers.memoizeWithExpiration( ActiveHostSet.ACTIVATED, 2, TimeUnit.SECONDS );
-  private static Supplier<Set<String>>        hostDatabases                  = Suppliers.memoizeWithExpiration( ActiveHostSet.HOSTS, 1, TimeUnit.SECONDS );
+  private static Supplier<Set<String>>        hostDatabases                  = Suppliers.memoizeWithExpiration( ActiveHostSet.DBHOSTS, 1, TimeUnit.SECONDS );
   
   private static Predicate<StackTraceElement> notStackFilterYouAreLookingFor = Predicates.or( Threads.filterStackByQualifiedName( "com\\.eucalyptus\\.entities\\..*" ),
                                                                                               Threads.filterStackByQualifiedName( "java\\.lang\\.Thread.*" ),

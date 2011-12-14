@@ -79,7 +79,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.log4j.Logger;
@@ -116,6 +115,7 @@ import com.google.common.base.Functions;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
+import com.google.common.base.Supplier;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -301,8 +301,8 @@ public class Hosts {
       
     };
     private final long                            interval;
-    private static final ScheduledExecutorService hostPruner = Executors.newScheduledThreadPool( 32 );
-    private static final Lock                     canHasChecks     = new ReentrantLock( );
+    private static final ScheduledExecutorService hostPruner   = Executors.newScheduledThreadPool( 32 );
+    private static final Lock                     canHasChecks = new ReentrantLock( );
     
     private PeriodicMembershipChecks( long interval ) {
       this.interval = interval;
@@ -1045,8 +1045,6 @@ public class Hosts {
     
   }
   
-
-  
   enum GroupAddressTransform implements Function<Host, Address> {
     INSTANCE;
     @Override
@@ -1126,6 +1124,51 @@ public class Hosts {
     return Coordinator.INSTANCE.get( );
   }
   
+  enum JoinShouldWait implements Predicate<Host>, Supplier<Host> {
+    CLOUD_CONTROLLER{
+      @Override
+      public boolean apply( Host input ) {
+        if ( input == null ) {
+          return false;
+        } else if ( !input.hasBootstrapped( ) ) {
+          return true;
+        } else if ( !input.hasSynced( ) ) {
+          return true;
+        } else {
+          return false;
+        }
+      }
+
+      @Override
+      public Host get( ) {
+        return Coordinator.find( Hosts.listDatabases( ) );
+      }
+    },
+    NON_CLOUD_CONTROLLER{
+      @Override
+      public boolean apply( Host input ) {
+        if ( input == null ) {
+          return true;
+        } else if ( !input.hasBootstrapped( ) ) {
+          return true;
+        } else if ( !input.hasSynced( ) ) {
+          return true;
+        } else {
+          return false;
+        }
+      }
+
+      @Override
+      public Host get( ) {
+        return Coordinator.find( Hosts.listActiveDatabases( ) );
+      }
+    };
+
+    public abstract boolean apply( Host input );
+    public abstract Host get( );
+  }
+  
+
   private enum Coordinator {
     INSTANCE;
     private final AtomicLong currentStartTime = new AtomicLong( Long.MAX_VALUE );
@@ -1155,35 +1198,36 @@ public class Hosts {
     
     public Host get( ) {//GRZE: this needs to use active DBs to avoid db-sync race.
       List<Host> dbHosts = Hosts.listActiveDatabases( );
-      return findCoordinator( dbHosts );
+      return find( dbHosts );
     }
     
     public Host await( ) {//GRZE: this needs to use all DBs to ensure waiting for booting coordinator
-      if ( get( ) != null ) {
-        return get( );
-      } else if ( findCoordinator( Hosts.listDatabases( ) ) == null && BootstrapArgs.isCloudController( ) ) {
-        return Hosts.localHost( );
-      } else {//implies initially findCoordinator()!=null
-        for ( Host h = findCoordinator( Hosts.listDatabases( ) ); h != null && ( !h.hasBootstrapped( ) || !h.hasSynced( ) ); h =
-          findCoordinator( Hosts.listDatabases( ) ) ) {
-          try {
-            LOG.info( "Waiting for cloud coordinator to become ready: " + h );
-            TimeUnit.MILLISECONDS.sleep( 1000 );
-          } catch ( InterruptedException ex ) {
-            Exceptions.maybeInterrupted( ex );
-          }
-        }
-        Host initCoordinator = findCoordinator( Hosts.listDatabases( ) );
-        if ( initCoordinator == null ) {
+      Host coord = get( );
+      if ( !BootstrapArgs.isCloudController( ) ) {
+        Coordinator.loggedWait( JoinShouldWait.NON_CLOUD_CONTROLLER );
+        return JoinShouldWait.NON_CLOUD_CONTROLLER.get( );
+      } else {//if ( BootstrapArgs.isCloudController( ) ) {
+        Coordinator.loggedWait( JoinShouldWait.NON_CLOUD_CONTROLLER );
+        if ( coord == null ) {
           return Hosts.localHost( );
         } else {
-          return initCoordinator;
+          return coord;
         }
-        
+      } 
+    }
+    
+    private static void loggedWait( JoinShouldWait waitFunction ) {
+      for ( Host h = waitFunction.get( ); waitFunction.apply( h ); h = waitFunction.get( ) ) {
+        try {
+          LOG.info( "Waiting for cloud coordinator to become ready: " + h );
+          TimeUnit.MILLISECONDS.sleep( 1000 );
+        } catch ( InterruptedException ex ) {
+          Exceptions.maybeInterrupted( ex );
+        }
       }
     }
     
-    private static Host findCoordinator( List<Host> dbHosts ) {
+    private static Host find( List<Host> dbHosts ) {
       Host minHost = null;
       for ( final Host h : dbHosts ) {
         if ( minHost == null ) {
