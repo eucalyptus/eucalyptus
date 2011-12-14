@@ -1207,7 +1207,7 @@ public class Hosts {
         Coordinator.loggedWait( JoinShouldWait.NON_CLOUD_CONTROLLER );
         return JoinShouldWait.NON_CLOUD_CONTROLLER.get( );
       } else {//if ( BootstrapArgs.isCloudController( ) ) {
-        Coordinator.loggedWait( JoinShouldWait.NON_CLOUD_CONTROLLER );
+        Coordinator.loggedWait( JoinShouldWait.CLOUD_CONTROLLER );
         if ( coord == null ) {
           return Hosts.localHost( );
         } else {
