@@ -320,8 +320,8 @@ public class Topology {
         final Callable<ServiceConfiguration> call = Topology.callable( input, Topology.get( toState ) );
         if ( Bootstrap.isOperational( ) ) {
           final Queue workQueue = ( this.serializedStates.contains( toState )
-            ? Queue.INTERNAL
-            : Queue.EXTERNAL );
+                                                                             ? Queue.INTERNAL
+                                                                             : Queue.EXTERNAL );
           return workQueue.enqueue( call );
         } else {
           try {
@@ -495,12 +495,12 @@ public class Topology {
       int result = 1;
       result = prime * result
                + ( ( this.componentId == null )
-                 ? 0
-                 : this.componentId.hashCode( ) );
+                                               ? 0
+                                               : this.componentId.hashCode( ) );
       result = prime * result
                + ( ( this.partition == null )
-                 ? 0
-                 : this.partition.hashCode( ) );
+                                             ? 0
+                                             : this.partition.hashCode( ) );
       return result;
     }
     
@@ -556,8 +556,8 @@ public class Topology {
   
   public TransitionGuard getGuard( ) {
     return ( Hosts.isCoordinator( )
-      ? this.cloudControllerGuard( )
-      : this.remoteGuard( ) );
+                                   ? this.cloudControllerGuard( )
+                                   : this.remoteGuard( ) );
   }
   
   private ConcurrentMap<ServiceKey, ServiceConfiguration> getServices( ) {
@@ -691,7 +691,7 @@ public class Topology {
       for ( final Component c : Components.list( ) ) {
         allServices.addAll( c.services( ) );
       }
-      List<ServiceConfiguration> checkedServices = submitTransitions( allServices, CheckServiceFilter.INSTANCE, SubmitCheck.INSTANCE );      
+      List<ServiceConfiguration> checkedServices = submitTransitions( allServices, CheckServiceFilter.INSTANCE, SubmitCheck.INSTANCE );
       if ( !checkedServices.isEmpty( ) ) {
         Logs.extreme( ).debug( "CHECKED" + ": " + Joiner.on( "\n" + "CHECKED" + ": " ).join( Collections2.transform( checkedServices, ServiceString.INSTANCE ) ) );
       }
@@ -765,14 +765,18 @@ public class Topology {
   }
   
   public static ServiceConfiguration lookup( final Class<? extends ComponentId> compClass, final Partition... maybePartition ) {
-    final Partition partition = ( ( maybePartition != null ) && ( maybePartition.length > 0 )
-      ? ( ComponentIds.lookup( compClass ).isPartitioned( )
-        ? maybePartition[0]
-        : null )
-      : null );
+    final Partition partition =
+      ( ( maybePartition != null ) && ( maybePartition.length > 0 )
+                                                                   ? ( ComponentIds.lookup( compClass ).isPartitioned( )
+                                                                                                                        ? maybePartition[0]
+                                                                                                                        : null )
+                                                                   : null );
     ServiceConfiguration res = Topology.getInstance( ).getServices( ).get( ServiceKey.create( ComponentIds.lookup( compClass ), partition ) );
     if ( res == null ) {
-      throw new NoSuchElementException( "Failed to lookup ENABLED service of type " + compClass.getSimpleName( ) + ( partition != null ? " in partition " + partition : "." ) );
+      throw new NoSuchElementException( "Failed to lookup ENABLED service of type "
+                                        + compClass.getSimpleName( )
+                                        + ( partition != null ? " in partition " + partition
+                                                             : "." ) );
     } else {
       return res;
     }
@@ -798,8 +802,8 @@ public class Topology {
   public String toString( ) {
     final StringBuilder builder = new StringBuilder( );
     builder.append( "Topology:currentEpoch=" ).append( this.currentEpoch ).append( ":guard=" ).append( Hosts.isCoordinator( )
-      ? "cloud"
-      : "remote" );
+                                                                                                                             ? "cloud"
+                                                                                                                             : "remote" );
     return builder.toString( );
   }
   
@@ -966,8 +970,8 @@ public class Topology {
         return endResult;
       } catch ( final Exception ex ) {
         Exceptions.maybeInterrupted( ex );
-        LOG.error( ex, Throwables.getRootCause( ex ) );
         LOG.error( this.toString( input, initialState, nextState, ex ) );
+        Logs.extreme( ).error( ex, Throwables.getRootCause( ex ) );
         Logs.extreme( ).error( ex, ex );
         throw Exceptions.toUndeclared( ex );
       } finally {
@@ -980,8 +984,8 @@ public class Topology {
     private String toString( final ServiceConfiguration endResult, final State initialState, final State nextState, final Throwable... throwables ) {
       return String.format( "%s %s %s->%s=%s \n[%s]\n", this.toString( ), endResult.getFullName( ), initialState, nextState, endResult.lookupState( ),
                             ( ( throwables != null ) && ( throwables.length > 0 )
-                              ? Exceptions.causeString( throwables[0] )
-                              : "WINNING" ) );
+                                                                                 ? Exceptions.causeString( throwables[0] )
+                                                                                 : "WINNING" ) );
     }
     
     @Override
