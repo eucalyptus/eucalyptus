@@ -874,7 +874,7 @@ static int copy_creator (artifact * a)
     logprintfl (EUCAINFO, "[%s] copying/cloning blob %s to blob %s\n", a->instanceId, dep->bb->id, a->bb->id);
     if (a->must_be_file) {
         if (blockblob_copy (dep->bb, 0L, a->bb, 0L, 0L)==-1) {
-            logprintfl (EUCAERROR, "[%s] error: failed to copy blob %s to blob %s\n", a->instanceId, dep->bb->id, a->bb->id);
+            logprintfl (EUCAERROR, "[%s] error: failed to copy blob %s to blob %s: %s\n", a->instanceId, dep->bb->id, a->bb->id, blobstore_get_last_msg());
             return blobstore_get_error();
         }
     } else {
@@ -882,7 +882,7 @@ static int copy_creator (artifact * a)
             {BLOBSTORE_SNAPSHOT, BLOBSTORE_BLOCKBLOB, {blob:dep->bb}, 0, 0, round_up_sec (dep->size_bytes) / 512}
         };
         if (blockblob_clone (a->bb, map, 1)==-1) {
-            logprintfl (EUCAERROR, "[%s] error: failed to clone blob %s to blob %s\n", a->instanceId, dep->bb->id, a->bb->id);
+            logprintfl (EUCAERROR, "[%s] error: failed to clone blob %s to blob %s: %s\n", a->instanceId, dep->bb->id, a->bb->id, blobstore_get_last_msg());
             return blobstore_get_error();
         }
     }
@@ -894,7 +894,7 @@ static int copy_creator (artifact * a)
         // tune file system, which is needed to boot EMIs fscked long ago
         logprintfl (EUCAINFO, "[%s] tuning root file system on disk %d partition %d\n", a->instanceId, vbr->diskNumber, vbr->partitionNumber);
         if (diskutil_tune (dev) == ERROR) {
-            logprintfl (EUCAERROR, "[%s] error: failed to tune root file system\n", a->instanceId);
+            logprintfl (EUCAERROR, "[%s] error: failed to tune root file system: %s\n", a->instanceId, blobstore_get_last_msg());
             return ERROR;
         }
     }
