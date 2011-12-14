@@ -362,6 +362,8 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
         RemoteCallback messageCallback = factory.newInstance( );
         BaseMessage baseMessage = AsyncRequests.newRequest( messageCallback ).sendSync( input.getConfiguration( ) );
         Logs.extreme( ).debug( "Response to " + messageCallback + ": " + baseMessage );
+      } catch ( CancellationException ex ) {
+        //do nothing
       } catch ( Exception ex ) {
         LOG.error( ex );
         Logs.extreme( ).error( ex );
@@ -866,7 +868,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
                                               + ex.getMessage( ), ex );
     } finally {
       try {
-        Clusters.getInstance( ).deregister( this.getName( ) );
+        Clusters.getInstance( ).disable( this.getName( ) );
       } catch ( Exception ex ) {}
     }
   }

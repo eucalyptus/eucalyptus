@@ -296,7 +296,7 @@ public class Exceptions {
       if ( this.map != null ) {
         return this.map.containsKey( ex );
       } else {
-        return this.map.containsKey( ex );
+        return false;
       }
     }
     
@@ -384,9 +384,10 @@ public class Exceptions {
     public boolean apply( Class input ) {
       if ( Function.class.isAssignableFrom( input ) && Ats.from( input ).has( ErrorMessages.class ) ) {
         try {
+          ErrorMessages annote = Ats.from( input ).get( ErrorMessages.class );
           Function<Class, String> errorFunction = ( Function<Class, String> ) Classes.builder( input ).newInstance( );
           ConcurrentMap<Class, String> errorMap = new MapMaker( ).expireAfterAccess( 60, TimeUnit.SECONDS ).makeComputingMap( errorFunction );
-          classErrorMessages.put( input, errorMap );
+          classErrorMessages.put( annote.value( ), errorMap );
           return true;
         } catch ( UndeclaredThrowableException ex ) {
           LOG.error( ex, ex );
