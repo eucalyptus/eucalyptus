@@ -2,6 +2,7 @@ package com.eucalyptus.ws.server;
 
 import java.net.InetSocketAddress;
 import java.util.List;
+import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
@@ -86,8 +87,14 @@ public class MetadataPipeline extends FilteredPipeline implements ChannelUpstrea
         response = new DefaultHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.NOT_FOUND );
         if ( Logs.isDebug( ) ) {
           response.setHeader( HttpHeaders.Names.CONTENT_TYPE, "text/plain" );
-          ChannelBuffer buffer = ChannelBuffers.wrappedBuffer( Exceptions.string( replyEx ).getBytes( ) );
-          response.setContent( buffer );
+          ChannelBuffer buffer = null;
+          if ( replyEx != null && !( replyEx instanceof NoSuchElementException ) ) {
+            buffer = ChannelBuffers.wrappedBuffer(  Exceptions.string( replyEx ).getBytes( ) );
+            response.setContent( buffer );
+          } else {
+            buffer = ChannelBuffers.wrappedBuffer( "".getBytes( ) );
+            response.setContent( buffer );
+          }
           response.addHeader( HttpHeaders.Names.CONTENT_LENGTH, Integer.toString( buffer.readableBytes( ) ) );
         }
       } else {

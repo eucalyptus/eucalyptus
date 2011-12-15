@@ -991,7 +991,11 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       : "";
     LOG.debug( "Servicing metadata request:" + path + " -> " + m.get( path ) );
     if ( m.containsKey( path + "/" ) ) path += "/";
-    return m.get( path ).replaceAll( "\n*\\z", "" );
+    if ( !m.containsKey( path ) ) {
+      throw new NoSuchElementException( "No such key: " + path );
+    } else {
+      return m.get( path ).replaceAll( "\n*\\z", "" );
+    }
   }
   
   private Map<String, String> getMetadataMap( ) {
