@@ -139,6 +139,7 @@ import com.eucalyptus.scripting.ScriptExecutionFailedException;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Internets;
+import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.Mbeans;
 import com.eucalyptus.util.async.Futures;
 import com.google.common.base.Function;
@@ -252,6 +253,10 @@ public class Databases {
           }
         }
       } );
+      Host local = Hosts.localHost( );
+      if ( !Hosts.isCoordinator( ) && local.hasDatabase( ) && Databases.enable( local ) ) {
+        LOG.info( LogUtil.subheader( "Database synchronization complete." ) );
+      }
       return true;
     }
     
