@@ -451,41 +451,40 @@ public class Databases {
                   final String realJdbcDriver = Databases.getDriverName( );
                   String syncStrategy = "passive";
                   Lock dbLock = cluster.getLockManager( ).writeLock( "" );
-                  if ( dbLock.tryLock( 120, TimeUnit.SECONDS ) ) {
-                    try {
-                      boolean activated = cluster.getActiveDatabases( ).contains( hostName );
-                      boolean deactivated = cluster.getInactiveDatabases( ).contains( hostName );
-                      syncStrategy = ( fullSync ? "full" : "passive" );
-                      if ( activated ) {
-                        LOG.info( "Deactivating existing database connections to: " + host );
-                        cluster.deactivate( hostName );
-                        ActivateHostFunction.prepareConnections( host, contextName );
-                      } else if ( deactivated ) {
-                        ActivateHostFunction.prepareConnections( host, contextName );
-                      } else {
-                        LOG.info( "Creating database connections for: " + host );
-                        cluster.add( hostName, realJdbcDriver, dbUrl );
-                        ActivateHostFunction.prepareConnections( host, contextName );
-                      }
-                    } finally {
-                      dbLock.unlock( );
+                  dbLock.lock( );
+                  try {
+                    boolean activated = cluster.getActiveDatabases( ).contains( hostName );
+                    boolean deactivated = cluster.getInactiveDatabases( ).contains( hostName );
+                    syncStrategy = ( fullSync ? "full" : "passive" );
+                    if ( activated ) {
+                      LOG.info( "Deactivating existing database connections to: " + host );
+                      cluster.deactivate( hostName );
+                      ActivateHostFunction.prepareConnections( host, contextName );
+                    } else if ( deactivated ) {
+                      ActivateHostFunction.prepareConnections( host, contextName );
+                    } else {
+                      LOG.info( "Creating database connections for: " + host );
+                      cluster.add( hostName, realJdbcDriver, dbUrl );
+                      ActivateHostFunction.prepareConnections( host, contextName );
                     }
-                    try {
-                      if ( fullSync ) {
-                        LOG.info( "Full sync of database on: " + host );
-                      } else {
-                        LOG.info( "Passive activation of database connections to: " + host );
-                      }
-                      cluster.activate( hostName, syncStrategy );
-                      if ( fullSync ) {
-                        LOG.info( "Full sync of database on: " + host + " using " + cluster.getActiveDatabases( ) );
-                      } else {
-                        LOG.info( "Passive activation of database on: " + host + " using " + cluster.getActiveDatabases( ) );
-                      }
-                      return;
-                    } catch ( Exception ex ) {
-                      throw Exceptions.toUndeclared( ex );
+                  } finally {
+                    dbLock.unlock( );
+                  }
+                  try {
+                    if ( fullSync ) {
+                      LOG.info( "Full sync of database on: " + host );
+                    } else {
+                      LOG.info( "Passive activation of database connections to: " + host );
                     }
+                    cluster.activate( hostName, syncStrategy );
+                    if ( fullSync ) {
+                      LOG.info( "Full sync of database on: " + host + " using " + cluster.getActiveDatabases( ) );
+                    } else {
+                      LOG.info( "Passive activation of database on: " + host + " using " + cluster.getActiveDatabases( ) );
+                    }
+                    return;
+                  } catch ( Exception ex ) {
+                    throw Exceptions.toUndeclared( ex );
                   }
                 }
               } catch ( final NoSuchElementException ex1 ) {
