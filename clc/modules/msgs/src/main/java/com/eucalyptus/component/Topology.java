@@ -743,6 +743,14 @@ public class Topology {
                                + ": not cloud controller, ignoring promotion for: "
                                    + arg0.getFullName( ) );
         return false;
+      } else if ( !arg0.isHostLocal( ) && !Hosts.contains( arg0.getHostName( ) ) ) {
+        Logs.extreme( ).debug( "FAILOVER-REJECT: " + arg0.getFullName( )
+                               + ": host for the service is not available: " + arg0.getHostName( ) );
+        return false;
+      } else if ( !arg0.isHostLocal( ) && Hosts.contains( arg0.getHostName( ) ) && !Hosts.lookup( arg0.getHostName( ) ).hasBootstrapped( ) ) {
+        Logs.extreme( ).debug( "FAILOVER-REJECT: " + arg0.getFullName( )
+                               + ": host for the service has not yet bootstrapped: " + arg0.getHostName( ) );
+        return false;
       } else if ( Topology.getInstance( ).getServices( ).containsKey( key ) && arg0.equals( Topology.getInstance( ).getServices( ).get( key ) ) ) {
         Logs.extreme( ).debug( "FAILOVER-REJECT: " + arg0.getFullName( )
                                + ": service is already ENABLED." );
