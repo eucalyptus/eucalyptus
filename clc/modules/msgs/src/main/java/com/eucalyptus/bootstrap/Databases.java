@@ -474,7 +474,7 @@ public class Databases {
                         LOG.info( "Creating database connections for: " + host );
                         cluster.add( hostName, realJdbcDriver, dbUrl );
                         ActivateHostFunction.prepareConnections( host, contextName );
-                        cluster.activate( hostName, "full" );
+                        cluster.activate( hostName, "passive" );
                       }
                       LOG.info( "Passive activation of database on: " + host + " using " + cluster.getActiveDatabases( ) );
                       return;
