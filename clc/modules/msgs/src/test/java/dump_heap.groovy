@@ -15,8 +15,9 @@ ObjectName name = new ObjectName("com.sun.management:type=HotSpotDiagnostic");
 String fname = "/tmp/${System.currentTimeMillis()}.hprof";
 MBeanServer server = ManagementFactory.getPlatformMBeanServer( );
 try {
+  f = new File( fname );
   JMX.newMBeanProxy( server, name, HotSpotDiagnosticMXBean.class ).dumpHeap( fname, false );
-  return fname;
+  return "SUCCESS: Dumped heap to: ${fname} ${f.length()/(1024.0d*1024.0d)}MB";
 } catch ( Exception ex ) {
   return Exceptions.string( ex );
 }
