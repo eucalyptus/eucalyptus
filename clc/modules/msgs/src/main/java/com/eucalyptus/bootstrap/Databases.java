@@ -455,21 +455,21 @@ public class Databases {
                   final String dbUrl = "jdbc:" + ServiceUris.remote( Database.class, host.getBindAddress( ), contextName );
                   final String realJdbcDriver = Databases.getDriverName( );
                   String syncStrategy = "passive";
-                  Lock dbLock = cluster.getLockManager( ).writeLock( "" );
                   boolean activated = cluster.getActiveDatabases( ).contains( hostName );
                   boolean deactivated = cluster.getInactiveDatabases( ).contains( hostName );
                   syncStrategy = ( fullSync ? "full" : "passive" );
                   if ( activated ) {
-                    LOG.info( "Deactivating existing database connections to: " + host );
-                    cluster.deactivate( hostName );
-                    ActivateHostFunction.prepareConnections( host, contextName );
+//                    LOG.info( "Deactivating existing database connections to: " + host );
+//                    cluster.deactivate( hostName );
+//                    ActivateHostFunction.prepareConnections( host, contextName );
+                    return;
                   } else if ( deactivated ) {
                     ActivateHostFunction.prepareConnections( host, contextName );
                   } else {
                     LOG.info( "Creating database connections for: " + host );
                     cluster.add( hostName, realJdbcDriver, dbUrl );
                     ActivateHostFunction.prepareConnections( host, contextName );
-                    }
+                  }
                   try {
                     if ( fullSync ) {
                       LOG.info( "Full sync of database on: " + host );
@@ -621,7 +621,7 @@ public class Databases {
             LOG.error( ex, ex );
             return false;
           }
-        } else {
+        } else if ( !SyncState.SYNCING.isCurrent( ) ) {
           try {
             runDbStateChange( ActivateHostFunction.INSTANCE.apply( host ) );
             return true;
@@ -631,6 +631,8 @@ public class Databases {
             Logs.extreme( ).debug( ex );
             return false;
           }
+        } else {
+          return false;
         }
       } else if ( !ActiveHostSet.ACTIVATED.get( ).contains( host.getDisplayName( ) ) ) {
         try {
