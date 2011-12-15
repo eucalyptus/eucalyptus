@@ -451,25 +451,20 @@ public class Databases {
                   final String realJdbcDriver = Databases.getDriverName( );
                   String syncStrategy = "passive";
                   Lock dbLock = cluster.getLockManager( ).writeLock( "" );
-                  dbLock.lock( );
-                  try {
-                    boolean activated = cluster.getActiveDatabases( ).contains( hostName );
-                    boolean deactivated = cluster.getInactiveDatabases( ).contains( hostName );
-                    syncStrategy = ( fullSync ? "full" : "passive" );
-                    if ( activated ) {
-                      LOG.info( "Deactivating existing database connections to: " + host );
-                      cluster.deactivate( hostName );
-                      ActivateHostFunction.prepareConnections( host, contextName );
-                    } else if ( deactivated ) {
-                      ActivateHostFunction.prepareConnections( host, contextName );
-                    } else {
-                      LOG.info( "Creating database connections for: " + host );
-                      cluster.add( hostName, realJdbcDriver, dbUrl );
-                      ActivateHostFunction.prepareConnections( host, contextName );
+                  boolean activated = cluster.getActiveDatabases( ).contains( hostName );
+                  boolean deactivated = cluster.getInactiveDatabases( ).contains( hostName );
+                  syncStrategy = ( fullSync ? "full" : "passive" );
+                  if ( activated ) {
+                    LOG.info( "Deactivating existing database connections to: " + host );
+                    cluster.deactivate( hostName );
+                    ActivateHostFunction.prepareConnections( host, contextName );
+                  } else if ( deactivated ) {
+                    ActivateHostFunction.prepareConnections( host, contextName );
+                  } else {
+                    LOG.info( "Creating database connections for: " + host );
+                    cluster.add( hostName, realJdbcDriver, dbUrl );
+                    ActivateHostFunction.prepareConnections( host, contextName );
                     }
-                  } finally {
-                    dbLock.unlock( );
-                  }
                   try {
                     if ( fullSync ) {
                       LOG.info( "Full sync of database on: " + host );
