@@ -317,17 +317,25 @@ public class Hosts {
           public void run( ) {
             if ( !Bootstrap.isLoaded( ) || Bootstrap.isShuttingDown( ) ) {
               return;
-            } else if ( PeriodicMembershipChecks.canHasChecks.tryLock( ) ) {
+            } else {
               try {
-                LOG.debug( runner.toString( ) + ": RUNNING" );
-                try {
-                  runner.run( );
-                } catch ( Exception ex ) {
-                  LOG.error( runner.toString( ) + ": FAILED because of: " + ex.getMessage( ) );
-                  Logs.extreme( ).error( runner.toString( ) + ": FAILED because of: " + ex.getMessage( ), ex );
+                if ( PeriodicMembershipChecks.canHasChecks.tryLock( 1, TimeUnit.SECONDS ) ) {
+                  try {
+                    LOG.debug( runner.toString( ) + ": RUNNING" );
+                    try {
+                      runner.run( );
+                    } catch ( Exception ex ) {
+                      LOG.error( runner.toString( ) + ": FAILED because of: " + ex.getMessage( ) );
+                      Logs.extreme( ).error( runner.toString( ) + ": FAILED because of: " + ex.getMessage( ), ex );
+                    }
+                  } finally {
+                    PeriodicMembershipChecks.canHasChecks.unlock( );
+                  }
                 }
-              } finally {
-                PeriodicMembershipChecks.canHasChecks.unlock( );
+              } catch ( Exception ex ) {
+                Exceptions.maybeInterrupted( ex );
+                LOG.debug( runner.toString( ) + ": SKIPPED: " + ex.getMessage( ) );
+                Logs.extreme( ).debug( ex, ex );
               }
             }
           }
