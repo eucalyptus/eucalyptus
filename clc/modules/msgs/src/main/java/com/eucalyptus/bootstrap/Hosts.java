@@ -74,6 +74,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Vector;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -148,7 +149,7 @@ public class Hosts {
       @Override
       public boolean apply( final ServiceConfiguration input ) {
         return input.getInetAddress( ).equals( addr ) || input.getInetAddress( ).getCanonicalHostName( ).equals( addr.getCanonicalHostName( ) )
-          || input.getHostName( ).equals( addr.getCanonicalHostName( ) );
+               || input.getHostName( ).equals( addr.getCanonicalHostName( ) );
       }
       
     };
@@ -375,10 +376,10 @@ public class Hosts {
             BootstrapComponent.TEARDOWN.apply( h );
           } else {
             LOG.info( "Pruning failed for orphan host: " + strayHost
-                + " with local-copy value: "
-                + hostCopy.get( strayHost.toString( ) )
-                + " and underlying host map value: "
-                + Hosts.lookup( strayHost ) );
+                      + " with local-copy value: "
+                      + hostCopy.get( strayHost.toString( ) )
+                      + " and underlying host map value: "
+                      + Hosts.lookup( strayHost ) );
           }
         }
       } else {
@@ -408,6 +409,7 @@ public class Hosts {
   
   enum HostMapStateListener implements ReplicatedHashMap.Notification<String, Host> {
     INSTANCE;
+    private static final ExecutorService dbActivation = Executors.newFixedThreadPool( 32 );
     
     private String printMap( ) {
       return "\n" + Joiner.on( "\nHosts.values(): " ).join( hostMap.values( ) );
@@ -438,7 +440,7 @@ public class Hosts {
         try {
           if ( host.isLocalHost( ) && Bootstrap.isFinished( ) ) {
             final boolean wasSynched = Databases.isSynchronized( );
-            Threads.enqueue( ServiceConfigurations.createEphemeral( Empyrean.INSTANCE ), new Runnable( ) {
+            dbActivation.submit( new Runnable( ) {
               
               @Override
               public void run( ) {
@@ -1125,7 +1127,7 @@ public class Hosts {
   }
   
   enum JoinShouldWait implements Predicate<Host>, Supplier<Host> {
-    CLOUD_CONTROLLER{
+    CLOUD_CONTROLLER {
       @Override
       public boolean apply( Host input ) {
         if ( input == null ) {
@@ -1138,13 +1140,13 @@ public class Hosts {
           return false;
         }
       }
-
+      
       @Override
       public Host get( ) {
         return Coordinator.find( Hosts.listDatabases( ) );
       }
     },
-    NON_CLOUD_CONTROLLER{
+    NON_CLOUD_CONTROLLER {
       @Override
       public boolean apply( Host input ) {
         if ( input == null ) {
@@ -1157,18 +1159,18 @@ public class Hosts {
           return false;
         }
       }
-
+      
       @Override
       public Host get( ) {
         return Coordinator.find( Hosts.listActiveDatabases( ) );
       }
     };
-
+    
     public abstract boolean apply( Host input );
+    
     public abstract Host get( );
   }
   
-
   private enum Coordinator {
     INSTANCE;
     private final AtomicLong currentStartTime = new AtomicLong( Long.MAX_VALUE );
@@ -1213,7 +1215,7 @@ public class Hosts {
         } else {
           return coord;
         }
-      } 
+      }
     }
     
     private static void loggedWait( JoinShouldWait waitFunction ) {
@@ -1261,7 +1263,8 @@ public class Hosts {
         doInitialize( );
       }
     } else if ( BootstrapArgs.isCloudController( ) && !Hosts.isCoordinator( ) ) {
-      for ( Host coordinator = Hosts.getCoordinator( ); coordinator == null || ( ( !coordinator.hasSynced( ) || !coordinator.hasBootstrapped( ) ) && !coordinator.isLocalHost( ) ); coordinator = Hosts.getCoordinator( ) ) {
+      for ( Host coordinator = Hosts.getCoordinator( ); coordinator == null
+                                                        || ( ( !coordinator.hasSynced( ) || !coordinator.hasBootstrapped( ) ) && !coordinator.isLocalHost( ) ); coordinator = Hosts.getCoordinator( ) ) {
         TimeUnit.SECONDS.sleep( 3 );
         LOG.info( "Waiting for system view with database..." );
       }
