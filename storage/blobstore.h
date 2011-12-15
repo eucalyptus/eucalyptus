@@ -192,12 +192,17 @@ typedef struct _blockmap {
     unsigned long long len_blocks;
 } blockmap;
 
+static char * blobstore_relation_type_name [] = {
+    "copy", "map", "snapshot"
+};
+
 typedef struct _blockblob_meta {
     char id [BLOBSTORE_MAX_PATH]; // ID of the blob (used as part of file/directory name)
     unsigned long long size_bytes; // size of the blob in bytes
     unsigned int in_use; // flags showing how the blockblob is being used (OPENED, LOCKED, LINKED)
     time_t last_accessed; // timestamp of last access
     time_t last_modified; // timestamp of last modification
+    blobstore * bs; // pointer to blobstore, if one is open
 
     struct _blockblob_meta * next;
     struct _blockblob_meta * prev;

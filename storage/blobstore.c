@@ -317,7 +317,7 @@ static int close_and_unlock (int fd)
         pthread_mutex_lock (&_blobstore_mutex); // grab global lock (we will not block below and we may be deallocating)
         logprintfl (EUCADEBUG2, "{%u} close_and_unlock: obtained global lock for closing of fd=%d\n", (unsigned int)pthread_self(), fd);
         
-        blobstore_filelock * path_lock; // lock struct to which this fd belongs
+        blobstore_filelock * path_lock = NULL; // lock struct to which this fd belongs
         int index = -1; // index of this fd entry in the lock struct
         int open_fds = 0; // count of other open file descriptors for this lock
         
@@ -812,6 +812,10 @@ int blobstore_init (void)
         } else {
             ret = verify_helpers (helpers, helpers_path, LASTHELPER);
             if (ret) {
+                for (int i=0; i<LASTHELPER; i++) {
+                    if (helpers_path [i] == NULL)
+                        logprintfl (EUCAERROR, "ERROR: missing a required handler: %s\n", helpers[i]);
+                }
                 ERR (BLOBSTORE_ERROR_UNKNOWN, "failed to initialize blobstore library");
             } else {
                 initialized = 1;
@@ -1449,6 +1453,7 @@ static blockblob ** walk_bs (blobstore * bs, const char * dir_path, blockblob **
         }
         * tail_bb = bb; // add to LL
         tail_bb = & (bb->next);
+
         // fill out the struct
         bb->store = bs;
         safe_strncpy (bb->id, blob_id, sizeof(bb->id));
@@ -1460,6 +1465,24 @@ static blockblob ** walk_bs (blobstore * bs, const char * dir_path, blockblob **
         bb->last_modified = sb.st_mtime;
         bb->snapshot_type = BLOBSTORE_FORMAT_ANY; // it is not necessary to know whether this is a snapshot
         bb->in_use = check_in_use (bs, bb->id, 0);
+
+        // if there is a .refs file, subtract the mapped blocks, if any, from the size
+        char ** array = NULL;
+        int array_size = 0;
+        if (read_array_blockblob_metadata_path (BLOCKBLOB_PATH_DEPS, bb->store, bb->id, &array, &array_size)!=-1) {
+            for (int i=0; i<array_size; i++) {
+                char * store_path  = strtok (array [i], " ");
+                char * blob_id     = strtok (NULL, " "); 
+                char * rel_type    = strtok (NULL, " ");
+                char * start_block = strtok (NULL, " ");
+                char * len_blocks  = strtok (NULL, " ");
+                if (rel_type && len_blocks && strcmp (rel_type, blobstore_relation_type_name [BLOBSTORE_MAP])==0) {
+                    bb->size_bytes -= strtoull (len_blocks, NULL, 0) * 512LL;
+                }
+            }
+        }
+        if (array)
+            free (array);
     }
 
  free:
@@ -1689,6 +1712,7 @@ int blobstore_search ( blobstore * bs, const char * regex, blockblob_meta ** res
         }
 
         safe_strncpy (bm->id, abb->id, sizeof (bm->id));
+        bm->bs = bs;
         bm->size_bytes = abb->size_bytes;
         bm->in_use = abb->in_use;
         bm->last_accessed = abb->last_accessed;
@@ -1710,21 +1734,19 @@ int blobstore_search ( blobstore * bs, const char * regex, blockblob_meta ** res
     if (bbs)
         free_bbs (bbs); // free the blockblobs LL returned by the search function
 
-    if (ret > 0) // all is well above and we have results
-        goto unlock;
-
-    // there were problems above, so free the results linked list, too
-    for (blockblob_meta * bm = head; bm;) {
-        blockblob_meta * next = bm->next;
-        free (bm);
-        bm = next;
-    }
-
- unlock:
     if (blobstore_unlock (bs)==-1) {
         ERR (BLOBSTORE_ERROR_UNKNOWN, "failed to unlock the blobstore");
         ret = -1;
     }    
+
+    if (ret < 0) { // there were problems, so free the partial linked list, if any
+        for (blockblob_meta * bm = head; bm;) {
+            blockblob_meta * next = bm->next;
+            free (bm);
+            bm = next;
+        }
+    }
+    
     return ret;
 }
 
@@ -2331,12 +2353,9 @@ int blockblob_delete ( blockblob * bb, long long timeout_usec )
     char my_ref [BLOBSTORE_MAX_PATH+MAX_DM_NAME+1];
     snprintf (my_ref, sizeof (my_ref), "%s %s", bb->store->path, bb->id);
     for (int i=0; i<array_size; i++) {
-        char * store_path = array [i];
-        char * blob_id = strrchr (array [i], ' ');
-        if (blob_id) {
-            * blob_id = '\0';
-            blob_id++;
-        }
+        char * store_path = strtok (array [i], " ");
+        char * blob_id    = strtok (NULL, " "); // the remaining entries in array[i] are ignored
+        
         if (strlen (store_path)<1 || strlen (blob_id)<1)
             continue; // TODO: print a warning about store/blob corruption?
 
@@ -2551,7 +2570,6 @@ int blockblob_clone ( blockblob * bb, // destination blob, which blocks may be u
                 return -1;
             }
             if (m->relation_type==BLOBSTORE_SNAPSHOT && m->len_blocks < MIN_BLOCKS_SNAPSHOT) {
-                printf ("len_blocks = %lld\n", m->len_blocks);
                 ERR (BLOBSTORE_ERROR_INVAL, "snapshot size is too small");
                 return -1;
             }
@@ -2658,7 +2676,11 @@ int blockblob_clone ( blockblob * bb, // destination blob, which blocks may be u
             snprintf (buf, sizeof(buf), "%s-p%d-snap", dm_base, i);
             dev_names [devices] = strdup (buf);
             dev = dev_names [devices];
-            snprintf (buf, sizeof(buf), "0 %lld snapshot %s%s " DM_PATH "%s p %d\n", m->len_blocks, snapshotted_dev[0]=='e'?DM_PATH:"", snapshotted_dev, backing_dev, granularity);
+            // We use 'n' for a non-persistent snapshot, which will not persist across a reboot.
+            // With 'p' we could get a persistent snapshot at the cost of 0.2-3.0% overhead in
+            // disk space, depending on chunksize [1-16], but then we would need to rebuild 
+            // device mapper entries and change space management to accommodate the overhead.
+            snprintf (buf, sizeof(buf), "0 %lld snapshot %s%s " DM_PATH "%s n %d\n", m->len_blocks, snapshotted_dev[0]=='e'?DM_PATH:"", snapshotted_dev, backing_dev, granularity);
             dm_tables [devices] = strdup (buf);
             devices++;
             
@@ -2733,7 +2755,8 @@ int blockblob_clone ( blockblob * bb, // destination blob, which blocks may be u
 
             // record the dependency in .deps (redundant entries will be filtered out)
             char dep_ref [BLOBSTORE_MAX_PATH+MAX_DM_NAME+1];
-            snprintf (dep_ref, sizeof (dep_ref), "%s %s", sbb->store->path, sbb->id);
+            snprintf (dep_ref, sizeof (dep_ref), "%s %s %s %llu %llu", 
+                      sbb->store->path, sbb->id, blobstore_relation_type_name[m->relation_type], m->first_block_dst, m->len_blocks);
             if (update_entry_blockblob_metadata_path (BLOCKBLOB_PATH_DEPS, bb->store, bb->id, dep_ref, 0)==-1) {
                 ret = -1;
                 goto cleanup; // ditto
@@ -3806,7 +3829,7 @@ int main (int argc, char ** argv)
         char * id = argv [1];
         printf ("---------> opening blob %s\n", id);
         blockblob * bb = blockblob_open (bs, id, 20, BLOBSTORE_FLAG_CREAT, NULL, 1000);
-        if (bs==NULL) {
+        if (bb==NULL) {
             printf ("ERROR: when opening blockblob: %s\n", blobstore_get_error_str(blobstore_get_error()));
             return 1;
         }
@@ -3862,5 +3885,324 @@ int main (int argc, char ** argv)
     blobstore_cleanup();
     exit(errors);
 }
-#endif
+#endif // _UNIT_TEST
 
+/////////////////////////////////////////////// command-line client code ///////////////////////////////////////////////////
+
+#ifdef _EUCA_BLOBS
+
+#include "map.h"
+
+#define USAGE "Usage: euca-blobs [cache=... work=...] command [param1] [param2]...\n"
+#define HELP  "\n"\
+    "\thelp\t\t- print this help message\n"\
+    "\tlist\t\t- list blobs in work and cache\n"\
+    "\tdelete [id]\t- delete blob with\n"
+#define MAX_ARGS 5
+
+static char show_debug = FALSE;
+static char show_extras = FALSE;
+static char show_children = FALSE;
+static char show_parents = FALSE;
+static char * euca_home = NULL;
+static char * work_path = NULL;
+static char * cache_path = NULL;
+static blobstore * work_bs = NULL;
+static blobstore * cache_bs = NULL;
+static map * blob_map;
+
+static void bs_errors (const char * msg) { 
+    if (show_debug)
+        fprintf (stderr, "{%u} blobstore: %s", (unsigned int)pthread_self(), msg);
+}
+
+static int open_blobstore (const char * path, blobstore ** bs, const char * name)
+{
+    if (path!=NULL) {
+        blobstore_set_error_function ( &bs_errors ); 
+
+        * bs = blobstore_open (path, 0, BLOBSTORE_FLAG_RDWR, BLOBSTORE_FORMAT_ANY, BLOBSTORE_REVOCATION_ANY, BLOBSTORE_SNAPSHOT_ANY);
+        if (bs==NULL) {
+            fprintf (stderr, "failed to open %s blobstore in '%s': %s\n", name, path, blobstore_get_error_str(blobstore_get_error()));
+            exit (1);
+        }
+        if (show_debug)
+            fprintf (stderr, "opened %s blobstore in %s\n", name, path);
+        return 1;
+    }
+    return 0;
+}
+
+static int open_blobstores ()
+{
+    int opened = 0;
+    opened += open_blobstore (work_path, &work_bs, "work");
+    opened += open_blobstore (cache_path, &cache_bs, "cache");
+    return opened;
+}
+
+static void close_blobstores ()
+{
+    if (work_bs!=NULL)
+        blobstore_close (work_bs);
+    if (cache_bs!=NULL)
+        blobstore_close (cache_bs);
+}
+
+static int do_list_bs (blobstore * bs, const char * regex)
+{
+    const char match_all_regex [] = ".*";
+    const char * actual_regex = regex;
+    if (actual_regex == NULL)
+        actual_regex = match_all_regex;
+
+    blockblob_meta * matches = NULL;
+    int found = blobstore_search (bs, actual_regex, &matches);
+    if (found < 0) {
+        fprintf (stderr, "error: %s\n", blobstore_get_error_str(blobstore_get_error()));
+    }
+    for (blockblob_meta * bm = matches; bm; bm=bm->next) {
+        char uid [MAX_PATH];
+        snprintf (uid, sizeof (uid), "%s/%s", bs->path, bm->id);
+        map_set (blob_map, uid, bm);
+    }
+
+    return found;
+}
+
+static void print_tree (const char * prefix, blockblob_meta * bm, blockblob_path_t type)
+{
+    char ** array = NULL;
+    int array_size = 0;
+    if (read_array_blockblob_metadata_path (type, bm->bs, bm->id, &array, &array_size)==-1)
+        return;
+        
+    for (int i=0; i<array_size; i++) {
+        char * child_store_path = strtok (array [i], " ");
+        char * child_blob_id    = strtok (NULL, " "); // the remaining entries in array[i] are ignored
+        char child_uid [MAX_PATH];
+
+        if (strlen (child_store_path)<1 || strlen (child_blob_id)<1)
+            continue;
+        snprintf (child_uid, sizeof (child_uid), "%s/%s", child_store_path, child_blob_id);
+        fprintf (stdout, "%s%s\n", prefix, child_uid);
+
+        char next_prefix [25];
+        snprintf (next_prefix, sizeof (next_prefix), "%s\t", prefix);
+        blockblob_meta * child_bm = map_get (blob_map, child_uid);
+        if (child_bm==NULL) {
+            fprintf (stdout, "%s?????\n", next_prefix);
+        } else {
+            print_tree (next_prefix, child_bm, type);
+        }
+        free (array[i]);
+    }
+    if (array)
+        free (array);
+}
+
+static int do_list (const char * regex)
+{
+    int total_found = 0;
+
+    if (work_bs) {
+        int found = do_list_bs (work_bs, regex);
+        if (found>0)
+            total_found += found;
+    }
+    if (cache_bs) {
+        int found = do_list_bs (cache_bs, regex);
+        if (found>0)
+            total_found += found;
+    }
+
+    if (total_found > 0) {
+        for (map * mp=blob_map; mp; mp=mp->next) {
+            blockblob_meta * bm = (blockblob_meta *)mp->val;
+
+            char loop_dev [100] = "";
+            if (read_blockblob_metadata_path (BLOCKBLOB_PATH_LOOPBACK, bm->bs, bm->id, loop_dev, sizeof (loop_dev))==OK) {
+                
+            }
+            char extras [100] = "";
+            if (show_extras) {
+                snprintf (extras, sizeof (extras), "%c%c%c %9llu %s",
+                          (bm->in_use & BLOCKBLOB_STATUS_OPENED) ? ('o') : ('-'), // o = open
+                          (bm->in_use & BLOCKBLOB_STATUS_BACKED) ? ('p') : ('-'), // p = has parents
+                          (bm->in_use & BLOCKBLOB_STATUS_MAPPED) ? ('c') : ('-'), // c = has children
+                          bm->size_bytes / 512L, // size is in sectors
+                          ctime (&(bm->last_modified)));
+                extras [strlen (extras)-1] = ' '; // remove the newline from date
+            }
+            fprintf (stdout, "%s%s\n", extras, mp->key);
+            if (show_parents) {
+                print_tree ("                           depends on: ", bm, BLOCKBLOB_PATH_DEPS);
+            }
+            if (show_children) {
+                print_tree ("                          depended by: ", bm, BLOCKBLOB_PATH_REFS);
+            }
+        }
+    }
+
+    return total_found;
+}
+
+static int do_delete (const char * id)
+{
+    return 0;
+}
+
+static void usage (const char * msg)
+{
+    if (msg!=NULL)
+        fprintf (stderr, "error: %s\n", msg);
+
+    fprintf (stderr, USAGE);
+
+    if (msg==NULL)
+        fprintf (stderr, "Try 'euca-blobs help' for list of commands\n");
+
+    exit (1);
+}
+
+static void set_global_parameter (char * key, char * val)
+{
+    if (strcmp (key, "work")==0) {
+        work_path = val;
+    } else if (strcmp (key, "cache")==0) {
+        cache_path = val;
+    } else if (strcmp (key, "debug")==0) {
+        show_debug = parse_boolean (val);
+    } else {
+        fprintf (stderr, "unknown global parameter '%s'", key);
+        exit (1);
+    }
+}
+
+int main (int argc, char * argv[])
+{
+    char * command = NULL;
+    char * args [MAX_ARGS]; bzero (args, sizeof (args));
+    int nargs = 0;
+
+    while ( *(++argv) ) {
+        char * eq = strstr(*argv, "="); // global params have '='s
+        
+        if (eq==NULL) { // it's a command or its arguments
+            if (command==NULL) {
+                command = * argv;
+            } else {
+                if (nargs==MAX_ARGS) {
+                    fprintf (stderr, "error: too many arguments for command '%s'\n", command);
+                    exit (1);
+                }
+                args [nargs++] = * argv;
+            }
+        } else { // this is a parameter
+            if (strlen (eq) == 1)
+                usage ("parameters must have non-empty values");
+            * eq = '\0'; // split key from value
+            if (strlen (* argv) == 1)
+                usage ("parameters must have non-empty names");
+            char * key = * argv;
+            char * val = eq + 1;
+            if (key==NULL || val==NULL)
+                usage ("syntax error in parameters");
+            if (key[0]=='-') key++; // skip '-' if any
+            if (key[0]=='-') key++; // skip second '-' if any
+
+            if (command==NULL) { // without a preceding command => global parameter
+                set_global_parameter (key, val);
+                continue;
+            } else {
+                usage ("unexpected parameters after the command");
+            }
+        }
+    }
+
+    if (command==NULL)
+        usage (NULL);
+
+    if (show_debug)
+        logfile (NULL, EUCADEBUG, 4);
+    else
+        logfile (NULL, EUCAWARN, 4);
+
+    if (work_path==NULL || cache_path==NULL) {
+        // use $EUCALYPTUS env var if available
+        char euca_root [] = "";
+        euca_home = getenv (EUCALYPTUS_ENV_VAR_NAME);
+        if (!euca_home) {
+            fprintf (stderr, "warning: env variable $EUCALYPTUS is not set, assuming root\n");
+            euca_home = euca_root;
+        }
+        
+        char euca_confs [2][MAX_PATH];
+        snprintf (euca_confs [0], sizeof (euca_confs [0]), EUCALYPTUS_CONF_LOCATION, euca_home);
+        snprintf (euca_confs [1], sizeof (euca_confs [1]), EUCALYPTUS_CONF_OVERRIDE_LOCATION, euca_home);
+        char * instance_path = getConfString(euca_confs, 2, INSTANCE_PATH);
+        if (instance_path == NULL) {
+            char path [MAX_PATH];
+            snprintf (path, sizeof (path), "%s/var/lib/eucalyptus/instances", euca_home);
+            instance_path = strdup (path);
+            fprintf (stderr, "warning: failed to obtain %s from eucalyptus.conf, will try '%s'\n", INSTANCE_PATH, instance_path);
+        }
+
+        if (work_path==NULL) {
+            char def_work_path [MAX_PATH];  
+            snprintf (def_work_path, sizeof (def_work_path), "%s/work", instance_path);
+            work_path = strdup (def_work_path);
+        }
+        if (cache_path==NULL) {
+            char def_cache_path [MAX_PATH]; 
+            snprintf (def_cache_path, sizeof (def_cache_path), "%s/cache", instance_path);
+            cache_path = strdup (def_cache_path);
+        }
+        free (instance_path);
+    }
+
+    blob_map = map_create (100);
+    int ret = 0;
+    if (strcmp (command, "help") == 0) {
+        fprintf (stderr, USAGE);
+        fprintf (stderr, HELP);
+
+    } else if (strcmp (command, "list") == 0) {
+        open_blobstores ();
+        char * regexp = NULL;
+        for (int i = 0; i<nargs; i++) {
+            regexp = args [i];
+            if (regexp==NULL || regexp[0]!='-' || regexp[1]=='\0')
+                break;
+            switch (regexp[1]) {
+            case 'l': show_extras = TRUE; break;
+            case 'p': show_parents = TRUE; break;
+            case 'c': show_children = TRUE; break;
+            default:
+                fprintf (stderr, "error: unknown flag '-%c'\n", regexp[1]);
+                exit (1);
+            }
+            regexp = NULL;
+        }
+        int found = do_list (regexp); // argument may be NULL
+        if (show_debug)
+            fprintf (stderr, "found %d blobs\n", found);
+        close_blobstores ();
+
+    } else if (strcmp (command, "delete") == 0) {
+        if (nargs!=1) {
+            fprintf (stderr, "error: command 'delete' requires one parameter: id of the blob to delete\n");
+            exit (1);
+        }
+        open_blobstores ();
+        ret = do_delete (args [0]);
+        close_blobstores ();
+
+    } else {
+        usage ("unknown command");
+    }
+
+    exit (ret);
+}
+
+#endif // _EUCA_BLOBS

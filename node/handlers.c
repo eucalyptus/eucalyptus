@@ -79,6 +79,7 @@ permission notice:
 #include <sys/vfs.h> /* statfs */
 #include <signal.h> /* SIGINT */
 #include <linux/limits.h>
+#include <pwd.h> /* getpwuid_r */
 #ifndef MAX_PATH
 #define MAX_PATH 4096
 #endif
@@ -891,6 +892,47 @@ static int init (void)
 	}
 	logfile(log, i, j);
 
+    { 
+        /* Initialize libvirtd.conf, since some buggy versions of libvirt
+         * require it.  At least two versions of libvirt have had this issue,
+         * most recently the version in RHEL 6.1.  Note that this happens
+         * at each startup of the NC mainly because the location of the
+         * required file depends on the process owner's home directory, which
+         * may change after the initial installation.
+         */
+        char libVirtConf [MAX_PATH];
+        uid_t uid = geteuid();
+        struct passwd *pw;
+        FILE * fd;
+        struct stat lvcstat;
+        pw = getpwuid(uid);
+        errno = 0;
+        if (pw != NULL) {
+            snprintf(libVirtConf, MAX_PATH, "%s/.libvirt/libvirtd.conf", pw->pw_dir);
+            if (access(libVirtConf, R_OK) == -1 && errno == ENOENT) {
+                libVirtConf[strlen(libVirtConf)-strlen("/libvirtd.conf")] = '\0';
+                errno = 0;
+                if (stat(libVirtConf, &lvcstat) == -1 && errno == ENOENT) {
+                    mkdir(libVirtConf, 0755);
+                } else if (errno) {
+                     logprintfl (EUCAINFO, "Failed to stat %s/.libvirt\n", pw->pw_dir);
+                }
+                libVirtConf[strlen(libVirtConf)] = '/';
+                errno = 0;
+                fd = fopen(libVirtConf, "a");
+                if (fd == NULL) {
+                    logprintfl (EUCAINFO, "Failed to open %s, error code %d\n", libVirtConf, errno);
+                } else {
+                    fclose(fd);
+                }
+            } else if (errno) {
+                logprintfl (EUCAINFO, "Failed to access libvirtd.conf, error code %d\n", errno);
+            }
+        } else {
+             logprintfl (EUCAINFO, "Cannot get EUID, not creating libvirtd.conf\n");
+        }
+    }
+
     { // initialize hooks if their directory looks ok
         char dir [MAX_PATH];
         snprintf (dir, sizeof (dir), EUCALYPTUS_NC_HOOKS_DIR, nc_state.home);
@@ -955,6 +997,55 @@ static int init (void)
 	snprintf (nc_state.libvirt_xslt_path, MAX_PATH, EUCALYPTUS_LIBVIRT_XSLT, nc_state.home);
 	snprintf (nc_state.rootwrap_cmd_path, MAX_PATH, EUCALYPTUS_ROOTWRAP, nc_state.home);
 
+	// determine the hypervisor to use
+	hypervisor = getConfString(configFiles, 2, CONFIG_HYPERVISOR);
+	if (!hypervisor) {
+		logprintfl (EUCAFATAL, "value %s is not set in the config file\n", CONFIG_HYPERVISOR);
+		return ERROR_FATAL;
+	}
+
+	// let's look for the right hypervisor driver
+	for (h = available_handlers; *h; h++ ) {
+		if (!strncmp ((*h)->name, "default", CHAR_BUFFER_SIZE))
+			nc_state.D = *h; 
+		if (!strncmp ((*h)->name, hypervisor, CHAR_BUFFER_SIZE))
+			nc_state.H = *h; 
+	}
+	if (nc_state.H == NULL) {
+		logprintfl (EUCAFATAL, "requested hypervisor type (%s) is not available\n", hypervisor);
+		free (hypervisor);
+		return ERROR_FATAL;
+	}
+	
+	// only load virtio config for kvm
+	if (!strncmp("kvm", hypervisor, CHAR_BUFFER_SIZE) ||
+		!strncmp("KVM", hypervisor, CHAR_BUFFER_SIZE)) {
+		GET_VAR_INT(nc_state.config_use_virtio_net, CONFIG_USE_VIRTIO_NET, 0);
+		GET_VAR_INT(nc_state.config_use_virtio_disk, CONFIG_USE_VIRTIO_DISK, 0);
+		GET_VAR_INT(nc_state.config_use_virtio_root, CONFIG_USE_VIRTIO_ROOT, 0);
+	}
+	free (hypervisor);
+
+	// NOTE: this is the only call which needs to be called on both
+	// the default and the specific handler! All the others will be
+	// either or
+	i = nc_state.D->doInitialize(&nc_state);
+	if (nc_state.H->doInitialize)
+		i += nc_state.H->doInitialize(&nc_state);
+	if (i) {
+		logprintfl(EUCAFATAL, "ERROR: failed to initialized hypervisor driver!\n");
+		return ERROR_FATAL;
+	}
+
+	// now that hypervisor-specific initializers have discovered mem_max and cores_max,
+    // adjust the values based on configuration parameters, if any
+	if (nc_state.config_max_mem && nc_state.config_max_mem < nc_state.mem_max)
+		nc_state.mem_max = nc_state.config_max_mem;
+	if (nc_state.config_max_cores)
+		nc_state.cores_max = nc_state.config_max_cores;
+	logprintfl(EUCAINFO, "physical memory available for instances: %lldMB\n", nc_state.mem_max);
+	logprintfl(EUCAINFO, "virtual cpu cores available for instances: %lld\n", nc_state.cores_max);
+    
     { // backing store configuration
         char * instance_path = getConfString(configFiles, 2, INSTANCE_PATH);
 
@@ -1082,7 +1173,7 @@ static int init (void)
         logprintfl (EUCAINFO, "                          %06lldMB reserved for use (%.1f%% of limit)\n", 
                     work_bs_reserved_mb, 
                     ((double)work_bs_reserved_mb/(double)work_size_mb)*100.0 );
-        logprintfl (EUCAINFO, "                          %06lldMB allocated for use (%.1f%% of limit, %.1f%% of file system)\n", 
+        logprintfl (EUCAINFO, "                          %06lldMB allocated for use (%.1f%% of limit, %.1f%% of the file system)\n", 
                     work_bs_allocated_mb, 
                     ((double)work_bs_allocated_mb/(double)work_size_mb)*100.0,
                     ((double)work_bs_allocated_mb/(double)fs_size_mb)*100.0 );
@@ -1094,7 +1185,7 @@ static int init (void)
             logprintfl (EUCAINFO, "                          %06lldMB reserved for use (%.1f%% of limit)\n", 
                         cache_bs_reserved_mb,
                         ((double)cache_bs_reserved_mb/(double)cache_size_mb)*100.0 );
-            logprintfl (EUCAINFO, "                          %06lldMB allocated for use (%.1f%% of limit, %.1f%% of file system)\n", 
+            logprintfl (EUCAINFO, "                          %06lldMB allocated for use (%.1f%% of limit, %.1f%% of the file system)\n", 
                         cache_bs_allocated_mb, 
                         ((double)cache_bs_allocated_mb/(double)cache_size_mb)*100.0,
                         ((double)cache_bs_allocated_mb/(double)fs_size_mb)*100.0 );
@@ -1104,58 +1195,13 @@ static int init (void)
         free (instance_path);
     }
 
-	// determine the hypervisor to use
-	hypervisor = getConfString(configFiles, 2, CONFIG_HYPERVISOR);
-	if (!hypervisor) {
-		logprintfl (EUCAFATAL, "value %s is not set in the config file\n", CONFIG_HYPERVISOR);
-		return ERROR_FATAL;
-	}
-
-	// let's look for the right hypervisor driver
-	for (h = available_handlers; *h; h++ ) {
-		if (!strncmp ((*h)->name, "default", CHAR_BUFFER_SIZE))
-			nc_state.D = *h; 
-		if (!strncmp ((*h)->name, hypervisor, CHAR_BUFFER_SIZE))
-			nc_state.H = *h; 
-	}
-	if (nc_state.H == NULL) {
-		logprintfl (EUCAFATAL, "requested hypervisor type (%s) is not available\n", hypervisor);
-		free (hypervisor);
-		return ERROR_FATAL;
-	}
-	
-	// only load virtio config for kvm
-	if (!strncmp("kvm", hypervisor, CHAR_BUFFER_SIZE) ||
-		!strncmp("KVM", hypervisor, CHAR_BUFFER_SIZE)) {
-		GET_VAR_INT(nc_state.config_use_virtio_net, CONFIG_USE_VIRTIO_NET, 0);
-		GET_VAR_INT(nc_state.config_use_virtio_disk, CONFIG_USE_VIRTIO_DISK, 0);
-		GET_VAR_INT(nc_state.config_use_virtio_root, CONFIG_USE_VIRTIO_ROOT, 0);
-	}
-	free (hypervisor);
-
-	// NOTE: this is the only call which needs to be called on both
-	// the default and the specific handler! All the others will be
-	// either or
-	i = nc_state.D->doInitialize(&nc_state);
-	if (nc_state.H->doInitialize)
-		i += nc_state.H->doInitialize(&nc_state);
-	if (i) {
-		logprintfl(EUCAFATAL, "ERROR: failed to initialized hypervisor driver!\n");
-		return ERROR_FATAL;
-	}
-
-	// now that hypervisor-specific initializers have discovered mem_max and cores_max,
-    // adjust the values based on configuration parameters, if any
-	if (nc_state.config_max_mem && nc_state.config_max_mem < nc_state.mem_max)
-		nc_state.mem_max = nc_state.config_max_mem;
-	if (nc_state.config_max_cores)
-		nc_state.cores_max = nc_state.config_max_cores;
-	logprintfl(EUCAINFO, "physical memory available for instances: %lldMB\n", nc_state.mem_max);
-	logprintfl(EUCAINFO, "virtual cpu cores available for instances: %lld\n", nc_state.cores_max);
-
-    
-	// adopt running instances
+	// adopt running instances -- do this before disk integrity check so we know what can be purged
 	adopt_instances();
+
+    if (check_backing_store()!=OK) { // integrity check, cleanup of unused instances and shrinking of cache
+        logprintfl (EUCAFATAL, "error: integrity check of the backing store failed");
+        return ERROR_FATAL;
+    }
 
 	// setup the network
 	nc_state.vnetconfig = malloc(sizeof(vnetConfig));
@@ -1192,7 +1238,7 @@ static int init (void)
             pubinterface = strdup("eth0"); 
             if (!pubinterface) {
                 logprintfl(EUCAFATAL, "out of memory!\n"); 
-                return ERROR_FATAL; 
+                initFail = 1;
             }
         } 
     }

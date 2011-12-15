@@ -430,7 +430,7 @@ public class Images {
                                                    String rootDeviceName, final List<BlockDeviceMappingItemType> blockDeviceMappings ) throws EucalyptusCloudException {
     ImageMetadata.Architecture imageArch = ImageMetadata.Architecture.x86_64;//TODO:GRZE:OMGFIXME: track parent vol info; needed here 
     ImageMetadata.Platform imagePlatform = ImageMetadata.Platform.linux;
-    if ( "windows".equals( eki ) ) {
+    if ( ImageMetadata.Platform.windows.name( ).equals( eki ) ) {
       imagePlatform = ImageMetadata.Platform.windows;
       eki = null;
     }
