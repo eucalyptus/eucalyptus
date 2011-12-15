@@ -80,6 +80,7 @@ import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.component.Component.State;
+import com.eucalyptus.component.Faults.CheckException;
 import com.eucalyptus.component.Topology.ServiceString;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.empyrean.ServiceId;
@@ -320,12 +321,12 @@ public class Topology {
         final Callable<ServiceConfiguration> call = Topology.callable( input, Topology.get( toState ) );
         if ( Bootstrap.isOperational( ) ) {
           final Queue workQueue = ( this.serializedStates.contains( toState )
-            ? Queue.INTERNAL
-            : Queue.EXTERNAL );
+                                                                             ? Queue.INTERNAL
+                                                                             : Queue.EXTERNAL );
           return workQueue.enqueue( call );
         } else {
           try {
-            return Futures.predestinedFuture( call.call( ) );
+            return Futures.predestinedFuture( input );
           } catch ( Exception ex ) {
             return Futures.predestinedFuture( input );
           }
@@ -495,12 +496,12 @@ public class Topology {
       int result = 1;
       result = prime * result
                + ( ( this.componentId == null )
-                 ? 0
-                 : this.componentId.hashCode( ) );
+                                               ? 0
+                                               : this.componentId.hashCode( ) );
       result = prime * result
                + ( ( this.partition == null )
-                 ? 0
-                 : this.partition.hashCode( ) );
+                                             ? 0
+                                             : this.partition.hashCode( ) );
       return result;
     }
     
@@ -556,8 +557,8 @@ public class Topology {
   
   public TransitionGuard getGuard( ) {
     return ( Hosts.isCoordinator( )
-      ? this.cloudControllerGuard( )
-      : this.remoteGuard( ) );
+                                   ? this.cloudControllerGuard( )
+                                   : this.remoteGuard( ) );
   }
   
   private ConcurrentMap<ServiceKey, ServiceConfiguration> getServices( ) {
@@ -568,7 +569,7 @@ public class Topology {
     INSTANCE;
     @Override
     public boolean apply( final ServiceConfiguration arg0 ) {
-      return arg0.lookupState( ).ordinal( ) < Component.State.DISABLED.ordinal( );
+      return arg0.lookupState( ).ordinal( ) < Component.State.DISABLED.ordinal( ) && !Component.State.STOPPED.apply( arg0 );
     }
     
   }
@@ -655,6 +656,24 @@ public class Topology {
     
   }
   
+  enum FilterErrorResults implements Predicate<Future> {
+    INSTANCE;
+    
+    @Override
+    public boolean apply( final Future input ) {
+      try {
+        final Object conf = input.get( 30, TimeUnit.SECONDS );
+        return false;
+      } catch ( final InterruptedException ex ) {
+        Thread.currentThread( ).interrupt( );
+      } catch ( final Exception ex ) {
+        Logs.extreme( ).trace( ex, ex );
+      }
+      return true;
+    }
+    
+  }
+  
   enum ServiceString implements Function<ServiceConfiguration, String> {
     INSTANCE;
     @Override
@@ -678,12 +697,28 @@ public class Topology {
     }
   }
   
+  enum ExtractErrorFuture implements Function<Future<ServiceConfiguration>, Exception> {
+    INSTANCE;
+    @Override
+    public Exception apply( final Future<ServiceConfiguration> input ) {
+      try {
+        input.get( );
+      } catch ( final InterruptedException ex ) {
+        Thread.currentThread( ).interrupt( );
+      } catch ( final Exception ex ) {
+        Logs.extreme( ).trace( ex, ex );
+        return ex;
+      }
+      return null;
+    }
+  }
+  
   enum RunChecks implements Callable<List<ServiceConfiguration>> {
     INSTANCE;
     
     @Override
     public List<ServiceConfiguration> call( ) {
-      if ( Databases.isSynchronizing( ) ) {
+      if ( Databases.isVolatile( ) ) {
         return Lists.newArrayList( );
       }
       /** submit describe operations **/
@@ -691,7 +726,7 @@ public class Topology {
       for ( final Component c : Components.list( ) ) {
         allServices.addAll( c.services( ) );
       }
-      List<ServiceConfiguration> checkedServices = submitTransitions( allServices, CheckServiceFilter.INSTANCE, SubmitCheck.INSTANCE );      
+      List<ServiceConfiguration> checkedServices = submitTransitions( allServices, CheckServiceFilter.INSTANCE, SubmitCheck.INSTANCE );
       if ( !checkedServices.isEmpty( ) ) {
         Logs.extreme( ).debug( "CHECKED" + ": " + Joiner.on( "\n" + "CHECKED" + ": " ).join( Collections2.transform( checkedServices, ServiceString.INSTANCE ) ) );
       }
@@ -743,6 +778,14 @@ public class Topology {
                                + ": not cloud controller, ignoring promotion for: "
                                    + arg0.getFullName( ) );
         return false;
+      } else if ( !arg0.isHostLocal( ) && !Hosts.contains( arg0.getHostName( ) ) ) {
+        Logs.extreme( ).debug( "FAILOVER-REJECT: " + arg0.getFullName( )
+                               + ": host for the service is not available: " + arg0.getHostName( ) );
+        return false;
+      } else if ( !arg0.isHostLocal( ) && Hosts.contains( arg0.getHostName( ) ) && !Hosts.lookup( arg0.getHostName( ) ).hasBootstrapped( ) ) {
+        Logs.extreme( ).debug( "FAILOVER-REJECT: " + arg0.getFullName( )
+                               + ": host for the service has not yet bootstrapped: " + arg0.getHostName( ) );
+        return false;
       } else if ( Topology.getInstance( ).getServices( ).containsKey( key ) && arg0.equals( Topology.getInstance( ).getServices( ).get( key ) ) ) {
         Logs.extreme( ).debug( "FAILOVER-REJECT: " + arg0.getFullName( )
                                + ": service is already ENABLED." );
@@ -765,14 +808,18 @@ public class Topology {
   }
   
   public static ServiceConfiguration lookup( final Class<? extends ComponentId> compClass, final Partition... maybePartition ) {
-    final Partition partition = ( ( maybePartition != null ) && ( maybePartition.length > 0 )
-      ? ( ComponentIds.lookup( compClass ).isPartitioned( )
-        ? maybePartition[0]
-        : null )
-      : null );
+    final Partition partition =
+      ( ( maybePartition != null ) && ( maybePartition.length > 0 )
+                                                                   ? ( ComponentIds.lookup( compClass ).isPartitioned( )
+                                                                                                                        ? maybePartition[0]
+                                                                                                                        : null )
+                                                                   : null );
     ServiceConfiguration res = Topology.getInstance( ).getServices( ).get( ServiceKey.create( ComponentIds.lookup( compClass ), partition ) );
     if ( res == null ) {
-      throw new NoSuchElementException( "Failed to lookup ENABLED service of type " + compClass.getSimpleName( ) + ( partition != null ? " in partition " + partition : "." ) );
+      throw new NoSuchElementException( "Failed to lookup ENABLED service of type "
+                                        + compClass.getSimpleName( )
+                                        + ( partition != null ? " in partition " + partition
+                                                             : "." ) );
     } else {
       return res;
     }
@@ -798,8 +845,8 @@ public class Topology {
   public String toString( ) {
     final StringBuilder builder = new StringBuilder( );
     builder.append( "Topology:currentEpoch=" ).append( this.currentEpoch ).append( ":guard=" ).append( Hosts.isCoordinator( )
-      ? "cloud"
-      : "remote" );
+                                                                                                                             ? "cloud"
+                                                                                                                             : "remote" );
     return builder.toString( );
   }
   
@@ -966,8 +1013,8 @@ public class Topology {
         return endResult;
       } catch ( final Exception ex ) {
         Exceptions.maybeInterrupted( ex );
-        LOG.error( ex, Throwables.getRootCause( ex ) );
         LOG.error( this.toString( input, initialState, nextState, ex ) );
+        Logs.extreme( ).error( ex, Throwables.getRootCause( ex ) );
         Logs.extreme( ).error( ex, ex );
         throw Exceptions.toUndeclared( ex );
       } finally {
@@ -980,8 +1027,8 @@ public class Topology {
     private String toString( final ServiceConfiguration endResult, final State initialState, final State nextState, final Throwable... throwables ) {
       return String.format( "%s %s %s->%s=%s \n[%s]\n", this.toString( ), endResult.getFullName( ), initialState, nextState, endResult.lookupState( ),
                             ( ( throwables != null ) && ( throwables.length > 0 )
-                              ? Exceptions.causeString( throwables[0] )
-                              : "WINNING" ) );
+                                                                                 ? Exceptions.causeString( throwables[0] )
+                                                                                 : "WINNING" ) );
     }
     
     @Override

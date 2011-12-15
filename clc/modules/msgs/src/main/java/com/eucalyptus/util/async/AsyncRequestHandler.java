@@ -229,8 +229,8 @@ public class AsyncRequestHandler<Q extends BaseMessage, R extends BaseMessage> i
             this.teardown( new FailedRequestException( "Cluster response includes _return=false", msg ) );
           } else {
             this.response.set( msg );
-            e.getFuture( ).addListener( ChannelFutureListener.CLOSE );
           }
+          e.getFuture( ).addListener( ChannelFutureListener.CLOSE );
         } catch ( final Exception e1 ) {
           LOG.error( e1, e1 );
           this.teardown( e1 );

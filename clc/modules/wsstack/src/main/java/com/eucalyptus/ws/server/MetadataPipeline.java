@@ -2,6 +2,7 @@ package com.eucalyptus.ws.server;
 
 import java.net.InetSocketAddress;
 import java.util.List;
+import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
@@ -25,6 +26,8 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.ServiceContext;
 import com.eucalyptus.context.ServiceDispatchException;
 import com.eucalyptus.http.MappingHttpRequest;
+import com.eucalyptus.records.Logs;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.ws.stages.UnrollableStage;
 
 @ChannelPipelineCoverage( "one" )
@@ -61,6 +64,7 @@ public class MetadataPipeline extends FilteredPipeline implements ChannelUpstrea
       HttpResponse response = null;
       LOG.trace( "Trying to get metadata: " + newUri );
       Object reply = "".getBytes( );
+      Exception replyEx = null;
       try {
         if ( Bootstrap.isShuttingDown( ) ) {
           reply = "System shutting down".getBytes( );
@@ -71,20 +75,35 @@ public class MetadataPipeline extends FilteredPipeline implements ChannelUpstrea
         }
       } catch ( ServiceDispatchException e1 ) {
         LOG.debug( e1, e1 );
-        reply = e1.getMessage( ).getBytes( );
+        replyEx = e1;
       } catch ( Exception e1 ) {
         LOG.debug( e1, e1 );
-        reply = e1.getMessage( ).getBytes( );
+        replyEx = e1;
       } finally {
         Contexts.clear( request.getCorrelationId( ) );
       }
-      if ( reply != null && !( reply instanceof NullPayload ) ) {
+      Logs.extreme( ).debug( "VmMetadata reply info: " + reply + " " + replyEx );
+      if ( replyEx != null || reply == null || reply instanceof NullPayload ) {
+        response = new DefaultHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.NOT_FOUND );
+        if ( Logs.isDebug( ) ) {
+          response.setHeader( HttpHeaders.Names.CONTENT_TYPE, "text/plain" );
+          ChannelBuffer buffer = null;
+          if ( replyEx != null && !( replyEx instanceof NoSuchElementException ) ) {
+            buffer = ChannelBuffers.wrappedBuffer(  Exceptions.string( replyEx ).getBytes( ) );
+            response.setContent( buffer );
+          } else {
+            buffer = ChannelBuffers.wrappedBuffer( "".getBytes( ) );
+            response.setContent( buffer );
+          }
+          response.addHeader( HttpHeaders.Names.CONTENT_LENGTH, Integer.toString( buffer.readableBytes( ) ) );
+        }
+      } else {
         response = new DefaultHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.OK );
         response.setHeader( HttpHeaders.Names.CONTENT_TYPE, "text/plain" );
         ChannelBuffer buffer = ChannelBuffers.wrappedBuffer( ( byte[] ) reply );
         response.setContent( buffer );
         response.addHeader( HttpHeaders.Names.CONTENT_LENGTH, Integer.toString( buffer.readableBytes( ) ) );
-      } else response = new DefaultHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.NOT_FOUND );
+      }
       ctx.getChannel( ).write( response ).addListener( ChannelFutureListener.CLOSE );
     } else {
       ctx.sendUpstream( e );

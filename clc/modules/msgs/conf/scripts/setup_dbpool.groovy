@@ -86,7 +86,7 @@ String pool_db_url = 'jdbc:ha-jdbc:eucalyptus';
 String db_pass = SystemIds.databasePassword( );
 
 default_pool_props = [
-      'proxool.simultaneous-build-throttle': '16',
+      'proxool.simultaneous-build-throttle': '32',
       'proxool.minimum-connection-count': '8',
       'proxool.maximum-connection-count': '64',
       'proxool.prototype-count': '8',
