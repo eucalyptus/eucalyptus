@@ -444,11 +444,17 @@ public class Hosts {
               
               @Override
               public void run( ) {
-                Host currentHost = Hosts.lookup( hostKey );
-                if ( currentHost != null ) {
-                  BootstrapComponent.SETUP.apply( currentHost );
-                  if ( !wasSynched && Databases.isSynchronized( ) ) {
-                    UpdateEntry.INSTANCE.apply( currentHost );
+                if ( Databases.isVolatile( ) && host.hasDatabase( ) ) {
+                  Databases.enable( host );
+                } else {
+                  Host currentHost = Hosts.lookup( hostKey );
+                  if ( !wasSynched && currentHost != null && !currentHost.hasSynced( ) ) {
+                    Databases.enable( host );
+                  } else if ( currentHost != null && currentHost.hasSynced( ) ) {
+                    BootstrapComponent.SETUP.apply( currentHost );
+                    if ( !wasSynched && Databases.isSynchronized( ) ) {
+                      UpdateEntry.INSTANCE.apply( currentHost );
+                    }
                   }
                 }
               }
