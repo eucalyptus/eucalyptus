@@ -451,7 +451,7 @@ public class Databases {
                   final String realJdbcDriver = Databases.getDriverName( );
                   String syncStrategy = "passive";
                   Lock dbLock = cluster.getLockManager( ).writeLock( "" );
-                  if ( dbLock.tryLock( 5, TimeUnit.SECONDS ) ) {
+                  if ( dbLock.tryLock( 120, TimeUnit.SECONDS ) ) {
                     try {
                       boolean activated = cluster.getActiveDatabases( ).contains( hostName );
                       boolean deactivated = cluster.getInactiveDatabases( ).contains( hostName );
@@ -615,12 +615,19 @@ public class Databases {
             return true;
           } catch ( Exception ex ) {
             SyncState.NOTSYNCED.set( );
-            Logs.extreme( ).debug( ex );
+            LOG.error( ex, ex );
             ActivateHostFunction.rollback( host, ex );
             return false;
           }
         } else {
-          return false;
+          try {
+            runDbStateChange( ActivateHostFunction.INSTANCE.apply( host ) );
+            return true;
+          } catch ( Exception ex ) {
+            Logs.extreme( ).debug( ex );
+            ActivateHostFunction.rollback( host, ex );
+            return false;
+          }
         }
       } else if ( !ActiveHostSet.ACTIVATED.get( ).contains( host.getDisplayName( ) ) ) {
         try {

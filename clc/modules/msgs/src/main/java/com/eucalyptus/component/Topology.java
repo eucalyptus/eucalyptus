@@ -758,18 +758,6 @@ public class Topology {
       final Collection<Future<ServiceConfiguration>> completedServices = Collections2.filter( submittedCallables, WaitForResults.INSTANCE );
       List<ServiceConfiguration> results = Lists.newArrayList( Collections2.transform( completedServices, ExtractFuture.INSTANCE ) );
       printCheckInfo( submitFunction.toString( ), results );
-      final Collection<Future<ServiceConfiguration>> failedCheckServices = Collections2.filter( submittedCallables, FilterErrorResults.INSTANCE );
-      List<Exception> failedResults = Lists.newArrayList( Collections2.transform( failedCheckServices, ExtractErrorFuture.INSTANCE ) );
-      for ( Exception ex : failedResults ) {
-        if ( ex != null ) {
-          if ( ex instanceof CheckException ) {
-            Faults.persist( ( CheckException ) ex );
-          } else {
-            LOG.error( "Failed to identify service for error: " + ex );
-          }
-        }
-      }
-//      allServices.removeAll( failedResults );
       return results;
     }
     
