@@ -452,17 +452,15 @@ public class Hosts {
               
               @Override
               public void run( ) {
-                if ( Databases.isVolatile( ) && host.hasDatabase( ) ) {
-                  Databases.enable( host );
+                if ( !Databases.isSynchronized( ) && host.hasDatabase( ) && Databases.enable( host ) ) {
+                  UpdateEntry.INSTANCE.apply( Hosts.lookup( hostKey ) );
                 } else {
                   Host currentHost = Hosts.lookup( hostKey );
-                  if ( !wasSynched && currentHost != null && !currentHost.hasSynced( ) ) {
-                    Databases.enable( host );
+                  if ( !wasSynched && currentHost != null && !currentHost.hasSynced( ) && Databases.enable( host ) ) {
+                    UpdateEntry.INSTANCE.apply( currentHost );
                   } else if ( currentHost != null && currentHost.hasSynced( ) ) {
                     BootstrapComponent.SETUP.apply( currentHost );
-                    if ( !wasSynched && Databases.isSynchronized( ) ) {
-                      UpdateEntry.INSTANCE.apply( currentHost );
-                    }
+                    UpdateEntry.INSTANCE.apply( currentHost );
                   }
                 }
               }
