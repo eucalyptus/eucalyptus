@@ -271,8 +271,10 @@ public class Databases {
   private static void runDbStateChange( Function<String, Runnable> runnableFunction ) {
     Logs.extreme( ).info( "DB STATE CHANGE: " + runnableFunction );
     try {
-      if ( canHas.writeLock( ).tryLock( ) ) {
+      LOG.debug( "Attempting to acquire db state lock: " + runnableFunction );
+      if ( canHas.writeLock( ).tryLock( 5, TimeUnit.MINUTES ) ) {
         try {
+          LOG.debug( "Acquired db state lock: " + runnableFunction );
           Map<Runnable, Future<Runnable>> runnables = Maps.newHashMap( );
           for ( final String ctx : PersistenceContexts.list( ) ) {
             Runnable run = runnableFunction.apply( ctx );
@@ -297,6 +299,9 @@ public class Databases {
       LOG.error( ex );
       Logs.extreme( ).error( ex, ex );
       throw ex;
+    } catch ( InterruptedException ex ) {
+      Exceptions.maybeInterrupted( ex );
+      throw Exceptions.toUndeclared( ex );
     }
   }
   
@@ -599,7 +604,7 @@ public class Databases {
   }
   
   static boolean enable( final Host host ) {
-    if ( !host.hasDatabase( ) || !Bootstrap.isLoaded( ) ) {
+    if ( !host.hasDatabase( ) ) {
       return false;
     } else {
       if ( host.isLocalHost( ) ) {
