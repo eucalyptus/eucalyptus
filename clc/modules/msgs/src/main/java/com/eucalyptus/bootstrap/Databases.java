@@ -613,19 +613,22 @@ public class Databases {
             runDbStateChange( ActivateHostFunction.INSTANCE.apply( host ) );
             SyncState.SYNCED.set( );
             return true;
+          } catch ( LockTimeoutException ex ) {
+            SyncState.NOTSYNCED.set( );
+            return false;
           } catch ( Exception ex ) {
             SyncState.NOTSYNCED.set( );
             LOG.error( ex, ex );
-            ActivateHostFunction.rollback( host, ex );
             return false;
           }
         } else {
           try {
             runDbStateChange( ActivateHostFunction.INSTANCE.apply( host ) );
             return true;
+          } catch ( LockTimeoutException ex ) {
+            return false;
           } catch ( Exception ex ) {
             Logs.extreme( ).debug( ex );
-            ActivateHostFunction.rollback( host, ex );
             return false;
           }
         }
@@ -633,6 +636,8 @@ public class Databases {
         try {
           runDbStateChange( ActivateHostFunction.INSTANCE.apply( host ) );
           return true;
+        } catch ( LockTimeoutException ex ) {
+          return false;
         } catch ( Exception ex ) {
           Logs.extreme( ).debug( ex );
           ActivateHostFunction.rollback( host, ex );
