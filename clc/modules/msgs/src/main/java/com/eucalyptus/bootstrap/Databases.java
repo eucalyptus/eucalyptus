@@ -456,11 +456,6 @@ public class Databases {
                       boolean activated = cluster.getActiveDatabases( ).contains( hostName );
                       boolean deactivated = cluster.getInactiveDatabases( ).contains( hostName );
                       syncStrategy = ( fullSync ? "full" : "passive" );
-                      if ( fullSync ) {
-                        LOG.info( "Full sync of database on: " + host );
-                      } else {
-                        LOG.info( "Passive activation of database connections to: " + host );
-                      }
                       if ( activated ) {
                         LOG.info( "Deactivating existing database connections to: " + host );
                         cluster.deactivate( hostName );
@@ -476,6 +471,11 @@ public class Databases {
                       dbLock.unlock( );
                     }
                     try {
+                      if ( fullSync ) {
+                        LOG.info( "Full sync of database on: " + host );
+                      } else {
+                        LOG.info( "Passive activation of database connections to: " + host );
+                      }
                       cluster.activate( hostName, syncStrategy );
                       if ( fullSync ) {
                         LOG.info( "Full sync of database on: " + host + " using " + cluster.getActiveDatabases( ) );
