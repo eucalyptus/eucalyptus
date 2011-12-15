@@ -446,22 +446,21 @@ public class Hosts {
       } else {
         LOG.info( "Hosts.entrySet(): " + hostKey + " => " + host );
         try {
-          if ( host.isLocalHost( ) && Bootstrap.isFinished( ) ) {
+          if ( host.isLocalHost( ) && host.hasDatabase( ) && Bootstrap.isLoaded( ) ) {
             final boolean wasSynched = Databases.isSynchronized( );
+            final boolean wasVolatile = Databases.isVolatile( );
             dbActivation.submit( new Runnable( ) {
               
               @Override
               public void run( ) {
-                if ( !Databases.isSynchronized( ) && host.hasDatabase( ) && Databases.enable( host ) ) {
-                  UpdateEntry.INSTANCE.apply( Hosts.lookup( hostKey ) );
-                } else {
-                  Host currentHost = Hosts.lookup( hostKey );
-                  if ( !wasSynched && currentHost != null && !currentHost.hasSynced( ) && Databases.enable( host ) ) {
-                    UpdateEntry.INSTANCE.apply( currentHost );
-                  } else if ( currentHost != null && currentHost.hasSynced( ) ) {
-                    BootstrapComponent.SETUP.apply( currentHost );
-                    UpdateEntry.INSTANCE.apply( currentHost );
+                if ( !wasSynched && !Databases.SyncState.SYNCING.isCurrent( ) && !Databases.isSynchronized( ) ) {
+                  if ( Databases.enable( host ) && Databases.isSynchronized( ) ) {
+                    UpdateEntry.INSTANCE.apply( Hosts.lookup( hostKey ) );
                   }
+                } else if ( wasVolatile && Bootstrap.isFinished( ) && !Databases.isVolatile( ) ) {
+                  UpdateEntry.INSTANCE.apply( Hosts.lookup( hostKey ) );
+                } else if ( Bootstrap.isFinished( ) && !Databases.isVolatile( ) ) {
+                  BootstrapComponent.SETUP.apply( Hosts.lookup( hostKey ) );
                 }
               }
             } );
@@ -507,7 +506,7 @@ public class Hosts {
         return Databases.enable( input );
       } else if ( input.hasDatabase( ) && input.hasSynced( ) && !input.isLocalHost( ) ) {
         return Databases.enable( input );
-      } else if ( input.isLocalHost( ) ) {
+      } else if ( input.isLocalHost( ) && !Databases.isSynchronized( ) ) {
         return Databases.enable( input );
       } else {
         return false;
@@ -1265,22 +1264,39 @@ public class Hosts {
     return parent.isVmLocal( ) || ( parent.isHostLocal( ) && isCoordinator( ) );
   }
   
+  enum AwaitDatabase implements Predicate<Host> {
+    INSTANCE;
+
+    @Override
+    public boolean apply( Host c ) {
+      if ( c != null && ( c.isLocalHost( ) || c.hasBootstrapped( ) ) ) {
+        LOG.info( "Found system view with database: " + c );
+        return false;
+      } else {
+        try {
+          TimeUnit.SECONDS.sleep( 3 );//GRZE: db state check sleep time
+          LOG.info( "Waiting for system view with database..." );
+        } catch ( InterruptedException ex ) {
+          Exceptions.maybeInterrupted( ex );
+        }
+        return true;
+      }
+    }
+    
+  }
+  
   static void awaitDatabases( ) throws InterruptedException {
     if ( !BootstrapArgs.isCloudController( ) ) {
       while ( list( FILTER_BOOTED_SYNCED_DBS ).isEmpty( ) ) {
-        TimeUnit.SECONDS.sleep( 3 );
+        TimeUnit.SECONDS.sleep( 3 );//GRZE: db state check sleep time
         LOG.info( "Waiting for system view with database..." );
       }
       if ( Databases.shouldInitialize( ) ) {
         doInitialize( );
       }
     } else if ( BootstrapArgs.isCloudController( ) && !Hosts.isCoordinator( ) ) {
-      for ( Host coordinator = Hosts.getCoordinator( ); 
-      coordinator == null || ( ( !coordinator.hasSynced( ) || !coordinator.hasBootstrapped( ) ) && !coordinator.isLocalHost( ) ); 
-      coordinator = Hosts.getCoordinator( ) ) {
-        TimeUnit.SECONDS.sleep( 3 );
-        LOG.info( "Waiting for system view with database..." );
-      }
+      while( AwaitDatabase.INSTANCE.apply( Hosts.getCoordinator( ) ) );
+      TimeUnit.SECONDS.sleep( 30 );//GRZE: rejoin backoff
     }
   }
   

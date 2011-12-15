@@ -112,6 +112,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import javax.management.InstanceAlreadyExistsException;
 import javax.persistence.LockTimeoutException;
 import net.sf.hajdbc.Dialect;
 import net.sf.hajdbc.ForeignKeyConstraint;
@@ -226,6 +227,11 @@ public class Databases {
   @Provides( Empyrean.class )
   @RunDuring( Bootstrap.Stage.PoolInit )
   public static class DatabasePoolBootstrapper extends Bootstrapper.Simple {
+    /**
+     * 
+     */
+    private static final int INITIAL_DB_SYNC_RETRY_WAIT = 15;
+
     @Override
     public boolean load( ) throws Exception {
       Hosts.awaitDatabases( );
@@ -253,9 +259,13 @@ public class Databases {
           }
         }
       } );
-      Host local = Hosts.localHost( );
-      if ( !Hosts.isCoordinator( ) && local.hasDatabase( ) && Databases.enable( local ) ) {
-        LOG.info( LogUtil.subheader( "Database synchronization complete." ) );
+      if ( !Hosts.isCoordinator( ) && Hosts.localHost( ).hasDatabase( ) ) {
+        while( !Databases.enable( Hosts.localHost( ) ) ) {
+          LOG.warn( LogUtil.subheader( "Synchronization of the database failed: " + Hosts.localHost( ) ) ); 
+          LOG.warn( "Sleeping for " + INITIAL_DB_SYNC_RETRY_WAIT + " seconds before trying again." );
+          TimeUnit.SECONDS.sleep( INITIAL_DB_SYNC_RETRY_WAIT );
+        }
+        LOG.info( LogUtil.subheader( "Database synchronization complete: " + Hosts.localHost( ) ) );
       }
       return true;
     }
@@ -472,7 +482,15 @@ public class Databases {
                     ActivateHostFunction.prepareConnections( host, contextName );
                   } else {
                     LOG.info( "Creating database connections for: " + host );
-                    cluster.add( hostName, realJdbcDriver, dbUrl );
+                    try {
+                      cluster.add( hostName, realJdbcDriver, dbUrl );
+                    } catch ( IllegalStateException ex ) {
+                      if ( !Exceptions.isCausedBy( ex, InstanceAlreadyExistsException.class ) ) {
+                        throw ex;
+                      } else {
+                        Logs.extreme( ).debug( "Skipping addition of db connections for host which already exists: " + hostName );
+                      }
+                    }
                     ActivateHostFunction.prepareConnections( host, contextName );
                   }
                   try {
