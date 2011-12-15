@@ -152,7 +152,7 @@ public abstract class Bootstrapper implements Comparable<Bootstrapper>, CanBoots
   public boolean checkLocal( ) {
     for ( final ComponentId c : this.getDependsLocal( ) ) {
       try {
-        if ( c.runLimitedServices( ) || !Components.lookup( c ).hasLocalService( ) ) {
+        if ( !Components.lookup( c ).hasLocalService( ) ) {
           return false;
         }
       } catch ( final NoSuchElementException ex ) {

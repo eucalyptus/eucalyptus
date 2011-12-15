@@ -116,8 +116,15 @@ public class ComponentRegistrationHandler {
               + ":"
               + port );
     if ( !builder.checkAdd( partition, name, hostName, port ) ) {
-      LOG.info( builder.getClass( ).getSimpleName( ) + ": checkAdd failed." );      
-      throw new ServiceRegistrationException( builder.getClass( ).getSimpleName( ) + ": checkAdd failed");
+      LOG.info( "Returning existing registration information for: "               
+                + partition
+                + "."
+                + name
+                + "@"
+                + hostName
+                + ":"
+                + port );
+      return true;
     }
     
     try {

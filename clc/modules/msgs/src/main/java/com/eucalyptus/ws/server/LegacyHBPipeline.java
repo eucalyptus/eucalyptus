@@ -80,6 +80,7 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.ComponentId.ComponentPart;
 import com.eucalyptus.component.Components;
+import com.eucalyptus.component.Topology;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.http.MappingHttpRequest;
@@ -117,9 +118,12 @@ public class LegacyHBPipeline extends FilteredPipeline {
             HttpResponse response = new DefaultHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.OK );
             String resp = "";
             for ( Component c : Components.list( ) ) {
-              resp += String.format( "name=%-20.20s enabled=%-10.10s local=%-10.10s initialized=%-10.10s\n", c.getName( ),
-                                     c.getComponentId( ).isAvailableLocally( ), !c.getComponentId( ).runLimitedServices( ),
-                                     c.getLocalServiceConfiguration( ).getFullName( ) );
+              boolean enabledLocally = Topology.isEnabledLocally( c.getComponentId( ).getClass( ) );
+              resp += String.format( "name=%-20.20s enabled=%-10.10s local=%-10.10s initialized=%-10.10s\n",
+                                     c.getName( ),
+                                     enabledLocally,
+                                     c.hasLocalService( ),
+                                     c.getComponentId( ).isAvailableLocally( ) );
             }
             ChannelBuffer buf = ChannelBuffers.copiedBuffer( resp.getBytes( ) );
             response.setContent( buf );
