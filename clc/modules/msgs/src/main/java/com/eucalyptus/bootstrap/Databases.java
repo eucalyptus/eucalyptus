@@ -568,16 +568,17 @@ public class Databases {
     } else if ( Internets.testLocal( hostName ) && !BootstrapArgs.isCloudController( ) ) {
       return true;
     } else if ( Internets.testLocal( hostName ) && BootstrapArgs.isCloudController( ) ) {
-      SyncState.DESYNCING.set( );
-      try {
-        runDbStateChange( DeactivateHostFunction.INSTANCE.apply( hostName ) );
-        SyncState.NOTSYNCED.set( );
-        return true;
-      } catch ( Exception ex ) {
-        SyncState.NOTSYNCED.set( );
-        Logs.extreme( ).debug( ex );
-        return false;
-      }
+//      SyncState.DESYNCING.set( );
+//      try {
+//        runDbStateChange( DeactivateHostFunction.INSTANCE.apply( hostName ) );
+//        SyncState.NOTSYNCED.set( );
+//        return true;
+//      } catch ( Exception ex ) {
+//        SyncState.NOTSYNCED.set( );
+//        Logs.extreme( ).debug( ex );
+//        return false;
+//      }
+      return true;
     } else if ( ActiveHostSet.ACTIVATED.get( ).contains( hostName ) ) {
       try {
         runDbStateChange( DeactivateHostFunction.INSTANCE.apply( hostName ) );
