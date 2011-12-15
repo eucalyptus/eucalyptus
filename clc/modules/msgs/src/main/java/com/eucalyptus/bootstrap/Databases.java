@@ -714,9 +714,12 @@ public class Databases {
         Set<String> intersection = Sets.newHashSet( hosts );
         Logs.extreme( ).debug( "ActiveHostSet: universe of db hosts: " + hosts );
         for ( String ctx : PersistenceContexts.list( ) ) {
-          Set<String> activeDatabases = Databases.lookup( ctx ).getActiveDatabases( );
-          union.addAll( activeDatabases );
-          intersection.retainAll( activeDatabases );
+          try {
+            Set<String> activeDatabases = Databases.lookup( ctx ).getActiveDatabases( );
+            union.addAll( activeDatabases );
+            intersection.retainAll( activeDatabases );
+          } catch ( Exception ex ) {
+          }
         }
         Logs.extreme( ).debug( "ActiveHostSet: union of activated db connections: " + union );
         Logs.extreme( ).debug( "ActiveHostSet: intersection of db hosts and activated db connections: " + intersection );
