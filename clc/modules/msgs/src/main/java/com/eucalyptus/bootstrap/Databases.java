@@ -86,7 +86,6 @@
 package com.eucalyptus.bootstrap;
 
 import java.sql.Connection;
-import java.sql.Driver;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -111,6 +110,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import javax.persistence.LockTimeoutException;
 import net.sf.hajdbc.Dialect;
@@ -346,41 +346,47 @@ public class Databases {
               }
               try {
                 final DriverDatabaseClusterMBean cluster = lookup( contextName );
+                Lock dbLock = cluster.getLockManager( ).writeLock( "" );
+                dbLock.lock( );
                 try {
-                  cluster.getDatabase( hostName );
-                } catch ( Exception ex1 ) {
-                  return;
-                }
-                LOG.info( "Tearing down database connections for: " + hostName + " to context: " + contextName );
-                for ( int i = 0; i < 10; i++ ) {
-                  if ( cluster.getActiveDatabases( ).contains( hostName ) ) {
-                    try {
-                      LOG.info( "Deactivating database connections for: " + hostName + " to context: " + contextName );
-                      cluster.deactivate( hostName );
-                      LOG.info( "Deactived database connections for: " + hostName + " to context: " + contextName );
+                  try {
+                    cluster.getDatabase( hostName );
+                  } catch ( Exception ex1 ) {
+                    return;
+                  }
+                  LOG.info( "Tearing down database connections for: " + hostName + " to context: " + contextName );
+                  for ( int i = 0; i < 10; i++ ) {
+                    if ( cluster.getActiveDatabases( ).contains( hostName ) ) {
+                      try {
+                        LOG.info( "Deactivating database connections for: " + hostName + " to context: " + contextName );
+                        cluster.deactivate( hostName );
+                        LOG.info( "Deactived database connections for: " + hostName + " to context: " + contextName );
+                        try {
+                          LOG.info( "Removing database connections for: " + hostName + " to context: " + contextName );
+                          cluster.remove( hostName );
+                          LOG.info( "Removed database connections for: " + hostName + " to context: " + contextName );
+                          return;
+                        } catch ( IllegalStateException ex ) {
+                          Logs.extreme( ).debug( ex, ex );
+                        }
+                      } catch ( Exception ex ) {
+                        LOG.info( ex );
+                        Logs.extreme( ).debug( ex, ex );
+                      }
+                    } else if ( cluster.getInactiveDatabases( ).contains( hostName ) ) {
                       try {
                         LOG.info( "Removing database connections for: " + hostName + " to context: " + contextName );
                         cluster.remove( hostName );
                         LOG.info( "Removed database connections for: " + hostName + " to context: " + contextName );
                         return;
-                      } catch ( IllegalStateException ex ) {
+                      } catch ( Exception ex ) {
+                        LOG.info( ex );
                         Logs.extreme( ).debug( ex, ex );
                       }
-                    } catch ( Exception ex ) {
-                      LOG.info( ex );
-                      Logs.extreme( ).debug( ex, ex );
-                    }
-                  } else if ( cluster.getInactiveDatabases( ).contains( hostName ) ) {
-                    try {
-                      LOG.info( "Removing database connections for: " + hostName + " to context: " + contextName );
-                      cluster.remove( hostName );
-                      LOG.info( "Removed database connections for: " + hostName + " to context: " + contextName );
-                      return;
-                    } catch ( Exception ex ) {
-                      LOG.info( ex );
-                      Logs.extreme( ).debug( ex, ex );
                     }
                   }
+                } finally {
+                  dbLock.unlock( );
                 }
               } catch ( final Exception ex1 ) {
                 LOG.info( ex1 );
@@ -440,49 +446,55 @@ public class Databases {
                   DriverDatabaseClusterMBean cluster = LookupPersistenceContextDatabaseCluster.INSTANCE.apply( contextName );
                   final String dbUrl = "jdbc:" + ServiceUris.remote( Database.class, host.getBindAddress( ), contextName );
                   final String realJdbcDriver = Databases.getDriverName( );
-                  boolean activated = cluster.getActiveDatabases( ).contains( hostName );
-                  boolean deactivated = cluster.getInactiveDatabases( ).contains( hostName );
+                  Lock dbLock = cluster.getLockManager( ).writeLock( "" );
+                  dbLock.lock( );
                   try {
-                    if ( fullSync ) {
-                      LOG.info( "Full sync of database on: " + host );
-                      if ( activated ) {
-                        LOG.info( "Deactivating existing database connections to: " + host );
-                        cluster.deactivate( hostName );
-                        ActivateHostFunction.prepareConnections( host, contextName );
-                        cluster.activate( hostName, "full" );
-                      } else if ( deactivated ) {
-                        ActivateHostFunction.prepareConnections( host, contextName );
-                        cluster.activate( hostName, "full" );
+                    boolean activated = cluster.getActiveDatabases( ).contains( hostName );
+                    boolean deactivated = cluster.getInactiveDatabases( ).contains( hostName );
+                    try {
+                      if ( fullSync ) {
+                        LOG.info( "Full sync of database on: " + host );
+                        if ( activated ) {
+                          LOG.info( "Deactivating existing database connections to: " + host );
+                          cluster.deactivate( hostName );
+                          ActivateHostFunction.prepareConnections( host, contextName );
+                          cluster.activate( hostName, "full" );
+                        } else if ( deactivated ) {
+                          ActivateHostFunction.prepareConnections( host, contextName );
+                          cluster.activate( hostName, "full" );
+                        } else {
+                          LOG.info( "Creating database connections for: " + host );
+                          cluster.add( hostName, realJdbcDriver, dbUrl );
+                          ActivateHostFunction.prepareConnections( host, contextName );
+                          cluster.activate( hostName, "full" );
+                        }
+                        LOG.info( "Full sync of database on: " + host + " using " + cluster.getActiveDatabases( ) );
+                        return;
+                      } else if ( passiveSync ) {
+                        LOG.info( "Passive activation of database connections to: " + host );
+                        if ( activated ) {
+                          cluster.deactivate( hostName );
+                          ActivateHostFunction.prepareConnections( host, contextName );
+                          cluster.activate( hostName, "passive" );
+                        } else if ( deactivated ) {
+                          ActivateHostFunction.prepareConnections( host, contextName );
+                          cluster.activate( hostName, "passive" );
+                        } else {
+                          LOG.info( "Creating database connections for: " + host );
+                          cluster.add( hostName, realJdbcDriver, dbUrl );
+                          ActivateHostFunction.prepareConnections( host, contextName );
+                          cluster.activate( hostName, "passive" );
+                        }
+                        LOG.info( "Passive activation of database on: " + host + " using " + cluster.getActiveDatabases( ) );
+                        return;
                       } else {
-                        LOG.info( "Creating database connections for: " + host );
-                        cluster.add( hostName, realJdbcDriver, dbUrl );
-                        ActivateHostFunction.prepareConnections( host, contextName );
-                        cluster.activate( hostName, "full" );
+                        Logs.extreme( ).info( "Skipping activation of already present database for: " + contextName + " on " + hostName );
                       }
-                      LOG.info( "Full sync of database on: " + host + " using " + cluster.getActiveDatabases( ) );
-                      return;
-                    } else if ( passiveSync ) {
-                      LOG.info( "Passive activation of database connections to: " + host );
-                      if ( activated ) {
-                        cluster.deactivate( hostName );
-                        ActivateHostFunction.prepareConnections( host, contextName );
-                        cluster.activate( hostName, "passive" );
-                      } else if ( deactivated ) {
-                        ActivateHostFunction.prepareConnections( host, contextName );
-                        cluster.activate( hostName, "passive" );
-                      } else {
-                        LOG.info( "Creating database connections for: " + host );
-                        cluster.add( hostName, realJdbcDriver, dbUrl );
-                        ActivateHostFunction.prepareConnections( host, contextName );
-                        cluster.activate( hostName, "passive" );
-                      }
-                      LOG.info( "Passive activation of database on: " + host + " using " + cluster.getActiveDatabases( ) );
-                      return;
-                    } else {
-                      Logs.extreme( ).info( "Skipping activation of already present database for: " + contextName + " on " + hostName );
+                    } catch ( Exception ex ) {
+                      throw Exceptions.toUndeclared( ex );
                     }
-                  } catch ( Exception ex ) {
-                    throw Exceptions.toUndeclared( ex );
+                  } finally {
+                    dbLock.unlock( );
                   }
                 }
               } catch ( final NoSuchElementException ex1 ) {
