@@ -80,6 +80,7 @@ import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.component.Component.State;
+import com.eucalyptus.component.Faults.CheckException;
 import com.eucalyptus.component.Topology.ServiceString;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.empyrean.ServiceId;
@@ -655,6 +656,24 @@ public class Topology {
     
   }
   
+  enum FilterErrorResults implements Predicate<Future> {
+    INSTANCE;
+    
+    @Override
+    public boolean apply( final Future input ) {
+      try {
+        final Object conf = input.get( 30, TimeUnit.SECONDS );
+        return false;
+      } catch ( final InterruptedException ex ) {
+        Thread.currentThread( ).interrupt( );
+      } catch ( final Exception ex ) {
+        Logs.extreme( ).trace( ex, ex );
+      }
+      return true;
+    }
+    
+  }
+  
   enum ServiceString implements Function<ServiceConfiguration, String> {
     INSTANCE;
     @Override
@@ -673,6 +692,22 @@ public class Topology {
         Thread.currentThread( ).interrupt( );
       } catch ( final Exception ex ) {
         Logs.extreme( ).trace( ex, ex );
+      }
+      return null;
+    }
+  }
+  
+  enum ExtractErrorFuture implements Function<Future<ServiceConfiguration>, Exception> {
+    INSTANCE;
+    @Override
+    public Exception apply( final Future<ServiceConfiguration> input ) {
+      try {
+        input.get( );
+      } catch ( final InterruptedException ex ) {
+        Thread.currentThread( ).interrupt( );
+      } catch ( final Exception ex ) {
+        Logs.extreme( ).trace( ex, ex );
+        return ex;
       }
       return null;
     }
@@ -723,6 +758,18 @@ public class Topology {
       final Collection<Future<ServiceConfiguration>> completedServices = Collections2.filter( submittedCallables, WaitForResults.INSTANCE );
       List<ServiceConfiguration> results = Lists.newArrayList( Collections2.transform( completedServices, ExtractFuture.INSTANCE ) );
       printCheckInfo( submitFunction.toString( ), results );
+      final Collection<Future<ServiceConfiguration>> failedCheckServices = Collections2.filter( submittedCallables, FilterErrorResults.INSTANCE );
+      List<Exception> failedResults = Lists.newArrayList( Collections2.transform( failedCheckServices, ExtractErrorFuture.INSTANCE ) );
+      for ( Exception ex : failedResults ) {
+        if ( ex != null ) {
+          if ( ex instanceof CheckException ) {
+            Faults.persist( ( CheckException ) ex );
+          } else {
+            LOG.error( "Failed to identify service for error: " + ex );
+          }
+        }
+      }
+//      allServices.removeAll( failedResults );
       return results;
     }
     
