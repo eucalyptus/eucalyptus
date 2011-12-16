@@ -357,11 +357,11 @@ public class ServiceTransitions {
       LOG.error( parent.getFullName( ) + " failed transition " + transitionAction.name( ) + " because of " + ex.getMessage( ) );
       if ( Faults.filter( parent, ex ) ) {
         transitionCallback.fireException( ex );
-        Faults.persist( Faults.failure( parent, ex ) );
+        Faults.persist( parent, Faults.failure( parent, ex ) );
         throw Exceptions.toUndeclared( ex );
       } else {
         transitionCallback.fire( );
-        Faults.persist( Faults.advisory( parent, ex ) );
+        Faults.persist( parent, Faults.advisory( parent, ex ) );
       }
     }
   }
@@ -488,7 +488,6 @@ public class ServiceTransitions {
             return;
           } else if ( errors.getSeverity( ).ordinal( ) < Faults.Severity.ERROR.ordinal( ) ) {
             Logs.extreme( ).error( errors, errors );
-            Faults.persist( errors );
           } else {
             throw errors;
           }
@@ -615,10 +614,8 @@ public class ServiceTransitions {
                   + parent );
                 Logs.extreme( ).error( ex1, ex1 );
               }
-              throw ex;
-            } else {
-              throw ex;
             }
+            throw ex;
           }
         } else {
           parent.lookupBootstrapper( ).check( );

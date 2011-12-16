@@ -186,7 +186,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
     if ( !this.state.isMarked( ) ) {
       IllegalStateException ex = new IllegalStateException( "error() called when there is no currently pending transition: "
         + this.toString( ), t );
-      Logs.extreme( ).error( ex );
+      Logs.exhaust( ).error( ex );
       ActiveTransition tr = this.currentTransition.getAndSet( null );
       if ( tr != null ) {
         tr.getTransitionFuture( ).setException( t );
