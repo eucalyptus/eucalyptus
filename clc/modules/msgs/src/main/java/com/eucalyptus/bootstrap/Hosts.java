@@ -262,11 +262,14 @@ public class Hosts {
         try {
           if ( !Hosts.list( Predicates.not( BootedFilter.INSTANCE ) ).isEmpty( ) && currentHost.hasDatabase( ) ) {
             if ( UpdateEntry.INSTANCE.apply( currentHost ) ) {
-              LOG.info( "Updated local host entry: " + currentHost );
+              LOG.info( "Updated local host entry while booting: " + currentHost );
             }
           } else if ( this.counter % 5 == 0 ) {
             if ( UpdateEntry.INSTANCE.apply( currentHost ) ) {
-              LOG.info( "Updated local host entry: " + currentHost );
+              LOG.info( "Updated changed local host entry: " + currentHost );
+            } else {
+              LOG.info( "Updated local host entry periodically: " + currentHost );
+              Hosts.put( Host.create( ) );
             }
           }
         } catch ( Exception ex ) {
