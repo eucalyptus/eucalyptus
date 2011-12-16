@@ -227,10 +227,7 @@ public class Databases {
   @Provides( Empyrean.class )
   @RunDuring( Bootstrap.Stage.PoolInit )
   public static class DatabasePoolBootstrapper extends Bootstrapper.Simple {
-    /**
-     * 
-     */
-    private static final int INITIAL_DB_SYNC_RETRY_WAIT = 15;
+    private static final int INITIAL_DB_SYNC_RETRY_WAIT = 5;
     
     @Override
     public boolean load( ) throws Exception {
