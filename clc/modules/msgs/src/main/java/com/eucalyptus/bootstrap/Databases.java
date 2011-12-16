@@ -85,6 +85,7 @@
 
 package com.eucalyptus.bootstrap;
 
+import java.lang.management.ManagementFactory;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -110,9 +111,9 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import javax.management.InstanceAlreadyExistsException;
+import javax.management.ObjectName;
 import javax.persistence.LockTimeoutException;
 import net.sf.hajdbc.Dialect;
 import net.sf.hajdbc.ForeignKeyConstraint;
@@ -474,12 +475,20 @@ public class Databases {
                   } else {
                     LOG.info( "Creating database connections for: " + host );
                     try {
-                      cluster.add( hostName, realJdbcDriver, dbUrl );
-                    } catch ( IllegalStateException ex ) {
-                      if ( !Exceptions.isCausedBy( ex, InstanceAlreadyExistsException.class ) ) {
-                        throw ex;
-                      } else {
+                      cluster.getDatabase( hostName );
+                    } catch ( IllegalArgumentException ex2 ) {
+                      try {
+                        cluster.add( hostName, realJdbcDriver, dbUrl );
+                        Logs.extreme( ).debug( "Added db connections for host: " + hostName );
+                      } catch ( IllegalArgumentException ex ) {
                         Logs.extreme( ).debug( "Skipping addition of db connections for host which already exists: " + hostName );
+                      } catch ( IllegalStateException ex ) {
+                        if ( Exceptions.isCausedBy( ex, InstanceAlreadyExistsException.class ) ) {
+                          ManagementFactory.getPlatformMBeanServer( ).unregisterMBean( new ObjectName( "net.sf.hajdbc:cluster=" + ctx + ",database=" + hostName ) );
+                          cluster.add( hostName, realJdbcDriver, dbUrl );
+                        } else {
+                          throw ex;
+                        }
                       }
                     }
                     ActivateHostFunction.prepareConnections( host, contextName );
@@ -1258,7 +1267,7 @@ public class Databases {
                 insertStatement.setObject( index, object, type );
               }
             }
-            LOG.info( selected );
+            Logs.exhaust( ).trace( selected );
             insertStatement.addBatch( );
             insertStatement.executeBatch( );
             insertStatement.clearBatch( );
