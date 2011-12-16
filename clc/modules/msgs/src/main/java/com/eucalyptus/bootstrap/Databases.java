@@ -231,7 +231,7 @@ public class Databases {
      * 
      */
     private static final int INITIAL_DB_SYNC_RETRY_WAIT = 15;
-
+    
     @Override
     public boolean load( ) throws Exception {
       Hosts.awaitDatabases( );
@@ -260,11 +260,12 @@ public class Databases {
         }
       } );
       if ( !Hosts.isCoordinator( ) && Hosts.localHost( ).hasDatabase( ) ) {
-        while( !Databases.enable( Hosts.localHost( ) ) ) {
-          LOG.warn( LogUtil.subheader( "Synchronization of the database failed: " + Hosts.localHost( ) ) ); 
+        while ( !Databases.enable( Hosts.localHost( ) ) ) {
+          LOG.warn( LogUtil.subheader( "Synchronization of the database failed: " + Hosts.localHost( ) ) );
           LOG.warn( "Sleeping for " + INITIAL_DB_SYNC_RETRY_WAIT + " seconds before trying again." );
           TimeUnit.SECONDS.sleep( INITIAL_DB_SYNC_RETRY_WAIT );
         }
+        Hosts.UpdateEntry.INSTANCE.apply( Hosts.localHost( ) );
         LOG.info( LogUtil.subheader( "Database synchronization complete: " + Hosts.localHost( ) ) );
       }
       return true;
@@ -366,49 +367,42 @@ public class Databases {
               }
               try {
                 final DriverDatabaseClusterMBean cluster = lookup( contextName );
-                Lock dbLock = cluster.getLockManager( ).writeLock( "" );
-                if ( dbLock.tryLock( 5, TimeUnit.SECONDS ) ) {
-                  try {
+                try {
+                  cluster.getDatabase( hostName );
+                } catch ( Exception ex1 ) {
+                  return;
+                }
+                LOG.info( "Tearing down database connections for: " + hostName + " to context: " + contextName );
+                for ( int i = 0; i < 10; i++ ) {
+                  if ( cluster.getActiveDatabases( ).contains( hostName ) ) {
                     try {
-                      cluster.getDatabase( hostName );
-                    } catch ( Exception ex1 ) {
-                      return;
-                    }
-                    LOG.info( "Tearing down database connections for: " + hostName + " to context: " + contextName );
-                    for ( int i = 0; i < 10; i++ ) {
-                      if ( cluster.getActiveDatabases( ).contains( hostName ) ) {
-                        try {
-                          LOG.info( "Deactivating database connections for: " + hostName + " to context: " + contextName );
-                          cluster.deactivate( hostName );
-                          LOG.info( "Deactived database connections for: " + hostName + " to context: " + contextName );
-                          try {
-                            if ( !Hosts.contains( hostName ) ) {
-                              LOG.info( "Removing database connections for: " + hostName + " to context: " + contextName );
-                              cluster.remove( hostName );
-                              LOG.info( "Removed database connections for: " + hostName + " to context: " + contextName );
-                            }
-                            return;
-                          } catch ( IllegalStateException ex ) {
-                            Logs.extreme( ).debug( ex, ex );
-                          }
-                        } catch ( Exception ex ) {
-                          LOG.info( ex );
-                          Logs.extreme( ).debug( ex, ex );
-                        }
-                      } else if ( cluster.getInactiveDatabases( ).contains( hostName ) && !Hosts.contains( hostName ) ) {
-                        try {
+                      LOG.info( "Deactivating database connections for: " + hostName + " to context: " + contextName );
+                      cluster.deactivate( hostName );
+                      LOG.info( "Deactived database connections for: " + hostName + " to context: " + contextName );
+                      try {
+                        if ( !Hosts.contains( hostName ) ) {
                           LOG.info( "Removing database connections for: " + hostName + " to context: " + contextName );
                           cluster.remove( hostName );
                           LOG.info( "Removed database connections for: " + hostName + " to context: " + contextName );
-                          return;
-                        } catch ( Exception ex ) {
-                          LOG.info( ex );
-                          Logs.extreme( ).debug( ex, ex );
                         }
+                        return;
+                      } catch ( IllegalStateException ex ) {
+                        Logs.extreme( ).debug( ex, ex );
                       }
+                    } catch ( Exception ex ) {
+                      LOG.info( ex );
+                      Logs.extreme( ).debug( ex, ex );
                     }
-                  } finally {
-                    dbLock.unlock( );
+                  } else if ( cluster.getInactiveDatabases( ).contains( hostName ) && !Hosts.contains( hostName ) ) {
+                    try {
+                      LOG.info( "Removing database connections for: " + hostName + " to context: " + contextName );
+                      cluster.remove( hostName );
+                      LOG.info( "Removed database connections for: " + hostName + " to context: " + contextName );
+                      return;
+                    } catch ( Exception ex ) {
+                      LOG.info( ex );
+                      Logs.extreme( ).debug( ex, ex );
+                    }
                   }
                 }
               } catch ( final Exception ex1 ) {
@@ -655,7 +649,18 @@ public class Databases {
             return false;
           }
         } else {
-          return false;
+          try {
+            runDbStateChange( ActivateHostFunction.INSTANCE.apply( host ) );
+            SyncState.SYNCED.set( );
+            return true;
+          } catch ( LockTimeoutException ex ) {
+            SyncState.NOTSYNCED.set( );
+            return false;
+          } catch ( Exception ex ) {
+            SyncState.NOTSYNCED.set( );
+            LOG.error( ex, ex );
+            return false;
+          }
         }
       } else if ( !ActiveHostSet.ACTIVATED.get( ).contains( host.getDisplayName( ) ) ) {
         try {
@@ -743,26 +748,26 @@ public class Databases {
             intersection.retainAll( activeDatabases );
           } catch ( Exception ex ) {
           }
-        }
-        Logs.extreme( ).debug( "ActiveHostSet: union of activated db connections: " + union );
-        Logs.extreme( ).debug( "ActiveHostSet: intersection of db hosts and activated db connections: " + intersection );
-        boolean dbVolatile = !hosts.equals( intersection );
-        String msg = String.format( "ActiveHostSet: %-14.14s %s%s%s", dbVolatile ? "volatile" : "synchronized", hosts, dbVolatile ? "!=" : "=", intersection );
-        if ( dbVolatile ) {
-          if ( last.compareAndSet( false, dbVolatile ) ) {
-            LOG.warn( msg );
-          } else {
-            LOG.debug( msg );
-          }
-        } else {
-          if ( last.compareAndSet( true, dbVolatile ) ) {
-            LOG.warn( msg );
-          } else {
-            LOG.debug( msg );
-          }
-        }
-        return intersection;
       }
+      Logs.extreme( ).debug( "ActiveHostSet: union of activated db connections: " + union );
+      Logs.extreme( ).debug( "ActiveHostSet: intersection of db hosts and activated db connections: " + intersection );
+      boolean dbVolatile = !hosts.equals( intersection );
+      String msg = String.format( "ActiveHostSet: %-14.14s %s%s%s", dbVolatile ? "volatile" : "synchronized", hosts, dbVolatile ? "!=" : "=", intersection );
+      if ( dbVolatile ) {
+        if ( last.compareAndSet( false, dbVolatile ) ) {
+          LOG.warn( msg );
+        } else {
+          LOG.debug( msg );
+        }
+      } else {
+        if ( last.compareAndSet( true, dbVolatile ) ) {
+          LOG.warn( msg );
+        } else {
+          LOG.debug( msg );
+        }
+      }
+      return intersection;
+    }
     },
     DBHOSTS {
       @Override
