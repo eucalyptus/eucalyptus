@@ -457,7 +457,11 @@ public class Hosts {
                   if ( Databases.enable( host ) && Databases.isSynchronized( ) ) {
                     UpdateEntry.INSTANCE.apply( Hosts.lookup( hostKey ) );
                   }
-                } else if ( wasVolatile && Bootstrap.isFinished( ) && !Databases.isVolatile( ) ) {
+                } else if ( wasVolatile && Bootstrap.isLoaded( ) && !Databases.ActiveHostSet.ACTIVATED.get( ).contains( hostKey ) ) {
+                  if ( Databases.enable( host ) && !Databases.isVolatile( ) ) {
+                    UpdateEntry.INSTANCE.apply( Hosts.lookup( hostKey ) );
+                  }
+                } else if ( wasVolatile && Bootstrap.isLoaded( ) && !Databases.isVolatile( ) ) {
                   UpdateEntry.INSTANCE.apply( Hosts.lookup( hostKey ) );
                 } else if ( Bootstrap.isFinished( ) && !Databases.isVolatile( ) ) {
                   BootstrapComponent.SETUP.apply( Hosts.lookup( hostKey ) );
@@ -1266,7 +1270,7 @@ public class Hosts {
   
   enum AwaitDatabase implements Predicate<Host> {
     INSTANCE;
-
+    
     @Override
     public boolean apply( Host c ) {
       if ( c != null && ( c.isLocalHost( ) || c.hasBootstrapped( ) ) ) {
@@ -1295,7 +1299,7 @@ public class Hosts {
         doInitialize( );
       }
     } else if ( BootstrapArgs.isCloudController( ) && !Hosts.isCoordinator( ) ) {
-      while( AwaitDatabase.INSTANCE.apply( Hosts.getCoordinator( ) ) );
+      while ( AwaitDatabase.INSTANCE.apply( Hosts.getCoordinator( ) ) );
       TimeUnit.SECONDS.sleep( 30 );//GRZE: rejoin backoff
     }
   }
