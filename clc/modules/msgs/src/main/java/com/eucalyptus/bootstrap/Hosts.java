@@ -283,10 +283,6 @@ public class Hosts {
         if ( Hosts.pruneHosts( ) ) {
           Hosts.updateServices( );
         }
-        SyncDatabases.INSTANCE.apply( Hosts.localHost( ) );
-        for ( Host h : Hosts.listDatabases( ) ) {
-          SyncDatabases.INSTANCE.apply( h );
-        }
       }
       
     },
