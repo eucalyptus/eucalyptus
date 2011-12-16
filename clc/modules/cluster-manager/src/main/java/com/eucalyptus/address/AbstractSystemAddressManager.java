@@ -182,7 +182,7 @@ public abstract class AbstractSystemAddressManager {
           ? addr.getInstanceId( )
           : null, addrInfo.getAddress( ), addrInfo.getInstanceIp( ) );
         if ( ( addr != null ) && ( vm != null ) ) {
-          Helper.ensureAllocated( addr, vm );
+//          Helper.ensureAllocated( addr, vm );
           clearOrphan( addrInfo );
         } else if ( addr != null && !addr.isPending( ) && vm != null && VmStateSet.DONE.apply( vm ) ) {
           handleOrphan( cluster, addrInfo );
