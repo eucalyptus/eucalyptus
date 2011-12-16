@@ -531,31 +531,29 @@ public class Faults {
     return Lists.newArrayList( );
   }
   
-  public static void persist( final CheckException errors ) {
-    if ( errors != null && Bootstrap.isFinished( ) && !Databases.isVolatile( ) && Hosts.isCoordinator( ) ) {
+  public static void persist( final ServiceConfiguration parent, final CheckException errors ) {
+    if ( errors != null && Hosts.isCoordinator( ) && Bootstrap.isFinished( ) && !Databases.isVolatile( ) ) {
       try {
+        final EntityTransaction db = Entities.get( CheckException.class );
+        try {
+          List<CheckException> list = Entities.query( new CheckException( parent.getFullName( ).toString( ) ) );
+          for ( CheckException old : list ) {
+            Logs.extreme( ).debug( "Purging fault: " + old, old );
+            Entities.delete( old );
+          }
+          db.commit( );
+        } catch ( final Exception ex ) {
+          LOG.error( "Failed to persist error information for: " + errors, ex );
+          db.rollback( );
+        }
         for ( final CheckException e : errors ) {
-          final EntityTransaction db = Entities.get( CheckException.class );
+          final EntityTransaction db2 = Entities.get( CheckException.class );
           try {
-            List<CheckException> list = Entities.query( new CheckException( e.getServiceName( ) ) );
-            for ( CheckException old : list ) {
-              LOG.debug( "Purging fault: " + old.getMessage( ) );
-              Logs.extreme( ).debug( "Purging fault: " + old, old );
-              Entities.delete( old );
-            }
             Entities.persist( e );
-            db.commit( );
+            db2.commit( );
           } catch ( final Exception ex ) {
             LOG.error( "Failed to persist error information for: " + errors, ex );
-            db.rollback( );
-            final EntityTransaction db2 = Entities.get( CheckException.class );
-            try {
-              Entities.persist( e );
-              db2.commit( );
-            } catch ( final Exception ex2 ) {
-              LOG.error( "Failed to persist error information for: " + errors, ex2 );
-              db2.rollback( );
-            }
+            db2.rollback( );
           }
         }
       } catch ( Exception ex ) {
