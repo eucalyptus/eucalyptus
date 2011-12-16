@@ -188,75 +188,53 @@ public class Topology {
     };
   }
   
-  private static Predicate<Partition> partitionFilter( final Partition p ) {
-    return new Predicate<Partition>( ) {
-      
-      @Override
-      public boolean apply( final Partition input ) {
-        return p.equals( input );
-      }
-    };
-  }
-  
-  public List<ServiceConfiguration> partitionView( final Partition partition ) {
-    return Lists.newArrayList( Iterables.filter( this.getServices( ).values( ), partitionViewFilter( partition ) ) );
-  }
-  
-  private static Predicate<ServiceConfiguration> partitionViewFilter( final Partition p ) {
-    return new Predicate<ServiceConfiguration>( ) {
-      
-      @Override
-      public boolean apply( final ServiceConfiguration config ) {
-        if ( config.getComponentId( ).isDistributedService( ) ) {
-          return true;
-        } else {
-          return false;
-        }
-      }
-    };
-  }
-  
-  public static void populateServices( ServiceConfiguration config, BaseMessage msg ) {
+  public static void populateServices( final ServiceConfiguration config, BaseMessage msg ) {
     try {
+      Predicate<ServiceConfiguration> filter = new Predicate<ServiceConfiguration>( ) {
+        
+        @Override
+        public boolean apply( final ServiceConfiguration filterConfig ) {
+          ComponentId filteredComponent = filterConfig.getComponentId( );
+          ComponentId destComponent = config.getComponentId( );
+          if ( filteredComponent.isDistributedService( ) ) {
+            if ( destComponent.isAlwaysLocal( ) ) {
+              return filterConfig.lookupState( ).ordinal( ) >= Component.State.NOTREADY.ordinal( );
+            } else if ( destComponent.isPartitioned( ) && filteredComponent.isPartitioned( ) ) {
+              return config.getPartition( ).equals( filterConfig.getPartition( ) );
+            } else {
+              return true;
+            }
+          } else {
+            return false;
+          }
+        }
+      };
       Function<ServiceConfiguration, ServiceId> typeMapper = TypeMappers.lookup( ServiceConfiguration.class, ServiceId.class );
       if ( Hosts.isCoordinator( ) ) {
         msg.set_epoch( Topology.epoch( ) );
-        if ( config.getComponentId( ).isAlwaysLocal( ) ) {
-          Collection<ServiceId> serviceList = Collections2.transform( Topology.getInstance( ).getServices( ).values( ),
-                                                                      typeMapper );
-          msg.get_services( ).addAll( serviceList );
-          for ( Component c : Components.list( ) ) {
-            if ( c.getComponentId( ).isDistributedService( ) ) {
-              for ( ServiceConfiguration s : c.services( ) ) {
-                if ( !serviceList.contains( s ) && State.DISABLED.apply( s ) ) {
-                  msg.get_disabledServices( ).add( typeMapper.apply( s ) );
-                } else if ( !serviceList.contains( s ) && State.NOTREADY.apply( s ) ) {
-                  msg.get_notreadyServices( ).add( typeMapper.apply( s ) );
-                }
-              }
-            }
+        for ( ServiceConfiguration s : Topology.getInstance( ).getServices( ).values( ) ) {
+          if ( !filter.apply( s ) ) {
+            continue;
+          } else {
+            msg.get_services( ).add( typeMapper.apply( s ) );
           }
-        } else {
-          Collection<ServiceId> serviceList = Topology.partitionRelativeView( config );
-          msg.get_services( ).addAll( serviceList );
-          final Partition partition = Partitions.lookup( config );
-          for ( Component c : Components.list( ) ) {
-            for ( ServiceConfiguration s : c.services( ) ) {
-              if ( !partitionViewFilter( partition ).apply( s ) ) {
-                continue;
-              } else {
-                if ( !serviceList.contains( s ) && State.DISABLED.apply( s ) ) {
-                  msg.get_disabledServices( ).add( typeMapper.apply( s ) );
-                } else if ( !serviceList.contains( s ) && State.NOTREADY.ordinal( ) >= s.getStateMachine( ).getState( ).ordinal( ) ) {
-                  msg.get_notreadyServices( ).add( typeMapper.apply( s ) );
-                }
+        }
+        for ( Component c : Components.list( ) ) {
+          for ( ServiceConfiguration s : c.services( ) ) {
+            if ( !filter.apply( s ) ) {
+              continue;
+            } else {
+              if ( !msg.get_services( ).contains( s ) && State.DISABLED.apply( s ) ) {
+                msg.get_disabledServices( ).add( typeMapper.apply( s ) );
+              } else if ( !msg.get_services( ).contains( s ) && State.NOTREADY.ordinal( ) >= s.getStateMachine( ).getState( ).ordinal( ) ) {
+                msg.get_notreadyServices( ).add( typeMapper.apply( s ) );
               }
             }
           }
         }
       }
     } catch ( Exception ex ) {
-      Logs.extreme( ).error( ex , ex );
+      Logs.extreme( ).error( ex, ex );
     }
   }
   
@@ -309,11 +287,6 @@ public class Topology {
   
   public static int epoch( ) {
     return Topology.getInstance( ).getEpoch( );
-  }
-  
-  private static Collection<ServiceId> partitionRelativeView( final ServiceConfiguration config ) {
-    final Partition partition = Partitions.lookup( config );
-    return Lists.transform( Topology.getInstance( ).partitionView( partition ), TypeMappers.lookup( ServiceConfiguration.class, ServiceId.class ) );
   }
   
   public static Function<ServiceConfiguration, Future<ServiceConfiguration>> transition( final Component.State toState ) {

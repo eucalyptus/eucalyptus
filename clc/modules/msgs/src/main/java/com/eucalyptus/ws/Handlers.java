@@ -244,14 +244,8 @@ public class Handlers {
   
   //TODO:GRZE: move this crap to Handlers.
   public static Map<String, ChannelHandler> channelMonitors( final TimeUnit unit, final int timeout ) {
-    return new HashMap<String, ChannelHandler>( 4 ) {
-      /**
-       * 
-       */
-      private static final long serialVersionUID = 1L;
-      
+    return new HashMap<String, ChannelHandler>( 3 ) {
       {
-//        put( "state-monitor", new ChannelStateMonitor( ) );
         this.put( "idlehandler", new IdleStateHandler( Handlers.timer, timeout, timeout, timeout, unit ) );
         this.put( "readTimeout", new ReadTimeoutHandler( Handlers.timer, timeout, unit ) );
         this.put( "writeTimeout", new WriteTimeoutHandler( Handlers.timer, timeout, unit ) );
