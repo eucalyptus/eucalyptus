@@ -89,7 +89,6 @@ public class ArbitratorConfiguration extends ComponentConfiguration implements S
   @Transient
   private static String DEFAULT_SERVICE_PATH = "/services/Arbitrator";
   
-  @Transient
   @ConfigurableIdentifier
   private String                propertyPrefix;
   
