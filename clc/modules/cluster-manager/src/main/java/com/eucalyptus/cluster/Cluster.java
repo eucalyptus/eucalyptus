@@ -899,9 +899,9 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
       Thread.currentThread( ).interrupt( );
     } catch ( final Exception ex ) {
       Logs.exhaust( ).debug( ex, ex );
-      throw new ServiceRegistrationException( "Failed to call disable() on cluster " + this.configuration
-                                              + " because of: "
-                                              + ex.getMessage( ), ex );
+//      throw new ServiceRegistrationException( "Failed to call disable() on cluster " + this.configuration
+//                                              + " because of: "
+//                                              + ex.getMessage( ), ex );
     } finally {
       try {
         Clusters.getInstance( ).disable( this.getName( ) );
