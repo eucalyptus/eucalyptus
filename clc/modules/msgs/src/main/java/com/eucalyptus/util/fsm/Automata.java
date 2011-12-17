@@ -140,12 +140,16 @@ public class Automata {
             S fromState = fsm.getState( );
             try {
               CheckedListenableFuture<P> res = fsm.transition( toState );
-              res.get( );
-              Logs.extreme( ).debug( fsm.toString( ) + " transitioned from "
-                                     + fromState
-                                     + "->"
-                                     + toState );
-              return res;
+              try {
+                res.get( );
+                Logs.extreme( ).debug( fsm.toString( ) + " transitioned from "
+                                       + fromState
+                                       + "->"
+                                       + toState );
+                return res;
+              } catch ( Exception ex ) {
+                return res;
+              }
             } catch ( final Exception ex ) {
               Logs.extreme( ).debug( fsm.toString( ) + " failed transitioned from "
                                      + fromState
