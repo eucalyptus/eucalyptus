@@ -293,7 +293,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
     } catch ( ExistingTransitionException t ) {
       throw t;
     } catch ( Exception t ) {
-      this.rollback( t );
+      this.error( t );
       throw Exceptions.trace( new IllegalStateException( String.format( "Failed to apply transition %s because request() threw an exception.",
                                                                         transitionName.toString( ) ), t ) );
     }
