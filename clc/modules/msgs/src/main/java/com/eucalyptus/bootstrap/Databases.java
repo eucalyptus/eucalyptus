@@ -311,13 +311,16 @@ public class Databases {
               try {
                 final DriverDatabaseClusterMBean cluster = lookup( contextName );
                 LOG.info( "Tearing down database connections for: " + hostName + " to context: " + contextName );
-                cluster.getDatabase( hostName );
+                try {
+                  cluster.getDatabase( hostName );
+                } catch ( Exception ex1 ) {
+                  return;
+                }
                 try {
                   LOG.info( "Removing database connections for: " + hostName + " to context: " + contextName );
                   cluster.remove( hostName );
                   LOG.info( "Removed database connections for: " + hostName + " to context: " + contextName );
                 } catch ( IllegalStateException ex ) {
-                  LOG.info( ex );
                   Logs.extreme( ).debug( ex, ex );
                 }
                 try {
@@ -416,7 +419,10 @@ public class Databases {
                       try {
                         cluster.getDatabase( hostName );
                       } catch ( IllegalArgumentException ex ) {
-                        cluster.add( hostName, realJdbcDriver, dbUrl );
+                        try {
+                          cluster.add( hostName, realJdbcDriver, dbUrl );
+                        } catch ( Exception ex1 ) {
+                        }
                       }
                       if ( !cluster.getActiveDatabases( ).contains( hostName ) ) {
                         ActivateHostFunction.prepareConnections( host, contextName );
