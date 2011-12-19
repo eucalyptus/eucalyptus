@@ -3,9 +3,12 @@
 #
 # use_resources.template is a template used to generate a perl file which is then inserted
 #  into a bundled image. The generated perl file is then executed from within the instance
-#  once it's started. Then the perl script writes random data to the local disk and to a
+#  upon startup. The generated perl script writes random data to the local disk and to a
 #  mounted EBS volume, from within a running instance, in order to simulate resource usage
-#  from that instance.
+#  for that instance. The reason we use a template is to overwrite the constants at the
+#  top of this file, and so generate different usage for different test images. This allows
+#  the test framework to control how much usage will be incurred by the various test
+#  instances.
 #
 # This template is converted into a perl file using the fill_template.pl script.
 #
@@ -19,7 +22,7 @@ use strict;
 my $pid = fork();
 exit(0) if ($pid != 0);
 
-# These values are automatically inserted by the templating mechanism
+# These values are automatically replaced by the templating mechanism
 my $interval = [INTERVAL];
 my $io_megs = [IO_MEGS];
 my $device = "[DEVICE]"; # should be /dev/sda1 or something similar
