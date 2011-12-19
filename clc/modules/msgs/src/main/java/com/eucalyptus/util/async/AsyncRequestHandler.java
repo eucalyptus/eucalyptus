@@ -181,6 +181,7 @@ public class AsyncRequestHandler<Q extends BaseMessage, R extends BaseMessage> i
         }
 //REVIEW: this is likely not needed.        LOG.error( this.connectFuture.getCause( ).getMessage( ) );
       }
+      this.response.setException( t );
     } else {
       this.response.setException( t );
     }
