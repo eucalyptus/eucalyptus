@@ -53,13 +53,12 @@ import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
-
 import javax.management.DynamicMBean;
+import javax.management.InstanceNotFoundException;
 import javax.management.JMException;
 import javax.management.MBeanRegistration;
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
-
 import net.sf.hajdbc.Balancer;
 import net.sf.hajdbc.Database;
 import net.sf.hajdbc.DatabaseActivationListener;
@@ -83,7 +82,6 @@ import net.sf.hajdbc.local.LocalStateManager;
 import net.sf.hajdbc.sync.SynchronizationContextImpl;
 import net.sf.hajdbc.sync.SynchronizationStrategyBuilder;
 import net.sf.hajdbc.util.concurrent.CronThreadPoolExecutor;
-
 import org.jibx.runtime.BindingDirectory;
 import org.jibx.runtime.IMarshallingContext;
 import org.jibx.runtime.IUnmarshallingContext;
@@ -630,10 +628,7 @@ public abstract class AbstractDatabaseCluster<D> implements DatabaseCluster<D>, 
 				throw new IllegalStateException(Messages.getMessage(Messages.DATABASE_STILL_ACTIVE, id, this));
 			}
 	
-			try {
-        this.unregister(database);
-      } catch ( Exception ex ) {
-      }
+      this.unregister(database);
 			
 			this.databaseMap.remove(id);
 			
@@ -649,7 +644,10 @@ public abstract class AbstractDatabaseCluster<D> implements DatabaseCluster<D>, 
 			
 			if (this.server.isRegistered(name))
 			{
-				this.server.unregisterMBean(name);
+				try {
+          this.server.unregisterMBean(name);
+        } catch ( InstanceNotFoundException ex ) {
+        }
 			}
 		}
 		catch (JMException e)
