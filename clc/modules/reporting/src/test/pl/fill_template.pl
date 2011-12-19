@@ -13,7 +13,7 @@
 #
 # This scipt is used to _generate_ a perl script, which is then bundled within an image
 #  and run automatically upon image startup. This allows the test scripts to control what
-#  the image will do upon running it.
+#  the image will do upon running it. See: use_resources.template
 #
 # (c)2011, Eucalyptus Systems, Inc. All Rights Reserved.
 # author: tom.werges
