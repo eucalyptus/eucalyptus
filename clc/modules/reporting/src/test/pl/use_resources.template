@@ -5,10 +5,9 @@
 #  into a bundled image. The generated perl file is then executed from within the instance
 #  upon startup. The generated perl script writes random data to the local disk and to a
 #  mounted EBS volume, from within a running instance, in order to simulate resource usage
-#  for that instance. The reason we use a template is to overwrite the constants at the
-#  top of this file, and so generate different usage for different test images. This allows
-#  the test framework to control how much usage will be incurred by the various test
-#  instances.
+#  for that instance. The reason we use a template is to allow the test suite to modify the
+#  amount of resources the perl script will use, by overwriting the constants near the top
+#  of this file.
 #
 # This template is converted into a perl file using the fill_template.pl script.
 #
