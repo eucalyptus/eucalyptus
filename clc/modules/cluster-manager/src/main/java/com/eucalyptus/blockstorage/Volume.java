@@ -175,7 +175,7 @@ public class Volume extends UserMetadata<State> implements VolumeMetadata {
   }
   
   public Integer getSize( ) {
-    return size;
+    return this.size;
   }
   
   public String getScName( ) {

@@ -212,7 +212,7 @@ public class VmControl {
           if ( instanceMap.put( v.getReservationId( ), VmInstances.transform( v ) ) && !reservations.containsKey( v.getReservationId( ) ) ) {
             reservations.put( v.getReservationId( ), new ReservationInfoType( v.getReservationId( ), v.getOwner( ).getAccountNumber( ), v.getNetworkNames( ) ) );
           }
-          db.commit( );
+          db.rollback( );
         } catch ( Exception ex ) {
           Logs.exhaust( ).error( ex, ex );
           db.rollback( );
@@ -284,25 +284,27 @@ public class VmControl {
                   oldState = newState = VmState.TERMINATED.getName( );
                   VmInstances.delete( vm );
                 }
+                results.add( new TerminateInstancesItemType( instanceId, oldCode, oldState, newCode, newState ) );
               } catch ( final TerminatedInstanceException e ) {
                 oldCode = newCode = VmState.TERMINATED.getCode( );
                 oldState = newState = VmState.TERMINATED.getName( );
                 VmInstances.delete( instanceId );
+                results.add( new TerminateInstancesItemType( instanceId, oldCode, oldState, newCode, newState ) );
               } catch ( final NoSuchElementException e ) {
-                     }
-                   results.add( new TerminateInstancesItemType( instanceId, oldCode, oldState, newCode, newState ) );
-                   db.commit( );
-                 } catch ( final TransactionException e ) {
-                   db.rollback( );
-                 } catch ( final NoSuchElementException e ) {
-                   db.rollback( );
-                 }
-               } catch ( Exception ex ) {
-                 Logs.exhaust( ).error( ex, ex );
-                 db.rollback( );
-               }
-               return true;
-             }
+                LOG.debug( "Ignoring terminate request for non-existant instance: " + instanceId );
+              }
+              db.commit( );
+            } catch ( final TransactionException e ) {
+              db.rollback( );
+            } catch ( final NoSuchElementException e ) {
+              db.rollback( );
+            }
+          } catch ( Exception ex ) {
+            Logs.exhaust( ).error( ex, ex );
+            db.rollback( );
+          }
+          return true;
+        }
       } );
       reply.set_return( !reply.getInstancesSet( ).isEmpty( ) );
       return reply;

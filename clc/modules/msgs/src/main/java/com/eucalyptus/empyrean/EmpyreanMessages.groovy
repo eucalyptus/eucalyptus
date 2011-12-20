@@ -123,6 +123,10 @@ public class ServiceStatusType extends EucalyptusData {
   Integer localEpoch;
   ArrayList<String> details = new ArrayList<String>( );
   ArrayList<ServiceStatusDetail> statusDetails = new ArrayList<ServiceStatusDetail>( );
+  @Override
+  public String toString( ) {
+    return "${this.serviceId.fullName} ${this.localState} ${this.localEpoch} ${this.statusDetails}";
+  }
 }
 public class ServiceStatusDetail extends EucalyptusData {
   String   severity;
@@ -133,6 +137,10 @@ public class ServiceStatusDetail extends EucalyptusData {
   String   serviceHost;
   String   stackTrace;
   String   timestamp;
+  @Override
+  public String toString( ) {
+    return "${this.timestamp} ${this.severity} ${this.serviceFullName} ${this.serviceName} ${this.serviceHost} ${this.message}";
+  }
 }
 public class DescribeServicesType extends ServiceTransitionType {
   Boolean listAll;

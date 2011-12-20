@@ -7,6 +7,7 @@ import java.net.URL;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.ResourceBundle;
+import java.util.concurrent.Callable;
 import org.apache.log4j.Appender;
 import org.apache.log4j.ConsoleAppender;
 import org.apache.log4j.Level;
@@ -19,16 +20,16 @@ import org.apache.log4j.spi.LoggerRepository;
 import org.apache.log4j.spi.LoggingEvent;
 import com.eucalyptus.bootstrap.SystemBootstrapper;
 import com.eucalyptus.scripting.Groovyness;
-import com.eucalyptus.scripting.ScriptExecutionFailedException;
 import com.eucalyptus.system.BaseDirectory;
 import com.eucalyptus.system.EucaLayout;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.LogUtil;
 import com.google.common.base.Joiner;
-import com.google.common.base.Objects;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 
 public class Logs {
-  private static Logger                LOG                     = Logger.getLogger( Logs.class );
+  private static Logger       LOG                     = Logger.getLogger( Logs.class );
   /**
    * <pre>
    *   <appender name="cloud-cluster" class="org.apache.log4j.RollingFileAppender">
@@ -52,28 +53,25 @@ public class Logs {
    * </pre>
    */
   
-  private static final ConsoleAppender console                 = new ConsoleAppender( new EucaLayout( ), "System.out" ) {
-                                                                 {
-                                                                   this.setThreshold( Priority.toPriority( System.getProperty( "euca.log.level" ),
-                                                                                                           Priority.INFO ) );
-                                                                   this.setName( "console" );
-                                                                   this.setImmediateFlush( false );
-                                                                   this.setFollow( false );
-                                                                 }
-                                                               };
-  private static final String          DEFAULT_LOG_LEVEL       = ( ( System.getProperty( "euca.log.level" ) == null )
-                                                                 ? "INFO"
-                                                                 : System.getProperty( "euca.log.level" ).toUpperCase( ) );
-  private static final String          DEFAULT_LOG_PATTERN     = "%d{EEE MMM d HH:mm:ss yyyy} %5p [%c{1}:%t] %m%n";
-  private static final String          DEFAULT_LOG_MAX_BACKUPS = "25";
-  private static final String          DEFAULT_LOG_MAX_SIZE    = "10MB";
+  private static final String DEFAULT_LOG_PATTERN     = "%d{EEE MMM d HH:mm:ss yyyy} %5p [%c{1}:%t] %m%n";
+  private static final String DEBUG_LOG_PATTERN       = "%d{EEE MMM d HH:mm:ss yyyy} %5p [%c{1}:%t] [%C.%M(%F):%L] %m%n";
+  private static final String DEFAULT_LOG_MAX_BACKUPS = "25";
+  private static final String DEFAULT_LOG_MAX_SIZE    = "10MB";
   
   private enum LogProps {
-    threshold, pattern, filesize, maxbackups;
+    threshold,
+    pattern,
+    filesize,
+    maxbackups;
   }
   
   private enum Appenders {
-    OUTPUT, ERROR, EXHAUST, CLUSTER, DEBUG, BOOTSTRAP;
+    OUTPUT,
+    ERROR,
+    EXHAUST,
+    CLUSTER,
+    DEBUG,
+    BOOTSTRAP;
     private final String  prop;
     private final String  threshold;
     private final String  pattern;
@@ -84,7 +82,7 @@ public class Logs {
     
     Appenders( ) {
       this.prop = "euca.log." + this.name( ).toLowerCase( ) + ".";
-      this.threshold = this.getProperty( LogProps.threshold, DEFAULT_LOG_LEVEL ).toUpperCase( );
+      this.threshold = this.getProperty( LogProps.threshold, LOG_LEVEL.get( ).level( ) ).toUpperCase( );
       this.pattern = this.getProperty( LogProps.pattern, DEFAULT_LOG_PATTERN );
       this.backups = Integer.parseInt( this.getProperty( LogProps.maxbackups, DEFAULT_LOG_MAX_BACKUPS ) );
       this.fileSize = this.getProperty( LogProps.filesize, DEFAULT_LOG_MAX_SIZE );
@@ -93,8 +91,8 @@ public class Logs {
     
     private String getProperty( final LogProps p, final String defaultValue ) {
       return ( System.getProperty( this.prop + p.name( ) ) == null )
-        ? defaultValue
-        : System.getProperty( this.prop + p.name( ) );
+                                                                    ? defaultValue
+                                                                    : System.getProperty( this.prop + p.name( ) );
     }
     
     public String getAppenderName( ) {
@@ -103,22 +101,30 @@ public class Logs {
     
     public Appender getAppender( ) throws IOException {
       return ( this.appender = ( this.appender != null )
-        ? this.appender
-        : new RollingFileAppender( new PatternLayout( this.pattern ), this.fileName, true ) {
-          {
-            this.setImmediateFlush( false );
-            this.setMaxBackupIndex( Appenders.this.backups );
-            this.setMaxFileSize( Appenders.this.fileSize );
-            this.setName( Appenders.this.getAppenderName( ) );
-            this.setThreshold( Priority.toPriority( Appenders.this.threshold ) );
+                                                        ? this.appender
+                                                        : new RollingFileAppender( new PatternLayout( this.pattern ), this.fileName, true ) {
+                                                          {
+                                                            this.setImmediateFlush( false );
+                                                            this.setMaxBackupIndex( Appenders.this.backups );
+                                                            this.setMaxFileSize( Appenders.this.fileSize );
+                                                            this.setName( Appenders.this.getAppenderName( ) );
+                                                            this.setThreshold( Priority.toPriority( Appenders.this.threshold ) );
 //            setBufferedIO( true );
 //            setBufferSize( 1024 );
-          }
-        } );
+                                                          }
+                                                        } );
     }
   }
   
   public static class LogConfigurator implements Configurator {
+    private static final ConsoleAppender console = new ConsoleAppender( new EucaLayout( ), "System.out" ) {
+                                                   {
+                                                     this.setThreshold( Priority.toPriority( LOG_LEVEL.get( ).level( ), Priority.INFO ) );
+                                                     this.setName( "console" );
+                                                     this.setImmediateFlush( false );
+                                                     this.setFollow( false );
+                                                   }
+                                                 };
     
     @Override
     public void doConfigure( final URL arg0, final LoggerRepository arg1 ) {
@@ -126,10 +132,6 @@ public class Logs {
     }
     
   }
-  
-  private static boolean      IS_EXTREME = "EXTREME".equals( System.getProperty( "euca.log.level" ).toUpperCase( ) );
-  private static boolean      IS_TRACE   = isExtrrreeeme( ) || "TRACE".equals( System.getProperty( "euca.log.level" ).toUpperCase( ) );
-  private static boolean      IS_DEBUG   = isExtrrreeeme( ) || IS_TRACE || "DEBUG".equals( System.getProperty( "euca.log.level" ).toUpperCase( ) );
   
   private static final Logger nullLogger = new Logger( "/dev/null" ) {
                                            
@@ -290,19 +292,11 @@ public class Logs {
                                          };
   
   public static Logger extreme( ) {
-    if ( isExtrrreeeme( ) ) {
-      return Logger.getLogger( "EXTREME" );
-    } else {
-      return nullLogger;
-    }
+    return LogLevel.EXTREME.logger( );
   }
   
   public static Logger exhaust( ) {
-    if ( isExtrrreeeme( ) ) {
-      return Logger.getLogger( "EXHAUST" );
-    } else {
-      return nullLogger;
-    }
+    return LogLevel.EXHAUST.logger( );
   }
   
   public static Logger bootstrap( ) {
@@ -310,16 +304,8 @@ public class Logs {
   }
   
   public static void init( ) {
-    if ( Logs.isExtrrreeeme( ) ) {
-      System.setProperty( "euca.log.level", "TRACE" );
-      System.setProperty( "euca.exhaust.level", "TRACE" );
-      System.setProperty( "euca.log.exhaustive", "TRACE" );
-      System.setProperty( "euca.log.exhaustive.cc", "TRACE" );
-      System.setProperty( "euca.log.exhaustive.user", "TRACE" );
-      System.setProperty( "euca.log.exhaustive.db", "TRACE" );
-      System.setProperty( "euca.log.exhaustive.external", "TRACE" );
-      System.setProperty( "euca.log.exhaustive.user", "TRACE" );
-    }//    System.setProperty( "log4j.configurationClass", "com.eucalyptus.util.Logs.LogConfigurator" );
+    logLevel.get( );
+    //    System.setProperty( "log4j.configurationClass", "com.eucalyptus.util.Logs.LogConfigurator" );
     try {
       final PrintStream oldOut = System.out;
       final ByteArrayOutputStream bos = new ByteArrayOutputStream( );
@@ -368,20 +354,138 @@ public class Logs {
     }
   }
   
-  public static void no( final boolean eXTREME ) {
-    IS_EXTREME = eXTREME;
+  private static LogLevel LOG_LEVEL = LogLevel.INFO;
+  
+  enum LogLevel implements Callable<Boolean> {
+    EXHAUST {
+      @Override
+      String level( ) {
+        return TRACE.name( );
+      }
+      
+      @Override
+      String exhaustLevel( ) {
+        return level( );
+      }
+    },
+    EXTREME {
+      
+      @Override
+      String level( ) {
+        return TRACE.name( );
+      }
+      
+      @Override
+      String exhaustLevel( ) {
+        return level( );
+      }
+      
+      @Override
+      public String pattern( ) {
+        return DEBUG_LOG_PATTERN;
+      }
+      
+    },
+    TRACE {
+      @Override
+      public String pattern( ) {
+        return DEBUG_LOG_PATTERN;
+      }
+      
+    },
+    DEBUG {
+      @Override
+      public String pattern( ) {
+        return DEBUG_LOG_PATTERN;
+      }
+    },
+    INFO,
+    WARN,
+    ERROR,
+    FATAL;
+    private static final String PROP_LOG_PATTERN = "euca.log.pattern";
+    private static final String PROP_LOG_LEVEL   = "euca.log.level";
+    private final Logger        logger;
+    
+    /**
+     * 
+     */
+    LogLevel( ) {
+      this.logger = Logger.getLogger( this.name( ) );
+    }
+    
+    @Override
+    public Boolean call( ) {
+      return logLevel.get( ).ordinal( ) >= this.ordinal( );
+    }
+    
+    public Logger logger( ) {
+      if ( this.call( ) ) {
+        return this.logger;
+      } else {
+        return nullLogger;
+      }
+    }
+    
+    private LogLevel init( ) {
+      System.setProperty( PROP_LOG_LEVEL, this.level( ) );
+      System.setProperty( PROP_LOG_PATTERN, this.pattern( ) );
+      System.setProperty( "euca.exhaust.level", exhaustLevel( ) );
+      System.setProperty( "euca.log.exhaustive", exhaustLevel( ) );
+      System.setProperty( "euca.log.exhaustive.cc", exhaustLevel( ) );
+      System.setProperty( "euca.log.exhaustive.user", exhaustLevel( ) );
+      System.setProperty( "euca.log.exhaustive.db", exhaustLevel( ) );
+      System.setProperty( "euca.log.exhaustive.external", exhaustLevel( ) );
+      System.setProperty( "euca.log.exhaustive.user", exhaustLevel( ) );
+      return this;
+    }
+    
+    public String pattern( ) {
+      return DEFAULT_LOG_PATTERN;
+    }
+    
+    String level( ) {
+      return this.name( );
+    }
+    
+    String exhaustLevel( ) {
+      return this.ordinal( ) <= TRACE.ordinal( ) ? TRACE.name( )
+                                                : FATAL.name( );
+    }
+    
+    static LogLevel get( ) {
+      try {
+        return LogLevel.valueOf( System.getProperty( PROP_LOG_LEVEL ).toUpperCase( ) ).init( );
+      } catch ( IllegalArgumentException ex ) {
+        if ( EXTREME.name( ).equals( System.getProperty( PROP_LOG_LEVEL ).toUpperCase( ) ) ) {
+          return EXTREME.init( );
+        } else {
+          throw ex;
+        }
+      } catch ( NullPointerException ex ) {
+        return LogLevel.INFO.init( );
+      }
+    }
   }
+  
+  private static final Supplier<LogLevel> logLevel = Suppliers.memoize( new Supplier<LogLevel>( ) {
+                                                     
+                                                     @Override
+                                                     public LogLevel get( ) {
+                                                       return LogLevel.get( );
+                                                     }
+                                                   } );
   
   public static boolean isExtrrreeeme( ) {
-    return IS_EXTREME;
+    return LogLevel.EXTREME.call( );
   }
   
-  public static boolean isDesbug( ) {
-    return IS_DEBUG;
+  public static boolean isDebug( ) {
+    return LogLevel.DEBUG.call( );
   }
   
   public static boolean isTrace( ) {
-    return IS_TRACE;
+    return LogLevel.TRACE.call( );
   }
   
   public static String dump( final Object o ) {
@@ -392,8 +496,8 @@ public class Logs {
       return ret;
     } else {
       return ( o == null
-        ? Threads.currentStackFrame( 1 ) + ": null"
-        : "" + o );
+                        ? Threads.currentStackFrame( 1 ) + ": null"
+                        : "" + o );
     }
   }
   

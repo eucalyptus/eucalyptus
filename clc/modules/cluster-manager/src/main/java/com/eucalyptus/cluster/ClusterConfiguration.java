@@ -73,6 +73,7 @@ import javax.persistence.Transient;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
+import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.component.ComponentId.ComponentPart;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.config.ComponentConfiguration;
@@ -197,7 +198,7 @@ public class ClusterConfiguration extends ComponentConfiguration implements Seri
   
   @Override
   public Boolean isHostLocal( ) {
-    return true;
+    return BootstrapArgs.isCloudController( );
   }
   
   public String getNetworkMode( ) {

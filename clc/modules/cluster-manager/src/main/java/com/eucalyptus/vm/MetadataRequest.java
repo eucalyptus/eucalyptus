@@ -63,20 +63,18 @@
 
 package com.eucalyptus.vm;
 
-import java.util.NoSuchElementException;
-
 import javax.persistence.EntityTransaction;
-
 import org.apache.log4j.Logger;
+import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.cluster.ClusterConfiguration;
+import com.eucalyptus.component.Components;
+import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.entities.Entities;
-import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.records.Logs;
-import com.eucalyptus.util.EucalyptusCloudException;
 
 public class MetadataRequest {
-  private static Logger LOG = Logger.getLogger( MetadataRequest.class );
+  private static Logger    LOG = Logger.getLogger( MetadataRequest.class );
   private final String     requestIp;
   private final String     metadataName;
   private final String     localPath;
@@ -99,20 +97,22 @@ public class MetadataRequest {
         this.localPath = "";
       }
       VmInstance findVm = null;
-      try {
-        findVm = VmInstances.lookupByPublicIp( requestIp );
-      } catch ( Exception ex2 ) {
+      if ( !Databases.isVolatile( ) ) {
         try {
-          findVm = VmInstances.lookupByPrivateIp( requestIp );
-        } catch ( Exception ex ) {
-          Logs.exhaust( ).error( ex );
+          findVm = VmInstances.lookupByPublicIp( requestIp );
+        } catch ( Exception ex2 ) {
+          try {
+            findVm = VmInstances.lookupByPrivateIp( requestIp );
+          } catch ( Exception ex ) {
+            Logs.exhaust( ).error( ex );
+          }
         }
-      }
+      } 
       this.vm = findVm;
     } finally {
       LOG.debug( ( this.vm != null
-        ? "Instance"
-        : "External" )
+                                  ? "Instance"
+                                  : "External" )
                  + " Metadata: requestIp=" + this.requestIp
                  + " metadataName=" + this.metadataName
                  + " metadataPath=" + this.localPath
@@ -150,25 +150,32 @@ public class MetadataRequest {
   }
   
   public boolean isSystem( ) {
-      
-      ClusterConfiguration cConfig = new ClusterConfiguration();  
-      cConfig.setSourceHostName(this.requestIp);
+    for ( ServiceConfiguration config : Components.lookup( ClusterController.class ).services( ) ) {
+      if (  config.getHostName( ).equals( this.requestIp ) ) {
+        return true;
+      } else if ( config instanceof ClusterConfiguration && ( ( ClusterConfiguration ) config ).getSourceHostName( ).equals( this.requestIp ) ) {
+        return true;
+      }
+    }
+    if ( !Databases.isVolatile( ) ) {
+      ClusterConfiguration cConfig = new ClusterConfiguration( );
+      cConfig.setSourceHostName( this.requestIp );
       EntityTransaction db = Entities.get( ClusterConfiguration.class );
-    
-      try {
-	  ClusterConfiguration ccAddresses = Entities.uniqueResult(cConfig);
-	  if (ccAddresses.getSourceHostName().equals(this.requestIp) 
-		  || ccAddresses.getHostName().equals(this.requestIp)) {
-	      db.commit();
-	      return true;
-	  } else {
-	      db.commit();
-	  }
-      } catch (Exception e) {
-	  LOG.debug("Unable to find Cluster Controller request addresss.", e);
-	  db.rollback();
-      } 
       
-      return false;
+      try {
+        ClusterConfiguration ccAddresses = Entities.uniqueResult( cConfig );
+        if ( ccAddresses.getSourceHostName( ).equals( this.requestIp )
+             || ccAddresses.getHostName( ).equals( this.requestIp ) ) {
+          db.commit( );
+          return true;
+        } else {
+          db.commit( );
+        }
+      } catch ( Exception e ) {
+        LOG.debug( "Unable to find Cluster Controller request addresss.", e );
+        db.rollback( );
+      }
+    }
+    return false;
   }
 }

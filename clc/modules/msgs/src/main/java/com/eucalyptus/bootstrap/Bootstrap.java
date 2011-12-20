@@ -62,16 +62,14 @@
  */
 package com.eucalyptus.bootstrap;
 
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.Callable;
-import java.util.concurrent.CompletionService;
 import java.util.concurrent.ConcurrentSkipListSet;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorCompletionService;
-import java.util.concurrent.Future;
-import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.Component;
@@ -79,20 +77,20 @@ import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.ServiceRegistrationException;
-import com.eucalyptus.component.ServiceTransitions;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.scripting.Groovyness;
+import com.eucalyptus.system.Ats;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.system.Threads.ThreadPool;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.ws.EmpyreanService;
 import com.google.common.base.Joiner;
+import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
@@ -136,6 +134,33 @@ import com.google.common.collect.Lists;
  */
 public class Bootstrap {
   static Logger LOG = Logger.getLogger( Bootstrap.class );
+  
+  @Target( { ElementType.TYPE,
+      ElementType.FIELD } )
+  @Retention( RetentionPolicy.RUNTIME )
+  public @interface Discovery {
+    /**
+     * Filter arguments to {@link Predicate#apply(Object argument)} by enforcing that {@link
+     * Iterables#any(Iterable #value( ), Predicate Classes#assignable())} is true (where assignable
+     * checks {@link Class#isAssignableFrom(Class argument)}) is {@code true} for the
+     * {@code argument}
+     * 
+     * @return
+     */
+    Class[] value( ) default {};
+    
+    double priority( ) default 0.99d;
+
+    /**
+     * Filter arguments to {@link Predicate#apply(Object argument)} by enforcing that {@link
+     * Iterables#any(Iterable #annotations( ), Predicate Classes#assignable())} is true (where assignable
+     * checks {@link Ats#from(Object argument)#has(Class #annotations( ))}) is {@code true} for the
+     * {@code argument}
+     * 
+     * @return
+     */
+    Class[] annotations( );
+  }
   
   /**
    * Mechanism for setting up and progressing through the sequence of stages the system goes through
@@ -231,9 +256,9 @@ public class Bootstrap {
       if ( !this.bootstrappers.isEmpty( ) ) {
         LOG.info( LogUtil.header( "Bootstrap stage: " + this.name( )
                                   + "."
-                                  + ( Bootstrap.loading
-                                    ? "load()"
-                                    : "start()" ) ) );
+                                  + ( !Bootstrap.starting
+                                                         ? "load()"
+                                                         : "start()" ) ) );
         LOG.debug( Joiner.on( " " ).join( this.name( ) + " bootstrappers:  ", this.bootstrappers ) );
       }
     }
@@ -438,8 +463,8 @@ public class Bootstrap {
       }
     }
     int currOrdinal = currentStage != null
-      ? currentStage.ordinal( )
-      : -1;
+                                          ? currentStage.ordinal( )
+                                          : -1;
     for ( int i = currOrdinal + 1; i <= Stage.Final.ordinal( ); i++ ) {
       currentStage = Stage.values( )[i];
       if ( currentStage.bootstrappers.isEmpty( ) ) {
@@ -455,7 +480,7 @@ public class Bootstrap {
   public static Boolean isLoaded( ) {
     return starting;
   }
-
+  
   public static Boolean isOperational( ) {
     return isFinished( ) && !isShuttingDown( );
   }
