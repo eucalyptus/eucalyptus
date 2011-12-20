@@ -413,6 +413,8 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
         } catch ( Exception ex ) {
           transitionCallback.fireException( ex );
         }
+      } else {
+        transitionCallback.fire( );
       }
     } finally {
       if ( !transitionCallback.isDone( ) ) {
