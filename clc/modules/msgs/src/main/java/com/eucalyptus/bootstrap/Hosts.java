@@ -606,15 +606,23 @@ public class Hosts {
         try {
           for ( final ComponentId c : ShouldLoadRemote.findDependentComponents( compClass, addr ) ) {
             try {
-              final ServiceConfiguration dependsConfig = ServiceConfigurations.lookupByName( c.getClass( ), addr.getHostAddress( ) );
-              Topology.destroy( dependsConfig ).get( );
-            } catch ( final Exception ex ) {
-              LOG.error( ex );
+              for ( final ServiceConfiguration s : Components.lookup( compClass ).services( ) ) {
+                try {
+                  if ( s.getHostName( ).equals( addr.getHostAddress( ) ) ) {
+                    Topology.destroy( s ).get( );
+                  }
+                } catch ( final Exception ex ) {
+                  LOG.error( ex );
+                  Logs.extreme( ).error( ex, ex );
+                }
+              }
+            } catch ( Exception ex ) {
               Logs.extreme( ).error( ex, ex );
             }
           }
         } catch ( final Exception ex ) {
-          LOG.error( ex, ex );
+          LOG.error( ex );
+          Logs.extreme( ).error( ex, ex );
           return false;
         }
         return true;

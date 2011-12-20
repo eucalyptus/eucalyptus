@@ -101,7 +101,7 @@ public class AsyncRequestHandler<Q extends BaseMessage, R extends BaseMessage> i
           public void operationComplete( final ChannelFuture future ) throws Exception {
             try {
               if ( future.isSuccess( ) ) {
-//TODO:GRZE: better logging here                LOG.debug( "Connected as: " + future.getChannel( ).getLocalAddress( ) );
+                Logs.extreme( ).debug( "Connected as: " + future.getChannel( ).getLocalAddress( ) );
                 final InetAddress localAddr = ( ( InetSocketAddress ) future.getChannel( ).getLocalAddress( ) ).getAddress( );
                 if ( !factory.getClass( ).getSimpleName( ).startsWith( "GatherLog" ) ) {
                   Topology.populateServices( config, AsyncRequestHandler.this.request.get( ) );
@@ -109,15 +109,6 @@ public class AsyncRequestHandler<Q extends BaseMessage, R extends BaseMessage> i
                 EventRecord.here( request.getClass( ), EventClass.SYSTEM_REQUEST, EventType.CHANNEL_OPEN, request.getClass( ).getSimpleName( ),
                                   request.getCorrelationId( ), serviceSocketAddress.toString( ), "" + future.getChannel( ).getLocalAddress( ),
                                   ""  + future.getChannel( ).getRemoteAddress( ) ).trace( );
-                future.getChannel( ).getCloseFuture( ).addListener( new ChannelFutureListener( ) {
-                  @Override
-                  public void operationComplete( final ChannelFuture future ) throws Exception {
-                    EventRecord.here( request.getClass( ), EventClass.SYSTEM_REQUEST, EventType.CHANNEL_CLOSED, request.getClass( ).getSimpleName( ),
-                                      request.getCorrelationId( ), serviceSocketAddress.toString( ), "" + future.getChannel( ).getLocalAddress( ),
-                                      ""  + future.getChannel( ).getRemoteAddress( ) ).trace( );
-                  }
-                } );
-                
                 future.getChannel( ).write( httpRequest ).addListener( new ChannelFutureListener( ) {
                   @Override
                   public void operationComplete( final ChannelFuture future ) throws Exception {
@@ -132,7 +123,7 @@ public class AsyncRequestHandler<Q extends BaseMessage, R extends BaseMessage> i
               }
             } catch ( final Exception ex ) {
               LOG.error( ex, ex );
-              AsyncRequestHandler.this.teardown( future.getCause( ) );
+              AsyncRequestHandler.this.teardown( ex );
             }
           }
         } );
@@ -190,6 +181,7 @@ public class AsyncRequestHandler<Q extends BaseMessage, R extends BaseMessage> i
         }
 //REVIEW: this is likely not needed.        LOG.error( this.connectFuture.getCause( ).getMessage( ) );
       }
+      this.response.setException( t );
     } else {
       this.response.setException( t );
     }
@@ -272,103 +264,8 @@ public class AsyncRequestHandler<Q extends BaseMessage, R extends BaseMessage> i
   }
   
   private void exceptionCaught( final ChannelHandlerContext ctx, final ExceptionEvent e ) {
+    Logs.extreme( ).error( e, e.getCause( ) );
     this.teardown( e.getCause( ) );
-  }
-  
-  private static class ChannelUtil {
-    public static Long              CLIENT_IDLE_TIMEOUT_SECS       = 4 * 60l;
-    public static Long              CLUSTER_IDLE_TIMEOUT_SECS      = 4 * 60l;
-    public static Long              CLUSTER_CONNECT_TIMEOUT_MILLIS = 2000l;
-    public static Long              PIPELINE_READ_TIMEOUT_SECONDS  = 20l;
-    public static Long              PIPELINE_WRITE_TIMEOUT_SECONDS = 20l;
-    public static Integer           CLIENT_POOL_MAX_THREADS        = 40;
-    public static Long              CLIENT_POOL_MAX_MEM_PER_CONN   = 1048576l;
-    public static Long              CLIENT_POOL_TOTAL_MEM          = 20 * 1024 * 1024l;
-    public static Long              CLIENT_POOL_TIMEOUT_MILLIS     = 500l;
-    
-    private static Lock             canHas                         = new ReentrantLock( );
-    private static HashedWheelTimer timer                          = new HashedWheelTimer( );
-    private static ExecutorService  clientWorkerThreadPool;
-    private static ExecutorService  clientBossThreadPool;
-    private static ChannelFactory   clientSocketFactory;
-    
-    static {
-      canHas.lock( );
-      try {
-        clientWorkerThreadPool = ChannelUtil.getClientWorkerThreadPool( );
-        clientBossThreadPool = ChannelUtil.getClientBossThreadPool( );
-        clientSocketFactory = ChannelUtil.getClientChannelFactory( );
-      } finally {
-        canHas.unlock( );
-      }
-    }
-    
-    public static ChannelPipeline addPipelineMonitors( final ChannelPipeline pipeline, final int i ) {
-      pipeline.addLast( "idlehandler", new IdleStateHandler( ChannelUtil.timer, i, i, i ) );
-      pipeline.addLast( "readTimeout", new ReadTimeoutHandler( ChannelUtil.timer, i, TimeUnit.SECONDS ) );
-      pipeline.addLast( "writeTimeout", new WriteTimeoutHandler( ChannelUtil.timer, i, TimeUnit.SECONDS ) );
-      return pipeline;
-    }
-    
-    private static ExecutorService getClientWorkerThreadPool( ) {
-      canHas.lock( );
-      try {
-        if ( clientWorkerThreadPool == null ) {
-          LOG.info( LogUtil.subheader( "Creating client worker thread pool." ) );
-          LOG.info( String.format( "-> Pool threads:              %8d", CLIENT_POOL_MAX_THREADS ) );
-          LOG.info( String.format( "-> Pool timeout:              %8d ms", CLIENT_POOL_TIMEOUT_MILLIS ) );
-          LOG.info( String.format( "-> Max memory per connection: %8.2f MB", CLIENT_POOL_MAX_MEM_PER_CONN / ( 1024f * 1024f ) ) );
-          LOG.info( String.format( "-> Max total memory:          %8.2f MB", CLIENT_POOL_TOTAL_MEM / ( 1024f * 1024f ) ) );
-          clientWorkerThreadPool = new OrderedMemoryAwareThreadPoolExecutor( CLIENT_POOL_MAX_THREADS, CLIENT_POOL_MAX_MEM_PER_CONN, CLIENT_POOL_TOTAL_MEM,
-                                                                             CLIENT_POOL_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS );
-        }
-      } finally {
-        canHas.unlock( );
-      }
-      return clientWorkerThreadPool;
-    }
-    
-    private static ExecutorService getClientBossThreadPool( ) {
-      canHas.lock( );
-      try {
-        if ( clientBossThreadPool == null ) {
-          LOG.info( LogUtil.subheader( "Creating client boss thread pool." ) );
-          LOG.info( String.format( "-> Pool threads:              %8d", CLIENT_POOL_MAX_THREADS ) );
-          LOG.info( String.format( "-> Pool timeout:              %8d ms", CLIENT_POOL_TIMEOUT_MILLIS ) );
-          LOG.info( String.format( "-> Max memory per connection: %8.2f MB", CLIENT_POOL_MAX_MEM_PER_CONN / ( 1024f * 1024f ) ) );
-          LOG.info( String.format( "-> Max total memory:          %8.2f MB", CLIENT_POOL_TOTAL_MEM / ( 1024f * 1024f ) ) );
-          clientBossThreadPool = new OrderedMemoryAwareThreadPoolExecutor( CLIENT_POOL_MAX_THREADS, CLIENT_POOL_MAX_MEM_PER_CONN, CLIENT_POOL_TOTAL_MEM,
-                                                                           CLIENT_POOL_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS );
-        }
-      } finally {
-        canHas.unlock( );
-      }
-      return clientBossThreadPool;
-    }
-    
-    public static NioBootstrap getClientBootstrap( final ChannelPipelineFactory factory ) {
-      final NioBootstrap bootstrap = new NioBootstrap( ChannelUtil.getClientChannelFactory( ) );//TODO: pass port host, etc here.
-      bootstrap.setPipelineFactory( factory );
-      bootstrap.setOption( "tcpNoDelay", false );
-      bootstrap.setOption( "keepAlive", false );
-      bootstrap.setOption( "reuseAddress", false );
-      bootstrap.setOption( "connectTimeoutMillis", 3000 );
-      return bootstrap;
-    }
-    
-    private static ChannelFactory getClientChannelFactory( ) {
-      canHas.lock( );
-      try {
-        if ( clientSocketFactory == null ) {
-          clientSocketFactory = new NioClientSocketChannelFactory( ChannelUtil.getClientBossThreadPool( ), ChannelUtil.getClientWorkerThreadPool( ),
-                                                                   CLIENT_POOL_MAX_THREADS );
-        }
-      } finally {
-        canHas.unlock( );
-      }
-      return clientSocketFactory;
-    }
-    
   }
   
 }

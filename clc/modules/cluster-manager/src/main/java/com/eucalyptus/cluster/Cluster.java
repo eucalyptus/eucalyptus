@@ -413,6 +413,8 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
         } catch ( Exception ex ) {
           transitionCallback.fireException( ex );
         }
+      } else {
+        transitionCallback.fire( );
       }
     } finally {
       if ( !transitionCallback.isDone( ) ) {
@@ -899,9 +901,9 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
       Thread.currentThread( ).interrupt( );
     } catch ( final Exception ex ) {
       Logs.exhaust( ).debug( ex, ex );
-      throw new ServiceRegistrationException( "Failed to call disable() on cluster " + this.configuration
-                                              + " because of: "
-                                              + ex.getMessage( ), ex );
+//      throw new ServiceRegistrationException( "Failed to call disable() on cluster " + this.configuration
+//                                              + " because of: "
+//                                              + ex.getMessage( ), ex );
     } finally {
       try {
         Clusters.getInstance( ).disable( this.getName( ) );
@@ -1134,7 +1136,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
   public void fireEvent( final Event event ) {
     if ( !Bootstrap.isFinished( ) ) {
       LOG.info( this.getFullName( ) + " skipping clock event because bootstrap isn't finished" );
-    } else if ( event instanceof Hertz ) {
+    } else if ( Hosts.isCoordinator( ) && event instanceof Hertz ) {
       this.fireClockTick( ( Hertz ) event );
     }
   }
