@@ -813,7 +813,7 @@ public class Databases {
           return;
         }
       }
-      if ( !isSynchronized( ) ) {
+      if ( isVolatile( ) ) {
         throw new DatabaseStateException( "Transaction begin failed due to concurrent database synchronization: " + Hosts.listDatabases( )
                                           + " for caller:\n"
                                           + Joiner.on( "\n\tat " ).join( stack ) );
