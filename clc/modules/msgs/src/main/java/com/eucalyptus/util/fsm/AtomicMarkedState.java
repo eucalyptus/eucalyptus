@@ -180,12 +180,17 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
       } else {
         this.state.set( tr.getTransitionRule( ).getToState( ), false );
       }
-      EventRecord.caller( this.getClass( ), EventType.TRANSITION_FUTURE,
-                          "set(" + this.parent.toString( )
-                              + ":"
-                              + this.parent.getClass( ).getCanonicalName( )
-                              + ")" ).trace( );
       tr.getTransitionFuture( ).set( this.parent );
+      try {
+        EventRecord.caller( this.getClass( ), EventType.TRANSITION_FUTURE,
+                            "set(" + this.parent.toString( )
+                                + ":"
+                                + this.parent.getClass( ).getCanonicalName( )
+                                + ")" ).trace( );
+      } catch ( Exception ex ) {
+        LOG.error( ex );
+        Logs.extreme( ).error( ex, ex );
+      }
     }
   }
   

@@ -392,13 +392,17 @@ public class ServiceTransitions {
     
     @Override
     public void leave( ServiceConfiguration parent, Completion transitionCallback ) {
-      EventRecord.here( ServiceBuilder.class,
-                        EventType.SERVICE_TRANSITION,
-                        this.name( ),
-                        parent.lookupState( ).toString( ),
-                        parent.getFullName( ).toString( ),
-                        parent.toString( ) ).exhaust( );
-      ServiceTransitions.processTransition( parent, transitionCallback, this );
+      try {
+        EventRecord.here( ServiceBuilder.class,
+          EventType.SERVICE_TRANSITION,
+          this.name( ),
+          parent.lookupState( ).toString( ),
+          parent.getFullName( ).toString( ),
+          parent.toString( ) ).exhaust( );
+        ServiceTransitions.processTransition( parent, transitionCallback, this );
+      } catch ( Exception ex ) {
+        transitionCallback.fireException( ex );
+      }
     }
     
     @Override
