@@ -1136,7 +1136,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
   public void fireEvent( final Event event ) {
     if ( !Bootstrap.isFinished( ) ) {
       LOG.info( this.getFullName( ) + " skipping clock event because bootstrap isn't finished" );
-    } else if ( event instanceof Hertz ) {
+    } else if ( Hosts.isCoordinator( ) && event instanceof Hertz ) {
       this.fireClockTick( ( Hertz ) event );
     }
   }
