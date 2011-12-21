@@ -102,6 +102,7 @@ permission notice:
 #define MONITORING_PERIOD (5)
 #define MAX_CREATE_TRYS 5
 #define CREATE_TIMEOUT_SEC 5
+#define PER_INSTANCE_BUFFER_MB 20 // we reserve this much extra room (in MB) for kernel, ramdisk, and metadata file overhead per instance
 
 #ifdef EUCA_COMPILE_TIMESTAMP
 static char * compile_timestamp_str = EUCA_COMPILE_TIMESTAMP;
@@ -1164,8 +1165,10 @@ static int init (void)
         }
        
         // record the work-space limit for max_disk 
-        nc_state.disk_max = (long long)(work_size_mb / MB_PER_DISK_UNIT);
-
+        {
+            long long work_size_gb = (long long)(work_size_mb / MB_PER_DISK_UNIT); // NOTE: also max number of instances per NC
+            nc_state.disk_max = ((long long)work_size_mb - (work_size_gb * PER_INSTANCE_BUFFER_MB)) / MB_PER_DISK_UNIT;
+        }
         logprintfl (EUCAINFO, "disk space for instances: %s/work\n", instance_path);
         logprintfl (EUCAINFO, "                          %06lldMB limit (%.1f%% of the file system)\n", 
                     work_size_mb, 

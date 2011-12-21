@@ -1913,7 +1913,7 @@ blockblob * blockblob_open ( blobstore * bs,
         // a bit of a hack: HOLLOW blobs skip the blobstore limit check upon creation
         if (flags & BLOBSTORE_FLAG_HOLLOW) {
             bb->is_hollow = TRUE;
-            if (write_blockblob_metadata_path (BLOCKBLOB_PATH_HOLLOW, bs, bb->id, "this block is hollow"))
+            if (write_blockblob_metadata_path (BLOCKBLOB_PATH_HOLLOW, bs, bb->id, "this blob is hollow\n"))
                 goto clean;
 
         } else { // enforce blobstore limits
