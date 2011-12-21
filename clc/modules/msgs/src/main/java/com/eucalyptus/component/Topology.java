@@ -63,7 +63,6 @@
 
 package com.eucalyptus.component;
 
-import java.net.InetAddress;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -74,14 +73,14 @@ import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.component.Component.State;
-import com.eucalyptus.component.Faults.CheckException;
-import com.eucalyptus.component.Topology.ServiceString;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.empyrean.ServiceId;
 import com.eucalyptus.empyrean.ServiceTransitionType;
@@ -94,7 +93,6 @@ import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Internets;
-import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.util.async.Futures;
 import com.google.common.base.Function;
@@ -165,9 +163,15 @@ public class Topology {
   
   private enum TopologyTimer implements EventListener<ClockTick> {
     INSTANCE;
+    private static final AtomicInteger counter = new AtomicInteger( 0 );
+    
     @Override
     public void fireEvent( final ClockTick event ) {
-      Queue.INTERNAL.enqueue( RunChecks.INSTANCE );
+      if ( Hosts.isCoordinator( ) ) {
+        Queue.INTERNAL.enqueue( RunChecks.INSTANCE );
+      } else if ( counter.incrementAndGet( ) % 3 == 0 ) {
+        Queue.INTERNAL.enqueue( RunChecks.INSTANCE );
+      }
     }
     
   }
