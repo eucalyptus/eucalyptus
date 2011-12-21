@@ -606,6 +606,7 @@ public class ServiceTransitions {
           try {
             parent.lookupBootstrapper( ).check( );
             ServiceBuilders.lookup( parent.getComponentId( ) ).fireCheck( parent );
+            Faults.failstop( parent );
           } catch ( Exception ex ) {
             if ( Exceptions.isCausedBy( ex, CheckException.class ) ) {
               CheckException checkEx = Exceptions.findCause( ex, CheckException.class );
@@ -629,6 +630,7 @@ public class ServiceTransitions {
           try {
             parent.lookupBootstrapper( ).check( );
             ServiceBuilders.lookup( parent.getComponentId( ) ).fireCheck( parent );
+            Faults.failstop( parent );
           } catch ( Exception ex ) {
             if ( Exceptions.isCausedBy( ex, CheckException.class ) ) {
               CheckException checkEx = Exceptions.findCause( ex, CheckException.class );
