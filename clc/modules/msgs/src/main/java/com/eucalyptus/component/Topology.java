@@ -904,6 +904,12 @@ public class Topology {
       public ServiceConfiguration apply( final ServiceConfiguration config ) {
         if ( Faults.isFailstop( ) ) {
           throw new IllegalStateException( "Failed to ENABLE service " + config.getFullName( ) + " because the host is currently fail-stopped." );
+        } else if ( config.getComponentId( ).isManyToOnePartition( ) ) {
+          try {
+            return super.apply( config );
+          } catch ( final RuntimeException ex ) {
+            throw ex;
+          }
         } else if ( Topology.guard( ).tryEnable( config ) ) {
           try {
             return super.apply( config );
