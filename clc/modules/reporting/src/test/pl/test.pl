@@ -54,24 +54,6 @@ print "Using args: duration:$duration_secs write_interval:$write_interval users:
 
 
 #
-# Gather a single initrd file from /boot and copy it here.
-# This file is used only for the purpose of having something of known size
-# which is uncompressible and which we can upload to S3 and ebs.
-#
-my $initrd_file = "";
-opendir(BOOTDIR, "/boot") or die("couldn't open /boot");
-while (my $file = readdir(BOOTDIR)) {
-	if ($file =~ /initrd-.*img/) {
-		$initrd_file = $file;
-		last;
-	}
-}
-closedir(BOOTDIR) or die("couldn't close /boot");
-print "found file:$initrd_file\n";
-system("cp /boot/$initrd_file .") and die("couldn't copy /boot/$initrd_file to .");
-
-
-#
 # Terminate all prior instances which may be running
 #
 my @running_instances = ();
@@ -88,6 +70,9 @@ if ($#running_instances > -1) {
 
 
 #
+# TODO: This is silly. We'll bundle an image and pass it in.
+#  Where to bundle. simulate_usage.pl? Here?
+# Bundle image here.
 # Find a suitable image to run this test; if none was specified in the cmd-line args then
 #  gather an image using euca-describe-images
 #
@@ -106,8 +91,8 @@ print "using image:$image\n";
 #
 # Run simulate_usage, then check results
 #
-print "Executing:./simulate_usage.pl $initrd_file $num_users $num_users_per_account $num_instances_per_user $duration_secs $write_interval $image\n";
-my $output=`./simulate_usage.pl $initrd_file $num_users $num_users_per_account $num_instances_per_user $duration_secs $write_interval $image`;
+print "Executing:./simulate_usage.pl $num_users $num_users_per_account $num_instances_per_user $duration_secs $write_interval $image\n";
+my $output=`./simulate_usage.pl $num_users $num_users_per_account $num_instances_per_user $duration_secs $write_interval $image`;
 chomp($output);
 print "Found output:[$output]\n";
 print "Executing: ./check_db.pl $num_instances_per_user $duration_secs $initrd_file $write_interval $output\n";

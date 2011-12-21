@@ -14,6 +14,7 @@
 #   you can modify if you wish.
 #
 sub storage_usage_mb() { 2 }
+sub upload_file() { "random.dat" }
 
 
 #
