@@ -69,6 +69,7 @@ import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentMap;
 import javax.persistence.Column;
 import javax.persistence.EntityTransaction;
 import javax.persistence.EnumType;
@@ -94,20 +95,17 @@ import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.bootstrap.Hosts;
-import com.eucalyptus.component.Faults.CheckException;
-import com.eucalyptus.context.ServiceStateException;
 import com.eucalyptus.empyrean.ServiceStatusDetail;
 import com.eucalyptus.empyrean.ServiceStatusType;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.records.Logs;
-import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Function;
-import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 
 public class Faults {
   private static Logger LOG = Logger.getLogger( Faults.class );
@@ -562,8 +560,14 @@ public class Faults {
       }
     }
   }
-
+  
+  private static final ConcurrentMap<ServiceConfiguration, CheckException> failstopExceptions = Maps.newConcurrentMap( );
+  
   public static void failstop( ServiceConfiguration key, CheckException checkEx ) {
-    Hosts.LOG.warn( "FAILSTOP: " + key.getFullName( ) + "=> " + checkEx.getMessage( ) );
+    LOG.warn( "FAILSTOP: " + key.getFullName( ) + "=> " + checkEx.getMessage( ) );
+  }
+  
+  public static boolean isFailstop( ) {
+    return !failstopExceptions.isEmpty( );
   }
 }
