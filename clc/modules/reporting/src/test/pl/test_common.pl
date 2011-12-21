@@ -16,6 +16,7 @@
 sub storage_usage_mb() { 2 }
 sub upload_file() { "random.dat" }
 sub image_file() { "fedora.img" }
+sub injected_image_file() { "injected_image.img" }
 
 
 #
