@@ -70,29 +70,10 @@ if ($#running_instances > -1) {
 
 
 #
-# TODO: This is silly. We'll bundle an image and pass it in.
-#  Where to bundle. simulate_usage.pl? Here?
-# Bundle image here.
-# Find a suitable image to run this test; if none was specified in the cmd-line args then
-#  gather an image using euca-describe-images
-#
-if ($image eq "") {
-	foreach(split("\n",`euca-describe-images`)) {
-		my @fields = split("\\s+");
-		if ($fields[1] =~ /^emi-.*/) {
-			$image = $fields[1];
-			last;
-		}
-	}
-}
-print "using image:$image\n";
-
-
-#
 # Run simulate_usage, then check results
 #
-print "Executing:./simulate_usage.pl $num_users $num_users_per_account $num_instances_per_user $duration_secs $write_interval $image\n";
-my $output=`./simulate_usage.pl $num_users $num_users_per_account $num_instances_per_user $duration_secs $write_interval $image`;
+print "Executing:./simulate_usage.pl $num_users $num_users_per_account $num_instances_per_user $duration_secs $write_interval\n";
+my $output=`./simulate_usage.pl $num_users $num_users_per_account $num_instances_per_user $duration_secs $write_interval`;
 chomp($output);
 print "Found output:[$output]\n";
 print "Executing: ./check_db.pl $num_instances_per_user $duration_secs $initrd_file $write_interval $output\n";
