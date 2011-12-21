@@ -707,6 +707,7 @@ public class Topology {
       for ( final Component c : Components.list( ) ) {
         allServices.addAll( c.services( ) );
       }
+      Faults.flush( );
       List<ServiceConfiguration> checkedServices = submitTransitions( allServices, CheckServiceFilter.INSTANCE, SubmitCheck.INSTANCE );
       if ( !checkedServices.isEmpty( ) ) {
         Logs.extreme( ).debug( "CHECKED" + ": " + Joiner.on( "\n" + "CHECKED" + ": " ).join( Collections2.transform( checkedServices, ServiceString.INSTANCE ) ) );
