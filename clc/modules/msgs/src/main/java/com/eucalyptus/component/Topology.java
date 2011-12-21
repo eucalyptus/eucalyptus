@@ -714,16 +714,7 @@ public class Topology {
       }
       if ( Faults.isFailstop( ) ) {
         Hosts.failstop( );
-        for ( final Component c : Components.list( ) ) {
-          if ( c.hasLocalService( ) ) {
-            try {
-              SubmitDisable.INSTANCE.apply( c.getLocalServiceConfiguration( ) ).get( );
-            } catch ( Exception ex ) {
-              Exceptions.maybeInterrupted( ex );
-              LOG.error( ex, ex );
-            }
-          }
-        }
+        submitTransitions( allServices, CheckServiceFilter.INSTANCE, SubmitCheck.INSTANCE );
         return Lists.newArrayList( );
       } else if ( !Hosts.isCoordinator( ) ) {
         final Predicate<ServiceConfiguration> proceedToDisableFilter = Predicates.and( ServiceConfigurations.filterHostLocal( ),
