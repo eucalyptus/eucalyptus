@@ -85,6 +85,7 @@
 
 package com.eucalyptus.bootstrap;
 
+import java.lang.management.ManagementFactory;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -108,8 +109,12 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import javax.management.InstanceAlreadyExistsException;
+import javax.management.ObjectName;
+import javax.persistence.LockTimeoutException;
 import net.sf.hajdbc.Dialect;
 import net.sf.hajdbc.ForeignKeyConstraint;
 import net.sf.hajdbc.InactiveDatabaseMBean;
@@ -136,15 +141,20 @@ import com.eucalyptus.scripting.ScriptExecutionFailedException;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Internets;
+import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.Mbeans;
 import com.eucalyptus.util.async.Futures;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
+import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.MapDifference;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 
 public class Databases {
   public static class DatabaseStateException extends IllegalStateException {
@@ -158,22 +168,52 @@ public class Databases {
     
   }
   
-  private static final int                        MAX_TX_START_SYNC_RETRIES = 120;
-  private static final Predicate<Host>            FILTER_SYNCING_DBS        = Predicates.and( DbFilter.INSTANCE, Predicates.not( SyncedDbFilter.INSTANCE ) );
-  private static final ScriptedDbBootstrapper     singleton                 = new ScriptedDbBootstrapper( );
-  private static Logger                           LOG                       = Logger.getLogger( Databases.class );
-  private static final String                     DB_NAME                   = "eucalyptus";
-  private static final String                     DB_USERNAME               = DB_NAME;
-  private static final String                     jdbcJmxDomain             = "net.sf.hajdbc";
-  private static final ExecutorService            dbSyncExecutors           = Executors.newCachedThreadPool( );                                              //NOTE:GRZE:special case thread handling.
-  private static final AtomicReference<SyncState> syncState                 = new AtomicReference<SyncState>( SyncState.NOTSYNCED );
-  private static final ReentrantReadWriteLock     canHas                    = new ReentrantReadWriteLock( );
+  private static final int                    MAX_TX_START_SYNC_RETRIES = 120;
+  private static final Predicate<Host>        FILTER_SYNCING_DBS        = Predicates.and( DbFilter.INSTANCE, Predicates.not( SyncedDbFilter.INSTANCE ) );
+  private static final ScriptedDbBootstrapper singleton                 = new ScriptedDbBootstrapper( );
+  private static Logger                       LOG                       = Logger.getLogger( Databases.class );
+  private static final String                 DB_NAME                   = "eucalyptus";
+  private static final String                 DB_USERNAME               = DB_NAME;
+  private static final String                 jdbcJmxDomain             = "net.sf.hajdbc";
+  private static final ExecutorService        dbSyncExecutors           = Executors.newCachedThreadPool( );                                              //NOTE:GRZE:special case thread handling.
+  private static final ReentrantReadWriteLock canHas                    = new ReentrantReadWriteLock( );
   
   enum SyncState {
+    IRRELEVANT,
     NOTSYNCED,
-    SYNCING,
+    SYNCING {
+      
+      @Override
+      public boolean set( ) {
+        return syncState.compareAndSet( NOTSYNCED, SYNCING );
+      }
+    },
     DESYNCING,
-    SYNCED
+    SYNCED {
+      
+      @Override
+      public boolean isCurrent( ) {
+        if ( Hosts.isCoordinator( ) ) {
+          syncState.set( this );
+        }
+        return super.isCurrent( );
+      }
+      
+    };
+    private static final AtomicReference<SyncState> syncState = new AtomicReference<SyncState>( SyncState.NOTSYNCED );
+    
+    public static SyncState get( ) {
+      return syncState.get( );
+    }
+    
+    public boolean set( ) {
+      syncState.set( this );
+      return true;
+    }
+    
+    public boolean isCurrent( ) {
+      return this.equals( syncState.get( ) );
+    }
   }
   
   enum ExecuteRunnable implements Function<Runnable, Future<Runnable>> {
@@ -188,6 +228,8 @@ public class Databases {
   @Provides( Empyrean.class )
   @RunDuring( Bootstrap.Stage.PoolInit )
   public static class DatabasePoolBootstrapper extends Bootstrapper.Simple {
+    private static final int INITIAL_DB_SYNC_RETRY_WAIT = 5;
+    
     @Override
     public boolean load( ) throws Exception {
       Hosts.awaitDatabases( );
@@ -215,6 +257,16 @@ public class Databases {
           }
         }
       } );
+      TimeUnit.SECONDS.sleep( INITIAL_DB_SYNC_RETRY_WAIT );
+      if ( !Hosts.isCoordinator( ) && Hosts.localHost( ).hasDatabase( ) ) {
+        while ( !Databases.enable( Hosts.localHost( ) ) ) {
+          LOG.warn( LogUtil.subheader( "Synchronization of the database failed: " + Hosts.localHost( ) ) );
+          LOG.warn( "Sleeping for " + INITIAL_DB_SYNC_RETRY_WAIT + " seconds before trying again." );
+          TimeUnit.SECONDS.sleep( INITIAL_DB_SYNC_RETRY_WAIT );
+        }
+        Hosts.UpdateEntry.INSTANCE.apply( Hosts.localHost( ) );
+        LOG.info( LogUtil.subheader( "Database synchronization complete: " + Hosts.localHost( ) ) );
+      }
       return true;
     }
     
@@ -232,10 +284,12 @@ public class Databases {
   }
   
   private static void runDbStateChange( Function<String, Runnable> runnableFunction ) {
-    LOG.info( "DB STATE CHANGE: " + runnableFunction );
+    Logs.extreme( ).info( "DB STATE CHANGE: " + runnableFunction );
     try {
-      if ( canHas.writeLock( ).tryLock( ) ) {
+      Logs.extreme( ).info( "Attempting to acquire db state lock: " + runnableFunction );
+      if ( canHas.writeLock( ).tryLock( 5, TimeUnit.MINUTES ) ) {
         try {
+          Logs.extreme( ).info( "Acquired db state lock: " + runnableFunction );
           Map<Runnable, Future<Runnable>> runnables = Maps.newHashMap( );
           for ( final String ctx : PersistenceContexts.list( ) ) {
             Runnable run = runnableFunction.apply( ctx );
@@ -254,12 +308,15 @@ public class Databases {
           canHas.writeLock( ).unlock( );
         }
       } else {
-        throw Exceptions.toUndeclared( "DB STATE CHANGE ABORTED (failed to get lock): " + runnableFunction );
+        throw new LockTimeoutException( "DB STATE CHANGE ABORTED (failed to get lock): " + runnableFunction );
       }
     } catch ( RuntimeException ex ) {
       LOG.error( ex );
       Logs.extreme( ).error( ex, ex );
       throw ex;
+    } catch ( InterruptedException ex ) {
+      Exceptions.maybeInterrupted( ex );
+      throw Exceptions.toUndeclared( ex );
     }
   }
   
@@ -269,9 +326,7 @@ public class Databases {
       return new Function<String, Runnable>( ) {
         @Override
         public Runnable apply( final String ctx ) {
-          final String contextName = ctx.startsWith( "eucalyptus_" )
-            ? ctx
-            : "eucalyptus_" + ctx;
+          final String contextName = ctx.startsWith( "eucalyptus_" ) ? ctx : "eucalyptus_" + ctx;
           Runnable removeRunner = new Runnable( ) {
             @Override
             public void run( ) {
@@ -302,46 +357,56 @@ public class Databases {
       return new Function<String, Runnable>( ) {
         @Override
         public Runnable apply( final String ctx ) {
-          final String contextName = ctx.startsWith( "eucalyptus_" )
-            ? ctx
-            : "eucalyptus_" + ctx;
+          final String contextName = ctx.startsWith( "eucalyptus_" ) ? ctx : "eucalyptus_" + ctx;
           Runnable removeRunner = new Runnable( ) {
             @Override
             public void run( ) {
+              if ( Internets.testLocal( hostName ) ) {
+                return;
+              }
               try {
                 final DriverDatabaseClusterMBean cluster = lookup( contextName );
-                LOG.info( "Tearing down database connections for: " + hostName + " to context: " + contextName );
                 try {
                   cluster.getDatabase( hostName );
                 } catch ( Exception ex1 ) {
                   return;
                 }
-                try {
-                  LOG.info( "Removing database connections for: " + hostName + " to context: " + contextName );
-                  cluster.remove( hostName );
-                  LOG.info( "Removed database connections for: " + hostName + " to context: " + contextName );
-                } catch ( IllegalStateException ex ) {
-                  Logs.extreme( ).debug( ex, ex );
-                }
-                try {
-                  LOG.info( "Deactivating database connections for: " + hostName + " to context: " + contextName );
-                  cluster.deactivate( hostName );
-                  LOG.info( "Deactived database connections for: " + hostName + " to context: " + contextName );
-                } catch ( Exception ex ) {
-                  LOG.info( ex );
-                  Logs.extreme( ).debug( ex, ex );
-                }
-                try {
-                  LOG.info( "Removing database connections for: " + hostName + " to context: " + contextName );
-                  cluster.remove( hostName );
-                  LOG.info( "Removed database connections for: " + hostName + " to context: " + contextName );
-                } catch ( Exception ex ) {
-                  LOG.info( ex );
-                  Logs.extreme( ).debug( ex, ex );
+                LOG.info( "Tearing down database connections for: " + hostName + " to context: " + contextName );
+                for ( int i = 0; i < 10; i++ ) {
+                  if ( cluster.getActiveDatabases( ).contains( hostName ) ) {
+                    try {
+                      Logs.extreme( ).info( "Deactivating database connections for: " + hostName + " to context: " + contextName );
+                      cluster.deactivate( hostName );
+                      Logs.extreme( ).info( "Deactived database connections for: " + hostName + " to context: " + contextName );
+                      try {
+                        if ( !Hosts.contains( hostName ) ) {
+                          Logs.extreme( ).info( "Removing database connections for: " + hostName + " to context: " + contextName );
+                          cluster.remove( hostName );
+                          Logs.extreme( ).info( "Removed database connections for: " + hostName + " to context: " + contextName );
+                        }
+                        return;
+                      } catch ( IllegalStateException ex ) {
+                        Logs.extreme( ).debug( ex, ex );
+                      }
+                    } catch ( Exception ex ) {
+                      LOG.error( ex );
+                      Logs.extreme( ).error( ex, ex );
+                    }
+                  } else if ( cluster.getInactiveDatabases( ).contains( hostName ) && !Hosts.contains( hostName ) ) {
+                    try {
+                      Logs.extreme( ).info( "Removing database connections for: " + hostName + " to context: " + contextName );
+                      cluster.remove( hostName );
+                      Logs.extreme( ).info( "Removed database connections for: " + hostName + " to context: " + contextName );
+                      return;
+                    } catch ( Exception ex ) {
+                      LOG.error( ex );
+                      Logs.extreme( ).error( ex, ex );
+                    }
+                  }
                 }
               } catch ( final Exception ex1 ) {
-                LOG.info( ex1 );
-                Logs.extreme( ).debug( ex1, ex1 );
+                LOG.error( ex1 );
+                Logs.extreme( ).error( ex1, ex1 );
               }
             }
             
@@ -384,9 +449,7 @@ public class Databases {
         @Override
         public Runnable apply( final String ctx ) {
           final String hostName = host.getBindAddress( ).getHostAddress( );
-          final String contextName = ctx.startsWith( "eucalyptus_" )
-            ? ctx
-            : "eucalyptus_" + ctx;
+          final String contextName = ctx.startsWith( "eucalyptus_" ) ? ctx : "eucalyptus_" + ctx;
           Runnable removeRunner = new Runnable( ) {
             @Override
             public void run( ) {
@@ -399,52 +462,65 @@ public class Databases {
                   DriverDatabaseClusterMBean cluster = LookupPersistenceContextDatabaseCluster.INSTANCE.apply( contextName );
                   final String dbUrl = "jdbc:" + ServiceUris.remote( Database.class, host.getBindAddress( ), contextName );
                   final String realJdbcDriver = Databases.getDriverName( );
-                  try {
-                    if ( fullSync ) {
-                      if ( cluster.getActiveDatabases( ).contains( hostName ) ) {
-                        LOG.info( "Deactivating existing database connections to: " + host );
-                        cluster.deactivate( hostName );
-                      }
-                      if ( cluster.getInactiveDatabases( ).contains( hostName ) ) {
-                        LOG.info( "Deactivating existing database connections to: " + host );
-                        cluster.remove( hostName );
-                      }
-                      LOG.info( "Creating database connections for: " + host );
-                      cluster.add( hostName, realJdbcDriver, dbUrl );
-                      ActivateHostFunction.prepareConnections( host, contextName );
-                      LOG.info( "Full sync of database on: " + host + " using " + cluster.getActiveDatabases( ) );
-                      cluster.activate( hostName, "full" );
-                      return;
-                    } else if ( passiveSync ) {
+                  String syncStrategy = "passive";
+                  boolean activated = cluster.getActiveDatabases( ).contains( hostName );
+                  boolean deactivated = cluster.getInactiveDatabases( ).contains( hostName );
+                  syncStrategy = ( fullSync ? "full" : "passive" );
+                  if ( activated ) {
+//                    LOG.info( "Deactivating existing database connections to: " + host );
+//                    cluster.deactivate( hostName );
+//                    ActivateHostFunction.prepareConnections( host, contextName );
+                    return;
+                  } else if ( deactivated ) {
+                    ActivateHostFunction.prepareConnections( host, contextName );
+                  } else {
+                    LOG.info( "Creating database connections for: " + host );
+                    try {
+                      cluster.getDatabase( hostName );
+                    } catch ( IllegalArgumentException ex2 ) {
                       try {
-                        cluster.getDatabase( hostName );
+                        cluster.add( hostName, realJdbcDriver, dbUrl );
+                        Logs.extreme( ).debug( "Added db connections for host: " + hostName );
                       } catch ( IllegalArgumentException ex ) {
-                        try {
+                        Logs.extreme( ).debug( "Skipping addition of db connections for host which already exists: " + hostName );
+                      } catch ( IllegalStateException ex ) {
+                        if ( Exceptions.isCausedBy( ex, InstanceAlreadyExistsException.class ) ) {
+                          ManagementFactory.getPlatformMBeanServer( ).unregisterMBean( new ObjectName( "net.sf.hajdbc:cluster=" + ctx + ",database=" + hostName ) );
                           cluster.add( hostName, realJdbcDriver, dbUrl );
-                        } catch ( Exception ex1 ) {
+                        } else {
+                          throw ex;
                         }
                       }
-                      if ( !cluster.getActiveDatabases( ).contains( hostName ) ) {
-                        ActivateHostFunction.prepareConnections( host, contextName );
-                        LOG.info( "Passive activation of database connections to: " + host );
-                        cluster.activate( hostName, "passive" );
-                      }
-                    } else {
-                      Logs.extreme( ).info( "Skipping activation of already present database for: " + contextName + " on " + hostName );
                     }
+                    ActivateHostFunction.prepareConnections( host, contextName );
+                  }
+                  try {
+                    if ( fullSync ) {
+                      LOG.info( "Full sync of database on: " + host );
+                    } else {
+                      LOG.info( "Passive activation of database connections to: " + host );
+                    }
+                    cluster.activate( hostName, syncStrategy );
+                    if ( fullSync ) {
+                      LOG.info( "Full sync of database on: " + host + " using " + cluster.getActiveDatabases( ) );
+                    } else {
+                      LOG.info( "Passive activation of database on: " + host + " using " + cluster.getActiveDatabases( ) );
+                    }
+                    return;
                   } catch ( Exception ex ) {
                     throw Exceptions.toUndeclared( ex );
                   }
                 }
               } catch ( final NoSuchElementException ex1 ) {
-                LOG.info( ex1 );
-                Logs.extreme( ).debug( ex1, ex1 );
+                LOG.error( ex1 );
+                Logs.extreme( ).error( ex1, ex1 );
                 return;
               } catch ( final IllegalStateException ex1 ) {
-                LOG.info( ex1 );
-                Logs.extreme( ).debug( ex1, ex1 );
+                LOG.error( ex1 );
+                Logs.extreme( ).error( ex1, ex1 );
                 return;
               } catch ( final Exception ex1 ) {
+                LOG.error( ex1 );
                 Logs.extreme( ).error( ex1, ex1 );
                 throw Exceptions.toUndeclared( "Failed to activate host " + host + " because of: " + ex1.getMessage( ), ex1 );
               }
@@ -469,6 +545,17 @@ public class Databases {
     @Override
     public String toString( ) {
       return "Databases.enable()";
+    }
+    
+    private static void rollback( final Host host, Exception ex ) {
+      try {
+        Databases.runDbStateChange( Databases.DeactivateHostFunction.INSTANCE.apply( host.getDisplayName( ) ) );
+      } catch ( LockTimeoutException ex1 ) {
+        Databases.LOG.error( "Databases.enable(): failed because of: " + ex.getMessage( ) );
+      } catch ( Exception ex1 ) {
+        Databases.LOG.error( "Databases.enable(): failed because of: " + ex.getMessage( ) );
+        Logs.extreme( ).error( ex, ex );
+      }
     }
   }
   
@@ -508,64 +595,96 @@ public class Databases {
   static boolean disable( final String hostName ) {
     if ( !Bootstrap.isFinished( ) ) {
       return false;
+    } else if ( Internets.testLocal( hostName ) && !BootstrapArgs.isCloudController( ) ) {
+      return true;
+    } else if ( Internets.testLocal( hostName ) && BootstrapArgs.isCloudController( ) ) {
+//      SyncState.DESYNCING.set( );
+//      try {
+//        runDbStateChange( DeactivateHostFunction.INSTANCE.apply( hostName ) );
+//        SyncState.NOTSYNCED.set( );
+//        return true;
+//      } catch ( Exception ex ) {
+//        SyncState.NOTSYNCED.set( );
+//        Logs.extreme( ).debug( ex );
+//        return false;
+//      }
+      return true;
+    } else if ( ActiveHostSet.ACTIVATED.get( ).contains( hostName ) ) {
+      try {
+        runDbStateChange( DeactivateHostFunction.INSTANCE.apply( hostName ) );
+        return true;
+      } catch ( Exception ex ) {
+        Logs.extreme( ).debug( ex );
+        return false;
+      }
     } else {
-      if ( Internets.testLocal( hostName ) ) {
-        syncState.set( SyncState.DESYNCING );
-        try {
-          runDbStateChange( DeactivateHostFunction.INSTANCE.apply( hostName ) );
-          syncState.set( SyncState.NOTSYNCED );
-          return true;
-        } catch ( Exception ex ) {
-          syncState.set( SyncState.NOTSYNCED );
-          return false;
-        }
-      } else {
-        try {
-          runDbStateChange( DeactivateHostFunction.INSTANCE.apply( hostName ) );
-          return true;
-        } catch ( Exception ex ) {
-          return false;
-        }
+      try {
+        runDbStateChange( DeactivateHostFunction.INSTANCE.apply( hostName ) );
+        return true;
+      } catch ( Exception ex ) {
+        Logs.extreme( ).debug( ex );
+        return false;
       }
     }
   }
   
   static boolean enable( final Host host ) {
-    if ( !host.hasDatabase( ) || !Bootstrap.isLoaded( ) ) {
+    if ( !host.hasDatabase( ) ) {
       return false;
     } else {
       if ( host.isLocalHost( ) ) {
-        if ( syncState.compareAndSet( SyncState.NOTSYNCED, SyncState.SYNCING ) ) {
+        if ( SyncState.SYNCING.set( ) ) {
           try {
             runDbStateChange( ActivateHostFunction.INSTANCE.apply( host ) );
-            syncState.set( SyncState.SYNCED );
+            SyncState.SYNCED.set( );
             return true;
+          } catch ( LockTimeoutException ex ) {
+            SyncState.NOTSYNCED.set( );
+            return false;
           } catch ( Exception ex ) {
-            try {
-              runDbStateChange( DeactivateHostFunction.INSTANCE.apply( host.getDisplayName( ) ) );
-            } catch ( Exception ex1 ) {
-              LOG.error( "Databases.enable(): failed because of: " + ex.getMessage( ) );
-              Logs.extreme( ).error( ex, ex );
-            } finally {
-              syncState.set( SyncState.NOTSYNCED );
-            }
+            SyncState.NOTSYNCED.set( );
+            LOG.error( ex );
+            Logs.extreme( ).error( ex, ex );
+            return false;
+          }
+        } else if ( !SyncState.SYNCING.isCurrent( ) ) {
+          try {
+            runDbStateChange( ActivateHostFunction.INSTANCE.apply( host ) );
+            return true;
+          } catch ( LockTimeoutException ex ) {
+            return false;
+          } catch ( Exception ex ) {
+            LOG.error( ex );
+            Logs.extreme( ).error( ex, ex );
             return false;
           }
         } else {
           try {
             runDbStateChange( ActivateHostFunction.INSTANCE.apply( host ) );
+            SyncState.SYNCED.set( );
             return true;
+          } catch ( LockTimeoutException ex ) {
+            SyncState.NOTSYNCED.set( );
+            return false;
           } catch ( Exception ex ) {
+            SyncState.NOTSYNCED.set( );
+            LOG.error( ex, ex );
             return false;
           }
         }
-      } else {
+      } else if ( !ActiveHostSet.ACTIVATED.get( ).contains( host.getDisplayName( ) ) ) {
         try {
           runDbStateChange( ActivateHostFunction.INSTANCE.apply( host ) );
           return true;
+        } catch ( LockTimeoutException ex ) {
+          return false;
         } catch ( Exception ex ) {
+          Logs.extreme( ).debug( ex );
+          ActivateHostFunction.rollback( host, ex );
           return false;
         }
+      } else {
+        return ActiveHostSet.ACTIVATED.get( ).contains( host.getDisplayName( ) );
       }
     }
   }
@@ -574,9 +693,7 @@ public class Databases {
     INSTANCE;
     @Override
     public DriverDatabaseClusterMBean apply( String ctx ) {
-      final String contextName = ctx.startsWith( "eucalyptus_" )
-        ? ctx
-        : "eucalyptus_" + ctx;
+      final String contextName = ctx.startsWith( "eucalyptus_" ) ? ctx : "eucalyptus_" + ctx;
       final DriverDatabaseClusterMBean cluster = lookup( contextName );
       return cluster;
     }
@@ -608,37 +725,86 @@ public class Databases {
   
   /**
    * @return
+   *         LockTimeoutException
    */
   public static Boolean isSynchronized( ) {
-    if ( Hosts.isCoordinator( ) ) {
-      syncState.set( SyncState.SYNCED );
-    }
-    return SyncState.SYNCED.equals( syncState.get( ) );
+    return SyncState.SYNCED.isCurrent( );
   }
   
-  public static Boolean isSynchronizing( ) {
+  public static Boolean isVolatile( ) {
     if ( !Bootstrap.isFinished( ) || BootstrapArgs.isInitializeSystem( ) ) {
       return false;
     } else if ( !Hosts.isCoordinator( ) && BootstrapArgs.isCloudController( ) ) {
-      return !isSynchronized( );
+      return !isSynchronized( ) || !activeHosts.get( ).containsAll( hostDatabases.get( ) );
+    } else if ( !activeHosts.get( ).equals( hostDatabases.get( ) ) ) {
+      return true;
     } else {
       return !Hosts.list( FILTER_SYNCING_DBS ).isEmpty( );
     }
   }
   
-  private static Predicate<StackTraceElement> notStackFilterYouAreLookingFor = Predicates.or( Threads.filterStackByQualifiedName( "com\\.eucalyptus\\.entities\\..*" ),
+  enum ActiveHostSet implements Supplier<Set<String>> {
+    ACTIVATED {
+      @Override
+      public Set<String> get( ) {
+        Set<String> hosts = DBHOSTS.get( );
+        Set<String> union = Sets.newHashSet( );
+        Set<String> intersection = Sets.newHashSet( hosts );
+        Logs.extreme( ).debug( "ActiveHostSet: universe of db hosts: " + hosts );
+        for ( String ctx : PersistenceContexts.list( ) ) {
+          try {
+            Set<String> activeDatabases = Databases.lookup( ctx ).getActiveDatabases( );
+            union.addAll( activeDatabases );
+            intersection.retainAll( activeDatabases );
+          } catch ( Exception ex ) {
+          }
+      }
+      Logs.extreme( ).debug( "ActiveHostSet: union of activated db connections: " + union );
+      Logs.extreme( ).debug( "ActiveHostSet: intersection of db hosts and activated db connections: " + intersection );
+      boolean dbVolatile = !hosts.equals( intersection );
+      String msg = String.format( "ActiveHostSet: %-14.14s %s%s%s", dbVolatile ? "volatile" : "synchronized", hosts, dbVolatile ? "!=" : "=", intersection );
+      if ( dbVolatile ) {
+        if ( last.compareAndSet( false, dbVolatile ) ) {
+          LOG.warn( msg );
+        } else {
+          LOG.debug( msg );
+        }
+      } else {
+        if ( last.compareAndSet( true, dbVolatile ) ) {
+          LOG.warn( msg );
+        } else {
+          LOG.debug( msg );
+        }
+      }
+      return intersection;
+    }
+    },
+    DBHOSTS {
+      @Override
+      public Set<String> get( ) {
+        return Sets.newHashSet( Collections2.transform( Hosts.listDatabases( ), Hosts.NameTransform.INSTANCE ) );
+      }
+    };
+    private static final AtomicBoolean last = new AtomicBoolean( false );
+  }
+  
+  private static Supplier<Set<String>>        activeHosts                    = Suppliers.memoizeWithExpiration( ActiveHostSet.ACTIVATED, 2, TimeUnit.SECONDS );
+  private static Supplier<Set<String>>        hostDatabases                  = Suppliers.memoizeWithExpiration( ActiveHostSet.DBHOSTS, 1, TimeUnit.SECONDS );
+  
+  private static Predicate<StackTraceElement> notStackFilterYouAreLookingFor = Predicates.or(
+                                                                               Threads.filterStackByQualifiedName( "com\\.eucalyptus\\.entities\\..*" ),
                                                                                               Threads.filterStackByQualifiedName( "java\\.lang\\.Thread.*" ),
                                                                                               Threads.filterStackByQualifiedName( "com\\.eucalyptus\\.system\\.Threads.*" ),
                                                                                               Threads.filterStackByQualifiedName( "com\\.eucalyptus\\.bootstrap\\.Databases.*" ) );
   private static Predicate<StackTraceElement> stackFilter                    = Predicates.not( notStackFilterYouAreLookingFor );
   
   public static void awaitSynchronized( ) {
-    if ( !isSynchronizing( ) ) {
+    if ( !isVolatile( ) ) {
       return;
     } else {
       Collection<StackTraceElement> stack = Threads.filteredStack( stackFilter );
       String caller = ( stack.isEmpty( ) ? "" : stack.iterator( ).next( ).toString( ) );
-      for ( int i = 0; i < MAX_TX_START_SYNC_RETRIES && isSynchronizing( ); i++ ) {
+      for ( int i = 0; i < MAX_TX_START_SYNC_RETRIES && isVolatile( ); i++ ) {
         try {
           TimeUnit.MILLISECONDS.sleep( 1000 );
           LOG.debug( "Transaction blocked on sync: " + caller );
@@ -647,10 +813,10 @@ public class Databases {
           return;
         }
       }
-      if ( !isSynchronized( ) ) {
+      if ( isVolatile( ) ) {
         throw new DatabaseStateException( "Transaction begin failed due to concurrent database synchronization: " + Hosts.listDatabases( )
-          + " for caller:\n"
-          + Joiner.on( "\n\tat " ).join( stack ) );
+                                          + " for caller:\n"
+                                          + Joiner.on( "\n\tat " ).join( stack ) );
       }
     }
   }
@@ -824,7 +990,7 @@ public class Databases {
       for ( TableProperties table : context.getTargetDatabaseProperties( ).getTables( ) ) {
         for ( ForeignKeyConstraint constraint : table.getForeignKeyConstraints( ) ) {
           String sql = dialect.getDropForeignKeyConstraintSQL( constraint );
-          LOG.info( sql );
+          Logs.extreme( ).info( sql );
           statement.addBatch( sql );
         }
       }
@@ -846,7 +1012,7 @@ public class Databases {
       for ( TableProperties table : context.getSourceDatabaseProperties( ).getTables( ) ) {
         for ( ForeignKeyConstraint constraint : table.getForeignKeyConstraints( ) ) {
           String sql = dialect.getCreateForeignKeyConstraintSQL( constraint );
-          LOG.info( sql );
+          Logs.extreme( ).info( sql );
           statement.addBatch( sql );
         }
       }
@@ -872,7 +1038,7 @@ public class Databases {
         Map<net.sf.hajdbc.Database<D>, Future<Long>> futureMap = new HashMap<net.sf.hajdbc.Database<D>, Future<Long>>( );
         for ( SequenceProperties sequence : sequences ) {
           final String sql = dialect.getNextSequenceValueSQL( sequence );
-          LOG.info( sql );
+          Logs.extreme( ).info( sql );
           for ( final net.sf.hajdbc.Database<D> database : databases ) {
             Callable<Long> task = new Callable<Long>( )
             {
@@ -909,7 +1075,7 @@ public class Databases {
         Statement targetStatement = targetConnection.createStatement( );
         for ( SequenceProperties sequence : sequences ) {
           String sql = dialect.getAlterSequenceSQL( sequence, sequenceMap.get( sequence ) + 1 );
-          LOG.info( sql );
+          Logs.extreme( ).info( sql );
           targetStatement.addBatch( sql );
         }
         targetStatement.executeBatch( );
@@ -930,7 +1096,7 @@ public class Databases {
         Collection<String> columns = table.getIdentityColumns( );
         if ( !columns.isEmpty( ) ) {
           String selectSQL = MessageFormat.format( "SELECT max({0}) FROM {1}", Strings.join( columns, "), max(" ), table.getName( ) ); //$NON-NLS-1$ //$NON-NLS-2$
-          LOG.info( selectSQL );
+          Logs.extreme( ).info( selectSQL );
           Map<String, Long> map = new HashMap<String, Long>( );
           ResultSet resultSet = sourceStatement.executeQuery( selectSQL );
           if ( resultSet.next( ) ) {
@@ -944,7 +1110,7 @@ public class Databases {
             for ( Map.Entry<String, Long> mapEntry : map.entrySet( ) ) {
               String alterSQL = dialect.getAlterIdentityColumnSQL( table, table.getColumnProperties( mapEntry.getKey( ) ), mapEntry.getValue( ) + 1 );
               if ( alterSQL != null ) {
-                LOG.info( alterSQL );
+                Logs.extreme( ).info( alterSQL );
                 targetStatement.addBatch( alterSQL );
               }
             }
@@ -968,7 +1134,7 @@ public class Databases {
       for ( TableProperties table : context.getTargetDatabaseProperties( ).getTables( ) ) {
         for ( UniqueConstraint constraint : table.getUniqueConstraints( ) ) {
           String sql = dialect.getDropUniqueConstraintSQL( constraint );
-          LOG.info( sql );
+          Logs.extreme( ).info( sql );
           statement.addBatch( sql );
         }
       }
@@ -989,7 +1155,7 @@ public class Databases {
         // Drop unique constraints on the current table
         for ( UniqueConstraint constraint : table.getUniqueConstraints( ) ) {
           String sql = dialect.getCreateUniqueConstraintSQL( constraint );
-          LOG.info( sql );
+          Logs.extreme( ).info( sql );
           statement.addBatch( sql );
         }
       }
@@ -1080,17 +1246,17 @@ public class Databases {
           final Statement selectStatement = sourceConnection.createStatement( );
           selectStatement.setFetchSize( this.fetchSize );
           String deleteSQL = dialect.getTruncateTableSQL( table );
-          LOG.info( deleteSQL );
+          Logs.extreme( ).info( deleteSQL );
           Statement deleteStatement = targetConnection.createStatement( );
           int deletedRows = deleteStatement.executeUpdate( deleteSQL );
           LOG.info( Messages.getMessage( Messages.DELETE_COUNT, deletedRows, tableName ) );
           deleteStatement.close( );
           ResultSet resultSet = selectStatement.executeQuery( selectSQL );
-          LOG.info( selectSQL );
+          Logs.extreme( ).info( selectSQL );
           int statementCount = 0;
           while ( resultSet.next( ) ) {
             String insertSQL = "INSERT INTO " + tableName + " (" + commaDelimitedColumns + ") VALUES (" + Strings.join( Collections.nCopies( columns.size( ), Strings.QUESTION ), Strings.PADDED_COMMA ) + ")"; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
-            LOG.info( insertSQL );
+            Logs.extreme( ).info( insertSQL );
             PreparedStatement insertStatement = targetConnection.prepareStatement( insertSQL );
             int index = 0;
             String selected = "SELECT * FROM " + tableName + ": " + resultSet.getRow( ) + " ";
@@ -1105,14 +1271,14 @@ public class Databases {
                 insertStatement.setObject( index, object, type );
               }
             }
-            LOG.info( selected );
+            Logs.exhaust( ).trace( selected );
             insertStatement.addBatch( );
             insertStatement.executeBatch( );
             insertStatement.clearBatch( );
             insertStatement.clearParameters( );
             insertStatement.close( );
           }
-          LOG.info( Messages.getMessage( Messages.INSERT_COUNT, statementCount, tableName ) );
+          Logs.extreme( ).info( Messages.getMessage( Messages.INSERT_COUNT, statementCount, tableName ) );
           selectStatement.close( );
           targetConnection.commit( );
         }
@@ -1154,232 +1320,4 @@ public class Databases {
     }
   }
   
-  public static class DifferentialSynchronizationStrategy implements SynchronizationStrategy {
-    private int fetchSize    = 0;
-    private int maxBatchSize = 100;
-    
-    @Override
-    public <D> void synchronize( SynchronizationContext<D> context ) throws SQLException {
-      Connection sourceConnection = context.getConnection( context.getSourceDatabase( ) );
-      Connection targetConnection = context.getConnection( context.getTargetDatabase( ) );
-      Dialect dialect = context.getDialect( );
-      ExecutorService executor = context.getExecutor( );
-      boolean autoCommit = targetConnection.getAutoCommit( );
-      targetConnection.setAutoCommit( true );
-      SynchronizationSupport.dropForeignKeys( context );
-      SynchronizationSupport.dropUniqueConstraints( context );
-      targetConnection.setAutoCommit( false );
-      try {
-        for ( TableProperties table : context.getSourceDatabaseProperties( ).getTables( ) ) {
-          String tableName = table.getName( );
-          UniqueConstraint primaryKey = table.getPrimaryKey( );
-          if ( primaryKey == null ) {
-            throw new SQLException( Messages.getMessage( Messages.PRIMARY_KEY_REQUIRED, this.getClass( ).getName( ), tableName ) );
-          }
-          List<String> primaryKeyColumnList = primaryKey.getColumnList( );
-          Collection<String> columns = table.getColumns( );
-          // List of colums for select statement - starting with primary key
-          List<String> columnList = new ArrayList<String>( columns.size( ) );
-          columnList.addAll( primaryKeyColumnList );
-          for ( String column : columns ) {
-            if ( !primaryKeyColumnList.contains( column ) ) {
-              columnList.add( column );
-            }
-          }
-          List<String> nonPrimaryKeyColumnList = columnList.subList( primaryKeyColumnList.size( ), columnList.size( ) );
-          String commaDelimitedColumns = Strings.join( columnList, Strings.PADDED_COMMA );
-          // Retrieve table rows in primary key order
-          final String selectSQL = "SELECT " + commaDelimitedColumns + " FROM " + tableName + " ORDER BY " + Strings.join( primaryKeyColumnList, Strings.PADDED_COMMA ); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
-          final Statement targetStatement = targetConnection.createStatement( );
-          targetStatement.setFetchSize( this.fetchSize );
-          LOG.info( selectSQL );
-          Callable<ResultSet> callable = new Callable<ResultSet>( )
-          {
-            public ResultSet call( ) throws SQLException
-            {
-              return targetStatement.executeQuery( selectSQL );
-            }
-          };
-          Future<ResultSet> future = executor.submit( callable );
-          Statement sourceStatement = sourceConnection.createStatement( );
-          sourceStatement.setFetchSize( this.fetchSize );
-          ResultSet sourceResultSet = sourceStatement.executeQuery( selectSQL );
-          ResultSet inactiveResultSet = future.get( );
-          String primaryKeyWhereClause = " WHERE " + Strings.join( primaryKeyColumnList, " = ? AND " ) + " = ?"; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
-          // Construct DELETE SQL
-          String deleteSQL = "DELETE FROM " + tableName + primaryKeyWhereClause; //$NON-NLS-1$
-          LOG.info( deleteSQL );
-          PreparedStatement deleteStatement = targetConnection.prepareStatement( deleteSQL );
-          // Construct INSERT SQL
-          String insertSQL = "INSERT INTO " + tableName + " (" + commaDelimitedColumns + ") VALUES (" + Strings.join( Collections.nCopies( columnList.size( ), Strings.QUESTION ), Strings.PADDED_COMMA ) + ")"; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
-          LOG.info( insertSQL );
-          PreparedStatement insertStatement = targetConnection.prepareStatement( insertSQL );
-          // Construct UPDATE SQL
-          PreparedStatement updateStatement = null;
-          if ( !nonPrimaryKeyColumnList.isEmpty( ) ) {
-            String updateSQL = "UPDATE " + tableName + " SET " + Strings.join( nonPrimaryKeyColumnList, " = ?, " ) + " = ?" + primaryKeyWhereClause; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
-            LOG.info( updateSQL );
-            updateStatement = targetConnection.prepareStatement( updateSQL );
-          }
-          boolean hasMoreActiveResults = sourceResultSet.next( );
-          boolean hasMoreInactiveResults = inactiveResultSet.next( );
-          int insertCount = 0;
-          int updateCount = 0;
-          int deleteCount = 0;
-          while ( hasMoreActiveResults || hasMoreInactiveResults ) {
-            int compare = 0;
-            if ( !hasMoreActiveResults ) {
-              compare = 1;
-            } else if ( !hasMoreInactiveResults ) {
-              compare = -1;
-            } else {
-              for ( int i = 1; i <= primaryKeyColumnList.size( ); ++i ) {
-                Object activeObject = sourceResultSet.getObject( i );
-                Object inactiveObject = inactiveResultSet.getObject( i );
-                // We assume that the primary keys column types are Comparable
-                compare = this.compare( activeObject, inactiveObject );
-                if ( compare != 0 ) {
-                  break;
-                }
-              }
-            }
-            if ( compare > 0 ) {
-              deleteStatement.clearParameters( );
-              for ( int i = 1; i <= primaryKeyColumnList.size( ); ++i ) {
-                int type = dialect.getColumnType( table.getColumnProperties( columnList.get( i - 1 ) ) );
-                deleteStatement.setObject( i, inactiveResultSet.getObject( i ), type );
-              }
-              deleteStatement.addBatch( );
-              deleteCount += 1;
-              if ( ( deleteCount % this.maxBatchSize ) == 0 ) {
-                deleteStatement.executeBatch( );
-                deleteStatement.clearBatch( );
-              }
-            } else if ( compare < 0 ) {
-              insertStatement.clearParameters( );
-              for ( int i = 1; i <= columnList.size( ); ++i ) {
-                int type = dialect.getColumnType( table.getColumnProperties( columnList.get( i - 1 ) ) );
-                Object object = SynchronizationSupport.getObject( sourceResultSet, i, type );
-                if ( sourceResultSet.wasNull( ) ) {
-                  insertStatement.setNull( i, type );
-                } else {
-                  insertStatement.setObject( i, object, type );
-                }
-              }
-              insertStatement.addBatch( );
-              insertCount += 1;
-              if ( ( insertCount % this.maxBatchSize ) == 0 ) {
-                insertStatement.executeBatch( );
-                insertStatement.clearBatch( );
-              }
-            } else if ( updateStatement != null ) // if (compare == 0)
-            {
-              updateStatement.clearParameters( );
-              boolean updated = false;
-              for ( int i = primaryKeyColumnList.size( ) + 1; i <= columnList.size( ); ++i ) {
-                int type = dialect.getColumnType( table.getColumnProperties( columnList.get( i - 1 ) ) );
-                Object activeObject = SynchronizationSupport.getObject( sourceResultSet, i, type );
-                Object inactiveObject = SynchronizationSupport.getObject( inactiveResultSet, i, type );
-                int index = i - primaryKeyColumnList.size( );
-                if ( sourceResultSet.wasNull( ) ) {
-                  updateStatement.setNull( index, type );
-                  updated |= !inactiveResultSet.wasNull( );
-                } else {
-                  updateStatement.setObject( index, activeObject, type );
-                  updated |= inactiveResultSet.wasNull( );
-                  updated |= !equals( activeObject, inactiveObject );
-                }
-              }
-              if ( updated ) {
-                for ( int i = 1; i <= primaryKeyColumnList.size( ); ++i ) {
-                  int type = dialect.getColumnType( table.getColumnProperties( columnList.get( i - 1 ) ) );
-                  updateStatement.setObject( i + nonPrimaryKeyColumnList.size( ), inactiveResultSet.getObject( i ), type );
-                }
-                updateStatement.addBatch( );
-                updateCount += 1;
-                if ( ( updateCount % this.maxBatchSize ) == 0 ) {
-                  updateStatement.executeBatch( );
-                  updateStatement.clearBatch( );
-                }
-              }
-            }
-            if ( hasMoreActiveResults && ( compare <= 0 ) ) {
-              hasMoreActiveResults = sourceResultSet.next( );
-            }
-            if ( hasMoreInactiveResults && ( compare >= 0 ) ) {
-              hasMoreInactiveResults = inactiveResultSet.next( );
-            }
-          }
-          if ( ( deleteCount % this.maxBatchSize ) > 0 ) {
-            deleteStatement.executeBatch( );
-          }
-          deleteStatement.close( );
-          if ( ( insertCount % this.maxBatchSize ) > 0 ) {
-            insertStatement.executeBatch( );
-          }
-          insertStatement.close( );
-          if ( updateStatement != null ) {
-            if ( ( updateCount % this.maxBatchSize ) > 0 ) {
-              updateStatement.executeBatch( );
-            }
-            updateStatement.close( );
-          }
-          targetStatement.close( );
-          sourceStatement.close( );
-          targetConnection.commit( );
-          LOG.info( Messages.getMessage( Messages.INSERT_COUNT, insertCount, tableName ) );
-          LOG.info( Messages.getMessage( Messages.UPDATE_COUNT, updateCount, tableName ) );
-          LOG.info( Messages.getMessage( Messages.DELETE_COUNT, deleteCount, tableName ) );
-        }
-      } catch ( ExecutionException e ) {
-        SynchronizationSupport.rollback( targetConnection );
-        throw SQLExceptionFactory.createSQLException( e.getCause( ) );
-      } catch ( InterruptedException e ) {
-        SynchronizationSupport.rollback( targetConnection );
-        throw SQLExceptionFactory.createSQLException( e.getCause( ) );
-      } catch ( SQLException e ) {
-        SynchronizationSupport.rollback( targetConnection );
-        throw e;
-      }
-      targetConnection.setAutoCommit( true );
-      SynchronizationSupport.restoreUniqueConstraints( context );
-      SynchronizationSupport.restoreForeignKeys( context );
-      SynchronizationSupport.synchronizeIdentityColumns( context );
-      SynchronizationSupport.synchronizeSequences( context );
-      targetConnection.setAutoCommit( autoCommit );
-    }
-    
-    private boolean equals( Object object1, Object object2 ) {
-      if ( ( object1 instanceof byte[] ) && ( object2 instanceof byte[] ) ) {
-        byte[] bytes1 = ( byte[] ) object1;
-        byte[] bytes2 = ( byte[] ) object2;
-        if ( bytes1.length != bytes2.length ) {
-          return false;
-        }
-        return Arrays.equals( bytes1, bytes2 );
-      }
-      return object1.equals( object2 );
-    }
-    
-    @SuppressWarnings( "unchecked" )
-    private int compare( Object object1, Object object2 ) {
-      return ( ( Comparable ) object1 ).compareTo( object2 );
-    }
-    
-    public int getFetchSize( ) {
-      return this.fetchSize;
-    }
-    
-    public void setFetchSize( int fetchSize ) {
-      this.fetchSize = fetchSize;
-    }
-    
-    public int getMaxBatchSize( ) {
-      return this.maxBatchSize;
-    }
-    
-    public void setMaxBatchSize( int maxBatchSize ) {
-      this.maxBatchSize = maxBatchSize;
-    }
-  }
 }

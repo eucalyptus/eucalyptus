@@ -79,7 +79,6 @@ import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.callback.StartNetworkCallback;
 import com.eucalyptus.cluster.callback.VmRunCallback;
-import com.eucalyptus.component.Dispatcher;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
@@ -107,7 +106,6 @@ import com.eucalyptus.vm.VmInstance.Reason;
 import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.vm.VmVolumeAttachment;
-import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
 import edu.emory.mathcs.backport.java.util.concurrent.TimeUnit;
@@ -124,7 +122,7 @@ import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
 public class ClusterAllocator implements Runnable {
   private static final long BYTES_PER_GB = ( 1024L * 1024L * 1024L );
-  private static Logger LOG = Logger.getLogger( ClusterAllocator.class );
+  private static Logger     LOG          = Logger.getLogger( ClusterAllocator.class );
   
   enum State {
     START,
@@ -157,7 +155,7 @@ public class ClusterAllocator implements Runnable {
             try {
               new ClusterAllocator( allocInfo ).run( );
             } catch ( Exception ex ) {
-              LOG.error( ex , ex );
+              LOG.error( ex, ex );
             }
           }
         };
@@ -214,11 +212,11 @@ public class ClusterAllocator implements Runnable {
             if ( "root".equals( blockDevMapping.getVirtualName( ) ) && blockDevMapping.getEbs( ) != null ) {
               deleteOnTerminate |= blockDevMapping.getEbs( ).getDeleteOnTermination( );
               if ( blockDevMapping.getEbs( ).getVolumeSize( ) != null ) {
-                volSizeBytes = BYTES_PER_GB * blockDevMapping.getEbs( ).getVolumeSize( ); 
+                volSizeBytes = BYTES_PER_GB * blockDevMapping.getEbs( ).getVolumeSize( );
               }
             }
           }
-          final int sizeGb = ( int ) Math.ceil( volSizeBytes / BYTES_PER_GB );          
+          final int sizeGb = ( int ) Math.ceil( volSizeBytes / BYTES_PER_GB );
           LOG.debug( "About to prepare root volume using bootable block storage: " + imgInfo + " and vbr: " + root );
           VmInstance vm = VmInstances.lookup( token.getInstanceId( ) );
           Volume vol = null;
@@ -273,10 +271,11 @@ public class ClusterAllocator implements Runnable {
     if ( root.isBlockStorage( ) ) {
       childVmInfo = vmInfo.child( );
       final Volume vol = this.allocInfo.getPersistentVolumes( ).get( index );
-      final Dispatcher sc = ServiceDispatcher.lookup( Topology.lookup( Storage.class, Partitions.lookupByName( vol.getPartition( ) ) ) );
+      ServiceConfiguration scConfig = Topology.lookup( Storage.class, Partitions.lookupByName( vol.getPartition( ) ) );
       for ( int i = 0; i < 60; i++ ) {
         try {
-          final DescribeStorageVolumesResponseType volState = sc.send( new DescribeStorageVolumesType( Lists.newArrayList( vol.getDisplayName( ) ) ) );
+          DescribeStorageVolumesType describeMsg = new DescribeStorageVolumesType( Lists.newArrayList( vol.getDisplayName( ) ) );
+          final DescribeStorageVolumesResponseType volState = AsyncRequests.sendSync( scConfig, describeMsg );
           if ( "available".equals( volState.getVolumeSet( ).get( 0 ).getStatus( ) ) ) {
             break;
           } else {
@@ -290,8 +289,8 @@ public class ClusterAllocator implements Runnable {
       }
       for ( final String nodeTag : this.cluster.getNodeTags( ) ) {
         try {
-          final AttachStorageVolumeResponseType scAttachResponse = sc.send( new AttachStorageVolumeType( this.cluster.getNode( nodeTag ).getIqn( ),
-                                                                                                         vol.getDisplayName( ) ) );
+          AttachStorageVolumeType attachMsg = new AttachStorageVolumeType( this.cluster.getNode( nodeTag ).getIqn( ), vol.getDisplayName( ) );
+          final AttachStorageVolumeResponseType scAttachResponse = AsyncRequests.sendSync( scConfig, attachMsg );
           childVmInfo.lookupRoot( ).setResourceLocation( scAttachResponse.getRemoteDeviceString( ) );
         } catch ( final Exception ex ) {
           LOG.error( ex, ex );

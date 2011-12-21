@@ -81,8 +81,8 @@ public class StateMachineBuilder<P extends HasName<P>, S extends Automata.State,
     TransitionBuilder commit( TransitionAction<P> action ) {
       this.action = action;
       this.errorState = ( this.errorState == null )
-        ? this.fromState
-        : this.errorState;
+                                                   ? this.fromState
+                                                   : this.errorState;
       TransitionRule<S, T> rule = new BasicTransitionRule<S, T>( name, fromState, toState, errorState );
       this.transition = new TransitionImpl<P, S, T>( rule, this.action, this.listeners.toArray( new TransitionListener[] {} ) );
       this.listeners = null;
@@ -338,6 +338,18 @@ public class StateMachineBuilder<P extends HasName<P>, S extends Automata.State,
     @Override
     public int compareTo( TransitionRule<S, T> that ) {
       return this.getName( ).compareTo( that.getName( ) );
+    }
+    
+    @Override
+    public String toString( ) {
+      return String.format(
+        "Transition name=%s from=%s/%s to=%s/%s error=%s",
+        this.getName( ),
+        this.getFromState( ),
+        this.getFromStateMark( ),
+        this.getToState( ),
+        this.getToStateMark( ),
+        this.getErrorState( ) );
     }
     
   }

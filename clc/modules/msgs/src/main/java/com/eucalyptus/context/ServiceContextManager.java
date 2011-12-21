@@ -116,14 +116,20 @@ public class ServiceContextManager {
     
     @Override
     public boolean start( ) throws Exception {
-      try {
-        singleton.update( );
-        singleton.getClient( );
-        return true;
-      } catch ( final Exception ex ) {
-        LOG.error( ex, ex );
-        throw ex;
-      }
+      new Thread() {
+
+        @Override
+        public void run( ) {
+          try {
+            singleton.update( );
+            singleton.getClient( );
+          } catch ( final Exception ex ) {
+            LOG.error( ex, ex );
+          }
+        }
+        
+      }.start( );
+      return true;
     }
   }
   

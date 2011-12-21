@@ -2,29 +2,40 @@ package com.eucalyptus.util;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintWriter;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 import java.lang.reflect.UndeclaredThrowableException;
+import java.util.Arrays;
 import java.util.Collection;
-import java.util.HashSet;
+import java.util.IllegalFormatException;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 import org.apache.log4j.Logger;
+import com.eucalyptus.bootstrap.Bootstrap.Discovery;
 import com.eucalyptus.context.ServiceDispatchException;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.system.Ats;
 import com.eucalyptus.ws.WebServicesException;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
-import com.google.common.base.Throwables;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.MapMaker;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import edu.emory.mathcs.backport.java.util.Arrays;
 
 public class Exceptions {
+  
   private static Logger                    LOG                      = Logger.getLogger( Exceptions.class );
   private static final List<String>        DEFAULT_FILTER_MATCHES   = Lists.newArrayList( "com.eucalyptus", "edu.ucsb.eucalyptus" );
   private static final Integer             DEFAULT_FILTER_MAX_DEPTH = 10;
@@ -45,8 +56,8 @@ public class Exceptions {
     @Override
     public String apply( Object o ) {
       return ( o == null
-        ? "null"
-        : o.toString( ) );
+                        ? "null"
+                        : o.toString( ) );
     }
   };
   
@@ -121,8 +132,8 @@ public class Exceptions {
    */
   public static <T extends Throwable> String string( T ex ) {
     Throwable t = ( ex == null
-      ? new RuntimeException( )
-      : ex );
+                              ? new RuntimeException( )
+                              : ex );
     String allMessages = causeString( ex );
     ByteArrayOutputStream os = new ByteArrayOutputStream( );
     PrintWriter p = new PrintWriter( os );
@@ -252,6 +263,146 @@ public class Exceptions {
     } else {
       return new NoSuchElementException( message );
     }
+  }
+  
+  private static final Map<Class, ErrorMessageBuilder> builders = new MapMaker( ).makeComputingMap(
+                                                                                 new Function<Class, ErrorMessageBuilder>( ) {
+                                                                                   
+                                                                                   @Override
+                                                                                   public ErrorMessageBuilder apply( Class input ) {
+                                                                                     return new ErrorMessageBuilder( input );
+                                                                                   }
+                                                                                 } );
+  
+  /**
+   * @param class1
+   * @param string
+   * @return
+   */
+  public static ErrorMessageBuilder builder( Class<?> type ) {
+    return builders.get( type );
+  }
+  
+  public static class ErrorMessageBuilder {
+    private Class              type;
+    private Map<Class, String> map;
+    
+    public ErrorMessageBuilder( Class input ) {
+      this.type = input;
+      this.map = classErrorMessages.get( this.type );
+    }
+    
+    private boolean hasMessage( Class<? extends Throwable> ex ) {
+      if ( this.map != null ) {
+        return this.map.containsKey( ex );
+      } else {
+        return false;
+      }
+    }
+    
+    private String getMessage( Class<? extends Throwable> ex ) {
+      return classErrorMessages.get( this.type ).get( ex );
+    }
+    
+    public ExceptionBuilder exception( Throwable ex ) {
+      return new ExceptionBuilder( ).exception( ex.getClass( ) );
+    }
+    
+    public class ExceptionBuilder {
+      private String                     extraMessage;
+      private Object[]                   fArgs;
+      private String                     message;
+      private Class<? extends Throwable> ex;
+      private String                     unknownMessage;
+      private String                     fstring;
+      
+      public ExceptionBuilder exception( Class<? extends Throwable> ex ) {
+        this.ex = ex;
+        return this;
+      }
+      
+      public ExceptionBuilder message( String message, Object[] formatArgs ) {
+        this.message = message;
+        this.fArgs = formatArgs;
+        return this;
+      }
+      
+      public ExceptionBuilder append( String appendedMessage ) {
+        this.extraMessage = appendedMessage;
+        return this;
+      }
+      
+      /**
+       * @param unknownExceptionMessage
+       * @return
+       */
+      public ExceptionBuilder unknownException( String unknownExceptionMessage ) {
+        this.unknownMessage = unknownExceptionMessage;
+        return this;
+      }
+      
+      public String build( ) {
+        if ( ErrorMessageBuilder.this.hasMessage( this.ex ) ) {
+          try {
+            return String.format( this.fstring, this.fArgs ) + ": " + ErrorMessageBuilder.this.getMessage( this.ex );
+          } catch ( IllegalFormatException ex1 ) {
+            LOG.error( "Failed to format \"" + this.fstring + "\" with args: " + Arrays.asList( this.fArgs ) + " because of: " + ex1.getMessage( ), ex1 );
+            return ErrorMessageBuilder.this.getMessage( this.ex );
+          }
+        } else {
+          return this.unknownMessage;
+        }
+      }
+      
+      public ExceptionBuilder context( String format, Object... formatArgs ) {
+        this.fstring = format;
+        this.fArgs = formatArgs;
+        return this;
+      }
+    }
+    
+  }
+  
+  @Target( { ElementType.TYPE,
+      ElementType.FIELD } )
+  @Retention( RetentionPolicy.RUNTIME )
+  public @interface ErrorMessages {
+    Class<?> value( );
+  }
+  
+  private static final Map<Class, Map<Class, String>> classErrorMessages = Maps.newConcurrentMap( );
+  
+  @Discovery( value = { Function.class },
+              annotations = { ErrorMessages.class },
+              priority = -0.1d )
+  public enum ErrorMessageDiscovery implements Predicate<Class> {
+    INSTANCE;
+    
+    @SuppressWarnings( { "unchecked",
+        "rawtypes" } )
+    @Override
+    public boolean apply( Class input ) {
+      if ( Function.class.isAssignableFrom( input ) && Ats.from( input ).has( ErrorMessages.class ) ) {
+        try {
+          ErrorMessages annote = Ats.from( input ).get( ErrorMessages.class );
+          Function<Class, String> errorFunction = ( Function<Class, String> ) Classes.builder( input ).newInstance( );
+          ConcurrentMap<Class, String> errorMap = new MapMaker( ).expireAfterAccess( 60, TimeUnit.SECONDS ).makeComputingMap( errorFunction );
+          classErrorMessages.put( annote.value( ), errorMap );
+          return true;
+        } catch ( UndeclaredThrowableException ex ) {
+          LOG.error( ex, ex );
+          return false;
+        }
+      } else {
+        Discovery discovery = Ats.from( ErrorMessageDiscovery.class ).get( Discovery.class );
+        LOG.error( "Annotated Discovery supplied class argument that does not conform to one of: value()="
+                   + discovery.value( )
+                   + " (assignable types) or annotations()="
+                   + discovery.annotations( ) );
+        return false;
+      }
+    }
+    
   }
   
 }
