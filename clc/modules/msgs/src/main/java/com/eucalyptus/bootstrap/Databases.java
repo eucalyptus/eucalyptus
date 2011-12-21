@@ -717,7 +717,7 @@ public class Databases {
           conn.close( );
         }
       } catch ( final Exception ex ) {
-        Hosts.LOG.error( ex, ex );
+        LOG.error( ex, ex );
       }
     }
     return false;
