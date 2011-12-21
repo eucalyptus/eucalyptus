@@ -1,11 +1,13 @@
-import java.util.List
-import com.eucalyptus.cluster.Cluster
-import com.eucalyptus.cluster.Clusters
-import com.eucalyptus.config.NodeComponentInfoType
-import com.eucalyptus.scripting.Groovyness
-import com.eucalyptus.vm.VmInstance
-import com.eucalyptus.vm.VmInstances
-import com.google.common.collect.Lists
+import java.util.List;
+
+import com.eucalyptus.cluster.Cluster;
+import com.eucalyptus.cluster.Clusters;
+import com.google.common.collect.Lists;
+
+import com.eucalyptus.config.NodeComponentInfoType;
+import com.eucalyptus.scripting.Groovyness;
+import com.eucalyptus.vm.VmInstance;
+import com.eucalyptus.vm.VmInstances;
 
 List<NodeComponentInfoType> nodeInfoList = Lists.newArrayList( );
 for( Cluster c : Clusters.getInstance( ).listValues( ) ) {
