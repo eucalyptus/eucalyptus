@@ -562,4 +562,8 @@ public class Faults {
       }
     }
   }
+
+  public static void failstop( ServiceConfiguration key, CheckException checkEx ) {
+    Hosts.LOG.warn( "FAILSTOP: " + key.getFullName( ) + "=> " + checkEx.getMessage( ) );
+  }
 }
