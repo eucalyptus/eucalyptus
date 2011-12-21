@@ -21,6 +21,9 @@
 # (c)2011 Eucalyptus Systems, Inc. All Rights Reserved
 # author: tom.werges
 #
+use strict;
+use warnings;
+require "test_common.pl";
 
 #
 # Parse cmd-line args.
@@ -30,7 +33,6 @@ my $write_interval = 40;
 my $num_users = 1;
 my $num_users_per_account = 1;
 my $num_instances_per_user = 1;
-my $image = "";
 if ($#ARGV>-1) {
 	$duration_secs = shift;
 }
@@ -46,11 +48,8 @@ if ($#ARGV>-1) {
 if ($#ARGV>-1) {
 	$num_instances_per_user = shift;
 }
-if ($#ARGV>-1) {
-	$image = shift;
-}
 my $return_code = 0;
-print "Using args: duration:$duration_secs write_interval:$write_interval users:$num_users num_users_per_account:$num_users_per_account num_instances_per_user:$num_instances_per_user image:" . (($image eq "") ? "(none)" : $image) . "\n";
+print "Using args: duration:$duration_secs write_interval:$write_interval users:$num_users num_users_per_account:$num_users_per_account num_instances_per_user:$num_instances_per_user\n";
 
 
 #
@@ -67,6 +66,17 @@ print "terminating instances\n";
 if ($#running_instances > -1) {
 	system("euca-terminate-instances " . join(" ",@running_instances)) and die("Couldn't terminate instances:" . join(" ",@running_instances));
 }
+
+
+#
+# Inject a perl script into the image. The perl script is injected in such a way
+#  that it will run automatically when the image boots. The perl script is generated to use
+#  resources based upon arguments passed to this script. The purpose is to generate false
+#  resource usage from within an image (disk, net, etc) when the test runs.
+#
+runcmd("./fill_template.pl use_resources.template INTERVAL=$write_interval IO_MEGS=" . storage_usage_mb() . " DEVICE=/dev/sda1 > use_resources.pl");
+runcmd("cp " . image_file() . " " . injected_image_file());
+runcmd("./inject.pl " . injected_image_file() . " use_resources.pl");
 
 
 #
