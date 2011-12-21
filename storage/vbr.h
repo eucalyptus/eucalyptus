@@ -79,6 +79,7 @@ typedef struct _artifact {
     char sig [MAX_ARTIFACT_SIG]; // unique signature for the artifact (IGNORED for a sentinel)
     boolean may_be_cached; // the underlying blob may reside in cache (it will not be modified by an instance)
     boolean must_be_file; // the bits for this artifact must reside in a regular file (rather than just on a block device)
+    boolean must_be_hollow; // create the artifact with BLOBSTORE_FLAG_HOLLOW set (so its size won count toward the limit)
     int (* creator) (struct _artifact * a); // function that can create this artifact based on info in this struct (must be NULL for a sentinel)
     long long size_bytes; // size of the artifact, in bytes (OPTIONAL for some types)
     virtualBootRecord * vbr; // VBR associated with the artifact (OPTIONAL for some types)
@@ -100,7 +101,7 @@ int vbr_parse (virtualMachine * vm, ncMetadata * meta);
 artifact * vbr_alloc_tree (virtualMachine * vm, boolean do_make_bootable, boolean do_make_work_copy, const char * sshkey, const char * instanceId);
 void art_set_instanceId (const char * instanceId);
 int art_implement_tree (artifact * root, blobstore * work_bs, blobstore * cache_bs, const char * work_prefix, long long timeout);
-artifact * art_alloc (const char * id, const char * sig, long long size_bytes, boolean may_be_cached, boolean must_be_file, int (* creator) (artifact * a), virtualBootRecord * vbr);
+artifact * art_alloc (const char * id, const char * sig, long long size_bytes, boolean may_be_cached, boolean must_be_file, boolean must_be_hollow, int (* creator) (artifact * a), virtualBootRecord * vbr);
 int art_add_dep (artifact * a, artifact * dep);
 void art_free (artifact * a);
 boolean tree_uses_blobstore (artifact * a);

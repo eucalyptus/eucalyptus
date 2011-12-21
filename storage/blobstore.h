@@ -84,6 +84,7 @@
 #define BLOBSTORE_FLAG_CREAT    00004
 #define BLOBSTORE_FLAG_EXCL     00010
 #define BLOBSTORE_FLAG_STRICT   01000
+#define BLOBSTORE_FLAG_HOLLOW   02000 // means the blob being created should be viewed as not occupying space
 
 // in-use flags for blockblobs
 #define BLOCKBLOB_STATUS_OPENED 00002 // currently opened by someone (read or write)
@@ -169,6 +170,7 @@ typedef struct _blockblob {
     unsigned long long blocks_allocated; // actual number of blocks on disk taken by the blob
     blobstore_snapshot_t snapshot_type; // ANY = not initialized/known, NONE = not a snapshot, DM = DM-based snapshot
     unsigned int in_use; // flags showing how the blockblob is being used (OPENED, LOCKED, LINKED)
+    unsigned char is_hollow; // blockblob is 'hollow' - its size doesn't count toward the limit
     time_t last_accessed; // timestamp of last access
     time_t last_modified; // timestamp of last modification
     double priority; // priority, for assisting LRU
@@ -200,6 +202,7 @@ typedef struct _blockblob_meta {
     char id [BLOBSTORE_MAX_PATH]; // ID of the blob (used as part of file/directory name)
     unsigned long long size_bytes; // size of the blob in bytes
     unsigned int in_use; // flags showing how the blockblob is being used (OPENED, LOCKED, LINKED)
+    unsigned char is_hollow; // blockblob is 'hollow' - its size doesn't count toward the limit
     time_t last_accessed; // timestamp of last access
     time_t last_modified; // timestamp of last modification
     blobstore * bs; // pointer to blobstore, if one is open
