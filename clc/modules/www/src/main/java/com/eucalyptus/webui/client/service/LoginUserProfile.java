@@ -33,7 +33,7 @@ public class LoginUserProfile implements Serializable {
   }
   
   public boolean isSystemAdmin( ) {
-    return Account.SYSTEM_ACCOUNT.equals( accountName );
+    return "eucalyptus".equals( accountName );
   }
 
   public void setUserName( String userName ) {
