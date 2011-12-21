@@ -731,10 +731,10 @@ public class Topology {
       }
     }
     
-    private static List<ServiceConfiguration> submitTransitions( final List<ServiceConfiguration> allServices,
-                                                                       final Predicate<ServiceConfiguration> proceedToDisableFilter,
+    private static List<ServiceConfiguration> submitTransitions( final List<ServiceConfiguration> services,
+                                                                       final Predicate<ServiceConfiguration> serviceFilter,
                                                                        final Function<ServiceConfiguration, Future<ServiceConfiguration>> submitFunction ) {
-      final Collection<ServiceConfiguration> filteredServices = Collections2.filter( allServices, proceedToDisableFilter );
+      final Collection<ServiceConfiguration> filteredServices = Collections2.filter( services, serviceFilter );
       final Collection<Future<ServiceConfiguration>> submittedCallables = Collections2.transform( filteredServices, submitFunction );
       final Collection<Future<ServiceConfiguration>> completedServices = Collections2.filter( submittedCallables, WaitForResults.INSTANCE );
       List<ServiceConfiguration> results = Lists.newArrayList( Collections2.transform( completedServices, ExtractFuture.INSTANCE ) );
