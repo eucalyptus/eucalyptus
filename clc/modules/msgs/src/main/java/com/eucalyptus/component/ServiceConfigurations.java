@@ -175,8 +175,7 @@ public class ServiceConfigurations {
     
     @Override
     public ServiceStatusType apply( final ServiceConfiguration config ) {
-      return new ServiceStatusType( ) {
-        
+      return new ServiceStatusType( ) {        
         {
           this.setServiceId( TypeMappers.transform( config, ServiceId.class ) );
           this.setLocalEpoch( Topology.epoch( ) );

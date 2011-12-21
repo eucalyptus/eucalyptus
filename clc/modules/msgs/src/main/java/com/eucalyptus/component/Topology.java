@@ -902,7 +902,9 @@ public class Topology {
     ENABLE( Component.State.ENABLED ) {
       @Override
       public ServiceConfiguration apply( final ServiceConfiguration config ) {
-        if ( Topology.guard( ).tryEnable( config ) ) {
+        if ( Faults.isFailstop( ) ) {
+          throw new IllegalStateException( "Failed to ENABLE service " + config.getFullName( ) + " because the host is currently fail-stopped." );
+        } else if ( Topology.guard( ).tryEnable( config ) ) {
           try {
             return super.apply( config );
           } catch ( final RuntimeException ex ) {
@@ -944,6 +946,8 @@ public class Topology {
                      + " aborted because bootstrap is not complete for service: "
                      + config );
           return config;
+        } else if ( Faults.isFailstop( ) ) {
+          throw new IllegalStateException( "Failed to CHECK service " + config.getFullName( ) + " because the host is currently fail-stopped." );
         } else {
           return super.apply( config );
         }
