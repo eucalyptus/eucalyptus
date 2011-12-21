@@ -74,13 +74,13 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.component.Component.State;
-import com.eucalyptus.component.Faults.CheckException;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.empyrean.ServiceId;
 import com.eucalyptus.empyrean.ServiceTransitionType;
@@ -105,7 +105,6 @@ import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.MapMaker;
-import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
@@ -667,7 +666,7 @@ public class Topology {
   enum ExtractFuture implements Function<Future<ServiceConfiguration>, ServiceConfiguration> {
     INSTANCE;
     @Override
-    public ServiceConfiguration apply( Future<ServiceConfiguration> input ) {
+    public ServiceConfiguration apply( final Future<ServiceConfiguration> input ) {
       try {
         return input.get( );
       } catch ( final InterruptedException ex ) {
@@ -736,26 +735,9 @@ public class Topology {
                                                                        final Predicate<ServiceConfiguration> serviceFilter,
                                                                        final Function<ServiceConfiguration, Future<ServiceConfiguration>> submitFunction ) {
       final Collection<ServiceConfiguration> filteredServices = Collections2.filter( services, serviceFilter );
-      Map<ServiceConfiguration, Future<ServiceConfiguration>> submittedCallables = Maps.newHashMap( );
-      for ( ServiceConfiguration s : filteredServices ) {
-        submittedCallables.put( s, submitFunction.apply( s ) );
-      }
-      final Map<ServiceConfiguration, Future<ServiceConfiguration>> completedServices = Maps.filterValues( submittedCallables, WaitForResults.INSTANCE );
-      for( Map.Entry<ServiceConfiguration,Future<ServiceConfiguration>> e : submittedCallables.entrySet() )  {
-        if ( e.getKey( ).isVmLocal( ) ) {
-          try {
-            e.getValue().get( );
-          } catch( Exception ex ) {
-            if ( Exceptions.isCausedBy( ex, CheckException.class ) ) {
-              CheckException checkEx = Exceptions.findCause(ex,CheckException.class );
-              if ( Faults.Severity.FATAL.equals( checkEx ) ) {
-                Hosts.failstop( e.getKey( ), checkEx );
-              }
-            }
-          }
-        }
-      }
-      List<ServiceConfiguration> results = Lists.newArrayList( Collections2.transform( completedServices.values( ), ExtractFuture.INSTANCE ) );
+      final Collection<Future<ServiceConfiguration>> submittedCallables = Collections2.transform( filteredServices, submitFunction );
+      final Collection<Future<ServiceConfiguration>> completedServices = Collections2.filter( submittedCallables, WaitForResults.INSTANCE );
+      List<ServiceConfiguration> results = Lists.newArrayList( Collections2.transform( completedServices, ExtractFuture.INSTANCE ) );
       printCheckInfo( submitFunction.toString( ), results );
       return results;
     }
