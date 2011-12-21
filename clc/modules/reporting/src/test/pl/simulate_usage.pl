@@ -31,12 +31,6 @@ my $write_interval = shift;
 my @types = ("m1.small","c1.medium","m1.large");
 my %types_num = (); # type=>n
 
-#
-# TODO: Generate use_resources.pl from template using fill_template.pl
-#   and parameters
-# TODO: for each image: copy image, inject into image, bundle image,
-#   upload image
-#
 
 #
 # For each user: create an account/user within eucalyptus, download
