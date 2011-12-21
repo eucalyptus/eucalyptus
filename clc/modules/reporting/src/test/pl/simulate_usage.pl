@@ -18,8 +18,8 @@ use strict;
 use warnings;
 require "test_common.pl";
 
-if ($#ARGV+1 < 5) {
-	die "Usage: simulate_usage.pl num_users num_users_per_account num_instances_per_user duration_secs write_interval image+";
+if ($#ARGV+1 < 4) {
+	die "Usage: simulate_usage.pl num_users num_users_per_account num_instances_per_user duration_secs write_interval";
 }
 
 
@@ -28,12 +28,8 @@ my $num_users_per_account = shift;
 my $num_instances_per_user = shift;
 my $duration_secs = shift;
 my $write_interval = shift;
-my @images = ();
 my @types = ("m1.small","c1.medium","m1.large");
 my %types_num = (); # type=>n
-while ($#ARGV+1>0) {
-	push(@images,shift);
-}
 
 #
 # TODO: Generate use_resources.pl from template using fill_template.pl
@@ -81,9 +77,9 @@ for (my $i=0; $i<$num_users; $i++) {
 	# Fork and run simulate_one_user.pl as this euca user
 	if ($pid==0) {
 		# Run usage simulation as euca user within subshell within separate process; rotate thru images and types
-		#exec("(cd \$PWD/credsdir-$user_name; \$PWD/simulate_one_user.pl $num_instances_per_user " . $types[$i % ($#types+1)] . " $duration_secs $num_users " . $images[$i % ($#images+1)] . " > log-$user_name 2>&1)") and die ("Couldn't exec simulate_one_user for: $user_name");
+		#exec("(cd \$PWD/credsdir-$user_name; \$PWD/simulate_one_user.pl $num_instances_per_user " . $types[$i % ($#types+1)] . " $duration_secs $num_users " . image_file() . " > log-$user_name 2>&1)") and die ("Couldn't exec simulate_one_user for: $user_name");
 		$types_num{$types[$i % ($#types+1)]}++; # Keep track of num of instance types started
-		runcmd("(. \$PWD/credsdir-$user_name/eucarc; . \$PWD/credsdir-$user_name/iamrc; \$PWD/simulate_one_user.pl $num_instances_per_user " . $types[$i % ($#types+1)] . " $write_interval $duration_secs " . upload_file() . " " . $images[$i % ($#images+1)] . ") > log-$user_name 2>&1") and die ("Couldn't exec simulate_one_user for: $user_name"); exit(0);
+		runcmd("(. \$PWD/credsdir-$user_name/eucarc; . \$PWD/credsdir-$user_name/iamrc; \$PWD/simulate_one_user.pl $num_instances_per_user " . $types[$i % ($#types+1)] . " $write_interval $duration_secs " . upload_file() . " " . image_file() . ") > log-$user_name 2>&1") and die ("Couldn't exec simulate_one_user for: $user_name"); exit(0);
 	}
 	push(@pids, $pid);
 }

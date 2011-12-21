@@ -17,8 +17,8 @@ use strict;
 use warnings;
 require "test_common.pl";
 
-if ($#ARGV+1 < 6) {
-	die "Usage: simulate_one_user.pl num_instances instance_type interval duration upload_file image\n";
+if ($#ARGV+1 < 5) {
+	die "Usage: simulate_one_user.pl num_instances instance_type interval duration upload_file\n";
 }
 
 # SUB: parse_instance_ids -- parse the output of euca-run-instances or euca-describe-instances
@@ -58,16 +58,16 @@ my $instance_type = shift;
 my $interval = shift;
 my $duration = shift;
 my $upload_file = shift;
-my $image = shift;
 
 my %instance_data = ();  # instance_id => status
 my $access_key = $ENV{"EC2_ACCESS_KEY"};
 my $secret_key = $ENV{"EC2_SECRET_KEY"};
 my $s3_url = $ENV{"S3_URL"};
 
-print "num_instances:$num_instances type:$instance_type interval:$interval duration:$duration upload_file:$upload_file s3_url:$s3_url image:$image\n";
+print "num_instances:$num_instances type:$instance_type interval:$interval duration:$duration upload_file:$upload_file s3_url:$s3_url\n";
 
 # Run instances
+my $image = image_file();
 print "euca-run-instances -t $instance_type -n $num_instances $image";
 my $output = `euca-run-instances -t $instance_type -n $num_instances $image` or die("starting instance failed");
 print "output:$output\n";
