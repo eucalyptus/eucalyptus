@@ -17,8 +17,8 @@ use strict;
 use warnings;
 require "test_common.pl";
 
-if ($#ARGV+1 < 5) {
-	die "Usage: simulate_one_user.pl num_instances instance_type interval duration upload_file\n";
+if ($#ARGV+1 < 4) {
+	die "Usage: simulate_one_user.pl num_instances instance_type interval duration\n";
 }
 
 # SUB: parse_instance_ids -- parse the output of euca-run-instances or euca-describe-instances
@@ -57,14 +57,13 @@ my $num_instances = shift;
 my $instance_type = shift;
 my $interval = shift;
 my $duration = shift;
-my $upload_file = shift;
 
 my %instance_data = ();  # instance_id => status
 my $access_key = $ENV{"EC2_ACCESS_KEY"};
 my $secret_key = $ENV{"EC2_SECRET_KEY"};
 my $s3_url = $ENV{"S3_URL"};
 
-print "num_instances:$num_instances type:$instance_type interval:$interval duration:$duration upload_file:$upload_file s3_url:$s3_url\n";
+print "num_instances:$num_instances type:$instance_type interval:$interval duration:$duration s3_url:$s3_url\n";
 
 # Run instances
 my $image = image_file();
@@ -104,6 +103,7 @@ my $bucketname = "b-" . rand_str(32);
 
 # Allocate storage and s3 for each user, every INTERVAL, sleeping between
 #   Iterations should be as close to the INTERVAL time as possible, so subtract running time
+my $upload_file = upload_file();
 my $start_time = time(); # All storage start time
 my $itime = 0; # Iteration start time
 for (my $i=0; (time()-$start_time) < $duration; $i++) {
