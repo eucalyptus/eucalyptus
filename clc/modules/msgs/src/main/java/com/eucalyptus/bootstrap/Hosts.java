@@ -1136,6 +1136,10 @@ public class Hosts {
     return coordinator != null && coordinator.getBindAddress( ).equals( addr );
   }
   
+  public static void failstop( ) {
+    Coordinator.INSTANCE.reset( );
+  }
+  
   public static boolean hasCoordinator( ) {
     return Coordinator.INSTANCE.get( ) != null;
   }
@@ -1207,6 +1211,11 @@ public class Hosts {
       if ( this.currentStartTime.compareAndSet( Long.MAX_VALUE, startTime ) ) {
         Hosts.put( Hosts.localHost( ) );
       }
+    }
+
+    public void reset( ) {
+      currentStartTime.set( Long.MAX_VALUE );
+      initialize( hostMap.values( ) );
     }
     
     public Boolean isLocalhost( ) {

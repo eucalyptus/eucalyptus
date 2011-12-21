@@ -563,8 +563,13 @@ public class Faults {
   
   private static final ConcurrentMap<ServiceConfiguration, CheckException> failstopExceptions = Maps.newConcurrentMap( );
   
-  public static void failstop( ServiceConfiguration key, CheckException checkEx ) {
-    LOG.warn( "FAILSTOP: " + key.getFullName( ) + "=> " + checkEx.getMessage( ) );
+  public static void failstop( ServiceConfiguration key, CheckException... checkEx ) {
+    if ( checkEx.length == 1 ) {
+      LOG.warn( "FAILSTOP: " + key.getFullName( ) + "=> " + checkEx[0].getMessage( ) );
+      failstopExceptions.put( key, checkEx[0] );
+    } else {
+      failstopExceptions.remove( key );
+    }
   }
   
   public static boolean isFailstop( ) {
