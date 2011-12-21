@@ -98,6 +98,7 @@ import com.eucalyptus.component.Component.State;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
+import com.eucalyptus.component.Faults.CheckException;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.Topology;
@@ -1309,6 +1310,10 @@ public class Hosts {
       while ( AwaitDatabase.INSTANCE.apply( Hosts.getCoordinator( ) ) );
       TimeUnit.SECONDS.sleep( 30 );//GRZE: rejoin backoff
     }
+  }
+
+  public static void failstop( ServiceConfiguration key, CheckException checkEx ) {
+    LOG.warn( "FAILSTOP: " + key.getFullName( ) + "=> " + checkEx.getMessage( ) );
   }
   
 }
