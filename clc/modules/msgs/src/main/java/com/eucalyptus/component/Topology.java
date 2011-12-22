@@ -251,12 +251,25 @@ public class Topology {
       }
       for ( ServiceConfiguration conf : Lists.transform( msg.get_disabledServices( ), ServiceConfigurations.ServiceIdToServiceConfiguration.INSTANCE ) ) {
         if ( !conf.isVmLocal( ) ) {
-          disable( conf );
+          try {
+            disable( conf ).get( );
+          } catch ( InterruptedException ex ) {
+            Exceptions.maybeInterrupted( ex );
+          } catch ( ExecutionException ex ) {
+            Logs.extreme( ).error( ex , ex );
+          }
         }
       }
       for ( ServiceConfiguration conf : Lists.transform( msg.get_notreadyServices( ), ServiceConfigurations.ServiceIdToServiceConfiguration.INSTANCE ) ) {
         if ( !conf.isVmLocal( ) ) {
-          transition( State.NOTREADY ).apply( conf );
+          try {
+            disable( conf ).get( );
+            transition( State.NOTREADY ).apply( conf ).get( );
+          } catch ( InterruptedException ex ) {
+            Exceptions.maybeInterrupted( ex );
+          } catch ( ExecutionException ex ) {
+            Logs.extreme( ).error( ex , ex );
+          }
         }
       }
       Topology.getInstance( ).currentEpoch = Ints.max( Topology.getInstance( ).currentEpoch, msg.get_epoch( ) );
