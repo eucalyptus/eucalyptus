@@ -56,9 +56,10 @@ print "Using args: duration:$duration_secs write_interval:$write_interval users:
 # Terminate all prior instances which may be running
 #
 my @running_instances = ();
+my @fields=();
 foreach (split("\n",`euca-describe-instances`)) {
-	my @fields = split("\\s+");
-	if ($fields[5] eq "running" or $fields[5] eq "pending") {
+	@fields = split("\\s+");
+	if ($#fields>4 and ($fields[5] eq "running" or $fields[5] eq "pending")) {
 		push(@running_instances,$fields[1]);
 	}
 }
@@ -69,21 +70,32 @@ if ($#running_instances > -1) {
 
 
 #
-# Inject a perl script into the image. The perl script is injected in such a way
+# Inject a perl script into the image, then bundle and register the image. The perl script is injected in such a way
 #  that it will run automatically when the image boots. The perl script is generated to use
 #  resources based upon arguments passed to this script. The purpose is to generate false
 #  resource usage from within an image (disk, net, etc) when the test runs.
 #
-runcmd("./fill_template.pl use_resources.template INTERVAL=$write_interval IO_MEGS=" . storage_usage_mb() . " DEVICE=/dev/sda1 > use_resources.pl");
-runcmd("cp " . image_file() . " " . injected_image_file());
-runcmd("./inject.pl " . injected_image_file() . " use_resources.pl");
+my $injected_image_file = injected_image_file();
+printf("./fill_template.pl use_resources.template INTERVAL=%s IO_MEGS=%d DEVICE=%s > use_resources.pl\n", $write_interval, storage_usage_mb(), vol_device());
+system(sprintf("./fill_template.pl use_resources.template INTERVAL=%s IO_MEGS=%d DEVICE=%s > use_resources.pl", $write_interval, storage_usage_mb(), vol_device()));
+runcmd(sprintf("cp %s %s", image_file(), $injected_image_file));
+runcmd(sprintf("./inject.pl %s use_resources.pl", $injected_image_file));
+runcmd(sprintf("euca-bundle-image -i %s", $injected_image_file));
+runcmd(sprintf("euca-upload-bundle -b injectedimage -m /tmp/%s.manifest.xml", $injected_image_file));
+my $output = `euca-register injectedimage/$injected_image_file.manifest.xml`;
+@fields = split("\\s+", $output);
+my $image_id = $fields[1];
+print "IMAGE ID:" . $image_id . "\n";
 
+
+die("done");
 
 #
 # Run simulate_usage, then check results
 #
-print "Executing:./simulate_usage.pl $num_users $num_users_per_account $num_instances_per_user $duration_secs $write_interval\n";
-my $output=`./simulate_usage.pl $num_users $num_users_per_account $num_instances_per_user $duration_secs $write_interval`;
+my $initrd_file = upload_file();
+print "Executing:./simulate_usage.pl $image_id $num_users $num_users_per_account $num_instances_per_user $duration_secs $write_interval\n";
+$output=`./simulate_usage.pl $image_id $num_users $num_users_per_account $num_instances_per_user $duration_secs $write_interval`;
 chomp($output);
 print "Found output:[$output]\n";
 print "Executing: ./check_db.pl $num_instances_per_user $duration_secs $initrd_file $write_interval $output\n";

@@ -16,6 +16,7 @@
 sub storage_usage_mb() { 2 }
 sub upload_file() { "random.dat" }
 sub image_file() { "fedora.img" }
+sub vol_device() { "/dev/sda5" }
 sub injected_image_file() { "injected_image.img" }
 
 
