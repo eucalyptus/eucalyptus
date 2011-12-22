@@ -130,7 +130,7 @@ const int createImage_cleanup_threshold = 60 * 60; /* after this many seconds an
 const int teardown_state_duration = 180; /* after this many seconds in TEARDOWN state (no resources), we'll forget about the instance */
 
 #define MIN_BLOBSTORE_SIZE_MB 10 // even with boot-from-EBS one will need work space for kernel and ramdisk
-#define FS_BUFFER_MB 100 // leave 100MB extra when deciding on blobstore sizes automatically
+#define FS_BUFFER_PERCENT 0.03 // leave 3% extra when deciding on blobstore sizes automatically
 #define WORK_BS_PERCENT 0.33 // give a third of available space to work, the rest to cache
 
 // a NULL-terminated array of available handlers
@@ -1136,13 +1136,14 @@ static int init (void)
         
         // if the user did not specify either or both of the sizes,
         // and blobstores do not exist yet, make reasonable choices
+        long long fs_usable_mb = (long long)((double)fs_avail_mb - (double)(fs_avail_mb) * FS_BUFFER_PERCENT);
         if (work_size_mb == -1 && cache_size_mb == -1) {
-            work_size_mb = (long long)((double)(fs_avail_mb - FS_BUFFER_MB) * WORK_BS_PERCENT);
-            cache_size_mb = fs_avail_mb - FS_BUFFER_MB - work_size_mb;
+            work_size_mb = (long long)((double)fs_usable_mb * WORK_BS_PERCENT);
+            cache_size_mb = fs_usable_mb - work_size_mb;
         } else if (work_size_mb == -1) {
-            work_size_mb = fs_avail_mb - FS_BUFFER_MB - cache_size_mb + cache_bs_allocated_mb;
+            work_size_mb = fs_usable_mb - cache_size_mb + cache_bs_allocated_mb;
         } else if (cache_size_mb == -1) {
-            cache_size_mb = fs_avail_mb - FS_BUFFER_MB - work_size_mb + work_bs_allocated_mb;
+            cache_size_mb = fs_usable_mb - work_size_mb + work_bs_allocated_mb;
         }
 
         // sanity-check final results
@@ -1150,7 +1151,7 @@ static int init (void)
             cache_size_mb = 0;
         if (work_size_mb < MIN_BLOBSTORE_SIZE_MB) {
             logprintfl (EUCAERROR, "error: insufficient disk space for virtual machines (free space: %dMB, reserved for cache: %dMB)\n", 
-                        work_size_mb, (fs_avail_mb - FS_BUFFER_MB), cache_size_mb);
+                        work_size_mb, fs_usable_mb, cache_size_mb);
             free (instance_path);
             return ERROR_FATAL;
         }
