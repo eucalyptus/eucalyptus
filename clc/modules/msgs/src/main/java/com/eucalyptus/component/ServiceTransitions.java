@@ -602,7 +602,15 @@ public class ServiceTransitions {
       
       @Override
       public void fire( final ServiceConfiguration parent ) throws Exception {
+      if ( parent.isVmLocal( ) && Faults.isFailstop( ) ) {
         if ( Component.State.ENABLED.apply( parent ) ) {
+          try {
+            DISABLE.fire( parent );
+          } catch ( Exception ex1 ) {
+          }          
+        }
+        throw new IllegalStateException( "Failed to CHECK service " + parent.getFullName( ) + " because the host is currently fail-stopped." );
+      } else if ( Component.State.ENABLED.apply( parent ) ) {
           try {
             parent.lookupBootstrapper( ).check( );
             ServiceBuilders.lookup( parent.getComponentId( ) ).fireCheck( parent );
@@ -651,11 +659,15 @@ public class ServiceTransitions {
       
       @Override
       public void fire( final ServiceConfiguration parent ) throws Exception {
-        parent.lookupBootstrapper( ).enable( );
-        try {
-          ServiceBuilders.lookup( parent.getComponentId( ) ).fireEnable( parent );
-        } catch ( Exception ex ) {
-          parent.lookupBootstrapper( ).disable( );
+        if ( parent.isVmLocal( ) && Faults.isFailstop( ) ) {
+          throw new IllegalStateException( "Failed to ENABLE service " + parent.getFullName( ) + " because the host is currently fail-stopped." );
+        } else {
+          parent.lookupBootstrapper( ).enable( );
+          try {
+            ServiceBuilders.lookup( parent.getComponentId( ) ).fireEnable( parent );
+          } catch ( Exception ex ) {
+            parent.lookupBootstrapper( ).disable( );
+          }
         }
       }
     },

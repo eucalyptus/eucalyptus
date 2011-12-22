@@ -251,12 +251,25 @@ public class Topology {
       }
       for ( ServiceConfiguration conf : Lists.transform( msg.get_disabledServices( ), ServiceConfigurations.ServiceIdToServiceConfiguration.INSTANCE ) ) {
         if ( !conf.isVmLocal( ) ) {
-          disable( conf );
+          try {
+            disable( conf ).get( );
+          } catch ( InterruptedException ex ) {
+            Exceptions.maybeInterrupted( ex );
+          } catch ( ExecutionException ex ) {
+            Logs.extreme( ).error( ex , ex );
+          }
         }
       }
       for ( ServiceConfiguration conf : Lists.transform( msg.get_notreadyServices( ), ServiceConfigurations.ServiceIdToServiceConfiguration.INSTANCE ) ) {
         if ( !conf.isVmLocal( ) ) {
-          transition( State.NOTREADY ).apply( conf );
+          try {
+            disable( conf ).get( );
+            transition( State.NOTREADY ).apply( conf ).get( );
+          } catch ( InterruptedException ex ) {
+            Exceptions.maybeInterrupted( ex );
+          } catch ( ExecutionException ex ) {
+            Logs.extreme( ).error( ex , ex );
+          }
         }
       }
       Topology.getInstance( ).currentEpoch = Ints.max( Topology.getInstance( ).currentEpoch, msg.get_epoch( ) );
@@ -550,7 +563,7 @@ public class Topology {
     INSTANCE;
     @Override
     public boolean apply( final ServiceConfiguration arg0 ) {
-      return arg0.lookupState( ).ordinal( ) < Component.State.DISABLED.ordinal( ) && !Component.State.STOPPED.apply( arg0 );
+      return arg0.lookupState( ).ordinal( ) < Component.State.NOTREADY.ordinal( ) && !Component.State.STOPPED.apply( arg0 );
     }
     
   }
@@ -714,16 +727,7 @@ public class Topology {
       }
       if ( Faults.isFailstop( ) ) {
         Hosts.failstop( );
-        for ( final Component c : Components.list( ) ) {
-          if ( c.hasLocalService( ) ) {
-            try {
-              SubmitDisable.INSTANCE.apply( c.getLocalServiceConfiguration( ) ).get( );
-            } catch ( Exception ex ) {
-              Exceptions.maybeInterrupted( ex );
-              LOG.error( ex, ex );
-            }
-          }
-        }
+        submitTransitions( allServices, CheckServiceFilter.INSTANCE, SubmitCheck.INSTANCE );
         return Lists.newArrayList( );
       } else if ( !Hosts.isCoordinator( ) ) {
         final Predicate<ServiceConfiguration> proceedToDisableFilter = Predicates.and( ServiceConfigurations.filterHostLocal( ),
@@ -902,7 +906,13 @@ public class Topology {
     ENABLE( Component.State.ENABLED ) {
       @Override
       public ServiceConfiguration apply( final ServiceConfiguration config ) {
-        if ( Topology.guard( ).tryEnable( config ) ) {
+        if ( config.getComponentId( ).isManyToOnePartition( ) ) {
+          try {
+            return super.apply( config );
+          } catch ( final RuntimeException ex ) {
+            throw ex;
+          }
+        } else if ( Topology.guard( ).tryEnable( config ) ) {
           try {
             return super.apply( config );
           } catch ( final RuntimeException ex ) {
