@@ -786,6 +786,10 @@ public class Databases {
       }
     };
     private static final AtomicBoolean last = new AtomicBoolean( false );
+
+    @Override
+    public abstract Set<String> get( );
+    
   }
   
   private static Supplier<Set<String>>        activeHosts                    = Suppliers.memoizeWithExpiration( ActiveHostSet.ACTIVATED, 2, TimeUnit.SECONDS );
