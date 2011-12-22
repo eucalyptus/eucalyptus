@@ -430,7 +430,7 @@ public class Images {
                                                    String rootDeviceName, final List<BlockDeviceMappingItemType> blockDeviceMappings ) throws EucalyptusCloudException {
     ImageMetadata.Architecture imageArch = ImageMetadata.Architecture.x86_64;//TODO:GRZE:OMGFIXME: track parent vol info; needed here 
     ImageMetadata.Platform imagePlatform = ImageMetadata.Platform.linux;
-    if ( "windows".equals( eki ) ) {
+    if ( ImageMetadata.Platform.windows.name( ).equals( eki ) ) {
       imagePlatform = ImageMetadata.Platform.windows;
       eki = null;
     }
@@ -501,7 +501,7 @@ public class Images {
     ImageMetadata.Architecture imageArch = ( requestArch != null )
       ? requestArch
       : manifest.getArchitecture( );
-    ImageMetadata.Platform imagePlatform = manifest.getPlatform( );
+    ImageMetadata.Platform imagePlatform = manifest.getPlatform( );    
     switch ( manifest.getImageType( ) ) {
       case kernel:
         ret = new KernelImageInfo( creator, ImageUtil.newImageId( ImageMetadata.Type.kernel.getTypePrefix( ), manifest.getImageLocation( ) ),
@@ -514,6 +514,10 @@ public class Images {
                                     manifest.getImageLocation( ), manifest.getBundledSize( ), manifest.getChecksum( ), manifest.getChecksumType( ) );
         break;
       case machine:
+    	if(ImageMetadata.Platform.windows.equals(imagePlatform)){
+    	    	eki = null; 
+    	    	eri = null;
+    	}
         ret = new MachineImageInfo( creator, ImageUtil.newImageId( ImageMetadata.Type.machine.getTypePrefix( ), manifest.getImageLocation( ) ),
                                     imageName, imageDescription, manifest.getSize( ), imageArch, imagePlatform,
                                     manifest.getImageLocation( ), manifest.getBundledSize( ), manifest.getChecksum( ), manifest.getChecksumType( ), eki, eri );

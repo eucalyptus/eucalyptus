@@ -357,11 +357,11 @@ public class ServiceTransitions {
       LOG.error( parent.getFullName( ) + " failed transition " + transitionAction.name( ) + " because of " + ex.getMessage( ) );
       if ( Faults.filter( parent, ex ) ) {
         transitionCallback.fireException( ex );
-        Faults.persist( Faults.failure( parent, ex ) );
+        Faults.persist( parent, Faults.failure( parent, ex ) );
         throw Exceptions.toUndeclared( ex );
       } else {
         transitionCallback.fire( );
-        Faults.persist( Faults.advisory( parent, ex ) );
+        Faults.persist( parent, Faults.advisory( parent, ex ) );
       }
     }
   }
@@ -392,13 +392,17 @@ public class ServiceTransitions {
     
     @Override
     public void leave( ServiceConfiguration parent, Completion transitionCallback ) {
-      EventRecord.here( ServiceBuilder.class,
-                        EventType.SERVICE_TRANSITION,
-                        this.name( ),
-                        parent.lookupState( ).toString( ),
-                        parent.getFullName( ).toString( ),
-                        parent.toString( ) ).exhaust( );
-      ServiceTransitions.processTransition( parent, transitionCallback, this );
+      try {
+        EventRecord.here( ServiceBuilder.class,
+          EventType.SERVICE_TRANSITION,
+          this.name( ),
+          parent.lookupState( ).toString( ),
+          parent.getFullName( ).toString( ),
+          parent.toString( ) ).exhaust( );
+        ServiceTransitions.processTransition( parent, transitionCallback, this );
+      } catch ( Exception ex ) {
+        transitionCallback.fireException( ex );
+      }
     }
     
     @Override
@@ -483,9 +487,11 @@ public class ServiceTransitions {
           if ( Faults.Severity.FATAL.equals( errors.getSeverity( ) ) ) {
             //TODO:GRZE: handle remote fatal error.
             throw errors;
+          } else if ( Faults.Severity.TRACE.equals( errors.getSeverity( ) ) ) {
+            Logs.extreme( ).error( errors, errors );
+            return;
           } else if ( errors.getSeverity( ).ordinal( ) < Faults.Severity.ERROR.ordinal( ) ) {
             Logs.extreme( ).error( errors, errors );
-            Faults.persist( errors );
           } else {
             throw errors;
           }
@@ -612,10 +618,8 @@ public class ServiceTransitions {
                   + parent );
                 Logs.extreme( ).error( ex1, ex1 );
               }
-              throw ex;
-            } else {
-              throw ex;
             }
+            throw ex;
           }
         } else {
           parent.lookupBootstrapper( ).check( );

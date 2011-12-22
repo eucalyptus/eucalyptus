@@ -63,43 +63,52 @@
 
 package com.eucalyptus.vm;
 
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
+import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.network.NetworkGroup;
 import com.eucalyptus.network.NetworkPeer;
 import com.eucalyptus.network.NetworkRule;
 import com.eucalyptus.util.ByteArray;
 import com.eucalyptus.vm.VmInstance.VmState;
-import com.eucalyptus.vm.VmInstance.VmStateSet;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
 
 public class NetworkGroupsMetadata implements Function<MetadataRequest, ByteArray> {
-  private static Logger                  LOG        = Logger.getLogger( NetworkGroupsMetadata.class );
-  private static Lock                    lock       = new ReentrantLock( );
-  private static Long                    lastTime   = 0l;
-  private static AtomicReference<String> topoString = new AtomicReference<String>( "" );
+  private static Logger                  LOG              = Logger.getLogger( NetworkGroupsMetadata.class );
+  private static Lock                    lock             = new ReentrantLock( );
+  private static Long                    lastTime         = 0l;
+  private static AtomicReference<String> topoString       = new AtomicReference<String>( "" );
+  private static final Supplier<String>  topoSupplier     = new Supplier<String>( ) {
+                                                            
+                                                            @Override
+                                                            public String get( ) {
+                                                              String ret = generateTopology( );
+                                                              topoString.set( ret );
+                                                              return ret;
+                                                            }
+                                                          };
+  private static Supplier<String>        topoMemoSupplier = Suppliers.memoizeWithExpiration( topoSupplier, VmInstances.NETWORK_METADATA_REFRESH_TIME, TimeUnit.SECONDS );
   
   private String getNetworkTopology( ) {
-    return generateTopology( );//GRZE:FIXME: this is stupid and will perform poorly.
+    if ( Databases.isVolatile( ) ) {
+      return topoString.get( );
+    } else {
+      return topoMemoSupplier.get( );
+    }
   }
   
-  private boolean checkInterval( ) {
-    return ( lastTime + refreshInterval( ) ) < System.currentTimeMillis( );
-  }
-  
-  private long refreshInterval( ) {
-    return VmInstances.NETWORK_METADATA_REFRESH_TIME * 1000l;
-  }
-  
-  public String generateTopology( ) {
+  private static String generateTopology( ) {
     StringBuilder buf = new StringBuilder( );
     Multimap<String, String> networks = ArrayListMultimap.create( );
     Multimap<String, String> rules = ArrayListMultimap.create( );
@@ -115,11 +124,17 @@ public class NetworkGroupsMetadata implements Function<MetadataRequest, ByteArra
               if ( !rules.containsKey( ruleGroup.getNaturalId( ) ) ) {
                 for ( NetworkRule netRule : ruleGroup.getNetworkRules( ) ) {
                   try {
-                    String rule = String.format( "-P %s -%s %d%s%d ", netRule.getProtocol( ), ( NetworkRule.Protocol.icmp.equals( netRule.getProtocol( ) )
-                      ? "t"
-                      : "p" ), netRule.getLowPort( ), ( NetworkRule.Protocol.icmp.equals( netRule.getProtocol( ) )
-                      ? ":"
-                      : "-" ), netRule.getHighPort( ) );
+                    String rule = String.format(
+                      "-P %s -%s %d%s%d ",
+                      netRule.getProtocol( ),
+                      ( NetworkRule.Protocol.icmp.equals( netRule.getProtocol( ) )
+                                                                                  ? "t"
+                                                                                  : "p" ),
+                      netRule.getLowPort( ),
+                      ( NetworkRule.Protocol.icmp.equals( netRule.getProtocol( ) )
+                                                                                  ? ":"
+                                                                                  : "-" ),
+                      netRule.getHighPort( ) );
                     for ( NetworkPeer peer : netRule.getNetworkPeers( ) ) {
                       String ruleString = String.format( "%s -o %s -u %s", rule, peer.getGroupName( ), peer.getUserQueryKey( ) );
                       if ( !rules.get( ruleGroup.getClusterNetworkName( ) ).contains( ruleString ) ) {
@@ -142,7 +157,7 @@ public class NetworkGroupsMetadata implements Function<MetadataRequest, ByteArra
             }
           }
         } catch ( Exception ex ) {
-          LOG.error( ex , ex );
+          LOG.error( ex, ex );
         }
       }
       buf.append( rulesToString( rules ) );

@@ -78,6 +78,7 @@ import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.component.Component;
+import com.eucalyptus.component.Component.State;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
@@ -127,10 +128,12 @@ public class ServiceBootstrapper extends Bootstrapper.Simple {
     }
     
     public static void submit( final Runnable run ) {
+      LOG.info( run );
       if ( !worker.running.get( ) ) {
         throw new IllegalStateException( "Worker has been stopped: " + ServiceBootstrapWorker.class );
+      } else {
+        worker.msgQueue.add( run );
       }
-      worker.msgQueue.add( run );
     }
     
     class Worker implements Runnable, Comparable<Worker> {
@@ -280,11 +283,11 @@ public class ServiceBootstrapper extends Bootstrapper.Simple {
         ServiceBootstrapWorker.submit( new Runnable( ) {
           @Override
           public void run( ) {
-            
-            LOG.debug( "load(): " + config );
             try {
               Components.lookup( config.getComponentId( ) ).setup( config );
-              Topology.start( config ).get( );
+              if ( config.lookupState( ).ordinal( ) < State.LOADED.ordinal( ) ) {
+                Topology.transition( State.LOADED ).apply( config );
+              }
             } catch ( final Exception ex ) {
               Faults.failure( config, ex );
             }
@@ -313,14 +316,9 @@ public class ServiceBootstrapper extends Bootstrapper.Simple {
           @Override
           public void run( ) {
             try {
-//              if ( Hosts.isCoordinator( ) && config.isVmLocal( ) ) {
-//                Topology.enable( config ).get( );
-//              } else {
-                Topology.disable( config ).get( );//GRZE:NOTE: ensure handling remote config push to NOTREADY
-//              }
+              Topology.transition( State.DISABLED ).apply( config );
             } catch ( final Exception ex ) {
               Exceptions.maybeInterrupted( ex );
-              Faults.failure( config, ex );
             }
           }
           
