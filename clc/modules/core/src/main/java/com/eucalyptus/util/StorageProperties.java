@@ -123,7 +123,7 @@ public class StorageProperties {
 	public static enum IscsiAuthType {
 		HBA
 	}
-	public final static int SNAP_PERCENT = 99;
+	public final static int SNAP_PERCENT = 100;
 	public static double NETAPP_META_OVERHEAD = 5;
 
 	static { Groovyness.loadConfig("storageprops.groovy"); }
