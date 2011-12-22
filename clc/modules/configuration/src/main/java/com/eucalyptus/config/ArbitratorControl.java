@@ -100,6 +100,8 @@ public class ArbitratorControl {
 	public static void start( ) {}
 
 	public static void check( ) throws Exception {
+		ArbitratorControl.okay.clear();
+		ArbitratorControl.error.clear();
 		final List<ArbitratorConfiguration> configs = ServiceConfigurations.list( Arbitrator.class );
 		for ( final ArbitratorConfiguration config : configs ) {
 			if(Internets.testLocal(config.getHostName())) {
