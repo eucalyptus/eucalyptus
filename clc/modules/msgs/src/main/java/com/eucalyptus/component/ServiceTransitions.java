@@ -603,6 +603,12 @@ public class ServiceTransitions {
       @Override
       public void fire( final ServiceConfiguration parent ) throws Exception {
       if ( parent.isVmLocal( ) && Faults.isFailstop( ) ) {
+        if ( Component.State.ENABLED.apply( parent ) ) {
+          try {
+            DISABLE.fire( parent );
+          } catch ( Exception ex1 ) {
+          }          
+        }
         throw new IllegalStateException( "Failed to CHECK service " + parent.getFullName( ) + " because the host is currently fail-stopped." );
       } else if ( Component.State.ENABLED.apply( parent ) ) {
           try {
