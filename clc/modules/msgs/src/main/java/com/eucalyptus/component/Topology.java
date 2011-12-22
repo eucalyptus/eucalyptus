@@ -550,7 +550,7 @@ public class Topology {
     INSTANCE;
     @Override
     public boolean apply( final ServiceConfiguration arg0 ) {
-      return arg0.lookupState( ).ordinal( ) < Component.State.DISABLED.ordinal( ) && !Component.State.STOPPED.apply( arg0 );
+      return arg0.lookupState( ).ordinal( ) < Component.State.NOTREADY.ordinal( ) && !Component.State.STOPPED.apply( arg0 );
     }
     
   }
