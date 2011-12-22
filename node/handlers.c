@@ -102,7 +102,7 @@ permission notice:
 #define MONITORING_PERIOD (5)
 #define MAX_CREATE_TRYS 5
 #define CREATE_TIMEOUT_SEC 5
-#define PER_INSTANCE_BUFFER_MB 20 // we reserve this much extra room (in MB) for kernel, ramdisk, and metadata file overhead per instance
+#define PER_INSTANCE_BUFFER_MB 20 // reserve this much extra room (in MB) per instance (for kernel, ramdisk, and metadata overhead)
 
 #ifdef EUCA_COMPILE_TIMESTAMP
 static char * compile_timestamp_str = EUCA_COMPILE_TIMESTAMP;
@@ -1165,14 +1165,18 @@ static int init (void)
         }
        
         // record the work-space limit for max_disk 
-        {
-            long long work_size_gb = (long long)(work_size_mb / MB_PER_DISK_UNIT); // NOTE: also max number of instances per NC
-            nc_state.disk_max = ((long long)work_size_mb - (work_size_gb * PER_INSTANCE_BUFFER_MB)) / MB_PER_DISK_UNIT;
-        }
+        long long work_size_gb = (long long)(work_size_mb / MB_PER_DISK_UNIT);
+        long long overhead_mb = work_size_gb * PER_INSTANCE_BUFFER_MB; // work_size_gb is also max number of instances
+        long long disk_max_mb = work_size_mb - overhead_mb;
+        nc_state.disk_max = disk_max_mb / MB_PER_DISK_UNIT;
+
         logprintfl (EUCAINFO, "disk space for instances: %s/work\n", instance_path);
-        logprintfl (EUCAINFO, "                          %06lldMB limit (%.1f%% of the file system)\n", 
+        logprintfl (EUCAINFO, "                          %06lldMB limit (%.1f%% of the file system) - %lldMB overhead = %lldMB = %lldGB\n",
                     work_size_mb, 
-                    ((double)work_size_mb/(double)fs_size_mb)*100.0 );
+                    ((double)work_size_mb/(double)fs_size_mb)*100.0,
+                    overhead_mb,
+                    disk_max_mb,
+                    nc_state.disk_max);
         logprintfl (EUCAINFO, "                          %06lldMB reserved for use (%.1f%% of limit)\n", 
                     work_bs_reserved_mb, 
                     ((double)work_bs_reserved_mb/(double)work_size_mb)*100.0 );
