@@ -874,7 +874,7 @@ static int copy_creator (artifact * a)
     logprintfl (EUCAINFO, "[%s] copying/cloning blob %s to blob %s\n", a->instanceId, dep->bb->id, a->bb->id);
     if (a->must_be_file) {
         if (blockblob_copy (dep->bb, 0L, a->bb, 0L, 0L)==-1) {
-            logprintfl (EUCAERROR, "[%s] error: failed to copy blob %s to blob %s\n", a->instanceId, dep->bb->id, a->bb->id);
+            logprintfl (EUCAERROR, "[%s] error: failed to copy blob %s to blob %s: %s\n", a->instanceId, dep->bb->id, a->bb->id, blobstore_get_last_msg());
             return blobstore_get_error();
         }
     } else {
@@ -882,7 +882,7 @@ static int copy_creator (artifact * a)
             {BLOBSTORE_SNAPSHOT, BLOBSTORE_BLOCKBLOB, {blob:dep->bb}, 0, 0, round_up_sec (dep->size_bytes) / 512}
         };
         if (blockblob_clone (a->bb, map, 1)==-1) {
-            logprintfl (EUCAERROR, "[%s] error: failed to clone blob %s to blob %s\n", a->instanceId, dep->bb->id, a->bb->id);
+            logprintfl (EUCAERROR, "[%s] error: failed to clone blob %s to blob %s: %s\n", a->instanceId, dep->bb->id, a->bb->id, blobstore_get_last_msg());
             return blobstore_get_error();
         }
     }
@@ -894,7 +894,7 @@ static int copy_creator (artifact * a)
         // tune file system, which is needed to boot EMIs fscked long ago
         logprintfl (EUCAINFO, "[%s] tuning root file system on disk %d partition %d\n", a->instanceId, vbr->diskNumber, vbr->partitionNumber);
         if (diskutil_tune (dev) == ERROR) {
-            logprintfl (EUCAERROR, "[%s] error: failed to tune root file system\n", a->instanceId);
+            logprintfl (EUCAERROR, "[%s] error: failed to tune root file system: %s\n", a->instanceId, blobstore_get_last_msg());
             return ERROR;
         }
     }
@@ -1065,7 +1065,7 @@ static int art_gen_id (char * buf, unsigned int buf_size, const char * first, co
 
 static __thread char current_instanceId [512] = ""; // instance ID that is being serviced, for logging only
 
-artifact * art_alloc (const char * id, const char * sig, long long size_bytes, boolean may_be_cached, boolean must_be_file, int (* creator) (artifact * a), virtualBootRecord * vbr)
+artifact * art_alloc (const char * id, const char * sig, long long size_bytes, boolean may_be_cached, boolean must_be_file, boolean must_be_hollow, int (* creator) (artifact * a), virtualBootRecord * vbr)
 {
     artifact * a = calloc (1, sizeof (artifact));
     if (a==NULL)
@@ -1083,6 +1083,7 @@ artifact * art_alloc (const char * id, const char * sig, long long size_bytes, b
     a->size_bytes = size_bytes;
     a->may_be_cached = may_be_cached;
     a->must_be_file = must_be_file;
+    a->must_be_hollow = must_be_hollow;
     a->creator = creator;
     a->vbr = vbr;
     a->do_tune_fs = FALSE;
@@ -1166,7 +1167,7 @@ static artifact * art_alloc_vbr (virtualBootRecord * vbr, boolean do_make_work_c
         if (art_gen_id (art_id, sizeof(art_id), vbr->id, blob_sig) != OK) goto w_out;
 
         // allocate artifact struct
-        a = art_alloc (art_id, blob_sig, bb_size_bytes, TRUE, must_be_file, url_creator, vbr);
+        a = art_alloc (art_id, blob_sig, bb_size_bytes, TRUE, must_be_file, FALSE, url_creator, vbr);
 
         u_out:
         
@@ -1198,7 +1199,7 @@ static artifact * art_alloc_vbr (virtualBootRecord * vbr, boolean do_make_work_c
         }
 
         // allocate artifact struct
-        a = art_alloc (art_id, blob_sig, bb_size_bytes, TRUE, must_be_file, walrus_creator, vbr);
+        a = art_alloc (art_id, blob_sig, bb_size_bytes, TRUE, must_be_file, FALSE, walrus_creator, vbr);
 
         w_out:
         
@@ -1208,12 +1209,12 @@ static artifact * art_alloc_vbr (virtualBootRecord * vbr, boolean do_make_work_c
     }        
 
     case NC_LOCATION_IQN: {
-        a = art_alloc (NULL, NULL, -1, FALSE, FALSE, iqn_creator, vbr);
+        a = art_alloc (NULL, NULL, -1, FALSE, FALSE, FALSE, iqn_creator, vbr);
         goto out;
     }
 
     case NC_LOCATION_AOE: {
-        a = art_alloc (NULL, NULL, -1, FALSE, FALSE, aoe_creator, vbr);
+        a = art_alloc (NULL, NULL, -1, FALSE, FALSE, FALSE, aoe_creator, vbr);
         goto out;
     }
 
@@ -1242,7 +1243,7 @@ static artifact * art_alloc_vbr (virtualBootRecord * vbr, boolean do_make_work_c
         if (art_gen_id (art_id, sizeof(art_id), art_pref, art_sig) != OK) 
             break;
 
-        a = art_alloc (art_id, art_sig, vbr->size, TRUE, must_be_file, partition_creator, vbr);
+        a = art_alloc (art_id, art_sig, vbr->size, TRUE, must_be_file, FALSE, partition_creator, vbr);
         break;
     }
     default:
@@ -1282,7 +1283,7 @@ static artifact * art_alloc_vbr (virtualBootRecord * vbr, boolean do_make_work_c
             }
         }
          
-        a2 = art_alloc (art_id, art_sig, a->size_bytes, !do_make_work_copy, must_be_file, copy_creator, vbr);
+        a2 = art_alloc (art_id, art_sig, a->size_bytes, !do_make_work_copy, must_be_file, FALSE, copy_creator, vbr);
         if (a2) {
             if (sshkey)
                 strncpy (a2->sshkey, sshkey, sizeof (a2->sshkey)-1 );
@@ -1380,7 +1381,7 @@ art_alloc_disk ( // allocates a 'keyed' disk artifact and possibly the underlyin
             }
             strncat (art_sig, emi_disk->sig, sizeof (art_sig) - strlen (art_sig) - 1);
             
-            if ((disk = art_alloc (emi_disk->id, art_sig, emi_disk->size_bytes, FALSE, FALSE, copy_creator, NULL)) == NULL ||
+            if ((disk = art_alloc (emi_disk->id, art_sig, emi_disk->size_bytes, FALSE, FALSE, FALSE, copy_creator, NULL)) == NULL ||
                 art_add_dep (disk, emi_disk) != OK) {
                 goto free;
             }
@@ -1393,7 +1394,7 @@ art_alloc_disk ( // allocates a 'keyed' disk artifact and possibly the underlyin
         if (art_gen_id (art_id, sizeof(art_id), art_pref, art_sig) != OK) 
             return NULL;
         
-        disk = art_alloc (art_id, art_sig, disk_size_bytes, !do_make_work_copy, FALSE, disk_creator, vbr);
+        disk = art_alloc (art_id, art_sig, disk_size_bytes, !do_make_work_copy, FALSE, TRUE, disk_creator, vbr);
         if (disk==NULL) {
             logprintfl (EUCAERROR, "[%s] error: failed to allocate an artifact for raw disk\n", disk->instanceId);
             return NULL;
@@ -1461,7 +1462,7 @@ vbr_alloc_tree ( // creates a tree of artifacts for a given VBR (caller must fre
     }
     logprintfl (EUCADEBUG, "[%s] found %d prereqs and %d partitions in the VBR\n", instanceId, total_prereq_vbrs, total_parts);
 
-    artifact * root = art_alloc (instanceId, NULL, -1, FALSE, FALSE, NULL, NULL); // allocate a sentinel artifact
+    artifact * root = art_alloc (instanceId, NULL, -1, FALSE, FALSE, FALSE, NULL, NULL); // allocate a sentinel artifact
     if (root == NULL)
         return NULL;
     
@@ -1570,7 +1571,7 @@ vbr_alloc_tree ( // creates a tree of artifacts for a given VBR (caller must fre
 
 static int // returns OK or BLOBSTORE_ERROR_ error codes
 find_or_create_blob ( // either opens a blockblob or creates it
-                     int do_create, // create if non-zero, open if 0
+                     int flags, // determine whether blob is created or opened
                      blobstore * bs, // the blobstore in which to open/create blockblob
                      const char * id, // id of the blockblob
                      long long size_bytes, // size of the blockblob
@@ -1580,10 +1581,6 @@ find_or_create_blob ( // either opens a blockblob or creates it
     blockblob * bb = NULL;
     int ret = OK;
     
-    int flags = 0; // for opening
-    if (do_create) {
-        flags = BLOBSTORE_FLAG_CREAT | BLOBSTORE_FLAG_EXCL; // for creating
-    }
     // open with a short timeout (0-1000 usec), as we do not want to block 
     // here - we let higher-level functions do retries if necessary
     bb = blockblob_open (bs, id, size_bytes, flags, sig, FIND_BLOB_TIMEOUT_USEC);
@@ -1619,6 +1616,15 @@ find_or_create_artifact ( // finds and opens or creates artifact's blob either i
     else 
         safe_strncpy (id_work, a->id, sizeof (id_work));
 
+    // determine flags
+    int flags = 0;
+    if (do_create) {
+        flags |= BLOBSTORE_FLAG_CREAT | BLOBSTORE_FLAG_EXCL;
+    }
+    if (a->must_be_hollow) {
+        flags |= BLOBSTORE_FLAG_HOLLOW;
+    }
+
     // see if a file and if it exists
     if (a->id_is_path) {
         if (check_path (a->id)) {
@@ -1645,8 +1651,8 @@ find_or_create_artifact ( // finds and opens or creates artifact's blob either i
 
     // for a blob first try cache as long as we're allowed to and have one
     if (a->may_be_cached && cache_bs) {
-        ret = find_or_create_blob (do_create, cache_bs, id_cache, size_bytes, a->sig, bbp);
-
+        ret = find_or_create_blob (flags, cache_bs, id_cache, size_bytes, a->sig, bbp);
+        
         // for some error conditions from cache we try work blobstore
         if (( do_create && ret==BLOBSTORE_ERROR_NOSPC) ||
             (!do_create && ret==BLOBSTORE_ERROR_NOENT) ||
@@ -1667,7 +1673,7 @@ find_or_create_artifact ( // finds and opens or creates artifact's blob either i
     if (ret==BLOBSTORE_ERROR_SIGNATURE) {
         logprintfl (EUCAWARN, "[%s] warning: signature mismatch on cached blob %s\n", a->instanceId, id_cache); // TODO: maybe invalidate?
     }
-    return find_or_create_blob (do_create, work_bs, id_work, size_bytes, a->sig, bbp);
+    return find_or_create_blob (flags, work_bs, id_work, size_bytes, a->sig, bbp);
 }
 
 #define ARTIFACT_RETRY_SLEEP_USEC 500000LL
