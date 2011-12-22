@@ -106,6 +106,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.MapMaker;
 import com.google.common.primitives.Ints;
+import edu.emory.mathcs.backport.java.util.Collections;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class Topology {
@@ -740,6 +741,7 @@ public class Topology {
         final Predicate<ServiceConfiguration> canPromote = Predicates.and( Predicates.in( checkedServices ), FailoverPredicate.INSTANCE );
         final Collection<ServiceConfiguration> promoteServices = Collections2.filter( allServices, canPromote );
         List<ServiceConfiguration> result = submitTransitions( allServices, canPromote, SubmitEnable.INSTANCE );
+        Collections.reverse( allServices );
         List<ServiceConfiguration> pass2result = submitTransitions( allServices, canPromote, SubmitEnable.INSTANCE );
         
         /** advance other components as needed **/
