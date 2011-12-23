@@ -186,8 +186,8 @@ parse_rec ( // parses the VBR as supplied by a client or user, checks values, an
     } else if (strstr (vbr->typeName, "ebs") == vbr->typeName) { 
         vbr->type = NC_RESOURCE_EBS;
     } else {
-        logprintfl (EUCAWARN, "Warning: failed to parse resource type '%s'\n", vbr->typeName);
-        //        return ERROR;
+        logprintfl (EUCAERROR, "Error: failed to parse resource type '%s'\n", vbr->typeName);
+        return ERROR;
     }
     
     // identify the type of resource location from location string
@@ -355,6 +355,7 @@ vbr_parse ( // parses and verifies all VBR entries in the virtual machine defini
 {
     virtualBootRecord * partitions [BUS_TYPES_TOTAL][EUCA_MAX_DISKS][EUCA_MAX_PARTITIONS]; // for validating partitions
     bzero (partitions, sizeof (partitions));
+    logprintf ("parsing VBR record len = %d\n", vm->virtualBootRecordLen);
     for (int i=0, j=0; i<EUCA_MAX_VBRS && i<vm->virtualBootRecordLen; i++) {
         virtualBootRecord * vbr = &(vm->virtualBootRecord[i]);
 
