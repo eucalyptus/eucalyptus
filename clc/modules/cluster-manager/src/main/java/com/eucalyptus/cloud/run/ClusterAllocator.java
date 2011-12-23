@@ -298,8 +298,14 @@ public class ClusterAllocator implements Runnable {
     			  DescribeStorageVolumesType describeMsg = new DescribeStorageVolumesType( Lists.newArrayList( vol.getDisplayName( ) ) );          
     			  volState = AsyncRequests.sendSync( scConfig, describeMsg );
     		  }catch(Exception e){
-    			  if (numDescVolError++ < 5)
+    			  if (numDescVolError++ < 5){
+    				  try{
+    					  TimeUnit.SECONDS.sleep( 1 );
+    				  }catch(final InterruptedException ex ) {
+    		    		  Thread.currentThread( ).interrupt( );
+    				  }
     				  continue;
+    			  }
     			  else
     				  throw e;
     		  }        
