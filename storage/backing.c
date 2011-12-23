@@ -279,7 +279,7 @@ static int stale_blob_examiner (const blockblob * bb)
         // while we're here, try to delete extra files that aren't managed by the blobstore
         // TODO: ensure we catch any other files - perhaps by performing this cleanup after all blobs are deleted
         char path [MAX_PATH];
-#define del_file(filename) snprintf (path, sizeof (path), "%s/%s/%s/%s", instances_path, user_id, inst_id, filename); unlink (path);
+#define del_file(filename) snprintf (path, sizeof (path), "%s/%s/%s/%s", instances_path, user_id, inst_id, filename); logprintfl (EUCADEBUG, "removing %s\n", path); unlink (path);
         del_file("instance.xml");
         del_file("libvirt.xml");
         del_file("console.log");
