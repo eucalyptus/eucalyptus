@@ -96,6 +96,7 @@ import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.Callback.Success;
+import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.AsyncRequests;
@@ -173,30 +174,45 @@ public class ClusterAllocator implements Runnable {
   }
   
   private ClusterAllocator( final Allocation allocInfo ) {
-    this.allocInfo = allocInfo;
-    EntityTransaction db = Entities.get( VmInstance.class );
-    try {
-      this.cluster = Clusters.lookup( Topology.lookup( ClusterController.class, allocInfo.getPartition( ) ) );
-      this.messages = new StatefulMessageSet<State>( this.cluster, State.values( ) );
-      this.setupVolumeMessages( );
-      this.setupNetworkMessages( );
-      for ( final ResourceToken token : allocInfo.getAllocationTokens( ) ) {
-        this.setupVmMessages( token );
-      }
-      db.commit( );
-    } catch ( final Exception e ) {
-      db.rollback( );
-      LOG.debug( e, e );
-      this.allocInfo.abort( );
-      for ( final ResourceToken token : allocInfo.getAllocationTokens( ) ) {
-        try {
-          final VmInstance vm = VmInstances.lookup( token.getInstanceId( ) );
-          vm.setState( VmState.TERMINATED, Reason.FAILED, e.getMessage( ) );
-        } catch ( final Exception e1 ) {
-          LOG.debug( e1, e1 );
-        }
-      }
-    }
+	  this.allocInfo = allocInfo;
+	  EntityTransaction db = Entities.get( VmInstance.class );
+	  try {
+		  this.cluster = Clusters.lookup( Topology.lookup( ClusterController.class, allocInfo.getPartition( ) ) );
+		  this.messages = new StatefulMessageSet<State>( this.cluster, State.values( ) );
+		  this.setupVolumeMessages( );
+		  this.setupNetworkMessages( );
+		  db.commit();
+	  }catch( final Exception e){
+		  db.rollback( );
+		  LOG.debug( e, e );
+		  this.allocInfo.abort( );
+		  for ( final ResourceToken token : allocInfo.getAllocationTokens( ) ) {
+			  try {
+				  final VmInstance vm = VmInstances.lookup( token.getInstanceId( ) );
+				  vm.setState( VmState.TERMINATED, Reason.FAILED, e.getMessage( ) );
+			  } catch ( final Exception e1 ) {
+				  LOG.debug( e1, e1 );
+			  }
+		  }
+		  return;
+	  }
+    
+	  try{
+	      for ( final ResourceToken token : allocInfo.getAllocationTokens( ) ) {    	  
+	        this.setupVmMessages( token );
+	      }
+	  }catch( final Exception e){
+		  LOG.debug( e, e );
+		  this.allocInfo.abort( );
+		  for ( final ResourceToken token : allocInfo.getAllocationTokens( ) ) {
+			  try {
+				  final VmInstance vm = VmInstances.lookup( token.getInstanceId( ) );
+				  vm.setState( VmState.TERMINATED, Reason.FAILED, e.getMessage( ) );
+			  } catch ( final Exception e1 ) {
+				  LOG.debug( e1, e1 );
+			  }
+		  }
+	  }
   }
   
   private void setupVolumeMessages( ) throws NoSuchElementException, MetadataException, ExecutionException {
@@ -272,12 +288,14 @@ public class ClusterAllocator implements Runnable {
       childVmInfo = vmInfo.child( );
       final Volume vol = this.allocInfo.getPersistentVolumes( ).get( index );
       ServiceConfiguration scConfig = Topology.lookup( Storage.class, Partitions.lookupByName( vol.getPartition( ) ) );
-      for ( int i = 0; i < 60; i++ ) {
+      for ( int i = 0; i < VmInstances.EBS_VOLUME_CREATION_TIMEOUT*60; i++ ) {
         try {
           DescribeStorageVolumesType describeMsg = new DescribeStorageVolumesType( Lists.newArrayList( vol.getDisplayName( ) ) );
           final DescribeStorageVolumesResponseType volState = AsyncRequests.sendSync( scConfig, describeMsg );
           if ( "available".equals( volState.getVolumeSet( ).get( 0 ).getStatus( ) ) ) {
             break;
+          } else if ("failed".equals( volState.getVolumeSet( ).get( 0 ).getStatus( ) )) {
+        	throw new EucalyptusCloudException("volume creation failed");  
           } else {
             TimeUnit.SECONDS.sleep( 1 );
           }

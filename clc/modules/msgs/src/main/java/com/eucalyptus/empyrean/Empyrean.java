@@ -90,7 +90,14 @@ public class Empyrean extends ComponentId {
   @Partition( value = { Empyrean.class },
               manyToOne = true )
 //  @InternalService
-  public static class Arbitrator extends ComponentId {}
+  public static class Arbitrator extends ComponentId {
+
+    @Override
+    public boolean isDistributedService( ) {
+      return false;
+    }
+    
+  }
   
   @Partition( Empyrean.class )
   @AdminService
