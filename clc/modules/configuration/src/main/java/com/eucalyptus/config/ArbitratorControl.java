@@ -92,7 +92,7 @@ public class ArbitratorControl {
 	private static Logger                   LOG               = Logger.getLogger( ArbitratorControl.class );
 	private static Map<ArbitratorConfiguration, Exception>   error             = Maps.newConcurrentMap( );
 	private static Map<String, ArbitratorConfiguration>   okay              = Maps.newConcurrentMap( );
-	private static boolean wasSet;
+	private static volatile boolean wasSet;
 	private static ScheduledExecutorService monitor;
 	private final static int                CHECK_PERIODICITY = 5;
 
