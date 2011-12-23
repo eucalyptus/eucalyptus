@@ -120,10 +120,15 @@ static void stat_blobstore (const char * conf_instances_path, const char * name,
     blobstore_close (bs);
 }
 
-int check_backing_store ()
+static int stale_blob_examiner (const blockblob * bb);
+static bunchOfInstances * instances = NULL;
+
+int check_backing_store (bunchOfInstances * global_instances)
 {
+    instances = global_instances;
+
     if (work_bs) {
-        if (blobstore_fsck (work_bs, NULL)) {
+        if (blobstore_fsck (work_bs, stale_blob_examiner)) {
             logprintfl (EUCAERROR, "ERROR: work directory failed integrity check: %s\n", blobstore_get_error_str(blobstore_get_error()));
             blobstore_close (cache_bs);
             return ERROR;
@@ -248,6 +253,32 @@ static void set_path (char * path, unsigned int path_size, const ncInstance * in
     } else {
         snprintf     (path, path_size, "%s/work", instances_path);
     }
+}
+
+static int stale_blob_examiner (const blockblob * bb)
+{
+    char work_path [MAX_PATH];
+    
+    set_path (work_path, sizeof (work_path), NULL, NULL);
+    int work_path_len = strlen (work_path);
+    assert (work_path_len > 0);
+
+    char * s = strstr(bb->blocks_path, work_path);
+    if (s==NULL || s!=bb->blocks_path)
+        return 0; // blob not under work blobstore path
+
+    // parse the path past the work directory base
+    safe_strncpy (work_path, bb->blocks_path, sizeof (work_path));
+    s = work_path + work_path_len + 1;
+    char * user_id = strtok (s, "/");
+    char * inst_id = strtok (NULL, "/"); 
+    char * file    = strtok (NULL, "/");
+
+    ncInstance * instance = find_instance (instances, inst_id);
+    if (instance == NULL)
+        return 1; // not found among running instances => stale
+
+    return 0;
 }
 
 int save_instance_struct (const ncInstance * instance)

@@ -297,6 +297,40 @@ sem * diskutil_get_loop_sem (void)
 
 #define LOOP_RETRIES 9
 
+// TODO: since 'losetup' truncates paths in its output, this
+// check is not perfect. It may return approve loopback devices
+// that are actually pointing at a different path.
+int diskutil_loop_check (const char * path, const char * lodev)
+{
+    int ret = 0;
+
+    char * output = pruntf (TRUE, "%s %s %s", helpers_path[ROOTWRAP], helpers_path[LOSETUP], lodev);
+    if (output==NULL)
+        return 1;
+    
+    // output is expected to look like:
+    // /dev/loop4: [0801]:5509589 (/var/lib/eucalyptus/volumes/v*)
+    char * oparen = strchr (output, '(');
+    char * cparen = strchr (output, ')');
+    if (oparen==NULL || cparen==NULL) { // no parenthesis => unexpected `losetup` output
+        ret = 1;
+    } else if ((cparen - oparen) < 3) { // strange paren arrangement => unexpected
+        ret = 1;
+    } else { // extract just the path, possibly truncated, from inside the parens
+        oparen++;
+        cparen--;
+        if (* cparen == '*') // handle truncated paths, identified with an asterisk
+            cparen--;
+        * cparen = '\0'; // truncate ')' or '*)'
+    }
+    if (strstr (path, oparen) == NULL) { // see if path is in the blobstore
+        ret = 1;
+    }
+    free (output);
+    
+    return ret;
+}
+
 int diskutil_loop (const char * path, const long long offset, char * lodev, int lodev_size)
 {
     int found = 0;

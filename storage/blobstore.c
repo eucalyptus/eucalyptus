@@ -1606,6 +1606,8 @@ int blobstore_stat (blobstore * bs, blobstore_meta * meta)
     return ret;
 }
 
+static int blockblob_check (const blockblob * bb);
+
 // integrity check of the blobstore
 // 
 // with a non-NULL examiner(), each found blob is passed to it
@@ -1635,43 +1637,84 @@ int blobstore_fsck (blobstore * bs, int (* examiner) (const blockblob * bb))
         }
         goto free;
     }
-    
-    // run through LL, examining each blockblob
-    unsigned int num_blobs = 0;
-    unsigned int blobs_deleted = 0;
-    for (blockblob * abb = bbs; abb; abb=abb->next) {
-        num_blobs++;
-        
-        // examiner(), if specified, tell us whether to delete the blob
-        if (examiner && examiner (abb)) {
-            blockblob * bb = blockblob_open (bs, abb->id, 0, 0, NULL, BLOBSTORE_FIND_TIMEOUT_USEC);
-            if (bb!=NULL) {
-                if (bb->in_use) {
-                    blockblob_close (bb);
-                    logprintfl (EUCAWARN, "WARNING: failed to delete in-use blockblob %s\n", bb->id);
-                }
-                if (blockblob_delete (bb, BLOBSTORE_DELETE_TIMEOUT_USEC)==-1) {
-                    logprintfl (EUCAWARN, "WARNING: failed to delete blockblob %s\n", bb->id);
-                    blockblob_close (bb);
+
+    {  // check objects in the blobstore
+
+        unsigned int num_blobs = 0;
+        unsigned int blobs_deleted = 0;
+        unsigned int blobs_undeletable = 0;
+        unsigned int blobs_unopenable = 0;
+        unsigned int to_delete_prev = 0;
+        unsigned int iterations = 1;
+        for ( ; iterations < 10; iterations++) { // outer loop for multiple iterations over the list
+            unsigned int to_delete = 0;
+            
+            // run through LL, examining each blockblob
+            for (blockblob * abb = bbs; abb; abb=abb->next) {
+                if (iterations==1)
+                    num_blobs++; // count all blobs on the first iteration
+                
+                if (abb->store==NULL) // these were cleared or condemned on a previous iteration
+                    continue;
+                
+                // examiner(), if specified, tell us whether to delete the blob
+                if (blockblob_check (abb) ||        // blob state is inconsistent
+                    (examiner && examiner (abb))) { // blobstore user condemned the blob
+                    
+                    blockblob * bb = blockblob_open (bs, abb->id, 0, 0, NULL, BLOBSTORE_FIND_TIMEOUT_USEC);
+                    if (bb!=NULL) {
+                        if (bb->in_use) {
+                            if (abb->in_use & ~BLOCKBLOB_STATUS_MAPPED) {
+                                to_delete++;
+                            }
+                            blockblob_close (bb);
+                            
+                        } else if (blockblob_delete (bb, BLOBSTORE_DELETE_TIMEOUT_USEC)==-1) {
+                            logprintfl (EUCAWARN, "WARNING: failed to delete blockblob %s\n", bb->id);
+                            blockblob_close (bb);
+                            abb->store = NULL; // so it will get skipped on next iteration
+                            blobs_undeletable++;
+                            
+                        } else {
+                            logprintfl (EUCAINFO, "deleted stale/corrupted blob %s\n", bb->id);
+                            abb->store = NULL; // so it will get skipped on next iteration
+                            blobs_deleted++;
+                        }
+                    } else {
+                        logprintfl (EUCAWARN, "WARNING: failed to open blockblob %s\n", bb->id);
+                        abb->store = NULL; // so it will get skipped on next iteration
+                        blobs_unopenable++;
+                    }
+                    
+                    /* TODO: delete this
+                    // remove the loopback files (TODO: ideally, only do this if loopback dev is not used)
+                    char path [PATH_MAX];
+                    set_blockblob_metadata_path (BLOCKBLOB_PATH_LOOPBACK, bs, abb->id, path, sizeof(path)); // load path of .../loopback file
+                    unlink (path);
+                    */
                 } else {
-                    logprintfl (EUCAINFO, "deleted unused blob %s\n", bb->id);
-                    blobs_deleted++;
+                    
                 }
-            } else {
-                logprintfl (EUCAWARN, "WARNING: failed to open blockblob %s\n", bb->id);
             }
+            assert (iterations<11);
+            
+            if (to_delete == 0)
+                break;
+            if (to_delete == to_delete_prev) // could not delete anything new this iteration
+                break;
+            to_delete_prev = to_delete;
         }
-
-        // remove the loopback files (TODO: ideally, only do this if loopback dev is not used)
-        char path [PATH_MAX];
-        set_blockblob_metadata_path (BLOCKBLOB_PATH_LOOPBACK, bs, abb->id, path, sizeof(path)); // load path of .../loopback file
-        unlink (path);
+        
+        if (num_blobs>0)
+            logprintfl (EUCAINFO, "fsck examined %d blobs in %d iteration(s): "
+                        "deleted %d, failed on %d + %d, failed to open %d\n", 
+                        num_blobs, iterations,
+                        blobs_deleted, to_delete_prev, blobs_undeletable, blobs_unopenable);
     }
-    logprintfl (EUCAINFO, "fsck deleted %d of %d blobs\n", blobs_deleted, num_blobs);   
-
  free:
     if (bbs)
         free_bbs (bbs);
+    
     return ret;
 }
 
@@ -2145,6 +2188,14 @@ static int dm_suspend_resume (const char * dev_name)
     return 0;
 }
 
+static int dm_check_device (const char * dev_name)
+{
+    // see if the device exists
+    char dm_path [MAX_DM_PATH];
+    snprintf (dm_path, sizeof (dm_path), DM_PATH "%s", dev_name);
+    return check_path (dm_path); // we do not use check_block() because /dev/mapper/... entries can be sym links
+}
+
 static int dm_delete_device (const char * dev_name)
 {
     int retries = 1;
@@ -2325,6 +2376,41 @@ static char * dm_get_zero (void)
     return dev_zero;
 }
 
+static int blockblob_check (const blockblob * bb)
+{
+    char ** array = NULL;
+    int array_size = 0;
+    int err = 0;
+    _err_off(); // do not care if metadata files do not exist
+
+    // check on dm devices listed in .dm of this blob, if any
+    if (read_array_blockblob_metadata_path (BLOCKBLOB_PATH_DM, bb->store, bb->id, &array, &array_size)!=-1) {
+        for (int i=0; i<array_size; i++) {
+            if (dm_check_device (array [i]))
+                err++;
+            free (array[i]);
+        }        
+        free (array);
+    }
+    
+    // check on the loop device listed in .loopback of the blob, if any
+    char lo_dev [PATH_MAX] = "";
+    read_blockblob_metadata_path (BLOCKBLOB_PATH_LOOPBACK, bb->store, bb->id, lo_dev, sizeof (lo_dev));
+    if (strlen (lo_dev) > 0) {
+        struct stat sb;
+        if (stat (lo_dev, &sb) == -1) {
+            err++;
+        } else if (!S_ISBLK(sb.st_mode)) {
+            err++;
+        } else if (diskutil_loop_check (bb->blocks_path, lo_dev)) {
+            err++;
+        }
+    }
+    
+    _err_on();
+    return err;
+}
+
 // if no outside references to the blob exist, and blob is not protected, 
 // deletes the blob and its metadata
 // 
@@ -2349,7 +2435,7 @@ int blockblob_delete ( blockblob * bb, long long timeout_usec )
 
     // do not delete the blob if it is used by another one
     bb->in_use = check_in_use (bs, bb->id, 0); // update in_use status
-    if (bb->in_use & ~(BLOCKBLOB_STATUS_OPENED|BLOCKBLOB_STATUS_BACKED)) { // in use other than opened or backed (by us)
+    if (bb->in_use & ~(BLOCKBLOB_STATUS_OPENED|BLOCKBLOB_STATUS_BACKED)) { // in use other than opened (by this thread) or backed
         ERR (BLOBSTORE_ERROR_AGAIN, NULL);
         ret = -1;
         goto unlock;
