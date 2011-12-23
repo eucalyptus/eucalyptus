@@ -90,7 +90,7 @@ public class VmTypes {
     Long imgSize = img.getImageSizeBytes( );
     Long diskSize = vmType.getDisk( )*1024l*1024l*1024l;
   
-    if ( imgSize > diskSize ) {
+    if ( !( img instanceof BlockStorageImageInfo ) && imgSize > diskSize ) {
       throw new InvalidMetadataException( "image too large [size=" + imgSize / ( 1024l * 1024l ) + "MB] for instance type " + vmType.getName( ) + " [disk="
                                           + vmType.getDisk( ) * 1024l + "MB]" );
     }
