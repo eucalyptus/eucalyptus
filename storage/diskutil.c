@@ -800,7 +800,7 @@ int diskutil_ch (const char * path, const char * user, const char * group, const
     int ret = OK;
     char * output;
 
-    logprintfl (EUCAINFO, "{%u} ch(mod|own) '%s' %s:%s %o\n", 
+    logprintfl (EUCAINFO, "{%u} ch(mod|own) '%s' %s.%s %o\n", 
                 (unsigned int)pthread_self(), 
                 path,
                 user?user:"", 

@@ -471,7 +471,7 @@ int gen_libvirt_attach_xml (const char *volumeId, const ncInstance *instance, co
     snprintf (path, sizeof (path), EUCALYPTUS_VOLUME_XML_PATH_FORMAT, instance->instancePath, volumeId);
     ret = write_xml_file (doc, instance->instanceId, path, "volume")
         || apply_xslt_stylesheet (xslt_path, path, NULL, xml, xml_size);
-        
+    logprintfl (EUCADEBUG, "XML={%s}\n", xml);
     xmlFreeDoc(doc);
     pthread_mutex_unlock (&xml_mutex);
 

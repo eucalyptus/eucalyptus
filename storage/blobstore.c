@@ -1706,7 +1706,7 @@ int blobstore_fsck (blobstore * bs, int (* examiner) (const blockblob * bb))
         }
         
         if (num_blobs>0)
-            logprintfl (EUCAINFO, "examined %d blobs in %d iteration(s): "
+            logprintfl (EUCAINFO, "examined %d blob(s) in %d iteration(s): "
                         "deleted %d, failed on %d + %d, failed to open %d\n", 
                         num_blobs, iterations,
                         blobs_deleted, to_delete_prev, blobs_undeletable, blobs_unopenable);
