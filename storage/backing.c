@@ -366,6 +366,13 @@ ncInstance * load_instance_struct (const char * instanceId)
     }
     close (fd);
     instance->stateCode = NO_STATE;
+    // clear out pointers, since they are now wrong
+    instance->params.root       = NULL;
+    instance->params.kernel     = NULL;
+    instance->params.ramdisk    = NULL;
+    instance->params.swap       = NULL;
+    instance->params.ephemeral0 = NULL;
+    vbr_parse (&(instance->params), NULL); // fix up the pointers
     return instance;
     
  free:
