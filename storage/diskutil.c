@@ -901,8 +901,8 @@ static char * pruntf (boolean log_error, char *format, ...)
 
     rc = pclose(IF);
     if (rc) {
-        // TODO: improve this hacky special case: failure to detach non-existing loop device is not a failure
-        if (strstr (output, "loop: can't delete device") && strstr (output, ": No such device or address")) {
+        // TODO: improve this hacky special case: failure to find or detach non-existing loop device is not a failure
+        if (strstr (output, "loop: can't ") && strstr (output, ": No such device or address")) {
             rc = 0;
         } else {
             if (log_error) {
