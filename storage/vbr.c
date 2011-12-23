@@ -1815,7 +1815,7 @@ art_implement_tree ( // traverse artifact tree and create/download/combine artif
                     unlink (root->id); // attempt to delete, but it may not even exist
 
                 } else {
-                    if (blockblob_delete (root->bb, DELETE_BLOB_TIMEOUT_USEC) == -1) {
+                    if (blockblob_delete (root->bb, DELETE_BLOB_TIMEOUT_USEC, 0) == -1) {
                         // failure of 'delete' is bad, since we may have an open blob
                         // that will prevent others from ever opening it again, so at
                         // least try to close it

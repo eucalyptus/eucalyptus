@@ -255,7 +255,8 @@ blockblob * blockblob_open ( blobstore * bs,
                              const char * sig, // if non-NULL, on create sig is recorded, on open it is verified
                              unsigned long long timeout ); // maximum wait, in milliseconds, for a lock (0 = no blocking)
 int blockblob_close ( blockblob * bb ); // releases the blob locks, allowing others to open() it, and frees the blockblob handle
-int blockblob_delete ( blockblob * bb, long long timeout ); // if no outside references to the blob exist, and blob is not protected, deletes the blob, its metadata, and frees the blockblob handle
+int blockblob_delete ( blockblob * bb, long long timeout_usec, char do_force ); // deletes the blob, its metadata, and frees the blockblob handle, but only
+                                                                                // if no outside references to the blob exist and blob is not protected (unless forced)
 int blockblob_copy ( blockblob * src_bb, // source blob to copy data from
                      unsigned long long src_offset_bytes, // start offset in source
                      blockblob * dst_bb, // destination blob to copy data to

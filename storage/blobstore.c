@@ -1669,7 +1669,7 @@ int blobstore_fsck (blobstore * bs, int (* examiner) (const blockblob * bb))
                             }
                             blockblob_close (bb);
                             
-                        } else if (blockblob_delete (bb, BLOBSTORE_DELETE_TIMEOUT_USEC)==-1) {
+                        } else if (blockblob_delete (bb, BLOBSTORE_DELETE_TIMEOUT_USEC, 1)==-1) {
                             logprintfl (EUCAWARN, "WARNING: failed to delete blockblob %s\n", abb->id);
                             blockblob_close (bb);
                             abb->store = NULL; // so it will get skipped on next iteration
@@ -1818,7 +1818,7 @@ int blobstore_delete_regex (blobstore * bs, const char * regex)
                     blockblob_close (bb);
                     continue; // in use now, try next one
                 }
-                if (blockblob_delete (bb, BLOBSTORE_DELETE_TIMEOUT_USEC)==-1) {
+                if (blockblob_delete (bb, BLOBSTORE_DELETE_TIMEOUT_USEC, 0)==-1) {
                     blockblob_close (bb);
                 } else {
                     closed++;
@@ -2417,7 +2417,7 @@ static int blockblob_check (const blockblob * bb)
 // returns 0 if cleanup was successful and frees the blockblob handle
 // returns -1 otherwise, and DOES NOT free the blockblob handle
 // (so that it can be closed and freed with blockblob_close) 
-int blockblob_delete ( blockblob * bb, long long timeout_usec )
+int blockblob_delete ( blockblob * bb, long long timeout_usec, char do_force )
 {
     char ** array = NULL;
     int array_size = 0;
@@ -2435,7 +2435,7 @@ int blockblob_delete ( blockblob * bb, long long timeout_usec )
 
     // do not delete the blob if it is used by another one
     bb->in_use = check_in_use (bs, bb->id, 0); // update in_use status
-    if (bb->in_use & ~(BLOCKBLOB_STATUS_OPENED|BLOCKBLOB_STATUS_BACKED)) { // in use other than opened (by this thread) or backed
+    if (!do_force && bb->in_use & ~(BLOCKBLOB_STATUS_OPENED|BLOCKBLOB_STATUS_BACKED)) { // in use other than opened (by this thread) or backed
         ERR (BLOBSTORE_ERROR_AGAIN, NULL);
         ret = -1;
         goto unlock;
@@ -2446,7 +2446,7 @@ int blockblob_delete ( blockblob * bb, long long timeout_usec )
         ||
         dm_delete_devices (array, array_size)==-1) {
         ret = -1;
-        goto unlock;
+        if (!do_force) goto unlock;
     }
     for (int i=0; i<array_size; i++) {
         free (array[i]);
@@ -2460,7 +2460,7 @@ int blockblob_delete ( blockblob * bb, long long timeout_usec )
     // so as to update their .refs (blobs depending on them).
     if (read_array_blockblob_metadata_path (BLOCKBLOB_PATH_DEPS, bb->store, bb->id, &array, &array_size)==-1) {
         ret = -1;
-        goto unlock;
+        if (!do_force) goto unlock;
     }
     char my_ref [BLOBSTORE_MAX_PATH+MAX_DM_NAME+1];
     snprintf (my_ref, sizeof (my_ref), "%s %s", bb->store->path, bb->id);
@@ -3028,7 +3028,7 @@ static char * _farray [] = { F1, F2, F3 };
 #define _CLOSBB(BB,ID) ret=blockblob_close(BB); \
     printf("%d: bb_close (%lu %s)=%d errno=%d '%s'\n", getpid(), (unsigned long)BB, (ID==NULL)?("null"):(ID), ret, _blobstore_errno, blobstore_get_error_str(_blobstore_errno));
 
-#define _DELEBB(BB,ID,RE) ret=blockblob_delete(BB, 3000);                 \
+#define _DELEBB(BB,ID,RE) ret=blockblob_delete(BB, 3000, 0);            \
     printf("%d: bb_delete (%lu %s)=%d errno=%d '%s'\n", getpid(), (unsigned long)BB, (ID==NULL)?("null"):(ID), ret, _blobstore_errno, blobstore_get_error_str(_blobstore_errno)); \
     if (ret!=RE) _UNEXPECTED;
 
@@ -3257,7 +3257,7 @@ static int do_clone_stresstest (const char * base, const char * name, blobstore_
             int i = (int)((STRESS_BLOBS-1)*((double)random()/RAND_MAX));
             if (bbs1 [i] != NULL) {
                 printf ("freeing slot %d\n", i);
-#define _DELWARN(BB) if (BB && blockblob_delete (BB, 1000) == -1) { printf ("WARNING: failed to delete blockblob %s i=%d\n", BB->id, i); } BB=NULL
+#define _DELWARN(BB) if (BB && blockblob_delete (BB, 1000, 0) == -1) { printf ("WARNING: failed to delete blockblob %s i=%d\n", BB->id, i); } BB=NULL
                 _DELWARN(bbs1[i]);
                 blockblob_close (bbs2[i]); // so it can be purged with LRU 
                 bbs2[i] = NULL;
