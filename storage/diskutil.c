@@ -803,8 +803,8 @@ int diskutil_ch (const char * path, const char * user, const char * group, const
     logprintfl (EUCAINFO, "{%u} ch(mod|own) '%s' %s.%s %o\n", 
                 (unsigned int)pthread_self(), 
                 path,
-                user?user:"", 
-                group?group:"", 
+                user?user:"*", 
+                group?group:"*", 
                 perms);
     if (user) {
         output = pruntf (TRUE, "%s %s %s %s", helpers_path[ROOTWRAP], helpers_path[CHOWN], user, path);
