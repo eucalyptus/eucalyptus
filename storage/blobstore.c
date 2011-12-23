@@ -1670,18 +1670,18 @@ int blobstore_fsck (blobstore * bs, int (* examiner) (const blockblob * bb))
                             blockblob_close (bb);
                             
                         } else if (blockblob_delete (bb, BLOBSTORE_DELETE_TIMEOUT_USEC)==-1) {
-                            logprintfl (EUCAWARN, "WARNING: failed to delete blockblob %s\n", bb->id);
+                            logprintfl (EUCAWARN, "WARNING: failed to delete blockblob %s\n", abb->id);
                             blockblob_close (bb);
                             abb->store = NULL; // so it will get skipped on next iteration
                             blobs_undeletable++;
                             
                         } else {
-                            logprintfl (EUCAINFO, "deleted stale/corrupted blob %s\n", bb->id);
+                            logprintfl (EUCAINFO, "deleted stale/corrupted blob %s\n", abb->id);
                             abb->store = NULL; // so it will get skipped on next iteration
                             blobs_deleted++;
                         }
                     } else {
-                        logprintfl (EUCAWARN, "WARNING: failed to open blockblob %s\n", bb->id);
+                        logprintfl (EUCAWARN, "WARNING: failed to open blockblob %s\n", abb->id);
                         abb->store = NULL; // so it will get skipped on next iteration
                         blobs_unopenable++;
                     }
@@ -1706,7 +1706,7 @@ int blobstore_fsck (blobstore * bs, int (* examiner) (const blockblob * bb))
         }
         
         if (num_blobs>0)
-            logprintfl (EUCAINFO, "fsck examined %d blobs in %d iteration(s): "
+            logprintfl (EUCAINFO, "examined %d blobs in %d iteration(s): "
                         "deleted %d, failed on %d + %d, failed to open %d\n", 
                         num_blobs, iterations,
                         blobs_deleted, to_delete_prev, blobs_undeletable, blobs_unopenable);

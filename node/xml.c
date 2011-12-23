@@ -451,6 +451,13 @@ int gen_libvirt_attach_xml (const char *volumeId, const ncInstance *instance, co
         _ATTRIBUTE(os, "virtioNetwork", _BOOL(config_use_virtio_net));
     }
 
+    { // backing specification (TODO: maybe expand this with device maps or whatnot?)
+        xmlNodePtr backing = xmlNewChild (volumeNode, NULL, BAD_CAST "backing", NULL);
+        xmlNodePtr root = xmlNewChild (backing, NULL, BAD_CAST "root", NULL);
+        assert (instance->params.root);
+        _ATTRIBUTE(root, "type", ncResourceTypeName[instance->params.root->type]);
+    }
+
     { // volume information
         xmlNodePtr disk = _ELEMENT(volumeNode, "diskPath", remoteDev);
         _ATTRIBUTE(disk, "targetDeviceType", "disk");

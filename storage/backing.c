@@ -275,8 +275,16 @@ static int stale_blob_examiner (const blockblob * bb)
     char * file    = strtok (NULL, "/");
 
     ncInstance * instance = find_instance (instances, inst_id);
-    if (instance == NULL)
-        return 1; // not found among running instances => stale
+    if (instance == NULL) { // not found among running instances => stale
+        // while we're here, try to delete extra files that aren't managed by the blobstore
+        // TODO: ensure we catch any other files - perhaps by performing this cleanup after all blobs are deleted
+        char path [MAX_PATH];
+        set_path (path, sizeof (path), inst_id, "instance.xml");         unlink (path);
+        set_path (path, sizeof (path), inst_id, "libvirt.xml");          unlink (path);
+        set_path (path, sizeof (path), inst_id, "console.log");          unlink (path);
+        set_path (path, sizeof (path), instance, "instance.checkpoint"); unlink (path);
+        return 1;
+    }
 
     return 0;
 }

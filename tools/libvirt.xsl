@@ -126,7 +126,7 @@ that describes a Eucalyptus instance to be launched.
                         </source>
                         <target>
 	                    <xsl:choose> 
-			       <xsl:when test="/instance/hypervisor/@type='kvm' and /instance/os/@platform='windows'">
+			       <xsl:when test="/instance/hypervisor/@type='kvm' and ( /instance/os/@platform='windows' or /instance/os/@virtioRoot = 'true')">
                                    <xsl:attribute name="bus">virtio</xsl:attribute>
 			  	   <xsl:attribute name="dev"> 
                                         <xsl:call-template name="string-replace-all">
@@ -146,16 +146,6 @@ that describes a Eucalyptus instance to be launched.
                                         </xsl:call-template>
 				  </xsl:attribute>
 			       </xsl:when>
-                               <xsl:when test="/instance/hypervisor/@type = 'kvm' and /instance/os/@virtioRoot = 'true'"> 
-                                   <xsl:attribute name="bus">virtio</xsl:attribute>
-                                   <xsl:attribute name="dev">
-                                        <xsl:call-template name="string-replace-all">
-                                           <xsl:with-param name="text" select="@targetDeviceName"/>
-                                           <xsl:with-param name="replace" select="'sd'"/>
-                                           <xsl:with-param name="by" select="'vd'"/>
-                                        </xsl:call-template>
-                                   </xsl:attribute>
-                               </xsl:when>
 			       <xsl:otherwise>
 			           <xsl:attribute name="dev">
                                		<xsl:value-of select="@targetDeviceName"/>
@@ -258,14 +248,40 @@ that describes a Eucalyptus instance to be launched.
 	  </xsl:attribute>
 	</source>
 	<target>
-	  <xsl:attribute name="dev">
-	    <xsl:value-of select="/volume/diskPath/@targetDeviceName"/>
-	  </xsl:attribute>
-	  <xsl:if test="/volume/hypervisor/@type = 'kvm'">
-	    <xsl:if test="( /volume/os/@virtioDisk = 'true' and contains(/volume/diskPath/@targetDeviceName, 'vd') ) or /volume/os/@platform = 'windows'">
-	      <xsl:attribute name="bus">virtio</xsl:attribute>
-	    </xsl:if>
-	  </xsl:if>
+	  <xsl:choose> 
+            <!-- on KVM, always use virtio disk devices for Windows and when requested to do so in NC configuration -->
+            <!-- NOTE: Alternatively, we can limit non-Windows use of virtio to when contains(/volume/diskPath/@targetDeviceName, 'vd') -->
+	    <xsl:when test="/volume/hypervisor/@type='kvm' and ( /volume/os/@platform='windows' or /volume/os/@virtioDisk = 'true')">
+              <xsl:attribute name="bus">virtio</xsl:attribute>
+	      <xsl:attribute name="dev"> 
+                <xsl:call-template name="string-replace-all">
+ 		  <xsl:with-param name="text" select="/volume/diskPath/@targetDeviceName"/>
+		  <xsl:with-param name="replace" select="'sd'"/>
+                  <xsl:with-param name="by" select="'vd'"/>
+ 		</xsl:call-template>
+              </xsl:attribute>
+	    </xsl:when>
+            <!-- on Xen, always use Xen PV disk devices for Windows and when attaching to an EBS-backed instance -->
+            <!-- Long-term, we should probably mandate PV devices for instance-store-backed instances, too, but we did not want to break existing images -->
+	    <xsl:when test="/volume/hypervisor/@type='xen' and ( /volume/os/@platform='windows' or /volume/backing/root/@type = 'ebs' )"> 
+              <xsl:attribute name="bus">xen</xsl:attribute>
+	      <xsl:attribute name="dev">
+		<xsl:call-template name="string-replace-all">
+		  <xsl:with-param name="text" select="/volume/diskPath/@targetDeviceName"/>
+		  <xsl:with-param name="replace" select="'sd'"/>
+		  <xsl:with-param name="by" select="'xvd'"/>
+                </xsl:call-template>
+	      </xsl:attribute>
+	    </xsl:when>
+	    <xsl:otherwise>
+	      <xsl:attribute name="dev">
+                <xsl:value-of select="/volume/diskPath/@targetDeviceName"/>
+              </xsl:attribute>
+              <xsl:attribute name="bus">
+                <xsl:value-of select="/volume/diskPath/@targetDeviceBus"/>
+              </xsl:attribute>
+	    </xsl:otherwise>
+	  </xsl:choose>
 	</target>
       </disk>
     </xsl:template>
