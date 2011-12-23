@@ -355,10 +355,11 @@ vbr_parse ( // parses and verifies all VBR entries in the virtual machine defini
 {
     virtualBootRecord * partitions [BUS_TYPES_TOTAL][EUCA_MAX_DISKS][EUCA_MAX_PARTITIONS]; // for validating partitions
     bzero (partitions, sizeof (partitions));
-    logprintf (EUCADEBUG, "parsing VBR record len = %d\n", vm->virtualBootRecordLen);
+    logprintfl (EUCADEBUG, "parsing vm = %0x\n", vm);
+    logprintfl (EUCADEBUG, "parsing VBR record len = %d\n", vm->virtualBootRecordLen);
     for (int i=0, j=0; i<EUCA_MAX_VBRS && i<vm->virtualBootRecordLen; i++) {
         virtualBootRecord * vbr = &(vm->virtualBootRecord[i]);
-        logprintf (EUCADEBUG, "\trecord %d\n", i);
+        logprintfl (EUCADEBUG, "\trecord %d\n", i);
 
         if (parse_rec (vbr, vm, meta) != OK)
             return ERROR;
