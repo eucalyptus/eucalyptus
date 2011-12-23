@@ -121,9 +121,9 @@ static void stat_blobstore (const char * conf_instances_path, const char * name,
 }
 
 static int stale_blob_examiner (const blockblob * bb);
-static bunchOfInstances * instances = NULL;
+static bunchOfInstances ** instances = NULL;
 
-int check_backing_store (bunchOfInstances * global_instances)
+int check_backing_store (bunchOfInstances ** global_instances)
 {
     instances = global_instances;
 
@@ -279,10 +279,11 @@ static int stale_blob_examiner (const blockblob * bb)
         // while we're here, try to delete extra files that aren't managed by the blobstore
         // TODO: ensure we catch any other files - perhaps by performing this cleanup after all blobs are deleted
         char path [MAX_PATH];
-        set_path (path, sizeof (path), inst_id, "instance.xml");         unlink (path);
-        set_path (path, sizeof (path), inst_id, "libvirt.xml");          unlink (path);
-        set_path (path, sizeof (path), inst_id, "console.log");          unlink (path);
-        set_path (path, sizeof (path), instance, "instance.checkpoint"); unlink (path);
+#define del_file(filename) snprintf (path, sizeof (path), "%s/%s/%s/%s", instances_path, user_id, inst_id, filename); unlink (path);
+        del_file("instance.xml");
+        del_file("libvirt.xml");
+        del_file("console.log");
+        del_file("instance.checkpoint");
         return 1;
     }
 
