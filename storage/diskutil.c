@@ -322,9 +322,9 @@ int diskutil_loop_check (const char * path, const char * lodev)
         if (* cparen == '*') // handle truncated paths, identified with an asterisk
             cparen--;
         * cparen = '\0'; // truncate ')' or '*)'
-    }
-    if (strstr (path, oparen) == NULL) { // see if path is in the blobstore
-        ret = 1;
+        if (strstr (path, oparen) == NULL) { // see if path is in the blobstore
+            ret = 1;
+        }
     }
     free (output);
     
