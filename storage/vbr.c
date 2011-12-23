@@ -358,8 +358,7 @@ vbr_parse ( // parses and verifies all VBR entries in the virtual machine defini
     for (int i=0, j=0; i<EUCA_MAX_VBRS && i<vm->virtualBootRecordLen; i++) {
         virtualBootRecord * vbr = &(vm->virtualBootRecord[i]);
 
-        if (strlen (vbr->typeName) == 0) {
-            logprintfl (EUCADEBUG, "empty VBR, root=%d\n", vm->root);
+        if (strlen (vbr->typeName) == 0) { // this must be the combined disk's VBR
             return OK;
         }
 
