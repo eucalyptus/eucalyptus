@@ -186,8 +186,8 @@ parse_rec ( // parses the VBR as supplied by a client or user, checks values, an
     } else if (strstr (vbr->typeName, "ebs") == vbr->typeName) { 
         vbr->type = NC_RESOURCE_EBS;
     } else {
-        logprintfl (EUCAERROR, "Error: failed to parse resource type '%s'\n", vbr->typeName);
-        return ERROR;
+        logprintfl (EUCAWARN, "Warning: failed to parse resource type '%s'\n", vbr->typeName);
+        //        return ERROR;
     }
     
     // identify the type of resource location from location string
