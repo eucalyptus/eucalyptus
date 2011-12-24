@@ -92,6 +92,7 @@ public class ArbitratorControl {
 	private static Logger                   LOG               = Logger.getLogger( ArbitratorControl.class );
 	private static Map<ArbitratorConfiguration, Exception>   error             = Maps.newConcurrentMap( );
 	private static Map<String, ArbitratorConfiguration>   okay              = Maps.newConcurrentMap( );
+	private static volatile boolean wasSet;
 	private static ScheduledExecutorService monitor;
 	private final static int                CHECK_PERIODICITY = 5;
 
@@ -100,8 +101,6 @@ public class ArbitratorControl {
 	public static void start( ) {}
 
 	public static void check( ) throws Exception {
-		ArbitratorControl.okay.clear();
-		ArbitratorControl.error.clear();
 		final List<ArbitratorConfiguration> configs = ServiceConfigurations.list( Arbitrator.class );
 		for ( final ArbitratorConfiguration config : configs ) {
 			if(Internets.testLocal(config.getHostName())) {
@@ -126,27 +125,37 @@ public class ArbitratorControl {
 								ArbitratorControl.error.put( config, Exceptions.filterStackTrace( e ) );
 								ArbitratorControl.okay.remove(hostName);
 							}
+							wasSet = true;
 							EventRecord.here( ArbitratorControl.class, EventType.BOOTSTRAPPER_CHECK, hostName, "errorMap", error.get( hostName ).toString( ) ).debug( );
 						}
 					}
-					);
+							);
 				}
 			}
 		}
-		final Set<ArbitratorConfiguration> downArbitrators = Sets.newHashSet( error.keySet( ) );
-		if ( downArbitrators.size( ) > 0 ) {
-			ArbitratorConfiguration anyConfig = null;
-			List<Exception> exceptions = new ArrayList<Exception>();
-			for (ArbitratorConfiguration key : downArbitrators) {
-				anyConfig = key;
-				exceptions.add(error.get(key));
+		try {
+			final Set<ArbitratorConfiguration> downArbitrators = Sets.newHashSet( error.keySet( ) );
+			if ( downArbitrators.size( ) > 0 ) {
+				ArbitratorConfiguration anyConfig = null;
+				List<Exception> exceptions = new ArrayList<Exception>();
+				for (ArbitratorConfiguration key : downArbitrators) {
+					anyConfig = key;
+					exceptions.add(error.get(key));
+				}
+				if (ArbitratorControl.okay.isEmpty()) {
+					throw Faults.fatal(anyConfig, exceptions);
+				} else {
+					throw Faults.advisory(anyConfig, exceptions);
+				}
 			}
-			if (ArbitratorControl.okay.isEmpty()) {
-				throw Faults.fatal(anyConfig, exceptions);
-			} else {
-				throw Faults.advisory(anyConfig, exceptions);
+		} catch (Exception e) {
+			throw e;
+		} finally {
+			if (wasSet) {
+				ArbitratorControl.okay.clear();
+				ArbitratorControl.error.clear();
+				wasSet = false;
 			}
 		}
-
 	}
 }

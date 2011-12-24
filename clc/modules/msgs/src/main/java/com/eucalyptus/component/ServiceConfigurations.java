@@ -175,19 +175,18 @@ public class ServiceConfigurations {
     
     @Override
     public ServiceStatusType apply( final ServiceConfiguration config ) {
-      return new ServiceStatusType( ) {
-        /**
-         * 
-         */
-        private static final long serialVersionUID = 1L;
-        
+      return new ServiceStatusType( ) {        
         {
           this.setServiceId( TypeMappers.transform( config, ServiceId.class ) );
           this.setLocalEpoch( Topology.epoch( ) );
-          try {
-            this.setLocalState( config.lookupState( ).toString( ) );
-          } catch ( final Exception ex ) {
-            this.setLocalState( "n/a: " + ex.getMessage( ) );
+          if ( config.isVmLocal( ) && Faults.isFailstop( ) ) {
+            this.setLocalState( Component.State.NOTREADY.name( ) );
+          } else {
+            try {
+              this.setLocalState( config.lookupState( ).toString( ) );
+            } catch ( final Exception ex ) {
+              this.setLocalState( "n/a: " + ex.getMessage( ) );
+            }
           }
           this.getStatusDetails( ).addAll( Collections2.transform( Faults.lookup( config ),
                                                                    TypeMappers.lookup( CheckException.class, ServiceStatusDetail.class ) ) );

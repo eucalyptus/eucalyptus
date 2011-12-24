@@ -109,6 +109,11 @@ public abstract class AbstractServiceBuilder<T extends ServiceConfiguration> imp
       } catch ( PersistenceException ex1 ) {
         LOG.trace( "Failed to find existing component registration for host: " + host );
       }
+    } else {
+      if ( ServiceConfigurations.listPartition( this.getComponentId( ).getClass( ), partition ).size( ) >= 1 ) {
+        throw new ServiceRegistrationException( "Unable to register more than one service in a partition for component type: "
+                                                + this.getComponentId( ).getName( ) );
+      }
     }
     if ( existingName != null && existingHost != null ) {
       return false;

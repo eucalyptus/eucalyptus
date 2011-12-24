@@ -8,7 +8,7 @@ import com.eucalyptus.component.ComponentId.Partition;
 import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.util.Internets;
 
-@Partition( value = { Eucalyptus.class }, manyToOne = true )
+@Partition( value = { Eucalyptus.class } )
 public class ClusterController extends ComponentId {
   
   private static final long       serialVersionUID = 1L;

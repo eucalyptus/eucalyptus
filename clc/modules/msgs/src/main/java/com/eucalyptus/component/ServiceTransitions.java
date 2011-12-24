@@ -458,16 +458,16 @@ public class ServiceTransitions {
           Host h = Hosts.lookup( parent.getHostName( ) );
           if ( h == null ) {
             UnknownHostException ex = new UnknownHostException( "Failed to lookup host " + parent.getHostName( )
-              + " for service "
-              + parent.getFullName( )
-              + ".  Current hosts are: "
-              + Hosts.list( ) );
+                                                                + " for service "
+                                                                + parent.getFullName( )
+                                                                + ".  Current hosts are: "
+                                                                + Hosts.list( ) );
             errors = Faults.failure( parent, ex );
           } else if ( !h.hasBootstrapped( ) ) {
             UnknownHostException ex = new UnknownHostException( "Host " + parent.getHostName( )
-              + " not yet bootstrapped for service "
-              + parent.getFullName( )
-              + "." );
+                                                                + " not yet bootstrapped for service "
+                                                                + parent.getFullName( )
+                                                                + "." );
             errors = Faults.failure( parent, ex );
           } else {
             DescribeServicesResponseType response = ServiceTransitions.sendEmpyreanRequest( parent, new DescribeServicesType( ) {
@@ -485,7 +485,7 @@ public class ServiceTransitions {
             errors = Faults.transformToExceptions( ).apply( status );
           }
           if ( Faults.Severity.FATAL.equals( errors.getSeverity( ) ) ) {
-            //TODO:GRZE: handle remote fatal error.
+//            Faults.failstop( parent, errors ); makes no sense!
             throw errors;
           } else if ( Faults.Severity.TRACE.equals( errors.getSeverity( ) ) ) {
             Logs.extreme( ).error( errors, errors );
@@ -602,28 +602,48 @@ public class ServiceTransitions {
       
       @Override
       public void fire( final ServiceConfiguration parent ) throws Exception {
+      if ( parent.isVmLocal( ) && Faults.isFailstop( ) ) {
         if ( Component.State.ENABLED.apply( parent ) ) {
+          try {
+            DISABLE.fire( parent );
+          } catch ( Exception ex1 ) {
+          }          
+        }
+        throw new IllegalStateException( "Failed to CHECK service " + parent.getFullName( ) + " because the host is currently fail-stopped." );
+      } else if ( Component.State.ENABLED.apply( parent ) ) {
           try {
             parent.lookupBootstrapper( ).check( );
             ServiceBuilders.lookup( parent.getComponentId( ) ).fireCheck( parent );
           } catch ( Exception ex ) {
+            if ( Exceptions.isCausedBy( ex, CheckException.class ) ) {
+              CheckException checkEx = Exceptions.findCause( ex, CheckException.class );
+              Faults.failstop( parent, checkEx );
+            }
             if ( Faults.filter( parent, ex ) ) {
               try {
                 DISABLE.fire( parent );
               } catch ( Exception ex1 ) {
                 LOG.error( "Failed to call DISABLE on an ENABLED service after CHECK failure: " + parent.getFullName( )
-                  + " due to: "
-                  + ex.getMessage( )
-                  + ". With current service info: "
-                  + parent );
+                           + " due to: "
+                           + ex.getMessage( )
+                           + ". With current service info: "
+                           + parent );
                 Logs.extreme( ).error( ex1, ex1 );
               }
             }
             throw ex;
           }
         } else {
-          parent.lookupBootstrapper( ).check( );
-          ServiceBuilders.lookup( parent.getComponentId( ) ).fireCheck( parent );
+          try {
+            parent.lookupBootstrapper( ).check( );
+            ServiceBuilders.lookup( parent.getComponentId( ) ).fireCheck( parent );
+          } catch ( Exception ex ) {
+            if ( Exceptions.isCausedBy( ex, CheckException.class ) ) {
+              CheckException checkEx = Exceptions.findCause( ex, CheckException.class );
+              Faults.failstop( parent, checkEx );
+            }
+            throw ex;
+          }
         }
       }
     },
@@ -639,11 +659,15 @@ public class ServiceTransitions {
       
       @Override
       public void fire( final ServiceConfiguration parent ) throws Exception {
-        parent.lookupBootstrapper( ).enable( );
-        try {
-          ServiceBuilders.lookup( parent.getComponentId( ) ).fireEnable( parent );
-        } catch ( Exception ex ) {
-          parent.lookupBootstrapper( ).disable( );
+        if ( parent.isVmLocal( ) && Faults.isFailstop( ) ) {
+          throw new IllegalStateException( "Failed to ENABLE service " + parent.getFullName( ) + " because the host is currently fail-stopped." );
+        } else {
+          parent.lookupBootstrapper( ).enable( );
+          try {
+            ServiceBuilders.lookup( parent.getComponentId( ) ).fireEnable( parent );
+          } catch ( Exception ex ) {
+            parent.lookupBootstrapper( ).disable( );
+          }
         }
       }
     },
@@ -770,8 +794,8 @@ public class ServiceTransitions {
       @Override
       public void fire( final ServiceConfiguration config ) {
         if ( Hosts.isCoordinator( ) && !config.isVmLocal( )
-          && config.getComponentId( ).isRegisterable( )
-          && !( config.getComponentId( ).isAlwaysLocal( ) || config.getComponentId( ).isCloudLocal( ) ) ) {
+             && config.getComponentId( ).isRegisterable( )
+             && !( config.getComponentId( ).isAlwaysLocal( ) || config.getComponentId( ).isCloudLocal( ) ) ) {
           ServiceEvents.fire( config, config.getStateMachine( ).getState( ) );
         }
       }

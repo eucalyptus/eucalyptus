@@ -138,7 +138,7 @@ public class Hosts {
   @ConfigurableField( description = "Timeout for state initialization (in msec).",
                       readonly = true )
   public static final Long                       STATE_INITIALIZE_TIMEOUT   = 120000L;
-  static final Logger                            LOG                        = Logger.getLogger( Hosts.class );
+  private static final Logger                            LOG                        = Logger.getLogger( Hosts.class );
   public static final long                       SERVICE_INITIALIZE_TIMEOUT = 10000L;
   private static ReplicatedHashMap<String, Host> hostMap;
   private static final ReentrantReadWriteLock    canHas                     = new ReentrantReadWriteLock( );
@@ -1136,6 +1136,10 @@ public class Hosts {
     return coordinator != null && coordinator.getBindAddress( ).equals( addr );
   }
   
+  public static void failstop( ) {
+    Coordinator.INSTANCE.reset( );
+  }
+  
   public static boolean hasCoordinator( ) {
     return Coordinator.INSTANCE.get( ) != null;
   }
@@ -1207,6 +1211,11 @@ public class Hosts {
       if ( this.currentStartTime.compareAndSet( Long.MAX_VALUE, startTime ) ) {
         Hosts.put( Hosts.localHost( ) );
       }
+    }
+
+    public void reset( ) {
+      currentStartTime.set( Long.MAX_VALUE );
+      initialize( hostMap.values( ) );
     }
     
     public Boolean isLocalhost( ) {

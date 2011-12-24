@@ -12,6 +12,7 @@ import com.eucalyptus.auth.checker.ValueChecker;
 import com.eucalyptus.auth.checker.ValueCheckerFactory;
 import com.eucalyptus.auth.entities.AccountEntity;
 import com.eucalyptus.auth.entities.AuthorizationEntity;
+import com.eucalyptus.auth.entities.CertificateEntity;
 import com.eucalyptus.auth.entities.GroupEntity;
 import com.eucalyptus.auth.entities.UserEntity;
 import com.eucalyptus.auth.principal.Account;
@@ -193,7 +194,7 @@ public class DatabaseAccountProxy implements Account {
       GroupEntity userGroup = DatabaseAuthUtils.getUniqueGroup( db, DatabaseAuthUtils.getUserGroupName( userName ), accountName );
       boolean result = ( user.getGroups( ).size( ) > 1
           || user.getKeys( ).size( ) > 0
-          || user.getCertificates( ).size( ) > 0
+          || getCurrentCertificateNumber( user.getCertificates( ) ) > 0
           || userGroup.getPolicies( ).size( ) > 0 );
       db.commit( );
       return result;
@@ -202,6 +203,16 @@ public class DatabaseAccountProxy implements Account {
       Debugging.logError( LOG, e, "Failed to check user " + userName + " in " + accountName );
       throw new AuthException( AuthException.NO_SUCH_USER, e );
     }
+  }
+  
+  private static int getCurrentCertificateNumber( List<CertificateEntity> certs ) {
+    int num = 0;
+    for ( CertificateEntity cert : certs ) {
+      if ( !cert.isRevoked( ) ) {
+        num++;
+      }
+    }
+    return num;
   }
   
   @Override
