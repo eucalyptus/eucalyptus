@@ -358,6 +358,10 @@ vbr_parse ( // parses and verifies all VBR entries in the virtual machine defini
     for (int i=0, j=0; i<EUCA_MAX_VBRS && i<vm->virtualBootRecordLen; i++) {
         virtualBootRecord * vbr = &(vm->virtualBootRecord[i]);
 
+        if (strlen (vbr->typeName) == 0) { // this must be the combined disk's VBR
+            return OK;
+        }
+
         if (parse_rec (vbr, vm, meta) != OK)
             return ERROR;
         
@@ -1811,7 +1815,7 @@ art_implement_tree ( // traverse artifact tree and create/download/combine artif
                     unlink (root->id); // attempt to delete, but it may not even exist
 
                 } else {
-                    if (blockblob_delete (root->bb, DELETE_BLOB_TIMEOUT_USEC) == -1) {
+                    if (blockblob_delete (root->bb, DELETE_BLOB_TIMEOUT_USEC, 0) == -1) {
                         // failure of 'delete' is bad, since we may have an open blob
                         // that will prevent others from ever opening it again, so at
                         // least try to close it
