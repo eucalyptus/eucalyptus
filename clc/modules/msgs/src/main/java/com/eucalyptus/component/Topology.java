@@ -63,8 +63,8 @@
 
 package com.eucalyptus.component;
 
-import java.net.InetAddress;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -74,14 +74,14 @@ import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.component.Component.State;
-import com.eucalyptus.component.Faults.CheckException;
-import com.eucalyptus.component.Topology.ServiceString;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.empyrean.ServiceId;
 import com.eucalyptus.empyrean.ServiceTransitionType;
@@ -94,7 +94,6 @@ import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Internets;
-import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.util.async.Futures;
 import com.google.common.base.Function;
@@ -165,9 +164,15 @@ public class Topology {
   
   private enum TopologyTimer implements EventListener<ClockTick> {
     INSTANCE;
+    private static final AtomicInteger counter = new AtomicInteger( 0 );
+    
     @Override
     public void fireEvent( final ClockTick event ) {
-      Queue.INTERNAL.enqueue( RunChecks.INSTANCE );
+      if ( Hosts.isCoordinator( ) ) {
+        Queue.INTERNAL.enqueue( RunChecks.INSTANCE );
+      } else if ( counter.incrementAndGet( ) % 3 == 0 ) {
+        Queue.INTERNAL.enqueue( RunChecks.INSTANCE );
+      }
     }
     
   }
@@ -247,12 +252,25 @@ public class Topology {
       }
       for ( ServiceConfiguration conf : Lists.transform( msg.get_disabledServices( ), ServiceConfigurations.ServiceIdToServiceConfiguration.INSTANCE ) ) {
         if ( !conf.isVmLocal( ) ) {
-          disable( conf );
+          try {
+            disable( conf ).get( );
+          } catch ( InterruptedException ex ) {
+            Exceptions.maybeInterrupted( ex );
+          } catch ( ExecutionException ex ) {
+            Logs.extreme( ).error( ex , ex );
+          }
         }
       }
       for ( ServiceConfiguration conf : Lists.transform( msg.get_notreadyServices( ), ServiceConfigurations.ServiceIdToServiceConfiguration.INSTANCE ) ) {
         if ( !conf.isVmLocal( ) ) {
-          transition( State.NOTREADY ).apply( conf );
+          try {
+            disable( conf ).get( );
+            transition( State.NOTREADY ).apply( conf ).get( );
+          } catch ( InterruptedException ex ) {
+            Exceptions.maybeInterrupted( ex );
+          } catch ( ExecutionException ex ) {
+            Logs.extreme( ).error( ex , ex );
+          }
         }
       }
       Topology.getInstance( ).currentEpoch = Ints.max( Topology.getInstance( ).currentEpoch, msg.get_epoch( ) );
@@ -703,11 +721,16 @@ public class Topology {
       for ( final Component c : Components.list( ) ) {
         allServices.addAll( c.services( ) );
       }
+      Faults.flush( );
       List<ServiceConfiguration> checkedServices = submitTransitions( allServices, CheckServiceFilter.INSTANCE, SubmitCheck.INSTANCE );
       if ( !checkedServices.isEmpty( ) ) {
         Logs.extreme( ).debug( "CHECKED" + ": " + Joiner.on( "\n" + "CHECKED" + ": " ).join( Collections2.transform( checkedServices, ServiceString.INSTANCE ) ) );
       }
-      if ( !Hosts.isCoordinator( ) ) {
+      if ( Faults.isFailstop( ) ) {
+        Hosts.failstop( );
+        submitTransitions( allServices, CheckServiceFilter.INSTANCE, SubmitCheck.INSTANCE );
+        return Lists.newArrayList( );
+      } else if ( !Hosts.isCoordinator( ) ) {
         final Predicate<ServiceConfiguration> proceedToDisableFilter = Predicates.and( ServiceConfigurations.filterHostLocal( ),
                                                                                        ProceedToDisabledServiceFilter.INSTANCE );
         submitTransitions( allServices, proceedToDisableFilter, SubmitDisable.INSTANCE );
@@ -716,6 +739,7 @@ public class Topology {
       } else {
         /** make promotion decisions **/
         final Predicate<ServiceConfiguration> canPromote = Predicates.and( Predicates.in( checkedServices ), FailoverPredicate.INSTANCE );
+        Collections.shuffle( allServices );
         final Collection<ServiceConfiguration> promoteServices = Collections2.filter( allServices, canPromote );
         List<ServiceConfiguration> result = submitTransitions( allServices, canPromote, SubmitEnable.INSTANCE );
         
@@ -727,10 +751,10 @@ public class Topology {
       }
     }
     
-    private static List<ServiceConfiguration> submitTransitions( final List<ServiceConfiguration> allServices,
-                                                                       final Predicate<ServiceConfiguration> proceedToDisableFilter,
+    private static List<ServiceConfiguration> submitTransitions( final List<ServiceConfiguration> services,
+                                                                       final Predicate<ServiceConfiguration> serviceFilter,
                                                                        final Function<ServiceConfiguration, Future<ServiceConfiguration>> submitFunction ) {
-      final Collection<ServiceConfiguration> filteredServices = Collections2.filter( allServices, proceedToDisableFilter );
+      final Collection<ServiceConfiguration> filteredServices = Collections2.filter( services, serviceFilter );
       final Collection<Future<ServiceConfiguration>> submittedCallables = Collections2.transform( filteredServices, submitFunction );
       final Collection<Future<ServiceConfiguration>> completedServices = Collections2.filter( submittedCallables, WaitForResults.INSTANCE );
       List<ServiceConfiguration> results = Lists.newArrayList( Collections2.transform( completedServices, ExtractFuture.INSTANCE ) );
@@ -884,7 +908,13 @@ public class Topology {
     ENABLE( Component.State.ENABLED ) {
       @Override
       public ServiceConfiguration apply( final ServiceConfiguration config ) {
-        if ( Topology.guard( ).tryEnable( config ) ) {
+        if ( config.getComponentId( ).isManyToOnePartition( ) ) {
+          try {
+            return super.apply( config );
+          } catch ( final RuntimeException ex ) {
+            throw ex;
+          }
+        } else if ( Topology.guard( ).tryEnable( config ) ) {
           try {
             return super.apply( config );
           } catch ( final RuntimeException ex ) {

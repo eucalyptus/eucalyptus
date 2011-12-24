@@ -124,9 +124,5 @@ public class ArbitratorConfiguration extends ComponentConfiguration implements S
     this.gatewayHost = gatewayHost;
   }
   
-  @Override
-  public Boolean isVmLocal( ) {
-    return true;
-  }
 }
 
