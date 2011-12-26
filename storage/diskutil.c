@@ -297,6 +297,40 @@ sem * diskutil_get_loop_sem (void)
 
 #define LOOP_RETRIES 9
 
+// TODO: since 'losetup' truncates paths in its output, this
+// check is not perfect. It may return approve loopback devices
+// that are actually pointing at a different path.
+int diskutil_loop_check (const char * path, const char * lodev)
+{
+    int ret = 0;
+
+    char * output = pruntf (TRUE, "%s %s %s", helpers_path[ROOTWRAP], helpers_path[LOSETUP], lodev);
+    if (output==NULL)
+        return 1;
+    
+    // output is expected to look like:
+    // /dev/loop4: [0801]:5509589 (/var/lib/eucalyptus/volumes/v*)
+    char * oparen = strchr (output, '(');
+    char * cparen = strchr (output, ')');
+    if (oparen==NULL || cparen==NULL) { // no parenthesis => unexpected `losetup` output
+        ret = 1;
+    } else if ((cparen - oparen) < 3) { // strange paren arrangement => unexpected
+        ret = 1;
+    } else { // extract just the path, possibly truncated, from inside the parens
+        oparen++;
+        cparen--;
+        if (* cparen == '*') // handle truncated paths, identified with an asterisk
+            cparen--;
+        * cparen = '\0'; // truncate ')' or '*)'
+        if (strstr (path, oparen) == NULL) { // see if path is in the blobstore
+            ret = 1;
+        }
+    }
+    free (output);
+    
+    return ret;
+}
+
 int diskutil_loop (const char * path, const long long offset, char * lodev, int lodev_size)
 {
     int found = 0;
@@ -766,11 +800,11 @@ int diskutil_ch (const char * path, const char * user, const char * group, const
     int ret = OK;
     char * output;
 
-    logprintfl (EUCAINFO, "{%u} changing ownership and permissions of '%s' to %s:%s %o\n", 
+    logprintfl (EUCAINFO, "{%u} ch(own|mod) '%s' %s.%s %o\n", 
                 (unsigned int)pthread_self(), 
                 path,
-                user?user:"", 
-                group?group:"", 
+                user?user:"*", 
+                group?group:"*", 
                 perms);
     if (user) {
         output = pruntf (TRUE, "%s %s %s %s", helpers_path[ROOTWRAP], helpers_path[CHOWN], user, path);
@@ -867,12 +901,17 @@ static char * pruntf (boolean log_error, char *format, ...)
 
     rc = pclose(IF);
     if (rc) {
-        if (log_error) {
-            logprintfl (EUCAERROR, "{%u} error: bad return code from cmd '%s'\n", (unsigned int)pthread_self(), cmd);
-            logprintfl (EUCADEBUG, "%s\n", output);
+        // TODO: improve this hacky special case: failure to find or detach non-existing loop device is not a failure
+        if (strstr (output, "loop: can't ") && strstr (output, ": No such device or address")) {
+            rc = 0;
+        } else {
+            if (log_error) {
+                logprintfl (EUCAERROR, "{%u} error: bad return code from cmd '%s'\n", (unsigned int)pthread_self(), cmd);
+                logprintfl (EUCADEBUG, "%s\n", output);
+            }
+            if (output) free (output);
+            output = NULL;
         }
-        if (output) free (output);
-        output = NULL;
     }
     va_end(ap);
 
