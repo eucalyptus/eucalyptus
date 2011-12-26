@@ -588,15 +588,22 @@ int clean_network_state(void) {
   }
   sem_mypost(VNET);
 
-  // clean up assigned addrs, iptables, dhcpd (and configs)
-  rc = vnetApplySingleTableRule(tmpvnetconfig, "filter", "-F");
-  if (rc) {
-  }
-  rc = vnetApplySingleTableRule(tmpvnetconfig, "nat", "-F");
-  if (rc) {
-  }
-  rc = vnetApplySingleTableRule(tmpvnetconfig, "filter", "-P FORWARD ACCEPT");
-  if (rc) {
+  if (!strcmp(tmpvnetconfig->mode, "MANAGED") || !strcmp(tmpvnetconfig->mode, "MANAGED-NOVLAN")) {
+    // clean up assigned addrs, iptables, dhcpd (and configs)
+    rc = vnetApplySingleTableRule(tmpvnetconfig, "filter", "-F");
+    if (rc) {
+    }
+    rc = vnetApplySingleTableRule(tmpvnetconfig, "nat", "-F");
+    if (rc) {
+    }
+    rc = vnetApplySingleTableRule(tmpvnetconfig, "filter", "-P FORWARD ACCEPT");
+    if (rc) {
+    }
+    
+    // ipt preload
+    rc = vnetLoadIPTables(tmpvnetconfig);
+    if (rc) {
+    }
   }
 
   // tunnels
