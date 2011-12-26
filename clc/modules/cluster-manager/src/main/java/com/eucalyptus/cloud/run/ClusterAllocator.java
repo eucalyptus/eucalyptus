@@ -282,29 +282,48 @@ public class ClusterAllocator implements Runnable {
     }
   }
   
-  private VmTypeInfo makeVmTypeInfo( final VmTypeInfo vmInfo, final int index, final VirtualBootRecord root ) {
+  private VmTypeInfo makeVmTypeInfo( final VmTypeInfo vmInfo, final int index, final VirtualBootRecord root ) throws Exception
+  {
     VmTypeInfo childVmInfo = vmInfo;
     if ( root.isBlockStorage( ) ) {
       childVmInfo = vmInfo.child( );
       final Volume vol = this.allocInfo.getPersistentVolumes( ).get( index );
       ServiceConfiguration scConfig = Topology.lookup( Storage.class, Partitions.lookupByName( vol.getPartition( ) ) );
+      
+      int numDescVolError =0;
       for ( int i = 0; i < VmInstances.EBS_VOLUME_CREATION_TIMEOUT*60; i++ ) {
-        try {
-          DescribeStorageVolumesType describeMsg = new DescribeStorageVolumesType( Lists.newArrayList( vol.getDisplayName( ) ) );
-          final DescribeStorageVolumesResponseType volState = AsyncRequests.sendSync( scConfig, describeMsg );
-          if ( "available".equals( volState.getVolumeSet( ).get( 0 ).getStatus( ) ) ) {
-            break;
-          } else if ("failed".equals( volState.getVolumeSet( ).get( 0 ).getStatus( ) )) {
-        	throw new EucalyptusCloudException("volume creation failed");  
-          } else {
-            TimeUnit.SECONDS.sleep( 1 );
-          }
-        } catch ( final InterruptedException ex ) {
-          Thread.currentThread( ).interrupt( );
-        } catch ( final Exception ex ) {
-          LOG.error( ex, ex );
-        }
+    	  try {
+    		  DescribeStorageVolumesResponseType volState = null;
+    		  try{
+    			  DescribeStorageVolumesType describeMsg = new DescribeStorageVolumesType( Lists.newArrayList( vol.getDisplayName( ) ) );          
+    			  volState = AsyncRequests.sendSync( scConfig, describeMsg );
+    		  }catch(Exception e){
+    			  if (numDescVolError++ < 5){
+    				  try{
+    					  TimeUnit.SECONDS.sleep( 1 );
+    				  }catch(final InterruptedException ex ) {
+    		    		  Thread.currentThread( ).interrupt( );
+    				  }
+    				  continue;
+    			  }
+    			  else
+    				  throw e;
+    		  }        
+    		  if ( "available".equals( volState.getVolumeSet( ).get( 0 ).getStatus( ) ) ) {
+    			  break;
+    		  } else if ("failed".equals( volState.getVolumeSet( ).get( 0 ).getStatus( ) )) {
+    			  throw new EucalyptusCloudException("volume creation failed");  
+    		  } else {
+    			  TimeUnit.SECONDS.sleep( 1 );
+    		  }
+    	  } catch ( final InterruptedException ex ) {
+    		  Thread.currentThread( ).interrupt( );
+    	  } catch ( final Exception ex ) {
+    		  LOG.error( ex, ex );          
+    		  throw ex;
+    	  }
       }
+      
       for ( final String nodeTag : this.cluster.getNodeTags( ) ) {
         try {
           AttachStorageVolumeType attachMsg = new AttachStorageVolumeType( this.cluster.getNode( nodeTag ).getIqn( ), vol.getDisplayName( ) );
