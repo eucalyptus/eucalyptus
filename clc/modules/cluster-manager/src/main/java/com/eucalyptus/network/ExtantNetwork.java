@@ -155,7 +155,16 @@ public class ExtantNetwork extends UserMetadata<Reference.State> {
   
   private static int bogusTag = -1;
   public static ExtantNetwork bogus( final NetworkGroup networkGroup ) {
-    return new ExtantNetwork( networkGroup, (bogusTag++)%Integer.MAX_VALUE );
+	  final EntityTransaction db = Entities.get( ExtantNetwork.class );
+	  for(;;){
+	    try {
+	      final ExtantNetwork net = Entities.uniqueResult( new ExtantNetwork(bogusTag) );
+	      db.commit( );
+	      bogusTag = (++bogusTag)%Integer.MAX_VALUE;
+	    } catch ( final Exception ex ) {	      
+	    	return new ExtantNetwork( networkGroup, bogusTag);
+	    }    
+	  }
   }
   
   public Integer getTag( ) {
