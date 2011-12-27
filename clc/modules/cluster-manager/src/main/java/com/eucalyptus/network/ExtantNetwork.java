@@ -153,8 +153,9 @@ public class ExtantNetwork extends UserMetadata<Reference.State> {
     return new ExtantNetwork( networkGroup, tag );
   }
   
+  private static int bogusTag = -1;
   public static ExtantNetwork bogus( final NetworkGroup networkGroup ) {
-    return new ExtantNetwork( networkGroup, -1 );
+    return new ExtantNetwork( networkGroup, (bogusTag++)%Integer.MAX_VALUE );
   }
   
   public Integer getTag( ) {
