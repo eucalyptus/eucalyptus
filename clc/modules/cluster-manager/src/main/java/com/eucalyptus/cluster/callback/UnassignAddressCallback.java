@@ -139,7 +139,7 @@ public class UnassignAddressCallback extends MessageCallback<UnassignAddressType
   @Override
   public void fire( UnassignAddressResponseType reply ) {
     try {
-      this.sendSecondaryUnassign( );
+//      this.sendSecondaryUnassign( );
       this.clearVmAddress( );
       this.address.clearPending( );
     } catch ( IllegalStateException t ) {

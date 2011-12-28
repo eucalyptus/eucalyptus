@@ -96,6 +96,7 @@ import com.eucalyptus.util.async.UnconditionalCallback;
 import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstances;
+import com.eucalyptus.vm.VmInstances.TerminatedInstanceException;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
@@ -236,15 +237,19 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
     try {
       final String instanceId = addr.getInstanceId( );
       if ( addr.isAssigned( ) ) {
-        AsyncRequests.newRequest( addr.unassign( ).getCallback( ) ).then( new UnconditionalCallback( ) {
-          @Override
-          public void fire( ) {
-            try {
-              final VmInstance vm = VmInstances.lookup( instanceId );
-              Addresses.system( vm );
-            } catch ( final NoSuchElementException ex ) {}
-          }
-        } ).dispatch( addr.getPartition( ) );
+        try {
+          final VmInstance vm = VmInstances.lookup( instanceId );
+          AsyncRequests.newRequest( addr.unassign( ).getCallback( ) ).then( new UnconditionalCallback( ) {
+            @Override
+            public void fire( ) {
+              try {
+                Addresses.system( vm );
+              } catch ( final NoSuchElementException ex ) {}
+            }
+          } ).dispatch( vm.getPartition( ) );
+        } catch ( TerminatedInstanceException ex ) {
+        } catch ( NoSuchElementException ex ) {
+        }
       } else {
         addr.release( );
       }
