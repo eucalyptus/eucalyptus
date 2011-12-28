@@ -73,6 +73,7 @@ import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.RestrictedTypes;
@@ -178,7 +179,7 @@ public class AddressManager {
           public void fire( BaseMessage response ) {
             vm.updatePublicAddress( address.getName( ) );
           }
-        } ).dispatch( address.getPartition( ) );
+        } ).dispatch( vm.getPartition( ) );
         if ( oldVm != null ) {
           Addresses.system( oldVm );
         }
@@ -188,14 +189,14 @@ public class AddressManager {
     final UnconditionalCallback unassignBystander = new UnconditionalCallback( ) {
       public void fire( ) {
         if ( oldAddr != null ) {
-          AsyncRequests.newRequest( oldAddr.unassign( ).getCallback( ) ).then( assignTarget ).dispatch( oldAddr.getPartition( ) );
+          AsyncRequests.newRequest( oldAddr.unassign( ).getCallback( ) ).then( assignTarget ).dispatch( vm.getPartition( ) );
         } else {
           assignTarget.fire( );
         }
       }
     };
     if ( address.isAssigned( ) ) {
-      AsyncRequests.newRequest( address.unassign( ).getCallback( ) ).then( unassignBystander ).dispatch( address.getPartition( ) );
+      AsyncRequests.newRequest( address.unassign( ).getCallback( ) ).then( unassignBystander ).dispatch( oldVm.getPartition( ) );
     } else {
       unassignBystander.fire( );
     }
@@ -237,16 +238,17 @@ public class AddressManager {
       throw new EucalyptusCloudException( "Only administrators can unassign system owned addresses: " + address.toString( ) );
     } else {
       try {
+        final VmInstance vm = VmInstances.lookup( vmId );
         if ( address.isSystemOwned( ) ) {
           AsyncRequests.newRequest( address.unassign( ).getCallback( ) ).then( new UnconditionalCallback( ) {
             public void fire( ) {
               try {
-                Addresses.system( VmInstances.lookup( vmId ) );
+                Addresses.system( vm );
               } catch ( Exception e ) {
                 LOG.debug( e, e );
               }
             }
-          } ).dispatch( address.getPartition( ) );
+          } ).dispatch( vm.getPartition( ) );
         } else {
           AsyncRequests.newRequest( address.unassign( ).getCallback( ) ).then( new UnconditionalCallback( ) {
             @Override
@@ -257,10 +259,12 @@ public class AddressManager {
                 LOG.debug( e, e );
               }
             }
-          } ).dispatch( address.getPartition( ) );
+          } ).dispatch( vm.getPartition( ) );
         }
       } catch ( Exception e ) {
-        LOG.debug( e, e );
+        LOG.debug( e );
+        Logs.extreme( ).debug( e, e );
+        address.unassign( ).clearPending( );
       }
     }
     return reply;

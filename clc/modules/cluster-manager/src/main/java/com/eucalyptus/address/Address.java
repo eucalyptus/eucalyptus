@@ -154,8 +154,6 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
   }
   
   private static Logger                   LOG                     = Logger.getLogger( Address.class );
-  @Column( name = "metadata_address_partition" )
-  private String                          partition;
   @Transient
   private String                          instanceId;
   @Transient
@@ -193,15 +191,13 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
     this( ipAddress );
     this.instanceId = UNASSIGNED_INSTANCEID;
     this.instanceAddress = UNASSIGNED_INSTANCEADDR;
-    this.partition = partition;
     this.transition = this.QUIESCENT;
     this.atomicState = new AtomicMarkableReference<State>( State.unallocated, false );
     this.init( );
   }
   
-  public Address( OwnerFullName ownerFullName, String address, String partition, String instanceId, String instanceAddress ) {
+  public Address( OwnerFullName ownerFullName, String address, String instanceId, String instanceAddress ) {
     this( address );
-    this.partition = partition;
     this.setOwner( ownerFullName );
     this.instanceId = instanceId;
     this.instanceAddress = instanceAddress;
@@ -447,7 +443,7 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
       db.rollback( );
       LOG.error( e, e );
     } catch ( EucalyptusCloudException e ) {
-      addr = new Address( address.getName( ), address.getPartition( ) );
+      addr = new Address( address.getName( ) );
       try {
         db.add( addr );
         db.commit( );
@@ -459,10 +455,6 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
   
   public String getInstanceId( ) {
     return this.instanceId;
-  }
-  
-  public String getCluster( ) {
-    return this.partition;
   }
   
   public String getUserId( ) {
@@ -481,17 +473,13 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
     return this.stateUuid;
   }
   
-  public void setCluster( final String cluster ) {
-    this.partition = cluster;
-  }
-  
   public void setInstanceId( String instanceId ) {
     this.instanceId = instanceId;
   }
   
   @Override
   public String toString( ) {
-    return "Address " + this.getDisplayName( ) + " " + this.partition + " " + ( this.isAllocated( )
+    return "Address " + this.getDisplayName( ) + " " + ( this.isAllocated( )
       ? this.getOwner( ) + " "
       : "" ) + ( this.isAssigned( )
       ? this.instanceId + " " + this.instanceAddress + " "
@@ -557,11 +545,6 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
   }
   
   @Override
-  public String getPartition( ) {
-    return this.partition;
-  }
-  
-  @Override
   public FullName getFullName( ) {
     return FullName.create.vendor( "euca" ).region( ComponentIds.lookup( ClusterController.class ).name( ) ).namespace( this.getPartition( ) ).relativeId( "public-address",
                                                                                                                                                            this.getName( ) );
@@ -574,6 +557,14 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
     } else {
       return super.compareTo( that );
     }
+  }
+
+  /**
+   * @see com.eucalyptus.util.HasFullName#getPartition()
+   */
+  @Override
+  public String getPartition( ) {
+    return "eucalyptus";
   }
   
 }

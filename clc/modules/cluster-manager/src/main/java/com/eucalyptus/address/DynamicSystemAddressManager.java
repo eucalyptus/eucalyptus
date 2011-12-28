@@ -54,7 +54,7 @@ public class DynamicSystemAddressManager extends AbstractSystemAddressManager {
       public void fire( final BaseMessage response ) {
         vm.updatePublicAddress( addr.getName( ) );
       }
-    } ).dispatch( addr.getPartition( ) );
+    } ).dispatch( vm.getPartition( ) );
   }
   
   @Override
