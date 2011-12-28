@@ -66,6 +66,8 @@ package com.eucalyptus.network;
 import java.util.HashSet;
 import java.util.NoSuchElementException;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
+
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.EntityTransaction;
@@ -153,8 +155,18 @@ public class ExtantNetwork extends UserMetadata<Reference.State> {
     return new ExtantNetwork( networkGroup, tag );
   }
   
+  private static AtomicInteger bogusTag = new AtomicInteger(0);
   public static ExtantNetwork bogus( final NetworkGroup networkGroup ) {
-    return new ExtantNetwork( networkGroup, -1 );
+	  for(;;){
+		final EntityTransaction db = Entities.get( ExtantNetwork.class );
+	    try {
+	      final ExtantNetwork net = Entities.uniqueResult( new ExtantNetwork(bogusTag.decrementAndGet()) );
+	      db.rollback();
+	    } catch ( final Exception ex ) {	
+	    	db.rollback();
+	    	return new ExtantNetwork( networkGroup, bogusTag.get());
+	    }    
+	  }
   }
   
   public Integer getTag( ) {

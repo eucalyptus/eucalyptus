@@ -666,7 +666,11 @@ public class ServiceTransitions {
           try {
             ServiceBuilders.lookup( parent.getComponentId( ) ).fireEnable( parent );
           } catch ( Exception ex ) {
-            parent.lookupBootstrapper( ).disable( );
+            try {
+              parent.lookupBootstrapper( ).disable( );
+            } catch ( Exception ex1 ) {
+            }
+            throw ex;
           }
         }
       }

@@ -99,6 +99,7 @@ import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Threads;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes.QuantityMetricFunction;
 import com.eucalyptus.util.RestrictedTypes.Resolver;
@@ -363,7 +364,7 @@ public class VmInstances {
   
   public static void cleanUp( final VmInstance vm ) {
     LOG.trace( Logs.dump( vm ) );
-    LOG.trace( Threads.currentStackString( ) );
+    LOG.info( "Terminating instance: " + vm.getInstanceId( ), new RuntimeException( ) );
     try {
       final Cluster cluster = Clusters.lookup( Topology.lookup( ClusterController.class, vm.lookupPartition( ) ) );
       VmInstances.cleanUpAttachedVolumes( vm );

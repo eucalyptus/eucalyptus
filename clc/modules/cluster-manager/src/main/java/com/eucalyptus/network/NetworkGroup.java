@@ -274,7 +274,10 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
   
   public ExtantNetwork extantNetwork( ) throws NotEnoughResourcesException, TransientEntityException {
     if ( !NetworkGroups.networkingConfiguration( ).hasNetworking( ) ) {
-      return ExtantNetwork.bogus( this );
+    	ExtantNetwork bogusNet = ExtantNetwork.bogus( this );
+    	if(!this.hasExtantNetwork())
+    		this.setExtantNetwork(bogusNet);
+    	return bogusNet;
     } else if ( !Entities.isPersistent( this ) ) {
       throw new TransientEntityException( this.toString( ) );
     } else {
