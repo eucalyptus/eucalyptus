@@ -538,7 +538,7 @@ static int xen_detach_helper (struct nc_state_t *nc, char *instanceId, char *loc
         int fd = safe_mkstemp(tmpfile);
 	char xvdDevReal[32];
         // sdx -> xvdx 
-        snprintf(xvdDevReal, MAX_PATH, "xvd%s", localDevReal+2);
+        snprintf(xvdDevReal, 32, "xvd%s", localDevReal+2);
         if (fd > 0) {
             write(fd, xml, strlen(xml));
             close(fd);
