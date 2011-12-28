@@ -439,6 +439,8 @@ public class VmControl {
             allocInfo.abort( );
             throw ex;
           }
+        } else {
+          db.rollback( );
         }
       } catch ( Exception ex1 ) {
         LOG.trace( ex1, ex1 );
