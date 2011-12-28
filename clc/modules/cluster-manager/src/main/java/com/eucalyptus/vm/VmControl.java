@@ -424,19 +424,21 @@ public class VmControl {
       EntityTransaction db = Entities.get( VmInstance.class );
       try {//scope for transaction
         final VmInstance vm = RestrictedTypes.doPrivileged( instanceId, VmInstance.class );
-        Allocation allocInfo = Allocations.start( vm );
-        try {//scope for allocInfo
-          AdmissionControl.run( ).apply( allocInfo );
-          vm.setState( VmState.PENDING );
-          ClusterAllocator.get( ).apply( allocInfo );
-          final int oldCode = vm.getState( ).getCode( ), newCode = VmState.PENDING.getCode( );
-          final String oldState = vm.getState( ).getName( ), newState = VmState.PENDING.getName( );
-          reply.getInstancesSet( ).add( new TerminateInstancesItemType( vm.getInstanceId( ), oldCode, oldState, newCode, newState ) );
-          db.commit( );
-        } catch ( Exception ex ) {
-          db.rollback( );
-          allocInfo.abort( );
-          throw ex;
+        if ( VmState.STOPPED.equals( vm.getState( ) ) ) {
+          Allocation allocInfo = Allocations.start( vm );
+          try {//scope for allocInfo
+            AdmissionControl.run( ).apply( allocInfo );
+            vm.setState( VmState.PENDING );
+            ClusterAllocator.get( ).apply( allocInfo );
+            final int oldCode = vm.getState( ).getCode( ), newCode = VmState.PENDING.getCode( );
+            final String oldState = vm.getState( ).getName( ), newState = VmState.PENDING.getName( );
+            reply.getInstancesSet( ).add( new TerminateInstancesItemType( vm.getInstanceId( ), oldCode, oldState, newCode, newState ) );
+            db.commit( );
+          } catch ( Exception ex ) {
+            db.rollback( );
+            allocInfo.abort( );
+            throw ex;
+          }
         }
       } catch ( Exception ex1 ) {
         LOG.trace( ex1, ex1 );
