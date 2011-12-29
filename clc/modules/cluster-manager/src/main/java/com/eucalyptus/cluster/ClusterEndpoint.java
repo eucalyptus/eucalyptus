@@ -283,7 +283,7 @@ public class ClusterEndpoint implements Startable {
       Component euca = Components.lookup( Eucalyptus.class );
       NavigableSet<ServiceConfiguration> configs = euca.services( );
       if ( !configs.isEmpty( ) && Component.State.ENABLED.equals( configs.first( ).lookupState( ) ) ) {
-        reply.getRegionInfo( ).add( new RegionInfoType( euca.getComponentId( ).name( ), ServiceUris.remote( configs.first( ) ).toASCIIString( ) ) );
+        reply.getRegionInfo( ).add( new RegionInfoType( euca.getComponentId( ).name( ), ServiceUris.remotePublicify( configs.first( ) ).toASCIIString( ) ) );
       }
     } catch ( NoSuchElementException ex ) {
       LOG.error( ex, ex );
@@ -292,7 +292,7 @@ public class ClusterEndpoint implements Startable {
       Component walrus = Components.lookup( Walrus.class );
       NavigableSet<ServiceConfiguration> configs = walrus.services( );
       if ( !configs.isEmpty( ) && Component.State.ENABLED.equals( configs.first( ).lookupState( ) ) ) {
-        reply.getRegionInfo( ).add( new RegionInfoType( walrus.getComponentId( ).name( ), ServiceUris.remote( configs.first( ) ).toASCIIString( ) ) );
+        reply.getRegionInfo( ).add( new RegionInfoType( walrus.getComponentId( ).name( ), ServiceUris.remotePublicify( configs.first( ) ).toASCIIString( ) ) );
       }
     } catch ( NoSuchElementException ex ) {
       LOG.error( ex, ex );
