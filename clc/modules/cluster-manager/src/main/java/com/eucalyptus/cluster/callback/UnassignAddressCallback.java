@@ -140,8 +140,8 @@ public class UnassignAddressCallback extends MessageCallback<UnassignAddressType
   public void fire( UnassignAddressResponseType reply ) {
     try {
 //      this.sendSecondaryUnassign( );
-      this.clearVmAddress( );
       this.address.clearPending( );
+      this.clearVmAddress( );
     } catch ( IllegalStateException t ) {
       LOG.debug( t );
     } catch ( Exception t ) {
@@ -163,26 +163,6 @@ public class UnassignAddressCallback extends MessageCallback<UnassignAddressType
     }
   }
 
-  private void sendSecondaryUnassign( ) {
-    try {
-      VmInstance vm = VmInstances.lookupByPrivateIp( super.getRequest( ).getDestination( ) );
-      if ( !vm.getPartition( ).equals( this.address.getPartition( ) ) ) {
-        Partition partition = Partitions.lookupByName( vm.getPartition( ) );
-        ServiceConfiguration config = Topology.lookup( ClusterController.class, partition );
-        UnassignAddressType request = new UnassignAddressType( this.address.getDisplayName( ), this.address.getInstanceAddress( ) );
-        try {
-          AsyncRequests.sendSync( config, request );
-        } catch ( Exception ex ) {
-          LOG.error( ex, ex );
-        }
-      }
-    } catch ( TerminatedInstanceException ex ) {
-      Logs.extreme( ).error( ex, ex );
-    } catch ( NoSuchElementException ex ) {
-      Logs.extreme( ).error( ex, ex );
-    }
-  }
-  
   @Override
   public void fireException( Throwable e ) {
     try {
