@@ -60,6 +60,7 @@ public class StatefulMessageSet<E extends Enum<E>> {
   @SuppressWarnings( "unchecked" )
   private void queueEvents( final E state ) {
     for ( final Request event : this.messages.get( state ) ) {
+      EventRecord.caller( StatefulMessageSet.class, EventType.VM_STARTING, state.name( ), event.getCallback( ).toString( ) ).debug( );
       if ( event.getCallback( ) instanceof BroadcastCallback ) {
         final BroadcastCallback callback = ( BroadcastCallback ) event.getCallback( );
         this.pendingEvents.addAll( Lists.transform( Clusters.getInstance( ).listValues( ), new Function<Cluster, CheckedListenableFuture>( ) {
