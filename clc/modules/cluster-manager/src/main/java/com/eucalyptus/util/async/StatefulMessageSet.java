@@ -64,15 +64,41 @@ public class StatefulMessageSet<E extends Enum<E>> {
         final BroadcastCallback callback = ( BroadcastCallback ) event.getCallback( );
         this.pendingEvents.addAll( Lists.transform( Clusters.getInstance( ).listValues( ), new Function<Cluster, CheckedListenableFuture>( ) {
           public CheckedListenableFuture apply( Cluster c ) {
-            EventRecord.caller( StatefulMessageSet.class, EventType.VM_STARTING, state.name( ), c.getName( ), event.getClass( ).getSimpleName( ) ).info( );
+            EventRecord.caller(
+              StatefulMessageSet.class,
+              EventType.VM_STARTING,
+              state.name( ),
+              c.getName( ),
+              event.getClass( ).getSimpleName( ),
+              event.getRequest( ).toSimpleString( ) ).info( );
+            EventRecord.caller(
+              StatefulMessageSet.class,
+              EventType.VM_STARTING,
+              state.name( ),
+              c.getName( ),
+              event.getClass( ).getSimpleName( ),
+              event.getRequest( ) ).debug( );
             Request request = AsyncRequests.newRequest( callback.newInstance( ) );
             request.getRequest( ).regardingUserRequest( callback.getRequest( ) );
             return request.dispatch( c.getConfiguration( ) );
           }
         } ) );
       } else {
+        EventRecord.caller(
+          StatefulMessageSet.class,
+          EventType.VM_STARTING,
+          state.name( ),
+          this.cluster.getName( ),
+          event.getClass( ).getSimpleName( ),
+          event.getRequest( ).toSimpleString( ) ).info( );
+        EventRecord.caller(
+          StatefulMessageSet.class,
+          EventType.VM_STARTING,
+          state.name( ),
+          this.cluster.getName( ),
+          event.getClass( ).getSimpleName( ),
+          event.getRequest( ) ).debug( );
         this.pendingEvents.add( event.dispatch( cluster.getConfiguration( ) ) );
-        EventRecord.caller( StatefulMessageSet.class, EventType.VM_STARTING, state.name( ), cluster.getName( ), event.getClass( ).getSimpleName( ) ).info( );
       }
     }
   }
@@ -85,18 +111,33 @@ public class StatefulMessageSet<E extends Enum<E>> {
         Object o = null;
 //        do {
 //          try {
-            o = future.get( 120, TimeUnit.SECONDS );
+        o = future.get( 120, TimeUnit.SECONDS );
 //          } catch ( TimeoutException ex ) {}
 //        } while ( o == null );
-        EventRecord.here( StatefulMessageSet.class, EventType.VM_STARTING, currentState.name( ), cluster.getName( ), o.getClass( ).getSimpleName( ) ).info( );
+        if ( o != null ) {
+          EventRecord.here( StatefulMessageSet.class, EventType.VM_STARTING, currentState.name( ), this.cluster.getName( ), o.getClass( ).getSimpleName( ) ).info( );
+          EventRecord.here( StatefulMessageSet.class, EventType.VM_STARTING, currentState.name( ), this.cluster.getName( ), o.toString( ) ).debug( );
+        }
       } catch ( InterruptedException t ) {
         Thread.currentThread( ).interrupt( );
-        EventRecord.here( StatefulMessageSet.class, EventType.VM_STARTING, "FAILED", currentState.name( ), cluster.getName( ), t.getClass( ).getSimpleName( ) ).info( );
+        EventRecord.here(
+          StatefulMessageSet.class,
+          EventType.VM_STARTING,
+          "FAILED",
+          currentState.name( ),
+          this.cluster.getName( ),
+          t.getClass( ).getSimpleName( ) ).info( );
         LOG.error( t, t );
         nextState = this.rollback( );
         break;
       } catch ( Exception t ) {
-        EventRecord.here( StatefulMessageSet.class, EventType.VM_STARTING, "FAILED", currentState.name( ), cluster.getName( ), t.getClass( ).getSimpleName( ) ).info( );
+        EventRecord.here(
+          StatefulMessageSet.class,
+          EventType.VM_STARTING,
+          "FAILED",
+          currentState.name( ),
+          this.cluster.getName( ),
+          t.getClass( ).getSimpleName( ) ).info( );
         LOG.error( t, t );
         nextState = this.rollback( );
         break;
@@ -120,12 +161,12 @@ public class StatefulMessageSet<E extends Enum<E>> {
         this.queueEvents( this.state );
         this.state = this.transition( this.state );
       } catch ( Exception ex ) {
-        LOG.error( ex , ex );
+        LOG.error( ex, ex );
       }
     } while ( !this.isFinished( ) );
     LOG.info( EventRecord.here( StatefulMessageSet.class, this.isSuccessful( )
-      ? EventType.VM_START_COMPLETED
-      : EventType.VM_START_ABORTED,
+                                                                              ? EventType.VM_START_COMPLETED
+                                                                              : EventType.VM_START_ABORTED,
                                 ( System.currentTimeMillis( ) - this.startTime ) / 1000.0d + "s" ) );
   }
 }
