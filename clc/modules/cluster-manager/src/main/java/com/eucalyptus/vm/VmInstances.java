@@ -351,7 +351,7 @@ public class VmInstances {
               Addresses.release( address );
             } else {
               EventRecord.caller( VmInstances.class, EventType.VM_TERMINATING, "USER_ADDRESS", address.toString( ) ).debug( );
-              AsyncRequests.newRequest( address.unassign( ).getCallback( ) ).dispatch( address.getPartition( ) );
+              AsyncRequests.newRequest( address.unassign( ).getCallback( ) ).dispatch( vm.getPartition( ) );
             }
           } catch ( final IllegalStateException e ) {} catch ( final Throwable e ) {
             LOG.debug( e, e );

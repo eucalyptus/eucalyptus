@@ -65,8 +65,16 @@ public abstract class AbstractSystemAddressManager {
       try {
         final Address addr = Addresses.getInstance( ).lookup( address.getAddress( ) );
         try {
-          if ( addr.isAssigned( ) ) {
+          if ( addr.isAssigned( ) && "0.0.0.0".equals( address.getInstanceIp( ) ) ) {
+            addr.unassign( ).clearPending( );
+            if ( addr.isSystemOwned( ) ) {
+              addr.release( );
+            }
+          } else if ( addr.isAssigned( ) && !"0.0.0.0".equals( address.getInstanceIp( ) ) ) {
             AsyncRequests.newRequest( new UnassignAddressCallback( address ) ).sendSync( cluster.getConfiguration( ) );
+            if ( addr.isSystemOwned( ) ) {
+              addr.release( );
+            }
           } else if ( !addr.isAssigned( ) && addr.isAllocated( ) && addr.isSystemOwned( ) ) {
             addr.release( );
           }

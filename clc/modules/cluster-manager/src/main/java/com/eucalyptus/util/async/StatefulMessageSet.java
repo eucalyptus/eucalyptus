@@ -83,18 +83,21 @@ public class StatefulMessageSet<E extends Enum<E>> {
     while ( ( future = this.pendingEvents.poll( ) ) != null ) {
       try {
         Object o = null;
-        do {
-          try {
-            o = future.get( 50, TimeUnit.MILLISECONDS );
-          } catch ( TimeoutException ex ) {}
-        } while ( o == null );
+//        do {
+//          try {
+            o = future.get( 120, TimeUnit.SECONDS );
+//          } catch ( TimeoutException ex ) {}
+//        } while ( o == null );
         EventRecord.here( StatefulMessageSet.class, EventType.VM_STARTING, currentState.name( ), cluster.getName( ), o.getClass( ).getSimpleName( ) ).info( );
       } catch ( InterruptedException t ) {
         Thread.currentThread( ).interrupt( );
+        EventRecord.here( StatefulMessageSet.class, EventType.VM_STARTING, "FAILED", currentState.name( ), cluster.getName( ), t.getClass( ).getSimpleName( ) ).info( );
+        LOG.error( t, t );
+        nextState = this.rollback( );
         break;
       } catch ( Exception t ) {
-        EventRecord.here( StatefulMessageSet.class, EventType.VM_STARTING, currentState.name( ), cluster.getName( ), t.getClass( ).getSimpleName( ) ).info( );
-        LOG.debug( t, t );
+        EventRecord.here( StatefulMessageSet.class, EventType.VM_STARTING, "FAILED", currentState.name( ), cluster.getName( ), t.getClass( ).getSimpleName( ) ).info( );
+        LOG.error( t, t );
         nextState = this.rollback( );
         break;
       }
