@@ -23,8 +23,7 @@ public class DynamicSystemAddressManager extends AbstractSystemAddressManager {
       final List<Address> addressList = Lists.newArrayList( );
       for ( final Address addr : Addresses.getInstance( ).listDisabledValues( ) ) {
         try {
-          if ( partition.getName( ).equals( addr.getPartition( ) )
-               && addressList.add( addr.pendingAssignment( ) )
+          if ( addressList.add( addr.pendingAssignment( ) )
                && ( --count == 0 ) ) {
             break;
           }
@@ -54,7 +53,7 @@ public class DynamicSystemAddressManager extends AbstractSystemAddressManager {
       public void fire( final BaseMessage response ) {
         vm.updatePublicAddress( addr.getName( ) );
       }
-    } ).dispatch( addr.getPartition( ) );
+    } ).dispatch( vm.getPartition( ) );
   }
   
   @Override

@@ -1284,7 +1284,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
   
   @Override
   public String getDisplayName( ) {
-    return this.getName( );
+    return this.getPartition( );
   }
   
   @Override

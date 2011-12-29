@@ -382,7 +382,7 @@ public class ClusterAllocator implements Runnable {
             };
             AsyncRequests.newRequest( addr.assign( vm ).getCallback( ) )
                          .then( vmUpdateCallback )
-                         .dispatch( addr.getPartition( ) );
+                         .dispatch( vm.getPartition( ) );
           } catch ( Exception ex ) {
             LOG.error( ex, ex );
           }

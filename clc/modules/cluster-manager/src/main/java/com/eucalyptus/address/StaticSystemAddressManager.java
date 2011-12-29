@@ -50,7 +50,7 @@ public class StaticSystemAddressManager extends AbstractSystemAddressManager {
       public void fire( BaseMessage response ) {
         vm.updatePublicAddress( addr.getName( ) );
       }
-    } ).dispatch( addr.getPartition( ) );
+    } ).dispatch( vm.getPartition( ) );
   }
   
   private Address getNext( ) throws NotEnoughResourcesException {
