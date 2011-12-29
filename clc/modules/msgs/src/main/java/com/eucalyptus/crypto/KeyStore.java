@@ -106,4 +106,6 @@ public interface KeyStore {
   
   public abstract InputStream getAsInputStream( ) throws FileNotFoundException;
   
+  public abstract List<X509Certificate> getAllCertificates( ) throws KeyStoreException;
+  
 }
