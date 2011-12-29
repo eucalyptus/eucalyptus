@@ -101,7 +101,10 @@ public class UnassignAddressCallback extends MessageCallback<UnassignAddressType
     } catch ( Exception e ) {
       try {
         this.address = Addresses.getInstance( ).lookupDisabled( addr );
-      } catch ( NoSuchElementException ex ) {
+      } catch ( Exception ex ) {
+        LOG.error( "Failed to prepare unassign for: " + addr + "=>" + vmIp );
+        Logs.extreme( ).error( "Failed to prepare unassign for: " + addr + "=>" + vmIp, e );
+        Logs.extreme( ).error( "Failed to prepare unassign for: " + addr + "=>" + vmIp, ex );
         throw new CancellationException( ex.getMessage( ) );
       }
     }
@@ -122,7 +125,11 @@ public class UnassignAddressCallback extends MessageCallback<UnassignAddressType
   
   @Override
   public void initialize( UnassignAddressType msg ) throws Exception {
-    EventRecord.here( UnassignAddressCallback.class, EventType.ADDRESS_UNASSIGNING, Transition.unassigning.toString( ), address.toString( ) ).info( );
+    try {
+      EventRecord.here( UnassignAddressCallback.class, EventType.ADDRESS_UNASSIGNING, Transition.unassigning.toString( ), address.toString( ) ).info( );
+    } catch ( Exception ex ) {
+      LOG.error( ex , ex );
+    }
   }
   
   public void clearVmAddress( ) {
