@@ -159,6 +159,7 @@ public class StatefulMessageSet<E extends Enum<E>> {
   
   public void run( ) {
     do {
+      LOG.info( EventRecord.here( StatefulMessageSet.class, EventType.VM_STARTING, this.state.name( ), ( System.currentTimeMillis( ) - this.startTime ) / 1000.0d + "s" ) );
       try {
         this.queueEvents( this.state );
         this.state = this.transition( this.state );
