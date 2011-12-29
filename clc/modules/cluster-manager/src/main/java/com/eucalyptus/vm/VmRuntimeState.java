@@ -158,6 +158,7 @@ public class VmRuntimeState {
     }
     this.getVmInstance( ).updateTimeStamps( );
     if ( action != null ) {
+      LOG.error( "Running cleanUp for instance: " + this.getVmInstance( ).getInstanceId( ), new RuntimeException() );
       EventRecord.caller( VmInstance.class, EventType.VM_TERMINATING, this.getVmInstance( ).getInstanceId( ), this.vmInstance.getOwner( ),
                           this.getVmInstance( ).getState( ).name( ) );
       if ( Reason.APPEND.equals( reason ) ) {
@@ -166,7 +167,7 @@ public class VmRuntimeState {
       this.addReasonDetail( extra );
       this.reason = reason;
       try {
-        Threads.lookup( Eucalyptus.class, VmInstance.class ).limitTo( VmInstances.MAX_STATE_THREADS ).submit( action ).get( 10, TimeUnit.MILLISECONDS );
+        Threads.lookup( Eucalyptus.class, VmInstance.class ).limitTo( VmInstances.MAX_STATE_THREADS ).submit( action ).get( 10, TimeUnit.MILLISECONDS );//GRZE:wtf?!  why short time limit.
       } catch ( final TimeoutException ex ) {
       } catch ( final Exception ex ) {
         LOG.error( ex, ex );
