@@ -116,7 +116,7 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
     EntityTransaction db1 = Entities.get( VmInstance.class );
     try {
       VmInstance vm = VmInstances.cachedLookup( vmId );
-      if ( vm.getCreationSplitTime( ) < VM_INITIAL_REPORT_TIMEOUT ) {
+      if ( VmState.PENDING.apply( vm ) && vm.getCreationSplitTime( ) < VM_INITIAL_REPORT_TIMEOUT ) {
         //do nothing during first VM_INITIAL_REPORT_TIMEOUT millis of instance life
       } else if ( VmInstances.Timeout.UNREPORTED.apply( vm ) ) {
         VmInstances.terminated( vm );
