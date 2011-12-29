@@ -15,14 +15,14 @@ import com.google.common.collect.Multimap;
 
 public class StatefulMessageSet<E extends Enum<E>> {
   private static Logger                                  LOG           = Logger.getLogger( StatefulMessageSet.class );
-  private Multimap<E, Request>                           messages      = ArrayListMultimap.create( );
-  private ConcurrentLinkedQueue<CheckedListenableFuture> pendingEvents = new ConcurrentLinkedQueue<CheckedListenableFuture>( );
-  private E[]                                            states;
+  private final Multimap<E, Request>                           messages      = ArrayListMultimap.create( );
+  private final ConcurrentLinkedQueue<CheckedListenableFuture> pendingEvents = new ConcurrentLinkedQueue<CheckedListenableFuture>( );
+  private final E[]                                            states;
   private E                                              state;
-  private E                                              endState;
-  private E                                              failState;
-  private Cluster                                        cluster;
-  private Long                                           startTime;
+  private final E                                              endState;
+  private final E                                              failState;
+  private final Cluster                                        cluster;
+  private final Long                                           startTime;
   
   /**
    * Collection of messages which need to honor a certain ordering. The state
@@ -39,7 +39,7 @@ public class StatefulMessageSet<E extends Enum<E>> {
    * @param cluster
    * @param states
    */
-  public StatefulMessageSet( Cluster cluster, E[] states ) {
+  public StatefulMessageSet( final Cluster cluster, final E[] states ) {
     this.cluster = cluster;
     this.states = states;
     this.state = states[0];
@@ -49,10 +49,10 @@ public class StatefulMessageSet<E extends Enum<E>> {
   }
   
   private E rollback( ) {
-    return ( this.state = failState );
+    return ( this.state = this.failState );
   }
   
-  public void addRequest( E state, Request asyncRequest ) {
+  public void addRequest( final E state, final Request asyncRequest ) {
     EventRecord.caller( StatefulMessageSet.class, EventType.VM_PREPARE, state.name( ), asyncRequest.getCallback( ).getClass( ).getSimpleName( ) ).debug( );
     this.messages.put( state, asyncRequest );
   }
@@ -63,7 +63,8 @@ public class StatefulMessageSet<E extends Enum<E>> {
       if ( event.getCallback( ) instanceof BroadcastCallback ) {
         final BroadcastCallback callback = ( BroadcastCallback ) event.getCallback( );
         this.pendingEvents.addAll( Lists.transform( Clusters.getInstance( ).listValues( ), new Function<Cluster, CheckedListenableFuture>( ) {
-          public CheckedListenableFuture apply( Cluster c ) {
+          @Override
+          public CheckedListenableFuture apply( final Cluster c ) {
             EventRecord.caller(
               StatefulMessageSet.class,
               EventType.VM_STARTING,
@@ -78,7 +79,7 @@ public class StatefulMessageSet<E extends Enum<E>> {
               c.getName( ),
               event.getClass( ).getSimpleName( ),
               event.getRequest( ) ).debug( );
-            Request request = AsyncRequests.newRequest( callback.newInstance( ) );
+            final Request request = AsyncRequests.newRequest( callback.newInstance( ) );
             request.getRequest( ).regardingUserRequest( callback.getRequest( ) );
             return request.dispatch( c.getConfiguration( ) );
           }
@@ -98,7 +99,7 @@ public class StatefulMessageSet<E extends Enum<E>> {
           this.cluster.getName( ),
           event.getClass( ).getSimpleName( ),
           event.getRequest( ) ).debug( );
-        this.pendingEvents.add( event.dispatch( cluster.getConfiguration( ) ) );
+        this.pendingEvents.add( event.dispatch( this.cluster.getConfiguration( ) ) );
       }
     }
   }
@@ -118,7 +119,7 @@ public class StatefulMessageSet<E extends Enum<E>> {
           EventRecord.here( StatefulMessageSet.class, EventType.VM_STARTING, currentState.name( ), this.cluster.getName( ), o.getClass( ).getSimpleName( ) ).info( );
           EventRecord.here( StatefulMessageSet.class, EventType.VM_STARTING, currentState.name( ), this.cluster.getName( ), o.toString( ) ).debug( );
         }
-      } catch ( InterruptedException t ) {
+      } catch ( final InterruptedException t ) {
         Thread.currentThread( ).interrupt( );
         EventRecord.here(
           StatefulMessageSet.class,
@@ -130,7 +131,7 @@ public class StatefulMessageSet<E extends Enum<E>> {
         LOG.error( t, t );
         nextState = this.rollback( );
         break;
-      } catch ( Exception t ) {
+      } catch ( final Exception t ) {
         EventRecord.here(
           StatefulMessageSet.class,
           EventType.VM_STARTING,
@@ -148,11 +149,11 @@ public class StatefulMessageSet<E extends Enum<E>> {
   }
   
   private boolean isSuccessful( ) {
-    return this.state.equals( endState );
+    return this.state.equals( this.endState );
   }
   
   private boolean isFinished( ) {
-    return this.state.equals( this.failState ) || this.state.equals( endState );
+    return this.state.equals( this.failState ) || this.state.equals( this.endState );
   }
   
   public void run( ) {
@@ -160,7 +161,7 @@ public class StatefulMessageSet<E extends Enum<E>> {
       try {
         this.queueEvents( this.state );
         this.state = this.transition( this.state );
-      } catch ( Exception ex ) {
+      } catch ( final Exception ex ) {
         LOG.error( ex, ex );
       }
     } while ( !this.isFinished( ) );
