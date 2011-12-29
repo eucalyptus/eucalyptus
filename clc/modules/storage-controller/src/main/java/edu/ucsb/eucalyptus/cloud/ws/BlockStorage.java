@@ -97,6 +97,7 @@ import edu.ucsb.eucalyptus.cloud.NoSuchVolumeException;
 import edu.ucsb.eucalyptus.cloud.SnapshotInUseException;
 import edu.ucsb.eucalyptus.cloud.VolumeAlreadyExistsException;
 import edu.ucsb.eucalyptus.cloud.VolumeNotReadyException;
+import edu.ucsb.eucalyptus.cloud.VolumeSizeExceededException;
 import edu.ucsb.eucalyptus.cloud.entities.SnapshotInfo;
 import edu.ucsb.eucalyptus.cloud.entities.StorageInfo;
 import edu.ucsb.eucalyptus.cloud.entities.VolumeInfo;
@@ -475,9 +476,12 @@ public class BlockStorage {
 			if(size != null) {
 				sizeAsInt = Integer.parseInt(size);
 				int totalVolumeSize = (int)(blockStorageStatistics.getTotalSpaceUsed() / StorageProperties.GB);
-				;				if(((totalVolumeSize + sizeAsInt) > StorageInfo.getStorageInfo().getMaxTotalVolumeSizeInGb()) ||
-						(sizeAsInt > StorageInfo.getStorageInfo().getMaxVolumeSizeInGB()))
-					throw new EntityTooLargeException(volumeId);
+				if(((totalVolumeSize + sizeAsInt) > StorageInfo.getStorageInfo().getMaxTotalVolumeSizeInGb())) {
+					throw new VolumeSizeExceededException(volumeId, "Total Volume Size Limit Exceeded");
+				}
+				if(sizeAsInt > StorageInfo.getStorageInfo().getMaxVolumeSizeInGB()) {
+					throw new VolumeSizeExceededException(volumeId, "Max Volume Size Limit Exceeded");
+				}
 			}
 		}
 		EntityWrapper<VolumeInfo> db = StorageProperties.getEntityWrapper();
