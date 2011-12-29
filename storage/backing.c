@@ -120,10 +120,15 @@ static void stat_blobstore (const char * conf_instances_path, const char * name,
     blobstore_close (bs);
 }
 
-int check_backing_store ()
+static int stale_blob_examiner (const blockblob * bb);
+static bunchOfInstances ** instances = NULL;
+
+int check_backing_store (bunchOfInstances ** global_instances)
 {
+    instances = global_instances;
+
     if (work_bs) {
-        if (blobstore_fsck (work_bs, NULL)) {
+        if (blobstore_fsck (work_bs, stale_blob_examiner)) {
             logprintfl (EUCAERROR, "ERROR: work directory failed integrity check: %s\n", blobstore_get_error_str(blobstore_get_error()));
             blobstore_close (cache_bs);
             return ERROR;
@@ -250,6 +255,41 @@ static void set_path (char * path, unsigned int path_size, const ncInstance * in
     }
 }
 
+static int stale_blob_examiner (const blockblob * bb)
+{
+    char work_path [MAX_PATH];
+    
+    set_path (work_path, sizeof (work_path), NULL, NULL);
+    int work_path_len = strlen (work_path);
+    assert (work_path_len > 0);
+
+    char * s = strstr(bb->blocks_path, work_path);
+    if (s==NULL || s!=bb->blocks_path)
+        return 0; // blob not under work blobstore path
+
+    // parse the path past the work directory base
+    safe_strncpy (work_path, bb->blocks_path, sizeof (work_path));
+    s = work_path + work_path_len + 1;
+    char * user_id = strtok (s, "/");
+    char * inst_id = strtok (NULL, "/"); 
+    char * file    = strtok (NULL, "/");
+
+    ncInstance * instance = find_instance (instances, inst_id);
+    if (instance == NULL) { // not found among running instances => stale
+        // while we're here, try to delete extra files that aren't managed by the blobstore
+        // TODO: ensure we catch any other files - perhaps by performing this cleanup after all blobs are deleted
+        char path [MAX_PATH];
+#define del_file(filename) snprintf (path, sizeof (path), "%s/work/%s/%s/%s", instances_path, user_id, inst_id, filename); unlink (path);
+        del_file("instance.xml");
+        del_file("libvirt.xml");
+        del_file("console.log");
+        del_file("instance.checkpoint");
+        return 1;
+    }
+
+    return 0;
+}
+
 int save_instance_struct (const ncInstance * instance)
 {
     if (instance==NULL) {
@@ -326,6 +366,13 @@ ncInstance * load_instance_struct (const char * instanceId)
     }
     close (fd);
     instance->stateCode = NO_STATE;
+    // clear out pointers, since they are now wrong
+    instance->params.root       = NULL;
+    instance->params.kernel     = NULL;
+    instance->params.ramdisk    = NULL;
+    instance->params.swap       = NULL;
+    instance->params.ephemeral0 = NULL;
+    vbr_parse (&(instance->params), NULL); // fix up the pointers
     return instance;
     
  free:

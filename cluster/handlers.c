@@ -2239,6 +2239,12 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
 	    rc = ncClientCall(ccMeta, OP_TIMEOUT_PERNODE, res->lockidx, res->ncURL, "ncRunInstance", uuid, instId, reservationId, &ncvm, amiId, amiURL, kernelId, kernelURL, ramdiskId, ramdiskURL, ownerId, accountId, keyName, &ncnet, userData, launchIndex, platform, expiryTime, netNames, netNamesLen, &outInst);
 
 	    if (rc) {
+	      // make sure we get the latest topology information before trying again
+	      sem_mywait(CONFIG);
+	      memcpy(ccMeta->services, config->services, sizeof(serviceInfoType) * 16);
+	      memcpy(ccMeta->disabledServices, config->disabledServices, sizeof(serviceInfoType) * 16);
+	      memcpy(ccMeta->notreadyServices, config->notreadyServices, sizeof(serviceInfoType) * 16);
+	      sem_mypost(CONFIG);
 	      sleep(1);
 	    }
 	  }

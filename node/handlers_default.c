@@ -536,6 +536,9 @@ static int xen_detach_helper (struct nc_state_t *nc, char *instanceId, char *loc
         char tmpfile[MAX_PATH];
         snprintf(tmpfile, 32, "/tmp/detachxml.XXXXXX");
         int fd = safe_mkstemp(tmpfile);
+	char xvdDevReal[32];
+        // sdx -> xvdx 
+        snprintf(xvdDevReal, 32, "xvd%s", localDevReal+2);
         if (fd > 0) {
             write(fd, xml, strlen(xml));
             close(fd);
@@ -545,8 +548,9 @@ static int xen_detach_helper (struct nc_state_t *nc, char *instanceId, char *loc
                      nc->detach_cmd_path, // TODO: does this work?
                      nc->rootwrap_cmd_path, 
                      instanceId, 
-                     localDevReal, 
+                     xvdDevReal, 
                      tmpfile);
+            logprintfl(EUCAINFO, "%s\n", cmd);
             rc = system(cmd);
             rc = rc>>8;
             unlink(tmpfile);
