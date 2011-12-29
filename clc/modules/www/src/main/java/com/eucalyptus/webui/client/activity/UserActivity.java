@@ -342,7 +342,7 @@ public class UserActivity extends AbstractSearchActivity
 
       @Override
       public void onSuccess( Void arg0 ) {
-        clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.NONE, "Selected users ared added to groups", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
+        clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.NONE, "Selected users were added to groups", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
         clientFactory.getShellView( ).getLogView( ).log( LogType.INFO, "Users " + ids + " are added to groups " + names );
       }
       
@@ -372,7 +372,7 @@ public class UserActivity extends AbstractSearchActivity
 
       @Override
       public void onSuccess( Void arg0 ) {
-        clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.NONE, "Selected users ared removed from groups", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
+        clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.NONE, "Selected users were removed from groups", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
         clientFactory.getShellView( ).getLogView( ).log( LogType.INFO, "Users " + ids + " are removed from groups " + names );
       }
       

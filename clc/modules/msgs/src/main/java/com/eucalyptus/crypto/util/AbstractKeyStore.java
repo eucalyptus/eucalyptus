@@ -85,6 +85,8 @@ import java.util.Collections;
 import java.util.List;
 import org.apache.log4j.Logger;
 
+import com.google.common.collect.Lists;
+
 public abstract class AbstractKeyStore implements com.eucalyptus.crypto.KeyStore {
   
   public static AbstractKeyStore getGenericKeystore( final String fileName, final String password, final String format ) throws IOException, GeneralSecurityException {
@@ -237,6 +239,20 @@ public abstract class AbstractKeyStore implements com.eucalyptus.crypto.KeyStore
   
   protected java.security.KeyStore getKeyStore( ) {
     return this.keyStore;
+  }
+  
+  @Override
+  public List<X509Certificate> getAllCertificates() throws KeyStoreException {
+    List<X509Certificate> results = Lists.newArrayList( );
+    for ( String alias : Collections.list( this.keyStore.aliases( ) ) ) {
+      if ( this.keyStore.isCertificateEntry( alias ) ) {
+        Certificate cert = this.keyStore.getCertificate( alias );
+        if ( cert instanceof X509Certificate ) {
+          results.add( ( X509Certificate ) cert );
+        }
+      }
+    }
+    return results;
   }
   
 }

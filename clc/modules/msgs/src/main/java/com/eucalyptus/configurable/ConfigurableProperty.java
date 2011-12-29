@@ -1,10 +1,14 @@
 package com.eucalyptus.configurable;
 
+import java.lang.reflect.Field;
+
 public interface ConfigurableProperty extends Comparable<ConfigurableProperty> {
   public abstract boolean isDeferred( );
   
   public abstract String getFieldName( );
-  
+
+  public abstract Field getField( );
+
   public abstract Class getDefiningClass( );
   
   public abstract String getEntrySetName( );

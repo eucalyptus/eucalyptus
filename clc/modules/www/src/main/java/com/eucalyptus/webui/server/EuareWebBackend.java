@@ -1092,7 +1092,7 @@ public class EuareWebBackend {
       User user = Accounts.lookupUserById( userId );
       Account account = user.getAccount( );
       Group group = account.lookupGroupByName( groupName );
-      Privileged.removeUserFromGroup( requestUser, account, user, group );
+      Privileged.addUserToGroup( requestUser, account, user, group );
     } catch ( Exception e ) {
       LOG.error( "Failed to add user " + userId + " to group " + groupName, e );
       LOG.debug( e, e );

@@ -1,5 +1,5 @@
 <domain type='kvm'>
-    <name>test</name>
+    <name>eucalyptus-windows</name>
     <os>
     <type>hvm</type>
     <boot dev='cdrom'/>

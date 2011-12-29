@@ -222,6 +222,9 @@ public class VmInstances {
   @ConfigurableField( description = "Maximum number of threads the system will use to service blocking state changes.",
                       initial = "16" )
   public static Integer MAX_STATE_THREADS             = 16;
+  @ConfigurableField( description = "Amount of time (in minutes) before a EBS volume backing the instance is created",
+          initial = "30" )
+  public static Integer EBS_VOLUME_CREATION_TIMEOUT   = 30;
   
   public static class SubdomainListener implements PropertyChangeListener {
     @Override

@@ -147,23 +147,35 @@ public class SslSetup {
     
   }
   
-  private static PrivateKey        trustedKey   = null;
-  private static X509Certificate   trusted      = getTrustedCertificate( );
-  private static X509Certificate[] trustedCerts = new X509Certificate[] { trusted };
+  private static PrivateKey        trustedKey   = getTrustedKey( );
+  private static X509Certificate[] trustedCerts = getTrustedCertificates( );
   
-  private static X509Certificate getTrustedCertificate( ) {
+  private static X509Certificate[] getTrustedCertificates( ) {
     try {
       synchronized ( SslSetup.class ) {
-        if ( trusted == null ) {
-          trusted = ( X509Certificate ) SystemCredentials.getKeyStore( ).getCertificate( ComponentIds.lookup(Eucalyptus.class).name( ) );
-          trustedKey = SystemCredentials.getKeyStore( ).getKeyPair( ComponentIds.lookup(Eucalyptus.class).name( ), ComponentIds.lookup(Eucalyptus.class).name( ) ).getPrivate( );
+        if ( trustedCerts == null ) {
+          trustedCerts = SystemCredentials.getKeyStore( ).getAllCertificates( ).toArray( new X509Certificate[0] );
         }
-        return trusted;
+        return trustedCerts;
       }
     } catch ( Exception e ) {
       LOG.error( e, e );
       throw new RuntimeException( e );
     }
+  }
+  
+  private static PrivateKey getTrustedKey( ) {
+    try {
+      synchronized ( SslSetup.class ) {
+        if ( trustedKey == null ) {
+          trustedKey = SystemCredentials.getKeyStore( ).getKeyPair( ComponentIds.lookup(Eucalyptus.class).name( ), ComponentIds.lookup(Eucalyptus.class).name( ) ).getPrivate( );
+        }
+        return trustedKey;
+      }
+    } catch ( Exception e ) {
+      LOG.error( e, e );
+      throw new RuntimeException( e );
+    }    
   }
   
   public static class SimpleTrustManager extends TrustManagerFactorySpi {

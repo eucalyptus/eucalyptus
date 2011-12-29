@@ -96,8 +96,8 @@ public class StorageProperties {
 	public static final String DUMMY_SAN_HOST = "sanHost";
 	public static final String ETHERD_PREFIX = "/dev/etherd/e";
 	public static final String iface = "eth0";
-	public static final int MAX_TOTAL_VOLUME_SIZE = 50;
-	public static final int MAX_VOLUME_SIZE = 10;
+	public static final int MAX_TOTAL_VOLUME_SIZE = 100;
+	public static final int MAX_VOLUME_SIZE = 15;
 	public static int TRANSFER_CHUNK_SIZE = 8192;
 	public static final boolean zeroFillVolumes = false;
 
@@ -123,7 +123,7 @@ public class StorageProperties {
 	public static enum IscsiAuthType {
 		HBA
 	}
-	public final static int SNAP_RESERVE = 20;
+	public final static int SNAP_PERCENT = 100;
 	public static double NETAPP_META_OVERHEAD = 5;
 
 	static { Groovyness.loadConfig("storageprops.groovy"); }
