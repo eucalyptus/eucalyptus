@@ -161,4 +161,8 @@ public class SshKeyPair extends UserMetadata<SshKeyPair.State> implements KeyPai
   public static SshKeyPair withPublicKey( OwnerFullName ownerFullName, String keyValue ) {
     return new SshKeyPair( ownerFullName, null, keyValue, null );
   }
+
+  public static SshKeyPair withPublicKey( OwnerFullName ownerFullName, String keyName, String keyValue ) {
+    return new SshKeyPair( ownerFullName, keyName, keyValue, null );
+  }
 }

@@ -63,6 +63,10 @@ def encode_prop_from_file(param, dict, value):
             print 'Error: Unable to read file: %s' % path
             sys.exit(1)
     dict['Value'] = value
+ 
+def reset_prop(param, dict, value):
+    dict['Name'] = value
+    dict['Reset'] = True
     
 class ModifyPropertyValue(AWSQueryRequest):
   
@@ -83,7 +87,14 @@ class ModifyPropertyValue(AWSQueryRequest):
                     ptype='string',
                     optional=True,
                     encoder=encode_prop_from_file,
-                    doc='Modify property with content of file')]
+                    doc='Modify property with content of file'),
+              Param(name='Reset',
+                    short_name='r',
+                    long_name='property-to-reset',
+                    ptype='string',
+                    optional=True,
+                    encoder=reset_prop,
+                    doc='Reset this property to default value.')]
           
     def get_connection(self, **args):
         if self.connection is None:

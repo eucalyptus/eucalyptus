@@ -126,7 +126,7 @@ public abstract class AbstractSystemAddressManager {
   
   public void update( final Cluster cluster, final List<ClusterAddressInfo> ccList ) {
     if ( !cluster.getState( ).isAddressingInitialized( ) ) {
-      Helper.loadStoredAddresses( cluster );
+      Helper.loadStoredAddresses( );
       cluster.getState( ).setAddressingInitialized( true );
     }
     for ( final ClusterAddressInfo addrInfo : ccList ) {
@@ -182,14 +182,14 @@ public abstract class AbstractSystemAddressManager {
           ? addr.getInstanceId( )
           : null, addrInfo.getAddress( ), addrInfo.getInstanceIp( ) );
         if ( ( addr != null ) && ( vm != null ) ) {
-//          Helper.ensureAllocated( addr, vm );
+          Helper.ensureAllocated( addr, vm );
           clearOrphan( addrInfo );
         } else if ( addr != null && !addr.isPending( ) && vm != null && VmStateSet.DONE.apply( vm ) ) {
           handleOrphan( cluster, addrInfo );
         } else if ( ( addr != null && !addr.isPending( ) ) && ( vm == null ) ) {
           handleOrphan( cluster, addrInfo );
         } else if ( ( addr == null ) && ( vm != null ) ) {
-          addr = new Address( Principals.systemFullName( ), addrInfo.getAddress( ), cluster.getPartition( ), vm.getInstanceId( ), vm.getPrivateAddress( ) );
+          addr = new Address( Principals.systemFullName( ), addrInfo.getAddress( ), vm.getInstanceId( ), vm.getPrivateAddress( ) );
           clearOrphan( addrInfo );
         } else if ( ( addr == null ) && ( vm == null ) ) {
           addr = new Address( addrInfo.getAddress( ), cluster.getPartition( ) );
@@ -300,9 +300,8 @@ public abstract class AbstractSystemAddressManager {
       }
     }
     
-    protected static void loadStoredAddresses( final Cluster cluster ) {
+    protected static void loadStoredAddresses( ) {
       final Address clusterAddr = new Address( );
-      clusterAddr.setCluster( cluster.getPartition( ) );
       final EntityTransaction db = Entities.get( Address.class );
       try {
         for ( Address addr : Entities.query( clusterAddr ) ) {
