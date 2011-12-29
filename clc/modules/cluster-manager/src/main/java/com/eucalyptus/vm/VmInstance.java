@@ -471,13 +471,13 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     }
     
     private static SshKeyPair restoreSshKeyPair( final VmInfo input, final UserFullName userFullName ) {
-      SshKeyPair keyPair = null;
-      try {
-        keyPair = KeyPairs.lookup( userFullName, input.getKeyValue( ) );
-      } catch ( final Exception ex ) {
-        keyPair = KeyPairs.noKey( );
+      String keyValue = input.getKeyValue( );
+      if ( keyValue == null || keyValue.indexOf( "@" ) == -1 ) {
+        return KeyPairs.noKey( );
+      } else {
+        String keyName = keyValue.replaceAll( ".*@eucalyptus\\.","" );
+        return SshKeyPair.withPublicKey( null, keyName, keyValue );
       }
-      return keyPair;
     }
     
     private static int restoreLaunchIndex( final VmInfo input ) {
