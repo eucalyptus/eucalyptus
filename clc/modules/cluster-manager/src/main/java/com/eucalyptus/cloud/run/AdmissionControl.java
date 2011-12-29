@@ -313,7 +313,7 @@ public class AdmissionControl {
         if ( cluster == null ) {
           throw new NotEnoughResourcesException( "Can't find cluster " + partitionName );
         }
-        if ( ! RestrictedTypes.filterPrivileged( ).apply( cluster ) ) {
+        if ( ! RestrictedTypes.filterPrivilegedWithoutOwner( ).apply( cluster ) ) {
           throw new NotEnoughResourcesException( "Not authorized to use cluster " + partitionName );
         }
         return Lists.newArrayList( cluster );
