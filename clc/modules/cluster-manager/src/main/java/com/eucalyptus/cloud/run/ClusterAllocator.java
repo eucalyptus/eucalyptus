@@ -156,7 +156,8 @@ public class ClusterAllocator implements Runnable {
             try {
               new ClusterAllocator( allocInfo ).run( );
             } catch ( Exception ex ) {
-              LOG.error( ex, ex );
+              LOG.warn( "Failed to prepare allocator for: " + allocInfo.getAllocationTokens( ) );
+              LOG.error( "Failed to prepare allocator for: " + allocInfo.getAllocationTokens( ), ex );
             }
           }
         };
