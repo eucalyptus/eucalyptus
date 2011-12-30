@@ -106,9 +106,10 @@ public class AsyncRequestHandler<Q extends BaseMessage, R extends BaseMessage> i
                 if ( !factory.getClass( ).getSimpleName( ).startsWith( "GatherLog" ) ) {
                   Topology.populateServices( config, AsyncRequestHandler.this.request.get( ) );
                 }
-                EventRecord.here( request.getClass( ), EventClass.SYSTEM_REQUEST, EventType.CHANNEL_OPEN, request.getClass( ).getSimpleName( ),
+                LOG.debug( EventRecord.here( request.getClass( ), EventClass.SYSTEM_REQUEST, EventType.CHANNEL_OPEN, request.getClass( ).getSimpleName( ),
                                   request.getCorrelationId( ), serviceSocketAddress.toString( ), "" + future.getChannel( ).getLocalAddress( ),
-                                  ""  + future.getChannel( ).getRemoteAddress( ) ).trace( );
+                                  ""  + future.getChannel( ).getRemoteAddress( ) ) );
+                LOG.debug( httpRequest );
                 future.getChannel( ).write( httpRequest ).addListener( new ChannelFutureListener( ) {
                   @Override
                   public void operationComplete( final ChannelFuture future ) throws Exception {
