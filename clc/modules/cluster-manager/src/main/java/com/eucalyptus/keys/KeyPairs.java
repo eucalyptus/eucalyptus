@@ -171,7 +171,7 @@ public class KeyPairs {
     System.arraycopy( lenArray, 0, authKeyBlob, 4 + expBlob.length + 4 + keyType.length + 4 - lenArray.length, lenArray.length );
     System.arraycopy( modBlob, 0, authKeyBlob, 4 + ( 4 + expBlob.length + ( 4 + keyType.length ) ), modBlob.length );
     
-    String authKeyString = String.format( "%s %s %s@%s.eucalyptus", new String( keyType ), new String( Base64.encode( authKeyBlob ) ), keyName, userName.toString( ) );
+    String authKeyString = String.format( "%s %s %s@eucalyptus.%s", new String( keyType ), new String( Base64.encode( authKeyBlob ) ), userName.getAccountNumber( ), keyName );
     return authKeyString;
   }
 

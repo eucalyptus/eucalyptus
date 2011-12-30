@@ -181,7 +181,7 @@ public class VmControl {
       }
       db.commit( );
     } catch ( Exception ex ) {
-      LOG.trace( ex, ex );
+      LOG.error( ex, ex );
       db.rollback( );
       allocInfo.abort( );
       throw ex;

@@ -177,5 +177,10 @@ public class AssignAddressCallback extends MessageCallback<AssignAddressType, As
       EventRecord.here( AssignAddressCallback.class, EventType.ADDRESS_ASSIGNED, Address.State.assigned.toString( ), LogUtil.dumpObject( address ) ).info( );
     }
   }
-  
+
+  @Override
+  public String toString( ) {
+    return "AssignAddressCallback " + this.address;
+  }
+
 }
