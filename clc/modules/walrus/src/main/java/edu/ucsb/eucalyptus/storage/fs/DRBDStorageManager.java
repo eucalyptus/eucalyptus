@@ -385,6 +385,10 @@ public class DRBDStorageManager extends FileSystemStorageManager {
 				if (Component.State.DISABLED.equals(Components.lookup(Walrus.class).getState())) {
 					if(!isSecondary()) {
 						LOG.warn("I am the slave, but not DRBD secondary. Trying to become secondary...");
+						if(isMounted()) {
+							unmountPrimary();
+						}
+						//make secondary
 						makeSecondary();
 						if(!isSecondary()) {
 							throw new EucalyptusCloudException("Attempt to set secondary failed. Unable to proceed!");
