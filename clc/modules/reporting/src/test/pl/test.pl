@@ -92,8 +92,6 @@ my $image_id = $fields[1];
 print "IMAGE ID:" . $image_id . "\n";
 
 
-die("done");
-
 #
 # Run simulate_usage, then check results
 #
