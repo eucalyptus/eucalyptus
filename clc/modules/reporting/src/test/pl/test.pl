@@ -17,8 +17,7 @@
 # automatically.
 #
 # This script accepts several optional arguments: duration_secs,
-# write_interval, num_users, num_users_per_account, num_instances_per_user, and
-# image.
+# write_interval, num_users, num_users_per_account, and num_instances_per_user. 
 #
 # This script has dependencies which can be satisfied by sourcing the "test.sh"
 # file.
