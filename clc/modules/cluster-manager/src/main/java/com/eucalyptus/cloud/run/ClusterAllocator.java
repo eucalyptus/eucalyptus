@@ -149,13 +149,14 @@ public class ClusterAllocator implements Runnable {
     @Override
     public boolean apply( final Allocation allocInfo ) {
       try {
-        EventRecord.here( ClusterAllocator.class, EventType.VM_PREPARE, LogUtil.dumpObject( allocInfo ) ).trace( );
-        ServiceConfiguration config = Topology.lookup( ClusterController.class, allocInfo.getPartition( ) );
-        Runnable runnable = new Runnable( ) {
+        EventRecord.here( ClusterAllocator.class, EventType.VM_PREPARE, LogUtil.dumpObject( allocInfo ) ).info( );
+        final ServiceConfiguration config = Topology.lookup( ClusterController.class, allocInfo.getPartition( ) );
+        final Runnable runnable = new Runnable( ) {
+          @Override
           public void run( ) {
             try {
               new ClusterAllocator( allocInfo ).run( );
-            } catch ( Exception ex ) {
+            } catch ( final Exception ex ) {
               LOG.warn( "Failed to prepare allocator for: " + allocInfo.getAllocationTokens( ) );
               LOG.error( "Failed to prepare allocator for: " + allocInfo.getAllocationTokens( ), ex );
             }
@@ -163,7 +164,7 @@ public class ClusterAllocator implements Runnable {
         };
         Threads.enqueue( config, 32, runnable );
         return true;
-      } catch ( Exception ex ) {
+      } catch ( final Exception ex ) {
         throw Exceptions.toUndeclared( ex );
       }
     }
@@ -175,45 +176,45 @@ public class ClusterAllocator implements Runnable {
   }
   
   private ClusterAllocator( final Allocation allocInfo ) {
-	  this.allocInfo = allocInfo;
-	  EntityTransaction db = Entities.get( VmInstance.class );
-	  try {
-		  this.cluster = Clusters.lookup( Topology.lookup( ClusterController.class, allocInfo.getPartition( ) ) );
-		  this.messages = new StatefulMessageSet<State>( this.cluster, State.values( ) );
-		  this.setupVolumeMessages( );
-		  this.setupNetworkMessages( );
-		  db.commit();
-	  }catch( final Exception e){
-		  db.rollback( );
-		  LOG.debug( e, e );
-		  this.allocInfo.abort( );
-		  for ( final ResourceToken token : allocInfo.getAllocationTokens( ) ) {
-			  try {
-				  final VmInstance vm = VmInstances.lookup( token.getInstanceId( ) );
-				  vm.setState( VmState.TERMINATED, Reason.FAILED, e.getMessage( ) );
-			  } catch ( final Exception e1 ) {
-				  LOG.debug( e1, e1 );
-			  }
-		  }
-		  return;
-	  }
+    this.allocInfo = allocInfo;
+    final EntityTransaction db = Entities.get( VmInstance.class );
+    try {
+      this.cluster = Clusters.lookup( Topology.lookup( ClusterController.class, allocInfo.getPartition( ) ) );
+      this.messages = new StatefulMessageSet<State>( this.cluster, State.values( ) );
+      this.setupVolumeMessages( );
+      this.setupNetworkMessages( );
+      db.commit( );
+    } catch ( final Exception e ) {
+      db.rollback( );
+      LOG.debug( e, e );
+      this.allocInfo.abort( );
+      for ( final ResourceToken token : allocInfo.getAllocationTokens( ) ) {
+        try {
+          final VmInstance vm = VmInstances.lookup( token.getInstanceId( ) );
+          vm.setState( VmState.TERMINATED, Reason.FAILED, e.getMessage( ) );
+        } catch ( final Exception e1 ) {
+          LOG.debug( e1, e1 );
+        }
+      }
+      return;
+    }
     
-	  try{
-	      for ( final ResourceToken token : allocInfo.getAllocationTokens( ) ) {    	  
-	        this.setupVmMessages( token );
-	      }
-	  }catch( final Exception e){
-		  LOG.debug( e, e );
-		  this.allocInfo.abort( );
-		  for ( final ResourceToken token : allocInfo.getAllocationTokens( ) ) {
-			  try {
-				  final VmInstance vm = VmInstances.lookup( token.getInstanceId( ) );
-				  vm.setState( VmState.TERMINATED, Reason.FAILED, e.getMessage( ) );
-			  } catch ( final Exception e1 ) {
-				  LOG.debug( e1, e1 );
-			  }
-		  }
-	  }
+    try {
+      for ( final ResourceToken token : allocInfo.getAllocationTokens( ) ) {
+        this.setupVmMessages( token );
+      }
+    } catch ( final Exception e ) {
+      LOG.debug( e, e );
+      this.allocInfo.abort( );
+      for ( final ResourceToken token : allocInfo.getAllocationTokens( ) ) {
+        try {
+          final VmInstance vm = VmInstances.lookup( token.getInstanceId( ) );
+          vm.setState( VmState.TERMINATED, Reason.FAILED, e.getMessage( ) );
+        } catch ( final Exception e1 ) {
+          LOG.debug( e1, e1 );
+        }
+      }
+    }
   }
   
   private void setupVolumeMessages( ) throws NoSuchElementException, MetadataException, ExecutionException {
@@ -221,12 +222,12 @@ public class ClusterAllocator implements Runnable {
       final ServiceConfiguration sc = Topology.lookup( Storage.class, this.cluster.getConfiguration( ).lookupPartition( ) );
       final VirtualBootRecord root = this.allocInfo.getVmTypeInfo( ).lookupRoot( );
       if ( root.isBlockStorage( ) ) {
-        for ( ResourceToken token : this.allocInfo.getAllocationTokens( ) ) {
+        for ( final ResourceToken token : this.allocInfo.getAllocationTokens( ) ) {
           final BlockStorageImageInfo imgInfo = ( ( BlockStorageImageInfo ) this.allocInfo.getBootSet( ).getMachine( ) );
           Long volSizeBytes = imgInfo.getImageSizeBytes( );
           Boolean deleteOnTerminate = imgInfo.getDeleteOnTerminate( );
-          for ( BlockDeviceMappingItemType blockDevMapping : this.allocInfo.getRequest( ).getBlockDeviceMapping( ) ) {
-            if ( "root".equals( blockDevMapping.getVirtualName( ) ) && blockDevMapping.getEbs( ) != null ) {
+          for ( final BlockDeviceMappingItemType blockDevMapping : this.allocInfo.getRequest( ).getBlockDeviceMapping( ) ) {
+            if ( "root".equals( blockDevMapping.getVirtualName( ) ) && ( blockDevMapping.getEbs( ) != null ) ) {
               deleteOnTerminate |= blockDevMapping.getEbs( ).getDeleteOnTermination( );
               if ( blockDevMapping.getEbs( ).getVolumeSize( ) != null ) {
                 volSizeBytes = BYTES_PER_GB * blockDevMapping.getEbs( ).getVolumeSize( );
@@ -235,13 +236,13 @@ public class ClusterAllocator implements Runnable {
           }
           final int sizeGb = ( int ) Math.ceil( volSizeBytes / BYTES_PER_GB );
           LOG.debug( "About to prepare root volume using bootable block storage: " + imgInfo + " and vbr: " + root );
-          VmInstance vm = VmInstances.lookup( token.getInstanceId( ) );
+          final VmInstance vm = VmInstances.lookup( token.getInstanceId( ) );
           Volume vol = null;
           if ( !vm.getBootRecord( ).hasPersistentVolumes( ) ) {
             vol = Volumes.createStorageVolume( sc, this.allocInfo.getOwnerFullName( ), imgInfo.getSnapshotId( ), sizeGb, this.allocInfo.getRequest( ) );
             vm.addPersistentVolume( "/dev/sda1", vol );
           } else {
-            VmVolumeAttachment volumeAttachment = vm.getBootRecord( ).getPersistentVolumes( ).iterator( ).next( );
+            final VmVolumeAttachment volumeAttachment = vm.getBootRecord( ).getPersistentVolumes( ).iterator( ).next( );
             vol = Volumes.lookup( null, volumeAttachment.getVolumeId( ) );
           }
           if ( deleteOnTerminate ) {
@@ -256,7 +257,7 @@ public class ClusterAllocator implements Runnable {
   
   @SuppressWarnings( "unchecked" )
   private void setupNetworkMessages( ) throws NotEnoughResourcesException {
-    NetworkGroup net = this.allocInfo.getPrimaryNetwork( );
+    final NetworkGroup net = this.allocInfo.getPrimaryNetwork( );
     if ( net != null ) {
       final Request callback = AsyncRequests.newRequest( new StartNetworkCallback( this.allocInfo.getExtantNetwork( ) ) );
       this.messages.addRequest( State.CREATE_NETWORK, callback );
@@ -266,8 +267,10 @@ public class ClusterAllocator implements Runnable {
   
   private void setupVmMessages( final ResourceToken token ) throws Exception {
     final String networkName = NetworkGroups.networkingConfiguration( ).hasNetworking( )
-      ? this.allocInfo.getPrimaryNetwork( ).getNaturalId( )
-      : NetworkGroups.lookup( this.allocInfo.getOwnerFullName( ), NetworkGroups.defaultNetworkName( ) ).getNaturalId( );
+                                                                                        ? this.allocInfo.getPrimaryNetwork( ).getNaturalId( )
+                                                                                        : NetworkGroups.lookup(
+                                                                                          this.allocInfo.getOwnerFullName( ),
+                                                                                          NetworkGroups.defaultNetworkName( ) ).getNaturalId( );
     
     final SshKeyPair keyInfo = this.allocInfo.getSshKeyPair( );
     final VmTypeInfo vmInfo = this.allocInfo.getVmTypeInfo( );
@@ -283,51 +286,48 @@ public class ClusterAllocator implements Runnable {
     }
   }
   
-  private VmTypeInfo makeVmTypeInfo( final VmTypeInfo vmInfo, final int index, final VirtualBootRecord root ) throws Exception
-  {
+  private VmTypeInfo makeVmTypeInfo( final VmTypeInfo vmInfo, final int index, final VirtualBootRecord root ) throws Exception {
     VmTypeInfo childVmInfo = vmInfo;
     if ( root.isBlockStorage( ) ) {
       childVmInfo = vmInfo.child( );
       final Volume vol = this.allocInfo.getPersistentVolumes( ).get( index );
-      ServiceConfiguration scConfig = Topology.lookup( Storage.class, Partitions.lookupByName( vol.getPartition( ) ) );
+      final ServiceConfiguration scConfig = Topology.lookup( Storage.class, Partitions.lookupByName( vol.getPartition( ) ) );
       
-      int numDescVolError =0;
-      for ( int i = 0; i < VmInstances.EBS_VOLUME_CREATION_TIMEOUT*60; i++ ) {
-    	  try {
-    		  DescribeStorageVolumesResponseType volState = null;
-    		  try{
-    			  DescribeStorageVolumesType describeMsg = new DescribeStorageVolumesType( Lists.newArrayList( vol.getDisplayName( ) ) );          
-    			  volState = AsyncRequests.sendSync( scConfig, describeMsg );
-    		  }catch(Exception e){
-    			  if (numDescVolError++ < 5){
-    				  try{
-    					  TimeUnit.SECONDS.sleep( 1 );
-    				  }catch(final InterruptedException ex ) {
-    		    		  Thread.currentThread( ).interrupt( );
-    				  }
-    				  continue;
-    			  }
-    			  else
-    				  throw e;
-    		  }        
-    		  if ( "available".equals( volState.getVolumeSet( ).get( 0 ).getStatus( ) ) ) {
-    			  break;
-    		  } else if ("failed".equals( volState.getVolumeSet( ).get( 0 ).getStatus( ) )) {
-    			  throw new EucalyptusCloudException("volume creation failed");  
-    		  } else {
-    			  TimeUnit.SECONDS.sleep( 1 );
-    		  }
-    	  } catch ( final InterruptedException ex ) {
-    		  Thread.currentThread( ).interrupt( );
-    	  } catch ( final Exception ex ) {
-    		  LOG.error( ex, ex );          
-    		  throw ex;
-    	  }
+      int numDescVolError = 0;
+      for ( int i = 0; i < VmInstances.EBS_VOLUME_CREATION_TIMEOUT * 60; i++ ) {
+        try {
+          DescribeStorageVolumesResponseType volState = null;
+          try {
+            final DescribeStorageVolumesType describeMsg = new DescribeStorageVolumesType( Lists.newArrayList( vol.getDisplayName( ) ) );
+            volState = AsyncRequests.sendSync( scConfig, describeMsg );
+          } catch ( final Exception e ) {
+            if ( numDescVolError++ < 5 ) {
+              try {
+                TimeUnit.SECONDS.sleep( 1 );
+              } catch ( final InterruptedException ex ) {
+                Thread.currentThread( ).interrupt( );
+              }
+              continue;
+            } else throw e;
+          }
+          if ( "available".equals( volState.getVolumeSet( ).get( 0 ).getStatus( ) ) ) {
+            break;
+          } else if ( "failed".equals( volState.getVolumeSet( ).get( 0 ).getStatus( ) ) ) {
+            throw new EucalyptusCloudException( "volume creation failed" );
+          } else {
+            TimeUnit.SECONDS.sleep( 1 );
+          }
+        } catch ( final InterruptedException ex ) {
+          Thread.currentThread( ).interrupt( );
+        } catch ( final Exception ex ) {
+          LOG.error( ex, ex );
+          throw ex;
+        }
       }
       
       for ( final String nodeTag : this.cluster.getNodeTags( ) ) {
         try {
-          AttachStorageVolumeType attachMsg = new AttachStorageVolumeType( this.cluster.getNode( nodeTag ).getIqn( ), vol.getDisplayName( ) );
+          final AttachStorageVolumeType attachMsg = new AttachStorageVolumeType( this.cluster.getNode( nodeTag ).getIqn( ), vol.getDisplayName( ) );
           final AttachStorageVolumeResponseType scAttachResponse = AsyncRequests.sendSync( scConfig, attachMsg );
           childVmInfo.lookupRoot( ).setResourceLocation( scAttachResponse.getRemoteDeviceString( ) );
         } catch ( final Exception ex ) {
@@ -342,12 +342,12 @@ public class ClusterAllocator implements Runnable {
     final SshKeyPair keyPair = this.allocInfo.getSshKeyPair( );
     final VmKeyInfo vmKeyInfo = new VmKeyInfo( keyPair.getName( ), keyPair.getPublicKey( ), keyPair.getFingerPrint( ) );
     final String platform = this.allocInfo.getBootSet( ).getMachine( ).getPlatform( ).name( ) != null
-      ? this.allocInfo.getBootSet( ).getMachine( ).getPlatform( ).name( )
-      : "linux"; // ASAP:FIXME:GRZE
+                                                                                                     ? this.allocInfo.getBootSet( ).getMachine( ).getPlatform( ).name( )
+                                                                                                     : "linux"; // ASAP:FIXME:GRZE
     ExtantNetwork exNet;
     try {
       exNet = this.allocInfo.getExtantNetwork( );
-    } catch ( Exception ex ) {
+    } catch ( final Exception ex ) {
       Logs.extreme( ).error( ex, ex );
       exNet = ExtantNetwork.bogus( this.allocInfo.getPrimaryNetwork( ) );
     }
@@ -369,13 +369,13 @@ public class ClusterAllocator implements Runnable {
     final Request<VmRunType, VmRunResponseType> req = AsyncRequests.newRequest( new VmRunCallback( run, childToken ) );
     final Address addr = childToken.getAddress( );
     if ( childToken.getAddress( ) != null ) {
-      Success<VmRunResponseType> addrCallback = new Callback.Success<VmRunResponseType>( ) {
+      final Success<VmRunResponseType> addrCallback = new Callback.Success<VmRunResponseType>( ) {
         @SuppressWarnings( "unchecked" )
         @Override
         public void fire( final VmRunResponseType response ) {
           try {
             final VmInstance vm = VmInstances.lookup( response.getVms( ).iterator( ).next( ).getInstanceId( ) );
-            Success<BaseMessage> vmUpdateCallback = new Callback.Success<BaseMessage>( ) {
+            final Success<BaseMessage> vmUpdateCallback = new Callback.Success<BaseMessage>( ) {
               @Override
               public void fire( final BaseMessage response ) {
                 vm.updateAddresses( addr.getInstanceAddress( ), addr.getName( ) );
@@ -384,7 +384,7 @@ public class ClusterAllocator implements Runnable {
             AsyncRequests.newRequest( addr.assign( vm ).getCallback( ) )
                          .then( vmUpdateCallback )
                          .dispatch( vm.getPartition( ) );
-          } catch ( Exception ex ) {
+          } catch ( final Exception ex ) {
             LOG.error( ex, ex );
           }
         }
