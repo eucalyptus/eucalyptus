@@ -538,16 +538,21 @@ static int xen_detach_helper (struct nc_state_t *nc, char *instanceId, char *loc
         int fd = safe_mkstemp(tmpfile);
 
 	char devReal[32];
-	char *tmp = strstr(xml, "<target dev=");
+	char *tmp = strstr(xml, "<target");
 	if(tmp==NULL){
-	    logprintfl(EUCAERROR, "'<target dev=' not found in the xml"); 
+	    logprintfl(EUCAERROR, "'<target' not found in the device xml\n"); 
 	    return -1;
         }
-	snprintf(devReal, 32, tmp+strlen("<target dev=\""));
-        for(int i=0; i<32; i++){
+	tmp = strstr(tmp, "dev=\"");
+        if(tmp==NULL){
+            logprintfl(EUCAERROR, "'<target dev' not found in the device xml\n");     
+            return -1;
+        }
+	snprintf(devReal, 32, tmp+strlen("dev=\""));
+        for(int i=0;i<32; i++){
 	     if(devReal[i]=='\"'){
-		devReal[i] = 0x00;
-		break;
+                for(;i<32; i++)
+		      devReal[i] = NULL;
 	     }
         }	
 
