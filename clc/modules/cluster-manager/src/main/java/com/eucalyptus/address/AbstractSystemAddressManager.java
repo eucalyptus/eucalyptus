@@ -64,6 +64,12 @@ public abstract class AbstractSystemAddressManager {
                           "Unassigning orphaned public ip address: " + LogUtil.dumpObject( address ) + " count=" + orphanCount ).warn( );
       try {
         final Address addr = Addresses.getInstance( ).lookup( address.getAddress( ) );
+        if ( addr.isPending( ) ) { 
+          try {
+            addr.clearPending( );
+          } catch ( Exception ex ) {
+          }
+        }
         try {
           if ( addr.isAssigned( ) && "0.0.0.0".equals( address.getInstanceIp( ) ) ) {
             addr.unassign( ).clearPending( );
