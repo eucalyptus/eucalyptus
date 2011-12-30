@@ -2870,7 +2870,7 @@ int ccCheckState(int clcTimer) {
     int arbitratorFails=0;
     snprintf(buf, 255, "%s", config->arbitrators);
     tok = strtok(buf, " ");
-    while(tok && count<10) {
+    while(tok && count<3) {
       hostint = dot2hex(tok);
       host = hex2dot(hostint);
       if (host) {
