@@ -536,9 +536,21 @@ static int xen_detach_helper (struct nc_state_t *nc, char *instanceId, char *loc
         char tmpfile[MAX_PATH];
         snprintf(tmpfile, 32, "/tmp/detachxml.XXXXXX");
         int fd = safe_mkstemp(tmpfile);
-	char xvdDevReal[32];
-        // sdx -> xvdx 
-        snprintf(xvdDevReal, 32, "xvd%s", localDevReal+2);
+
+	char devReal[32];
+	char *tmp = strstr(xml, "<target dev=");
+	if(tmp==NULL){
+	    logprintfl(EUCAERROR, "'<target dev=' not found in the xml"); 
+	    return -1;
+        }
+	snprintf(devReal, 32, tmp+strlen("<target dev=\""));
+        for(int i=0; i<32; i++){
+	     if(devReal[i]=='\"'){
+		devReal[i] = 0x00;
+		break;
+	     }
+        }	
+
         if (fd > 0) {
             write(fd, xml, strlen(xml));
             close(fd);
@@ -548,7 +560,7 @@ static int xen_detach_helper (struct nc_state_t *nc, char *instanceId, char *loc
                      nc->detach_cmd_path, // TODO: does this work?
                      nc->rootwrap_cmd_path, 
                      instanceId, 
-                     xvdDevReal, 
+                     devReal, 
                      tmpfile);
             logprintfl(EUCAINFO, "%s\n", cmd);
             rc = system(cmd);
