@@ -37,8 +37,8 @@ import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
 public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescribeType, VmDescribeResponseType> {
   private static Logger               LOG                       = Logger.getLogger( VmStateCallback.class );
-  private static final int            VM_INITIAL_REPORT_TIMEOUT = 20000;
-  private static final int            VM_STATE_SETTLE_TIME      = 5000;
+  private static final int            VM_INITIAL_REPORT_TIMEOUT = 300000;
+  private static final int            VM_STATE_SETTLE_TIME      = 15000;
   private final Supplier<Set<String>> initialInstances;
   
   public VmStateCallback( ) {
@@ -116,7 +116,7 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
     EntityTransaction db1 = Entities.get( VmInstance.class );
     try {
       VmInstance vm = VmInstances.cachedLookup( vmId );
-      if ( vm.getCreationSplitTime( ) < VM_INITIAL_REPORT_TIMEOUT ) {
+      if ( VmState.PENDING.apply( vm ) && vm.getCreationSplitTime( ) < VM_INITIAL_REPORT_TIMEOUT ) {
         //do nothing during first VM_INITIAL_REPORT_TIMEOUT millis of instance life
       } else if ( VmInstances.Timeout.UNREPORTED.apply( vm ) ) {
         VmInstances.terminated( vm );
