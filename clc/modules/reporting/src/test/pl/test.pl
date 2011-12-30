@@ -1,22 +1,27 @@
 #!/usr/bin/perl
 
 #
-# test.pl tests the reporting system, by simulating resource usage and then verifying
-# that resultant reports are correct.
+# test.pl tests the reporting system, by simulating resource usage and then
+# verifying that resultant reports are correct.
 #
-# This script decomposes the test into a series of phases. Each phase is implemented as a
-# separate perl script which this script calls in order. First this calls
-# "simulate_usage.pl" which simulates resource usage. Then it calls "check_db.pl" which
-# verifies that the values in the database are correct according to the simulated usage.
-# Then it calls "check_report.pl" which verifies that generated reports are correct
-# according to the simulated usage. Those commands can be run manually and separately
-# if desired, however running those commands manually would require setting up images etc
-# which this script does automatically.
+# Test.pl decomposes the test into a series of phases. Each phase is
+# implemented as a separate perl script which this script calls in order. First
+# it calls inject.pl to inject a script into the startup sequence of an image
+# it will use for testing. Then it calls "simulate_usage.pl" which simulates
+# resource usage, using the injected image. Then it calls "check_db.pl" which
+# verifies that the values in the database are correct according to the
+# simulated usage. Then it calls "check_report.pl" which verifies that
+# generated reports are correct according to the simulated usage. Those
+# commands can be run manually and separately if desired, however running those
+# commands manually would require setting up images etc which this script does
+# automatically.
 #
-# This script accepts several optional arguments: duration_secs, write_interval, num_users,
-# num_users_per_account, num_instances_per_user, and image.
+# This script accepts several optional arguments: duration_secs,
+# write_interval, num_users, num_users_per_account, num_instances_per_user, and
+# image.
 #
-# This script has dependencies which can be satisfied by sourcing the "test.sh" file.
+# This script has dependencies which can be satisfied by sourcing the "test.sh"
+# file.
 #
 # (c)2011 Eucalyptus Systems, Inc. All Rights Reserved
 # author: tom.werges
