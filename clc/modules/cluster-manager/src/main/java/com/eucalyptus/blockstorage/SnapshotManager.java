@@ -209,10 +209,10 @@ public class SnapshotManager {
   public DescribeSnapshotsResponseType describe( DescribeSnapshotsType request ) throws EucalyptusCloudException {
     DescribeSnapshotsResponseType reply = ( DescribeSnapshotsResponseType ) request.getReply( );
     Context ctx = Contexts.lookup( );
-    boolean showAll = ctx.hasAdministrativePrivileges( ) && request.getSnapshotSet( ).remove( "*" );
+    boolean showAll = request.getSnapshotSet( ).remove( "*" );
     EntityWrapper<Snapshot> db = EntityWrapper.get( Snapshot.class );
     try {
-      List<Snapshot> snapshots = db.query( Snapshot.named( showAll ? null : AccountFullName.getInstance( ctx.getAccount( ) ), null ) );
+      List<Snapshot> snapshots = db.query( Snapshot.named( ( ctx.hasAdministrativePrivileges( ) && showAll ) ? null : AccountFullName.getInstance( ctx.getAccount( ) ), null ) );
       
       for ( Snapshot snap : Iterables.filter( snapshots, RestrictedTypes.filterPrivileged( ) ) ) {
         DescribeStorageSnapshotsType scRequest = new DescribeStorageSnapshotsType( Lists.newArrayList( snap.getDisplayName( ) ) );

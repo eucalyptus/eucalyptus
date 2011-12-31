@@ -193,12 +193,12 @@ public class VmControl {
   public DescribeInstancesResponseType describeInstances( final DescribeInstancesType msg ) throws EucalyptusCloudException {
     final DescribeInstancesResponseType reply = ( DescribeInstancesResponseType ) msg.getReply( );
     Context ctx = Contexts.lookup( );
-    boolean showAll = ctx.hasAdministrativePrivileges( ) && msg.getInstancesSet( ).remove( "*" );
+    boolean showAll = msg.getInstancesSet( ).remove( "*" );
     final ArrayList<String> instancesSet = msg.getInstancesSet( );    
     final Multimap<String, RunningInstancesItemType> instanceMap = TreeMultimap.create( );
     final Map<String, ReservationInfoType> reservations = Maps.newHashMap( );
     Predicate<VmInstance> filter = CloudMetadatas.filterPrivilegesById( msg.getInstancesSet( ) );
-    OwnerFullName ownerFullName = showAll
+    OwnerFullName ownerFullName = ( ctx.hasAdministrativePrivileges( ) && showAll )
       ? null
       : ctx.getUserFullName( ).asAccountFullName( );
     try {

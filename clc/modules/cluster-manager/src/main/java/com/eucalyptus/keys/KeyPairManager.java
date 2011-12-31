@@ -38,8 +38,8 @@ public class KeyPairManager {
   public DescribeKeyPairsResponseType describe( DescribeKeyPairsType request ) throws Exception {
     DescribeKeyPairsResponseType reply = request.getReply( );
     Context ctx = Contexts.lookup( );
-    boolean showAll = ctx.hasAdministrativePrivileges( ) && request.getKeySet( ).remove( "*" );
-    for ( SshKeyPair kp : Iterables.filter( KeyPairs.list( showAll ? null : Contexts.lookup( ).getUserFullName( ).asAccountFullName( ) ), RestrictedTypes.filterPrivileged( ) ) ) {
+    boolean showAll = request.getKeySet( ).remove( "*" );
+    for ( SshKeyPair kp : Iterables.filter( KeyPairs.list( ( ctx.hasAdministrativePrivileges( ) &&  showAll ) ? null : Contexts.lookup( ).getUserFullName( ).asAccountFullName( ) ), RestrictedTypes.filterPrivileged( ) ) ) {
       if ( request.getKeySet( ).isEmpty( ) || request.getKeySet( ).contains( kp.getDisplayName( ) ) ) {
         reply.getKeySet( ).add( new DescribeKeyPairsResponseItemType( kp.getDisplayName( ), kp.getFingerPrint( ) ) );
       }

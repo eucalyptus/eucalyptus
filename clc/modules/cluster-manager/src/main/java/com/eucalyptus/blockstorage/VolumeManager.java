@@ -241,7 +241,7 @@ public class VolumeManager {
   public DescribeVolumesResponseType DescribeVolumes( DescribeVolumesType request ) throws EucalyptusCloudException {
     DescribeVolumesResponseType reply = ( DescribeVolumesResponseType ) request.getReply( );
     Context ctx = Contexts.lookup( );
-    boolean showAll = ctx.hasAdministrativePrivileges( ) && request.getVolumeSet( ).remove( "*" );
+    boolean showAll = request.getVolumeSet( ).remove( "*" );
     EntityWrapper<Volume> db = EntityWrapper.get( Volume.class );
     try {
       
@@ -254,7 +254,7 @@ public class VolumeManager {
           }
         } );
       }
-      List<Volume> volumes = db.query( Volume.named( showAll ? null : ctx.getUserFullName( ).asAccountFullName( ), null ) );
+      List<Volume> volumes = db.query( Volume.named( ( ctx.hasAdministrativePrivileges( ) && showAll ) ? null : ctx.getUserFullName( ).asAccountFullName( ), null ) );
       List<Volume> describeVolumes = Lists.newArrayList( );
       for ( Volume v : Iterables.filter( volumes, CloudMetadatas.filterPrivilegesById( request.getVolumeSet( ) ) ) ) {
         if ( !State.ANNIHILATED.equals( v.getState( ) ) ) {
