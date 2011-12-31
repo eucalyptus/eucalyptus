@@ -184,8 +184,8 @@ public class VmVolumeAttachment implements Comparable<VmVolumeAttachment> {
   }
   
   public int hashCode( ) {
-    return ( volumeId == null
-      ? volumeId.hashCode( )
+    return ( this.volumeId != null
+      ? this.volumeId.hashCode( )
       : 0 );
   }
   
