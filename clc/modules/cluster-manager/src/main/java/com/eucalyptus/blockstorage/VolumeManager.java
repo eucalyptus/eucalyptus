@@ -253,7 +253,7 @@ public class VolumeManager {
           }
         } );
       }
-      List<Volume> volumes = db.query( ctx.hasAdministrativePrivileges( ) ? null : Volume.named( ctx.getUserFullName( ).asAccountFullName( ), null ) );
+      List<Volume> volumes = db.query( Volume.named( ctx.hasAdministrativePrivileges( ) ? null : ctx.getUserFullName( ).asAccountFullName( ), null ) );
       List<Volume> describeVolumes = Lists.newArrayList( );
       for ( Volume v : Iterables.filter( volumes, CloudMetadatas.filterPrivilegesById( request.getVolumeSet( ) ) ) ) {
         if ( !State.ANNIHILATED.equals( v.getState( ) ) ) {
