@@ -224,8 +224,19 @@ public class FileSystemStorageManager implements StorageManager {
 			objectFile.createNewFile();
 		}
 		BufferedOutputStream outputStream = new BufferedOutputStream(new FileOutputStream(objectFile, append));
+		try {
 		outputStream.write(base64Data);
-		outputStream.close();
+		} catch (IOException ex) {
+			LOG.error( ex );
+			Logs.extreme( ).error( ex, ex );
+			throw ex;
+		} finally {
+			try {
+				outputStream.close();
+			} catch (IOException ex) {
+				LOG.error( ex );
+			}
+		}
 	}
 
 	public void renameObject(String bucket, String oldName, String newName) throws IOException {
