@@ -2234,10 +2234,11 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
 	    }
 	    
             // call StartNetwork client
+	    
 	    rc = ncClientCall(ccMeta, OP_TIMEOUT_PERNODE, res->lockidx, res->ncURL, "ncStartNetwork", uuid, NULL, 0, 0, vlan, NULL);
-
+	    logprintfl(EUCADEBUG, "RunInstances(): sent network start request for network idx '%d' on resource '%s' uuid '%s': result '%s'\n", vlan, res->ncURL, uuid, rc ? "FAIL" : "SUCCESS");
 	    rc = ncClientCall(ccMeta, OP_TIMEOUT_PERNODE, res->lockidx, res->ncURL, "ncRunInstance", uuid, instId, reservationId, &ncvm, amiId, amiURL, kernelId, kernelURL, ramdiskId, ramdiskURL, ownerId, accountId, keyName, &ncnet, userData, launchIndex, platform, expiryTime, netNames, netNamesLen, &outInst);
-
+	    logprintfl(EUCADEBUG, "RunInstances(): sent run request for instance '%s' on resource '%s': result '%s' uuis '%s'\n", instId, res->ncURL, uuid, rc ? "FAIL" : "SUCCESS");
 	    if (rc) {
 	      // make sure we get the latest topology information before trying again
 	      sem_mywait(CONFIG);
@@ -2812,7 +2813,7 @@ int ccGetStateString(char *statestr, int n) {
   return(0);
 }
 
-int ccCheckState() {
+int ccCheckState(int clcTimer) {
   char localDetails[1024];
   int ret=0;
   char cmd[MAX_PATH];
@@ -2861,6 +2862,41 @@ int ccCheckState() {
   // filesystem
   
   // network
+  // arbitrators
+  if (clcTimer == 1 && strlen(config->arbitrators)) {
+    char *tok, buf[256], *host;
+    uint32_t hostint;
+    int count=0;
+    int arbitratorFails=0;
+    snprintf(buf, 255, "%s", config->arbitrators);
+    tok = strtok(buf, " ");
+    while(tok && count<3) {
+      hostint = dot2hex(tok);
+      host = hex2dot(hostint);
+      if (host) {
+	logprintfl(EUCADEBUG, "ccCheckState(): checking health of arbitrator (%s)\n", tok);
+	snprintf(cmd, 255, "ping -c 1 %s", host);
+	rc = system(cmd);
+	if (rc) {
+	  logprintfl(EUCADEBUG, "ccCheckState(): cannot ping arbitrator %s (ping rc=%d)\n", host, rc);
+	  arbitratorFails++;
+	}
+	free(host);
+      }
+      tok = strtok(NULL, " ");
+      count++;
+    }
+    if (arbitratorFails) {
+      config->arbitratorFails++;
+    } else {
+      config->arbitratorFails=0;
+    }
+
+    if (config->arbitratorFails > 10) {
+      logprintfl(EUCADEBUG, "ccCheckState(): more than 10 arbitrator ping fails in a row (%d), failing check\n", config->arbitratorFails);
+      ret++;
+    }
+  }
 
   // broker pairing algo
   for (i=0; i<16; i++) {
@@ -2936,12 +2972,12 @@ void *monitor_thread(void *in) {
       config->kick_enabled = 0;
     }
 
-    if (config->ccState == ENABLED) {
+    rc = update_config();
+    if (rc) {
+      logprintfl(EUCAWARN, "refresh_resources(): bad return from update_config(), check your config file\n");
+    }
 
-      rc = update_config();
-      if (rc) {
-	logprintfl(EUCAWARN, "refresh_resources(): bad return from update_config(), check your config file\n");
-      }
+    if (config->ccState == ENABLED) {
 
       // NC Polling operations
       if (ncTimer >= config->ncPollingFrequency) {
@@ -3042,7 +3078,7 @@ void *monitor_thread(void *in) {
 
     // do state checks under CONFIG lock
     sem_mywait(CONFIG);
-    if (ccCheckState()) {
+    if (ccCheckState(clcTimer)) {
       logprintfl(EUCAERROR, "monitor_thread(): ccCheckState() returned failures\n");
       config->kick_enabled = 0;
       ccChangeState(NOTREADY);
@@ -3283,6 +3319,15 @@ int update_config(void) {
       }
       if (res) free(res);
 
+      // CC Arbitrators
+      tmpstr = configFileValue("CC_ARBITRATORS");
+      if (tmpstr) {
+	snprintf(config->arbitrators, 255, "%s", tmpstr);
+	free(tmpstr);
+      } else {
+	bzero(config->arbitrators, 256);
+      }
+
       // polling frequencies
 
       // CLC
@@ -3325,7 +3370,7 @@ int init_config(void) {
   char *tmpstr=NULL, *proxyIp=NULL;
   int rc, numHosts, use_wssec, use_tunnels, use_proxy, proxy_max_cache_size, schedPolicy, idleThresh, wakeThresh, ret, i;
   
-  char configFiles[2][MAX_PATH], netPath[MAX_PATH], eucahome[MAX_PATH], policyFile[MAX_PATH], home[MAX_PATH], proxyPath[MAX_PATH];
+  char configFiles[2][MAX_PATH], netPath[MAX_PATH], eucahome[MAX_PATH], policyFile[MAX_PATH], home[MAX_PATH], proxyPath[MAX_PATH], arbitrators[256];
   
   time_t configMtime, instanceTimeout, ncPollingFrequency, clcPollingFrequency, ncFanout;
   struct stat statbuf;
@@ -3683,6 +3728,15 @@ int init_config(void) {
   }
   if (tmpstr) free(tmpstr);
 
+  // CC Arbitrators
+  tmpstr = configFileValue("CC_ARBITRATORS");
+  if (tmpstr) {
+    snprintf(arbitrators, 255, "%s", tmpstr);
+    free(tmpstr);
+  } else {
+    bzero(arbitrators, 256);
+  }
+
   tmpstr = configFileValue("NC_FANOUT");
   if (!tmpstr) {
     ncFanout = 1;
@@ -3786,11 +3840,12 @@ int init_config(void) {
   config->instanceTimeout = instanceTimeout;
   config->ncPollingFrequency = ncPollingFrequency;
   config->clcPollingFrequency = clcPollingFrequency;
-  config->ncFanout = ncFanout;
+    config->ncFanout = ncFanout;
   locks[REFRESHLOCK] = sem_open("/eucalyptusCCrefreshLock", O_CREAT, 0644, config->ncFanout);
   config->initialized = 1;
   ccChangeState(LOADED);
   config->ccStatus.localEpoch = 0;
+  snprintf(config->arbitrators, 255, "%s", arbitrators);
   snprintf(config->ccStatus.details, 1024, "ERRORS=0");
   snprintf(config->ccStatus.serviceId.type, 32, "cluster");
   snprintf(config->ccStatus.serviceId.name, 32, "self");
