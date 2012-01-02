@@ -83,6 +83,7 @@ import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.stream.ChunkedInput;
 
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.WalrusProperties;
 import com.eucalyptus.ws.util.WalrusBucketLogger;
@@ -247,11 +248,33 @@ public class FileSystemStorageManager implements StorageManager {
 			FileChannel fileOut = fileOutputStream.getChannel();
 			try {
 				fileIn.transferTo(0, fileIn.size(), fileOut);
+			} catch (IOException ex) {
+				 LOG.error( ex );
+			     Logs.extreme( ).error( ex, ex );
+			     throw ex;
 			} finally {
-				if(fileIn != null) fileIn.close();
-				fileInputStream.close();
-				if(fileOut != null) fileOut.close();
-				fileOutputStream.close();
+				try {
+					if(fileIn != null) 
+						fileIn.close();
+				} catch(IOException e) {
+					LOG.error( e );
+				}
+				try {
+					fileInputStream.close();
+				} catch(IOException e) {
+					LOG.error( e );
+				}
+				try {
+					if(fileOut != null) 
+						fileOut.close();
+				} catch(IOException e) {
+					LOG.error( e );
+				}
+				try {
+					fileOutputStream.close();
+				} catch(IOException e) {
+					LOG.error( e );
+				}
 			}
 		}
 	}
