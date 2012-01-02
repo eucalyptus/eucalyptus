@@ -88,13 +88,25 @@ import edu.ucsb.eucalyptus.msgs.AssignAddressResponseType;
 import edu.ucsb.eucalyptus.msgs.AssignAddressType;
 
 public class AssignAddressCallback extends MessageCallback<AssignAddressType, AssignAddressResponseType> {
-  private static Logger LOG = Logger.getLogger( AssignAddressCallback.class );
+  private static Logger    LOG = Logger.getLogger( AssignAddressCallback.class );
   
-  private Address       address;
+  private final Address    address;
+  private final VmInstance vm;
   
   public AssignAddressCallback( Address address ) {
     super( new AssignAddressType( address.getStateUuid( ), address.getName( ), address.getInstanceAddress( ), address.getInstanceId( ) ) );
     this.address = address;
+    this.vm = lookupVm( );
+  }
+
+  public VmInstance lookupVm( ) {
+    try {
+      return VmInstances.lookup( super.getRequest( ).getInstanceId( ) );
+    } catch ( TerminatedInstanceException ex ) {
+      return null;
+    } catch ( NoSuchElementException ex ) {
+      return null;
+    }
   }
   
   @Override
@@ -108,10 +120,14 @@ public class AssignAddressCallback extends MessageCallback<AssignAddressType, As
       this.updateState( );
     } catch ( IllegalStateException e ) {
       LOG.debug( e, e );
-      AsyncRequests.newRequest( address.unassign( ).getCallback( ) ).dispatch( address.getPartition( ) );
+      if ( this.vm != null ) {
+        AsyncRequests.newRequest( address.unassign( ).getCallback( ) ).dispatch( this.vm.getPartition( ) );
+      }
     } catch ( Exception e ) {
       LOG.debug( e, e );
-      AsyncRequests.newRequest( address.unassign( ).getCallback( ) ).dispatch( address.getPartition( ) );
+      if ( this.vm != null ) {
+        AsyncRequests.newRequest( address.unassign( ).getCallback( ) ).dispatch( this.vm.getPartition( ) );
+      }
     }
   }
   
@@ -124,14 +140,16 @@ public class AssignAddressCallback extends MessageCallback<AssignAddressType, As
     if ( this.address.isPending( ) ) {
       try {
         this.address.clearPending( );
-      } catch ( Exception ex ) {
-      }
-    } 
-    if ( this.address.isSystemOwned( ) ) {
-      Addresses.release( this.address );
-    } else if ( this.address.isAssigned( ) ) {
-      AsyncRequests.newRequest( this.address.unassign( ).getCallback( ) ).dispatch( this.address.getPartition( ) );
+      } catch ( Exception ex ) {}
     }
+    try {
+      VmInstance vm = VmInstances.lookup( super.getRequest( ).getInstanceId( ) );
+      if ( this.address.isSystemOwned( ) ) {
+        Addresses.release( this.address );
+      } else if ( this.address.isAssigned( ) ) {
+        AsyncRequests.newRequest( this.address.unassign( ).getCallback( ) ).dispatch( vm.getPartition( ) );
+      }
+    } catch ( TerminatedInstanceException ex ) {} catch ( NoSuchElementException ex ) {}
   }
   
   private boolean checkVmState( ) {
@@ -155,30 +173,14 @@ public class AssignAddressCallback extends MessageCallback<AssignAddressType, As
       this.address.clearPending( );
       throw new IllegalStateException( "Failed to find the vm for this assignment: " + this.getRequest( ) );
     } else {
-      EventRecord.here( AssignAddressCallback.class, EventType.ADDRESS_ASSIGNED, Address.State.assigned.toString( ), LogUtil.dumpObject( address ) ).info( );
-      this.sendSecondaryAssign( );
       this.address.clearPending( );
+      EventRecord.here( AssignAddressCallback.class, EventType.ADDRESS_ASSIGNED, Address.State.assigned.toString( ), LogUtil.dumpObject( address ) ).info( );
     }
   }
 
-  private void sendSecondaryAssign( ) {
-    try {
-      VmInstance vm = VmInstances.lookup( super.getRequest( ).getInstanceId( ) );
-      if ( !vm.getPartition( ).equals( this.address.getPartition( ) ) ) {
-        Partition partition = Partitions.lookupByName( vm.getPartition( ) );
-        ServiceConfiguration config = Topology.lookup( ClusterController.class, partition );
-        AssignAddressType request = new AssignAddressType( this.address.getStateUuid( ), this.address.getDisplayName( ), vm.getPrivateAddress( ), vm.getDisplayName( ) );
-        try {
-          AsyncRequests.sendSync( config, request );
-        } catch ( Exception ex ) {
-          LOG.error( ex, ex );
-        }
-      }
-    } catch ( TerminatedInstanceException ex ) {
-      LOG.error( ex, ex );
-    } catch ( NoSuchElementException ex ) {
-      LOG.error( ex, ex );
-    }
+  @Override
+  public String toString( ) {
+    return "AssignAddressCallback " + this.address;
   }
-  
+
 }

@@ -700,10 +700,10 @@ class EucaConf(object):
                 req.sync()
 
     def do_register_arbitrator(self):
-        if self.options.partition_name != self.options.component_name:
-            self.warn('Partition name must match component name')
-            sys.exit(1)
         if hasattr(self.options, 'register_arbitrator'):
+            if self.options.partition_name != self.options.component_name:
+                self.warn('Partition name must match component name')
+                sys.exit(1)
             self._do_register('eucadmin.registerarbitrator',
                               'RegisterArbitrator', None)
 

@@ -180,13 +180,13 @@ public abstract class AbstractConfigurableProperty implements ConfigurableProper
       Object prop = this.getter.invoke( o );
       String result = prop != null
         ? prop.toString( )
-        : "unknown";
+        : "<unset>";
       db.commit( );
       return result;
     } catch ( Exception e ) {
       Logs.exhaust( ).error( e, e );
       db.rollback( );
-      return "unknown";
+      return "<unset>";
     }
   }
   

@@ -101,7 +101,10 @@ public class UnassignAddressCallback extends MessageCallback<UnassignAddressType
     } catch ( Exception e ) {
       try {
         this.address = Addresses.getInstance( ).lookupDisabled( addr );
-      } catch ( NoSuchElementException ex ) {
+      } catch ( Exception ex ) {
+        LOG.error( "Failed to prepare unassign for: " + addr + "=>" + vmIp );
+        Logs.extreme( ).error( "Failed to prepare unassign for: " + addr + "=>" + vmIp, e );
+        Logs.extreme( ).error( "Failed to prepare unassign for: " + addr + "=>" + vmIp, ex );
         throw new CancellationException( ex.getMessage( ) );
       }
     }
@@ -122,7 +125,11 @@ public class UnassignAddressCallback extends MessageCallback<UnassignAddressType
   
   @Override
   public void initialize( UnassignAddressType msg ) throws Exception {
-    EventRecord.here( UnassignAddressCallback.class, EventType.ADDRESS_UNASSIGNING, Transition.unassigning.toString( ), address.toString( ) ).info( );
+    try {
+      EventRecord.here( UnassignAddressCallback.class, EventType.ADDRESS_UNASSIGNING, Transition.unassigning.toString( ), address.toString( ) ).info( );
+    } catch ( Exception ex ) {
+      LOG.error( ex , ex );
+    }
   }
   
   public void clearVmAddress( ) {
@@ -139,9 +146,9 @@ public class UnassignAddressCallback extends MessageCallback<UnassignAddressType
   @Override
   public void fire( UnassignAddressResponseType reply ) {
     try {
-      this.sendSecondaryUnassign( );
-      this.clearVmAddress( );
+//      this.sendSecondaryUnassign( );
       this.address.clearPending( );
+      this.clearVmAddress( );
     } catch ( IllegalStateException t ) {
       LOG.debug( t );
     } catch ( Exception t ) {
@@ -163,26 +170,6 @@ public class UnassignAddressCallback extends MessageCallback<UnassignAddressType
     }
   }
 
-  private void sendSecondaryUnassign( ) {
-    try {
-      VmInstance vm = VmInstances.lookupByPrivateIp( super.getRequest( ).getDestination( ) );
-      if ( !vm.getPartition( ).equals( this.address.getPartition( ) ) ) {
-        Partition partition = Partitions.lookupByName( vm.getPartition( ) );
-        ServiceConfiguration config = Topology.lookup( ClusterController.class, partition );
-        UnassignAddressType request = new UnassignAddressType( this.address.getDisplayName( ), this.address.getInstanceAddress( ) );
-        try {
-          AsyncRequests.sendSync( config, request );
-        } catch ( Exception ex ) {
-          LOG.error( ex, ex );
-        }
-      }
-    } catch ( TerminatedInstanceException ex ) {
-      Logs.extreme( ).error( ex, ex );
-    } catch ( NoSuchElementException ex ) {
-      Logs.extreme( ).error( ex, ex );
-    }
-  }
-  
   @Override
   public void fireException( Throwable e ) {
     try {

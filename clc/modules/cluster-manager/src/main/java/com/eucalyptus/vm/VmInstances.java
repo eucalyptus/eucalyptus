@@ -99,6 +99,7 @@ import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Threads;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes.QuantityMetricFunction;
 import com.eucalyptus.util.RestrictedTypes.Resolver;
@@ -350,7 +351,7 @@ public class VmInstances {
               Addresses.release( address );
             } else {
               EventRecord.caller( VmInstances.class, EventType.VM_TERMINATING, "USER_ADDRESS", address.toString( ) ).debug( );
-              AsyncRequests.newRequest( address.unassign( ).getCallback( ) ).dispatch( address.getPartition( ) );
+              AsyncRequests.newRequest( address.unassign( ).getCallback( ) ).dispatch( vm.getPartition( ) );
             }
           } catch ( final IllegalStateException e ) {} catch ( final Throwable e ) {
             LOG.debug( e, e );
@@ -363,7 +364,7 @@ public class VmInstances {
   
   public static void cleanUp( final VmInstance vm ) {
     LOG.trace( Logs.dump( vm ) );
-    LOG.trace( Threads.currentStackString( ) );
+    LOG.info( "Terminating instance: " + vm.getInstanceId( ), new RuntimeException( ) );
     try {
       final Cluster cluster = Clusters.lookup( Topology.lookup( ClusterController.class, vm.lookupPartition( ) ) );
       VmInstances.cleanUpAttachedVolumes( vm );
@@ -399,7 +400,16 @@ public class VmInstances {
         @Override
         public boolean apply( final AttachedVolume arg0 ) {
           if ( "/dev/sda1".equals( arg0.getDevice( ) ) ) {//GRZE:fix references to root device name.
-            return true;
+            try {
+              final ServiceConfiguration sc = Topology.lookup( Storage.class, vm.lookupPartition( ) );
+              final Dispatcher scDispatcher = ServiceDispatcher.lookup( sc );
+              scDispatcher.send( new DetachStorageVolumeType( cluster.getNode( vm.getServiceTag( ) ).getIqn( ), arg0.getVolumeId( ) ) );
+              return true;
+            } catch ( final Throwable e ) {
+              LOG.error( "Failed sending Detach Storage Volume for: " + arg0.getVolumeId( )
+                         + ".  Will keep trying as long as instance is reported.  The request failed because of: " + e.getMessage( ), e );
+              return true;
+            }
           } else {
             try {
               final ServiceConfiguration sc = Topology.lookup( Storage.class, vm.lookupPartition( ) );

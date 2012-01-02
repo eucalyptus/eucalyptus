@@ -577,10 +577,9 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                 def snap_meta = connMap['eucalyptus_storage'].firstRow("SELECT * FROM Snapshots WHERE snapshot_name=?", [ snap.displayname ]);
                 def scName = (snap_meta == null) ? null :  snap_meta.sc_name;
                 // Second scName is partition
-                Snapshot s = new Snapshot( ufn, snap.displayname, snap.parentvolume, scName + '_sc', scName);
+                Snapshot s = new Snapshot( ufn, snap.displayname, snap.parentvolume, volumeSizeMap.get(snap.parentvolume), scName + '_sc', scName);
                 initMetaClass(s, s.class);
                 s.setState(State.valueOf(snap.state));
-                s.setVolumeSize(volumeSizeMap.get(snap.parentvolume));
                 LOG.debug("Adding snapshot ${ snap.displayname } for ${ it.auth_user_name }");
                 dbSnap.add(s);
                 dbSnap.commit();

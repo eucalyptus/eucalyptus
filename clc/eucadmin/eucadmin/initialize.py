@@ -51,15 +51,16 @@ class Initialize(object):
                                         self.config['EUCALYPTUS'])
         if 'CLOUD_OPTS' in self.config:
             cmd_string += ' %s' % self.config['CLOUD_OPTS']
+        print 'Initializing Database...'
         cmd = Command(cmd_string)
         if self.debug:
-            if cmd.status:
-                print 'Initialize command failed'
-            else:
-                print 'Initialize command succeeded'
             print '\tStatus=%d' % cmd.status
             print '\tOutput:'
             print cmd.stdout
             print cmd.stderr
+        if cmd.status:
+            print 'Initialize command failed'
+        else:
+            print 'Initialize command succeeded'
         return cmd.status
             

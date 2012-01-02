@@ -181,7 +181,7 @@ public class VmControl {
       }
       db.commit( );
     } catch ( Exception ex ) {
-      LOG.trace( ex, ex );
+      LOG.error( ex, ex );
       db.rollback( );
       allocInfo.abort( );
       throw ex;
@@ -192,13 +192,13 @@ public class VmControl {
   
   public DescribeInstancesResponseType describeInstances( final DescribeInstancesType msg ) throws EucalyptusCloudException {
     final DescribeInstancesResponseType reply = ( DescribeInstancesResponseType ) msg.getReply( );
-    final ArrayList<String> instancesSet = msg.getInstancesSet( );
-    
+    Context ctx = Contexts.lookup( );
+    boolean showAll = msg.getInstancesSet( ).remove( "*" );
+    final ArrayList<String> instancesSet = msg.getInstancesSet( );    
     final Multimap<String, RunningInstancesItemType> instanceMap = TreeMultimap.create( );
     final Map<String, ReservationInfoType> reservations = Maps.newHashMap( );
     Predicate<VmInstance> filter = CloudMetadatas.filterPrivilegesById( msg.getInstancesSet( ) );
-    Context ctx = Contexts.lookup( );
-    OwnerFullName ownerFullName = ctx.hasAdministrativePrivileges( )
+    OwnerFullName ownerFullName = ( ctx.hasAdministrativePrivileges( ) && showAll )
       ? null
       : ctx.getUserFullName( ).asAccountFullName( );
     try {
@@ -424,19 +424,23 @@ public class VmControl {
       EntityTransaction db = Entities.get( VmInstance.class );
       try {//scope for transaction
         final VmInstance vm = RestrictedTypes.doPrivileged( instanceId, VmInstance.class );
-        Allocation allocInfo = Allocations.start( vm );
-        try {//scope for allocInfo
-          AdmissionControl.run( ).apply( allocInfo );
-          vm.setState( VmState.PENDING );
-          ClusterAllocator.get( ).apply( allocInfo );
-          final int oldCode = vm.getState( ).getCode( ), newCode = VmState.PENDING.getCode( );
-          final String oldState = vm.getState( ).getName( ), newState = VmState.PENDING.getName( );
-          reply.getInstancesSet( ).add( new TerminateInstancesItemType( vm.getInstanceId( ), oldCode, oldState, newCode, newState ) );
-          db.commit( );
-        } catch ( Exception ex ) {
+        if ( VmState.STOPPED.equals( vm.getState( ) ) ) {
+          Allocation allocInfo = Allocations.start( vm );
+          try {//scope for allocInfo
+            AdmissionControl.run( ).apply( allocInfo );
+            vm.setState( VmState.PENDING );
+            ClusterAllocator.get( ).apply( allocInfo );
+            final int oldCode = vm.getState( ).getCode( ), newCode = VmState.PENDING.getCode( );
+            final String oldState = vm.getState( ).getName( ), newState = VmState.PENDING.getName( );
+            reply.getInstancesSet( ).add( new TerminateInstancesItemType( vm.getInstanceId( ), oldCode, oldState, newCode, newState ) );
+            db.commit( );
+          } catch ( Exception ex ) {
+            db.rollback( );
+            allocInfo.abort( );
+            throw ex;
+          }
+        } else {
           db.rollback( );
-          allocInfo.abort( );
-          throw ex;
         }
       } catch ( Exception ex1 ) {
         LOG.trace( ex1, ex1 );

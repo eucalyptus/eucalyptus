@@ -197,4 +197,9 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
       Logs.extreme( ).error( ex, ex );
     }
   }
+
+  @Override
+  public String toString( ) {
+    return "VmRunCallback " + this.token;
+  }
 }

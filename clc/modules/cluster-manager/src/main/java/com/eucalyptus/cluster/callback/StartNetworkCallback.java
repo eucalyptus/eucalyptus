@@ -128,4 +128,9 @@ public class StartNetworkCallback extends BroadcastCallback<StartNetworkType, St
     return new StartNetworkCallback( this.extantNet );
   }
   
+  @Override
+  public String toString( ) {
+    return "StartNetworkCallback " + this.extantNet;
+  }
+
 }
