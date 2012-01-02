@@ -1115,6 +1115,7 @@ public class OverlayManager implements LogicalStorageManager {
 				entityWrapper.commit();
 			} catch (Exception ex) {
 				LOG.error(ex, ex);
+				entityWrapper.rollback();
 			}
 		}
 
