@@ -1088,15 +1088,28 @@ public class Databases {
             throw SQLExceptionFactory.createSQLException( e.getCause( ) );
           }
         }
-        Connection targetConnection = context.getConnection( context.getTargetDatabase( ) );
-        Statement targetStatement = targetConnection.createStatement( );
-        for ( SequenceProperties sequence : sequences ) {
-          String sql = dialect.getAlterSequenceSQL( sequence, sequenceMap.get( sequence ) + 1 );
-          Logs.extreme( ).info( sql );
-          targetStatement.addBatch( sql );
+        Connection targetConnection = null;
+        Statement targetStatement = null;
+        try {
+          targetConnection = context.getConnection( context.getTargetDatabase( ) );
+          targetStatement = targetConnection.createStatement( );
+          for ( SequenceProperties sequence : sequences ) {
+            String sql = dialect.getAlterSequenceSQL( sequence, sequenceMap.get( sequence ) + 1 );
+            Logs.extreme( ).info( sql );
+            targetStatement.addBatch( sql );
+          }
+          targetStatement.executeBatch( );
+        } catch ( SQLException sqle ) {
+          LOG.error( sqle );
+          Logs.extreme( ).error( sqle, sqle );
+          throw sqle;
+        } finally {
+            try {
+              targetStatement.close( );
+            } catch ( Exception e ) {
+              LOG.error( e );	
+            }
         }
-        targetStatement.executeBatch( );
-        targetStatement.close( );
       }
     }
     
