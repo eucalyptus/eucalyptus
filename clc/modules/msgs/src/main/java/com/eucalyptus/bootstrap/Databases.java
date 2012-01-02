@@ -1011,17 +1011,31 @@ public class Databases {
      */
     public static <D> void restoreForeignKeys( SynchronizationContext<D> context ) throws SQLException {
       Dialect dialect = context.getDialect( );
-      Connection connection = context.getConnection( context.getTargetDatabase( ) );
-      Statement statement = connection.createStatement( );
-      for ( TableProperties table : context.getSourceDatabaseProperties( ).getTables( ) ) {
-        for ( ForeignKeyConstraint constraint : table.getForeignKeyConstraints( ) ) {
-          String sql = dialect.getCreateForeignKeyConstraintSQL( constraint );
-          Logs.extreme( ).info( sql );
-          statement.addBatch( sql );
+      Connection connection = null;
+      Statement statement = null;
+      try {
+        connection = context.getConnection( context.getTargetDatabase( ) );
+        statement = connection.createStatement( );
+        for ( TableProperties table : context.getSourceDatabaseProperties( ).getTables( ) ) {
+          for ( ForeignKeyConstraint constraint : table.getForeignKeyConstraints( ) ) {
+            String sql = dialect.getCreateForeignKeyConstraintSQL( constraint );
+            Logs.extreme( ).info( sql );
+            statement.addBatch( sql );
+          }
         }
+        statement.executeBatch( );
+      } catch ( SQLException sqle ) {
+	  LOG.error( sqle );
+          Logs.extreme( ).error( sqle, sqle );
+          throw sqle;
+      } finally {
+	try {
+          statement.close( );  
+	} catch ( Exception e ) {
+          LOG.error( e ); 
+	}
       }
-      statement.executeBatch( );
-      statement.close( );
+      
     }
     
     /**
