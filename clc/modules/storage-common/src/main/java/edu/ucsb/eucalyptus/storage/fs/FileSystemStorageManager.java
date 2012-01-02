@@ -69,6 +69,7 @@ import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
@@ -241,18 +242,21 @@ public class FileSystemStorageManager implements StorageManager {
 		File oldObjectFile = new File (WalrusInfo.getWalrusInfo().getStorageDir() + FILE_SEPARATOR + sourceBucket + FILE_SEPARATOR + sourceObject);
 		File newObjectFile = new File (WalrusInfo.getWalrusInfo().getStorageDir() + FILE_SEPARATOR + destinationBucket + FILE_SEPARATOR + destinationObject);
 		if(!oldObjectFile.equals(newObjectFile)) {	
-			
-			FileInputStream fileInputStream = new FileInputStream(oldObjectFile);
-			FileChannel fileIn = fileInputStream.getChannel();
-			FileOutputStream fileOutputStream = new FileOutputStream(newObjectFile);
-			FileChannel fileOut = fileOutputStream.getChannel();
+			FileInputStream fileInputStream = null;
+			FileChannel fileIn = null;
+			FileOutputStream fileOutputStream = null;
+			FileChannel fileOut = null;
 			try {
+				fileInputStream = new FileInputStream(oldObjectFile);
+				fileIn = fileInputStream.getChannel();
+				fileOutputStream = new FileOutputStream(newObjectFile);
+				fileOut = fileOutputStream.getChannel();
 				fileIn.transferTo(0, fileIn.size(), fileOut);
 			} catch (IOException ex) {
 				 LOG.error( ex );
 			     Logs.extreme( ).error( ex, ex );
 			     throw ex;
-			} finally {
+			}  finally {
 				try {
 					if(fileIn != null) 
 						fileIn.close();
@@ -260,7 +264,8 @@ public class FileSystemStorageManager implements StorageManager {
 					LOG.error( e );
 				}
 				try {
-					fileInputStream.close();
+					if( fileInputStream != null)
+						fileInputStream.close();
 				} catch(IOException e) {
 					LOG.error( e );
 				}
@@ -271,7 +276,8 @@ public class FileSystemStorageManager implements StorageManager {
 					LOG.error( e );
 				}
 				try {
-					fileOutputStream.close();
+					if(fileOutputStream != null)
+						fileOutputStream.close();
 				} catch(IOException e) {
 					LOG.error( e );
 				}
