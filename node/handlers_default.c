@@ -90,6 +90,7 @@ permission notice:
 #include "vbr.h"
 #include "iscsi.h"
 #include "xml.h"
+#include "hooks.h"
 
 #include "windows-bundle.h"
 
@@ -133,8 +134,13 @@ doRunInstance(	struct nc_state_t *nc,
     instance = find_instance (&global_instances, instanceId);
     sem_v (inst_sem);
     if (instance) {
-        logprintfl (EUCAERROR, "[%s] error: instance already running\n", instanceId);
-        return 1; /* TODO: return meaningful error codes? */
+        if (instance->state==TEARDOWN) { // fully cleaned up, so OK to revive it, e.g., with euca-start-instance
+            remove_instance (&global_instances, instance);
+            free_instance (&instance);
+        } else {
+            logprintfl (EUCAERROR, "[%s] error: instance already running\n", instanceId);
+            return 1; /* TODO: return meaningful error codes? */
+        }
     }
     if (!(instance = allocate_instance (uuid,
                                         instanceId, 
@@ -530,6 +536,26 @@ static int xen_detach_helper (struct nc_state_t *nc, char *instanceId, char *loc
         char tmpfile[MAX_PATH];
         snprintf(tmpfile, 32, "/tmp/detachxml.XXXXXX");
         int fd = safe_mkstemp(tmpfile);
+
+	char devReal[32];
+	char *tmp = strstr(xml, "<target");
+	if(tmp==NULL){
+	    logprintfl(EUCAERROR, "'<target' not found in the device xml\n"); 
+	    return -1;
+        }
+	tmp = strstr(tmp, "dev=\"");
+        if(tmp==NULL){
+            logprintfl(EUCAERROR, "'<target dev' not found in the device xml\n");     
+            return -1;
+        }
+	snprintf(devReal, 32, tmp+strlen("dev=\""));
+        for(int i=0;i<32; i++){
+	     if(devReal[i]=='\"'){
+                for(;i<32; i++)
+		      devReal[i] = NULL;
+	     }
+        }	
+
         if (fd > 0) {
             write(fd, xml, strlen(xml));
             close(fd);
@@ -539,8 +565,9 @@ static int xen_detach_helper (struct nc_state_t *nc, char *instanceId, char *loc
                      nc->detach_cmd_path, // TODO: does this work?
                      nc->rootwrap_cmd_path, 
                      instanceId, 
-                     localDevReal, 
+                     devReal, 
                      tmpfile);
+            logprintfl(EUCAINFO, "%s\n", cmd);
             rc = system(cmd);
             rc = rc>>8;
             unlink(tmpfile);
@@ -668,8 +695,17 @@ doAttachVolume (	struct nc_state_t *nc,
      
      // generate XML for libvirt attachment request
      char xml [1024];
-     if (gen_libvirt_attach_xml (instance, localDevReal, remoteDevReal, nc->config_use_virtio_disk, xml, sizeof(xml))) {
+     if (gen_libvirt_attach_xml (volumeId, instance, localDevReal, remoteDevReal, xml, sizeof(xml))) {
          logprintfl(EUCAERROR, "AttachVolume(): could not produce attach device xml\n");
+         ret = ERROR;
+         goto release;
+     }
+
+     // invoke hooks
+     char path [MAX_PATH];
+     snprintf (path, sizeof (path), EUCALYPTUS_VOLUME_XML_PATH_FORMAT, instance->instancePath, volumeId);
+     if (call_hooks (NC_EVENT_PRE_ATTACH, path)) {
+         logprintfl (EUCAERROR, "[%s] cancelled volume attachment via hooks\n", instance->instanceId);
          ret = ERROR;
          goto release;
      }
@@ -832,7 +868,7 @@ doDetachVolume (	struct nc_state_t *nc,
 
     // generate XML for libvirt detachment request
     char xml [1024];
-    if (gen_libvirt_attach_xml (instance, localDevReal, remoteDevReal, nc->config_use_virtio_disk, xml, sizeof(xml))) {
+    if (gen_libvirt_attach_xml (volumeId, instance, localDevReal, remoteDevReal, xml, sizeof(xml))) {
         logprintfl(EUCAERROR, "DetachVolume(): could not produce detach device xml\n");
         ret = ERROR;
         goto release;
@@ -851,6 +887,11 @@ doDetachVolume (	struct nc_state_t *nc,
         logprintfl (EUCAERROR, "DetachVolume(): virDomainDetachDevice() or 'virsh detach' failed (err=%d) XML='%s'\n", err, xml);
         if (!force) 
             ret = ERROR;
+    } else {
+        char path [MAX_PATH];
+        snprintf (path, sizeof (path), EUCALYPTUS_VOLUME_XML_PATH_FORMAT, instance->instancePath, volumeId);
+        call_hooks (NC_EVENT_POST_DETACH, path); // invoke hooks, but do not do anything if they return error
+        unlink (path); // remove vol-XXXX.xml file
     }
     
  release:

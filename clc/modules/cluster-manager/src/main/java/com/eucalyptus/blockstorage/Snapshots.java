@@ -63,7 +63,9 @@
 
 package com.eucalyptus.blockstorage;
 
+import java.util.NoSuchElementException;
 import java.util.concurrent.ExecutionException;
+import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import org.hibernate.criterion.Example;
 import org.hibernate.exception.ConstraintViolationException;
@@ -72,8 +74,10 @@ import com.eucalyptus.cloud.CloudMetadata.SnapshotMetadata;
 import com.eucalyptus.cloud.util.DuplicateMetadataException;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.crypto.Crypto;
+import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.event.EventFailedException;
@@ -98,8 +102,8 @@ public class Snapshots {
     
     @Override
     public Long apply( OwnerFullName input ) {
-      EntityWrapper<Snapshot> db = EntityWrapper.get( Snapshot.class );
-      int ret = db.createCriteria( Snapshot.class ).add( Example.create( Snapshot.named( input, null ) ) ).setReadOnly( true ).setCacheable( false ).list( ).size( );
+      EntityTransaction db = Entities.get( Snapshot.class );
+      int ret = Entities.createCriteria( Snapshot.class ).add( Example.create( Snapshot.named( input, null ) ) ).setReadOnly( true ).setCacheable( false ).list( ).size( );
       db.rollback( );
       return new Long( ret );
     }
@@ -109,16 +113,15 @@ public class Snapshots {
   static Snapshot initializeSnapshot( UserFullName userFullName, Volume vol, ServiceConfiguration sc ) throws EucalyptusCloudException {
     String newId = null;
     Snapshot snap = null;
-    EntityWrapper<Snapshot> db = EntityWrapper.get( Snapshot.class );
+    EntityTransaction db = Entities.get( Snapshot.class );
     try {
       while ( true ) {
         newId = Crypto.generateId( userFullName.getUniqueId( ), SnapshotManager.ID_PREFIX );
         try {
-          db.getUnique( Snapshot.named( null, newId ) );
-        } catch ( EucalyptusCloudException e ) {
-          snap = new Snapshot( userFullName, newId, vol.getDisplayName( ), sc.getName( ), sc.getPartition( ) );
-          snap.setVolumeSize( vol.getSize( ) );
-          db.add( snap );
+          Entities.uniqueResult( Snapshot.named( null, newId ) );
+        } catch ( NoSuchElementException e ) {
+          snap = new Snapshot( userFullName, newId, vol.getDisplayName( ), vol.getSize( ), sc.getName( ), sc.getPartition( ) );
+          Entities.persist( snap );
           db.commit( );
           return snap;
         }
@@ -130,7 +133,7 @@ public class Snapshots {
   }
   
   static Snapshot startCreateSnapshot( final Volume vol, final Snapshot snap ) throws EucalyptusCloudException, DuplicateMetadataException {
-    final ServiceConfiguration sc = Partitions.lookupService( Storage.class, vol.getPartition( ) );
+    final ServiceConfiguration sc = Topology.lookup( Storage.class, Partitions.lookupByName( vol.getPartition( ) ) );
     try {
       Snapshot snapState = Transactions.save( snap, new Callback<Snapshot>( ) {
         

@@ -113,7 +113,7 @@ import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 public class AdmissionControl {
   private static Logger LOG = Logger.getLogger( AdmissionControl.class );
   
-  public static Predicate<Allocation> get( ) {
+  public static Predicate<Allocation> run( ) {
     return RunAdmissionControl.INSTANCE;
   }
   
@@ -126,7 +126,7 @@ public class AdmissionControl {
       List<ResourceAllocator> finished = Lists.newArrayList( );
       EntityTransaction db = Entities.get( NetworkGroup.class );
       try {
-        for ( ResourceAllocator allocator : pending ) {
+        for ( ResourceAllocator allocator : allocators ) {
           runAllocatorSafely( allocInfo, allocator );
           finished.add( allocator );
         }
@@ -179,7 +179,7 @@ public class AdmissionControl {
     
   }
   
-  private static final List<ResourceAllocator> pending = new ArrayList<ResourceAllocator>( ) {
+  private static final List<ResourceAllocator> allocators = new ArrayList<ResourceAllocator>( ) {
                                                          {
                                                            this.add( NodeResourceAllocator.INSTANCE );
                                                            this.add( VmTypePrivAllocator.INSTANCE );
@@ -259,7 +259,7 @@ public class AdmissionControl {
               try {
                 ServiceConfiguration sc = Topology.lookup( Storage.class, partition );
               } catch ( Exception ex ) {
-                throw new NotEnoughResourcesException( "Not enough resources: " + ex.getMessage( ), ex );
+                throw new NotEnoughResourcesException( "Not enough resources: Cannot run EBS instances in partition w/o a storage controller: " + ex.getMessage( ), ex );
               }
             }
             try {
@@ -271,12 +271,13 @@ public class AdmissionControl {
               remaining -= tokens.size( );
               allocInfo.setPartition( partition );
             } catch ( Exception t ) {
+              LOG.error( t );
+              Logs.extreme( ).error( t, t );
               if ( ( ( available = checkAvailability( vmTypeName, authorizedClusters ) ) < remaining ) || remaining > 0 ) {
                 allocInfo.abort( );
-                throw new NotEnoughResourcesException( "Not enough resources (" + available + " in " + zoneName + " < " + minAmount + "): vm instances." );
+                throw new NotEnoughResourcesException( "Not enough resources (" + available + " in " + zoneName + " < " + minAmount + "): vm instances.", t );
               } else {
-                LOG.error( t, t );
-                throw new NotEnoughResourcesException( "Not enough resources (" + available + " in " + zoneName + " < " + minAmount + "): vm instances." );
+                throw new NotEnoughResourcesException( "Not enough resources (" + available + " in " + zoneName + " < " + minAmount + "): vm instances.", t );
               }
             }
           }
@@ -307,13 +308,14 @@ public class AdmissionControl {
           return Lists.newArrayList( sorted.values( ) );
         }
       } else {
-        Cluster cluster = Clusters.getInstance( ).lookup( Partitions.lookupService( ClusterController.class, partitionName ) );
+        ServiceConfiguration ccConfig = Topology.lookup( ClusterController.class, Partitions.lookupByName( partitionName ) );
+        Cluster cluster = Clusters.lookup( ccConfig );
         if ( cluster == null ) {
           throw new NotEnoughResourcesException( "Can't find cluster " + partitionName );
         }
-//        if ( ! RestrictedTypes.filterPrivileged( ).apply( cluster ) ) {
-//          throw new NotEnoughResourcesException( "Not authorized to use cluster " + partitionName );
-//        }
+        if ( ! RestrictedTypes.filterPrivilegedWithoutOwner( ).apply( cluster ) ) {
+          throw new NotEnoughResourcesException( "Not authorized to use cluster " + partitionName );
+        }
         return Lists.newArrayList( cluster );
       }
     }

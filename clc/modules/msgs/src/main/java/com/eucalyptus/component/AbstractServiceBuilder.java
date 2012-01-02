@@ -66,6 +66,8 @@ package com.eucalyptus.component;
 import java.util.List;
 import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
+import com.eucalyptus.component.ComponentId.Partition;
+import com.eucalyptus.system.Ats;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Internets;
 
@@ -89,11 +91,29 @@ public abstract class AbstractServiceBuilder<T extends ServiceConfiguration> imp
     } catch ( PersistenceException ex1 ) {
       LOG.trace( "Failed to find existing component registration for name: " + name );
     }
+    Partition partitionAnnotation = Ats.from( this.getComponentId( ) ).get( Partition.class );
+    boolean manyToOne = partitionAnnotation != null && partitionAnnotation.manyToOne( );
     ServiceConfiguration existingHost = null;
-    try {
-      existingHost = ServiceConfigurations.lookupByHost( this.getComponentId( ).getClass( ), host );
-    } catch ( PersistenceException ex1 ) {
-      LOG.trace( "Failed to find existing component registration for host: " + host );
+    if ( !manyToOne ) {
+      if ( this.getComponentId( ).isPartitioned( ) ) {
+        if ( ServiceConfigurations.listPartition( this.getComponentId( ).getClass( ), partition ).size( ) >= 2 ) {
+          throw new ServiceRegistrationException( "Unable to register more than two services in a partition for component type: " + this.getComponentId( ).getName( ) );
+        }
+      } else {
+        if ( ServiceConfigurations.list( this.getComponentId( ).getClass( ) ).size( ) >= 2 ) {
+          throw new ServiceRegistrationException( "Unable to register more than two services in a partition for component type: " + this.getComponentId( ).getName( ) );
+        }
+      }
+      try {
+        existingHost = ServiceConfigurations.lookupByHost( this.getComponentId( ).getClass( ), host );
+      } catch ( PersistenceException ex1 ) {
+        LOG.trace( "Failed to find existing component registration for host: " + host );
+      }
+    } else {
+      if ( ServiceConfigurations.listPartition( this.getComponentId( ).getClass( ), partition ).size( ) >= 1 ) {
+        throw new ServiceRegistrationException( "Unable to register more than one service in a partition for component type: "
+                                                + this.getComponentId( ).getName( ) );
+      }
     }
     if ( existingName != null && existingHost != null ) {
       return false;

@@ -70,6 +70,7 @@ import java.util.NavigableSet;
 import java.util.NoSuchElementException;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ExecutionException;
@@ -150,8 +151,13 @@ import com.eucalyptus.vm.VmTypes;
 import com.eucalyptus.ws.WebServicesException;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.ObjectArrays;
+import com.google.common.collect.Table;
+import com.google.common.collect.Tables;
 import edu.ucsb.eucalyptus.cloud.NodeInfo;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.NodeCertInfo;
@@ -269,19 +275,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
         
         @Override
         public final void leave( final Cluster parent, final Callback.Completion transitionCallback ) {
-          try {
-            AsyncRequests.newRequest( factory.newInstance( ) ).dispatch( parent.getLogServiceConfiguration( ) ).get( );
-            transitionCallback.fire( );
-          } catch ( final InterruptedException t ) {
-            Thread.currentThread( ).interrupt( );
-            transitionCallback.fireException( t );
-          } catch ( final Exception t ) {
-            if ( !parent.swallowException( t ) ) {
-              transitionCallback.fireException( t );
-            } else {
-              transitionCallback.fire( );
-            }
-          }
+          Cluster.fireCallback( parent, parent.getLogServiceConfiguration( ), false, factory, transitionCallback );
         }
       };
     }
@@ -304,7 +298,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
         for ( ServiceStatusType status : serviceStatuses ) {
           if ( "self".equals( status.getServiceId( ).getName( ) ) ) {
             status.setServiceId( TypeMappers.transform( parent.getConfiguration( ), ServiceId.class ) );
-          } 
+          }
           if ( config.getName( ).equals( status.getServiceId( ).getName( ) ) ) {
             LOG.debug( "Found service info: " + status );
             Component.State serviceState = Component.State.valueOf( status.getLocalState( ) );
@@ -327,10 +321,10 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
         }
       }
       LOG.error( "Failed to find service info for cluster: " + parent.getFullName( ) + " instead found service status for: "
-        + serviceStatuses );
+                 + serviceStatuses );
       throw new NoSuchElementException( "Failed to find service info for cluster: " + parent.getFullName( ) );
     }
-
+    
     @Override
     public void setSubject( Cluster subject ) {
       this.getRequest( ).getServices( ).add( TypeMappers.transform( subject.getConfiguration( ), ServiceId.class ) );
@@ -342,7 +336,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
     RESOURCES( ResourceStateCallback.class ),
     NETWORKS( NetworkStateCallback.class ),
     INSTANCES( VmStateCallback.class ),
-    VOLATILE_INSTANCES( VmStateCallback.VmPendingCallback.class ),
+    VOLATILEINSTANCES( VmStateCallback.VmPendingCallback.class ),
     ADDRESSES( PublicAddressStateCallback.class ),
     SERVICEREADY( ServiceStateCallback.class );
     Class refresh;
@@ -351,35 +345,105 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
       this.refresh = refresh;
     }
     
+    @SuppressWarnings( { "rawtypes",
+        "unchecked" } )
     @Override
     public TransitionAction<Cluster> apply( final Cluster cluster ) {
       final SubjectRemoteCallbackFactory<RemoteCallback, Cluster> factory = newSubjectMessageFactory( this.refresh, cluster );
       return new AbstractTransitionAction<Cluster>( ) {
         
+        @SuppressWarnings( "rawtypes" )
         @Override
         public final void leave( final Cluster parent, final Callback.Completion transitionCallback ) {
+          Cluster.fireCallback( parent, factory, transitionCallback );
+        }
+      };
+    }
+    
+    public void fire( Cluster input ) {
+      final SubjectRemoteCallbackFactory<RemoteCallback, Cluster> factory = newSubjectMessageFactory( this.refresh, input );
+      try {
+        RemoteCallback messageCallback = factory.newInstance( );
+        BaseMessage baseMessage = AsyncRequests.newRequest( messageCallback ).sendSync( input.getConfiguration( ) );
+        Logs.extreme( ).debug( "Response to " + messageCallback + ": " + baseMessage );
+      } catch ( CancellationException ex ) {
+        //do nothing
+      } catch ( Exception ex ) {
+        LOG.error( ex );
+        Logs.extreme( ).error( ex );
+        throw Exceptions.toUndeclared( ex );
+      }
+    }
+    
+    @Override
+    public String toString( ) {
+      return this.name( ) + ":" + this.refresh.getSimpleName( );
+    }
+  }
+  
+  private static void fireCallback( final Cluster parent, final SubjectRemoteCallbackFactory<RemoteCallback, Cluster> factory, final Callback.Completion transitionCallback ) {
+    fireCallback( parent, parent.getConfiguration( ), true, factory, transitionCallback );
+  }
+  
+  private static void fireCallback( final Cluster parent,
+                                    final ServiceConfiguration config,
+                                    final boolean doCoordinatorCheck,
+                                    final SubjectRemoteCallbackFactory<RemoteCallback, Cluster> factory,
+                                    final Callback.Completion transitionCallback ) {
+    RemoteCallback messageCallback = null;
+    try {
+      if ( !doCoordinatorCheck || checkCoordinator( transitionCallback ) ) {
+        try {
+          messageCallback = factory.newInstance( );
           try {
-            AsyncRequests.newRequest( factory.newInstance( ) ).then( transitionCallback ).sendSync( parent.getConfiguration( ) );
-          } catch ( final InterruptedException ex ) {
-            Thread.currentThread( ).interrupt( );
-            Exceptions.trace( ex );
+            BaseMessage baseMessage = AsyncRequests.newRequest( messageCallback ).sendSync( config );
             transitionCallback.fire( );
+            if ( Logs.isExtrrreeeme( ) ) {
+              Logs.extreme( ).debug( baseMessage );
+            }
           } catch ( final Exception t ) {
             if ( !parent.swallowException( t ) ) {
-              transitionCallback.fireException( t );
+              transitionCallback.fireException( Exceptions.unwrapCause( t ) );
             } else {
               transitionCallback.fire( );
             }
           }
+        } catch ( CancellationException ex ) {
+          transitionCallback.fire( );
+        } catch ( Exception ex ) {
+          transitionCallback.fireException( ex );
         }
-      };
+      } else {
+        transitionCallback.fire( );
+      }
+    } finally {
+      if ( !transitionCallback.isDone( ) ) {
+        LOG.debug( parent.getFullName( ) + " transition fell through w/o completing: " + messageCallback );
+        Logs.exhaust( ).debug( Exceptions.toUndeclared( parent.getFullName( ) + " transition fell through w/o completing: " + messageCallback ) );
+        transitionCallback.fire( );
+      }
     }
   }
   
+  private static boolean checkCoordinator( final Callback.Completion transitionCallback ) {
+    boolean coordinator = false;
+    try {
+      coordinator = Hosts.isCoordinator( );
+      if ( !coordinator ) {
+        transitionCallback.fire( );
+        return false;
+      }
+    } catch ( Exception ex ) {
+      transitionCallback.fire( );
+      return false;
+    }
+    return coordinator;
+  }
+  
   private static final List<Class<? extends Exception>> communicationErrors = Lists.newArrayList( ConnectionException.class, IOException.class,
-                                                                                                  WebServicesException.class );
+                                                                              WebServicesException.class );
   private static final List<Class<? extends Exception>> executionErrors     = Lists.newArrayList( UndeclaredThrowableException.class,
-                                                                                                  ExecutionException.class );
+                                                                              ExecutionException.class );
   
   public enum State implements Automata.State<State> {
     BROKEN,
@@ -406,11 +470,11 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
     ENABLING_ADDRS_PASS_TWO,
     /** Component.State.ENABLED -> Component.State.ENABLED **/
     ENABLED,
+    ENABLED_SERVICE_CHECK,
     ENABLED_ADDRS,
     ENABLED_RSC,
     ENABLED_NET,
-    ENABLED_VMS,
-    ENABLED_SERVICE_CHECK;
+    ENABLED_VMS;
     public Component.State proxyState( ) {
       try {
         return Component.State.valueOf( this.name( ) );
@@ -501,7 +565,8 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
         
         this.from( State.NOTREADY ).to( State.DISABLED ).error( State.NOTREADY ).on( Transition.NOTREADYCHECK ).run( Refresh.SERVICEREADY );
         
-        this.from( State.DISABLED ).to( State.DISABLED ).error( State.NOTREADY ).on( Transition.DISABLEDCHECK ).addListener( ErrorStateListeners.FLUSHPENDING ).run( Refresh.SERVICEREADY );
+        this.from( State.DISABLED ).to( State.DISABLED ).error( State.NOTREADY ).on( Transition.DISABLEDCHECK ).addListener( ErrorStateListeners.FLUSHPENDING ).run(
+          Refresh.SERVICEREADY );
         this.from( State.DISABLED ).to( State.ENABLING ).error( State.DISABLED ).on( Transition.ENABLE ).run( Cluster.ServiceStateDispatch.ENABLED );
         this.from( State.DISABLED ).to( State.STOPPED ).error( State.PENDING ).on( Transition.STOP ).run( noop );
         
@@ -511,8 +576,10 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
         this.from( State.ENABLING_RESOURCES ).to( State.ENABLING_NET ).error( State.NOTREADY ).on( Transition.ENABLING_NET ).run( Refresh.NETWORKS );
         this.from( State.ENABLING_NET ).to( State.ENABLING_VMS ).error( State.NOTREADY ).on( Transition.ENABLING_VMS ).run( Refresh.INSTANCES );
         this.from( State.ENABLING_VMS ).to( State.ENABLING_ADDRS ).error( State.NOTREADY ).on( Transition.ENABLING_ADDRS ).run( Refresh.ADDRESSES );
-        this.from( State.ENABLING_ADDRS ).to( State.ENABLING_VMS_PASS_TWO ).error( State.NOTREADY ).on( Transition.ENABLING_VMS_PASS_TWO ).run( Refresh.INSTANCES );
-        this.from( State.ENABLING_VMS_PASS_TWO ).to( State.ENABLING_ADDRS_PASS_TWO ).error( State.NOTREADY ).on( Transition.ENABLING_ADDRS_PASS_TWO ).run( Refresh.ADDRESSES );
+        this.from( State.ENABLING_ADDRS ).to( State.ENABLING_VMS_PASS_TWO ).error( State.NOTREADY ).on( Transition.ENABLING_VMS_PASS_TWO ).run(
+          Refresh.INSTANCES );
+        this.from( State.ENABLING_VMS_PASS_TWO ).to( State.ENABLING_ADDRS_PASS_TWO ).error( State.NOTREADY ).on( Transition.ENABLING_ADDRS_PASS_TWO ).run(
+          Refresh.ADDRESSES );
         this.from( State.ENABLING_ADDRS_PASS_TWO ).to( State.ENABLED ).error( State.NOTREADY ).on( Transition.ENABLING_ADDRS_PASS_TWO ).run( Refresh.ADDRESSES );
         
         this.from( State.ENABLED ).to( State.ENABLED_SERVICE_CHECK ).error( State.NOTREADY ).on( Transition.ENABLED_SERVICES ).run( Refresh.SERVICEREADY );
@@ -580,78 +647,101 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
           case ENABLING_ADDRS:
           case ENABLING_VMS_PASS_TWO:
           case ENABLING_ADDRS_PASS_TWO:
+            break;
           case ENABLED:
           case ENABLED_ADDRS:
           case ENABLED_RSC:
           case ENABLED_NET:
           case ENABLED_VMS:
           case ENABLED_SERVICE_CHECK:
-            if ( initialized && tick.isAsserted( Clusters.getConfiguration( ).getEnabledInterval( ) )
+            if ( initialized && tick.isAsserted( VmInstances.VOLATILE_STATE_INTERVAL_SEC )
                  && Component.State.ENABLED.equals( this.configuration.lookupState( ) ) ) {
-              transition = enabledTransition( );
-            } else if ( initialized && tick.isAsserted( VmInstances.VOLATILE_STATE_INTERVAL_SEC )
-                        && Component.State.ENABLED.equals( this.configuration.lookupState( ) ) ) {
-              Refresh.VOLATILE_INSTANCES.apply( this );
-            } else if ( ( initialized && Component.State.DISABLED.equals( this.configuration.lookupState( ) ) )
-                        || Component.State.NOTREADY.equals( this.configuration.lookupState( ) ) ) {
-              transition = disableTransition( );
+              Refresh.VOLATILEINSTANCES.fire( this );
             }
             break;
           default:
             break;
         }
-        if ( transition != null ) {
-          try {
-            transition.call( ).get( 30000L, TimeUnit.MILLISECONDS );
-            Cluster.this.clearExceptions( );
-          } catch ( final Exception ex ) {
-            LOG.error( ex, ex );
-          }
-        }
+//        if ( transition != null ) {
+//          try {
+//            transition.call( );
+//            Cluster.this.clearExceptions( );
+//          } catch ( final Exception ex ) {
+//            LOG.error( ex );
+//            Logs.extreme( ).error( ex, ex );
+//          }
+//        }
       }
     } catch ( final Exception ex ) {
       LOG.error( ex, ex );
     }
   }
   
+  private static final State[] PATH_NOTREADY      = new State[] { State.PENDING,
+                                                                  State.AUTHENTICATING,
+                                                                  State.STARTING,
+                                                                  State.STARTING_NOTREADY,
+                                                                  State.NOTREADY };
+  private static final State[] PATH_DISABLED      = ObjectArrays.concat( PATH_NOTREADY, State.DISABLED );
+  private static final State[] PATH_ENABLED       = new State[] { State.PENDING,
+                                                                  State.AUTHENTICATING,
+                                                                  State.STARTING,
+                                                                  State.STARTING_NOTREADY,
+                                                                  State.NOTREADY,
+                                                                  State.DISABLED,
+                                                                  State.ENABLING,
+                                                                  State.ENABLING_RESOURCES,
+                                                                  State.ENABLING_NET,
+                                                                  State.ENABLING_VMS,
+                                                                  State.ENABLING_ADDRS,
+                                                                  State.ENABLING_VMS_PASS_TWO,
+                                                                  State.ENABLING_ADDRS_PASS_TWO,
+                                                                  State.ENABLED };
+  
+  private static final State[] PATH_ENABLED_CHECK = new State[] { State.ENABLED,
+                                                                  State.ENABLED_SERVICE_CHECK,
+                                                                  State.ENABLED_ADDRS,
+                                                                  State.ENABLED_RSC,
+                                                                  State.ENABLED_NET,
+                                                                  State.ENABLED_VMS,
+                                                                  State.ENABLED };
+  
   private Callable<CheckedListenableFuture<Cluster>> disableTransition( ) {
     Callable<CheckedListenableFuture<Cluster>> transition;
-    transition = Automata.sequenceTransitions( this, State.ENABLED, State.DISABLED );
-    return transition;
+    if ( this.stateMachine.getState( ).ordinal( ) >= State.ENABLED.ordinal( ) ) {
+      return Automata.sequenceTransitions( this, State.ENABLED, State.DISABLED );
+    } else {
+      return Automata.sequenceTransitions( this, PATH_DISABLED );
+    }
   }
   
   private Callable<CheckedListenableFuture<Cluster>> enabledTransition( ) {
     Callable<CheckedListenableFuture<Cluster>> transition;
-    transition = Automata.sequenceTransitions( this, State.ENABLED, State.ENABLED_SERVICE_CHECK, State.ENABLED_ADDRS, State.ENABLED_RSC,
-                                               State.ENABLED_NET, State.ENABLED_VMS, State.ENABLED );
-    return transition;
+    if ( this.stateMachine.getState( ).ordinal( ) >= State.ENABLED.ordinal( ) ) {
+      return Automata.sequenceTransitions( this, PATH_ENABLED_CHECK );
+    } else {
+      return Automata.sequenceTransitions( this, PATH_ENABLED );
+    }
   }
   
   private Callable<CheckedListenableFuture<Cluster>> enablingTransition( ) {
-    Callable<CheckedListenableFuture<Cluster>> transition;
-    transition = Automata.sequenceTransitions( this, State.ENABLING, State.ENABLING_RESOURCES, State.ENABLING_NET, State.ENABLING_VMS,
-                                               State.ENABLING_ADDRS, State.ENABLING_VMS_PASS_TWO, State.ENABLING_ADDRS_PASS_TWO, State.ENABLED );
-    return transition;
+    return Automata.sequenceTransitions( this, PATH_ENABLED );
   }
   
   private Callable<CheckedListenableFuture<Cluster>> disabledTransition( ) {
-    Callable<CheckedListenableFuture<Cluster>> transition;
-    transition = Automata.sequenceTransitions( this, State.DISABLED, State.DISABLED );
-    return transition;
+    if ( this.stateMachine.getState( ).ordinal( ) >= State.ENABLED.ordinal( ) ) {
+      return Automata.sequenceTransitions( this, ObjectArrays.concat( PATH_ENABLED_CHECK, State.DISABLED ) );
+    } else {
+      return Automata.sequenceTransitions( this, ObjectArrays.concat( PATH_DISABLED, State.DISABLED ) );
+    }
   }
   
   private Callable<CheckedListenableFuture<Cluster>> notreadyTransition( ) {
-    Callable<CheckedListenableFuture<Cluster>> transition;
-    transition = Automata.sequenceTransitions( this, State.NOTREADY, State.DISABLED );
-    return transition;
+    return Automata.sequenceTransitions( this, PATH_DISABLED );
   }
   
   private Callable<CheckedListenableFuture<Cluster>> startingTransition( ) {
-    Callable<CheckedListenableFuture<Cluster>> transition;
-    transition = Automata.sequenceTransitions( this, State.STOPPED, State.PENDING, State.AUTHENTICATING, State.STARTING,
-                                               State.STARTING_NOTREADY,
-                                               State.NOTREADY, State.DISABLED );
-    return transition;
+    return Automata.sequenceTransitions( this, PATH_DISABLED );
   }
   
   public Boolean isReady( ) {
@@ -739,13 +829,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
     try {
       Clusters.getInstance( ).registerDisabled( this );
       if ( !State.DISABLED.equals( this.stateMachine.getState( ) ) ) {
-        final Callable<CheckedListenableFuture<Cluster>> trans = Automata.sequenceTransitions( this,
-                                                                                               State.PENDING,
-                                                                                               State.AUTHENTICATING,
-                                                                                               State.STARTING,
-                                                                                               State.STARTING_NOTREADY,
-                                                                                               State.NOTREADY,
-                                                                                               State.DISABLED );
+        final Callable<CheckedListenableFuture<Cluster>> trans = startingTransition( );
         Exception lastEx = null;
         for ( int i = 0; i < Clusters.getConfiguration( ).getStartupSyncRetries( ); i++ ) {
           try {
@@ -778,23 +862,18 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
   public void enable( ) throws ServiceRegistrationException {
     if ( State.ENABLING.ordinal( ) > this.stateMachine.getState( ).ordinal( ) ) {
       try {
-        final CheckedListenableFuture<Cluster> result = Automata.sequenceTransitions( this, State.PENDING, State.AUTHENTICATING, State.STARTING,
-                                                                                      State.STARTING_NOTREADY, State.NOTREADY,
-                                                                                      State.DISABLED, State.ENABLING, State.ENABLING_RESOURCES,
-                                                                                      State.ENABLING_NET, State.ENABLING_VMS,
-                                                                                      State.ENABLING_ADDRS, State.ENABLING_VMS_PASS_TWO,
-                                                                                      State.ENABLING_ADDRS_PASS_TWO, State.ENABLED ).call( );
+        final Callable<CheckedListenableFuture<Cluster>> trans = enablingTransition( );
         RuntimeException fail = null;
         for ( int i = 0; i < Clusters.getConfiguration( ).getStartupSyncRetries( ); i++ ) {
           try {
-            result.get( );
+            trans.call( ).get( );
             fail = null;
             break;
           } catch ( Exception ex ) {
             try {
               TimeUnit.SECONDS.sleep( 1 );
             } catch ( Exception ex1 ) {
-              LOG.error( ex1 , ex1 );
+              LOG.error( ex1, ex1 );
             }
             fail = Exceptions.toUndeclared( ex );
           }
@@ -802,8 +881,6 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
         if ( fail != null ) {
           throw fail;
         }
-      } catch ( final InterruptedException ex ) {
-        Thread.currentThread( ).interrupt( );
       } catch ( final Exception ex ) {
         Logs.exhaust( ).debug( ex, ex );
         throw new ServiceRegistrationException( "Failed to call enable() on cluster " + this.configuration
@@ -824,9 +901,13 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
       Thread.currentThread( ).interrupt( );
     } catch ( final Exception ex ) {
       Logs.exhaust( ).debug( ex, ex );
-      throw new ServiceRegistrationException( "Failed to call disable() on cluster " + this.configuration
-                                              + " because of: "
-                                              + ex.getMessage( ), ex );
+//      throw new ServiceRegistrationException( "Failed to call disable() on cluster " + this.configuration
+//                                              + " because of: "
+//                                              + ex.getMessage( ), ex );
+    } finally {
+      try {
+        Clusters.getInstance( ).disable( this.getName( ) );
+      } catch ( Exception ex ) {}
     }
   }
   
@@ -841,8 +922,10 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
                                               + " because of: "
                                               + ex.getMessage( ), ex );
     } finally {
-      ListenerRegistry.getInstance( ).deregister( Hertz.class, this );
-      ListenerRegistry.getInstance( ).deregister( ClockTick.class, this );
+      try {
+        ListenerRegistry.getInstance( ).deregister( Hertz.class, this );
+        ListenerRegistry.getInstance( ).deregister( ClockTick.class, this );
+      } catch ( Exception ex ) {}
       Clusters.getInstance( ).deregister( this.getName( ) );
     }
   }
@@ -853,12 +936,12 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
     int result = 1;
     result = prime * result
              + ( ( this.configuration == null )
-               ? 0
-               : this.configuration.hashCode( ) );
+                                               ? 0
+                                               : this.configuration.hashCode( ) );
     result = prime * result
              + ( ( this.state == null )
-               ? 0
-               : this.state.hashCode( ) );
+                                       ? 0
+                                       : this.state.hashCode( ) );
     return result;
   }
   
@@ -1037,21 +1120,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
       
       @Override
       public final void leave( final Cluster parent, final Callback.Completion transitionCallback ) {
-        try {
-          AsyncRequests.newRequest( factory.newInstance( ) ).then( transitionCallback )
-                       .sendSync( parent.getLogServiceConfiguration( ) );
-        } catch ( final ExecutionException e ) {
-          if ( e.getCause( ) instanceof FailedRequestException ) {
-            LOG.error( e.getCause( ).getMessage( ) );
-          } else if ( ( e.getCause( ) instanceof ConnectionException ) || ( e.getCause( ) instanceof IOException ) ) {
-            LOG.error( parent.getName( ) + ": Error communicating with cluster: "
-                       + e.getCause( ).getMessage( ) );
-          } else {
-            LOG.error( e, e );
-          }
-        } catch ( final InterruptedException e ) {
-          LOG.error( e, e );
-        }
+        Cluster.fireCallback( parent, parent.getLogServiceConfiguration( ), false, factory, transitionCallback );
       }
     };
   }
@@ -1067,22 +1136,67 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
   public void fireEvent( final Event event ) {
     if ( !Bootstrap.isFinished( ) ) {
       LOG.info( this.getFullName( ) + " skipping clock event because bootstrap isn't finished" );
-    } else if ( event instanceof Hertz ) {
+    } else if ( Hosts.isCoordinator( ) && event instanceof Hertz ) {
       this.fireClockTick( ( Hertz ) event );
     }
   }
   
-  private static <P, T extends SubjectMessageCallback<P, Q, R>, Q extends BaseMessage, R extends BaseMessage> SubjectRemoteCallbackFactory<T, P> newSubjectMessageFactory( final Class<T> callbackClass, final P subject ) {
-    return new SubjectRemoteCallbackFactory( ) {
+  private static <P, T extends SubjectMessageCallback<P, Q, R>, Q extends BaseMessage, R extends BaseMessage> SubjectRemoteCallbackFactory<T, P> newSubjectMessageFactory( final Class<T> callbackClass, final P subject ) throws CancellationException {
+    return new SubjectRemoteCallbackFactory<T, P>( ) {
       @Override
       public T newInstance( ) {
         try {
-          final T callback = callbackClass.newInstance( );
-          callback.setSubject( subject );
-          return callback;
-        } catch ( final Throwable t ) {
-          LOG.error( t, t );
-          throw new RuntimeException( t );
+          if ( subject != null ) {
+            try {
+              T callback = Classes.builder( callbackClass ).arg( subject ).newInstance( );
+              return callback;
+            } catch ( UndeclaredThrowableException ex ) {
+              if ( ex.getCause( ) instanceof CancellationException ) {
+                throw ( CancellationException ) ex.getCause( );
+              } else if ( ex.getCause( ) instanceof NoSuchMethodException ) {
+                try {
+                  T callback = Classes.builder( callbackClass ).newInstance( );
+                  callback.setSubject( subject );
+                  return callback;
+                } catch ( UndeclaredThrowableException ex1 ) {
+                  if ( ex1.getCause( ) instanceof CancellationException ) {
+                    throw ( CancellationException ) ex.getCause( );
+                  } else if ( ex1.getCause( ) instanceof NoSuchMethodException ) {
+                    throw ex1;
+                  } else {
+                    throw ex1;
+                  }
+                } catch ( Exception ex1 ) {
+                  if ( ex1.getCause( ) instanceof CancellationException ) {
+                    throw ( CancellationException ) ex.getCause( );
+                  } else if ( ex1.getCause( ) instanceof NoSuchMethodException ) {
+                    throw ex;
+                  } else {
+                    throw Exceptions.toUndeclared( ex1 );
+                  }
+                }
+              } else {
+                T callback = callbackClass.newInstance( );
+                LOG.error( "Creating uninitialized callback (subject=" + subject + ") for type: " + callbackClass.getCanonicalName( ) );
+                return callback;
+              }
+            } catch ( RuntimeException ex ) {
+              LOG.error( "Failed to create instance of: " + callbackClass );
+              Logs.extreme( ).error( ex, ex );
+              throw ex;
+            }
+          } else {
+            T callback = callbackClass.newInstance( );
+            LOG.error( "Creating uninitialized callback (subject=" + subject + ") for type: " + callbackClass.getCanonicalName( ) );
+            return callback;
+          }
+        } catch ( final CancellationException ex ) {
+          LOG.debug( ex );
+          throw ex;
+        } catch ( final Exception ex ) {
+          LOG.error( ex );
+          Logs.exhaust( ).error( ex, ex );
+          throw Exceptions.toUndeclared( ex );
         }
       }
       
@@ -1094,55 +1208,57 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
   }
   
   private <T extends Throwable> boolean swallowException( final T t ) {
-    Throwable fin = t;
-    if ( t instanceof ExecutionException ) {
-      fin = t.getCause( ) != null
-        ? t.getCause( )
-        : t;
-    }
-    /// Ill-formed responses to DescribeNetworks are OK  
-    if( Exceptions.isCausedBy(t, org.jibx.runtime.JiBXException.class) || t instanceof org.jibx.runtime.JiBXException)
-    	return true;
-    
-    LOG.error( t );
+    LOG.error( this.getConfiguration( ).getFullName( ) + " checking: " + Exceptions.causeString( t ) );
     if ( Exceptions.isCausedBy( t, InterruptedException.class ) ) {
       Thread.currentThread( ).interrupt( );
+      return true;
     } else if ( Exceptions.isCausedBy( t, FailedRequestException.class ) ) {
-      Logs.extreme( ).debug( fin, fin );
-      this.pendingErrors.add( fin );
+      Logs.extreme( ).debug( t, t );
+      this.pendingErrors.add( t );
+      return false;
     } else if ( Exceptions.isCausedBy( t, ConnectionException.class ) || Exceptions.isCausedBy( t, IOException.class ) ) {
       LOG.error( this.getName( ) + ": Error communicating with cluster: "
-                 + fin.getMessage( ) );
-      Logs.extreme( ).debug( fin, fin );
-      this.pendingErrors.add( fin );
+                 + t.getMessage( ) );
+      Logs.extreme( ).debug( t, t );
+      this.pendingErrors.add( t );
+      return false;
     } else {
-      Logs.extreme( ).debug( fin, fin );
-      this.pendingErrors.add( fin );
+      Logs.extreme( ).debug( t, t );
+      this.pendingErrors.add( t );
+      return false;
     }
-    return false;
   }
   
   public void check( ) throws Faults.CheckException, IllegalStateException {
     final Cluster.State currentState = this.stateMachine.getState( );
-    final Component.State externalState = this.configuration.lookupState( );
-    final List<Throwable> currentErrors = Lists.newArrayList( );
+    final List<Throwable> currentErrors = Lists.newArrayList( this.pendingErrors );
+    this.pendingErrors.clear( );
     try {
-      Refresh.SERVICEREADY.apply( this );
+      if ( Component.State.ENABLED.equals( this.configuration.lookupState( ) ) ) {
+        enabledTransition( ).call( ).get( );
+      } else if ( Component.State.DISABLED.equals( this.configuration.lookupState( ) ) ) {
+        disabledTransition( ).call( ).get( );
+      } else if ( Component.State.NOTREADY.equals( this.configuration.lookupState( ) ) ) {
+        notreadyTransition( ).call( ).get( );
+      } else {
+        Refresh.SERVICEREADY.fire( this );
+      }
     } catch ( Exception ex ) {
-      CheckException fail = Faults.failure( this.configuration, ex );
-      currentErrors.add( fail );
-      throw fail;
+      if ( ex.getCause( ) instanceof CancellationException ) {
+        //ignore cancellation errors.
+      } else {
+        currentErrors.add( ex );
+      }
     }
-    currentErrors.addAll( this.pendingErrors );
+    final Component.State externalState = this.configuration.lookupState( );
     if ( !currentErrors.isEmpty( ) ) {
       throw Faults.failure( this.configuration, currentErrors );
-    } else if ( ( currentState.ordinal( ) < State.DISABLED.ordinal( ) )
-                || ( Component.State.ENABLED.equals( externalState ) && ( Cluster.State.ENABLING.ordinal( ) >= currentState.ordinal( ) ) ) ) {
+    } else if ( Component.State.ENABLED.equals( externalState ) && ( Cluster.State.ENABLING.ordinal( ) >= currentState.ordinal( ) ) ) {
       final IllegalStateException ex = new IllegalStateException( "Cluster is currently reported as " + externalState
                                                                   + " but is really "
                                                                   + currentState
                                                                   + ":  please see logs for additional information." );
-      this.pendingErrors.add( ex );
+      currentErrors.add( ex );
       throw Faults.failure( this.configuration, currentErrors );
     }
   }
@@ -1168,7 +1284,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
   
   @Override
   public String getDisplayName( ) {
-    return this.getName( );
+    return this.getPartition( );
   }
   
   @Override

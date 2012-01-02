@@ -121,6 +121,12 @@ int verify_helpers (char **helpers, char **helpers_path, int num_helpers)
             if (!tok) return -1;
             path = strdup(tok);
             if (!path) {
+                if(helpers_path == NULL) { 
+                    for(int i = 0; i < num_helpers; i++) 
+                        if(tmp_helpers_path[i])
+                            free(tmp_helpers_path[i]);
+                    free(tmp_helpers_path);
+                }
                 return -1;
             }
             
@@ -150,9 +156,9 @@ int verify_helpers (char **helpers, char **helpers_path, int num_helpers)
 
         if (!done) {
             missing_helpers++;
-            logprintfl (EUCAINFO, "did not find '%s' in path\n", helpers[i]);
+            logprintfl (EUCADEBUG2, "did not find '%s' in path\n", helpers[i]);
         } else {
-            logprintfl (EUCAINFO, "found '%s' at '%s'\n", helpers[i], tmp_helpers_path[i]);
+            logprintfl (EUCADEBUG2, "found '%s' at '%s'\n", helpers[i], tmp_helpers_path[i]);
         }
     }
     
@@ -2125,6 +2131,27 @@ int get_blkid (const char * dev_path, char * uuid, unsigned int uuid_size)
     free (blkid_output);
 
     return ret;
+}
+
+// turn a string into a boolean (returned as a char)
+char parse_boolean (const char * s)
+{
+    char * lc = strduplc (s);
+    char val;
+
+    if (strcmp (lc, "y")==0 ||
+        strcmp (lc, "yes")==0 ||
+        strcmp (lc, "t")==0 ||
+        strcmp (lc, "true")==0) { val = 1; }
+    else if (strcmp (lc, "n")==0 ||
+             strcmp (lc, "no")==0 ||
+             strcmp (lc, "f")==0 ||
+             strcmp (lc, "false")==0) { val = 0; }
+    else
+        logprintfl (EUCAERROR, "error: failed to parse value '%s' as boolean", lc);
+    free (lc);
+
+    return val;
 }
 
 /////////////////////////////////////////////// unit testing code ///////////////////////////////////////////////////

@@ -98,7 +98,7 @@ public class Listeners {
     ListenerRegistry.getInstance( ).fireEvent( type, e );
   }
   
-  public Future<Throwable> fireEventAsync( final Object type, final Event e ) {
+  public Future<Event> fireEventAsync( final Object type, final Event e ) {
     return ListenerRegistry.getInstance( ).fireEventAsync( type, e );
   }
 }

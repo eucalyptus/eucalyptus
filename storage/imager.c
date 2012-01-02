@@ -32,7 +32,7 @@ static boolean print_argv = FALSE;
 
 static void bs_errors (const char * msg) { 
     // we normally do not care to print all messages from blobstore as many are errors that we can handle
-    logprintfl (EUCADEBUG, "{%u} blobstore: %s", (unsigned int)pthread_self(), msg);
+    logprintfl (EUCADEBUG2, "{%u} blobstore: %s", (unsigned int)pthread_self(), msg);
 } 
 
 static void set_debug (boolean yes)
@@ -181,7 +181,6 @@ int main (int argc, char * argv[])
         strncat (argv_str, argv[i], sizeof (argv_str) - strlen(argv_str) - 1);
         strncat (argv_str, "\" ", sizeof (argv_str) - strlen(argv_str) - 1);
     }
-    
 
     // parse command-line parameters
     char * cmd_name = NULL;
@@ -275,7 +274,7 @@ int main (int argc, char * argv[])
 
         if (ensure_directories_exist (get_work_dir(), 0, NULL, NULL, BLOBSTORE_DIRECTORY_PERM) == -1)
             err ("failed to open or create work directory");
-        work_bs = blobstore_open (get_work_dir(), get_work_limit()/512, BLOBSTORE_FORMAT_FILES, BLOBSTORE_REVOCATION_NONE, BLOBSTORE_SNAPSHOT_ANY);
+        work_bs = blobstore_open (get_work_dir(), get_work_limit()/512, BLOBSTORE_FLAG_CREAT, BLOBSTORE_FORMAT_FILES, BLOBSTORE_REVOCATION_NONE, BLOBSTORE_SNAPSHOT_ANY);
         if (work_bs==NULL) {
             logprintfl (EUCAERROR, "ERROR: %s\n", blobstore_get_error_str(blobstore_get_error()));
             err ("failed to open work blobstore");
@@ -287,7 +286,7 @@ int main (int argc, char * argv[])
     if (root && tree_uses_cache (root)) {
         if (ensure_directories_exist (get_cache_dir(), 0, NULL, NULL, BLOBSTORE_DIRECTORY_PERM) == -1)
             err ("failed to open or create cache directory");
-        cache_bs = blobstore_open (get_cache_dir(), get_cache_limit()/512, BLOBSTORE_FORMAT_DIRECTORY, BLOBSTORE_REVOCATION_LRU, BLOBSTORE_SNAPSHOT_ANY);
+        cache_bs = blobstore_open (get_cache_dir(), get_cache_limit()/512, BLOBSTORE_FLAG_CREAT, BLOBSTORE_FORMAT_DIRECTORY, BLOBSTORE_REVOCATION_LRU, BLOBSTORE_SNAPSHOT_ANY);
         if (cache_bs==NULL) {
             logprintfl (EUCAERROR, "ERROR: %s\n", blobstore_get_error_str(blobstore_get_error()));
             blobstore_close (work_bs);            
@@ -332,28 +331,6 @@ void print_req (imager_request * req)
     for (imager_param * p = req->params; p!=NULL && p->key!=NULL; p++) {
         logprintfl (EUCAINFO, "\t%s=%s\n", p->key, p->val);
     }
-}
-
-// turn a string into a boolean (returned as a char)
-
-char parse_boolean (const char * s)
-{
-    char * lc = strduplc (s);
-    char val;
-
-    if (strcmp (lc, "y")==0 ||
-        strcmp (lc, "yes")==0 ||
-        strcmp (lc, "t")==0 ||
-        strcmp (lc, "true")==0) { val = 1; }
-    else if (strcmp (lc, "n")==0 ||
-             strcmp (lc, "no")==0 ||
-             strcmp (lc, "f")==0 ||
-             strcmp (lc, "false")==0) { val = 0; }
-    else
-        err ("failed to parse value '%s' as boolean", lc);
-    free (lc);
-
-    return val;
 }
 
 // read in login or password from command line or from a file

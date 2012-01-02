@@ -86,6 +86,7 @@ import org.hibernate.criterion.MatchMode;
 import org.hibernate.criterion.Restrictions;
 import org.hibernate.ejb.EntityManagerFactoryImpl;
 import org.hibernate.exception.ConstraintViolationException;
+import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.records.Logs;
@@ -228,6 +229,21 @@ public class Entities {
                                                                     .setResultTransformer( Criteria.DISTINCT_ROOT_ENTITY )
                                                                     .setCacheable( true )
                                                                     .add( qbe )
+                                                                    .list( );
+    return Lists.newArrayList( Sets.newHashSet( resultList ) );
+  }
+  
+  @SuppressWarnings( { "unchecked", "cast" } )
+  public static <T> List<T> query( final T example, final boolean readOnly, final int maxResults ) {
+    final Example qbe = Example.create( example ).enableLike( MatchMode.EXACT );
+    final List<T> resultList = ( List<T> ) getTransaction( example ).getTxState( ).getSession( )
+                                                                    .createCriteria( example.getClass( ) )
+                                                                    .setReadOnly( readOnly )
+                                                                    .setResultTransformer( Criteria.DISTINCT_ROOT_ENTITY )
+                                                                    .setCacheable( true )
+                                                                    .add( qbe )
+                                                                    .setMaxResults( maxResults )
+                                                                    .setFetchSize( maxResults )
                                                                     .list( );
     return Lists.newArrayList( Sets.newHashSet( resultList ) );
   }
@@ -858,13 +874,13 @@ public class Entities {
     
     @Override
     public R apply( final D input ) {
-      if ( Entities.hasTransaction( ) ) {
-        throw new RuntimeException( "Failed to execute retryable transaction because of a nested transaction: "
-                                    + Entities.getTransaction( input.getClass( ) ).getRecord( ).stack );
-      } else {
+//      if ( Entities.hasTransaction( this.entityType ) ) {
+//        throw new RuntimeException( "Failed to execute retryable transaction because of a nested transaction: "
+//                                    + Entities.getTransaction( input.getClass( ) ).getRecord( ).stack );
+//      } else {
         RuntimeException rootCause = null;
         for ( int i = 0; i < retries; i++ ) {
-          EntityTransaction db = Entities.get( entityType );
+          EntityTransaction db = Entities.get( this.entityType );
           try {
             R ret = this.function.apply( input );
             db.commit( );
@@ -884,7 +900,7 @@ public class Entities {
         throw ( rootCause != null
                 ? rootCause
                 : new NullPointerException( "BUG: Transaction retry failed but root cause exception is unknown!" ) );
-      }
+//      }
     }
     
   }
@@ -916,6 +932,16 @@ public class Entities {
       return function;
     } else {
       return new TransactionalFunction<E, T, R>( type, function, retries );
+    }
+  }
+  
+  public static void commit( EntityTransaction tx ) {
+    if ( tx.getRollbackOnly( ) ) {
+      tx.rollback( );
+    } else if ( Databases.isVolatile( ) ) {
+      tx.rollback( );
+    } else {
+      tx.commit( );
     }
   }
   

@@ -83,6 +83,7 @@ import com.eucalyptus.cluster.callback.TerminateCallback;
 import com.eucalyptus.component.Dispatcher;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
+import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
@@ -92,11 +93,13 @@ import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.crypto.Digest;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
+import com.eucalyptus.images.BlockStorageImageInfo;
 import com.eucalyptus.network.NetworkGroups;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Threads;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes.QuantityMetricFunction;
 import com.eucalyptus.util.RestrictedTypes.Resolver;
@@ -219,6 +222,9 @@ public class VmInstances {
   @ConfigurableField( description = "Maximum number of threads the system will use to service blocking state changes.",
                       initial = "16" )
   public static Integer MAX_STATE_THREADS             = 16;
+  @ConfigurableField( description = "Amount of time (in minutes) before a EBS volume backing the instance is created",
+          initial = "30" )
+  public static Integer EBS_VOLUME_CREATION_TIMEOUT   = 30;
   
   public static class SubdomainListener implements PropertyChangeListener {
     @Override
@@ -345,7 +351,7 @@ public class VmInstances {
               Addresses.release( address );
             } else {
               EventRecord.caller( VmInstances.class, EventType.VM_TERMINATING, "USER_ADDRESS", address.toString( ) ).debug( );
-              AsyncRequests.newRequest( address.unassign( ).getCallback( ) ).dispatch( address.getPartition( ) );
+              AsyncRequests.newRequest( address.unassign( ).getCallback( ) ).dispatch( vm.getPartition( ) );
             }
           } catch ( final IllegalStateException e ) {} catch ( final Throwable e ) {
             LOG.debug( e, e );
@@ -358,9 +364,9 @@ public class VmInstances {
   
   public static void cleanUp( final VmInstance vm ) {
     LOG.trace( Logs.dump( vm ) );
-    LOG.trace( Threads.currentStackString( ) );
+    LOG.info( "Terminating instance: " + vm.getInstanceId( ), new RuntimeException( ) );
     try {
-      final Cluster cluster = Clusters.getInstance( ).lookup( vm.lookupPartition( ) );
+      final Cluster cluster = Clusters.lookup( Topology.lookup( ClusterController.class, vm.lookupPartition( ) ) );
       VmInstances.cleanUpAttachedVolumes( vm );
       
       Address address = null;
@@ -388,20 +394,34 @@ public class VmInstances {
   
   private static void cleanUpAttachedVolumes( final VmInstance vm ) {
     try {
-      final Cluster cluster = Clusters.getInstance( ).lookup( vm.lookupPartition( ) );
+      ServiceConfiguration ccConfig = Topology.lookup( ClusterController.class, vm.lookupPartition( ) );
+      final Cluster cluster = Clusters.lookup( ccConfig );
       vm.eachVolumeAttachment( new Predicate<AttachedVolume>( ) {
         @Override
         public boolean apply( final AttachedVolume arg0 ) {
-          try {
-            final ServiceConfiguration sc = Topology.lookup( Storage.class, vm.lookupPartition( ) );
-            vm.removeVolumeAttachment( arg0.getVolumeId( ) );
-            final Dispatcher scDispatcher = ServiceDispatcher.lookup( sc );
-            scDispatcher.send( new DetachStorageVolumeType( cluster.getNode( vm.getServiceTag( ) ).getIqn( ), arg0.getVolumeId( ) ) );
-            return true;
-          } catch ( final Throwable e ) {
-            LOG.error( "Failed sending Detach Storage Volume for: " + arg0.getVolumeId( )
-                       + ".  Will keep trying as long as instance is reported.  The request failed because of: " + e.getMessage( ), e );
-            return false;
+          if ( "/dev/sda1".equals( arg0.getDevice( ) ) ) {//GRZE:fix references to root device name.
+            try {
+              final ServiceConfiguration sc = Topology.lookup( Storage.class, vm.lookupPartition( ) );
+              final Dispatcher scDispatcher = ServiceDispatcher.lookup( sc );
+              scDispatcher.send( new DetachStorageVolumeType( cluster.getNode( vm.getServiceTag( ) ).getIqn( ), arg0.getVolumeId( ) ) );
+              return true;
+            } catch ( final Throwable e ) {
+              LOG.error( "Failed sending Detach Storage Volume for: " + arg0.getVolumeId( )
+                         + ".  Will keep trying as long as instance is reported.  The request failed because of: " + e.getMessage( ), e );
+              return true;
+            }
+          } else {
+            try {
+              final ServiceConfiguration sc = Topology.lookup( Storage.class, vm.lookupPartition( ) );
+              vm.removeVolumeAttachment( arg0.getVolumeId( ) );
+              final Dispatcher scDispatcher = ServiceDispatcher.lookup( sc );
+              scDispatcher.send( new DetachStorageVolumeType( cluster.getNode( vm.getServiceTag( ) ).getIqn( ), arg0.getVolumeId( ) ) );
+              return true;
+            } catch ( final Throwable e ) {
+              LOG.error( "Failed sending Detach Storage Volume for: " + arg0.getVolumeId( )
+                         + ".  Will keep trying as long as instance is reported.  The request failed because of: " + e.getMessage( ), e );
+              return true;
+            }
           }
         }
       } );
@@ -474,7 +494,10 @@ public class VmInstances {
   }
   
   public static void stopped( final String key ) throws NoSuchElementException, TransactionException {
-    VmInstances.stopped( VmInstance.Lookup.INSTANCE.apply( key ) );
+    VmInstance vm = VmInstance.Lookup.INSTANCE.apply( key );
+    if ( vm.getBootRecord( ).getMachine( ) instanceof BlockStorageImageInfo ) {
+      VmInstances.stopped( vm );
+    }
   }
   
   public static void shutDown( final VmInstance vm ) throws TransactionException {

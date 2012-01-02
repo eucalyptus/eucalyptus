@@ -67,7 +67,7 @@ import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentId.GenerateKeys;
 import com.eucalyptus.component.ComponentId.Partition;
 
-@Partition( value = { Eucalyptus.class }, manyToOne = true )
+@Partition( value = { Eucalyptus.class } )
 @GenerateKeys
 public class Storage extends ComponentId {
   

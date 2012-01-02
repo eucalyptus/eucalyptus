@@ -70,6 +70,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.cloud.ImageMetadata;
+import com.eucalyptus.cloud.ImageMetadata.Platform;
 import com.eucalyptus.cloud.ImageMetadata.StaticDiskImage;
 import com.eucalyptus.cloud.util.IllegalMetadataAccessException;
 import com.eucalyptus.cloud.util.InvalidMetadataException;
@@ -81,13 +82,17 @@ import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.IllegalContextAccessException;
 import com.eucalyptus.entities.Entities;
+import com.eucalyptus.images.Emis.BootableSet;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.RestrictedTypes.Resolver;
+import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmType;
 import com.eucalyptus.vm.VmTypes;
 import com.google.common.base.Function;
+import com.google.common.base.Functions;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
@@ -95,6 +100,8 @@ import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
 public class Emis {
+  private static Logger LOG = Logger.getLogger( Emis.class );
+  
   enum VBRTypes {
     MACHINE( "walrus://" ),
     EBS,
@@ -108,7 +115,7 @@ public class Emis {
       this( "" );
     }
     
-    private VBRTypes( String prefix ) {
+    private VBRTypes( final String prefix ) {
       this.prefix = prefix;
     }
     
@@ -119,7 +126,7 @@ public class Emis {
     INSTANCE;
     
     @Override
-    public ImageInfo apply( String input ) {
+    public ImageInfo apply( final String input ) {
       if ( input.startsWith( "eki-" ) ) {
         return LookupKernel.INSTANCE.apply( input );
       } else if ( input.startsWith( "eri-" ) ) {
@@ -127,7 +134,7 @@ public class Emis {
       } else if ( input.startsWith( "emi-" ) ) {
         try {
           return LookupMachine.INSTANCE.apply( input );
-        } catch ( Exception ex ) {
+        } catch ( final Exception ex ) {
           return LookupBlockStorage.INSTANCE.apply( input );
         }
       } else {
@@ -139,10 +146,13 @@ public class Emis {
   public enum LookupBlockStorage implements Function<String, BlockStorageImageInfo> {
     INSTANCE;
     @Override
-    public BlockStorageImageInfo apply( String identifier ) {
-      EntityTransaction db = Entities.get( BlockStorageImageInfo.class );
+    public BlockStorageImageInfo apply( final String identifier ) {
+      final EntityTransaction db = Entities.get( BlockStorageImageInfo.class );
       try {
-        BlockStorageImageInfo ret = Entities.uniqueResult( Images.exampleBlockStorageWithImageId( identifier ) );
+        final BlockStorageImageInfo ret = Entities.uniqueResult( Images.exampleBlockStorageWithImageId( identifier ) );
+        if ( Platform.windows.name( ).equals( ret.getKernelId( ) ) || ret.getImageName( ).startsWith( Platform.windows.name( ) ) ) {
+          ret.setPlatform( Platform.windows );
+        }
         if ( !ImageMetadata.State.available.equals( ret.getState( ) ) ) {
           db.rollback( );
           throw new NoSuchElementException( "Unable to start instance with deregistered image : " + ret );
@@ -150,7 +160,7 @@ public class Emis {
           db.rollback( );
           return ret;
         }
-      } catch ( Exception ex ) {
+      } catch ( final Exception ex ) {
         Logs.exhaust( ).error( ex, ex );
         db.rollback( );
         throw new NoSuchElementException( "Failed to lookup image: " + identifier + " because of " + ex.getMessage( ) );
@@ -161,10 +171,10 @@ public class Emis {
   public enum LookupMachine implements Function<String, MachineImageInfo> {
     INSTANCE;
     @Override
-    public MachineImageInfo apply( String identifier ) {
-      EntityTransaction db = Entities.get( MachineImageInfo.class );
+    public MachineImageInfo apply( final String identifier ) {
+      final EntityTransaction db = Entities.get( MachineImageInfo.class );
       try {
-        MachineImageInfo ret = Entities.uniqueResult( Images.exampleMachineWithImageId( identifier ) );
+        final MachineImageInfo ret = Entities.uniqueResult( Images.exampleMachineWithImageId( identifier ) );
         if ( !ImageMetadata.State.available.equals( ret.getState( ) ) ) {
           db.rollback( );
           throw new NoSuchElementException( "Unable to start instance with deregistered image : " + ret );
@@ -172,7 +182,7 @@ public class Emis {
           db.rollback( );
           return ret;
         }
-      } catch ( Exception ex ) {
+      } catch ( final Exception ex ) {
         Logs.exhaust( ).error( ex, ex );
         db.rollback( );
         throw new NoSuchElementException( "Failed to lookup image: " + identifier + " because of " + ex.getMessage( ) );
@@ -183,10 +193,10 @@ public class Emis {
   public enum LookupKernel implements Function<String, KernelImageInfo> {
     INSTANCE;
     @Override
-    public KernelImageInfo apply( String identifier ) {
-      EntityTransaction db = Entities.get( KernelImageInfo.class );
+    public KernelImageInfo apply( final String identifier ) {
+      final EntityTransaction db = Entities.get( KernelImageInfo.class );
       try {
-        KernelImageInfo ret = Entities.uniqueResult( Images.exampleKernelWithImageId( identifier ) );
+        final KernelImageInfo ret = Entities.uniqueResult( Images.exampleKernelWithImageId( identifier ) );
         if ( !ImageMetadata.State.available.equals( ret.getState( ) ) ) {
           db.rollback( );
           throw new NoSuchElementException( "Unable to start instance with deregistered image : " + ret );
@@ -195,7 +205,7 @@ public class Emis {
           ret.setOwner( Principals.nobodyFullName( ) );
           return ret;
         }
-      } catch ( Exception ex ) {
+      } catch ( final Exception ex ) {
         Logs.exhaust( ).error( ex, ex );
         db.rollback( );
         throw new NoSuchElementException( "Failed to lookup image: " + identifier + " because of " + ex.getMessage( ) );
@@ -206,10 +216,10 @@ public class Emis {
   public enum LookupRamdisk implements Function<String, RamdiskImageInfo> {
     INSTANCE;
     @Override
-    public RamdiskImageInfo apply( String identifier ) {
-      EntityTransaction db = Entities.get( RamdiskImageInfo.class );
+    public RamdiskImageInfo apply( final String identifier ) {
+      final EntityTransaction db = Entities.get( RamdiskImageInfo.class );
       try {
-        RamdiskImageInfo ret = Entities.uniqueResult( Images.exampleRamdiskWithImageId( identifier ) );
+        final RamdiskImageInfo ret = Entities.uniqueResult( Images.exampleRamdiskWithImageId( identifier ) );
         if ( !ImageMetadata.State.available.equals( ret.getState( ) ) ) {
           db.rollback( );
           throw new NoSuchElementException( "Unable to start instance with deregistered image : " + ret );
@@ -218,7 +228,7 @@ public class Emis {
           ret.setOwner( Principals.nobodyFullName( ) );
           return ret;
         }
-      } catch ( Exception ex ) {
+      } catch ( final Exception ex ) {
         Logs.exhaust( ).error( ex, ex );
         db.rollback( );
         throw new NoSuchElementException( "Failed to lookup image: " + identifier + " because of " + ex.getMessage( ) );
@@ -226,12 +236,10 @@ public class Emis {
     }
   }
   
-  private static Logger LOG = Logger.getLogger( Emis.class );
-  
   public static class BootableSet {
     private final BootableImageInfo disk;
     
-    private BootableSet( BootableImageInfo bootableImageInfo ) {
+    private BootableSet( final BootableImageInfo bootableImageInfo ) {
       this.disk = bootableImageInfo;
     }
     
@@ -251,7 +259,7 @@ public class Emis {
       try {
         this.getKernel( );
         return true;
-      } catch ( NoSuchElementException ex ) {
+      } catch ( final NoSuchElementException ex ) {
         return false;
       }
     }
@@ -260,29 +268,33 @@ public class Emis {
       try {
         this.getRamdisk( );
         return true;
-      } catch ( NoSuchElementException ex ) {
+      } catch ( final NoSuchElementException ex ) {
         return false;
       }
     }
     
+    public boolean isBlockStorage( ) {
+      return this.getMachine( ) instanceof BlockStorageImageInfo;
+    }
+    
     public boolean isLinux( ) {
-      return ImageMetadata.Platform.linux.equals( this.getMachine( ).getPlatform( ) ) || this.getMachine( ).getPlatform( ) == null;
+      return ImageMetadata.Platform.linux.equals( this.getMachine( ).getPlatform( ) ) || ( this.getMachine( ).getPlatform( ) == null );
     }
     
     @Override
     public String toString( ) {
       return String.format( "BootableSet:machine=%s:ramdisk=%s:kernel=%s:isLinux=%s", this.getMachine( ),
                             this.hasRamdisk( )
-                              ? this.getRamdisk( )
-                              : "false",
+                                              ? this.getRamdisk( )
+                                              : "false",
                               this.hasKernel( )
-                                ? this.getKernel( )
-                                : "false",
+                                               ? this.getKernel( )
+                                               : "false",
                                 this.isLinux( ) );
     }
     
-    public VmTypeInfo populateVirtualBootRecord( VmType vmType ) throws MetadataException {
-      VmTypeInfo vmTypeInfo = VmTypes.asVmTypeInfo( vmType, this.getMachine( ) );
+    public VmTypeInfo populateVirtualBootRecord( final VmType vmType ) throws MetadataException {
+      final VmTypeInfo vmTypeInfo = VmTypes.asVmTypeInfo( vmType, this.getMachine( ) );
       if ( this.isLinux( ) ) {
         if ( this.hasKernel( ) ) {
           vmTypeInfo.setKernel( this.getKernel( ).getDisplayName( ), this.getKernel( ).getManifestLocation( ) );
@@ -293,12 +305,13 @@ public class Emis {
       }
       return vmTypeInfo;
     }
+    
   }
   
   static class NoRamdiskBootableSet extends BootableSet {
     private final KernelImageInfo kernel;
     
-    private NoRamdiskBootableSet( BootableImageInfo bootableImageInfo, KernelImageInfo kernel ) {
+    private NoRamdiskBootableSet( final BootableImageInfo bootableImageInfo, final KernelImageInfo kernel ) {
       super( bootableImageInfo );
       this.kernel = kernel;
     }
@@ -312,7 +325,7 @@ public class Emis {
   static class TrifectaBootableSet extends NoRamdiskBootableSet {
     private final RamdiskImageInfo ramdisk;
     
-    public TrifectaBootableSet( BootableImageInfo bootableImageInfo, KernelImageInfo kernel, RamdiskImageInfo ramdisk ) {
+    public TrifectaBootableSet( final BootableImageInfo bootableImageInfo, final KernelImageInfo kernel, final RamdiskImageInfo ramdisk ) {
       super( bootableImageInfo, kernel );
       this.ramdisk = ramdisk;
     }
@@ -323,102 +336,221 @@ public class Emis {
     }
   }
   
-  /**
-   * Temporary: Don't even think of referencing this symbol.
-   */
-  @Deprecated
-  public static BootableSet newBootableSet( VmType vmType, Partition partition, String imageId, String kernelId, String ramdiskId ) throws MetadataException, AuthException {
-    BootableSet bootSet = null;
+  public static BootableSet recreateBootableSet( final VmInstance vm ) {
+    final BootableImageInfo bootableImageInfo = vm.getBootRecord( ).getMachine( );
+    final KernelImageInfo kernel = vm.getBootRecord( ).getKernel( );
+    final RamdiskImageInfo ramdisk = vm.getBootRecord( ).getRamdisk( );
+    if ( ( kernel != null ) && ( ramdisk != null ) ) {
+      return new TrifectaBootableSet( bootableImageInfo, kernel, ramdisk );
+    } else if ( kernel != null ) {
+      return new NoRamdiskBootableSet( bootableImageInfo, kernel );
+    } else {
+      return new BootableSet( bootableImageInfo );
+    }
+  }
+  
+  public static BootableSet recreateBootableSet( final String imageId, final String kernelId, final String ramdiskId ) throws MetadataException {
     try {
-      bootSet = new BootableSet( LookupMachine.INSTANCE.apply( imageId ) );
-    } catch ( Exception e ) {
+      final BootsetBuilder builder = new BootsetBuilder( ).imageId( imageId );
+      if ( kernelId != null ) {
+        builder.kernelId( kernelId );
+        if ( ramdiskId != null ) {
+          builder.ramdiskId( ramdiskId );
+        }
+      }
+      final BootableSet bootSet = builder.start( );
+      Emis.checkStoredImage( bootSet );
+      return bootSet;
+    } catch ( final MetadataException ex ) {
+      throw ex;
+    } catch ( final Exception ex ) {
+      throw new InvalidMetadataException( "Failed to construct bootset for image id: " + imageId + " because of: " + ex.getMessage( ), ex );
+    }
+  }
+  
+  public static BootableSet newBootableSet( final String imageId ) throws MetadataException {
+    try {
+      final BootableSet bootSet = new BootsetBuilder( ).imageId( imageId ).run( );
+      Emis.checkStoredImage( bootSet );
+      return bootSet;
+    } catch ( final MetadataException ex ) {
+      throw ex;
+    } catch ( final Exception ex ) {
+      throw new InvalidMetadataException( "Failed to construct bootset for image id: " + imageId + " because of: " + ex.getMessage( ), ex );
+    }
+  }
+  
+  private static class BootsetBuilder {
+    private String imageId;
+    private String kernelId;
+    private String ramdiskId;
+    
+    public BootsetBuilder imageId( final String imageId ) {
+      this.imageId = imageId;
+      return this;
+    }
+    
+    public BootsetBuilder ramdiskId( final String ramdiskId ) {
+      this.ramdiskId = ramdiskId;
+      return this;
+    }
+    
+    public BootsetBuilder kernelId( final String kernelId ) {
+      this.kernelId = kernelId;
+      return this;
+    }
+    
+    public BootableSet run( ) throws MetadataException {
+      final Function<String, BootableSet> create = Functions.compose( BootsetWithRamdisk.INSTANCE,
+                                                                Functions.compose( BootsetWithKernel.INSTANCE, BootsetFromId.INSTANCE ) );
+      return this.prepareBootset( create );
+    }
+    
+    private BootableSet prepareBootset( final Function<String, BootableSet> create ) throws MetadataException {
       try {
-        bootSet = new BootableSet( LookupBlockStorage.INSTANCE.apply( imageId ) );
-      } catch ( IllegalContextAccessException ex ) {
-        throw new VerificationException( ex );
-      } catch ( NoSuchElementException ex ) {
-        throw new NoSuchMetadataException( ex );
-      } catch ( PersistenceException ex ) {
-        throw new InvalidMetadataException( ex );
+        final BootableSet bootSet = create.apply( this.imageId );
+        return bootSet;
+      } catch ( final RuntimeException ex ) {
+        if ( ex.getCause( ) instanceof MetadataException ) {
+          throw ( MetadataException ) ex.getCause( );
+        } else {
+          throw ex;
+        }
       }
     }
-    KernelImageInfo kernel = ( kernelId == null
-      ? null
-      : LookupKernel.INSTANCE.apply( kernelId ) );
-    RamdiskImageInfo ramdisk = ( ramdiskId == null
-      ? null
-      : LookupRamdisk.INSTANCE.apply( ramdiskId ) );
-    if ( kernel != null && ramdisk != null ) {
-      return new TrifectaBootableSet( bootSet.getMachine( ), kernel, ramdisk );
-    } else if ( kernel != null ) {
-      return new NoRamdiskBootableSet( bootSet.getMachine( ), kernel );
+    
+    public BootableSet start( ) throws MetadataException {
+      final Function<String, BootableSet> create = new Function<String, BootableSet>( ) {
+        
+        @Override
+        public BootableSet apply( final String input ) {
+          final BootableSet b = BootsetFromId.INSTANCE.apply( BootsetBuilder.this.imageId );
+          final KernelImageInfo kernel = ( BootsetBuilder.this.kernelId == null
+                                                                         ? null
+                                                                         : LookupKernel.INSTANCE.apply( BootsetBuilder.this.kernelId ) );
+          final RamdiskImageInfo ramdisk = ( BootsetBuilder.this.ramdiskId == null
+                                                                            ? null
+                                                                            : LookupRamdisk.INSTANCE.apply( BootsetBuilder.this.ramdiskId ) );
+          if ( ( kernel != null ) && ( ramdisk != null ) ) {
+            return new TrifectaBootableSet( b.getMachine( ), kernel, ramdisk );
+          } else if ( kernel != null ) {
+            return new NoRamdiskBootableSet( b.getMachine( ), kernel );
+          } else {
+            return b;
+          }
+        }
+      };
+      return this.prepareBootset( create );
+    }
+  }
+  
+  private static <T extends ImageInfo> T resolveDiskImage( final String imageId, final Function<String, T> resolver ) throws IllegalMetadataAccessException {
+    final T img = resolver.apply( imageId );
+    if ( Contexts.exists( ) ) {
+      final Predicate<T> filter = Predicates.and( Images.FilterPermissions.INSTANCE, RestrictedTypes.filterPrivilegedWithoutOwner( ) );
+      if ( filter.apply( img ) ) {
+        return img;
+      } else {
+        throw new IllegalMetadataAccessException( imageId + ": permission denied." );
+      }
     } else {
+      return img;
+    }
+  }
+  
+  enum BootsetFromId implements Function<String, BootableSet> {
+    INSTANCE;
+    
+    @Override
+    public BootableSet apply( final String input ) {
+      BootableSet bootSet;
+      try {
+        bootSet = new BootableSet( resolveDiskImage( input, LookupMachine.INSTANCE ) );
+      } catch ( final IllegalContextAccessException ex ) {
+        throw Exceptions.toUndeclared( new IllegalMetadataAccessException( ex ) );
+      } catch ( final IllegalMetadataAccessException ex ) {
+        throw Exceptions.toUndeclared( ex );
+      } catch ( final Exception e ) {
+        try {
+          bootSet = new BootableSet( resolveDiskImage( input, LookupBlockStorage.INSTANCE ) );
+        } catch ( final IllegalContextAccessException ex ) {
+          throw Exceptions.toUndeclared( new IllegalMetadataAccessException( ex ) );
+        } catch ( final IllegalMetadataAccessException ex ) {
+          throw Exceptions.toUndeclared( ex );
+        } catch ( final NoSuchElementException ex ) {
+          throw Exceptions.toUndeclared( new NoSuchMetadataException( "Failed to lookup image named: " + input, ex ) );
+        } catch ( final PersistenceException ex ) {
+          throw Exceptions.toUndeclared( new InvalidMetadataException( "Error occurred while trying to lookup image named: " + input, ex ) );
+        }
+      }
       return bootSet;
     }
     
   }
   
-  public static BootableSet newBootableSet( VmType vmType, Partition partition, String imageId ) throws MetadataException, AuthException {
-    BootableSet bootSet = null;
-    try {
-      bootSet = new BootableSet( resolveDiskImage( imageId, LookupMachine.INSTANCE ) );
-    } catch ( Exception e ) {
-      try {
-        bootSet = new BootableSet( resolveDiskImage( imageId, LookupBlockStorage.INSTANCE ) );
-      } catch ( IllegalContextAccessException ex ) {
-        throw new VerificationException( ex );
-      } catch ( NoSuchElementException ex ) {
-        throw new NoSuchMetadataException( ex );
-      } catch ( PersistenceException ex ) {
-        throw new InvalidMetadataException( ex );
-      }
-    }
-    if ( bootSet.isLinux( ) ) {
-      bootSet = Emis.bootsetWithKernel( bootSet );
-      bootSet = Emis.bootsetWithRamdisk( bootSet );
-    }
-    Emis.checkStoredImage( bootSet );
-    return bootSet;
-  }
-  
-  public static <T extends ImageInfo> T resolveDiskImage( String imageId, Function<String, T> resolver ) throws IllegalMetadataAccessException {
-    T img = resolver.apply( imageId );
-    Predicate<T> filter = Predicates.and( Images.FilterPermissions.INSTANCE, RestrictedTypes.filterPrivilegedWithoutOwner( ) );
-    if ( filter.apply( img ) ) {
-      return img;
-    } else {
-      throw new IllegalMetadataAccessException( imageId + ": permission denied." );
-    }
-  }
-  
-  private static BootableSet bootsetWithKernel( BootableSet bootSet ) throws MetadataException {
-    String kernelId = determineKernelId( bootSet );
-    LOG.debug( "Determined the appropriate kernelId to be " + kernelId + " for " + bootSet.toString( ) );
-    try {
-      KernelImageInfo kernel = RestrictedTypes.doPrivilegedWithoutOwner( kernelId, LookupKernel.INSTANCE );
-      return new NoRamdiskBootableSet( bootSet.getMachine( ), kernel );
-    } catch ( Exception ex ) {
-      throw new NoSuchMetadataException( "Failed to lookup kernel image information: " + kernelId + " because of: " + ex.getMessage( ), ex );
-    }
-  }
-  
-  private static BootableSet bootsetWithRamdisk( BootableSet bootSet ) throws MetadataException {
-    String ramdiskId = determineRamdiskId( bootSet );
-    LOG.debug( "Determined the appropriate ramdiskId to be " + ramdiskId + " for " + bootSet.toString( ) );
-    if ( ramdiskId == null ) {
-      return bootSet;
-    } else {
-      try {
-        RamdiskImageInfo ramdisk = RestrictedTypes.doPrivilegedWithoutOwner( ramdiskId, LookupRamdisk.INSTANCE );
-        return new TrifectaBootableSet( bootSet.getMachine( ), bootSet.getKernel( ), ramdisk );
-      } catch ( Exception ex ) {
-        throw new NoSuchMetadataException( "Failed to lookup ramdisk image information: " + ramdiskId + " because of: " + ex.getMessage( ), ex );
+  enum BootsetWithRamdisk implements Function<BootableSet, BootableSet> {
+    INSTANCE;
+    
+    @Override
+    public BootableSet apply( final BootableSet input ) {
+      if ( !input.isLinux( ) ) {
+        return input;
+      } else {
+        String ramdiskId = null;
+        try {
+          ramdiskId = determineRamdiskId( input );
+          LOG.debug( "Determined the appropriate ramdiskId to be " + ramdiskId + " for " + input.toString( ) );
+          if ( ramdiskId == null ) {
+            return input;
+          } else {
+            final RamdiskImageInfo ramdisk = RestrictedTypes.doPrivilegedWithoutOwner( ramdiskId, LookupRamdisk.INSTANCE );
+            return new TrifectaBootableSet( input.getMachine( ), input.getKernel( ), ramdisk );
+          }
+        } catch ( final InvalidMetadataException ex ) {
+          return input;
+        } catch ( final Exception ex ) {
+          if ( input.isBlockStorage( ) ) {
+            return input;
+          } else {
+            throw Exceptions.toUndeclared( new NoSuchMetadataException( "Failed to lookup ramdisk image information: " + ramdiskId
+                                                                        + " because of: "
+                                                                        + ex.getMessage( ), ex ) );
+          }
+        }
       }
     }
   }
   
-  private static String determineKernelId( BootableSet bootSet ) throws MetadataException {
-    BootableImageInfo disk = bootSet.getMachine( );
+  enum BootsetWithKernel implements Function<BootableSet, BootableSet> {
+    INSTANCE;
+    
+    @Override
+    public BootableSet apply( final BootableSet input ) {
+      if ( !input.isLinux( ) ) {
+        return input;
+      } else {
+        String kernelId = "unknown";
+        try {
+          kernelId = determineKernelId( input );
+          LOG.debug( "Determined the appropriate kernelId to be " + kernelId + " for " + input.toString( ) );
+          final KernelImageInfo kernel = RestrictedTypes.doPrivilegedWithoutOwner( kernelId, LookupKernel.INSTANCE );
+          return new NoRamdiskBootableSet( input.getMachine( ), kernel );
+        } catch ( final Exception ex ) {
+          if ( input.isBlockStorage( ) ) {
+            return input;
+          } else {
+            throw Exceptions.toUndeclared( new NoSuchMetadataException( "Failed to lookup kernel image information " + kernelId
+                                                                        + " because of: "
+                                                                        + ex.getMessage( ), ex ) );
+          }
+        }
+      }
+    }
+    
+  }
+  
+  private static String determineKernelId( final BootableSet bootSet ) throws MetadataException {
+    final BootableImageInfo disk = bootSet.getMachine( );
     String kernelId = null;
     Context ctx = null;
     try {
@@ -426,18 +558,21 @@ public class Emis {
       if ( ctx.getRequest( ) instanceof RunInstancesType ) {
         kernelId = ( ( RunInstancesType ) ctx.getRequest( ) ).getKernelId( );
       }
-    } catch ( IllegalContextAccessException ex ) {
+    } catch ( final IllegalContextAccessException ex ) {
       LOG.error( ex, ex );
     }
-    if ( kernelId == null || "".equals( kernelId ) ) {
+    if ( ( kernelId == null ) || "".equals( kernelId ) ) {
       kernelId = disk.getKernelId( );
     }
-    if ( kernelId == null || "".equals( kernelId ) ) {
+    if ( ( kernelId == null ) || "".equals( kernelId ) ) {
       kernelId = Images.lookupDefaultKernelId( );
     }
-    Preconditions.checkNotNull( kernelId, "Attempt to resolve a kerneId for " + bootSet.toString( ) + " during request " + ( ctx != null
-      ? ctx.getRequest( ).toSimpleString( )
-      : "UNKNOWN" ) );
+    Preconditions.checkNotNull( kernelId, "Attempt to resolve a kerneId for "
+                                          + bootSet.toString( )
+                                          + " during request "
+                                          + ( ctx != null
+                                                         ? ctx.getRequest( ).toSimpleString( )
+                                                         : "UNKNOWN" ) );
     if ( kernelId == null ) {
       throw new NoSuchMetadataException( "Unable to determine required kernel image for " + disk.getDisplayName( ) );
     } else if ( !kernelId.startsWith( ImageMetadata.Type.kernel.getTypePrefix( ) ) ) {
@@ -446,15 +581,15 @@ public class Emis {
     return kernelId;
   }
   
-  private static String determineRamdiskId( BootableSet bootSet ) throws MetadataException {
+  private static String determineRamdiskId( final BootableSet bootSet ) throws MetadataException {
     if ( !bootSet.hasKernel( ) ) {
       throw new InvalidMetadataException( "Image specified does not have a kernel: " + bootSet );
     }
     String ramdiskId = bootSet.getMachine( ).getRamdiskId( );//GRZE: use the ramdisk that is part of the registered image definition to start.
-    Context ctx = Contexts.lookup( );
+    final Context ctx = Contexts.lookup( );
     if ( ctx.getRequest( ) instanceof RunInstancesType ) {
-      RunInstancesType msg = ( RunInstancesType ) ctx.getRequest( );
-      if ( msg.getRamdiskId( ) != null && !"".equals( msg.getRamdiskId( ) ) ) {
+      final RunInstancesType msg = ( RunInstancesType ) ctx.getRequest( );
+      if ( ( msg.getRamdiskId( ) != null ) && !"".equals( msg.getRamdiskId( ) ) ) {
         ramdiskId = msg.getRamdiskId( );//GRZE: maybe update w/ a specific ramdisk user requests
       }
     }
@@ -468,7 +603,7 @@ public class Emis {
     }
   }
   
-  public static void checkStoredImage( BootableSet bootSet ) {
+  private static void checkStoredImage( final BootableSet bootSet ) {
     try {
       if ( bootSet.getMachine( ) instanceof StaticDiskImage ) {
         ImageUtil.checkStoredImage( ( StaticDiskImage ) bootSet.getMachine( ) );
@@ -479,8 +614,9 @@ public class Emis {
       if ( bootSet.hasRamdisk( ) ) {
         ImageUtil.checkStoredImage( bootSet.getRamdisk( ) );
       }
-    } catch ( EucalyptusCloudException ex ) {
-      LOG.error( ex, ex );
+    } catch ( final Exception ex ) {
+      LOG.error( ex );
+      Logs.extreme( ).error( ex, ex );
     }
   }
   

@@ -73,6 +73,7 @@ import javax.persistence.Transient;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
+import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.component.ComponentId.ComponentPart;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.config.ComponentConfiguration;
@@ -106,11 +107,11 @@ public class ClusterConfiguration extends ComponentConfiguration implements Seri
   @ConfigurableField( description = "Indicates whether vlans are in use or not.", displayName = "Uses vlans", readonly = true )
   private Boolean               useNetworkTags;
   
-  @ConfigurableField( description = "Minimum vlan tag to use (0 < x < max_vlan <= 4096)", displayName = "Min vlan" )
+  @ConfigurableField( description = "Minimum vlan tag to use (0 < x < max_vlan <= 4096)", displayName = "Min vlan", readonly = true )
   @Column( name = "cluster_min_network_tag" )
   private Integer               minNetworkTag;
   
-  @ConfigurableField( description = "Maximum vlan tag to use (0 < min_vlan < x < 4096)", displayName = "Max vlan" )
+  @ConfigurableField( description = "Maximum vlan tag to use (0 < min_vlan < x < 4096)", displayName = "Max vlan", readonly = true )
   @Column( name = "cluster_max_network_tag" )
   private Integer               maxNetworkTag;
   
@@ -197,7 +198,7 @@ public class ClusterConfiguration extends ComponentConfiguration implements Seri
   
   @Override
   public Boolean isHostLocal( ) {
-    return true;
+    return BootstrapArgs.isCloudController( );
   }
   
   public String getNetworkMode( ) {

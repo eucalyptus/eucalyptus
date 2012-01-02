@@ -74,10 +74,13 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Vector;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.log4j.Logger;
 import org.jgroups.Address;
@@ -102,9 +105,6 @@ import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.empyrean.Empyrean;
-import com.eucalyptus.event.EventListener;
-import com.eucalyptus.event.Hertz;
-import com.eucalyptus.event.Listeners;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.scripting.Groovyness;
 import com.eucalyptus.system.Threads;
@@ -116,6 +116,7 @@ import com.google.common.base.Functions;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
+import com.google.common.base.Supplier;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -137,7 +138,7 @@ public class Hosts {
   @ConfigurableField( description = "Timeout for state initialization (in msec).",
                       readonly = true )
   public static final Long                       STATE_INITIALIZE_TIMEOUT   = 120000L;
-  static final Logger                            LOG                        = Logger.getLogger( Hosts.class );
+  private static final Logger                            LOG                        = Logger.getLogger( Hosts.class );
   public static final long                       SERVICE_INITIALIZE_TIMEOUT = 10000L;
   private static ReplicatedHashMap<String, Host> hostMap;
   private static final ReentrantReadWriteLock    canHas                     = new ReentrantReadWriteLock( );
@@ -148,7 +149,7 @@ public class Hosts {
       @Override
       public boolean apply( final ServiceConfiguration input ) {
         return input.getInetAddress( ).equals( addr ) || input.getInetAddress( ).getCanonicalHostName( ).equals( addr.getCanonicalHostName( ) )
-          || input.getHostName( ).equals( addr.getCanonicalHostName( ) );
+               || input.getHostName( ).equals( addr.getCanonicalHostName( ) );
       }
       
     };
@@ -259,13 +260,16 @@ public class Hosts {
         final Host currentHost = Hosts.localHost( );
         ++this.counter;
         try {
-          if ( !Hosts.list( Predicates.not( BootedFilter.INSTANCE ) ).isEmpty( ) && currentHost.hasDatabase( ) && currentHost.hasBootstrapped( ) ) {
+          if ( !Hosts.list( Predicates.not( BootedFilter.INSTANCE ) ).isEmpty( ) && currentHost.hasDatabase( ) ) {
             if ( UpdateEntry.INSTANCE.apply( currentHost ) ) {
-              LOG.info( "Updated local host entry: " + currentHost );
+              LOG.info( "Updated local host entry while booting: " + currentHost );
             }
           } else if ( this.counter % 5 == 0 ) {
             if ( UpdateEntry.INSTANCE.apply( currentHost ) ) {
-              LOG.info( "Updated local host entry: " + currentHost );
+              LOG.info( "Updated changed local host entry: " + currentHost );
+            } else {
+              LOG.info( "Updated local host entry periodically: " + currentHost );
+              Hosts.put( Host.create( ) );
             }
           }
         } catch ( Exception ex ) {
@@ -282,10 +286,6 @@ public class Hosts {
         if ( Hosts.pruneHosts( ) ) {
           Hosts.updateServices( );
         }
-        SyncDatabases.INSTANCE.apply( Hosts.localHost( ) );
-        for ( Host h : Hosts.listDatabases( ) ) {
-          SyncDatabases.INSTANCE.apply( h );
-        }
       }
       
     },
@@ -301,7 +301,8 @@ public class Hosts {
       
     };
     private final long                            interval;
-    private static final ScheduledExecutorService hostPruner = Executors.newScheduledThreadPool( 32 );
+    private static final ScheduledExecutorService hostPruner   = Executors.newScheduledThreadPool( 32 );
+    private static final Lock                     canHasChecks = new ReentrantLock( );
     
     private PeriodicMembershipChecks( long interval ) {
       this.interval = interval;
@@ -313,15 +314,27 @@ public class Hosts {
           
           @Override
           public void run( ) {
-            if ( !Bootstrap.isFinished( ) || Bootstrap.isShuttingDown( ) ) {
+            if ( !Bootstrap.isLoaded( ) || Bootstrap.isShuttingDown( ) ) {
               return;
             } else {
-              LOG.debug( runner.toString( ) + ": RUNNING" );
               try {
-                runner.run( );
+                if ( PeriodicMembershipChecks.canHasChecks.tryLock( 1, TimeUnit.SECONDS ) ) {
+                  try {
+                    LOG.debug( runner.toString( ) + ": RUNNING" );
+                    try {
+                      runner.run( );
+                    } catch ( Exception ex ) {
+                      LOG.error( runner.toString( ) + ": FAILED because of: " + ex.getMessage( ) );
+                      Logs.extreme( ).error( runner.toString( ) + ": FAILED because of: " + ex.getMessage( ), ex );
+                    }
+                  } finally {
+                    PeriodicMembershipChecks.canHasChecks.unlock( );
+                  }
+                }
               } catch ( Exception ex ) {
-                LOG.error( runner.toString( ) + ": FAILED because of: " + ex.getMessage( ) );
-                Logs.extreme( ).error( runner.toString( ) + ": FAILED because of: " + ex.getMessage( ), ex );
+                Exceptions.maybeInterrupted( ex );
+                LOG.debug( runner.toString( ) + ": SKIPPED: " + ex.getMessage( ) );
+                Logs.extreme( ).debug( ex, ex );
               }
             }
           }
@@ -370,10 +383,10 @@ public class Hosts {
             BootstrapComponent.TEARDOWN.apply( h );
           } else {
             LOG.info( "Pruning failed for orphan host: " + strayHost
-                + " with local-copy value: "
-                + hostCopy.get( strayHost.toString( ) )
-                + " and underlying host map value: "
-                + Hosts.lookup( strayHost ) );
+                      + " with local-copy value: "
+                      + hostCopy.get( strayHost.toString( ) )
+                      + " and underlying host map value: "
+                      + Hosts.lookup( strayHost ) );
           }
         }
       } else {
@@ -403,6 +416,7 @@ public class Hosts {
   
   enum HostMapStateListener implements ReplicatedHashMap.Notification<String, Host> {
     INSTANCE;
+    private static final ExecutorService dbActivation = Executors.newFixedThreadPool( 32 );
     
     private String printMap( ) {
       return "\n" + Joiner.on( "\nHosts.values(): " ).join( hostMap.values( ) );
@@ -431,18 +445,25 @@ public class Hosts {
       } else {
         LOG.info( "Hosts.entrySet(): " + hostKey + " => " + host );
         try {
-          if ( host.isLocalHost( ) && Bootstrap.isFinished( ) ) {
+          if ( host.isLocalHost( ) && host.hasDatabase( ) && Bootstrap.isLoaded( ) ) {
             final boolean wasSynched = Databases.isSynchronized( );
-            Threads.enqueue( ServiceConfigurations.createEphemeral( Empyrean.INSTANCE ), new Runnable( ) {
+            final boolean wasVolatile = Databases.isVolatile( );
+            dbActivation.submit( new Runnable( ) {
               
               @Override
               public void run( ) {
-                Host currentHost = Hosts.lookup( hostKey );
-                if ( currentHost != null ) {
-                  BootstrapComponent.SETUP.apply( currentHost );
-                  if ( !wasSynched && Databases.isSynchronized( ) ) {
-                    UpdateEntry.INSTANCE.apply( currentHost );
+                if ( !wasSynched && !Databases.SyncState.SYNCING.isCurrent( ) && !Databases.isSynchronized( ) ) {
+                  if ( Databases.enable( host ) && Databases.isSynchronized( ) ) {
+                    UpdateEntry.INSTANCE.apply( Hosts.lookup( hostKey ) );
                   }
+                } else if ( wasVolatile && Bootstrap.isLoaded( ) && !Databases.ActiveHostSet.ACTIVATED.get( ).contains( hostKey ) ) {
+                  if ( Databases.enable( host ) && !Databases.isVolatile( ) ) {
+                    UpdateEntry.INSTANCE.apply( Hosts.lookup( hostKey ) );
+                  }
+                } else if ( wasVolatile && Bootstrap.isLoaded( ) && !Databases.isVolatile( ) ) {
+                  UpdateEntry.INSTANCE.apply( Hosts.lookup( hostKey ) );
+                } else if ( Bootstrap.isFinished( ) && !Databases.isVolatile( ) ) {
+                  BootstrapComponent.SETUP.apply( Hosts.lookup( hostKey ) );
                 }
               }
             } );
@@ -488,7 +509,7 @@ public class Hosts {
         return Databases.enable( input );
       } else if ( input.hasDatabase( ) && input.hasSynced( ) && !input.isLocalHost( ) ) {
         return Databases.enable( input );
-      } else if ( input.isLocalHost( ) ) {
+      } else if ( input.isLocalHost( ) && !Databases.isSynchronized( ) ) {
         return Databases.enable( input );
       } else {
         return false;
@@ -585,15 +606,23 @@ public class Hosts {
         try {
           for ( final ComponentId c : ShouldLoadRemote.findDependentComponents( compClass, addr ) ) {
             try {
-              final ServiceConfiguration dependsConfig = ServiceConfigurations.lookupByName( c.getClass( ), addr.getHostAddress( ) );
-              Topology.destroy( dependsConfig ).get( );
-            } catch ( final Exception ex ) {
-              LOG.error( ex );
+              for ( final ServiceConfiguration s : Components.lookup( compClass ).services( ) ) {
+                try {
+                  if ( s.getHostName( ).equals( addr.getHostAddress( ) ) ) {
+                    Topology.destroy( s ).get( );
+                  }
+                } catch ( final Exception ex ) {
+                  LOG.error( ex );
+                  Logs.extreme( ).error( ex, ex );
+                }
+              }
+            } catch ( Exception ex ) {
               Logs.extreme( ).error( ex, ex );
             }
           }
         } catch ( final Exception ex ) {
-          LOG.error( ex, ex );
+          LOG.error( ex );
+          Logs.extreme( ).error( ex, ex );
           return false;
         }
         return true;
@@ -831,7 +860,7 @@ public class Hosts {
           public void run( ) {
             try {
               hostMap.start( STATE_INITIALIZE_TIMEOUT );
-              OrderedShutdown.registerShutdownHook( Eucalyptus.class, new Runnable( ) {
+              OrderedShutdown.registerPreShutdownHook( new Runnable( ) {
                 
                 @Override
                 public void run( ) {
@@ -843,7 +872,6 @@ public class Hosts {
                     LOG.error( ex1, ex1 );
                   }
                   try {
-//                    Listeners.deregister( HostBootstrapEventListener.INSTANCE );
                     hostMap.removeNotifier( HostMapStateListener.INSTANCE );
                     try {
                       if ( Hosts.contains( Internets.localHostIdentifier( ) ) ) {
@@ -942,11 +970,11 @@ public class Hosts {
     return Hosts.list( DbFilter.INSTANCE );
   }
   
-  private static final Predicate<Host> filterSyncedDbs       = Predicates.and( DbFilter.INSTANCE, SyncedDbFilter.INSTANCE );
-  private static final Predicate<Host> filterBootedSyncedDbs = Predicates.and( filterSyncedDbs, BootedFilter.INSTANCE );
+  private static final Predicate<Host> FILTER_SYNCED_DBS        = Predicates.and( DbFilter.INSTANCE, SyncedDbFilter.INSTANCE );
+  private static final Predicate<Host> FILTER_BOOTED_SYNCED_DBS = Predicates.and( FILTER_SYNCED_DBS, BootedFilter.INSTANCE );
   
   public static List<Host> listActiveDatabases( ) {
-    return Hosts.list( filterSyncedDbs );
+    return Hosts.list( FILTER_SYNCED_DBS );
   }
   
   private static Host put( final Host newHost ) {
@@ -1032,6 +1060,15 @@ public class Hosts {
     
   }
   
+  enum NameTransform implements Function<Host, String> {
+    INSTANCE;
+    @Override
+    public String apply( final Host input ) {
+      return input.getDisplayName( );
+    }
+    
+  }
+  
   enum GroupAddressTransform implements Function<Host, Address> {
     INSTANCE;
     @Override
@@ -1099,6 +1136,10 @@ public class Hosts {
     return coordinator != null && coordinator.getBindAddress( ).equals( addr );
   }
   
+  public static void failstop( ) {
+    Coordinator.INSTANCE.reset( );
+  }
+  
   public static boolean hasCoordinator( ) {
     return Coordinator.INSTANCE.get( ) != null;
   }
@@ -1109,6 +1150,51 @@ public class Hosts {
   
   public static Host getCoordinator( ) {
     return Coordinator.INSTANCE.get( );
+  }
+  
+  enum JoinShouldWait implements Predicate<Host>, Supplier<Host> {
+    CLOUD_CONTROLLER {
+      @Override
+      public boolean apply( Host input ) {
+        if ( input == null ) {
+          return false;
+        } else if ( !input.hasBootstrapped( ) ) {
+          return true;
+        } else if ( !input.hasSynced( ) ) {
+          return true;
+        } else {
+          return false;
+        }
+      }
+      
+      @Override
+      public Host get( ) {
+        return Coordinator.find( Hosts.listDatabases( ) );
+      }
+    },
+    NON_CLOUD_CONTROLLER {
+      @Override
+      public boolean apply( Host input ) {
+        if ( input == null ) {
+          return true;
+        } else if ( !input.hasBootstrapped( ) ) {
+          return true;
+        } else if ( !input.hasSynced( ) ) {
+          return true;
+        } else {
+          return false;
+        }
+      }
+      
+      @Override
+      public Host get( ) {
+        return Coordinator.find( Hosts.listActiveDatabases( ) );
+      }
+    };
+    
+    public abstract boolean apply( Host input );
+    
+    public abstract Host get( );
   }
   
   private enum Coordinator {
@@ -1126,6 +1212,11 @@ public class Hosts {
         Hosts.put( Hosts.localHost( ) );
       }
     }
+
+    public void reset( ) {
+      currentStartTime.set( Long.MAX_VALUE );
+      initialize( hostMap.values( ) );
+    }
     
     public Boolean isLocalhost( ) {
       Host minHost = get( );
@@ -1140,35 +1231,36 @@ public class Hosts {
     
     public Host get( ) {//GRZE: this needs to use active DBs to avoid db-sync race.
       List<Host> dbHosts = Hosts.listActiveDatabases( );
-      return findCoordinator( dbHosts );
+      return find( dbHosts );
     }
     
     public Host await( ) {//GRZE: this needs to use all DBs to ensure waiting for booting coordinator
-      if ( get( ) != null ) {
-        return get( );
-      } else if ( findCoordinator( Hosts.listDatabases( ) ) == null && BootstrapArgs.isCloudController( ) ) {
-        return Hosts.localHost( );
-      } else {//implies initially findCoordinator()!=null
-        for ( Host h = findCoordinator( Hosts.listDatabases( ) ); h != null && ( !h.hasBootstrapped( ) || !h.hasSynced( ) ); h =
-          findCoordinator( Hosts.listDatabases( ) ) ) {
-          try {
-            LOG.info( "Waiting for cloud coordinator to become ready: " + h );
-            TimeUnit.MILLISECONDS.sleep( 1000 );
-          } catch ( InterruptedException ex ) {
-            Exceptions.maybeInterrupted( ex );
-          }
-        }
-        Host initCoordinator = findCoordinator( Hosts.listDatabases( ) );
-        if ( initCoordinator == null ) {
+      Host coord = get( );
+      if ( !BootstrapArgs.isCloudController( ) ) {
+        Coordinator.loggedWait( JoinShouldWait.NON_CLOUD_CONTROLLER );
+        return JoinShouldWait.NON_CLOUD_CONTROLLER.get( );
+      } else {//if ( BootstrapArgs.isCloudController( ) ) {
+        Coordinator.loggedWait( JoinShouldWait.CLOUD_CONTROLLER );
+        if ( coord == null ) {
           return Hosts.localHost( );
         } else {
-          return initCoordinator;
+          return coord;
         }
-        
       }
     }
     
-    private static Host findCoordinator( List<Host> dbHosts ) {
+    private static void loggedWait( JoinShouldWait waitFunction ) {
+      for ( Host h = waitFunction.get( ); waitFunction.apply( h ); h = waitFunction.get( ) ) {
+        try {
+          LOG.info( "Waiting for cloud coordinator to become ready: " + h );
+          TimeUnit.MILLISECONDS.sleep( 1000 );
+        } catch ( InterruptedException ex ) {
+          Exceptions.maybeInterrupted( ex );
+        }
+      }
+    }
+    
+    private static Host find( List<Host> dbHosts ) {
       Host minHost = null;
       for ( final Host h : dbHosts ) {
         if ( minHost == null ) {
@@ -1192,20 +1284,39 @@ public class Hosts {
     return parent.isVmLocal( ) || ( parent.isHostLocal( ) && isCoordinator( ) );
   }
   
+  enum AwaitDatabase implements Predicate<Host> {
+    INSTANCE;
+    
+    @Override
+    public boolean apply( Host c ) {
+      if ( c != null && ( c.isLocalHost( ) || c.hasBootstrapped( ) ) ) {
+        LOG.info( "Found system view with database: " + c );
+        return false;
+      } else {
+        try {
+          TimeUnit.SECONDS.sleep( 3 );//GRZE: db state check sleep time
+          LOG.info( "Waiting for system view with database..." );
+        } catch ( InterruptedException ex ) {
+          Exceptions.maybeInterrupted( ex );
+        }
+        return true;
+      }
+    }
+    
+  }
+  
   static void awaitDatabases( ) throws InterruptedException {
     if ( !BootstrapArgs.isCloudController( ) ) {
-      while ( list( filterBootedSyncedDbs ).isEmpty( ) ) {
-        TimeUnit.SECONDS.sleep( 3 );
+      while ( list( FILTER_BOOTED_SYNCED_DBS ).isEmpty( ) ) {
+        TimeUnit.SECONDS.sleep( 3 );//GRZE: db state check sleep time
         LOG.info( "Waiting for system view with database..." );
       }
       if ( Databases.shouldInitialize( ) ) {
         doInitialize( );
       }
     } else if ( BootstrapArgs.isCloudController( ) && !Hosts.isCoordinator( ) ) {
-      for ( Host coordinator = Hosts.getCoordinator( ); coordinator == null || ( ( !coordinator.hasSynced( ) || !coordinator.hasBootstrapped( ) ) && !coordinator.isLocalHost( ) ); coordinator = Hosts.getCoordinator( ) ) {
-        TimeUnit.SECONDS.sleep( 3 );
-        LOG.info( "Waiting for system view with database..." );
-      }
+      while ( AwaitDatabase.INSTANCE.apply( Hosts.getCoordinator( ) ) );
+      TimeUnit.SECONDS.sleep( 30 );//GRZE: rejoin backoff
     }
   }
   

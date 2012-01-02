@@ -73,7 +73,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.channel.ChannelDownstreamHandler;
+import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
@@ -111,10 +111,12 @@ import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.ComponentMessages;
+import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.context.ServiceStateException;
 import com.eucalyptus.crypto.util.SslSetup;
 import com.eucalyptus.empyrean.ServiceTransitionType;
 import com.eucalyptus.http.MappingHttpMessage;
@@ -133,8 +135,8 @@ import com.eucalyptus.ws.protocol.SoapHandler;
 import com.eucalyptus.ws.server.NioServerHandler;
 import com.eucalyptus.ws.server.ServiceContextHandler;
 import com.eucalyptus.ws.server.ServiceHackeryHandler;
-import com.eucalyptus.ws.server.Statistics;
 import com.google.common.base.Function;
+import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 import com.google.common.collect.MapMaker;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
@@ -242,14 +244,8 @@ public class Handlers {
   
   //TODO:GRZE: move this crap to Handlers.
   public static Map<String, ChannelHandler> channelMonitors( final TimeUnit unit, final int timeout ) {
-    return new HashMap<String, ChannelHandler>( 4 ) {
-      /**
-       * 
-       */
-      private static final long serialVersionUID = 1L;
-      
+    return new HashMap<String, ChannelHandler>( 3 ) {
       {
-//        put( "state-monitor", new ChannelStateMonitor( ) );
         this.put( "idlehandler", new IdleStateHandler( Handlers.timer, timeout, timeout, timeout, unit ) );
         this.put( "readTimeout", new ReadTimeoutHandler( Handlers.timer, timeout, unit ) );
         this.put( "writeTimeout", new WriteTimeoutHandler( Handlers.timer, timeout, unit ) );
@@ -371,7 +367,7 @@ public class Handlers {
             if ( compId.isAlwaysLocal( ) || Topology.isEnabledLocally( compClass ) ) {
               ctx.sendUpstream( e );
             } else {
-              Handlers.sendError( ctx, e, compClass, request.getServicePath( ) );
+              Handlers.sendRedirect( ctx, e, compClass, request.getServicePath( ) );
             }
           } catch ( final NoSuchElementException ex ) {
             LOG.warn( "Failed to find reverse component mapping for message type: " + msg.getClass( ) );
@@ -409,7 +405,7 @@ public class Handlers {
               ctx.sendUpstream( e );
             } else {
               final Class<? extends ComponentId> compClass = ComponentMessages.lookup( msg );
-              Handlers.sendError( ctx, e, compClass, request.getServicePath( ) );
+              Handlers.sendRedirect( ctx, e, compClass, request.getServicePath( ) );
             }
           } catch ( final Exception ex ) {
             Logs.extreme( ).error( ex, ex );
@@ -421,19 +417,35 @@ public class Handlers {
     
   }
   
-  static void sendError( final ChannelHandlerContext ctx, final ChannelEvent e, final Class<? extends ComponentId> compClass, final String originalPath ) {
+  static void sendRedirect( final ChannelHandlerContext ctx, final ChannelEvent e, final Class<? extends ComponentId> compClass, final String originalPath ) {
     e.getFuture( ).cancel( );
-    HttpResponse response = null;
-    response = new DefaultHttpResponse( HttpVersion.HTTP_1_1, HttpResponseStatus.TEMPORARY_REDIRECT );
-    String redirectUri;
+    String redirectUri = null;
     if ( Topology.isEnabled( compClass ) ) {//have an enabled service, lets use that 
       final URI serviceUri = ServiceUris.remote( Topology.lookup( compClass ) );
       redirectUri = serviceUri.toASCIIString( ) + originalPath.replace( serviceUri.getPath( ), "" );
-    } else {//can't find service info, redirect via clc master
+    } else if ( ComponentIds.lookup( compClass ).isCloudLocal( ) && Topology.isEnabled( Eucalyptus.class ) ) {//treat cloudLocals different because of serivce path.
+      final URI serviceUri = ServiceUris.remote( Topology.lookup( Eucalyptus.class ) );
+      redirectUri = serviceUri.toASCIIString( ).replace( Eucalyptus.INSTANCE.getServicePath( ), "" ) + originalPath.replace( serviceUri.getPath( ), "" );
+    } else if ( Topology.isEnabled( Eucalyptus.class ) ) {//can't find service info, redirect via clc master
       final URI serviceUri = ServiceUris.remote( Topology.lookup( Eucalyptus.class ) );
       redirectUri = serviceUri.toASCIIString( ) + originalPath.replace( serviceUri.getPath( ), "" );
     }
-    response.setHeader( HttpHeaders.Names.LOCATION, redirectUri );
+    HttpResponse response = null;
+    if ( redirectUri == null ) {
+      response = new DefaultHttpResponse( HttpVersion.HTTP_1_1, HttpResponseStatus.SERVICE_UNAVAILABLE );
+      if ( Logs.isDebug( ) ) {
+        String errorMessage = "Failed to lookup service for " + Components.lookup( compClass ).getName( )
+          + " for path "
+          + originalPath
+          + ".\nCurrent state: \n\t"
+          + Joiner.on( "\n\t" ).join( Topology.enabledServices( ) );
+        byte[] errorBytes = Exceptions.string( new ServiceStateException( errorMessage ) ).getBytes( );
+        response.setContent( ChannelBuffers.wrappedBuffer( errorBytes ) );
+      }
+    } else {
+      response = new DefaultHttpResponse( HttpVersion.HTTP_1_1, HttpResponseStatus.TEMPORARY_REDIRECT );
+      response.setHeader( HttpHeaders.Names.LOCATION, redirectUri );
+    }
     final ChannelFuture writeFuture = Channels.future( ctx.getChannel( ) );
     writeFuture.addListener( ChannelFutureListener.CLOSE );
     if ( ctx.getChannel( ).isConnected( ) ) {

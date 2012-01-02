@@ -163,11 +163,11 @@ public class VerifyMetadata {
         LOG.debug( "disabled values: " + Joiner.on( "\n" ).join( Clusters.getInstance( ).listValues( ) ) );
         throw new VerificationException( "Not enough resources: no cluster controller is currently available to run instances." );
       } else if ( Partitions.exists( zoneName ) ) {
-        Partition partition = Partitions.lookupService( ClusterController.class, zoneName ).lookupPartition( );
+        Partition partition = Partitions.lookupByName( zoneName );
         allocInfo.setPartition( partition );
       } else if ( "default".equals( zoneName ) ) {
         String defaultZone = Clusters.getInstance( ).listValues( ).get( 0 ).getPartition( );
-        Partition partition = Partitions.lookupService( ClusterController.class, defaultZone ).lookupPartition( );
+        Partition partition = Partitions.lookupByName( defaultZone );
         allocInfo.setPartition( partition );
       } else {
         throw new VerificationException( "Not enough resources: no cluster controller is currently available to run instances." );
@@ -184,13 +184,13 @@ public class VerifyMetadata {
       RunInstancesType msg = allocInfo.getRequest( );
       String imageId = msg.getImageId( );
       VmType vmType = allocInfo.getVmType( );
-      Partition partition = allocInfo.getPartition( );
       try {
-        BootableSet bootSet = Emis.newBootableSet( vmType, partition, imageId );
+        BootableSet bootSet = Emis.newBootableSet( imageId );
         allocInfo.setBootableSet( bootSet );
         
         // Add (1024L * 1024L * 10) to handle NTFS min requirements.
-        if ( Platform.windows.equals( bootSet.getMachine( ).getPlatform( ) ) && bootSet.getMachine( ).getImageSizeBytes( ) > ( ( 1024L * 1024L * 1024L * vmType.getDisk( ) ) + ( 1024L * 1024L * 10 ) ) ) {
+        if ( bootSet.isBlockStorage( ) ) {
+        } else if ( Platform.windows.equals( bootSet.getMachine( ).getPlatform( ) ) && bootSet.getMachine( ).getImageSizeBytes( ) > ( ( 1024L * 1024L * 1024L * vmType.getDisk( ) ) + ( 1024L * 1024L * 10 ) ) ) {
           throw new VerificationException( "Unable to run instance " + bootSet.getMachine( ).getDisplayName( ) +
                                            " in which the size " + bootSet.getMachine( ).getImageSizeBytes( ) +
                                            " bytes of the instance is greater than the vmType " + vmType.getDisplayName( ) + " size " + vmType.getDisk( )
@@ -201,12 +201,12 @@ public class VerifyMetadata {
                     " bytes of the instance is greater than the vmType " + vmType.getDisplayName( ) + " size " + vmType.getDisk( )
                     + " GB." );
         }
-      } catch ( AuthException ex ) {
-        LOG.error( ex );
-        throw new VerificationException( ex );
       } catch ( MetadataException ex ) {
         LOG.error( ex );
-        throw new VerificationException( ex );
+        throw ex;
+      } catch ( RuntimeException ex ) {
+        LOG.error( ex );
+        throw new VerificationException( "Failed to verify references for request: " + msg.toSimpleString( ) + " because of: " + ex.getMessage( ), ex );
       }
       return true;
     }

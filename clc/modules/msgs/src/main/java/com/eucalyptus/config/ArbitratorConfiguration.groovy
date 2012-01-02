@@ -89,7 +89,6 @@ public class ArbitratorConfiguration extends ComponentConfiguration implements S
   @Transient
   private static String DEFAULT_SERVICE_PATH = "/services/Arbitrator";
   
-  @Transient
   @ConfigurableIdentifier
   private String                propertyPrefix;
   
@@ -125,9 +124,5 @@ public class ArbitratorConfiguration extends ComponentConfiguration implements S
     this.gatewayHost = gatewayHost;
   }
   
-  @Override
-  public Boolean isVmLocal( ) {
-    return true;
-  }
 }
 

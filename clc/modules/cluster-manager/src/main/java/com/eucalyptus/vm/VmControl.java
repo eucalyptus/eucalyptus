@@ -63,7 +63,6 @@
 
 package com.eucalyptus.vm;
 
-import java.security.AccessControlException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
@@ -71,39 +70,35 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import javax.persistence.EntityTransaction;
-import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 import org.mule.RequestContext;
-import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.cloud.CloudMetadatas;
 import com.eucalyptus.cloud.ImageMetadata;
 import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.run.AdmissionControl;
 import com.eucalyptus.cloud.run.Allocations;
+import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.cloud.run.ClusterAllocator;
 import com.eucalyptus.cloud.run.VerifyMetadata;
-import com.eucalyptus.cloud.run.Allocations.Allocation;
-import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.callback.ConsoleOutputCallback;
 import com.eucalyptus.cluster.callback.PasswordDataCallback;
 import com.eucalyptus.cluster.callback.RebootCallback;
+import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
-import com.eucalyptus.context.IllegalContextAccessException;
 import com.eucalyptus.context.ServiceContext;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
-import com.eucalyptus.network.NetworkGroup;
+import com.eucalyptus.images.BlockStorageImageInfo;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.async.AsyncRequests;
@@ -114,7 +109,6 @@ import com.eucalyptus.vm.VmInstance.Reason;
 import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstance.VmStateSet;
 import com.eucalyptus.vm.VmInstances.TerminatedInstanceException;
-import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.Iterables;
@@ -171,10 +165,10 @@ public class VmControl {
   
   public static RunInstancesResponseType runInstances( RunInstancesType request ) throws Exception {
     RunInstancesResponseType reply = request.getReply( );
-    Allocation allocInfo = Allocations.begin( request );
+    Allocation allocInfo = Allocations.run( request );
     EntityTransaction db = Entities.get( VmInstance.class );
     try {
-      Predicates.and( VerifyMetadata.get( ), AdmissionControl.get( ) ).apply( allocInfo );
+      Predicates.and( VerifyMetadata.get( ), AdmissionControl.run( ) ).apply( allocInfo );
       allocInfo.commit( );
       
       ReservationInfoType reservation = new ReservationInfoType( allocInfo.getReservationId( ),
@@ -187,7 +181,7 @@ public class VmControl {
       }
       db.commit( );
     } catch ( Exception ex ) {
-      LOG.trace( ex, ex );
+      LOG.error( ex, ex );
       db.rollback( );
       allocInfo.abort( );
       throw ex;
@@ -198,13 +192,13 @@ public class VmControl {
   
   public DescribeInstancesResponseType describeInstances( final DescribeInstancesType msg ) throws EucalyptusCloudException {
     final DescribeInstancesResponseType reply = ( DescribeInstancesResponseType ) msg.getReply( );
-    final ArrayList<String> instancesSet = msg.getInstancesSet( );
-    
+    Context ctx = Contexts.lookup( );
+    boolean showAll = msg.getInstancesSet( ).remove( "*" );
+    final ArrayList<String> instancesSet = msg.getInstancesSet( );    
     final Multimap<String, RunningInstancesItemType> instanceMap = TreeMultimap.create( );
     final Map<String, ReservationInfoType> reservations = Maps.newHashMap( );
     Predicate<VmInstance> filter = CloudMetadatas.filterPrivilegesById( msg.getInstancesSet( ) );
-    Context ctx = Contexts.lookup( );
-    OwnerFullName ownerFullName = ctx.hasAdministrativePrivileges( )
+    OwnerFullName ownerFullName = ( ctx.hasAdministrativePrivileges( ) && showAll )
       ? null
       : ctx.getUserFullName( ).asAccountFullName( );
     try {
@@ -218,7 +212,7 @@ public class VmControl {
           if ( instanceMap.put( v.getReservationId( ), VmInstances.transform( v ) ) && !reservations.containsKey( v.getReservationId( ) ) ) {
             reservations.put( v.getReservationId( ), new ReservationInfoType( v.getReservationId( ), v.getOwner( ).getAccountNumber( ), v.getNetworkNames( ) ) );
           }
-          db.commit( );
+          db.rollback( );
         } catch ( Exception ex ) {
           Logs.exhaust( ).error( ex, ex );
           db.rollback( );
@@ -275,9 +269,9 @@ public class VmControl {
                 oldCode = vm.getState( ).getCode( );
                 oldState = vm.getState( ).getName( );
                 if ( VmState.STOPPED.apply( vm ) ) {
-                  newCode = VmState.STOPPED.getCode( );
-                  newState = VmState.STOPPED.getName( );
-                  VmInstances.stopped( vm );
+                  newCode = VmState.TERMINATED.getCode( );
+                  newState = VmState.TERMINATED.getName( );
+                  VmInstances.terminated( vm );
                 } else if ( VmStateSet.RUN.apply( vm ) ) {
                   newCode = VmState.SHUTTING_DOWN.getCode( );
                   newState = VmState.SHUTTING_DOWN.getName( );
@@ -290,25 +284,27 @@ public class VmControl {
                   oldState = newState = VmState.TERMINATED.getName( );
                   VmInstances.delete( vm );
                 }
+                results.add( new TerminateInstancesItemType( instanceId, oldCode, oldState, newCode, newState ) );
               } catch ( final TerminatedInstanceException e ) {
                 oldCode = newCode = VmState.TERMINATED.getCode( );
                 oldState = newState = VmState.TERMINATED.getName( );
                 VmInstances.delete( instanceId );
+                results.add( new TerminateInstancesItemType( instanceId, oldCode, oldState, newCode, newState ) );
               } catch ( final NoSuchElementException e ) {
-                     }
-                   results.add( new TerminateInstancesItemType( instanceId, oldCode, oldState, newCode, newState ) );
-                   db.commit( );
-                 } catch ( final TransactionException e ) {
-                   db.rollback( );
-                 } catch ( final NoSuchElementException e ) {
-                   db.rollback( );
-                 }
-               } catch ( Exception ex ) {
-                 Logs.exhaust( ).error( ex, ex );
-                 db.rollback( );
-               }
-               return true;
-             }
+                LOG.debug( "Ignoring terminate request for non-existant instance: " + instanceId );
+              }
+              db.commit( );
+            } catch ( final TransactionException e ) {
+              db.rollback( );
+            } catch ( final NoSuchElementException e ) {
+              db.rollback( );
+            }
+          } catch ( Exception ex ) {
+            Logs.exhaust( ).error( ex, ex );
+            db.rollback( );
+          }
+          return true;
+        }
       } );
       reply.set_return( !reply.getInstancesSet( ).isEmpty( ) );
       return reply;
@@ -331,7 +327,8 @@ public class VmControl {
             if ( RestrictedTypes.filterPrivileged( ).apply( v ) ) {
               final Request<RebootInstancesType, RebootInstancesResponseType> req = AsyncRequests.newRequest( new RebootCallback( v.getInstanceId( ) ) );
               req.getRequest( ).regarding( request );
-              req.dispatch( Topology.lookup( ClusterController.class, v.lookupPartition( ) ) );
+              ServiceConfiguration ccConfig = Topology.lookup( ClusterController.class, v.lookupPartition( ) );
+              req.dispatch( ccConfig );
               return true;
             } else {
               return false;
@@ -377,9 +374,10 @@ public class VmControl {
     } else {
       Cluster cluster = null;
       try {
-        cluster = Clusters.getInstance( ).lookup( v.lookupPartition( ) );
+        ServiceConfiguration ccConfig = Topology.lookup( ClusterController.class, v.lookupPartition( ) );
+        cluster = Clusters.lookup( ccConfig );
       } catch ( final NoSuchElementException e1 ) {
-        throw new EucalyptusCloudException( "Failed to find cluster info for '" + v.lookupPartition( ) + "' related to vm: " + request.getInstanceId( ) );
+        throw new EucalyptusCloudException( "Failed to find cluster info for '" + v.getPartition( ) + "' related to vm: " + request.getInstanceId( ) );
       }
       RequestContext.getEventContext( ).setStopFurtherProcessing( true );
       AsyncRequests.newRequest( new ConsoleOutputCallback( request ) ).dispatch( cluster.getConfiguration( ) );
@@ -426,28 +424,23 @@ public class VmControl {
       EntityTransaction db = Entities.get( VmInstance.class );
       try {//scope for transaction
         final VmInstance vm = RestrictedTypes.doPrivileged( instanceId, VmInstance.class );
-        RunInstancesType runRequest = new RunInstancesType( ) {
-          {
-            this.setMinCount( 1 );
-            this.setMaxCount( 1 );
-            this.setImageId( vm.getImageId( ) );
-            this.setAvailabilityZone( vm.getPartition( ) );
-            this.getGroupSet( ).addAll( vm.getNetworkNames( ) );
-            this.setInstanceType( vm.getVmType( ).getName( ) );
+        if ( VmState.STOPPED.equals( vm.getState( ) ) ) {
+          Allocation allocInfo = Allocations.start( vm );
+          try {//scope for allocInfo
+            AdmissionControl.run( ).apply( allocInfo );
+            vm.setState( VmState.PENDING );
+            ClusterAllocator.get( ).apply( allocInfo );
+            final int oldCode = vm.getState( ).getCode( ), newCode = VmState.PENDING.getCode( );
+            final String oldState = vm.getState( ).getName( ), newState = VmState.PENDING.getName( );
+            reply.getInstancesSet( ).add( new TerminateInstancesItemType( vm.getInstanceId( ), oldCode, oldState, newCode, newState ) );
+            db.commit( );
+          } catch ( Exception ex ) {
+            db.rollback( );
+            allocInfo.abort( );
+            throw ex;
           }
-        };
-        Allocation allocInfo = Allocations.begin( runRequest );
-        try {//scope for allocInfo
-          Predicates.and( VerifyMetadata.get( ), AdmissionControl.get( ) ).apply( allocInfo );
-          ClusterAllocator.get( ).apply( allocInfo );
-          final int oldCode = vm.getState( ).getCode( ), newCode = VmState.PENDING.getCode( );
-          final String oldState = vm.getState( ).getName( ), newState = VmState.PENDING.getName( );
-          reply.getInstancesSet( ).add( new TerminateInstancesItemType( vm.getInstanceId( ), oldCode, oldState, newCode, newState ) );
-          db.commit( );
-        } catch ( Exception ex ) {
+        } else {
           db.rollback( );
-          allocInfo.abort( );
-          throw ex;
         }
       } catch ( Exception ex1 ) {
         LOG.trace( ex1, ex1 );
@@ -469,11 +462,15 @@ public class VmControl {
           try {
             final VmInstance v = VmInstances.lookup( instanceId );
             if ( RestrictedTypes.filterPrivileged( ).apply( v ) ) {
-              final int oldCode = v.getState( ).getCode( ), newCode = VmState.STOPPING.getCode( );
-              final String oldState = v.getState( ).getName( ), newState = VmState.STOPPING.getName( );
-              results.add( new TerminateInstancesItemType( v.getInstanceId( ), oldCode, oldState, newCode, newState ) );
-              if ( VmState.RUNNING.equals( v.getState( ) ) || VmState.PENDING.equals( v.getState( ) ) ) {
-                v.setState( VmState.STOPPING, Reason.USER_STOPPED );
+              if ( v.getBootRecord( ).getMachine( ) instanceof BlockStorageImageInfo ) {
+                final int oldCode = v.getState( ).getCode( ), newCode = VmState.STOPPING.getCode( );
+                final String oldState = v.getState( ).getName( ), newState = VmState.STOPPING.getName( );
+                results.add( new TerminateInstancesItemType( v.getInstanceId( ), oldCode, oldState, newCode, newState ) );
+                if ( VmState.RUNNING.equals( v.getState( ) ) || VmState.PENDING.equals( v.getState( ) ) ) {
+                  v.setState( VmState.STOPPING, Reason.USER_STOPPED );
+                }
+              } else {
+                return false;
               }
             }
             return true;
@@ -565,7 +562,8 @@ public class VmControl {
                                       v.getRuntimeState( ).getBundleTask( ).getBundleId( ),
                                       v.getInstanceId( ) ) );
         
-        final Cluster cluster = Clusters.lookup( v.lookupPartition( ) );
+        ServiceConfiguration ccConfig = Topology.lookup( ClusterController.class, v.lookupPartition( ) );
+        final Cluster cluster = Clusters.lookup( ccConfig );
         
         request.setInstanceId( v.getInstanceId( ) );
         reply.setTask( Bundles.transform( v.getRuntimeState( ).getBundleTask( ) ) );
@@ -614,7 +612,8 @@ public class VmControl {
                           ctx.getUserFullName( ).toString( ),
                           v.getRuntimeState( ).getBundleTask( ).getBundleId( ),
                           v.getInstanceId( ) ).debug( );
-        AsyncRequests.newRequest( Bundles.createCallback( request ) ).dispatch( Topology.lookup( ClusterController.class, v.lookupPartition( ) ) );
+        ServiceConfiguration cluster = Topology.lookup( ClusterController.class, v.lookupPartition( ) );
+        AsyncRequests.newRequest( Bundles.createCallback( request ) ).dispatch( cluster );
       } else {
         throw new EucalyptusCloudException( "Failed to find instance: " + request.getInstanceId( ) );
       }
@@ -641,7 +640,8 @@ public class VmControl {
         throw new NoSuchElementException( "Instance " + request.getInstanceId( ) + " is not in a running state." );
       }
       if ( RestrictedTypes.filterPrivileged( ).apply( v ) ) {
-        cluster = Clusters.lookup( Topology.lookup( ClusterController.class, v.lookupPartition( ) ) );
+        ServiceConfiguration ccConfig = Topology.lookup( ClusterController.class, v.lookupPartition( ) );
+        cluster = Clusters.lookup( ccConfig );
       } else {
         throw new NoSuchElementException( "Instance " + request.getInstanceId( ) + " does not exist." );
       }

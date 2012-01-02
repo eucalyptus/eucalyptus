@@ -95,30 +95,27 @@ static int doInitialize (struct nc_state_t *nc)
 	virNodeInfo ni;
 	long long dom0_min_mem;
 
-	logprintfl(EUCADEBUG, "doInitialized() invoked\n");
-
-	/* set up paths of Eucalyptus commands NC relies on */
-	snprintf (nc->gen_libvirt_cmd_path, MAX_PATH, EUCALYPTUS_GEN_LIBVIRT_XML, nc->home, nc->home);
+	// set up paths of Eucalyptus commands NC relies on
 	snprintf (nc->get_info_cmd_path, MAX_PATH, EUCALYPTUS_GET_XEN_INFO, nc->home, nc->home);
 	snprintf (nc->virsh_cmd_path, MAX_PATH, EUCALYPTUS_VIRSH, nc->home);
 	snprintf (nc->xm_cmd_path, MAX_PATH, EUCALYPTUS_XM);
 	snprintf (nc->detach_cmd_path, MAX_PATH, EUCALYPTUS_DETACH, nc->home, nc->home);
 	strcpy(nc->uri, HYPERVISOR_URI);
 	nc->convert_to_disk = 0;
-        nc->capability = HYPERVISOR_XEN_AND_HARDWARE; // TODO: set to XEN_PARAVIRTUALIZED if on older Xen kernel
-
-        /* check connection is fresh */
-        if (!check_hypervisor_conn()) {
-          return ERROR_FATAL;
+    nc->capability = HYPERVISOR_XEN_AND_HARDWARE; // TODO: set to XEN_PARAVIRTUALIZED if on older Xen kernel
+    
+    // check connection is fresh
+    if (!check_hypervisor_conn()) {
+        return ERROR_FATAL;
 	}
-
-	/* get resources */
+    
+	// get resources
 	if (virNodeGetInfo(nc->conn, &ni)) {
 		logprintfl (EUCAFATAL, "error: failed to discover resources\n");
 		return ERROR_FATAL;
 	}
 
-	/* dom0-min-mem has to come from xend config file */
+	// dom0-min-mem has to come from xend config file
 	s = system_output (nc->get_info_cmd_path);
 	if (get_value (s, "dom0-min-mem", &dom0_min_mem)) {
 		logprintfl (EUCAFATAL, "error: did not find dom0-min-mem in output from %s\n", nc->get_info_cmd_path);
@@ -127,20 +124,17 @@ static int doInitialize (struct nc_state_t *nc)
 	}
 	free (s);
 
-	/* calculate the available memory */
+	// calculate the available memory
 	nc->mem_max = ni.memory/1024 - 32 - dom0_min_mem;
 
-	/* calculate the available cores */
+	// calculate the available cores
 	nc->cores_max = ni.cpus;
 
-	/* let's adjust the values based on the config values */
+	// let's adjust the values based on the config values
 	if (nc->config_max_mem && nc->config_max_mem < nc->mem_max)
 		nc->mem_max = nc->config_max_mem;
 	if (nc->config_max_cores)
 		nc->cores_max = nc->config_max_cores;
-
-	logprintfl(EUCAINFO, "Using %lld cores\n", nc->cores_max);
-	logprintfl(EUCAINFO, "Using %lld memory\n", nc->mem_max);
 
 	return OK;
 }

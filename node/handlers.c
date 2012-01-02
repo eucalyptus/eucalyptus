@@ -79,6 +79,7 @@ permission notice:
 #include <sys/vfs.h> /* statfs */
 #include <signal.h> /* SIGINT */
 #include <linux/limits.h>
+#include <pwd.h> /* getpwuid_r */
 #ifndef MAX_PATH
 #define MAX_PATH 4096
 #endif
@@ -101,6 +102,7 @@ permission notice:
 #define MONITORING_PERIOD (5)
 #define MAX_CREATE_TRYS 5
 #define CREATE_TIMEOUT_SEC 5
+#define PER_INSTANCE_BUFFER_MB 20 // reserve this much extra room (in MB) per instance (for kernel, ramdisk, and metadata overhead)
 
 #ifdef EUCA_COMPILE_TIMESTAMP
 static char * compile_timestamp_str = EUCA_COMPILE_TIMESTAMP;
@@ -126,6 +128,10 @@ const int booting_cleanup_threshold = 60; /* after this many seconds any BOOTING
 const int bundling_cleanup_threshold = 60 * 60; /* after this many seconds any BUNDLING domains will be cleaned up */
 const int createImage_cleanup_threshold = 60 * 60; /* after this many seconds any CREATEIMAGE domains will be cleaned up */
 const int teardown_state_duration = 180; /* after this many seconds in TEARDOWN state (no resources), we'll forget about the instance */
+
+#define MIN_BLOBSTORE_SIZE_MB 10 // even with boot-from-EBS one will need work space for kernel and ramdisk
+#define FS_BUFFER_PERCENT 0.03 // leave 3% extra when deciding on blobstore sizes automatically
+#define WORK_BS_PERCENT 0.33 // give a third of available space to work, the rest to cache
 
 // a NULL-terminated array of available handlers
 static struct handlers * available_handlers [] = {
@@ -601,15 +607,12 @@ void *startup_thread (void * arg)
         logprintfl(EUCAWARN, "[%s] can't determine the host's bitness (assuming 64)\n", instance->instanceId);
         instance->hypervisorBitness = 64;
     }
-    
     instance->combinePartitions = nc_state.convert_to_disk; 
     instance->do_inject_key = nc_state.do_inject_key;
 
-    char xslt_path [1024];
-    snprintf (xslt_path, sizeof (xslt_path), "%s/etc/eucalyptus/libvirt.xsl", nc_state.home);
-    if ((error = create_instance_backing (instance))
-        || (error = gen_instance_xml (instance))
-        || (error = gen_libvirt_xml (instance, xslt_path))) {
+    if ((error = create_instance_backing (instance)) // do the heavy lifting on the disk
+        || (error = gen_instance_xml (instance)) // create euca-specific instance XML file
+        || (error = gen_libvirt_instance_xml (instance))) { // transform euca-specific XML into libvirt XML
         
         logprintfl (EUCAERROR, "[%s] error: failed to prepare images for instance (error=%d)\n", instance->instanceId, error);
         goto shutoff;
@@ -834,48 +837,44 @@ static int init (void)
         *tmp=NULL,
         *pubinterface=NULL;
 	struct stat mystat;
-	struct statfs fs;
 	struct handlers ** h; 
-	long long fs_free_blocks = 0;
-	long long fs_block_size  = 0;
-	long long instances_bytes = 0; // TODO: get this value from instance backing code
-	pthread_t tcb;
 
-	if (initialized>0) /* 0 => hasn't run, -1 => failed, 1 => ok */
+	if (initialized>0) // 0 => hasn't run, -1 => failed, 1 => ok
 		return 0;
 	else if (initialized<0)
 		return 1;
 
 	bzero (&nc_state, sizeof(struct nc_state_t)); // ensure that MAXes are zeroed out
 
-	/* read in configuration - this should be first! */
+	// read in configuration - this should be first!
+
+    // determine home ($EUCALYPTUS)
 	tmp = getenv(EUCALYPTUS_ENV_VAR_NAME);
 	if (!tmp) {
-		nc_state.home[0] = '\0';
+		nc_state.home[0] = '\0'; // empty string means '/'
 		do_warn = 1;
 	} else {
 		strncpy(nc_state.home, tmp, MAX_PATH - 1);
     }
 
-	/* set the minimum log for now */
+	// set the minimum log for now
 	snprintf(log, MAX_PATH, "%s/var/log/eucalyptus/nc.log", nc_state.home);
-	logfile(log, EUCADEBUG, 4);
+	logfile(log, EUCAINFO, 4);
         logprintfl (EUCAINFO, "Eucalyptus node controller initializing %s\n", compile_timestamp_str);
 
 	if (do_warn) 
 		logprintfl (EUCAWARN, "env variable %s not set, using /\n", EUCALYPTUS_ENV_VAR_NAME);
 
-	/* search for the config file */
+	// search for the config file
 	snprintf(configFiles[1], MAX_PATH, EUCALYPTUS_CONF_LOCATION, nc_state.home);
 	if (stat(configFiles[1], &mystat)) {
 		logprintfl (EUCAFATAL, "could not open configuration file %s\n", configFiles[1]);
 		return 1;
 	}
 	snprintf(configFiles[0], MAX_PATH, EUCALYPTUS_CONF_OVERRIDE_LOCATION, nc_state.home);
-
 	logprintfl (EUCAINFO, "NC is looking for configuration in %s,%s\n", configFiles[1], configFiles[0]);
 
-	/* reset the log to the right value */
+	// reset the log level to the requested value
 	tmp = getConfString(configFiles, 2, "LOGLEVEL");
 	i = EUCADEBUG;
 	if (tmp) {
@@ -894,39 +893,86 @@ static int init (void)
 	}
 	logfile(log, i, j);
 
+    { 
+        /* Initialize libvirtd.conf, since some buggy versions of libvirt
+         * require it.  At least two versions of libvirt have had this issue,
+         * most recently the version in RHEL 6.1.  Note that this happens
+         * at each startup of the NC mainly because the location of the
+         * required file depends on the process owner's home directory, which
+         * may change after the initial installation.
+         */
+        char libVirtConf [MAX_PATH];
+        uid_t uid = geteuid();
+        struct passwd *pw;
+        FILE * fd;
+        struct stat lvcstat;
+        pw = getpwuid(uid);
+        errno = 0;
+        if (pw != NULL) {
+            snprintf(libVirtConf, MAX_PATH, "%s/.libvirt/libvirtd.conf", pw->pw_dir);
+            if (access(libVirtConf, R_OK) == -1 && errno == ENOENT) {
+                libVirtConf[strlen(libVirtConf)-strlen("/libvirtd.conf")] = '\0';
+                errno = 0;
+                if (stat(libVirtConf, &lvcstat) == -1 && errno == ENOENT) {
+                    mkdir(libVirtConf, 0755);
+                } else if (errno) {
+                     logprintfl (EUCAINFO, "Failed to stat %s/.libvirt\n", pw->pw_dir);
+                }
+                libVirtConf[strlen(libVirtConf)] = '/';
+                errno = 0;
+                fd = fopen(libVirtConf, "a");
+                if (fd == NULL) {
+                    logprintfl (EUCAINFO, "Failed to open %s, error code %d\n", libVirtConf, errno);
+                } else {
+                    fclose(fd);
+                }
+            } else if (errno) {
+                logprintfl (EUCAINFO, "Failed to access libvirtd.conf, error code %d\n", errno);
+            }
+        } else {
+             logprintfl (EUCAINFO, "Cannot get EUID, not creating libvirtd.conf\n");
+        }
+    }
+
     { // initialize hooks if their directory looks ok
         char dir [MAX_PATH];
         snprintf (dir, sizeof (dir), EUCALYPTUS_NC_HOOKS_DIR, nc_state.home);
         // if 'dir' does not exist, init_hooks() will silently fail, 
         // and all future call_hooks() will silently succeed
         init_hooks (nc_state.home, dir); 
+
+        if (call_hooks (NC_EVENT_PRE_INIT, nc_state.home)) {
+            logprintfl (EUCAFATAL, "hooks prevented initialization\n");
+            return ERROR_FATAL;
+        }
     }
 
-#define GET_VAR_INT(var,name) \
+#define GET_VAR_INT(var,name,def)                   \
         s = getConfString(configFiles, 2, name); \
 	if (s){					\
 		var = atoi(s);\
 		free (s);\
-	}
-	GET_VAR_INT(nc_state.config_max_mem,      CONFIG_MAX_MEM);
-	GET_VAR_INT(nc_state.config_max_disk,     CONFIG_MAX_DISK);
-	GET_VAR_INT(nc_state.config_max_cores,    CONFIG_MAX_CORES);
-	GET_VAR_INT(nc_state.save_instance_files, CONFIG_SAVE_INSTANCES);
-    int disable_injection = 0;
-    GET_VAR_INT(disable_injection, CONFIG_DISABLE_KEY_INJECTION); 
+	} else { \
+        var = def; \
+    }
+	GET_VAR_INT(nc_state.config_max_mem,      CONFIG_MAX_MEM, 0);
+	GET_VAR_INT(nc_state.config_max_cores,    CONFIG_MAX_CORES, 0);
+	GET_VAR_INT(nc_state.save_instance_files, CONFIG_SAVE_INSTANCES, 0);
+    GET_VAR_INT(nc_state.concurrent_disk_ops, CONFIG_CONCURRENT_DISK_OPS, 4);
+    int disable_injection; GET_VAR_INT(disable_injection, CONFIG_DISABLE_KEY_INJECTION, 0); 
     nc_state.do_inject_key = !disable_injection;
-    nc_state.config_network_port = NC_NET_PORT_DEFAULT;
     strcpy(nc_state.admin_user_id, EUCALYPTUS_ADMIN);
-                
-    add_euca_to_path (nc_state.home); // add three eucalyptus directories with executables to PATH of this process
-                
+               
+    // add three eucalyptus directories with executables to PATH of this process
+    add_euca_to_path (nc_state.home); 
+
+    // read in .pem files
 	if (euca_init_cert ()) {
 	  logprintfl (EUCAERROR, "init(): failed to find cryptographic certificates\n");
 	  return ERROR_FATAL;
 	}
 
-	/* from now on we have unrecoverable failure, so no point in
-	 * retrying to re-init */
+	//// from now on we have unrecoverable failure, so no point in retrying to re-init ////
 	initialized = -1;
 
 	hyp_sem = sem_alloc (1, "mutex");
@@ -946,39 +992,13 @@ static int init (void)
 
 	// set default in the paths. the driver will override
 	nc_state.config_network_path[0] = '\0';
-	nc_state.gen_libvirt_cmd_path[0] = '\0';
 	nc_state.xm_cmd_path[0] = '\0';
 	nc_state.virsh_cmd_path[0] = '\0';
 	nc_state.get_info_cmd_path[0] = '\0';
+	snprintf (nc_state.libvirt_xslt_path, MAX_PATH, EUCALYPTUS_LIBVIRT_XSLT, nc_state.home);
 	snprintf (nc_state.rootwrap_cmd_path, MAX_PATH, EUCALYPTUS_ROOTWRAP, nc_state.home);
 
-    // backing store configuration
-    int cache_size_mb = DEFAULT_NC_CACHE_SIZE;
-    int work_size_mb = DEFAULT_NC_WORK_SIZE;
-    GET_VAR_INT(cache_size_mb, CONFIG_NC_CACHE_SIZE);
-    GET_VAR_INT(work_size_mb, CONFIG_NC_WORK_SIZE);
-    char * instance_path = getConfString(configFiles, 2, INSTANCE_PATH);
-
-    if (instance_path == NULL || init_backing_store (instance_path, work_size_mb, cache_size_mb)) {
-        logprintfl (EUCAFATAL, "error: failed to initialize backing store\n");
-        if(instance_path) free(instance_path);
-        return ERROR_FATAL;
-	}
-	if (statfs (instance_path, &fs) == -1) { // TODO: get the values from instance backing code
-		logprintfl(EUCAWARN, "Failed to stat %s\n", instance_path);
-	}  else {
-		nc_state.disk_max = (long long)fs.f_bsize * (long long)fs.f_bavail + instances_bytes; /* max for Euca, not total */
-		nc_state.disk_max /= BYTES_PER_DISK_UNIT;
-		if (nc_state.config_max_disk && nc_state.config_max_disk < nc_state.disk_max)
-			nc_state.disk_max = nc_state.config_max_disk;
-
-		logprintfl (EUCAINFO, "Maximum disk available: %lld (under %s)\n", nc_state.disk_max, instance_path);
-	}
-    if (instance_path) free (instance_path);
-
 	// determine the hypervisor to use
-	
-	//if (get_conf_var(config, CONFIG_HYPERVISOR, &hypervisor)<1) {
 	hypervisor = getConfString(configFiles, 2, CONFIG_HYPERVISOR);
 	if (!hypervisor) {
 		logprintfl (EUCAFATAL, "value %s is not set in the config file\n", CONFIG_HYPERVISOR);
@@ -1001,9 +1021,9 @@ static int init (void)
 	// only load virtio config for kvm
 	if (!strncmp("kvm", hypervisor, CHAR_BUFFER_SIZE) ||
 		!strncmp("KVM", hypervisor, CHAR_BUFFER_SIZE)) {
-		GET_VAR_INT(nc_state.config_use_virtio_net, CONFIG_USE_VIRTIO_NET);
-		GET_VAR_INT(nc_state.config_use_virtio_disk, CONFIG_USE_VIRTIO_DISK);
-		GET_VAR_INT(nc_state.config_use_virtio_root, CONFIG_USE_VIRTIO_ROOT);
+		GET_VAR_INT(nc_state.config_use_virtio_net, CONFIG_USE_VIRTIO_NET, 0);
+		GET_VAR_INT(nc_state.config_use_virtio_disk, CONFIG_USE_VIRTIO_DISK, 0);
+		GET_VAR_INT(nc_state.config_use_virtio_root, CONFIG_USE_VIRTIO_ROOT, 0);
 	}
 	free (hypervisor);
 
@@ -1018,8 +1038,178 @@ static int init (void)
 		return ERROR_FATAL;
 	}
 
-	// adopt running instances
+	// now that hypervisor-specific initializers have discovered mem_max and cores_max,
+    // adjust the values based on configuration parameters, if any
+	if (nc_state.config_max_mem && nc_state.config_max_mem < nc_state.mem_max)
+		nc_state.mem_max = nc_state.config_max_mem;
+	if (nc_state.config_max_cores)
+		nc_state.cores_max = nc_state.config_max_cores;
+	logprintfl(EUCAINFO, "physical memory available for instances: %lldMB\n", nc_state.mem_max);
+	logprintfl(EUCAINFO, "virtual cpu cores available for instances: %lld\n", nc_state.cores_max);
+    
+    { // backing store configuration
+        char * instance_path = getConfString(configFiles, 2, INSTANCE_PATH);
+
+        // determine bytes available on the file system to which instance path belongs
+        if (instance_path == NULL) {
+            logprintfl (EUCAFATAL, "error: %s is not set\n", INSTANCE_PATH);
+            return ERROR_FATAL;
+        }
+        struct statfs fs;
+        if (statfs (instance_path, &fs) == -1) { 
+            logprintfl (EUCAERROR, "error: failed to stat %s (%s): %s\n", INSTANCE_PATH, instance_path, strerror(errno));
+            free (instance_path);
+            return ERROR_FATAL;
+        }
+        long long fs_avail_mb = (long long)fs.f_bsize * (long long)(fs.f_bavail/MEGABYTE); // TODO: is 2 petabytes enough?
+        long long fs_size_mb =  (long long)fs.f_bsize * (long long)(fs.f_blocks/MEGABYTE); 
+        if (fs_avail_mb < MIN_BLOBSTORE_SIZE_MB) {
+            logprintfl (EUCAERROR, "error: insufficient available disk space (%d) under %s\n", fs_avail_mb, instance_path);
+            free (instance_path);
+            return ERROR_FATAL;
+        }
+
+        // determine how much is used/available in work and cache areas on the backing store
+        blobstore_meta work_meta, cache_meta;
+        stat_backing_store (instance_path, &work_meta, &cache_meta); // will zero-out work_ and cache_meta
+        long long work_bs_size_mb       = work_meta.blocks_limit  ? (work_meta.blocks_limit / 2048) : (-1L); // convert sectors->MB
+        long long work_bs_allocated_mb  = work_meta.blocks_limit  ? (work_meta.blocks_allocated / 2048) : 0;
+        long long work_bs_reserved_mb   = work_meta.blocks_limit  ? ((work_meta.blocks_locked + work_meta.blocks_unlocked) / 2048) : 0;
+        long long cache_bs_size_mb      = cache_meta.blocks_limit ? (cache_meta.blocks_limit / 2048) : (-1L);
+        long long cache_bs_allocated_mb = cache_meta.blocks_limit ? (cache_meta.blocks_allocated / 2048) : 0;
+        long long cache_bs_reserved_mb  = cache_meta.blocks_limit ? ((cache_meta.blocks_locked + cache_meta.blocks_unlocked) / 2048) : 0;
+
+        // look up configuration file settings for work and cache size
+        long long conf_work_size_mb; GET_VAR_INT(conf_work_size_mb,  CONFIG_NC_WORK_SIZE, -1);
+        long long conf_cache_size_mb; GET_VAR_INT(conf_cache_size_mb, CONFIG_NC_CACHE_SIZE, -1);
+        { // accommodate legacy MAX_DISK setting by converting it
+            int max_disk_gb; GET_VAR_INT(max_disk_gb, CONFIG_MAX_DISK, -1);
+            if (max_disk_gb != -1) {
+                if (conf_work_size_mb == -1) {
+                    logprintfl (EUCAWARN, "warning: using deprecated setting %s for the new setting %s\n", CONFIG_MAX_DISK, CONFIG_NC_WORK_SIZE);
+                    if (max_disk_gb == 0) {
+                        conf_work_size_mb = -1; // change in semantics: 0 used to mean 'unlimited', now 'unset' or -1 means that
+                    } else {
+                        conf_work_size_mb = max_disk_gb * 1024;
+                    }
+                } else {
+                    logprintfl (EUCAWARN, "warning: ignoring deprecated setting %s in favor of the new setting %s\n", CONFIG_MAX_DISK, CONFIG_NC_WORK_SIZE);
+                }
+            }
+        }
+
+        // decide what work and cache sizes should be, based on all the inputs
+        long long work_size_mb = -1;
+        long long cache_size_mb = -1;
+
+        // above all, try to respect user-specified limits for work and cache
+        if (conf_work_size_mb != -1) {
+            if (conf_work_size_mb < MIN_BLOBSTORE_SIZE_MB) {
+                logprintfl (EUCAWARN, "warning: ignoring specified work size (%s=%d) that is below acceptable minimum (%d)\n", 
+                            CONFIG_NC_WORK_SIZE, conf_work_size_mb, MIN_BLOBSTORE_SIZE_MB);
+            } else {
+                if (work_bs_size_mb != -1 && work_bs_size_mb != conf_work_size_mb) {
+                    logprintfl (EUCAWARN, "warning: specified work size (%s=%d) differs from existing work size (%d), will try resizing\n",
+                                CONFIG_NC_WORK_SIZE, conf_work_size_mb, work_bs_size_mb);
+                }
+                work_size_mb = conf_work_size_mb;
+            }
+        }
+        if (conf_cache_size_mb != -1) { // respect user-specified limit
+            if (conf_cache_size_mb < MIN_BLOBSTORE_SIZE_MB) {
+                cache_size_mb = 0; // so it won't be used
+            } else {
+                if (cache_bs_size_mb != -1 && cache_bs_size_mb != conf_cache_size_mb) {
+                    logprintfl (EUCAWARN, "warning: specified cache size (%s=%d) differs from existing cache size (%d), will try resizing\n",
+                                CONFIG_NC_CACHE_SIZE, conf_cache_size_mb, cache_bs_size_mb);
+                }
+                cache_size_mb = conf_cache_size_mb;
+            }
+        }
+
+        // if the user did not specify sizes, try existing blobstores, 
+        // if any, whose limits would have been chosen earlier
+        if (work_size_mb == -1 && work_bs_size_mb != -1)
+            work_size_mb = work_bs_size_mb; 
+        if (cache_size_mb == -1 && cache_bs_size_mb != -1)
+            cache_size_mb = cache_bs_size_mb; 
+        
+        // if the user did not specify either or both of the sizes,
+        // and blobstores do not exist yet, make reasonable choices
+        long long fs_usable_mb = (long long)((double)fs_avail_mb - (double)(fs_avail_mb) * FS_BUFFER_PERCENT);
+        if (work_size_mb == -1 && cache_size_mb == -1) {
+            work_size_mb = (long long)((double)fs_usable_mb * WORK_BS_PERCENT);
+            cache_size_mb = fs_usable_mb - work_size_mb;
+        } else if (work_size_mb == -1) {
+            work_size_mb = fs_usable_mb - cache_size_mb + cache_bs_allocated_mb;
+        } else if (cache_size_mb == -1) {
+            cache_size_mb = fs_usable_mb - work_size_mb + work_bs_allocated_mb;
+        }
+
+        // sanity-check final results
+        if (cache_size_mb < MIN_BLOBSTORE_SIZE_MB)
+            cache_size_mb = 0;
+        if (work_size_mb < MIN_BLOBSTORE_SIZE_MB) {
+            logprintfl (EUCAERROR, "error: insufficient disk space for virtual machines (free space: %dMB, reserved for cache: %dMB)\n", 
+                        work_size_mb, fs_usable_mb, cache_size_mb);
+            free (instance_path);
+            return ERROR_FATAL;
+        }
+        if ((cache_size_mb + work_size_mb - cache_bs_allocated_mb - work_bs_allocated_mb) > fs_avail_mb) {
+            logprintfl (EUCAWARN, "warning: sum of work and cache sizes exceeds available disk space\n");
+        }
+
+        if (init_backing_store (instance_path, work_size_mb, cache_size_mb)) {
+            logprintfl (EUCAFATAL, "error: failed to initialize backing store\n");
+            free (instance_path);
+            return ERROR_FATAL;
+        }
+       
+        // record the work-space limit for max_disk 
+        long long work_size_gb = (long long)(work_size_mb / MB_PER_DISK_UNIT);
+        long long overhead_mb = work_size_gb * PER_INSTANCE_BUFFER_MB; // work_size_gb is also max number of instances
+        long long disk_max_mb = work_size_mb - overhead_mb;
+        nc_state.disk_max = disk_max_mb / MB_PER_DISK_UNIT;
+
+        logprintfl (EUCAINFO, "disk space for instances: %s/work\n", instance_path);
+        logprintfl (EUCAINFO, "                          %06lldMB limit (%.1f%% of the file system) - %lldMB overhead = %lldMB = %lldGB\n",
+                    work_size_mb, 
+                    ((double)work_size_mb/(double)fs_size_mb)*100.0,
+                    overhead_mb,
+                    disk_max_mb,
+                    nc_state.disk_max);
+        logprintfl (EUCAINFO, "                          %06lldMB reserved for use (%.1f%% of limit)\n", 
+                    work_bs_reserved_mb, 
+                    ((double)work_bs_reserved_mb/(double)work_size_mb)*100.0 );
+        logprintfl (EUCAINFO, "                          %06lldMB allocated for use (%.1f%% of limit, %.1f%% of the file system)\n", 
+                    work_bs_allocated_mb, 
+                    ((double)work_bs_allocated_mb/(double)work_size_mb)*100.0,
+                    ((double)work_bs_allocated_mb/(double)fs_size_mb)*100.0 );
+        if (cache_size_mb) {
+            logprintfl (EUCAINFO, "    disk space for cache: %s/cache\n", instance_path);
+            logprintfl (EUCAINFO, "                          %06lldMB limit (%.1f%% of the file system)\n", 
+                        cache_size_mb, 
+                        ((double)cache_size_mb/(double)fs_size_mb)*100.0 );
+            logprintfl (EUCAINFO, "                          %06lldMB reserved for use (%.1f%% of limit)\n", 
+                        cache_bs_reserved_mb,
+                        ((double)cache_bs_reserved_mb/(double)cache_size_mb)*100.0 );
+            logprintfl (EUCAINFO, "                          %06lldMB allocated for use (%.1f%% of limit, %.1f%% of the file system)\n", 
+                        cache_bs_allocated_mb, 
+                        ((double)cache_bs_allocated_mb/(double)cache_size_mb)*100.0,
+                        ((double)cache_bs_allocated_mb/(double)fs_size_mb)*100.0 );
+        } else {
+            logprintfl (EUCAWARN, "warning: disk cache will not be used\n");
+        }
+        free (instance_path);
+    }
+
+	// adopt running instances -- do this before disk integrity check so we know what can be purged
 	adopt_instances();
+
+    if (check_backing_store(&global_instances)!=OK) { // integrity check, cleanup of unused instances and shrinking of cache
+        logprintfl (EUCAFATAL, "error: integrity check of the backing store failed");
+        return ERROR_FATAL;
+    }
 
 	// setup the network
 	nc_state.vnetconfig = malloc(sizeof(vnetConfig));
@@ -1056,7 +1246,7 @@ static int init (void)
             pubinterface = strdup("eth0"); 
             if (!pubinterface) {
                 logprintfl(EUCAFATAL, "out of memory!\n"); 
-                return ERROR_FATAL; 
+                initFail = 1;
             }
         } 
     }
@@ -1086,7 +1276,7 @@ static int init (void)
 	if (bridge) free(bridge);
 	if (tmp) free(tmp);
 
-    if(initFail)
+    if (initFail)
         return ERROR_FATAL;
     
 	// set NC helper path
@@ -1133,18 +1323,20 @@ static int init (void)
         }
 	}
     
-	// start the monitoring thread
-	if (pthread_create(&tcb, NULL, monitoring_thread, &nc_state)) {
-		logprintfl (EUCAFATAL, "failed to spawn a monitoring thread\n");
-		return ERROR_FATAL;
-	}
-    
-    if (pthread_detach(tcb)) {
-        logprintfl (EUCAFATAL, "failed to detach the monitoring thread\n");
-        return ERROR_FATAL;
+	{ // start the monitoring thread
+        pthread_t tcb;
+        if (pthread_create(&tcb, NULL, monitoring_thread, &nc_state)) {
+            logprintfl (EUCAFATAL, "failed to spawn a monitoring thread\n");
+            return ERROR_FATAL;
+        }
+        if (pthread_detach(tcb)) {
+            logprintfl (EUCAFATAL, "failed to detach the monitoring thread\n");
+            return ERROR_FATAL;
+        }
     }
 
-    if (call_hooks (NC_EVENT_INIT, NULL)) {
+    // post-init hook
+    if (call_hooks (NC_EVENT_POST_INIT, nc_state.home)) {
         logprintfl (EUCAFATAL, "hooks prevented initialization\n");
         return ERROR_FATAL;
     }

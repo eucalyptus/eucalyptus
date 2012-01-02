@@ -84,7 +84,18 @@ public enum SubDirectory {
   	 }
       }
   },
-  TX( BaseDirectory.HOME, "/var/run/eucalyptus/tx" ),
+  TX( BaseDirectory.HOME, "/var/run/eucalyptus/tx" ) { 
+	@Override
+	protected void assertPermissions() {
+
+	    super.assertPermissions();
+	    try {
+		Groovyness.exec("chmod -R 700 " + this.toString());
+	    } catch (ScriptExecutionFailedException ex) {
+		LOG.error(ex, ex);
+	    }
+	}
+    },
   CLASSCACHE( BaseDirectory.HOME, "/var/run/eucalyptus/classcache" ),
   WWW( BaseDirectory.CONF, "www" ),
   WEBAPPS( BaseDirectory.VAR, "webapps" ),

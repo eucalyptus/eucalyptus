@@ -75,7 +75,6 @@ permission notice:
 
 #include <server-marshal.h>
 #include <handlers.h>
-#include <storage.h>
 #include <vnetwork.h>
 #include <misc.h>
 #include <ipc.h>
@@ -2129,9 +2128,6 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
     
     strncpy(pubip, "0.0.0.0", 32);
     strncpy(privip, "0.0.0.0", 32);
-    //    if (macAddrsLen >= maxCount) {
-    //      strncpy(mac, macAddrs[i], 32);
-    //    }      
 
     sem_mywait(VNET);
     if (nidx == -1) {
@@ -2243,6 +2239,12 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
 	    rc = ncClientCall(ccMeta, OP_TIMEOUT_PERNODE, res->lockidx, res->ncURL, "ncRunInstance", uuid, instId, reservationId, &ncvm, amiId, amiURL, kernelId, kernelURL, ramdiskId, ramdiskURL, ownerId, accountId, keyName, &ncnet, userData, launchIndex, platform, expiryTime, netNames, netNamesLen, &outInst);
 
 	    if (rc) {
+	      // make sure we get the latest topology information before trying again
+	      sem_mywait(CONFIG);
+	      memcpy(ccMeta->services, config->services, sizeof(serviceInfoType) * 16);
+	      memcpy(ccMeta->disabledServices, config->disabledServices, sizeof(serviceInfoType) * 16);
+	      memcpy(ccMeta->notreadyServices, config->notreadyServices, sizeof(serviceInfoType) * 16);
+	      sem_mypost(CONFIG);
 	      sleep(1);
 	    }
 	  }
@@ -2288,7 +2290,8 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
 	  sem_mypost(CONFIG);
 
 	  // add the instance to the cache, and continue on
-	  add_instanceCache(myInstance->instanceId, myInstance);
+	  //	  add_instanceCache(myInstance->instanceId, myInstance);
+	  refresh_instanceCache(myInstance->instanceId, myInstance);
 	  print_ccInstance("RunInstances(): ", myInstance);
 	  
 	  runCount++;
@@ -2813,6 +2816,8 @@ int ccCheckState() {
   char localDetails[1024];
   int ret=0;
   char cmd[MAX_PATH];
+  char buri[MAX_PATH], uriType[32], bhost[MAX_PATH], path[MAX_PATH], curi[MAX_PATH], chost[MAX_PATH];
+  int port, done=0, i, j, rc;
 
   if (!config) {
     return(1);
@@ -2857,10 +2862,36 @@ int ccCheckState() {
   
   // network
 
+  // broker pairing algo
+  for (i=0; i<16; i++) {
+    int j;
+    if (strlen(config->notreadyServices[i].type)) {
+      if (!strcmp(config->notreadyServices[i].type, "vmwarebroker")) {
+	for (j=0; j<8; j++) {
+	  if (strlen(config->notreadyServices[i].uris[j])) {
+	    logprintfl(EUCADEBUG, "ccCheckState(): found broker - %s\n", config->notreadyServices[i].uris[j]);
+	    
+	    snprintf(buri, MAX_PATH, "%s", config->notreadyServices[i].uris[j]);
+	    bzero(bhost, sizeof(char) * MAX_PATH);
+	    rc = tokenize_uri(buri, uriType, bhost, &port, path);
+	    
+	    snprintf(curi, MAX_PATH, "%s", config->ccStatus.serviceId.uris[0]);
+	    bzero(chost, sizeof(char) * MAX_PATH);
+	    rc = tokenize_uri(curi, uriType, chost, &port, path);
+	    logprintfl(EUCADEBUG, "ccCheckState(): comparing found not ready broker host (%s) with local CC host (%s)\n", bhost, chost);
+	    if (!strcmp(chost, bhost)) {
+	      logprintfl(EUCAWARN, "ccCheckState(): detected local broker (%s) matching local CC (%s) in NOTREADY state\n", bhost, chost);
+	      ret++;
+	    }
+	  }
+	}
+      }
+    }
+  }
+
   snprintf(localDetails, 1023, "ERRORS=%d", ret);
-  sem_mywait(CONFIG);
   snprintf(config->ccStatus.details, 1023, "%s", localDetails);
-  sem_mypost(CONFIG);
+  
   return(ret);
 }
 
@@ -3009,18 +3040,16 @@ void *monitor_thread(void *in) {
       }
     }
 
+    // do state checks under CONFIG lock
+    sem_mywait(CONFIG);
     if (ccCheckState()) {
       logprintfl(EUCAERROR, "monitor_thread(): ccCheckState() returned failures\n");
-      sem_mywait(CONFIG);
       config->kick_enabled = 0;
       ccChangeState(NOTREADY);
-      sem_mypost(CONFIG);
     } else if (config->ccState == NOTREADY) {
-      sem_mywait(CONFIG);
       ccChangeState(DISABLED);
-      sem_mypost(CONFIG);
     }
-
+    sem_mypost(CONFIG);
     shawn();
     
     logprintfl(EUCADEBUG, "monitor_thread(localState=%s): done\n", config->ccStatus.localState);

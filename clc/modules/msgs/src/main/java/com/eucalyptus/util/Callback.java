@@ -159,5 +159,7 @@ public interface Callback<R> {
     }
 
     public abstract void fire( );
+
+    public abstract boolean isDone( );
   }
 }

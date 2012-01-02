@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.ExecutionException;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.principal.Principals;
@@ -22,6 +23,7 @@ import com.eucalyptus.entities.Entities;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes;
@@ -62,13 +64,37 @@ public abstract class AbstractSystemAddressManager {
                           "Unassigning orphaned public ip address: " + LogUtil.dumpObject( address ) + " count=" + orphanCount ).warn( );
       try {
         final Address addr = Addresses.getInstance( ).lookup( address.getAddress( ) );
-        if ( addr.isAssigned( ) ) {
-          AsyncRequests.newRequest( new UnassignAddressCallback( address ) ).dispatch( cluster.getConfiguration( ) );
-        } else if ( addr.isSystemOwned( ) ) {
-          addr.release( );
+        if ( addr.isPending( ) ) { 
+          try {
+            addr.clearPending( );
+          } catch ( Exception ex ) {
+          }
         }
-      } catch ( NoSuchElementException e ) {}
-      orphans.remove( address );
+        try {
+          if ( addr.isAssigned( ) && "0.0.0.0".equals( address.getInstanceIp( ) ) ) {
+            addr.unassign( ).clearPending( );
+            if ( addr.isSystemOwned( ) ) {
+              addr.release( );
+            }
+          } else if ( addr.isAssigned( ) && !"0.0.0.0".equals( address.getInstanceIp( ) ) ) {
+            AsyncRequests.newRequest( new UnassignAddressCallback( address ) ).sendSync( cluster.getConfiguration( ) );
+            if ( addr.isSystemOwned( ) ) {
+              addr.release( );
+            }
+          } else if ( !addr.isAssigned( ) && addr.isAllocated( ) && addr.isSystemOwned( ) ) {
+            addr.release( );
+          }
+        } catch ( ExecutionException ex ) {
+          if ( !addr.isAssigned( ) && addr.isAllocated( ) && addr.isSystemOwned( ) ) {
+            addr.release( );
+          }
+        }
+      } catch ( InterruptedException ex ) {
+        Exceptions.maybeInterrupted( ex );
+      } catch ( NoSuchElementException ex ) {
+      } finally {
+        orphans.remove( address );
+      }
     }
   }
 
@@ -114,7 +140,7 @@ public abstract class AbstractSystemAddressManager {
   
   public void update( final Cluster cluster, final List<ClusterAddressInfo> ccList ) {
     if ( !cluster.getState( ).isAddressingInitialized( ) ) {
-      Helper.loadStoredAddresses( cluster );
+      Helper.loadStoredAddresses( );
       cluster.getState( ).setAddressingInitialized( true );
     }
     for ( final ClusterAddressInfo addrInfo : ccList ) {
@@ -177,7 +203,7 @@ public abstract class AbstractSystemAddressManager {
         } else if ( ( addr != null && !addr.isPending( ) ) && ( vm == null ) ) {
           handleOrphan( cluster, addrInfo );
         } else if ( ( addr == null ) && ( vm != null ) ) {
-          addr = new Address( Principals.systemFullName( ), addrInfo.getAddress( ), cluster.getPartition( ), vm.getInstanceId( ), vm.getPrivateAddress( ) );
+          addr = new Address( Principals.systemFullName( ), addrInfo.getAddress( ), vm.getInstanceId( ), vm.getPrivateAddress( ) );
           clearOrphan( addrInfo );
         } else if ( ( addr == null ) && ( vm == null ) ) {
           addr = new Address( addrInfo.getAddress( ), cluster.getPartition( ) );
@@ -288,9 +314,8 @@ public abstract class AbstractSystemAddressManager {
       }
     }
     
-    protected static void loadStoredAddresses( final Cluster cluster ) {
+    protected static void loadStoredAddresses( ) {
       final Address clusterAddr = new Address( );
-      clusterAddr.setCluster( cluster.getPartition( ) );
       final EntityTransaction db = Entities.get( Address.class );
       try {
         for ( Address addr : Entities.query( clusterAddr ) ) {

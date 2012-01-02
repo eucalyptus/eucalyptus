@@ -63,12 +63,16 @@
 
 package com.eucalyptus.cloud.run;
 
+import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
+import com.eucalyptus.auth.Contract;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.blockstorage.Volume;
 import com.eucalyptus.cloud.ResourceToken;
@@ -77,11 +81,11 @@ import com.eucalyptus.cloud.util.NotEnoughResourcesException;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
-import com.eucalyptus.context.IllegalContextAccessException;
-import com.eucalyptus.context.NoSuchContextException;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransientEntityException;
+import com.eucalyptus.images.Emis;
 import com.eucalyptus.images.Emis.BootableSet;
+import com.eucalyptus.keys.KeyPairs;
 import com.eucalyptus.keys.SshKeyPair;
 import com.eucalyptus.network.ExtantNetwork;
 import com.eucalyptus.network.NetworkGroup;
@@ -91,8 +95,8 @@ import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.vm.VmType;
 import com.eucalyptus.vm.VmTypes;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import edu.ucsb.eucalyptus.msgs.HasRequest;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
@@ -102,55 +106,108 @@ public class Allocations {
   
   public static class Allocation implements HasRequest {
     /** to be eliminated **/
-    private final Context             context;
-    private final RunInstancesType    request;
+    private final Context              context;
+    private final RunInstancesType     request;
     /** values determined by the request **/
-    private final UserFullName        ownerFullName;
-    private byte[]                    userData;
-    private final int                 minCount;
-    private final int                 maxCount;
+    private final UserFullName         ownerFullName;
+    private byte[]                     userData;
+    private final int                  minCount;
+    private final int                  maxCount;
     /** verified references determined by the request **/
-    private Partition                 partition;
-    private final List<Volume>        persistentVolumes = Lists.newArrayList( );
-    private final List<Volume>        transientVolumes  = Lists.newArrayList( );
-    private SshKeyPair                sshKeyPair;
-    private BootableSet               bootSet;
-    private VmType                    vmType;
-    private NetworkGroup              primaryNetwork;
-    private Map<String, NetworkGroup> networkGroups;
+    private Partition                  partition;
+    private final List<Volume>         persistentVolumes = Lists.newArrayList( );
+    private final List<Volume>         transientVolumes  = Lists.newArrayList( );
+    private SshKeyPair                 sshKeyPair;
+    private BootableSet                bootSet;
+    private VmType                     vmType;
+    private NetworkGroup               primaryNetwork;
+    private Map<String, NetworkGroup>  networkGroups;
     
     /** intermediate allocation state **/
-    private final String              reservationId;
-    private final List<ResourceToken> allocationTokens  = Lists.newArrayList( );
-    private Long                      reservationIndex;
+    private final String               reservationId;
+    private final List<ResourceToken>  allocationTokens  = Lists.newArrayList( );
+    private final Long                 reservationIndex;
+    private final Map<Integer, String> instanceIds;
+    private final Date                 expiration;
     
-    private Allocation( RunInstancesType request ) {
+    private Allocation( final RunInstancesType request ) {
       super( );
       this.context = Contexts.lookup( );
+      this.instanceIds = Maps.newHashMap( );
       this.request = request;
       this.minCount = request.getMinCount( );
       this.maxCount = request.getMaxCount( );
       this.ownerFullName = this.context.getUserFullName( );
-      if ( this.request.getInstanceType( ) == null || "".equals( this.request.getInstanceType( ) ) ) {
+      if ( ( this.request.getInstanceType( ) == null ) || "".equals( this.request.getInstanceType( ) ) ) {
         this.request.setInstanceType( VmTypes.defaultTypeName( ) );
       }
       this.reservationIndex = UniqueIds.nextIndex( VmInstance.class, ( long ) request.getMaxCount( ) );
       this.reservationId = VmInstances.getId( this.reservationIndex, 0 ).replaceAll( "i-", "r-" );
-      byte[] tmpData = new byte[0];
+      Contract<Date> expiry = this.getContext( ).getContracts( ).get( Contract.Type.EXPIRATION );
+      this.expiration = ( expiry == null ? new Date( 32503708800000l ) : expiry.getValue( ) );
       if ( this.request.getUserData( ) != null ) {
         try {
           this.userData = Base64.decode( this.request.getUserData( ) );
-          this.request.setUserData( new String( Base64.encode( tmpData ) ) );
+          this.request.setUserData( new String( Base64.encode( this.userData ) ) );
         } catch ( Exception e ) {}
       } else {
         try {
-          this.request.setUserData( new String( Base64.encode( tmpData ) ) );
+          this.request.setUserData( new String( Base64.encode(  new byte[0] ) ) );
         } catch ( Exception ex ) {
           LOG.error( ex, ex );
         }
       }
     }
     
+    private Allocation( final String reservationId,
+                        final Integer launchIndex,
+                        final String instanceId,
+                        final byte[] userData,
+                        final Date expiration,
+                        final Partition partition,
+                        final SshKeyPair sshKeyPair,
+                        final BootableSet bootSet,
+                        final VmType vmType,
+                        final Set<NetworkGroup> networkGroups ) {
+      super( );
+      this.context = Contexts.lookup( );
+      this.minCount = 1;
+      this.maxCount = 1;
+      this.ownerFullName = this.context.getUserFullName( );
+      this.reservationId = reservationId;
+      this.reservationIndex = UniqueIds.nextIndex( VmInstance.class, ( long ) this.maxCount );
+      this.instanceIds = Maps.newHashMap( );
+      this.instanceIds.put( launchIndex, instanceId );
+      this.userData = userData;
+      this.partition = partition;
+      this.sshKeyPair = ( sshKeyPair != null ? sshKeyPair : KeyPairs.noKey( ) );
+      this.bootSet = bootSet;
+      this.expiration = expiration;
+      this.vmType = vmType;
+      this.networkGroups = new HashMap<String, NetworkGroup>( ) {
+        {
+          for ( NetworkGroup g : networkGroups ) {
+            if ( Allocation.this.primaryNetwork == null ) {
+              Allocation.this.primaryNetwork = g;
+            }
+            put( g.getDisplayName( ), g );
+          }
+        }
+      };
+      this.request = new RunInstancesType( ) {
+        {
+          this.setMinCount( 1 );
+          this.setMaxCount( 1 );
+          this.setImageId( bootSet.getMachine( ).getDisplayName( ) );
+          this.setAvailabilityZone( partition.getName( ) );
+          this.getGroupSet( ).addAll( Allocation.this.networkGroups.keySet( ) );
+          this.setInstanceType( vmType.getName( ) );
+        }
+      };
+      
+    }
+    
+    @Override
     public RunInstancesType getRequest( ) {
       return this.request;
     }
@@ -160,17 +217,17 @@ public class Allocations {
     }
     
     public ExtantNetwork getExtantNetwork( ) {
-      EntityTransaction db = Entities.get( ExtantNetwork.class );
+      final EntityTransaction db = Entities.get( ExtantNetwork.class );
       try {
-        NetworkGroup net = Entities.merge( this.primaryNetwork );
-        ExtantNetwork ex = net.extantNetwork( );
+        final NetworkGroup net = Entities.merge( this.primaryNetwork );
+        final ExtantNetwork ex = net.extantNetwork( );
         db.commit( );
         return ex;
-      } catch ( TransientEntityException ex ) {
+      } catch ( final TransientEntityException ex ) {
         LOG.error( ex, ex );
         db.rollback( );
         throw new RuntimeException( ex );
-      } catch ( NotEnoughResourcesException ex ) {
+      } catch ( final NotEnoughResourcesException ex ) {
         db.rollback( );
         return ExtantNetwork.bogus( this.getPrimaryNetwork( ) );
       }
@@ -178,22 +235,23 @@ public class Allocations {
     
     public void commit( ) throws Exception {
       try {
-        for ( ResourceToken t : this.getAllocationTokens( ) ) {
+        for ( final ResourceToken t : this.getAllocationTokens( ) ) {
           VmInstance.Create.INSTANCE.apply( t );
         }
-      } catch ( Exception ex ) {
+      } catch ( final Exception ex ) {
         this.abort( );
         throw ex;
       }
     }
     
     public void abort( ) {
-      for ( ResourceToken token : this.allocationTokens ) {
-        EntityTransaction db = Entities.get( VmInstance.class );
+      for ( final ResourceToken token : this.allocationTokens ) {
+        LOG.error( "Aborting resource token: " + token, new RuntimeException( ) );
+        final EntityTransaction db = Entities.get( VmInstance.class );
         try {
           token.abort( );
           db.commit( );
-        } catch ( Exception ex ) {
+        } catch ( final Exception ex ) {
           LOG.warn( ex.getMessage( ) );
           Logs.exhaust( ).error( ex, ex );
           db.rollback( );
@@ -213,11 +271,11 @@ public class Allocations {
       return this.partition;
     }
     
-    public void setBootableSet( BootableSet bootSet ) {
+    public void setBootableSet( final BootableSet bootSet ) {
       this.bootSet = bootSet;
     }
     
-    public void setVmType( VmType vmType ) {
+    public void setVmType( final VmType vmType ) {
       this.vmType = vmType;
     }
     
@@ -249,7 +307,7 @@ public class Allocations {
       return this.context;
     }
     
-    public void setPartition( Partition partition2 ) {
+    public void setPartition( final Partition partition2 ) {
       this.partition = partition2;
     }
     
@@ -265,18 +323,18 @@ public class Allocations {
       return this.sshKeyPair;
     }
     
-    public void setSshKeyPair( SshKeyPair sshKeyPair ) {
+    public void setSshKeyPair( final SshKeyPair sshKeyPair ) {
       this.sshKeyPair = sshKeyPair;
     }
     
-    public void setNetworkRules( Map<String, NetworkGroup> networkRuleGroups ) {
-      Entry<String, NetworkGroup> ent = networkRuleGroups.entrySet( ).iterator( ).next( );
+    public void setNetworkRules( final Map<String, NetworkGroup> networkRuleGroups ) {
+      final Entry<String, NetworkGroup> ent = networkRuleGroups.entrySet( ).iterator( ).next( );
       this.primaryNetwork = ent.getValue( );
       this.networkGroups = networkRuleGroups;
     }
     
     public VmTypeInfo getVmTypeInfo( ) throws MetadataException {
-      return this.bootSet.populateVirtualBootRecord( vmType );
+      return this.bootSet.populateVirtualBootRecord( this.vmType );
     }
     
     public int getMinCount( ) {
@@ -286,9 +344,34 @@ public class Allocations {
     public int getMaxCount( ) {
       return this.maxCount;
     }
+    
+    public String getInstanceId( int index ) {
+      while ( this.instanceIds.size( ) < index + 1 ) {
+        this.instanceIds.put( index, VmInstances.getId( ( long ) this.getReservationIndex( ), index ) );
+      }
+      return this.instanceIds.get( index );
+    }
+    
+    public Date getExpiration( ) {
+      return this.expiration;
+    }
   }
   
-  public static Allocation begin( RunInstancesType request ) {
+  public static Allocation run( final RunInstancesType request ) {
     return new Allocation( request );
+  }
+  
+  public static Allocation start( final VmInstance vm ) {
+    BootableSet bootSet = Emis.recreateBootableSet( vm );
+    return new Allocation( vm.getReservationId( ),
+                           vm.getLaunchIndex( ),
+                           vm.getInstanceId( ),
+                           vm.getUserData( ),
+                           vm.getExpiration( ),
+                           vm.lookupPartition( ),
+                           vm.getKeyPair( ),
+                           bootSet,
+                           vm.getVmType( ),
+                           vm.getNetworkGroups( ) );
   }
 }
