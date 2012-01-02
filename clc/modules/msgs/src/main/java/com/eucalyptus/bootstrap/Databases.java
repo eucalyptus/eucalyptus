@@ -1048,12 +1048,25 @@ public class Databases {
             {
               public Long call( ) throws SQLException
               {
-                Statement statement = context.getConnection( database ).createStatement( );
-                ResultSet resultSet = statement.executeQuery( sql );
-                resultSet.next( );
-                long value = resultSet.getLong( 1 );
-                statement.close( );
-                return value;
+                Statement statement = null;
+                ResultSet resultSet = null;
+                try {
+                  statement = context.getConnection( database ).createStatement( );
+                  resultSet = statement.executeQuery( sql );
+                  resultSet.next( );
+                  long value = resultSet.getLong( 1 );
+                  return value;
+                } catch ( SQLException sqle ) {
+                    LOG.error(sqle);
+                    Logs.extreme( ).error( sqle, sqle );
+                    throw sqle;
+                } finally {
+                    try {
+                      statement.close( );
+                    } catch ( Exception e ) {
+                      LOG.error( e );
+                    }
+                }
               }
             };
             futureMap.put( database, executor.submit( task ) );
