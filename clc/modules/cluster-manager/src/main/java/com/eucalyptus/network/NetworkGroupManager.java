@@ -75,7 +75,7 @@ public class NetworkGroupManager {
   public DescribeSecurityGroupsResponseType describe( final DescribeSecurityGroupsType request ) throws EucalyptusCloudException, MetadataException {
     final DescribeSecurityGroupsResponseType reply = request.getReply( );
     final Context ctx = Contexts.lookup( );
-    boolean showAll = request.getSecurityGroupSet( ).remove( "*" );
+    boolean showAll = request.getSecurityGroupSet( ).remove( "verbose" );
     NetworkGroups.createDefault( ctx.getUserFullName( ) );//ensure the default group exists to cover some old broken installs
    
     final List<String> groupNames = request.getSecurityGroupSet( );

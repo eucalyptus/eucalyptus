@@ -137,7 +137,7 @@ typedef struct vnetConfig_t {
   userEntry users[NUMBER_OF_VLANS];
   networkEntry networks[NUMBER_OF_VLANS];
   publicip publicips[NUMBER_OF_PUBLIC_IPS];
-  char iptables[32768];
+  char iptables[4194304];
 } vnetConfig;
 
 enum {NC, CC, CLC};

@@ -805,12 +805,12 @@ int vnetSaveTablesToMemory(vnetConfig *vnetconfig) {
       // error
     } else {
       // read file
-      bzero(vnetconfig->iptables, 32768);
+      bzero(vnetconfig->iptables, 4194304);
       rbytes = 0;
-      rc = read(fd, vnetconfig->iptables+rbytes, 32767 - rbytes);
-      while(rc > 0 && rbytes <= 32767) {
+      rc = read(fd, vnetconfig->iptables+rbytes, 4194303 - rbytes);
+      while(rc > 0 && rbytes <= 4194303) {
 	rbytes += rc;
-	rc = read(fd, vnetconfig->iptables+rbytes, 32767 - rbytes);
+	rc = read(fd, vnetconfig->iptables+rbytes, 4194303 - rbytes);
       }
       close(fd);
     }

@@ -303,7 +303,7 @@ public class VmRuntimeState {
                         this.getVmInstance( ).getInstanceId( ),
                         "" + this.getBundleTask( ).getState( ) ).info( );
       return true;
-    } else if ( BundleState.canceling.name( ).equals( this.getBundleTaskState( ) ) ) {
+    } else if ( BundleState.canceling.equals( this.getBundleTaskState( ) ) ) {
       EventRecord.here( VmRuntimeState.class, EventType.BUNDLE_CANCELLED, this.vmInstance.getOwner( ).toString( ), this.getBundleTask( ).getBundleId( ),
                         this.getVmInstance( ).getInstanceId( ),
                         "" + this.getBundleTask( ).getState( ) ).info( );
