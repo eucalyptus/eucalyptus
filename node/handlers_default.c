@@ -548,11 +548,11 @@ static int xen_detach_helper (struct nc_state_t *nc, char *instanceId, char *loc
             logprintfl(EUCAERROR, "'<target dev' not found in the device xml\n");     
             return -1;
         }
-	snprintf(devReal, 32, tmp+strlen("dev=\""));
+        snprintf(devReal, 32, "%s", tmp+strlen("dev=\""));
         for(int i=0;i<32; i++){
 	     if(devReal[i]=='\"'){
                 for(;i<32; i++)
-		      devReal[i] = NULL;
+		      devReal[i] = '\0';
 	     }
         }	
 
