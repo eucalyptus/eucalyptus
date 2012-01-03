@@ -66,40 +66,14 @@ public class StatefulMessageSet<E extends Enum<E>> {
         this.pendingEvents.addAll( Lists.transform( Clusters.getInstance( ).listValues( ), new Function<Cluster, CheckedListenableFuture>( ) {
           @Override
           public CheckedListenableFuture apply( final Cluster c ) {
-            EventRecord.caller(
-              StatefulMessageSet.class,
-              EventType.VM_STARTING,
-              state.name( ),
-              c.getName( ),
-              event.getClass( ).getSimpleName( ),
-              event.getRequest( ).toSimpleString( ) ).info( );
-            EventRecord.caller(
-              StatefulMessageSet.class,
-              EventType.VM_STARTING,
-              state.name( ),
-              c.getName( ),
-              event.getClass( ).getSimpleName( ),
-              event.getRequest( ) ).debug( );
+            LOG.debug( "VM_STARTING: " + state.name( ) + " " + c.getName( ) + " " + event.getClass( ).getSimpleName( ) + " " + event.getCallback( ) );
             final Request request = AsyncRequests.newRequest( callback.newInstance( ) );
             request.getRequest( ).regardingUserRequest( callback.getRequest( ) );
             return request.dispatch( c.getConfiguration( ) );
           }
         } ) );
       } else {
-        EventRecord.caller(
-          StatefulMessageSet.class,
-          EventType.VM_STARTING,
-          state.name( ),
-          this.cluster.getName( ),
-          event.getClass( ).getSimpleName( ),
-          event.getRequest( ).toSimpleString( ) ).info( );
-        EventRecord.caller(
-          StatefulMessageSet.class,
-          EventType.VM_STARTING,
-          state.name( ),
-          this.cluster.getName( ),
-          event.getClass( ).getSimpleName( ),
-          event.getRequest( ) ).debug( );
+        LOG.debug( "VM_STARTING: " + state.name( ) + " " + this.cluster.getName( ) + " " + event.getClass( ).getSimpleName( ) + " " + event.getCallback( ) );
         this.pendingEvents.add( event.dispatch( this.cluster.getConfiguration( ) ) );
       }
     }

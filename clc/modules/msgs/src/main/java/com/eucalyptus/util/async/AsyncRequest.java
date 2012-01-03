@@ -4,6 +4,7 @@ import java.util.NoSuchElementException;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import org.apache.log4j.Logger;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.component.Partitions;
@@ -21,6 +22,7 @@ import com.google.common.collect.Iterables;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implements Request<Q, R> {
+  private static Logger                     LOG = Logger.getLogger( AsyncRequest.class );
   private final Callback.TwiceChecked<Q, R> wrapperCallback;
   private final CheckedListenableFuture<R>  requestResult;
   private final CheckedListenableFuture<R>  result;
@@ -123,12 +125,14 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
       try {
         serviceConfig = Topology.lookup( ClusterController.class, partition );
       } catch ( Exception ex ) {
-        Iterable<ServiceConfiguration> serviceInPartition = Iterables.filter( Components.lookup( ClusterController.class ).services( ), ServiceConfigurations.filterByPartition( partition ) );
+        Iterable<ServiceConfiguration> serviceInPartition = Iterables.filter(
+          Components.lookup( ClusterController.class ).services( ),
+          ServiceConfigurations.filterByPartition( partition ) );
         if ( serviceInPartition.iterator( ).hasNext( ) ) {
-          serviceConfig = serviceInPartition.iterator( ).next( ); 
+          serviceConfig = serviceInPartition.iterator( ).next( );
         }
       }
-    } 
+    }
     if ( serviceConfig == null ) {
       serviceConfig = ServiceConfigurations.lookupByName( ClusterController.class, clusterOrPartition );
     }
@@ -160,13 +164,22 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
       
       @Override
       public CheckedListenableFuture<R> call( ) throws Exception {
-        return AsyncRequest.this.execute( serviceConfig ).getResponse( );
+        try {
+          Request<Q, R> execute = AsyncRequest.this.execute( serviceConfig );
+          return execute.getResponse( );
+        } catch ( Exception ex ) {
+          AsyncRequest.this.result.setException( ex );
+          LOG.error( ex );
+          Logs.extreme( ).error( ex, ex );
+          throw ex;
+        }
       }
     };
     try {
       Future<CheckedListenableFuture<R>> res = Threads.enqueue( serviceConfig, call );
       return this.getResponse( );
     } catch ( Exception ex1 ) {
+      LOG.error( ex1 );
       Logs.extreme( ).error( ex1, ex1 );
       Future<CheckedListenableFuture<R>> res = Threads.lookup( Empyrean.class,
                                                                AsyncRequest.class,
@@ -228,9 +241,10 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
     } catch ( Exception e ) {
       Logs.extreme( ).error( e.getMessage( ), e );
       RequestException ex = ( e instanceof RequestException )
-        ? ( RequestException ) e
-        : new RequestInitializationException( this.wrapperCallback.getClass( ).getSimpleName( ) + " failed: "
-                                              + e.getMessage( ), e, this.getRequest( ) );
+                                                             ? ( RequestException ) e
+                                                             : new RequestInitializationException( this.wrapperCallback.getClass( ).getSimpleName( )
+                                                                                                   + " failed: "
+                                                                                                   + e.getMessage( ), e, this.getRequest( ) );
       this.result.setException( ex );
       throw ex;
     }
