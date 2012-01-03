@@ -111,7 +111,7 @@ public class AssignAddressCallback extends MessageCallback<AssignAddressType, As
   
   @Override
   public void initialize( AssignAddressType msg ) {
-    EventRecord.here( AssignAddressCallback.class, EventType.ADDRESS_ASSIGNING, Transition.assigning.toString( ), address.toString( ) ).debug( );
+    LOG.debug( this.address.toString( ) );
   }
   
   @Override

@@ -262,6 +262,7 @@ public class ClusterAllocator implements Runnable {
     if ( net != null ) {
       final Request callback = AsyncRequests.newRequest( new StartNetworkCallback( this.allocInfo.getExtantNetwork( ) ) );
       this.messages.addRequest( State.CREATE_NETWORK, callback );
+      LOG.debug( "Queued StartNetwork: " + callback );
       EventRecord.here( ClusterAllocator.class, EventType.VM_PREPARE, callback.getClass( ).getSimpleName( ), net.toString( ) ).debug( );
     }
   }
@@ -281,6 +282,7 @@ public class ClusterAllocator implements Runnable {
       final VmTypeInfo childVmInfo = this.makeVmTypeInfo( vmInfo, token.getLaunchIndex( ), root );
       cb = this.makeRunRequest( token, childVmInfo, networkName );
       this.messages.addRequest( State.CREATE_VMS, cb );
+      LOG.debug( "Queued RunInstances: " + token );
     } catch ( final Exception ex ) {
       Logs.extreme( ).error( ex, ex );
       throw ex;
