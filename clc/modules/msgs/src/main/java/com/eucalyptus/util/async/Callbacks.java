@@ -68,10 +68,6 @@ public class Callbacks {
       R reply = null;
       try {
         reply = this.future.get( );
-        if ( reply == null ) {
-          this.log.warn( "Application of callback resulted in null value: " + this.getClass( ).getSimpleName( ) );
-          Exceptions.trace( "Callback marked as done has null valued response: " + reply );
-        }
         try {
           EventRecord.here( this.getClass( ), EventType.CALLBACK, "fire(" + reply.getClass( ).getSimpleName( ) + ")" ).exhaust( );
           this.callback.fire( reply );
