@@ -1528,7 +1528,7 @@ int refresh_instances(ncMetadata *ccMeta, int timeout, int dolock) {
 		}
 		bzero(myInstance, sizeof(ccInstance));
 	      }
-
+	      
 	      // update CC instance with instance state from NC 
 	      rc = ccInstance_to_ncInstance(myInstance, ncOutInsts[j]);
 	      
@@ -4614,8 +4614,15 @@ int refresh_instanceCache(char *instanceId, ccInstance *in){
   for (i=0; i<MAXINSTANCES && !done; i++) {
     if (!strcmp(instanceCache->instances[i].instanceId, instanceId)) {
       // in cache
-      memcpy(&(instanceCache->instances[i]), in, sizeof(ccInstance));
-      instanceCache->lastseen[i] = time(NULL);
+      // give precedence to instances that are in Extant/Pending over expired instances, when info comes from two different nodes
+      if (strcmp(in->serviceTag, instanceCache->instances[i].serviceTag) && strcmp(in->state, instanceCache->instances[i].state) && !strcmp(in->state, "Teardown")) {
+	// skip
+	logprintfl(EUCADEBUG, "refresh_instanceCache(): skipping cache refresh with instance in Teardown (instance with non-Teardown from different node already cached)\n");
+      } else {
+	// update cached instance info
+	memcpy(&(instanceCache->instances[i]), in, sizeof(ccInstance));
+	instanceCache->lastseen[i] = time(NULL);
+      }
       sem_mypost(INSTCACHE);
       return(0);
     }
