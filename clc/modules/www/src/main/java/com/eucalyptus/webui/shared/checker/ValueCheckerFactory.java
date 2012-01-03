@@ -105,7 +105,10 @@ public class ValueCheckerFactory {
 
       @Override
       public String check( String value ) throws InvalidValueException {
-        if ( value != null && !value.startsWith( "/" ) ) {
+        if ( Strings.isNullOrEmpty( value ) ) {
+          throw new InvalidValueException( "Path can not be empty" );
+        }
+        if ( !value.startsWith( "/" ) ) {
           throw new InvalidValueException( "Path must start with /" );
         }
         for ( int i = 0; i < value.length( ); i++ ) {

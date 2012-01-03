@@ -523,6 +523,11 @@ public class DetailViewImpl extends Composite implements DetailView {
       @Override
       public void onClick( ClickEvent event ) {
         HasValueWidget widget = getContentWidget( Type.KEYVAL, keyInput.getValue( ), valueInput.getValue( ), true );
+        if ( widget == null ) {
+          // impossible, just to pass static analysis
+          LOG.log( Level.WARNING, "Failed to get content widget" );
+          return;
+        }
         // Always append to the end, but before the new value input row.
         addRow( keyInput.getValue( ), new Label( keyInput.getValue( ) ), widget, currentGrid.getRowCount( ) - 1 );
         keyInput.setValue( NEW_KEY );
