@@ -194,37 +194,40 @@ public class VmInstances {
     
   }
   
+  @ConfigurableField( description = "Number of times to retry transactions in the face of potential concurrent update conflicts.",
+                      initial = "10" )
+  public static final int TX_RETRIES                    = 10;
   @ConfigurableField( description = "Amount of time (in minutes) before a previously running instance which is not reported will be marked as terminated.",
                       initial = "60" )
-  public static Integer INSTANCE_TIMEOUT              = 60;
+  public static Integer   INSTANCE_TIMEOUT              = 60;
   @ConfigurableField( description = "Amount of time (in minutes) before a VM which is not reported by a cluster will be marked as terminated.",
                       initial = "10" )
-  public static Integer SHUT_DOWN_TIME                = 10;
+  public static Integer   SHUT_DOWN_TIME                = 10;
   @ConfigurableField( description = "Amount of time (in minutes) that a terminated VM will continue to be reported.",
                       initial = "60" )
-  public static Integer TERMINATED_TIME               = 60;
+  public static Integer   TERMINATED_TIME               = 60;
   @ConfigurableField( description = "Maximum amount of time (in seconds) that the network topology service takes to propagate state changes.",
                       initial = "" + 60 * 60 * 1000 )
-  public static Long    NETWORK_METADATA_REFRESH_TIME = 15l;
+  public static Long      NETWORK_METADATA_REFRESH_TIME = 15l;
   @ConfigurableField( description = "Prefix to use for instance MAC addresses.",
                       initial = "d0:0d" )
-  public static String  MAC_PREFIX                    = "d0:0d";
+  public static String    MAC_PREFIX                    = "d0:0d";
   @ConfigurableField( description = "Subdomain to use for instance DNS.",
                       initial = ".eucalyptus",
                       changeListener = SubdomainListener.class )
-  public static String  INSTANCE_SUBDOMAIN            = ".eucalyptus";
+  public static String    INSTANCE_SUBDOMAIN            = ".eucalyptus";
   @ConfigurableField( description = "Period (in seconds) between state updates for actively changing state.",
                       initial = "3" )
-  public static Long    VOLATILE_STATE_INTERVAL_SEC   = 3l;
+  public static Long      VOLATILE_STATE_INTERVAL_SEC   = 3l;
   @ConfigurableField( description = "Timeout (in seconds) before a requested instance terminate will be repeated.",
                       initial = "60" )
-  public static Long    VOLATILE_STATE_TIMEOUT_SEC    = 60l;
+  public static Long      VOLATILE_STATE_TIMEOUT_SEC    = 60l;
   @ConfigurableField( description = "Maximum number of threads the system will use to service blocking state changes.",
                       initial = "16" )
-  public static Integer MAX_STATE_THREADS             = 16;
+  public static Integer   MAX_STATE_THREADS             = 16;
   @ConfigurableField( description = "Amount of time (in minutes) before a EBS volume backing the instance is created",
-          initial = "30" )
-  public static Integer EBS_VOLUME_CREATION_TIMEOUT   = 30;
+                      initial = "30" )
+  public static Integer   EBS_VOLUME_CREATION_TIMEOUT   = 30;
   
   public static class SubdomainListener implements PropertyChangeListener {
     @Override
@@ -467,6 +470,29 @@ public class VmInstances {
   }
   
   public static void delete( final String instanceId ) {
+    try {
+      Entities.asTransaction( VmInstance.class, new Function<String, String>( ) {
+        
+        @Override
+        public String apply( String input ) {
+          EntityTransaction db = Entities.get( VmInstance.class );
+          try {
+            VmInstance entity = Entities.uniqueResult( VmInstance.named( null, input ) );
+            entity.cleanUp( );
+            Entities.delete( entity );
+            db.commit( );
+          } catch ( final Exception ex ) {
+            LOG.error( ex );
+            Logs.extreme( ).error( ex, ex );
+            db.rollback( );
+          }
+          return input;
+        }
+      }, VmInstances.TX_RETRIES ).apply( instanceId );
+    } catch ( Exception ex ) {
+      LOG.error( ex );
+      Logs.extreme( ).error( ex, ex );
+    }
     terminateDescribeCache.remove( instanceId );
     terminateCache.remove( instanceId );
   }
@@ -477,7 +503,7 @@ public class VmInstances {
       final RunningInstancesItemType ret = VmInstances.transform( vm );
       terminateDescribeCache.put( vm.getDisplayName( ), ret );
       terminateCache.put( vm.getDisplayName( ), vm );
-      Transitions.DELETE.apply( vm );
+      Entities.asTransaction( VmInstance.class, Transitions.DELETE, VmInstances.TX_RETRIES ).apply( vm );
     }
   }
   
