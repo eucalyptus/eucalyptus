@@ -193,7 +193,7 @@ public class VmControl {
   public DescribeInstancesResponseType describeInstances( final DescribeInstancesType msg ) throws EucalyptusCloudException {
     final DescribeInstancesResponseType reply = ( DescribeInstancesResponseType ) msg.getReply( );
     Context ctx = Contexts.lookup( );
-    boolean showAll = msg.getInstancesSet( ).remove( "*" );
+    boolean showAll = msg.getInstancesSet( ).remove( "verbose" );
     final ArrayList<String> instancesSet = msg.getInstancesSet( );    
     final Multimap<String, RunningInstancesItemType> instanceMap = TreeMultimap.create( );
     final Map<String, ReservationInfoType> reservations = Maps.newHashMap( );

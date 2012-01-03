@@ -241,7 +241,7 @@ public class VolumeManager {
   public DescribeVolumesResponseType DescribeVolumes( DescribeVolumesType request ) throws EucalyptusCloudException {
     DescribeVolumesResponseType reply = ( DescribeVolumesResponseType ) request.getReply( );
     Context ctx = Contexts.lookup( );
-    boolean showAll = request.getVolumeSet( ).remove( "*" );
+    boolean showAll = request.getVolumeSet( ).remove( "verbose" );
     EntityWrapper<Volume> db = EntityWrapper.get( Volume.class );
     try {
       
