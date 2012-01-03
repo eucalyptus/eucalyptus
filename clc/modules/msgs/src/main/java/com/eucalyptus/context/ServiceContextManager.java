@@ -166,7 +166,6 @@ public class ServiceContextManager {
   public static final void restartSync( ) {
     if ( singleton.canHasWrite.tryLock( ) ) {
       try {
-        singleton = null;
         singleton.update( );
       } catch ( final Exception ex ) {
         LOG.error( Exceptions.causeString( ex ) );
