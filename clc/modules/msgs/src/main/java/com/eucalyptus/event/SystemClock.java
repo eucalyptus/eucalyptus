@@ -84,7 +84,7 @@ public class SystemClock extends TimerTask implements UncaughtExceptionHandler {
   private static Logger      LOG   = Logger.getLogger( SystemClock.class );
   
   @ConfigurableField( description = "Amount of time (in milliseconds) before a previously running instance which is not reported will be marked as terminated.",
-                      initial = "60" )
+                      initial = "60", changeListener=ClockRateChangeListener.class )
   public static Long         RATE  = 10000L;
   
   private static SystemClock clock;
@@ -93,7 +93,7 @@ public class SystemClock extends TimerTask implements UncaughtExceptionHandler {
   private static HzClock     hertz;
   private int                phase = 0;
   
-  public static class PortChangeListener implements PropertyChangeListener {
+  public static class ClockRateChangeListener implements PropertyChangeListener {
     @Override
     public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
       try {
