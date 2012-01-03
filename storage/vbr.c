@@ -1809,7 +1809,7 @@ art_implement_tree ( // traverse artifact tree and create/download/combine artif
         create:
             ret = root->creator (root); // create and open this artifact for exclusive use
             if (ret != OK) {
-                logprintfl (EUCAERROR, "[%s] error: failed to create artifact %s (may retry) on try %d\n", root->instanceId, root->id, ret, tries);
+                logprintfl (EUCAERROR, "[%s] error: failed to create artifact %s (error=%d, may retry) on try %d\n", root->instanceId, root->id, ret, tries);
                 // delete the partially created artifact so we can retry with a clean slate
                 if (root->id_is_path) { // artifact is not a blob, but a file
                     unlink (root->id); // attempt to delete, but it may not even exist

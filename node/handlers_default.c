@@ -317,7 +317,7 @@ doTerminateInstance( struct nc_state_t *nc,
 	}
     
 	// change the state and let the monitoring_thread clean up state
-	if (instance->state!=TEARDOWN) { // do not leave TEARDOWN
+	if (instance->state!=TEARDOWN && instance->state!=CANCELED) { // do not leave TEARDOWN (cleaned up) or CANCELED (already trying to terminate)
         if (instance->state==STAGING) {
             change_state (instance, CANCELED);
         } else {
