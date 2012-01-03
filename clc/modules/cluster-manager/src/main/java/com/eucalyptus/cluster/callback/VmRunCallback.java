@@ -97,6 +97,7 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
   
   @Override
   public void initialize( final VmRunType msg ) {
+    Logs.extreme( ).error( "Preparing to send: " + msg );
     try {
       this.token.submit( );
     } catch ( final NoSuchTokenException e2 ) {
@@ -115,13 +116,13 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
       }
       db.commit( );
     } catch ( final Exception e ) {
-      LOG.error( e );
+      LOG.error( e, e );
       Logs.extreme( ).error( e, e );
       db.rollback( );
       try {
         this.token.abort( );
       } catch ( Exception ex ) {
-        LOG.error( ex );
+        LOG.error( ex, ex );
         Logs.extreme( ).error( ex, ex );
       }
       throw new EucalyptusClusterException( "Error while initializing request state: " + this.getRequest( ), e );
@@ -130,10 +131,10 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
   
   @Override
   public void fire( final VmRunResponseType reply ) {
+    Logs.extreme( ).error( reply );
     if ( !reply.get_return( ) ) {
       throw new EucalyptusClusterException( "Failed to run instance: " + this.getRequest( ).getInstanceId( ) );
     }
-    Logs.extreme( ).error( reply );
     Function<VmRunResponseType, Boolean> redeemToken = new Function<VmRunResponseType, Boolean>( ) {
       @Override
       public Boolean apply( final VmRunResponseType reply ) {
