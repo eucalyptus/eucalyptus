@@ -118,6 +118,7 @@ import com.eucalyptus.blockstorage.Snapshot;
 import com.eucalyptus.blockstorage.Volume;
 import com.eucalyptus.blockstorage.State;
 import com.eucalyptus.util.Internets;
+import com.eucalyptus.configurable.StaticDatabasePropertyEntry;
 
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.EntityWrapper;
@@ -182,7 +183,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                       'VMwareBroker' ]
         buildConnectionMap();
         parts.each { this."upgrade${it}"(); }
-                
+         
         // Do object upgrades which follow the entity map / setter map pattern
         buildEntityMap();
         def altEntityMap = [ vm_types:'eucalyptus_general' ];
@@ -212,15 +213,44 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                 LOG.error("Failed to get connection to " + contextName);
             }
         }
+        setDNSProperty();
+        return;
+    }
+
+    private void setDNSProperty() {
+        // XXX: What was the old default here?
+        def oldHome = System.getProperty( "euca.upgrade.old.dir" );
+        String enableInstanceDNS = "false";
+        File eucaConf = new File(oldHome.toString() + "/etc/eucalyptus/eucalyptus.conf");
+        eucaConf.getText().splitEachLine(/\s*=\s*/){ words ->
+            if (words[0] != "DISABLE_DNS") { return }
+            if (words[1].replaceAll("['\"]", "") == "Y") {
+                enableInstanceDNS = "false";
+            } else {
+                enableInstanceDNS = "true";
+            }
+        }
+        EntityWrapper<StaticDatabasePropertyEntry> db = EntityWrapper.get(StaticDatabasePropertyEntry.class);
+        StaticDatabasePropertyEntry dbPropEntry = new StaticDatabasePropertyEntry(
+            "com.eucalyptus.ws.StackConfiguration.USE_INSTANCE_DNS",
+            "bootstrap.webservices.use_instance_dns", null );
+        initMetaClass(dbPropEntry, dbPropEntry.class);
+        dbPropEntry.setValue( enableInstanceDNS );
+        db.add(dbPropEntry);
+        db.commit( );
     }
 
     private Sql getConnection(String contextName) {
         try {
             Sql conn = StandalonePersistence.getConnection(contextName);
+            if (conn == null) {
+                LOG.warning("Connection for ${contextName} is null; this could cause errors.");
+            }
             return conn;
         } catch (SQLException e) {
             LOG.error(e);
-            return null;
+            // return null;
+            throw(e);
         }
     }
 
