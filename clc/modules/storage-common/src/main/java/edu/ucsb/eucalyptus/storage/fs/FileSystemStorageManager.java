@@ -190,11 +190,23 @@ public class FileSystemStorageManager implements StorageManager {
 			throw new IOException("Unable to read: " + path);
 		}
 		BufferedInputStream inputStream = new BufferedInputStream(new FileInputStream(objectFile));
-		if (offset > 0) {
-			inputStream.skip(offset);
+		int bytesRead = 0;
+		try {
+			if (offset > 0) {
+				inputStream.skip(offset);
+			}
+			bytesRead = inputStream.read(bytes);
+		} catch (IOException ex) {
+			LOG.error( ex );
+			Logs.extreme( ).error( ex, ex );
+			throw ex;
+		} finally {
+			try {
+				inputStream.close();
+			} catch (IOException ex) {
+				LOG.error( ex );
+			}
 		}
-		int bytesRead = inputStream.read(bytes);
-		inputStream.close();
 		return bytesRead;
 	}
 
