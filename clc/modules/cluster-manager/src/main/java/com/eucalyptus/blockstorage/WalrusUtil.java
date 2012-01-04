@@ -128,7 +128,7 @@ public class WalrusUtil {
     Document inputSource = null;
     try {
       DocumentBuilder builder = DocumentBuilderFactory.newInstance( ).newDocumentBuilder( );
-      inputSource = builder.parse( new ByteArrayInputStream( Hashes.base64decode( reply.getBase64Data( ) ).getBytes( ) ) );
+      inputSource = builder.parse( new ByteArrayInputStream( Hashes.base64decode( reply.getBase64Data( ) ).getBytes( ) ) );//OMG:WTF:GRZE:what am i doing.
     } catch ( Exception e ) {
       throw new EucalyptusCloudException( "Failed to read manifest file: " + bucketName + "/" + objectName, e );
     }

@@ -84,17 +84,26 @@ import com.google.common.io.Files;
 @Provides( Empyrean.class )
 @RunDuring( Bootstrap.Stage.UserCredentialsInit )
 @DependsLocal( Eucalyptus.class )
-@ConfigurableClass( root = "www", description = "Parameters controlling the web UI's http server." )
+@ConfigurableClass( root = "www",
+                    description = "Parameters controlling the web UI's http server." )
 public class HttpServerBootstrapper extends Bootstrapper {
   private static Logger LOG        = Logger.getLogger( HttpServerBootstrapper.class );
-  @ConfigurableField( description = "Listen to HTTPs on this port.", initial = "" + 8443, changeListener = PortChangeListener.class, displayName = "euca.https.port" )
+  @ConfigurableField( description = "Listen to HTTPs on this port.",
+                      initial = "" + 8443,
+                      changeListener = PortChangeListener.class,
+                      displayName = "euca.https.port" )
   public static Integer HTTPS_PORT = 8443;
-  @ConfigurableField( description = "Listen to HTTP on this port.", initial = "" + 8080, changeListener = PortChangeListener.class, displayName = "euca.http.port" )
+  @ConfigurableField( description = "Listen to HTTP on this port.",
+                      initial = "" + 8080,
+                      changeListener = PortChangeListener.class,
+                      displayName = "euca.http.port" )
   public static Integer HTTP_PORT  = 8080;
   private static Server jettyServer;
-  @ConfigurableField( initial = "", description = "Http Proxy Host" )
+  @ConfigurableField( initial = "",
+                      description = "Http Proxy Host" )
   public static String  httpProxyHost;
-  @ConfigurableField( initial = "", description = "Http Proxy Port" )
+  @ConfigurableField( initial = "",
+                      description = "Http Proxy Port" )
   public static String  httpProxyPort;
   
   private static void setupJettyServer( ) throws Exception {
@@ -120,12 +129,12 @@ public class HttpServerBootstrapper extends Bootstrapper {
         try {
           
           String path = "/var/run/eucalyptus/webapp";
-          File dir = new File(BaseDirectory.HOME + path);
+          File dir = new File( BaseDirectory.HOME + path );
           if ( dir.exists( ) ) {
-            Files.deleteDirectoryContents(dir);
-            dir.delete( ); 
+            Files.deleteDirectoryContents( dir );
+            dir.delete( );
           }
-        
+          
           jettyServer.start( );
         } catch ( Exception e ) {
           LOG.debug( e, e );
@@ -194,12 +203,12 @@ public class HttpServerBootstrapper extends Bootstrapper {
     public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
       LOG.warn( "Change occurred to property " + t.getQualifiedName( ) + " which will restart the servlet container." );
       try {
-		t.getField().set(null, t.getTypeParser().apply(newValue));
-	} catch (IllegalArgumentException e1) {
-		throw new ConfigurablePropertyException(e1);
-	} catch (IllegalAccessException e1) {
-		throw new ConfigurablePropertyException(e1);
-	}
+        t.getField( ).set( null, t.getTypeParser( ).apply( newValue ) );
+      } catch ( IllegalArgumentException e1 ) {
+        throw new ConfigurablePropertyException( e1 );
+      } catch ( IllegalAccessException e1 ) {
+        throw new ConfigurablePropertyException( e1 );
+      }
       if ( jettyServer == null || !Bootstrap.isFinished( ) ) {
         return;
       } else if ( jettyServer.isRunning( ) ) {
