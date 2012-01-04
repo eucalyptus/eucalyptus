@@ -1685,19 +1685,11 @@ int blobstore_fsck (blobstore * bs, int (* examiner) (const blockblob * bb))
                         abb->store = NULL; // so it will get skipped on next iteration
                         blobs_unopenable++;
                     }
-                    
-                    /* TODO: delete this
-                    // remove the loopback files (TODO: ideally, only do this if loopback dev is not used)
-                    char path [PATH_MAX];
-                    set_blockblob_metadata_path (BLOCKBLOB_PATH_LOOPBACK, bs, abb->id, path, sizeof(path)); // load path of .../loopback file
-                    unlink (path);
-                    */
-                } else {
-                    
                 }
             }
             assert (iterations<11);
-            
+            logprintfl (EUCADEBUG, "blobstore_fsck: i=%d to_delete=%d to_delete_prev=%d\n", iterations, to_delete, to_delete_prev);
+
             if (to_delete == 0)
                 break;
             if (to_delete == to_delete_prev) // could not delete anything new this iteration
@@ -2049,30 +2041,30 @@ blockblob * blockblob_open ( blobstore * bs,
                 goto clean;
             }
         }
+
+        // check its in-use status
+        bb->in_use = check_in_use (bs, bb->id, 0);
     }
     
-    // create a loopback device, if there isn't one already (this may happen whether the blob is new or old)
-    char lo_dev [PATH_MAX] = "";
-    _err_off(); // do not care if loopback file does not exist
-    read_blockblob_metadata_path (BLOCKBLOB_PATH_LOOPBACK, bs, bb->id, lo_dev, sizeof (lo_dev));
-    _err_on();
-    if (strlen (lo_dev) > 0) {
+    { // create a loopback device, if there isn't a valid one already (this may happen whether the blob is new or old)
+        char lo_dev [PATH_MAX] = "";
         struct stat sb;
-        if (stat (lo_dev, &sb) == -1) {
-            ERR (BLOBSTORE_ERROR_UNKNOWN, "blockblob loopback device is recorded but does not exist");
-            goto clean;
+
+        _err_off(); // do not care if loopback file does not exist
+        read_blockblob_metadata_path (BLOCKBLOB_PATH_LOOPBACK, bs, bb->id, lo_dev, sizeof (lo_dev));
+        _err_on();
+        if ((strlen (lo_dev) < 1) // nothing in .loopback file
+            || (stat (lo_dev, &sb) == -1) // something in .loopback that does not exist
+            || (!S_ISBLK(sb.st_mode))) {  // something in .loopback that is not block device
+            
+            if (diskutil_loop (bb->blocks_path, 0, lo_dev, sizeof (lo_dev))) {
+                ERR (BLOBSTORE_ERROR_UNKNOWN, "failed to obtain a loopback device for a blockblob");
+                goto clean;
+            }
+            write_blockblob_metadata_path (BLOCKBLOB_PATH_LOOPBACK, bs, bb->id, lo_dev);
         }
-        if (!S_ISBLK(sb.st_mode)) {
-            ERR (BLOBSTORE_ERROR_UNKNOWN, "blockblob loopback path is not a block device");
-            goto clean;
-        }
-    } else {
-        if (diskutil_loop (bb->blocks_path, 0, lo_dev, sizeof (lo_dev))) {
-            ERR (BLOBSTORE_ERROR_UNKNOWN, "failed to obtain a loopback device for a blockblob");
-            goto clean;
-        }
-        write_blockblob_metadata_path (BLOCKBLOB_PATH_LOOPBACK, bs, bb->id, lo_dev);
     }
+    
     set_device_path (bb); // read .dm and .loopback and set bb->device_path accordingly
     
     goto out; // all is well
