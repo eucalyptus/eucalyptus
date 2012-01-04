@@ -93,7 +93,14 @@ public class ResourceState {
   private NavigableSet<ResourceToken>                        redeemedTokens;
   private int                                                virtualTimer;
   private String                                             clusterName;
-  
+  public static class NoSuchTokenException extends Exception {
+
+    public NoSuchTokenException( String message ) {
+      super( message );
+    }
+
+  }
+
   public ResourceState( String clusterName ) {
     this.clusterName = clusterName;
     this.typeMap = new ConcurrentSkipListMap<String, VmTypeAvailability>( );
@@ -118,8 +125,8 @@ public class ResourceState {
       throw new NotEnoughResourcesException( "Not enough resources (" + available + " < " + minAmount + ": vm instances." );
     } else {
       quantity = ( maxAmount < available
-        ? maxAmount
-        : available );
+                                        ? maxAmount
+                                        : available );
     }
     
     Set<VmTypeAvailability> tailSet = sorted.tailSet( vmTypeStatus );
@@ -158,7 +165,7 @@ public class ResourceState {
     if ( this.pendingTokens.remove( token ) ) {
       this.submittedTokens.add( token );
     } else {
-      throw new NoSuchTokenException( );
+      throw new NoSuchTokenException( token.toString( ) );
     }
   }
   
@@ -167,9 +174,12 @@ public class ResourceState {
     if ( this.submittedTokens.remove( token ) || this.pendingTokens.remove( token ) ) {
       this.redeemedTokens.add( token );
     } else {
-      LOG.error( "Failed to find token: " + token + "\n"
-                     + Joiner.on( "\n" ).join( "pending", this.pendingTokens, "submitted", this.submittedTokens, "redeemed", this.redeemedTokens ),
-                 new NoSuchTokenException( ) );
+      LOG.error(
+        "Failed to find token: "
+            + token
+            + "\n"
+            + Joiner.on( "\n" ).join( "pending", this.pendingTokens, "submitted", this.submittedTokens, "redeemed", this.redeemedTokens ),
+        new NoSuchTokenException( token.toString( ) ) );
     }
   }
   
@@ -256,8 +266,8 @@ public class ResourceState {
     public void decrement( int quantity ) {
       this.available -= quantity;
       this.available = ( this.available < 0 )
-        ? 0
-        : this.available;
+                                             ? 0
+                                             : this.available;
     }
     
     public int getMax( ) {
