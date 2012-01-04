@@ -350,16 +350,18 @@ public class VmInstances {
       if ( NetworkGroups.networkingConfiguration( ).hasNetworking( ) ) {
         try {
           address = Addresses.getInstance( ).lookup( vm.getPublicAddress( ) );
+          if ( address.isAssigned( ) ) {
+            AsyncRequests.newRequest( address.unassign( ).getCallback( ) ).dispatch( vm.getPartition( ) );
+          }
           if ( address.isSystemOwned( ) ) {
             EventRecord.caller( VmInstances.class, EventType.VM_TERMINATING, "SYSTEM_ADDRESS", address.toString( ) ).debug( );
-            Addresses.release( address );
+            address.release( );
           } else {
             EventRecord.caller( VmInstances.class, EventType.VM_TERMINATING, "USER_ADDRESS", address.toString( ) ).debug( );
-            AsyncRequests.newRequest( address.unassign( ).getCallback( ) ).dispatch( vm.getPartition( ) );
           }
         } catch ( final NoSuchElementException e ) {
           
-        } catch ( final Throwable e1 ) {
+        } catch ( final Exception e1 ) {
           LOG.debug( e1, e1 );
         }
       }
