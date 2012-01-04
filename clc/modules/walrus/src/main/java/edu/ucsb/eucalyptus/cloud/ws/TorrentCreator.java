@@ -65,6 +65,7 @@ package edu.ucsb.eucalyptus.cloud.ws;
  */
 
 import com.eucalyptus.auth.util.Hashes;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.WalrusProperties;
 
 import edu.ucsb.eucalyptus.util.StreamConsumer;
@@ -145,11 +146,21 @@ public class TorrentCreator {
         int idx = inString.indexOf(NAME_TAG);
         int lastidx = inString.indexOf(objectName) + objectName.length();
 
-        outStream.write(bytes, 0, idx + NAME_TAG.length());
-        outStream.write(new String(objectKey.length() + ":" + objectKey).getBytes());
-        outStream.write(bytes, lastidx, totalBytesRead - lastidx);
-
-        outStream.close();
+        try {
+        	outStream.write(bytes, 0, idx + NAME_TAG.length());
+        	outStream.write(new String(objectKey.length() + ":" + objectKey).getBytes());
+        	outStream.write(bytes, lastidx, totalBytesRead - lastidx);
+        } catch (IOException ex) {
+        	LOG.error( ex );
+            Logs.extreme( ).error( ex, ex );
+            throw ex;
+        } finally {
+        	try {
+        		outStream.close();
+        	} catch (IOException ex) {
+        		LOG.error( ex );
+        	}
+        }
         outFile.renameTo(inFile);
     }
 
