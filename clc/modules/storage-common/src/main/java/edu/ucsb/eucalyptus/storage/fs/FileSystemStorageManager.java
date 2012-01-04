@@ -262,16 +262,20 @@ public class FileSystemStorageManager implements StorageManager {
 	public void copyObject(String sourceBucket, String sourceObject, String destinationBucket, String destinationObject) throws IOException {
 		File oldObjectFile = new File (WalrusInfo.getWalrusInfo().getStorageDir() + FILE_SEPARATOR + sourceBucket + FILE_SEPARATOR + sourceObject);
 		File newObjectFile = new File (WalrusInfo.getWalrusInfo().getStorageDir() + FILE_SEPARATOR + destinationBucket + FILE_SEPARATOR + destinationObject);
-		if(!oldObjectFile.equals(newObjectFile)) {			
+		if(!oldObjectFile.equals(newObjectFile)) {	
+			
 			FileInputStream fileInputStream = new FileInputStream(oldObjectFile);
 			FileChannel fileIn = fileInputStream.getChannel();
 			FileOutputStream fileOutputStream = new FileOutputStream(newObjectFile);
 			FileChannel fileOut = fileOutputStream.getChannel();
-			fileIn.transferTo(0, fileIn.size(), fileOut);
-			fileIn.close();
-			fileInputStream.close();
-			fileOut.close();
-			fileOutputStream.close();
+			try {
+				fileIn.transferTo(0, fileIn.size(), fileOut);
+			} finally {
+				if(fileIn != null) fileIn.close();
+				fileInputStream.close();
+				if(fileOut != null) fileOut.close();
+				fileOutputStream.close();
+			}
 		}
 	}
 
