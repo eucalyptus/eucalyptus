@@ -90,16 +90,14 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
       
       @Override
       public void initialize( Q request ) throws Exception {
-        if ( Logs.isExtrrreeeme( ) ) {
-          Logs.exhaust( ).debug( cb.getClass( ).getCanonicalName( ) + ".initialize():\n"
-                                     + request );
-        }
+        Logs.extreme( ).debug( cb.getClass( ).getCanonicalName( ) + ".initialize():\n" + request );
         try {
           cb.initialize( request );
         } catch ( Exception ex ) {
           Logs.extreme( ).error( ex, ex );
           AsyncRequest.this.result.setException( ex );
           AsyncRequest.this.callbackSequence.fireException( ex );
+          throw ex;
         }
       }
       
