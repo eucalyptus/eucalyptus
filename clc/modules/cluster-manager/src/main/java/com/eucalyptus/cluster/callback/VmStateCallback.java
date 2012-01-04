@@ -118,6 +118,8 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
       VmInstance vm = VmInstances.cachedLookup( vmId );
       if ( VmState.PENDING.apply( vm ) && vm.getCreationSplitTime( ) < VM_INITIAL_REPORT_TIMEOUT ) {
         //do nothing during first VM_INITIAL_REPORT_TIMEOUT millis of instance life
+        db1.rollback( );
+        return;
       } else if ( VmState.STOPPING.apply( vm ) ) {
         VmInstances.stopped( vm );
       } else if ( VmState.SHUTTING_DOWN.apply( vm ) ) {

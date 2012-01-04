@@ -161,6 +161,7 @@ public class ResourceToken implements VmInstanceMetadata, Comparable<ResourceTok
   }
   
   public void abort( ) {
+    LOG.debug( this );
     try {
       final ServiceConfiguration config = Topology.lookup( ClusterController.class, this.getAllocationInfo( ).getPartition( ) );
       final Cluster cluster = Clusters.lookup( config );
@@ -195,9 +196,9 @@ public class ResourceToken implements VmInstanceMetadata, Comparable<ResourceTok
   public int hashCode( ) {
     final int prime = 31;
     int result = 1;
-    result = prime * result + ( ( this.instanceUuid == null )
+    result = prime * result + ( ( this.instanceId == null )
       ? 0
-      : this.instanceUuid.hashCode( ) );
+      : this.instanceId.hashCode( ) );
     return result;
   }
   
@@ -213,11 +214,11 @@ public class ResourceToken implements VmInstanceMetadata, Comparable<ResourceTok
       return false;
     }
     ResourceToken other = ( ResourceToken ) obj;
-    if ( this.instanceUuid == null ) {
-      if ( other.instanceUuid != null ) {
+    if ( this.instanceId == null ) {
+      if ( other.instanceId != null ) {
         return false;
       }
-    } else if ( !this.instanceUuid.equals( other.instanceUuid ) ) {
+    } else if ( !this.instanceId.equals( other.instanceId ) ) {
       return false;
     }
     return true;
