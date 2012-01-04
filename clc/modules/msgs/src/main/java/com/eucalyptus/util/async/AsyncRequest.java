@@ -231,7 +231,7 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
   }
   
   private void doInitializeCallback( ServiceConfiguration config ) throws RequestException {
-    Logs.extreme( ).info( "initialize: endpoint " + config + " request " + this.request.toSimpleString( ) );
+    Logs.extreme( ).info( "initialize: endpoint " + config + " request " + this.request.getClass( ).getSimpleName( ) + ":" + this.request.toSimpleString( ) );
     try {
       this.wrapperCallback.initialize( this.request );
     } catch ( Exception e ) {
