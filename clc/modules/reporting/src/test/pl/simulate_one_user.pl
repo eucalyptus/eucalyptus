@@ -6,19 +6,8 @@
 # objects and storage every INTERVAL, until DURATION is reached, at which
 # point it terminates every instance it started and stops running.
 #
-# Usage: simulate_one_user.pl num_instances interval duration storage_usage_mb kernel_image ramdisk_image image
-#
-# Example: simulate_one_user.pl 2 100 10000 kernel_image ramdisk_image image
-#  This example will start 2 instances, then run for 10,000 seconds,
-#  allocating storage and S3 every 100 seconds, after which it will terminate
-#  the instances it started and quit.
-#
-# NOTE!! This script has many external dependencies which must be satisfied
-#   for it to run. As follows: 1) A CLC must be running locally; 2) A Walrus
-#   must be running; 3) You must have created and uploaded all the images,
-#   ramdisk images, and kernel images which you pass in; 4) eucarc must
-#   be sourced; 5) A Eucalyptus user corresponding to the credentials
-#   must have been created, accepted, and confirmed.
+# This script is called by test.pl; see test.pl for comprehensive documentation
+# of the perl test suite.
 #
 # (c)2011, Eucalyptus Systems, Inc. All Rights Reserved.
 # author: tom.werges
@@ -26,9 +15,10 @@
 
 use strict;
 use warnings;
+require "test_common.pl";
 
-if ($#ARGV+1 < 7) {
-	die "Usage: simulate_one_user.pl num_instances instance_type interval duration upload_file storage_usage_mb image\n";
+if ($#ARGV+1 < 5) {
+	die "Usage: simulate_one_user.pl image_id num_instances instance_type interval duration\n";
 }
 
 # SUB: parse_instance_ids -- parse the output of euca-run-instances or euca-describe-instances
@@ -58,40 +48,27 @@ sub parse_avail_zones($) {
 }
 
 
-sub rand_str($) {
-	return sprintf("%x",rand(2<<$_[0]));
-}
-
-sub cmd($) {
-	print "Executing command:$_[0]\n";
-	my $output = `$_[0]`;
-	print "Output:$output\n";
-}
-
-
 
 #
 # MAIN LOGIC
 #
 
+my $image_id = shift;
 my $num_instances = shift;
 my $instance_type = shift;
 my $interval = shift;
 my $duration = shift;
-my $upload_file = shift;
-my $storage_usage_mb = shift;
-my $image = shift;
 
 my %instance_data = ();  # instance_id => status
 my $access_key = $ENV{"EC2_ACCESS_KEY"};
 my $secret_key = $ENV{"EC2_SECRET_KEY"};
 my $s3_url = $ENV{"S3_URL"};
 
-print "num_instances:$num_instances type:$instance_type interval:$interval duration:$duration upload_file:$upload_file storage_usage_mb:$storage_usage_mb s3_url:$s3_url image:$image\n";
+print "image_id:$image_id num_instances:$num_instances type:$instance_type interval:$interval duration:$duration s3_url:$s3_url\n";
 
 # Run instances
-print "euca-run-instances -t $instance_type -n $num_instances $image";
-my $output = `euca-run-instances -t $instance_type -n $num_instances $image` or die("starting instance failed");
+print "euca-run-instances -t $instance_type -n $num_instances $image_id";
+my $output = `euca-run-instances -t $instance_type -n $num_instances $image_id` or die("starting instance failed");
 print "output:$output\n";
 %instance_data = parse_instance_ids($output);
 foreach (keys %instance_data) {
@@ -126,16 +103,17 @@ my $bucketname = "b-" . rand_str(32);
 
 # Allocate storage and s3 for each user, every INTERVAL, sleeping between
 #   Iterations should be as close to the INTERVAL time as possible, so subtract running time
+my $upload_file = upload_file();
 my $start_time = time(); # All storage start time
 my $itime = 0; # Iteration start time
 for (my $i=0; (time()-$start_time) < $duration; $i++) {
 	$itime = time();
 	print "iter:$i\n";
-	cmd("euca-create-volume --size $storage_usage_mb --zone $zones[0]");
+	runcmd("euca-create-volume --size " . storage_usage_mb() . " --zone $zones[0]");
 	print "$i: Created volume\n";
-	cmd("euca-bundle-image -i $upload_file");
+	runcmd("euca-bundle-image -i $upload_file");
 	#TODO: grab manifest path from this
-	cmd("euca-upload-bundle -b $bucketname -m /tmp/$upload_file.manifest.xml");
+	runcmd("euca-upload-bundle -b $bucketname -m /tmp/$upload_file.manifest.xml");
 	print "$i: Uploaded bundle\n";
 	sleep $interval - (time() - $itime);
 }
