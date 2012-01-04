@@ -203,7 +203,7 @@ int doStartService(ncMetadata *ccMeta) {
   if (config->ccState == SHUTDOWNCC) {
     logprintfl(EUCAWARN, "StartService(): attempt to start a shutdown CC, skipping.\n");
     ret++;
-  } else if (ccCheckState()) {
+  } else if (ccCheckState(0)) {
     logprintfl(EUCAWARN, "StartService(): ccCheckState() returned failures, skipping.\n");
     ret++;
   } else {
@@ -234,7 +234,7 @@ int doStopService(ncMetadata *ccMeta) {
   if (config->ccState == SHUTDOWNCC) {
     logprintfl(EUCAWARN, "StopService(): attempt to stop a shutdown CC, skipping.\n");
     ret++;
-  } else if (ccCheckState()) {
+  } else if (ccCheckState(0)) {
     logprintfl(EUCAWARN, "StopService(): ccCheckState() returned failures, skipping.\n");
     ret++;
   } else {
@@ -265,7 +265,7 @@ int doEnableService(ncMetadata *ccMeta) {
   if (config->ccState == SHUTDOWNCC) {
     logprintfl(EUCAWARN, "EnableService(): attempt to enable a shutdown CC, skipping.\n");
     ret++;
-  } else if (ccCheckState()) {
+  } else if (ccCheckState(0)) {
     logprintfl(EUCAWARN, "EnableService(): ccCheckState() returned failures, skipping.\n");
     ret++;
   } else if (config->ccState != ENABLED) {
@@ -316,7 +316,7 @@ int doDisableService(ncMetadata *ccMeta) {
   if (config->ccState == SHUTDOWNCC) {
     logprintfl(EUCAWARN, "DisableService(): attempt to disable a shutdown CC, skipping.\n");
     ret++;
-  } else if (ccCheckState()) {
+  } else if (ccCheckState(0)) {
     logprintfl(EUCAWARN, "DisableService(): ccCheckState() returned failures, skipping.\n");
     ret++;
   } else {
