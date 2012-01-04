@@ -721,8 +721,11 @@ public class EuareWebBackend {
       result.addField( QueryBuilder.get( ).start( QueryType.user ).add( ID, user.getUserId( ) ).url( ) );
     } else if ( group != null ) {
       result.addField( QueryBuilder.get( ).start( QueryType.group ).add( ID, group.getGroupId( ) ).url( ) );
-    } else {
+    } else if ( account != null ){
       result.addField( QueryBuilder.get( ).start( QueryType.account ).add( ID, account.getAccountNumber( ) ).url( ) );
+    } else {
+      // impossible, just to be safe
+      result.addField( "" );
     }
     result.addField( policy.getText( ) );
     return result;

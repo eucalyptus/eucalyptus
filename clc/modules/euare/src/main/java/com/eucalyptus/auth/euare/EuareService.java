@@ -448,10 +448,9 @@ public class EuareService {
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     User userFound = lookupUserByName( account, request.getUserName( ) );
     try {
-      String newPath = request.getNewPath( ) != null ? sanitizePath( request.getNewPath( ) ) : null;
       Boolean enabled = request.getEnabled( ) != null ? "true".equalsIgnoreCase( request.getEnabled( ) ) : null;
       Long passwordExpiration = request.getPasswordExpiration( ) != null ? Iso8601DateParser.parse( request.getPasswordExpiration( ) ).getTime( ) : null;
-      Privileged.modifyUser( requestUser, account, userFound, request.getNewUserName( ), newPath, enabled, passwordExpiration, null/*info*/ );
+      Privileged.modifyUser( requestUser, account, userFound, request.getNewUserName( ), request.getNewPath( ), enabled, passwordExpiration, null/*info*/ );
       if ( request.getRegStatus( ) != null ) {
         userFound.setRegistrationStatus( parseRegStatIgnoreCase( request.getRegStatus( ) ) );
       }
@@ -592,8 +591,7 @@ public class EuareService {
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     Group groupFound = lookupGroupByName( account, request.getGroupName( ) );
     try {
-      String newPath = request.getNewPath( ) != null ? sanitizePath( request.getNewPath( ) ) : null;
-      Privileged.modifyGroup( requestUser, account, groupFound, request.getNewGroupName( ), newPath );
+      Privileged.modifyGroup( requestUser, account, groupFound, request.getNewGroupName( ), request.getNewPath( ) );
     } catch ( Exception e ) {
       LOG.error( e, e );
       if ( e instanceof AuthException ) {
@@ -1537,10 +1535,6 @@ public class EuareService {
   private static String sanitizePath( String path ) {
     if ( path == null || "".equals( path ) ) {
       return "/";
-    } else if ( !"/".equals( path ) ) {
-      if ( path.endsWith( "/" ) ) {
-        path = path.substring( 0, path.length( ) - 1 );
-      }
     }
     return path;
   }
