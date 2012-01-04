@@ -160,7 +160,6 @@ public class ResourceState {
   }
   
   public synchronized void submitToken( ResourceToken token ) throws NoSuchTokenException {
-//    LOG.trace( new RuntimeException( ), new RuntimeException( ) ); 
     EventRecord.caller( ResourceToken.class, EventType.TOKEN_SUBMITTED, token.toString( ) ).info( );
     if ( this.pendingTokens.remove( token ) ) {
       this.submittedTokens.add( token );
