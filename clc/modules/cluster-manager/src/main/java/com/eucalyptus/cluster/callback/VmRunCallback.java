@@ -133,6 +133,7 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
   public void fire( final VmRunResponseType reply ) {
     Logs.extreme( ).error( reply );
     if ( !reply.get_return( ) ) {
+      this.token.abort( );
       throw new EucalyptusClusterException( "Failed to run instance: " + this.getRequest( ).getInstanceId( ) );
     }
     Function<VmRunResponseType, Boolean> redeemToken = new Function<VmRunResponseType, Boolean>( ) {
@@ -141,6 +142,7 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
         try {
           VmRunCallback.this.token.redeem( );
         } catch ( Exception ex ) {
+          LOG.error( ex );
           Logs.extreme( ).error( ex, ex );
         }
         for ( final VmInfo vmInfo : reply.getVms( ) ) {
@@ -168,7 +170,7 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
       public boolean apply( Throwable input ) {
         LOG.debug( "-> Release resource tokens for unused resources." );
         try {
-          VmRunCallback.this.token.release( );
+          VmRunCallback.this.token.abort( );
         } catch ( final Exception ex ) {
           LOG.error( ex.getMessage( ) );
           Logs.extreme( ).error( ex, ex );
