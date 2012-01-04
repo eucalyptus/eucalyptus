@@ -100,7 +100,7 @@ public class ResourceToken implements VmInstanceMetadata, Comparable<ResourceTok
   private final Date          expirationTime;
   @Nullable
   private VmInstance          vmInst;
-  private final Cluster             cluster;
+  private final Cluster       cluster;
   
   public ResourceToken( final Allocation allocInfo, final int resourceAllocationSequenceNumber, final int launchIndex ) {
     this.allocation = allocInfo;
@@ -140,7 +140,7 @@ public class ResourceToken implements VmInstanceMetadata, Comparable<ResourceTok
   
   @Override
   public int compareTo( final ResourceToken that ) {
-    return this.resourceAllocationSequenceNumber - that.resourceAllocationSequenceNumber;
+    return this.instanceId.compareTo( that.instanceId );
   }
   
   public String getInstanceUuid( ) {

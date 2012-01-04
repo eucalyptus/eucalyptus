@@ -145,7 +145,7 @@ public class ResourceState {
     List<ResourceToken> tokenList = Lists.newArrayList( );
     for ( int i = 0; i < quantity; i++ ) {
       ResourceToken token = new ResourceToken( allocInfo, seqNumber, i );
-      EventRecord.caller( ResourceToken.class, EventType.TOKEN_RESERVED, token.toString( ) ).info( );
+      LOG.debug( EventType.TOKEN_RESERVED.name( ) + ": " + token.toString( ) );
       this.pendingTokens.add( token );
       tokenList.add( token );
     }
@@ -153,14 +153,14 @@ public class ResourceState {
   }
   
   public synchronized void releaseToken( ResourceToken token ) {
-    EventRecord.caller( ResourceToken.class, EventType.TOKEN_RETURNED, token.toString( ) ).info( );
+    LOG.debug( EventType.TOKEN_RELEASED.name( ) + ": " + token.toString( ) );
     this.pendingTokens.remove( token );
     this.submittedTokens.remove( token );
     this.redeemedTokens.remove( token );
   }
   
   public synchronized void submitToken( ResourceToken token ) throws NoSuchTokenException {
-    EventRecord.caller( ResourceToken.class, EventType.TOKEN_SUBMITTED, token.toString( ) ).info( );
+    LOG.debug( EventType.TOKEN_SUBMITTED.name( ) + ": " + token.toString( ) );
     if ( this.pendingTokens.remove( token ) ) {
       this.submittedTokens.add( token );
     } else {
@@ -169,7 +169,7 @@ public class ResourceState {
   }
   
   public synchronized void redeemToken( ResourceToken token ) throws NoSuchTokenException {
-    EventRecord.caller( ResourceToken.class, EventType.TOKEN_REDEEMED, token.toString( ) ).info( );
+    LOG.debug( EventType.TOKEN_REDEEMED.name( ) + ": " + token.toString( ) );
     if ( this.submittedTokens.remove( token ) || this.pendingTokens.remove( token ) ) {
       this.redeemedTokens.add( token );
     } else {

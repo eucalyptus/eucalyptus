@@ -268,7 +268,7 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
             for ( VmInstance vm : Iterables.filter( VmInstances.list( ), VmPendingCallback.this.filter ) ) {
               this.getInstancesSet( ).add( vm.getInstanceId( ) );
             }
-            Entities.commit( db );
+            db.rollback( );
           } catch ( Exception ex ) {
             Logs.exhaust( ).error( ex, ex );
             db.rollback( );

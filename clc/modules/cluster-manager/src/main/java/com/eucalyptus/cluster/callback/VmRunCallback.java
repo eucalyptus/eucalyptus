@@ -146,7 +146,7 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
         LOG.error( ex );
         Logs.extreme( ).error( ex, ex );
       }
-      Function<VmInfo, Boolean> redeemToken = new Function<VmInfo, Boolean>( ) {
+      Function<VmInfo, Boolean> updateInstance = new Function<VmInfo, Boolean>( ) {
         @Override
         public Boolean apply( final VmInfo input ) {
           final VmInstance vm = VmInstances.lookup( input.getInstanceId( ) );
@@ -167,7 +167,7 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
       };
       for ( final VmInfo vmInfo : reply.getVms( ) ) {
         try {
-          Entities.asTransaction( VmInstance.class, redeemToken, 10 ).apply( vmInfo );
+          Entities.asTransaction( VmInstance.class, updateInstance, 10 ).apply( vmInfo );
         } catch ( RuntimeException ex ) {
           LOG.error( "Failed: " + this.token + " because of " + ex.getMessage( ), ex );
           throw ex;
