@@ -77,6 +77,8 @@ public class ConfigActivity extends AbstractSearchActivity implements ConfigView
   public void saveValue( ArrayList<String> keys, ArrayList<HasValueWidget> values ) {
     if ( values == null || values.size( ) < 1 || this.currentSelected == null ) {
       clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.ERROR, "Must select a single service component to change value", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
+      LOG.log( Level.WARNING, "No valid values or empty selection" );
+      return;
     }
     final SearchResultRow result = new SearchResultRow( );
     result.setExtraFieldDescs( this.currentSelected.getExtraFieldDescs( ) );
