@@ -216,12 +216,10 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
       Logs.extreme( ).debug( "fire: endpoint " + config );
       if ( !this.handler.fire( config, this.request ) ) {
         Logs.extreme( ).error( "Error occurred while trying to send request: " + this.request );
-        if ( !this.requestResult.isDone( ) ) {
-          RequestException ex = new RequestException( "Error occured attempting to fire the request.", this.getRequest( ) );
-          try {
-            this.result.setException( ex );
-          } catch ( Exception t ) {}
-        }
+        RequestException ex = new RequestException( "Error occured attempting to fire the request.", this.getRequest( ) );
+        try {
+          this.result.setException( ex );
+        } catch ( Exception t ) {}
       } else {
         this.requestResult.get( );
       }
@@ -235,7 +233,7 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
   }
   
   private void doInitializeCallback( ServiceConfiguration config ) throws RequestException {
-    Logs.extreme( ).trace( "initialize: endpoint " + config );
+    Logs.extreme( ).info( "initialize: endpoint " + config + " request " + this.request.toSimpleString( ) );
     try {
       this.wrapperCallback.initialize( this.request );
     } catch ( Exception e ) {
