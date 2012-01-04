@@ -1663,11 +1663,10 @@ int blobstore_fsck (blobstore * bs, int (* examiner) (const blockblob * bb))
                     
                     blockblob * bb = blockblob_open (bs, abb->id, 0, 0, NULL, BLOBSTORE_FIND_TIMEOUT_USEC);
                     if (bb!=NULL) {
-                        if (bb->in_use) {
-                            if (abb->in_use & ~BLOCKBLOB_STATUS_MAPPED) {
-                                to_delete++;
-                            }
+                        if (bb->in_use & BLOCKBLOB_STATUS_MAPPED) {
+                            // mapped blobs have children, thus cannot be deleted at this iteration
                             blockblob_close (bb);
+                            to_delete++;
                             
                         } else if (blockblob_delete (bb, BLOBSTORE_DELETE_TIMEOUT_USEC, 1)==-1) {
                             logprintfl (EUCAWARN, "WARNING: failed to delete blockblob %s\n", abb->id);
@@ -1688,13 +1687,12 @@ int blobstore_fsck (blobstore * bs, int (* examiner) (const blockblob * bb))
                 }
             }
             assert (iterations<11);
-            logprintfl (EUCADEBUG, "blobstore_fsck: i=%d to_delete=%d to_delete_prev=%d\n", iterations, to_delete, to_delete_prev);
 
-            if (to_delete == 0)
-                break;
             if (to_delete == to_delete_prev) // could not delete anything new this iteration
                 break;
             to_delete_prev = to_delete;
+            if (to_delete == 0)
+                break;
         }
         
         if (num_blobs>0)
