@@ -91,7 +91,7 @@ public class StatefulMessageSet<E extends Enum<E>> {
     while ( ( request = this.pendingEvents.poll( ) ) != null ) {
       try {
         try {
-          Object o = request.getResponse( ).get( 120, TimeUnit.SECONDS );
+          Object o = request.getResponse( ).get( 240, TimeUnit.SECONDS );
           if ( o != null ) {
             EventRecord.here( StatefulMessageSet.class, EventType.VM_STARTING, currentState.name( ), this.cluster.getName( ), o.getClass( ).getSimpleName( ) ).info( );
             EventRecord.here( StatefulMessageSet.class, EventType.VM_STARTING, currentState.name( ), this.cluster.getName( ), o.toString( ) ).debug( );
