@@ -124,11 +124,23 @@ public class TorrentCreator {
         byte[] bytes = new byte[102400];
         String inString = "";
 
-        while((bytesRead = inStream.read(bytes)) > 0) {
-            inString += new String(bytes, 0, bytesRead);
-            totalBytesRead += bytesRead;
+        try {
+        	while((bytesRead = inStream.read(bytes)) > 0) {
+        		inString += new String(bytes, 0, bytesRead);
+        		totalBytesRead += bytesRead;
+        	}
+        } catch (IOException ex) {
+        	LOG.error( ex );
+            Logs.extreme( ).error( ex, ex );
+            throw ex;
+        } finally {
+        	try {
+        		inStream.close();
+        	} catch (IOException ex) {
+        		LOG.error( ex );
+        	}
         }
-        inStream.close();
+        
         int len = inString.length();
         int idx = inString.indexOf(NAME_TAG);
         int lastidx = inString.indexOf(objectName) + objectName.length();
