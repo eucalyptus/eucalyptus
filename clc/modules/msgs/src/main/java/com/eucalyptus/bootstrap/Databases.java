@@ -773,7 +773,7 @@ public class Databases {
         if ( last.compareAndSet( true, dbVolatile ) ) {
           LOG.warn( msg );
         } else {
-          LOG.debug( msg );
+          Logs.extreme( ).info( msg );
         }
       }
       return intersection;
