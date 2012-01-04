@@ -106,7 +106,6 @@
     <param name="File" value="${euca.log.dir}/cloud-cluster.log" />
     <param name="MaxFileSize" value="10MB" />
     <param name="MaxBackupIndex" value="2" />
-    <param name="Threshold" value="${euca.log.level}" />
     <layout class="org.apache.log4j.PatternLayout">
       <param name="ConversionPattern" value="%d{EEE MMM d HH:mm:ss yyyy} %5p [%c{1}:%t] [%C.%M(%F):%L] %m%n" />
     </layout>

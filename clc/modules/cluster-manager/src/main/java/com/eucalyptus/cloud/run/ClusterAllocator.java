@@ -262,6 +262,7 @@ public class ClusterAllocator implements Runnable {
     if ( net != null ) {
       final Request callback = AsyncRequests.newRequest( new StartNetworkCallback( this.allocInfo.getExtantNetwork( ) ) );
       this.messages.addRequest( State.CREATE_NETWORK, callback );
+      LOG.debug( "Queued StartNetwork: " + callback );
       EventRecord.here( ClusterAllocator.class, EventType.VM_PREPARE, callback.getClass( ).getSimpleName( ), net.toString( ) ).debug( );
     }
   }
@@ -281,6 +282,7 @@ public class ClusterAllocator implements Runnable {
       final VmTypeInfo childVmInfo = this.makeVmTypeInfo( vmInfo, token.getLaunchIndex( ), root );
       cb = this.makeRunRequest( token, childVmInfo, networkName );
       this.messages.addRequest( State.CREATE_VMS, cb );
+      LOG.debug( "Queued RunInstances: " + token );
     } catch ( final Exception ex ) {
       Logs.extreme( ).error( ex, ex );
       throw ex;
@@ -372,30 +374,6 @@ public class ClusterAllocator implements Runnable {
                                    .owner( this.allocInfo.getOwnerFullName( ) )
                                    .create( );
     final Request<VmRunType, VmRunResponseType> req = AsyncRequests.newRequest( new VmRunCallback( run, childToken ) );
-    final Address addr = childToken.getAddress( );
-    if ( childToken.getAddress( ) != null ) {
-      final Success<VmRunResponseType> addrCallback = new Callback.Success<VmRunResponseType>( ) {
-        @SuppressWarnings( "unchecked" )
-        @Override
-        public void fire( final VmRunResponseType response ) {
-          try {
-            final VmInstance vm = VmInstances.lookup( response.getVms( ).iterator( ).next( ).getInstanceId( ) );
-            final Success<BaseMessage> vmUpdateCallback = new Callback.Success<BaseMessage>( ) {
-              @Override
-              public void fire( final BaseMessage response ) {
-                vm.updateAddresses( addr.getInstanceAddress( ), addr.getName( ) );
-              }
-            };
-            AsyncRequests.newRequest( addr.assign( vm ).getCallback( ) )
-                         .then( vmUpdateCallback )
-                         .dispatch( vm.getPartition( ) );
-          } catch ( final Exception ex ) {
-            LOG.error( ex, ex );
-          }
-        }
-      };
-      req.then( addrCallback );
-    }
     return req;
   }
   

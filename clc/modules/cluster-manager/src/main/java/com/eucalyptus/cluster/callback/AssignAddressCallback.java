@@ -80,6 +80,7 @@ import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.MessageCallback;
 import com.eucalyptus.vm.VmInstance;
+import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstance.VmStateSet;
 import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.vm.VmInstances.TerminatedInstanceException;
@@ -99,9 +100,14 @@ public class AssignAddressCallback extends MessageCallback<AssignAddressType, As
     this.vm = lookupVm( );
   }
 
-  public VmInstance lookupVm( ) {
+  private VmInstance lookupVm( ) {
     try {
-      return VmInstances.lookup( super.getRequest( ).getInstanceId( ) );
+      VmInstance foundVm = VmInstances.lookup( super.getRequest( ).getInstanceId( ) );
+      if ( VmStateSet.RUN.apply( foundVm ) ) {
+        return foundVm;
+      } else {
+        return null;
+      }
     } catch ( TerminatedInstanceException ex ) {
       return null;
     } catch ( NoSuchElementException ex ) {
@@ -111,23 +117,22 @@ public class AssignAddressCallback extends MessageCallback<AssignAddressType, As
   
   @Override
   public void initialize( AssignAddressType msg ) {
-    EventRecord.here( AssignAddressCallback.class, EventType.ADDRESS_ASSIGNING, Transition.assigning.toString( ), address.toString( ) ).debug( );
+    LOG.debug( this.address.toString( ) );
   }
   
   @Override
   public void fire( AssignAddressResponseType msg ) {
     try {
-      this.updateState( );
-    } catch ( IllegalStateException e ) {
-      LOG.debug( e, e );
-      if ( this.vm != null ) {
-        AsyncRequests.newRequest( address.unassign( ).getCallback( ) ).dispatch( this.vm.getPartition( ) );
+      if ( !msg.get_return( ) || !this.checkVmState( ) ) {
+        this.address.clearPending( );
+        this.clearState( );
+      } else {
+        this.address.clearPending( );
+        EventRecord.here( AssignAddressCallback.class, EventType.ADDRESS_ASSIGNED, Address.State.assigned.toString( ), this.address.toString( ) ).info( );
       }
     } catch ( Exception e ) {
       LOG.debug( e, e );
-      if ( this.vm != null ) {
-        AsyncRequests.newRequest( address.unassign( ).getCallback( ) ).dispatch( this.vm.getPartition( ) );
-      }
+      this.clearState( );
     }
   }
   
@@ -135,32 +140,36 @@ public class AssignAddressCallback extends MessageCallback<AssignAddressType, As
   public void fireException( Throwable e ) {
     LOG.error( e );
     Logs.extreme( ).error( e, e );
-    EventRecord.here( AssignAddressCallback.class, EventType.ADDRESS_ASSIGNING, Transition.assigning.toString( ), LogUtil.FAIL, this.address.toString( ) ).debug( );
-    LOG.debug( LogUtil.subheader( this.getRequest( ).toString( ) ) );
+    this.clearState( );
+  }
+
+  private void clearState( ) {
+    EventRecord.here( AssignAddressCallback.class, EventType.ADDRESS_ASSIGNING, Transition.assigning.toString( ), "FAILED", this.address.toString( ) ).debug( );
     if ( this.address.isPending( ) ) {
       try {
         this.address.clearPending( );
       } catch ( Exception ex ) {}
     }
-    try {
-      VmInstance vm = VmInstances.lookup( super.getRequest( ).getInstanceId( ) );
-      if ( this.address.isSystemOwned( ) ) {
-        Addresses.release( this.address );
-      } else if ( this.address.isAssigned( ) ) {
-        AsyncRequests.newRequest( this.address.unassign( ).getCallback( ) ).dispatch( vm.getPartition( ) );
-      }
-    } catch ( TerminatedInstanceException ex ) {} catch ( NoSuchElementException ex ) {}
+    if ( this.address.isSystemOwned( ) ) {
+      Addresses.release( this.address );
+    } else if ( this.address.isAssigned( ) && this.vm != null ) {
+      AsyncRequests.newRequest( this.address.unassign( ).getCallback( ) ).dispatch( vm.getPartition( ) );
+    } else if ( this.address.isAssigned( ) && this.vm == null ) {
+      this.address.unassign( ).clearPending( );
+    }
   }
   
   private boolean checkVmState( ) {
     try {
-      VmInstance vm = VmInstances.lookup( super.getRequest( ).getInstanceId( ) );
-      if ( !VmStateSet.RUN.apply( vm ) ) {
-        vm.updatePublicAddress( VmNetworkConfig.DEFAULT_IP );
-        return false;
+      if ( this.vm != null ) {
+        VmInstance foundVm = VmInstances.lookup( this.vm.getInstanceId( ) );
+        if ( !VmStateSet.RUN.apply( foundVm ) ) {
+          return false;
+        } else {
+          return true;
+        }
       } else {
-        vm.updatePublicAddress( this.address.getName( ) );
-        return true;
+        return false;
       }
     } catch ( NoSuchElementException e ) {
       LOG.debug( e, e );
@@ -168,19 +177,9 @@ public class AssignAddressCallback extends MessageCallback<AssignAddressType, As
     }
   }
   
-  private void updateState( ) {
-    if ( !this.checkVmState( ) ) {
-      this.address.clearPending( );
-      throw new IllegalStateException( "Failed to find the vm for this assignment: " + this.getRequest( ) );
-    } else {
-      this.address.clearPending( );
-      EventRecord.here( AssignAddressCallback.class, EventType.ADDRESS_ASSIGNED, Address.State.assigned.toString( ), LogUtil.dumpObject( address ) ).info( );
-    }
-  }
-
   @Override
   public String toString( ) {
-    return "AssignAddressCallback " + this.address;
+    return "AssignAddressCallback " + this.address + " vm=" + ( this.vm != null ? this.vm.getInstanceId( ) : "none" );
   }
 
 }

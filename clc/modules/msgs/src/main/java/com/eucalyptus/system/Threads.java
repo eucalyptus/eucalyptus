@@ -660,7 +660,7 @@ public class Threads {
       FutureTask<C> f = new FutureTask<C>( call ) {
         @Override
         public String toString( ) {
-          return call.toString( ) + super.toString( );
+          return call.toString( ) + " " + super.toString( );
         }
       };
       this.msgQueue.add( f );
@@ -673,7 +673,7 @@ public class Threads {
         try {
           this.task = this.msgQueue.take( );
           if ( this.task != null ) {
-            Logs.exhaust( ).debug( EventType.QUEUE + " " + this.task + " " + Thread.currentThread( ).getName( ) );
+            Logs.extreme( ).debug( EventType.QUEUE + " " + this.task + " " + Thread.currentThread( ).getName( ) );
             try {
               this.task.run( );
             } catch ( final Exception ex ) {

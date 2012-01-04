@@ -95,6 +95,7 @@ import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.UnconditionalCallback;
 import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstance.VmState;
+import com.eucalyptus.vm.VmInstance.VmStateSet;
 import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.vm.VmInstances.TerminatedInstanceException;
 import com.google.common.base.Function;
@@ -239,14 +240,16 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
       if ( addr.isAssigned( ) ) {
         try {
           final VmInstance vm = VmInstances.lookup( instanceId );
-          AsyncRequests.newRequest( addr.unassign( ).getCallback( ) ).then( new UnconditionalCallback( ) {
-            @Override
-            public void fire( ) {
-              try {
-                Addresses.system( vm );
-              } catch ( final NoSuchElementException ex ) {}
-            }
-          } ).dispatch( vm.getPartition( ) );
+          if ( VmStateSet.RUN.apply( vm ) ) {
+            AsyncRequests.newRequest( addr.unassign( ).getCallback( ) ).then( new UnconditionalCallback( ) {
+              @Override
+              public void fire( ) {
+                try {
+                  Addresses.system( vm );
+                } catch ( final NoSuchElementException ex ) {}
+              }
+            } ).dispatch( vm.getPartition( ) );
+          }
         } catch ( TerminatedInstanceException ex ) {
         } catch ( NoSuchElementException ex ) {
         }
