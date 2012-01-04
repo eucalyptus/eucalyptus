@@ -520,7 +520,7 @@ public class VmInstances {
 //        VmInstances.terminated( vm );
 //      }
 //    } else {
-      Transitions.SHUTDOWN.apply( vm );
+      Entities.asTransaction( VmInstance.class, Transitions.SHUTDOWN ).apply( vm );
     }
   }
   
