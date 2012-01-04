@@ -63,18 +63,23 @@
  */
 package com.eucalyptus.cluster.callback;
 
+import java.util.concurrent.ExecutionException;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import com.eucalyptus.address.Address;
+import com.eucalyptus.address.Addresses;
 import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.VmRunType;
 import com.eucalyptus.cluster.ResourceState.NoSuchTokenException;
+import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.Topology;
+import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.EucalyptusClusterException;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.LogUtil;
-import com.eucalyptus.util.Callback.Success;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.MessageCallback;
 import com.eucalyptus.vm.VmInstance;
@@ -83,7 +88,6 @@ import com.eucalyptus.vm.VmInstances;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Predicate;
-import com.google.common.base.Predicates;
 import edu.ucsb.eucalyptus.cloud.VmInfo;
 import edu.ucsb.eucalyptus.cloud.VmRunResponseType;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
@@ -151,15 +155,25 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
         public Boolean apply( final VmInfo input ) {
           final VmInstance vm = VmInstances.lookup( input.getInstanceId( ) );
           vm.updateAddresses( input.getNetParams( ).getIpAddress( ), input.getNetParams( ).getIgnoredPublicIp( ) );
+          final ServiceConfiguration ccConfig = Topology.lookup( ClusterController.class, vm.lookupPartition( ) );
           final Address addr = VmRunCallback.this.token.getAddress( );
           if ( addr != null ) {
-            AsyncRequests.newRequest( addr.assign( vm ).getCallback( ) )
-                         .then( new Callback.Success<BaseMessage>( ) {
-                           @Override
-                           public void fire( final BaseMessage response ) {
-                             vm.updateAddresses( addr.getInstanceAddress( ), addr.getName( ) );
-                           }
-                         } ).dispatch( vm.getPartition( ) );
+            try {
+              AsyncRequests.newRequest( addr.assign( vm ).getCallback( ) )
+                           .then( new Callback.Success<BaseMessage>( ) {
+                             @Override
+                             public void fire( final BaseMessage response ) {
+                               vm.updateAddresses( addr.getInstanceAddress( ), addr.getName( ) );
+                             }
+                           } ).sendSync( ccConfig );
+            } catch ( InterruptedException ex ) {
+              Exceptions.maybeInterrupted( ex );
+              Addresses.release( addr );
+            } catch ( Exception ex ) {
+              LOG.error( ex );
+              Logs.extreme( ).error( ex, ex );
+              Addresses.release( addr );
+            }
             
           }
           return true;
