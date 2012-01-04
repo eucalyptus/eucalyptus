@@ -268,7 +268,7 @@ public class Hosts {
             if ( UpdateEntry.INSTANCE.apply( currentHost ) ) {
               LOG.info( "Updated changed local host entry: " + currentHost );
             } else {
-              LOG.info( "Updated local host entry periodically: " + currentHost );
+              Logs.extreme( ).info( "Updated local host entry periodically: " + currentHost );
               Hosts.put( Host.create( ) );
             }
           }
@@ -472,7 +472,7 @@ public class Hosts {
           } else if ( InitializeAsCloudController.INSTANCE.apply( host ) ) {
             LOG.info( "Hosts.entrySet(): INITIALIZED CLC => " + host );
           } else {
-            LOG.debug( "Hosts.entrySet(): UPDATED HOST => " + host );
+            Logs.extreme( ).debug( "Hosts.entrySet(): UPDATED HOST => " + host );
           }
         } catch ( Exception ex ) {
           LOG.error( ex, ex );
