@@ -60,21 +60,25 @@ public class StatefulMessageSet<E extends Enum<E>> {
   @SuppressWarnings( "unchecked" )
   private void queueEvents( final E state ) {
     for ( final Request event : this.messages.get( state ) ) {
-      EventRecord.caller( StatefulMessageSet.class, EventType.VM_STARTING, state.name( ), event.getCallback( ).toString( ) ).debug( );
-      if ( event.getCallback( ) instanceof BroadcastCallback ) {
-        final BroadcastCallback callback = ( BroadcastCallback ) event.getCallback( );
-        this.pendingEvents.addAll( Lists.transform( Clusters.getInstance( ).listValues( ), new Function<Cluster, CheckedListenableFuture>( ) {
-          @Override
-          public CheckedListenableFuture apply( final Cluster c ) {
-            LOG.debug( "VM_STARTING: " + state.name( ) + " " + c.getName( ) + " " + event.getClass( ).getSimpleName( ) + " " + event.getCallback( ) );
-            final Request request = AsyncRequests.newRequest( callback.newInstance( ) );
-            request.getRequest( ).regardingUserRequest( callback.getRequest( ) );
-            return request.dispatch( c.getConfiguration( ) );
-          }
-        } ) );
-      } else {
-        LOG.debug( "VM_STARTING: " + state.name( ) + " " + this.cluster.getName( ) + " " + event.getClass( ).getSimpleName( ) + " " + event.getCallback( ) );
-        this.pendingEvents.add( event.dispatch( this.cluster.getConfiguration( ) ) );
+      try {
+        EventRecord.caller( StatefulMessageSet.class, EventType.VM_STARTING, state.name( ), event.getCallback( ).toString( ) ).debug( );
+        if ( event.getCallback( ) instanceof BroadcastCallback ) {
+          final BroadcastCallback callback = ( BroadcastCallback ) event.getCallback( );
+          this.pendingEvents.addAll( Lists.transform( Clusters.getInstance( ).listValues( ), new Function<Cluster, CheckedListenableFuture>( ) {
+            @Override
+            public CheckedListenableFuture apply( final Cluster c ) {
+              LOG.debug( "VM_STARTING: " + state.name( ) + " " + c.getName( ) + " " + event.getClass( ).getSimpleName( ) + " " + event.getCallback( ) );
+              final Request request = AsyncRequests.newRequest( callback.newInstance( ) );
+              request.getRequest( ).regardingUserRequest( callback.getRequest( ) );
+              return request.dispatch( c.getConfiguration( ) );
+            }
+          } ) );
+        } else {
+          LOG.debug( "VM_STARTING: " + state.name( ) + " " + this.cluster.getName( ) + " " + event.getClass( ).getSimpleName( ) + " " + event.getCallback( ) );
+          this.pendingEvents.add( event.dispatch( this.cluster.getConfiguration( ) ) );
+        }
+      } catch ( Exception ex ) {
+        LOG.error( ex , ex );
       }
     }
   }
