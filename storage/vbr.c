@@ -1213,12 +1213,12 @@ static artifact * art_alloc_vbr (virtualBootRecord * vbr, boolean do_make_work_c
     }        
 
     case NC_LOCATION_IQN: {
-        a = art_alloc (NULL, NULL, -1, FALSE, FALSE, FALSE, iqn_creator, vbr);
+        a = art_alloc ("iscsi-vol", NULL, -1, FALSE, FALSE, FALSE, iqn_creator, vbr);
         goto out;
     }
 
     case NC_LOCATION_AOE: {
-        a = art_alloc (NULL, NULL, -1, FALSE, FALSE, FALSE, aoe_creator, vbr);
+        a = art_alloc ("aoe-vol", NULL, -1, FALSE, FALSE, FALSE, aoe_creator, vbr);
         goto out;
     }
 
@@ -1766,7 +1766,7 @@ art_implement_tree ( // traverse artifact tree and create/download/combine artif
                     if (do_create) { // we'll hold the dependency open for the creator
                         num_opened_deps++;
                     } else { // this is a sentinel, we're not creating anything, so release the dep immediately
-                        if (blockblob_close (root->deps[i]->bb) == -1) {
+                        if (root->deps[i]->bb && (blockblob_close (root->deps[i]->bb) == -1)) {
                             logprintfl (EUCAERROR, "[%s] error: failed to close dependency of %s: %d %s (potential resource leak!) on try %d\n",
                                         root->instanceId, root->id, blobstore_get_error(), blobstore_get_last_msg(), tries);
                         }
