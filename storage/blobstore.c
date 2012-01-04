@@ -2303,7 +2303,7 @@ static int dm_create_devices (char * dev_names[], char * dm_tables[], int size)
                 close (fd);
 
             } else { // couldn't get fd
-                logprintfl (EUCAERROR, "{%u} error: dm_create_devices: couldn't open temporary file %s\n", (unsigned int)pthread_self(), tmpfile);
+                logprintfl (EUCAERROR, "{%u} error: dm_create_devices: couldn't open temporary file %s: %s\n", (unsigned int)pthread_self(), tmpfile, strerror (errno));
                 unlink (tmpfile);
                 exit (1);
             }

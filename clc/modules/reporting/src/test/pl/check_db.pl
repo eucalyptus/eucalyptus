@@ -1,31 +1,35 @@
 #!/usr/bin/perl
 
 #
-# check_db.pl
+# check_db.pl verifies that simulated usage results in correct events stored
+#  in the database.
 #
-# author: tom.werges
+# This script is called by test.pl; see test.pl for comprehensive documentation
+# of the perl test suite.
 #
 # (c)2011, Eucalyptus Systems, Inc. All Rights Reserved.
+# author: tom.werges
 #
 
 use strict;
 use warnings;
+require "test_common.pl";
 
-if ($#ARGV+1 < 4) {
-	die "Usage: check_db.pl num_instances_per_user duration_secs upload_file (account:user,user,user)+";
+if ($#ARGV+1 < 5) {
+	die "Usage: check_db.pl num_instances_per_user duration_secs upload_file write_interval (account:user,user,user)+";
 }
 
 
 my $num_instances_per_user = shift;
 my $duration_secs = shift;
 my $upload_file = shift;
-my $write_interval = 40;
-my $storage_usage_mb = 2;
+my $write_interval = shift;
 my $num_users = 0;
 my $account = "";
 my $username_arg = "";
 my @usernames = ();
 my @accountnames = ();
+my $return_code = 0;
 
 while ($#ARGV+1>0) {
 	($account,$username_arg) = split(":",shift);
@@ -35,49 +39,6 @@ while ($#ARGV+1>0) {
 		$num_users++;
 	}
 }
-
-sub rand_str($) {
-	return sprintf("%x",rand(2<<$_[0]));
-}
-
-sub execute_query($) {
-	print "Executing query:$_[0]\n";
-	my $output = `./db.sh --execute="$_[0]" -D eucalyptus_reporting --skip-column-names`;
-	print "Output:$output\n";
-	return split("\n",$output);
-}
-
-sub runcmd($) {
-	print "Running cmd:$_[0]\n";
-	my $ret = system($_[0]);
-	return $ret;
-}
-
-# TEST_RANGE
-#  var_name, expected, value, error
-sub test_range($$$$) {
-	my ($name,$expected,$val,$error) = @_;
-	print "test:$name, expected:$expected +/- $error, val:$val\n";
-	if ($val < $expected-$error || $val > $expected+$error) {
-		print " FAILED: test $name\n";
-	}
-}
-
-# TEST_EQ
-#  var_name, expected, value
-sub test_eq($$$) {
-	my ($name,$expected,$val) = @_;
-	print "test:$name, expected:$expected val:$val\n";
-	if ($val != $expected) {
-		print " FAILED: test $name\n";
-	}
-}
-
-
-
-#
-# MAIN LOGIC
-#
 
 
 #
@@ -109,10 +70,10 @@ foreach (execute_query("
 ")) {
 	($username,$count) = split("\\s+");
 	print "Found instances user:$username #:$count\n";
-	test_eq("ins count", $num_instances_per_user, $count);
+	$return_code |= $return_code = test_eq("ins count", $num_instances_per_user, $count);
 	$num_rows++;
 }
-test_eq("rows count", $num_users, $num_rows);
+$return_code |= test_eq("rows count", $num_users, $num_rows);
 $num_rows=0;
 
 use integer;
@@ -140,13 +101,13 @@ foreach (execute_query("
 ")) {
 	my ($disk_io,$net_io) = (0,0);
 	($count,$disk_io,$net_io,$username) = split("\\s+");
-	test_range("ins event count", $interval_cnt, $count, 1);
+	$return_code |= test_range("ins event count", $interval_cnt, $count, 1);
 	if ($disk_io==0) {
 		die ("Disk == 0");
 	}
 	$num_rows++;
 }
-test_eq("rows count", $num_users, $num_rows);
+$return_code |= test_eq("rows count", $num_users, $num_rows);
 $num_rows=0;
 
 
@@ -173,13 +134,13 @@ foreach (execute_query("
 ")) {
 	my ($max_buckets,$max_objects,$max_size)=(0,0,0);
 	($count,$max_buckets,$max_objects,$max_size,$username) = split("\\s+");
-	test_range("count", $interval_cnt, $count, 1);
-	test_eq("max_buckets", $interval_cnt, 1);
-	test_range("max_objects", $interval_cnt, $max_size, 1);
-	test_range("max_size", $interval_cnt*$object_size, $max_size, $object_size);
+	$return_code |= test_range("count", $interval_cnt, $count, 1);
+	$return_code |= test_eq("max_buckets", $interval_cnt, 1);
+	$return_code |= test_range("max_objects", $interval_cnt, $max_size, 1);
+	$return_code |= test_range("max_size", $interval_cnt*$object_size, $max_size, $object_size);
 	$num_rows++;
 }
-test_eq("rows count", $num_users, $num_rows);
+$return_code |= test_eq("rows count", $num_users, $num_rows);
 $num_rows=0;
 
 
@@ -205,15 +166,16 @@ foreach (execute_query("
 ")) {
 	my ($max_snap,$max_snap_size,$max_vols,$max_vol_size) = (0,0,0,0);
 	($count, $max_snap, $max_snap_size, $max_vols, $max_vol_size, $username) = split("\\s+");
-	test_range("count", $interval_cnt, $count, 1);
-	test_range("max_snap", $interval_cnt, $max_snap, 1);
-	test_range("max_vols", $interval_cnt, $max_vols, 1);
-	test_range("max_vol_size", $interval_cnt*$storage_usage_mb, $max_vol_size, $storage_usage_mb);
+	$return_code |= test_range("count", $interval_cnt, $count, 1);
+	$return_code |= test_range("max_snap", $interval_cnt, $max_snap, 1);
+	$return_code |= test_range("max_vols", $interval_cnt, $max_vols, 1);
+	$return_code |= test_range("max_vol_size", $interval_cnt*storage_usage_mb(), $max_vol_size, storage_usage_mb());
 	# TODO: how do we determine what this should be???
 	if ($max_snap_size < 1) {
 		die ("max snap size expected: >1, got:$max_snap_size");
 	}
 	$num_rows++;
 }
-test_eq("rows count", $num_users, $num_rows);
+$return_code |= test_eq("rows count", $num_users, $num_rows);
 
+exit($return_code);

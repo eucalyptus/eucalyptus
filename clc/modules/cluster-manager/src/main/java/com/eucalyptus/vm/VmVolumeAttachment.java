@@ -178,14 +178,14 @@ public class VmVolumeAttachment implements Comparable<VmVolumeAttachment> {
     if ( o == null || !getClass( ).equals( o.getClass( ) ) ) return false;
     VmVolumeAttachment that = ( VmVolumeAttachment ) o;
     if ( this.volumeId != null
-      ? !volumeId.equals( that.getVolumeId( ) )
+      ? !this.volumeId.equals( that.getVolumeId( ) )
       : that.getVolumeId( ) != null ) return false;
     return true;
   }
   
   public int hashCode( ) {
-    return ( volumeId == null
-      ? volumeId.hashCode( )
+    return ( this.volumeId != null
+      ? this.volumeId.hashCode( )
       : 0 );
   }
   
