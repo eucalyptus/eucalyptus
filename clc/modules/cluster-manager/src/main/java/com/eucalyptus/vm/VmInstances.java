@@ -343,46 +343,30 @@ public class VmInstances {
     return Iterables.find( list( ), withBundleId( bundleId ) );
   }
   
-  public static UnconditionalCallback getCleanUpCallback( final Address address, final VmInstance vm, final Cluster cluster ) {
-    final UnconditionalCallback cleanup = new UnconditionalCallback( ) {
-      @Override
-      public void fire( ) {
-        if ( address != null ) {
-          try {
-            if ( address.isSystemOwned( ) ) {
-              EventRecord.caller( VmInstances.class, EventType.VM_TERMINATING, "SYSTEM_ADDRESS", address.toString( ) ).debug( );
-              Addresses.release( address );
-            } else {
-              EventRecord.caller( VmInstances.class, EventType.VM_TERMINATING, "USER_ADDRESS", address.toString( ) ).debug( );
-              AsyncRequests.newRequest( address.unassign( ).getCallback( ) ).dispatch( vm.getPartition( ) );
-            }
-          } catch ( final IllegalStateException e ) {} catch ( final Throwable e ) {
-            LOG.debug( e, e );
-          }
-        }
-      }
-    };
-    return cleanup;
-  }
-  
   public static void cleanUp( final VmInstance vm ) {
-    LOG.trace( Logs.dump( vm ) );
-    LOG.info( "Terminating instance: " + vm.getInstanceId( ), new RuntimeException( ) );
+    Logs.extreme( ).info( "Terminating instance: " + vm.getInstanceId( ), new RuntimeException( ) );
     try {
-      final Cluster cluster = Clusters.lookup( Topology.lookup( ClusterController.class, vm.lookupPartition( ) ) );
-      VmInstances.cleanUpAttachedVolumes( vm );
-      
       Address address = null;
-      final Request<TerminateInstancesType, TerminateInstancesResponseType> req = AsyncRequests.newRequest( new TerminateCallback( vm.getInstanceId( ) ) );
       if ( NetworkGroups.networkingConfiguration( ).hasNetworking( ) ) {
         try {
           address = Addresses.getInstance( ).lookup( vm.getPublicAddress( ) );
-        } catch ( final NoSuchElementException e ) {} catch ( final Throwable e1 ) {
+          if ( address.isSystemOwned( ) ) {
+            EventRecord.caller( VmInstances.class, EventType.VM_TERMINATING, "SYSTEM_ADDRESS", address.toString( ) ).debug( );
+            Addresses.release( address );
+          } else {
+            EventRecord.caller( VmInstances.class, EventType.VM_TERMINATING, "USER_ADDRESS", address.toString( ) ).debug( );
+            AsyncRequests.newRequest( address.unassign( ).getCallback( ) ).dispatch( vm.getPartition( ) );
+          }
+        } catch ( final NoSuchElementException e ) {
+          
+        } catch ( final Throwable e1 ) {
           LOG.debug( e1, e1 );
         }
       }
-      req.then( VmInstances.getCleanUpCallback( address, vm, cluster ) );
-      req.dispatch( cluster.getConfiguration( ) );
+      final Cluster cluster = Clusters.lookup( Topology.lookup( ClusterController.class, vm.lookupPartition( ) ) );
+      VmInstances.cleanUpAttachedVolumes( vm );
+      
+      AsyncRequests.newRequest( new TerminateCallback( vm.getInstanceId( ) ) ).dispatch( cluster.getConfiguration( ) );
     } catch ( final Throwable e ) {
       LOG.error( e, e );
     }
