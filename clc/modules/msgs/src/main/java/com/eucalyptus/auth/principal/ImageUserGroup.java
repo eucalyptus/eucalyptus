@@ -1,5 +1,6 @@
 package com.eucalyptus.auth.principal;
 
+import java.util.ArrayList;
 import java.util.List;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.PolicyParseException;
@@ -86,7 +87,7 @@ public class ImageUserGroup implements Group {
   @Override
   public List<Policy> getPolicies( ) {
     // TODO Auto-generated method stub
-    return null;
+    return new ArrayList<Policy>( );
   }
 
   @Override

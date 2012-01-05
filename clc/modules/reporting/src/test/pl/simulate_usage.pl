@@ -1,55 +1,37 @@
 #!/usr/bin/perl
 
 #
-# simulate_usage.pl runs a test of the reporting system. It simulates usage
-#   of several users simultaneously by spawning processes and generating usage
-#   as various users simultaneously. Then it verifies that events were sent and
-#   recorded in the database correctly and that reports are generated correctly.
+# simulate_usage.pl simulates usage of the reporting system, by spawning
+#  processes and generating usage as various users simultaneously.
 #
-# Usage: simulate_usage.pl admin_pw num_users num_users_per_Account
-#             num_instances_per_user duration_secs_secs image+
+# This script generates different users, then forks and calls
+# simulate_one_user.pl repeatedly.
 #
-# author: tom.werges
+# This script is called by test.pl; see test.pl for comprehensive documentation
+# of the perl test suite.
 #
 # (c)2011, Eucalyptus Systems, Inc. All Rights Reserved.
+# author: tom.werges
 #
 
 use strict;
 use warnings;
+require "test_common.pl";
 
-if ($#ARGV+1 < 6) {
-	die "Usage: simulate_usage.pl upload_file num_users num_users_per_account num_instances_per_user duration_secs image+";
+if ($#ARGV+1 < 5) {
+	die "Usage: simulate_usage.pl image_id num_users num_users_per_account num_instances_per_user duration_secs write_interval";
 }
 
 
-my $upload_file = shift;
+my $image_id = shift;
 my $num_users = shift;
 my $num_users_per_account = shift;
 my $num_instances_per_user = shift;
 my $duration_secs = shift;
-my $write_interval = 40;
-my $storage_usage_mb = 2;
-my @images = ();
+my $write_interval = shift;
 my @types = ("m1.small","c1.medium","m1.large");
 my %types_num = (); # type=>n
-while ($#ARGV+1>0) {
-	push(@images,shift);
-}
 
-sub rand_str($) {
-	return sprintf("%x",rand(2<<$_[0]));
-}
-
-sub runcmd($) {
-	print STDERR "Running cmd:$_[0]\n";
-	my $ret = system("$_[0] 1>&2");
-	return $ret;
-}
-
-
-#
-# MAIN LOGIC
-#
 
 #
 # For each user: create an account/user within eucalyptus, download
@@ -90,9 +72,9 @@ for (my $i=0; $i<$num_users; $i++) {
 	# Fork and run simulate_one_user.pl as this euca user
 	if ($pid==0) {
 		# Run usage simulation as euca user within subshell within separate process; rotate thru images and types
-		#exec("(cd \$PWD/credsdir-$user_name; \$PWD/simulate_one_user.pl $num_instances_per_user " . $types[$i % ($#types+1)] . " $duration_secs $num_users " . $images[$i % ($#images+1)] . " > log-$user_name 2>&1)") and die ("Couldn't exec simulate_one_user for: $user_name");
+		#exec("(cd \$PWD/credsdir-$user_name; \$PWD/simulate_one_user.pl $num_instances_per_user " . $types[$i % ($#types+1)] . " $duration_secs $num_users " . image_file() . " > log-$user_name 2>&1)") and die ("Couldn't exec simulate_one_user for: $user_name");
 		$types_num{$types[$i % ($#types+1)]}++; # Keep track of num of instance types started
-		runcmd("(. \$PWD/credsdir-$user_name/eucarc; . \$PWD/credsdir-$user_name/iamrc; \$PWD/simulate_one_user.pl $num_instances_per_user " . $types[$i % ($#types+1)] . " $write_interval $duration_secs $upload_file $storage_usage_mb " . $images[$i % ($#images+1)] . ") > log-$user_name 2>&1") and die ("Couldn't exec simulate_one_user for: $user_name"); exit(0);
+		runcmd("(. \$PWD/credsdir-$user_name/eucarc; . \$PWD/credsdir-$user_name/iamrc; \$PWD/simulate_one_user.pl $image_id $num_instances_per_user " . $types[$i % ($#types+1)] . " $write_interval $duration_secs " . image_file() . ") > log-$user_name 2>&1") and die ("Couldn't exec simulate_one_user for: $user_name"); exit(0);
 	}
 	push(@pids, $pid);
 }

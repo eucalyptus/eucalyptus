@@ -52,7 +52,9 @@ public class VmTypeActivity extends AbstractSearchActivity implements VmTypeView
   @Override
   public void saveValue( ArrayList<String> keys, ArrayList<HasValueWidget> values ) {
     if ( values == null || values.size( ) < 1 || this.currentSelected == null ) {
+      clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.ERROR, "Must select a single vm type to change value", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
       LOG.log( Level.WARNING, "No valid values or empty selection" );
+      return;
     }
     LOG.log( Level.INFO, "Saving: " + values );
     final SearchResultRow result = new SearchResultRow( );

@@ -104,6 +104,15 @@ public class WalrusDataMessenger {
 		return getQueue(key1, key2);
 	}
 
+	public void clearQueues(String key1) {
+		ConcurrentHashMap<String,WalrusDataQueue<WalrusDataMessage>> queues = queueMap.get(key1);
+		if(queues != null) {
+			for (WalrusDataQueue<WalrusDataMessage> queue: queues.values()) {
+				queue.setInterrupted(false);
+			}
+		}
+	}
+
 	public void removeQueue(String key1, String key2) {
 		if(queueMap.containsKey(key1)) {
 			ConcurrentHashMap<String, WalrusDataQueue<WalrusDataMessage>> queues = queueMap.get(key1);
