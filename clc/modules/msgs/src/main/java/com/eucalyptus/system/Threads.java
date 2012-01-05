@@ -597,7 +597,7 @@ public class Threads {
     private final String                       creationStack;
     private final Class<? extends ComponentId> componentId;
     private final String                       name;
-    private FutureTask<?>                      task;
+    private FutureTask<?>                      currentTask;
     
     Queue( final Class<? extends ComponentId> componentId, final T owner, final int numWorkers ) {
       this.componentId = componentId;
@@ -643,8 +643,12 @@ public class Threads {
         
         @Override
         public C call( ) throws Exception {
-          run.run( );
-          f.set( null );
+          try {
+            run.run( );
+            f.set( null );
+          } catch ( Exception ex ) {
+            f.setException( ex );
+          }
           return null;
         }
         
@@ -671,11 +675,11 @@ public class Threads {
     public void run( ) {
       do {
         try {
-          this.task = this.msgQueue.take( );
-          if ( this.task != null ) {
-            Logs.extreme( ).debug( EventType.QUEUE + " " + this.task + " " + Thread.currentThread( ).getName( ) );
+          final FutureTask<?> futureTask = this.msgQueue.take( );
+          if ( futureTask != null ) {
+            Logs.extreme( ).debug( EventType.QUEUE + " " + ( this.currentTask = futureTask ) + " " + Thread.currentThread( ).getName( ) );
             try {
-              this.task.run( );
+              futureTask.run( );
             } catch ( final Exception ex ) {
               Exceptions.maybeInterrupted( ex );
               Logs.extreme( ).error( ex, ex );
@@ -683,7 +687,9 @@ public class Threads {
           }
         } catch ( final InterruptedException e ) {
           Exceptions.maybeInterrupted( e );
-          return;
+          break;
+        } finally {
+          this.currentTask = null;
         }
       } while ( !this.msgQueue.isEmpty( ) || this.running.get( ) );
       Logs.extreme( ).debug( "Shutting down worker: " + this.owner

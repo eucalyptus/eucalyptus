@@ -502,7 +502,7 @@ public class VmInstances {
   }
   
   public static void stopped( final VmInstance vm ) throws TransactionException {
-    Transitions.STOPPED.apply( vm );
+    Entities.asTransaction( VmInstance.class, Transitions.STOPPED ).apply( vm );
   }
   
   public static void stopped( final String key ) throws NoSuchElementException, TransactionException {
@@ -520,7 +520,7 @@ public class VmInstances {
 //        VmInstances.terminated( vm );
 //      }
 //    } else {
-      Transitions.SHUTDOWN.apply( vm );
+      Entities.asTransaction( VmInstance.class, Transitions.SHUTDOWN ).apply( vm );
     }
   }
   
