@@ -43,8 +43,6 @@ import com.eucalyptus.webui.client.view.PolicyView;
 import com.eucalyptus.webui.client.view.PolicyViewImpl;
 import com.eucalyptus.webui.client.view.ReportView;
 import com.eucalyptus.webui.client.view.ReportViewImpl;
-import com.eucalyptus.webui.client.view.RightScaleView;
-import com.eucalyptus.webui.client.view.RightScaleViewImpl;
 import com.eucalyptus.webui.client.view.ShellView;
 import com.eucalyptus.webui.client.view.ShellViewImpl;
 import com.eucalyptus.webui.client.view.StartView;
@@ -106,7 +104,6 @@ public class ClientFactoryImpl implements ClientFactory {
 	private InputView inputView;
 	
 	// Snippets
-	private RightScaleView rightscaleView;
 	private CloudRegistrationView cloudRegView;
 	private DownloadView downloadView;
 	
@@ -329,14 +326,6 @@ public class ClientFactoryImpl implements ClientFactory {
       actionResultView = new ActionResultViewImpl( );
     }
     return actionResultView;
-  }
-
-  @Override
-  public RightScaleView getRightScaleView( ) {
-    if ( rightscaleView == null ) {
-      rightscaleView = new RightScaleViewImpl( );
-    }
-    return rightscaleView;
   }
 
   @Override

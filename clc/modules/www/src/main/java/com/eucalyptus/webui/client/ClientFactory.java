@@ -21,7 +21,6 @@ import com.eucalyptus.webui.client.view.LoginView;
 import com.eucalyptus.webui.client.view.ConfigView;
 import com.eucalyptus.webui.client.view.PolicyView;
 import com.eucalyptus.webui.client.view.ReportView;
-import com.eucalyptus.webui.client.view.RightScaleView;
 import com.eucalyptus.webui.client.view.ShellView;
 import com.eucalyptus.webui.client.view.StartView;
 import com.eucalyptus.webui.client.view.UserView;
@@ -127,7 +126,6 @@ public interface ClientFactory {
   
   ActionResultView getActionResultView( );
   
-  RightScaleView getRightScaleView( );
   DownloadView getDownloadView( );
   
   ItemView createItemView( );
