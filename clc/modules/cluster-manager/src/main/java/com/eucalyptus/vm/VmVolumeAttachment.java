@@ -86,9 +86,13 @@ public class VmVolumeAttachment implements Comparable<VmVolumeAttachment> {
   @Column( name = "metadata_vm_volume_status" )
   private String     status;
   @Column( name = "metadata_vm_volume_attach_time" )
-  private Date       attachTime = new Date( );
+  private Date       attachTime;
+  @Column( name = "metadata_vm_vol_delete_on_terminate")
+  private Boolean deleteOnTerminate;
+  @Column( name = "metadata_vm_vol_remove_on_cleanup")
+  private Boolean removeOnCleanUp;
   
-//  @OneToOne
+  //  @OneToOne
 //  @JoinTable( name = "metadata_vm_has_volume", joinColumns = { @JoinColumn( name = "metadata_vm_id" ) }, inverseJoinColumns = { @JoinColumn( name = "metadata_volume_id" ) } )
 //  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 //  private Volume     volume;
@@ -97,7 +101,9 @@ public class VmVolumeAttachment implements Comparable<VmVolumeAttachment> {
     super( );
   }
   
-  public VmVolumeAttachment( VmInstance vmInstance, String volumeId, String device, String remoteDevice, String status, Date attachTime ) {
+  
+  VmVolumeAttachment( VmInstance vmInstance, String volumeId, String device, String remoteDevice, String status, Date attachTime,
+                              Boolean deleteOnTerminate, Boolean removeOnCleanUp ) {
     super( );
     this.vmInstance = vmInstance;
     this.volumeId = volumeId;
@@ -105,6 +111,13 @@ public class VmVolumeAttachment implements Comparable<VmVolumeAttachment> {
     this.remoteDevice = remoteDevice;
     this.status = status;
     this.attachTime = attachTime;
+    this.deleteOnTerminate = deleteOnTerminate;
+    this.removeOnCleanUp = removeOnCleanUp;
+  }
+
+
+  public VmVolumeAttachment( VmInstance vmInstance, String volumeId, String device, String remoteDevice, String status, Date attachTime ) {
+    this( vmInstance, volumeId, device, remoteDevice, status, attachTime, Boolean.TRUE, Boolean.FALSE );
   }
   
   public static Function<AttachedVolume, VmVolumeAttachment> fromAttachedVolume( final VmInstance vm ) {
@@ -112,6 +125,15 @@ public class VmVolumeAttachment implements Comparable<VmVolumeAttachment> {
       @Override
       public VmVolumeAttachment apply( AttachedVolume vol ) {
         return new VmVolumeAttachment( vm, vol.getVolumeId( ), vol.getDevice( ), vol.getRemoteDevice( ), vol.getStatus( ), vol.getAttachTime( ) );
+      }
+    };
+  }
+  
+  public static Function<AttachedVolume, VmVolumeAttachment> fromTransientAttachedVolume( final VmInstance vm ) {
+    return new Function<AttachedVolume, VmVolumeAttachment>( ) {
+      @Override
+      public VmVolumeAttachment apply( AttachedVolume vol ) {
+        return new VmVolumeAttachment( vm, vol.getVolumeId( ), vol.getDevice( ), vol.getRemoteDevice( ), vol.getStatus( ), vol.getAttachTime( ), false, true );
       }
     };
   }
@@ -157,7 +179,7 @@ public class VmVolumeAttachment implements Comparable<VmVolumeAttachment> {
     this.remoteDevice = remoteDevice;
   }
   
-  String getStatus( ) {
+  public String getStatus( ) {
     return this.status;
   }
   
@@ -171,6 +193,14 @@ public class VmVolumeAttachment implements Comparable<VmVolumeAttachment> {
   
   void setAttachTime( Date attachTime ) {
     this.attachTime = attachTime;
+  }
+  
+  Boolean getDeleteOnTerminate( ) {
+    return this.deleteOnTerminate;
+  }
+  
+  void setDeleteOnTerminate(Boolean value) {
+    this.deleteOnTerminate = value;
   }
   
   public boolean equals( final Object o ) {
@@ -230,6 +260,16 @@ public class VmVolumeAttachment implements Comparable<VmVolumeAttachment> {
         return input.getVolumeId( ).equals( volumeId );
       }
     };
+  }
+
+
+  Boolean getRemoveOnCleanUp( ) {
+    return this.removeOnCleanUp;
+  }
+
+
+  void setRemoveOnCleanUp( Boolean removeOnCleanUp ) {
+    this.removeOnCleanUp = removeOnCleanUp;
   }
   
 }

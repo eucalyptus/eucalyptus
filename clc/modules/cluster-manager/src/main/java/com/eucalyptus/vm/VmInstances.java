@@ -117,6 +117,7 @@ import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
+import edu.ucsb.eucalyptus.msgs.DeleteStorageVolumeType;
 import edu.ucsb.eucalyptus.msgs.DetachStorageVolumeType;
 import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
 import edu.ucsb.eucalyptus.msgs.TerminateInstancesResponseType;
@@ -385,9 +386,16 @@ public class VmInstances {
     try {
       ServiceConfiguration ccConfig = Topology.lookup( ClusterController.class, vm.lookupPartition( ) );
       final Cluster cluster = Clusters.lookup( ccConfig );
-      vm.eachVolumeAttachment( new Predicate<AttachedVolume>( ) {
+      vm.eachVolumeAttachment( new Predicate<VmVolumeAttachment>( ) {
         @Override
-        public boolean apply( final AttachedVolume arg0 ) {
+        public boolean apply( final VmVolumeAttachment arg0 ) {
+          if ( arg0.getDeleteOnTerminate( ) && !arg0.getRemoveOnCleanUp( ) ) {
+            //ebs with either default DOT or user specified DOT
+          } else if ( !arg0.getDeleteOnTerminate( ) && !arg0.getRemoveOnCleanUp( ) ) {
+            //ebs with user specified DOT
+          } else {//arg0.getRemoveCleanUp()==true
+            //AttachVolume transient volume attachment
+          }
           if ( "/dev/sda1".equals( arg0.getDevice( ) ) ) {//GRZE:fix references to root device name.
             try {
               final ServiceConfiguration sc = Topology.lookup( Storage.class, vm.lookupPartition( ) );
@@ -405,6 +413,11 @@ public class VmInstances {
               vm.removeVolumeAttachment( arg0.getVolumeId( ) );
               final Dispatcher scDispatcher = ServiceDispatcher.lookup( sc );
               scDispatcher.send( new DetachStorageVolumeType( cluster.getNode( vm.getServiceTag( ) ).getIqn( ), arg0.getVolumeId( ) ) );
+        
+              AttachedVolume attachedVolume = vm.lookupVolumeAttachment(arg0.getVolumeId( ) );      
+              if (attachedVolume.getDeleteOnTerminate( ) ) {
+        	  scDispatcher.send( new DeleteStorageVolumeType(attachedVolume.getVolumeId( ) ) );
+              }
               return true;
             } catch ( final Throwable e ) {
               LOG.error( "Failed sending Detach Storage Volume for: " + arg0.getVolumeId( )

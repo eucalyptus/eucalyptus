@@ -240,7 +240,11 @@ public class ClusterAllocator implements Runnable {
           Volume vol = null;
           if ( !vm.getBootRecord( ).hasPersistentVolumes( ) ) {
             vol = Volumes.createStorageVolume( sc, this.allocInfo.getOwnerFullName( ), imgInfo.getSnapshotId( ), sizeGb, this.allocInfo.getRequest( ) );
-            vm.addPersistentVolume( "/dev/sda1", vol );
+            if ( deleteOnTerminate ) {
+              vm.addPersistentVolume( "/dev/sda1", vol );
+            } else {
+              vm.addPermanentVolume( "/dev/sda1", vol );
+            }
           } else {
             final VmVolumeAttachment volumeAttachment = vm.getBootRecord( ).getPersistentVolumes( ).iterator( ).next( );
             vol = Volumes.lookup( null, volumeAttachment.getVolumeId( ) );            
