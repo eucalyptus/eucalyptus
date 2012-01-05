@@ -49,8 +49,6 @@ public class QuickLinkTreeModel implements TreeViewModel {
     ImageResource lock( );    
     @Source( "image/sun_12x12_gray.png" )
     ImageResource sun( );
-    @Source( "image/rightscale_12x12_gray.png" )
-    ImageResource rightscale( );
     
   }
   
@@ -115,7 +113,6 @@ public class QuickLinkTreeModel implements TreeViewModel {
       imageMap.put( images.key( ).getName( ), AbstractImagePrototype.create( images.key( ) ).getHTML( ) );
       imageMap.put( images.lock( ).getName( ), AbstractImagePrototype.create( images.lock( ) ).getHTML( ) );
       imageMap.put( images.sun( ).getName( ), AbstractImagePrototype.create( images.sun( ) ).getHTML( ) );
-      imageMap.put( images.rightscale( ).getName( ), AbstractImagePrototype.create( images.rightscale( ) ).getHTML( ) );
     }    
   }
   
