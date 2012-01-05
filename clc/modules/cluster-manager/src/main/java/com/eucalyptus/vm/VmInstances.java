@@ -413,10 +413,9 @@ public class VmInstances {
               vm.removeVolumeAttachment( arg0.getVolumeId( ) );
               final Dispatcher scDispatcher = ServiceDispatcher.lookup( sc );
               scDispatcher.send( new DetachStorageVolumeType( cluster.getNode( vm.getServiceTag( ) ).getIqn( ), arg0.getVolumeId( ) ) );
-        
-              AttachedVolume attachedVolume = vm.lookupVolumeAttachment(arg0.getVolumeId( ) );      
-              if (attachedVolume.getDeleteOnTerminate( ) ) {
-        	  scDispatcher.send( new DeleteStorageVolumeType(attachedVolume.getVolumeId( ) ) );
+           
+              if (arg0.getDeleteOnTerminate( ) ) {
+        	  scDispatcher.send( new DeleteStorageVolumeType(arg0.getVolumeId( ) ) );
               }
               return true;
             } catch ( final Throwable e ) {
