@@ -333,7 +333,7 @@ public class EbsInstanceBlockDeviceMapping extends EucalyptusData {
   String volumeId;
   String status;
   Date attachTime;
-  Boolean deleteOnTermination = Boolean.FALSE;
+  Boolean deleteOnTermination = Boolean.TRUE;
   public EbsInstanceBlockDeviceMapping() {}
   public EbsInstanceBlockDeviceMapping( String volumeId, String status, Date attachTime ) {
     this.volumeId = volumeId;
@@ -345,7 +345,7 @@ public class EbsDeviceMapping extends EucalyptusData {  //** added 2008-02-01  *
   String virtualName; // ephemeralN, root, ami, swap
   String snapshotId;
   Integer volumeSize = null;
-  Boolean deleteOnTermination = Boolean.FALSE;
+  Boolean deleteOnTermination = Boolean.TRUE;
 }
 
 public class BlockDeviceMappingItemType extends EucalyptusData {  //** added 2008-02-01  **/

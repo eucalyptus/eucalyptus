@@ -389,41 +389,28 @@ public class VmInstances {
       vm.eachVolumeAttachment( new Predicate<VmVolumeAttachment>( ) {
         @Override
         public boolean apply( final VmVolumeAttachment arg0 ) {
-          if ( arg0.getDeleteOnTerminate( ) && !arg0.getRemoveOnCleanUp( ) ) {
-            //ebs with either default DOT or user specified DOT
-          } else if ( !arg0.getDeleteOnTerminate( ) && !arg0.getRemoveOnCleanUp( ) ) {
-            //ebs with user specified DOT
-          } else {//arg0.getRemoveCleanUp()==true
-            //AttachVolume transient volume attachment
-          }
-          if ( "/dev/sda1".equals( arg0.getDevice( ) ) ) {//GRZE:fix references to root device name.
             try {
+ 
               final ServiceConfiguration sc = Topology.lookup( Storage.class, vm.lookupPartition( ) );
               final Dispatcher scDispatcher = ServiceDispatcher.lookup( sc );
-              scDispatcher.send( new DetachStorageVolumeType( cluster.getNode( vm.getServiceTag( ) ).getIqn( ), arg0.getVolumeId( ) ) );
-              return true;
-            } catch ( final Throwable e ) {
-              LOG.error( "Failed sending Detach Storage Volume for: " + arg0.getVolumeId( )
-                         + ".  Will keep trying as long as instance is reported.  The request failed because of: " + e.getMessage( ), e );
-              return true;
-            }
-          } else {
-            try {
-              final ServiceConfiguration sc = Topology.lookup( Storage.class, vm.lookupPartition( ) );
-              vm.removeVolumeAttachment( arg0.getVolumeId( ) );
-              final Dispatcher scDispatcher = ServiceDispatcher.lookup( sc );
+              
+              if ( !"/dev/sda1".equals(arg0.getDevice( ) ) ) {
+                vm.removeVolumeAttachment( arg0.getVolumeId( ) );
+              }
+              
               scDispatcher.send( new DetachStorageVolumeType( cluster.getNode( vm.getServiceTag( ) ).getIqn( ), arg0.getVolumeId( ) ) );
            
-              if (arg0.getDeleteOnTerminate( ) ) {
-        	  scDispatcher.send( new DeleteStorageVolumeType(arg0.getVolumeId( ) ) );
+              //ebs with either default DOT or user specified DOT
+              if ( arg0.getDeleteOnTerminate( ) && !arg0.getRemoveOnCleanUp( ) ) {
+                scDispatcher.send( new DeleteStorageVolumeType( arg0.getVolumeId( ) ) );
               }
+              
               return true;
             } catch ( final Throwable e ) {
               LOG.error( "Failed sending Detach Storage Volume for: " + arg0.getVolumeId( )
                          + ".  Will keep trying as long as instance is reported.  The request failed because of: " + e.getMessage( ), e );
               return true;
             }
-          }
         }
       } );
     } catch ( final Exception ex ) {
