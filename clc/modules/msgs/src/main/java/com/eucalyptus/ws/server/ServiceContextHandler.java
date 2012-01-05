@@ -148,8 +148,12 @@ public class ServiceContextHandler implements ChannelUpstreamHandler, ChannelDow
         reply = new EucalyptusErrorMessageType( this.getClass( ).getSimpleName( ), ( BaseMessage ) request.getMessage( ), "Received a NULL reply" );
       }
       Long currTime = System.currentTimeMillis( );
-      EventRecord.here( reply.getClass( ), EventClass.MESSAGE, EventType.MSG_SERVICED, "request-ms",
-                        Long.toString( currTime - this.startTime.get( ctx.getChannel( ) ) ) ).debug( );
+      try {
+    	  EventRecord.here( reply.getClass( ), EventClass.MESSAGE, EventType.MSG_SERVICED, "request-ms",
+    			  Long.toString( currTime - this.startTime.get( ctx.getChannel( ) ) ) ).debug( );
+      } catch ( Exception ex ) {
+    	  Logs.extreme( ).trace( ex, ex );
+      }
       final MappingHttpResponse response = new MappingHttpResponse( request.getProtocolVersion( ) );
       final DownstreamMessageEvent newEvent = new DownstreamMessageEvent( ctx.getChannel( ), e.getFuture( ), response, null );
       response.setMessage( reply );

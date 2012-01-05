@@ -200,7 +200,7 @@ public abstract class AbstractSystemAddressManager {
           clearOrphan( addrInfo );
         } else if ( addr != null && !addr.isPending( ) && vm != null && VmStateSet.DONE.apply( vm ) ) {
           handleOrphan( cluster, addrInfo );
-        } else if ( ( addr != null && !addr.isPending( ) ) && ( vm == null ) ) {
+        } else if ( ( addr != null && addr.isAssigned( ) && !addr.isPending( ) ) && ( vm == null ) ) {
           handleOrphan( cluster, addrInfo );
         } else if ( ( addr == null ) && ( vm != null ) ) {
           addr = new Address( Principals.systemFullName( ), addrInfo.getAddress( ), vm.getInstanceId( ), vm.getPrivateAddress( ) );

@@ -14,15 +14,15 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 
 public class StatefulMessageSet<E extends Enum<E>> {
-  private static Logger                                  LOG           = Logger.getLogger( StatefulMessageSet.class );
-  private final Multimap<E, Request>                           messages      = ArrayListMultimap.create( );
-  private final ConcurrentLinkedQueue<CheckedListenableFuture> pendingEvents = new ConcurrentLinkedQueue<CheckedListenableFuture>( );
-  private final E[]                                            states;
-  private E                                              state;
-  private final E                                              endState;
-  private final E                                              failState;
-  private final Cluster                                        cluster;
-  private final Long                                           startTime;
+  private static Logger                        LOG           = Logger.getLogger( StatefulMessageSet.class );
+  private final Multimap<E, Request>           messages      = ArrayListMultimap.create( );
+  private final ConcurrentLinkedQueue<Request> pendingEvents = new ConcurrentLinkedQueue<Request>( );
+  private final E[]                            states;
+  private E                                    state;
+  private final E                              endState;
+  private final E                              failState;
+  private final Cluster                        cluster;
+  private final Long                           startTime;
   
   /**
    * Collection of messages which need to honor a certain ordering. The state
@@ -60,65 +60,44 @@ public class StatefulMessageSet<E extends Enum<E>> {
   @SuppressWarnings( "unchecked" )
   private void queueEvents( final E state ) {
     for ( final Request event : this.messages.get( state ) ) {
-      EventRecord.caller( StatefulMessageSet.class, EventType.VM_STARTING, state.name( ), event.getCallback( ).toString( ) ).debug( );
-      if ( event.getCallback( ) instanceof BroadcastCallback ) {
-        final BroadcastCallback callback = ( BroadcastCallback ) event.getCallback( );
-        this.pendingEvents.addAll( Lists.transform( Clusters.getInstance( ).listValues( ), new Function<Cluster, CheckedListenableFuture>( ) {
-          @Override
-          public CheckedListenableFuture apply( final Cluster c ) {
-            EventRecord.caller(
-              StatefulMessageSet.class,
-              EventType.VM_STARTING,
-              state.name( ),
-              c.getName( ),
-              event.getClass( ).getSimpleName( ),
-              event.getRequest( ).toSimpleString( ) ).info( );
-            EventRecord.caller(
-              StatefulMessageSet.class,
-              EventType.VM_STARTING,
-              state.name( ),
-              c.getName( ),
-              event.getClass( ).getSimpleName( ),
-              event.getRequest( ) ).debug( );
-            final Request request = AsyncRequests.newRequest( callback.newInstance( ) );
-            request.getRequest( ).regardingUserRequest( callback.getRequest( ) );
-            return request.dispatch( c.getConfiguration( ) );
-          }
-        } ) );
-      } else {
-        EventRecord.caller(
-          StatefulMessageSet.class,
-          EventType.VM_STARTING,
-          state.name( ),
-          this.cluster.getName( ),
-          event.getClass( ).getSimpleName( ),
-          event.getRequest( ).toSimpleString( ) ).info( );
-        EventRecord.caller(
-          StatefulMessageSet.class,
-          EventType.VM_STARTING,
-          state.name( ),
-          this.cluster.getName( ),
-          event.getClass( ).getSimpleName( ),
-          event.getRequest( ) ).debug( );
-        this.pendingEvents.add( event.dispatch( this.cluster.getConfiguration( ) ) );
+      try {
+        EventRecord.caller( StatefulMessageSet.class, EventType.VM_STARTING, state.name( ), event.getCallback( ).toString( ) ).debug( );
+        if ( event.getCallback( ) instanceof BroadcastCallback ) {
+          final BroadcastCallback callback = ( BroadcastCallback ) event.getCallback( );
+          this.pendingEvents.addAll( Lists.transform( Clusters.getInstance( ).listValues( ), new Function<Cluster, Request>( ) {
+            @Override
+            public Request apply( final Cluster c ) {
+              LOG.debug( "VM_STARTING: " + state.name( ) + " " + c.getName( ) + " " + event.getClass( ).getSimpleName( ) + " " + event.getCallback( ) );
+              final Request request = AsyncRequests.newRequest( callback.newInstance( ) );
+              request.getRequest( ).regardingUserRequest( callback.getRequest( ) );
+              request.dispatch( c.getConfiguration( ) );
+              return request;
+            }
+          } ) );
+        } else {
+          LOG.debug( "VM_STARTING: " + state.name( ) + " " + this.cluster.getName( ) + " " + event.getClass( ).getSimpleName( ) + " " + event.getCallback( ) );
+          event.dispatch( this.cluster.getConfiguration( ) );
+          this.pendingEvents.add( event );
+        }
+      } catch ( Exception ex ) {
+        LOG.error( ex, ex );
       }
     }
   }
   
   private E transition( final E currentState ) {
-    CheckedListenableFuture future = null;
+    Request request = null;
     E nextState = this.states[currentState.ordinal( ) + 1];
-    while ( ( future = this.pendingEvents.poll( ) ) != null ) {
+    while ( ( request = this.pendingEvents.poll( ) ) != null ) {
       try {
-        Object o = null;
-//        do {
-//          try {
-        o = future.get( 120, TimeUnit.SECONDS );
-//          } catch ( TimeoutException ex ) {}
-//        } while ( o == null );
-        if ( o != null ) {
-          EventRecord.here( StatefulMessageSet.class, EventType.VM_STARTING, currentState.name( ), this.cluster.getName( ), o.getClass( ).getSimpleName( ) ).info( );
-          EventRecord.here( StatefulMessageSet.class, EventType.VM_STARTING, currentState.name( ), this.cluster.getName( ), o.toString( ) ).debug( );
+        try {
+          Object o = request.getResponse( ).get( 240, TimeUnit.SECONDS );
+          if ( o != null ) {
+            EventRecord.here( StatefulMessageSet.class, EventType.VM_STARTING, currentState.name( ), this.cluster.getName( ), o.getClass( ).getSimpleName( ) ).info( );
+            EventRecord.here( StatefulMessageSet.class, EventType.VM_STARTING, currentState.name( ), this.cluster.getName( ), o.toString( ) ).debug( );
+          }
+        } catch ( TimeoutException ex1 ) {
+          request.getCallback( ).fireException( ex1 );
         }
       } catch ( final InterruptedException t ) {
         Thread.currentThread( ).interrupt( );
@@ -159,7 +138,9 @@ public class StatefulMessageSet<E extends Enum<E>> {
   
   public void run( ) {
     do {
-      LOG.info( EventRecord.here( StatefulMessageSet.class, EventType.VM_STARTING, this.state.name( ), ( System.currentTimeMillis( ) - this.startTime ) / 1000.0d + "s" ) );
+      LOG.info( EventRecord.here( StatefulMessageSet.class, EventType.VM_STARTING, this.state.name( ), ( System.currentTimeMillis( ) - this.startTime )
+                                                                                                       / 1000.0d
+                                                                                                       + "s" ) );
       try {
         this.queueEvents( this.state );
         this.state = this.transition( this.state );

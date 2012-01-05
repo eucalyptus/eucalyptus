@@ -402,8 +402,8 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       PrivateNetworkIndex index = null;
       if ( networks.isEmpty( ) ) {
         LOG.warn( "Failed to recover network index for " + input.getInstanceId( )
-          + " because no network group information is available: "
-          + input.getGroupNames( ) );
+                  + " because no network group information is available: "
+                  + input.getGroupNames( ) );
       } else {
         final EntityTransaction db = Entities.get( NetworkGroup.class );
         try {
@@ -452,10 +452,10 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         }
       } catch ( final Exception ex2 ) {
         LOG.error( "Failed to restore address state " + input.getNetParams( )
-          + " for instance "
-          + input.getInstanceId( )
-          + " because of: "
-          + ex2.getMessage( ) );
+                   + " for instance "
+                   + input.getInstanceId( )
+                   + " because of: "
+                   + ex2.getMessage( ) );
         Logs.extreme( ).error( ex2, ex2 );
       }
     }
@@ -475,7 +475,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       if ( keyValue == null || keyValue.indexOf( "@" ) == -1 ) {
         return KeyPairs.noKey( );
       } else {
-        String keyName = keyValue.replaceAll( ".*@eucalyptus\\.","" );
+        String keyName = keyValue.replaceAll( ".*@eucalyptus\\.", "" );
         return SshKeyPair.withPublicKey( null, keyName, keyValue );
       }
     }
@@ -497,14 +497,14 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           bootSet = Emis.recreateBootableSet( imageId, kernelId, ramdiskId );
         } catch ( final Exception ex ) {
           LOG.error( "Failed to recreate bootset with imageId " + imageId
-            + ", kernelId "
-            + kernelId
-            + " ramdiskId "
-            + ramdiskId
-            + " for: "
-            + input.getInstanceId( )
-            + " because of: "
-            + ex.getMessage( ) );
+                     + ", kernelId "
+                     + kernelId
+                     + " ramdiskId "
+                     + ramdiskId
+                     + " for: "
+                     + input.getInstanceId( )
+                     + " because of: "
+                     + ex.getMessage( ) );
           Logs.extreme( ).error( ex, ex );
         }
       } else {
@@ -519,10 +519,10 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         ramdiskId = input.getInstanceType( ).lookupRamdisk( ).getId( );
       } catch ( final NoSuchElementException ex ) {
         LOG.debug( "No ramdiskId " + input.getRamdiskId( )
-          + " for: "
-          + input.getInstanceId( )
-          + " because vbr does not contain a ramdisk: "
-          + input.getInstanceType( ).getVirtualBootRecord( ) );
+                   + " for: "
+                   + input.getInstanceId( )
+                   + " because vbr does not contain a ramdisk: "
+                   + input.getInstanceType( ).getVirtualBootRecord( ) );
         Logs.extreme( ).error( ex, ex );
       } catch ( final Exception ex ) {
         LOG.error( "Failed to lookup ramdiskId " + input.getRamdiskId( ) + " for: " + input.getInstanceId( ) + " because of: " + ex.getMessage( ) );
@@ -537,10 +537,10 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         kernelId = input.getInstanceType( ).lookupKernel( ).getId( );
       } catch ( final NoSuchElementException ex ) {
         LOG.debug( "No kernelId " + input.getKernelId( )
-          + " for: "
-          + input.getInstanceId( )
-          + " because vbr does not contain a kernel: "
-          + input.getInstanceType( ).getVirtualBootRecord( ) );
+                   + " for: "
+                   + input.getInstanceId( )
+                   + " because vbr does not contain a kernel: "
+                   + input.getInstanceType( ).getVirtualBootRecord( ) );
         Logs.extreme( ).error( ex, ex );
       } catch ( final Exception ex ) {
         LOG.error( "Failed to lookup kernelId " + input.getKernelId( ) + " for: " + input.getInstanceId( ) + " because of: " + ex.getMessage( ) );
@@ -635,12 +635,12 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
             final VmInstance vm = Entities.merge( v );
             if ( VmStateSet.RUN.apply( vm ) ) {
               vm.setState( VmState.SHUTTING_DOWN, ( Timeout.SHUTTING_DOWN.apply( vm )
-                ? Reason.EXPIRED
-                : Reason.USER_TERMINATED ) );
+                                                                                     ? Reason.EXPIRED
+                                                                                     : Reason.USER_TERMINATED ) );
             } else if ( VmState.SHUTTING_DOWN.equals( vm.getState( ) ) ) {
               vm.setState( VmState.TERMINATED, Timeout.TERMINATED.apply( vm )
-                ? Reason.EXPIRED
-                : Reason.USER_TERMINATED );
+                                                                             ? Reason.EXPIRED
+                                                                             : Reason.USER_TERMINATED );
             }
             db.commit( );
             return vm;
@@ -684,16 +684,23 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         } else {
           final EntityTransaction db = Entities.get( VmInstance.class );
           try {
+            VmInstance entity = Entities.uniqueResult( VmInstance.named( null, vm.getInstanceId( ) ) );
+            entity.cleanUp( );
+            Entities.delete( entity );
+            db.commit( );
+          } catch ( final Exception ex ) {
+            LOG.error( ex );
+            Logs.extreme( ).error( ex, ex );
+            db.rollback( );
+          }
+          try {
             vm.cleanUp( );
             vm.setState( VmState.TERMINATED );
-            Entities.delete( vm );
-            db.commit( );
-            return vm;
-          } catch ( final Exception ex ) {
-            Logs.exhaust( ).trace( ex, ex );
-            db.rollback( );
-            throw new NoSuchElementException( "Failed to lookup instance: " + vm );
+          } catch ( Exception ex ) {
+            LOG.error( ex );
+            Logs.extreme( ).error( ex, ex );
           }
+          return vm;
         }
       }
     },
@@ -708,8 +715,8 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
             final VmInstance vm = Entities.merge( v );
             if ( VmStateSet.RUN.apply( vm ) ) {
               vm.setState( VmState.SHUTTING_DOWN, ( Timeout.SHUTTING_DOWN.apply( vm )
-                ? Reason.EXPIRED
-                : Reason.USER_TERMINATED ) );
+                                                                                     ? Reason.EXPIRED
+                                                                                     : Reason.USER_TERMINATED ) );
             }
             db.commit( );
             return vm;
@@ -871,8 +878,8 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     final Function<NetworkGroup, NetworkGroup> func = Entities.merge( );
     this.networkGroups.addAll( Collections2.transform( networkRulesGroups, func ) );
     this.networkIndex = networkIndex != PrivateNetworkIndex.bogus( )
-      ? Entities.merge( networkIndex.set( this ) )
-      : null;
+                                                                    ? Entities.merge( networkIndex.set( this ) )
+                                                                    : null;
     this.store( );
   }
   
@@ -987,8 +994,8 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   public String getByKey( final String pathArg ) {
     final Map<String, String> m = this.getMetadataMap( );
     String path = ( pathArg != null )
-      ? pathArg
-      : "";
+                                     ? pathArg
+                                     : "";
     LOG.debug( "Servicing metadata request:" + path + " -> " + m.get( path ) );
     if ( m.containsKey( path + "/" ) ) path += "/";
     if ( !m.containsKey( path ) ) {
@@ -1093,7 +1100,8 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   
   public boolean hasPublicAddress( ) {
     return ( this.networkConfig != null )
-           && !( VmNetworkConfig.DEFAULT_IP.equals( this.getNetworkConfig( ).getPublicAddress( ) ) || this.getNetworkConfig( ).getPrivateAddress( ).equals( this.getNetworkConfig( ).getPublicAddress( ) ) );
+           && !( VmNetworkConfig.DEFAULT_IP.equals( this.getNetworkConfig( ).getPublicAddress( ) ) || this.getNetworkConfig( ).getPrivateAddress( ).equals(
+             this.getNetworkConfig( ).getPublicAddress( ) ) );
   }
   
   public String getInstanceId( ) {
@@ -1244,8 +1252,8 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   
   public Set<NetworkGroup> getNetworkGroups( ) {
     return ( Set<NetworkGroup> ) ( this.networkGroups != null
-      ? this.networkGroups
-      : Sets.newHashSet( ) );
+                                                             ? this.networkGroups
+                                                             : Sets.newHashSet( ) );
   }
   
   static long getSerialversionuid( ) {
@@ -1607,11 +1615,11 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
             String publicDnsName = input.getPublicDnsName( );
             String privateDnsName = input.getPrivateDnsName( );
             publicDnsName = ( publicDnsName == null
-              ? VmNetworkConfig.DEFAULT_IP
-              : publicDnsName );
+                                                   ? VmNetworkConfig.DEFAULT_IP
+                                                   : publicDnsName );
             privateDnsName = ( privateDnsName == null
-              ? VmNetworkConfig.DEFAULT_IP
-              : privateDnsName );
+                                                     ? VmNetworkConfig.DEFAULT_IP
+                                                     : privateDnsName );
             runningInstance.setDnsName( publicDnsName );
             runningInstance.setIpAddress( publicDnsName );
             runningInstance.setPrivateDnsName( privateDnsName );
@@ -1620,11 +1628,11 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
             String publicDnsName = input.getPublicAddress( );
             String privateDnsName = input.getPrivateAddress( );
             publicDnsName = ( publicDnsName == null
-              ? VmNetworkConfig.DEFAULT_IP
-              : publicDnsName );
+                                                   ? VmNetworkConfig.DEFAULT_IP
+                                                   : publicDnsName );
             privateDnsName = ( privateDnsName == null
-              ? VmNetworkConfig.DEFAULT_IP
-              : privateDnsName );
+                                                     ? VmNetworkConfig.DEFAULT_IP
+                                                     : privateDnsName );
             runningInstance.setPrivateDnsName( privateDnsName );
             runningInstance.setPrivateIpAddress( privateDnsName );
             if ( !VmNetworkConfig.DEFAULT_IP.equals( publicDnsName ) ) {
@@ -1727,8 +1735,8 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     final int prime = 31;
     int result = super.hashCode( );
     result = prime * result + ( ( this.vmId == null )
-      ? 0
-      : this.vmId.hashCode( ) );
+                                                     ? 0
+                                                     : this.vmId.hashCode( ) );
     return result;
   }
   
@@ -1770,8 +1778,10 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   
   public void release( ) {
     try {
-      Transitions.DELETE.apply( this );
-    } catch ( final Exception ex ) {}
+      Entities.asTransaction( VmInstance.class, Transitions.DELETE, VmInstances.TX_RETRIES ).apply( this );
+    } catch ( final Exception ex ) {
+      Logs.extreme( ).error( ex, ex );
+    }
   }
   
   public Date getExpiration( ) {

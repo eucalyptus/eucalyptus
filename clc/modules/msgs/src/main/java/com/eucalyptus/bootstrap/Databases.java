@@ -773,7 +773,7 @@ public class Databases {
         if ( last.compareAndSet( true, dbVolatile ) ) {
           LOG.warn( msg );
         } else {
-          LOG.debug( msg );
+          Logs.extreme( ).info( msg );
         }
       }
       return intersection;
@@ -989,17 +989,30 @@ public class Databases {
      */
     public static <D> void dropForeignKeys( SynchronizationContext<D> context ) throws SQLException {
       Dialect dialect = context.getDialect( );
-      Connection connection = context.getConnection( context.getTargetDatabase( ) );
-      Statement statement = connection.createStatement( );
-      for ( TableProperties table : context.getTargetDatabaseProperties( ).getTables( ) ) {
-        for ( ForeignKeyConstraint constraint : table.getForeignKeyConstraints( ) ) {
-          String sql = dialect.getDropForeignKeyConstraintSQL( constraint );
-          Logs.extreme( ).info( sql );
-          statement.addBatch( sql );
+      Connection connection = null;
+      Statement statement = null;
+      try {
+        connection = context.getConnection( context.getTargetDatabase( ) );
+        statement = connection.createStatement( );
+        for ( TableProperties table : context.getTargetDatabaseProperties( ).getTables( ) ) {
+          for ( ForeignKeyConstraint constraint : table.getForeignKeyConstraints( ) ) {
+            String sql = dialect.getDropForeignKeyConstraintSQL( constraint );
+            Logs.extreme( ).info( sql );
+            statement.addBatch( sql );
+          }
         }
+        statement.executeBatch( );
+      } catch ( SQLException sqle ) {
+	  LOG.error( sqle );
+          Logs.extreme( ).error( sqle, sqle );
+          throw sqle;
+      } finally {
+          try {
+	  statement.close( );
+          } catch ( Exception e ) {
+              LOG.error( e );
+          }
       }
-      statement.executeBatch( );
-      statement.close( );
     }
     
     /**
@@ -1011,17 +1024,31 @@ public class Databases {
      */
     public static <D> void restoreForeignKeys( SynchronizationContext<D> context ) throws SQLException {
       Dialect dialect = context.getDialect( );
-      Connection connection = context.getConnection( context.getTargetDatabase( ) );
-      Statement statement = connection.createStatement( );
-      for ( TableProperties table : context.getSourceDatabaseProperties( ).getTables( ) ) {
-        for ( ForeignKeyConstraint constraint : table.getForeignKeyConstraints( ) ) {
-          String sql = dialect.getCreateForeignKeyConstraintSQL( constraint );
-          Logs.extreme( ).info( sql );
-          statement.addBatch( sql );
+      Connection connection = null;
+      Statement statement = null;
+      try {
+        connection = context.getConnection( context.getTargetDatabase( ) );
+        statement = connection.createStatement( );
+        for ( TableProperties table : context.getSourceDatabaseProperties( ).getTables( ) ) {
+          for ( ForeignKeyConstraint constraint : table.getForeignKeyConstraints( ) ) {
+            String sql = dialect.getCreateForeignKeyConstraintSQL( constraint );
+            Logs.extreme( ).info( sql );
+            statement.addBatch( sql );
+          }
         }
+        statement.executeBatch( );
+      } catch ( SQLException sqle ) {
+	  LOG.error( sqle );
+          Logs.extreme( ).error( sqle, sqle );
+          throw sqle;
+      } finally {
+	try {
+          statement.close( );  
+	} catch ( Exception e ) {
+          LOG.error( e ); 
+	}
       }
-      statement.executeBatch( );
-      statement.close( );
+      
     }
     
     /**
@@ -1048,12 +1075,25 @@ public class Databases {
             {
               public Long call( ) throws SQLException
               {
-                Statement statement = context.getConnection( database ).createStatement( );
-                ResultSet resultSet = statement.executeQuery( sql );
-                resultSet.next( );
-                long value = resultSet.getLong( 1 );
-                statement.close( );
-                return value;
+                Statement statement = null;
+                ResultSet resultSet = null;
+                try {
+                  statement = context.getConnection( database ).createStatement( );
+                  resultSet = statement.executeQuery( sql );
+                  resultSet.next( );
+                  long value = resultSet.getLong( 1 );
+                  return value;
+                } catch ( SQLException sqle ) {
+                    LOG.error(sqle);
+                    Logs.extreme( ).error( sqle, sqle );
+                    throw sqle;
+                } finally {
+                    try {
+                      statement.close( );
+                    } catch ( Exception e ) {
+                      LOG.error( e );
+                    }
+                }
               }
             };
             futureMap.put( database, executor.submit( task ) );
@@ -1075,15 +1115,28 @@ public class Databases {
             throw SQLExceptionFactory.createSQLException( e.getCause( ) );
           }
         }
-        Connection targetConnection = context.getConnection( context.getTargetDatabase( ) );
-        Statement targetStatement = targetConnection.createStatement( );
-        for ( SequenceProperties sequence : sequences ) {
-          String sql = dialect.getAlterSequenceSQL( sequence, sequenceMap.get( sequence ) + 1 );
-          Logs.extreme( ).info( sql );
-          targetStatement.addBatch( sql );
+        Connection targetConnection = null;
+        Statement targetStatement = null;
+        try {
+          targetConnection = context.getConnection( context.getTargetDatabase( ) );
+          targetStatement = targetConnection.createStatement( );
+          for ( SequenceProperties sequence : sequences ) {
+            String sql = dialect.getAlterSequenceSQL( sequence, sequenceMap.get( sequence ) + 1 );
+            Logs.extreme( ).info( sql );
+            targetStatement.addBatch( sql );
+          }
+          targetStatement.executeBatch( );
+        } catch ( SQLException sqle ) {
+          LOG.error( sqle );
+          Logs.extreme( ).error( sqle, sqle );
+          throw sqle;
+        } finally {
+            try {
+              targetStatement.close( );
+            } catch ( Exception e ) {
+              LOG.error( e );	
+            }
         }
-        targetStatement.executeBatch( );
-        targetStatement.close( );
       }
     }
     
@@ -1093,37 +1146,55 @@ public class Databases {
      * @throws SQLException
      */
     public static <D> void synchronizeIdentityColumns( SynchronizationContext<D> context ) throws SQLException {
-      Statement sourceStatement = context.getConnection( context.getSourceDatabase( ) ).createStatement( );
-      Statement targetStatement = context.getConnection( context.getTargetDatabase( ) ).createStatement( );
-      Dialect dialect = context.getDialect( );
-      for ( TableProperties table : context.getSourceDatabaseProperties( ).getTables( ) ) {
-        Collection<String> columns = table.getIdentityColumns( );
-        if ( !columns.isEmpty( ) ) {
-          String selectSQL = MessageFormat.format( "SELECT max({0}) FROM {1}", Strings.join( columns, "), max(" ), table.getName( ) ); //$NON-NLS-1$ //$NON-NLS-2$
-          Logs.extreme( ).info( selectSQL );
-          Map<String, Long> map = new HashMap<String, Long>( );
-          ResultSet resultSet = sourceStatement.executeQuery( selectSQL );
-          if ( resultSet.next( ) ) {
-            int i = 0;
-            for ( String column : columns ) {
-              map.put( column, resultSet.getLong( ++i ) );
-            }
-          }
-          resultSet.close( );
-          if ( !map.isEmpty( ) ) {
-            for ( Map.Entry<String, Long> mapEntry : map.entrySet( ) ) {
-              String alterSQL = dialect.getAlterIdentityColumnSQL( table, table.getColumnProperties( mapEntry.getKey( ) ), mapEntry.getValue( ) + 1 );
-              if ( alterSQL != null ) {
-                Logs.extreme( ).info( alterSQL );
-                targetStatement.addBatch( alterSQL );
+   
+      Statement sourceStatement = null;
+      Statement targetStatement = null;
+      try { 	
+        sourceStatement = context.getConnection( context.getSourceDatabase( ) ).createStatement( );
+        targetStatement = context.getConnection( context.getTargetDatabase( ) ).createStatement( );
+        Dialect dialect = context.getDialect( );
+        for ( TableProperties table : context.getSourceDatabaseProperties( ).getTables( ) ) {
+          Collection<String> columns = table.getIdentityColumns( );
+          if ( !columns.isEmpty( ) ) {
+            String selectSQL = MessageFormat.format( "SELECT max({0}) FROM {1}", Strings.join( columns, "), max(" ), table.getName( ) ); //$NON-NLS-1$ //$NON-NLS-2$
+            Logs.extreme( ).info( selectSQL );
+            Map<String, Long> map = new HashMap<String, Long>( );
+            ResultSet resultSet = sourceStatement.executeQuery( selectSQL );
+            if ( resultSet.next( ) ) {
+              int i = 0;
+              for ( String column : columns ) {
+                map.put( column, resultSet.getLong( ++i ) );
               }
             }
-            targetStatement.executeBatch( );
+            resultSet.close( );
+            if ( !map.isEmpty( ) ) {
+              for ( Map.Entry<String, Long> mapEntry : map.entrySet( ) ) {
+                String alterSQL = dialect.getAlterIdentityColumnSQL( table, table.getColumnProperties( mapEntry.getKey( ) ), mapEntry.getValue( ) + 1 );
+                if ( alterSQL != null ) {
+                  Logs.extreme( ).info( alterSQL );
+                  targetStatement.addBatch( alterSQL );
+                }
+              }
+              targetStatement.executeBatch( );
+            }
           }
         }
+      } catch (SQLException sqle ) {
+	  LOG.error( sqle );
+          Logs.extreme( ).error( sqle, sqle );
+          throw sqle;
+      } finally {
+        try {
+	  sourceStatement.close( );
+        } catch ( Exception e1 ) {
+            LOG.error( e1 );
+        }
+        try {
+          targetStatement.close( );
+        } catch ( Exception e2 ) {
+            LOG.error( e2 );
+        }
       }
-      sourceStatement.close( );
-      targetStatement.close( );
     }
     
     /**
@@ -1133,17 +1204,30 @@ public class Databases {
      */
     public static <D> void dropUniqueConstraints( SynchronizationContext<D> context ) throws SQLException {
       Dialect dialect = context.getDialect( );
-      Connection connection = context.getConnection( context.getTargetDatabase( ) );
-      Statement statement = connection.createStatement( );
-      for ( TableProperties table : context.getTargetDatabaseProperties( ).getTables( ) ) {
-        for ( UniqueConstraint constraint : table.getUniqueConstraints( ) ) {
-          String sql = dialect.getDropUniqueConstraintSQL( constraint );
-          Logs.extreme( ).info( sql );
-          statement.addBatch( sql );
+      Connection connection = null;
+      Statement statement = null;
+      try {
+        connection = context.getConnection( context.getTargetDatabase( ) );
+        statement = connection.createStatement( );
+        for ( TableProperties table : context.getTargetDatabaseProperties( ).getTables( ) ) {
+          for ( UniqueConstraint constraint : table.getUniqueConstraints( ) ) {
+            String sql = dialect.getDropUniqueConstraintSQL( constraint );
+            Logs.extreme( ).info( sql );
+            statement.addBatch( sql );
+          }
         }
+        statement.executeBatch( );
+      } catch ( SQLException sqle ) {
+          LOG.error( sqle );
+          Logs.extreme( ).error( sqle, sqle );
+          throw sqle;
+      } finally {
+	  try {
+	    statement.close( );
+	  } catch (Exception e) {
+	      LOG.error( e );
+	  }
       }
-      statement.executeBatch( );
-      statement.close( );
     }
     
     /**
@@ -1153,18 +1237,31 @@ public class Databases {
      */
     public static <D> void restoreUniqueConstraints( SynchronizationContext<D> context ) throws SQLException {
       Dialect dialect = context.getDialect( );
-      Connection connection = context.getConnection( context.getTargetDatabase( ) );
-      Statement statement = connection.createStatement( );
-      for ( TableProperties table : context.getSourceDatabaseProperties( ).getTables( ) ) {
-        // Drop unique constraints on the current table
-        for ( UniqueConstraint constraint : table.getUniqueConstraints( ) ) {
-          String sql = dialect.getCreateUniqueConstraintSQL( constraint );
-          Logs.extreme( ).info( sql );
-          statement.addBatch( sql );
+      Connection connection = null;
+      Statement statement = null;
+      try {
+        connection = context.getConnection( context.getTargetDatabase( ) );
+        statement = connection.createStatement( );
+        for ( TableProperties table : context.getSourceDatabaseProperties( ).getTables( ) ) {
+          // Drop unique constraints on the current table
+          for ( UniqueConstraint constraint : table.getUniqueConstraints( ) ) {
+            String sql = dialect.getCreateUniqueConstraintSQL( constraint );
+            Logs.extreme( ).info( sql );
+            statement.addBatch( sql );
+          }
+        }
+        statement.executeBatch( );
+      } catch ( SQLException sqle ) {
+          LOG.error( sqle );
+          Logs.extreme( ).error( sqle, sqle );
+          throw sqle;
+      } finally {
+        try {
+          statement.close( );
+        } catch ( Exception e ) {
+            LOG.error( e );
         }
       }
-      statement.executeBatch( );
-      statement.close( );
     }
     
     /**
