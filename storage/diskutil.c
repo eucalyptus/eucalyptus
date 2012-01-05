@@ -298,7 +298,7 @@ sem * diskutil_get_loop_sem (void)
 #define LOOP_RETRIES 9
 
 // TODO: since 'losetup' truncates paths in its output, this
-// check is not perfect. It may return approve loopback devices
+// check is not perfect. It may approve loopback devices
 // that are actually pointing at a different path.
 int diskutil_loop_check (const char * path, const char * lodev)
 {
@@ -390,7 +390,7 @@ int diskutil_unloop (const char * lodev)
     char * output;
     int retried = 0;
 
-    logprintfl (EUCAINFO, "{%u} detaching from loop device %s\n", (unsigned int)pthread_self(), lodev);
+    logprintfl (EUCADEBUG, "{%u} detaching from loop device %s\n", (unsigned int)pthread_self(), lodev);
 
     // we retry because we have seen spurious errors from 'losetup -d' on Xen:
     //     ioctl: LOOP_CLR_FD: Device or resource bus
@@ -411,7 +411,7 @@ int diskutil_unloop (const char * lodev)
         sleep (1);
     }
     if (ret == ERROR) {
-        logprintfl (EUCAINFO, "{%u} error: cannot detach loop device\n", (unsigned int)pthread_self());
+        logprintfl (EUCAWARN, "{%u} error: cannot detach loop device\n", (unsigned int)pthread_self());
     } else if (retried) {
         logprintfl (EUCAINFO, "{%u} succeeded to detach %s after %d retries\n", (unsigned int)pthread_self(), lodev, retried);
     }
@@ -902,7 +902,7 @@ static char * pruntf (boolean log_error, char *format, ...)
     rc = pclose(IF);
     if (rc) {
         // TODO: improve this hacky special case: failure to find or detach non-existing loop device is not a failure
-        if (strstr (output, "loop: can't ") && strstr (output, ": No such device or address")) {
+        if (strstr (cmd, "losetup") && strstr (output, ": No such device or address")) {
             rc = 0;
         } else {
             if (log_error) {
