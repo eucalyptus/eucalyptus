@@ -672,7 +672,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
             db.commit( );
             return vm;
           } catch ( final Exception ex ) {
-            Logs.extreme( ).trace( ex, ex );
+            Logs.extreme( ).debug( ex, ex );
             db.rollback( );
             throw new NoSuchElementException( "Failed to lookup instance: " + v );
           }

@@ -472,11 +472,11 @@ public class VmControl {
               if ( v.getBootRecord( ).getMachine( ) instanceof BlockStorageImageInfo ) {
                 final int oldCode = v.getState( ).getCode( ), newCode = VmState.STOPPING.getCode( );
                 final String oldState = v.getState( ).getName( ), newState = VmState.STOPPING.getName( );
-                results.add( new TerminateInstancesItemType( v.getInstanceId( ), oldCode, oldState, newCode, newState ) );
+                TerminateInstancesItemType termInfo = new TerminateInstancesItemType( v.getInstanceId( ), oldCode, oldState, newCode, newState );
+                if ( !results.contains( termInfo ) ) {
+                  results.add( termInfo );
+                }
                 VmInstances.stopped( v );
-                return true;
-              } else {
-                return false;
               }
             }
             return true;//GRZE: noop needs to be true to continue Iterables.all
@@ -485,10 +485,10 @@ public class VmControl {
               VmInstances.stopped( instanceId );
               return true;
             } catch ( final NoSuchElementException e1 ) {
-              return false;
+              return true;
             } catch ( TransactionException ex ) {
               Logs.extreme( ).error( ex, ex );
-              return false;
+              return true;
             }
           } catch ( Exception ex ) {
             LOG.error( ex );
