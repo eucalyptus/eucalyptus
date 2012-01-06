@@ -915,8 +915,12 @@ public class Entities {
   }
 
   public static <E, T> Predicate<T> asTransaction( final Class<E> type, final Predicate<T> predicate ) {
+    return asTransaction( type, predicate, CONCURRENT_UPDATE_RETRIES );
+  }
+
+  public static <E, T> Predicate<T> asTransaction( final Class<E> type, final Predicate<T> predicate, final Integer retries ) {
     final Function<T, Boolean> funcionalized = Functions.forPredicate( predicate );
-    final Function<T, Boolean> transactionalized = Entities.asTransaction( type, funcionalized );
+    final Function<T, Boolean> transactionalized = Entities.asTransaction( type, funcionalized, retries );
     return new Predicate<T>() {
 
       @Override
