@@ -358,8 +358,8 @@ public class VolumeManager {
     
     AttachStorageVolumeResponseType scAttachResponse;
     try {
-      scAttachResponse = ServiceDispatcher.lookup( sc ).send( new AttachStorageVolumeType( cluster.getNode( vm.getServiceTag( ) ).getIqn( ),
-                                                                                           volume.getDisplayName( ) ) );
+      AttachStorageVolumeType req = new AttachStorageVolumeType( cluster.getNode( vm.getServiceTag( ) ).getIqn( ), volume.getDisplayName( ) );
+      scAttachResponse = AsyncRequests.sendSync( sc, req );
     } catch ( Exception e ) {
       LOG.debug( e, e );
       throw new EucalyptusCloudException( e.getMessage( ) );
@@ -431,10 +431,10 @@ public class VolumeManager {
       scVm = Topology.lookup( Storage.class, vm.lookupPartition( ) );
     } catch ( Exception ex ) {
       LOG.error( ex, ex );
-      throw new EucalyptusCloudException( "Failed to lookup SC for cluster: " + cluster, ex );
+      throw new EucalyptusCloudException( "Failed to lookup SC for partition: " + vm.getPartition( ), ex );
     }
     try {
-      ServiceDispatcher.lookup( scVm ).send( new DetachStorageVolumeType( cluster.getNode( vm.getServiceTag( ) ).getIqn( ), volume.getVolumeId( ) ) );
+      AsyncRequests.sendSync( scVm, new DetachStorageVolumeType( cluster.getNode( vm.getServiceTag( ) ).getIqn( ), volume.getVolumeId( ) ) );
     } catch ( Exception e ) {
       LOG.debug( e, e );
       throw new EucalyptusCloudException( e.getMessage( ) );
