@@ -312,7 +312,7 @@ public class VmControl {
           return true;
         }
       };
-      Iterables.filter( request.getInstancesSet( ), terminatePredicate ); 
+      Iterables.all( request.getInstancesSet( ), terminatePredicate ); 
       reply.set_return( !reply.getInstancesSet( ).isEmpty( ) );
       return reply;
     } catch ( final Throwable e ) {
@@ -498,7 +498,7 @@ public class VmControl {
         }
       };
       Predicate<String> stopTx = Entities.asTransaction( VmInstance.class, stopPredicate );
-      Iterables.filter( request.getInstancesSet( ), stopTx );
+      Iterables.all( request.getInstancesSet( ), stopTx );
       reply.set_return( !reply.getInstancesSet( ).isEmpty( ) );
       return reply;
     } catch ( final Throwable e ) {
