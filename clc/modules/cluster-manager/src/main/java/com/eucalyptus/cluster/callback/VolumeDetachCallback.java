@@ -64,12 +64,14 @@
 package com.eucalyptus.cluster.callback;
 
 import org.apache.log4j.Logger;
+import com.eucalyptus.entities.Entities;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.ConnectionException;
 import com.eucalyptus.util.async.FailedRequestException;
 import com.eucalyptus.util.async.MessageCallback;
 import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstances;
+import com.google.common.base.Function;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
 import edu.ucsb.eucalyptus.msgs.DetachVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.DetachVolumeType;
@@ -89,13 +91,14 @@ public class VolumeDetachCallback extends MessageCallback<DetachVolumeType,Detac
    */
   @Override
   public void fire( DetachVolumeResponseType reply ) {
-    if ( reply.get_return( ) ) {
-      VmInstance vm = VmInstances.lookup( this.getRequest( ).getInstanceId( ) );
-      vm.removeVolumeAttachment( this.getRequest( ).getVolumeId( ) );
-    } else {
-      VmInstance vm = VmInstances.lookup( this.getRequest( ).getInstanceId( ) );
-      vm.updateVolumeAttachment( this.getRequest( ).getVolumeId( ), "attached" );
-    }
+    final Function<String, VmInstance> removeVolAttachment = new Function<String, VmInstance>( ) {
+      public VmInstance apply( final String input ) {
+        VmInstance vm = VmInstances.lookup( input );
+        vm.removeVolumeAttachment( VolumeDetachCallback.this.getRequest( ).getVolumeId( ) );
+        return vm;
+      }
+    };
+    Entities.asTransaction( VmInstance.class, removeVolAttachment ).apply( this.getRequest( ).getInstanceId( ) );
   }
 
   /**
@@ -111,8 +114,14 @@ public class VolumeDetachCallback extends MessageCallback<DetachVolumeType,Detac
       LOG.error( e, e );
     }
     LOG.trace( this.getRequest( ).toString( "eucalyptus_ucsb_edu" ) );
-    VmInstance vm = VmInstances.lookup( this.getRequest( ).getInstanceId( ) );
-    vm.updateVolumeAttachment( this.getRequest( ).getVolumeId( ), "attached" );
+    final Function<String, VmInstance> failedVolDetach = new Function<String, VmInstance>( ) {
+      public VmInstance apply( final String input ) {
+        VmInstance vm = VmInstances.lookup( input );
+        vm.updateVolumeAttachment( VolumeDetachCallback.this.getRequest( ).getVolumeId( ), "attached" );
+        return vm;
+      }
+    };
+    Entities.asTransaction( VmInstance.class, failedVolDetach ).apply( this.getRequest( ).getInstanceId( ) );
   }
   
 }

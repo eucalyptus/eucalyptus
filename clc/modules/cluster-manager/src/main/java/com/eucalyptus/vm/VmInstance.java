@@ -97,7 +97,9 @@ import org.hibernate.criterion.SimpleExpression;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
 import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.blockstorage.State;
 import com.eucalyptus.blockstorage.Volume;
+import com.eucalyptus.blockstorage.Volumes;
 import com.eucalyptus.cloud.CloudMetadata.VmInstanceMetadata;
 import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.UserMetadata;
@@ -1372,12 +1374,14 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   /**
    * @param attachVol
    */
-  public void addTransientVolume( AttachedVolume attachVol ) {
+  public void addTransientVolume( String deviceName, Volume vol ) {
     final EntityTransaction db = Entities.get( VmInstance.class );
     try {
       final VmInstance entity = Entities.merge( this );
-      attachVol.setStatus( "attaching" );
-      entity.getTransientVolumeState( ).addVolumeAttachment( VmVolumeAttachment.fromTransientAttachedVolume( entity ).apply( attachVol ) );
+      final Volume volEntity = Entities.merge( vol );
+      VmVolumeAttachment attachVol = new VmVolumeAttachment( this, vol.getDisplayName( ), deviceName, vol.getRemoteDevice( ), "attaching", new Date( ), false ); 
+      volEntity.setState( State.BUSY );
+      entity.getTransientVolumeState( ).addVolumeAttachment( attachVol );
       db.commit( );
     } catch ( final Exception ex ) {
       Logs.exhaust( ).error( ex, ex );
@@ -1451,7 +1455,11 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     final EntityTransaction db = Entities.get( VmInstance.class );
     try {
       final VmInstance entity = Entities.merge( this );
+      final Volume volEntity = Volumes.lookup( null, volumeId );
       final AttachedVolume ret = VmVolumeAttachment.asAttachedVolume( entity ).apply( entity.transientVolumeState.removeVolumeAttachment( volumeId ) );
+      if ( State.BUSY.equals( volEntity.getState( ) ) ) {
+        volEntity.setState( State.EXTANT );
+      }
       db.commit( );
       return ret;
     } catch ( final Exception ex ) {

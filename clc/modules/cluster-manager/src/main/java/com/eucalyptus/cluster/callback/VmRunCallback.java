@@ -140,46 +140,43 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
   @Override
   public void fire( final VmRunResponseType reply ) {
     Logs.extreme( ).error( reply );
-    if ( !reply.get_return( ) ) {
-      this.token.abort( );
-      throw new EucalyptusClusterException( "Failed to run instance: " + this.getRequest( ).getInstanceId( ) );
-    } else {
-      try {
-        this.token.redeem( );
-      } catch ( Exception ex ) {
-        LOG.error( ex );
-        Logs.extreme( ).error( ex, ex );
-      }
-      Function<VmInfo, Boolean> updateInstance = new Function<VmInfo, Boolean>( ) {
-        @Override
-        public Boolean apply( final VmInfo input ) {
-          final VmInstance vm = VmInstances.lookup( input.getInstanceId( ) );
-          vm.updateAddresses( input.getNetParams( ).getIpAddress( ), input.getNetParams( ).getIgnoredPublicIp( ) );
-          final ServiceConfiguration ccConfig = Topology.lookup( ClusterController.class, vm.lookupPartition( ) );
-          final Address addr = VmRunCallback.this.token.getAddress( );
-          if ( addr != null ) {
-            try {
-              AsyncRequests.newRequest( addr.assign( vm ).getCallback( ) )
-                           .then( new Callback.Success<BaseMessage>( ) {
-                             @Override
-                             public void fire( final BaseMessage response ) {
-                               vm.updateAddresses( addr.getInstanceAddress( ), addr.getName( ) );
-                             }
-                           } ).sendSync( ccConfig );
-            } catch ( InterruptedException ex ) {
-              Exceptions.maybeInterrupted( ex );
-              Addresses.release( addr );
-            } catch ( Exception ex ) {
-              LOG.error( ex );
-              Logs.extreme( ).error( ex, ex );
-              Addresses.release( addr );
-            }
-            
+    try {
+      this.token.redeem( );
+    } catch ( Exception ex ) {
+      LOG.error( ex );
+      Logs.extreme( ).error( ex, ex );
+    }
+    Function<VmInfo, Boolean> updateInstance = new Function<VmInfo, Boolean>( ) {
+      @Override
+      public Boolean apply( final VmInfo input ) {
+        final VmInstance vm = VmInstances.lookup( input.getInstanceId( ) );
+        vm.updateAddresses( input.getNetParams( ).getIpAddress( ), input.getNetParams( ).getIgnoredPublicIp( ) );
+        final ServiceConfiguration ccConfig = Topology.lookup( ClusterController.class, vm.lookupPartition( ) );
+        final Address addr = VmRunCallback.this.token.getAddress( );
+        if ( addr != null ) {
+          try {
+            AsyncRequests.newRequest( addr.assign( vm ).getCallback( ) )
+                         .then( new Callback.Success<BaseMessage>( ) {
+                           @Override
+                           public void fire( final BaseMessage response ) {
+                             vm.updateAddresses( addr.getInstanceAddress( ), addr.getName( ) );
+                           }
+                         } ).sendSync( ccConfig );
+          } catch ( InterruptedException ex ) {
+            Exceptions.maybeInterrupted( ex );
+            Addresses.release( addr );
+          } catch ( Exception ex ) {
+            LOG.error( ex );
+            Logs.extreme( ).error( ex, ex );
+            Addresses.release( addr );
           }
-          return true;
+          
         }
-      };
-      for ( final VmInfo vmInfo : reply.getVms( ) ) {
+        return true;
+      }
+    };
+    for ( final VmInfo vmInfo : reply.getVms( ) ) {
+      if ( vmInfo.equals( this.token.getInstanceId( ) ) ) {
         try {
           Entities.asTransaction( VmInstance.class, updateInstance, 10 ).apply( vmInfo );
         } catch ( RuntimeException ex ) {
@@ -187,6 +184,12 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
           throw ex;
         }
       }
+      throw new EucalyptusClusterException( "ccRunInstancesResponse: does not contain requested instance information for: "
+                                            + this.token.getInstanceId( )
+                                            + " but return status is "
+                                            + reply.get_return( )
+                                            + "\nccRunInstancesResponse:vms="
+                                            + reply.getVms( ) );
     }
   }
   

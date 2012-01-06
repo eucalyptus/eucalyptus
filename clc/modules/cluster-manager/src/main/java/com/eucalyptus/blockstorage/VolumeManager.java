@@ -251,7 +251,8 @@ public class VolumeManager {
         vm.eachVolumeAttachment( new Predicate<VmVolumeAttachment>( ) {
           @Override
           public boolean apply( VmVolumeAttachment arg0 ) {
-            return attachedVolumes.put( arg0.getVolumeId( ), VmVolumeAttachment.asAttachedVolume( vm ).apply( arg0 ) ) == null;
+            attachedVolumes.put( arg0.getVolumeId( ), VmVolumeAttachment.asAttachedVolume( vm ).apply( arg0 ) );
+            return true;
           }
         } );
       }
@@ -288,7 +289,9 @@ public class VolumeManager {
   
   public AttachVolumeResponseType AttachVolume( AttachVolumeType request ) throws EucalyptusCloudException {
     AttachVolumeResponseType reply = ( AttachVolumeResponseType ) request.getReply( );
-    Context ctx = Contexts.lookup( );
+    final String deviceName = request.getDevice( );
+    final String volumeId = request.getVolumeId( );
+    final Context ctx = Contexts.lookup( );
     
     if ( request.getDevice( ) == null || request.getDevice( ).endsWith( "sda" ) || request.getDevice( ).endsWith( "sdb" ) ) {
       throw new EucalyptusCloudException( "Invalid device name specified: " + request.getDevice( ) );
@@ -303,6 +306,11 @@ public class VolumeManager {
       LOG.debug( ex, ex );
       throw new EucalyptusCloudException( ex.getMessage( ), ex );
     }
+    AccountFullName ownerFullName = ctx.getUserFullName( ).asAccountFullName( );
+    Volume volume = Volumes.lookup( ownerFullName, volumeId );
+    if ( !RestrictedTypes.filterPrivileged( ).apply( volume ) ) {
+      throw new EucalyptusCloudException( "Not authorized to attach volume " + request.getVolumeId( ) + " by " + ctx.getUser( ).getName( ) );
+    }
     Cluster cluster = null;
     try {
       ServiceConfiguration ccConfig = Topology.lookup( ClusterController.class, vm.lookupPartition( ) );
@@ -311,8 +319,6 @@ public class VolumeManager {
       LOG.debug( e, e );
       throw new EucalyptusCloudException( "Cluster does not exist in partition: " + vm.getPartition( ) );
     }
-    final String deviceName = request.getDevice( );
-    final String volumeId = request.getVolumeId( );
     try {
       vm.lookupVolumeAttachmentByDevice( deviceName );
       throw new EucalyptusCloudException( "Already have a device attached to: " + request.getDevice( ) );
@@ -328,16 +334,11 @@ public class VolumeManager {
       }
     }
     
-    AccountFullName ownerFullName = ctx.getUserFullName( ).asAccountFullName( );
-    Volume volume = Volumes.lookup( ownerFullName, volumeId );
-    if ( !RestrictedTypes.filterPrivileged( ).apply( volume ) ) {
-      throw new EucalyptusCloudException( "Not authorized to attach volume " + request.getVolumeId( ) + " by " + ctx.getUser( ).getName( ) );
-    }
     Partition volPartition = Partitions.lookupByName( volume.getPartition( ) );
     ServiceConfiguration sc = Topology.lookup( Storage.class, volPartition );
     ServiceConfiguration scVm = Topology.lookup( Storage.class, cluster.getConfiguration( ).lookupPartition( ) );
     if ( !sc.equals( scVm ) ) {
-      throw new EucalyptusCloudException( "Can only attach volumes in the same cluster: " + request.getVolumeId( ) );
+      throw new EucalyptusCloudException( "Can only attach volumes in the same zone: " + request.getVolumeId( ) );
     } else if ( "invalid".equals( volume.getRemoteDevice( ) ) ) {
       throw new EucalyptusCloudException( "Volume is not yet available: " + request.getVolumeId( ) );
     }
@@ -353,9 +354,7 @@ public class VolumeManager {
     request.setRemoteDevice( scAttachResponse.getRemoteDeviceString( ) );
 
     AttachedVolume attachVol = new AttachedVolume( volume.getDisplayName( ), vm.getInstanceId( ), request.getDevice( ), request.getRemoteDevice( ) );
-    volume.setState( State.BUSY );
-    attachVol.setStatus( "attaching" );
-    vm.addTransientVolume( attachVol );
+    vm.addTransientVolume( deviceName, volume );
     AsyncRequests.newRequest( new VolumeAttachCallback( request, attachVol ) ).dispatch( cluster.getConfiguration( ) );
     
     EventRecord.here( VolumeManager.class, EventClass.VOLUME, EventType.VOLUME_ATTACH )
