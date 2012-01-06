@@ -1840,5 +1840,9 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     vmExample.setNetworkConfig( VmNetworkConfig.exampleWithPrivateIp( ip ) );
     return vmExample;
   }
+
+  private void setBootRecord( VmBootRecord bootRecord ) {
+    this.bootRecord = bootRecord;
+  }
   
 }
