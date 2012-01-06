@@ -63,13 +63,14 @@
  */
 package com.eucalyptus.cluster.callback;
 
-import java.util.concurrent.ExecutionException;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
 import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.VmRunType;
+import com.eucalyptus.cluster.Cluster;
+import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.ResourceState.NoSuchTokenException;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
@@ -78,7 +79,6 @@ import com.eucalyptus.entities.Entities;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.EucalyptusClusterException;
-import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.MessageCallback;
@@ -90,6 +90,8 @@ import com.google.common.base.Functions;
 import com.google.common.base.Predicate;
 import edu.ucsb.eucalyptus.cloud.VmInfo;
 import edu.ucsb.eucalyptus.cloud.VmRunResponseType;
+import edu.ucsb.eucalyptus.msgs.AttachStorageVolumeResponseType;
+import edu.ucsb.eucalyptus.msgs.AttachStorageVolumeType;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType> {
@@ -151,6 +153,19 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
       public Boolean apply( final VmInfo input ) {
         final VmInstance vm = VmInstances.lookup( input.getInstanceId( ) );
         vm.updateAddresses( input.getNetParams( ).getIpAddress( ), input.getNetParams( ).getIgnoredPublicIp( ) );
+        if ( VmRunCallback.this.token.getRootVolume( ) != null ) {
+          try {
+            ServiceConfiguration scConfig = Topology.lookup( ClusterController.class, vm.lookupPartition( ) );
+            Cluster cluster = Clusters.lookup( Topology.lookup( ClusterController.class, vm.lookupPartition( ) ) );
+            String volumeId = VmRunCallback.this.token.getRootVolume( ).getDisplayName( );
+            String iqn = cluster.getNode( vm.getServiceTag( ) ).getIqn( );
+            final AttachStorageVolumeType attachMsg = new AttachStorageVolumeType( iqn, volumeId  );
+            AsyncRequests.dispatch( scConfig, attachMsg );
+          } catch ( Exception ex ) {
+            LOG.error( ex );
+            Logs.extreme( ).error( ex, ex );
+          }
+        }
         final Address addr = VmRunCallback.this.token.getAddress( );
         if ( addr != null ) {
           try {

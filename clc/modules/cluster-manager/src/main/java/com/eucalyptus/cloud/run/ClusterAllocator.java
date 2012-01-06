@@ -184,14 +184,17 @@ public class ClusterAllocator implements Runnable {
       db.commit( );
     } catch ( final Exception e ) {
       db.rollback( );
-      LOG.debug( e, e );
+      LOG.error( e );
+      Logs.extreme( ).error( e, e );
       this.allocInfo.abort( );
       for ( final ResourceToken token : allocInfo.getAllocationTokens( ) ) {
         try {
           final VmInstance vm = VmInstances.lookup( token.getInstanceId( ) );
-          vm.setState( VmState.TERMINATED, Reason.FAILED, e.getMessage( ) );
+          VmInstances.terminated( vm );
+          VmInstances.terminated( vm );
         } catch ( final Exception e1 ) {
-          LOG.debug( e1, e1 );
+          LOG.error( e1 );
+          Logs.extreme( ).error( e1, e1 );
         }
       }
       return;
@@ -202,14 +205,17 @@ public class ClusterAllocator implements Runnable {
         this.setupVmMessages( token );
       }
     } catch ( final Exception e ) {
-      LOG.debug( e, e );
+      LOG.error( e );
+      Logs.extreme( ).error( e, e );
       this.allocInfo.abort( );
       for ( final ResourceToken token : allocInfo.getAllocationTokens( ) ) {
         try {
           final VmInstance vm = VmInstances.lookup( token.getInstanceId( ) );
-          vm.setState( VmState.TERMINATED, Reason.FAILED, e.getMessage( ) );
+          VmInstances.terminated( vm );
+          VmInstances.terminated( vm );
         } catch ( final Exception e1 ) {
-          LOG.debug( e1, e1 );
+          LOG.error( e1 );
+          Logs.extreme( ).error( e1, e1 );
         }
       }
     }

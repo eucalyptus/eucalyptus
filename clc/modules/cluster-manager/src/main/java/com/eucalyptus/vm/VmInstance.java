@@ -338,7 +338,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
             db.commit( );
             return result;
           } catch ( Exception ex ) {
-            Logs.exhaust( ).error( ex, ex );
+            Logs.extreme( ).error( ex, ex );
             db.rollback( );
             throw Exceptions.toUndeclared( ex );
           }
@@ -427,7 +427,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           }
           db.commit( );
         } catch ( final Exception ex ) {
-          Logs.exhaust( ).error( ex, ex );
+          Logs.extreme( ).error( ex, ex );
           db.rollback( );
         }
       }
@@ -648,7 +648,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
             db.commit( );
             return vm;
           } catch ( final Exception ex ) {
-            Logs.exhaust( ).trace( ex, ex );
+            Logs.extreme( ).trace( ex, ex );
             db.rollback( );
             throw new NoSuchElementException( "Failed to lookup instance: " + v );
           }
@@ -672,7 +672,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
             db.commit( );
             return vm;
           } catch ( final Exception ex ) {
-            Logs.exhaust( ).trace( ex, ex );
+            Logs.extreme( ).trace( ex, ex );
             db.rollback( );
             throw new NoSuchElementException( "Failed to lookup instance: " + v );
           }
@@ -724,7 +724,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
             db.commit( );
             return vm;
           } catch ( final Exception ex ) {
-            Logs.exhaust( ).trace( ex, ex );
+            Logs.extreme( ).trace( ex, ex );
             db.rollback( );
             throw new NoSuchElementException( "Failed to lookup instance: " + v );
           }
@@ -1314,7 +1314,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       }
       db.commit( );
     } catch ( final Exception ex ) {
-      Logs.exhaust( ).error( ex, ex );
+      Logs.extreme( ).error( ex, ex );
       db.rollback( );
       throw new RuntimeException( ex );
     }
@@ -1337,11 +1337,11 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       db.commit( );
       return ret;
     } catch ( final NoSuchElementException ex ) {
-      Logs.exhaust( ).error( ex, ex );
+      Logs.extreme( ).error( ex, ex );
       db.rollback( );
       throw ex;
     } catch ( final Exception ex ) {
-      Logs.exhaust( ).error( ex, ex );
+      Logs.extreme( ).error( ex, ex );
       db.rollback( );
       throw new NoSuchElementException( "Failed to lookup volume with device: " + volumeDevice );
     }
@@ -1356,7 +1356,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     try {
       final VmInstance entity = Entities.merge( this );
       VmVolumeAttachment volumeAttachment = null;
-      AttachedVolume ret = null;
       try {
         volumeAttachment = entity.getTransientVolumeState( ).lookupVolumeAttachment( volumeId );
       } catch ( final NoSuchElementException ex ) {
@@ -1365,7 +1364,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       db.commit( );
       return volumeAttachment;
     } catch ( final Exception ex ) {
-      Logs.exhaust( ).error( ex, ex );
+      Logs.extreme( ).error( ex, ex );
       db.rollback( );
       throw new NoSuchElementException( "Failed to lookup volume: " + volumeId );
     }
@@ -1443,7 +1442,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       db.commit( );
       return ret;
     } catch ( final Exception ex ) {
-      Logs.exhaust( ).error( ex, ex );
+      Logs.extreme( ).error( ex, ex );
       db.rollback( );
       return false;
     }
@@ -1504,7 +1503,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       entity.getTransientVolumeState( ).updateVolumeAttachment( volumeId, newState );
       db.commit( );
     } catch ( final Exception ex ) {
-      Logs.exhaust( ).error( ex, ex );
+      Logs.extreme( ).error( ex, ex );
       db.rollback( );
     }
   }
@@ -1543,7 +1542,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
             VmInstance.this.fireUsageEvent( );
             db.commit( );
           } catch ( final Exception ex ) {
-            Logs.exhaust( ).error( ex, ex );
+            Logs.extreme( ).error( ex, ex );
             db.rollback( );
           }
         }
@@ -1579,7 +1578,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       entity.getTransientVolumeState( ).updateVolumeAttachments( Lists.transform( volumes, VmVolumeAttachment.fromAttachedVolume( entity ) ) );
       db.commit( );
     } catch ( final Exception ex ) {
-      Logs.exhaust( ).error( ex, ex );
+      Logs.extreme( ).error( ex, ex );
       db.rollback( );
     }
   }
