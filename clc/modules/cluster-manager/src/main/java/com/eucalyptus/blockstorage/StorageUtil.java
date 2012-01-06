@@ -142,8 +142,11 @@ public class StorageUtil {
     } else {
       v.setState( State.ANNIHILATED );
     }
-    edu.ucsb.eucalyptus.msgs.Volume aVolume = null;
-    
+    edu.ucsb.eucalyptus.msgs.Volume aVolume = transformVolume( v, status, size, actualDeviceName );
+    return aVolume;
+  }
+
+  public static edu.ucsb.eucalyptus.msgs.Volume transformVolume( Volume v, String status, Integer size, String actualDeviceName ) {
     VmVolumeAttachment vmAttachedVol = null;
     VmInstance vm = null;
     try {
@@ -159,7 +162,7 @@ public class StorageUtil {
     if ( "invalid".equals( v.getRemoteDevice( ) ) || "unknown".equals( v.getRemoteDevice( ) ) || v.getRemoteDevice( ) == null ) {
       v.setRemoteDevice( actualDeviceName );
     }
-    aVolume = v.morph( new edu.ucsb.eucalyptus.msgs.Volume( ) );
+    edu.ucsb.eucalyptus.msgs.Volume aVolume = v.morph( new edu.ucsb.eucalyptus.msgs.Volume( ) );
     if ( vmAttachedVol != null ) {
       aVolume.setStatus( v.mapState( ) );
       aVolume.getAttachmentSet( ).add( VmVolumeAttachment.asAttachedVolume( vm ).apply( vmAttachedVol ) );
