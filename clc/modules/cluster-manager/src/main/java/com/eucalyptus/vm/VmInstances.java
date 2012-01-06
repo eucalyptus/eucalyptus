@@ -90,6 +90,7 @@ import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
+import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.Digest;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
@@ -271,14 +272,7 @@ public class VmInstances {
   public static String getId( final Long rsvId, final int launchIndex ) {
     String vmId = null;
     do {
-      final MessageDigest digest = Digest.MD5.get( );
-      digest.reset( );
-      digest.update( Long.toString( rsvId + launchIndex + System.currentTimeMillis( ) ).getBytes( ) );
-      
-      final Adler32 hash = new Adler32( );
-      hash.reset( );
-      hash.update( digest.digest( ) );
-      vmId = String.format( "i-%08X", hash.getValue( ) );
+      vmId = Crypto.generateId( Long.toString( rsvId + launchIndex ), "i-" ); 
     } while ( VmInstances.contains( vmId ) );
     return vmId;
   }

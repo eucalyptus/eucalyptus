@@ -26,6 +26,7 @@ import com.eucalyptus.crypto.HmacProvider;
 import com.eucalyptus.crypto.Signatures;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import com.google.common.primitives.Longs;
 
 public class DefaultCryptoProvider implements CryptoProvider, CertificateProvider, HmacProvider {
   public static String  KEY_ALGORITHM         = "RSA";
@@ -192,12 +193,18 @@ public class DefaultCryptoProvider implements CryptoProvider, CertificateProvide
   }
 
   @Override
-  public String generateId( final String userId, final String prefix ) {
+  public String generateId( final String seed, final String prefix ) {
     Adler32 hash = new Adler32( );
-    String key = userId + (System.currentTimeMillis( ) * Math.random( ));
+    String key = seed;
     hash.update( key.getBytes( ) );
-    String imageId = String.format( "%s-%08X", prefix, hash.getValue( ) );
-    return imageId;
+    /**
+     * @see http://tools.ietf.org/html/rfc3309
+     */
+    for ( int i = key.length( ); i < 128; i += 8 ) {
+      hash.update( Longs.toByteArray( Double.doubleToRawLongBits( System.currentTimeMillis( ) * Math.random( ) ) ) );
+    }
+    String id = String.format( "%s-%08X", prefix, hash.getValue( ) );
+    return id;
   }
 
   @Override
