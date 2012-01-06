@@ -218,6 +218,11 @@ public class VmRunType extends CloudClusterMessage {
                           this.userData, this.vlan, this.vmTypeInfo );
   }
   
+  @Override
+  public String toSimpleString( ) {
+    return String.format( "%s %s networkIndex=%s vlan=%s", super.toSimpleString( ), this.instanceId, this.networkIndex, this.vlan );
+  }
+
   void setReservationId( final String reservationId ) {
     this.reservationId = reservationId;
   }

@@ -122,6 +122,7 @@ import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.crypto.Digest;
 import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Lookups;
@@ -977,14 +978,31 @@ public class WalrusImageManager {
 		int bytesRead = 0;
 		byte[] bytes = new byte[8192];
 
-		while((bytesRead = in.read(bytes)) > 0) {
-			byte[] outBytes = cipher.update(bytes, 0, bytesRead);
+		try {
+			while((bytesRead = in.read(bytes)) > 0) {
+				byte[] outBytes = cipher.update(bytes, 0, bytesRead);
+				out.write(outBytes);
+			}
+
+			byte[] outBytes = cipher.doFinal();
 			out.write(outBytes);
+		} catch (IOException ex) {
+			LOG.error( ex );
+			Logs.extreme( ).error( ex, ex );
+			throw ex;
+		} finally {
+			try {
+				out.close();
+			} catch (IOException ex) {
+				LOG.error( ex );
+			}
+			try {
+				in.close();
+			} catch (IOException ex) {
+				LOG.error( ex );
+			}
 		}
-		byte[] outBytes = cipher.doFinal();
-		out.write(outBytes);
-		in.close();
-		out.close();
+		
 		LOG.info("Done decrypting: " + decryptedImageName);
 	}
 

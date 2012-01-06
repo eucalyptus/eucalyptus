@@ -389,8 +389,13 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
       Class cbClass = this.transition.getName( ).getCallback( );
       Constructor cbCons = cbClass.getConstructor( Address.class );
       return ( RemoteCallback ) cbCons.newInstance( this );
-    } catch ( Exception e ) {
-      LOG.debug( e, e );
+    } catch ( Exception ex ) {
+      LOG.error( ex );
+      Logs.extreme( ).error( ex, ex );
+      try {
+        this.clearPending( );
+      } catch ( Exception ex1 ) {
+      }
       return new NOOP( );
     }
   }

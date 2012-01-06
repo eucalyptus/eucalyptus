@@ -91,8 +91,8 @@ public class AsyncRequestHandler<Q extends BaseMessage, R extends BaseMessage> i
           }
         } );
 //TODO:GRZE: better logging here        LOG.debug( request.getClass( ).getSimpleName( ) + ":" + request.getCorrelationId( ) + " connecting to " + serviceSocketAddress );
-        EventRecord.here( request.getClass( ), EventClass.SYSTEM_REQUEST, EventType.CHANNEL_OPENING, request.getClass( ).getSimpleName( ),
-                          request.getCorrelationId( ), serviceSocketAddress.toString( ) ).trace( );
+        Logs.extreme( ).debug( EventRecord.here( request.getClass( ), EventClass.SYSTEM_REQUEST, EventType.CHANNEL_OPENING, request.getClass( ).getSimpleName( ),
+                          request.getCorrelationId( ), serviceSocketAddress.toString( ) ) );
         this.connectFuture = this.clientBootstrap.connect( serviceSocketAddress );
         final HttpRequest httpRequest = new MappingHttpRequest( HttpVersion.HTTP_1_1, HttpMethod.POST, config, this.request.get( ) );
         
@@ -106,16 +106,17 @@ public class AsyncRequestHandler<Q extends BaseMessage, R extends BaseMessage> i
                 if ( !factory.getClass( ).getSimpleName( ).startsWith( "GatherLog" ) ) {
                   Topology.populateServices( config, AsyncRequestHandler.this.request.get( ) );
                 }
-                EventRecord.here( request.getClass( ), EventClass.SYSTEM_REQUEST, EventType.CHANNEL_OPEN, request.getClass( ).getSimpleName( ),
+                Logs.extreme( ).debug( EventRecord.here( request.getClass( ), EventClass.SYSTEM_REQUEST, EventType.CHANNEL_OPEN, request.getClass( ).getSimpleName( ),
                                   request.getCorrelationId( ), serviceSocketAddress.toString( ), "" + future.getChannel( ).getLocalAddress( ),
-                                  ""  + future.getChannel( ).getRemoteAddress( ) ).trace( );
+                                  ""  + future.getChannel( ).getRemoteAddress( ) ) );
+                Logs.extreme( ).debug( httpRequest );
                 future.getChannel( ).write( httpRequest ).addListener( new ChannelFutureListener( ) {
                   @Override
                   public void operationComplete( final ChannelFuture future ) throws Exception {
                     AsyncRequestHandler.this.writeComplete.set( true );
-                    EventRecord.here( request.getClass( ), EventClass.SYSTEM_REQUEST, EventType.CHANNEL_WRITE, request.getClass( ).getSimpleName( ),
+                    Logs.extreme( ).debug( EventRecord.here( request.getClass( ), EventClass.SYSTEM_REQUEST, EventType.CHANNEL_WRITE, request.getClass( ).getSimpleName( ),
                                       request.getCorrelationId( ), serviceSocketAddress.toString( ), "" + future.getChannel( ).getLocalAddress( ),
-                                      ""  + future.getChannel( ).getRemoteAddress( ) ).trace( );
+                                      ""  + future.getChannel( ).getRemoteAddress( ) ) );
                   }
                 } );
               } else {

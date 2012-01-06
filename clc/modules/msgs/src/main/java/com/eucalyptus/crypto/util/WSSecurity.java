@@ -277,7 +277,6 @@ public class WSSecurity {
   private static void verifyBodyLocation(Node node) throws WSSecurityException {
 	 
 	  Node parent = node.getParentNode();
-	  LOG.debug("processing " + node.getNodeName() + ", parent = " + parent.getNodeName());
 	  
 	  if(parent == null || (WSConstants.ELEM_ENVELOPE.compareTo(parent.getLocalName()) != 0))
 	      throw new WSSecurityException("Unexpected parent element for signed <Body>");

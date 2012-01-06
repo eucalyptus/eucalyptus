@@ -71,18 +71,41 @@ import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.OrderedShutdown;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
+import com.eucalyptus.configurable.ConfigurableClass;
+import com.eucalyptus.configurable.ConfigurableField;
+import com.eucalyptus.configurable.ConfigurableProperty;
+import com.eucalyptus.configurable.ConfigurablePropertyException;
+import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.empyrean.Empyrean;
 
+@ConfigurableClass( root = "bootstrap.timer",
+                    description = "Parameters controlling the system timer." )
 public class SystemClock extends TimerTask implements UncaughtExceptionHandler {
   private static Logger      LOG   = Logger.getLogger( SystemClock.class );
   
-  private static final long  RATE  = 10000;
+  @ConfigurableField( description = "Amount of time (in milliseconds) before a previously running instance which is not reported will be marked as terminated.",
+                      initial = "60", changeListener=ClockRateChangeListener.class )
+  public static Long         RATE  = 10000L;
   
   private static SystemClock clock;
   private static Timer       timer;
   private static Timer       hzTimer;
   private static HzClock     hertz;
   private int                phase = 0;
+  
+  public static class ClockRateChangeListener implements PropertyChangeListener {
+    @Override
+    public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
+      try {
+        RATE = Long.parseLong( ( String ) newValue );
+        hzTimer.cancel( );
+        timer.cancel( );
+        setupTimer( );
+      } catch ( Exception ex ) {
+        LOG.error( ex , ex );
+      }
+    }
+  }
   
   public SystemClock( ) {
     super( );
@@ -101,7 +124,7 @@ public class SystemClock extends TimerTask implements UncaughtExceptionHandler {
         hertz = new HzClock( );
         ListenerRegistry.getInstance( ).register( ClockTick.class, new Dummy( ) );
         ListenerRegistry.getInstance( ).register( Hertz.class, new Dummy( ) );
-        timer.scheduleAtFixedRate( clock, 0, 10000 );//TODO: make configurable
+        timer.scheduleAtFixedRate( clock, 0, RATE );//TODO: make configurable
         hzTimer.scheduleAtFixedRate( hertz, 0, 1000 );
         OrderedShutdown.registerPreShutdownHook( new Runnable( ) {
           @Override

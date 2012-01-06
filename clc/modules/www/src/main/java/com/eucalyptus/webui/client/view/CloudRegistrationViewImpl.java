@@ -9,32 +9,20 @@ import com.google.gwt.user.client.ui.Composite;
 import com.google.gwt.user.client.ui.Label;
 import com.google.gwt.user.client.ui.Widget;
 
-public class RightScaleViewImpl extends Composite implements RightScaleView {
+public class CloudRegistrationViewImpl extends Composite implements CloudRegistrationView {
   
-  private static RightScaleViewImplUiBinder uiBinder = GWT.create( RightScaleViewImplUiBinder.class );
+  private static CloudRegistrationViewImplUiBinder uiBinder = GWT.create( CloudRegistrationViewImplUiBinder.class );
   
-  interface RightScaleViewImplUiBinder extends UiBinder<Widget, RightScaleViewImpl> {}
+  interface CloudRegistrationViewImplUiBinder extends UiBinder<Widget, CloudRegistrationViewImpl> {}
   
   @UiField
   Label cloudUrl;
   
   @UiField
   Label cloudId;
-  
-  private Presenter presenter;
-  
-  public RightScaleViewImpl( ) {
+    
+  public CloudRegistrationViewImpl( ) {
     initWidget( uiBinder.createAndBindUi( this ) );
-  }
-  
-  @UiHandler( "registerButton" )
-  void handleClickRegisterButton( ClickEvent e ) {
-    this.presenter.register( );
-  }
-
-  @Override
-  public void setPresenter( Presenter presenter ) {
-    this.presenter = presenter;
   }
 
   @Override

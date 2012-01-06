@@ -70,9 +70,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import javax.persistence.EntityTransaction;
+import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 import org.mule.RequestContext;
+import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.cloud.CloudMetadatas;
 import com.eucalyptus.cloud.ImageMetadata;
 import com.eucalyptus.cloud.ResourceToken;
@@ -91,7 +93,9 @@ import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.context.IllegalContextAccessException;
 import com.eucalyptus.context.ServiceContext;
+import com.eucalyptus.context.ServiceStateException;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.images.BlockStorageImageInfo;
@@ -99,6 +103,7 @@ import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.async.AsyncRequests;
@@ -109,6 +114,7 @@ import com.eucalyptus.vm.VmInstance.Reason;
 import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstance.VmStateSet;
 import com.eucalyptus.vm.VmInstances.TerminatedInstanceException;
+import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.Iterables;
@@ -193,7 +199,7 @@ public class VmControl {
   public DescribeInstancesResponseType describeInstances( final DescribeInstancesType msg ) throws EucalyptusCloudException {
     final DescribeInstancesResponseType reply = ( DescribeInstancesResponseType ) msg.getReply( );
     Context ctx = Contexts.lookup( );
-    boolean showAll = msg.getInstancesSet( ).remove( "*" );
+    boolean showAll = msg.getInstancesSet( ).remove( "verbose" );
     final ArrayList<String> instancesSet = msg.getInstancesSet( );    
     final Multimap<String, RunningInstancesItemType> instanceMap = TreeMultimap.create( );
     final Map<String, ReservationInfoType> reservations = Maps.newHashMap( );
@@ -580,52 +586,71 @@ public class VmControl {
   public BundleInstanceResponseType bundleInstance( final BundleInstanceType request ) throws EucalyptusCloudException {
     final Context ctx = Contexts.lookup( );
     final BundleInstanceResponseType reply = request.getReply( );//TODO: check if the instance has platform windows.
-    reply.set_return( false );
     final String instanceId = request.getInstanceId( );
-    
-    EntityTransaction db = Entities.get( VmInstance.class );
-    try {
-      final VmInstance v = RestrictedTypes.doPrivileged( instanceId, VmInstance.class );
-      if ( v.getRuntimeState( ).isBundling( ) ) {
-        reply.setTask( Bundles.transform( v.getRuntimeState( ).getBundleTask( ) ) );
-        reply.markWinning( );
-      } else if ( !ImageMetadata.Platform.windows.name( ).equals( v.getPlatform( ) ) ) {
-        throw new EucalyptusCloudException( "Failed to bundle requested vm because the platform is not 'windows': " + request.getInstanceId( ) );
-      } else if ( !VmState.RUNNING.equals( v.getState( ) ) ) {
-        throw new EucalyptusCloudException( "Failed to bundle requested vm because it is not currently 'running': " + request.getInstanceId( ) );
-      } else if ( RestrictedTypes.filterPrivileged( ).apply( v ) ) {
-        final VmBundleTask bundleTask = Bundles.create( v, request.getBucket( ), request.getPrefix( ), new String( Base64.decode( request.getUploadPolicy( ) ) ) );
-        if ( v.getRuntimeState( ).startBundleTask( bundleTask ) ) {
-          reply.setTask( Bundles.transform( bundleTask ) );
-          reply.markWinning( );
-        } else if ( v.getRuntimeState( ).getBundleTask( ) == null ) {
-          v.resetBundleTask( );
-          if ( v.getRuntimeState( ).startBundleTask( bundleTask ) ) {
-            reply.setTask( Bundles.transform( bundleTask ) );
+    Function<String, VmInstance> bundleFunc = new Function<String,VmInstance> () {
+
+      @Override
+      public VmInstance apply( String input ) {
+        reply.set_return( false );
+        try {
+          final VmInstance v = RestrictedTypes.doPrivileged( input, VmInstance.class );
+          if ( v.getRuntimeState( ).isBundling( ) ) {
+            reply.setTask( Bundles.transform( v.getRuntimeState( ).getBundleTask( ) ) );
             reply.markWinning( );
+          } else if ( !ImageMetadata.Platform.windows.name( ).equals( v.getPlatform( ) ) ) {
+            throw new EucalyptusCloudException( "Failed to bundle requested vm because the platform is not 'windows': " + request.getInstanceId( ) );
+          } else if ( !VmState.RUNNING.equals( v.getState( ) ) ) {
+            throw new EucalyptusCloudException( "Failed to bundle requested vm because it is not currently 'running': " + request.getInstanceId( ) );
+          } else if ( RestrictedTypes.filterPrivileged( ).apply( v ) ) {
+            final VmBundleTask bundleTask = Bundles.create( v, request.getBucket( ), request.getPrefix( ), new String( Base64.decode( request.getUploadPolicy( ) ) ) );
+            if ( v.getRuntimeState( ).startBundleTask( bundleTask ) ) {
+              reply.setTask( Bundles.transform( bundleTask ) );
+              reply.markWinning( );
+            } else if ( v.getRuntimeState( ).getBundleTask( ) == null ) {
+              v.resetBundleTask( );
+              if ( v.getRuntimeState( ).startBundleTask( bundleTask ) ) {
+                reply.setTask( Bundles.transform( bundleTask ) );
+                reply.markWinning( );
+              }
+            } else {
+              throw new EucalyptusCloudException( "Instance is already being bundled: " + v.getRuntimeState( ).getBundleTask( ).getBundleId( ) );
+            }
+            EventRecord.here( VmControl.class,
+                              EventType.BUNDLE_PENDING,
+                              ctx.getUserFullName( ).toString( ),
+                              v.getRuntimeState( ).getBundleTask( ).getBundleId( ),
+                              v.getInstanceId( ) ).debug( );
+          } else {
+            throw new EucalyptusCloudException( "Failed to find instance: " + request.getInstanceId( ) );
           }
-        } else {
-          throw new EucalyptusCloudException( "Instance is already being bundled: " + v.getRuntimeState( ).getBundleTask( ).getBundleId( ) );
+          return v;
+        } catch ( Exception ex ) {
+          LOG.error( ex );
+          Logs.extreme( ).error( ex, ex );
+          throw Exceptions.toUndeclared( ex );
         }
-        EventRecord.here( VmControl.class,
-                          EventType.BUNDLE_PENDING,
-                          ctx.getUserFullName( ).toString( ),
-                          v.getRuntimeState( ).getBundleTask( ).getBundleId( ),
-                          v.getInstanceId( ) ).debug( );
-        ServiceConfiguration cluster = Topology.lookup( ClusterController.class, v.lookupPartition( ) );
-        AsyncRequests.newRequest( Bundles.createCallback( request ) ).dispatch( cluster );
-      } else {
-        throw new EucalyptusCloudException( "Failed to find instance: " + request.getInstanceId( ) );
       }
-      db.commit( );
-    } catch ( EucalyptusCloudException ex ) {
-      Logs.exhaust( ).error( ex, ex );
-      db.rollback( );
-      throw ex;
-    } catch ( final Exception ex ) {
-      Logs.exhaust( ).error( ex, ex );
-      db.rollback( );
-      throw new EucalyptusCloudException( "Failed to bundle instance: " + request.getInstanceId( ), ex );
+    };
+    VmInstance bundledVm = Entities.asTransaction( VmInstance.class, bundleFunc ).apply( instanceId );
+    try {
+      ServiceConfiguration cluster = Topology.lookup( ClusterController.class, bundledVm.lookupPartition( ) );
+      BundleInstanceType reqInternal = new BundleInstanceType(){
+			{
+  			setInstanceId(request.getInstanceId());
+  			setBucket(request.getBucket());
+  			setPrefix(request.getPrefix());
+  			setAwsAccessKeyId(request.getAwsAccessKeyId());
+  			setUploadPolicy(request.getUploadPolicy());
+  			setUploadPolicySignature(request.getUploadPolicySignature());
+  			setUrl(request.getUrl());
+  			setUserKey(request.getUserKey());
+			}
+		}.regardingUserRequest(request);      
+      AsyncRequests.newRequest( Bundles.createCallback(reqInternal)).dispatch( cluster );
+    } catch ( Exception ex ) {
+      LOG.error( ex );
+      Logs.extreme( ).error( ex, ex );
+      throw Exceptions.toUndeclared( ex );
     }
     return reply;
     

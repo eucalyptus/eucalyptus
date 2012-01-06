@@ -878,7 +878,7 @@ static int copy_creator (artifact * a)
     logprintfl (EUCAINFO, "[%s] copying/cloning blob %s to blob %s\n", a->instanceId, dep->bb->id, a->bb->id);
     if (a->must_be_file) {
         if (blockblob_copy (dep->bb, 0L, a->bb, 0L, 0L)==-1) {
-            logprintfl (EUCAERROR, "[%s] error: failed to copy blob %s to blob %s: %s\n", a->instanceId, dep->bb->id, a->bb->id, blobstore_get_last_msg());
+            logprintfl (EUCAERROR, "[%s] error: failed to copy blob %s to blob %s: %d %s\n", a->instanceId, dep->bb->id, a->bb->id, blobstore_get_error(), blobstore_get_last_msg());
             return blobstore_get_error();
         }
     } else {
@@ -886,7 +886,7 @@ static int copy_creator (artifact * a)
             {BLOBSTORE_SNAPSHOT, BLOBSTORE_BLOCKBLOB, {blob:dep->bb}, 0, 0, round_up_sec (dep->size_bytes) / 512}
         };
         if (blockblob_clone (a->bb, map, 1)==-1) {
-            logprintfl (EUCAERROR, "[%s] error: failed to clone blob %s to blob %s: %s\n", a->instanceId, dep->bb->id, a->bb->id, blobstore_get_last_msg());
+            logprintfl (EUCAERROR, "[%s] error: failed to clone blob %s to blob %s: %d %s\n", a->instanceId, dep->bb->id, a->bb->id, blobstore_get_error(), blobstore_get_last_msg());
             return blobstore_get_error();
         }
     }
@@ -1007,7 +1007,7 @@ void art_free (artifact * a) // frees the artifact and all its dependencies
         for (int i = 0; i < MAX_ARTIFACT_DEPS && a->deps[i]; i++) {
             art_free (a->deps[i]);
         }
-        logprintfl (EUCADEBUG, "[%s] freeing artifact %03d|%s size=%lld vbr=%u cache=%d file=%d\n", 
+        logprintfl (EUCADEBUG2, "[%s] freeing artifact %03d|%s size=%lld vbr=%u cache=%d file=%d\n", 
                     a->instanceId, a->seq, a->id, a->size_bytes, a->vbr, a->may_be_cached, a->must_be_file);
         free (a);
     }
@@ -1213,12 +1213,12 @@ static artifact * art_alloc_vbr (virtualBootRecord * vbr, boolean do_make_work_c
     }        
 
     case NC_LOCATION_IQN: {
-        a = art_alloc (NULL, NULL, -1, FALSE, FALSE, FALSE, iqn_creator, vbr);
+        a = art_alloc ("iscsi-vol", NULL, -1, FALSE, FALSE, FALSE, iqn_creator, vbr);
         goto out;
     }
 
     case NC_LOCATION_AOE: {
-        a = art_alloc (NULL, NULL, -1, FALSE, FALSE, FALSE, aoe_creator, vbr);
+        a = art_alloc ("aoe-vol", NULL, -1, FALSE, FALSE, FALSE, aoe_creator, vbr);
         goto out;
     }
 
@@ -1766,7 +1766,7 @@ art_implement_tree ( // traverse artifact tree and create/download/combine artif
                     if (do_create) { // we'll hold the dependency open for the creator
                         num_opened_deps++;
                     } else { // this is a sentinel, we're not creating anything, so release the dep immediately
-                        if (blockblob_close (root->deps[i]->bb) == -1) {
+                        if (root->deps[i]->bb && (blockblob_close (root->deps[i]->bb) == -1)) {
                             logprintfl (EUCAERROR, "[%s] error: failed to close dependency of %s: %d %s (potential resource leak!) on try %d\n",
                                         root->instanceId, root->id, blobstore_get_error(), blobstore_get_last_msg(), tries);
                         }
@@ -1802,14 +1802,14 @@ art_implement_tree ( // traverse artifact tree and create/download/combine artif
                 goto retry_or_fail;
                 break;
             default: // all other errors
-                logprintfl (EUCAERROR, "[%s] error: failed to allocate artifact %s (error=%d) on try %d\n", root->instanceId, root->id, ret, tries);
+                logprintfl (EUCAERROR, "[%s] error: failed to allocate artifact %s (%d %s) on try %d\n", root->instanceId, root->id, ret, blobstore_get_last_msg(), tries);
                 goto retry_or_fail;
             }
 
         create:
             ret = root->creator (root); // create and open this artifact for exclusive use
             if (ret != OK) {
-                logprintfl (EUCAERROR, "[%s] error: failed to create artifact %s (may retry) on try %d\n", root->instanceId, root->id, ret, tries);
+                logprintfl (EUCAERROR, "[%s] error: failed to create artifact %s (error=%d, may retry) on try %d\n", root->instanceId, root->id, ret, tries);
                 // delete the partially created artifact so we can retry with a clean slate
                 if (root->id_is_path) { // artifact is not a blob, but a file
                     unlink (root->id); // attempt to delete, but it may not even exist

@@ -243,8 +243,9 @@ public class ClusterAllocator implements Runnable {
             vm.addPersistentVolume( "/dev/sda1", vol );
           } else {
             final VmVolumeAttachment volumeAttachment = vm.getBootRecord( ).getPersistentVolumes( ).iterator( ).next( );
-            vol = Volumes.lookup( null, volumeAttachment.getVolumeId( ) );
+            vol = Volumes.lookup( null, volumeAttachment.getVolumeId( ) );            
           }
+          
           if ( deleteOnTerminate ) {
             this.allocInfo.getTransientVolumes( ).add( vol );
           } else {
@@ -261,6 +262,7 @@ public class ClusterAllocator implements Runnable {
     if ( net != null ) {
       final Request callback = AsyncRequests.newRequest( new StartNetworkCallback( this.allocInfo.getExtantNetwork( ) ) );
       this.messages.addRequest( State.CREATE_NETWORK, callback );
+      LOG.debug( "Queued StartNetwork: " + callback );
       EventRecord.here( ClusterAllocator.class, EventType.VM_PREPARE, callback.getClass( ).getSimpleName( ), net.toString( ) ).debug( );
     }
   }
@@ -280,6 +282,7 @@ public class ClusterAllocator implements Runnable {
       final VmTypeInfo childVmInfo = this.makeVmTypeInfo( vmInfo, token.getLaunchIndex( ), root );
       cb = this.makeRunRequest( token, childVmInfo, networkName );
       this.messages.addRequest( State.CREATE_VMS, cb );
+      LOG.debug( "Queued RunInstances: " + token );
     } catch ( final Exception ex ) {
       Logs.extreme( ).error( ex, ex );
       throw ex;
@@ -294,7 +297,8 @@ public class ClusterAllocator implements Runnable {
       final ServiceConfiguration scConfig = Topology.lookup( Storage.class, Partitions.lookupByName( vol.getPartition( ) ) );
       
       int numDescVolError = 0;
-      for ( int i = 0; i < VmInstances.EBS_VOLUME_CREATION_TIMEOUT * 60; i++ ) {
+      int i =0; 
+      for ( i = 0; i < VmInstances.EBS_VOLUME_CREATION_TIMEOUT * 60; i++ ) {
         try {
           DescribeStorageVolumesResponseType volState = null;
           try {
@@ -324,6 +328,8 @@ public class ClusterAllocator implements Runnable {
           throw ex;
         }
       }
+      if(i >= VmInstances.EBS_VOLUME_CREATION_TIMEOUT * 60)
+    	  throw new EucalyptusCloudException( "volume "+vol.getDisplayName()+ " was not created in time"); 
       
       for ( final String nodeTag : this.cluster.getNodeTags( ) ) {
         try {
@@ -332,6 +338,7 @@ public class ClusterAllocator implements Runnable {
           childVmInfo.lookupRoot( ).setResourceLocation( scAttachResponse.getRemoteDeviceString( ) );
         } catch ( final Exception ex ) {
           LOG.error( ex, ex );
+          throw ex;
         }
       }
     }//TODO:GRZE:OMGFIXME: move this for bfe to later stage.
@@ -367,30 +374,6 @@ public class ClusterAllocator implements Runnable {
                                    .owner( this.allocInfo.getOwnerFullName( ) )
                                    .create( );
     final Request<VmRunType, VmRunResponseType> req = AsyncRequests.newRequest( new VmRunCallback( run, childToken ) );
-    final Address addr = childToken.getAddress( );
-    if ( childToken.getAddress( ) != null ) {
-      final Success<VmRunResponseType> addrCallback = new Callback.Success<VmRunResponseType>( ) {
-        @SuppressWarnings( "unchecked" )
-        @Override
-        public void fire( final VmRunResponseType response ) {
-          try {
-            final VmInstance vm = VmInstances.lookup( response.getVms( ).iterator( ).next( ).getInstanceId( ) );
-            final Success<BaseMessage> vmUpdateCallback = new Callback.Success<BaseMessage>( ) {
-              @Override
-              public void fire( final BaseMessage response ) {
-                vm.updateAddresses( addr.getInstanceAddress( ), addr.getName( ) );
-              }
-            };
-            AsyncRequests.newRequest( addr.assign( vm ).getCallback( ) )
-                         .then( vmUpdateCallback )
-                         .dispatch( vm.getPartition( ) );
-          } catch ( final Exception ex ) {
-            LOG.error( ex, ex );
-          }
-        }
-      };
-      req.then( addrCallback );
-    }
     return req;
   }
   

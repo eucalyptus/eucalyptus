@@ -199,6 +199,10 @@ public class StandalonePersistence {
   public static void runDiscovery( ) {
     runSetupDiscovery( );
     for( File script : SubDirectory.UPGRADE.getFile( ).listFiles( ) ) {
+      if (! script.getPath().endsWith(".groovy")) {
+        LOG.debug("Skipping " + script.getAbsolutePath( ) + " due to file extension.");
+        continue;
+      }
       LOG.debug( "Trying to load what looks like an upgrade script: " + script.getAbsolutePath( ) );
       try {
         UpgradeScript u = Groovyness.newInstance( script.getAbsolutePath( ) );
