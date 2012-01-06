@@ -110,7 +110,7 @@ import com.google.common.collect.Sets;
 public class Entities {
   @ConfigurableField( description = "Maximum number of times a transaction may be retried before giving up.",
                       initial = "5" )
-  public static Integer                                          CONCURRENT_UPDATE_RETRIES = 5;
+  public static Integer                                          CONCURRENT_UPDATE_RETRIES = 10;
   private static ConcurrentMap<String, String>                   txLog                     = new MapMaker( ).softKeys( ).softValues( ).makeMap( );
   private static Logger                                          LOG                       = Logger.getLogger( Entities.class );
   private static ThreadLocal<String>                             txRootThreadLocal         = new ThreadLocal<String>( );

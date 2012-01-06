@@ -472,14 +472,13 @@ public class VmControl {
                 final int oldCode = v.getState( ).getCode( ), newCode = VmState.STOPPING.getCode( );
                 final String oldState = v.getState( ).getName( ), newState = VmState.STOPPING.getName( );
                 results.add( new TerminateInstancesItemType( v.getInstanceId( ), oldCode, oldState, newCode, newState ) );
-                if ( VmState.RUNNING.equals( v.getState( ) ) || VmState.PENDING.equals( v.getState( ) ) ) {
-                  v.setState( VmState.STOPPING, Reason.USER_STOPPED );
-                }
+                VmInstances.stopped( v );
+                return true;
               } else {
                 return false;
               }
             }
-            return true;
+            return true;//GRZE: noop needs to be true to continue Iterables.all
           } catch ( final NoSuchElementException e ) {
             try {
               VmInstances.stopped( instanceId );
@@ -490,6 +489,10 @@ public class VmControl {
               Logs.extreme( ).error( ex, ex );
               return false;
             }
+          } catch ( Exception ex ) {
+            LOG.error( ex );
+            Logs.extreme( ).error( ex, ex );
+            throw Exceptions.toUndeclared( ex );
           }
         }
       } );
