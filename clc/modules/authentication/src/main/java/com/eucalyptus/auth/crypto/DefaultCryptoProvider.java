@@ -201,7 +201,7 @@ public class DefaultCryptoProvider implements CryptoProvider, CertificateProvide
      * @see http://tools.ietf.org/html/rfc3309
      */
     for ( int i = key.length( ); i < 128; i += 8 ) {
-      hash.update( Longs.toByteArray( Double.doubleToRawLongBits( System.currentTimeMillis( ) * Math.random( ) ) ) );
+      hash.update( Longs.toByteArray( Double.doubleToRawLongBits( Math.random( ) ) ) );
     }
     String id = String.format( "%s-%08X", prefix, hash.getValue( ) );
     return id;

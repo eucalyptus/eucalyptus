@@ -328,7 +328,7 @@ public class VmRuntimeState {
     }
   }
   
-  private void setBundleTask( final VmBundleTask bundleTask ) {
+  void setBundleTask( final VmBundleTask bundleTask ) {
     this.bundleTask = bundleTask;
   }
   

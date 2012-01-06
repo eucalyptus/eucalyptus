@@ -262,7 +262,7 @@ public class VmControl {
     try {
       final Context ctx = Contexts.lookup( );
       final List<TerminateInstancesItemType> results = reply.getInstancesSet( );
-      Iterables.all( request.getInstancesSet( ), new Predicate<String>( ) {
+      Predicate<String> terminatePredicate = new Predicate<String>( ) {
         @Override
         public boolean apply( final String instanceId ) {
           EntityTransaction db = Entities.get( VmInstance.class );
@@ -311,7 +311,8 @@ public class VmControl {
           }
           return true;
         }
-      } );
+      };
+      Iterables.all( request.getInstancesSet( ), terminatePredicate ); 
       reply.set_return( !reply.getInstancesSet( ).isEmpty( ) );
       return reply;
     } catch ( final Throwable e ) {
@@ -462,7 +463,7 @@ public class VmControl {
     try {
       final Context ctx = Contexts.lookup( );
       final List<TerminateInstancesItemType> results = reply.getInstancesSet( );
-      Iterables.all( request.getInstancesSet( ), new Predicate<String>( ) {
+      Predicate<String> stopPredicate = new Predicate<String>( ) {
         @Override
         public boolean apply( final String instanceId ) {
           try {
@@ -471,28 +472,33 @@ public class VmControl {
               if ( v.getBootRecord( ).getMachine( ) instanceof BlockStorageImageInfo ) {
                 final int oldCode = v.getState( ).getCode( ), newCode = VmState.STOPPING.getCode( );
                 final String oldState = v.getState( ).getName( ), newState = VmState.STOPPING.getName( );
-                results.add( new TerminateInstancesItemType( v.getInstanceId( ), oldCode, oldState, newCode, newState ) );
-                if ( VmState.RUNNING.equals( v.getState( ) ) || VmState.PENDING.equals( v.getState( ) ) ) {
-                  v.setState( VmState.STOPPING, Reason.USER_STOPPED );
+                TerminateInstancesItemType termInfo = new TerminateInstancesItemType( v.getInstanceId( ), oldCode, oldState, newCode, newState );
+                if ( !results.contains( termInfo ) ) {
+                  results.add( termInfo );
                 }
-              } else {
-                return false;
+                VmInstances.stopped( v );
               }
             }
-            return true;
+            return true;//GRZE: noop needs to be true to continue Iterables.all
           } catch ( final NoSuchElementException e ) {
             try {
               VmInstances.stopped( instanceId );
               return true;
             } catch ( final NoSuchElementException e1 ) {
-              return false;
+              return true;
             } catch ( TransactionException ex ) {
               Logs.extreme( ).error( ex, ex );
-              return false;
+              return true;
             }
+          } catch ( Exception ex ) {
+            LOG.error( ex );
+            Logs.extreme( ).error( ex, ex );
+            throw Exceptions.toUndeclared( ex );
           }
         }
-      } );
+      };
+      Predicate<String> stopTx = Entities.asTransaction( VmInstance.class, stopPredicate );
+      Iterables.all( request.getInstancesSet( ), stopTx );
       reply.set_return( !reply.getInstancesSet( ).isEmpty( ) );
       return reply;
     } catch ( final Throwable e ) {

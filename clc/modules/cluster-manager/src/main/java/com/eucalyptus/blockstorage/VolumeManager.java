@@ -64,13 +64,12 @@
 package com.eucalyptus.blockstorage;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
+import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
-import org.hibernate.exception.ConstraintViolationException;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.UserFullName;
@@ -87,15 +86,19 @@ import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.event.EventFailedException;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.records.EventClass;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.reporting.event.StorageEvent;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.vm.VmInstance;
@@ -104,10 +107,11 @@ import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.vm.VmVolumeAttachment;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.base.Function;
-import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
+import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import edu.ucsb.eucalyptus.msgs.AttachStorageVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.AttachStorageVolumeType;
@@ -214,14 +218,7 @@ public class VolumeManager {
       if ( scReply.get_return( ) ) {
         vol.setState( State.ANNIHILATING );
         db.commit( );
-        try {
-          ListenerRegistry.getInstance( ).fireEvent( new StorageEvent( StorageEvent.EventType.EbsVolume, false, vol.getSize( ),
-                                                                       vol.getOwnerUserId( ), vol.getOwnerUserName( ),
-                                                                       vol.getOwnerAccountNumber( ), vol.getOwnerAccountName( ),
-                                                                       vol.getScName( ), vol.getPartition( ) ) );
-        } catch ( EventFailedException ex ) {
-          LOG.error( ex, ex );
-        }
+        fireDeleteEvent( vol );
       } else {
         reallyFailed = true;
         throw new EucalyptusCloudException( "Storage Controller returned false:  Contact the administrator to report the problem." );
@@ -239,56 +236,78 @@ public class VolumeManager {
     return reply;
   }
   
-  public DescribeVolumesResponseType DescribeVolumes( DescribeVolumesType request ) throws EucalyptusCloudException {
-    DescribeVolumesResponseType reply = ( DescribeVolumesResponseType ) request.getReply( );
-    Context ctx = Contexts.lookup( );
-    boolean showAll = request.getVolumeSet( ).remove( "verbose" );
-    EntityWrapper<Volume> db = EntityWrapper.get( Volume.class );
-    try {
-      
-      final Map<String, AttachedVolume> attachedVolumes = new HashMap<String, AttachedVolume>( );
-      for ( final VmInstance vm : VmInstances.list( Predicates.not( VmState.TERMINATED ) ) ) {
-        vm.eachVolumeAttachment( new Predicate<VmVolumeAttachment>( ) {
-          @Override
-          public boolean apply( VmVolumeAttachment arg0 ) {
-            return attachedVolumes.put( arg0.getVolumeId( ), VmVolumeAttachment.asAttachedVolume( vm ).apply( arg0 ) ) == null;
+  public DescribeVolumesResponseType DescribeVolumes( DescribeVolumesType request ) throws Exception {
+    final DescribeVolumesResponseType reply = ( DescribeVolumesResponseType ) request.getReply( );
+    final Context ctx = Contexts.lookup( );
+    final boolean showAll = request.getVolumeSet( ).remove( "verbose" );
+    final AccountFullName ownerFullName = ( ctx.hasAdministrativePrivileges( ) && showAll ) ? null : ctx.getUserFullName( ).asAccountFullName( );
+    final Set<String> volumeIds = Sets.newHashSet( );
+    if ( !request.getVolumeSet( ).isEmpty( ) ) {
+      volumeIds.addAll( request.getVolumeSet( ) );
+    }
+    
+    final Function<Set<String>, List<Volume>> lookupVolumes = new Function<Set<String>, List<Volume>>( ) {
+      public List<Volume> apply( final Set<String> input ) {
+        List<Volume> res = Lists.newArrayList( );
+        if ( input.isEmpty( ) ) {
+          List<Volume> found = Entities.query( Volume.named( ownerFullName, null ) );
+          res.addAll( Collections2.filter( found, RestrictedTypes.filterPrivileged( ) ) );
+        } else {
+          for ( String s : input ) {
+            try {
+              Volume foundVol = Entities.uniqueResult( Volume.named( ownerFullName, s ) );
+              if ( RestrictedTypes.filterPrivileged( ).apply( foundVol ) ) {
+                res.add( foundVol );
+              }
+            } catch ( NoSuchElementException ex ) {
+            } catch ( TransactionException ex ) {
+              throw Exceptions.toUndeclared( ex );
+            }
           }
-        } );
+        }
+        return res;
       }
-      List<Volume> volumes = db.query( Volume.named( ( ctx.hasAdministrativePrivileges( ) && showAll ) ? null : ctx.getUserFullName( ).asAccountFullName( ), null ) );
+    };
+    
+    EntityTransaction db = Entities.get( Volume.class );
+    try {
+      List<Volume> volumes = lookupVolumes.apply( volumeIds );
       List<Volume> describeVolumes = Lists.newArrayList( );
-      for ( Volume v : Iterables.filter( volumes, CloudMetadatas.filterPrivilegesById( request.getVolumeSet( ) ) ) ) {
+      for ( Volume v : volumes ) {
         if ( !State.ANNIHILATED.equals( v.getState( ) ) ) {
           describeVolumes.add( v );
         } else {
-          try {
-            ListenerRegistry.getInstance( ).fireEvent( new StorageEvent( StorageEvent.EventType.EbsVolume, false, v.getSize( ),
-                                                                         v.getOwnerUserId( ), v.getOwnerUserName( ),
-                                                                         v.getOwnerAccountNumber( ), v.getOwnerAccountName( ),
-                                                                         v.getScName( ), v.getPartition( ) ) );
-          } catch ( EventFailedException ex ) {
-            LOG.error( ex, ex );
-          }
-          db.delete( v );
+          fireDeleteEvent( v );
+          Entities.delete( v );
         }
       }
-      try {
-        ArrayList<edu.ucsb.eucalyptus.msgs.Volume> volumeReplyList = StorageUtil.getVolumeReply( attachedVolumes, describeVolumes );
-        reply.getVolumeSet( ).addAll( volumeReplyList );
-      } catch ( Exception e ) {
-        LOG.warn( "Error getting volume information from the Storage Controller: " + e );
-        LOG.debug( e, e );
-      }
+      reply.getVolumeSet( ).addAll( StorageUtil.getVolumeReply( describeVolumes ) );
       db.commit( );
-    } catch ( Exception t ) {
-      db.commit( );
+    } catch ( Exception ex ) {
+      Logs.extreme( ).error( ex, ex );
+      db.rollback( );
+      throw ex;
     }
     return reply;
+  }
+
+  private static void fireDeleteEvent( Volume v ) {
+    try {
+      ListenerRegistry.getInstance( ).fireEvent( new StorageEvent( StorageEvent.EventType.EbsVolume, false, v.getSize( ),
+                                                                   v.getOwnerUserId( ), v.getOwnerUserName( ),
+                                                                   v.getOwnerAccountNumber( ), v.getOwnerAccountName( ),
+                                                                   v.getScName( ), v.getPartition( ) ) );
+    } catch ( EventFailedException ex ) {
+      LOG.error( ex );
+      Logs.extreme( ).error( ex, ex );
+    }
   }
   
   public AttachVolumeResponseType AttachVolume( AttachVolumeType request ) throws EucalyptusCloudException {
     AttachVolumeResponseType reply = ( AttachVolumeResponseType ) request.getReply( );
-    Context ctx = Contexts.lookup( );
+    final String deviceName = request.getDevice( );
+    final String volumeId = request.getVolumeId( );
+    final Context ctx = Contexts.lookup( );
     
     if ( request.getDevice( ) == null || request.getDevice( ).endsWith( "sda" ) || request.getDevice( ).endsWith( "sdb" ) ) {
       throw new EucalyptusCloudException( "Invalid device name specified: " + request.getDevice( ) );
@@ -303,6 +322,11 @@ public class VolumeManager {
       LOG.debug( ex, ex );
       throw new EucalyptusCloudException( ex.getMessage( ), ex );
     }
+    AccountFullName ownerFullName = ctx.getUserFullName( ).asAccountFullName( );
+    Volume volume = Volumes.lookup( ownerFullName, volumeId );
+    if ( !RestrictedTypes.filterPrivileged( ).apply( volume ) ) {
+      throw new EucalyptusCloudException( "Not authorized to attach volume " + request.getVolumeId( ) + " by " + ctx.getUser( ).getName( ) );
+    }
     Cluster cluster = null;
     try {
       ServiceConfiguration ccConfig = Topology.lookup( ClusterController.class, vm.lookupPartition( ) );
@@ -311,41 +335,31 @@ public class VolumeManager {
       LOG.debug( e, e );
       throw new EucalyptusCloudException( "Cluster does not exist in partition: " + vm.getPartition( ) );
     }
-    final String deviceName = request.getDevice( );
-    final String volumeId = request.getVolumeId( );
     try {
       vm.lookupVolumeAttachmentByDevice( deviceName );
       throw new EucalyptusCloudException( "Already have a device attached to: " + request.getDevice( ) );
     } catch ( NoSuchElementException ex1 ) {
       /** no attachment **/
     }
-    for ( VmInstance iter : VmInstances.list( Predicates.not( VmState.TERMINATED ) ) ) {
-      try {
-        iter.lookupVolumeAttachment( volumeId );
-        throw new EucalyptusCloudException( "Volume already attached: " + request.getVolumeId( ) );
-      } catch ( NoSuchElementException ex ) {
-        /** no attachment **/
-      }
+    try {
+      VmInstances.lookupVolumeAttachment( volumeId );
+      throw new EucalyptusCloudException( "Volume already attached: " + request.getVolumeId( ) );
+    } catch ( Exception ex1 ) {
     }
-    
-    AccountFullName ownerFullName = ctx.getUserFullName( ).asAccountFullName( );
-    Volume volume = Volumes.lookup( ownerFullName, volumeId );
-    if ( !RestrictedTypes.filterPrivileged( ).apply( volume ) ) {
-      throw new EucalyptusCloudException( "Not authorized to attach volume " + request.getVolumeId( ) + " by " + ctx.getUser( ).getName( ) );
-    }
+
     Partition volPartition = Partitions.lookupByName( volume.getPartition( ) );
     ServiceConfiguration sc = Topology.lookup( Storage.class, volPartition );
     ServiceConfiguration scVm = Topology.lookup( Storage.class, cluster.getConfiguration( ).lookupPartition( ) );
     if ( !sc.equals( scVm ) ) {
-      throw new EucalyptusCloudException( "Can only attach volumes in the same cluster: " + request.getVolumeId( ) );
+      throw new EucalyptusCloudException( "Can only attach volumes in the same zone: " + request.getVolumeId( ) );
     } else if ( "invalid".equals( volume.getRemoteDevice( ) ) ) {
       throw new EucalyptusCloudException( "Volume is not yet available: " + request.getVolumeId( ) );
     }
     
     AttachStorageVolumeResponseType scAttachResponse;
     try {
-      scAttachResponse = ServiceDispatcher.lookup( sc ).send( new AttachStorageVolumeType( cluster.getNode( vm.getServiceTag( ) ).getIqn( ),
-                                                                                           volume.getDisplayName( ) ) );
+      AttachStorageVolumeType req = new AttachStorageVolumeType( cluster.getNode( vm.getServiceTag( ) ).getIqn( ), volume.getDisplayName( ) );
+      scAttachResponse = AsyncRequests.sendSync( sc, req );
     } catch ( Exception e ) {
       LOG.debug( e, e );
       throw new EucalyptusCloudException( e.getMessage( ) );
@@ -353,9 +367,7 @@ public class VolumeManager {
     request.setRemoteDevice( scAttachResponse.getRemoteDeviceString( ) );
 
     AttachedVolume attachVol = new AttachedVolume( volume.getDisplayName( ), vm.getInstanceId( ), request.getDevice( ), request.getRemoteDevice( ) );
-    volume.setState( State.BUSY );
-    attachVol.setStatus( "attaching" );
-    vm.addTransientVolume( attachVol );
+    vm.addTransientVolume( deviceName, volume );
     AsyncRequests.newRequest( new VolumeAttachCallback( request, attachVol ) ).dispatch( cluster.getConfiguration( ) );
     
     EventRecord.here( VolumeManager.class, EventClass.VOLUME, EventType.VOLUME_ATTACH )
@@ -385,13 +397,12 @@ public class VolumeManager {
     
     VmInstance vm = null;
     AttachedVolume volume = null;
-    for ( VmInstance iter : VmInstances.list( Predicates.not( VmState.TERMINATED ) ) ) {
-      try {
-        volume = iter.lookupVolumeAttachment( request.getVolumeId( ) );
-        vm = iter;
-      } catch ( NoSuchElementException ex ) {
-        /** no such attachment **/
-      }
+    try {
+      VmVolumeAttachment vmVolAttach = VmInstances.lookupVolumeAttachment( request.getVolumeId( ) );
+      volume = VmVolumeAttachment.asAttachedVolume( vmVolAttach.getVmInstance( ) ).apply( vmVolAttach );
+      vm = vmVolAttach.getVmInstance( );
+    } catch ( NoSuchElementException ex ) {
+      /** no such attachment **/
     }
     if ( volume == null ) {
       throw new EucalyptusCloudException( "Volume is not attached: " + request.getVolumeId( ) );
@@ -420,10 +431,10 @@ public class VolumeManager {
       scVm = Topology.lookup( Storage.class, vm.lookupPartition( ) );
     } catch ( Exception ex ) {
       LOG.error( ex, ex );
-      throw new EucalyptusCloudException( "Failed to lookup SC for cluster: " + cluster, ex );
+      throw new EucalyptusCloudException( "Failed to lookup SC for partition: " + vm.getPartition( ), ex );
     }
     try {
-      ServiceDispatcher.lookup( scVm ).send( new DetachStorageVolumeType( cluster.getNode( vm.getServiceTag( ) ).getIqn( ), volume.getVolumeId( ) ) );
+      AsyncRequests.sendSync( scVm, new DetachStorageVolumeType( cluster.getNode( vm.getServiceTag( ) ).getIqn( ), volume.getVolumeId( ) ) );
     } catch ( Exception e ) {
       LOG.debug( e, e );
       throw new EucalyptusCloudException( e.getMessage( ) );

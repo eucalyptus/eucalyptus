@@ -90,6 +90,7 @@ import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes.QuantityMetricFunction;
 import com.eucalyptus.util.RestrictedTypes.UsageMetricFunction;
+import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
@@ -176,7 +177,7 @@ public class Volumes {
     try {
       volume = Entities.uniqueResult( Volume.named( ownerFullName, volumeId ) );
       if ( volume.getRemoteDevice( ) == null ) {
-        StorageUtil.getVolumeReply( new HashMap<String, AttachedVolume>( ), Lists.newArrayList( volume ) );
+        StorageUtil.getVolumeReply( Lists.newArrayList( volume ) );
       }
       db.commit( );
     } catch ( Exception ex ) {
@@ -200,7 +201,7 @@ public class Volumes {
                                                                        t.getOwnerAccountNumber( ), t.getOwnerAccountName( ),
                                                                        t.getScName( ), t.getPartition( ) ) );
           final CreateStorageVolumeType req = new CreateStorageVolumeType( t.getDisplayName( ), t.getSize( ), snapId, null ).regardingUserRequest( request );
-          ServiceDispatcher.lookup( sc ).send( req );
+          AsyncRequests.sendSync( sc, req );
         } catch ( final Exception ex ) {
           LOG.error( "Failed to create volume: " + t.toString( ), ex );
           throw Exceptions.toUndeclared( ex );

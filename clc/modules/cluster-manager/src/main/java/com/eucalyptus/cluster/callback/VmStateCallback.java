@@ -12,7 +12,6 @@ import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.records.Logs;
-import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.async.FailedRequestException;
 import com.eucalyptus.util.async.SubjectMessageCallback;
 import com.eucalyptus.vm.VmBundleTask.BundleState;
@@ -23,7 +22,6 @@ import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.vm.VmInstances.TerminatedInstanceException;
 import com.eucalyptus.vm.VmType;
 import com.eucalyptus.vm.VmTypes;
-import com.google.common.base.Function;
 import com.eucalyptus.vm.VmVolumeAttachment;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
@@ -143,45 +141,40 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
     }
   }
   
-  private static void handleReportedState( final VmInfo runVm ) {     
-	  Function<VmInfo, VmInstance> handleFunc = new Function<VmInfo,VmInstance> () {
-		  @Override
-		  public VmInstance apply( VmInfo runVm ) {
-			  VmInstance vm = null;
-			  try {
-				  final VmState runVmState = VmState.Mapper.get( runVm.getStateName( ) );        	  
-				  vm = VmInstances.lookup( runVm.getInstanceId( ) );
-				  if ( VmInstances.Timeout.EXPIRED.apply( vm ) ) {
-					  VmInstances.shutDown( vm );
-				  } else if ( VmState.SHUTTING_DOWN.equals( runVmState ) ) {
-					  VmStateCallback.handleReportedTeardown( vm, runVm );
-				  } else if ( VmStateSet.RUN.apply( vm ) ) {
-					  vm.doUpdate( ).apply( runVm );
-				  } else if ( !VmStateSet.RUN.apply( vm ) && VmStateSet.RUN.contains( runVmState )
-						  && vm.lastUpdateMillis( ) > ( VmInstances.VOLATILE_STATE_TIMEOUT_SEC * 1000l ) ) {
-					  vm.doUpdate( ).apply( runVm );
-				  } else {
-					  throw new Exception("Can't handle the instance's reported state ("+runVmState+")");
-				  }
-			  } catch ( TerminatedInstanceException ex1 ) {
-				  LOG.trace( "Ignore state update to terminated instance: " + runVm.getInstanceId( ) );
-				  throw Exceptions.toUndeclared(ex1);
-			  } catch ( NoSuchElementException ex1 ) {
-				  //      VmStateCallback.handleRestore( runVm );
-				  throw Exceptions.toUndeclared(ex1);
-			  } catch ( Exception ex1 ) {
-			      throw Exceptions.toUndeclared( ex1 );
-			  }
-			  return vm;
-		  }
-	  };
-	  
-	  try{
-		  Entities.asTransaction( VmInstance.class, handleFunc ).apply( runVm );
-	  }catch ( Exception ex1 ) {  
-		  LOG.error( ex1 );
-		  Logs.extreme( ).error( ex1, ex1 );
-	  }			
+  private static void handleReportedState( final VmInfo runVm ) {
+    final VmState runVmState = VmState.Mapper.get( runVm.getStateName( ) );
+    try {
+      EntityTransaction db = Entities.get( VmInstance.class );
+      try {
+        VmInstance vm = VmInstances.lookup( runVm.getInstanceId( ) );
+        if ( VmInstances.Timeout.EXPIRED.apply( vm ) ) {
+          VmInstances.shutDown( vm );
+        } else if ( VmState.SHUTTING_DOWN.equals( runVmState ) ) {
+          VmStateCallback.handleReportedTeardown( vm, runVm );
+        } else if ( VmStateSet.RUN.apply( vm ) ) {
+          vm.doUpdate( ).apply( runVm );
+        } else if ( !VmStateSet.RUN.apply( vm ) && VmStateSet.RUN.contains( runVmState )
+                    && vm.lastUpdateMillis( ) > ( VmInstances.VOLATILE_STATE_TIMEOUT_SEC * 1000l ) ) {
+          vm.doUpdate( ).apply( runVm );
+        } else {
+          db.rollback( );
+          return;
+        }
+        Entities.commit( db );
+      } catch ( Exception ex ) {
+        LOG.error( ex );
+        Logs.extreme( ).error( ex, ex );
+        db.rollback( );
+        throw ex;
+      }
+    } catch ( TerminatedInstanceException ex1 ) {
+      LOG.trace( "Ignore state update to terminated instance: " + runVm.getInstanceId( ) );
+    } catch ( NoSuchElementException ex1 ) {
+//      VmStateCallback.handleRestore( runVm );
+    } catch ( Exception ex1 ) {
+      LOG.error( ex1 );
+      Logs.extreme( ).error( ex1, ex1 );
+    }
   }
   
   private static void handleRestore( final VmInfo runVm ) {
@@ -230,7 +223,7 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
         return input.eachVolumeAttachment( new Predicate<VmVolumeAttachment>( ) {
           @Override
           public boolean apply( VmVolumeAttachment arg0 ) {
-            return arg0.getStatus( ).endsWith( "ing" );
+            return arg0.getAttachmentState( ).isVolatile( );
           }
         } );
       }

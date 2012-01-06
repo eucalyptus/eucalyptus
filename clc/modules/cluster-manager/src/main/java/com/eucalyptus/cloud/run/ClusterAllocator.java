@@ -184,14 +184,17 @@ public class ClusterAllocator implements Runnable {
       db.commit( );
     } catch ( final Exception e ) {
       db.rollback( );
-      LOG.debug( e, e );
+      LOG.error( e );
+      Logs.extreme( ).error( e, e );
       this.allocInfo.abort( );
       for ( final ResourceToken token : allocInfo.getAllocationTokens( ) ) {
         try {
           final VmInstance vm = VmInstances.lookup( token.getInstanceId( ) );
-          vm.setState( VmState.TERMINATED, Reason.FAILED, e.getMessage( ) );
+          VmInstances.terminated( vm );
+          VmInstances.terminated( vm );
         } catch ( final Exception e1 ) {
-          LOG.debug( e1, e1 );
+          LOG.error( e1 );
+          Logs.extreme( ).error( e1, e1 );
         }
       }
       return;
@@ -202,14 +205,17 @@ public class ClusterAllocator implements Runnable {
         this.setupVmMessages( token );
       }
     } catch ( final Exception e ) {
-      LOG.debug( e, e );
+      LOG.error( e );
+      Logs.extreme( ).error( e, e );
       this.allocInfo.abort( );
       for ( final ResourceToken token : allocInfo.getAllocationTokens( ) ) {
         try {
           final VmInstance vm = VmInstances.lookup( token.getInstanceId( ) );
-          vm.setState( VmState.TERMINATED, Reason.FAILED, e.getMessage( ) );
+          VmInstances.terminated( vm );
+          VmInstances.terminated( vm );
         } catch ( final Exception e1 ) {
-          LOG.debug( e1, e1 );
+          LOG.error( e1 );
+          Logs.extreme( ).error( e1, e1 );
         }
       }
     }
@@ -220,20 +226,20 @@ public class ClusterAllocator implements Runnable {
       final ServiceConfiguration sc = Topology.lookup( Storage.class, this.cluster.getConfiguration( ).lookupPartition( ) );
       final VirtualBootRecord root = this.allocInfo.getVmTypeInfo( ).lookupRoot( );
       if ( root.isBlockStorage( ) ) {
-        for ( final ResourceToken token : this.allocInfo.getAllocationTokens( ) ) {
-          final BlockStorageImageInfo imgInfo = ( ( BlockStorageImageInfo ) this.allocInfo.getBootSet( ).getMachine( ) );
-          Long volSizeBytes = imgInfo.getImageSizeBytes( );
-          Boolean deleteOnTerminate = imgInfo.getDeleteOnTerminate( );
-          for ( final BlockDeviceMappingItemType blockDevMapping : this.allocInfo.getRequest( ).getBlockDeviceMapping( ) ) {
-            if ( "root".equals( blockDevMapping.getVirtualName( ) ) && ( blockDevMapping.getEbs( ) != null ) ) {
-              deleteOnTerminate |= blockDevMapping.getEbs( ).getDeleteOnTermination( );
-              if ( blockDevMapping.getEbs( ).getVolumeSize( ) != null ) {
-                volSizeBytes = BYTES_PER_GB * blockDevMapping.getEbs( ).getVolumeSize( );
-              }
+        final BlockStorageImageInfo imgInfo = ( ( BlockStorageImageInfo ) this.allocInfo.getBootSet( ).getMachine( ) );
+        Long volSizeBytes = imgInfo.getImageSizeBytes( );
+        Boolean deleteOnTerminate = imgInfo.getDeleteOnTerminate( );
+        for ( final BlockDeviceMappingItemType blockDevMapping : this.allocInfo.getRequest( ).getBlockDeviceMapping( ) ) {
+          if ( "root".equals( blockDevMapping.getVirtualName( ) ) && ( blockDevMapping.getEbs( ) != null ) ) {
+            deleteOnTerminate |= blockDevMapping.getEbs( ).getDeleteOnTermination( );
+            if ( blockDevMapping.getEbs( ).getVolumeSize( ) != null ) {
+              volSizeBytes = BYTES_PER_GB * blockDevMapping.getEbs( ).getVolumeSize( );
             }
           }
-          final int sizeGb = ( int ) Math.ceil( volSizeBytes / BYTES_PER_GB );
-          LOG.debug( "About to prepare root volume using bootable block storage: " + imgInfo + " and vbr: " + root );
+        }
+        final int sizeGb = ( int ) Math.ceil( volSizeBytes / BYTES_PER_GB );
+        LOG.debug( "About to prepare root volume using bootable block storage: " + imgInfo + " and vbr: " + root );
+        for ( final ResourceToken token : this.allocInfo.getAllocationTokens( ) ) {
           final VmInstance vm = VmInstances.lookup( token.getInstanceId( ) );
           Volume vol = null;
           if ( !vm.getBootRecord( ).hasPersistentVolumes( ) ) {
@@ -243,15 +249,11 @@ public class ClusterAllocator implements Runnable {
             } else {
               vm.addPermanentVolume( "/dev/sda1", vol );
             }
+            token.setRootVolume( vol );
           } else {
             final VmVolumeAttachment volumeAttachment = vm.getBootRecord( ).getPersistentVolumes( ).iterator( ).next( );
             vol = Volumes.lookup( null, volumeAttachment.getVolumeId( ) );            
-          }
-          
-          if ( deleteOnTerminate ) {
-            this.allocInfo.getTransientVolumes( ).add( vol );
-          } else {
-            this.allocInfo.getPersistentVolumes( ).add( vol );
+            token.setRootVolume( vol );
           }
         }
       }
@@ -281,7 +283,7 @@ public class ClusterAllocator implements Runnable {
     Request cb = null;
     try {
       final VirtualBootRecord root = vmInfo.lookupRoot( );
-      final VmTypeInfo childVmInfo = this.makeVmTypeInfo( vmInfo, token.getLaunchIndex( ), root );
+      final VmTypeInfo childVmInfo = this.makeVmTypeInfo( vmInfo, token, root );
       cb = this.makeRunRequest( token, childVmInfo, networkName );
       this.messages.addRequest( State.CREATE_VMS, cb );
       LOG.debug( "Queued RunInstances: " + token );
@@ -291,11 +293,11 @@ public class ClusterAllocator implements Runnable {
     }
   }
   
-  private VmTypeInfo makeVmTypeInfo( final VmTypeInfo vmInfo, final int index, final VirtualBootRecord root ) throws Exception {
+  private VmTypeInfo makeVmTypeInfo( final VmTypeInfo vmInfo, final ResourceToken token, final VirtualBootRecord root ) throws Exception {
     VmTypeInfo childVmInfo = vmInfo;
     if ( root.isBlockStorage( ) ) {
       childVmInfo = vmInfo.child( );
-      final Volume vol = this.allocInfo.getPersistentVolumes( ).get( index );
+      final Volume vol = token.getRootVolume( );
       final ServiceConfiguration scConfig = Topology.lookup( Storage.class, Partitions.lookupByName( vol.getPartition( ) ) );
       
       int numDescVolError = 0;

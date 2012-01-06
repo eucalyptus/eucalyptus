@@ -110,7 +110,7 @@ import com.google.common.collect.Sets;
 public class Entities {
   @ConfigurableField( description = "Maximum number of times a transaction may be retried before giving up.",
                       initial = "5" )
-  public static Integer                                          CONCURRENT_UPDATE_RETRIES = 5;
+  public static Integer                                          CONCURRENT_UPDATE_RETRIES = 10;
   private static ConcurrentMap<String, String>                   txLog                     = new MapMaker( ).softKeys( ).softValues( ).makeMap( );
   private static Logger                                          LOG                       = Logger.getLogger( Entities.class );
   private static ThreadLocal<String>                             txRootThreadLocal         = new ThreadLocal<String>( );
@@ -336,7 +336,12 @@ public class Entities {
   public static Criteria createCriteria( final Class class1 ) {
     return getTransaction( class1 ).getTxState( ).getSession( ).createCriteria( class1 );
   }
+
+  public static Criteria createCriteriaUnique( final Class class1 ) {
+    return getTransaction( class1 ).getTxState( ).getSession( ).createCriteria( class1 ).setCacheable( true ).setFetchSize( 1 ).setMaxResults( 1 ).setFirstResult( 0 );
+  }
   
+
   /**
    * Invokes underlying persist implementation per jsr-220
    * 
@@ -908,7 +913,21 @@ public class Entities {
     }
     
   }
+
+  public static <E, T> Predicate<T> asTransaction( final Class<E> type, final Predicate<T> predicate ) {
+    final Function<T, Boolean> funcionalized = Functions.forPredicate( predicate );
+    final Function<T, Boolean> transactionalized = Entities.asTransaction( type, funcionalized );
+    return new Predicate<T>() {
+
+      @Override
+      public boolean apply( T input ) {
+        return transactionalized.apply( input );
+      }
+      
+    };
+  }
   
+
   public static <T, R> Function<T, R> asTransaction( final Function<T, R> function ) {
     if ( function instanceof TransactionalFunction ) {
       return function;

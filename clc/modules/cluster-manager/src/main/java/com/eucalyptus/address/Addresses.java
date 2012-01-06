@@ -256,7 +256,7 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
       } else {
         addr.release( );
       }
-    } catch ( final IllegalStateException e ) {
+    } catch ( final Exception e ) {
       LOG.debug( e, e );
     }
   }
