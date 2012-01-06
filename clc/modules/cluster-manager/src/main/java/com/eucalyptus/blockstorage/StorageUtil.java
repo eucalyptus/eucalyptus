@@ -85,6 +85,7 @@ import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstances;
+import com.eucalyptus.vm.VmVolumeAttachment;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.base.Function;
 import com.google.common.collect.HashMultimap;
@@ -143,9 +144,11 @@ public class StorageUtil {
     }
     edu.ucsb.eucalyptus.msgs.Volume aVolume = null;
     
-    AttachedVolume vmAttachedVol = null;
+    VmVolumeAttachment vmAttachedVol = null;
+    VmInstance vm = null;
     try {
-      VmInstances.lookupVolumeAttachment( v.getDisplayName( ) );
+      vmAttachedVol = VmInstances.lookupVolumeAttachment( v.getDisplayName( ) );
+      vm = vmAttachedVol.getVmInstance( );
       v.setState( State.BUSY );
     } catch ( NoSuchElementException ex ) {
       v.setMappedState( status );
@@ -159,7 +162,7 @@ public class StorageUtil {
     aVolume = v.morph( new edu.ucsb.eucalyptus.msgs.Volume( ) );
     if ( vmAttachedVol != null ) {
       aVolume.setStatus( v.mapState( ) );
-      aVolume.getAttachmentSet( ).add( vmAttachedVol );
+      aVolume.getAttachmentSet( ).add( VmVolumeAttachment.asAttachedVolume( vm ).apply( vmAttachedVol ) );
       for ( AttachedVolume attachedVolume : aVolume.getAttachmentSet( ) ) {
         if ( !attachedVolume.getDevice( ).startsWith( "/dev/" ) ) {
           attachedVolume.setDevice( "/dev/" + attachedVolume.getDevice( ) );
