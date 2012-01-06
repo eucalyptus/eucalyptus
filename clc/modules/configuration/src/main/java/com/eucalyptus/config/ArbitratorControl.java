@@ -91,7 +91,8 @@ import com.google.common.collect.Sets;
 public class ArbitratorControl {
 	private static Logger                   LOG               = Logger.getLogger( ArbitratorControl.class );
 	private static Map<ArbitratorConfiguration, Exception>   error             = Maps.newConcurrentMap( );
-	private static Map<String, ArbitratorConfiguration>   okay              = Maps.newConcurrentMap( );
+	private static Map<ArbitratorConfiguration, ArbitratorConfiguration>   okay              = Maps.newConcurrentMap( );
+	private static volatile boolean wasSet;
 	private static ScheduledExecutorService monitor;
 	private final static int                CHECK_PERIODICITY = 5;
 
@@ -100,51 +101,63 @@ public class ArbitratorControl {
 	public static void start( ) {}
 
 	public static void check( ) throws Exception {
-		final List<ArbitratorConfiguration> configs = ServiceConfigurations.list( Arbitrator.class );
-		for ( final ArbitratorConfiguration config : configs ) {
-			if(Internets.testLocal(config.getHostName())) {
-				final String hostName = config.getGatewayHost();
-				if ( hostName != null ) {
-					Threads.lookup( Arbitrator.class, ArbitratorControl.class ).submit( new Runnable( ) {
-						@Override
-						public void run( ) {
+		Threads.lookup( Arbitrator.class, ArbitratorControl.class ).submit( new Runnable( ) {
+			@Override
+			public void run( ) {
+				final List<ArbitratorConfiguration> configs = ServiceConfigurations.list( Arbitrator.class );
+				for ( final ArbitratorConfiguration config : configs ) {
+					if(Internets.testLocal(config.getHostName())) {
+						final String hostName = config.getGatewayHost();
+						if ( hostName != null ) {
 							try {
 								final InetAddress addr = InetAddress.getByName( hostName );
 								if ( Internets.isReachable( addr, 2000 ) ) {
 									ArbitratorControl.error.remove( config );
-									ArbitratorControl.okay.put( hostName, config );
+									ArbitratorControl.okay.put( config, config );
 								} else {
 									ArbitratorControl.error.put( config, Exceptions.filterStackTrace( new NoRouteToHostException( addr.toString( ) ) ) );
-									ArbitratorControl.okay.remove(hostName);
+									ArbitratorControl.okay.remove(config);
 								}
 							} catch ( final UnknownHostException e ) {
 								ArbitratorControl.error.put( config, Exceptions.filterStackTrace( e ) );
-								ArbitratorControl.okay.remove(hostName);
+								ArbitratorControl.okay.remove(config);
 							} catch ( final IOException e ) {
 								ArbitratorControl.error.put( config, Exceptions.filterStackTrace( e ) );
-								ArbitratorControl.okay.remove(hostName);
+								ArbitratorControl.okay.remove(config);
 							}
-							EventRecord.here( ArbitratorControl.class, EventType.BOOTSTRAPPER_CHECK, hostName, "errorMap", error.get( hostName ).toString( ) ).debug( );
+//							EventRecord.here( ArbitratorControl.class, EventType.BOOTSTRAPPER_CHECK, hostName, "errorMap", error.get( hostName ).toString( ) ).debug( );
 						}
 					}
-					);
+				}
+				wasSet = true;
+			}
+		}
+				);
+		try {
+			if (wasSet) {
+				final Set<ArbitratorConfiguration> downArbitrators = Sets.newHashSet( error.keySet( ) );
+				if ( downArbitrators.size( ) > 0 ) {
+					ArbitratorConfiguration anyConfig = null;
+					List<Exception> exceptions = new ArrayList<Exception>();
+					for (ArbitratorConfiguration key : downArbitrators) {
+						anyConfig = key;
+						exceptions.add(error.get(key));
+					}
+					if (ArbitratorControl.okay.isEmpty()) {
+						throw Faults.fatal(anyConfig, exceptions);
+					} else {
+						throw Faults.advisory(anyConfig, exceptions);
+					}
 				}
 			}
-		}
-		final Set<ArbitratorConfiguration> downArbitrators = Sets.newHashSet( error.keySet( ) );
-		if ( downArbitrators.size( ) > 0 ) {
-			ArbitratorConfiguration anyConfig = null;
-			List<Exception> exceptions = new ArrayList<Exception>();
-			for (ArbitratorConfiguration key : downArbitrators) {
-				anyConfig = key;
-				exceptions.add(error.get(key));
-			}
-			if (ArbitratorControl.okay.isEmpty()) {
-				throw Faults.fatal(anyConfig, exceptions);
-			} else {
-				throw Faults.advisory(anyConfig, exceptions);
+		} catch (Exception e) {
+			throw e;
+		} finally {
+			if (wasSet) {
+				ArbitratorControl.okay.clear();
+				ArbitratorControl.error.clear();
+				wasSet = false;
 			}
 		}
-
 	}
 }

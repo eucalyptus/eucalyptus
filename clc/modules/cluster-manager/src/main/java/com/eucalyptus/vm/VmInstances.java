@@ -93,15 +93,18 @@ import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.crypto.Digest;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
+import com.eucalyptus.images.BlockStorageImageInfo;
 import com.eucalyptus.network.NetworkGroups;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Threads;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes.QuantityMetricFunction;
 import com.eucalyptus.util.RestrictedTypes.Resolver;
 import com.eucalyptus.util.async.AsyncRequests;
+import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Request;
 import com.eucalyptus.util.async.UnconditionalCallback;
 import com.eucalyptus.vm.VmInstance.Transitions;
@@ -192,34 +195,40 @@ public class VmInstances {
     
   }
   
+  @ConfigurableField( description = "Number of times to retry transactions in the face of potential concurrent update conflicts.",
+                      initial = "10" )
+  public static final int TX_RETRIES                    = 10;
   @ConfigurableField( description = "Amount of time (in minutes) before a previously running instance which is not reported will be marked as terminated.",
                       initial = "60" )
-  public static Integer INSTANCE_TIMEOUT              = 60;
+  public static Integer   INSTANCE_TIMEOUT              = 60;
   @ConfigurableField( description = "Amount of time (in minutes) before a VM which is not reported by a cluster will be marked as terminated.",
                       initial = "10" )
-  public static Integer SHUT_DOWN_TIME                = 10;
+  public static Integer   SHUT_DOWN_TIME                = 10;
   @ConfigurableField( description = "Amount of time (in minutes) that a terminated VM will continue to be reported.",
                       initial = "60" )
-  public static Integer TERMINATED_TIME               = 60;
+  public static Integer   TERMINATED_TIME               = 60;
   @ConfigurableField( description = "Maximum amount of time (in seconds) that the network topology service takes to propagate state changes.",
                       initial = "" + 60 * 60 * 1000 )
-  public static Long    NETWORK_METADATA_REFRESH_TIME = 15l;
+  public static Long      NETWORK_METADATA_REFRESH_TIME = 15l;
   @ConfigurableField( description = "Prefix to use for instance MAC addresses.",
                       initial = "d0:0d" )
-  public static String  MAC_PREFIX                    = "d0:0d";
+  public static String    MAC_PREFIX                    = "d0:0d";
   @ConfigurableField( description = "Subdomain to use for instance DNS.",
                       initial = ".eucalyptus",
                       changeListener = SubdomainListener.class )
-  public static String  INSTANCE_SUBDOMAIN            = ".eucalyptus";
+  public static String    INSTANCE_SUBDOMAIN            = ".eucalyptus";
   @ConfigurableField( description = "Period (in seconds) between state updates for actively changing state.",
                       initial = "3" )
-  public static Long    VOLATILE_STATE_INTERVAL_SEC   = 3l;
+  public static Long      VOLATILE_STATE_INTERVAL_SEC   = 3l;
   @ConfigurableField( description = "Timeout (in seconds) before a requested instance terminate will be repeated.",
                       initial = "60" )
-  public static Long    VOLATILE_STATE_TIMEOUT_SEC    = 60l;
+  public static Long      VOLATILE_STATE_TIMEOUT_SEC    = 60l;
   @ConfigurableField( description = "Maximum number of threads the system will use to service blocking state changes.",
                       initial = "16" )
-  public static Integer MAX_STATE_THREADS             = 16;
+  public static Integer   MAX_STATE_THREADS             = 16;
+  @ConfigurableField( description = "Amount of time (in minutes) before a EBS volume backing the instance is created",
+                      initial = "30" )
+  public static Integer   EBS_VOLUME_CREATION_TIMEOUT   = 30;
   
   public static class SubdomainListener implements PropertyChangeListener {
     @Override
@@ -335,46 +344,31 @@ public class VmInstances {
     return Iterables.find( list( ), withBundleId( bundleId ) );
   }
   
-  public static UnconditionalCallback getCleanUpCallback( final Address address, final VmInstance vm, final Cluster cluster ) {
-    final UnconditionalCallback cleanup = new UnconditionalCallback( ) {
-      @Override
-      public void fire( ) {
-        if ( address != null ) {
-          try {
-            if ( address.isSystemOwned( ) ) {
-              EventRecord.caller( VmInstances.class, EventType.VM_TERMINATING, "SYSTEM_ADDRESS", address.toString( ) ).debug( );
-              Addresses.release( address );
-            } else {
-              EventRecord.caller( VmInstances.class, EventType.VM_TERMINATING, "USER_ADDRESS", address.toString( ) ).debug( );
-              AsyncRequests.newRequest( address.unassign( ).getCallback( ) ).dispatch( address.getPartition( ) );
-            }
-          } catch ( final IllegalStateException e ) {} catch ( final Throwable e ) {
-            LOG.debug( e, e );
-          }
-        }
-      }
-    };
-    return cleanup;
-  }
-  
   public static void cleanUp( final VmInstance vm ) {
-    LOG.trace( Logs.dump( vm ) );
-    LOG.trace( Threads.currentStackString( ) );
+    Logs.extreme( ).info( "Terminating instance: " + vm.getInstanceId( ), new RuntimeException( ) );
     try {
-      final Cluster cluster = Clusters.lookup( Topology.lookup( ClusterController.class, vm.lookupPartition( ) ) );
-      VmInstances.cleanUpAttachedVolumes( vm );
-      
       Address address = null;
-      final Request<TerminateInstancesType, TerminateInstancesResponseType> req = AsyncRequests.newRequest( new TerminateCallback( vm.getInstanceId( ) ) );
       if ( NetworkGroups.networkingConfiguration( ).hasNetworking( ) ) {
         try {
           address = Addresses.getInstance( ).lookup( vm.getPublicAddress( ) );
-        } catch ( final NoSuchElementException e ) {} catch ( final Throwable e1 ) {
+          if ( address.isAssigned( ) ) {
+            AsyncRequests.newRequest( address.unassign( ).getCallback( ) ).dispatch( vm.getPartition( ) );
+          }
+          if ( address.isSystemOwned( ) ) {
+            EventRecord.caller( VmInstances.class, EventType.VM_TERMINATING, "SYSTEM_ADDRESS", address.toString( ) ).debug( );
+          } else {
+            EventRecord.caller( VmInstances.class, EventType.VM_TERMINATING, "USER_ADDRESS", address.toString( ) ).debug( );
+          }
+        } catch ( final NoSuchElementException e ) {
+          
+        } catch ( final Exception e1 ) {
           LOG.debug( e1, e1 );
         }
       }
-      req.then( VmInstances.getCleanUpCallback( address, vm, cluster ) );
-      req.dispatch( cluster.getConfiguration( ) );
+      final Cluster cluster = Clusters.lookup( Topology.lookup( ClusterController.class, vm.lookupPartition( ) ) );
+      VmInstances.cleanUpAttachedVolumes( vm );
+      
+      AsyncRequests.newRequest( new TerminateCallback( vm.getInstanceId( ) ) ).dispatch( cluster.getConfiguration( ) );
     } catch ( final Throwable e ) {
       LOG.error( e, e );
     }
@@ -394,16 +388,29 @@ public class VmInstances {
       vm.eachVolumeAttachment( new Predicate<AttachedVolume>( ) {
         @Override
         public boolean apply( final AttachedVolume arg0 ) {
-          try {
-            final ServiceConfiguration sc = Topology.lookup( Storage.class, vm.lookupPartition( ) );
-            vm.removeVolumeAttachment( arg0.getVolumeId( ) );
-            final Dispatcher scDispatcher = ServiceDispatcher.lookup( sc );
-            scDispatcher.send( new DetachStorageVolumeType( cluster.getNode( vm.getServiceTag( ) ).getIqn( ), arg0.getVolumeId( ) ) );
-            return true;
-          } catch ( final Throwable e ) {
-            LOG.error( "Failed sending Detach Storage Volume for: " + arg0.getVolumeId( )
-                       + ".  Will keep trying as long as instance is reported.  The request failed because of: " + e.getMessage( ), e );
-            return false;
+          if ( "/dev/sda1".equals( arg0.getDevice( ) ) ) {//GRZE:fix references to root device name.
+            try {
+              final ServiceConfiguration sc = Topology.lookup( Storage.class, vm.lookupPartition( ) );
+              final Dispatcher scDispatcher = ServiceDispatcher.lookup( sc );
+              scDispatcher.send( new DetachStorageVolumeType( cluster.getNode( vm.getServiceTag( ) ).getIqn( ), arg0.getVolumeId( ) ) );
+              return true;
+            } catch ( final Throwable e ) {
+              LOG.error( "Failed sending Detach Storage Volume for: " + arg0.getVolumeId( )
+                         + ".  Will keep trying as long as instance is reported.  The request failed because of: " + e.getMessage( ), e );
+              return true;
+            }
+          } else {
+            try {
+              final ServiceConfiguration sc = Topology.lookup( Storage.class, vm.lookupPartition( ) );
+              vm.removeVolumeAttachment( arg0.getVolumeId( ) );
+              final Dispatcher scDispatcher = ServiceDispatcher.lookup( sc );
+              scDispatcher.send( new DetachStorageVolumeType( cluster.getNode( vm.getServiceTag( ) ).getIqn( ), arg0.getVolumeId( ) ) );
+              return true;
+            } catch ( final Throwable e ) {
+              LOG.error( "Failed sending Detach Storage Volume for: " + arg0.getVolumeId( )
+                         + ".  Will keep trying as long as instance is reported.  The request failed because of: " + e.getMessage( ), e );
+              return true;
+            }
           }
         }
       } );
@@ -449,6 +456,29 @@ public class VmInstances {
   }
   
   public static void delete( final String instanceId ) {
+    try {
+      Entities.asTransaction( VmInstance.class, new Function<String, String>( ) {
+        
+        @Override
+        public String apply( String input ) {
+          EntityTransaction db = Entities.get( VmInstance.class );
+          try {
+            VmInstance entity = Entities.uniqueResult( VmInstance.named( null, input ) );
+            entity.cleanUp( );
+            Entities.delete( entity );
+            db.commit( );
+          } catch ( final Exception ex ) {
+            LOG.error( ex );
+            Logs.extreme( ).error( ex, ex );
+            db.rollback( );
+          }
+          return input;
+        }
+      }, VmInstances.TX_RETRIES ).apply( instanceId );
+    } catch ( Exception ex ) {
+      LOG.error( ex );
+      Logs.extreme( ).error( ex, ex );
+    }
     terminateDescribeCache.remove( instanceId );
     terminateCache.remove( instanceId );
   }
@@ -459,7 +489,7 @@ public class VmInstances {
       final RunningInstancesItemType ret = VmInstances.transform( vm );
       terminateDescribeCache.put( vm.getDisplayName( ), ret );
       terminateCache.put( vm.getDisplayName( ), vm );
-      Transitions.DELETE.apply( vm );
+      Entities.asTransaction( VmInstance.class, Transitions.DELETE, VmInstances.TX_RETRIES ).apply( vm );
     }
   }
   
@@ -472,11 +502,14 @@ public class VmInstances {
   }
   
   public static void stopped( final VmInstance vm ) throws TransactionException {
-    Transitions.STOPPED.apply( vm );
+    Entities.asTransaction( VmInstance.class, Transitions.STOPPED ).apply( vm );
   }
   
   public static void stopped( final String key ) throws NoSuchElementException, TransactionException {
-    VmInstances.stopped( VmInstance.Lookup.INSTANCE.apply( key ) );
+    VmInstance vm = VmInstance.Lookup.INSTANCE.apply( key );
+    if ( vm.getBootRecord( ).getMachine( ) instanceof BlockStorageImageInfo ) {
+      VmInstances.stopped( vm );
+    }
   }
   
   public static void shutDown( final VmInstance vm ) throws TransactionException {
@@ -487,7 +520,7 @@ public class VmInstances {
 //        VmInstances.terminated( vm );
 //      }
 //    } else {
-      Transitions.SHUTDOWN.apply( vm );
+      Entities.asTransaction( VmInstance.class, Transitions.SHUTDOWN ).apply( vm );
     }
   }
   

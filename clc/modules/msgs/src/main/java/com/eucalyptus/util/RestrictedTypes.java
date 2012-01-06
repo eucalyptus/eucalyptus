@@ -471,7 +471,7 @@ public class RestrictedTypes {
       } else if ( Ats.from( candidate ).has( Resolver.class ) && Function.class.isAssignableFrom( candidate ) ) {
         Resolver resolver = Ats.from( candidate ).get( Resolver.class );
         Class<?> resolverFunctionType = resolver.value( );
-        LOG.info( "Registered @Resolver:              " + resolverFunctionType.getSimpleName( ) + " => " + candidate );
+        LOG.info( "Registered @Resolver:               " + resolverFunctionType.getSimpleName( ) + " => " + candidate );
         RestrictedTypes.resourceResolvers.put( resolverFunctionType, ( Function<String, RestrictedType<?>> ) Classes.newInstance( candidate ) );
         return true;
       } else {

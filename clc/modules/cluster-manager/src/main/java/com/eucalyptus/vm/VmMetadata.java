@@ -63,7 +63,7 @@
  */
 package com.eucalyptus.vm;
 
-import java.util.Collections;
+import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import org.apache.log4j.Logger;
@@ -72,8 +72,6 @@ import com.eucalyptus.util.ByteArray;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
-import com.google.common.collect.Lists;
-import com.google.common.primitives.Bytes;
 
 public class VmMetadata {
   private static Logger                                                      LOG                       = Logger.getLogger( VmMetadata.class );
@@ -154,14 +152,14 @@ public class VmMetadata {
       } else {
         return "".getBytes( );
       }
+    } catch ( NoSuchElementException ex ) {
+      throw ex;
     } catch ( Exception ex ) {
       String errorMsg = "Metadata request failed: " + path + ( Logs.isExtrrreeeme( )
         ? " cause: " + ex.getMessage( )
         : "" );
       LOG.error( errorMsg, ex );
-      return Logs.isExtrrreeeme( )
-        ? Exceptions.string( errorMsg, ex ).getBytes( )
-        : errorMsg.getBytes( );
+      throw Exceptions.toUndeclared( ex );
     }
   }
   

@@ -231,6 +231,18 @@ public class AssignAddressType extends CloudClusterMessage {
   
   def AssignAddressType() {
   }
+
+  @Override
+  public String toString( ) {
+    return "AssignAddress ${this.source}=>${this.destination} ${this.instanceId} ${this.uuid}";
+  }
+
+  @Override
+  public String toSimpleString( ) {
+    return "${super.toSimpleString( )} ${this.source}=>${this.destination} ${this.instanceId} ${this.uuid}";
+  }
+  
+  
 }
 public class AssignAddressResponseType extends CloudClusterMessage {
 }
@@ -252,6 +264,16 @@ public class UnassignAddressType extends CloudClusterMessage {
   
   
   def UnassignAddressType() {
+  }
+
+  @Override
+  public String toString( ) {
+    return "UnassignAddress ${this.source}=>${this.destination}";
+  }
+
+  @Override
+  public String toSimpleString( ) {
+    return "${super.toSimpleString( )} ${this.source}=>${this.destination}";
   }
 }
 public class UnassignAddressResponseType extends CloudClusterMessage {

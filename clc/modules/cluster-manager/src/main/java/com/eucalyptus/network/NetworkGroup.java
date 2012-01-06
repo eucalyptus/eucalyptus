@@ -125,7 +125,7 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
   @Column( name = "metadata_network_group_description" )
   private String           description;
   
-  @OneToMany( cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER )
+  @OneToMany( cascade = CascadeType.ALL, orphanRemoval = true ) //, fetch = FetchType.EAGER )
   @JoinColumn( name = "metadata_network_group_rule_fk" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Set<NetworkRule> networkRules = new HashSet<NetworkRule>( );
@@ -274,7 +274,10 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
   
   public ExtantNetwork extantNetwork( ) throws NotEnoughResourcesException, TransientEntityException {
     if ( !NetworkGroups.networkingConfiguration( ).hasNetworking( ) ) {
-      return ExtantNetwork.bogus( this );
+    	ExtantNetwork bogusNet = ExtantNetwork.bogus( this );
+    	if(!this.hasExtantNetwork())
+    		this.setExtantNetwork(bogusNet);
+    	return bogusNet;
     } else if ( !Entities.isPersistent( this ) ) {
       throw new TransientEntityException( this.toString( ) );
     } else {

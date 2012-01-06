@@ -209,8 +209,10 @@ int main (int argc, char * argv[])
     helpers_path [2] = find_conf_value (eucahome, "NC_DELETE_BUNDLE_PATH");
 
     if (verify_helpers (helpers_name, helpers_path, 3) > 0) {
-        fprintf (stderr, "error: failed to find required euca2ools\n");
-        exit (1);
+       if (verify_helpers (helpers_name, NULL, 3) > 0) {
+             fprintf (stderr, "error: failed to find required euca2ools\n");
+             exit (1);
+       }
     }
 
     // ensure hypervisor information is available

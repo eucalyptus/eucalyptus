@@ -11,7 +11,7 @@
 #  Eucalyptus installations.
 #
 # NOTE: You must first deploy the test classes by stopping Euca, then:
-#   "cd $SRC/clc; ant build build_test install", then starting Euca again.
+#   "cd $SRC/clc; ant build build-test install", then starting Euca again.
 #
 # (c)2011 Eucalyptus Systems, inc. All rights reserved.
 # author: tom.werges

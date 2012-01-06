@@ -105,6 +105,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.io.Resources;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.*;
 import static org.hamcrest.Matchers.notNullValue;
 
 public class ServiceContextManager {
@@ -116,14 +117,20 @@ public class ServiceContextManager {
     
     @Override
     public boolean start( ) throws Exception {
-      try {
-        singleton.update( );
-        singleton.getClient( );
-        return true;
-      } catch ( final Exception ex ) {
-        LOG.error( ex, ex );
-        throw ex;
-      }
+      new Thread( ) {
+        
+        @Override
+        public void run( ) {
+          try {
+            singleton.update( );
+            singleton.getClient( );
+          } catch ( final Exception ex ) {
+            LOG.error( ex, ex );
+          }
+        }
+        
+      }.start( );
+      return true;
     }
   }
   
@@ -159,7 +166,6 @@ public class ServiceContextManager {
   public static final void restartSync( ) {
     if ( singleton.canHasWrite.tryLock( ) ) {
       try {
-        singleton = null;
         singleton.update( );
       } catch ( final Exception ex ) {
         LOG.error( Exceptions.causeString( ex ) );
@@ -306,10 +312,11 @@ public class ServiceContextManager {
   }
   
   public static String mapServiceToEndpoint( final String service ) throws Exception {
+    assertThat( service, notNullValue( ) );
     if ( singleton.canHasRead.tryLock( 120, TimeUnit.SECONDS ) ) {
       try {
         String dest = service;
-        if ( ( !service.startsWith( "vm://" ) && !singleton.serviceToEndpoint.containsKey( service ) ) || ( service == null ) ) {
+        if ( ( !service.startsWith( "vm://" ) && !singleton.serviceToEndpoint.containsKey( service ) ) ) {
           dest = "vm://RequestQueue";
         } else if ( !service.startsWith( "vm://" ) ) {
           dest = singleton.serviceToEndpoint.get( dest );
@@ -323,10 +330,11 @@ public class ServiceContextManager {
   }
   
   public static String mapEndpointToService( final String endpoint ) throws Exception {
+    assertThat( endpoint, notNullValue( ) );
     if ( singleton.canHasRead.tryLock( 120, TimeUnit.SECONDS ) ) {
       try {
         String dest = endpoint;
-        if ( ( endpoint.startsWith( "vm://" ) && !singleton.endpointToService.containsKey( endpoint ) ) || ( endpoint == null ) ) {
+        if ( ( endpoint.startsWith( "vm://" ) && !singleton.endpointToService.containsKey( endpoint ) ) ) {
           throw new ServiceDispatchException( "No such endpoint: " + endpoint
                                               + " in endpoints="
                                               + singleton.endpointToService.entrySet( ) );

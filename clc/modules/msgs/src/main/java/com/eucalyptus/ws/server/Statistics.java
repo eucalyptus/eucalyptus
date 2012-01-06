@@ -95,16 +95,18 @@ public class Statistics {
     @Override
     public String toString( ) {
       StringBuilder builder = new StringBuilder( );
+      Long time = ( ( this.endTime == null ? System.currentTimeMillis( ) : this.endTime ) - this.startTime );
       builder.append( " " );
-      if ( this.handlerClassName != null && this.startTime != null && this.endTime != null ) {
-        builder.append( this.handlerClassName ).append( ": " ).append( this.endTime - this.startTime ).append( " msec" );
-      }
+      builder.append( this.handlerClassName ).append( ": " ).append( time ).append( " msec" );
       return builder.toString( );
     }
     
     @Override
     public Long call( ) throws Exception {
-      Logs.extreme( ).debug( "HandlerRecord:" + this.handlerClassName + " " + ( ( this.endTime == null ? this.endTime = System.currentTimeMillis( ) : this.endTime ) - this.startTime ) + "msec" );
+      Logs.extreme( ).debug( "HandlerRecord:" + this.handlerClassName
+        + " "
+        + ( ( this.endTime == null ? this.endTime = System.currentTimeMillis( ) : this.endTime ) - this.startTime )
+        + "msec" );
       return this.endTime;
     }
     
@@ -123,11 +125,10 @@ public class Statistics {
     @Override
     public String toString( ) {
       StringBuilder builder = new StringBuilder( );
-      if ( this.type != null ) {
-        builder.append( this.type ).append( " " ).append( Joiner.on( "\n" + this.type ).join( this.handlerUpstreamStats.values( ) ) );
-        builder.append( this.type ).append( " " ).append( Joiner.on( "\n" + this.type ).join( this.handlerDownstreamStats.values( ) ) );
-        builder.append( this.type ).append( " " ).append( System.currentTimeMillis( ) - this.creationTime ).append( " msec" );
-      }
+      String typeName = ( this.type == null ? "unknown" : this.type );
+      builder.append( typeName ).append( " " ).append( Joiner.on( "\n" + typeName ).join( this.handlerUpstreamStats.values( ) ) );
+      builder.append( typeName ).append( " " ).append( Joiner.on( "\n" + typeName ).join( this.handlerDownstreamStats.values( ) ) );
+      builder.append( typeName ).append( " " ).append( System.currentTimeMillis( ) - this.creationTime ).append( " msec" );
       return builder.toString( );
     }
     
@@ -141,8 +142,7 @@ public class Statistics {
         
         @Override
         public void operationComplete( ChannelFuture future ) throws Exception {
-          requestStatistics.remove( channel.getId( ) );
-          LOG.debug( record );
+          LOG.info( requestStatistics.remove( channel.getId( ) ) );
         }
       } );
     }
@@ -155,8 +155,7 @@ public class Statistics {
       if ( record.type == null ) {
         try {
           record.type = Contexts.lookup( channel ).getRequest( ).getClass( ).getSimpleName( );
-        } catch ( Exception ex ) {
-        }
+        } catch ( Exception ex ) {}
       }
       HandlerRecord handlerRecord = new HandlerRecord( handler.getClass( ) );
       record.handlerUpstreamStats.put( handler.getClass( ), handlerRecord );

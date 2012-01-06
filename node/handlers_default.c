@@ -134,8 +134,13 @@ doRunInstance(	struct nc_state_t *nc,
     instance = find_instance (&global_instances, instanceId);
     sem_v (inst_sem);
     if (instance) {
-        logprintfl (EUCAERROR, "[%s] error: instance already running\n", instanceId);
-        return 1; /* TODO: return meaningful error codes? */
+        if (instance->state==TEARDOWN) { // fully cleaned up, so OK to revive it, e.g., with euca-start-instance
+            remove_instance (&global_instances, instance);
+            free_instance (&instance);
+        } else {
+            logprintfl (EUCAERROR, "[%s] error: instance already running\n", instanceId);
+            return 1; /* TODO: return meaningful error codes? */
+        }
     }
     if (!(instance = allocate_instance (uuid,
                                         instanceId, 
@@ -312,7 +317,7 @@ doTerminateInstance( struct nc_state_t *nc,
 	}
     
 	// change the state and let the monitoring_thread clean up state
-	if (instance->state!=TEARDOWN) { // do not leave TEARDOWN
+	if (instance->state!=TEARDOWN && instance->state!=CANCELED) { // do not leave TEARDOWN (cleaned up) or CANCELED (already trying to terminate)
         if (instance->state==STAGING) {
             change_state (instance, CANCELED);
         } else {
@@ -531,6 +536,26 @@ static int xen_detach_helper (struct nc_state_t *nc, char *instanceId, char *loc
         char tmpfile[MAX_PATH];
         snprintf(tmpfile, 32, "/tmp/detachxml.XXXXXX");
         int fd = safe_mkstemp(tmpfile);
+
+	char devReal[32];
+	char *tmp = strstr(xml, "<target");
+	if(tmp==NULL){
+	    logprintfl(EUCAERROR, "'<target' not found in the device xml\n"); 
+	    return -1;
+        }
+	tmp = strstr(tmp, "dev=\"");
+        if(tmp==NULL){
+            logprintfl(EUCAERROR, "'<target dev' not found in the device xml\n");     
+            return -1;
+        }
+	snprintf(devReal, 32, tmp+strlen("dev=\""));
+        for(int i=0;i<32; i++){
+	     if(devReal[i]=='\"'){
+                for(;i<32; i++)
+		      devReal[i] = NULL;
+	     }
+        }	
+
         if (fd > 0) {
             write(fd, xml, strlen(xml));
             close(fd);
@@ -540,8 +565,9 @@ static int xen_detach_helper (struct nc_state_t *nc, char *instanceId, char *loc
                      nc->detach_cmd_path, // TODO: does this work?
                      nc->rootwrap_cmd_path, 
                      instanceId, 
-                     localDevReal, 
+                     devReal, 
                      tmpfile);
+            logprintfl(EUCAINFO, "%s\n", cmd);
             rc = system(cmd);
             rc = rc>>8;
             unlink(tmpfile);
@@ -1278,8 +1304,8 @@ static void * bundling_thread (void *arg)
 			cleanup_bundling_task (instance, params, SHUTOFF, BUNDLING_SUCCESS);
 			logprintfl (EUCAINFO, "bundling_thread: finished bundling instance %s\n", instance->instanceId);
 		} else if (rc == -1) {
-		        // bundler child was cancelled (killed)
-		        cleanup_bundling_task (instance, params, SHUTOFF, BUNDLING_CANCELLED);
+		        // bundler child was cancelled (killed), but should report it as failed 
+		        cleanup_bundling_task (instance, params, SHUTOFF, BUNDLING_FAILED);
 			logprintfl (EUCAINFO, "bundling_thread: cancelled while bundling instance %s (rc=%d)\n", instance->instanceId, rc);
 		} else {
 			cleanup_bundling_task (instance, params, SHUTOFF, BUNDLING_FAILED);

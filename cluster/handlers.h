@@ -122,6 +122,7 @@ static configEntry configKeysNoRestart[] = {
   {"NODES", NULL},
   {"NC_POLLING_FREQUENCY", "6"},
   {"CLC_POLLING_FREQUENCY", "6"},
+  {"CC_ARBITRATORS", NULL},
   {NULL, NULL}
 };
 
@@ -230,6 +231,8 @@ typedef struct ccConfig_t {
   uint32_t cloudIp;
   serviceStatusType ccStatus;
   serviceInfoType services[16], disabledServices[16], notreadyServices[16];
+  char arbitrators[256];
+  int arbitratorFails;
 } ccConfig;
 
 enum {SCHEDGREEDY, SCHEDROUNDROBIN, SCHEDPOWERSAVE, SCHEDLAST};
@@ -323,6 +326,7 @@ int changeState(ccResource *in, int newstate);
 int ccIsEnabled(void);
 int ccIsDisabled(void);
 int ccChangeState(int newstate);
+int ccCheckState(int clcTimer);
 int ccGetStateString(char *outstr, int n);
 
 int readConfigFile(char configFiles[][MAX_PATH], int numFiles);

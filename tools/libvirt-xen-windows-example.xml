@@ -1,5 +1,5 @@
 <domain type='xen'>
-    <name>test</name>
+    <name>eucalyptus-windows</name>
     <os>
             <type>hvm</type>
             <loader>/usr/lib/xen/boot/hvmloader</loader>

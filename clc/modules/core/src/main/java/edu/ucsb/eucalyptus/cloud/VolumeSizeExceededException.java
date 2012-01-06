@@ -59,24 +59,35 @@
 *    ANY SUCH LICENSES OR RIGHTS.
 *******************************************************************************/
 /*
- * Author: chris grzegorczyk <grze@eucalyptus.com>
+ *
+ * Author: Sunil Soman sunils@cs.ucsb.edu
  */
-package com.eucalyptus.cluster;
 
-public class NoSuchTokenException extends Exception {
+package edu.ucsb.eucalyptus.cloud;
 
-  public NoSuchTokenException( String string ) {}
+import com.eucalyptus.util.EucalyptusCloudException;
 
-  public NoSuchTokenException( ) {
-    super( );
+public class VolumeSizeExceededException extends EucalyptusCloudException {
+
+  String volume;
+  public VolumeSizeExceededException()
+  {
+    super( "Size Exceeded" );
   }
-
-  public NoSuchTokenException( String message, Throwable cause ) {
-    super( message, cause );
+  public VolumeSizeExceededException(String volume, String reason)
+  {
+    super(reason + " volume: " + volume);
+    this.volume = volume;
   }
-
-  public NoSuchTokenException( Throwable cause ) {
-    super( cause );
+  public String getVolumeName() {
+      return volume;
   }
-
+  public VolumeSizeExceededException(Throwable ex)
+  {
+    super("Size Exceeded", ex);
+  }
+  public VolumeSizeExceededException(String message, Throwable ex)
+  {
+    super(message,ex);
+  }
 }

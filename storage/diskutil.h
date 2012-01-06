@@ -79,6 +79,8 @@ int diskutil_dd2 (const char * in, const char * out, const int bs, const long lo
 int diskutil_mbr (const char * path, const char * type);
 int diskutil_part (const char * path, char * part_type, const char * fs_type, const long long first_sector, const long long last_sector);
 int diskutil_loop (const char * path, const long long offset, char * lodev, int lodev_size);
+int diskutil_loop_check (const char * path, const char * lodev);
+int diskutil_loop_clean (const char * path);
 int diskutil_unloop (const char * lodev);
 int diskutil_mkswap (const char * lodev, const long long size_bytes);
 int diskutil_mkfs (const char * lodev, const long long size_bytes);

@@ -69,23 +69,18 @@ import java.util.UUID;
 import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
 import com.eucalyptus.address.Address;
-import com.eucalyptus.auth.Contract;
 import com.eucalyptus.cloud.CloudMetadata.VmInstanceMetadata;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
-import com.eucalyptus.cluster.NoSuchTokenException;
-import com.eucalyptus.component.Partitions;
+import com.eucalyptus.cluster.ResourceState.NoSuchTokenException;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.ClusterController;
-import com.eucalyptus.context.Contexts;
 import com.eucalyptus.network.ExtantNetwork;
 import com.eucalyptus.network.PrivateNetworkIndex;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.vm.VmInstance;
-import com.eucalyptus.vm.VmInstances;
-import edu.ucsb.eucalyptus.msgs.StartInstancesType;
 
 public class ResourceToken implements VmInstanceMetadata, Comparable<ResourceToken> {
   private static Logger       LOG    = Logger.getLogger( ResourceToken.class );
@@ -105,24 +100,18 @@ public class ResourceToken implements VmInstanceMetadata, Comparable<ResourceTok
   private final Date          expirationTime;
   @Nullable
   private VmInstance          vmInst;
+  private final Cluster       cluster;
   
   public ResourceToken( final Allocation allocInfo, final int resourceAllocationSequenceNumber, final int launchIndex ) {
     this.allocation = allocInfo;
-    Contract<Date> expiry = allocInfo.getContext( ).getContracts( ).get( Contract.Type.EXPIRATION );
-    this.expirationTime = ( expiry == null ? new Date( 32503708800000l ) : expiry.getValue( ) );
+    this.expirationTime = allocInfo.getExpiration( );
     this.launchIndex = launchIndex;
-    String tempVmId = VmInstances.getId( allocInfo.getReservationIndex( ), launchIndex );
-    try {//GRZE:ugly hack.
-      if ( Contexts.lookup( ).getRequest( ) instanceof StartInstancesType ) {
-        tempVmId = ( ( StartInstancesType ) Contexts.lookup( ).getRequest( ) ).getInstancesSet( ).get( launchIndex );
-      }
-    } catch ( Exception ex ) {
-      LOG.error( ex, ex );
-    }
-    this.instanceId = tempVmId;
+    this.instanceId = allocInfo.getInstanceId( launchIndex );
     this.instanceUuid = UUID.randomUUID( ).toString( );
     this.resourceAllocationSequenceNumber = resourceAllocationSequenceNumber;
     this.creationTime = Calendar.getInstance( ).getTime( );
+    ServiceConfiguration config = Topology.lookup( ClusterController.class, this.getAllocationInfo( ).getPartition( ) );
+    this.cluster = Clusters.lookup( config );
   }
   
   public Allocation getAllocationInfo( ) {
@@ -151,7 +140,7 @@ public class ResourceToken implements VmInstanceMetadata, Comparable<ResourceTok
   
   @Override
   public int compareTo( final ResourceToken that ) {
-    return this.resourceAllocationSequenceNumber - that.resourceAllocationSequenceNumber;
+    return this.instanceId.compareTo( that.instanceId );
   }
   
   public String getInstanceUuid( ) {
@@ -160,8 +149,8 @@ public class ResourceToken implements VmInstanceMetadata, Comparable<ResourceTok
   
   public PrivateNetworkIndex getNetworkIndex( ) {
     return this.networkIndex != null
-      ? this.networkIndex
-      : PrivateNetworkIndex.bogus( );
+                                    ? this.networkIndex
+                                    : PrivateNetworkIndex.bogus( );
   }
   
   public Integer getLaunchIndex( ) {
@@ -169,10 +158,9 @@ public class ResourceToken implements VmInstanceMetadata, Comparable<ResourceTok
   }
   
   public void abort( ) {
+    LOG.debug( this );
     try {
-      final ServiceConfiguration config = Topology.lookup( ClusterController.class, this.getAllocationInfo( ).getPartition( ) );
-      final Cluster cluster = Clusters.lookup( config );
-      cluster.getNodeState( ).releaseToken( this );
+      this.release( );
     } catch ( final Exception ex ) {
       LOG.error( ex, ex );
     }
@@ -203,9 +191,7 @@ public class ResourceToken implements VmInstanceMetadata, Comparable<ResourceTok
   public int hashCode( ) {
     final int prime = 31;
     int result = 1;
-    result = prime * result + ( ( this.instanceUuid == null )
-      ? 0
-      : this.instanceUuid.hashCode( ) );
+    result = prime * result + this.instanceId.hashCode( );
     return result;
   }
   
@@ -221,11 +207,7 @@ public class ResourceToken implements VmInstanceMetadata, Comparable<ResourceTok
       return false;
     }
     ResourceToken other = ( ResourceToken ) obj;
-    if ( this.instanceUuid == null ) {
-      if ( other.instanceUuid != null ) {
-        return false;
-      }
-    } else if ( !this.instanceUuid.equals( other.instanceUuid ) ) {
+    if ( !this.instanceId.equals( other.instanceId ) ) {
       return false;
     }
     return true;
@@ -244,15 +226,15 @@ public class ResourceToken implements VmInstanceMetadata, Comparable<ResourceTok
   }
   
   public void submit( ) throws NoSuchTokenException {
-    Clusters.lookup( Topology.lookup( ClusterController.class, this.getAllocationInfo( ).getPartition( ) ) ).getNodeState( ).submitToken( this );
+    this.cluster.getNodeState( ).submitToken( this );
   }
   
   public void redeem( ) throws NoSuchTokenException {
-    Clusters.lookup( Topology.lookup( ClusterController.class, this.getAllocationInfo( ).getPartition( ) ) ).getNodeState( ).redeemToken( this );
+    this.cluster.getNodeState( ).redeemToken( this );
   }
   
   public void release( ) throws NoSuchTokenException {
-    Clusters.lookup( Topology.lookup( ClusterController.class, this.getAllocationInfo( ).getPartition( ) ) ).getNodeState( ).releaseToken( this );
+    this.cluster.getNodeState( ).releaseToken( this );
   }
   
   public void setNetworkIndex( PrivateNetworkIndex networkIndex ) {
@@ -307,7 +289,7 @@ public class ResourceToken implements VmInstanceMetadata, Comparable<ResourceTok
   public OwnerFullName getOwner( ) {
     return this.allocation.getOwnerFullName( );
   }
-
+  
   public Date getExpirationTime( ) {
     return this.expirationTime;
   }

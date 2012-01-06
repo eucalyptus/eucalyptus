@@ -71,6 +71,7 @@ import java.util.Map.Entry;
 import java.util.NoSuchElementException;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.TimeUnit;
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.EntityTransaction;
@@ -104,9 +105,11 @@ import com.google.common.collect.MapMaker;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
-@ConfigurableClass( root = "bootstrap.tx", description = "Parameters controlling transaction behaviour." )
+@ConfigurableClass( root = "bootstrap.tx",
+                    description = "Parameters controlling transaction behaviour." )
 public class Entities {
-  @ConfigurableField( description = "Maximum number of times a transaction may be retried before giving up.", initial = "5" )
+  @ConfigurableField( description = "Maximum number of times a transaction may be retried before giving up.",
+                      initial = "5" )
   public static Integer                                          CONCURRENT_UPDATE_RETRIES = 5;
   private static ConcurrentMap<String, String>                   txLog                     = new MapMaker( ).softKeys( ).softValues( ).makeMap( );
   private static Logger                                          LOG                       = Logger.getLogger( Entities.class );
@@ -414,8 +417,8 @@ public class Entities {
       try {
         final T persistedObject = getTransaction( newObject ).getTxState( ).getEntityManager( ).merge( newObject );
         return persistedObject == newObject
-          ? newObject
-          : persistedObject;
+                                           ? newObject
+                                           : persistedObject;
       } catch ( final RuntimeException ex ) {
         
         PersistenceExceptions.throwFiltered( ex );
@@ -554,8 +557,8 @@ public class Entities {
     @Override
     public boolean getRollbackOnly( ) throws RecoverablePersistenceException {
       return this.txState == null
-        ? false
-        : this.txState.getRollbackOnly( );
+                                 ? false
+                                 : this.txState.getRollbackOnly( );
     }
     
     /**
@@ -577,8 +580,8 @@ public class Entities {
     @Override
     public boolean isActive( ) throws RecoverablePersistenceException {
       return this.txState == null
-        ? false
-        : this.txState.isActive( );
+                                 ? false
+                                 : this.txState.isActive( );
     }
     
     /**
@@ -874,33 +877,33 @@ public class Entities {
     
     @Override
     public R apply( final D input ) {
-      if ( Entities.hasTransaction( ) ) {
-        throw new RuntimeException( "Failed to execute retryable transaction because of a nested transaction: "
-                                    + Entities.getTransaction( input.getClass( ) ).getRecord( ).stack );
-      } else {
-        RuntimeException rootCause = null;
-        for ( int i = 0; i < retries; i++ ) {
-          EntityTransaction db = Entities.get( entityType );
-          try {
-            R ret = this.function.apply( input );
-            db.commit( );
-            return ret;
-          } catch ( RuntimeException ex ) {
-            db.rollback( );
-            if ( Exceptions.isCausedBy( ex, OptimisticLockException.class ) ) {
-              rootCause = Exceptions.findCause( ex, OptimisticLockException.class );
-              continue;
-            } else {
-              rootCause = ex;
-              Logs.extreme( ).error( ex, ex );
-              throw ex;
+      RuntimeException rootCause = null;
+      for ( int i = 0; i < retries; i++ ) {
+        EntityTransaction db = Entities.get( this.entityType );
+        try {
+          R ret = this.function.apply( input );
+          db.commit( );
+          return ret;
+        } catch ( RuntimeException ex ) {
+          db.rollback( );
+          if ( Exceptions.isCausedBy( ex, OptimisticLockException.class ) ) {
+            rootCause = Exceptions.findCause( ex, OptimisticLockException.class );
+            try {
+              TimeUnit.MILLISECONDS.sleep( 20 );
+            } catch ( InterruptedException ex1 ) {
+              Exceptions.maybeInterrupted( ex1 );
             }
+            continue;
+          } else {
+            rootCause = ex;
+            Logs.extreme( ).error( ex, ex );
+            throw ex;
           }
         }
-        throw ( rootCause != null
-                ? rootCause
-                : new NullPointerException( "BUG: Transaction retry failed but root cause exception is unknown!" ) );
       }
+      throw ( rootCause != null
+                               ? rootCause
+                               : new NullPointerException( "BUG: Transaction retry failed but root cause exception is unknown!" ) );
     }
     
   }
@@ -932,6 +935,16 @@ public class Entities {
       return function;
     } else {
       return new TransactionalFunction<E, T, R>( type, function, retries );
+    }
+  }
+  
+  public static void commit( EntityTransaction tx ) {
+    if ( tx.getRollbackOnly( ) ) {
+      tx.rollback( );
+    } else if ( Databases.isVolatile( ) ) {
+      tx.rollback( );
+    } else {
+      tx.commit( );
     }
   }
   

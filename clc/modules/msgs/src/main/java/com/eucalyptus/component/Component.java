@@ -171,19 +171,6 @@ public class Component implements HasName<Component> {
     return ServiceBuilders.lookup( this.identity.getClass( ) );
   }
   
-  /**
-   * True if the component has not been explicitly configured as running in remote-mode where only
-   * partial services are provided locally. That is, even if
-   * the code is available locally we do not prepare the service bootstrappers to run, but the local
-   * service endpoint is still configured (i.e. for
-   * {@link com.eucalyptus.component.id.ComponentService.dns}).
-   * 
-   * @return true if the component has not been explicitly marked as remote.
-   */
-  public Boolean isRunningRemoteMode( ) {
-    return this.identity.runLimitedServices( );
-  }
-  
   public NavigableSet<ServiceConfiguration> services( ) {
     return this.serviceRegistry.getServices( );
   }
@@ -236,7 +223,7 @@ public class Component implements HasName<Component> {
     ServiceConfiguration config = this.getBuilder( ).newInstance( this.getComponentId( ).getPartition( ), addr.getHostAddress( ), addr.getHostAddress( ),
                                                                   this.getComponentId( ).getPort( ) );
     BasicService ret = this.serviceRegistry.register( config );
-    LOG.debug( "Initializing remote service for host " + addr
+    Logs.extreme( ).debug( "Initializing remote service for host " + addr
                + " with configuration: "
                + config );
     return config;
@@ -354,7 +341,7 @@ public class Component implements HasName<Component> {
     private final ConcurrentMap<ServiceConfiguration, BasicService> services     = Maps.newConcurrentMap( );
     
     public boolean hasLocalService( ) {
-      return !Component.this.isRunningRemoteMode( ) && ( this.localService.get( ) != null );
+      return this.localService.get( ) != null;
     }
     
     public BasicService getLocalService( ) {

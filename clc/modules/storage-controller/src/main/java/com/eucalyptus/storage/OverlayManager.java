@@ -892,7 +892,9 @@ public class OverlayManager implements LogicalStorageManager {
 		}
 		for(LVMVolumeInfo foundVolumeInfo : volumeInfos) {
 			try {
-				volumeManager.exportVolume(foundVolumeInfo);
+				if (foundVolumeInfo.getVgName() != null) {
+					volumeManager.exportVolume(foundVolumeInfo);
+				}
 			} catch(EucalyptusCloudException ex) {
 				LOG.error("Unable to reload volume: " + foundVolumeInfo.getVolumeId() + ex);
 			}		
@@ -1021,17 +1023,17 @@ public class OverlayManager implements LogicalStorageManager {
 						throw new EucalyptusCloudException(ex);
 					}
 					((ISCSIManager)exportManager).exportTarget(iscsiVolumeInfo.getTid(), iscsiVolumeInfo.getStoreName(), iscsiVolumeInfo.getLun(), absoluteLVName, iscsiVolumeInfo.getStoreUser());
-				} else {
-					ISCSIVolumeInfo volumeInfo = new ISCSIVolumeInfo();
-					convertVolumeInfo(lvmVolumeInfo, volumeInfo);
-					try {
-						unexportVolume(lvmVolumeInfo);
-						exportVolume(volumeInfo, volumeInfo.getVgName(), volumeInfo.getLvName());
-						add(volumeInfo);
-						remove(lvmVolumeInfo);
-					} catch(EucalyptusCloudException ex) {
-						LOG.error(ex);
-					}
+				}
+			} else {
+				ISCSIVolumeInfo volumeInfo = new ISCSIVolumeInfo();
+				convertVolumeInfo(lvmVolumeInfo, volumeInfo);
+				try {
+					unexportVolume(lvmVolumeInfo);
+					exportVolume(volumeInfo, volumeInfo.getVgName(), volumeInfo.getLvName());
+					add(volumeInfo);
+					remove(lvmVolumeInfo);
+				} catch(EucalyptusCloudException ex) {
+					LOG.error(ex);
 				}
 			}	
 		}
@@ -1113,6 +1115,7 @@ public class OverlayManager implements LogicalStorageManager {
 				entityWrapper.commit();
 			} catch (Exception ex) {
 				LOG.error(ex, ex);
+				entityWrapper.rollback();
 			}
 		}
 

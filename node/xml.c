@@ -182,6 +182,13 @@ int gen_instance_xml (const ncInstance * instance)
         _ATTRIBUTE(hypervisor, "bitness", bitness);
     }
 
+    { // backing specification (TODO: maybe expand this with device maps or whatnot?)
+        xmlNodePtr backing = xmlNewChild (instanceNode, NULL, BAD_CAST "backing", NULL);
+        xmlNodePtr root = xmlNewChild (backing, NULL, BAD_CAST "root", NULL);
+        assert (instance->params.root);
+        _ATTRIBUTE(root, "type", ncResourceTypeName[instance->params.root->type]);
+    }
+
     _ELEMENT(instanceNode, "name", instance->instanceId);
     _ELEMENT(instanceNode, "uuid", instance->uuid);
     _ELEMENT(instanceNode, "reservation", instance->reservationId);
@@ -239,9 +246,9 @@ int gen_instance_xml (const ncInstance * instance)
                // skip anything without a device on the guest, e.g., kernel and ramdisk
                if (!strcmp ("none", vbr->guestDeviceName)) 
                    continue;
-               // for Linux instances on Xen, partitions can be used directly, so disks can be skipped
+               // for Linux instances on Xen, partitions can be used directly, so disks can be skipped unless booting from EBS
                if (strstr (instance->platform, "linux") && strstr (instance->hypervisorType, "xen")) {
-                   if (vbr->partitionNumber == 0) {
+                   if (vbr->partitionNumber == 0 && vbr->type == NC_RESOURCE_IMAGE) {
                        continue;
                    }
                } else { // on all other os + hypervisor combinations, disks are used, so partitions must be skipped
@@ -444,6 +451,13 @@ int gen_libvirt_attach_xml (const char *volumeId, const ncInstance *instance, co
         _ATTRIBUTE(os, "virtioNetwork", _BOOL(config_use_virtio_net));
     }
 
+    { // backing specification (TODO: maybe expand this with device maps or whatnot?)
+        xmlNodePtr backing = xmlNewChild (volumeNode, NULL, BAD_CAST "backing", NULL);
+        xmlNodePtr root = xmlNewChild (backing, NULL, BAD_CAST "root", NULL);
+        assert (instance->params.root);
+        _ATTRIBUTE(root, "type", ncResourceTypeName[instance->params.root->type]);
+    }
+
     { // volume information
         xmlNodePtr disk = _ELEMENT(volumeNode, "diskPath", remoteDev);
         _ATTRIBUTE(disk, "targetDeviceType", "disk");
@@ -457,7 +471,8 @@ int gen_libvirt_attach_xml (const char *volumeId, const ncInstance *instance, co
     snprintf (path, sizeof (path), EUCALYPTUS_VOLUME_XML_PATH_FORMAT, instance->instancePath, volumeId);
     ret = write_xml_file (doc, instance->instanceId, path, "volume")
         || apply_xslt_stylesheet (xslt_path, path, NULL, xml, xml_size);
-        
+    logprintfl (EUCADEBUG2, "XML={%s}\n", xml);
+
     xmlFreeDoc(doc);
     pthread_mutex_unlock (&xml_mutex);
 

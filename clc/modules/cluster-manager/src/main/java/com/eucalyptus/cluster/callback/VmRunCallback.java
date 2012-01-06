@@ -63,16 +63,24 @@
  */
 package com.eucalyptus.cluster.callback;
 
+import java.util.concurrent.ExecutionException;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import com.eucalyptus.address.Address;
+import com.eucalyptus.address.Addresses;
 import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.VmRunType;
-import com.eucalyptus.cluster.NoSuchTokenException;
+import com.eucalyptus.cluster.ResourceState.NoSuchTokenException;
+import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.Topology;
+import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.EucalyptusClusterException;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.LogUtil;
+import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.MessageCallback;
 import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstance.VmState;
@@ -80,9 +88,9 @@ import com.eucalyptus.vm.VmInstances;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Predicate;
-import com.google.common.base.Predicates;
 import edu.ucsb.eucalyptus.cloud.VmInfo;
 import edu.ucsb.eucalyptus.cloud.VmRunResponseType;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType> {
   
@@ -93,10 +101,18 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
   public VmRunCallback( final VmRunType msg, final ResourceToken token ) {
     super( msg );
     this.token = token;
+    LOG.debug( this.token );
   }
   
   @Override
   public void initialize( final VmRunType msg ) {
+    LOG.debug( this.token + ":" + msg );
+    try {
+      this.token.submit( );
+    } catch ( final NoSuchTokenException e2 ) {
+      LOG.error( e2 );
+      Logs.extreme( ).error( e2, e2 );
+    }
     EntityTransaction db = Entities.get( VmInstance.class );
     try {
       final VmInstance vm = VmInstances.lookup( msg.getInstanceId( ) );
@@ -106,45 +122,71 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
       if ( !VmState.PENDING.equals( vm.getState( ) ) ) {
         throw new EucalyptusClusterException( "Intercepted a RunInstances request for an instance which has meanwhile been terminated." );
       }
-      try {
-        this.token.submit( );
-      } catch ( final NoSuchTokenException e2 ) {
-        LOG.debug( e2, e2 );
-      }
-      db.commit( );
-    } catch ( final Exception e ) {
       db.rollback( );
-      LOG.debug( e, e );
+    } catch ( final Exception e ) {
+      LOG.error( e );
+      Logs.extreme( ).error( e, e );
+      db.rollback( );
+      try {
+        this.token.abort( );
+      } catch ( Exception ex ) {
+        LOG.error( ex );
+        Logs.extreme( ).error( ex, ex );
+      }
       throw new EucalyptusClusterException( "Error while initializing request state: " + this.getRequest( ), e );
     }
   }
   
   @Override
   public void fire( final VmRunResponseType reply ) {
-    if ( !reply.get_return( ) ) {
-      throw new EucalyptusClusterException( "Failed to run instance: " + this.getRequest( ).getInstanceId( ) );
-    }
     Logs.extreme( ).error( reply );
-    Function<VmRunResponseType, Boolean> redeemToken = new Function<VmRunResponseType, Boolean>( ) {
-      @Override
-      public Boolean apply( final VmRunResponseType reply ) {
-        try {
-          VmRunCallback.this.token.redeem( );
-        } catch ( Exception ex ) {
-          Logs.extreme( ).error( ex, ex );
-        }
-        for ( final VmInfo vmInfo : reply.getVms( ) ) {
-          final VmInstance vm = VmInstances.lookup( vmInfo.getInstanceId( ) );
-          vm.updateAddresses( vmInfo.getNetParams( ).getIpAddress( ), vmInfo.getNetParams( ).getIgnoredPublicIp( ) );
-        }
-        return true;
+    if ( !reply.get_return( ) ) {
+      this.token.abort( );
+      throw new EucalyptusClusterException( "Failed to run instance: " + this.getRequest( ).getInstanceId( ) );
+    } else {
+      try {
+        this.token.redeem( );
+      } catch ( Exception ex ) {
+        LOG.error( ex );
+        Logs.extreme( ).error( ex, ex );
       }
-    };
-    try {
-      Entities.asTransaction( VmInstance.class, redeemToken ).apply( reply );
-    } catch ( RuntimeException ex ) {
-      LOG.error( ex, ex );
-      throw ex;
+      Function<VmInfo, Boolean> updateInstance = new Function<VmInfo, Boolean>( ) {
+        @Override
+        public Boolean apply( final VmInfo input ) {
+          final VmInstance vm = VmInstances.lookup( input.getInstanceId( ) );
+          vm.updateAddresses( input.getNetParams( ).getIpAddress( ), input.getNetParams( ).getIgnoredPublicIp( ) );
+          final ServiceConfiguration ccConfig = Topology.lookup( ClusterController.class, vm.lookupPartition( ) );
+          final Address addr = VmRunCallback.this.token.getAddress( );
+          if ( addr != null ) {
+            try {
+              AsyncRequests.newRequest( addr.assign( vm ).getCallback( ) )
+                           .then( new Callback.Success<BaseMessage>( ) {
+                             @Override
+                             public void fire( final BaseMessage response ) {
+                               vm.updateAddresses( addr.getInstanceAddress( ), addr.getName( ) );
+                             }
+                           } ).sendSync( ccConfig );
+            } catch ( InterruptedException ex ) {
+              Exceptions.maybeInterrupted( ex );
+              Addresses.release( addr );
+            } catch ( Exception ex ) {
+              LOG.error( ex );
+              Logs.extreme( ).error( ex, ex );
+              Addresses.release( addr );
+            }
+            
+          }
+          return true;
+        }
+      };
+      for ( final VmInfo vmInfo : reply.getVms( ) ) {
+        try {
+          Entities.asTransaction( VmInstance.class, updateInstance, 10 ).apply( vmInfo );
+        } catch ( RuntimeException ex ) {
+          LOG.error( "Failed: " + this.token + " because of " + ex.getMessage( ), ex );
+          throw ex;
+        }
+      }
     }
   }
   
@@ -152,20 +194,6 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
   public void fireException( final Throwable e ) {
     LOG.debug( LogUtil.header( "Failing run instances because of: " + e.getMessage( ) ), e );
     LOG.debug( LogUtil.subheader( VmRunCallback.this.getRequest( ).toString( ) ) );
-    Predicate<Throwable> rollbackToken = new Predicate<Throwable>( ) {
-      
-      @Override
-      public boolean apply( Throwable input ) {
-        LOG.debug( "-> Release resource tokens for unused resources." );
-        try {
-          VmRunCallback.this.token.release( );
-        } catch ( final Exception ex ) {
-          LOG.error( ex.getMessage( ) );
-          Logs.extreme( ).error( ex, ex );
-        }
-        return true;
-      }
-    };
     Predicate<Throwable> rollbackAddr = new Predicate<Throwable>( ) {
       
       @Override
@@ -173,7 +201,6 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
         final Address addr = VmRunCallback.this.token.getAddress( );
         LOG.debug( "-> Release addresses from failed vm run allocation: " + addr );
         try {
-          
           addr.release( );
         } catch ( final Exception ex ) {
           LOG.error( ex.getMessage( ) );
@@ -183,9 +210,33 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
       }
     };
     try {
-      Entities.asTransaction( VmInstance.class, Functions.forPredicate( Predicates.and( rollbackToken, rollbackAddr ) ) ).apply( e );
+      Entities.asTransaction( VmInstance.class, Functions.forPredicate( rollbackAddr ) ).apply( e );
     } catch ( Exception ex ) {
       Logs.extreme( ).error( ex, ex );
     }
+    Predicate<Throwable> rollbackToken = new Predicate<Throwable>( ) {
+      
+      @Override
+      public boolean apply( Throwable input ) {
+        LOG.debug( "-> Release resource tokens for unused resources." );
+        try {
+          VmRunCallback.this.token.abort( );
+        } catch ( final Exception ex ) {
+          LOG.error( ex.getMessage( ) );
+          Logs.extreme( ).error( ex, ex );
+        }
+        return true;
+      }
+    };
+    try {
+      Entities.asTransaction( VmInstance.class, Functions.forPredicate( rollbackToken ) ).apply( e );
+    } catch ( Exception ex ) {
+      Logs.extreme( ).error( ex, ex );
+    }
+  }
+  
+  @Override
+  public String toString( ) {
+    return "VmRunCallback " + this.token;
   }
 }

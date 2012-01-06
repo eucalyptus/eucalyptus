@@ -34,7 +34,7 @@ import eucadmin
 import os
 
 class DescribeServices(AWSQueryRequest):
-  
+
     ServicePath = '/services/Empyrean'
     ServiceClass = eucadmin.EucAdmin
     Description = 'Get services'
@@ -103,46 +103,45 @@ class DescribeServices(AWSQueryRequest):
       AWSQueryRequest.__init__(self, **args)
       self.list_markers = ['euca:serviceStatuses']
       self.item_markers = ['euca:item']
-  
+
     def get_connection(self, **args):
         if self.connection is None:
             args['path'] = self.ServicePath
             self.connection = self.ServiceClass(**args)
         return self.connection
-      
+
     def cli_formatter(self, data):
         services = getattr(data, 'euca:serviceStatuses')
         fmt = 'SERVICE\t%-15.15s\t%-15s\t%-15s\t%-10s\t%-4s\t%-40s\t%s'
         detail_fmt = 'SERVICEEVENT\t%-36.36s\t%s'
         for s in services:
             service_id = s['euca:serviceId']
-            print fmt % (service_id['euca:type'],
-                         service_id['euca:partition'],
-                         service_id['euca:name'],
-                         s['euca:localState'],
-                         s['euca:localEpoch'],
-                         service_id['euca:uri'],
-                         service_id['euca:fullName'])
-            details = s['euca:statusDetails']
+            print fmt % (service_id.get('euca:type'),
+                         service_id.get('euca:partition'),
+                         service_id.get('euca:name'),
+                         s.get('euca:localState'),
+                         s.get('euca:localEpoch'),
+                         service_id.get('euca:uri'),
+                         service_id.get('euca:fullName'))
+            details = s.get('euca:statusDetails')
             if details:
-                detail_item = details['euca:item']
+                detail_item = details.get('euca:item')
                 if detail_item:
-                      print detail_fmt % (detail_item['euca:uuid'],
-                                          detail_item['euca:serviceFullName'])
-                      print detail_fmt % (detail_item['euca:uuid'],
-                                          detail_item['euca:severity'])
-                      print detail_fmt % (detail_item['euca:uuid'],
-                                          detail_item['euca:timestamp'])
-                      print detail_fmt % (detail_item['euca:uuid'],detail_item['euca:message'])
-                      if detail_item['euca:stackTrace']:
-                          print detail_item['euca:stackTrace']
-                      print
-                             
-
+                    print detail_fmt % (detail_item.get('euca:uuid'),
+                                        detail_item.get('euca:serviceFullName'))
+                    print detail_fmt % (detail_item.get('euca:uuid'),
+                                        detail_item.get('euca:severity'))
+                    print detail_fmt % (detail_item.get('euca:uuid'),
+                                        detail_item.get('euca:timestamp'))
+                    print detail_fmt % (detail_item.get('euca:uuid'),
+                                        detail_item.get('euca:message'))
+                    if detail_item.get('euca:stackTrace'):
+                        print detail_item['euca:stackTrace']
+                    print
 
     def main(self, **args):
         return self.send(**args)
 
     def main_cli(self):
-      self.do_cli()
-    
+        eucadmin.print_version_if_necessary()
+        self.do_cli()

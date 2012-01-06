@@ -83,6 +83,8 @@
 #define BLOBSTORE_FLAG_RDONLY   00002
 #define BLOBSTORE_FLAG_CREAT    00004
 #define BLOBSTORE_FLAG_EXCL     00010
+#define BLOBSTORE_FLAG_STRICT   01000
+#define BLOBSTORE_FLAG_HOLLOW   02000 // means the blob being created should be viewed as not occupying space
 
 // in-use flags for blockblobs
 #define BLOCKBLOB_STATUS_OPENED 00002 // currently opened by someone (read or write)
@@ -165,8 +167,10 @@ typedef struct _blockblob {
     char device_path [BLOBSTORE_MAX_PATH]; // full path of a block device on which blob can be accessed
     char dm_name [MAX_DM_NAME]; // name of the main device mapper device if this is a clone
     unsigned long long size_bytes; // size of the blob in bytes
+    unsigned long long blocks_allocated; // actual number of blocks on disk taken by the blob
     blobstore_snapshot_t snapshot_type; // ANY = not initialized/known, NONE = not a snapshot, DM = DM-based snapshot
     unsigned int in_use; // flags showing how the blockblob is being used (OPENED, LOCKED, LINKED)
+    unsigned char is_hollow; // blockblob is 'hollow' - its size doesn't count toward the limit
     time_t last_accessed; // timestamp of last access
     time_t last_modified; // timestamp of last modification
     double priority; // priority, for assisting LRU
@@ -190,24 +194,44 @@ typedef struct _blockmap {
     unsigned long long len_blocks;
 } blockmap;
 
+static char * blobstore_relation_type_name [] = {
+    "copy", "map", "snapshot"
+};
+
 typedef struct _blockblob_meta {
     char id [BLOBSTORE_MAX_PATH]; // ID of the blob (used as part of file/directory name)
     unsigned long long size_bytes; // size of the blob in bytes
     unsigned int in_use; // flags showing how the blockblob is being used (OPENED, LOCKED, LINKED)
+    unsigned char is_hollow; // blockblob is 'hollow' - its size doesn't count toward the limit
     time_t last_accessed; // timestamp of last access
     time_t last_modified; // timestamp of last modification
+    blobstore * bs; // pointer to blobstore, if one is open
 
     struct _blockblob_meta * next;
     struct _blockblob_meta * prev;
 } blockblob_meta;
 
+typedef struct _blobstore_meta {
+    char id [BLOBSTORE_MAX_PATH]; // ID of the blobstore, to handle directory moving
+    unsigned long long blocks_limit; // max size of the blobstore, in blocks
+    unsigned long long blocks_unlocked;  // number of blocks in blobstore allocated to blobs that are not in use and is not mapped
+    unsigned long long blocks_locked;    // number of blocks in blobstore allocated to blobs that are in use or is mapped (a dependency)
+    unsigned long long blocks_allocated; // number of blocks in blobstore that have been allocated on disk
+    unsigned int num_blobs; // count of blobs in the blobstore
+    blobstore_revocation_t revocation_policy; 
+    blobstore_snapshot_t snapshot_policy;
+    blobstore_format_t format;    
+} blobstore_meta;
+
 // blobstore operations
 
 blobstore * blobstore_open ( const char * path, 
                              unsigned long long limit_blocks, // on create: 0 is not valid; on open: 0 = any size
+                             unsigned int flags,
                              blobstore_format_t format,
                              blobstore_revocation_t revocation_policy,
                              blobstore_snapshot_t snapshot_policy);
+int blobstore_stat (blobstore * bs, blobstore_meta * meta);
 int blobstore_fsck (blobstore * bs, int (* examiner) (const blockblob * bb));
 int blobstore_search ( blobstore * bs, const char * regex, blockblob_meta ** results ); // returns a list of blockblobs matching an expression
 int blobstore_delete_regex (blobstore * bs, const char * regex); // delete all blobs in blobstore that match regex, return number deleted or -1 if error
@@ -231,7 +255,8 @@ blockblob * blockblob_open ( blobstore * bs,
                              const char * sig, // if non-NULL, on create sig is recorded, on open it is verified
                              unsigned long long timeout ); // maximum wait, in milliseconds, for a lock (0 = no blocking)
 int blockblob_close ( blockblob * bb ); // releases the blob locks, allowing others to open() it, and frees the blockblob handle
-int blockblob_delete ( blockblob * bb, long long timeout ); // if no outside references to the blob exist, and blob is not protected, deletes the blob, its metadata, and frees the blockblob handle
+int blockblob_delete ( blockblob * bb, long long timeout_usec, char do_force ); // deletes the blob, its metadata, and frees the blockblob handle, but only
+                                                                                // if no outside references to the blob exist and blob is not protected (unless forced)
 int blockblob_copy ( blockblob * src_bb, // source blob to copy data from
                      unsigned long long src_offset_bytes, // start offset in source
                      blockblob * dst_bb, // destination blob to copy data to

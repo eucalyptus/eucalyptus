@@ -129,7 +129,7 @@ public class EuareWebBackend {
   static {
     KEY_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( ID, "ID", false, "25%", TableDisplay.MANDATORY, Type.TEXT, false, false ) );
     KEY_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( SECRETKEY, "Secret key", false, "0px", TableDisplay.NONE, Type.REVEALING, false, false ) );
-    KEY_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( STATUS, "Status", false, "10%", TableDisplay.MANDATORY, Type.BOOLEAN, true, false ) );
+    KEY_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( STATUS, "Active", false, "10%", TableDisplay.MANDATORY, Type.BOOLEAN, true, false ) );
     KEY_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( ACCOUNT, "Owner account", false, "10%", TableDisplay.MANDATORY, Type.TEXT, false, true ) );
     KEY_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( USER, "Owner user", false, "55%", TableDisplay.MANDATORY, Type.TEXT, false, true ) );
     KEY_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( CREATION, "Creation date", false, "0px", TableDisplay.NONE, Type.TEXT, false, false ) );
@@ -139,7 +139,7 @@ public class EuareWebBackend {
   public static final ArrayList<SearchResultFieldDesc> CERT_COMMON_FIELD_DESCS = Lists.newArrayList( );
   static {
     CERT_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( ID, "ID", false, "25%", TableDisplay.MANDATORY, Type.TEXT, false, false ) );
-    CERT_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( STATUS, "Status", false, "10%", TableDisplay.MANDATORY, Type.BOOLEAN, true, false ) );
+    CERT_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( STATUS, "Active", false, "10%", TableDisplay.MANDATORY, Type.BOOLEAN, true, false ) );
     CERT_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( ACCOUNT, "Owner account", false, "10%", TableDisplay.MANDATORY, Type.TEXT, false, true ) );
     CERT_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( USER, "Owner user", false, "55%", TableDisplay.MANDATORY, Type.TEXT, false, true ) );
     CERT_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( CREATION, "Creation date", false, "0px", TableDisplay.NONE, Type.TEXT, false, false ) );
@@ -721,8 +721,11 @@ public class EuareWebBackend {
       result.addField( QueryBuilder.get( ).start( QueryType.user ).add( ID, user.getUserId( ) ).url( ) );
     } else if ( group != null ) {
       result.addField( QueryBuilder.get( ).start( QueryType.group ).add( ID, group.getGroupId( ) ).url( ) );
-    } else {
+    } else if ( account != null ){
       result.addField( QueryBuilder.get( ).start( QueryType.account ).add( ID, account.getAccountNumber( ) ).url( ) );
+    } else {
+      // impossible, just to be safe
+      result.addField( "" );
     }
     result.addField( policy.getText( ) );
     return result;
@@ -783,7 +786,7 @@ public class EuareWebBackend {
   private static SearchResultRow serializeCert( Certificate cert, Account account, User user ) {
     SearchResultRow result = new SearchResultRow( );
     result.addField( cert.getCertificateId( ) );
-    result.addField( cert.isActive( ) ? "Active" : "Inactive" );
+    result.addField( cert.isActive( ).toString( ) );
     result.addField( account.getName( ) );
     result.addField( user.getName( ) );
     result.addField( cert.getCreateDate( ) == null ? "" : cert.getCreateDate( ).toString( ) );
@@ -848,7 +851,7 @@ public class EuareWebBackend {
     SearchResultRow result = new SearchResultRow( );
     result.addField( key.getAccessKey( ) );
     result.addField( key.getSecretKey( ) );
-    result.addField( key.isActive( ) ? "Active" : "Inactive" );
+    result.addField( key.isActive( ).toString( ) );
     result.addField( account.getName( ) );
     result.addField( user.getName( ) );
     result.addField( key.getCreateDate( ) == null ? "" : key.getCreateDate( ).toString( ) );
@@ -1092,7 +1095,7 @@ public class EuareWebBackend {
       User user = Accounts.lookupUserById( userId );
       Account account = user.getAccount( );
       Group group = account.lookupGroupByName( groupName );
-      Privileged.removeUserFromGroup( requestUser, account, user, group );
+      Privileged.addUserToGroup( requestUser, account, user, group );
     } catch ( Exception e ) {
       LOG.error( "Failed to add user " + userId + " to group " + groupName, e );
       LOG.debug( e, e );
@@ -1158,7 +1161,7 @@ public class EuareWebBackend {
       String userName = values.get( i++ );
       Account account = Accounts.lookupAccountByName( accountName );
       User user = account.lookupUserByName( userName );
-      Privileged.modifySigningCertificate( requestUser, account, user, certId, status );
+      Privileged.modifySigningCertificate( requestUser, account, user, certId, "true".equalsIgnoreCase( status ) ? "Active" : "Inactive" );
     } catch ( Exception e ) {
       LOG.error( "Failed to modify cert " + values, e );
       LOG.debug( e, e );
@@ -1171,12 +1174,13 @@ public class EuareWebBackend {
       // Deserialize
       int i = 0;
       String keyId = values.get( i++ );
+      i++; // secret key
       String status = values.get( i++ );
       String accountName = values.get( i++ );
       String userName = values.get( i++ );
       Account account = Accounts.lookupAccountByName( accountName );
       User user = account.lookupUserByName( userName );
-      Privileged.modifyAccessKey( requestUser, account, user, keyId, status );
+      Privileged.modifyAccessKey( requestUser, account, user, keyId, "true".equalsIgnoreCase( status ) ? "Active" : "Inactive" );
     } catch ( Exception e ) {
       LOG.error( "Failed to modify key " + values, e );
       LOG.debug( e, e );

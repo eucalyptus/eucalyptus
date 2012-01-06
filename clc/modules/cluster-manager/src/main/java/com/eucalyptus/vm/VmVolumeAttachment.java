@@ -69,6 +69,7 @@ import javax.persistence.Embeddable;
 import javax.persistence.Lob;
 import org.hibernate.annotations.Parent;
 import com.google.common.base.Function;
+import com.google.common.base.Predicate;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
 
 @Embeddable
@@ -132,7 +133,7 @@ public class VmVolumeAttachment implements Comparable<VmVolumeAttachment> {
     return this.vmInstance;
   }
   
-  String getVolumeId( ) {
+  public String getVolumeId( ) {
     return this.volumeId;
   }
   
@@ -177,14 +178,14 @@ public class VmVolumeAttachment implements Comparable<VmVolumeAttachment> {
     if ( o == null || !getClass( ).equals( o.getClass( ) ) ) return false;
     VmVolumeAttachment that = ( VmVolumeAttachment ) o;
     if ( this.volumeId != null
-      ? !volumeId.equals( that.getVolumeId( ) )
+      ? !this.volumeId.equals( that.getVolumeId( ) )
       : that.getVolumeId( ) != null ) return false;
     return true;
   }
   
   public int hashCode( ) {
-    return ( volumeId == null
-      ? volumeId.hashCode( )
+    return ( this.volumeId != null
+      ? this.volumeId.hashCode( )
       : 0 );
   }
   
@@ -211,6 +212,24 @@ public class VmVolumeAttachment implements Comparable<VmVolumeAttachment> {
     if ( this.status != null ) builder.append( "status=" ).append( this.status ).append( ":" );
     if ( this.attachTime != null ) builder.append( "attachTime=" ).append( this.attachTime );
     return builder.toString( );
+  }
+
+  static Predicate<VmVolumeAttachment> volumeDeviceFilter( final String deviceName ) {
+    return new Predicate<VmVolumeAttachment>( ) {
+      @Override
+      public boolean apply( VmVolumeAttachment input ) {
+        return input.getDevice( ).replaceAll( "unknown,requested:", "" ).equals( deviceName );
+      }
+    };
+  }
+
+  static Predicate<VmVolumeAttachment> volumeIdFilter( final String volumeId ) {
+    return new Predicate<VmVolumeAttachment>( ) {
+      @Override
+      public boolean apply( VmVolumeAttachment input ) {
+        return input.getVolumeId( ).equals( volumeId );
+      }
+    };
   }
   
 }

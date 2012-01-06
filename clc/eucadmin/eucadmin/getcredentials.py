@@ -43,7 +43,7 @@ EucaP12File = '%s/var/lib/eucalyptus/keys/euca.p12'
 CloudPKFile = '%s/var/lib/eucalyptus/keys/cloud-pk.pem'
 
 class GetCredentials(AWSQueryRequest):
-    
+
     ServiceClass = eucadmin.EucAdmin
     Description = """Download credentials to <zipfile>.  Each time this is \
 called, new X.509 certificates will be created for the specified user."""
@@ -63,7 +63,7 @@ called, new X.509 certificates will be created for the specified user."""
     Args = [Param(name='zipfile', long_name='zipfile',
                   ptype='string', optional=False,
                   doc='The path to the resulting zip file with credentials')]
-                    
+
     def check_zipfile(self):
         if os.path.exists(self.zipfile):
             msg = 'file %s already exists, ' % self.zipfile
@@ -80,7 +80,7 @@ called, new X.509 certificates will be created for the specified user."""
     def gen_cloudpk_file(self):
         cmd_string = get_cmdstring('openssl')
         cmd = Command(cmd_string % (self.eucap12_file, self.cloudpk_file))
-                      
+
     def query_mysql(self, query, num_retries=2):
         result = None
         i = 0
@@ -148,8 +148,7 @@ called, new X.509 certificates will be created for the specified user."""
         # check local service?
         self.token = self.query_mysql(get_cmdstring('mysql_get_token'))
         self.get_credentials()
-        
+
     def main_cli(self):
+        eucadmin.print_version_if_necessary()
         self.do_cli()
-        
-        

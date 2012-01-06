@@ -105,7 +105,7 @@ public class VmVolumeState {
   
   
   private VmVolumeAttachment resolveVolumeId( final String volumeId ) throws NoSuchElementException {
-    final VmVolumeAttachment v = Iterables.find( this.attachments, volumeIdFilter( volumeId ) );
+    final VmVolumeAttachment v = Iterables.find( this.attachments, VmVolumeAttachment.volumeIdFilter( volumeId ) );
     if ( v == null ) {
       throw new NoSuchElementException( "Failed to find volume attachment for instance " + this.getVmInstance( ).getInstanceId( ) + " and volume " + volumeId );
     } else {
@@ -113,26 +113,8 @@ public class VmVolumeState {
     }
   }
   
-  private static Predicate<VmVolumeAttachment> volumeDeviceFilter( final String deviceName ) {
-    return new Predicate<VmVolumeAttachment>( ) {
-      @Override
-      public boolean apply( VmVolumeAttachment input ) {
-        return input.getDevice( ).replaceAll( "unknown,requested:", "" ).equals( deviceName );
-      }
-    };
-  }
-  
-  private static Predicate<VmVolumeAttachment> volumeIdFilter( final String volumeId ) {
-    return new Predicate<VmVolumeAttachment>( ) {
-      @Override
-      public boolean apply( VmVolumeAttachment input ) {
-        return input.getVolumeId( ).equals( volumeId );
-      }
-    };
-  }
-  
   public VmVolumeAttachment removeVolumeAttachment( final String volumeId ) throws NoSuchElementException {
-    final VmVolumeAttachment v = Iterables.find( this.attachments, volumeIdFilter( volumeId ) );
+    final VmVolumeAttachment v = Iterables.find( this.attachments, VmVolumeAttachment.volumeIdFilter( volumeId ) );
     if ( v == null ) {
       throw new NoSuchElementException( "Failed to find volume attachment for instance " + this.getVmInstance( ).getInstanceId( ) + " and volume " + volumeId );
     } else {
@@ -204,7 +186,7 @@ public class VmVolumeState {
   }
   
   public VmVolumeAttachment lookupVolumeAttachmentByDevice( String volumeDevice ) {
-    return Iterables.find( this.attachments, this.volumeDeviceFilter( volumeDevice ) );
+    return Iterables.find( this.attachments, VmVolumeAttachment.volumeDeviceFilter( volumeDevice ) );
   }
   
   @Override
@@ -253,6 +235,13 @@ public class VmVolumeState {
       return false;
     }
     return true;
+  }
+
+  /**
+   * @return
+   */
+  public boolean isEmpty( ) {
+    return this.attachments.isEmpty( );
   }
   
 }

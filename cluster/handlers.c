@@ -75,7 +75,6 @@ permission notice:
 
 #include <server-marshal.h>
 #include <handlers.h>
-#include <storage.h>
 #include <vnetwork.h>
 #include <misc.h>
 #include <ipc.h>
@@ -1529,7 +1528,7 @@ int refresh_instances(ncMetadata *ccMeta, int timeout, int dolock) {
 		}
 		bzero(myInstance, sizeof(ccInstance));
 	      }
-
+	      
 	      // update CC instance with instance state from NC 
 	      rc = ccInstance_to_ncInstance(myInstance, ncOutInsts[j]);
 	      
@@ -2129,9 +2128,6 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
     
     strncpy(pubip, "0.0.0.0", 32);
     strncpy(privip, "0.0.0.0", 32);
-    //    if (macAddrsLen >= maxCount) {
-    //      strncpy(mac, macAddrs[i], 32);
-    //    }      
 
     sem_mywait(VNET);
     if (nidx == -1) {
@@ -2238,11 +2234,18 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
 	    }
 	    
             // call StartNetwork client
+	    
 	    rc = ncClientCall(ccMeta, OP_TIMEOUT_PERNODE, res->lockidx, res->ncURL, "ncStartNetwork", uuid, NULL, 0, 0, vlan, NULL);
-
+	    logprintfl(EUCADEBUG, "RunInstances(): sent network start request for network idx '%d' on resource '%s' uuid '%s': result '%s'\n", vlan, res->ncURL, uuid, rc ? "FAIL" : "SUCCESS");
 	    rc = ncClientCall(ccMeta, OP_TIMEOUT_PERNODE, res->lockidx, res->ncURL, "ncRunInstance", uuid, instId, reservationId, &ncvm, amiId, amiURL, kernelId, kernelURL, ramdiskId, ramdiskURL, ownerId, accountId, keyName, &ncnet, userData, launchIndex, platform, expiryTime, netNames, netNamesLen, &outInst);
-
+	    logprintfl(EUCADEBUG, "RunInstances(): sent run request for instance '%s' on resource '%s': result '%s' uuis '%s'\n", instId, res->ncURL, uuid, rc ? "FAIL" : "SUCCESS");
 	    if (rc) {
+	      // make sure we get the latest topology information before trying again
+	      sem_mywait(CONFIG);
+	      memcpy(ccMeta->services, config->services, sizeof(serviceInfoType) * 16);
+	      memcpy(ccMeta->disabledServices, config->disabledServices, sizeof(serviceInfoType) * 16);
+	      memcpy(ccMeta->notreadyServices, config->notreadyServices, sizeof(serviceInfoType) * 16);
+	      sem_mypost(CONFIG);
 	      sleep(1);
 	    }
 	  }
@@ -2288,7 +2291,8 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
 	  sem_mypost(CONFIG);
 
 	  // add the instance to the cache, and continue on
-	  add_instanceCache(myInstance->instanceId, myInstance);
+	  //	  add_instanceCache(myInstance->instanceId, myInstance);
+	  refresh_instanceCache(myInstance->instanceId, myInstance);
 	  print_ccInstance("RunInstances(): ", myInstance);
 	  
 	  runCount++;
@@ -2809,10 +2813,12 @@ int ccGetStateString(char *statestr, int n) {
   return(0);
 }
 
-int ccCheckState() {
+int ccCheckState(int clcTimer) {
   char localDetails[1024];
   int ret=0;
   char cmd[MAX_PATH];
+  char buri[MAX_PATH], uriType[32], bhost[MAX_PATH], path[MAX_PATH], curi[MAX_PATH], chost[MAX_PATH];
+  int port, done=0, i, j, rc;
 
   if (!config) {
     return(1);
@@ -2856,11 +2862,72 @@ int ccCheckState() {
   // filesystem
   
   // network
+  // arbitrators
+  if (clcTimer == 1 && strlen(config->arbitrators)) {
+    char *tok, buf[256], *host;
+    uint32_t hostint;
+    int count=0;
+    int arbitratorFails=0;
+    snprintf(buf, 255, "%s", config->arbitrators);
+    tok = strtok(buf, " ");
+    while(tok && count<3) {
+      hostint = dot2hex(tok);
+      host = hex2dot(hostint);
+      if (host) {
+	logprintfl(EUCADEBUG, "ccCheckState(): checking health of arbitrator (%s)\n", tok);
+	snprintf(cmd, 255, "ping -c 1 %s", host);
+	rc = system(cmd);
+	if (rc) {
+	  logprintfl(EUCADEBUG, "ccCheckState(): cannot ping arbitrator %s (ping rc=%d)\n", host, rc);
+	  arbitratorFails++;
+	}
+	free(host);
+      }
+      tok = strtok(NULL, " ");
+      count++;
+    }
+    if (arbitratorFails) {
+      config->arbitratorFails++;
+    } else {
+      config->arbitratorFails=0;
+    }
+
+    if (config->arbitratorFails > 10) {
+      logprintfl(EUCADEBUG, "ccCheckState(): more than 10 arbitrator ping fails in a row (%d), failing check\n", config->arbitratorFails);
+      ret++;
+    }
+  }
+
+  // broker pairing algo
+  for (i=0; i<16; i++) {
+    int j;
+    if (strlen(config->notreadyServices[i].type)) {
+      if (!strcmp(config->notreadyServices[i].type, "vmwarebroker")) {
+	for (j=0; j<8; j++) {
+	  if (strlen(config->notreadyServices[i].uris[j])) {
+	    logprintfl(EUCADEBUG, "ccCheckState(): found broker - %s\n", config->notreadyServices[i].uris[j]);
+	    
+	    snprintf(buri, MAX_PATH, "%s", config->notreadyServices[i].uris[j]);
+	    bzero(bhost, sizeof(char) * MAX_PATH);
+	    rc = tokenize_uri(buri, uriType, bhost, &port, path);
+	    
+	    snprintf(curi, MAX_PATH, "%s", config->ccStatus.serviceId.uris[0]);
+	    bzero(chost, sizeof(char) * MAX_PATH);
+	    rc = tokenize_uri(curi, uriType, chost, &port, path);
+	    logprintfl(EUCADEBUG, "ccCheckState(): comparing found not ready broker host (%s) with local CC host (%s)\n", bhost, chost);
+	    if (!strcmp(chost, bhost)) {
+	      logprintfl(EUCAWARN, "ccCheckState(): detected local broker (%s) matching local CC (%s) in NOTREADY state\n", bhost, chost);
+	      ret++;
+	    }
+	  }
+	}
+      }
+    }
+  }
 
   snprintf(localDetails, 1023, "ERRORS=%d", ret);
-  sem_mywait(CONFIG);
   snprintf(config->ccStatus.details, 1023, "%s", localDetails);
-  sem_mypost(CONFIG);
+  
   return(ret);
 }
 
@@ -2905,12 +2972,12 @@ void *monitor_thread(void *in) {
       config->kick_enabled = 0;
     }
 
-    if (config->ccState == ENABLED) {
+    rc = update_config();
+    if (rc) {
+      logprintfl(EUCAWARN, "refresh_resources(): bad return from update_config(), check your config file\n");
+    }
 
-      rc = update_config();
-      if (rc) {
-	logprintfl(EUCAWARN, "refresh_resources(): bad return from update_config(), check your config file\n");
-      }
+    if (config->ccState == ENABLED) {
 
       // NC Polling operations
       if (ncTimer >= config->ncPollingFrequency) {
@@ -3009,18 +3076,16 @@ void *monitor_thread(void *in) {
       }
     }
 
-    if (ccCheckState()) {
+    // do state checks under CONFIG lock
+    sem_mywait(CONFIG);
+    if (ccCheckState(clcTimer)) {
       logprintfl(EUCAERROR, "monitor_thread(): ccCheckState() returned failures\n");
-      sem_mywait(CONFIG);
       config->kick_enabled = 0;
       ccChangeState(NOTREADY);
-      sem_mypost(CONFIG);
     } else if (config->ccState == NOTREADY) {
-      sem_mywait(CONFIG);
       ccChangeState(DISABLED);
-      sem_mypost(CONFIG);
     }
-
+    sem_mypost(CONFIG);
     shawn();
     
     logprintfl(EUCADEBUG, "monitor_thread(localState=%s): done\n", config->ccStatus.localState);
@@ -3254,6 +3319,15 @@ int update_config(void) {
       }
       if (res) free(res);
 
+      // CC Arbitrators
+      tmpstr = configFileValue("CC_ARBITRATORS");
+      if (tmpstr) {
+	snprintf(config->arbitrators, 255, "%s", tmpstr);
+	free(tmpstr);
+      } else {
+	bzero(config->arbitrators, 256);
+      }
+
       // polling frequencies
 
       // CLC
@@ -3296,7 +3370,7 @@ int init_config(void) {
   char *tmpstr=NULL, *proxyIp=NULL;
   int rc, numHosts, use_wssec, use_tunnels, use_proxy, proxy_max_cache_size, schedPolicy, idleThresh, wakeThresh, ret, i;
   
-  char configFiles[2][MAX_PATH], netPath[MAX_PATH], eucahome[MAX_PATH], policyFile[MAX_PATH], home[MAX_PATH], proxyPath[MAX_PATH];
+  char configFiles[2][MAX_PATH], netPath[MAX_PATH], eucahome[MAX_PATH], policyFile[MAX_PATH], home[MAX_PATH], proxyPath[MAX_PATH], arbitrators[256];
   
   time_t configMtime, instanceTimeout, ncPollingFrequency, clcPollingFrequency, ncFanout;
   struct stat statbuf;
@@ -3656,6 +3730,15 @@ int init_config(void) {
   }
   if (tmpstr) free(tmpstr);
 
+  // CC Arbitrators
+  tmpstr = configFileValue("CC_ARBITRATORS");
+  if (tmpstr) {
+    snprintf(arbitrators, 255, "%s", tmpstr);
+    free(tmpstr);
+  } else {
+    bzero(arbitrators, 256);
+  }
+
   tmpstr = configFileValue("NC_FANOUT");
   if (!tmpstr) {
     ncFanout = 1;
@@ -3759,11 +3842,12 @@ int init_config(void) {
   config->instanceTimeout = instanceTimeout;
   config->ncPollingFrequency = ncPollingFrequency;
   config->clcPollingFrequency = clcPollingFrequency;
-  config->ncFanout = ncFanout;
+    config->ncFanout = ncFanout;
   locks[REFRESHLOCK] = sem_open("/eucalyptusCCrefreshLock", O_CREAT, 0644, config->ncFanout);
   config->initialized = 1;
   ccChangeState(LOADED);
   config->ccStatus.localEpoch = 0;
+  snprintf(config->arbitrators, 255, "%s", arbitrators);
   snprintf(config->ccStatus.details, 1024, "ERRORS=0");
   snprintf(config->ccStatus.serviceId.type, 32, "cluster");
   snprintf(config->ccStatus.serviceId.name, 32, "self");
@@ -4532,8 +4616,15 @@ int refresh_instanceCache(char *instanceId, ccInstance *in){
   for (i=0; i<MAXINSTANCES && !done; i++) {
     if (!strcmp(instanceCache->instances[i].instanceId, instanceId)) {
       // in cache
-      memcpy(&(instanceCache->instances[i]), in, sizeof(ccInstance));
-      instanceCache->lastseen[i] = time(NULL);
+      // give precedence to instances that are in Extant/Pending over expired instances, when info comes from two different nodes
+      if (strcmp(in->serviceTag, instanceCache->instances[i].serviceTag) && strcmp(in->state, instanceCache->instances[i].state) && !strcmp(in->state, "Teardown")) {
+	// skip
+	logprintfl(EUCADEBUG, "refresh_instanceCache(): skipping cache refresh with instance in Teardown (instance with non-Teardown from different node already cached)\n");
+      } else {
+	// update cached instance info
+	memcpy(&(instanceCache->instances[i]), in, sizeof(ccInstance));
+	instanceCache->lastseen[i] = time(NULL);
+      }
       sem_mypost(INSTCACHE);
       return(0);
     }

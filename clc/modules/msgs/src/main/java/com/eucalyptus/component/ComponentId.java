@@ -155,8 +155,8 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
   protected ComponentId( final String name ) {
     this( );
     this.capitalizedName = ( name == null
-      ? this.getClass( ).getSimpleName( )
-      : name );
+                                         ? this.getClass( ).getSimpleName( )
+                                         : name );
   }
   
   protected ComponentId( ) {
@@ -169,8 +169,8 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
       this.keyInfo = null;
     }
     this.vendorName = ( !this.ats.has( PolicyVendor.class )
-        ? "euca"
-          : this.ats.get( PolicyVendor.class ).value( ) );
+                                                           ? "euca"
+                                                           : this.ats.get( PolicyVendor.class ).value( ) );
   }
   
   public List<? extends TransportDefinition> getTransports( ) {
@@ -362,8 +362,8 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
     int result = 1;
     result = prime * result
              + ( ( this.name( ) == null )
-               ? 0
-               : this.name( ).hashCode( ) );
+                                         ? 0
+                                         : this.name( ).hashCode( ) );
     return result;
   }
   
@@ -398,18 +398,15 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
     } else if ( this.isAlwaysLocal( ) ) {
       builder.append( "alwaysLocal:" );
     }
-    if ( this.runLimitedServices( ) ) {
-      builder.append( "runs-limited-services:" );
-    }
     return builder.toString( );
   }
   
   public final boolean isInternal( ) {
     return this.ats.has( InternalService.class )
-      || !this.isAdminService( )
-      || !this.isPublicService( )
-      || ( this.partitionParent( ).equals( Empyrean.INSTANCE ) && !this.isRegisterable( ) )
-      || ( this.partitionParent( ).equals( Eucalyptus.INSTANCE ) && !this.isRegisterable( ) );
+           || !this.isAdminService( )
+           || !this.isPublicService( )
+           || ( this.partitionParent( ).equals( Empyrean.INSTANCE ) && !this.isRegisterable( ) )
+           || ( this.partitionParent( ).equals( Eucalyptus.INSTANCE ) && !this.isRegisterable( ) );
   }
   
   /**
@@ -452,6 +449,10 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
   public Boolean isAvailableLocally( ) {
     return this.isAlwaysLocal( ) || ( this.isCloudLocal( ) && BootstrapArgs.isCloudController( ) )
            || this.checkComponentParts( );
+  }
+  
+  public Boolean isManyToOnePartition( ) {
+    return this.ats.has( Partition.class ) && this.ats.get( Partition.class ).manyToOne( );
   }
   
   private boolean checkComponentParts( ) {

@@ -63,23 +63,50 @@
 
 package com.eucalyptus.util;
 
-import java.lang.reflect.Modifier;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.GenericDeclaration;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.lang.reflect.UndeclaredThrowableException;
 import java.util.List;
-import org.apache.log4j.Logger;
-import com.eucalyptus.event.EventListener;
+import java.util.Map;
+import com.eucalyptus.system.Ats;
+import com.eucalyptus.util.Exceptions.ErrorMessages;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
-import com.google.common.collect.Iterables;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 
 public class Classes {
-
+  /**
+   * Returns a {@link Predicate} which determines if the class or interface represented by
+   * {@link Predicate#apply(Class input)} is either the same as, or is a
+   * superclass or superinterface of, the class or interface represented by
+   * {@link #assignableTo(Class type)}. It
+   * returns true if so; otherwise it returns false. If this Class object represents a primitive
+   * type, this
+   * method returns true if the specified Class parameter is exactly this Class object; otherwise it
+   * returns
+   * false.
+   * 
+   * @param type
+   * @return
+   */
+  public static Predicate<Class> assignableTo( final Class<?> type ) {
+    return new Predicate<Class>( ) {
+      
+      @Override
+      public boolean apply( Class input ) {
+        return input.isAssignableFrom( type );
+      }
+    };
+  }
+  
   enum ClassNameToSimpleName implements Function<Object, String> {
     INSTANCE;
     @Override
-    public String apply( Object arg0 ) {
+    public String apply( final Object arg0 ) {
       return WhateverAsClass.INSTANCE.apply( arg0 ).getSimpleName( );
     }
   }
@@ -87,7 +114,7 @@ public class Classes {
   enum ClassNameToCanonicalName implements Function<Object, String> {
     INSTANCE;
     @Override
-    public String apply( Object arg0 ) {
+    public String apply( final Object arg0 ) {
       return WhateverAsClass.INSTANCE.apply( arg0 ).getCanonicalName( );
     }
   }
@@ -100,20 +127,117 @@ public class Classes {
     return ClassNameToCanonicalName.INSTANCE;
   }
   
-  public static <T> T newInstance( final Class<T> type ) {
-    if ( !Modifier.isPublic( type.getModifiers( ) ) ) {//TODO:GRZE: see if we can relax this restriction
-      throw new InstantiationError( "Attempt to instantiate a class which is not public: " + type.getCanonicalName( ) );
-    } else if ( type.isEnum( ) ) {
-      return type.getEnumConstants( )[0];
-    } else {
-      try {
-        T t = type.newInstance( );
-        return t;
-      } catch ( final InstantiationException ex ) {
-        throw new InstantiationError( "Attempt to instantiate a class which is not public: " + type.getCanonicalName( ) + " because of: " + ex.getMessage( ) );
-      } catch ( final IllegalAccessException ex ) {
-        throw new InstantiationError( "Attempt to instantiate a class which is not public: " + type.getCanonicalName( ) + " because of: " + ex.getMessage( ) );
+  @ErrorMessages( Classes.class )
+  enum ErrorMessageMap implements Function<Class, String> {
+    INSTANCE;
+    private static final//
+    Map<Class, String> errorMessages = new ImmutableMap.Builder<Class, String>( ) {
+                                       {
+                                         this.put(
+                                           IllegalAccessException.class,
+                                                   "Either: "
+                                                       + "the number of actual and formal parameters differ;"
+                                                       + "an unwrapping conversion for primitive arguments fails; "
+                                                       + "this constructor pertains to an enum type;"
+                                                       + "a parameter value cannot be converted to the corresponding formal parameter type by a method invocation conversion." );
+                                         this.put( NoSuchMethodException.class, "" );
+                                         this.put( SecurityException.class, "" );
+                                         this.put( ExceptionInInitializerError.class, "" );
+                                         this.put( InvocationTargetException.class, "" );
+                                         this.put( InstantiationException.class, "" );
+                                         this.put( IllegalArgumentException.class, "" );
+                                       }
+                                     }.build( );
+    
+    @Override
+    public String apply( Class input ) {
+      return errorMessages.get( input );
+    }
+    
+  }
+  
+  public static class InstanceBuilder<T> {
+    private final Class<T>     type;
+    private final List<Class>  argTypes = Lists.newArrayList( );
+    private final List<Object> args     = Lists.newArrayList( );
+    
+    public InstanceBuilder( Class<T> type ) {
+      this.type = type;
+    }
+    
+    public InstanceBuilder<T> arg( Object arg ) {
+      if ( arg == null ) {
+        throw new IllegalArgumentException( "Cannot supply a null value argument w/o specifying the type." );
+      } else {
+        return arg( arg, arg.getClass( ) );
       }
+    }
+    
+    public InstanceBuilder<T> arg( Object arg, Class type ) {
+      this.argTypes.add( type );
+      this.args.add( arg );
+      return this;
+    }
+    
+    /**
+     * @return
+     * @throws UndeclaredThrowableException if the called constructor throws either:
+     *           {@link InvocationTargetException} the value of
+     *           {@link InvocationTargetException#getCause()} is rethrown as
+     *           {@link UndeclaredThrowableException#UndeclaredThrowableException(Throwable)}.
+     *           {@link NoSuchMethodException} is rethrown as
+     *           {@link UndeclaredThrowableException#UndeclaredThrowableException(Throwable)}.
+     */
+    public T newInstance( ) throws UndeclaredThrowableException {
+      if ( this.type.isEnum( ) ) {
+        return this.type.getEnumConstants( )[0];
+      } else {
+        try {
+          Constructor<T> constructor = this.type.getConstructor( this.argTypes.toArray( new Class<?>[] {} ) );
+          if ( !constructor.isAccessible( ) ) {
+            constructor.setAccessible( true );
+          }
+          return ( T ) constructor.newInstance( this.args.toArray( ) );
+        } catch ( final InvocationTargetException ex ) {
+          throw new UndeclaredThrowableException( ex.getCause( ), errorMessage( ex ) );
+        } catch ( final NoSuchMethodException ex ) {
+          throw new UndeclaredThrowableException( ex );
+        } catch ( Exception ex ) {
+          String message = errorMessage( ex, InstanceBuilder.errFstring,
+                                         this.type.getClass( ), this.args, this.argTypes );
+          throw new InstantiationError( Exceptions.string( message, ex ) );
+        }
+      }
+    }
+    
+    private String errorMessage( final InvocationTargetException ex ) {
+      return errorMessage( ex.getCause( ), errFstring, this.type.getClass( ), this.args, this.argTypes );
+    }
+    
+    private static final String errFstring = "Failed to create new instance of type %s with arguments %s (of types: %s) because of: ";
+    
+    public static String errorMessage( Throwable ex, String message, Object... formatArgs ) {
+      return Exceptions.builder( Classes.class ).exception( ex ).unknownException( "An unexpected error: " ).context( errFstring, formatArgs ).append(
+        " because of: " ).build( );
+    }
+    
+  }
+  
+  public static <T> InstanceBuilder<T> builder( Class<T> type ) {
+    return new InstanceBuilder<T>( type );
+  }
+  
+  public static <T> T newInstance( final Class<T> type, final Object... args ) {
+    try {
+      return new InstanceBuilder<T>( type ) {
+        {
+          for ( Object o : args ) {
+            this.arg( o );
+          }
+        }
+      }.newInstance( );
+    } catch ( UndeclaredThrowableException ex ) {
+      throw ex;
     }
   }
   
@@ -122,10 +246,10 @@ public class Classes {
     @Override
     public Class apply( final Object o ) {
       return ( o instanceof Class
-          ? ( Class ) o
-          : ( o != null
-            ? o.getClass( )
-            : null ) );
+                                 ? ( Class ) o
+                                 : ( o != null
+                                              ? o.getClass( )
+                                              : null ) );
     }
   }
   
@@ -146,7 +270,7 @@ public class Classes {
         return ret;
       } else {
         for ( final Class t : types ) {
-          if ( t == null || t == Object.class ) {
+          if ( ( t == null ) || ( t == Object.class ) ) {
             continue;
           } else if ( t.isInterface( ) ) {
             ret.add( t );
@@ -170,7 +294,7 @@ public class Classes {
     public List<Class> apply( final Object input ) {
       final List<Class> ret = Lists.newArrayList( );
       final Class type = WhateverAsClass.INSTANCE.apply( input );
-      if ( type == Object.class || type == null ) {
+      if ( ( type == Object.class ) || ( type == null ) ) {
         return ret;
       } else if ( type.isInterface( ) ) {
         ret.add( type );
@@ -218,7 +342,7 @@ public class Classes {
     public List<Class> apply( final Object input ) {
       final List<Class> ret = Lists.newArrayList( );
       final Class type = WhateverAsClass.INSTANCE.apply( input );
-      if ( type == Object.class || type == null ) {
+      if ( ( type == Object.class ) || ( type == null ) ) {
         return ret;
       } else if ( type.isInterface( ) ) {
         return ret;
@@ -262,7 +386,7 @@ public class Classes {
     public List<Class> apply( final Object input ) {
       final List<Class> ret = Lists.newArrayList( );
       final Class type = WhateverAsClass.INSTANCE.apply( input );
-      if ( type == Object.class || type == null ) {
+      if ( ( type == Object.class ) || ( type == null ) ) {
         return ret;
       } else {
         final List<Class> superInterfaces = TransitiveClosureImplementedInterfaces.INSTANCE.apply( new Class[] { type } );
@@ -276,7 +400,7 @@ public class Classes {
   }
   
   @SuppressWarnings( "unchecked" )
-  public static <T> Class<T> typeOf( Object obj ) {
+  public static <T> Class<T> typeOf( final Object obj ) {
     return ( Class<T> ) WhateverAsClass.INSTANCE.apply( obj );
   }
   
@@ -309,7 +433,7 @@ public class Classes {
     @Override
     public List<Class> apply( final Object input ) {
       final List<Class> ret = Lists.newArrayList( );
-      Class inputClass = WhateverAsClass.INSTANCE.apply( input );
+      final Class inputClass = WhateverAsClass.INSTANCE.apply( input );
       if ( !inputClass.isEnum( ) ) {
         ret.addAll( processTypeForGenerics( inputClass.getGenericSuperclass( ) ) );
       }

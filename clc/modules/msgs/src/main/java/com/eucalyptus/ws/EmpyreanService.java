@@ -99,6 +99,9 @@ import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
+import com.google.common.collect.Iterables;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.notNullValue;
 
 public class EmpyreanService {
   private static Logger LOG = Logger.getLogger( EmpyreanService.class );
@@ -211,17 +214,24 @@ public class EmpyreanService {
     }
   }
   
-  public static ServiceConfiguration findService( String name ) {
+  public static ServiceConfiguration findService( final String name ) {
+    assertThat( name, notNullValue( ) );
+    Predicate<ServiceConfiguration> nameOrFullName = new Predicate<ServiceConfiguration>( ) {
+      
+      @Override
+      public boolean apply( ServiceConfiguration input ) {
+        return name.equals( input.getName( ) ) || name.equals( input.getFullName( ).toString( ) );
+      }
+    };
     for ( final ComponentId compId : ComponentIds.list( ) ) {
       ServiceConfiguration a;
       try {
-        a = Components.lookup( compId ).lookup( name );
+        return Iterables.find( Components.lookup( compId ).services( ), nameOrFullName );
       } catch ( NoSuchElementException ex ) {
         if ( compId.isRegisterable( ) ) {
           try {
             return ServiceConfigurations.lookupByName( compId.getClass( ), name );
-          } catch ( Exception ex1 ) {
-          }
+          } catch ( Exception ex1 ) {}
         }
       }
     }

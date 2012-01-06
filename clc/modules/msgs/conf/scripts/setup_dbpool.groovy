@@ -86,7 +86,7 @@ String pool_db_url = 'jdbc:ha-jdbc:eucalyptus';
 String db_pass = SystemIds.databasePassword( );
 
 default_pool_props = [
-      'proxool.simultaneous-build-throttle': '16',
+      'proxool.simultaneous-build-throttle': '32',
       'proxool.minimum-connection-count': '8',
       'proxool.maximum-connection-count': '64',
       'proxool.prototype-count': '8',
@@ -111,10 +111,6 @@ PersistenceContexts.list( ).each { String ctx_simplename ->
     def xml = new MarkupBuilder(writer);
     xml.'ha-jdbc'() {
       sync('class':'com.eucalyptus.bootstrap.Databases\$FullSynchronizationStrategy', id:'full') {
-        'property'(name:'fetchSize', '1000')
-        'property'(name:'maxBatchSize', '1000')
-      }
-      sync('class':'com.eucalyptus.bootstrap.Databases\$DifferentialSynchronizationStrategy', id:'diff') {
         'property'(name:'fetchSize', '1000')
         'property'(name:'maxBatchSize', '1000')
       }

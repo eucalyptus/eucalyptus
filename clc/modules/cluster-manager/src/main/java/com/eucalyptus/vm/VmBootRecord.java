@@ -77,6 +77,7 @@ import javax.persistence.PreRemove;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Parent;
+import com.eucalyptus.blockstorage.Volume;
 import com.eucalyptus.cloud.ImageMetadata;
 import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.images.BlockStorageImageInfo;
@@ -106,15 +107,15 @@ public class VmBootRecord {
   @Column( name = "metadata_vm_platform" )
   private String                  platform;
   @ElementCollection
-  @CollectionTable(name="metadata_instances_persistent_volumes")
+  @CollectionTable( name = "metadata_instances_persistent_volumes" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Set<VmVolumeAttachment> persistentVolumes = Sets.newHashSet( );
   @Lob
   @Column( name = "metadata_vm_user_data" )
   private byte[]                  userData;
-  @ManyToOne
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  private SshKeyPair              sshKeyPair;
+  @Lob
+  @Column( name = "metadata_vm_sshkey" )
+  private String                  sshKeyString;
   @ManyToOne
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private VmType                  vmType;
@@ -125,17 +126,15 @@ public class VmBootRecord {
   
   VmBootRecord( BootableSet bootSet, byte[] userData, SshKeyPair sshKeyPair, VmType vmType ) {
     super( );
-    assertThat("Bootset must not be null", bootSet, notNullValue());
+    assertThat( "Bootset must not be null", bootSet, notNullValue( ) );
     this.machineImage = ( ImageInfo ) bootSet.getMachine( );
-    if(bootSet.hasKernel())
-    	this.kernel = bootSet.getKernel( );
-    if(bootSet.hasRamdisk())
-    	this.ramdisk = bootSet.getRamdisk( ); 
+    if ( bootSet.hasKernel( ) )
+      this.kernel = bootSet.getKernel( );
+    if ( bootSet.hasRamdisk( ) )
+      this.ramdisk = bootSet.getRamdisk( );
     this.platform = bootSet.getMachine( ).getPlatform( ).name( );
     this.userData = userData;
-    this.sshKeyPair = KeyPairs.noKey( ).equals( sshKeyPair ) || ( sshKeyPair == null )
-      ? null
-      : sshKeyPair;
+    this.sshKeyString = sshKeyPair.getPublicKey( );
     this.vmType = vmType;
   }
   
@@ -143,7 +142,7 @@ public class VmBootRecord {
   private void cleanUp( ) {
     this.persistentVolumes.clear( );
   }
-
+  
   private VmInstance getVmInstance( ) {
     return this.vmInstance;
   }
@@ -164,8 +163,12 @@ public class VmBootRecord {
     return this.platform;
   }
   
-  Set<VmVolumeAttachment> getPersistentVolumes( ) {
+  public Set<VmVolumeAttachment> getPersistentVolumes( ) {
     return this.persistentVolumes;
+  }
+  
+  public boolean hasPersistentVolumes( ) {
+    return !this.persistentVolumes.isEmpty( );
   }
   
   byte[] getUserData( ) {
@@ -173,7 +176,11 @@ public class VmBootRecord {
   }
   
   SshKeyPair getSshKeyPair( ) {
-    return this.sshKeyPair;
+    if ( this.getSshKeyString( ) != null ) {
+      return SshKeyPair.withPublicKey( null, this.getSshKeyString( ).replaceAll( ".*@eucalyptus\\.", "" ), this.getSshKeyString( ) );
+    } else {
+      return KeyPairs.noKey( );
+    }
   }
   
   VmType getVmType( ) {
@@ -187,7 +194,7 @@ public class VmBootRecord {
   public boolean isBlockStorage( ) {
     return this.getMachine( ) instanceof BlockStorageImageInfo;
   }
-
+  
   public boolean isLinux( ) {
     return ImageMetadata.Platform.linux.equals( this.getMachine( ).getPlatform( ) ) || this.getMachine( ).getPlatform( ) == null;
   }
@@ -233,14 +240,10 @@ public class VmBootRecord {
     this.userData = userData;
   }
   
-  private void setSshKeyPair( SshKeyPair sshKeyPair ) {
-    this.sshKeyPair = sshKeyPair;
-  }
-  
   private void setVmType( VmType vmType ) {
     this.vmType = vmType;
   }
-
+  
   @Override
   public String toString( ) {
     StringBuilder builder = new StringBuilder( );
@@ -251,21 +254,21 @@ public class VmBootRecord {
     if ( this.platform != null ) builder.append( "platform=" ).append( this.platform ).append( ":" );
     if ( this.persistentVolumes != null ) builder.append( "persistentVolumes=" ).append( this.persistentVolumes ).append( ":" );
     if ( this.userData != null ) builder.append( "userData=" ).append( Arrays.toString( this.userData ) ).append( ":" );
-    if ( this.sshKeyPair != null ) builder.append( "sshKeyPair=" ).append( this.sshKeyPair ).append( ":" );
+    if ( this.sshKeyString != null ) builder.append( "sshKeyPair=" ).append( this.sshKeyString.replaceAll( ".*@eucalyptus\\.", "" ) ).append( ":" );
     if ( this.vmType != null ) builder.append( "vmType=" ).append( this.vmType );
     return builder.toString( );
   }
-
+  
   @Override
   public int hashCode( ) {
     final int prime = 31;
     int result = 1;
     result = prime * result + ( ( this.vmInstance == null )
-      ? 0
-      : this.vmInstance.hashCode( ) );
+                                                           ? 0
+                                                           : this.vmInstance.hashCode( ) );
     return result;
   }
-
+  
   @Override
   public boolean equals( Object obj ) {
     if ( this == obj ) {
@@ -286,6 +289,14 @@ public class VmBootRecord {
       return false;
     }
     return true;
+  }
+
+  private String getSshKeyString( ) {
+    return this.sshKeyString;
+  }
+
+  private void setSshKeyString( String sshKeyString ) {
+    this.sshKeyString = sshKeyString;
   }
   
 }

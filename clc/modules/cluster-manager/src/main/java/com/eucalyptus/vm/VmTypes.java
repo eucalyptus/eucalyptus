@@ -83,10 +83,14 @@ import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
 public class VmTypes {
   private static String DEFAULT_TYPE_NAME = "m1.small";//TODO:GRZE:@Configurable
+  protected static final Long SWAP_SIZE_BYTES = 512 * 1024l * 1024l; // swap is hardcoded at 512MB for now
+  private static final long MIN_EPHEMERAL_SIZE_BYTES = 61440; // the smallest ext{2|3|4} partition possible
   
   public static VmTypeInfo asVmTypeInfo( VmType vmType, BootableImageInfo img ) throws MetadataException {
     Long imgSize = img.getImageSizeBytes( );
-    if ( imgSize > 1024l * 1024l * 1024l * vmType.getDisk( ) ) {
+    Long diskSize = vmType.getDisk( )*1024l*1024l*1024l;
+  
+    if ( !( img instanceof BlockStorageImageInfo ) && imgSize > diskSize ) {
       throw new InvalidMetadataException( "image too large [size=" + imgSize / ( 1024l * 1024l ) + "MB] for instance type " + vmType.getName( ) + " [disk="
                                           + vmType.getDisk( ) * 1024l + "MB]" );
     }
@@ -94,16 +98,21 @@ public class VmTypes {
     if ( img instanceof StaticDiskImage ) {
       if( ImageMetadata.Platform.windows.equals( img.getPlatform( ) ) ) {
         vmTypeInfo  = VmTypes.InstanceStoreWindowsVmTypeInfoMapper.INSTANCE.apply( vmType );
-        vmTypeInfo.setEphemeral( 0, "sdb", vmType.getDisk( )*1024l*1024l*1024l - imgSize /**bytes**/, "none" );
+        vmTypeInfo.setEphemeral( 0, "sdb", diskSize - imgSize, "none" );
       } else {
         vmTypeInfo = VmTypes.InstanceStoreVmTypeInfoMapper.INSTANCE.apply( vmType );
-        vmTypeInfo.setEphemeral( 0, "sda2", vmType.getDisk( )*1024l*1024l*1024l - imgSize /**bytes**/, "ext3" );
+        long ephemeralSize = diskSize - imgSize - SWAP_SIZE_BYTES;
+        if (ephemeralSize < MIN_EPHEMERAL_SIZE_BYTES) {
+        	throw new InvalidMetadataException( "image too large to accommodate swap and ephemeral [size=" + imgSize / ( 1024l * 1024l ) + "MB] for instance type " + vmType.getName( ) + " [disk="
+                    + vmType.getDisk( ) * 1024l + "MB]" );
+        }
+        vmTypeInfo.setEphemeral( 0, "sda2", ephemeralSize, "ext3" );
       }
       vmTypeInfo.setRoot( img.getDisplayName( ), ( ( StaticDiskImage ) img ).getManifestLocation( ), imgSize );
     } else if ( img instanceof BlockStorageImageInfo ) {
       vmTypeInfo = VmTypes.BlockStorageVmTypeInfoMapper.INSTANCE.apply( vmType );
       vmTypeInfo.setEbsRoot( img.getDisplayName( ), null, imgSize );
-      vmTypeInfo.setEphemeral( 0, "sdb", vmType.getDisk( )*1024l*1024l*1024l /**bytes**/, "none" );
+      vmTypeInfo.setEphemeral( 0, "sdb", diskSize, "none" );
     } else {
       throw new InvalidMetadataException( "Failed to identify the root machine image type: " + img );
     }
@@ -117,7 +126,7 @@ public class VmTypes {
     public VmTypeInfo apply( VmType arg0 ) {
       return new VmTypeInfo( arg0.getName( ), arg0.getMemory( ), arg0.getDisk( ), arg0.getCpu( ), "sda1" ) {
         {
-          this.setSwap( "sda3", 512 * 1024l * 1024l );
+          this.setSwap( "sda3", VmTypes.SWAP_SIZE_BYTES );
         }
       };
     }

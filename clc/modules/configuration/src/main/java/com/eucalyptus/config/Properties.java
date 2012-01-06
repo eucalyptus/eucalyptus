@@ -75,10 +75,17 @@ public class Properties {
           oldValue = entry.getValue( );
         }
         reply.setOldValue( oldValue );
+        Boolean reset = request.getReset( );
+        if (reset != null) {
+          if (Boolean.TRUE.equals( reset )) {
+        	entry.setValue(entry.getDefaultValue());	
+          }
+        } else { 
         try {
           entry.setValue( request.getValue( ) );
         } catch ( Exception e ) {
           entry.setValue( oldValue );
+        }
         }
         reply.setValue( entry.getValue( ) );
         reply.setName( request.getName( ) );

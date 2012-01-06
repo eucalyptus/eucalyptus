@@ -2,6 +2,8 @@ package com.eucalyptus.webui.client.service;
 
 import java.io.Serializable;
 
+import com.eucalyptus.auth.principal.Account;
+
 public class LoginUserProfile implements Serializable {
 
   private static final long serialVersionUID = 1L;
@@ -31,7 +33,7 @@ public class LoginUserProfile implements Serializable {
   }
   
   public boolean isSystemAdmin( ) {
-	return "admin".equals( userName ) && "eucalyptus".equals( accountName );
+    return "eucalyptus".equals( accountName );
   }
 
   public void setUserName( String userName ) {

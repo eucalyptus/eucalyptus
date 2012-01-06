@@ -24,7 +24,7 @@ public class StartViewImpl extends Composite implements StartView {
   SimplePanel iamSnippet;
 
   @UiField
-  SimplePanel rightscaleSnippet;
+  SimplePanel cloudRegSnippet;
 
   @UiField
   SimplePanel downloadSnippet;
@@ -36,7 +36,7 @@ public class StartViewImpl extends Composite implements StartView {
   Anchor iamHeader;
 
   @UiField
-  Anchor rightscaleHeader;
+  Anchor cloudRegHeader;
 
   @UiField
   Anchor downloadHeader;
@@ -56,9 +56,9 @@ public class StartViewImpl extends Composite implements StartView {
     iamSnippet.setVisible( !iamSnippet.isVisible( ) );
   }
 
-  @UiHandler( "rightscaleHeader" )
-  void handleRightscaleHeaderClick( ClickEvent e ) {
-    rightscaleSnippet.setVisible( !rightscaleSnippet.isVisible( ) );
+  @UiHandler( "cloudRegHeader" )
+  void handlecloudRegHeaderClick( ClickEvent e ) {
+    cloudRegSnippet.setVisible( !cloudRegSnippet.isVisible( ) );
   }
 
   @UiHandler( "downloadHeader" )
@@ -67,8 +67,8 @@ public class StartViewImpl extends Composite implements StartView {
   }
 
   @Override
-  public AcceptsOneWidget getRightScaleSnippetDisplay( ) {
-    return rightscaleSnippet;
+  public AcceptsOneWidget getCloudRegSnippetDisplay( ) {
+    return cloudRegSnippet;
   }
 
   @Override

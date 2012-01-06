@@ -70,7 +70,9 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ExecutionException;
 import org.apache.log4j.Logger;
+import org.hibernate.exception.ConstraintViolationException;
 import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.CloudMetadatas;
 import com.eucalyptus.cluster.Cluster;
@@ -239,6 +241,7 @@ public class VolumeManager {
   public DescribeVolumesResponseType DescribeVolumes( DescribeVolumesType request ) throws EucalyptusCloudException {
     DescribeVolumesResponseType reply = ( DescribeVolumesResponseType ) request.getReply( );
     Context ctx = Contexts.lookup( );
+    boolean showAll = request.getVolumeSet( ).remove( "verbose" );
     EntityWrapper<Volume> db = EntityWrapper.get( Volume.class );
     try {
       
@@ -251,7 +254,7 @@ public class VolumeManager {
           }
         } );
       }
-      List<Volume> volumes = db.query( Volume.named( ctx.getUserFullName( ).asAccountFullName( ), null ) );
+      List<Volume> volumes = db.query( Volume.named( ( ctx.hasAdministrativePrivileges( ) && showAll ) ? null : ctx.getUserFullName( ).asAccountFullName( ), null ) );
       List<Volume> describeVolumes = Lists.newArrayList( );
       for ( Volume v : Iterables.filter( volumes, CloudMetadatas.filterPrivilegesById( request.getVolumeSet( ) ) ) ) {
         if ( !State.ANNIHILATED.equals( v.getState( ) ) ) {
@@ -324,19 +327,8 @@ public class VolumeManager {
       }
     }
     
-    EntityWrapper<Volume> db = EntityWrapper.get( Volume.class );
-    Volume volume = null;
-    try {
-      volume = db.getUnique( Volume.named( ctx.getUserFullName( ).asAccountFullName( ), request.getVolumeId( ) ) );
-      if ( volume.getRemoteDevice( ) == null ) {
-        StorageUtil.getVolumeReply( new HashMap<String, AttachedVolume>( ), Lists.newArrayList( volume ) );
-      }
-      db.commit( );
-    } catch ( EucalyptusCloudException e ) {
-      LOG.debug( e, e );
-      db.rollback( );
-      throw new EucalyptusCloudException( "Volume does not exist: " + request.getVolumeId( ) );
-    }
+    AccountFullName ownerFullName = ctx.getUserFullName( ).asAccountFullName( );
+    Volume volume = Volumes.lookup( ownerFullName, volumeId );
     if ( !RestrictedTypes.filterPrivileged( ).apply( volume ) ) {
       throw new EucalyptusCloudException( "Not authorized to attach volume " + request.getVolumeId( ) + " by " + ctx.getUser( ).getName( ) );
     }
@@ -371,7 +363,7 @@ public class VolumeManager {
     reply.setAttachedVolume( attachVol );
     return reply;
   }
-  
+
   public DetachVolumeResponseType detach( DetachVolumeType request ) throws EucalyptusCloudException {
     DetachVolumeResponseType reply = ( DetachVolumeResponseType ) request.getReply( );
     Context ctx = Contexts.lookup( );
