@@ -273,7 +273,7 @@ public class VmInstances {
   public static String getId( final Long rsvId, final int launchIndex ) {
     String vmId = null;
     do {
-      vmId = Crypto.generateId( Long.toString( rsvId + launchIndex ), "i-" );
+      vmId = Crypto.generateId( Long.toString( rsvId + launchIndex ), "i" );
     } while ( VmInstances.contains( vmId ) );
     return vmId;
   }
