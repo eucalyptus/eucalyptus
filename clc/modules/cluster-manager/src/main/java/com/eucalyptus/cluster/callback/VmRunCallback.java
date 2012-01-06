@@ -176,7 +176,7 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
       }
     };
     for ( final VmInfo vmInfo : reply.getVms( ) ) {
-      if ( vmInfo.equals( this.token.getInstanceId( ) ) ) {
+      if ( this.token.getInstanceId( ).equals( vmInfo.getInstanceId( ) ) ) {
         try {
           Entities.asTransaction( VmInstance.class, updateInstance, 10 ).apply( vmInfo );
           break;
