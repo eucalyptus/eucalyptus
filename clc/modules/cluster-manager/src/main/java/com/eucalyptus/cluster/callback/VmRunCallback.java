@@ -179,6 +179,7 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
       if ( vmInfo.equals( this.token.getInstanceId( ) ) ) {
         try {
           Entities.asTransaction( VmInstance.class, updateInstance, 10 ).apply( vmInfo );
+          break;
         } catch ( RuntimeException ex ) {
           LOG.error( "Failed: " + this.token + " because of " + ex.getMessage( ), ex );
           throw ex;
