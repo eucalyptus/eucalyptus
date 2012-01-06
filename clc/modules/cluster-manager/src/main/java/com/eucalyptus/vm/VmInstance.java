@@ -231,10 +231,10 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       
       @Override
       public boolean apply( final VmInstance arg0 ) {
-        return super.apply( arg0 ) || !arg0.eachVolumeAttachment( new Predicate<AttachedVolume>( ) {
+        return super.apply( arg0 ) || !arg0.eachVolumeAttachment( new Predicate<VmVolumeAttachment>( ) {
           @Override
-          public boolean apply( final AttachedVolume arg0 ) {
-            return !arg0.getStatus( ).endsWith( "ing" );
+          public boolean apply( final VmVolumeAttachment input ) {
+            return !input.getStatus( ).endsWith( "ing" );
           }
         } );
       }
@@ -1372,25 +1372,37 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   /**
    * @param attachVol
    */
-  public void addVolumeAttachment( final AttachedVolume vol ) {
+  public void addTransientVolume( AttachedVolume attachVol ) {
     final EntityTransaction db = Entities.get( VmInstance.class );
     try {
       final VmInstance entity = Entities.merge( this );
-      vol.setStatus( "attaching" );
-      entity.getTransientVolumeState( ).addVolumeAttachment( VmVolumeAttachment.fromAttachedVolume( entity ).apply( vol ) );
+      attachVol.setStatus( "attaching" );
+      entity.getTransientVolumeState( ).addVolumeAttachment( VmVolumeAttachment.fromTransientAttachedVolume( entity ).apply( attachVol ) );
       db.commit( );
     } catch ( final Exception ex ) {
       Logs.exhaust( ).error( ex, ex );
       db.rollback( );
     }
-    
   }
-  
+
   public void addPersistentVolume( final String deviceName, final Volume vol ) {
     final EntityTransaction db = Entities.get( VmInstance.class );
     try {
       final VmInstance entity = Entities.merge( this );
-      final VmVolumeAttachment volumeAttachment = new VmVolumeAttachment( entity, vol.getDisplayName( ), deviceName, vol.getRemoteDevice( ), "attached", new Date( ) );
+      final VmVolumeAttachment volumeAttachment = new VmVolumeAttachment( entity, vol.getDisplayName( ), deviceName, vol.getRemoteDevice( ), "attached", new Date( ), true );
+      entity.bootRecord.getPersistentVolumes( ).add( volumeAttachment );
+      db.commit( );
+    } catch ( final Exception ex ) {
+      Logs.exhaust( ).error( ex, ex );
+      db.rollback( );
+    }
+  }
+  
+  public void addPermanentVolume( final String deviceName, final Volume vol ) {
+    final EntityTransaction db = Entities.get( VmInstance.class );
+    try {
+      final VmInstance entity = Entities.merge( this );
+      final VmVolumeAttachment volumeAttachment = new VmVolumeAttachment( entity, vol.getDisplayName( ), deviceName, vol.getRemoteDevice( ), "attached", new Date( ), false );
       entity.bootRecord.getPersistentVolumes( ).add( volumeAttachment );
       db.commit( );
     } catch ( final Exception ex ) {
@@ -1403,7 +1415,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
    * @param predicate
    * @return
    */
-  public boolean eachVolumeAttachment( final Predicate<AttachedVolume> predicate ) {
+  public boolean eachVolumeAttachment( final Predicate<VmVolumeAttachment> predicate ) {
     final EntityTransaction db = Entities.get( VmInstance.class );
     try {
       final VmInstance entity = Entities.merge( this );
@@ -1411,14 +1423,14 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         
         @Override
         public boolean apply( final VmVolumeAttachment arg0 ) {
-          return predicate.apply( VmVolumeAttachment.asAttachedVolume( entity ).apply( arg0 ) );
+          return predicate.apply( arg0 );
         }
       } );
       ret |= Iterables.all( entity.getBootRecord( ).getPersistentVolumes( ), new Predicate<VmVolumeAttachment>( ) {
         
         @Override
         public boolean apply( final VmVolumeAttachment arg0 ) {
-          return predicate.apply( VmVolumeAttachment.asAttachedVolume( entity ).apply( arg0 ) );
+          return predicate.apply( arg0 );
         }
       } );
       db.commit( );
@@ -1655,9 +1667,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           
           runningInstance.setLaunchTime( input.getLaunchRecord( ).getLaunchTime( ) );
           
-          if ( !input.getBootRecord( ).hasPersistentVolumes( ) ) {
-            runningInstance.getBlockDevices( ).add( new InstanceBlockDeviceMapping( "/dev/sda1" ) );
-          } else {
+          if ( input.getBootRecord( ).hasPersistentVolumes( ) ) {
             for ( final VmVolumeAttachment attachedVol : input.getBootRecord( ).getPersistentVolumes( ) ) {
               runningInstance.getBlockDevices( ).add( new InstanceBlockDeviceMapping( attachedVol.getDevice( ), attachedVol.getVolumeId( ),
                                                                                       attachedVol.getStatus( ),
@@ -1795,5 +1805,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   public SshKeyPair getKeyPair( ) {
     return this.getBootRecord( ).getSshKeyPair( );
   }
+
   
 }

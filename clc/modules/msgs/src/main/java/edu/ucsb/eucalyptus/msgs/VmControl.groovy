@@ -182,6 +182,7 @@ public class RunInstancesType extends VmControlMessage {
   String availabilityZone = "default"; //** added 2008-02-01  **/
   @HttpParameterMapping (parameter = "Placement.GroupName")
   String placementGroup = "default"; //** added 2010-02-01  **/
+  @HttpEmbedded (multiple = true)
   ArrayList<BlockDeviceMappingItemType> blockDeviceMapping = new ArrayList<BlockDeviceMappingItemType>(); //** added 2008-02-01  **/
   Boolean monitoring = false;
   String subnetId;
@@ -333,7 +334,7 @@ public class EbsInstanceBlockDeviceMapping extends EucalyptusData {
   String volumeId;
   String status;
   Date attachTime;
-  Boolean deleteOnTermination = Boolean.FALSE;
+  Boolean deleteOnTermination = Boolean.TRUE;
   public EbsInstanceBlockDeviceMapping() {}
   public EbsInstanceBlockDeviceMapping( String volumeId, String status, Date attachTime ) {
     this.volumeId = volumeId;
@@ -345,7 +346,7 @@ public class EbsDeviceMapping extends EucalyptusData {  //** added 2008-02-01  *
   String virtualName; // ephemeralN, root, ami, swap
   String snapshotId;
   Integer volumeSize = null;
-  Boolean deleteOnTermination = Boolean.FALSE;
+  Boolean deleteOnTermination = Boolean.TRUE;
 }
 
 public class BlockDeviceMappingItemType extends EucalyptusData {  //** added 2008-02-01  **/

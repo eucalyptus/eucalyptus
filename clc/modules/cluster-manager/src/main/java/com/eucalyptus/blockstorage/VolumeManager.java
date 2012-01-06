@@ -101,6 +101,7 @@ import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstances;
+import com.eucalyptus.vm.VmVolumeAttachment;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
@@ -246,11 +247,11 @@ public class VolumeManager {
     try {
       
       final Map<String, AttachedVolume> attachedVolumes = new HashMap<String, AttachedVolume>( );
-      for ( VmInstance vm : VmInstances.list( Predicates.not( VmState.TERMINATED ) ) ) {
-        vm.eachVolumeAttachment( new Predicate<AttachedVolume>( ) {
+      for ( final VmInstance vm : VmInstances.list( Predicates.not( VmState.TERMINATED ) ) ) {
+        vm.eachVolumeAttachment( new Predicate<VmVolumeAttachment>( ) {
           @Override
-          public boolean apply( AttachedVolume arg0 ) {
-            return attachedVolumes.put( arg0.getVolumeId( ), arg0 ) == null;
+          public boolean apply( VmVolumeAttachment arg0 ) {
+            return attachedVolumes.put( arg0.getVolumeId( ), VmVolumeAttachment.asAttachedVolume( vm ).apply( arg0 ) ) == null;
           }
         } );
       }
@@ -354,7 +355,7 @@ public class VolumeManager {
     AttachedVolume attachVol = new AttachedVolume( volume.getDisplayName( ), vm.getInstanceId( ), request.getDevice( ), request.getRemoteDevice( ) );
     volume.setState( State.BUSY );
     attachVol.setStatus( "attaching" );
-    vm.addVolumeAttachment( attachVol );
+    vm.addTransientVolume( attachVol );
     AsyncRequests.newRequest( new VolumeAttachCallback( request, attachVol ) ).dispatch( cluster.getConfiguration( ) );
     
     EventRecord.here( VolumeManager.class, EventClass.VOLUME, EventType.VOLUME_ATTACH )
