@@ -176,7 +176,7 @@ public class Volumes {
     try {
       volume = Entities.uniqueResult( Volume.named( ownerFullName, volumeId ) );
       if ( volume.getRemoteDevice( ) == null ) {
-        StorageUtil.getVolumeReply( new HashMap<String, AttachedVolume>( ), Lists.newArrayList( volume ) );
+        StorageUtil.getVolumeReply( Lists.newArrayList( volume ) );
       }
       db.commit( );
     } catch ( Exception ex ) {

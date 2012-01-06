@@ -246,16 +246,6 @@ public class VolumeManager {
     EntityWrapper<Volume> db = EntityWrapper.get( Volume.class );
     try {
       
-      final Map<String, AttachedVolume> attachedVolumes = new HashMap<String, AttachedVolume>( );
-      for ( final VmInstance vm : VmInstances.list( Predicates.not( VmState.TERMINATED ) ) ) {
-        vm.eachVolumeAttachment( new Predicate<VmVolumeAttachment>( ) {
-          @Override
-          public boolean apply( VmVolumeAttachment arg0 ) {
-            attachedVolumes.put( arg0.getVolumeId( ), VmVolumeAttachment.asAttachedVolume( vm ).apply( arg0 ) );
-            return true;
-          }
-        } );
-      }
       List<Volume> volumes = db.query( Volume.named( ( ctx.hasAdministrativePrivileges( ) && showAll ) ? null : ctx.getUserFullName( ).asAccountFullName( ), null ) );
       List<Volume> describeVolumes = Lists.newArrayList( );
       for ( Volume v : Iterables.filter( volumes, CloudMetadatas.filterPrivilegesById( request.getVolumeSet( ) ) ) ) {
@@ -274,7 +264,7 @@ public class VolumeManager {
         }
       }
       try {
-        ArrayList<edu.ucsb.eucalyptus.msgs.Volume> volumeReplyList = StorageUtil.getVolumeReply( attachedVolumes, describeVolumes );
+        ArrayList<edu.ucsb.eucalyptus.msgs.Volume> volumeReplyList = StorageUtil.getVolumeReply( describeVolumes );
         reply.getVolumeSet( ).addAll( volumeReplyList );
       } catch ( Exception e ) {
         LOG.warn( "Error getting volume information from the Storage Controller: " + e );

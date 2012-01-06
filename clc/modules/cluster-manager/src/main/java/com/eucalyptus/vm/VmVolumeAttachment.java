@@ -241,6 +241,13 @@ public class VmVolumeAttachment implements Comparable<VmVolumeAttachment> {
     return builder.toString( );
   }
 
+  public static VmVolumeAttachment exampleWithVolumeId( final String volumeId ) {
+    VmVolumeAttachment ex = new VmVolumeAttachment(  );
+    ex.setVolumeId( volumeId );
+    return ex;
+  }
+
+
   static Predicate<VmVolumeAttachment> volumeDeviceFilter( final String deviceName ) {
     return new Predicate<VmVolumeAttachment>( ) {
       @Override

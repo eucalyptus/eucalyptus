@@ -1816,17 +1816,13 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   
   public static VmInstance exampleWithTransientVolume( final String volumeId ) {
     VmInstance vmExample = VmInstance.create( );
-    VmVolumeAttachment ex = new VmVolumeAttachment( );
-    ex.setVolumeId( volumeId );
-    vmExample.getTransientVolumeState( ).addVolumeAttachment( ex );
+    vmExample.getTransientVolumeState( ).addVolumeAttachment( VmVolumeAttachment.exampleWithVolumeId( volumeId ) );
     return vmExample;
   }
   
   public static VmInstance exampleWithPersistentVolume( final String volumeId ) {
     VmInstance vmExample = new VmInstance( );
-    VmVolumeAttachment ex = new VmVolumeAttachment( );
-    ex.setVolumeId( volumeId );
-    vmExample.getBootRecord( ).getPersistentVolumes( ).add( ex );
+    vmExample.getBootRecord( ).getPersistentVolumes( ).add( VmVolumeAttachment.exampleWithVolumeId( volumeId ) );
     return vmExample;
   }
   
