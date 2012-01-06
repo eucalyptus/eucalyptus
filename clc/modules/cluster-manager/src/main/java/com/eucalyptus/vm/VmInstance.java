@@ -135,6 +135,7 @@ import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.vm.VmBundleTask.BundleState;
 import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstances.Timeout;
+import com.eucalyptus.vm.VmVolumeAttachment.AttachmentState;
 import com.eucalyptus.ws.StackConfiguration;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
@@ -236,7 +237,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         return super.apply( arg0 ) || !arg0.eachVolumeAttachment( new Predicate<VmVolumeAttachment>( ) {
           @Override
           public boolean apply( final VmVolumeAttachment input ) {
-            return !input.getStatus( ).endsWith( "ing" );
+            return !input.getAttachmentState( ).isVolatile( );
           }
         } );
       }
@@ -1379,13 +1380,14 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     try {
       final VmInstance entity = Entities.merge( this );
       final Volume volEntity = Entities.merge( vol );
-      VmVolumeAttachment attachVol = new VmVolumeAttachment( entity, vol.getDisplayName( ), deviceName, vol.getRemoteDevice( ), "attaching", new Date( ), false );
+      VmVolumeAttachment attachVol = new VmVolumeAttachment( entity, vol.getDisplayName( ), deviceName, vol.getRemoteDevice( ), AttachmentState.attaching.name( ), new Date( ), false );
       volEntity.setState( State.BUSY );
       entity.getTransientVolumeState( ).addVolumeAttachment( attachVol );
       db.commit( );
-    } catch ( final Exception ex ) {
-      Logs.exhaust( ).error( ex, ex );
+    } catch ( final RuntimeException ex ) {
+      Logs.extreme( ).error( ex, ex );
       db.rollback( );
+      throw ex;
     }
   }
   
@@ -1393,12 +1395,13 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     final EntityTransaction db = Entities.get( VmInstance.class );
     try {
       final VmInstance entity = Entities.merge( this );
-      final VmVolumeAttachment volumeAttachment = new VmVolumeAttachment( entity, vol.getDisplayName( ), deviceName, vol.getRemoteDevice( ), "attached", new Date( ), true );
+      final VmVolumeAttachment volumeAttachment = new VmVolumeAttachment( entity, vol.getDisplayName( ), deviceName, vol.getRemoteDevice( ), AttachmentState.attached.name( ), new Date( ), true );
       entity.bootRecord.getPersistentVolumes( ).add( volumeAttachment );
       db.commit( );
-    } catch ( final Exception ex ) {
-      Logs.exhaust( ).error( ex, ex );
+    } catch ( final RuntimeException ex ) {
+      Logs.extreme( ).error( ex, ex );
       db.rollback( );
+      throw ex;
     }
   }
   
@@ -1406,12 +1409,13 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     final EntityTransaction db = Entities.get( VmInstance.class );
     try {
       final VmInstance entity = Entities.merge( this );
-      final VmVolumeAttachment volumeAttachment = new VmVolumeAttachment( entity, vol.getDisplayName( ), deviceName, vol.getRemoteDevice( ), "attached", new Date( ), false );
+      final VmVolumeAttachment volumeAttachment = new VmVolumeAttachment( entity, vol.getDisplayName( ), deviceName, vol.getRemoteDevice( ), AttachmentState.attached.name( ), new Date( ), false );
       entity.bootRecord.getPersistentVolumes( ).add( volumeAttachment );
       db.commit( );
-    } catch ( final Exception ex ) {
-      Logs.exhaust( ).error( ex, ex );
+    } catch ( final RuntimeException ex ) {
+      Logs.extreme( ).error( ex, ex );
       db.rollback( );
+      throw ex;
     }
   }
   
@@ -1494,7 +1498,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
    * @param volumeId
    * @param newState
    */
-  public void updateVolumeAttachment( final String volumeId, final String newState ) {
+  public void updateVolumeAttachment( final String volumeId, final AttachmentState newState ) {
     final EntityTransaction db = Entities.get( VmInstance.class );
     try {
       final VmInstance entity = Entities.merge( this );
@@ -1569,7 +1573,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   /**
    * @param volumes
    */
-  public void updateVolumeAttachments( final List<AttachedVolume> volumes ) {
+  private void updateVolumeAttachments( final List<AttachedVolume> volumes ) {
     final EntityTransaction db = Entities.get( VmInstance.class );
     try {
       final VmInstance entity = Entities.merge( this );

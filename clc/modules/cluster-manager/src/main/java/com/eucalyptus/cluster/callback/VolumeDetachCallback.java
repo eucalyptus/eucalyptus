@@ -71,6 +71,7 @@ import com.eucalyptus.util.async.FailedRequestException;
 import com.eucalyptus.util.async.MessageCallback;
 import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstances;
+import com.eucalyptus.vm.VmVolumeAttachment.AttachmentState;
 import com.google.common.base.Function;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
 import edu.ucsb.eucalyptus.msgs.DetachVolumeResponseType;
@@ -82,24 +83,18 @@ public class VolumeDetachCallback extends MessageCallback<DetachVolumeType,Detac
   
   public VolumeDetachCallback( DetachVolumeType request ) {
     super( request );
-  }
-  
-  /**
-   * TODO: DOCUMENT
-   * @see com.eucalyptus.util.async.MessageCallback#fire(edu.ucsb.eucalyptus.msgs.BaseMessage)
-   * @param reply
-   */
-  @Override
-  public void fire( DetachVolumeResponseType reply ) {
     final Function<String, VmInstance> removeVolAttachment = new Function<String, VmInstance>( ) {
       public VmInstance apply( final String input ) {
         VmInstance vm = VmInstances.lookup( input );
-        vm.updateVolumeAttachment( VolumeDetachCallback.this.getRequest( ).getVolumeId( ), "detaching" );
+        vm.updateVolumeAttachment( VolumeDetachCallback.this.getRequest( ).getVolumeId( ), AttachmentState.detaching );
         return vm;
       }
     };
     Entities.asTransaction( VmInstance.class, removeVolAttachment ).apply( this.getRequest( ).getInstanceId( ) );
   }
+  
+  @Override
+  public void fire( DetachVolumeResponseType reply ) {}
 
   /**
    * TODO: DOCUMENT
@@ -117,7 +112,7 @@ public class VolumeDetachCallback extends MessageCallback<DetachVolumeType,Detac
     final Function<String, VmInstance> failedVolDetach = new Function<String, VmInstance>( ) {
       public VmInstance apply( final String input ) {
         VmInstance vm = VmInstances.lookup( input );
-        vm.updateVolumeAttachment( VolumeDetachCallback.this.getRequest( ).getVolumeId( ), "attached" );
+        vm.updateVolumeAttachment( VolumeDetachCallback.this.getRequest( ).getVolumeId( ), AttachmentState.attached );
         return vm;
       }
     };

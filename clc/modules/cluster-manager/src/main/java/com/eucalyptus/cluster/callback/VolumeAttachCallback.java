@@ -64,33 +64,27 @@
 package com.eucalyptus.cluster.callback;
 
 import java.util.NoSuchElementException;
-import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.component.Dispatcher;
 import com.eucalyptus.component.Partition;
-import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.entities.Entities;
-import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.async.AsyncRequests;
-import com.eucalyptus.util.async.FailedRequestException;
 import com.eucalyptus.util.async.MessageCallback;
 import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstances;
+import com.eucalyptus.vm.VmVolumeAttachment.AttachmentState;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.base.Function;
-import com.google.common.base.Functions;
 import edu.ucsb.eucalyptus.msgs.AttachVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.AttachVolumeType;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
 import edu.ucsb.eucalyptus.msgs.DetachStorageVolumeType;
-import edu.ucsb.eucalyptus.msgs.DetachVolumeType;
 
 public class VolumeAttachCallback extends MessageCallback<AttachVolumeType, AttachVolumeResponseType> {
   private final AttachedVolume attachedVolume;
@@ -106,30 +100,19 @@ public class VolumeAttachCallback extends MessageCallback<AttachVolumeType, Atta
     final Function<String, VmInstance> funcName = new Function<String, VmInstance>( ) {
       public VmInstance apply( final String input ) {
         VmInstance vm = VmInstances.lookup( VolumeAttachCallback.this.getRequest( ).getInstanceId( ) );
-        vm.updateVolumeAttachment( VolumeAttachCallback.this.getRequest( ).getVolumeId( ), "attaching" );
+        vm.updateVolumeAttachment( VolumeAttachCallback.this.getRequest( ).getVolumeId( ), AttachmentState.attaching );
         return vm;
       }
     };
-    Entities.asTransaction( VmInstance.class, funcName ).apply( this.getRequest( ).getInstanceId( ) );
     try {
-      VmInstance vm = VmInstances.lookup( this.getRequest( ).getInstanceId( ) );
-      vm.updateVolumeAttachment( this.getRequest( ).getVolumeId( ), "attaching" );
+      Entities.asTransaction( VmInstance.class, funcName ).apply( this.getRequest( ).getInstanceId( ) );
     } catch ( NoSuchElementException e1 ) {
       LOG.error( "Failed to lookup volume attachment state in order to update: " + this.getRequest( ).getVolumeId( ) + " due to " + e1.getMessage( ), e1 );
     }
   }
   
   @Override
-  public void fire( AttachVolumeResponseType reply ) {
-    final Function<String, VmInstance> removeVolAttachment = new Function<String, VmInstance>( ) {
-      public VmInstance apply( final String input ) {
-        VmInstance vm = VmInstances.lookup( input );
-        vm.updateVolumeAttachment( VolumeAttachCallback.this.getRequest( ).getVolumeId( ), "attached" );
-        return vm;
-      }
-    };
-    Entities.asTransaction( VmInstance.class, removeVolAttachment ).apply( this.getRequest( ).getInstanceId( ) );
-  }
+  public void fire( AttachVolumeResponseType reply ) {}
   
   @Override
   public void fireException( Throwable e ) {

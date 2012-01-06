@@ -223,7 +223,7 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
         return input.eachVolumeAttachment( new Predicate<VmVolumeAttachment>( ) {
           @Override
           public boolean apply( VmVolumeAttachment arg0 ) {
-            return arg0.getStatus( ).endsWith( "ing" );
+            return arg0.getAttachmentState( ).isVolatile( );
           }
         } );
       }

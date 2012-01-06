@@ -313,6 +313,12 @@ public class VmInstances {
       }      
       if ( vm == null ) {
         throw new NoSuchElementException( "VmVolumeAttachment: no volume attachment for " + volumeId );
+      } else {
+        try {
+          vm.lookupVolumeAttachment( volumeId );
+        } catch ( NoSuchElementException ex ) {
+          vm = null;
+        }
       }
       db.commit( );
       return vm;
