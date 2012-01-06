@@ -1,6 +1,7 @@
 package com.eucalyptus.cluster.callback;
 
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.CancellationException;
@@ -55,9 +56,18 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
       
       @Override
       public Set<String> get( ) {
-        Collection<VmInstance> clusterInstances = Collections2.filter( VmInstances.list( ), filter );
-        Collection<String> instanceNames = Collections2.transform( clusterInstances, CloudMetadatas.toDisplayName( ) );
-        return Sets.newHashSet( instanceNames );
+        EntityTransaction db = Entities.get( VmInstance.class );
+        try {
+          Collection<VmInstance> clusterInstances = Collections2.filter( VmInstances.list( ), filter );
+          Collection<String> instanceNames = Collections2.transform( clusterInstances, CloudMetadatas.toDisplayName( ) );
+          Set<String> ret = Sets.newHashSet( instanceNames );
+          db.rollback( );
+          return ret;
+        } catch ( Exception ex ) {
+          Logs.extreme( ).error( ex, ex );
+          db.rollback( );
+          return Sets.newHashSet( );
+        }
       }
     } );
   }
