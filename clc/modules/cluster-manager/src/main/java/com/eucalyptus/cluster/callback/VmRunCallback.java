@@ -85,6 +85,7 @@ import com.eucalyptus.util.async.MessageCallback;
 import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstances;
+import com.eucalyptus.vm.VmVolumeAttachment;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Predicate;
@@ -155,12 +156,14 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
         vm.updateAddresses( input.getNetParams( ).getIpAddress( ), input.getNetParams( ).getIgnoredPublicIp( ) );
         if ( VmRunCallback.this.token.getRootVolume( ) != null ) {
           try {
+            String volumeId = VmRunCallback.this.token.getRootVolume( ).getDisplayName( );
+            VmVolumeAttachment volumeAttachment = vm.lookupVolumeAttachment( volumeId );
             ServiceConfiguration scConfig = Topology.lookup( ClusterController.class, vm.lookupPartition( ) );
             Cluster cluster = Clusters.lookup( Topology.lookup( ClusterController.class, vm.lookupPartition( ) ) );
-            String volumeId = VmRunCallback.this.token.getRootVolume( ).getDisplayName( );
             String iqn = cluster.getNode( vm.getServiceTag( ) ).getIqn( );
             final AttachStorageVolumeType attachMsg = new AttachStorageVolumeType( iqn, volumeId  );
-            AsyncRequests.dispatch( scConfig, attachMsg );
+            final AttachStorageVolumeResponseType scReply = AsyncRequests.sendSync( scConfig, attachMsg );
+            volumeAttachment.setRemoteDevice( scReply.getRemoteDeviceString( ) );
           } catch ( Exception ex ) {
             LOG.error( ex );
             Logs.extreme( ).error( ex, ex );
