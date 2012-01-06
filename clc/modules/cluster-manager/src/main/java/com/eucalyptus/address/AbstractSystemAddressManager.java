@@ -268,19 +268,29 @@ public abstract class AbstractSystemAddressManager {
     
     private static VmInstance maybeFindVm( final String instanceId, final String publicIp, final String privateIp ) {
       VmInstance vm = null;
-      try {
-        vm = VmInstances.lookup( instanceId );
-      } catch ( NoSuchElementException ex ) {
+      if ( instanceId != null ) {
+        try {
+          vm = VmInstances.lookup( instanceId );
+        } catch ( NoSuchElementException ex ) {
+          Logs.extreme( ).error( ex );
+        }
+      } else if ( privateIp != null ) {
         try {
           vm = VmInstances.lookupByPrivateIp( privateIp );
-        } catch ( final NoSuchElementException e ) {
-          Logs.exhaust( ).error( e );
+        } catch ( NoSuchElementException ex ) {
+          Logs.extreme( ).error( ex );
+        }
+      } else if ( publicIp != null ) {
+        try {
+          vm = VmInstances.lookupByPublicIp( publicIp );
+        } catch ( NoSuchElementException ex ) {
+          Logs.extreme( ).error( ex );
         }
       }
       if ( vm != null ) {
-        LOG.trace( "Candidate vm which claims this address: " + vm.getInstanceId( ) + " " + vm.getState( ) + " " + publicIp );
+        LOG.debug( "Candidate vm which claims this address: " + vm.getInstanceId( ) + " " + vm.getState( ) + " " + publicIp );
         if ( publicIp.equals( vm.getPublicAddress( ) ) ) {
-          LOG.trace( "Found vm which claims this address: " + vm.getInstanceId( ) + " " + vm.getState( ) + " " + publicIp );
+          LOG.debug( "Found vm which claims this address: " + vm.getInstanceId( ) + " " + vm.getState( ) + " " + publicIp );
         }
       }
       return vm;
