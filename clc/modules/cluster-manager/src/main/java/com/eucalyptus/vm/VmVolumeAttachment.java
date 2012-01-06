@@ -170,11 +170,14 @@ public class VmVolumeAttachment implements Comparable<VmVolumeAttachment> {
     return new Function<VmVolumeAttachment, AttachedVolume>( ) {
       @Override
       public AttachedVolume apply( VmVolumeAttachment vol ) {
+        AttachedVolume attachment = null;
         if ( vm == null ) {
-          return new AttachedVolume( vol.getVolumeId( ), vol.getVmInstance( ).getInstanceId( ), vol.getDevice( ), vol.getRemoteDevice( ) );
+          attachment = new AttachedVolume( vol.getVolumeId( ), vol.getVmInstance( ).getInstanceId( ), vol.getDevice( ), vol.getRemoteDevice( ) );
         } else {
-          return new AttachedVolume( vol.getVolumeId( ), vm.getInstanceId( ), vol.getDevice( ), vol.getRemoteDevice( ) );
+          attachment = new AttachedVolume( vol.getVolumeId( ), vm.getInstanceId( ), vol.getDevice( ), vol.getRemoteDevice( ) );
         }
+        attachment.setAttachTime( vol.getAttachTime( ) );
+        return attachment;
       }
     };
   }
