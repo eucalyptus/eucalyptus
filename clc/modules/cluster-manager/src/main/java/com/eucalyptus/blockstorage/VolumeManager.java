@@ -437,7 +437,7 @@ public class VolumeManager {
       AsyncRequests.sendSync( scVm, new DetachStorageVolumeType( cluster.getNode( vm.getServiceTag( ) ).getIqn( ), volume.getVolumeId( ) ) );
     } catch ( Exception e ) {
       LOG.debug( e, e );
-      throw new EucalyptusCloudException( e.getMessage( ) );
+//GRZE: attach is idempotent, failure here is ok.      throw new EucalyptusCloudException( e.getMessage( ) );
     }
     request.setVolumeId( volume.getVolumeId( ) );
     request.setRemoteDevice( volume.getRemoteDevice( ) );
