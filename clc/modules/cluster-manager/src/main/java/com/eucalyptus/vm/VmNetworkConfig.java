@@ -207,10 +207,10 @@ public class VmNetworkConfig {
    * @return
    */
   public static VmNetworkConfig exampleWithPrivateIp( String ip ) {
-    return new VmNetworkConfig( ip, null );
+    return VmNetworkConfig.exampleWithIps( ip, null );
   }
   public static VmNetworkConfig exampleWithPublicIp( String ip ) {
-    return new VmNetworkConfig( null, ip );
+    return VmNetworkConfig.exampleWithIps( null, ip );
   }
   public static VmNetworkConfig exampleWithIps( String privateIp, String publicIp ) {
     return new VmNetworkConfig( privateIp, publicIp );

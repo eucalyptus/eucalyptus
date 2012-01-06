@@ -281,14 +281,9 @@ public class VmInstances {
   public static VmInstance lookupByPrivateIp( final String ip ) throws NoSuchElementException {
     EntityTransaction db = Entities.get( VmInstance.class );
     try {
-      VmInstance vmExample = VmInstance.create( );
-      vmExample.setNetworkConfig( VmNetworkConfig.exampleWithPrivateIp( ip ) );
-      VmInstance vm = ( VmInstance ) Entities.createCriteria( VmInstance.class )
+      VmInstance vmExample = VmInstance.exampleWithPrivateIp( ip );
+      VmInstance vm = ( VmInstance ) Entities.createCriteriaUnique( VmInstance.class )
                                              .add( Example.create( vmExample ).enableLike( MatchMode.EXACT ) )
-                                             .setCacheable( true )
-                                             .setMaxResults( 1 )
-                                             .setFetchSize( 1 )
-                                             .setFirstResult( 0 )
                                              .uniqueResult( );
       if ( vm == null ) {
         throw new NoSuchElementException( "VmInstance with private ip: " + ip );
@@ -302,17 +297,39 @@ public class VmInstances {
     }
   }
   
+  public static VmInstance lookupByVolumeId( final String volumeId ) {
+    VmInstance vm = null;
+    EntityTransaction db = Entities.get( VmInstance.class );
+    try {
+      VmInstance vmTransientExample = VmInstance.exampleWithTransientVolume( volumeId );
+      vm = ( VmInstance ) Entities.createCriteriaUnique( VmInstance.class )
+                                  .add( Example.create( vmTransientExample ).enableLike( MatchMode.EXACT ) )
+                                  .uniqueResult( );
+      if ( vm == null ) {
+        VmInstance vmPersistentExample = VmInstance.exampleWithPersistentVolume( volumeId );
+        vm = ( VmInstance ) Entities.createCriteriaUnique( VmInstance.class )
+                                    .add( Example.create( vmPersistentExample ).enableLike( MatchMode.EXACT ) )
+                                    .uniqueResult( );
+      }      
+      if ( vm == null ) {
+        throw new NoSuchElementException( "VmVolumeAttachment: no volume attachment for " + volumeId );
+      }
+      db.commit( );
+      return vm;
+    } catch ( Exception ex ) {
+      Logs.exhaust( ).error( ex, ex );
+      db.rollback( );
+      throw new NoSuchElementException( ex.getMessage( ) );
+    }
+    
+  }
+  
   public static VmInstance lookupByPublicIp( final String ip ) throws NoSuchElementException {
     EntityTransaction db = Entities.get( VmInstance.class );
     try {
-      VmInstance vmExample = VmInstance.create( );
-      vmExample.setNetworkConfig( VmNetworkConfig.exampleWithPublicIp( ip ) );
-      VmInstance vm = ( VmInstance ) Entities.createCriteria( VmInstance.class )
+      VmInstance vmExample = VmInstance.exampleWithPublicIp( ip );
+      VmInstance vm = ( VmInstance ) Entities.createCriteriaUnique( VmInstance.class )
                                              .add( Example.create( vmExample ).enableLike( MatchMode.EXACT ) )
-                                             .setCacheable( true )
-                                             .setMaxResults( 1 )
-                                             .setFetchSize( 1 )
-                                             .setFirstResult( 0 )
                                              .uniqueResult( );
       if ( vm == null ) {
         throw new NoSuchElementException( "VmInstance with public ip: " + ip );

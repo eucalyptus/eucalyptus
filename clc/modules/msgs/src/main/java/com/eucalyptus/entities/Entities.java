@@ -336,7 +336,12 @@ public class Entities {
   public static Criteria createCriteria( final Class class1 ) {
     return getTransaction( class1 ).getTxState( ).getSession( ).createCriteria( class1 );
   }
+
+  public static Criteria createCriteriaUnique( final Class class1 ) {
+    return getTransaction( class1 ).getTxState( ).getSession( ).createCriteria( class1 ).setCacheable( true ).setFetchSize( 1 ).setMaxResults( 1 ).setFirstResult( 0 );
+  }
   
+
   /**
    * Invokes underlying persist implementation per jsr-220
    * 

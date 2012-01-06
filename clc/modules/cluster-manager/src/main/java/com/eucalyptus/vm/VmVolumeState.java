@@ -103,6 +103,9 @@ public class VmVolumeState {
     this.vmInstance = vmInstance;
   }
   
+  public static VmVolumeAttachment exampleWithVolumeId( final String volumeId ) {
+    VmVolumeState ret = new VmVolumeState( );
+  }
   
   private VmVolumeAttachment resolveVolumeId( final String volumeId ) throws NoSuchElementException {
     final VmVolumeAttachment v = Iterables.find( this.attachments, VmVolumeAttachment.volumeIdFilter( volumeId ) );

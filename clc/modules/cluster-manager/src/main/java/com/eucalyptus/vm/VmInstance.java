@@ -1379,7 +1379,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     try {
       final VmInstance entity = Entities.merge( this );
       final Volume volEntity = Entities.merge( vol );
-      VmVolumeAttachment attachVol = new VmVolumeAttachment( this, vol.getDisplayName( ), deviceName, vol.getRemoteDevice( ), "attaching", new Date( ), false ); 
+      VmVolumeAttachment attachVol = new VmVolumeAttachment( this, vol.getDisplayName( ), deviceName, vol.getRemoteDevice( ), "attaching", new Date( ), false );
       volEntity.setState( State.BUSY );
       entity.getTransientVolumeState( ).addVolumeAttachment( attachVol );
       db.commit( );
@@ -1388,7 +1388,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       db.rollback( );
     }
   }
-
+  
   public void addPersistentVolume( final String deviceName, final Volume vol ) {
     final EntityTransaction db = Entities.get( VmInstance.class );
     try {
@@ -1748,6 +1748,33 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     this.networkGroups = networkGroups;
   }
   
+  /**
+   * @param exampleWithPrivateIp
+   */
+  void setNetworkConfig( final VmNetworkConfig networkConfig ) {
+    this.networkConfig = networkConfig;
+  }
+  
+  public Date getExpiration( ) {
+    return this.expiration;
+  }
+  
+  public Integer getLaunchIndex( ) {
+    return this.getLaunchRecord( ).getLaunchIndex( );
+  }
+  
+  public SshKeyPair getKeyPair( ) {
+    return this.getBootRecord( ).getSshKeyPair( );
+  }
+  
+  public void release( ) {
+    try {
+      Entities.asTransaction( VmInstance.class, Transitions.DELETE, VmInstances.TX_RETRIES ).apply( this );
+    } catch ( final Exception ex ) {
+      Logs.extreme( ).error( ex, ex );
+    }
+  }
+  
   @Override
   public int hashCode( ) {
     final int prime = 31;
@@ -1787,32 +1814,32 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     return new VmInstance( );
   }
   
-  /**
-   * @param exampleWithPrivateIp
-   */
-  void setNetworkConfig( final VmNetworkConfig networkConfig ) {
-    this.networkConfig = networkConfig;
+  public static VmInstance exampleWithTransientVolume( final String volumeId ) {
+    VmInstance vmExample = VmInstance.create( );
+    VmVolumeAttachment ex = new VmVolumeAttachment( );
+    ex.setVolumeId( volumeId );
+    vmExample.getTransientVolumeState( ).addVolumeAttachment( ex );
+    return vmExample;
   }
   
-  public void release( ) {
-    try {
-      Entities.asTransaction( VmInstance.class, Transitions.DELETE, VmInstances.TX_RETRIES ).apply( this );
-    } catch ( final Exception ex ) {
-      Logs.extreme( ).error( ex, ex );
-    }
+  public static VmInstance exampleWithPersistentVolume( final String volumeId ) {
+    VmInstance vmExample = new VmInstance( );
+    VmVolumeAttachment ex = new VmVolumeAttachment( );
+    ex.setVolumeId( volumeId );
+    vmExample.getBootRecord( ).getPersistentVolumes( ).add( ex );
+    return vmExample;
   }
   
-  public Date getExpiration( ) {
-    return this.expiration;
+  public static VmInstance exampleWithPublicIp( String ip ) {
+    VmInstance vmExample = VmInstance.create( );
+    vmExample.setNetworkConfig( VmNetworkConfig.exampleWithPublicIp( ip ) );
+    return vmExample;
   }
   
-  public Integer getLaunchIndex( ) {
-    return this.getLaunchRecord( ).getLaunchIndex( );
+  public static VmInstance exampleWithPrivateIp( String ip ) {
+    VmInstance vmExample = VmInstance.create( );
+    vmExample.setNetworkConfig( VmNetworkConfig.exampleWithPrivateIp( ip ) );
+    return vmExample;
   }
-  
-  public SshKeyPair getKeyPair( ) {
-    return this.getBootRecord( ).getSshKeyPair( );
-  }
-
   
 }
