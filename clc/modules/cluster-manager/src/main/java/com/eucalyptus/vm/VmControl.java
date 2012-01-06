@@ -262,7 +262,7 @@ public class VmControl {
     try {
       final Context ctx = Contexts.lookup( );
       final List<TerminateInstancesItemType> results = reply.getInstancesSet( );
-      Iterables.all( request.getInstancesSet( ), new Predicate<String>( ) {
+      Predicate<String> terminatePredicate = new Predicate<String>( ) {
         @Override
         public boolean apply( final String instanceId ) {
           EntityTransaction db = Entities.get( VmInstance.class );
@@ -311,7 +311,8 @@ public class VmControl {
           }
           return true;
         }
-      } );
+      };
+      Iterables.filter( request.getInstancesSet( ), terminatePredicate ); 
       reply.set_return( !reply.getInstancesSet( ).isEmpty( ) );
       return reply;
     } catch ( final Throwable e ) {
