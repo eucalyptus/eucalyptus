@@ -32,8 +32,9 @@ from boto.roboto.awsqueryservice import AWSQueryService
 from boto.roboto.awsqueryrequest import AWSQueryRequest
 from boto.roboto.param import Param
 import re
+import sys
 
-__version__ = '1.0a'
+__version__ = '@EUCA_VERSION@'
 
 class EucAdmin(AWSQueryService):
 
@@ -63,3 +64,13 @@ class EucAdmin(AWSQueryService):
         print s.replace("\n","")
         sys.exit(1)
 
+def print_version_if_necessary():
+    """
+    If '--version' appears in sys.argv then print the version and exit
+    successfully.
+
+    This is a hackish workaround for a roboto limitation in boto 2.1.1.
+    """
+    if '--version' in sys.argv:
+        print 'eucalyptus', __version__
+        sys.exit()

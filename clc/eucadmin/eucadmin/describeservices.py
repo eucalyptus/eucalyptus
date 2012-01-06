@@ -143,4 +143,5 @@ class DescribeServices(AWSQueryRequest):
         return self.send(**args)
 
     def main_cli(self):
-      self.do_cli()
+        eucadmin.print_version_if_necessary()
+        self.do_cli()
