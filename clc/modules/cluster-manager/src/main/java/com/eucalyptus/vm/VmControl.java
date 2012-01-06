@@ -265,54 +265,55 @@ public class VmControl {
       Predicate<String> terminatePredicate = new Predicate<String>( ) {
         @Override
         public boolean apply( final String instanceId ) {
-          EntityTransaction db = Entities.get( VmInstance.class );
+          String oldState = null, newState = null;
+          int oldCode = 0, newCode = 0;
+          TerminateInstancesItemType result = null;
           try {
-            try {
-              String oldState = null, newState = null;
-              int oldCode = 0, newCode = 0;
-              try {
-                VmInstance vm = RestrictedTypes.doPrivileged( instanceId, VmInstance.class );
-                oldCode = vm.getState( ).getCode( );
-                oldState = vm.getState( ).getName( );
-                if ( VmState.STOPPED.apply( vm ) ) {
-                  newCode = VmState.TERMINATED.getCode( );
-                  newState = VmState.TERMINATED.getName( );
-                  VmInstances.terminated( vm );
-                } else if ( VmStateSet.RUN.apply( vm ) ) {
-                  newCode = VmState.SHUTTING_DOWN.getCode( );
-                  newState = VmState.SHUTTING_DOWN.getName( );
-                  VmInstances.shutDown( vm );
-                } else if ( VmState.SHUTTING_DOWN.apply( vm ) ) {
-                  newCode = VmState.SHUTTING_DOWN.getCode( );
-                  newState = VmState.SHUTTING_DOWN.getName( );
-                } else if ( VmState.TERMINATED.apply( vm ) ) {
-                  oldCode = newCode = VmState.TERMINATED.getCode( );
-                  oldState = newState = VmState.TERMINATED.getName( );
-                  VmInstances.delete( vm );
-                }
-                results.add( new TerminateInstancesItemType( instanceId, oldCode, oldState, newCode, newState ) );
-              } catch ( final TerminatedInstanceException e ) {
-                oldCode = newCode = VmState.TERMINATED.getCode( );
-                oldState = newState = VmState.TERMINATED.getName( );
-                VmInstances.delete( instanceId );
-                results.add( new TerminateInstancesItemType( instanceId, oldCode, oldState, newCode, newState ) );
-              } catch ( final NoSuchElementException e ) {
-                LOG.debug( "Ignoring terminate request for non-existant instance: " + instanceId );
-              }
-              db.commit( );
-            } catch ( final TransactionException e ) {
-              db.rollback( );
-            } catch ( final NoSuchElementException e ) {
-              db.rollback( );
+            VmInstance vm = RestrictedTypes.doPrivileged( instanceId, VmInstance.class );
+            oldCode = vm.getState( ).getCode( );
+            oldState = vm.getState( ).getName( );
+            if ( VmState.STOPPED.apply( vm ) ) {
+              newCode = VmState.TERMINATED.getCode( );
+              newState = VmState.TERMINATED.getName( );
+              VmInstances.terminated( vm );
+            } else if ( VmStateSet.RUN.apply( vm ) ) {
+              newCode = VmState.SHUTTING_DOWN.getCode( );
+              newState = VmState.SHUTTING_DOWN.getName( );
+              VmInstances.shutDown( vm );
+            } else if ( VmState.SHUTTING_DOWN.apply( vm ) ) {
+              newCode = VmState.SHUTTING_DOWN.getCode( );
+              newState = VmState.SHUTTING_DOWN.getName( );
+            } else if ( VmState.TERMINATED.apply( vm ) ) {
+              oldCode = newCode = VmState.TERMINATED.getCode( );
+              oldState = newState = VmState.TERMINATED.getName( );
+              VmInstances.delete( vm );
             }
-          } catch ( Exception ex ) {
-            Logs.exhaust( ).error( ex, ex );
-            db.rollback( );
+            result = new TerminateInstancesItemType( instanceId, oldCode, oldState, newCode, newState );
+          } catch ( final TerminatedInstanceException e ) {
+            oldCode = newCode = VmState.TERMINATED.getCode( );
+            oldState = newState = VmState.TERMINATED.getName( );
+            VmInstances.delete( instanceId );
+            result = new TerminateInstancesItemType( instanceId, oldCode, oldState, newCode, newState );
+          } catch ( final NoSuchElementException e ) {
+            LOG.debug( "Ignoring terminate request for non-existant instance: " + instanceId );
+          } catch ( final Exception e ) {
+            throw Exceptions.toUndeclared( e );
+          }
+          if ( result != null && !results.contains( results ) ) {
+            results.add( result );
           }
           return true;
         }
       };
-      Iterables.all( request.getInstancesSet( ), terminatePredicate ); 
+      Predicate<String> terminateTx = Entities.asTransaction( VmInstance.class, terminatePredicate, VmInstances.TX_RETRIES );
+      for ( String instanceId : request.getInstancesSet( ) ) {
+        try {
+          terminateTx.apply( instanceId );
+        } catch ( Exception ex ) {
+          LOG.error( ex );
+          Logs.extreme( ).error( ex, ex );
+        }
+      }
       reply.set_return( !reply.getInstancesSet( ).isEmpty( ) );
       return reply;
     } catch ( final Throwable e ) {
