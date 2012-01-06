@@ -151,7 +151,6 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
       public Boolean apply( final VmInfo input ) {
         final VmInstance vm = VmInstances.lookup( input.getInstanceId( ) );
         vm.updateAddresses( input.getNetParams( ).getIpAddress( ), input.getNetParams( ).getIgnoredPublicIp( ) );
-        final ServiceConfiguration ccConfig = Topology.lookup( ClusterController.class, vm.lookupPartition( ) );
         final Address addr = VmRunCallback.this.token.getAddress( );
         if ( addr != null ) {
           try {
@@ -161,10 +160,7 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
                            public void fire( final BaseMessage response ) {
                              vm.updateAddresses( addr.getInstanceAddress( ), addr.getName( ) );
                            }
-                         } ).sendSync( ccConfig );
-          } catch ( InterruptedException ex ) {
-            Exceptions.maybeInterrupted( ex );
-            Addresses.release( addr );
+                         } ).dispatch( vm.getPartition( ) );
           } catch ( Exception ex ) {
             LOG.error( ex );
             Logs.extreme( ).error( ex, ex );
