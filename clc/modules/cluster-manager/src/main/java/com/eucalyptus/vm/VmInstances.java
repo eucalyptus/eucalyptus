@@ -388,10 +388,21 @@ public class VmInstances {
           LOG.debug( e1, e1 );
         }
       }
+    } catch ( final Exception e ) {
+      LOG.error( e );
+      Logs.extreme( ).error( e, e );
+    }
+    try {
       VmInstances.cleanUpAttachedVolumes( vm );
+    } catch ( Exception ex ) {
+      LOG.error( ex );
+      Logs.extreme( ).error( ex, ex );
+    }
+    try {
       AsyncRequests.newRequest( new TerminateCallback( vm.getInstanceId( ) ) ).dispatch( vm.getPartition( ) );
-    } catch ( final Throwable e ) {
-      LOG.error( e, e );
+    } catch ( Exception ex ) {
+      LOG.error( ex );
+      Logs.extreme( ).error( ex, ex );
     }
   }
   
