@@ -1351,7 +1351,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
    * @param volumeId
    * @return
    */
-  public AttachedVolume lookupVolumeAttachment( final String volumeId ) {
+  public VmVolumeAttachment lookupVolumeAttachment( final String volumeId ) {
     final EntityTransaction db = Entities.get( VmInstance.class );
     try {
       final VmInstance entity = Entities.merge( this );
@@ -1362,9 +1362,8 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       } catch ( final NoSuchElementException ex ) {
         volumeAttachment = Iterables.find( entity.getBootRecord( ).getPersistentVolumes( ), VmVolumeAttachment.volumeIdFilter( volumeId ) );
       }
-      ret = VmVolumeAttachment.asAttachedVolume( entity ).apply( volumeAttachment );
       db.commit( );
-      return ret;
+      return volumeAttachment;
     } catch ( final Exception ex ) {
       Logs.exhaust( ).error( ex, ex );
       db.rollback( );
@@ -1455,19 +1454,19 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
    * @param volumeId
    * @return
    */
-  public AttachedVolume removeVolumeAttachment( final String volumeId ) {
+  public VmVolumeAttachment removeVolumeAttachment( final String volumeId ) {
     final EntityTransaction db = Entities.get( VmInstance.class );
     try {
       final VmInstance entity = Entities.merge( this );
       final Volume volEntity = Volumes.lookup( null, volumeId );
-      final AttachedVolume ret = VmVolumeAttachment.asAttachedVolume( entity ).apply( entity.transientVolumeState.removeVolumeAttachment( volumeId ) );
+      final VmVolumeAttachment ret = entity.transientVolumeState.removeVolumeAttachment( volumeId );
       if ( State.BUSY.equals( volEntity.getState( ) ) ) {
         volEntity.setState( State.EXTANT );
       }
       db.commit( );
       return ret;
     } catch ( final Exception ex ) {
-      Logs.exhaust( ).error( ex, ex );
+      Logs.extreme( ).error( ex, ex );
       db.rollback( );
       throw new NoSuchElementException( "Failed to lookup volume: " + volumeId );
     }

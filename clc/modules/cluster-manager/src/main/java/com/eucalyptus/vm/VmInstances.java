@@ -297,10 +297,11 @@ public class VmInstances {
     }
   }
   
-  public static VmInstance lookupByVolumeId( final String volumeId ) {
-    VmInstance vm = null;
+  public static VmVolumeAttachment lookupVolumeAttachment( final String volumeId ) {
+    VmVolumeAttachment ret = null;
     EntityTransaction db = Entities.get( VmInstance.class );
     try {
+      VmInstance vm = null;
       VmInstance vmTransientExample = VmInstance.exampleWithTransientVolume( volumeId );
       vm = ( VmInstance ) Entities.createCriteriaUnique( VmInstance.class )
                                   .add( Example.create( vmTransientExample ).enableLike( MatchMode.EXACT ) )
@@ -311,17 +312,21 @@ public class VmInstances {
                                     .add( Example.create( vmPersistentExample ).enableLike( MatchMode.EXACT ) )
                                     .uniqueResult( );
       }      
-      if ( vm == null ) {
-        throw new NoSuchElementException( "VmVolumeAttachment: no volume attachment for " + volumeId );
-      } else {
+      if ( vm != null ) {
         try {
-          vm.lookupVolumeAttachment( volumeId );
+          ret = vm.lookupVolumeAttachment( volumeId );
+          if ( ret.getVmInstance( ) == null ) {
+            ret.setVmInstance( vm );
+          }
         } catch ( NoSuchElementException ex ) {
-          vm = null;
+          ret = null;
         }
       }
+      if ( vm == null || ret == null ) {
+        throw new NoSuchElementException( "VmVolumeAttachment: no volume attachment for " + volumeId );
+      }
       db.commit( );
-      return vm;
+      return ret;
     } catch ( Exception ex ) {
       Logs.exhaust( ).error( ex, ex );
       db.rollback( );

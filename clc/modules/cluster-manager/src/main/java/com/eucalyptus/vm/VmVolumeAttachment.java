@@ -152,7 +152,7 @@ public class VmVolumeAttachment implements Comparable<VmVolumeAttachment> {
     return new Function<AttachedVolume, VmVolumeAttachment>( ) {
       @Override
       public VmVolumeAttachment apply( AttachedVolume vol ) {
-        return new VmVolumeAttachment( vm, vol.getVolumeId( ), vol.getDevice( ), vol.getRemoteDevice( ), vol.getStatus( ), vol.getAttachTime( ) );
+        return new VmVolumeAttachment( vm, vol.getVolumeId( ), vol.getDevice( ), vol.getRemoteDevice( ), vol.getStatus( ), vol.getAttachTime( ), false );
       }
     };
   }
@@ -170,7 +170,11 @@ public class VmVolumeAttachment implements Comparable<VmVolumeAttachment> {
     return new Function<VmVolumeAttachment, AttachedVolume>( ) {
       @Override
       public AttachedVolume apply( VmVolumeAttachment vol ) {
-        return new AttachedVolume( vol.getVolumeId( ), vm.getInstanceId( ), vol.getDevice( ), vol.getRemoteDevice( ) );
+        if ( vm == null ) {
+          return new AttachedVolume( vol.getVolumeId( ), vol.getVmInstance( ).getInstanceId( ), vol.getDevice( ), vol.getRemoteDevice( ) );
+        } else {
+          return new AttachedVolume( vol.getVolumeId( ), vm.getInstanceId( ), vol.getDevice( ), vol.getRemoteDevice( ) );
+        }
       }
     };
   }
@@ -179,7 +183,7 @@ public class VmVolumeAttachment implements Comparable<VmVolumeAttachment> {
 //    return this.volume;
 //  }
   
-  VmInstance getVmInstance( ) {
+  public VmInstance getVmInstance( ) {
     return this.vmInstance;
   }
   
@@ -235,22 +239,6 @@ public class VmVolumeAttachment implements Comparable<VmVolumeAttachment> {
     this.deleteOnTerminate = value;
   }
   
-  public boolean equals( final Object o ) {
-    if ( this == o ) return true;
-    if ( o == null || !getClass( ).equals( o.getClass( ) ) ) return false;
-    VmVolumeAttachment that = ( VmVolumeAttachment ) o;
-    if ( this.volumeId != null
-                              ? !this.volumeId.equals( that.getVolumeId( ) )
-                              : that.getVolumeId( ) != null ) return false;
-    return true;
-  }
-  
-  public int hashCode( ) {
-    return ( this.volumeId != null
-                                  ? this.volumeId.hashCode( )
-                                  : 0 );
-  }
-  
   public int compareTo( VmVolumeAttachment that ) {
     return this.volumeId.compareTo( that.getVolumeId( ) );
   }
@@ -260,7 +248,7 @@ public class VmVolumeAttachment implements Comparable<VmVolumeAttachment> {
    */
   public void setInstanceId( String instanceId ) {}
   
-  private void setVmInstance( VmInstance vmInstance ) {
+  void setVmInstance( VmInstance vmInstance ) {
     this.vmInstance = vmInstance;
   }
   
@@ -298,6 +286,36 @@ public class VmVolumeAttachment implements Comparable<VmVolumeAttachment> {
         return input.getVolumeId( ).equals( volumeId );
       }
     };
+  }
+
+  @Override
+  public int hashCode( ) {
+    final int prime = 31;
+    int result = 1;
+    result = prime * result + ( ( this.volumeId == null ) ? 0 : this.volumeId.hashCode( ) );
+    return result;
+  }
+
+  @Override
+  public boolean equals( Object obj ) {
+    if ( this == obj ) {
+      return true;
+    }
+    if ( obj == null ) {
+      return false;
+    }
+    if ( getClass( ) != obj.getClass( ) ) {
+      return false;
+    }
+    VmVolumeAttachment other = ( VmVolumeAttachment ) obj;
+    if ( this.volumeId == null ) {
+      if ( other.volumeId != null ) {
+        return false;
+      }
+    } else if ( !this.volumeId.equals( other.volumeId ) ) {
+      return false;
+    }
+    return true;
   }
   
 }

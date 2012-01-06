@@ -104,6 +104,7 @@ import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstances;
+import com.eucalyptus.vm.VmVolumeAttachment;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.base.Function;
 import com.google.common.base.Predicates;
@@ -341,7 +342,7 @@ public class VolumeManager {
       /** no attachment **/
     }
     try {
-      VmInstances.lookupByVolumeId( volumeId );
+      VmInstances.lookupVolumeAttachment( volumeId );
       throw new EucalyptusCloudException( "Volume already attached: " + request.getVolumeId( ) );
     } catch ( Exception ex1 ) {
     }
@@ -396,13 +397,12 @@ public class VolumeManager {
     
     VmInstance vm = null;
     AttachedVolume volume = null;
-    for ( VmInstance iter : VmInstances.list( Predicates.not( VmState.TERMINATED ) ) ) {
-      try {
-        volume = iter.lookupVolumeAttachment( request.getVolumeId( ) );
-        vm = iter;
-      } catch ( NoSuchElementException ex ) {
-        /** no such attachment **/
-      }
+    try {
+      VmVolumeAttachment vmVolAttach = VmInstances.lookupVolumeAttachment( request.getVolumeId( ) );
+      volume = VmVolumeAttachment.asAttachedVolume( vmVolAttach.getVmInstance( ) ).apply( vmVolAttach );
+      vm = vmVolAttach.getVmInstance( );
+    } catch ( NoSuchElementException ex ) {
+      /** no such attachment **/
     }
     if ( volume == null ) {
       throw new EucalyptusCloudException( "Volume is not attached: " + request.getVolumeId( ) );

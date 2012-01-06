@@ -63,6 +63,7 @@
 
 package com.eucalyptus.vm;
 
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -144,6 +145,8 @@ public class VmVolumeState {
   public void addVolumeAttachment( final VmVolumeAttachment volume ) {
     final String volumeId = volume.getVolumeId( );
     volume.setStatus( AttachmentState.attaching.name( ) );
+    volume.setAttachTime( volume.getAttachTime( ) != null ? volume.getAttachTime( ) : new Date( ) );
+    volume.setInstanceId( this.getVmInstance( ).getInstanceId( ) );
     if ( !this.attachments.add( volume ) ) {
       Exceptions.trace( "Failed to add volume to attachment set: " + volume );
     }
@@ -179,7 +182,8 @@ public class VmVolumeState {
     for ( String volId : intersection ) {
       try {
         VmVolumeAttachment ncVolumeAttachment = ncAttachedVolMap.get( volId );
-        final AttachmentState localState = this.lookupVolumeAttachment( volId ).getAttachmentState( );
+        VmVolumeAttachment localVolumeAttachment = this.lookupVolumeAttachment( volId );
+        final AttachmentState localState = localVolumeAttachment.getAttachmentState( );
         final AttachmentState remoteState = AttachmentState.parse( ncVolumeAttachment.getStatus( ) );
         if ( !localState.isVolatile( ) ) {
           if ( AttachmentState.detached.equals( remoteState ) ) {

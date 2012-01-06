@@ -145,8 +145,7 @@ public class StorageUtil {
     
     AttachedVolume vmAttachedVol = null;
     try {
-      VmInstance vm = VmInstances.lookupByVolumeId( v.getDisplayName( ) );
-      vmAttachedVol = vm.lookupVolumeAttachment( v.getDisplayName( ) );
+      VmInstances.lookupVolumeAttachment( v.getDisplayName( ) );
       v.setState( State.BUSY );
     } catch ( NoSuchElementException ex ) {
       v.setMappedState( status );
