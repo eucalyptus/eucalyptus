@@ -188,7 +188,7 @@ public class Volumes {
   }
   
   public static Volume createStorageVolume( final ServiceConfiguration sc, final UserFullName owner, final String snapId, final Integer newSize, final BaseMessage request ) throws ExecutionException {
-    final String newId = Crypto.generateId( owner.getAccountNumber( ), ID_PREFIX );
+    final String newId = Crypto.generateId( owner.getUniqueId( ), ID_PREFIX );
     final Volume newVol = Transactions.save( Volume.create( sc, owner, snapId, newSize, newId ), new Callback<Volume>( ) {
       
       @Override

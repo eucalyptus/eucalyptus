@@ -64,10 +64,10 @@
 package com.eucalyptus.cloud.run;
 
 import java.util.NoSuchElementException;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
-import com.eucalyptus.address.Address;
 import com.eucalyptus.blockstorage.Volume;
 import com.eucalyptus.blockstorage.Volumes;
 import com.eucalyptus.cloud.ResourceToken;
@@ -94,8 +94,6 @@ import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Threads;
-import com.eucalyptus.util.Callback;
-import com.eucalyptus.util.Callback.Success;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.LogUtil;
@@ -115,7 +113,6 @@ import edu.ucsb.eucalyptus.cloud.VmKeyInfo;
 import edu.ucsb.eucalyptus.cloud.VmRunResponseType;
 import edu.ucsb.eucalyptus.msgs.AttachStorageVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.AttachStorageVolumeType;
-import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType;
 import edu.ucsb.eucalyptus.msgs.DescribeStorageVolumesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeStorageVolumesType;
@@ -151,15 +148,16 @@ public class ClusterAllocator implements Runnable {
       try {
         EventRecord.here( ClusterAllocator.class, EventType.VM_PREPARE, LogUtil.dumpObject( allocInfo ) ).info( );
         final ServiceConfiguration config = Topology.lookup( ClusterController.class, allocInfo.getPartition( ) );
-        final Runnable runnable = new Runnable( ) {
+        final Callable<Boolean> runnable = new Callable<Boolean>( ) {
           @Override
-          public void run( ) {
+          public Boolean call( ) {
             try {
               new ClusterAllocator( allocInfo ).run( );
             } catch ( final Exception ex ) {
               LOG.warn( "Failed to prepare allocator for: " + allocInfo.getAllocationTokens( ) );
               LOG.error( "Failed to prepare allocator for: " + allocInfo.getAllocationTokens( ), ex );
             }
+            return Boolean.TRUE;
           }
         };
         Threads.enqueue( config, 32, runnable );
@@ -240,7 +238,11 @@ public class ClusterAllocator implements Runnable {
           Volume vol = null;
           if ( !vm.getBootRecord( ).hasPersistentVolumes( ) ) {
             vol = Volumes.createStorageVolume( sc, this.allocInfo.getOwnerFullName( ), imgInfo.getSnapshotId( ), sizeGb, this.allocInfo.getRequest( ) );
-            vm.addPersistentVolume( "/dev/sda1", vol );
+            if ( deleteOnTerminate ) {
+              vm.addPersistentVolume( "/dev/sda1", vol );
+            } else {
+              vm.addPermanentVolume( "/dev/sda1", vol );
+            }
           } else {
             final VmVolumeAttachment volumeAttachment = vm.getBootRecord( ).getPersistentVolumes( ).iterator( ).next( );
             vol = Volumes.lookup( null, volumeAttachment.getVolumeId( ) );            

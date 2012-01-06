@@ -24,6 +24,7 @@ import com.eucalyptus.vm.VmInstances.TerminatedInstanceException;
 import com.eucalyptus.vm.VmType;
 import com.eucalyptus.vm.VmTypes;
 import com.google.common.base.Function;
+import com.eucalyptus.vm.VmVolumeAttachment;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
@@ -34,7 +35,6 @@ import com.google.common.collect.Sets;
 import edu.ucsb.eucalyptus.cloud.VmDescribeResponseType;
 import edu.ucsb.eucalyptus.cloud.VmDescribeType;
 import edu.ucsb.eucalyptus.cloud.VmInfo;
-import edu.ucsb.eucalyptus.msgs.AttachedVolume;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
 public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescribeType, VmDescribeResponseType> {
@@ -227,9 +227,9 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
       
       @Override
       public boolean apply( VmInstance input ) {
-        return input.eachVolumeAttachment( new Predicate<AttachedVolume>( ) {
+        return input.eachVolumeAttachment( new Predicate<VmVolumeAttachment>( ) {
           @Override
-          public boolean apply( AttachedVolume arg0 ) {
+          public boolean apply( VmVolumeAttachment arg0 ) {
             return arg0.getStatus( ).endsWith( "ing" );
           }
         } );

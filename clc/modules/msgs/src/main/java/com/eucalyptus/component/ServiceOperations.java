@@ -133,17 +133,6 @@ public class ServiceOperations {
     
   }
   
-  private static Supplier<ServiceConfiguration> queueConfig = Suppliers.memoize( new Supplier<ServiceConfiguration>( ) {
-                                                              
-                                                              @Override
-                                                              public ServiceConfiguration get( ) {
-                                                                return ServiceConfigurations.createEphemeral( Empyrean.INSTANCE,
-                                                                                                              ServiceConfigurations.class.getSimpleName( ),
-                                                                                                              "dispatcher",
-                                                                                                              ServiceUris.internal( Empyrean.INSTANCE ) );
-                                                              }
-                                                            } );
-  
   @SuppressWarnings( "unchecked" )
   public static <I extends BaseMessage, O extends BaseMessage> void dispatch( final I request ) {
     if ( !serviceOperations.containsKey( request.getClass( ) ) || !StackConfiguration.OOB_INTERNAL_OPERATIONS ) {
@@ -161,11 +150,12 @@ public class ServiceOperations {
           @Override
           public Object call( ) throws Exception {
             if ( StackConfiguration.ASYNC_INTERNAL_OPERATIONS ) {
-              Threads.enqueue( queueConfig.get( ), new Runnable( ) {
+              Threads.enqueue( Empyrean.class, ServiceOperations.class, new Callable<Boolean>( ) {
                 
                 @Override
-                public void run( ) {
+                public Boolean call( ) {
                   executeOperation( request, ctx, op );
+                  return Boolean.TRUE;
                 }
               } );
             } else {

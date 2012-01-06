@@ -9,7 +9,7 @@ public interface CryptoProvider extends BaseSecurityProvider {
    * @param userName
    * @return
    */
-  public abstract String generateId( String userId, String prefix );
+  public abstract String generateId( String seed, String prefix );
   public abstract String generateCertificateCode( String userName );
   public abstract String generateConfirmationCode( String userName );
   public abstract String generateHashedPassword( String password );

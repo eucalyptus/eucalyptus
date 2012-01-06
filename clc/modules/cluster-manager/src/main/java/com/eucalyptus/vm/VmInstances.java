@@ -90,6 +90,7 @@ import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
+import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.Digest;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
@@ -117,6 +118,7 @@ import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
+import edu.ucsb.eucalyptus.msgs.DeleteStorageVolumeType;
 import edu.ucsb.eucalyptus.msgs.DetachStorageVolumeType;
 import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
 import edu.ucsb.eucalyptus.msgs.TerminateInstancesResponseType;
@@ -271,14 +273,7 @@ public class VmInstances {
   public static String getId( final Long rsvId, final int launchIndex ) {
     String vmId = null;
     do {
-      final MessageDigest digest = Digest.MD5.get( );
-      digest.reset( );
-      digest.update( Long.toString( rsvId + launchIndex + System.currentTimeMillis( ) ).getBytes( ) );
-      
-      final Adler32 hash = new Adler32( );
-      hash.reset( );
-      hash.update( digest.digest( ) );
-      vmId = String.format( "i-%08X", hash.getValue( ) );
+      vmId = Crypto.generateId( Long.toString( rsvId + launchIndex ), "i" );
     } while ( VmInstances.contains( vmId ) );
     return vmId;
   }
@@ -360,15 +355,13 @@ public class VmInstances {
             EventRecord.caller( VmInstances.class, EventType.VM_TERMINATING, "USER_ADDRESS", address.toString( ) ).debug( );
           }
         } catch ( final NoSuchElementException e ) {
-          
+
         } catch ( final Exception e1 ) {
           LOG.debug( e1, e1 );
         }
       }
-      final Cluster cluster = Clusters.lookup( Topology.lookup( ClusterController.class, vm.lookupPartition( ) ) );
       VmInstances.cleanUpAttachedVolumes( vm );
-      
-      AsyncRequests.newRequest( new TerminateCallback( vm.getInstanceId( ) ) ).dispatch( cluster.getConfiguration( ) );
+      AsyncRequests.newRequest( new TerminateCallback( vm.getInstanceId( ) ) ).dispatch( vm.getPartition( ) );
     } catch ( final Throwable e ) {
       LOG.error( e, e );
     }
@@ -385,32 +378,38 @@ public class VmInstances {
     try {
       ServiceConfiguration ccConfig = Topology.lookup( ClusterController.class, vm.lookupPartition( ) );
       final Cluster cluster = Clusters.lookup( ccConfig );
-      vm.eachVolumeAttachment( new Predicate<AttachedVolume>( ) {
+      vm.eachVolumeAttachment( new Predicate<VmVolumeAttachment>( ) {
         @Override
-        public boolean apply( final AttachedVolume arg0 ) {
-          if ( "/dev/sda1".equals( arg0.getDevice( ) ) ) {//GRZE:fix references to root device name.
-            try {
-              final ServiceConfiguration sc = Topology.lookup( Storage.class, vm.lookupPartition( ) );
-              final Dispatcher scDispatcher = ServiceDispatcher.lookup( sc );
-              scDispatcher.send( new DetachStorageVolumeType( cluster.getNode( vm.getServiceTag( ) ).getIqn( ), arg0.getVolumeId( ) ) );
-              return true;
-            } catch ( final Throwable e ) {
-              LOG.error( "Failed sending Detach Storage Volume for: " + arg0.getVolumeId( )
-                         + ".  Will keep trying as long as instance is reported.  The request failed because of: " + e.getMessage( ), e );
-              return true;
+        public boolean apply( final VmVolumeAttachment arg0 ) {
+          try {
+            
+            final ServiceConfiguration sc = Topology.lookup( Storage.class, vm.lookupPartition( ) );
+            final Dispatcher scDispatcher = ServiceDispatcher.lookup( sc );
+            
+            if ( !VmStateSet.STOP.apply( arg0.getVmInstance( ) ) && !"/dev/sda1".equals( arg0.getDevice( ) ) ) {
+              try {
+                vm.removeVolumeAttachment( arg0.getVolumeId( ) );
+              } catch ( NoSuchElementException ex ) {
+                Logs.extreme( ).debug( ex );
+              }
             }
-          } else {
-            try {
-              final ServiceConfiguration sc = Topology.lookup( Storage.class, vm.lookupPartition( ) );
-              vm.removeVolumeAttachment( arg0.getVolumeId( ) );
-              final Dispatcher scDispatcher = ServiceDispatcher.lookup( sc );
-              scDispatcher.send( new DetachStorageVolumeType( cluster.getNode( vm.getServiceTag( ) ).getIqn( ), arg0.getVolumeId( ) ) );
-              return true;
-            } catch ( final Throwable e ) {
-              LOG.error( "Failed sending Detach Storage Volume for: " + arg0.getVolumeId( )
-                         + ".  Will keep trying as long as instance is reported.  The request failed because of: " + e.getMessage( ), e );
-              return true;
+            
+            scDispatcher.send( new DetachStorageVolumeType( cluster.getNode( vm.getServiceTag( ) ).getIqn( ), arg0.getVolumeId( ) ) );
+            
+            //ebs with either default deleteOnTerminate or user specified deleteOnTerminate and not STOPPING instance
+            if ( !VmStateSet.STOP.apply( arg0.getVmInstance( ) ) && arg0.getDeleteOnTerminate( ) ) {
+              scDispatcher.send( new DeleteStorageVolumeType( arg0.getVolumeId( ) ) );
             }
+            
+            return true;
+          } catch ( final Throwable e ) {
+            LOG.error( "Failed to clean up attached volume: "
+                       + arg0.getVolumeId( )
+                       + " for instance "
+                       + vm.getInstanceId( )
+                       + ".  The request failed because of: "
+                       + e.getMessage( ), e );
+            return true;
           }
         }
       } );

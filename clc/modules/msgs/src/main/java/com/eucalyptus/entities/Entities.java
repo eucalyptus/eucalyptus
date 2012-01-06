@@ -614,10 +614,11 @@ public class Entities {
           this.txState.rollback( );
           this.txState = null;
         } catch ( final RuntimeException ex ) {
+          Logs.extreme( ).error( ex );
           throw PersistenceExceptions.throwFiltered( ex );
         }
       } else {
-        Logs.extreme( ).error( "Duplicate call to rollback( ): " + Threads.currentStackString( ) );
+        Logs.extreme( ).debug( "Duplicate call to rollback( )" );
       }
     }
     
