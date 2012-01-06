@@ -41,6 +41,7 @@ import com.eucalyptus.records.EventClass;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.ws.WebServices;
@@ -102,21 +103,39 @@ public class AsyncRequestHandler<Q extends BaseMessage, R extends BaseMessage> i
             try {
               if ( future.isSuccess( ) ) {
                 Logs.extreme( ).debug( "Connected as: " + future.getChannel( ).getLocalAddress( ) );
+                
                 final InetAddress localAddr = ( ( InetSocketAddress ) future.getChannel( ).getLocalAddress( ) ).getAddress( );
                 if ( !factory.getClass( ).getSimpleName( ).startsWith( "GatherLog" ) ) {
                   Topology.populateServices( config, AsyncRequestHandler.this.request.get( ) );
                 }
-                Logs.extreme( ).debug( EventRecord.here( request.getClass( ), EventClass.SYSTEM_REQUEST, EventType.CHANNEL_OPEN, request.getClass( ).getSimpleName( ),
-                                  request.getCorrelationId( ), serviceSocketAddress.toString( ), "" + future.getChannel( ).getLocalAddress( ),
-                                  ""  + future.getChannel( ).getRemoteAddress( ) ) );
+
+                Logs.extreme( ).debug(
+                  EventRecord.here(
+                    request.getClass( ),
+                    EventClass.SYSTEM_REQUEST,
+                    EventType.CHANNEL_OPEN,
+                    request.getClass( ).getSimpleName( ),
+                    request.getCorrelationId( ),
+                    serviceSocketAddress.toString( ),
+                    "" + future.getChannel( ).getLocalAddress( ),
+                    "" + future.getChannel( ).getRemoteAddress( ) ) );
                 Logs.extreme( ).debug( httpRequest );
+                
                 future.getChannel( ).write( httpRequest ).addListener( new ChannelFutureListener( ) {
                   @Override
                   public void operationComplete( final ChannelFuture future ) throws Exception {
                     AsyncRequestHandler.this.writeComplete.set( true );
-                    Logs.extreme( ).debug( EventRecord.here( request.getClass( ), EventClass.SYSTEM_REQUEST, EventType.CHANNEL_WRITE, request.getClass( ).getSimpleName( ),
-                                      request.getCorrelationId( ), serviceSocketAddress.toString( ), "" + future.getChannel( ).getLocalAddress( ),
-                                      ""  + future.getChannel( ).getRemoteAddress( ) ) );
+                    
+                    Logs.extreme( ).debug(
+                      EventRecord.here(
+                        request.getClass( ),
+                        EventClass.SYSTEM_REQUEST,
+                        EventType.CHANNEL_WRITE,
+                        request.getClass( ).getSimpleName( ),
+                        request.getCorrelationId( ),
+                        serviceSocketAddress.toString( ),
+                        "" + future.getChannel( ).getLocalAddress( ),
+                        "" + future.getChannel( ).getRemoteAddress( ) ) );
                   }
                 } );
               } else {
@@ -137,54 +156,61 @@ public class AsyncRequestHandler<Q extends BaseMessage, R extends BaseMessage> i
     }
   }
   
-  private void teardown( final Throwable t ) {
-    if ( ( t != null ) && !this.response.isDone( ) ) {
+  private void teardown( Throwable t ) {
+    if ( t == null ) {
+      t = new NullPointerException( "teardown() called with null argument." );
+    }
+    try {
+      this.logRequestFailure( t );
+      if ( this.connectFuture != null ) {
+        this.maybeCloseChannel( );
+      }
+    } finally {
+      this.response.setException( t );
+    }
+  }
+
+  private void maybeCloseChannel( ) {
+    if ( this.connectFuture.isDone( ) && this.connectFuture.isSuccess( ) ) {
+      final Channel channel = this.connectFuture.getChannel( );
+      if ( ( channel != null ) && channel.isOpen( ) ) {
+        channel.close( ).addListener( new ChannelFutureListener( ) {
+          @Override
+          public void operationComplete( final ChannelFuture future ) throws Exception {
+            EventRecord.here( AsyncRequestHandler.this.request.get( ).getClass( ), EventClass.SYSTEM_REQUEST, EventType.CHANNEL_CLOSED ).trace( );
+          }
+        } );
+      } else {
+        EventRecord.here( AsyncRequestHandler.this.request.get( ).getClass( ), EventClass.SYSTEM_REQUEST, EventType.CHANNEL_CLOSED, "ALREADY_CLOSED" ).trace( );
+      }
+    } else if ( !this.connectFuture.isDone( ) && !this.connectFuture.cancel( ) ) {
+      LOG.error( "Failed to cancel in-flight connection request: " + this.connectFuture.toString( ) );
+      final Channel channel = this.connectFuture.getChannel( );
+      if ( channel != null ) {
+        channel.close( );
+      }
+    } else if ( !this.connectFuture.isSuccess( ) ) {
+      final Channel channel = this.connectFuture.getChannel( );
+      if ( channel != null ) {
+        channel.close( );
+      }
+    }
+  }
+
+  private void logRequestFailure( Throwable t ) {
+    try {
       Logs.extreme( ).debug( "RESULT:" + t.getMessage( )
                  + ":REQUEST:"
                  + ( ( this.request.get( ) != null )
                    ? this.request.get( ).getClass( )
                    : "REQUEST IS NULL" ) );
-      if ( t instanceof RetryableConnectionException ) {
-        Logs.extreme( ).trace( t.getMessage( ) );
-      } else if ( t instanceof ConnectionException ) {
-        Logs.extreme( ).trace( t.getMessage( ) );
-      } else if ( t instanceof IOException ) {
-        Logs.extreme( ).trace( t.getMessage( ) );
+      if ( Exceptions.isCausedBy( t, RetryableConnectionException.class ) 
+          || Exceptions.isCausedBy( t, ConnectionException.class )
+          || Exceptions.isCausedBy( t, IOException.class ) ) {
+        Logs.extreme( ).debug( "Failed request: " + this.request.get( ).toSimpleString( ) + " because of: " + t.getMessage( ), t );
       }
-      this.response.setException( t );
-    } else if ( ( t != null ) && this.response.isDone( ) ) {
-      Logs.extreme( ).trace( t.getMessage( ) );
-      this.response.setException( t );
-    }
-    if ( this.connectFuture != null ) {
-      if ( this.connectFuture.isDone( ) && this.connectFuture.isSuccess( ) ) {
-        final Channel channel = this.connectFuture.getChannel( );
-        if ( ( channel != null ) && channel.isOpen( ) ) {
-          channel.close( ).addListener( new ChannelFutureListener( ) {
-            @Override
-            public void operationComplete( final ChannelFuture future ) throws Exception {
-              EventRecord.here( AsyncRequestHandler.this.request.get( ).getClass( ), EventClass.SYSTEM_REQUEST, EventType.CHANNEL_CLOSED ).trace( );
-            }
-          } );
-        } else {
-          EventRecord.here( AsyncRequestHandler.this.request.get( ).getClass( ), EventClass.SYSTEM_REQUEST, EventType.CHANNEL_CLOSED, "ALREADY_CLOSED" ).trace( );
-        }
-      } else if ( !this.connectFuture.isDone( ) && !this.connectFuture.cancel( ) ) {
-        LOG.error( "Failed to cancel in-flight connection request: " + this.connectFuture.toString( ) );
-        final Channel channel = this.connectFuture.getChannel( );
-        if ( channel != null ) {
-          channel.close( );
-        }
-      } else if ( !this.connectFuture.isSuccess( ) ) {
-        final Channel channel = this.connectFuture.getChannel( );
-        if ( channel != null ) {
-          channel.close( );
-        }
-//REVIEW: this is likely not needed.        LOG.error( this.connectFuture.getCause( ).getMessage( ) );
-      }
-      this.response.setException( t );
-    } else {
-      this.response.setException( t );
+    } catch ( Exception ex ) {
+      Logs.extreme( ).error( ex , ex );
     }
   }
   
