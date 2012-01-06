@@ -74,6 +74,7 @@ import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.entities.Entities;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.async.MessageCallback;
 import com.eucalyptus.vm.VmInstance;
@@ -131,8 +132,9 @@ public class VolumeAttachCallback extends MessageCallback<AttachVolumeType, Atta
         LOG.debug( "Sending detach after async failure in attach volume: cluster=" + cluster.getName( ) + " iqn=" + iqn + " sc=" + sc + " dispatcher="
                    + dispatcher.getName( ) + " uri=" + dispatcher.getAddress( ) );
         dispatcher.send( new DetachStorageVolumeType( iqn, this.getRequest( ).getVolumeId( ) ) );
-      } catch ( EucalyptusCloudException ex ) {
-        LOG.error( ex, ex );
+      } catch ( Exception ex ) {
+        LOG.error( ex );
+        Logs.extreme( ).error( ex, ex );
       }
       /** clean up internal attachment state **/
       final Function<String, VmInstance> removeVolAttachment = new Function<String, VmInstance>( ) {

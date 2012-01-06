@@ -422,7 +422,12 @@ public class VmInstances {
               }
             }
             
-            AsyncRequests.sendSync( sc, new DetachStorageVolumeType( cluster.getNode( vm.getServiceTag( ) ).getIqn( ), arg0.getVolumeId( ) ) );
+            try {
+              AsyncRequests.sendSync( sc, new DetachStorageVolumeType( cluster.getNode( vm.getServiceTag( ) ).getIqn( ), arg0.getVolumeId( ) ) );
+            } catch ( Exception ex ) {
+              LOG.debug( ex );
+              Logs.extreme( ).debug( ex, ex );
+            }
             
             //ebs with either default deleteOnTerminate or user specified deleteOnTerminate and TERMINATING instance
             if ( VmStateSet.TERM.apply( vm ) && arg0.getDeleteOnTerminate( ) ) {
