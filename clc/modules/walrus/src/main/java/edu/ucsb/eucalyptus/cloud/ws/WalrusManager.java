@@ -526,7 +526,6 @@ public class WalrusManager {
 								// set exception code in reply
 								LOG.error(ex);
 							}
-
 							Status status = new Status();
 							status.setCode(204);
 							status.setDescription("No Content");
@@ -3360,5 +3359,95 @@ public class WalrusManager {
 		} finally {
 			db.rollback();
 		}
+	}
+
+	public void fastDeleteObject(DeleteObjectType request) throws EucalyptusCloudException {
+		String bucketName = request.getBucket();
+		String objectKey = request.getKey();
+		EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
+		BucketInfo bucketInfos = new BucketInfo(bucketName);
+		List<BucketInfo> bucketList = db.query(bucketInfos);
+		if (bucketList.size() > 0) {
+			BucketInfo bucketInfo = bucketList.get(0);
+			BucketLogData logData = bucketInfo.getLoggingEnabled() ? request.getLogData() : null;
+			ObjectInfo searchObjectInfo = new ObjectInfo(bucketName, objectKey);
+			searchObjectInfo.setVersionId(WalrusProperties.NULL_VERSION_ID);
+			EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
+			List<ObjectInfo>objectInfos = dbObject.query(searchObjectInfo);
+			if (objectInfos.size() > 0) {
+				ObjectInfo foundObject = objectInfos.get(0);
+				dbObject.delete(foundObject);
+				String objectName = foundObject.getObjectName();
+				for (GrantInfo grantInfo : foundObject.getGrants()) {
+					db.delete(grantInfo);
+				}
+				Long size = foundObject.getSize();
+				try {
+					storageManager.deleteObject(bucketName, objectName);
+				} catch (IOException ex) {
+					LOG.error(ex, ex);
+				}				boolean success = false;
+				int retryCount = 0;
+				do {
+					try {
+						decrementBucketSize(bucketName, size);
+						success = true;
+					} catch (NoSuchBucketException ex) {
+						db.rollback();
+						throw ex;
+					} catch (RollbackException ex) {
+						retryCount++;
+						LOG.trace("retrying update: " + bucketName);
+					} catch (EucalyptusCloudException ex) {
+						db.rollback();
+						throw ex;
+					}
+				} while(!success && (retryCount < 5));
+
+			} else {
+				db.rollback();
+				throw new NoSuchEntityException(objectKey, logData);
+			}
+		} else {
+			db.rollback();
+			throw new NoSuchBucketException(bucketName);
+		}
+		db.commit();
+	}
+
+	public void fastDeleteBucket(DeleteBucketType request) throws EucalyptusCloudException {
+		String bucketName = request.getBucket();
+		EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
+		BucketInfo searchBucket = new BucketInfo(bucketName);
+		List<BucketInfo> bucketList = db.query(searchBucket);
+
+		if (bucketList.size() > 0) {
+			BucketInfo bucketFound = bucketList.get(0);
+			EntityWrapper<ObjectInfo> dbObject = db
+					.recast(ObjectInfo.class);
+			ObjectInfo searchObject = new ObjectInfo();
+			searchObject.setBucketName(bucketName);
+			searchObject.setDeleted(false);
+			List<ObjectInfo> objectInfos = dbObject.query(searchObject);
+			if (objectInfos.size() == 0) {
+				db.delete(bucketFound);
+				// Actually remove the bucket from the backing store
+				try {
+					storageManager.deleteBucket(bucketName);
+					if (WalrusProperties.trackUsageStatistics)
+						walrusStatistics.decrementBucketCount();
+				} catch (IOException ex) {
+					// set exception code in reply
+					LOG.error(ex);
+				}
+			} else {
+				db.rollback();
+				throw new BucketNotEmptyException(bucketName);
+			}
+		} else {
+			db.rollback();
+			throw new NoSuchBucketException(bucketName);
+		}
+		db.commit();
 	}
 }
