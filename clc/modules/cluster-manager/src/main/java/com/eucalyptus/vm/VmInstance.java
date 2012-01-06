@@ -1825,6 +1825,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   public static VmInstance exampleWithPersistentVolume( final String volumeId ) {
     VmInstance vmExample = VmInstance.create( );
     vmExample.bootRecord = new VmBootRecord( );
+    vmExample.bootRecord.setVmInstance( vmExample );
     vmExample.getBootRecord( ).getPersistentVolumes( ).add( VmVolumeAttachment.exampleWithVolumeId( volumeId ) );
     return vmExample;
   }
