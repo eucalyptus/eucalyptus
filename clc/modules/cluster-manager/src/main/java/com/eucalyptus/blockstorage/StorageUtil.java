@@ -140,7 +140,6 @@ public class StorageUtil {
             VmInstance vm = VmInstances.lookupByVolumeId( v.getDisplayName( ) );
             vmAttachedVol = vm.lookupVolumeAttachment( v.getDisplayName( ) );
           } catch ( Exception ex ) {
-            LOG.error( ex, ex );
           }
           if ( vmAttachedVol != null ) {
             v.setState( State.BUSY );
