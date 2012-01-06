@@ -94,7 +94,7 @@ public class VolumeDetachCallback extends MessageCallback<DetachVolumeType,Detac
     final Function<String, VmInstance> removeVolAttachment = new Function<String, VmInstance>( ) {
       public VmInstance apply( final String input ) {
         VmInstance vm = VmInstances.lookup( input );
-        vm.removeVolumeAttachment( VolumeDetachCallback.this.getRequest( ).getVolumeId( ) );
+        vm.updateVolumeAttachment( VolumeDetachCallback.this.getRequest( ).getVolumeId( ), "detaching" );
         return vm;
       }
     };
