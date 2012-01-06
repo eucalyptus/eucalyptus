@@ -414,7 +414,7 @@ public class VmInstances {
             
             final ServiceConfiguration sc = Topology.lookup( Storage.class, vm.lookupPartition( ) );
             
-            if ( VmStateSet.TERM.apply( arg0.getVmInstance( ) ) && !"/dev/sda1".equals( arg0.getDevice( ) ) ) {
+            if ( VmStateSet.TERM.apply( vm ) && !"/dev/sda1".equals( arg0.getDevice( ) ) ) {
               try {
                 vm.removeVolumeAttachment( arg0.getVolumeId( ) );
               } catch ( NoSuchElementException ex ) {
@@ -425,7 +425,7 @@ public class VmInstances {
             AsyncRequests.sendSync( sc, new DetachStorageVolumeType( cluster.getNode( vm.getServiceTag( ) ).getIqn( ), arg0.getVolumeId( ) ) );
             
             //ebs with either default deleteOnTerminate or user specified deleteOnTerminate and TERMINATING instance
-            if ( VmStateSet.TERM.apply( arg0.getVmInstance( ) ) && arg0.getDeleteOnTerminate( ) ) {
+            if ( VmStateSet.TERM.apply( vm ) && arg0.getDeleteOnTerminate( ) ) {
               AsyncRequests.sendSync( sc, new DeleteStorageVolumeType( arg0.getVolumeId( ) ) );
             }
             
