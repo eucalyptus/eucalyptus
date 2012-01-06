@@ -192,16 +192,18 @@ public class VmVolumeState {
             this.removeVolumeAttachment( volId );
           } else if ( AttachmentState.detaching_failed.equals( remoteState ) && !AttachmentState.attached.equals( localState ) ) {
             this.updateVolumeAttachment( volId, AttachmentState.attached );
-          } else if ( AttachmentState.detaching_failed.equals( remoteState ) && !AttachmentState.attached.equals( localState ) ) {
+          } else if ( AttachmentState.attached.equals( remoteState ) && !AttachmentState.attached.equals( localState ) ) {
             this.updateVolumeAttachment( volId, AttachmentState.attached );
           }
         } else {
-          if ( AttachmentState.attaching_failed.equals( remoteState ) ) {
+          if ( AttachmentState.detaching.equals( localState ) && AttachmentState.detached.equals( remoteState ) ) {
             this.removeVolumeAttachment( volId );
-          } else if ( AttachmentState.detaching_failed.equals( remoteState ) && !AttachmentState.attached.equals( localState ) ) {
+          } else if ( AttachmentState.attaching.equals( localState ) && AttachmentState.attached.equals( remoteState ) ) {
             this.updateVolumeAttachment( volId, AttachmentState.attached );
-          } else if ( AttachmentState.attached.equals( remoteState ) && !localState.equals( remoteState ) ) {
-            this.updateVolumeAttachment( volId, remoteState );
+          } else if ( AttachmentState.detaching.equals( localState ) && AttachmentState.attaching_failed.equals( remoteState ) ) {
+            this.removeVolumeAttachment( volId );
+          } else if ( AttachmentState.detaching.equals( localState ) && AttachmentState.detaching_failed.equals( remoteState ) ) {
+            this.updateVolumeAttachment( volId, AttachmentState.attached );
           }
         }
       } catch ( Exception ex ) {
