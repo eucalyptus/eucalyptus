@@ -615,7 +615,7 @@ public class Entities {
           this.txState = null;
         } catch ( final RuntimeException ex ) {
           Logs.extreme( ).error( ex );
-//          throw PersistenceExceptions.throwFiltered( ex );
+          throw PersistenceExceptions.throwFiltered( ex );
         }
       } else {
         Logs.extreme( ).debug( "Duplicate call to rollback( )" );
