@@ -76,7 +76,7 @@ import edu.ucsb.eucalyptus.msgs.AttachedVolume;
 public class VmVolumeAttachment implements Comparable<VmVolumeAttachment> {
   @Parent
   private VmInstance vmInstance;
-  @Column( name = "metadata_vm_volume_id" )
+  @Column( name = "metadata_vm_volume_id", unique = true )
   private String     volumeId;
   @Column( name = "metadata_vm_volume_device" )
   private String     device;
