@@ -1816,20 +1816,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     return new VmInstance( );
   }
   
-  public static VmInstance exampleWithTransientVolume( final String volumeId ) {
-    VmInstance vmExample = VmInstance.create( );
-    vmExample.getTransientVolumeState( ).getAttachments( ).add( VmVolumeAttachment.exampleWithVolumeId( volumeId ) );
-    return vmExample;
-  }
-  
-  public static VmInstance exampleWithPersistentVolume( final String volumeId ) {
-    VmInstance vmExample = VmInstance.create( );
-    vmExample.bootRecord = new VmBootRecord( );
-    vmExample.bootRecord.setVmInstance( vmExample );
-    vmExample.getBootRecord( ).getPersistentVolumes( ).add( VmVolumeAttachment.exampleWithVolumeId( volumeId ) );
-    return vmExample;
-  }
-  
   public static VmInstance exampleWithPublicIp( String ip ) {
     VmInstance vmExample = VmInstance.create( );
     vmExample.setNetworkConfig( VmNetworkConfig.exampleWithPublicIp( ip ) );

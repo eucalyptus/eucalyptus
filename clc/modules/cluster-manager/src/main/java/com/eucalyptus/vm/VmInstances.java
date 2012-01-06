@@ -301,28 +301,18 @@ public class VmInstances {
     VmVolumeAttachment ret = null;
     EntityTransaction db = Entities.get( VmInstance.class );
     try {
-      VmInstance vm = null;
-      VmInstance vmTransientExample = VmInstance.exampleWithTransientVolume( volumeId );
-      vm = ( VmInstance ) Entities.createCriteriaUnique( VmInstance.class )
-                                  .add( Example.create( vmTransientExample ).enableLike( MatchMode.EXACT ) )
-                                  .uniqueResult( );
-      if ( vm == null ) {
-        VmInstance vmPersistentExample = VmInstance.exampleWithPersistentVolume( volumeId );
-        vm = ( VmInstance ) Entities.createCriteriaUnique( VmInstance.class )
-                                    .add( Example.create( vmPersistentExample ).enableLike( MatchMode.EXACT ) )
-                                    .uniqueResult( );
-      }      
-      if ( vm != null ) {
+      List<VmInstance> vms = Entities.query( VmInstance.create( ) );
+      for ( VmInstance vm : vms ) {
         try {
-          ret = vm.lookupVolumeAttachment( volumeId );
+          ret = vm.lookupVolumeAttachment(volumeId);
           if ( ret.getVmInstance( ) == null ) {
             ret.setVmInstance( vm );
           }
         } catch ( NoSuchElementException ex ) {
-          ret = null;
+          continue;
         }
       }
-      if ( vm == null || ret == null ) {
+      if ( ret == null ) {
         throw new NoSuchElementException( "VmVolumeAttachment: no volume attachment for " + volumeId );
       }
       db.commit( );
