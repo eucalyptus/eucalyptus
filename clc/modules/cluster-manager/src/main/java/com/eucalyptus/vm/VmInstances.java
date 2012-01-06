@@ -521,7 +521,7 @@ public class VmInstances {
   }
   
   public static void terminated( final VmInstance vm ) throws TransactionException {
-    VmInstances.cache( Transitions.TERMINATED.apply( vm ) );
+    VmInstances.cache( Entities.asTransaction( VmInstance.class, Transitions.TERMINATED, VmInstances.TX_RETRIES ).apply( vm ) );
   }
   
   public static void terminated( final String key ) throws NoSuchElementException, TransactionException {
@@ -529,7 +529,7 @@ public class VmInstances {
   }
   
   public static void stopped( final VmInstance vm ) throws TransactionException {
-    Entities.asTransaction( VmInstance.class, Transitions.STOPPED ).apply( vm );
+    Entities.asTransaction( VmInstance.class, Transitions.STOPPED, VmInstances.TX_RETRIES ).apply( vm );
   }
   
   public static void stopped( final String key ) throws NoSuchElementException, TransactionException {
@@ -547,7 +547,7 @@ public class VmInstances {
 //        VmInstances.terminated( vm );
 //      }
 //    } else {
-      Entities.asTransaction( VmInstance.class, Transitions.SHUTDOWN ).apply( vm );
+      Entities.asTransaction( VmInstance.class, Transitions.SHUTDOWN, VmInstances.TX_RETRIES ).apply( vm );
     }
   }
   

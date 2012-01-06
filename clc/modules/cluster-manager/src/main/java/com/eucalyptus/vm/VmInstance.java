@@ -610,124 +610,104 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     START {
       @Override
       public VmInstance apply( final VmInstance v ) {
-        if ( !Entities.isPersistent( v ) ) {
-          throw new TransientEntityException( v.toString( ) );
-        } else {
-          final EntityTransaction db = Entities.get( VmInstance.class );
-          try {
-            final VmInstance vm = Entities.merge( v );
-            vm.setState( VmState.PENDING, Reason.USER_STARTED );
-            db.commit( );
-            return vm;
-          } catch ( final RuntimeException ex ) {
-            Logs.extreme( ).error( ex, ex );
-            db.rollback( );
-            throw ex;
-          }
+        final EntityTransaction db = Entities.get( VmInstance.class );
+        try {
+          final VmInstance vm = Entities.merge( v );
+          vm.setState( VmState.PENDING, Reason.USER_STARTED );
+          db.commit( );
+          return vm;
+        } catch ( final RuntimeException ex ) {
+          Logs.extreme( ).error( ex, ex );
+          db.rollback( );
+          throw ex;
         }
       }
     },
     TERMINATED {
       @Override
       public VmInstance apply( final VmInstance v ) {
-        if ( !Entities.isPersistent( v ) ) {
-          throw new TransientEntityException( v.toString( ) );
-        } else {
-          final EntityTransaction db = Entities.get( VmInstance.class );
-          try {
-            final VmInstance vm = Entities.merge( v );
-            if ( VmStateSet.RUN.apply( vm ) ) {
-              vm.setState( VmState.SHUTTING_DOWN, ( Timeout.SHUTTING_DOWN.apply( vm )
-                                                                                     ? Reason.EXPIRED
-                                                                                     : Reason.USER_TERMINATED ) );
-            } else if ( VmState.SHUTTING_DOWN.equals( vm.getState( ) ) ) {
-              vm.setState( VmState.TERMINATED, Timeout.TERMINATED.apply( vm )
-                                                                             ? Reason.EXPIRED
-                                                                             : Reason.USER_TERMINATED );
-            }
-            db.commit( );
-            return vm;
-          } catch ( final Exception ex ) {
-            Logs.extreme( ).trace( ex, ex );
-            db.rollback( );
-            throw new NoSuchElementException( "Failed to lookup instance: " + v );
+        final EntityTransaction db = Entities.get( VmInstance.class );
+        try {
+          final VmInstance vm = Entities.uniqueResult( VmInstance.named( null, v.getInstanceId( ) ) );
+          if ( VmStateSet.RUN.apply( vm ) ) {
+            vm.setState( VmState.SHUTTING_DOWN, ( Timeout.SHUTTING_DOWN.apply( vm )
+                                                                                   ? Reason.EXPIRED
+                                                                                   : Reason.USER_TERMINATED ) );
+          } else if ( VmState.SHUTTING_DOWN.equals( vm.getState( ) ) ) {
+            vm.setState( VmState.TERMINATED, Timeout.TERMINATED.apply( vm )
+                                                                           ? Reason.EXPIRED
+                                                                           : Reason.USER_TERMINATED );
           }
+          db.commit( );
+          return vm;
+        } catch ( final Exception ex ) {
+          Logs.extreme( ).trace( ex, ex );
+          db.rollback( );
+          throw new NoSuchElementException( "Failed to lookup instance: " + v );
         }
       }
     },
     STOPPED {
       @Override
       public VmInstance apply( final VmInstance v ) {
-        if ( !Entities.isPersistent( v ) ) {
-          throw new TransientEntityException( v.toString( ) );
-        } else {
-          final EntityTransaction db = Entities.get( VmInstance.class );
-          try {
-            final VmInstance vm = Entities.merge( v );
-            if ( VmStateSet.RUN.apply( vm ) ) {
-              vm.setState( VmState.STOPPING, Reason.USER_STOPPED );
-            } else if ( VmState.STOPPING.equals( vm.getState( ) ) ) {
-              vm.setState( VmState.STOPPED, Reason.USER_STOPPED );
-            }
-            db.commit( );
-            return vm;
-          } catch ( final Exception ex ) {
-            Logs.extreme( ).debug( ex, ex );
-            db.rollback( );
-            throw new NoSuchElementException( "Failed to lookup instance: " + v );
+        final EntityTransaction db = Entities.get( VmInstance.class );
+        try {
+          final VmInstance vm = Entities.uniqueResult( VmInstance.named( null, v.getInstanceId( ) ) );
+          if ( VmStateSet.RUN.apply( vm ) ) {
+            vm.setState( VmState.STOPPING, Reason.USER_STOPPED );
+          } else if ( VmState.STOPPING.equals( vm.getState( ) ) ) {
+            vm.setState( VmState.STOPPED, Reason.USER_STOPPED );
           }
+          db.commit( );
+          return vm;
+        } catch ( final Exception ex ) {
+          Logs.extreme( ).debug( ex, ex );
+          db.rollback( );
+          throw new NoSuchElementException( "Failed to lookup instance: " + v );
         }
       }
     },
     DELETE {
       @Override
-      public VmInstance apply( final VmInstance vm ) {
-        if ( !Entities.isPersistent( vm ) ) {
-          throw new TransientEntityException( vm.toString( ) );
-        } else {
-          final EntityTransaction db = Entities.get( VmInstance.class );
-          try {
-            VmInstance entity = Entities.uniqueResult( VmInstance.named( null, vm.getInstanceId( ) ) );
-            entity.cleanUp( );
-            Entities.delete( entity );
-            db.commit( );
-          } catch ( final Exception ex ) {
-            LOG.error( ex );
-            Logs.extreme( ).error( ex, ex );
-            db.rollback( );
-          }
-          try {
-            vm.cleanUp( );
-            vm.setState( VmState.TERMINATED );
-          } catch ( Exception ex ) {
-            LOG.error( ex );
-            Logs.extreme( ).error( ex, ex );
-          }
-          return vm;
+      public VmInstance apply( final VmInstance v ) {
+        final EntityTransaction db = Entities.get( VmInstance.class );
+        try {
+          final VmInstance vm = Entities.uniqueResult( VmInstance.named( null, v.getInstanceId( ) ) );
+          vm.cleanUp( );
+          Entities.delete( vm );
+          db.commit( );
+        } catch ( final Exception ex ) {
+          LOG.error( ex );
+          Logs.extreme( ).error( ex, ex );
+          db.rollback( );
         }
+        try {
+          v.cleanUp( );
+          v.setState( VmState.TERMINATED );
+        } catch ( Exception ex ) {
+          LOG.error( ex );
+          Logs.extreme( ).error( ex, ex );
+        }
+        return v;
       }
     },
     SHUTDOWN {
       @Override
       public VmInstance apply( final VmInstance v ) {
-        if ( !Entities.isPersistent( v ) ) {
-          throw new TransientEntityException( v.toString( ) );
-        } else {
-          final EntityTransaction db = Entities.get( VmInstance.class );
-          try {
-            final VmInstance vm = Entities.merge( v );
-            if ( VmStateSet.RUN.apply( vm ) ) {
-              vm.setState( VmState.SHUTTING_DOWN, ( Timeout.SHUTTING_DOWN.apply( vm )
-                                                                                     ? Reason.EXPIRED
-                                                                                     : Reason.USER_TERMINATED ) );
-            }
-            db.commit( );
-            return vm;
-          } catch ( final Exception ex ) {
-            Logs.extreme( ).trace( ex, ex );
-            db.rollback( );
-            throw new NoSuchElementException( "Failed to lookup instance: " + v );
+        final EntityTransaction db = Entities.get( VmInstance.class );
+        try {
+          final VmInstance vm = Entities.uniqueResult( VmInstance.named( null, v.getInstanceId( ) ) );
+          if ( VmStateSet.RUN.apply( vm ) ) {
+            vm.setState( VmState.SHUTTING_DOWN, ( Timeout.SHUTTING_DOWN.apply( vm )
+                                                                                   ? Reason.EXPIRED
+                                                                                   : Reason.USER_TERMINATED ) );
           }
+          db.commit( );
+          return vm;
+        } catch ( final Exception ex ) {
+          Logs.extreme( ).trace( ex, ex );
+          db.rollback( );
+          throw new NoSuchElementException( "Failed to lookup instance: " + v );
         }
       }
     };
