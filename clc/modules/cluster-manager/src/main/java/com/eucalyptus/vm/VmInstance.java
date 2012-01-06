@@ -1379,7 +1379,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     try {
       final VmInstance entity = Entities.merge( this );
       final Volume volEntity = Entities.merge( vol );
-      VmVolumeAttachment attachVol = new VmVolumeAttachment( this, vol.getDisplayName( ), deviceName, vol.getRemoteDevice( ), "attaching", new Date( ), false );
+      VmVolumeAttachment attachVol = new VmVolumeAttachment( entity, vol.getDisplayName( ), deviceName, vol.getRemoteDevice( ), "attaching", new Date( ), false );
       volEntity.setState( State.BUSY );
       entity.getTransientVolumeState( ).addVolumeAttachment( attachVol );
       db.commit( );
@@ -1816,12 +1816,12 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   
   public static VmInstance exampleWithTransientVolume( final String volumeId ) {
     VmInstance vmExample = VmInstance.create( );
-    vmExample.getTransientVolumeState( ).addVolumeAttachment( VmVolumeAttachment.exampleWithVolumeId( volumeId ) );
+    vmExample.getTransientVolumeState( ).getAttachments( ).add( VmVolumeAttachment.exampleWithVolumeId( volumeId ) );
     return vmExample;
   }
   
   public static VmInstance exampleWithPersistentVolume( final String volumeId ) {
-    VmInstance vmExample = new VmInstance( );
+    VmInstance vmExample = VmInstance.create( );
     vmExample.getBootRecord( ).getPersistentVolumes( ).add( VmVolumeAttachment.exampleWithVolumeId( volumeId ) );
     return vmExample;
   }
