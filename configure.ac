@@ -268,12 +268,13 @@ AC_CHECK_FUNCS([bzero dup2 ftruncate gettimeofday mkdir pow select strchr strdup
 AC_CONFIG_FILES([Makedefs
                  clc/eucadmin/bin/euca_conf:clc/eucadmin/bin/euca_conf.in
                  clc/eucadmin/setup.cfg.template:clc/eucadmin/setup.cfg.template.in
+                 clc/eucadmin/eucadmin/__init__.py:clc/eucadmin/eucadmin/__init__.py.in
                  clc/modules/bootstrap/src/main/native/arguments.ggo:clc/modules/bootstrap/src/main/native/arguments.ggo.in
                  tools/eucalyptus-cc:tools/eucalyptus-cc.in
                  tools/eucalyptus-cloud:tools/eucalyptus-cloud.in
                  tools/eucalyptus-nc:tools/eucalyptus-nc.in])
 
-AC_DEFINE_UNQUOTED(EUCA_VERSION, "$EUCA_VERSION")
+AC_DEFINE_UNQUOTED([EUCA_VERSION], "$EUCA_VERSION", [Version of Eucalyptus])
 
 AC_SUBST(EUCA_VERSION)
 AC_SUBST(TOP)

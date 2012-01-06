@@ -43,13 +43,13 @@ class DescribeRequest(AWSQueryRequest):
         AWSQueryRequest.__init__(self, **args)
         self.list_markers = ['euca:registered']
         self.item_markers = ['euca:item']
-  
+
     def get_connection(self, **args):
         if self.connection is None:
             args['path'] = self.ServicePath
             self.connection = self.ServiceClass(**args)
         return self.connection
-      
+
     def cli_formatter(self, data):
         services = getattr(data, 'euca:registered')
         fields = {'euca:partition' : 15,
@@ -80,5 +80,5 @@ class DescribeRequest(AWSQueryRequest):
         return self.send(**args)
 
     def main_cli(self):
+        eucadmin.print_version_if_necessary()
         self.do_cli()
-    

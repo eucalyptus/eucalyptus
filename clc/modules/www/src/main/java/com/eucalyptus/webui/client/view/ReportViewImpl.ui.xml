@@ -102,8 +102,8 @@
                     <colgroup width="12%"/>
                     <tbody>
                         <tr>
-                            <td>Start date</td>
-                            <td>End date</td>
+                            <td>From</td>
+                            <td>Through</td>
                             <td>Report type</td>
                             <td>Criteria</td>
                             <td>Group by</td>

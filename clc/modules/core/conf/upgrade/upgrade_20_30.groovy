@@ -3,6 +3,7 @@ import java.io.BufferedInputStream;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.lang.RuntimeException;
 import java.sql.SQLException;
 import java.sql.DatabaseMetaData;
 import java.util.ArrayList;
@@ -589,6 +590,11 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                                                                       [ vol.displayname ]);
                 if (vol.cluster == "default") {
                     vol.cluster = System.getProperty("euca.storage.name");
+                }
+                if (vol.cluster == null && vol_meta != null) {
+                    vol.cluster = vol_meta.sc_name;
+                } else {
+                    throw new RuntimeException("Cannot determine SC for volume " + vol.displayname);
                 }
                 // Second "vol.cluster" is partition name
                 Volume v = new Volume( ufn, vol.displayname, vol.size, vol.cluster + '_sc', vol.cluster, vol.parentsnapshot );

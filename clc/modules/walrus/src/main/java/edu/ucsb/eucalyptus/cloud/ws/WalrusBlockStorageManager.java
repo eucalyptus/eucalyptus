@@ -90,7 +90,7 @@ import javax.activity.InvalidActivityException;
 
 public class WalrusBlockStorageManager {
 	private static Logger LOG = Logger
-	.getLogger(WalrusBlockStorageManager.class);
+			.getLogger(WalrusBlockStorageManager.class);
 	private StorageManager storageManager;
 	private WalrusManager walrusManager;
 
@@ -134,9 +134,9 @@ public class WalrusBlockStorageManager {
 	}
 
 	public StoreSnapshotResponseType storeSnapshot(StoreSnapshotType request)
-	throws EucalyptusCloudException {
+			throws EucalyptusCloudException {
 		StoreSnapshotResponseType reply = (StoreSnapshotResponseType) request
-		.getReply();
+				.getReply();
 
 		String snapshotId = request.getKey();
 		String bucketName = request.getBucket();
@@ -203,7 +203,7 @@ public class WalrusBlockStorageManager {
 		putObjectRequest.setEffectiveUserId(request.getEffectiveUserId());
 		try {
 			PutObjectResponseType putObjectResponseType = walrusManager
-			.putObject(putObjectRequest);
+					.putObject(putObjectRequest);
 			reply.setEtag(putObjectResponseType.getEtag());
 			reply.setLastModified(putObjectResponseType.getLastModified());
 			reply.setStatusMessage(putObjectResponseType.getStatusMessage());
@@ -223,7 +223,7 @@ public class WalrusBlockStorageManager {
 	public GetWalrusSnapshotResponseType getSnapshot(
 			GetWalrusSnapshotType request) throws EucalyptusCloudException {
 		GetWalrusSnapshotResponseType reply = (GetWalrusSnapshotResponseType) request
-		.getReply();
+				.getReply();
 		String snapshotId = request.getKey();
 		EntityWrapper<WalrusSnapshotInfo> db = EntityWrapper.get(WalrusSnapshotInfo.class);
 		WalrusSnapshotInfo snapshotInfo = new WalrusSnapshotInfo(snapshotId);
@@ -259,7 +259,7 @@ public class WalrusBlockStorageManager {
 	public DeleteWalrusSnapshotResponseType deleteWalrusSnapshot(
 			DeleteWalrusSnapshotType request) throws EucalyptusCloudException {
 		DeleteWalrusSnapshotResponseType reply = (DeleteWalrusSnapshotResponseType) request
-		.getReply();
+				.getReply();
 		String snapshotId = request.getKey();
 
 		// Load the entire snapshot tree and then remove the snapshot
@@ -309,14 +309,13 @@ public class WalrusBlockStorageManager {
 			deleteObjectType.setKey(snapshotId);
 			deleteObjectType.setEffectiveUserId(effectiveUserId);
 			deleteObjectType.setUserId(userId);
-
 			try {
-				walrusManager.deleteObject(deleteObjectType);
+				walrusManager.fastDeleteObject(deleteObjectType);
 				DeleteBucketType deleteBucketType = new DeleteBucketType();
 				deleteBucketType.setBucket(bucketName);
 				deleteBucketType.setEffectiveUserId(effectiveUserId);
 				deleteBucketType.setUserId(userId);
-				walrusManager.deleteBucket(deleteBucketType);
+				walrusManager.fastDeleteBucket(deleteBucketType);
 			} catch (EucalyptusCloudException ex) {
 				LOG.error(ex, ex);
 				return;
