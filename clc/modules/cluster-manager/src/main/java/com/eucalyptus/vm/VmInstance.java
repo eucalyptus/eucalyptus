@@ -166,7 +166,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   @Embedded
   private final VmId           vmId;
   @Embedded
-  private final VmBootRecord   bootRecord;
+  private VmBootRecord   bootRecord;
   @Embedded
   private final VmUsageStats   usageStats;
   @Embedded
@@ -1824,6 +1824,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   
   public static VmInstance exampleWithPersistentVolume( final String volumeId ) {
     VmInstance vmExample = VmInstance.create( );
+    vmExample.bootRecord = new VmBootRecord( );
     vmExample.getBootRecord( ).getPersistentVolumes( ).add( VmVolumeAttachment.exampleWithVolumeId( volumeId ) );
     return vmExample;
   }
