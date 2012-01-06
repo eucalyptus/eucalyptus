@@ -73,6 +73,25 @@ public class AsyncRequests {
   
   private static Logger LOG = Logger.getLogger( AsyncRequests.class );
   
+  public static <A extends BaseMessage, B extends BaseMessage> CheckedListenableFuture<B> dispatch( ServiceConfiguration config, final A msg ) throws Exception {
+    if ( config.isVmLocal( ) ) {
+      return ServiceContext.send( config.getComponentId( ), msg );
+    } else {
+      Request<A, B> req = newRequest( new MessageCallback<A, B>( ) {
+        {
+          this.setRequest( msg );
+        }
+        
+        @Override
+        public void fire( B msg ) {
+          Logs.extreme( ).debug( msg.toSimpleString( ) );
+        }
+      } );
+      return req.dispatch( config );
+    }
+  }
+  
+
   public static <A extends BaseMessage, B extends BaseMessage> B sendSync( ServiceConfiguration config, final A msg ) throws Exception {
     if ( config.isVmLocal( ) ) {
       return ServiceContext.send( config.getComponentId( ), msg );
