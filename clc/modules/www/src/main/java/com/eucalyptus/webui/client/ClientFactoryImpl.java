@@ -13,6 +13,8 @@ import com.eucalyptus.webui.client.view.ActionResultView;
 import com.eucalyptus.webui.client.view.ActionResultViewImpl;
 import com.eucalyptus.webui.client.view.CertView;
 import com.eucalyptus.webui.client.view.CertViewImpl;
+import com.eucalyptus.webui.client.view.CloudRegistrationView;
+import com.eucalyptus.webui.client.view.CloudRegistrationViewImpl;
 import com.eucalyptus.webui.client.view.ConfirmationView;
 import com.eucalyptus.webui.client.view.ConfirmationViewImpl;
 import com.eucalyptus.webui.client.view.DownloadView;
@@ -41,8 +43,6 @@ import com.eucalyptus.webui.client.view.PolicyView;
 import com.eucalyptus.webui.client.view.PolicyViewImpl;
 import com.eucalyptus.webui.client.view.ReportView;
 import com.eucalyptus.webui.client.view.ReportViewImpl;
-import com.eucalyptus.webui.client.view.RightScaleView;
-import com.eucalyptus.webui.client.view.RightScaleViewImpl;
 import com.eucalyptus.webui.client.view.ShellView;
 import com.eucalyptus.webui.client.view.ShellViewImpl;
 import com.eucalyptus.webui.client.view.StartView;
@@ -104,7 +104,7 @@ public class ClientFactoryImpl implements ClientFactory {
 	private InputView inputView;
 	
 	// Snippets
-	private RightScaleView rightscaleView;
+	private CloudRegistrationView cloudRegView;
 	private DownloadView downloadView;
 	
   @Override
@@ -329,14 +329,6 @@ public class ClientFactoryImpl implements ClientFactory {
   }
 
   @Override
-  public RightScaleView getRightScaleView( ) {
-    if ( rightscaleView == null ) {
-      rightscaleView = new RightScaleViewImpl( );
-    }
-    return rightscaleView;
-  }
-
-  @Override
   public DownloadView getDownloadView( ) {
     if ( downloadView == null ) {
       downloadView = new DownloadViewImpl( );
@@ -347,6 +339,14 @@ public class ClientFactoryImpl implements ClientFactory {
   @Override
   public ItemView createItemView( ) {
     return new ItemViewImpl( );
+  }
+
+  @Override
+  public CloudRegistrationView getCloudRegistrationView() {
+    if ( cloudRegView == null ) {
+      cloudRegView = new CloudRegistrationViewImpl( );
+    }
+    return cloudRegView;
   }
   
 }

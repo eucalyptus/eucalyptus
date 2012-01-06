@@ -50,7 +50,7 @@ public class ReportActivity extends AbstractActivity implements ReportView.Prese
 			+ "&type=" + type
 			+ "&format=" + format
 			+ "&start="	+ fromDate.getTime()
-			+ "&end=" + toDate.getTime()
+			+ "&end=" + (toDate.getTime()+(1000*60*60*24))  //Add one day because UI says "start" and "THRU"
 			+ "&criterion=" + criteria
 			+ "&groupByCriterion=" + groupBy;
 
