@@ -75,6 +75,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import org.apache.log4j.Logger;
@@ -165,28 +166,34 @@ public class Topology {
   
   private enum TopologyTimer implements EventListener<ClockTick> {
     INSTANCE;
-    private static final AtomicInteger    counter   = new AtomicInteger( 0 );
-    private static final Lock             canHas    = new ReentrantLock( );
-    private static final Callable<Object> lockedRun = new Callable<Object>( ) {
-                                                      public Object call( ) {
-                                                        if ( canHas.tryLock( ) ) {
-                                                          try {
-                                                            return RunChecks.INSTANCE.call( );
-                                                          } finally {
-                                                            canHas.unlock( );
-                                                          }
-                                                        } else {
-                                                          return new Object( );
-                                                        }
-                                                      }
-                                                    };
+    private static final AtomicInteger counter = new AtomicInteger( 0 );
+    private static final Lock          canHas  = new ReentrantLock( );
     
     @Override
     public void fireEvent( final ClockTick event ) {
-      if ( Hosts.isCoordinator( ) ) {
-        Queue.INTERNAL.enqueue( lockedRun );
-      } else if ( counter.incrementAndGet( ) % 3 == 0 ) {
-        Queue.INTERNAL.enqueue( lockedRun );
+      if ( Hosts.isCoordinator( ) && canHas.tryLock( ) ) {
+        Queue.INTERNAL.enqueue( new Callable<Object>( ) {
+          public Object call( ) {
+            try {
+              return RunChecks.INSTANCE.call( );
+            } finally {
+              canHas.unlock( );
+            }
+          }
+        } );
+      } else if ( counter.incrementAndGet( ) % 3 == 0 && canHas.tryLock( ) ) {
+        Queue.INTERNAL.enqueue( new Callable<Object>( ) {
+          public Object call( ) {
+            try {
+              return RunChecks.INSTANCE.call( );
+            } finally {
+              canHas.unlock( );
+            }
+          }
+        } );
+      } else if ( counter.incrementAndGet( ) > 10 ) {
+        counter.set( 0 );
+        Queue.INTERNAL.enqueue( RunChecks.INSTANCE );
       }
     }
     
