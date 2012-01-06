@@ -5,7 +5,7 @@ import com.google.gwt.user.client.ui.IsWidget;
 
 public interface StartView extends IsWidget {
   
-  AcceptsOneWidget getRightScaleSnippetDisplay( );
+  AcceptsOneWidget getCloudRegSnippetDisplay( );
 
   AcceptsOneWidget getDownloadSnippetDisplay( );
 

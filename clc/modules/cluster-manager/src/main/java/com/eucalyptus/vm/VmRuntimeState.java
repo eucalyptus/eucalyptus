@@ -158,7 +158,7 @@ public class VmRuntimeState {
     }
     this.getVmInstance( ).updateTimeStamps( );
     if ( action != null ) {
-      LOG.error( "Running cleanUp for instance: " + this.getVmInstance( ).getInstanceId( ), new RuntimeException() );
+      Logs.extreme( ).error( "Running cleanUp for instance: " + this.getVmInstance( ).getInstanceId( ), new RuntimeException() );
       EventRecord.caller( VmInstance.class, EventType.VM_TERMINATING, this.getVmInstance( ).getInstanceId( ), this.vmInstance.getOwner( ),
                           this.getVmInstance( ).getState( ).name( ) );
       if ( Reason.APPEND.equals( reason ) ) {
@@ -167,8 +167,7 @@ public class VmRuntimeState {
       this.addReasonDetail( extra );
       this.reason = reason;
       try {
-        Threads.lookup( Eucalyptus.class, VmInstance.class ).limitTo( VmInstances.MAX_STATE_THREADS ).submit( action ).get( 10, TimeUnit.MILLISECONDS );//GRZE:wtf?!  why short time limit.
-      } catch ( final TimeoutException ex ) {
+        Threads.lookup( Eucalyptus.class, VmInstance.class ).limitTo( VmInstances.MAX_STATE_THREADS ).submit( action ).get( );//10, TimeUnit.MILLISECONDS );//GRZE:wtf?!  why short time limit.
       } catch ( final Exception ex ) {
         LOG.error( ex, ex );
       }
@@ -303,7 +302,7 @@ public class VmRuntimeState {
                         this.getVmInstance( ).getInstanceId( ),
                         "" + this.getBundleTask( ).getState( ) ).info( );
       return true;
-    } else if ( BundleState.canceling.name( ).equals( this.getBundleTaskState( ) ) ) {
+    } else if ( BundleState.canceling.equals( this.getBundleTaskState( ) ) ) {
       EventRecord.here( VmRuntimeState.class, EventType.BUNDLE_CANCELLED, this.vmInstance.getOwner( ).toString( ), this.getBundleTask( ).getBundleId( ),
                         this.getVmInstance( ).getInstanceId( ),
                         "" + this.getBundleTask( ).getState( ) ).info( );

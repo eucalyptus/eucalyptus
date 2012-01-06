@@ -69,6 +69,7 @@ import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
@@ -83,6 +84,7 @@ import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.stream.ChunkedInput;
 
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.WalrusProperties;
 import com.eucalyptus.ws.util.WalrusBucketLogger;
@@ -190,11 +192,23 @@ public class FileSystemStorageManager implements StorageManager {
 			throw new IOException("Unable to read: " + path);
 		}
 		BufferedInputStream inputStream = new BufferedInputStream(new FileInputStream(objectFile));
-		if (offset > 0) {
-			inputStream.skip(offset);
+		int bytesRead = 0;
+		try {
+			if (offset > 0) {
+				inputStream.skip(offset);
+			}
+			bytesRead = inputStream.read(bytes);
+		} catch (IOException ex) {
+			LOG.error( ex );
+			Logs.extreme( ).error( ex, ex );
+			throw ex;
+		} finally {
+			try {
+				inputStream.close();
+			} catch (IOException ex) {
+				LOG.error( ex );
+			}
 		}
-		int bytesRead = inputStream.read(bytes);
-		inputStream.close();
 		return bytesRead;
 	}
 
@@ -222,8 +236,19 @@ public class FileSystemStorageManager implements StorageManager {
 			objectFile.createNewFile();
 		}
 		BufferedOutputStream outputStream = new BufferedOutputStream(new FileOutputStream(objectFile, append));
+		try {
 		outputStream.write(base64Data);
-		outputStream.close();
+		} catch (IOException ex) {
+			LOG.error( ex );
+			Logs.extreme( ).error( ex, ex );
+			throw ex;
+		} finally {
+			try {
+				outputStream.close();
+			} catch (IOException ex) {
+				LOG.error( ex );
+			}
+		}
 	}
 
 	public void renameObject(String bucket, String oldName, String newName) throws IOException {
@@ -239,16 +264,47 @@ public class FileSystemStorageManager implements StorageManager {
 	public void copyObject(String sourceBucket, String sourceObject, String destinationBucket, String destinationObject) throws IOException {
 		File oldObjectFile = new File (WalrusInfo.getWalrusInfo().getStorageDir() + FILE_SEPARATOR + sourceBucket + FILE_SEPARATOR + sourceObject);
 		File newObjectFile = new File (WalrusInfo.getWalrusInfo().getStorageDir() + FILE_SEPARATOR + destinationBucket + FILE_SEPARATOR + destinationObject);
-		if(!oldObjectFile.equals(newObjectFile)) {			
-			FileInputStream fileInputStream = new FileInputStream(oldObjectFile);
-			FileChannel fileIn = fileInputStream.getChannel();
-			FileOutputStream fileOutputStream = new FileOutputStream(newObjectFile);
-			FileChannel fileOut = fileOutputStream.getChannel();
-			fileIn.transferTo(0, fileIn.size(), fileOut);
-			fileIn.close();
-			fileInputStream.close();
-			fileOut.close();
-			fileOutputStream.close();
+		if(!oldObjectFile.equals(newObjectFile)) {	
+			FileInputStream fileInputStream = null;
+			FileChannel fileIn = null;
+			FileOutputStream fileOutputStream = null;
+			FileChannel fileOut = null;
+			try {
+				fileInputStream = new FileInputStream(oldObjectFile);
+				fileIn = fileInputStream.getChannel();
+				fileOutputStream = new FileOutputStream(newObjectFile);
+				fileOut = fileOutputStream.getChannel();
+				fileIn.transferTo(0, fileIn.size(), fileOut);
+			} catch (IOException ex) {
+				 LOG.error( ex );
+			     Logs.extreme( ).error( ex, ex );
+			     throw ex;
+			}  finally {
+				try {
+					if(fileIn != null) 
+						fileIn.close();
+				} catch(IOException e) {
+					LOG.error( e );
+				}
+				try {
+					if( fileInputStream != null)
+						fileInputStream.close();
+				} catch(IOException e) {
+					LOG.error( e );
+				}
+				try {
+					if(fileOut != null) 
+						fileOut.close();
+				} catch(IOException e) {
+					LOG.error( e );
+				}
+				try {
+					if(fileOutputStream != null)
+						fileOutputStream.close();
+				} catch(IOException e) {
+					LOG.error( e );
+				}
+			}
 		}
 	}
 

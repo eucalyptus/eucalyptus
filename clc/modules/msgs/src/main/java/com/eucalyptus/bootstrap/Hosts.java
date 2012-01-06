@@ -172,7 +172,7 @@ public class Hosts {
       public ServiceConfiguration apply( final T input ) {
         Component component = Components.lookup( input );
         final ServiceConfiguration config = !Internets.testLocal( addr.getHostAddress( ) ) ? component.initRemoteService( addr ) : component.initService( );
-        LOG.info( "Initialized service: " + config.getFullName( ) );
+        Logs.extreme( ).info( "Initialized service: " + config.getFullName( ) );
         return config;
       }
     };
@@ -268,7 +268,7 @@ public class Hosts {
             if ( UpdateEntry.INSTANCE.apply( currentHost ) ) {
               LOG.info( "Updated changed local host entry: " + currentHost );
             } else {
-              LOG.info( "Updated local host entry periodically: " + currentHost );
+              Logs.extreme( ).info( "Updated local host entry periodically: " + currentHost );
               Hosts.put( Host.create( ) );
             }
           }
@@ -320,7 +320,7 @@ public class Hosts {
               try {
                 if ( PeriodicMembershipChecks.canHasChecks.tryLock( 1, TimeUnit.SECONDS ) ) {
                   try {
-                    LOG.debug( runner.toString( ) + ": RUNNING" );
+                    Logs.extreme( ).debug( runner.toString( ) + ": RUNNING" );
                     try {
                       runner.run( );
                     } catch ( Exception ex ) {
@@ -443,7 +443,7 @@ public class Hosts {
       if ( Bootstrap.isShuttingDown( ) ) {
         return;
       } else {
-        LOG.info( "Hosts.entrySet(): " + hostKey + " => " + host );
+        Logs.extreme( ).info( "Hosts.entrySet(): " + hostKey + " => " + host );
         try {
           if ( host.isLocalHost( ) && host.hasDatabase( ) && Bootstrap.isLoaded( ) ) {
             final boolean wasSynched = Databases.isSynchronized( );
@@ -472,12 +472,12 @@ public class Hosts {
           } else if ( InitializeAsCloudController.INSTANCE.apply( host ) ) {
             LOG.info( "Hosts.entrySet(): INITIALIZED CLC => " + host );
           } else {
-            LOG.debug( "Hosts.entrySet(): UPDATED HOST => " + host );
+            Logs.extreme( ).debug( "Hosts.entrySet(): UPDATED HOST => " + host );
           }
         } catch ( Exception ex ) {
           LOG.error( ex, ex );
         }
-        LOG.info( "Hosts.entrySet(): " + hostKey + " finished." );
+        Logs.extreme( ).info( "Hosts.entrySet(): " + hostKey + " finished." );
       }
     }
     

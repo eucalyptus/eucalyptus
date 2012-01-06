@@ -3,9 +3,11 @@
     xmlns:g="urn:import:com.google.gwt.user.client.ui">
     
     <ui:style>
-        .icon {
-        	vertical-align:middle;
-        	margin:12px;
+        .title {
+          font-size:85%;
+          color:#323232;
+          margin-bottom:12px;
+          margin-top:12px;
         }
         .label {
         	font-size:90%;
@@ -26,12 +28,11 @@
     
     <g:HTMLPanel>
         <table style="width:100%;">
-            <colgroup width="1px"/>
             <tbody>
                 <tr>
-                    <td style="vertical-align:middle;">
-                        <image alt="RightScale" src="themes/active/rightscalelogo.gif" class="{style.icon}"/>
-                    </td>
+                  <g:Label addStyleNames="{style.title}">Use the following information to register your cloud with third-party cloud management platform:</g:Label>
+                </tr>
+                <tr>
                     <td>
                         <table class="{style.reg}">
                             <tbody>
@@ -42,9 +43,6 @@
                                 <tr>
                                     <td><g:Label addStyleNames="{style.label}">Cloud ID:</g:Label></td>
                                     <td><g:Label addStyleNames="{style.value}" ui:field="cloudId"></g:Label></td>
-                                </tr>
-                                <tr>
-                                    <td colspan="2"><g:Button ui:field="registerButton">Register</g:Button></td>
                                 </tr>
                             </tbody>
                         </table>

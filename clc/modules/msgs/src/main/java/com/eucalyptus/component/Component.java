@@ -223,7 +223,7 @@ public class Component implements HasName<Component> {
     ServiceConfiguration config = this.getBuilder( ).newInstance( this.getComponentId( ).getPartition( ), addr.getHostAddress( ), addr.getHostAddress( ),
                                                                   this.getComponentId( ).getPort( ) );
     BasicService ret = this.serviceRegistry.register( config );
-    LOG.debug( "Initializing remote service for host " + addr
+    Logs.extreme( ).debug( "Initializing remote service for host " + addr
                + " with configuration: "
                + config );
     return config;
