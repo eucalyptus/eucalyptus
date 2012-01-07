@@ -65,12 +65,14 @@ package com.eucalyptus.cluster.callback;
 
 import org.apache.log4j.Logger;
 import com.eucalyptus.entities.Entities;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.ConnectionException;
 import com.eucalyptus.util.async.FailedRequestException;
 import com.eucalyptus.util.async.MessageCallback;
 import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstances;
+import com.eucalyptus.vm.VmVolumeAttachment;
 import com.eucalyptus.vm.VmVolumeAttachment.AttachmentState;
 import com.google.common.base.Function;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
@@ -85,8 +87,13 @@ public class VolumeDetachCallback extends MessageCallback<DetachVolumeType,Detac
     super( request );
     final Function<String, VmInstance> removeVolAttachment = new Function<String, VmInstance>( ) {
       public VmInstance apply( final String input ) {
+        String volumeId = VolumeDetachCallback.this.getRequest( ).getVolumeId( );
         VmInstance vm = VmInstances.lookup( input );
-        vm.updateVolumeAttachment( VolumeDetachCallback.this.getRequest( ).getVolumeId( ), AttachmentState.detaching );
+        VmVolumeAttachment volumeAttachment = vm.lookupVolumeAttachment( volumeId );
+        if ( !VmVolumeAttachment.AttachmentState.attached.equals( volumeAttachment.getAttachmentState( ) ) ) {
+          throw Exceptions.toUndeclared( "Failed to detach volume which is already detaching: " + volumeId );
+        }
+        vm.updateVolumeAttachment( volumeId, AttachmentState.detaching );
         return vm;
       }
     };
