@@ -1353,12 +1353,12 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   /**
    * @param attachVol
    */
-  public void addTransientVolume( String deviceName, Volume vol ) {
+  public void addTransientVolume( String deviceName, String remoteDevice, Volume vol ) {
     final EntityTransaction db = Entities.get( VmInstance.class );
     try {
       final VmInstance entity = Entities.merge( this );
       final Volume volEntity = Entities.merge( vol );
-      VmVolumeAttachment attachVol = new VmVolumeAttachment( entity, vol.getDisplayName( ), deviceName, vol.getRemoteDevice( ), AttachmentState.attaching.name( ), new Date( ), false );
+      VmVolumeAttachment attachVol = new VmVolumeAttachment( entity, vol.getDisplayName( ), deviceName, remoteDevice, AttachmentState.attaching.name( ), new Date( ), false );
       volEntity.setState( State.BUSY );
       entity.getTransientVolumeState( ).addVolumeAttachment( attachVol );
       db.commit( );
