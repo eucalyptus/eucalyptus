@@ -433,6 +433,11 @@ public class VolumeManager {
       LOG.error( ex, ex );
       throw new EucalyptusCloudException( "Failed to lookup SC for partition: " + vm.getPartition( ), ex );
     }
+    request.setVolumeId( volume.getVolumeId( ) );
+    request.setRemoteDevice( volume.getRemoteDevice( ) );
+    request.setDevice( volume.getDevice( ).replaceAll( "unknown,requested:", "" ) );
+    request.setInstanceId( vm.getInstanceId( ) );
+    VolumeDetachCallback ncDetach = new VolumeDetachCallback( request );
     try {
       AsyncRequests.sendSync( scVm, new DetachStorageVolumeType( cluster.getNode( vm.getServiceTag( ) ).getIqn( ), volume.getVolumeId( ) ) );
     } catch ( Exception e ) {
@@ -440,11 +445,7 @@ public class VolumeManager {
       Logs.extreme( ).debug( e, e );
 //GRZE: attach is idempotent, failure here is ok.      throw new EucalyptusCloudException( e.getMessage( ) );
     }
-    request.setVolumeId( volume.getVolumeId( ) );
-    request.setRemoteDevice( volume.getRemoteDevice( ) );
-    request.setDevice( volume.getDevice( ).replaceAll( "unknown,requested:", "" ) );
-    request.setInstanceId( vm.getInstanceId( ) );
-    AsyncRequests.newRequest( new VolumeDetachCallback( request ) ).dispatch( cluster.getConfiguration( ) );
+    AsyncRequests.newRequest( ncDetach ).dispatch( cluster.getConfiguration( ) );
     EventRecord.here( VolumeManager.class, EventClass.VOLUME, EventType.VOLUME_DETACH )
                .withDetails( vm.getOwner( ).toString( ), volume.getVolumeId( ), "instance", vm.getInstanceId( ) )
                .withDetails( "cluster", ccConfig.getFullName( ).toString( ) ).info( );
