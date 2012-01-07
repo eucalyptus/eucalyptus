@@ -90,6 +90,7 @@ import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
+import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.Digest;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
@@ -117,6 +118,7 @@ import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
+import edu.ucsb.eucalyptus.msgs.DeleteStorageVolumeType;
 import edu.ucsb.eucalyptus.msgs.DetachStorageVolumeType;
 import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
 import edu.ucsb.eucalyptus.msgs.TerminateInstancesResponseType;
@@ -271,14 +273,7 @@ public class VmInstances {
   public static String getId( final Long rsvId, final int launchIndex ) {
     String vmId = null;
     do {
-      final MessageDigest digest = Digest.MD5.get( );
-      digest.reset( );
-      digest.update( Long.toString( rsvId + launchIndex + System.currentTimeMillis( ) ).getBytes( ) );
-      
-      final Adler32 hash = new Adler32( );
-      hash.reset( );
-      hash.update( digest.digest( ) );
-      vmId = String.format( "i-%08X", hash.getValue( ) );
+      vmId = Crypto.generateId( Long.toString( rsvId + launchIndex ), "i" );
     } while ( VmInstances.contains( vmId ) );
     return vmId;
   }
@@ -286,14 +281,9 @@ public class VmInstances {
   public static VmInstance lookupByPrivateIp( final String ip ) throws NoSuchElementException {
     EntityTransaction db = Entities.get( VmInstance.class );
     try {
-      VmInstance vmExample = VmInstance.create( );
-      vmExample.setNetworkConfig( VmNetworkConfig.exampleWithPrivateIp( ip ) );
-      VmInstance vm = ( VmInstance ) Entities.createCriteria( VmInstance.class )
+      VmInstance vmExample = VmInstance.exampleWithPrivateIp( ip );
+      VmInstance vm = ( VmInstance ) Entities.createCriteriaUnique( VmInstance.class )
                                              .add( Example.create( vmExample ).enableLike( MatchMode.EXACT ) )
-                                             .setCacheable( true )
-                                             .setMaxResults( 1 )
-                                             .setFetchSize( 1 )
-                                             .setFirstResult( 0 )
                                              .uniqueResult( );
       if ( vm == null ) {
         throw new NoSuchElementException( "VmInstance with private ip: " + ip );
@@ -307,17 +297,40 @@ public class VmInstances {
     }
   }
   
+  public static VmVolumeAttachment lookupVolumeAttachment( final String volumeId ) {
+    VmVolumeAttachment ret = null;
+    EntityTransaction db = Entities.get( VmInstance.class );
+    try {
+      List<VmInstance> vms = Entities.query( VmInstance.create( ) );
+      for ( VmInstance vm : vms ) {
+        try {
+          ret = vm.lookupVolumeAttachment(volumeId);
+          if ( ret.getVmInstance( ) == null ) {
+            ret.setVmInstance( vm );
+          }
+        } catch ( NoSuchElementException ex ) {
+          continue;
+        }
+      }
+      if ( ret == null ) {
+        throw new NoSuchElementException( "VmVolumeAttachment: no volume attachment for " + volumeId );
+      }
+      db.commit( );
+      return ret;
+    } catch ( Exception ex ) {
+      Logs.exhaust( ).error( ex, ex );
+      db.rollback( );
+      throw new NoSuchElementException( ex.getMessage( ) );
+    }
+    
+  }
+  
   public static VmInstance lookupByPublicIp( final String ip ) throws NoSuchElementException {
     EntityTransaction db = Entities.get( VmInstance.class );
     try {
-      VmInstance vmExample = VmInstance.create( );
-      vmExample.setNetworkConfig( VmNetworkConfig.exampleWithPublicIp( ip ) );
-      VmInstance vm = ( VmInstance ) Entities.createCriteria( VmInstance.class )
+      VmInstance vmExample = VmInstance.exampleWithPublicIp( ip );
+      VmInstance vm = ( VmInstance ) Entities.createCriteriaUnique( VmInstance.class )
                                              .add( Example.create( vmExample ).enableLike( MatchMode.EXACT ) )
-                                             .setCacheable( true )
-                                             .setMaxResults( 1 )
-                                             .setFetchSize( 1 )
-                                             .setFirstResult( 0 )
                                              .uniqueResult( );
       if ( vm == null ) {
         throw new NoSuchElementException( "VmInstance with public ip: " + ip );
@@ -360,17 +373,26 @@ public class VmInstances {
             EventRecord.caller( VmInstances.class, EventType.VM_TERMINATING, "USER_ADDRESS", address.toString( ) ).debug( );
           }
         } catch ( final NoSuchElementException e ) {
-          
+
         } catch ( final Exception e1 ) {
           LOG.debug( e1, e1 );
         }
       }
-      final Cluster cluster = Clusters.lookup( Topology.lookup( ClusterController.class, vm.lookupPartition( ) ) );
+    } catch ( final Exception e ) {
+      LOG.error( e );
+      Logs.extreme( ).error( e, e );
+    }
+    try {
       VmInstances.cleanUpAttachedVolumes( vm );
-      
-      AsyncRequests.newRequest( new TerminateCallback( vm.getInstanceId( ) ) ).dispatch( cluster.getConfiguration( ) );
-    } catch ( final Throwable e ) {
-      LOG.error( e, e );
+    } catch ( Exception ex ) {
+      LOG.error( ex );
+      Logs.extreme( ).error( ex, ex );
+    }
+    try {
+      AsyncRequests.newRequest( new TerminateCallback( vm.getInstanceId( ) ) ).dispatch( vm.getPartition( ) );
+    } catch ( Exception ex ) {
+      LOG.error( ex );
+      Logs.extreme( ).error( ex, ex );
     }
   }
   
@@ -385,32 +407,42 @@ public class VmInstances {
     try {
       ServiceConfiguration ccConfig = Topology.lookup( ClusterController.class, vm.lookupPartition( ) );
       final Cluster cluster = Clusters.lookup( ccConfig );
-      vm.eachVolumeAttachment( new Predicate<AttachedVolume>( ) {
+      vm.eachVolumeAttachment( new Predicate<VmVolumeAttachment>( ) {
         @Override
-        public boolean apply( final AttachedVolume arg0 ) {
-          if ( "/dev/sda1".equals( arg0.getDevice( ) ) ) {//GRZE:fix references to root device name.
-            try {
-              final ServiceConfiguration sc = Topology.lookup( Storage.class, vm.lookupPartition( ) );
-              final Dispatcher scDispatcher = ServiceDispatcher.lookup( sc );
-              scDispatcher.send( new DetachStorageVolumeType( cluster.getNode( vm.getServiceTag( ) ).getIqn( ), arg0.getVolumeId( ) ) );
-              return true;
-            } catch ( final Throwable e ) {
-              LOG.error( "Failed sending Detach Storage Volume for: " + arg0.getVolumeId( )
-                         + ".  Will keep trying as long as instance is reported.  The request failed because of: " + e.getMessage( ), e );
-              return true;
+        public boolean apply( final VmVolumeAttachment arg0 ) {
+          try {
+            
+            final ServiceConfiguration sc = Topology.lookup( Storage.class, vm.lookupPartition( ) );
+            
+            if ( VmStateSet.TERM.apply( vm ) && !"/dev/sda1".equals( arg0.getDevice( ) ) ) {
+              try {
+                vm.removeVolumeAttachment( arg0.getVolumeId( ) );
+              } catch ( NoSuchElementException ex ) {
+                Logs.extreme( ).debug( ex );
+              }
             }
-          } else {
+            
             try {
-              final ServiceConfiguration sc = Topology.lookup( Storage.class, vm.lookupPartition( ) );
-              vm.removeVolumeAttachment( arg0.getVolumeId( ) );
-              final Dispatcher scDispatcher = ServiceDispatcher.lookup( sc );
-              scDispatcher.send( new DetachStorageVolumeType( cluster.getNode( vm.getServiceTag( ) ).getIqn( ), arg0.getVolumeId( ) ) );
-              return true;
-            } catch ( final Throwable e ) {
-              LOG.error( "Failed sending Detach Storage Volume for: " + arg0.getVolumeId( )
-                         + ".  Will keep trying as long as instance is reported.  The request failed because of: " + e.getMessage( ), e );
-              return true;
+              AsyncRequests.sendSync( sc, new DetachStorageVolumeType( cluster.getNode( vm.getServiceTag( ) ).getIqn( ), arg0.getVolumeId( ) ) );
+            } catch ( Exception ex ) {
+              LOG.debug( ex );
+              Logs.extreme( ).debug( ex, ex );
             }
+            
+            //ebs with either default deleteOnTerminate or user specified deleteOnTerminate and TERMINATING instance
+            if ( VmStateSet.TERM.apply( vm ) && arg0.getDeleteOnTerminate( ) ) {
+              AsyncRequests.sendSync( sc, new DeleteStorageVolumeType( arg0.getVolumeId( ) ) );
+            }
+            
+            return true;
+          } catch ( final Throwable e ) {
+            LOG.error( "Failed to clean up attached volume: "
+                       + arg0.getVolumeId( )
+                       + " for instance "
+                       + vm.getInstanceId( )
+                       + ".  The request failed because of: "
+                       + e.getMessage( ), e );
+            return true;
           }
         }
       } );
@@ -494,7 +526,7 @@ public class VmInstances {
   }
   
   public static void terminated( final VmInstance vm ) throws TransactionException {
-    VmInstances.cache( Transitions.TERMINATED.apply( vm ) );
+    VmInstances.cache( Entities.asTransaction( VmInstance.class, Transitions.TERMINATED, VmInstances.TX_RETRIES ).apply( vm ) );
   }
   
   public static void terminated( final String key ) throws NoSuchElementException, TransactionException {
@@ -502,7 +534,7 @@ public class VmInstances {
   }
   
   public static void stopped( final VmInstance vm ) throws TransactionException {
-    Entities.asTransaction( VmInstance.class, Transitions.STOPPED ).apply( vm );
+    Entities.asTransaction( VmInstance.class, Transitions.STOPPED, VmInstances.TX_RETRIES ).apply( vm );
   }
   
   public static void stopped( final String key ) throws NoSuchElementException, TransactionException {
@@ -520,7 +552,7 @@ public class VmInstances {
 //        VmInstances.terminated( vm );
 //      }
 //    } else {
-      Entities.asTransaction( VmInstance.class, Transitions.SHUTDOWN ).apply( vm );
+      Entities.asTransaction( VmInstance.class, Transitions.SHUTDOWN, VmInstances.TX_RETRIES ).apply( vm );
     }
   }
   

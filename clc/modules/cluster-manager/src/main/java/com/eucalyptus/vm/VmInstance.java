@@ -97,7 +97,9 @@ import org.hibernate.criterion.SimpleExpression;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
 import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.blockstorage.State;
 import com.eucalyptus.blockstorage.Volume;
+import com.eucalyptus.blockstorage.Volumes;
 import com.eucalyptus.cloud.CloudMetadata.VmInstanceMetadata;
 import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.UserMetadata;
@@ -133,6 +135,7 @@ import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.vm.VmBundleTask.BundleState;
 import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstances.Timeout;
+import com.eucalyptus.vm.VmVolumeAttachment.AttachmentState;
 import com.eucalyptus.ws.StackConfiguration;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
@@ -163,7 +166,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   @Embedded
   private final VmId           vmId;
   @Embedded
-  private final VmBootRecord   bootRecord;
+  private VmBootRecord   bootRecord;
   @Embedded
   private final VmUsageStats   usageStats;
   @Embedded
@@ -231,10 +234,10 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       
       @Override
       public boolean apply( final VmInstance arg0 ) {
-        return super.apply( arg0 ) || !arg0.eachVolumeAttachment( new Predicate<AttachedVolume>( ) {
+        return super.apply( arg0 ) || !arg0.eachVolumeAttachment( new Predicate<VmVolumeAttachment>( ) {
           @Override
-          public boolean apply( final AttachedVolume arg0 ) {
-            return !arg0.getStatus( ).endsWith( "ing" );
+          public boolean apply( final VmVolumeAttachment input ) {
+            return !input.getAttachmentState( ).isVolatile( );
           }
         } );
       }
@@ -335,7 +338,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
             db.commit( );
             return result;
           } catch ( Exception ex ) {
-            Logs.exhaust( ).error( ex, ex );
+            Logs.extreme( ).error( ex, ex );
             db.rollback( );
             throw Exceptions.toUndeclared( ex );
           }
@@ -424,7 +427,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           }
           db.commit( );
         } catch ( final Exception ex ) {
-          Logs.exhaust( ).error( ex, ex );
+          Logs.extreme( ).error( ex, ex );
           db.rollback( );
         }
       }
@@ -607,124 +610,104 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     START {
       @Override
       public VmInstance apply( final VmInstance v ) {
-        if ( !Entities.isPersistent( v ) ) {
-          throw new TransientEntityException( v.toString( ) );
-        } else {
-          final EntityTransaction db = Entities.get( VmInstance.class );
-          try {
-            final VmInstance vm = Entities.merge( v );
-            vm.setState( VmState.PENDING, Reason.USER_STARTED );
-            db.commit( );
-            return vm;
-          } catch ( final RuntimeException ex ) {
-            Logs.extreme( ).error( ex, ex );
-            db.rollback( );
-            throw ex;
-          }
+        final EntityTransaction db = Entities.get( VmInstance.class );
+        try {
+          final VmInstance vm = Entities.merge( v );
+          vm.setState( VmState.PENDING, Reason.USER_STARTED );
+          db.commit( );
+          return vm;
+        } catch ( final RuntimeException ex ) {
+          Logs.extreme( ).error( ex, ex );
+          db.rollback( );
+          throw ex;
         }
       }
     },
     TERMINATED {
       @Override
       public VmInstance apply( final VmInstance v ) {
-        if ( !Entities.isPersistent( v ) ) {
-          throw new TransientEntityException( v.toString( ) );
-        } else {
-          final EntityTransaction db = Entities.get( VmInstance.class );
-          try {
-            final VmInstance vm = Entities.merge( v );
-            if ( VmStateSet.RUN.apply( vm ) ) {
-              vm.setState( VmState.SHUTTING_DOWN, ( Timeout.SHUTTING_DOWN.apply( vm )
-                                                                                     ? Reason.EXPIRED
-                                                                                     : Reason.USER_TERMINATED ) );
-            } else if ( VmState.SHUTTING_DOWN.equals( vm.getState( ) ) ) {
-              vm.setState( VmState.TERMINATED, Timeout.TERMINATED.apply( vm )
-                                                                             ? Reason.EXPIRED
-                                                                             : Reason.USER_TERMINATED );
-            }
-            db.commit( );
-            return vm;
-          } catch ( final Exception ex ) {
-            Logs.exhaust( ).trace( ex, ex );
-            db.rollback( );
-            throw new NoSuchElementException( "Failed to lookup instance: " + v );
+        final EntityTransaction db = Entities.get( VmInstance.class );
+        try {
+          final VmInstance vm = Entities.uniqueResult( VmInstance.named( null, v.getInstanceId( ) ) );
+          if ( VmStateSet.RUN.apply( vm ) ) {
+            vm.setState( VmState.SHUTTING_DOWN, ( Timeout.SHUTTING_DOWN.apply( vm )
+                                                                                   ? Reason.EXPIRED
+                                                                                   : Reason.USER_TERMINATED ) );
+          } else if ( VmState.SHUTTING_DOWN.equals( vm.getState( ) ) ) {
+            vm.setState( VmState.TERMINATED, Timeout.TERMINATED.apply( vm )
+                                                                           ? Reason.EXPIRED
+                                                                           : Reason.USER_TERMINATED );
           }
+          db.commit( );
+          return vm;
+        } catch ( final Exception ex ) {
+          Logs.extreme( ).trace( ex, ex );
+          db.rollback( );
+          throw new NoSuchElementException( "Failed to lookup instance: " + v );
         }
       }
     },
     STOPPED {
       @Override
       public VmInstance apply( final VmInstance v ) {
-        if ( !Entities.isPersistent( v ) ) {
-          throw new TransientEntityException( v.toString( ) );
-        } else {
-          final EntityTransaction db = Entities.get( VmInstance.class );
-          try {
-            final VmInstance vm = Entities.merge( v );
-            if ( VmStateSet.RUN.apply( vm ) ) {
-              vm.setState( VmState.STOPPING, Reason.USER_STOPPED );
-            } else if ( VmState.STOPPING.equals( vm.getState( ) ) ) {
-              vm.setState( VmState.STOPPED, Reason.USER_STOPPED );
-            }
-            db.commit( );
-            return vm;
-          } catch ( final Exception ex ) {
-            Logs.exhaust( ).trace( ex, ex );
-            db.rollback( );
-            throw new NoSuchElementException( "Failed to lookup instance: " + v );
+        final EntityTransaction db = Entities.get( VmInstance.class );
+        try {
+          final VmInstance vm = Entities.uniqueResult( VmInstance.named( null, v.getInstanceId( ) ) );
+          if ( VmStateSet.RUN.apply( vm ) ) {
+            vm.setState( VmState.STOPPING, Reason.USER_STOPPED );
+          } else if ( VmState.STOPPING.equals( vm.getState( ) ) ) {
+            vm.setState( VmState.STOPPED, Reason.USER_STOPPED );
           }
+          db.commit( );
+          return vm;
+        } catch ( final Exception ex ) {
+          Logs.extreme( ).debug( ex, ex );
+          db.rollback( );
+          throw new NoSuchElementException( "Failed to lookup instance: " + v );
         }
       }
     },
     DELETE {
       @Override
-      public VmInstance apply( final VmInstance vm ) {
-        if ( !Entities.isPersistent( vm ) ) {
-          throw new TransientEntityException( vm.toString( ) );
-        } else {
-          final EntityTransaction db = Entities.get( VmInstance.class );
-          try {
-            VmInstance entity = Entities.uniqueResult( VmInstance.named( null, vm.getInstanceId( ) ) );
-            entity.cleanUp( );
-            Entities.delete( entity );
-            db.commit( );
-          } catch ( final Exception ex ) {
-            LOG.error( ex );
-            Logs.extreme( ).error( ex, ex );
-            db.rollback( );
-          }
-          try {
-            vm.cleanUp( );
-            vm.setState( VmState.TERMINATED );
-          } catch ( Exception ex ) {
-            LOG.error( ex );
-            Logs.extreme( ).error( ex, ex );
-          }
-          return vm;
+      public VmInstance apply( final VmInstance v ) {
+        final EntityTransaction db = Entities.get( VmInstance.class );
+        try {
+          final VmInstance vm = Entities.uniqueResult( VmInstance.named( null, v.getInstanceId( ) ) );
+          vm.cleanUp( );
+          Entities.delete( vm );
+          db.commit( );
+        } catch ( final Exception ex ) {
+          LOG.error( ex );
+          Logs.extreme( ).error( ex, ex );
+          db.rollback( );
         }
+        try {
+          v.cleanUp( );
+          v.setState( VmState.TERMINATED );
+        } catch ( Exception ex ) {
+          LOG.error( ex );
+          Logs.extreme( ).error( ex, ex );
+        }
+        return v;
       }
     },
     SHUTDOWN {
       @Override
       public VmInstance apply( final VmInstance v ) {
-        if ( !Entities.isPersistent( v ) ) {
-          throw new TransientEntityException( v.toString( ) );
-        } else {
-          final EntityTransaction db = Entities.get( VmInstance.class );
-          try {
-            final VmInstance vm = Entities.merge( v );
-            if ( VmStateSet.RUN.apply( vm ) ) {
-              vm.setState( VmState.SHUTTING_DOWN, ( Timeout.SHUTTING_DOWN.apply( vm )
-                                                                                     ? Reason.EXPIRED
-                                                                                     : Reason.USER_TERMINATED ) );
-            }
-            db.commit( );
-            return vm;
-          } catch ( final Exception ex ) {
-            Logs.exhaust( ).trace( ex, ex );
-            db.rollback( );
-            throw new NoSuchElementException( "Failed to lookup instance: " + v );
+        final EntityTransaction db = Entities.get( VmInstance.class );
+        try {
+          final VmInstance vm = Entities.uniqueResult( VmInstance.named( null, v.getInstanceId( ) ) );
+          if ( VmStateSet.RUN.apply( vm ) ) {
+            vm.setState( VmState.SHUTTING_DOWN, ( Timeout.SHUTTING_DOWN.apply( vm )
+                                                                                   ? Reason.EXPIRED
+                                                                                   : Reason.USER_TERMINATED ) );
           }
+          db.commit( );
+          return vm;
+        } catch ( final Exception ex ) {
+          Logs.extreme( ).trace( ex, ex );
+          db.rollback( );
+          throw new NoSuchElementException( "Failed to lookup instance: " + v );
         }
       }
     };
@@ -1311,7 +1294,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       }
       db.commit( );
     } catch ( final Exception ex ) {
-      Logs.exhaust( ).error( ex, ex );
+      Logs.extreme( ).error( ex, ex );
       db.rollback( );
       throw new RuntimeException( ex );
     }
@@ -1334,11 +1317,11 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       db.commit( );
       return ret;
     } catch ( final NoSuchElementException ex ) {
-      Logs.exhaust( ).error( ex, ex );
+      Logs.extreme( ).error( ex, ex );
       db.rollback( );
       throw ex;
     } catch ( final Exception ex ) {
-      Logs.exhaust( ).error( ex, ex );
+      Logs.extreme( ).error( ex, ex );
       db.rollback( );
       throw new NoSuchElementException( "Failed to lookup volume with device: " + volumeDevice );
     }
@@ -1348,22 +1331,20 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
    * @param volumeId
    * @return
    */
-  public AttachedVolume lookupVolumeAttachment( final String volumeId ) {
+  public VmVolumeAttachment lookupVolumeAttachment( final String volumeId ) {
     final EntityTransaction db = Entities.get( VmInstance.class );
     try {
       final VmInstance entity = Entities.merge( this );
       VmVolumeAttachment volumeAttachment = null;
-      AttachedVolume ret = null;
       try {
         volumeAttachment = entity.getTransientVolumeState( ).lookupVolumeAttachment( volumeId );
       } catch ( final NoSuchElementException ex ) {
         volumeAttachment = Iterables.find( entity.getBootRecord( ).getPersistentVolumes( ), VmVolumeAttachment.volumeIdFilter( volumeId ) );
       }
-      ret = VmVolumeAttachment.asAttachedVolume( entity ).apply( volumeAttachment );
       db.commit( );
-      return ret;
+      return volumeAttachment;
     } catch ( final Exception ex ) {
-      Logs.exhaust( ).error( ex, ex );
+      Logs.extreme( ).error( ex, ex );
       db.rollback( );
       throw new NoSuchElementException( "Failed to lookup volume: " + volumeId );
     }
@@ -1372,30 +1353,47 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   /**
    * @param attachVol
    */
-  public void addVolumeAttachment( final AttachedVolume vol ) {
+  public void addTransientVolume( String deviceName, String remoteDevice, Volume vol ) {
     final EntityTransaction db = Entities.get( VmInstance.class );
     try {
       final VmInstance entity = Entities.merge( this );
-      vol.setStatus( "attaching" );
-      entity.getTransientVolumeState( ).addVolumeAttachment( VmVolumeAttachment.fromAttachedVolume( entity ).apply( vol ) );
+      final Volume volEntity = Entities.merge( vol );
+      VmVolumeAttachment attachVol = new VmVolumeAttachment( entity, vol.getDisplayName( ), deviceName, remoteDevice, AttachmentState.attaching.name( ), new Date( ), false );
+      volEntity.setState( State.BUSY );
+      entity.getTransientVolumeState( ).addVolumeAttachment( attachVol );
       db.commit( );
-    } catch ( final Exception ex ) {
-      Logs.exhaust( ).error( ex, ex );
+    } catch ( final RuntimeException ex ) {
+      Logs.extreme( ).error( ex, ex );
       db.rollback( );
+      throw ex;
     }
-    
   }
   
   public void addPersistentVolume( final String deviceName, final Volume vol ) {
     final EntityTransaction db = Entities.get( VmInstance.class );
     try {
       final VmInstance entity = Entities.merge( this );
-      final VmVolumeAttachment volumeAttachment = new VmVolumeAttachment( entity, vol.getDisplayName( ), deviceName, vol.getRemoteDevice( ), "attached", new Date( ) );
+      final VmVolumeAttachment volumeAttachment = new VmVolumeAttachment( entity, vol.getDisplayName( ), deviceName, vol.getRemoteDevice( ), AttachmentState.attached.name( ), new Date( ), true );
       entity.bootRecord.getPersistentVolumes( ).add( volumeAttachment );
       db.commit( );
-    } catch ( final Exception ex ) {
-      Logs.exhaust( ).error( ex, ex );
+    } catch ( final RuntimeException ex ) {
+      Logs.extreme( ).error( ex, ex );
       db.rollback( );
+      throw ex;
+    }
+  }
+  
+  public void addPermanentVolume( final String deviceName, final Volume vol ) {
+    final EntityTransaction db = Entities.get( VmInstance.class );
+    try {
+      final VmInstance entity = Entities.merge( this );
+      final VmVolumeAttachment volumeAttachment = new VmVolumeAttachment( entity, vol.getDisplayName( ), deviceName, vol.getRemoteDevice( ), AttachmentState.attached.name( ), new Date( ), false );
+      entity.bootRecord.getPersistentVolumes( ).add( volumeAttachment );
+      db.commit( );
+    } catch ( final RuntimeException ex ) {
+      Logs.extreme( ).error( ex, ex );
+      db.rollback( );
+      throw ex;
     }
   }
   
@@ -1403,7 +1401,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
    * @param predicate
    * @return
    */
-  public boolean eachVolumeAttachment( final Predicate<AttachedVolume> predicate ) {
+  public boolean eachVolumeAttachment( final Predicate<VmVolumeAttachment> predicate ) {
     final EntityTransaction db = Entities.get( VmInstance.class );
     try {
       final VmInstance entity = Entities.merge( this );
@@ -1411,20 +1409,20 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         
         @Override
         public boolean apply( final VmVolumeAttachment arg0 ) {
-          return predicate.apply( VmVolumeAttachment.asAttachedVolume( entity ).apply( arg0 ) );
+          return predicate.apply( arg0 );
         }
       } );
       ret |= Iterables.all( entity.getBootRecord( ).getPersistentVolumes( ), new Predicate<VmVolumeAttachment>( ) {
         
         @Override
         public boolean apply( final VmVolumeAttachment arg0 ) {
-          return predicate.apply( VmVolumeAttachment.asAttachedVolume( entity ).apply( arg0 ) );
+          return predicate.apply( arg0 );
         }
       } );
       db.commit( );
       return ret;
     } catch ( final Exception ex ) {
-      Logs.exhaust( ).error( ex, ex );
+      Logs.extreme( ).error( ex, ex );
       db.rollback( );
       return false;
     }
@@ -1435,15 +1433,19 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
    * @param volumeId
    * @return
    */
-  public AttachedVolume removeVolumeAttachment( final String volumeId ) {
+  public VmVolumeAttachment removeVolumeAttachment( final String volumeId ) {
     final EntityTransaction db = Entities.get( VmInstance.class );
     try {
       final VmInstance entity = Entities.merge( this );
-      final AttachedVolume ret = VmVolumeAttachment.asAttachedVolume( entity ).apply( entity.transientVolumeState.removeVolumeAttachment( volumeId ) );
+      final Volume volEntity = Volumes.lookup( null, volumeId );
+      final VmVolumeAttachment ret = entity.transientVolumeState.removeVolumeAttachment( volumeId );
+      if ( State.BUSY.equals( volEntity.getState( ) ) ) {
+        volEntity.setState( State.EXTANT );
+      }
       db.commit( );
       return ret;
     } catch ( final Exception ex ) {
-      Logs.exhaust( ).error( ex, ex );
+      Logs.extreme( ).error( ex, ex );
       db.rollback( );
       throw new NoSuchElementException( "Failed to lookup volume: " + volumeId );
     }
@@ -1474,14 +1476,14 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
    * @param volumeId
    * @param newState
    */
-  public void updateVolumeAttachment( final String volumeId, final String newState ) {
+  public void updateVolumeAttachment( final String volumeId, final AttachmentState newState ) {
     final EntityTransaction db = Entities.get( VmInstance.class );
     try {
       final VmInstance entity = Entities.merge( this );
       entity.getTransientVolumeState( ).updateVolumeAttachment( volumeId, newState );
       db.commit( );
     } catch ( final Exception ex ) {
-      Logs.exhaust( ).error( ex, ex );
+      Logs.extreme( ).error( ex, ex );
       db.rollback( );
     }
   }
@@ -1520,7 +1522,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
             VmInstance.this.fireUsageEvent( );
             db.commit( );
           } catch ( final Exception ex ) {
-            Logs.exhaust( ).error( ex, ex );
+            Logs.extreme( ).error( ex, ex );
             db.rollback( );
           }
         }
@@ -1549,14 +1551,14 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   /**
    * @param volumes
    */
-  public void updateVolumeAttachments( final List<AttachedVolume> volumes ) {
+  private void updateVolumeAttachments( final List<AttachedVolume> volumes ) {
     final EntityTransaction db = Entities.get( VmInstance.class );
     try {
       final VmInstance entity = Entities.merge( this );
       entity.getTransientVolumeState( ).updateVolumeAttachments( Lists.transform( volumes, VmVolumeAttachment.fromAttachedVolume( entity ) ) );
       db.commit( );
     } catch ( final Exception ex ) {
-      Logs.exhaust( ).error( ex, ex );
+      Logs.extreme( ).error( ex, ex );
       db.rollback( );
     }
   }
@@ -1655,9 +1657,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           
           runningInstance.setLaunchTime( input.getLaunchRecord( ).getLaunchTime( ) );
           
-          if ( !input.getBootRecord( ).hasPersistentVolumes( ) ) {
-            runningInstance.getBlockDevices( ).add( new InstanceBlockDeviceMapping( "/dev/sda1" ) );
-          } else {
+          if ( input.getBootRecord( ).hasPersistentVolumes( ) ) {
             for ( final VmVolumeAttachment attachedVol : input.getBootRecord( ).getPersistentVolumes( ) ) {
               runningInstance.getBlockDevices( ).add( new InstanceBlockDeviceMapping( attachedVol.getDevice( ), attachedVol.getVolumeId( ),
                                                                                       attachedVol.getStatus( ),
@@ -1730,6 +1730,33 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     this.networkGroups = networkGroups;
   }
   
+  /**
+   * @param exampleWithPrivateIp
+   */
+  void setNetworkConfig( final VmNetworkConfig networkConfig ) {
+    this.networkConfig = networkConfig;
+  }
+  
+  public Date getExpiration( ) {
+    return this.expiration;
+  }
+  
+  public Integer getLaunchIndex( ) {
+    return this.getLaunchRecord( ).getLaunchIndex( );
+  }
+  
+  public SshKeyPair getKeyPair( ) {
+    return this.getBootRecord( ).getSshKeyPair( );
+  }
+  
+  public void release( ) {
+    try {
+      Entities.asTransaction( VmInstance.class, Transitions.DELETE, VmInstances.TX_RETRIES ).apply( this );
+    } catch ( final Exception ex ) {
+      Logs.extreme( ).error( ex, ex );
+    }
+  }
+  
   @Override
   public int hashCode( ) {
     final int prime = 31;
@@ -1769,31 +1796,20 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     return new VmInstance( );
   }
   
-  /**
-   * @param exampleWithPrivateIp
-   */
-  void setNetworkConfig( final VmNetworkConfig networkConfig ) {
-    this.networkConfig = networkConfig;
+  public static VmInstance exampleWithPublicIp( String ip ) {
+    VmInstance vmExample = VmInstance.create( );
+    vmExample.setNetworkConfig( VmNetworkConfig.exampleWithPublicIp( ip ) );
+    return vmExample;
   }
   
-  public void release( ) {
-    try {
-      Entities.asTransaction( VmInstance.class, Transitions.DELETE, VmInstances.TX_RETRIES ).apply( this );
-    } catch ( final Exception ex ) {
-      Logs.extreme( ).error( ex, ex );
-    }
+  public static VmInstance exampleWithPrivateIp( String ip ) {
+    VmInstance vmExample = VmInstance.create( );
+    vmExample.setNetworkConfig( VmNetworkConfig.exampleWithPrivateIp( ip ) );
+    return vmExample;
   }
-  
-  public Date getExpiration( ) {
-    return this.expiration;
-  }
-  
-  public Integer getLaunchIndex( ) {
-    return this.getLaunchRecord( ).getLaunchIndex( );
-  }
-  
-  public SshKeyPair getKeyPair( ) {
-    return this.getBootRecord( ).getSshKeyPair( );
+
+  private void setBootRecord( VmBootRecord bootRecord ) {
+    this.bootRecord = bootRecord;
   }
   
 }

@@ -74,9 +74,42 @@ import edu.ucsb.eucalyptus.msgs.AttachedVolume;
 
 @Embeddable
 public class VmVolumeAttachment implements Comparable<VmVolumeAttachment> {
+  public enum AttachmentState {
+    attaching {
+      
+      @Override
+      public boolean isVolatile( ) {
+        return true;
+      }
+    },
+    attached,
+    detaching {
+      @Override
+      public boolean isVolatile( ) {
+        return true;
+      }
+    },
+    detached,
+    detaching_failed,
+    attaching_failed;
+    public static AttachmentState parse( String stateName ) {
+      if ( stateName != null && stateName.indexOf( " " ) != -1 ) {
+        stateName = stateName.replace( " ", "_" );
+      } else if ( stateName == null ) {
+        return AttachmentState.detached;
+      }
+      return AttachmentState.valueOf( stateName );
+    }
+    
+    public boolean isVolatile( ) {
+      return false;
+    }
+  }
+  
   @Parent
   private VmInstance vmInstance;
-  @Column( name = "metadata_vm_volume_id" )
+  @Column( name = "metadata_vm_volume_id",
+           unique = true )
   private String     volumeId;
   @Column( name = "metadata_vm_volume_device" )
   private String     device;
@@ -86,9 +119,11 @@ public class VmVolumeAttachment implements Comparable<VmVolumeAttachment> {
   @Column( name = "metadata_vm_volume_status" )
   private String     status;
   @Column( name = "metadata_vm_volume_attach_time" )
-  private Date       attachTime = new Date( );
+  private Date       attachTime;
+  @Column( name = "metadata_vm_vol_delete_on_terminate" )
+  private Boolean    deleteOnTerminate;
   
-//  @OneToOne
+  //  @OneToOne
 //  @JoinTable( name = "metadata_vm_has_volume", joinColumns = { @JoinColumn( name = "metadata_vm_id" ) }, inverseJoinColumns = { @JoinColumn( name = "metadata_volume_id" ) } )
 //  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 //  private Volume     volume;
@@ -97,7 +132,8 @@ public class VmVolumeAttachment implements Comparable<VmVolumeAttachment> {
     super( );
   }
   
-  public VmVolumeAttachment( VmInstance vmInstance, String volumeId, String device, String remoteDevice, String status, Date attachTime ) {
+  VmVolumeAttachment( VmInstance vmInstance, String volumeId, String device, String remoteDevice, String status, Date attachTime,
+                              Boolean deleteOnTerminate ) {
     super( );
     this.vmInstance = vmInstance;
     this.volumeId = volumeId;
@@ -105,13 +141,27 @@ public class VmVolumeAttachment implements Comparable<VmVolumeAttachment> {
     this.remoteDevice = remoteDevice;
     this.status = status;
     this.attachTime = attachTime;
+    this.deleteOnTerminate = deleteOnTerminate;
+  }
+  
+  public VmVolumeAttachment( VmInstance vmInstance, String volumeId, String device, String remoteDevice, String status, Date attachTime ) {
+    this( vmInstance, volumeId, device, remoteDevice, status, attachTime, Boolean.TRUE );
   }
   
   public static Function<AttachedVolume, VmVolumeAttachment> fromAttachedVolume( final VmInstance vm ) {
     return new Function<AttachedVolume, VmVolumeAttachment>( ) {
       @Override
       public VmVolumeAttachment apply( AttachedVolume vol ) {
-        return new VmVolumeAttachment( vm, vol.getVolumeId( ), vol.getDevice( ), vol.getRemoteDevice( ), vol.getStatus( ), vol.getAttachTime( ) );
+        return new VmVolumeAttachment( vm, vol.getVolumeId( ), vol.getDevice( ), vol.getRemoteDevice( ), vol.getStatus( ), vol.getAttachTime( ), false );
+      }
+    };
+  }
+  
+  public static Function<AttachedVolume, VmVolumeAttachment> fromTransientAttachedVolume( final VmInstance vm ) {
+    return new Function<AttachedVolume, VmVolumeAttachment>( ) {
+      @Override
+      public VmVolumeAttachment apply( AttachedVolume vol ) {
+        return new VmVolumeAttachment( vm, vol.getVolumeId( ), vol.getDevice( ), vol.getRemoteDevice( ), vol.getStatus( ), vol.getAttachTime( ), false );
       }
     };
   }
@@ -120,7 +170,14 @@ public class VmVolumeAttachment implements Comparable<VmVolumeAttachment> {
     return new Function<VmVolumeAttachment, AttachedVolume>( ) {
       @Override
       public AttachedVolume apply( VmVolumeAttachment vol ) {
-        return new AttachedVolume( vol.getVolumeId( ), vm.getInstanceId( ), vol.getDevice( ), vol.getRemoteDevice( ) );
+        AttachedVolume attachment = null;
+        if ( vm == null ) {
+          attachment = new AttachedVolume( vol.getVolumeId( ), vol.getVmInstance( ).getInstanceId( ), vol.getDevice( ), vol.getRemoteDevice( ) );
+        } else {
+          attachment = new AttachedVolume( vol.getVolumeId( ), vm.getInstanceId( ), vol.getDevice( ), vol.getRemoteDevice( ) );
+        }
+        attachment.setAttachTime( vol.getAttachTime( ) );
+        return attachment;
       }
     };
   }
@@ -129,7 +186,7 @@ public class VmVolumeAttachment implements Comparable<VmVolumeAttachment> {
 //    return this.volume;
 //  }
   
-  VmInstance getVmInstance( ) {
+  public VmInstance getVmInstance( ) {
     return this.vmInstance;
   }
   
@@ -153,11 +210,15 @@ public class VmVolumeAttachment implements Comparable<VmVolumeAttachment> {
     return this.remoteDevice;
   }
   
-  void setRemoteDevice( String remoteDevice ) {
+  public void setRemoteDevice( String remoteDevice ) {
     this.remoteDevice = remoteDevice;
   }
   
-  String getStatus( ) {
+  public AttachmentState getAttachmentState( ) {
+    return AttachmentState.parse( this.status );
+  }
+  
+  public String getStatus( ) {
     return this.status;
   }
   
@@ -173,20 +234,12 @@ public class VmVolumeAttachment implements Comparable<VmVolumeAttachment> {
     this.attachTime = attachTime;
   }
   
-  public boolean equals( final Object o ) {
-    if ( this == o ) return true;
-    if ( o == null || !getClass( ).equals( o.getClass( ) ) ) return false;
-    VmVolumeAttachment that = ( VmVolumeAttachment ) o;
-    if ( this.volumeId != null
-      ? !this.volumeId.equals( that.getVolumeId( ) )
-      : that.getVolumeId( ) != null ) return false;
-    return true;
+  Boolean getDeleteOnTerminate( ) {
+    return this.deleteOnTerminate;
   }
   
-  public int hashCode( ) {
-    return ( this.volumeId != null
-      ? this.volumeId.hashCode( )
-      : 0 );
+  void setDeleteOnTerminate( Boolean value ) {
+    this.deleteOnTerminate = value;
   }
   
   public int compareTo( VmVolumeAttachment that ) {
@@ -198,10 +251,10 @@ public class VmVolumeAttachment implements Comparable<VmVolumeAttachment> {
    */
   public void setInstanceId( String instanceId ) {}
   
-  private void setVmInstance( VmInstance vmInstance ) {
+  void setVmInstance( VmInstance vmInstance ) {
     this.vmInstance = vmInstance;
   }
-
+  
   @Override
   public String toString( ) {
     StringBuilder builder = new StringBuilder( );
@@ -213,7 +266,13 @@ public class VmVolumeAttachment implements Comparable<VmVolumeAttachment> {
     if ( this.attachTime != null ) builder.append( "attachTime=" ).append( this.attachTime );
     return builder.toString( );
   }
-
+  
+  public static VmVolumeAttachment exampleWithVolumeId( final String volumeId ) {
+    VmVolumeAttachment ex = new VmVolumeAttachment( );
+    ex.setVolumeId( volumeId );
+    return ex;
+  }
+  
   static Predicate<VmVolumeAttachment> volumeDeviceFilter( final String deviceName ) {
     return new Predicate<VmVolumeAttachment>( ) {
       @Override
@@ -222,7 +281,7 @@ public class VmVolumeAttachment implements Comparable<VmVolumeAttachment> {
       }
     };
   }
-
+  
   static Predicate<VmVolumeAttachment> volumeIdFilter( final String volumeId ) {
     return new Predicate<VmVolumeAttachment>( ) {
       @Override
@@ -230,6 +289,36 @@ public class VmVolumeAttachment implements Comparable<VmVolumeAttachment> {
         return input.getVolumeId( ).equals( volumeId );
       }
     };
+  }
+
+  @Override
+  public int hashCode( ) {
+    final int prime = 31;
+    int result = 1;
+    result = prime * result + ( ( this.volumeId == null ) ? 0 : this.volumeId.hashCode( ) );
+    return result;
+  }
+
+  @Override
+  public boolean equals( Object obj ) {
+    if ( this == obj ) {
+      return true;
+    }
+    if ( obj == null ) {
+      return false;
+    }
+    if ( getClass( ) != obj.getClass( ) ) {
+      return false;
+    }
+    VmVolumeAttachment other = ( VmVolumeAttachment ) obj;
+    if ( this.volumeId == null ) {
+      if ( other.volumeId != null ) {
+        return false;
+      }
+    } else if ( !this.volumeId.equals( other.volumeId ) ) {
+      return false;
+    }
+    return true;
   }
   
 }

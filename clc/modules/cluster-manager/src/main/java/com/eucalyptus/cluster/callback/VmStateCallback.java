@@ -1,6 +1,7 @@
 package com.eucalyptus.cluster.callback;
 
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.CancellationException;
@@ -22,6 +23,7 @@ import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.vm.VmInstances.TerminatedInstanceException;
 import com.eucalyptus.vm.VmType;
 import com.eucalyptus.vm.VmTypes;
+import com.eucalyptus.vm.VmVolumeAttachment;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
@@ -32,7 +34,6 @@ import com.google.common.collect.Sets;
 import edu.ucsb.eucalyptus.cloud.VmDescribeResponseType;
 import edu.ucsb.eucalyptus.cloud.VmDescribeType;
 import edu.ucsb.eucalyptus.cloud.VmInfo;
-import edu.ucsb.eucalyptus.msgs.AttachedVolume;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
 public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescribeType, VmDescribeResponseType> {
@@ -55,9 +56,18 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
       
       @Override
       public Set<String> get( ) {
-        Collection<VmInstance> clusterInstances = Collections2.filter( VmInstances.list( ), filter );
-        Collection<String> instanceNames = Collections2.transform( clusterInstances, CloudMetadatas.toDisplayName( ) );
-        return Sets.newHashSet( instanceNames );
+        EntityTransaction db = Entities.get( VmInstance.class );
+        try {
+          Collection<VmInstance> clusterInstances = Collections2.filter( VmInstances.list( ), filter );
+          Collection<String> instanceNames = Collections2.transform( clusterInstances, CloudMetadatas.toDisplayName( ) );
+          Set<String> ret = Sets.newHashSet( instanceNames );
+          db.rollback( );
+          return ret;
+        } catch ( Exception ex ) {
+          Logs.extreme( ).error( ex, ex );
+          db.rollback( );
+          return Sets.newHashSet( );
+        }
       }
     } );
   }
@@ -220,10 +230,10 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
       
       @Override
       public boolean apply( VmInstance input ) {
-        return input.eachVolumeAttachment( new Predicate<AttachedVolume>( ) {
+        return input.eachVolumeAttachment( new Predicate<VmVolumeAttachment>( ) {
           @Override
-          public boolean apply( AttachedVolume arg0 ) {
-            return arg0.getStatus( ).endsWith( "ing" );
+          public boolean apply( VmVolumeAttachment arg0 ) {
+            return arg0.getAttachmentState( ).isVolatile( );
           }
         } );
       }
