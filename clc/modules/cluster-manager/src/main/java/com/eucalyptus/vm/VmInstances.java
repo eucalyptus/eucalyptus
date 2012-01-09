@@ -318,7 +318,7 @@ public class VmInstances {
       db.commit( );
       return ret;
     } catch ( Exception ex ) {
-      Logs.exhaust( ).error( ex, ex );
+      Logs.extreme( ).error( ex, ex );
       db.rollback( );
       throw new NoSuchElementException( ex.getMessage( ) );
     }

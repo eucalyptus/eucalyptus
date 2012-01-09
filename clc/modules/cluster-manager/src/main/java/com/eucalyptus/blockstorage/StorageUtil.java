@@ -83,6 +83,7 @@ import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.vm.VmVolumeAttachment;
@@ -109,20 +110,12 @@ public class StorageUtil {
     }
     ArrayList<edu.ucsb.eucalyptus.msgs.Volume> reply = Lists.newArrayList( );
     for ( String partition : partitionVolumeMap.keySet( ) ) {
-      try {
-        Map<String, StorageVolume> idStorageVolumeMap = updateVolumesInPartition( partitionVolumeMap, partition );
-        for ( Volume v : partitionVolumeMap.get( partition ) ) {
-          try {
-            reply.add( volumeStateTransform( idStorageVolumeMap, v ) );
-          } catch ( Exception ex ) {
-            Logs.extreme( ).error( ex );
-            reply.add( v.morph( new edu.ucsb.eucalyptus.msgs.Volume( ) ) );
-          }
-        }
-      } catch ( EucalyptusCloudException ex ) {
-        LOG.error( ex );
-        Logs.extreme( ).error( ex, ex );
-        for ( Volume v : partitionVolumeMap.get( partition ) ) {
+      Map<String, StorageVolume> idStorageVolumeMap = updateVolumesInPartition( partitionVolumeMap, partition );
+      for ( Volume v : partitionVolumeMap.get( partition ) ) {
+        try {
+          reply.add( volumeStateTransform( idStorageVolumeMap, v ) );
+        } catch ( Exception ex ) {
+          Logs.extreme( ).error( ex );
           reply.add( v.morph( new edu.ucsb.eucalyptus.msgs.Volume( ) ) );
         }
       }
@@ -178,7 +171,7 @@ public class StorageUtil {
     return aVolume;
   }
   
-  private static Map<String, StorageVolume> updateVolumesInPartition( Multimap<String, Volume> partitionVolumeMap, String partition ) throws EucalyptusCloudException {
+  private static Map<String, StorageVolume> updateVolumesInPartition( Multimap<String, Volume> partitionVolumeMap, String partition ) {
     Map<String, StorageVolume> idStorageVolumeMap = Maps.newHashMap( );
     ServiceConfiguration scConfig = Topology.lookup( Storage.class, Partitions.lookupByName( partition ) );
     Iterator<String> volumeNames = Iterators.transform( partitionVolumeMap.get( partition ).iterator( ), new Function<Volume, String>( ) {
@@ -188,10 +181,15 @@ public class StorageUtil {
       }
     } );
     DescribeStorageVolumesType descVols = new DescribeStorageVolumesType( Lists.newArrayList( volumeNames ) );
-    Dispatcher sc = ServiceDispatcher.lookup( scConfig );
-    DescribeStorageVolumesResponseType volState = sc.send( descVols );
-    for ( StorageVolume vol : volState.getVolumeSet( ) ) {
-      idStorageVolumeMap.put( vol.getVolumeId( ), vol );
+    try {
+      DescribeStorageVolumesResponseType volState = AsyncRequests.sendSync( scConfig, descVols );
+      for ( StorageVolume vol : volState.getVolumeSet( ) ) {
+        LOG.debug( "Volume states: " + vol.getVolumeId( ) + " " + vol.getStatus( ) + " " + vol.getActualDeviceName( ) );
+        idStorageVolumeMap.put( vol.getVolumeId( ), vol );
+      }
+    } catch ( Exception ex ) {
+      LOG.error( ex );
+      Logs.extreme( ).error( ex, ex );
     }
     return idStorageVolumeMap;
   }

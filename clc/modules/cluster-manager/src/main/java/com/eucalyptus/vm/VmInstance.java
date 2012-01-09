@@ -1353,48 +1353,44 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   /**
    * @param attachVol
    */
-  public void addTransientVolume( String deviceName, String remoteDevice, Volume vol ) {
-    final EntityTransaction db = Entities.get( VmInstance.class );
-    try {
-      final VmInstance entity = Entities.merge( this );
-      final Volume volEntity = Entities.merge( vol );
-      VmVolumeAttachment attachVol = new VmVolumeAttachment( entity, vol.getDisplayName( ), deviceName, remoteDevice, AttachmentState.attaching.name( ), new Date( ), false );
-      volEntity.setState( State.BUSY );
-      entity.getTransientVolumeState( ).addVolumeAttachment( attachVol );
-      db.commit( );
-    } catch ( final RuntimeException ex ) {
-      Logs.extreme( ).error( ex, ex );
-      db.rollback( );
-      throw ex;
-    }
+  public void addTransientVolume( final String deviceName, final String remoteDevice, final Volume vol ) {
+    final Function<Volume, Volume> attachmentFunction = new Function<Volume, Volume>( ) {
+      public Volume apply( final Volume input ) {
+        final VmInstance entity = Entities.merge( VmInstance.this );
+        final Volume volEntity = Entities.merge( vol );
+        VmVolumeAttachment attachVol = new VmVolumeAttachment( entity, volEntity.getDisplayName( ), deviceName, remoteDevice, AttachmentState.attaching.name( ), new Date( ), false );
+        volEntity.setState( State.BUSY );
+        entity.getTransientVolumeState( ).addVolumeAttachment( attachVol );
+        return volEntity;
+      }
+    };
+    Entities.asTransaction( VmInstance.class, attachmentFunction, VmInstances.TX_RETRIES ).apply( vol );
   }
   
   public void addPersistentVolume( final String deviceName, final Volume vol ) {
-    final EntityTransaction db = Entities.get( VmInstance.class );
-    try {
-      final VmInstance entity = Entities.merge( this );
-      final VmVolumeAttachment volumeAttachment = new VmVolumeAttachment( entity, vol.getDisplayName( ), deviceName, vol.getRemoteDevice( ), AttachmentState.attached.name( ), new Date( ), true );
-      entity.bootRecord.getPersistentVolumes( ).add( volumeAttachment );
-      db.commit( );
-    } catch ( final RuntimeException ex ) {
-      Logs.extreme( ).error( ex, ex );
-      db.rollback( );
-      throw ex;
-    }
+    final Function<Volume, Volume> attachmentFunction = new Function<Volume, Volume>( ) {
+      public Volume apply( final Volume input ) {
+        final VmInstance entity = Entities.merge( VmInstance.this );
+        final Volume volEntity = Entities.merge( vol );
+        final VmVolumeAttachment volumeAttachment = new VmVolumeAttachment( entity, vol.getDisplayName( ), deviceName, vol.getRemoteDevice( ), AttachmentState.attached.name( ), new Date( ), true );
+        entity.bootRecord.getPersistentVolumes( ).add( volumeAttachment );
+        return volEntity;
+      }
+    };
+    Entities.asTransaction( VmInstance.class, attachmentFunction, VmInstances.TX_RETRIES ).apply( vol );
   }
   
   public void addPermanentVolume( final String deviceName, final Volume vol ) {
-    final EntityTransaction db = Entities.get( VmInstance.class );
-    try {
-      final VmInstance entity = Entities.merge( this );
-      final VmVolumeAttachment volumeAttachment = new VmVolumeAttachment( entity, vol.getDisplayName( ), deviceName, vol.getRemoteDevice( ), AttachmentState.attached.name( ), new Date( ), false );
-      entity.bootRecord.getPersistentVolumes( ).add( volumeAttachment );
-      db.commit( );
-    } catch ( final RuntimeException ex ) {
-      Logs.extreme( ).error( ex, ex );
-      db.rollback( );
-      throw ex;
-    }
+    final Function<Volume, Volume> attachmentFunction = new Function<Volume, Volume>( ) {
+      public Volume apply( final Volume input ) {
+        final VmInstance entity = Entities.merge( VmInstance.this );
+        final Volume volEntity = Entities.merge( vol );
+        final VmVolumeAttachment volumeAttachment = new VmVolumeAttachment( entity, vol.getDisplayName( ), deviceName, vol.getRemoteDevice( ), AttachmentState.attached.name( ), new Date( ), false );
+        entity.bootRecord.getPersistentVolumes( ).add( volumeAttachment );
+        return volEntity;
+      }
+    };
+    Entities.asTransaction( VmInstance.class, attachmentFunction, VmInstances.TX_RETRIES ).apply( vol );
   }
   
   /**
