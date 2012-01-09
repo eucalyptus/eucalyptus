@@ -75,9 +75,12 @@ import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
+import com.eucalyptus.component.ServiceTransitions;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.empyrean.DescribeServicesResponseType;
 import com.eucalyptus.empyrean.DescribeServicesType;
+import com.eucalyptus.empyrean.DestroyServiceResponseType;
+import com.eucalyptus.empyrean.DestroyServiceType;
 import com.eucalyptus.empyrean.DisableServiceResponseType;
 import com.eucalyptus.empyrean.DisableServiceType;
 import com.eucalyptus.empyrean.Empyrean;
@@ -286,6 +289,27 @@ public class EmpyreanService {
     return reply;
   }
   
+  public static DestroyServiceResponseType destroyService( final DestroyServiceType request ) throws Exception {
+    DestroyServiceResponseType reply = request.getReply( );
+    for ( final ServiceId serviceInfo : request.getServices( ) ) {
+      try {
+        final ServiceConfiguration service = TypeMappers.transform( serviceInfo, ServiceConfiguration.class );
+        if ( service.isVmLocal( ) ) {
+          try {
+            Topology.destroy( service ).get( );
+          } catch ( final IllegalStateException ex ) {
+            LOG.error( ex, ex );
+          }
+        }        
+        reply.getServices( ).add( serviceInfo );
+      } catch ( final Exception ex ) {
+        LOG.error( ex );
+        Logs.extreme( ).debug( ex, ex );
+      }
+    }
+    return reply;    
+  }
+  
   public static StopServiceResponseType stopService( final StopServiceType request ) throws Exception {
     final StopServiceResponseType reply = request.getReply( );
     for ( final ServiceId serviceInfo : request.getServices( ) ) {
@@ -299,13 +323,6 @@ public class EmpyreanService {
           } catch ( final IllegalStateException ex ) {
             LOG.error( ex, ex );
             throw ex;
-//          } catch ( ExecutionException ex ) {
-//            LOG.error( ex, ex );
-//            throw Exceptions.toCatchable( ex.getCause( ) );
-//          } catch ( InterruptedException ex ) {
-//            LOG.error( ex, ex );
-//            Thread.currentThread( ).interrupt( );
-//            throw ex;
           }
         }
       } catch ( final Exception ex ) {
