@@ -12,6 +12,7 @@
 #include <sys/ipc.h> // ftok
 #include <sys/shm.h> // shmget et al
 #include <sys/stat.h>
+#include <sys/wait.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <time.h>
