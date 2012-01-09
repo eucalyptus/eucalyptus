@@ -168,7 +168,7 @@ public class VolumeManager {
             try {
               return Volumes.createStorageVolume( sc, owner, snapId, Ints.checkedCast( size ), request );
             } catch ( ExecutionException ex ) {
-              throw new RuntimeException( ex );
+              throw Exceptions.toUndeclared( ex );
             }
           }};
         Volume newVol = RestrictedTypes.allocateMeasurableResource( newSize.longValue( ), allocator );
