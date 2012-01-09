@@ -79,7 +79,7 @@ import edu.ucsb.eucalyptus.msgs.AttachedVolume;
 import edu.ucsb.eucalyptus.msgs.DetachVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.DetachVolumeType;
 
-public class VolumeDetachCallback extends MessageCallback<DetachVolumeType,DetachVolumeResponseType> {
+public class VolumeDetachCallback extends MessageCallback<DetachVolumeType, DetachVolumeResponseType> {
   
   private static Logger LOG = Logger.getLogger( VolumeDetachCallback.class );
   
@@ -90,8 +90,10 @@ public class VolumeDetachCallback extends MessageCallback<DetachVolumeType,Detac
         String volumeId = VolumeDetachCallback.this.getRequest( ).getVolumeId( );
         VmInstance vm = VmInstances.lookup( input );
         VmVolumeAttachment volumeAttachment = vm.lookupVolumeAttachment( volumeId );
-        if ( !VmVolumeAttachment.AttachmentState.attached.equals( volumeAttachment.getAttachmentState( ) ) ) {
+        if ( VmVolumeAttachment.AttachmentState.detaching.equals( volumeAttachment.getAttachmentState( ) ) ) {
           throw Exceptions.toUndeclared( "Failed to detach volume which is already detaching: " + volumeId );
+        } else if ( VmVolumeAttachment.AttachmentState.attaching.equals( volumeAttachment.getAttachmentState( ) ) ) {
+          throw Exceptions.toUndeclared( "Failed to detach volume which is currently attaching: " + volumeId );
         }
         vm.updateVolumeAttachment( volumeId, AttachmentState.detaching );
         return vm;
@@ -102,17 +104,18 @@ public class VolumeDetachCallback extends MessageCallback<DetachVolumeType,Detac
   
   @Override
   public void fire( DetachVolumeResponseType reply ) {}
-
+  
   /**
    * TODO: DOCUMENT
+   * 
    * @see com.eucalyptus.util.async.MessageCallback#fireException(java.lang.Throwable)
    * @param e
    */
   @Override
   public void fireException( Throwable e ) {
-    if( e instanceof FailedRequestException ) {
+    if ( e instanceof FailedRequestException ) {
       LOG.debug( "Request failed: " + this.getRequest( ).toSimpleString( ) + " because of: " + e.getMessage( ) );
-    } else if( e instanceof ConnectionException ) {
+    } else if ( e instanceof ConnectionException ) {
       LOG.error( e, e );
     }
     LOG.trace( this.getRequest( ).toString( "eucalyptus_ucsb_edu" ) );
