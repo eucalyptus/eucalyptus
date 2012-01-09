@@ -1,5 +1,5 @@
-# Makefile for eucalyptus/storage
 #
+# Makefile for eucalyptus/storage
 #
 
 include ../Makedefs

@@ -119,15 +119,34 @@ int verify_helpers (char **helpers, char **helpers_path, int num_helpers)
 
             tok = getenv("PATH");
             if (!tok) return -1;
+
             path = strdup(tok);
             if (!path) {
-                if(helpers_path == NULL) { 
-                    for(int i = 0; i < num_helpers; i++) 
-                        if(tmp_helpers_path[i])
-                            free(tmp_helpers_path[i]);
-                    free(tmp_helpers_path);
+                missing_helpers = -1;
+                goto cleanup;
+            }
+
+            { // append some Eucalyptus-specific locations to $PATH
+                char * euca = getenv ("EUCALYPTUS");
+                if (euca == NULL) {
+                    euca = "";
                 }
-                return -1;
+                char * locations [] = {
+                    "/usr/lib/eucalyptus",
+                    "/usr/share/eucalyptus",
+                    "/usr/sbin",
+                    NULL
+                };
+                for (int i = 0; locations [i]; i++) {
+                    char lpath [MAX_PATH];
+                    snprintf (lpath, sizeof (lpath), ":%s%s", euca, locations [i]);
+                    char * newpath = strdupcat (path, lpath);
+                    if (newpath == NULL) {
+                        missing_helpers = -1;
+                        goto cleanup;
+                    }
+                    path = newpath;
+                }
             }
             
             tok = strtok_r(path, ":", &save);
@@ -161,6 +180,8 @@ int verify_helpers (char **helpers, char **helpers_path, int num_helpers)
             logprintfl (EUCADEBUG2, "found '%s' at '%s'\n", helpers[i], tmp_helpers_path[i]);
         }
     }
+
+ cleanup:
     
     if(helpers_path == NULL) { 
         for(int i = 0; i < num_helpers; i++) 
