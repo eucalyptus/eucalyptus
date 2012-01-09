@@ -5,7 +5,7 @@
 include ../Makedefs
 
 STORAGE_LIBS = $(LDFLAGS) -lcurl -lssl -lcrypto -lpthread -pthread
-IMAGER_LIBS = ../util/euca_auth.o ../util/misc.o ../util/ipc.o cache.o walrus.o cmd_bundle.o cmd_convert.o cmd_upload.o cmd_prepare.o cmd_fsck.o map.o vmdk.o http.o img.o diskfile.o diskutil.o vbr.o blobstore.o iscsi.o
+IMAGER_LIBS = ../util/euca_auth.o ../util/misc.o ../util/ipc.o cache.o walrus.o cmd_bundle.o cmd_convert.o cmd_upload.o cmd_prepare.o cmd_fsck.o map.o vmdk_shim.o http.o img.o diskfile.o diskutil.o vbr.o blobstore.o iscsi.o
 
 # will be 32 or 64
 ARCH := $(shell getconf LONG_BIT)
@@ -26,7 +26,7 @@ all: vbr.o backing.o storage-windows.o walrus.o diskutil.o Wclient $(IMAGER) $(V
 build: all
 
 $(IMAGER): Makefile imager.c imager.h cmd.h $(IMAGER_LIBS)
-	$(CC) $(CFLAGS) $(INCLUDES) imager.c -o $(IMAGER) $(IMAGER_LIBS) $(VDDK_FLAGS) $(STORAGE_LIBS) -lrt $(EFENCE)
+	$(CC) $(CFLAGS) $(INCLUDES) imager.c -o $(IMAGER) $(IMAGER_LIBS) $(STORAGE_LIBS) -lrt $(EFENCE)
 
 $(VMDK): vmdk_shim.c vmdk.h vmdk.o diskutil.o http.o ../util/ipc.o ../util/misc.o ../util/euca_auth.o
 	$(CC) $(CFLAGS) $(INCLUDES) -DVMDK_CALLEE vmdk_shim.c -o $(VMDK) $(VDDK_FLAGS) vmdk.o diskutil.o http.o ../util/ipc.o ../util/misc.o ../util/euca_auth.o -lcurl -lssl -lcrypto
@@ -59,7 +59,7 @@ test_url: http.c
 	$(CC) -D_UNIT_TEST -o test_url http.c
 
 .c.o:
-	$(CC) -c $(CFLAGS) $(INCLUDES) $(VDDK_FLAGS) $<
+	$(CC) -c $(CFLAGS) $(INCLUDES) $<
 
 ../util/ipc.o: ../util/ipc.c ../util/ipc.h ../util/eucalyptus.h
 	make -C ../util
