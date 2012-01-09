@@ -275,7 +275,7 @@ public class ClusterAllocator implements Runnable {
     final String networkName = NetworkGroups.networkingConfiguration( ).hasNetworking( )
                                                                                         ? this.allocInfo.getPrimaryNetwork( ).getNaturalId( )
                                                                                         : NetworkGroups.lookup(
-                                                                                          this.allocInfo.getOwnerFullName( ),
+                                                                                          this.allocInfo.getOwnerFullName( ).asAccountFullName( ),
                                                                                           NetworkGroups.defaultNetworkName( ) ).getNaturalId( );
     
     final SshKeyPair keyInfo = this.allocInfo.getSshKeyPair( );
