@@ -226,6 +226,7 @@ public class Transactions {
       } catch ( Exception ex ) {
         throw new TransactionCallbackException( ex );
       }
+      db.commit( );
       return entity;
     } catch ( TransactionCallbackException e ) {
       db.rollback( );

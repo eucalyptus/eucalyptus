@@ -91,7 +91,13 @@ public class VolumeDetachCallback extends MessageCallback<DetachVolumeType,Detac
         VmInstance vm = VmInstances.lookup( input );
         VmVolumeAttachment volumeAttachment = vm.lookupVolumeAttachment( volumeId );
         if ( !VmVolumeAttachment.AttachmentState.attached.equals( volumeAttachment.getAttachmentState( ) ) ) {
-          throw Exceptions.toUndeclared( "Failed to detach volume which is already detaching: " + volumeId );
+          if ( VmVolumeAttachment.AttachmentState.detaching.equals( volumeAttachment.getAttachmentState( ) ) ) {
+            throw Exceptions.toUndeclared( "Failed to detach volume which is already detaching: " + volumeId );
+          } else if ( VmVolumeAttachment.AttachmentState.attaching.equals( volumeAttachment.getAttachmentState( ) ) ) {
+            throw Exceptions.toUndeclared( "Failed to detach volume which is currently attaching: " + volumeId );
+          } else {
+            throw Exceptions.toUndeclared( "Failed to detach volume which is not currently attached: " + volumeId );
+          }
         }
         vm.updateVolumeAttachment( volumeId, AttachmentState.detaching );
         return vm;
