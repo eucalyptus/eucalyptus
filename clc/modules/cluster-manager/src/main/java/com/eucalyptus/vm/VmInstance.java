@@ -1364,7 +1364,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         return volEntity;
       }
     };
-    Entities.asTransaction( VmInstance.class, attachmentFunction, VmInstances.TX_RETRIES );
+    Entities.asTransaction( VmInstance.class, attachmentFunction, VmInstances.TX_RETRIES ).apply( vol );
   }
   
   public void addPersistentVolume( final String deviceName, final Volume vol ) {
@@ -1377,7 +1377,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         return volEntity;
       }
     };
-    Entities.asTransaction( VmInstance.class, attachmentFunction, VmInstances.TX_RETRIES );
+    Entities.asTransaction( VmInstance.class, attachmentFunction, VmInstances.TX_RETRIES ).apply( vol );
   }
   
   public void addPermanentVolume( final String deviceName, final Volume vol ) {
@@ -1390,7 +1390,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         return volEntity;
       }
     };
-    Entities.asTransaction( VmInstance.class, attachmentFunction, VmInstances.TX_RETRIES );
+    Entities.asTransaction( VmInstance.class, attachmentFunction, VmInstances.TX_RETRIES ).apply( vol );
   }
   
   /**
