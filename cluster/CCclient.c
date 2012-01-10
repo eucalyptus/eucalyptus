@@ -119,9 +119,8 @@ int main(int argc, char **argv) {
 
   rc = get_conf_var(configFile, "ENABLE_WS_SECURITY", &tmpstr);
   if (rc != 1) {
-    // error
-    logprintf("ERROR: parsing config file (%s) for ENABLE_WS_SECURITY\n",configFile);
-    exit(1);
+    /* Default to enabled */
+    use_wssec = 1;
   } else {
     if (!strcmp(tmpstr, "Y")) {
       use_wssec = 1;

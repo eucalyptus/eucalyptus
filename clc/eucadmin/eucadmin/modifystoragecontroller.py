@@ -39,13 +39,13 @@ def encode_prop(param, dict, value):
         sys.exit(1)
     dict['Attribute'] = t[0]
     dict['Value'] = t[1]
-    
+
 class ModifyStorageControllerAttribute(AWSQueryRequest):
-  
+
     ServicePath = '/services/Properties'
     ServiceClass = eucadmin.EucAdmin
     Description = 'Modify storage controller attribute'
-    
+
     Params = [Param(name='property',
                     short_name='p',
                     long_name='property',
@@ -64,18 +64,19 @@ class ModifyStorageControllerAttribute(AWSQueryRequest):
                   ptype='string',
                   optional=False,
                   doc='The storage controller name')]
-          
+
     def get_connection(self, **args):
         if self.connection is None:
             args['path'] = self.ServicePath
             self.connection = self.ServiceClass(**args)
         return self.connection
-      
+
     def cli_formatter(self, data):
         print data
-        
+
     def main(self, **args):
         return self.send(**args)
 
     def main_cli(self):
+        eucadmin.print_version_if_necessary()
         self.do_cli()

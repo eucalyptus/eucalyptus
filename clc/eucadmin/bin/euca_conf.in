@@ -34,6 +34,7 @@ import inspect
 import os
 import sys
 import boto.utils
+import eucadmin
 import eucadmin.configfile
 from boto.roboto.awsqueryservice import NoCredentialsError
 
@@ -381,6 +382,8 @@ class EucaConf(object):
         self.parser.add_option('--help-register', action='store_true',
                                default=False,
                                help='Display help on register/deregister.')
+        self.parser.add_option('--version', action='store_true', default=False,
+                               help='Display version string')
         self.options, self.args = self.parser.parse_args()
         if len(self.args) > 0:
             filepath = self.args[0]
@@ -647,6 +650,9 @@ class EucaConf(object):
                       'eucadmin.describeservices',
                       'DescribeServices')
 
+    def do_version(self):
+        eucadmin.print_version_if_necessary()
+
     def _get_accesskey_secretkey(self, url):
         self.warn('No credentials found, attempting local authentication')
         gc_cls = boto.utils.find_class('eucadmin.getcredentials',
@@ -657,7 +663,7 @@ class EucaConf(object):
                      zipfile='notused')
         s = obj.get_accesskey_secretkey()
         return s.split('\t')
-        
+
     def _do_register(self, module_name, class_name, port_option):
         partition = self.options.partition_name
         component_name = self.options.component_name

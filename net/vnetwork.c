@@ -83,6 +83,7 @@ permission notice:
 
 #include <vnetwork.h>
 #include <misc.h>
+#include <hash.h>
 
 char *iptablesCache=NULL;
 
