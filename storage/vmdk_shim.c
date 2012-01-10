@@ -26,7 +26,6 @@
 #define VMDK_CMD                 "euca_vmdk"
 #define VMDK_SHMEM_MAGICK        0xbeefcafe
 #define VMDK_GEN_CALL            "gen_vmdk"
-#define VMDK_UPLOAD_CALL         "vmdk_upload"
 #define VMDK_GET_SIZE_CALL       "vmdk_get_size"
 #define VMDK_CONVERT_REMOTE_CALL "vmdk_convert_remote"
 #define VMDK_CLONE_CALL          "vmdk_clone"
@@ -50,6 +49,8 @@ struct vmdk_shmem {
  */
 
 #ifdef VMDK_CALLER
+
+#include "http.h"
 
 static char my_path   [MAX_PATH] = "";
 static char vmdk_path [MAX_PATH] = "";
@@ -162,19 +163,32 @@ int gen_vmdk (const char * disk_path, const char * vmdk_path)
 // uploading a file to vSphere endpoint
 int vmdk_upload (const char * file_path, const img_spec * dest)
 {
-    int ret = ERROR;
+    const img_loc * loc = &(dest->location);
+    char url [1024];
+    int ret = OK;
 
-    struct vmdk_shmem * shm = alloc_shmem ();
-    if (shm == NULL)
-        return ret;
+    char * en_path = strdup (loc->path); // TODO: how to encode paths so slashes are maintained?
+    char * en_dc   = url_encode (loc->vsphere_dc);
+    char * en_ds   = url_encode (loc->vsphere_ds);
+    if (en_path == NULL
+        || en_dc == NULL
+        || en_ds == NULL) {
+        logprintfl (EUCAERROR, "out of memory in vmdk_upload()\n");
+        ret = ERROR;
+        goto cleanup;
+    }
+    // EXAMPLE: https://192.168.7.236/folder/i-4DD50852?dcPath=ha-datacenter&dsName=S1
+    snprintf (url, sizeof(url), "https://%s/folder/%s?dcPath=%s&dsName=%s", loc->host, en_path, en_dc, en_ds);
+    if (http_put (file_path, url, loc->creds.login, loc->creds.password) != OK) {
+        logprintfl (EUCAFATAL, "upload of file '%s' to '%s' failed\n", file_path, url);
+        ret = ERROR;
+    }
 
-    strncpy (shm->path1,   file_path, sizeof (shm->path1));
-    memcpy  (&(shm->spec), dest,      sizeof (img_spec));
-    if (do_call (VMDK_UPLOAD_CALL, shm) == OK)
-        ret = shm->ret_int;
+ cleanup:
+    if (en_path) free (en_path);
+    if (en_dc) free (en_dc);
+    if (en_ds) free (en_ds);
 
-    free_shmem (shm);
-    
     return ret;
 }
 
@@ -287,7 +301,6 @@ int main (int argc, char * argv[])
 
     // make real invocations with fake parameters and expect them all to fail
     assert (gen_vmdk ("/foo/bar", "/foo/baz"));
-    assert (vmdk_upload ("/foo/bar", &spec));
     assert (vmdk_get_size (&spec) == -1L);
     assert (vmdk_convert_remote (&spec, "/foo/bar"));
     assert (vmdk_clone ("/foo/bar", &spec));
@@ -363,8 +376,6 @@ int main (int argc, char * argv[])
     int ret = 0; // 0 = sucessfully was able to invoke one of the vmdk_* funcitons (not their result)
     if (strcmp (shm->fname, VMDK_GEN_CALL) == 0) {
         shm->ret_int = gen_vmdk (shm->path1, shm->path2);
-    } else if (strcmp (shm->fname, VMDK_UPLOAD_CALL) == 0) {
-        shm->ret_int = vmdk_upload (shm->path1, &shm->spec);
     } else if (strcmp (shm->fname, VMDK_GET_SIZE_CALL) == 0) {
         shm->ret_long_long = vmdk_get_size (&shm->spec);
     } else if (strcmp (shm->fname, VMDK_CONVERT_REMOTE_CALL) == 0) {
