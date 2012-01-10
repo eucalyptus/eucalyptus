@@ -69,6 +69,7 @@ import java.util.UUID;
 import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
 import com.eucalyptus.address.Address;
+import com.eucalyptus.blockstorage.Volume;
 import com.eucalyptus.cloud.CloudMetadata.VmInstanceMetadata;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.cluster.Cluster;
@@ -88,6 +89,8 @@ public class ResourceToken implements VmInstanceMetadata, Comparable<ResourceTok
   private final Integer       launchIndex;
   private final String        instanceId;
   private final String        instanceUuid;
+  @Nullable
+  private Volume              rootVolume;
   @Nullable
   private Address             address;
   @Nullable
@@ -292,6 +295,14 @@ public class ResourceToken implements VmInstanceMetadata, Comparable<ResourceTok
   
   public Date getExpirationTime( ) {
     return this.expirationTime;
+  }
+
+  public Volume getRootVolume( ) {
+    return this.rootVolume;
+  }
+
+  public void setRootVolume( Volume rootVolume ) {
+    this.rootVolume = rootVolume;
   }
   
 }

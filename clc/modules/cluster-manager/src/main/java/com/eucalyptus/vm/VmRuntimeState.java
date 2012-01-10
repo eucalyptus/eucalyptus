@@ -65,6 +65,7 @@ package com.eucalyptus.vm;
 
 import java.util.Date;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import javax.persistence.CollectionTable;
@@ -148,7 +149,7 @@ public class VmRuntimeState {
   
   public void setState( final VmState newState, Reason reason, final String... extra ) {
     final VmState oldState = this.getVmInstance( ).getState( );
-    Runnable action = null;
+    Callable<Boolean> action = null;
     if ( VmStateSet.RUN.contains( newState ) && VmStateSet.NOT_RUNNING.contains( oldState ) ) {
       action = this.cleanUpRunnable( SEND_USER_TERMINATE );
     } else if ( !oldState.equals( newState ) ) {
@@ -167,15 +168,18 @@ public class VmRuntimeState {
       this.addReasonDetail( extra );
       this.reason = reason;
       try {
-        Threads.lookup( Eucalyptus.class, VmInstance.class ).limitTo( VmInstances.MAX_STATE_THREADS ).submit( action ).get( );//10, TimeUnit.MILLISECONDS );//GRZE:wtf?!  why short time limit.
+        Threads.enqueue( Eucalyptus.class, VmInstance.class, VmInstances.MAX_STATE_THREADS, action ).get( 10, TimeUnit.MILLISECONDS );//GRZE: yes.  wait for 10ms. because.
+      } catch ( final TimeoutException ex ) {
+      } catch ( final InterruptedException ex ) {
       } catch ( final Exception ex ) {
-        LOG.error( ex, ex );
+        LOG.error( ex );
+        Logs.extreme( ).error( ex, ex );
       }
     }
   }
 
-  private Runnable handleStateTransition( final VmState newState, final VmState oldState ) {
-    Runnable action = null;
+  private Callable<Boolean> handleStateTransition( final VmState newState, final VmState oldState ) {
+    Callable<Boolean> action = null;
     LOG.info( String.format( "%s state change: %s -> %s", this.getVmInstance( ).getInstanceId( ), this.getVmInstance( ).getState( ), newState ) );
     if ( VmStateSet.RUN.contains( oldState ) && VmStateSet.NOT_RUNNING.contains( newState ) ) {
       this.getVmInstance( ).setState( newState );
@@ -202,18 +206,19 @@ public class VmRuntimeState {
     return action;
   }
   
-  private Runnable cleanUpRunnable( ) {
+  private Callable<Boolean> cleanUpRunnable( ) {
     return this.cleanUpRunnable( null );
   }
   
-  private Runnable cleanUpRunnable( final String reason ) {
-    return new Runnable( ) {
+  private Callable<Boolean> cleanUpRunnable( final String reason ) {
+    return new Callable<Boolean>( ) {
       @Override
-      public void run( ) {
+      public Boolean call( ) {
         VmInstances.cleanUp( VmRuntimeState.this.getVmInstance( ) );
         if ( ( reason != null ) && !VmRuntimeState.this.reasonDetails.contains( reason ) ) {
           VmRuntimeState.this.addReasonDetail( reason );
         }
+        return Boolean.TRUE;
       }
     };
   }
@@ -328,7 +333,7 @@ public class VmRuntimeState {
     }
   }
   
-  private void setBundleTask( final VmBundleTask bundleTask ) {
+  void setBundleTask( final VmBundleTask bundleTask ) {
     this.bundleTask = bundleTask;
   }
   
