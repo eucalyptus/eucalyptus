@@ -498,8 +498,8 @@ case "$1" in
                 fi
         fi
 	# start and stop are hard: we loose the CC state
-	if ( test -f $EUCALYPTUS/usr/lib/eucalyptus/shutdownCC >/dev/null 2>&1 ); then
-	    $EUCALYPTUS/usr/lib/eucalyptus/shutdownCC localhost:$CC_PORT ); then
+	if ( test -f $EUCALYPTUS/usr/lib/eucalyptus/shutdownCC ); then
+	    $EUCALYPTUS/usr/lib/eucalyptus/shutdownCC localhost:$CC_PORT >/dev/null 2>&1
 	else
 	    echo "WARNING: could not find $EUCALYPTUS/usr/lib/eucalyptus/shutdownCC, please check location of executable"
 	fi
@@ -543,8 +543,8 @@ case "$1" in
 		fi
 	fi
 
-	if ( test -f $EUCALYPTUS/usr/lib/eucalyptus/shutdownCC >/dev/null 2>&1 ); then
-	    $EUCALYPTUS/usr/lib/eucalyptus/shutdownCC localhost:$CC_PORT ); then
+	if ( test -f $EUCALYPTUS/usr/lib/eucalyptus/shutdownCC ); then
+	    $EUCALYPTUS/usr/lib/eucalyptus/shutdownCC localhost:$CC_PORT >/dev/null 2>&1
 	else
 	    echo "WARNING: could not find $EUCALYPTUS/usr/lib/eucalyptus/shutdownCC, please check location of executable"
 	fi
