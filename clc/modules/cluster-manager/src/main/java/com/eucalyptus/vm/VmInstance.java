@@ -1372,7 +1372,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       public Volume apply( final Volume input ) {
         final VmInstance entity = Entities.merge( VmInstance.this );
         final Volume volEntity = Entities.merge( vol );
-        final VmVolumeAttachment volumeAttachment = new VmVolumeAttachment( entity, vol.getDisplayName( ), deviceName, vol.getRemoteDevice( ), AttachmentState.attached.name( ), new Date( ), true );
+        final VmVolumeAttachment volumeAttachment = new VmVolumeAttachment( entity, vol.getDisplayName( ), deviceName, null, AttachmentState.attached.name( ), new Date( ), true );
         entity.bootRecord.getPersistentVolumes( ).add( volumeAttachment );
         return volEntity;
       }
@@ -1385,7 +1385,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       public Volume apply( final Volume input ) {
         final VmInstance entity = Entities.merge( VmInstance.this );
         final Volume volEntity = Entities.merge( vol );
-        final VmVolumeAttachment volumeAttachment = new VmVolumeAttachment( entity, vol.getDisplayName( ), deviceName, vol.getRemoteDevice( ), AttachmentState.attached.name( ), new Date( ), false );
+        final VmVolumeAttachment volumeAttachment = new VmVolumeAttachment( entity, vol.getDisplayName( ), deviceName, null, AttachmentState.attached.name( ), new Date( ), false );
         entity.bootRecord.getPersistentVolumes( ).add( volumeAttachment );
         return volEntity;
       }

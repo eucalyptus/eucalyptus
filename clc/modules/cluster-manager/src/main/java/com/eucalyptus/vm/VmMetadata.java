@@ -164,7 +164,7 @@ public class VmMetadata {
       } else if ( publicMetadataEndpoints.containsKey( request.getMetadataName( ) ) ) {
         return publicMetadataEndpoints.get( request.getMetadataName( ) ).apply( request ).getBytes( );
       } else {
-        return "".getBytes( );
+        throw new NoSuchElementException( "Metadata request failed: " + path ); 
       }
     } catch ( NoSuchElementException ex ) {
       throw ex;

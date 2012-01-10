@@ -64,6 +64,7 @@
 package com.eucalyptus.vm;
 
 import java.util.Date;
+import java.util.NoSuchElementException;
 import javax.persistence.Column;
 import javax.persistence.Embeddable;
 import javax.persistence.Lob;
@@ -171,12 +172,18 @@ public class VmVolumeAttachment implements Comparable<VmVolumeAttachment> {
       @Override
       public AttachedVolume apply( VmVolumeAttachment vol ) {
         AttachedVolume attachment = null;
-        if ( vm == null ) {
+        if ( vm == null && vol.getVmInstance( ) == null ) {
+          throw new NoSuchElementException( "Failed to transform volume attachment because it no longer exists: " + vol );
+        } else if ( vm == null ) {
           attachment = new AttachedVolume( vol.getVolumeId( ), vol.getVmInstance( ).getInstanceId( ), vol.getDevice( ), vol.getRemoteDevice( ) );
         } else {
           attachment = new AttachedVolume( vol.getVolumeId( ), vm.getInstanceId( ), vol.getDevice( ), vol.getRemoteDevice( ) );
         }
         attachment.setAttachTime( vol.getAttachTime( ) );
+        attachment.setStatus( vol.getStatus( ) );
+        if ( !attachment.getDevice( ).startsWith( "/dev/" ) ) {
+          attachment.setDevice( "/dev/" + attachment.getDevice( ) );
+        }
         return attachment;
       }
     };

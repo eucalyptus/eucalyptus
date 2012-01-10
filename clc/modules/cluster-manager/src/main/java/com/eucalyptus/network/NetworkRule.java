@@ -92,6 +92,15 @@ import com.google.common.collect.Sets;
 @Table( name = "metadata_network_rule" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class NetworkRule extends AbstractPersistent {
+  /**
+   * 
+   */
+  private static final int RULE_MIN_PORT = 0;
+  /**
+   * 
+   */
+  private static final int RULE_MAX_PORT = 65535;
+
   public enum Protocol {
     icmp, tcp, udp;
   }
@@ -122,6 +131,15 @@ public class NetworkRule extends AbstractPersistent {
                        final Collection<String> ipRanges,
                        final Multimap<String, String> peers ) {
     this.protocol = protocol;
+    if ( Protocol.tcp.equals( protocol ) || Protocol.udp.equals( protocol ) ) {
+      if ( lowPort < RULE_MIN_PORT || highPort < RULE_MIN_PORT ) {
+        throw new IllegalArgumentException( "Provided ports must be greater than " + RULE_MIN_PORT + ": lowPort=" + lowPort + " highPort=" + highPort );
+      } else if ( lowPort > RULE_MAX_PORT || highPort > RULE_MAX_PORT ) {
+        throw new IllegalArgumentException( "Provided ports must be less than " + RULE_MAX_PORT + ": lowPort=" + lowPort + " highPort=" + highPort );
+      } else if ( lowPort > highPort ) {
+        throw new IllegalArgumentException( "Provided lowPort is greater than highPort: lowPort=" + lowPort + " highPort=" + highPort );
+      }
+    }
     this.lowPort = lowPort;
     this.highPort = highPort;
     if ( ipRanges != null ) {

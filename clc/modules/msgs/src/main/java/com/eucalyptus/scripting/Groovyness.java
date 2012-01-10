@@ -160,19 +160,25 @@ public class Groovyness {
       String conf = "import " + className;
       String line = null;
       try {
-        BufferedReader fileReader = new BufferedReader( new FileReader( confFile ) );
-        for ( ; ( line = fileReader.readLine( ) ) != null; conf += !line.matches( "\\s*\\w+\\s*=[\\s\\.\\w*\"']*;{0,1}" )
-          ? ""
-          : "\n" + className + "." + line );
-        LOG.debug( conf );
-        fileReader.close( );
+        BufferedReader fileReader = null;
         try {
-          getGroovyEngine( ).eval( conf );
-        } catch ( ScriptException e ) {
-          if ( !( e.getCause( ) instanceof ReadOnlyPropertyException ) ) {
-            LOG.warn( e, e );
-          } else {
-            LOG.warn( e.getMessage( ) );
+          fileReader = new BufferedReader( new FileReader( confFile ) );
+          for ( ; ( line = fileReader.readLine( ) ) != null; conf += !line.matches( "\\s*\\w+\\s*=[\\s\\.\\w*\"']*;{0,1}" )
+            ? ""
+            : "\n" + className + "." + line );
+          LOG.debug( conf );
+          try {
+            getGroovyEngine( ).eval( conf );
+          } catch ( ScriptException e ) {
+            if ( !( e.getCause( ) instanceof ReadOnlyPropertyException ) ) {
+              LOG.warn( e, e );
+            } else {
+              LOG.warn( e.getMessage( ) );
+            }
+          }
+        } finally {
+          if ( fileReader != null ) {
+            fileReader.close( );
           }
         }
       } catch ( FileNotFoundException e ) {
