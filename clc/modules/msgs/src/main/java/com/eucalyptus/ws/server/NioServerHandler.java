@@ -163,18 +163,17 @@ public class NioServerHandler extends SimpleChannelUpstreamHandler {//TODO:GRZE:
   public void exceptionCaught( final ChannelHandlerContext ctx, final ExceptionEvent e ) throws Exception {
     final Channel ch = e.getChannel( );
     final Throwable cause = e.getCause( );
+    Logs.extreme( ).error( cause, cause );
     try {
       if ( ch != null ) {
         Contexts.clear( Contexts.lookup( ch ) );
       }
     } catch ( Exception ex ) {
-      LOG.error( ex, ex );
+//      LOG.error( ex, ex );
     }
     if ( cause instanceof ReadTimeoutException ) {//TODO:ASAP:GRZE: wth are all these exception types?!?! ONLY WebServicesException caught; else wrap.
-      LOG.debug( cause, cause );
       this.sendError( ctx, HttpResponseStatus.REQUEST_TIMEOUT, cause );
     } else if ( cause instanceof WriteTimeoutException ) {
-      LOG.debug( cause, cause );
       ctx.sendUpstream( e );
       ctx.getChannel( ).close( );
     } else if ( cause instanceof TooLongFrameException ) {
@@ -185,7 +184,7 @@ public class NioServerHandler extends SimpleChannelUpstreamHandler {//TODO:GRZE:
       this.sendError( ctx, HttpResponseStatus.FORBIDDEN, cause );
     } else if ( e.getCause( ) instanceof WebServicesException ) {
       LOG.error( "Internal Error: " + cause.getMessage( ) );
-      Logs.exhaust( ).error( cause, cause );
+      Logs.extreme( ).error( cause, cause );
       this.sendError( ctx, ( ( WebServicesException ) e.getCause( ) ).getStatus( ), cause );
     } else {
       this.sendError( ctx, HttpResponseStatus.BAD_REQUEST, cause );

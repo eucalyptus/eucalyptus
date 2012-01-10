@@ -7,6 +7,7 @@ import java.util.Set;
 import java.util.concurrent.CancellationException;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
+import org.hibernate.exception.ConstraintViolationException;
 import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.cloud.CloudMetadatas;
 import com.eucalyptus.cluster.Cluster;
@@ -230,12 +231,18 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
       
       @Override
       public boolean apply( VmInstance input ) {
-        return input.eachVolumeAttachment( new Predicate<VmVolumeAttachment>( ) {
-          @Override
-          public boolean apply( VmVolumeAttachment arg0 ) {
-            return arg0.getAttachmentState( ).isVolatile( );
-          }
-        } );
+        try {
+          VmInstance vm = Entities.merge( input );
+          return vm.eachVolumeAttachment( new Predicate<VmVolumeAttachment>( ) {
+            @Override
+            public boolean apply( VmVolumeAttachment arg0 ) {
+              return arg0.getAttachmentState( ).isVolatile( );
+            }
+          } );
+        } catch ( Exception ex ) {
+          Logs.extreme( ).error( ex, ex );
+          return false;
+        }
       }
     };
   }

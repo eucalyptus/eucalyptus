@@ -308,8 +308,14 @@ public class Logs {
     //    System.setProperty( "log4j.configurationClass", "com.eucalyptus.util.Logs.LogConfigurator" );
     try {
       final PrintStream oldOut = System.out;
-      final ByteArrayOutputStream bos = new ByteArrayOutputStream( );
-      System.setOut( new PrintStream( bos ) {
+      final ByteArrayOutputStream bos = new ByteArrayOutputStream( ) {
+        @Override
+        public synchronized void reset( ) {
+          super.buf = new byte[4096];
+          super.reset( );
+        }
+      };
+      System.setOut( new PrintStream( bos, true ) {
         @Override
         public void flush( ) {
           Logs.exhaust( ).info( SystemBootstrapper.class + " " + EventType.STDOUT + " " + bos.toString( ) );
@@ -328,8 +334,14 @@ public class Logs {
       );
       
       final PrintStream oldErr = System.err;
-      final ByteArrayOutputStream bosErr = new ByteArrayOutputStream( );
-      System.setErr( new PrintStream( bosErr ) {
+      final ByteArrayOutputStream bosErr = new ByteArrayOutputStream( ) {       
+        @Override
+        public synchronized void reset( ) {
+          super.buf = new byte[4096];
+          super.reset( );
+        }
+      };
+      System.setErr( new PrintStream( bosErr, true ) {
         
         @Override
         public void flush( ) {
@@ -416,7 +428,7 @@ public class Logs {
     
     @Override
     public Boolean call( ) {
-      return logLevel.get( ).ordinal( ) >= this.ordinal( );
+      return logLevel.get( ).ordinal( ) <= this.ordinal( );
     }
     
     public Logger logger( ) {
