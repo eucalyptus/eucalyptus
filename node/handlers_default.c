@@ -1304,8 +1304,8 @@ static void * bundling_thread (void *arg)
 			cleanup_bundling_task (instance, params, SHUTOFF, BUNDLING_SUCCESS);
 			logprintfl (EUCAINFO, "bundling_thread: finished bundling instance %s\n", instance->instanceId);
 		} else if (rc == -1) {
-		        // bundler child was cancelled (killed)
-		        cleanup_bundling_task (instance, params, SHUTOFF, BUNDLING_CANCELLED);
+		        // bundler child was cancelled (killed), but should report it as failed 
+		        cleanup_bundling_task (instance, params, SHUTOFF, BUNDLING_FAILED);
 			logprintfl (EUCAINFO, "bundling_thread: cancelled while bundling instance %s (rc=%d)\n", instance->instanceId, rc);
 		} else {
 			cleanup_bundling_task (instance, params, SHUTOFF, BUNDLING_FAILED);

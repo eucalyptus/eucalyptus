@@ -51,7 +51,7 @@ class FixPortMetaClass(type):
                             param.default = port
                             param.doc = 'Port for service (default=%d)' % port
         return type.__new__(cls, name, bases, attrs)
-    
+
 class RegisterRequest(AWSQueryRequest):
 
     __metaclass__ = FixPortMetaClass
@@ -107,7 +107,7 @@ class RegisterRequest(AWSQueryRequest):
             args['path'] = self.ServicePath
             self.connection = self.ServiceClass(**args)
         return self.connection
-      
+
     def cli_formatter(self, data):
         response = getattr(data, 'euca:_return')
         print 'RESPONSE %s' % response
@@ -116,5 +116,5 @@ class RegisterRequest(AWSQueryRequest):
         return self.send(**args)
 
     def main_cli(self):
+        eucadmin.print_version_if_necessary()
         self.do_cli()
-    

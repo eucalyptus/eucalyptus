@@ -33,7 +33,7 @@ from boto.roboto.param import Param
 import eucadmin
 
 class CloneVolume(AWSQueryRequest):
-  
+
     ServicePath = '/services/Component'
     ServiceClass = eucadmin.EucAdmin
     Description = 'Convert volumes'
@@ -64,7 +64,7 @@ class CloneVolume(AWSQueryRequest):
             args['path'] = self.ServicePath
             self.connection = self.ServiceClass()
         return self.connection
-      
+
     def cli_formatter(self, data):
         response = getattr(data, 'euca:_return')
         print 'RESPONSE %s' % response
@@ -73,5 +73,5 @@ class CloneVolume(AWSQueryRequest):
         return self.send(**args)
 
     def main_cli(self):
+        eucadmin.print_version_if_necessary()
         self.do_cli()
-    

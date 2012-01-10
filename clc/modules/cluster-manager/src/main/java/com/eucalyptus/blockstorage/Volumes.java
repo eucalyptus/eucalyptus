@@ -63,14 +63,11 @@
 
 package com.eucalyptus.blockstorage;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.NoSuchElementException;
 import java.util.concurrent.ExecutionException;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import org.hibernate.criterion.Example;
-import org.hibernate.exception.ConstraintViolationException;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.CloudMetadata.VolumeMetadata;
 import com.eucalyptus.component.Partitions;
@@ -80,7 +77,6 @@ import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.reporting.event.StorageEvent;
@@ -90,11 +86,12 @@ import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes.QuantityMetricFunction;
 import com.eucalyptus.util.RestrictedTypes.UsageMetricFunction;
+import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
-import edu.ucsb.eucalyptus.msgs.AttachedVolume;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import edu.ucsb.eucalyptus.msgs.CreateStorageVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.CreateStorageVolumeType;
 import edu.ucsb.eucalyptus.msgs.DescribeStorageVolumesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeStorageVolumesType;
@@ -176,7 +173,7 @@ public class Volumes {
     try {
       volume = Entities.uniqueResult( Volume.named( ownerFullName, volumeId ) );
       if ( volume.getRemoteDevice( ) == null ) {
-        StorageUtil.getVolumeReply( new HashMap<String, AttachedVolume>( ), Lists.newArrayList( volume ) );
+        StorageUtil.getVolumeReply( Lists.newArrayList( volume ) );
       }
       db.commit( );
     } catch ( Exception ex ) {
@@ -188,19 +185,25 @@ public class Volumes {
   }
   
   public static Volume createStorageVolume( final ServiceConfiguration sc, final UserFullName owner, final String snapId, final Integer newSize, final BaseMessage request ) throws ExecutionException {
-    final String newId = Crypto.generateId( owner.getAccountNumber( ), ID_PREFIX );
+    final String newId = Crypto.generateId( owner.getUniqueId( ), ID_PREFIX );
     final Volume newVol = Transactions.save( Volume.create( sc, owner, snapId, newSize, newId ), new Callback<Volume>( ) {
       
       @Override
       public void fire( final Volume t ) {
         t.setState( State.GENERATING );
         try {
+          final CreateStorageVolumeType req = new CreateStorageVolumeType( t.getDisplayName( ), t.getSize( ), snapId, null ).regardingUserRequest( request );
+          final CreateStorageVolumeResponseType ret = AsyncRequests.sendSync( sc, req );
+          LOG.debug( "Volume created: CreateStorageVolumeResponse: " +
+                     ret.getVolumeId( ) + " " +
+                     ret.getStatus( ) + " " +
+                     ret.getSize( ) + " " +
+                     ret.getSnapshotId( ) + " " +
+                     ret.getCreateTime( ) );
           ListenerRegistry.getInstance( ).fireEvent( new StorageEvent( StorageEvent.EventType.EbsVolume, true, t.getSize( ),
                                                                        t.getOwnerUserId( ), t.getOwnerUserName( ),
                                                                        t.getOwnerAccountNumber( ), t.getOwnerAccountName( ),
                                                                        t.getScName( ), t.getPartition( ) ) );
-          final CreateStorageVolumeType req = new CreateStorageVolumeType( t.getDisplayName( ), t.getSize( ), snapId, null ).regardingUserRequest( request );
-          ServiceDispatcher.lookup( sc ).send( req );
         } catch ( final Exception ex ) {
           LOG.error( "Failed to create volume: " + t.toString( ), ex );
           throw Exceptions.toUndeclared( ex );

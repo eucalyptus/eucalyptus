@@ -115,8 +115,6 @@ public class Allocations {
     private final int                  maxCount;
     /** verified references determined by the request **/
     private Partition                  partition;
-    private final List<Volume>         persistentVolumes = Lists.newArrayList( );
-    private final List<Volume>         transientVolumes  = Lists.newArrayList( );
     private SshKeyPair                 sshKeyPair;
     private BootableSet                bootSet;
     private VmType                     vmType;
@@ -309,14 +307,6 @@ public class Allocations {
     
     public void setPartition( final Partition partition2 ) {
       this.partition = partition2;
-    }
-    
-    public List<Volume> getPersistentVolumes( ) {
-      return this.persistentVolumes;
-    }
-    
-    public List<Volume> getTransientVolumes( ) {
-      return this.transientVolumes;
     }
     
     public SshKeyPair getSshKeyPair( ) {

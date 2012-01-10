@@ -57,13 +57,13 @@ public class Crypto {
   }
   
   /**
-   * @param userId
+   * @param seed
    * @param prefix
    * @return
    * @see com.eucalyptus.crypto.CryptoProvider#generateId(String, String)
    */
-  public static String generateId( final String userId, final String prefix ) {
-    return Crypto.getCryptoProvider( ).generateId( userId, prefix );
+  public static String generateId( final String seed, final String prefix ) {
+    return Crypto.getCryptoProvider( ).generateId( seed, prefix );
   }
 
   public static CertificateProvider getCertificateProvider( ) {

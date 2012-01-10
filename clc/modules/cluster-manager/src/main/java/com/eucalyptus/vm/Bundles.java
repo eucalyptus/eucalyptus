@@ -224,7 +224,7 @@ public class Bundles {
       AsyncRequests.sendSync( walrusConfig, createBucket );
       AsyncRequests.sendSync( walrusConfig, deleteBucket );
     } catch ( Exception ex ) {
-      Logs.extreme( ).error( ex );
+      throw new RuntimeException("Can't create the requested bucket", ex);
     }    
   }
 }

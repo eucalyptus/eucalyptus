@@ -286,7 +286,7 @@ static int walrus_request_timeout (const char * walrus_op, const char * verb, co
         pthread_mutex_unlock(&wreq_mutex); /* unlock for message exchange */
         result = curl_easy_perform (curl); /* do it */
         pthread_mutex_lock(&wreq_mutex); /* relock for curl teardown */
-        logprintfl (EUCADEBUG, "{%u} walrus_request: wrote %lld bytes in %ld writes\n", (unsigned int)pthread_self(), params.total_wrote, params.total_calls);
+        logprintfl (EUCADEBUG, "{%u} walrus_request: wrote %lld byte(s) in %ld write(s)\n", (unsigned int)pthread_self(), params.total_wrote, params.total_calls);
 
 #if defined(CAN_GZIP)
         if (do_compress) {

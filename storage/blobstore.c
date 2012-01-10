@@ -1663,12 +1663,60 @@ int blobstore_fsck (blobstore * bs, int (* examiner) (const blockblob * bb))
                     
                     blockblob * bb = blockblob_open (bs, abb->id, 0, 0, NULL, BLOBSTORE_FIND_TIMEOUT_USEC);
                     if (bb!=NULL) {
-                        if (bb->in_use) {
-                            if (abb->in_use & ~BLOCKBLOB_STATUS_MAPPED) {
-                                to_delete++;
+                        if (bb->in_use & BLOCKBLOB_STATUS_MAPPED) {
+
+                            // Since we are checking integrity, do not trust .refs file blindly,
+                            // but ensure that the entries -- blobs depending on this one -- exist
+
+                            char ** array = NULL;
+                            int array_size = 0;
+                            if (read_array_blockblob_metadata_path (BLOCKBLOB_PATH_REFS, bb->store, bb->id, &array, &array_size)!=-1) {
+                                for (int i=0; i<array_size; i++) {
+                                    char ref [BLOBSTORE_MAX_PATH+MAX_DM_NAME+1];
+                                    safe_strncpy (ref, array [i], sizeof (ref));
+
+                                    char * store_path = strtok (array [i], " ");
+                                    char * blob_id    = strtok (NULL, " "); // the remaining entries in array[i] are ignored
+                                    char ref_exists = 0;
+
+                                    if (strlen (store_path)<1 || strlen (blob_id)<1)
+                                        goto remove_ref;
+
+                                    blobstore * ref_bs = bs;
+                                    if (strcmp (bs->path, store_path)) { // if deleting reference in a different blobstore
+                                        // need to open it
+                                        ref_bs = blobstore_open (store_path, 0, BLOBSTORE_FLAG_CREAT, BLOBSTORE_FORMAT_ANY, BLOBSTORE_REVOCATION_ANY, BLOBSTORE_SNAPSHOT_ANY);
+                                        if (ref_bs == NULL) // blobstore with a child blob does not exist
+                                            goto remove_ref;
+                                    }
+                                    
+                                    blockblob * ref_bb = blockblob_open (ref_bs, blob_id, 0, 0, NULL, BLOBSTORE_FIND_TIMEOUT_USEC);
+                                    if (ref_bb) {
+                                        blockblob_close (ref_bb);
+                                        ref_exists = 1;
+                                    } else {
+                                        // TODO: check error code before assuming ref does not exist?
+                                    }
+                                    if (ref_bs != bs) {
+                                        blobstore_close (ref_bs);
+                                    }
+                                    
+                                remove_ref:
+
+                                    if (! ref_exists) {
+                                        // update the .refs file to remove this entry
+                                        logprintfl (EUCAINFO, "removing stale/corrupted reference in blob %s to blob %s\n", bb->id, blob_id);
+                                        update_entry_blockblob_metadata_path (BLOCKBLOB_PATH_REFS, bb->store, bb->id, ref, 1);
+                                    }
+                                }
+                                if (array)
+                                    free (array);
                             }
+                             
+                            // mapped blobs have children, thus cannot be deleted at this iteration
                             blockblob_close (bb);
-                            
+                            to_delete++;
+                           
                         } else if (blockblob_delete (bb, BLOBSTORE_DELETE_TIMEOUT_USEC, 1)==-1) {
                             logprintfl (EUCAWARN, "WARNING: failed to delete blockblob %s\n", abb->id);
                             blockblob_close (bb);
@@ -1685,30 +1733,21 @@ int blobstore_fsck (blobstore * bs, int (* examiner) (const blockblob * bb))
                         abb->store = NULL; // so it will get skipped on next iteration
                         blobs_unopenable++;
                     }
-                    
-                    /* TODO: delete this
-                    // remove the loopback files (TODO: ideally, only do this if loopback dev is not used)
-                    char path [PATH_MAX];
-                    set_blockblob_metadata_path (BLOCKBLOB_PATH_LOOPBACK, bs, abb->id, path, sizeof(path)); // load path of .../loopback file
-                    unlink (path);
-                    */
-                } else {
-                    
                 }
             }
             assert (iterations<11);
-            
-            if (to_delete == 0)
-                break;
+
             if (to_delete == to_delete_prev) // could not delete anything new this iteration
                 break;
             to_delete_prev = to_delete;
+            if (to_delete == 0)
+                break;
         }
         
         if (num_blobs>0)
-            logprintfl (EUCAINFO, "examined %d blob(s) in %d iteration(s): "
+            logprintfl (EUCAINFO, "%s: examined %d blob(s) in %d iteration(s): "
                         "deleted %d, failed on %d + %d, failed to open %d\n", 
-                        num_blobs, iterations,
+                        bs->path, num_blobs, iterations,
                         blobs_deleted, to_delete_prev, blobs_undeletable, blobs_unopenable);
     }
  free:
@@ -1809,14 +1848,15 @@ int blobstore_delete_regex (blobstore * bs, const char * regex)
     int found  = blobstore_search (bs, regex, &matches);
     int left_to_close = found;
     int closed;
-    do { // iterate multiple times in case there are dependencies
+    do { // iterate multiple times in case there are dependencies (TODO: unify with _fsck's iteration code?)
         closed = 0; // closed in this round
         for (blockblob_meta * bm = matches; bm; bm=bm->next) {
             blockblob * bb = blockblob_open (bs, bm->id, 0, 0, NULL, BLOBSTORE_FIND_TIMEOUT_USEC);
             if (bb!=NULL) {
-                if (bb->in_use) {
+                if (bb->in_use & BLOCKBLOB_STATUS_MAPPED) {
+                    // mapped blobs have children, thus cannot be deleted at this iteration
                     blockblob_close (bb);
-                    continue; // in use now, try next one
+                    continue;
                 }
                 if (blockblob_delete (bb, BLOBSTORE_DELETE_TIMEOUT_USEC, 0)==-1) {
                     blockblob_close (bb);
@@ -2049,30 +2089,30 @@ blockblob * blockblob_open ( blobstore * bs,
                 goto clean;
             }
         }
+
+        // check its in-use status
+        bb->in_use = check_in_use (bs, bb->id, 0);
     }
     
-    // create a loopback device, if there isn't one already (this may happen whether the blob is new or old)
-    char lo_dev [PATH_MAX] = "";
-    _err_off(); // do not care if loopback file does not exist
-    read_blockblob_metadata_path (BLOCKBLOB_PATH_LOOPBACK, bs, bb->id, lo_dev, sizeof (lo_dev));
-    _err_on();
-    if (strlen (lo_dev) > 0) {
+    { // create a loopback device, if there isn't a valid one already (this may happen whether the blob is new or old)
+        char lo_dev [PATH_MAX] = "";
         struct stat sb;
-        if (stat (lo_dev, &sb) == -1) {
-            ERR (BLOBSTORE_ERROR_UNKNOWN, "blockblob loopback device is recorded but does not exist");
-            goto clean;
+
+        _err_off(); // do not care if loopback file does not exist
+        read_blockblob_metadata_path (BLOCKBLOB_PATH_LOOPBACK, bs, bb->id, lo_dev, sizeof (lo_dev));
+        _err_on();
+        if ((strlen (lo_dev) < 1) // nothing in .loopback file
+            || (stat (lo_dev, &sb) == -1) // something in .loopback that does not exist
+            || (!S_ISBLK(sb.st_mode))) {  // something in .loopback that is not block device
+            
+            if (diskutil_loop (bb->blocks_path, 0, lo_dev, sizeof (lo_dev))) {
+                ERR (BLOBSTORE_ERROR_UNKNOWN, "failed to obtain a loopback device for a blockblob");
+                goto clean;
+            }
+            write_blockblob_metadata_path (BLOCKBLOB_PATH_LOOPBACK, bs, bb->id, lo_dev);
         }
-        if (!S_ISBLK(sb.st_mode)) {
-            ERR (BLOBSTORE_ERROR_UNKNOWN, "blockblob loopback path is not a block device");
-            goto clean;
-        }
-    } else {
-        if (diskutil_loop (bb->blocks_path, 0, lo_dev, sizeof (lo_dev))) {
-            ERR (BLOBSTORE_ERROR_UNKNOWN, "failed to obtain a loopback device for a blockblob");
-            goto clean;
-        }
-        write_blockblob_metadata_path (BLOCKBLOB_PATH_LOOPBACK, bs, bb->id, lo_dev);
     }
+    
     set_device_path (bb); // read .dm and .loopback and set bb->device_path accordingly
     
     goto out; // all is well

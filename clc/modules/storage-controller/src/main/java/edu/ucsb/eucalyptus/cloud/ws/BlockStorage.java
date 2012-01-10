@@ -76,6 +76,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import javax.persistence.RollbackException;
+
 import org.apache.log4j.Logger;
 import org.apache.tools.ant.util.DateUtils;
 import org.mule.RequestContext;
@@ -92,6 +94,7 @@ import com.eucalyptus.util.StorageProperties;
 
 import edu.ucsb.eucalyptus.cloud.AccessDeniedException;
 import edu.ucsb.eucalyptus.cloud.EntityTooLargeException;
+import edu.ucsb.eucalyptus.cloud.NoSuchBucketException;
 import edu.ucsb.eucalyptus.cloud.NoSuchEntityException;
 import edu.ucsb.eucalyptus.cloud.NoSuchVolumeException;
 import edu.ucsb.eucalyptus.cloud.SnapshotInUseException;
@@ -936,7 +939,17 @@ public class BlockStorage {
 				db.commit();
 				if (success) {
 					if(StorageProperties.trackUsageStatistics) {
-						blockStorageStatistics.incrementVolumeCount((size * StorageProperties.GB));
+						boolean updated = false;
+						int retryCount = 0;
+						do {
+							try {
+								blockStorageStatistics.incrementVolumeCount((size * StorageProperties.GB));
+								updated = true;
+							} catch (RollbackException ex) {
+								retryCount++;
+								LOG.trace("retrying stats update for: " + volumeId);
+							} 
+						} while(!updated && (retryCount < 5));
 					}
 				}
 			} catch(EucalyptusCloudException ex) {

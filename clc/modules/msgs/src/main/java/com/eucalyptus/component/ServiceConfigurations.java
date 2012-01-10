@@ -278,6 +278,11 @@ public class ServiceConfigurations {
     return createEphemeral( component.getComponentId( ), host );
   }
   
+  public static ServiceConfiguration createBogus( final Class<? extends ComponentId> compIdClass, final Class<?> ownerType ) {
+    ComponentId compId = ComponentIds.lookup( compIdClass ); 
+    return new EphemeralConfiguration( compId, compId.getPartition( ), ownerType.getCanonicalName( ), ServiceUris.internal( compId, Internets.localHostInetAddress( ), ownerType.getSimpleName( ) ) );
+  }
+  
   public static <T extends ServiceConfiguration, C extends ComponentId> Iterable<T> filter( final Class<C> type, final Predicate<T> pred ) throws PersistenceException {
     List<T> list = ServiceConfigurations.list( type );
     return Iterables.filter( list, pred );

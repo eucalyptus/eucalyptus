@@ -1,6 +1,7 @@
 package com.eucalyptus.cluster.callback;
 
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.CancellationException;
@@ -22,6 +23,7 @@ import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.vm.VmInstances.TerminatedInstanceException;
 import com.eucalyptus.vm.VmType;
 import com.eucalyptus.vm.VmTypes;
+import com.eucalyptus.vm.VmVolumeAttachment;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
@@ -32,7 +34,6 @@ import com.google.common.collect.Sets;
 import edu.ucsb.eucalyptus.cloud.VmDescribeResponseType;
 import edu.ucsb.eucalyptus.cloud.VmDescribeType;
 import edu.ucsb.eucalyptus.cloud.VmInfo;
-import edu.ucsb.eucalyptus.msgs.AttachedVolume;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
 public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescribeType, VmDescribeResponseType> {
@@ -55,9 +56,18 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
       
       @Override
       public Set<String> get( ) {
-        Collection<VmInstance> clusterInstances = Collections2.filter( VmInstances.list( ), filter );
-        Collection<String> instanceNames = Collections2.transform( clusterInstances, CloudMetadatas.toDisplayName( ) );
-        return Sets.newHashSet( instanceNames );
+        EntityTransaction db = Entities.get( VmInstance.class );
+        try {
+          Collection<VmInstance> clusterInstances = Collections2.filter( VmInstances.list( ), filter );
+          Collection<String> instanceNames = Collections2.transform( clusterInstances, CloudMetadatas.toDisplayName( ) );
+          Set<String> ret = Sets.newHashSet( instanceNames );
+          db.rollback( );
+          return ret;
+        } catch ( Exception ex ) {
+          Logs.extreme( ).error( ex, ex );
+          db.rollback( );
+          return Sets.newHashSet( );
+        }
       }
     } );
   }
@@ -118,14 +128,18 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
       VmInstance vm = VmInstances.cachedLookup( vmId );
       if ( VmState.PENDING.apply( vm ) && vm.getCreationSplitTime( ) < VM_INITIAL_REPORT_TIMEOUT ) {
         //do nothing during first VM_INITIAL_REPORT_TIMEOUT millis of instance life
-      } else if ( VmInstances.Timeout.UNREPORTED.apply( vm ) ) {
-        VmInstances.terminated( vm );
+        db1.rollback( );
+        return;
       } else if ( VmState.STOPPING.apply( vm ) ) {
         VmInstances.stopped( vm );
-      } else if ( VmInstances.Timeout.SHUTTING_DOWN.apply( vm ) ) {
+      } else if ( VmState.SHUTTING_DOWN.apply( vm ) ) {
         VmInstances.terminated( vm );
       } else if ( VmInstances.Timeout.TERMINATED.apply( vm ) ) {
         VmInstances.delete( vm );
+      } else if ( VmInstances.Timeout.SHUTTING_DOWN.apply( vm ) ) {
+        VmInstances.terminated( vm );
+      } else if ( VmInstances.Timeout.UNREPORTED.apply( vm ) ) {
+        VmInstances.terminated( vm );
       } else {
         db1.rollback( );
         return;
@@ -216,10 +230,10 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
       
       @Override
       public boolean apply( VmInstance input ) {
-        return input.eachVolumeAttachment( new Predicate<AttachedVolume>( ) {
+        return input.eachVolumeAttachment( new Predicate<VmVolumeAttachment>( ) {
           @Override
-          public boolean apply( AttachedVolume arg0 ) {
-            return arg0.getStatus( ).endsWith( "ing" );
+          public boolean apply( VmVolumeAttachment arg0 ) {
+            return arg0.getAttachmentState( ).isVolatile( );
           }
         } );
       }
@@ -264,7 +278,7 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
             for ( VmInstance vm : Iterables.filter( VmInstances.list( ), VmPendingCallback.this.filter ) ) {
               this.getInstancesSet( ).add( vm.getInstanceId( ) );
             }
-            Entities.commit( db );
+            db.rollback( );
           } catch ( Exception ex ) {
             Logs.exhaust( ).error( ex, ex );
             db.rollback( );

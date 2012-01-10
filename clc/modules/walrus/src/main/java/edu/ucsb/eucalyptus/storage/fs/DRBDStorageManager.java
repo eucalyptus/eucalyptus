@@ -303,7 +303,14 @@ public class DRBDStorageManager extends FileSystemStorageManager {
 		}
 		//mount
 		if(!isMounted()) {
-			mountPrimary();
+			try {
+				mountPrimary();
+			} catch(Exception e) {
+				//undo
+				if(isPrimary()) {
+					makeSecondary();
+				}
+			}
 		}
 		//verify state
 		if(!isPrimary()) {

@@ -41,7 +41,7 @@ def encode_prop(param, dict, value):
         sys.exit(1)
     dict['Name'] = t[0]
     dict['Value'] = t[1]
-    
+
 def encode_prop_from_file(param, dict, value):
     t = value.split('=', 1)
     if len(t) != 2:
@@ -63,17 +63,17 @@ def encode_prop_from_file(param, dict, value):
             print 'Error: Unable to read file: %s' % path
             sys.exit(1)
     dict['Value'] = value
- 
+
 def reset_prop(param, dict, value):
     dict['Name'] = value
     dict['Reset'] = True
-    
+
 class ModifyPropertyValue(AWSQueryRequest):
-  
+
     ServicePath = '/services/Properties'
     ServiceClass = eucadmin.EucAdmin
     Description = 'Modify property'
-    
+
     Params = [Param(name='property',
                     short_name='p',
                     long_name='property',
@@ -95,21 +95,22 @@ class ModifyPropertyValue(AWSQueryRequest):
                     optional=True,
                     encoder=reset_prop,
                     doc='Reset this property to default value.')]
-          
+
     def get_connection(self, **args):
         if self.connection is None:
             args['path'] = self.ServicePath
             self.connection = self.ServiceClass(**args)
         return self.connection
-      
+
     def cli_formatter(self, data):
         prop = data['euca:ModifyPropertyValueResponseType']
         print 'PROPERTY\t%s\t%s was %s' % (prop['euca:name'],
                                            prop['euca:value'],
                                            prop['euca:oldValue'])
-        
+
     def main(self, **args):
         return self.send(verb='POST', **args)
 
     def main_cli(self):
+        eucadmin.print_version_if_necessary()
         self.do_cli()

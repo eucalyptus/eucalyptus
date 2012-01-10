@@ -74,75 +74,89 @@ import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 
 public class VmMetadata {
-  private static Logger                                                      LOG                       = Logger.getLogger( VmMetadata.class );
-  private static Function<MetadataRequest, ByteArray>                        dynamicFunc               = new Function<MetadataRequest, ByteArray>( ) {
-                                                                                                         public ByteArray apply( MetadataRequest arg0 ) {
-                                                                                                           return ByteArray.newInstance( "" );
-                                                                                                         }
-                                                                                                       };
-  private static Function<MetadataRequest, ByteArray>                        userDataFunc              = new Function<MetadataRequest, ByteArray>( ) {
-                                                                                                         public ByteArray apply( MetadataRequest arg0 ) {
-                                                                                                           return ByteArray.newInstance( arg0.getVmInstance( ).getUserData( ) );
-                                                                                                         }
-                                                                                                       };
-  private static Function<MetadataRequest, ByteArray>                        metaDataFunc              = new Function<MetadataRequest, ByteArray>( ) {
-                                                                                                         public ByteArray apply( MetadataRequest arg0 ) {
-                                                                                                           return ByteArray.newInstance( arg0.getVmInstance( ).getByKey( arg0.getLocalPath( ) ) );
-                                                                                                         }
-                                                                                                       };
+  private static//
+  Logger                                                      LOG                       = Logger.getLogger( VmMetadata.class );
+  private static//
+  Function<MetadataRequest, ByteArray>                        dynamicFunc               = new Function<MetadataRequest, ByteArray>( ) {
+                                                                                          public ByteArray apply( MetadataRequest arg0 ) {
+                                                                                            return ByteArray.newInstance( "" );
+                                                                                          }
+                                                                                        };
+  private static//
+  Function<MetadataRequest, ByteArray>                        userDataFunc              = new Function<MetadataRequest, ByteArray>( ) {
+                                                                                          public ByteArray apply( MetadataRequest arg0 ) {
+                                                                                            return ByteArray.newInstance( arg0.getVmInstance( ).getUserData( ) );
+                                                                                          }
+                                                                                        };
+  private static//
+  Function<MetadataRequest, ByteArray>                        metaDataFunc              = new Function<MetadataRequest, ByteArray>( ) {
+                                                                                          public ByteArray apply( MetadataRequest arg0 ) {
+                                                                                            String res = arg0.getVmInstance( ).getByKey( arg0.getLocalPath( ) );
+                                                                                            if ( res == null ) {
+                                                                                              throw new NullPointerException( "Failed to lookup path: " + arg0.getLocalPath( ) );
+                                                                                            } else {
+                                                                                              return ByteArray.newInstance( res );
+                                                                                            }
+                                                                                          }
+                                                                                        };
   
-  private static ConcurrentMap<String, Function<MetadataRequest, ByteArray>> publicMetadataEndpoints   = new ConcurrentSkipListMap<String, Function<MetadataRequest, ByteArray>>( ) {
-                                                                                                         {
-                                                                                                           put( "",
-                                                                                                                new Function<MetadataRequest, ByteArray>( ) {
-                                                                                                                  public ByteArray apply( MetadataRequest arg0 ) {
-                                                                                                                    return ByteArray.newInstance( Joiner.on( "\n" ).join(
-                                                                                                                                                                          keySet( ) ) );
-                                                                                                                  }
-                                                                                                                } );
-                                                                                                         }
-                                                                                                       };
-  private static ConcurrentMap<String, Function<MetadataRequest, ByteArray>> instanceMetadataEndpoints = new ConcurrentSkipListMap<String, Function<MetadataRequest, ByteArray>>( ) {
-                                                                                                         {
-                                                                                                           put( "",
-                                                                                                                new Function<MetadataRequest, ByteArray>( ) {
-                                                                                                                  public ByteArray apply( MetadataRequest arg0 ) {
-                                                                                                                    String listing = "";
-                                                                                                                    for ( String key : keySet( ) ) {
-                                                                                                                      if ( !"".equals( key )
-                                                                                                                           && get( key ).apply( arg0 ) != null ) {
-                                                                                                                        listing += key + "\n";
-                                                                                                                      }
-                                                                                                                    }
-                                                                                                                    listing = listing.replaceAll( "\n$", "" );
-                                                                                                                    return ByteArray.newInstance( listing );
-                                                                                                                  }
-                                                                                                                } );
-                                                                                                           put( "dynamic", dynamicFunc );
-                                                                                                           put( "user-data", userDataFunc );
-                                                                                                           put( "meta-data", metaDataFunc );
-                                                                                                         }
-                                                                                                       };
+  private static//
+  ConcurrentMap<String, Function<MetadataRequest, ByteArray>> publicMetadataEndpoints   = new ConcurrentSkipListMap<String, Function<MetadataRequest, ByteArray>>( ) {
+                                                                                          {
+                                                                                            put( "",
+                                                                                              new Function<MetadataRequest, ByteArray>( ) {
+                                                                                                public ByteArray apply( MetadataRequest arg0 ) {
+                                                                                                  return ByteArray.newInstance( Joiner.on( "\n" ).join(
+                                                                                                    keySet( ) ) );
+                                                                                                }
+                                                                                              } );
+                                                                                          }
+                                                                                        };
+  private static//
+  ConcurrentMap<String, Function<MetadataRequest, ByteArray>> instanceMetadataEndpoints = new ConcurrentSkipListMap<String, Function<MetadataRequest, ByteArray>>( ) {
+                                                                                          {
+                                                                                            put( "",
+                                                                                              new Function<MetadataRequest, ByteArray>( ) {
+                                                                                                public ByteArray apply( MetadataRequest arg0 ) {
+                                                                                                  String listing = "";
+                                                                                                  for ( String key : keySet( ) ) {
+                                                                                                    if ( !"".equals( key )
+                                                                                                         && get( key ).apply( arg0 ) != null ) {
+                                                                                                      listing += key + "\n";
+                                                                                                    }
+                                                                                                  }
+                                                                                                  listing = listing.replaceAll( "\n$", "" );
+                                                                                                  return ByteArray.newInstance( listing );
+                                                                                                }
+                                                                                              } );
+                                                                                            put( "dynamic", dynamicFunc );
+                                                                                            put( "user-data", userDataFunc );
+                                                                                            put( "meta-data", metaDataFunc );
+                                                                                          }
+                                                                                        };
   
-  private static ConcurrentMap<String, Function<MetadataRequest, ByteArray>> systemMetadataEndpoints   = new ConcurrentSkipListMap<String, Function<MetadataRequest, ByteArray>>( ) {
-                                                                                                         {
-                                                                                                           put( "",
-                                                                                                                new Function<MetadataRequest, ByteArray>( ) {
-                                                                                                                  public ByteArray apply( MetadataRequest arg0 ) {
-                                                                                                                    return ByteArray.newInstance( Joiner.on( "\n" ).join(
-                                                                                                                                                                          keySet( ) ) );
-                                                                                                                  }
-                                                                                                                } );
-                                                                                                           put( "network-topology", new NetworkGroupsMetadata( ) );
-                                                                                                         }
-                                                                                                       };
+  private static//
+  ConcurrentMap<String, Function<MetadataRequest, ByteArray>> //
+                                                              systemMetadataEndpoints   = new ConcurrentSkipListMap<String, Function<MetadataRequest, ByteArray>>( ) {
+                                                                                          {
+                                                                                            put( "",
+                                                                                              new Function<MetadataRequest, ByteArray>( ) {
+                                                                                                public ByteArray apply( MetadataRequest arg0 ) {
+                                                                                                  return ByteArray.newInstance( Joiner.on(
+                                                                                                    "\n" ).join(
+                                                                                                                            keySet( ) ) );
+                                                                                                }
+                                                                                              } );
+                                                                                            put( "network-topology", new NetworkGroupsMetadata( ) );
+                                                                                          }
+                                                                                        };
   
   public byte[] handle( String path ) {
     String[] parts = path.split( ":" );
     try {
       MetadataRequest request = new MetadataRequest( parts[0], parts.length == 2
-        ? parts[1]
-        : "/" );
+                                                                                ? parts[1]
+                                                                                : "/" );
       if ( instanceMetadataEndpoints.containsKey( request.getMetadataName( ) ) && request.isInstance( ) ) {
         return instanceMetadataEndpoints.get( request.getMetadataName( ) ).apply( request ).getBytes( );
       } else if ( systemMetadataEndpoints.containsKey( request.getMetadataName( ) ) && request.isSystem( ) ) {
@@ -156,8 +170,8 @@ public class VmMetadata {
       throw ex;
     } catch ( Exception ex ) {
       String errorMsg = "Metadata request failed: " + path + ( Logs.isExtrrreeeme( )
-        ? " cause: " + ex.getMessage( )
-        : "" );
+                                                                                    ? " cause: " + ex.getMessage( )
+                                                                                    : "" );
       LOG.error( errorMsg, ex );
       throw Exceptions.toUndeclared( ex );
     }
