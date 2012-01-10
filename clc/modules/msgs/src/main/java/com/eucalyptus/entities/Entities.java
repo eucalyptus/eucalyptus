@@ -265,7 +265,7 @@ public class Entities {
     } catch ( final NoSuchElementException ex ) {
       throw ex;
     } catch ( final RuntimeException ex ) {
-      Logs.exhaust( ).trace( ex, ex );
+      Logs.extreme( ).trace( ex, ex );
       final Exception newEx = PersistenceExceptions.throwFiltered( ex );
       throw new TransactionInternalException( newEx.getMessage( ), newEx );
     }
@@ -548,7 +548,7 @@ public class Entities {
       try {
         this.txState = new TxState( ctx );
       } catch ( final RuntimeException ex ) {
-        Logs.exhaust( ).error( ex, ex );
+        Logs.extreme( ).error( ex, ex );
         this.rollback( );
         throw PersistenceExceptions.throwFiltered( ex );
       }
@@ -658,7 +658,7 @@ public class Entities {
         
         @Override
         public void rollback( ) {
-//          Logs.exhaust( ).trace( "Child call to rollback() is ignored: " + Threads.currentStackRange( 2, 8 ) );
+//          Logs.extreme( ).trace( "Child call to rollback() is ignored: " + Threads.currentStackRange( 2, 8 ) );
         }
         
         @Override
@@ -675,7 +675,7 @@ public class Entities {
         public void commit( ) {
           try {
 //            CascadingTx.this.getTxState( ).getEntityManager( ).flush( );
-//          Logs.exhaust( ).trace( "Child call to commit() is ignored: " + Threads.currentStackRange( 2, 8 ) );
+//          Logs.extreme( ).trace( "Child call to commit() is ignored: " + Threads.currentStackRange( 2, 8 ) );
           } catch ( final HibernateException ex ) {
             LOG.error( ex, ex );
           }
@@ -766,7 +766,7 @@ public class Entities {
           this.transaction.begin( );
         } catch ( final RuntimeException ex ) {
           LOG.warn( ex );
-          Logs.exhaust( ).warn( ex, ex );
+          Logs.extreme( ).warn( ex, ex );
           throw ex;
         }
       }
@@ -781,7 +781,7 @@ public class Entities {
           this.transaction.commit( );
         } catch ( final RuntimeException ex ) {
           LOG.trace( ex, ex );
-          Logs.exhaust( ).warn( ex, ex );
+          Logs.extreme( ).warn( ex, ex );
           throw ex;
         }
       }
@@ -816,7 +816,7 @@ public class Entities {
           this.transaction.rollback( );
         } catch ( final RuntimeException ex ) {
           LOG.warn( ex );
-          Logs.exhaust( ).warn( ex, ex );
+          Logs.extreme( ).warn( ex, ex );
           throw ex;
         }
       }

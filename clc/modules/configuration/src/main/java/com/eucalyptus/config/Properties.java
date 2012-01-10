@@ -9,42 +9,41 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.scripting.Groovyness;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
+import com.google.common.base.Predicate;
+import com.google.common.collect.Iterables;
 
 public class Properties {
   private static Logger LOG = Logger.getLogger( Properties.class );
   
-  public DescribePropertiesResponseType describeProperties( DescribePropertiesType request ) throws EucalyptusCloudException {
+  
+  public DescribePropertiesResponseType describeProperties( final DescribePropertiesType request ) throws EucalyptusCloudException {
     if ( !Contexts.lookup( ).hasAdministrativePrivileges( ) ) {
       throw new EucalyptusCloudException( "You are not authorized to interact with this service." );
     }
     DescribePropertiesResponseType reply = request.getReply( );
     List<Property> props = reply.getProperties( );
-    if ( request.getProperties( ).isEmpty( ) ) {
-      for ( ConfigurableProperty entry : PropertyDirectory.getPropertyEntrySet( ) ) {
+    final Predicate<ConfigurableProperty> filter = new Predicate<ConfigurableProperty>( ) {
+      public boolean apply( final ConfigurableProperty input ) {
+        if ( request.getProperties( ).isEmpty( ) ) {
+          return true;
+        } else if ( request.getProperties( ).contains( input.getQualifiedName( ) ) ) {
+          return true;
+        } else {
+          for ( String propRequest : request.getProperties( ) ) {
+            if ( input.getQualifiedName( ).startsWith( propRequest ) ) {
+              return true;
+            }
+          }
+        }
+        return false;
+      }
+    };
+    for ( ConfigurableProperty entry : Iterables.filter( PropertyDirectory.getPropertyEntrySet( ), filter ) ) {
+      if ( filter.apply( entry ) ) {
         String value = "********";
         if ( !entry.getWidgetType( ).equals( ConfigurableFieldType.KEYVALUEHIDDEN ) )
           value = entry.getValue( );
         props.add( new Property( entry.getQualifiedName( ), value, entry.getDescription( ) ) );
-      }
-    } else {
-      for ( ConfigurableProperty entry : PropertyDirectory.getPropertyEntrySet( ) ) {
-        if ( request.getProperties( ).contains( entry.getQualifiedName( ) ) ) {
-          String value = "********";
-          if ( !entry.getWidgetType( ).equals( ConfigurableFieldType.KEYVALUEHIDDEN ) )
-            value = entry.getValue( );
-          props.add( new Property( entry.getQualifiedName( ), value, entry.getDescription( ) ) );
-        }
-      }
-      for ( String entrySetName : PropertyDirectory.getPropertyEntrySetNames( ) ) {
-        if ( request.getProperties( ).contains( entrySetName ) ) {
-          String value = "********";
-          for ( ConfigurableProperty entry : PropertyDirectory.getPropertyEntrySet( entrySetName ) ) {
-            if ( !entry.getWidgetType( ).equals( ConfigurableFieldType.KEYVALUEHIDDEN ) ) {
-              value = entry.getValue( );
-            }
-            props.add( new Property( entry.getQualifiedName( ), value, entry.getDescription( ) ) );
-          }
-        }
       }
     }
     return reply;

@@ -19,7 +19,7 @@ SHUTDOWNCC=shutdownCC
 NCLIBS=../util/data.o ../node/client-marshal-adb.o ../util/ipc.o
 NC_FAKE_LIBS=../util/data.o ../node/client-marshal-fake.o ../util/ipc.o
 SCLIBS=../storage/storage-windows.o ../storage/walrus.o ../storage/http.o
-VNLIBS=../net/vnetwork.o ../util/misc.o ../storage/diskutil.o
+VNLIBS=../net/vnetwork.o ../util/misc.o ../storage/diskutil.o ../util/hash.o
 WSSECLIBS=../util/euca_axis.o ../util/euca_auth.o
 CC_LIBS = ${LIBS} ${LDFLAGS} -lcurl -lssl -lcrypto -lrampart
 
