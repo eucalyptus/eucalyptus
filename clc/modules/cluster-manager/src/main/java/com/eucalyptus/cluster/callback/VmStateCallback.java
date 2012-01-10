@@ -201,7 +201,7 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
       }
       try {
         VmInstance.RestoreAllocation.INSTANCE.apply( runVm );
-      } catch ( Exception ex ) {
+      } catch ( Throwable ex ) {
         LOG.error( ex );
         Logs.extreme( ).error( ex, ex );
       }
