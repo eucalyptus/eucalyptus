@@ -85,15 +85,15 @@ import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.event.EventFailedException;
 import com.eucalyptus.event.ListenerRegistry;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.reporting.event.StorageEvent;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.RestrictedTypes;
-import com.eucalyptus.ws.client.ServiceDispatcher;
+import com.eucalyptus.util.async.AsyncRequests;
 import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.CreateSnapshotResponseType;
 import edu.ucsb.eucalyptus.msgs.CreateSnapshotType;
 import edu.ucsb.eucalyptus.msgs.DeleteSnapshotResponseType;
@@ -104,13 +104,10 @@ import edu.ucsb.eucalyptus.msgs.DescribeSnapshotAttributeResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeSnapshotAttributeType;
 import edu.ucsb.eucalyptus.msgs.DescribeSnapshotsResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeSnapshotsType;
-import edu.ucsb.eucalyptus.msgs.DescribeStorageSnapshotsResponseType;
-import edu.ucsb.eucalyptus.msgs.DescribeStorageSnapshotsType;
 import edu.ucsb.eucalyptus.msgs.ModifySnapshotAttributeResponseType;
 import edu.ucsb.eucalyptus.msgs.ModifySnapshotAttributeType;
 import edu.ucsb.eucalyptus.msgs.ResetSnapshotAttributeResponseType;
 import edu.ucsb.eucalyptus.msgs.ResetSnapshotAttributeType;
-import edu.ucsb.eucalyptus.msgs.StorageSnapshot;
 
 public class SnapshotManager {
   
@@ -171,28 +168,35 @@ public class SnapshotManager {
           } else {
             ServiceConfiguration sc = Topology.lookup( Storage.class, Partitions.lookupByName( snap.getPartition( ) ) );
             try {
-              DeleteStorageSnapshotResponseType scReply = ServiceDispatcher.lookup( sc ).send( new DeleteStorageSnapshotType( snap.getDisplayName( ) ) );
+              DeleteStorageSnapshotResponseType scReply = AsyncRequests.sendSync( sc, new DeleteStorageSnapshotType( snap.getDisplayName( ) ) );
               if ( scReply.get_return( ) ) {
                 final DeleteStorageSnapshotType deleteMsg = new DeleteStorageSnapshotType( snap.getDisplayName( ) );
-                Iterables.any( Topology.enabledServices( Storage.class ), new Predicate<ServiceConfiguration>() {
-
+                Iterables.all( Topology.enabledServices( Storage.class ), new Predicate<ServiceConfiguration>( ) {
+                  
                   @Override
                   public boolean apply( ServiceConfiguration arg0 ) {
-                    ServiceDispatcher.lookup( arg0 ).dispatch( deleteMsg );
+                    try {
+                      AsyncRequests.sendSync( arg0, deleteMsg );
+                    } catch ( Exception ex ) {
+                      LOG.error( ex );
+                      Logs.extreme( ).error( ex, ex );
+                    }
                     return true;
-                  }} );
+                  }
+                } );
                 try {
                   ListenerRegistry.getInstance( ).fireEvent( new StorageEvent( StorageEvent.EventType.EbsSnapshot, false, snap.getVolumeSize( ),
                                                                                snap.getOwnerUserId( ), snap.getOwnerUserName( ),
                                                                                snap.getOwnerAccountNumber( ), snap.getOwnerAccountName( ),
                                                                                snap.getVolumeCluster( ), snap.getVolumePartition( ) ) );
-                } catch ( EventFailedException ex ) {
-                  LOG.error( ex, ex );
+                } catch ( Exception ex ) {
+                  LOG.error( ex );
+                  Logs.extreme( ).error( ex, ex );
                 }
               } else {
                 throw Exceptions.toUndeclared( "Unable to delete snapshot: " + snap, new EucalyptusCloudException( ) );
               }
-            } catch ( EucalyptusCloudException ex1 ) {
+            } catch ( Exception ex1 ) {
               throw Exceptions.toUndeclared( ex1.getMessage( ), ex1 );
             }
             return true;
@@ -212,7 +216,9 @@ public class SnapshotManager {
     boolean showAll = request.getSnapshotSet( ).remove( "verbose" );
     EntityWrapper<Snapshot> db = EntityWrapper.get( Snapshot.class );
     try {
-      List<Snapshot> snapshots = db.query( Snapshot.named( ( ctx.hasAdministrativePrivileges( ) && showAll ) ? null : AccountFullName.getInstance( ctx.getAccount( ) ), null ) );
+      List<Snapshot> snapshots = db.query( Snapshot.named(
+        ( ctx.hasAdministrativePrivileges( ) && showAll ) ? null : AccountFullName.getInstance( ctx.getAccount( ) ),
+        null ) );
       
       for ( Snapshot snap : Iterables.filter( snapshots, RestrictedTypes.filterPrivileged( ) ) ) {
         if ( request.getSnapshotSet( ).isEmpty( ) || request.getSnapshotSet( ).contains( snap.getDisplayName( ) ) ) {
@@ -227,7 +233,7 @@ public class SnapshotManager {
           }
         }
       }
-      db.commit( );
+      db.rollback( );
     } catch ( Exception e ) {
       db.rollback( );
     }

@@ -99,6 +99,7 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes.QuantityMetricFunction;
+import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.base.Function;
 import com.google.common.collect.ArrayListMultimap;
@@ -143,7 +144,7 @@ public class Snapshots {
             ServiceConfiguration sc = Topology.lookup( Storage.class, Partitions.lookupByName( partition ) );
             for ( String snapshotId : snapshots.get( partition ) ) {
               DescribeStorageSnapshotsType scRequest = new DescribeStorageSnapshotsType( Lists.newArrayList( snapshotId ) );
-              DescribeStorageSnapshotsResponseType snapshotInfo = ServiceDispatcher.lookup( sc ).send( scRequest );
+              DescribeStorageSnapshotsResponseType snapshotInfo = AsyncRequests.sendSync( sc, scRequest );
               for ( final StorageSnapshot storageSnapshot : snapshotInfo.getSnapshotSet( ) ) {
                 final Function<String, Snapshot> updateSnapshot = new Function<String, Snapshot>( ) {
                   public Snapshot apply( final String input ) {
@@ -224,9 +225,9 @@ public class Snapshots {
         public void fire( Snapshot s ) {
           try {
             CreateStorageSnapshotType scRequest = new CreateStorageSnapshotType( vol.getDisplayName( ), snap.getDisplayName( ) );
-            CreateStorageSnapshotResponseType scReply = ServiceDispatcher.lookup( sc ).send( scRequest );
+            CreateStorageSnapshotResponseType scReply = AsyncRequests.sendSync( sc, scRequest );
             s.setMappedState( scReply.getStatus( ) );
-          } catch ( EucalyptusCloudException ex ) {
+          } catch ( Exception ex ) {
             throw Exceptions.toUndeclared( ex );
           }
         }
