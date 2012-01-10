@@ -849,7 +849,8 @@ public class ServiceTransitions {
       @Override
       public void fire( final ServiceConfiguration config ) {
         try {
-          List<ConfigurableProperty> props = PropertyDirectory.getPropertyEntrySet( config.getComponentId( ).name( ) );
+          String prefix = config.getPartition( ) + "." + config.getComponentId( ).name( );
+          List<ConfigurableProperty> props = PropertyDirectory.getPropertyEntrySet( prefix );
           for ( ConfigurableProperty prop : props ) {
             if ( prop instanceof SingletonDatabasePropertyEntry ) {
             //GRZE:REVIEW do nothing?

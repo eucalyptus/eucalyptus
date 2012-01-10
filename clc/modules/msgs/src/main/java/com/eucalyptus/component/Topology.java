@@ -75,15 +75,16 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.bootstrap.Databases;
+import com.eucalyptus.bootstrap.Host;
 import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.component.Component.State;
+import com.eucalyptus.empyrean.DestroyServiceType;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.empyrean.ServiceId;
 import com.eucalyptus.empyrean.ServiceTransitionType;
@@ -97,6 +98,7 @@ import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.TypeMappers;
+import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.Futures;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
@@ -331,7 +333,7 @@ public class Topology {
   
   public static Function<ServiceConfiguration, Future<ServiceConfiguration>> transition( final Component.State toState ) {
     final Function<ServiceConfiguration, Future<ServiceConfiguration>> transition = new Function<ServiceConfiguration, Future<ServiceConfiguration>>( ) {
-      private final List<Component.State> serializedStates = Lists.newArrayList( Component.State.ENABLED );
+      private final List<Component.State> serializedStates = Lists.newArrayList( Component.State.ENABLED, Component.State.STOPPED );
       
       @Override
       public Future<ServiceConfiguration> apply( final ServiceConfiguration input ) {
@@ -362,7 +364,62 @@ public class Topology {
   }
   
   public static Future<ServiceConfiguration> destroy( final ServiceConfiguration config ) {
-    return transition( State.PRIMORDIAL ).apply( config );
+    try {
+      ServiceConfigurations.remove( config );
+    } catch ( Exception ex ) {
+      LOG.error( ex );
+      Logs.extreme( ).debug( ex, ex );
+    }
+    try {
+      Topology.disable( config ).get( );
+    } catch ( Exception ex ) {
+      Exceptions.maybeInterrupted( ex );
+      LOG.error( ex );
+      Logs.extreme( ).debug( ex, ex );
+    }
+    try {
+      Topology.stop( config ).get( );
+    } catch ( Exception ex ) {
+      Exceptions.maybeInterrupted( ex );
+      LOG.error( ex );
+      Logs.extreme( ).debug( ex, ex );
+    }
+    try {
+      Component comp = Components.lookup( config.getComponentId( ) );
+      comp.destroy( config );
+    } catch ( Exception ex ) {
+      Exceptions.maybeInterrupted( ex );
+      LOG.error( ex );
+      Logs.extreme( ).debug( ex, ex );
+    }
+    if ( Hosts.isCoordinator( ) ) {
+      DestroyServiceType msg = new DestroyServiceType( );
+      try {
+        msg.getServices( ).add( TypeMappers.transform( config, ServiceId.class ) );
+        for ( Host h : Hosts.list( ) ) {
+          if ( !h.isLocalHost( ) && h.hasBootstrapped( ) ) { 
+            try {
+              AsyncRequests.sendSync( ServiceConfigurations.createEphemeral( Empyrean.INSTANCE, h.getBindAddress( ) ), msg );
+            } catch ( Exception ex ) {
+              Exceptions.maybeInterrupted( ex );
+              LOG.error( ex );
+              Logs.extreme( ).debug( ex, ex );
+            }
+          }
+        }
+      } catch ( Exception ex ) {
+        LOG.error( ex );
+        Logs.extreme( ).debug( ex, ex );
+      }
+    }
+    try {
+      ServiceTransitions.StateCallbacks.PROPERTIES_REMOVE.fire( config );
+    } catch ( Exception ex ) {
+      Exceptions.maybeInterrupted( ex );
+      LOG.error( ex );
+      Logs.extreme( ).debug( ex, ex );
+    }
+    return Futures.predestinedFuture( config );
   }
   
   public static Future<ServiceConfiguration> load( final ServiceConfiguration config ) {
@@ -923,7 +980,14 @@ public class Topology {
   
   public enum Transitions implements Function<ServiceConfiguration, ServiceConfiguration>, Supplier<Component.State> {
     START( Component.State.DISABLED ),
-    STOP( Component.State.STOPPED ),
+    STOP( Component.State.STOPPED ) {
+
+      @Override
+      public ServiceConfiguration apply( ServiceConfiguration input ) {
+        return super.tc.apply( input );
+      }
+      
+    },
     INITIALIZE( Component.State.INITIALIZED ),
     LOAD( Component.State.LOADED ),
     DESTROY( Component.State.PRIMORDIAL ),
