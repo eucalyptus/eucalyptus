@@ -36,7 +36,8 @@ import ConfigParser
 
 cfg = ConfigParser.ConfigParser()
 cfg.read('setup.cfg')
-prefix = cfg.get('install', 'prefix')
+prefix  = cfg.get('install', 'prefix')
+version = cfg.get('meta',    'version')
 
 class build_scripts_with_path_headers(build_scripts):
     def run(self):
@@ -95,7 +96,7 @@ admin_scripts = ["bin/euca_conf",
                 ]
 
 setup(name="eucadmin",
-      version='3.0.0',
+      version=version,
       description="Eucalyptus Admin Tools",
       long_description="CLI tools to help administer Eucalyptus",
       author="Mitch Garnaat",

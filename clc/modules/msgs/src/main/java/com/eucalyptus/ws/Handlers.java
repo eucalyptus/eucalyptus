@@ -423,12 +423,9 @@ public class Handlers {
     if ( Topology.isEnabled( compClass ) ) {//have an enabled service, lets use that 
       final URI serviceUri = ServiceUris.remote( Topology.lookup( compClass ) );
       redirectUri = serviceUri.toASCIIString( ) + originalPath.replace( serviceUri.getPath( ), "" );
-    } else if ( ComponentIds.lookup( compClass ).isCloudLocal( ) && Topology.isEnabled( Eucalyptus.class ) ) {//treat cloudLocals different because of serivce path.
-      final URI serviceUri = ServiceUris.remote( Topology.lookup( Eucalyptus.class ) );
-      redirectUri = serviceUri.toASCIIString( ).replace( Eucalyptus.INSTANCE.getServicePath( ), "" ) + originalPath.replace( serviceUri.getPath( ), "" );
     } else if ( Topology.isEnabled( Eucalyptus.class ) ) {//can't find service info, redirect via clc master
       final URI serviceUri = ServiceUris.remote( Topology.lookup( Eucalyptus.class ) );
-      redirectUri = serviceUri.toASCIIString( ) + originalPath.replace( serviceUri.getPath( ), "" );
+      redirectUri = serviceUri.toASCIIString( ).replace( Eucalyptus.INSTANCE.getServicePath( ), "" ) + originalPath.replace( serviceUri.getPath( ), "" );
     }
     HttpResponse response = null;
     if ( redirectUri == null ) {

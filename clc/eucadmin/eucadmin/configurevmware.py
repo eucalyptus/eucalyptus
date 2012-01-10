@@ -50,7 +50,7 @@ VMwareConfigPropSuffix = '.vmwarebroker.configxml'
 VMwareCommand = 'usr/share/eucalyptus/euca_vmware'
 
 class ConfigureVMware(AWSQueryRequest):
-    
+
     ServiceClass = eucadmin.EucAdmin
     Description = 'Configure the VMware Broker.'
     Params = [Param(name='euca_home',
@@ -187,8 +187,7 @@ class ConfigureVMware(AWSQueryRequest):
             self.create_file(euca_home, path)
             self.validate_file(euca_home, path)
             self.save_new_value(path, prop)
-        
+
     def main_cli(self):
+        eucadmin.print_version_if_necessary()
         self.do_cli()
-        
-        

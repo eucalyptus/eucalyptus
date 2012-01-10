@@ -110,6 +110,7 @@ import com.eucalyptus.bootstrap.OrderedShutdown;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
@@ -664,7 +665,7 @@ public class Threads {
       FutureTask<C> f = new FutureTask<C>( call ) {
         @Override
         public String toString( ) {
-          return call.toString( ) + " " + super.toString( );
+          return Thread.currentThread( ).getName( ) + ":" + super.toString( ) + " " + call.toString( );
         }
       };
       this.msgQueue.add( f );
@@ -760,19 +761,18 @@ public class Threads {
       }
     }
   }
+
+  public static <C> Future<C> enqueue( final Class<? extends ComponentId> compId, final Class<?> ownerType, final Callable<C> callable ) {
+    return enqueue( compId, ownerType, NUM_QUEUE_WORKERS, callable );
+  }
   
-  public static Future<?> enqueue( final ServiceConfiguration config, final Runnable runnable ) {
-    return queue( config.getComponentId( ).getClass( ), config, NUM_QUEUE_WORKERS ).submit( runnable );
+  public static <C> Future<C> enqueue( final Class<? extends ComponentId> compId, final Class<?> ownerType, final Integer workers, final Callable<C> callable ) {
+    return enqueue( ServiceConfigurations.createBogus( compId, ownerType ), workers, callable );
   }
   
   @SuppressWarnings( "unchecked" )
   public static <C> Future<C> enqueue( final ServiceConfiguration config, final Callable<C> callable ) {
     return ( Future<C> ) queue( config.getComponentId( ).getClass( ), config, NUM_QUEUE_WORKERS ).submit( callable );
-  }
-  
-  @SuppressWarnings( "unchecked" )
-  public static <C> Future<C> enqueue( final ServiceConfiguration config, final Integer workers, final Runnable runnable ) {
-    return ( Future<C> ) queue( config.getComponentId( ).getClass( ), config, workers ).submit( runnable );
   }
   
   @SuppressWarnings( "unchecked" )

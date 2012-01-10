@@ -34,7 +34,7 @@ import eucadmin
 import os
 
 class ModifyService(AWSQueryRequest):
-  
+
     ServicePath = '/services/Empyrean'
     ServiceClass = eucadmin.EucAdmin
     Description = 'Modify service state'
@@ -57,7 +57,7 @@ class ModifyService(AWSQueryRequest):
             args['path'] = self.ServicePath
             self.connection = self.ServiceClass()
         return self.connection
-      
+
     def cli_formatter(self, data):
         response = getattr(data, 'euca:_return')
         print 'RESPONSE %s' % response
@@ -66,5 +66,5 @@ class ModifyService(AWSQueryRequest):
         return self.send(**args)
 
     def main_cli(self):
+        eucadmin.print_version_if_necessary()
         self.do_cli()
-    

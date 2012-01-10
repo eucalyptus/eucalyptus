@@ -69,21 +69,13 @@ import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.security.Security;
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.PriorityBlockingQueue;
+import java.util.concurrent.Callable;
 import org.apache.log4j.Logger;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import com.eucalyptus.bootstrap.Bootstrap.Stage;
 import com.eucalyptus.component.Component;
-import com.eucalyptus.component.Component.State;
-import com.eucalyptus.component.Component.Transition;
-import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.ServiceConfigurations;
-import com.eucalyptus.context.ServiceContextManager;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.EventClass;
 import com.eucalyptus.records.EventRecord;
@@ -94,7 +86,6 @@ import com.eucalyptus.util.Internets;
 import com.google.common.base.Functions;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 
@@ -253,15 +244,16 @@ public class SystemBootstrapper {
       }
     } );
     Bootstrap.applyTransition( Component.State.LOADED, Components.whichCanLoad( ) );
-    Threads.enqueue( ServiceConfigurations.createEphemeral( Empyrean.INSTANCE ), new Runnable( ) {
+    Threads.enqueue( Empyrean.class, SystemBootstrapper.class, new Callable<Boolean>( ) {
                        @Override
-                       public void run( ) {
+                       public Boolean call( ) {
                          try {
                            Bootstrap.applyTransition( Component.State.DISABLED, Components.whichCanLoad( ) );
                            Bootstrap.applyTransition( Component.State.ENABLED, Components.whichCanEnable( ) );
                          } catch ( Exception ex ) {
                            LOG.error( ex, ex );
                          }
+                         return Boolean.TRUE;
                        }
                      } ).get( );
     try {
