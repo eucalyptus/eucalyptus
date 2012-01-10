@@ -114,7 +114,7 @@ distclean: clean
 	rm -rf generated cc-client-policy.xml
 
 install: deploy
-#	@$(INSTALL) -m 0555 $(SHUTDOWNCC) $(DESTDIR)$(sbindir)
+	@$(INSTALL) -m 0555 $(SHUTDOWNCC) $(DESTDIR)$(usrdir)/lib/eucalyptus
 	@$(INSTALL) cc-client-policy.xml $(DESTDIR)$(vardir)/lib/eucalyptus/keys/
 
 uninstall:
