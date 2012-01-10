@@ -84,10 +84,10 @@ public class MetadataPipeline extends FilteredPipeline implements ChannelUpstrea
           reply = ServiceContext.send( "VmMetadata", newUri );
         }
       } catch ( ServiceDispatchException e1 ) {
-        LOG.debug( e1, e1 );
+        Logs.extreme( ).debug( e1, e1 );
         replyEx = e1;
       } catch ( Exception e1 ) {
-        LOG.debug( e1, e1 );
+        Logs.extreme( ).debug( e1, e1 );
         replyEx = e1;
       } finally {
         Contexts.clear( request.getCorrelationId( ) );
@@ -99,18 +99,16 @@ public class MetadataPipeline extends FilteredPipeline implements ChannelUpstrea
           ERROR_STRING,
           newUri.replaceAll( remoteHost + ":", "" ),
           replyEx != null && Logs.isDebug( ) ? Exceptions.string( replyEx ) : "" );
-        if ( Logs.isDebug( ) ) {
-          response.setHeader( HttpHeaders.Names.CONTENT_TYPE, "text/plain" );
-          ChannelBuffer buffer = null;
-          if ( replyEx != null && !( replyEx instanceof NoSuchElementException ) ) {
-            buffer = ChannelBuffers.wrappedBuffer( errorMessage.getBytes( ) );
-            response.setContent( buffer );
-          } else {
-            buffer = ChannelBuffers.wrappedBuffer( errorMessage.getBytes( ) );
-            response.setContent( buffer );
-          }
-          response.addHeader( HttpHeaders.Names.CONTENT_LENGTH, Integer.toString( buffer.readableBytes( ) ) );
+        response.setHeader( HttpHeaders.Names.CONTENT_TYPE, "text/plain" );
+        ChannelBuffer buffer = null;
+        if ( replyEx != null && !( replyEx instanceof NoSuchElementException ) ) {
+          buffer = ChannelBuffers.wrappedBuffer( errorMessage.getBytes( ) );
+          response.setContent( buffer );
+        } else {
+          buffer = ChannelBuffers.wrappedBuffer( errorMessage.getBytes( ) );
+          response.setContent( buffer );
         }
+        response.addHeader( HttpHeaders.Names.CONTENT_LENGTH, Integer.toString( buffer.readableBytes( ) ) );
       } else {
         response = new DefaultHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.OK );
         response.setHeader( HttpHeaders.Names.CONTENT_TYPE, "text/plain" );

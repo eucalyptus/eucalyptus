@@ -428,7 +428,7 @@ public class Logs {
     
     @Override
     public Boolean call( ) {
-      return logLevel.get( ).ordinal( ) >= this.ordinal( );
+      return logLevel.get( ).ordinal( ) <= this.ordinal( );
     }
     
     public Logger logger( ) {
