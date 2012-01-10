@@ -648,6 +648,18 @@ public class Topology {
     
   }
   
+  enum AlwaysLocalServiceFilter implements Predicate<ServiceConfiguration> {
+    INSTANCE;
+    @Override
+    public boolean apply( final ServiceConfiguration arg0 ) {
+      return arg0.isVmLocal( )
+             && arg0.getComponentId( ).isAlwaysLocal( )
+             && arg0.lookupState( ).ordinal( ) < Component.State.ENABLED.ordinal( )
+             && !Component.State.STOPPED.apply( arg0 );
+    }
+    
+  }
+  
   enum CheckServiceFilter implements Predicate<ServiceConfiguration> {
     INSTANCE;
     @Override
@@ -813,6 +825,7 @@ public class Topology {
         final Predicate<ServiceConfiguration> proceedToDisableFilter = Predicates.and( ServiceConfigurations.filterHostLocal( ),
                                                                                        ProceedToDisabledServiceFilter.INSTANCE );
         submitTransitions( allServices, proceedToDisableFilter, SubmitDisable.INSTANCE );
+        submitTransitions( allServices, AlwaysLocalServiceFilter.INSTANCE, SubmitEnable.INSTANCE );
         /** TODO:GRZE: check and disable timeout here **/
         return checkedServices;
       } else {
