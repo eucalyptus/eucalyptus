@@ -91,6 +91,8 @@ public class Snapshot extends UserMetadata<State> implements SnapshotMetadata {
   private String   volumeSc;
   @Column( name = "metadata_snapshot_vol_partition", updatable = false )
   private String   volumePartition;
+  @Column( name = "metadata_snapshot_progress" )
+  private String   progress;
   
   private Snapshot( ) {
     super( );
@@ -106,6 +108,7 @@ public class Snapshot extends UserMetadata<State> implements SnapshotMetadata {
     this.volumeSc = volumeScName;
     this.volumePartition = volumePartition;
     this.volumeSize = volumeSize;
+    this.progress = "0%";
     super.setState( State.NIHIL );
   }
   
@@ -206,6 +209,14 @@ public class Snapshot extends UserMetadata<State> implements SnapshotMetadata {
   
   public String getVolumeSc( ) {
     return this.volumeSc;
+  }
+
+  protected String getProgress( ) {
+    return this.progress;
+  }
+
+  protected void setProgress( String progress ) {
+    this.progress = progress;
   }
   
 }

@@ -215,23 +215,13 @@ public class SnapshotManager {
       List<Snapshot> snapshots = db.query( Snapshot.named( ( ctx.hasAdministrativePrivileges( ) && showAll ) ? null : AccountFullName.getInstance( ctx.getAccount( ) ), null ) );
       
       for ( Snapshot snap : Iterables.filter( snapshots, RestrictedTypes.filterPrivileged( ) ) ) {
-        DescribeStorageSnapshotsType scRequest = new DescribeStorageSnapshotsType( Lists.newArrayList( snap.getDisplayName( ) ) );
         if ( request.getSnapshotSet( ).isEmpty( ) || request.getSnapshotSet( ).contains( snap.getDisplayName( ) ) ) {
           try {
-            ServiceConfiguration sc = Topology.lookup( Storage.class, Partitions.lookupByName( snap.getPartition( ) ) );
-            DescribeStorageSnapshotsResponseType snapshotInfo = ServiceDispatcher.lookup( sc ).send( scRequest );
-            for ( StorageSnapshot storageSnapshot : snapshotInfo.getSnapshotSet( ) ) {
-              snap.setMappedState( storageSnapshot.getStatus( ) );
-              edu.ucsb.eucalyptus.msgs.Snapshot snapReply = snap.morph( new edu.ucsb.eucalyptus.msgs.Snapshot( ) );
-              if ( storageSnapshot.getProgress( ) != null ) snapReply.setProgress( storageSnapshot.getProgress( ) );
-              snapReply.setVolumeId( storageSnapshot.getVolumeId( ) );
-              snapReply.setOwnerId( snap.getOwnerAccountNumber( ) );
-              reply.getSnapshotSet( ).add( snapReply );
-            }
+            edu.ucsb.eucalyptus.msgs.Snapshot snapReply = snap.morph( new edu.ucsb.eucalyptus.msgs.Snapshot( ) );
+            snapReply.setVolumeId( snap.getParentVolume( ) );
+            snapReply.setOwnerId( snap.getOwnerAccountNumber( ) );
+            reply.getSnapshotSet( ).add( snapReply );
           } catch ( NoSuchElementException e ) {
-            LOG.warn( "Error getting snapshot information from the Storage Controller: " + e );
-            LOG.debug( e, e );
-          } catch ( EucalyptusCloudException e ) {
             LOG.warn( "Error getting snapshot information from the Storage Controller: " + e );
             LOG.debug( e, e );
           }

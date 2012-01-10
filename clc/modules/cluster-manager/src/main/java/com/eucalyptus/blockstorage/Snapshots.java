@@ -63,26 +63,37 @@
 
 package com.eucalyptus.blockstorage;
 
+import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import org.hibernate.criterion.Example;
 import org.hibernate.exception.ConstraintViolationException;
 import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.blockstorage.Volumes.VolumeUpdateEvent;
+import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.cloud.CloudMetadata.SnapshotMetadata;
 import com.eucalyptus.cloud.util.DuplicateMetadataException;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.entities.Entities;
-import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.Transactions;
+import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventFailedException;
+import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.ListenerRegistry;
+import com.eucalyptus.event.Listeners;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.reporting.event.StorageEvent;
+import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
@@ -90,11 +101,83 @@ import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes.QuantityMetricFunction;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.base.Function;
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Multimap;
 import edu.ucsb.eucalyptus.msgs.CreateStorageSnapshotResponseType;
 import edu.ucsb.eucalyptus.msgs.CreateStorageSnapshotType;
+import edu.ucsb.eucalyptus.msgs.DescribeStorageSnapshotsResponseType;
+import edu.ucsb.eucalyptus.msgs.DescribeStorageSnapshotsType;
+import edu.ucsb.eucalyptus.msgs.StorageSnapshot;
 
 public class Snapshots {
   private static Logger LOG = Logger.getLogger( Snapshots.class );
+  
+  public static class SnapshotUpdateEvent implements EventListener<ClockTick>, Callable<Boolean> {
+    private static final AtomicBoolean ready = new AtomicBoolean( true );
+    
+    public static void register( ) {
+      Listeners.register( ClockTick.class, new VolumeUpdateEvent( ) );
+    }
+    
+    @Override
+    public void fireEvent( ClockTick event ) {
+      if ( Hosts.isCoordinator( ) && ready.compareAndSet( true, false ) ) {
+        try {
+          Threads.enqueue( Eucalyptus.class, Snapshots.class, this );
+        } catch ( Exception ex ) {
+          ready.set( true );
+        }
+      }
+    }
+    
+    @Override
+    public Boolean call( ) throws Exception {
+      try {
+        try {
+          Multimap<String,String> snapshots = ArrayListMultimap.create( );
+          for ( Snapshot s : Snapshots.list( ) ) {
+            snapshots.put( s.getPartition( ), s.getDisplayName( ) );
+          }
+          for ( String partition : snapshots.keySet( ) ) {
+            ServiceConfiguration sc = Topology.lookup( Storage.class, Partitions.lookupByName( partition ) );
+            for ( String snapshotId : snapshots.get( partition ) ) {
+              DescribeStorageSnapshotsType scRequest = new DescribeStorageSnapshotsType( Lists.newArrayList( snapshotId ) );
+              DescribeStorageSnapshotsResponseType snapshotInfo = ServiceDispatcher.lookup( sc ).send( scRequest );
+              for ( final StorageSnapshot storageSnapshot : snapshotInfo.getSnapshotSet( ) ) {
+                final Function<String, Snapshot> updateSnapshot = new Function<String, Snapshot>( ) {
+                  public Snapshot apply( final String input ) {
+                    try {
+                      Snapshot entity = Entities.uniqueResult( Snapshot.named( null, input ) );
+                      entity.setMappedState( storageSnapshot.getStatus( ) );
+                      if ( storageSnapshot.getProgress( ) != null ) {
+                        entity.setProgress( storageSnapshot.getProgress( ) );
+                      }
+                      return entity;
+                    } catch ( TransactionException ex ) {
+                      throw Exceptions.toUndeclared( ex );
+                    }
+                  }
+                };
+                try {
+                  Entities.asTransaction( Snapshot.class, updateSnapshot ).apply( snapshotId );
+                } catch ( Exception ex ) {
+                  LOG.error( ex );
+                  Logs.extreme( ).error( ex, ex );
+                }
+              }
+            }
+          }
+        } catch ( Exception ex ) {
+          LOG.error( ex );
+          Logs.extreme( ).error( ex, ex );
+        }
+      } finally {
+        ready.set( true );
+      }
+      return true;
+    }
+  }
   
   @QuantityMetricFunction( SnapshotMetadata.class )
   public enum CountSnapshots implements Function<OwnerFullName, Long> {
@@ -171,5 +254,9 @@ public class Snapshots {
   
   public static Snapshot lookup( OwnerFullName accountFullName, String snapshotId ) throws ExecutionException {
     return Transactions.find( Snapshot.named( accountFullName, snapshotId ) );
+  }
+  
+  public static List<Snapshot> list( ) throws TransactionException {
+    return Transactions.findAll( Snapshot.named( null, null ) );
   }
 }
