@@ -498,6 +498,9 @@ case "$1" in
                 fi
         fi
 	# start and stop are hard: we loose the CC state
+	if ( $EUCALYPTUS/usr/lib/eucalyptus/shutdownCC localhost:$CC_PORT ); then
+	    echo "WARNING: sending full network shutdown to local CC (localhost:$CC_PORT) failed, please check $EUCALYPTUS/var/log/eucalyptus/shutdownCC.log"
+	fi
 	do_stop
 	do_fullclean
 	rm -f /dev/shm/*eucalyptusCC*
@@ -536,8 +539,11 @@ case "$1" in
 			echo -n "Restarting $DESC: "
 		fi
 	fi
-	do_stop
 
+	if ( $EUCALYPTUS/usr/lib/eucalyptus/shutdownCC localhost:$CC_PORT ); then
+	    echo "WARNING: sending full network shutdown to local CC (localhost:$CC_PORT) failed, please check $EUCALYPTUS/var/log/eucalyptus/shutdownCC.log"
+	fi
+	do_stop
 	do_fullclean
 	rm -f /dev/shm/*eucalyptusCC*
 

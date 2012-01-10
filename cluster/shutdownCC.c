@@ -116,7 +116,7 @@ int main(int argc, char **argv) {
     exit(1);
   }
 
-  sleep(5);
+  sleep(10);
   exit(0);
 }
 
