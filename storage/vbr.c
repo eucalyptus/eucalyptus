@@ -76,7 +76,9 @@
 #include <limits.h>
 #include <assert.h>
 #include <dirent.h>
+
 #include "misc.h" // logprintfl, ensure_...
+#include "hash.h"
 #include "data.h"
 #include "vbr.h"
 #include "walrus.h"
