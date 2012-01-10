@@ -64,7 +64,11 @@
 package com.eucalyptus.blockstorage;
 
 import java.util.List;
+import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import org.hibernate.criterion.Example;
@@ -73,13 +77,22 @@ import com.eucalyptus.cloud.CloudMetadata.VolumeMetadata;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.Transactions;
+import com.eucalyptus.event.ClockTick;
+import com.eucalyptus.event.EventFailedException;
+import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.ListenerRegistry;
+import com.eucalyptus.event.Listeners;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.reporting.event.StorageEvent;
+import com.eucalyptus.reporting.event.StorageEvent.EventType;
+import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
@@ -87,18 +100,29 @@ import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes.QuantityMetricFunction;
 import com.eucalyptus.util.RestrictedTypes.UsageMetricFunction;
 import com.eucalyptus.util.async.AsyncRequests;
+import com.eucalyptus.vm.VmInstance;
+import com.eucalyptus.vm.VmInstances;
+import com.eucalyptus.vm.VmVolumeAttachment;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.base.Function;
+import com.google.common.base.Joiner;
+import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Multimap;
+import edu.ucsb.eucalyptus.msgs.AttachedVolume;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.CreateStorageVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.CreateStorageVolumeType;
 import edu.ucsb.eucalyptus.msgs.DescribeStorageVolumesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeStorageVolumesType;
+import edu.ucsb.eucalyptus.msgs.StorageVolume;
 
 public class Volumes {
-  private static Logger LOG       = Logger.getLogger( Volumes.class );
-  private static String ID_PREFIX = "vol";
+  private static Logger     LOG                  = Logger.getLogger( Volumes.class );
+  private static String     ID_PREFIX            = "vol";
+  private static final long VOLUME_STATE_TIMEOUT = 2 * 60 * 60 * 1000L;
+  private static final long VOLUME_DELETE_TIMEOUT = 30 * 60 * 1000L;
   
   @QuantityMetricFunction( VolumeMetadata.class )
   public enum CountVolumes implements Function<OwnerFullName, Long> {
@@ -134,6 +158,138 @@ public class Volumes {
     
   }
   
+  public static class VolumeUpdateEvent implements EventListener<ClockTick>, Callable<Boolean> {
+    private static final AtomicBoolean ready = new AtomicBoolean( true );
+    
+    public static void register( ) {
+      Listeners.register( ClockTick.class, new VolumeUpdateEvent( ) );
+    }
+    
+    @Override
+    public void fireEvent( ClockTick event ) {
+      if ( ready.compareAndSet( true, false ) ) {
+        try {
+          Threads.enqueue( Eucalyptus.class, Volumes.class, this );
+        } catch ( Exception ex ) {
+          ready.set( true );
+        }
+      }
+    }
+    
+    @Override
+    public Boolean call( ) throws Exception {
+      try {
+        VolumeUpdateEvent.update( );
+      } finally {
+        ready.set( true );
+      }
+      return true;
+    }
+    
+    static void update( ) {
+      Multimap<String, String> partitionVolumeMap = HashMultimap.create( );
+      EntityTransaction db = Entities.get( Volume.class );
+      try {
+        for ( Volume v : Entities.query( Volume.named( null, null ) ) ) {
+          partitionVolumeMap.put( v.getPartition( ), v.getDisplayName( ) );
+        }
+        db.rollback( );
+      } catch ( Exception ex ) {
+        Logs.extreme( ).error( ex, ex );
+        db.rollback( );
+      }
+      Logs.extreme( ).debug( "Volume state update: " + Joiner.on( "\n" ).join( partitionVolumeMap.entries( ) ) );
+      for ( String partition : partitionVolumeMap.keySet( ) ) {
+        try {
+          Map<String, StorageVolume> idStorageVolumeMap = updateVolumesInPartition( partition );//TODO:GRZE: restoring volume state
+          for ( String v : partitionVolumeMap.get( partition ) ) {
+            try {
+              volumeStateUpdate( v, idStorageVolumeMap.get( v ) );
+            } catch ( Exception ex ) {
+              LOG.error( ex );
+              Logs.extreme( ).error( ex, ex );
+            }
+          }
+        } catch ( Exception ex ) {
+          LOG.error( ex );
+          Logs.extreme( ).error( ex, ex );
+        }
+      }
+    }
+    
+    static void volumeStateUpdate( String volumeId, final StorageVolume storageVolume ) {
+      final Function<String, Volume> updateVolume = new Function<String, Volume>( ) {
+        public Volume apply( final String input ) {
+          try {
+            Volume v = Entities.uniqueResult( Volume.named( null, input ) );
+            String status = null;
+            Integer size = 0;
+            String actualDeviceName = "unknown";
+            State volumeState;
+            if ( storageVolume != null ) {
+              status = storageVolume.getStatus( );
+              size = Integer.parseInt( storageVolume.getSize( ) );
+              actualDeviceName = storageVolume.getActualDeviceName( );
+              if ( actualDeviceName == null || "invalid".equals( actualDeviceName ) || "unknown".equals( actualDeviceName ) ) {
+                volumeState = State.GENERATING;
+              } else {
+                volumeState = Volumes.transformStorageState( v.getState( ), status );
+              }
+            } else if ( v.lastUpdateMillis( ) > VOLUME_STATE_TIMEOUT && State.GENERATING.equals( v.getState( ) ) ) {
+              volumeState = State.FAIL;
+            } else {
+              volumeState = Volumes.transformStorageState( v.getState( ), status );
+            }
+//TODO:GRZE: expire deleted/failed volumes in the future.
+//            if ( State.ANNIHILATED.equals( v.getState( ) ) && State.ANNIHILATED.equals( v.getState( ) ) && v.lastUpdateMillis( ) > VOLUME_DELETE_TIMEOUT ) {
+//              Entities.delete( v );
+//            }
+            VmVolumeAttachment vmAttachedVol = null;
+            VmInstance vm = null;
+            try {
+              vmAttachedVol = VmInstances.lookupVolumeAttachment( v.getDisplayName( ) );
+              vm = vmAttachedVol.getVmInstance( );
+              v.setState( State.BUSY );
+            } catch ( NoSuchElementException ex ) {
+              v.setState( volumeState );
+            }
+            try {
+              if ( v.getSize( ) <= 0 ) {
+                v.setSize( new Integer( size ) );
+              }
+            } catch ( Exception ex ) {
+              LOG.error( ex );
+              Logs.extreme( ).error( ex, ex );
+            }
+            return v;
+          } catch ( TransactionException ex ) {
+            throw Exceptions.toUndeclared( ex );
+          } catch ( NoSuchElementException ex ) {
+            throw ex;
+          }
+        }
+      };
+      Entities.asTransaction( Volume.class, updateVolume ).apply( volumeId );
+    }
+    
+    static Map<String, StorageVolume> updateVolumesInPartition( String partition ) {
+      Map<String, StorageVolume> idStorageVolumeMap = Maps.newHashMap( );
+      ServiceConfiguration scConfig = Topology.lookup( Storage.class, Partitions.lookupByName( partition ) );
+      try {
+        DescribeStorageVolumesResponseType volState = AsyncRequests.sendSync( scConfig, new DescribeStorageVolumesType( ) );
+        for ( StorageVolume vol : volState.getVolumeSet( ) ) {
+          LOG.debug( "Volume states: " + vol.getVolumeId( ) + " " + vol.getStatus( ) + " " + vol.getActualDeviceName( ) );
+          idStorageVolumeMap.put( vol.getVolumeId( ), vol );
+        }
+      } catch ( Exception ex ) {
+        LOG.error( ex );
+        Logs.extreme( ).error( ex, ex );
+      }
+      return idStorageVolumeMap;
+    }
+    
+  }
+  
   public static Volume checkVolumeReady( final Volume vol ) throws EucalyptusCloudException {
     if ( vol.isReady( ) ) {
       return vol;
@@ -147,12 +303,14 @@ public class Volumes {
           @Override
           public void fire( final Volume t ) {
             try {
-              final DescribeStorageVolumesResponseType volState = ServiceDispatcher.lookup( sc ).send( descVols );
+              final DescribeStorageVolumesResponseType volState = AsyncRequests.sendSync( sc, descVols );
               if ( !volState.getVolumeSet( ).isEmpty( ) ) {
-                vol.setMappedState( volState.getVolumeSet( ).get( 0 ).getStatus( ) );
+                State newVolumeState = Volumes.transformStorageState( vol.getState( ), volState.getVolumeSet( ).get( 0 ).getStatus( ) );
+                vol.setState( newVolumeState );
               }
-            } catch ( final EucalyptusCloudException ex ) {
-              LOG.error( ex, ex );
+            } catch ( Exception ex ) {
+              LOG.error( ex );
+              Logs.extreme( ).error( ex, ex );
               throw Exceptions.toUndeclared( "Failed to update the volume state " + vol.getDisplayName( ) + " not yet ready", ex );
             }
           }
@@ -172,9 +330,6 @@ public class Volumes {
     Volume volume = null;
     try {
       volume = Entities.uniqueResult( Volume.named( ownerFullName, volumeId ) );
-      if ( volume.getRemoteDevice( ) == null ) {
-        StorageUtil.getVolumeReply( Lists.newArrayList( volume ) );
-      }
       db.commit( );
     } catch ( Exception ex ) {
       LOG.debug( ex, ex );
@@ -200,17 +355,65 @@ public class Volumes {
                      ret.getSize( ) + " " +
                      ret.getSnapshotId( ) + " " +
                      ret.getCreateTime( ) );
-          ListenerRegistry.getInstance( ).fireEvent( new StorageEvent( StorageEvent.EventType.EbsVolume, true, t.getSize( ),
-                                                                       t.getOwnerUserId( ), t.getOwnerUserName( ),
-                                                                       t.getOwnerAccountNumber( ), t.getOwnerAccountName( ),
-                                                                       t.getScName( ), t.getPartition( ) ) );
+          try {
+            ListenerRegistry.getInstance( ).fireEvent( new StorageEvent( StorageEvent.EventType.EbsVolume, true, t.getSize( ),
+                                                                         t.getOwnerUserId( ), t.getOwnerUserName( ),
+                                                                         t.getOwnerAccountNumber( ), t.getOwnerAccountName( ),
+                                                                         t.getScName( ), t.getPartition( ) ) );
+          } catch ( Exception ex ) {
+            LOG.error( ex );
+            Logs.extreme( ).error( ex, ex );
+          }
         } catch ( final Exception ex ) {
           LOG.error( "Failed to create volume: " + t.toString( ), ex );
+          t.setState( State.FAIL );
           throw Exceptions.toUndeclared( ex );
         }
       }
     } );
     return newVol;
+  }
+  
+  static State transformStorageState( final State volumeState, final String storageState ) {
+    if ( State.GENERATING.equals( volumeState ) ) {
+      if ( "failed".toString( ).equals( storageState ) ) {
+        return State.FAIL;
+      } else if ( "available".toString( ).equals( storageState ) ) {
+        return State.EXTANT;
+      } else {
+        return State.GENERATING;
+      }
+    } else if ( !State.ANNIHILATING.equals( volumeState ) ) {
+      if ( "failed".toString( ).equals( storageState ) ) {
+        return State.FAIL;
+      } else if ( "creating".toString( ).equals( storageState ) ) {
+        return State.GENERATING;
+      } else if ( "available".toString( ).equals( storageState ) ) {
+        return State.EXTANT;
+      } else if ( "in-use".equals( storageState ) ) {
+        return State.BUSY;
+      } else {
+        return State.ANNIHILATED;
+      }
+    } else {
+      if ( "failed".toString( ).equals( storageState ) ) {
+        return State.FAIL;
+      } else {
+        return State.ANNIHILATED;
+      }
+    }
+  }
+
+  static void fireDeleteEvent( Volume v ) {
+    try {
+      ListenerRegistry.getInstance( ).fireEvent( new StorageEvent( StorageEvent.EventType.EbsVolume, false, v.getSize( ),
+                                                                   v.getOwnerUserId( ), v.getOwnerUserName( ),
+                                                                   v.getOwnerAccountNumber( ), v.getOwnerAccountName( ),
+                                                                   v.getScName( ), v.getPartition( ) ) );
+    } catch ( EventFailedException ex ) {
+      LOG.error( ex );
+      Logs.extreme( ).error( ex, ex );
+    }
   }
   
 }
