@@ -213,11 +213,15 @@ public class PersistenceExceptions {
    */
   @SuppressWarnings( "unchecked" )
   public static RecoverablePersistenceException throwFiltered( final Throwable e ) {
-    ConstraintViolationException cause = Exceptions.findCause( e, ConstraintViolationException.class );
-    if ( cause != null ) {
-      throw cause;
+    Logs.extreme( ).trace( e, e );
+    ConstraintViolationException constraintVolationCause = Exceptions.findCause( e, ConstraintViolationException.class );
+    if ( constraintVolationCause != null ) {
+      throw constraintVolationCause;
     } else {
-      Logs.exhaust( ).trace( e, e );
+      PersistentObjectException detachedObjectCause = Exceptions.findCause( e, PersistentObjectException.class );
+      if ( detachedObjectCause != null ) {
+        LOG.error( detachedObjectCause );
+      }
       if ( e instanceof RuntimeException ) {
         final ErrorCategory category = PersistenceExceptions.classify( e );
         final RuntimeException up = category.handleException( ( RuntimeException ) e );
