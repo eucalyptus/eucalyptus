@@ -29,6 +29,8 @@
 # Author: Mitch Garnaat mgarnaat@eucalyptus.com
 
 from eucadmin.command import Command
+import os.path
+import sys
 
 InitCommand = """%s/usr/sbin/eucalyptus-cloud -u %s -h %s --initialize"""
 
@@ -41,6 +43,10 @@ class Initialize(object):
         self.debug = debug
 
     def main(self):
+        db_dir = os.path.join(self.config['EUCALYPTUS'],
+                              'var/lib/eucalyptus/db')
+        if os.path.exists(os.path.join(db_dir, 'data/ibdata1')):
+            sys.exit('Database in %s already exists' % db_dir)
         if self.debug:
             cmd_string = DebugInitCommand % (self.config['EUCALYPTUS'],
                                              self.config['EUCA_USER'],
@@ -63,4 +69,3 @@ class Initialize(object):
         else:
             print 'Initialize command succeeded'
         return cmd.status
-            
