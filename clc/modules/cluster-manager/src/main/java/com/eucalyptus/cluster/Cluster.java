@@ -419,7 +419,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
     } finally {
       if ( !transitionCallback.isDone( ) ) {
         LOG.debug( parent.getFullName( ) + " transition fell through w/o completing: " + messageCallback );
-        Logs.exhaust( ).debug( Exceptions.toUndeclared( parent.getFullName( ) + " transition fell through w/o completing: " + messageCallback ) );
+        Logs.extreme( ).debug( Exceptions.toUndeclared( parent.getFullName( ) + " transition fell through w/o completing: " + messageCallback ) );
         transitionCallback.fire( );
       }
     }
@@ -535,7 +535,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
       @Override
       public void fire( final Cluster t ) {
         if ( !t.pendingErrors.isEmpty( ) ) {
-          Logs.exhaust( ).error( t.pendingErrors );
+          Logs.extreme( ).error( t.pendingErrors );
         }
         LOG.debug( "Clearing error logs for: " + t );
         t.clearExceptions( );
@@ -840,19 +840,19 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
             Thread.currentThread( ).interrupt( );
           } catch ( final ServiceRegistrationException ex ) {
             lastEx = ex;
-            Logs.exhaust( ).debug( ex, ex );
+            Logs.extreme( ).debug( ex, ex );
           } catch ( final Exception ex ) {
             lastEx = ex;
-            Logs.exhaust( ).debug( ex, ex );
+            Logs.extreme( ).debug( ex, ex );
           }
         }
         Listeners.register( Hertz.class, this );
       }
     } catch ( final NoSuchElementException ex ) {
-      Logs.exhaust( ).debug( ex, ex );
+      Logs.extreme( ).debug( ex, ex );
       throw ex;
     } catch ( final Exception ex ) {
-      Logs.exhaust( ).debug( ex, ex );
+      Logs.extreme( ).debug( ex, ex );
       throw new ServiceRegistrationException( "Failed to call start() on cluster " + this.configuration
                                               + " because of: "
                                               + ex.getMessage( ), ex );
@@ -882,7 +882,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
           throw fail;
         }
       } catch ( final Exception ex ) {
-        Logs.exhaust( ).debug( ex, ex );
+        Logs.extreme( ).debug( ex, ex );
         throw new ServiceRegistrationException( "Failed to call enable() on cluster " + this.configuration
                                                 + " because of: "
                                                 + ex.getMessage( ), ex );
@@ -900,7 +900,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
     } catch ( final InterruptedException ex ) {
       Thread.currentThread( ).interrupt( );
     } catch ( final Exception ex ) {
-      Logs.exhaust( ).debug( ex, ex );
+      Logs.extreme( ).debug( ex, ex );
 //      throw new ServiceRegistrationException( "Failed to call disable() on cluster " + this.configuration
 //                                              + " because of: "
 //                                              + ex.getMessage( ), ex );
@@ -917,7 +917,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
     } catch ( final InterruptedException ex ) {
       Thread.currentThread( ).interrupt( );
     } catch ( final Exception ex ) {
-      Logs.exhaust( ).debug( ex, ex );
+      Logs.extreme( ).debug( ex, ex );
       throw new ServiceRegistrationException( "Failed to call stop() on cluster " + this.configuration
                                               + " because of: "
                                               + ex.getMessage( ), ex );
@@ -1195,7 +1195,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
           throw ex;
         } catch ( final Exception ex ) {
           LOG.error( ex );
-          Logs.exhaust( ).error( ex, ex );
+          Logs.extreme( ).error( ex, ex );
           throw Exceptions.toUndeclared( ex );
         }
       }
