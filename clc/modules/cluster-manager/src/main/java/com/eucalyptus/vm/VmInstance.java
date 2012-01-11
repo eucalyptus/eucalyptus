@@ -637,6 +637,10 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
             vm.setState( VmState.TERMINATED, Timeout.TERMINATED.apply( vm )
                                                                            ? Reason.EXPIRED
                                                                            : Reason.USER_TERMINATED );
+          } else if ( VmState.STOPPED.equals( vm.getState( ) ) ) {
+            vm.setState( VmState.TERMINATED, Timeout.TERMINATED.apply( vm )
+                                                                           ? Reason.EXPIRED
+                                                                           : Reason.USER_TERMINATED );
           }
           db.commit( );
           return vm;
