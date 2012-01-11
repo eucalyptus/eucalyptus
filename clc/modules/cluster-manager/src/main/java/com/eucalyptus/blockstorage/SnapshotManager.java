@@ -160,17 +160,17 @@ public class SnapshotManager {
         
         @Override
         public boolean apply( Snapshot snap ) {
-          if ( !State.EXTANT.equals( snap.getState( ) ) ) {
+          if ( !State.EXTANT.equals( snap.getState( ) ) && !State.FAIL.equals( snap.getState( ) ) ) {
             return false;
           } else if ( !RestrictedTypes.filterPrivileged( ).apply( snap ) ) {
             throw Exceptions.toUndeclared( "Not authorized to delete snapshot " + request.getSnapshotId( ) + " by " + ctx.getUser( ).getName( ),
                                            new EucalyptusCloudException( ) );
           } else {
+            Snapshots.fireDeleteEvent( snap );
             ServiceConfiguration sc = Topology.lookup( Storage.class, Partitions.lookupByName( snap.getPartition( ) ) );
             try {
               DeleteStorageSnapshotResponseType scReply = AsyncRequests.sendSync( sc, new DeleteStorageSnapshotType( snap.getDisplayName( ) ) );
               if ( scReply.get_return( ) ) {
-                Snapshots.fireDeleteEvent( snap );
                 final DeleteStorageSnapshotType deleteMsg = new DeleteStorageSnapshotType( snap.getDisplayName( ) );
                 Iterables.all( Topology.enabledServices( Storage.class ), new Predicate<ServiceConfiguration>( ) {
                   

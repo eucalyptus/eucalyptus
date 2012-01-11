@@ -390,25 +390,30 @@ public class Volumes {
                      ret.getSize( ) + " " +
                      ret.getSnapshotId( ) + " " +
                      ret.getCreateTime( ) );
-          try {
-            ListenerRegistry.getInstance( ).fireEvent( new StorageEvent( StorageEvent.EventType.EbsVolume, true, t.getSize( ),
-                                                                         t.getOwnerUserId( ), t.getOwnerUserName( ),
-                                                                         t.getOwnerAccountNumber( ), t.getOwnerAccountName( ),
-                                                                         t.getScName( ), t.getPartition( ) ) );
-          } catch ( final Exception ex ) {
-            LOG.error( ex );
-            Logs.extreme( ).error( ex, ex );
-          }
+          fireCreateEvent( t );
         } catch ( final Exception ex ) {
           LOG.error( "Failed to create volume: " + t.toString( ), ex );
           t.setState( State.FAIL );
           throw Exceptions.toUndeclared( ex );
         }
       }
+
     } );
     return newVol;
   }
   
+  static void fireCreateEvent( final Volume t ) {
+    try {
+      ListenerRegistry.getInstance( ).fireEvent( new StorageEvent( StorageEvent.EventType.EbsVolume, true, t.getSize( ),
+                                                                   t.getOwnerUserId( ), t.getOwnerUserName( ),
+                                                                   t.getOwnerAccountNumber( ), t.getOwnerAccountName( ),
+                                                                   t.getScName( ), t.getPartition( ) ) );
+    } catch ( final Exception ex ) {
+      LOG.error( ex );
+      Logs.extreme( ).error( ex, ex );
+    }
+  }
+
   static State transformStorageState( final State volumeState, final String storageState ) {
     if ( State.GENERATING.equals( volumeState ) ) {
       if ( "failed".toString( ).equals( storageState ) ) {

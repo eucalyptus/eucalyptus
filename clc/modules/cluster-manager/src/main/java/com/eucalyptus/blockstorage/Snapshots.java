@@ -262,6 +262,11 @@ public class Snapshots {
       LOG.error( ex.getCause( ), ex.getCause( ) );
       throw new EucalyptusCloudException( ex );
     }
+    fireCreateEvent( snap );
+    return snap;
+  }
+
+  public static void fireCreateEvent( final Snapshot snap ) {
     try {
       ListenerRegistry.getInstance( ).fireEvent( new StorageEvent( StorageEvent.EventType.EbsSnapshot, true, snap.getVolumeSize( ),
                                                                    snap.getOwnerUserId( ), snap.getOwnerUserName( ),
@@ -270,7 +275,6 @@ public class Snapshots {
     } catch ( EventFailedException ex ) {
       LOG.error( ex, ex );
     }
-    return snap;
   }
   
   public static Snapshot named( final String snapshotId ) {
