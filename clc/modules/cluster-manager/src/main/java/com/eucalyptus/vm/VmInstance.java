@@ -1348,7 +1348,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       db.commit( );
       return volumeAttachment;
     } catch ( final Exception ex ) {
-      Logs.extreme( ).error( ex, ex );
       db.rollback( );
       throw new NoSuchElementException( "Failed to lookup volume: " + volumeId );
     }
