@@ -113,7 +113,8 @@ import edu.ucsb.eucalyptus.msgs.StorageSnapshot;
 
 public class Snapshots {
   private static Logger LOG = Logger.getLogger( Snapshots.class );
-  
+  private static final long SNAPSHOT_STATE_TIMEOUT  = 2 * 60 * 60 * 1000L;
+
   public static class SnapshotUpdateEvent implements EventListener<ClockTick>, Callable<Boolean> {
     private static final AtomicBoolean ready = new AtomicBoolean( true );
     
@@ -149,48 +150,11 @@ public class Snapshots {
               storageSnapshots.put( storageSnapshot.getSnapshotId( ), storageSnapshot );
             }
             for ( String snapshotId : snapshots.get( partition ) ) {
-              final StorageSnapshot storageSnapshot = storageSnapshots.get( snapshotId );
-              try {
-                final Function<String, Snapshot> updateSnapshot = new Function<String, Snapshot>( ) {
-                  public Snapshot apply( final String input ) {
-                    try {
-                      Snapshot entity = Entities.uniqueResult( Snapshot.named( null, input ) );
-                      StringBuilder buf = new StringBuilder( );
-                      buf.append( "SnapshotStateUpdate: " )
-                           .append( entity.getPartition( ) ).append( " " )
-                           .append( input ).append( " " )
-                           .append( entity.getParentVolume( ) ).append( " " )
-                           .append( entity.getState( ) ).append( " " )
-                           .append( entity.getProgress( ) ).append( " " );
-                      if ( storageSnapshot != null && !State.EXTANT.equals( entity.getState( ) ) ) {
-                        entity.setMappedState( storageSnapshot.getStatus( ) );
-                        if ( storageSnapshot.getProgress( ) != null ) {
-                          entity.setProgress( storageSnapshot.getProgress( ) );
-                        }
-                        buf.append( "\nSnapshotStateUpdate: " )
-                        .append( entity.getPartition( ) ).append( " " )
-                        .append( input ).append( " storage-snapshot " )
-                        .append( storageSnapshot.getVolumeId( ) ).append( " " )
-                        .append( storageSnapshot.getStatus( ) ).append( "=>" ).append( entity.getState( ) )
-                        .append( storageSnapshot.getProgress( ) ).append( " " );
-                      }
-                      LOG.debug( buf.toString( ) );
-                      return entity;
-                    } catch ( TransactionException ex ) {
-                      throw Exceptions.toUndeclared( ex );
-                    }
-                  }
-                };
-                try {
-                  Entities.asTransaction( Snapshot.class, updateSnapshot ).apply( snapshotId );
-                } catch ( Exception ex ) {
-                  LOG.error( ex );
-                  Logs.extreme( ).error( ex, ex );
-                }
-              } catch ( Exception ex ) {
-                LOG.error( ex );
-                Logs.extreme( ).error( ex, ex );
-              }
+              final StorageSnapshot storageSnapshot = storageSnapshots.remove( snapshotId );
+              updateSnapshot( snapshotId, storageSnapshot );
+            }
+            for ( StorageSnapshot unknownSnapshot : storageSnapshots.values( ) ) {
+              LOG.debug( "SnapshotStateUpdate: found unknown snapshot: " + unknownSnapshot.getSnapshotId( ) + " " + unknownSnapshot.getStatus( ) );
             }
           }
         } catch ( Exception ex ) {
@@ -201,6 +165,52 @@ public class Snapshots {
         ready.set( true );
       }
       return true;
+    }
+
+    public void updateSnapshot( String snapshotId, final StorageSnapshot storageSnapshot ) {
+      try {
+        final Function<String, Snapshot> updateSnapshot = new Function<String, Snapshot>( ) {
+          public Snapshot apply( final String input ) {
+            try {
+              Snapshot entity = Entities.uniqueResult( Snapshot.named( null, input ) );
+              StringBuilder buf = new StringBuilder( );
+              buf.append( "SnapshotStateUpdate: " )
+                   .append( entity.getPartition( ) ).append( " " )
+                   .append( input ).append( " " )
+                   .append( entity.getParentVolume( ) ).append( " " )
+                   .append( entity.getState( ) ).append( " " )
+                   .append( entity.getProgress( ) ).append( " " );
+              if ( storageSnapshot != null && !State.EXTANT.equals( entity.getState( ) ) ) {
+                entity.setMappedState( storageSnapshot.getStatus( ) );
+                if ( storageSnapshot.getProgress( ) != null ) {
+                  entity.setProgress( storageSnapshot.getProgress( ) );
+                }
+                buf.append( "\nSnapshotStateUpdate: " )
+                .append( entity.getPartition( ) ).append( " " )
+                .append( input ).append( " storage-snapshot " )
+                .append( storageSnapshot.getVolumeId( ) ).append( " " )
+                .append( storageSnapshot.getStatus( ) ).append( "=>" ).append( entity.getState( ) )
+                .append( storageSnapshot.getProgress( ) ).append( " " );
+              } else if ( State.GENERATING.equals( entity.getState( ) ) && entity.lastUpdateMillis( ) > SNAPSHOT_STATE_TIMEOUT ) {
+                Entities.delete( entity );
+              }
+              LOG.debug( buf.toString( ) );
+              return entity;
+            } catch ( TransactionException ex ) {
+              throw Exceptions.toUndeclared( ex );
+            }
+          }
+        };
+        try {
+          Entities.asTransaction( Snapshot.class, updateSnapshot ).apply( snapshotId );
+        } catch ( Exception ex ) {
+          LOG.error( ex );
+          Logs.extreme( ).error( ex, ex );
+        }
+      } catch ( Exception ex ) {
+        LOG.error( ex );
+        Logs.extreme( ).error( ex, ex );
+      }
     }
   }
   
