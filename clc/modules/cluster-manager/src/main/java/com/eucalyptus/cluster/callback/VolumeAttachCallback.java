@@ -76,6 +76,7 @@ import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.MessageCallback;
 import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstances;
@@ -127,11 +128,9 @@ public class VolumeAttachCallback extends MessageCallback<AttachVolumeType, Atta
       ServiceConfiguration sc = Topology.lookup( Storage.class, partition );
       /** clean up SC session state **/
       try {
-        Dispatcher dispatcher = ServiceDispatcher.lookup( sc );
         String iqn = cluster.getNode( vm.getServiceTag( ) ).getIqn( );
-        LOG.debug( "Sending detach after async failure in attach volume: cluster=" + cluster.getName( ) + " iqn=" + iqn + " sc=" + sc + " dispatcher="
-                   + dispatcher.getName( ) + " uri=" + dispatcher.getAddress( ) );
-        dispatcher.send( new DetachStorageVolumeType( iqn, this.getRequest( ).getVolumeId( ) ) );
+        LOG.debug( "Sending detach after async failure in attach volume: cluster=" + cluster.getName( ) + " iqn=" + iqn + " sc=" + sc );
+        AsyncRequests.sendSync( sc, new DetachStorageVolumeType( iqn, this.getRequest( ).getVolumeId( ) ) );
       } catch ( Exception ex ) {
         LOG.error( ex );
         Logs.extreme( ).error( ex, ex );

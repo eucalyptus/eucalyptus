@@ -105,6 +105,7 @@ import com.eucalyptus.vm.VmInstance.Reason;
 import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.vm.VmVolumeAttachment;
+import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
 import edu.emory.mathcs.backport.java.util.concurrent.TimeUnit;
@@ -301,18 +302,59 @@ public class ClusterAllocator implements Runnable {
       final Volume vol = token.getRootVolume( );
       final ServiceConfiguration scConfig = waitForVolume( vol );
       
+      VirtualBootRecord vbrRootDevice = childVmInfo.lookupRoot( );
+      String volumeId = vol.getDisplayName( );
+      String remoteDeviceString = null;
+      Exception lastError = null;
       for ( final String nodeTag : this.cluster.getNodeTags( ) ) {
         try {
-          final AttachStorageVolumeType attachMsg = new AttachStorageVolumeType( this.cluster.getNode( nodeTag ).getIqn( ), vol.getDisplayName( ) );
-          final AttachStorageVolumeResponseType scAttachResponse = AsyncRequests.sendSync( scConfig, attachMsg );
-          childVmInfo.lookupRoot( ).setResourceLocation( scAttachResponse.getRemoteDeviceString( ) );
-        } catch ( final Exception ex ) {
-          LOG.error( ex, ex );
-          throw ex;
+          String newDevString = requestAttachStorageVolume( scConfig, volumeId, nodeTag );
+          if ( newDevString != null && remoteDeviceString == null ) {
+            Logs.extreme( ).debug( "Updating remote device for " + token + " with " + newDevString );
+            remoteDeviceString = newDevString;
+            break;
+          }
+        } catch ( Exception ex ) {
+          lastError = ex;
+        }
+      }
+      if ( remoteDeviceString == null ) {
+        if ( lastError == null ) {
+          lastError = new NullPointerException( "Unknown error." );
+        }
+        LOG.error( "Failed to start instance " + token + " while preparing attachment of volume " + volumeId + " failed because: " + lastError, lastError );
+        throw lastError;
+      } else {
+        vbrRootDevice.setResourceLocation( remoteDeviceString );
+        final String updateRemoteDevString = remoteDeviceString;
+        final Function<String, VmInstance> updateInstance = new Function<String, VmInstance>( ) {
+          public VmInstance apply( final String input ) {
+            VmVolumeAttachment attachment = VmInstances.lookupVolumeAttachment( input );
+            attachment.setRemoteDevice( updateRemoteDevString );
+            return attachment.getVmInstance( );
+          }
+        };
+        try {
+          Entities.asTransaction( VmInstance.class, updateInstance ).apply( volumeId );
+        } catch ( Exception ex ) {
+          LOG.error( ex );
+          Logs.extreme( ).error( ex, ex );
         }
       }
     }//TODO:GRZE:OMGFIXME: move this for bfe to later stage.
     return childVmInfo;
+  }
+  
+  private String requestAttachStorageVolume( final ServiceConfiguration scConfig, String volumeId, final String nodeTag ) throws Exception {
+    try {
+      final AttachStorageVolumeType attachMsg = new AttachStorageVolumeType( this.cluster.getNode( nodeTag ).getIqn( ), volumeId );
+      final AttachStorageVolumeResponseType scAttachResponse = AsyncRequests.sendSync( scConfig, attachMsg );
+      return scAttachResponse.getRemoteDeviceString( );
+    } catch ( final Exception ex ) {
+      LOG.error( ex );
+      Logs.extreme( ).error( ex, ex );
+      throw ex;
+    }
   }
   
   public ServiceConfiguration waitForVolume( final Volume vol ) throws Exception {
