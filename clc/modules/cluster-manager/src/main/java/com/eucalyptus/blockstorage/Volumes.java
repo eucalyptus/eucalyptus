@@ -289,12 +289,14 @@ public class Volumes {
                .append( v.getDisplayName( ) ).append( " updated " )
                .append( v.getState( ) ).append( " " )
                .append( v.getCreationTimestamp( ) );
-            Logs.extreme( ).info( buf.toString( ) );
+            LOG.debug( buf.toString( ) );
             return v;
           } catch ( final TransactionException ex ) {
+            LOG.error( buf.toString( ) + " failed because of " + ex.getMessage( ) );
             Logs.extreme( ).error( buf.toString( ) + " failed because of " + ex.getMessage( ), ex );
             throw Exceptions.toUndeclared( ex );
           } catch ( final NoSuchElementException ex ) {
+            LOG.error( buf.toString( ) + " failed because of " + ex.getMessage( ) );
             Logs.extreme( ).error( buf.toString( ) + " failed because of " + ex.getMessage( ), ex );
             throw ex;
           }

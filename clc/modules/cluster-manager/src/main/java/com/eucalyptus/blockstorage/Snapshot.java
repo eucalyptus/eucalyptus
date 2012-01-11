@@ -87,6 +87,10 @@ public class Snapshot extends UserMetadata<State> implements SnapshotMetadata {
   private Integer  volumeSize;
   @Column( name = "metadata_snapshot_parentvolume", updatable = false )
   private String   parentVolume;
+  /**
+   * @deprecated srsly. dont use it.
+   */
+  @Deprecated
   @Column( name = "metadata_snapshot_vol_sc", updatable = false )
   private String   volumeSc;
   @Column( name = "metadata_snapshot_vol_partition", updatable = false )

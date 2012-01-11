@@ -136,36 +136,57 @@ public class Snapshots {
     public Boolean call( ) throws Exception {
       try {
         try {
-          Multimap<String,String> snapshots = ArrayListMultimap.create( );
+          Multimap<String, String> snapshots = ArrayListMultimap.create( );
           for ( Snapshot s : Snapshots.list( ) ) {
             snapshots.put( s.getPartition( ), s.getDisplayName( ) );
           }
-          for ( String partition : snapshots.keySet( ) ) {
+          for ( final String partition : snapshots.keySet( ) ) {
             ServiceConfiguration sc = Topology.lookup( Storage.class, Partitions.lookupByName( partition ) );
             for ( String snapshotId : snapshots.get( partition ) ) {
               DescribeStorageSnapshotsType scRequest = new DescribeStorageSnapshotsType( Lists.newArrayList( snapshotId ) );
-              DescribeStorageSnapshotsResponseType snapshotInfo = AsyncRequests.sendSync( sc, scRequest );
-              for ( final StorageSnapshot storageSnapshot : snapshotInfo.getSnapshotSet( ) ) {
-                final Function<String, Snapshot> updateSnapshot = new Function<String, Snapshot>( ) {
-                  public Snapshot apply( final String input ) {
-                    try {
-                      Snapshot entity = Entities.uniqueResult( Snapshot.named( null, input ) );
-                      entity.setMappedState( storageSnapshot.getStatus( ) );
-                      if ( storageSnapshot.getProgress( ) != null ) {
-                        entity.setProgress( storageSnapshot.getProgress( ) );
+              try {
+                DescribeStorageSnapshotsResponseType snapshotInfo = AsyncRequests.sendSync( sc, scRequest );
+                for ( final StorageSnapshot storageSnapshot : snapshotInfo.getSnapshotSet( ) ) {
+                  final Function<String, Snapshot> updateSnapshot = new Function<String, Snapshot>( ) {
+                    public Snapshot apply( final String input ) {
+                      try {
+                        Snapshot entity = Entities.uniqueResult( Snapshot.named( null, input ) );
+                        StringBuilder buf = new StringBuilder( );
+                        buf.append( "SnapshotStateUpdate: " )
+                           .append( entity.getPartition( ) ).append( " " )
+                           .append( input ).append( " " )
+                           .append( entity.getParentVolume( ) ).append( " " )
+                           .append( entity.getState( ) ).append( " " )
+                           .append( entity.getProgress( ) ).append( " " );
+                        entity.setMappedState( storageSnapshot.getStatus( ) );
+                        if ( storageSnapshot.getProgress( ) != null ) {
+                          entity.setProgress( storageSnapshot.getProgress( ) );
+                        }
+                        buf.append( "\nSnapshotStateUpdate: " )
+                           .append( entity.getPartition( ) ).append( " " )
+                           .append( input ).append( " " )
+                           .append( storageSnapshot.getVolumeId( ) ).append( " " )
+                           .append( storageSnapshot.getStatus( ) ).append( "=>" ).append( entity.getState( ) )
+                           .append( storageSnapshot.getProgress( ) ).append( " " );
+                        LOG.debug( buf.toString( ) );
+                        return entity;
+                      } catch ( TransactionException ex ) {
+                        throw Exceptions.toUndeclared( ex );
                       }
-                      return entity;
-                    } catch ( TransactionException ex ) {
-                      throw Exceptions.toUndeclared( ex );
+                    }
+                  };
+                  if ( snapshotId.equals( storageSnapshot.getSnapshotId( ) ) ) {
+                    try {
+                      Entities.asTransaction( Snapshot.class, updateSnapshot ).apply( snapshotId );
+                    } catch ( Exception ex ) {
+                      LOG.error( ex );
+                      Logs.extreme( ).error( ex, ex );
                     }
                   }
-                };
-                try {
-                  Entities.asTransaction( Snapshot.class, updateSnapshot ).apply( snapshotId );
-                } catch ( Exception ex ) {
-                  LOG.error( ex );
-                  Logs.extreme( ).error( ex, ex );
                 }
+              } catch ( Exception ex ) {
+                LOG.error( ex );
+                Logs.extreme( ).error( ex, ex );
               }
             }
           }
