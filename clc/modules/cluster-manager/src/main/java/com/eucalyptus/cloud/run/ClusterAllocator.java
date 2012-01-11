@@ -312,6 +312,7 @@ public class ClusterAllocator implements Runnable {
           if ( newDevString != null && remoteDeviceString == null ) {
             Logs.extreme( ).debug( "Updating remote device for " + token + " with " + newDevString );
             remoteDeviceString = newDevString;
+            break;
           }
         } catch ( Exception ex ) {
           lastError = ex;
@@ -321,7 +322,7 @@ public class ClusterAllocator implements Runnable {
         if ( lastError == null ) {
           lastError = new NullPointerException( "Unknown error." );
         }
-        LOG.error( "Failed to start instance " + token + " while preparing attachment of volume " + volumeId + " failed because: " + lastError, lastError ); 
+        LOG.error( "Failed to start instance " + token + " while preparing attachment of volume " + volumeId + " failed because: " + lastError, lastError );
         throw lastError;
       } else {
         vbrRootDevice.setResourceLocation( remoteDeviceString );
@@ -343,7 +344,7 @@ public class ClusterAllocator implements Runnable {
     }//TODO:GRZE:OMGFIXME: move this for bfe to later stage.
     return childVmInfo;
   }
-
+  
   private String requestAttachStorageVolume( final ServiceConfiguration scConfig, String volumeId, final String nodeTag ) throws Exception {
     try {
       final AttachStorageVolumeType attachMsg = new AttachStorageVolumeType( this.cluster.getNode( nodeTag ).getIqn( ), volumeId );

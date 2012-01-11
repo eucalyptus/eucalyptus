@@ -158,7 +158,7 @@ public class Snapshot extends UserMetadata<State> implements SnapshotMetadata {
     snap.setVolumeSize( Integer.toString( this.getVolumeSize( ) ) );
     snap.setProgress( this.getState( ).equals( State.EXTANT )
       ? "100%"
-      : "" );
+      : this.getProgress( ) );
     return snap;
   }
   
