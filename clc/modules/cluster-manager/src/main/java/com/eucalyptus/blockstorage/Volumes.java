@@ -284,7 +284,7 @@ public class Volumes {
             //            if ( State.ANNIHILATED.equals( v.getState( ) ) && State.ANNIHILATED.equals( v.getState( ) ) && v.lastUpdateMillis( ) > VOLUME_DELETE_TIMEOUT ) {
             //              Entities.delete( v );
             //            }
-            buf.append( "VolumeStateUpdate: " )
+            buf.append( "\nVolumeStateUpdate: " )
                .append( v.getPartition( ) ).append( " " )
                .append( v.getDisplayName( ) ).append( " updated " )
                .append( v.getState( ) ).append( " " )
