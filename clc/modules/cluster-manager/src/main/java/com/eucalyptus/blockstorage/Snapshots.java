@@ -167,13 +167,13 @@ public class Snapshots {
                         if ( storageSnapshot.getProgress( ) != null ) {
                           entity.setProgress( storageSnapshot.getProgress( ) );
                         }
+                        buf.append( "\nSnapshotStateUpdate: " )
+                        .append( entity.getPartition( ) ).append( " " )
+                        .append( input ).append( " storage-snapshot " )
+                        .append( storageSnapshot.getVolumeId( ) ).append( " " )
+                        .append( storageSnapshot.getStatus( ) ).append( "=>" ).append( entity.getState( ) )
+                        .append( storageSnapshot.getProgress( ) ).append( " " );
                       }
-                      buf.append( "\nSnapshotStateUpdate: " )
-                           .append( entity.getPartition( ) ).append( " " )
-                           .append( input ).append( " storage-snapshot " )
-                           .append( storageSnapshot.getVolumeId( ) ).append( " " )
-                           .append( storageSnapshot.getStatus( ) ).append( "=>" ).append( entity.getState( ) )
-                           .append( storageSnapshot.getProgress( ) ).append( " " );
                       LOG.debug( buf.toString( ) );
                       return entity;
                     } catch ( TransactionException ex ) {
