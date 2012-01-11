@@ -268,7 +268,9 @@ public class Volumes {
                  .append( storageVolume.getSnapshotId( ) ).append( " " )
                  .append( storageVolume.getCreateTime( ) ).append( " " )
                  .append( storageVolume.getActualDeviceName( ) );
-            } else if ( ( v.lastUpdateMillis( ) > VOLUME_STATE_TIMEOUT ) && State.GENERATING.equals( v.getState( ) ) ) {
+            } else if ( State.ANNIHILATING.equals( v.getState( ) ) ) {
+              volumeState = State.ANNIHILATED;
+            } else if ( State.GENERATING.equals( v.getState( ) ) && v.lastUpdateMillis( ) > VOLUME_STATE_TIMEOUT ) {
               volumeState = State.FAIL;
             }
             v.setState( volumeState );
