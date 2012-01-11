@@ -253,39 +253,11 @@ public class NetworkGroups {
           
         }
       } );
-      LOG.debug( "Updated network configuration: " + netConfig.toString( ) );
+      Logs.extreme( ).debug( "Updated network configuration: " + netConfig.toString( ) );
     } catch ( final TransactionException ex ) {
       Logs.extreme( ).error( ex, ex );
     }
     netConfig.setUseNetworkTags( netTagging.get( ) );
-    try {
-      Properties.lookup( NetworkGroups.class, "GLOBAL_MAX_NETWORK_INDEX" ).setValue( netConfig.getMaxNetworkIndex( ).toString( ) );
-    } catch ( IllegalAccessException ex ) {
-      Logs.extreme( ).error( ex );
-    } catch ( NoSuchFieldException ex ) {
-      Logs.extreme( ).error( ex );
-    }
-    try {
-      Properties.lookup( NetworkGroups.class, "GLOBAL_MIN_NETWORK_INDEX" ).setValue( netConfig.getMinNetworkIndex( ).toString( ) );
-    } catch ( IllegalAccessException ex ) {
-      Logs.extreme( ).error( ex );
-    } catch ( NoSuchFieldException ex ) {
-      Logs.extreme( ).error( ex );
-    }
-    try {
-      Properties.lookup( NetworkGroups.class, "GLOBAL_MAX_NETWORK_TAG" ).setValue( netConfig.getMaxNetworkTag( ).toString( ) );
-    } catch ( IllegalAccessException ex ) {
-      Logs.extreme( ).error( ex );
-    } catch ( NoSuchFieldException ex ) {
-      Logs.extreme( ).error( ex );
-    }
-    try {
-      Properties.lookup( NetworkGroups.class, "GLOBAL_MIN_NETWORK_TAG" ).setValue( netConfig.getMinNetworkTag( ).toString( ) );
-    } catch ( IllegalAccessException ex ) {
-      Logs.extreme( ).error( ex );
-    } catch ( NoSuchFieldException ex ) {
-      Logs.extreme( ).error( ex );
-    }
   }
   
   public static List<Long> networkIndexInterval( ) {
