@@ -69,11 +69,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import org.hibernate.exception.ConstraintViolationException;
 import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.User;
@@ -82,7 +82,6 @@ import com.eucalyptus.cloud.util.DuplicateMetadataException;
 import com.eucalyptus.cloud.util.IllegalMetadataAccessException;
 import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.cloud.util.NoSuchMetadataException;
-import com.eucalyptus.cloud.util.NotEnoughResourcesException;
 import com.eucalyptus.cluster.ClusterConfiguration;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
@@ -91,7 +90,7 @@ import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.PersistenceExceptions;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.Transactions;
-import com.eucalyptus.entities.TransientEntityException;
+import com.eucalyptus.network.NetworkGroups.NetworkRangeConfiguration;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.Exceptions;
@@ -180,11 +179,63 @@ public class NetworkGroups {
       this.minNetworkIndex = minNetworkIndex;
     }
     
+    @Override
+    public String toString( ) {
+      StringBuilder builder = new StringBuilder( );
+      builder.append( "NetworkRangeConfiguration:" );
+      if ( this.useNetworkTags != null ) builder.append( "useNetworkTags=" ).append( this.useNetworkTags ).append( ":" );
+      if ( this.minNetworkTag != null ) builder.append( "minNetworkTag=" ).append( this.minNetworkTag ).append( ":" );
+      if ( this.maxNetworkTag != null ) builder.append( "maxNetworkTag=" ).append( this.maxNetworkTag ).append( ":" );
+      if ( this.minNetworkIndex != null ) builder.append( "minNetworkIndex=" ).append( this.minNetworkIndex ).append( ":" );
+      if ( this.maxNetworkIndex != null ) builder.append( "maxNetworkIndex=" ).append( this.maxNetworkIndex );
+      return builder.toString( );
+    }
+    
   }
   
   static NetworkRangeConfiguration netConfig = new NetworkRangeConfiguration( );
   
   public static synchronized void updateNetworkRangeConfiguration( ) {
+    final AtomicReference<NetworkRangeConfiguration> equalityCheck = new AtomicReference( null );
+    try {
+      Transactions.each( new ClusterConfiguration( ), new Callback<ClusterConfiguration>( ) {
+        
+        @Override
+        public void fire( final ClusterConfiguration input ) {
+          NetworkRangeConfiguration comparisonConfig = new NetworkRangeConfiguration( );
+          comparisonConfig.setUseNetworkTags( input.getUseNetworkTags( ) );
+          comparisonConfig.setMinNetworkTag( input.getMinNetworkTag( ) );
+          comparisonConfig.setMaxNetworkTag( input.getMaxNetworkTag( ) );
+          comparisonConfig.setMinNetworkIndex( input.getMinNetworkIndex( ) );
+          comparisonConfig.setMaxNetworkIndex( input.getMaxNetworkIndex( ) );
+          Logs.extreme( ).debug( "Updating cluster configs: " + input.getName( ) + " " + equalityCheck.get( ).toString( ) );
+          if ( equalityCheck.compareAndSet( null, comparisonConfig ) ) {
+            Logs.extreme( ).debug( "Initialized cluster config check: " + equalityCheck.get( ) );
+          } else {
+            NetworkRangeConfiguration currentConfig = equalityCheck.get( );
+            List<String> errors = Lists.newArrayList( );
+            if ( !currentConfig.getUseNetworkTags( ).equals( comparisonConfig.getUseNetworkTags( ) ) ) {
+              errors.add( input.getName( ) + " network config mismatch: vlan tagging  " + currentConfig.getUseNetworkTags( ) + " != " + comparisonConfig.getUseNetworkTags( ) );
+            } else if ( !currentConfig.getMinNetworkTag( ).equals( comparisonConfig.getMinNetworkTag( ) ) ) {
+              errors.add( input.getName( ) + " network config mismatch: min vlan tag " + currentConfig.getMinNetworkTag( ) + " != " + comparisonConfig.getMinNetworkTag( ) );
+            } else if ( !currentConfig.getMaxNetworkTag( ).equals( comparisonConfig.getMaxNetworkTag( ) ) ) {
+              errors.add( input.getName( ) + " network config mismatch: max vlan tag " + currentConfig.getMaxNetworkTag( ) + " != " + comparisonConfig.getMaxNetworkTag( ) );
+            } else if ( !currentConfig.getMinNetworkIndex( ).equals( comparisonConfig.getMinNetworkIndex( ) ) ) {
+              errors.add( input.getName( ) + " network config mismatch: min net index " + currentConfig.getMinNetworkIndex( ) + " != " + comparisonConfig.getMinNetworkIndex( ) );
+            } else if ( !currentConfig.getMaxNetworkIndex( ).equals( comparisonConfig.getMaxNetworkIndex( ) ) ) {
+              errors.add( input.getName( ) + " network config mismatch: max net index " + currentConfig.getMaxNetworkIndex( ) + " != " + comparisonConfig.getMaxNetworkIndex( ) );
+            }
+          }
+        }
+      } );
+    } catch ( RuntimeException ex ) {
+      Logs.extreme( ).error( ex, ex );
+      throw ex;
+    } catch ( TransactionException ex ) {
+      LOG.error( ex );
+      Logs.extreme( ).error( ex, ex );
+    }
+
     netConfig = new NetworkRangeConfiguration( );
     final AtomicBoolean netTagging = new AtomicBoolean( true );
     try {
@@ -202,6 +253,7 @@ public class NetworkGroups {
           
         }
       } );
+      LOG.debug( "Updated network configuration: " + netConfig.toString( ) );
     } catch ( final TransactionException ex ) {
       Logs.extreme( ).error( ex, ex );
     }
