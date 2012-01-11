@@ -74,7 +74,6 @@ import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -156,6 +155,7 @@ public class Topology {
     @Override
     public Future apply( final Callable call ) {
       Logs.extreme( ).debug( Topology.class.getSimpleName( ) + ": queueing " + call.toString( ) );
+      Logs.extreme( ).debug( Threads.currentStackRange( 3, 9 ) );
       return Threads.enqueue( this.queue( ), this.numWorkers, call );
     }
     
@@ -168,31 +168,34 @@ public class Topology {
   
   private enum TopologyTimer implements EventListener<ClockTick> {
     INSTANCE;
-    private static final AtomicBoolean ready   = new AtomicBoolean( true );
     private static final AtomicInteger counter = new AtomicInteger( 0 );
+    private static final Lock          canHas  = new ReentrantLock( );
     
     @Override
     public void fireEvent( final ClockTick event ) {
-      if ( Hosts.isCoordinator( ) && ready.compareAndSet( true, false ) ) {
-        submit( );
-      } else if ( !Hosts.isCoordinator( ) && ( counter.incrementAndGet( ) % 3 ) == 0 ) {
-        submit( );
-      }
-    }
-
-    private static void submit( ) {
-      try {
+      if ( Hosts.isCoordinator( ) && canHas.tryLock( ) ) {
         Queue.INTERNAL.enqueue( new Callable<Object>( ) {
           public Object call( ) {
             try {
               return RunChecks.INSTANCE.call( );
             } finally {
-              ready.set( true );
+              canHas.unlock( );
             }
           }
         } );
-      } catch ( Exception ex ) {
-        ready.set( true );
+      } else if ( counter.incrementAndGet( ) % 3 == 0 && canHas.tryLock( ) ) {
+        Queue.INTERNAL.enqueue( new Callable<Object>( ) {
+          public Object call( ) {
+            try {
+              return RunChecks.INSTANCE.call( );
+            } finally {
+              canHas.unlock( );
+            }
+          }
+        } );
+      } else if ( counter.incrementAndGet( ) > 10 ) {
+        counter.set( 0 );
+        Queue.INTERNAL.enqueue( RunChecks.INSTANCE );
       }
     }
     
@@ -394,7 +397,7 @@ public class Topology {
       try {
         msg.getServices( ).add( TypeMappers.transform( config, ServiceId.class ) );
         for ( Host h : Hosts.list( ) ) {
-          if ( !h.isLocalHost( ) && h.hasBootstrapped( ) ) {
+          if ( !h.isLocalHost( ) && h.hasBootstrapped( ) ) { 
             try {
               AsyncRequests.sendSync( ServiceConfigurations.createEphemeral( Empyrean.INSTANCE, h.getBindAddress( ) ), msg );
             } catch ( Exception ex ) {
@@ -645,18 +648,6 @@ public class Topology {
     
   }
   
-  enum AlwaysLocalServiceFilter implements Predicate<ServiceConfiguration> {
-    INSTANCE;
-    @Override
-    public boolean apply( final ServiceConfiguration arg0 ) {
-      return arg0.isVmLocal( )
-             && arg0.getComponentId( ).isAlwaysLocal( )
-             && arg0.lookupState( ).ordinal( ) < Component.State.ENABLED.ordinal( )
-             && !Component.State.STOPPED.apply( arg0 );
-    }
-    
-  }
-  
   enum CheckServiceFilter implements Predicate<ServiceConfiguration> {
     INSTANCE;
     @Override
@@ -822,7 +813,6 @@ public class Topology {
         final Predicate<ServiceConfiguration> proceedToDisableFilter = Predicates.and( ServiceConfigurations.filterHostLocal( ),
                                                                                        ProceedToDisabledServiceFilter.INSTANCE );
         submitTransitions( allServices, proceedToDisableFilter, SubmitDisable.INSTANCE );
-        submitTransitions( allServices, AlwaysLocalServiceFilter.INSTANCE, SubmitEnable.INSTANCE );
         /** TODO:GRZE: check and disable timeout here **/
         return checkedServices;
       } else {
@@ -898,10 +888,12 @@ public class Topology {
   }
   
   public static ServiceConfiguration lookup( final Class<? extends ComponentId> compClass, final Partition... maybePartition ) {
-    Partition partition = null;
-    if ( maybePartition != null && maybePartition.length > 0 && ComponentIds.lookup( compClass ).isPartitioned( ) ) {
-      partition = maybePartition[0];
-    }
+    final Partition partition =
+      ( ( maybePartition != null ) && ( maybePartition.length > 0 )
+                                                                   ? ( ComponentIds.lookup( compClass ).isPartitioned( )
+                                                                                                                        ? maybePartition[0]
+                                                                                                                        : null )
+                                                                   : null );
     ServiceConfiguration res = Topology.getInstance( ).getServices( ).get( ServiceKey.create( ComponentIds.lookup( compClass ), partition ) );
     if ( res == null ) {
       throw new NoSuchElementException( "Failed to lookup ENABLED service of type "
@@ -989,7 +981,7 @@ public class Topology {
   public enum Transitions implements Function<ServiceConfiguration, ServiceConfiguration>, Supplier<Component.State> {
     START( Component.State.DISABLED ),
     STOP( Component.State.STOPPED ) {
-      
+
       @Override
       public ServiceConfiguration apply( ServiceConfiguration input ) {
         return super.tc.apply( input );
@@ -1011,9 +1003,9 @@ public class Topology {
         } else if ( Topology.guard( ).tryEnable( config ) ) {
           try {
             return super.apply( config );
-          } catch ( final Throwable ex ) {
+          } catch ( final RuntimeException ex ) {
             Topology.guard( ).tryDisable( config );
-            throw Exceptions.toUndeclared( ex );
+            throw ex;
           }
         } else {
 //          throw new IllegalStateException( "Failed to ENABLE " + config.getFullName( ) );
@@ -1118,10 +1110,10 @@ public class Topology {
         Logs.extreme( ).error( ex, Throwables.getRootCause( ex ) );
         Logs.extreme( ).error( ex, ex );
         throw Exceptions.toUndeclared( ex );
-//      } finally {
-//        if ( Bootstrap.isFinished( ) && !Component.State.ENABLED.equals( endResult.lookupState( ) ) ) {
-//          Topology.guard( ).tryDisable( endResult );
-//        }
+      } finally {
+        if ( Bootstrap.isFinished( ) && !Component.State.ENABLED.equals( endResult.lookupState( ) ) ) {
+          Topology.guard( ).tryDisable( endResult );
+        }
       }
     }
     
