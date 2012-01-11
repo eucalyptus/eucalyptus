@@ -966,9 +966,9 @@ class upgrade_20_30 extends AbstractUpgradeScript {
         }
 
         if (has_table('eucalyptus_storage', "netapp_info")) {
-            EntityWrapper<NetappInfo> netappinfo = EntityWrappet.get(NetappInfo.class);
+            EntityWrapper<NetappInfo> netappinfo = EntityWrapper.get(NetappInfo.class);
             connMap['eucalyptus_storage'].rows('SELECT * FROM netapp_info').each{
-                NetappInfo n = new NetappInfo(it.name, it.aggregate, 100);
+                NetappInfo n = new NetappInfo(it.storage_name, it.netapp_aggregate, 100);
                 netappinfo.add(n);
             }
             netappinfo.commit();
