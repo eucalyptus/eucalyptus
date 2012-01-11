@@ -553,7 +553,6 @@ case "$1" in
 	do_stop
 	do_fullclean
 	rm -f /dev/shm/*eucalyptusCC*
-
 	do_start
 	if [ "$VERBOSE" != no ]; then
 		if [ "$WE_HAVE_LSB" = "Y" ]; then
