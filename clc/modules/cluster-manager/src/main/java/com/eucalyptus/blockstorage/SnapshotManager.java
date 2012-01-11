@@ -67,6 +67,7 @@ package com.eucalyptus.blockstorage;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ExecutionException;
+import javax.persistence.EntityTransaction;
 import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.AuthException;
@@ -80,13 +81,12 @@ import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.IllegalContextAccessException;
+import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.event.EventFailedException;
-import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.records.Logs;
-import com.eucalyptus.reporting.event.StorageEvent;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.RestrictedTypes;
@@ -170,6 +170,7 @@ public class SnapshotManager {
             try {
               DeleteStorageSnapshotResponseType scReply = AsyncRequests.sendSync( sc, new DeleteStorageSnapshotType( snap.getDisplayName( ) ) );
               if ( scReply.get_return( ) ) {
+                Snapshots.fireDeleteEvent( snap );
                 final DeleteStorageSnapshotType deleteMsg = new DeleteStorageSnapshotType( snap.getDisplayName( ) );
                 Iterables.all( Topology.enabledServices( Storage.class ), new Predicate<ServiceConfiguration>( ) {
                   
@@ -184,15 +185,6 @@ public class SnapshotManager {
                     return true;
                   }
                 } );
-                try {
-                  ListenerRegistry.getInstance( ).fireEvent( new StorageEvent( StorageEvent.EventType.EbsSnapshot, false, snap.getVolumeSize( ),
-                                                                               snap.getOwnerUserId( ), snap.getOwnerUserName( ),
-                                                                               snap.getOwnerAccountNumber( ), snap.getOwnerAccountName( ),
-                                                                               snap.getVolumeCluster( ), snap.getVolumePartition( ) ) );
-                } catch ( Exception ex ) {
-                  LOG.error( ex );
-                  Logs.extreme( ).error( ex, ex );
-                }
               } else {
                 throw Exceptions.toUndeclared( "Unable to delete snapshot: " + snap, new EucalyptusCloudException( ) );
               }
@@ -202,6 +194,7 @@ public class SnapshotManager {
             return true;
           }
         }
+        
       } );
     } catch ( ExecutionException ex1 ) {
       throw new EucalyptusCloudException( ex1.getCause( ) );
@@ -214,12 +207,10 @@ public class SnapshotManager {
     DescribeSnapshotsResponseType reply = ( DescribeSnapshotsResponseType ) request.getReply( );
     Context ctx = Contexts.lookup( );
     boolean showAll = request.getSnapshotSet( ).remove( "verbose" );
-    EntityWrapper<Snapshot> db = EntityWrapper.get( Snapshot.class );
+    AccountFullName ownerFullName = ( ctx.hasAdministrativePrivileges( ) && showAll ) ? null : AccountFullName.getInstance( ctx.getAccount( ) );
+    EntityTransaction db = Entities.get( Snapshot.class );
     try {
-      List<Snapshot> snapshots = db.query( Snapshot.named(
-        ( ctx.hasAdministrativePrivileges( ) && showAll ) ? null : AccountFullName.getInstance( ctx.getAccount( ) ),
-        null ) );
-      
+      List<Snapshot> snapshots = Entities.query( Snapshot.named( ownerFullName, null ) );
       for ( Snapshot snap : Iterables.filter( snapshots, RestrictedTypes.filterPrivileged( ) ) ) {
         if ( request.getSnapshotSet( ).isEmpty( ) || request.getSnapshotSet( ).contains( snap.getDisplayName( ) ) ) {
           try {

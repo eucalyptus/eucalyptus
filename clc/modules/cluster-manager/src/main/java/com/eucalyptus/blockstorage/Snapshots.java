@@ -64,6 +64,7 @@
 package com.eucalyptus.blockstorage;
 
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -73,7 +74,6 @@ import org.apache.log4j.Logger;
 import org.hibernate.criterion.Example;
 import org.hibernate.exception.ConstraintViolationException;
 import com.eucalyptus.auth.principal.UserFullName;
-import com.eucalyptus.blockstorage.Volumes.VolumeUpdateEvent;
 import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.cloud.CloudMetadata.SnapshotMetadata;
 import com.eucalyptus.cloud.util.DuplicateMetadataException;
@@ -93,6 +93,7 @@ import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.reporting.event.StorageEvent;
+import com.eucalyptus.reporting.event.StorageEvent.EventType;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -100,10 +101,9 @@ import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes.QuantityMetricFunction;
 import com.eucalyptus.util.async.AsyncRequests;
-import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.base.Function;
 import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import edu.ucsb.eucalyptus.msgs.CreateStorageSnapshotResponseType;
 import edu.ucsb.eucalyptus.msgs.CreateStorageSnapshotType;
@@ -118,7 +118,7 @@ public class Snapshots {
     private static final AtomicBoolean ready = new AtomicBoolean( true );
     
     public static void register( ) {
-      Listeners.register( ClockTick.class, new VolumeUpdateEvent( ) );
+      Listeners.register( ClockTick.class, new SnapshotUpdateEvent( ) );
     }
     
     @Override
@@ -142,47 +142,50 @@ public class Snapshots {
           }
           for ( final String partition : snapshots.keySet( ) ) {
             ServiceConfiguration sc = Topology.lookup( Storage.class, Partitions.lookupByName( partition ) );
+            DescribeStorageSnapshotsType scRequest = new DescribeStorageSnapshotsType( );
+            DescribeStorageSnapshotsResponseType snapshotInfo = AsyncRequests.sendSync( sc, scRequest );
+            final Map<String, StorageSnapshot> storageSnapshots = Maps.newHashMap( );
+            for ( final StorageSnapshot storageSnapshot : snapshotInfo.getSnapshotSet( ) ) {
+              storageSnapshots.put( storageSnapshot.getSnapshotId( ), storageSnapshot );
+            }
             for ( String snapshotId : snapshots.get( partition ) ) {
-              DescribeStorageSnapshotsType scRequest = new DescribeStorageSnapshotsType( Lists.newArrayList( snapshotId ) );
+              final StorageSnapshot storageSnapshot = storageSnapshots.get( snapshotId );
               try {
-                DescribeStorageSnapshotsResponseType snapshotInfo = AsyncRequests.sendSync( sc, scRequest );
-                for ( final StorageSnapshot storageSnapshot : snapshotInfo.getSnapshotSet( ) ) {
-                  final Function<String, Snapshot> updateSnapshot = new Function<String, Snapshot>( ) {
-                    public Snapshot apply( final String input ) {
-                      try {
-                        Snapshot entity = Entities.uniqueResult( Snapshot.named( null, input ) );
-                        StringBuilder buf = new StringBuilder( );
-                        buf.append( "SnapshotStateUpdate: " )
+                final Function<String, Snapshot> updateSnapshot = new Function<String, Snapshot>( ) {
+                  public Snapshot apply( final String input ) {
+                    try {
+                      Snapshot entity = Entities.uniqueResult( Snapshot.named( null, input ) );
+                      StringBuilder buf = new StringBuilder( );
+                      buf.append( "SnapshotStateUpdate: " )
                            .append( entity.getPartition( ) ).append( " " )
                            .append( input ).append( " " )
                            .append( entity.getParentVolume( ) ).append( " " )
                            .append( entity.getState( ) ).append( " " )
                            .append( entity.getProgress( ) ).append( " " );
+                      if ( storageSnapshot != null && !State.EXTANT.equals( entity.getState( ) ) ) {
                         entity.setMappedState( storageSnapshot.getStatus( ) );
                         if ( storageSnapshot.getProgress( ) != null ) {
                           entity.setProgress( storageSnapshot.getProgress( ) );
                         }
-                        buf.append( "\nSnapshotStateUpdate: " )
+                      }
+                      buf.append( "\nSnapshotStateUpdate: " )
                            .append( entity.getPartition( ) ).append( " " )
-                           .append( input ).append( " " )
+                           .append( input ).append( " storage-snapshot " )
                            .append( storageSnapshot.getVolumeId( ) ).append( " " )
                            .append( storageSnapshot.getStatus( ) ).append( "=>" ).append( entity.getState( ) )
                            .append( storageSnapshot.getProgress( ) ).append( " " );
-                        LOG.debug( buf.toString( ) );
-                        return entity;
-                      } catch ( TransactionException ex ) {
-                        throw Exceptions.toUndeclared( ex );
-                      }
-                    }
-                  };
-                  if ( snapshotId.equals( storageSnapshot.getSnapshotId( ) ) ) {
-                    try {
-                      Entities.asTransaction( Snapshot.class, updateSnapshot ).apply( snapshotId );
-                    } catch ( Exception ex ) {
-                      LOG.error( ex );
-                      Logs.extreme( ).error( ex, ex );
+                      LOG.debug( buf.toString( ) );
+                      return entity;
+                    } catch ( TransactionException ex ) {
+                      throw Exceptions.toUndeclared( ex );
                     }
                   }
+                };
+                try {
+                  Entities.asTransaction( Snapshot.class, updateSnapshot ).apply( snapshotId );
+                } catch ( Exception ex ) {
+                  LOG.error( ex );
+                  Logs.extreme( ).error( ex, ex );
                 }
               } catch ( Exception ex ) {
                 LOG.error( ex );
@@ -280,5 +283,17 @@ public class Snapshots {
   
   public static List<Snapshot> list( ) throws TransactionException {
     return Transactions.findAll( Snapshot.named( null, null ) );
+  }
+
+  public static void fireDeleteEvent( Snapshot snap ) {
+    try {
+      ListenerRegistry.getInstance( ).fireEvent( new StorageEvent( StorageEvent.EventType.EbsSnapshot, false, snap.getVolumeSize( ),
+                                                                   snap.getOwnerUserId( ), snap.getOwnerUserName( ),
+                                                                   snap.getOwnerAccountNumber( ), snap.getOwnerAccountName( ),
+                                                                   snap.getVolumeCluster( ), snap.getVolumePartition( ) ) );
+    } catch ( Exception ex ) {
+      SnapshotManager.LOG.error( ex );
+      Logs.extreme( ).error( ex, ex );
+    }
   }
 }
