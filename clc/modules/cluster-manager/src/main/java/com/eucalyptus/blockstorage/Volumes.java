@@ -259,10 +259,7 @@ public class Volumes {
               } else {
                 volumeState = Volumes.transformStorageState( v.getState( ), status );
               }
-              buf.append( "\nVolumeStateUpdate: " )
-                 .append( v.getPartition( ) ).append( " " )
-                 .append( v.getDisplayName( ) ).append( " " )
-                 .append( " storage-volume " )
+              buf.append( " storage-volume " )
                  .append( storageVolume.getStatus( ) ).append( "=>" ).append( volumeState ).append( " " )
                  .append( storageVolume.getSize( ) ).append( "GB " )
                  .append( storageVolume.getSnapshotId( ) ).append( " " )
@@ -286,11 +283,7 @@ public class Volumes {
             //            if ( State.ANNIHILATED.equals( v.getState( ) ) && State.ANNIHILATED.equals( v.getState( ) ) && v.lastUpdateMillis( ) > VOLUME_DELETE_TIMEOUT ) {
             //              Entities.delete( v );
             //            }
-            buf.append( "\nVolumeStateUpdate: " )
-               .append( v.getPartition( ) ).append( " " )
-               .append( v.getDisplayName( ) ).append( " updated " )
-               .append( v.getState( ) ).append( " " )
-               .append( v.getCreationTimestamp( ) );
+            buf.append( " end-state " ).append( v.getState( ) );
             LOG.debug( buf.toString( ) );
             return v;
           } catch ( final TransactionException ex ) {

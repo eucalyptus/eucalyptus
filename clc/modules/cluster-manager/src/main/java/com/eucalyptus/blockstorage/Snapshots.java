@@ -185,11 +185,8 @@ public class Snapshots {
                 if ( storageSnapshot.getProgress( ) != null ) {
                   entity.setProgress( storageSnapshot.getProgress( ) );
                 }
-                buf.append( "\nSnapshotStateUpdate: " )
-                .append( entity.getPartition( ) ).append( " " )
-                .append( input ).append( " storage-snapshot " )
-                .append( storageSnapshot.getVolumeId( ) ).append( " " )
-                .append( storageSnapshot.getStatus( ) ).append( "=>" ).append( entity.getState( ) )
+                buf.append( " storage-snapshot " )
+                .append( storageSnapshot.getStatus( ) ).append( "=>" ).append( entity.getState( ) ).append( " " )
                 .append( storageSnapshot.getProgress( ) ).append( " " );
               } else if ( State.GENERATING.equals( entity.getState( ) ) && entity.lastUpdateMillis( ) > SNAPSHOT_STATE_TIMEOUT ) {
                 Entities.delete( entity );
