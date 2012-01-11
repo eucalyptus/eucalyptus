@@ -4,14 +4,14 @@
 
 include ../Makedefs
 
-STORAGE_LIBS = $(LDFLAGS) -lcurl -lssl -lcrypto -lpthread -pthread
+STORAGE_LIBS = $(LDFLAGS) -lcurl -lssl -lcrypto -pthread -lpthread
 IMAGER_LIBS = ../util/euca_auth.o ../util/hash.o ../util/misc.o ../util/ipc.o cache.o walrus.o cmd_bundle.o cmd_convert.o cmd_upload.o cmd_prepare.o cmd_fsck.o map.o vmdk_shim.o http.o img.o diskfile.o diskutil.o vbr.o blobstore.o iscsi.o
 
 # will be 32 or 64
 ARCH := $(shell getconf LONG_BIT)
 
 # the flags replicate output of `pkg-config --cflags --libs vix-disklib`, which does not work if VDDK is installed in /opt/packages/vddk
-VDDK_FLAGS = -I$(VDDK_HOME)/lib/vmware-vix-disklib/include  -L$(VDDK_HOME)/lib/vmware-vix-disklib/lib$(ARCH) -lvixDiskLib -lvixMntapi -UDYNAMIC_LOADING
+VDDK_FLAGS = -I$(VDDK_HOME)/lib/vmware-vix-disklib/include  -L$(VDDK_HOME)/lib/vmware-vix-disklib/lib$(ARCH) -lpthread -lvixDiskLib -lvixMntapi -UDYNAMIC_LOADING
 
 TESTS=test_vbr test_blobstore test_vmdk_shim
 IMAGER=euca_imager
@@ -35,7 +35,7 @@ vmdk_shim.o: vmdk_shim.c vmdk.h _euca_vmdk
 	$(CC) $(CFLAGS) $(INCLUDES) -DVMDK_CALLER vmdk_shim.c -c
 
 test_vmdk_shim: vmdk_shim.c vmdk.h vmdk_shim.o
-	$(CC) $(CFLAGS) $(INCLUDES) -DVMDK_CALLER -D_UNIT_TEST vmdk_shim.c -o test_vmdk_shim ../util/misc.o diskutil.o http.o ../util/euca_auth.o ../util/ipc.o -lcrypto -lrt -lcurl
+	$(CC) $(CFLAGS) $(INCLUDES) -DVMDK_CALLER -D_UNIT_TEST vmdk_shim.c -o test_vmdk_shim ../util/misc.o diskutil.o http.o ../util/euca_auth.o ../util/ipc.o -lcrypto -lrt -lcurl -lpthread
 
 euca-blobs: Makefile blobstore.c blobstore.h
 	$(CC) $(CFLAGS) $(INCLUDES) -D_EUCA_BLOBS blobstore.c -o euca-blobs map.o diskutil.o ../util/misc.o ../util/ipc.o ../util/euca_auth.o $(STORAGE_LIBS) $(EFENCE)

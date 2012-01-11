@@ -72,8 +72,9 @@ int main(int argc, char **argv) {
   axis2_char_t endpoint_uri[256], *tmpstr;
   axis2_stub_t * stub = NULL;
   int rc, i, port, use_wssec;
-  char *euca_home, configFile[1024], policyFile[1024];
+  char *euca_home, configFile[1024], policyFile[1024], logFile[1024];
 
+  bzero(&mymeta, sizeof(ncMetadata));
   mymeta.userId = strdup("admin");
   mymeta.correlationId = strdup("shutdowncorrid");
   mymeta.epoch = 1;
@@ -82,14 +83,19 @@ int main(int argc, char **argv) {
   if (!euca_home) {
     snprintf(configFile, 1024, "/etc/eucalyptus/eucalyptus.conf");
     snprintf(policyFile, 1024, "/var/lib/eucalyptus/keys/cc-client-policy.xml");
+    snprintf(logFile, 1024, "/var/log/eucalyptus/shutdownCC_axis2c.log");
   } else {
     snprintf(configFile, 1024, "%s/etc/eucalyptus/eucalyptus.conf", euca_home);
     snprintf(policyFile, 1024, "%s/var/lib/eucalyptus/keys/cc-client-policy.xml", euca_home);
+    snprintf(logFile, 1024, "%s/var/log/eucalyptus/shutdownCC_axis2c.log", euca_home);
   }
 
+  if (argc != 2 || !argv[1]) {
+    printf("must supply argument <host>:<port>\n");
+  }
   snprintf(endpoint_uri, 256," http://%s/axis2/services/EucalyptusCC", argv[1]);
 
-  env =  axutil_env_create_all("/tmp/fofo", AXIS2_LOG_LEVEL_TRACE);
+  env =  axutil_env_create_all(logFile, AXIS2_LOG_LEVEL_TRACE);
   
   client_home = AXIS2_GETENV("AXIS2C_HOME");
   if (!client_home) {
@@ -109,7 +115,8 @@ int main(int argc, char **argv) {
     printf("cc_shutdownService() failed\n");
     exit(1);
   }
-  
+
+  sleep(10);
   exit(0);
 }
 
