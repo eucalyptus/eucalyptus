@@ -208,7 +208,7 @@ public class NetworkGroups {
           comparisonConfig.setMaxNetworkTag( input.getMaxNetworkTag( ) );
           comparisonConfig.setMinNetworkIndex( input.getMinNetworkIndex( ) );
           comparisonConfig.setMaxNetworkIndex( input.getMaxNetworkIndex( ) );
-          Logs.extreme( ).debug( "Updating cluster configs: " + input.getName( ) + " " + equalityCheck.get( ).toString( ) );
+          Logs.extreme( ).debug( "Updating cluster config: " + input.getName( ) + " " + comparisonConfig.toString( ) );
           if ( equalityCheck.compareAndSet( null, comparisonConfig ) ) {
             Logs.extreme( ).debug( "Initialized cluster config check: " + equalityCheck.get( ) );
           } else {
