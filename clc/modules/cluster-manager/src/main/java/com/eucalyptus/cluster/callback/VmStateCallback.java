@@ -231,16 +231,20 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
       
       @Override
       public boolean apply( VmInstance input ) {
-        try {
-          VmInstance vm = Entities.merge( input );
-          return vm.eachVolumeAttachment( new Predicate<VmVolumeAttachment>( ) {
-            @Override
-            public boolean apply( VmVolumeAttachment arg0 ) {
-              return arg0.getAttachmentState( ).isVolatile( );
-            }
-          } );
-        } catch ( Exception ex ) {
-          Logs.extreme( ).error( ex, ex );
+        if ( VmState.RUNNING.apply( input ) ) {
+          try {
+            VmInstance vm = Entities.merge( input );
+            return vm.eachVolumeAttachment( new Predicate<VmVolumeAttachment>( ) {
+              @Override
+              public boolean apply( VmVolumeAttachment arg0 ) {
+                return arg0.getAttachmentState( ).isVolatile( );
+              }
+            } );
+          } catch ( Exception ex ) {
+            Logs.extreme( ).error( ex, ex );
+            return false;
+          }
+        } else {
           return false;
         }
       }
