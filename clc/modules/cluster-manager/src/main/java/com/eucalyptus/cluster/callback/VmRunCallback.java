@@ -160,7 +160,7 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
         if ( VmRunCallback.this.token.getRootVolume( ) != null ) {
           try {
             Cluster cluster = Clusters.lookup( Topology.lookup( ClusterController.class, vm.lookupPartition( ) ) );
-            String initialIqn = cluster.getNode( vm.getServiceTag( ) ).getIqn( );
+            String initialIqn = VmRunCallback.this.token.getInitialIqn( );
             String iqn = cluster.getNode( input.getServiceTag( ) ).getIqn( );
             if ( !iqn.equals( initialIqn ) ) {
               String volumeId = VmRunCallback.this.token.getRootVolume( ).getDisplayName( );
