@@ -194,31 +194,11 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
           final Predicate<VmVolumeAttachment> attachVolumes = new Predicate<VmVolumeAttachment>( ) {
             public boolean apply( VmVolumeAttachment input ) {
               final String volumeId = input.getVolumeId( );
-              final String vmDevice = input.getDevice( );
               if ( !volumeId.equals( rootVolumeId ) ) {
                 try {
-                  LOG.debug( VmRunCallback.this.token + ": attaching volume: " + input );
                   if ( !AttachmentState.attached.equals( input.getAttachmentState( ) ) && !AttachmentState.attaching.equals( input.getAttachmentState( ) ) ) {
                     input.setStatus( AttachmentState.attaching.name( ) );
                   }
-                  final AttachStorageVolumeType attachMsg = new AttachStorageVolumeType( iqn, volumeId );
-                  final CheckedListenableFuture<AttachStorageVolumeResponseType> scAttachReplyFuture = AsyncRequests.dispatch( scConfig, attachMsg );
-                  final Callable<Boolean> ncAttachRequest = new Callable<Boolean>( ) {
-                    public Boolean call( ) {
-                      try {
-                        LOG.debug( VmRunCallback.this.token + ": waiting for storage volume: " + volumeId );
-                        AttachStorageVolumeResponseType scReply = scAttachReplyFuture.get( );
-                        LOG.debug( VmRunCallback.this.token + ": " + volumeId + " => " + scAttachReplyFuture );
-                        AsyncRequests.dispatch( ccConfig, new AttachVolumeType( volumeId, vm.getInstanceId( ), vmDevice, scReply.getRemoteDeviceString( ) ) );
-                      } catch ( Exception ex ) {
-                        Exceptions.maybeInterrupted( ex );
-                        LOG.error( VmRunCallback.this.token + ": " + ex );
-                        Logs.extreme( ).error( ex, ex );
-                      }
-                      return true;
-                    }
-                  };
-                  Threads.enqueue( Eucalyptus.class, VmRunCallback.class, ncAttachRequest );
                 } catch ( Exception ex ) {
                   input.setStatus( AttachmentState.attaching_failed.name( ) );
                   LOG.error( VmRunCallback.this.token + ": " + ex );
