@@ -161,7 +161,8 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
             VmVolumeAttachment volumeAttachment = vm.lookupVolumeAttachment( volumeId );
             ServiceConfiguration scConfig = Topology.lookup( Storage.class, vm.lookupPartition( ) );
             Cluster cluster = Clusters.lookup( Topology.lookup( ClusterController.class, vm.lookupPartition( ) ) );
-            String iqn = cluster.getNode( vm.getServiceTag( ) ).getIqn( );
+            String iqn = cluster.getNode( input.getServiceTag( ) ).getIqn( );
+            vm.getRuntimeState( ).setServiceTag( input.getServiceTag( ) );
             final AttachStorageVolumeType attachMsg = new AttachStorageVolumeType( iqn, volumeId  );
             final AttachStorageVolumeResponseType scReply = AsyncRequests.sendSync( scConfig, attachMsg );
             volumeAttachment.setRemoteDevice( scReply.getRemoteDeviceString( ) );
