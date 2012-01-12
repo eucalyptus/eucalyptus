@@ -40,7 +40,7 @@ import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescribeType, VmDescribeResponseType> {
   private static Logger               LOG                       = Logger.getLogger( VmStateCallback.class );
   private static final int            VM_INITIAL_REPORT_TIMEOUT = 300000;
-  private static final int            VM_STATE_SETTLE_TIME      = 15000;
+  private static final int            VM_STATE_SETTLE_TIME      = 10000;
   private final Supplier<Set<String>> initialInstances;
   
   public VmStateCallback( ) {
@@ -59,7 +59,7 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
       public Set<String> get( ) {
         EntityTransaction db = Entities.get( VmInstance.class );
         try {
-          Collection<VmInstance> clusterInstances = Collections2.filter( VmInstances.list( ), filter );
+          Collection<VmInstance> clusterInstances = VmInstances.list( filter );
           Collection<String> instanceNames = Collections2.transform( clusterInstances, CloudMetadatas.toDisplayName( ) );
           Set<String> ret = Sets.newHashSet( instanceNames );
           db.rollback( );
@@ -131,6 +131,8 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
         //do nothing during first VM_INITIAL_REPORT_TIMEOUT millis of instance life
         db1.rollback( );
         return;
+      } else if ( vm.isBlockStorage( ) && VmInstances.Timeout.UNREPORTED.apply( vm ) ) {
+        VmInstances.stopped( vm );
       } else if ( VmState.STOPPING.apply( vm ) ) {
         VmInstances.stopped( vm );
       } else if ( VmState.SHUTTING_DOWN.apply( vm ) ) {
@@ -159,7 +161,11 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
       try {
         VmInstance vm = VmInstances.lookup( runVm.getInstanceId( ) );
         if ( VmInstances.Timeout.EXPIRED.apply( vm ) ) {
-          VmInstances.shutDown( vm );
+          if ( vm.isBlockStorage( ) ) {
+            VmInstances.stopped( vm );
+          } else {
+            VmInstances.shutDown( vm );
+          }
         } else if ( VmState.SHUTTING_DOWN.equals( runVmState ) ) {
           VmStateCallback.handleReportedTeardown( vm, runVm );
         } else if ( VmStateSet.RUN.apply( vm ) ) {
@@ -214,16 +220,19 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
      * SHUTTING_DOWN state differently
      **/
     BundleState bundleState = BundleState.mapper.apply( runVm.getBundleTaskStateName( ) );
-    VmState lastState = vm.getLastState( );
     if ( !BundleState.none.equals( bundleState ) ) {
       vm.getRuntimeState( ).updateBundleTaskState( bundleState );
       VmInstances.terminated( vm );
-    } else if ( VmState.STOPPING.apply( vm ) || VmState.STOPPED.equals( lastState ) ) {
-      VmInstances.stopped( vm );
     } else if ( VmState.SHUTTING_DOWN.apply( vm ) ) {
       VmInstances.terminated( vm );
+    } else if ( VmState.STOPPING.apply( vm ) ) {
+      VmInstances.stopped( vm );
     } else if ( VmStateSet.RUN.apply( vm ) && vm.getSplitTime( ) > VM_STATE_SETTLE_TIME ) {
-      VmInstances.shutDown( vm );
+      if ( vm.isBlockStorage( ) ) {
+        VmInstances.stopped( vm );
+      } else {
+        VmInstances.shutDown( vm );
+      }
     }
   }
   
@@ -249,9 +258,7 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
   
   public static class VmPendingCallback extends StateUpdateMessageCallback<Cluster, VmDescribeType, VmDescribeResponseType> {
     @SuppressWarnings( "unchecked" )
-    private final Predicate<VmInstance> filter = Predicates.and( VmStateSet.CHANGING,
-                                                                 partitionFilter( this ),
-                                                                 stateSettleFilter( ) );
+    private final Predicate<VmInstance> filter = Predicates.and( stateSettleFilter( ), partitionFilter( this ), VmStateSet.TORNDOWN.not( ) );
     private final Supplier<Set<String>> initialInstances;
     
     public VmPendingCallback( Cluster cluster ) {
@@ -262,7 +269,7 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
           regarding( );
           EntityTransaction db = Entities.get( VmInstance.class );
           try {
-            for ( VmInstance vm : Iterables.filter( VmInstances.list( ), VmPendingCallback.this.filter ) ) {
+            for ( VmInstance vm : VmInstances.list( VmPendingCallback.this.filter ) ) {
               this.getInstancesSet( ).add( vm.getInstanceId( ) );
             }
             db.rollback( );
