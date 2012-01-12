@@ -306,12 +306,14 @@ public class ClusterAllocator implements Runnable {
       String volumeId = vol.getDisplayName( );
       String remoteDeviceString = null;
       Exception lastError = null;
+      String finalNodeTag = null;
       for ( final String nodeTag : this.cluster.getNodeTags( ) ) {
         try {
           String newDevString = requestAttachStorageVolume( scConfig, volumeId, nodeTag );
           if ( newDevString != null && remoteDeviceString == null ) {
             Logs.extreme( ).debug( "Updating remote device for " + token + " with " + newDevString );
             remoteDeviceString = newDevString;
+            finalNodeTag = nodeTag;
             break;
           }
         } catch ( Exception ex ) {
@@ -325,11 +327,13 @@ public class ClusterAllocator implements Runnable {
         LOG.error( "Failed to start instance " + token + " while preparing attachment of volume " + volumeId + " failed because: " + lastError, lastError );
         throw lastError;
       } else {
+        final String serviceTag = finalNodeTag;
         vbrRootDevice.setResourceLocation( remoteDeviceString );
         final String updateRemoteDevString = remoteDeviceString;
         final Function<String, VmInstance> updateInstance = new Function<String, VmInstance>( ) {
           public VmInstance apply( final String input ) {
             VmVolumeAttachment attachment = VmInstances.lookupVolumeAttachment( input );
+            attachment.getVmInstance( ).setServiceTag( serviceTag );
             attachment.setRemoteDevice( updateRemoteDevString );
             return attachment.getVmInstance( );
           }

@@ -95,6 +95,8 @@ import edu.ucsb.eucalyptus.cloud.VmRunResponseType;
 import edu.ucsb.eucalyptus.msgs.AttachStorageVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.AttachStorageVolumeType;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import edu.ucsb.eucalyptus.msgs.DetachStorageVolumeResponseType;
+import edu.ucsb.eucalyptus.msgs.DetachStorageVolumeType;
 
 public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType> {
   
@@ -157,15 +159,20 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
         vm.updateAddresses( input.getNetParams( ).getIpAddress( ), input.getNetParams( ).getIgnoredPublicIp( ) );
         if ( VmRunCallback.this.token.getRootVolume( ) != null ) {
           try {
-            String volumeId = VmRunCallback.this.token.getRootVolume( ).getDisplayName( );
-            VmVolumeAttachment volumeAttachment = vm.lookupVolumeAttachment( volumeId );
-            ServiceConfiguration scConfig = Topology.lookup( Storage.class, vm.lookupPartition( ) );
             Cluster cluster = Clusters.lookup( Topology.lookup( ClusterController.class, vm.lookupPartition( ) ) );
+            String initialIqn = cluster.getNode( vm.getServiceTag( ) ).getIqn( );
             String iqn = cluster.getNode( input.getServiceTag( ) ).getIqn( );
-            vm.getRuntimeState( ).setServiceTag( input.getServiceTag( ) );
-            final AttachStorageVolumeType attachMsg = new AttachStorageVolumeType( iqn, volumeId  );
-            final AttachStorageVolumeResponseType scReply = AsyncRequests.sendSync( scConfig, attachMsg );
-            volumeAttachment.setRemoteDevice( scReply.getRemoteDeviceString( ) );
+            if ( !iqn.equals( initialIqn ) ) {
+              String volumeId = VmRunCallback.this.token.getRootVolume( ).getDisplayName( );
+              VmVolumeAttachment volumeAttachment = vm.lookupVolumeAttachment( volumeId );
+              ServiceConfiguration scConfig = Topology.lookup( Storage.class, vm.lookupPartition( ) );
+              final DetachStorageVolumeType detachMsg = new DetachStorageVolumeType( initialIqn, volumeId  );
+              final DetachStorageVolumeResponseType scDetachReply = AsyncRequests.sendSync( scConfig, detachMsg );
+              vm.getRuntimeState( ).setServiceTag( input.getServiceTag( ) );
+              final AttachStorageVolumeType attachMsg = new AttachStorageVolumeType( iqn, volumeId  );
+              final AttachStorageVolumeResponseType scAttachReply = AsyncRequests.sendSync( scConfig, attachMsg );
+              volumeAttachment.setRemoteDevice( scAttachReply.getRemoteDeviceString( ) );
+            }
           } catch ( Exception ex ) {
             LOG.error( ex );
             Logs.extreme( ).error( ex, ex );
