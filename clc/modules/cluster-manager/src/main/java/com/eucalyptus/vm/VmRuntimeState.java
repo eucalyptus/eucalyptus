@@ -90,6 +90,8 @@ import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.entities.Entities;
+import com.eucalyptus.images.BlockStorageImageInfo;
+import com.eucalyptus.images.BootableImageInfo;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
@@ -233,16 +235,16 @@ public class VmRuntimeState {
   
   private void restoreVolumeState( ) {
     final VmInstance vm = this.getVmInstance( );
-    final String vmId = vm.getInstanceId( );
-    final ServiceConfiguration scConfig = Topology.lookup( Storage.class, vm.lookupPartition( ) );
-    final ServiceConfiguration ccConfig = Topology.lookup( ClusterController.class, vm.lookupPartition( ) );
-    final Cluster cluster = Clusters.lookup( ccConfig );
-    final String iqn = cluster.getNode( this.getServiceTag( ) ).getIqn( );
-    final Predicate<VmVolumeAttachment> attachVolumes = new Predicate<VmVolumeAttachment>( ) {
-      public boolean apply( VmVolumeAttachment input ) {
-        final String volumeId = input.getVolumeId( );
-        final String vmDevice = input.getDevice( );
-        if ( !AttachmentState.attached.equals( input.getAttachmentState( ) ) ) {
+    if ( vm.isBlockStorage( ) ) {
+      final String vmId = vm.getInstanceId( );
+      final ServiceConfiguration scConfig = Topology.lookup( Storage.class, vm.lookupPartition( ) );
+      final ServiceConfiguration ccConfig = Topology.lookup( ClusterController.class, vm.lookupPartition( ) );
+      final Cluster cluster = Clusters.lookup( ccConfig );
+      final String iqn = cluster.getNode( this.getServiceTag( ) ).getIqn( );
+      final Predicate<VmVolumeAttachment> attachVolumes = new Predicate<VmVolumeAttachment>( ) {
+        public boolean apply( VmVolumeAttachment input ) {
+          final String volumeId = input.getVolumeId( );
+          final String vmDevice = input.getDevice( );
           try {
             LOG.debug( vmId + ": attaching volume: " + input );
             final AttachStorageVolumeType attachMsg = new AttachStorageVolumeType( iqn, volumeId );
@@ -273,19 +275,18 @@ public class VmRuntimeState {
             };
             Threads.enqueue( Eucalyptus.class, VmRuntimeState.class, ncAttachRequest );
           } catch ( Exception ex ) {
-            input.setStatus( AttachmentState.attaching_failed.name( ) );
             LOG.error( vmId + ": " + ex );
             Logs.extreme( ).error( ex, ex );
           }
+          return true;
         }
-        return true;
+      };
+      try {
+        this.getVmInstance( ).getTransientVolumeState( ).eachVolumeAttachment( attachVolumes );
+      } catch ( Exception ex ) {
+        LOG.error( this.getVmInstance( ).getInstanceId( ) + ": " + ex );
+        Logs.extreme( ).error( this.getVmInstance( ).getInstanceId( ) + ": " + ex, ex );
       }
-    };
-    try {
-      vm.eachVolumeAttachment( attachVolumes );
-    } catch ( Exception ex ) {
-      LOG.error( vm.getInstanceId( ) + ": " + ex );
-      Logs.extreme( ).error( vm.getInstanceId( ) + ": " + ex, ex );
     }
   }
 
