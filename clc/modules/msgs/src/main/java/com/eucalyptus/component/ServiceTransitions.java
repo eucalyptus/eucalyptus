@@ -363,6 +363,8 @@ public class ServiceTransitions {
         transitionCallback.fire( );
         Faults.persist( parent, Faults.advisory( parent, ex ) );
       }
+    } finally {
+      transitionCallback.fire( );
     }
   }
   
