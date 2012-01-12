@@ -63,10 +63,12 @@
  */
 package com.eucalyptus.cluster.callback;
 
+import java.util.concurrent.Callable;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
+import com.eucalyptus.blockstorage.Volume;
 import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.VmRunType;
 import com.eucalyptus.cluster.Cluster;
@@ -75,18 +77,23 @@ import com.eucalyptus.cluster.ResourceState.NoSuchTokenException;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.ClusterController;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.EucalyptusClusterException;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.AsyncRequests;
+import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.MessageCallback;
 import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.vm.VmVolumeAttachment;
+import com.eucalyptus.vm.VmVolumeAttachment.AttachmentState;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Predicate;
@@ -94,9 +101,8 @@ import edu.ucsb.eucalyptus.cloud.VmInfo;
 import edu.ucsb.eucalyptus.cloud.VmRunResponseType;
 import edu.ucsb.eucalyptus.msgs.AttachStorageVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.AttachStorageVolumeType;
+import edu.ucsb.eucalyptus.msgs.AttachVolumeType;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import edu.ucsb.eucalyptus.msgs.DetachStorageVolumeResponseType;
-import edu.ucsb.eucalyptus.msgs.DetachStorageVolumeType;
 
 public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType> {
   
@@ -149,31 +155,34 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
     try {
       this.token.redeem( );
     } catch ( Exception ex ) {
-      LOG.error( ex );
-      Logs.extreme( ).error( ex, ex );
+      LOG.error( this.token + ": " + ex );
+      Logs.extreme( ).error( this.token + ": " + ex, ex );
     }
+    final Volume rootVolume = this.token.getRootVolume( );
+    final String rootVolumeId = ( rootVolume != null ? rootVolume.getDisplayName( ) : null );
     Function<VmInfo, Boolean> updateInstance = new Function<VmInfo, Boolean>( ) {
       @Override
       public Boolean apply( final VmInfo input ) {
         final VmInstance vm = VmInstances.lookup( input.getInstanceId( ) );
         vm.updateAddresses( input.getNetParams( ).getIpAddress( ), input.getNetParams( ).getIgnoredPublicIp( ) );
-        if ( VmRunCallback.this.token.getRootVolume( ) != null ) {
-          try {
-            Cluster cluster = Clusters.lookup( Topology.lookup( ClusterController.class, vm.lookupPartition( ) ) );
-            String initialIqn = VmRunCallback.this.token.getInitialIqn( );
-            String iqn = cluster.getNode( input.getServiceTag( ) ).getIqn( );
-            vm.getRuntimeState( ).setServiceTag( input.getServiceTag( ) );
+        try {
+          final ServiceConfiguration scConfig = Topology.lookup( Storage.class, vm.lookupPartition( ) );
+          final ServiceConfiguration ccConfig = Topology.lookup( ClusterController.class, vm.lookupPartition( ) );
+          final Cluster cluster = Clusters.lookup( ccConfig );
+          final String initialIqn = VmRunCallback.this.token.getInitialIqn( );
+          final String iqn = cluster.getNode( input.getServiceTag( ) ).getIqn( );
+          vm.getRuntimeState( ).setServiceTag( input.getServiceTag( ) );
+          if ( rootVolume != null ) {
             if ( !iqn.equals( initialIqn ) ) {
               LOG.debug( VmRunCallback.this.token + ": initial iqn: " + initialIqn );
               LOG.debug( VmRunCallback.this.token + ": final iqn:   " + iqn );
               String volumeId = VmRunCallback.this.token.getRootVolume( ).getDisplayName( );
               VmVolumeAttachment volumeAttachment = vm.lookupVolumeAttachment( volumeId );
               LOG.debug( VmRunCallback.this.token + ": initial remove device: " + volumeAttachment.getRemoteDevice( ) );
-              ServiceConfiguration scConfig = Topology.lookup( Storage.class, vm.lookupPartition( ) );
               try {
-                final AttachStorageVolumeType attachMsg = new AttachStorageVolumeType( iqn, volumeId  );
+                final AttachStorageVolumeType attachMsg = new AttachStorageVolumeType( iqn, volumeId );
                 final AttachStorageVolumeResponseType scAttachReply = AsyncRequests.sendSync( scConfig, attachMsg );
-                LOG.debug( VmRunCallback.this.token + ": " + scAttachReply );
+                LOG.debug( VmRunCallback.this.token + ": " + volumeId + " => " + scAttachReply );
                 volumeAttachment.setRemoteDevice( scAttachReply.getRemoteDeviceString( ) );
                 LOG.debug( VmRunCallback.this.token + ": final remove device:   " + volumeAttachment.getRemoteDevice( ) );
               } catch ( Exception ex ) {
@@ -181,10 +190,33 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
                 Logs.extreme( ).error( ex, ex );
               }
             }
+          }
+          final Predicate<VmVolumeAttachment> attachVolumes = new Predicate<VmVolumeAttachment>( ) {
+            public boolean apply( VmVolumeAttachment input ) {
+              final String volumeId = input.getVolumeId( );
+              if ( !volumeId.equals( rootVolumeId ) ) {
+                try {
+                  if ( !AttachmentState.attached.equals( input.getAttachmentState( ) ) && !AttachmentState.attaching.equals( input.getAttachmentState( ) ) ) {
+                    input.setStatus( AttachmentState.attaching.name( ) );
+                  }
+                } catch ( Exception ex ) {
+                  input.setStatus( AttachmentState.attaching_failed.name( ) );
+                  LOG.error( VmRunCallback.this.token + ": " + ex );
+                  Logs.extreme( ).error( ex, ex );
+                }
+              }
+              return true;
+            }
+          };
+          try {
+            vm.eachVolumeAttachment( attachVolumes );
           } catch ( Exception ex ) {
             LOG.error( VmRunCallback.this.token + ": " + ex );
-            Logs.extreme( ).error( ex, ex );
+            Logs.extreme( ).error( VmRunCallback.this.token + ": " + ex, ex );
           }
+        } catch ( Exception ex ) {
+          LOG.error( VmRunCallback.this.token + ": " + ex );
+          Logs.extreme( ).error( VmRunCallback.this.token + ": " + ex, ex );
         }
         final Address addr = VmRunCallback.this.token.getAddress( );
         if ( addr != null ) {
@@ -197,8 +229,8 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
                            }
                          } ).dispatch( vm.getPartition( ) );
           } catch ( Exception ex ) {
-            LOG.error( ex );
-            Logs.extreme( ).error( ex, ex );
+            LOG.error( VmRunCallback.this.token + ": " + ex );
+            Logs.extreme( ).error( VmRunCallback.this.token + ": " + ex, ex );
             Addresses.release( addr );
           }
           

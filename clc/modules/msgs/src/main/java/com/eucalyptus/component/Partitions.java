@@ -147,6 +147,8 @@ public class Partitions {
       } else {
         return Partitions.lookupInternal( config );
       }
+    } catch ( IllegalStateException ex ) {
+      throw ex;
     } catch ( Exception ex ) {
       LOG.trace( ex );
       return Partitions.lookupInternal( config );

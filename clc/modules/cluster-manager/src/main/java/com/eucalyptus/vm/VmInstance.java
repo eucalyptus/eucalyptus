@@ -1516,6 +1516,8 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
               VmInstance.this.setState( VmState.STOPPED, Reason.EXPIRED );
             } else if ( VmState.SHUTTING_DOWN.apply( VmInstance.this ) && VmInstances.Timeout.SHUTTING_DOWN.apply( VmInstance.this ) ) {
               VmInstance.this.setState( VmState.TERMINATED, Reason.EXPIRED );
+            } else if ( VmState.STOPPING.apply( VmInstance.this ) && VmInstances.Timeout.SHUTTING_DOWN.apply( VmInstance.this ) ) {
+              VmInstance.this.setState( VmState.STOPPED, Reason.EXPIRED );
             } else if ( VmStateSet.NOT_RUNNING.apply( VmInstance.this ) && VmStateSet.RUN.contains( runVmState ) ) {
               VmInstance.this.setState( VmState.RUNNING, Reason.APPEND, "MISMATCHED" );
             } else {
@@ -1535,10 +1537,12 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         VmInstance.this.getRuntimeState( ).setServiceTag( runVm.getServiceTag( ) );
         VmInstance.this.getRuntimeState( ).updateBundleTaskState( runVm.getBundleTaskStateName( ) );
         VmInstance.this.updateCreateImageTaskState( runVm.getBundleTaskStateName( ) );
-        VmInstance.this.updateVolumeAttachments( runVm.getVolumes( ) );
-        VmInstance.this.updateAddresses( runVm.getNetParams( ).getIpAddress( ), runVm.getNetParams( ).getIgnoredPublicIp( ) );
-        VmInstance.this.updateBlockBytes( runVm.getBlockBytes( ) );
-        VmInstance.this.updateNetworkBytes( runVm.getNetworkBytes( ) );
+        if ( VmState.RUNNING.apply( VmInstance.this ) ) {
+          VmInstance.this.updateVolumeAttachments( runVm.getVolumes( ) );
+          VmInstance.this.updateAddresses( runVm.getNetParams( ).getIpAddress( ), runVm.getNetParams( ).getIgnoredPublicIp( ) );
+          VmInstance.this.updateBlockBytes( runVm.getBlockBytes( ) );
+          VmInstance.this.updateNetworkBytes( runVm.getNetworkBytes( ) );
+        }
       }
     };
   }
@@ -1696,7 +1700,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     super.setNaturalId( naturalId );
   }
   
-  private VmVolumeState getTransientVolumeState( ) {
+  VmVolumeState getTransientVolumeState( ) {
     if ( this.transientVolumeState == null ) {
       this.transientVolumeState = new VmVolumeState( this );
     }

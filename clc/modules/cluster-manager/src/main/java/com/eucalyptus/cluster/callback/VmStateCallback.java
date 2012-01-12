@@ -214,10 +214,11 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
      * SHUTTING_DOWN state differently
      **/
     BundleState bundleState = BundleState.mapper.apply( runVm.getBundleTaskStateName( ) );
+    VmState lastState = vm.getLastState( );
     if ( !BundleState.none.equals( bundleState ) ) {
       vm.getRuntimeState( ).updateBundleTaskState( bundleState );
       VmInstances.terminated( vm );
-    } else if ( VmState.STOPPING.apply( vm ) ) {
+    } else if ( VmState.STOPPING.apply( vm ) || VmState.STOPPED.equals( lastState ) ) {
       VmInstances.stopped( vm );
     } else if ( VmState.SHUTTING_DOWN.apply( vm ) ) {
       VmInstances.terminated( vm );

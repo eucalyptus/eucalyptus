@@ -205,7 +205,7 @@ public class VmVolumeAttachment implements Comparable<VmVolumeAttachment> {
     this.volumeId = volumeId;
   }
   
-  String getDevice( ) {
+  public String getDevice( ) {
     return this.device;
   }
   
@@ -229,7 +229,7 @@ public class VmVolumeAttachment implements Comparable<VmVolumeAttachment> {
     return this.status;
   }
   
-  void setStatus( String status ) {
+  public void setStatus( String status ) {
     this.status = status;
   }
   
