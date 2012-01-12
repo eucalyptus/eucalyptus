@@ -162,6 +162,7 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
             Cluster cluster = Clusters.lookup( Topology.lookup( ClusterController.class, vm.lookupPartition( ) ) );
             String initialIqn = VmRunCallback.this.token.getInitialIqn( );
             String iqn = cluster.getNode( input.getServiceTag( ) ).getIqn( );
+            vm.getRuntimeState( ).setServiceTag( input.getServiceTag( ) );
             if ( !iqn.equals( initialIqn ) ) {
               LOG.debug( VmRunCallback.this.token + ": initial iqn: " + initialIqn );
               LOG.debug( VmRunCallback.this.token + ": final iqn:   " + iqn );
@@ -170,19 +171,15 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
               LOG.debug( VmRunCallback.this.token + ": initial remove device: " + volumeAttachment.getRemoteDevice( ) );
               ServiceConfiguration scConfig = Topology.lookup( Storage.class, vm.lookupPartition( ) );
               try {
-                final DetachStorageVolumeType detachMsg = new DetachStorageVolumeType( initialIqn, volumeId  );
-                final DetachStorageVolumeResponseType scDetachReply = AsyncRequests.sendSync( scConfig, detachMsg );
-                LOG.debug( VmRunCallback.this.token + ": " + scDetachReply );
+                final AttachStorageVolumeType attachMsg = new AttachStorageVolumeType( iqn, volumeId  );
+                final AttachStorageVolumeResponseType scAttachReply = AsyncRequests.sendSync( scConfig, attachMsg );
+                LOG.debug( VmRunCallback.this.token + ": " + scAttachReply );
+                volumeAttachment.setRemoteDevice( scAttachReply.getRemoteDeviceString( ) );
+                LOG.debug( VmRunCallback.this.token + ": final remove device:   " + volumeAttachment.getRemoteDevice( ) );
               } catch ( Exception ex ) {
                 LOG.error( VmRunCallback.this.token + ": " + ex );
                 Logs.extreme( ).error( ex, ex );
               }
-              vm.getRuntimeState( ).setServiceTag( input.getServiceTag( ) );
-              final AttachStorageVolumeType attachMsg = new AttachStorageVolumeType( iqn, volumeId  );
-              final AttachStorageVolumeResponseType scAttachReply = AsyncRequests.sendSync( scConfig, attachMsg );
-              LOG.debug( VmRunCallback.this.token + ": " + scAttachReply );
-              volumeAttachment.setRemoteDevice( scAttachReply.getRemoteDeviceString( ) );
-              LOG.debug( VmRunCallback.this.token + ": final remove device:   " + volumeAttachment.getRemoteDevice( ) );
             }
           } catch ( Exception ex ) {
             LOG.error( VmRunCallback.this.token + ": " + ex );
