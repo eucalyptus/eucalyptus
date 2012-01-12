@@ -262,9 +262,9 @@ public class VmControl {
     try {
       final Context ctx = Contexts.lookup( );
       final List<TerminateInstancesItemType> results = reply.getInstancesSet( );
-      Predicate<String> terminatePredicate = new Predicate<String>( ) {
+      Function<String,TerminateInstancesItemType> terminateFunction = new Function<String,TerminateInstancesItemType>( ) {
         @Override
-        public boolean apply( final String instanceId ) {
+        public TerminateInstancesItemType apply( final String instanceId ) {
           String oldState = null, newState = null;
           int oldCode = 0, newCode = 0;
           TerminateInstancesItemType result = null;
@@ -299,16 +299,16 @@ public class VmControl {
           } catch ( final Exception e ) {
             throw Exceptions.toUndeclared( e );
           }
-          if ( result != null && !results.contains( results ) ) {
-            results.add( result );
-          }
-          return true;
+          return result;
         }
       };
-      Predicate<String> terminateTx = Entities.asTransaction( VmInstance.class, terminatePredicate, VmInstances.TX_RETRIES );
+      Function<String, TerminateInstancesItemType> terminateTx = Entities.asTransaction( VmInstance.class, terminateFunction, VmInstances.TX_RETRIES );
       for ( String instanceId : request.getInstancesSet( ) ) {
         try {
-          terminateTx.apply( instanceId );
+          TerminateInstancesItemType termInstance = terminateTx.apply( instanceId );
+          if ( termInstance != null ) {
+            results.add( termInstance );
+          }
         } catch ( Exception ex ) {
           LOG.error( ex );
           Logs.extreme( ).error( ex, ex );
