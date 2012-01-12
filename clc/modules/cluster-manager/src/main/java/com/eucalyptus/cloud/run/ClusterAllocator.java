@@ -353,6 +353,7 @@ public class ClusterAllocator implements Runnable {
     try {
       final AttachStorageVolumeType attachMsg = new AttachStorageVolumeType( this.cluster.getNode( nodeTag ).getIqn( ), volumeId );
       final AttachStorageVolumeResponseType scAttachResponse = AsyncRequests.sendSync( scConfig, attachMsg );
+      LOG.debug( scAttachResponse );
       return scAttachResponse.getRemoteDeviceString( );
     } catch ( final Exception ex ) {
       LOG.error( ex );

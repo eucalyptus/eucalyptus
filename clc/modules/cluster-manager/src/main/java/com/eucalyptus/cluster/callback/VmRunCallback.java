@@ -168,9 +168,11 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
               ServiceConfiguration scConfig = Topology.lookup( Storage.class, vm.lookupPartition( ) );
               final DetachStorageVolumeType detachMsg = new DetachStorageVolumeType( initialIqn, volumeId  );
               final DetachStorageVolumeResponseType scDetachReply = AsyncRequests.sendSync( scConfig, detachMsg );
+              LOG.debug( scDetachReply );
               vm.getRuntimeState( ).setServiceTag( input.getServiceTag( ) );
               final AttachStorageVolumeType attachMsg = new AttachStorageVolumeType( iqn, volumeId  );
               final AttachStorageVolumeResponseType scAttachReply = AsyncRequests.sendSync( scConfig, attachMsg );
+              LOG.debug( scAttachReply );
               volumeAttachment.setRemoteDevice( scAttachReply.getRemoteDeviceString( ) );
             }
           } catch ( Exception ex ) {
