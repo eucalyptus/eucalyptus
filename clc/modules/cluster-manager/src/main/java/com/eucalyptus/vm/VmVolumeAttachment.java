@@ -213,7 +213,7 @@ public class VmVolumeAttachment implements Comparable<VmVolumeAttachment> {
     this.device = device;
   }
   
-  String getRemoteDevice( ) {
+  public String getRemoteDevice( ) {
     return this.remoteDevice;
   }
   
