@@ -432,15 +432,21 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
         }
       } catch ( Exception t ) {
         this.fireException( t );
+      } finally {
+        this.transitionFuture.set( AtomicMarkedState.this.parent );
       }
     }
     
     public void fireException( Throwable t ) {
-      if ( Logs.isExtrrreeeme( ) ) {
-        Logs.extreme( ).error( this.startStackTrace );
-        Logs.extreme( ).error( this.endStackTrace.get( ) );
+      try {
+        if ( Logs.isExtrrreeeme( ) ) {
+          Logs.extreme( ).error( this.startStackTrace );
+          Logs.extreme( ).error( this.endStackTrace.get( ) );
+        }
+        AtomicMarkedState.this.error( t );
+      } finally {
+        this.transitionFuture.setException( t );
       }
-      AtomicMarkedState.this.error( t );
     }
     
     public final Long getId( ) {
