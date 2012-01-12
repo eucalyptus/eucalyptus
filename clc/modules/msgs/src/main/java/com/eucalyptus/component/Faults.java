@@ -95,6 +95,8 @@ import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.bootstrap.Hosts;
+import com.eucalyptus.component.Component.State;
+import com.eucalyptus.component.Component.Transition;
 import com.eucalyptus.empyrean.ServiceStatusDetail;
 import com.eucalyptus.empyrean.ServiceStatusType;
 import com.eucalyptus.entities.Entities;
@@ -102,6 +104,7 @@ import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
+import com.eucalyptus.util.fsm.TransitionRecord;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
@@ -529,35 +532,9 @@ public class Faults {
     return Lists.newArrayList( );
   }
   
-  public static void persist( final ServiceConfiguration parent, final CheckException errors ) {
+  public static void submit( final ServiceConfiguration parent, TransitionRecord<ServiceConfiguration, State, Transition> transitionRecord, final CheckException errors ) {
     if ( errors != null && Hosts.isCoordinator( ) && Bootstrap.isFinished( ) && !Databases.isVolatile( ) ) {
-      try {
-        final EntityTransaction db = Entities.get( CheckException.class );
-        try {
-          List<CheckException> list = Entities.query( new CheckException( parent.getFullName( ).toString( ) ) );
-          for ( CheckException old : list ) {
-            Logs.extreme( ).debug( "Purging fault: " + old, old );
-            Entities.delete( old );
-          }
-          db.commit( );
-        } catch ( final Exception ex ) {
-          LOG.error( "Failed to persist error information for: " + errors, ex );
-          db.rollback( );
-        }
-        for ( final CheckException e : errors ) {
-          final EntityTransaction db2 = Entities.get( CheckException.class );
-          try {
-            Entities.persist( e );
-            db2.commit( );
-          } catch ( final Exception ex ) {
-            LOG.error( "Failed to persist error information for: " + errors, ex );
-            db2.rollback( );
-          }
-        }
-      } catch ( Exception ex ) {
-        LOG.error( "Faults: error in processing previous error: " + errors );
-        Logs.extreme( ).error( ex, ex );
-      }
+      Logs.extreme( ).error( errors, errors );
     }
   }
   
