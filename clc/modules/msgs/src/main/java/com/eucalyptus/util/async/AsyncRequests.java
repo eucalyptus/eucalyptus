@@ -63,19 +63,35 @@
 
 package com.eucalyptus.util.async;
 
+import java.util.concurrent.Callable;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.context.ServiceContext;
+import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.system.Threads;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class AsyncRequests {
   
   private static Logger LOG = Logger.getLogger( AsyncRequests.class );
   
-  public static <A extends BaseMessage, B extends BaseMessage> CheckedListenableFuture<B> dispatch( ServiceConfiguration config, final A msg ) throws Exception {
+  public static <A extends BaseMessage, B extends BaseMessage> CheckedListenableFuture<B> dispatch( final ServiceConfiguration config, final A msg ) throws Exception {
     if ( config.isVmLocal( ) ) {
-      return ServiceContext.send( config.getComponentId( ), msg );
+      final CheckedListenableFuture<B> future = Futures.newGenericeFuture( );
+      Threads.enqueue( Empyrean.class, AsyncRequests.class, new Callable<B>( ) {
+        public B call( ) {
+          try {
+            B ret = ServiceContext.send( config.getComponentId( ), msg );
+            future.set( ret );
+          } catch ( Exception ex ) {
+            future.setException( ex );
+          }
+          return null;
+        }
+      } );
+      return future;
+      
     } else {
       Request<A, B> req = newRequest( new MessageCallback<A, B>( ) {
         {
