@@ -4074,7 +4074,7 @@ static int open_blobstore (const char * path, blobstore ** bs, const char * name
         blobstore_set_error_function ( &bs_errors ); 
 
         * bs = blobstore_open (path, 0, BLOBSTORE_FLAG_RDWR, BLOBSTORE_FORMAT_ANY, BLOBSTORE_REVOCATION_ANY, BLOBSTORE_SNAPSHOT_ANY);
-        if (bs==NULL) {
+        if (* bs == NULL) {
             fprintf (stderr, "failed to open %s blobstore in '%s': %s\n", name, path, blobstore_get_error_str(blobstore_get_error()));
             exit (1);
         }
