@@ -2061,7 +2061,7 @@ int get_blkid (const char * dev_path, char * uuid, unsigned int uuid_size)
 char parse_boolean (const char * s)
 {
     char * lc = strduplc (s);
-    char val;
+    char val = 0;
 
     if (strcmp (lc, "y")==0 ||
         strcmp (lc, "yes")==0 ||
