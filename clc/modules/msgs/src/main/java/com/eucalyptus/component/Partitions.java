@@ -67,9 +67,12 @@ import java.io.File;
 import java.security.KeyPair;
 import java.security.cert.X509Certificate;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.concurrent.TimeUnit;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
+import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.crypto.Certs;
@@ -78,6 +81,9 @@ import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.system.SubDirectory;
 import com.eucalyptus.util.Exceptions;
+import com.google.common.base.Function;
+import com.google.common.collect.MapMaker;
+import com.google.common.collect.Maps;
 
 public class Partitions {
   static Logger         LOG                 = Logger.getLogger( Partitions.class );
@@ -107,22 +113,35 @@ public class Partitions {
     }
   }
   
-  public static Partition lookupByName( String partitionName ) {
-    EntityTransaction db = Entities.get( Partition.class );
-    Partition p = null;
-    try {
-      p = Entities.uniqueResult( Partition.newInstanceNamed( partitionName ) );
-      db.commit( );
-      return p;
-    } catch ( TransactionException ex ) {
-      db.rollback( );
-      throw new NoSuchElementException( "Failed to lookup partition for " + partitionName
-                                        + " because of: "
-                                        + ex.getMessage( ) );
-    } catch ( RuntimeException ex ) {
-      db.rollback( );
-      throw ex;
+  private static final Map<String,Partition> partitionMap = new MapMaker().expireAfterAccess( 20, TimeUnit.MINUTES ).makeComputingMap( LookupPartition.INSTANCE );
+  enum LookupPartition implements Function<String, Partition> {
+    INSTANCE;
+    public Partition apply( final String input ) {
+      Databases.awaitSynchronized( );
+      try {
+        EntityTransaction db = Entities.get( Partition.class );
+        Partition p = null;
+        try {
+          p = Entities.uniqueResult( Partition.newInstanceNamed( input ) );
+          db.commit( );
+          return p;
+        } catch ( NoSuchElementException ex ) {
+          db.rollback( );
+          throw ex;
+        } catch ( Exception ex ) {
+          db.rollback( );
+          Databases.awaitSynchronized( );
+          return INSTANCE.apply( input );
+        }
+      } catch ( Exception ex ) {
+        Databases.awaitSynchronized( );
+        return INSTANCE.apply( input );
+      }
     }
+  }
+  
+  public static Partition lookupByName( String partitionName ) {
+    return partitionMap.get( partitionName );
   }
   
   public static Partition lookup( final ServiceConfiguration config ) {
