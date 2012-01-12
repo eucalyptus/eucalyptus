@@ -14,6 +14,7 @@
 #   you can modify if you wish.
 #
 sub storage_usage_mb() { 2 }
+sub startup_sleep_duration() { 120 }
 sub upload_file() { "random.dat" }
 sub image_file() { "fedora.img" }
 sub vol_device() { "/dev/sda5" }

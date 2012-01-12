@@ -47,7 +47,12 @@ sub parse_avail_zones($) {
 	return @zones;
 }
 
-
+# SUB: parse_vol_id -- parse the output of euca-create-volume
+#       
+sub parse_vol_id($) {
+	my @fields = split("\\s+", $_[0]);
+	return $fields[1];
+}
 
 #
 # MAIN LOGIC
@@ -66,6 +71,11 @@ my $s3_url = $ENV{"S3_URL"};
 
 print "image_id:$image_id num_instances:$num_instances type:$instance_type interval:$interval duration:$duration s3_url:$s3_url\n";
 
+# Get an availability zone
+$output = `euca-describe-availability-zones` or die("couldn't euca-describe-availability-zones");
+my @zones = parse_avail_zones($output);
+print "Using zone:$zones[0]\n";
+
 # Run instances
 print "euca-run-instances -t $instance_type -n $num_instances $image_id";
 my $output = `euca-run-instances -t $instance_type -n $num_instances $image_id` or die("starting instance failed");
@@ -79,25 +89,23 @@ if ($num_instances != keys(%instance_data)) {
 }
 
 # Sleep to give instances time to start
-my $sleep_duration = 120;
-print "Sleeping for $sleep_duration secs so instances can start up...\n";
-sleep $sleep_duration;
+print "Sleeping for " . startup_sleep_duration() . " secs so instances can start up...\n";
+sleep startup_sleep_duration();
 
-# Verify that instances are running
+# Verify that instances are running, and mount EBS volume for each
 $output = `euca-describe-instances` or die("couldn't euca-describe-instances");
+print "output:$output\n";
 my %instances = parse_instance_ids($output);
 foreach (keys %instance_data) {
 	if ($instances{$_} eq "running") {
 		print "Instance $_ is running\n";
+		$output = `euca-create-volume --size " . (storage_usage_mb()*2) . " --zone $zones[0]`;
+		runcmd("euca-attach-volume -e $_ -d " . vol_device() . " " . parse_vol_id($output));
 	} else {
 		die ("Instance $_ not running:$instances{$_}");
 	}
 }
 
-# Get an availability zone
-$output = `euca-describe-availability-zones` or die("couldn't euca-describe-availability-zones");
-my @zones = parse_avail_zones($output);
-print "Using zone:$zones[0]\n";
 
 my $bucketname = "b-" . rand_str(32);
 
