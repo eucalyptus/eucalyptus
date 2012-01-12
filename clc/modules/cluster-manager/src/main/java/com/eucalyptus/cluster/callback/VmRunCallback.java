@@ -75,6 +75,7 @@ import com.eucalyptus.cluster.ResourceState.NoSuchTokenException;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.ClusterController;
+import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Callback;
@@ -94,6 +95,8 @@ import edu.ucsb.eucalyptus.cloud.VmRunResponseType;
 import edu.ucsb.eucalyptus.msgs.AttachStorageVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.AttachStorageVolumeType;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import edu.ucsb.eucalyptus.msgs.DetachStorageVolumeResponseType;
+import edu.ucsb.eucalyptus.msgs.DetachStorageVolumeType;
 
 public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType> {
   
@@ -156,16 +159,30 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
         vm.updateAddresses( input.getNetParams( ).getIpAddress( ), input.getNetParams( ).getIgnoredPublicIp( ) );
         if ( VmRunCallback.this.token.getRootVolume( ) != null ) {
           try {
-            String volumeId = VmRunCallback.this.token.getRootVolume( ).getDisplayName( );
-            VmVolumeAttachment volumeAttachment = vm.lookupVolumeAttachment( volumeId );
-            ServiceConfiguration scConfig = Topology.lookup( ClusterController.class, vm.lookupPartition( ) );
             Cluster cluster = Clusters.lookup( Topology.lookup( ClusterController.class, vm.lookupPartition( ) ) );
-            String iqn = cluster.getNode( vm.getServiceTag( ) ).getIqn( );
-            final AttachStorageVolumeType attachMsg = new AttachStorageVolumeType( iqn, volumeId  );
-            final AttachStorageVolumeResponseType scReply = AsyncRequests.sendSync( scConfig, attachMsg );
-            volumeAttachment.setRemoteDevice( scReply.getRemoteDeviceString( ) );
+            String initialIqn = VmRunCallback.this.token.getInitialIqn( );
+            String iqn = cluster.getNode( input.getServiceTag( ) ).getIqn( );
+            vm.getRuntimeState( ).setServiceTag( input.getServiceTag( ) );
+            if ( !iqn.equals( initialIqn ) ) {
+              LOG.debug( VmRunCallback.this.token + ": initial iqn: " + initialIqn );
+              LOG.debug( VmRunCallback.this.token + ": final iqn:   " + iqn );
+              String volumeId = VmRunCallback.this.token.getRootVolume( ).getDisplayName( );
+              VmVolumeAttachment volumeAttachment = vm.lookupVolumeAttachment( volumeId );
+              LOG.debug( VmRunCallback.this.token + ": initial remove device: " + volumeAttachment.getRemoteDevice( ) );
+              ServiceConfiguration scConfig = Topology.lookup( Storage.class, vm.lookupPartition( ) );
+              try {
+                final AttachStorageVolumeType attachMsg = new AttachStorageVolumeType( iqn, volumeId  );
+                final AttachStorageVolumeResponseType scAttachReply = AsyncRequests.sendSync( scConfig, attachMsg );
+                LOG.debug( VmRunCallback.this.token + ": " + scAttachReply );
+                volumeAttachment.setRemoteDevice( scAttachReply.getRemoteDeviceString( ) );
+                LOG.debug( VmRunCallback.this.token + ": final remove device:   " + volumeAttachment.getRemoteDevice( ) );
+              } catch ( Exception ex ) {
+                LOG.error( VmRunCallback.this.token + ": " + ex );
+                Logs.extreme( ).error( ex, ex );
+              }
+            }
           } catch ( Exception ex ) {
-            LOG.error( ex );
+            LOG.error( VmRunCallback.this.token + ": " + ex );
             Logs.extreme( ).error( ex, ex );
           }
         }

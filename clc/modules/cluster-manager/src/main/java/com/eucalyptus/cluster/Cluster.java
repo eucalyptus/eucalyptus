@@ -1291,5 +1291,9 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
   public OwnerFullName getOwner( ) {
     return Principals.systemFullName( );
   }
+
+  public ConcurrentNavigableMap<String, NodeInfo> getNodeMap( ) {
+    return this.nodeMap;
+  }
   
 }

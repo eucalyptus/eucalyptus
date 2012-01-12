@@ -87,6 +87,7 @@ import org.hibernate.criterion.MatchMode;
 import org.hibernate.criterion.Restrictions;
 import org.hibernate.ejb.EntityManagerFactoryImpl;
 import org.hibernate.exception.ConstraintViolationException;
+import org.hibernate.exception.LockAcquisitionException;
 import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
@@ -894,17 +895,19 @@ public class Entities {
           db.rollback( );
           if ( Exceptions.isCausedBy( ex, OptimisticLockException.class ) ) {
             rootCause = Exceptions.findCause( ex, OptimisticLockException.class );
-            try {
-              TimeUnit.MILLISECONDS.sleep( 20 );
-            } catch ( InterruptedException ex1 ) {
-              Exceptions.maybeInterrupted( ex1 );
-            }
-            continue;
+          } else if ( Exceptions.isCausedBy( ex, OptimisticLockException.class ) ) {
+              rootCause = Exceptions.findCause( ex, LockAcquisitionException.class );
           } else {
             rootCause = ex;
             Logs.extreme( ).error( ex, ex );
             throw ex;
           }
+          try {
+            TimeUnit.MILLISECONDS.sleep( 20 );
+          } catch ( InterruptedException ex1 ) {
+            Exceptions.maybeInterrupted( ex1 );
+          }
+          continue;
         }
       }
       throw ( rootCause != null

@@ -734,7 +734,7 @@ public class Databases {
   }
   
   public static Boolean isVolatile( ) {
-    if ( !Bootstrap.isFinished( ) || BootstrapArgs.isInitializeSystem( ) ) {
+    if ( !Bootstrap.isFinished( ) || Bootstrap.isShuttingDown( ) || BootstrapArgs.isInitializeSystem( ) ) {
       return false;
     } else if ( !Hosts.isCoordinator( ) && BootstrapArgs.isCloudController( ) ) {
       return !isSynchronized( ) || !activeHosts.get( ).containsAll( hostDatabases.get( ) );
