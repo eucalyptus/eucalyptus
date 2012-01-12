@@ -226,27 +226,6 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
     }
   }
   
-  private static Predicate<VmInstance> volumeFilter( ) {
-    return new Predicate<VmInstance>( ) {
-      
-      @Override
-      public boolean apply( VmInstance input ) {
-        try {
-          VmInstance vm = Entities.merge( input );
-          return vm.eachVolumeAttachment( new Predicate<VmVolumeAttachment>( ) {
-            @Override
-            public boolean apply( VmVolumeAttachment arg0 ) {
-              return arg0.getAttachmentState( ).isVolatile( );
-            }
-          } );
-        } catch ( Exception ex ) {
-          Logs.extreme( ).error( ex, ex );
-          return false;
-        }
-      }
-    };
-  }
-  
   private static Predicate<VmInstance> stateSettleFilter( ) {
     return new Predicate<VmInstance>( ) {
       
@@ -269,7 +248,7 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
   
   public static class VmPendingCallback extends StateUpdateMessageCallback<Cluster, VmDescribeType, VmDescribeResponseType> {
     @SuppressWarnings( "unchecked" )
-    private final Predicate<VmInstance> filter = Predicates.and( Predicates.or( VmStateSet.CHANGING, volumeFilter( ) ),
+    private final Predicate<VmInstance> filter = Predicates.and( VmStateSet.CHANGING,
                                                                  partitionFilter( this ),
                                                                  stateSettleFilter( ) );
     private final Supplier<Set<String>> initialInstances;

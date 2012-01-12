@@ -105,9 +105,11 @@ import com.eucalyptus.vm.VmInstance.Reason;
 import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.vm.VmVolumeAttachment;
+import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
 import edu.emory.mathcs.backport.java.util.concurrent.TimeUnit;
+import edu.ucsb.eucalyptus.cloud.NodeInfo;
 import edu.ucsb.eucalyptus.cloud.VirtualBootRecord;
 import edu.ucsb.eucalyptus.cloud.VmKeyInfo;
 import edu.ucsb.eucalyptus.cloud.VmRunResponseType;
@@ -301,18 +303,66 @@ public class ClusterAllocator implements Runnable {
       final Volume vol = token.getRootVolume( );
       final ServiceConfiguration scConfig = waitForVolume( vol );
       
+      VirtualBootRecord vbrRootDevice = childVmInfo.lookupRoot( );
+      String volumeId = vol.getDisplayName( );
+      String remoteDeviceString = null;
+      Exception lastError = null;
+      String finalIqn = null;
       for ( final String nodeTag : this.cluster.getNodeTags( ) ) {
+        NodeInfo nodeInfo = this.cluster.getNode( nodeTag );
+        if ( nodeInfo != null && nodeInfo.getIqn( ) != null ) { 
+          try {
+            String nodeIqn = nodeInfo.getIqn( );
+            remoteDeviceString = requestAttachStorageVolume( scConfig, volumeId, nodeIqn );
+            if ( remoteDeviceString != null ) {
+              finalIqn = nodeIqn;
+              Logs.extreme( ).debug( "Updating remote device for " + token + " using iqn " + finalIqn + " with " + remoteDeviceString );
+              break;
+            }
+          } catch ( Exception ex ) {
+            lastError = ex;
+          }
+        }
+      }
+      if ( remoteDeviceString == null || finalIqn == null ) {
+        if ( lastError == null ) {
+          lastError = new NullPointerException( "Failed to find a node w/ reported iqn: " + this.cluster.getNodeMap( ) );
+        }
+        LOG.error( "Failed to start instance " + token + " while preparing attachment of volume " + volumeId + " failed because: " + lastError, lastError );
+        throw lastError;
+      } else {
+        token.setInitialIqn( finalIqn );
+        vbrRootDevice.setResourceLocation( remoteDeviceString );
+        final String updateRemoteDevString = remoteDeviceString;
+        final Function<String, VmInstance> updateInstance = new Function<String, VmInstance>( ) {
+          public VmInstance apply( final String input ) {
+            VmVolumeAttachment attachment = VmInstances.lookupVolumeAttachment( input );
+            attachment.setRemoteDevice( updateRemoteDevString );
+            return attachment.getVmInstance( );
+          }
+        };
         try {
-          final AttachStorageVolumeType attachMsg = new AttachStorageVolumeType( this.cluster.getNode( nodeTag ).getIqn( ), vol.getDisplayName( ) );
-          final AttachStorageVolumeResponseType scAttachResponse = AsyncRequests.sendSync( scConfig, attachMsg );
-          childVmInfo.lookupRoot( ).setResourceLocation( scAttachResponse.getRemoteDeviceString( ) );
-        } catch ( final Exception ex ) {
-          LOG.error( ex, ex );
-          throw ex;
+          Entities.asTransaction( VmInstance.class, updateInstance ).apply( volumeId );
+        } catch ( Exception ex ) {
+          LOG.error( ex );
+          Logs.extreme( ).error( ex, ex );
         }
       }
     }//TODO:GRZE:OMGFIXME: move this for bfe to later stage.
     return childVmInfo;
+  }
+  
+  private String requestAttachStorageVolume( final ServiceConfiguration scConfig, String volumeId, final String nodeIqn ) throws Exception {
+    try {
+      final AttachStorageVolumeType attachMsg = new AttachStorageVolumeType( nodeIqn, volumeId );
+      final AttachStorageVolumeResponseType scAttachResponse = AsyncRequests.sendSync( scConfig, attachMsg );
+      LOG.debug( scAttachResponse );
+      return scAttachResponse.getRemoteDeviceString( );
+    } catch ( final Exception ex ) {
+      LOG.error( ex );
+      Logs.extreme( ).error( ex, ex );
+      throw ex;
+    }
   }
   
   public ServiceConfiguration waitForVolume( final Volume vol ) throws Exception {

@@ -159,7 +159,7 @@ public class Contexts {
     try {
       Context ctx = lookup( corrId );
       EventRecord.here( ServiceContext.class, EventType.MSG_REPLY, responseMessage.getCorrelationId( ), responseMessage.getClass( ).getSimpleName( ),
-                        String.format( "%.3f ms", ( System.nanoTime( ) - ctx.getCreationTime( ) ) / 1000000.0 ) ).debug( );
+                        String.format( "%.3f ms", ( System.nanoTime( ) - ctx.getCreationTime( ) ) / 1000000.0 ) ).trace( );
       Channel channel = ctx.getChannel( );
       Channels.write( channel, responseMessage );
       clear( ctx );
@@ -180,7 +180,7 @@ public class Contexts {
     try {
       Context ctx = lookup( corrId );
       EventRecord.here( ReplyQueue.class, EventType.MSG_REPLY, cause.getClass( ).getCanonicalName( ), cause.getMessage( ),
-                        String.format( "%.3f ms", ( System.nanoTime( ) - ctx.getCreationTime( ) ) / 1000000.0 ) ).debug( );
+                        String.format( "%.3f ms", ( System.nanoTime( ) - ctx.getCreationTime( ) ) / 1000000.0 ) ).trace( );
       Channels.fireExceptionCaught( ctx.getChannel( ), cause );
       if ( !( cause instanceof BaseException ) ) {
         clear( ctx );

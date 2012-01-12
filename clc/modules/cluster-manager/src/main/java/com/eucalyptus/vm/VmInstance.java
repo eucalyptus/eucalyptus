@@ -1348,7 +1348,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       db.commit( );
       return volumeAttachment;
     } catch ( final Exception ex ) {
-      Logs.extreme( ).error( ex, ex );
       db.rollback( );
       throw new NoSuchElementException( "Failed to lookup volume: " + volumeId );
     }
@@ -1402,31 +1401,34 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
    * @return
    */
   public boolean eachVolumeAttachment( final Predicate<VmVolumeAttachment> predicate ) {
-    final EntityTransaction db = Entities.get( VmInstance.class );
-    try {
-      final VmInstance entity = Entities.merge( this );
-      boolean ret = entity.getTransientVolumeState( ).eachVolumeAttachment( new Predicate<VmVolumeAttachment>( ) {
-        
-        @Override
-        public boolean apply( final VmVolumeAttachment arg0 ) {
-          return predicate.apply( arg0 );
-        }
-      } );
-      ret |= Iterables.all( entity.getBootRecord( ).getPersistentVolumes( ), new Predicate<VmVolumeAttachment>( ) {
-        
-        @Override
-        public boolean apply( final VmVolumeAttachment arg0 ) {
-          return predicate.apply( arg0 );
-        }
-      } );
-      db.commit( );
-      return ret;
-    } catch ( final Exception ex ) {
-      Logs.extreme( ).error( ex, ex );
-      db.rollback( );
+    if ( VmStateSet.DONE.contains( this.getState( ) ) ) {
       return false;
-    }
-    
+    } else {
+      final EntityTransaction db = Entities.get( VmInstance.class );
+      try {
+        final VmInstance entity = Entities.merge( this );
+        boolean ret = entity.getTransientVolumeState( ).eachVolumeAttachment( new Predicate<VmVolumeAttachment>( ) {
+          
+          @Override
+          public boolean apply( final VmVolumeAttachment arg0 ) {
+            return predicate.apply( arg0 );
+          }
+        } );
+        ret |= Iterables.all( entity.getBootRecord( ).getPersistentVolumes( ), new Predicate<VmVolumeAttachment>( ) {
+          
+          @Override
+          public boolean apply( final VmVolumeAttachment arg0 ) {
+            return predicate.apply( arg0 );
+          }
+        } );
+        db.commit( );
+        return ret;
+      } catch ( final Exception ex ) {
+        Logs.extreme( ).error( ex, ex );
+        db.rollback( );
+        return false;
+      }
+    }    
   }
   
   /**
