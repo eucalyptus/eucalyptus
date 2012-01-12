@@ -153,14 +153,18 @@ public class Partitions {
         Partition p;
         try {
           p = Partitions.lookupByName( config.getPartition( ) );
-        } catch ( NoSuchElementException ex ) {
-          LOG.warn( "Failed to lookup partition for " + config
-                    + ".  Generating new partition configuration.\nCaused by: " + Exceptions.causeString( ex ) );
-          try {
-            p = Partitions.generatePartition( config );
-          } catch ( ServiceRegistrationException ex1 ) {
-            LOG.error( ex1, ex1 );
-            throw Exceptions.toUndeclared( ex1 );
+        } catch ( Exception ex ) {
+          if ( Exceptions.isCausedBy( ex, NoSuchElementException.class ) ) {
+            LOG.warn( "Failed to lookup partition for " + config
+                      + ".  Generating new partition configuration.\nCaused by: " + Exceptions.causeString( ex ) );
+            try {
+              p = Partitions.generatePartition( config );
+            } catch ( ServiceRegistrationException ex1 ) {
+              LOG.error( ex1, ex1 );
+              throw Exceptions.toUndeclared( ex1 );
+            }
+          } else {
+            throw ex;
           }
         }
         return p;
