@@ -75,6 +75,7 @@ import com.eucalyptus.cluster.ResourceState.NoSuchTokenException;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.ClusterController;
+import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Callback;
@@ -158,7 +159,7 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
           try {
             String volumeId = VmRunCallback.this.token.getRootVolume( ).getDisplayName( );
             VmVolumeAttachment volumeAttachment = vm.lookupVolumeAttachment( volumeId );
-            ServiceConfiguration scConfig = Topology.lookup( ClusterController.class, vm.lookupPartition( ) );
+            ServiceConfiguration scConfig = Topology.lookup( Storage.class, vm.lookupPartition( ) );
             Cluster cluster = Clusters.lookup( Topology.lookup( ClusterController.class, vm.lookupPartition( ) ) );
             String iqn = cluster.getNode( vm.getServiceTag( ) ).getIqn( );
             final AttachStorageVolumeType attachMsg = new AttachStorageVolumeType( iqn, volumeId  );
