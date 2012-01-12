@@ -64,7 +64,6 @@
 package com.eucalyptus.cluster.callback;
 
 import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import com.eucalyptus.address.Address;
@@ -78,6 +77,7 @@ import com.eucalyptus.cluster.ResourceState.NoSuchTokenException;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.ClusterController;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.records.Logs;
@@ -192,8 +192,9 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
             }
           }
           final Predicate<VmVolumeAttachment> attachVolumes = new Predicate<VmVolumeAttachment>( ) {
-            public boolean apply( final VmVolumeAttachment input ) {
+            public boolean apply( VmVolumeAttachment input ) {
               final String volumeId = input.getVolumeId( );
+              final String vmDevice = input.getDevice( );
               if ( !volumeId.equals( rootVolumeId ) ) {
                 try {
                   LOG.debug( VmRunCallback.this.token + ": attaching volume: " + input );
@@ -205,19 +206,19 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
                   final Callable<Boolean> ncAttachRequest = new Callable<Boolean>( ) {
                     public Boolean call( ) {
                       try {
+                        LOG.debug( VmRunCallback.this.token + ": waiting for storage volume: " + volumeId );
+                        AttachStorageVolumeResponseType scReply = scAttachReplyFuture.get( );
                         LOG.debug( VmRunCallback.this.token + ": " + volumeId + " => " + scAttachReplyFuture );
-                        input.setRemoteDevice( scAttachReplyFuture.get( ).getRemoteDeviceString( ) );
-                        AsyncRequests.dispatch( ccConfig, new AttachVolumeType( volumeId, vm.getInstanceId( ), input.getDevice( ), input.getRemoteDevice( ) ) );
+                        AsyncRequests.dispatch( ccConfig, new AttachVolumeType( volumeId, vm.getInstanceId( ), vmDevice, scReply.getRemoteDeviceString( ) ) );
                       } catch ( Exception ex ) {
                         Exceptions.maybeInterrupted( ex );
-                        input.setStatus( AttachmentState.attaching_failed.name( ) );
                         LOG.error( VmRunCallback.this.token + ": " + ex );
                         Logs.extreme( ).error( ex, ex );
                       }
                       return true;
                     }
                   };
-                  scAttachReplyFuture.addListener( ncAttachRequest, Threads.lookup( ccConfig ) );
+                  Threads.enqueue( Eucalyptus.class, VmRunCallback.class, ncAttachRequest );
                 } catch ( Exception ex ) {
                   input.setStatus( AttachmentState.attaching_failed.name( ) );
                   LOG.error( VmRunCallback.this.token + ": " + ex );
