@@ -89,20 +89,26 @@ import edu.ucsb.eucalyptus.msgs.AttachedVolume;
 import edu.ucsb.eucalyptus.msgs.DetachStorageVolumeType;
 
 public class VolumeAttachCallback extends MessageCallback<AttachVolumeType, AttachVolumeResponseType> {
-  private final AttachedVolume attachedVolume;
   private static Logger        LOG = Logger.getLogger( VolumeAttachCallback.class );
   
-  public VolumeAttachCallback( AttachVolumeType request, AttachedVolume attachVol ) {
+  public VolumeAttachCallback( AttachVolumeType request ) {
     super( request );
-    this.attachedVolume = attachVol;
   }
   
   @Override
   public void initialize( AttachVolumeType msg ) {
+    final String instanceId = this.getRequest( ).getInstanceId( );
+    final String volumeId = this.getRequest( ).getVolumeId( );
     final Function<String, VmInstance> funcName = new Function<String, VmInstance>( ) {
       public VmInstance apply( final String input ) {
-        VmInstance vm = VmInstances.lookup( VolumeAttachCallback.this.getRequest( ).getInstanceId( ) );
-        vm.updateVolumeAttachment( VolumeAttachCallback.this.getRequest( ).getVolumeId( ), AttachmentState.attaching );
+        VmInstance vm = VmInstances.lookup( instanceId );
+        try {
+          if ( !AttachmentState.attached.equals( vm.lookupVolumeAttachment( volumeId ).getAttachmentState( ) ) ) {
+            vm.updateVolumeAttachment( volumeId, AttachmentState.attaching );
+          }
+        } catch ( Exception ex ) {
+          vm.updateVolumeAttachment( volumeId, AttachmentState.attaching );
+        }
         return vm;
       }
     };

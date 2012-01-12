@@ -377,7 +377,7 @@ public class VolumeManager {
     
     AttachedVolume attachVol = new AttachedVolume( volume.getDisplayName( ), vm.getInstanceId( ), request.getDevice( ), request.getRemoteDevice( ) );
     vm.addTransientVolume( deviceName, scAttachResponse.getRemoteDeviceString( ), volume );
-    AsyncRequests.newRequest( new VolumeAttachCallback( request, attachVol ) ).dispatch( cluster.getConfiguration( ) );
+    AsyncRequests.newRequest( new VolumeAttachCallback( request ) ).dispatch( cluster.getConfiguration( ) );
     
     EventRecord.here( VolumeManager.class, EventClass.VOLUME, EventType.VOLUME_ATTACH )
                .withDetails( volume.getOwner( ).toString( ), volume.getDisplayName( ), "instance", vm.getInstanceId( ) )
