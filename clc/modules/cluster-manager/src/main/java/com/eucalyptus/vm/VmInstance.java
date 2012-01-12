@@ -244,6 +244,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       
     },
     EXPECTING_TEARDOWN( VmState.STOPPING, VmState.SHUTTING_DOWN ),
+    TORNDOWN( VmState.STOPPED, VmState.TERMINATED ),
     STOP( VmState.STOPPING, VmState.STOPPED ),
     TERM( VmState.SHUTTING_DOWN, VmState.TERMINATED ),
     NOT_RUNNING( VmState.STOPPING, VmState.STOPPED, VmState.SHUTTING_DOWN, VmState.TERMINATED ),
@@ -1534,12 +1535,12 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       }
       
       private void updateState( final VmInfo runVm ) {
-        VmInstance.this.getRuntimeState( ).setServiceTag( runVm.getServiceTag( ) );
         VmInstance.this.getRuntimeState( ).updateBundleTaskState( runVm.getBundleTaskStateName( ) );
         VmInstance.this.updateCreateImageTaskState( runVm.getBundleTaskStateName( ) );
+        VmInstance.this.getRuntimeState( ).setServiceTag( runVm.getServiceTag( ) );
+        VmInstance.this.updateAddresses( runVm.getNetParams( ).getIpAddress( ), runVm.getNetParams( ).getIgnoredPublicIp( ) );
         if ( VmState.RUNNING.apply( VmInstance.this ) ) {
           VmInstance.this.updateVolumeAttachments( runVm.getVolumes( ) );
-          VmInstance.this.updateAddresses( runVm.getNetParams( ).getIpAddress( ), runVm.getNetParams( ).getIgnoredPublicIp( ) );
           VmInstance.this.updateBlockBytes( runVm.getBlockBytes( ) );
           VmInstance.this.updateNetworkBytes( runVm.getNetworkBytes( ) );
         }
