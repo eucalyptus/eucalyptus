@@ -315,7 +315,7 @@ public class ClusterAllocator implements Runnable {
             String nodeIqn = nodeInfo.getIqn( );
             remoteDeviceString = requestAttachStorageVolume( scConfig, volumeId, nodeIqn );
             if ( remoteDeviceString != null ) {
-              finalIqn = nodeTag;
+              finalIqn = nodeIqn;
               Logs.extreme( ).debug( "Updating remote device for " + token + " using iqn " + finalIqn + " with " + remoteDeviceString );
               break;
             }
