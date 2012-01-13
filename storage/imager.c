@@ -10,6 +10,7 @@
 #include <fcntl.h> // open
 #include <ctype.h> // tolower
 #include <errno.h> // errno
+#include <sys/vfs.h> // statfs
 
 #include "euca_auth.h"
 #include "eucalyptus.h"
@@ -159,8 +160,39 @@ static void set_global_parameter (char * key, char * val)
     logprintfl (EUCAINFO, "GLOBAL: %s=%s\n", key, val);
 }
 
-static int stale_blob_examiner (const blockblob * bb) {
+static int stale_blob_examiner (const blockblob * bb) 
+{
     return 1; // delete all work blobs during fsck
+}
+
+static int stat_blobstore (const char * path, blobstore * bs) 
+{
+    blobstore_meta meta;
+    blobstore_stat (bs, &meta);
+    long long size_mb       = meta.blocks_limit  ? (meta.blocks_limit / 2048) : (-1L); // convert sectors->MB
+    long long allocated_mb  = meta.blocks_limit  ? (meta.blocks_allocated / 2048) : 0;
+    long long reserved_mb   = meta.blocks_limit  ? ((meta.blocks_locked + meta.blocks_unlocked) / 2048) : 0;
+
+    struct statfs fs;
+    if (statfs (path, &fs) == -1) { 
+        logprintfl (EUCAERROR, "error: failed to stat %s: %s\n", path, strerror(errno));
+        return 1;
+    }
+    long long fs_avail_mb = (long long)fs.f_bsize * (long long)(fs.f_bavail/MEGABYTE);
+    long long fs_size_mb =  (long long)fs.f_bsize * (long long)(fs.f_blocks/MEGABYTE); 
+
+    logprintfl (EUCAINFO, "disk space under %s\n", path);
+    logprintfl (EUCAINFO, "                 %06lldMB limit (%.1f%% of the file system)\n",
+                size_mb, 
+                ((double)size_mb/(double)fs_size_mb)*100.0);
+    logprintfl (EUCAINFO, "                 %06lldMB reserved for use (%.1f%% of limit)\n", 
+                reserved_mb, 
+                ((double)reserved_mb/(double)size_mb)*100.0 );
+    logprintfl (EUCAINFO, "                 %06lldMB allocated for use (%.1f%% of limit, %.1f%% of the file system)\n", 
+                allocated_mb, 
+                ((double)allocated_mb/(double)size_mb)*100.0,
+                ((double)allocated_mb/(double)fs_size_mb)*100.0 );
+    return 0;
 }
 
 int main (int argc, char * argv[])
@@ -283,7 +315,7 @@ int main (int argc, char * argv[])
             logprintfl (EUCAERROR, "ERROR: %s\n", blobstore_get_error_str(blobstore_get_error()));
             err ("failed to open work blobstore");
         }
-
+        stat_blobstore (get_work_dir(), work_bs);
         if (blobstore_fsck (work_bs, stale_blob_examiner)) {
             logprintfl (EUCAERROR, "ERROR: work directory failed integrity check: %s\n", blobstore_get_error_str(blobstore_get_error()));
             err ("work blobstore failed integrity check");
@@ -301,6 +333,7 @@ int main (int argc, char * argv[])
             blobstore_close (work_bs);            
             err ("failed to open cache blobstore");
         }
+        stat_blobstore (get_cache_dir(), cache_bs);
         if (blobstore_fsck (cache_bs, NULL)) { // TODO: verify checksums?
             logprintfl (EUCAERROR, "ERROR: cache failed integrity check: %s\n", blobstore_get_error_str(blobstore_get_error()));
             err ("cache blobstore failed integrity check");
