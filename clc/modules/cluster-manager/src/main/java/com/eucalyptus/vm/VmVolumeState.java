@@ -159,6 +159,13 @@ public class VmVolumeState {
     }
   }
   
+  enum VmVolumeAttachmentStateInfo implements Function<VmVolumeAttachment, String> {
+    INSTANCE;
+    public String apply( final VmVolumeAttachment input ) {
+      return input.getVolumeId( ) + ":" + input.getAttachmentState( ).stateFlag( );
+    }
+  }
+  
   public void updateVolumeAttachments( final List<VmVolumeAttachment> ncAttachedVols ) throws NoSuchElementException {
     Set<String> remoteVolumes = Sets.newHashSet( Collections2.transform( ncAttachedVols, VmVolumeAttachmentName.INSTANCE ) );
     Set<String> localVolumes = Sets.newHashSet( Collections2.transform( this.getAttachments( ), VmVolumeAttachmentName.INSTANCE ) );
@@ -170,6 +177,8 @@ public class VmVolumeState {
                  + " intersection=" + intersection
                  + " local=" + localOnly
                  + " remote=" + remoteOnly );
+      LOG.debug( "Reported state for: " + this.getVmInstance( ).getInstanceId( )
+                 + Collections2.transform( ncAttachedVols, VmVolumeAttachmentStateInfo.INSTANCE ) );
     }
     final Map<String, VmVolumeAttachment> ncAttachedVolMap = new HashMap<String, VmVolumeAttachment>( ) {
       
@@ -226,7 +235,7 @@ public class VmVolumeState {
       try {
         final AttachmentState localState = this.lookupVolumeAttachment( volId ).getAttachmentState( );
         if ( !localState.isVolatile( ) ) {
-          
+
         }
       } catch ( Exception ex ) {
         LOG.error( ex );
