@@ -47,7 +47,12 @@ sub parse_avail_zones($) {
 	return @zones;
 }
 
-
+# SUB: parse_vol_id -- parse the output of euca-create-volume
+#       
+sub parse_vol_id($) {
+	my @fields = split("\\s+", $_[0]);
+	return $fields[1];
+}
 
 #
 # MAIN LOGIC
@@ -60,15 +65,21 @@ my $interval = shift;
 my $duration = shift;
 
 my %instance_data = ();  # instance_id => status
+my @volumes = (); # volume ids of mounted volumes to which instances are writing
 my $access_key = $ENV{"EC2_ACCESS_KEY"};
 my $secret_key = $ENV{"EC2_SECRET_KEY"};
 my $s3_url = $ENV{"S3_URL"};
 
 print "image_id:$image_id num_instances:$num_instances type:$instance_type interval:$interval duration:$duration s3_url:$s3_url\n";
 
+# Get an availability zone
+my $output = `euca-describe-availability-zones` or die("couldn't euca-describe-availability-zones");
+my @zones = parse_avail_zones($output);
+print "Using zone:$zones[0]\n";
+
 # Run instances
 print "euca-run-instances -t $instance_type -n $num_instances $image_id";
-my $output = `euca-run-instances -t $instance_type -n $num_instances $image_id` or die("starting instance failed");
+$output = `euca-run-instances -t $instance_type -n $num_instances $image_id` or die("starting instance failed");
 print "output:$output\n";
 %instance_data = parse_instance_ids($output);
 foreach (keys %instance_data) {
@@ -79,25 +90,26 @@ if ($num_instances != keys(%instance_data)) {
 }
 
 # Sleep to give instances time to start
-my $sleep_duration = 120;
-print "Sleeping for $sleep_duration secs so instances can start up...\n";
-sleep $sleep_duration;
+print "Sleeping for " . startup_sleep_duration() . " secs so instances can start up...\n";
+sleep startup_sleep_duration();
 
-# Verify that instances are running
+# Verify that instances are running, and mount EBS volume for each
 $output = `euca-describe-instances` or die("couldn't euca-describe-instances");
+print "output:$output\n";
 my %instances = parse_instance_ids($output);
 foreach (keys %instance_data) {
 	if ($instances{$_} eq "running") {
 		print "Instance $_ is running\n";
+		my $vol_size = storage_usage_mb()*2;
+		my $vol_id = parse_vol_id(`euca-create-volume --size $vol_size --zone $zones[0]`);
+		runcmd("euca-attach-volume -i $_ -d " . vol_device() . " $vol_id");
+		push(@volumes, $vol_id);
 	} else {
 		die ("Instance $_ not running:$instances{$_}");
 	}
 }
+sleep 20; # Give vol time to come up before creating snapshots
 
-# Get an availability zone
-$output = `euca-describe-availability-zones` or die("couldn't euca-describe-availability-zones");
-my @zones = parse_avail_zones($output);
-print "Using zone:$zones[0]\n";
 
 my $bucketname = "b-" . rand_str(32);
 
@@ -113,8 +125,8 @@ for (my $i=0; (time()-$start_time) < $duration; $i++) {
 	print "$i: Created volume\n";
 	runcmd("euca-bundle-image -i $upload_file");
 	#TODO: grab manifest path from this
-	runcmd("euca-upload-bundle -b $bucketname -m /tmp/$upload_file.manifest.xml");
 	print "$i: Uploaded bundle\n";
+	runcmd("euca-create-snapshot " . $volumes[$i % ($#volumes+1)]);
 	sleep $interval - (time() - $itime);
 }
 
