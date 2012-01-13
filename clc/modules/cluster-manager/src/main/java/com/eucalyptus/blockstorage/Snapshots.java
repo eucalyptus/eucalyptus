@@ -187,9 +187,7 @@ public class Snapshots {
                 if ( !State.EXTANT.equals( entity.getState( ) ) && storageSnapshot.getProgress( ) != null ) {
                   entity.setProgress( storageSnapshot.getProgress( ) );
                 } else if ( State.EXTANT.equals( entity.getState( ) ) ) {
-                  if ( entity.getProgress( ) == null ) {
-                    entity.setProgress( "100%" );
-                  }
+                  entity.setProgress( "100%" );
                 } else if ( State.GENERATING.equals( entity.getState( ) ) ) {
                   if ( entity.getProgress( ) == null ) {
                     entity.setProgress( "0%" );
@@ -202,9 +200,7 @@ public class Snapshots {
                 Entities.delete( entity );
               } else {
                 if ( State.EXTANT.equals( entity.getState( ) ) ) {
-                  if ( entity.getProgress( ) == null ) {
-                    entity.setProgress( "100%" );
-                  }
+                  entity.setProgress( "100%" );
                 } else if ( State.GENERATING.equals( entity.getState( ) ) ) {
                   if ( entity.getProgress( ) == null ) {
                     entity.setProgress( "0%" );
