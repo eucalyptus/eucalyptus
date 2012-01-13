@@ -182,7 +182,7 @@ public class VmRuntimeState {
       this.addReasonDetail( extra );
       this.reason = reason;
       try {
-        Threads.lookup( Eucalyptus.class, VmInstance.class ).limitTo( VmInstances.MAX_STATE_THREADS ).submit( action ).get( 10, TimeUnit.MILLISECONDS );//GRZE: yes.  wait for 10ms. because.
+        Threads.enqueue( Eucalyptus.class, VmInstance.class, VmInstances.MAX_STATE_THREADS, action ).get( 10, TimeUnit.MILLISECONDS );//GRZE: yes.  wait for 10ms. because.
       } catch ( final TimeoutException ex ) {} catch ( final InterruptedException ex ) {} catch ( final Exception ex ) {
         LOG.error( ex );
         Logs.extreme( ).error( ex, ex );
@@ -218,7 +218,7 @@ public class VmRuntimeState {
     } else if ( VmStateSet.EXPECTING_TEARDOWN.contains( oldState )
                 && VmStateSet.TORNDOWN.contains( newState ) ) {
       if ( VmState.SHUTTING_DOWN.equals( oldState ) ) {
-        this.getVmInstance( ).setState( VmState.SHUTTING_DOWN );
+        this.getVmInstance( ).setState( VmState.TERMINATED );
       } else {//if ( VmState.STOPPING.equals( oldState ) ) {
         this.getVmInstance( ).setState( VmState.STOPPED );
       }
@@ -230,7 +230,7 @@ public class VmRuntimeState {
                 && VmStateSet.NOT_RUNNING.contains( newState ) ) {
       this.getVmInstance( ).setState( newState );
       action = this.cleanUpRunnable( );
-    } else if ( VmState.TERMINATED.equals( newState ) && ( oldState.ordinal( ) > VmState.RUNNING.ordinal( ) ) ) {
+    } else {//if ( VmState.TERMINATED.equals( newState ) && ( oldState.ordinal( ) > VmState.RUNNING.ordinal( ) ) ) {
       this.getVmInstance( ).setState( newState );
     }
     try {
@@ -262,15 +262,15 @@ public class VmRuntimeState {
                   AttachStorageVolumeResponseType scReply = scAttachReplyFuture.get( );
                   LOG.debug( vmId + ": " + volumeId + " => " + scAttachReplyFuture.get( ) );
                   AsyncRequests.dispatch( ccConfig, new AttachVolumeType( volumeId, vmId, vmDevice, scReply.getRemoteDeviceString( ) ) );
-                  final EntityTransaction db = Entities.get( VmInstance.class );
-                  try {
-                    final VmInstance entity = Entities.merge( vm );
-                    entity.lookupVolumeAttachment( volumeId ).setRemoteDevice( scReply.getRemoteDeviceString( ) );
-                    db.commit( );
-                  } catch ( final Exception ex ) {
-                    Logs.extreme( ).error( ex, ex );
-                    db.rollback( );
-                  }
+//                  final EntityTransaction db = Entities.get( VmInstance.class );
+//                  try {
+//                    final VmInstance entity = Entities.merge( vm );
+//                    entity.lookupVolumeAttachment( volumeId ).setRemoteDevice( scReply.getRemoteDeviceString( ) );
+//                    db.commit( );
+//                  } catch ( final Exception ex ) {
+//                    Logs.extreme( ).error( ex, ex );
+//                    db.rollback( );
+//                  }
                 } catch ( Exception ex ) {
                   Exceptions.maybeInterrupted( ex );
                   LOG.error( vmId + ": " + ex );
@@ -288,10 +288,10 @@ public class VmRuntimeState {
         }
       };
       try {
-        this.getVmInstance( ).getTransientVolumeState( ).eachVolumeAttachment( attachVolumes );
+        vm.getTransientVolumeState( ).eachVolumeAttachment( attachVolumes );
       } catch ( Exception ex ) {
-        LOG.error( this.getVmInstance( ).getInstanceId( ) + ": " + ex );
-        Logs.extreme( ).error( this.getVmInstance( ).getInstanceId( ) + ": " + ex, ex );
+        LOG.error( vm.getInstanceId( ) + ": " + ex );
+        Logs.extreme( ).error( vm.getInstanceId( ) + ": " + ex, ex );
       }
     }
   }

@@ -221,7 +221,7 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
           this.result.setException( ex );
         } catch ( Exception t ) {}
       } else {
-        this.requestResult.get( 120, TimeUnit.SECONDS );
+        this.requestResult.get( );
       }
     } catch ( Exception ex ) {
       Exceptions.maybeInterrupted( ex );

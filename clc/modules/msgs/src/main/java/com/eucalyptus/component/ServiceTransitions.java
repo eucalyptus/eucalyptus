@@ -366,8 +366,8 @@ public class ServiceTransitions {
         transitionCallback.fire( );
         Faults.submit( parent, transitionRecord, Faults.advisory( parent, ex ) );
       }
-    } finally {
-      transitionCallback.fire( );
+//    } finally {
+//      transitionCallback.fire( );
     }
   }
   
