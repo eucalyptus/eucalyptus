@@ -72,13 +72,13 @@ my $s3_url = $ENV{"S3_URL"};
 print "image_id:$image_id num_instances:$num_instances type:$instance_type interval:$interval duration:$duration s3_url:$s3_url\n";
 
 # Get an availability zone
-$output = `euca-describe-availability-zones` or die("couldn't euca-describe-availability-zones");
+my $output = `euca-describe-availability-zones` or die("couldn't euca-describe-availability-zones");
 my @zones = parse_avail_zones($output);
 print "Using zone:$zones[0]\n";
 
 # Run instances
 print "euca-run-instances -t $instance_type -n $num_instances $image_id";
-my $output = `euca-run-instances -t $instance_type -n $num_instances $image_id` or die("starting instance failed");
+$output = `euca-run-instances -t $instance_type -n $num_instances $image_id` or die("starting instance failed");
 print "output:$output\n";
 %instance_data = parse_instance_ids($output);
 foreach (keys %instance_data) {
