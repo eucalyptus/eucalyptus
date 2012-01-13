@@ -169,9 +169,10 @@ static int stat_blobstore (const char * path, blobstore * bs)
 {
     blobstore_meta meta;
     blobstore_stat (bs, &meta);
-    long long size_mb       = meta.blocks_limit  ? (meta.blocks_limit / 2048) : (-1L); // convert sectors->MB
-    long long allocated_mb  = meta.blocks_limit  ? (meta.blocks_allocated / 2048) : 0;
-    long long reserved_mb   = meta.blocks_limit  ? ((meta.blocks_locked + meta.blocks_unlocked) / 2048) : 0;
+    long long size_mb       = meta.blocks_limit ? (meta.blocks_limit / 2048) : (-1L); // convert sectors->MB
+    long long allocated_mb  = meta.blocks_limit ? (meta.blocks_allocated / 2048) : 0;
+    long long reserved_mb   = meta.blocks_limit ? ((meta.blocks_locked + meta.blocks_unlocked) / 2048) : 0;
+    long long locked_mb     = meta.blocks_limit ? (meta.blocks_locked / 2048) : (-1L);
 
     struct statfs fs;
     if (statfs (path, &fs) == -1) { 
@@ -188,6 +189,9 @@ static int stat_blobstore (const char * path, blobstore * bs)
     logprintfl (EUCAINFO, "                 %06lldMB reserved for use (%.1f%% of limit)\n", 
                 reserved_mb, 
                 ((double)reserved_mb/(double)size_mb)*100.0 );
+    logprintfl (EUCAINFO, "                 %06lldMB locked for use (%.1f%% of limit)\n", 
+                locked_mb, 
+                ((double)locked_mb/(double)size_mb)*100.0 );
     logprintfl (EUCAINFO, "                 %06lldMB allocated for use (%.1f%% of limit, %.1f%% of the file system)\n", 
                 allocated_mb, 
                 ((double)allocated_mb/(double)size_mb)*100.0,
