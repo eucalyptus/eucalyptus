@@ -203,7 +203,7 @@ public class Volume extends UserMetadata<State> implements VolumeMetadata {
   }
   
   public boolean isReady( ) {
-    return this.getState( ).equals( State.EXTANT );
+    return this.getState( ).equals( State.EXTANT ) || this.getState( ).equals( State.BUSY );
   }
   
   @Override
