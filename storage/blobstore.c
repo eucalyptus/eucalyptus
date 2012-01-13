@@ -409,6 +409,7 @@ static int close_and_unlock (int fd)
     return ret;
 }
 
+#ifdef _TEST_LOCKS
 static char * path_to_sem_name (const char * path, char * name, int name_size) 
 {
     snprintf (name, name_size, "euca%s", path);
@@ -417,6 +418,7 @@ static char * path_to_sem_name (const char * path, char * name, int name_size)
             name [i] = '-';
     return name;
 }
+#endif // _UNIT_TEST
 
 // This function creates or opens a file and locks it; the lock is 
 // - exclusive if the file is being created or written to, or a
@@ -584,13 +586,13 @@ static int open_and_lock (const char * path,
 
     // successully acquired both file and Posix locks
 
-    /* lock testing code
+#ifdef _TEST_LOCKS
     if (l_type == F_WRLCK) {
         char sem_name [512];
         path_lock->sem = sem_alloc (1, path_to_sem_name (path, sem_name, sizeof (sem_name)));
         sem_p (path_lock->sem);
     }
-    */
+#endif // _TEST_LOCKS
 
     pthread_mutex_lock (&_blobstore_mutex);
     _open_success_ctr++;
@@ -1729,7 +1731,7 @@ int blobstore_fsck (blobstore * bs, int (* examiner) (const blockblob * bb))
                             blobs_deleted++;
                         }
                     } else {
-                        logprintfl (EUCAWARN, "WARNING: failed to open blockblob %s\n", abb->id);
+                        logprintfl (EUCAWARN, "could not open blockblob %s (it may be in use)\n", abb->id);
                         abb->store = NULL; // so it will get skipped on next iteration
                         blobs_unopenable++;
                     }
@@ -2209,6 +2211,7 @@ int blockblob_close ( blockblob * bb )
     return ret;
 }
 
+#ifdef _UNIT_TEST // only used by the unit test for now
 static int dm_suspend_resume (const char * dev_name)
 {
     char cmd [1024];
@@ -2227,6 +2230,7 @@ static int dm_suspend_resume (const char * dev_name)
     }
     return 0;
 }
+#endif // _UNIT_TEST
 
 static int dm_check_device (const char * dev_name)
 {

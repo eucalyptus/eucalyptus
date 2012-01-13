@@ -159,6 +159,10 @@ static void set_global_parameter (char * key, char * val)
     logprintfl (EUCAINFO, "GLOBAL: %s=%s\n", key, val);
 }
 
+static int stale_blob_examiner (const blockblob * bb) {
+    return 1; // delete all work blobs during fsck
+}
+
 int main (int argc, char * argv[])
 {
     set_debug (print_debug);
@@ -279,8 +283,13 @@ int main (int argc, char * argv[])
             logprintfl (EUCAERROR, "ERROR: %s\n", blobstore_get_error_str(blobstore_get_error()));
             err ("failed to open work blobstore");
         }
-    }
 
+        if (blobstore_fsck (work_bs, stale_blob_examiner)) {
+            logprintfl (EUCAERROR, "ERROR: work directory failed integrity check: %s\n", blobstore_get_error_str(blobstore_get_error()));
+            err ("work blobstore failed integrity check");
+        }
+    }
+   
     // see if cache blobstore will be needed at any stage
     blobstore * cache_bs = NULL;
     if (root && tree_uses_cache (root)) {
@@ -291,6 +300,10 @@ int main (int argc, char * argv[])
             logprintfl (EUCAERROR, "ERROR: %s\n", blobstore_get_error_str(blobstore_get_error()));
             blobstore_close (work_bs);            
             err ("failed to open cache blobstore");
+        }
+        if (blobstore_fsck (cache_bs, NULL)) { // TODO: verify checksums?
+            logprintfl (EUCAERROR, "ERROR: cache failed integrity check: %s\n", blobstore_get_error_str(blobstore_get_error()));
+            err ("cache blobstore failed integrity check");
         }
     }
 
