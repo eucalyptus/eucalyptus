@@ -64,6 +64,7 @@
 package com.eucalyptus.cluster.callback;
 
 import java.util.concurrent.Callable;
+import java.util.ArrayList;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import com.eucalyptus.address.Address;
@@ -180,7 +181,9 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
               VmVolumeAttachment volumeAttachment = vm.lookupVolumeAttachment( volumeId );
               LOG.debug( VmRunCallback.this.token + ": initial remove device: " + volumeAttachment.getRemoteDevice( ) );
               try {
-                final AttachStorageVolumeType attachMsg = new AttachStorageVolumeType( iqn, volumeId );
+            	ArrayList<String> iqns = new ArrayList<String>();
+            	iqns.add(iqn);
+                final AttachStorageVolumeType attachMsg = new AttachStorageVolumeType( iqns, volumeId  );
                 final AttachStorageVolumeResponseType scAttachReply = AsyncRequests.sendSync( scConfig, attachMsg );
                 LOG.debug( VmRunCallback.this.token + ": " + volumeId + " => " + scAttachReply );
                 volumeAttachment.setRemoteDevice( scAttachReply.getRemoteDeviceString( ) );

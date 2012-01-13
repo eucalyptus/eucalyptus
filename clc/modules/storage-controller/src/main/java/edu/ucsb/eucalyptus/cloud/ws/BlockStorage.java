@@ -616,7 +616,7 @@ public class BlockStorage {
 	public AttachStorageVolumeResponseType attachVolume(AttachStorageVolumeType request) throws EucalyptusCloudException {
 		AttachStorageVolumeResponseType reply = request.getReply();
 		String volumeId = request.getVolumeId();
-		String nodeIqn = request.getNodeIqn();
+		ArrayList<String> nodeIqns = request.getNodeIqns();
 
 		EntityWrapper<VolumeInfo> db = StorageProperties.getEntityWrapper();
 		try {
@@ -628,7 +628,7 @@ public class BlockStorage {
 			db.commit();
 		}
 		try {
-			String deviceName = blockManager.attachVolume(volumeId, nodeIqn);
+			String deviceName = blockManager.attachVolume(volumeId, nodeIqns);
 			reply.setRemoteDeviceString(deviceName);
 		} catch (EucalyptusCloudException ex) {
 			throw ex;

@@ -63,6 +63,7 @@
  */
 package com.eucalyptus.cloud.run;
 
+import java.util.ArrayList;
 import java.util.NoSuchElementException;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -120,6 +121,7 @@ import edu.ucsb.eucalyptus.msgs.DescribeStorageVolumesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeStorageVolumesType;
 import edu.ucsb.eucalyptus.msgs.StorageVolume;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
+import groovyjarjarantlr.collections.List;
 
 public class ClusterAllocator implements Runnable {
   private static final long BYTES_PER_GB = ( 1024L * 1024L * 1024L );
@@ -358,7 +360,9 @@ public class ClusterAllocator implements Runnable {
   
   private String requestAttachStorageVolume( final ServiceConfiguration scConfig, String volumeId, final String nodeIqn ) throws Exception {
     try {
-      final AttachStorageVolumeType attachMsg = new AttachStorageVolumeType( nodeIqn, volumeId );
+      ArrayList<String> iqns = new ArrayList<String>();
+      iqns.add(nodeIqn);
+      final AttachStorageVolumeType attachMsg = new AttachStorageVolumeType( iqns, volumeId );
       final AttachStorageVolumeResponseType scAttachResponse = AsyncRequests.sendSync( scConfig, attachMsg );
       LOG.debug( scAttachResponse );
       return scAttachResponse.getRemoteDeviceString( );

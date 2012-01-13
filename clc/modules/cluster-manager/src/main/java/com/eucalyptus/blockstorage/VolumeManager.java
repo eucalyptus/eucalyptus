@@ -63,6 +63,8 @@
 
 package com.eucalyptus.blockstorage;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
@@ -367,7 +369,9 @@ public class VolumeManager {
     
     AttachStorageVolumeResponseType scAttachResponse;
     try {
-      AttachStorageVolumeType req = new AttachStorageVolumeType( cluster.getNode( vm.getServiceTag( ) ).getIqn( ), volume.getDisplayName( ) );
+      ArrayList<String> iqns = new ArrayList<String>();
+      iqns.add(cluster.getNode( vm.getServiceTag( ) ).getIqn( ));
+      AttachStorageVolumeType req = new AttachStorageVolumeType( iqns, volume.getDisplayName( ) );
       scAttachResponse = AsyncRequests.sendSync( sc, req );
     } catch ( Exception e ) {
       LOG.debug( e, e );
