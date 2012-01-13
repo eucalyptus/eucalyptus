@@ -63,6 +63,7 @@
 
 package com.eucalyptus.vm;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.Set;
 import java.util.concurrent.Callable;
@@ -252,7 +253,9 @@ public class VmRuntimeState {
           final String vmDevice = input.getDevice( );
           try {
             LOG.debug( vmId + ": attaching volume: " + input );
-            final AttachStorageVolumeType attachMsg = new AttachStorageVolumeType( iqn, volumeId );
+            ArrayList<String> iqns = new ArrayList<String>();
+            iqns.add(iqn);
+            final AttachStorageVolumeType attachMsg = new AttachStorageVolumeType( iqns, volumeId );
             final CheckedListenableFuture<AttachStorageVolumeResponseType> scAttachReplyFuture = AsyncRequests.dispatch( scConfig, attachMsg );
             final Callable<Boolean> ncAttachRequest = new Callable<Boolean>( ) {
               public Boolean call( ) {
