@@ -157,6 +157,8 @@ public class Faults {
     private final Severity        severity;
     @Column( name = "fault_service_name" )
     private final String          serviceName;
+    @Column( name = "fault_service_full_name" )
+    private final String          serviceFullName;
     @Column( name = "fault_timestamp" )
     private final Date            timestamp;
     @Column( name = "fault_msg_correlation_id" )
@@ -178,6 +180,7 @@ public class Faults {
     
     private CheckException( final String serviceName ) {
       this.serviceName = serviceName;
+      this.serviceFullName = null;
       this.severity = null;
       this.timestamp = null;
       this.correlationId = null;
@@ -205,7 +208,8 @@ public class Faults {
         this.fillInStackTrace( );
       }
       this.severity = severity;
-      this.serviceName = config.getFullName( ).toString( );
+      this.serviceName = config.getName( );
+      this.serviceFullName = config.getFullName( ).toString( );
       this.correlationId = ( correlationId == null
                                                   ? UUID.randomUUID( ).toString( )
                                                   : correlationId );
@@ -329,6 +333,10 @@ public class Faults {
     
     public String getStackString( ) {
       return this.stackString;
+    }
+
+    private String getServiceFullName( ) {
+      return this.serviceFullName;
     }
     
   }
