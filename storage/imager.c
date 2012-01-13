@@ -315,11 +315,7 @@ int main (int argc, char * argv[])
             logprintfl (EUCAERROR, "ERROR: %s\n", blobstore_get_error_str(blobstore_get_error()));
             err ("failed to open work blobstore");
         }
-        stat_blobstore (get_work_dir(), work_bs);
-        if (blobstore_fsck (work_bs, stale_blob_examiner)) {
-            logprintfl (EUCAERROR, "ERROR: work directory failed integrity check: %s\n", blobstore_get_error_str(blobstore_get_error()));
-            err ("work blobstore failed integrity check");
-        }
+        // no point in fscking the work blobstore as it was just created
     }
    
     // see if cache blobstore will be needed at any stage
@@ -333,11 +329,11 @@ int main (int argc, char * argv[])
             blobstore_close (work_bs);            
             err ("failed to open cache blobstore");
         }
-        stat_blobstore (get_cache_dir(), cache_bs);
         if (blobstore_fsck (cache_bs, NULL)) { // TODO: verify checksums?
             logprintfl (EUCAERROR, "ERROR: cache failed integrity check: %s\n", blobstore_get_error_str(blobstore_get_error()));
             err ("cache blobstore failed integrity check");
         }
+        stat_blobstore (get_cache_dir(), cache_bs);
     }
 
     // implement the artifact tree
@@ -360,8 +356,10 @@ int main (int argc, char * argv[])
         art_free (root);
     }
 
-    // if work dir was created and is now empty, it will be deleted
-    clean_work_dir(work_bs);
+    if (blobstore_fsck (work_bs, stale_blob_examiner)) { // will remove all blobs
+       logprintfl (EUCAWARN, "WARNING: failed to clean up work space: %s\n", blobstore_get_error_str(blobstore_get_error()));
+   }
+   clean_work_dir(work_bs);
 
     // indicate completion
     logprintfl (EUCAINFO, "imager done (exit code=%d)\n", ret);
