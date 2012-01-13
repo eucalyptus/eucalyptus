@@ -1534,7 +1534,7 @@ static long long purge_blockblobs_lru ( blobstore * bs, blockblob * bb_list, lon
         int i;
 
         blockblob ** bb_array = (blockblob **) calloc (list_length, sizeof (blockblob *));
-        if(!bb_array)
+        if (!bb_array)
             return purged;
 
         for (i=0, bb = bb_list; bb; bb = bb->next, i++) {
@@ -1543,17 +1543,27 @@ static long long purge_blockblobs_lru ( blobstore * bs, blockblob * bb_list, lon
 
         qsort (bb_array, list_length, sizeof (blockblob *), compare_bbs);
 
-        for (i=0; i<list_length; i++) {
-            bb = bb_array [i];
-            if (! (bb->in_use & ~BLOCKBLOB_STATUS_BACKED) ) {
-                if (delete_blockblob_files (bs, bb->id)>0) {
-                    purged += round_up_sec (bb->size_bytes) / 512;
-                    myprintf (EUCAINFO, "purged from blobstore %s blockblob %s (total blocks purged in this sweep %lld)\n", bs->id, bb->id, purged);
+        int iteration = 0;
+        int deleted;
+        do { // iterate multiple times in case there are dependencies (TODO: unify with _fsck's iteration code?)
+            deleted = 0; // deleted in this round
+            for (i=0; i<list_length; i++) {
+                bb = bb_array [i];
+                if (bb == NULL) // this was deleted on anearlier iteration
+                    continue;
+                bb->in_use = check_in_use (bs, bb->id, 0); // verify in-use status
+                logprintfl (EUCADEBUG, "LRU purge loop %d: %s %o\n", iteration, bb->id, bb->in_use);
+                if (! (bb->in_use & ~BLOCKBLOB_STATUS_BACKED) ) { // the only in-use flag is _BACKED (has parents)
+                    if (delete_blockblob_files (bs, bb->id)>0) {
+                        myprintf (EUCAINFO, "purged from blobstore %s blockblob %s (total blocks purged in this sweep %lld)\n", bs->id, bb->id, purged);
+                        purged += round_up_sec (bb->size_bytes) / 512;
+                        deleted++;
+                        bb_array [i] = NULL; // mark as deleted
+                    }
                 }
             }
-            if (purged>=need_blocks)
-                break;
-        }
+            iteration++;
+        } while (deleted && (purged>=need_blocks));
         free (bb_array);
     }
 
@@ -1584,11 +1594,10 @@ int blobstore_stat (blobstore * bs, blobstore_meta * meta)
     meta->num_blobs = 0;
     for (blockblob * abb = bbs; abb; abb=abb->next) {
         long long abb_size_blocks = round_up_sec (abb->size_bytes) / 512;
-        if (abb->in_use & ~BLOCKBLOB_STATUS_BACKED) {
-            logprintfl (EUCADEBUG, "%s locked (%x)\n", abb->id, abb->in_use);
+        if (abb->in_use & BLOCKBLOB_STATUS_OPENED) {
             meta->blocks_locked += abb_size_blocks; // these can't be purged if we need space (TODO: look into recursive purging of unused references?)
         } else {
-            meta->blocks_unlocked += abb_size_blocks; // these can be purged
+            meta->blocks_unlocked += abb_size_blocks; // these potentially can be purged, unless they are depended on by locked ones
         }
         meta->blocks_allocated += abb->blocks_allocated;
         meta->num_blobs++;
@@ -1849,10 +1858,10 @@ int blobstore_delete_regex (blobstore * bs, const char * regex)
 {
     blockblob_meta * matches = NULL;
     int found  = blobstore_search (bs, regex, &matches);
-    int left_to_close = found;
-    int closed;
+    int left_to_delete = found;
+    int deleted;
     do { // iterate multiple times in case there are dependencies (TODO: unify with _fsck's iteration code?)
-        closed = 0; // closed in this round
+        deleted = 0; // deleted in this round
         for (blockblob_meta * bm = matches; bm; bm=bm->next) {
             blockblob * bb = blockblob_open (bs, bm->id, 0, 0, NULL, BLOBSTORE_FIND_TIMEOUT_USEC);
             if (bb!=NULL) {
@@ -1864,11 +1873,11 @@ int blobstore_delete_regex (blobstore * bs, const char * regex)
                 if (blockblob_delete (bb, BLOBSTORE_DELETE_TIMEOUT_USEC, 0)==-1) {
                     blockblob_close (bb);
                 } else {
-                    closed++;
+                    deleted++;
                 }
             }
         }
-    } while (closed && (left_to_close-=closed));
+    } while (deleted && (left_to_delete-=deleted));
     
     // free the search results
     for (blockblob_meta * bm = matches; bm;) {
@@ -1877,7 +1886,7 @@ int blobstore_delete_regex (blobstore * bs, const char * regex)
         bm = next;
     }
 
-    return (left_to_close==0)?(found):(-1);
+    return (left_to_delete==0)?(found):(-1);
 }
 
 blockblob * blockblob_open ( blobstore * bs,
