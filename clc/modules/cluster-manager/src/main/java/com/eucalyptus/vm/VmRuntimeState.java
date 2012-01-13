@@ -183,7 +183,7 @@ public class VmRuntimeState {
       this.addReasonDetail( extra );
       this.reason = reason;
       try {
-        Threads.enqueue( Eucalyptus.class, VmInstance.class, VmInstances.MAX_STATE_THREADS, action ).get( 10, TimeUnit.MILLISECONDS );//GRZE: yes.  wait for 10ms. because.
+        Threads.lookup( Eucalyptus.class, VmInstance.class ).limitTo( VmInstances.MAX_STATE_THREADS ).submit( action ).get( 10, TimeUnit.MILLISECONDS );//GRZE: yes.  wait for 10ms. because.
       } catch ( final TimeoutException ex ) {} catch ( final InterruptedException ex ) {} catch ( final Exception ex ) {
         LOG.error( ex );
         Logs.extreme( ).error( ex, ex );
@@ -210,19 +210,23 @@ public class VmRuntimeState {
       this.getVmInstance( ).setState( VmState.STOPPED );
       action = this.cleanUpRunnable( );
     } else if ( VmState.STOPPED.equals( oldState )
-                && VmState.PENDING.equals( newState ) ) {
-      this.getVmInstance( ).setState( VmState.PENDING );
+                && VmState.TERMINATED.equals( newState ) ) {
+      this.getVmInstance( ).setState( VmState.TERMINATED );
+      action = this.cleanUpRunnable( );
     } else if ( VmStateSet.EXPECTING_TEARDOWN.contains( oldState )
                 && VmStateSet.RUN.contains( newState ) ) {
       this.getVmInstance( ).setState( oldState );//mask/ignore running on {stopping,shutting-down} transitions 
-    } else if ( VmStateSet.EXPECTING_TEARDOWN.equals( oldState )
-                && VmState.TERMINATED.equals( newState ) ) {
+    } else if ( VmStateSet.EXPECTING_TEARDOWN.contains( oldState )
+                && VmStateSet.TORNDOWN.contains( newState ) ) {
       if ( VmState.SHUTTING_DOWN.equals( oldState ) ) {
         this.getVmInstance( ).setState( VmState.SHUTTING_DOWN );
       } else {//if ( VmState.STOPPING.equals( oldState ) ) {
         this.getVmInstance( ).setState( VmState.STOPPED );
       }
       action = this.cleanUpRunnable( );
+    } else if ( VmState.STOPPED.equals( oldState )
+                && VmState.PENDING.equals( newState ) ) {
+      this.getVmInstance( ).setState( VmState.PENDING );
     } else if ( VmStateSet.RUN.contains( oldState )
                 && VmStateSet.NOT_RUNNING.contains( newState ) ) {
       this.getVmInstance( ).setState( newState );
