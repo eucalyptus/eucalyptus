@@ -96,7 +96,7 @@ public class Host implements java.io.Serializable, Comparable<Host> {
     this.bindAddress = Internets.localHostInetAddress( );
     this.epoch = Topology.epoch( );
     ImmutableList<InetAddress> newAddrs = ImmutableList.copyOf( Ordering.from( Internets.INET_ADDRESS_COMPARATOR ).sortedCopy( Internets.getAllInetAddresses( ) ) );
-    this.hasBootstrapped = Bootstrap.isLoaded( );
+    this.hasBootstrapped = Bootstrap.isFinished( );
     this.hasDatabase = BootstrapArgs.isCloudController( );
     this.hasSynced = Databases.isSynchronized( );
     this.hostAddresses = newAddrs;
