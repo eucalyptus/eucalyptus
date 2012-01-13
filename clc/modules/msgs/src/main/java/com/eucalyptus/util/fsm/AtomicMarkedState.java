@@ -432,8 +432,8 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
         }
       } catch ( Exception t ) {
         this.fireException( t );
-      } finally {
-        this.transitionFuture.set( AtomicMarkedState.this.parent );
+//      } finally {
+//        this.transitionFuture.set( AtomicMarkedState.this.parent );
       }
     }
     

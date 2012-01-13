@@ -85,6 +85,7 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Parent;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
+import com.eucalyptus.cluster.Nodes;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.ClusterController;
@@ -175,9 +176,6 @@ public class VmRuntimeState {
     }
     this.getVmInstance( ).updateTimeStamps( );
     if ( action != null ) {
-      Logs.extreme( ).error( "Running cleanUp for instance: " + this.getVmInstance( ).getInstanceId( ), new RuntimeException( ) );
-      EventRecord.caller( VmInstance.class, EventType.VM_TERMINATING, this.getVmInstance( ).getInstanceId( ), this.vmInstance.getOwner( ),
-                          this.getVmInstance( ).getState( ).name( ) );
       if ( Reason.APPEND.equals( reason ) ) {
         reason = this.reason;
       }
@@ -211,24 +209,28 @@ public class VmRuntimeState {
       this.getVmInstance( ).setState( VmState.STOPPED );
       action = this.cleanUpRunnable( );
     } else if ( VmState.STOPPED.equals( oldState )
-                && VmState.PENDING.equals( newState ) ) {
-      this.getVmInstance( ).setState( VmState.PENDING );
+                && VmState.TERMINATED.equals( newState ) ) {
+      this.getVmInstance( ).setState( VmState.TERMINATED );
+      action = this.cleanUpRunnable( );
     } else if ( VmStateSet.EXPECTING_TEARDOWN.contains( oldState )
                 && VmStateSet.RUN.contains( newState ) ) {
       this.getVmInstance( ).setState( oldState );//mask/ignore running on {stopping,shutting-down} transitions 
-    } else if ( VmStateSet.EXPECTING_TEARDOWN.equals( oldState )
-                && VmState.TERMINATED.equals( newState ) ) {
+    } else if ( VmStateSet.EXPECTING_TEARDOWN.contains( oldState )
+                && VmStateSet.TORNDOWN.contains( newState ) ) {
       if ( VmState.SHUTTING_DOWN.equals( oldState ) ) {
-        this.getVmInstance( ).setState( VmState.SHUTTING_DOWN );
+        this.getVmInstance( ).setState( VmState.TERMINATED );
       } else {//if ( VmState.STOPPING.equals( oldState ) ) {
         this.getVmInstance( ).setState( VmState.STOPPED );
       }
       action = this.cleanUpRunnable( );
+    } else if ( VmState.STOPPED.equals( oldState )
+                && VmState.PENDING.equals( newState ) ) {
+      this.getVmInstance( ).setState( VmState.PENDING );
     } else if ( VmStateSet.RUN.contains( oldState )
                 && VmStateSet.NOT_RUNNING.contains( newState ) ) {
       this.getVmInstance( ).setState( newState );
       action = this.cleanUpRunnable( );
-    } else if ( VmState.TERMINATED.equals( newState ) && ( oldState.ordinal( ) > VmState.RUNNING.ordinal( ) ) ) {
+    } else {//if ( VmState.TERMINATED.equals( newState ) && ( oldState.ordinal( ) > VmState.RUNNING.ordinal( ) ) ) {
       this.getVmInstance( ).setState( newState );
     }
     try {
@@ -245,17 +247,13 @@ public class VmRuntimeState {
       final String vmId = vm.getInstanceId( );
       final ServiceConfiguration scConfig = Topology.lookup( Storage.class, vm.lookupPartition( ) );
       final ServiceConfiguration ccConfig = Topology.lookup( ClusterController.class, vm.lookupPartition( ) );
-      final Cluster cluster = Clusters.lookup( ccConfig );
-      final String iqn = cluster.getNode( this.getServiceTag( ) ).getIqn( );
       final Predicate<VmVolumeAttachment> attachVolumes = new Predicate<VmVolumeAttachment>( ) {
         public boolean apply( VmVolumeAttachment input ) {
           final String volumeId = input.getVolumeId( );
           final String vmDevice = input.getDevice( );
           try {
             LOG.debug( vmId + ": attaching volume: " + input );
-            ArrayList<String> iqns = new ArrayList<String>();
-            iqns.add(iqn);
-            final AttachStorageVolumeType attachMsg = new AttachStorageVolumeType( iqns, volumeId );
+            final AttachStorageVolumeType attachMsg = new AttachStorageVolumeType( Nodes.lookupIqns( ccConfig ), volumeId );
             final CheckedListenableFuture<AttachStorageVolumeResponseType> scAttachReplyFuture = AsyncRequests.dispatch( scConfig, attachMsg );
             final Callable<Boolean> ncAttachRequest = new Callable<Boolean>( ) {
               public Boolean call( ) {
@@ -264,15 +262,15 @@ public class VmRuntimeState {
                   AttachStorageVolumeResponseType scReply = scAttachReplyFuture.get( );
                   LOG.debug( vmId + ": " + volumeId + " => " + scAttachReplyFuture.get( ) );
                   AsyncRequests.dispatch( ccConfig, new AttachVolumeType( volumeId, vmId, vmDevice, scReply.getRemoteDeviceString( ) ) );
-                  final EntityTransaction db = Entities.get( VmInstance.class );
-                  try {
-                    final VmInstance entity = Entities.merge( vm );
-                    entity.lookupVolumeAttachment( volumeId ).setRemoteDevice( scReply.getRemoteDeviceString( ) );
-                    db.commit( );
-                  } catch ( final Exception ex ) {
-                    Logs.extreme( ).error( ex, ex );
-                    db.rollback( );
-                  }
+//                  final EntityTransaction db = Entities.get( VmInstance.class );
+//                  try {
+//                    final VmInstance entity = Entities.merge( vm );
+//                    entity.lookupVolumeAttachment( volumeId ).setRemoteDevice( scReply.getRemoteDeviceString( ) );
+//                    db.commit( );
+//                  } catch ( final Exception ex ) {
+//                    Logs.extreme( ).error( ex, ex );
+//                    db.rollback( );
+//                  }
                 } catch ( Exception ex ) {
                   Exceptions.maybeInterrupted( ex );
                   LOG.error( vmId + ": " + ex );
@@ -290,10 +288,10 @@ public class VmRuntimeState {
         }
       };
       try {
-        this.getVmInstance( ).getTransientVolumeState( ).eachVolumeAttachment( attachVolumes );
+        vm.getTransientVolumeState( ).eachVolumeAttachment( attachVolumes );
       } catch ( Exception ex ) {
-        LOG.error( this.getVmInstance( ).getInstanceId( ) + ": " + ex );
-        Logs.extreme( ).error( this.getVmInstance( ).getInstanceId( ) + ": " + ex, ex );
+        LOG.error( vm.getInstanceId( ) + ": " + ex );
+        Logs.extreme( ).error( vm.getInstanceId( ) + ": " + ex, ex );
       }
     }
   }
@@ -303,6 +301,8 @@ public class VmRuntimeState {
   }
   
   private Callable<Boolean> cleanUpRunnable( final String reason ) {
+    Logs.extreme( ).info( "Preparing to clean-up instance: " + this.getVmInstance( ).getInstanceId( ),
+      Exceptions.filterStackTrace( new RuntimeException( ) ) );
     return new Callable<Boolean>( ) {
       @Override
       public Boolean call( ) {

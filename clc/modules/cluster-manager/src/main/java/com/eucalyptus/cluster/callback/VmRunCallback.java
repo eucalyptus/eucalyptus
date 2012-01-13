@@ -167,33 +167,7 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
         final VmInstance vm = VmInstances.lookup( input.getInstanceId( ) );
         vm.updateAddresses( input.getNetParams( ).getIpAddress( ), input.getNetParams( ).getIgnoredPublicIp( ) );
         try {
-          final ServiceConfiguration scConfig = Topology.lookup( Storage.class, vm.lookupPartition( ) );
-          final ServiceConfiguration ccConfig = Topology.lookup( ClusterController.class, vm.lookupPartition( ) );
-          final Cluster cluster = Clusters.lookup( ccConfig );
-          final String initialIqn = VmRunCallback.this.token.getInitialIqn( );
-          final String iqn = cluster.getNode( input.getServiceTag( ) ).getIqn( );
           vm.getRuntimeState( ).setServiceTag( input.getServiceTag( ) );
-          if ( rootVolume != null ) {
-            if ( !iqn.equals( initialIqn ) ) {
-              LOG.debug( VmRunCallback.this.token + ": initial iqn: " + initialIqn );
-              LOG.debug( VmRunCallback.this.token + ": final iqn:   " + iqn );
-              String volumeId = VmRunCallback.this.token.getRootVolume( ).getDisplayName( );
-              VmVolumeAttachment volumeAttachment = vm.lookupVolumeAttachment( volumeId );
-              LOG.debug( VmRunCallback.this.token + ": initial remove device: " + volumeAttachment.getRemoteDevice( ) );
-              try {
-            	ArrayList<String> iqns = new ArrayList<String>();
-            	iqns.add(iqn);
-                final AttachStorageVolumeType attachMsg = new AttachStorageVolumeType( iqns, volumeId  );
-                final AttachStorageVolumeResponseType scAttachReply = AsyncRequests.sendSync( scConfig, attachMsg );
-                LOG.debug( VmRunCallback.this.token + ": " + volumeId + " => " + scAttachReply );
-                volumeAttachment.setRemoteDevice( scAttachReply.getRemoteDeviceString( ) );
-                LOG.debug( VmRunCallback.this.token + ": final remove device:   " + volumeAttachment.getRemoteDevice( ) );
-              } catch ( Exception ex ) {
-                LOG.error( VmRunCallback.this.token + ": " + ex );
-                Logs.extreme( ).error( ex, ex );
-              }
-            }
-          }
           final Predicate<VmVolumeAttachment> attachVolumes = new Predicate<VmVolumeAttachment>( ) {
             public boolean apply( VmVolumeAttachment input ) {
               final String volumeId = input.getVolumeId( );
