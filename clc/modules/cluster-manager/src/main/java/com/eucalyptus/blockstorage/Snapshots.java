@@ -112,9 +112,9 @@ import edu.ucsb.eucalyptus.msgs.DescribeStorageSnapshotsType;
 import edu.ucsb.eucalyptus.msgs.StorageSnapshot;
 
 public class Snapshots {
-  private static Logger LOG = Logger.getLogger( Snapshots.class );
-  private static final long SNAPSHOT_STATE_TIMEOUT  = 2 * 60 * 60 * 1000L;
-
+  private static Logger     LOG                    = Logger.getLogger( Snapshots.class );
+  private static final long SNAPSHOT_STATE_TIMEOUT = 2 * 60 * 60 * 1000L;
+  
   public static class SnapshotUpdateEvent implements EventListener<ClockTick>, Callable<Boolean> {
     private static final AtomicBoolean ready = new AtomicBoolean( true );
     
@@ -166,7 +166,7 @@ public class Snapshots {
       }
       return true;
     }
-
+    
     public void updateSnapshot( String snapshotId, final StorageSnapshot storageSnapshot ) {
       try {
         final Function<String, Snapshot> updateSnapshot = new Function<String, Snapshot>( ) {
@@ -180,16 +180,36 @@ public class Snapshots {
                    .append( entity.getParentVolume( ) ).append( " " )
                    .append( entity.getState( ) ).append( " " )
                    .append( entity.getProgress( ) ).append( " " );
-              if ( storageSnapshot != null && !State.EXTANT.equals( entity.getState( ) ) ) {
-                entity.setMappedState( storageSnapshot.getStatus( ) );
-                if ( storageSnapshot.getProgress( ) != null ) {
+              if ( storageSnapshot != null ) {
+                if ( storageSnapshot.getStatus( ) != null ) {
+                  entity.setMappedState( storageSnapshot.getStatus( ) );
+                }
+                if ( !State.EXTANT.equals( entity.getState( ) ) && storageSnapshot.getProgress( ) != null ) {
                   entity.setProgress( storageSnapshot.getProgress( ) );
+                } else if ( State.EXTANT.equals( entity.getState( ) ) ) {
+                  if ( entity.getProgress( ) == null ) {
+                    entity.setProgress( "100%" );
+                  }
+                } else if ( State.GENERATING.equals( entity.getState( ) ) ) {
+                  if ( entity.getProgress( ) == null ) {
+                    entity.setProgress( "0%" );
+                  }
                 }
                 buf.append( " storage-snapshot " )
-                .append( storageSnapshot.getStatus( ) ).append( "=>" ).append( entity.getState( ) ).append( " " )
-                .append( storageSnapshot.getProgress( ) ).append( " " );
+                   .append( storageSnapshot.getStatus( ) ).append( "=>" ).append( entity.getState( ) ).append( " " )
+                   .append( storageSnapshot.getProgress( ) ).append( " " );
               } else if ( State.GENERATING.equals( entity.getState( ) ) && entity.lastUpdateMillis( ) > SNAPSHOT_STATE_TIMEOUT ) {
                 Entities.delete( entity );
+              } else {
+                if ( State.EXTANT.equals( entity.getState( ) ) ) {
+                  if ( entity.getProgress( ) == null ) {
+                    entity.setProgress( "100%" );
+                  }
+                } else if ( State.GENERATING.equals( entity.getState( ) ) ) {
+                  if ( entity.getProgress( ) == null ) {
+                    entity.setProgress( "0%" );
+                  }
+                }
               }
               LOG.debug( buf.toString( ) );
               return entity;
@@ -272,7 +292,7 @@ public class Snapshots {
     fireCreateEvent( snap );
     return snap;
   }
-
+  
   public static void fireCreateEvent( final Snapshot snap ) {
     try {
       ListenerRegistry.getInstance( ).fireEvent( new StorageEvent( StorageEvent.EventType.EbsSnapshot, true, snap.getVolumeSize( ),
@@ -295,7 +315,7 @@ public class Snapshots {
   public static List<Snapshot> list( ) throws TransactionException {
     return Transactions.findAll( Snapshot.named( null, null ) );
   }
-
+  
   public static void fireDeleteEvent( Snapshot snap ) {
     try {
       ListenerRegistry.getInstance( ).fireEvent( new StorageEvent( StorageEvent.EventType.EbsSnapshot, false, snap.getVolumeSize( ),
