@@ -176,9 +176,6 @@ public class VmRuntimeState {
     }
     this.getVmInstance( ).updateTimeStamps( );
     if ( action != null ) {
-      Logs.extreme( ).error( "Running cleanUp for instance: " + this.getVmInstance( ).getInstanceId( ), new RuntimeException( ) );
-      EventRecord.caller( VmInstance.class, EventType.VM_TERMINATING, this.getVmInstance( ).getInstanceId( ), this.vmInstance.getOwner( ),
-                          this.getVmInstance( ).getState( ).name( ) );
       if ( Reason.APPEND.equals( reason ) ) {
         reason = this.reason;
       }
@@ -304,6 +301,8 @@ public class VmRuntimeState {
   }
   
   private Callable<Boolean> cleanUpRunnable( final String reason ) {
+    Logs.extreme( ).info( "Preparing to clean-up instance: " + this.getVmInstance( ).getInstanceId( ),
+      Exceptions.filterStackTrace( new RuntimeException( ) ) );
     return new Callable<Boolean>( ) {
       @Override
       public Boolean call( ) {
