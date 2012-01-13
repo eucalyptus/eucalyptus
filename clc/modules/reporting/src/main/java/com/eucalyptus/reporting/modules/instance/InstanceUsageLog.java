@@ -308,6 +308,7 @@ public class InstanceUsageLog
     		double result =
     			(double)lastSnapshot.getCumulativeDiskIoMegs() -
     			(double)firstSnapshot.getCumulativeDiskIoMegs();
+    		log.debug("Unadjusted disk io megs:" + result);
 			/* Extrapolate fractional usage for snapshots which occurred
 			 * before report beginning or after report end.
 			 */
@@ -319,6 +320,7 @@ public class InstanceUsageLog
     			gap = (double)(lastSnapshot.getTimestampMs()-period.getEndingMs());
     			result *= 1d-(gap/duration);
     		}
+    		log.debug("Extrapolated disk io megs:" + result);
     		return (long) result;
     	}
     	
@@ -329,6 +331,7 @@ public class InstanceUsageLog
     		double result =
     			(double)lastSnapshot.getCumulativeNetworkIoMegs() -
     			(double)firstSnapshot.getCumulativeNetworkIoMegs();
+    		log.debug("Unadjusted net IO megs:" + result);
 			/* Extrapolate fractional usage for snapshots which occurred
 			 * before report beginning or after report end.
 			 */
@@ -340,6 +343,7 @@ public class InstanceUsageLog
     			gap = (double)(lastSnapshot.getTimestampMs()-period.getEndingMs());
     			result *= 1d-(gap/duration);
     		}
+    		log.debug("Extrapolated net IO megs:" + result);
     		return (long) result;
     	}
 

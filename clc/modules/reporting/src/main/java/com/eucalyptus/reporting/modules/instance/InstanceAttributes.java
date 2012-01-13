@@ -117,6 +117,11 @@ public class InstanceAttributes
 		return true;
 	}
 
+	@Override
+	public String toString()
+	{
+		return "[uuid:" + this.uuid+ " instanceId:" + this.instanceId + " userId:" + this.userId + "]";
+	}
 
 
 }
