@@ -100,13 +100,15 @@ my %instances = parse_instance_ids($output);
 foreach (keys %instance_data) {
 	if ($instances{$_} eq "running") {
 		print "Instance $_ is running\n";
-		my $vol_id = parse_vol_id(`euca-create-volume --size " . (storage_usage_mb()*2) . " --zone $zones[0]`);
+		my $vol_size = storage_usage_mb()*2;
+		my $vol_id = parse_vol_id(`euca-create-volume --size $vol_size --zone $zones[0]`);
 		runcmd("euca-attach-volume -i $_ -d " . vol_device() . " $vol_id");
 		push(@volumes, $vol_id);
 	} else {
 		die ("Instance $_ not running:$instances{$_}");
 	}
 }
+sleep 20; # Give vol time to come up before creating snapshots
 
 
 my $bucketname = "b-" . rand_str(32);
