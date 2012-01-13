@@ -65,6 +65,7 @@ my $interval = shift;
 my $duration = shift;
 
 my %instance_data = ();  # instance_id => status
+my @volumes = (); # volume ids of mounted volumes to which instances are writing
 my $access_key = $ENV{"EC2_ACCESS_KEY"};
 my $secret_key = $ENV{"EC2_SECRET_KEY"};
 my $s3_url = $ENV{"S3_URL"};
@@ -99,8 +100,9 @@ my %instances = parse_instance_ids($output);
 foreach (keys %instance_data) {
 	if ($instances{$_} eq "running") {
 		print "Instance $_ is running\n";
-		$output = `euca-create-volume --size " . (storage_usage_mb()*2) . " --zone $zones[0]`;
-		runcmd("euca-attach-volume -e $_ -d " . vol_device() . " " . parse_vol_id($output));
+		my $vol_id = parse_vol_id(`euca-create-volume --size " . (storage_usage_mb()*2) . " --zone $zones[0]`);
+		runcmd("euca-attach-volume -e $_ -d " . vol_device() . " $vol_id");
+		push(@volumes, $vol_id);
 	} else {
 		die ("Instance $_ not running:$instances{$_}");
 	}
@@ -121,8 +123,8 @@ for (my $i=0; (time()-$start_time) < $duration; $i++) {
 	print "$i: Created volume\n";
 	runcmd("euca-bundle-image -i $upload_file");
 	#TODO: grab manifest path from this
-	runcmd("euca-upload-bundle -b $bucketname -m /tmp/$upload_file.manifest.xml");
 	print "$i: Uploaded bundle\n";
+	runcmd("euca-create-snapshot " . $volumes[$i % ($#volumes+1)]);
 	sleep $interval - (time() - $itime);
 }
 
