@@ -72,6 +72,7 @@ import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
+import com.eucalyptus.cluster.Nodes;
 import com.eucalyptus.cluster.callback.VolumeAttachCallback;
 import com.eucalyptus.cluster.callback.VolumeDetachCallback;
 import com.eucalyptus.component.Partition;
@@ -85,9 +86,6 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.Transactions;
-import com.eucalyptus.event.ClockTick;
-import com.eucalyptus.event.EventListener;
-import com.eucalyptus.event.Listeners;
 import com.eucalyptus.records.EventClass;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
@@ -339,14 +337,6 @@ public class VolumeManager {
     if ( !RestrictedTypes.filterPrivileged( ).apply( volume ) ) {
       throw new EucalyptusCloudException( "Not authorized to attach volume " + request.getVolumeId( ) + " by " + ctx.getUser( ).getName( ) );
     }
-    Cluster cluster = null;
-    try {
-      ServiceConfiguration ccConfig = Topology.lookup( ClusterController.class, vm.lookupPartition( ) );
-      cluster = Clusters.lookup( ccConfig );
-    } catch ( NoSuchElementException e ) {
-      LOG.debug( e, e );
-      throw new EucalyptusCloudException( "Cluster does not exist in partition: " + vm.getPartition( ) );
-    }
     try {
       vm.lookupVolumeAttachmentByDevice( deviceName );
       throw new EucalyptusCloudException( "Already have a device attached to: " + request.getDevice( ) );
@@ -360,24 +350,24 @@ public class VolumeManager {
     
     Partition volPartition = Partitions.lookupByName( volume.getPartition( ) );
     ServiceConfiguration sc = Topology.lookup( Storage.class, volPartition );
-    ServiceConfiguration scVm = Topology.lookup( Storage.class, cluster.getConfiguration( ).lookupPartition( ) );
+    ServiceConfiguration scVm = Topology.lookup( Storage.class, vm.lookupPartition( ) );
     if ( !sc.equals( scVm ) ) {
       throw new EucalyptusCloudException( "Can only attach volumes in the same zone: " + request.getVolumeId( ) );
     }
-    
+    ServiceConfiguration ccConfig = Topology.lookup( ClusterController.class, vm.lookupPartition( ) );
     AttachStorageVolumeResponseType scAttachResponse;
     try {
-      AttachStorageVolumeType req = new AttachStorageVolumeType( cluster.getNode( vm.getServiceTag( ) ).getIqn( ), volume.getDisplayName( ) );
+      AttachStorageVolumeType req = new AttachStorageVolumeType( Nodes.lookupIqn( vm ), volume.getDisplayName( ) );
       scAttachResponse = AsyncRequests.sendSync( sc, req );
     } catch ( Exception e ) {
       LOG.debug( e, e );
-      throw new EucalyptusCloudException( e.getMessage( ) );
+      throw new EucalyptusCloudException( e.getMessage( ), e );
     }
     request.setRemoteDevice( scAttachResponse.getRemoteDeviceString( ) );
     
     AttachedVolume attachVol = new AttachedVolume( volume.getDisplayName( ), vm.getInstanceId( ), request.getDevice( ), request.getRemoteDevice( ) );
     vm.addTransientVolume( deviceName, scAttachResponse.getRemoteDeviceString( ), volume );
-    AsyncRequests.newRequest( new VolumeAttachCallback( request ) ).dispatch( cluster.getConfiguration( ) );
+    AsyncRequests.newRequest( new VolumeAttachCallback( request ) ).dispatch( ccConfig );
     
     EventRecord.here( VolumeManager.class, EventClass.VOLUME, EventType.VOLUME_ATTACH )
                .withDetails( volume.getOwner( ).toString( ), volume.getDisplayName( ), "instance", vm.getInstanceId( ) )

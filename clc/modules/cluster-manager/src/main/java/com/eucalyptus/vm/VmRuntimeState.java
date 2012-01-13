@@ -63,6 +63,7 @@
 
 package com.eucalyptus.vm;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.Set;
 import java.util.concurrent.Callable;
@@ -84,6 +85,7 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Parent;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
+import com.eucalyptus.cluster.Nodes;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.ClusterController;
@@ -248,15 +250,13 @@ public class VmRuntimeState {
       final String vmId = vm.getInstanceId( );
       final ServiceConfiguration scConfig = Topology.lookup( Storage.class, vm.lookupPartition( ) );
       final ServiceConfiguration ccConfig = Topology.lookup( ClusterController.class, vm.lookupPartition( ) );
-      final Cluster cluster = Clusters.lookup( ccConfig );
-      final String iqn = cluster.getNode( this.getServiceTag( ) ).getIqn( );
       final Predicate<VmVolumeAttachment> attachVolumes = new Predicate<VmVolumeAttachment>( ) {
         public boolean apply( VmVolumeAttachment input ) {
           final String volumeId = input.getVolumeId( );
           final String vmDevice = input.getDevice( );
           try {
             LOG.debug( vmId + ": attaching volume: " + input );
-            final AttachStorageVolumeType attachMsg = new AttachStorageVolumeType( iqn, volumeId );
+            final AttachStorageVolumeType attachMsg = new AttachStorageVolumeType( Nodes.lookupIqns( ccConfig ), volumeId );
             final CheckedListenableFuture<AttachStorageVolumeResponseType> scAttachReplyFuture = AsyncRequests.dispatch( scConfig, attachMsg );
             final Callable<Boolean> ncAttachRequest = new Callable<Boolean>( ) {
               public Boolean call( ) {

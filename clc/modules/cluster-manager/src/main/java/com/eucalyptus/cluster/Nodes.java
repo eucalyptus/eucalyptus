@@ -1,5 +1,5 @@
 /*******************************************************************************
- *Copyright (c) 2009  Eucalyptus Systems, Inc.
+ * Copyright (c) 2009  Eucalyptus Systems, Inc.
  * 
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -53,90 +53,47 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
- *******************************************************************************/
-/*
- *
- * Author: Sunil Soman sunils@cs.ucsb.edu
+ *******************************************************************************
+ * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.storage;
+package com.eucalyptus.cluster;
 
-import com.eucalyptus.util.EucalyptusCloudException;
-
-import edu.ucsb.eucalyptus.msgs.ComponentProperty;
-
-
-import java.util.ArrayList;
 import java.util.List;
+import java.util.NoSuchElementException;
+import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.Topology;
+import com.eucalyptus.component.id.ClusterController;
+import com.eucalyptus.vm.VmInstance;
+import com.google.common.collect.Lists;
+import edu.ucsb.eucalyptus.cloud.NodeInfo;
 
-public interface LogicalStorageManager {
-	public void initialize() throws EucalyptusCloudException;
-
-	public void configure() throws EucalyptusCloudException;
-
-	public void checkPreconditions() throws EucalyptusCloudException;
-
-	public void reload();
-
-	public void startupChecks();
-
-	public void cleanVolume(String volumeId);
-
-	public void cleanSnapshot(String snapshotId);
-
-	public List<String> createSnapshot(String volumeId, String snapshotId, Boolean shouldTransferSnapshots) throws EucalyptusCloudException;
-
-	public List<String> prepareForTransfer(String snapshotId) throws EucalyptusCloudException;
-
-	public void createVolume(String volumeId, int size) throws EucalyptusCloudException;
-
-	public int createVolume(String volumeId, String snapshotId, int size) throws EucalyptusCloudException;
-
-	public void cloneVolume(String volumeId, String parentVolumeId) throws EucalyptusCloudException;
-
-	public void addSnapshot(String snapshotId) throws EucalyptusCloudException;
-
-	public void deleteVolume(String volumeId) throws EucalyptusCloudException;
-
-	public void deleteSnapshot(String snapshotId) throws EucalyptusCloudException;
-
-	public String getVolumeProperty(String volumeId) throws EucalyptusCloudException;
-
-	public void loadSnapshots(List<String> snapshotSet, List<String> snapshotFileNames) throws EucalyptusCloudException;
-
-	public int getSnapshotSize(String snapshotId) throws EucalyptusCloudException;
-
-	public void finishVolume(String snapshotId) throws EucalyptusCloudException;
-
-	public String prepareSnapshot(String snapshotId, int sizeExpected) throws EucalyptusCloudException;
-
-	public ArrayList<ComponentProperty> getStorageProps();
-
-	public void setStorageProps(ArrayList<ComponentProperty> storageParams);
-
-	public String getStorageRootDirectory();
-	
-	public String getVolumePath(String volumeId) throws EucalyptusCloudException;
-
-	public void importVolume(String volumeId, String volumePath, int size) throws EucalyptusCloudException;
-
-	public String getSnapshotPath(String snapshotId) throws EucalyptusCloudException;
-
-	public void importSnapshot(String snapshotId, String snapPath, String volumeId, int size) throws EucalyptusCloudException;
-
-	public String attachVolume(String volumeId, List<String> nodeIqns) throws EucalyptusCloudException;
-
-	public void detachVolume(String volumeId, String nodeIqn) throws EucalyptusCloudException;
-
-	public void checkReady() throws EucalyptusCloudException;
-
-	public void stop() throws EucalyptusCloudException;
-
-	public void enable() throws EucalyptusCloudException;;
-
-	public void disable() throws EucalyptusCloudException;;
+public class Nodes {
+  public static List<String> lookupIqns( ServiceConfiguration ccConfig ) {
+    Cluster cluster = Clusters.lookup( ccConfig );
+    List<String> ret = Lists.newArrayList( );
+    for ( NodeInfo node : cluster.getNodeMap( ).values( ) ) {
+      if ( node.getIqn( ) != null ) {
+        ret.add( node.getIqn( ) );
+      }
+    }
+    return ret;
+  }
+  
+  public static List<String> lookupIqn( VmInstance vm ) {
+    ServiceConfiguration ccConfig = Topology.lookup( ClusterController.class, vm.lookupPartition( ) );
+    Cluster cluster = Clusters.lookup( ccConfig );
+    NodeInfo node = cluster.getNode( vm.getServiceTag( ) );
+    if ( node == null ) {
+      throw new NoSuchElementException( "Failed to look up node information for " + vm.getInstanceId( ) + " with service tag " + vm.getServiceTag( ) );
+    } else if ( node.getIqn( ) == null ) {
+      throw new NoSuchElementException( "Error looking up iqn for node " + vm.getServiceTag( ) + " (" + vm.getInstanceId( ) + "): node does not have an iqn." );
+    } else {
+      return Lists.newArrayList( node.getIqn( ) );
+    }
+  }
 }
