@@ -101,7 +101,7 @@ foreach (keys %instance_data) {
 	if ($instances{$_} eq "running") {
 		print "Instance $_ is running\n";
 		my $vol_id = parse_vol_id(`euca-create-volume --size " . (storage_usage_mb()*2) . " --zone $zones[0]`);
-		runcmd("euca-attach-volume -e $_ -d " . vol_device() . " $vol_id");
+		runcmd("euca-attach-volume -i $_ -d " . vol_device() . " $vol_id");
 		push(@volumes, $vol_id);
 	} else {
 		die ("Instance $_ not running:$instances{$_}");
