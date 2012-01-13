@@ -434,7 +434,7 @@ public class VolumeManager {
     request.setInstanceId( vm.getInstanceId( ) );
     VolumeDetachCallback ncDetach = new VolumeDetachCallback( request );
     try {
-      AsyncRequests.sendSync( scVm, new DetachStorageVolumeType( cluster.getNode( vm.getServiceTag( ) ).getIqn( ), volume.getVolumeId( ) ) );
+      AsyncRequests.sendSync( scVm, new DetachStorageVolumeType( volume.getVolumeId( ) ) );
     } catch ( Exception e ) {
       LOG.debug( e );
       Logs.extreme( ).debug( e, e );

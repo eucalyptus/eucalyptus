@@ -404,14 +404,12 @@ public class VmInstances {
   
   private static void cleanUpAttachedVolumes( final VmInstance vm ) {
     try {
-      ServiceConfiguration ccConfig = Topology.lookup( ClusterController.class, vm.lookupPartition( ) );
-      final Cluster cluster = Clusters.lookup( ccConfig );
+      final ServiceConfiguration sc = Topology.lookup( Storage.class, vm.lookupPartition( ) );
       vm.eachVolumeAttachment( new Predicate<VmVolumeAttachment>( ) {
         @Override
         public boolean apply( final VmVolumeAttachment arg0 ) {
           try {
             
-            final ServiceConfiguration sc = Topology.lookup( Storage.class, vm.lookupPartition( ) );
             
             if ( VmStateSet.TERM.apply( vm ) && !"/dev/sda1".equals( arg0.getDevice( ) ) ) {
               try {
@@ -422,7 +420,7 @@ public class VmInstances {
             }
             
             try {
-              AsyncRequests.sendSync( sc, new DetachStorageVolumeType( cluster.getNode( vm.getServiceTag( ) ).getIqn( ), arg0.getVolumeId( ) ) );
+              AsyncRequests.sendSync( sc, new DetachStorageVolumeType( arg0.getVolumeId( ) ) );
             } catch ( Exception ex ) {
               LOG.debug( ex );
               Logs.extreme( ).debug( ex, ex );
@@ -434,7 +432,7 @@ public class VmInstances {
             }
             
             return true;
-          } catch ( final Throwable e ) {
+          } catch ( final Exception e ) {
             LOG.error( "Failed to clean up attached volume: "
                        + arg0.getVolumeId( )
                        + " for instance "
