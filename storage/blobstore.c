@@ -1585,6 +1585,7 @@ int blobstore_stat (blobstore * bs, blobstore_meta * meta)
     for (blockblob * abb = bbs; abb; abb=abb->next) {
         long long abb_size_blocks = round_up_sec (abb->size_bytes) / 512;
         if (abb->in_use & ~BLOCKBLOB_STATUS_BACKED) {
+            logprintfl (EUCADEBUG, "%s locked (%x)\n", abb->id, abb->in_use);
             meta->blocks_locked += abb_size_blocks; // these can't be purged if we need space (TODO: look into recursive purging of unused references?)
         } else {
             meta->blocks_unlocked += abb_size_blocks; // these can be purged
