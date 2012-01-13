@@ -389,14 +389,18 @@ public class DatabaseAuthProvider implements AccountProvider {
           .createCriteria( AccountEntity.class ).setCacheable( true ).add( accountExample )
           .list( );
       if ( accounts.size( ) < 1 ) {
-        throw new AuthException( "No matching account by name " + accountName );
+        throw new AuthException( AuthException.NO_SUCH_ACCOUNT );
       }
       db.commit( );
       return new DatabaseAccountProxy( accounts.get( 0 ) );
+    } catch ( AuthException e ) {
+      db.rollback( );
+      Debugging.logError( LOG, e, "No matching account " + accountName );
+      throw e;
     } catch ( Exception e ) {
       db.rollback( );
       Debugging.logError( LOG, e, "Failed to find account " + accountName );
-      throw new AuthException( "Failed to find account", e );
+      throw new AuthException( AuthException.NO_SUCH_ACCOUNT, e );
     }
   }
 

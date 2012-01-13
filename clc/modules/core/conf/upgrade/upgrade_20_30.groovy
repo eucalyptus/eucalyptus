@@ -188,7 +188,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
         // Do object upgrades which follow the entity map / setter map pattern
         buildEntityMap();
         def altEntityMap = [ vm_types:'eucalyptus_general' ];
-        def optionalTables = [ 'netapp_info', 'das_info' ]
+        def optionalTables = [ 'das_info' ]
 
         Set<String> entityKeys = entityMap.keySet();
         for (String entityKey : entityKeys) {
@@ -591,7 +591,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                 if (vol.cluster == "default") {
                     vol.cluster = System.getProperty("euca.storage.name");
                 }
-                if (vol.cluster == null) {
+                if (vol.cluster == null && vol.state == "EXTANT") {
                     if (vol_meta != null) {
                         vol.cluster = vol_meta.sc_name;
                     } else {
@@ -964,6 +964,16 @@ class upgrade_20_30 extends AbstractUpgradeScript {
             }
             dbsaninfo.commit();
         }
+
+        if (has_table('eucalyptus_storage', "netapp_info")) {
+            EntityWrapper<NetappInfo> netappinfo = EntityWrapper.get(NetappInfo.class);
+            connMap['eucalyptus_storage'].rows('SELECT * FROM netapp_info').each{
+                NetappInfo n = new NetappInfo(it.storage_name, it.netapp_aggregate, 100);
+                netappinfo.add(n);
+            }
+            netappinfo.commit();
+        }
+
         return true;
     }
     
@@ -1010,6 +1020,23 @@ class upgrade_20_30 extends AbstractUpgradeScript {
             dbSC.add(sc);
             dbSC.commit();
         }
+
+        /* Preserve VLAN range from 2.x per-cluster settings, using the
+         * intersection of all clusters' ranges.  This is not ideal, but
+         * is least likely to cause network issues.
+         */
+        EntityWrapper<StaticDatabasePropertyEntry> db = EntityWrapper.get(StaticDatabasePropertyEntry.class);
+        Map vlanrange = connMap['eucalyptus_config'].firstRow('SELECT MAX(minvlan),MIN(maxvlan) FROM config_clusters');
+        StaticDatabasePropertyEntry minVlanProp = new StaticDatabasePropertyEntry(
+            "com.eucalyptus.network.NetworkGroups.GLOBAL_MIN_NETWORK_TAG",
+            "cloud.network.global_min_network_tag", vlanrange['MAX(minvlan)'].toString());
+        StaticDatabasePropertyEntry maxVlanProp = new StaticDatabasePropertyEntry(
+            "com.eucalyptus.network.NetworkGroups.GLOBAL_MAX_NETWORK_TAG",
+            "cloud.network.global_max_network_tag", vlanrange['MIN(maxvlan)'].toString());
+        db.add(minVlanProp);
+        db.add(maxVlanProp);
+        db.commit( );
+
         return true;
     }   
 
@@ -1034,7 +1061,6 @@ class upgrade_20_30 extends AbstractUpgradeScript {
         entities.add(DirectStorageInfo.class);
         entities.add(StorageStatsInfo.class);
         // Below are for enterprise only
-        entities.add(NetappInfo.class);
         entities.add(DASInfo.class);
 
         // eucalyptus_walrus

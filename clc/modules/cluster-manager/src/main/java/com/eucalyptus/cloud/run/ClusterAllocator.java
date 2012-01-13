@@ -105,9 +105,11 @@ import com.eucalyptus.vm.VmInstance.Reason;
 import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.vm.VmVolumeAttachment;
+import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
 import edu.emory.mathcs.backport.java.util.concurrent.TimeUnit;
+import edu.ucsb.eucalyptus.cloud.NodeInfo;
 import edu.ucsb.eucalyptus.cloud.VirtualBootRecord;
 import edu.ucsb.eucalyptus.cloud.VmKeyInfo;
 import edu.ucsb.eucalyptus.cloud.VmRunResponseType;
@@ -116,6 +118,7 @@ import edu.ucsb.eucalyptus.msgs.AttachStorageVolumeType;
 import edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType;
 import edu.ucsb.eucalyptus.msgs.DescribeStorageVolumesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeStorageVolumesType;
+import edu.ucsb.eucalyptus.msgs.StorageVolume;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
 public class ClusterAllocator implements Runnable {
@@ -252,7 +255,7 @@ public class ClusterAllocator implements Runnable {
             token.setRootVolume( vol );
           } else {
             final VmVolumeAttachment volumeAttachment = vm.getBootRecord( ).getPersistentVolumes( ).iterator( ).next( );
-            vol = Volumes.lookup( null, volumeAttachment.getVolumeId( ) );            
+            vol = Volumes.lookup( null, volumeAttachment.getVolumeId( ) );
             token.setRootVolume( vol );
           }
         }
@@ -298,55 +301,109 @@ public class ClusterAllocator implements Runnable {
     if ( root.isBlockStorage( ) ) {
       childVmInfo = vmInfo.child( );
       final Volume vol = token.getRootVolume( );
-      final ServiceConfiguration scConfig = Topology.lookup( Storage.class, Partitions.lookupByName( vol.getPartition( ) ) );
+      final ServiceConfiguration scConfig = waitForVolume( vol );
       
-      int numDescVolError = 0;
-      int i =0; 
-      for ( i = 0; i < VmInstances.EBS_VOLUME_CREATION_TIMEOUT * 60; i++ ) {
-        try {
-          DescribeStorageVolumesResponseType volState = null;
+      VirtualBootRecord vbrRootDevice = childVmInfo.lookupRoot( );
+      String volumeId = vol.getDisplayName( );
+      String remoteDeviceString = null;
+      Exception lastError = null;
+      String finalIqn = null;
+      for ( final String nodeTag : this.cluster.getNodeTags( ) ) {
+        NodeInfo nodeInfo = this.cluster.getNode( nodeTag );
+        if ( nodeInfo != null && nodeInfo.getIqn( ) != null ) { 
           try {
-            final DescribeStorageVolumesType describeMsg = new DescribeStorageVolumesType( Lists.newArrayList( vol.getDisplayName( ) ) );
-            volState = AsyncRequests.sendSync( scConfig, describeMsg );
-          } catch ( final Exception e ) {
-            if ( numDescVolError++ < 5 ) {
-              try {
-                TimeUnit.SECONDS.sleep( 1 );
-              } catch ( final InterruptedException ex ) {
-                Thread.currentThread( ).interrupt( );
-              }
-              continue;
-            } else throw e;
+            String nodeIqn = nodeInfo.getIqn( );
+            remoteDeviceString = requestAttachStorageVolume( scConfig, volumeId, nodeIqn );
+            if ( remoteDeviceString != null ) {
+              finalIqn = nodeIqn;
+              Logs.extreme( ).debug( "Updating remote device for " + token + " using iqn " + finalIqn + " with " + remoteDeviceString );
+              break;
+            }
+          } catch ( Exception ex ) {
+            lastError = ex;
           }
-          if ( "available".equals( volState.getVolumeSet( ).get( 0 ).getStatus( ) ) ) {
-            break;
-          } else if ( "failed".equals( volState.getVolumeSet( ).get( 0 ).getStatus( ) ) ) {
-            throw new EucalyptusCloudException( "volume creation failed" );
-          } else {
-            TimeUnit.SECONDS.sleep( 1 );
-          }
-        } catch ( final InterruptedException ex ) {
-          Thread.currentThread( ).interrupt( );
-        } catch ( final Exception ex ) {
-          LOG.error( ex, ex );
-          throw ex;
         }
       }
-      if(i >= VmInstances.EBS_VOLUME_CREATION_TIMEOUT * 60)
-    	  throw new EucalyptusCloudException( "volume "+vol.getDisplayName()+ " was not created in time"); 
-      
-      for ( final String nodeTag : this.cluster.getNodeTags( ) ) {
+      if ( remoteDeviceString == null || finalIqn == null ) {
+        if ( lastError == null ) {
+          lastError = new NullPointerException( "Failed to find a node w/ reported iqn: " + this.cluster.getNodeMap( ) );
+        }
+        LOG.error( "Failed to start instance " + token + " while preparing attachment of volume " + volumeId + " failed because: " + lastError, lastError );
+        throw lastError;
+      } else {
+        token.setInitialIqn( finalIqn );
+        vbrRootDevice.setResourceLocation( remoteDeviceString );
+        final String updateRemoteDevString = remoteDeviceString;
+        final Function<String, VmInstance> updateInstance = new Function<String, VmInstance>( ) {
+          public VmInstance apply( final String input ) {
+            VmVolumeAttachment attachment = VmInstances.lookupVolumeAttachment( input );
+            attachment.setRemoteDevice( updateRemoteDevString );
+            return attachment.getVmInstance( );
+          }
+        };
         try {
-          final AttachStorageVolumeType attachMsg = new AttachStorageVolumeType( this.cluster.getNode( nodeTag ).getIqn( ), vol.getDisplayName( ) );
-          final AttachStorageVolumeResponseType scAttachResponse = AsyncRequests.sendSync( scConfig, attachMsg );
-          childVmInfo.lookupRoot( ).setResourceLocation( scAttachResponse.getRemoteDeviceString( ) );
-        } catch ( final Exception ex ) {
-          LOG.error( ex, ex );
-          throw ex;
+          Entities.asTransaction( VmInstance.class, updateInstance ).apply( volumeId );
+        } catch ( Exception ex ) {
+          LOG.error( ex );
+          Logs.extreme( ).error( ex, ex );
         }
       }
     }//TODO:GRZE:OMGFIXME: move this for bfe to later stage.
     return childVmInfo;
+  }
+  
+  private String requestAttachStorageVolume( final ServiceConfiguration scConfig, String volumeId, final String nodeIqn ) throws Exception {
+    try {
+      final AttachStorageVolumeType attachMsg = new AttachStorageVolumeType( nodeIqn, volumeId );
+      final AttachStorageVolumeResponseType scAttachResponse = AsyncRequests.sendSync( scConfig, attachMsg );
+      LOG.debug( scAttachResponse );
+      return scAttachResponse.getRemoteDeviceString( );
+    } catch ( final Exception ex ) {
+      LOG.error( ex );
+      Logs.extreme( ).error( ex, ex );
+      throw ex;
+    }
+  }
+  
+  public ServiceConfiguration waitForVolume( final Volume vol ) throws Exception {
+    final ServiceConfiguration scConfig = Topology.lookup( Storage.class, Partitions.lookupByName( vol.getPartition( ) ) );
+    long startTime = System.currentTimeMillis( );
+    int numDescVolError = 0;
+    while ( ( System.currentTimeMillis( ) - startTime ) < VmInstances.EBS_VOLUME_CREATION_TIMEOUT * 60 * 1000L ) {
+      try {
+        DescribeStorageVolumesResponseType volState = null;
+        try {
+          final DescribeStorageVolumesType describeMsg = new DescribeStorageVolumesType( Lists.newArrayList( vol.getDisplayName( ) ) );
+          volState = AsyncRequests.sendSync( scConfig, describeMsg );
+        } catch ( final Exception e ) {
+          if ( numDescVolError++ < 5 ) {
+            try {
+              TimeUnit.SECONDS.sleep( 5 );
+            } catch ( final InterruptedException ex ) {
+              Thread.currentThread( ).interrupt( );
+            }
+            continue;
+          } else {
+            throw e;
+          }
+        }
+        StorageVolume storageVolume = volState.getVolumeSet( ).get( 0 );
+        LOG.debug( "Got storage volume info: " + storageVolume );
+        if ( "available".equals( storageVolume.getStatus( ) ) ) {
+          return scConfig;
+        } else if ( "failed".equals( storageVolume.getStatus( ) ) ) {
+          throw new EucalyptusCloudException( "volume creation failed" );
+        } else {
+          TimeUnit.SECONDS.sleep( 5 );
+        }
+      } catch ( final InterruptedException ex ) {
+        Thread.currentThread( ).interrupt( );
+      } catch ( final Exception ex ) {
+        LOG.error( ex, ex );
+        throw ex;
+      }
+    }
+    throw new EucalyptusCloudException( "volume " + vol.getDisplayName( ) + " was not created in time" );
   }
   
   private Request makeRunRequest( final ResourceToken childToken, final VmTypeInfo vmInfo, final String networkName ) {

@@ -648,6 +648,18 @@ public class Topology {
     
   }
   
+  enum AlwaysLocalServiceFilter implements Predicate<ServiceConfiguration> {
+    INSTANCE;
+    @Override
+    public boolean apply( final ServiceConfiguration arg0 ) {
+      return arg0.isVmLocal( )
+             && arg0.getComponentId( ).isAlwaysLocal( )
+             && arg0.lookupState( ).ordinal( ) < Component.State.ENABLED.ordinal( )
+             && !Component.State.STOPPED.apply( arg0 );
+    }
+    
+  }
+  
   enum CheckServiceFilter implements Predicate<ServiceConfiguration> {
     INSTANCE;
     @Override
@@ -813,6 +825,7 @@ public class Topology {
         final Predicate<ServiceConfiguration> proceedToDisableFilter = Predicates.and( ServiceConfigurations.filterHostLocal( ),
                                                                                        ProceedToDisabledServiceFilter.INSTANCE );
         submitTransitions( allServices, proceedToDisableFilter, SubmitDisable.INSTANCE );
+        submitTransitions( allServices, AlwaysLocalServiceFilter.INSTANCE, SubmitEnable.INSTANCE );
         /** TODO:GRZE: check and disable timeout here **/
         return checkedServices;
       } else {
@@ -994,20 +1007,25 @@ public class Topology {
     ENABLE( Component.State.ENABLED ) {
       @Override
       public ServiceConfiguration apply( final ServiceConfiguration config ) {
-        if ( config.getComponentId( ).isManyToOnePartition( ) ) {
+        boolean busy = config.lookupStateMachine( ).isBusy( );
+        boolean tryEnable = false;
+        boolean manyToOne = config.getComponentId( ).isManyToOnePartition( );
+        if ( manyToOne ) {
           try {
             return super.apply( config );
           } catch ( final RuntimeException ex ) {
             throw ex;
           }
         } else if ( Topology.guard( ).tryEnable( config ) ) {
+          tryEnable = true;
           try {
-            return super.apply( config );
+            ServiceConfiguration res = super.apply( config );
+            return res;
           } catch ( final RuntimeException ex ) {
             Topology.guard( ).tryDisable( config );
             throw ex;
           }
-        } else {
+        } else if ( !busy ) {
 //          throw new IllegalStateException( "Failed to ENABLE " + config.getFullName( ) );
           try {
             return ServiceTransitions.pathTo( config, Component.State.DISABLED ).get( );
@@ -1017,6 +1035,8 @@ public class Topology {
           } catch ( final ExecutionException ex ) {
             throw Exceptions.toUndeclared( ex );
           }
+        } else {
+          throw new IllegalStateException( "Failed to ENABLE " + config.getFullName( ) + " since manyToOne=" + manyToOne + " tryEnable=" + tryEnable + " fsm.isBusy()=" + busy );
         }
       }
     },
@@ -1102,7 +1122,7 @@ public class Topology {
       ServiceConfiguration endResult = input;
       try {
         endResult = ServiceTransitions.pathTo( input, nextState ).get( );
-        Logs.exhaust( ).debug( this.toString( endResult, initialState, nextState ) );
+        Logs.extreme( ).debug( this.toString( endResult, initialState, nextState ) );
         return endResult;
       } catch ( final Exception ex ) {
         Exceptions.maybeInterrupted( ex );
@@ -1111,7 +1131,8 @@ public class Topology {
         Logs.extreme( ).error( ex, ex );
         throw Exceptions.toUndeclared( ex );
       } finally {
-        if ( Bootstrap.isFinished( ) && !Component.State.ENABLED.equals( endResult.lookupState( ) ) ) {
+        boolean enabledEndState = Component.State.ENABLED.equals( endResult.lookupState( ) );
+        if ( Bootstrap.isFinished( ) && !enabledEndState && Topology.getInstance( ).services.containsValue( input ) ) {
           Topology.guard( ).tryDisable( endResult );
         }
       }

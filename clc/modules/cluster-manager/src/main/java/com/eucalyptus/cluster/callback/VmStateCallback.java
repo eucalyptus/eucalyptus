@@ -7,6 +7,7 @@ import java.util.Set;
 import java.util.concurrent.CancellationException;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
+import org.hibernate.exception.ConstraintViolationException;
 import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.cloud.CloudMetadatas;
 import com.eucalyptus.cluster.Cluster;
@@ -200,7 +201,7 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
       }
       try {
         VmInstance.RestoreAllocation.INSTANCE.apply( runVm );
-      } catch ( Exception ex ) {
+      } catch ( Throwable ex ) {
         LOG.error( ex );
         Logs.extreme( ).error( ex, ex );
       }
@@ -225,21 +226,6 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
     }
   }
   
-  private static Predicate<VmInstance> volumeFilter( ) {
-    return new Predicate<VmInstance>( ) {
-      
-      @Override
-      public boolean apply( VmInstance input ) {
-        return input.eachVolumeAttachment( new Predicate<VmVolumeAttachment>( ) {
-          @Override
-          public boolean apply( VmVolumeAttachment arg0 ) {
-            return arg0.getAttachmentState( ).isVolatile( );
-          }
-        } );
-      }
-    };
-  }
-  
   private static Predicate<VmInstance> stateSettleFilter( ) {
     return new Predicate<VmInstance>( ) {
       
@@ -262,7 +248,7 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
   
   public static class VmPendingCallback extends StateUpdateMessageCallback<Cluster, VmDescribeType, VmDescribeResponseType> {
     @SuppressWarnings( "unchecked" )
-    private final Predicate<VmInstance> filter = Predicates.and( Predicates.or( VmStateSet.CHANGING, volumeFilter( ) ),
+    private final Predicate<VmInstance> filter = Predicates.and( VmStateSet.CHANGING,
                                                                  partitionFilter( this ),
                                                                  stateSettleFilter( ) );
     private final Supplier<Set<String>> initialInstances;
