@@ -1687,7 +1687,7 @@ static int get_stale_refs (const blockblob * bb, char *** refs)
                     free (array [i]);
                 }
             }
-            assert (j<stale_refs);
+            assert (j==stale_refs || *refs==NULL);
         }
         free (array);
     }
