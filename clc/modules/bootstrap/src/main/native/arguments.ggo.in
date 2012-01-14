@@ -23,7 +23,7 @@ option "log-level"             l   "Control the log level for console output."  
 option "log-appender"          L   "Control the destination for console output."       string  typestr="APPENDERNAME"    default="console-log"   no
 option "exhaustive"            x   "Exhaustive logging of all connections."            flag                              off
 option "exhaustive-db"         -   "Exhaustive logging for database connections."      flag                              off
-option "exhaustive-user"       -   "Exhaustive logging for client connections."        flag                             1006 off
+option "exhaustive-user"       -   "Exhaustive logging for client connections."        flag                              off
 option "exhaustive-cc"         -   "Exhaustive logging for cluster connections."       flag                              off
 option "exhaustive-external"   -   "Exhaustive logging for external libraries."        flag                              off
 option "out"                   o   "Redirect standard out to file."                    string  typestr="FILENAME"        default="&1"            no

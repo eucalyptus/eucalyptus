@@ -79,6 +79,9 @@ public abstract class AbstractStatefulPersistent<STATE extends Enum<STATE>> exte
   @Column( name = "metadata_state" )
   @Enumerated( EnumType.STRING )
   STATE                     state;
+  @Column( name = "metadata_last_state" )
+  @Enumerated( EnumType.STRING )
+  STATE                     lastState;
   @Lob
   @Column( name = "metadata_state_change_stack" )
   protected String          stateChangeStack;
@@ -106,6 +109,13 @@ public abstract class AbstractStatefulPersistent<STATE extends Enum<STATE>> exte
   
   public void setState( final STATE state ) {
     this.stateChangeStack = Threads.currentStackString( );
+    if ( state != null && this.state != null && !state.equals( this.state ) ) {
+      this.lastState = this.state;
+    } else if ( state != null && this.state == null ) {
+      this.lastState = state;
+    } else if ( state == null && this.state != null ) {
+      this.lastState = this.state;
+    }
     this.state = state;
   }
   
@@ -137,6 +147,14 @@ public abstract class AbstractStatefulPersistent<STATE extends Enum<STATE>> exte
 
   private void setStateChangeStack( String stateChangeStack ) {
     this.stateChangeStack = stateChangeStack;
+  }
+
+  public STATE getLastState( ) {
+    return this.lastState;
+  }
+
+  public void setLastState( STATE lastState ) {
+    this.lastState = lastState;
   }
   
 }

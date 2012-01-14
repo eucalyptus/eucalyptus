@@ -63,6 +63,7 @@
  */
 package com.eucalyptus.cloud.run;
 
+import java.util.ArrayList;
 import java.util.NoSuchElementException;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -77,6 +78,7 @@ import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.cloud.util.NotEnoughResourcesException;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
+import com.eucalyptus.cluster.Nodes;
 import com.eucalyptus.cluster.callback.StartNetworkCallback;
 import com.eucalyptus.cluster.callback.VmRunCallback;
 import com.eucalyptus.component.Partitions;
@@ -120,6 +122,7 @@ import edu.ucsb.eucalyptus.msgs.DescribeStorageVolumesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeStorageVolumesType;
 import edu.ucsb.eucalyptus.msgs.StorageVolume;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
+import groovyjarjarantlr.collections.List;
 
 public class ClusterAllocator implements Runnable {
   private static final long BYTES_PER_GB = ( 1024L * 1024L * 1024L );
@@ -193,8 +196,12 @@ public class ClusterAllocator implements Runnable {
       for ( final ResourceToken token : allocInfo.getAllocationTokens( ) ) {
         try {
           final VmInstance vm = VmInstances.lookup( token.getInstanceId( ) );
-          VmInstances.terminated( vm );
-          VmInstances.terminated( vm );
+          if ( VmState.STOPPED.equals( vm.getLastState( ) ) ) {
+            VmInstances.stopped( vm );
+          } else {
+            VmInstances.terminated( vm );
+            VmInstances.terminated( vm );
+          }
         } catch ( final Exception e1 ) {
           LOG.error( e1 );
           Logs.extreme( ).error( e1, e1 );
@@ -306,63 +313,37 @@ public class ClusterAllocator implements Runnable {
       VirtualBootRecord vbrRootDevice = childVmInfo.lookupRoot( );
       String volumeId = vol.getDisplayName( );
       String remoteDeviceString = null;
-      Exception lastError = null;
-      String finalIqn = null;
-      for ( final String nodeTag : this.cluster.getNodeTags( ) ) {
-        NodeInfo nodeInfo = this.cluster.getNode( nodeTag );
-        if ( nodeInfo != null && nodeInfo.getIqn( ) != null ) { 
-          try {
-            String nodeIqn = nodeInfo.getIqn( );
-            remoteDeviceString = requestAttachStorageVolume( scConfig, volumeId, nodeIqn );
-            if ( remoteDeviceString != null ) {
-              finalIqn = nodeIqn;
-              Logs.extreme( ).debug( "Updating remote device for " + token + " using iqn " + finalIqn + " with " + remoteDeviceString );
-              break;
+      try {
+        AttachStorageVolumeType attachMsg = new AttachStorageVolumeType( Nodes.lookupIqns( this.cluster.getConfiguration( ) ), volumeId );
+        final AttachStorageVolumeResponseType scAttachResponse = AsyncRequests.sendSync( scConfig, attachMsg );
+        LOG.debug( scAttachResponse );
+        remoteDeviceString = scAttachResponse.getRemoteDeviceString( );
+        if ( remoteDeviceString == null ) {
+          throw new EucalyptusCloudException( "Failed to get remote device string for " + volumeId + " while running instance " + token.getInstanceId( ) );
+        } else {
+          vbrRootDevice.setResourceLocation( remoteDeviceString );
+          final String updateRemoteDevString = remoteDeviceString;
+          final Function<String, VmInstance> updateInstance = new Function<String, VmInstance>( ) {
+            public VmInstance apply( final String input ) {
+              VmVolumeAttachment attachment = VmInstances.lookupVolumeAttachment( input );
+              attachment.setRemoteDevice( updateRemoteDevString );
+              return attachment.getVmInstance( );
             }
+          };
+          try {
+            Entities.asTransaction( VmInstance.class, updateInstance ).apply( volumeId );
           } catch ( Exception ex ) {
-            lastError = ex;
+            LOG.error( ex );
+            Logs.extreme( ).error( ex, ex );
           }
         }
-      }
-      if ( remoteDeviceString == null || finalIqn == null ) {
-        if ( lastError == null ) {
-          lastError = new NullPointerException( "Failed to find a node w/ reported iqn: " + this.cluster.getNodeMap( ) );
-        }
-        LOG.error( "Failed to start instance " + token + " while preparing attachment of volume " + volumeId + " failed because: " + lastError, lastError );
-        throw lastError;
-      } else {
-        token.setInitialIqn( finalIqn );
-        vbrRootDevice.setResourceLocation( remoteDeviceString );
-        final String updateRemoteDevString = remoteDeviceString;
-        final Function<String, VmInstance> updateInstance = new Function<String, VmInstance>( ) {
-          public VmInstance apply( final String input ) {
-            VmVolumeAttachment attachment = VmInstances.lookupVolumeAttachment( input );
-            attachment.setRemoteDevice( updateRemoteDevString );
-            return attachment.getVmInstance( );
-          }
-        };
-        try {
-          Entities.asTransaction( VmInstance.class, updateInstance ).apply( volumeId );
-        } catch ( Exception ex ) {
-          LOG.error( ex );
-          Logs.extreme( ).error( ex, ex );
-        }
+      } catch ( final Exception ex ) {
+        LOG.error( ex );
+        Logs.extreme( ).error( ex, ex );
+        throw ex;
       }
     }//TODO:GRZE:OMGFIXME: move this for bfe to later stage.
     return childVmInfo;
-  }
-  
-  private String requestAttachStorageVolume( final ServiceConfiguration scConfig, String volumeId, final String nodeIqn ) throws Exception {
-    try {
-      final AttachStorageVolumeType attachMsg = new AttachStorageVolumeType( nodeIqn, volumeId );
-      final AttachStorageVolumeResponseType scAttachResponse = AsyncRequests.sendSync( scConfig, attachMsg );
-      LOG.debug( scAttachResponse );
-      return scAttachResponse.getRemoteDeviceString( );
-    } catch ( final Exception ex ) {
-      LOG.error( ex );
-      Logs.extreme( ).error( ex, ex );
-      throw ex;
-    }
   }
   
   public ServiceConfiguration waitForVolume( final Volume vol ) throws Exception {

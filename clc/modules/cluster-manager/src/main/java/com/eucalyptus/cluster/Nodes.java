@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -61,27 +61,39 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.util.fsm;
+package com.eucalyptus.cluster;
 
-import com.eucalyptus.component.Component.State;
-import com.eucalyptus.util.HasName;
-import com.eucalyptus.util.async.CheckedListenableFuture;
-import com.google.common.collect.ImmutableList;
+import java.util.List;
+import java.util.NoSuchElementException;
+import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.Topology;
+import com.eucalyptus.component.id.ClusterController;
+import com.eucalyptus.vm.VmInstance;
+import com.google.common.collect.Lists;
+import edu.ucsb.eucalyptus.cloud.NodeInfo;
 
-public interface StateMachine<P extends HasName<P>, S extends Automata.State, T extends Automata.Transition> {
-  public abstract P getParent( );
+public class Nodes {
+  public static List<String> lookupIqns( ServiceConfiguration ccConfig ) {
+    Cluster cluster = Clusters.lookup( ccConfig );
+    List<String> ret = Lists.newArrayList( );
+    for ( NodeInfo node : cluster.getNodeMap( ).values( ) ) {
+      if ( node.getIqn( ) != null ) {
+        ret.add( node.getIqn( ) );
+      }
+    }
+    return ret;
+  }
   
-  public abstract ImmutableList<S> getStates( );
-  
-  public abstract ImmutableList<TransitionHandler<P, S, T>> getTransitions( );
-  
-  public abstract boolean isLegalTransition( T transitionName );
-  
-  public abstract S getState( );
-  
-  public abstract boolean isBusy( );
-  
-  public abstract CheckedListenableFuture<P> transition( S nextState ) throws IllegalStateException, ExistingTransitionException;
-
-  public abstract TransitionRecord<P, S, T> getTransitionRecord( );
+  public static List<String> lookupIqn( VmInstance vm ) {
+    ServiceConfiguration ccConfig = Topology.lookup( ClusterController.class, vm.lookupPartition( ) );
+    Cluster cluster = Clusters.lookup( ccConfig );
+    NodeInfo node = cluster.getNode( vm.getServiceTag( ) );
+    if ( node == null ) {
+      throw new NoSuchElementException( "Failed to look up node information for " + vm.getInstanceId( ) + " with service tag " + vm.getServiceTag( ) );
+    } else if ( node.getIqn( ) == null ) {
+      throw new NoSuchElementException( "Error looking up iqn for node " + vm.getServiceTag( ) + " (" + vm.getInstanceId( ) + "): node does not have an iqn." );
+    } else {
+      return Lists.newArrayList( node.getIqn( ) );
+    }
+  }
 }
