@@ -1684,14 +1684,14 @@ static int get_stale_refs (const blockblob * bb, char *** refs)
             if (array [i]) { // ref does not exist
                 if (refs && *refs) {
                     (* refs) [j++] = array [i];
+                    assert (j<=stale_refs);
                 } else {
                     free (array [i]);
                 }
             }
-            assert (j==stale_refs || refs==NULL || *refs==NULL);
         }
     }
-
+    
     if (array_size > 0)
         free (array);
 
