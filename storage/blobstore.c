@@ -1552,7 +1552,12 @@ static long long purge_blockblobs_lru ( blobstore * bs, blockblob * bb_list, lon
                 if (bb == NULL) // this was deleted on anearlier iteration
                     continue;
                 bb->in_use = check_in_use (bs, bb->id, 0); // verify in-use status
-                logprintfl (EUCADEBUG, "LRU purge loop %d: %s %o\n", iteration, bb->id, bb->in_use);
+                logprintfl (EUCADEBUG, "LRU check %d: %s %c%c%c %9llu %s\n", iteration, bb->id,
+                            (bb->in_use & BLOCKBLOB_STATUS_OPENED) ? ('o') : ('-'), // o = open
+                            (bb->in_use & BLOCKBLOB_STATUS_BACKED) ? ('p') : ('-'), // p = has parents
+                            (bb->in_use & BLOCKBLOB_STATUS_MAPPED) ? ('c') : ('-'), // c = has children
+                            bb->size_bytes / 512L, // size is in sectors
+                            ctime (&(bb->last_modified)));
                 if (! (bb->in_use & ~BLOCKBLOB_STATUS_BACKED) ) { // the only in-use flag is _BACKED (has parents)
                     if (delete_blockblob_files (bs, bb->id)>0) {
                         myprintf (EUCAINFO, "purged from blobstore %s blockblob %s (total blocks purged in this sweep %lld)\n", bs->id, bb->id, purged);
