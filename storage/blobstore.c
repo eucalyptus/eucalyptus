@@ -1654,7 +1654,8 @@ static int get_stale_refs (const blockblob * bb, char *** refs)
                 blockblob_close (ref_bb);
                 ref_exists = 1;
             } else {
-                // TODO: check error code before assuming ref does not exist?
+                if (_blobstore_errno != BLOBSTORE_ERROR_NOENT) // conservatively assume that unless the error says otherwise, the blob exists
+                    ref_exists = 1;
             }
             if (ref_bs != bs) {
                 blobstore_close (ref_bs);
@@ -1663,7 +1664,7 @@ static int get_stale_refs (const blockblob * bb, char *** refs)
         stale_ref:
             
             if (ref_exists) {
-                free (array [i]);
+                free (array [i]); // free names of refs that exist
                 array [i] = NULL;
             } else {
                 strcpy (array [i], ref); // since strtok() clobbered the original value
@@ -1680,17 +1681,20 @@ static int get_stale_refs (const blockblob * bb, char *** refs)
             }
         }
         for (int i=0, j=0; i<array_size; i++) {
-            if (array [i]) {
+            if (array [i]) { // ref does not exist
                 if (refs && *refs) {
                     (* refs) [j++] = array [i];
                 } else {
                     free (array [i]);
                 }
             }
-            assert (j==stale_refs || *refs==NULL);
+            assert (j==stale_refs || refs==NULL || *refs==NULL);
         }
-        free (array);
     }
+
+    if (array_size > 0)
+        free (array);
+
     return stale_refs;
 }
 
