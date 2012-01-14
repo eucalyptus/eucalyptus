@@ -220,7 +220,7 @@ public class InstanceUsageLog
 			 * the usageMap, which is what we return.
 			 */
 			for (String uuid: dataAccumulatorMap.keySet()) {
-				//log.info("Instance uuid:" + uuid);
+				log.debug("Instance uuid:" + uuid);
 				InstanceDataAccumulator accumulator =
 					dataAccumulatorMap.get(uuid);
 				InstanceSummaryKey key =
@@ -263,7 +263,7 @@ public class InstanceUsageLog
     private class InstanceDataAccumulator
     {
     	private final InstanceAttributes insAttrs;
-    	private final InstanceUsageSnapshot firstSnapshot;
+    	private InstanceUsageSnapshot firstSnapshot;
     	private InstanceUsageSnapshot lastSnapshot;
     	private Period period;
     	
@@ -279,7 +279,12 @@ public class InstanceUsageLog
     	
     	public void update(InstanceUsageSnapshot snapshot)
     	{
-    		this.lastSnapshot = snapshot;
+    		final long timeMs = snapshot.getTimestampMs().longValue();
+    		if (timeMs > lastSnapshot.getTimestampMs().longValue()) {
+        		this.lastSnapshot = snapshot;    			
+    		} else if (timeMs < firstSnapshot.getTimestampMs().longValue()) {
+    			this.firstSnapshot = snapshot;
+    		}
     	}
 
     	public InstanceAttributes getInstanceAttributes()
@@ -308,6 +313,7 @@ public class InstanceUsageLog
     		double result =
     			(double)lastSnapshot.getCumulativeDiskIoMegs() -
     			(double)firstSnapshot.getCumulativeDiskIoMegs();
+    		log.debug("Unadjusted disk io megs:" + result);
 			/* Extrapolate fractional usage for snapshots which occurred
 			 * before report beginning or after report end.
 			 */
@@ -319,6 +325,7 @@ public class InstanceUsageLog
     			gap = (double)(lastSnapshot.getTimestampMs()-period.getEndingMs());
     			result *= 1d-(gap/duration);
     		}
+    		log.debug("Extrapolated disk io megs:" + result);
     		return (long) result;
     	}
     	
@@ -329,6 +336,7 @@ public class InstanceUsageLog
     		double result =
     			(double)lastSnapshot.getCumulativeNetworkIoMegs() -
     			(double)firstSnapshot.getCumulativeNetworkIoMegs();
+    		log.debug("Unadjusted net IO megs:" + result);
 			/* Extrapolate fractional usage for snapshots which occurred
 			 * before report beginning or after report end.
 			 */
@@ -340,6 +348,7 @@ public class InstanceUsageLog
     			gap = (double)(lastSnapshot.getTimestampMs()-period.getEndingMs());
     			result *= 1d-(gap/duration);
     		}
+    		log.debug("Extrapolated net IO megs:" + result);
     		return (long) result;
     	}
 
