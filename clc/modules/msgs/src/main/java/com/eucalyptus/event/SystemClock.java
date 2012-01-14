@@ -68,6 +68,7 @@ import java.util.TimerTask;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
+import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.bootstrap.OrderedShutdown;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
@@ -146,11 +147,13 @@ public class SystemClock extends TimerTask implements UncaughtExceptionHandler {
   @Override
   public void run( ) {
     Thread.currentThread( ).setUncaughtExceptionHandler( ( UncaughtExceptionHandler ) this );
-    try {
-      long sign = ( long ) ( Math.pow( -1f, ( float ) ( ++phase % 2 ) ) );
-      ListenerRegistry.getInstance( ).fireEvent( new ClockTick( ).setMessage( sign * System.currentTimeMillis( ) ) );
-    } catch ( EventFailedException e ) {} catch ( Exception t ) {
-      LOG.error( t, t );
+    if ( !Databases.isVolatile( ) ) {
+      try {
+        long sign = ( long ) ( Math.pow( -1f, ( float ) ( ++phase % 2 ) ) );
+        ListenerRegistry.getInstance( ).fireEvent( new ClockTick( ).setMessage( sign * System.currentTimeMillis( ) ) );
+      } catch ( EventFailedException e ) {} catch ( Exception t ) {
+        LOG.error( t, t );
+      }
     }
   }
   
@@ -214,11 +217,13 @@ public class SystemClock extends TimerTask implements UncaughtExceptionHandler {
     }
     
     public void run( ) {
-      Thread.currentThread( ).setUncaughtExceptionHandler( ( UncaughtExceptionHandler ) this );
-      try {
-        ListenerRegistry.getInstance( ).fireEvent( new Hertz( ) );
-      } catch ( EventFailedException e ) {} catch ( Exception t ) {
-        LOG.error( t, t );
+      if ( !Databases.isVolatile( ) ) {
+        Thread.currentThread( ).setUncaughtExceptionHandler( ( UncaughtExceptionHandler ) this );
+        try {
+          ListenerRegistry.getInstance( ).fireEvent( new Hertz( ) );
+        } catch ( EventFailedException e ) {} catch ( Exception t ) {
+          LOG.error( t, t );
+        }
       }
     }
   }

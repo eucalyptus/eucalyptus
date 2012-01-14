@@ -25,11 +25,14 @@ exit(0) if ($pid != 0);
 my $interval = [INTERVAL];
 my $io_megs = [IO_MEGS];
 my $device = "[DEVICE]"; # should be /dev/sda1 or something similar
+my $sleep_duration = [SLEEP_DURATION];
 my $filename = "";
 
 sub write_random_file($$);
 
-# Mount volume
+# Wait for EBS vols to show up, then mount volume
+print "startup sleep:$sleep_duration\n";
+sleep $sleep_duration;
 mkdir("/mnt/volume");
 system("mount $device /mnt/volume") or die("couldn't mount $device");
 
@@ -52,5 +55,7 @@ sub write_random_file($$) {
 		print FILE $chars[int(rand($#chars))];
 	}
 	close (FILE) or die("couldn't close $filename");
+	system("rm $filename") or die("couldn't remove $filename");
+	print "wrote $size_megs\n";
 }
 

@@ -233,7 +233,7 @@ public class VmRuntimeState {
     return this.serviceTag;
   }
   
-  void setServiceTag( final String serviceTag ) {
+  public void setServiceTag( final String serviceTag ) {
     this.serviceTag = serviceTag;
   }
   

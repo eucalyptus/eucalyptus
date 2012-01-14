@@ -966,9 +966,9 @@ class upgrade_20_30 extends AbstractUpgradeScript {
         }
 
         if (has_table('eucalyptus_storage', "netapp_info")) {
-            EntityWrapper<NetappInfo> netappinfo = EntityWrappet.get(NetappInfo.class);
+            EntityWrapper<NetappInfo> netappinfo = EntityWrapper.get(NetappInfo.class);
             connMap['eucalyptus_storage'].rows('SELECT * FROM netapp_info').each{
-                NetappInfo n = new NetappInfo(it.name, it.aggregate, 100);
+                NetappInfo n = new NetappInfo(it.storage_name, it.netapp_aggregate, 100);
                 netappinfo.add(n);
             }
             netappinfo.commit();
@@ -1020,6 +1020,23 @@ class upgrade_20_30 extends AbstractUpgradeScript {
             dbSC.add(sc);
             dbSC.commit();
         }
+
+        /* Preserve VLAN range from 2.x per-cluster settings, using the
+         * intersection of all clusters' ranges.  This is not ideal, but
+         * is least likely to cause network issues.
+         */
+        EntityWrapper<StaticDatabasePropertyEntry> db = EntityWrapper.get(StaticDatabasePropertyEntry.class);
+        Map vlanrange = connMap['eucalyptus_config'].firstRow('SELECT MAX(minvlan),MIN(maxvlan) FROM config_clusters');
+        StaticDatabasePropertyEntry minVlanProp = new StaticDatabasePropertyEntry(
+            "com.eucalyptus.network.NetworkGroups.GLOBAL_MIN_NETWORK_TAG",
+            "cloud.network.global_min_network_tag", vlanrange['MAX(minvlan)'].toString());
+        StaticDatabasePropertyEntry maxVlanProp = new StaticDatabasePropertyEntry(
+            "com.eucalyptus.network.NetworkGroups.GLOBAL_MAX_NETWORK_TAG",
+            "cloud.network.global_max_network_tag", vlanrange['MIN(maxvlan)'].toString());
+        db.add(minVlanProp);
+        db.add(maxVlanProp);
+        db.commit( );
+
         return true;
     }   
 

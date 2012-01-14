@@ -124,7 +124,7 @@ public class StorageProperties {
 		HBA
 	}
 	public final static int SNAP_PERCENT = 100;
-	public static double NETAPP_META_OVERHEAD = 5;
+	public static double NETAPP_META_OVERHEAD = 1;
 
 	static { Groovyness.loadConfig("storageprops.groovy"); }
 

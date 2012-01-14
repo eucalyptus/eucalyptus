@@ -422,6 +422,11 @@ public class WalrusManager {
 						throw new EucalyptusCloudException("Unable to create bucket: " + bucketName);						
 					}
 				}
+				QueueSender queueSender = QueueFactory.getInstance().getSender(QueueIdentifier.S3);
+				queueSender.send(new S3Event(true, ctx.getUser().getUserId(),
+					ctx.getUser().getName(), ctx.getAccount().getAccountNumber(),
+					ctx.getAccount().getName()));
+
 			} else {
 				LOG.error( "Not authorized to create bucket by " + ctx.getUserFullName( ) );
 				db.rollback();
@@ -526,6 +531,10 @@ public class WalrusManager {
 								// set exception code in reply
 								LOG.error(ex);
 							}
+							QueueSender queueSender = QueueFactory.getInstance().getSender(QueueIdentifier.S3);
+							queueSender.send(new S3Event(false, ctx.getUser().getUserId(),
+								ctx.getUser().getName(), ctx.getAccount().getAccountNumber(),
+								ctx.getAccount().getName()));
 							Status status = new Status();
 							status.setCode(204);
 							status.setDescription("No Content");

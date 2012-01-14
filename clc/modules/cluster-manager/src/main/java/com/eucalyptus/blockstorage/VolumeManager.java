@@ -284,7 +284,7 @@ public class VolumeManager {
               VmVolumeAttachment attachment = VmInstances.lookupVolumeAttachment( input );
               attachedVolume  = VmVolumeAttachment.asAttachedVolume( attachment.getVmInstance( ) ).apply( attachment );
               foundVol.setState( State.BUSY );
-            } catch ( Exception ex ) {
+            } catch ( NoSuchElementException ex ) {
               if ( State.BUSY.equals( foundVol.getState( ) ) ) {
                 foundVol.setState( State.EXTANT );
               }

@@ -194,7 +194,8 @@ parse_rec ( // parses the VBR as supplied by a client or user, checks values, an
     
     // identify the type of resource location from location string
     int error = OK;
-    if (strcasestr (vbr->resourceLocation, "http://") == vbr->resourceLocation) { 
+    if (strcasestr (vbr->resourceLocation, "http://") == vbr->resourceLocation ||
+        strcasestr (vbr->resourceLocation, "https://") == vbr->resourceLocation) { 
         if (strcasestr (vbr->resourceLocation, "/services/Walrus/")) {
             vbr->locationType = NC_LOCATION_WALRUS;
         } else {
