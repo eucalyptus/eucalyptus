@@ -1563,7 +1563,7 @@ static long long purge_blockblobs_lru ( blobstore * bs, blockblob * bb_list, lon
                 }
             }
             iteration++;
-        } while (deleted && (purged>=need_blocks));
+        } while (deleted && (purged<need_blocks));
         free (bb_array);
     }
 
@@ -1616,6 +1616,82 @@ int blobstore_stat (blobstore * bs, blobstore_meta * meta)
     meta->blocks_limit = bs->limit_blocks;
 
     return ret;
+}
+
+/*
+ * read .refs file content and return any entries that point to blobs that no longer exist
+ * return value is size of the array placed into *refs, which caller must free, or -1 on error
+ */
+static int get_stale_refs (const blockblob * bb, char *** refs)
+{
+    blobstore * bs = bb->store;
+    char ** array = NULL;
+    int array_size = 0;
+    int stale_refs = 0;
+
+    if (read_array_blockblob_metadata_path (BLOCKBLOB_PATH_REFS, bb->store, bb->id, &array, &array_size)!=-1) {
+        for (int i=0; i<array_size; i++) {
+            char ref [BLOBSTORE_MAX_PATH+MAX_DM_NAME+1];
+            safe_strncpy (ref, array [i], sizeof (ref));
+            
+            char * store_path = strtok (array [i], " ");
+            char * blob_id    = strtok (NULL, " "); // the remaining entries in array[i] are ignored
+            char ref_exists = 0;
+            
+            if (strlen (store_path)<1 || strlen (blob_id)<1)
+                goto stale_ref;
+            
+            blobstore * ref_bs = bs;
+            if (strcmp (bs->path, store_path)) { // if deleting reference in a different blobstore
+                // need to open it
+                ref_bs = blobstore_open (store_path, 0, BLOBSTORE_FLAG_CREAT, BLOBSTORE_FORMAT_ANY, BLOBSTORE_REVOCATION_ANY, BLOBSTORE_SNAPSHOT_ANY);
+                if (ref_bs == NULL) // blobstore with a child blob does not exist
+                    goto stale_ref;
+            }
+            
+            blockblob * ref_bb = blockblob_open (ref_bs, blob_id, 0, 0, NULL, BLOBSTORE_FIND_TIMEOUT_USEC);
+            if (ref_bb) {
+                blockblob_close (ref_bb);
+                ref_exists = 1;
+            } else {
+                // TODO: check error code before assuming ref does not exist?
+            }
+            if (ref_bs != bs) {
+                blobstore_close (ref_bs);
+            }
+            
+        stale_ref:
+            
+            if (ref_exists) {
+                free (array [i]);
+                array [i] = NULL;
+            } else {
+                strcpy (array [i], ref); // since strtok() clobbered the original value
+                stale_refs++;
+            }
+        }
+    }
+
+    if (stale_refs>0) {
+        if (refs) {
+            * refs = calloc (stale_refs, sizeof (char *));
+            if (* refs == NULL) {
+                stale_refs = -1; // OOM error
+            }
+        }
+        for (int i=0, j=0; i<array_size; i++) {
+            if (array [i]) {
+                if (refs && *refs) {
+                    (* refs) [j++] = array [i];
+                } else {
+                    free (array [i]);
+                }
+            }
+            assert (j<stale_refs);
+        }
+        free (array);
+    }
+    return stale_refs;
 }
 
 static int blockblob_check (const blockblob * bb);
@@ -1680,51 +1756,18 @@ int blobstore_fsck (blobstore * bs, int (* examiner) (const blockblob * bb))
                             // Since we are checking integrity, do not trust .refs file blindly,
                             // but ensure that the entries -- blobs depending on this one -- exist
 
-                            char ** array = NULL;
-                            int array_size = 0;
-                            if (read_array_blockblob_metadata_path (BLOCKBLOB_PATH_REFS, bb->store, bb->id, &array, &array_size)!=-1) {
-                                for (int i=0; i<array_size; i++) {
-                                    char ref [BLOBSTORE_MAX_PATH+MAX_DM_NAME+1];
-                                    safe_strncpy (ref, array [i], sizeof (ref));
-
-                                    char * store_path = strtok (array [i], " ");
-                                    char * blob_id    = strtok (NULL, " "); // the remaining entries in array[i] are ignored
-                                    char ref_exists = 0;
-
-                                    if (strlen (store_path)<1 || strlen (blob_id)<1)
-                                        goto remove_ref;
-
-                                    blobstore * ref_bs = bs;
-                                    if (strcmp (bs->path, store_path)) { // if deleting reference in a different blobstore
-                                        // need to open it
-                                        ref_bs = blobstore_open (store_path, 0, BLOBSTORE_FLAG_CREAT, BLOBSTORE_FORMAT_ANY, BLOBSTORE_REVOCATION_ANY, BLOBSTORE_SNAPSHOT_ANY);
-                                        if (ref_bs == NULL) // blobstore with a child blob does not exist
-                                            goto remove_ref;
-                                    }
-                                    
-                                    blockblob * ref_bb = blockblob_open (ref_bs, blob_id, 0, 0, NULL, BLOBSTORE_FIND_TIMEOUT_USEC);
-                                    if (ref_bb) {
-                                        blockblob_close (ref_bb);
-                                        ref_exists = 1;
-                                    } else {
-                                        // TODO: check error code before assuming ref does not exist?
-                                    }
-                                    if (ref_bs != bs) {
-                                        blobstore_close (ref_bs);
-                                    }
-                                    
-                                remove_ref:
-
-                                    if (! ref_exists) {
-                                        // update the .refs file to remove this entry
-                                        logprintfl (EUCAINFO, "removing stale/corrupted reference in blob %s to blob %s\n", bb->id, blob_id);
-                                        update_entry_blockblob_metadata_path (BLOCKBLOB_PATH_REFS, bb->store, bb->id, ref, 1);
-                                    }
+                            char ** stale_refs;
+                            int num_stale_refs = get_stale_refs (bb, &stale_refs);
+                            if (num_stale_refs > 0) {
+                                for (int i=0; i<num_stale_refs; i++) {
+                                    // update the .refs file to remove this entry
+                                    logprintfl (EUCAINFO, "removing stale/corrupted reference in blob %s to %s\n", bb->id, stale_refs [i]);
+                                    update_entry_blockblob_metadata_path (BLOCKBLOB_PATH_REFS, bb->store, bb->id, stale_refs [i], 1);
+                                    free (stale_refs [i]);
                                 }
-                                if (array)
-                                    free (array);
+                                free (stale_refs);
                             }
-                             
+                            
                             // mapped blobs have children, thus cannot be deleted at this iteration
                             blockblob_close (bb);
                             to_delete++;
@@ -2460,6 +2503,9 @@ static int blockblob_check (const blockblob * bb)
             err++;
         }
     }
+
+    if (get_stale_refs (bb, NULL)>0)
+        err++;
     
     _err_on();
     return err;
