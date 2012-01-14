@@ -1592,7 +1592,7 @@ int blobstore_stat (blobstore * bs, blobstore_meta * meta)
     meta->blocks_unlocked = 0;
     meta->blocks_locked = 0;
     meta->num_blobs = 0;
-    for (blockblob * abb = bbs; abb; abb=abb->next) {
+    for (blockblob * abb = bbs; abb; abb=abb->next) { // TODO: unify this with locked/unlocked calculation in open()
         long long abb_size_blocks = round_up_sec (abb->size_bytes) / 512;
         if (abb->in_use & BLOCKBLOB_STATUS_OPENED) {
             meta->blocks_locked += abb_size_blocks; // these can't be purged if we need space (TODO: look into recursive purging of unused references?)
@@ -2021,10 +2021,10 @@ blockblob * blockblob_open ( blobstore * bs,
                 long long abb_size_blocks = round_up_sec (abb->size_bytes) / 512;
                 if (abb->is_hollow)
                     abb_size_blocks = 0;
-                if (abb->in_use & ~BLOCKBLOB_STATUS_BACKED) {
+                if (abb->in_use & BLOCKBLOB_STATUS_OPENED) {
                     blocks_locked += abb_size_blocks; // these can't be purged if we need space (TODO: look into recursive purging of unused references?)
                 } else {
-                    blocks_unlocked += abb_size_blocks; // these can be purged
+                    blocks_unlocked += abb_size_blocks; // these potentially can be purged, unless they are depended on by locked ones
                 }
                 num_blobs++;
             }
