@@ -376,7 +376,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
     return new ActiveTransition( AtomicMarkedState.id.incrementAndGet( ), rule, transition );
   }
   
-  private class ActiveTransition extends Callback.Completion implements HasName<ActiveTransition> {
+  private class ActiveTransition extends Callback.Completion implements HasName<ActiveTransition>, TransitionRecord {
     private final Long                       txId;
     private final String                     txName;
     private final Long                       startTime;
@@ -432,15 +432,21 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
         }
       } catch ( Exception t ) {
         this.fireException( t );
+//      } finally {
+//        this.transitionFuture.set( AtomicMarkedState.this.parent );
       }
     }
     
     public void fireException( Throwable t ) {
-      if ( Logs.isExtrrreeeme( ) ) {
-        Logs.extreme( ).error( this.startStackTrace );
-        Logs.extreme( ).error( this.endStackTrace.get( ) );
+      try {
+        if ( Logs.isExtrrreeeme( ) ) {
+          Logs.extreme( ).error( this.startStackTrace );
+          Logs.extreme( ).error( this.endStackTrace.get( ) );
+        }
+        AtomicMarkedState.this.error( t );
+      } finally {
+        this.transitionFuture.setException( t );
       }
-      AtomicMarkedState.this.error( t );
     }
     
     public final Long getId( ) {
@@ -478,9 +484,49 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
       Logs.exhaust( ).trace( sb.toString( ) );
       return sb.toString( );
     }
+
+    @Override
+    public Long getTxId( ) {
+      return this.txId;
+    }
+
+    @Override
+    public String getTxName( ) {
+      return this.txName;
+    }
+
+    public Long getStartTime( ) {
+      return this.startTime;
+    }
+
+    public Long getEndTime( ) {
+      return this.endTime;
+    }
+
+    @Override
+    public TransitionAction<P> getTransition( ) {
+      return this.transition;
+    }
+
+    public String getStartStackTrace( ) {
+      return this.startStackTrace;
+    }
+
+    public Supplier<String> getEndStackTrace( ) {
+      return this.endStackTrace;
+    }
+
+    @Override
+    public TransitionRule<S, T> getRule( ) {
+      return this.rule;
+    }
   }
   
   public P getParent( ) {
     return this.parent;
+  }
+
+  public TransitionRecord getTransitionRecord( ) {
+    return this.currentTransition.get( );
   }
 }

@@ -149,7 +149,7 @@
 	 File passFile = new File(SubDirectory.DB.getFile().getPath() + File.separator +  PG_PASSFILE)
  
 	 passFile.write(pass);
-	 String command = PG_INITDB + PG_USER_OPT + PG_TRUST_OPT + f + " " + PG_DB_OPT + " " + EUCA_DB_DIR + PG_X_OPT + PG_X_DIR;
+	 String command = PG_INITDB + PG_USER_OPT + PG_TRUST_OPT + passFile + " " + PG_DB_OPT + " " + EUCA_DB_DIR + PG_X_OPT + PG_X_DIR;
 	 try {
 	     if (!runProc(command)) {
 		 LOG.debug("Database server did not init.");

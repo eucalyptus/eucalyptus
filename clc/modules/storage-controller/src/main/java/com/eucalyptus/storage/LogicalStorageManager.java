@@ -128,7 +128,7 @@ public interface LogicalStorageManager {
 
 	public void importSnapshot(String snapshotId, String snapPath, String volumeId, int size) throws EucalyptusCloudException;
 
-	public String attachVolume(String volumeId, String nodeIqn) throws EucalyptusCloudException;
+	public String attachVolume(String volumeId, List<String> nodeIqns) throws EucalyptusCloudException;
 
 	public void detachVolume(String volumeId, String nodeIqn) throws EucalyptusCloudException;
 

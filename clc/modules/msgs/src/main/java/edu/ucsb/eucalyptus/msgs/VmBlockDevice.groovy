@@ -133,6 +133,17 @@ public class AttachVolumeType extends BlockVolumeMessage {
   String instanceId;
   String device;
   String remoteDevice;
+  public AttachVolumeType( ) {
+    super( );
+  }
+  public AttachVolumeType( String volumeId, String instanceId, String device, String remoteDevice ) {
+    super( );
+    this.volumeId = volumeId;
+    this.instanceId = instanceId;
+    this.device = device;
+    this.remoteDevice = remoteDevice;
+  }
+  
 }
 public class AttachVolumeResponseType extends BlockVolumeMessage {
   

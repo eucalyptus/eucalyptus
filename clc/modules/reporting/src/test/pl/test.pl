@@ -80,8 +80,8 @@ if ($#running_instances > -1) {
 #  resource usage from within an image (disk, net, etc) when the test runs.
 #
 my $injected_image_file = injected_image_file();
-printf("./fill_template.pl use_resources.template INTERVAL=%s IO_MEGS=%d DEVICE=%s > use_resources.pl\n", $write_interval, storage_usage_mb(), vol_device());
-system(sprintf("./fill_template.pl use_resources.template INTERVAL=%s IO_MEGS=%d DEVICE=%s > use_resources.pl", $write_interval, storage_usage_mb(), vol_device()));
+printf("./fill_template.pl use_resources.template INTERVAL=%s IO_MEGS=%d DEVICE=%s SLEEP_DURATION=%s > use_resources.pl\n", $write_interval, storage_usage_mb(), vol_device(), startup_sleep_duration());
+system(sprintf("./fill_template.pl use_resources.template INTERVAL=%s IO_MEGS=%d DEVICE=%s SLEEP_DURATION=%s > use_resources.pl", $write_interval, storage_usage_mb(), vol_device(), startup_sleep_duration()));
 runcmd(sprintf("cp %s %s", image_file(), $injected_image_file));
 runcmd(sprintf("./inject.pl %s use_resources.pl", $injected_image_file));
 runcmd(sprintf("euca-bundle-image -i %s", $injected_image_file));

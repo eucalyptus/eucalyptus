@@ -77,6 +77,7 @@ import com.eucalyptus.util.fsm.StateMachine;
 import com.eucalyptus.util.fsm.StateMachineBuilder;
 import com.eucalyptus.util.fsm.TransitionAction;
 import com.eucalyptus.util.fsm.TransitionHandler;
+import com.eucalyptus.util.fsm.TransitionRecord;
 import com.eucalyptus.util.fsm.Transitions;
 import com.google.common.collect.ImmutableList;
 
@@ -189,6 +190,11 @@ public class ServiceState implements StateMachine<ServiceConfiguration, Componen
   @Override
   public String toString( ) {
     return this.parent.getFullName( ).toString( );
+  }
+
+  @Override
+  public TransitionRecord<ServiceConfiguration, State, Transition> getTransitionRecord( ) {
+    return this.stateMachine.getTransitionRecord( );
   }
   
 }
