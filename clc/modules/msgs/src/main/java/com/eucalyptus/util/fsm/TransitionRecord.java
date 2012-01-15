@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -63,25 +63,18 @@
 
 package com.eucalyptus.util.fsm;
 
-import com.eucalyptus.component.Component.State;
 import com.eucalyptus.util.HasName;
-import com.eucalyptus.util.async.CheckedListenableFuture;
-import com.google.common.collect.ImmutableList;
+import com.eucalyptus.util.fsm.Automata.State;
+import com.eucalyptus.util.fsm.Automata.Transition;
 
-public interface StateMachine<P extends HasName<P>, S extends Automata.State, T extends Automata.Transition> {
-  public abstract P getParent( );
+public interface TransitionRecord<P extends HasName<P>, S extends Automata.State, T extends Automata.Transition> {
   
-  public abstract ImmutableList<S> getStates( );
+  public abstract Long getTxId( );
   
-  public abstract ImmutableList<TransitionHandler<P, S, T>> getTransitions( );
+  public abstract String getTxName( );
   
-  public abstract boolean isLegalTransition( T transitionName );
+  public abstract TransitionAction<P> getTransition( );
   
-  public abstract S getState( );
+  public abstract TransitionRule<S, T> getRule( );
   
-  public abstract boolean isBusy( );
-  
-  public abstract CheckedListenableFuture<P> transition( S nextState ) throws IllegalStateException, ExistingTransitionException;
-
-  public abstract TransitionRecord<P, S, T> getTransitionRecord( );
 }

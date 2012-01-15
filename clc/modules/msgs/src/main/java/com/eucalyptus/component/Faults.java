@@ -69,9 +69,9 @@ import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentMap;
 import javax.persistence.Column;
-import javax.persistence.EntityTransaction;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.GeneratedValue;
@@ -91,17 +91,20 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
 import org.hibernate.annotations.GenericGenerator;
 import org.hibernate.annotations.NaturalId;
+import org.jboss.netty.util.internal.LinkedTransferQueue;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.bootstrap.Hosts;
+import com.eucalyptus.component.Component.State;
+import com.eucalyptus.component.Component.Transition;
 import com.eucalyptus.empyrean.ServiceStatusDetail;
 import com.eucalyptus.empyrean.ServiceStatusType;
-import com.eucalyptus.entities.Entities;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
+import com.eucalyptus.util.fsm.TransitionRecord;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
@@ -154,6 +157,8 @@ public class Faults {
     private final Severity        severity;
     @Column( name = "fault_service_name" )
     private final String          serviceName;
+    @Column( name = "fault_service_full_name" )
+    private final String          serviceFullName;
     @Column( name = "fault_timestamp" )
     private final Date            timestamp;
     @Column( name = "fault_msg_correlation_id" )
@@ -175,6 +180,7 @@ public class Faults {
     
     private CheckException( final String serviceName ) {
       this.serviceName = serviceName;
+      this.serviceFullName = null;
       this.severity = null;
       this.timestamp = null;
       this.correlationId = null;
@@ -202,7 +208,8 @@ public class Faults {
         this.fillInStackTrace( );
       }
       this.severity = severity;
-      this.serviceName = config.getFullName( ).toString( );
+      this.serviceName = config.getName( );
+      this.serviceFullName = config.getFullName( ).toString( );
       this.correlationId = ( correlationId == null
                                                   ? UUID.randomUUID( ).toString( )
                                                   : correlationId );
@@ -327,6 +334,10 @@ public class Faults {
     public String getStackString( ) {
       return this.stackString;
     }
+
+    private String getServiceFullName( ) {
+      return this.serviceFullName;
+    }
     
   }
   
@@ -403,7 +414,7 @@ public class Faults {
    * 
    * TODO:GRZE: this behaviour should be @Configurable
    */
-  public enum Severity {
+  public enum Severity implements Predicate<CheckException> {
     TRACE, //ignored
     DEBUG, //default: store
     INFO, //default: store, describe
@@ -411,6 +422,20 @@ public class Faults {
     ERROR, //default: store, describe, ui, notification
     URGENT, //default: store, describe, ui, notification, alert
     FATAL;
+
+    @Override
+    public boolean apply( CheckException input ) {
+      if ( input == null ) {
+        return false;
+      } else {
+        for ( CheckException ex : input ) {
+          if ( this.equals( ex.getSeverity( ) ) ) {
+            return true;
+          }
+        }
+        return false;
+      }
+    }
   }
   
   public enum Scope {
@@ -512,52 +537,56 @@ public class Faults {
     return StatusToCheckException.INSTANCE;
   }
   
-  /**
-   * @param config
-   * @return
-   */
-  public static Collection<CheckException> lookup( final ServiceConfiguration config ) {
-    final EntityTransaction db = Entities.get( CheckException.class );
-    try {
-      final List<CheckException> res = Entities.query( new CheckException( config.getName( ) ), true, 1 );
-      db.commit( );
-      return res;
-    } catch ( final Exception ex ) {
-      LOG.error( "Failed to lookup error information for: " + config.getFullName( ), ex );
-      db.rollback( );
+  private static final ConcurrentMap<ServiceConfiguration, FaultRecord> serviceExceptions = Maps.newConcurrentMap( );
+  private static final BlockingQueue<FaultRecord>                       errorQueue        = new LinkedTransferQueue<FaultRecord>( );
+  
+  private static class FaultRecord {
+    private final ServiceConfiguration                                      serviceConfiguration;
+    private final TransitionRecord<ServiceConfiguration, State, Transition> transitionRecord;
+    private final CheckException                                            error;
+    
+    private FaultRecord( ServiceConfiguration serviceConfiguration, TransitionRecord<ServiceConfiguration, State, Transition> transitionRecord,
+                         CheckException error ) {
+      super( );
+      this.serviceConfiguration = serviceConfiguration;
+      this.transitionRecord = transitionRecord;
+      this.error = error;
     }
-    return Lists.newArrayList( );
+
+    public ServiceConfiguration getServiceConfiguration( ) {
+      return this.serviceConfiguration;
+    }
+
+    public TransitionRecord<ServiceConfiguration, State, Transition> getTransitionRecord( ) {
+      return this.transitionRecord;
+    }
+
+    public CheckException getError( ) {
+      return this.error;
+    }
+    
+    
   }
   
-  public static void persist( final ServiceConfiguration parent, final CheckException errors ) {
+  public static void flush( final ServiceConfiguration config ) {
+    serviceExceptions.remove( config );
+  }
+  
+  public static Collection<CheckException> lookup( final ServiceConfiguration config ) {
+    FaultRecord record = serviceExceptions.get( config );
+    if ( record != null ) {
+      return Lists.newArrayList( record.getError( ) );
+    } else {
+      return Lists.newArrayList( );
+    }
+  }
+  
+  public static void submit( final ServiceConfiguration parent, TransitionRecord<ServiceConfiguration, State, Transition> transitionRecord, final CheckException errors ) {
     if ( errors != null && Hosts.isCoordinator( ) && Bootstrap.isFinished( ) && !Databases.isVolatile( ) ) {
-      try {
-        final EntityTransaction db = Entities.get( CheckException.class );
-        try {
-          List<CheckException> list = Entities.query( new CheckException( parent.getFullName( ).toString( ) ) );
-          for ( CheckException old : list ) {
-            Logs.extreme( ).debug( "Purging fault: " + old, old );
-            Entities.delete( old );
-          }
-          db.commit( );
-        } catch ( final Exception ex ) {
-          LOG.error( "Failed to persist error information for: " + errors, ex );
-          db.rollback( );
-        }
-        for ( final CheckException e : errors ) {
-          final EntityTransaction db2 = Entities.get( CheckException.class );
-          try {
-            Entities.persist( e );
-            db2.commit( );
-          } catch ( final Exception ex ) {
-            LOG.error( "Failed to persist error information for: " + errors, ex );
-            db2.rollback( );
-          }
-        }
-      } catch ( Exception ex ) {
-        LOG.error( "Faults: error in processing previous error: " + errors );
-        Logs.extreme( ).error( ex, ex );
-      }
+      Logs.extreme( ).error( errors, errors );
+      FaultRecord record = new FaultRecord( parent, transitionRecord, errors );
+      serviceExceptions.put( parent, record );
+      //      errorQueue.offer( record );
     }
   }
   

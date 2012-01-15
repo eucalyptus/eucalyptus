@@ -89,7 +89,6 @@ public class ResourceToken implements VmInstanceMetadata, Comparable<ResourceTok
   private final Integer       launchIndex;
   private final String        instanceId;
   private final String        instanceUuid;
-  private String              initialIqn;
   @Nullable
   private Volume              rootVolume;
   @Nullable
@@ -304,14 +303,6 @@ public class ResourceToken implements VmInstanceMetadata, Comparable<ResourceTok
   
   public void setRootVolume( Volume rootVolume ) {
     this.rootVolume = rootVolume;
-  }
-
-  public String getInitialIqn( ) {
-    return this.initialIqn;
-  }
-
-  public void setInitialIqn( String initialIqn ) {
-    this.initialIqn = initialIqn;
   }
 
 }

@@ -1677,6 +1677,7 @@ find_or_create_artifact ( // finds and opens or creates artifact's blob either i
         }
     }
  try_work:
+    logprintfl (EUCADEBUG, "[%s] switching to work blobstore for %s (do_create=%d ret=%d)\n", a->instanceId, id_cache, do_create, ret);
     if (ret==BLOBSTORE_ERROR_SIGNATURE) {
         logprintfl (EUCAWARN, "[%s] warning: signature mismatch on cached blob %s\n", a->instanceId, id_cache); // TODO: maybe invalidate?
     }

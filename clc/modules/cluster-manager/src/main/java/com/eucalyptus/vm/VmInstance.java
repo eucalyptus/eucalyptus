@@ -166,7 +166,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   @Embedded
   private final VmId           vmId;
   @Embedded
-  private VmBootRecord   bootRecord;
+  private VmBootRecord         bootRecord;
   @Embedded
   private final VmUsageStats   usageStats;
   @Embedded
@@ -244,6 +244,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       
     },
     EXPECTING_TEARDOWN( VmState.STOPPING, VmState.SHUTTING_DOWN ),
+    TORNDOWN( VmState.STOPPED, VmState.TERMINATED ),
     STOP( VmState.STOPPING, VmState.STOPPED ),
     TERM( VmState.SHUTTING_DOWN, VmState.TERMINATED ),
     NOT_RUNNING( VmState.STOPPING, VmState.STOPPED, VmState.SHUTTING_DOWN, VmState.TERMINATED ),
@@ -629,18 +630,13 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         final EntityTransaction db = Entities.get( VmInstance.class );
         try {
           final VmInstance vm = Entities.uniqueResult( VmInstance.named( null, v.getInstanceId( ) ) );
+          Reason reason = Timeout.SHUTTING_DOWN.apply( vm ) ? Reason.EXPIRED : Reason.USER_TERMINATED;
           if ( VmStateSet.RUN.apply( vm ) ) {
-            vm.setState( VmState.SHUTTING_DOWN, ( Timeout.SHUTTING_DOWN.apply( vm )
-                                                                                   ? Reason.EXPIRED
-                                                                                   : Reason.USER_TERMINATED ) );
+            vm.setState( VmState.SHUTTING_DOWN, reason );
           } else if ( VmState.SHUTTING_DOWN.equals( vm.getState( ) ) ) {
-            vm.setState( VmState.TERMINATED, Timeout.TERMINATED.apply( vm )
-                                                                           ? Reason.EXPIRED
-                                                                           : Reason.USER_TERMINATED );
+            vm.setState( VmState.TERMINATED, reason );
           } else if ( VmState.STOPPED.equals( vm.getState( ) ) ) {
-            vm.setState( VmState.TERMINATED, Timeout.TERMINATED.apply( vm )
-                                                                           ? Reason.EXPIRED
-                                                                           : Reason.USER_TERMINATED );
+            vm.setState( VmState.TERMINATED, reason );
           }
           db.commit( );
           return vm;
@@ -702,14 +698,13 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         try {
           final VmInstance vm = Entities.uniqueResult( VmInstance.named( null, v.getInstanceId( ) ) );
           if ( VmStateSet.RUN.apply( vm ) ) {
-            vm.setState( VmState.SHUTTING_DOWN, ( Timeout.SHUTTING_DOWN.apply( vm )
-                                                                                   ? Reason.EXPIRED
-                                                                                   : Reason.USER_TERMINATED ) );
+            Reason reason = Timeout.SHUTTING_DOWN.apply( vm ) ? Reason.EXPIRED : Reason.USER_TERMINATED;
+            vm.setState( VmState.SHUTTING_DOWN, reason );
           }
           db.commit( );
           return vm;
         } catch ( final Exception ex ) {
-          Logs.extreme( ).trace( ex, ex );
+          Logs.extreme( ).debug( ex, ex );
           db.rollback( );
           throw new NoSuchElementException( "Failed to lookup instance: " + v );
         }
@@ -1428,7 +1423,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         db.rollback( );
         return false;
       }
-    }    
+    }
   }
   
   /**
@@ -1516,6 +1511,8 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
               VmInstance.this.setState( VmState.STOPPED, Reason.EXPIRED );
             } else if ( VmState.SHUTTING_DOWN.apply( VmInstance.this ) && VmInstances.Timeout.SHUTTING_DOWN.apply( VmInstance.this ) ) {
               VmInstance.this.setState( VmState.TERMINATED, Reason.EXPIRED );
+            } else if ( VmState.STOPPING.apply( VmInstance.this ) && VmInstances.Timeout.SHUTTING_DOWN.apply( VmInstance.this ) ) {
+              VmInstance.this.setState( VmState.STOPPED, Reason.EXPIRED );
             } else if ( VmStateSet.NOT_RUNNING.apply( VmInstance.this ) && VmStateSet.RUN.contains( runVmState ) ) {
               VmInstance.this.setState( VmState.RUNNING, Reason.APPEND, "MISMATCHED" );
             } else {
@@ -1532,13 +1529,15 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       }
       
       private void updateState( final VmInfo runVm ) {
-        VmInstance.this.getRuntimeState( ).setServiceTag( runVm.getServiceTag( ) );
         VmInstance.this.getRuntimeState( ).updateBundleTaskState( runVm.getBundleTaskStateName( ) );
         VmInstance.this.updateCreateImageTaskState( runVm.getBundleTaskStateName( ) );
-        VmInstance.this.updateVolumeAttachments( runVm.getVolumes( ) );
+        VmInstance.this.getRuntimeState( ).setServiceTag( runVm.getServiceTag( ) );
         VmInstance.this.updateAddresses( runVm.getNetParams( ).getIpAddress( ), runVm.getNetParams( ).getIgnoredPublicIp( ) );
-        VmInstance.this.updateBlockBytes( runVm.getBlockBytes( ) );
-        VmInstance.this.updateNetworkBytes( runVm.getNetworkBytes( ) );
+        if ( VmState.RUNNING.apply( VmInstance.this ) ) {
+          VmInstance.this.updateVolumeAttachments( runVm.getVolumes( ) );
+          VmInstance.this.updateBlockBytes( runVm.getBlockBytes( ) );
+          VmInstance.this.updateNetworkBytes( runVm.getNetworkBytes( ) );
+        }
       }
     };
   }
@@ -1696,7 +1695,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     super.setNaturalId( naturalId );
   }
   
-  private VmVolumeState getTransientVolumeState( ) {
+  VmVolumeState getTransientVolumeState( ) {
     if ( this.transientVolumeState == null ) {
       this.transientVolumeState = new VmVolumeState( this );
     }
@@ -1809,7 +1808,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     vmExample.setNetworkConfig( VmNetworkConfig.exampleWithPrivateIp( ip ) );
     return vmExample;
   }
-
+  
   private void setBootRecord( VmBootRecord bootRecord ) {
     this.bootRecord = bootRecord;
   }

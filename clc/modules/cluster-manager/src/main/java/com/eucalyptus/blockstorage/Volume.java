@@ -89,6 +89,7 @@ import com.eucalyptus.util.OwnerFullName;
 public class Volume extends UserMetadata<State> implements VolumeMetadata {
   @Column( name = "metadata_volume_size" )
   private Integer  size;
+  @Deprecated
   @Column( name = "metadata_volume_sc_name" )
   private String   scName;
   @Column( name = "metadata_volume_partition" )
@@ -202,7 +203,7 @@ public class Volume extends UserMetadata<State> implements VolumeMetadata {
   }
   
   public boolean isReady( ) {
-    return this.getState( ).equals( State.EXTANT );
+    return this.getState( ).equals( State.EXTANT ) || this.getState( ).equals( State.BUSY );
   }
   
   @Override

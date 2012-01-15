@@ -89,20 +89,26 @@ import edu.ucsb.eucalyptus.msgs.AttachedVolume;
 import edu.ucsb.eucalyptus.msgs.DetachStorageVolumeType;
 
 public class VolumeAttachCallback extends MessageCallback<AttachVolumeType, AttachVolumeResponseType> {
-  private final AttachedVolume attachedVolume;
   private static Logger        LOG = Logger.getLogger( VolumeAttachCallback.class );
   
-  public VolumeAttachCallback( AttachVolumeType request, AttachedVolume attachVol ) {
+  public VolumeAttachCallback( AttachVolumeType request ) {
     super( request );
-    this.attachedVolume = attachVol;
   }
   
   @Override
   public void initialize( AttachVolumeType msg ) {
+    final String instanceId = this.getRequest( ).getInstanceId( );
+    final String volumeId = this.getRequest( ).getVolumeId( );
     final Function<String, VmInstance> funcName = new Function<String, VmInstance>( ) {
       public VmInstance apply( final String input ) {
-        VmInstance vm = VmInstances.lookup( VolumeAttachCallback.this.getRequest( ).getInstanceId( ) );
-        vm.updateVolumeAttachment( VolumeAttachCallback.this.getRequest( ).getVolumeId( ), AttachmentState.attaching );
+        VmInstance vm = VmInstances.lookup( instanceId );
+        try {
+          if ( !AttachmentState.attached.equals( vm.lookupVolumeAttachment( volumeId ).getAttachmentState( ) ) ) {
+            vm.updateVolumeAttachment( volumeId, AttachmentState.attaching );
+          }
+        } catch ( Exception ex ) {
+          vm.updateVolumeAttachment( volumeId, AttachmentState.attaching );
+        }
         return vm;
       }
     };
@@ -118,19 +124,17 @@ public class VolumeAttachCallback extends MessageCallback<AttachVolumeType, Atta
   
   @Override
   public void fireException( Throwable e ) {
-    LOG.debug( e, e );
+    LOG.debug( e );
+    Logs.extreme( ).error( e, e );
     LOG.debug( "Trying to remove invalid volume attachment " + this.getRequest( ).getVolumeId( ) + " from instance " + this.getRequest( ).getInstanceId( ) );
     try {
       VmInstance vm = VmInstances.lookup( this.getRequest( ).getInstanceId( ) );
       Partition partition = vm.lookupPartition( );
-      ServiceConfiguration cc = Topology.lookup( ClusterController.class, partition );
-      Cluster cluster = Clusters.lookup( cc );
       ServiceConfiguration sc = Topology.lookup( Storage.class, partition );
       /** clean up SC session state **/
       try {
-        String iqn = cluster.getNode( vm.getServiceTag( ) ).getIqn( );
-        LOG.debug( "Sending detach after async failure in attach volume: cluster=" + cluster.getName( ) + " iqn=" + iqn + " sc=" + sc );
-        AsyncRequests.sendSync( sc, new DetachStorageVolumeType( iqn, this.getRequest( ).getVolumeId( ) ) );
+        LOG.debug( "Sending detach after async failure in attach volume: " + this.getRequest( ).getVolumeId( ) + " sc=" + sc );
+        AsyncRequests.sendSync( sc, new DetachStorageVolumeType( this.getRequest( ).getVolumeId( ) ) );
       } catch ( Exception ex ) {
         LOG.error( ex );
         Logs.extreme( ).error( ex, ex );
@@ -146,7 +150,8 @@ public class VolumeAttachCallback extends MessageCallback<AttachVolumeType, Atta
       Entities.asTransaction( VmInstance.class, removeVolAttachment ).apply( this.getRequest( ).getInstanceId( ) );
       LOG.debug( "Removed failed attachment: " + this.getRequest( ).getVolumeId( ) + " -> " + vm.getInstanceId( ) );
     } catch ( Exception e1 ) {
-      LOG.error( e1, e1 );
+      LOG.error( e1 );
+      Logs.extreme( ).error( e1, e1 );
     }
   }
   

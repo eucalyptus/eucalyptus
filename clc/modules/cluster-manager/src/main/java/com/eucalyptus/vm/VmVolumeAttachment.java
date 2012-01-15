@@ -82,17 +82,60 @@ public class VmVolumeAttachment implements Comparable<VmVolumeAttachment> {
       public boolean isVolatile( ) {
         return true;
       }
+
+      @Override
+      public String stateFlag( ) {
+        return "a";
+      }
     },
-    attached,
+    attached {
+      @Override
+      public String stateFlag( ) {
+        return "A";
+      }
+    },
     detaching {
       @Override
       public boolean isVolatile( ) {
         return true;
       }
+
+      @Override
+      public String stateFlag( ) {
+        return "d";
+      }
     },
-    detached,
-    detaching_failed,
-    attaching_failed;
+    detached {
+      @Override
+      public String stateFlag( ) {
+        return "D";
+      }
+    },
+    detaching_failed {
+      
+      @Override
+      public boolean isFailed( ) {
+        return true;
+      }
+
+      @Override
+      public String stateFlag( ) {
+        return "df";
+      }
+      
+    },
+    attaching_failed {
+      @Override
+      public boolean isFailed( ) {
+        return true;
+      }
+
+      @Override
+      public String stateFlag( ) {
+        return "af";
+      }
+      
+    };
     public static AttachmentState parse( String stateName ) {
       if ( stateName != null && stateName.indexOf( " " ) != -1 ) {
         stateName = stateName.replace( " ", "_" );
@@ -105,6 +148,12 @@ public class VmVolumeAttachment implements Comparable<VmVolumeAttachment> {
     public boolean isVolatile( ) {
       return false;
     }
+    
+    public boolean isFailed( ) {
+      return false;
+    }
+    
+    public abstract String stateFlag( );
   }
   
   @Parent
@@ -205,7 +254,7 @@ public class VmVolumeAttachment implements Comparable<VmVolumeAttachment> {
     this.volumeId = volumeId;
   }
   
-  String getDevice( ) {
+  public String getDevice( ) {
     return this.device;
   }
   
@@ -229,7 +278,7 @@ public class VmVolumeAttachment implements Comparable<VmVolumeAttachment> {
     return this.status;
   }
   
-  void setStatus( String status ) {
+  public void setStatus( String status ) {
     this.status = status;
   }
   
@@ -297,7 +346,7 @@ public class VmVolumeAttachment implements Comparable<VmVolumeAttachment> {
       }
     };
   }
-
+  
   @Override
   public int hashCode( ) {
     final int prime = 31;
@@ -305,7 +354,7 @@ public class VmVolumeAttachment implements Comparable<VmVolumeAttachment> {
     result = prime * result + ( ( this.volumeId == null ) ? 0 : this.volumeId.hashCode( ) );
     return result;
   }
-
+  
   @Override
   public boolean equals( Object obj ) {
     if ( this == obj ) {

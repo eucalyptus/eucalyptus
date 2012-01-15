@@ -164,6 +164,12 @@ public class VmInstances {
         return SHUT_DOWN_TIME;
       }
     },
+    STOPPING( VmState.STOPPING ) {
+      @Override
+      public Integer getMinutes( ) {
+        return STOPPING_TIME;
+      }
+    },
     TERMINATED( VmState.TERMINATED ) {
       @Override
       public Integer getMinutes( ) {
@@ -206,6 +212,9 @@ public class VmInstances {
   @ConfigurableField( description = "Amount of time (in minutes) before a VM which is not reported by a cluster will be marked as terminated.",
                       initial = "10" )
   public static Integer   SHUT_DOWN_TIME                = 10;
+  @ConfigurableField( description = "Amount of time (in minutes) before a stopping VM which is not reported by a cluster will be marked as terminated.",
+                      initial = "10" )
+  public static Integer   STOPPING_TIME                 = 10;
   @ConfigurableField( description = "Amount of time (in minutes) that a terminated VM will continue to be reported.",
                       initial = "60" )
   public static Integer   TERMINATED_TIME               = 60;
@@ -304,7 +313,7 @@ public class VmInstances {
       List<VmInstance> vms = Entities.query( VmInstance.create( ) );
       for ( VmInstance vm : vms ) {
         try {
-          ret = vm.lookupVolumeAttachment(volumeId);
+          ret = vm.lookupVolumeAttachment( volumeId );
           if ( ret.getVmInstance( ) == null ) {
             ret.setVmInstance( vm );
           }
@@ -404,37 +413,40 @@ public class VmInstances {
   
   private static void cleanUpAttachedVolumes( final VmInstance vm ) {
     try {
-      ServiceConfiguration ccConfig = Topology.lookup( ClusterController.class, vm.lookupPartition( ) );
-      final Cluster cluster = Clusters.lookup( ccConfig );
       vm.eachVolumeAttachment( new Predicate<VmVolumeAttachment>( ) {
         @Override
         public boolean apply( final VmVolumeAttachment arg0 ) {
           try {
             
-            final ServiceConfiguration sc = Topology.lookup( Storage.class, vm.lookupPartition( ) );
-            
             if ( VmStateSet.TERM.apply( vm ) && !"/dev/sda1".equals( arg0.getDevice( ) ) ) {
               try {
-                vm.removeVolumeAttachment( arg0.getVolumeId( ) );
+                arg0.getVmInstance( ).getTransientVolumeState( ).removeVolumeAttachment( arg0.getVolumeId( ) );
               } catch ( NoSuchElementException ex ) {
                 Logs.extreme( ).debug( ex );
               }
             }
             
             try {
-              AsyncRequests.sendSync( sc, new DetachStorageVolumeType( cluster.getNode( vm.getServiceTag( ) ).getIqn( ), arg0.getVolumeId( ) ) );
+              final ServiceConfiguration sc = Topology.lookup( Storage.class, vm.lookupPartition( ) );
+              AsyncRequests.sendSync( sc, new DetachStorageVolumeType( arg0.getVolumeId( ) ) );
             } catch ( Exception ex ) {
               LOG.debug( ex );
               Logs.extreme( ).debug( ex, ex );
             }
             
-            //ebs with either default deleteOnTerminate or user specified deleteOnTerminate and TERMINATING instance
-            if ( VmStateSet.TERM.apply( vm ) && arg0.getDeleteOnTerminate( ) ) {
-              AsyncRequests.sendSync( sc, new DeleteStorageVolumeType( arg0.getVolumeId( ) ) );
+            try {
+              //ebs with either default deleteOnTerminate or user specified deleteOnTerminate and TERMINATING instance
+              if ( VmStateSet.TERM.apply( vm ) && arg0.getDeleteOnTerminate( ) ) {
+                final ServiceConfiguration sc = Topology.lookup( Storage.class, vm.lookupPartition( ) );
+                AsyncRequests.dispatch( sc, new DeleteStorageVolumeType( arg0.getVolumeId( ) ) );
+              }
+            } catch ( Exception ex ) {
+              LOG.debug( ex );
+              Logs.extreme( ).debug( ex, ex );
             }
             
             return true;
-          } catch ( final Throwable e ) {
+          } catch ( final Exception e ) {
             LOG.error( "Failed to clean up attached volume: "
                        + arg0.getVolumeId( )
                        + " for instance "
