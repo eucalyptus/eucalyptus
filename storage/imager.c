@@ -357,13 +357,12 @@ int main (int argc, char * argv[])
 
     // free the artifact tree
     if (root) {
-        art_free (root);
-    }
-
-    if (root && tree_uses_blobstore (root)) {
-        if (blobstore_fsck (work_bs, stale_blob_examiner)) { // will remove all blobs
-            logprintfl (EUCAWARN, "WARNING: failed to clean up work space: %s\n", blobstore_get_error_str(blobstore_get_error()));
+        if (tree_uses_blobstore (root)) {
+            if (blobstore_fsck (work_bs, stale_blob_examiner)) { // will remove all blobs
+                logprintfl (EUCAWARN, "WARNING: failed to clean up work space: %s\n", blobstore_get_error_str(blobstore_get_error()));
+            }
         }
+        art_free (root);
     }
     clean_work_dir (work_bs);
 
