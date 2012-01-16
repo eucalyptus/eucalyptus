@@ -586,7 +586,7 @@ public class Faults {
       Logs.extreme( ).error( errors, errors );
       FaultRecord record = new FaultRecord( parent, transitionRecord, errors );
       serviceExceptions.put( parent, record );
-      errorQueue.offer( record );
+      //      errorQueue.offer( record );
     }
   }
   
