@@ -93,7 +93,7 @@
       </structure>
     </collection>
     <structure name="allocationIdsSet" usage="optional">
-      <collection factory="org.jibx.runtime.Utility.arrayListFactory" item-type="java.lang.String">
+      <collection field="allocationIds" factory="org.jibx.runtime.Utility.arrayListFactory" item-type="java.lang.String">
         <structure name="item">
           <value name="allocationId" />
         </structure>
