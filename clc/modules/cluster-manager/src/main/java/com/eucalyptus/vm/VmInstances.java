@@ -76,6 +76,8 @@ import org.hibernate.criterion.Example;
 import org.hibernate.criterion.MatchMode;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
+import com.eucalyptus.blockstorage.State;
+import com.eucalyptus.blockstorage.Volumes;
 import com.eucalyptus.cloud.CloudMetadata.VmInstanceMetadata;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
@@ -438,7 +440,8 @@ public class VmInstances {
               //ebs with either default deleteOnTerminate or user specified deleteOnTerminate and TERMINATING instance
               if ( VmStateSet.TERM.apply( vm ) && arg0.getDeleteOnTerminate( ) ) {
                 final ServiceConfiguration sc = Topology.lookup( Storage.class, vm.lookupPartition( ) );
-                AsyncRequests.sendSync( sc, new DeleteStorageVolumeType( arg0.getVolumeId( ) ) );
+                AsyncRequests.dispatch( sc, new DeleteStorageVolumeType( arg0.getVolumeId( ) ) );
+                Volumes.lookup( null, arg0.getVolumeId( ) ).setState( State.ANNIHILATING );
               }
             } catch ( Exception ex ) {
               LOG.debug( ex );
