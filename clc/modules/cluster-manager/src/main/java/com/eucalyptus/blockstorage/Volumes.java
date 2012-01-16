@@ -224,16 +224,19 @@ public class Volumes {
           try {
             final Volume v = Entities.uniqueResult( Volume.named( null, input ) );
             VmVolumeAttachment vmAttachedVol = null;
+            boolean maybeBusy = false;
             String vmId = null;
             try {
               vmAttachedVol = VmInstances.lookupVolumeAttachment( v.getDisplayName( ) );
-              v.setState( State.BUSY );
+              maybeBusy = true;
               vmId = vmAttachedVol.getVmInstance( ).getInstanceId( );
             } catch ( final NoSuchElementException ex ) {
             }
           
-            final State initialState = v.getState( );
-            
+            State initialState = v.getState( );
+            if ( !State.ANNIHILATING.equals( initialState ) && !State.ANNIHILATED.equals( initialState ) && maybeBusy ) {
+              initialState = State.BUSY;
+            }
             buf.append( "VolumeStateUpdate: " )
                .append( v.getPartition( ) ).append( " " )
                .append( v.getDisplayName( ) ).append( " " )
@@ -256,6 +259,8 @@ public class Volumes {
               if ( State.EXTANT.equals( initialState )
                    && ( ( actualDeviceName == null ) || "invalid".equals( actualDeviceName ) || "unknown".equals( actualDeviceName ) ) ) {
                 volumeState = State.GENERATING;
+              } else if ( State.ANNIHILATING.equals( initialState ) && State.ANNIHILATED.equals( Volumes.transformStorageState( v.getState( ), status ) ) ) {
+                volumeState = State.ANNIHILATED;
               } else {
                 volumeState = Volumes.transformStorageState( v.getState( ), status );
               }

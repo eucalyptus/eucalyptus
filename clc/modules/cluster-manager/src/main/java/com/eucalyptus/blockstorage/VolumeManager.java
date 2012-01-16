@@ -281,7 +281,6 @@ public class VolumeManager {
             try {
               VmVolumeAttachment attachment = VmInstances.lookupVolumeAttachment( input );
               attachedVolume  = VmVolumeAttachment.asAttachedVolume( attachment.getVmInstance( ) ).apply( attachment );
-              foundVol.setState( State.BUSY );
             } catch ( NoSuchElementException ex ) {
               if ( State.BUSY.equals( foundVol.getState( ) ) ) {
                 foundVol.setState( State.EXTANT );
@@ -289,6 +288,7 @@ public class VolumeManager {
             }
             edu.ucsb.eucalyptus.msgs.Volume msgTypeVolume = foundVol.morph( new edu.ucsb.eucalyptus.msgs.Volume( ) );
             if ( attachedVolume != null ) {
+              msgTypeVolume.setStatus( "in-use" );
               msgTypeVolume.getAttachmentSet( ).add( attachedVolume );
             }
             reply.getVolumeSet( ).add( msgTypeVolume );
@@ -346,7 +346,9 @@ public class VolumeManager {
     try {
       VmInstances.lookupVolumeAttachment( volumeId );
       throw new EucalyptusCloudException( "Volume already attached: " + request.getVolumeId( ) );
-    } catch ( Exception ex1 ) {}
+    } catch ( NoSuchElementException ex1 ) {
+      /** no attachment **/
+    }
     
     Partition volPartition = Partitions.lookupByName( volume.getPartition( ) );
     ServiceConfiguration sc = Topology.lookup( Storage.class, volPartition );
