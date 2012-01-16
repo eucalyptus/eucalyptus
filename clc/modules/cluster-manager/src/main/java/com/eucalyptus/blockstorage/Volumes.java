@@ -256,6 +256,8 @@ public class Volumes {
               if ( State.EXTANT.equals( initialState )
                    && ( ( actualDeviceName == null ) || "invalid".equals( actualDeviceName ) || "unknown".equals( actualDeviceName ) ) ) {
                 volumeState = State.GENERATING;
+              } else if ( State.ANNIHILATING.equals( initialState ) && State.ANNIHILATED.equals( Volumes.transformStorageState( v.getState( ), status ) ) ) {
+                volumeState = State.ANNIHILATED;
               } else {
                 volumeState = Volumes.transformStorageState( v.getState( ), status );
               }
