@@ -126,7 +126,7 @@ public class Pipelines {
     if ( candidate == null ) {
       if ( Logs.isExtrrreeeme( ) ) {
         if ( request instanceof MappingHttpMessage ) {
-          Logs.extreme( ).error( ( ( MappingHttpMessage ) request ).logMessage( ) );
+          ( ( MappingHttpMessage ) request ).logMessage( );
           for ( final FilteredPipeline p : pipelines ) {
             LOG.debug( "PIPELINE: " + p );
           }
@@ -135,7 +135,7 @@ public class Pipelines {
           }
         }
       }
-      throw new NoAcceptingPipelineException( request.toString( ) + "\n" + request.getContent( ));
+      throw new NoAcceptingPipelineException( );
     }
     if ( Logs.isExtrrreeeme( ) ) {
       EventRecord.here( Pipelines.class, EventType.PIPELINE_UNROLL, candidate.toString( ) ).extreme( );

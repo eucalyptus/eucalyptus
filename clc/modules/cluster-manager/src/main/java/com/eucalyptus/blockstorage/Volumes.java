@@ -234,7 +234,7 @@ public class Volumes {
             }
           
             State initialState = v.getState( );
-            if ( !State.ANNIHILATING.equals( initialState ) && maybeBusy ) {
+            if ( !State.ANNIHILATING.equals( initialState ) && !State.ANNIHILATED.equals( initialState ) && maybeBusy ) {
               initialState = State.BUSY;
             }
             buf.append( "VolumeStateUpdate: " )
