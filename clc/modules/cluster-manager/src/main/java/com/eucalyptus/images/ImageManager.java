@@ -138,7 +138,7 @@ public class ImageManager {
     }
     Predicate<ImageInfo> rangeFilter = Predicates.and( CloudMetadatas.filterById( request.getImagesSet( ) ),
                                                        CloudMetadatas.filterByOwningAccount( request.getOwnersSet( ) ),
-                                                       Images.filterExecutableBy( ownersSet ) );
+                                                       Images.filterExecutableBy( request.getExecutableBySet( ) ) );
     Predicate<ImageInfo> privilegesFilter = Predicates.and( Images.FilterPermissions.INSTANCE, RestrictedTypes.filterPrivilegedWithoutOwner( ) );
     Predicate<ImageInfo> filter = Predicates.and( privilegesFilter, rangeFilter );
     List<ImageDetails> imageDetailsList = Transactions.filteredTransform( new ImageInfo( ), filter, Images.TO_IMAGE_DETAILS );
