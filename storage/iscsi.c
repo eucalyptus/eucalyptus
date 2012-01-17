@@ -140,20 +140,20 @@ char * connect_iscsi_target (const char *dev_string)
     } else {
         close (filedes[1]);
         
-        rbytes = timeread(filedes[0], &len, sizeof(int), 15);
+        rbytes = timeread(filedes[0], &len, sizeof(int), 90);
         if (rbytes <= 0) {
             kill(pid, SIGKILL);
         } else {
             retval = malloc(sizeof(char) * (len+1));
             bzero(retval, len+1);
-            rbytes = timeread(filedes[0], retval, len, 15);
+            rbytes = timeread(filedes[0], retval, len, 90);
             if (rbytes <= 0) {
                 kill(pid, SIGKILL);
             }
         }
         close (filedes[0]);
 
-        rc = timewait(pid, &status, 15);
+        rc = timewait(pid, &status, 90);
         if (rc) {
             rc = WEXITSTATUS(status);
         } else {
@@ -179,7 +179,7 @@ int disconnect_iscsi_target (const char *dev_string)
         }
         exit(0);
     } else {
-        retval = timewait(pid, &status, 15);
+        retval = timewait(pid, &status, 90);
         if (retval) {
             retval = WEXITSTATUS(status);
         } else {
@@ -233,20 +233,20 @@ char * get_iscsi_target (const char *dev_string)
     } else {
         close(filedes[1]);
         
-        rbytes = timeread(filedes[0], &len, sizeof(int), 15);
+        rbytes = timeread(filedes[0], &len, sizeof(int), 90);
         if (rbytes <= 0) {
             kill(pid, SIGKILL);
         } else {
             retval = malloc(sizeof(char) * (len+1));
             bzero(retval, len+1);
-            rbytes = timeread(filedes[0], retval, len, 15);
+            rbytes = timeread(filedes[0], retval, len, 90);
             if (rbytes <= 0) {
                 kill(pid, SIGKILL);
             }
         }
         close(filedes[0]);
 
-        rc = timewait(pid, &status, 15);
+        rc = timewait(pid, &status, 90);
         if (rc) {
             rc = WEXITSTATUS(status);
         } else {
