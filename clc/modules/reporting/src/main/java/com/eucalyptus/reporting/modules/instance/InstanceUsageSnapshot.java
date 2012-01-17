@@ -76,7 +76,12 @@ public class InstanceUsageSnapshot
 		return diskIoMegs;
 	}
 
-
+	@Override
+	public String toString()
+	{
+		return "[timestamp: " + this.timestampMs + " cumulIoMegs:" + this.networkIoMegs + " cumulDiskMegs:" + this.diskIoMegs + "]";
+	}
+	
 	@Override
 	public int hashCode()
 	{
