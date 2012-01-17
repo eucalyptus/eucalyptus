@@ -158,7 +158,6 @@ public class Allocations {
     }
     
     private Allocation( final String reservationId,
-                        final Integer launchIndex,
                         final String instanceId,
                         final byte[] userData,
                         final Date expiration,
@@ -175,7 +174,7 @@ public class Allocations {
       this.reservationId = reservationId;
       this.reservationIndex = UniqueIds.nextIndex( VmInstance.class, ( long ) this.maxCount );
       this.instanceIds = Maps.newHashMap( );
-      this.instanceIds.put( launchIndex, instanceId );
+      this.instanceIds.put( 0, instanceId );
       this.userData = userData;
       this.partition = partition;
       this.sshKeyPair = ( sshKeyPair != null ? sshKeyPair : KeyPairs.noKey( ) );
@@ -354,7 +353,6 @@ public class Allocations {
   public static Allocation start( final VmInstance vm ) {
     BootableSet bootSet = Emis.recreateBootableSet( vm );
     return new Allocation( vm.getReservationId( ),
-                           vm.getLaunchIndex( ),
                            vm.getInstanceId( ),
                            vm.getUserData( ),
                            vm.getExpiration( ),
