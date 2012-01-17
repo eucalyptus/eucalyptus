@@ -237,14 +237,14 @@ public class Volumes {
             initialState = State.BUSY;
           }
           buf.append( "VolumeStateUpdate: " )
-               .append( v.getPartition( ) ).append( " " )
-               .append( v.getDisplayName( ) ).append( " " )
-               .append( v.getState( ) ).append( " " )
-               .append( v.getCreationTimestamp( ) );
+             .append( v.getPartition( ) ).append( " " )
+             .append( v.getDisplayName( ) ).append( " " )
+             .append( v.getState( ) ).append( " " )
+             .append( v.getCreationTimestamp( ) );
           if ( vmAttachedVol != null ) {
             buf.append( " attachment " )
-                 .append( vmId ).append( " " )
-                 .append( vmAttachedVol.getAttachmentState( ) );
+               .append( vmId ).append( " " )
+               .append( vmAttachedVol.getAttachmentState( ) );
           }
           
           String status = null;
