@@ -80,7 +80,6 @@ import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.OwnerFullName;
-import com.eucalyptus.util.StorageProperties;
 
 @Entity
 @javax.persistence.Entity
@@ -90,6 +89,7 @@ import com.eucalyptus.util.StorageProperties;
 public class Volume extends UserMetadata<State> implements VolumeMetadata {
   @Column( name = "metadata_volume_size" )
   private Integer  size;
+  @Deprecated
   @Column( name = "metadata_volume_sc_name" )
   private String   scName;
   @Column( name = "metadata_volume_partition" )
@@ -150,18 +150,6 @@ public class Volume extends UserMetadata<State> implements VolumeMetadata {
     }
   }
   
-  public void setMappedState( final String state ) {
-    if ( StorageProperties.Status.failed.toString( ).equals( state ) )
-      this.setState( State.FAIL );
-    else if ( StorageProperties.Status.creating.toString( ).equals( state ) )
-      this.setState( State.GENERATING );
-    else if ( StorageProperties.Status.available.toString( ).equals( state ) )
-      this.setState( State.EXTANT );
-    else if ( "in-use".equals( state ) )
-      this.setState( State.BUSY );
-    else this.setState( State.ANNIHILATED );
-  }
-  
   public edu.ucsb.eucalyptus.msgs.Volume morph( final edu.ucsb.eucalyptus.msgs.Volume vol ) {
     vol.setAvailabilityZone( this.getPartition( ) );
     vol.setCreateTime( this.getCreationTimestamp( ) );
@@ -215,7 +203,7 @@ public class Volume extends UserMetadata<State> implements VolumeMetadata {
   }
   
   public boolean isReady( ) {
-    return this.getState( ).equals( State.EXTANT );
+    return this.getState( ).equals( State.EXTANT ) || this.getState( ).equals( State.BUSY );
   }
   
   @Override

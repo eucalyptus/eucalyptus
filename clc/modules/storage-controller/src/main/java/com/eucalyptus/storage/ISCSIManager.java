@@ -186,10 +186,24 @@ public class ISCSIManager implements StorageExportManager {
 				return;
 			}
 
-			if(SystemUtil.runAndGetCode(new String[]{ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "delete", "--mode", "target", "--tid", String.valueOf(tid)}) != 0) {
-				LOG.error("Unable to delete target: " + tid);
-				return;
-			}			
+			int retryCount = 0;
+			do {
+				if(SystemUtil.runAndGetCode(new String[]{ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "delete", "--mode", "target", "--tid", String.valueOf(tid)}) != 0) {
+					LOG.warn("Unable to delete target: " + tid);
+                                        Thread.sleep(300); //FIXME: clean this up async 
+					continue;
+				}	
+				String returnValue = SystemUtil.run(new String[]{ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "show", "--mode", "target", "--tid" , String.valueOf(tid)});
+				if(returnValue.length() > 0) {
+					LOG.warn("Target: " + tid + " still exists...");
+					Thread.sleep(300); //FIXME: clean this up async
+				} else {
+					break;
+				}
+			} while (retryCount++ < 10);
+			if (retryCount>=10){
+				LOG.error("Gave up deleting the target: " + tid);
+			}
 		} catch (Exception t) {
 			LOG.error(t);
 		}

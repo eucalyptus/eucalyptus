@@ -151,9 +151,10 @@ public class EuareService {
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
     User requestUser = ctx.getUser( );
+    Account accountFound = lookupAccountByName( request.getAccountName( ) );
     try {
       boolean recursive = ( request.getRecursive( ) != null && request.getRecursive( ) );
-      Privileged.deleteAccount( ctx.hasAdministrativePrivileges( ), request.getAccountName( ), recursive );
+      Privileged.deleteAccount( ctx.hasAdministrativePrivileges( ), accountFound.getName( ), recursive );
     } catch ( Exception e ) {
       LOG.error( e, e );
       if ( e instanceof AuthException ) {

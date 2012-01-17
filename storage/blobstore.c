@@ -409,6 +409,7 @@ static int close_and_unlock (int fd)
     return ret;
 }
 
+#ifdef _TEST_LOCKS
 static char * path_to_sem_name (const char * path, char * name, int name_size) 
 {
     snprintf (name, name_size, "euca%s", path);
@@ -417,6 +418,7 @@ static char * path_to_sem_name (const char * path, char * name, int name_size)
             name [i] = '-';
     return name;
 }
+#endif // _UNIT_TEST
 
 // This function creates or opens a file and locks it; the lock is 
 // - exclusive if the file is being created or written to, or a
@@ -584,13 +586,13 @@ static int open_and_lock (const char * path,
 
     // successully acquired both file and Posix locks
 
-    /* lock testing code
+#ifdef _TEST_LOCKS
     if (l_type == F_WRLCK) {
         char sem_name [512];
         path_lock->sem = sem_alloc (1, path_to_sem_name (path, sem_name, sizeof (sem_name)));
         sem_p (path_lock->sem);
     }
-    */
+#endif // _TEST_LOCKS
 
     pthread_mutex_lock (&_blobstore_mutex);
     _open_success_ctr++;
@@ -1532,7 +1534,7 @@ static long long purge_blockblobs_lru ( blobstore * bs, blockblob * bb_list, lon
         int i;
 
         blockblob ** bb_array = (blockblob **) calloc (list_length, sizeof (blockblob *));
-        if(!bb_array)
+        if (!bb_array)
             return purged;
 
         for (i=0, bb = bb_list; bb; bb = bb->next, i++) {
@@ -1541,17 +1543,32 @@ static long long purge_blockblobs_lru ( blobstore * bs, blockblob * bb_list, lon
 
         qsort (bb_array, list_length, sizeof (blockblob *), compare_bbs);
 
-        for (i=0; i<list_length; i++) {
-            bb = bb_array [i];
-            if (! (bb->in_use & ~BLOCKBLOB_STATUS_BACKED) ) {
-                if (delete_blockblob_files (bs, bb->id)>0) {
-                    purged += round_up_sec (bb->size_bytes) / 512;
-                    myprintf (EUCAINFO, "purged from blobstore %s blockblob %s (total blocks purged in this sweep %lld)\n", bs->id, bb->id, purged);
+        int iteration = 0;
+        int deleted;
+        do { // iterate multiple times in case there are dependencies (TODO: unify with _fsck's iteration code?)
+            deleted = 0; // deleted in this round
+            for (i=0; i<list_length; i++) {
+                bb = bb_array [i];
+                if (bb == NULL) // this was deleted on anearlier iteration
+                    continue;
+                bb->in_use = check_in_use (bs, bb->id, 0); // verify in-use status
+                logprintfl (EUCADEBUG, "LRU check %d: %24s %c%c%c %9llu %s", iteration, bb->id,
+                            (bb->in_use & BLOCKBLOB_STATUS_OPENED) ? ('o') : ('-'), // o = open
+                            (bb->in_use & BLOCKBLOB_STATUS_BACKED) ? ('p') : ('-'), // p = has parents
+                            (bb->in_use & BLOCKBLOB_STATUS_MAPPED) ? ('c') : ('-'), // c = has children
+                            bb->size_bytes / 512L, // size is in sectors
+                            ctime (&(bb->last_modified))); // ctime adds a newline
+                if (! (bb->in_use & ~BLOCKBLOB_STATUS_BACKED) ) { // the only in-use flag is _BACKED (has parents)
+                    if (delete_blockblob_files (bs, bb->id)>0) {
+                        myprintf (EUCAINFO, "purged from blobstore %s blockblob %s (total blocks purged in this sweep %lld)\n", bs->id, bb->id, purged);
+                        purged += round_up_sec (bb->size_bytes) / 512;
+                        deleted++;
+                        bb_array [i] = NULL; // mark as deleted
+                    }
                 }
             }
-            if (purged>=need_blocks)
-                break;
-        }
+            iteration++;
+        } while (deleted && (purged<need_blocks));
         free (bb_array);
     }
 
@@ -1580,12 +1597,12 @@ int blobstore_stat (blobstore * bs, blobstore_meta * meta)
     meta->blocks_unlocked = 0;
     meta->blocks_locked = 0;
     meta->num_blobs = 0;
-    for (blockblob * abb = bbs; abb; abb=abb->next) {
+    for (blockblob * abb = bbs; abb; abb=abb->next) { // TODO: unify this with locked/unlocked calculation in open()
         long long abb_size_blocks = round_up_sec (abb->size_bytes) / 512;
-        if (abb->in_use & ~BLOCKBLOB_STATUS_BACKED) {
+        if (abb->in_use & BLOCKBLOB_STATUS_OPENED) {
             meta->blocks_locked += abb_size_blocks; // these can't be purged if we need space (TODO: look into recursive purging of unused references?)
         } else {
-            meta->blocks_unlocked += abb_size_blocks; // these can be purged
+            meta->blocks_unlocked += abb_size_blocks; // these potentially can be purged, unless they are depended on by locked ones
         }
         meta->blocks_allocated += abb->blocks_allocated;
         meta->num_blobs++;
@@ -1604,6 +1621,86 @@ int blobstore_stat (blobstore * bs, blobstore_meta * meta)
     meta->blocks_limit = bs->limit_blocks;
 
     return ret;
+}
+
+/*
+ * read .refs file content and return any entries that point to blobs that no longer exist
+ * return value is size of the array placed into *refs, which caller must free, or -1 on error
+ */
+static int get_stale_refs (const blockblob * bb, char *** refs)
+{
+    blobstore * bs = bb->store;
+    char ** array = NULL;
+    int array_size = 0;
+    int stale_refs = 0;
+
+    if (read_array_blockblob_metadata_path (BLOCKBLOB_PATH_REFS, bb->store, bb->id, &array, &array_size)!=-1) {
+        for (int i=0; i<array_size; i++) {
+            char ref [BLOBSTORE_MAX_PATH+MAX_DM_NAME+1];
+            safe_strncpy (ref, array [i], sizeof (ref));
+            
+            char * store_path = strtok (array [i], " ");
+            char * blob_id    = strtok (NULL, " "); // the remaining entries in array[i] are ignored
+            char ref_exists = 0;
+            
+            if (strlen (store_path)<1 || strlen (blob_id)<1)
+                goto stale_ref;
+            
+            blobstore * ref_bs = bs;
+            if (strcmp (bs->path, store_path)) { // if deleting reference in a different blobstore
+                // need to open it
+                ref_bs = blobstore_open (store_path, 0, BLOBSTORE_FLAG_CREAT, BLOBSTORE_FORMAT_ANY, BLOBSTORE_REVOCATION_ANY, BLOBSTORE_SNAPSHOT_ANY);
+                if (ref_bs == NULL) // blobstore with a child blob does not exist
+                    goto stale_ref;
+            }
+            
+            blockblob * ref_bb = blockblob_open (ref_bs, blob_id, 0, 0, NULL, BLOBSTORE_FIND_TIMEOUT_USEC);
+            if (ref_bb) {
+                blockblob_close (ref_bb);
+                ref_exists = 1;
+            } else {
+                if (_blobstore_errno != BLOBSTORE_ERROR_NOENT) // conservatively assume that unless the error says otherwise, the blob exists
+                    ref_exists = 1;
+            }
+            if (ref_bs != bs) {
+                blobstore_close (ref_bs);
+            }
+            
+        stale_ref:
+            
+            if (ref_exists) {
+                free (array [i]); // free names of refs that exist
+                array [i] = NULL;
+            } else {
+                strcpy (array [i], ref); // since strtok() clobbered the original value
+                stale_refs++;
+            }
+        }
+    }
+
+    if (stale_refs>0) {
+        if (refs) {
+            * refs = calloc (stale_refs, sizeof (char *));
+            if (* refs == NULL) {
+                stale_refs = -1; // OOM error
+            }
+        }
+        for (int i=0, j=0; i<array_size; i++) {
+            if (array [i]) { // ref does not exist
+                if (refs && *refs) {
+                    (* refs) [j++] = array [i];
+                    assert (j<=stale_refs);
+                } else {
+                    free (array [i]);
+                }
+            }
+        }
+    }
+    
+    if (array_size > 0)
+        free (array);
+
+    return stale_refs;
 }
 
 static int blockblob_check (const blockblob * bb);
@@ -1668,51 +1765,18 @@ int blobstore_fsck (blobstore * bs, int (* examiner) (const blockblob * bb))
                             // Since we are checking integrity, do not trust .refs file blindly,
                             // but ensure that the entries -- blobs depending on this one -- exist
 
-                            char ** array = NULL;
-                            int array_size = 0;
-                            if (read_array_blockblob_metadata_path (BLOCKBLOB_PATH_REFS, bb->store, bb->id, &array, &array_size)!=-1) {
-                                for (int i=0; i<array_size; i++) {
-                                    char ref [BLOBSTORE_MAX_PATH+MAX_DM_NAME+1];
-                                    safe_strncpy (ref, array [i], sizeof (ref));
-
-                                    char * store_path = strtok (array [i], " ");
-                                    char * blob_id    = strtok (NULL, " "); // the remaining entries in array[i] are ignored
-                                    char ref_exists = 0;
-
-                                    if (strlen (store_path)<1 || strlen (blob_id)<1)
-                                        goto remove_ref;
-
-                                    blobstore * ref_bs = bs;
-                                    if (strcmp (bs->path, store_path)) { // if deleting reference in a different blobstore
-                                        // need to open it
-                                        ref_bs = blobstore_open (store_path, 0, BLOBSTORE_FLAG_CREAT, BLOBSTORE_FORMAT_ANY, BLOBSTORE_REVOCATION_ANY, BLOBSTORE_SNAPSHOT_ANY);
-                                        if (ref_bs == NULL) // blobstore with a child blob does not exist
-                                            goto remove_ref;
-                                    }
-                                    
-                                    blockblob * ref_bb = blockblob_open (ref_bs, blob_id, 0, 0, NULL, BLOBSTORE_FIND_TIMEOUT_USEC);
-                                    if (ref_bb) {
-                                        blockblob_close (ref_bb);
-                                        ref_exists = 1;
-                                    } else {
-                                        // TODO: check error code before assuming ref does not exist?
-                                    }
-                                    if (ref_bs != bs) {
-                                        blobstore_close (ref_bs);
-                                    }
-                                    
-                                remove_ref:
-
-                                    if (! ref_exists) {
-                                        // update the .refs file to remove this entry
-                                        logprintfl (EUCAINFO, "removing stale/corrupted reference in blob %s to blob %s\n", bb->id, blob_id);
-                                        update_entry_blockblob_metadata_path (BLOCKBLOB_PATH_REFS, bb->store, bb->id, ref, 1);
-                                    }
+                            char ** stale_refs;
+                            int num_stale_refs = get_stale_refs (bb, &stale_refs);
+                            if (num_stale_refs > 0) {
+                                for (int i=0; i<num_stale_refs; i++) {
+                                    // update the .refs file to remove this entry
+                                    logprintfl (EUCAINFO, "removing stale/corrupted reference in blob %s to %s\n", bb->id, stale_refs [i]);
+                                    update_entry_blockblob_metadata_path (BLOCKBLOB_PATH_REFS, bb->store, bb->id, stale_refs [i], 1);
+                                    free (stale_refs [i]);
                                 }
-                                if (array)
-                                    free (array);
+                                free (stale_refs);
                             }
-                             
+                            
                             // mapped blobs have children, thus cannot be deleted at this iteration
                             blockblob_close (bb);
                             to_delete++;
@@ -1729,7 +1793,7 @@ int blobstore_fsck (blobstore * bs, int (* examiner) (const blockblob * bb))
                             blobs_deleted++;
                         }
                     } else {
-                        logprintfl (EUCAWARN, "WARNING: failed to open blockblob %s\n", abb->id);
+                        logprintfl (EUCAWARN, "could not open blockblob %s (it may be in use)\n", abb->id);
                         abb->store = NULL; // so it will get skipped on next iteration
                         blobs_unopenable++;
                     }
@@ -1846,10 +1910,10 @@ int blobstore_delete_regex (blobstore * bs, const char * regex)
 {
     blockblob_meta * matches = NULL;
     int found  = blobstore_search (bs, regex, &matches);
-    int left_to_close = found;
-    int closed;
+    int left_to_delete = found;
+    int deleted;
     do { // iterate multiple times in case there are dependencies (TODO: unify with _fsck's iteration code?)
-        closed = 0; // closed in this round
+        deleted = 0; // deleted in this round
         for (blockblob_meta * bm = matches; bm; bm=bm->next) {
             blockblob * bb = blockblob_open (bs, bm->id, 0, 0, NULL, BLOBSTORE_FIND_TIMEOUT_USEC);
             if (bb!=NULL) {
@@ -1861,11 +1925,11 @@ int blobstore_delete_regex (blobstore * bs, const char * regex)
                 if (blockblob_delete (bb, BLOBSTORE_DELETE_TIMEOUT_USEC, 0)==-1) {
                     blockblob_close (bb);
                 } else {
-                    closed++;
+                    deleted++;
                 }
             }
         }
-    } while (closed && (left_to_close-=closed));
+    } while (deleted && (left_to_delete-=deleted));
     
     // free the search results
     for (blockblob_meta * bm = matches; bm;) {
@@ -1874,7 +1938,7 @@ int blobstore_delete_regex (blobstore * bs, const char * regex)
         bm = next;
     }
 
-    return (left_to_close==0)?(found):(-1);
+    return (left_to_delete==0)?(found):(-1);
 }
 
 blockblob * blockblob_open ( blobstore * bs,
@@ -2009,10 +2073,10 @@ blockblob * blockblob_open ( blobstore * bs,
                 long long abb_size_blocks = round_up_sec (abb->size_bytes) / 512;
                 if (abb->is_hollow)
                     abb_size_blocks = 0;
-                if (abb->in_use & ~BLOCKBLOB_STATUS_BACKED) {
+                if (abb->in_use & BLOCKBLOB_STATUS_OPENED) {
                     blocks_locked += abb_size_blocks; // these can't be purged if we need space (TODO: look into recursive purging of unused references?)
                 } else {
-                    blocks_unlocked += abb_size_blocks; // these can be purged
+                    blocks_unlocked += abb_size_blocks; // these potentially can be purged, unless they are depended on by locked ones
                 }
                 num_blobs++;
             }
@@ -2209,6 +2273,7 @@ int blockblob_close ( blockblob * bb )
     return ret;
 }
 
+#ifdef _UNIT_TEST // only used by the unit test for now
 static int dm_suspend_resume (const char * dev_name)
 {
     char cmd [1024];
@@ -2227,6 +2292,7 @@ static int dm_suspend_resume (const char * dev_name)
     }
     return 0;
 }
+#endif // _UNIT_TEST
 
 static int dm_check_device (const char * dev_name)
 {
@@ -2446,6 +2512,9 @@ static int blockblob_check (const blockblob * bb)
             err++;
         }
     }
+
+    if (get_stale_refs (bb, NULL)>0)
+        err++;
     
     _err_on();
     return err;
@@ -4074,7 +4143,7 @@ static int open_blobstore (const char * path, blobstore ** bs, const char * name
         blobstore_set_error_function ( &bs_errors ); 
 
         * bs = blobstore_open (path, 0, BLOBSTORE_FLAG_RDWR, BLOBSTORE_FORMAT_ANY, BLOBSTORE_REVOCATION_ANY, BLOBSTORE_SNAPSHOT_ANY);
-        if (bs==NULL) {
+        if (* bs == NULL) {
             fprintf (stderr, "failed to open %s blobstore in '%s': %s\n", name, path, blobstore_get_error_str(blobstore_get_error()));
             exit (1);
         }

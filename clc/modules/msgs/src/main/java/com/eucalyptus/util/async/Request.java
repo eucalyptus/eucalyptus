@@ -72,8 +72,6 @@ public interface Request<Q extends BaseMessage, R extends BaseMessage> {
   
   public abstract R sendSync( ServiceConfiguration endpoint ) throws ExecutionException, InterruptedException;
   
-  public Request<Q, R> execute( ServiceConfiguration config );
-  
   public abstract Request<Q, R> then( UnconditionalCallback callback );
   
   public abstract Request<Q, R> then( Callback.Completion callback );

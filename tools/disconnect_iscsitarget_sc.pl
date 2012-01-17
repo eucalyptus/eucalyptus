@@ -54,22 +54,35 @@ if ((length($lun) > 0) && ($lun > -1)) {
     logout_target($ip, $store, $passwd);
 }
 
-
 sub get_storage_pk {
+    my $pk = "";
+
     if(!open GET_KEY, "openssl pkcs12 -in $P12_PATH -name eucalyptus -name 'eucalyptus' -password pass:eucalyptus  -passin pass:eucalyptus -passout pass:eucalyptus -nodes | grep -A30 'friendlyName: storage' | grep -A26 'BEGIN RSA' |") {
 	print "Could not get storage key";
 	do_exit(1)
     }
 
-    my $pk = "";
-
+    $pk = "";
     while(<GET_KEY>) {
 	$pk = $pk.$_;
     };
+    close(GET_KEY);
+
+    if (!$pk || $pk eq "") {
+	if(!open GET_KEY, "openssl pkcs12 -in $P12_PATH -name eucalyptus -name 'eucalyptus' -password pass:eucalyptus  -passin pass:eucalyptus -passout pass:eucalyptus -nodes | grep -A30 'friendlyName: storage' | grep -A27 'BEGIN PRIVATE KEY' |") {
+	    print "Could not get storage key";
+	    do_exit(1)
+	}
+	
+	$pk = "";
+	while(<GET_KEY>) {
+	    $pk = $pk.$_;
+	};
+	close(GET_KEY);
+    }
 
     return $pk;
 }
-
 
 sub parse_devstring {
     my ($dev_string) = @_;

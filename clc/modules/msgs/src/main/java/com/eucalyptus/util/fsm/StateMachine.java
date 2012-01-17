@@ -63,6 +63,7 @@
 
 package com.eucalyptus.util.fsm;
 
+import com.eucalyptus.component.Component.State;
 import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.google.common.collect.ImmutableList;
@@ -81,4 +82,6 @@ public interface StateMachine<P extends HasName<P>, S extends Automata.State, T 
   public abstract boolean isBusy( );
   
   public abstract CheckedListenableFuture<P> transition( S nextState ) throws IllegalStateException, ExistingTransitionException;
+
+  public abstract TransitionRecord<P, S, T> getTransitionRecord( );
 }

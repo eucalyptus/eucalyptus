@@ -220,7 +220,7 @@ public class VmBootRecord {
     this.machineImage = machineImage;
   }
   
-  private void setVmInstance( VmInstance vmInstance ) {
+  void setVmInstance( VmInstance vmInstance ) {
     this.vmInstance = vmInstance;
   }
   

@@ -83,6 +83,7 @@ permission notice:
 
 #include <vnetwork.h>
 #include <misc.h>
+#include <hash.h>
 
 char *iptablesCache=NULL;
 
@@ -2273,8 +2274,8 @@ int vnetStopNetworkManaged(vnetConfig *vnetconfig, int vlan, char *userName, cha
 
     snprintf(newdevname, 32, "%s.%d", vnetconfig->privInterface, vlan);
     rc = check_device(newdevname);
-    // DAN temporary for QA
-    if (0 && !rc) {
+    // DAN temporary for QA, re-enable for release
+    if (!rc) {
       snprintf(cmd, MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap ip link set dev %s down", vnetconfig->eucahome, newdevname);
       rc = system(cmd);
       if (rc) {

@@ -123,8 +123,7 @@ public class AssignAddressCallback extends MessageCallback<AssignAddressType, As
   @Override
   public void fire( AssignAddressResponseType msg ) {
     try {
-      if ( !msg.get_return( ) || !this.checkVmState( ) ) {
-        this.address.clearPending( );
+      if ( !this.checkVmState( ) ) {
         this.clearState( );
       } else {
         this.address.clearPending( );

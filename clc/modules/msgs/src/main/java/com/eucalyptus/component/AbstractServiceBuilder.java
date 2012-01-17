@@ -63,7 +63,7 @@ package com.eucalyptus.component;
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-import java.util.List;
+import java.util.NoSuchElementException;
 import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.ComponentId.Partition;
@@ -88,6 +88,8 @@ public abstract class AbstractServiceBuilder<T extends ServiceConfiguration> imp
     ServiceConfiguration existingName = null;
     try {
       existingName = ServiceConfigurations.lookupByName( this.getComponentId( ).getClass( ), name );
+    } catch ( NoSuchElementException ex1 ) {
+      LOG.trace( "Failed to find existing component registration for name: " + name );
     } catch ( PersistenceException ex1 ) {
       LOG.trace( "Failed to find existing component registration for name: " + name );
     }
@@ -97,15 +99,19 @@ public abstract class AbstractServiceBuilder<T extends ServiceConfiguration> imp
     if ( !manyToOne ) {
       if ( this.getComponentId( ).isPartitioned( ) ) {
         if ( ServiceConfigurations.listPartition( this.getComponentId( ).getClass( ), partition ).size( ) >= 2 ) {
-          throw new ServiceRegistrationException( "Unable to register more than two services in a partition for component type: " + this.getComponentId( ).getName( ) );
+          throw new ServiceRegistrationException( "Unable to register more than two services in a partition for component type: "
+                                                  + this.getComponentId( ).getName( ) );
         }
       } else {
         if ( ServiceConfigurations.list( this.getComponentId( ).getClass( ) ).size( ) >= 2 ) {
-          throw new ServiceRegistrationException( "Unable to register more than two services in a partition for component type: " + this.getComponentId( ).getName( ) );
+          throw new ServiceRegistrationException( "Unable to register more than two services in a partition for component type: "
+                                                  + this.getComponentId( ).getName( ) );
         }
       }
       try {
         existingHost = ServiceConfigurations.lookupByHost( this.getComponentId( ).getClass( ), host );
+      } catch ( NoSuchElementException ex1 ) {
+        LOG.trace( "Failed to find existing component registration for host: " + name );
       } catch ( PersistenceException ex1 ) {
         LOG.trace( "Failed to find existing component registration for host: " + host );
       }
@@ -115,9 +121,21 @@ public abstract class AbstractServiceBuilder<T extends ServiceConfiguration> imp
                                                 + this.getComponentId( ).getName( ) );
       }
     }
+    /**
+     * @grze check here if we have an existing identical registration and return false in this case
+     *       -- caller should handle it differently than an exception
+     */
     if ( existingName != null && existingHost != null ) {
-      return false;
-    } else if ( existingName == null && existingHost == null ) {
+      ServiceConfiguration maybeIdenticalConfig = existingName;
+      if ( existingName.equals( existingHost )
+           && maybeIdenticalConfig.getName( ).equals( name )
+           && maybeIdenticalConfig.getPartition( ).equals( partition )
+           && maybeIdenticalConfig.getHostName( ).equals( host )
+           && maybeIdenticalConfig.getPort( ).equals( port ) ) {
+        return false;
+      }
+    }
+    if ( existingName == null && existingHost == null ) {
       return true;
     } else if ( existingName != null ) {
       throw new ServiceRegistrationException( "Component with name=" + name + " already exists with host=" + existingName.getHostName( ) );

@@ -498,6 +498,12 @@ case "$1" in
                 fi
         fi
 	# start and stop are hard: we loose the CC state
+	if ( test -f $EUCALYPTUS/usr/lib/eucalyptus/shutdownCC ); then
+	    $EUCALYPTUS/usr/lib/eucalyptus/shutdownCC localhost:$CC_PORT >/dev/null 2>&1
+	else
+	    echo "WARNING: could not find $EUCALYPTUS/usr/lib/eucalyptus/shutdownCC, please check location of executable"
+	fi
+	
 	do_stop
 	do_fullclean
 	rm -f /dev/shm/*eucalyptusCC*
@@ -519,6 +525,7 @@ case "$1" in
 	fi
 	# restart allow the CC to mantain the state across restart
 	do_stop
+	rm -f /dev/shm/*eucalyptusCC*
 	do_start
 	if [ "$VERBOSE" != no ]; then
 		if [ "$WE_HAVE_LSB" = "Y" ]; then
@@ -536,11 +543,16 @@ case "$1" in
 			echo -n "Restarting $DESC: "
 		fi
 	fi
-	do_stop
 
+	if ( test -f $EUCALYPTUS/usr/lib/eucalyptus/shutdownCC ); then
+	    $EUCALYPTUS/usr/lib/eucalyptus/shutdownCC localhost:$CC_PORT >/dev/null 2>&1
+	else
+	    echo "WARNING: could not find $EUCALYPTUS/usr/lib/eucalyptus/shutdownCC, please check location of executable"
+	fi
+
+	do_stop
 	do_fullclean
 	rm -f /dev/shm/*eucalyptusCC*
-
 	do_start
 	if [ "$VERBOSE" != no ]; then
 		if [ "$WE_HAVE_LSB" = "Y" ]; then

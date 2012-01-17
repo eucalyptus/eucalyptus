@@ -63,6 +63,7 @@
 
 package com.eucalyptus.vm;
 
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -77,22 +78,24 @@ import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Parent;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.vm.VmVolumeAttachment.AttachmentState;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
+import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 
 @Embeddable
 public class VmVolumeState {
   @Transient
-  private static Logger    LOG = Logger.getLogger( VmVolumeState.class );
+  private static Logger                 LOG         = Logger.getLogger( VmVolumeState.class );
   @Parent
-  private VmInstance vmInstance;
+  private VmInstance                    vmInstance;
   @ElementCollection
-  @CollectionTable(name="metadata_instances_volume_attachments")
+  @CollectionTable( name = "metadata_instances_volume_attachments" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private final Set<VmVolumeAttachment> attachments = Sets.newHashSet( );
-
+  
   VmVolumeState( ) {
     super( );
     this.vmInstance = null;
@@ -102,7 +105,6 @@ public class VmVolumeState {
     super( );
     this.vmInstance = vmInstance;
   }
-  
   
   private VmVolumeAttachment resolveVolumeId( final String volumeId ) throws NoSuchElementException {
     final VmVolumeAttachment v = Iterables.find( this.attachments, VmVolumeAttachment.volumeIdFilter( volumeId ) );
@@ -123,9 +125,9 @@ public class VmVolumeState {
     }
   }
   
-  public void updateVolumeAttachment( final String volumeId, final String state ) throws NoSuchElementException {
+  public void updateVolumeAttachment( final String volumeId, final AttachmentState state ) throws NoSuchElementException {
     final VmVolumeAttachment v = this.resolveVolumeId( volumeId );
-    v.setStatus( state );
+    v.setStatus( state.name( ) );
   }
   
   public VmVolumeAttachment lookupVolumeAttachment( final String volumeId ) throws NoSuchElementException {
@@ -142,13 +144,42 @@ public class VmVolumeState {
   
   public void addVolumeAttachment( final VmVolumeAttachment volume ) {
     final String volumeId = volume.getVolumeId( );
-    volume.setStatus( "attaching" );
+    volume.setStatus( AttachmentState.attaching.name( ) );
+    volume.setAttachTime( volume.getAttachTime( ) != null ? volume.getAttachTime( ) : new Date( ) );
+    volume.setInstanceId( this.getVmInstance( ).getInstanceId( ) );
     if ( !this.attachments.add( volume ) ) {
       Exceptions.trace( "Failed to add volume to attachment set: " + volume );
     }
   }
   
+  enum VmVolumeAttachmentName implements Function<VmVolumeAttachment, String> {
+    INSTANCE;
+    public String apply( final VmVolumeAttachment input ) {
+      return input.getVolumeId( );
+    }
+  }
+  
+  enum VmVolumeAttachmentStateInfo implements Function<VmVolumeAttachment, String> {
+    INSTANCE;
+    public String apply( final VmVolumeAttachment input ) {
+      return input.getVolumeId( ) + ":" + input.getAttachmentState( ).stateFlag( );
+    }
+  }
+  
   public void updateVolumeAttachments( final List<VmVolumeAttachment> ncAttachedVols ) throws NoSuchElementException {
+    Set<String> remoteVolumes = Sets.newHashSet( Collections2.transform( ncAttachedVols, VmVolumeAttachmentName.INSTANCE ) );
+    Set<String> localVolumes = Sets.newHashSet( Collections2.transform( this.getAttachments( ), VmVolumeAttachmentName.INSTANCE ) );
+    Set<String> intersection = Sets.intersection( remoteVolumes, localVolumes );
+    Set<String> remoteOnly = Sets.difference( remoteVolumes, localVolumes );
+    Set<String> localOnly = Sets.difference( localVolumes, remoteVolumes );
+    if ( !intersection.isEmpty( ) || !remoteOnly.isEmpty( ) || !localOnly.isEmpty( ) ) {
+      LOG.debug( "Updating volume attachments for: " + this.getVmInstance( ).getInstanceId( )
+                 + " intersection=" + intersection
+                 + " local=" + localOnly
+                 + " remote=" + remoteOnly );
+      LOG.debug( "Reported state for: " + this.getVmInstance( ).getInstanceId( )
+                 + Collections2.transform( ncAttachedVols, VmVolumeAttachmentStateInfo.INSTANCE ) );
+    }
     final Map<String, VmVolumeAttachment> ncAttachedVolMap = new HashMap<String, VmVolumeAttachment>( ) {
       
       {
@@ -157,26 +188,57 @@ public class VmVolumeState {
         }
       }
     };
-    this.eachVolumeAttachment( new Predicate<VmVolumeAttachment>( ) {
-      @Override
-      public boolean apply( final VmVolumeAttachment arg0 ) {
-        final String volId = arg0.getVolumeId( );
-        if ( ncAttachedVolMap.containsKey( volId ) ) {
-          final VmVolumeAttachment ncVol = ncAttachedVolMap.get( volId );
-          if ( "detached".equals( ncVol.getStatus( ) ) || "attaching failed".equals( ncVol.getStatus( ) ) ) {
-            VmVolumeState.this.removeVolumeAttachment( volId );
-          } else if ( "attaching".equals( arg0.getStatus( ) ) || "attached".equals( ncVol.getStatus( ) ) || "detach failed".equals( ncVol.getStatus( ) ) ) {
-            VmVolumeState.this.updateVolumeAttachment( volId, arg0.getStatus( ) );
+    for ( String volId : intersection ) {
+      try {
+        VmVolumeAttachment ncVolumeAttachment = ncAttachedVolMap.get( volId );
+        VmVolumeAttachment localVolumeAttachment = this.lookupVolumeAttachment( volId );
+        final AttachmentState localState = localVolumeAttachment.getAttachmentState( );
+        final AttachmentState remoteState = AttachmentState.parse( ncVolumeAttachment.getStatus( ) );
+        if ( !localState.isVolatile( ) ) {
+          if ( AttachmentState.detached.equals( remoteState ) ) {
+            this.removeVolumeAttachment( volId );
+          } else if ( AttachmentState.attaching_failed.equals( remoteState ) ) {
+            this.removeVolumeAttachment( volId );
+          } else if ( AttachmentState.detaching_failed.equals( remoteState ) && !AttachmentState.attached.equals( localState ) ) {
+            this.updateVolumeAttachment( volId, AttachmentState.attached );
+          } else if ( AttachmentState.attached.equals( remoteState ) && !AttachmentState.attached.equals( localState ) ) {
+            this.updateVolumeAttachment( volId, AttachmentState.attached );
+          }
+        } else {
+          if ( AttachmentState.detaching.equals( localState ) && AttachmentState.detached.equals( remoteState ) ) {
+            this.removeVolumeAttachment( volId );
+          } else if ( AttachmentState.attaching.equals( localState ) && AttachmentState.attached.equals( remoteState ) ) {
+            this.updateVolumeAttachment( volId, AttachmentState.attached );
+          } else if ( AttachmentState.detaching.equals( localState ) && AttachmentState.attaching_failed.equals( remoteState ) ) {
+            this.removeVolumeAttachment( volId );
+          } else if ( AttachmentState.detaching.equals( localState ) && AttachmentState.detaching_failed.equals( remoteState ) ) {
+            this.updateVolumeAttachment( volId, AttachmentState.attached );
           }
         }
-        ncAttachedVolMap.remove( volId );
-        return true;
+      } catch ( Exception ex ) {
+        LOG.error( ex );
       }
-    } );
-    for ( final VmVolumeAttachment v : ncAttachedVolMap.values( ) ) {
-      if( "attached".equals( v.getStatus( ) ) || "detach failed".equals( v.getStatus( ) ) ) {
-        LOG.warn( "Restoring volume attachment state for " + this.getVmInstance( ).getInstanceId( ) + " with " + v.toString( ) );
-        this.addVolumeAttachment( v );
+    }
+    for ( String volId : remoteOnly ) {
+      try {
+        VmVolumeAttachment ncVolumeAttachment = ncAttachedVolMap.get( volId );
+        final AttachmentState remoteState = AttachmentState.parse( ncVolumeAttachment.getStatus( ) );
+        if ( AttachmentState.attached.equals( remoteState ) || AttachmentState.detaching_failed.equals( remoteState ) ) {
+          LOG.warn( "Restoring volume attachment state for " + this.getVmInstance( ).getInstanceId( ) + " with " + ncVolumeAttachment.toString( ) );
+          this.addVolumeAttachment( ncVolumeAttachment );
+        }
+      } catch ( Exception ex ) {
+        LOG.error( ex );
+      }
+    }
+    for ( String volId : localOnly ) {
+      try {
+        final AttachmentState localState = this.lookupVolumeAttachment( volId ).getAttachmentState( );
+        if ( !localState.isVolatile( ) ) {
+
+        }
+      } catch ( Exception ex ) {
+        LOG.error( ex );
       }
     }
   }
@@ -200,21 +262,21 @@ public class VmVolumeState {
   Set<VmVolumeAttachment> getAttachments( ) {
     return this.attachments;
   }
-
+  
   private void setVmInstance( VmInstance vmInstance ) {
     this.vmInstance = vmInstance;
   }
-
+  
   @Override
   public int hashCode( ) {
     final int prime = 31;
     int result = 1;
     result = prime * result + ( ( this.vmInstance == null )
-      ? 0
-      : this.vmInstance.hashCode( ) );
+                                                           ? 0
+                                                           : this.vmInstance.hashCode( ) );
     return result;
   }
-
+  
   @Override
   public boolean equals( Object obj ) {
     if ( this == obj ) {
@@ -236,7 +298,7 @@ public class VmVolumeState {
     }
     return true;
   }
-
+  
   /**
    * @return
    */

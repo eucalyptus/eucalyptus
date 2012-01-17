@@ -51,18 +51,18 @@ public class ServiceConfigurations {
     INSTANCE;
     
     public <T extends ServiceConfiguration> List<T> list( final T example ) {
-      final EntityWrapper<T> db = EntityWrapper.get( example );
+      final EntityTransaction db = Entities.get( example.getClass( ) );
       List<T> componentList;
       try {
-        componentList = db.query( example );
+        componentList = Entities.query( example );
         db.commit( );
         return componentList;
       } catch ( final PersistenceException ex ) {
-        LOG.trace( ex );
+        LOG.debug( ex );
         db.rollback( );
         throw ex;
       } catch ( final Throwable ex ) {
-        LOG.trace( ex );
+        LOG.debug( ex );
         db.rollback( );
         throw new PersistenceException( "Service configuration lookup failed for: " + LogUtil.dumpObject( example ), ex );
       }
@@ -75,30 +75,33 @@ public class ServiceConfigurations {
         existingName = Entities.uniqueResult( example );
         db.commit( );
         return existingName;
+      } catch ( final NoSuchElementException ex ) {
+        db.rollback( );
+        throw ex;
       } catch ( final PersistenceException ex ) {
-        LOG.trace( ex );
+        LOG.debug( ex );
         db.rollback( );
         throw ex;
       } catch ( final Throwable ex ) {
-        LOG.trace( ex );
+        LOG.debug( ex );
         db.rollback( );
         throw new PersistenceException( "Service configuration lookup failed for: " + LogUtil.dumpObject( example ), ex );
       }
     }
     
     public <T extends ServiceConfiguration> T store( T config ) {
-      final EntityWrapper<T> db = EntityWrapper.get( config );
+      final EntityTransaction db = Entities.get( config.getClass( ) );
       try {
-        config = db.persist( config );
+        config = Entities.persist( config );
         db.commit( );
         EventRecord.here( ServiceConfigurations.class, EventClass.COMPONENT, EventType.COMPONENT_REGISTERED, config.toString( ) ).info( );
       } catch ( final PersistenceException ex ) {
-        LOG.trace( ex );
+        LOG.debug( ex );
         EventRecord.here( ServiceConfigurations.class, EventClass.COMPONENT, EventType.COMPONENT_REGISTERED, "FAILED", config.toString( ) ).error( );
         db.rollback( );
         throw ex;
       } catch ( final Throwable ex ) {
-        LOG.trace( ex );
+        LOG.debug( ex );
         EventRecord.here( ServiceConfigurations.class, EventClass.COMPONENT, EventType.COMPONENT_REGISTERED, "FAILED", config.toString( ) ).error( );
         db.rollback( );
         throw new PersistenceException( "Service configuration storing failed for: " + LogUtil.dumpObject( config ), ex );
@@ -107,21 +110,23 @@ public class ServiceConfigurations {
     }
     
     public <T extends ServiceConfiguration> T remove( final T config ) {
-      final EntityWrapper<T> db = EntityWrapper.get( config );
+      final EntityTransaction db = Entities.get( config.getClass( ) );
       try {
         final T searchConfig = ( T ) config.getClass( ).newInstance( );
         searchConfig.setName( config.getName( ) );
-        final T exists = db.getUnique( searchConfig );
-        db.delete( exists );
+        final T exists = Entities.uniqueResult( searchConfig );
+        Entities.delete( exists );
         db.commit( );
         EventRecord.here( ServiceConfigurations.class, EventClass.COMPONENT, EventType.COMPONENT_DEREGISTERED, config.toString( ) ).info( );
+      } catch ( final NoSuchElementException ex ) {
+        db.rollback( );
       } catch ( final PersistenceException ex ) {
-        LOG.trace( ex );
+        LOG.debug( ex );
         EventRecord.here( ServiceConfigurations.class, EventClass.COMPONENT, EventType.COMPONENT_DEREGISTERED, "FAILED", config.toString( ) ).error( );
         db.rollback( );
         throw ex;
       } catch ( final Throwable ex ) {
-        LOG.trace( ex );
+        LOG.debug( ex );
         EventRecord.here( ServiceConfigurations.class, EventClass.COMPONENT, EventType.COMPONENT_DEREGISTERED, "FAILED", config.toString( ) ).error( );
         db.rollback( );
         throw new PersistenceException( "Service configuration removal failed for: " + LogUtil.dumpObject( config ), ex );
@@ -276,6 +281,11 @@ public class ServiceConfigurations {
   
   public static ServiceConfiguration createEphemeral( final Component component, final InetAddress host ) {
     return createEphemeral( component.getComponentId( ), host );
+  }
+  
+  public static ServiceConfiguration createBogus( final Class<? extends ComponentId> compIdClass, final Class<?> ownerType ) {
+    ComponentId compId = ComponentIds.lookup( compIdClass ); 
+    return new EphemeralConfiguration( compId, compId.getPartition( ), ownerType.getCanonicalName( ), ServiceUris.internal( compId, Internets.localHostInetAddress( ), ownerType.getSimpleName( ) ) );
   }
   
   public static <T extends ServiceConfiguration, C extends ComponentId> Iterable<T> filter( final Class<C> type, final Predicate<T> pred ) throws PersistenceException {

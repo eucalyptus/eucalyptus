@@ -76,7 +76,9 @@
 #include <limits.h>
 #include <assert.h>
 #include <dirent.h>
+
 #include "misc.h" // logprintfl, ensure_...
+#include "hash.h"
 #include "data.h"
 #include "vbr.h"
 #include "walrus.h"
@@ -192,7 +194,8 @@ parse_rec ( // parses the VBR as supplied by a client or user, checks values, an
     
     // identify the type of resource location from location string
     int error = OK;
-    if (strcasestr (vbr->resourceLocation, "http://") == vbr->resourceLocation) { 
+    if (strcasestr (vbr->resourceLocation, "http://") == vbr->resourceLocation ||
+        strcasestr (vbr->resourceLocation, "https://") == vbr->resourceLocation) { 
         if (strcasestr (vbr->resourceLocation, "/services/Walrus/")) {
             vbr->locationType = NC_LOCATION_WALRUS;
         } else {
@@ -1674,6 +1677,7 @@ find_or_create_artifact ( // finds and opens or creates artifact's blob either i
         }
     }
  try_work:
+    logprintfl (EUCADEBUG, "[%s] switching to work blobstore for %s (do_create=%d ret=%d)\n", a->instanceId, id_cache, do_create, ret);
     if (ret==BLOBSTORE_ERROR_SIGNATURE) {
         logprintfl (EUCAWARN, "[%s] warning: signature mismatch on cached blob %s\n", a->instanceId, id_cache); // TODO: maybe invalidate?
     }

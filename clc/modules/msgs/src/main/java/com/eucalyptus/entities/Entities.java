@@ -87,6 +87,7 @@ import org.hibernate.criterion.MatchMode;
 import org.hibernate.criterion.Restrictions;
 import org.hibernate.ejb.EntityManagerFactoryImpl;
 import org.hibernate.exception.ConstraintViolationException;
+import org.hibernate.exception.LockAcquisitionException;
 import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
@@ -110,7 +111,7 @@ import com.google.common.collect.Sets;
 public class Entities {
   @ConfigurableField( description = "Maximum number of times a transaction may be retried before giving up.",
                       initial = "5" )
-  public static Integer                                          CONCURRENT_UPDATE_RETRIES = 5;
+  public static Integer                                          CONCURRENT_UPDATE_RETRIES = 10;
   private static ConcurrentMap<String, String>                   txLog                     = new MapMaker( ).softKeys( ).softValues( ).makeMap( );
   private static Logger                                          LOG                       = Logger.getLogger( Entities.class );
   private static ThreadLocal<String>                             txRootThreadLocal         = new ThreadLocal<String>( );
@@ -265,7 +266,7 @@ public class Entities {
     } catch ( final NoSuchElementException ex ) {
       throw ex;
     } catch ( final RuntimeException ex ) {
-      Logs.exhaust( ).trace( ex, ex );
+      Logs.extreme( ).trace( ex, ex );
       final Exception newEx = PersistenceExceptions.throwFiltered( ex );
       throw new TransactionInternalException( newEx.getMessage( ), newEx );
     }
@@ -335,6 +336,10 @@ public class Entities {
   
   public static Criteria createCriteria( final Class class1 ) {
     return getTransaction( class1 ).getTxState( ).getSession( ).createCriteria( class1 );
+  }
+  
+  public static Criteria createCriteriaUnique( final Class class1 ) {
+    return getTransaction( class1 ).getTxState( ).getSession( ).createCriteria( class1 ).setCacheable( true ).setFetchSize( 1 ).setMaxResults( 1 ).setFirstResult( 0 );
   }
   
   /**
@@ -543,7 +548,7 @@ public class Entities {
       try {
         this.txState = new TxState( ctx );
       } catch ( final RuntimeException ex ) {
-        Logs.exhaust( ).error( ex, ex );
+        Logs.extreme( ).error( ex, ex );
         this.rollback( );
         throw PersistenceExceptions.throwFiltered( ex );
       }
@@ -614,10 +619,11 @@ public class Entities {
           this.txState.rollback( );
           this.txState = null;
         } catch ( final RuntimeException ex ) {
+          Logs.extreme( ).error( ex );
           throw PersistenceExceptions.throwFiltered( ex );
         }
       } else {
-        Logs.extreme( ).error( "Duplicate call to rollback( ): " + Threads.currentStackString( ) );
+        Logs.extreme( ).debug( "Duplicate call to rollback( )" );
       }
     }
     
@@ -652,7 +658,7 @@ public class Entities {
         
         @Override
         public void rollback( ) {
-//          Logs.exhaust( ).trace( "Child call to rollback() is ignored: " + Threads.currentStackRange( 2, 8 ) );
+//          Logs.extreme( ).trace( "Child call to rollback() is ignored: " + Threads.currentStackRange( 2, 8 ) );
         }
         
         @Override
@@ -669,7 +675,7 @@ public class Entities {
         public void commit( ) {
           try {
 //            CascadingTx.this.getTxState( ).getEntityManager( ).flush( );
-//          Logs.exhaust( ).trace( "Child call to commit() is ignored: " + Threads.currentStackRange( 2, 8 ) );
+//          Logs.extreme( ).trace( "Child call to commit() is ignored: " + Threads.currentStackRange( 2, 8 ) );
           } catch ( final HibernateException ex ) {
             LOG.error( ex, ex );
           }
@@ -760,7 +766,7 @@ public class Entities {
           this.transaction.begin( );
         } catch ( final RuntimeException ex ) {
           LOG.warn( ex );
-          Logs.exhaust( ).warn( ex, ex );
+          Logs.extreme( ).warn( ex, ex );
           throw ex;
         }
       }
@@ -775,7 +781,7 @@ public class Entities {
           this.transaction.commit( );
         } catch ( final RuntimeException ex ) {
           LOG.trace( ex, ex );
-          Logs.exhaust( ).warn( ex, ex );
+          Logs.extreme( ).warn( ex, ex );
           throw ex;
         }
       }
@@ -810,7 +816,7 @@ public class Entities {
           this.transaction.rollback( );
         } catch ( final RuntimeException ex ) {
           LOG.warn( ex );
-          Logs.exhaust( ).warn( ex, ex );
+          Logs.extreme( ).warn( ex, ex );
           throw ex;
         }
       }
@@ -888,17 +894,19 @@ public class Entities {
           db.rollback( );
           if ( Exceptions.isCausedBy( ex, OptimisticLockException.class ) ) {
             rootCause = Exceptions.findCause( ex, OptimisticLockException.class );
-            try {
-              TimeUnit.MILLISECONDS.sleep( 20 );
-            } catch ( InterruptedException ex1 ) {
-              Exceptions.maybeInterrupted( ex1 );
-            }
-            continue;
+          } else if ( Exceptions.isCausedBy( ex, LockAcquisitionException.class ) ) {
+            rootCause = Exceptions.findCause( ex, LockAcquisitionException.class );
           } else {
             rootCause = ex;
             Logs.extreme( ).error( ex, ex );
             throw ex;
           }
+          try {
+            TimeUnit.MILLISECONDS.sleep( 20 );
+          } catch ( InterruptedException ex1 ) {
+            Exceptions.maybeInterrupted( ex1 );
+          }
+          continue;
         }
       }
       throw ( rootCause != null
@@ -906,6 +914,23 @@ public class Entities {
                                : new NullPointerException( "BUG: Transaction retry failed but root cause exception is unknown!" ) );
     }
     
+  }
+  
+  public static <E, T> Predicate<T> asTransaction( final Class<E> type, final Predicate<T> predicate ) {
+    return asTransaction( type, predicate, CONCURRENT_UPDATE_RETRIES );
+  }
+  
+  public static <E, T> Predicate<T> asTransaction( final Class<E> type, final Predicate<T> predicate, final Integer retries ) {
+    final Function<T, Boolean> funcionalized = Functions.forPredicate( predicate );
+    final Function<T, Boolean> transactionalized = Entities.asTransaction( type, funcionalized, retries );
+    return new Predicate<T>( ) {
+      
+      @Override
+      public boolean apply( T input ) {
+        return transactionalized.apply( input );
+      }
+      
+    };
   }
   
   public static <T, R> Function<T, R> asTransaction( final Function<T, R> function ) {

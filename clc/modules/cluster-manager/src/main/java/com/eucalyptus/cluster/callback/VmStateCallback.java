@@ -27,18 +27,16 @@ import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.Collections2;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import edu.ucsb.eucalyptus.cloud.VmDescribeResponseType;
 import edu.ucsb.eucalyptus.cloud.VmDescribeType;
 import edu.ucsb.eucalyptus.cloud.VmInfo;
-import edu.ucsb.eucalyptus.msgs.AttachedVolume;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
 public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescribeType, VmDescribeResponseType> {
   private static Logger               LOG                       = Logger.getLogger( VmStateCallback.class );
   private static final int            VM_INITIAL_REPORT_TIMEOUT = 300000;
-  private static final int            VM_STATE_SETTLE_TIME      = 15000;
+  private static final int            VM_STATE_SETTLE_TIME      = 20000;
   private final Supplier<Set<String>> initialInstances;
   
   public VmStateCallback( ) {
@@ -55,9 +53,18 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
       
       @Override
       public Set<String> get( ) {
-        Collection<VmInstance> clusterInstances = Collections2.filter( VmInstances.list( ), filter );
-        Collection<String> instanceNames = Collections2.transform( clusterInstances, CloudMetadatas.toDisplayName( ) );
-        return Sets.newHashSet( instanceNames );
+        EntityTransaction db = Entities.get( VmInstance.class );
+        try {
+          Collection<VmInstance> clusterInstances =  Collections2.filter( VmInstances.list( ), filter );
+          Collection<String> instanceNames = Collections2.transform( clusterInstances, CloudMetadatas.toDisplayName( ) );
+          Set<String> ret = Sets.newHashSet( instanceNames );
+          db.rollback( );
+          return ret;
+        } catch ( Exception ex ) {
+          Logs.extreme( ).error( ex, ex );
+          db.rollback( );
+          return Sets.newHashSet( );
+        }
       }
     } );
   }
@@ -116,10 +123,12 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
     EntityTransaction db1 = Entities.get( VmInstance.class );
     try {
       VmInstance vm = VmInstances.cachedLookup( vmId );
-      if ( VmState.PENDING.apply( vm ) && vm.getCreationSplitTime( ) < VM_INITIAL_REPORT_TIMEOUT ) {
+      if ( VmState.PENDING.apply( vm ) && vm.lastUpdateMillis( ) < VM_INITIAL_REPORT_TIMEOUT ) {
         //do nothing during first VM_INITIAL_REPORT_TIMEOUT millis of instance life
         db1.rollback( );
         return;
+      } else if ( vm.isBlockStorage( ) && VmInstances.Timeout.UNREPORTED.apply( vm ) ) {
+        VmInstances.stopped( vm );
       } else if ( VmState.STOPPING.apply( vm ) ) {
         VmInstances.stopped( vm );
       } else if ( VmState.SHUTTING_DOWN.apply( vm ) ) {
@@ -128,6 +137,8 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
         VmInstances.delete( vm );
       } else if ( VmInstances.Timeout.SHUTTING_DOWN.apply( vm ) ) {
         VmInstances.terminated( vm );
+      } else if ( VmInstances.Timeout.STOPPING.apply( vm ) ) {
+        VmInstances.stopped( vm );
       } else if ( VmInstances.Timeout.UNREPORTED.apply( vm ) ) {
         VmInstances.terminated( vm );
       } else {
@@ -148,7 +159,11 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
       try {
         VmInstance vm = VmInstances.lookup( runVm.getInstanceId( ) );
         if ( VmInstances.Timeout.EXPIRED.apply( vm ) ) {
-          VmInstances.shutDown( vm );
+          if ( vm.isBlockStorage( ) ) {
+            VmInstances.stopped( vm );
+          } else {
+            VmInstances.shutDown( vm );
+          }
         } else if ( VmState.SHUTTING_DOWN.equals( runVmState ) ) {
           VmStateCallback.handleReportedTeardown( vm, runVm );
         } else if ( VmStateSet.RUN.apply( vm ) ) {
@@ -190,7 +205,7 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
       }
       try {
         VmInstance.RestoreAllocation.INSTANCE.apply( runVm );
-      } catch ( Exception ex ) {
+      } catch ( Throwable ex ) {
         LOG.error( ex );
         Logs.extreme( ).error( ex, ex );
       }
@@ -206,28 +221,17 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
     if ( !BundleState.none.equals( bundleState ) ) {
       vm.getRuntimeState( ).updateBundleTaskState( bundleState );
       VmInstances.terminated( vm );
-    } else if ( VmState.STOPPING.apply( vm ) ) {
-      VmInstances.stopped( vm );
     } else if ( VmState.SHUTTING_DOWN.apply( vm ) ) {
       VmInstances.terminated( vm );
+    } else if ( VmState.STOPPING.apply( vm ) ) {
+      VmInstances.stopped( vm );
     } else if ( VmStateSet.RUN.apply( vm ) && vm.getSplitTime( ) > VM_STATE_SETTLE_TIME ) {
-      VmInstances.shutDown( vm );
-    }
-  }
-  
-  private static Predicate<VmInstance> volumeFilter( ) {
-    return new Predicate<VmInstance>( ) {
-      
-      @Override
-      public boolean apply( VmInstance input ) {
-        return input.eachVolumeAttachment( new Predicate<AttachedVolume>( ) {
-          @Override
-          public boolean apply( AttachedVolume arg0 ) {
-            return arg0.getStatus( ).endsWith( "ing" );
-          }
-        } );
+      if ( vm.isBlockStorage( ) ) {
+        VmInstances.stopped( vm );
+      } else {
+        VmInstances.shutDown( vm );
       }
-    };
+    }
   }
   
   private static Predicate<VmInstance> stateSettleFilter( ) {
@@ -252,9 +256,7 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
   
   public static class VmPendingCallback extends StateUpdateMessageCallback<Cluster, VmDescribeType, VmDescribeResponseType> {
     @SuppressWarnings( "unchecked" )
-    private final Predicate<VmInstance> filter = Predicates.and( Predicates.or( VmStateSet.CHANGING, volumeFilter( ) ),
-                                                                 partitionFilter( this ),
-                                                                 stateSettleFilter( ) );
+    private final Predicate<VmInstance> filter = Predicates.and( VmStateSet.TORNDOWN.not( ), stateSettleFilter( ), partitionFilter( this ) );
     private final Supplier<Set<String>> initialInstances;
     
     public VmPendingCallback( Cluster cluster ) {
@@ -263,16 +265,7 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
       this.setRequest( new VmDescribeType( ) {
         {
           regarding( );
-          EntityTransaction db = Entities.get( VmInstance.class );
-          try {
-            for ( VmInstance vm : Iterables.filter( VmInstances.list( ), VmPendingCallback.this.filter ) ) {
-              this.getInstancesSet( ).add( vm.getInstanceId( ) );
-            }
-            db.rollback( );
-          } catch ( Exception ex ) {
-            Logs.exhaust( ).error( ex, ex );
-            db.rollback( );
-          }
+          this.getInstancesSet( ).addAll( VmPendingCallback.this.initialInstances.get( ) );
         }
       } );
       if ( this.getRequest( ).getInstancesSet( ).isEmpty( ) ) {

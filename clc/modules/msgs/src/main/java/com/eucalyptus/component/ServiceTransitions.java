@@ -74,6 +74,7 @@ import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.bootstrap.Host;
 import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.component.Component.State;
+import com.eucalyptus.component.Component.Transition;
 import com.eucalyptus.component.Faults.CheckException;
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.MultiDatabasePropertyEntry;
@@ -106,6 +107,7 @@ import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Futures;
 import com.eucalyptus.util.fsm.Automata;
 import com.eucalyptus.util.fsm.TransitionAction;
+import com.eucalyptus.util.fsm.TransitionRecord;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
@@ -335,6 +337,7 @@ public class ServiceTransitions {
   }
   
   private static void processTransition( final ServiceConfiguration parent, final Completion transitionCallback, final TransitionActions transitionAction ) {
+    TransitionRecord<ServiceConfiguration, State, Transition> transitionRecord = parent.lookupStateMachine( ).getTransitionRecord( );
     ServiceTransitionCallback trans = null;
     try {
       if ( Hosts.isServiceLocal( parent ) ) {
@@ -357,12 +360,14 @@ public class ServiceTransitions {
       LOG.error( parent.getFullName( ) + " failed transition " + transitionAction.name( ) + " because of " + ex.getMessage( ) );
       if ( Faults.filter( parent, ex ) ) {
         transitionCallback.fireException( ex );
-        Faults.persist( parent, Faults.failure( parent, ex ) );
+        Faults.submit( parent, transitionRecord, Faults.failure( parent, ex ) );
         throw Exceptions.toUndeclared( ex );
       } else {
         transitionCallback.fire( );
-        Faults.persist( parent, Faults.advisory( parent, ex ) );
+        Faults.submit( parent, transitionRecord, Faults.advisory( parent, ex ) );
       }
+//    } finally {
+//      transitionCallback.fire( );
     }
   }
   
@@ -849,7 +854,8 @@ public class ServiceTransitions {
       @Override
       public void fire( final ServiceConfiguration config ) {
         try {
-          List<ConfigurableProperty> props = PropertyDirectory.getPropertyEntrySet( config.getComponentId( ).name( ) );
+          String prefix = config.getPartition( ) + "." + config.getComponentId( ).name( );
+          List<ConfigurableProperty> props = PropertyDirectory.getPropertyEntrySet( prefix );
           for ( ConfigurableProperty prop : props ) {
             if ( prop instanceof SingletonDatabasePropertyEntry ) {
             //GRZE:REVIEW do nothing?

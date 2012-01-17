@@ -183,6 +183,10 @@
     <priority value="${euca.log.level}" />
     <appender-ref ref="cloud-cluster" />
   </category>
+  <category name="com.eucalyptus.cluster.callback" additivity="false">
+    <priority value="${euca.log.level}" />
+    <appender-ref ref="cloud-cluster" />
+  </category>
   <category name="edu.ucsb.eucalyptus.cloud.cluster" additivity="false">
     <priority value="${euca.log.level}" />
     <appender-ref ref="cloud-cluster" />

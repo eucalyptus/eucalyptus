@@ -4,6 +4,7 @@ import java.util.NoSuchElementException;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Partition;
@@ -174,7 +175,7 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
       }
     };
     try {
-      Future<CheckedListenableFuture<R>> res = Threads.enqueue( serviceConfig, call );
+      Future<CheckedListenableFuture<R>> res = Threads.enqueue( serviceConfig, call );//TODO:GRZE: what happens to 'res'?
       return this.getResponse( );
     } catch ( Exception ex1 ) {
       LOG.error( ex1 );
@@ -205,7 +206,8 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
    */
   @Override
   public R sendSync( ServiceConfiguration serviceConfig ) throws ExecutionException, InterruptedException {
-    return this.execute( serviceConfig ).getResponse( ).get( );
+    Request<Q, R> asyncRequest = this.execute( serviceConfig );
+    return asyncRequest.getResponse( ).get( );
   }
   
   public Request<Q, R> execute( ServiceConfiguration config ) {

@@ -75,13 +75,16 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.bootstrap.Databases;
+import com.eucalyptus.bootstrap.Host;
 import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.component.Component.State;
+import com.eucalyptus.empyrean.DestroyServiceType;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.empyrean.ServiceId;
 import com.eucalyptus.empyrean.ServiceTransitionType;
@@ -95,6 +98,7 @@ import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.TypeMappers;
+import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.Futures;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
@@ -165,12 +169,32 @@ public class Topology {
   private enum TopologyTimer implements EventListener<ClockTick> {
     INSTANCE;
     private static final AtomicInteger counter = new AtomicInteger( 0 );
+    private static final Lock          canHas  = new ReentrantLock( );
     
     @Override
     public void fireEvent( final ClockTick event ) {
-      if ( Hosts.isCoordinator( ) ) {
-        Queue.INTERNAL.enqueue( RunChecks.INSTANCE );
-      } else if ( counter.incrementAndGet( ) % 3 == 0 ) {
+      if ( Hosts.isCoordinator( ) && canHas.tryLock( ) ) {
+        Queue.INTERNAL.enqueue( new Callable<Object>( ) {
+          public Object call( ) {
+            try {
+              return RunChecks.INSTANCE.call( );
+            } finally {
+              canHas.unlock( );
+            }
+          }
+        } );
+      } else if ( counter.incrementAndGet( ) % 3 == 0 && canHas.tryLock( ) ) {
+        Queue.INTERNAL.enqueue( new Callable<Object>( ) {
+          public Object call( ) {
+            try {
+              return RunChecks.INSTANCE.call( );
+            } finally {
+              canHas.unlock( );
+            }
+          }
+        } );
+      } else if ( counter.incrementAndGet( ) > 10 ) {
+        counter.set( 0 );
         Queue.INTERNAL.enqueue( RunChecks.INSTANCE );
       }
     }
@@ -257,7 +281,7 @@ public class Topology {
           } catch ( InterruptedException ex ) {
             Exceptions.maybeInterrupted( ex );
           } catch ( ExecutionException ex ) {
-            Logs.extreme( ).error( ex , ex );
+            Logs.extreme( ).error( ex, ex );
           }
         }
       }
@@ -269,7 +293,7 @@ public class Topology {
           } catch ( InterruptedException ex ) {
             Exceptions.maybeInterrupted( ex );
           } catch ( ExecutionException ex ) {
-            Logs.extreme( ).error( ex , ex );
+            Logs.extreme( ).error( ex, ex );
           }
         }
       }
@@ -309,7 +333,7 @@ public class Topology {
   
   public static Function<ServiceConfiguration, Future<ServiceConfiguration>> transition( final Component.State toState ) {
     final Function<ServiceConfiguration, Future<ServiceConfiguration>> transition = new Function<ServiceConfiguration, Future<ServiceConfiguration>>( ) {
-      private final List<Component.State> serializedStates = Lists.newArrayList( Component.State.ENABLED );
+      private final List<Component.State> serializedStates = Lists.newArrayList( Component.State.ENABLED, Component.State.STOPPED );
       
       @Override
       public Future<ServiceConfiguration> apply( final ServiceConfiguration input ) {
@@ -340,7 +364,62 @@ public class Topology {
   }
   
   public static Future<ServiceConfiguration> destroy( final ServiceConfiguration config ) {
-    return transition( State.PRIMORDIAL ).apply( config );
+    try {
+      ServiceConfigurations.remove( config );
+    } catch ( Exception ex ) {
+      LOG.error( ex );
+      Logs.extreme( ).debug( ex, ex );
+    }
+    try {
+      Topology.disable( config ).get( );
+    } catch ( Exception ex ) {
+      Exceptions.maybeInterrupted( ex );
+      LOG.error( ex );
+      Logs.extreme( ).debug( ex, ex );
+    }
+    try {
+      Topology.stop( config ).get( );
+    } catch ( Exception ex ) {
+      Exceptions.maybeInterrupted( ex );
+      LOG.error( ex );
+      Logs.extreme( ).debug( ex, ex );
+    }
+    try {
+      Component comp = Components.lookup( config.getComponentId( ) );
+      comp.destroy( config );
+    } catch ( Exception ex ) {
+      Exceptions.maybeInterrupted( ex );
+      LOG.error( ex );
+      Logs.extreme( ).debug( ex, ex );
+    }
+    if ( Hosts.isCoordinator( ) ) {
+      DestroyServiceType msg = new DestroyServiceType( );
+      try {
+        msg.getServices( ).add( TypeMappers.transform( config, ServiceId.class ) );
+        for ( Host h : Hosts.list( ) ) {
+          if ( !h.isLocalHost( ) && h.hasBootstrapped( ) ) { 
+            try {
+              AsyncRequests.sendSync( ServiceConfigurations.createEphemeral( Empyrean.INSTANCE, h.getBindAddress( ) ), msg );
+            } catch ( Exception ex ) {
+              Exceptions.maybeInterrupted( ex );
+              LOG.error( ex );
+              Logs.extreme( ).debug( ex, ex );
+            }
+          }
+        }
+      } catch ( Exception ex ) {
+        LOG.error( ex );
+        Logs.extreme( ).debug( ex, ex );
+      }
+    }
+    try {
+      ServiceTransitions.StateCallbacks.PROPERTIES_REMOVE.fire( config );
+    } catch ( Exception ex ) {
+      Exceptions.maybeInterrupted( ex );
+      LOG.error( ex );
+      Logs.extreme( ).debug( ex, ex );
+    }
+    return Futures.predestinedFuture( config );
   }
   
   public static Future<ServiceConfiguration> load( final ServiceConfiguration config ) {
@@ -569,6 +648,18 @@ public class Topology {
     
   }
   
+  enum AlwaysLocalServiceFilter implements Predicate<ServiceConfiguration> {
+    INSTANCE;
+    @Override
+    public boolean apply( final ServiceConfiguration arg0 ) {
+      return arg0.isVmLocal( )
+             && arg0.getComponentId( ).isAlwaysLocal( )
+             && arg0.lookupState( ).ordinal( ) < Component.State.ENABLED.ordinal( )
+             && !Component.State.STOPPED.apply( arg0 );
+    }
+    
+  }
+  
   enum CheckServiceFilter implements Predicate<ServiceConfiguration> {
     INSTANCE;
     @Override
@@ -734,6 +825,7 @@ public class Topology {
         final Predicate<ServiceConfiguration> proceedToDisableFilter = Predicates.and( ServiceConfigurations.filterHostLocal( ),
                                                                                        ProceedToDisabledServiceFilter.INSTANCE );
         submitTransitions( allServices, proceedToDisableFilter, SubmitDisable.INSTANCE );
+        submitTransitions( allServices, AlwaysLocalServiceFilter.INSTANCE, SubmitEnable.INSTANCE );
         /** TODO:GRZE: check and disable timeout here **/
         return checkedServices;
       } else {
@@ -901,27 +993,39 @@ public class Topology {
   
   public enum Transitions implements Function<ServiceConfiguration, ServiceConfiguration>, Supplier<Component.State> {
     START( Component.State.DISABLED ),
-    STOP( Component.State.STOPPED ),
+    STOP( Component.State.STOPPED ) {
+
+      @Override
+      public ServiceConfiguration apply( ServiceConfiguration input ) {
+        return super.tc.apply( input );
+      }
+      
+    },
     INITIALIZE( Component.State.INITIALIZED ),
     LOAD( Component.State.LOADED ),
     DESTROY( Component.State.PRIMORDIAL ),
     ENABLE( Component.State.ENABLED ) {
       @Override
       public ServiceConfiguration apply( final ServiceConfiguration config ) {
-        if ( config.getComponentId( ).isManyToOnePartition( ) ) {
+        boolean busy = config.lookupStateMachine( ).isBusy( );
+        boolean tryEnable = false;
+        boolean manyToOne = config.getComponentId( ).isManyToOnePartition( );
+        if ( manyToOne ) {
           try {
             return super.apply( config );
           } catch ( final RuntimeException ex ) {
             throw ex;
           }
         } else if ( Topology.guard( ).tryEnable( config ) ) {
+          tryEnable = true;
           try {
-            return super.apply( config );
+            ServiceConfiguration res = super.apply( config );
+            return res;
           } catch ( final RuntimeException ex ) {
             Topology.guard( ).tryDisable( config );
             throw ex;
           }
-        } else {
+        } else if ( !busy ) {
 //          throw new IllegalStateException( "Failed to ENABLE " + config.getFullName( ) );
           try {
             return ServiceTransitions.pathTo( config, Component.State.DISABLED ).get( );
@@ -931,6 +1035,8 @@ public class Topology {
           } catch ( final ExecutionException ex ) {
             throw Exceptions.toUndeclared( ex );
           }
+        } else {
+          throw new IllegalStateException( "Failed to ENABLE " + config.getFullName( ) + " since manyToOne=" + manyToOne + " tryEnable=" + tryEnable + " fsm.isBusy()=" + busy );
         }
       }
     },
@@ -1016,7 +1122,7 @@ public class Topology {
       ServiceConfiguration endResult = input;
       try {
         endResult = ServiceTransitions.pathTo( input, nextState ).get( );
-        Logs.exhaust( ).debug( this.toString( endResult, initialState, nextState ) );
+        Logs.extreme( ).debug( this.toString( endResult, initialState, nextState ) );
         return endResult;
       } catch ( final Exception ex ) {
         Exceptions.maybeInterrupted( ex );
@@ -1025,7 +1131,8 @@ public class Topology {
         Logs.extreme( ).error( ex, ex );
         throw Exceptions.toUndeclared( ex );
       } finally {
-        if ( Bootstrap.isFinished( ) && !Component.State.ENABLED.equals( endResult.lookupState( ) ) ) {
+        boolean enabledEndState = Component.State.ENABLED.equals( endResult.lookupState( ) );
+        if ( Bootstrap.isFinished( ) && !enabledEndState && Topology.getInstance( ).services.containsValue( input ) ) {
           Topology.guard( ).tryDisable( endResult );
         }
       }

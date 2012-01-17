@@ -65,6 +65,7 @@ package com.eucalyptus.component;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.NoSuchElementException;
 import java.util.concurrent.Future;
 import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
@@ -116,7 +117,7 @@ public class ComponentRegistrationHandler {
               + ":"
               + port );
     if ( !builder.checkAdd( partition, name, hostName, port ) ) {
-      LOG.info( "Returning existing registration information for: "               
+      LOG.info( "Returning existing registration information for: "
                 + partition
                 + "."
                 + name
@@ -133,8 +134,8 @@ public class ComponentRegistrationHandler {
         Partition part = Partitions.lookup( newComponent );
         part.syncKeysToDisk( );
         Partition p = Partitions.lookup( newComponent );
-        Logs.exhaust( ).info( p.getCertificate( ) );
-        Logs.exhaust( ).info( p.getNodeCertificate( ) );
+        Logs.extreme( ).info( p.getCertificate( ) );
+        Logs.extreme( ).info( p.getNodeCertificate( ) );
       }
       ServiceConfigurations.store( newComponent );
       try {
@@ -170,6 +171,7 @@ public class ComponentRegistrationHandler {
   public static boolean deregister( final ComponentId compId, String name ) throws ServiceRegistrationException, EucalyptusCloudException {
     final ServiceBuilder<?> builder = ServiceBuilders.lookup( compId );
     LOG.info( "Using builder: " + builder.getClass( ).getSimpleName( ) );
+    boolean proceedOnError = false;
     try {
       if ( !checkRemove( builder, name ) ) {
         LOG.info( builder.getClass( ).getSimpleName( ) + ": checkRemove failed." );
@@ -177,18 +179,41 @@ public class ComponentRegistrationHandler {
                                                 +
                                                 "It is unsafe to currently deregister, please check the logs for additional information." );
       }
+    } catch ( final NoSuchElementException ex ) {
+      LOG.info( "Silently proceeding with deregister for non-existant configuration" );
+      proceedOnError = true;
     } catch ( Exception e ) {
       LOG.info( builder.getClass( ).getSimpleName( ) + ": checkRemove failed." );
       throw new ServiceRegistrationException( builder.getClass( ).getSimpleName( ) + ": checkRemove failed with message: "
-                                             + e.getMessage( ), e );
+                                              + e.getMessage( ), e );
     }
-    try{
-	    final ServiceConfiguration conf = ServiceConfigurations.lookupByName( compId.getClass( ), name );
-	    Topology.destroy( conf );
-	    ServiceConfigurations.remove( conf );
-    }catch(Exception e){
-    	LOG.info(builder.getClass().getSimpleName() + ": deregistration failed because of" + e.getMessage());
-    	throw new ServiceRegistrationException(builder.getClass().getSimpleName() + ": deregistration failed because of" + e.getMessage(), e);
+    try {
+      ServiceConfiguration conf;
+      try {
+        conf = ServiceConfigurations.lookupByName( compId.getClass( ), name );
+      } catch ( NoSuchElementException ex1 ) {
+        conf = Components.lookup( compId.getClass( ) ).lookup( name );
+      }
+      try {
+        Topology.destroy( conf );
+      } catch ( Exception ex ) {
+        LOG.error( ex );
+        Logs.extreme( ).debug( ex, ex );
+      }
+      try {
+        ServiceConfigurations.remove( conf );
+      } catch ( Exception ex ) {
+        LOG.error( ex );
+        Logs.extreme( ).debug( ex, ex );
+      }
+    } catch ( Exception e ) {
+      if ( proceedOnError ) {
+        LOG.info( builder.getClass( ).getSimpleName( ) + ": deregistration error, but proceeding since config has been removed: " + e.getMessage( ) );
+        return true;
+      } else {
+        LOG.info( builder.getClass( ).getSimpleName( ) + ": deregistration failed because of" + e.getMessage( ) );
+        throw new ServiceRegistrationException( builder.getClass( ).getSimpleName( ) + ": deregistration failed because of: " + e.getMessage( ), e );
+      }
     }
     return true;
   }
@@ -206,6 +231,8 @@ public class ComponentRegistrationHandler {
       conf.setName( name );
       ServiceConfigurations.lookup( conf );
       return true;
+    } catch ( final NoSuchElementException ex ) {
+      throw ex;
     } catch ( PersistenceException e ) {
       throw Exceptions.toUndeclared( e );
     } catch ( Exception e ) {

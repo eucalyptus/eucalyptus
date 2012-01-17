@@ -92,6 +92,10 @@ public class StopServiceType extends ServiceTransitionType {
 }
 public class StopServiceResponseType extends ServiceTransitionType {
 }
+public class DestroyServiceType extends ServiceTransitionType {
+}
+public class DestroyServiceResponseType extends ServiceTransitionType {
+}
 public class EnableServiceType extends ServiceTransitionType {
 }
 public class EnableServiceResponseType extends ServiceTransitionType implements HasSideEffect {

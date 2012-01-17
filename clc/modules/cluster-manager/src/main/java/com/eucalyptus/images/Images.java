@@ -17,6 +17,7 @@ import com.eucalyptus.cloud.ImageMetadata;
 import com.eucalyptus.cloud.ImageMetadata.StaticDiskImage;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.TransactionExecutionException;
 import com.eucalyptus.entities.Transactions;
@@ -109,25 +110,6 @@ public class Images {
       db.rollback( );
       return ( long ) i;
     }
-  }
-  
-  private static String generateImageId( final String imagePrefix, final String imageLocation ) {
-    Adler32 hash = new Adler32( );
-    String key = imageLocation + System.currentTimeMillis( );
-    hash.update( key.getBytes( ) );
-    String imageId = String.format( "%s-%08X", imagePrefix, hash.getValue( ) );
-    return imageId;
-  }
-  
-  private static String newImageId( final String imagePrefix, final String imageLocation ) {
-    EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
-    String testId = generateImageId( imagePrefix, imageLocation );
-    ImageInfo query = Images.exampleWithImageId( testId );
-    LOG.info( "Trying to lookup using created AMI id=" + query.getDisplayName( ) );
-    for ( ; db.query( query ).size( ) != 0; query.setDisplayName( generateImageId( imagePrefix, imageLocation ) ) );
-    db.commit( );
-    LOG.info( "Assigning imageId=" + query.getDisplayName( ) );
-    return query.getDisplayName( );
   }
   
   @TypeMapper
@@ -454,7 +436,7 @@ public class Images {
         : snapVolumeSize;
       Long imageSizeBytes = targetVolumeSizeGB * 1024l * 1024l * 1024l;
       Boolean targetDeleteOnTermination = Boolean.TRUE.equals( rootBlockDevice.getEbs( ).getDeleteOnTermination( ) );
-      String imageId = generateImageId( ImageMetadata.Type.machine.getTypePrefix( ), snapshotId );
+      String imageId = Crypto.generateId( snapshotId, ImageMetadata.Type.machine.getTypePrefix( ) );
       
       BlockStorageImageInfo ret = new BlockStorageImageInfo( userFullName, imageId, imageName, imageDescription, imageSizeBytes,
                                                              imageArch, imagePlatform,

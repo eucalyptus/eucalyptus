@@ -79,7 +79,6 @@ import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.blockstorage.WalrusUtil;
 import com.eucalyptus.cloud.ImageMetadata;
@@ -89,6 +88,7 @@ import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.FullName;
@@ -103,20 +103,12 @@ import edu.ucsb.eucalyptus.msgs.RegisterImageType;
 public class ImageUtil {
   private static Logger LOG = Logger.getLogger( ImageUtil.class );
   
-  public static String generateImageId( final String imagePrefix, final String imageLocation ) {
-    Adler32 hash = new Adler32( );
-    String key = imageLocation + System.currentTimeMillis( );
-    hash.update( key.getBytes( ) );
-    String imageId = String.format( "%s-%08X", imagePrefix, hash.getValue( ) );
-    return imageId;
-  }
-  
   public static String newImageId( final String imagePrefix, final String imageLocation ) {
     EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
-    String testId = generateImageId( imagePrefix, imageLocation );
+    String testId = Crypto.generateId( imageLocation, imagePrefix );
     ImageInfo query = Images.exampleWithImageId( testId );
     LOG.info( "Trying to lookup using created AMI id=" + query.getDisplayName( ) );
-    for ( ; db.query( query ).size( ) != 0; query.setDisplayName( generateImageId( imagePrefix, imageLocation ) ) );
+    for ( ; db.query( query ).size( ) != 0; query.setDisplayName( Crypto.generateId( imageLocation, imagePrefix ) ) );
     db.commit( );
     LOG.info( "Assigning imageId=" + query.getDisplayName( ) );
     return query.getDisplayName( );
