@@ -100,7 +100,6 @@ import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes.QuantityMetricFunction;
 import com.eucalyptus.util.RestrictedTypes.UsageMetricFunction;
 import com.eucalyptus.util.async.AsyncRequests;
-import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.vm.VmVolumeAttachment;
 import com.google.common.base.Function;
@@ -233,74 +232,74 @@ public class Volumes {
             } catch ( final NoSuchElementException ex ) {
             }
           
-            State initialState = v.getState( );
-            if ( !State.ANNIHILATING.equals( initialState ) && !State.ANNIHILATED.equals( initialState ) && maybeBusy ) {
-              initialState = State.BUSY;
-            }
-            buf.append( "VolumeStateUpdate: " )
-               .append( v.getPartition( ) ).append( " " )
-               .append( v.getDisplayName( ) ).append( " " )
-               .append( v.getState( ) ).append( " " )
-               .append( v.getCreationTimestamp( ) );
-            if ( vmAttachedVol != null ) {
-              buf.append( " attachment " )
-                 .append( vmId ).append( " " )
-                 .append( vmAttachedVol.getAttachmentState( ) );
-            }
+          State initialState = v.getState( );
+          if ( !State.ANNIHILATING.equals( initialState ) && !State.ANNIHILATED.equals( initialState ) && maybeBusy ) {
+            initialState = State.BUSY;
+          }
+          buf.append( "VolumeStateUpdate: " )
+             .append( v.getPartition( ) ).append( " " )
+             .append( v.getDisplayName( ) ).append( " " )
+             .append( v.getState( ) ).append( " " )
+             .append( v.getCreationTimestamp( ) );
+          if ( vmAttachedVol != null ) {
+            buf.append( " attachment " )
+               .append( vmId ).append( " " )
+               .append( vmAttachedVol.getAttachmentState( ) );
+          }
           
-            String status = null;
-            Integer size = 0;
-            String actualDeviceName = "unknown";
-            State volumeState = initialState;
-            if ( storageVolume != null ) {
-              status = storageVolume.getStatus( );
-              size = Integer.parseInt( storageVolume.getSize( ) );
-              actualDeviceName = storageVolume.getActualDeviceName( );
-              if ( State.EXTANT.equals( initialState )
+          String status = null;
+          Integer size = 0;
+          String actualDeviceName = "unknown";
+          State volumeState = initialState;
+          if ( storageVolume != null ) {
+            status = storageVolume.getStatus( );
+            size = Integer.parseInt( storageVolume.getSize( ) );
+            actualDeviceName = storageVolume.getActualDeviceName( );
+            if ( State.EXTANT.equals( initialState )
                    && ( ( actualDeviceName == null ) || "invalid".equals( actualDeviceName ) || "unknown".equals( actualDeviceName ) ) ) {
-                volumeState = State.GENERATING;
-              } else if ( State.ANNIHILATING.equals( initialState ) && State.ANNIHILATED.equals( Volumes.transformStorageState( v.getState( ), status ) ) ) {
-                volumeState = State.ANNIHILATED;
-              } else {
-                volumeState = Volumes.transformStorageState( v.getState( ), status );
-              }
-              buf.append( " storage-volume " )
+              volumeState = State.GENERATING;
+            } else if ( State.ANNIHILATING.equals( initialState ) && State.ANNIHILATED.equals( Volumes.transformStorageState( v.getState( ), status ) ) ) {
+              volumeState = State.ANNIHILATED;
+            } else {
+              volumeState = Volumes.transformStorageState( v.getState( ), status );
+            }
+            buf.append( " storage-volume " )
                  .append( storageVolume.getStatus( ) ).append( "=>" ).append( volumeState ).append( " " )
                  .append( storageVolume.getSize( ) ).append( "GB " )
                  .append( storageVolume.getSnapshotId( ) ).append( " " )
                  .append( storageVolume.getCreateTime( ) ).append( " " )
                  .append( storageVolume.getActualDeviceName( ) );
-            } else if ( State.ANNIHILATING.equals( v.getState( ) ) ) {
-              volumeState = State.ANNIHILATED;
-            } else if ( State.GENERATING.equals( v.getState( ) ) && v.lastUpdateMillis( ) > VOLUME_STATE_TIMEOUT ) {
-              volumeState = State.FAIL;
-            }
-            v.setState( volumeState );
-            try {
-              if ( v.getSize( ) <= 0 ) {
-                v.setSize( new Integer( size ) );
-              }
-            } catch ( final Exception ex ) {
-              LOG.error( ex );
-              Logs.extreme( ).error( ex, ex );
-            }
-            //TODO:GRZE: expire deleted/failed volumes in the future.
-            //            if ( State.ANNIHILATED.equals( v.getState( ) ) && State.ANNIHILATED.equals( v.getState( ) ) && v.lastUpdateMillis( ) > VOLUME_DELETE_TIMEOUT ) {
-            //              Entities.delete( v );
-            //            }
-            buf.append( " end-state " ).append( v.getState( ) );
-            LOG.debug( buf.toString( ) );
-            return v;
-          } catch ( final TransactionException ex ) {
-            LOG.error( buf.toString( ) + " failed because of " + ex.getMessage( ) );
-            Logs.extreme( ).error( buf.toString( ) + " failed because of " + ex.getMessage( ), ex );
-            throw Exceptions.toUndeclared( ex );
-          } catch ( final NoSuchElementException ex ) {
-            LOG.error( buf.toString( ) + " failed because of " + ex.getMessage( ) );
-            Logs.extreme( ).error( buf.toString( ) + " failed because of " + ex.getMessage( ), ex );
-            throw ex;
+          } else if ( State.ANNIHILATING.equals( v.getState( ) ) ) {
+            volumeState = State.ANNIHILATED;
+          } else if ( State.GENERATING.equals( v.getState( ) ) && v.lastUpdateMillis( ) > VOLUME_STATE_TIMEOUT ) {
+            volumeState = State.FAIL;
           }
+          v.setState( volumeState );
+          try {
+            if ( v.getSize( ) <= 0 ) {
+              v.setSize( new Integer( size ) );
+            }
+          } catch ( final Exception ex ) {
+            LOG.error( ex );
+            Logs.extreme( ).error( ex, ex );
+          }
+          //TODO:GRZE: expire deleted/failed volumes in the future.
+          //            if ( State.ANNIHILATED.equals( v.getState( ) ) && State.ANNIHILATED.equals( v.getState( ) ) && v.lastUpdateMillis( ) > VOLUME_DELETE_TIMEOUT ) {
+          //              Entities.delete( v );
+          //            }
+          buf.append( " end-state " ).append( v.getState( ) );
+          LOG.debug( buf.toString( ) );
+          return v;
+        } catch ( final TransactionException ex ) {
+          LOG.error( buf.toString( ) + " failed because of " + ex.getMessage( ) );
+          Logs.extreme( ).error( buf.toString( ) + " failed because of " + ex.getMessage( ), ex );
+          throw Exceptions.toUndeclared( ex );
+        } catch ( final NoSuchElementException ex ) {
+          LOG.error( buf.toString( ) + " failed because of " + ex.getMessage( ) );
+          Logs.extreme( ).error( buf.toString( ) + " failed because of " + ex.getMessage( ), ex );
+          throw ex;
         }
+      }
       };
       Entities.asTransaction( Volume.class, updateVolume ).apply( volumeId );
     }
@@ -395,7 +394,7 @@ public class Volumes {
           throw Exceptions.toUndeclared( ex );
         }
       }
-
+      
     } );
     return newVol;
   }
@@ -411,7 +410,7 @@ public class Volumes {
       Logs.extreme( ).error( ex, ex );
     }
   }
-
+  
   static State transformStorageState( final State volumeState, final String storageState ) {
     if ( State.GENERATING.equals( volumeState ) ) {
       if ( "failed".toString( ).equals( storageState ) ) {
@@ -421,8 +420,8 @@ public class Volumes {
       } else {
         return State.GENERATING;
       }
-    } else if (State.ANNIHILATING.equals(volumeState)) {
-    	return State.ANNIHILATING;
+    } else if ( State.ANNIHILATING.equals( volumeState ) ) {
+      return State.ANNIHILATING;
     } else if ( !State.ANNIHILATING.equals( volumeState ) && !State.BUSY.equals( volumeState ) ) {
       if ( "failed".toString( ).equals( storageState ) ) {
         return State.FAIL;
@@ -437,8 +436,7 @@ public class Volumes {
       }
     } else if ( State.BUSY.equals( volumeState ) ) {
       return State.BUSY;
-    } else
-    {
+    } else {
       if ( "failed".toString( ).equals( storageState ) ) {
         return State.FAIL;
       } else {
