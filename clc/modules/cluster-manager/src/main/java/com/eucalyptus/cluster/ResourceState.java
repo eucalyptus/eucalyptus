@@ -77,6 +77,7 @@ import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.cloud.util.NotEnoughResourcesException;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.vm.VmType;
 import com.eucalyptus.vm.VmTypes;
@@ -144,10 +145,18 @@ public class ResourceState {
     int seqNumber = this.virtualTimer++;
     List<ResourceToken> tokenList = Lists.newArrayList( );
     for ( int i = 0; i < quantity; i++ ) {
-      ResourceToken token = new ResourceToken( allocInfo, seqNumber, i );
-      LOG.debug( EventType.TOKEN_RESERVED.name( ) + ": " + token.toString( ) );
-      this.pendingTokens.add( token );
-      tokenList.add( token );
+      try {
+        ResourceToken token = new ResourceToken( allocInfo, seqNumber, i );
+        LOG.debug( EventType.TOKEN_RESERVED.name( ) + ": " + token.toString( ) );
+        this.pendingTokens.add( token );
+        tokenList.add( token );
+      } catch ( Exception ex ) {
+        LOG.error( ex );
+        Logs.extreme( ).error( ex, ex );
+        for ( ResourceToken token : tokenList ) {
+          this.pendingTokens.remove( token );
+        }
+      }
     }
     return tokenList;
   }
