@@ -421,6 +421,8 @@ public class Volumes {
       } else {
         return State.GENERATING;
       }
+    } else if (State.ANNIHILATING.equals(volumeState)) {
+    	return State.ANNIHILATING;
     } else if ( !State.ANNIHILATING.equals( volumeState ) && !State.BUSY.equals( volumeState ) ) {
       if ( "failed".toString( ).equals( storageState ) ) {
         return State.FAIL;
@@ -435,7 +437,8 @@ public class Volumes {
       }
     } else if ( State.BUSY.equals( volumeState ) ) {
       return State.BUSY;
-    } else {
+    } else
+    {
       if ( "failed".toString( ).equals( storageState ) ) {
         return State.FAIL;
       } else {
