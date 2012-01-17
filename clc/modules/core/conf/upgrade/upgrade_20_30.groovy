@@ -1026,13 +1026,13 @@ class upgrade_20_30 extends AbstractUpgradeScript {
          * is least likely to cause network issues.
          */
         EntityWrapper<StaticDatabasePropertyEntry> db = EntityWrapper.get(StaticDatabasePropertyEntry.class);
-        Map vlanrange = connMap['eucalyptus_config'].firstRow('SELECT MAX(minvlan),MIN(maxvlan) FROM config_clusters');
+        Map vlanrange = connMap['eucalyptus_config'].firstRow('SELECT MAX(MINVLAN) as MINVLAN,MIN(MAXVLAN) as MAXVLAN FROM config_clusters');
         StaticDatabasePropertyEntry minVlanProp = new StaticDatabasePropertyEntry(
             "com.eucalyptus.network.NetworkGroups.GLOBAL_MIN_NETWORK_TAG",
-            "cloud.network.global_min_network_tag", vlanrange['MAX(minvlan)'].toString());
+            "cloud.network.global_min_network_tag", vlanrange['MINVLAN'].toString());
         StaticDatabasePropertyEntry maxVlanProp = new StaticDatabasePropertyEntry(
             "com.eucalyptus.network.NetworkGroups.GLOBAL_MAX_NETWORK_TAG",
-            "cloud.network.global_max_network_tag", vlanrange['MIN(maxvlan)'].toString());
+            "cloud.network.global_max_network_tag", vlanrange['MAXVLAN'].toString());
         db.add(minVlanProp);
         db.add(maxVlanProp);
         db.commit( );
