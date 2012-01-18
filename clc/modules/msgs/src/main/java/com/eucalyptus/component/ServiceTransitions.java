@@ -178,11 +178,11 @@ public class ServiceTransitions {
       CheckedListenableFuture<ServiceConfiguration> result = executeTransition( configuration, Automata.sequenceTransitions( configuration, path ) );
       return result;
     } catch ( RuntimeException ex ) {
-      Logs.extreme( ).error( ex, ex );
-      LOG.error( configuration.getFullName( ) + " failed to transition to "
+      Logs.extreme( ).error( configuration.getFullName( ) + " failed to transition to "
                    + goalState
                    + " because of: "
                    + Exceptions.causeString( ex ) );
+      Logs.extreme( ).error( ex, ex );
       throw ex;
     }
   }
@@ -348,7 +348,7 @@ public class ServiceTransitions {
         trans = ServiceRemoteTransitionNotification.valueOf( transitionAction.name( ) );
       }
       if ( trans != null ) {
-        Logs.exhaust( ).debug( "Executing transition: " + trans.getClass( )
+        Logs.extreme( ).debug( "Executing transition: " + trans.getClass( )
                                + "."
                                + transitionAction.name( )
                                + " for "
@@ -356,6 +356,7 @@ public class ServiceTransitions {
         trans.fire( parent );
       }
       transitionCallback.fire( );
+      Faults.flush( parent );
     } catch ( Exception ex ) {
       LOG.error( parent.getFullName( ) + " failed transition " + transitionAction.name( ) + " because of " + ex.getMessage( ) );
       if ( Faults.filter( parent, ex ) ) {

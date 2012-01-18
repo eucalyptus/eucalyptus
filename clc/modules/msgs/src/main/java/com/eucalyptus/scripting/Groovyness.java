@@ -22,6 +22,7 @@ import org.apache.log4j.Logger;
 import org.codehaus.groovy.control.CompilerConfiguration;
 import com.eucalyptus.system.SubDirectory;
 import com.eucalyptus.util.Exceptions;
+import com.google.common.collect.Maps;
 
 public class Groovyness {
   private static Logger      LOG          = Logger.getLogger( Groovyness.class );
@@ -29,7 +30,7 @@ public class Groovyness {
   
   public static <T extends GroovyObject> T expandoMetaClass( T obj ) {
     ExpandoMetaClass emc = new ExpandoMetaClass( obj.getClass( ), false );
-    emc.initialize();
+    emc.initialize( );
     obj.setMetaClass( emc );
     return obj;
   }
@@ -45,7 +46,6 @@ public class Groovyness {
     return loader;
   }
   
-
   private static ScriptEngine getGroovyEngine( ) {
     synchronized ( Groovyness.class ) {
       if ( groovyEngine == null ) {
@@ -63,8 +63,8 @@ public class Groovyness {
       File f = new File( fileName );
       if ( !f.exists( ) ) {
         f = new File( SubDirectory.SCRIPTS + File.separator + fileName + ( fileName.endsWith( ".groovy" )
-          ? ""
-          : ".groovy" ) );
+                                                                                                         ? ""
+                                                                                                         : ".groovy" ) );
       }
       GroovyClassLoader loader = getGroovyClassLoader( );
       Class groovyClass = loader.parseClass( f );
@@ -80,8 +80,8 @@ public class Groovyness {
       throw new ScriptExecutionFailedException( e.getMessage( ), e );
     }
   }
-
-  public static <T> T run( SubDirectory dir, String fileName ) {
+  
+  public static <T> T run( SubDirectory dir, String fileName, Map context ) {
     fileName = dir + File.separator + fileName;
     String fileNameWExt = fileName + ".groovy";
     if ( !new File( fileName ).exists( ) && new File( fileNameWExt ).exists( ) ) {
@@ -90,19 +90,27 @@ public class Groovyness {
     FileReader fileReader = null;
     try {
       fileReader = new FileReader( fileName );
-      T ret = ( T ) getGroovyEngine( ).eval( fileReader );
+      Bindings bindings = new SimpleBindings( context );
+      SimpleScriptContext scriptContext = new SimpleScriptContext( );
+      scriptContext.setBindings( bindings, SimpleScriptContext.ENGINE_SCOPE );
+      T ret = ( T ) getGroovyEngine( ).eval( fileReader, scriptContext );
       return ret;
     } catch ( Exception e ) {
       LOG.debug( e, e );
       throw new RuntimeException( "Executing the requested script failed: " + fileName, e );
     } finally {
-      if ( fileReader != null )
+      if ( fileReader != null ) {
         try {
-        fileReader.close( );
+          fileReader.close( );
         } catch ( IOException e ) {
-        LOG.error( e );
+          LOG.error( e );
         }
+      }
     }
+  }
+  
+  public static <T> T run( SubDirectory dir, String fileName ) {
+    return run( dir, fileName, Maps.newHashMap( ) );
   }
   
   public static <T> T run( String fileName ) {
@@ -131,10 +139,10 @@ public class Groovyness {
       return ( T ) getGroovyEngine( ).eval( code, scriptContext );
     } catch ( Exception e ) {
       LOG.debug( e, e );
-      throw new ScriptExecutionFailedException( "Executing the requested script failed:\n" 
-                                                + "============================\n" 
-                                                + code 
-                                                + "============================\n" 
+      throw new ScriptExecutionFailedException( "Executing the requested script failed:\n"
+                                                + "============================\n"
+                                                + code
+                                                + "============================\n"
                                                 + "\nbecause of:\n" + Exceptions.causeString( e ), e );
     }
   }
@@ -144,10 +152,10 @@ public class Groovyness {
       return ( T ) getGroovyEngine( ).eval( code );
     } catch ( Exception e ) {
       LOG.debug( e, e );
-      throw new ScriptExecutionFailedException( "Executing the requested script failed:\n" 
-                                                + "============================\n" 
-                                                + code 
-                                                + "============================\n" 
+      throw new ScriptExecutionFailedException( "Executing the requested script failed:\n"
+                                                + "============================\n"
+                                                + code
+                                                + "============================\n"
                                                 + "\nbecause of:\n" + Exceptions.causeString( e ), e );
     }
   }
@@ -164,8 +172,8 @@ public class Groovyness {
         try {
           fileReader = new BufferedReader( new FileReader( confFile ) );
           for ( ; ( line = fileReader.readLine( ) ) != null; conf += !line.matches( "\\s*\\w+\\s*=[\\s\\.\\w*\"']*;{0,1}" )
-            ? ""
-            : "\n" + className + "." + line );
+                                                                                                                           ? ""
+                                                                                                                           : "\n" + className + "." + line );
           LOG.debug( conf );
           try {
             getGroovyEngine( ).eval( conf );
