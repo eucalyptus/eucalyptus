@@ -8,13 +8,13 @@ details = ""
 faults.each{ FaultRecord f ->
   ServiceConfiguration s = Groovyness.expandoMetaClass(f.getServiceConfiguration( ));
   summary += """
-- ${s.getFullName( )} ${f.getTransitionRecord( ).getRule( ).getFromState( )}->${f.getFinalState( )} 
-  ${f.getError( ).getMessage( )}
+- ${s.getFullName( )} ${f.getTransitionRecord( ).getRule( ).getFromState( )}->${f.getFinalState( )} ${f.getError( ).getTimeStamp( )}
+  ${Throwables.getRootCause(f.getError( )).getMessage( )}
 """
   details += """
 - ${s.getFullName( )} ------------
   ${f.getTransitionRecord( )}
-  ${Exceptions.string(f.getError())}
+  ${Exceptions.causeString(f.getError())}
 """
 }
 content = """
