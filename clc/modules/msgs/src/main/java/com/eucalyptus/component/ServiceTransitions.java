@@ -178,11 +178,11 @@ public class ServiceTransitions {
       CheckedListenableFuture<ServiceConfiguration> result = executeTransition( configuration, Automata.sequenceTransitions( configuration, path ) );
       return result;
     } catch ( RuntimeException ex ) {
-      Logs.extreme( ).error( ex, ex );
-      LOG.error( configuration.getFullName( ) + " failed to transition to "
+      Logs.extreme( ).error( configuration.getFullName( ) + " failed to transition to "
                    + goalState
                    + " because of: "
                    + Exceptions.causeString( ex ) );
+      Logs.extreme( ).error( ex, ex );
       throw ex;
     }
   }
