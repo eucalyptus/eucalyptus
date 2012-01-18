@@ -348,7 +348,7 @@ public class ServiceTransitions {
         trans = ServiceRemoteTransitionNotification.valueOf( transitionAction.name( ) );
       }
       if ( trans != null ) {
-        Logs.exhaust( ).debug( "Executing transition: " + trans.getClass( )
+        Logs.extreme( ).debug( "Executing transition: " + trans.getClass( )
                                + "."
                                + transitionAction.name( )
                                + " for "
