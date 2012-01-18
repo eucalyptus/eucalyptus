@@ -671,11 +671,7 @@ public class Faults {
               String subject = Faults.EMAIL_SUBJECT_PREFIX + " system state for " + digestDate;
               String result = Groovyness.run( SubDirectory.SCRIPTS, "notifications_digest" );
               if ( !Strings.isNullOrEmpty( result ) ) {
-//                  Emails.send( Faults.FROM_EMAIL, Faults.FROM_EMAIL_NAME, Faults.EMAIL, subject, result );
-                LOG.debug( "From: " + Faults.EMAIL_FROM_NAME + " <" + Faults.EMAIL_FROM + ">" );
-                LOG.debug( "To: " + Faults.EMAIL_TO );
-                LOG.debug( "Subject: " + subject );
-                LOG.debug( result );
+                dispatchEmail( subject, result );
               }
             } catch ( Exception ex ) {
               LOG.error( "Fault notifications: rendering digest failed: " + ex.getMessage( ) );
@@ -716,11 +712,7 @@ public class Faults {
             try {
               String result = Groovyness.run( SubDirectory.SCRIPTS, "notifications", new HashMap( ) {{ this.put( "faults", pendingFaults ); }} );
               if ( !Strings.isNullOrEmpty( result ) ) {
-//                  Emails.send( Faults.FROM_EMAIL, Faults.FROM_EMAIL_NAME, Faults.EMAIL, subject, result );
-                LOG.debug( "From: " + Faults.EMAIL_FROM_NAME + " <" + Faults.EMAIL_FROM + ">" );
-                LOG.debug( "To: " + Faults.EMAIL_TO );
-                LOG.debug( "Subject: " + subject );
-                LOG.debug( result );
+                dispatchEmail( subject, result );
               }
             } catch ( Exception ex ) {
               LOG.error( "Fault notifications: rendering notification failed: " + ex.getMessage( ) );
@@ -728,6 +720,16 @@ public class Faults {
             }
           }
         }
+      }
+    }
+
+    public static void dispatchEmail( String subject, String result ) {
+      LOG.debug( "From: " + Faults.EMAIL_FROM_NAME + " <" + Faults.EMAIL_FROM + ">" );
+      LOG.debug( "To: " + Faults.EMAIL_TO );
+      LOG.debug( "Subject: " + subject );
+      LOG.debug( result );
+      if ( !Strings.isNullOrEmpty( Faults.EMAIL_TO ) ) {
+        //    Emails.send( Faults.FROM_EMAIL, Faults.FROM_EMAIL_NAME, Faults.EMAIL, subject, result );
       }
     }
   }
