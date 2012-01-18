@@ -356,6 +356,7 @@ public class ServiceTransitions {
         trans.fire( parent );
       }
       transitionCallback.fire( );
+      Faults.flush( parent );
     } catch ( Exception ex ) {
       LOG.error( parent.getFullName( ) + " failed transition " + transitionAction.name( ) + " because of " + ex.getMessage( ) );
       if ( Faults.filter( parent, ex ) ) {
