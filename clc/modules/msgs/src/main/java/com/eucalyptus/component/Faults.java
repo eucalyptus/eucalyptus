@@ -115,6 +115,7 @@ import com.eucalyptus.records.Logs;
 import com.eucalyptus.scripting.Groovyness;
 import com.eucalyptus.system.SubDirectory;
 import com.eucalyptus.system.Threads;
+import com.eucalyptus.util.Emails;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
@@ -710,7 +711,11 @@ public class Faults {
             LOG.debug( "Fault notifications: no state changes pending, discarding pending faults" );
           } else {
             try {
-              String result = Groovyness.run( SubDirectory.SCRIPTS, "notifications", new HashMap( ) {{ this.put( "faults", pendingFaults ); }} );
+              String result = Groovyness.run( SubDirectory.SCRIPTS, "notifications", new HashMap( ) {
+                {
+                  this.put( "faults", pendingFaults );
+                }
+              } );
               if ( !Strings.isNullOrEmpty( result ) ) {
                 dispatchEmail( subject, result );
               }
@@ -722,14 +727,14 @@ public class Faults {
         }
       }
     }
-
+    
     public static void dispatchEmail( String subject, String result ) {
       LOG.debug( "From: " + Faults.EMAIL_FROM_NAME + " <" + Faults.EMAIL_FROM + ">" );
       LOG.debug( "To: " + Faults.EMAIL_TO );
       LOG.debug( "Subject: " + subject );
       LOG.debug( result );
       if ( !Strings.isNullOrEmpty( Faults.EMAIL_TO ) ) {
-        //    Emails.send( Faults.FROM_EMAIL, Faults.FROM_EMAIL_NAME, Faults.EMAIL, subject, result );
+        Emails.send( Faults.EMAIL_FROM, Faults.EMAIL_FROM_NAME, Faults.EMAIL_TO, subject, result );
       }
     }
   }
