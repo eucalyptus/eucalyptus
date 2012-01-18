@@ -66,6 +66,7 @@ package com.eucalyptus.component;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
@@ -121,7 +122,6 @@ import com.eucalyptus.util.fsm.TransitionRecord;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
@@ -692,7 +692,7 @@ public class Faults {
     
     private static void sendFaults( ) {
       LOG.debug( "Fault notifications: waking up to service error queue." );
-      List<FaultRecord> pendingFaults = Lists.newArrayList( );
+      final List<FaultRecord> pendingFaults = Lists.newArrayList( );
       errorQueue.drainTo( pendingFaults );
       if ( pendingFaults.isEmpty( ) ) {
         LOG.debug( "Fault notifications: service error queue is empty... going back to sleep." );
@@ -714,7 +714,7 @@ public class Faults {
             LOG.debug( "Fault notifications: no state changes pending, discarding pending faults" );
           } else {
             try {
-              String result = Groovyness.run( SubDirectory.SCRIPTS, "notifications", ImmutableMap.builder( ).put( "faults", pendingFaults ).build( ) );
+              String result = Groovyness.run( SubDirectory.SCRIPTS, "notifications", new HashMap( ) {{ this.put( "faults", pendingFaults ); }} );
               if ( !Strings.isNullOrEmpty( result ) ) {
 //                  Emails.send( Faults.FROM_EMAIL, Faults.FROM_EMAIL_NAME, Faults.EMAIL, subject, result );
                 LOG.debug( "From: " + Faults.EMAIL_FROM_NAME + " <" + Faults.EMAIL_FROM + ">" );
