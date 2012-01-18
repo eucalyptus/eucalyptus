@@ -3,11 +3,11 @@ import com.eucalyptus.component.Faults.FaultRecord
 import com.eucalyptus.scripting.Groovyness
 import com.eucalyptus.util.Exceptions
 
-preamble = ""
+summary = ""
 details = ""
 faults.each{ FaultRecord f ->
   ServiceConfiguration s = Groovyness.expandoMetaClass(f.getServiceConfiguration( ));
-  preamble += """
+  summary += """
 - ${s.getFullName( )} ${f.getTransitionRecord( ).getRule( ).getFromState( )}->${f.getFinalState( )} 
   ${f.getError( ).getMessage( )}
 """
