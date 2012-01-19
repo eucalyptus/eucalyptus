@@ -101,7 +101,7 @@ permission notice:
 #include "windows-bundle.h"
 #define MONITORING_PERIOD (5)
 #define MAX_CREATE_TRYS 5
-#define CREATE_TIMEOUT_SEC 5
+#define CREATE_TIMEOUT_SEC 15
 #define PER_INSTANCE_BUFFER_MB 20 // reserve this much extra room (in MB) per instance (for kernel, ramdisk, and metadata overhead)
 
 #ifdef EUCA_COMPILE_TIMESTAMP
@@ -511,6 +511,7 @@ monitoring_thread (void *arg)
             if ((instance->state==CREATEIMAGE_SHUTDOWN || instance->state==CREATEIMAGE_SHUTOFF)
                 && (now - instance->createImageTime) < createImage_cleanup_threshold) continue;
             
+            //DAN: need to destroy the domain here, just in case...
             // ok, it's been condemned => destroy the files
             int destroy_files = !nc_state.save_instance_files;
             if (call_hooks (NC_EVENT_PRE_CLEAN, instance->instancePath)) {
