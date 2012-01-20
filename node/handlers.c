@@ -512,6 +512,11 @@ monitoring_thread (void *arg)
                 && (now - instance->createImageTime) < createImage_cleanup_threshold) continue;
             
             //DAN: need to destroy the domain here, just in case...
+            if (instance->state == BOOTING) {
+                ncInstance *tmpInstance=NULL;
+                logprintfl(EUCADEBUG, "[%s] finding and terminating BOOTING instance (%d)\n", instance->instanceId, find_and_terminate_instance (nc, NULL, instance->instanceId, 1, &tmpInstance, 1));
+            }
+
             // ok, it's been condemned => destroy the files
             int destroy_files = !nc_state.save_instance_files;
             if (call_hooks (NC_EVENT_PRE_CLEAN, instance->instancePath)) {
