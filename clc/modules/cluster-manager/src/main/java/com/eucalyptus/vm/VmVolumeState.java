@@ -209,7 +209,7 @@ public class VmVolumeState {
             this.removeVolumeAttachment( volId );
           } else if ( AttachmentState.attaching.equals( localState ) && AttachmentState.attached.equals( remoteState ) ) {
             this.updateVolumeAttachment( volId, AttachmentState.attached );
-          } else if ( AttachmentState.detaching.equals( localState ) && AttachmentState.attaching_failed.equals( remoteState ) ) {
+          } else if ( AttachmentState.attaching.equals( localState ) && AttachmentState.attaching_failed.equals( remoteState ) ) {
             this.removeVolumeAttachment( volId );
           } else if ( AttachmentState.detaching.equals( localState ) && AttachmentState.detaching_failed.equals( remoteState ) ) {
             this.updateVolumeAttachment( volId, AttachmentState.attached );
