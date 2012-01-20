@@ -168,7 +168,7 @@ public class Databases {
   }
   
   private static final int                    MAX_TX_START_SYNC_RETRIES = 120;
-  private static final AtomicInteger          counter                   = new AtomicInteger( 5 );
+  private static final AtomicInteger          counter                   = new AtomicInteger( 120 );
   private static final Predicate<Host>        FILTER_SYNCING_DBS        = Predicates.and( DbFilter.INSTANCE, Predicates.not( SyncedDbFilter.INSTANCE ) );
   private static final ScriptedDbBootstrapper singleton                 = new ScriptedDbBootstrapper( );
   private static Logger                       LOG                       = Logger.getLogger( Databases.class );
