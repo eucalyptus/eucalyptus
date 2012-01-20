@@ -72,14 +72,16 @@
 #include <fcntl.h> /* open */
 #include <signal.h>
 #include "eucalyptus.h"
-#include "misc.h"
 #include <sys/types.h>
 #include <sys/wait.h>
+#include "misc.h"
+#include "ipc.h"
 
 static char home [MAX_PATH] = "";
 static char connect_storage_cmd_path [MAX_PATH];
 static char disconnect_storage_cmd_path [MAX_PATH];
 static char get_storage_cmd_path [MAX_PATH];
+static sem * iscsi_sem; // for serializing attach and detach invocations
 
 void init_iscsi (const char * euca_home)
 {
@@ -96,6 +98,7 @@ void init_iscsi (const char * euca_home)
     snprintf (connect_storage_cmd_path, MAX_PATH, EUCALYPTUS_CONNECT_ISCSI, home, home);
     snprintf (disconnect_storage_cmd_path, MAX_PATH, EUCALYPTUS_DISCONNECT_ISCSI, home, home);
     snprintf (get_storage_cmd_path, MAX_PATH, EUCALYPTUS_GET_ISCSI, home, home);
+	iscsi_sem = sem_alloc (1, "mutex");
 }
 
 char * connect_iscsi_target (const char *dev_string) 
@@ -114,6 +117,7 @@ char * connect_iscsi_target (const char *dev_string)
         return(NULL);
     }
     
+    sem_p (iscsi_sem);
     pid = fork();
     if (!pid) {
         close (filedes[0]);
@@ -160,6 +164,7 @@ char * connect_iscsi_target (const char *dev_string)
             kill(pid, SIGKILL);
         }
     }
+    sem_v (iscsi_sem);
 
     return retval;
 }
@@ -170,6 +175,8 @@ int disconnect_iscsi_target (const char *dev_string)
     assert (strlen (home));
 
     logprintfl (EUCAINFO, "disconnect_iscsi_target invoked (dev_string=%s)\n", dev_string);
+
+    sem_p (iscsi_sem);
     pid = fork();
     if (!pid) {
         if ( dev_string && strlen(dev_string) ) logprintfl(EUCADEBUG, "disconnect_iscsi_target(): running command: %s %s,%s\n", disconnect_storage_cmd_path, home, dev_string);
@@ -187,6 +194,8 @@ int disconnect_iscsi_target (const char *dev_string)
             retval = -1;
         }
     }
+    sem_v (iscsi_sem);
+
     return retval;
 }
 
@@ -206,6 +215,7 @@ char * get_iscsi_target (const char *dev_string)
         return(NULL);
     }
     
+    sem_p (iscsi_sem);
     pid = fork();
     if (!pid) {
         close(filedes[0]);
@@ -253,6 +263,7 @@ char * get_iscsi_target (const char *dev_string)
             kill(pid, SIGKILL);
         }
     }
+    sem_v (iscsi_sem);
 
     return retval;
 }
