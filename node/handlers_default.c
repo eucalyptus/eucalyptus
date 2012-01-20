@@ -219,7 +219,7 @@ doGetConsoleOutput(	struct nc_state_t *nc,
 
 // finds instance by ID and destroys it on the hypervisor
 // NOTE: this must be called with inst_sem semaphore held
-static int 
+int 
 find_and_terminate_instance ( 
                              struct nc_state_t *nc_state,
                              ncMetadata *meta,

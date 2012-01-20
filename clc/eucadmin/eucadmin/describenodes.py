@@ -34,11 +34,23 @@ class DescribeNodes(eucadmin.describerequest.DescribeRequest):
 
     ServiceName = 'Node'
     Description = 'List Node controllers.'
-    
+
+    def __init__(self, **kwargs):
+        eucadmin.describerequest.DescribeRequest.__init__(self, **kwargs)
+        self.list_markers.append('euca:instances')
+
     def cli_formatter(self, data):
         nodes = getattr(data, 'euca:registered')
-        fmt = 'NODE\t%s\t%s'
-        for n in nodes:
-            print fmt % (n.get('euca:name', None),
-                         n.get('euca:clusterName', None))
+        for node in nodes:
+            instances = node.get('euca:instances')
+            if isinstance(instances, list):
+                instance_ids = [instance.get('euca:entry') for instance in
+                                node.get('euca:instances', [])]
+            else:
+                # If boto's XML parsing bug hasn't been fixed then instances
+                # will be a dict with only one or zero instances per node.
+                instance_ids = []
+            fmt = ['NODE', node.get('euca:name'), node.get('euca:clusterName')]
+            fmt.extend(instance_ids)
+            print '\t'.join(map(str, fmt))
 

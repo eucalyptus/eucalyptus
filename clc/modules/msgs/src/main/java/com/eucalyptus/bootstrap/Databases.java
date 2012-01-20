@@ -168,6 +168,7 @@ public class Databases {
   }
   
   private static final int                    MAX_TX_START_SYNC_RETRIES = 120;
+  private static final AtomicInteger          counter                   = new AtomicInteger( 120 );
   private static final Predicate<Host>        FILTER_SYNCING_DBS        = Predicates.and( DbFilter.INSTANCE, Predicates.not( SyncedDbFilter.INSTANCE ) );
   private static final ScriptedDbBootstrapper singleton                 = new ScriptedDbBootstrapper( );
   private static Logger                       LOG                       = Logger.getLogger( Databases.class );
@@ -260,8 +261,13 @@ public class Databases {
       if ( !Hosts.isCoordinator( ) && Hosts.localHost( ).hasDatabase( ) ) {
         while ( !Databases.enable( Hosts.localHost( ) ) ) {
           LOG.warn( LogUtil.subheader( "Synchronization of the database failed: " + Hosts.localHost( ) ) );
-          LOG.warn( "Sleeping for " + INITIAL_DB_SYNC_RETRY_WAIT + " seconds before trying again." );
-          TimeUnit.SECONDS.sleep( INITIAL_DB_SYNC_RETRY_WAIT );
+          if ( counter.decrementAndGet( ) == 0 ) {
+            LOG.fatal( "Restarting process to force re-synchronization." );
+            System.exit( 123 );
+          } else {
+            LOG.warn( "Sleeping for " + INITIAL_DB_SYNC_RETRY_WAIT + " seconds before trying again." );
+            TimeUnit.SECONDS.sleep( INITIAL_DB_SYNC_RETRY_WAIT );
+          }
         }
         Hosts.UpdateEntry.INSTANCE.apply( Hosts.localHost( ) );
         LOG.info( LogUtil.subheader( "Database synchronization complete: " + Hosts.localHost( ) ) );
@@ -484,7 +490,8 @@ public class Databases {
                         Logs.extreme( ).debug( "Skipping addition of db connections for host which already exists: " + hostName );
                       } catch ( IllegalStateException ex ) {
                         if ( Exceptions.isCausedBy( ex, InstanceAlreadyExistsException.class ) ) {
-                          ManagementFactory.getPlatformMBeanServer( ).unregisterMBean( new ObjectName( "net.sf.hajdbc:cluster=" + ctx + ",database=" + hostName ) );
+                          ManagementFactory.getPlatformMBeanServer( ).unregisterMBean(
+                            new ObjectName( "net.sf.hajdbc:cluster=" + ctx + ",database=" + hostName ) );
                           cluster.add( hostName, realJdbcDriver, dbUrl );
                         } else {
                           throw ex;
@@ -626,7 +633,7 @@ public class Databases {
       }
     }
   }
-  private static final AtomicInteger counter = new AtomicInteger( 5 );
+  
   static boolean enable( final Host host ) {
     if ( !host.hasDatabase( ) ) {
       return false;
@@ -644,9 +651,6 @@ public class Databases {
             SyncState.NOTSYNCED.set( );
             LOG.error( ex );
             Logs.extreme( ).error( ex, ex );
-            if ( Exceptions.isCausedBy( ex, InstanceNotFoundException.class ) && counter.decrementAndGet( ) == 0 ) {
-              System.exit( 123 );
-            }
             return false;
           }
         } else if ( !SyncState.SYNCING.isCurrent( ) ) {
@@ -788,7 +792,7 @@ public class Databases {
       }
     };
     private static final AtomicBoolean last = new AtomicBoolean( false );
-
+    
     @Override
     public abstract Set<String> get( );
     
@@ -1005,15 +1009,15 @@ public class Databases {
         }
         statement.executeBatch( );
       } catch ( SQLException sqle ) {
-	  LOG.error( sqle );
-          Logs.extreme( ).error( sqle, sqle );
-          throw sqle;
+        LOG.error( sqle );
+        Logs.extreme( ).error( sqle, sqle );
+        throw sqle;
       } finally {
-          try {
-	  statement.close( );
-          } catch ( Exception e ) {
-              LOG.error( e );
-          }
+        try {
+          statement.close( );
+        } catch ( Exception e ) {
+          LOG.error( e );
+        }
       }
     }
     
@@ -1040,15 +1044,15 @@ public class Databases {
         }
         statement.executeBatch( );
       } catch ( SQLException sqle ) {
-	  LOG.error( sqle );
-          Logs.extreme( ).error( sqle, sqle );
-          throw sqle;
+        LOG.error( sqle );
+        Logs.extreme( ).error( sqle, sqle );
+        throw sqle;
       } finally {
-	try {
-          statement.close( );  
-	} catch ( Exception e ) {
-          LOG.error( e ); 
-	}
+        try {
+          statement.close( );
+        } catch ( Exception e ) {
+          LOG.error( e );
+        }
       }
       
     }
@@ -1086,15 +1090,15 @@ public class Databases {
                   long value = resultSet.getLong( 1 );
                   return value;
                 } catch ( SQLException sqle ) {
-                    LOG.error(sqle);
-                    Logs.extreme( ).error( sqle, sqle );
-                    throw sqle;
+                  LOG.error( sqle );
+                  Logs.extreme( ).error( sqle, sqle );
+                  throw sqle;
                 } finally {
-                    try {
-                      statement.close( );
-                    } catch ( Exception e ) {
-                      LOG.error( e );
-                    }
+                  try {
+                    statement.close( );
+                  } catch ( Exception e ) {
+                    LOG.error( e );
+                  }
                 }
               }
             };
@@ -1133,11 +1137,11 @@ public class Databases {
           Logs.extreme( ).error( sqle, sqle );
           throw sqle;
         } finally {
-            try {
-              targetStatement.close( );
-            } catch ( Exception e ) {
-              LOG.error( e );	
-            }
+          try {
+            targetStatement.close( );
+          } catch ( Exception e ) {
+            LOG.error( e );
+          }
         }
       }
     }
@@ -1148,10 +1152,10 @@ public class Databases {
      * @throws SQLException
      */
     public static <D> void synchronizeIdentityColumns( SynchronizationContext<D> context ) throws SQLException {
-   
+      
       Statement sourceStatement = null;
       Statement targetStatement = null;
-      try { 	
+      try {
         sourceStatement = context.getConnection( context.getSourceDatabase( ) ).createStatement( );
         targetStatement = context.getConnection( context.getTargetDatabase( ) ).createStatement( );
         Dialect dialect = context.getDialect( );
@@ -1181,20 +1185,20 @@ public class Databases {
             }
           }
         }
-      } catch (SQLException sqle ) {
-	  LOG.error( sqle );
-          Logs.extreme( ).error( sqle, sqle );
-          throw sqle;
+      } catch ( SQLException sqle ) {
+        LOG.error( sqle );
+        Logs.extreme( ).error( sqle, sqle );
+        throw sqle;
       } finally {
         try {
-	  sourceStatement.close( );
+          sourceStatement.close( );
         } catch ( Exception e1 ) {
-            LOG.error( e1 );
+          LOG.error( e1 );
         }
         try {
           targetStatement.close( );
         } catch ( Exception e2 ) {
-            LOG.error( e2 );
+          LOG.error( e2 );
         }
       }
     }
@@ -1220,15 +1224,15 @@ public class Databases {
         }
         statement.executeBatch( );
       } catch ( SQLException sqle ) {
-          LOG.error( sqle );
-          Logs.extreme( ).error( sqle, sqle );
-          throw sqle;
+        LOG.error( sqle );
+        Logs.extreme( ).error( sqle, sqle );
+        throw sqle;
       } finally {
-	  try {
-	    statement.close( );
-	  } catch (Exception e) {
-	      LOG.error( e );
-	  }
+        try {
+          statement.close( );
+        } catch ( Exception e ) {
+          LOG.error( e );
+        }
       }
     }
     
@@ -1254,14 +1258,14 @@ public class Databases {
         }
         statement.executeBatch( );
       } catch ( SQLException sqle ) {
-          LOG.error( sqle );
-          Logs.extreme( ).error( sqle, sqle );
-          throw sqle;
+        LOG.error( sqle );
+        Logs.extreme( ).error( sqle, sqle );
+        throw sqle;
       } finally {
         try {
           statement.close( );
         } catch ( Exception e ) {
-            LOG.error( e );
+          LOG.error( e );
         }
       }
     }

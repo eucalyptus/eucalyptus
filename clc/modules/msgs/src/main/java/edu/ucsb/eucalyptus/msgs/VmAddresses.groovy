@@ -111,6 +111,9 @@ public class DescribeAddressesType extends VmAddressMessage { //** added 2008-02
   ArrayList<String> publicIpsSet = new ArrayList<String>();
   @HttpParameterMapping (parameter = "FilterSet")
   ArrayList<Filter> filterSet = new ArrayList<Filter>();
+  @HttpParameterMapping (parameter = "AllocationId")
+  ArrayList<String> allocationIds = new ArrayList<String>();
+  
 }
 public class DescribeAddressesResponseType extends VmAddressMessage { //** added 2008-02-01  **/
   ArrayList<AddressInfoType> addressesSet = new ArrayList<AddressInfoType>();
