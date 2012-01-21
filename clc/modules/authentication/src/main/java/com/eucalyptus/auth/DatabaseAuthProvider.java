@@ -447,9 +447,20 @@ public class DatabaseAuthProvider implements AccountProvider {
     UserEntity example = new UserEntity( );
     example.setConfirmationCode( code );
     try {
-      UserEntity user = db.getUnique( example );
+      Example userExample = Example.create( example ).enableLike( MatchMode.EXACT );
+      @SuppressWarnings( "unchecked" )
+      List<UserEntity> users = ( List<UserEntity> ) db
+          .createCriteria( UserEntity.class ).setCacheable( true ).add( userExample )
+          .list( );
+      if ( users.size( ) < 1 ) {
+        throw new AuthException( AuthException.NO_SUCH_USER );
+      }
       db.commit( );
-      return new DatabaseUserProxy( user );
+      return new DatabaseUserProxy( users.get( 0 ) );
+    } catch ( AuthException e ) {
+      db.rollback( );
+      Debugging.logError( LOG, e, "Failed to find user by confirmation code " + code );
+      throw e;      
     } catch ( Exception e ) {
       db.rollback( );
       Debugging.logError( LOG, e, "Failed to find user by confirmation code " + code );
