@@ -444,13 +444,10 @@ public class DatabaseAuthProvider implements AccountProvider {
       throw new AuthException( "Empty confirmation code to search" );
     }
     EntityWrapper<UserEntity> db = EntityWrapper.get( UserEntity.class );
-    UserEntity example = new UserEntity( );
-    example.setConfirmationCode( code );
     try {
-      Example userExample = Example.create( example ).enableLike( MatchMode.EXACT );
       @SuppressWarnings( "unchecked" )
       List<UserEntity> users = ( List<UserEntity> ) db
-          .createCriteria( UserEntity.class ).setCacheable( true ).add( userExample )
+          .createCriteria( UserEntity.class ).setCacheable( true ).add( Restrictions.eq( "confirmationCode", code ) )
           .list( );
       if ( users.size( ) < 1 ) {
         throw new AuthException( AuthException.NO_SUCH_USER );
