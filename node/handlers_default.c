@@ -439,7 +439,7 @@ doDescribeResource(	struct nc_state_t *nc,
         logprintfl (EUCAERROR, "stats integer overflow error (bump up the units?)\n");
         logprintfl (EUCAERROR, "   memory: max=%-10lld free=%-10lld\n", nc->mem_max, mem_free);
         logprintfl (EUCAERROR, "     disk: max=%-10lld free=%-10lld\n", nc->disk_max, disk_free);
-        logprintfl (EUCAERROR, "    cores: max=%-10d free=%-10d\n", nc->cores_max, cores_free);
+        logprintfl (EUCAERROR, "    cores: max=%-10lld free=%-10d\n", nc->cores_max, cores_free);
         logprintfl (EUCAERROR, "       INT_MAX=%-10d\n", INT_MAX);
         return 10;
     }
@@ -450,7 +450,7 @@ doDescribeResource(	struct nc_state_t *nc,
         return 1;
     }
     *outRes = res;
-	logprintfl(EUCADEBUG, "doDescribeResource: cores=%d/%d mem=%lld/%lld disk=%lld/%lld iqn=%s\n", 
+	logprintfl(EUCADEBUG, "doDescribeResource: cores=%d/%lld mem=%lld/%lld disk=%lld/%lld iqn=%s\n", 
                cores_free, nc->cores_max,
                mem_free, nc->mem_max,
                disk_free, nc->disk_max,
