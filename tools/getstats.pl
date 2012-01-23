@@ -42,12 +42,12 @@ foreach $iface (@ifaces) {
 }
 
 if ($blkbytes) {
-    $blkmbytes = int($blkbytes / 1024000);
+    $blkmbytes = int($blkbytes / (1<<20));
 } else {
     $blkmbytes = 0;
 }
 if ($ifbytes) {
-    $ifmbytes = int($ifbytes / 1024000);
+    $ifmbytes = int($ifbytes / (1<<20));
 } else {
     $ifmbytes = 0;
 }

@@ -894,11 +894,11 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   }
   
   public void updateBlockBytes( final long blkbytes ) {
-    this.usageStats.setBlockBytes( this.usageStats.getBlockBytes( ) + blkbytes );
+    this.usageStats.setBlockBytes( blkbytes );
   }
   
   public void updateNetworkBytes( final long netbytes ) {
-    this.usageStats.setNetworkBytes( this.usageStats.getNetworkBytes( ) + netbytes );
+    this.usageStats.setNetworkBytes( netbytes );
   }
   
   public void updateAddresses( final String privateAddr, final String publicAddr ) {

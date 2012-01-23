@@ -273,6 +273,7 @@ void * startup_thread(		void *arg);
 
 int get_instance_stats(virDomainPtr dom, ncInstance *instance);
 ncInstance * find_global_instance (const char * instanceId);
+int find_and_terminate_instance (struct nc_state_t *nc_state, ncMetadata *meta, char *instanceId, int force, ncInstance **instance_p, char destroy);
 
 // bundling structure
 struct bundling_params_t {
