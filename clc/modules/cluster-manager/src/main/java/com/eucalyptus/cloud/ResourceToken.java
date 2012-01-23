@@ -110,6 +110,9 @@ public class ResourceToken implements VmInstanceMetadata, Comparable<ResourceTok
     this.expirationTime = allocInfo.getExpiration( );
     this.launchIndex = launchIndex;
     this.instanceId = allocInfo.getInstanceId( launchIndex );
+    if ( this.instanceId == null ) {
+      throw new IllegalArgumentException( "Cannot create resource token with null instance id: " + allocInfo );
+    }
     this.instanceUuid = UUID.randomUUID( ).toString( );
     this.resourceAllocationSequenceNumber = resourceAllocationSequenceNumber;
     this.creationTime = Calendar.getInstance( ).getTime( );

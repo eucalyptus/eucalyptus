@@ -976,7 +976,7 @@ public class Topology {
             return result;
           } catch ( final Exception ex ) {
             final Throwable t = Exceptions.unwrapCause( ex );
-            LOG.error( config.getFullName( ) + " failed to transition because of:\n" + t.getMessage( ) );
+            Logs.extreme( ).error( config.getFullName( ) + " failed to transition because of:\n" + t.getMessage( ) );
             Logs.extreme( ).error( t, t );
             throw ex;
           }
@@ -1139,9 +1139,9 @@ public class Topology {
     }
     
     private String toString( final ServiceConfiguration endResult, final State initialState, final State nextState, final Throwable... throwables ) {
-      return String.format( "%s %s %s->%s=%s \n[%s]\n", this.toString( ), endResult.getFullName( ), initialState, nextState, endResult.lookupState( ),
+      return String.format( "%s %s %s->%s=%s [%s]\n", this.toString( ), endResult.getFullName( ), initialState, nextState, endResult.lookupState( ),
                             ( ( throwables != null ) && ( throwables.length > 0 )
-                                                                                 ? Exceptions.causeString( throwables[0] )
+                                                                                 ? Throwables.getRootCause( throwables[0] ).getMessage( )
                                                                                  : "WINNING" ) );
     }
     

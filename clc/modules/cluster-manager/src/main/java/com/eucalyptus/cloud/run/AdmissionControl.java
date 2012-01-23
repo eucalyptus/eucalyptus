@@ -217,13 +217,13 @@ public class AdmissionControl {
         
         @Override
         public ResourceToken get( ) {
-          return this.iter.next( );
+          ResourceToken ret = this.iter.next( );
+          allocInfo.getAllocationTokens( ).add( ret );
+          return ret;
         }
       };
-      List<ResourceToken> pendingTokens = RestrictedTypes.allocateUnitlessResources( tokens.size( ), allocator );
-      
-      allocInfo.getAllocationTokens( ).addAll( pendingTokens );
-      return pendingTokens;
+      RestrictedTypes.allocateUnitlessResources( tokens.size( ), allocator );
+      return allocInfo.getAllocationTokens( );
     }
     
     @Override
