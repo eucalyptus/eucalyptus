@@ -1,0 +1,31 @@
+
+<p>The instance reporting module tracks and records statistics of instance
+usage. It tracks instance running time, instance type, disk IO usage,
+and network IO usage.
+
+<p>This module gathers usage statistics by receiving events every <i>n</i>
+seconds for each instance then recording a series of snapshots of total
+usage for each instance to the database. It does not necessarily record a
+snapshot for every event received; generally it aggregates several events
+and then writes a single snapshot per instance every few hours; the
+interval can be adjusted via a runtime property.
+
+<p>When a report is generated, this module aggregates database snapshots
+into a series of statistics which are returned as a list of <i>Report Lines</i>
+to be displayed in a visual report. The statistics are aggregated by the
+<i>InstanceUsageLog</i> class, which proceeds using the following algorithm.
+First it scans through all snapshots relevant to the report, starting with
+the snapshot immediately before the report beginning and ending at the
+snapshot immediately after the report end. Then it constructs an
+<i>InstanceDataAccumulator</i> object for each instance and feeds in
+every snapshot for the relevant instance to that accumulator. The accumulator
+keeps track of the first and last snapshots for that instance and subtracts
+the first usage from the last, including timestamp, extrapolating those values
+according to the partial periods at the beginning and end of the report. At
+this point, we have aggregate statistics for each instance. Then, we
+<i>summarize</i> that data based upon the criteria which the user selected
+for his report (by account, by availability zone, etc), which means
+that we add up all usage of all instances within the given account or
+availability zone etc. Then we return the <i>ReportLines</i> to be displayed
+in a visual report.
+
