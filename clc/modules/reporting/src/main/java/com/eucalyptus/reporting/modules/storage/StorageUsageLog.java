@@ -178,7 +178,7 @@ public class StorageUsageLog
 					"from StorageUsageSnapshot as sus"
 					+ " WHERE sus.key.timestampMs > ?"
 					+ " AND sus.key.timestampMs < ?"
-					+ " ORDER BY sus.key_timestampMs")
+					+ " ORDER BY sus.key.timestampMs")
 					.setLong(0, (latestSnapshotBeforeMs!=null ? latestSnapshotBeforeMs : 0l))
 					.setLong(1, new Long(period.getEndingMs()))
 					.list();
@@ -188,7 +188,7 @@ public class StorageUsageLog
 						+ " WHERE sus.key.timestampMs > ?"
 						+ " AND sus.key.timestampMs < ?"
 						+ " AND sus.key.accountId = ?"
-						+ " ORDER BY sus.key_timestampMs")
+						+ " ORDER BY sus.key.timestampMs")
 						.setLong(0, (latestSnapshotBeforeMs!=null ? latestSnapshotBeforeMs : 0l))
 						.setLong(1, new Long(period.getEndingMs()))
 						.setString(2, accountId)
