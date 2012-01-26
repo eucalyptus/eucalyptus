@@ -358,6 +358,11 @@ public class ServiceUris {
 	return make( config.getComponentId( ), config.getInetAddress( ), config.getPort( ), pathParts ).getPublicify( );
   }
 
+  public static URI remotePublicify( final Class<? extends ComponentId> idClass, String... pathParts ) {
+	Component comp = Components.lookup( idClass );
+	return make( comp.getComponentId(), Internets.localHostInetAddress( ), comp.getComponentId().getPort(), pathParts ).getPublicify();
+  }
+
   private static UriParserBuilder makeInternal( ComponentId compId, final InetAddress host, Integer port, String... pathParts ) {
     return new UriParserBuilder( compId ).scheme( compId.getTransports( ).iterator( ).next( ) ).host( host ).port( port ).path( compId.getInternalServicePath( pathParts ) );
   }
