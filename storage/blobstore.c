@@ -1520,6 +1520,8 @@ static int compare_bbs (const void * bb1, const void * bb2)
     return (int)((*(blockblob **)bb1)->last_modified - (*(blockblob **)bb2)->last_modified);
 }
 
+static int delete_blob_state (blockblob * bb, long long timeout_usec, char do_force);
+
 static long long purge_blockblobs_lru ( blobstore * bs, blockblob * bb_list, long long need_blocks ) 
 {
     int list_length = 0;
@@ -1549,29 +1551,42 @@ static long long purge_blockblobs_lru ( blobstore * bs, blockblob * bb_list, lon
             deleted = 0; // deleted in this round
             for (i=0; i<list_length; i++) {
                 bb = bb_array [i];
-                if (bb == NULL) // this was deleted on anearlier iteration
+                if (bb == NULL) // was either deleted or deemed undeletable on previous iteration
                     continue;
-                bb->in_use = check_in_use (bs, bb->id, 0); // verify in-use status
-                logprintfl (EUCADEBUG, "LRU check %d: %24s %c%c%c %9llu %s", iteration, bb->id,
+                bb->in_use = check_in_use (bs, bb->id, 0); // record in-use status
+
+                char code = '?';
+                if (bb->in_use & BLOCKBLOB_STATUS_MAPPED) {
+                    // mapped blobs have children, thus cannot be deleted at this iteration
+                    code = 'C';
+                    
+                } else if (bb->in_use & BLOCKBLOB_STATUS_OPENED) {
+                    bb_array [i] = NULL; // mark it to skip in the future
+                    code = 'O'; 
+                    
+                } else if (delete_blob_state (bb, BLOBSTORE_DELETE_TIMEOUT_USEC, 1)==-1) {
+                    bb_array [i] = NULL; // mark it to skip in the future
+                    code = '!';
+                    
+                } else {
+                    purged += round_up_sec (bb->size_bytes) / 512;
+                    bb_array [i] = NULL; // mark it to skip in the future
+                    code = 'D';
+                    deleted++;
+                }
+                logprintfl (EUCADEBUG, "LRU %d %08d: %29s %c%c%c %c %9llu %s", iteration, purged, bb->id,
                             (bb->in_use & BLOCKBLOB_STATUS_OPENED) ? ('o') : ('-'), // o = open
                             (bb->in_use & BLOCKBLOB_STATUS_BACKED) ? ('p') : ('-'), // p = has parents
                             (bb->in_use & BLOCKBLOB_STATUS_MAPPED) ? ('c') : ('-'), // c = has children
+                            code, // outcome codes: D=deleted, else C=children, !=undeletable, O=open
                             bb->size_bytes / 512L, // size is in sectors
                             ctime (&(bb->last_modified))); // ctime adds a newline
-                if (! (bb->in_use & ~BLOCKBLOB_STATUS_BACKED) ) { // the only in-use flag is _BACKED (has parents)
-                    if (delete_blockblob_files (bs, bb->id)>0) {
-                        myprintf (EUCAINFO, "purged from blobstore %s blockblob %s (total blocks purged in this sweep %lld)\n", bs->id, bb->id, purged);
-                        purged += round_up_sec (bb->size_bytes) / 512;
-                        deleted++;
-                        bb_array [i] = NULL; // mark as deleted
-                    }
-                }
             }
             iteration++;
         } while (deleted && (purged<need_blocks));
         free (bb_array);
     }
-
+    
     return purged;
 }
 
@@ -2520,42 +2535,21 @@ static int blockblob_check (const blockblob * bb)
     return err;
 }
 
-// if no outside references to the blob exist, and blob is not protected, 
-// deletes the blob and its metadata
-// 
-// returns 0 if cleanup was successful and frees the blockblob handle
-// returns -1 otherwise, and DOES NOT free the blockblob handle
-// (so that it can be closed and freed with blockblob_close) 
-int blockblob_delete ( blockblob * bb, long long timeout_usec, char do_force )
+static int delete_blob_state (blockblob * bb, long long timeout_usec, char do_force)
 {
+    blobstore * bs = bb->store;
     char ** array = NULL;
     int array_size = 0;
-
-    if (bb==NULL) {
-        ERR (BLOBSTORE_ERROR_INVAL,NULL);
-        return -1;
-    }
-    blobstore * bs = bb->store;
     int ret = 0;
-    if (blobstore_lock (bs, timeout_usec)==-1) { // lock it so we can traverse it
-        ret = -1;
-        goto error; // failed to obtain a lock on the blobstore
-    }
-
-    // do not delete the blob if it is used by another one
-    bb->in_use = check_in_use (bs, bb->id, 0); // update in_use status
-    if (!do_force && bb->in_use & ~(BLOCKBLOB_STATUS_OPENED|BLOCKBLOB_STATUS_BACKED)) { // in use other than opened (by this thread) or backed
-        ERR (BLOBSTORE_ERROR_AGAIN, NULL);
-        ret = -1;
-        goto unlock;
-    }
 
     // delete dm devices listed in .dm of this blob
     if (read_array_blockblob_metadata_path (BLOCKBLOB_PATH_DM, bb->store, bb->id, &array, &array_size)==-1
         ||
         dm_delete_devices (array, array_size)==-1) {
-        ret = -1;
-        if (!do_force) goto unlock;
+        if (!do_force) {
+            ret = -1;
+            goto free;
+        }
     }
     for (int i=0; i<array_size; i++) {
         free (array[i]);
@@ -2564,12 +2558,15 @@ int blockblob_delete ( blockblob * bb, long long timeout_usec, char do_force )
         free (array);
     array_size = 0;
     array = NULL;
-
+    
     // Read in .deps (blobs that this blob depends on),
     // so as to update their .refs (blobs depending on them).
     if (read_array_blockblob_metadata_path (BLOCKBLOB_PATH_DEPS, bb->store, bb->id, &array, &array_size)==-1) {
         ret = -1;
-        if (!do_force) goto unlock;
+        if (!do_force) {
+            ret = -1;
+            goto free;
+        }
     }
     char my_ref [BLOBSTORE_MAX_PATH+MAX_DM_NAME+1];
     snprintf (my_ref, sizeof (my_ref), "%s %s", bb->store->path, bb->id);
@@ -2579,7 +2576,7 @@ int blockblob_delete ( blockblob * bb, long long timeout_usec, char do_force )
         
         if (strlen (store_path)<1 || strlen (blob_id)<1)
             continue; // TODO: print a warning about store/blob corruption?
-
+        
         blobstore * dep_bs = bs;
         if (strcmp (bs->path, store_path)) { // if deleting reference in a different blobstore
             // need to open it
@@ -2591,12 +2588,12 @@ int blockblob_delete ( blockblob * bb, long long timeout_usec, char do_force )
                 continue; // TODO: print a warning about store/blob corruption?
             }
         }
-
+        
         // update .refs file on each of the dependencies
         if (update_entry_blockblob_metadata_path (BLOCKBLOB_PATH_REFS, dep_bs, blob_id, my_ref, 1)==-1) {
             // TODO: print a warning about store/blob corruption?
         }
-
+        
         if (!check_in_use(dep_bs, blob_id, 0)) {
             loop_remove (dep_bs, blob_id); // TODO: do we care about errors?
         }
@@ -2605,29 +2602,74 @@ int blockblob_delete ( blockblob * bb, long long timeout_usec, char do_force )
             blobstore_close (dep_bs);
         }
     }
-    
+
+    // remove the loopback entry for this blob
     if (loop_remove (bs, bb->id) == -1) {
         ret = -1;
     }
-    ftruncate (bb->fd_lock, 0);
-    if (close_and_unlock (bb->fd_lock) == -1) {
-        ret = -1;
-    } else {
-        bb->fd_lock = 0; // TODO: needed? maybe -1?
-    }
-    if (close (bb->fd_blocks) == -1) {
-        ret = -1;
-    } else {
-        bb->fd_blocks = 0; // TODO: needed? maybe -1? 
-    }
+
+    // remove the files, data and metadata, for of this blob
     if (delete_blockblob_files (bs, bb->id) < 1) {
         ret = -1;
     }
-    if (ret==0) // do not free the blob if there were any errors
-        free (bb);
+
+ free:
+    for (int i=0; i<array_size; i++) {
+        free (array[i]);
+    }
+    if (array)
+        free (array);
+    
+    return ret;
+}
+
+
+// if no outside references to the blob exist, and blob is not protected, 
+// deletes the blob and its metadata
+// 
+// returns 0 if cleanup was successful and frees the blockblob handle
+// returns -1 otherwise, and DOES NOT free the blockblob handle
+// (so that it can be closed and freed with blockblob_close) 
+int blockblob_delete ( blockblob * bb, long long timeout_usec, char do_force )
+{
+    if (bb==NULL) {
+        ERR (BLOBSTORE_ERROR_INVAL,NULL);
+        return -1;
+    }
+    blobstore * bs = bb->store;
+    int ret = 0;
+    if (blobstore_lock (bs, timeout_usec)==-1) { // lock it so we can traverse it
+        return -1; // failed to obtain a lock on the blobstore
+    }
+    
+    // do not delete the blob if it is used by another one
+    bb->in_use = check_in_use (bs, bb->id, 0); // update in_use status
+    if (!do_force && bb->in_use & ~(BLOCKBLOB_STATUS_OPENED|BLOCKBLOB_STATUS_BACKED)) { // in use other than opened (by this thread) or backed
+        ERR (BLOBSTORE_ERROR_AGAIN, NULL);
+        ret = -1;
+    } else {
+        ret = delete_blob_state (bb, timeout_usec, do_force); // do the bulk of the cleanup
+
+        // close the open file descriptors
+        ftruncate (bb->fd_lock, 0);
+        if (close_and_unlock (bb->fd_lock) == -1) {
+            ret = -1;
+        } else {
+            bb->fd_lock = 0; // TODO: needed? maybe -1?
+        }
+        if (close (bb->fd_blocks) == -1) {
+            ret = -1;
+        } else {
+            bb->fd_blocks = 0; // TODO: needed? maybe -1? 
+        }
+        
+        // free the blob struct if everything above was OK
+        if (ret==0) {
+            free (bb);
+        }
+    }
     
     int saved_errno = 0;
- unlock:
     saved_errno = _blobstore_errno; // save it because blobstore_unlock may overwrite it
     if (blobstore_unlock (bs)==-1) {
         ERR (BLOBSTORE_ERROR_UNKNOWN, "failed to unlock the blobstore");
@@ -2635,14 +2677,7 @@ int blockblob_delete ( blockblob * bb, long long timeout_usec, char do_force )
     if (saved_errno) {
         _blobstore_errno = saved_errno;
     }
-
-    for (int i=0; i<array_size; i++) {
-        free (array[i]);
-    }
-    if (array)
-        free (array);
-
- error:
+    
     return ret;
 }
 

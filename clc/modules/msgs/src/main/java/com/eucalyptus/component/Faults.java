@@ -66,11 +66,16 @@ package com.eucalyptus.component;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 import javax.persistence.Column;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
@@ -93,25 +98,56 @@ import org.hibernate.annotations.GenericGenerator;
 import org.hibernate.annotations.NaturalId;
 import org.jboss.netty.util.internal.LinkedTransferQueue;
 import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.bootstrap.Bootstrapper;
-import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.component.Component.State;
 import com.eucalyptus.component.Component.Transition;
+import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.configurable.ConfigurableClass;
+import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.empyrean.ServiceStatusDetail;
 import com.eucalyptus.empyrean.ServiceStatusType;
+import com.eucalyptus.event.ClockTick;
+import com.eucalyptus.event.EventListener;
+import com.eucalyptus.event.Listeners;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.scripting.Groovyness;
+import com.eucalyptus.system.SubDirectory;
+import com.eucalyptus.system.Threads;
+import com.eucalyptus.util.Emails;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.util.fsm.TransitionRecord;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
+import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
+@ConfigurableClass( root = "bootstrap.notifications",
+                    description = "Parameters controlling the handling of service state notifications." )
 public class Faults {
-  private static Logger LOG = Logger.getLogger( Faults.class );
+  private static Logger      LOG                    = Logger.getLogger( Faults.class );
+  @ConfigurableField( description = "Email address where notifications are to be delivered." )
+  public static String       EMAIL_TO;
+  @ConfigurableField( description = "From email address used for notification delivery." )
+  public static String       EMAIL_FROM             = "notification@eucalyptus";
+  @ConfigurableField( description = "From email name used for notification delivery." )
+  public static String       EMAIL_FROM_NAME        = "Eucalyptus Notifications";
+  @ConfigurableField( description = "Email subject used for notification delivery." )
+  public static final String EMAIL_SUBJECT_PREFIX   = "[eucalyptus-notifications] ";
+  @ConfigurableField( description = "Interval (in seconds) during which a notification will be delayed to allow for batching events for delivery." )
+  public static Integer      BATCH_DELAY_SECONDS    = 60;
+  @ConfigurableField( description = "Send a system state digest periodically." )
+  public static Boolean      DIGEST                 = Boolean.FALSE;
+  @ConfigurableField( description = "If sending system state digests is set to true, then only send the digest when the system has failures to report." )
+  public static Boolean      DIGEST_ONLY_ON_ERRORS  = Boolean.TRUE;
+  @ConfigurableField( description = "Period (in hours) with which a system state digest will be delivered." )
+  public static Integer      DIGEST_FREQUENCY_HOURS = 24;
+  @ConfigurableField( description = "Period (in hours) with which a system state digest will be delivered." )
+  public static Boolean      INCLUDE_FAULT_STACK    = Boolean.FALSE;
   
   enum NoopErrorFilter implements Predicate<Throwable> {
     INSTANCE;
@@ -334,7 +370,7 @@ public class Faults {
     public String getStackString( ) {
       return this.stackString;
     }
-
+    
     private String getServiceFullName( ) {
       return this.serviceFullName;
     }
@@ -422,7 +458,7 @@ public class Faults {
     ERROR, //default: store, describe, ui, notification
     URGENT, //default: store, describe, ui, notification, alert
     FATAL;
-
+    
     @Override
     public boolean apply( CheckException input ) {
       if ( input == null ) {
@@ -544,27 +580,32 @@ public class Faults {
     private final ServiceConfiguration                                      serviceConfiguration;
     private final TransitionRecord<ServiceConfiguration, State, Transition> transitionRecord;
     private final CheckException                                            error;
+    private final Component.State                                           finalState;
     
     private FaultRecord( ServiceConfiguration serviceConfiguration, TransitionRecord<ServiceConfiguration, State, Transition> transitionRecord,
                          CheckException error ) {
       super( );
       this.serviceConfiguration = serviceConfiguration;
+      this.finalState = serviceConfiguration.lookupState( );
       this.transitionRecord = transitionRecord;
       this.error = error;
     }
-
+    
     public ServiceConfiguration getServiceConfiguration( ) {
       return this.serviceConfiguration;
     }
-
+    
     public TransitionRecord<ServiceConfiguration, State, Transition> getTransitionRecord( ) {
       return this.transitionRecord;
     }
-
+    
     public CheckException getError( ) {
       return this.error;
     }
     
+    private Component.State getFinalState( ) {
+      return this.finalState;
+    }
     
   }
   
@@ -582,11 +623,119 @@ public class Faults {
   }
   
   public static void submit( final ServiceConfiguration parent, TransitionRecord<ServiceConfiguration, State, Transition> transitionRecord, final CheckException errors ) {
-    if ( errors != null && Hosts.isCoordinator( ) && Bootstrap.isFinished( ) && !Databases.isVolatile( ) ) {
-      Logs.extreme( ).error( errors, errors );
-      FaultRecord record = new FaultRecord( parent, transitionRecord, errors );
-      serviceExceptions.put( parent, record );
-      //      errorQueue.offer( record );
+    FaultRecord record = new FaultRecord( parent, transitionRecord, errors );
+    serviceExceptions.put( parent, record );
+    if ( errors != null && BootstrapArgs.isCloudController( ) && Bootstrap.isFinished( ) ) {
+      errorQueue.offer( record );
+    }
+  }
+  
+  public static class FaultNotificationHandler implements EventListener<ClockTick>, Callable<Boolean> {
+    private static final AtomicBoolean ready      = new AtomicBoolean( true );
+    private static final AtomicLong    lastDigest = new AtomicLong( System.currentTimeMillis( ) );
+    
+    public static void register( ) {
+      Listeners.register( ClockTick.class, new FaultNotificationHandler( ) );
+    }
+    
+    @Override
+    public void fireEvent( final ClockTick event ) {
+      if ( BootstrapArgs.isCloudController( ) && ready.compareAndSet( true, false ) ) {
+        try {
+          Threads.enqueue( Eucalyptus.class, Faults.class, this );
+        } catch ( final Exception ex ) {
+          ready.set( true );
+        }
+      }
+    }
+    
+    @Override
+    public Boolean call( ) throws Exception {
+      try {
+        TimeUnit.SECONDS.sleep( Faults.BATCH_DELAY_SECONDS );
+        sendFaults( );
+        sendDigest( );
+      } finally {
+        ready.set( true );
+      }
+      return true;
+    }
+    
+    private static void sendDigest( ) {
+      if ( Hosts.isCoordinator( ) && Faults.DIGEST ) {
+        long lastTime = lastDigest.getAndSet( System.currentTimeMillis( ) );
+        if ( ( lastDigest.get( ) - lastTime ) > Faults.DIGEST_FREQUENCY_HOURS * 60 * 60 * 1000 ) {
+          Date digestDate = new Date( lastDigest.get( ) );
+          if ( !serviceExceptions.isEmpty( ) || !Faults.DIGEST_ONLY_ON_ERRORS ) {
+            LOG.debug( "Fault notifications: preparing digest for " + digestDate + "." );
+            try {
+              String subject = Faults.EMAIL_SUBJECT_PREFIX + " system state for " + digestDate;
+              String result = Groovyness.run( SubDirectory.SCRIPTS, "notifications_digest" );
+              if ( !Strings.isNullOrEmpty( result ) ) {
+                dispatchEmail( subject, result );
+              }
+            } catch ( Exception ex ) {
+              LOG.error( "Fault notifications: rendering digest failed: " + ex.getMessage( ) );
+              Logs.extreme( ).error( ex, ex );
+            }
+          } else {
+            LOG.debug( "Fault notifications: skipping digest for " + digestDate + "." );
+          }
+        } else {
+          lastDigest.set( lastTime );
+        }
+      }
+    }
+    
+    private static void sendFaults( ) {
+      LOG.debug( "Fault notifications: waking up to service error queue." );
+      final List<FaultRecord> pendingFaults = Lists.newArrayList( );
+      errorQueue.drainTo( pendingFaults );
+      if ( pendingFaults.isEmpty( ) ) {
+        LOG.debug( "Fault notifications: service error queue is empty... going back to sleep." );
+      } else {
+        if ( Hosts.isCoordinator( ) ) {
+          String subject = Faults.EMAIL_SUBJECT_PREFIX;
+          List<FaultRecord> noStateChange = Lists.newArrayList( );
+          List<FaultRecord> stateChange = Lists.newArrayList( );
+          for ( FaultRecord f : pendingFaults ) {
+            TransitionRecord<ServiceConfiguration, State, Transition> tr = f.getTransitionRecord( );
+            if ( tr.getRule( ).getFromState( ).equals( f.getFinalState( ) ) ) {
+              noStateChange.add( f );
+            } else {
+              stateChange.add( f );
+              subject += " " + f.getServiceConfiguration( ).getName( ) + "->" + f.getFinalState( );
+            }
+          }
+          if ( stateChange.isEmpty( ) ) {
+            LOG.debug( "Fault notifications: no state changes pending, discarding pending faults" );
+          } else {
+            try {
+              String result = Groovyness.run( SubDirectory.SCRIPTS, "notifications", new HashMap( ) {
+                {
+                  this.put( "faults", pendingFaults );
+                }
+              } );
+              if ( !Strings.isNullOrEmpty( result ) ) {
+                dispatchEmail( subject, result );
+              }
+            } catch ( Exception ex ) {
+              LOG.error( "Fault notifications: rendering notification failed: " + ex.getMessage( ) );
+              Logs.extreme( ).error( ex, ex );
+            }
+          }
+        }
+      }
+    }
+    
+    public static void dispatchEmail( String subject, String result ) {
+      LOG.debug( "From: " + Faults.EMAIL_FROM_NAME + " <" + Faults.EMAIL_FROM + ">" );
+      LOG.debug( "To: " + Faults.EMAIL_TO );
+      LOG.debug( "Subject: " + subject );
+      LOG.debug( result );
+      if ( !Strings.isNullOrEmpty( Faults.EMAIL_TO ) ) {
+        Emails.send( Faults.EMAIL_FROM, Faults.EMAIL_FROM_NAME, Faults.EMAIL_TO, subject, result );
+      }
     }
   }
   

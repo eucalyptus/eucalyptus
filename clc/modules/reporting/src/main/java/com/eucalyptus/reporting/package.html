@@ -1,7 +1,12 @@
 
-<p>The reporting package generates visual reports, based upon usage statistics
-which it tracks and records. For example, it could be used to track S3
-storage usage, then generate monthly reports, broken down by user and account.
+<p>The reporting package generates visual reports of eucalyptus usage
+statistics. For example, it generates reports of instance usage, S3 usage,
+and EBS usage.
+
+<p>The reporting package is also responsible for tracking usage statistics
+and recording them in a database. Some usage statistics (like instance usage)
+are statistically sampled every interval, whereas others (like S3 usage) are
+recorded every time some event occurs, like resource allocation.
 
 <p>The reporting system has a single entry point: the <code>generateReport</code>
 method in the <code>ReportGenerator</code> class. All reports are generated
