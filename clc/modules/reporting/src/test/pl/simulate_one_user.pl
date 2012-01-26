@@ -124,8 +124,8 @@ for (my $i=0; (time()-$start_time) < $duration; $i++) {
 	runcmd("euca-create-volume --size " . storage_usage_mb() . " --zone $zones[0]");
 	print "$i: Created volume\n";
 	runcmd("./s3curl.pl --id " . $ENV{'EC2_ACCESS_KEY'} . " --key " . $ENV{'EC2_SECRET_KEY'} . " --put /dev/null -- -s -v ". $ENV{'S3_URL'} . "/$bucketname");
-	runcmd("./s3curl.pl --id " . $ENV{'EC2_ACCESS_KEY'} . " --key " . $ENV{'EC2_SECRET_KEY'} . " --put /boot/initrd-2.6.18-274.17.1.el5xen.img -- -s -v " . $ENV{'S3_URL'} . "/$bucketname/object-$i-a");
-	runcmd("./s3curl.pl --id " . $ENV{'EC2_ACCESS_KEY'} . " --key " . $ENV{'EC2_SECRET_KEY'} . " --put /boot/initrd-2.6.18-274.17.1.el5xen.img -- -s -v " . $ENV{'S3_URL'} . "/$bucketname/object-$i-b");
+	runcmd("./s3curl.pl --id " . $ENV{'EC2_ACCESS_KEY'} . " --key " . $ENV{'EC2_SECRET_KEY'} . " --put random.dat -- -s -v " . $ENV{'S3_URL'} . "/$bucketname/object-$i-a");
+	runcmd("./s3curl.pl --id " . $ENV{'EC2_ACCESS_KEY'} . " --key " . $ENV{'EC2_SECRET_KEY'} . " --put random.dat -- -s -v " . $ENV{'S3_URL'} . "/$bucketname/object-$i-b");
 	#TODO: grab manifest path from this
 	print "$i: Created bucket and objects\n";
 	runcmd("euca-create-snapshot " . $volumes[$i % ($#volumes+1)]);
