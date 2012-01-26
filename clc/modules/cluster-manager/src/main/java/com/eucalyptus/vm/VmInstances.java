@@ -232,7 +232,7 @@ public class VmInstances {
   public static String    INSTANCE_SUBDOMAIN            = ".eucalyptus";
   @ConfigurableField( description = "Period (in seconds) between state updates for actively changing state.",
                       initial = "3" )
-  public static Long      VOLATILE_STATE_INTERVAL_SEC   = 3l;
+  public static Long      VOLATILE_STATE_INTERVAL_SEC   = Long.MAX_VALUE;
   @ConfigurableField( description = "Timeout (in seconds) before a requested instance terminate will be repeated.",
                       initial = "60" )
   public static Long      VOLATILE_STATE_TIMEOUT_SEC    = 60l;
