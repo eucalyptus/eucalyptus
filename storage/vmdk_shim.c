@@ -358,7 +358,13 @@ int main (int argc, char * argv[])
     }
 
     // find, using the key, and attach the shared memory segment created by the parent process
-    key_t key = (key_t) atoi (argv[1]);
+    char * endptr;
+    errno = 0;
+    key_t key = (key_t) strtoull (argv[1], &endptr, 0);
+    if (errno != 0) {
+        logprintfl (EUCAERROR, "%s: failed to parse shmem region key number on command line (%s)\n", argv[0], argv[1]);
+        exit (1);
+    }
     struct vmdk_shmem * shm = find_shmem (key);
     if (shm == NULL)
         exit (1);
