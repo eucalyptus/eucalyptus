@@ -25,6 +25,7 @@ import javax.persistence.Table;
 
 import org.apache.log4j.Logger;
 import org.mortbay.log.Log;
+import org.hibernate.exception.ConstraintViolationException;
 
 // For cluster / node keypairs
 import java.security.KeyPair;
@@ -379,7 +380,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                 }
                 for (String column : columnNames) {
                     if(!setterMap.containsKey(column) && !unmappedColumns.contains("${entityKey}.${column}".toString()) ) {
-                        LOG.warn("No corresponding field for column: ${entityKey}.${column} found");
+                        LOG.info("No corresponding field for column: ${entityKey}.${column} found");
                     }
                 }
                 if (entityKey.equals('vm_types')) {
@@ -478,10 +479,10 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                     accountProxy = new DatabaseAccountProxy(account);
                     safeUserMap.put(it.auth_user_name, accountName);
                     accountIdMap.put(accountName, accountProxy.getAccountNumber());
-                } catch (AuthException e) {
+                } catch (ConstraintViolationException e) {
                     // The account already existed
-                    userName = userName + "-";
-                    accountName = userName;
+                    account = null;
+                    accountName += '-';
                 }
             }
             
@@ -503,13 +504,18 @@ class upgrade_20_30 extends AbstractUpgradeScript {
             if (uInfo != null) {
                 Map<String, String> info = new HashMap<String, String>( );
                 userInfoFields.each { k,v ->
-                    if (uInfo[k] != null) { info.put(v, uInfo[k]); }
+                    if (uInfo[k] != null) {
+                        def truncatedInfo = uInfo[k].size() > 255 ? uInfo[k][0..254] : uInfo[k];
+                        info.put(v, truncatedInfo);
+                    }
                 }
+                LOG.debug("Setting user info: " + info);
                 user.setInfo( info );
             }
 
             EntityWrapper<UserEntity> dbUE = EntityWrapper.get(UserEntity.class);
             def ue = DatabaseAuthUtils.getUniqueUser(dbUE, userName, accountName);
+            dbUE.rollback();
             EntityWrapper<AccessKeyEntity> dbAuth = EntityWrapper.get(AccessKeyEntity.class);
             AccessKeyEntity accessKey = new AccessKeyEntity();
             initMetaClass(accessKey, accessKey.class);
@@ -628,17 +634,26 @@ class upgrade_20_30 extends AbstractUpgradeScript {
 
     public boolean upgradeKeyPairs() {
         connMap['eucalyptus_general'].rows('SELECT * FROM metadata_keypair').each{
-            EntityWrapper<SshKeyPair> dbkp = EntityWrapper.get(SshKeyPair.class);
             if (!userIdMap.containsKey(it.metadata_user_name)) {
                 return;
             }
             UserFullName ufn = UserFullName.getInstance(userIdMap.get(it.metadata_user_name));
-            SshKeyPair kp = new SshKeyPair( ufn, 
-                                            it.metadata_keypair_user_keyname,
+            def keyname = it.metadata_keypair_user_keyname;
+            def committed = false;
+            while (!committed) {
+                try {
+                    EntityWrapper<SshKeyPair> dbkp = EntityWrapper.get(SshKeyPair.class);
+                    SshKeyPair kp = new SshKeyPair( ufn, 
+                                            keyname,
                                             it.metadata_keypair_public_key,
                                             it.metadata_keypair_finger_print );
-            dbkp.add(kp);
-            dbkp.commit();
+                    dbkp.add(kp);
+                    dbkp.commit();
+                    committed = true;
+                } catch (ConstraintViolationException e) {
+                    keyname += "-";
+                }
+            }
         }
     }
 
@@ -838,11 +853,11 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                                      ON peer.network_rule_peer_network_id=metadata_network_rule_has_peer_network.metadata_network_rule_peer_network_id 
                                      WHERE metadata_network_rule_has_peer_network.metadata_network_rule_id=?""", [ rule.metadata_network_rule_id ]).each { peer ->
                         peers.put(peer.network_rule_peer_network_user_query_key, peer.network_rule_peer_network_user_group);
-                        LOG.debug("Peer: " + networkPeer);
+                        // LOG.debug("Peer: " + networkPeer);
                     }
-                    NetworkRule networkRule = NetworkRule.create(rule.metadata_network_rule_protocol, 
-                                                              rule.metadata_network_rule_low_port, 
-                                                              rule.metadata_network_rule_high_port,
+                    NetworkRule networkRule = NetworkRule.create(rule.metadata_network_rule_protocol.toLowerCase(), 
+                                                              [rule.metadata_network_rule_low_port, 0].max(), 
+                                                              [[rule.metadata_network_rule_high_port, 65535].min(), 0].max(),
                                                               peers as Multimap<String, String>,
                                                               ipRanges as Collection<String>);
                     initMetaClass(networkRule, networkRule.class);
