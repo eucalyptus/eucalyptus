@@ -49,26 +49,29 @@ my $accountname_csv = "'" . join("','",@accountnames) . "'";
 
 
 #
-# Calculate the number of resources used over i intervals, where new resources are allocated 
-# each interval and no resources from previous intervals are released.
+# Calculate the number of resource-seconds used over i intervals, where new
+# resources are allocated each interval and no resources from previous
+# intervals are released.
 #
-# For example, if 10 new resources are allocated in each of 6 intervals, the total number 
-# is equal to (10+20+30+40+50+60). This total can be calculated using the more general
-# formula: ((i+1)*a)*(i/2), where i is the number of intervals and a is the amount of
-# resource allocated in each interval.
+# For example, if 10 new resources are allocated in each of 6 intervals, and
+# each interval is 5 seconds long, the total number of resource-seconds is
+# is equal to ((10*5)+(20*5)+(30*5)+(40*5)+(50*5)+(60*5)). This total can be
+# calculated using the more general formula: ((i+1)*(a*d))*(i/2), where i is
+# the number of intervals, a is the amount of resource allocated in each
+# interval, and d is the duration of each interval.
 #
 # This formula can be inferred by re-arranging terms:
-#  (10+20+30+40+50+60)
-#  = (60+10)+(50+20)+(40+30)
-#  = 70+70+70
-#  = 70*3
-#  ...but 70 is equal to (i+1)*a, and 3 is the number of intervals / 2.
+#  ((10*5)+(20*5)+(30*5)+(40*5)+(50*5)+(60*5))
+#  = ((60+10)*5) + ((50+20)*5) + ((40+30)*5)
+#  = 350+350+350
+#  = 350*3
+#  ...but 350 is equal to (i+1)*(a*d), and 3 is the number of intervals / 2.
 #
 # This arithmetic trick was suggested by Gauss' solution to adding all numbers in a range.
 #
-sub calculate_total_acc_usage($$) {
-	my ($i, $a) = @_;
-	return (($i+1)*$a)*($i/2);
+sub calculate_total_acc_usage($$$) {
+	my ($i, $a, $d) = @_;
+	return (($i+1)*($a*$d))*($i/2);
 }
 
 # set report units to smaller units for test; GB-days would not show up at all
@@ -160,13 +163,13 @@ while (my $rl = <REPORT>) {
 	}
 	print "user:$user volMaxSize:$volMaxSize volSizeTime:$volSizeTime " .
 			"snapMaxSize:$snapMaxSize snapSizeTime:$snapSizeTime\n";
-	$return_code |= test_range("volMaxSize", ($num_intervals*storage_usage_mb()), $volMaxSize, storage_usage_mb()+1);
-	$return_code |= test_range("snapMaxSize", ($num_intervals*storage_usage_mb()), $snapMaxSize, storage_usage_mb()+1);
-	# What is an appropriate error range? What about storage_usage_mb()?
-	$return_code |= test_range("volSizeTime", calculate_total_acc_usage($num_intervals,storage_usage_mb()),
-				$volSizeTime, $volMaxSize);
-	$return_code |= test_range("snapSizeTime", calculate_total_acc_usage($num_intervals,storage_usage_mb()),
-				$snapSizeTime, $snapMaxSize);
+	$return_code |= test_range("volMaxSize", ($num_intervals*storage_usage_mb()), $volMaxSize, storage_usage_mb()+4);
+	$return_code |= test_range("snapMaxSize", ($num_intervals*snap_usage_mb()), $snapMaxSize, snap_usage_mb()+5);
+	# minus two intervals below because we do not include the outliers in report gen
+	$return_code |= test_range("volSizeTime", calculate_total_acc_usage($num_intervals-2,storage_usage_mb(),$write_interval),
+				$volSizeTime, 1500);
+	$return_code |= test_range("snapSizeTime", calculate_total_acc_usage($num_intervals-2,snap_usage_mb(),$write_interval),
+				$snapSizeTime, 1500);
 }
 print "\n\n";
 close(REPORT);
@@ -178,6 +181,7 @@ runcmd("wget -O \"$report_file\" --no-check-certificate \"https://localhost:8443
 		"&start=$start_ms&end=$end_ms&criterion=User&groupByCriterion=None\"");
 open(REPORT, $report_file);
 print "Report: s3\n";
+my $s3ObjSize = (-s "random.dat")/1024/1024;
 while (my $rl = <REPORT>) {
 	my ($blank,$user,$bucketsMaxNum,$objectsMaxSize,$blank2,$objectsMaxTime) = split(",",$rl);
 	if (($user !~ /^user-/) or (!$userhash{$user})) {
@@ -185,9 +189,9 @@ while (my $rl = <REPORT>) {
 	}
 	print "user:$user bucketsMaxNum:$bucketsMaxNum objectsMaxSize:$objectsMaxSize " .
 		"objectsMaxTime:$objectsMaxTime\n";
-	# BucketsNumMax should be equal to number of users, ==1
-	# ObjectsMaxSize should be equal to intervals*objectSize
-	# objectsMaxTime should be math alg
+	$return_code |= test_eq("bucketsMaxNum",$bucketsMaxNum,1);
+	$return_code |= test_range("objectsMaxSize", $num_intervals*$s3ObjSize, $objectsMaxSize, 20);
+	$return_code |= test_range("objectsMaxTime", calculate_total_acc_usage($num_intervals,$s3ObjSize,$write_interval), $objectsMaxTime, 4000);
 }
 close(REPORT);
 

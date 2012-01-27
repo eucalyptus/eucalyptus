@@ -175,7 +175,8 @@ public class S3UsageLog
 				list = entityWrapper.createQuery(
 					"from S3UsageSnapshot as sus"
 					+ " WHERE sus.key.timestampMs > ?"
-					+ " AND sus.key.timestampMs < ?")
+					+ " AND sus.key.timestampMs < ?"
+					+ " ORDER BY sus.key.timestampMs")
 					.setLong(0, new Long(latestSnapshotBeforeMs))
 					.setLong(1, new Long(period.getEndingMs()))
 					.list();
@@ -184,7 +185,8 @@ public class S3UsageLog
 						"from S3UsageSnapshot as sus"
 						+ " WHERE sus.key.timestampMs > ?"
 						+ " AND sus.key.timestampMs < ?"
-						+ " AND sus.key.accountId = ?")
+						+ " AND sus.key.accountId = ?"
+						+ " ORDER BY sus.key.timestampMs")
 						.setLong(0, new Long(latestSnapshotBeforeMs))
 						.setLong(1, new Long(period.getEndingMs()))
 						.setString(2, accountId)
@@ -222,11 +224,11 @@ public class S3UsageLog
 					long endingMs = snapshotKey.getTimestampMs()-1;
 					long durationSecs = (endingMs - beginningMs) / 1000;
 
+					log.info(String.format("Accumulate usage, %d-%d, key:%s",
+							beginningMs, endingMs, summaryKey));
 					accumulator.accumulateUsage( durationSecs );		
 					accumulator.setLastTimestamp(snapshotKey.getTimestampMs());
 					accumulator.setLastUsageData(snapshot.getUsageData());
-					log.info(String.format("Accumulate usage, %d-%d, key:%s",
-							beginningMs, endingMs, summaryKey));
 
 				}
 
@@ -241,9 +243,9 @@ public class S3UsageLog
 						accumulator.getLastTimestamp() );
 				long endingMs = period.getEndingMs() - 1;
 				long durationSecs = ( endingMs-beginningMs ) / 1000;
-				accumulator.accumulateUsage( durationSecs );
 				log.info(String.format("Accumulate endUsage, %d-%d, key:%s",
 						beginningMs, endingMs, key));
+				accumulator.accumulateUsage( durationSecs );
 
 				//add to results
 				usageMap.put( key, accumulator.getCurrentSummary() );
@@ -313,8 +315,9 @@ public class S3UsageLog
 				currentSummary.setBucketsNumMax(
 						Math.max(currentSummary.getBucketsNumMax(),
 								lastUsageData.getBucketsNum()));
-				log.info("Accumulate "
-						+ (lastUsageData.getObjectsMegs() * durationSecs));
+				log.info(String.format("Accumulated durationSecs:%d raw:%d multDurationSecs:%d",durationSecs,
+						lastUsageData.getObjectsMegs(),
+						(lastUsageData.getObjectsMegs() * durationSecs)));
 				this.lastUsageData = null;
 
     		}    		
@@ -322,6 +325,5 @@ public class S3UsageLog
     	
     }
 
-    
 
 }

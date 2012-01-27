@@ -245,8 +245,13 @@ public class X509Download extends HttpServlet {
       } else {
         sb.append( "\necho WARN:  Walrus URL is not configured. >&2" );
       }
-      sb.append( "\nexport AWS_SNS_URL=" + ServiceUris.remote( Notifications.class ) );
-      sb.append( "\nexport EUARE_URL=" + ServiceUris.remote( Euare.class ) );
+      //Disable notifications for now
+      //sb.append( "\nexport AWS_SNS_URL=" + ServiceUris.remote( Notifications.class ) );
+      if ( Topology.isEnabled( Euare.class ) ) {//GRZE:NOTE: this is temporary
+        sb.append( "\nexport EUARE_URL=" + ServiceUris.remotePublicify(  Euare.class ) );
+      } else {
+        sb.append( "\necho WARN:  EUARE URL is not configured. >&2" );
+      }
       sb.append( "\nexport EC2_PRIVATE_KEY=${EUCA_KEY_DIR}/" + baseName + "-pk.pem" );
       sb.append( "\nexport EC2_CERT=${EUCA_KEY_DIR}/" + baseName + "-cert.pem" );
       sb.append( "\nexport EC2_JVM_ARGS=-Djavax.net.ssl.trustStore=${EUCA_KEY_DIR}/jssecacerts" );

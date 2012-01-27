@@ -93,14 +93,14 @@ if ($num_instances != keys(%instance_data)) {
 print "Sleeping for " . startup_sleep_duration() . " secs so instances can start up...\n";
 sleep startup_sleep_duration();
 
-# Verify that instances are running, and mount EBS volume for each
+# Verify that instances are running, and mount EBS volume for each for subsequent snaps
 $output = `euca-describe-instances` or die("couldn't euca-describe-instances");
 print "output:$output\n";
 my %instances = parse_instance_ids($output);
 foreach (keys %instance_data) {
 	if ($instances{$_} eq "running") {
 		print "Instance $_ is running\n";
-		my $vol_size = storage_usage_mb()*2;
+		my $vol_size = snap_usage_mb();
 		my $vol_id = parse_vol_id(`euca-create-volume --size $vol_size --zone $zones[0]`);
 		runcmd("euca-attach-volume -i $_ -d " . vol_device() . " $vol_id");
 		push(@volumes, $vol_id);
@@ -123,9 +123,11 @@ for (my $i=0; (time()-$start_time) < $duration; $i++) {
 	print "iter:$i\n";
 	runcmd("euca-create-volume --size " . storage_usage_mb() . " --zone $zones[0]");
 	print "$i: Created volume\n";
-	runcmd("euca-bundle-image -i $upload_file");
+	runcmd("./s3curl.pl --id " . $ENV{'EC2_ACCESS_KEY'} . " --key " . $ENV{'EC2_SECRET_KEY'} . " --put /dev/null -- -s -v ". $ENV{'S3_URL'} . "/$bucketname");
+	runcmd("./s3curl.pl --id " . $ENV{'EC2_ACCESS_KEY'} . " --key " . $ENV{'EC2_SECRET_KEY'} . " --put random.dat -- -s -v " . $ENV{'S3_URL'} . "/$bucketname/object-$i-a");
+	runcmd("./s3curl.pl --id " . $ENV{'EC2_ACCESS_KEY'} . " --key " . $ENV{'EC2_SECRET_KEY'} . " --put random.dat -- -s -v " . $ENV{'S3_URL'} . "/$bucketname/object-$i-b");
 	#TODO: grab manifest path from this
-	print "$i: Uploaded bundle\n";
+	print "$i: Created bucket and objects\n";
 	runcmd("euca-create-snapshot " . $volumes[$i % ($#volumes+1)]);
 	sleep $interval - (time() - $itime);
 }

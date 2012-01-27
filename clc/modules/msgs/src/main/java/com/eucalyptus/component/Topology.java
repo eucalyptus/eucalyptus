@@ -74,9 +74,8 @@ import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapArgs;
@@ -169,33 +168,34 @@ public class Topology {
   private enum TopologyTimer implements EventListener<ClockTick> {
     INSTANCE;
     private static final AtomicInteger counter = new AtomicInteger( 0 );
-    private static final Lock          canHas  = new ReentrantLock( );
+    private static final AtomicBoolean busy  = new AtomicBoolean( false );
     
     @Override
     public void fireEvent( final ClockTick event ) {
-      if ( Hosts.isCoordinator( ) && canHas.tryLock( ) ) {
-        Queue.INTERNAL.enqueue( new Callable<Object>( ) {
-          public Object call( ) {
-            try {
-              return RunChecks.INSTANCE.call( );
-            } finally {
-              canHas.unlock( );
-            }
+      Callable<Object> call = new Callable<Object>( ) {
+        public Object call( ) {
+          try {
+            TimeUnit.SECONDS.sleep( 10 );
+            return RunChecks.INSTANCE.call( );
+          } catch ( InterruptedException ex ) {
+            return Exceptions.maybeInterrupted( ex );
+          } finally {
+            busy.set( false );
           }
-        } );
-      } else if ( counter.incrementAndGet( ) % 3 == 0 && canHas.tryLock( ) ) {
-        Queue.INTERNAL.enqueue( new Callable<Object>( ) {
-          public Object call( ) {
-            try {
-              return RunChecks.INSTANCE.call( );
-            } finally {
-              canHas.unlock( );
-            }
-          }
-        } );
-      } else if ( counter.incrementAndGet( ) > 10 ) {
-        counter.set( 0 );
-        Queue.INTERNAL.enqueue( RunChecks.INSTANCE );
+        }
+      };
+      if ( Hosts.isCoordinator( ) && busy.compareAndSet( false, true ) ) {
+        try {
+          Queue.INTERNAL.enqueue( call );
+        } catch ( Exception ex ) {
+          busy.set( false );
+        }
+      } else if ( counter.incrementAndGet( ) % 3 == 0 && busy.compareAndSet( false, true ) ) {
+        try {
+          Queue.INTERNAL.enqueue( call );
+        } catch ( Exception ex ) {
+          busy.set( false );
+        }
       }
     }
     
@@ -730,7 +730,7 @@ public class Topology {
     @Override
     public boolean apply( final Future input ) {
       try {
-        final Object conf = input.get( 30, TimeUnit.SECONDS );
+        final Object conf = input.get( 120, TimeUnit.SECONDS );
         return true;
       } catch ( final InterruptedException ex ) {
         Thread.currentThread( ).interrupt( );
