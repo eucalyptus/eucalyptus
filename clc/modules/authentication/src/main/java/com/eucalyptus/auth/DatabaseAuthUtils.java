@@ -11,6 +11,7 @@ import com.eucalyptus.auth.entities.PolicyEntity;
 import com.eucalyptus.auth.entities.UserEntity;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.Group;
+import com.eucalyptus.auth.principal.Policy;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.entities.EntityWrapper;
 
@@ -277,6 +278,17 @@ public class DatabaseAuthUtils {
       db.rollback( );
       throw new AuthException( "Failed to check groups for account", e );
     }
+  }
+  
+  public static boolean policyNameinList( String name, List<Policy> policies ) {
+    if ( policies != null ) {
+      for ( Policy p : policies ) {
+        if ( p.getName( ).equals( name ) ) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
 }

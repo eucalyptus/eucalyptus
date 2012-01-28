@@ -212,6 +212,10 @@ public class DatabaseGroupProxy implements Group {
       Debugging.logError( LOG, e, "Invalid policy name " + name );
       throw new AuthException( AuthException.INVALID_NAME, e );
     }
+    if ( DatabaseAuthUtils.policyNameinList( name, this.getPolicies( ) ) ) {
+      Debugging.logError( LOG, null, "Policy name already used: " + name );
+      throw new AuthException( AuthException.INVALID_NAME );
+    }    
     PolicyEntity parsedPolicy = PolicyParser.getInstance( ).parse( policy );
     parsedPolicy.setName( name );
     EntityWrapper<GroupEntity> db = EntityWrapper.get( GroupEntity.class );
