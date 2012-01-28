@@ -73,11 +73,6 @@ public class ReportViewImpl extends Composite implements ReportView {
     this.presenter.downloadCsv( );
   }
 
-  @UiHandler( "xlsButton" )
-  void handleXlsButtonClick( ClickEvent e ) {
-    this.presenter.downloadXls( );
-  }
-
   @UiHandler( "htmlButton" )
   void handleHtmlButtonClick( ClickEvent e ) {
     this.presenter.downloadHtml( );
