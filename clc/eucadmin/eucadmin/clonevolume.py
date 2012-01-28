@@ -36,7 +36,7 @@ class CloneVolume(AWSQueryRequest):
 
     ServicePath = '/services/Component'
     ServiceClass = eucadmin.EucAdmin
-    Description = 'Convert volumes'
+    Description = 'Clone a volume'
     Params = [
               Param(name='Host',
                     short_name='H',
