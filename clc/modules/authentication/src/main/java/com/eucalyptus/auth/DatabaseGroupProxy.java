@@ -199,7 +199,7 @@ public class DatabaseGroupProxy implements Group {
         }
       } );
     } catch ( ExecutionException e ) {
-      Debugging.logError( LOG, e, "Failed to getUsers for " + this.delegate );
+      Debugging.logError( LOG, e, "Failed to getPolicies for " + this.delegate );
     }
     return results;
   }
