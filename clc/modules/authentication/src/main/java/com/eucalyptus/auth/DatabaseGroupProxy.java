@@ -235,6 +235,7 @@ public class DatabaseGroupProxy implements Group {
           cond.setStatement( statement );
         }
       }
+      groupEntity.getPolicies( ).add( parsedPolicy );
       db.commit( );
       return new DatabasePolicyProxy( parsedPolicy );
     } catch ( Exception e ) {

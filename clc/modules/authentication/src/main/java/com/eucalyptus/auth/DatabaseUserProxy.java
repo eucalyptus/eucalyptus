@@ -415,6 +415,7 @@ public class DatabaseUserProxy implements User {
       AccessKeyEntity keyEntity = new AccessKeyEntity( user );
       keyEntity.setActive( true );
       db.recast( AccessKeyEntity.class ).add( keyEntity );
+      user.getKeys( ).add( keyEntity );
       db.commit( );
       return new DatabaseAccessKeyProxy( keyEntity );
     } catch ( Exception e ) {
@@ -468,6 +469,7 @@ public class DatabaseUserProxy implements User {
       certEntity.setRevoked( false );
       db.recast( CertificateEntity.class ).add( certEntity );
       certEntity.setUser( user );
+      user.getCertificates( ).add( certEntity );
       db.commit( );
       return new DatabaseCertificateProxy( certEntity );
     } catch ( Exception e ) {
@@ -614,6 +616,7 @@ public class DatabaseUserProxy implements User {
           cond.setStatement( statement );
         }
       }
+      groupEntity.getPolicies( ).add( parsedPolicy );
       db.commit( );
       return new DatabasePolicyProxy( parsedPolicy );
     } catch ( Exception e ) {
