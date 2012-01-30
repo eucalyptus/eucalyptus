@@ -199,7 +199,7 @@ public class DatabaseGroupProxy implements Group {
         }
       } );
     } catch ( ExecutionException e ) {
-      Debugging.logError( LOG, e, "Failed to getUsers for " + this.delegate );
+      Debugging.logError( LOG, e, "Failed to getPolicies for " + this.delegate );
     }
     return results;
   }
@@ -212,6 +212,10 @@ public class DatabaseGroupProxy implements Group {
       Debugging.logError( LOG, e, "Invalid policy name " + name );
       throw new AuthException( AuthException.INVALID_NAME, e );
     }
+    if ( DatabaseAuthUtils.policyNameinList( name, this.getPolicies( ) ) ) {
+      Debugging.logError( LOG, null, "Policy name already used: " + name );
+      throw new AuthException( AuthException.INVALID_NAME );
+    }    
     PolicyEntity parsedPolicy = PolicyParser.getInstance( ).parse( policy );
     parsedPolicy.setName( name );
     EntityWrapper<GroupEntity> db = EntityWrapper.get( GroupEntity.class );
@@ -231,6 +235,7 @@ public class DatabaseGroupProxy implements Group {
           cond.setStatement( statement );
         }
       }
+      groupEntity.getPolicies( ).add( parsedPolicy );
       db.commit( );
       return new DatabasePolicyProxy( parsedPolicy );
     } catch ( Exception e ) {
