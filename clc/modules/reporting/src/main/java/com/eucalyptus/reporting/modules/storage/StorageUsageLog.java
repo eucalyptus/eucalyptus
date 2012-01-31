@@ -177,7 +177,8 @@ public class StorageUsageLog
 				list = entityWrapper.createQuery(
 					"from StorageUsageSnapshot as sus"
 					+ " WHERE sus.key.timestampMs > ?"
-					+ " AND sus.key.timestampMs < ?")
+					+ " AND sus.key.timestampMs < ?"
+					+ " ORDER BY sus.key.timestampMs")
 					.setLong(0, (latestSnapshotBeforeMs!=null ? latestSnapshotBeforeMs : 0l))
 					.setLong(1, new Long(period.getEndingMs()))
 					.list();
@@ -186,7 +187,8 @@ public class StorageUsageLog
 						"from StorageUsageSnapshot as sus"
 						+ " WHERE sus.key.timestampMs > ?"
 						+ " AND sus.key.timestampMs < ?"
-						+ " AND sus.key.accountId = ?")
+						+ " AND sus.key.accountId = ?"
+						+ " ORDER BY sus.key.timestampMs")
 						.setLong(0, (latestSnapshotBeforeMs!=null ? latestSnapshotBeforeMs : 0l))
 						.setLong(1, new Long(period.getEndingMs()))
 						.setString(2, accountId)
@@ -224,11 +226,11 @@ public class StorageUsageLog
 					long endingMs = snapshotKey.getTimestampMs()-1;
 					long durationSecs = (endingMs - beginningMs) / 1000;
 
+					log.info(String.format("Accumulate usage, %d-%d, key:%s",
+							beginningMs, endingMs, summaryKey));
 					accumulator.accumulateUsage( durationSecs );		
 					accumulator.setLastTimestamp(snapshotKey.getTimestampMs());
 					accumulator.setLastUsageData(snapshot.getUsageData());
-					log.info(String.format("Accumulate usage, %d-%d, key:%s",
-							beginningMs, endingMs, summaryKey));
 
 				}
 
@@ -243,9 +245,9 @@ public class StorageUsageLog
 						accumulator.getLastTimestamp() );
 				long endingMs = period.getEndingMs() - 1;
 				long durationSecs = ( endingMs-beginningMs ) / 1000;
-				accumulator.accumulateUsage( durationSecs );
 				log.info(String.format("Accumulate endUsage, %d-%d, key:%s",
 						beginningMs, endingMs, key));
+				accumulator.accumulateUsage( durationSecs );
 
 				//add to results
 				usageMap.put( key, accumulator.getCurrentSummary() );
@@ -320,9 +322,10 @@ public class StorageUsageLog
 						Math.max(currentSummary.getSnapshotsMegsMax(),
 								lastUsageData.getSnapshotsMegs()));
 
-				log.info("Accumulate "
-						+ (lastUsageData.getVolumesMegs() * durationSecs)
-						+ " " + (lastUsageData.getSnapshotsMegs() * durationSecs));
+				log.info(String.format("Accumulated durationSecs:%d raw:%d,%d multDurationSecs:%d,%d",durationSecs,
+						lastUsageData.getVolumesMegs(), lastUsageData.getSnapshotsMegs(),
+						(lastUsageData.getVolumesMegs() * durationSecs),
+						(lastUsageData.getSnapshotsMegs() * durationSecs)));
 				this.lastUsageData = null;
 
     		}    		
@@ -330,5 +333,5 @@ public class StorageUsageLog
     	
     }
 
-	
+
 }

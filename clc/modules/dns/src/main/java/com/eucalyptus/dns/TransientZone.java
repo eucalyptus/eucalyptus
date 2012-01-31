@@ -192,7 +192,7 @@ public class TransientZone extends Zone {
       } catch ( Exception e ) {
         return super.findRecords( name, type );
       }
-    } else if (name.toString().startsWith("eucalyptus.")) {
+    } else if (name.toString().startsWith("eucalyptus.") || (name.toString().startsWith("euare."))) {
         SetResponse resp = new SetResponse(SetResponse.SUCCESSFUL);        
 		try {
 			InetAddress cloudIp = Topology.lookup( Eucalyptus.class ).getInetAddress( );

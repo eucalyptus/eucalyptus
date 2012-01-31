@@ -125,7 +125,7 @@ public class ReportGenerator
 		List<ReportLine> reportLines = null;
 		ReportKey key = new ReportKey(reportType, period, criterion,
 				groupByCriterion, displayUnits, System.currentTimeMillis());
-		if (lineListMap.containsKey(key)) {
+		if (lineListMap.containsKey(key)) {  //TODO: this isnt working all of the sudden even though hashcode and equals do not use timestampMs
 			log.info("Gathered report data from cache:" + key);
 			reportLines = lineListMap.get(key);
 		} else {

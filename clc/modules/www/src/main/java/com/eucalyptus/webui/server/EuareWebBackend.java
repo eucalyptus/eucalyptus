@@ -655,14 +655,6 @@ public class EuareWebBackend {
             results.add( serializePolicy( policy, account, group, null ) );
           }
         }
-      } else if ( query.hasOnlySingle( ACCOUNTID ) ) {
-        // Optimization for a single account's policies
-        Account account = Accounts.lookupAccountById( query.getSingle( ACCOUNTID ).getValue( ) );
-        if ( Privileged.allowListOrReadAccountPolicy( requestUser, account ) ) {
-          for ( Policy policy : account.lookupUserByName( User.ACCOUNT_ADMIN ).getPolicies( ) ) {
-            results.add( serializePolicy( policy, account, null, null ) );
-          }
-        }
       } else {
         for ( Account account : getAccounts( query ) ) {
           try {
