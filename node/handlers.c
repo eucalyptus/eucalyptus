@@ -623,7 +623,6 @@ void *startup_thread (void * arg)
         logprintfl (EUCAERROR, "[%s] error: failed to prepare images for instance (error=%d)\n", instance->instanceId, error);
         goto shutoff;
     }
-    xml = file2str (instance->libvirtFilePath);
     
     if (instance->state==TEARDOWN) { // timed out in STAGING
         goto free;
@@ -636,6 +635,7 @@ void *startup_thread (void * arg)
         logprintfl (EUCAERROR, "[%s] cancelled instance startup via hooks\n", instance->instanceId);
         goto shutoff;
     }
+    xml = file2str (instance->libvirtFilePath);
     
     save_instance_struct (instance); // to enable NC recovery
 
