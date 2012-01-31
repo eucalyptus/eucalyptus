@@ -925,7 +925,8 @@ int doAssignAddress(ncMetadata *ccMeta, char *uuid, char *src, char *dst) {
     logprintfl(EUCADEBUG, "doAssignAddress(): bad input params\n");
     return(1);
   }
-  
+  set_dirty_instanceCache();
+
   sem_mywait(RESCACHE);
   memcpy(&resourceCacheLocal, resourceCache, sizeof(ccResourceCache));
   sem_mypost(RESCACHE);
@@ -1031,12 +1032,14 @@ int doUnassignAddress(ncMetadata *ccMeta, char *src, char *dst) {
     return(1);
   }
   logprintfl(EUCAINFO,"UnassignAddress(): called \n");
+
   logprintfl(EUCADEBUG,"UnassignAddress(): params: userId=%s, src=%s, dst=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"), SP(src), SP(dst));  
   
   if (!src || !dst || !strcmp(src, "0.0.0.0")) {
     logprintfl(EUCADEBUG, "UnassignAddress(): bad input params\n");
     return(1);
   }
+  set_dirty_instanceCache();
 
   sem_mywait(RESCACHE);
   memcpy(&resourceCacheLocal, resourceCache, sizeof(ccResourceCache));
@@ -1465,6 +1468,8 @@ int refresh_instances(ncMetadata *ccMeta, int timeout, int dolock) {
   op_start = time(NULL);
 
   logprintfl(EUCAINFO,"refresh_instances(): called\n");
+  
+  set_clean_instanceCache();
 
   // critical NC call section
   sem_mywait(RESCACHE);
@@ -2481,6 +2486,8 @@ int doTerminateInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, int
   if (rc || ccIsEnabled()) {
     return(1);
   }
+  set_dirty_instanceCache();
+
   logprintfl(EUCAINFO,"TerminateInstances(): called \n");
   logprintfl(EUCADEBUG,"TerminateInstances(): params: userId=%s, instIdsLen=%d, firstInstId=%s, force=%d\n", SP(ccMeta ? ccMeta->userId : "UNSET"), instIdsLen, SP(instIdsLen ? instIds[0] : "UNSET"), force);
   
@@ -2538,6 +2545,11 @@ int doTerminateInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, int
 	  (*outStatus)[i] = 0;
 	  ret = 0;
 	  done++;
+	}
+	rc = ncClientCall(ccMeta, 0, resourceCacheStage->resources[j].lockidx, resourceCacheStage->resources[j].ncURL, "ncAssignAddress", instId, "0.0.0.0");
+	if (rc) {
+	  // problem, but will retry next time
+	  logprintfl(EUCAWARN, "TerminateInstances(): could not send AssignAddress to NC\n");
 	}
       }
     }
@@ -3006,27 +3018,35 @@ void *monitor_thread(void *in) {
       }
       
       if (ncRefresh) {
+	if (is_clean_instanceCache()) {
 	// Network state operations
-	logprintfl(EUCADEBUG, "monitor_thread(): syncing network state\n");
-	rc = syncNetworkState();
-	if (rc) {
-	  logprintfl(EUCADEBUG, "monitor_thread(): syncNetworkState() triggering network restore\n");
-	  config->kick_network = 1;
-	}
-
-	if (config->kick_network) {
-	  logprintfl(EUCADEBUG, "monitor_thread(): restoring network state\n");
-	  rc = restoreNetworkState();
+	//	sem_mywait(RESCACHE);
+	
+	  logprintfl(EUCADEBUG, "monitor_thread(): syncing network state\n");
+	  rc = syncNetworkState();
 	  if (rc) {
-	    // failed to restore network state, continue 
-	    logprintfl(EUCAWARN, "monitor_thread(): restoreNetworkState returned false (may be already restored)\n");
-	  } else {
-	    sem_mywait(CONFIG);
-	    config->kick_network = 0;
-	    sem_mypost(CONFIG);
+	    logprintfl(EUCADEBUG, "monitor_thread(): syncNetworkState() triggering network restore\n");
+	    config->kick_network = 1;
 	  }
+	  //	sem_mypost(RESCACHE);
+	  
+	  if (config->kick_network) {
+	    logprintfl(EUCADEBUG, "monitor_thread(): restoring network state\n");
+	    rc = restoreNetworkState();
+	    if (rc) {
+	      // failed to restore network state, continue 
+	      logprintfl(EUCAWARN, "monitor_thread(): restoreNetworkState returned false (may be already restored)\n");
+	    } else {
+	      sem_mywait(CONFIG);
+	      config->kick_network = 0;
+	      sem_mypost(CONFIG);
+	    }
+	  }
+	} else {
+	  logprintfl(EUCADEBUG, "monitor_thread(): instanceCache is dirty, skipping network update\n");
 	}
       }
+
 
       if (clcRefresh) {
 	logprintfl(EUCADEBUG, "monitor_thread(): syncing CLC network rules ground truth with local state\n");
@@ -4582,6 +4602,29 @@ void print_ccInstance(char *tag, ccInstance *in) {
 
   free(volbuf);
   free(groupbuf);
+}
+
+void set_clean_instanceCache(void) {
+  sem_mywait(INSTCACHE);
+  instanceCache->dirty = 0;
+  sem_mypost(INSTCACHE);
+}
+void set_dirty_instanceCache(void) {
+  sem_mywait(INSTCACHE);
+  instanceCache->dirty = 1;
+  sem_mypost(INSTCACHE);
+}
+
+int is_clean_instanceCache(void) {
+  int ret=1;
+  sem_mywait(INSTCACHE);
+  if (instanceCache->dirty) {
+    ret = 0;
+  } else {
+    ret = 1;
+  }
+  sem_mypost(INSTCACHE);
+  return(ret);
 }
 
 void invalidate_instanceCache(void) {
