@@ -36,7 +36,7 @@ class ConvertVolumes(AWSQueryRequest):
 
     ServicePath = '/services/Component'
     ServiceClass = eucadmin.EucAdmin
-    Description = 'Convert volumes'
+    Description = 'Convert volumes from one storage back end to another'
     Params = [
               Param(name='Host',
                     short_name='H',
