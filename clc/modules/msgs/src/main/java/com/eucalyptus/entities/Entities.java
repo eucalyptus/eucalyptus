@@ -196,14 +196,23 @@ public class Entities {
   private static CascadingTx createTransaction( final Object obj ) throws RecoverablePersistenceException, RuntimeException {
     final String ctx = lookatPersistenceContext( obj );
     final CascadingTx ret = new CascadingTx( ctx );
-    ret.begin( );
-    if ( txRootThreadLocal.get( ) == null ) {
-      final String txId = makeTxRootName( ret );
-      LOG.trace( "Creating root entry for transaction tree: " + txId + " at: \n" + Threads.currentStackString( ) );
-      txRootThreadLocal.set( txId );
+    try {
+      ret.begin( );
+      if ( txRootThreadLocal.get( ) == null ) {
+        final String txId = makeTxRootName( ret );
+        LOG.trace( "Creating root entry for transaction tree: " + txId + " at: \n" + Threads.currentStackString( ) );
+        txRootThreadLocal.set( txId );
+      }
+      txStateThreadLocal.get( ).put( ctx, ret );
+      return ret;
+    } catch ( RuntimeException ex ) {
+      try {
+        ret.rollback( );
+      } catch ( RuntimeException ex1 ) {
+        throw ex1;
+      }
+      throw ex;
     }
-    txStateThreadLocal.get( ).put( ctx, ret );
-    return ret;
   }
   
   public static EntityTransaction get( final Object obj ) {
