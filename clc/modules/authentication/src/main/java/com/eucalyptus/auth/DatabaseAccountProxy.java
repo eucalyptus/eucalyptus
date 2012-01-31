@@ -333,7 +333,7 @@ public class DatabaseAccountProxy implements Account {
     } catch ( Exception e ) {
       db.rollback( );
       Debugging.logError( LOG, e, "Failed to get group " + groupName + " for " + accountName );
-      throw new AuthException( "Failed to get group", e );
+      throw new AuthException( AuthException.NO_SUCH_GROUP, e );
     }
   }
   
