@@ -230,8 +230,8 @@ public class VmVolumeAttachment implements Comparable<VmVolumeAttachment> {
         }
         attachment.setAttachTime( vol.getAttachTime( ) );
         attachment.setStatus( vol.getStatus( ) );
-        if ( !attachment.getDevice( ).startsWith( "/dev/" ) ) {
-          attachment.setDevice( "/dev/" + attachment.getDevice( ) );
+        if ( !attachment.getDevice( ).replaceAll( "unknown,requested:", "" ).startsWith( "/dev/" ) ) {
+          attachment.setDevice( "/dev/" + attachment.getDevice( ).replaceAll( "unknown,requested:", "" ) );
         }
         return attachment;
       }
