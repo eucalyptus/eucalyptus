@@ -99,6 +99,7 @@ import com.eucalyptus.context.ServiceStateException;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.images.BlockStorageImageInfo;
+import com.eucalyptus.network.PrivateNetworkIndex;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
@@ -436,6 +437,9 @@ public class VmControl {
           Allocation allocInfo = Allocations.start( vm );
           try {//scope for allocInfo
             AdmissionControl.run( ).apply( allocInfo );
+            PrivateNetworkIndex vmIdx = allocInfo.getAllocationTokens( ).get( 0 ).getNetworkIndex( );
+            vmIdx.set( vm );
+            vm.setNetworkIndex( vmIdx );
             vm.setState( VmState.PENDING );
             ClusterAllocator.get( ).apply( allocInfo );
             final int oldCode = vm.getState( ).getCode( ), newCode = VmState.PENDING.getCode( );
