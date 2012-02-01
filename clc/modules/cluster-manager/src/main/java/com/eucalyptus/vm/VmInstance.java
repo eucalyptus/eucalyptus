@@ -657,6 +657,13 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
             vm.setState( VmState.STOPPING, Reason.USER_STOPPED );
           } else if ( VmState.STOPPING.equals( vm.getState( ) ) ) {
             vm.setState( VmState.STOPPED, Reason.USER_STOPPED );
+            PrivateNetworkIndex vmIdx = vm.getNetworkIndex( );
+            if ( vmIdx != null ) {
+              vmIdx.release( );
+              vmIdx.teardown( );
+              vmIdx = null;
+            }
+            vm.setNetworkIndex( null );
           }
           db.commit( );
           return vm;
@@ -1214,7 +1221,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     
   }
   
-  private PrivateNetworkIndex getNetworkIndex( ) {
+  PrivateNetworkIndex getNetworkIndex( ) {
     return this.networkIndex;
   }
   
