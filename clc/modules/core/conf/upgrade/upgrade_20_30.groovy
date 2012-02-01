@@ -181,8 +181,8 @@ class upgrade_20_30 extends AbstractUpgradeScript {
     @Override
     public void upgrade(File oldEucaHome, File newEucaHome) {
         // Do this in stages and bail out if something goes seriously wrong.
-        def parts = [ 'Cluster', 'Auth', 'KeyPairs', 'Network', 'Walrus', 'Storage', 'SAN',
-                      'VMwareBroker' ]
+        def parts = [ 'Cluster', 'Auth', 'KeyPairs', 'Images', 'Network', 'Walrus', 
+                      'Storage', 'SAN', 'VMwareBroker' ]
         buildConnectionMap();
         parts.each { this."upgrade${it}"(); }
          
@@ -527,7 +527,52 @@ class upgrade_20_30 extends AbstractUpgradeScript {
             dbAuth.commit();
             
             def ufn = UserFullName.getInstance(user);
-            connMap['eucalyptus_general'].rows("SELECT * FROM Images WHERE image_owner_id=?", [it.auth_user_name]).each { img ->
+            connMap['eucalyptus_images'].rows("SELECT * FROM Volume WHERE username=?", [ it.auth_user_name ]).each { vol ->
+                EntityWrapper<Volume> dbVol = EntityWrapper.get(Volume.class);
+                def vol_meta = connMap['eucalyptus_storage'].firstRow("SELECT * FROM Volumes WHERE volume_name=?", 
+                                                                      [ vol.displayname ]);
+                if (vol.cluster == "default") {
+                    vol.cluster = System.getProperty("euca.storage.name");
+                }
+                if (vol.cluster == null && vol.state == "EXTANT") {
+                    if (vol_meta != null) {
+                        vol.cluster = vol_meta.sc_name;
+                    } else {
+                        throw new RuntimeException("Cannot determine SC for volume " + vol.displayname);
+                    }
+                }
+                // Second "vol.cluster" is partition name
+                Volume v = new Volume( ufn, vol.displayname, vol.size, vol.cluster + '_sc', vol.cluster, vol.parentsnapshot );
+                initMetaClass(v, v.class);
+                v.setState(State.valueOf(vol.state));
+                v.setLocalDevice(vol.localdevice);
+                v.setRemoteDevice(vol.remotedevice);
+                v.setSize(vol.size);
+                volumeSizeMap.put(vol.displayname, vol.size);
+                LOG.debug("Adding volume ${ vol.displayname } for ${ it.auth_user_name }");
+                dbVol.add(v);
+                dbVol.commit();
+            }
+            connMap['eucalyptus_images'].rows("SELECT * FROM Snapshot WHERE username=?", [ it.auth_user_name ]).each { snap ->
+                EntityWrapper<Snapshot> dbSnap = EntityWrapper.get(Snapshot.class);
+                def snap_meta = connMap['eucalyptus_storage'].firstRow("SELECT * FROM Snapshots WHERE snapshot_name=?", [ snap.displayname ]);
+                def scName = (snap_meta == null) ? null :  snap_meta.sc_name;
+                // Second scName is partition
+                Snapshot s = new Snapshot( ufn, snap.displayname, snap.parentvolume, volumeSizeMap.get(snap.parentvolume), scName + '_sc', scName);
+                initMetaClass(s, s.class);
+                s.setState(State.valueOf(snap.state));
+                LOG.debug("Adding snapshot ${ snap.displayname } for ${ it.auth_user_name }");
+                dbSnap.add(s);
+                dbSnap.commit();
+            }
+        }
+        return true;
+    }
+
+    public boolean upgradeImages() {
+       safeUserMap.keySet().each { auth_user_name ->
+            def ufn = UserFullName.getInstance(userIdMap.get(auth_user_name));
+            connMap['eucalyptus_general'].rows("SELECT * FROM Images WHERE image_owner_id=?", [auth_user_name]).each { img ->
                 EntityWrapper<ImageInfo> dbGen = EntityWrapper.get(ImageInfo.class);
                 LOG.debug("Adding image ${img.image_name}");
                 def path = img.image_path.split("/");
@@ -589,47 +634,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                 }
                 ii.addPermissions(accountIds);
             }
-
-            connMap['eucalyptus_images'].rows("SELECT * FROM Volume WHERE username=?", [ it.auth_user_name ]).each { vol ->
-                EntityWrapper<Volume> dbVol = EntityWrapper.get(Volume.class);
-                def vol_meta = connMap['eucalyptus_storage'].firstRow("SELECT * FROM Volumes WHERE volume_name=?", 
-                                                                      [ vol.displayname ]);
-                if (vol.cluster == "default") {
-                    vol.cluster = System.getProperty("euca.storage.name");
-                }
-                if (vol.cluster == null && vol.state == "EXTANT") {
-                    if (vol_meta != null) {
-                        vol.cluster = vol_meta.sc_name;
-                    } else {
-                        throw new RuntimeException("Cannot determine SC for volume " + vol.displayname);
-                    }
-                }
-                // Second "vol.cluster" is partition name
-                Volume v = new Volume( ufn, vol.displayname, vol.size, vol.cluster + '_sc', vol.cluster, vol.parentsnapshot );
-                initMetaClass(v, v.class);
-                v.setState(State.valueOf(vol.state));
-                v.setLocalDevice(vol.localdevice);
-                v.setRemoteDevice(vol.remotedevice);
-                v.setSize(vol.size);
-                volumeSizeMap.put(vol.displayname, vol.size);
-                LOG.debug("Adding volume ${ vol.displayname } for ${ it.auth_user_name }");
-                dbVol.add(v);
-                dbVol.commit();
-            }
-            connMap['eucalyptus_images'].rows("SELECT * FROM Snapshot WHERE username=?", [ it.auth_user_name ]).each { snap ->
-                EntityWrapper<Snapshot> dbSnap = EntityWrapper.get(Snapshot.class);
-                def snap_meta = connMap['eucalyptus_storage'].firstRow("SELECT * FROM Snapshots WHERE snapshot_name=?", [ snap.displayname ]);
-                def scName = (snap_meta == null) ? null :  snap_meta.sc_name;
-                // Second scName is partition
-                Snapshot s = new Snapshot( ufn, snap.displayname, snap.parentvolume, volumeSizeMap.get(snap.parentvolume), scName + '_sc', scName);
-                initMetaClass(s, s.class);
-                s.setState(State.valueOf(snap.state));
-                LOG.debug("Adding snapshot ${ snap.displayname } for ${ it.auth_user_name }");
-                dbSnap.add(s);
-                dbSnap.commit();
-            }
         }
-        return true;
     }
 
     public boolean upgradeKeyPairs() {
