@@ -210,6 +210,7 @@ typedef struct ccInstanceCache_t {
   int cacheState[MAXINSTANCES];
   int numInsts;
   int instanceCacheUpdate;
+  int dirty;
 } ccInstanceCache;
 
 typedef struct ccConfig_t {
@@ -278,6 +279,9 @@ int find_instanceCacheId(char *instanceId, ccInstance **out);
 int find_instanceCacheIP(char *ip, ccInstance **out);
 void print_instanceCache(void);
 void invalidate_instanceCache(void);
+void set_clean_instanceCache(void);
+void set_dirty_instanceCache(void);
+int is_clean_instanceCache(void);
 int map_instanceCache(int (*match)(ccInstance *, void *), void *matchParam, int (*operate)(ccInstance *, void *), void *operateParam);
 int privIpCmp(ccInstance *inst, void *ip);
 int privIpSet(ccInstance *inst, void *ip);

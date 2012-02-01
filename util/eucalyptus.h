@@ -129,7 +129,7 @@ permission notice:
 #define MAXINSTANCES 2048
 #define MAXLOGFILESIZE 32768000
 #define EUCA_MAX_GROUPS 64
-#define EUCA_MAX_VOLUMES 256
+#define EUCA_MAX_VOLUMES 64
 #define EUCA_MAX_VBRS 64
 #define EUCA_MAX_PATH 4096
 #define EUCA_MAX_PARTITIONS 32 // partitions per disk
