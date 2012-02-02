@@ -270,20 +270,22 @@ public abstract class AbstractSystemAddressManager {
         } catch ( NoSuchElementException ex ) {
           Logs.extreme( ).error( ex );
         }
-      } else if ( privateIp != null ) {
+      } 
+      if ( vm == null && privateIp != null ) {
         try {
           vm = VmInstances.lookupByPrivateIp( privateIp );
         } catch ( NoSuchElementException ex ) {
           Logs.extreme( ).error( ex );
         }
-      } else if ( publicIp != null ) {
+      } 
+      if ( vm == null && publicIp != null ) {
         try {
           vm = VmInstances.lookupByPublicIp( publicIp );
         } catch ( NoSuchElementException ex ) {
           Logs.extreme( ).error( ex );
         }
       }
-      if ( vm != null ) {
+      if ( vm != null && VmState.RUNNING.equals( vm ) ) {
         Logs.extreme( ).debug( "Candidate vm which claims this address: " + vm.getInstanceId( ) + " " + vm.getState( ) + " " + publicIp );
         if ( publicIp.equals( vm.getPublicAddress( ) ) ) {
           Logs.extreme( ).debug( "Found vm which claims this address: " + vm.getInstanceId( ) + " " + vm.getState( ) + " " + publicIp );
