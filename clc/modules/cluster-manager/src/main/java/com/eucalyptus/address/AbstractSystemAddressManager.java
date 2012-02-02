@@ -285,13 +285,15 @@ public abstract class AbstractSystemAddressManager {
           Logs.extreme( ).error( ex );
         }
       }
-      if ( vm != null && VmState.RUNNING.equals( vm ) ) {
+      if ( vm != null && VmState.RUNNING.equals( vm.getState( ) ) ) {
         Logs.extreme( ).debug( "Candidate vm which claims this address: " + vm.getInstanceId( ) + " " + vm.getState( ) + " " + publicIp );
         if ( publicIp.equals( vm.getPublicAddress( ) ) ) {
           Logs.extreme( ).debug( "Found vm which claims this address: " + vm.getInstanceId( ) + " " + vm.getState( ) + " " + publicIp );
         }
+        return vm;
+      } else {
+        return null;
       }
-      return vm;
     }
     
     private static void ensureAllocated( final Address addr, final VmInstance vm ) {
