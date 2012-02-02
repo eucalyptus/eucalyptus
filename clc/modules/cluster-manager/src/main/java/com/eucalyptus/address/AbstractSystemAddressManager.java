@@ -290,8 +290,10 @@ public abstract class AbstractSystemAddressManager {
         if ( publicIp.equals( vm.getPublicAddress( ) ) ) {
           Logs.extreme( ).debug( "Found vm which claims this address: " + vm.getInstanceId( ) + " " + vm.getState( ) + " " + publicIp );
         }
+        return vm;
+      } else {
+        return null;
       }
-      return vm;
     }
     
     private static void ensureAllocated( final Address addr, final VmInstance vm ) {
