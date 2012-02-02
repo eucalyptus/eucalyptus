@@ -438,19 +438,19 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
     Address addr = address;
     EntityWrapper<Address> db = EntityWrapper.get( Address.class );
     try {
-      addr = db.getUnique( new Address( address.getName( ) ) {
+      addr = db.getUnique( new Address( ) {
         {
-          this.setOwnerAccountNumber( address.getOwnerAccountNumber( ) );
+          this.setDisplayName( address.getName( ) );
         }
       } );
+      addr.setOwner( address.getOwner( ) );
       db.commit( );
     } catch ( RuntimeException e ) {
       db.rollback( );
       LOG.error( e, e );
     } catch ( EucalyptusCloudException e ) {
-      addr = new Address( address.getName( ) );
       try {
-        db.add( addr );
+        db.add( address );
         db.commit( );
       } catch ( Exception e1 ) {
         db.rollback( );
