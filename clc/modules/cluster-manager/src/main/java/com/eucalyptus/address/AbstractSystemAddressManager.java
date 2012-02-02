@@ -3,7 +3,6 @@ package com.eucalyptus.address;
 import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.Collection;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentNavigableMap;
@@ -139,10 +138,7 @@ public abstract class AbstractSystemAddressManager {
   }
   
   public void update( final Cluster cluster, final List<ClusterAddressInfo> ccList ) {
-    if ( !cluster.getState( ).isAddressingInitialized( ) ) {
-      Helper.loadStoredAddresses( );
-      cluster.getState( ).setAddressingInitialized( true );
-    }
+    Helper.loadStoredAddresses( );
     for ( final ClusterAddressInfo addrInfo : ccList ) {
       try {
         final Address address = Helper.lookupOrCreate( cluster, addrInfo );
@@ -329,10 +325,12 @@ public abstract class AbstractSystemAddressManager {
       final EntityTransaction db = Entities.get( Address.class );
       try {
         for ( Address addr : Entities.query( clusterAddr ) ) {
-          try {
-            addr.init( );
-          } catch ( Exception ex ) {
-            LOG.error( ex, ex );
+          if ( !Addresses.getInstance( ).contains( addr.getName( ) ) ) {
+            try {
+              addr.init( );
+            } catch ( Exception ex ) {
+              LOG.error( ex, ex );
+            }
           }
         }
         db.commit( );
