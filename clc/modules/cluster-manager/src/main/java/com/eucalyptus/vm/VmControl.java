@@ -438,7 +438,7 @@ public class VmControl {
           try {//scope for allocInfo
             AdmissionControl.run( ).apply( allocInfo );
             PrivateNetworkIndex vmIdx = allocInfo.getAllocationTokens( ).get( 0 ).getNetworkIndex( );
-            if ( vmIdx != null ) {
+            if ( vmIdx != null && !PrivateNetworkIndex.bogus( ).equals( vmIdx ) ) {
               vmIdx.set( vm );
               vm.setNetworkIndex( vmIdx );
             }
