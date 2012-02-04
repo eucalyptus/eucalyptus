@@ -157,10 +157,10 @@ public class AddressingConfiguration extends AbstractPersistent {
       this.systemReservedPublicAddresses = 0;
     }
     if ( this.maxKillOrphans == null ) {
-      this.maxKillOrphans = 10;
+      this.maxKillOrphans = 360;
     }
     if ( this.orphanGrace == null ) {
-      this.orphanGrace = 10;
+      this.orphanGrace = 360;
     }
   }
   

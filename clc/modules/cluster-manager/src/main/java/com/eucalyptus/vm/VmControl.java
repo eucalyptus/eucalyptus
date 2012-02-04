@@ -438,8 +438,10 @@ public class VmControl {
           try {//scope for allocInfo
             AdmissionControl.run( ).apply( allocInfo );
             PrivateNetworkIndex vmIdx = allocInfo.getAllocationTokens( ).get( 0 ).getNetworkIndex( );
-            vmIdx.set( vm );
-            vm.setNetworkIndex( vmIdx );
+            if ( vmIdx != null ) {
+              vmIdx.set( vm );
+              vm.setNetworkIndex( vmIdx );
+            }
             vm.setState( VmState.PENDING );
             ClusterAllocator.get( ).apply( allocInfo );
             final int oldCode = vm.getState( ).getCode( ), newCode = VmState.PENDING.getCode( );
