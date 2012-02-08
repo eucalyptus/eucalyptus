@@ -118,7 +118,7 @@ public class WalrusUtil {
 //      User user = Accounts.lookupUserById( userName.getNamespace( ) );
 //      msg.setUserId( user.getName( ) );
       msg.regarding( );
-      msg.setCorrelationId( Contexts.lookup( ).getRequest( ).getCorrelationId( ) );
+//      msg.setCorrelationId( Contexts.lookup( ).getRequest( ).getCorrelationId( ) );
       
       reply = ( GetObjectResponseType ) ServiceDispatcher.lookupSingle( Components.lookup( Walrus.class ) ).send( msg );
     } catch ( Exception e ) {
