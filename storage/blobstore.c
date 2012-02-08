@@ -90,7 +90,7 @@
 #include "ipc.h"
 
 #define BLOBSTORE_METADATA_FILE ".blobstore"
-#define BLOBSTORE_METADATA_TIMEOUT_USEC 9999999LL
+#define BLOBSTORE_METADATA_TIMEOUT_USEC 1000000LL * 60 * 2 // it may take dozens of seconds to open blobstore when others are LRU-purging it
 #define BLOBSTORE_LOCK_TIMEOUT_USEC 50000LL
 #define BLOBSTORE_FIND_TIMEOUT_USEC 50000LL
 #define BLOBSTORE_DELETE_TIMEOUT_USEC 50000LL
