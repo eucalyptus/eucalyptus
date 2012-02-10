@@ -810,7 +810,7 @@ int blobstore_init (void)
     int ret = 0;
 
     if (!initialized) {
-        ret = diskutil_init(); 
+        ret = diskutil_init(FALSE); // blobstore does not invoke GRUB-related functions
         if (ret) {
             ERR (BLOBSTORE_ERROR_UNKNOWN, "failed to initialize diskutil library");
         } else {

@@ -28,7 +28,7 @@ long long mbr_size_bytes (void) { return SECTOR_SIZE * (62 + 4); } // TODO: figu
 diskfile * df_create (const char * path, const long long limit_bytes, boolean zero_fill)
 {
     if (!diskutil_initialized) {
-        if (diskutil_init()) {
+        if (diskutil_init(FALSE)) { // will not use GRUB functions
             logprintfl (EUCAERROR, "error: failed to initialize diskutil\n");
             return NULL;
         }
@@ -64,7 +64,7 @@ diskfile * df_create (const char * path, const long long limit_bytes, boolean ze
 diskfile * df_open (const char * path)
 {
     if (!diskutil_initialized) {
-        if (diskutil_init()) {
+        if (diskutil_init(FALSE)) { // will not use GRUB functions
             logprintfl (EUCAERROR, "error: failed to initialize diskutil\n");
             return NULL;
         }
