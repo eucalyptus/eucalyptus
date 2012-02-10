@@ -18,7 +18,11 @@ public class PublicAddressStateCallback extends SubjectMessageCallback<Cluster, 
   @Override
   public void fire( DescribePublicAddressesResponseType reply ) {
     this.getSubject( ).getState( ).setPublicAddressing( true );
-    Addresses.getAddressManager( ).update( this.getSubject( ), reply.getAddresses( ) );
+    try {
+      Addresses.getAddressManager( ).update( this.getSubject( ), reply.getAddresses( ) );
+    } catch ( Exception ex ) {
+      LOG.error( ex );
+    }
   }
   
   @Override
