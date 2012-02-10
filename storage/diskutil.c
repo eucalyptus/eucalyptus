@@ -166,11 +166,13 @@ int diskutil_init (int require_grub) // 0 = not required, 1 = required
                 try_stage_dir ("/usr/lib/grub/i386-pc") ||
                 try_stage_dir ("/usr/lib/grub") ||
                 try_stage_dir ("/boot/grub")) {
-                logprintfl (EUCAINFO, "found grub stage files in %s\n", stage_files_dir);
+                logprintfl (EUCAINFO, "found grub 1 stage files in %s\n", stage_files_dir);
             } else {
-                logprintfl (EUCAERROR, "ERROR: failed to find grub stage files (in /boot/grub et al)\n");
+                logprintfl (EUCAERROR, "ERROR: failed to find grub 1 stage files (in /boot/grub et al)\n");
                 ret = 1;
             }
+        } else if (require_grub && grub_version == 2) {
+            logprintfl (EUCAINFO, "detected grub 2\n");
         }
 
         // flag missing handlers
