@@ -860,13 +860,17 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                         peers.put(peer.network_rule_peer_network_user_query_key, peer.network_rule_peer_network_user_group);
                         // LOG.debug("Peer: " + networkPeer);
                     }
-                    NetworkRule networkRule = NetworkRule.create(rule.metadata_network_rule_protocol.toLowerCase(), 
-                                                              [rule.metadata_network_rule_low_port, 0].max(), 
-                                                              [[rule.metadata_network_rule_high_port, 65535].min(), 0].max(),
-                                                              peers as Multimap<String, String>,
-                                                              ipRanges as Collection<String>);
-                    initMetaClass(networkRule, networkRule.class);
-                    rulesGroup.getNetworkRules().add(networkRule);
+                    try {
+                        NetworkRule networkRule = NetworkRule.create(rule.metadata_network_rule_protocol.toLowerCase(), 
+                                                                  rule.metadata_network_rule_low_port, 
+                                                                  [rule.metadata_network_rule_high_port, 65535].min(),
+                                                                  peers as Multimap<String, String>,
+                                                                  ipRanges as Collection<String>);
+                        initMetaClass(networkRule, networkRule.class);
+                        rulesGroup.getNetworkRules().add(networkRule);
+                    } catch(IllegalArgumentException e) {
+                        LOG.warn("Ignored invalid network rule: protocol ${rule.metadata_network_rule_protocol}, ports ${rule.metadata_network_rule_low_port} to ${rule.metadata_network_rule_high_port}");
+                    }	
                 } 
 
                 LOG.debug("adding rules group: " + rulesGroup);

@@ -187,7 +187,7 @@ that describes a Eucalyptus instance to be launched.
                             <xsl:when test="/instance/hypervisor/@type = 'kvm' and /instance/os/@platform = 'windows'">
                                 <model type="virtio"/>
                             </xsl:when>
-                            <xsl:when test="/instance/hypervisor/@type = 'kvm' and /instance/os/@virtioNet = 'true'">
+                            <xsl:when test="/instance/hypervisor/@type = 'kvm' and /instance/os/@virtioNetwork = 'true'">
                                 <model type="virtio"/>
                             </xsl:when>
                             <xsl:when test="/instance/hypervisor/@type = 'kvm' and /instance/os/@platform = 'linux'">
