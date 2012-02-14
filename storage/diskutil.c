@@ -153,7 +153,8 @@ int diskutil_init (int require_grub) // 0 = not required, 1 = required
             missing_handlers--;
 
         if (helpers_path [GRUB_SETUP]) // don't need it, but grub-setup only exists on v2
-            if (grub_version != 1) grub_version = 2; // prefer 1 until 2 is implemented
+            if (grub_version != 1)
+                grub_version = 2; // prefer 1 until 2 is implemented
         else 
             missing_handlers--;
 
@@ -178,10 +179,11 @@ int diskutil_init (int require_grub) // 0 = not required, 1 = required
         // flag missing handlers
         if (missing_handlers) {
             for (int i=0; i<LASTHELPER; i++) {
-                if (helpers_path [i] == NULL && i!=GRUB && i!=GRUB_SETUP)
+                if (helpers_path [i] == NULL && i!=GRUB && i!=GRUB_SETUP) {
                     logprintfl (EUCAERROR, "ERROR: missing a required handler: %s\n", helpers[i]);
+                    ret = 1;
+                }
             }
-            ret = 1;
         }
         
         if (initialized < 1)
