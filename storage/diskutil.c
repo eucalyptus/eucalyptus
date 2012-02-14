@@ -161,21 +161,21 @@ int diskutil_init (int require_grub) // 0 = not required, 1 = required
         if (require_grub && grub_version == 0) {
             logprintfl (EUCAERROR, "ERROR: cannot find either grub 1 or grub 2\n");
             ret = 1;   
-        } else if (require_grub && grub_version == 1) { 
+        } else if (grub_version == 1) { 
             // grub 1 commands seem present, check for stage files, which we will be copying
             if (try_stage_dir ("/usr/lib/grub/x86_64-pc") ||
                 try_stage_dir ("/usr/lib/grub/i386-pc") ||
                 try_stage_dir ("/usr/lib/grub") ||
                 try_stage_dir ("/boot/grub")) {
                 logprintfl (EUCAINFO, "found grub 1 stage files in %s\n", stage_files_dir);
-            } else {
+            } else if (require_grub) {
                 logprintfl (EUCAERROR, "ERROR: failed to find grub 1 stage files (in /boot/grub et al)\n");
                 ret = 1;
             }
-        } else if (require_grub && grub_version == 2) {
+        } else if (grub_version == 2) {
             logprintfl (EUCAINFO, "detected grub 2\n");
         }
-
+        
         // flag missing handlers
         if (missing_handlers) {
             for (int i=0; i<LASTHELPER; i++) {
