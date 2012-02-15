@@ -70,7 +70,7 @@
 #define MBR_BLOCKS 63 // the size of "DOS-compatibility region" partially used by 'grub'
 #define SECTOR_SIZE 512
 
-int diskutil_init (void);
+int diskutil_init (int require_grub);
 sem * diskutil_get_loop_sem (void);
 int diskutil_cleanup (void);
 int diskutil_ddzero (const char * path, const long long sectors, boolean zero_fill);

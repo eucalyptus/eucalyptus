@@ -989,7 +989,7 @@ static int init (void)
 		return ERROR_FATAL;
 	}
 
-    if (diskutil_init() || (loop_sem = diskutil_get_loop_sem())==NULL) {
+    if (diskutil_init(FALSE) || (loop_sem = diskutil_get_loop_sem())==NULL) { // NC does not need GRUB for now
         logprintfl (EUCAFATAL, "failed to find all dependencies\n");
 		return ERROR_FATAL;
     }
