@@ -333,9 +333,15 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           EntityTransaction db = Entities.get( NetworkGroup.class );
           try {
             SimpleExpression naturalId = Restrictions.like( "naturalId", arg0.replace( userFullName.getAccountNumber( ) + "-", "" ) + "%" );
-            final NetworkGroup result = ( NetworkGroup ) Entities.createCriteria( NetworkGroup.class )
+            NetworkGroup result = ( NetworkGroup ) Entities.createCriteria( NetworkGroup.class )
                                                                  .add( naturalId )
                                                                  .uniqueResult( );
+            if ( result == null ) {
+              SimpleExpression displayName = Restrictions.like( "displayName", arg0.replace( userFullName.getAccountNumber( ) + "-", "" ) + "%" );
+              result = ( NetworkGroup ) Entities.createCriteria( NetworkGroup.class )
+                                                .add( displayName )
+                                                .uniqueResult( );
+            }
             db.commit( );
             return result;
           } catch ( Exception ex ) {
