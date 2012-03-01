@@ -136,7 +136,9 @@ public interface LogicalStorageManager {
 
 	public void stop() throws EucalyptusCloudException;
 
-	public void enable() throws EucalyptusCloudException;;
+	public void enable() throws EucalyptusCloudException;
 
-	public void disable() throws EucalyptusCloudException;;
+	public void disable() throws EucalyptusCloudException;
+
+	public boolean getFromBackend(String snapshotId) throws EucalyptusCloudException;
 }
