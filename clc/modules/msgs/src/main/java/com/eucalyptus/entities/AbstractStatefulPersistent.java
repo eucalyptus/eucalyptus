@@ -69,6 +69,7 @@ import javax.persistence.Enumerated;
 import javax.persistence.Lob;
 import javax.persistence.MappedSuperclass;
 import javax.persistence.Transient;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Threads;
 
 @MappedSuperclass
@@ -108,7 +109,7 @@ public abstract class AbstractStatefulPersistent<STATE extends Enum<STATE>> exte
   }
   
   public void setState( final STATE state ) {
-    this.stateChangeStack = Threads.currentStackString( );
+    this.stateChangeStack = Logs.isDebug( ) ? Threads.currentStackString( ) : "n/a";
     if ( state != null && this.state != null && !state.equals( this.state ) ) {
       this.lastState = this.state;
     } else if ( state != null && this.state == null ) {
