@@ -706,4 +706,13 @@
 		class="edu.ucsb.eucalyptus.msgs.DeleteWalrusSnapshotResponseType">
 	</mapping>
 
+	<mapping name="GetWalrusSnapshotSize" class="edu.ucsb.eucalyptus.msgs.GetWalrusSnapshotSizeType">
+		<structure map-as="edu.ucsb.eucalyptus.msgs.WalrusDataRequestType" />
+	</mapping>
+
+	<mapping name="GetWalrusSnapshotSizeResponse"
+		class="edu.ucsb.eucalyptus.msgs.GetWalrusSnapshotSizeResponseType">
+		<structure map-as="edu.ucsb.eucalyptus.msgs.WalrusDataResponseType" />
+	</mapping>
+
 </binding>
