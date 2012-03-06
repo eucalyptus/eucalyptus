@@ -861,17 +861,22 @@ public class BlockStorage {
 					SnapshotInfo snapshotInfo = new SnapshotInfo(snapshotId);
 					List<SnapshotInfo> foundSnapshotInfos = db.query(snapshotInfo);
 					if(foundSnapshotInfos.size() == 0) {
-						db.commit();						
+						db.commit();			
+						//TODO: Check if backend knows about this
 						//get snapshot size from walrus
-						int sizeExpected;
-						if(size <= 0) {
-							sizeExpected = getSnapshotSize(snapshotId);
+						if(blockManager.getFromBackend(snapshotId)) {
+
 						} else {
-							sizeExpected = size;
-						}
-						String snapDestination = blockManager.prepareSnapshot(snapshotId, sizeExpected);
-						if(snapDestination != null) {
-							getSnapshot(snapshotId, snapDestination);
+							int sizeExpected;
+							if(size <= 0) {
+								sizeExpected = getSnapshotSize(snapshotId);
+							} else {
+								sizeExpected = size;
+							}
+							String snapDestination = blockManager.prepareSnapshot(snapshotId, sizeExpected);
+							if(snapDestination != null) {
+								getSnapshot(snapshotId, snapDestination);
+							}
 						}
 						db = StorageProperties.getEntityWrapper();
 						snapshotInfo = new SnapshotInfo(snapshotId);
