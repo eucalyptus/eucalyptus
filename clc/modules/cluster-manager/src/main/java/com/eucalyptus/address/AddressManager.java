@@ -71,6 +71,7 @@ import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.cloud.CloudMetadatas;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.records.Logs;
@@ -81,6 +82,7 @@ import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.UnconditionalCallback;
 import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstances;
+import com.google.common.collect.Iterables;
 import edu.ucsb.eucalyptus.msgs.AddressInfoType;
 import edu.ucsb.eucalyptus.msgs.AllocateAddressResponseType;
 import edu.ucsb.eucalyptus.msgs.AllocateAddressType;
@@ -132,7 +134,7 @@ public class AddressManager {
     boolean isAdmin = ctx.hasAdministrativePrivileges( );
     User requestUser = ctx.getUser( );
     String action = PolicySpec.requestToAction( request );
-    for ( Address address : Addresses.getInstance( ).listValues( ) ) {
+    for ( Address address : Iterables.filter( Addresses.getInstance( ).listValues( ), CloudMetadatas.filterById( request.getPublicIpsSet( ) ) ) ) {
       //TODO:GRZE:FIXME this is not going to last this way.
       Account addrAccount = null;
       String addrAccountNumber = address.getOwnerAccountNumber( );
@@ -153,7 +155,7 @@ public class AddressManager {
       }
     }
     if ( isAdmin ) {
-      for ( Address address : Addresses.getInstance( ).listDisabledValues( ) ) {
+      for ( Address address : Iterables.filter( Addresses.getInstance( ).listDisabledValues( ), CloudMetadatas.filterById( request.getPublicIpsSet( ) ) ) ) {
         reply.getAddressesSet( ).add( new AddressInfoType( address.getName( ), Principals.nobodyFullName( ).getUserName( ) ) );
       }
     }
