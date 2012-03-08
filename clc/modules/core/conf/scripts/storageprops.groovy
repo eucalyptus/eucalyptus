@@ -9,6 +9,3 @@
 
 TRANSFER_CHUNK_SIZE = 8192;
 
-SAN_HOST = "san_host";
-SAN_USERNAME = "user";
-SAN_PASSWORD = "password";

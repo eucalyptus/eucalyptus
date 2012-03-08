@@ -139,11 +139,12 @@ static int try_stage_dir (const char * dir)
     return 1;
 }
 
-int diskutil_init (void)
+int diskutil_init (int require_grub) // 0 = not required, 1 = required
 {
     int ret = 0;
 
-    if (!initialized) {
+    if (require_grub > 0) require_grub = 1;
+    if (initialized < 1+require_grub) { // if init was called without grub requirement, it will run again if grub is needed now
         bzero (helpers_path, sizeof (helpers_path));
         int missing_handlers = verify_helpers (helpers, helpers_path, LASTHELPER);
         if (helpers_path [GRUB])
@@ -152,36 +153,42 @@ int diskutil_init (void)
             missing_handlers--;
 
         if (helpers_path [GRUB_SETUP]) // don't need it, but grub-setup only exists on v2
-            grub_version = 2; // two is better than one
+            if (grub_version != 1)
+                grub_version = 2; // prefer 1 until 2 is implemented
         else 
             missing_handlers--;
 
-        if (grub_version == 0) {
+        if (require_grub && grub_version == 0) {
             logprintfl (EUCAERROR, "ERROR: cannot find either grub 1 or grub 2\n");
             ret = 1;   
-        } else { 
-            // grub commands seem present, check for stage files
+        } else if (grub_version == 1) { 
+            // grub 1 commands seem present, check for stage files, which we will be copying
             if (try_stage_dir ("/usr/lib/grub/x86_64-pc") ||
                 try_stage_dir ("/usr/lib/grub/i386-pc") ||
                 try_stage_dir ("/usr/lib/grub") ||
                 try_stage_dir ("/boot/grub")) {
-                logprintfl (EUCAINFO, "found grub stage files in %s\n", stage_files_dir);
-
-                // flag missing handlers
-                if (missing_handlers) {
-                    for (int i=0; i<LASTHELPER; i++) {
-                        if (helpers_path [i] == NULL && i!=GRUB && i!=GRUB_SETUP)
-                            logprintfl (EUCAERROR, "ERROR: missing a required handler: %s\n", helpers[i]);
-                    }
-                    ret = 1;
-                }
-            } else {
-                logprintfl (EUCAERROR, "ERROR: failed to find grub stage files (in /boot/grub et al)\n");
+                logprintfl (EUCAINFO, "found grub 1 stage files in %s\n", stage_files_dir);
+            } else if (require_grub) {
+                logprintfl (EUCAERROR, "ERROR: failed to find grub 1 stage files (in /boot/grub et al)\n");
                 ret = 1;
             }
+        } else if (grub_version == 2) {
+            logprintfl (EUCAINFO, "detected grub 2\n");
         }
-        initialized = 1;
-        loop_sem = sem_alloc (1, "mutex");
+        
+        // flag missing handlers
+        if (missing_handlers) {
+            for (int i=0; i<LASTHELPER; i++) {
+                if (helpers_path [i] == NULL && i!=GRUB && i!=GRUB_SETUP) {
+                    logprintfl (EUCAERROR, "ERROR: missing a required handler: %s\n", helpers[i]);
+                    ret = 1;
+                }
+            }
+        }
+        
+        if (initialized < 1)
+            loop_sem = sem_alloc (1, "mutex");
+        initialized = 1 + require_grub;
     }
     
     return ret;
@@ -685,7 +692,10 @@ int diskutil_grub_files (const char * mnt_pt, const int part, const char * kerne
 
 int diskutil_grub_mbr (const char * path, const int part)
 {
-    assert (grub_version==1);
+    if (grub_version != 1) {
+        logprintfl (EUCAERROR, "{%u} grub 2 is not supported\n", (unsigned int)pthread_self());
+        return ERROR;
+    }
     return diskutil_grub2_mbr (path, part, NULL);
 }
 
@@ -719,9 +729,6 @@ int diskutil_grub2_mbr (const char * path, const int part, const char * mnt_pt)
         } else {
             free(output);
         }
-        /*        if (NULL==pruntf (TRUE, "%s /bin/ln -s %sp1 %s1", helpers_path[ROOTWRAP], path, path)) {
-            logprintfl (EUCAINFO, "{%u} warning: failed to create partition device soft-link", (unsigned int)pthread_self());
-            }*/
 
         // we now invoke grub through euca_rootwrap because it may need to operate on
         // devices that are owned by root (e.g. /dev/mapper/euca-dsk-7E4E131B-fca1d769p1)
@@ -775,9 +782,6 @@ int diskutil_grub2_mbr (const char * path, const int part, const char * mnt_pt)
         } else {
             free(output);
         }
-        /*        if (NULL==pruntf (TRUE, "%s /bin/rm %s1", helpers_path[ROOTWRAP], path)) {
-            logprintfl (EUCAINFO, "{%u} warning: failed to remove partition device soft-link", (unsigned int)pthread_self());
-            }*/
 
     } else if (grub_version==2) {
         char * output = pruntf (TRUE, "%s %s --modules='part_msdos ext2' --root-directory=%s %s", helpers_path[ROOTWRAP], helpers_path[GRUB_INSTALL], mnt_pt, path);

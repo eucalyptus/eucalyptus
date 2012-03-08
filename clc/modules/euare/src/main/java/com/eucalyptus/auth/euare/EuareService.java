@@ -1297,7 +1297,7 @@ public class EuareService {
       SigningCertificateType result = reply.getCreateSigningCertificateResult( ).getCertificate( );
       result.setUserName( userFound.getName( ) );
       result.setCertificateId( cert.getCertificateId( ) );
-      result.setCertificateBody( cert.getPem( ) );
+      result.setCertificateBody( B64.url.decString( cert.getPem( ) ) );
       result.setPrivateKey( X509CertHelper.privateKeyToPem( keyPair.getPrivate( ) ) );
       result.setStatus( "Active" );
       result.setUploadDate( cert.getCreateDate( ) );
