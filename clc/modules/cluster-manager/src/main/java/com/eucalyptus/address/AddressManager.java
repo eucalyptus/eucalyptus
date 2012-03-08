@@ -165,6 +165,11 @@ public class AddressManager {
     AssociateAddressResponseType reply = ( AssociateAddressResponseType ) request.getReply( );
     reply.set_return( false );
     final Address address = RestrictedTypes.doPrivileged( request.getPublicIp( ), Address.class );
+    if ( !address.isAllocated( ) ) {
+      throw new EucalyptusCloudException( "Cannot associated an address which is not allocated: " + request.getPublicIp( ) );
+    } else if ( !Contexts.lookup( ).hasAdministrativePrivileges( ) && !Contexts.lookup( ).getUserFullName( ).asAccountFullName( ).equals( address.getOwner( ) ) ) {
+      throw new EucalyptusCloudException( "Cannot associated an address which is not allocated to your account: " + request.getPublicIp( ) );
+    }
     final VmInstance vm = RestrictedTypes.doPrivileged( request.getInstanceId( ), VmInstance.class );
     final VmInstance oldVm = findCurrentAssignedVm( address );
     final Address oldAddr = findVmExistingAddress( vm );
