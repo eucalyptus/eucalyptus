@@ -356,22 +356,34 @@ public class VmInstances {
   }
   
   public static void cleanUp( final VmInstance vm ) {
-    Logs.extreme( ).info( "Terminating instance: " + vm.getInstanceId( ), new RuntimeException( ) );
+    VmState vmLastState = vm.getLastState( );
+    VmState vmState = vm.getState( );
+    RuntimeException logEx = new RuntimeException( "Cleaning up instance: " + vm.getInstanceId( ) + " " + vmLastState + " -> " + vmState );
+    LOG.debug( logEx.getMessage( ) );
+    Logs.extreme( ).info( logEx, logEx );
     try {
-      Address address = null;
       if ( NetworkGroups.networkingConfiguration( ).hasNetworking( ) ) {
         try {
-          address = Addresses.getInstance( ).lookup( vm.getPublicAddress( ) );
-          if ( address.isAssigned( ) ) {
-            AsyncRequests.newRequest( address.unassign( ).getCallback( ) ).dispatch( vm.getPartition( ) );
+          Address address = Addresses.getInstance( ).lookup( vm.getPublicAddress( ) );
+          if ( ( address.isAssigned( ) && vm.getInstanceId( ).equals( address.getInstanceId( ) ) ) //assigned to this instance explicitly
+               || VmState.PENDING.equals( vmLastState ) ) { //partial assignment implicitly associated with this failed (PENDING->SHUTTINGDOWN) instance
             if ( address.isSystemOwned( ) ) {
               EventRecord.caller( VmInstances.class, EventType.VM_TERMINATING, "SYSTEM_ADDRESS", address.toString( ) ).debug( );
             } else {
               EventRecord.caller( VmInstances.class, EventType.VM_TERMINATING, "USER_ADDRESS", address.toString( ) ).debug( );
             }
+            AsyncRequests.newRequest( address.unassign( ).getCallback( ) ).dispatch( vm.getPartition( ) );
           }
         } catch ( final NoSuchElementException e ) {
-
+          //PENDING->SHUTTINGDOWN might happen before address info reported in describe instances by CC, need to try finding address
+          if ( VmState.PENDING.equals( vmLastState ) ) {
+            for ( Address addr : Addresses.getInstance( ).listValues( ) ) {
+              if ( addr.getInstanceId( ).equals( vm.getInstanceId( ) ) ) {
+                AsyncRequests.newRequest( addr.unassign( ).getCallback( ) ).dispatch( vm.getPartition( ) );
+                break;
+              }
+            }
+          }
         } catch ( final Exception e1 ) {
           LOG.debug( e1, e1 );
         }
