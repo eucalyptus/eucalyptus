@@ -90,7 +90,7 @@
 #include "ipc.h"
 
 #define BLOBSTORE_METADATA_FILE ".blobstore"
-#define BLOBSTORE_METADATA_TIMEOUT_USEC 9999999LL
+#define BLOBSTORE_METADATA_TIMEOUT_USEC 1000000LL * 60 * 2 // it may take dozens of seconds to open blobstore when others are LRU-purging it
 #define BLOBSTORE_LOCK_TIMEOUT_USEC 50000LL
 #define BLOBSTORE_FIND_TIMEOUT_USEC 50000LL
 #define BLOBSTORE_DELETE_TIMEOUT_USEC 50000LL
@@ -810,7 +810,7 @@ int blobstore_init (void)
     int ret = 0;
 
     if (!initialized) {
-        ret = diskutil_init(); 
+        ret = diskutil_init(FALSE); // blobstore does not invoke GRUB-related functions
         if (ret) {
             ERR (BLOBSTORE_ERROR_UNKNOWN, "failed to initialize diskutil library");
         } else {

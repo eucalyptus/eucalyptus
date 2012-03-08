@@ -80,10 +80,14 @@ public class HttpReader extends HttpTransfer {
 		BufferedOutputStream bufferedOut = null;
 		try {
 			File outFile;
-			if(compressed)
-				outFile = new File(tempPath + File.separator + file.getName() + Hashes.getRandom(16) + ".gz");		
-			else
+			File outFileUncompressed = null;
+			if(compressed) {
+				String outFileNameUncompressed = tempPath + File.separator + file.getName() + Hashes.getRandom(16);
+				outFileUncompressed = new File(outFileNameUncompressed);
+				outFile = new File(outFileNameUncompressed + ".gz");		
+			} else {
 				outFile = file;
+			}
 			httpClient.executeMethod(method);
 			InputStream httpIn;
 			httpIn = method.getResponseBodyAsStream();
@@ -98,9 +102,9 @@ public class HttpReader extends HttpTransfer {
 				try
 				{
 					Runtime rt = Runtime.getRuntime();
-					Process proc = rt.exec(new String[]{ "/bin/gunzip", "-c", outFile.getAbsolutePath()});
+					Process proc = rt.exec(new String[]{ "/bin/gunzip", outFile.getAbsolutePath()});
 					StreamConsumer error = new StreamConsumer(proc.getErrorStream());
-					StreamConsumer output = new StreamConsumer(proc.getInputStream(), file);
+					StreamConsumer output = new StreamConsumer(proc.getInputStream());
 					error.start();
 					output.start();
 					output.join();
@@ -108,8 +112,9 @@ public class HttpReader extends HttpTransfer {
 				} catch (Exception t) {
 					LOG.error(t);
 				}
-				if(!outFile.delete()) {
-					LOG.error("Unable to delete temporary file: " + outFile.getAbsolutePath());
+                                if ((outFileUncompressed != null) && (!outFileUncompressed.renameTo(file))) {
+                                        LOG.error("Unable to uncompress: " + outFile.getAbsolutePath());
+					return;
 				}
 			}
 		} catch (Exception ex) {

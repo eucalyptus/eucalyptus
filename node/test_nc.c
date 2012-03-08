@@ -192,7 +192,7 @@ int main (int argc, char * argv[])
     add_euca_to_path (eucahome);
 
     fprintf (stderr, "looking for system utilities...\n");
-    if (diskutil_init())
+    if (diskutil_init(FALSE)) // NC does not require GRUB for now
         exit (1);
     
     // check if euca2ools commands for bundle-instance are available

@@ -64,12 +64,12 @@ void err (const char *format, ...)
     va_list ap;
 
     va_start(ap, format);
-    fprintf (stderr, "error: ");
-    vfprintf(stderr, format, ap);
-    fprintf (stderr, "\n");
-    fflush(stderr);
+    char buf [1024];
+    vsnprintf (buf, sizeof (buf), format, ap);
     va_end(ap);
 
+    logprintfl (EUCAERROR, "%s\n", buf);
+    logprintfl (EUCAINFO,  "imager done (exit code=1)\n");
     exit (1);
 }
 
@@ -313,11 +313,10 @@ int main (int argc, char * argv[])
         blobstore_set_error_function ( &bs_errors ); 
 
         if (ensure_directories_exist (get_work_dir(), 0, NULL, NULL, BLOBSTORE_DIRECTORY_PERM) == -1)
-            err ("failed to open or create work directory");
+            err ("failed to open or create work directory %s", get_work_dir());
         work_bs = blobstore_open (get_work_dir(), get_work_limit()/512, BLOBSTORE_FLAG_CREAT, BLOBSTORE_FORMAT_FILES, BLOBSTORE_REVOCATION_NONE, BLOBSTORE_SNAPSHOT_ANY);
         if (work_bs==NULL) {
-            logprintfl (EUCAERROR, "ERROR: %s\n", blobstore_get_error_str(blobstore_get_error()));
-            err ("failed to open work blobstore");
+            err ("failed to open work blobstore: %s", blobstore_get_error_str(blobstore_get_error()));
         }
         // no point in fscking the work blobstore as it was just created
     }
@@ -326,18 +325,17 @@ int main (int argc, char * argv[])
     blobstore * cache_bs = NULL;
     if (root && tree_uses_cache (root)) {
         if (ensure_directories_exist (get_cache_dir(), 0, NULL, NULL, BLOBSTORE_DIRECTORY_PERM) == -1)
-            err ("failed to open or create cache directory");
+            err ("failed to open or create cache directory %s", get_cache_dir());
         cache_bs = blobstore_open (get_cache_dir(), get_cache_limit()/512, BLOBSTORE_FLAG_CREAT, BLOBSTORE_FORMAT_DIRECTORY, BLOBSTORE_REVOCATION_LRU, BLOBSTORE_SNAPSHOT_ANY);
         if (cache_bs==NULL) {
-            logprintfl (EUCAERROR, "ERROR: %s\n", blobstore_get_error_str(blobstore_get_error()));
             blobstore_close (work_bs);            
-            err ("failed to open cache blobstore");
+            err ("failed to open cache blobstore: %s\n", blobstore_get_error_str(blobstore_get_error()));
         }
-        if (blobstore_fsck (cache_bs, NULL)) { // TODO: verify checksums?
-            logprintfl (EUCAERROR, "ERROR: cache failed integrity check: %s\n", blobstore_get_error_str(blobstore_get_error()));
-            err ("cache blobstore failed integrity check");
-        }
-        stat_blobstore (get_cache_dir(), cache_bs);
+        if (blobstore_fsck (cache_bs, NULL)) // TODO: verify checksums?
+            err ("cache blobstore failed integrity check: %s", blobstore_get_error_str(blobstore_get_error()));
+
+        if (stat_blobstore (get_cache_dir(), cache_bs))
+            err ("blobstore is unreadable");
     }
 
     // implement the artifact tree
