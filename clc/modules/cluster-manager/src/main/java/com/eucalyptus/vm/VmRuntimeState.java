@@ -207,10 +207,12 @@ public class VmRuntimeState {
                 && VmState.TERMINATED.equals( newState )
                 && VmState.STOPPED.equals( olderState ) ) {
       this.getVmInstance( ).setState( VmState.STOPPED );
+      this.getVmInstance( ).updatePublicAddress( this.getVmInstance( ).getPrivateAddress( ) );
       action = this.cleanUpRunnable( );
     } else if ( VmState.STOPPED.equals( oldState )
                 && VmState.TERMINATED.equals( newState ) ) {
       this.getVmInstance( ).setState( VmState.TERMINATED );
+      this.getVmInstance( ).updatePublicAddress( this.getVmInstance( ).getPrivateAddress( ) );
       action = this.cleanUpRunnable( );
     } else if ( VmStateSet.EXPECTING_TEARDOWN.contains( oldState )
                 && VmStateSet.RUN.contains( newState ) ) {
@@ -219,8 +221,10 @@ public class VmRuntimeState {
                 && VmStateSet.TORNDOWN.contains( newState ) ) {
       if ( VmState.SHUTTING_DOWN.equals( oldState ) ) {
         this.getVmInstance( ).setState( VmState.TERMINATED );
+        this.getVmInstance( ).updatePublicAddress( this.getVmInstance( ).getPrivateAddress( ) );
       } else {//if ( VmState.STOPPING.equals( oldState ) ) {
         this.getVmInstance( ).setState( VmState.STOPPED );
+        this.getVmInstance( ).updatePublicAddress( this.getVmInstance( ).getPrivateAddress( ) );
       }
       action = this.cleanUpRunnable( );
     } else if ( VmState.STOPPED.equals( oldState )
