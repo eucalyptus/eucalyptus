@@ -138,13 +138,23 @@ initlog=$EUCALYPTUS/var/log/eucalyptus/startup.log
 
 check_java_version() {
     # First check CLOUD_OPTS for --java-home
+    JAVA=""
     JH=$( echo $CLOUD_OPTS | \
          sed -r -e '/--java-home/!d; s/^.*(--java-home(=|\s+)(\S+)).*$/\3/g' );
     if [ -n "$JH" ]; then
-        JAVA=$JH/jre/bin/java
+        if [ -x $JH/jre/bin/java ]; then
+            JAVA=$JH/jre/bin/java
+        elif [ -x $JH/bin/java ]; then
+            JAVA=$JH/bin/java
+        fi
     elif [ -n "$JAVA_HOME" ]; then
-        JAVA=$JAVA_HOME/jre/bin/java
-    else
+        if [ -x $JAVA_HOME/jre/bin/java ]; then
+            JAVA=$JAVA_HOME/jre/bin/java
+        elif [ -x $JAVA_HOME/bin/java ]; then
+            JAVA=$JAVA_HOME/bin/java
+        fi
+    fi
+    if [ -z "$JAVA" ]; then
         JAVA=$( which java )
     fi
     JV=$( $JAVA -version 2>&1 | \
