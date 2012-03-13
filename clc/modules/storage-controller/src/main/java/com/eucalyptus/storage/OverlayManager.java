@@ -1425,4 +1425,10 @@ public class OverlayManager implements LogicalStorageManager {
 		// TODO Auto-generated method stub
 
 	}
+
+	@Override
+	public boolean getFromBackend(String snapshotId)
+			throws EucalyptusCloudException {
+		return false;
+	}
 }
