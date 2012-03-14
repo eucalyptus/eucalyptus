@@ -626,7 +626,7 @@ public class ConfigurationWebBackend {
 				List<ComponentProperty> properties = Lists.newArrayList( );
 
 				try {
-					GetWalrusConfigurationType getWalrusConfiguration = new GetWalrusConfigurationType( WalrusProperties.NAME );
+					GetWalrusConfigurationType getWalrusConfiguration = new GetWalrusConfigurationType( c.getPartition() );
 					Dispatcher walrusDispatch = ServiceDispatcher.lookup( c );
 					GetWalrusConfigurationResponseType getWalrusConfigResponse = walrusDispatch.send( getWalrusConfiguration );
 					configMap.put( c.getPartition(), getWalrusConfigResponse.getProperties( ));

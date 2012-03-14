@@ -97,7 +97,9 @@ public class ComponentProperty extends EucalyptusData {
   private String displayName;
   private String value;
   private String qualifiedName;
-  
+ 
+  public ComponentProperty() {}
+ 
   public ComponentProperty(String type, String displayName, String value, String qualifiedName) {
     this.type = type;
     this.displayName = displayName;
