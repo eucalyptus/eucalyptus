@@ -216,9 +216,6 @@ do_start() {
 	cd $EUCALYPTUS/etc/eucalyptus
 
 	# options from the configuration file
-	if [ "$DISABLE_DNS" != "N" ]; then
-		CLOUD_OPTS="$CLOUD_OPTS --remote-dns"
-	fi
 	if [ "$DISABLE_ISCSI" = "Y" ]; then
 		CLOUD_OPTS="$CLOUD_OPTS --disable-iscsi"
 	fi
