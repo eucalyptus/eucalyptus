@@ -161,6 +161,7 @@
 	     }
 	 } catch (Exception e) {
 	     LOG.error("Unable to init the database.", e);
+	     passFile.delete();
 	     System.exit(1);
 	 }
  
