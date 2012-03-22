@@ -229,6 +229,7 @@ AC_CHECK_LIB([virt],[main],true,AC_MSG_ERROR([Cannot find libvirt!]))
 AC_CHECK_LIB([curl],[main],true,AC_MSG_ERROR([Cannot find libcurl!]))
 AC_CHECK_LIB([z],[inflate])
 AC_CHECK_LIB([cap],[cap_from_name],,AC_MSG_WARN([Cannot find sufficiently recent libcap will not use it]))
+AC_CHECK_LIB([xml2],[xmlFree],,AC_MSG_ERROR([Cannot find libxml2!]))
 
 # Checks for header files.
 AC_HEADER_DIRENT
