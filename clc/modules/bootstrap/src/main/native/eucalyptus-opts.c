@@ -57,7 +57,7 @@ const char *eucalyptus_opts_full_help[] = {
   "  -o, --out=FILENAME            Redirect standard out to file.  (default=`&1')",
   "  -e, --err=FILENAME            Redirect standard error to file.  \n                                  (default=`&2')",
   "\nDisable Features:",
-  "      --remote-dns              eucalyptus-cloud will not try to bind port 53.  \n                                  (default=off)",
+  "      --remote-dns              DEPRECATED DO NOT USE. IT DOES NOTHING.  \n                                  (default=off)",
   "      --remote-cloud            DEPRECATED DO NOT USE. IT DOES NOTHING.  \n                                  (default=off)",
   "      --remote-walrus           DEPRECATED DO NOT USE. IT DOES NOTHING.  \n                                  (default=off)",
   "      --remote-storage          DEPRECATED DO NOT USE. IT DOES NOTHING.  \n                                  (default=off)",
