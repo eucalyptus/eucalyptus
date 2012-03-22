@@ -5,40 +5,15 @@
 include ../Makedefs
 
 STORAGE_LIBS = $(LDFLAGS) -lcurl -lssl -lcrypto -pthread -lpthread
-IMAGER_LIBS = ../util/euca_auth.o ../util/hash.o ../util/misc.o ../util/ipc.o cache.o walrus.o cmd_bundle.o cmd_convert.o cmd_upload.o cmd_prepare.o cmd_fsck.o map.o vmdk_shim.o http.o img.o diskfile.o diskutil.o vbr.o blobstore.o iscsi.o
-
-# will be 32 or 64
-ARCH := $(shell getconf LONG_BIT)
-
-# the flags replicate output of `pkg-config --cflags --libs vix-disklib`, which does not work if VDDK is installed in /opt/packages/vddk
-VDDK_FLAGS = -I$(VDDK_HOME)/lib/vmware-vix-disklib/include -L$(VDDK_HOME)/lib/vmware-vix-disklib/lib$(ARCH)
-VDDK_LIBS = -lpthread -lvixDiskLib -lvixMntapi -UDYNAMIC_LOADING
-
-TESTS=test_vbr test_blobstore test_vmdk_shim
-IMAGER=euca_imager
-VMDK_WRAPPER=euca_vmdk
-VMDK=_euca_vmdk
-
+TESTS=test_vbr test_blobstore
 #EFENCE=-lefence
 
-all: vbr.o backing.o storage-windows.o walrus.o diskutil.o Wclient $(IMAGER) $(VMDK) euca-blobs $(TESTS)
+all: vbr.o backing.o storage-windows.o walrus.o diskutil.o map.o Wclient euca-blobs $(TESTS)
 #all: storage-windows.o walrus.o test_blobstore
 
 build: all
 
-$(IMAGER): Makefile imager.c imager.h cmd.h $(IMAGER_LIBS)
-	$(CC) $(CFLAGS) $(INCLUDES) imager.c -o $(IMAGER) $(IMAGER_LIBS) $(STORAGE_LIBS) -lrt $(EFENCE)
-
-$(VMDK): vmdk_shim.c vmdk.h vmdk.o diskutil.o http.o ../util/ipc.o ../util/misc.o ../util/euca_auth.o Makefile
-	$(CC) $(CFLAGS) $(INCLUDES) $(VDDK_FLAGS) -DVMDK_CALLEE vmdk_shim.c -o $(VMDK) vmdk.o diskutil.o ../util/ipc.o ../util/misc.o $(VDDK_LIBS)
-
-vmdk_shim.o: vmdk_shim.c vmdk.h _euca_vmdk
-	$(CC) $(CFLAGS) $(INCLUDES) -DVMDK_CALLER vmdk_shim.c -c
-
-test_vmdk_shim: vmdk_shim.c vmdk.h vmdk_shim.o
-	$(CC) $(CFLAGS) $(INCLUDES) -DVMDK_CALLER -D_UNIT_TEST vmdk_shim.c -o test_vmdk_shim ../util/misc.o diskutil.o http.o ../util/euca_auth.o ../util/ipc.o -lcrypto -lrt -lcurl -lpthread
-
-euca-blobs: Makefile blobstore.c blobstore.h
+euca-blobs: Makefile blobstore.c blobstore.h map.o
 	$(CC) $(CFLAGS) $(INCLUDES) -D_EUCA_BLOBS blobstore.c -o euca-blobs map.o diskutil.o ../util/misc.o ../util/ipc.o ../util/euca_auth.o $(STORAGE_LIBS) $(EFENCE)
 
 Wclient: Makefile Wclient.c ../util/euca_auth.o ../util/misc.o walrus.o http.o
@@ -81,18 +56,13 @@ test_url: http.c
 	make -C ../util
 
 clean:
-	rm -rf *~ *.o Wclient euca-blobs $(IMAGER) $(VMDK) $(TESTS)
+	rm -rf *~ *.o Wclient euca-blobs $(TESTS)
 
 distclean:
 
-install: $(VMDK_WRAPPER) $(IMAGER) $(VMDK)
-	@$(INSTALL) -m 0755 $(VMDK_WRAPPER) $(DESTDIR)$(usrdir)/lib/eucalyptus
-	@$(INSTALL) -m 0755 $(IMAGER) $(DESTDIR)$(usrdir)/lib/eucalyptus
-	@$(INSTALL) -m 0755 $(VMDK) $(DESTDIR)$(usrdir)/lib/eucalyptus
+install:
+
 deploy:
 
 uninstall:
-	@$(RM) -f $(usrdir)/lib/eucalyptus/$(VMDK_WRAPPER)
-	@$(RM) -f $(usrdir)/lib/eucalyptus/$(IMAGER)
-	@$(RM) -f $(usrdir)/lib/eucalyptus/$(VMDK)
 
