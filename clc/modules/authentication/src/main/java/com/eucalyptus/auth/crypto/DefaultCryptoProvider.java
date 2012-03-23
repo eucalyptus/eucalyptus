@@ -16,6 +16,7 @@ import org.bouncycastle.asn1.x509.BasicConstraints;
 import org.bouncycastle.asn1.x509.X509Extensions;
 import org.bouncycastle.util.encoders.UrlBase64;
 import org.bouncycastle.x509.X509V3CertificateGenerator;
+import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.component.id.Eucalyptus;
@@ -58,64 +59,67 @@ public class DefaultCryptoProvider implements CryptoProvider, CertificateProvide
   }
   
   /**
-   * @see com.eucalyptus.crypto.CryptoProvider#generateQueryId(java.lang.String)
+   * @see com.eucalyptus.crypto.CryptoProvider#generateQueryId()
    */
   @Override
-  public String generateQueryId( String userName ) {
-    return this.getDigestBase64( userName, Digest.SHA224, false ).replaceAll( "\\p{Punct}", "" ).substring( 0, 21 ).toUpperCase( );//NOTE: this MUST be 21-alnums upper case.
+  public String generateQueryId() {
+    return generateRandomAlphanumeric(21).toUpperCase();//NOTE: this MUST be 21-alnums upper case.
   }
   
   /**
-   * @see com.eucalyptus.crypto.CryptoProvider#generateSecretKey(java.lang.String)
+   * @see com.eucalyptus.crypto.CryptoProvider#generateSecretKey()
    */
   @Override
-  public String generateSecretKey( String userName ) {
-    return this.getDigestBase64( userName, Digest.SHA384, true ).replaceAll( "\\p{Punct}", "" ).substring( 0, 40 );//NOTE: this MUST be 40-chars from base64.
+  public String generateSecretKey() {
+    return generateRandomAlphanumeric(40);//NOTE: this MUST be 40-chars from base64.
   }
   
   /**
-   * @see com.eucalyptus.crypto.CryptoProvider#generateCertificateCode(java.lang.String)
+   * Note that the output has not always been of fixed length.
+   *
+   * @see com.eucalyptus.crypto.CryptoProvider#generateSessionToken()
    */
   @Override
-  public String generateCertificateCode( String userName ) {
-    return this.getDigestBase64( userName, Digest.SHA512, true ).replaceAll( "\\p{Punct}", "" );
+  public String generateSessionToken() {
+    return generateRandomAlphanumeric(80);
   }
-  
-  /**
-   * @see com.eucalyptus.crypto.CryptoProvider#generateConfirmationCode(java.lang.String)
-   */
-  @Override
-  public String generateConfirmationCode( String userName ) {
-    return this.getDigestBase64( userName, Digest.SHA512, true ).replaceAll( "\\p{Punct}", "" );
+
+  private String generateRandomAlphanumeric(int length) {
+    final StringBuilder randomBuilder = new StringBuilder( length + 90 );
+    while( randomBuilder.length() < length ) {
+        randomBuilder.append(generateRandomAlphanumeric() );
+    }
+    return randomBuilder.toString().substring( 0, length );
   }
-  
-  /**
-   * @see com.eucalyptus.crypto.CryptoProvider#generateSessionToken(java.lang.String)
-   */
-  @Override
-  public String generateSessionToken( String userName ) {
-    return this.getDigestBase64( userName, Digest.SHA512, true ).replaceAll( "\\p{Punct}", "" );
+    
+  private String generateRandomAlphanumeric() {
+    // length from generateRandomAlphanumeric is not constant due to
+    // removal of punctuation characters
+    return Hashes.getRandom( 64 ).replaceAll("\\p{Punct}", "");
   }
 
   /**
-   * @see com.eucalyptus.crypto.CryptoProvider#getDigestBase64(java.lang.String, com.eucalyptus.crypto.Digest, boolean)
+   * Note that the output is not standard Base64.
+   *
+   * <p>The output has the following substitutions:</p>
+   *
+   * <ul>
+   *   <li> + -> - </li>
+   *   <li> / -> _ </li>
+   *   <li> = -> . </li>
+   * </ul>
+   *
+   * @see com.eucalyptus.crypto.CryptoProvider#getDigestBase64(java.lang.String, com.eucalyptus.crypto.Digest)
    */
   @Override
-  public String getDigestBase64( String input, Digest hash, boolean randomize ) {
-    byte[] inputBytes = input.getBytes( );
-    byte[] digestBytes = null;
-    MessageDigest digest = hash.get( );
+  public String getDigestBase64( final String input, final Digest hash ) {
+    final byte[] inputBytes = input.getBytes();
+    final MessageDigest digest = hash.get( );
     digest.update( inputBytes );
-    if ( randomize ) {
-      SecureRandom random = new SecureRandom( );
-//TODO: RELEASE:      random.setSeed( System.currentTimeMillis( ) );
-      byte[] randomBytes = random.generateSeed( inputBytes.length );
-      digest.update( randomBytes );
-    }
-    digestBytes = digest.digest( );
+    final byte[] digestBytes = digest.digest( );
     return new String( UrlBase64.encode( digestBytes ) );
   }
-  
+
   public X509Certificate generateServiceCertificate( KeyPair keys, String serviceName ) {
     X500Principal x500 = new X500Principal( String.format( "CN=%s, OU=Eucalyptus, O=Cloud, C=US", serviceName ) );
 //    if( !"eucalyptus".equals( serviceName ) ) {
@@ -161,7 +165,7 @@ public class DefaultCryptoProvider implements CryptoProvider, CertificateProvide
   }
   
   /**
-   * @see com.eucalyptus.crypto.CryptoProvider#generateKeyPair()
+   * @see com.eucalyptus.crypto.CertificateProvider#generateKeyPair()
    */
   @Override
   public KeyPair generateKeyPair( ) {
@@ -171,7 +175,6 @@ public class DefaultCryptoProvider implements CryptoProvider, CertificateProvide
       keyGen = KeyPairGenerator.getInstance( KEY_ALGORITHM, "BC" );
       SecureRandom random = new SecureRandom( );
     //TODO: RELEASE: see line:110
-      random.setSeed( System.currentTimeMillis( ) );
       keyGen.initialize( KEY_SIZE, random );
       KeyPair keyPair = keyGen.generateKeyPair( );
       return keyPair;

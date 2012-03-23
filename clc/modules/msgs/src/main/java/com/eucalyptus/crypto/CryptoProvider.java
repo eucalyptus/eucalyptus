@@ -6,24 +6,18 @@ public interface CryptoProvider extends BaseSecurityProvider {
   
   /**
    * TODO: DOCUMENT CryptoProvider.java
-   * @param userName
-   * @return
    */
-  public abstract String generateId( String seed, String prefix );
-  public abstract String generateCertificateCode( String userName );
-  public abstract String generateConfirmationCode( String userName );
-  public abstract String generateHashedPassword( String password );
-  public abstract String generateSessionToken( String userName );
+  String generateId( String seed, String prefix );
+  String generateQueryId();
+  String generateSecretKey();
+  String generateHashedPassword( String password );
+  String generateSessionToken();
   
   /**
    * TODO: DOCUMENT CryptoProvider.java
-   * @param input
-   * @param hash
-   * @param randomize
-   * @return
    */
-  public abstract String getDigestBase64( final String input, final Digest hash, final boolean randomize );
-  public abstract String getFingerPrint( byte[] data );
+  String getDigestBase64( String input, Digest hash );
+  String getFingerPrint( byte[] data );
 
 
 }
