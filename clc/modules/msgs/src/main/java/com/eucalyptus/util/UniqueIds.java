@@ -148,7 +148,7 @@ public class UniqueIds implements Serializable {
     
     @Override
     public String nextId( ) {
-      return Crypto.getDigestBase64( Long.toString( this.nextIndex( ) ), Digest.SHA512, false ).replaceAll( "\\.", "" );
+      return Crypto.getDigestBase64( Long.toString( this.nextIndex( ) ), Digest.SHA512 ).replaceAll( "\\.", "" );
     }
     
     @Override

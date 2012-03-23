@@ -199,7 +199,7 @@ public class DatabaseUserProxy implements User {
   @Override
   public String resetToken( ) throws AuthException {
     String original = this.delegate.getToken( );
-    this.setToken( Crypto.generateSessionToken( this.delegate.getName( ) ) );
+    this.setToken( Crypto.generateSessionToken() );
     return original;
   }
 
@@ -224,7 +224,7 @@ public class DatabaseUserProxy implements User {
 
   @Override
   public void createConfirmationCode( ) throws AuthException {
-    this.setConfirmationCode( Crypto.generateSessionToken( this.delegate.getName( ) ) );
+    this.setConfirmationCode( Crypto.generateSessionToken() );
   }
 
   @Override

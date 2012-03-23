@@ -59,14 +59,14 @@ public class AccessKeyEntity extends AbstractPersistent implements Serializable 
   
   public AccessKeyEntity( UserEntity user ) {
     this.user = user;
-    this.key = Hmacs.generateSecretKey( user.getName( ) );
+    this.key = Crypto.generateSecretKey();
     this.createDate = new Date( );
   }
 
   @PrePersist
   public void generateOnCommit() {
     if( this.accessKey == null && this.key != null ) {/** NOTE: first time that AKey is committed it needs to generate its own ID (i.e., not the database id), do this at commit time and generate if null **/
-      this.accessKey = Crypto.getHmacProvider( ).generateQueryId( this.key );//NOTE: here we use the key 
+      this.accessKey = Crypto.generateQueryId();
     }
   }
   

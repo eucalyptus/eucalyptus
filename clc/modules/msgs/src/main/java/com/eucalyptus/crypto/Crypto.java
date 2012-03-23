@@ -37,29 +37,34 @@ public class Crypto {
   }
   
   /**
-   * @param userName
-   * @return
-   * @see com.eucalyptus.crypto.CryptoProvider#generateSessionToken(java.lang.String)
+   * @see com.eucalyptus.crypto.CryptoProvider#generateSessionToken()
    */
-  public static String generateSessionToken( final String userName ) {
-    return Crypto.getCryptoProvider( ).generateSessionToken( userName );
+  public static String generateSessionToken() {
+    return Crypto.getCryptoProvider( ).generateSessionToken();
+  }
+
+  /**
+   * @see com.eucalyptus.crypto.CryptoProvider#generateQueryId()
+   */
+  public static String generateQueryId() {
+    return Crypto.getCryptoProvider().generateQueryId();
+  }
+
+  /**
+   * @see com.eucalyptus.crypto.CryptoProvider#generateSecretKey()
+   */
+  public static String generateSecretKey() {
+    return Crypto.getCryptoProvider().generateSecretKey();
+  }
+
+  /**
+   * @see com.eucalyptus.crypto.CryptoProvider#getDigestBase64(java.lang.String, com.eucalyptus.crypto.Digest)
+   */
+  public static String getDigestBase64( final String input, final Digest hash ) {
+    return Crypto.getCryptoProvider( ).getDigestBase64( input, hash );
   }
   
   /**
-   * @param input
-   * @param hash
-   * @param randomize
-   * @return
-   * @see com.eucalyptus.crypto.CryptoProvider#getDigestBase64(java.lang.String, com.eucalyptus.crypto.Digest, boolean)
-   */
-  public static String getDigestBase64( final String input, final Digest hash, final boolean randomize ) {
-    return Crypto.getCryptoProvider( ).getDigestBase64( input, hash, randomize );
-  }
-  
-  /**
-   * @param seed
-   * @param prefix
-   * @return
    * @see com.eucalyptus.crypto.CryptoProvider#generateId(String, String)
    */
   public static String generateId( final String seed, final String prefix ) {
