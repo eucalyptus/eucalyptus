@@ -180,6 +180,15 @@ class ConfigureVMware(AWSQueryRequest):
             self.edit_file(path)
             self.validate_file(euca_home, path)
             self.save_new_value(path, prop)
+        # if no config file
+        # and no edit flag, but value exists,
+        # then just validate it again.
+        # Need to check what the default, unitialized value for the vmware xmlconfig property is.
+        elif prop and self.get_current_value(prop) and self.get_current_value(prop) != '<!-- Eucalyptus VMware Broker configuration file -->':
+            value = self.get_current_value(prop)
+            path = self.save_to_file(value)
+            self.validate_file(euca_home, path)
+            self.save_new_value(path, prop)
         # if no configfile was passed and edit_flg is False
         # create a new file and then upload it
         else:
