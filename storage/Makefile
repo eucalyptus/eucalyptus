@@ -4,14 +4,14 @@
 
 include ../Makedefs
 
-EUCA_BLOBS_OBJS = map.o diskutil.o ../util/misc.o ../util/ipc.o ../util/euca_auth.o
-WCLIENT_OBJS    = diskutil.o walrus.o http.o ../util/misc.o ../util/ipc.o ../util/euca_auth.o
-TEST_OBJS       = blobstore.o storage-windows.o ../util/misc.o diskutil.o ../util/data.o ../util/ipc.o ../util/euca_auth.o walrus.o
-TEST_BLOB_OBJS  = map.o diskutil.o ../util/misc.o ../util/ipc.o ../util/euca_auth.o
-TEST_VBR_OBJS   = blobstore.o diskutil.o walrus.o iscsi.o http.o ../util/hash.o ../util/misc.o ../util/ipc.o ../util/euca_auth.o
+EUCA_BLOBS_OBJS =                                     diskutil.o map.o                ../util/misc.o ../util/ipc.o ../util/euca_auth.o
+WCLIENT_OBJS    =                     walrus.o http.o diskutil.o map.o                ../util/misc.o ../util/ipc.o ../util/euca_auth.o
+TEST_BLOB_OBJS  =                                     diskutil.o map.o                ../util/misc.o ../util/ipc.o ../util/euca_auth.o
+TEST_VBR_OBJS   = iscsi.o blobstore.o walrus.o http.o diskutil.o       ../util/hash.o ../util/misc.o ../util/ipc.o ../util/euca_auth.o
+
 STORAGE_LIBS    = $(LDFLAGS) -lcurl -lssl -lcrypto -pthread -lpthread
 TESTS           = test_vbr test_blobstore
-EFENCE          = -lefence
+#EFENCE          = -lefence
 
 all: vbr.o backing.o storage-windows.o walrus.o diskutil.o map.o Wclient euca-blobs $(TESTS)
 
@@ -22,9 +22,6 @@ euca-blobs: Makefile blobstore.c blobstore.h $(EUCA_BLOBS_OBJS)
 
 Wclient: Makefile Wclient.c $(WCLIENT_OBJS)
 	$(CC) $(CFLAGS) $(INCLUDES) Wclient.c -o Wclient $(WCLIENT_OBJS) $(STORAGE_LIBS) $(EFENCE)
-
-test: test.c $(TEST_OBJS)
-	$(CC) $(CFLAGS) $(INCLUDES) test.c -o test $(TEST_OBJS) $(STORAGE_LIBS) $(EFENCE)
 
 test_blobstore: blobstore.o $(TEST_BLOB_OBJS)
 	$(CC) -g -rdynamic $(CFLAGS) $(INCLUDES) -D_UNIT_TEST blobstore.c -o test_blobstore $(TEST_BLOB_OBJS) $(STORAGE_LIBS) $(EFENCE)
