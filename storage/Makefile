@@ -4,37 +4,38 @@
 
 include ../Makedefs
 
-STORAGE_LIBS = $(LDFLAGS) -lcurl -lssl -lcrypto -pthread -lpthread
-TESTS=test_vbr test_blobstore
-#EFENCE=-lefence
+EUCA_BLOBS_OBJS = map.o diskutil.o ../util/misc.o ../util/ipc.o ../util/euca_auth.o
+WCLIENT_OBJS    = diskutil.o walrus.o http.o ../util/misc.o ../util/ipc.o ../util/euca_auth.o
+TEST_OBJS       = blobstore.o storage-windows.o ../util/misc.o diskutil.o ../util/data.o ../util/ipc.o ../util/euca_auth.o walrus.o
+TEST_BLOB_OBJS  = map.o diskutil.o ../util/misc.o ../util/ipc.o ../util/euca_auth.o
+TEST_VBR_OBJS   = blobstore.o diskutil.o walrus.o iscsi.o http.o ../util/hash.o ../util/misc.o ../util/ipc.o ../util/euca_auth.o
+STORAGE_LIBS    = $(LDFLAGS) -lcurl -lssl -lcrypto -pthread -lpthread
+TESTS           = test_vbr test_blobstore
+EFENCE          = -lefence
 
 all: vbr.o backing.o storage-windows.o walrus.o diskutil.o map.o Wclient euca-blobs $(TESTS)
-#all: storage-windows.o walrus.o test_blobstore
 
 build: all
 
-euca-blobs: Makefile blobstore.c blobstore.h map.o
-	$(CC) $(CFLAGS) $(INCLUDES) -D_EUCA_BLOBS blobstore.c -o euca-blobs map.o diskutil.o ../util/misc.o ../util/ipc.o ../util/euca_auth.o $(STORAGE_LIBS) $(EFENCE)
+euca-blobs: Makefile blobstore.c blobstore.h $(EUCA_BLOBS_OBJS)
+	$(CC) $(CFLAGS) $(INCLUDES) -D_EUCA_BLOBS blobstore.c -o euca-blobs $(EUCA_BLOBS_OBJS) $(STORAGE_LIBS) $(EFENCE)
 
-Wclient: Makefile Wclient.c ../util/euca_auth.o ../util/misc.o walrus.o http.o
-	$(CC) $(CFLAGS) $(INCLUDES) Wclient.c -o Wclient ../util/euca_auth.o ../util/misc.o ../util/ipc.o diskutil.o walrus.o http.o $(STORAGE_LIBS)
+Wclient: Makefile Wclient.c $(WCLIENT_OBJS)
+	$(CC) $(CFLAGS) $(INCLUDES) Wclient.c -o Wclient $(WCLIENT_OBJS) $(STORAGE_LIBS) $(EFENCE)
 
-walrus.o: walrus.c walrus.h
-	$(CC) $(CFLAGS) $(INCLUDES) -c walrus.c 
+test: test.c $(TEST_OBJS)
+	$(CC) $(CFLAGS) $(INCLUDES) test.c -o test $(TEST_OBJS) $(STORAGE_LIBS) $(EFENCE)
 
-test: test.c blobstore.o storage-windows.o ../util/misc.o ../util/data.o ../util/ipc.o ../util/euca_auth.o walrus.o
-	$(CC) $(CFLAGS) $(INCLUDES) test.c blobstore.o storage-windows.o ../util/misc.o diskutil.o ../util/data.o ../util/ipc.o ../util/euca_auth.o walrus.o $(STORAGE_LIBS) -o test
+test_blobstore: blobstore.o $(TEST_BLOB_OBJS)
+	$(CC) -g -rdynamic $(CFLAGS) $(INCLUDES) -D_UNIT_TEST blobstore.c -o test_blobstore $(TEST_BLOB_OBJS) $(STORAGE_LIBS) $(EFENCE)
 
-test_blobstore: blobstore.o blobstore.c blobstore.h map.o diskutil.o ../util/misc.o
-	$(CC) -g -rdynamic $(CFLAGS) $(INCLUDES) -D_UNIT_TEST blobstore.c -o test_blobstore map.o diskutil.o ../util/misc.o ../util/ipc.o ../util/euca_auth.o $(STORAGE_LIBS) $(EFENCE)
-
-test_vbr: iscsi.o vbr.o blobstore.o diskutil.o walrus.o http.o ../util/misc.o ../util/data.h
-	$(CC) -g -rdynamic $(CFLAGS) $(INCLUDES) -D_UNIT_TEST vbr.c -o test_vbr blobstore.o diskutil.o walrus.o iscsi.o http.o ../util/hash.o ../util/misc.o ../util/ipc.o ../util/euca_auth.o $(STORAGE_LIBS) $(EFENCE)
+test_vbr: vbr.o $(TEST_VBR_OBJS)
+	$(CC) -g -rdynamic $(CFLAGS) $(INCLUDES) -D_UNIT_TEST vbr.c -o test_vbr $(TEST_VBR_OBJS) $(STORAGE_LIBS) $(EFENCE)
 
 test_url: http.c
 	$(CC) -D_UNIT_TEST -o test_url http.c
 
-.c.o:
+%.o: %.c %.h
 	$(CC) -c $(CFLAGS) $(INCLUDES) $<
 
 ../util/ipc.o: ../util/ipc.c ../util/ipc.h ../util/eucalyptus.h
