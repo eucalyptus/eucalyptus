@@ -117,6 +117,7 @@
      public void init() throws Exception {
  
 	 try {
+
 	     if (!initdbPG()) {
 		 LOG.fatal("Unable to init the postgres database");
 		 System.exit(1);
@@ -136,6 +137,7 @@
 	     dbComp.initService( );
  
 	     prepareService();
+
 	 } catch ( Exception ex ) {
 	     LOG.error( ex, ex );
 	     throw ex;
@@ -171,15 +173,14 @@
      private void initDBFile(File passFile) {
 	 
 	 passFile.delete();
- 
-	 String cmdTouch = "/bin/touch " + EUCA_DB_DIR +  "ibdata1";
- 
+	 File ibdata1;
 	 try {
-	     cmdTouch.execute();
+	     ibdata1 = new File(EUCA_DB_DIR + File.separator + "ibdata1" ).append("");
 	     initPGHBA();
 	     initPGCONF();
 	 } catch (Exception e ) {
 	     LOG.debug("Unable to create the configuration files");
+	     ibdata1.delete();
 	     System.exit(1);
 	 }
      }
@@ -187,7 +188,6 @@
      private void initPGHBA() throws Exception {
  
 	 try {
-	     LOG.debug("EUCA_DB_DIR " + EUCA_DB_DIR);
 	     File orgPGHBA = new File(EUCA_DB_DIR + File.separator +  "pg_hba.conf");
 	     File tmpPGHBA = new File(EUCA_DB_DIR + File.separator + "pg_hba.conf.org");
 	     orgPGHBA.renameTo(tmpPGHBA);
@@ -206,8 +206,11 @@
 	     File bakPGCONF = new File(EUCA_DB_DIR + File.separator + "postgresql.conf.org");
 	     String pgconfText = orgPGCONF.getText();
 	     bakPGCONF.write(pgconfText);
-	     Pattern p = ~/max_connections\s+=\s+\d+/;
-	     orgPGCONF.setText(pgconfText.replaceAll(p, "max_connections = 150"));
+	     Pattern pattern_max_connection = ~/max_connections\s+=\s+\d+/;
+	     orgPGCONF.setText(pgconfText.replaceAll(pattern_max_connection, "max_connections = 150"));
+	     Pattern pattern_socket_dir = ~/#unix_socket_directory\s+=\s+\'\'/;
+	     String pgconfText2 = orgPGCONF.getText();
+	     orgPGCONF.setText(pgconfText2.replaceAll(pattern_socket_dir, "unix_socket_directory = " + "'" + EUCA_DB_DIR + "'" ) )
 	 } catch (Exception e) {
 	     LOG.debug("Unable to modify the postgresql.conf file", e);
 	 }

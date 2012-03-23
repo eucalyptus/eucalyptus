@@ -36,6 +36,10 @@ import eucadmin
 import os
 import time
 import boto.utils
+import pgdb as db
+import hashlib
+import binascii
+from M2Crypto import RSA
 
 GetCertURL = 'https://localhost:8443/getX509?account=%s&user=%s&code=%s'
 
@@ -107,9 +111,12 @@ called, new X.509 certificates will be created for the specified user."""
         fp.close()
 
     def get_dbpass(self):
-        cmd_string = get_cmdstring('dbpass')
-        cmd = Command(cmd_string % self.euca_home)
-        self.db_pass = cmd.stdout.strip()
+        def passphrase_callback():
+            return "eucalyptus"
+        d = hashlib.sha256()
+        d.update("eucalyptus")
+        pk = RSA.load_key(self.cloudpk_file,passphrase_callback)
+        self.db_pass = binascii.hexlify(pk.sign(d.digest(),algo="sha256"))
 
     def cli_formatter(self, data):
         pass
@@ -137,8 +144,30 @@ called, new X.509 certificates will be created for the specified user."""
         self.args.update(args)
         self.process_args()
         self.setup_query()
-        query = get_cmdstring('mysql_get_accesskey_secretkey')
-        return self.query_mysql(query)
+        con1 = db.connect(host='localhost:8777', user='eucalyptus', password=self.db_pass, database='eucalyptus_auth')
+        cur1 = con1.cursor()
+        cur1.execute("""select k.auth_access_key_query_id, k.auth_access_key_key 
+                          from auth_access_key k 
+                    inner join auth_user u on k.auth_access_key_owning_user=u.id 
+                          join auth_group_has_users gu on u.id=gu.auth_user_id 
+                          join auth_group g on gu.auth_group_id=g.id 
+                          join auth_account a on g.auth_group_owning_account=a.id 
+                         where a.auth_account_name=%(acctname)s and g.auth_group_name=%(grpname)s and k.auth_access_key_active=TRUE""",
+                         params={"acctname": "eucalyptus", "grpname": "_admin"})
+        result = cur1.fetchall()
+        return '\t'.join(result[0])
+
+    def get_token(self):
+        con1 = db.connect(host='localhost:8777', user='eucalyptus', password=self.db_pass, database='eucalyptus_auth')
+        cur1 = con1.cursor()
+        cur1.execute("""select u.auth_user_token 
+                          from auth_user u 
+                    inner join auth_group_has_users gu on u.id=gu.auth_user_id 
+                          join auth_group g on gu.auth_group_id=g.id 
+                          join auth_account a on g.auth_group_owning_account=a.id 
+                          where a.auth_account_name=%(name)s""", params={'name': 'eucalyptus'})
+        result = cur1.fetchall()
+        return result[0][0]
 
     def main(self, **args):
         self.args.update(args)
@@ -146,7 +175,8 @@ called, new X.509 certificates will be created for the specified user."""
         self.setup_query()
         self.check_zipfile()
         # check local service?
-        self.token = self.query_mysql(get_cmdstring('mysql_get_token'))
+        
+        self.token = self.get_token()
         self.get_credentials()
 
     def main_cli(self):
