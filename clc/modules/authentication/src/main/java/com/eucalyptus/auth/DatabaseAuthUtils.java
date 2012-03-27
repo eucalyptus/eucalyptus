@@ -1,6 +1,8 @@
 package com.eucalyptus.auth;
 
 import java.util.List;
+import java.util.NoSuchElementException;
+
 import org.hibernate.Session;
 import org.hibernate.criterion.Example;
 import org.hibernate.criterion.MatchMode;
@@ -291,4 +293,13 @@ public class DatabaseAuthUtils {
     return false;
   }
 
+  @SuppressWarnings("unchecked")
+  public static <T> T getUnique( EntityWrapper<T> db, Class<T> entityClass, String property, Object value ) throws Exception {
+    T result = ( T ) db.createCriteria( entityClass ).setCacheable( true ).add( Restrictions.eq( property, value ) ).uniqueResult( );
+    if ( result == null ) {
+      throw new NoSuchElementException( "No " + entityClass.getCanonicalName( ) + " with " + property + "=" + value ); 
+    }
+    return result;
+  }
+  
 }

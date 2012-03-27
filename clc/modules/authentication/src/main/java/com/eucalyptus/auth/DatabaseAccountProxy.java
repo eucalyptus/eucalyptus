@@ -172,7 +172,7 @@ public class DatabaseAccountProxy implements Account {
     newGroup.setUserGroup( true );
     EntityWrapper<AccountEntity> db = EntityWrapper.get( AccountEntity.class );
     try {
-      AccountEntity account = db.getUnique( new AccountEntity( this.delegate.getName( ) ) );
+      AccountEntity account = DatabaseAuthUtils.getUnique( db, AccountEntity.class, "name", this.delegate.getName( ) );
       newGroup = db.recast( GroupEntity.class ).merge( newGroup );
       newUser = db.recast( UserEntity.class ).merge( newUser );
       newGroup.setAccount( account );
@@ -265,7 +265,7 @@ public class DatabaseAccountProxy implements Account {
     }
     EntityWrapper<AccountEntity> db = EntityWrapper.get( AccountEntity.class );
     try {
-      AccountEntity account = db.getUnique( new AccountEntity( this.delegate.getName( ) ) );
+      AccountEntity account = DatabaseAuthUtils.getUnique( db, AccountEntity.class, "name", this.delegate.getName( ) );
       GroupEntity group = new GroupEntity( groupName );
       group.setPath( path );
       group.setUserGroup( false );
