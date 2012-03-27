@@ -72,6 +72,8 @@ import org.apache.xml.security.utils.Base64;
 
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.component.Partition;
+import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.auth.api.BaseLoginModule;
 import com.eucalyptus.auth.principal.User;
@@ -105,7 +107,17 @@ public class WalrusComponentLoginModule extends BaseLoginModule<WalrusWrappedCom
 			} finally {
 				if( !valid && credentials.getCertString() != null ) {
 					try {
+						boolean found = false;
 						X509Certificate nodeCert = Hashes.getPemCert( Base64.decode( credentials.getCertString() ) );
+						for (Partition part : Partitions.list()) {
+							if (nodeCert.equals(part.getNodeCertificate())) {
+								found = true;
+								break;
+							}
+						}
+						if (!found) {
+							throw new AuthenticationException("Invalid certificate");
+						}
 						if(nodeCert != null) {
 							PublicKey publicKey = nodeCert.getPublicKey( );
 							sig = Signature.getInstance( "SHA1withRSA" );
