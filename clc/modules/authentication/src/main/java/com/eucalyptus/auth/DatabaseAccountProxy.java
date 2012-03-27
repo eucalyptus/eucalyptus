@@ -166,7 +166,7 @@ public class DatabaseAccountProxy implements Account {
     if ( info != null ) {
       newUser.getInfo( ).putAll( info );
     }
-    newUser.setToken( Crypto.generateSessionToken( userName ) );
+    newUser.setToken( Crypto.generateSessionToken() );
     //newUser.setConfirmationCode( Crypto.generateSessionToken( userName ) );
     GroupEntity newGroup = new GroupEntity( DatabaseAuthUtils.getUserGroupName( userName ) );
     newGroup.setUserGroup( true );

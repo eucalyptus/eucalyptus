@@ -10,24 +10,6 @@ package com.eucalyptus.crypto;
 public class Hmacs {
   
   /**
-   * @param userName
-   * @return
-   * @see com.eucalyptus.crypto.CryptoProvider#generateQueryId(java.lang.String)
-   */
-  public static String generateQueryId( final String userName ) {
-    return Crypto.getHmacProvider( ).generateQueryId( userName );
-  }
-  
-  /**
-   * @param userName
-   * @return
-   * @see com.eucalyptus.crypto.CryptoProvider#generateSecretKey(java.lang.String)
-   */
-  public static String generateSecretKey( final String userName ) {
-    return Crypto.getHmacProvider( ).generateSecretKey( userName );
-  }
-  
-  /**
    * TODO: DOCUMENT Hmacs.java
    * 
    * @return

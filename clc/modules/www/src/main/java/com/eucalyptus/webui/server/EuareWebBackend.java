@@ -1466,7 +1466,7 @@ public class EuareWebBackend {
       }
       if ( email != null && email.equals( user.getInfo( User.EMAIL ) ) ) {
         long expires = System.currentTimeMillis() + User.RECOVERY_EXPIRATION;
-        user.setConfirmationCode( String.format( "%015d", expires ) + Crypto.generateSessionToken( user.getName( ) ) );
+        user.setConfirmationCode( String.format( "%015d", expires ) + Crypto.generateSessionToken() );
         // Need to make sure the confirmation code is saved
         notifyUserPasswordReset( account.lookupUserByName( userName ), backendUrl );
       } else {
