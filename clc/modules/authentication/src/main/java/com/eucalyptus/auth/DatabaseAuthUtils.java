@@ -3,19 +3,18 @@ package com.eucalyptus.auth;
 import java.util.List;
 import java.util.NoSuchElementException;
 
-import org.hibernate.Session;
-import org.hibernate.criterion.Example;
-import org.hibernate.criterion.MatchMode;
 import org.hibernate.criterion.Restrictions;
 import com.eucalyptus.auth.entities.AccountEntity;
 import com.eucalyptus.auth.entities.GroupEntity;
 import com.eucalyptus.auth.entities.PolicyEntity;
 import com.eucalyptus.auth.entities.UserEntity;
 import com.eucalyptus.auth.principal.Account;
-import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.Policy;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.entities.TransactionCallbackException;
+import com.eucalyptus.entities.TransactionException;
+import com.eucalyptus.util.Callback;
 
 public class DatabaseAuthUtils {
 
@@ -43,20 +42,17 @@ public class DatabaseAuthUtils {
    * @param accountName
    * @return
    */
-  public static UserEntity getUniqueUser( EntityWrapper db, String userName, String accountName ) throws Exception {
-    Example accountExample = Example.create( new AccountEntity( accountName ) ).enableLike( MatchMode.EXACT );
-    Example groupExample = Example.create( new GroupEntity( true ) ).enableLike( MatchMode.EXACT );
-    Example userExample = Example.create( new UserEntity( userName ) ).enableLike( MatchMode.EXACT );
+  public static UserEntity getUniqueUser( EntityWrapper<UserEntity> db, String userName, String accountName ) throws Exception {
     @SuppressWarnings( "unchecked" )
-    List<UserEntity> users = ( List<UserEntity> ) db
-        .createCriteria( UserEntity.class ).setCacheable( true ).add( userExample )
-        .createCriteria( "groups" ).setCacheable( true ).add( groupExample )
-        .createCriteria( "account" ).setCacheable( true ).add( accountExample )
-        .list( );
-    if ( users.size( ) != 1 ) {
-      throw new AuthException( "Found " + users.size( ) + " user(s)" );
+    UserEntity result = ( UserEntity ) db
+        .createCriteria( UserEntity.class ).setCacheable( true ).add( Restrictions.eq( "name", userName ) )
+        .createCriteria( "groups" ).setCacheable( true ).add( Restrictions.eq( "userGroup", true ) )
+        .createCriteria( "account" ).setCacheable( true ).add( Restrictions.eq( "name", accountName ) )
+        .uniqueResult( );
+    if ( result == null ) {
+      throw new NoSuchElementException( "Can not find user " + userName + " in " + accountName );
     }
-    return users.get( 0 );
+    return result;
   }
   
   /**
@@ -68,18 +64,16 @@ public class DatabaseAuthUtils {
    * @return
    * @throws Exception
    */
-  public static GroupEntity getUniqueGroup( EntityWrapper db, String groupName, String accountName ) throws Exception {
-    Example accountExample = Example.create( new AccountEntity( accountName ) ).enableLike( MatchMode.EXACT );
-    Example groupExample = Example.create( new GroupEntity( groupName ) ).enableLike( MatchMode.EXACT );
+  public static GroupEntity getUniqueGroup( EntityWrapper<GroupEntity> db, String groupName, String accountName ) throws Exception {
     @SuppressWarnings( "unchecked" )
-    List<GroupEntity> groups = ( List<GroupEntity> ) db
-        .createCriteria( GroupEntity.class ).setCacheable( true ).add( groupExample )
-        .createCriteria( "account" ).setCacheable( true ).add( accountExample )
-        .list( );
-    if ( groups.size( ) != 1 ) {
-      throw new AuthException( "Found " + groups.size( ) + " group(s)" );
+    GroupEntity result = ( GroupEntity ) db
+        .createCriteria( GroupEntity.class ).setCacheable( true ).add( Restrictions.eq( "name", groupName ) )
+        .createCriteria( "account" ).setCacheable( true ).add( Restrictions.eq( "name", accountName ) )
+        .uniqueResult( );
+    if ( result == null ) {
+      throw new NoSuchElementException( "Can not find group " + groupName + " in " + accountName );
     }
-    return groups.get( 0 );
+    return result;
   }
   
   /**
@@ -90,16 +84,8 @@ public class DatabaseAuthUtils {
    * @return
    * @throws Exception
    */
-  public static AccountEntity getUniqueAccount( EntityWrapper db, String accountName ) throws Exception {
-    Example accountExample = Example.create( new AccountEntity( accountName ) ).enableLike( MatchMode.EXACT );
-    @SuppressWarnings( "unchecked" )
-    List<AccountEntity> accounts = ( List<AccountEntity> ) db
-        .createCriteria( AccountEntity.class ).setCacheable( true ).add( accountExample )
-        .list( );
-    if ( accounts.size( ) != 1 ) {
-      throw new AuthException( "Found " + accounts.size( ) + " account(s)" );
-    }
-    return accounts.get( 0 );
+  public static AccountEntity getUniqueAccount( EntityWrapper<AccountEntity> db, String accountName ) throws Exception {
+    return getUnique( db, AccountEntity.class, "name", accountName );
   }
   
   /**
@@ -110,17 +96,16 @@ public class DatabaseAuthUtils {
    * @return
    * @throws Exception
    */
-  public static PolicyEntity getUniquePolicy( EntityWrapper db, String policyName, String groupId ) throws Exception {
-    Example example = Example.create( new PolicyEntity( policyName ) ).enableLike( MatchMode.EXACT );
+  public static PolicyEntity getUniquePolicy( EntityWrapper<PolicyEntity> db, String policyName, String groupId ) throws Exception {
     @SuppressWarnings( "unchecked" )
-    List<PolicyEntity> policies = ( List<PolicyEntity> ) db
-        .createCriteria( PolicyEntity.class ).setCacheable( true ).add( example )
+    PolicyEntity result = ( PolicyEntity ) db
+        .createCriteria( PolicyEntity.class ).setCacheable( true ).add( Restrictions.eq( "name", policyName ) )
         .createCriteria( "group" ).setCacheable( true ).add( Restrictions.eq( "groupId", groupId ) )
-        .list( );
-    if ( policies.size( ) != 1 ) {
-      throw new AuthException( "Found " + policies.size( ) + " policies" );
+        .uniqueResult( );
+    if ( result == null ) {
+      throw new NoSuchElementException( "Can not find policy " + policyName + " for group " + groupId );
     }
-    return policies.get( 0 );
+    return result;
   }
   
   public static PolicyEntity removeGroupPolicy( GroupEntity group, String name ) throws Exception {
@@ -183,17 +168,14 @@ public class DatabaseAuthUtils {
     }
     EntityWrapper<UserEntity> db = EntityWrapper.get( UserEntity.class );
     try {
-      Example accountExample = Example.create( new AccountEntity( accountName ) ).enableLike( MatchMode.EXACT );
-      Example groupExample = Example.create( new GroupEntity( true ) ).enableLike( MatchMode.EXACT );
-      Example userExample = Example.create( new UserEntity( userName ) ).enableLike( MatchMode.EXACT );
       @SuppressWarnings( "unchecked" )
-      List<UserEntity> users = ( List<UserEntity> ) db
-          .createCriteria( UserEntity.class ).setCacheable( true ).add( userExample )
-          .createCriteria( "groups" ).setCacheable( true ).add( groupExample )
-          .createCriteria( "account" ).setCacheable( true ).add( accountExample )
-          .list( );
+      UserEntity result = ( UserEntity ) db
+          .createCriteria( UserEntity.class ).setCacheable( true ).add( Restrictions.eq( "name", userName ) )
+          .createCriteria( "groups" ).setCacheable( true ).add( Restrictions.eq( "userGroup", true ) )
+          .createCriteria( "account" ).setCacheable( true ).add( Restrictions.eq( "name", accountName ) )
+          .uniqueResult( );
       db.commit( );
-      return users.size( ) > 0;
+      return result != null;
     } catch ( Exception e ) {
       db.rollback( );
       throw new AuthException( "Failed to find user", e );
@@ -213,13 +195,12 @@ public class DatabaseAuthUtils {
     }
     EntityWrapper<AccountEntity> db = EntityWrapper.get( AccountEntity.class );
     try {
-      Example accountExample = Example.create( new AccountEntity( accountName ) ).enableLike( MatchMode.EXACT );
       @SuppressWarnings( "unchecked" )
-      List<AccountEntity> accounts = ( List<AccountEntity> ) db
-          .createCriteria( AccountEntity.class ).setCacheable( true ).add( accountExample )
-          .list( );
+      AccountEntity result = ( AccountEntity ) db
+          .createCriteria( AccountEntity.class ).setCacheable( true ).add( Restrictions.eq( "name", accountName ) )
+          .uniqueResult( );
       db.commit( );
-      return accounts.size( ) > 0;
+      return result != null;
     } catch ( Exception e ) {
       db.rollback( );
       throw new AuthException( "Failed to find account", e );
@@ -243,15 +224,13 @@ public class DatabaseAuthUtils {
     }
     EntityWrapper<GroupEntity> db = EntityWrapper.get( GroupEntity.class );
     try {
-      Example accountExample = Example.create( new AccountEntity( accountName ) ).enableLike( MatchMode.EXACT );
-      Example groupExample = Example.create( new GroupEntity( groupName ) ).enableLike( MatchMode.EXACT );
       @SuppressWarnings( "unchecked" )
-      List<GroupEntity> groups = ( List<GroupEntity> ) db
-          .createCriteria( GroupEntity.class ).setCacheable( true ).add( groupExample )
-          .createCriteria( "account" ).setCacheable( true ).add( accountExample )
-          .list( );
+      GroupEntity result = ( GroupEntity ) db
+          .createCriteria( GroupEntity.class ).setCacheable( true ).add( Restrictions.eq( "name", groupName ) )
+          .createCriteria( "account" ).setCacheable( true ).add( Restrictions.eq( "name", accountName ) )
+          .uniqueResult( );
       db.commit( );
-      return groups.size( ) > 0;
+      return result != null;
     } catch ( Exception e ) {
       db.rollback( );
       throw new AuthException( "Failed to find group", e );
@@ -268,11 +247,10 @@ public class DatabaseAuthUtils {
   public static boolean isAccountEmpty( String accountName ) throws AuthException {
     EntityWrapper<GroupEntity> db = EntityWrapper.get( GroupEntity.class );
     try {
-      Example accountExample = Example.create( new AccountEntity( accountName ) ).enableLike( MatchMode.EXACT );
       @SuppressWarnings( "unchecked" )
       List<GroupEntity> groups = ( List<GroupEntity> ) db
           .createCriteria( GroupEntity.class ).setCacheable( true )
-          .createCriteria( "account" ).setCacheable( true ).add( accountExample )
+          .createCriteria( "account" ).setCacheable( true ).add( Restrictions.eq( "name", accountName ) )
           .list( );
       db.commit( );
       return groups.size( ) == 0;
@@ -300,6 +278,20 @@ public class DatabaseAuthUtils {
       throw new NoSuchElementException( "No " + entityClass.getCanonicalName( ) + " with " + property + "=" + value ); 
     }
     return result;
+  }
+  
+  public static <T> void invokeUnique( Class<T> entityClass, String property, Object value, final Callback<T> c ) throws TransactionException {
+    EntityWrapper<T> db = EntityWrapper.get( entityClass );
+    try {
+      T result = getUnique( db, entityClass, property, value );
+      if ( c != null ) {
+        c.fire( result );
+      }
+      db.commit( );
+    } catch ( Exception e ) {
+      db.rollback( );
+      throw new TransactionCallbackException( e );
+    }
   }
   
 }
