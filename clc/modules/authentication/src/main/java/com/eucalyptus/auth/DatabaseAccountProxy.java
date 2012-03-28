@@ -96,7 +96,7 @@ public class DatabaseAccountProxy implements Account {
       @SuppressWarnings( "unchecked" )
       List<UserEntity> users = ( List<UserEntity> ) db
           .createCriteria( UserEntity.class ).setCacheable( true )
-          .createCriteria( "groups" ).setCacheable( true ).add( Restrictions.eq( "userGroup", false ) )
+          .createCriteria( "groups" ).setCacheable( true ).add( Restrictions.eq( "userGroup", true ) )
           .createCriteria( "account" ).setCacheable( true ).add( Restrictions.eq( "name", this.delegate.getName( ) ) )
           .list( );
       db.commit( );

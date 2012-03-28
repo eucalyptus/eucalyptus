@@ -594,9 +594,9 @@ public class DatabaseUserProxy implements User {
     }
     PolicyEntity parsedPolicy = PolicyParser.getInstance( ).parse( policy );
     parsedPolicy.setName( name );
-    EntityWrapper<GroupEntity> db = EntityWrapper.get( GroupEntity.class );
+    EntityWrapper<UserEntity> db = EntityWrapper.get( UserEntity.class );
     try {
-      UserEntity userEntity = DatabaseAuthUtils.getUnique( db.recast( UserEntity.class ), UserEntity.class, "userId", this.delegate.getUserId( ) );
+      UserEntity userEntity = DatabaseAuthUtils.getUnique( db, UserEntity.class, "userId", this.delegate.getUserId( ) );
       GroupEntity groupEntity = getUserGroupEntity( userEntity );
       if ( groupEntity == null ) {
         throw new RuntimeException( "Can't find user group for user " + this.delegate.getName( ) );
