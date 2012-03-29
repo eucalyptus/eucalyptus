@@ -85,22 +85,6 @@ called, new X.509 certificates will be created for the specified user."""
         cmd_string = get_cmdstring('openssl')
         cmd = Command(cmd_string % (self.eucap12_file, self.cloudpk_file))
 
-    def query_mysql(self, query, num_retries=2):
-        result = None
-        i = 0
-        while i < num_retries:
-            cmd = Command(query % (self.account, self.user, self.db_pass))
-            result = cmd.stdout.strip()
-            if result:
-                break
-            time.sleep(1)
-            i += 1
-        if not result:
-            msg = 'The MySQL server is not responding.\n'
-            msg += 'Please make sure MySQL is up and running.'
-            raise ValueError(msg)
-        return result
-
     def get_credentials(self):
         data = boto.utils.retry_url(GetCertURL % (self.account,
                                                   self.user,
@@ -148,12 +132,12 @@ called, new X.509 certificates will be created for the specified user."""
         cur1 = con1.cursor()
         cur1.execute("""select k.auth_access_key_query_id, k.auth_access_key_key 
                           from auth_access_key k 
-                    inner join auth_user u on k.auth_access_key_owning_user=u.id 
+                          join auth_user u on k.auth_access_key_owning_user=u.id
                           join auth_group_has_users gu on u.id=gu.auth_user_id 
                           join auth_group g on gu.auth_group_id=g.id 
                           join auth_account a on g.auth_group_owning_account=a.id 
                          where a.auth_account_name=%(acctname)s and g.auth_group_name=%(grpname)s and k.auth_access_key_active=TRUE""",
-                         params={"acctname": "eucalyptus", "grpname": "_admin"})
+                     params={'acctname': self.account, 'grpname': '_' + self.user})
         result = cur1.fetchall()
         return '\t'.join(result[0])
 
@@ -162,10 +146,11 @@ called, new X.509 certificates will be created for the specified user."""
         cur1 = con1.cursor()
         cur1.execute("""select u.auth_user_token 
                           from auth_user u 
-                    inner join auth_group_has_users gu on u.id=gu.auth_user_id 
+                          join auth_group_has_users gu on u.id=gu.auth_user_id
                           join auth_group g on gu.auth_group_id=g.id 
                           join auth_account a on g.auth_group_owning_account=a.id 
-                          where a.auth_account_name=%(name)s""", params={'name': 'eucalyptus'})
+                          where a.auth_account_name=%(acctname)s and g.auth_group_name=%(grpname)s""",
+                     params={'acctname': self.account, 'grpname': '_' + self.user})
         result = cur1.fetchall()
         return result[0][0]
 
