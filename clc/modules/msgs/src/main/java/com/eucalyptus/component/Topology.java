@@ -1119,6 +1119,7 @@ public class Topology {
     
     private ServiceConfiguration doTopologyChange( final ServiceConfiguration input, final State nextState ) throws RuntimeException {
       final State initialState = input.lookupState( );
+      boolean enabledCheck = Component.State.ENABLED.equals( initialState ) && Component.State.ENABLED.equals( nextState );
       ServiceConfiguration endResult = input;
       try {
         endResult = ServiceTransitions.pathTo( input, nextState ).get( );
@@ -1132,7 +1133,7 @@ public class Topology {
         throw Exceptions.toUndeclared( ex );
       } finally {
         boolean enabledEndState = Component.State.ENABLED.equals( endResult.lookupState( ) );
-        if ( Bootstrap.isFinished( ) && !enabledEndState && Topology.getInstance( ).services.containsValue( input ) ) {
+        if ( Bootstrap.isFinished( ) && !enabledCheck && !enabledEndState && Topology.getInstance( ).services.containsValue( input ) ) {
           Topology.guard( ).tryDisable( endResult );
         }
       }
