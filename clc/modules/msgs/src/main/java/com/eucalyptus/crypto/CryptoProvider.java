@@ -19,5 +19,6 @@ public interface CryptoProvider extends BaseSecurityProvider {
   String getDigestBase64( String input, Digest hash );
   String getFingerPrint( byte[] data );
 
-
+  String generateLinuxSaltedPassword( String password );
+  boolean verifyLinuxSaltedPassword( String clear, String hashed );
 }
