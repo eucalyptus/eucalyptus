@@ -180,7 +180,7 @@ void loadNcStuff() {
     for (i=0; i<MAX_FAKE_INSTANCES; i++) {
       if (strlen(myconfig->global_instances[i].instanceId)) {
 
-	if (!strcmp(myconfig->global_instances[i].stateName, "Teardown")) {
+	if (!strcmp(myconfig->global_instances[i].stateName, "Teardown") && ((time(NULL) - myconfig->global_instances[i].launchTime) > 300) ) {
 	  logprintfl(EUCADEBUG, "fakeNC: setup(): invalidating instance %s\n", myconfig->global_instances[i].instanceId);
 	  bzero(&(myconfig->global_instances[i]), sizeof(ncInstance));
 	} else {
@@ -300,6 +300,7 @@ int ncRunInstanceStub (ncStub *st, ncMetadata *meta, char *uuid, char *instanceI
 				netparams, keyName,
 				userData, launchIndex, platform, expiryTime, groupNames, groupNamesSize);
   if (instance) {
+    instance->launchTime = time (NULL);
     foundidx=-1;
     for (i=0; i<MAX_FAKE_INSTANCES && (foundidx < 0); i++) {
       if (!strlen(myconfig->global_instances[i].instanceId)) {
@@ -337,7 +338,7 @@ int ncTerminateInstanceStub (ncStub *st, ncMetadata *meta, char *instanceId, int
 
   for (i=0; i<MAX_FAKE_INSTANCES && !done; i++) {
     if (!strcmp(myconfig->global_instances[i].instanceId, instanceId)) {
-      logprintfl(EUCADEBUG, "fakeNC: terminateInstance():\tsetting stateName at idx %d\n", i);
+      logprintfl(EUCADEBUG, "fakeNC: terminateInstance():\tsetting stateName for instance %s at idx %d\n", instanceId, i);
       snprintf(myconfig->global_instances[i].stateName, 10, "Teardown");
       myconfig->res.memorySizeAvailable += myconfig->global_instances[i].params.mem;
       myconfig->res.numberOfCoresAvailable += myconfig->global_instances[i].params.cores;

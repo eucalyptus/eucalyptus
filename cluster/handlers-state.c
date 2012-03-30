@@ -543,16 +543,26 @@ int clean_network_state(void) {
 
   memcpy(tmpvnetconfig, vnetconfig, sizeof(vnetConfig));
   
+  rc = vnetUnsetMetadataRedirect(tmpvnetconfig);
+  if (rc) {
+    logprintfl(EUCAWARN, "clean_network_state(): failed to unset metadata redirect\n");
+  } else {
+    //    logprintfl(EUCADEBUG, "clean_network_state(): sucessfully unset metadata redirect\n");
+  }
+  /*
   snprintf(cmd, MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap ip addr del 169.254.169.254/32 dev %s", config->eucahome, tmpvnetconfig->pubInterface);
   rc = system(cmd);
   rc = rc>>8;
   if (rc && (rc != 2)) {
     logprintfl(EUCAERROR, "clean_network_state(): running cmd '%s' failed: cannot remove ip 169.254.169.254\n", cmd);
   }
+  */
+
   for (i=1; i<NUMBER_OF_PUBLIC_IPS; i++) {
-    if (tmpvnetconfig->publicips[i].ip != 0) {
+    if (tmpvnetconfig->publicips[i].ip != 0 && tmpvnetconfig->publicips[i].allocated != 0) {
       ipstr = hex2dot(tmpvnetconfig->publicips[i].ip);
       snprintf(cmd, MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap ip addr del %s/32 dev %s", config->eucahome, SP(ipstr), tmpvnetconfig->pubInterface);
+      logprintfl(EUCADEBUG, "clean_network_state(): running command '%s'\n", cmd);
       rc = system(cmd);
       rc = rc>>8;
       if (rc && rc != 2) {
@@ -561,6 +571,7 @@ int clean_network_state(void) {
       if (ipstr) free(ipstr);
     }
   }
+  //  logprintfl(EUCADEBUG, "clean_network_state(): finished clearing public IPs\n");
 
 
   // dhcp
@@ -576,8 +587,10 @@ int clean_network_state(void) {
       free(pidstr);
     }
   }
+  //  logprintfl(EUCADEBUG, "clean_network_state(): finished clearing dhcpd\n");
 
   sem_mywait(VNET);
+  // stop all running networks
   for (i=2; i<NUMBER_OF_VLANS; i++) {
     if (vnetconfig->networks[i].active) {
       rc = vnetStopNetwork(vnetconfig, i, vnetconfig->users[i].userName, vnetconfig->users[i].netName);
@@ -586,7 +599,11 @@ int clean_network_state(void) {
       }
     }
   }
+  // clear stored cloudIP
+  vnetconfig->cloudIp = 0;
+
   sem_mypost(VNET);
+  //  logprintfl(EUCADEBUG, "clean_network_state(): finished stopping virtual networks\n");
 
   if (!strcmp(tmpvnetconfig->mode, "MANAGED") || !strcmp(tmpvnetconfig->mode, "MANAGED-NOVLAN")) {
     // clean up assigned addrs, iptables, dhcpd (and configs)
@@ -606,10 +623,12 @@ int clean_network_state(void) {
     }
   }
 
+  /*
   // tunnels
   rc = vnetSetCCS(tmpvnetconfig, NULL, 0);
   if (rc) {
   }
+  */
   
   if (tmpvnetconfig) free(tmpvnetconfig);
   return(0);

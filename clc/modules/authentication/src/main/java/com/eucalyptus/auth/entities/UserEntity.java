@@ -122,7 +122,7 @@ public class UserEntity extends AbstractPersistent implements Serializable {
   @PrePersist
   public void generateOnCommit() {
     if( this.userId == null ) {/** NOTE: first time that AKey is committed it needs to generate its own ID (i.e., not the database id), do this at commit time and generate if null **/
-      this.userId = Crypto.getHmacProvider( ).generateQueryId( this.name + System.currentTimeMillis( ) );//NOTE: here we use the key 
+      this.userId = Crypto.generateQueryId();
     }
   }
   
