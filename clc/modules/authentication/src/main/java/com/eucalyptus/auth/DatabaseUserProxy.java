@@ -248,7 +248,7 @@ public class DatabaseUserProxy implements User {
 
   @Override
   public void createPassword( ) throws AuthException {
-    this.setPassword( Crypto.generateHashedPassword( this.delegate.getName( ) ) );
+    this.setPassword( Crypto.generateEncryptedPassword( this.delegate.getName( ) ) );
   }
   
   @Override
