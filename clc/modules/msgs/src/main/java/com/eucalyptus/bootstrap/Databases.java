@@ -711,7 +711,7 @@ public class Databases {
       try {
         final Connection conn = DriverManager.getConnection( url, Databases.getUserName( ), Databases.getPassword( ) );
         try {
-          final PreparedStatement statement = conn.prepareStatement( "select config_component_hostname from eucalyptus_config.config_component_base where config_component_partition='eucalyptus';" );
+          final PreparedStatement statement = conn.prepareStatement( "select config_component_hostname from config_component_base where config_component_partition='eucalyptus';" );
           final ResultSet result = statement.executeQuery( );
           while ( result.next( ) ) {
             final Object columnValue = result.getObject( 1 );
