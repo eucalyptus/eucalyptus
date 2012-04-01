@@ -275,8 +275,13 @@ doGetConsoleOutput(	struct nc_state_t *nc,
     return(1);
   }
 
+  // read from console.append.log if it exists into dynamically allocated 4K console_append buffer
   rc = stat(console_file, &statbuf);
   if (rc >= 0) {
+      if (diskutil_ch (console_file, nc->admin_user_id, nc->admin_user_id, 0) != OK) {
+          logprintfl (EUCAERROR, "doGetConsoleOutput(): failed to change ownership of %s\n", console_file);
+          return (1);
+      }
     fd = open(console_file, O_RDONLY);
     if (fd >= 0) {
       console_append = malloc(4096);
@@ -292,8 +297,15 @@ doGetConsoleOutput(	struct nc_state_t *nc,
   snprintf(console_file, MAX_PATH, "%s/console.log", instance->instancePath);
   sem_v (inst_sem);
 
+  // read the last 64K from console.log or the whole file, if smaller, into dynamically allocated 64K console_main buffer
   rc = stat(console_file, &statbuf);
   if (rc >= 0) {
+      if (diskutil_ch (console_file, nc->admin_user_id, nc->admin_user_id, 0) != OK) {
+          logprintfl (EUCAERROR, "doGetConsoleOutput(): failed to change ownership of %s\n", console_file);
+          if (console_append) 
+              free(console_append);
+          return (1);
+      }
     fd = open(console_file, O_RDONLY);
     if (fd >= 0) {
       rc = lseek(fd, (off_t)(-1 * readsize), SEEK_END);
@@ -318,6 +330,7 @@ doGetConsoleOutput(	struct nc_state_t *nc,
     logprintfl(EUCAERROR, "cannot stat console_output file '%s'\n", console_file);
   }
   
+  // concatenate console_append with console_main, base64-encode this, and put into dynamically allocated buffer consoleOutput
   ret = 1;
   console_output = malloc( (readsize) + 4096 );
   if (console_output) {
