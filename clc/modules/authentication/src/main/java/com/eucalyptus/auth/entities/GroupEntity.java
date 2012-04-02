@@ -93,7 +93,7 @@ public class GroupEntity extends AbstractPersistent implements Serializable {
   @PrePersist
   public void generateOnCommit() {
     if( this.groupId == null ) {
-      this.groupId = Crypto.getHmacProvider( ).generateQueryId( this.name + System.currentTimeMillis( ) );
+      this.groupId = Crypto.generateQueryId();
     }
   }
   

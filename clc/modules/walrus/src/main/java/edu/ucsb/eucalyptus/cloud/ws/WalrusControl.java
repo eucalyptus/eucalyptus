@@ -259,15 +259,10 @@ public class WalrusControl {
 
 	public GetWalrusConfigurationResponseType GetWalrusConfiguration(GetWalrusConfigurationType request) throws EucalyptusCloudException {
 		GetWalrusConfigurationResponseType reply = (GetWalrusConfigurationResponseType) request.getReply();
-		if(ComponentIds.lookup(Eucalyptus.class).name( ).equals(request.getEffectiveUserId()))
-			throw new AccessDeniedException("Only admin can change walrus properties.");
-		String name = request.getName();
-		if(WalrusProperties.NAME.equals(name)) {
-			ConfigurableClass configurableClass = WalrusInfo.class.getAnnotation(ConfigurableClass.class);
-			if(configurableClass != null) {
-				String prefix = configurableClass.root();
-				reply.setProperties((ArrayList<ComponentProperty>) PropertyDirectory.getComponentPropertySet(prefix));
-			}
+		ConfigurableClass configurableClass = WalrusInfo.class.getAnnotation(ConfigurableClass.class);
+		if(configurableClass != null) {
+			String prefix = configurableClass.root();
+			reply.setProperties((ArrayList<ComponentProperty>) PropertyDirectory.getComponentPropertySet(prefix));
 		}
 		return reply;
 	}
