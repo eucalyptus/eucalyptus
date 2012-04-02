@@ -163,7 +163,11 @@ void libvirt_error_handler (	void *userData,
 	if ( error==NULL) {
 		logprintfl (EUCAERROR, "libvirt error handler was given a NULL pointer\n");
 	} else {
-		logprintfl (EUCAERROR, "libvirt: %s (code=%d)\n", error->message, error->code);
+        int log_level = EUCAERROR;
+        if (error->code==VIR_ERR_NO_DOMAIN) { // report "domain not found" errors as warnings, since they are expected when instance is being terminated
+            log_level = EUCAWARN;
+        }
+		logprintfl (log_level, "libvirt: %s (code=%d)\n", error->message, error->code);
 	}
 }
 

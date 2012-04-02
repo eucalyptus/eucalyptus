@@ -2,6 +2,8 @@
 # Makefile for vmware-broker
 #
 
+include ../Makedefs
+
 all:
 	$(MAKE) -C imager all
 
@@ -13,11 +15,13 @@ distclean:
 
 install:
 	$(MAKE) -C imager install
+	@$(INSTALL) -m 755 euca_vmware $(DESTDIR)$(datarootdir)/eucalyptus
 
 deploy:
 	$(MAKE) -C imager deploy
 
 uninstall:
 	$(MAKE) -C imager uninstall
+	@$(RM) -f $(DESTDIR)$(datarootdir)/eucalyptus/euca_vmware
 
 build: all

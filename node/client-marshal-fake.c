@@ -241,9 +241,9 @@ ncStub * ncStubCreate (char *endpoint_uri, char *logfile, char *homedir)
 
     logprintfl (EUCADEBUG, "fakeNC: DEBUG: requested URI %s\n", uri);
 
-    // see if we should redirect to the VMware broker
-    if (strstr (uri, "VMwareBroker")) {
-        uri = "http://localhost:8773/services/VMwareBroker";
+    // see if we should redirect to a local broker
+    if (strstr (uri, "EucalyptusBroker")) {
+        uri = "http://localhost:8773/services/EucalyptusBroker";
         logprintfl (EUCADEBUG, "fakeNC: DEBUG: redirecting request to %s\n", uri);
     }
 
