@@ -99,6 +99,7 @@ import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.Futures;
+import com.eucalyptus.util.fsm.ExistingTransitionException;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
@@ -1119,21 +1120,27 @@ public class Topology {
     
     private ServiceConfiguration doTopologyChange( final ServiceConfiguration input, final State nextState ) throws RuntimeException {
       final State initialState = input.lookupState( );
-      boolean enabledCheck = Component.State.ENABLED.equals( initialState ) && Component.State.ENABLED.equals( nextState );
+      boolean enabledEndState = false;
       ServiceConfiguration endResult = input;
       try {
         endResult = ServiceTransitions.pathTo( input, nextState ).get( );
         Logs.extreme( ).debug( this.toString( endResult, initialState, nextState ) );
         return endResult;
       } catch ( final Exception ex ) {
-        Exceptions.maybeInterrupted( ex );
-        LOG.error( this.toString( input, initialState, nextState, ex ) );
-        Logs.extreme( ).error( ex, Throwables.getRootCause( ex ) );
-        Logs.extreme( ).error( ex, ex );
-        throw Exceptions.toUndeclared( ex );
+        if ( Exceptions.isCausedBy( ex, ExistingTransitionException.class ) ) {
+          LOG.error( this.toString( input, initialState, nextState, ex ) );
+          enabledEndState = true;
+          throw Exceptions.toUndeclared( ex );
+        } else {
+          Exceptions.maybeInterrupted( ex );
+          LOG.error( this.toString( input, initialState, nextState, ex ) );
+          Logs.extreme( ).error( ex, Throwables.getRootCause( ex ) );
+          Logs.extreme( ).error( ex, ex );
+          throw Exceptions.toUndeclared( ex );
+        }
       } finally {
-        boolean enabledEndState = Component.State.ENABLED.equals( endResult.lookupState( ) );
-        if ( Bootstrap.isFinished( ) && !enabledCheck && !enabledEndState && Topology.getInstance( ).services.containsValue( input ) ) {
+        enabledEndState |= Component.State.ENABLED.equals( endResult.lookupState( ) );
+        if ( Bootstrap.isFinished( ) && !enabledEndState && Topology.getInstance( ).services.containsValue( input ) ) {
           Topology.guard( ).tryDisable( endResult );
         }
       }
