@@ -94,7 +94,7 @@ public class Ats implements Predicate<Class> {
       if ( a.isAnnotationPresent( annotation ) ) {
         return true;
       } else if ( a instanceof Class ) {
-        for ( Class inter : ( ( Class ) a ).getInterfaces( ) ) {
+        for ( Class<?> inter : ( ( Class<?> ) a ).getInterfaces( ) ) {
           if ( inter.isAnnotationPresent( annotation ) ) {
             return true;
           }
