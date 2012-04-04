@@ -241,7 +241,8 @@ int main (int argc, char * argv[])
         fprintf (stderr, "error: failed to query running domains\n");
         exit (1);
     }
-    
+
+    fprintf (stdout, "NC test was successful\n");
     return 0;
 }
 

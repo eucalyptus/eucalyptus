@@ -4164,7 +4164,6 @@ int restoreNetworkState() {
     logprintfl(EUCAERROR, "restoreNetworkState(): cannot start DHCP daemon, please check your network settings\n");
     ret = 1;
   }
-
   sem_mypost(VNET);
 
   logprintfl(EUCADEBUG, "restoreNetworkState(): done restoring network state\n");
