@@ -141,7 +141,15 @@ public class VmNetworkConfig {
   void setParent( VmInstance parent ) {
     this.parent = parent;
   }
-  
+
+  Boolean getUsePrivateAddressing( ) {
+    return this.usePrivateAddressing;
+  }
+
+  void setUsePrivateAddressing( Boolean usePrivateAddressing ) {
+    this.usePrivateAddressing = usePrivateAddressing;
+  }
+
   String getMacAddress( ) {
     return this.macAddress;
   }
@@ -192,14 +200,6 @@ public class VmNetworkConfig {
     if ( this.privateDnsName != null ) builder.append( "privateDnsName=" ).append( this.privateDnsName ).append( ":" );
     if ( this.publicDnsName != null ) builder.append( "publicDnsName=" ).append( this.publicDnsName );
     return builder.toString( );
-  }
-
-  private Boolean getUsePrivateAddressing( ) {
-    return this.usePrivateAddressing;
-  }
-
-  private void setUsePrivateAddressing( Boolean usePrivateAddressing ) {
-    this.usePrivateAddressing = usePrivateAddressing;
   }
 
   /**

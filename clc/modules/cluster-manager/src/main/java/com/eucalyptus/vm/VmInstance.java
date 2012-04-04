@@ -779,6 +779,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
                                                      .networking( allocInfo.getNetworkGroups( ), token.getNetworkIndex( ) )
                                                      .expiresOn( token.getExpirationTime( ) )
                                                      .build( token.getLaunchIndex( ) );
+        vmInst.getNetworkConfig().setUsePrivateAddressing( allocInfo.isUsePrivateAddressing() );
         vmInst = Entities.persist( vmInst );
         Entities.flush( vmInst );
         db.commit( );
@@ -1124,7 +1125,12 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       }
     } ) );
   }
-  
+
+  public boolean isUsePrivateAddressing() {
+    // allow for null value
+    return Boolean.TRUE.equals( this.getNetworkConfig().getUsePrivateAddressing() );
+  }
+
   public String getPrivateAddress( ) {
     return this.getNetworkConfig( ).getPrivateAddress( );
   }
