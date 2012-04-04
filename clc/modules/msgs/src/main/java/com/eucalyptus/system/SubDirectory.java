@@ -84,7 +84,7 @@ public enum SubDirectory {
   	 }
       }
   },
-  TX( BaseDirectory.HOME, "/var/run/eucalyptus/tx" ) { 
+  TX( BaseDirectory.VAR, "tx" ) { 
 	@Override
 	protected void assertPermissions() {
 
