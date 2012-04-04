@@ -61,6 +61,7 @@
 package com.eucalyptus.ws.handlers;
 
 import java.io.ByteArrayOutputStream;
+import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
@@ -499,6 +500,13 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 				objectKey += splitOn + target[i];
 				splitOn = "/";
 			}
+
+			try {
+				objectKey = WalrusUtil.URLdecode(objectKey);
+			} catch (UnsupportedEncodingException e) {
+				throw new BindingException("Unable to get key: " + e.getMessage());
+			}
+
 			operationParams.put("Bucket", target[0]);
 			operationParams.put("Key", objectKey);
 			operationParams.put("Operation", verb.toUpperCase() + "." + "OBJECT");
@@ -524,6 +532,11 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 							for(int i = 1; i < sourceTarget.length; ++i) {
 								sourceObjectKey += sourceSplitOn + sourceTarget[i];
 								sourceSplitOn = "/";
+							}                                                        
+							try {
+								sourceObjectKey = WalrusUtil.URLdecode(sourceObjectKey);
+							} catch (UnsupportedEncodingException e) {
+								throw new BindingException("Unable to get source key: " + e.getMessage());
 							}
 							operationParams.put("SourceBucket", sourceTarget[0]);
 							operationParams.put("SourceObject", sourceObjectKey);

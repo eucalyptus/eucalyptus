@@ -93,7 +93,6 @@ public class StorageProperties {
 	public static final long GB = 1024*1024*1024;
 	public static final long MB = 1024*1024;
 	public static final long KB = 1024;
-	public static final String DUMMY_SAN_HOST = "sanHost";
 	public static final String ETHERD_PREFIX = "/dev/etherd/e";
 	public static final String iface = "eth0";
 	public static final int MAX_TOTAL_VOLUME_SIZE = 100;
@@ -114,17 +113,6 @@ public class StorageProperties {
 	public static String eucaHome = BaseDirectory.HOME.toString( );
 	public static final String EUCA_ROOT_WRAPPER = "/usr/lib/eucalyptus/euca_rootwrap";
 	public static final String blockSize = "1M";
-	public static final String SAN_HOST = "sanHost";
-	public static final String SAN_USERNAME = "sanUser";
-	public static final String SAN_PASSWORD = "sanPassword";
-	public static String DAS_DEVICE = "/dev/blockdev";
-	public static String AGGR_NAME = "aggr1";
-	public static String IQN;
-	public static enum IscsiAuthType {
-		HBA
-	}
-	public final static int SNAP_PERCENT = 100;
-	public static double NETAPP_META_OVERHEAD = 1;
 
 	static { Groovyness.loadConfig("storageprops.groovy"); }
 
