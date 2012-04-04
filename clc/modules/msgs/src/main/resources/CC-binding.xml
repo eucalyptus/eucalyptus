@@ -72,7 +72,7 @@
   <include path="cc-vms.xml" />
   <include path="cc-getlogs.xml" />
   <include path="cc-services.xml" />
-  <include path="vmware-broker-types.xml"/>
+  <include path="broker-types.xml"/>
 
   <mapping class="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" abstract="true" extends="edu.ucsb.eucalyptus.msgs.BaseMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.BaseMessage" />
