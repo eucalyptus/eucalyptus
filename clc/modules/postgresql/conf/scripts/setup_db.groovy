@@ -102,7 +102,7 @@
      private static String PG_DB_OPT = "-D";
      private static String PG_INITDB = "/usr/pgsql-9.1/bin/initdb ";
      private static String PG_X_OPT = " -X ";
-     private static String PG_X_DIR =  SubDirectory.TX.getFile().getPath();
+     private static String PG_X_DIR =  SubDirectory.DB.getFile().getPath() + "/tx/";
      private static String PG_USER_OPT = " -Ueucalyptus ";
      private static String PG_TRUST_OPT = " --auth=password --pwfile=";
      private static String PG_PWD_FILE = " --pwfile= ";
