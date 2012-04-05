@@ -327,7 +327,7 @@ public class AdmissionControl {
 
     @Override
     public void allocate( Allocation allocInfo ) throws Exception {
-      if ( NetworkGroups.networkingConfiguration( ).hasNetworking( ) ) {
+      if ( NetworkGroups.networkingConfiguration( ).hasNetworking( ) && !allocInfo.isUsePrivateAddressing()) {
         for ( ResourceToken token : allocInfo.getAllocationTokens( ) ) {
           token.setAddress( Addresses.allocateSystemAddress( token.getAllocationInfo( ).getPartition( ) ) );
         }
