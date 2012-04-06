@@ -777,9 +777,9 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
                                                                   allocInfo.getVmType( ) )
                                                      .placement( allocInfo.getPartition( ), allocInfo.getRequest( ).getAvailabilityZone( ) )
                                                      .networking( allocInfo.getNetworkGroups( ), token.getNetworkIndex( ) )
-                                                     .expiresOn( token.getExpirationTime( ) )
+                                                     .addressing( allocInfo.isUsePrivateAddressing() )
+                                                     .expiresOn(token.getExpirationTime())
                                                      .build( token.getLaunchIndex( ) );
-        vmInst.getNetworkConfig().setUsePrivateAddressing( allocInfo.isUsePrivateAddressing() );
         vmInst = Entities.persist( vmInst );
         Entities.flush( vmInst );
         db.commit( );
@@ -799,25 +799,20 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   }
   
   public static class Builder {
-    VmId                vmId;
-    VmBootRecord        vmBootRecord;
-    VmUsageStats        vmUsageStats;
-    VmPlacement         vmPlacement;
-    VmLaunchRecord      vmLaunchRecord;
-    List<NetworkGroup>  networkRulesGroups;
-    PrivateNetworkIndex networkIndex;
-    OwnerFullName       owner;
-    Date                expiration;
+    private VmId                vmId;
+    private VmBootRecord        vmBootRecord;
+    private VmPlacement         vmPlacement;
+    private List<NetworkGroup>  networkRulesGroups;
+    private PrivateNetworkIndex networkIndex;
+    private Boolean             usePrivateAddressing;
+    private OwnerFullName       owner;
+    private Date                expiration;
     
     public Builder owner( final OwnerFullName owner ) {
       this.owner = owner;
       return this;
     }
-    
-    /**
-     * @param expirationTime
-     * @return
-     */
+
     public Builder expiresOn( final Date expirationTime ) {
       this.expiration = expirationTime;
       return this;
@@ -826,6 +821,11 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     public Builder networking( final List<NetworkGroup> groups, final PrivateNetworkIndex networkIndex ) {
       this.networkRulesGroups = groups;
       this.networkIndex = networkIndex;
+      return this;
+    }
+
+    public Builder addressing( final Boolean usePrivate ) {
+      this.usePrivateAddressing = usePrivate;
       return this;
     }
     
@@ -847,7 +847,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     
     public VmInstance build( final Integer launchndex ) throws ResourceAllocationException {
       return new VmInstance( this.owner, this.vmId, this.vmBootRecord, new VmLaunchRecord( launchndex, new Date( ) ), this.vmPlacement,
-                             this.networkRulesGroups, this.networkIndex, this.expiration );
+                             this.networkRulesGroups, this.networkIndex, this.usePrivateAddressing, this.expiration );
     }
   }
   
@@ -858,6 +858,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
                       final VmPlacement placement,
                       final List<NetworkGroup> networkRulesGroups,
                       final PrivateNetworkIndex networkIndex,
+                      final Boolean usePrivateAddressing,
                       final Date expiration ) throws ResourceAllocationException {
     super( owner, vmId.getInstanceId( ) );
     this.setState( VmState.PENDING );
@@ -870,7 +871,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     this.usageStats = new VmUsageStats( this );
     this.runtimeState = new VmRuntimeState( this );
     this.transientVolumeState = new VmVolumeState( this );
-    this.networkConfig = new VmNetworkConfig( this );
+    this.networkConfig = new VmNetworkConfig( this, usePrivateAddressing );
     final Function<NetworkGroup, NetworkGroup> func = Entities.merge( );
     this.networkGroups.addAll( Collections2.transform( networkRulesGroups, func ) );
     this.networkIndex = networkIndex != PrivateNetworkIndex.bogus( )

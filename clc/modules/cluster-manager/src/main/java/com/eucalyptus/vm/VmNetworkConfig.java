@@ -114,7 +114,15 @@ public class VmNetworkConfig {
   VmNetworkConfig( VmInstance vmInstance ) {
     this( vmInstance, DEFAULT_IP, DEFAULT_IP );
   }
-  
+
+  /**
+   *
+   */
+  VmNetworkConfig( final VmInstance vmInstance, final Boolean usePrivateAddressing ) {
+    this( vmInstance );
+    this.usePrivateAddressing = usePrivateAddressing;
+  }
+
   void updateDns( ) {
     String dnsDomain = null;
     try {
@@ -194,6 +202,7 @@ public class VmNetworkConfig {
   public String toString( ) {
     StringBuilder builder = new StringBuilder( );
     builder.append( "VmNetworkConfig:" );
+    if ( this.usePrivateAddressing != null ) builder.append( "usePrivateAddressing=" ).append( this.usePrivateAddressing ).append( ":" );
     if ( this.macAddress != null ) builder.append( "macAddress=" ).append( this.macAddress ).append( ":" );
     if ( this.privateAddress != null ) builder.append( "privateAddress=" ).append( this.privateAddress ).append( ":" );
     if ( this.publicAddress != null ) builder.append( "publicAddress=" ).append( this.publicAddress ).append( ":" );
