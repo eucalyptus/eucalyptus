@@ -207,7 +207,7 @@
 	     String pgconfText = orgPGCONF.getText();
 	     bakPGCONF.write(pgconfText);
 	     Pattern pattern_max_connection = ~/max_connections\s+=\s+\d+/;
-	     orgPGCONF.setText(pgconfText.replaceAll(pattern_max_connection, "max_connections = 2000"));
+	     orgPGCONF.setText(pgconfText.replaceAll(pattern_max_connection, "max_connections = 1000"));
 	     Pattern pattern_socket_dir = ~/#unix_socket_directory\s+=\s+\'\'/;
 	     String pgconfText2 = orgPGCONF.getText();
 	     orgPGCONF.setText(pgconfText2.replaceAll(pattern_socket_dir, "unix_socket_directory = " + "'" + EUCA_DB_DIR + "'" ) )
