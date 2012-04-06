@@ -197,5 +197,6 @@
 	<classpathentry kind="lib" path="lib/xom-1.1.jar"/>
 	<classpathentry kind="lib" path="lib/xpp3-1.1.3.4.O.jar"/>
 	<classpathentry kind="lib" path="modules/module-inc.groovy"/>
+	<classpathentry exported="true" kind="con" path="GROOVY_DSL_SUPPORT"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

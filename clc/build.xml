@@ -78,8 +78,6 @@
 		</filterchain>
 	</loadfile>
 	<!--================================== other vars ==================================-->
-	<property name="deps.url" value="http://mirror.eucalyptus/dependencies/${euca.version}" />
-	<property name="deps.dir" value="deps" />
 	<property name="deps.lib.dir" value="lib" />
 	<property name="tools.dir" value="tools/src" />
 	<property name="deps.lib" value="cloud-lib" />
@@ -90,8 +88,11 @@
 		<fileset dir="${deps.lib.dir}">
 			<include name="**/*.jar" />
 		</fileset>
+		<fileset dir="/usr/share/java">
+			<include name="**/*.jar" />
+		</fileset>
 	</path>
-	<taskdef name="groovy" classpathref="groovy-classpath" classname="org.codehaus.groovy.ant.Groovy" />
+	<taskdef onerror="ignore" name="groovy" classpathref="groovy-classpath" classname="org.codehaus.groovy.ant.Groovy" />
 	<macrodef name="call-module-target">
 		<attribute name="target" />
 		<sequential>
@@ -193,8 +194,6 @@
 		<call-module-target target="clean"/>
 	</target>
 	<target name="distclean" depends="clean">
-		<delete dir="${deps.dir}" />
-		<delete dir="${deps.lib.dir}" />
 		<delete dir="target" />
 	</target>
 	<!--================================== install target ==================================-->
@@ -232,65 +231,6 @@
 		<mkdir dir="${DESTDIR}${euca.var.dir}/webapps" />
 		<mkdir dir="${DESTDIR}${euca.var.dir}/modules" />
 		<mkdir dir="${DESTDIR}${euca.run.dir}" />
-		<ant dir="modules/msgs" inheritall="false" target="install" />
-		<ant dir="modules/euare-common" inheritall="false" target="install" />
-		<ant dir="modules/mysql" inheritall="false" target="install" />
-		<ant dir="modules/cloud" inheritall="false" target="install" />
-		<ant dir="modules/authentication" inheritall="false" target="install" />
-		<ant dir="modules/euare" inheritall="false" target="install" />
-		<ant dir="modules/configuration" inheritall="false" target="install" />
-		<ant dir="modules/component" inheritall="false" target="install" />
-		<ant dir="modules/core" inheritall="false" target="install" />
-		<ant dir="modules/wsstack" inheritall="false" target="install" />
-		<ant dir="modules/storage-common" inheritall="false" target="install" />
-		<ant dir="modules/reporting" inheritall="false" target="install" />
-		<ant dir="modules/cluster-manager" inheritall="false" target="install" />
-		<ant dir="modules/notifications" inheritall="false" target="install" />
-		<ant dir="modules/walrus" inheritall="false" target="install" />
-		<ant dir="modules/storage-controller" inheritall="false" target="install" />
-		<ant dir="modules/storage-san" inheritall="false" target="install" />
-		<ant dir="modules/dns" inheritall="false" target="install" />
-		<ant dir="modules/www" inheritall="false" target="install" />
-		<ant dir="modules/reporting" inheritall="false" target="install" />
-		<ant dir="modules/vmware-broker" inheritall="false" target="install" />
-	</target>
-	<!--================================== unzipping target ==================================-->
-	<target name="deps">
-		<condition property="needDownload">
-			<and>
-				<not>
-					<available file="${deps.lib.dir}/bcprov.jar" />
-				</not>
-				<and>
-					<not>
-						<available file="${deps.dir}/${deps.lib}.tar.gz" />
-					</not>
-				</and>
-			</and>
-		</condition>
-		<ant target="download-deps" />
-		<condition property="needUnzipping">
-			<and>
-				<not>
-					<available file="${deps.lib.dir}/bcprov.jar" />
-				</not>
-				<and>
-					<available file="${deps.dir}/${deps.lib}.tar.gz" />
-				</and>
-			</and>
-		</condition>
-		<ant target="untar" />
-	</target>
-	<target name="dist-deps" depends="deps">
-		<delete dir="${deps.dir}" />
-	</target>
-	<target name="untar" if="needUnzipping">
-		<untar compression="gzip" src="${deps.dir}/${deps.lib}.tar.gz" dest="${deps.lib.dir}" />
-	</target>
-	<target name="download-deps" if="needDownload">
-		<mkdir dir="${deps.dir}" />
-		<mkdir dir="${deps.lib.dir}" />
-		<!--===========  download the dependency libraries  ===========-->
-		<get src="${deps.url}/${deps.lib}.tar.gz" dest="${deps.dir}/${deps.lib}.tar.gz" />
+		<call-module-target target="install"/>
 	</target>
 </project>

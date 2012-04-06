@@ -11,8 +11,15 @@ web_prop_dir	= ${TOP}/clc/modules/www/conf
 all: deps build
 test: deps build-test
 
-deps:
-	@$(ANT) deps
+deps/cloud-lib.tar.gz:
+	@mkdir -p deps
+	cd ${TOP}/clc/deps/ && wget -q http://mirror.eucalyptus/dependencies/${VERSION}/cloud-lib.tar.gz	
+
+lib/bcrpov.jar:
+	@mkdir -p lib
+	tar -C ${TOP}/clc/lib -zxf ${TOP}/clc/deps/cloud-lib.tar.gz
+
+deps: deps/cloud-lib.tar.gz lib/bcrpov.jar
 
 update_properties: ${web_prop_dir}/eucalyptus-web.properties
 
@@ -75,7 +82,7 @@ build-test: deps extras
 	@make -C eucadmin
 
 
-clean:
+clean: deps
 	$(ANT) clean
 	make -C modules/bootstrap/src/main/native clean
 	make -C modules/storage-controller/native clean
@@ -83,6 +90,7 @@ clean:
 	make -C eucadmin clean
 
 distclean: clean
+	rm -rf ${TOP}/deps ${TOP}/lib
 	$(ANT) distclean
 	make -C modules/bootstrap/src/main/native distclean
 	make -C modules/storage-controller/native distclean
