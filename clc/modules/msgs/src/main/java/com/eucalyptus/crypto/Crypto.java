@@ -83,4 +83,44 @@ public class Crypto {
     return (CryptoProvider) providers.get( CryptoProvider.class );
   }
   
+  public static String generateLinuxSaltedPassword( final String password ) {
+    return Crypto.getCryptoProvider( ).generateLinuxSaltedPassword( password );
+  }
+  
+  public static boolean verifyLinuxSaltedPassword( final String clear, final String hashed ) {
+    return Crypto.getCryptoProvider( ).verifyLinuxSaltedPassword( clear, hashed );
+  }
+  
+  /**
+   * verifyPassword checks if a hashed password matches its clear text form,
+   * using Linux-compatible salted password hash;
+   * if not match, fall back to original non-salted hash.
+   * 
+   * @param clear
+   * @param hashed
+   * @return
+   */
+  public static boolean verifyPassword( final String clear, final String hashed ) {
+    try {
+      // Try salted hash first
+      return Crypto.verifyLinuxSaltedPassword( clear, hashed );
+    } catch ( Exception e ) {
+      // Fall back to old password hash
+      if ( clear != null ) {
+        return hashed.equals( Crypto.generateHashedPassword( clear ) );
+      }
+    }
+    return false;
+  }
+  
+  /**
+   * A gateway for creating the encrypted password.
+   * 
+   * @param password
+   * @return
+   */
+  public static String generateEncryptedPassword( final String password ) {
+    // Use Linux-compatible salted password
+    return Crypto.generateLinuxSaltedPassword( password );
+  }
 }
