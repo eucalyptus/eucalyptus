@@ -71,6 +71,8 @@ import edu.ucsb.eucalyptus.cloud.entities.WalrusInfo;
 import edu.ucsb.eucalyptus.cloud.entities.WalrusSnapshotInfo;
 import edu.ucsb.eucalyptus.msgs.*;
 import edu.ucsb.eucalyptus.storage.StorageManager;
+
+import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.WalrusProperties;
 import org.apache.log4j.Logger;
@@ -139,6 +141,9 @@ public class WalrusBlockStorageManager {
 				.getReply();
 
 		String snapshotId = request.getKey();
+    if (!Contexts.lookup().hasAdministrativePrivileges()) {
+      throw new AccessDeniedException("Snapshot", snapshotId);
+    }
 		String bucketName = request.getBucket();
 		String snapSizeString = request.getSnapshotSize();
 		Long snapSize = 0L;
@@ -225,6 +230,9 @@ public class WalrusBlockStorageManager {
 		GetWalrusSnapshotResponseType reply = (GetWalrusSnapshotResponseType) request
 				.getReply();
 		String snapshotId = request.getKey();
+    if (!Contexts.lookup().hasAdministrativePrivileges()) {
+      throw new AccessDeniedException("Snapshot", snapshotId);
+    }
 		EntityWrapper<WalrusSnapshotInfo> db = EntityWrapper.get(WalrusSnapshotInfo.class);
 		WalrusSnapshotInfo snapshotInfo = new WalrusSnapshotInfo(snapshotId);
 		List<WalrusSnapshotInfo> snapshotInfos = db.query(snapshotInfo);
@@ -262,6 +270,9 @@ public class WalrusBlockStorageManager {
 				.getReply();
 		String snapshotId = request.getKey();
 
+		if (!Contexts.lookup().hasAdministrativePrivileges()) {
+		  throw new AccessDeniedException("Snapshot", snapshotId);
+		}
 		// Load the entire snapshot tree and then remove the snapshot
 		EntityWrapper<WalrusSnapshotInfo> db = EntityWrapper.get(WalrusSnapshotInfo.class);
 		WalrusSnapshotInfo snapshotInfo = new WalrusSnapshotInfo(snapshotId);
@@ -326,6 +337,9 @@ public class WalrusBlockStorageManager {
 	public GetWalrusSnapshotSizeResponseType getWalrusSnapshotSize(GetWalrusSnapshotSizeType request) throws EucalyptusCloudException {
 		GetWalrusSnapshotSizeResponseType reply = (GetWalrusSnapshotSizeResponseType) request.getReply();
 		String snapshotId = request.getKey();
+    if (!Contexts.lookup().hasAdministrativePrivileges()) {
+      throw new AccessDeniedException("Snapshot", snapshotId);
+    }
 		EntityWrapper<WalrusSnapshotInfo> db = EntityWrapper.get(WalrusSnapshotInfo.class);
 		WalrusSnapshotInfo snapshotInfo = new WalrusSnapshotInfo(snapshotId);
 		List<WalrusSnapshotInfo> snapshotInfos = db.query(snapshotInfo);
