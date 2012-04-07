@@ -64,11 +64,9 @@ package com.eucalyptus.auth;
 
 import java.security.cert.X509Certificate;
 import java.util.List;
-import javax.persistence.EntityManager;
+import java.util.NoSuchElementException;
+
 import org.apache.log4j.Logger;
-import org.hibernate.Session;
-import org.hibernate.criterion.Example;
-import org.hibernate.criterion.MatchMode;
 import org.hibernate.criterion.Restrictions;
 import com.eucalyptus.auth.api.AccountProvider;
 import com.eucalyptus.auth.checker.InvalidValueException;
@@ -112,7 +110,7 @@ public class DatabaseAuthProvider implements AccountProvider {
     }
     EntityWrapper<UserEntity> db = EntityWrapper.get( UserEntity.class );
     try {
-      UserEntity user = db.getUnique( new UserEntity( userName ) );
+      UserEntity user = DatabaseAuthUtils.getUnique( db, UserEntity.class, "name", userName );
       db.commit( );
       return new DatabaseUserProxy( user );
     } catch ( Exception e ) {
@@ -129,7 +127,7 @@ public class DatabaseAuthProvider implements AccountProvider {
     }
     EntityWrapper<UserEntity> db = EntityWrapper.get( UserEntity.class );
     try {
-      UserEntity user = db.getUnique( UserEntity.newInstanceWithUserId( userId ) );
+      UserEntity user = DatabaseAuthUtils.getUnique( db, UserEntity.class, "userId", userId );
       db.commit( );
       return new DatabaseUserProxy( user );
     } catch ( Exception e ) {
@@ -153,18 +151,17 @@ public class DatabaseAuthProvider implements AccountProvider {
     }
     EntityWrapper<UserEntity> db = EntityWrapper.get( UserEntity.class );
     try {
-      Example userExample = Example.create( new UserEntity( true ) ).enableLike( MatchMode.EXACT );
       @SuppressWarnings( "unchecked" )
-      List<UserEntity> users = ( List<UserEntity> ) db
-          .createCriteria( UserEntity.class ).setCacheable( true ).add( userExample )
+      UserEntity result = ( UserEntity ) db
+          .createCriteria( UserEntity.class ).setCacheable( true ).add( Restrictions.eq( "enabled", true ) )
           .createCriteria( "keys" ).setCacheable( true ).add( 
               Restrictions.and( Restrictions.eq( "accessKey", keyId ), Restrictions.eq( "active", true ) ) )
-          .list( );
-      if ( users.size( ) != 1 ) {
-        throw new AuthException( "Found " + users.size( ) + " user(s)" );
+          .uniqueResult( );
+      if ( result == null ) {
+        throw new NoSuchElementException( "Can not find user with key " + keyId );
       }
       db.commit( );
-      return new DatabaseUserProxy( users.get( 0 ) );
+      return new DatabaseUserProxy( result );
     } catch ( Exception e ) {
       db.rollback( );
       Debugging.logError( LOG, e, "Failed to find user with access key ID : " + keyId );
@@ -186,21 +183,21 @@ public class DatabaseAuthProvider implements AccountProvider {
     }
     EntityWrapper<UserEntity> db = EntityWrapper.get( UserEntity.class );
     try {
-      Example userExample = Example.create( new UserEntity( true ) ).enableLike( MatchMode.EXACT );
-      CertificateEntity searchCert = new CertificateEntity( X509CertHelper.fromCertificate( cert ) );
-      searchCert.setActive( true );
-      searchCert.setRevoked( false );
-      Example certExample = Example.create( searchCert ).enableLike( MatchMode.EXACT );
       @SuppressWarnings( "unchecked" )
-      List<UserEntity> users = ( List<UserEntity> ) db
-          .createCriteria( UserEntity.class ).setCacheable( true ).add( userExample )
-          .createCriteria( "certificates" ).setCacheable( true ).add( certExample )
-          .list( );
-      if ( users.size( ) != 1 ) {
-        throw new AuthException( "Found " + users.size( ) + " user(s)" );
+      UserEntity result = ( UserEntity ) db
+          .createCriteria( UserEntity.class ).setCacheable( true ).add( Restrictions.eq( "enabled", true ) )
+          .createCriteria( "certificates" ).setCacheable( true ).add( 
+              Restrictions.and( 
+                  Restrictions.eq( "pem", X509CertHelper.fromCertificate( cert ) ), 
+                  Restrictions.and( 
+                      Restrictions.eq( "active", true ),
+                      Restrictions.eq( "revoked", false ) ) ) )
+          .uniqueResult( );
+      if ( result == null ) {
+        throw new NoSuchElementException( "Can not find user with specific cert" );
       }
       db.commit( );
-      return new DatabaseUserProxy( users.get( 0 ) );
+      return new DatabaseUserProxy( result );
     } catch ( Exception e ) {
       db.rollback( );
       Debugging.logError( LOG, e, "Failed to find user with certificate : " + cert );
@@ -215,7 +212,7 @@ public class DatabaseAuthProvider implements AccountProvider {
     }
     EntityWrapper<GroupEntity> db = EntityWrapper.get( GroupEntity.class );
     try {
-      GroupEntity group = db.getUnique( GroupEntity.newInstanceWithGroupId( groupId ) );
+      GroupEntity group = DatabaseAuthUtils.getUnique( db, GroupEntity.class, "groupId", groupId );
       db.commit( );
       return new DatabaseGroupProxy( group );
     } catch ( Exception e ) {
@@ -268,19 +265,17 @@ public class DatabaseAuthProvider implements AccountProvider {
     if ( !recursive && !DatabaseAuthUtils.isAccountEmpty( accountName ) ) {
       throw new AuthException( AuthException.ACCOUNT_DELETE_CONFLICT );
     }
-    Example accountExample = Example.create( new AccountEntity( accountName ) ).enableLike( MatchMode.EXACT );
-    Example groupExample = Example.create( new GroupEntity( true ) ).enableLike( MatchMode.EXACT );
     EntityWrapper<AccountEntity> db = EntityWrapper.get( AccountEntity.class );
     try {
       if ( recursive ) {
         List<GroupEntity> groups = ( List<GroupEntity> ) db
             .createCriteria( GroupEntity.class ).setCacheable( true )
-            .createCriteria( "account" ).setCacheable( true ).add( accountExample )
+            .createCriteria( "account" ).setCacheable( true ).add( Restrictions.eq( "name", accountName ) )
             .list( );
         List<UserEntity> users = ( List<UserEntity> ) db
             .createCriteria( UserEntity.class ).setCacheable( true )
-            .createCriteria( "groups" ).setCacheable( true ).add( groupExample )
-            .createCriteria( "account" ).setCacheable( true ).add( accountExample )
+            .createCriteria( "groups" ).setCacheable( true ).add( Restrictions.eq( "userGroup", true ) )
+            .createCriteria( "account" ).setCacheable( true ).add( Restrictions.eq( "name", accountName ) )
             .list( );
         for ( GroupEntity g : groups ) {
           db.recast( GroupEntity.class ).delete( g );
@@ -289,13 +284,13 @@ public class DatabaseAuthProvider implements AccountProvider {
           db.recast( UserEntity.class ).delete( u );
         }
       }
-      List<AccountEntity> accounts = ( List<AccountEntity> ) db
-          .createCriteria( AccountEntity.class ).setCacheable( true ).add( accountExample )
-          .list( );
-      if ( accounts.size( ) != 1 ) {
-        throw new AuthException( "Found " + accounts.size( ) + " account(s)" );
+      AccountEntity account = ( AccountEntity ) db
+          .createCriteria( AccountEntity.class ).setCacheable( true ).add( Restrictions.eq( "name", accountName ) )
+          .uniqueResult( );
+      if ( account == null ) {
+        throw new NoSuchElementException( "Can not find account " + accountName );
       }
-      db.delete( accounts.get( 0 ) );
+      db.delete( account );
       db.commit( );
     } catch ( Exception e ) {
       db.rollback( );
@@ -366,7 +361,7 @@ public class DatabaseAuthProvider implements AccountProvider {
     }
     EntityWrapper<CertificateEntity> db = EntityWrapper.get( CertificateEntity.class );
     try {
-      CertificateEntity certEntity = db.getUnique( new CertificateEntity( X509CertHelper.fromCertificate( cert ) ) );
+      CertificateEntity certEntity = DatabaseAuthUtils.getUnique( db, CertificateEntity.class, "pem", X509CertHelper.fromCertificate( cert ) );
       db.commit( );
       return new DatabaseCertificateProxy( certEntity );
     }  catch ( Exception e ) {
@@ -383,16 +378,13 @@ public class DatabaseAuthProvider implements AccountProvider {
     }
     EntityWrapper<AccountEntity> db = EntityWrapper.get( AccountEntity.class );
     try {
-      Example accountExample = Example.create( new AccountEntity( accountName ) ).enableLike( MatchMode.EXACT );
       @SuppressWarnings( "unchecked" )
-      List<AccountEntity> accounts = ( List<AccountEntity> ) db
-          .createCriteria( AccountEntity.class ).setCacheable( true ).add( accountExample )
-          .list( );
-      if ( accounts.size( ) < 1 ) {
+      AccountEntity result = ( AccountEntity ) db.createCriteria( AccountEntity.class ).setCacheable( true ).add( Restrictions.eq( "name", accountName ) ).uniqueResult( );
+      if ( result == null ) {
         throw new AuthException( AuthException.NO_SUCH_ACCOUNT );
       }
       db.commit( );
-      return new DatabaseAccountProxy( accounts.get( 0 ) );
+      return new DatabaseAccountProxy( result );
     } catch ( AuthException e ) {
       db.rollback( );
       Debugging.logError( LOG, e, "No matching account " + accountName );
@@ -411,7 +403,7 @@ public class DatabaseAuthProvider implements AccountProvider {
     }
     EntityWrapper<AccountEntity> db = EntityWrapper.get( AccountEntity.class );
     try {
-      AccountEntity account = db.getUnique( AccountEntity.newInstanceWithAccountNumber( accountId ) );
+      AccountEntity account = DatabaseAuthUtils.getUnique( db, AccountEntity.class, "accountNumber", accountId );
       db.commit( );
       return new DatabaseAccountProxy( account );
     } catch ( Exception e ) {
@@ -428,7 +420,7 @@ public class DatabaseAuthProvider implements AccountProvider {
     }
     EntityWrapper<AccessKeyEntity> db = EntityWrapper.get( AccessKeyEntity.class );
     try {
-      AccessKeyEntity keyEntity = db.getUnique( AccessKeyEntity.newInstanceWithAccessKeyId( keyId ) );
+      AccessKeyEntity keyEntity = DatabaseAuthUtils.getUnique( db, AccessKeyEntity.class, "accessKey", keyId );
       db.commit( );
       return new DatabaseAccessKeyProxy( keyEntity );
     } catch ( Exception e ) {
@@ -446,14 +438,14 @@ public class DatabaseAuthProvider implements AccountProvider {
     EntityWrapper<UserEntity> db = EntityWrapper.get( UserEntity.class );
     try {
       @SuppressWarnings( "unchecked" )
-      List<UserEntity> users = ( List<UserEntity> ) db
+      UserEntity result = ( UserEntity ) db
           .createCriteria( UserEntity.class ).setCacheable( true ).add( Restrictions.eq( "confirmationCode", code ) )
-          .list( );
-      if ( users.size( ) < 1 ) {
+          .uniqueResult( );
+      if ( result == null ) {
         throw new AuthException( AuthException.NO_SUCH_USER );
       }
       db.commit( );
-      return new DatabaseUserProxy( users.get( 0 ) );
+      return new DatabaseUserProxy( result );
     } catch ( AuthException e ) {
       db.rollback( );
       Debugging.logError( LOG, e, "Failed to find user by confirmation code " + code );
