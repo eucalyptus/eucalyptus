@@ -110,32 +110,31 @@
      private static String PG_PASSFILE = "pass.txt";
      
      //Default constructor
-     public PostgresqlBootstrapper() {
+     public PostgresqlBootstrapper( ) {
      }
  
      @Override
-     public void init() throws Exception {
+     public void init( ) throws Exception {
  
 	 try {
-
-	     if (!initdbPG()) {
-		 LOG.fatal("Unable to init the postgres database");
-		 System.exit(1);
+	     if ( !versionCheck( ) ){
+		 throw new Exception("Postgres versions less than 9.1.X are not supported");
+	     }
+	     
+	     if ( !initdbPG( ) ) {
+		 throw new Exception("Unable to initialize the postgres database");
 	     }
  
-	     if (!startResource()) {
-		 LOG.fatal("Unable to start the postgres database");
-		 System.exit(1);
+	     if ( !startResource( ) ) {
+		 throw new Exception("Unable to start the postgres database");
 	     }
  
-	     if (!createDBSql()) {
-		 LOG.fatal("Unable to create the eucalyptus database");
-		 System.exit(1);
+	     if ( !createDBSql( ) ) {
+		 throw new Exception("Unable to create the eucalyptus database tables");
 	     }
  
 	     Component dbComp = Components.lookup( Database.class );
 	     dbComp.initService( );
- 
 	     prepareService();
 
 	 } catch ( Exception ex ) {
@@ -144,44 +143,54 @@
 	 }
      }
  
-     public boolean initdbPG() throws Exception {
+    // Version check to ensure only Postgres 9.1.X creates the db. 
+    private boolean versionCheck ( ) {
+      try {
+	String cmd = PG_INITDB + " --version";
+	if ( cmd.execute( ).text.contains("9.1") )
+	  return true;
+      } catch ( Exception e ) {
+	    LOG.fatal("Unable to find the initdb command");
+	    return false;
+      }
+    }
+     
+     private boolean initdbPG( ) throws Exception {
  
-	 String pass = Databases.getPassword();
- 
-	 File passFile = new File(SubDirectory.DB.getFile().getPath() + File.separator +  PG_PASSFILE)
- 
-	 passFile.write(pass);
+	 String pass = Databases.getPassword( );
+	 File passFile = new File( SubDirectory.DB.getFile( ).getPath( ) + File.separator +  PG_PASSFILE )
+	 passFile.write( pass );
 	 String command = PG_INITDB + PG_USER_OPT + PG_TRUST_OPT + passFile + " " + PG_DB_OPT + " " + EUCA_DB_DIR + PG_X_OPT + PG_X_DIR;
 	 try {
-	     if (!runProc(command)) {
+	     if (!runProc( command ) ) {
 		 LOG.debug("Database server did not init.");
 		 return false;
 	     } else {
-		 LOG.debug("Database init complete.");
-		 initDBFile(passFile);
+		 LOG.debug( "Database init complete." );
+		 initDBFile( passFile );
 		 return true;
 	     }
 	 } catch (Exception e) {
-	     LOG.error("Unable to init the database.", e);
-	     passFile.delete();
-	     System.exit(1);
+	     LOG.error( "Unable to init the database.", e );
+	     passFile.delete( );
+	     return false;
 	 }
  
 	 return false;
      }
  
-     private void initDBFile(File passFile) {
+     private void initDBFile( File passFile ) throws Exception {
 	 
-	 passFile.delete();
+	 passFile.delete( );
 	 File ibdata1;
 	 try {
-	     ibdata1 = new File(EUCA_DB_DIR + File.separator + "ibdata1" ).append("");
-	     initPGHBA();
-	     initPGCONF();
-	 } catch (Exception e ) {
+	     ibdata1 = new File( EUCA_DB_DIR + File.separator + "ibdata1" ).append("");
+	     initPGHBA( );
+	     initPGCONF( );
+	 } catch ( Exception e ) {
 	     LOG.debug("Unable to create the configuration files");
-	     ibdata1.delete();
-	     System.exit(1);
+	     ibdata1.delete( );
+	     throw e;
 	 }
      }
  
@@ -197,6 +206,7 @@
 	     newPGHBA.append("host\tall\tall\t::1/128\tpassword\n");
 	 } catch (Exception e) {
 	     LOG.debug("Unable to create the pg_hba.conf file", e);
+	     throw e;
 	 }
      }
  
@@ -213,26 +223,26 @@
 	     orgPGCONF.setText(pgconfText2.replaceAll(pattern_socket_dir, "unix_socket_directory = " + "'" + EUCA_DB_DIR + "'" ) )
 	 } catch (Exception e) {
 	     LOG.debug("Unable to modify the postgresql.conf file", e);
+	     throw e;
 	 }
      }
  
-     public boolean createDBSql() throws Exception {
+     private boolean createDBSql( ) throws Exception {
  
-	 if (!isRunning()) {
-	     LOG.error("Unable to create the database");
-	     System.exit(1);
+	 if ( !isRunning( ) ) {
+	     throw new Exception("The database must be running to create the tables");
 	 }
  
 	 Connection conn = null;
  
-	 for ( String contextName : PersistenceContexts.list() ) {
+	 for ( String contextName : PersistenceContexts.list( ) ) {
  
 	     if (!contextName.startsWith("eucalyptus_")) {
 		 contextName = "eucalyptus_" + contextName;
 	     }
  
 	     try {
-		 String url = "jdbc:postgresql://127.0.0.1:8777/postgres";
+		 String url = String.format( "jdbc:%s", ServiceUris.remote( Database.class, Internets.localHostInetAddress( ), "postgres" ) );
 		 conn = DriverManager.getConnection(url, Databases.getUserName(),Databases.getPassword());
 		 Statement createSchema = conn.createStatement();
 		 String dbName = "CREATE DATABASE " + contextName + " OWNER " + Databases.getUserName();
@@ -240,13 +250,11 @@
 		 LOG.debug("executed sql command : " + dbName + " within the schema : " + contextName);
 		 conn.close();
  
-		 String userUrl = "jdbc:postgresql://127.0.0.1:8777/" + contextName;
- 
+		 String userUrl = String.format( "jdbc:%s", ServiceUris.remote( Database.class, Internets.localHostInetAddress( ), contextName ) );
 		 conn = DriverManager.getConnection(userUrl, Databases.getUserName(), Databases.getPassword());
  
 		 String alterUser = "ALTER ROLE " + Databases.getUserName() + " WITH LOGIN PASSWORD \'" + Databases.getPassword() + "\'";
- 
-		 Statement alterSchema = conn.createStatement();
+                 Statement alterSchema = conn.createStatement();
  
 		 LOG.debug("executed successfully = ALTER ROLE "
 			 + Databases.getUserName() + " within schema " + contextName);
@@ -261,7 +269,7 @@
      }
  
  
-     private boolean startResource() throws Exception {
+     public boolean startResource() throws Exception {
 	 OrderedShutdown.registerPostShutdownHook(new Runnable() {
 		     @Override
 		     public void run( ) {
@@ -286,18 +294,11 @@
 	     return true;
 	 }
  
-	 LOG.debug("Entered the startResource method");
- 
 	 ProcessBuilder pb = new ProcessBuilder(PG_BIN, PG_START, "-w", "-s", PG_DB_OPT + EUCA_DB_DIR, PG_PORT_OPTS2);
- 
-	 LOG.debug("The pb contents : " + pb.command().toArray().toString());
- 
 	 Process p = pb.start();
- 
 	 int value = p.waitFor();
- 
 	 LOG.debug("waitFor value : " + value);
- 
+	 
 	 if (value == 0) {
 	     LOG.debug("The database has started");
 	     return true;
@@ -309,10 +310,10 @@
      }
  
      @Override
-     public boolean load() throws Exception {
+     public boolean load( ) throws Exception {
  
 	 LOG.debug("The load method is being executed");
-	 if (isRunning()) {
+	 if ( isRunning( ) ) {
 	     return true;
 	 }
  
@@ -323,7 +324,7 @@
 	 //   LOG.debug("Unable to load the ssl setup", essl);
 	 //}
 	 try {
-	     if (!startResource()) {
+	     if (!startResource( ) ) {
 		 LOG.debug("Unable to start postgresql");
 		 return false;
 	     }
@@ -335,26 +336,22 @@
 	 return true;
      }
  
-     private void prepareService() throws Exception {
-	 for ( String persistCtx : PersistenceContexts.list() ) {
-	     testContext(persistCtx);
+     private void prepareService( ) throws Exception {
+	 for ( String persistCtx : PersistenceContexts.list( ) ) {
+	     testContext( persistCtx );
 	 }
      }
  
      private void testContext(String context) throws Exception {
  
 	 String ctxName = context.substring( context.indexOf("_") + 1 );
-	 ClassLoader.getSystemClassLoader().loadClass( this.getDriverName() );
+	 ClassLoader.getSystemClassLoader( ).loadClass( this.getDriverName( ) );
 	 Connection conn = null;
  
 	 try {
 	     String url = String.format( "jdbc:%s", ServiceUris.remote( Database.class, Internets.localHostInetAddress( ), context ) );
- 
-	     LOG.debug("connecting url : " + url);
- 
-	     conn = DriverManager.getConnection(url, Databases.getUserName(), Databases.getPassword());
- 
-	     Statement testEucaDB = conn.createStatement();
+	     conn = DriverManager.getConnection(url, Databases.getUserName( ), Databases.getPassword( ) );
+	     Statement testEucaDB = conn.createStatement( );
 	     String pgPing = "SELECT USER;"
 	     if(!testEucaDB.execute(pgPing)) {
 		 LOG.debug("Unable to ping the database : " + url);
@@ -371,13 +368,9 @@
      }
  
      public boolean isRunning() {
- 
 	 for ( int x = 0 ; x < PG_MAX_RETRY; x++) {
- 
 	     try {
- 
 		 File pidFile = new File(EUCA_DB_DIR + "postmaster.pid");
- 
 		 if ( pidFile.size() > 0 ) {
 		     LOG.debug("Found the postmaster.pid file");
 		     return true;
@@ -419,19 +412,19 @@
 	     }
 	 } catch (Exception e) {
 	     LOG.error("Unable to stop the database.", e);
-	     System.exit(1);
+	     throw e;
 	 }
  
 	 return false;
      }
  
      @Override
-     public void destroy() throws IOException {
+     public void destroy( ) throws IOException {
  
 	 boolean status = false;
  
-	 if (isRunning()) {
-	     status = stop();
+	 if ( isRunning( ) ) {
+	     status = stop( );
 	 } else {
 	     LOG.debug("Database is not running");
 	 }
@@ -439,21 +432,21 @@
 	 LOG.debug("Final status after destroy : " + status );
      }
  
-     public boolean runProc(String command) throws Exception {
+     private boolean runProc( String command ) throws Exception {
  
 	 String cmd = command;
  
 	 try {
 	     LOG.debug("Running command: " + cmd);
-	     Runtime rt = Runtime.getRuntime();
+	     Runtime rt = Runtime.getRuntime( );
 	     Process proc = rt.exec(cmd);
-	     int returnValue = proc.waitFor();
-	     int exitValue = proc.exitValue();
+	     int returnValue = proc.waitFor( );
+	     int exitValue = proc.exitValue( );
 	     def sout = new StringBuffer(2000), serr = new StringBuffer(2000)
 	     proc.consumeProcessOutput(sout, serr)
  
-	     LOG.debug("process output : " + sout.toString());
-	     LOG.debug("process error : " + serr.toString());
+	     LOG.debug("process output : " + sout.toString( ) );
+	     LOG.debug("process error : " + serr.toString( ) );
 	     LOG.debug("cmd = " + cmd + " : exitValue = " + exitValue + " : returnValue = " + returnValue);
  
 	     if (returnValue != 0) {
@@ -469,20 +462,19 @@
      }
  
      @Override
-     public String getDriverName() {
+     public String getDriverName( ) {
 	 return "org.postgresql.Driver";
      }
  
      @Override
-     public String getHibernateDialect() {
+     public String getHibernateDialect( ) {
 	 return "org.hibernate.dialect.PostgreSQLDialect";
      }
  
      @Override
-     public String getJdbcDialect() {
+     public String getJdbcDialect( ) {
 	 return "net.sf.hajdbc.dialect.PostgreSQLDialect";
      }
- 
  
      @Override
      public String getServicePath( String... pathParts ) {
