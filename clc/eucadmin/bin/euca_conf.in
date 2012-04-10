@@ -83,12 +83,12 @@ CheckableServicesString = '|'.join(CheckableServices)
 EnableableServices = ['cloud', 'walrus', 'sc', 'vmwarebroker']
 EnableableServicesString = '|'.join(EnableableServices)
 
-# config entries that must be updated when registering vmwarebroker
-ConfigVMwareReg = {'NC_SERVICE' : '/services/VMwareBroker',
+# config entries that must be updated when registering a broker
+ConfigBrokerReg = {'NC_SERVICE' : '/services/EucalyptusBroker',
                    'NC_PORT' : '8773'}
 
-# config entries that must be updated when deregistering vmwarebroker
-ConfigVMwareDereg = {'NC_SERVICE' : 'axis2/services/EucalyptusNC',
+# config entries that must be updated when deregistering a broker
+ConfigBrokerDereg = {'NC_SERVICE' : 'axis2/services/EucalyptusNC',
                      'NC_PORT' : '8775'}
 
 RegisterHelp = """
@@ -781,7 +781,7 @@ class EucaConf(object):
             self._do_register('eucadmin.registervmwarebroker',
                               'RegisterVMwareBroker', None)
             # Make some changes in eucalyptus.conf file
-            self.config.update(ConfigVMwareReg)
+            self.config.update(ConfigBrokerReg)
             if not self.options.no_sync:
                 path = os.path.join(self.config['EUCALYPTUS'],
                                      'var/lib/eucalyptus/keys')
@@ -837,7 +837,7 @@ class EucaConf(object):
                             'eucadmin.deregistervmwarebroker',
                             'DeregisterVMwareBroker')
         # Make some changes in eucalyptus.conf file
-        self.config.update(ConfigVMwareDereg)
+        self.config.update(ConfigBrokerDereg)
         
 
     def _sync_node(self, node):
@@ -846,7 +846,7 @@ class EucaConf(object):
         # probably need to look in partition directory
         cls = boto.utils.find_class('eucadmin.synckeys', 'SyncKeys')
         files = ['node-cert.pem', 'cluster-cert.pem', 'cloud-cert.pem',
-                 'node-pk.pem', 'cluster-pk.pem']
+                 'node-pk.pem']
         req = cls([path], path, node, files,
                   use_rsync=(not self.options.no_rsync),
                   use_scp=(not self.options.no_scp))

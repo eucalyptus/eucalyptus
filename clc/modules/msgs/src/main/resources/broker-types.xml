@@ -1,0 +1,383 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Software License Agreement (BSD License)
+  ~
+  ~ Copyright (c) 2008, Regents of the University of California
+  ~ All rights reserved.
+  ~
+  ~ Redistribution and use of this software in source and binary forms, with or
+  ~ without modification, are permitted provided that the following conditions
+  ~ are met:
+  ~
+  ~ * Redistributions of source code must retain the above
+  ~   copyright notice, this list of conditions and the
+  ~   following disclaimer.
+  ~
+  ~ * Redistributions in binary form must reproduce the above
+  ~   copyright notice, this list of conditions and the
+  ~   following disclaimer in the documentation and/or other
+  ~   materials provided with the distribution.   
+  ~
+  ~ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+  ~ AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+  ~ IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+  ~ ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+  ~ LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+  ~ CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+  ~ SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+  ~ INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+  ~ CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+  ~ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+  ~ POSSIBILITY OF SUCH DAMAGE.
+  -->
+
+<binding force-classes="true" add-constructors="true" xmlns:tns="http://eucalyptus.ucsb.edu/">
+
+    <mapping class="com.eucalyptus.broker.BrokerRequestType" abstract="true" extends="edu.ucsb.eucalyptus.msgs.BaseMessage">
+        <structure map-as="edu.ucsb.eucalyptus.msgs.BaseMessage" />
+        <value name="nodeName" field="nodeName" usage="optional" />
+    </mapping>
+
+    <mapping class="com.eucalyptus.broker.BrokerResponseType" abstract="true" extends="edu.ucsb.eucalyptus.msgs.BaseMessage">
+        <structure map-as="edu.ucsb.eucalyptus.msgs.BaseMessage" />
+    </mapping>
+
+    <mapping class="com.eucalyptus.broker.VirtualMachineType" abstract="true"> <!-- vs. VmTypeInfo in cc-types.xml -->
+        <value name="name" field="name" usage="required" />
+        <value name="memory" field="memory" usage="required" />
+        <value name="cores" field="cores" usage="required" />
+        <value name="disk" field="disk" usage="required" />
+        <collection field="virtualBootRecord" factory="org.jibx.runtime.Utility.arrayListFactory">
+            <structure name="virtualBootRecord" map-as="edu.ucsb.eucalyptus.cloud.VirtualBootRecord" />
+        </collection>
+    </mapping>
+  
+    <mapping class="com.eucalyptus.broker.NetConfigType" abstract="true"> <!-- vs. NetworkConfigType in cc-types.xml -->
+        <value name="privateMacAddress" field="privateMacAddress" />
+        <value name="privateIp" field="privateIp" />
+        <value name="publicIp" field="publicIp" />
+        <value name="vlan" field="vlan" />
+        <value name="networkIndex" field="networkIndex" />
+    </mapping>
+
+    <mapping class="com.eucalyptus.broker.VolumeType" abstract="true"> <!-- vs. AttachedVolume in cc-types.xml -->
+        <value name="volumeId" field="volumeId" usage="required" />
+        <value name="remoteDev" field="remoteDevice" usage="required" />
+        <value name="localDev" field="device" usage="required" />
+        <value name="state" field="status" usage="required" />
+    </mapping>
+
+    <mapping class="com.eucalyptus.broker.InstanceType" abstract="true"> <!-- dmitrii TODO: remove optionals -->
+        <value name="uuid" field="uuid" usage="optional" />
+        <value name="reservationId" field="reservationId" usage="optional" />
+        <value name="instanceId" field="instanceId" usage="optional" />
+        <value name="imageId" field="imageId" usage="optional" />
+        <value name="kernelId" field="kernelId" usage="optional" />
+        <value name="ramdiskId" field="ramdiskId" usage="optional" />
+        <value name="userId" field="userId" usage="optional" />
+        <value name="ownerId" field="ownerId" usage="optional" />
+        <value name="accountId" field="accountId" usage="optional" />
+        <value name="keyName" field="keyName" usage="optional" />
+        <structure name="instanceType" usage="optional">
+            <structure field="instanceType" map-as="com.eucalyptus.broker.VirtualMachineType" />
+        </structure>
+        <structure name="netParams" usage="optional">
+            <structure field="netParams" map-as="com.eucalyptus.broker.NetConfigType" />
+        </structure>
+        <value name="stateName" field="stateName" usage="optional" />
+        <value name="bundleTaskStateName" field="bundleTaskStateName" usage="optional" />
+        <value name="createImageStateName" field="createImageStateName" usage="optional" />
+        <value name="launchTime" field="launchTime" usage="optional" />
+        <value name="expiryTime" field="expiryTime" usage="optional" />
+        <value name="blkbytes" field="blkbytes" usage="optional" />
+        <value name="netbytes" field="netbytes" usage="optional" />
+        <value name="userData" field="userData" usage="optional" />
+        <value name="launchIndex" field="launchIndex" usage="optional" />
+        <value name="platform" field="platform" usage="optional" />
+        <structure usage="optional">
+            <collection field="groupNames" factory="org.jibx.runtime.Utility.arrayListFactory">
+                <value name="groupNames" type="java.lang.String" />
+            </collection>
+        </structure>
+        <structure usage="optional">
+            <collection field="volumes" factory="org.jibx.runtime.Utility.arrayListFactory">
+                <structure name="volumes" map-as="com.eucalyptus.broker.VolumeType" />
+            </collection>
+        </structure>
+        <value name="serviceTag" field="serviceTag" usage="optional" />
+    </mapping>
+
+    <mapping class="com.eucalyptus.broker.BundleTaskType" abstract="true">
+        <value name="instanceId" field="instanceId" usage="required" />
+        <value name="state" field="state" usage="required" />
+        <value name="manifest" field="manifest" usage="required" />
+    </mapping>
+
+    <!-- DescribeResource -->
+
+    <mapping name="ncDescribeResource" class="com.eucalyptus.broker.EucalyptusNCNcDescribeResourceType" extends="com.eucalyptus.broker.BrokerRequestType">
+        <structure map-as="com.eucalyptus.broker.BrokerRequestType" />
+        <value name="resourceType" field="resourceType" usage="optional" />
+    </mapping>
+
+    <mapping name="ncDescribeResourceResponse" class="com.eucalyptus.broker.EucalyptusNCNcDescribeResourceResponseType" extends="com.eucalyptus.broker.BrokerResponseType">
+        <structure map-as="com.eucalyptus.broker.BrokerResponseType" />
+        <value name="nodeStatus" field="nodeStatus" usage="required" />
+        <value name="iqn" field="iqn" usage="required" />
+        <value name="memorySizeMax" field="memorySizeMax" usage="required" />
+        <value name="memorySizeAvailable" field="memorySizeAvailable" usage="required" />
+        <value name="diskSizeMax" field="diskSizeMax" usage="required" />
+        <value name="diskSizeAvailable" field="diskSizeAvailable" usage="required" />
+        <value name="numberOfCoresMax" field="numberOfCoresMax" usage="required" />
+        <value name="numberOfCoresAvailable" field="numberOfCoresAvailable" usage="required" />
+        <value name="publicSubnets" field="publicSubnets" usage="required" />
+    </mapping>
+
+    <!-- GetConsoleOutput -->
+
+    <mapping name="ncGetConsoleOutput" class="com.eucalyptus.broker.EucalyptusNCNcGetConsoleOutputType" extends="com.eucalyptus.broker.BrokerRequestType">
+        <structure map-as="com.eucalyptus.broker.BrokerRequestType" />
+        <value name="instanceId" field="instanceId" usage="required" />
+    </mapping>
+
+    <mapping name="ncGetConsoleOutputResponse" class="com.eucalyptus.broker.EucalyptusNCNcGetConsoleOutputResponseType" extends="com.eucalyptus.broker.BrokerResponseType">
+        <structure map-as="com.eucalyptus.broker.BrokerResponseType" />
+        <value name="consoleOutput" field="consoleOutput" usage="required" />
+    </mapping>
+
+    <!-- DescribeInstances -->
+
+    <mapping name="ncDescribeInstances" class="com.eucalyptus.broker.EucalyptusNCNcDescribeInstancesType" extends="com.eucalyptus.broker.BrokerRequestType">
+        <structure map-as="com.eucalyptus.broker.BrokerRequestType" />
+        <structure usage="optional">
+            <collection field="instanceIds" factory="org.jibx.runtime.Utility.arrayListFactory">
+                <value name="instanceIds" type="java.lang.String" />
+            </collection>
+        </structure>
+    </mapping>
+
+    <mapping name="ncDescribeInstancesResponse" class="com.eucalyptus.broker.EucalyptusNCNcDescribeInstancesResponseType" extends="com.eucalyptus.broker.BrokerResponseType">
+        <structure map-as="com.eucalyptus.broker.BrokerResponseType" />
+        <structure usage="optional">
+            <collection field="instances" factory="org.jibx.runtime.Utility.arrayListFactory">
+                <structure name="instances" map-as="com.eucalyptus.broker.InstanceType" />
+            </collection>
+        </structure>
+    </mapping>
+
+    <!-- RunInstance -->
+
+    <mapping name="ncRunInstance" class="com.eucalyptus.broker.EucalyptusNCNcRunInstanceType" extends="com.eucalyptus.broker.BrokerRequestType">
+        <structure map-as="com.eucalyptus.broker.BrokerRequestType" />
+        <value name="imageId" field="imageId" usage="optional" />
+        <value name="kernelId" field="kernelId" usage="optional" />
+        <value name="ramdiskId" field="ramdiskId" usage="optional" />
+        <value name="imageURL" field="imageURL" usage="optional" />
+        <value name="kernelURL" field="kernelURL" usage="optional" />
+        <value name="ramdiskURL" field="ramdiskURL" usage="optional" />
+        <value name="ownerId" field="ownerId" usage="optional" />
+        <value name="accountId" field="accountId" usage="optional" />
+        <value name="reservationId" field="reservationId" />
+        <value name="instanceId" field="instanceId" />
+        <value name="uuid" field="uuid" />
+        <structure name="instanceType">
+            <structure field="instanceType" map-as="com.eucalyptus.broker.VirtualMachineType" />
+        </structure>
+        <value name="keyName" field="keyName" usage="optional" />
+        <structure name="netParams">
+            <structure field="netParams" map-as="com.eucalyptus.broker.NetConfigType" />
+        </structure>
+        <value name="userData" field="userData" usage="optional" />
+        <value name="launchIndex" field="launchIndex" usage="optional" />
+        <value name="platform" field="platform" usage="optional" />
+        <value name="expiryTime" field="expiryTime" usage="optional" />
+        <structure usage="optional">
+            <collection field="groupNames" factory="org.jibx.runtime.Utility.arrayListFactory">
+                <value name="groupNames" type="java.lang.String" />
+            </collection>
+        </structure>
+    </mapping>
+
+    <mapping name="ncRunInstanceResponse" class="com.eucalyptus.broker.EucalyptusNCNcRunInstanceResponseType" extends="com.eucalyptus.broker.BrokerResponseType">
+        <structure map-as="com.eucalyptus.broker.BrokerResponseType" />
+        <structure name="instance" usage="optional">
+            <structure field="instance" map-as="com.eucalyptus.broker.InstanceType" />
+        </structure>
+    </mapping>
+
+    <!-- TerminateInstance -->
+
+    <mapping name="ncTerminateInstance" class="com.eucalyptus.broker.EucalyptusNCNcTerminateInstanceType" extends="com.eucalyptus.broker.BrokerRequestType">
+        <structure map-as="com.eucalyptus.broker.BrokerRequestType" />
+        <value name="instanceId" field="instanceId" usage="required" />
+        <value name="force" field="force" usage="required" />
+    </mapping>
+
+    <mapping name="ncTerminateInstanceResponse" class="com.eucalyptus.broker.EucalyptusNCNcTerminateInstanceResponseType" extends="com.eucalyptus.broker.BrokerResponseType">
+        <structure map-as="com.eucalyptus.broker.BrokerResponseType" />
+        <value name="instanceId" field="instanceId" usage="required" />
+        <value name="shutdownState" field="shutdownState" usage="optional" />
+        <value name="previousState" field="previousState" usage="optional" />
+    </mapping>
+
+    <!-- StartNetwork -->
+
+    <mapping name="ncStartNetwork" class="com.eucalyptus.broker.EucalyptusNCNcStartNetworkType" extends="com.eucalyptus.broker.BrokerRequestType">
+        <structure map-as="com.eucalyptus.broker.BrokerRequestType" />
+        <structure usage="optional">
+            <collection field="remoteHosts" factory="org.jibx.runtime.Utility.arrayListFactory">
+                <value name="remoteHosts" type="java.lang.String" />
+            </collection>
+            <value name="remoteHostPort" field="remoteHostPort" usage="required" />
+            <value name="vlan" field="vlan" usage="required" />
+            <value name="uuid" field="uuid" usage="required" />
+        </structure>
+
+    </mapping>
+
+    <mapping name="ncStartNetworkResponse" class="com.eucalyptus.broker.EucalyptusNCNcStartNetworkResponseType" extends="com.eucalyptus.broker.BrokerResponseType">
+        <structure map-as="com.eucalyptus.broker.BrokerResponseType" />
+        <value name="networkStatus" field="networkStatus" usage="required" />
+    </mapping>
+
+    <!-- RebootInstance -->
+
+    <mapping name="ncRebootInstance" class="com.eucalyptus.broker.EucalyptusNCNcRebootInstanceType" extends="com.eucalyptus.broker.BrokerRequestType">
+        <structure map-as="com.eucalyptus.broker.BrokerRequestType" />
+        <value name="instanceId" field="instanceId" usage="required" />
+    </mapping>
+
+    <mapping name="ncRebootInstanceResponse" class="com.eucalyptus.broker.EucalyptusNCNcRebootInstanceResponseType" extends="com.eucalyptus.broker.BrokerResponseType">
+        <structure map-as="com.eucalyptus.broker.BrokerResponseType" />
+        <value name="status" field="status" usage="required" />
+    </mapping>
+
+    <!-- AttachVolume -->
+
+    <mapping name="ncAttachVolume" class="com.eucalyptus.broker.EucalyptusNCNcAttachVolumeType" extends="com.eucalyptus.broker.BrokerRequestType">
+        <structure map-as="com.eucalyptus.broker.BrokerRequestType" />
+        <value name="instanceId" field="instanceId" usage="required" />
+        <value name="volumeId" field="volumeId" usage="required" />
+        <value name="remoteDev" field="remoteDev" usage="required" />
+        <value name="localDev" field="localDev" usage="required" />
+    </mapping>
+
+    <mapping name="ncAttachVolumeResponse" class="com.eucalyptus.broker.EucalyptusNCNcAttachVolumeResponseType" extends="com.eucalyptus.broker.BrokerResponseType">
+        <structure map-as="com.eucalyptus.broker.BrokerResponseType" />
+    </mapping>
+
+    <!-- DetachVolume -->
+
+    <mapping name="ncDetachVolume" class="com.eucalyptus.broker.EucalyptusNCNcDetachVolumeType" extends="com.eucalyptus.broker.BrokerRequestType">
+        <structure map-as="com.eucalyptus.broker.BrokerRequestType" />
+        <value name="instanceId" field="instanceId" usage="required" />
+        <value name="volumeId" field="volumeId" usage="required" />
+        <value name="remoteDev" field="remoteDev" usage="required" />
+        <value name="localDev" field="localDev" usage="required" />
+        <value name="force" field="force" usage="required" />
+    </mapping>
+
+    <mapping name="ncDetachVolumeResponse" class="com.eucalyptus.broker.EucalyptusNCNcDetachVolumeResponseType" extends="com.eucalyptus.broker.BrokerResponseType">
+        <structure map-as="com.eucalyptus.broker.BrokerResponseType" />
+    </mapping>
+
+    <!-- PowerDown -->
+
+    <mapping name="ncPowerDown" class="com.eucalyptus.broker.EucalyptusNCNcPowerDownType" extends="com.eucalyptus.broker.BrokerRequestType">
+        <structure map-as="com.eucalyptus.broker.BrokerRequestType" />
+    </mapping>
+
+    <mapping name="ncPowerDownResponse" class="com.eucalyptus.broker.EucalyptusNCNcPowerDownResponseType" extends="com.eucalyptus.broker.BrokerResponseType">
+        <structure map-as="com.eucalyptus.broker.BrokerResponseType" />
+    </mapping>
+
+    <!-- BundleInstance -->
+
+    <mapping name="ncBundleInstance" class="com.eucalyptus.broker.EucalyptusNCNcBundleInstanceType" extends="com.eucalyptus.broker.BrokerRequestType">
+        <structure map-as="com.eucalyptus.broker.BrokerRequestType" />
+        <value name="instanceId" field="instanceId" usage="required" />
+        <value name="bucketName" field="bucketName" usage="required" />
+        <value name="filePrefix" field="filePrefix" usage="required" />
+        <value name="walrusURL" field="walrusURL" usage="required" />
+        <value name="userPublicKey" field="userPublicKey" usage="required" />
+        <value name="cloudPublicKey" field="cloudPublicKey" usage="optional" />
+        <value name="S3Policy" field="S3Policy" usage="optional" />
+        <value name="S3PolicySig" field="S3PolicySig" usage="optional" />
+    </mapping>
+
+    <mapping name="ncBundleInstanceResponse" class="com.eucalyptus.broker.EucalyptusNCNcBundleInstanceResponseType" extends="com.eucalyptus.broker.BrokerResponseType">
+        <structure map-as="com.eucalyptus.broker.BrokerResponseType" />
+    </mapping>
+
+    <!-- CancelBundle -->
+
+    <mapping name="ncCancelBundleTask" class="com.eucalyptus.broker.EucalyptusNCNcCancelBundleType" extends="com.eucalyptus.broker.BrokerRequestType">
+        <structure map-as="com.eucalyptus.broker.BrokerRequestType" />
+        <value name="instanceId" field="instanceId" usage="required" />
+    </mapping>
+
+    <mapping name="ncCancelBundleTaskResponse" class="com.eucalyptus.broker.EucalyptusNCNcCancelBundleResponseType" extends="com.eucalyptus.broker.BrokerResponseType">
+        <structure map-as="com.eucalyptus.broker.BrokerResponseType" />
+    </mapping>
+
+    <!-- DescribeBundleTasks -->
+
+    <mapping name="ncDescribeBundleTasks" class="com.eucalyptus.broker.EucalyptusNCNcDescribeBundleTasksType" extends="com.eucalyptus.broker.BrokerRequestType">
+        <structure map-as="com.eucalyptus.broker.BrokerRequestType" />
+        <structure usage="optional">
+            <collection field="instanceIds" factory="org.jibx.runtime.Utility.arrayListFactory">
+                <value name="instanceIds" type="java.lang.String" />
+            </collection>
+        </structure>
+    </mapping>
+
+    <mapping name="ncDescribeBundleTasksResponse" class="com.eucalyptus.broker.EucalyptusNCNcDescribeBundleTasksResponseType" extends="com.eucalyptus.broker.BrokerResponseType">
+        <structure map-as="com.eucalyptus.broker.BrokerResponseType" />
+        <structure usage="optional">
+            <collection field="bundleTasks" factory="org.jibx.runtime.Utility.arrayListFactory">
+                <structure name="bundleTasks" map-as="com.eucalyptus.broker.BundleTaskType" />
+            </collection>
+        </structure>
+    </mapping>
+
+    <!-- AssignAddress -->
+
+    <mapping name="ncAssignAddress" class="com.eucalyptus.broker.EucalyptusNCNcAssignAddressType" extends="com.eucalyptus.broker.BrokerRequestType">
+        <structure map-as="com.eucalyptus.broker.BrokerRequestType" />
+        <value name="instanceId" field="instanceId" usage="required" />
+        <value name="publicIp" field="publicIp" usage="required" />
+    </mapping>
+
+    <mapping name="ncAssignAddressResponse" class="com.eucalyptus.broker.EucalyptusNCNcAssignAddressResponseType" extends="com.eucalyptus.broker.BrokerResponseType">
+        <structure map-as="com.eucalyptus.broker.BrokerResponseType" />
+    </mapping>
+
+    <!-- CreateImage -->
+
+    <mapping name="ncCreateImage" class="com.eucalyptus.broker.EucalyptusNCNcCreateImageType" extends="com.eucalyptus.broker.BrokerRequestType">
+        <structure map-as="com.eucalyptus.broker.BrokerRequestType" />
+        <value name="instanceId" field="instanceId" usage="optional" />
+        <value name="volumeId" field="volumeId" usage="optional" />
+        <value name="remoteDev" field="remoteDev" usage="optional" />
+    </mapping>
+
+    <mapping name="ncCreateImageResponse" class="com.eucalyptus.broker.EucalyptusNCNcCreateImageResponseType" extends="com.eucalyptus.broker.BrokerResponseType">
+        <structure map-as="com.eucalyptus.broker.BrokerResponseType" />
+    </mapping>
+    
+	<!-- Template: -->
+
+	<!-- XXX
+	
+     <mapping name="ncXXX" class="com.eucalyptus.broker.EucalyptusNCNcXXXType" extends="com.eucalyptus.broker.BrokerRequestType">
+        <structure map-as="com.eucalyptus.broker.BrokerRequestType"/>
+        <value name="foo" field="foo" usage="required"/>
+    </mapping>
+
+    <mapping name="ncXXXResponse" class="com.eucalyptus.broker.EucalyptusNCNcXXXResponseType" extends="com.eucalyptus.broker.BrokerResponseType">
+        <structure map-as="com.eucalyptus.broker.BrokerResponseType"/>
+        <value name="bar" field="bar" usage="required"/>
+    </mapping>
+-->
+
+</binding>

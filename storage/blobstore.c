@@ -2412,7 +2412,7 @@ static int dm_create_devices (char * dev_names[], char * dm_tables[], int size)
             bzero (tmpfile, sizeof(tmpfile));
             snprintf (tmpfile, sizeof(tmpfile)-1, "/tmp/dmsetup.XXXXXX");
             int fd = safe_mkstemp (tmpfile);
-            if (fd > 0) {
+            if (fd >= 0) {
                 int tot = 0;
                 int rbytes = write (fd, dm_tables[i], strlen(dm_tables[i]));
                 if (rbytes != strlen (dm_tables[i])) { // if write error
