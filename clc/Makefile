@@ -15,7 +15,7 @@ deps/cloud-lib.tar.gz:
 	@mkdir -p deps
 	cd ${TOP}/clc/deps/ && wget -q http://mirror.eucalyptus/dependencies/${VERSION}/cloud-lib.tar.gz	
 
-lib/bcrpov.jar:
+lib/bcprov.jar:
 	@mkdir -p lib
 	tar -C ${TOP}/clc/lib -zxf ${TOP}/clc/deps/cloud-lib.tar.gz
 
