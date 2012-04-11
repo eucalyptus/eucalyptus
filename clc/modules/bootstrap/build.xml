@@ -59,9 +59,22 @@
   ~   ANY SUCH LICENSES OR RIGHTS.
   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   ~ Author: chris grzegorczyk <grze@eucalyptus.com>
-  --> 
+  -->
 <project name="eucalyptus-bootstrap" basedir=".">
-  <property name="builder.suffix" value="groovy" />
-  <import file="../module-inc.xml"/>
-  <!--================================== BUILD TARGETS ==================================-->
+	<property name="builder.suffix" value="module" />
+	<import file="../module-inc.xml"/>
+	<!--================================== BUILD TARGETS ==================================-->
+	<target name="build-module">
+		<mkdir dir="build"/>
+		<native-make dir="src/main/native" target="all" />
+	</target>
+	<target name="clean-module">
+		<native-make dir="src/main/native" target="clean" />
+	</target>
+	<target name="distclean-module">
+		<native-make dir="src/main/native" target="distclean" />
+	</target>
+	<target name="uninstall-module">
+		<native-make dir="src/main/native" target="uninstall" />
+	</target>
 </project>

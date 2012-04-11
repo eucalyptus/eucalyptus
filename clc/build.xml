@@ -192,6 +192,7 @@
 	<!--================================== clean targets ==================================-->
 	<target name="clean">
 		<call-module-target target="clean"/>
+		<delete file="${project.basedir}/modules/msgs/src/main/resources/msgs-binding.xml"/>
 	</target>
 	<target name="distclean" depends="clean">
 		<delete dir="target" />

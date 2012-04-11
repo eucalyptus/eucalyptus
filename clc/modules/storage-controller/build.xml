@@ -78,11 +78,19 @@
 			<class name="com.eucalyptus.storage.OverlayManager" />
 			<class name="com.eucalyptus.storage.AOEManager" />
 		</javah>
+		<native-make dir="native" target="all"/>
 	</target>
 
-	<target name="clean-jni">
+	<target name="clean-module">
 		<delete dir="h" />
 		<delete dir="include" />
+		<native-make dir="native" target="clean"/>
+	</target>
+	<target name="distclean-module">
+		<native-make dir="native" target="distclean"/>
+	</target>
+	<target name="uninstall-module">
+		<native-make dir="native" target="uninstall"/>
 	</target>
 	<!--================================== install target ==================================-->
 	<target name="install">
@@ -94,6 +102,7 @@
     <copy todir="${DESTDIR}${euca.lib.dir}" overwrite="true">
       <fileset file="${jar.file}" />
     </copy>
+		<native-make dir="native" target="install"/>
 	</target>
 </project>
 

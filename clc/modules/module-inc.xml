@@ -77,12 +77,12 @@
 			<filterreader classname="org.apache.tools.ant.filters.StripLineBreaks" />
 		</filterchain>
 	</loadfile>
-	<property name="euca.etc.dir"  value="${euca.home}/etc/eucalyptus" />
+	<property name="euca.etc.dir" value="${euca.home}/etc/eucalyptus" />
 	<property name="euca.conf.dir" value="${euca.home}/etc/eucalyptus/cloud.d" />
-	<property name="euca.lib.dir"  value="${euca.home}/usr/share/eucalyptus" />
-	<property name="euca.var.dir"  value="${euca.home}/var/lib/eucalyptus" />
-	<property name="euca.run.dir"  value="${euca.home}/var/run/eucalyptus" />
-	<property name="euca.log.dir"  value="${euca.home}/var/log/eucalyptus" />
+	<property name="euca.lib.dir" value="${euca.home}/usr/share/eucalyptus" />
+	<property name="euca.var.dir" value="${euca.home}/var/lib/eucalyptus" />
+	<property name="euca.run.dir" value="${euca.home}/var/run/eucalyptus" />
+	<property name="euca.log.dir" value="${euca.home}/var/log/eucalyptus" />
 	<propertyset id="euca-props">
 		<propertyref prefix="euca" />
 	</propertyset>
@@ -126,21 +126,33 @@
 			</fileset>
 		</copy>
 	</target>
+	<!--================================== make macro ==================================-->
+	<macrodef name="native-make">
+		<attribute name="target" />
+		<attribute name="dir" />
+		<sequential>
+			<property name="makeTarget" value="@{target}" />
+			<property name="makeDir" value="@{dir}" />
+			<exec failifexecutionfails="true" failonerror="true" dir="${makeDir}" executable="/usr/bin/make">
+				<arg value="${makeTarget}" />
+			</exec>
+		</sequential>
+	</macrodef>
 	<!--================================== init target ==================================-->
-  <target name="builder" description="--> build the jar file from source.">
-    <condition property="builder.target" value="build-${builder.suffix}" else="build-java">
-      <isset property="builder.suffix" />
-    </condition>
-    <echo message="[BUILDER] ${builder.target} for ${ant.project.name}" />
-    <antcall target="${builder.target}" inheritall="true" inheritrefs="true" />
-  </target>
-  <target name="should-build-test">
-    <mkdir dir="${build.dir}" />
-    <uptodate property="build.notRequired" targetfile="${jar.file}">
-      <srcfiles dir="${src.dir}" includes="**/*" />
-    	<srcfiles dir="${test.dir}" includes="**/*" />
-    </uptodate>
-  </target>
+	<target name="builder" description="--> build the jar file from source.">
+		<condition property="builder.target" value="build-${builder.suffix}" else="build-java">
+			<isset property="builder.suffix" />
+		</condition>
+		<echo message="[BUILDER] ${builder.target} for ${ant.project.name}" />
+		<antcall target="${builder.target}" inheritall="true" inheritrefs="true" />
+	</target>
+	<target name="should-build-test">
+		<mkdir dir="${build.dir}" />
+		<uptodate property="build.notRequired" targetfile="${jar.file}">
+			<srcfiles dir="${src.dir}" includes="**/*" />
+			<srcfiles dir="${test.dir}" includes="**/*" />
+		</uptodate>
+	</target>
 	<target name="should-build-java">
 		<mkdir dir="${build.dir}" />
 		<uptodate property="build.notRequired" targetfile="${jar.file}">
@@ -176,22 +188,22 @@
 			<javac target="1.5" debug="true" />
 		</groovyc>
 	</target>
-    <target name="builder-test">
-        <condition property="builder.target" value="build-${builder.suffix}" else="build-java">
-            <isset property="builder.suffix" />
-        </condition>
-        <echo message="[BUILDER] ${builder.target} for ${ant.project.name}" />
-        <uptodate property="build.notRequired" targetfile="${jar.file}">
-            <srcfiles dir="${src.dir}" includes="**/*" />
-            <srcfiles dir="${test.dir}" includes="**/*" />
-        </uptodate>
-        <echo message="[COMPILE] ${builder.target} for ${ant.project.name}" />
-        <antcall target="${builder.target}" inheritall="true" inheritrefs="true" />
-        <taskdef name="groovyc" classname="org.codehaus.groovy.ant.Groovyc" classpathref="classpath" />
-        <groovyc srcdir="${test.dir}" classpathref="classpath" sourcepathref="srcpath" destdir="${build.dir}" verbose="true" listfiles="true">
-            <javac target="1.5" debug="true" />
-        </groovyc>
-    </target>
+	<target name="builder-test">
+		<condition property="builder.target" value="build-${builder.suffix}" else="build-java">
+			<isset property="builder.suffix" />
+		</condition>
+		<echo message="[BUILDER] ${builder.target} for ${ant.project.name}" />
+		<uptodate property="build.notRequired" targetfile="${jar.file}">
+			<srcfiles dir="${src.dir}" includes="**/*" />
+			<srcfiles dir="${test.dir}" includes="**/*" />
+		</uptodate>
+		<echo message="[COMPILE] ${builder.target} for ${ant.project.name}" />
+		<antcall target="${builder.target}" inheritall="true" inheritrefs="true" />
+		<taskdef name="groovyc" classname="org.codehaus.groovy.ant.Groovyc" classpathref="classpath" />
+		<groovyc srcdir="${test.dir}" classpathref="classpath" sourcepathref="srcpath" destdir="${build.dir}" verbose="true" listfiles="true">
+			<javac target="1.5" debug="true" />
+		</groovyc>
+	</target>
 
 	<!--================================== jar target ==================================-->
 	<target name="jar">
@@ -223,11 +235,24 @@
 		<copy todir="${DESTDIR}${euca.lib.dir}">
 			<fileset file="${jar.file}" />
 		</copy>
+		<antcall target="install-module" />
 	</target>
 	<!--================================== clean target ==================================-->
 	<target name="clean">
+		<antcall target="clean-module" />
 		<delete dir="${build.dir}" />
 		<delete file="${jar.file}" />
 	</target>
+	<target name="distclean">
+		<antcall target="distclean-module" />
+	</target>
+	<target name="uninstall">
+		<antcall target="uninstall" />
+	</target>
+	<!--================================== module sub-targets ==================================-->
+	<target name="clean-module" />
+	<target name="distclean-module" />
+	<target name="uninstall-module" />
+	<target name="install-module" />
 
 </project>
