@@ -81,6 +81,7 @@ import com.eucalyptus.records.EventClass;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.scripting.Groovyness;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Internets;
 import com.google.common.base.Functions;
@@ -182,6 +183,11 @@ public class SystemBootstrapper {
     OrderedShutdown.initialize( );
     BootstrapArgs.init( );
     Security.addProvider( new BouncyCastleProvider( ) );
+    try {//GRZE:HACK: need to remove the nss add-on in deb based distros as it breaks ssl.
+      Groovyness.eval( "import sun.security.jca.*; Providers.setProviderList( ProviderList.remove( Providers.@providerList,\"SunPKCS11-NSS\") );" );
+    } catch ( Exception ex ) {
+      LOG.error( ex , ex );
+    }
     try {
       if ( !BootstrapArgs.isInitializeSystem( ) ) {
         Bootstrap.init( );
