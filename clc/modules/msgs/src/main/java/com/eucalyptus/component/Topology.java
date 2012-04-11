@@ -840,8 +840,9 @@ public class Topology {
         return checkedServices;
       } else {
         /** make promotion decisions **/
-        final Predicate<ServiceConfiguration> canPromote = Predicates.and( Predicates.in( checkedServices ), FailoverPredicate.INSTANCE );
         Collections.shuffle( allServices );
+        submitTransitions( allServices, Predicates.and( Predicates.in( checkedServices ), Component.State.NOTREADY, FailoverPredicate.INSTANCE ), SubmitDisable.INSTANCE );
+        final Predicate<ServiceConfiguration> canPromote = Predicates.and( Predicates.in( checkedServices ), Component.State.DISABLED, FailoverPredicate.INSTANCE );
         final Collection<ServiceConfiguration> promoteServices = Collections2.filter( allServices, canPromote );
         List<ServiceConfiguration> result = submitTransitions( allServices, canPromote, SubmitEnable.INSTANCE );
         
@@ -892,11 +893,6 @@ public class Topology {
       } else if ( Topology.getInstance( ).getServices( ).containsKey( key ) && arg0.equals( Topology.getInstance( ).getServices( ).get( key ) ) ) {
         Logs.extreme( ).debug( "FAILOVER-REJECT: " + arg0.getFullName( )
                                + ": service is already ENABLED." );
-        return false;
-      } else if ( !Component.State.DISABLED.equals( arg0.lookupState( ) ) ) {
-        Logs.extreme( ).debug( "FAILOVER-REJECT: " + arg0.getFullName( )
-                               + ": service is in an invalid state: "
-                               + arg0.lookupState( ) );
         return false;
       } else if ( !Topology.getInstance( ).getServices( ).containsKey( key ) ) {
         Logs.extreme( ).debug( "FAILOVER-ACCEPT: " + arg0.getFullName( )
