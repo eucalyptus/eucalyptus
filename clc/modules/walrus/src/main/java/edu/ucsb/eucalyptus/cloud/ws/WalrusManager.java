@@ -280,12 +280,7 @@ public class WalrusManager {
 			ArrayList<BucketListEntry> buckets = new ArrayList<BucketListEntry>();
 
 			for (BucketInfo bucketInfo : bucketInfoList) {
-				if (ctx.hasAdministrativePrivileges() ||
-						Lookups.checkPrivilege(PolicySpec.S3_LISTALLMYBUCKETS,
-								PolicySpec.VENDOR_S3,
-								PolicySpec.S3_RESOURCE_BUCKET,
-								bucketInfo.getBucketName(),
-								bucketInfo.getOwnerId())) {						
+				if (ctx.hasAdministrativePrivileges()) {						
 					EntityWrapper<WalrusSnapshotInfo> dbSnap = EntityWrapper.get(WalrusSnapshotInfo.class);
 					try {
 						WalrusSnapshotInfo walrusSnapInfo = new WalrusSnapshotInfo();
@@ -300,10 +295,17 @@ public class WalrusManager {
 						dbSnap.rollback();
 					}
 				}
-				buckets.add(new BucketListEntry(bucketInfo.getBucketName(),
-						DateUtils.format(bucketInfo.getCreationDate().getTime(),
-								DateUtils.ISO8601_DATETIME_PATTERN)
-								+ ".000Z"));
+        if (ctx.hasAdministrativePrivileges() ||
+            Lookups.checkPrivilege(PolicySpec.S3_LISTALLMYBUCKETS,
+                PolicySpec.VENDOR_S3,
+                PolicySpec.S3_RESOURCE_BUCKET,
+                bucketInfo.getBucketName(),
+                bucketInfo.getOwnerId())) {           
+          buckets.add(new BucketListEntry(bucketInfo.getBucketName(),
+              DateUtils.format(bucketInfo.getCreationDate().getTime(),
+                  DateUtils.ISO8601_DATETIME_PATTERN)
+                  + ".000Z"));
+        }
 			}
 			try {
 				CanonicalUserType owner = new CanonicalUserType(account.getName(), account.getAccountNumber());

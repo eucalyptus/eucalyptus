@@ -178,7 +178,7 @@ public class EuareWebBackend {
       String userKeySearch = QueryBuilder.get( ).start( QueryType.key ).add( EuareWebBackend.USERID, user.getUserId( ) ).query( );
       LoginAction action = null;
       if ( !authenticateWithLdap( user ) ) {
-	      if ( user.getPassword( ).equals( Crypto.generateHashedPassword( user.getName( ) ) ) || Strings.isNullOrEmpty( user.getInfo( User.EMAIL ) ) ) {
+	      if ( Crypto.verifyPassword( user.getName( ), user.getPassword( ) ) || Strings.isNullOrEmpty( user.getInfo( User.EMAIL ) ) ) {
 	        action = LoginAction.FIRSTTIME;
 	      } else if ( user.getPasswordExpires( ) < System.currentTimeMillis( ) ) {
 	        action = LoginAction.EXPIRATION;
@@ -209,7 +209,7 @@ public class EuareWebBackend {
   }
   
   private static void authenticateLocal( User user, String password ) throws EucalyptusServiceException {
-    if ( !Strings.isNullOrEmpty( user.getPassword( ) ) && !user.getPassword( ).equals( Crypto.generateHashedPassword( password ) ) ) {
+    if ( !Strings.isNullOrEmpty( user.getPassword( ) ) && !Crypto.verifyPassword( password, user.getPassword( ) ) ) {
       throw new EucalyptusServiceException( "Incorrect password" );
     }    
   }
@@ -221,7 +221,7 @@ public class EuareWebBackend {
         throw new EucalyptusServiceException( "Currently authenticating with LDAP. Can not change password." );
       }
       // Anyone want to change some other people's password must authenticate himself first
-      if ( Strings.isNullOrEmpty( requestUser.getPassword( ) ) || !requestUser.getPassword( ).equals( Crypto.generateHashedPassword( oldPass ) ) ) {
+      if ( Strings.isNullOrEmpty( requestUser.getPassword( ) ) || !Crypto.verifyPassword( oldPass, requestUser.getPassword( ) ) ) {
         throw new EucalyptusServiceException( "You can not be authenticated to change user password" );
       }
       Privileged.changeUserPasswordAndEmail( requestUser, user.getAccount( ), user, newPass, email );
@@ -1403,7 +1403,7 @@ public class EuareWebBackend {
       User user = account.addUser( userName, "/", false/*skipRegistration*/, true/*enabled*/, info );
       user.resetToken( );
       user.createConfirmationCode( );
-      user.setPassword( Crypto.generateHashedPassword( password ) );
+      user.setPassword( Crypto.generateEncryptedPassword( password ) );
       user.setPasswordExpires( System.currentTimeMillis( ) + User.PASSWORD_LIFETIME );
       return user;
     } catch ( Exception e ) {
@@ -1509,7 +1509,7 @@ public class EuareWebBackend {
         throw new IllegalArgumentException( "Recovery attempt expired" );
       }
       user.setConfirmationCode( null );
-      user.setPassword( Crypto.generateHashedPassword( password ) );
+      user.setPassword( Crypto.generateEncryptedPassword( password ) );
       user.setPasswordExpires( System.currentTimeMillis( ) + User.PASSWORD_LIFETIME );
       return user;
     } catch ( Exception e ) {

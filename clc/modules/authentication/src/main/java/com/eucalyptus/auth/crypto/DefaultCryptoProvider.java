@@ -228,4 +228,18 @@ public class DefaultCryptoProvider implements CryptoProvider, CertificateProvide
     }
   }
 
+  @Override
+  public String generateLinuxSaltedPassword(String password) {
+    // Use MD5Crypt
+    // TODO(wenye): try SHA256?
+    return MD5Crypt.crypt( password );
+  }
+
+  @Override
+  public boolean verifyLinuxSaltedPassword(String clear, String hashed) {
+    // Use MD5Crypt
+    // TODO(wenye): try SHA256?
+    return MD5Crypt.verifyPassword( clear, hashed );
+  }
+
 }
