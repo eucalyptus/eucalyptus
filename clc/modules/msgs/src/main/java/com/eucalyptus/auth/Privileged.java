@@ -36,7 +36,7 @@ public class Privileged {
     admin.resetToken( );
     admin.createConfirmationCode( );
     if ( password != null ) {
-      admin.setPassword( Crypto.generateHashedPassword( password ) );
+      admin.setPassword( Crypto.generateEncryptedPassword( password ) );
       admin.setPasswordExpires( System.currentTimeMillis( ) + User.PASSWORD_LIFETIME );
     }
     return newAccount;
@@ -741,13 +741,10 @@ public class Privileged {
   }
 
   private static void setUserPassword( User user, String newPass ) throws AuthException {
-    if ( Strings.isNullOrEmpty( newPass ) ) {
+    if ( Strings.isNullOrEmpty( newPass ) || user.getName( ).equals( newPass ) ) {
       throw new AuthException( AuthException.INVALID_PASSWORD );
     }
-    String newEncrypted = Crypto.generateHashedPassword( newPass );
-    if ( newEncrypted.equals( Crypto.generateHashedPassword( user.getName( ) ) ) ) {
-      throw new AuthException( AuthException.INVALID_PASSWORD );
-    }
+    String newEncrypted = Crypto.generateEncryptedPassword( newPass );
     user.setPassword( newEncrypted );
     user.setPasswordExpires( System.currentTimeMillis( ) + User.PASSWORD_LIFETIME );
   }
