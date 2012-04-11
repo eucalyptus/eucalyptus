@@ -29,7 +29,7 @@ public class DatabaseCertificateProxy implements Certificate {
   public String toString( ) {
     final StringBuilder sb = new StringBuilder( );
     try {
-      Transactions.one( CertificateEntity.newInstanceWithId( this.delegate.getCertificateId() ), new Tx<CertificateEntity>( ) {
+      DatabaseAuthUtils.invokeUnique( CertificateEntity.class, "certificateId", this.delegate.getCertificateId( ), new Tx<CertificateEntity>( ) {
         public void fire( CertificateEntity t ) {
           sb.append( t.toString( ) );
         }
@@ -53,7 +53,7 @@ public class DatabaseCertificateProxy implements Certificate {
   @Override
   public void setActive( final Boolean active ) throws AuthException {
     try {
-      Transactions.one( CertificateEntity.newInstanceWithId( this.delegate.getCertificateId() ), new Tx<CertificateEntity>( ) {
+      DatabaseAuthUtils.invokeUnique( CertificateEntity.class, "certificateId", this.delegate.getCertificateId( ), new Tx<CertificateEntity>( ) {
         public void fire( CertificateEntity t ) {
           t.setActive( active );
         }
@@ -72,7 +72,7 @@ public class DatabaseCertificateProxy implements Certificate {
   @Override
   public void setRevoked( final Boolean revoked ) throws AuthException {
     try {
-      Transactions.one( CertificateEntity.newInstanceWithId( this.delegate.getCertificateId() ), new Tx<CertificateEntity>( ) {
+      DatabaseAuthUtils.invokeUnique( CertificateEntity.class, "certificateId", this.delegate.getCertificateId( ), new Tx<CertificateEntity>( ) {
         public void fire( CertificateEntity t ) {
           t.setRevoked( revoked );
         }
@@ -91,7 +91,7 @@ public class DatabaseCertificateProxy implements Certificate {
   @Override
   public void setCreateDate( final Date createDate ) throws AuthException {
     try {
-      Transactions.one( CertificateEntity.newInstanceWithId( this.delegate.getCertificateId() ), new Tx<CertificateEntity>( ) {
+      DatabaseAuthUtils.invokeUnique( CertificateEntity.class, "certificateId", this.delegate.getCertificateId( ), new Tx<CertificateEntity>( ) {
         public void fire( CertificateEntity t ) {
           t.setCreateDate( createDate );
         }
@@ -106,7 +106,7 @@ public class DatabaseCertificateProxy implements Certificate {
   public User getUser( ) throws AuthException {
     final List<User> results = Lists.newArrayList( );
     try {
-      Transactions.one( CertificateEntity.newInstanceWithId( this.delegate.getCertificateId() ), new Tx<CertificateEntity>( ) {
+      DatabaseAuthUtils.invokeUnique( CertificateEntity.class, "certificateId", this.delegate.getCertificateId( ), new Tx<CertificateEntity>( ) {
         public void fire( CertificateEntity t ) {
           results.add( new DatabaseUserProxy( t.getUser( ) ) );
         }
@@ -126,7 +126,7 @@ public class DatabaseCertificateProxy implements Certificate {
   @Override
   public void setX509Certificate( final X509Certificate x509 ) throws AuthException {
     try {
-      Transactions.one( CertificateEntity.newInstanceWithId( this.delegate.getCertificateId() ), new Tx<CertificateEntity>( ) {
+      DatabaseAuthUtils.invokeUnique( CertificateEntity.class, "certificateId", this.delegate.getCertificateId( ), new Tx<CertificateEntity>( ) {
         public void fire( CertificateEntity t ) {
           t.setPem( X509CertHelper.fromCertificate( x509 ) );
         }
