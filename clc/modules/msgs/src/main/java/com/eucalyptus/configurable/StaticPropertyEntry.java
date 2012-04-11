@@ -100,7 +100,7 @@ public class StaticPropertyEntry extends AbstractConfigurableProperty {
   @Override
   public String getValue( ) {
     try {
-      StaticDatabasePropertyEntry dbEntry = StaticDatabasePropertyEntry.lookup( Fields.canonicalName( this.getField( ) ),
+      StaticDatabasePropertyEntry dbEntry = StaticDatabasePropertyEntry.lookup( this.getFieldCanonicalName(),
                                                                                 this.getQualifiedName( ),
                                                                                 this.safeGetFieldValue( )
                                                                        );
