@@ -15,11 +15,11 @@ deps/cloud-lib.tar.gz:
 	@mkdir -p deps
 	cd ${TOP}/clc/deps/ && wget -q http://mirror.eucalyptus/dependencies/${VERSION}/cloud-lib.tar.gz	
 
-lib/bcrpov.jar:
+lib/bcprov.jar:
 	@mkdir -p lib
 	tar -C ${TOP}/clc/lib -zxf ${TOP}/clc/deps/cloud-lib.tar.gz
 
-deps: deps/cloud-lib.tar.gz lib/bcrpov.jar
+deps: deps/cloud-lib.tar.gz lib/bcprov.jar
 
 update_properties: ${web_prop_dir}/eucalyptus-web.properties
 
