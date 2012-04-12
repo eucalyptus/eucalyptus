@@ -4,6 +4,7 @@ import java.io.File;
 import java.net.Socket;
 import java.security.GeneralSecurityException;
 import java.security.InvalidAlgorithmParameterException;
+import java.security.KeyManagementException;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
@@ -25,17 +26,66 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.configurable.ConfigurableClass;
+import com.eucalyptus.configurable.ConfigurableField;
+import com.eucalyptus.configurable.ConfigurableProperty;
+import com.eucalyptus.configurable.ConfigurablePropertyException;
+import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.system.SubDirectory;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ObjectArrays;
 import com.sun.net.ssl.internal.ssl.X509ExtendedTrustManager;
 
+@ConfigurableClass( root = "bootstrap.webservices.ssl",
+                    description = "Parameters controlling the SSL configuration for the web services endpoint." )
 public class SslSetup {
-  private static Logger       LOG            = Logger.getLogger( SslSetup.class );
-  private static final String PROTOCOL       = "TLS";
-  private static SSLContext   SERVER_CONTEXT = null;
-  private static SSLContext   CLIENT_CONTEXT = null;
+  private static Logger       LOG             = Logger.getLogger( SslSetup.class );
+  private static final String PROTOCOL        = "TLS";
+  private static SSLContext   SERVER_CONTEXT  = null;
+  private static SSLContext   CLIENT_CONTEXT  = null;
+  @ConfigurableField( description = "Alias of the certificate entry in euca.p12 to use for SSL for webservices.",
+                      changeListener = SslCertChangeListener.class )
+  public static String        SERVER_ALIAS    = ComponentIds.lookup( Eucalyptus.class ).name( );
+  @ConfigurableField( description = "Password of the private key corresponding to the specified certificate for SSL for webservices.",
+                      changeListener = SslPasswordChangeListener.class )
+  public static String        SERVER_PASSWORD = ComponentIds.lookup( Eucalyptus.class ).name( );
+  
+  public static class SslCertChangeListener implements PropertyChangeListener<String> {
+    
+    @Override
+    public void fireChange( ConfigurableProperty t, String newValue ) throws ConfigurablePropertyException {
+      if ( SERVER_ALIAS != null && !SERVER_ALIAS.equals( newValue ) ) {
+        try {
+          String oldValue = SERVER_ALIAS;
+          SSLContext newContext = createServerContext( );
+          SERVER_ALIAS = newValue;
+          SERVER_CONTEXT = newContext;
+        } catch ( Exception ex ) {
+          throw new ConfigurablePropertyException( ex );
+        }
+      }
+    }
+    
+  }
+  
+  public static class SslPasswordChangeListener implements PropertyChangeListener<String> {
+    
+    @Override
+    public void fireChange( ConfigurableProperty t, String newValue ) throws ConfigurablePropertyException {
+      if ( SERVER_PASSWORD != null && !SERVER_PASSWORD.equals( newValue ) ) {
+        try {
+          String oldValue = SERVER_PASSWORD;
+          SSLContext newContext = createServerContext( );
+          SERVER_PASSWORD = newValue;
+          SERVER_CONTEXT = newContext;
+        } catch ( Exception ex ) {
+          throw new ConfigurablePropertyException( ex );
+        }
+      }
+    }
+    
+  }
   
   static {
     SSLContext serverContext = null;
@@ -48,8 +98,7 @@ public class SslSetup {
     System.setProperty( "javax.net.ssl.keyStorePassword", ComponentIds.lookup( Eucalyptus.class ).name( ) );
 //    System.setProperty( "javax.net.debug", "ssl" );//set this to "ssl" for debugging.
     try {
-      serverContext = SSLContext.getInstance( "TLS" );
-      serverContext.init( SslSetup.ServerKeyManager.getKeyManagers( ), SslSetup.ServerTrustManager.getTrustManagers( ), null );
+      serverContext = createServerContext( );
     } catch ( Exception e ) {
       LOG.debug( e, e );
       throw new Error( "Failed to initialize the server-side SSLContext", e );
@@ -65,6 +114,13 @@ public class SslSetup {
     
     SERVER_CONTEXT = serverContext;
     CLIENT_CONTEXT = clientContext;
+  }
+  
+  private static SSLContext createServerContext( ) throws NoSuchAlgorithmException, KeyManagementException {
+    SSLContext serverContext;
+    serverContext = SSLContext.getInstance( "TLS" );
+    serverContext.init( SslSetup.ServerKeyManager.getKeyManagers( ), SslSetup.ServerTrustManager.getTrustManagers( ), null );
+    return serverContext;
   }
   
   public static SSLContext getServerContext( ) {
@@ -175,17 +231,17 @@ public class SslSetup {
       
       @Override
       public String chooseClientAlias( String[] arg0, Principal[] arg1, Socket arg2 ) {
-        return SslSetup.SERVER_CERT_ALIAS;
+        return SslSetup.SERVER_ALIAS;
       }
       
       @Override
       public String chooseServerAlias( String arg0, Principal[] arg1, Socket arg2 ) {
-        return SslSetup.SERVER_CERT_ALIAS;
+        return SslSetup.SERVER_ALIAS;
       }
       
       @Override
       public X509Certificate[] getCertificateChain( String arg0 ) {
-        if ( SslSetup.SERVER_CERT_ALIAS.equals( arg0 ) ) {
+        if ( SslSetup.SERVER_ALIAS.equals( arg0 ) ) {
           return memoizedServerCertSupplier.get( );
         } else {
           return null;
@@ -194,13 +250,13 @@ public class SslSetup {
       
       @Override
       public String[] getClientAliases( String arg0, Principal[] arg1 ) {
-        return new String[] { SslSetup.SERVER_CERT_ALIAS };
+        return new String[] { SslSetup.SERVER_ALIAS };
       }
       
       @Override
       public PrivateKey getPrivateKey( String arg0 ) {
-        if ( SslSetup.SERVER_CERT_ALIAS.equals( arg0 ) ) {
-          return serverPrivateKeySupplier.get( );
+        if ( SslSetup.SERVER_ALIAS.equals( arg0 ) ) {
+          return memoizedPrivateKeySupplier.get( );
         } else {
           return null;
         }
@@ -208,33 +264,31 @@ public class SslSetup {
       
       @Override
       public String[] getServerAliases( String arg0, Principal[] arg1 ) {
-        return new String[] { SslSetup.SERVER_CERT_ALIAS };
+        return new String[] { SslSetup.SERVER_ALIAS };
       }
       
       @Override
       public String chooseEngineClientAlias( String[] keyType, Principal[] issuers, SSLEngine engine ) {
-        return SslSetup.SERVER_CERT_ALIAS;
+        return SslSetup.SERVER_ALIAS;
       }
       
       @Override
       public String chooseEngineServerAlias( String keyType, Principal[] issuers, SSLEngine engine ) {
-        return SslSetup.SERVER_CERT_ALIAS;
+        return SslSetup.SERVER_ALIAS;
       }
       
     }
     
   }
   
-  public static String                             SERVER_CERT_ALIAS          = ComponentIds.lookup( Eucalyptus.class ).name( );
-  public static String                             SERVER_CERT_PASSWORD       = ComponentIds.lookup( Eucalyptus.class ).name( );
   private static final Supplier<PrivateKey>        serverPrivateKeySupplier   = new Supplier<PrivateKey>( ) {
                                                                                 
                                                                                 @Override
                                                                                 public PrivateKey get( ) {
                                                                                   try {
                                                                                     return SystemCredentials.getKeyStore( ).getKeyPair(
-                                                                                      SslSetup.SERVER_CERT_ALIAS,
-                                                                                      SslSetup.SERVER_CERT_ALIAS ).getPrivate( );
+                                                                                      SslSetup.SERVER_ALIAS,
+                                                                                      SslSetup.SERVER_ALIAS ).getPrivate( );
                                                                                   } catch ( GeneralSecurityException ex ) {
                                                                                     LOG.error( ex, ex );
                                                                                     return null;
@@ -248,7 +302,7 @@ public class SslSetup {
                                                                                   X509Certificate[] certs = ObjectArrays.newArray( X509Certificate.class, 1 );
                                                                                   try {
                                                                                     certs[0] = SystemCredentials.getKeyStore( ).getCertificate(
-                                                                                      SslSetup.SERVER_CERT_ALIAS );
+                                                                                      SslSetup.SERVER_ALIAS );
                                                                                     return certs;
                                                                                   } catch ( GeneralSecurityException ex ) {
                                                                                     LOG.error( ex, ex );
@@ -256,8 +310,8 @@ public class SslSetup {
                                                                                   }
                                                                                 }
                                                                               };
-  private static Supplier<PrivateKey>              memoizedPrivateKeySupplier = Suppliers.memoizeWithExpiration( serverPrivateKeySupplier, 1l, TimeUnit.MINUTES );
-  private static Supplier<X509Certificate[]>       memoizedServerCertSupplier = Suppliers.memoizeWithExpiration( serverCertSupplier, 1l, TimeUnit.MINUTES );
+  private static Supplier<PrivateKey>              memoizedPrivateKeySupplier = Suppliers.memoizeWithExpiration( serverPrivateKeySupplier, 15l, TimeUnit.SECONDS );
+  private static Supplier<X509Certificate[]>       memoizedServerCertSupplier = Suppliers.memoizeWithExpiration( serverCertSupplier, 15l, TimeUnit.SECONDS );
   private static PrivateKey                        trustedKey                 = getTrustedKey( );
   private static X509Certificate[]                 trustedCerts               = getTrustedCertificates( );
   

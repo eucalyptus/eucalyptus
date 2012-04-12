@@ -115,15 +115,21 @@ public abstract class AbstractConfigurableProperty implements ConfigurableProper
     this.widgetType = widgetType;
     this.alias = alias;
     this.changeListener = changeListener;
+    Constructor cons = null;
     try {
-      this.noArgConstructor = this.definingClass.getConstructor( new Class[] {} );
-      this.noArgConstructor.setAccessible( true );
+      cons = this.definingClass.getConstructor( new Class[] {} );
+      cons.setAccessible( true );
     } catch ( Exception ex ) {
-      LOG.debug( "Known declared constructors: " + this.getDefiningClass( ).getDeclaredConstructors( ) );
-      LOG.debug( "Known constructors: " + this.getDefiningClass( ).getConstructors( ) );
-      LOG.debug( ex, ex );
-      throw new RuntimeException( ex );
+      if ( !Modifier.isStatic( field.getModifiers( ) ) ) {
+        LOG.debug( "Known declared constructors: " + this.getDefiningClass( ).getDeclaredConstructors( ) );
+        LOG.debug( "Known constructors: " + this.getDefiningClass( ).getConstructors( ) );
+        LOG.debug( ex, ex );
+        throw new RuntimeException( ex );
+      } else {
+        //that a default no-arg constructor is required indicates there is too much specialized junk in here.
+      }
     }
+    this.noArgConstructor = cons;
     this.setArgs = new Class[] { this.field.getType( ) };
     this.getter = this.getReflectedMethod( "get", this.field );
     this.setter = this.getReflectedMethod( "set", this.field, this.setArgs );
