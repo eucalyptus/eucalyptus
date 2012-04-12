@@ -211,6 +211,10 @@ public class Topology {
     
   }
   
+  private Topology( ) {
+    this( 0 );
+  }
+  
   private Topology( final int i ) {
     super( );
     this.currentEpoch = i;
