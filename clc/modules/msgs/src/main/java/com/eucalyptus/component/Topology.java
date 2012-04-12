@@ -931,11 +931,11 @@ public class Topology {
                                                                                                                         : null )
                                                                    : null );
     ServiceConfiguration res = Topology.getInstance( ).getServices( ).get( ServiceKey.create( ComponentIds.lookup( compClass ), partition ) );
-    if ( res == null || !Component.State.ENABLED.apply( res ) ) {
-      throw new NoSuchElementException( "Failed to lookup ENABLED service of type "
-                                        + compClass.getSimpleName( )
-                                        + ( partition != null ? " in partition " + partition
-                                                             : "." ) );
+    String err = "Failed to lookup ENABLED service of type " + compClass.getSimpleName( ) + ( partition != null ? " in partition " + partition : "." );
+    if ( res == null ) {
+      throw new NoSuchElementException( err );
+    } else if ( !Component.State.ENABLED.apply( res ) ) {
+      throw new NoSuchElementException( err + "  Service is currently ENABLING." );
     } else {
       return res;
     }
