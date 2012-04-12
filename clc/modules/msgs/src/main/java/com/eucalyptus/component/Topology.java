@@ -931,7 +931,7 @@ public class Topology {
                                                                                                                         : null )
                                                                    : null );
     ServiceConfiguration res = Topology.getInstance( ).getServices( ).get( ServiceKey.create( ComponentIds.lookup( compClass ), partition ) );
-    if ( res == null ) {
+    if ( res == null || !Component.State.ENABLED.apply( res ) ) {
       throw new NoSuchElementException( "Failed to lookup ENABLED service of type "
                                         + compClass.getSimpleName( )
                                         + ( partition != null ? " in partition " + partition
