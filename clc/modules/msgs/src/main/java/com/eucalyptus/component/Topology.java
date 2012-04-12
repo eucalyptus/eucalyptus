@@ -844,7 +844,6 @@ public class Topology {
         submitTransitions( allServices, Predicates.and( Predicates.in( checkedServices ), Component.State.NOTREADY, FailoverPredicate.INSTANCE ), SubmitDisable.INSTANCE );
         submitTransitions( allServices, Predicates.and( Predicates.in( checkedServices ), Component.State.NOTREADY, FailoverPredicate.INSTANCE ), SubmitCheck.INSTANCE );
         submitTransitions( allServices, Predicates.and( Predicates.in( checkedServices ), Component.State.NOTREADY, FailoverPredicate.INSTANCE ), SubmitDisable.INSTANCE );
-        submitTransitions( allServices, Predicates.and( Predicates.in( checkedServices ), Component.State.NOTREADY, FailoverPredicate.INSTANCE ), SubmitCheck.INSTANCE );
         final Predicate<ServiceConfiguration> canPromote = Predicates.and( Predicates.in( checkedServices ), Component.State.DISABLED, FailoverPredicate.INSTANCE );
         final Collection<ServiceConfiguration> promoteServices = Collections2.filter( allServices, canPromote );
         List<ServiceConfiguration> result = submitTransitions( allServices, canPromote, SubmitEnable.INSTANCE );
