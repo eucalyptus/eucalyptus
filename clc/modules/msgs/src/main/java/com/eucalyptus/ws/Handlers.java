@@ -367,7 +367,7 @@ public class Handlers {
             if ( compId.isAlwaysLocal( ) || Topology.isEnabledLocally( compClass ) ) {
               ctx.sendUpstream( e );
             } else {
-              Handlers.sendRedirect( ctx, e, compClass, request.getServicePath( ) );
+              Handlers.sendRedirect( ctx, e, compClass, request );
             }
           } catch ( final NoSuchElementException ex ) {
             LOG.warn( "Failed to find reverse component mapping for message type: " + msg.getClass( ) );
@@ -405,7 +405,7 @@ public class Handlers {
               ctx.sendUpstream( e );
             } else {
               final Class<? extends ComponentId> compClass = ComponentMessages.lookup( msg );
-              Handlers.sendRedirect( ctx, e, compClass, request.getServicePath( ) );
+              Handlers.sendRedirect( ctx, e, compClass, request );
             }
           } catch ( final Exception ex ) {
             Logs.extreme( ).error( ex, ex );
@@ -417,15 +417,15 @@ public class Handlers {
     
   }
   
-  static void sendRedirect( final ChannelHandlerContext ctx, final ChannelEvent e, final Class<? extends ComponentId> compClass, final String originalPath ) {
+  static void sendRedirect( final ChannelHandlerContext ctx, final ChannelEvent e, final Class<? extends ComponentId> compClass, final MappingHttpRequest request ) {
     e.getFuture( ).cancel( );
     String redirectUri = null;
     if ( Topology.isEnabled( compClass ) ) {//have an enabled service, lets use that 
       final URI serviceUri = ServiceUris.remote( Topology.lookup( compClass ) );
-      redirectUri = serviceUri.toASCIIString( ) + originalPath.replace( serviceUri.getPath( ), "" );
+      redirectUri = serviceUri.toASCIIString( ) + request.getServicePath().replace( serviceUri.getPath( ), "" );
     } else if ( Topology.isEnabled( Eucalyptus.class ) ) {//can't find service info, redirect via clc master
       final URI serviceUri = ServiceUris.remote( Topology.lookup( Eucalyptus.class ) );
-      redirectUri = serviceUri.toASCIIString( ).replace( Eucalyptus.INSTANCE.getServicePath( ), "" ) + originalPath.replace( serviceUri.getPath( ), "" );
+      redirectUri = serviceUri.toASCIIString( ).replace( Eucalyptus.INSTANCE.getServicePath( ), "" ) + request.getServicePath().replace( serviceUri.getPath( ), "" );
     }
     HttpResponse response = null;
     if ( redirectUri == null ) {
@@ -433,7 +433,7 @@ public class Handlers {
       if ( Logs.isDebug( ) ) {
         String errorMessage = "Failed to lookup service for " + Components.lookup( compClass ).getName( )
           + " for path "
-          + originalPath
+          + request.getServicePath()
           + ".\nCurrent state: \n\t"
           + Joiner.on( "\n\t" ).join( Topology.enabledServices( ) );
         byte[] errorBytes = Exceptions.string( new ServiceStateException( errorMessage ) ).getBytes( );
@@ -441,6 +441,9 @@ public class Handlers {
       }
     } else {
       response = new DefaultHttpResponse( HttpVersion.HTTP_1_1, HttpResponseStatus.TEMPORARY_REDIRECT );
+      if(request.getQuery() != null) {
+    	  redirectUri += "?" + request.getQuery();
+      }
       response.setHeader( HttpHeaders.Names.LOCATION, redirectUri );
     }
     final ChannelFuture writeFuture = Channels.future( ctx.getChannel( ) );
