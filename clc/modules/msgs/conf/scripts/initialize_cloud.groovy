@@ -60,7 +60,7 @@ try {
     for ( String ctx : PersistenceContexts.list( ) ) {
       Properties p = new Properties( );
       p.putAll( props );
-      String ctxUrl = "jdbc:${ServiceUris.remote(Database.class,Internets.loopback( ),ctx)}?createDatabaseIfNotExist=true";
+      String ctxUrl = "jdbc:${ServiceUris.remote(Database.class,Internets.loopback( ),ctx)}";
       p.put( "hibernate.connection.url", ctxUrl );
       p.put("hibernate.cache.region_prefix", "eucalyptus_" + ctx + "_cache" );
       Ejb3Configuration config = new Ejb3Configuration( );

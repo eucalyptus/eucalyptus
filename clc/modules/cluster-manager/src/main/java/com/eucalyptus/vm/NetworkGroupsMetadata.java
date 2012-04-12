@@ -69,9 +69,13 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
+import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.network.NetworkGroup;
+import com.eucalyptus.network.NetworkGroups;
 import com.eucalyptus.network.NetworkPeer;
 import com.eucalyptus.network.NetworkRule;
 import com.eucalyptus.util.ByteArray;
@@ -136,7 +140,9 @@ public class NetworkGroupsMetadata implements Function<MetadataRequest, ByteArra
                                                                                   : "-" ),
                       netRule.getHighPort( ) );
                     for ( NetworkPeer peer : netRule.getNetworkPeers( ) ) {
-                      String ruleString = String.format( "%s -o %s -u %s", rule, peer.getGroupName( ), peer.getUserQueryKey( ) );
+                      Account groupAccount = Accounts.lookupAccountById( peer.getUserQueryKey( ) ); 
+                      String groupId = NetworkGroups.lookup( AccountFullName.getInstance( groupAccount ), peer.getGroupName( ) ).getNaturalId( );
+                      String ruleString = String.format( "%s -o %s -u %s", rule, groupId, groupAccount.getAccountNumber( ) ); 
                       if ( !rules.get( ruleGroup.getClusterNetworkName( ) ).contains( ruleString ) ) {
                         rules.put( ruleGroup.getClusterNetworkName( ), ruleString );
                       }
