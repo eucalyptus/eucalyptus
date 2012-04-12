@@ -841,8 +841,11 @@ public class Topology {
       } else {
         /** make promotion decisions **/
         Collections.shuffle( allServices );
-        submitTransitions( allServices, Predicates.and( Predicates.in( checkedServices ), Component.State.NOTREADY, FailoverPredicate.INSTANCE ), SubmitDisable.INSTANCE );
-        submitTransitions( allServices, Predicates.and( Predicates.in( checkedServices ), Component.State.NOTREADY, FailoverPredicate.INSTANCE ), SubmitDisable.INSTANCE );
+        Collection<ServiceConfiguration> doPass1 = Collections2.filter( allServices, Predicates.and( CheckServiceFilter.INSTANCE, Component.State.NOTREADY ) );
+        Predicate<ServiceConfiguration> alwaysTrue = Predicates.alwaysTrue( );
+        Collection<ServiceConfiguration>  disabledPass1 = submitTransitions( Lists.newArrayList( doPass1 ), alwaysTrue, SubmitDisable.INSTANCE );
+        doPass1.removeAll( disabledPass1 );
+        submitTransitions( Lists.newArrayList( doPass1 ), alwaysTrue, SubmitDisable.INSTANCE );
         final Predicate<ServiceConfiguration> canPromote = Predicates.and( Predicates.in( checkedServices ), Component.State.DISABLED, FailoverPredicate.INSTANCE );
         final Collection<ServiceConfiguration> promoteServices = Collections2.filter( allServices, canPromote );
         List<ServiceConfiguration> result = submitTransitions( allServices, canPromote, SubmitEnable.INSTANCE );
