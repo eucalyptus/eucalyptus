@@ -225,7 +225,7 @@ public class WalrusProperties {
 	}
 
 	public enum SubResource {
-		acl, logging, torrent, location
+		acl, logging, torrent, location, versioning, versions
 	}
 
 	public enum HTTPVerb {

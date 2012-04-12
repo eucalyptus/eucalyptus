@@ -308,7 +308,7 @@ public class WalrusManager {
         }
 			}
 			try {
-				CanonicalUserType owner = new CanonicalUserType(account.getName(), account.getAccountNumber());
+				CanonicalUserType owner = new CanonicalUserType(account.getAccountNumber(), account.getName());
 				ListAllMyBucketsList bucketList = new ListAllMyBucketsList();
 				reply.setOwner(owner);
 				bucketList.setBuckets(buckets);
@@ -626,7 +626,7 @@ public class WalrusManager {
 		AccessControlPolicyType accessControlPolicy = new AccessControlPolicyType();
 		try {
 			Account ownerInfo = Accounts.lookupAccountById(ownerId);
-			accessControlPolicy.setOwner(new CanonicalUserType(ownerInfo.getName(), ownerInfo.getAccountNumber()));
+			accessControlPolicy.setOwner(new CanonicalUserType(ownerInfo.getAccountNumber(), ownerInfo.getName()));
 			accessControlPolicy.setAccessControlList(accessControlList);
 		} catch (AuthException e) {
 			db.rollback();
@@ -639,7 +639,7 @@ public class WalrusManager {
 
 	private static void addPermission(ArrayList<Grant> grants, Account account,
 			GrantInfo grantInfo) throws AuthException {
-		CanonicalUserType user = new CanonicalUserType(account.getName(), account.getAccountNumber());
+		CanonicalUserType user = new CanonicalUserType(account.getAccountNumber(), account.getName());
 
 		if (grantInfo.canRead() && grantInfo.canWrite()
 				&& grantInfo.canReadACP() && grantInfo.isWriteACP()) {
@@ -1747,10 +1747,10 @@ public class WalrusManager {
 										DateUtils.ISO8601_DATETIME_PATTERN)
 										+ ".000Z");
 								listEntry.setStorageClass(objectInfo.getStorageClass());
-								// displayName is actually the owner account ID
-								String displayName = objectInfo.getOwnerId();
+
 								try {
-									listEntry.setOwner(new CanonicalUserType(Accounts.lookupAccountById(displayName).getName(), displayName));
+									// displayName is actually the owner account ID
+									listEntry.setOwner(new CanonicalUserType(objectInfo.getOwnerId(), Accounts.lookupAccountById(objectInfo.getOwnerId()).getName()));
 								} catch (AuthException e) {
 									db.rollback();
 									throw new AccessDeniedException("Bucket",
@@ -1858,7 +1858,7 @@ public class WalrusManager {
 		AccessControlPolicyType accessControlPolicy = new AccessControlPolicyType();
 		try {
 			Account ownerInfo = Accounts.lookupAccountById(ownerId);
-			accessControlPolicy.setOwner(new CanonicalUserType(ownerInfo.getName(), ownerInfo.getAccountNumber()));
+			accessControlPolicy.setOwner(new CanonicalUserType(ownerInfo.getAccountNumber(), ownerInfo.getName()));			
 			accessControlPolicy.setAccessControlList(accessControlList);
 		} catch (AuthException e) {
 			throw new AccessDeniedException("Key", objectKey, logData);
@@ -3209,10 +3209,10 @@ public class WalrusManager {
 									objectInfo.getLastModified().getTime(),
 									DateUtils.ISO8601_DATETIME_PATTERN)
 									+ ".000Z");
-							// displayName is actually the owner account ID
-							String displayName = objectInfo.getOwnerId();
 							try {
-								versionEntry.setOwner(new CanonicalUserType(Accounts.lookupAccountById(displayName).getName(), displayName));
+								String displayName = Accounts.lookupAccountById(objectInfo.getOwnerId()).getName();
+								versionEntry.setOwner(new CanonicalUserType(objectInfo.getOwnerId(), displayName));
+								
 							} catch (AuthException e) {
 								db.rollback();
 								throw new AccessDeniedException("Bucket",
