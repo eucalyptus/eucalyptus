@@ -476,7 +476,9 @@ public class Topology {
       @Override
       public boolean tryEnable( final ServiceConfiguration config ) {
         final ServiceKey serviceKey = ServiceKey.create( config );
+        Logs.extreme( ).info( config );
         final ServiceConfiguration curr = Topology.this.getServices( ).putIfAbsent( serviceKey, config );
+        Logs.extreme( ).info( "Current ENABLED: " + curr );
         if ( ( curr != null ) && !curr.equals( config ) ) {
           return false;
         } else if ( ( curr != null ) && curr.equals( config ) ) {
@@ -490,6 +492,7 @@ public class Topology {
       @Override
       public boolean tryDisable( final ServiceConfiguration config ) {
         final ServiceKey serviceKey = ServiceKey.create( config );
+        Logs.extreme( ).info( config );
         return !config.equals( Topology.this.getServices( ).get( serviceKey ) )
                || ( Topology.this.getServices( ).remove( serviceKey, config ) && this.nextEpoch( ) );
       }
@@ -508,7 +511,9 @@ public class Topology {
       @Override
       public boolean tryEnable( final ServiceConfiguration config ) {
         final ServiceKey serviceKey = ServiceKey.create( config );
+        Logs.extreme( ).info( config );
         final ServiceConfiguration curr = Topology.this.getServices( ).put( serviceKey, config );
+        Logs.extreme( ).info( "Current ENABLED: " + curr );
         if ( ( curr != null ) && !curr.equals( config ) ) {
           transition( State.DISABLED ).apply( curr );
           return false;
@@ -522,6 +527,7 @@ public class Topology {
       @Override
       public boolean tryDisable( final ServiceConfiguration config ) {
         final ServiceKey serviceKey = ServiceKey.create( config );
+        Logs.extreme( ).info( config );
         return ( Topology.this.getServices( ).remove( serviceKey, config ) || !config.equals( Topology.this.getServices( ).get( serviceKey ) ) )
                && this.nextEpoch( );
       }
