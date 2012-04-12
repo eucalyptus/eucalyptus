@@ -840,18 +840,21 @@ public class Topology {
         return checkedServices;
       } else {
         /** make promotion decisions **/
-        Collections.shuffle( allServices );
-        Collection<ServiceConfiguration> doPass1 = Collections2.filter( allServices, Predicates.and( CheckServiceFilter.INSTANCE, Component.State.NOTREADY ) );
         Predicate<ServiceConfiguration> alwaysTrue = Predicates.alwaysTrue( );
+        Collections.shuffle( allServices );
+        
+        Collection<ServiceConfiguration> doPass1 = Collections2.filter( allServices, Predicates.and( CheckServiceFilter.INSTANCE, Component.State.NOTREADY ) );
         Collection<ServiceConfiguration>  disabledPass1 = submitTransitions( Lists.newArrayList( doPass1 ), alwaysTrue, SubmitDisable.INSTANCE );
-        doPass1.removeAll( disabledPass1 );
-        submitTransitions( Lists.newArrayList( doPass1 ), alwaysTrue, SubmitDisable.INSTANCE );
-        final Predicate<ServiceConfiguration> canPromote = Predicates.and( Predicates.in( checkedServices ), Component.State.DISABLED, FailoverPredicate.INSTANCE );
+
+        List<ServiceConfiguration> doPass2 = Lists.newArrayList( doPass1 ); 
+        submitTransitions( doPass2, Predicates.not( Predicates.in( disabledPass1 ) ), SubmitDisable.INSTANCE );
+        
+        final Predicate<ServiceConfiguration> canPromote = Predicates.and( Predicates.not( Predicates.in( doPass1 ) ), Component.State.DISABLED, FailoverPredicate.INSTANCE );
         final Collection<ServiceConfiguration> promoteServices = Collections2.filter( allServices, canPromote );
         List<ServiceConfiguration> result = submitTransitions( allServices, canPromote, SubmitEnable.INSTANCE );
         
         /** advance other components as needed **/
-        final Predicate<ServiceConfiguration> proceedToDisableFilter = Predicates.and( Predicates.not( Predicates.in( promoteServices ) ),
+        final Predicate<ServiceConfiguration> proceedToDisableFilter = Predicates.and( Predicates.not( Predicates.in( result ) ),
                                                                                        ProceedToDisabledServiceFilter.INSTANCE );
         submitTransitions( allServices, proceedToDisableFilter, SubmitDisable.INSTANCE );
         return result;
