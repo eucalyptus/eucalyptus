@@ -152,12 +152,24 @@ public class EuareWebBackend {
   }
   
   public static User getUser( String userName, String accountName ) throws EucalyptusServiceException {
-    if ( userName == null || accountName == null ) {
-      throw new EucalyptusServiceException( "Empty user name or account name" );
-    }
+    User user = null;
     try {
       Account account = Accounts.lookupAccountByName( accountName );
-      User user = account.lookupUserByName( userName );
+      user = account.lookupUserByName( userName );
+    } catch ( Exception e ) {
+      LOG.error( "Failed to find user " + userName + "@" + accountName, e );
+      LOG.debug( e, e );
+      throw new EucalyptusServiceException( "Failed to find user " + userName + "@" + accountName + ": " + e.getMessage( ) );
+    }
+    return getUser( user.getUserId( ) );
+  }
+  
+  public static User getUser( String userId ) throws EucalyptusServiceException {
+    if ( userId == null ) {
+      throw new EucalyptusServiceException( "Empty user ID" );
+    }
+    try {
+      User user = Accounts.lookupUserById( userId );
       if ( !user.isEnabled( ) || !user.getRegistrationStatus( ).equals( RegistrationStatus.CONFIRMED ) ) {
         throw new EucalyptusServiceException( "User is not enabled or confirmed" );
       }
@@ -166,9 +178,9 @@ public class EuareWebBackend {
       LOG.debug( e, e );
       throw e;
     } catch ( Exception e ) {
-      LOG.error( "Failed to verify user " + userName + "@" + accountName, e );
+      LOG.error( "Failed to verify user " + userId, e );
       LOG.debug( e, e );
-      throw new EucalyptusServiceException( "Failed to verify user " + userName + "@" + accountName + ": " + e.getMessage( ) );
+      throw new EucalyptusServiceException( "Failed to verify user " + userId + ": " + e.getMessage( ) );
     }
   }
   
