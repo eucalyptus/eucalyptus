@@ -35,7 +35,7 @@ public class ActivityUtil {
   }
   
   /**
-   * Log out if 
+   * Log out if session is invalid
    * @param clientFactory
    */
   public static void logoutForInvalidSession( ClientFactory clientFactory, Throwable exception ) {

@@ -196,7 +196,8 @@ public class EuareWebBackend {
 	        action = LoginAction.EXPIRATION;
 	      }
       }
-      return new LoginUserProfile( user.getUserId( ), user.getName( ), user.getAccount( ).getName( ), userProfileSearch, userKeySearch, action );
+      Account userAccount = user.getAccount( );
+      return new LoginUserProfile( user.getUserId( ), user.getName( ), userAccount.getAccountNumber( ), userAccount.getName( ), userProfileSearch, userKeySearch, action );
     } catch ( Exception e ) {
       LOG.error( "Exception in retrieving user profile", e );
       LOG.debug( e, e );

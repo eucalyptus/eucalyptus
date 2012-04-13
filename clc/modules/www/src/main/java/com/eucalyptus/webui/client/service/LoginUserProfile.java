@@ -16,6 +16,7 @@ public class LoginUserProfile implements Serializable {
   private String userId;
   private String userName;
   private String accountName;
+  private String accountId;
   private String userProfileSearch;
   private String userKeySearch;
   private LoginAction loginAction;
@@ -23,9 +24,10 @@ public class LoginUserProfile implements Serializable {
   public LoginUserProfile( ) {
   }
   
-  public LoginUserProfile( String userId, String userName, String accountName, String userProfileSearch, String userKeySearch, LoginAction action ) {
+  public LoginUserProfile( String userId, String userName, String accountId, String accountName, String userProfileSearch, String userKeySearch, LoginAction action ) {
     this.setUserId( userId );
     this.setUserName( userName );
+    this.setAccountId( accountId );
     this.setAccountName( accountName );
     this.setUserProfileSearch( userProfileSearch );
     this.setUserKeySearch( userKeySearch );
@@ -53,7 +55,7 @@ public class LoginUserProfile implements Serializable {
   }
   
   public String toString( ) {
-    return userName + "@" + accountName;
+    return userName + "@" + accountName + "(" + accountId + ")";
   }
 
   public void setUserProfileSearch( String userProfileSearch ) {
@@ -86,6 +88,14 @@ public class LoginUserProfile implements Serializable {
 
   public void setUserKeySearch( String userKeySearch ) {
     this.userKeySearch = userKeySearch;
+  }
+
+  public String getAccountId() {
+    return accountId;
+  }
+
+  public void setAccountId(String accountId) {
+    this.accountId = accountId;
   }
   
 }
