@@ -116,7 +116,8 @@ public class ImageManifests {
     try {
       GetBucketAccessControlPolicyResponseType reply = ( GetBucketAccessControlPolicyResponseType ) ServiceDispatcher.lookupSingle( Components.lookup( Walrus.class ) ).send( getBukkitInfo );
       String ownerName = reply.getAccessControlPolicy( ).getOwner( ).getDisplayName( );
-      return ctx.getUserFullName( ).getAccountNumber( ).equals( ownerName ) || ctx.getUserFullName( ).getUserId( ).equals( ownerName );
+      String ownerId = reply.getAccessControlPolicy( ).getOwner( ).getID();
+      return ctx.getUserFullName( ).getAccountNumber( ).equals( ownerId ) || ctx.getUserFullName( ).getUserId( ).equals( ownerId );
     } catch ( EucalyptusCloudException ex ) {
       LOG.error( ex, ex );
     } catch ( NoSuchElementException ex ) {

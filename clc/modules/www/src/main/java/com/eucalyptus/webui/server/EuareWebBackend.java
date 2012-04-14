@@ -1333,9 +1333,11 @@ public class EuareWebBackend {
       throw new IllegalArgumentException( "Can not find email to send approval notification for account " + accountName );
     }
     String confirmLink = QueryBuilder.get( ).start( QueryType.confirm ).add( CONFIRMATIONCODE, admin.getConfirmationCode( ) ).url( backendUrl );
-    String emailMessage = "Your account '" + accountName + "' application was approved. Click the following link to login and confirm your account:" + 
+    String emailMessage = "Your account '" + accountName + "' application was approved. Click the following link to login and confirm your account:" +
                           "\n\n" +
                           confirmLink +
+                          "\n\n" +
+                          "After you confirm your account you can login into it with 'admin' user and the password that you provided during account's application." +
                           "\n\n" +
                           "However, if you never requested a Eucalyptus account then, please, disregard this message.";
     String subject = WebProperties.getProperty( WebProperties.ACCOUNT_APPROVAL_SUBJECT, WebProperties.ACCOUNT_APPROVAL_SUBJECT_DEFAULT );
