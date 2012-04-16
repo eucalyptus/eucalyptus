@@ -9,7 +9,6 @@ SUBDIRS			=	tools \
 				util \
 				net \
 				storage	 \
-				vmware-broker \
 				gatherlog \
 				node  \
 				cluster \
