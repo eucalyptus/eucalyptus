@@ -225,7 +225,9 @@ public class WalrusProperties {
 	}
 
 	public enum SubResource {
-		acl, logging, torrent, location, versioning, versions
+		//Per the S3 Dev guide, these must be included in the canonicalized resource:
+		//acl, lifecycle, location, logging, notification, partNumber, policy, requestPayment, torrent, uploadId, uploads, versionId, versioning, versions and website
+		acl, location, logging, torrent, versioning, versions, versionId
 	}
 
 	public enum HTTPVerb {

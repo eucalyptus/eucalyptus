@@ -64,6 +64,7 @@
  */
 package com.eucalyptus.ws.handlers;
 
+import java.io.UnsupportedEncodingException;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -95,6 +96,9 @@ import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.util.StorageProperties;
 import com.eucalyptus.util.WalrusProperties;
 import com.eucalyptus.util.WalrusUtil;
+import com.sun.tools.javac.code.Attribute.Array;
+
+import edu.emory.mathcs.backport.java.util.Arrays;
 
 @ChannelPipelineCoverage("one")
 public class WalrusAuthenticationHandler extends MessageStackHandler {
@@ -159,11 +163,32 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 			String addrString = addrStrings[0];
 
 			if(addrStrings.length > 1) {
-				for(WalrusProperties.SubResource subResource : WalrusProperties.SubResource.values()) {
-					if(addr.endsWith(subResource.toString().toLowerCase())) {
-						addrString += "?" + subResource.toString().toLowerCase();
-						break;
-					}
+				//Split into individual parameter=value strings
+				String[] params = addrStrings[1].split("&");
+
+				//Sort the query parameters before adding them to the canonical string
+				Arrays.sort(params);
+				String[] pair = null;
+				boolean first = true;
+				try {
+					for(String qparam : params) {
+						pair = qparam.split("="); //pair[0] = param name, pair[1] = param value if it is present
+					
+						for(WalrusProperties.SubResource subResource : WalrusProperties.SubResource.values()) {
+							if(pair[0].equals(subResource.toString())) {
+								if(first) {
+									addrString += "?";
+									first = false;
+								}
+								else {
+									addrString += "&";
+								}
+								addrString += subResource.toString() + (pair.length > 1 ? "=" + WalrusUtil.URLdecode(pair[1]) : "");							
+							}
+						}
+					}					
+				} catch(UnsupportedEncodingException e) {
+					throw new AuthenticationException("Could not verify request. Failed url decoding query parameters: " + e.getMessage());
 				}
 			}
 
