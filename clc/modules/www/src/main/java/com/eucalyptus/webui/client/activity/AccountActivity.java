@@ -7,6 +7,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import com.eucalyptus.webui.client.ClientFactory;
 import com.eucalyptus.webui.client.place.AccountPlace;
+import com.eucalyptus.webui.client.service.LoginUserProfile;
 import com.eucalyptus.webui.client.service.SearchRange;
 import com.eucalyptus.webui.client.service.SearchResultRow;
 import com.eucalyptus.webui.client.service.SearchResult;
@@ -128,9 +129,34 @@ public class AccountActivity extends AbstractSearchActivity
         clientFactory.getShellView( ).getLogView( ).log( LogType.INFO, "Modified account " + accountId );
         clientFactory.getShellView( ).getDetailView( ).disableSave( );
         reloadCurrentRange( );
+        // If we are changing the login user's account, we need to reload the user profile, esp. updating the account name
+        if ( clientFactory.getSessionData( ).getLoginUser( ).getAccountId( ).equals( accountId ) ) {
+          reloadLoginUser( );
+        }
       }
       
     } );
+  }
+
+  protected void reloadLoginUser() {
+    this.clientFactory.getBackendService( ).getLoginUserProfile( this.clientFactory.getLocalSession( ).getSession( ),
+        new AsyncCallback<LoginUserProfile>( ) {
+
+      @Override
+      public void onFailure( Throwable caught ) {
+        ActivityUtil.logoutForInvalidSession( clientFactory, caught );
+        LOG.log( Level.WARNING, "Failed to reload login user profile" );
+      }
+
+      @Override
+      public void onSuccess( LoginUserProfile result ) {
+        LOG.log( Level.INFO, "Reloaded login user profile" );
+        // Update the login user profile
+        clientFactory.getSessionData( ).setLoginUser( result );
+        // Update the login user text in header view
+        clientFactory.getShellView( ).getHeaderView( ).setUser( result.toString( ) );
+      }
+    });
   }
 
   @Override

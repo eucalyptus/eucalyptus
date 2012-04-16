@@ -84,7 +84,8 @@ public class AccountFullName implements OwnerFullName {
     assertThat( ownerFn, notNullValue( ) );
     this.accountNumber = ownerFn.getAccountNumber( );
     assertThat( this.accountNumber, notNullValue( ) );
-    this.accountName = ownerFn.getAccountName( );
+    //this.accountName = ownerFn.getAccountName( );
+    this.accountName = null;
     this.authority = ownerFn.getAuthority( );
     this.relativeId = FullName.ASSEMBLE_PATH_PARTS.apply( relativePath );
     this.qName = this.authority + this.relativeId;
@@ -93,7 +94,8 @@ public class AccountFullName implements OwnerFullName {
   protected AccountFullName( Account account, String... relativePath ) {
     this.accountNumber = account.getAccountNumber( );
     assertThat( this.accountNumber, notNullValue( ) );
-    this.accountName = account.getName( );
+    //this.accountName = account.getName( );
+    this.accountName = null;
     this.authority = new StringBuilder( ).append( FullName.PREFIX ).append( FullName.SEP ).append( VENDOR ).append( FullName.SEP ).append( FullName.SEP ).append( this.accountNumber ).append( FullName.SEP ).toString( );
     this.relativeId = FullName.ASSEMBLE_PATH_PARTS.apply( relativePath );
     this.qName = this.authority + this.relativeId;

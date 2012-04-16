@@ -3,15 +3,13 @@ package com.eucalyptus.webui.server;
 public class WebSession {
   
   private String id;
-  private String userName;
-  private String accountName;
+  private String userId;
   private long creationTime;
   private long lastAccessTime;
   
-  public WebSession( String id, String userName, String accountName, long creationTime, long lastAccessTime ) {
+  public WebSession( String id, String userId, long creationTime, long lastAccessTime ) {
     this.setId( id );
-    this.setUserName( userName );
-    this.setAccountName( accountName );
+    this.setUserId( userId );
     this.setCreationTime( creationTime );
     this.setLastAccessTime( lastAccessTime );
   }
@@ -22,22 +20,6 @@ public class WebSession {
 
   public String getId( ) {
     return id;
-  }
-
-  public void setUserName( String userName ) {
-    this.userName = userName;
-  }
-
-  public String getUserName( ) {
-    return userName;
-  }
-
-  public void setAccountName( String accountName ) {
-    this.accountName = accountName;
-  }
-
-  public String getAccountName( ) {
-    return accountName;
   }
 
   public void setCreationTime( long creationTime ) {
@@ -55,7 +37,13 @@ public class WebSession {
   public long getLastAccessTime( ) {
     return lastAccessTime;
   }
-  
-  
+
+  public String getUserId() {
+    return userId;
+  }
+
+  public void setUserId(String userId) {
+    this.userId = userId;
+  }
   
 }

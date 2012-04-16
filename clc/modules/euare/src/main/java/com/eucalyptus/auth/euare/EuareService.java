@@ -1575,16 +1575,21 @@ public class EuareService {
   private static Account lookupAccountByName( String accountName ) throws EucalyptusCloudException {
     try {
       return Accounts.lookupAccountByName( accountName );
-    } catch ( Exception e ) {
-      LOG.error( e, e );
-      if ( e instanceof AuthException ) {
-        if ( AuthException.NO_SUCH_ACCOUNT.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find account " + accountName );
-        } else if ( AuthException.EMPTY_ACCOUNT_NAME.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Empty account name" );
+    } catch ( Exception e1 ) {
+      try {
+        // Try using ID
+        return Accounts.lookupAccountById( accountName );
+      } catch ( Exception e ) {
+        LOG.error( e, e );
+        if ( e instanceof AuthException ) {
+          if ( AuthException.NO_SUCH_ACCOUNT.equals( e.getMessage( ) ) ) {
+            throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find account " + accountName );
+          } else if ( AuthException.EMPTY_ACCOUNT_NAME.equals( e.getMessage( ) ) ) {
+            throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Empty account name" );
+          }
         }
+        throw new EucalyptusCloudException( e );
       }
-      throw new EucalyptusCloudException( e );
     }
   }
   

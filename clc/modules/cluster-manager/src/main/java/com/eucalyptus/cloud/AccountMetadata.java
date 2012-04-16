@@ -98,9 +98,10 @@ public abstract class AccountMetadata<STATE extends Enum<STATE>> extends Abstrac
     this.ownerAccountNumber = owner != null
       ? owner.getAccountNumber( )
       : null;
-    this.ownerAccountName = owner != null
-      ? owner.getAccountName( )
-      : null;
+    this.ownerAccountName = null;
+    //this.ownerAccountName = owner != null
+    //  ? owner.getAccountName( )
+    //  : null;
   }
   
   public AccountMetadata( OwnerFullName owner, String displayName ) {
@@ -108,9 +109,10 @@ public abstract class AccountMetadata<STATE extends Enum<STATE>> extends Abstrac
     this.ownerAccountNumber = owner != null
       ? owner.getAccountNumber( )
       : null;
-    this.ownerAccountName = owner != null
-      ? owner.getAccountName( )
-      : null;
+    this.ownerAccountName = null;
+    //this.ownerAccountName = owner != null
+    //  ? owner.getAccountName( )
+    //  : null;
   }
   
   public OwnerFullName getOwner( ) {
@@ -155,7 +157,8 @@ public abstract class AccountMetadata<STATE extends Enum<STATE>> extends Abstrac
   }
   
   public void setOwnerAccountName( String ownerAccountName ) {
-    this.ownerAccountName = ownerAccountName;
+    this.ownerAccountName = null;
+    //this.ownerAccountName = ownerAccountName;
   }
   
   protected String getUniqueName( ) {
