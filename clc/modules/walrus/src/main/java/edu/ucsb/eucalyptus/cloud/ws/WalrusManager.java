@@ -780,10 +780,11 @@ public class WalrusManager {
 						objectInfo.setObjectName(objectName);
 						objectInfo.setSize(0L);
 					}
-				}
-				if (bucket.isVersioningEnabled()) {
+				}				
+				if(bucket.isVersioningEnabled()) {
 					reply.setVersionId(versionId);
 				}
+				
 				db.commit();
 				// writes are unconditional
 				WalrusDataQueue<WalrusDataMessage> putQueue = messenger
@@ -1670,9 +1671,7 @@ public class WalrusManager {
 							WalrusSnapshotInfo walrusSnapInfo = new WalrusSnapshotInfo();
 							walrusSnapInfo.setSnapshotBucket(bucketName);
 							
-							//zhill -- changed to use projection to just get the row count, not all the data itself
 							Criteria snapCount = dbSnap.createCriteria(WalrusSnapshotInfo.class).add(Example.create(walrusSnapInfo)).setProjection(Projections.rowCount());
-							//List<WalrusSnapshotInfo> walrusSnaps = (List<WalrusSnapshotInfo>)snapCount.list();
 							Long rowCount = (Long)snapCount.uniqueResult();
 							if (rowCount != null && rowCount.longValue() > 0) {
 								db.rollback();
@@ -1831,8 +1830,6 @@ public class WalrusManager {
 		return reply;
 	}
 		
-
-
 	public GetObjectAccessControlPolicyResponseType getObjectAccessControlPolicy(
 			GetObjectAccessControlPolicyType request)
 					throws EucalyptusCloudException {
@@ -1858,12 +1855,10 @@ public class WalrusManager {
 					.getLogData() : null;
 					EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
 					ObjectInfo searchObjectInfo = new ObjectInfo(bucketName, objectKey);
-					if(bucket.isVersioningEnabled()) {
-						if(request.getVersionId() == null)
-							searchObjectInfo.setLast(true);
+					searchObjectInfo.setVersionId(request.getVersionId());
+					if(request.getVersionId() == null) {
+						searchObjectInfo.setLast(true);						
 					}
-					String versionId = request.getVersionId() != null ? request.getVersionId() : WalrusProperties.NULL_VERSION_ID;
-					searchObjectInfo.setVersionId(versionId);
 					searchObjectInfo.setDeleted(false);
 					List<ObjectInfo> objectInfos = dbObject.query(searchObjectInfo);
 					if (objectInfos.size() > 0) {
@@ -2046,12 +2041,11 @@ public class WalrusManager {
 					.getLogData() : null;
 					EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
 					ObjectInfo searchObjectInfo = new ObjectInfo(bucketName, objectKey);
-					if(bucket.isVersioningEnabled()) {
-						if(request.getVersionId() == null)
-							searchObjectInfo.setLast(true);
-					}
-					String versionId = request.getVersionId() != null ? request.getVersionId() : WalrusProperties.NULL_VERSION_ID;
-					searchObjectInfo.setVersionId(versionId);
+					searchObjectInfo.setVersionId(request.getVersionId());
+					if(request.getVersionId() == null) {
+						searchObjectInfo.setLast(true);						
+					}				
+					
 					searchObjectInfo.setDeleted(false);
 					List<ObjectInfo> objectInfos = dbObject.query(searchObjectInfo);
 					if (objectInfos.size() > 0) {
@@ -2111,7 +2105,7 @@ public class WalrusManager {
 		db.commit();
 		return reply;
 	}
-
+	
 	public SetRESTObjectAccessControlPolicyResponseType setRESTObjectAccessControlPolicy(
 			SetRESTObjectAccessControlPolicyType request)
 					throws EucalyptusCloudException {
@@ -2139,12 +2133,11 @@ public class WalrusManager {
 					.getLogData() : null;
 					EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
 					ObjectInfo searchObjectInfo = new ObjectInfo(bucketName, objectKey);
-					if(bucket.isVersioningEnabled()) {
-						if(request.getVersionId() == null)
-							searchObjectInfo.setLast(true);
+					searchObjectInfo.setVersionId(request.getVersionId());
+					if(request.getVersionId() == null) {
+						searchObjectInfo.setLast(true);						
 					}
-					String versionId = request.getVersionId() != null ? request.getVersionId() : WalrusProperties.NULL_VERSION_ID;
-					searchObjectInfo.setVersionId(versionId);
+
 					searchObjectInfo.setDeleted(false);
 					List<ObjectInfo> objectInfos = dbObject.query(searchObjectInfo);
 					if (objectInfos.size() > 0) {
@@ -2205,7 +2198,7 @@ public class WalrusManager {
 		db.commit();
 		return reply;
 	}
-
+	
 	public GetObjectResponseType getObject(GetObjectType request)
 			throws EucalyptusCloudException {
 		GetObjectResponseType reply = (GetObjectResponseType) request
@@ -2241,8 +2234,9 @@ public class WalrusManager {
 					ObjectInfo searchObjectInfo = new ObjectInfo(bucketName, objectKey);
 					searchObjectInfo.setVersionId(request.getVersionId());
 					searchObjectInfo.setDeleted(false);
-					if(request.getVersionId() == null)
+					if(request.getVersionId() == null) {
 						searchObjectInfo.setLast(true);
+					}
 					List<ObjectInfo> objectInfos = dbObject.query(searchObjectInfo);
 					if (objectInfos.size() > 0) {
 						ObjectInfo objectInfo = objectInfos.get(0);
@@ -2775,9 +2769,6 @@ public class WalrusManager {
 							ObjectInfo destSearchObjectInfo = new ObjectInfo(
 									destinationBucket, destinationKey);
 							if(foundDestinationBucketInfo.isVersioningEnabled()) {
-								if(sourceVersionId != null)
-									destinationVersionId = sourceVersionId;
-								else 
 									destinationVersionId = UUID.randomUUID().toString().replaceAll("-", "");
 							} else {
 								destinationVersionId = WalrusProperties.NULL_VERSION_ID;

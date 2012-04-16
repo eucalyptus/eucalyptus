@@ -139,10 +139,9 @@ public class WalrusDeleteType extends WalrusRequestType {
 public class WalrusDeleteResponseType extends WalrusResponseType {
 }
 
-//TODO(wenye): The usage of the fields in this class is very confusing at this point. Make it be more sane.
 public class CanonicalUserType extends EucalyptusData {
-	String ID; // account name
-	String DisplayName; // account ID
+	String ID; // account ID - numeric
+	String DisplayName; // account display name (i.e. eucalyptus)
 
 	public CanonicalUserType() {}
 
