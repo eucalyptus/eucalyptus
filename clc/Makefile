@@ -11,8 +11,15 @@ web_prop_dir	= ${TOP}/clc/modules/www/conf
 all: deps build
 test: deps build-test
 
-deps:
-	@$(ANT) deps
+deps/cloud-lib.tar.gz:
+	@mkdir -p deps
+	cd ${TOP}/clc/deps/ && wget -q http://mirror.eucalyptus/dependencies/${VERSION}/cloud-lib.tar.gz	
+
+lib/bcprov.jar:
+	@mkdir -p lib
+	tar -C ${TOP}/clc/lib -zxf ${TOP}/clc/deps/cloud-lib.tar.gz
+
+deps: deps/cloud-lib.tar.gz lib/bcprov.jar
 
 update_properties: ${web_prop_dir}/eucalyptus-web.properties
 
@@ -53,9 +60,6 @@ build: deps extras
 	bash -c 'ulimit -n 500000;ulimit -n;ANT_OPTS="-Xmx1g -XX:MaxPermSize=512m" $(ANT) compile-bind'
 	#HACK!
 	bash -c 'ulimit -n 500000;ulimit -n;ANT_OPTS="-Xmx1g -XX:MaxPermSize=512m" $(ANT) jar'
-	@make -C modules/storage-controller/native
-	@make -C modules/storage-san/native
-	@make -C modules/bootstrap/src/main/native
 	@make -C eucadmin
 
 build-test: deps extras
@@ -69,53 +73,30 @@ build-test: deps extras
 	bash -c 'ulimit -n 500000;ulimit -n;ANT_OPTS="-Xmx1g -XX:MaxPermSize=512m" $(ANT) compile-bind'
 	#HACK!
 	bash -c 'ulimit -n 500000;ulimit -n;ANT_OPTS="-Xmx1g -XX:MaxPermSize=512m" $(ANT) jar'
-	@make -C modules/storage-controller/native
-	@make -C modules/storage-san/native
-	@make -C modules/bootstrap/src/main/native
 	@make -C eucadmin
 
 
-clean:
+clean: deps
 	$(ANT) clean
-	make -C modules/bootstrap/src/main/native clean
-	make -C modules/storage-controller/native clean
-	make -C modules/storage-san/native clean
 	make -C eucadmin clean
 
 distclean: clean
+	rm -rf ${TOP}/deps ${TOP}/lib
 	$(ANT) distclean
-	make -C modules/bootstrap/src/main/native distclean
-	make -C modules/storage-controller/native distclean
-	make -C modules/storage-san/native distclean
 	make -C eucadmin distclean
-
-install-test: build-test
-	@ANT_OPTS="-Xmx1g -XX:MaxPermSize=512m" $(ANT) install
-	@make -C modules/storage-controller/native install
-	@make -C modules/bootstrap/src/main/native install
-	@make -C eucadmin install
 
 install: build
 	@ANT_OPTS="-Xmx1g -XX:MaxPermSize=512m" $(ANT) install
-	@make -C modules/storage-controller/native install
-	@make -C modules/storage-san/native install
-	@make -C modules/bootstrap/src/main/native install
 	@make -C eucadmin install
 
 install-test: build-test
 	@ANT_OPTS="-Xmx1g -XX:MaxPermSize=256m" $(ANT) install
-	@make -C modules/storage-controller/native install
-	@make -C modules/storage-san/native install
-	@make -C modules/bootstrap/src/main/native install
 	@make -C eucadmin install
 
 
 deploy: install
 
 uninstall:
-	make -C modules/storage-controller/native uninstall
-	make -C modules/storage-san/native uninstall
-	make -C modules/bootstrap/src/main/native uninstall
 	make -C eucadmin uninstall
 	$(RM) -rf $(DESTDIR)$(etcdir)/eucalyptus/cloud.d
 	$(RM) -rf $(DESTDIR)$(datarootdir)/eucalyptus/*jar
@@ -123,8 +104,3 @@ uninstall:
 
 # cleaning up after run-test currently requires a few iterations of:
 #   dmsetup table | cut -d':' -f 1 | sort | uniq | xargs -L 1 dmsetup remove ; losetup -a | cut -d':' -f 1 | xargs -L 1 losetup -d; losetup -a
-run-test:
-	tools/runJUnitTest.sh com.eucalyptus.cloud.ws.EucaImagerTest
-	tools/runJUnitTest.sh com.eucalyptus.cloud.ws.BrokerInterfaceTest
-	tools/runJUnitTest.sh com.eucalyptus.cloud.ws.vsphere.VSphereEndpointTest -Dvsphere.url=${VSPHERE_URL} -Dvsphere.login=${VSPHERE_LOGIN} -Dvsphere.password=${VSPHERE_PASSWORD}
-	tools/runJUnitTest.sh com.eucalyptus.cloud.ws.vsphere.VSphereEndpointAsyncTest -Dvsphere.url=${VSPHERE_URL} -Dvsphere.login=${VSPHERE_LOGIN} -Dvsphere.password=${VSPHERE_PASSWORD}

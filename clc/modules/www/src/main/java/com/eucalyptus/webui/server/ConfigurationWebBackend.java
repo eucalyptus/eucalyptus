@@ -20,7 +20,6 @@ import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.log4j.Logger;
 import com.eucalyptus.address.AddressingConfiguration;
 import com.eucalyptus.bootstrap.HttpServerBootstrapper;
-import com.eucalyptus.broker.vmware.VMwareBroker;
 import com.eucalyptus.cluster.ClusterConfiguration;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
@@ -87,7 +86,7 @@ public class ConfigurationWebBackend {
 	public static final String CLUSTER_TYPE = "cluster controller";
 	public static final String STORAGE_TYPE = "storage controller";
 	public static final String WALRUS_TYPE = "walrus";
-	public static final String VMWARE_BROKER_TYPE = "vmware broker";
+	public static final String BROKER_TYPE = "broker";
 	public static final String ARBITRATOR_TYPE = "arbitrator";
 
 	public static final String DEFAULT_KERNEL = "Default kernel";
@@ -335,28 +334,30 @@ public class ConfigurationWebBackend {
 	}
 
 
-	private static void serializeVMwareBrokerConfiguration( ServiceConfiguration serviceConf, SearchResultRow result ) {
+	private static void serializeBrokerConfiguration( ServiceConfiguration serviceConf, SearchResultRow result ) {
 		// Common
-		result.addField( makeConfigId( serviceConf.getName( ), VMWARE_BROKER_TYPE ) );
+		result.addField( makeConfigId( serviceConf.getName( ), serviceConf.getComponentId( ).getName( ) ) );
 		result.addField( serviceConf.getName( ) );
 		result.addField( serviceConf.getPartition( ) );
-		result.addField( VMWARE_BROKER_TYPE );
+		result.addField( serviceConf.getComponentId( ).getName( ) );
 		result.addField( serviceConf.getHostName( ) );
 		result.addField( serviceConf.getPort( ) == null ? null : serviceConf.getPort( ).toString( ) );
 		result.addField( serviceConf.lookupState().toString( ) );
 	}
 
 	/**
-	 * @return the list of VMware broker configurations for UI display.
+	 * @return the list of broker configurations for UI display.
 	 */
-	public static List<SearchResultRow> getVMwareBrokerConfigurations( ) {
+	public static List<SearchResultRow> getBrokerConfigurations( ) {
 		List<SearchResultRow> results = Lists.newArrayList( );
-		NavigableSet<ServiceConfiguration> configs = Components.lookup(VMwareBroker.class).services();
-		for (ServiceConfiguration c : configs ) {
-			SearchResultRow row = new SearchResultRow( );
-			serializeVMwareBrokerConfiguration( c, row );
-			results.add( row );
-
+		for (Component component : Components.list( ) ) {
+		  if ( component.getName( ).endsWith( BROKER_TYPE ) ) {
+    		for (ServiceConfiguration c : component.services( ) ) {
+    			SearchResultRow row = new SearchResultRow( );
+    			serializeBrokerConfiguration( c, row );
+    			results.add( row );
+    		}
+		  }
 		}
 		return results;
 	}
@@ -423,15 +424,15 @@ public class ConfigurationWebBackend {
 	}
 
 	/**
-	 * Set the VMware broker configuration using the UI input.
-	 * 
-	 * @param input
-	 */
-	public static void setVMwareBrokerConfiguration( final SearchResultRow input ) throws EucalyptusServiceException {
-		//Do nothing for now. Revisit.
-	}
+  * Set the broker configuration using the UI input.
+  * 
+  * @param input
+  */
+ public static void setBrokerConfiguration( final SearchResultRow input ) throws EucalyptusServiceException {
+   //Do nothing for now. Revisit.
+ }
 
-	/**
+ /**
 	 * Set the Arbitrator configuration using the UI input.
 	 * 
 	 * @param input

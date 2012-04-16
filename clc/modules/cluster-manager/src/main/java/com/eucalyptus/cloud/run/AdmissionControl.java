@@ -98,9 +98,9 @@ import com.eucalyptus.records.Logs;
 import com.eucalyptus.scripting.ScriptExecutionFailedException;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.RestrictedTypes;
-import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
@@ -240,12 +240,7 @@ public class AdmissionControl {
       List<Cluster> authorizedClusters = this.doPrivilegedLookup( zoneName, vmTypeName );
       int remaining = maxAmount;
       int available = 0;
-      LOG.info( "Found authorized clusters: " + Iterables.transform( authorizedClusters, new Function<Cluster, String>( ) {
-        @Override
-        public String apply( Cluster arg0 ) {
-          return arg0.getName( );
-        }
-      } ) );
+      LOG.info( "Found authorized clusters: " + Iterables.transform( authorizedClusters, HasName.GET_NAME ) );
       if ( ( available = checkAvailability( vmTypeName, authorizedClusters ) ) < minAmount ) {
         throw new NotEnoughResourcesException( "Not enough resources (" + available + " in " + zoneName + " < " + minAmount + "): vm instances." );
       } else {
@@ -329,10 +324,10 @@ public class AdmissionControl {
   
   enum PublicAddressAllocator implements ResourceAllocator {
     INSTANCE;
-    
+
     @Override
     public void allocate( Allocation allocInfo ) throws Exception {
-      if ( NetworkGroups.networkingConfiguration( ).hasNetworking( ) ) {
+      if ( NetworkGroups.networkingConfiguration( ).hasNetworking( ) && !allocInfo.isUsePrivateAddressing() ) {
         for ( ResourceToken token : allocInfo.getAllocationTokens( ) ) {
           token.setAddress( Addresses.allocateSystemAddress( token.getAllocationInfo( ).getPartition( ) ) );
         }

@@ -35,13 +35,11 @@ option "remote-dns"            -   "eucalyptus-cloud will not try to bind port 5
 option "remote-cloud"          -   "DEPRECATED DO NOT USE. IT DOES NOTHING."           flag                              off                            hidden # DEPRECATED
 option "remote-walrus"         -   "DEPRECATED DO NOT USE. IT DOES NOTHING."           flag                              off                            hidden # DEPRECATED
 option "remote-storage"        -   "DEPRECATED DO NOT USE. IT DOES NOTHING."           flag                              off                            hidden # DEPRECATED
-option "remote-vmwarebroker"   -   "DEPRECATED DO NOT USE. IT DOES NOTHING."           flag                              off                            hidden # DEPRECATED
 option "disable-iscsi"         -   "Disable ISCSI support for dynamic block storage."  flag                              off                                   # TODO: this needs to be removed
 option "disable-cloud"         -   "DEPRECATED DO NOT USE. IT DOES NOTHING."           flag                              off                            hidden # DEPRECATED
 option "disable-walrus"        -   "DEPRECATED DO NOT USE. IT DOES NOTHING."           flag                              off                            hidden # DEPRECATED
 option "disable-dns"           -   "DEPRECATED DO NOT USE. IT DOES NOTHING."           flag                              off                            hidden # DEPRECATED
 option "disable-storage"       -   "DEPRECATED DO NOT USE. IT DOES NOTHING."           flag                              off                            hidden # DEPRECATED
-option "disable-vmwarebroker"	 -   "DEPRECATED DO NOT USE. IT DOES NOTHING."           flag                              off                            hidden # DEPRECATED
 ######                   #       #                                                    #       #                         #                      #      #           
 ###### long-opt          # short # description                                        # type  # type desc.              # default value        # req. # extras... 
 section "Java Options"   #       #                                                    #       #                         #                      #      #           

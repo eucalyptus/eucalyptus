@@ -74,7 +74,6 @@ import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 import com.eucalyptus.auth.Contract;
 import com.eucalyptus.auth.principal.UserFullName;
-import com.eucalyptus.blockstorage.Volume;
 import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.cloud.util.NotEnoughResourcesException;
@@ -113,6 +112,7 @@ public class Allocations {
     private byte[]                     userData;
     private final int                  minCount;
     private final int                  maxCount;
+    private final boolean              usePrivateAddressing;
     /** verified references determined by the request **/
     private Partition                  partition;
     private SshKeyPair                 sshKeyPair;
@@ -135,6 +135,7 @@ public class Allocations {
       this.request = request;
       this.minCount = request.getMinCount( );
       this.maxCount = request.getMaxCount( );
+      this.usePrivateAddressing = "private".equals(request.getAddressingType());
       this.ownerFullName = this.context.getUserFullName( );
       if ( ( this.request.getInstanceType( ) == null ) || "".equals( this.request.getInstanceType( ) ) ) {
         this.request.setInstanceType( VmTypes.defaultTypeName( ) );
@@ -165,11 +166,13 @@ public class Allocations {
                         final SshKeyPair sshKeyPair,
                         final BootableSet bootSet,
                         final VmType vmType,
-                        final Set<NetworkGroup> networkGroups ) {
+                        final Set<NetworkGroup> networkGroups,
+                        final boolean isUsePrivateAddressing ) {
       super( );
       this.context = Contexts.lookup( );
       this.minCount = 1;
       this.maxCount = 1;
+      this.usePrivateAddressing = isUsePrivateAddressing;
       this.ownerFullName = this.context.getUserFullName( );
       this.reservationId = reservationId;
       this.reservationIndex = UniqueIds.nextIndex( VmInstance.class, ( long ) this.maxCount );
@@ -333,7 +336,11 @@ public class Allocations {
     public int getMaxCount( ) {
       return this.maxCount;
     }
-    
+
+    public boolean isUsePrivateAddressing() {
+      return usePrivateAddressing;
+    }
+
     public String getInstanceId( int index ) {
       while ( this.instanceIds.size( ) < index + 1 ) {
         this.instanceIds.put( index, VmInstances.getId( ( long ) this.getReservationIndex( ), index ) );
@@ -360,6 +367,7 @@ public class Allocations {
                            vm.getKeyPair( ),
                            bootSet,
                            vm.getVmType( ),
-                           vm.getNetworkGroups( ) );
+                           vm.getNetworkGroups( ),
+                           vm.isUsePrivateAddressing() );
   }
 }

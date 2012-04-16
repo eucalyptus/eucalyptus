@@ -624,7 +624,7 @@ public class Threads {
       return this.componentId.getSimpleName( ) + ":"
              + this.ownerType.getSimpleName( )
              + ":"
-             + this.owner
+             + this.owner.getFullName( )
              + "[workers]";
     }
     
