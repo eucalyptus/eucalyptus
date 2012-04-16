@@ -142,13 +142,13 @@ public class ReportServlet
 	
 	private User getUserFromSession( String sessionId )
 	{
-	    WebSession ws = WebSessionManager.getInstance( ).getSession( sessionId );
+	    WebSession ws = WebSessionManager.getInstance( ).getSessionById( sessionId );
 	    if ( ws == null ) {
 	    	throw new RuntimeException("Session verification failed:" + sessionId);
 	    }
 	    User user;
 		try {
-			user = EuareWebBackend.getUser( ws.getUserName( ), ws.getAccountName( ) );
+			user = EuareWebBackend.getUser( ws.getUserId( ) );
 		} catch ( EucalyptusServiceException ex ) {
 			throw new RuntimeException("Session verification failed", ex);
 		}

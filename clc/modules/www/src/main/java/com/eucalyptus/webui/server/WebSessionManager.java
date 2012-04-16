@@ -17,7 +17,8 @@ public class WebSessionManager {
   
   private static WebSessionManager instance = null;
   
-  private Map<String, WebSession> sessions = Maps.newHashMap( );
+  private Map<String, WebSession> sessionsById = Maps.newHashMap( );
+  private Map<String, WebSession> sessionsByUser = Maps.newHashMap( );
   
   private WebSessionManager( ) {
     
@@ -37,11 +38,12 @@ public class WebSessionManager {
    * @param accountName
    * @return the new session ID.
    */
-  public synchronized String newSession( String userName, String accountName ) {
+  public synchronized String newSession( String userId ) {
     String id = ServletUtils.genGUID( );
     long time = System.currentTimeMillis( );
-    WebSession session = new WebSession( id, userName, accountName, time/*creationTime*/, time/*lastAccessTime*/ );
-    sessions.put( id, session );
+    WebSession session = new WebSession( id, userId, time/*creationTime*/, time/*lastAccessTime*/ );
+    sessionsById.put( id, session );
+    sessionsByUser.put( userId, session );
     return id;
   }
   
@@ -51,35 +53,18 @@ public class WebSessionManager {
    * @param id
    * @return the session, null if not exists or expired.
    */
-  public synchronized WebSession getSession( String id ) {
-    WebSession session = sessions.get( id );
-    if ( session != null ) {
-      if ( System.currentTimeMillis( ) - session.getCreationTime( ) > AuthenticationProperties.WEBSESSION_LIFE_IN_MINUTES * 60 * 1000 ) {
-        sessions.remove( id );
-        session = null;
-      }
-    }
-    return session;
+  public synchronized WebSession getSessionById( String id ) {
+    return getValidSession( sessionsById.get( id ) );
   }
   
   /**
-   * Get a session by user name and account name. Remove the found session if expired.
+   * Get a session by user ID. Remove the found session if expired.
    * 
-   * @param userName
-   * @param accountName
-   * @return
+   * @param userId
+   * @return the session, null if not exists or expired
    */
-  public synchronized WebSession getSession( String userName, String accountName ) {
-	for ( WebSession session : sessions.values( ) ) {
-	  if ( session != null && session.getUserName( ).equals( userName ) && session.getAccountName( ).equals( accountName ) ) {
-	    if ( System.currentTimeMillis( ) - session.getCreationTime( ) > AuthenticationProperties.WEBSESSION_LIFE_IN_MINUTES * 60 * 1000 ) {
-	      sessions.remove( session.getId( ) );
-	      return null;
-	    }
-	    return session;
-	  }
-	}
-	return null;
+  public synchronized WebSession getSessionByUser( String userId ) {
+    return getValidSession( sessionsByUser.get( userId ) );
   }
   
   /**
@@ -89,8 +74,25 @@ public class WebSessionManager {
    */
   public synchronized void removeSession( String id ) {
     if ( id != null ) {
-      sessions.remove( id );
+      removeSession( sessionsById.get( id ) );
     }
+  }
+  
+  private void removeSession( WebSession session ) {
+    if ( session != null ) {
+      sessionsById.remove( session.getId( ) );
+      sessionsByUser.remove( session.getUserId( ) );
+    }
+  }
+  
+  private WebSession getValidSession( WebSession session ) {
+    if ( session != null ) {
+      if ( System.currentTimeMillis( ) - session.getCreationTime( ) > AuthenticationProperties.WEBSESSION_LIFE_IN_MINUTES * 60 * 1000 ) {
+        removeSession( session );
+        return null;
+      }
+    }
+    return session;
   }
   
 }

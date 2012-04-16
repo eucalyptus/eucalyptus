@@ -82,7 +82,7 @@ public class Images {
             return true;
           } else if ( input.getOwnerAccountNumber( ).equals( luser.getAccountNumber( ) ) ) {
             return true;
-          } else if ( input.hasPermission( luser.getAccountNumber( ), luser.getAccountName( ), luser.getUserId( ) ) ) {
+          } else if ( input.hasPermission( luser.getAccountNumber( ), luser.getUserId( ) ) ) {
             return true;
           } else {
             for ( AccessKey key : ctx.getUser( ).getKeys( ) ) {
