@@ -41,35 +41,20 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
   private static final Random RANDOM = new Random( );
   
   public static User verifySession( Session session ) throws EucalyptusServiceException {
-    WebSession ws = WebSessionManager.getInstance( ).getSession( session.getId( ) );
+    WebSession ws = WebSessionManager.getInstance( ).getSessionById( session.getId( ) );
     if ( ws == null ) {
       throw new EucalyptusServiceException( EucalyptusServiceException.INVALID_SESSION );
     }
-    return EuareWebBackend.getUser( ws.getUserName( ), ws.getAccountName( ) );
+    return EuareWebBackend.getUser( ws.getUserId( ) );
   }
   
-  private static void invalidateSession( String userName, String accountName ) {
-  	WebSession ws = WebSessionManager.getInstance( ).getSession( userName, accountName );
+  private static void invalidateSession( String userId ) {
+  	WebSession ws = WebSessionManager.getInstance( ).getSessionByUser( userId );
   	if ( ws != null ) {
   	  WebSessionManager.getInstance( ).removeSession( ws.getId( ) );
   	}
   }
-  
-  private static void invalidateSession( User user ) throws EucalyptusServiceException {
-  	if ( user == null ) {
-  	  LOG.error( "Empty user for invalidating web session" );
-  	  return;
-  	}
-  	try {
-  	  String userName = user.getName( );
-        String accountName = user.getAccount( ).getName( );
-        invalidateSession( userName, accountName );
-      } catch ( AuthException e ) {
-  	  LOG.error( e, e );
-  	  throw new EucalyptusServiceException( "Invalid user to lookup in web sessions", e );
-  	}
-  }
-  
+    
   private static SearchQuery parseQuery( QueryType type, String query ) throws EucalyptusServiceException {
     SearchQuery sq = null;
     try {
@@ -93,8 +78,9 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
     if ( Strings.isNullOrEmpty( accountName ) || Strings.isNullOrEmpty( userName ) || Strings.isNullOrEmpty( password ) ) {
       throw new EucalyptusServiceException( "Empty login or password" );
     }
-    EuareWebBackend.checkPassword( EuareWebBackend.getUser( userName, accountName ), password );
-    return new Session( WebSessionManager.getInstance( ).newSession( userName, accountName ) );
+    User user = EuareWebBackend.getUser( userName, accountName );
+    EuareWebBackend.checkPassword( user, password );
+    return new Session( WebSessionManager.getInstance( ).newSession( user.getUserId( ) ) );
   }
 
 
@@ -533,7 +519,7 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
   @Override
   public void resetPassword( String confirmationCode, String password ) throws EucalyptusServiceException {
     User targetUser = EuareWebBackend.resetPassword( confirmationCode, password );
-    invalidateSession( targetUser );
+    invalidateSession( targetUser.getUserId( ) );
   }
 
   @Override

@@ -160,7 +160,7 @@ public class WalrusBucketLogger {
 							String ownerId = entry.getOwnerId();
 							try {
 								ArrayList<Grant> grants = new ArrayList<Grant>();
-								grants.add(new Grant(new Grantee(new CanonicalUserType(Accounts.lookupAccountById(ownerId).getName(), ownerId)), 
+								grants.add(new Grant(new Grantee(new CanonicalUserType(ownerId, Accounts.lookupAccountById(ownerId).getName())), 
 								"FULL_CONTROL"));
 								request.getAccessControlList().setGrants(grants);
 							} catch (AuthException e1) {

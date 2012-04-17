@@ -152,12 +152,24 @@ public class EuareWebBackend {
   }
   
   public static User getUser( String userName, String accountName ) throws EucalyptusServiceException {
-    if ( userName == null || accountName == null ) {
-      throw new EucalyptusServiceException( "Empty user name or account name" );
-    }
+    User user = null;
     try {
       Account account = Accounts.lookupAccountByName( accountName );
-      User user = account.lookupUserByName( userName );
+      user = account.lookupUserByName( userName );
+    } catch ( Exception e ) {
+      LOG.error( "Failed to find user " + userName + "@" + accountName, e );
+      LOG.debug( e, e );
+      throw new EucalyptusServiceException( "Failed to find user " + userName + "@" + accountName + ": " + e.getMessage( ) );
+    }
+    return getUser( user.getUserId( ) );
+  }
+  
+  public static User getUser( String userId ) throws EucalyptusServiceException {
+    if ( userId == null ) {
+      throw new EucalyptusServiceException( "Empty user ID" );
+    }
+    try {
+      User user = Accounts.lookupUserById( userId );
       if ( !user.isEnabled( ) || !user.getRegistrationStatus( ).equals( RegistrationStatus.CONFIRMED ) ) {
         throw new EucalyptusServiceException( "User is not enabled or confirmed" );
       }
@@ -166,9 +178,9 @@ public class EuareWebBackend {
       LOG.debug( e, e );
       throw e;
     } catch ( Exception e ) {
-      LOG.error( "Failed to verify user " + userName + "@" + accountName, e );
+      LOG.error( "Failed to verify user " + userId, e );
       LOG.debug( e, e );
-      throw new EucalyptusServiceException( "Failed to verify user " + userName + "@" + accountName + ": " + e.getMessage( ) );
+      throw new EucalyptusServiceException( "Failed to verify user " + userId + ": " + e.getMessage( ) );
     }
   }
   
@@ -184,7 +196,8 @@ public class EuareWebBackend {
 	        action = LoginAction.EXPIRATION;
 	      }
       }
-      return new LoginUserProfile( user.getUserId( ), user.getName( ), user.getAccount( ).getName( ), userProfileSearch, userKeySearch, action );
+      Account userAccount = user.getAccount( );
+      return new LoginUserProfile( user.getUserId( ), user.getName( ), userAccount.getAccountNumber( ), userAccount.getName( ), userProfileSearch, userKeySearch, action );
     } catch ( Exception e ) {
       LOG.error( "Exception in retrieving user profile", e );
       LOG.debug( e, e );
@@ -1333,9 +1346,11 @@ public class EuareWebBackend {
       throw new IllegalArgumentException( "Can not find email to send approval notification for account " + accountName );
     }
     String confirmLink = QueryBuilder.get( ).start( QueryType.confirm ).add( CONFIRMATIONCODE, admin.getConfirmationCode( ) ).url( backendUrl );
-    String emailMessage = "Your account '" + accountName + "' application was approved. Click the following link to login and confirm your account:" + 
+    String emailMessage = "Your account '" + accountName + "' application was approved. Click the following link to login and confirm your account:" +
                           "\n\n" +
                           confirmLink +
+                          "\n\n" +
+                          "After you confirm your account you can login into it with 'admin' user and the password that you provided during account's application." +
                           "\n\n" +
                           "However, if you never requested a Eucalyptus account then, please, disregard this message.";
     String subject = WebProperties.getProperty( WebProperties.ACCOUNT_APPROVAL_SUBJECT, WebProperties.ACCOUNT_APPROVAL_SUBJECT_DEFAULT );

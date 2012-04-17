@@ -171,20 +171,10 @@ public class GrantInfo extends AbstractPersistent {
 				GrantInfo grantInfo = new GrantInfo();
 				Grantee grantee = grant.getGrantee();
 				if(grantee.getCanonicalUser() != null) {
-					String displayName = grantee.getCanonicalUser().getDisplayName();
-					if(displayName == null || displayName.length() == 0) {
-						String id = grantee.getCanonicalUser().getID();
+					String id = grantee.getCanonicalUser().getID();
 						if(id == null || id.length() == 0)
 							continue;
-						try {
-							displayName = Accounts.lookupUserByAccessKeyId(id).getUserId();
-						} catch ( AuthException e ) {
-              LOG.warn(e,e);
-            }
-						if(displayName == null)
-							continue;
-					}
-					grantInfo.setUserId(displayName);
+					grantInfo.setUserId(id);					
 				} else {
 					grantInfo.setGrantGroup(grantee.getGroup().getUri());
 				}
