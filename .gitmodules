@@ -1,0 +1,6 @@
+[submodule "clc/modules/vmware-broker"]
+	path = clc/modules/vmware-broker
+	url = git+ssh://git.eucalyptus-systems.com/mnt/repos/eucalyptus/vmwarebroker
+[submodule "clc/modules/storage-san"]
+	path = clc/modules/storage-san
+	url = git+ssh://git.eucalyptus-systems.com/mnt/repos/eucalyptus/storage-san
