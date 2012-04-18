@@ -85,7 +85,7 @@ import java.util.List;
 import java.util.Collections;
 
 public class WalrusProperties {
-	private static Logger LOG = Logger.getLogger( WalrusProperties.class );
+	private static Logger LOG = Logger.getLogger(WalrusProperties.class);
 
 	public static final String SERVICE_NAME = "Walrus";
 	public static String NAME = "Walrus";
@@ -256,7 +256,8 @@ public class WalrusProperties {
 	public static String getTrackerUrl() {
 		try {
 			String walrusUrl = SystemConfiguration.getWalrusUrl();
-			TRACKER_URL = "http://" + new URI(walrusUrl).getHost() + ":" + TRACKER_PORT + "/announce";
+			TRACKER_URL = "http://" + new URI(walrusUrl).getHost() + ":" + 
+					TRACKER_PORT + "/announce";
 		} catch (EucalyptusCloudException e) {
 			LOG.error(e);
 		} catch (URISyntaxException e) {
@@ -266,8 +267,8 @@ public class WalrusProperties {
 	}
 
 	public static InetAddress getWalrusAddress() throws EucalyptusCloudException {
-		if( Topology.isEnabled( Walrus.class ) ) {
-			return Topology.lookup( Walrus.class ).getInetAddress();
+		if (Topology.isEnabled(Walrus.class)) {
+			return Topology.lookup(Walrus.class).getInetAddress();
 		} else {
 			throw new EucalyptusCloudException("Walrus not ENABLED");
 		}	    
