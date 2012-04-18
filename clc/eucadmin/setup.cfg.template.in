@@ -1,0 +1,6 @@
+[meta]
+version=@EUCA_VERSION@
+
+[install]
+install_scripts=@prefix@/usr/sbin
+prefix=@prefix@/usr

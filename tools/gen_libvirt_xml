@@ -1,0 +1,207 @@
+#!/usr/bin/perl
+#Copyright (c) 2009  Eucalyptus Systems, Inc.	
+#
+#This program is free software: you can redistribute it and/or modify
+#it under the terms of the GNU General Public License as published by 
+#the Free Software Foundation, only version 3 of the License.  
+# 
+#This file is distributed in the hope that it will be useful, but WITHOUT
+#ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+#FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+#for more details.  
+#
+#You should have received a copy of the GNU General Public License along
+#with this program.  If not, see <http://www.gnu.org/licenses/>.
+# 
+#Please contact Eucalyptus Systems, Inc., 130 Castilian
+#Dr., Goleta, CA 93101 USA or visit <http://www.eucalyptus.com/licenses/> 
+#if you need additional information or have any questions.
+#
+#This file may incorporate work covered under the following copyright and
+#permission notice:
+#
+#  Software License Agreement (BSD License)
+#
+#  Copyright (c) 2008, Regents of the University of California
+#  
+#
+#  Redistribution and use of this software in source and binary forms, with
+#  or without modification, are permitted provided that the following
+#  conditions are met:
+#
+#    Redistributions of source code must retain the above copyright notice,
+#    this list of conditions and the following disclaimer.
+#
+#    Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+#
+#  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+#  IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+#  TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+#  PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+#  OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+#  EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+#  PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+#  PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+#  LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+#  NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+#  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. USERS OF
+#  THIS SOFTWARE ACKNOWLEDGE THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE
+#  LICENSED MATERIAL, COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS
+#  SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
+#  IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
+#  BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
+#  THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+#  OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
+#  WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
+#  ANY SUCH LICENSES OR RIGHTS.
+#
+
+#
+# this generates an XML template for libvirt domain specification,
+# which is tailored to an instance by the node controller
+
+use diagnostics;
+use warnings; 
+use sigtrap;
+use strict;
+use English; # for descriptive predefined var names
+use Data::Dumper; # for debugging: print Dumper($var)
+use Getopt::Long;
+use FindBin;
+$OUTPUT_AUTOFLUSH = 1; # no output buffering
+
+our $use_ramdisk = 0;
+our $use_ephemeral = 0;
+our $use_kernel = 0;
+our $plaindisk = 0;
+
+# deal with command-line parameters
+GetOptions('ramdisk'        => sub { $use_ramdisk = 1; },
+           'ephemeral'      => sub { $use_ephemeral = 1; },
+	   'kernel'         => sub { $use_kernel = 1; }
+		   ) or exit (1);
+
+if (!$use_ramdisk && !$use_kernel) {
+    $plaindisk = 1;
+}
+
+print <<EOF;
+<domain type='xen'>
+    <name>NAME</name>
+    <os>
+EOF
+
+
+if (!$plaindisk) {
+    print "        <type>linux</type>\n";
+    if ($use_kernel) {
+	print "        <kernel>BASEPATH/kernel</kernel>\n";
+    }
+    if ( $use_ramdisk ) {
+	print "        <initrd>BASEPATH/ramdisk</initrd>\n";
+    }
+    print "        <root>/dev/sda1</root>\n";
+    print "        <cmdline> ro</cmdline>\n";
+} else {
+    print "            <type>hvm</type>\n";
+    print "            <loader>/usr/lib/xen/boot/hvmloader</loader>\n";
+}
+
+
+print <<EOF;
+    </os>
+EOF
+
+if ($plaindisk) {
+print <<EOF;
+  <features>
+    <acpi/>
+    <apic/>
+    <pae/>
+  </features>
+  <clock offset='localtime'/>
+  <on_poweroff>destroy</on_poweroff>
+  <on_reboot>restart</on_reboot>
+  <on_crash>destroy</on_crash>
+EOF
+}
+
+print <<EOF;
+    <memory>MEMORY</memory>
+    <vcpu>VCPUS</vcpu>
+    <devices>
+EOF
+
+if ($plaindisk) {
+    print "        <emulator>/usr/lib64/xen/bin/qemu-dm</emulator>\n";
+}
+
+print <<EOF;
+        <disk type='file'>
+            <source file='BASEPATH/root'/>
+EOF
+
+if ($plaindisk) {
+    print "            <target dev='hda' bus='ide'/>\n";
+} else {
+    print "            <target dev='sda1'/>\n";
+}
+
+print <<EOF;
+        </disk>
+EOF
+
+if (!$plaindisk) {
+    if ( $use_ephemeral ) {
+print <<EOF;
+        <disk type='file'>
+            <source file='BASEPATH/ephemeral'/>
+            <target dev='sda2'/>
+	</disk>
+EOF
+    }
+}
+
+if (!$plaindisk) {
+print <<EOF;
+        <disk type='file'>
+            <source file='SWAPPATH/swap'/>
+            <target dev='sda3'/>
+        </disk>
+EOF
+}
+
+if ($plaindisk) {
+print <<EOF;
+        <disk type='file' device='floppy'>
+          <source file='BASEPATH/floppy'/>
+          <target dev='fda'/>
+        </disk>
+EOF
+}
+
+print <<EOF;
+        <interface type='bridge'>
+            <source bridge='BRIDGEDEV'/>
+            <mac address='PRIVMACADDR'/>
+            <script path='/etc/xen/scripts/vif-bridge'/>
+        </interface>
+EOF
+if ($plaindisk) {
+print <<EOF;
+        <serial type='pty'>
+           <source path='/dev/pts/3'/>
+           <target port='0'/>
+        </serial>
+        <input type='tablet' bus='usb'/>
+        <input type='mouse' bus='ps2'/>
+EOF
+}
+
+print <<EOF;
+        <!-- <graphics type='vnc' port='-1' autoport='yes' keymap='en-us' listen='0.0.0.0'/> -->
+    </devices>
+</domain>
+EOF

@@ -1,0 +1,1491 @@
+<?xml version="1.0" encoding="utf-8"?>
+<wsdl:definitions 
+    xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/" 
+    xmlns:ns1="http://schemas.xmlsoap.org/soap/http" 
+    xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/" 
+    xmlns:tns="http://eucalyptus.ucsb.edu/" 
+    xmlns:xsd="http://www.w3.org/2001/XMLSchema" 
+    name="EucalyptusCC" 
+    targetNamespace="http://eucalyptus.ucsb.edu/">
+
+  <wsdl:types>
+    <xs:schema 
+	attributeFormDefault="qualified" 
+	elementFormDefault="qualified" 
+	targetNamespace="http://eucalyptus.ucsb.edu/" 
+	xmlns:xs="http://www.w3.org/2001/XMLSchema"
+	xmlns:tns="http://eucalyptus.ucsb.edu/">
+      
+      <xs:complexType name="ccInstanceType">
+	<xs:sequence>
+	  <xs:element minOccurs="0" name="uuid" type="xs:string"/>
+	  <xs:element minOccurs="0" name="imageId" type="xs:string"/>
+	  <xs:element minOccurs="0" name="kernelId" type="xs:string"/>
+	  <xs:element minOccurs="0" name="ramdiskId" type="xs:string"/>
+	  <xs:element minOccurs="0" name="instanceId" type="xs:string"/>
+	  <xs:element minOccurs="0" name="instanceType" type="tns:virtualMachineType"/>
+	  <xs:element minOccurs="0" name="keyName" type="xs:string"/>
+	  <xs:element minOccurs="0" name="launchTime" type="xs:dateTime"/>
+	  <xs:element minOccurs="0" name="expiryTime" type="xs:dateTime"/>
+	  <xs:element minOccurs="0" name="stateName" type="xs:string"/>
+	  <xs:element minOccurs="0" name="netParams" type="tns:netConfigType"/>
+	  <xs:element minOccurs="0" name="ownerId" type="xs:string"/>
+	  <xs:element minOccurs="0" name="accountId" type="xs:string"/>
+	  <xs:element minOccurs="0" name="reservationId" type="xs:string"/>
+	  <xs:element minOccurs="0" name="serviceTag" type="xs:string"/>
+	  <xs:element minOccurs="0" name="userData" type="xs:string"/>
+	  <xs:element minOccurs="0" name="launchIndex" type="xs:string"/>
+	  <xs:element minOccurs="0" name="platform" type="xs:string"/>
+	  <xs:element minOccurs="0" name="bundleTaskStateName" type="xs:string"/>
+	  <xs:element minOccurs="0" name="createImageStateName" type="xs:string"/>
+	  <xs:element minOccurs="0" name="blkbytes" type="xs:int"/>
+	  <xs:element minOccurs="0" name="netbytes" type="xs:int"/>
+	  
+	  <!-- <xs:element minOccurs="0" name="networkIndex" type="xs:int"/> -->
+	  <xs:element minOccurs="0" maxOccurs="unbounded" name="groupNames" type="xs:string"/>
+	  <xs:element minOccurs="0" maxOccurs="unbounded" name="volumes" type="tns:volumeType"/>
+	</xs:sequence>
+      </xs:complexType>
+     
+      <xs:complexType name="ccResourceType">
+	<xs:sequence>
+	  <xs:element minOccurs="0" name="instanceType" type="tns:virtualMachineType"/>
+	  <xs:element minOccurs="0" name="maxInstances" type="xs:int"/>
+	  <xs:element minOccurs="0" name="availableInstances" type="xs:int"/>
+	</xs:sequence>
+      </xs:complexType>
+
+      <xs:complexType name="ccNodeType">
+	<xs:sequence>
+      	  <xs:element minOccurs="0" name="serviceTag" type="xs:string"/>
+	  <xs:element minOccurs="0" name="iqn" type="xs:string"/>
+	</xs:sequence>
+      </xs:complexType>
+
+      <xs:complexType name="volumeType">
+	<xs:sequence>
+	  <xs:element minOccurs="0" name="volumeId" type="xs:string"/>
+	  <xs:element minOccurs="0" name="remoteDev" type="xs:string"/>
+	  <xs:element minOccurs="0" name="localDev" type="xs:string"/>
+	  <xs:element minOccurs="0" name="state" type="xs:string"/>
+	</xs:sequence>
+      </xs:complexType>
+
+      <xs:complexType name="virtualMachineType">
+	<xs:sequence>
+	  <xs:element minOccurs="0" name="name" type="xs:string"/>
+	  <xs:element minOccurs="0" name="memory" type="xs:int"/>
+	  <xs:element minOccurs="0" name="cores" type="xs:int"/>
+	  <xs:element minOccurs="0" name="disk" type="xs:int"/>
+	  <xs:element minOccurs="0" maxOccurs="unbounded" name="virtualBootRecord" type="tns:virtualBootRecordType"/>
+	</xs:sequence>
+      </xs:complexType>
+
+      <xs:complexType name="virtualBootRecordType">
+	<xs:sequence>
+	  <xs:element minOccurs="0" name="resourceLocation" type="xs:string"/>
+	  <xs:element minOccurs="0" name="guestDeviceName" type="xs:string"/>
+	  <xs:element minOccurs="0" name="size" type="xs:int"/>
+	  <xs:element minOccurs="0" name="format" type="xs:string"/>
+	  <xs:element minOccurs="0" name="id" type="xs:string"/>
+	  <xs:element minOccurs="0" name="type" type="xs:string"/>
+	</xs:sequence>
+      </xs:complexType>
+
+      <xs:complexType name="ccTerminatedInstanceType">
+	<xs:sequence>
+	  <xs:element name="instanceId" type="xs:string" />
+
+	</xs:sequence>
+      </xs:complexType>
+
+      <xs:complexType abstract="true" name="serviceInfoType">
+        <xs:sequence>
+          <xs:element nillable="false" minOccurs="0" maxOccurs="1" name="type" type="xs:string"/>
+          <xs:element nillable="false" minOccurs="0" maxOccurs="1" name="name" type="xs:string"/>
+          <xs:element nillable="false" minOccurs="0" maxOccurs="unbounded" name="uris" type="xs:string"/>
+        </xs:sequence>
+      </xs:complexType>
+
+      <xs:complexType name="serviceStatusType">
+	<xs:sequence>
+	  <xs:element nillable="false" minOccurs="1" maxOccurs="1" name="serviceId" type="tns:serviceInfoType" />
+	  <xs:element nillable="false" minOccurs="1" maxOccurs="1" name="localState" type="xs:string" />
+	  <xs:element nillable="false" minOccurs="1" maxOccurs="1" name="localEpoch" type="xs:int" />
+	  <xs:element maxOccurs="unbounded" minOccurs="0" name="details" type="xs:string" />
+	</xs:sequence>
+      </xs:complexType>
+
+      <xs:complexType abstract="true" name="eucalyptusMessage">
+	<xs:sequence>
+	  <xs:element nillable="false" minOccurs="0" name="correlationId" type="xs:string"/>
+	  <xs:element nillable="false" minOccurs="0" name="userId" type="xs:string"/>
+	  <xs:element nillable="true" minOccurs="0" maxOccurs="1" name="statusMessage" type="xs:string"/>
+	  <xs:element nillable="false" minOccurs="0" maxOccurs="1" name="return" type="xs:boolean"/>
+          <xs:element nillable="false" minOccurs="0" maxOccurs="1" name="epoch" type="xs:int"/>
+          <xs:element maxOccurs="unbounded" minOccurs="0" name="services" type="tns:serviceInfoType"/>
+          <xs:element maxOccurs="unbounded" minOccurs="0" name="disabledServices" type="tns:serviceInfoType"/>
+          <xs:element maxOccurs="unbounded" minOccurs="0" name="notreadyServices" type="tns:serviceInfoType"/>
+    <xs:element nillable="true" minOccurs="0" maxOccurs="1" name="nodeName" type="xs:string"/>
+    	</xs:sequence>
+      </xs:complexType>
+
+      <xs:complexType name="describeInstancesType">
+	<xs:complexContent>
+	  <xs:extension base="tns:eucalyptusMessage">
+	    <xs:sequence>
+	      <xs:element maxOccurs="unbounded" minOccurs="0" name="instanceIds" type="xs:string"/>
+	    </xs:sequence>
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+
+      <xs:complexType name="describeInstancesResponseType">
+	<xs:complexContent>
+	  <xs:extension base="tns:eucalyptusMessage">
+	    <xs:sequence>
+	      <xs:element maxOccurs="unbounded" minOccurs="0" name="instances" type="tns:ccInstanceType"/>
+	    </xs:sequence>
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+
+      <xs:complexType name="describeResourcesType">
+	<xs:complexContent>
+	  <xs:extension base="tns:eucalyptusMessage">
+	    <xs:sequence>
+	      <xs:element maxOccurs="unbounded" minOccurs="1" name="instanceTypes" type="tns:virtualMachineType"/>
+	    </xs:sequence>
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+
+      <xs:complexType name="describeResourcesResponseType">
+	<xs:complexContent>
+	  <xs:extension base="tns:eucalyptusMessage">
+	    <xs:sequence>
+	      <xs:element maxOccurs="unbounded" minOccurs="0" name="resources" type="tns:ccResourceType"/>
+	      <xs:element maxOccurs="unbounded" minOccurs="0" name="serviceTags" type="xs:string"/>
+	      <xs:element maxOccurs="unbounded" minOccurs="0" name="nodes" type="tns:ccNodeType"/>
+	    </xs:sequence>
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+      
+      <xs:complexType name="terminateInstancesType">
+	<xs:complexContent>
+	  <xs:extension base="tns:eucalyptusMessage">
+	    <xs:sequence>
+	      <xs:element maxOccurs="unbounded" minOccurs="0" name="instanceIds" nillable="true" type="xs:string"/>
+	      <xs:element maxOccurs="1" minOccurs="0" name="force" nillable="true" type="xs:boolean"/>
+	    </xs:sequence>
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+
+      <xs:complexType name="terminateInstancesResponseType">
+	<xs:complexContent>
+	  <xs:extension base="tns:eucalyptusMessage">
+	    <xs:sequence>
+	      <xs:element maxOccurs="unbounded" minOccurs="0" name="isTerminated" type="xs:boolean"/>
+	    </xs:sequence>
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+      
+      <xs:complexType name="attachVolumeType">
+	<xs:complexContent>
+	  <xs:extension base="tns:eucalyptusMessage">
+	    <xs:sequence>
+	      <xs:element minOccurs="0" maxOccurs="1" name="volumeId" type="xs:string"/>
+	      <xs:element minOccurs="0" maxOccurs="1" name="instanceId" type="xs:string"/>
+	      <xs:element minOccurs="0" maxOccurs="1" name="remoteDev" type="xs:string"/>
+	      <xs:element minOccurs="0" maxOccurs="1" name="localDev" type="xs:string"/>
+	    </xs:sequence>
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+      
+      <xs:complexType name="attachVolumeResponseType">
+	<xs:complexContent>
+	  <xs:extension base="tns:eucalyptusMessage">
+	    <xs:sequence>
+	    </xs:sequence>
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+
+      <xs:complexType name="detachVolumeType">
+	<xs:complexContent>
+	  <xs:extension base="tns:eucalyptusMessage">
+	    <xs:sequence>
+	      <xs:element minOccurs="0" maxOccurs="1" name="instanceId" type="xs:string"/>
+	      <xs:element minOccurs="0" maxOccurs="1" name="volumeId" type="xs:string"/>
+	      <xs:element minOccurs="0" maxOccurs="1" name="remoteDev" type="xs:string"/>
+	      <xs:element minOccurs="0" maxOccurs="1" name="localDev" type="xs:string"/>
+	      <xs:element minOccurs="0" maxOccurs="1" name="force" type="xs:boolean"/>
+	    </xs:sequence>
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+      
+      <xs:complexType name="detachVolumeResponseType">
+	<xs:complexContent>
+	  <xs:extension base="tns:eucalyptusMessage">
+	    <xs:sequence>
+	    </xs:sequence>
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+
+      <xs:complexType name="createImageType">
+        <xs:complexContent>
+          <xs:extension base="tns:eucalyptusMessage">
+            <xs:sequence>
+              <xs:element minOccurs="0" maxOccurs="1" name="instanceId" type="xs:string"/>
+	      <xs:element minOccurs="0" maxOccurs="1" name="volumeId" type="xs:string"/>
+	      <xs:element minOccurs="0" maxOccurs="1" name="remoteDev" type="xs:string"/>
+            </xs:sequence>
+          </xs:extension>
+        </xs:complexContent>
+      </xs:complexType>
+
+      <xs:complexType name="createImageResponseType">
+        <xs:complexContent>
+          <xs:extension base="tns:eucalyptusMessage">
+            <xs:sequence>
+            </xs:sequence>
+          </xs:extension>
+        </xs:complexContent>
+      </xs:complexType>
+
+      <xs:complexType name="bundleInstanceType">
+	<xs:complexContent>
+	  <xs:extension base="tns:eucalyptusMessage">
+	    <xs:sequence>
+	      <xs:element minOccurs="0" maxOccurs="1" name="instanceId" type="xs:string"/>
+	      <xs:element minOccurs="0" maxOccurs="1" name="bucketName" type="xs:string"/>
+	      <xs:element minOccurs="0" maxOccurs="1" name="filePrefix" type="xs:string"/>
+	      <xs:element minOccurs="0" maxOccurs="1" name="walrusURL" type="xs:string"/>
+	      <xs:element minOccurs="0" maxOccurs="1" name="userPublicKey" type="xs:string"/>
+	      <xs:element minOccurs="0" maxOccurs="1" name="S3Policy" type="xs:string"/>
+	      <xs:element minOccurs="0" maxOccurs="1" name="S3PolicySig" type="xs:string"/>
+	    </xs:sequence>
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+      
+      <xs:complexType name="bundleInstanceResponseType">
+	<xs:complexContent>
+	  <xs:extension base="tns:eucalyptusMessage">
+	    <xs:sequence>
+	    </xs:sequence>
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+
+      <xs:complexType name="cancelBundleTaskType">
+	<xs:complexContent>
+	  <xs:extension base="tns:eucalyptusMessage">
+	    <xs:sequence>
+	      <xs:element minOccurs="0" maxOccurs="1" name="instanceId" type="xs:string"/>
+	    </xs:sequence>
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+      
+      <xs:complexType name="cancelBundleTaskResponseType">
+	<xs:complexContent>
+	  <xs:extension base="tns:eucalyptusMessage">
+	    <xs:sequence>
+	    </xs:sequence>
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+
+      <xs:complexType name="getConsoleOutputType">
+	<xs:complexContent>
+	  <xs:extension base="tns:eucalyptusMessage">
+	    <xs:sequence>
+	      <xs:element minOccurs="0" maxOccurs="1" name="instanceId" type="xs:string"/>
+	    </xs:sequence>
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+      
+      <xs:complexType name="getConsoleOutputResponseType">
+	<xs:complexContent>
+	  <xs:extension base="tns:eucalyptusMessage">
+	    <xs:sequence>
+	      <xs:element minOccurs="0" maxOccurs="1" name="consoleOutput" type="xs:string"/>
+	    </xs:sequence>
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+
+      <xs:complexType name="rebootInstancesType">
+	<xs:complexContent>
+	  <xs:extension base="tns:eucalyptusMessage">
+	    <xs:sequence>
+	      <xs:element maxOccurs="unbounded" minOccurs="0" name="instanceIds" type="xs:string"/>
+	    </xs:sequence>
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+      
+      <xs:complexType name="rebootInstancesResponseType">
+	<xs:complexContent>
+	  <xs:extension base="tns:eucalyptusMessage">
+	    <xs:sequence>
+	    </xs:sequence>
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+
+      <xs:complexType name="startNetworkType">
+	<xs:complexContent>
+	  <xs:extension base="tns:eucalyptusMessage">
+	    <xs:sequence>
+	      <xs:element minOccurs="0" name="uuid" type="xs:string"/>
+	      <xs:element minOccurs="0" maxOccurs="1" name="vlan" type="xs:int"/>
+	      <xs:element minOccurs="0" maxOccurs="1" name="netName" type="xs:string"/>
+	      <xs:element minOccurs="0" maxOccurs="1" name="nameserver" type="xs:string"/>
+	      <xs:element maxOccurs="unbounded" minOccurs="0" name="clusterControllers" type="xs:string"/>
+	      <xs:element minOccurs="0" maxOccurs="1" name="accountId" type="xs:string"/>
+	    </xs:sequence>
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+      
+      <xs:complexType name="startNetworkResponseType">
+	<xs:complexContent>
+	  <xs:extension base="tns:eucalyptusMessage">
+	    <xs:sequence>
+	    </xs:sequence>
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+
+
+      <xs:complexType name="stopNetworkType">
+	<xs:complexContent>
+	  <xs:extension base="tns:eucalyptusMessage">
+	    <xs:sequence>
+	      <xs:element minOccurs="0" maxOccurs="1" name="vlan" type="xs:int"/>
+	      <xs:element minOccurs="0" maxOccurs="1" name="netName" type="xs:string"/>
+	      <xs:element minOccurs="0" maxOccurs="1" name="accountId" type="xs:string"/>
+	    </xs:sequence>
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+      
+      <xs:complexType name="stopNetworkResponseType">
+	<xs:complexContent>
+	  <xs:extension base="tns:eucalyptusMessage">
+	    <xs:sequence>
+	    </xs:sequence>
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+
+      <xs:complexType name="assignAddressType">
+	<xs:complexContent>
+	  <xs:extension base="tns:eucalyptusMessage">
+	    <xs:sequence>
+	      <xs:element minOccurs="1" maxOccurs="1" name="uuid" type="xs:string"/>
+	      <xs:element name="source" type="xs:string"/>
+	      <xs:element name="dest" type="xs:string"/>
+	    </xs:sequence>
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+      
+      <xs:complexType name="assignAddressResponseType">
+	<xs:complexContent>
+	  <xs:extension base="tns:eucalyptusMessage">
+	    <xs:sequence>
+	    </xs:sequence>
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+
+      <xs:complexType name="unassignAddressType">
+	<xs:complexContent>
+	  <xs:extension base="tns:eucalyptusMessage">
+	    <xs:sequence>
+	      <xs:element name="source" type="xs:string"/>
+	      <xs:element name="dest" type="xs:string"/>
+	    </xs:sequence>
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+      
+      <xs:complexType name="unassignAddressResponseType">
+	<xs:complexContent>
+	  <xs:extension base="tns:eucalyptusMessage">
+	    <xs:sequence>
+	    </xs:sequence>
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+
+      <xs:complexType name="describeNetworksType">
+	<xs:complexContent>
+	  <xs:extension base="tns:eucalyptusMessage">
+	    <xs:sequence>
+	      <xs:element minOccurs="0" maxOccurs="1" name="nameserver" type="xs:string"/>
+	      <xs:element maxOccurs="unbounded" minOccurs="0" name="clusterControllers" type="xs:string"/>
+	    </xs:sequence>
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+      
+      <xs:complexType name="describeNetworksResponseType">
+	<xs:complexContent>
+	  <xs:extension base="tns:eucalyptusMessage">
+	    <xs:sequence>
+	      <xs:element minOccurs="0" maxOccurs="1" name="useVlans" type="xs:int"/>
+	      <xs:element minOccurs="0" maxOccurs="1" name="mode" type="xs:string"/>
+	      <xs:element minOccurs="0" maxOccurs="1" name="addrsPerNet" type="xs:int"/>
+	      <xs:element minOccurs="0" maxOccurs="1" name="addrIndexMin" type="xs:int"/>
+	      <xs:element minOccurs="0" maxOccurs="1" name="addrIndexMax" type="xs:int"/>
+	      <xs:element minOccurs="0" maxOccurs="1" name="vlanMin" type="xs:int"/>
+	      <xs:element minOccurs="0" maxOccurs="1" name="vlanMax" type="xs:int"/>
+	      <xs:element minOccurs="0" maxOccurs="1" name="vnetSubnet" type="xs:string"/>
+	      <xs:element minOccurs="0" maxOccurs="1" name="vnetNetmask" type="xs:string"/>
+	      <xs:element maxOccurs="unbounded" minOccurs="0" name="activeNetworks" type="tns:networkType"/>
+	    </xs:sequence>
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+
+      <xs:complexType name="networkType">
+	<xs:sequence>
+	  <xs:element minOccurs="1" maxOccurs="1" name="uuid" type="xs:string"/>
+	  <xs:element minOccurs="1" maxOccurs="1" name="vlan" type="xs:int"/>
+	  <xs:element minOccurs="1" maxOccurs="1" name="netName" type="xs:string"/>
+	  <xs:element minOccurs="1" maxOccurs="1" name="userName" type="xs:string"/>
+	  <xs:element maxOccurs="unbounded" minOccurs="0" name="activeAddrs" type="xs:int"/>
+	</xs:sequence>
+      </xs:complexType>
+
+      <xs:complexType name="describePublicAddressesType">
+	<xs:complexContent>
+	  <xs:extension base="tns:eucalyptusMessage">
+	    <xs:sequence>
+	    </xs:sequence>
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+
+      <xs:complexType name="publicAddressType">
+	<xs:sequence>
+	  <xs:element minOccurs="1" maxOccurs="1" name="uuid" type="xs:string" />
+	  <xs:element minOccurs="1" maxOccurs="1" name="sourceAddress" type="xs:string" />
+	  <xs:element minOccurs="1" maxOccurs="1" name="destAddress" type="xs:string" />
+	</xs:sequence>
+      </xs:complexType>
+      
+      <xs:complexType name="describePublicAddressesResponseType">
+	<xs:complexContent>
+	  <xs:extension base="tns:eucalyptusMessage">
+	    <xs:sequence>
+	      <xs:element minOccurs="0" maxOccurs="unbounded" name="addresses" type="tns:publicAddressType"/>
+	    </xs:sequence>
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+
+      <xs:complexType name="configureNetworkType">
+	<xs:complexContent>
+	  <xs:extension base="tns:eucalyptusMessage">
+	    <xs:sequence>
+	      <xs:element minOccurs="0" maxOccurs="unbounded" name="rules" type="tns:networkRule"/>
+	      <xs:element minOccurs="0" maxOccurs="1" name="accountId" type="xs:string"/>
+	    </xs:sequence>
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+      
+      <xs:complexType name="configureNetworkResponseType">
+	<xs:complexContent>
+	  <xs:extension base="tns:eucalyptusMessage">
+	    <xs:sequence>
+	    </xs:sequence>
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+      
+      <xs:complexType name="networkRule">
+	<xs:sequence>
+	  <xs:element name="type" type="xs:string"/>
+	  <!-- these next two lists should always be the same length -->
+	  <xs:element minOccurs="0" maxOccurs="unbounded" name="sourceNames" type="xs:string"/>
+	  <xs:element minOccurs="0" maxOccurs="unbounded" name="userNames" type="xs:string"/>
+	  <xs:element minOccurs="0" maxOccurs="unbounded" name="sourceNets" type="xs:string"/>
+	  <xs:element minOccurs="0" maxOccurs="1" name="destUserName" type="xs:string"/>
+	  <xs:element name="destName" type="xs:string"/>
+	  <xs:element name="protocol" type="xs:string"/>
+	  <xs:element name="portRangeMin" type="xs:int"/>
+	  <xs:element name="portRangeMax" type="xs:int"/>
+	</xs:sequence>
+      </xs:complexType>
+      
+      <xs:complexType name="runInstancesType">
+	<xs:complexContent>
+	  <xs:extension base="tns:eucalyptusMessage">
+	    <xs:sequence>
+	      <xs:element minOccurs="0" name="imageId" type="xs:string"/>
+	      <xs:element minOccurs="0" name="kernelId" type="xs:string"/>
+	      <xs:element minOccurs="0" name="ramdiskId" type="xs:string"/>
+	      <xs:element minOccurs="0" name="imageURL" type="xs:string"/>
+	      <xs:element minOccurs="0" name="kernelURL" type="xs:string"/>
+	      <xs:element minOccurs="0" name="ramdiskURL" type="xs:string"/>
+	      <xs:element minOccurs="0" name="instanceType" type="tns:virtualMachineType"/>
+	      <xs:element minOccurs="0" name="keyName" type="xs:string"/>
+	      <xs:element name="maxCount" type="xs:int"/>
+	      <xs:element name="minCount" type="xs:int"/>
+	      <xs:element name="reservationId" type="xs:string"/>
+	      <xs:element minOccurs="1" maxOccurs="unbounded" name="instanceIds" type="xs:string"/>
+	      <xs:element minOccurs="1" maxOccurs="unbounded" name="netNames" type="xs:string"/>
+	      <xs:element minOccurs="1" maxOccurs="unbounded" name="macAddresses" type="xs:string"/>
+	      <xs:element minOccurs="0" maxOccurs="unbounded" name="networkIndexList" type="xs:int"/>
+	      <xs:element minOccurs="1" maxOccurs="unbounded" name="uuids" type="xs:string"/>
+	      <xs:element name="vlan" type="xs:int"/>
+	      <xs:element name="userData" type="xs:string"/>
+	      <xs:element name="launchIndex" type="xs:string"/>
+	      <xs:element minOccurs="0" name="platform" type="xs:string"/>
+	      <xs:element minOccurs="0" name="expiryTime" type="xs:dateTime"/>
+	      <xs:element minOccurs="0" maxOccurs="1" name="ownerId" type="xs:string"/>
+	      <xs:element minOccurs="0" maxOccurs="1" name="accountId" type="xs:string"/>
+	    </xs:sequence>
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+      
+      <xs:complexType name="netConfigType">
+	<xs:sequence>
+	  <xs:element name="privateMacAddress" type="xs:string"/>
+	  <xs:element name="privateIp" type="xs:string"/>
+	  <xs:element name="publicIp" type="xs:string"/>
+	  <xs:element name="vlan" type="xs:int"/>
+	  <xs:element name="networkIndex" type="xs:int"/>
+	</xs:sequence>
+      </xs:complexType>
+      
+      <xs:complexType name="runInstancesResponseType">
+	<xs:complexContent>
+	  <xs:extension base="tns:eucalyptusMessage">
+	    <xs:sequence>
+	      <xs:element minOccurs="0" maxOccurs="unbounded" name="instances" type="tns:ccInstanceType"/>
+	    </xs:sequence>
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+      
+      <xs:complexType name="describeServicesType">
+	<xs:complexContent>
+	  <xs:extension base="tns:eucalyptusMessage">
+	    <xs:sequence>
+              <xs:element maxOccurs="unbounded" minOccurs="0" name="serviceIds" type="tns:serviceInfoType" />
+	    </xs:sequence>
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+      
+      <xs:complexType name="describeServicesResponseType">
+	<xs:complexContent>
+	  <xs:extension base="tns:eucalyptusMessage">
+	    <xs:sequence>
+              <xs:element maxOccurs="unbounded" minOccurs="0" name="serviceStatuses" type="tns:serviceStatusType" />
+	    </xs:sequence>
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+
+      <xs:complexType abstract="true" name="serviceTransitionType">
+	<xs:complexContent>
+	  <xs:extension base="tns:eucalyptusMessage">
+	    <xs:sequence>
+              <xs:element nillable="false" minOccurs="0" maxOccurs="unbounded" name="serviceIds" type="tns:serviceInfoType" />
+	    </xs:sequence>
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+      
+      <xs:complexType name="startServiceType">
+	<xs:complexContent>
+	  <xs:extension base="tns:serviceTransitionType">
+	    <xs:sequence />
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+      
+      <xs:complexType name="stopServiceType">
+	<xs:complexContent>
+	  <xs:extension base="tns:serviceTransitionType">
+	    <xs:sequence />
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+      
+      <xs:complexType name="enableServiceType">
+	<xs:complexContent>
+	  <xs:extension base="tns:serviceTransitionType">
+	    <xs:sequence />
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+      
+      <xs:complexType name="disableServiceType">
+	<xs:complexContent>
+	  <xs:extension base="tns:serviceTransitionType">
+	    <xs:sequence />
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+
+      <xs:complexType name="shutdownServiceType">
+	<xs:complexContent>
+	  <xs:extension base="tns:serviceTransitionType">
+	    <xs:sequence />
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+      
+      <xs:complexType name="startServiceResponseType">
+	<xs:complexContent>
+	  <xs:extension base="tns:serviceTransitionType">
+	    <xs:sequence />
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+      
+      <xs:complexType name="stopServiceResponseType">
+	<xs:complexContent>
+	  <xs:extension base="tns:serviceTransitionType">
+	    <xs:sequence />
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+      
+      <xs:complexType name="enableServiceResponseType">
+	<xs:complexContent>
+	  <xs:extension base="tns:serviceTransitionType">
+	    <xs:sequence />
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+      
+      <xs:complexType name="disableServiceResponseType">
+	<xs:complexContent>
+	  <xs:extension base="tns:serviceTransitionType">
+	    <xs:sequence />
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+
+      <xs:complexType name="shutdownServiceResponseType">
+	<xs:complexContent>
+	  <xs:extension base="tns:serviceTransitionType">
+	    <xs:sequence />
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+      
+      <xs:element name="DescribeServices" nillable="true" type="tns:describeServicesType"/>
+      <xs:element name="DescribeServicesResponse" nillable="true" type="tns:describeServicesResponseType"/>
+      
+      <xs:element name="StartService" nillable="true" type="tns:startServiceType"/>
+      <xs:element name="StartServiceResponse" nillable="true" type="tns:startServiceResponseType"/>
+      
+      <xs:element name="StopService" nillable="true" type="tns:stopServiceType"/>
+      <xs:element name="StopServiceResponse" nillable="true" type="tns:stopServiceResponseType"/>
+      
+      <xs:element name="EnableService" nillable="true" type="tns:enableServiceType"/>
+      <xs:element name="EnableServiceResponse" nillable="true" type="tns:enableServiceResponseType"/>
+      
+      <xs:element name="DisableService" nillable="true" type="tns:disableServiceType"/>
+      <xs:element name="DisableServiceResponse" nillable="true" type="tns:disableServiceResponseType"/>
+
+      <xs:element name="ShutdownService" nillable="true" type="tns:shutdownServiceType"/>
+      <xs:element name="ShutdownServiceResponse" nillable="true" type="tns:shutdownServiceResponseType"/>
+      
+      <xs:element name="AttachVolume" nillable="true" type="tns:attachVolumeType"/>
+      <xs:element name="AttachVolumeResponse" nillable="true" type="tns:attachVolumeResponseType"/>
+
+      <xs:element name="DetachVolume" nillable="true" type="tns:detachVolumeType"/>
+      <xs:element name="DetachVolumeResponse" nillable="true" type="tns:detachVolumeResponseType"/>
+
+      <xs:element name="CreateImage" nillable="true" type="tns:createImageType"/>
+      <xs:element name="CreateImageResponse" nillable="true" type="tns:createImageResponseType"/>
+
+      <xs:element name="BundleInstance" nillable="true" type="tns:bundleInstanceType"/>
+      <xs:element name="BundleInstanceResponse" nillable="true" type="tns:bundleInstanceResponseType"/>
+
+      <xs:element name="CancelBundleTask" nillable="true" type="tns:cancelBundleTaskType"/>
+      <xs:element name="CancelBundleTaskResponse" nillable="true" type="tns:cancelBundleTaskResponseType"/>
+
+      <xs:element name="GetConsoleOutput" nillable="true" type="tns:getConsoleOutputType"/>
+      <xs:element name="GetConsoleOutputResponse" nillable="true" type="tns:getConsoleOutputResponseType"/>
+
+      <xs:element name="RebootInstances" nillable="true" type="tns:rebootInstancesType"/>
+      <xs:element name="RebootInstancesResponse" nillable="true" type="tns:rebootInstancesResponseType"/>
+
+      <xs:element name="StartNetwork" nillable="true" type="tns:startNetworkType"/>
+      <xs:element name="StartNetworkResponse" nillable="true" type="tns:startNetworkResponseType"/>
+
+      <xs:element name="StopNetwork" nillable="true" type="tns:stopNetworkType"/>
+      <xs:element name="StopNetworkResponse" nillable="true" type="tns:stopNetworkResponseType"/>
+
+      <xs:element name="ConfigureNetwork" nillable="true" type="tns:configureNetworkType"/>
+      <xs:element name="ConfigureNetworkResponse" nillable="true" type="tns:configureNetworkResponseType"/>
+
+      <xs:element name="AssignAddress" nillable="true" type="tns:assignAddressType"/>
+      <xs:element name="AssignAddressResponse" nillable="true" type="tns:assignAddressResponseType"/>
+
+      <xs:element name="UnassignAddress" nillable="true" type="tns:unassignAddressType"/>
+      <xs:element name="UnassignAddressResponse" nillable="true" type="tns:unassignAddressResponseType"/>
+
+      <xs:element name="DescribeNetworks" nillable="true" type="tns:describeNetworksType"/>
+      <xs:element name="DescribeNetworksResponse" nillable="true" type="tns:describeNetworksResponseType"/>
+
+      <xs:element name="DescribePublicAddresses" nillable="true" type="tns:describePublicAddressesType"/>
+      <xs:element name="DescribePublicAddressesResponse" nillable="true" type="tns:describePublicAddressesResponseType"/>
+      
+      <xs:element name="DescribeInstances" nillable="true" type="tns:describeInstancesType"/>
+      <xs:element name="DescribeInstancesResponse" nillable="true" type="tns:describeInstancesResponseType"/>
+
+      <xs:element name="DescribeResources" nillable="true" type="tns:describeResourcesType"/>
+      <xs:element name="DescribeResourcesResponse" nillable="true" type="tns:describeResourcesResponseType"/>
+      
+      <xs:element name="TerminateInstances" nillable="true" type="tns:terminateInstancesType"/>
+      <xs:element name="TerminateInstancesResponse" nillable="true" type="tns:terminateInstancesResponseType"/>
+      
+      <xs:element name="RunInstances" nillable="true" type="tns:runInstancesType"/>
+      <xs:element name="RunInstancesResponse" nillable="true" type="tns:runInstancesResponseType"/>
+      
+    </xs:schema>
+  </wsdl:types>
+
+  <wsdl:message name="DescribeServicesResponse">
+    <wsdl:part element="tns:DescribeServicesResponse" name="DescribeServicesResponse">
+    </wsdl:part>
+  </wsdl:message>
+  
+  <wsdl:message name="StartServiceResponse">
+    <wsdl:part element="tns:StartServiceResponse" name="StartServiceResponse">
+    </wsdl:part>
+  </wsdl:message>
+  
+  <wsdl:message name="StopServiceResponse">
+    <wsdl:part element="tns:StopServiceResponse" name="StopServiceResponse">
+    </wsdl:part>
+  </wsdl:message>
+  
+  <wsdl:message name="EnableServiceResponse">
+    <wsdl:part element="tns:EnableServiceResponse" name="EnableServiceResponse">
+    </wsdl:part>
+  </wsdl:message>
+  
+  <wsdl:message name="DisableServiceResponse">
+    <wsdl:part element="tns:DisableServiceResponse" name="DisableServiceResponse">
+    </wsdl:part>
+  </wsdl:message>
+
+  <wsdl:message name="ShutdownServiceResponse">
+    <wsdl:part element="tns:ShutdownServiceResponse" name="ShutdownServiceResponse">
+    </wsdl:part>
+  </wsdl:message>
+  
+  <wsdl:message name="DescribeServicesResponse">
+    <wsdl:part element="tns:DescribeServicesResponse" name="DescribeServicesResponse">
+    </wsdl:part>
+  </wsdl:message>
+  
+  <wsdl:message name="StartServiceResponse">
+    <wsdl:part element="tns:StartServiceResponse" name="StartServiceResponse">
+    </wsdl:part>
+  </wsdl:message>
+  
+  <wsdl:message name="StopServiceResponse">
+    <wsdl:part element="tns:StopServiceResponse" name="StopServiceResponse">
+    </wsdl:part>
+  </wsdl:message>
+  
+  <wsdl:message name="EnableServiceResponse">
+    <wsdl:part element="tns:EnableServiceResponse" name="EnableServiceResponse">
+    </wsdl:part>
+  </wsdl:message>
+  
+  <wsdl:message name="DisableServiceResponse">
+    <wsdl:part element="tns:DisableServiceResponse" name="DisableServiceResponse">
+    </wsdl:part>
+  </wsdl:message>
+
+  <wsdl:message name="ShutdownServiceResponse">
+    <wsdl:part element="tns:ShutdownServiceResponse" name="ShutdownServiceResponse">
+    </wsdl:part>
+  </wsdl:message>
+  
+  <wsdl:message name="AttachVolumeResponse">
+    <wsdl:part element="tns:AttachVolumeResponse" name="AttachVolumeResponse">
+    </wsdl:part>
+  </wsdl:message>
+
+  <wsdl:message name="DetachVolumeResponse">
+    <wsdl:part element="tns:DetachVolumeResponse" name="DetachVolumeResponse">
+    </wsdl:part>
+  </wsdl:message>
+
+  <wsdl:message name="CreateImageResponse">
+    <wsdl:part element="tns:CreateImageResponse" name="CreateImageResponse">
+    </wsdl:part>
+  </wsdl:message>
+
+  <wsdl:message name="BundleInstanceResponse">
+    <wsdl:part element="tns:BundleInstanceResponse" name="BundleInstanceResponse">
+    </wsdl:part>
+  </wsdl:message>
+
+  <wsdl:message name="CancelBundleTaskResponse">
+    <wsdl:part element="tns:CancelBundleTaskResponse" name="CancelBundleTaskResponse">
+    </wsdl:part>
+  </wsdl:message>
+
+  <wsdl:message name="GetConsoleOutputResponse">
+    <wsdl:part element="tns:GetConsoleOutputResponse" name="GetConsoleOutputResponse">
+    </wsdl:part>
+  </wsdl:message>
+
+  <wsdl:message name="RebootInstancesResponse">
+    <wsdl:part element="tns:RebootInstancesResponse" name="RebootInstancesResponse">
+    </wsdl:part>
+  </wsdl:message>
+
+  <wsdl:message name="StartNetworkResponse">
+    <wsdl:part element="tns:StartNetworkResponse" name="StartNetworkResponse">
+    </wsdl:part>
+  </wsdl:message>
+
+  <wsdl:message name="StopNetworkResponse">
+    <wsdl:part element="tns:StopNetworkResponse" name="StopNetworkResponse">
+    </wsdl:part>
+  </wsdl:message>
+
+  <wsdl:message name="ConfigureNetworkResponse">
+    <wsdl:part element="tns:ConfigureNetworkResponse" name="ConfigureNetworkResponse">
+    </wsdl:part>
+  </wsdl:message>
+
+  <wsdl:message name="AssignAddressResponse">
+    <wsdl:part element="tns:AssignAddressResponse" name="AssignAddressResponse">
+    </wsdl:part>
+  </wsdl:message>
+
+  <wsdl:message name="UnassignAddressResponse">
+    <wsdl:part element="tns:UnassignAddressResponse" name="UnassignAddressResponse">
+    </wsdl:part>
+  </wsdl:message>
+
+  <wsdl:message name="DescribeNetworksResponse">
+    <wsdl:part element="tns:DescribeNetworksResponse" name="DescribeNetworksResponse">
+    </wsdl:part>
+  </wsdl:message>
+
+  <wsdl:message name="DescribePublicAddressesResponse">
+    <wsdl:part element="tns:DescribePublicAddressesResponse" name="DescribePublicAddressesResponse">
+    </wsdl:part>
+  </wsdl:message>
+
+  <wsdl:message name="DescribeInstancesResponse">
+    <wsdl:part element="tns:DescribeInstancesResponse" name="DescribeInstancesResponse">
+    </wsdl:part>
+  </wsdl:message>
+
+  <wsdl:message name="DescribeResourcesResponse">
+    <wsdl:part element="tns:DescribeResourcesResponse" name="DescribeResourcesResponse">
+    </wsdl:part>
+  </wsdl:message>
+  
+  <wsdl:message name="TerminateInstancesResponse">
+    <wsdl:part element="tns:TerminateInstancesResponse" name="TerminateInstancesResponse">
+    </wsdl:part>
+  </wsdl:message>
+
+  <wsdl:message name="RunInstancesResponse">
+    <wsdl:part element="tns:RunInstancesResponse" name="RunInstancesResponse">
+    </wsdl:part>
+  </wsdl:message>
+
+  <wsdl:message name="DescribeServices">
+    <wsdl:part element="tns:DescribeServices" name="DescribeServices">
+    </wsdl:part>
+  </wsdl:message>
+  
+  <wsdl:message name="StartService">
+    <wsdl:part element="tns:StartService" name="StartService">
+    </wsdl:part>
+  </wsdl:message>
+  
+  <wsdl:message name="StopService">
+    <wsdl:part element="tns:StopService" name="StopService">
+    </wsdl:part>
+  </wsdl:message>
+  
+  <wsdl:message name="EnableService">
+    <wsdl:part element="tns:EnableService" name="EnableService">
+    </wsdl:part>
+  </wsdl:message>
+  
+  <wsdl:message name="DisableService">
+    <wsdl:part element="tns:DisableService" name="DisableService">
+    </wsdl:part>
+  </wsdl:message>
+
+  <wsdl:message name="ShutdownService">
+    <wsdl:part element="tns:ShutdownService" name="ShutdownService">
+    </wsdl:part>
+  </wsdl:message>
+
+  <wsdl:message name="AttachVolume">
+    <wsdl:part element="tns:AttachVolume" name="AttachVolume">
+    </wsdl:part>
+  </wsdl:message>
+
+  <wsdl:message name="DetachVolume">
+    <wsdl:part element="tns:DetachVolume" name="DetachVolume">
+    </wsdl:part>
+  </wsdl:message>
+
+  <wsdl:message name="CreateImage">
+    <wsdl:part element="tns:CreateImage" name="CreateImage">
+    </wsdl:part>
+  </wsdl:message>
+
+  <wsdl:message name="BundleInstance">
+    <wsdl:part element="tns:BundleInstance" name="BundleInstance">
+    </wsdl:part>
+  </wsdl:message>
+
+  <wsdl:message name="CancelBundleTask">
+    <wsdl:part element="tns:CancelBundleTask" name="CancelBundleTask">
+    </wsdl:part>
+  </wsdl:message>
+
+  <wsdl:message name="GetConsoleOutput">
+    <wsdl:part element="tns:GetConsoleOutput" name="GetConsoleOutput">
+    </wsdl:part>
+  </wsdl:message>
+
+  <wsdl:message name="RebootInstances">
+    <wsdl:part element="tns:RebootInstances" name="RebootInstances">
+    </wsdl:part>
+  </wsdl:message>
+
+  <wsdl:message name="StartNetwork">
+    <wsdl:part element="tns:StartNetwork" name="StartNetwork">
+    </wsdl:part>
+  </wsdl:message>
+
+  <wsdl:message name="StopNetwork">
+    <wsdl:part element="tns:StopNetwork" name="StopNetwork">
+    </wsdl:part>
+  </wsdl:message>
+
+  <wsdl:message name="ConfigureNetwork">
+    <wsdl:part element="tns:ConfigureNetwork" name="ConfigureNetwork">
+    </wsdl:part>
+  </wsdl:message>
+
+  <wsdl:message name="AssignAddress">
+    <wsdl:part element="tns:AssignAddress" name="AssignAddress">
+    </wsdl:part>
+  </wsdl:message>
+
+  <wsdl:message name="UnassignAddress">
+    <wsdl:part element="tns:UnassignAddress" name="UnassignAddress">
+    </wsdl:part>
+  </wsdl:message>
+
+  <wsdl:message name="DescribeNetworks">
+    <wsdl:part element="tns:DescribeNetworks" name="DescribeNetworks">
+    </wsdl:part>
+  </wsdl:message>
+
+  <wsdl:message name="DescribePublicAddresses">
+    <wsdl:part element="tns:DescribePublicAddresses" name="DescribePublicAddresses">
+    </wsdl:part>
+  </wsdl:message>
+
+  <wsdl:message name="RunInstances">
+    <wsdl:part element="tns:RunInstances" name="RunInstances">
+    </wsdl:part>
+  </wsdl:message>
+
+  <wsdl:message name="DescribeInstances">
+    <wsdl:part element="tns:DescribeInstances" name="DescribeInstances">
+    </wsdl:part>
+  </wsdl:message>
+
+  <wsdl:message name="DescribeResources">
+    <wsdl:part element="tns:DescribeResources" name="DescribeResources">
+    </wsdl:part>
+  </wsdl:message>
+
+  <wsdl:message name="TerminateInstances">
+    <wsdl:part element="tns:TerminateInstances" name="TerminateInstances">
+    </wsdl:part>
+  </wsdl:message>
+
+<!--
+  <wsdl:message name="RegisterImage">
+    <wsdl:part element="tns:RegisterImage" name="RegisterImage">
+    </wsdl:part>
+  </wsdl:message>
+-->
+
+  <wsdl:portType name="EucalyptusCC">
+
+    <wsdl:operation name="DescribeServices">
+      <wsdl:input message="tns:DescribeServices" name="DescribeServices">
+      </wsdl:input>
+      <wsdl:output message="tns:DescribeServicesResponse" name="DescribeServicesResponse">
+      </wsdl:output>
+    </wsdl:operation>
+    
+    <wsdl:operation name="StartService">
+      <wsdl:input message="tns:StartService" name="StartService">
+      </wsdl:input>
+      <wsdl:output message="tns:StartServiceResponse" name="StartServiceResponse">
+      </wsdl:output>
+    </wsdl:operation>
+    
+    <wsdl:operation name="StopService">
+      <wsdl:input message="tns:StopService" name="StopService">
+      </wsdl:input>
+      <wsdl:output message="tns:StopServiceResponse" name="StopServiceResponse">
+      </wsdl:output>
+    </wsdl:operation>
+    
+    <wsdl:operation name="EnableService">
+      <wsdl:input message="tns:EnableService" name="EnableService">
+      </wsdl:input>
+      <wsdl:output message="tns:EnableServiceResponse" name="EnableServiceResponse">
+      </wsdl:output>
+    </wsdl:operation>
+    
+    <wsdl:operation name="DisableService">
+      <wsdl:input message="tns:DisableService" name="DisableService">
+      </wsdl:input>
+      <wsdl:output message="tns:DisableServiceResponse" name="DisableServiceResponse">
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="ShutdownService">
+      <wsdl:input message="tns:ShutdownService" name="ShutdownService">
+      </wsdl:input>
+      <wsdl:output message="tns:ShutdownServiceResponse" name="ShutdownServiceResponse">
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="AttachVolume">
+      <wsdl:input message="tns:AttachVolume" name="AttachVolume">
+      </wsdl:input>
+      <wsdl:output message="tns:AttachVolumeResponse" name="AttachVolumeResponse">
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="DetachVolume">
+      <wsdl:input message="tns:DetachVolume" name="DetachVolume">
+      </wsdl:input>
+      <wsdl:output message="tns:DetachVolumeResponse" name="DetachVolumeResponse">
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="CreateImage">
+      <wsdl:input message="tns:CreateImage" name="CreateImage">
+      </wsdl:input>
+      <wsdl:output message="tns:CreateImageResponse" name="CreateImageResponse">
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="BundleInstance">
+      <wsdl:input message="tns:BundleInstance" name="BundleInstance">
+      </wsdl:input>
+      <wsdl:output message="tns:BundleInstanceResponse" name="BundleInstanceResponse">
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="CancelBundleTask">
+      <wsdl:input message="tns:CancelBundleTask" name="CancelBundleTask">
+      </wsdl:input>
+      <wsdl:output message="tns:CancelBundleTaskResponse" name="CancelBundleTaskResponse">
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="GetConsoleOutput">
+      <wsdl:input message="tns:GetConsoleOutput" name="GetConsoleOutput">
+      </wsdl:input>
+      <wsdl:output message="tns:GetConsoleOutputResponse" name="GetConsoleOutputResponse">
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="RebootInstances">
+      <wsdl:input message="tns:RebootInstances" name="RebootInstances">
+      </wsdl:input>
+      <wsdl:output message="tns:RebootInstancesResponse" name="RebootInstancesResponse">
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="StartNetwork">
+      <wsdl:input message="tns:StartNetwork" name="StartNetwork">
+      </wsdl:input>
+      <wsdl:output message="tns:StartNetworkResponse" name="StartNetworkResponse">
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="StopNetwork">
+      <wsdl:input message="tns:StopNetwork" name="StopNetwork">
+      </wsdl:input>
+      <wsdl:output message="tns:StopNetworkResponse" name="StopNetworkResponse">
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="ConfigureNetwork">
+      <wsdl:input message="tns:ConfigureNetwork" name="ConfigureNetwork">
+      </wsdl:input>
+      <wsdl:output message="tns:ConfigureNetworkResponse" name="ConfigureNetworkResponse">
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="AssignAddress">
+      <wsdl:input message="tns:AssignAddress" name="AssignAddress">
+      </wsdl:input>
+      <wsdl:output message="tns:AssignAddressResponse" name="AssignAddressResponse">
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="UnassignAddress">
+      <wsdl:input message="tns:UnassignAddress" name="UnassignAddress">
+      </wsdl:input>
+      <wsdl:output message="tns:UnassignAddressResponse" name="UnassignAddressResponse">
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="DescribeNetworks">
+      <wsdl:input message="tns:DescribeNetworks" name="DescribeNetworks">
+      </wsdl:input>
+      <wsdl:output message="tns:DescribeNetworksResponse" name="DescribeNetworksResponse">
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="DescribePublicAddresses">
+      <wsdl:input message="tns:DescribePublicAddresses" name="DescribePublicAddresses">
+      </wsdl:input>
+      <wsdl:output message="tns:DescribePublicAddressesResponse" name="DescribePublicAddressesResponse">
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="DescribeInstances">
+      <wsdl:input message="tns:DescribeInstances" name="DescribeInstances">
+      </wsdl:input>
+      <wsdl:output message="tns:DescribeInstancesResponse" name="DescribeInstancesResponse">
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="DescribeResources">
+      <wsdl:input message="tns:DescribeResources" name="DescribeResources">
+      </wsdl:input>
+      <wsdl:output message="tns:DescribeResourcesResponse" name="DescribeResourcesResponse">
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="TerminateInstances">
+      <wsdl:input message="tns:TerminateInstances" name="TerminateInstances">
+      </wsdl:input>
+      <wsdl:output message="tns:TerminateInstancesResponse" name="TerminateInstancesResponse">
+      </wsdl:output>
+    </wsdl:operation>
+
+<!--
+    <wsdl:operation name="RegisterImage">
+      <wsdl:input message="tns:RegisterImage" name="RegisterImage">
+      </wsdl:input>
+      <wsdl:output message="tns:RegisterImageResponse" name="RegisterImageResponse">
+      </wsdl:output>
+    </wsdl:operation>
+-->
+
+    <wsdl:operation name="RunInstances">
+      <wsdl:input message="tns:RunInstances" name="RunInstances">
+    </wsdl:input>
+      <wsdl:output message="tns:RunInstancesResponse" name="RunInstancesResponse">
+    </wsdl:output>
+    </wsdl:operation>
+  </wsdl:portType>
+
+  <wsdl:binding name="EucalyptusCCSoapBinding" type="tns:EucalyptusCC">
+    <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+
+    <wsdl:operation name="DescribeServices">
+      <soap:operation soapAction="EucalyptusCC#DescribeServices" style="document"/>
+      <wsdl:input name="DescribeServices">
+	<soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output name="DescribeServicesResponse">
+	<soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="StartService">
+      <soap:operation soapAction="EucalyptusCC#StartService" style="document"/>
+      <wsdl:input name="StartService">
+	<soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output name="StartServiceResponse">
+	<soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="StopService">
+      <soap:operation soapAction="EucalyptusCC#StopService" style="document"/>
+      <wsdl:input name="StopService">
+	<soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output name="StopServiceResponse">
+	<soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="EnableService">
+      <soap:operation soapAction="EucalyptusCC#EnableService" style="document"/>
+      <wsdl:input name="EnableService">
+	<soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output name="EnableServiceResponse">
+	<soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="DisableService">
+      <soap:operation soapAction="EucalyptusCC#DisableService" style="document"/>
+      <wsdl:input name="DisableService">
+	<soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output name="DisableServiceResponse">
+	<soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="ShutdownService">
+      <soap:operation soapAction="EucalyptusCC#ShutdownService" style="document"/>
+      <wsdl:input name="ShutdownService">
+	<soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output name="ShutdownServiceResponse">
+	<soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="AttachVolume">
+      <soap:operation soapAction="EucalyptusCC#AttachVolume" style="document"/>
+      <wsdl:input name="AttachVolume">
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output name="AttachVolumeResponse">
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="DetachVolume">
+      <soap:operation soapAction="EucalyptusCC#DetachVolume" style="document"/>
+      <wsdl:input name="DetachVolume">
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output name="DetachVolumeResponse">
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="CreateImage">
+      <soap:operation soapAction="EucalyptusCC#CreateImage" style="document"/>
+      <wsdl:input name="CreateImage">
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output name="CreateImageResponse">
+	<soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="BundleInstance">
+      <soap:operation soapAction="EucalyptusCC#BundleInstance" style="document"/>
+      <wsdl:input name="BundleInstance">
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output name="BundleInstanceResponse">
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="CancelBundleTask">
+      <soap:operation soapAction="EucalyptusCC#CancelBundleTask" style="document"/>
+      <wsdl:input name="CancelBundleTask">
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output name="CancelBundleTaskResponse">
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="GetConsoleOutput">
+      <soap:operation soapAction="EucalyptusCC#GetConsoleOutput" style="document"/>
+      <wsdl:input name="GetConsoleOutput">
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output name="GetConsoleOutputResponse">
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="RebootInstances">
+      <soap:operation soapAction="EucalyptusCC#RebootInstances" style="document"/>
+      <wsdl:input name="RebootInstances">
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output name="RebootInstancesResponse">
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="StartNetwork">
+      <soap:operation soapAction="EucalyptusCC#StartNetwork" style="document"/>
+      <wsdl:input name="StartNetwork">
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output name="StartNetworkResponse">
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="StopNetwork">
+      <soap:operation soapAction="EucalyptusCC#StopNetwork" style="document"/>
+      <wsdl:input name="StopNetwork">
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output name="StopNetworkResponse">
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="ConfigureNetwork">
+      <soap:operation soapAction="EucalyptusCC#ConfigureNetwork" style="document"/>
+      <wsdl:input name="ConfigureNetwork">
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output name="ConfigureNetworkResponse">
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="AssignAddress">
+      <soap:operation soapAction="EucalyptusCC#AssignAddress" style="document"/>
+      <wsdl:input name="AssignAddress">
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output name="AssignAddressResponse">
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="UnassignAddress">
+      <soap:operation soapAction="EucalyptusCC#UnassignAddress" style="document"/>
+      <wsdl:input name="UnassignAddress">
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output name="UnassignAddressResponse">
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="DescribeNetworks">
+      <soap:operation soapAction="EucalyptusCC#DescribeNetworks" style="document"/>
+      <wsdl:input name="DescribeNetworks">
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output name="DescribeNetworksResponse">
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="DescribePublicAddresses">
+      <soap:operation soapAction="EucalyptusCC#DescribePublicAddresses" style="document"/>
+      <wsdl:input name="DescribePublicAddresses">
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output name="DescribePublicAddressesResponse">
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="DescribeInstances">
+      <soap:operation soapAction="EucalyptusCC#DescribeInstances" style="document"/>
+      <wsdl:input name="DescribeInstances">
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output name="DescribeInstancesResponse">
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="DescribeResources">
+      <soap:operation soapAction="EucalyptusCC#DescribeResources" style="document"/>
+      <wsdl:input name="DescribeResources">
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output name="DescribeResourcesResponse">
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="TerminateInstances">
+      <soap:operation soapAction="EucalyptusCC#TerminateInstances" style="document"/>
+      <wsdl:input name="TerminateInstances">
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output name="TerminateInstancesResponse">
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+
+<!--
+    <wsdl:operation name="RegisterImage">
+      <soap:operation soapAction="EucalyptusCC#RegisterImage" style="document"/>
+      <wsdl:input name="RegisterImage">
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output name="RegisterImageResponse">
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+-->
+
+    <wsdl:operation name="RunInstances">
+      <soap:operation soapAction="EucalyptusCC#RunInstances" style="document"/>
+      <wsdl:input name="RunInstances">
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output name="RunInstancesResponse">
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+  </wsdl:binding>
+
+  <wsdl:service name="EucalyptusCC">
+    <wsdl:port binding="tns:EucalyptusCCSoapBinding" name="EucalyptusCCPort">
+      <soap:address location="http://cc:9090/axis2/services/EucalyptusCC"/>
+    </wsdl:port>
+  </wsdl:service>
+
+
+</wsdl:definitions>

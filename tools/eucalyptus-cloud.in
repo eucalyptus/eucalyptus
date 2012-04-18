@@ -1,0 +1,412 @@
+#!/bin/bash
+#Copyright (c) 2009  Eucalyptus Systems, Inc.
+#
+#This program is free software: you can redistribute it and/or modify
+#it under the terms of the GNU General Public License as published by
+#the Free Software Foundation, only version 3 of the License.
+#
+#This file is distributed in the hope that it will be useful, but WITHOUT
+#ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+#FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+#for more details.
+#
+#You should have received a copy of the GNU General Public License along
+#with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+#Please contact Eucalyptus Systems, Inc., 130 Castilian
+#Dr., Goleta, CA 93101 USA or visit <http://www.eucalyptus.com/licenses/>
+#if you need additional information or have any questions.
+#
+#This file may incorporate work covered under the following copyright and
+#permission notice:
+#
+#  Software License Agreement (BSD License)
+#
+#  Copyright (c) 2008, Regents of the University of California
+#
+#
+#  Redistribution and use of this software in source and binary forms, with
+#  or without modification, are permitted provided that the following
+#  conditions are met:
+#
+#    Redistributions of source code must retain the above copyright notice,
+#    this list of conditions and the following disclaimer.
+#
+#    Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+#
+#  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+#  IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+#  TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+#  PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+#  OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+#  EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+#  PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+#  PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+#  LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+#  NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+#  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. USERS OF
+#  THIS SOFTWARE ACKNOWLEDGE THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE
+#  LICENSED MATERIAL, COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS
+#  SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
+#  IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
+#  BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
+#  THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+#  OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
+#  WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
+#  ANY SUCH LICENSES OR RIGHTS.
+#
+
+#
+# chkconfig: 2345 99 05
+# description: script for starting and stopping eucalyptus java ws services
+#
+### BEGIN INIT INFO
+# Provides:                   eucalyptus
+# Required-Start:             $remote_fs $syslog
+# Should-Start:               START
+# Required-Stop:              $remote_fs $syslog
+# Default-Start:              2 3 4 5
+# Default-Stop:	              0 1 6
+# Short-Description:          Start Eucalyptus
+# Description:                Start the Eucalyptus services
+# X-UnitedLinux-Default-Enabled: yes
+### END INIT INFO
+#
+
+# Do NOT "set -e"
+
+# we need to source the current path in case of manual intallation
+export PATH=/sbin:/usr/sbin:/bin:/usr/bin:$PATH
+DESC="Eucalyptus services"
+NAME=""
+ANT="`which ant 2> /dev/null`"
+EUCA_USER="eucalyptus"
+
+if [ "$EUID" != "0" ]; then
+	echo "Eucalyptus init scripts must be run as root."
+	exit 1
+fi
+
+# if we have lsb functions let's source them
+WE_HAVE_LSB="N"
+if [ -e /lib/lsb/init-functions ]; then
+	. /lib/lsb/init-functions
+	# very old lsb don't have the functions we need
+	if type log_daemon_msg > /dev/null 2> /dev/null ; then
+		WE_HAVE_LSB="Y"
+	fi
+fi
+
+# honor the ENV variable if found otherwise look in root
+if [ -z "$EUCALYPTUS" ] ; then
+       EUCALYPTUS="@prefix@"
+       if [ ! -e ${EUCALYPTUS}/etc/eucalyptus/eucalyptus.conf ] ; then
+              EUCALYPTUS="/"
+       fi
+fi
+
+# Read configuration variable file if it is present
+if [ -r $EUCALYPTUS/etc/eucalyptus/eucalyptus.conf ]; then
+	EUCA_TMP="`readlink -f ${EUCALYPTUS}`"
+	. $EUCALYPTUS/etc/eucalyptus/eucalyptus.conf
+
+	# has eucalyptus been configured?
+	if [ "$EUCALYPTUS" = "not_configured" ]; then
+		echo "EUCALYPTUS not configured!"
+		exit 1
+	fi
+
+	# there may be inconsistencied between conf file and env variable
+	if [ "$EUCA_TMP" != "`readlink -f ${EUCALYPTUS}`" ]; then
+		echo "Warning: you should check EUCALYPTUS in conf file"
+	fi
+else
+	# on removal of RPM we can get in a state in which the conf file
+	# is gone but the services are still running: make this hard
+	# failure only if we are not stopping
+	echo "Cannot find eucalyptus configuration file!"
+	if [ "$1" != "stop" ]; then
+		exit 1
+	fi
+fi
+export EUCALYPTUS
+
+pidfile=$EUCALYPTUS/var/run/eucalyptus/eucalyptus-cloud.pid
+initlog=$EUCALYPTUS/var/log/eucalyptus/startup.log
+
+check_java_version() {
+    # First check CLOUD_OPTS for --java-home
+    JAVA=""
+    JH=$( echo $CLOUD_OPTS | \
+         sed -r -e '/--java-home/!d; s/^.*(--java-home(=|\s+)(\S+)).*$/\3/g' );
+    if [ -n "$JH" ]; then
+        if [ -x $JH/jre/bin/java ]; then
+            JAVA=$JH/jre/bin/java
+        elif [ -x $JH/bin/java ]; then
+            JAVA=$JH/bin/java
+        fi
+    elif [ -n "$JAVA_HOME" ]; then
+        if [ -x $JAVA_HOME/jre/bin/java ]; then
+            JAVA=$JAVA_HOME/jre/bin/java
+        elif [ -x $JAVA_HOME/bin/java ]; then
+            JAVA=$JAVA_HOME/bin/java
+        fi
+    fi
+    if [ -z "$JAVA" ]; then
+        JAVA=$( which java )
+    fi
+    JV=$( $JAVA -version 2>&1 | \
+          sed -r -e '/^java version/!d; s/^java version "(.*)"/\1/' )
+    VER=$( echo $JV | cut -d_ -f1 )
+    PATCH=$( echo $JV | cut -d_ -f2 )
+    if [ "$VER" != "1.6.0" ]; then
+        echo "ERROR: Only JVM 1.6.0 is supported" >&2
+        exit 1
+    elif [ -z "$PATCH" ] || [ $PATCH -lt 20 ]; then
+        echo "ERROR: JVM 1.6.0 patch 20 or newer is required" >&2
+        exit 1
+    fi  
+}
+
+do_upgrade() {
+        while IFS=: read -r a b; do
+                OLD_EUCA_VERSION=$a
+                OLD_EUCA_PATH=$b
+        done < $EUCALYPTUS/etc/eucalyptus/.upgrade
+
+        if [ "$OLD_EUCA_VERSION" = "@EUCA_VERSION@" ]; then
+            # No need to upgrade to the same version
+            return
+        fi
+
+        # Remove old unpacked webapp area
+        rm -rf $EUCALYPTUS/var/run/eucalyptus/webapp
+
+        # Java version check: older than 1.6.0_22 is bad
+        check_java_version
+
+        # Attempt db upgrade
+        echo "Attempting database upgrade from $OLD_EUCA_VERSION at $OLD_EUCA_PATH..."
+	$EUCALYPTUS/usr/share/eucalyptus/euca_upgrade --old $OLD_EUCA_PATH --new $EUCALYPTUS --db --user $EUCA_USER
+	case "$?" in
+	0)
+		echo "done."
+		rm -f $EUCALYPTUS/etc/eucalyptus/.upgrade
+		;;
+        1)
+		echo "Upgrade failed. Aborting start."
+		exit 1
+		;;
+	esac
+}
+
+do_start() {
+	if [ -z "$CLOUD_OPTS" ]; then
+		local CLOUD_OPTS="--log-level=INFO"
+	fi
+
+	# basic checks
+	if [ ! -x $EUCALYPTUS/usr/sbin/euca_conf ]; then
+		echo "Some eucalyptus components are missing"
+		exit 1
+	fi
+
+	cd $EUCALYPTUS/etc/eucalyptus
+
+	# options from the configuration file
+	if [ "$DISABLE_ISCSI" = "Y" ]; then
+		CLOUD_OPTS="$CLOUD_OPTS --disable-iscsi"
+	fi
+
+        #Check if we need to upgrade
+        if [ -e $EUCALYPTUS/etc/eucalyptus/.upgrade ]; then
+                do_upgrade
+        fi
+
+        # Add loop devices if necessary (and possible)
+        [ -z "$CREATE_SC_LOOP_DEVICES" ] && CREATE_SC_LOOP_DEVICES=256
+        if [ "$CREATE_SC_LOOP_DEVICES" -gt 0 ] 2>/dev/null; then
+            "$EUCALYPTUS/usr/share/eucalyptus/create-loop-devices" $CREATE_SC_LOOP_DEVICES
+        fi
+
+	ulimit -n 4096
+	$EUCALYPTUS/usr/sbin/eucalyptus-cloud $CLOUD_OPTS -h $EUCALYPTUS -u $EUCA_USER --pidfile ${pidfile} -f \
+		-L console-log -o $initlog -e $initlog
+	return $?
+}
+
+do_status() {
+    local inpid="$1"
+    local ret=0
+
+    if [ -z "$inpid" ]; then
+        if [ -s ${pidfile} ]; then
+            pid=`cat ${pidfile} 2> /dev/null`
+        else
+            # no input pid, no pidfile, can't do anything
+            return 1
+        fi
+    else
+        pid="$inpid"
+    fi
+
+    ppid=`ps -p $pid -o ppid=`
+    if [ -n "$ppid" ]; then
+        if ! ps axww|grep $ppid|grep eucalyptus-cloud.pid >/dev/null; then
+            # pid file is not matching parent pid
+            ret=1
+        fi
+    fi
+    if [ -n "$pid" ]; then
+        if ! ps axww|grep $pid|grep eucalyptus-cloud.pid > /dev/null; then
+            # pid file is not matching
+            ret=1
+        fi
+    fi
+
+    return $ret
+}
+
+do_stop() {
+	# now stop the service
+	if [ -s "${pidfile}" ]; then
+		pid=`cat $pidfile 2> /dev/null`
+                ppid=`ps -p $pid -o ppid=`
+		kill $pid > /dev/null 2>&1
+	else
+		return
+	fi
+
+	timeout=40
+	while [ $timeout -gt 0 ]; do
+		if do_status ; then
+			sleep 1
+			timeout=$(($timeout - 1))
+		else
+			break
+		fi
+	done
+	if [ $timeout -eq 0 ]; then
+#	        echo "WARNING: timed out waiting for eucalyptus-cloud process to shut down (pid=$pid, ppid=$ppid)."
+#               explicit kill -9 is dangerous with DB process running,
+#               could lead to loss of data and so we'll print the
+#               above error.
+		kill -9 $pid > /dev/null 2>&1
+		kill -9 $ppid > /dev/null 2>&1
+	fi
+	rm -f $pidfile
+
+}
+
+# let's get the user to use
+if [ -z "$EUCA_USER" ] ; then
+	EUCA_USER="root"
+fi
+
+# set the library path correctly
+if [ -z "$VDDK_HOME" ] ; then
+	VDDK_HOME="@VDDK_HOME@"
+fi
+export VDDK_HOME
+
+# moved these to the euca_imager wrapper itself
+#export LD_LIBRARY_PATH="$EUCALYPTUS/usr/lib/eucalyptus:$VDDK_HOME/lib:$VDDK_HOME/lib/vmware-vix-disklib/lib32:$VDDK_HOME/lib/vmware-vix-disklib/lib64/" # to ensure euca_imager finds VDDK libs
+#export PATH="$EUCALYPTUS/usr/lib/eucalyptus:$PATH" # to ensure euca_imager has euca_rootwrap
+
+#VERBOSE="yes"
+
+case "$1" in
+  start)
+	if [ "$VERBOSE" != no ]; then
+		if [ "$WE_HAVE_LSB" = "Y" ]; then
+			log_daemon_msg "Starting $DESC" "$NAME"
+		else
+			echo -n "Starting $DESC: $NAME"
+		fi
+	fi
+
+	# let's check there is no previous cloud running
+	if do_status ; then
+		echo
+		echo "$DESC are already running!"
+		if [ "$VERBOSE" != no ]; then
+			if [ "$WE_HAVE_LSB" = "Y" ]; then
+				log_end_msg 1
+			fi
+		fi
+		exit 0
+	fi
+
+	do_start
+
+	case "$?" in
+	0)
+		if [ "$VERBOSE" != no ]; then
+			if [ "$WE_HAVE_LSB" = "Y" ]; then
+				log_end_msg 0
+			else
+				echo "done."
+			fi
+		fi
+		;;
+	*)
+		if [ "$VERBOSE" != no ]; then
+			if [ "$WE_HAVE_LSB" = "Y" ]; then
+				log_end_msg 1
+			else
+				echo "failed! Check $initlog for details"
+			fi
+		fi
+		;;
+	esac
+	;;
+  stop)
+	if [ "$VERBOSE" != no ]; then
+		if [ "$WE_HAVE_LSB" = "Y" ]; then
+			log_daemon_msg "Stopping $DESC" "$NAME"
+		else
+			echo -n "Stopping $DESC: $NAME"
+		fi
+	fi
+
+	# let's check there is a previous cloud running
+	if ! do_status ; then
+		echo
+		echo "No $DESC are running!"
+		if [ "$VERBOSE" != no ]; then
+			if [ "$WE_HAVE_LSB" = "Y" ]; then
+				log_end_msg 1
+			fi
+		fi
+		exit 0
+	fi
+
+	do_stop
+
+	if [ "$VERBOSE" != no ]; then
+		if [ "$WE_HAVE_LSB" = "Y" ]; then
+			log_end_msg 0
+		else
+			echo "done."
+		fi
+	fi
+	;;
+  restart)
+	$0 stop
+	$0 start
+	;;
+  status)
+	if do_status ; then
+		echo "$DESC are running"
+	else
+		exit 3
+	fi
+	;;
+  *)
+	echo "Usage: $0 {start|stop|restart}" >&2
+	exit 3
+	;;
+esac
+

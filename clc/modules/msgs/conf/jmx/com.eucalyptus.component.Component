@@ -1,0 +1,10 @@
+jmx.export{
+  bean( 
+    target: obj,
+    name: "com.eucalyptus.component:type=Component,name="+obj.componentId.name,
+    desc: obj.toString(), 
+    constructors:[],
+    attributes:["stateMachine"],
+    operations: "*",
+  )
+}

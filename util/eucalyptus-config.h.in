@@ -1,0 +1,77 @@
+#ifndef EUCALYPTUS_CONFIG_H
+#define EUCALYPTUS_CONFIG_H
+
+#ifdef __cplusplus
+{
+#endif
+
+/* Current version */
+#undef EUCA_VERSION
+
+/* headers on the system */
+
+/* Define if you have standards headers */
+#undef STDC_HEADERS
+
+/* Define if you have fcntl.h */
+#undef HAVE_FCNTL_H
+
+/* Define if you have limits.h */
+#undef HAVE_LIMITS_H
+
+/* Define if stdint.h */
+#undef HAVE_STDINT_H
+
+/* Define if stdlib.h */
+#undef HAVE_STDINT_H
+
+/* Define if stdint.h */
+#undef HAVE_STDLIB_H
+
+/* Define if string.h */
+#undef HAVE_STRING_H
+
+/* Define if strings.h */
+#undef HAVE_STRINGS_H
+
+/* Define if sys/ioctl.h */
+#undef HAVE_SYS_IOCTL_H
+
+/* Define if sys/vfs.h */
+#undef HAVE_SYS_VFS_H
+
+/* Define if sys/wait.h */
+#undef HAVE_SYS_WAIT_H
+
+/* Define if unistd.h */
+#undef HAVE_UNISTD_H
+
+/* Define if you have the dirent.h & Co. header.  */
+#undef HAVE_DIRENT_H
+#undef HAVE_SYS_NDIR_H
+#undef HAVE_SYS_DIR_H
+#undef HAVE_NDIR_H
+
+/* Define if you have zlib.h */
+#undef HAVE_ZLIB_H
+
+/* functions on the system */
+
+/* Define if closedir returns void */
+#undef CLOSEDIR_VOID
+
+/* Define if there is working fork */
+#undef HAVE_WORKING_FORK
+
+/* Define if there is strnlen */
+#undef HAVE_STRNLEN
+
+/* Define if we have libcap */
+#undef HAVE_LIBCAP
+
+#ifdef __cplusplus
+}
+#endif
+
+
+#endif /* CONFIG_H */

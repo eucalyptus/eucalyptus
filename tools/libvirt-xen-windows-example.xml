@@ -1,0 +1,51 @@
+<domain type='xen'>
+    <name>eucalyptus-windows</name>
+    <os>
+            <type>hvm</type>
+            <loader>/usr/lib/xen/boot/hvmloader</loader>
+	    <boot dev='cdrom'/>
+    </os>
+  <features>
+    <acpi/>
+    <apic/>
+    <pae/>
+  </features>
+  <clock offset='localtime'/>
+  <on_poweroff>destroy</on_poweroff>
+  <on_reboot>restart</on_reboot>
+  <on_crash>destroy</on_crash>
+    <memory>524288</memory>
+    <vcpu>1</vcpu>
+    <devices>
+        <emulator>/usr/lib64/xen/bin/qemu-dm</emulator>
+        <disk type='file'>
+            <source file='fully_qualified_path_to_disk'/>
+            <target dev='hda' bus='ide'/>
+        </disk>
+        <!--<disk type='file' device='disk'>
+            <driver name='tap' type='aio'/>
+            <source file='fully_qualified_path_to_secondary_disk'/>
+            <target dev='xvda' bus='xen'/>
+        </disk>
+	<disk type='file' device='floppy'>
+	     <source file='fully_qualified_path_to_floppy_disk'/>
+	     <target dev='fda'/>
+	</disk> -->
+        <disk type='file' device='cdrom'>
+            <source file='fully_qualified_path_to_iso'/>
+            <target dev='hdc'/>
+            <readonly/>
+        </disk>
+        <interface type='bridge'>
+            <source bridge='xenbr0'/>
+            <script path='/etc/xen/scripts/vif-bridge'/>
+        </interface>
+        <serial type='pty'>
+           <source path='/dev/pts/3'/>
+           <target port='0'/>
+        </serial>
+        <input type='tablet' bus='usb'/>
+        <input type='mouse' bus='ps2'/>
+        <graphics type='vnc' port='-1' autoport='yes' keymap='en-us' listen='0.0.0.0'/>
+    </devices>
+</domain>

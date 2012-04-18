@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns="http://www.mulesource.org/schema/mule/core/2.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:spring="http://www.springframework.org/schema/beans" xmlns:euca="http://www.eucalyptus.com/schema/cloud/1.6"
+  xmlns:vm="http://www.mulesource.org/schema/mule/vm/2.0" xmlns:mule="http://www.mulesource.org/schema/mule/core/2.0"
+  xsi:schemaLocation="
+       http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-2.0.xsd
+       http://www.mulesource.org/schema/mule/core/2.0 http://www.mulesource.org/schema/mule/core/2.0/mule.xsd
+       http://www.mulesource.org/schema/mule/vm/2.0 http://www.mulesource.org/schema/mule/vm/2.0/mule-vm.xsd
+       http://www.eucalyptus.com/schema/cloud/1.6 http://www.eucalyptus.com/schema/cloud/1.6/euca.xsd">
+
+  <endpoint name="EmpyreanVM" address="vm://Empyrean" synchronous="false" />
+  <endpoint name="EmpyreanInternalVM" address="vm://EmpyreanInternal" synchronous="true" />
+  <endpoint name="EmpyreanReplyQueueVM" address="vm://EmpyreanReplyQueue" synchronous="false" />
+  <euca:endpoint name="EmpyreanWS" connector-ref="eucaws" address="http://127.0.0.1:8773/services/Empyrean"
+    synchronous="true" />
+  <euca:endpoint name="EmpyreanInternalWS" connector-ref="eucaws" address="http://127.0.0.1:8773/internal/BootstrapInternal"
+    synchronous="true" />
+
+  <model name="empyrean">
+    <default-service-exception-strategy>
+      <outbound-endpoint ref="EmpyreanReplyQueueVM" />
+    </default-service-exception-strategy>
+    <service name="EmpyreanRequestQueue">
+      <inbound>
+        <vm:inbound-endpoint address="vm://EmpyreanRequestQueue" />
+      </inbound>
+      <bridge-component />
+      <outbound>
+        <filtering-router>
+          <outbound-endpoint ref="EmpyreanVM" />
+          <payload-type-filter expectedType="com.eucalyptus.empyrean.EmpyreanMessage" />
+        </filtering-router>
+      </outbound>
+    </service>
+
+    <service name="EmpyreanService">
+      <inbound>
+        <inbound-endpoint ref="EmpyreanVM" />
+        <inbound-endpoint ref="EmpyreanWS" />
+      </inbound>
+      <component class="com.eucalyptus.ws.EmpyreanService" />
+      <outbound>
+        <outbound-pass-through-router>
+          <outbound-endpoint ref="EmpyreanReplyQueueVM" />
+        </outbound-pass-through-router>
+      </outbound>
+    </service>
+
+    <service name="EmpyreanReplyQueue">
+      <inbound>
+        <inbound-endpoint ref="EmpyreanReplyQueueVM" />
+      </inbound>
+      <component class="com.eucalyptus.ws.util.ReplyQueue" />
+    </service>
+
+  </model>
+  <model name="empyrean-internal">
+    <service name="EmpyreanInternal">
+      <inbound>
+        <inbound-endpoint ref="EmpyreanInternalWS" />
+        <inbound-endpoint ref="EmpyreanInternalVM" />
+      </inbound>
+      <component class="com.eucalyptus.ws.EmpyreanService" />
+    </service>
+  </model>
+</mule>

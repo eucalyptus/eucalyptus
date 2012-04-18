@@ -1,0 +1,33 @@
+<!DOCTYPE ui:UiBinder SYSTEM "http://dl.google.com/gwt/DTD/xhtml.ent">
+<ui:UiBinder xmlns:ui="urn:ui:com.google.gwt.uibinder"
+    xmlns:g="urn:import:com.google.gwt.user.client.ui">
+    
+    <ui:style>
+        @def radius 6px;
+        .boundingBox {
+        	background-color:#FDFDFD;
+            border-top:1px solid #D1D1D1;
+            padding:12px;
+        }
+    </ui:style>
+    
+    <ui:style field="gridStyle" type="com.eucalyptus.webui.client.view.LogViewImpl.GridStyle">
+        .grid {
+            font-size:80%;
+            color:#333333;          
+            width:100%;
+            border-top:1px solid #feb645;
+            border-bottom:2px solid #feb645;
+        }
+        .grid td {
+            padding-top:4px;
+            padding-bottom:4px;
+            vertical-align:middle;
+            border-bottom:1px solid #DDDDDD;
+        }
+    </ui:style>
+
+    <g:ScrollPanel styleName="{style.boundingBox}" ui:field="panel">
+    </g:ScrollPanel>
+    
+</ui:UiBinder> 

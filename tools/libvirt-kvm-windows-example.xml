@@ -1,0 +1,41 @@
+<domain type='kvm'>
+    <name>eucalyptus-windows</name>
+    <os>
+    <type>hvm</type>
+    <boot dev='cdrom'/>
+    </os>
+    <features>
+        <acpi/>
+    </features>
+    <memory>524288</memory>
+    <vcpu>1</vcpu>
+    <devices>
+        <emulator>/usr/bin/kvm</emulator>
+        <disk type='file'>
+            <source file='fully_qualifed_path_to_disk'/>
+            <target dev='hda'/>
+        </disk>
+	<!-- <disk type='file' device='disk'>
+	     <source file='fully_qualified_path_to_secondary_disk'/>
+	     <target dev='vda' bus='virtio'/>
+	</disk> 
+   	<disk type='file' device='floppy'>
+             <source file='fully_qualified_path_to_floppy_disk'/>
+             <target dev='fda'/>
+        </disk> -->
+        <disk type='file' device='cdrom'>
+            <source file='fully_qualified_path_to_iso'/>
+            <target dev='hdc'/>
+            <readonly/>
+        </disk>
+        <interface type='bridge'>
+            <source bridge='br0'/>
+            <model type='rtl8139'/>
+        </interface>
+	<!--<interface type='bridge'>
+	    <source bridge='br0'/>
+	    <model type='virtio'/> 
+	</interface> -->
+        <graphics type='vnc' port='-1' autoport='yes' listen='0.0.0.0'/>
+    </devices>
+</domain>

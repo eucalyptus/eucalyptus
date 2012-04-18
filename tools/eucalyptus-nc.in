@@ -1,0 +1,482 @@
+#!/bin/bash
+#Copyright (c) 2009  Eucalyptus Systems, Inc.
+#
+#This program is free software: you can redistribute it and/or modify
+#it under the terms of the GNU General Public License as published by
+#the Free Software Foundation, only version 3 of the License.
+#
+#This file is distributed in the hope that it will be useful, but WITHOUT
+#ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+#FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+#for more details.
+#
+#You should have received a copy of the GNU General Public License along
+#with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+#Please contact Eucalyptus Systems, Inc., 130 Castilian
+#Dr., Goleta, CA 93101 USA or visit <http://www.eucalyptus.com/licenses/>
+#if you need additional information or have any questions.
+#
+#This file may incorporate work covered under the following copyright and
+#permission notice:
+#
+#  Software License Agreement (BSD License)
+#
+#  Copyright (c) 2008, Regents of the University of California
+#
+#
+#  Redistribution and use of this software in source and binary forms, with
+#  or without modification, are permitted provided that the following
+#  conditions are met:
+#
+#    Redistributions of source code must retain the above copyright notice,
+#    this list of conditions and the following disclaimer.
+#
+#    Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+#
+#  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+#  IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+#  TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+#  PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+#  OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+#  EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+#  PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+#  PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+#  LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+#  NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+#  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. USERS OF
+#  THIS SOFTWARE ACKNOWLEDGE THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE
+#  LICENSED MATERIAL, COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS
+#  SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
+#  IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
+#  BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
+#  THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+#  OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
+#  WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
+#  ANY SUCH LICENSES OR RIGHTS.
+#
+
+#
+# Init script for the Eucalyptus node controller.
+#
+# chkconfig: 2345 99 05
+# description: script for starting and stopping eucalyptus node controller
+#
+### BEGIN INIT INFO
+# Provides:                   eucalyptus-nc
+# Required-Start:             $remote_fs $syslog libvirtd
+# Required-Stop:              $remote_fs $syslog
+# Default-Start:              2 3 4 5
+# Default-Stop:               0 1 6
+# Short-Description:          Start Eucalyptus node controller
+# Description:                Start the Eucalyptus node controller
+### END INIT INFO
+#
+
+# Do NOT "set -e"
+
+# if we have lsb functions let's source them
+WE_HAVE_LSB="N"
+if [ -e /lib/lsb/init-functions ]; then
+	. /lib/lsb/init-functions
+	# very old lsb don't have the functions we need
+	if type log_daemon_msg > /dev/null 2> /dev/null ; then
+		WE_HAVE_LSB="Y"
+	fi
+fi
+
+if [ "$EUID" != "0" ]; then
+    echo "Eucalyptus init scritps must be run as root."
+    exit 1
+fi
+
+# I just wanted to set PATH to be the system PATH, but if a user install
+# eucalyptus manually, it may have binaries in a non-standard position:
+# hence we need to keep the PATH we receive.
+export PATH=/sbin:/usr/sbin:/bin:/usr/bin:$PATH
+DESC="Eucalyptus services"
+NAME=eucalyptus-nc
+BRCTL="`which brctl 2> /dev/null`"
+MODPROBE="`which modprobe 2> /dev/null`"
+EUCA_USER="eucalyptus"
+
+# honor the ENV variable if found otherwise look in root
+if [ -z "$EUCALYPTUS" ] ; then
+       EUCALYPTUS="@prefix@"
+       if [ ! -e ${EUCALYPTUS}/etc/eucalyptus/eucalyptus.conf ] ; then
+              EUCALYPTUS="/"
+       fi
+fi
+export EUCALYPTUS
+
+create_httpd_config() {
+	IPS="all"
+
+	# let's configure the common parts for both CC and NC
+        sed -e "s|EUCALYPTUS|$EUCALYPTUS|" \
+            -e "s|APACHE2_MODULE_DIR|$APACHE2_MODULE_DIR|" \
+            -e "s|AXIS2C_HOME|$AXIS2C_HOME|" \
+            -e "s|\(ServerRoot\).*|\1 "$HTTPD_HOME"|" \
+            -e "s|EUCA_USER|$EUCA_USER|" \
+            $EUCALYPTUS/etc/eucalyptus/httpd.conf \
+            > $EUCALYPTUS/etc/eucalyptus/httpd-tmp.conf
+
+	# load authz if we have it (ubuntu needs it)
+	if [ -e $HTTPD_HOME/usr/lib/apache2/modules/mod_authz_host.so ]; then
+		echo "LoadModule authz_host_module /usr/lib/apache2/modules/mod_authz_host.so" >> $EUCALYPTUS/etc/eucalyptus/httpd-tmp.conf
+	fi
+
+	# let's configure the NC
+        sed -e "s|\(Listen\).*|\1 $NC_PORT|" \
+            -e "s|\(PidFile\).*|\1 $EUCALYPTUS/var/run/eucalyptus/eucalyptus-nc.pid|" \
+            -e "s|\(Allow from\).*|\1 $IPS|" \
+            -e "s|\(ErrorLog\).*|\1 $EUCALYPTUS/var/log/eucalyptus/httpd-nc_error_log|" \
+            $EUCALYPTUS/etc/eucalyptus/httpd-tmp.conf \
+            > $EUCALYPTUS/etc/eucalyptus/httpd-nc.conf
+}
+
+# crude way to start the axis2c services
+do_start() {
+	# fixes #469984
+	IPTABLES="`which iptables 2> /dev/null`"
+	if [ -n "$IPTABLES" ]; then
+		[ -x $IPTABLES ] && $IPTABLES -L -n > /dev/null 2> /dev/null
+	fi
+
+	if [ ! -x $HTTPD ]; then
+		echo
+		echo "cannot find httpd (was set to <$HTTPD>)!"
+		exit 1
+	fi
+	if [ ! -x $EUCALYPTUS/usr/sbin/euca_conf ]; then
+		echo "Some eucalyptus components are missing"
+		exit 1
+	fi
+
+	# Add loop devices if necessary (and possible)
+	[ -z "$CREATE_NC_LOOP_DEVICES" ] && CREATE_NC_LOOP_DEVICES=256
+	if [ "$CREATE_NC_LOOP_DEVICES" -gt 0 ] 2>/dev/null; then
+            "$EUCALYPTUS/usr/share/eucalyptus/create-loop-devices" $CREATE_NC_LOOP_DEVICES
+	fi
+
+	if ! $EUCALYPTUS/usr/sbin/euca_conf --check nc ; then
+		exit 1
+	fi
+
+	# we have a program to test the hypervisor and more for the NC
+	if [ ! -x $EUCALYPTUS/usr/sbin/euca_test_nc ]; then
+		echo
+		echo "Cannot check Node Controller: missing euca_test_nc."
+	else
+            # sometimes, libvirtd takes some time to start on init, so retry euca_test_nc a few times before failing
+            for i in 1 2 3 4 5
+            do
+                PASSED=0
+                if ( $EUCALYPTUS/usr/sbin/euca_test_nc $HYPERVISOR > $EUCALYPTUS/var/log/eucalyptus/euca_test_nc.log 2>&1 ); then
+                    PASSED=1
+                else
+                    sleep 1
+                fi
+            done
+            if ( test $PASSED = "0" ); then
+                echo
+                echo "Node Controller cannot be started: errors in $EUCALYPTUS/var/log/eucalyptus/euca_test_nc.log"
+                exit 1
+            fi
+	fi
+
+	# on SYSTEM or STATIC mode the bridge needs to exists
+	if [ "$VNET_MODE" = "SYSTEM" -o "$VNET_MODE" = "STATIC" ]; then
+		if [ -n "$BRCTL" -a -x $BRCTL ]; then
+			if ! $BRCTL show |grep $VNET_BRIDGE > /dev/null 2> /dev/null ; then
+				echo
+				echo "Warning! Cannot find bridge $VNET_BRIDGE: instances may be without net"
+			fi
+		fi
+	fi
+
+	# we need aoe loaded
+	if [ -z "$MODPROBE" ]; then
+		echo
+		echo "Cannot find modprobe: you may have problems."
+	elif ! $MODPROBE aoe ; then
+		echo
+		echo "Failed to load aoe: you may experience problems"
+	fi
+
+	# we need IP forwarding and we need to use iptable over the bridge
+	if [ -w /proc/sys/net/ipv4/ip_forward ]; then
+		VAL=`cat /proc/sys/net/ipv4/ip_forward`
+		if [ "$VAL" = "0" ]; then
+			echo
+			echo "Enabling IP forwarding for eucalyptus."
+			echo -n 1 > /proc/sys/net/ipv4/ip_forward
+		fi
+	fi
+	if [ -w /proc/sys/net/bridge/bridge-nf-call-iptables ]; then
+		VAL=`cat /proc/sys/net/bridge/bridge-nf-call-iptables`
+		if [ "$VAL" = "0" ]; then
+			echo
+			echo "Enabling bridge netfiltering for eucalyptus."
+			echo 1 >  /proc/sys/net/bridge/bridge-nf-call-iptables
+		fi
+	fi
+
+	# let's be sure we have the right port for NC and CC
+	create_httpd_config
+
+	if [ -x $EUCALYPTUS/usr/sbin/eucanetd ]; then
+            if ! $EUCALYPTUS/usr/sbin/eucanetd ; then
+		echo
+		echo "Failed to start the eucanetd"
+            fi
+	fi
+
+	if ! $HTTPD -f $EUCALYPTUS/etc/eucalyptus/httpd-nc.conf ; then
+		echo
+		echo "Failed to start the NC!"
+		exit 1
+	fi
+}
+
+do_status() {
+	pidfile=$EUCALYPTUS/var/run/eucalyptus/eucalyptus-nc.pid
+	if [ -s $pidfile ]; then
+		pid=`cat $pidfile 2> /dev/null`
+		if ps axww|grep $pid|grep httpd-nc.conf > /dev/null ; then
+			# we are good
+			return 0
+		fi
+	fi
+	return 1
+}
+
+do_stop() {
+	netpid="$EUCALYPTUS/var/run/eucalyptus/eucanetd.pid"
+        if [ -f "$netpid" ]; then
+            kill `cat $netpid` >/dev/null 2>&1
+            rm -f $netpid
+        fi
+
+	pidfile=$EUCALYPTUS/var/run/eucalyptus/eucalyptus-nc.pid
+
+	# let's be sure we are killing the right process
+	if ! do_status ; then
+		rm -f $pidfile
+		return
+	fi
+
+	# now kill the services
+	if [ -s $pidfile ]; then
+		pid=`cat $pidfile 2> /dev/null`
+		kill $pid > /dev/null 2>&1
+	else
+		return
+	fi
+	timeout=5
+	while [ $timeout -gt 0 ]; do
+		if ps $pid > /dev/null 2>&1 ; then
+			sleep 1
+			timeout=$(($timeout - 1))
+		else
+			break
+		fi
+	done
+	if [ $timeout -eq 0 ]; then
+		kill -9 $pid > /dev/null 2>&1
+	fi
+	rm -f $pidfile
+}
+
+# Read configuration variable file if it is present
+if [ -r $EUCALYPTUS/etc/eucalyptus/eucalyptus.conf ]; then
+	. $EUCALYPTUS/etc/eucalyptus/eucalyptus.conf
+else
+	echo "Cannot find eucalyptus configuration file!"
+	exit 1
+fi
+if [ "$EUCALYPTUS" = "not_configured" ]; then
+	echo "EUCALYPTUS not configured!"
+	exit 1
+fi
+
+# let's see how many loop devices we have available
+LOOP_AVL_DEV="`/bin/ls -1d /dev/loop*       2>/dev/null | wc -l`"
+LOOP_AVL_SYS="`/bin/ls -1d /sys/block/loop* 2>/dev/null | wc -l`"
+if [ -z "$LOOP_AVL_DEV" -o "$LOOP_AVL_DEV" = "0" ]; then
+	echo "warning: no loop devices found in /dev; expect problems" >&2
+elif [ $LOOP_AVL_DEV -lt 50 ]; then
+	echo "warning: found $LOOP_AVL_DEV loop devices in /dev; at least 50 are recommended" >&2
+elif [ -z "$LOOP_AVL_SYS" -o "$LOOP_AVL_SYS" -lt "$LOOP_AVL_DEV" ] && [[ `uname -r` < 2.6.22 ]]; then  # The version comparison does not work in every shell
+	# When then loop driver's max_loop option is not 0, loop device nodes
+	# that are not automatically created by the kernel do not work.  We can
+	# check for this case by looking for too few loop device entries in
+	# sysfs.
+	#
+	# Trying to determine whether or not max_loop is 0 is difficult on
+	# Linux 2, so in general we make no attempt to do so.  However, max_loop
+	# *cannot* be 0 on Linux < 2.6.22, so we perform this check on those
+	# systems so it will hopefully cover the majority of cases.
+	echo "warning: found fewer loop devices in /sys/block than in /dev ($LOOP_AVL_SYS < $LOOP_AVL_DEV); expect problems"
+fi
+
+if [ -z "$EUCA_USER" ] ; then
+	EUCA_USER="root"
+fi
+
+# let's try to pick the system apache2
+HTTPD="`which apache2 2> /dev/null`"		# .deb based machines
+if [ -z  "$HTTPD" ]; then
+	HTTPD="`which httpd 2> /dev/null`"	# .rpm based machines
+fi
+if [ -z  "$HTTPD" ]; then
+	HTTPD="`which httpd2 2> /dev/null`"	# newer .rpm based machines
+fi
+HTTPD_HOME="/"
+
+if [ -d "@AXIS2C_HOME@" -a -e @AXIS2C_HOME@/services/EucalyptusNC ]; then
+	export AXIS2C_HOME="@AXIS2C_HOME@"
+else
+    # let's find our dependencies
+    for y in $EUCALYPTUS/opt $EUCALYPTUS/packages $EUCALYPTUS /opt ; do
+	for x in `/bin/ls $y 2> /dev/null`; do
+		# this is for system or source installed
+		if [ "`echo $x | cut -f 1 -d -`" = "axis2c" ]; then
+			if [ -e $y/$x/lib/libmod_axis2.so -a \
+                             -e $y/$x/services/EucalyptusNC ]; then
+				export AXIS2C_HOME="$y/$x"
+                                break
+			fi
+		fi
+	done
+    done
+fi
+
+if [ -z "$AXIS2C_HOME" ]; then
+	echo "Cannot find AXIS2C_HOME?"
+	exit 1
+fi
+
+# do we have the httpd daemon?
+if [ -z "${HTTPD}" ]; then
+	echo "apache2/httpd daemon not found!"
+	exit 1
+fi
+
+if [ -z "${APACHE2_MODULE_DIR}" ]; then
+        export APACHE2_MODULE_DIR="@APACHE2_MODULE_DIR@"
+fi
+
+if [ ! -d "$APACHE2_MODULE_DIR" ]; then
+        echo "Cannot find APACHE2_MODULE_DIR?"
+        exit 1
+fi
+
+# set the library path correctly
+export LD_LIBRARY_PATH="$AXIS2C_HOME/lib:$AXIS2C_HOME/modules/rampart:$EUCALYPTUS/usr/lib/eucalyptus"
+
+case "$1" in
+  start)
+	if [ "$VERBOSE" != no ]; then
+		if [ "$WE_HAVE_LSB" = "Y" ]; then
+			log_daemon_msg "Starting $DESC" "$NAME"
+		else
+			echo -n "Starting $DESC: "
+		fi
+	fi
+
+	# let's check there is no previous NC running
+	if do_status ; then
+		echo
+		echo "another NC is already running!"
+		if [ "$VERBOSE" != no ]; then
+			if [ "$WE_HAVE_LSB" = "Y" ]; then
+				log_end_msg 1
+			fi
+		fi
+		exit 1
+	fi
+
+	rm -f /dev/shm/sem.eucalyptus-nc* /dev/shm/sem.eucalyptus-st*
+	do_start
+	case "$?" in
+	0|1)
+		if [ "$VERBOSE" != no ]; then
+			if [ "$WE_HAVE_LSB" = "Y" ]; then
+				log_end_msg 0
+			else
+				echo "done."
+			fi
+		fi
+		;;
+	*)
+		if [ "$VERBOSE" != no ]; then
+			if [ "$WE_HAVE_LSB" = "Y" ]; then
+				log_end_msg 1
+			else
+				echo "failed!"
+			fi
+		fi
+		;;
+	esac
+	;;
+  stop)
+	if [ "$VERBOSE" != no ]; then
+		if [ "$WE_HAVE_LSB" = "Y" ]; then
+			log_begin_msg "Stopping $DESC"
+		else
+			echo -n "Stopping $DESC: "
+                fi
+        fi
+	do_stop
+	rm -f /dev/shm/sem.eucalyptus-nc* /dev/shm/sem.eucalyptus-st*
+	if [ "$VERBOSE" != no ]; then
+		if [ "$WE_HAVE_LSB" = "Y" ]; then
+			log_end_msg 0
+		else
+			echo "done."
+		fi
+	fi
+	;;
+  restart)
+	if [ "$VERBOSE" != no ]; then
+		if [ "$WE_HAVE_LSB" = "Y" ]; then
+			log_begin_msg "Restarting $DESC"
+		else
+			echo -n "Restarting $DESC: "
+		fi
+	fi
+	# restart allow the CC to mantain the state across restart
+	do_stop
+	do_start
+	if [ "$VERBOSE" != no ]; then
+		if [ "$WE_HAVE_LSB" = "Y" ]; then
+			log_end_msg 0
+		else
+			echo "done."
+		fi
+	fi
+	;;
+  status)
+	if do_status ; then
+		echo "NC is running"
+	else
+		exit 3
+	fi
+	;;
+  config)
+	echo "EUCALYPTUS=${EUCALYPTUS}"
+	echo "AXIS2C_HOME=${AXIS2C_HOME}"
+	echo "HTTPD_HOME=${HTTPD_HOME}"
+	echo "HTTPD=${HTTPD}"
+        ;;
+
+  *)
+	echo "Usage: $NAME {start|stop|restart}" >&2
+	exit 3
+	;;
+esac
+
+:

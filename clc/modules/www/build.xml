@@ -1,0 +1,179 @@
+<!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ~ Copyright (c) 2009  Eucalyptus Systems, Inc.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, only version 3 of the License.
+  ~
+  ~
+  ~ This file is distributed in the hope that it will be useful, but WITHOUT
+  ~ ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+  ~ FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+  ~ for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License along
+  ~ with this program.  If not, see http://www.gnu.org/licenses/.
+  ~
+  ~ Please contact Eucalyptus Systems, Inc., 130 Castilian
+  ~ Dr., Goleta, CA 93101 USA or visit http://www.eucalyptus.com/licenses/
+  ~ if you need additional information or have any questions.
+  ~
+  ~ This file may incorporate work covered under the following copyright and
+  ~ permission notice:
+  ~
+  ~   Software License Agreement (BSD License)
+  ~
+  ~   Copyright (c) 2008, Regents of the University of California
+  ~   All rights reserved.
+  ~
+  ~   Redistribution and use of this software in source and binary forms, with
+  ~   or without modification, are permitted provided that the following
+  ~   conditions are met:
+  ~
+  ~     Redistributions of source code must retain the above copyright notice,
+  ~     this list of conditions and the following disclaimer.
+  ~
+  ~     Redistributions in binary form must reproduce the above copyright
+  ~     notice, this list of conditions and the following disclaimer in the
+  ~     documentation and/or other materials provided with the distribution.
+  ~
+  ~   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+  ~   IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+  ~   TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+  ~   PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+  ~   OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+  ~   EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+  ~   PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+  ~   PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+  ~   LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+  ~   NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+  ~   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. USERS OF
+  ~   THIS SOFTWARE ACKNOWLEDGE THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE
+  ~   LICENSED MATERIAL, COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS
+  ~   SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
+  ~   IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
+  ~   BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
+  ~   THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+  ~   OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
+  ~   WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
+  ~   ANY SUCH LICENSES OR RIGHTS.
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ~ Author: chris grzegorczyk grze@eucalyptus.com
+  ~ Author: Dmitrii Zagorodnov dmitrii@cs.ucsb.edu
+  -->
+
+<project name="eucalyptus-www" basedir=".">
+	<import file="../module-inc.xml" />
+	<property environment="localenv"/>
+  <property name="DESTDIR.0" value="${localenv.DESTDIR}"/>
+  <condition property="DESTDIR" value="/" else="${localenv.DESTDIR}">
+    <contains string="${DESTDIR.0}" substring="localenv"/>
+  </condition>
+
+	<!--================================== BUILD TARGET ==================================-->
+  <property name="builder.suffix" value="gwt" />
+    <target name="do-build-gwt">
+        <antcall target="build-gwt"/>
+    </target>
+  <target name="build-gwt">
+  	<echo message="gwtDebug=${gwtDebug}"/>
+    <antcall target="compile-src" />
+    <antcall target="jar" />
+    <condition property="gwtBuildType" value="debug" else="normal" >
+      <isset property="gwtDebug"/>
+    </condition>
+  	<antcall target="compile-gwt-${gwtBuildType}" />
+	</target>
+	<!--================================== GWT-ONLY TARGET ==================================-->
+	<property environment="env" />
+	<path id="gwtclasspath">
+		<fileset dir="${lib.dir}">
+			<include name="**/*.jar" />
+		</fileset>
+		<pathelement path="conf" />
+    <dirset dir="${modules.dir}">
+      <include name="**/build"/>
+    </dirset>
+	</path>
+	<path id="gwtcompilerclasspath">
+		<fileset dir="${lib.dir}">
+			<include name="**/gwt-dev.jar" />
+		</fileset>
+		<path refid="gwtclasspath" />
+    <dirset dir="${modules.dir}">
+      <include name="**/build"/>
+    </dirset>
+		<pathelement path="${src.dir}" />
+	</path>
+	<property name="gwt.build.dir" value="build" />
+	<property name="gwt.war.build.dir" value="build-war" />
+	<property name="gwt.module" value="com.eucalyptus.webui.EucalyptusWebInterface" />
+	<property name="gwt.module.rename" value="webui" />
+	<property name="gwt.module.dir" value="com/eucalyptus/webui" />
+	<property name="gwt.war.dir" value="webapps" />
+	<property name="gwt.war" value="${gwt.war.dir}/root.war" />
+
+	<target name="check-src">
+		<uptodate property="gwtc.notRequired" targetfile="${gwt.war}">
+			<srcfiles dir="${src.dir}" includes="**/*" />
+			<srcfiles dir="${conf.dir}" includes="**/*" />
+		</uptodate>
+	</target>
+
+	<target name="compile-src">
+    <mkdir dir="${build.dir}"/>
+    <mkdir dir="${test.dir}"/>
+		<javac deprecation="false" srcdir="${src.dir}" destdir="${build.dir}" classpathref="gwtclasspath" failonerror="true" debug="true" target="1.5" />
+	</target>
+
+	<target name="clean">
+		<delete dir="${build.dir}" />
+		<delete dir="${gwt.war.dir}" />
+		<delete dir="${gwt.war.build.dir}" />
+		<delete file="${jar.file}" />
+	</target>
+
+
+  <target name="compile-gwt-normal" depends="check-src" unless="gwtc.notRequired">
+    <delete dir="${gwt.war.build.dir}" />
+    <mkdir dir="${gwt.war.build.dir}" />
+    <mkdir dir="${gwt.war.dir}" />
+    <java classpathref="gwtcompilerclasspath" fork="true" failonerror="true" classname="com.google.gwt.dev.Compiler">
+      <jvmarg value="-Xmx1024m" />
+      <jvmarg value="-Xss1024k" />
+      <arg line="-war ${gwt.war.build.dir}" />
+      <arg line="com.eucalyptus.webui.EucalyptusWebInterface" />
+    </java>
+    <war destfile="${gwt.war}" webxml="${conf.dir}/gwt-web.xml" basedir="${gwt.war.build.dir}/${gwt.module.rename}/" />
+  </target>
+
+  <target name="compile-gwt-debug" depends="check-src" unless="gwtc.notRequired">
+		<delete dir="${gwt.war.build.dir}" />
+		<mkdir dir="${gwt.war.build.dir}" />
+		<mkdir dir="${gwt.war.dir}" />
+		<java classpathref="gwtcompilerclasspath" fork="true" failonerror="true" classname="com.google.gwt.dev.Compiler">
+			<jvmarg value="-Xmx1024m" />
+			<jvmarg value="-Xss1024k" />
+			<arg line="-war ${gwt.war.build.dir}" />
+			<arg line="-draftCompile"/>
+			<arg line="-style DETAILED"/> <!-- PRETTY for non-obfuscated Javascript -->
+			<arg line="com.eucalyptus.webui.EucalyptusWebInterface" />
+		</java>
+		<war destfile="${gwt.war}" webxml="${conf.dir}/gwt-web.xml" basedir="${gwt.war.build.dir}/${gwt.module.rename}/" />
+	</target>
+
+	<property name="servlet.dir" value="${euca.var.dir}/webapps" />
+	<target name="install">
+    <copy todir="${DESTDIR}${euca.conf.dir}" overwrite="true">
+      <fileset dir="conf">
+        <include name="**/*" />
+      </fileset>
+    </copy>
+    <copy todir="${DESTDIR}${euca.lib.dir}" overwrite="true">
+      <fileset file="${jar.file}" />
+    </copy>
+		<copy overwrite="true" file="${gwt.war}" todir="${DESTDIR}${servlet.dir}" />
+	</target>
+
+
+</project>

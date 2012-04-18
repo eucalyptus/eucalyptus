@@ -1,0 +1,61 @@
+#!/usr/bin/perl
+
+#
+# use_resources.template is a template used to generate a perl file which is then inserted
+#  into a bundled image. The generated perl file is then executed from within the instance
+#  upon startup. The generated perl script writes random data to the local disk and to a
+#  mounted EBS volume, from within a running instance, in order to simulate resource usage
+#  for that instance. The reason we use a template is to allow the test suite to modify the
+#  amount of resources the perl script will use, by overwriting the constants near the top
+#  of this file.
+#
+# This template is converted into a perl file using the fill_template.pl script.
+#
+# (c)2011, Eucalyptus Systems, Inc. All Rights Reserved.
+# author: tom.werges
+#
+
+use warnings;
+use strict;
+
+my $pid = fork();
+exit(0) if ($pid != 0);
+
+# These values are automatically replaced by the templating mechanism
+my $interval = [INTERVAL];
+my $io_megs = [IO_MEGS];
+my $device = "[DEVICE]"; # should be /dev/sda1 or something similar
+my $sleep_duration = [SLEEP_DURATION];
+my $filename = "";
+
+sub write_random_file($$);
+
+# Wait for EBS vols to show up, then mount volume
+print "startup sleep:$sleep_duration\n";
+sleep $sleep_duration;
+mkdir("/mnt/volume");
+system("mount $device /mnt/volume") or die("couldn't mount $device");
+
+# Periodically use local disk and ebs volume to simulate reporting usage
+my $start_time = 0;
+while (1) {
+	$start_time = time();
+	$filename = "dummy_file_" . time();
+	write_random_file("/tmp/$filename", $io_megs);
+	write_random_file("/mnt/volume/$filename", $io_megs);
+	print "sleep:" . ($interval-(time()-$start_time)) . "\n";
+	sleep(($interval-(time()-$start_time)));
+}
+
+sub write_random_file($$) {
+	my ($filename, $size_megs) = @_;
+	my @chars = ('a'..'z','A'..'Z',0..9);
+	open (FILE, ">$filename") or die("couldn't open $filename");
+	for (my $i=0; $i<($size_megs<<20);$i++) {
+		print FILE $chars[int(rand($#chars))];
+	}
+	close (FILE) or die("couldn't close $filename");
+	system("rm $filename") or die("couldn't remove $filename");
+	print "wrote $size_megs\n";
+}
+

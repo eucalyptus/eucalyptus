@@ -1,0 +1,106 @@
+<!DOCTYPE ui:UiBinder SYSTEM "http://dl.google.com/gwt/DTD/xhtml.ent">
+<ui:UiBinder xmlns:ui="urn:ui:com.google.gwt.uibinder"
+    xmlns:g="urn:import:com.google.gwt.user.client.ui">
+    
+    <ui:style>
+        .outer {
+            margin-left:20px;
+            margin-right:20px;
+            margin-top:8px;
+            margin-bottom:24px;
+        }
+        .outer td {
+            padding-top:16px;
+        }
+        .label {
+            font-size:14px;
+            color:#333333;
+            margin-right:4px;
+        }
+        .input {
+            width:280px;
+            margin-left:4px;
+            color:#4D4D4D;
+            background-color:#F1F1F1;
+            border-style: solid;
+            border-width: 1px;
+            border-color: #999999 #CCCCCC #CCCCCC #999999;                  
+        }
+        .button {
+            float:right;
+            margin-left:16px;
+        }
+        .error {
+            font-size:12px;
+            font-style:italic;
+            color:red;
+            vertical-align:middle;
+            float:left;
+        }
+        .content {
+        	width:100%;
+        }
+    </ui:style>
+    
+    <ui:style field="gridStyle" type="com.eucalyptus.webui.client.view.InputViewImpl.GridStyle">
+        .grid {
+            font-size:80%;
+            color:#333333;          
+            width:100%;
+        }
+        .grid td {
+            padding-top:4px;
+            padding-bottom:4px;
+            vertical-align:middle;
+        }
+        .grid input[type='text'], .grid input[type='password'], .grid textarea {
+            color:#222222;
+            width:300px;
+            /*background-color:#F2F2F2;*/
+            border-style: solid;
+            border-width: 1px;
+            border-color: #999999 #CCCCCC #CCCCCC #999999;        
+        }
+        .passwordWeak {
+        	background-color:#FFBBAF;
+        }
+        .passwordMedium {
+        	background-color:#FBFFAF;
+        }
+        .passwordStrong {
+        	background-color:#BAFFAF;
+        }
+        .passwordStronger {
+        	background-color:#AFFFFF;
+        }
+    </ui:style>
+    
+    <ui:with field="global" type="com.eucalyptus.webui.client.view.GlobalResources"/>
+    
+    <g:HTMLPanel>
+        <table class="{style.outer}">
+            <tbody>
+                <tr>
+                    <td><g:Label addStyleNames="{style.label}" ui:field="subject"/></td>
+                </tr>
+                <tr>
+                    <td><g:SimplePanel addStyleNames="{style.content}" ui:field="contentPanel"/></td>
+                </tr>
+                <tr>
+                    <td><g:Label addStyleNames="{style.error}" ui:field="error"></g:Label></td>
+                </tr>
+                <tr>
+                    <td>
+                        <g:Anchor styleName="{global.buttonCss.button} {global.buttonCss.positive} {style.button}" ui:field="ok">
+                            <span class="{global.buttonCss.check} {global.buttonCss.icon}"/>OK
+                        </g:Anchor>
+                        <g:Anchor styleName="{global.buttonCss.button} {style.button}" ui:field="cancel">
+                            <span class="{global.buttonCss.x} {global.buttonCss.icon}"/>Cancel
+                        </g:Anchor>                    
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </g:HTMLPanel>
+    
+</ui:UiBinder> 

@@ -1,0 +1,915 @@
+#!/usr/bin/python
+# Copyright (c) 2011, Eucalyptus Systems, Inc.
+# All rights reserved.
+#
+# Redistribution and use of this software in source and binary forms, with or
+# without modification, are permitted provided that the following conditions
+# are met:
+#
+#   Redistributions of source code must retain the above
+#   copyright notice, this list of conditions and the
+#   following disclaimer.
+#
+#   Redistributions in binary form must reproduce the above
+#   copyright notice, this list of conditions and the
+#   following disclaimer in the documentation and/or other
+#   materials provided with the distribution.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#
+# Author: Mitch Garnaat mgarnaat@eucalyptus.com
+
+import optparse
+import inspect
+import os
+import sys
+import boto.utils
+import eucadmin
+import eucadmin.configfile
+from boto.roboto.awsqueryservice import NoCredentialsError
+
+import bdb
+import traceback
+try:
+    import epdb as debugger
+except ImportError:
+    import pdb as debugger
+
+def euca_except_hook(debugger_flag, debug_flag):
+    def excepthook(typ, value, tb):
+        if typ is bdb.BdbQuit:
+            sys.exit(1)
+        sys.excepthook = sys.__excepthook__
+
+        if debugger_flag and sys.stdout.isatty() and sys.stdin.isatty():
+            if debugger.__name__ == 'epdb':
+                debugger.post_mortem(tb, typ, value)
+            else:
+                debugger.post_mortem(tb)
+        elif debug_flag:
+            print traceback.print_tb(tb)
+            sys.exit(1)
+        else:
+            print value
+            sys.exit(1)
+
+    return excepthook
+
+
+DefaultEucaDir = '@prefix@'
+DefaultEucaConfPath = 'etc/eucalyptus/eucalyptus.conf'
+
+RegOptions = {
+    'partition' : ['-P', '--partition', 'partition_name'],
+    'host' : ['-H', '--host', 'host_name'],
+    'component' : ['-C', '--component', 'component_name']}
+
+# list of services which can be checked
+CheckableServices = ['common', 'cc', 'cloud', 'nc', 'sc',
+                     'walrus', 'vmware', 'vmwarebroker']
+CheckableServicesString = '|'.join(CheckableServices)
+
+# list of services which can be enabled/disabled
+EnableableServices = ['cloud', 'walrus', 'sc', 'vmwarebroker']
+EnableableServicesString = '|'.join(EnableableServices)
+
+# config entries that must be updated when registering a broker
+ConfigBrokerReg = {'NC_SERVICE' : '/services/EucalyptusBroker',
+                   'NC_PORT' : '8773'}
+
+# config entries that must be updated when deregistering a broker
+ConfigBrokerDereg = {'NC_SERVICE' : 'axis2/services/EucalyptusNC',
+                     'NC_PORT' : '8775'}
+
+RegisterHelp = """
+euca_conf provides two alternatives for component registration. The
+first alternative is compatible with the previous version of euca_conf
+and uses positional arguments. For example:
+
+euca_conf --register-cluster Part001 192.168.51.108
+
+would register a new cluster on host 192.168.51.108. In previous
+versions of the tool, the first argument would be interpreted as the
+"clustername" but now, with HA, this argument is interpreted as the
+partition name. Rather than requiring an additional positional
+argument for the component name required for registration, this
+approach will generate a component name for the user by concatenating
+the resource type (in this case "cluster") with the host name. So, in
+this case the component name would be "cluster-192.168.51.108". This
+allows previous scripts to continue working unchanged in the new
+version of the tool.
+
+The second, and preferred, approach uses explicit options for the
+partition name, the component name and the host name required for
+registration. For example:
+
+euca_conf --register-cluster --partition Part001 --component MyCluster --host 192.168.51.108
+
+Alternatively, you could use the short form of the options like this:
+
+euca_conf --register-cluster -P Part001 -C MyCluster -H 192.168.51.108
+
+or any combination thereof. The options can be provided in any order
+and can appear before or after the --register-* option.
+"""
+
+class EucaConf(object):
+
+    def __init__(self, filepath=None):
+        self.debug = 0
+        self.config = None
+        self.specified_options = {}
+        self.parser = optparse.OptionParser()
+        self.parser.add_option('--initialize', action='store_true',
+                               dest='initialize', default=False,
+                               help='Do one-time initialize of CLC.')
+        self.parser.add_option('--heartbeat', action='store', type='string',
+                               help='Get heartbeat data for <host>.',
+                               metavar='host')
+        self.parser.add_option('--synckey', action='store_true',
+                               dest='sync_keys', help='',
+                               default=False)
+        self.parser.add_option('--no-rsync', action='store_true',
+                               dest='no_rsync', default=False,
+                               help="Don't use rsync when registering."),
+        self.parser.add_option('--no-scp', action='store_true',
+                               dest='no_scp', default=False,
+                               help="Don't use scp when registering.")
+        self.parser.add_option('--skip-scp-hostcheck', action='store_true',
+                               dest='skip_scp_hostcheck',
+                               help='Skip scp interactive host keycheck.',
+                               default=False)
+        self.parser.add_option('--get-credentials', action='store',
+                               type='string', dest='get_credentials',
+                               metavar='<zipfile>',
+                               help='Download credentials to <zipfile>.\
+                                     By default, the admin credentials \
+                                     will be downloaded but this can be \
+                                     adjusted with the --cred-user option. \
+                                     Each time this is called, new X.509 \
+                                     certificates will be created for the \
+                                     specified user.')
+        self.parser.add_option('--cred-account', action='store',
+                               type='string', dest='cred_account',
+                               metavar='<accountname>', default='eucalyptus',
+                               help="Set get-credentials account.")
+        self.parser.add_option('--cred-user', action='store',
+                               type='string', dest='cred_user',
+                               metavar='<username>', default='admin',
+                               help="Set get-credentials user.")
+        self.parser.add_option('--register-nodes',
+                               action='append', type='string',
+                               dest='reg_nodes', metavar='"host host..."',
+                               help='Add new nodes to EUCALYPTUS.')
+        self.parser.add_option('--deregister-nodes',
+                               action='append', type='string',
+                               dest='dereg_nodes', metavar='"host host..."',
+                               help='Remove nodes from EUCALYPTUS.')
+        self.parser.add_option('--register-arbitrator',
+                               action='callback',  callback=self.reg_callback,
+                               callback_kwargs={'needs' : ['partition_name',
+                                                           'component_name',
+                                                           'host_name']},
+                               help='Add new arbitrator to EUCALYPTUS.')
+        self.parser.add_option('--deregister-arbitrator',
+                               action='callback', callback=self.reg_callback,
+                               callback_kwargs={'needs' : ['partition_name',
+                                                           'component_name']},
+                               help='Remove arbitrator from EUCALYPTUS.')
+        self.parser.add_option('--register-cloud',
+                               action='callback',  callback=self.reg_callback,
+                               callback_kwargs={'needs' : ['partition_name',
+                                                           'component_name',
+                                                           'host_name']},
+                               help='Add new clc to EUCALYPTUS.')
+        self.parser.add_option('--deregister-cloud',
+                               action='callback', callback=self.reg_callback,
+                               callback_kwargs={'needs' : ['partition_name',
+                                                           'component_name']},
+                               help='Remove clc from EUCALYPTUS.')
+        self.parser.add_option('--register-cluster',
+                               action='callback',  callback=self.reg_callback,
+                               callback_kwargs={'needs' : ['partition_name',
+                                                           'component_name',
+                                                           'host_name']},
+                               help='Add new cluster to EUCALYPTUS.')
+        self.parser.add_option('--deregister-cluster',
+                               action='callback', callback=self.reg_callback,
+                               callback_kwargs={'needs' : ['partition_name',
+                                                           'component_name']},
+                               help='Remove cluster from EUCALYPTUS.')
+        self.parser.add_option('--register-walrus',
+                               action='callback', callback=self.reg_callback,
+                               callback_kwargs={'needs' : ['partition_name',
+                                                           'component_name',
+                                                           'host_name']},
+                               help='Add new walrus to EUCALYPTUS.')
+        self.parser.add_option('--deregister-walrus',
+                               action='callback', callback=self.reg_callback,
+                               callback_kwargs={'needs' : ['partition_name',
+                                                           'component_name']},
+                               help='Remove walrus from EUCALYPTUS.')
+        self.parser.add_option('--register-sc',
+                               action='callback',  callback=self.reg_callback,
+                               callback_kwargs={'needs' : ['partition_name',
+                                                           'component_name',
+                                                           'host_name']},
+                               help='Add new storage controller to EUCALYPTUS.')
+        self.parser.add_option('--deregister-sc',
+                               action='callback', callback=self.reg_callback,
+                               callback_kwargs={'needs' : ['partition_name',
+                                                           'component_name']},
+                               metavar='<partition> <host>',
+                               help='Remove storage controller from EUCALYPTUS.')
+        self.parser.add_option('--register-vmwarebroker',
+                               action='callback',  callback=self.reg_callback,
+                               callback_kwargs={'needs' : ['partition_name',
+                                                           'component_name',
+                                                           'host_name']},
+                               help='Add new vmwarebroker to EUCALYPTUS.')
+        self.parser.add_option('--deregister-vmwarebroker',
+                               action='callback', callback=self.reg_callback,
+                               callback_kwargs={'needs' : ['partition_name',
+                                                           'component_name']},
+                               metavar='<partition> <host>',
+                               help='Remove vmwarebroker from EUCALYPTUS.')
+        self.parser.add_option('--list-walruses', action='store_true',
+                               dest='list_walruses', default=False,
+                               help='List registered walrus(es).')
+        self.parser.add_option('--list-clouds', action='store_true',
+                               dest='list_clouds', default=False,
+                               help='List registered CLCs.')
+        self.parser.add_option('--list-clusters', action='store_true',
+                               dest='list_clusters', default=False,
+                               help='List registered CCs.')
+        self.parser.add_option('--list-arbitrators', action='store_true',
+                               dest='list_arbitrators', default=False,
+                               help='List registered arbitrators.')
+        self.parser.add_option('--list-vmwarebrokers', action='store_true',
+                               dest='list_vmwarebrokers', default=False,
+                               help='List registered VMware brokers.')
+        self.parser.add_option('--list-nodes', action='store_true',
+                              dest='list_nodes', default=False,
+                              help='List registered NCs.')
+        self.parser.add_option('--list-components', action='store_true',
+                              dest='list_components', default=False,
+                              help='List Eucalyptus components.')
+        self.parser.add_option('--list-services', action='store_true',
+                              dest='list_services', default=False,
+                              help='List Eucalyptus services.')
+        self.parser.add_option('--list-scs', action='store_true',
+                               dest='list_scs', default=False,
+                               help='List registered SCs.')
+        self.parser.add_option('--no-sync', action='store_true',
+                               dest='no_sync', default=False,
+                               help='Used with --register-* to skip syncing \
+                                     keys.')
+        self.parser.add_option('-d', action='callback', type='string',
+                               metavar='<dir>', callback=self.option_callback,
+                               callback_kwargs={'optname' : 'EUCALYPTUS'},
+                               help='Point EUCALYPTUS to <dir>.')
+        self.parser.add_option('--cc-port', action='callback', type='int',
+                               metavar='<port>', callback=self.option_callback,
+                               callback_kwargs={'optname' : 'CC_PORT'},
+                               help='Set CC port.', default=8774)
+        self.parser.add_option('--sc-port', action='callback', type='int',
+                               metavar='<port>', callback=self.option_callback,
+                               callback_kwargs={'optname' : 'SC_PORT'},
+                               help='Set SC port.', default=8773)
+        self.parser.add_option('--walrus-port', action='callback', type='int',
+                               metavar='<port>', callback=self.option_callback,
+                               callback_kwargs={'optname' : 'WALRUS_PORT'},
+                               help='Set Walrus port.', default=8773)
+        self.parser.add_option('--nc-port', action='callback', type='int',
+                               metavar='<port>', callback=self.option_callback,
+                               callback_kwargs={'optname' : 'NC_PORT'},
+                               help='Set NC port.', default=8775)
+        self.parser.add_option('--instances', action='callback',
+                               type='string', callback=self.option_callback,
+                               metavar='<path>',
+                               callback_kwargs={'optname' : 'INSTANCE_PATH'},
+                               help='Set the INSTANCE path.')
+        self.parser.add_option('--hypervisor', action='callback',
+                               type='choice', callback=self.option_callback,
+                               metavar='[kvm|xen]', choices=['kvm', 'xen'],
+                               callback_kwargs={'optname' : 'HYPERVISOR'},
+                               help='Set hypervisor to use.')
+        self.parser.add_option('--user', action='callback',
+                               type='string', callback=self.option_callback,
+                               metavar='<euca_user>',
+                               callback_kwargs={'optname' : 'EUCA_USER'},
+                               help='Set the user to use for EUCA_USER.')
+        self.parser.add_option('--dhcpd', action='callback',
+                               type='string', callback=self.option_callback,
+                               metavar='<dhcpd>',
+                               callback_kwargs={'optname' : 'DHCPD'},
+                               help='Set the dhcpd binary to <dhcpd>.')
+        self.parser.add_option('--dhcp_user', action='callback',
+                               type='string', callback=self.option_callback,
+                               metavar='<user>',
+                               callback_kwargs={'optname' : 'DHCPC_USER'},
+                               help='Set the username to run dhcpd as.')
+        self.parser.add_option('--bridge', action='callback',
+                               type='string', callback=self.option_callback,
+                               callback_kwargs={'optname' : 'BRIDGE'}),
+        self.parser.add_option('--name', action='store',
+                               type='string', dest='var_name',
+                               help='Returns the value or <name>.')
+        self.parser.add_option('--import-conf', action='store',
+                               type='string', dest='import_conf_file',
+                               help='Import vars from another eucalyptus.conf.')
+        self.parser.add_option('--upgrade-conf', action='store',
+                               type='string', dest='upgrade_conf_file',
+                               help='Upgrade eucalyptus.conf from old \
+                                     installation.')
+        self.parser.add_option('--setup', action='store_true',
+                               dest='do_setup', default=False,
+                               help='Perform initial setup.')
+        self.parser.add_option('--enable',
+                               action='append', type='choice',
+                               choices=EnableableServices,
+                               metavar='[%s]' % EnableableServicesString,
+                               dest='enable_whats',
+                               help='Enable service at next start.')
+        self.parser.add_option('--disable',
+                               action='append', type='choice',
+                               choices=EnableableServices,
+                               metavar='[%s]' % EnableableServicesString,
+                               dest='disable_whats',
+                               help='Disable service at next start.')
+        self.parser.add_option('--check',
+                               action='store', type='choice',
+                               choices=CheckableServices,
+                               metavar='[common|vmware]',
+                               dest='check_what',
+                               help='Pre-flight checks.')
+        self.parser.add_option('--debug', action='store_true',
+                               default=False, help='Enable debug output')
+        self.parser.add_option('--debugger', action='store_true',
+                               default=False,
+                               help='Enable interactive debugger on error.')
+        self.parser.add_option(RegOptions['partition'][0],
+                               RegOptions['partition'][1],
+                               action='store', type='string',
+                               dest=RegOptions['partition'][2],
+                               metavar='<partition name>',
+                               help='Name of partition.\
+                                     Used with --register-* & --deregister-*.')
+        self.parser.add_option(RegOptions['host'][0],
+                               RegOptions['host'][1],
+                               action='store', type='string',
+                               dest=RegOptions['host'][2],
+                               metavar='<host name or ip>',
+                               help='Name or IP address of host.\
+                                     Used with --register-*.')
+        self.parser.add_option(RegOptions['component'][0],
+                               RegOptions['component'][1],
+                               action='store', type='string',
+                               dest=RegOptions['component'][2],
+                               metavar='<component name>',
+                               help='Name of the component.\
+                                     Used with --register-* & --deregister-*.')
+        self.parser.add_option('--help-register', action='store_true',
+                               default=False,
+                               help='Display help on register/deregister.')
+        self.parser.add_option('--version', action='store_true', default=False,
+                               help='Display version string')
+        self.options, self.args = self.parser.parse_args()
+        if len(self.args) > 0:
+            filepath = self.args[0]
+        elif filepath is None:
+            # use the value passed in with -d option, if present
+            if self.specified_options.has_key('EUCALYPTUS'):
+                euca_dir = self.specified_options['EUCALYPTUS']
+            else:
+                euca_dir = os.environ.get('EUCALYPTUS', DefaultEucaDir)
+            filepath = os.path.join(euca_dir, DefaultEucaConfPath)
+        try:
+            self.config = eucadmin.configfile.ConfigFile(filepath)
+        except IOError:
+            self.warn('Unable to read config file: %s' % filepath)
+            sys.exit(1)
+
+    def warn(self, msg):
+        sys.stderr.write(msg + '\n')
+
+    def get_sshkey(self):
+        key = None
+        try:
+            user = pwd.getpwnam('eucalyptus')
+            path = os.path.join(user.pw_dir, '.ssh')
+            path = os.path.join(path, 'id_rsa.pub')
+            if os.path.isfile(path):
+                fp = open(path)
+                key = fp.read()
+                fp.close()
+        except:
+            self.warn('problem finding sshkey for user eucalyptus')
+        return key
+
+    def check_local_service(self, service_name):
+        valid_services = ['CLC', 'CC']
+        if service_name is None or service_name not in valid_services:
+            self.warn('ERROR: must pass in service name %s' % valid_services)
+            return False
+        if service_name == 'CLC':
+            resp = boto.utils.retry_url('https://127.0.0.1:8443/register',
+                                        num_retries=2)
+            if resp.find('CloudVersion') < 0:
+                return False
+        elif service_name == 'CC':
+            resp = boto.utils.retry_url('http://127.0.0.1:8774/axis2/services',
+                                        num_retries=2)
+            if resp.find('EucalyptusCC') < 0:
+                return False
+        return True
+
+    def check_local_credentials(self):
+        missing = []
+        path = os.path.join(self.config['EUCALYPTUS'],
+                            'var/lib/eucalyptus/keys')
+        files = ['node-cert.pem', 'cluster-cert.pem', 'cloud-cert.pem',
+                 'node-pk.pem', 'cluster-pk.pem']
+        for file in files:
+            full_path = os.path.join(path, file)
+            if not os.path.isfile(full_path):
+                missing.append(full_path)
+        return missing
+
+    def option_callback(self, option, opt_str, value, parser, optname=None):
+        self.specified_options[optname] = value
+
+    def reg_callback(self, option, opt_str, value, parser, needs=None):
+        """
+        This is called whenever a --register-* options is specified.
+        It is responsible for determining whether the user is
+        specifying partition and host via the option names (preferred)
+        or whether they are specifying the using positional args.
+
+        If any options are specified via explicit options, then all
+        other options must also be so specified or else it will be
+        considered an error.
+
+        The explicit options take precedence over positional args.
+
+        Any options supplied prior to the --register-* option
+        can be found by looking in the parser.values data
+        for the appropriate variable name
+
+        Any options supplied after the --register-* option
+        need to be parsed out of parser.rargs.
+        """
+        action, res_type = opt_str.split('-')[-2:]
+        opt_names = [ opt[2] for opt in RegOptions.values() ]
+        opts = []
+        for opt_name in opt_names:
+            if hasattr(parser.values, opt_name):
+                value = getattr(parser.values, opt_name)
+                if value:
+                    opts.append(opt_name)
+        for opt in parser.rargs:
+            # If option was specified as foo=bar we get the whole
+            # expression here and need to split it to have only
+            # the option name.
+            if '=' in opt:
+                opt = opt.split('=')[0]
+            for reg_opt in RegOptions.values():
+                if opt == reg_opt[0] or opt == reg_opt[1]:
+                    opts.append(reg_opt[2])
+        # At this point, opts should either be empty (using positional args)
+        # or should contain all the needed options.
+        if opts:
+            missing = []
+            for opt_name in needs:
+                if opt_name not in opts:
+                    missing.append(opt_name)
+            if missing:
+                parser.error('option(s) %s is/are required' % missing)
+        else:
+            if action == 'register' and 'component_name' in needs:
+                needs.remove('component_name')
+            if res_type == 'walrus' and 'partition_name' in needs:
+                needs.remove('partition_name')
+            if len(parser.rargs) < len(needs):
+                parser.error('incomplete args to %s' % opt_str)
+            for arg in parser.rargs[0:len(needs)]:
+                if arg.startswith('-'):
+                    parser.error('incomplete args to %s' % opt_str)
+            for i in range(0, len(needs)):
+                setattr(parser.values, needs[i], parser.rargs[i])
+            if action == 'register':
+                setattr(parser.values, 'component_name',
+                        '%s-%s' % (res_type, getattr(parser.values,
+                                                     'host_name')))
+            if res_type == 'walrus':
+                setattr(parser.values, 'partition_name', 'walrus')
+            del parser.rargs[:len(needs)]
+        setattr(parser.values, '%s_%s' % (action, res_type), True)
+
+    def update_config_file(self):
+        if self.config:
+            for key in self.specified_options:
+                self.config[key] = self.specified_options[key]
+
+    def main(self):
+        status = 0
+        self.update_config_file()
+        if self.options.debug:
+            self.debug = 2
+        sys.excepthook = euca_except_hook(self.options.debugger,
+                                          self.options.debug)
+        for name, method in inspect.getmembers(self):
+            if name.startswith('do_') and inspect.ismethod(method):
+                method()
+
+    def do_initialize(self):
+        if self.options.initialize:
+            cls = boto.utils.find_class('eucadmin.initialize',
+                                        'Initialize')
+            obj = cls(self.config)
+            obj.debug = self.debug
+            sys.exit(obj.main())
+
+    def do_get_credentials(self):
+        if self.options.get_credentials:
+            cls = boto.utils.find_class('eucadmin.getcredentials',
+                                        'GetCredentials')
+            obj = cls()
+            obj.main(euca_home=self.config['EUCALYPTUS'],
+                     account=self.options.cred_account,
+                     user=self.options.cred_user,
+                     zipfile=self.options.get_credentials)
+
+    def do_setup(self):
+        if self.options.do_setup:
+            cls = boto.utils.find_class('eucadmin.eucasetup', 'EucaSetup')
+            req = cls(self.config)
+            req.main()
+
+    def do_check(self):
+        if self.options.check_what in CheckableServices:
+            # All previously supported options, plus common, will
+            # now just call check.common
+            cls = boto.utils.find_class('eucadmin.check', 'Check')
+            req = cls(self.config, self.options.check_what)
+            req.common()
+            if len(req.messages) > 0:
+                print 'The following messages should be reviewed:'
+                for msg in req.messages:
+                    print '\t%s' % msg
+            sys.exit(req.status)
+        elif self.options.check_what == 'vmware':
+            print 'do vmware check here'
+
+    def do_enable(self):
+        if self.options.enable_whats:
+            self.warn('This command is deprecated and no longer has any effect.')
+            sys.exit(0)
+
+    def do_disable(self):
+        if self.options.disable_whats:
+            self.warn('This command is deprecated and no longer has any effect.')
+            sys.exit(0)
+
+    def do_heartbeat(self):
+        if self.options.heartbeat:
+            cls = boto.utils.find_class('eucadmin.heartbeat', 'Heartbeat')
+            req = cls(self.options.heartbeat)
+            req.cli_formatter()
+
+    def do_upgrade_conf(self):
+        if self.options.upgrade_conf_file:
+            print 'Upgrading from %s' % self.options.upgrade_conf_file
+            self.config.mergefile(self.options.upgrade_conf_file)
+            
+    def _do_list(self, option_name, module_name, class_name):
+        if getattr(self.options, option_name):
+            cls = boto.utils.find_class(module_name, class_name)
+            req = cls(debug=self.debug)
+            try:
+                data = req.main()
+            except NoCredentialsError:
+                url = 'http://localhost:8773/services/Eucalyptus'
+                ak, sk = self._get_accesskey_secretkey(url)
+                req = cls(aws_access_key_id=ak, aws_secret_access_key=sk,
+                          url=url, debug=self.debug)
+                data = req.main()
+            req.cli_formatter(data)
+
+    def do_list_nodes(self):
+        self._do_list('list_nodes',
+                      'eucadmin.describenodes',
+                      'DescribeNodes')
+
+    def do_list_walruses(self):
+        self._do_list('list_walruses',
+                      'eucadmin.describewalruses',
+                      'DescribeWalruses')
+
+    def do_list_arbitrators(self):
+        self._do_list('list_arbitrators',
+                      'eucadmin.describearbitrators',
+                      'DescribeArbitrators')
+
+    def do_list_clouds(self):
+        self._do_list('list_clouds',
+                      'eucadmin.describeeucalyptus',
+                      'DescribeEucalyptus')
+
+    def do_list_clusters(self):
+        self._do_list('list_clusters',
+                      'eucadmin.describeclusters',
+                      'DescribeClusters')
+
+    def do_list_scs(self):
+        self._do_list('list_scs',
+                      'eucadmin.describestoragecontrollers',
+                      'DescribeStorageControllers')
+
+    def do_list_vmwarebrokers(self):
+        self._do_list('list_vmwarebrokers',
+                      'eucadmin.describevmwarebrokers',
+                      'DescribeVMwareBrokers')
+
+    def do_list_components(self):
+        self._do_list('list_components',
+                      'eucadmin.describecomponents',
+                      'DescribeComponents')
+
+    def do_list_services(self):
+        self._do_list('list_services',
+                      'eucadmin.describeservices',
+                      'DescribeServices')
+
+    def do_version(self):
+        eucadmin.print_version_if_necessary()
+
+    def _get_accesskey_secretkey(self, url):
+        self.warn('No credentials found, attempting local authentication')
+        gc_cls = boto.utils.find_class('eucadmin.getcredentials',
+                                       'GetCredentials')
+        obj = gc_cls(euca_home=self.config['EUCALYPTUS'],
+                     account=self.options.cred_account,
+                     user=self.options.cred_user,
+                     zipfile='notused')
+        s = obj.get_accesskey_secretkey()
+        return s.split('\t')
+
+    def _do_register(self, module_name, class_name, port_option):
+        partition = self.options.partition_name
+        component_name = self.options.component_name
+        host = self.options.host_name
+        if not (partition and component_name and host):
+            self.parser.error('Requires partition, component and host')
+        if port_option:
+            port = getattr(self.options, port_option)
+        else:
+            port = None
+        cls = boto.utils.find_class(module_name, class_name)
+        req = cls(debug=self.debug)
+        try:
+            data = req.main(partition=partition, name=component_name,
+                            port=port, host=host)
+        except NoCredentialsError:
+            url = 'http://localhost:8773/services/Eucalyptus'
+            ak, sk = self._get_accesskey_secretkey(url)
+            req = cls(aws_access_key_id=ak, aws_secret_access_key=sk,
+                      url=url, debug=self.debug)
+            data = req.main(partition=partition, name=component_name,
+                            port=port, host=host)
+        req.cli_formatter(data)
+
+    def do_register_cloud(self):
+        if hasattr(self.options, 'register_cloud'):
+            self._do_register('eucadmin.registereucalyptus',
+                              'RegisterEucalyptus', None)
+            if not self.options.no_sync:
+                path1 = os.path.join(self.config['EUCALYPTUS'],
+                                     'var/lib/eucalyptus/keys')
+                path2 = os.path.join(path1, self.options.partition_name)
+                cls = boto.utils.find_class('eucadmin.synckeys', 'SyncKeys')
+                req = cls([path1, path2], path1,
+                          self.options.host_name, ['euca.p12',
+                                                   'cloud-cert.pem',
+                                                   'cloud-pk.pem'],
+                          use_rsync=(not self.options.no_rsync),
+                          use_scp=(not self.options.no_scp))
+                req.sync()
+
+    def do_register_arbitrator(self):
+        if hasattr(self.options, 'register_arbitrator'):
+            if self.options.partition_name != self.options.component_name:
+                self.warn('Partition name must match component name')
+                sys.exit(1)
+            self._do_register('eucadmin.registerarbitrator',
+                              'RegisterArbitrator', None)
+
+    def do_register_cluster(self):
+        if hasattr(self.options, 'register_cluster'):
+            self._do_register('eucadmin.registercluster',
+                              'RegisterCluster', 'cc_port')
+            if not self.options.no_sync:
+                path1 = os.path.join(self.config['EUCALYPTUS'],
+                                     'var/lib/eucalyptus/keys')
+                path2 = os.path.join(path1, self.options.partition_name)
+                cls = boto.utils.find_class('eucadmin.synckeys', 'SyncKeys')
+                req = cls([path2], path1, self.options.host_name,
+                          ['node-cert.pem', 'cluster-cert.pem',
+                           'cluster-pk.pem', 'node-pk.pem',
+                           'vtunpass', 'cloud-cert.pem'],
+                          use_rsync=(not self.options.no_rsync),
+                          use_scp=(not self.options.no_scp))
+                req.sync()
+
+    def do_register_walrus(self):
+        if hasattr(self.options, 'register_walrus'):
+            self._do_register('eucadmin.registerwalrus',
+                              'RegisterWalrus', 'walrus_port')
+            if not self.options.no_sync:
+                path = os.path.join(self.config['EUCALYPTUS'],
+                                     'var/lib/eucalyptus/keys')
+                cls = boto.utils.find_class('eucadmin.synckeys', 'SyncKeys')
+                req = cls([path], path, self.options.host_name, ['euca.p12'],
+                          use_rsync=(not self.options.no_rsync),
+                          use_scp=(not self.options.no_scp))
+                req.sync()
+
+    def do_register_sc(self):
+        if hasattr(self.options, 'register_sc'):
+            self._do_register('eucadmin.registerstoragecontroller',
+                              'RegisterStorageController', 'sc_port')
+            if not self.options.no_sync:
+                path = os.path.join(self.config['EUCALYPTUS'],
+                                     'var/lib/eucalyptus/keys')
+                cls = boto.utils.find_class('eucadmin.synckeys', 'SyncKeys')
+                req = cls([path], path, self.options.host_name, ['euca.p12'],
+                          use_rsync=(not self.options.no_rsync),
+                          use_scp=(not self.options.no_scp))
+                req.sync()
+
+    def _check_host(self):
+        import socket, re
+        cls = boto.utils.find_class('eucadmin.command', 'Command')
+        cmd = cls('ifconfig')
+        ip_addrs = []
+        regex = re.compile('\s*inet\saddr:([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+).*')
+        for line in cmd.stdout.split('\n'):
+            m = regex.match(line)
+            if m:
+                ip_addrs.append(m.group(1))
+        host = self.options.host_name
+        host = socket.gethostbyname(host)
+        if host not in ip_addrs:
+            s = 'Warning: VMwareBroker registration must be peformed on the'
+            s += '         VMwareBroker host.  Make sure you are running this'
+            s += '         command on the VMwareBroker host.'
+            self.warn(s)
+                                
+    def do_register_vmwarebroker(self):
+        if hasattr(self.options, 'register_vmwarebroker'):
+            self._check_host()
+            self._do_register('eucadmin.registervmwarebroker',
+                              'RegisterVMwareBroker', None)
+            # Make some changes in eucalyptus.conf file
+            self.config.update(ConfigBrokerReg)
+            if not self.options.no_sync:
+                path = os.path.join(self.config['EUCALYPTUS'],
+                                     'var/lib/eucalyptus/keys')
+                cls = boto.utils.find_class('eucadmin.synckeys', 'SyncKeys')
+                req = cls([path], path, self.options.host_name, ['euca.p12'],
+                          use_rsync=(not self.options.no_rsync),
+                          use_scp=(not self.options.no_scp))
+                req.sync()
+
+    def _do_deregister(self, option_name, module_name, class_name):
+        if hasattr(self.options, option_name):
+            cls = boto.utils.find_class(module_name, class_name)
+            req = cls(debug=self.debug)
+            try:
+                data = req.main(partition=self.options.partition_name,
+                                name=self.options.component_name)
+            except NoCredentialsError:
+                url = 'http://localhost:8773/services/Eucalyptus'
+                ak, sk = self._get_accesskey_secretkey(url)
+                req = cls(aws_access_key_id=ak, aws_secret_access_key=sk,
+                          url=url, debug=self.debug)
+                data = req.main(partition=self.options.partition_name,
+                                name=self.options.component_name)
+            req.cli_formatter(data)
+
+    def do_deregister_cloud(self):
+        self._do_deregister('deregister_cloud',
+                            'eucadmin.deregistereucalyptus',
+                            'DeregisterEucalyptus')
+
+    def do_deregister_arbitrator(self):
+        self._do_deregister('deregister_arbitrator',
+                            'eucadmin.deregisterarbitrator',
+                            'DeregisterArbitrator')
+
+    def do_deregister_cluster(self):
+        self._do_deregister('deregister_cluster',
+                            'eucadmin.deregistercluster',
+                            'DeregisterCluster')
+
+    def do_deregister_walrus(self):
+        self._do_deregister('deregister_walrus',
+                            'eucadmin.deregisterwalrus',
+                            'DeregisterWalrus')
+
+    def do_deregister_sc(self):
+        self._do_deregister('deregister_sc',
+                            'eucadmin.deregisterstoragecontroller',
+                            'DeregisterStorageController')
+
+    def do_deregister_vmwarebroker(self):
+        self._do_deregister('deregister_vmwarebroker',
+                            'eucadmin.deregistervmwarebroker',
+                            'DeregisterVMwareBroker')
+        # Make some changes in eucalyptus.conf file
+        self.config.update(ConfigBrokerDereg)
+        
+
+    def _sync_node(self, node):
+        path = os.path.join(self.config['EUCALYPTUS'],
+                            'var/lib/eucalyptus/keys')
+        # probably need to look in partition directory
+        cls = boto.utils.find_class('eucadmin.synckeys', 'SyncKeys')
+        files = ['node-cert.pem', 'cluster-cert.pem', 'cloud-cert.pem',
+                 'node-pk.pem']
+        req = cls([path], path, node, files,
+                  use_rsync=(not self.options.no_rsync),
+                  use_scp=(not self.options.no_scp))
+        return req.sync()
+
+    def _print_sync_error(self, node):
+        s = 'ERROR: could not synchronize keys with %s\n' % node
+        s += 'The configuration will not have this node.'
+        self.warn(s)
+        ssh_key = self.get_sshkey()
+        if not ssh_key:
+            self.warn('User $EUCA_USER may have to run ssh-keygen!')
+        else:
+            print "Hint: to setup passwordless login to the nodes as"
+            print "user $EUCA_USER, you can"
+            print "run the following commands on node $NEWNODE:"
+            print "sudo -u $EUCA_USER mkdir -p ~${EUCA_USER}/.ssh"
+            print "sudo -u $EUCA_USER tee ~${EUCA_USER}/.ssh/authorized_keys > /dev/null <<EOT"
+            print self.ssh_key
+            print "EOT"
+            print
+            print "Be sure that authorized_keys is not group/world readable or writable"
+
+    def do_register_nodes(self):
+        if self.options.reg_nodes:
+            if not self.check_local_service('CC'):
+                self.warn('CC must be local service to run this command')
+                sys.exit(1)
+            missing = self.check_local_credentials()
+            if missing:
+                print 'The following expected credentials are missing:'
+                for cred in missing:
+                    print '\t%s' % cred
+                sys.exit(1)
+            msg = 'INFO: We expect all nodes to have eucalyptus'
+            msg += ' installed in $EUCALYPTUS for key synchronization.'
+            print msg
+            current_nodes = self.config['NODES'].split()
+
+            for node_string in self.options.reg_nodes:
+                nodes_to_add = node_string.split()
+                for node in nodes_to_add:
+                    if node not in current_nodes:
+                        current_nodes.append(node)
+                    if not self._sync_node(node):
+                        self._print_sync_error(node)
+            self.config['NODES'] = ' '.join(current_nodes)
+            print '...done'
+
+    def do_deregister_nodes(self):
+        if self.options.dereg_nodes:
+            current_nodes = self.config['NODES'].split()
+            for node in self.options.dereg_nodes:
+                if node in current_nodes:
+                    current_nodes.remove(node)
+                else:
+                    self.warn('Node %s is not currently registered' % node)
+            self.config['NODES'] = ' '.join(current_nodes)
+
+    def do_help_register(self):
+        if self.options.help_register:
+            print RegisterHelp
+
+if __name__ == "__main__":
+    ec = EucaConf()
+    ec.main()

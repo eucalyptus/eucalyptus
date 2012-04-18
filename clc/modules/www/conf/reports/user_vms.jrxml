@@ -1,0 +1,263 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="Instances" language="groovy" pageWidth="984" pageHeight="600" columnWidth="984" leftMargin="0" rightMargin="0" topMargin="0" bottomMargin="0" whenResourceMissingType="Empty" isIgnorePagination="true">
+	<property name="ireport.zoom" value="1.0"/>
+	<property name="ireport.x" value="0"/>
+	<property name="ireport.y" value="0"/>
+	<property name="euca.report.group" value="user"/>
+	<style name="Title" isDefault="false" fontName="Verdana" fontSize="26" isBold="true" pdfFontName="Helvetica-Bold"/>
+	<style name="SubTitle" isDefault="false" mode="Transparent" forecolor="#000000" hAlign="Center" vAlign="Middle" fontName="Verdana" fontSize="10"/>
+	<style name="Column header" isDefault="false" forecolor="#323232" hAlign="Center" vAlign="Middle" fontName="Verdana" fontSize="8" isBold="true" isItalic="false" isUnderline="false" isStrikeThrough="false"/>
+	<style name="Detail" isDefault="false" hAlign="Center" vAlign="Middle" fontName="Verdana" fontSize="8" isBold="false" isItalic="false" isUnderline="false" isStrikeThrough="false"/>
+	<style name="alternating" isDefault="false" forecolor="#F5F5F5" fontName="Verdana" fontSize="12">
+		<conditionalStyle>
+			<conditionExpression><![CDATA[new Boolean($V{REPORT_COUNT}.intValue() % 2 == 0 )]]></conditionExpression>
+			<style isDefault="false" style="alternating" backcolor="#F5F562"/>
+		</conditionalStyle>
+	</style>
+	<style name="table" isDefault="false" hAlign="Center" vAlign="Middle" fontName="Verdana" fontSize="16">
+		<box>
+			<pen lineWidth="0.0" lineColor="#000000"/>
+			<topPen lineWidth="0.0"/>
+			<leftPen lineWidth="0.0"/>
+			<bottomPen lineWidth="0.0"/>
+			<rightPen lineWidth="0.0"/>
+		</box>
+	</style>
+	<style name="table_TH" isDefault="false" mode="Opaque" backcolor="#FFCC33" hAlign="Center" vAlign="Middle" fontName="Verdana" fontSize="14" isBold="true">
+		<box>
+			<pen lineWidth="0.5" lineColor="#000000"/>
+		</box>
+	</style>
+	<style name="table_CH" isDefault="false" mode="Opaque" backcolor="#FFFF66" hAlign="Center" vAlign="Middle" fontName="Verdana">
+		<pen lineWidth="1.0"/>
+		<box>
+			<pen lineWidth="0.5" lineColor="#000000"/>
+			<bottomPen lineWidth="1.0" lineColor="#000000"/>
+		</box>
+	</style>
+	<style name="table_TD" isDefault="false" mode="Opaque" backcolor="#FFFFFF" hAlign="Center" vAlign="Middle" fontName="Verdana" fontSize="10">
+		<box>
+			<pen lineWidth="0.5" lineColor="#000000"/>
+			<topPen lineWidth="0.0" lineStyle="Solid"/>
+			<leftPen lineWidth="1.0" lineStyle="Solid"/>
+			<bottomPen lineWidth="0.5" lineStyle="Solid"/>
+			<rightPen lineWidth="1.0" lineStyle="Solid"/>
+		</box>
+		<conditionalStyle>
+			<conditionExpression><![CDATA[new Boolean($V{REPORT_COUNT}.intValue()%2==0)]]></conditionExpression>
+			<style isDefault="false" style="table_TD" backcolor="#FFFEF8"/>
+		</conditionalStyle>
+	</style>
+	<subDataset name="Table Dataset 1_1">
+		<parameter name="EUCA_NOT_BEFORE_DATE" class="java.util.Date"/>
+		<parameter name="EUCA_NOT_AFTER_DATE" class="java.util.Date"/>
+		<field name="userName" class="java.lang.String"/>
+		<field name="m1small" class="java.lang.Integer"/>
+		<field name="c1medium" class="java.lang.Integer"/>
+		<field name="m1large" class="java.lang.Integer"/>
+		<field name="m1xlarge" class="java.lang.Integer"/>
+		<field name="c1xlarge" class="java.lang.Integer"/>
+		<field name="m1smallTime" class="java.lang.Integer"/>
+		<field name="c1mediumTime" class="java.lang.Integer"/>
+		<field name="m1largeTime" class="java.lang.Integer"/>
+		<field name="m1xlargeTime" class="java.lang.Integer"/>
+		<field name="c1xlargeTime" class="java.lang.Integer"/>
+	</subDataset>
+	<parameter name="EUCA_NOT_BEFORE" class="java.lang.Long"/>
+	<parameter name="EUCA_NOT_AFTER" class="java.lang.Long"/>
+	<parameter name="EUCA_NOT_BEFORE_DATE" class="java.util.Date"/>
+	<parameter name="EUCA_NOT_AFTER_DATE" class="java.util.Date"/>
+	<parameter name="EUCA_USER_RESULTS" class="java.util.List"/>
+	<parameter name="EUCA_GROUP_RESULTS" class="java.util.List"/>
+	<queryString>
+		<![CDATA[]]>
+	</queryString>
+	<field name="userName" class="java.lang.String"/>
+	<field name="m1small" class="java.lang.Integer"/>
+	<field name="c1medium" class="java.lang.Integer"/>
+	<field name="m1large" class="java.lang.Integer"/>
+	<field name="m1xlarge" class="java.lang.Integer"/>
+	<field name="c1xlarge" class="java.lang.Integer"/>
+	<field name="m1smallTime" class="java.lang.Integer"/>
+	<field name="c1mediumTime" class="java.lang.Integer"/>
+	<field name="m1largeTime" class="java.lang.Integer"/>
+	<field name="m1xlargeTime" class="java.lang.Integer"/>
+	<field name="c1xlargeTime" class="java.lang.Integer"/>
+	<summary>
+		<band height="50">
+			<componentElement>
+				<reportElement key="table" style="table" x="0" y="0" width="984" height="50"/>
+				<jr:table xmlns:jr="http://jasperreports.sourceforge.net/jasperreports/components" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports/components http://jasperreports.sourceforge.net/xsd/components.xsd">
+					<datasetRun subDataset="Table Dataset 1_1">
+						<dataSourceExpression><![CDATA[new net.sf.jasperreports.engine.data.JRBeanCollectionDataSource($P{EUCA_USER_RESULTS})]]></dataSourceExpression>
+					</datasetRun>
+					<jr:column width="80">
+						<jr:columnHeader style="table_TH" height="90" rowSpan="3">
+							<staticText>
+								<reportElement style="SubTitle" mode="Transparent" x="0" y="0" width="80" height="90"/>
+								<textElement>
+									<font isBold="true"/>
+								</textElement>
+								<text><![CDATA[User]]></text>
+							</staticText>
+						</jr:columnHeader>
+						<jr:detailCell style="table_TD" height="29" rowSpan="1">
+							<textField>
+								<reportElement style="Detail" x="0" y="0" width="80" height="29"/>
+								<textElement>
+									<font isBold="true"/>
+								</textElement>
+								<textFieldExpression class="java.lang.String"><![CDATA[$F{userName}]]></textFieldExpression>
+							</textField>
+						</jr:detailCell>
+					</jr:column>
+					<jr:columnGroup width="551">
+						<jr:columnHeader style="table_TH" height="30" rowSpan="1">
+							<staticText>
+								<reportElement style="SubTitle" x="0" y="0" width="551" height="30"/>
+								<textElement>
+									<font isBold="true"/>
+								</textElement>
+								<text><![CDATA[Instance Data]]></text>
+							</staticText>
+						</jr:columnHeader>
+						<jr:columnGroup width="275">
+							<jr:columnHeader style="table_TH" height="30" rowSpan="1">
+								<staticText>
+									<reportElement style="SubTitle" x="0" y="0" width="225" height="30"/>
+									<textElement>
+										<font isBold="true"/>
+									</textElement>
+									<text><![CDATA[Type-Hours]]></text>
+								</staticText>
+							</jr:columnHeader>
+							<jr:column width="55">
+								<jr:columnHeader style="table_CH" height="30" rowSpan="1">
+									<staticText>
+										<reportElement style="Column header" x="0" y="0" width="55" height="30"/>
+										<textElement/>
+										<text><![CDATA[m1.small]]></text>
+									</staticText>
+								</jr:columnHeader>
+								<jr:detailCell style="table_TD" height="29" rowSpan="1">
+									<textField>
+										<reportElement style="Detail" x="0" y="0" width="55" height="29"/>
+										<textElement/>
+										<textFieldExpression class="java.lang.Integer"><![CDATA[$F{m1small}]]></textFieldExpression>
+									</textField>
+								</jr:detailCell>
+							</jr:column>
+							<jr:column width="55">
+								<jr:columnHeader style="table_CH" height="30" rowSpan="1">
+									<staticText>
+										<reportElement style="Column header" x="0" y="0" width="55" height="30"/>
+										<textElement/>
+										<text><![CDATA[c1.medium]]></text>
+									</staticText>
+								</jr:columnHeader>
+								<jr:detailCell style="table_TD" height="29" rowSpan="1">
+									<textField>
+										<reportElement style="Detail" x="0" y="0" width="55" height="29"/>
+										<textElement/>
+										<textFieldExpression class="java.lang.Integer"><![CDATA[$F{m1smallTime}]]></textFieldExpression>
+									</textField>
+								</jr:detailCell>
+							</jr:column>
+							<jr:column width="55">
+								<jr:columnHeader style="table_CH" height="30" rowSpan="1">
+									<staticText>
+										<reportElement style="Column header" x="0" y="0" width="55" height="30"/>
+										<textElement/>
+										<text><![CDATA[m1.large]]></text>
+									</staticText>
+								</jr:columnHeader>
+								<jr:detailCell style="table_TD" height="29" rowSpan="1">
+									<textField>
+										<reportElement style="Detail" x="0" y="0" width="55" height="29"/>
+										<textElement/>
+										<textFieldExpression class="java.lang.Integer"><![CDATA[$F{c1medium}]]></textFieldExpression>
+									</textField>
+								</jr:detailCell>
+							</jr:column>
+							<jr:column width="55">
+								<jr:columnHeader style="table_CH" height="30" rowSpan="1">
+									<staticText>
+										<reportElement style="Column header" x="0" y="0" width="55" height="30"/>
+										<textElement/>
+										<text><![CDATA[m1.xlarge]]></text>
+									</staticText>
+								</jr:columnHeader>
+								<jr:detailCell style="table_TD" height="29" rowSpan="1">
+									<textField>
+										<reportElement style="Detail" x="0" y="0" width="55" height="29"/>
+										<textElement/>
+										<textFieldExpression class="java.lang.Integer"><![CDATA[$F{c1mediumTime}]]></textFieldExpression>
+									</textField>
+								</jr:detailCell>
+							</jr:column>
+							<jr:column width="55">
+								<jr:columnHeader style="table_CH" height="30" rowSpan="1">
+									<staticText>
+										<reportElement style="Column header" x="0" y="0" width="55" height="30"/>
+										<textElement/>
+										<text><![CDATA[c1.xlarge]]></text>
+									</staticText>
+								</jr:columnHeader>
+								<jr:detailCell style="table_TD" height="29" rowSpan="1">
+									<textField>
+										<reportElement style="Detail" x="0" y="0" width="55" height="29"/>
+										<textElement/>
+										<textFieldExpression class="java.lang.Integer"><![CDATA[$F{m1large}]]></textFieldExpression>
+									</textField>
+								</jr:detailCell>
+							</jr:column>
+						</jr:columnGroup>
+						<jr:columnGroup width="276">
+							<jr:columnHeader style="table_TH" height="30" rowSpan="1">
+								<staticText>
+									<reportElement style="SubTitle" x="0" y="0" width="226" height="30"/>
+									<textElement>
+										<font isBold="true"/>
+									</textElement>
+									<text><![CDATA[Resource Usage]]></text>
+								</staticText>
+							</jr:columnHeader>
+							<jr:column width="138">
+								<jr:columnHeader style="table_CH" height="30" rowSpan="1">
+									<staticText>
+										<reportElement style="Column header" x="0" y="0" width="138" height="30"/>
+										<textElement/>
+										<text><![CDATA[Network I/O Megs]]></text>
+									</staticText>
+								</jr:columnHeader>
+								<jr:detailCell style="table_TD" height="29" rowSpan="1">
+									<textField>
+										<reportElement style="Detail" x="0" y="0" width="138" height="29"/>
+										<textElement/>
+										<textFieldExpression class="java.lang.Integer"><![CDATA[$F{c1xlarge}]]></textFieldExpression>
+									</textField>
+								</jr:detailCell>
+							</jr:column>
+							<jr:column width="138">
+								<jr:columnHeader style="table_CH" height="30" rowSpan="1">
+									<staticText>
+										<reportElement style="Column header" x="0" y="0" width="138" height="30"/>
+										<textElement/>
+										<text><![CDATA[Disk I/O Megs]]></text>
+									</staticText>
+								</jr:columnHeader>
+								<jr:detailCell style="table_TD" height="29" rowSpan="1">
+									<textField>
+										<reportElement style="Detail" x="0" y="0" width="138" height="29"/>
+										<textElement/>
+										<textFieldExpression class="java.lang.Integer"><![CDATA[$F{c1xlargeTime}]]></textFieldExpression>
+									</textField>
+								</jr:detailCell>
+							</jr:column>
+						</jr:columnGroup>
+					</jr:columnGroup>
+				</jr:table>
+			</componentElement>
+		</band>
+	</summary>
+</jasperReport>

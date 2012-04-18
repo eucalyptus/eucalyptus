@@ -1,0 +1,73 @@
+<!DOCTYPE ui:UiBinder SYSTEM "http://dl.google.com/gwt/DTD/xhtml.ent">
+<ui:UiBinder xmlns:ui="urn:ui:com.google.gwt.uibinder"
+    xmlns:g="urn:import:com.google.gwt.user.client.ui"
+    xmlns:euca="urn:import:com.eucalyptus.webui.client.view">
+    
+    <ui:style>
+        .boundingBox {
+        	width:15em;
+        	height:7em;
+        }
+        .topLeft {
+        	border-top:1px solid #AAAAAA;
+        	border-left:1px solid #AAAAAA;
+        	border-right:1px solid #AAAAAA;
+        	background-color:#F1F1F1;
+        }
+        .topRight {
+        	border-bottom:1px solid #AAAAAA;
+        	width:100%;
+        }
+        .bottom {
+        	border-bottom:1px solid #AAAAAA;
+            border-left:1px solid #AAAAAA;
+            border-right:1px solid #AAAAAA;
+            background-color:#F1F1F1;
+        }
+        .boxShadow {
+        	-webkit-box-shadow:0px 0px 8px #DDDDDD;
+            -moz-box-shadow:0px 0px 8px #DDDDDD;
+            box-shadow:0px 0px 8px #DDDDDD;
+        }
+        .links {
+        	margin-top:2px;
+        	font-size:85%;
+        	color:#2E52A4;
+        	cursor:pointer;
+        	cursor:hand;
+        }
+    </ui:style>
+    
+    <g:HTMLPanel>
+        <table class="{style.boundingBox}">
+            <tbody>
+                <tr style="height:1px;">
+                    <td class="{style.topLeft} {style.boxShadow}"><euca:UserLink ui:field="userLink"/></td>
+                    <td class="{style.topRight}">&nbsp;</td>
+                </tr>
+                <tr>
+                    <td colspan="2" class="{style.bottom} {style.boxShadow}">
+                        <div style="margin:8px;">
+                            <div style="margin-bottom:8px;">
+                                <g:Anchor styleName="{style.links}" ui:field="profileLink">View/change profile</g:Anchor>
+                            </div>
+                            <div style="margin-bottom:8px;">
+                                <g:Anchor styleName="{style.links}" ui:field="keyLink">View access key</g:Anchor>
+                            </div>
+                            <div style="margin-bottom:8px;">
+                                <g:Anchor styleName="{style.links}" ui:field="passwordLink">Change password</g:Anchor>
+                            </div>
+                            <div style="margin-bottom:8px;">
+                                <g:Anchor styleName="{style.links}" ui:field="credLink">Download new credentials</g:Anchor>
+                            </div>
+                            <div style="border-top:1px solid #888888">
+                                <g:Anchor styleName="{style.links}" ui:field="logoutLink">Sign out</g:Anchor>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </g:HTMLPanel>
+    
+</ui:UiBinder> 

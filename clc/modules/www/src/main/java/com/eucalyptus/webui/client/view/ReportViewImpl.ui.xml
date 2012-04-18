@@ -1,0 +1,137 @@
+<!DOCTYPE ui:UiBinder SYSTEM "http://dl.google.com/gwt/DTD/xhtml.ent">
+<ui:UiBinder xmlns:ui="urn:ui:com.google.gwt.uibinder"
+    xmlns:g="urn:import:com.google.gwt.user.client.ui"
+    xmlns:d="urn:import:com.google.gwt.user.datepicker.client">
+    
+    <ui:image field="pdf" src="image/pdf-color.png"></ui:image>
+    <ui:image field="csv" src="image/csv-color.png"></ui:image>
+    <ui:image field="html" src="image/html-color.png"></ui:image>
+    
+    <ui:style>
+        .boundingBox {
+        	width:100%;
+        }
+        .toolbar {
+        	font-size:85%;
+        	font-weight:bold;
+        	color:#4D4D4D;
+        	width:100%;
+        }
+        .toolbar td {
+        	text-align:center;
+        	padding-top:6px;
+        	padding-bottom:4px;
+        }
+        .input {
+            background-color:#F1F1F1;
+            border-style: solid;
+            border-width: 1px;
+            border-color: #999999 #CCCCCC #CCCCCC #999999;        
+        }
+        .list {
+        	width:10em;
+        	background-color:#F1F1F1;
+            border-style: solid;
+            border-width: 1px;
+            border-color: #999999 #CCCCCC #CCCCCC #999999;                	
+        }
+        @sprite .pdf {
+            height:28px;
+            width:28px;
+            gwt-image:'pdf';
+            background-repeat:no-repeat;
+            background-position:center center;
+            display:inline-block;                   	
+        }
+        @sprite .csv {
+            height:28px;
+            width:28px;
+            gwt-image:'csv';
+            background-repeat:no-repeat;
+            background-position:center center;
+            display:inline-block;                       
+        }
+        @sprite .html {
+            height:28px;
+            width:28px;
+            gwt-image:'html';
+            background-repeat:no-repeat;
+            background-position:center center;
+            display:inline-block;                       
+        }
+        a.link {
+        	display:inline-block;
+        	outline:none;
+        	cursor:pointer;
+        	cursor:hand;
+        }
+        a.link:hover, a.link:focus {
+        	border:1px solid #AAAAAA;
+        }
+        .mime {
+        	margin-left:auto;
+        	margin-right:auto;
+        }
+        .mime td {
+        	width:64px;
+        	height:36px;
+        	vertical-align:middle;
+        }
+    </ui:style>
+    
+    <ui:with field="global" type="com.eucalyptus.webui.client.view.GlobalResources"/>
+    
+    <g:DockLayoutPanel unit="PX">
+        <g:north size="64">
+            <g:HTMLPanel addStyleNames="{style.boundingBox}">
+                <table class="{style.toolbar}">
+                    <colgroup width="20%"/>
+                    <colgroup width="20%"/>
+                    <colgroup width="16%"/>
+                    <colgroup width="16%"/>
+                    <colgroup width="16%"/>
+                    <colgroup width="12%"/>
+                    <tbody>
+                        <tr>
+                            <td>From</td>
+                            <td>Through</td>
+                            <td>Report type</td>
+                            <td>Criteria</td>
+                            <td>Group by</td>
+                            <td>&nbsp;</td>
+                        </tr>
+                        <tr>
+                            <td><d:DateBox addStyleNames="{style.input}" ui:field="fromDate"/></td>
+                            <td><d:DateBox addStyleNames="{style.input}" ui:field="toDate"/></td>
+                            <td><g:ListBox addStyleNames="{style.list}" ui:field="type"/></td>
+                            <td><g:ListBox addStyleNames="{style.list}" ui:field="criteria"/></td>
+                            <td><g:ListBox addStyleNames="{style.list}" ui:field="groupBy"/></td>
+                            <td>
+                                <g:Anchor styleName="{global.buttonCss.button}" ui:field="generateButton">
+                                    <span class="{global.buttonCss.report} {global.buttonCss.icon}"/>Generate
+                                </g:Anchor>                            
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </g:HTMLPanel>
+        </g:north>
+        <g:south size="36">
+            <g:HTMLPanel>
+                <table class="{style.mime}">
+                    <tbody>
+                        <tr>
+                            <td><g:Anchor styleName="{style.link}" ui:field="pdfButton"><span class="{style.pdf}"/></g:Anchor></td>
+                            <td><g:Anchor styleName="{style.link}" ui:field="csvButton"><span class="{style.csv}"/></g:Anchor></td>
+                            <td><g:Anchor styleName="{style.link}" ui:field="htmlButton"><span class="{style.html}"/></g:Anchor></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </g:HTMLPanel>
+        </g:south>
+        <g:center>
+            <g:LayoutPanel ui:field="contentPanel"/>
+        </g:center>
+    </g:DockLayoutPanel>
+    
+</ui:UiBinder> 

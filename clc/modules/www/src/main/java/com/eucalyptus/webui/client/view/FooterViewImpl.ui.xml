@@ -1,0 +1,94 @@
+<!DOCTYPE ui:UiBinder SYSTEM "http://dl.google.com/gwt/DTD/xhtml.ent">
+<ui:UiBinder xmlns:ui="urn:ui:com.google.gwt.uibinder"
+    xmlns:g="urn:import:com.google.gwt.user.client.ui"
+    xmlns:euca="urn:import:com.eucalyptus.webui.client.view">
+    
+    <ui:style>
+        .footerBar {
+        	width:100%;
+        	height:100%;
+        	border-top-style:solid;
+        	border-top-width:1px;
+        	border-top-color:#D1D1D1;
+        	background: #F5F5F5;
+            background:literal("-moz-linear-gradient(top, #F5F5F5 0%, #cccccc 100%, #FFFFFF 100%, #DFDFDF 100%)");
+            background:literal("-webkit-gradient(linear, left top, left bottom, color-stop(0%,#F5F5F5), color-stop(100%,#cccccc), color-stop(100%,#FFFFFF), color-stop(100%,#DFDFDF))");
+            filter:literal("progid:DXImageTransform.Microsoft.gradient( startColorstr='#F5F5F5', endColorstr='#DFDFDF',GradientType=0 )");
+            background:literal("-o-linear-gradient(top, #F5F5F5 0%,#cccccc 100%,#FFFFFF 100%,#DFDFDF 100%)");
+        }
+        .horizontalLeft {
+            float:left;
+        }
+        .horizontalRight {
+            float:right;
+        }
+        .vcenter {
+        	display:table-cell;
+            vertical-align:middle;
+        }
+        .logDiv {
+        	display:table;
+        	height:100%;
+        }
+        .rightDiv {
+        	display:table;
+        	height:100%;
+        }
+        .splitter {
+        	width:1px;
+        	height:80%;
+        	border-left:1px solid #AAAAAA;
+        	border-right:1px solid #FFFFFF;
+        }
+        .version {
+        	font-size:70%;
+        	font-style:italic;
+        	color:#666666;
+        	margin-right:6px;
+        	margin-left:6px;
+        	text-align:center;   	
+        }
+        .log {
+        	font-size:80%;
+            font-style:italic;
+            color:#333333;
+            margin-left:4px;
+            margin-top:4px;
+            float:left;
+        }
+        .fullHeight {
+        	height:100%;
+        }
+        .icon {
+        	margin-top:4px;
+        	margin-left:4px;
+        	float:left;
+        }
+    </ui:style>
+        
+    <g:HTMLPanel styleName="{style.footerBar}">
+        <div class="{style.horizontalLeft} {style.logDiv}">
+            <g:Image styleName="{style.icon}" url="themes/active/barloading.gif" ui:field="loadingIcon"/>
+            <g:Image styleName="{style.icon}" url="themes/active/redx.png" ui:field="errorIcon"/>
+            <g:Label styleName="{style.log}" ui:field="status"></g:Label>
+        </div>
+        <div class="{style.horizontalRight} {style.rightDiv}">
+            <div class="{style.vcenter}">
+                <g:Label styleName="{style.version}" ui:field="version">EEE 3.0</g:Label>
+            </div>
+        </div>
+        <div class="{style.horizontalRight} {style.rightDiv}">
+            <div class="{style.vcenter}">
+                <div class="{style.splitter}">&nbsp;</div>
+            </div>
+        </div>
+        <div class="{style.horizontalRight} {style.fullHeight}">
+            <euca:LogSwitch ui:field="logSwitch"/>
+        </div>
+        <div class="{style.horizontalRight} {style.rightDiv}">
+            <div class="{style.vcenter}">
+                <div class="{style.splitter}">&nbsp;</div>
+            </div>
+        </div>
+    </g:HTMLPanel>
+</ui:UiBinder> 

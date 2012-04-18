@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+
+<xsd:schema xmlns="http://www.eucalyptus.com/schema/cloud/1.6"
+            xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+            xmlns:mule="http://www.mulesource.org/schema/mule/core/2.0"
+            targetNamespace="http://www.eucalyptus.com/schema/cloud/1.6"
+            elementFormDefault="qualified"
+            attributeFormDefault="unqualified">
+
+  <xsd:import namespace="http://www.w3.org/XML/1998/namespace"/>
+  <xsd:import namespace="http://www.springframework.org/schema/beans" schemaLocation="http://www.springframework.org/schema/beans"/>
+  <xsd:import namespace="http://www.mulesource.org/schema/mule/core/2.0" schemaLocation="http://www.mulesource.org/schema/mule/core/2.0/mule.xsd"/>
+
+  <xsd:element name="connector" type="eucaConnectorType" substitutionGroup="mule:abstract-connector">
+    <xsd:annotation>
+      <xsd:documentation>
+        eucalyptus webservices
+      </xsd:documentation>
+    </xsd:annotation>
+  </xsd:element>
+
+  <xsd:complexType name="eucaConnectorType">
+    <xsd:complexContent>
+      <xsd:extension base="mule:connectorType">
+        <xsd:attribute name="port" type="xsd:string"/>
+      </xsd:extension>
+    </xsd:complexContent>
+  </xsd:complexType>
+
+  <xsd:element name="inbound-endpoint" type="eucaInboundEndpointType" substitutionGroup="mule:abstract-inbound-endpoint"/>
+  <xsd:complexType name="eucaInboundEndpointType">
+    <xsd:complexContent>
+      <xsd:extension base="mule:inboundEndpointType">
+        <xsd:sequence>
+          <xsd:group ref="mule:defaultEndpointElements"/>
+        </xsd:sequence>
+        <xsd:attributeGroup ref="inboundPropertyAttributes"/>
+        <xsd:attributeGroup ref="generalPropertyAttributes"/>
+      </xsd:extension>
+    </xsd:complexContent>
+  </xsd:complexType>
+
+  <xsd:element name="outbound-endpoint" type="eucaOutboundEndpointType" substitutionGroup="mule:abstract-outbound-endpoint"/>
+  <xsd:complexType name="eucaOutboundEndpointType">
+    <xsd:complexContent>
+      <xsd:extension base="mule:outboundEndpointType">
+        <xsd:sequence>
+          <xsd:group ref="mule:defaultEndpointElements"/>
+        </xsd:sequence>
+        <xsd:attributeGroup ref="outboundPropertyAttributes"/>
+        <xsd:attributeGroup ref="generalPropertyAttributes"/>
+      </xsd:extension>
+    </xsd:complexContent>
+  </xsd:complexType>
+
+  <xsd:element name="endpoint" type="eucaGlobalEndpointType" substitutionGroup="mule:abstract-global-endpoint"/>
+  <xsd:complexType name="eucaGlobalEndpointType">
+    <xsd:complexContent>
+      <xsd:extension base="mule:globalEndpointType">
+        <xsd:sequence>
+          <xsd:group ref="mule:defaultEndpointElements"/>
+        </xsd:sequence>
+        <xsd:attributeGroup ref="inboundPropertyAttributes"/>
+        <xsd:attributeGroup ref="generalPropertyAttributes"/>
+      </xsd:extension>
+    </xsd:complexContent>
+  </xsd:complexType>
+
+  <xsd:attributeGroup name="inboundPropertyAttributes">
+  </xsd:attributeGroup>
+
+  <xsd:attributeGroup name="outboundPropertyAttributes">
+  </xsd:attributeGroup>
+
+  <xsd:attributeGroup name="generalPropertyAttributes">
+  </xsd:attributeGroup>
+
+</xsd:schema>
+

@@ -1,0 +1,587 @@
+#!/bin/bash
+#Copyright (c) 2009  Eucalyptus Systems, Inc.	
+#
+#This program is free software: you can redistribute it and/or modify
+#it under the terms of the GNU General Public License as published by 
+#the Free Software Foundation, only version 3 of the License.  
+# 
+#This file is distributed in the hope that it will be useful, but WITHOUT
+#ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+#FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+#for more details.  
+#
+#You should have received a copy of the GNU General Public License along
+#with this program.  If not, see <http://www.gnu.org/licenses/>.
+# 
+#Please contact Eucalyptus Systems, Inc., 130 Castilian
+#Dr., Goleta, CA 93101 USA or visit <http://www.eucalyptus.com/licenses/> 
+#if you need additional information or have any questions.
+#
+#This file may incorporate work covered under the following copyright and
+#permission notice:
+#
+#  Software License Agreement (BSD License)
+#
+#  Copyright (c) 2008, Regents of the University of California
+#  
+#
+#  Redistribution and use of this software in source and binary forms, with
+#  or without modification, are permitted provided that the following
+#  conditions are met:
+#
+#    Redistributions of source code must retain the above copyright notice,
+#    this list of conditions and the following disclaimer.
+#
+#    Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+#
+#  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+#  IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+#  TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+#  PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+#  OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+#  EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+#  PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+#  PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+#  LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+#  NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+#  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. USERS OF
+#  THIS SOFTWARE ACKNOWLEDGE THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE
+#  LICENSED MATERIAL, COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS
+#  SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
+#  IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
+#  BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
+#  THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+#  OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
+#  WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
+#  ANY SUCH LICENSES OR RIGHTS.
+#
+#
+# Init script for the Eucalyptus cluster controller
+#
+# chkconfig: 2345 99 05
+# description: script for starting and stopping eucalyptus cluster controller
+#
+### BEGIN INIT INFO
+# Provides:                   eucalyptus-cc
+# Required-Start:             $remote_fs $syslog 
+# Required-Stop:              $remote_fs $syslog 
+# Default-Start:              2 3 4 5
+# Default-Stop:               0 1 6
+# Short-Description:          Start Eucalyptus cluster controller
+# Description:                Start the Eucalyptus cluster controller
+### END INIT INFO
+#
+
+# Do NOT "set -e"
+
+# if we have lsb functions let's source them
+WE_HAVE_LSB="N"
+if [ -e /lib/lsb/init-functions ]; then
+	. /lib/lsb/init-functions
+	# very old lsb don't have the functions we need
+	if type log_daemon_msg > /dev/null 2> /dev/null ; then
+		WE_HAVE_LSB="Y"
+	fi
+fi
+
+if [ "$EUID" != "0" ]; then
+	echo "Eucalyptus init scripts must be run as root."
+	exit 1
+fi
+
+# I just wanted to set PATH to be the system PATH, but if a user install
+# eucalyptus manually, it may have binaries in a non-standard position:
+# hence we need to keep the PATH we receive.
+export PATH=/sbin:/usr/sbin:/bin:/usr/bin:$PATH
+DESC="Eucalyptus cluster controller"
+NAME=eucalyptus-cc
+EUCA_USER="eucalyptus"
+
+# honor the ENV variable if found otherwise look in root
+if [ -z "$EUCALYPTUS" ] ; then
+       EUCALYPTUS="@prefix@"
+       if [ ! -e ${EUCALYPTUS}/etc/eucalyptus/eucalyptus.conf ] ; then
+              EUCALYPTUS="/"
+       fi
+fi
+export EUCALYPTUS
+
+create_httpd_config() {
+	IPS="all"
+
+	# let's configure the common parts for both CC and NC
+        sed -e "s|EUCALYPTUS|$EUCALYPTUS|" \
+            -e "s|APACHE2_MODULE_DIR|$APACHE2_MODULE_DIR|" \
+            -e "s|AXIS2C_HOME|$AXIS2C_HOME|" \
+            -e "s|\(ServerRoot\).*|\1 "$HTTPD_HOME"|" \
+            -e "s|EUCA_USER|$EUCA_USER|" \
+            $EUCALYPTUS/etc/eucalyptus/httpd.conf \
+            > $EUCALYPTUS/etc/eucalyptus/httpd-tmp.conf
+
+	# if we find authz load it (needed by ubuntu)
+	if [ -e $HTTPD_HOME/usr/lib/apache2/modules/mod_authz_host.so ]; then
+		echo "LoadModule authz_host_module /usr/lib/apache2/modules/mod_authz_host.so" >> $EUCALYPTUS/etc/eucalyptus/httpd-tmp.conf
+	fi
+
+	# let's configure the CC
+        sed -e "s|\(Listen\).*|\1 $CC_PORT|" \
+            -e "s|\(PidFile\).*|\1 $EUCALYPTUS/var/run/eucalyptus/eucalyptus-cc.pid|" \
+            -e "s|\(Allow from\).*|\1 $IPS|" \
+            -e "s|\(ErrorLog\).*|\1 $EUCALYPTUS/var/log/eucalyptus/httpd-cc_error_log|" \
+            -e "s|\(StartServers\).*|\1 5|" \
+            -e "s|\(MinSpareServers\).*|\1 5|" \
+            -e "s|\(MaxSpareServers\).*|\1 10|" \
+            -e "s|\(MaxClients\).*|\1 8|" \
+            -e "s|\(MinSpareThreads\).*|\1 25|" \
+            -e "s|\(MaxSpareThreads\).*|\1 75|" \
+            -e "s|\(ThreadsPerChild\).*|\1 1|" \
+            -e "s|\(ThreadLimit\).*|\1 64|" \
+            $EUCALYPTUS/etc/eucalyptus/httpd-tmp.conf \
+            > $EUCALYPTUS/etc/eucalyptus/httpd-cc.conf
+
+}
+
+# crude way to start the axis2c services
+do_start() {
+	# fixes #469984 (was against NC but CC may have similar issue)
+	IPTABLES="`which iptables 2> /dev/null`"
+	if [ -n "$IPTABLES" ]; then
+		[ -x $IPTABLES ] && $IPTABLES -L -n > /dev/null 2> /dev/null
+	fi
+
+	# let's check if we have apache2
+	if [ ! -x $HTTPD ]; then
+		echo
+		echo "cannot find httpd (was set to <$HTTPD>)!"
+		exit 1
+	fi
+	if [ ! -x $EUCALYPTUS/usr/sbin/euca_conf ]; then
+		echo "Some eucalyptus components are missing"
+		exit 1
+	fi
+
+	if ! $EUCALYPTUS/usr/sbin/euca_conf --check cc ; then
+		exit 1
+	fi
+
+	# we need IP forwarding and we need to use iptable over the bridge
+	if [ -w /proc/sys/net/ipv4/ip_forward ]; then
+		VAL=`cat /proc/sys/net/ipv4/ip_forward`
+		if [ "$VAL" = "0" ]; then
+			echo
+			echo -n "Enabling IP forwarding"
+			echo -n 1 > /proc/sys/net/ipv4/ip_forward
+		fi
+	fi
+
+	# let's be sure we have the right port for NC and CC
+	create_httpd_config
+
+	# if in MANAGED or STATIC mode, we need to use
+	# dhcpd, so better check we know how to use it
+	if [ "$VNET_MODE" = "MANAGED" -o "$VNET_MODE" = "STATIC" ]; then
+		if [ -z "$VNET_DHCPDAEMON" -o ! -x $VNET_DHCPDAEMON ]; then
+			echo
+			echo "Cannot find dhcp server!"
+			exit 1
+		fi
+		if ! $VNET_DHCPDAEMON --help 2>&1 |grep -- -tf > /dev/null ; then
+			echo
+			echo "dhcp server doesn't accept -tf option!"
+		fi
+	fi
+
+	ulimit -u 100000
+	ulimit -n 10000
+	# now we start the services
+	if  ! $HTTPD -f $EUCALYPTUS/etc/eucalyptus/httpd-cc.conf ; then
+		echo
+		echo "Failed to start the CC!"
+		exit 1
+	fi
+}
+
+do_status() {
+	pidfile=$EUCALYPTUS/var/run/eucalyptus/eucalyptus-cc.pid
+	if [ -s $pidfile ]; then
+		pid=`cat $pidfile 2> /dev/null`
+		if ps axww|grep $pid|grep httpd-cc.conf > /dev/null ; then
+			# we are good
+			return 0
+		fi
+	fi
+	return 1
+}
+
+# fully clean up all local CC state
+do_fullclean() {
+	pidfiles="`ls -1 $EUCALYPTUS/var/run/eucalyptus/vtund*.pid 2>/dev/null`"
+        pids=""
+        sids=""
+        for pidfile in $pidfiles ; do
+            if [ -s $pidfile ]; then
+                pid=`cat $pidfile 2> /dev/null`
+                sids="$pid $sids"
+                morepids="$pid"
+                for i in `pgrep -P $pid`; do
+                    morepids="$morepids `echo $i`"
+                    morepids="$morepids `pgrep -P $i`"
+                done
+                pids="$pids $morepids"
+                rm -f $pidfile
+            fi
+        done
+        if [ -n "$pids" ]; then
+            kill -15 $pids >/dev/null 2>&1
+            pkill -15 -s $sids >/dev/null 2>&1
+        fi
+
+        dopkill=0
+        for pid in $pids ; do
+            timeout=5
+            while [ $timeout -gt 0 ]; do
+                if ps $pid > /dev/null 2>&1 ; then
+                    sleep 1
+                    timeout=$(($timeout - 1))
+                    dopkill=1
+                else
+                    break
+                fi
+            done
+            if [ $timeout -eq 0 ]; then
+                kill -9 ${pid} >/dev/null 2>&1
+            fi
+        done
+        if [ $dopkill -gt 0 ]; then
+            pkill -9 -s $sids >/dev/null 2>&1
+        fi
+
+	rm -f $EUCALYPTUS/var/lib/eucalyptus/CC/*
+	rm -f /dev/shm/*eucalyptusCC*    
+}
+
+do_stop() {
+        pidfile="$EUCALYPTUS/var/run/eucalyptus/eucalyptus-cc.pid"
+
+        # let's be sure we are killing the right process                                                                                                                                                                                    
+        if ! do_status ; then
+                rm -f $pidfile
+                return
+        fi
+        # now kill the services                                                                                                                                                                                                             
+        pidfiles="$EUCALYPTUS/var/run/eucalyptus/net/euca-dhcp.pid $EUCALYPTUS/var/run/eucalyptus/eucalyptus-cc.pid $EUCALYPTUS/var/run/eucalyptus/httpd-dynserv.pid"
+        pids=""
+        sids=""
+        for pidfile in $pidfiles ; do
+            if [ -s $pidfile ]; then
+                pid=`cat $pidfile 2> /dev/null`
+                sids="$pid $sids"
+                morepids="$pid"
+                for i in `pgrep -P $pid`; do
+                    morepids="$morepids `echo $i`"
+                    morepids="$morepids `pgrep -P $i`"
+                done
+                pids="$pids $morepids"
+                rm -f $pidfile
+            fi
+        done
+        if [ -n "$pids" ]; then
+            kill -15 $pids >/dev/null 2>&1
+            pkill -9 -s $sids >/dev/null 2>&1
+        fi
+
+        dopkill=0
+        for pid in $pids ; do
+            timeout=5
+            while [ $timeout -gt 0 ]; do
+                if ps $pid > /dev/null 2>&1 ; then
+                    sleep 1
+                    timeout=$(($timeout - 1))
+                    dopkill=1
+                else
+                    break
+                fi
+            done
+            if [ $timeout -eq 0 ]; then
+                kill -9 ${pid} >/dev/null 2>&1
+            fi
+        done
+        if [ $dopkill -gt 0 ]; then
+            pkill -9 -s $sids >/dev/null 2>&1
+        fi
+}
+
+# Read configuration variable file if it is present
+if [ -r $EUCALYPTUS/etc/eucalyptus/eucalyptus.conf ]; then
+	. $EUCALYPTUS/etc/eucalyptus/eucalyptus.conf
+else
+	echo "Cannot find eucalyptus configuration file!"
+	exit 1
+fi
+if [ "$EUCALYPTUS" = "not_configured" ]; then
+	echo "EUCALYPTUS not configured!" 
+	exit 1
+fi
+
+if [ -z "$EUCA_USER" ] ; then
+	EUCA_USER="root"
+fi
+
+# let's try to pick the system apache2
+HTTPD="`which apache2 2> /dev/null`"		# .deb based machines
+if [ -z  "$HTTPD" ]; then
+	HTTPD="`which httpd 2> /dev/null`"	# .rpm based machines
+fi
+if [ -z  "$HTTPD" ]; then
+	HTTPD="`which httpd2 2> /dev/null`"	# newer .rpm based machines
+fi
+HTTPD_HOME="/"
+
+if [ -d "@AXIS2C_HOME@" -a -e @AXIS2C_HOME@/services/EucalyptusCC ]; then
+        export AXIS2C_HOME="@AXIS2C_HOME@"
+else
+    # let's find our dependencies
+    for y in $EUCALYPTUS/opt $EUCALYPTUS/packages $EUCALYPTUS /opt ; do
+	for x in `/bin/ls $y 2> /dev/null`; do
+		# this is for system or source installed
+		if [ "`echo $x | cut -f 1 -d -`" = "axis2c" ]; then
+			if [ -e $y/$x/lib/libmod_axis2.so -a  
+                             -e $y/$x/services/EucalyptusCC ]; then
+				export AXIS2C_HOME="$y/$x"
+                                break
+			fi
+		fi
+	done
+   done
+fi
+
+if [ -z "$AXIS2C_HOME" ]; then
+	echo "Cannot find AXIS2C_HOME?"
+	exit 1
+fi
+
+# do we have the httpd daemon?
+if [ -z "${HTTPD}" ]; then
+	echo "apache2/httpd daemon not found!"
+	exit 1
+fi
+
+if [ -z "${APACHE2_MODULE_DIR}" ]; then
+        export APACHE2_MODULE_DIR="@APACHE2_MODULE_DIR@"
+fi
+
+if [ ! -d "$APACHE2_MODULE_DIR" ]; then
+        echo "Cannot find APACHE2_MODULE_DIR?"
+        exit 1
+fi
+
+# set the library path correctly
+export LD_LIBRARY_PATH="$AXIS2C_HOME/lib:$AXIS2C_HOME/modules/rampart:$EUCALYPTUS/usr/lib/eucalyptus"
+
+case "$1" in
+  start)
+	if [ "$VERBOSE" != no ]; then
+		if [ "$WE_HAVE_LSB" = "Y" ]; then
+			log_daemon_msg "Starting $DESC" "$NAME"
+		else
+			echo -n "Starting $DESC: "
+		fi
+	fi
+	
+	# let's check there is no previous CC running
+	if do_status ; then
+		echo
+		echo "another CC is already running!"
+		if [ "$VERBOSE" != no ]; then
+			 if [ "$WE_HAVE_LSB" = "Y" ]; then
+				log_end_msg 1
+			fi
+		fi
+		exit 1
+	fi
+
+	# start and stop are hard: clear the semaphores
+	rm -f /dev/shm/*eucalyptusCC*
+	do_start
+	case "$?" in
+	0|1) 
+		if [ "$VERBOSE" != no ]; then
+			if [ "$WE_HAVE_LSB" = "Y" ]; then
+				log_end_msg 0
+			else
+				echo "done."
+			fi
+		fi
+		;;
+	*)
+		if [ "$VERBOSE" != no ]; then
+			if [ "$WE_HAVE_LSB" = "Y" ]; then
+				log_end_msg 1
+			else
+				echo "failed!"
+			fi
+		fi
+		;;
+	esac
+	;;
+  cleanstart)
+	if [ "$VERBOSE" != no ]; then
+		if [ "$WE_HAVE_LSB" = "Y" ]; then
+			log_daemon_msg "Starting $DESC" "$NAME"
+		else
+			echo -n "Starting $DESC: "
+		fi
+	fi
+	
+	# let's check there is no previous CC running
+	if do_status ; then
+		echo
+		echo "another CC is already running!"
+		if [ "$VERBOSE" != no ]; then
+			 if [ "$WE_HAVE_LSB" = "Y" ]; then
+				log_end_msg 1
+			fi
+		fi
+		exit 1
+	fi
+
+	# start and stop are hard: clear the semaphores
+	rm -f /dev/shm/*eucalyptusCC*
+	do_fullclean
+	do_start
+	case "$?" in
+	0|1) 
+		if [ "$VERBOSE" != no ]; then
+			if [ "$WE_HAVE_LSB" = "Y" ]; then
+				log_end_msg 0
+			else
+				echo "done."
+			fi
+		fi
+		;;
+	*)
+		if [ "$VERBOSE" != no ]; then
+			if [ "$WE_HAVE_LSB" = "Y" ]; then
+				log_end_msg 1
+			else
+				echo "failed!"
+			fi
+		fi
+		;;
+	esac
+	;;
+  stop)
+	if [ "$VERBOSE" != no ]; then
+       		if [ "$WE_HAVE_LSB" = "Y" ]; then
+			log_begin_msg "Stopping $DESC"
+		else
+			echo -n "Stopping $DESC: "
+                fi
+        fi
+	# start and stop are hard: we loose the CC state
+	do_stop
+	rm -f /dev/shm/*eucalyptusCC*
+	if [ "$VERBOSE" != no ]; then
+		if [ "$WE_HAVE_LSB" = "Y" ]; then
+			log_end_msg 0
+		else
+			echo "done."
+		fi
+	fi
+	;;
+  cleanstop)
+	if [ "$VERBOSE" != no ]; then
+       		if [ "$WE_HAVE_LSB" = "Y" ]; then
+			log_begin_msg "Stopping $DESC"
+		else
+			echo -n "Stopping $DESC: "
+                fi
+        fi
+	# start and stop are hard: we loose the CC state
+	if ( test -f $EUCALYPTUS/usr/lib/eucalyptus/shutdownCC ); then
+	    $EUCALYPTUS/usr/lib/eucalyptus/shutdownCC localhost:$CC_PORT >/dev/null 2>&1
+	else
+	    echo "WARNING: could not find $EUCALYPTUS/usr/lib/eucalyptus/shutdownCC, please check location of executable"
+	fi
+	
+	do_stop
+	do_fullclean
+	rm -f /dev/shm/*eucalyptusCC*
+	if [ "$VERBOSE" != no ]; then
+		if [ "$WE_HAVE_LSB" = "Y" ]; then
+			log_end_msg 0
+		else
+			echo "done."
+		fi
+	fi
+	;;
+  restart)
+	if [ "$VERBOSE" != no ]; then
+		if [ "$WE_HAVE_LSB" = "Y" ]; then
+			log_begin_msg "Restarting $DESC"
+		else
+			echo -n "Restarting $DESC: "
+		fi
+	fi
+	# restart allow the CC to mantain the state across restart
+	do_stop
+	rm -f /dev/shm/*eucalyptusCC*
+	do_start
+	if [ "$VERBOSE" != no ]; then
+		if [ "$WE_HAVE_LSB" = "Y" ]; then
+			log_end_msg 0
+		else
+			echo "done."
+		fi
+	fi
+  	;;
+  cleanrestart)
+	if [ "$VERBOSE" != no ]; then
+		if [ "$WE_HAVE_LSB" = "Y" ]; then
+			log_begin_msg "Restarting $DESC"
+		else
+			echo -n "Restarting $DESC: "
+		fi
+	fi
+
+	if ( test -f $EUCALYPTUS/usr/lib/eucalyptus/shutdownCC ); then
+	    $EUCALYPTUS/usr/lib/eucalyptus/shutdownCC localhost:$CC_PORT >/dev/null 2>&1
+	else
+	    echo "WARNING: could not find $EUCALYPTUS/usr/lib/eucalyptus/shutdownCC, please check location of executable"
+	fi
+
+	do_stop
+	do_fullclean
+	rm -f /dev/shm/*eucalyptusCC*
+	do_start
+	if [ "$VERBOSE" != no ]; then
+		if [ "$WE_HAVE_LSB" = "Y" ]; then
+			log_end_msg 0
+		else
+			echo "done."
+		fi
+	fi
+	;;
+  config)
+	echo "EUCALYPTUS=${EUCALYPTUS}"
+	echo "AXIS2C_HOME=${AXIS2C_HOME}"
+	echo "HTTPD_HOME=${HTTPD_HOME}"
+	echo "HTTPD=${HTTPD}"
+        ;;
+  status)
+	if do_status ; then
+		echo "CC is running"
+	else
+		exit 3
+	fi
+        ;;
+
+  *)
+	echo "Usage: $NAME {start|stop|restart|cleanstart|cleanstop|cleanrestart}" >&2
+	exit 3
+	;;
+esac
+
+:

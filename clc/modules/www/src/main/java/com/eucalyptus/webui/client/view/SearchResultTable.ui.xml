@@ -1,0 +1,53 @@
+<!DOCTYPE ui:UiBinder SYSTEM "http://dl.google.com/gwt/DTD/xhtml.ent">
+<ui:UiBinder xmlns:ui="urn:ui:com.google.gwt.uibinder"
+    xmlns:g="urn:import:com.google.gwt.user.client.ui"
+    xmlns:c="urn:import:com.google.gwt.user.cellview.client">
+    
+    <ui:style>
+        .scroll {
+        	width:100%;
+        	height:100%;
+        }
+	    .cellTable {
+	    	font-size:95%;
+	    	color:#292929;
+            border-top:1px solid #CCCCCC;	    	
+	    	border-bottom:1px solid #CCCCCC;
+	    }
+	    .tableBox {
+	    	width:99%;
+	    }
+	    .pager {
+	    	font-size:80%;
+	    	color:#505050;
+	    	margin-left:auto;
+	    	margin-right:auto;
+	    }
+	    .tip {
+	    	color:#555555;
+	    	font-size:80%;
+	    	font-style:italic;
+	    	margin-left:4px;
+	    	position:absolute;
+	    	top:4px;
+	    	left:0;
+	    }
+	</ui:style>
+ 
+    <g:DockLayoutPanel unit="PX">
+        <g:south size="32">
+            <g:FlowPanel>
+                <g:Label addStyleNames="{style.tip}" ui:field="tip"/>            
+                <c:SimplePager addStyleNames="{style.pager}" ui:field="pager" />
+            </g:FlowPanel>
+        </g:south>
+        <g:center>
+            <g:ScrollPanel addStyleNames="{style.scroll}">
+                <g:FlowPanel addStyleNames="{style.tableBox}">
+                    <c:CellTable addStyleNames="{style.cellTable}" ui:field="cellTable" />
+                </g:FlowPanel>
+            </g:ScrollPanel>
+        </g:center>
+    </g:DockLayoutPanel>
+    
+</ui:UiBinder> 

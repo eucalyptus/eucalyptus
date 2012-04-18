@@ -1,0 +1,6 @@
+_euca_conf_args() {
+    COMPREPLY=( $(compgen -W "$(euca_conf --help | awk '/--/{print $1}')" -- "${COMP_WORDS[COMP_CWORD]}") )
+    return 0;
+}
+complete -F _euca_conf_args euca_conf
+

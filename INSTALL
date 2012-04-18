@@ -1,0 +1,331 @@
+http://open.eucalyptus.com/wiki/EucalyptusInstallationSource_v2.0
+
+1. Prerequisites
+================
+What follows is a comprehensive list of dependencies that must be satisfied before building Eucalyptus or running it. While we provide distribution-specific installation instructions that help satisfy these dependencies, this list should be useful if you are installing or building Eucalyptus on an unsupported distribution. NOTE - If you are upgrading from a Eucalyptus 1.6.2 or older installation, please consult the Upgrade Documentation for instructions that will explain how to preserve user account information, images, volumes and snapshots.
+
+Prerequisites for compiling from source
+
+    * C compilers
+    * Java Developer Kit (SDK) version 1.6 or above
+    * Apache ant 1.6.5 or above
+    * libc development files
+    * pthreads development files
+    * libvirt development files
+    * Axis2C and rampart development files (included with Eucalyptus)
+    * Curl development files
+    * openssl development files
+    * Optional: zlib development files 
+
+Prerequisites for running Eucalyptus
+
+There are a few different Eucalyptus components that run on either the 'front-end or 'node'. There are different run-time dependencies for 'front-end' and 'node' components. One physical machine can play the role of the front-end and the node.
+
+Front-end run-time dependencies
+
+    * Java 6 is needed by the Eucalyptus components running on the front end. Note that GNU Compiler for Java (gcj), included by default with some Linux distributions, is not sufficient. Make sure that your JAVA_HOME environment variable is set to the location of your JDK.
+    * Perl is used by helper scripts
+    * The head node must run a server on port 25 that can deliver or relay email messages to cloud users' email addresses. This can be Sendmail, Exim, or postfix, or even something simpler, given that this server does not have to be able to receive incoming mail. Many Linux distributions satisfy this requirement out of the box. To test whether you have a properly functioning mail relay for localhost, try to send email to yourself from the terminal using "mail".
+    * Dependencies for network support differ depending on the mode used (see Eucalyptus Network Configuration for details). For full functionality satisfy all of them:
+          o For all modes:
+                + iproute and iptables packages (ip and iptables commands must work) 
+          o For all modes except SYSTEM:
+                + DHCP Server compatible with ISC DHCP Daemon version 3.0.X (dhcp3-server) 
+          o For MANAGED and MANAGED-NOVLAN modes:
+                + bridge-utils package (brctl command must work)
+                + vtun package, for multi-cluster configurations 
+          o Additionally, for MANAGED mode:
+                + vlan package (vconfig command must work) 
+    * For persistent dynamic block storage (aka EBS) to work, the front end will need to have the following software packages installed:
+          o lvm2 package (e.g., command lvm should work)
+          o aoetools package. The aoe module needs to be loaded on the front end as well as all nodes (modprobe aoe). If your kernel does not have ATA-over-Ethernet support, you will have to add that.
+          o vblade package 
+
+Node run-time dependencies
+
+    * Perl scripts are invoked by the Node Controller
+    * Two hypervisors are supported:
+         1. Xen (version >= 3.0.x)
+                o Furthermore, xen-utils package is needed (xm command must work) 
+         2. KVM 
+    * Dependencies for network support differ depending on the mode used (see Eucalyptus Network configuration for details). For full functionality satisfy all of them:
+          o For all modes:
+                + iproute and iptables packages (ip and iptables commands must work) 
+          o For MANAGED and MANAGED-NOVLAN modes:
+                + bridge-utils package (brctl command must work) 
+          o Additionally, for MANAGED mode:
+                + vlan package (vconfig command must work) 
+    * libvirt package (potentially with libvirtd, depending on hypervisor configuration) 
+
+All Eucalyptus components
+
+    * You must be root to install and start Eucalyptus components (by default they will run under a different user after start). This document assumes that all commands will be executed as root. 
+
+Attention CentOS users:The version of OpenJDK that is bundled with CentOS-5 cannot compile the version of GWT that comes with Eucalyptus as a dependency. You will need to install JDK 1.6.0 "manually". We use Sun's JDK, which can be found at http://java.sun.com/javase/downloads/index.jsp. Be sure to set your JAVA_HOME and PATH properly before running the Eucalyptus 'configure' script.
+
+Distribution-specific examples
+
+What follows is a superset of all packages necessary for building and running Eucalyptus on each supported distribution:
+
+    * For Opensuse 11.2, download and install RPMs the appropriate OpenSUSE RPM dependency package from the Eucalyptus website, then run the following command to install all required dependency packages: 
+
+zypper -n install curl bzr python-paramiko make gcc ant apache2 apache2-prefork apache2-devel java-1_6_0-openjdk java-1_6_0-openjdk-devel libvirt-devel libcurl-devel vlan dhcp-server bridge-utils ant-contrib ant-nodeps openssl libvirt libcurl-devel vlan apache2 perl-Crypt-OpenSSL-Random perl-Crypt-OpenSSL-RSA libfuse2 tgt swig
+
+    * For Ubuntu 10.04, run the following command to install all required dependency packages: 
+
+apt-get install bzr gcc make apache2-threaded-dev ant openjdk-6-jdk\
+   libvirt-dev libcurl4-openssl-dev dhcp3-server vblade apache2 unzip curl vlan\
+   bridge-utils libvirt-bin kvm vtun
+
+    * For CentOS 5 and Fedora 12, download and install RPMs the appropriate CentOS or Fedora RPM dependency package from the Eucalyptus website, then run the following command to install all required dependency packages: 
+
+yum install -y java-1.6.0-openjdk-devel ant ant-nodeps libvirt-devel curl-devel httpd httpd-devel apr-devel openssl-devel dhcp libxml2 libxml2-devel gnutls gnutls-devel xen-devel libgcrypt-devel zlib-devel perl-Convert-ASN1 perl-Crypt-OpenSSL-RSA perl-Crypt-OpenSSL-Random chkfontpath scsi-target-utils fuse-libs swig gcc
+
+    * For Debian, run the following command to install all required dependency packages: 
+
+apt-get install gcc make apache2-threaded-dev ant openjdk-6-jdk\
+   libvirt-dev libcurl4-dev dhcp3-server vblade apache2 unzip curl vlan\
+   bridge-utils libvirt-bin kvm sudo vtun
+
+Please, consult the distribution-specific pages for detailed installation instructions.
+
+Tools for interacting with Eucalyptus
+
+To interact with Eucalyptus, you need to install EC2-compatible command-line tools. The instructions in Eucalyptus documentation rely on the euca2ools command-line tools distributed by the Eucalyptus Team. Many other third-party tools can also be used for some of the tasks, as described on the ecosystem page.
+
+2. Download Eucalyptus and supplied dependencies
+================================================
+In what follows substitute the desired version (e.g., 2.0.1) for $VERSION either manually or by setting a shell variable.
+
+Download either
+
+    * eucalyptus-$VERSION-src.tar.gz (Eucalyptus source with included java libraries) 
+
+or
+
+    * eucalyptus-$VERSION-src-online.tar.gz (Eucalyptus source that will download java libraries at build-time) 
+
+and for both
+
+    * eucalyptus-$VERSION-src-deps.tar.gz (Eucalyptus C library dependency packages) 
+
+All packages can be found on the Eucalyptus Web site:
+
+    * http://open.eucalyptus.com/downloads 
+
+Unpack the Eucalyptus source:
+
+tar zvxf eucalyptus-$VERSION-src.tar.gz
+
+Now you should have a directory eucalyptus-$VERSION. To simplify the remainder of the installation, define EUCALYPTUS_SRC environment variable to be the top of the source tree of eucalyptus and the variable EUCALYPTUS to be the directory where eucalyptus will be installed (we recommend using /opt/eucalyptus/):
+
+cd eucalyptus-$VERSION
+export EUCALYPTUS_SRC=`pwd`
+export EUCALYPTUS=/opt/eucalyptus
+
+3. Build Dependencies
+=====================
+To install Eucalyptus, you need to build packages that Eucalyptus depends on, which we provide in the above-mentioned package eucalyptus-$VERSION-src-deps.tar.gz. For the sake of this discussion, we are going to assume that all packages have been untarred inside "$EUCALYPTUS_SRC/eucalyptus-src-deps/" as above and will be installed in "$EUCALYPTUS/packages".
+
+Unpack the dependencies and create the directory you'll use to install them:
+
+cd $EUCALYPTUS_SRC
+tar zvxf ../eucalyptus-$VERSION-src-deps.tar.gz
+mkdir -p $EUCALYPTUS/packages/
+
+Build and install the dependencies. The following instructions work on some Linux distributions, but aren't universal. Please, consult the documentation for the specific packages for help with building them on your distribution.
+
+a. Axis2
+--------
+cd $EUCALYPTUS/packages
+tar zxvf $EUCALYPTUS_SRC/eucalyptus-src-deps/axis2-1.4.tgz
+
+b. Axis2/C
+----------
+To compile Axis2/C, you will need to locate development headers for Apache and for APR. On some distributions (e.g., Ubuntu and Debian) the following values should work:
+
+export APACHE_INCLUDES=/usr/include/apache2
+export APR_INCLUDES=/usr/include/apr-1.0
+
+On CentOS 5, the headers should be in the following location:
+
+export APACHE_INCLUDES=/usr/include/httpd/
+export APR_INCLUDES=/usr/include/apr-1/
+
+while on OpenSuse 11 you may find them at:
+
+export APACHE_INCLUDES=/usr/include/apache2/
+export APR_INCLUDES=/usr/include/apr-1/
+
+With the two environment variables set, you can build and install Axis2/C as follows:
+
+export AXIS2C_HOME=$EUCALYPTUS/packages/axis2c-1.6.0
+cd $EUCALYPTUS_SRC/eucalyptus-src-deps/
+tar zvxf axis2c-src-1.6.0.tar.gz
+cd axis2c-src-1.6.0
+CFLAGS="-w" ./configure --prefix=${AXIS2C_HOME} --with-apache2=$APACHE_INCLUDES --with-apr=$APR_INCLUDES --enable-multi-thread=no
+make ; make install
+
+c. Rampart/C
+------------
+export AXIS2C_HOME=$EUCALYPTUS/packages/axis2c-1.6.0
+export LD_LIBRARY_PATH=${AXIS2C_HOME}/lib:$LD_LIBRARY_PATH
+cd $EUCALYPTUS_SRC/eucalyptus-src-deps/
+tar zvxf rampartc-src-1.3.0-0euca1.tar.gz
+cd rampartc-src-1.3.0
+./configure --prefix=${AXIS2C_HOME} --enable-static=no --with-axis2=${AXIS2C_HOME}/include/axis2-1.6.0
+make ; make install
+
+Next, change the following in $AXIS2C_HOME/axis2.xml. In the 'inflow' section, change:
+
+        <!--phase name="Security"/-->
+
+to
+
+        <phase name="Security"/>
+
+In the 'outflow' section, change:
+
+        <!--phase name="Security"/-->
+
+to
+
+        <phase name="Security"/>
+
+4. Building Eucalyptus
+=======================
+First, make sure JAVA_HOME is defined. For example, on Centos 5:
+
+export JAVA_HOME="/usr/lib/jvm/java-openjdk/"
+export JAVA="$JAVA_HOME/JRE/bin/java"
+
+then, build Eucalyptus:
+
+cd $EUCALYPTUS_SRC
+./configure --with-axis2=$EUCALYPTUS/packages/axis2-1.4 --with-axis2c=$EUCALYPTUS/packages/axis2c-1.6.0 --enable-debug --prefix=$EUCALYPTUS
+make ; make install
+
+5. Deploying Eucalyptus
+=======================
+At this point, if you plan to use Eucalyptus on more than one node, you're ready to push the software out to the other nodes (although not all software components are required on all nodes, it is simpler to just mirror everything and selectively enable components via start-up scripts). If you installed Eucalyptus in its own directory, you can just sync the entire package to all of the hosts listed above using whatever mechanism you typically use to push changes to nodes (rsync, for instance).
+
+rsync -a $EUCALYPTUS/ root@{node-host-1}:$EUCALYPTUS/
+rsync -a $EUCALYPTUS/ root@{node-host-1}:$EUCALYPTUS/
+...
+
+On installations without a root user, such as Ubuntu, it may be easier to pull the software from each node one at a time:
+
+node1# rsync -a {user}@{front-end}:$EUCALYPTUS/ $EUCALYPTUS/
+node2# rsync -a {user}@{front-end}:$EUCALYPTUS/ $EUCALYPTUS/
+...
+
+NOTE: Installing Eucalyptus in the same directory on all nodes will make it easier to manage it, so we strongly advise you to do so.
+6. Configure Hosts
+
+a. Set up a 'eucalyptus' user on all machines
+---------------------------------------------
+Eucalyptus will run as regular user on your systems, which you'll need to add before running Eucalyptus (we will use eucalyptus) on all machines. For most distributions, this task is accomplished by running the command:
+
+useradd eucalyptus
+
+For OpenSUSE, use:
+
+groupadd eucalyptus
+useradd eucalyptus -m -g eucalyptus
+
+b. Configure your hypervisor
+----------------------------
+Ensure that this user can control your hypervisor through libvirt on all compute nodes. On some distributions, this can be accomplished by adding eucalyptus to group libvirt or libvirtd in file /etc/group. Please consult the documentation for libvirt on your distribution for instructions. See Hypervisor Configuration for more detailed information.
+
+c. Configure your network
+-------------------------
+Eucalyptus provides several networking modes from which to choose, depending on your local network setup, capabilities, and the networking features that you wish to take advantage of within Eucalyptus. Most networking options require that, on your node controllers, the primary interface is configured to be a bridge (this is the default configuration with some distribution's Xen hypervisor configuration). See Network Configuration for more information and set-up instructions. Once you have decided which network mode you will be using, you may be required to set up ethernet bridges on Eucalyptus component machines. Example bridge configuration steps can be found here.
+
+d. Configure Eucalyptus components
+----------------------------------
+On your compute nodes, create a local directory where VM images are to be placed temporarily while VMs are running (images will be cached under the same path, too). It is important that the directory is empty as everything in it will be removed. Be sure to pick a partition with ample disk space as VM images can be large. We use /usr/local/eucalyptus in the example below.
+
+Place the mandatory parameters (including the type of hypervisor you plan to use) into the configuration file and set up the permissions on Eucalyptus files appropriately on all nodes. Both tasks can be accomplished with flags to euca_conf tool:
+
+    * -d specifies the root of Eucalyptus installation ($EUCALYPTUS)
+    * --hypervisor specifies the hypervisor ('xen' or 'kvm')
+    * --instances specifies where, on compute nodes, instance files will be stored
+    * --user specifies the user that you created for running Eucalyptus
+    * --setup invokes the first-time setup tasks 
+
+$EUCALYPTUS/usr/sbin/euca_conf -d $EUCALYPTUS --hypervisor kvm --instances /usr/local/eucalyptus --user eucalyptus --setup
+
+e. Distribution-specific post configuration steps
+-------------------------------------------------
+Some linux distributions require that the admin perform a few extra steps before bringing up Eucalyptus. This section details some of these steps:
+
+For Ubuntu, apparmor needs to be configured to allow dhcpd3 to write to the filesystem. Add the following lines to '/etc/apparmor.d/usr.sbin.dhcp3':
+
+/opt/eucalyptus/var/run/eucalyptus/net/ r,
+/opt/eucalyptus/var/run/eucalyptus/net/** r,
+/opt/eucalyptus/var/run/eucalyptus/net/*.pid lrw,
+/opt/eucalyptus/var/run/eucalyptus/net/*.leases* lrw,
+/opt/eucalyptus/var/run/eucalyptus/net/*.trace lrw,
+
+where you substitute '/opt/eucalyptus' with the path to where you have chosen to install Eucalyptus. Then, restart apparmor (NOTE: sometimes changes don't take effect right away - either wait or reboot the system to be sure):
+
+/etc/init.d/apparmor stop
+/etc/init.d/apparmor start
+
+Also, since Ubuntu DHCP daemon is configured to run as 'dhcpd' and not root, ensure that the following two variables are set as follows in the $EUCALYPTUS/etc/eucalyptus/eucalyptus.conf file on the Cluster head-node:
+
+VNET_DHCPDAEMON="/usr/sbin/dhcpd3"
+VNET_DHCPUSER="dhcpd"
+
+At this point you should be ready to start Eucalyptus processes on all nodes but before doing so you may want to configure the Eucalyptus network: you can read more about it at Network Configuration.
+
+f. Configure your startup scripts
+---------------------------------
+If you want to have eucalyptus started automatically when your machines are (re)booted, you can add the following symlinks on the appropriate hosts: add eucalyptus-cloud on the Cloud head-node, add eucalyptus-cc on the Cluster head-node(s), and add eucalyptus-nc on the compute node(s)
+
+ln -sf $EUCALYPTUS/etc/init.d/eucalyptus-cloud /etc/init.d/eucalyptus-cloud
+ln -sf $EUCALYPTUS/etc/init.d/eucalyptus-cc /etc/init.d/eucalyptus-cc
+ln -sf $EUCALYPTUS/etc/init.d/eucalyptus-nc /etc/init.d/eucalyptus-nc
+
+and then add the symlinks to the distribution's booting process. This process differs from distribution to distribution. For example if you have update-rc.d available you can run:
+
+update-rc.d eucalyptus-cloud defaults
+
+or if you have chkconfig available you can run:
+
+chkconfig eucalyptus-cloud on
+
+7. Running Eucalyptus
+=====================
+Eucalyptus comes with the euca_conf script for configuring Eucalyptus. For some requests it modifies the configuration file located in '$EUCALYPTUS/etc/eucalyptus/eucalyptus.conf' (which can also be edited manually), for other requests it modifies the database maintained by the Cloud Controller (much of that functionality is duplicated in the Web interface, to be described later).
+
+In addition to modifying the configuration, euca_conf attempts to synchronize x509 credentials across the nodes of a Eucalyptus installation by relying on rsync and scp. We highly recommend setting up password-less SSH access for the root user across all nodes of your Eucalyptus installation (otherwise, euca_conf will prompt you for remote system passwords).
+
+As explained in the overview, a Eucalyptus installation consists of five types of components: cloud controller (CLC), Walrus, cluster controller (CC), storage controller (SC), and the node controller(s) (NCs). In following instructions we assume that all components except the NCs are co-located on one machine that we refer to as the front end and that NCs run on one or more other machines referred to ascompute nodes.
+
+To run Eucalyptus, first, make sure that you have all of the runtime dependencies of Eucalyptus installed, based on your chosen set of configuration parameters. If there is a problem with runtime dependencies (for instance, if Eucalyptus cannot find/interact with them), all errors will be reported in log files located in $EUCALYPTUS/var/log/eucalyptus. For more information on Eucalyptus log files and error reports, please see Troubleshooting Eucalyptus.
+
+Next, inspect the contents of $EUCALYPTUS/etc/eucalyptus/eucalyptus.conf carefully, on each machine, to make sure that the settings are appropriate for your environment. Once you have confirmed that everything is configured properly, enable the cloud services on the front-end:
+
+# enable services on the front-end
+$EUCALYPTUS/usr/sbin/euca_conf -d $EUCALYPTUS --setup
+$EUCALYPTUS/usr/sbin/euca_conf -d $EUCALYPTUS --enable cloud --enable walrus --enable sc
+
+BEFORE STARTING EUCALYPTUS SERVICES! If you are upgrading from Eucalyptus 1.6.2 to Eucalyptus 2.0, return now to the Upgrade Instructions, and proceed with running the upgrade commands for the front-end and nodes as specified. If you are performing a first-time installation, you may proceed with the following steps and start Eucalyptus services:
+
+Start each component on the appropriate host.
+
+# start enabled front-end services
+$EUCALYPTUS/etc/init.d/eucalyptus-cloud start
+
+# start the cluster controller
+$EUCALYPTUS/etc/init.d/eucalyptus-cc start
+
+And on each of the compute nodes run:
+
+$EUCALYPTUS/etc/init.d/eucalyptus-nc start
+
+To stop them you call the script with stop instead of start.
+
+NOTE: if you later decide to make changes to $EUCALYPTUS/etc/eucalyptus/eucalyptus.conf that will effect the cluster-controller, make sure to use the 'cleanstart', 'cleanstop', and/or 'cleanrestart' directives to the init scripts (as opposed to start/stop/restart). This will both remove all existing CC state, and will cause it to re-read the configuration file.
+

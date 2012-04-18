@@ -1,0 +1,298 @@
+#!/bin/bash
+#
+#Copyright (c) 2009  Eucalyptus Systems, Inc.   
+#
+#This program is free software: you can redistribute it and/or modify
+#it under the terms of the GNU General Public License as published by 
+#the Free Software Foundation, only version 3 of the License.  
+# 
+#This file is distributed in the hope that it will be useful, but WITHOUT
+#ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+#FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+#for more details.  
+#
+#You should have received a copy of the GNU General Public License along
+#with this program.  If not, see <http://www.gnu.org/licenses/>.
+# 
+#Please contact Eucalyptus Systems, Inc., 130 Castilian
+#Dr., Goleta, CA 93101 USA or visit <http://www.eucalyptus.com/licenses/> 
+#if you need additional information or have any questions.
+#
+#This file may incorporate work covered under the following copyright and
+#permission notice:
+#
+#  Software License Agreement (BSD License)
+#
+#  Copyright (c) 2008, Regents of the University of California
+#  
+#
+#  Redistribution and use of this software in source and binary forms, with
+#  or without modification, are permitted provided that the following
+#  conditions are met:
+#
+#    Redistributions of source code must retain the above copyright notice,
+#    this list of conditions and the following disclaimer.
+#
+#    Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+#
+#  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+#  IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+#  TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+#  PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+#  OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+#  EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+#  PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+#  PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+#  LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+#  NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+#  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. USERS OF
+#  THIS SOFTWARE ACKNOWLEDGE THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE
+#  LICENSED MATERIAL, COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS
+#  SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
+#  IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
+#  BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
+#  THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+#  OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
+#  WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
+#  ANY SUCH LICENSES OR RIGHTS.
+#
+#set -o nounset
+set -e
+unset UP_DB UP_KEYS UP_CONF UP_FORCE UP_LOG UP_SAMEVERSION
+unset NEW_EUCA OLD_EUCA NEW_EUCA_VERSION OLD_EUCA_VERSION
+LEGAL_LONG_OPTS="help old new conf keys db force copyonly sameversion user"
+KEYDIR="/var/lib/eucalyptus/keys"
+DBDIR="/var/lib/eucalyptus/db"
+NEW_EUCA="/"
+
+usage() {
+	echo "$0 [options]"
+	echo
+	echo "This script attempts to upgrade an old installation of eucalyptus"
+	echo
+	echo "   -h|--help                   Ibid."
+	echo "   -n|--new <euca_dir>         The value of \${EUCALYPTUS} for the NEW installation."
+	echo "   -o|--old <euca_dir>         The value of \${EUCALYPTUS} for the OLD installation."
+#	echo "   -b|--backup <euca_dir>      create a backup of an existing eucalyptus installation"
+	echo "   -f|--force                  Attempt the upgrade even if a database is detected"
+	echo "   -c|--conf                   Upgrade the conf file"
+	echo "   -d|--db                     Upgrade the database"
+	echo "   -k|--keys                   Upgrade the keys"
+	echo "   -s|--sameversion            Versions unchanged or no db changes."
+	echo "   -u|--user                   The user who owns this eucalyptus installation."
+	echo
+}
+
+log() {
+  FSTR="${1}\n"
+  shift
+  printf "${FSTR}" ${@} | tee -a ${UP_LOG}
+}
+
+boole() {
+  if [ -z "$1" ]; then echo "false"; else echo "true"; fi
+}
+
+get_euca_version() {
+  NAME=$1
+  FLAG=$(echo ${NAME//_EUCA/} | tr A-Z a-z)
+  DIR=$(eval echo \$$NAME)
+  if [ -z "${DIR}" ]; then 
+    log "Use --${FLAG} to specify the location of the new installation" 1>&2; exit 1
+  elif [ ! -e ${DIR}/etc/eucalyptus/eucalyptus-version ]; then 
+    log "cannot locate ${DIR}/etc/eucalyptus/eucalyptus-version, --${FLAG} must point to a valid eucalyptus installation" 1>&2; exit 1
+  else
+    head -n1 ${DIR}/etc/eucalyptus/eucalyptus-version
+  fi  
+}
+
+sameversion() {
+  SAME_VERSION=1
+}
+
+upgrade_conf() {
+  if [ -n "${SAME_VERSION}" ]; then 
+    cp --preserve -a ${OLD_EUCA}/etc/eucalyptus/eucalyptus.conf ${NEW_EUCA}/etc/eucalyptus/eucalyptus.conf
+    return
+  fi
+  if [ ! -x ${NEW_EUCA}/usr/sbin/euca_conf ]; then
+    echo "Cannot find new ${NEW_EUCA}/usr/sbin/euca_conf! Skipping automatic upgrade."; exit 1
+  fi
+  # upgrade the conf file
+  ${EUCALYPTUS}/usr/sbin/euca_conf -d ${EUCALYPTUS} --upgrade-conf ${OLD_EUCA}/etc/eucalyptus/eucalyptus.conf 
+}
+
+upgrade_keys() {
+  for x in $(\ls -ad ${OLD_EUCA}/${KEYDIR}/* 2>&1 | grep -v policy\.xml) ; do
+    cp -a --preserve $x ${NEW_EUCA}/${KEYDIR}/
+  done
+}
+
+upgrade_db() {
+  # Ensure that this system had CLC enabled in the previous version
+  if [ -f "${OLD_EUCA}/var/lib/eucalyptus/services" ]; then
+      if ! grep -q cloud ${OLD_EUCA}/var/lib/eucalyptus/services; then
+          log "CLC is disabled.  Skipping DB upgrade."
+          return
+      fi
+  elif ! (ls ${OLD_EUCA}/${DBDIR}/* >/dev/null 2>&1); then 
+      if [ "${OLD_EUCA_VERSION:0:3}" == "3.0" ]; then
+          log "This is not a CLC.  Skipping DB upgrade."
+          return
+      else 
+          log "Cannot locate previous database files in ${OLD_EUCA}/${DBDIR}! Skipping DB upgrade.";    
+          exit 1; 
+      fi
+  fi
+  
+  if [ -n "${SAME_VERSION}" ]; then
+    for x in $(\ls -ad ${OLD_EUCA}/${DBDIR}/* 2>&1 | grep eucalyptus) ; do
+      cp -a --preserve $x ${NEW_EUCA}/${DBDIR}/
+    done
+    return
+  fi
+
+  # setup the classpath
+  CLASSPATH=""
+  FILES=$(\ls -1 ${EUCALYPTUS}/usr/share/eucalyptus/*.jar | egrep -v ".*eucalyptus-.*${OLD_EUCA_VERSION//\./\\.}.jar")
+  for FILE in $FILES; do
+    export CLASSPATH=${FILE}:${CLASSPATH}
+  done
+  CLASSPATH=${EUCALYPTUS}/etc/eucalyptus/cloud.d/upgrade:${EUCALYPTUS}/etc/eucalyptus/cloud.d/scripts:${CLASSPATH}
+
+  # clean out the target DB directory
+  rm -fv ${NEW_EUCA}/${DBDIR}/* > ${UP_LOG} 2>&1
+  
+  # setup the upgrade command
+  UPGRADE_CLASS="com.eucalyptus.upgrade.StandalonePersistence"
+  # key=value pairs required to run the db update code
+  UPGRADE_DEST_DIR="euca.upgrade.new.dir=${NEW_EUCA}"
+  UPGRADE_SRC_DIR="euca.upgrade.old.dir=${OLD_EUCA}" 
+  UPGRADE_DEST_VERSION="euca.upgrade.new.version=${NEW_EUCA_VERSION}"
+  UPGRADE_SRC_VERSION="euca.upgrade.old.version=${OLD_EUCA_VERSION}" 
+  UPGRADE_DEST_DB="euca.upgrade.destination=com.eucalyptus.upgrade.PgsqldbDestination"
+  if [ "${OLD_EUCA_VERSION:0:7}" == "eee-2.0" -o "${OLD_EUCA_VERSION:0:3}" == "3.0" ]; then
+    UPGRADE_SRC_DB="euca.upgrade.source=com.eucalyptus.upgrade.MysqldbSource"
+  else
+    UPGRADE_SRC_DB="euca.upgrade.source=com.eucalyptus.upgrade.HsqldbSource"
+  fi
+  # Arbitrary string of properly formatted opts passed direct to jvm"
+  UPGRADE_OPTS="-Deuca.log.level=INFO -Djava.security.egd=file:/dev/./urandom -XX:MaxPermSize=512m"
+  # Setup commands 
+  UPGRADE_ARGS=$( for arg in ${UPGRADE_DEST_DIR} ${UPGRADE_SRC_DIR} ${UPGRADE_SRC_DB} ${UPGRADE_DEST_DB} ${UPGRADE_DEST_VERSION} ${UPGRADE_SRC_VERSION}; do echo -n " -D${arg}"; done; )
+  UPGRADE_CMD="java -Xbootclasspath/p:${EUCALYPTUS}/usr/share/eucalyptus/openjdk-crypto.jar -classpath ${CLASSPATH} ${UPGRADE_OPTS} ${UPGRADE_ARGS} ${UPGRADE_CLASS}" 
+  echo "${UPGRADE_CMD}" >> ${UP_LOG} 
+  
+  echo "Upgrading your database..." | tee -a ${UP_LOG} 2>&1
+  chown $EUCA_USER $UP_LOG
+  
+  # This is to deal with possible database connection leaks in the upgrade script
+  ulimit -n 65536
+
+  if ! ( su $EUCA_USER -c "${UPGRADE_CMD}" ); then
+    echo "Database upgrade failed! Please ${UP_LOG} for details and contact Eucalyptus support for assistance."
+    exit 1
+  fi
+}
+
+## NOTE: Start reading here.
+## Parse cmd line options.
+NEW_ARGS=$(echo "${@}" | sed 's/--\(.\)\w*/-\1/g')
+for f in $(echo "${@}" | sed 's/ /\n/g' | awk ' $1 ~ /--\w*/' | sed 's/--//g'); do if ! echo ${LEGAL_LONG_OPTS} | grep $f >/dev/null 2>&1; then echo "Illegal option: --$f"; FAIL="true"; fi; done
+if [ -n "${FAIL}" ]; then exit 1;fi
+while getopts ":hn:fo:ckdpsu:" flag ${NEW_ARGS} ; do
+  case $flag in
+    h) usage; exit 0;;
+    n) 
+      NEW_EUCA=${OPTARG}
+      NEW_EUCA_VERSION=$(get_euca_version NEW_EUCA)
+    ;;
+    o) 
+      OLD_EUCA=${OPTARG}
+      OLD_EUCA_VERSION=$(get_euca_version OLD_EUCA)
+    ;;
+    f) UP_FORCE="force";;
+    d) UP_DB="upgrade_db";;
+    k) UP_KEYS="upgrade_keys";;
+    c) UP_CONF="upgrade_conf";;
+    s) UP_SAMEVERSION="sameversion";;
+    u) EUCA_USER=${OPTARG};;
+  esac
+done
+## After this point guaranteed that NEW_EUCA and OLD_EUCA are set.
+export EUCALYPTUS="${NEW_EUCA}"
+UP_LOG=${NEW_EUCA}/var/log/eucalyptus/upgrade.log
+if [ "${NEW_EUCA_VERSION}" == "${OLD_EUCA_VERSION}" ]; then SAME_VERSION="true"; fi
+if [ "${NEW_EUCA_VERSION}" == "eee-2.0.1" -a "${OLD_EUCA_VERSION}" == "eee-2.0.0" ]; then SAME_VERSION="true"; fi
+
+if [ ! -d "${NEW_EUCA}/var/lib/eucalyptus" ]; then echo "${NEW_EUCA} does not point to a valid Eucalyptus installation. Aborting." ; exit 1 ; fi
+## NOTE: Add an externalized v.old -> v.new upgrade-path check.
+log "#                           UPGRADE INFORMATION\n#================================================================================" 
+log "# Old Version:              %-12.12s" "${OLD_EUCA_VERSION}"
+log "# New Version:              %-12.12s" "${NEW_EUCA_VERSION}"
+log "# Upgrade keys:             %-12.12s       using: %-15.15s" "$(boole ${UP_KEYS})" ${UP_KEYS}
+log "# Upgrade configuration:    %-12.12s       using: %-15.15s" "$(boole ${UP_CONF})" ${UP_CONF}
+log "# Upgrade database:         %-12.12s       using: %-15.15s" "$(boole ${UP_DB})" ${UP_DB}
+log "# Same version:             %-12.12s       using: %-15.15s" "$(boole ${UP_SAMEVERSION})" ${UP_SAMEVERSION}
+ 
+for f in $(echo ${UP_SAMEVERSION} ${UP_KEYS} ${UP_DB} ${UP_CONF}); do
+  log "$(echo "# Start upgrading: ${f}" | sed 's/upgrade_//g')"
+  if ! $f; then
+    log "ERROR:  Upgrading failed for ${f//upgrade_/}.  See ${UP_LOG} for details."
+  else
+    log "$(echo "# Done upgrading:  ${f}" | sed 's/upgrade_//g;s/_//g')"
+  fi
+done
+
+if [ -f "$EUCALYPTUS/usr/sbin/euca_conf" ]; then
+    $EUCALYPTUS/usr/sbin/euca_conf --setup
+fi
+## NOTE: Don't bother reading past here.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+## ONEDAY: Restore --backup
+#if [ -d "$BACKUP" ]; then
+#    # backup useful bits of existing eucalyptus installation
+#    echo "Backing up $BACKUP..."
+#    CWD=`pwd` 
+#    DATESTR=`date +%s`
+#    mkdir -p /root/eucalyptus.backup.$DATESTR
+#    cd /root/eucalyptus.backup.$DATESTR
+#    echo "Backing up to /root/eucalyptus.backup.$DATESTR"
+#    EUCABACKUPS=""
+#    for i in $EUCADIR/${KEYDIR}/ $EUCADIR/${DBDIR}/ $EUCADIR/etc/eucalyptus/eucalyptus.conf $EUCADIR/etc/eucalyptus/eucalyptus-version
+#    do
+# if [ -e $i ]; then
+#     echo "Adding $i"
+#     EUCABACKUPS="$EUCABACKUPS $i"
+# fi
+#    done
+#    tar cf - $EUCABACKUPS 2>/dev/null | tar xf - 2>/dev/null
+#    cd $CWD
+#    echo "Done."
+#    exit 0
+#fi

@@ -1,0 +1,39 @@
+        EUCALYPTUS: Elastic Utility Computing Architecture 
+            for Linking Your Programs To Useful Systems
+
+EUCALYPTUS is an open source service overlay that implements elastic
+computing using existing resources. The goal of EUCALYPTUS is to allow
+sites with existing clusters and server infrastructure to co-host an
+elastic computing service that is interface-compatible with Amazon's
+EC2.
+
+Because EUCALYPTUS is designed to function as an overlay, it must be
+able to incorporate resources from different clusters or pools.  For
+example, EUCALYPTUS allows its administrator to set up a "cloud" that
+permit users to virtualized OS instances on a number of clusters
+transparently.  Enabling the necessary network interconnectivity in a
+way that is secure and portable is one novel feature of EUCALYPTUS.
+Another stems from its ability to provide interface compatibility with
+the existing Amazon EC2 service.  EUCALYPTUS users can develop using
+their own local resources and then transition directly some or all of
+their functionality to EC2.
+
+Finally, a key requirement of EUCALYPTUS is that it be able to serve
+as a research platform for elastic computing.  To this end, its design
+makes two significant contributions.  The first concerns the use of
+scarce network resources in a structured way.  A EUCALYPTUS allocation
+can function equally well in an environment in which all processors
+have externally routable IP addresses (e.g. Amazon's current
+environment) as well as one in which only a certain "front-end
+machine" is externally routable (as is the case with many production
+and research clusters today).  Secondly, EUCALYPTUS leverages the
+extensive Linux packaging and deployment support that is currently
+available while requiring minimal modification to the existing
+installed OS base.  Specifically, the target resources need only run a
+standard hypervisor (Xen, KVM), along with common open-source Linux
+utilities.  All other functionality installs directly without need for
+kernel patching or module additions to the host OS domain.
+
+For more information and complete documentation, please visit our
+website (http://open.eucalyptus.com).
+

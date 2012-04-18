@@ -1,0 +1,114 @@
+.cellTableWidget {
+}
+
+.cellTableFirstColumn {
+}
+
+.cellTableLastColumn {
+}
+
+.cellTableFooter {
+  border-top: 2px solid #6f7277;
+  padding: 3px 15px;
+  text-align: left;
+  color: #4b4a4a;
+  text-shadow: #ddf 1px 1px 0;
+  overflow: hidden;
+}
+
+.cellTableHeader {
+  font-size:90%;
+  font-weight:bold;
+  border-bottom: 1px solid #CCCCCC;
+  padding: 3px 15px;
+  text-align: left;
+  color: #4b4a4a;
+  text-shadow: #ddf 1px 1px 0;
+  overflow: hidden;
+}
+
+.cellTableCell {
+  padding: 4px 15px;
+  overflow: hidden;
+}
+
+.cellTableFirstColumnFooter {
+  
+}
+
+.cellTableFirstColumnHeader {
+  
+}
+
+.cellTableLastColumnFooter {
+  
+}
+
+.cellTableLastColumnHeader {
+  
+}
+
+.cellTableSortableHeader {
+  cursor: pointer;
+  cursor: hand;
+}
+
+.cellTableSortableHeader:hover {
+  color: #6c6b6b;
+}
+
+.cellTableSortedHeaderAscending {
+
+}
+
+.cellTableSortedHeaderDescending {
+
+}
+
+.cellTableEvenRow {
+}
+
+.cellTableEvenRowCell {
+}
+
+.cellTableOddRow {
+  background: #DDDDDD;
+}
+
+.cellTableOddRowCell {
+}
+
+.cellTableHoveredRow {
+  background: #FCFCFC;
+}
+
+.cellTableHoveredRowCell {
+}
+
+.cellTableKeyboardSelectedRow {
+}
+
+.cellTableKeyboardSelectedRowCell {
+}
+
+.cellTableSelectedRow {
+    background: #f1e767; /* Old browsers */
+    background:literal("-moz-linear-gradient(top, #f1e767 0%, #feb645 100%)"); /* FF3.6+ */
+    background:literal("-webkit-gradient(linear, left top, left bottom, color-stop(0%,#f1e767), color-stop(100%,#feb645))"); /* Chrome,Safari4+ */
+    background:literal("-webkit-linear-gradient(top, #f1e767 0%,#feb645 100%)"); /* Chrome10+,Safari5.1+ */
+    background:literal("-o-linear-gradient(top, #f1e767 0%,#feb645 100%)"); /* Opera11.10+ */
+    background:literal("-ms-linear-gradient(top, #f1e767 0%,#feb645 100%)"); /* IE10+ */
+    filter:literal("progid:DXImageTransform.Microsoft.gradient( startColorstr='#f1e767', endColorstr='#feb645',GradientType=0 )"); /* IE6-9 */
+    background:literal("linear-gradient(top, #f1e767 0%,#feb645 100%)"); /* W3C */
+}
+
+.cellTableSelectedRowCell {
+}
+
+.cellTableKeyboardSelectedCell {
+}
+
+@sprite .cellTableLoading {
+  gwt-image: 'cellTableLoading';
+  margin: 30px;
+}

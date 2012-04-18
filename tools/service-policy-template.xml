@@ -1,0 +1,68 @@
+<wsp:Policy xmlns:wsp="http://schemas.xmlsoap.org/ws/2004/09/policy">
+  <wsp:ExactlyOne>
+    <wsp:All>
+      <sp:AsymmetricBinding xmlns:sp="http://schemas.xmlsoap.org/ws/2005/07/securitypolicy">
+	<wsp:Policy>
+          <sp:InitiatorToken>
+            <wsp:Policy>
+              <sp:X509Token sp:IncludeToken="http://schemas.xmlsoap.org/ws/2005/07/securitypolicy/IncludeToken/Always">a
+                <wsp:Policy>
+                  <sp:RequireEmbeddedTokenReference/>
+                  <sp:WssX509V3Token10/>
+                </wsp:Policy>
+              </sp:X509Token>
+            </wsp:Policy>
+          </sp:InitiatorToken>
+          <sp:RecipientToken>
+            <wsp:Policy>
+              <sp:X509Token sp:IncludeToken="http://schemas.xmlsoap.org/ws/2005/07/securitypolicy/IncludeToken/Always">
+                <wsp:Policy>
+                  <sp:RequireEmbeddedTokenReference/>
+                  <sp:WssX509V3Token10/>
+                </wsp:Policy>
+              </sp:X509Token>
+            </wsp:Policy>
+          </sp:RecipientToken>
+
+          <sp:AlgorithmSuite>
+            <wsp:Policy>
+              <sp:Basic256Rsa15/>
+            </wsp:Policy>
+          </sp:AlgorithmSuite>
+
+          <sp:Layout>
+            <wsp:Policy>
+              <sp:Strict/>
+            </wsp:Policy>
+          </sp:Layout>
+
+	  <sp:IncludeTimestamp/>
+          <sp:OnlySignEntireHeadersAndBody/>
+	  <!-- <sp:EncryptSignature/> -->
+        </wsp:Policy>
+      </sp:AsymmetricBinding>
+
+      <sp:Wss10 xmlns:sp="http://schemas.xmlsoap.org/ws/2005/07/securitypolicy">
+        <wsp:Policy>
+          <sp:MustSupportRefKeyIdentifier/>
+          <sp:MustSupportRefEmbeddedToken/>
+	  <sp:MustSupportRefIssuerSerial/>
+        </wsp:Policy>
+      </sp:Wss10>
+
+      <sp:SignedParts xmlns:sp="http://schemas.xmlsoap.org/ws/2005/07/securitypolicy">
+	<sp:Body/>
+        <sp:Header Namespace="http://www.w3.org/2005/08/addressing"/>
+      </sp:SignedParts>
+
+      <rampc:RampartConfig xmlns:rampc="http://ws.apache.org/rampart/c/policy">
+	<rampc:ReceiverCertificate>EUCALYPTUS_HOME/var/lib/eucalyptus/keys/CLIENT-CERT</rampc:ReceiverCertificate>
+	<rampc:Certificate>EUCALYPTUS_HOME/var/lib/eucalyptus/keys/SERVER-CERT</rampc:Certificate>
+	<rampc:PrivateKey>EUCALYPTUS_HOME/var/lib/eucalyptus/keys/SERVER-KEY</rampc:PrivateKey>
+	<!-- <rampc:TimeToLive>14400</rampc:TimeToLive> -->
+	<rampc:ClockSkewBuffer>20</rampc:ClockSkewBuffer>
+      </rampc:RampartConfig>
+    </wsp:All>
+  </wsp:ExactlyOne>
+</wsp:Policy>
+

@@ -1,0 +1,51 @@
+<!DOCTYPE ui:UiBinder SYSTEM "http://dl.google.com/gwt/DTD/xhtml.ent">
+<ui:UiBinder xmlns:ui="urn:ui:com.google.gwt.uibinder"
+    xmlns:g="urn:import:com.google.gwt.user.client.ui">
+    
+    <ui:style>
+        .downloads {
+        	width:100%;
+        }
+        .title {
+        	font-size:85%;
+        	color:#323232;
+        	margin-bottom:12px;
+        	margin-top:12px;
+        }
+	</ui:style>
+    
+    <ui:style field="gridStyle" type="com.eucalyptus.webui.client.view.DownloadViewImpl.GridStyle">
+        .grid {
+        	font-size:85%;
+        	font-style:italic;
+        	color:#4D4D4D;
+        	width:90%;
+        }
+        .grid td {
+        	padding:4px;
+        	vertical-align:middle;
+        	border-bottom:1px dotted #CCCCCC;
+        }
+    </ui:style>
+    
+    <g:HTMLPanel>
+        <table class="{style.downloads}">
+            <tbody>
+                <tr>
+                    <td><g:Label addStyleNames="{style.title}">Eucalyptus-certified Images</g:Label></td>
+                </tr>
+                <tr>
+                    <td><g:SimplePanel ui:field="imagePanel"></g:SimplePanel></td>
+                </tr>
+                <tr>
+                    <td><g:Label addStyleNames="{style.title}">Eucalyptus-compatible Tools</g:Label></td>
+                </tr>
+                <tr>
+                    <td><g:SimplePanel ui:field="toolPanel"></g:SimplePanel></td>
+                </tr>
+                
+            </tbody>
+        </table>
+    </g:HTMLPanel>
+    
+</ui:UiBinder> 

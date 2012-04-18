@@ -1,0 +1,59 @@
+
+<p>The reporting package generates visual reports of eucalyptus usage
+statistics. For example, it generates reports of instance usage, S3 usage,
+and EBS usage.
+
+<p>The reporting package is also responsible for tracking usage statistics
+and recording them in a database. Some usage statistics (like instance usage)
+are statistically sampled every interval, whereas others (like S3 usage) are
+recorded every time some event occurs, like resource allocation.
+
+<p>The reporting system has a single entry point: the <code>generateReport</code>
+method in the <code>ReportGenerator</code> class. All reports are generated
+by calling that single method.
+
+<p><i>Implementation</i>
+
+<p>The reporting system is broken down into several <i>Reporting Modules</i>.
+Each module tracks its own usage statistics, has its own event listener, and
+has its own database tables. All reporting modules implement the
+<code>ReportingModule</code> interface, and
+are organized as sub-packages under the "com.eucalyptus.reporting.modules"
+package. When a report is generated, the reporting system calls a specific
+module to gather aggregate historical statistics, then feeds this information
+to Jasper to generate a report.
+
+<p>At present, three reporting modules are implemented: Instance, EBS, and S3.
+Additional reporting modules could be added, by adding additional
+sub-packages and implementing the ReportingModule interface; this would
+allow the reporting system to track additional kinds of usage statistics.
+
+<p>All reporting modules gather usage data by means of events. Events are
+sent from various components of Eucalyptus (like the CLC and Walrus) to the
+reporting modules, either periodically or whenever some usage occurs.
+The events are aggregated into reporting statistics which are stored in the
+various module database tables.
+
+<p>Usage statistics are aggregated and stored in the database as a series of
+<i>snapshots</i>.  Each snapshot contains the total usage for a given
+(user,account,cluster,avail_zone) tuple at a given moment in time.
+
+<p>The current reporting modules all share a common structure and a similar way
+of storing statistics as snapshots. However, this is only a <i>convention</i>
+which has been followed for the existing reporting modules.  Any future
+reporting module need not have similar classes or a similar organiztion;
+it needs only to have its own module sub-package, and to implement
+ReportingModule and ReportLine interfaces. It can store, aggregate, and
+retrieve its statistics in any manner chosen by the developer.  It need not
+necessarily store its statistics as a series of snapshots either.
+
+<p>In addition to the reporting modules, the reporting system also has a
+super-structure, which loads the modules, queries the modules for data,
+listens for (and parses) web requests, maintains a queue of events,
+generates visual reports using Jasper, caches frequently used reports, and so
+on.
+
+<p>The super-structure has a <i>queue</i> package for transmitting
+events over the network if necessary, and a <i>units</i> package for unit
+conversions.
+

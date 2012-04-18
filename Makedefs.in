@@ -1,0 +1,54 @@
+#
+# parameters needed to compile eucalyptus: modified by autoconf
+#
+#
+
+# which version
+export VERSION		= @EUCA_VERSION@
+
+# packages we depend upon
+export APACHE2_MODULE_DIR = @APACHE2_MODULE_DIR@
+export AXIS2C_HOME	  = @AXIS2C_HOME@
+export AXIS2C_SERVICES	  = @AXIS2C_SERVICES@
+export AXIS2_HOME	  = @AXIS2_HOME@
+export LIBVIRT_HOME	  = @LIBVIRT_HOME@
+export VDDK_HOME	  = @VDDK_HOME@
+
+# where eucalyptus will install and other standard stuff: eventually we'll
+# comply to the GNU standard
+prefix		= @prefix@
+#exec_prefix	= @exec_prefix@
+#bindir		= @bindir@
+#sbindir	= @sbindir@
+#libdir		= @libdir@
+#mandir		= @mandir@
+#incdir		= @includedir@
+#etcdir		= @sysconfdir@
+#datarootdir	= @datarootdir@
+etcdir		= ${prefix}/etc
+vardir		= ${prefix}/var
+usrdir		= ${prefix}/usr
+bindir		= ${prefix}/usr/bin
+sbindir		= ${prefix}/usr/sbin
+datarootdir	= ${usrdir}/share
+
+# where we are going to install eucalyptus and where are the sources
+export EUCALYPTUS	= ${prefix}
+TOP			= @TOP@
+
+# system dependents 
+CC		= @CC@
+CFLAGS		= @CFLAGS@
+LDFLAGS		= @LDFLAGS@
+INCLUDES	= @INCLUDES@
+LIBS		= @LIBS@ -pthread
+INSTALL		= @INSTALL@
+ANT		= @ANT@ -e
+WSDL2C		= @WSDL2C@
+JAVA_HOME       = @JAVA_HOME@
+RM		= @RM@
+PYTHON		= @PYTHON@
+
+# compile time configurations
+euca_theme	= @INTERFACE_THEME@
+extensions	= @EXTENSIONS@

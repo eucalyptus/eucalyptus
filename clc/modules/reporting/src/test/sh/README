@@ -1,0 +1,62 @@
+
+This directory contains tests for the reporting system.
+
+There are two kinds of tests: real-data tests and false-data tests. The
+false-data tests send many fake events of resource usage, then generate
+reports based upon that fake data. The real-data tests generate real
+data by creating instances or S3 buckets, then verify that
+reporting events were sent and ended up in the database. Together, these
+provide adequate coverage: we know that events are sent (from the real-
+data tests), that events make it into the DB (from the real-data tests),
+and that reports are generated correctly from data in the DB (from the
+fake-data tests).
+
+
+--- FAKE-DATA TESTS ---
+
+Fake-data tests are used because we cannot generate enough real data
+quickly enough to test the reports. It would require starting
+thousands of instances and running them for hours. So we generate fake
+events instead.
+
+The fake-data tests are in the following scripts:
+	runInstanceReportingTest.sh
+	runStorageReportingTest.sh
+	runS3ReportingTest.sh
+
+Each will return 0 upon success.
+
+The fake data tests generate reports in CSV format, then verify the
+correctness of those reports, using a tool called CsvChecker which
+is checked into the source repository. The CsvChecker tool
+compares a CSV file against a reference CSV file based upon rules.
+The CsvChecker tool relies upon reference CSV files which are located
+in this directoy (instanceReference.csv, storageReference.csv,
+and s3Reference.csv) which indicate what the reports should look
+like.
+
+--- REAL-DATA TESTS ---
+
+The real-data tests don't test report genertaion; that is tested only
+by the fake-data tests. The only reason we have real-data tests, is
+because the fake-data tests do not verify that any events actually
+are sent when instances are started etc. Thus, we have real-data
+tests for that. The real-data tests start actual instances, etc,
+then verify that events are sent, and that data with correct
+timestamps is added to the database.
+
+The real-data tests are in the following scripts:
+	runRealInstanceReportingTest.sh
+	runRealStorageReportingTest.sh
+	runRealS3ReportingTest.sh
+
+Each will return 0 upon success.
+
+The s3 test relies upon s3curl.pl which is located in this directory.
+
+All the real-data tests rely upon within_error.bc which is a bc
+script to verify that numeric values fall within ranges.
+
+Some real-data tests rely upon data.txt which is filled with dummy
+data for creating S3 objects, etc.
+

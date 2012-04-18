@@ -1,0 +1,58 @@
+{
+  "Version":"2010-11-14",
+  "Statement":[{
+    "Sid":"11111",
+    "Effect":"Allow",
+    "Action":["iam:listusers","iam:listgroups"],
+    "Resource":["arn:aws:iam::123456:group/*","arn:aws:iam::123456:user/*"],
+    "Condition":{
+      "DateGreaterThan":{
+        "aws:currenttime":"2010-11-14T00:07:00.4555Z"
+      }
+    }
+  },
+  {
+    "Sid":"22222",
+    "Effect":"Deny",
+    "Action":"ec2:*instances",
+    "NotResource":"arn:aws:ec2:::image/emi-12345678",
+    "Condition":{
+      "DateGreaterThan":{
+        "aws:currenttime":["2010-11-14", "2010-11-15"]
+      },
+      "NumericEquals":{
+        "ec2:KeepAlive":"6000"
+      }
+    }
+  },
+  {
+    "Sid":"33333",
+    "Effect":"Allow",
+    "NotAction":"s3:*bucket",
+    "Resource":"arn:aws:s3:::b*",
+  },
+  {
+    "Sid":"33334",
+    "Effect":"Allow",
+    "Action":"s3:*bucket",
+    "Resource":"*",
+  },
+  {
+    "Sid":"44444",
+    "Effect":"Limit",
+    "Action":"*",
+    "Resource":"arn:aws:ec2:::instance/*",
+    "Condition":{
+      "NumericLessThanEquals":{
+        "ec2:vmnumber":"10"
+      }
+    }
+  },
+  {
+    "Sid":"55555",
+    "Effect":"Allow",
+    "Action":["s3:*", "ec2:*"],
+    "Resource":["arn:aws:ec2:::image/*", "arn:aws:s3:::*", "arn:aws:iam::1234567890:group/*"],
+  }
+  ]
+}

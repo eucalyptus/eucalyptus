@@ -1,0 +1,194 @@
+.TH euca_conf 1 "August 2, 2009" "euca_conf"
+
+.SH NAME
+euca_conf \- configuration tool for Eucalyptus
+
+.SH SYNOPSIS
+.B euca_conf 
+
+.SH DESCRIPTION
+This manual page describes the
+.B euca_conf
+command which is used to configure Eucalyptus. There are few component to
+a Eucalyptus installation: the cloud controller (CLC), walrus, one or more
+cluster controller (CC), one storage controller (SC) per CC and node
+controller (NC).
+
+CLC is the endpoint for the client tool, and contains the administrative
+UI (reachable at https://localhost:8443 on the CLC machine).
+
+walrus is the S3 compatible storage for Eucalyptus.
+
+CC controls a number of NCs, provisions the network for VMs.
+
+SC gives EBS functionality to a cluster.
+
+NC interact with the local hypervisor to start/stop/control instances.
+
+
+.SH OPTIONS
+
+.BI --help
+.RS
+display some help
+.RE
+
+.BI --enable\ {walrus|sc|cloud}
+.RS
+Service to enable at the next start time. Needs to be run on the machine
+which has the service to start.
+.RE
+
+.BI --disable\ {walrus|sc|cloud}
+.RS
+Disable services, preventing them to be started. 
+.RE
+
+.BI --register-cluster\ <name>\ <hostname>
+.RS
+Register a CC with the CLC. To allow provisioning of instances, at least
+one CC is needed on a running Eucalyptus installation.
+This command needs to be ran on the CLC machine, and the
+CC machine (possibly the same machine) needs to be reachable. The keys
+needs to be transferred from the CLC to the CC machine to enable
+secure operation, and ssh is used, so this command may ask for a password.
+
+The user need to choose a name per CC.
+.RE
+
+.BI --deregister-cluster\ <name>\ <hostname>
+.RS
+Deregister a CC.
+.RE
+
+.BI --register-sc\ <CC>\ <hostname>
+.RS
+Register a SC with the CLC. The SC is needed to provide EBS support to a
+cluster logically resides with the CC.
+This command needs to be ran on the CLC machine, and the
+SC machine (possibly the same machine) needs to be reachable. The keys
+needs to be transferred from the CLC to the SC machine to enable
+secure operation, and ssh is used, so this command may ask for a password.
+
+There has to be a CC already registered, since the SC works in conjunction
+with a CC.
+.RE
+
+.BI --deregister-sc\ <hostname>
+.RS
+Deregister a running SC. You will need to register another SC to
+have EBS functionality for a named cluster.
+
+.B WARNING:
+running this command will invalidate volumes and snapshots which this SC
+is responsible for.
+.RE
+
+.BI --register-walrus\ <hostname>
+.RS
+Register a walrus with the CLC. A walrus is needed for a running Eucalyptus
+installation. This command needs to be ran on the CLC machine, and the
+walrus machine (possibly the same machine) needs to be reachable. The keys
+needs to be transferred from the CLC to the walrus machine to enable
+secure operation, and ssh is used, so this command may ask for a password.
+.RE
+
+.BI --deregister-walrus\ <hostname>
+.RS
+Deregister a running walrus. You will need to register another walrus to
+have a functional Eucalyptus installation. 
+
+.B WARNING:
+running this command will invalidate the uploaded and running images,
+kernels and ramdisk! So you (and all the users) will have to upload new
+images.
+.RE
+
+.BI --register-nodes\ host\ [host ...]
+.RS
+Register NCs with a CC. NC and CC should be on the same network. This
+command needs to be run the CC which will controll the NCs. The keys
+needs to be transferred from the CC to the NC for enable secure operation,
+and ssh is used, so this command may ask for a password.
+.RE
+
+.BI --deregister-nodes\ host\ [host ...]
+.RS
+Intruct the CC to ignore specified NCs. 
+.RE
+
+.BI --list-walruses
+.RS
+List registered walruses. The command needs to be run on the CLC.
+.RE
+
+.BI --list-scs
+.RS
+List registered storage controllers. The command needs to be run on the CLC.
+.RE
+.
+.BI --list-clusters
+.RS
+List registered cluster controllers. The command needs to be run on the CLC.
+.RE
+.
+.BI --instances\ <path>
+.RS
+The NC needs disk space to keep a copy of the running instances. Some
+copies are cached for faster startup time. This instruct the NC to user
+.I path
+as the local cache.
+.I path
+better be an empty directory, since the NC needs to initialized it every
+time.
+.RE
+
+.BI --version
+.RS
+Print the version of Eucalyptus.
+.RE
+
+.BI --setup
+.RS
+This command needs to run as root, before the first-time startup or
+Eucalyptus. Eucalyptus runs as an unprivileged user (EUCA_USER in config)
+but to interact with hypervisor and disk image, it will need to escalate
+privilege. To do so we use a command (euca_rootwrap) and this command set
+it up properly.
+.RE
+
+.BI --check\ {nc|cc|cloud|sc|walrus}
+.RS
+This command is mainly used on the startup script for the specific
+component, since it checks that the environment is properly setup for the
+component (mainly permission on directory needs to be right for the
+eucalyptus user).
+.RE
+
+.BI --cc-port\ <port>
+.RS
+.RE
+.BI --nc-port\ <port> 
+.RS
+.RE
+.BI --user\ <euca_user>
+.RS
+.RE
+.BI --dhcpd\ <dhcpd> 
+.RS
+.RE
+.BI --dhcp_user\ <user> 
+.RS
+These commands modify eucalyptus.conf so the changes will be reflected at
+the restart of the services.
+.RE
+
+.SH COPYRIGHT
+Copyright © 2009 Eucalyptus Systems Inc.   License  GPLv3+: GNU GPL
+version 3 or later <http://gnu.org/licenses/gpl.html>.  This  is  free
+software:  you  are free to change and redistribute it.  There is NO
+WARRANTY, to the extent permitted by law.
+
+.SH AUTHOR
+Eucalyptus Systems Inc. <http://www.eucalyptus.com>
+

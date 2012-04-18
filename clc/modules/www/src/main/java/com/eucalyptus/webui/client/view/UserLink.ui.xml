@@ -1,0 +1,37 @@
+<!DOCTYPE ui:UiBinder SYSTEM "http://dl.google.com/gwt/DTD/xhtml.ent">
+<ui:UiBinder xmlns:ui="urn:ui:com.google.gwt.uibinder"
+    xmlns:g="urn:import:com.google.gwt.user.client.ui">
+    
+    <ui:image field="arrow" src="image/arrow_down_8x7_blue.png"></ui:image>
+    
+    <ui:style>
+        .boundingBox {
+        	padding:4px;
+        }
+        .userAnchor {
+        	font-size:90%;
+            cursor:pointer;
+            color:#2E52A4;
+        }
+        @sprite .arrow {
+        	height:8px;
+        	width:8px;
+        	gwt-image:'arrow';
+            background-repeat:no-repeat;
+            background-position:center center;
+            display:inline-block;        	
+        }
+    </ui:style>
+    
+    <g:HTMLPanel styleName="{style.boundingBox}">
+        <table style="width:100%;"><tbody><tr>
+            <td>
+                <g:Anchor styleName="{style.userAnchor}" ui:field="userAnchor">username@account</g:Anchor>
+            </td>
+            <td style="vertical-align:middle;padding-left:3px;">
+                <span class="{style.arrow}"></span>
+            </td>
+        </tr></tbody></table>
+    </g:HTMLPanel>
+    
+</ui:UiBinder> 

@@ -1,0 +1,5 @@
+
+define within(val, correctval, err) {
+	return ((correctval - err) < val) && (val < (correctval + err))
+}
+

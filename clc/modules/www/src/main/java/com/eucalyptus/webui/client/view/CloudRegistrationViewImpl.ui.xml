@@ -1,0 +1,55 @@
+<!DOCTYPE ui:UiBinder SYSTEM "http://dl.google.com/gwt/DTD/xhtml.ent">
+<ui:UiBinder xmlns:ui="urn:ui:com.google.gwt.uibinder"
+    xmlns:g="urn:import:com.google.gwt.user.client.ui">
+    
+    <ui:style>
+        .title {
+          font-size:85%;
+          color:#323232;
+          margin-bottom:12px;
+          margin-top:12px;
+        }
+        .label {
+        	font-size:90%;
+        	font-weight:bold;
+        	color:#323232;
+        }
+        .value {
+        	font-size:85%;
+        	font-style:italic;
+        	color:#4D4D4D;
+        }
+        .reg {
+        }
+        .reg td {
+        	padding:5px;
+        }
+    </ui:style>
+    
+    <g:HTMLPanel>
+        <table style="width:100%;">
+            <tbody>
+                <tr>
+                  <g:Label addStyleNames="{style.title}">Use the following information to register your cloud with third-party cloud management platform:</g:Label>
+                </tr>
+                <tr>
+                    <td>
+                        <table class="{style.reg}">
+                            <tbody>
+                                <tr>
+                                    <td><g:Label addStyleNames="{style.label}">Cloud URL:</g:Label></td>
+                                    <td><g:Label addStyleNames="{style.value}" ui:field="cloudUrl"></g:Label></td>
+                                </tr>
+                                <tr>
+                                    <td><g:Label addStyleNames="{style.label}">Cloud ID:</g:Label></td>
+                                    <td><g:Label addStyleNames="{style.value}" ui:field="cloudId"></g:Label></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </g:HTMLPanel>
+    
+</ui:UiBinder> 

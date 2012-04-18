@@ -1,0 +1,240 @@
+*Wed Oct 20 2010 Eucalyptus Systems (support@eucalyptus.com)
+    * Version 2.0.1
+    * Bug fix minor release.
+    * Fixes launchpad bugs: 
+      
+      #661565 #644482 #658023 #658022 #595421 #637659 #632263 
+      #622818 #628328 #664002 #639639
+      
+      which include fixes to the following sub-systems:
+
+        o External dashboard registration
+        o Meta-data service access
+        o S3 Versioning
+        o Walrus image decryption
+        o Component registration
+
+*Tue Aug 24 2010 Eucalyptus Systems (support@eucalyptus.com)
+    * Version 2.0.0
+    * Stability/Performance point-release.
+    * Back-end (CC/NC) scale improvements.
+    * CLC fixes including backend database pooling and persistence improvements, SSL support.
+    * euca_conf fixes including the ability to list nodes (and VMs).
+    * Fixes to Walrus for specific use cases, bugs and stability, as well as beta support for the S3 server logging API, fixes to bittorrent support.
+    * Storage Controller scalability improvements.
+    * Updated packages for current versions of supported distributions.
+    * Closes many bugs, including:
+
+      #477776 #461156 #477776 #498379 #498379 
+      #517769 #518601 #513842 #453416 #328146
+
+*Fri Feb 12 2010 Eucalyptus Systems (support@eucalyptus.com)
+    * Version 1.6.2
+    * Stability/Performance point-release.
+    * Back-end (CC/NC) scale improvements.
+    * CLC fixes including backend database pooling and persistence
+      improvements, SSL support.
+    * euca_conf fixes including the ability to list nodes (and VMs).
+    * Fixes to Walrus for specific use cases, bugs and stability, as
+      well as beta support for the S3 server logging API, fixes to
+      bittorrent support.
+    * Storage Controller scalability improvements.
+    * Updated packages for current versions of supported distributions.
+    * Closes many bugs, including:
+
+     #477776 #461156 #477776 #498379 #498379 #517769 #518601 #513842
+     #453416 #328146
+
+*Thu Nov 5 2009 Eucalyptus Systems (support@eucalyptus.com)
+    * Version 1.6.1
+    * Added support for multiple clusters (availability zones)
+    * Allow components (cloud, walrus, sc, cc, nc) to be hosted on
+      different machines
+    * Support for dynamic instance and bucket DNS
+    * Better startup (no need for ant anymore, much faster)
+    * Reworked part of the network provisioning code for
+      multi-cluster and better handling public IP addressing
+    * Hypervisor improvements
+         o switched default kvm ethernet interface to e1000
+         o serialized calls to the xen hypervisor
+    * Added helpers to integrate with nagios and/or ganglia
+    * The Web UI is now theme-able (at compile time)
+    * A lot of work toward long term stability: run the code thru
+      different code/memory checker, re-engineer the java stack to be
+      faster and more robust.
+    * Closes bugs:
+
+      #426469 #426576 #428546 #428654 #428710 #430260 #430356 #430888
+      #430922 #431939 #430830 #431933 #431935 #426469 #431934 #431937
+      #431931 #426467 #430830 #426389 #426389 #430944 #432604 #432823
+      #436274 #436276 #436290 #436313 #436407 #436885 #436917 #437014
+      #437026 #436407 #430957 #430226 #388934 #440744 #440817 #440950
+      #441033 #441035 #441020 #441019 #443325 #443325 #443314 #444838
+      #445206 #444908 #445206 #444908 #445997 #447585 #447555 #444838
+      #449135 #438565 #449948 #430266 #398867 #449948 #401996 #449944
+      #450915 #451795 #454405 #456877 #456878 #461394 #461444 #460085
+      #404842 #462940 #456878 #406049 
+
+*Fri Jul 17 2009 Eucalyptus Systems (support@eucalyptus.com)
+    * Version 1.5.2
+    * A lot of bug fixes and improvements
+    * Eucalytpus now runs as user 'eucalyptus' by default
+    * added new UI tab 'Extras' that includes links to pre-packaged images
+      and client tools
+    * Fixed support for client tools (including fixes to the REST interface).
+    * Closes bugs:
+
+      #368975 #375809 #375805 #376575 #354787 #382522 #357350 #375105 
+      #359855 #384069 #359855 #357499 #384117 #384119 #375093 #384119
+      #356580 #384123 #359855 #356389 #384069 #384119 #357849 #359855
+      #384124 #384126 #384126 #384652 #385660 #386430 #357440
+
+*Fri May  1 2009 Eucalyptus Systems (support@eucalyptus.com)
+    * Version 1.5.1
+    * Elastic Block Store (EBS) support (volumes & snapshots)
+    * Walrus improvements:
+          o Support for groups in ACLS
+          o Fixed issues with meta data support
+          o Web browser form-based uploads via HTTP POST
+          o Object copying
+          o Query string authentication
+          o Support for arbitrary key names
+          o Compressed image downloads and fixes to image caching
+          o Reduced memory requirement 
+    * Network improvement: new MANAGED-NOVLAN mode
+    * Node-side improvements:
+          o Support for the KVM hypervisor
+          o Compression & retries on Walrus downloads
+          o Reworked caching (now with configurable limit) 
+    * Web UI improvements:
+          o Cloud registration with Rightscale (from admin's 'Credentials'
+tab)
+          o New configuration options for Walrus
+          o Better screening of usernames
+          o Fixed account confirmation glitches 
+    * Building and installation improvements
+          o Better Java installation checking
+          o New command-line administration: euca_conf -addcluster ...  -addnode ...
+          o Non-root user deployment of Eucalyptus
+          o Binary packages for more distributions (Ubuntu et al) 
+
+*Thu Apr 30 2009 mayhem group (support@eucalyptus.com)
+    * Elastic Block Store (EBS) support (volumes & snapshots)
+    * Walrus improvements:
+          o Support for groups in ACLS
+          o Fixed issues with meta data support
+          o Web browser form-based uploads via HTTP POST
+          o Object copying
+          o Query string authentication
+          o Support for arbitrary key names
+          o Compressed image downloads and fixes to image caching
+          o Reduced memory requirement 
+    * Network improvement: new MANAGED-NOVLAN mode
+    * Node-side improvements:
+          o Support for the KVM hypervisor
+          o Compression & retries on Walrus downloads
+          o Reworked caching (now with configurable limit) 
+    * Web UI improvements:
+          o Cloud registration with Rightscale (from admin's 'Credentials'
+tab)
+          o New configuration options for Walrus
+          o Better screening of usernames
+          o Fixed account confirmation glitches 
+    * Building and installation improvements
+          o Better Java installation checking
+          o New command-line administration: euca_conf -addcluster ...
+-addnode ...
+          o Non-root user deployment of Eucalyptus
+          o Binary packages for more distributions (Ubuntu et al) 
+
+
+*Mon Jan  5 2009 mayhem group (support@open.eucalyptus.com)
+
+- Added new networking subsystem that no longer depends on VDE
+- Added support for elastic IP assignment and security using the 'MANAGED'
+  networking mode
+- Cluster controller scheduling policy can now be configured in
+  eucalyptus.conf (ROUNDROBIN and GREEDY currently supported)
+- Cluster controller now handles concurrent requests (no longer have to
+  restrict apache to allow only one connection at a time)
+- Added Walrus: a Amazon S3 interface compatible storage manager. Walrus handles 
+  storage of user data as well as filesystem images, kernels, and ramdisks. 
+- Support for new operations: 
+  - Reboot instance and get console output.
+- Node Controller improvements:
+  - Retrieval of images from Walrus instead of NFS-mounted file system
+  - New caching and cleanup code, including start-time integrity checks
+  - On-the-fly script-based generation of libvirt XML configuration
+  - Script-based discovery of node resources (no assumptions about stat)
+  - MAX_CORES overrides actual number of cores both down and up
+  - Moved libvirt errors to nc.log and suppressed harmless ones
+  - Serialized some Xen invocations to guard against non-determinism
+  - Added proper swap creation, also "ephemeral" disk support
+  - More robust instance state reporting to Cluster Controller
+- Web interface improvements:
+  - Added cloud/Walrus configuration, including clusters and VM types
+  - Revamped 'credentials' tab with new options to edit user information
+    and hide/show "secret" strings
+  - Editing of user information for the administrator, including
+    confirmation dialog for deletion of users
+  - User-initiated password recovery mechanism
+  - Fixed a couple of bugs: ' ' in username, spurious double additions
+- Revamped logging throughout, with five levels a la log4j
+- Cloud Controller:
+  - User, Cluster, and System keys are now stored in PKCS#12 keystores and have moved to var/lib/eucalyptus/keys
+  - Configuration is handled entirely through the web interface
+    - Clusters dynamically added/started/stopped
+    - Webservices operations complete up to EC2 2008-05-05 (w/o EBS):
+    - "Elastic IP" address support
+    - Image registration and attribute manipulation
+    - GetConsole and RebootInstances support
+    - Working Security Groups support for clusters in MANAGED network mode
+    - see website for additional details, extensions, and caveats:
+      http://open.eucalyptus.com/wiki/API_v1.4
+  - Instance Metadata service (including userData)
+  - Workaround to use standard tools for registering kernels & ramdisks
+
+
+*Mon Jul 28 2008 mayhem group (support@open.eucalyptus.com)
+- Removed cloud, cluster controller and node controller and created their
+  own packages.
+- Added the possibility of installing Eucalyptus from RPMs (without
+  ROCKS).
+- Implemented caching of the instances.
+- More robust checking for running instances.
+- Fix the instance ID naming collision.
+
+*Tue Jul 01 2008 mayhem group (support@open.eucalyptus.com)
+- Added WS-security for internal communication
+- Added URL Query Interface for interacting with Eucalyptus
+- Cluster Controller improvements:
+   - Instance caching added to improve performance under
+     certain conditions
+   - Thread locks removed to improve performance
+   - NC resource information gathered asynchronously to
+     improve scheduler performance
+- Network control improvements:
+   - Added ability to configure 'public' instance interface
+     network parameters (instead of hardcoded 10. network)
+   - Lots of reliability changes
+- Cloud Controller improvements:
+   - Pure in-memory database
+   - Image registration over WS interface
+   - Improved build procedure
+- Web interface improvements:
+    - For all users (query interface credentials, listing of
+      available images)
+    - For the administrator (addition, approval, disabling,
+      and deletion of users; disabling of images)
+- Numerous bug fixes, improving stability and performance.
+   In particular, but not limited to:
+   - Recovering Cloud Controller system state
+   - Timeout-related error reporting
+   - Slimmer log files, with timestamps
+
+*Sat May 21 2008 mayhem group (support@open.eucalyptus.com)
+- first release of eucalyptus
+
+
+
+

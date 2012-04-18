@@ -1,0 +1,58 @@
+<!DOCTYPE ui:UiBinder SYSTEM "http://dl.google.com/gwt/DTD/xhtml.ent">
+<ui:UiBinder xmlns:ui="urn:ui:com.google.gwt.uibinder"
+    xmlns:g="urn:import:com.google.gwt.user.client.ui"
+    xmlns:euca="urn:import:com.eucalyptus.webui.client.view">
+    
+    <ui:style>
+        .toolbar {
+            width:99%;
+        }
+    </ui:style>
+    
+    <ui:with field="global" type="com.eucalyptus.webui.client.view.GlobalResources"/>
+    
+    <g:DockLayoutPanel unit="PX">
+        <g:north size="36">
+            <g:HTMLPanel addStyleNames="{style.toolbar}">
+                <table>
+                    <colgroup width="1px"/>
+                    <colgroup width="20px"/>
+                    <colgroup width="1px"/>
+                    <colgroup width="1px"/>
+                    <colgroup width="20px"/>
+                    <colgroup width="1px"/>
+                    <tbody>
+                        <tr>
+                            <td>
+                                <g:Anchor styleName="{global.buttonCss.negative} {global.buttonCss.button} {global.buttonCss.small}" ui:field="delButton">
+                                    <span class="{global.buttonCss.minus} {global.buttonCss.icon}"/>Delete groups
+                                </g:Anchor>
+                            </td>
+                            <td>&nbsp;</td>
+                            <td>
+                                <g:Anchor styleName="{global.buttonCss.button} {global.buttonCss.small} {global.buttonCss.left}" ui:field="addUsersButton">
+                                    <span class="{global.buttonCss.user} {global.buttonCss.icon}"/>Add users
+                                </g:Anchor>
+                            </td>
+                            <td>
+                                <g:Anchor styleName="{global.buttonCss.negative} {global.buttonCss.button} {global.buttonCss.small} {global.buttonCss.right}" ui:field="removeUsersButton">
+                                    <span class="{global.buttonCss.user} {global.buttonCss.icon}"/>Remove users
+                                </g:Anchor>
+                            </td>                            
+                            <td>&nbsp;</td>
+                            <td>
+                                <g:Anchor styleName="{global.buttonCss.button} {global.buttonCss.small}" ui:field="addPolicyButton">
+                                    <span class="{global.buttonCss.lock} {global.buttonCss.icon}"/>Add policy
+                                </g:Anchor>                            
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </g:HTMLPanel>
+        </g:north>
+        <g:center>
+            <g:LayoutPanel ui:field="tablePanel"/>
+        </g:center>
+    </g:DockLayoutPanel>
+    
+</ui:UiBinder> 

@@ -1,0 +1,247 @@
+#!/usr/bin/perl
+#Copyright (c) 2009  Eucalyptus Systems, Inc.	
+#
+#This program is free software: you can redistribute it and/or modify
+#it under the terms of the GNU General Public License as published by 
+#the Free Software Foundation, only version 3 of the License.  
+# 
+#This file is distributed in the hope that it will be useful, but WITHOUT
+#ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+#FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+#for more details.  
+#
+#You should have received a copy of the GNU General Public License along
+#with this program.  If not, see <http://www.gnu.org/licenses/>.
+# 
+#Please contact Eucalyptus Systems, Inc., 130 Castilian
+#Dr., Goleta, CA 93101 USA or visit <http://www.eucalyptus.com/licenses/> 
+#if you need additional information or have any questions.
+#
+#This file may incorporate work covered under the following copyright and
+#permission notice:
+#
+#  Software License Agreement (BSD License)
+#
+#  Copyright (c) 2008, Regents of the University of California
+#  
+#
+#  Redistribution and use of this software in source and binary forms, with
+#  or without modification, are permitted provided that the following
+#  conditions are met:
+#
+#    Redistributions of source code must retain the above copyright notice,
+#    this list of conditions and the following disclaimer.
+#
+#    Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+#
+#  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+#  IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+#  TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+#  PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+#  OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+#  EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+#  PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+#  PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+#  LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+#  NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+#  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. USERS OF
+#  THIS SOFTWARE ACKNOWLEDGE THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE
+#  LICENSED MATERIAL, COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS
+#  SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
+#  IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
+#  BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
+#  THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+#  OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
+#  WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
+#  ANY SUCH LICENSES OR RIGHTS.
+#
+
+
+# This script is invoked by Eucalyptus for converting partitions to disks.
+# If given a partition, it will overwrite it with a disk containing that
+# partition and, optionally, with new swap and ephemeral partitions, too.
+# If it is given a disk with partition #1 only, it can expand the disk to
+# accommodate swap and ephemeral partitions.  (This is used by Eucalyptus
+# to cache a disk with only root partition and then add the other two
+# partitions later.)  If the script is given a disk with more than 
+# partition #1, the disk is quietly ignored.
+
+use strict;
+
+our $quiet = 0;
+our $attached = 0;
+
+delete @ENV{qw(IFS CDPATH ENV BASH_ENV)};
+$ENV{'PATH'}='/bin:/usr/bin:/sbin:/usr/sbin/';
+
+my $partition = untaint(shift @ARGV);
+my $swap_size_mb = untaint(shift @ARGV);
+if (! defined $swap_size_mb) { $swap_size_mb = 0 }
+my $ephemeral_size_mb = untaint(shift @ARGV);
+if (! defined $ephemeral_size_mb) { $ephemeral_size_mb = 0 }
+
+my $DD=untaint(`which dd`);
+my $PARTED=untaint(`which parted`);
+my $MV=untaint(`which mv`);
+my $FILE=untaint(`which file`);
+
+if ( !-x $PARTED ) {
+    print STDERR "Missing parted!\n";
+    exit(2);
+}
+if ( !-x $DD ) {
+    print STDERR "Missing dd!\n";
+    exit(3);
+}
+if (!$partition || !-f $partition) {
+    print STDERR "USAGE: partition2disk <path/to/disk_or_partition_file> [swap-size-MB] [ephemeral-size-MB]\n";
+    exit(5);
+}
+
+my $root_size_b = -s "$partition";
+my $root_size_mb = int(($root_size_b / (1024 * 1000)))+ 1;
+my $disk_size_mb = $root_size_mb + $swap_size_mb + $ephemeral_size_mb - 1;
+my $root_size_sectors = ($root_size_b / 512);
+my $swap_size_sectors = ($swap_size_mb * 2000);
+my $ephemeral_size_sectors = ($ephemeral_size_mb * 2000);
+my $first_sector = 63; # common starting sector because of DOS
+my $last_sector = $first_sector + $root_size_sectors;
+
+# we need to be sure that the console.log is writable by the qemu user
+my $quser = "";
+my $console_log = $partition;
+my $idcheck = untaint(`id qemu 2>/dev/null`);
+if ( $idcheck ) {
+    $quser = "qemu";
+} else {
+    $quser = "eucalyptus";
+}
+$console_log =~ s|(.*)/(.*)|$1/console.log|;
+untaint(`touch $console_log`);
+untaint(`chown $quser.eucalyptus $console_log`);
+untaint(`chmod 0660 $console_log`);
+
+my $magic=`$FILE $partition`;
+chomp($magic);
+if (!($magic =~ /partition [0-99]/) && !($magic =~ /Qcow/)) { # if not a disk image already
+
+    # create the disk image
+    run ("$DD if=/dev/zero of=$partition.disk bs=1M seek=$disk_size_mb count=1 >/dev/null 2>&1", 2);
+    run ("$PARTED --script $partition.disk mklabel msdos", 3);
+
+    # create the first partition
+    run ("$PARTED --script $partition.disk mkpart primary ext2 ${first_sector}s ${last_sector}s", 4);
+
+    # copy partition 
+    run ("$DD if=$partition of=$partition.disk bs=512 seek=63 conv=notrunc,fsync", 11);
+ 
+    run ("$MV $partition.disk $partition", 14);
+
+} else { # if already a disk image
+    if ($ephemeral_size_mb>0 or $swap_size_mb>0) { # and there are partitions to add
+        if ($magic =~ /partition [2-9]/) {
+            print STDERR "this disk already has partitions in the range [2-9], not touching it\n";
+            do_exit(0);
+        }
+        if ($magic =~ /partition 1\: ID=(\w+), starthead (\d+), startsector (\d+), (\d+) sectors/) {
+            $last_sector = $3 + $4 - 1;
+            # enlarge the disk to accommodate ephemeral and swap
+            run ("$DD if=/dev/zero of=$partition bs=1M seek=$disk_size_mb count=1 >/dev/null 2>&1", 15);
+        } else {
+            print STDERR "cannot find the first partition on this disk, giving up\n";
+            do_exit(0);
+        }
+    }
+}
+
+# if no partitions to add, quit
+if ($ephemeral_size_mb<1 and $swap_size_mb<1) {
+    do_exit(0);
+}
+
+# create the ephemeral disk partition no matter what
+$first_sector = $last_sector + 1;
+$last_sector = $first_sector + $ephemeral_size_sectors;
+if ($ephemeral_size_sectors>=40) { # 40 is the bare minimum for ext2 disks, apparently
+    run ("$PARTED --script $partition mkpartfs primary ext2 ${first_sector}s ${last_sector}s", 5);
+} else {
+    # we'll create a dummy partition so that swap gets partition #3
+    $last_sector = $first_sector + 1;
+    run ("$PARTED --script $partition mkpart primary ${first_sector}s ${last_sector}s", 6);
+}
+
+if ($swap_size_sectors>=8) { # 8 is the bare minimum for swap partitions, apparently
+    $first_sector = $last_sector + 1;
+    my $rc = tryrun ("$PARTED --script $partition mkpartfs primary linux-swap ${first_sector}s 100%", 7);
+    if ($rc) {
+	print STDERR "trying new cmdline format (linux-swap(new))\n";
+	my $rc = tryrun ("$PARTED --script $partition mkpartfs primary linux-swap\\\(new\\\) ${first_sector}s 100%", 7);
+	if ($rc) {
+	    do_exit(7);
+	}
+    }
+    
+
+}
+
+# delete the ephemeral if it wasn't actually requested, leaving a 1-sector hole
+if ($ephemeral_size_sectors<40) {
+    run ("$PARTED --script $partition rm 2", 8);
+}
+
+do_exit(0);
+
+sub run() {
+    my $cmd = shift;
+    my $error = shift;
+
+    if ( not defined $error) {
+	$error = 1;
+    }
+
+    if (system($cmd)) {
+	print STDERR "ERROR while executing: $cmd\n";
+	do_exit ($error);
+    } else {
+	print STDERR "$cmd\n" unless $quiet;
+    }
+}
+
+sub tryrun() {
+    my $cmd = shift;
+    my $error = shift;
+
+    if ( not defined $error) {
+	$error = 1;
+    }
+    
+    my $rc = system($cmd);
+    if ($rc) {
+	print STDERR "ERROR while executing: $cmd\n";
+	return ($error);
+    } else {
+	print STDERR "$cmd\n" unless $quiet;
+    }
+    return($rc);
+}
+
+sub do_exit() {
+    my $ecode = shift;
+
+    if ($ecode && -f "$partition.disk") {
+	unlink("$partition.disk");
+    }
+    exit($ecode);
+}
+
+sub untaint() {
+    my $str = shift;
+    if ($str =~ /^([ &:#-\@\w.]+)$/) {
+	$str = $1; #data is now untainted
+    } else {
+	$str = "";
+    }
+    return($str);
+}

@@ -1,0 +1,30 @@
+common {
+  protocol C;
+}
+
+resource r0 {
+  
+  on <walrus-host-1> {
+    device    <drbd-block-dev, e.g., /dev/drbd1>;
+    disk      <drbd-backing-disk-dev, e.g. /dev/sdb1>;
+    address   <walrus-host-1-ip>:7789;
+    meta-disk internal;
+  }
+
+  on <walrus-host-2> {
+    device    <drbd-block-dev, e.g., /dev/drbd1>;
+    disk      <drbd-backing-disk-dev, e.g. /dev/sdb1>;
+    address   <walrus-host-2-ip>:7789;
+    meta-disk internal;
+  }
+
+  syncer {
+    rate 40M;
+  }
+
+  net {
+    after-sb-0pri discard-zero-changes;
+    after-sb-1pri discard-secondary;
+  }
+}
+    

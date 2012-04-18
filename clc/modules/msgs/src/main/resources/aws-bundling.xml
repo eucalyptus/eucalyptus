@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<binding force-classes="true" add-constructors="true">
+  <mapping name="CancelBundleTask" class="com.eucalyptus.vm.CancelBundleTaskType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <value name="bundleId" field="bundleId" usage="required" />
+  </mapping>
+  <mapping name="CancelBundleTaskResponse" class="com.eucalyptus.vm.CancelBundleTaskResponseType"
+    extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <structure name="bundleInstanceTask" field="task" map-as="com.eucalyptus.vm.BundleTask" />
+  </mapping>
+  <mapping name="BundleInstance" class="com.eucalyptus.vm.BundleInstanceType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <value name="instanceId" field="instanceId" usage="required" />
+    <structure name="storage">
+      <structure name="S3">
+        <value name="bucket" field="bucket" usage="required" />
+        <value name="prefix" field="prefix" usage="required" />
+        <value name="awsAccessKeyId" field="awsAccessKeyId" usage="required" />
+        <value name="uploadPolicy" field="uploadPolicy" usage="required" />
+        <value name="uploadPolicySignature" field="uploadPolicySignature" usage="required" />
+      </structure>
+    </structure>
+  </mapping>
+  <mapping name="BundleInstanceResponse" class="com.eucalyptus.vm.BundleInstanceResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <structure name="bundleInstanceTask" field="task" map-as="com.eucalyptus.vm.BundleTask" />
+  </mapping>
+  <mapping name="DescribeBundleTasks" class="com.eucalyptus.vm.DescribeBundleTasksType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <structure usage="optional">
+      <collection name="bundlesSet" factory="org.jibx.runtime.Utility.arrayListFactory" field="bundleIds"
+        item-type="java.lang.String">
+        <structure name="item">
+          <value name="bundleId" />
+        </structure>
+      </collection>
+    </structure>
+  </mapping>
+  <mapping name="DescribeBundleTasksResponse" class="com.eucalyptus.vm.DescribeBundleTasksResponseType"
+    extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <structure name="bundleInstanceTasksSet" usage="optional">
+      <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="bundleTasks">
+        <structure name="item" map-as="com.eucalyptus.vm.BundleTask" />
+      </collection>
+    </structure>
+  </mapping>
+  <mapping abstract="true" class="com.eucalyptus.vm.BundleTask">
+    <value name="instanceId" field="instanceId" usage="required" />
+    <value name="bundleId" field="bundleId" usage="required" />
+    <value name="state" field="state" usage="required" />
+    <value name="startTime" field="startTime" usage="required" />
+    <value name="updateTime" field="updateTime" usage="required" />
+    <value name="progress" field="progress" usage="required" />
+    <structure name="storage">
+      <structure name="S3">
+        <value name="bucket" field="bucket" usage="required" />
+        <value name="prefix" field="prefix" usage="required" />
+      </structure>
+    </structure>
+  </mapping>
+</binding>

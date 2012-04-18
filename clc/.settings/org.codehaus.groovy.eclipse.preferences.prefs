@@ -1,0 +1,4 @@
+#Mon Aug 17 15:22:22 PDT 2009
+eclipse.preferences.version=1
+groovy.compiler.output.path=bin-groovy
+support.groovy=true

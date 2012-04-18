@@ -1,0 +1,264 @@
+/* Inspired by the GitHub style button from http://css3buttons.michaelhenriksen.dk */
+a.button,button {
+	display: inline-block;
+	padding: 5px;
+	color: #3C3C3D;
+	font-size:14px;
+	text-shadow: 1px 1px 1px #FFFFFF;
+	background-color: #ECECEC;
+	white-space: nowrap;
+	overflow: visible;
+	cursor: pointer;
+	cursor: hand;
+	text-decoration: none;
+	border: 1px solid #CACACA;
+	-webkit-border-radius: 2px;
+	-moz-border-radius: 2px;
+	border-radius: 2px;
+	outline: none;
+	position: relative;
+	zoom: 1;
+	vertical-align:middle;
+}
+
+button {
+	margin-left: 0;
+	margin-right: 0;
+}
+
+a.button {
+	-moz-group-select: none;
+	-webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+	-webkit-group-select: none;
+	-webkit-touch-callout: none;
+}
+
+button[disabled] {
+	color:#AAAAAA;
+}
+
+a.button.primary,button.primary {
+	font-weight: bold
+}
+
+a.button:focus,button:focus,a.button:hover,button:hover {
+	color: #FFFFFF;
+	border-color: #388AD4;
+	text-decoration: none;
+	text-shadow: -1px -1px 0 rgba(0, 0, 0, 0.3);
+	background-color: #2D7DC5;
+}
+
+button[disabled]:focus,button[disabled]:hover,button[disabled]:active {
+	color:#AAAAAA;
+	border:1px solid #CACACA;
+	text-shadow:1px 1px 1px #FFFFFF;
+	background-color: #ECECEC;
+}
+
+a.button:active,button:active,a.button.active,button.active {
+	border-color: #347BBA;
+	background-color: #0F5EA2;
+	color: #FFFFFF;
+	text-shadow: none;
+}
+
+a.button:active,button:active {
+	top: 1px;
+}
+
+a.button.negative:focus,button.negative:focus,a.button.negative:hover,button.negative:hover {
+	color: #FFFFFF;
+	background-color: #D84743;
+	border-color: #911D1B;
+}
+
+a.button.negative:active,button.negative:active,a.button.negative.active,button.negative.active {
+	background-color: #A5211E;
+	border-color: #911D1B;
+}
+
+a.button.positive:focus,button.positive:focus,a.button.positive:hover,button.positive:hover {
+	background-color: #96ED89;
+	border-color: #45BF55;
+}
+
+a.button.positive:active,button.positive:active,a.button.positive.active,button.positive.active {
+ 	background-color: #45BF55;
+}
+
+a.button.pill,button.pill {
+	-webkit-border-radius: 19px;
+	-moz-border-radius: 19px;
+	border-radius: 19px;
+	padding: 5px 10px 4px 10px;
+}
+
+a.button.big,button.big {
+	font-size: 16px;
+	padding-left: 14px;
+	padding-right: 17px;
+}
+
+a.button.small,button.small {
+    font-size: 12px;
+    padding-left: 5px;
+    padding-right: 5px;
+    padding-top: 5px;
+    padding-bottom: 7px;
+}
+
+a.button.left,button.left {
+    -webkit-border-bottom-right-radius: 0px;
+    -webkit-border-top-right-radius: 0px;
+    -moz-border-radius-bottomright: 0px;
+    -moz-border-radius-topright: 0px;
+    border-bottom-right-radius: 0px;
+    border-top-right-radius: 0px;
+    margin-right: 0px;
+    border-right: none;
+}
+
+a.button.middle,button.middle {
+    margin-right: 0px;
+    margin-left: 0px;
+    -webkit-border-radius: 0px;
+    -moz-border-radius: 0px;
+    border-radius: 0px;
+    border-right: none;
+}
+
+a.button.right,button.right {
+    -webkit-border-bottom-left-radius: 0px;
+    -webkit-border-top-left-radius: 0px;
+    -moz-border-radius-bottomleft: 0px;
+    -moz-border-radius-topleft: 0px;
+    border-top-left-radius: 0px;
+    border-bottom-left-radius: 0px;
+    margin-left: 0px;
+}
+
+a.button span.icon,button span.icon {
+	display: inline-block;
+	width: 12px;
+	height: 12px;
+	margin: auto 5px auto auto;
+	position: relative;
+	top: 0;
+	background-repeat: no-repeat;
+	background-position: center center;
+}
+
+a.big.button span.icon,button.big span.icon {
+	top: 0px;
+}
+
+@sprite a.button span.icon.plus,button span.icon.plus {
+    gwt-image:'plusGray';
+}
+@sprite a.button:hover span.icon.plus,a.button:focus span.icon.plus,button:hover span.icon.plus,button:focus span.icon.plus {
+    gwt-image:'plusWhite';
+}
+@sprite button[disabled] span.icon.plus {
+    gwt-image:'plusGray';
+}
+
+@sprite a.button span.icon.minus,button span.icon.minus {
+    gwt-image:'minusGray';
+}
+@sprite a.button:hover span.icon.minus,button:hover span.icon.minus,a.button:focus span.icon.minus,button:focus span.icon.minus {
+    gwt-image:'minusWhite';
+}
+@sprite button[disabled] span.icon.minus {
+    gwt-image:'minusGray';
+}
+
+@sprite a.button span.icon.floppy,button span.icon.floppy {
+    gwt-image:'floppyGray';
+}
+@sprite a.button:hover span.icon.floppy,a.button:focus span.icon.floppy,button:hover span.icon.floppy,button:focus span.icon.floppy {
+    gwt-image:'floppyWhite';
+}
+@sprite button[disabled]:hover span.icon.floppy {
+    gwt-image:'floppyGray';
+}
+
+@sprite a.button span.icon.report,button span.icon.report {
+    gwt-image:'reportGray';
+}
+@sprite a.button:hover span.icon.report,button:hover span.icon.report,a.button:focus span.icon.report,button:focus span.icon.report {
+    gwt-image:'reportWhite';
+}
+@sprite button[disabled] span.icon.report {
+    gwt-image:'reportGray';
+}
+
+@sprite a.button span.icon.check,button span.icon.check {
+    gwt-image:'checkGray';
+}
+@sprite a.button:hover span.icon.check,button:hover span.icon.check,a.button:focus span.icon.check,button:focus span.icon.check {
+    gwt-image:'checkWhite';
+}
+@sprite button[disabled] span.icon.check {
+    gwt-image:'checkGray';
+}
+
+@sprite a.button span.icon.x,button span.icon.x {
+    gwt-image:'xGray';
+}
+@sprite a.button:hover span.icon.x,button:hover span.icon.x,a.button:focus span.icon.x,button:focus span.icon.x {
+    gwt-image:'xWhite';
+}
+@sprite button[disabled] span.icon.x {
+    gwt-image:'xGray';
+}
+
+@sprite a.button span.icon.user,button span.icon.user {
+    gwt-image:'userGray';
+}
+@sprite a.button:hover span.icon.user,button:hover span.icon.user,a.button:focus span.icon.user,button:focus span.icon.user {
+    gwt-image:'userWhite';
+}
+@sprite button[disabled] span.icon.user {
+    gwt-image:'userGray';
+}
+
+@sprite a.button span.icon.group,button span.icon.group {
+    gwt-image:'groupGray';
+}
+@sprite a.button:hover span.icon.group,button:hover span.icon.group,a.button:focus span.icon.group,button:focus span.icon.group {
+    gwt-image:'groupWhite';
+}
+@sprite button[disabled] span.icon.group {
+    gwt-image:'groupGray';
+}
+
+@sprite a.button span.icon.lock,button span.icon.lock {
+    gwt-image:'lockGray';
+}
+@sprite a.button:hover span.icon.lock,button:hover span.icon.lock,a.button:focus span.icon.lock,button:focus span.icon.lock {
+    gwt-image:'lockWhite';
+}
+@sprite button[disabled] span.icon.lock {
+    gwt-image:'lockGray';
+}
+
+@sprite a.button span.icon.key,button span.icon.key {
+    gwt-image:'keyGray';
+}
+@sprite a.button:hover span.icon.key,button:hover span.icon.key,a.button:focus span.icon.key,button:focus span.icon.key {
+    gwt-image:'keyWhite';
+}
+@sprite button[disabled] span.icon.key {
+    gwt-image:'keyGray';
+}
+
+@sprite a.button span.icon.sun,button span.icon.sun {
+    gwt-image:'sunGray';
+}
+@sprite a.button:hover span.icon.sun,button:hover span.icon.sun,a.button:focus span.icon.sun,button:focus span.icon.sun {
+    gwt-image:'sunWhite';
+}
+@sprite button[disabled] span.icon.sun {
+    gwt-image:'sunGray';
+}

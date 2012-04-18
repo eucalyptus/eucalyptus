@@ -1,0 +1,17 @@
+to run the CCClient program, the steps are:
+
+1.) log into the CC machine (need built source tree available)
+2.) set up environment (EUCALYTPUS, AXIS2C_HOME, LD_LIBRARY_PATH)
+3.) run the program (CCClient) with some arguments
+
+For example, in the typical /opt/eucalyptus case (QA)
+
+export EUCALYPTUS=/opt/eucalyptus
+export AXIS2C_HOME=$EUCALYPTUS/packages/axis2c-1.6.0
+export LD_LIBRARY_PATH=$AXIS2C_HOME/lib/:$AXIS2C_HOME/modules/rampart/
+cd /wherever/your/source/directory/is/cluster/
+./CCClient localhost:8774 describeServices
+./CCClient localhost:8774 describeResources
+./CCClient localhost:8774 terminateInstances i-12345678
+etc
+

@@ -1,0 +1,76 @@
+# Copyright (c) 2011, Eucalyptus Systems, Inc.
+# All rights reserved.
+#
+# Redistribution and use of this software in source and binary forms, with or
+# without modification, are permitted provided that the following conditions
+# are met:
+#
+#   Redistributions of source code must retain the above
+#   copyright notice, this list of conditions and the
+#   following disclaimer.
+#
+#   Redistributions in binary form must reproduce the above
+#   copyright notice, this list of conditions and the
+#   following disclaimer in the documentation and/or other
+#   materials provided with the distribution.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#
+# Author: Mitch Garnaat mgarnaat@eucalyptus.com
+
+from boto.roboto.awsqueryservice import AWSQueryService
+from boto.roboto.awsqueryrequest import AWSQueryRequest
+from boto.roboto.param import Param
+import re
+import sys
+
+__version__ = '@EUCA_VERSION@'
+
+class EucAdmin(AWSQueryService):
+
+    Name = 'eucadmin'
+    Description = 'Eucalyptus Administration Services'
+    APIVersion = 'eucalyptus'
+    Authentication = 'sign-v2'
+    Path = '/services/Configuration'
+    Port = 8773
+    Provider = 'aws'
+    EnvURL = 'EC2_URL'
+
+    def handle_error(self, ex):
+        s = ""
+        if not hasattr(ex,"errors"):
+            s = 'ERROR %s' % (ex)
+        else:
+            if ex.errors.__len__() != 0:
+                for i in ex.errors:
+                    s = '%sERROR %s %s %s: %s\n' % (s, ex.status,
+                                                    ex.reason,
+                                                    i[0], i[1])
+            else:
+                s = 'ERROR %s %s %s' % (ex.status, ex.reason, ex)
+            while s.count("\n") != 3:
+                s = re.sub(".*Exception.*\n", ": ", s)
+        print s.replace("\n","")
+        sys.exit(1)
+
+def print_version_if_necessary():
+    """
+    If '--version' appears in sys.argv then print the version and exit
+    successfully.
+
+    This is a hackish workaround for a roboto limitation in boto 2.1.1.
+    """
+    if '--version' in sys.argv:
+        print 'eucalyptus', __version__
+        sys.exit()

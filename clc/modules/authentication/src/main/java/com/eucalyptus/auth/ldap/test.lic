@@ -1,0 +1,74 @@
+{
+
+  "_comment":"This is a template of LDAP integration config file in JSON. For security, please create this template by using create_lic.pl command, which fill the <auth-credentials> in <ldap-service> section with encrypted password. After you make the changes, you can remove <_comment> lines in all sections (but you do not have to). Among all the sections, only <sync> section is mandatory. However, if sync is enabled, <ldap-service>, !!ONLY!! ONE of <accounting-groups> and <groups-partition>, <groups> and <users> become mandatory. The simplest configuration is disabled sync, with only <sync> section, in which <enable> is false.",
+
+  "ldap-service":{
+
+    "_comment":"This section defines configurations for LDAP service. <server-url> defines LDAP service URL. <auth-method> defines the LDAP authentication method. <auth-principal> defines the LDAP authentication user (for whom to access LDAP). <auth-credentials> field should show the encrypted password. <use-ssl> specifies whether to use SSL for LDAP connection for extra safety.",
+
+    "server-url":"ldap://localhost:7733",
+    "auth-method":"GSSAPI",
+    "user-auth-method":"GSSAPI",
+    "auth-principal":"cn=ldapadmin,dc=foo,dc=com",
+    "auth-credentials":"ENCRYPTED_PASSWORD",
+    "use-ssl":"false",
+    "ignore-ssl-cert-validation":"true",
+    "krb5-conf":"/path/to/krb5.conf",
+  },
+
+  "sync":{
+
+    "_comment":"This section defines configurations for sync behavior. <enable> turns on/off sync. <auto> specifies if sync is automated. <interval> defines the period between syncs.",
+
+    "enable":"true",
+    "auto":"true",
+    "interval":"900000",
+    "clean-deletion":"false",
+  },
+
+  "groups-partition":{
+
+    "_comment":"This section defines configurations for groups partitions. !!REMOVE!! this section if you have accounting groups and will use accounting groups to define accounts. Each field defines an account and gives the IDs of the groups for the account.",
+
+    "fooAccount":["fooGroup1", "fooGroup2"],
+    "barAccount":["barGroup1", "barGroup2"],
+  },
+
+  "groups":{
+
+    "_comment":"This section defines configurations for groups to sync. <base-dn> defines the base DN for searching groups. <id-attribute> specifies the attribute name that which serves as the unique ID of a group. <member-attribute> is the attribute name that specifies members of the group. <selection> is a construct to define how to pick groups in the tree.",
+
+    "base-dn":"ou=groups,dc=foo,dc=com",
+    "id-attribute":"cn",
+    "member-attribute":"member",
+    "selection":{
+
+        "_comment":"This construct defines what entities to select from LDAP tree. <filter> is mandatory, which is an LDAP search filter. <select> and <not-select> are optional, which specify one-offs.",
+
+        "filter":"objectClass=groupOfNames",
+        "select":["cn=groupToSelect,ou=Groups,dc=eucalyptus,dc=com"],
+        "not-select":["cn=groupToIgnore,ou=Groups,dc=eucalyptus,dc=com"],
+    }
+  },
+
+  "users":{
+
+    "_comment":"This section defines configurations for users to sync. <base-dn> defines the base DN for searching users. <id-attribute> specifies the attribute name that which serves as the unique ID of a user. <user-info-attribute> defines which of the user attributes are chosen, with which, each field defines a mapping between LDAP attribute name and the name to be used in Eucalyptus. <password-attribute> specifies the name of the password attribute, which is used for Eucalyptus Web UI authentication. <selection> is a construct to define how to pick users in the tree.",
+
+    "base-dn":"ou=people,dc=foo,dc=com",
+    "id-attribute":"uid",
+    "user-info-attributes":{
+        "name":"Name",
+        "email":"Email"
+    },
+    "password-attribute":"password",
+    "selection":{
+
+        "_comment":"This construct defines what entities to select from LDAP tree. <filter> is mandatory, which is an LDAP search filter. <select> and <not-select> are optional, which specify one-offs.",
+
+        "filter":"objectClass=inetOrgPersion",
+        "select":["uid=john,ou=People,dc=foo,dc=com", "uid=jack,ou=People,dc=foo,dc=com"],
+        "not-select":["uid=tom,ou=People,dc=eucalyptus,dc=com"],
+    }
+  },
+}

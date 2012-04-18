@@ -1,0 +1,64 @@
+<!DOCTYPE ui:UiBinder SYSTEM "http://dl.google.com/gwt/DTD/xhtml.ent">
+<ui:UiBinder xmlns:ui="urn:ui:com.google.gwt.uibinder"
+    xmlns:g="urn:import:com.google.gwt.user.client.ui">
+
+    <ui:style>
+    .panel {
+    	width:100%;
+    	height:100%;
+    }
+    .panel p {
+    	margin-bottom:10px;
+    }
+    @def rad 4px;
+    @def depth 4px;
+    .block {
+      	width:90%;
+     	padding:20px;
+     	margin-bottom:10px;
+    }
+    .block a {
+    	cursor:pointer;
+    	cursor:hand;
+    }
+    .header {
+    	width:100%;
+    	height:2em;
+    	border-bottom:1px solid #CCCCCC;
+    	margin-bottom:10px;
+    	font-size:90%;
+    	font-weight:bold;
+    	color:#323232;
+    	text-shadow: 1px 1px 2px #FFFFFF;
+    }
+    .mainText {
+        color:#414141;
+        padding:12px 0px 8px 10px;
+        text-align:left;
+        filter:literal("dropshadow(color=#FFFFFF, offx=1, offy=1)");
+    }
+    </ui:style>
+    
+    <g:ScrollPanel>
+        <g:HTMLPanel addStyleNames="{style.panel}">
+            <div class="{style.mainText}">
+                <p style="font-size:1.2em;text-align:center;">Welcome to your Eucalyptus-Powered Cloud</p>
+                <p>&nbsp;</p>
+                <p style="font-size:0.9em;">Following are some quick guides to the things you can do with your cloud's Web dashboard.</p>
+            </div>
+            <div class="{style.block}"><div class="{style.header}"><g:Anchor ui:field="iamHeader">MANAGE IDENTITIES AND YOUR PROFILE</g:Anchor></div>
+                <g:SimplePanel ui:field="iamSnippet"></g:SimplePanel>
+            </div>            
+            <div class="{style.block}"><div class="{style.header}"><g:Anchor ui:field="serviceHeader">MANAGE CLOUD SERVICES AND RESOURCES</g:Anchor></div>
+                <g:SimplePanel ui:field="serviceSnippet"></g:SimplePanel>
+            </div>
+            <div class="{style.block}"><div class="{style.header}"><g:Anchor ui:field="cloudRegHeader">REGISTER YOUR CLOUD</g:Anchor></div>
+                <g:SimplePanel ui:field="cloudRegSnippet"></g:SimplePanel>
+            </div>
+            <div class="{style.block}"><div class="{style.header}"><g:Anchor ui:field="downloadHeader">DOWNLOAD STOCK IMAGES AND TOOLS FROM EUCALYPTUS</g:Anchor></div>
+                <g:SimplePanel ui:field="downloadSnippet"></g:SimplePanel>
+            </div>            
+        </g:HTMLPanel>
+    </g:ScrollPanel>
+    
+</ui:UiBinder> 

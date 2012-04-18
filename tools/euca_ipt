@@ -1,0 +1,419 @@
+#!/usr/bin/perl
+#Copyright (c) 2009  Eucalyptus Systems, Inc.	
+#
+#This program is free software: you can redistribute it and/or modify
+#it under the terms of the GNU General Public License as published by 
+#the Free Software Foundation, only version 3 of the License.  
+# 
+#This file is distributed in the hope that it will be useful, but WITHOUT
+#ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+#FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+#for more details.  
+#
+#You should have received a copy of the GNU General Public License along
+#with this program.  If not, see <http://www.gnu.org/licenses/>.
+# 
+#Please contact Eucalyptus Systems, Inc., 130 Castilian
+#Dr., Goleta, CA 93101 USA or visit <http://www.eucalyptus.com/licenses/> 
+#if you need additional information or have any questions.
+#
+#This file may incorporate work covered under the following copyright and
+#permission notice:
+#
+#  Software License Agreement (BSD License)
+#
+#  Copyright (c) 2008, Regents of the University of California
+#  
+#
+#  Redistribution and use of this software in source and binary forms, with
+#  or without modification, are permitted provided that the following
+#  conditions are met:
+#
+#    Redistributions of source code must retain the above copyright notice,
+#    this list of conditions and the following disclaimer.
+#
+#    Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+#
+#  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+#  IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+#  TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+#  PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+#  OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+#  EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+#  PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+#  PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+#  LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+#  NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+#  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. USERS OF
+#  THIS SOFTWARE ACKNOWLEDGE THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE
+#  LICENSED MATERIAL, COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS
+#  SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
+#  IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
+#  BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
+#  THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+#  OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
+#  WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
+#  ANY SUCH LICENSES OR RIGHTS.
+#
+
+use Digest::MD5 qw(md5 md5_hex md5_base64);
+use MIME::Base64;
+
+delete @ENV{qw(IFS CDPATH ENV BASH_ENV)};
+$ENV{'PATH'}='/bin:/usr/bin:/sbin:/usr/sbin/';
+
+if (@ARGV == 3) {
+    print STDERR "DO NEW EUCA_IPT\n";
+    doexit(new_euca_ipt(@ARGV), "done\n");
+} elsif (@ARGV == 2) {
+    print STDERR "DO OLD EUCA_IPT\n";
+    doexit(old_euca_ipt(@ARGV), "done\n");
+} else {
+    dodie("euca_ipt: wrong number of commandline parameters\n");
+}
+
+sub old_euca_ipt() {
+    $table = shift @_;
+    if ($table =~ /^([ &:#-\@\w.]+)$/) {
+	$table = $1; #data is now untainted
+    } else {
+	return(1);
+    }
+    
+    $rulefile = shift @_;
+    if ($rulefile =~ /^([ &:#-\@\w.]+)$/) {
+	$rulefile = $1; #data is now untainted
+    } else {
+	return(1);
+    }
+    
+    if (!$table || !$rulefile || !($table eq "filter" || $table eq "nat") || $rulefile eq "" || !-f $rulefile) {dodie("cannot verify commandline parameters\n");}
+    
+    @workingfiles = ("$rulefile.orig", "$rulefile.new");
+    
+    open my $fh, '-|' or exec 'iptables-save', ("-t", "$table") or dodie ("iptables-save failed: $!\n");
+    open(OFH, ">$rulefile.orig") or dodie ("cannot open $rulefile.orig");
+    $outbuf = "";
+    while(<$fh>) {
+	chomp;
+	my $line = $_;
+	$line =~ s/\s+$//g;
+	$line =~ s/^\s+//g;
+	print OFH "$line\n";
+    }
+    close($fh) || dodie ("iptables-save failed\n");
+    close(OFH);
+    
+    $added=0;
+    $outbuf = "";
+    open(FH, "$rulefile.orig");
+    while(<FH>) {
+	chomp;
+	my $line = $_;
+	$line =~ s/\s+$//g;
+	$line =~ s/^\s+//g;
+	if ($line eq "COMMIT") {
+	    # time to load the input rules
+	    open (RFH, "$rulefile");
+	    while(<RFH>) {
+		chomp;
+		my $line = $_;
+		$line =~ s/\s+$//g;
+		$line =~ s/^\s+//g;
+		if ($line ne "" && !$rulehash{$line}) {
+		    $buf .= "$line\n";
+		    $rulehash{$line} = 1;
+		    $added=1;
+		}
+	    }
+	    close(RFH);	
+	}
+	if ($line ne "" && !$rulehash{$line}) {
+	    $buf .= "$line\n";
+	    $rulehash{$line} = 1;
+	}
+    }
+    close(FH);
+    
+    if (!$added) {
+	return(0);
+    }
+    
+    open (OFH, ">$rulefile.new");
+    print OFH "$buf\n";
+    close(OFH);
+    if (!-f "$rulefile.new") {
+	dodie("cannot find $rulefile.new");
+    }
+    
+    
+    $rc = system("cat $rulefile.new | iptables-restore");
+    if ($rc) {
+	print STDERR "iptables-restore failed: rulefile contents:\n";
+	system("cat $rulefile.new 1>&2");
+	dodie("iptables-restore failed\n");
+    }
+
+#    open my $fh, '|-' or exec 'iptables-restore' or dodie( "iptables-restore failed: $!\n");
+#    open(IFH, "$rulefile.new") or dodie( "cannot open $rulefile.new");
+#    while(<IFH>) {
+#	print $fh "$_";
+#    }
+#    close($fh) || dodie( "iptables-restore failed\n");
+#    close(IFH);
+    
+    return(0);
+}
+
+sub new_euca_ipt() {
+    $table = shift @_;
+    if ($table =~ /^([ &:#-\@\w.]+)$/) {
+	$table = $1; #data is now untainted
+    } else {
+	return(1);
+    }
+    
+    $rulefile = shift @_;
+    if ($rulefile =~ /^([ &:#-\@\w.]+)$/) {
+	$rulefile = $1; #data is now untainted
+    } else {
+	return(1);
+    }
+    
+    $chainmapfile = shift @_;
+    if ($chainmapfile =~ /^([ &:#-\@\w.]+)$/) {
+	$chainmapfile = $1; #data is now untainted
+    } else {
+	return(1);
+    }
+    system("cp $chainmapfile /tmp/chains");
+    
+    
+    if (!$table || !$rulefile || !$chainmapfile || !($table eq "filter" || $table eq "nat") || $rulefile eq "" || !-f $rulefile || $chainmapfile eq "" || !-f $chainmapfile) {dodie("cannot verify commandline options");}
+    
+    my %newchains, %oldchains, %chainmap, %allchains;
+    my $ofile = "/tmp/euca_ipt_intermediate.$$";
+    @workingfiles = ($ofile);
+    
+    open(FH, "$chainmapfile") || dodie("cannot open $chainmap");
+    while(<FH>) {
+	chomp;
+	my $line = $_;
+	if (!$line) {
+	    next;
+	}
+	my ($chain, $net) = split(/\s+/, $line);
+	if ($chain && $net) {
+	    $chainmap{$chain} = "$net";
+	    $allchains{$chain} = 1;
+	}
+    }
+    close(FH);
+    
+    open(FH, "$rulefile") || dodie("cannot open $rulefile");
+    while(<FH>) {
+	chomp;
+	my $line = $_;
+	if ($line =~ /^\s*RULE/) {
+	    my ($add, $chainuser, @rule) = split(/\s+/, $line);
+	    if ($chainuser && @rule) {
+		$chainuser =~ s/-//;
+		chomp(my $chain = encode_base64(md5($chainuser)));
+		$chain = md5_base64($chainuser) . "==";
+		$newchains{$chain} .= ",,," . join(" ", @rule);
+		$allchains{$chain} = 1;
+	    }
+	} elsif ($line =~ /^\s*GROUP/) {
+	    my ($add, $chainuser, @ips) = split(/\s+/, $line);
+	    
+	}
+    }
+    close(FH);
+    
+    open(RFH, "iptables-save -t $table|") || dodie("iptables-save failed\n");
+    while(<RFH>) {
+	chomp;
+	my $line = $_;
+	if ($line =~ /^\s*#/) {
+	} elsif ($line =~ /-A/) {
+	    my ($add, $chain, @rule) = split(/\s+/, $line);
+	    if ($chain && @rule) {
+		$oldchains{$chain} .= ",,," . join(" ", @rule);
+		$allchains{$chain} = 1;
+	    }
+	} elsif ($line =~ /^:/) {
+	    my ($exchain) = split(/\s+/, $line);
+	    if ($exchain && $exchain ne "") {
+		$exchain =~ s/://g;
+		$allchains{$exchain} = 1;
+	    }
+	}
+    }
+    close(RFH);
+    
+    $ncl = keys(%newchains);
+    $ocl = keys(%oldchains);
+    $cml = keys(%chainmap);
+    if ($ncl <= 0 || $ocl <= 0 || $cml <= 0) {
+    }    
+    
+    foreach $chain (keys(%newchains)) {
+#	print STDERR "INCHAIN($chain): $newchains{$chain}\n";
+	my @inrules = split(',,,', $newchains{$chain});
+#	print STDERR "INRULES: @inrules\n";
+	my $newchain = "";
+	foreach $rule (@inrules) {
+	    my @rules = rule_convert($rule, $chainmap{$chain});
+	    if (@rules) {
+#		print STDERR "RULECONVERT: @rules\n";
+		$newchain .= ",,,$rules[0]";
+	    }
+	}
+#	print STDERR "NEWCHAIN($chain): $newchain\n";
+#	print STDERR "OLDCHAIN($chain): $oldchains{$chain}\n";
+	$oldchains{$chain} = $newchain;
+#	print STDERR "CHAINMAP($chain): $chainmap{$chain}\n\n\n";
+    }
+    
+    foreach $chain (keys(%chainmap)) {
+	if (!$newchains{$chain}) {
+	    $oldchains{$chain} = "";
+	}
+    }
+
+#    print STDERR "------------------\n";
+    open(OFH, ">$ofile") || dodie("cannot write to file $ofile");
+# write out the header
+    print OFH "*filter\n:INPUT ACCEPT [0:0]\n:FORWARD DROP [0:0]\n:OUTPUT ACCEPT [0:0]\n";
+    
+#write out eucalyptus chains
+    foreach $chain (keys(%allchains)) {
+	if ($chain && $chain ne "" && $chain ne "FORWARD" && $chain ne "INPUT" && $chain ne "OUTPUT" && $chain ne "PREROUTING" && $chain ne "POSTROUTING") {
+	    print OFH ":$chain - [0:0]\n";
+	}
+    }
+    
+#restore non-eucalyptus chains
+    foreach $chain (keys(%oldchains)) {
+	if (!$chainmap{$chain}) {
+	    my @rules = split(',,,', $oldchains{$chain});
+	    foreach $rule (@rules) {
+		if ($chain && $rule && $rule ne "") {
+		    print OFH "-A $chain $rule\n";
+		}
+	    }
+	}
+    }
+    
+#install eucalyptus chains
+    foreach $chain (keys(%oldchains)) {
+	if ($chainmap{$chain}) {
+	    my @rules = split(',,,', $oldchains{$chain});
+	    my $rulelen = @rules;
+	    if ($rulelen > 0) {
+		print STDERR "CHAIN: $chain RULES: @rules\n";
+		foreach $rule (@rules) {
+		    if ($chain && $rule && $rule ne "") {
+			print OFH "-A $chain $rule\n";
+		    }
+		}
+	    }
+	}
+    }
+    
+    print OFH "COMMIT\n";
+    close(OFH);
+    
+    if ( -f "$ofile" ) {
+	$rc = system("cat $ofile | iptables-restore");
+	if ($rc) {
+	    print STDERR "[EUCAERROR] euca_ipt: could not run iptables-restore\n";
+	}
+    } else {
+	$rc = 1;
+    }
+    
+    return($rc);
+}
+
+sub rule_convert() {
+    my $rule = shift @_;
+    my $dest = shift @_;
+    my ($prot, $port, $source, $sourceuser, $sourcegroup);
+    my $ret = "";
+    my @retrules;
+
+    if (!$rule || $rule eq "") {
+	return;
+    }
+
+    if ($rule =~ /-P (\S+)/) {
+	$prot = lc($1);
+    }
+    if ($rule =~ /-p (\S+)/) {
+	$port = $1;
+	my ($minport, $maxport) = split("-", $port);
+	if (!$maxport || ($minport eq $maxport)) {
+	    $port = $minport;
+	} else {
+	    $port =~ s/-/:/g;
+	}
+    }
+    if ($rule =~ /-s (\S+)/) {
+	$source = $1;
+    }
+    if ($rule =~ /-u (\S+)/) {
+	$sourceuser = "$1";
+    }
+    if ($rule =~ /-o (\S+)/) {
+        $sourcegroup = "$1";
+    }
+    if ($sourceuser && $sourcegroup) {
+	chomp($chainuser = encode_base64(md5("$sourceuser"."$sourcegroup")));
+	$source = $chainmap{$chainuser};
+    }
+
+    if ($source =~ /\d+\.\d+\.\d+\.\d+/) {
+	if ($source && $source ne "0.0.0.0/0") {
+	    $ret .= "-s $source ";
+	}
+	if ($dest) {
+	    $ret .= "-d $dest ";
+	}
+	if ($prot) {
+	    $ret .= "-p $prot -m $prot ";
+	}
+	if ($port) {
+	    $ret .= "--dport $port ";
+	}
+	$ret .= "-j ACCEPT";
+	@retrules = (@retrules, $ret);
+    } else {
+	
+    }
+    return(@retrules);
+}
+
+sub doexit {
+    $ret = shift @_;
+    $msg = shift @_;
+    if ($msg) {
+	print STDERR "$msg\n";
+    }
+
+    for ($i=0; $i<@workingfiles; $i++) {
+	if ( -f "$workingfiles[$i]" ) {
+	    unlink("$workingfiles[$i]");
+	}
+    }
+
+    exit($ret);
+}    
+
+sub dodie {
+    $msg = shift @_;
+    doexit(1, "[EUCAERROR] $msg");
+}
+
