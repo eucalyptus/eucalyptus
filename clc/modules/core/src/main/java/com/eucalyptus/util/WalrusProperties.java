@@ -65,7 +65,6 @@
 
 package com.eucalyptus.util;
 
-//import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 import edu.ucsb.eucalyptus.msgs.UpdateWalrusConfigurationType;
 
