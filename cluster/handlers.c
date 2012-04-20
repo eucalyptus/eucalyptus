@@ -92,22 +92,22 @@ permission notice:
 
 #define SUPERUSER "eucalyptus"
 
+// Globals
+
 // local globals
 int config_init=0;
 int local_init=0;
 int thread_init=0;
 int init=0;
 
-// to be stored in shared memory
+// shared (between CC processes) globals
 ccConfig *config=NULL;
-
 ccInstanceCache *instanceCache=NULL;
-
+vnetConfig *vnetconfig=NULL;
 ccResourceCache *resourceCache=NULL;
 ccResourceCache *resourceCacheStage=NULL;
 
-vnetConfig *vnetconfig=NULL;
-
+// shared (between CC processes) semaphores
 sem_t *locks[ENDLOCK];
 int mylocks[ENDLOCK];
 
