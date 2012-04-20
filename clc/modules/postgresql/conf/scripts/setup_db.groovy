@@ -143,6 +143,10 @@ public class PostgresqlBootstrapper extends Bootstrapper.Simple implements Datab
 		throw new Exception("Unable to create the eucalyptus database tables");
 	    }
 
+		if ( !createCliUser( ) ) {
+		throw new Exception("Unable to create the cli user");
+		}
+ 
 	    Component dbComp = Components.lookup( Database.class );
 	    dbComp.initService( );
 	    prepareService( );
@@ -219,6 +223,7 @@ public class PostgresqlBootstrapper extends Bootstrapper.Simple implements Datab
 	    File tmpPGHBA = new File(EUCA_DB_DIR + File.separator + "pg_hba.conf.org");
 	    orgPGHBA.renameTo(tmpPGHBA);
 	    File newPGHBA = new File(EUCA_DB_DIR + File.separator + "pg_hba.conf");
+	    newPGHBA.append("local\tall\troot\tident\n");
 	    newPGHBA.append("local\tall\tall\t\tpassword\n");
 	    newPGHBA.append("host\tall\tall\t0.0.0.0/0\tpassword\n");
 	    newPGHBA.append("host\tall\tall\t::1/128\tpassword\n");
@@ -244,6 +249,27 @@ public class PostgresqlBootstrapper extends Bootstrapper.Simple implements Datab
 	    throw e;
 	}
     }
+
+	 private boolean createCliUser() throws Exception {
+	 	if ( !isRunning( ) ) {
+	    	throw new Exception("The database must be running to create the cli user");
+		}
+	 	Connection conn = null;
+	 	try {
+		 	String url = String.format( "jdbc:%s", ServiceUris.remote( Database.class, Internets.localHostInetAddress( ), "postgres" ) );
+			conn = DriverManager.getConnection(url, Databases.getUserName(),Databases.getPassword());
+			Statement stmt = conn.createStatement();
+			String sqlCmd = "CREATE USER root WITH CREATEUSER";
+			stmt.execute(sqlCmd);
+			LOG.debug("executed successfully = CREATE USER root");
+			conn.close();
+		} catch (Exception e) {
+			LOG.error("Unable to create cli user", e);
+			return false;
+	 	}
+		return true;
+	 }
+
 
     private boolean createDBSql( ) throws Exception {
 
