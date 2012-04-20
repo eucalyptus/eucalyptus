@@ -65,6 +65,8 @@ package com.eucalyptus.ws;
 
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
+import java.net.URL;
+import java.net.MalformedURLException;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
@@ -225,7 +227,11 @@ public class StackConfiguration extends AbstractPersistent {
   @ConfigurableField( description = "Default scheme for EUARE_URL in eucarc.",
                       changeListener = UriChangeListener.class )
   public static String        DEFAULT_EUARE_URI_SCHEME          = "http";                                      //GRZE: there references to specific services are not in the right scope here.
-                                                                                                                
+
+  @ConfigurableField( description = "Default EUSTORE_URL in eucarc.",
+                      changeListener = UriChangeListener.class )
+  public static String        DEFAULT_EUSTORE_URL          = "http://emis.eucalyptus.com/";                                      //GRZE: there references to specific services are not in the right scope here.
+
   private static Logger       LOG                               = Logger.getLogger( StackConfiguration.class );
   
   public enum BasicTransport implements TransportDefinition {
@@ -326,8 +332,11 @@ public class StackConfiguration extends AbstractPersistent {
         if ( "http".equals( prefix ) || "https".equals( prefix ) )
           return;
       }
-      throw new ConfigurablePropertyException( "URL prefix for " + t.getFieldName( )
-                                               + " has to be 'http' or 'https'" );
+      try {
+          URL url = new URL( (String) newValue );
+      } catch ( MalformedURLException e ) {
+          throw new ConfigurablePropertyException( "Invalid URL or URL prefix: " + t.getFieldName( ) + e);
+      }
       
     }
   }
