@@ -6,6 +6,7 @@
 #   configure   [--with-axis2c=<dir>]
 #               [--with-axis2=<dir>]
 #               [--with-libvirt=<dir>]
+#               [--extra-version=<version>]
 #               [--with-interface-theme=<name>]
 #               [--enable-appliance-store]
 #               [--enable-debug]
@@ -141,6 +142,10 @@ if test -n "${VDDK_HOME}" ; then
         fi
 fi
 
+if test -n "${EXTRA_VERSION}" ; then
+	# Extra Eucalyptus Version
+	sed -i "s/ARGUMENTS_EXTRA_VERSION.*\"unconfigured\"/ARGUMENTS_EXTRA_VERSION \"${EXTRA_VERSION}\"/" ./clc/modules/bootstrap/src/main/native/eucalyptus-opts.h
+fi
 
 # Checks for programs.
 AC_PROG_AWK
