@@ -785,6 +785,10 @@ int java_init(euca_opts *args, java_home_t *data) {
                 JVM_ARG(opt[++x], "-Deuca.noha.cloud");
         }
 
+	if (args->db_home_given) {
+                JVM_ARG(opt[++x], "-Deuca.db.home=%s", GETARG(args, db_home));
+        }
+ 
 	if (args->debug_flag) {
 		JVM_ARG(opt[++x], "-XX:+HeapDumpOnOutOfMemoryError");
 		JVM_ARG(opt[++x], "-XX:HeapDumpPath=%s/var/log/eucalyptus/", GETARG(args, home));
