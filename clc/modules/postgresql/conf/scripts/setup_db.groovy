@@ -94,12 +94,13 @@ public class PostgresqlBootstrapper extends Bootstrapper.Simple implements Datab
     // Static definitions of postgres commands and options
     private static int    PG_MAX_RETRY = 5;
     private static String EUCA_DB_DIR  = SubDirectory.DB.getFile().getPath() + "/data/";
-    private static String PG_BIN = "/usr/pgsql-9.1/bin/pg_ctl";
+    private static String PG_HOME = System.getProperty("euca.db.home");
+    private static String PG_BIN = PG_HOME + "bin/pg_ctl";
     private static String PG_START = "start";
     private static String PG_STOP = "stop";
     private static String PG_PORT_OPTS2 = "-o -h0.0.0.0/0 -p8777 -i";
     private static String PG_DB_OPT = "-D";
-    private static String PG_INITDB = "/usr/pgsql-9.1/bin/initdb";
+    private static String PG_INITDB = PG_HOME + "bin/initdb";
     private static String PG_X_OPT = "-X";
     private static String PG_X_DIR =  SubDirectory.DB.getFile().getPath() + "/tx/";
     private static String PG_USER_OPT = "-Ueucalyptus";
