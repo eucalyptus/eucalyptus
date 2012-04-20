@@ -225,7 +225,11 @@ public class StackConfiguration extends AbstractPersistent {
   @ConfigurableField( description = "Default scheme for EUARE_URL in eucarc.",
                       changeListener = UriChangeListener.class )
   public static String        DEFAULT_EUARE_URI_SCHEME          = "http";                                      //GRZE: there references to specific services are not in the right scope here.
-                                                                                                                
+
+  @ConfigurableField( description = "Default EUSTORE_URL in eucarc.",
+                      changeListener = UriChangeListener.class )
+  public static String        DEFAULT_EUSTORE_URL          = "http://emis.eucalyptus.com/";                                      //GRZE: there references to specific services are not in the right scope here.
+
   private static Logger       LOG                               = Logger.getLogger( StackConfiguration.class );
   
   public enum BasicTransport implements TransportDefinition {
