@@ -34,6 +34,11 @@ extern "C" {
 #define ARGUMENTS_VERSION "3.1.0"
 #endif
 
+#ifndef ARGUMENTS_EXTRA_VERSION
+/** @brief Eucalyptus extra version string */
+#define ARGUMENTS_EXTRA_VERSION "unconfigured"
+#endif
+
 /** @brief Where the command line options are stored */
 struct eucalyptus_opts
 {

@@ -5,6 +5,8 @@ import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.util.ArrayList;
 import org.apache.commons.httpclient.HttpClient;
+import org.apache.commons.httpclient.params.HttpMethodParams;
+import org.apache.commons.httpclient.params.HttpParams;
 import org.apache.commons.httpclient.ProxyHost;
 import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.log4j.Logger;
@@ -24,6 +26,13 @@ public class DownloadsWebBackend {
     ArrayList<DownloadInfo> downloadsList = Lists.newArrayList( );
 
     HttpClient httpClient = new HttpClient( );
+    //set User-Agent
+    String extraVersion = System.getProperty("euca.extra_version");
+    HttpParams defaultParams = httpClient.getParams().getDefaults();
+    httpClient.getParams().setParameter(HttpMethodParams.USER_AGENT,
+                                        defaultParams.getParameter(
+				        HttpMethodParams.USER_AGENT) + 
+				        " " + extraVersion);
     //support for http proxy
     if ( HttpServerBootstrapper.httpProxyHost != null && (HttpServerBootstrapper.httpProxyHost.length( ) > 0 ) ) {
       String proxyHost = HttpServerBootstrapper.httpProxyHost;
