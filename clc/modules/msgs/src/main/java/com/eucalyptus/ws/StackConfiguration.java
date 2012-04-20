@@ -65,6 +65,8 @@ package com.eucalyptus.ws;
 
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
+import java.net.URL;
+import java.net.MalformedURLException;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
@@ -330,8 +332,11 @@ public class StackConfiguration extends AbstractPersistent {
         if ( "http".equals( prefix ) || "https".equals( prefix ) )
           return;
       }
-      throw new ConfigurablePropertyException( "URL prefix for " + t.getFieldName( )
-                                               + " has to be 'http' or 'https'" );
+      try {
+          URL url = new URL( (String) newValue );
+      } catch ( MalformedURLException e ) {
+          throw new ConfigurablePropertyException( "Invalid URL or URL prefix: " + t.getFieldName( ) + e);
+      }
       
     }
   }
