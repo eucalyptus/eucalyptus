@@ -681,12 +681,14 @@ public class ConfigurationWebBackend {
 		String ipAddr = null;
 		HttpClient httpClient = new HttpClient( );
 		//set User-Agent
+		String version = System.getProperty("euca.version");
     		String extraVersion = System.getProperty("euca.extra_version");
     		HttpParams defaultParams = httpClient.getParams().getDefaults();
     		httpClient.getParams().setParameter(HttpMethodParams.USER_AGENT,
                                         defaultParams.getParameter(
 				        HttpMethodParams.USER_AGENT) + 
-				        " " + extraVersion);
+                                        " " + version + "-" + extraVersion);
+
 		//support for http proxy
 		if( HttpServerBootstrapper.httpProxyHost != null && ( HttpServerBootstrapper.httpProxyHost.length( ) > 0 ) ) {
 			String proxyHost = HttpServerBootstrapper.httpProxyHost;
