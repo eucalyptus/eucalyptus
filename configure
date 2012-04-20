@@ -3650,9 +3650,6 @@ if test "${with_vddk+set}" = set; then :
   withval=$with_vddk; VDDK_HOME="${withval}"
 fi
 
-#AC_ARG_VAR(EXTRA_VERSION,
-#        [  --extra-version=<version>            extra Eucalyptus version string],
-#        [EXTRA_VERSION="${withval}"])
 
 # Check whether --with-interface-theme was given.
 if test "${with_interface_theme+set}" = set; then :
