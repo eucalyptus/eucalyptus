@@ -38,9 +38,6 @@ public class DownloadViewImpl extends Composite implements DownloadView {
   GridStyle gridStyle;
   
   @UiField
-  SimplePanel imagePanel;
-  
-  @UiField
   SimplePanel toolPanel;
   
   Resources resources;
@@ -48,11 +45,6 @@ public class DownloadViewImpl extends Composite implements DownloadView {
   public DownloadViewImpl( ) {
     initWidget( uiBinder.createAndBindUi( this ) );
     resources = GWT.create( Resources.class );
-  }
-
-  @Override
-  public void displayImageDownloads( ArrayList<DownloadInfo> downloads ) {
-    display( imagePanel, downloads );
   }
 
   @Override
