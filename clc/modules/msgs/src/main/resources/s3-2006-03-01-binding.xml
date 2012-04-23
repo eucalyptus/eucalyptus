@@ -643,13 +643,13 @@
 
 	<mapping name="VersioningConfiguration"
 		class="edu.ucsb.eucalyptus.msgs.GetBucketVersioningStatusResponseType">
-		<value name="VersioningStatus" field="versioningStatus" />
+		<value name="Status" field="versioningStatus" />
 	</mapping>
 
 	<mapping name="SetBucketVersioningStatus"
 		class="edu.ucsb.eucalyptus.msgs.SetBucketVersioningStatusType"
 		extends="edu.ucsb.eucalyptus.msgs.WalrusRequestType">
-		<value name="VersioningStatus" field="versioningStatus" />
+		<value name="Status" field="versioningStatus" />
 	</mapping>
 
 	<mapping name="SetBucketVersioningStatusResponse"

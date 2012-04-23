@@ -690,11 +690,11 @@ public class GetBucketVersioningStatusType extends WalrusRequestType {
 }
 
 public class GetBucketVersioningStatusResponseType extends WalrusResponseType {
-	String versioningStatus;
+	String Status;
 }
 
 public class SetBucketVersioningStatusType extends WalrusRequestType {
-	String versioningStatus;
+	String Status;
 }
 
 public class SetBucketVersioningStatusResponseType extends WalrusResponseType {
