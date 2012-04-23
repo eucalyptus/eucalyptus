@@ -52,7 +52,7 @@ public class StartGuideWebBackend {
     return new ArrayList<GuideItem>( Arrays.asList( new GuideItem( "View and configure cloud service components",
                                                                    QueryBuilder.get( ).start( QueryType.config ).url( ),
                                                                    "service" ),
-                                                    new GuideItem( "View all the images you can access",
+                                                    new GuideItem( "Download and view images",
                                                                    QueryBuilder.get( ).start( QueryType.image ).url( ),
                                                                    "image" ),
                                                     new GuideItem( "View and configure virtual machine types",
