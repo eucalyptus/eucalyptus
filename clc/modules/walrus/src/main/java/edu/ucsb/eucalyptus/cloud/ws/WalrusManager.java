@@ -1802,6 +1802,8 @@ public class WalrusManager {
 							}
 						} while(resultKeyCount <= maxKeys);
 						
+						db.commit();
+						
 						reply.setMetaData(metaData);
 						reply.setContents(contents);						
 												
