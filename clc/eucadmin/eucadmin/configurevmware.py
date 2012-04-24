@@ -62,10 +62,16 @@ class ConfigureVMware(AWSQueryRequest):
                     doc='Edit the current config file using $EDITOR'),
               Param(name='Partition', short_name='P', long_name='partition',
                     ptype='string', optional=True,
-                    doc='Partition name for the service')]
+                    doc='Partition name for the service'),
+              Param(name='generate', long_name='generate', ptype='boolean',
+                    optional=True, doc='Generate new configuration file for VMWare Broker'),
+              Param(name='verbose', long_name='verbose', ptype='boolean', optional=True,
+                    doc='Provides extra debug messaging')]
+
     Args = [Param(name='configfile', long_name='configfile',
                   ptype='string', optional=True,
                   doc='The path to the input config file')]
+    verbose_flg = False
 
     def get_prop_name(self, part):
         num_found = 0
@@ -103,22 +109,25 @@ class ConfigureVMware(AWSQueryRequest):
                 value = prop['euca:value']
                 if value == VMwareConfigDefault:
                     value = ''
-        print '---Current value is:'
-        print value
+        if self.verbose_flg:
+            print '---Current value is:'
+            print value
         return value
 
     def save_to_file(self, value):
         fd, path = tempfile.mkstemp(suffix='.xml', prefix='euca_vmware')
         os.write(fd, value)
         os.close(fd)
-        print '---saving to %s' % path
+        if self.verbose_flg:
+            print '---saving to %s' % path
         return path
 
     def edit_file(self, path):
         editor = os.environ.get('EDITOR', None)
         if editor:
             cmd_string = '%s %s' % (editor, path)
-            print '---running command %s' % cmd_string
+            if self.verbose_flg:
+                print '---running command %s' % cmd_string
             status = subprocess.call(cmd_string, shell=True)
             if status != 0:
                 print 'Edit operation failed'
@@ -130,7 +139,8 @@ class ConfigureVMware(AWSQueryRequest):
     def create_file(self, euca_home, path):
         validate_path = os.path.join(euca_home, VMwareCommand)
         cmd_string = '%s --config %s --prompt --force' % (validate_path, path)
-        print '---running command %s' % cmd_string
+        if self.verbose_flg:
+            print '---running command %s' % cmd_string
         status = subprocess.call(cmd_string, shell=True)
         if status != 0:
             print 'An error occured creating the file.'
@@ -140,7 +150,8 @@ class ConfigureVMware(AWSQueryRequest):
     def validate_file(self, euca_home, path):
         validate_path = os.path.join(euca_home, VMwareCommand)
         cmd_string = '%s --config %s' % (validate_path, path)
-        print '---running command %s' % cmd_string
+        if self.verbose_flg:
+            print '---running command %s' % cmd_string
         status = subprocess.call(cmd_string, shell=True)
         if status != 0:
             print 'A validation error occured.'
@@ -148,7 +159,8 @@ class ConfigureVMware(AWSQueryRequest):
             sys.exit(1)
 
     def save_new_value(self, path, prop):
-        print '---saving new property value from %s' % path
+        if self.verbose_flg:
+            print '---saving new property value from %s' % path
         obj = ModifyPropertyValue()
         obj.main(property_from_file='%s=%s' % (prop, path))
 
@@ -161,13 +173,16 @@ class ConfigureVMware(AWSQueryRequest):
         euca_home = self.request_params.get('euca_home', None)
         cfg_file = self.request_params.get('configfile', None)
         edit_flg = self.request_params.get('edit', False)
+        generate_flg = self.request_params.get('generate', False)
         prop = self.get_prop_name(self.request_params.get('Partition',None))
+        self.verbose_flg = self.request_params.get('verbose', False)
 
         if not euca_home:
             euca_home = os.environ.get('EUCALYPTUS', None)
             if not euca_home:
                 print 'EUCALYPTUS not defined'
                 sys.exit(1)
+
         # if a configfile was passed as an option, validate it and upload it
         if cfg_file:
             self.validate_file(euca_home, cfg_file)
@@ -180,6 +195,12 @@ class ConfigureVMware(AWSQueryRequest):
             self.edit_file(path)
             self.validate_file(euca_home, path)
             self.save_new_value(path, prop)
+        # if no configfile was passed and generate flag is passed
+        # greate a new file
+        elif generate_flg:
+            path = self.save_to_file('')
+            self.create_file(euca_home, path)
+            print 'New config file was saved to %s' % path
         # if no config file
         # and no edit flag, but value exists,
         # then just validate it again.
