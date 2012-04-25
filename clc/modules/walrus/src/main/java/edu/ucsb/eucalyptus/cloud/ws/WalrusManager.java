@@ -428,13 +428,16 @@ public class WalrusManager {
 					ctx.getUser().getName(), ctx.getAccount().getAccountNumber(),
 					ctx.getAccount().getName()));
 
+				Status status = new Status();
+				status.setCode(200);
+				status.setDescription("OK");
+				reply.setStatus(status);
 			} else {
 				LOG.error( "Not authorized to create bucket by " + ctx.getUserFullName( ) );
 				db.rollback();
 				throw new AccessDeniedException("Bucket", bucketName);
 			}
 		}
-		reply.setBucket(bucketName);
 		return reply;
 	}
 
@@ -600,6 +603,7 @@ public class WalrusManager {
 				for (GrantInfo grantInfo : grantInfos) {
 					String uId = grantInfo.getUserId();
 					try {
+						//TODO: zhill - Modify this to handle invalid accounts and just skip them. This is just response creation, not authorization
 						if (uId != null) {
 							addPermission(grants, Accounts.lookupAccountById(uId), grantInfo);
 						} else {

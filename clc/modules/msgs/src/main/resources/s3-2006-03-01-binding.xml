@@ -78,14 +78,12 @@
 			usage="optional" />
 	</mapping>
 
-	<mapping name="ListAllMyBucketsResponse"
+	<mapping name="ListAllMyBucketsResult"
 		class="edu.ucsb.eucalyptus.msgs.ListAllMyBucketsResponseType">
-		<structure name="ListAllMyBucketsResponse">
 			<structure name="Owner" field="owner"
 				map-as="edu.ucsb.eucalyptus.msgs.CanonicalUserType" />
 			<structure name="Buckets" field="bucketList"
 				map-as="edu.ucsb.eucalyptus.msgs.ListAllMyBucketsList" />
-		</structure>
 	</mapping>
 
 	<mapping class="edu.ucsb.eucalyptus.msgs.ListAllMyBucketsList"
@@ -257,7 +255,7 @@
 	<mapping name="CreateBucketResponse"
 		class="edu.ucsb.eucalyptus.msgs.CreateBucketResponseType">
 		<structure name="CreateBucketResponse">
-			<value name="BucketName" field="bucket" />
+			<structure field="status" map-as="edu.ucsb.eucalyptus.msgs.Status" />
 		</structure>
 	</mapping>
 
@@ -486,8 +484,7 @@
 			usage="optional" />
 	</mapping>
 
-	<mapping name="ListBucketResponse" class="edu.ucsb.eucalyptus.msgs.ListBucketResponseType">
-		<structure name="ListBucketResponse">
+	<mapping name="ListBucketResult" class="edu.ucsb.eucalyptus.msgs.ListBucketResponseType">
 			<collection field="metaData"
 				factory="org.jibx.runtime.Utility.arrayListFactory" usage="optional">
 				<structure map-as="edu.ucsb.eucalyptus.msgs.MetaDataEntry" />
@@ -507,7 +504,6 @@
 				factory="org.jibx.runtime.Utility.arrayListFactory" usage="optional">
 				<structure map-as="edu.ucsb.eucalyptus.msgs.PrefixEntry" />
 			</collection>
-		</structure>
 	</mapping>
 
 	<mapping name="Contents" class="edu.ucsb.eucalyptus.msgs.ListEntry"
