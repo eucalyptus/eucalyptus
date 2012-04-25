@@ -221,9 +221,11 @@ sub new_euca_ipt() {
 	    if ($chainuser && @rule) {
 		$chainuser =~ s/-//;
 		chomp(my $chain = encode_base64(md5($chainuser)));
-		$chain = md5_base64($chainuser) . "==";
-		$newchains{$chain} .= ",,," . join(" ", @rule);
-		$allchains{$chain} = 1;
+                $chain = md5_base64($chainuser) . "==";
+		if ($allchains{$chain}){
+                    $newchains{$chain} .= ",,," . join(" ", @rule);
+		}
+#               $allchains{$chain} = 1;                                                                                 
 	    }
 	} elsif ($line =~ /^\s*GROUP/) {
 	    my ($add, $chainuser, @ips) = split(/\s+/, $line);
