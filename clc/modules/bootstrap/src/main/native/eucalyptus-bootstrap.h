@@ -135,6 +135,7 @@ static char *jvm_default_opts[] = {
 	    "-Djava.awt.headless=true",
 	    "-Dsun.java.command=Eucalyptus",
 	    "-Deuca.home=%1$s/",
+            "-Deuca.db.home=/usr/pgsql-9.1/",
 	    "-Deuca.var.dir=%1$s/var/lib/eucalyptus",
 	    "-Deuca.run.dir=%1$s/var/run/eucalyptus",
 	    "-Deuca.lib.dir=%1$s/usr/share/eucalyptus",

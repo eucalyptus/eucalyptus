@@ -764,6 +764,7 @@ int java_init(euca_opts *args, java_home_t *data) {
 		}
 	}
 	JVM_ARG(opt[++x], "-Deuca.version=%1$s", ARGUMENTS_VERSION);
+	JVM_ARG(opt[++x], "-Deuca.extra_version=%1$s", ARGUMENTS_EXTRA_VERSION);
 	JVM_ARG(opt[++x], "-Deuca.log.level=%1$s", GETARG(args, log_level));
 	JVM_ARG(opt[++x], "-Deuca.log.appender=%1$s", GETARG(args, log_appender));
 	if (args->initialize_flag) {
@@ -785,6 +786,10 @@ int java_init(euca_opts *args, java_home_t *data) {
                 JVM_ARG(opt[++x], "-Deuca.noha.cloud");
         }
 
+	if (args->db_home_given) {
+                JVM_ARG(opt[++x], "-Deuca.db.home=%s", GETARG(args, db_home));
+        }
+ 
 	if (args->debug_flag) {
 		JVM_ARG(opt[++x], "-XX:+HeapDumpOnOutOfMemoryError");
 		JVM_ARG(opt[++x], "-XX:HeapDumpPath=%s/var/log/eucalyptus/", GETARG(args, home));
