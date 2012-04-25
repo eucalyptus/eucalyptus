@@ -75,7 +75,7 @@ public class PolicyParser {
       return policyEntity;
     } catch ( JSONException e ) {
       Debugging.logError( LOG, e, "Syntax error in input policy" );
-      throw new PolicyParseException( PolicyParseException.SYNTAX_ERROR, e );
+      throw new PolicyParseException( e );
     }
   }
   
