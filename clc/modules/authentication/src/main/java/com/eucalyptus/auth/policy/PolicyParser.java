@@ -87,7 +87,7 @@ public class PolicyParser {
    * @throws JSONException for syntax error.
    */
   private List<StatementEntity> parseStatements( JSONObject policy ) throws JSONException {
-    List<JSONObject> objs = JsonUtils.getArrayByType( JSONObject.class, policy, PolicySpec.STATEMENT );
+    List<JSONObject> objs = JsonUtils.getRequiredArrayByType( JSONObject.class, policy, PolicySpec.STATEMENT );
     List<StatementEntity> statements = Lists.newArrayList( );
     for ( JSONObject o : objs ) {
       statements.add( parseStatement( o ) );
