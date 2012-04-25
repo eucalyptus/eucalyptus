@@ -9,6 +9,7 @@ import com.eucalyptus.webui.client.place.SearchPlace;
 import com.eucalyptus.webui.client.service.SearchRange;
 import com.eucalyptus.webui.client.service.SearchResult;
 import com.eucalyptus.webui.client.service.SearchResultRow;
+import com.eucalyptus.webui.client.session.SessionData;
 import com.eucalyptus.webui.client.view.DetailView;
 import com.eucalyptus.webui.client.view.ImageView;
 import com.eucalyptus.webui.client.view.HasValueWidget;
@@ -78,6 +79,7 @@ public class ImageActivity extends AbstractSearchActivity implements ImageView.P
       container.setWidget( this.view );
       ( ( ImageView ) this.view ).clear( );
     }
+    ( ( ImageView ) this.view ).setDesc( this.clientFactory.getSessionData( ).getStringProperty( SessionData.EUSTORE_DESCRIPTION, "Please use euStore to add images to your cloud." ) );
     ( ( ImageView ) this.view ).showSearchResult( result );    
   }
   
