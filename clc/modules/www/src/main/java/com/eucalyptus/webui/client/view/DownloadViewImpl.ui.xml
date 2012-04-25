@@ -32,12 +32,6 @@
         <table class="{style.downloads}">
             <tbody>
                 <tr>
-                    <td><g:Label addStyleNames="{style.title}">Eucalyptus-certified Images</g:Label></td>
-                </tr>
-                <tr>
-                    <td><g:SimplePanel ui:field="imagePanel"></g:SimplePanel></td>
-                </tr>
-                <tr>
                     <td><g:Label addStyleNames="{style.title}">Eucalyptus-compatible Tools</g:Label></td>
                 </tr>
                 <tr>

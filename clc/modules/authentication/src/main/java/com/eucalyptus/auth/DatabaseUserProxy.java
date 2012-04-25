@@ -593,6 +593,9 @@ public class DatabaseUserProxy implements User {
       throw new AuthException( AuthException.INVALID_NAME );
     }
     PolicyEntity parsedPolicy = PolicyParser.getInstance( ).parse( policy );
+    if ( this.isAccountAdmin( ) && parsedPolicy.containsIamPermission( ) ) {
+      throw new PolicyParseException( "Non-quota policy can not be assigned to account/account admin" );
+    }
     parsedPolicy.setName( name );
     EntityWrapper<UserEntity> db = EntityWrapper.get( UserEntity.class );
     try {
