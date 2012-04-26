@@ -255,8 +255,8 @@
 	<mapping name="CreateBucketResponse"
 		class="edu.ucsb.eucalyptus.msgs.CreateBucketResponseType">
 		<structure name="CreateBucketResponse">
-			<structure field="status" map-as="edu.ucsb.eucalyptus.msgs.Status" />
-		</structure>
+ 			<value name="BucketName" field="bucket" />
+ 		</structure>
 	</mapping>
 
 	<mapping name="DeleteBucket" class="edu.ucsb.eucalyptus.msgs.DeleteBucketType"

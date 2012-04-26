@@ -331,7 +331,7 @@ public class CreateBucketType extends WalrusRequestType {
 }
 
 public class CreateBucketResponseType extends WalrusResponseType {
-	Status status;
+	String bucket;
 }
 
 public class DeleteBucketType extends WalrusDeleteType {

@@ -427,17 +427,13 @@ public class WalrusManager {
 				queueSender.send(new S3Event(true, ctx.getUser().getUserId(),
 					ctx.getUser().getName(), ctx.getAccount().getAccountNumber(),
 					ctx.getAccount().getName()));
-
-				Status status = new Status();
-				status.setCode(200);
-				status.setDescription("OK");
-				reply.setStatus(status);
 			} else {
 				LOG.error( "Not authorized to create bucket by " + ctx.getUserFullName( ) );
 				db.rollback();
 				throw new AccessDeniedException("Bucket", bucketName);
 			}
 		}
+		reply.setBucket(bucketName);
 		return reply;
 	}
 
@@ -1806,10 +1802,8 @@ public class WalrusManager {
 							}
 						} while(resultKeyCount <= maxKeys);
 						
-						db.commit();
-						
 						reply.setMetaData(metaData);
-						reply.setContents(contents);						
+						reply.setContents(contents);				
 												
 						//Sort the prefixes from the hashtable and add to the reply
 						if (prefixes != null && prefixes.size() > 0) {
