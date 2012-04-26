@@ -15,6 +15,9 @@ public class ValueCheckerFactory {
 
   public static final HashSet<Character> USERGROUPNAME_EXTRA = new HashSet<Character>( Arrays.asList( '+', '=', ',', '.', '@', '-' ) );
   
+  // special characters for those from Active Directory sync
+  public static final HashSet<Character> USERGROUPNAME_AD = new HashSet<Character>( Arrays.asList( '/', '\\', '_' ) );
+  
   public static final HashSet<Character> POLICYNAME_EXCLUDE = new HashSet<Character>( Arrays.asList( '/', '\\', '*', '?', ' ' ) );
 
   public static final HashSet<Character> PASSWORD_SPECIAL = new HashSet<Character>( Arrays.asList( '`', '~', '!', '@', '#', '$', '%', '^', '&', '*', '(', ')', '-', '_', '=', '+', '[', ']', '{', '}', '\\', '|', ';', ':', '\'', '"', ',', '.', '<', '>', '/', '?' ) );
@@ -71,7 +74,7 @@ public class ValueCheckerFactory {
         }
         for ( int i = 0; i < value.length( ); i++ ) {
           char c = value.charAt( i );
-          if ( !Character.isLetterOrDigit( c ) && !USERGROUPNAME_EXTRA.contains( c ) && !WHITESPACES.contains( c ) ) {
+          if ( !Character.isLetterOrDigit( c ) && !USERGROUPNAME_EXTRA.contains( c ) && !USERGROUPNAME_AD.contains( c ) && !WHITESPACES.contains( c ) ) {
             throw new InvalidValueException( "Containing invalid character for user or group names: " + c );
           }
         }
@@ -91,7 +94,7 @@ public class ValueCheckerFactory {
         }
         for ( int i = 0; i < value.length( ); i++ ) {
           char c = value.charAt( i );
-          if ( !Character.isLetterOrDigit( c ) && !USERGROUPNAME_EXTRA.contains( c ) ) {
+          if ( !Character.isLetterOrDigit( c ) && !USERGROUPNAME_EXTRA.contains( c ) && !USERGROUPNAME_AD.contains( c ) ) {
             throw new InvalidValueException( "Containing invalid character for user or group name: " + c );
           }
         }
