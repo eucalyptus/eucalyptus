@@ -77,6 +77,7 @@ import javax.persistence.PreRemove;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Parent;
+
 import com.eucalyptus.blockstorage.Volume;
 import com.eucalyptus.cloud.ImageMetadata;
 import com.eucalyptus.cloud.util.MetadataException;
@@ -90,6 +91,8 @@ import com.eucalyptus.keys.KeyPairs;
 import com.eucalyptus.keys.SshKeyPair;
 import com.google.common.collect.Sets;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
+
+
 
 @Embeddable
 public class VmBootRecord {
@@ -110,7 +113,7 @@ public class VmBootRecord {
   @CollectionTable( name = "metadata_instances_persistent_volumes" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Set<VmVolumeAttachment> persistentVolumes = Sets.newHashSet( );
-  @Lob
+  
   @Column( name = "metadata_vm_user_data" )
   private byte[]                  userData;
   @Lob
