@@ -1,27 +1,41 @@
 package com.eucalyptus.bootstrap;
 
+import java.util.Map;
+
 public interface DatabaseBootstrapper {
-  public abstract void init( ) throws Exception;
+
+  /**
+   * Recommended / default database username
+   */
+  String DB_USERNAME = "eucalyptus";
+
+  void init( ) throws Exception;
   
-  public abstract boolean load( ) throws Exception;
+  boolean load( ) throws Exception;
   
-  public abstract boolean start( ) throws Exception;
+  boolean start( ) throws Exception;
   
-  public abstract boolean stop( ) throws Exception;
+  boolean stop( ) throws Exception;
   
-  public abstract void destroy( ) throws Exception;
+  void destroy( ) throws Exception;
   
-  public abstract boolean isRunning( );
+  boolean isRunning( );
   
-  public abstract void hup( );
+  void hup( );
+  String getDriverName( );
   
-  public abstract String getDriverName( );
+  String getJdbcDialect( );
   
-  public abstract String getJdbcDialect( );
+  String getHibernateDialect( );
   
-  public abstract String getHibernateDialect( );
+  String getJdbcScheme( );
   
-  public abstract String getJdbcScheme( );
-  
-  public abstract String getServicePath( String... pathParts );
+  String getServicePath( String... pathParts );
+
+  Map<String,String> getJdbcUrlQueryParameters();
+
+  String getUserName();
+
+  String getPassword();
+
 }
