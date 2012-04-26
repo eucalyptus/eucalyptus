@@ -65,7 +65,7 @@
 <Configure id="Server" class="org.mortbay.jetty.Server">
   <Call name="addConnector">
     <Arg>
-      <New class="org.mortbay.jetty.security.SslSelectChannelConnector">
+      <New class="com.eucalyptus.bootstrap.HttpServerBootstrapper$ConfiguredSslSelectChannelConnector">
         <Set name="Port">
           <SystemProperty name="euca.https.port" default="8443" />
         </Set>

@@ -427,7 +427,6 @@ public class WalrusManager {
 				queueSender.send(new S3Event(true, ctx.getUser().getUserId(),
 					ctx.getUser().getName(), ctx.getAccount().getAccountNumber(),
 					ctx.getAccount().getName()));
-
 			} else {
 				LOG.error( "Not authorized to create bucket by " + ctx.getUserFullName( ) );
 				db.rollback();
@@ -600,6 +599,7 @@ public class WalrusManager {
 				for (GrantInfo grantInfo : grantInfos) {
 					String uId = grantInfo.getUserId();
 					try {
+						//TODO: zhill - Modify this to handle invalid accounts and just skip them. This is just response creation, not authorization
 						if (uId != null) {
 							addPermission(grants, Accounts.lookupAccountById(uId), grantInfo);
 						} else {
@@ -1803,7 +1803,7 @@ public class WalrusManager {
 						} while(resultKeyCount <= maxKeys);
 						
 						reply.setMetaData(metaData);
-						reply.setContents(contents);						
+						reply.setContents(contents);				
 												
 						//Sort the prefixes from the hashtable and add to the reply
 						if (prefixes != null && prefixes.size() > 0) {
@@ -3270,18 +3270,16 @@ public class WalrusManager {
 						} else {
 							DeleteMarkerEntry deleteMarkerEntry = new DeleteMarkerEntry();
 							deleteMarkerEntry.setKey(objectKey);
-							deleteMarkerEntry.setVersionId(objectInfo
-									.getVersionId());
+							deleteMarkerEntry.setVersionId(objectInfo.getVersionId());
 							deleteMarkerEntry.setLastModified(DateUtils.format(
 									objectInfo.getLastModified().getTime(),
 									DateUtils.ISO8601_DATETIME_PATTERN)
 									+ ".000Z");
-							String displayName = objectInfo.getOwnerId();
+														
 							try {
-								User userInfo = Accounts.lookupUserById(displayName);
-								deleteMarkerEntry
-								.setOwner(new CanonicalUserType(Accounts.getFirstActiveAccessKeyId( userInfo ),
-										displayName));
+								String ownerId = objectInfo.getOwnerId();
+								String displayName = Accounts.lookupAccountById(ownerId).getName();
+								deleteMarkerEntry.setOwner(new CanonicalUserType(ownerId, displayName));
 							} catch (AuthException e) {
 								db.rollback();
 								throw new AccessDeniedException("Bucket",
