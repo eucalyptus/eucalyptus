@@ -60,14 +60,14 @@
  *******************************************************************************/
 package com.eucalyptus.bootstrap;
 
+import static com.eucalyptus.crypto.util.SslSetup.getEnabledCipherSuites;
 import java.io.File;
+import java.io.IOException;
 import java.net.URL;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import org.apache.log4j.Logger;
 import org.mortbay.jetty.Server;
+import org.mortbay.jetty.security.SslSelectChannelConnector;
 import org.mortbay.xml.XmlConfiguration;
-import com.eucalyptus.bootstrap.Bootstrap.Stage;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.HttpService;
 import com.eucalyptus.configurable.ConfigurableClass;
@@ -79,6 +79,7 @@ import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.system.BaseDirectory;
 import com.eucalyptus.system.Threads;
 import java.util.concurrent.TimeUnit;
+import javax.net.ssl.SSLEngine;
 import com.google.common.io.Files;
 
 @Provides( Empyrean.class )
@@ -105,7 +106,10 @@ public class HttpServerBootstrapper extends Bootstrapper {
   @ConfigurableField( initial = "",
                       description = "Http Proxy Port" )
   public static String  httpProxyPort;
-  
+  @ConfigurableField( description = "SSL ciphers for HTTPS listener.",
+                      displayName = "euca.https.ciphers" )
+  public static String  HTTPS_CIPHERS = "RSA:DSS:ECDSA:+RC4:+3DES:TLS_EMPTY_RENEGOTIATION_INFO_SCSV:!NULL:!EXPORT:!EXPORT1024:!MD5:!DES";
+
   private static void setupJettyServer( ) throws Exception {
     //http proxy setup
     if ( System.getProperty( "http.proxyHost" ) != null ) {
@@ -235,5 +239,13 @@ public class HttpServerBootstrapper extends Bootstrapper {
       }
     }
   }
-  
+
+  public static final class ConfiguredSslSelectChannelConnector extends SslSelectChannelConnector {
+    @Override
+    protected SSLEngine createSSLEngine() throws IOException {
+      final SSLEngine engine = super.createSSLEngine();
+      engine.setEnabledCipherSuites( getEnabledCipherSuites(HTTPS_CIPHERS, engine.getSupportedCipherSuites()) );
+      return engine;
+    }
+  }
 }
