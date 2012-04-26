@@ -3270,18 +3270,16 @@ public class WalrusManager {
 						} else {
 							DeleteMarkerEntry deleteMarkerEntry = new DeleteMarkerEntry();
 							deleteMarkerEntry.setKey(objectKey);
-							deleteMarkerEntry.setVersionId(objectInfo
-									.getVersionId());
+							deleteMarkerEntry.setVersionId(objectInfo.getVersionId());
 							deleteMarkerEntry.setLastModified(DateUtils.format(
 									objectInfo.getLastModified().getTime(),
 									DateUtils.ISO8601_DATETIME_PATTERN)
 									+ ".000Z");
-							String displayName = objectInfo.getOwnerId();
+														
 							try {
-								User userInfo = Accounts.lookupUserById(displayName);
-								deleteMarkerEntry
-								.setOwner(new CanonicalUserType(Accounts.getFirstActiveAccessKeyId( userInfo ),
-										displayName));
+								String ownerId = objectInfo.getOwnerId();
+								String displayName = Accounts.lookupAccountById(ownerId).getName();
+								deleteMarkerEntry.setOwner(new CanonicalUserType(ownerId, displayName));
 							} catch (AuthException e) {
 								db.rollback();
 								throw new AccessDeniedException("Bucket",
