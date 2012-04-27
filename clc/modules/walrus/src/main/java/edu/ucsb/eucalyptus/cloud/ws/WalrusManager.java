@@ -1915,8 +1915,8 @@ public class WalrusManager {
 				
 				try {
 					addPermission(grants, new CanonicalUserType(uId,""), grantInfo);
-				} catch (AuthException e) {
-					LOG.debug(e,e);
+				} catch (AuthException ex) {
+					LOG.debug(ex,ex);
 					continue;
 				}
 			}
