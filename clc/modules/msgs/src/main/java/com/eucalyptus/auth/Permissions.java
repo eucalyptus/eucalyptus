@@ -1,12 +1,11 @@
 package com.eucalyptus.auth;
 
-import java.util.HashMap;
+import static com.google.common.collect.Maps.newHashMap;
 import java.util.Map;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.api.PolicyEngine;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.IllegalContextAccessException;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -24,17 +23,12 @@ public class Permissions {
     }
   }
   public static boolean isAuthorized( String vendor, String resourceType, String resourceName, Account resourceAccount, String action, User requestUser ) {
-    Context context = null;
-    try {
-      context = Contexts.lookup( );
-    } catch ( IllegalContextAccessException e ) {
-      LOG.debug( "Not in a request context", e );      
-    }
     try {
       // If we are not in a request context, e.g. the UI, use a dummy contract map.
       // TODO(wenye): we should consider how to handle this if we allow the EC2 operations in the UI.
-      Map<Contract.Type, Contract> contracts = context != null ? context.getContracts( ) : new HashMap<Contract.Type, Contract>( );
+      final Map<Contract.Type, Contract> contracts = newHashMap();
       policyEngine.evaluateAuthorization( vendor + ":" + resourceType, resourceName, resourceAccount, vendor + ":" + action, requestUser, contracts );
+      pushToContext(contracts);
       return true;
     } catch ( AuthException e ) {
       LOG.error( "Denied resource access to " + resourceType + ":" + resourceName + " of " + resourceAccount + " for " + requestUser, e );
@@ -43,7 +37,7 @@ public class Permissions {
     }
     return false;
   }
-  
+
   public static boolean canAllocate( String vendor, String resourceType, String resourceName, String action, User requestUser, Long quantity ) {
     try {
       policyEngine.evaluateQuota( vendor + ":" + resourceType, resourceName, vendor + ":" + action, requestUser, quantity );
@@ -77,5 +71,12 @@ public class Permissions {
       throw new EucalyptusCloudException( t );
     }
   }
-  
+
+  private static void pushToContext( final Map<Contract.Type, Contract> contracts ) {
+    try {
+      Contexts.lookup().setContracts( contracts );
+    } catch ( IllegalContextAccessException e ) {
+      LOG.debug( "Not in a request context", e );
+    }
+  }
 }

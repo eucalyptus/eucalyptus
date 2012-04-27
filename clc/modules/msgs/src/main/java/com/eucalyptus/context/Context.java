@@ -1,5 +1,7 @@
 package com.eucalyptus.context;
 
+import static java.util.Collections.unmodifiableMap;
+import static com.google.common.collect.Maps.newHashMap;
 import java.lang.ref.WeakReference;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -25,7 +27,6 @@ import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.ws.server.Statistics;
-import com.google.common.collect.Maps;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class Context {
@@ -38,7 +39,7 @@ public class Context {
   private WeakReference<MuleEvent>     muleEvent = new WeakReference<MuleEvent>( null );
   private User                         user      = null;
   private Subject                      subject   = null;
-  private Map<Contract.Type, Contract> contracts = Maps.newHashMap( );
+  private Map<Contract.Type, Contract> contracts = null;
   
   protected Context( String dest, final BaseMessage msg ) {
     this.correlationId = msg.getCorrelationId( );
@@ -176,7 +177,7 @@ public class Context {
       this.muleEvent.clear( );
       this.muleEvent = null;
     }
-    this.contracts.clear( );
+    this.contracts = null;
   }
   
   private final static <TYPE> TYPE check( final TYPE obj ) {
@@ -187,11 +188,19 @@ public class Context {
     }
     return obj;
   }
-  
-  public Map<Contract.Type, Contract> getContracts( ) {
+
+  /**
+   * @throws IllegalStateException If contracts have not been evaluated for this context.
+   */
+  public Map<Contract.Type, Contract> getContracts( ) throws IllegalStateException {
+    if ( this.contracts == null ) throw new IllegalStateException("Contracts not available");
     return this.contracts;
   }
-  
+
+  public void setContracts( final Map<Contract.Type, Contract> contracts ) {
+    this.contracts = unmodifiableMap(newHashMap(contracts));
+  }
+
   public Account getAccount( ) {
     try {
       return this.user.getAccount( );

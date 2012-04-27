@@ -72,7 +72,6 @@ import java.util.Set;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
-import com.eucalyptus.auth.Contract;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.util.MetadataException;
@@ -126,7 +125,7 @@ public class Allocations {
     private final List<ResourceToken>  allocationTokens  = Lists.newArrayList( );
     private final Long                 reservationIndex;
     private final Map<Integer, String> instanceIds;
-    private final Date                 expiration;
+    private Date                       expiration = new Date( 32503708800000l );
     
     private Allocation( final RunInstancesType request ) {
       super( );
@@ -142,8 +141,6 @@ public class Allocations {
       }
       this.reservationIndex = UniqueIds.nextIndex( VmInstance.class, ( long ) request.getMaxCount( ) );
       this.reservationId = VmInstances.getId( this.reservationIndex, 0 ).replaceAll( "i-", "r-" );
-      Contract<Date> expiry = this.getContext( ).getContracts( ).get( Contract.Type.EXPIRATION );
-      this.expiration = ( expiry == null ? new Date( 32503708800000l ) : expiry.getValue( ) );
       if ( this.request.getUserData( ) != null ) {
         try {
           this.userData = Base64.decode( this.request.getUserData( ) );
@@ -350,6 +347,10 @@ public class Allocations {
     
     public Date getExpiration( ) {
       return this.expiration;
+    }
+
+    public void setExpiration(final Date expiration) {
+      this.expiration = expiration;
     }
   }
   
