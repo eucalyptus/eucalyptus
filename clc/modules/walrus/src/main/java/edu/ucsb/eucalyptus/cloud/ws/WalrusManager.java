@@ -217,8 +217,8 @@ import com.eucalyptus.system.Threads;
 import com.eucalyptus.component.id.Walrus;
 
 public class WalrusManager {
-	private static org.codehaus.groovy.tools.shell.util.Logger LOG = Logger.getLogger(WalrusManager.class);
-
+	private static Logger LOG = Logger.getLogger(WalrusManager.class);
+	
 	private StorageManager storageManager;
 	private WalrusImageManager walrusImageManager;
 	private static WalrusStatistics walrusStatistics = null;
