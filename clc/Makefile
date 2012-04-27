@@ -1,7 +1,7 @@
 # Makefile wrapper around ant
 #
 #
-include ../Makedefs
+#include ../Makedefs
 
 theme_dir	= ${TOP}/clc/modules/www/src/main/java/com/eucalyptus/webui/public/themes
 web_prop_dir	= ${TOP}/clc/modules/www/conf
@@ -13,7 +13,7 @@ test: deps build-test
 
 deps/cloud-lib.tar.gz:
 	@mkdir -p deps
-	cd ${TOP}/clc/deps/ && wget -q http://mirror.eucalyptus/dependencies/${VERSION}/cloud-lib.tar.gz	
+	cd ${TOP}/clc/deps/ && curl -q http://192.168.7.65/dependencies/${VERSION}/cloud-lib.tar.gz > cloud-lib.tar.gz	
 
 lib/bcprov.jar:
 	@mkdir -p lib
