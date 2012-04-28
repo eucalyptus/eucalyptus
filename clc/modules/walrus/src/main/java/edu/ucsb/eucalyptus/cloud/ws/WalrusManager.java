@@ -218,7 +218,7 @@ import com.eucalyptus.component.id.Walrus;
 
 public class WalrusManager {
 	private static Logger LOG = Logger.getLogger(WalrusManager.class);
-
+	
 	private StorageManager storageManager;
 	private WalrusImageManager walrusImageManager;
 	private static WalrusStatistics walrusStatistics = null;
@@ -257,6 +257,31 @@ public class WalrusManager {
 		} catch (EucalyptusCloudException ex) {
 			LOG.fatal(ex);
 		}
+	
+	}
+	
+	private boolean bucketHasSnapshots(String bucketName) throws Exception {
+		EntityWrapper<WalrusSnapshotInfo> dbSnap = null;
+		
+		try {
+			dbSnap = EntityWrapper.get(WalrusSnapshotInfo.class);
+			WalrusSnapshotInfo walrusSnapInfo = new WalrusSnapshotInfo();
+			walrusSnapInfo.setSnapshotBucket(bucketName);
+		
+			Criteria snapCount = dbSnap.createCriteria(WalrusSnapshotInfo.class).add(Example.create(walrusSnapInfo)).setProjection(Projections.rowCount());
+			snapCount.setReadOnly(true);
+			Long rowCount = (Long)snapCount.uniqueResult();
+			dbSnap.rollback();
+			if (rowCount != null && rowCount.longValue() > 0) {
+				return true;
+			}
+			return false;
+		} catch(Exception e) {
+			if(dbSnap != null) {
+				dbSnap.rollback();
+			}
+			throw e;
+		}
 	}
 
 	public ListAllMyBucketsResponseType listAllMyBuckets(
@@ -274,38 +299,38 @@ public class WalrusManager {
 			BucketInfo searchBucket = new BucketInfo();
 			searchBucket.setOwnerId(account.getAccountNumber());
 			searchBucket.setHidden(false);
+			
 			List<BucketInfo> bucketInfoList = db.query(searchBucket);
 
 			ArrayList<BucketListEntry> buckets = new ArrayList<BucketListEntry>();
 
 			for (BucketInfo bucketInfo : bucketInfoList) {
 				if (ctx.hasAdministrativePrivileges()) {						
-					EntityWrapper<WalrusSnapshotInfo> dbSnap = EntityWrapper.get(WalrusSnapshotInfo.class);
 					try {
-						WalrusSnapshotInfo walrusSnapInfo = new WalrusSnapshotInfo();
-						walrusSnapInfo.setSnapshotBucket(bucketInfo.getBucketName());
-						List<WalrusSnapshotInfo> walrusSnaps = dbSnap
-								.query(walrusSnapInfo);
-						dbSnap.commit();
-						if (walrusSnaps.size() > 0)
+						//TODO: zhill -- we should modify the bucket schema to indicate if the bucket is a snapshot bucket, or use a seperate type for snap containers
+						if(bucketHasSnapshots(bucketInfo.getBucketName())) {
 							continue;
-					} catch (Exception eee) {
-						LOG.debug(eee, eee);
-						dbSnap.rollback();
-					}
-				}
-        if (ctx.hasAdministrativePrivileges() ||
-            Lookups.checkPrivilege(PolicySpec.S3_LISTALLMYBUCKETS,
-                PolicySpec.VENDOR_S3,
-                PolicySpec.S3_RESOURCE_BUCKET,
-                bucketInfo.getBucketName(),
-                bucketInfo.getOwnerId())) {           
-          buckets.add(new BucketListEntry(bucketInfo.getBucketName(),
-              DateUtils.format(bucketInfo.getCreationDate().getTime(),
-                  DateUtils.ISO8601_DATETIME_PATTERN)
-                  + ".000Z"));
-        }
+						}
+					} catch(Exception e) {
+						LOG.debug(e, e);
+						continue;
+					}	
+				}	
+        		if (ctx.hasAdministrativePrivileges() || 
+        			Lookups.checkPrivilege(PolicySpec.S3_LISTALLMYBUCKETS, 
+                	PolicySpec.VENDOR_S3,
+                	PolicySpec.S3_RESOURCE_BUCKET,
+                	bucketInfo.getBucketName(),
+                	bucketInfo.getOwnerId())) {
+        		
+        			buckets.add(new BucketListEntry(bucketInfo.getBucketName(),
+        					DateUtils.format(bucketInfo.getCreationDate().getTime(), 
+        							DateUtils.ISO8601_DATETIME_PATTERN) 
+        							+ ".000Z"));
+        		}
 			}
+			db.commit();
+			
 			try {
 				CanonicalUserType owner = new CanonicalUserType(account.getAccountNumber(), account.getName());
 				ListAllMyBucketsList bucketList = new ListAllMyBucketsList();
@@ -313,11 +338,9 @@ public class WalrusManager {
 				bucketList.setBuckets(buckets);
 				reply.setBucketList(bucketList);
 			} catch (Exception ex) {
-				db.rollback();
 				LOG.error(ex);
 				throw new AccessDeniedException("Account: " + account.getName() + " not found", ex);
-			}
-			db.commit();
+			}			
 		} catch (EucalyptusCloudException e) {
 			db.rollback();
 			throw e;
@@ -596,19 +619,33 @@ public class WalrusManager {
 				ownerId = bucket.getOwnerId();
 				ArrayList<Grant> grants = new ArrayList<Grant>();
 				bucket.readPermissions(grants);
+				CanonicalUserType grantUser = null;
+				Account tmpAccnt = null;
 				for (GrantInfo grantInfo : grantInfos) {
-					String uId = grantInfo.getUserId();
+					String uId = grantInfo.getUserId();					
 					try {
-						//TODO: zhill - Modify this to handle invalid accounts and just skip them. This is just response creation, not authorization
 						if (uId != null) {
-							addPermission(grants, Accounts.lookupAccountById(uId), grantInfo);
+							//Lots of work just to try to get the display Name of the userId.
+							//TODO: zhill - Operations like this shouldn't have to hit the DB for every user, that can be in the grant record
+							try {
+								tmpAccnt = Accounts.lookupAccountById(uId);
+								grantUser = new CanonicalUserType(tmpAccnt.getAccountNumber(), tmpAccnt.getName());
+								tmpAccnt = null;								
+							} catch(AuthException e) {
+								LOG.debug(e,e);
+								//Couldn't get one, use empty string
+								grantUser = new CanonicalUserType(uId, "");
+								tmpAccnt = null;
+							}
+							
+							addPermission(grants, grantUser, grantInfo);
 						} else {
 							addPermission(grants, grantInfo);
 						}
 					} catch (AuthException e) {
-						db.rollback();
-						throw new AccessDeniedException("Bucket", bucketName,
-								logData);
+						//Just skip this entry, this is not an auth issue
+						LOG.debug(e,e);
+						continue;
 					}
 				}
 				accessControlList.setGrants(grants);
@@ -663,6 +700,35 @@ public class WalrusManager {
 		}
 	}
 
+	private static void addPermission(ArrayList<Grant> grants, CanonicalUserType user,
+			GrantInfo grantInfo) throws AuthException, IllegalArgumentException {
+		if(user == null) {
+			throw new IllegalArgumentException("Cannot add grant for null user");
+		}
+		
+		if (grantInfo.canRead() && grantInfo.canWrite()
+				&& grantInfo.canReadACP() && grantInfo.isWriteACP()) {
+			grants.add(new Grant(new Grantee(user), "FULL_CONTROL"));
+			return;
+		}
+
+		if (grantInfo.canRead()) {
+			grants.add(new Grant(new Grantee(user), "READ"));
+		}
+
+		if (grantInfo.canWrite()) {
+			grants.add(new Grant(new Grantee(user), "WRITE"));
+		}
+
+		if (grantInfo.canReadACP()) {
+			grants.add(new Grant(new Grantee(user), "READ_ACP"));
+		}
+
+		if (grantInfo.isWriteACP()) {
+			grants.add(new Grant(new Grantee(user), "WRITE_ACP"));
+		}
+	}
+	
 	private static void addPermission(ArrayList<Grant> grants,
 			GrantInfo grantInfo) {
 		if (grantInfo.getGrantGroup() != null) {
@@ -1666,16 +1732,14 @@ public class WalrusManager {
 						}
 						
 						if (Contexts.lookup().hasAdministrativePrivileges()) {
-							EntityWrapper<WalrusSnapshotInfo> dbSnap = db
-									.recast(WalrusSnapshotInfo.class);
-							WalrusSnapshotInfo walrusSnapInfo = new WalrusSnapshotInfo();
-							walrusSnapInfo.setSnapshotBucket(bucketName);
-							
-							Criteria snapCount = dbSnap.createCriteria(WalrusSnapshotInfo.class).add(Example.create(walrusSnapInfo)).setProjection(Projections.rowCount());
-							Long rowCount = (Long)snapCount.uniqueResult();
-							if (rowCount != null && rowCount.longValue() > 0) {
+							try {
+								if(bucketHasSnapshots(bucketName)) {
+									db.rollback();
+									throw new NoSuchBucketException(bucketName);
+								}
+							} catch(Exception e) {
 								db.rollback();
-								throw new NoSuchBucketException(bucketName);
+								throw new EucalyptusCloudException(e);
 							}
 						}
 						
@@ -1696,8 +1760,7 @@ public class WalrusManager {
 						}
 						
 						final int queryStrideSize = maxKeys + 1;						
-						EntityWrapper<ObjectInfo> dbObject = db
-								.recast(ObjectInfo.class);												
+						EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);												
 						
 						ObjectInfo searchObj = new ObjectInfo();
 						searchObj.setBucketName(bucketName);
@@ -1829,6 +1892,36 @@ public class WalrusManager {
 		db.commit();
 		return reply;
 	}
+	
+	/*
+	 * Build a grant list from a list of GrantInfos. Will add 'invalid' grants if they are in the list.
+	 */
+	private void addGrants(ArrayList<Grant> grants, List<GrantInfo> grantInfos) {		
+		if(grantInfos == null) {
+			return;
+		}
+		
+		if(grants == null) {
+			grants = new ArrayList<Grant>();
+		}
+		
+		String uId = null;
+		for (GrantInfo grantInfo : grantInfos) {
+			uId = grantInfo.getUserId();								
+			try {							
+				addPermission(grants, Accounts.lookupAccountById(uId), grantInfo);
+			} catch (AuthException e) {
+				LOG.debug(e, e);
+				
+				try {
+					addPermission(grants, new CanonicalUserType(uId,""), grantInfo);
+				} catch (AuthException ex) {
+					LOG.debug(ex,ex);
+					continue;
+				}
+			}
+		}
+	}
 		
 	public GetObjectAccessControlPolicyResponseType getObjectAccessControlPolicy(
 			GetObjectAccessControlPolicyType request)
@@ -1879,16 +1972,9 @@ public class WalrusManager {
 							ownerId = objectInfo.getOwnerId();
 							ArrayList<Grant> grants = new ArrayList<Grant>();
 							List<GrantInfo> grantInfos = objectInfo.getGrants();
-							for (GrantInfo grantInfo : grantInfos) {
-								String uId = grantInfo.getUserId();
-								try {
-									objectInfo.readPermissions(grants);
-									addPermission(grants, Accounts.lookupAccountById(uId), grantInfo);
-								} catch (AuthException e) {
-									throw new AccessDeniedException("Key", objectKey,
-											logData);
-								}
-							}
+							objectInfo.readPermissions(grants);							
+							addGrants(grants, grantInfos);							
+							
 							accessControlList.setGrants(grants);
 						} else {
 							db.rollback();
@@ -1979,8 +2065,7 @@ public class WalrusManager {
 		if (accessControlPolicy == null) {
 			throw new AccessDeniedException("Bucket", bucketName);
 		}
-		AccessControlListType accessControlList = accessControlPolicy
-				.getAccessControlList();
+		AccessControlListType accessControlList = accessControlPolicy.getAccessControlList();
 
 		EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
 		BucketInfo bucketInfo = new BucketInfo(bucketName);
@@ -1998,8 +2083,7 @@ public class WalrusManager {
 							null)))) {
 				List<GrantInfo> grantInfos = new ArrayList<GrantInfo>();
 				bucket.resetGlobalGrants();
-				bucket.addGrants(bucket.getOwnerId(), grantInfos,
-						accessControlList);
+				bucket.addGrants(bucket.getOwnerId(), grantInfos, accessControlList);
 				bucket.setGrants(grantInfos);
 				reply.setCode("204");
 				reply.setDescription("OK");
@@ -3163,15 +3247,14 @@ public class WalrusManager {
 					reply.setLogData(logData);
 				}
 				if (Contexts.lookup().hasAdministrativePrivileges()) {
-					EntityWrapper<WalrusSnapshotInfo> dbSnap = db
-							.recast(WalrusSnapshotInfo.class);
-					WalrusSnapshotInfo walrusSnapInfo = new WalrusSnapshotInfo();
-					walrusSnapInfo.setSnapshotBucket(bucketName);
-					List<WalrusSnapshotInfo> walrusSnaps = dbSnap
-							.query(walrusSnapInfo);
-					if (walrusSnaps.size() > 0) {
-						db.rollback();
-						throw new NoSuchBucketException(bucketName);
+					try {
+						if(bucketHasSnapshots(bucketName)) {
+							db.rollback();
+							throw new NoSuchBucketException(bucketName);
+						}
+					} catch(Exception e) {
+						LOG.debug(e,e);
+						throw new EucalyptusCloudException(e);
 					}
 				}
 				reply.setName(bucketName);
