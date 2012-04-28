@@ -136,7 +136,10 @@ public class VolumeManager {
     
     if ( snapId != null ) {
       try {
-        Transactions.find( Snapshot.named( null, snapId ) );
+        Snapshot snap = Transactions.find( Snapshot.named( null, snapId ) );
+        if ( !RestrictedTypes.filterPrivileged( ).apply( snap ) ) {
+          throw new EucalyptusCloudException( "Not authorized to use snapshot " + snapId + " by " + ctx.getUser( ).getName( ) );
+        }
       } catch ( ExecutionException ex ) {
         throw new EucalyptusCloudException( "Failed to create volume because the referenced snapshot id is invalid: " + snapId );
       }
