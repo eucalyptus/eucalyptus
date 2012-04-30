@@ -6,8 +6,6 @@ import com.google.gwt.user.client.ui.IsWidget;
 
 public interface DownloadView extends IsWidget {
   
-  void displayImageDownloads( ArrayList<DownloadInfo> downloads );
-
   void displayToolDownloads( ArrayList<DownloadInfo> downloads );
   
 }

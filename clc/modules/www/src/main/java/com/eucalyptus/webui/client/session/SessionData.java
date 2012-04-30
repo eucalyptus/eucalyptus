@@ -11,6 +11,7 @@ public class SessionData {
   public static final String VERSION = "version";
   public static final String SEARCH_RESULT_PAGE_SIZE = "search-result-page-size";
   public static final String RIGHTSCALE_REGISTRATION_BASE_URL = "rightscale-registration-base-url";
+  public static final String EUSTORE_DESCRIPTION = "eustore-description";
   
   private LoginUserProfile user;
   private HashMap<String, String> props = new HashMap<String, String>( );

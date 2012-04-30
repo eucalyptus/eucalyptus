@@ -14,6 +14,8 @@ import javax.persistence.Table;
 import javax.persistence.Transient;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+
+import com.eucalyptus.auth.principal.Authorization.EffectType;
 import com.eucalyptus.entities.AbstractPersistent;
 
 /**
@@ -129,5 +131,19 @@ public class PolicyEntity extends AbstractPersistent implements Serializable {
     return this.getId( );
   }
 
+  /**
+   * @param policy
+   * @return true if the policy contains IAM permission statements, i.e. Effect is "Allow" or "Deny".
+   */
+  public boolean containsIamPermission( ) {
+    for ( StatementEntity statement : this.getStatements( ) ) {
+      for ( AuthorizationEntity authorization : statement.getAuthorizations( ) ) {
+        if ( authorization.getEffect( ) != EffectType.Limit ) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
   
 }

@@ -61,20 +61,12 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-import com.eucalyptus.system.SubDirectory;
-
 import org.apache.log4j.Logger
 import org.hibernate.ejb.Ejb3Configuration
 import com.eucalyptus.bootstrap.Databases
-import com.eucalyptus.bootstrap.SystemIds
 import com.eucalyptus.entities.PersistenceContexts
 
 Logger LOG = Logger.getLogger( "setup_persistence" );
-
-String real_jdbc_driver = Databases.getDriverName( );;
-String pool_db_driver = 'net.sf.hajdbc.sql.Driver';
-String pool_db_url = 'jdbc:ha-jdbc:eucalyptus';
-String db_pass = SystemIds.databasePassword( );
 
 default_hiber_config = [
       'hibernate.archive.autodetection': 'jar, class, hbm',

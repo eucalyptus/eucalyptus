@@ -49,10 +49,7 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
   }
   
   private static void invalidateSession( String userId ) {
-  	WebSession ws = WebSessionManager.getInstance( ).getSessionByUser( userId );
-  	if ( ws != null ) {
-  	  WebSessionManager.getInstance( ).removeSession( ws.getId( ) );
-  	}
+	  WebSessionManager.getInstance( ).removeUserSessions( userId );
   }
     
   private static SearchQuery parseQuery( QueryType type, String query ) throws EucalyptusServiceException {

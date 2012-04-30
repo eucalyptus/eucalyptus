@@ -1,11 +1,12 @@
 package com.eucalyptus.webui.server;
 
+import java.util.Collection;
 import java.util.Map;
+
 import com.eucalyptus.auth.AuthenticationProperties;
-import com.eucalyptus.auth.AuthenticationProperties.LicChangeListener;
-import com.eucalyptus.configurable.ConfigurableClass;
-import com.eucalyptus.configurable.ConfigurableField;
+import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Multimap;
 
 /**
  * Web session manager, maintaining a web session registrar.
@@ -18,7 +19,7 @@ public class WebSessionManager {
   private static WebSessionManager instance = null;
   
   private Map<String, WebSession> sessionsById = Maps.newHashMap( );
-  private Map<String, WebSession> sessionsByUser = Maps.newHashMap( );
+  private Multimap<String, WebSession> sessionsByUser = HashMultimap.create( );
   
   private WebSessionManager( ) {
     
@@ -58,16 +59,6 @@ public class WebSessionManager {
   }
   
   /**
-   * Get a session by user ID. Remove the found session if expired.
-   * 
-   * @param userId
-   * @return the session, null if not exists or expired
-   */
-  public synchronized WebSession getSessionByUser( String userId ) {
-    return getValidSession( sessionsByUser.get( userId ) );
-  }
-  
-  /**
    * Remove a session.
    * 
    * @param id
@@ -78,10 +69,21 @@ public class WebSessionManager {
     }
   }
   
+  public synchronized void removeUserSessions( String userId ) {
+    if ( userId != null ) {
+      Collection<WebSession> sessions = sessionsByUser.removeAll( userId );
+      if ( sessions != null ) {
+        for ( WebSession session : sessions ) {
+          sessionsById.remove( session.getId( ) );
+        }
+      }
+    }
+  }
+  
   private void removeSession( WebSession session ) {
     if ( session != null ) {
       sessionsById.remove( session.getId( ) );
-      sessionsByUser.remove( session.getUserId( ) );
+      sessionsByUser.remove( session.getUserId( ), session );
     }
   }
   

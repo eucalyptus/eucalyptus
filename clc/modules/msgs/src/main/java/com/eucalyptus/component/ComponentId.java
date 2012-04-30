@@ -7,7 +7,9 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentMap;
 import org.apache.log4j.Logger;
@@ -183,6 +185,10 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
   
   public String getInternalServicePath( final String... pathParts ) {
     return "/internal/" + this.capitalizedName;
+  }
+
+  public Map<String,String> getServiceQueryParameters() {
+    return Collections.emptyMap();
   }
   
   public final String getVendorName( ) {
