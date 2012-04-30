@@ -3,8 +3,57 @@
     xmlns:g="urn:import:com.google.gwt.user.client.ui">
     
     <ui:style>
+        .scroll {
+            width:99%;
+            border-bottom:1px solid #CCCCCC;
+            margin-bottom:10px;
+        }
+        .top {
+            width:100%;
+            height:100%;
+            margin-top:10px;
+        }
+        .header {
+            width:100%;
+            height:2em;
+            margin-bottom:10px;
+            text-align:center;
+            font-size:90%;
+            font-weight:bold;
+            color:#323232;
+            text-shadow: 1px 1px 2px #FFFFFF;
+        }
+        .desc {
+            color:#414141;
+            margin-top:10px;
+            margin-left:36px;
+            margin-right:36px;
+            line-height:1.5em;
+            text-wrap:normal;
+        }
     </ui:style>
     
-    <g:LayoutPanel ui:field="tablePanel"/>
+    <g:DockLayoutPanel unit="PX">
+        <g:north size="200">
+            <g:ScrollPanel addStyleNames="{style.scroll}">
+                <g:HTMLPanel addStyleNames="{style.top}">
+                    <div class="{style.header}">ADD IMAGES TO YOUR CLOUD</div>
+                    <g:HTML addStyleNames="{style.desc}" ui:field="euStoreDesc">Please use euStore to add images to your cloud.</g:HTML>
+                </g:HTMLPanel>
+            </g:ScrollPanel>
+        </g:north>
+        <g:center>
+            <g:DockLayoutPanel unit="PX">
+                <g:north size="36">
+                    <g:HTMLPanel>
+                        <div class="{style.header}">VIEW INSTALLED IMAGES</div>
+                    </g:HTMLPanel>
+                </g:north>
+                <g:center>
+                    <g:LayoutPanel ui:field="tablePanel"/>
+                </g:center>
+            </g:DockLayoutPanel>
+        </g:center>
+    </g:DockLayoutPanel>
     
 </ui:UiBinder> 

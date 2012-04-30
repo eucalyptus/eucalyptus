@@ -78,14 +78,12 @@
 			usage="optional" />
 	</mapping>
 
-	<mapping name="ListAllMyBucketsResponse"
+	<mapping name="ListAllMyBucketsResult"
 		class="edu.ucsb.eucalyptus.msgs.ListAllMyBucketsResponseType">
-		<structure name="ListAllMyBucketsResponse">
 			<structure name="Owner" field="owner"
 				map-as="edu.ucsb.eucalyptus.msgs.CanonicalUserType" />
 			<structure name="Buckets" field="bucketList"
 				map-as="edu.ucsb.eucalyptus.msgs.ListAllMyBucketsList" />
-		</structure>
 	</mapping>
 
 	<mapping class="edu.ucsb.eucalyptus.msgs.ListAllMyBucketsList"
@@ -257,8 +255,8 @@
 	<mapping name="CreateBucketResponse"
 		class="edu.ucsb.eucalyptus.msgs.CreateBucketResponseType">
 		<structure name="CreateBucketResponse">
-			<value name="BucketName" field="bucket" />
-		</structure>
+ 			<value name="BucketName" field="bucket" />
+ 		</structure>
 	</mapping>
 
 	<mapping name="DeleteBucket" class="edu.ucsb.eucalyptus.msgs.DeleteBucketType"
@@ -486,8 +484,7 @@
 			usage="optional" />
 	</mapping>
 
-	<mapping name="ListBucketResponse" class="edu.ucsb.eucalyptus.msgs.ListBucketResponseType">
-		<structure name="ListBucketResponse">
+	<mapping name="ListBucketResult" class="edu.ucsb.eucalyptus.msgs.ListBucketResponseType">
 			<collection field="metaData"
 				factory="org.jibx.runtime.Utility.arrayListFactory" usage="optional">
 				<structure map-as="edu.ucsb.eucalyptus.msgs.MetaDataEntry" />
@@ -507,7 +504,6 @@
 				factory="org.jibx.runtime.Utility.arrayListFactory" usage="optional">
 				<structure map-as="edu.ucsb.eucalyptus.msgs.PrefixEntry" />
 			</collection>
-		</structure>
 	</mapping>
 
 	<mapping name="Contents" class="edu.ucsb.eucalyptus.msgs.ListEntry"
@@ -643,13 +639,13 @@
 
 	<mapping name="VersioningConfiguration"
 		class="edu.ucsb.eucalyptus.msgs.GetBucketVersioningStatusResponseType">
-		<value name="VersioningStatus" field="versioningStatus" />
+		<value name="Status" field="versioningStatus" />
 	</mapping>
 
 	<mapping name="SetBucketVersioningStatus"
 		class="edu.ucsb.eucalyptus.msgs.SetBucketVersioningStatusType"
 		extends="edu.ucsb.eucalyptus.msgs.WalrusRequestType">
-		<value name="VersioningStatus" field="versioningStatus" />
+		<value name="Status" field="versioningStatus" />
 	</mapping>
 
 	<mapping name="SetBucketVersioningStatusResponse"

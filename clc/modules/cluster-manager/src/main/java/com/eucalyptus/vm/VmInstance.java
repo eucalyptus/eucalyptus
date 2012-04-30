@@ -778,7 +778,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
                                                      .placement( allocInfo.getPartition( ), allocInfo.getRequest( ).getAvailabilityZone( ) )
                                                      .networking( allocInfo.getNetworkGroups( ), token.getNetworkIndex( ) )
                                                      .addressing( allocInfo.isUsePrivateAddressing() )
-                                                     .expiresOn(token.getExpirationTime())
+                                                     .expiresOn( allocInfo.getExpiration() )
                                                      .build( token.getLaunchIndex( ) );
         vmInst = Entities.persist( vmInst );
         Entities.flush( vmInst );
