@@ -178,7 +178,7 @@ if test -z "$JAVA_HOME" ; then
         fi
 fi
 
-AC_PATH_PROG([ANT], ant,,$ANT_HOME/bin:$PATH)
+AC_PATH_PROGS([ANT], ant17 ant,,$ANT_HOME/bin:$PATH)
 AC_PATH_PROG([JAVA], java,,$JAVA_HOME/bin)
 
 # Check the version of java and ant
