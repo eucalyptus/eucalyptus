@@ -4,8 +4,8 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.notNullValue;
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
-import java.util.zip.Adler32;
 import org.apache.log4j.Logger;
 import org.hibernate.criterion.Example;
 import org.hibernate.exception.ConstraintViolationException;
@@ -285,7 +285,16 @@ public class Images {
       }
     };
   }
-  
+
+  public static <T extends ImageInfo> Predicate<T> inState( final Set<ImageMetadata.State> states ) {
+    return new Predicate<T>() {
+      @Override
+      public boolean apply( final T imageInfo ) {
+        return states.contains( imageInfo.getState() );
+      }
+    };
+  }
+
   public static Function<ImageInfo, ImageDetails> TO_IMAGE_DETAILS = new Function<ImageInfo, ImageDetails>( ) {
                                                                      
                                                                      @Override
@@ -363,7 +372,13 @@ public class Images {
   public static BlockStorageImageInfo exampleBlockStorageWithImageId( final String imageId ) {
     return new BlockStorageImageInfo( imageId );
   }
-  
+
+  public static BlockStorageImageInfo exampleBlockStorageWithSnapshotId( final String snapshotId ) {
+    final BlockStorageImageInfo info = new BlockStorageImageInfo();
+    info.setSnapshotId( snapshotId );
+    return info;
+  }
+
   public static KernelImageInfo exampleKernelWithImageId( final String imageId ) {
     return new KernelImageInfo( imageId );
   }

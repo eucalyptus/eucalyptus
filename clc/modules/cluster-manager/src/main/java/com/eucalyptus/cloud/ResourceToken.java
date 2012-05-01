@@ -100,14 +100,12 @@ public class ResourceToken implements VmInstanceMetadata, Comparable<ResourceTok
   private final Date          creationTime;
   private final Integer       resourceAllocationSequenceNumber;
   private final Integer       amount = 1;
-  private final Date          expirationTime;
   @Nullable
   private VmInstance          vmInst;
   private final Cluster       cluster;
   
   public ResourceToken( final Allocation allocInfo, final int resourceAllocationSequenceNumber, final int launchIndex ) {
     this.allocation = allocInfo;
-    this.expirationTime = allocInfo.getExpiration( );
     this.launchIndex = launchIndex;
     this.instanceId = allocInfo.getInstanceId( launchIndex );
     if ( this.instanceId == null ) {
@@ -295,11 +293,7 @@ public class ResourceToken implements VmInstanceMetadata, Comparable<ResourceTok
   public OwnerFullName getOwner( ) {
     return this.allocation.getOwnerFullName( );
   }
-  
-  public Date getExpirationTime( ) {
-    return this.expirationTime;
-  }
-  
+
   public Volume getRootVolume( ) {
     return this.rootVolume;
   }

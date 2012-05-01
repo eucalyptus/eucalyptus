@@ -70,11 +70,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import javax.persistence.EntityTransaction;
-import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 import org.mule.RequestContext;
-import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.cloud.CloudMetadatas;
 import com.eucalyptus.cloud.ImageMetadata;
 import com.eucalyptus.cloud.ResourceToken;
@@ -82,6 +80,7 @@ import com.eucalyptus.cloud.run.AdmissionControl;
 import com.eucalyptus.cloud.run.Allocations;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.cloud.run.ClusterAllocator;
+import com.eucalyptus.cloud.run.ContractEnforcement;
 import com.eucalyptus.cloud.run.VerifyMetadata;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
@@ -93,9 +92,7 @@ import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
-import com.eucalyptus.context.IllegalContextAccessException;
 import com.eucalyptus.context.ServiceContext;
-import com.eucalyptus.context.ServiceStateException;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.images.BlockStorageImageInfo;
@@ -111,7 +108,6 @@ import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.Request;
 import com.eucalyptus.vm.Bundles.BundleCallback;
 import com.eucalyptus.vm.VmBundleTask.BundleState;
-import com.eucalyptus.vm.VmInstance.Reason;
 import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstance.VmStateSet;
 import com.eucalyptus.vm.VmInstances.TerminatedInstanceException;
@@ -175,7 +171,7 @@ public class VmControl {
     Allocation allocInfo = Allocations.run( request );
     EntityTransaction db = Entities.get( VmInstance.class );
     try {
-      Predicates.and( VerifyMetadata.get( ), AdmissionControl.run( ) ).apply( allocInfo );
+      Predicates.and( VerifyMetadata.get( ), AdmissionControl.run( ), ContractEnforcement.run() ).apply( allocInfo );
       allocInfo.commit( );
       
       ReservationInfoType reservation = new ReservationInfoType( allocInfo.getReservationId( ),
@@ -196,7 +192,7 @@ public class VmControl {
     ClusterAllocator.get( ).apply( allocInfo );
     return reply;
   }
-  
+
   public DescribeInstancesResponseType describeInstances( final DescribeInstancesType msg ) throws EucalyptusCloudException {
     final DescribeInstancesResponseType reply = ( DescribeInstancesResponseType ) msg.getReply( );
     Context ctx = Contexts.lookup( );

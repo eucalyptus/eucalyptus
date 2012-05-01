@@ -111,7 +111,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import javax.management.InstanceAlreadyExistsException;
-import javax.management.InstanceNotFoundException;
 import javax.management.ObjectName;
 import javax.persistence.LockTimeoutException;
 import net.sf.hajdbc.Dialect;
@@ -166,14 +165,12 @@ public class Databases {
     }
     
   }
-  
+
+  private static Logger                       LOG                       = Logger.getLogger( Databases.class );
   private static final int                    MAX_TX_START_SYNC_RETRIES = 120;
   private static final AtomicInteger          counter                   = new AtomicInteger( 500 );
   private static final Predicate<Host>        FILTER_SYNCING_DBS        = Predicates.and( DbFilter.INSTANCE, Predicates.not( SyncedDbFilter.INSTANCE ) );
   private static final ScriptedDbBootstrapper singleton                 = new ScriptedDbBootstrapper( );
-  private static Logger                       LOG                       = Logger.getLogger( Databases.class );
-  private static final String                 DB_NAME                   = "eucalyptus";
-  private static final String                 DB_USERNAME               = DB_NAME;
   private static final String                 jdbcJmxDomain             = "net.sf.hajdbc";
   private static final ExecutorService        dbSyncExecutors           = Executors.newCachedThreadPool( );                                              //NOTE:GRZE:special case thread handling.
   private static final ReentrantReadWriteLock canHas                    = new ReentrantReadWriteLock( );
@@ -440,10 +437,9 @@ public class Databases {
     INSTANCE;
     private static void prepareConnections( final Host host, final String contextName ) throws NoSuchElementException {
       final String hostName = host.getDisplayName( );
-      final String dbPass = SystemIds.databasePassword( );
       final InactiveDatabaseMBean database = Databases.lookupInactiveDatabase( contextName, hostName );
-      database.setUser( "eucalyptus" );
-      database.setPassword( dbPass );
+      database.setUser( getUserName() );
+      database.setPassword( getPassword() );
       database.setWeight( Hosts.isCoordinator( host ) ? 100 : 1 );
       database.setLocal( host.isLocalHost( ) );
     }
@@ -832,15 +828,11 @@ public class Databases {
   }
   
   public static String getUserName( ) {
-    return DB_USERNAME;
-  }
-  
-  public static String getDatabaseName( ) {
-    return DB_NAME;
+    return singleton.getUserName();
   }
   
   public static String getPassword( ) {
-    return SystemIds.databasePassword( );
+    return singleton.getPassword();
   }
   
   public static String getDriverName( ) {
@@ -901,7 +893,17 @@ public class Databases {
     public void hup( ) {
       this.db.hup( );
     }
-    
+
+    @Override
+    public String getUserName() {
+      return db.getUserName();
+    }
+
+    @Override
+    public String getPassword() {
+      return db.getPassword();
+    }
+
     public String getDriverName( ) {
       return this.db.getDriverName( );
     }
@@ -933,7 +935,11 @@ public class Databases {
     public String getServicePath( String... pathParts ) {
       return this.db.getServicePath( pathParts );
     }
-    
+
+    public Map<String,String> getJdbcUrlQueryParameters() {
+      return this.db.getJdbcUrlQueryParameters();
+    }
+
     @Override
     public boolean check( ) throws Exception {
       return this.db.isRunning( );
@@ -960,7 +966,11 @@ public class Databases {
   public static String getServicePath( String... pathParts ) {
     return singleton.getServicePath( pathParts );
   }
-  
+
+  public static Map<String,String> getJdbcUrlQueryParameters() {
+    return singleton.getJdbcUrlQueryParameters();
+  }
+
   public static String getJdbcScheme( ) {
     return singleton.getJdbcScheme( );
   }
