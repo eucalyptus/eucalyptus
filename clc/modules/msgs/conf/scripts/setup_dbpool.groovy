@@ -83,7 +83,7 @@ ClassLoader.getSystemClassLoader().loadClass('net.sf.hajdbc.local.LocalStateMana
 String real_jdbc_driver = Databases.getDriverName( );
 String pool_db_driver = 'net.sf.hajdbc.sql.Driver';
 String pool_db_url = 'jdbc:ha-jdbc:eucalyptus';
-String db_pass = SystemIds.databasePassword( );
+String db_pass = Databases.getPassword();
 
 default_pool_props = [
       'proxool.simultaneous-build-throttle': '32',

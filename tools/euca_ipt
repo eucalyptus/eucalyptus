@@ -221,9 +221,11 @@ sub new_euca_ipt() {
 	    if ($chainuser && @rule) {
 		$chainuser =~ s/-//;
 		chomp(my $chain = encode_base64(md5($chainuser)));
-		$chain = md5_base64($chainuser) . "==";
-		$newchains{$chain} .= ",,," . join(" ", @rule);
-		$allchains{$chain} = 1;
+                $chain = md5_base64($chainuser) . "==";
+		if ($allchains{$chain}){
+                    $newchains{$chain} .= ",,," . join(" ", @rule);
+		}
+#               $allchains{$chain} = 1;                                                                                 
 	    }
 	} elsif ($line =~ /^\s*GROUP/) {
 	    my ($add, $chainuser, @ips) = split(/\s+/, $line);
@@ -265,10 +267,12 @@ sub new_euca_ipt() {
 #	print STDERR "INRULES: @inrules\n";
 	my $newchain = "";
 	foreach $rule (@inrules) {
-	    my @rules = rule_convert($rule, $chainmap{$chain});
-	    if (@rules) {
+	    if ($chainmap{$chain} && $chainmap{$chain} ne "") {
+		my @rules = rule_convert($rule, $chainmap{$chain});
+		if (@rules) {
 #		print STDERR "RULECONVERT: @rules\n";
-		$newchain .= ",,,$rules[0]";
+		    $newchain .= ",,,$rules[0]";
+		}
 	    }
 	}
 #	print STDERR "NEWCHAIN($chain): $newchain\n";

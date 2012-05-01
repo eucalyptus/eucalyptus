@@ -351,7 +351,7 @@ public class ServiceUris {
   }
   
   public static URI remote( ComponentId compId, final InetAddress host, Integer port, String... pathParts ) {
-    return make( compId, host, port, pathParts ).get( );
+    return make( compId, host, port, pathParts ).query( compId.getServiceQueryParameters() ).get( );
   }
 
   public static URI remotePublicify( ServiceConfiguration config, String... pathParts ) {
