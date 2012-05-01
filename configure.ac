@@ -83,13 +83,12 @@ AC_ARG_ENABLE(appliance-store,
         [if test "${enableval}" != "no"; then
                 EXTENSIONS="store"
         fi])
-
 AC_ARG_ENABLE(debug,
         [  --enable-debug                       include debugging info when compiling],
         [if test "${enableval}" != "no"; then
                 CFLAGS="$CFLAGS -g -DDEBUG"
         fi])
-
+AC_ARG_VAR(EXTRA_VERSION,			extra version string that can be used for tracking provenance (distro, architecture, "e.g. fc16-x86_64).)
 
 # If we didn't specify the services directory, let's use the default
 if test -z "$AXIS2C_SERVICES" ; then
