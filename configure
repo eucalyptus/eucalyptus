@@ -642,6 +642,7 @@ PYTHON_EXEC_PREFIX
 PYTHON_PREFIX
 PYTHON_VERSION
 PYTHON
+EXTRA_VERSION
 build_os
 build_vendor
 build_cpu
@@ -717,6 +718,7 @@ LDFLAGS
 LIBS
 CPPFLAGS
 CPP
+EXTRA_VERSION
 PYTHON'
 
 
@@ -1357,6 +1359,9 @@ Some influential environment variables:
   CPPFLAGS    (Objective) C/C++ preprocessor flags, e.g. -I<include dir> if
               you have headers in a nonstandard directory <include dir>
   CPP         C preprocessor
+  EXTRA_VERSION
+              extra version string that can be used for tracking provenance
+              (distro, architecture, "e.g. fc16-x86_64).
   PYTHON      the Python interpreter
 
 Use these variables to override the choices made by `configure' or to help
@@ -3662,7 +3667,6 @@ if test "${enable_appliance_store+set}" = set; then :
                 EXTENSIONS="store"
         fi
 fi
-
 
 # Check whether --enable-debug was given.
 if test "${enable_debug+set}" = set; then :
