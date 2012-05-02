@@ -96,9 +96,14 @@ public class EucalyptusBuilder extends AbstractServiceBuilder<EucalyptusConfigur
     COORDINATOR {
       
       @Override
-      public boolean apply( ServiceConfiguration config ) {
-//GRZE: No service check makes sense here.
-        return true;
+      public boolean apply( ServiceConfiguration config ) {  
+	  if ( !Databases.isRunning( ) ) {
+	      throw Faults.failure( config,
+                      Exceptions.error( config.getFullName( )
+                        + ":fireCheck(): eucalyptus service " + config.getFullName( ) + " database is not running : "
+                        + Hosts.getCoordinator( ) ) );
+	  }
+	  return true;
       }
     },
     SECONDARY {
