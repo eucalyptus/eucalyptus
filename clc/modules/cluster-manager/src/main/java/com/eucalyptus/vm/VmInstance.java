@@ -156,11 +156,11 @@ import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetadata {
   private static final long    serialVersionUID = 1L;
-  
-  @Transient
-  private static Logger        LOG              = Logger.getLogger( VmInstance.class );
-  @Transient
-  public static String         DEFAULT_TYPE     = "m1.small";
+
+  private static final Logger        LOG                  = Logger.getLogger( VmInstance.class );
+  public static final String         DEFAULT_TYPE         = "m1.small";
+  public static final String         ROOT_DEVICE_TYPE_EBS = "ebs";
+
   @Embedded
   private VmNetworkConfig      networkConfig;
   @Embedded
@@ -1677,7 +1677,11 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           runningInstance.setPlacement( input.getPlacement( ).getPartitionName( ) );
           
           runningInstance.setLaunchTime( input.getLaunchRecord( ).getLaunchTime( ) );
-          
+
+          if ( input.isBlockStorage( ) ) {
+            runningInstance.setRootDeviceType( ROOT_DEVICE_TYPE_EBS );
+          }
+
           if ( input.getBootRecord( ).hasPersistentVolumes( ) ) {
             for ( final VmVolumeAttachment attachedVol : input.getBootRecord( ).getPersistentVolumes( ) ) {
               runningInstance.getBlockDevices( ).add( new InstanceBlockDeviceMapping( attachedVol.getDevice( ), attachedVol.getVolumeId( ),

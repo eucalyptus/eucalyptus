@@ -64,6 +64,10 @@
 
 package com.eucalyptus.blockstorage;
 
+import static com.eucalyptus.cloud.ImageMetadata.State.available;
+import static com.eucalyptus.cloud.ImageMetadata.State.pending;
+import static com.eucalyptus.images.Images.inState;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.Callable;
@@ -87,6 +91,7 @@ import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.Transactions;
+import com.eucalyptus.images.Images;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -94,6 +99,7 @@ import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import edu.ucsb.eucalyptus.msgs.CreateSnapshotResponseType;
@@ -152,7 +158,7 @@ public class SnapshotManager {
   private static Snapshot startCreateSnapshot( final Volume vol, final Snapshot snap ) throws EucalyptusCloudException, DuplicateMetadataException {
     return Snapshots.startCreateSnapshot( vol, snap );
   }
-  
+
   public DeleteSnapshotResponseType delete( final DeleteSnapshotType request ) throws EucalyptusCloudException {
     final DeleteSnapshotResponseType reply = ( DeleteSnapshotResponseType ) request.getReply( );
     final Context ctx = Contexts.lookup( );
@@ -167,6 +173,8 @@ public class SnapshotManager {
           } else if ( !RestrictedTypes.filterPrivileged( ).apply( snap ) ) {
             throw Exceptions.toUndeclared( "Not authorized to delete snapshot " + request.getSnapshotId( ) + " by " + ctx.getUser( ).getName( ),
                                            new EucalyptusCloudException( ) );
+          } else if ( isReservedSnapshot( request.getSnapshotId( ) ) ) {
+            throw Exceptions.toUndeclared( "Snapshot " + request.getSnapshotId( ) + " is in use, deletion not permitted", new EucalyptusCloudException( ) );
           } else {
             Snapshots.fireDeleteEvent( snap );
             final ServiceConfiguration sc = Topology.lookup( Storage.class, Partitions.lookupByName( snap.getPartition( ) ) );
@@ -254,5 +262,20 @@ public class SnapshotManager {
   public DescribeSnapshotAttributeResponseType describeSnapshotAttribute( DescribeSnapshotAttributeType request ) {
     DescribeSnapshotAttributeResponseType reply = request.getReply( );
     return reply;
+  }
+
+  private boolean isReservedSnapshot( final String snapshotId ) {
+    return Predicates.or( ImageSnapshotReservation.INSTANCE ).apply( snapshotId );
+  }
+
+  private enum ImageSnapshotReservation implements Predicate<String> {
+    INSTANCE;
+
+    @Override
+    public boolean apply( final String identifier ) {
+      return Iterables.any(
+          Entities.query(Images.exampleBlockStorageWithSnapshotId(identifier), true),
+          inState(EnumSet.of( pending, available ) ) );
+    }
   }
 }
