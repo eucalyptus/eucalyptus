@@ -39,5 +39,6 @@ public class LicSpec {
   public static final String KRB5_CONF = "krb5-conf";
   public static final String USER_AUTH_METHOD = "user-auth-method";
   public static final String CLEAN_DELETION = "clean-deletion";
+  public static final String SASL_ID_ATTRIBUTE = "sasl-id-attribute";
 
 }

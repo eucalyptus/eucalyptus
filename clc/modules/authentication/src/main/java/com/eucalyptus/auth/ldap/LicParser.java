@@ -93,21 +93,21 @@ public class LicParser {
   }
 
   private String validateServerUrl( String url ) throws JSONException {
-    if ( isEmpty( url ) || !url.startsWith( LDAP_URL_PREFIX ) ) {
+    if ( Strings.isNullOrEmpty( url ) || !url.startsWith( LDAP_URL_PREFIX ) ) {
       throw new JSONException( "Invalid server url " + url );
     }
     return url;
   }
   
   private String validateAuthMethod( String method, boolean allowEmpty ) throws JSONException {
-    if ( ( !allowEmpty && isEmpty( method) ) || ( !isEmpty( method ) && !LDAP_AUTH_METHODS.contains( method ) ) ) {
+    if ( ( !allowEmpty && Strings.isNullOrEmpty( method) ) || ( !Strings.isNullOrEmpty( method ) && !LDAP_AUTH_METHODS.contains( method ) ) ) {
       throw new JSONException( "Unsupported LDAP authentication method " + ( method != null ? method : "null" ) );
     }
     return method;
   }
   
   private String validateNonEmpty( String value ) throws JSONException {
-    if ( isEmpty( value ) ) {
+    if ( Strings.isNullOrEmpty( value ) ) {
       throw new JSONException( "Empty value is not allowed for LIC element" );
     }
     return value;
@@ -144,27 +144,31 @@ public class LicParser {
     JSONObject accountingGroups = JsonUtils.getByType( JSONObject.class, licJson, LicSpec.ACCOUNTING_GROUPS );
     lic.setAccountingGroupBaseDn( validateNonEmpty( JsonUtils.getRequiredByType( String.class, accountingGroups, LicSpec.ACCOUNTING_GROUP_BASE_DN ) ) );
     lic.setAccountingGroupsSelection( parseSelection( JsonUtils.getByType( JSONObject.class, accountingGroups, LicSpec.SELECTION ) ) );
-    lic.setAccountingGroupIdAttribute( JsonUtils.getRequiredByType( String.class, accountingGroups, LicSpec.ID_ATTRIBUTE ).toLowerCase( ) );
-    lic.setGroupsAttribute( JsonUtils.getRequiredByType( String.class, accountingGroups, LicSpec.GROUPS_ATTRIBUTE ) );
+    lic.setAccountingGroupIdAttribute( toLowerCaseIfNotNull( JsonUtils.getByType( String.class, accountingGroups, LicSpec.ID_ATTRIBUTE ) ) );
+    lic.setGroupsAttribute( validateNonEmpty( JsonUtils.getRequiredByType( String.class, accountingGroups, LicSpec.GROUPS_ATTRIBUTE ) ) );
   }
 
   private void parseGroups( JSONObject licJson, LdapIntegrationConfiguration lic ) throws JSONException {
     JSONObject groups = JsonUtils.getRequiredByType( JSONObject.class, licJson, LicSpec.GROUPS );
     lic.setGroupBaseDn( validateNonEmpty( JsonUtils.getRequiredByType( String.class, groups, LicSpec.GROUP_BASE_DN ) ) );
     lic.setGroupsSelection( parseSelection( JsonUtils.getByType( JSONObject.class, groups, LicSpec.SELECTION ) ) );
-    lic.setGroupIdAttribute( JsonUtils.getRequiredByType( String.class, groups, LicSpec.ID_ATTRIBUTE ).toLowerCase( ) );
-    lic.setUsersAttribute( JsonUtils.getRequiredByType( String.class, groups, LicSpec.USERS_ATTRIBUTE ) );
+    lic.setGroupIdAttribute( toLowerCaseIfNotNull( JsonUtils.getByType( String.class, groups, LicSpec.ID_ATTRIBUTE ) ) );
+    lic.setUsersAttribute( validateNonEmpty( JsonUtils.getRequiredByType( String.class, groups, LicSpec.USERS_ATTRIBUTE ) ) );
   }
   
   private void parseUsers( JSONObject licJson, LdapIntegrationConfiguration lic ) throws JSONException {
     JSONObject users = JsonUtils.getRequiredByType( JSONObject.class, licJson, LicSpec.USERS );
     lic.setUserBaseDn( validateNonEmpty( JsonUtils.getRequiredByType( String.class, users, LicSpec.USER_BASE_DN ) ) );
     lic.setUsersSelection( parseSelection( JsonUtils.getByType( JSONObject.class, users, LicSpec.SELECTION ) ) );
-    lic.setUserIdAttribute( JsonUtils.getRequiredByType( String.class, users, LicSpec.ID_ATTRIBUTE ).toLowerCase( ) );
+    lic.setUserIdAttribute( toLowerCaseIfNotNull( JsonUtils.getByType( String.class, users, LicSpec.ID_ATTRIBUTE ) ) );
+    lic.setUserSaslIdAttribute( toLowerCaseIfNotNull( JsonUtils.getByType( String.class, users, LicSpec.SASL_ID_ATTRIBUTE ) ) );
     parseUserInfoMap( ( JSONObject ) JsonUtils.getByType( JSONObject.class, users, LicSpec.USER_INFO_ATTRIBUTES ), lic );
   }
   
   private void parseUserInfoMap( JSONObject map, LdapIntegrationConfiguration lic ) throws JSONException {
+    if ( map == null ) {
+      return;
+    }
     for ( Object m : map.keySet( ) ) {
       String attr = ( String ) m;
       if ( attr.equalsIgnoreCase( COMMENT ) ) {
@@ -176,6 +180,9 @@ public class LicParser {
   }
 
   private Selection parseSelection( JSONObject obj ) throws JSONException {
+    if ( obj == null ) {
+      return null;
+    }
     Selection selection = new Selection( );
     selection.setSearchFilter( JsonUtils.getRequiredByType( String.class, obj, LicSpec.FILTER ) );
     if ( selection.getSearchFilter( ) == null ) {
@@ -213,8 +220,11 @@ public class LicParser {
     }
   }
   
-  public static boolean isEmpty( String value ) {
-    return null == value || "".equals( value );
+  private static String toLowerCaseIfNotNull( String value ) {
+    if ( value != null ) {
+      return value.toLowerCase( );
+    }
+    return value;
   }
   
 }
