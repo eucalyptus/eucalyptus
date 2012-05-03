@@ -619,35 +619,10 @@ public class WalrusManager {
 				ownerId = bucket.getOwnerId();
 				ArrayList<Grant> grants = new ArrayList<Grant>();
 				bucket.readPermissions(grants);
-				CanonicalUserType grantUser = null;
-				Account tmpAccnt = null;
-				for (GrantInfo grantInfo : grantInfos) {
-					String uId = grantInfo.getUserId();					
-					try {
-						if (uId != null) {
-							//Lots of work just to try to get the display Name of the userId.
-							//TODO: zhill - Operations like this shouldn't have to hit the DB for every user, that can be in the grant record
-							try {
-								tmpAccnt = Accounts.lookupAccountById(uId);
-								grantUser = new CanonicalUserType(tmpAccnt.getAccountNumber(), tmpAccnt.getName());
-								tmpAccnt = null;								
-							} catch(AuthException e) {
-								LOG.debug(e,e);
-								//Couldn't get one, use empty string
-								grantUser = new CanonicalUserType(uId, "");
-								tmpAccnt = null;
-							}
-							
-							addPermission(grants, grantUser, grantInfo);
-						} else {
-							addPermission(grants, grantInfo);
-						}
-					} catch (AuthException e) {
-						//Just skip this entry, this is not an auth issue
-						LOG.debug(e,e);
-						continue;
-					}
-				}
+				
+				//Construct the grant list from the returned infos
+				addGrants(grants, grantInfos);				
+				
 				accessControlList.setGrants(grants);
 			} else {
 				LOG.error( "Not authorized to get bucket ACL by " + ctx.getUserFullName( ) );
@@ -3079,20 +3054,9 @@ public class WalrusManager {
 					BucketInfo targetBucketInfo = db.getUnique(new BucketInfo(
 							targetBucket));
 					List<GrantInfo> grantInfos = targetBucketInfo.getGrants();
-					for (GrantInfo grantInfo : grantInfos) {
-						String uId = grantInfo.getUserId();
-						try {
-							if (uId != null) {
-								addPermission(grants, Accounts.lookupAccountById(uId), grantInfo);
-							} else {
-								addPermission(grants, grantInfo);
-							}
-						} catch (AuthException e) {
-							db.rollback();
-							throw new AccessDeniedException("Bucket",
-									targetBucket);
-						}
-					}
+					
+					addGrants(grants, grantInfos);
+					
 				} catch (EucalyptusCloudException ex) {
 					db.rollback();
 					throw new InvalidTargetBucketForLoggingException(

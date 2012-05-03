@@ -103,6 +103,8 @@ public class PostgresqlBootstrapper extends Bootstrapper.Simple implements Datab
     private static String PG_BIN = PG_HOME + "bin/pg_ctl"
     private static String PG_START = "start"
     private static String PG_STOP = "stop"
+    private static String PG_STATUS = "status"
+    private static String PG_MODE = "-mf"
     private static String PG_PORT_OPTS2 = "-o -h0.0.0.0/0 -p8777 -i"
     private static String PG_DB_OPT = "-D"
     private static String PG_INITDB = PG_HOME + "bin/initdb"
@@ -364,6 +366,7 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
                         int value = runProcess([
                             PG_BIN,
                             PG_STOP,
+                            PG_MODE,
                             PG_DB_OPT + SubDirectory.DB.getChildPath(EUCA_DB_DIR)
                         ])
                         if (value != 0) {
@@ -400,7 +403,6 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
 
     @Override
     public boolean load( ) throws Exception {
-        LOG.debug("The load method is being executed")
         if ( isRunning( ) ) {
             return true
         }
@@ -442,20 +444,17 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
     }
 
     public boolean isRunning() {
-        for ( int x = 0;  x < PG_MAX_RETRY; x++ ) {
-            try {
-                File pidFile = SubDirectory.DB.getChildFile( EUCA_DB_DIR, "postmaster.pid" )
-                if ( pidFile.size() > 0 ) {
-                    LOG.debug("Found the postmaster.pid file")
-                    return true
-                }
-            } catch (Exception e) {
-                LOG.debug("The postmaster.pid file was not found")
-                sleep(1000)
-            }
-        }
+	int value = runProcess([
+	    PG_BIN,
+	    PG_STATUS,
+	    PG_DB_OPT + SubDirectory.DB.getChildPath(EUCA_DB_DIR)
+	])
 
-        return false
+	if (value != 0) {
+	    return false
+	}
+
+       return true
     }
 
     public void hup( ) {
@@ -476,6 +475,7 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
             int value = runProcess([
                 PG_BIN,
                 PG_STOP,
+                PG_MODE,
                 PG_DB_OPT + SubDirectory.DB.getChildPath(EUCA_DB_DIR)
             ])
             if( value != 0 ) {
