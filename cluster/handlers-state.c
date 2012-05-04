@@ -125,7 +125,7 @@ int doDescribeServices(ncMetadata *ccMeta, serviceInfoType *serviceIds, int serv
 	  snprintf(uri, MAX_PATH, "%s", serviceIds[i].uris[0]);
 	  rc = tokenize_uri(uri, uriType, host, &port, path);
 	  if (strlen(host)) {
-	    logprintfl(EUCADEBUG, "DescribeServices(): setting local serviceId to input serviceId (type=%s name=%s)\n", SP(serviceIds[i].type), SP(serviceIds[i].name));
+	    logprintfl(EUCADEBUG, "DescribeServices(): setting local serviceId to input serviceId (type=%s name=%s partition=%s)\n", SP(serviceIds[i].type), SP(serviceIds[i].name), SP(serviceIds[i].partition));
 	    memcpy(&(config->ccStatus.serviceId), &(serviceIds[i]), sizeof(serviceInfoType));
 	  }
 	}
@@ -137,7 +137,7 @@ int doDescribeServices(ncMetadata *ccMeta, serviceInfoType *serviceIds, int serv
   for (i=0; i<16; i++) {
     int j;
     if (strlen(config->services[i].type)) {
-      logprintfl(EUCADEBUG, "DescribeServices(): internal serviceInfos type=%s name=%s urisLen=%d\n", config->services[i].type, config->services[i].name, config->services[i].urisLen);
+      logprintfl(EUCADEBUG, "DescribeServices(): internal serviceInfos type=%s name=%s partition=%s urisLen=%d\n", config->services[i].type, config->services[i].name, config->services[i].partition, config->services[i].urisLen);
       for (j=0; j<8; j++) {
 	if (strlen(config->services[i].uris[j])) {
 	  logprintfl(EUCADEBUG, "DescribeServices(): internal serviceInfos\t uri[%d]:%s\n", j, config->services[i].uris[j]);
@@ -149,7 +149,7 @@ int doDescribeServices(ncMetadata *ccMeta, serviceInfoType *serviceIds, int serv
   for (i=0; i<16; i++) {
     int j;
     if (strlen(config->disabledServices[i].type)) {
-      logprintfl(EUCADEBUG, "DescribeServices(): internal disabled serviceInfos type=%s name=%s urisLen=%d\n", config->disabledServices[i].type, config->disabledServices[i].name, config->disabledServices[i].urisLen);
+      logprintfl(EUCADEBUG, "DescribeServices(): internal disabled serviceInfos type=%s name=%s partition=%s urisLen=%d\n", config->disabledServices[i].type, config->disabledServices[i].name, config->disabledServices[i].partition, config->disabledServices[i].urisLen);
       for (j=0; j<8; j++) {
 	if (strlen(config->disabledServices[i].uris[j])) {
 	  logprintfl(EUCADEBUG, "DescribeServices(): internal disabled serviceInfos\t uri[%d]:%s\n", j, config->disabledServices[i].uris[j]);
@@ -161,7 +161,7 @@ int doDescribeServices(ncMetadata *ccMeta, serviceInfoType *serviceIds, int serv
   for (i=0; i<16; i++) {
     int j;
     if (strlen(config->notreadyServices[i].type)) {
-      logprintfl(EUCADEBUG, "DescribeServices(): internal not ready serviceInfos type=%s name=%s urisLen=%d\n", config->notreadyServices[i].type, config->notreadyServices[i].name, config->notreadyServices[i].urisLen);
+      logprintfl(EUCADEBUG, "DescribeServices(): internal not ready serviceInfos type=%s name=%s partition=%s urisLen=%d\n", config->notreadyServices[i].type, config->notreadyServices[i].name, config->notreadyServices[i].partition, config->notreadyServices[i].urisLen);
       for (j=0; j<8; j++) {
 	if (strlen(config->notreadyServices[i].uris[j])) {
 	  logprintfl(EUCADEBUG, "DescribeServices(): internal not ready serviceInfos\t uri[%d]:%s\n", j, config->notreadyServices[i].uris[j]);

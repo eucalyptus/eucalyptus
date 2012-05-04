@@ -82,8 +82,9 @@ int main(int argc, char **argv) {
   mymeta.correlationId = strdup("1234abcd");
   mymeta.epoch = 3;
   mymeta.servicesLen = 16;
-  snprintf(mymeta.services[15].name, 16, "eucalyptus");
-  snprintf(mymeta.services[15].type, 16, "eucalyptus");
+  snprintf(mymeta.services[15].name, 16, "eucalyptusname");
+  snprintf(mymeta.services[15].type, 16, "eucalyptustype");
+  snprintf(mymeta.services[15].partition, 16, "eucalyptuspart");
   mymeta.services[15].urisLen = 1;
   snprintf(mymeta.services[15].uris[0], 512, "http://192.168.254.3:8773/services/Eucalyptus");
     

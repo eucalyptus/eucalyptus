@@ -14,6 +14,7 @@
       sit = adb_##thefunc##_get_services_at(theadb, env, i);		\
       snprintf(themeta->services[i].type,32,"%s",adb_serviceInfoType_get_type(sit, env)); \
       snprintf(themeta->services[i].name,32,"%s",adb_serviceInfoType_get_name(sit, env)); \
+      snprintf(themeta->services[i].partition,32,"%s",adb_serviceInfoType_get_partition(sit, env)); \
       themeta->services[i].urisLen = adb_serviceInfoType_sizeof_uris(sit, env);	\
       for (j=0; j<themeta->services[i].urisLen && j < 8; j++) {		\
 	snprintf(themeta->services[i].uris[j], 512, "%s",adb_serviceInfoType_get_uris_at(sit, env, j)); \
@@ -24,6 +25,7 @@
       sit = adb_##thefunc##_get_disabledServices_at(theadb, env, i);		\
       snprintf(themeta->disabledServices[i].type,32,"%s",adb_serviceInfoType_get_type(sit, env)); \
       snprintf(themeta->disabledServices[i].name,32,"%s",adb_serviceInfoType_get_name(sit, env)); \
+      snprintf(themeta->disabledServices[i].partition,32,"%s",adb_serviceInfoType_get_partition(sit, env)); \
       themeta->disabledServices[i].urisLen = adb_serviceInfoType_sizeof_uris(sit, env);	\
       for (j=0; j<themeta->disabledServices[i].urisLen && j < 8; j++) {		\
 	snprintf(themeta->disabledServices[i].uris[j], 512, "%s",adb_serviceInfoType_get_uris_at(sit, env, j)); \
@@ -34,6 +36,7 @@
       sit = adb_##thefunc##_get_notreadyServices_at(theadb, env, i);		\
       snprintf(themeta->notreadyServices[i].type,32,"%s",adb_serviceInfoType_get_type(sit, env)); \
       snprintf(themeta->notreadyServices[i].name,32,"%s",adb_serviceInfoType_get_name(sit, env)); \
+      snprintf(themeta->notreadyServices[i].partition,32,"%s",adb_serviceInfoType_get_partition(sit, env)); \
       themeta->notreadyServices[i].urisLen = adb_serviceInfoType_sizeof_uris(sit, env);	\
       for (j=0; j<themeta->notreadyServices[i].urisLen && j < 8; j++) {		\
 	snprintf(themeta->notreadyServices[i].uris[j], 512, "%s",adb_serviceInfoType_get_uris_at(sit, env, j)); \
@@ -53,6 +56,7 @@
       sit = adb_serviceInfoType_create(env);				\
       adb_serviceInfoType_set_type(sit, env, themeta->services[i].type); \
       adb_serviceInfoType_set_name(sit, env, themeta->services[i].name); \
+      adb_serviceInfoType_set_partition(sit, env, themeta->services[i].partition); \
       for (j=0; j<themeta->services[i].urisLen && j < 8; j++) {	\
 	adb_serviceInfoType_add_uris(sit, env, themeta->services[i].uris[j]); \
       }									\
@@ -154,6 +158,7 @@ static inline adb_serviceInfoType_t * copy_service_info_type_to_adb(const axutil
 
   adb_serviceInfoType_set_type(sit, env, input->type);
   adb_serviceInfoType_set_name(sit, env, input->name);
+  adb_serviceInfoType_set_partition(sit, env, input->partition);
   for (i=0; i<input->urisLen; i++) {
     adb_serviceInfoType_add_uris(sit, env, input->uris[i]);
   }
@@ -166,6 +171,7 @@ static inline void copy_service_info_type_from_adb(serviceInfoType * input, adb_
 
   snprintf(input->type, 32, "%s", adb_serviceInfoType_get_type(sit, env));
   snprintf(input->name, 32, "%s", adb_serviceInfoType_get_name(sit, env));
+  snprintf(input->partition, 32, "%s", adb_serviceInfoType_get_partition(sit, env));
   input->urisLen = adb_serviceInfoType_sizeof_uris(sit, env);
   for (i=0; i<input->urisLen && i<8; i++) {
     snprintf(input->uris[i], 512, "%s", adb_serviceInfoType_get_uris_at(sit, env, i));

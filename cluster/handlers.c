@@ -2829,8 +2829,7 @@ int ccCheckState(int clcTimer) {
   char localDetails[1024];
   int ret=0;
   char cmd[MAX_PATH];
-  char buri[MAX_PATH], uriType[32], bhost[MAX_PATH], path[MAX_PATH], curi[MAX_PATH], chost[MAX_PATH];
-  int port, done=0, i, j, rc;
+  int port, done=0, i, j, rc, local_broker_down, is_ha_cc;
 
   if (!config) {
     return(1);
@@ -2911,8 +2910,67 @@ int ccCheckState(int clcTimer) {
   }
 
   // broker pairing algo
+  rc = doBrokerPairing();
+  if (rc) {
+    ret++;
+  }
+
+  snprintf(localDetails, 1023, "ERRORS=%d", ret);
+  snprintf(config->ccStatus.details, 1023, "%s", localDetails);
+  
+  return(ret);
+}
+
+int doBrokerPairing() {
+  int ret, rc, local_broker_down, i, j, is_ha_cc, port;
+  char buri[MAX_PATH], uriType[32], bhost[MAX_PATH], path[MAX_PATH], curi[MAX_PATH], chost[MAX_PATH];
+
+  ret = 0;
+  local_broker_down = 0;
+  is_ha_cc = 0;
+
+  snprintf(curi, MAX_PATH, "%s", config->ccStatus.serviceId.uris[0]);
+  bzero(chost, sizeof(char) * MAX_PATH);
+  rc = tokenize_uri(curi, uriType, chost, &port, path);
+
+  //enabled
+  for (i=0; i<16; i++) {
+    if (!strcmp(config->ccStatus.serviceId.name, "self")) {
+      //      logprintfl(EUCADEBUG, "ccCheckState(): local CC service info not yet initialized\n");
+    } else if (!memcmp(&(config->ccStatus.serviceId), &(config->services[i]), sizeof(serviceInfoType))) {
+      //      logprintfl(EUCADEBUG, "ccCheckState(): found local CC information in services()\n");
+    } else if (!strcmp(config->services[i].type, "cluster") && !strcmp(config->services[i].partition, config->ccStatus.serviceId.partition)) {
+      // service is not 'me', but is a 'cluster' and in has the same 'partition', must be in HA mode
+      //      logprintfl(EUCADEBUG, "ccCheckState(): CC is in HA mode\n");
+      is_ha_cc = 1;
+    }
+  }
+  //disabled
+  for (i=0; i<16; i++) {
+    if (!strcmp(config->ccStatus.serviceId.name, "self")) {
+      //      logprintfl(EUCADEBUG, "ccCheckState(): local CC service info not yet initialized\n");
+    } else if (!memcmp(&(config->ccStatus.serviceId), &(config->disabledServices[i]), sizeof(serviceInfoType))) {
+      //      logprintfl(EUCADEBUG, "ccCheckState(): found local CC information in disabled services()\n");
+    } else if (!strcmp(config->disabledServices[i].type, "cluster") && !strcmp(config->disabledServices[i].partition, config->ccStatus.serviceId.partition)) {
+      // service is not 'me', but is a 'cluster' and in has the same 'partition', must be in HA mode
+      //      logprintfl(EUCADEBUG, "ccCheckState(): CC is in HA mode\n");
+      is_ha_cc = 1;
+    }
+  }
+  //notready
   for (i=0; i<16; i++) {
     int j;
+    //test
+    if (!strcmp(config->ccStatus.serviceId.name, "self")) {
+      //      logprintfl(EUCADEBUG, "ccCheckState(): local CC service info not yet initialized\n");
+    } else if (!memcmp(&(config->ccStatus.serviceId), &(config->notreadyServices[i]), sizeof(serviceInfoType))) {
+      //      logprintfl(EUCADEBUG, "ccCheckState(): found local CC information in notreadyServices()\n");
+    } else if (!strcmp(config->notreadyServices[i].type, "cluster") && !strcmp(config->notreadyServices[i].partition, config->ccStatus.serviceId.partition)) {
+      // service is not 'me', but is a 'cluster' and in has the same 'partition', must be in HA mode
+      //      logprintfl(EUCADEBUG, "ccCheckState(): CC is in HA mode\n");
+      is_ha_cc = 1;
+    } 
+    
     if (strlen(config->notreadyServices[i].type)) {
       if (!strcmp(config->notreadyServices[i].type, "vmwarebroker")) {
 	for (j=0; j<8; j++) {
@@ -2923,13 +2981,11 @@ int ccCheckState(int clcTimer) {
 	    bzero(bhost, sizeof(char) * MAX_PATH);
 	    rc = tokenize_uri(buri, uriType, bhost, &port, path);
 	    
-	    snprintf(curi, MAX_PATH, "%s", config->ccStatus.serviceId.uris[0]);
-	    bzero(chost, sizeof(char) * MAX_PATH);
-	    rc = tokenize_uri(curi, uriType, chost, &port, path);
 	    logprintfl(EUCADEBUG, "ccCheckState(): comparing found not ready broker host (%s) with local CC host (%s)\n", bhost, chost);
 	    if (!strcmp(chost, bhost)) {
 	      logprintfl(EUCAWARN, "ccCheckState(): detected local broker (%s) matching local CC (%s) in NOTREADY state\n", bhost, chost);
-	      ret++;
+	      //	      ret++;
+	      local_broker_down = 1;
 	    }
 	  }
 	}
@@ -2937,9 +2993,10 @@ int ccCheckState(int clcTimer) {
     }
   }
 
-  snprintf(localDetails, 1023, "ERRORS=%d", ret);
-  snprintf(config->ccStatus.details, 1023, "%s", localDetails);
-  
+  if (local_broker_down && is_ha_cc) {
+    logprintfl(EUCADEBUG, "ccCheckState(): detected CC in HA mode, and local broker is not ENABLED\n", local_broker_down, is_ha_cc);
+    ret++;
+  }
   return(ret);
 }
 
@@ -3871,6 +3928,7 @@ int init_config(void) {
   snprintf(config->ccStatus.details, 1024, "ERRORS=0");
   snprintf(config->ccStatus.serviceId.type, 32, "cluster");
   snprintf(config->ccStatus.serviceId.name, 32, "self");
+  snprintf(config->ccStatus.serviceId.partition, 32, "unset");
   config->ccStatus.serviceId.urisLen=0;
   for (i=0; i<32 && config->ccStatus.serviceId.urisLen < 8; i++) {
     if (vnetconfig->localIps[i]) {
