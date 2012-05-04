@@ -33,11 +33,11 @@ public class GroupActivity extends AbstractSearchActivity
   public static final String DELETE_GROUPS_SUBJECT = "Are you sure you want to delete following selected groups?";
   
   public static final String ADD_USERS_CAPTION = "Add users to selected groups";
-  public static final String ADD_USERS_SUBJECT = "Enter users to add to selected groups (using space to separate names):";
+  public static final String ADD_USERS_SUBJECT = "Enter users to add to selected groups (using semicolon to separate names):";
   public static final String USER_NAMES_INPUT_TITLE = "User names";
 
   public static final String REMOVE_USERS_CAPTION = "Remove users from selected groups";
-  public static final String REMOVE_USERS_SUBJECT = "Enter users to remove from selected groups (using space to separate names):";
+  public static final String REMOVE_USERS_SUBJECT = "Enter users to remove from selected groups (using semicolon to separate names):";
 
   public static final String ADD_POLICY_CAPTION = "Add new policy";
   public static final String ADD_POLICY_SUBJECT = "Enter new policy to assign to the selected group:";

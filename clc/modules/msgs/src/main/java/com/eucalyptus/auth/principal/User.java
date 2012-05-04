@@ -84,7 +84,9 @@ public interface User extends /*HasId, */BasePrincipal, Serializable {
   
   public static final String EMAIL = "email";
   // LDAP user full DN
-  public static final String DN = "Dn";
+  public static final String DN = "dn";
+  // LDAP user SASL ID
+  public static final String SASLID = "saslid";
   
   public static final Long PASSWORD_LIFETIME = 1000 * 60 * 60 * 24 * 60L; // 2 months
   public static final Long RECOVERY_EXPIRATION = 1000 * 60 * 30L; // 30 minutes
