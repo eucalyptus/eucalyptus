@@ -13,7 +13,7 @@ test: deps build-test
 
 deps/cloud-lib.tar.gz:
 	@mkdir -p deps
-	cd ${TOP}/clc/deps/ && wget -q http://mirror.eucalyptus/dependencies/${VERSION}/cloud-lib.tar.gz	
+	cd ${TOP}/clc/deps/ && curl -q http://mirror.eucalyptus/dependencies/${VERSION}/cloud-lib.tar.gz > cloud-lib.tar.gz	
 
 lib/bcprov.jar:
 	@mkdir -p lib

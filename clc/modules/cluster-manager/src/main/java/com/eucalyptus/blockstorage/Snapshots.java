@@ -63,9 +63,12 @@
 
 package com.eucalyptus.blockstorage;
 
+import static java.util.Collections.unmodifiableSet;
+import static java.util.EnumSet.of;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -93,7 +96,6 @@ import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.reporting.event.StorageEvent;
-import com.eucalyptus.reporting.event.StorageEvent.EventType;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -112,8 +114,9 @@ import edu.ucsb.eucalyptus.msgs.DescribeStorageSnapshotsType;
 import edu.ucsb.eucalyptus.msgs.StorageSnapshot;
 
 public class Snapshots {
-  private static Logger     LOG                    = Logger.getLogger( Snapshots.class );
-  private static final long SNAPSHOT_STATE_TIMEOUT = 2 * 60 * 60 * 1000L;
+  private static Logger           LOG                     = Logger.getLogger( Snapshots.class );
+  private static final long       SNAPSHOT_STATE_TIMEOUT  = 2 * 60 * 60 * 1000L;
+  private static final Set<State> SNAPSHOT_TIMEOUT_STATES = unmodifiableSet(of(State.NIHIL, State.GENERATING));
   
   public static class SnapshotUpdateEvent implements EventListener<ClockTick>, Callable<Boolean> {
     private static final AtomicBoolean ready = new AtomicBoolean( true );
@@ -196,7 +199,8 @@ public class Snapshots {
                 buf.append( " storage-snapshot " )
                    .append( storageSnapshot.getStatus( ) ).append( "=>" ).append( entity.getState( ) ).append( " " )
                    .append( storageSnapshot.getProgress( ) ).append( " " );
-              } else if ( State.GENERATING.equals( entity.getState( ) ) && entity.lastUpdateMillis( ) > SNAPSHOT_STATE_TIMEOUT ) {
+              } else if ( SNAPSHOT_TIMEOUT_STATES.contains( entity.getState( ) ) &&
+                  entity.lastUpdateMillis( ) > SNAPSHOT_STATE_TIMEOUT ) {
                 Entities.delete( entity );
               } else {
                 if ( State.EXTANT.equals( entity.getState( ) ) ) {
