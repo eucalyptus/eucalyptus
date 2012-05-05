@@ -114,20 +114,12 @@ public class InternalWsSecHandler extends WsSecHandler {
     if ( o instanceof MappingHttpRequest ) {
       final MappingHttpMessage httpRequest = ( MappingHttpMessage ) o;
       final SOAPEnvelope envelope = httpRequest.getSoapEnvelope( );
-      final Element secNode = WSSecurity.getSecurityElement( envelope );
-      final XMLSignature sig = WSSecurity.getXMLSignature( secNode );
-      String sigValue = new String( sig.getSignatureValue( ) );
-      SecurityContext.enqueueSignature( sigValue );
-      try {
-        X509Certificate cert = WSSecurity.verifySignature( secNode, sig );
-        Logs.exhaust( ).debug( cert );
-        if ( cert == null || !cert.equals( SystemCredentials.lookup( Eucalyptus.class ).getCertificate( ) ) ) {
-          throw new WebServicesException( "Authentication failed: The following certificate is not trusted:\n " + cert );
-        }
-      } catch ( Exception ex ) {
-        Logs.exhaust( ).error( ex , ex );
-        throw new WebServicesException( "Authentication failed: " + ex.getMessage( ), ex );
+      
+      X509Certificate cert = WSSecurity.verifyWSSec( envelope );
+      if ( cert == null || !cert.equals( SystemCredentials.lookup( Eucalyptus.class ).getCertificate( ) ) ) {
+    	  throw new WebServicesException( "Authentication failed: The following certificate is not trusted:\n " + cert );
       }
+      
       Contexts.lookup( ( ( MappingHttpMessage ) o ).getCorrelationId( ) ).setUser( Principals.systemUser() );
     }
   }
