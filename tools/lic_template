@@ -28,7 +28,7 @@
 
   "accounting-groups":{
 
-    "_comment":"This section defines configurations for accounting groups. !!REMOVE!! this section if you don't have accounting groups and will define accounts by using groups partitions. <base-dn> defines the base DN for searching accounting groups. <id-attribute> specifies the attribute name that which serves as the unique ID of a group. <member-attribute> is the attribute name that specifies members of the group. <selection> is a construct to define how to pick groups in the tree.",
+    "_comment":"This section defines configurations for accounting groups. !!REMOVE!! this section if you don't have accounting groups and will define accounts by using groups partitions. <base-dn> defines the base DN for searching accounting groups. <id-attribute> specifies name of the attribute that which serves as the unique ID of an account. <member-attribute> is the attribute name that specifies members of the group. <selection> is a construct to define how to pick groups in the tree.",
 
     "base-dn":"ou=groups,dc=foo,dc=com",
     "id-attribute":"cn",
@@ -53,7 +53,7 @@
 
   "groups":{
 
-    "_comment":"This section defines configurations for groups to sync. <base-dn> defines the base DN for searching groups. <id-attribute> specifies the attribute name that which serves as the unique ID of a group. <member-attribute> is the attribute name that specifies members of the group. <selection> is a construct to define how to pick groups in the tree.",
+    "_comment":"This section defines configurations for groups to sync. <base-dn> defines the base DN for searching groups. <id-attribute> specifies name of the attribute that which serves as the unique ID of a group. <member-attribute> is the attribute name that specifies members of the group. <selection> is a construct to define how to pick groups in the tree.",
 
     "base-dn":"ou=groups,dc=foo,dc=com",
     "id-attribute":"cn",
@@ -70,10 +70,11 @@
 
   "users":{
 
-    "_comment":"This section defines configurations for users to sync. <base-dn> defines the base DN for searching users. <id-attribute> specifies the attribute name that which serves as the unique ID of a user. <user-info-attribute> defines which of the user attributes are chosen, with which, each field defines a mapping between LDAP attribute name and the name to be used in Eucalyptus. <selection> is a construct to define how to pick users in the tree.",
+    "_comment":"This section defines configurations for users to sync. <base-dn> defines the base DN for searching users. <id-attribute> specifies name of the attribute that serves as the unique ID of a user. <sasl-id-attribute> defines the name of the attribute that serves as the ID for LDAP login in SASL mode. <user-info-attribute> defines which of the user attributes are chosen, with which, each field defines a mapping between LDAP attribute name and the name to be used in Eucalyptus. <selection> is a construct to define how to pick users in the tree.",
 
     "base-dn":"ou=people,dc=foo,dc=com",
     "id-attribute":"uid",
+    "sasl-id-attribute":"uid",
     "user-info-attributes":{
         "fullName":"Full Name",
         "email":"Email"

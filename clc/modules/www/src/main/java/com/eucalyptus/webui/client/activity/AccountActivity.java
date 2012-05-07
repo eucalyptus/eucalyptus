@@ -36,12 +36,12 @@ public class AccountActivity extends AbstractSearchActivity
   public static final String ACCOUNT_NAME_INPUT_TITLE = "Account name";
   
   public static final String CREATE_USERS_CAPTION = "Create new users";
-  public static final String CREATE_USERS_SUBJECT = "Enter information to create new users (using space to separate names):";
+  public static final String CREATE_USERS_SUBJECT = "Enter information to create new users (using semicolon to separate names):";
   public static final String USER_NAMES_INPUT_TITLE = "User names";
   public static final String USER_PATH_INPUT_TITLE = "User path";
   
   public static final String CREATE_GROUPS_CAPTION = "Create new groups";
-  public static final String CREATE_GROUPS_SUBJECT = "Enter information to create new groups (using space to separate names):";
+  public static final String CREATE_GROUPS_SUBJECT = "Enter information to create new groups (using semicolon to separate names):";
   public static final String GROUP_NAMES_INPUT_TITLE = "Group names";
   public static final String GROUP_PATH_INPUT_TITLE = "Group path";
   

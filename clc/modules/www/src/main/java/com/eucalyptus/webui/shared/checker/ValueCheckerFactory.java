@@ -2,10 +2,13 @@ package com.eucalyptus.webui.shared.checker;
 
 import java.util.Arrays;
 import java.util.HashSet;
+
 import com.google.common.base.Strings;
 
 /**
- * Various minimal input field checkers.
+ * Various minimal input field checkers. Update both of the identical files at the same time!!!
+ * {@link com.eucalyptus.auth.checker.ValueCheckerFactory}
+ * {@link com.eucalyptus.webui.shared.checker.ValueCheckerFactory}
  * 
  * @author Ye Wen (wenye@eucalyptus.com)
  *
@@ -14,11 +17,20 @@ public class ValueCheckerFactory {
 
   public static final HashSet<Character> USERGROUPNAME_EXTRA = new HashSet<Character>( Arrays.asList( '+', '=', ',', '.', '@', '-' ) );
   
+  // special characters for those from Active Directory sync
+  public static final HashSet<Character> USERGROUPNAME_AD = new HashSet<Character>( Arrays.asList( '_', ' ' ) );
+  
+  // REGEX used for LDAP sync to sanitizing user/gropu names.
+  // !!! ALWAYS update this if the above two sets change
+  public static final String INVALID_USERGROUPNAME_CHARSET_REGEX = "[^a-zA-Z0-9+=,.@\\-_ ]";
+  
+  public static final String INVALID_ACCOUNTNAME_CHARSET_REGEX = "[^a-z0-9\\-]";
+  
   public static final HashSet<Character> POLICYNAME_EXCLUDE = new HashSet<Character>( Arrays.asList( '/', '\\', '*', '?', ' ' ) );
 
   public static final HashSet<Character> PASSWORD_SPECIAL = new HashSet<Character>( Arrays.asList( '`', '~', '!', '@', '#', '$', '%', '^', '&', '*', '(', ')', '-', '_', '=', '+', '[', ']', '{', '}', '\\', '|', ';', ':', '\'', '"', ',', '.', '<', '>', '/', '?' ) );
 
-  public static final HashSet<Character> WHITESPACES = new HashSet<Character>( Arrays.asList( '\t', ' ' ) );
+  public static final HashSet<Character> NAME_SEPARATORS = new HashSet<Character>( Arrays.asList( ';' ) );
   
   public static ValueChecker createNonEmptyValueChecker( ) {
     return new ValueChecker( ) {
@@ -70,7 +82,7 @@ public class ValueCheckerFactory {
         }
         for ( int i = 0; i < value.length( ); i++ ) {
           char c = value.charAt( i );
-          if ( !Character.isLetterOrDigit( c ) && !USERGROUPNAME_EXTRA.contains( c ) && !WHITESPACES.contains( c ) ) {
+          if ( !Character.isLetterOrDigit( c ) && !USERGROUPNAME_EXTRA.contains( c ) && !USERGROUPNAME_AD.contains( c ) && !NAME_SEPARATORS.contains( c ) ) {
             throw new InvalidValueException( "Containing invalid character for user or group names: " + c );
           }
         }
@@ -90,7 +102,7 @@ public class ValueCheckerFactory {
         }
         for ( int i = 0; i < value.length( ); i++ ) {
           char c = value.charAt( i );
-          if ( !Character.isLetterOrDigit( c ) && !USERGROUPNAME_EXTRA.contains( c ) ) {
+          if ( !Character.isLetterOrDigit( c ) && !USERGROUPNAME_EXTRA.contains( c ) && !USERGROUPNAME_AD.contains( c ) ) {
             throw new InvalidValueException( "Containing invalid character for user or group name: " + c );
           }
         }

@@ -49,6 +49,7 @@ public class LdapIntegrationConfiguration {
   // Selected users
   private String userBaseDn;
   private String userIdAttribute;
+  private String userSaslIdAttribute;
   private Map<String, String> userInfoAttributes = Maps.newHashMap( );
   private Selection usersSelection = new Selection( );
   
@@ -90,6 +91,7 @@ public class LdapIntegrationConfiguration {
     sb.append( "users:\n" );
     sb.append( '\t' ).append( "base-dn:" ).append( this.userBaseDn ).append( '\n' );
     sb.append( '\t' ).append( "id-attribute:" ).append( this.userIdAttribute ).append( '\n' );
+    sb.append( '\t' ).append( "sasl-id-attribute:" ).append( this.userSaslIdAttribute ).append( '\n' );
     sb.append( '\t' ).append( "user-info-attributes:" ).append( this.userInfoAttributes ).append( '\n' );
     sb.append( '\t' ).append( "selection:" ).append( this.usersSelection ).append( '\n' );
     return sb.toString( );
@@ -305,6 +307,14 @@ public class LdapIntegrationConfiguration {
 
   public boolean isCleanDeletion( ) {
     return cleanDeletion;
+  }
+
+  public String getUserSaslIdAttribute() {
+    return userSaslIdAttribute;
+  }
+
+  public void setUserSaslIdAttribute(String userSaslIdAttribute) {
+    this.userSaslIdAttribute = userSaslIdAttribute;
   }
 
 }

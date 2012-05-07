@@ -404,7 +404,7 @@ char * walrus_get_digest (const char * url)
         if (walrus_object_by_url (url, digest_path, 0) != 0 ) {
             logprintfl (EUCAERROR, "{%u} error: failed to download digest to %s\n", (unsigned int)pthread_self(), digest_path);
         } else {
-            digest_str = file2strn (digest_path, 100000);
+            digest_str = file2strn (digest_path, 2000000);
         }
         unlink (digest_path);
     }
@@ -421,7 +421,7 @@ int walrus_verify_digest (const char * url, const char * old_digest_path)
     int e = ERROR;
 
     char * new_digest;
-    char * old_digest = file2strn (old_digest_path, 100000);
+    char * old_digest = file2strn (old_digest_path, 2000000);
     if (old_digest == NULL) {
         logprintfl (EUCAERROR, "{%u} error: failed to read old digest %s\n", (unsigned int)pthread_self(), old_digest_path);
         return e;

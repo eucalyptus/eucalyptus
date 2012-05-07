@@ -308,6 +308,7 @@ void unlock_exit(int);
 void shawn(void);
 int ncClientCall(ncMetadata *meta, int timeout, int ncLock, char *ncURL, char *ncOp, ...);
 int ncGetTimeout(time_t op_start, time_t op_max, int numCalls, int idx);
+int doBrokerPairing(void);
 
 int refresh_resources(ncMetadata *ccMeta, int timeout, int dolock);
 int refresh_instances(ncMetadata *ccMeta, int timeout, int dolock);
