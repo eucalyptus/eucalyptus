@@ -98,10 +98,8 @@ public class EucalyptusBuilder extends AbstractServiceBuilder<EucalyptusConfigur
       @Override
       public boolean apply( ServiceConfiguration config ) {  
 	  if ( !Databases.isRunning( ) ) {
-	      throw Faults.failure( config,
-                      Exceptions.error( config.getFullName( )
-                        + ":fireCheck(): eucalyptus service " + config.getFullName( ) + " database is not running : "
-                        + Hosts.getCoordinator( ) ) );
+	       LOG.fatal( "config.getFullName( )" + " : does not have a running database. Restarting process to force re-synchronization." );
+	       System.exit(123);
 	  }
 	  return true;
       }
