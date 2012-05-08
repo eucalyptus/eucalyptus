@@ -3,6 +3,8 @@ package com.eucalyptus.cloud;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import org.apache.log4j.Logger;
+
+import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.bootstrap.Handles;
 import com.eucalyptus.bootstrap.Host;
@@ -96,16 +98,27 @@ public class EucalyptusBuilder extends AbstractServiceBuilder<EucalyptusConfigur
     COORDINATOR {
       
       @Override
-      public boolean apply( ServiceConfiguration config ) {
-//GRZE: No service check makes sense here.
-        return true;
+      public boolean apply( ServiceConfiguration config ) {  
+	  if ( !Databases.isRunning( ) ) {
+	       LOG.fatal( "config.getFullName( )" + " : does not have a running database. Restarting process to force re-synchronization." );
+	       System.exit(123);
+	  }
+	  return true;
       }
     },
     SECONDARY {
       
       @Override
       public boolean apply( ServiceConfiguration config ) {
-        if ( config.isVmLocal( ) ) {
+        if ( config.isVmLocal( ) ) {  
+   
+          if ( BootstrapArgs.isCloudController( ) ) {
+              if ( !Databases.isRunning( ) ) {
+ 	           LOG.fatal( "config.getFullName( )" + " : does not have a running database. Restarting process to force re-synchronization." );
+ 	           System.exit(123);
+              }
+ 	  }
+          
           if ( !Databases.isSynchronized( ) ) {
             throw Faults.failure( config,
                                   Exceptions.error( config.getFullName( )

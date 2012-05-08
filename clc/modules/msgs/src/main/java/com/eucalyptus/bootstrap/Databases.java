@@ -756,6 +756,9 @@ public class Databases {
         for ( String ctx : PersistenceContexts.list( ) ) {
           try {
             Set<String> activeDatabases = Databases.lookup( ctx ).getActiveDatabases( );
+            if( BootstrapArgs.isCloudController( ) ) {
+              activeDatabases.add( Hosts.localHost( ).getDisplayName( ) );
+            }
             union.addAll( activeDatabases );
             intersection.retainAll( activeDatabases );
           } catch ( Exception ex ) {
