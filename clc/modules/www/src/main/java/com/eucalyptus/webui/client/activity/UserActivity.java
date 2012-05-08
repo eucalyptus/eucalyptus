@@ -36,11 +36,11 @@ public class UserActivity extends AbstractSearchActivity
   public static final String ADD_KEY_SUBJECT = "Are you sure to add key for the following selected user?";
   
   public static final String ADD_GROUPS_CAPTION = "Add selected users to groups";
-  public static final String ADD_GROUPS_SUBJECT = "Enter groups to add the selected users (using space to separate names):";
+  public static final String ADD_GROUPS_SUBJECT = "Enter groups to add the selected users (using semicolon to separate names):";
   public static final String GROUP_NAMES_INPUT_TITLE = "Group names";
 
   public static final String REMOVE_GROUPS_CAPTION = "Remove users from selected groups";
-  public static final String REMOVE_GROUPS_SUBJECT = "Enter groups to remove the selected users (using space to separate names):";
+  public static final String REMOVE_GROUPS_SUBJECT = "Enter groups to remove the selected users (using semicolon to separate names):";
 
   public static final String ADD_POLICY_CAPTION = "Add new policy";
   public static final String ADD_POLICY_SUBJECT = "Enter new policy to assign to the selected user:";

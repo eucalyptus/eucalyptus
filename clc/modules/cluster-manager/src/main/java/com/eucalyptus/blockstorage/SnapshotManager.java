@@ -264,7 +264,7 @@ public class SnapshotManager {
     return reply;
   }
 
-  private boolean isReservedSnapshot( final String snapshotId ) {
+  private static boolean isReservedSnapshot( final String snapshotId ) {
     return Predicates.or( ImageSnapshotReservation.INSTANCE ).apply( snapshotId );
   }
 

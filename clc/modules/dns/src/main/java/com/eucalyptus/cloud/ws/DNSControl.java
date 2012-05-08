@@ -150,7 +150,7 @@ public class DNSControl {
 			initializeUDP();
 			initializeTCP();
 		} catch(Exception ex) {
-			LOG.error("DNS could not be initialized. Please resolve the problem or run with euca.dns.disable");
+			LOG.error("DNS could not be initialized. Is some other srvice running on port 53?");
 			throw ex;
 		}
 	}

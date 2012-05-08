@@ -32,7 +32,7 @@ clc/modules/storage-san/include/**
 clc/modules/storage-san/lib/
 clc/modules/www/build-war
 clc/modules/www/conf/eucalyptus-web.properties
-clc/modules/www/src/main/java/edu/ucsb/eucalyptus/admin/public/themes/active
+clc/modules/www/src/main/java/com/eucalyptus/webui/public/themes/active
 clc/modules/www/test-gwt/*
 clc/modules/www/test-gwt/war/*
 clc/modules/www/test-gwt/war/WEB-INF/*

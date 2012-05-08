@@ -101,7 +101,11 @@ import org.w3c.dom.Node;
 import org.w3c.dom.Text;
 import com.eucalyptus.auth.login.SecurityContext;
 import com.eucalyptus.binding.HoldMe;
+import com.eucalyptus.component.auth.SystemCredentials;
+import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.ws.StackConfiguration;
+import com.eucalyptus.ws.WebServicesException;
 
 public class WSSecurity {
   private static Logger             LOG = Logger.getLogger( WSSecurity.class );
@@ -129,6 +133,23 @@ public class WSSecurity {
   
   private static boolean useBc = false;
  
+  public static X509Certificate verifyWSSec( final SOAPEnvelope envelope ) throws Exception {
+	  
+	  final Element secNode = WSSecurity.getSecurityElement( envelope );
+      final XMLSignature sig = WSSecurity.getXMLSignature( secNode );
+      String sigValue = new String( sig.getSignatureValue( ) );
+      SecurityContext.enqueueSignature( sigValue );
+      X509Certificate cert = null;
+      try {
+        cert = WSSecurity.verifySignature( secNode, sig );
+        Logs.exhaust( ).debug( cert );
+      } catch ( Exception ex ) {
+        Logs.exhaust( ).error( ex , ex );
+        throw new WebServicesException( "Authentication failed: " + ex.getMessage( ), ex );
+      }
+      
+      return cert;
+  }
   
   public static X509Certificate verifySignature( final Element securityNode, final XMLSignature sig ) 
   	throws WSSecurityException, XMLSignatureException, XMLSecurityException {

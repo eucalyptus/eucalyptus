@@ -1,22 +1,20 @@
 package com.eucalyptus.auth.ldap;
 
-import java.security.Principal;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import javax.naming.InvalidNameException;
 import javax.naming.NamingEnumeration;
 import javax.naming.NamingException;
 import javax.naming.directory.Attribute;
 import javax.naming.directory.Attributes;
-import javax.naming.directory.BasicAttributes;
 import javax.naming.directory.SearchResult;
+import javax.naming.ldap.LdapName;
+
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.LdapException;
+import com.eucalyptus.auth.checker.ValueCheckerFactory;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.User;
@@ -27,7 +25,7 @@ import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.event.SystemClock;
 import com.eucalyptus.system.Threads;
-import com.google.common.collect.Lists;
+import com.google.common.base.Strings;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
@@ -50,9 +48,7 @@ public class LdapSync {
   private static final boolean VERBOSE = true;
   
   private static final String LDAP_SYNC_THREAD = "LDAP sync";
-  
-  private static final BasicAttributes WILDCARD_FILTER = new BasicAttributes( );
-  
+
   private static final LdapIntegrationConfiguration DEFAULT_LIC = new LdapIntegrationConfiguration( );
   
   private static LdapIntegrationConfiguration lic = DEFAULT_LIC;
@@ -149,11 +145,15 @@ public class LdapSync {
         // Simple requires full user DN
         login = user.getInfo( User.DN );
       } else {
-        // SASL requires user ID
+        // SASL requires a different ID:
+        // Pick the specified ID first. If not exist, pick the user name.
         // TODO(wenye): possible other formats of user ID, like "u:..." or "dn:..."
-        login = user.getName( );
+        login = user.getInfo( User.SASLID );
+        if ( Strings.isNullOrEmpty( login ) ) {
+          login = user.getName( );
+        }
       }
-      if ( login == null ) {
+      if ( Strings.isNullOrEmpty( login ) ) {
         throw new LdapException( "Invalid login user" );
       }
       ldap = LdapClient.authenticateUser( lic, login, password );
@@ -214,29 +214,24 @@ public class LdapSync {
     }
   }
   
-  public static void sync( LdapIntegrationConfiguration lic ) {
+  public static void sync( final LdapIntegrationConfiguration lic ) {
     // Get users/groups from LDAP
-    Map<String, Set<String>> accountingGroups = null;
-    Map<String, Set<String>> groups = null;
-    Map<String, Map<String, String>> users = null;
+    Map<String, Set<String>> accountingGroups = Maps.newHashMap( );
+    Map<String, String> groupDnToId = Maps.newHashMap( );
+    Map<String, Set<String>> groups = Maps.newHashMap( );
+    Map<String, String> userDnToId = Maps.newHashMap( );
+    Map<String, Map<String, String>> users = Maps.newHashMap( );
     LdapClient ldap = null;
     try {
       ldap = LdapClient.authenticateClient( lic );
+      
+      loadLdapUsers( ldap, lic, userDnToId, users );
+      loadLdapGroups( ldap, lic, userDnToId, groupDnToId, groups );
       if ( lic.hasAccountingGroups( ) ) {
-        accountingGroups = loadLdapGroupType( ldap,
-                                              lic.getAccountingGroupBaseDn( ),
-                                              lic.getAccountingGroupIdAttribute( ),
-                                              lic.getGroupsAttribute( ),
-                                              lic.getGroupIdAttribute( ),
-                                              lic.getAccountingGroupsSelection( ) );
+        loadLdapAccountingGroups( ldap, lic, groupDnToId, accountingGroups );
+      } else {
+        accountingGroups = lic.getGroupsPartition( );
       }
-      groups = loadLdapGroupType( ldap,
-                                  lic.getGroupBaseDn( ),
-                                  lic.getGroupIdAttribute( ),
-                                  lic.getUsersAttribute( ),
-                                  lic.getUserIdAttribute( ),
-                                  lic.getGroupsSelection( ) );
-      users = loadLdapUsers( ldap, lic );
     } catch ( Exception e ) {
       LOG.error( e, e );
       LOG.error( "Failed to sync with LDAP", e );
@@ -246,10 +241,6 @@ public class LdapSync {
         ldap.close( );
       }
     }
-    if ( !lic.hasAccountingGroups( ) ) {
-      accountingGroups = lic.getGroupsPartition( );
-    }
-    
     if ( VERBOSE ) {
       LOG.debug( "Sync remote accounts: " + accountingGroups );
       LOG.debug( "Sync remote groups: " + groups );
@@ -538,42 +529,73 @@ public class LdapSync {
     return accountSet;
   }
   
-  private static String getId( String idAttrName, Attributes attrs ) throws NamingException {
-    String id = getAttrWithNullCheck( attrs, idAttrName );
-    if ( LicParser.isEmpty( id ) ) {
-      throw new NamingException( "Empty ID for " + attrs );
+  /**
+   * Following RFC 2253
+   * 
+   * @param dn
+   * @return the last RDN of a DN
+   */
+  private static String parseIdFromDn( String dn ) {
+    if ( Strings.isNullOrEmpty( dn ) ) {
+      return null;
     }
-    return id;
+    try {
+      LdapName ln = new LdapName( dn );
+      if ( ln.size( ) > 0 ) {
+        return ( String ) ln.getRdn( ln.size( ) - 1 ).getValue( );
+      }
+    } catch ( InvalidNameException e ) {
+      LOG.error( e, e );
+      LOG.warn( "Invalid DN " + dn, e );
+    }
+    return null;
   }
   
-  private static Set<String> getMembers( String idAttrName, String memberAttrName, Attributes attrs ) throws NamingException {
+  /**
+   * Get the ID of an LDAP/AD entity, accounting group or group or user.
+   * 
+   * If no id attribute name is specified, use the last RDN of the entity DN
+   * Otherwise, use the specified id attribute value.
+   * 
+   * @param dn
+   * @param idAttrName
+   * @param attrs
+   * @return a valid ID
+   * @throws NamingException
+   */
+  private static String getId( String dn, String idAttrName, Attributes attrs ) throws NamingException {
+    String id = null;
+    // If the id-attribute is not specified, by default, use the last RDN from DN
+    // Else use the value of the id-attribute
+    if ( Strings.isNullOrEmpty( idAttrName ) ) {
+      id = parseIdFromDn( dn );
+    } else {
+      id = getAttrWithNullCheck( attrs, idAttrName );
+    }
+    if ( Strings.isNullOrEmpty( id ) ) {
+      throw new NamingException( "Empty ID for " + attrs );
+    }
+    return id.toLowerCase( );
+  }
+
+  private static Set<String> getMembers( String memberAttrName, Attributes attrs, final Map<String, String> dnToId ) throws NamingException {
     Set<String> members = Sets.newHashSet( );
     Attribute membersAttr = attrs.get( memberAttrName );
     if ( membersAttr != null ) {
       NamingEnumeration<?> names = membersAttr.getAll( );
       while ( names.hasMore( ) ) {
-        members.add( parseMemberName( idAttrName, ( ( String ) names.next( ) ).toLowerCase( ) ).toLowerCase( ) );
+        String memberDn = ( String ) names.next( );
+        String memberId = dnToId.get( memberDn.toLowerCase( ) );
+        if ( Strings.isNullOrEmpty( memberId ) ) {
+          LOG.warn( "Can not map member DN " + memberDn + " to ID for " + attrs + ". Check corresponding selection section in your LIC." );
+        } else {
+          members.add( memberId.toLowerCase( ) );
+        }
       }
     }
     return members;
   }
-  
-  private static String parseMemberName( String idAttrName, String dn ) throws NamingException {
-    if ( LicParser.isEmpty( dn ) ) {
-      throw new NamingException( "Empty member name in accounting group" + dn );
-    }
-    dn = dn.trim( );
-    Pattern pattern = Pattern.compile( idAttrName + "=([^,]+),.*");
-    Matcher matcher = pattern.matcher( dn );
-    if ( matcher.matches( ) ) {
-      return matcher.group( 1 );
-    } else if ( dn.contains( "=" ) ) {
-      throw new NamingException( "Can not recognize member name " + dn );
-    } else {
-      return dn;
-    }
-  }
-  
+
   private static void retrieveSelection( LdapClient ldap, String baseDn, Selection selection, String[] attrNames, LdapEntryProcessor processor ) throws LdapException {
     if ( VERBOSE ) {
       LOG.debug( "Search users by: baseDn=" + baseDn + ", attributes=" + attrNames + ", selection=" + selection );
@@ -583,8 +605,13 @@ public class LdapSync {
       NamingEnumeration<SearchResult> results = ldap.search( baseDn, selection.getSearchFilter( ), attrNames );
       while ( results.hasMore( ) ) {
         SearchResult res = results.next( );
-        if ( !selection.getNotSelected( ).contains( res.getNameInNamespace( ) ) ) {
-          processor.processLdapEntry( res.getNameInNamespace( ), res.getAttributes( ) );
+        try {
+          if ( !selection.getNotSelected( ).contains( res.getNameInNamespace( ) ) ) {
+            processor.processLdapEntry( res.getNameInNamespace( ).toLowerCase( ), res.getAttributes( ) );
+          }
+        } catch ( NamingException e ) {
+          LOG.debug( "Failed to retrieve entry " + res );
+          LOG.error( e, e );
         }
       }
       // Get one-off DNs
@@ -592,11 +619,11 @@ public class LdapSync {
         Attributes attrs = null;
         try {
           attrs = ldap.getContext( ).getAttributes( dn, attrNames );
+          processor.processLdapEntry( dn.toLowerCase( ), attrs );
         } catch ( NamingException e ) {
-          LOG.debug( "Failed to retrieve entry " + dn );
+          LOG.debug( "Failed to retrieve entry " + attrs );
           LOG.error( e, e );
         }
-        processor.processLdapEntry( dn, attrs );
       }
     } catch ( NamingException e ) {
       LOG.error( e, e );
@@ -604,33 +631,77 @@ public class LdapSync {
     }
   }
   
-  private static Map<String, Set<String>> loadLdapGroupType( LdapClient ldap, String baseDn, final String idAttrName, final String memberAttrName, final String memberIdAttrName, Selection selection ) throws LdapException {
-    String[] attrNames = new String[]{ idAttrName, memberAttrName };
-    final Map<String, Set<String>> groupMap = Maps.newHashMap( );
-    retrieveSelection( ldap, baseDn, selection, attrNames, new LdapEntryProcessor( ) {
+  private static void loadLdapAccountingGroups( LdapClient ldap, final LdapIntegrationConfiguration lic, final Map<String, String> groupDnToId, final Map<String, Set<String>> accountingGroups ) throws LdapException {
+    if ( VERBOSE ) {
+      LOG.debug( "Loading accounting groups from LDAP/AD" );
+    }
+    Set<String> attrNames = Sets.newHashSet( );
+    attrNames.add( lic.getGroupsAttribute( ) );
+    if ( !Strings.isNullOrEmpty( lic.getAccountingGroupIdAttribute( ) ) ) {
+      attrNames.add( lic.getAccountingGroupIdAttribute( ) );
+    }
+    if ( VERBOSE ) {
+      LOG.debug( "Attributes to load for accounting groups: " + attrNames );
+    }
+    retrieveSelection( ldap, lic.getAccountingGroupBaseDn( ), lic.getAccountingGroupsSelection( ), attrNames.toArray( new String[0] ), new LdapEntryProcessor( ) {
+
+      @Override
+      public void processLdapEntry( String dn, Attributes attrs ) throws NamingException {
+        if ( VERBOSE ) {
+          LOG.debug( "Retrieved accounting group: " + dn + " -> " + attrs );
+        }
+        accountingGroups.put( sanitizeAccountId( getId( dn, lic.getAccountingGroupIdAttribute( ), attrs ) ),
+                              getMembers( lic.getGroupsAttribute( ), attrs, groupDnToId ) );
+        
+      }
+      
+    } );    
+  }
+  
+  private static void loadLdapGroups( LdapClient ldap, final LdapIntegrationConfiguration lic, final Map<String, String> userDnToId, final Map<String, String> groupDnToId, final Map<String, Set<String>> groups ) throws LdapException {
+    if ( VERBOSE ) {
+      LOG.debug( "Loading groups from LDAP/AD" );
+    }
+    Set<String> attrNames = Sets.newHashSet( );
+    attrNames.add( lic.getUsersAttribute( ) );
+    if ( !Strings.isNullOrEmpty( lic.getGroupIdAttribute( ) ) ) {
+      attrNames.add( lic.getGroupIdAttribute( ) );
+    }
+    if ( VERBOSE ) {
+      LOG.debug( "Attributes to load for groups: " + attrNames );
+    }
+    retrieveSelection( ldap, lic.getGroupBaseDn( ), lic.getGroupsSelection( ), attrNames.toArray( new String[0] ), new LdapEntryProcessor( ) {
 
       @Override
       public void processLdapEntry( String dn, Attributes attrs ) throws NamingException {
         if ( VERBOSE ) {
           LOG.debug( "Retrieved group: " + dn + " -> " + attrs );
         }
-        groupMap.put( getId( idAttrName, attrs ), getMembers( memberIdAttrName, memberAttrName, attrs ) );
-        
+        String id = sanitizeUserGroupId( getId( dn, lic.getGroupIdAttribute( ), attrs ) ); 
+        groupDnToId.put( dn, id );
+        groups.put( id, getMembers( lic.getUsersAttribute( ), attrs, userDnToId ) );
       }
       
-    } );
-    return groupMap;
+    } );    
   }
   
-  private static Map<String, Map<String, String>> loadLdapUsers( LdapClient ldap, final LdapIntegrationConfiguration lic ) throws LdapException {
+  private static void loadLdapUsers( LdapClient ldap, final LdapIntegrationConfiguration lic, final Map<String, String> userDnToId, final Map<String, Map<String, String>> users ) throws LdapException {
+    if ( VERBOSE ) {
+      LOG.debug( "Loading users from LDAP/AD" );
+    }
     // Prepare the list of attributes to retrieve
-    List<String> attrNames = Lists.newArrayList( );
+    Set<String> attrNames = Sets.newHashSet( );
     attrNames.addAll( lic.getUserInfoAttributes( ).keySet( ) );
-    if ( !lic.getUserInfoAttributes( ).keySet( ).contains( lic.getUserIdAttribute( ) ) ) {
+    if ( !Strings.isNullOrEmpty( lic.getUserIdAttribute( ) ) ) {
       attrNames.add( lic.getUserIdAttribute( ) );
     }
+    if ( !Strings.isNullOrEmpty( lic.getUserSaslIdAttribute( ) ) ) {
+      attrNames.add( lic.getUserSaslIdAttribute( ) );
+    }
+    if ( VERBOSE ) {
+      LOG.debug( "Attributes to load for users: " + attrNames );
+    }
     // Retrieving from LDAP using a search
-    final Map<String, Map<String, String>> userMap = Maps.newHashMap( );
     retrieveSelection( ldap, lic.getUserBaseDn( ), lic.getUsersSelection( ), attrNames.toArray( new String[0] ), new LdapEntryProcessor( ) {
 
       @Override
@@ -638,6 +709,8 @@ public class LdapSync {
         if ( VERBOSE ) {
           LOG.debug( "Retrieved user: " + dn + " -> " + attrs );
         }
+        String id = sanitizeUserGroupId( getId( dn, lic.getUserIdAttribute( ), attrs ) );
+        userDnToId.put( dn, id );
         Map<String, String> infoMap = Maps.newHashMap( );
         for ( String attrName : lic.getUserInfoAttributes( ).keySet( ) ) {
           String infoKey = lic.getUserInfoAttributes( ).get( attrName );
@@ -647,11 +720,13 @@ public class LdapSync {
           }
         }
         infoMap.put( User.DN, dn );
-        userMap.put( getId( lic.getUserIdAttribute( ), attrs ).toLowerCase( ), infoMap );
+        if ( !Strings.isNullOrEmpty( lic.getUserSaslIdAttribute( ) ) ) {
+          infoMap.put( User.SASLID, getAttrWithNullCheck( attrs, lic.getUserSaslIdAttribute( ) ) );
+        }
+        users.put( id, infoMap );
       }
       
     } );
-    return userMap;
   }
 
   private static String getAttrWithNullCheck( Attributes attrs, String attrName ) throws NamingException {
@@ -661,5 +736,19 @@ public class LdapSync {
     }
     return null;
   }
-  
+    
+  private static String sanitizeUserGroupId( String id ) {
+    if ( id != null ) {
+      return id.replaceAll( ValueCheckerFactory.INVALID_USERGROUPNAME_CHARSET_REGEX, "-" ).replaceAll( "-{2,}", "-" );
+    }
+    return id;
+  }
+
+  private static String sanitizeAccountId( String id ) {
+    if ( id != null ) {
+      return id.replaceAll( ValueCheckerFactory.INVALID_ACCOUNTNAME_CHARSET_REGEX, "-" ).replaceAll( "-{2,}", "-" );
+    }
+    return id;
+  }
+
 }

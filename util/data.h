@@ -81,6 +81,7 @@ typedef struct publicAddressType_t {
 typedef struct serviceInfoType_t {
   char type[32];
   char name[32];
+  char partition[32];
   char uris[8][512];
   int urisLen;
 } serviceInfoType;
