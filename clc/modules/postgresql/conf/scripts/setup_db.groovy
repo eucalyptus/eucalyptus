@@ -118,6 +118,14 @@ public class PostgresqlBootstrapper extends Bootstrapper.Simple implements Datab
     private static String PG_S_OPT ="-s"
     private static String PG_DEFAULT_DBNAME = "postgres"
     private static boolean PG_USE_SSL = Boolean.valueOf( System.getProperty("euca.db.ssl", "true") )
+    private static String COMMAND_GET_CONF = "getconf"
+    private static String GET_CONF_SYSTEM_PAGE_SIZE = "PAGE_SIZE"
+    private static String PROC_SEM = "/proc/sys/kernel/sem"
+    private static String PROC_SHMALL = "/proc/sys/kernel/shmall"
+    private static String PROC_SHMMAX = "/proc/sys/kernel/shmmax"
+    private static long   MIN_SEMMNI = 1536L
+    private static long   MIN_SEMMNS = 32000L
+    private static long   MIN_SHMMAX = 536870912L //512MB
 
     private int runProcess( List<String> args ) {
         PrintStream outstream = null
@@ -146,6 +154,8 @@ public class PostgresqlBootstrapper extends Bootstrapper.Simple implements Datab
     @Override
     public void init( ) throws Exception {
         try {
+            kernelParametersCheck( )
+
             if ( !versionCheck( ) ){
                 throw new Exception("Postgres versions less than 9.1.X are not supported")
             }
@@ -176,8 +186,47 @@ public class PostgresqlBootstrapper extends Bootstrapper.Simple implements Datab
         }
     }
 
+    private void kernelParametersCheck( ) {
+        try {
+            LOG.debug "Reading '/proc' kernel parameters"
+            String[] semStrs = new File( PROC_SEM ).text.split("\\s")
+            String shmallStr = new File( PROC_SHMALL ).text.trim()
+            String shmmaxStr = new File( PROC_SHMMAX ).text.trim()
+
+            LOG.debug "Getting page size"
+            String pageSizeStr = [COMMAND_GET_CONF, GET_CONF_SYSTEM_PAGE_SIZE].execute().text.trim()
+
+            LOG.debug "Read system values [$semStrs] [$shmallStr] [$shmmaxStr] [$pageSizeStr]"
+
+            long pageSize = Long.parseLong( pageSizeStr )
+            long MIN_SHMALL = MIN_SHMMAX / pageSize
+            long semmni = Long.parseLong( semStrs[3] )
+            long semmns = Long.parseLong( semStrs[1] )
+            long shmall = Long.parseLong( shmallStr )
+            long shmmax = Long.parseLong( shmmaxStr )
+
+            LOG.info "Found kernel parameters semmni=$semmni, semmns=$semmns, shmall=$shmall, shmmax=$shmmax"
+
+            // Parameter descriptions from "man proc"
+            if ( semmni < MIN_SEMMNI ) {
+                LOG.error "Insufficient operating system resources! The available number of semaphore identifiers is too low (semmni < $MIN_SEMMNI)"
+            }
+            if ( semmns < MIN_SEMMNS ) {
+                LOG.error "Insufficient operating system resources! The available number of semaphores in all semaphore sets is too low (semmns < $MIN_SEMMNS)"
+            }
+            if ( shmall < MIN_SHMALL ) {
+                LOG.error "Insufficient operating system resources! The total number of pages of System V shared memory is too low (shmall < $MIN_SHMALL)"
+            }
+            if ( shmmax < MIN_SHMMAX ) {
+                LOG.error "Insufficient operating system resources! The run-time limit on the maximum (System V IPC) shared memory segment size that can be created is too low (shmmax < $MIN_SHMMAX)"
+            }
+        }  catch ( Exception e ) {
+            LOG.error("Error checking kernel parameters: " + e.message )
+        }
+    }
+
     // Version check to ensure only Postgres 9.1.X creates the db.
-    private boolean versionCheck ( ) {
+    private boolean versionCheck( ) {
         try {
             String cmd = PG_INITDB + " --version"
             return cmd.execute( ).text.contains("9.1")
@@ -422,12 +471,12 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
 
     private boolean dbExecute( String databaseName, String statement ) throws Exception {
         String url = String.format( "jdbc:%s", ServiceUris.remote( Database.class, Internets.localHostInetAddress( ), databaseName ) )
-        Sql sql = null;
+        Sql sql = null
         try {
             sql = Sql.newInstance( url, getUserName(), getPassword(), getDriverName() )
             return sql.execute( statement )
         } finally {
-            sql?.close();
+            sql?.close()
         }
     }
 
