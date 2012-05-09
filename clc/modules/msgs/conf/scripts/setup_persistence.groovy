@@ -66,7 +66,7 @@ import org.hibernate.ejb.Ejb3Configuration
 import com.eucalyptus.bootstrap.Databases
 import com.eucalyptus.entities.PersistenceContexts
 
-Logger LOG = Logger.getLogger( "setup_persistence" );
+Logger LOG = Logger.getLogger( "com.eucalyptus.scripts.setup_persistence" );
 
 default_hiber_config = [
       'hibernate.archive.autodetection': 'jar, class, hbm',

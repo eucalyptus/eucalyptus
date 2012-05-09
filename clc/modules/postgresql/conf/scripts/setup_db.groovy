@@ -94,7 +94,7 @@ import static java.util.regex.Pattern.quote
  */
 public class PostgresqlBootstrapper extends Bootstrapper.Simple implements DatabaseBootstrapper {
 
-    private static Logger LOG = Logger.getLogger( "setup_db" )
+    private static Logger LOG = Logger.getLogger( "com.eucalyptus.scripts.setup_db" )
 
     // Static definitions of postgres commands and options
     private static int    PG_MAX_RETRY = 5
