@@ -3,7 +3,7 @@
 # modules which are not listed here will be built last in an undefined order. 
 msgs
 euare-common
-#mysql
+postgresql
 configuration
 cloud
 authentication
@@ -19,5 +19,3 @@ walrus
 storage-controller
 dns
 www
-postgresql
-#hsqldb
