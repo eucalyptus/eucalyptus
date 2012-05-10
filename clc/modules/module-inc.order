@@ -3,11 +3,11 @@
 # modules which are not listed here will be built last in an undefined order. 
 msgs
 euare-common
-postgresql
 configuration
 cloud
 authentication
 core
+postgresql
 wsstack
 euare
 component
