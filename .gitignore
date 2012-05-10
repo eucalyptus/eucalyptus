@@ -16,6 +16,7 @@ clc/bind.log
 clc/.deprecated/*/build
 clc/deps
 clc/eucadmin/bin/euca_conf
+clc/eucadmin/eucadmin/__init__.py
 clc/eucadmin/build/
 clc/eucadmin/setup.cfg
 clc/eucadmin/setup.cfg.template
