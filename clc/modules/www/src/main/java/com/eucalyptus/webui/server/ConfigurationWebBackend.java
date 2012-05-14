@@ -680,14 +680,23 @@ public class ConfigurationWebBackend {
 	private static String getExternalIpAddress ( ) {
 		String ipAddr = null;
 		HttpClient httpClient = new HttpClient( );
+
 		//set User-Agent
-		String version = System.getProperty("euca.version");
-    		String extraVersion = System.getProperty("euca.extra_version");
-    		HttpParams defaultParams = httpClient.getParams().getDefaults();
-    		httpClient.getParams().setParameter(HttpMethodParams.USER_AGENT,
-                                        defaultParams.getParameter(
-				        HttpMethodParams.USER_AGENT) + 
-                                        " " + version + "-" + extraVersion);
+		String clientVersion = (String)httpClient.getParams().getDefaults().getParameter(HttpMethodParams.USER_AGENT);
+		String javaVersion   = System.getProperty("java.version");
+		String osName        = System.getProperty("os.name");
+		String osArch        = System.getProperty("os.arch");
+		String eucaVersion   = System.getProperty("euca.version");
+		String extraVersion  = System.getProperty("euca.extra_version");
+
+		// Jakarta Commons-HttpClient/3.1 (java 1.6.0_24; Linux amd64) Eucalyptus/3.1.0-1.el6
+		String userAgent = clientVersion + " (java " + javaVersion + "; " +
+				   osName + " " + osArch + ") Eucalyptus/" + eucaVersion;
+		if (extraVersion != null) {
+			userAgent = userAgent + "-" + extraVersion;
+		}
+
+		httpClient.getParams().setParameter(HttpMethodParams.USER_AGENT, userAgent);
 
 		//support for http proxy
 		if( HttpServerBootstrapper.httpProxyHost != null && ( HttpServerBootstrapper.httpProxyHost.length( ) > 0 ) ) {

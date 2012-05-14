@@ -42,6 +42,8 @@ build: eucalyptus-cloud
 eucalyptus-cloud: eucalyptus-opts.h $(OBJS)
 	$(LDCMD) $(OBJS) -o eucalyptus-cloud $(LDFLAGS)
 
+eucalyptus-opts.c: eucalyptus-opts.h
+
 eucalyptus-opts.h:
 	gengetopt --input=arguments.ggo --file-name=eucalyptus-opts --func-name=arguments --arg-struct-name=eucalyptus_opts
 
