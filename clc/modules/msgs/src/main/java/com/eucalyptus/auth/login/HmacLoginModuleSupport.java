@@ -60,71 +60,64 @@
  *******************************************************************************/
 package com.eucalyptus.auth.login;
 
-import java.io.UnsupportedEncodingException;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeSet;
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
-import org.apache.commons.codec.DecoderException;
-import org.apache.commons.codec.net.URLCodec;
-import org.apache.log4j.Logger;
-import org.apache.xml.security.utils.Base64;
+import java.net.URLDecoder;
+import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.api.BaseLoginModule;
 import com.eucalyptus.auth.principal.AccessKey;
-import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.crypto.Hmac;
+import com.eucalyptus.crypto.util.B64;
+import com.google.common.base.Strings;
 
-public class Hmacv1LoginModule extends HmacLoginModuleSupport {
-  private static Logger LOG = Logger.getLogger( Hmacv1LoginModule.class );
+/**
+ * Support class for HMAC login modules
+ */
+abstract class HmacLoginModuleSupport extends BaseLoginModule<HmacCredentials> {
 
-  public Hmacv1LoginModule() {
-    super(1);
+  private final int signatureVersion;
+
+  protected HmacLoginModuleSupport( final int signatureVersion ) {
+    this.signatureVersion = signatureVersion;
   }
 
   @Override
-  public boolean authenticate( HmacCredentials credentials ) throws Exception {
-    String sig = credentials.getSignature( );
-    checkForReplay( sig );
-    AccessKey accessKey = lookupAccessKey(credentials);
-    User user = accessKey.getUser( );
-    String secretKey = accessKey.getSecretKey( );
-
-    String canonicalString = this.makeSubjectString( credentials.getParameters( ) );
-    String computedSig = this.getSignature( secretKey, canonicalString, credentials.getSignatureMethod( ) );
-    String decodedSig = sanitize( urldecode( sig ) );
-    if ( !computedSig.equals( sanitize(sig) ) && !computedSig.equals( decodedSig ) && !computedSig.equals( sig ) ) {
-      return false;
-    }
-    super.setCredential( credentials.getQueryId( ) );
-    super.setPrincipal( user );
-    //super.getGroups( ).addAll( Groups.lookupUserGroups( super.getPrincipal( ) ) );
-    return true;
+  public boolean accepts( ) {
+    return super.getCallbackHandler( ) instanceof HmacCredentials && ((HmacCredentials)super.getCallbackHandler( )).getSignatureVersion( ).equals( signatureVersion );
   }
 
-  private String makeSubjectString( final Map<String, String> parameters ) throws UnsupportedEncodingException {
-    String paramString = "";
-    Set<String> sortedKeys = new TreeSet<String>( String.CASE_INSENSITIVE_ORDER );
-    sortedKeys.addAll( parameters.keySet( ) );
-    for ( String key : sortedKeys )
-      paramString = paramString.concat( key ).concat( parameters.get( key ).replaceAll( "\\+", " " ) );
-    try {
-      return new String(URLCodec.decodeUrl( paramString.getBytes() ) );
-    } catch ( DecoderException e ) {
-      return paramString;
-    }
+  @Override
+  public void reset( ) {
   }
 
-  public String getSignature( final String queryKey, final String subject, final Hmac mac ) throws AuthenticationException {
-    SecretKeySpec signingKey = new SecretKeySpec( queryKey.getBytes( ), mac.toString( ) );
-    try {
-      Mac digest = mac.getInstance( );
-      digest.init( signingKey );
-      byte[] rawHmac = digest.doFinal( subject.getBytes( ) );
-      return sanitize( Base64.encode( rawHmac ) );
-    } catch ( Exception e ) {
-      LOG.error( e, e );
-      throw new AuthenticationException( "Failed to compute signature" );
-    }
+  protected AccessKey lookupAccessKey( final HmacCredentials credentials ) throws AuthException {
+    return Accounts.lookupAccessKeyById( credentials.getQueryId( ) );
   }
 
+  protected void checkForReplay( final String signature ) throws AuthenticationException {
+    SecurityContext.enqueueSignature( normalize(signature) );
+  }
+
+  protected static String urldecode( final String text ) {
+    return URLDecoder.decode( text );
+  }
+
+  protected static String sanitize( final String b64text ) {
+    // There should only be trailing =, it is not clear why
+    // we replace = at other locations in B64 data
+    return b64text.replace( "=", "" );
+  }
+
+  protected static String normalize( final String signature ) {
+    final String urldecoded = urldecode( signature );
+    final String decoded = urldecoded.replace( ' ', '+' ); // url decoding could remove valid b64 characters
+    final String sanitized = sanitize( decoded );
+    final String normalized;
+    int lastBlockLength = sanitized.length() % 4;
+    if( lastBlockLength > 0 ) {
+      normalized =
+          sanitized + Strings.repeat( "=", 4 - lastBlockLength );
+    } else {
+      normalized = sanitized;
+    }
+    return B64.standard.encString(B64.standard.dec(normalized));
+  }
 }
