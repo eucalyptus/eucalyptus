@@ -1389,7 +1389,7 @@ int doDescribeInstances (ncMetadata *meta, char **instIds, int instIdsLen, ncIns
                 continue;
             vols_count++;
             
-            char * s;
+            char * s = "";
             if (! strcmp(volume->stateName, VOL_STATE_ATTACHING))        s = "a";
             if (! strcmp(volume->stateName, VOL_STATE_ATTACHED))         s = "A";
             if (! strcmp(volume->stateName, VOL_STATE_ATTACHING_FAILED)) s = "af";
