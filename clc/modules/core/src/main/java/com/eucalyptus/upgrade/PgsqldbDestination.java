@@ -41,7 +41,7 @@ public class PgsqldbDestination implements DatabaseDestination {
           put( "hibernate.connection.autocommit", "true" );
           put( "hibernate.hbm2ddl.auto", "update" );
           put( "hibernate.generate_statistics", "true" );
-          put( "hibernate.connection.driver_class", "com.postgresql.Driver" );
+          put( "hibernate.connection.driver_class", "org.postgresql.Driver" );
           put( "hibernate.connection.username", "eucalyptus" );
           put( "hibernate.connection.password", pass );
           put( "hibernate.bytecode.use_reflection_optimizer", "true" );
@@ -62,13 +62,11 @@ public class PgsqldbDestination implements DatabaseDestination {
       Connection conn = DriverManager.getConnection( url, Databases.getUserName( ), Databases.getPassword( ) );
 
       for ( String ctx : PersistenceContexts.list( ) ) {
-        // Drop the old database first
-        Statement stmt = conn.createStatement( );
-        int rs = stmt.executeUpdate( "drop database " + ctx );
+        // XXX: Need to drop the old database first
 
         Properties p = new Properties( );
         p.putAll( props );
-        String ctxUrl = String.format("jdbc:%s?createDatabaseIfNotExist=true",ServiceUris.remote(dbComp,ctx));
+        String ctxUrl = String.format("jdbc:%s",ServiceUris.remote(dbComp,ctx));
         p.put( "hibernate.connection.url", ctxUrl );
         p.put( "hibernate.cache.region_prefix", "eucalyptus_" + ctx + "_cache" );
         Ejb3Configuration config = new Ejb3Configuration( );

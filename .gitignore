@@ -40,7 +40,6 @@ clc/modules/www/webapps
 clc/target
 config.log
 config.status
-core
 core.*
 gatherlog/GLclient
 Makedefs

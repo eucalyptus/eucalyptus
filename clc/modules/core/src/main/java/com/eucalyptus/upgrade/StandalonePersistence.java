@@ -106,7 +106,11 @@ public class StandalonePersistence {
   }
   
   private static void setupOldDatabase( ) throws Exception {
-    source = ( DatabaseSource ) ClassLoader.getSystemClassLoader( ).loadClass( eucaSource ).newInstance( );
+    if (eucaSource.startsWith("groovy:")) {
+        source = Groovyness.newInstance( eucaSource.replace("groovy:", "") );
+    } else {
+    	source = ( DatabaseSource ) ClassLoader.getSystemClassLoader( ).loadClass( eucaSource ).newInstance( );
+    }
     /** Register a shutdown hook which closes all source-sql sessions **/
     Runtime.getRuntime( ).addShutdownHook( new Thread( ) {
       @Override
