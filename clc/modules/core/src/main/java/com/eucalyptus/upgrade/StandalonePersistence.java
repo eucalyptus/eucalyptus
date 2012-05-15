@@ -64,10 +64,11 @@ public class StandalonePersistence {
       StandalonePersistence.setupNewDatabase( );
       StandalonePersistence.setupOldDatabase( );
       StandalonePersistence.runUpgrade( );
-      System.exit(0);
+      dest.getDb().stop();
     } catch ( Exception e ) {
       LOG.error( e, e );
       e.printStackTrace( );
+      dest.getDb().stop();
       System.exit( -1 );
     }
   }
@@ -134,12 +135,6 @@ public class StandalonePersistence {
   public static void setupNewDatabase( ) throws Exception {
     dest = ( DatabaseDestination ) ClassLoader.getSystemClassLoader( ).loadClass( eucaDest ).newInstance( );
     dest.initialize( );    
-    Runtime.getRuntime( ).addShutdownHook( new Thread( ) {
-      @Override
-      public void run( ) {
-        PersistenceContexts.shutdown( );
-      }
-    } );
   }
   
   public static void setupInitProviders( ) throws Exception {

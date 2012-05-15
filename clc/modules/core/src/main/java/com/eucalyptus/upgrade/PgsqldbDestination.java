@@ -24,14 +24,20 @@ import com.eucalyptus.util.Internets;
 
 public class PgsqldbDestination implements DatabaseDestination {
   private static Logger LOG = Logger.getLogger( PgsqldbDestination.class );
+  private DatabaseBootstrapper db;
+
+  public DatabaseBootstrapper getDb( ) throws Exception {
+    return db;
+  }
   
   public void initialize( ) throws Exception {
     /** Bring up the new destination database **/
     Component dbComp = Components.lookup( Database.class );
     ComponentId dbCompId = ComponentIds.lookup( Database.class );
-    DatabaseBootstrapper db = Groovyness.newInstance( "setup_db" );
+    db = Groovyness.newInstance( "setup_db" );
     try {
       db.init();
+      
       final String pass = Databases.getPassword( );
       Map<String, String> props = new HashMap<String, String>( ) {
         {
@@ -75,7 +81,7 @@ public class PgsqldbDestination implements DatabaseDestination {
           config.addAnnotatedClass( c );
         }
         PersistenceContexts.registerPersistenceContext( ctx, config );
-      }
+      } 
     } catch ( Exception e ) {
       LOG.fatal( e, e );
       LOG.fatal( "Failed to initialize the persistence layer." );
