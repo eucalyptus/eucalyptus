@@ -1248,6 +1248,7 @@ int diff (const char * path1, const char * path2)
         logprintfl (EUCAERROR, "error: diff(): failed to open %s\n", path1);
     } else if ( (fd2 = open (path2, O_RDONLY)) < 0 ) {
         logprintfl (EUCAERROR, "error: diff(): failed to open %s\n", path2);
+        close(fd1);
     } else {
         int read1, read2;
         do {
