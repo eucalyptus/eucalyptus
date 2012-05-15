@@ -266,6 +266,7 @@ int makeWindowsFloppy(char *euca_home, char *rundir_path, char *keyName, char *i
     if (tmp) free(tmp);
     if (newpass) free(newpass);
     if (newInstName) free(newInstName);
+    close(fd);
     return(1);
   }
   close(fd);
