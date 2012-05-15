@@ -131,7 +131,7 @@ import com.eucalyptus.upgrade.UpgradeScript;
 
 class upgrade_20_30 extends AbstractUpgradeScript {
     static final List<String> FROM_VERSION = ["eee-2.0.2", "eee-2.0.1", "2.0.2", "2.0.3"];
-    static final List<String> TO_VERSION   = ["3.0.0", "3.0.1"];
+    static final List<String> TO_VERSION   = ["3.0.0", "3.0.1", "3.1.0"];
     private static Logger LOG = Logger.getLogger( upgrade_20_30.class );
     private static List<Class> entities = new ArrayList<Class>();
     private static Map<String, Class> entityMap = new HashMap<String, Class>();

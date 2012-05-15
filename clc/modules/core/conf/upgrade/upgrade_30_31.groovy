@@ -170,8 +170,53 @@ class upgrade_30_31 extends AbstractUpgradeScript {
         for (String entityKey : entityKeys) {
             upgradeEntity(entityKey);
         }
+
+        upgradeComponents();
+        upgradeMisc();
+        /* LOG.error("sleeping");
+        sleep 3600000;
+        LOG.error("done sleeping"); */
         return;
     } 
+
+    private void upgradeComponents() {
+        def confConn = connMap['eucalyptus_config'];
+        def compSetterMap = buildSetterMap(connMap['eucalyptus_config'], "config_component_base");
+
+        def componentMap = new HashMap<String, Class>();
+        componentMap.put("ArbitratorConfiguration", Class.forName("com.eucalyptus.config.ArbitratorConfiguration"));
+        componentMap.put("EucalyptusConfiguration", Class.forName("com.eucalyptus.cloud.EucalyptusConfiguration"));
+        componentMap.put("ClusterConfiguration", Class.forName("com.eucalyptus.cluster.ClusterConfiguration"));
+        componentMap.put("StorageControllerConfiguration", Class.forName("com.eucalyptus.config.StorageControllerConfiguration"));
+        componentMap.put("WalrusConfiguration", Class.forName("com.eucalyptus.config.WalrusConfiguration"));
+
+        confConn.rows("""select * from config_component_base""").each { row ->
+            Class componentType = componentMap[row.DTYPE];
+            EntityWrapper<ComponentConfiguration> db = EntityWrapper.get(componentType);
+            db.recast(componentType);
+            def comp= componentType.newInstance();
+            initMetaClass(comp, componentType);
+            comp = convertRowToObject(compSetterMap, row, comp);
+            if (comp instanceof ClusterConfiguration) {
+                comp.setNetworkMode( row.cluster_network_mode );
+                comp.setUseNetworkTags( row.cluster_use_network_tags );
+                comp.setMinNetworkTag( row.cluster_min_network_tag );
+                comp.setMaxNetworkTag( row.cluster_max_network_tag );
+                comp.setMinNetworkIndex( row.cluster_min_addr );
+                comp.setMaxNetworkIndex( row.cluster_min_vlan );
+                comp.setAddressesPerNetwork( row.cluster_addrs_per_net );
+                comp.setVnetSubnet( row.cluster_vnet_subnet );
+                comp.setVnetNetmask( row.cluster_vnet_netmask );
+                comp.setVnetType( row.cluster_vnet_type );
+                // comp.setPropertyPrefix( row.cluster_property_prefix );
+                comp.setSourceHostName( row.cluster_alt_source_hostname );
+            }
+
+            db.add(comp);
+            db.commit();
+        }
+    }
+            
 
     private void upgradeAuth() {
         def acctSetterMap = buildSetterMap(connMap['eucalyptus_auth'], "auth_account");
@@ -184,7 +229,7 @@ class upgrade_30_31 extends AbstractUpgradeScript {
         authConn.rows("""select * from auth_account""").each { row ->
             EntityWrapper<AccountEntity> db = EntityWrapper.get(AccountEntity.class); 
             AccountEntity acct = AccountEntity.newInstanceWithAccountNumber(row.auth_account_number);
-            acct = convertRowToObject('eucalyptus_auth', connMap['eucalyptus_auth'], "auth_account", acctSetterMap, row, acct);
+            acct = convertRowToObject(acctSetterMap, row, acct);
             initMetaClass(acct, AccountEntity.class); 
             LOG.error("setting account number to " + row.auth_account_number);
             acct.setAccountNumber(row.auth_account_number);
@@ -204,7 +249,7 @@ class upgrade_30_31 extends AbstractUpgradeScript {
                                         where a.auth_account_name=?""", acct.getName()).each { rowResult ->
                 GroupEntity group = GroupEntity.newInstanceWithGroupId(rowResult.auth_group_id_external);
                 LOG.error("adding group " + rowResult.auth_group_id_external + " in " + acct.getName());
-                group = convertRowToObject('eucalyptus_auth', connMap['eucalyptus_auth'], "auth_group",  groupSetterMap, rowResult, group);
+                group = convertRowToObject(groupSetterMap, rowResult, group);
                 initMetaClass(group, GroupEntity.class);
                 group.setAccount(acctEnt);
                 db.recast( GroupEntity.class ).add(group);
@@ -221,7 +266,7 @@ class upgrade_30_31 extends AbstractUpgradeScript {
                 db = EntityWrapper.get(AccountEntity.class);
                 UserEntity user = UserEntity.newInstanceWithUserId(rowResult.auth_user_id_external);
                 LOG.error("adding user " + rowResult.auth_user_id_external + " in " + acct.getName());
-                user = convertRowToObject('eucalyptus_auth', connMap['eucalyptus_auth'], "auth_user", userSetterMap, rowResult, user);
+                user = convertRowToObject(userSetterMap, rowResult, user);
                 initMetaClass(user, UserEntity.class);
                 user.setRegistrationStatus(RegistrationStatus.valueOf(rowResult.auth_user_reg_stat));
                 GroupEntity userGroup = DatabaseAuthUtils.getUniqueGroup(db, DatabaseAuthUtils.getUserGroupName( rowResult.auth_user_name ), acct.getName( ) );
@@ -238,7 +283,7 @@ class upgrade_30_31 extends AbstractUpgradeScript {
                                   where u.auth_user_id_external=?""", rowResult.auth_user_id_external).each { rowResult2 ->
                     db = EntityWrapper.get(AccessKeyEntity.class);
                     AccessKeyEntity accessKey = new AccessKeyEntity(user);
-                    accessKey = convertRowToObject('eucalyptus_auth', authConn, "auth_access_key", akeySetterMap, rowResult2, accessKey);
+                    accessKey = convertRowToObject(akeySetterMap, rowResult2, accessKey);
                     initMetaClass(accessKey, AccessKeyEntity.class);
                     accessKey.setSecretKey(rowResult2.auth_access_key_key);
                     accessKey.setAccess(rowResult2.auth_access_key_query_id);
@@ -247,9 +292,18 @@ class upgrade_30_31 extends AbstractUpgradeScript {
                 }
             }
         } 
-        LOG.error("sleeping");
-        // sleep 3600000;
-        LOG.error("done sleeping");
+    }
+
+    private void upgradeMisc() {
+        // StaticDatabaseProperty
+        def confConn = connMap["eucalyptus_config"];
+
+        def db = EntityWrapper.get(StaticDatabasePropertyEntry.class);
+        confConn.rows("""select * from config_static_property""").each { prop ->
+            StaticDatabasePropertyEntry sdbprop = new StaticDatabasePropertyEntry(prop.config_static_field_name, prop.config_static_prop_name, prop.config_static_field_value);
+            db.add(sdbprop);
+        }
+        db.commit();
     }
 
     private void upgradeEntity(entityKey) {
@@ -319,7 +373,7 @@ class upgrade_30_31 extends AbstractUpgradeScript {
             for (GroovyRowResult rowResult : rowResults) {
                 try {
                     dest = ClassLoader.getSystemClassLoader().loadClass(entityMap.get(entityKey).getCanonicalName()).newInstance();
-                    dest = convertRowToObject(contextName, conn, entityKey, setterMap, rowResult, dest);
+                    dest = convertRowToObject(setterMap, rowResult, dest);
                 } catch (ClassNotFoundException e1) {
                     LOG.error(e1);
                     break;
@@ -340,7 +394,7 @@ class upgrade_30_31 extends AbstractUpgradeScript {
         }        
     }
 
-    private Object convertRowToObject(String contextName, Sql conn, String entityKey, Map<String, Method> setterMap, GroovyRowResult rowResult, Object dest) {
+    private Object convertRowToObject(Map<String, Method> setterMap, GroovyRowResult rowResult, Object dest) {
         Set<String> columns = rowResult.keySet();
         columns.each{ c -> LOG.debug("column: " + c); }
         for (String column : columns) {
@@ -443,12 +497,12 @@ class upgrade_30_31 extends AbstractUpgradeScript {
     }
 
     private void buildEntityMap() {
-                // Note that this maps new -> old
         for (Class entity : entities) {
             if (entity.isAnnotationPresent(Table.class)) {
                 // This only handles tables whose names have not changed.
                 Table annot = (Table)entity.getAnnotation(Table.class);
                 entityMap.put(annot.name(), entity);
+                LOG.info("Mapping " + entity + " to " + annot.name());
             }
         }
     }
@@ -468,7 +522,7 @@ class upgrade_30_31 extends AbstractUpgradeScript {
 
         entities.add(AccessKeyEntity.class)
         entities.add(AccountEntity.class)
-        // entities.add(Address.class)
+        entities.add(Address.class)
         entities.add(AddressingConfiguration.class)
         entities.add(AOEMetaInfo.class)
         entities.add(AOEVolumeInfo.class)
@@ -476,7 +530,6 @@ class upgrade_30_31 extends AbstractUpgradeScript {
         entities.add(BucketInfo.class)
         entities.add(CertificateEntity.class)
         entities.add(CHAPUserInfo.class)
-        // entities.add(ClusterConfiguration.class)
         entities.add(Clusters.class)
         entities.add(CNAMERecordInfo.class)
         entities.add(ComponentConfiguration.class)
@@ -484,7 +537,6 @@ class upgrade_30_31 extends AbstractUpgradeScript {
         entities.add(DeviceMapping.class)
         entities.add(DirectStorageInfo.class)
         entities.add(DRBDInfo.class)
-        // entities.add(EucalyptusConfiguration.class)
         entities.add(ExtantNetwork.class)
         entities.add(Faults.class)
         entities.add(GrantInfo.class)
@@ -502,8 +554,6 @@ class upgrade_30_31 extends AbstractUpgradeScript {
         entities.add(NetworkRule.class)
         entities.add(NSRecordInfo.class)
         entities.add(ObjectInfo.class)
-        // Caused by: java.lang.NullPointerException
-        // entities.add(Partition.class)
         entities.add(PolicyEntity.class)
         entities.add(PrivateNetworkIndex.class)
         // entities.add(ReportingAccount.class)
@@ -515,10 +565,6 @@ class upgrade_30_31 extends AbstractUpgradeScript {
         // entities.add(SshKeyPair.class)
         entities.add(StackConfiguration.class)
         entities.add(StatementEntity.class)
-        // Caused by: org.hibernate.PropertyValueException: not-null property references a null or transient value: com.eucalyptus.configurable.StaticDatabasePropertyEntry.fieldName
-        // entities.add(StaticDatabasePropertyEntry.class)
-        // com.mysql.jdbc.exceptions.jdbc4.MySQLSyntaxErrorException: Table 'eucalyptus_config.config_sc' doesn't exist
-        // entities.add(StorageControllerConfiguration.class)
         entities.add(StorageInfo.class)
         entities.add(StorageStatsInfo.class)
         // Caused by: org.hibernate.PropertyValueException: not-null property references a null or transient value: com.eucalyptus.reporting.modules.storage.StorageUsageSnapshot.key
@@ -529,11 +575,8 @@ class upgrade_30_31 extends AbstractUpgradeScript {
         entities.add(UserEntity.class)
         entities.add(VmInstance.class)
         entities.add(VmType.class)
-        // Caused by: org.hibernate.PropertyValueException: not-null property references a null or transient value: com.eucalyptus.blockstorage.Volume.uniqueName
-        // entities.add(Volume.class)
+        entities.add(Volume.class)
         entities.add(VolumeInfo.class)
-        // com.mysql.jdbc.exceptions.jdbc4.MySQLSyntaxErrorException: Table 'eucalyptus_config.config_walrus' doesn't exist
-        // entities.add(WalrusConfiguration.class)
         entities.add(WalrusInfo.class)
         entities.add(WalrusSnapshotInfo.class)
         entities.add(WalrusStatsInfo.class)

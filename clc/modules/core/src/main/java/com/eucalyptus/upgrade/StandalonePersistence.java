@@ -65,6 +65,7 @@ public class StandalonePersistence {
       StandalonePersistence.setupOldDatabase( );
       StandalonePersistence.runUpgrade( );
       dest.getDb().stop();
+      System.exit(0);
     } catch ( Exception e ) {
       LOG.error( e, e );
       e.printStackTrace( );
