@@ -1411,7 +1411,6 @@ char *file2str_seek(char *file, size_t size, int mode) {
   if (rc >= 0) {
     fd = open(file, O_RDONLY);
     if (fd >= 0) {
-
       if (mode == 1) {
 	rc = lseek(fd, (off_t)(-1 * size), SEEK_END);
 	if (rc < 0) {
@@ -1419,6 +1418,7 @@ char *file2str_seek(char *file, size_t size, int mode) {
 	  if (rc < 0) {
 	    logprintfl(EUCAERROR, "file2str_seek(): cannot seek\n");
 	    if (ret) free(ret);
+	    close(fd);
 	    return(NULL);
 	  }
 	}
