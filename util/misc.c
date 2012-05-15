@@ -1113,7 +1113,7 @@ int daemonrun(char *incmd, char *pidfile) {
   if (!pid) {
     char *tok=NULL, *ptr=NULL;
     int idx, rc;
-    struct sigaction newsigact;
+    struct sigaction newsigact = { 0 };
 
     newsigact.sa_handler = SIG_DFL;
     newsigact.sa_flags = 0;
