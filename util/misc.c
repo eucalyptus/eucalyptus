@@ -1360,7 +1360,7 @@ char * file2str (const char * path)
     }
 
     int fp;
-    if ( ( fp = open (path, O_RDONLY) ) < 1 ) {
+    if ( ( fp = open (path, O_RDONLY) ) < 0 ) {
         logprintfl (EUCAERROR, "error: file2str() failed to open file %s\n", path);
         free (content);
         content = NULL;
