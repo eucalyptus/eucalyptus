@@ -187,9 +187,7 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
                 if ( !destClassFile.exists( ) ) {
                   Files.createParentDirs( destClassFile );
                   Files.copy( classSupplier, destClassFile );
-                  if ( BINDING_DEBUG ) {
-                    LOG.info( "Caching: " + j.getName( ) + " => " + destClassFile.getAbsolutePath( ) );
-                  }
+                  Logs.extreme( ).debug( "Caching: " + j.getName( ) + " => " + destClassFile.getAbsolutePath( ) );
                 }
                 BINDING_CLASS_MAP.putIfAbsent( classGuess, candidate );
               }
@@ -205,7 +203,7 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
     }
     
     private void addCurrentBinding( byte[] bindingBytes, String bindingName, String bindingFullPath ) {
-      LOG.info( "Loading binding from: " + bindingFullPath );
+      LOG.debug( "Binding cache: loading binding from: " + bindingFullPath );
       BINDING_LIST.add( URI.create( bindingFullPath ) );
       String digest = new BigInteger( Digest.MD5.get( ).digest( bindingBytes ) ).abs( ).toString( 16 );
       String entryName = BINDING_CACHE_BINDING_PREFIX + bindingName;
@@ -243,9 +241,7 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
                     Files.copy( classSupplier, destClassFile );
                   }
                   ClassFile cf = ClassFile.getClassFile( classFile.getName( ) );
-                  if ( BINDING_DEBUG ) {
-                    LOG.info( "Caching: " + classFile.getName( ) + " => " + destClassFile.getAbsolutePath( ) );
-                  }
+                  Logs.extreme( ).debug( "Caching: " + classFile.getName( ) + " => " + destClassFile.getAbsolutePath( ) );
                 } else if ( child instanceof IncludeElement ) {
                   BindingElement bind = ( ( IncludeElement ) child ).getBinding( );
                   if ( bind != null ) {
@@ -267,23 +263,28 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
     }
     
     public static void compile( ) {
+      LOG.info( "Binding cache: processing message and binding files." );
       processFiles( );
-      if ( !BindingFileSearch.INSTANCE.check( ) ) {
+      if ( BindingFileSearch.INSTANCE.check( ) ) {
+        LOG.info( "Binding cache: nothing to do." );
+      } else {
+        LOG.info( "Binding cache: regenerating cache." );
         try {
+          LOG.info( "Binding cache: generating internal bindings." );
           // generate msgs-binding
           InternalSoapBindingGenerator gen = new InternalSoapBindingGenerator( );
           for ( Class genBindClass : BindingFileSearch.BINDING_CLASS_MAP.values( ) ) {
-            if ( BINDING_DEBUG ) {
-              LOG.info( "Generating binding: " + genBindClass );
-            }
+            Logs.extreme( ).debug( "Generating binding: " + genBindClass );
             gen.processClass( genBindClass );
           }
           gen.close( );
           BINDING_LIST.add( gen.getOutFile( ).toURI( ) );
+          LOG.info( "Binding cache: populating cache from transitive closure of bindings." );
           // load *-binding.xml, populate cache w/ all referenced files
           BindingFileSearch.reset( Utility.getClassPaths( ) );
           Iterables.all( BindingFileSearch.BINDING_LIST, BindingFileSearch.INSTANCE );
           BindingFileSearch.reset( Utility.getClassPaths( ) );
+          LOG.info( "Binding cache: loading and validating bindings." );
           Map<URI, BindingDefinition> bindingDefs = Maps.newHashMap( );
           for ( URI binding : BINDING_LIST ) {
             String shortPath = binding.toURL( ).getPath( ).replaceAll( ".*!/", "" );
@@ -291,9 +292,10 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
             BindingDefinition def = Utility.loadBinding( binding.toASCIIString( ), sname, binding.toURL( ).openStream( ), binding.toURL( ), true );
             bindingDefs.put( binding, def );
           }
+          LOG.info( "Binding cache: compiling bindings." );
           for ( Entry<URI, BindingDefinition> def : bindingDefs.entrySet( ) ) {
             try {
-              LOG.info( "Compiling binding: " + def.getKey( ) );
+              LOG.debug( "Binding cache: " + def.getKey( ) );
               def.getValue( ).generateCode( BindingFileSearch.BINDING_DEBUG, BindingFileSearch.BINDING_DEBUG );
             } catch ( RuntimeException e ) {
               throw new JiBXException( "\n*** Error during code generation for file '" +
@@ -310,7 +312,7 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
           LOG.info( "Binding cache: wrote " + lists[0] + " files" );
           LOG.info( "Binding cache: kept " + lists[1].length + " files unchanged:" );
           LOG.info( "Binding cache: deleted " + lists[2].length + " files:" );
-          BindingFileSearch.INSTANCE.store( );          
+          BindingFileSearch.INSTANCE.store( );
           System.exit( 123 );//success! now we restart.
         } catch ( Exception ex ) {
           LOG.error( ex, ex );
