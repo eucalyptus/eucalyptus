@@ -81,6 +81,7 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
     INSTANCE;
     private static final String                 BINDING_EMPTY                = "<binding>\n</binding>";
     private static final Boolean                BINDING_DEBUG                = System.getProperty( "euca.binding.debug" ) != null;
+    private static final Boolean                BINDING_DEBUG_EXTREME        = System.getProperty( "euca.binding.debug.extreme" ) != null;
     private static List<URI>                    BINDING_LIST                 = Lists.newArrayList( );
     private static ConcurrentMap<String, Class> BINDING_CLASS_MAP            = Maps.newConcurrentMap( );
     private static final String                 BINDING_CACHE_JAR_PREFIX     = "jar.";
@@ -250,7 +251,7 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
                   if ( bind != null ) {
                     this.apply( bind );
                   } else {
-                    Files.write( BINDING_EMPTY.getBytes( ), SubDirectory.CLASSCACHE.getChildFile( includeElement.getIncludePath( ) ) ); 
+                    Files.write( BINDING_EMPTY.getBytes( ), SubDirectory.CLASSCACHE.getChildFile( includeElement.getIncludePath( ).replace( "classpath:", "" ) ) );
                   }
                 }
               } catch ( Exception ex ) {
@@ -260,7 +261,9 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
             return true;
           }
         };
-        writeFile.apply( root );
+        if ( !writeFile.apply( root ) ) {
+          writeFile.apply( root );
+        }
         return true;
       } catch ( Exception ex ) {
         throw Exceptions.toUndeclared( ex );
@@ -304,7 +307,7 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
           for ( Entry<URI, BindingDefinition> def : bindingDefs.entrySet( ) ) {
             try {
               LOG.debug( "Binding cache: " + def.getKey( ) );
-              def.getValue( ).generateCode( BindingFileSearch.BINDING_DEBUG, BindingFileSearch.BINDING_DEBUG );
+              def.getValue( ).generateCode( BindingFileSearch.BINDING_DEBUG, BindingFileSearch.BINDING_DEBUG_EXTREME );
             } catch ( RuntimeException e ) {
               throw new JiBXException( "\n*** Error during code generation for file '" +
                                            def.getKey( ) + "' -\n this may be due to an error in " +
