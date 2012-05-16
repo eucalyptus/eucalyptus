@@ -78,22 +78,24 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
   
   enum BindingFileSearch implements Predicate<URI> {
     INSTANCE;
-    static final Boolean                BINDING_DEBUG                = System.getProperty( "euca.binding.debug" ) != null;
-    static List<URI>                    BINDING_LIST                 = Lists.newArrayList( );
-    static ConcurrentMap<String, Class> BINDING_CLASS_MAP            = Maps.newConcurrentMap( );
-    static final String                 BINDING_CACHE_JAR_PREFIX     = "jar.";
-    static final String                 BINDING_CACHE_BINDING_PREFIX = "binding.";
-    static final String                 BINDING_CACHE_DIGEST_LIST    = "classcache.properties";
-    static final File                   CACHE_LIST                   = SubDirectory.CLASSCACHE.getChildFile( BINDING_CACHE_DIGEST_LIST );
-    final ClassLoader                   CACHE_CLASS_LOADER;
-    final Class MSG_BASE_CLASS;
-    static final String                 FILE_PATTERN                 = System.getProperty( "euca.binding.pattern", ".*\\-binding.xml" );
-    static final Properties             CURRENT_PROPS                = new Properties( );
+    private static final Boolean                BINDING_DEBUG                = System.getProperty( "euca.binding.debug" ) != null;
+    private static List<URI>                    BINDING_LIST                 = Lists.newArrayList( );
+    private static ConcurrentMap<String, Class> BINDING_CLASS_MAP            = Maps.newConcurrentMap( );
+    private static final String                 BINDING_CACHE_JAR_PREFIX     = "jar.";
+    private static final String                 BINDING_CACHE_BINDING_PREFIX = "binding.";
+    private static final String                 BINDING_CACHE_DIGEST_LIST    = "classcache.properties";
+    private static final File                   CACHE_LIST                   = SubDirectory.CLASSCACHE.getChildFile( BINDING_CACHE_DIGEST_LIST );
+    private final ClassLoader                   CACHE_CLASS_LOADER;
+    private final Class<?>                      MSG_BASE_CLASS;
+    private final Class<?>                      MSG_DATA_CLASS;
+    private static final String                 FILE_PATTERN                 = System.getProperty( "euca.binding.pattern", ".*\\-binding.xml" );
+    private static final Properties             CURRENT_PROPS                = new Properties( );
     
     private BindingFileSearch( ) {
       try {
         CACHE_CLASS_LOADER = new URLClassLoader( new URL[] { SubDirectory.CLASSCACHE.getFile( ).toURL( ) } );
         MSG_BASE_CLASS = Class.forName( "edu.ucsb.eucalyptus.msgs.BaseMessage" );
+        MSG_DATA_CLASS = Class.forName( "edu.ucsb.eucalyptus.msgs.EucalyptusData" );
       } catch ( Exception ex ) {
         LOG.error( ex, ex );
         throw Exceptions.toUndeclared( ex );
@@ -169,7 +171,6 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
         CURRENT_PROPS.put( BINDING_CACHE_JAR_PREFIX + f.getName( ), digest );
         final JarFile jar = new JarFile( f );
         final List<JarEntry> jarList = Collections.list( jar.entries( ) );
-        LOG.trace( "-> Trying to load message binding info from " + f.getAbsolutePath( ) );
         for ( final JarEntry j : jarList ) {
           try {
             if ( j.getName( ).matches( FILE_PATTERN ) ) {
@@ -180,8 +181,18 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
             } else if ( j.getName( ).matches( ".*\\.class.{0,1}" ) ) {
               final String classGuess = j.getName( ).replaceAll( "/", "." ).replaceAll( "\\.class.{0,1}", "" );
               final Class candidate = ClassLoader.getSystemClassLoader( ).loadClass( classGuess );
-              if ( MSG_BASE_CLASS.isAssignableFrom( candidate ) /*|| MSG_DATA_CLASS.isAssignableFrom( candidate ) */) {
-                BINDING_CLASS_MAP.putIfAbsent( classGuess, candidate );
+              if ( MSG_BASE_CLASS.isAssignableFrom( candidate ) || MSG_DATA_CLASS.isAssignableFrom( candidate ) ) {
+                if ( BINDING_CLASS_MAP.putIfAbsent( classGuess, candidate ) == null ) {
+                  InputSupplier<InputStream> classSupplier = Resources.newInputStreamSupplier( ClassLoader.getSystemResource( j.getName( ) ) );
+                  File destClassFile = SubDirectory.CLASSCACHE.getChildFile( j.getName( ) );
+                  if ( !destClassFile.exists( ) ) {
+                    Files.createParentDirs( destClassFile );
+                    Files.copy( classSupplier, destClassFile );
+                    if ( BINDING_DEBUG ) {
+                      LOG.info( "Caching: " + j.getName( ) + " => " + destClassFile.getAbsolutePath( ) );
+                    }
+                  }
+                }
               }
             }
           } catch ( RuntimeException ex ) {
@@ -260,11 +271,12 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
       processFiles( );
       if ( !BindingFileSearch.INSTANCE.check( ) ) {
         try {
+          InternalSoapBindingGenerator gen = new InternalSoapBindingGenerator( );
+          gen.getOutFile( ).delete( );
           // load *-binding.xml, populate cache w/ all referenced files
           BindingFileSearch.reset( Utility.getClassPaths( ) );
           Iterables.all( BindingFileSearch.BINDING_LIST, BindingFileSearch.INSTANCE );
           // generate msgs-binding
-          InternalSoapBindingGenerator gen = new InternalSoapBindingGenerator( );
           for ( Class genBindClass : BindingFileSearch.BINDING_CLASS_MAP.values( ) ) {
             if ( BINDING_DEBUG ) {
               LOG.info( "Generating binding: " + genBindClass );
@@ -274,7 +286,7 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
           gen.close( );
           BINDING_LIST.add( gen.getOutFile( ).toURI( ) );
           BindingFileSearch.reset( Utility.getClassPaths( ) );
-          Map<URI,BindingDefinition> bindingDefs = Maps.newHashMap( );
+          Map<URI, BindingDefinition> bindingDefs = Maps.newHashMap( );
           for ( URI binding : BINDING_LIST ) {
             String shortPath = binding.toURL( ).getPath( ).replaceAll( ".*!/", "" );
             String sname = Utility.bindingFromFileName( shortPath );
