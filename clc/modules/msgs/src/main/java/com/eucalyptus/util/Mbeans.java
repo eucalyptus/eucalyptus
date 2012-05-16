@@ -120,27 +120,29 @@ public class Mbeans {
     System.setProperty( "euca.jmx.uri", URI );
     mbeanServer = ManagementFactory.getPlatformMBeanServer( ); //MBeanServerFactory.createMBeanServer( "com.eucalyptus" );
     
-    try {
+    if ( System.getProperty( "com.sun.management.jmxremote" ) != null ) {
       try {
-        rmiRegistry = LocateRegistry.createRegistry( JMX_PORT );
-      } catch ( ExportException ex1 ) {
+        try {
+          rmiRegistry = LocateRegistry.createRegistry( JMX_PORT );
+        } catch ( ExportException ex1 ) {
+          LOG.error( ex1, ex1 );
+          rmiRegistry = LocateRegistry.getRegistry( JMX_PORT );
+        }
+      } catch ( RemoteException ex1 ) {
         LOG.error( ex1, ex1 );
-        rmiRegistry = LocateRegistry.getRegistry( JMX_PORT );
+        throw BootstrapException.throwFatal( ex1.getMessage( ), ex1 );
       }
-    } catch ( RemoteException ex1 ) {
-      LOG.error( ex1, ex1 );
-      throw BootstrapException.throwFatal( ex1.getMessage( ), ex1 );
-    }
-    try {
-      jmxServer = JMXConnectorServerFactory.newJMXConnectorServer( new JMXServiceURL( URI ), jmxProps, mbeanServer );
-      jmxServer.start( );
-      jmxBuilder = new JmxBuilder( /*mbeanServer*/);
-      jmxBuilder.setDefaultJmxNameDomain( "com.eucalyptus" );
+      try {
+        jmxServer = JMXConnectorServerFactory.newJMXConnectorServer( new JMXServiceURL( URI ), jmxProps, mbeanServer );
+        jmxServer.start( );
+        jmxBuilder = new JmxBuilder( /*mbeanServer*/);
+        jmxBuilder.setDefaultJmxNameDomain( "com.eucalyptus" );
 //      jmxBuilder.setMBeanServer( mbeanServer );
-    } catch ( MalformedURLException ex ) {
-      LOG.error( ex, ex );
-    } catch ( IOException ex ) {
-      LOG.error( ex, ex );
+      } catch ( MalformedURLException ex ) {
+        LOG.error( ex, ex );
+      } catch ( IOException ex ) {
+        LOG.error( ex, ex );
+      }
     }
   }
   
@@ -148,7 +150,7 @@ public class Mbeans {
     return mbeanServer;
   }
   
-  public static <T> T lookup( final String domain, final Map props, Class<T> type  ) throws NoSuchElementException {
+  public static <T> T lookup( final String domain, final Map props, Class<T> type ) throws NoSuchElementException {
     ObjectName objectName;
     Hashtable<String, String> attributes = new Hashtable<String, String>( props );
     try {
@@ -157,55 +159,59 @@ public class Mbeans {
       T mbeanProxy = JMX.newMBeanProxy( server, objectName, type );
       return mbeanProxy;
     } catch ( MalformedObjectNameException ex ) {
-      Logs.extreme( ).error( ex , ex );
+      Logs.extreme( ).error( ex, ex );
       throw new NoSuchElementException( "Failed to lookup: " + type.getCanonicalName( ) + " named: " + domain + "=" + props.toString( ) );
     } catch ( NullPointerException ex ) {
-      Logs.extreme( ).error( ex , ex );
+      Logs.extreme( ).error( ex, ex );
       throw new NoSuchElementException( "Failed to lookup: " + type.getCanonicalName( ) + " named: " + domain + "=" + props.toString( ) );
     }
   }
-
+  
   public static void register( final Object obj ) {
-    Class targetType = obj.getClass( );
-    if( targetType.isAnonymousClass( ) ) {
-      targetType = ( targetType.getSuperclass( ) != null ? targetType.getSuperclass( ) : targetType.getInterfaces( )[0]);
-    }
-    String exportString = "jmx.export{ bean( " +
-    " target: obj, " +
-    " name: obj.class.package.name+\":type=${obj.class.simpleName}\"," +
-    " desc: \"${obj.toString()}\"" +
-    " ) }";
-    for( Class c : Classes.ancestors( targetType ) ) {
-      File jmxConfig = SubDirectory.MANAGEMENT.getChildFile( c.getCanonicalName( ) );
-      if(  jmxConfig.exists( ) ) {
-        LOG.trace( "Trying to read jmx config file: " + jmxConfig.getAbsolutePath( ) );
-        try {
-          exportString = Files.toString( jmxConfig, Charset.defaultCharset( ) );
-          LOG.trace( "Succeeded reading jmx config file: " + jmxConfig.getAbsolutePath( ) );
-          break;
-        } catch ( IOException ex ) {
-          LOG.error( ex , ex );
+    if ( jmxBuilder == null ) {
+      return;
+    } else {
+      Class targetType = obj.getClass( );
+      if ( targetType.isAnonymousClass( ) ) {
+        targetType = ( targetType.getSuperclass( ) != null ? targetType.getSuperclass( ) : targetType.getInterfaces( )[0] );
+      }
+      String exportString = "jmx.export{ bean( " +
+                            " target: obj, " +
+                            " name: obj.class.package.name+\":type=${obj.class.simpleName}\"," +
+                            " desc: \"${obj.toString()}\"" +
+                            " ) }";
+      for ( Class c : Classes.ancestors( targetType ) ) {
+        File jmxConfig = SubDirectory.MANAGEMENT.getChildFile( c.getCanonicalName( ) );
+        if ( jmxConfig.exists( ) ) {
+          LOG.trace( "Trying to read jmx config file: " + jmxConfig.getAbsolutePath( ) );
+          try {
+            exportString = Files.toString( jmxConfig, Charset.defaultCharset( ) );
+            LOG.trace( "Succeeded reading jmx config file: " + jmxConfig.getAbsolutePath( ) );
+            break;
+          } catch ( IOException ex ) {
+            LOG.error( ex, ex );
+          }
         }
       }
-    }
-    //TODO:GRZE:load class specific config here
-    try {
-      LOG.trace( "Exporting MBean: " + obj );
-      LOG.trace( "Exporting MBean: " + exportString );
-      List<GroovyMBean> mbeans = ( List<GroovyMBean> ) Groovyness.eval( exportString, new HashMap( ) {
-        {
-          put( "jmx", jmxBuilder );
-          put( "obj", obj );
+      //TODO:GRZE:load class specific config here
+      try {
+        LOG.trace( "Exporting MBean: " + obj );
+        LOG.trace( "Exporting MBean: " + exportString );
+        List<GroovyMBean> mbeans = ( List<GroovyMBean> ) Groovyness.eval( exportString, new HashMap( ) {
+          {
+            put( "jmx", jmxBuilder );
+            put( "obj", obj );
+          }
+        } );
+        for ( GroovyMBean mbean : mbeans ) {
+          LOG.trace( "MBean server: default=" + mbean.server( ).getDefaultDomain( ) + " all=" + Arrays.asList( mbean.server( ).getDomains( ) ) );
+          LOG.trace( "Exported MBean: " + mbean );
         }
-      } );
-      for ( GroovyMBean mbean : mbeans ) {
-        LOG.trace( "MBean server: default=" + mbean.server( ).getDefaultDomain( ) + " all=" + Arrays.asList( mbean.server( ).getDomains( ) ) );
-        LOG.trace( "Exported MBean: " + mbean );
+      } catch ( ScriptExecutionFailedException ex ) {
+        LOG.error( "Exporting MBean failed: " + ex.getMessage( ), ex );
+      } catch ( IOException ex ) {
+        LOG.error( "Error after export MBean: " + ex.getMessage( ), ex );
       }
-    } catch ( ScriptExecutionFailedException ex ) {
-      LOG.error( "Exporting MBean failed: " + ex.getMessage( ), ex );
-    } catch ( IOException ex ) {
-      LOG.error( "Error after export MBean: " + ex.getMessage( ), ex );
     }
   }
 }
