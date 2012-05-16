@@ -182,17 +182,16 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
               final String classGuess = j.getName( ).replaceAll( "/", "." ).replaceAll( "\\.class.{0,1}", "" );
               final Class candidate = ClassLoader.getSystemClassLoader( ).loadClass( classGuess );
               if ( MSG_BASE_CLASS.isAssignableFrom( candidate ) || MSG_DATA_CLASS.isAssignableFrom( candidate ) ) {
-                if ( BINDING_CLASS_MAP.putIfAbsent( classGuess, candidate ) == null ) {
-                  InputSupplier<InputStream> classSupplier = Resources.newInputStreamSupplier( ClassLoader.getSystemResource( j.getName( ) ) );
-                  File destClassFile = SubDirectory.CLASSCACHE.getChildFile( j.getName( ) );
-                  if ( !destClassFile.exists( ) ) {
-                    Files.createParentDirs( destClassFile );
-                    Files.copy( classSupplier, destClassFile );
-                    if ( BINDING_DEBUG ) {
-                      LOG.info( "Caching: " + j.getName( ) + " => " + destClassFile.getAbsolutePath( ) );
-                    }
+                InputSupplier<InputStream> classSupplier = Resources.newInputStreamSupplier( ClassLoader.getSystemResource( j.getName( ) ) );
+                File destClassFile = SubDirectory.CLASSCACHE.getChildFile( j.getName( ) );
+                if ( !destClassFile.exists( ) ) {
+                  Files.createParentDirs( destClassFile );
+                  Files.copy( classSupplier, destClassFile );
+                  if ( BINDING_DEBUG ) {
+                    LOG.info( "Caching: " + j.getName( ) + " => " + destClassFile.getAbsolutePath( ) );
                   }
                 }
+                BINDING_CLASS_MAP.putIfAbsent( classGuess, candidate );
               }
             }
           } catch ( RuntimeException ex ) {
@@ -271,12 +270,8 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
       processFiles( );
       if ( !BindingFileSearch.INSTANCE.check( ) ) {
         try {
-          InternalSoapBindingGenerator gen = new InternalSoapBindingGenerator( );
-          gen.getOutFile( ).delete( );
-          // load *-binding.xml, populate cache w/ all referenced files
-          BindingFileSearch.reset( Utility.getClassPaths( ) );
-          Iterables.all( BindingFileSearch.BINDING_LIST, BindingFileSearch.INSTANCE );
           // generate msgs-binding
+          InternalSoapBindingGenerator gen = new InternalSoapBindingGenerator( );
           for ( Class genBindClass : BindingFileSearch.BINDING_CLASS_MAP.values( ) ) {
             if ( BINDING_DEBUG ) {
               LOG.info( "Generating binding: " + genBindClass );
@@ -285,17 +280,18 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
           }
           gen.close( );
           BINDING_LIST.add( gen.getOutFile( ).toURI( ) );
+          // load *-binding.xml, populate cache w/ all referenced files
+          BindingFileSearch.reset( Utility.getClassPaths( ) );
+          Iterables.all( BindingFileSearch.BINDING_LIST, BindingFileSearch.INSTANCE );
           BindingFileSearch.reset( Utility.getClassPaths( ) );
           Map<URI, BindingDefinition> bindingDefs = Maps.newHashMap( );
           for ( URI binding : BINDING_LIST ) {
             String shortPath = binding.toURL( ).getPath( ).replaceAll( ".*!/", "" );
             String sname = Utility.bindingFromFileName( shortPath );
             BindingDefinition def = Utility.loadBinding( binding.toASCIIString( ), sname, binding.toURL( ).openStream( ), binding.toURL( ), true );
-//            def.setFactoryLocation( "", SubDirectory.CLASSCACHE.getFile( ) );
             bindingDefs.put( binding, def );
           }
           for ( Entry<URI, BindingDefinition> def : bindingDefs.entrySet( ) ) {
-//            def.setFactoryLocation( "", SubDirectory.CLASSCACHE.getFile( ) );
             try {
               LOG.info( "Compiling binding: " + def.getKey( ) );
               def.getValue( ).generateCode( BindingFileSearch.BINDING_DEBUG, BindingFileSearch.BINDING_DEBUG );
@@ -306,39 +302,21 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
                                            "JiBX code ***\n", e );
             }
           }
-          // get the lists of class names modified, kept unchanged, and unused
           ClassFile[][] lists = MungedClass.fixDispositions( );
-          // add class used list to each binding factory and output files
           for ( BindingDefinition def : bindingDefs.values( ) ) {
             def.addClassList( lists[0], lists[1] );
           }
           MungedClass.writeChanges( );
-          // report modified file results to user
-          ClassFile[] adds = lists[0];
-          int addcount = adds.length;
-          LOG.info( "\nWrote " + addcount + " files" );
-          
-          // report summary information for files unchanged or deleted
-          if ( BindingFileSearch.BINDING_DEBUG ) {
-            ClassFile[] keeps = lists[1];
-            LOG.info( "\nKept " + keeps.length + " files unchanged:" );
-            for ( int i = 0; i < keeps.length; i++ ) {
-              LOG.info( " " + keeps[i].getName( ) );
-            }
-            ClassFile[] dels = lists[2];
-            LOG.info( "\nDeleted " + dels.length + " files:" );
-            for ( int i = 0; i < dels.length; i++ ) {
-              LOG.info( " " + dels[i].getName( ) );
-            }
-          }
-          BindingFileSearch.INSTANCE.store( );
-          
+          LOG.info( "Binding cache: wrote " + lists[0] + " files" );
+          LOG.info( "Binding cache: kept " + lists[1].length + " files unchanged:" );
+          LOG.info( "Binding cache: deleted " + lists[2].length + " files:" );
+          BindingFileSearch.INSTANCE.store( );          
+          System.exit( 123 );//success! now we restart.
         } catch ( Exception ex ) {
           LOG.error( ex, ex );
           System.exit( 1 );
           throw new Error( "Failed to prepare the system while trying to compile bindings: " + ex.getMessage( ), ex );
         }
-        System.exit( 1 );
       }
     }
     
