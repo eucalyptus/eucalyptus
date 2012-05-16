@@ -181,7 +181,7 @@ sub new_euca_ipt() {
     } else {
 	return(1);
     }
-    
+
     $chainmapfile = shift @_;
     if ($chainmapfile =~ /^([ &:#-\@\w.]+)$/) {
 	$chainmapfile = $1; #data is now untainted
@@ -345,7 +345,7 @@ sub new_euca_ipt() {
 sub rule_convert() {
     my $rule = shift @_;
     my $dest = shift @_;
-    my ($prot, $port, $source, $sourceuser, $sourcegroup);
+    my ($prot, $port, $source, $sourceuser, $sourcegroup, $type);
     my $ret = "";
     my @retrules;
 
@@ -363,6 +363,14 @@ sub rule_convert() {
 	    $port = $minport;
 	} else {
 	    $port =~ s/-/:/g;
+	}
+    } elsif ($rule =~ /-t (\S+)/) {
+	$type = $1;
+	my ($mintype, $maxtype) = split(":", $type);
+	if (!$mintype || !$maxtype) {
+	    $type = "any ";
+	} else {
+	    $type = "any ";
 	}
     }
     if ($rule =~ /-s (\S+)/) {
@@ -391,6 +399,9 @@ sub rule_convert() {
 	}
 	if ($port) {
 	    $ret .= "--dport $port ";
+	}
+	if ($type) {
+	    $ret .= "--icmp-type $type";
 	}
 	$ret .= "-j ACCEPT";
 	@retrules = (@retrules, $ret);
