@@ -72,6 +72,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.TimeUnit;
 import org.apache.log4j.Logger;
+import com.eucalyptus.binding.BindingCache;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
@@ -361,7 +362,6 @@ public class Bootstrap {
    * dependency constraints.
    */
   private static void doDiscovery( ) {
-    ServiceJarDiscovery.compileBindings( );
     ServiceJarDiscovery.processLibraries( );
     ServiceJarDiscovery.runDiscovery( );
   }
@@ -549,6 +549,11 @@ public class Bootstrap {
       }
       
     } );
+    /**
+     * Populate the binding cache.
+     */
+    LOG.info( LogUtil.header( "Populating binding cache." ) );
+    BindingCache.compileBindings( );
     /**
      * run discovery to find (primarily) bootstrappers, msg typs, bindings, util-providers, etc. See
      * the descendants of {@link ServiceJarDiscovery}.
