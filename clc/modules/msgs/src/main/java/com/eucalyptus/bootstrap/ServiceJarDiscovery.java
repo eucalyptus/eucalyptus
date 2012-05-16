@@ -73,7 +73,7 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
   private static SortedSet<ServiceJarDiscovery> discovery = Sets.newTreeSet( );
   private static Multimap<Class, String>        classList = ArrayListMultimap.create( );
   
-  enum BindingFileSearch implements Function<URI, BindingDefinition> {
+  enum BindingFileSearch implements Predicate<URI> {
     INSTANCE;
     static final Boolean    BINDING_DEBUG                = System.getProperty( "euca.binding.debug" ) != null;
     static List<URI>        BINDING_LIST                 = Lists.newArrayList( );
@@ -186,10 +186,11 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
     }
     
     @Override
-    public BindingDefinition apply( URI input ) {
+    public boolean apply( URI input ) {
       try {
         String shortPath = input.toURL( ).getPath( ).replaceAll( ".*!/", "" );
         String sname = Utility.bindingFromFileName( shortPath );
+//        BindingDefinition def = Utility.loadBinding( input.toASCIIString( ), sname, input.toURL( ).openStream( ), input.toURL( ), true );
         ValidationContext vctx = BindingElement.newValidationContext( );
         BindingElement root = BindingElement.validateBinding( input.toASCIIString( ), input.toURL( ), input.toURL( ).openStream( ), vctx );
         Predicate<BindingElement> writeFile = new Predicate<BindingElement>( ) {
@@ -211,7 +212,6 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
                   }
                   ClassFile cf = ClassFile.getClassFile( classFile.getName( ) );
                   LOG.info( classFile.getName( ) + " => " + destClassFile.getAbsolutePath( ) );
-                  LOG.info( new URLClassLoader( new URL[] { SubDirectory.CLASSCACHE.getFile( ).toURL( ) } ).loadClass( classFile.getName( ) ).getProtectionDomain( ).getCodeSource( ).getLocation( ) );
                 } else if ( child instanceof IncludeElement ) {
                   BindingElement bind = ( ( IncludeElement ) child ).getBinding( );
                   if ( bind != null ) {
@@ -226,7 +226,7 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
           }
         };
         writeFile.apply( root );
-        return def;
+        return true;
       } catch ( Exception ex ) {
         throw Exceptions.toUndeclared( ex );
       }
@@ -259,21 +259,19 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
       }
       if ( !BindingFileSearch.INSTANCE.check( ) ) {
         try {
-          List<BindingDefinition> bindingDefs = Lists.transform( BindingFileSearch.BINDING_LIST, BindingFileSearch.INSTANCE );
-          String[] paths = new String[] { SubDirectory.CLASSCACHE.getFile( ).getAbsolutePath( ) };
-          ClassCache.setPaths( paths );
-          ClassFile.setPaths( paths );
-          ClasspathUrlExtender.setClassLoader( new URLClassLoader( new URL[] { SubDirectory.CLASSCACHE.getFile( ).toURL( ) } ) );
-          BoundClass.reset( );
-          MungedClass.reset( );
-          BindingDefinition.reset( );
-          BranchWrapper.setTracking( false );
-          BranchWrapper.setErrorOverride( false );
+          BindingFileSearch.reset( Utility.getClassPaths( ) );
+          Iterables.all( BindingFileSearch.BINDING_LIST, BindingFileSearch.INSTANCE );
+          BindingFileSearch.reset( Utility.getClassPaths( ) );
+          List<BindingDefinition> bindingDefs = Lists.newArrayList( );
           for ( URI binding : BINDING_LIST ) {
-            
+            String shortPath = binding.toURL( ).getPath( ).replaceAll( ".*!/", "" );
+            String sname = Utility.bindingFromFileName( shortPath );
+            BindingDefinition def = Utility.loadBinding( binding.toASCIIString( ), sname, binding.toURL( ).openStream( ), binding.toURL( ), true );
+//            def.setFactoryLocation( "", SubDirectory.CLASSCACHE.getFile( ) );
+            bindingDefs.add( def );
           }
           for ( BindingDefinition def : bindingDefs ) {
-            def.setFactoryLocation( "", SubDirectory.CLASSCACHE.getFile( ) );
+//            def.setFactoryLocation( "", SubDirectory.CLASSCACHE.getFile( ) );
             try {
               def.generateCode( BindingFileSearch.BINDING_DEBUG, BindingFileSearch.BINDING_DEBUG );
             } catch ( RuntimeException e ) {
@@ -317,6 +315,18 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
         }
         System.exit( 1 );
       }
+    }
+
+    public static String[] reset( String[] paths ) {
+      ClassCache.setPaths( paths );
+      ClassFile.setPaths( paths );
+      ClasspathUrlExtender.setClassLoader( ClassFile.getClassLoader( ) );
+      BoundClass.reset( );
+      MungedClass.reset( );
+      BindingDefinition.reset( );
+      BranchWrapper.setTracking( false );
+      BranchWrapper.setErrorOverride( false );
+      return paths;
     }
   }
   
