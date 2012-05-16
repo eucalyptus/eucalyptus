@@ -5,6 +5,7 @@ import java.io.FileWriter;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.PrintStream;
 import java.io.Reader;
 import java.io.Writer;
 import java.math.BigInteger;
@@ -78,6 +79,7 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
   
   enum BindingFileSearch implements Predicate<URI> {
     INSTANCE;
+    private static final String                 BINDING_EMPTY                = "<binding>\n</binding>";
     private static final Boolean                BINDING_DEBUG                = System.getProperty( "euca.binding.debug" ) != null;
     private static List<URI>                    BINDING_LIST                 = Lists.newArrayList( );
     private static ConcurrentMap<String, Class> BINDING_CLASS_MAP            = Maps.newConcurrentMap( );
@@ -243,9 +245,12 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
                   ClassFile cf = ClassFile.getClassFile( classFile.getName( ) );
                   Logs.extreme( ).debug( "Caching: " + classFile.getName( ) + " => " + destClassFile.getAbsolutePath( ) );
                 } else if ( child instanceof IncludeElement ) {
-                  BindingElement bind = ( ( IncludeElement ) child ).getBinding( );
+                  IncludeElement includeElement = ( IncludeElement ) child;
+                  BindingElement bind = includeElement.getBinding( );
                   if ( bind != null ) {
                     this.apply( bind );
+                  } else {
+                    Files.write( BINDING_EMPTY.getBytes( ), SubDirectory.CLASSCACHE.getChildFile( includeElement.getIncludePath( ) ) ); 
                   }
                 }
               } catch ( Exception ex ) {
@@ -286,11 +291,14 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
           BindingFileSearch.reset( Utility.getClassPaths( ) );
           LOG.info( "Binding cache: loading and validating bindings." );
           Map<URI, BindingDefinition> bindingDefs = Maps.newHashMap( );
+          PrintStream oldOut = System.out, oldErr = System.err;
+          
           for ( URI binding : BINDING_LIST ) {
             String shortPath = binding.toURL( ).getPath( ).replaceAll( ".*!/", "" );
             String sname = Utility.bindingFromFileName( shortPath );
             BindingDefinition def = Utility.loadBinding( binding.toASCIIString( ), sname, binding.toURL( ).openStream( ), binding.toURL( ), true );
             bindingDefs.put( binding, def );
+            def.print( );
           }
           LOG.info( "Binding cache: compiling bindings." );
           for ( Entry<URI, BindingDefinition> def : bindingDefs.entrySet( ) ) {
@@ -309,7 +317,7 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
             def.addClassList( lists[0], lists[1] );
           }
           MungedClass.writeChanges( );
-          LOG.info( "Binding cache: wrote " + lists[0] + " files" );
+          LOG.info( "Binding cache: wrote " + lists[0].length + " files" );
           LOG.info( "Binding cache: kept " + lists[1].length + " files unchanged:" );
           LOG.info( "Binding cache: deleted " + lists[2].length + " files:" );
           BindingFileSearch.INSTANCE.store( );
