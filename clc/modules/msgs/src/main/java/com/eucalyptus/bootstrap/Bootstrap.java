@@ -361,7 +361,7 @@ public class Bootstrap {
    * dependency constraints.
    */
   private static void doDiscovery( ) {
-//    ServiceJarDiscovery.compileBindings( );
+    ServiceJarDiscovery.compileBindings( );
     ServiceJarDiscovery.processLibraries( );
     ServiceJarDiscovery.runDiscovery( );
   }

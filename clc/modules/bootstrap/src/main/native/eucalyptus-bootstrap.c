@@ -658,7 +658,7 @@ char* java_library_path(euca_opts *args) {
 	int wb = 0;
 	wb += snprintf(jar_list + wb, JAVA_PATH_LEN - wb, "-Djava.class.path=%s:",
 			etc_dir);
-	wb += snprintf(jar_list + wb, JAVA_PATH_LEN - wb, "%s", class_cache_dir);
+	wb += snprintf(jar_list + wb, JAVA_PATH_LEN - wb, "%s:", class_cache_dir);
 	wb += snprintf(jar_list + wb, JAVA_PATH_LEN - wb, "%s", script_dir);
 	DIR* lib_dir_p = opendir(lib_dir);
 	if(!lib_dir_p)

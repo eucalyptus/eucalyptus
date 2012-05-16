@@ -54,12 +54,7 @@ build: deps extras
 	@if test -z "${JAVA_HOME}" ; then \
 		echo "You need to define JAVA_HOME!"; exit 1; fi
 	@ANT_OPTS="-Xmx1g -XX:MaxPermSize=512m" $(ANT) build-all
-	#HACK!
-	bash -c 'ulimit -n 500000;ulimit -n;ANT_OPTS="-Xmx1g -XX:MaxPermSize=512m" $(ANT) generate-bind'
-	#HACK!
-	bash -c 'ulimit -n 500000;ulimit -n;ANT_OPTS="-Xmx1g -XX:MaxPermSize=512m" $(ANT) compile-bind'
-	#HACK!
-	bash -c 'ulimit -n 500000;ulimit -n;ANT_OPTS="-Xmx1g -XX:MaxPermSize=512m" $(ANT) jar'
+	@ANT_OPTS="-Xmx1g -XX:MaxPermSize=512m" $(ANT) jar
 	@make -C eucadmin
 
 build-test: deps extras
@@ -67,12 +62,7 @@ build-test: deps extras
 	@if test -z "${JAVA_HOME}" ; then \
 		echo "You need to define JAVA_HOME!"; exit 1; fi
 	@ANT_OPTS="-Xmx1g -XX:MaxPermSize=512m" $(ANT) build-test
-	#HACK!
-	bash -c 'ulimit -n 500000;ulimit -n;ANT_OPTS="-Xmx1g -XX:MaxPermSize=512m" $(ANT) generate-bind'
-	#HACK!
-	bash -c 'ulimit -n 500000;ulimit -n;ANT_OPTS="-Xmx1g -XX:MaxPermSize=512m" $(ANT) compile-bind'
-	#HACK!
-	bash -c 'ulimit -n 500000;ulimit -n;ANT_OPTS="-Xmx1g -XX:MaxPermSize=512m" $(ANT) jar'
+	@ANT_OPTS="-Xmx1g -XX:MaxPermSize=512m" $(ANT) jar
 	@make -C eucadmin
 
 
