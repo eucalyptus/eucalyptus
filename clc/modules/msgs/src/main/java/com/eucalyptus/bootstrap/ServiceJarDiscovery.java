@@ -17,9 +17,11 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.Set;
 import java.util.SortedSet;
+import java.util.concurrent.ConcurrentMap;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import javax.persistence.PersistenceContext;
@@ -40,6 +42,7 @@ import org.jibx.binding.model.MappingElementBase;
 import org.jibx.binding.model.ValidationContext;
 import org.jibx.runtime.JiBXException;
 import org.jibx.util.ClasspathUrlExtender;
+import com.eucalyptus.binding.InternalSoapBindingGenerator;
 import com.eucalyptus.crypto.Digest;
 import com.eucalyptus.entities.PersistenceContexts;
 import com.eucalyptus.records.EventRecord;
@@ -75,14 +78,27 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
   
   enum BindingFileSearch implements Predicate<URI> {
     INSTANCE;
-    static final Boolean    BINDING_DEBUG                = System.getProperty( "euca.binding.debug" ) != null;
-    static List<URI>        BINDING_LIST                 = Lists.newArrayList( );
-    static final String     BINDING_CACHE_JAR_PREFIX     = "jar.";
-    static final String     BINDING_CACHE_BINDING_PREFIX = "binding.";
-    static final String     BINDING_CACHE_DIGEST_LIST    = "classcache.properties";
-    static final File       CACHE_LIST                   = SubDirectory.CLASSCACHE.getChildFile( BINDING_CACHE_DIGEST_LIST );
-    static final String     FILE_PATTERN                 = System.getProperty( "euca.binding.pattern", ".*\\-binding.xml" );
-    static final Properties CURRENT_PROPS                = new Properties( );
+    static final Boolean                BINDING_DEBUG                = System.getProperty( "euca.binding.debug" ) != null;
+    static List<URI>                    BINDING_LIST                 = Lists.newArrayList( );
+    static ConcurrentMap<String, Class> BINDING_CLASS_MAP            = Maps.newConcurrentMap( );
+    static final String                 BINDING_CACHE_JAR_PREFIX     = "jar.";
+    static final String                 BINDING_CACHE_BINDING_PREFIX = "binding.";
+    static final String                 BINDING_CACHE_DIGEST_LIST    = "classcache.properties";
+    static final File                   CACHE_LIST                   = SubDirectory.CLASSCACHE.getChildFile( BINDING_CACHE_DIGEST_LIST );
+    final ClassLoader                   CACHE_CLASS_LOADER;
+    final Class MSG_BASE_CLASS;
+    static final String                 FILE_PATTERN                 = System.getProperty( "euca.binding.pattern", ".*\\-binding.xml" );
+    static final Properties             CURRENT_PROPS                = new Properties( );
+    
+    private BindingFileSearch( ) {
+      try {
+        CACHE_CLASS_LOADER = new URLClassLoader( new URL[] { SubDirectory.CLASSCACHE.getFile( ).toURL( ) } );
+        MSG_BASE_CLASS = Class.forName( "edu.ucsb.eucalyptus.msgs.BaseMessage" );
+      } catch ( Exception ex ) {
+        LOG.error( ex, ex );
+        throw Exceptions.toUndeclared( ex );
+      }
+    }
     
     public boolean check( ) {
       final Properties oldProps = new Properties( );
@@ -161,6 +177,12 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
               String bindingName = j.getName( );
               String bindingFullPath = "jar:file:" + f.getAbsolutePath( ) + "!/" + bindingName;
               this.addCurrentBinding( bindingBytes, bindingName, bindingFullPath );
+            } else if ( j.getName( ).matches( ".*\\.class.{0,1}" ) ) {
+              final String classGuess = j.getName( ).replaceAll( "/", "." ).replaceAll( "\\.class.{0,1}", "" );
+              final Class candidate = ClassLoader.getSystemClassLoader( ).loadClass( classGuess );
+              if ( MSG_BASE_CLASS.isAssignableFrom( candidate ) /*|| MSG_DATA_CLASS.isAssignableFrom( candidate ) */) {
+                BINDING_CLASS_MAP.putIfAbsent( classGuess, candidate );
+              }
             }
           } catch ( RuntimeException ex ) {
             LOG.error( ex, ex );
@@ -211,7 +233,9 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
                     Files.copy( classSupplier, destClassFile );
                   }
                   ClassFile cf = ClassFile.getClassFile( classFile.getName( ) );
-                  LOG.info( classFile.getName( ) + " => " + destClassFile.getAbsolutePath( ) );
+                  if ( BINDING_DEBUG ) {
+                    LOG.info( "Caching: " + classFile.getName( ) + " => " + destClassFile.getAbsolutePath( ) );
+                  }
                 } else if ( child instanceof IncludeElement ) {
                   BindingElement bind = ( ( IncludeElement ) child ).getBinding( );
                   if ( bind != null ) {
@@ -233,50 +257,39 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
     }
     
     public static void compile( ) {
-      final File libDir = new File( BaseDirectory.LIB.toString( ) );
-      for ( final File f : libDir.listFiles( ) ) {
-        if ( f.getName( ).startsWith( "eucalyptus" ) && f.getName( ).endsWith( ".jar" )
-               && !f.getName( ).matches( ".*-ext-.*" ) ) {
-          EventRecord.here( ServiceJarDiscovery.class, EventType.BOOTSTRAP_INIT_SERVICE_JAR, f.getName( ) ).info( );
-          try {
-            BindingFileSearch.INSTANCE.process( f );
-          } catch ( final Throwable e ) {
-            LOG.error( e.getMessage( ) );
-            continue;
-          }
-        }
-      }
-      for ( String pathName : ClassPath.SYSTEM_CLASS_PATH.getClassPath( ).split( File.pathSeparator ) ) {
-        File pathFile = new File( pathName );
-        if ( pathFile.isDirectory( ) ) {
-          try {
-            BindingFileSearch.INSTANCE.process( pathFile );
-          } catch ( final Throwable e ) {
-            LOG.error( e.getMessage( ) );
-            continue;
-          };
-        }
-      }
+      processFiles( );
       if ( !BindingFileSearch.INSTANCE.check( ) ) {
         try {
+          // load *-binding.xml, populate cache w/ all referenced files
           BindingFileSearch.reset( Utility.getClassPaths( ) );
           Iterables.all( BindingFileSearch.BINDING_LIST, BindingFileSearch.INSTANCE );
+          // generate msgs-binding
+          InternalSoapBindingGenerator gen = new InternalSoapBindingGenerator( );
+          for ( Class genBindClass : BindingFileSearch.BINDING_CLASS_MAP.values( ) ) {
+            if ( BINDING_DEBUG ) {
+              LOG.info( "Generating binding: " + genBindClass );
+            }
+            gen.processClass( genBindClass );
+          }
+          gen.close( );
+          BINDING_LIST.add( gen.getOutFile( ).toURI( ) );
           BindingFileSearch.reset( Utility.getClassPaths( ) );
-          List<BindingDefinition> bindingDefs = Lists.newArrayList( );
+          Map<URI,BindingDefinition> bindingDefs = Maps.newHashMap( );
           for ( URI binding : BINDING_LIST ) {
             String shortPath = binding.toURL( ).getPath( ).replaceAll( ".*!/", "" );
             String sname = Utility.bindingFromFileName( shortPath );
             BindingDefinition def = Utility.loadBinding( binding.toASCIIString( ), sname, binding.toURL( ).openStream( ), binding.toURL( ), true );
 //            def.setFactoryLocation( "", SubDirectory.CLASSCACHE.getFile( ) );
-            bindingDefs.add( def );
+            bindingDefs.put( binding, def );
           }
-          for ( BindingDefinition def : bindingDefs ) {
+          for ( Entry<URI, BindingDefinition> def : bindingDefs.entrySet( ) ) {
 //            def.setFactoryLocation( "", SubDirectory.CLASSCACHE.getFile( ) );
             try {
-              def.generateCode( BindingFileSearch.BINDING_DEBUG, BindingFileSearch.BINDING_DEBUG );
+              LOG.info( "Compiling binding: " + def.getKey( ) );
+              def.getValue( ).generateCode( BindingFileSearch.BINDING_DEBUG, BindingFileSearch.BINDING_DEBUG );
             } catch ( RuntimeException e ) {
               throw new JiBXException( "\n*** Error during code generation for file '" +
-                                           def.getFactoryName( ) + "' -\n this may be due to an error in " +
+                                           def.getKey( ) + "' -\n this may be due to an error in " +
                                            "your binding or classpath, or to an error in the " +
                                            "JiBX code ***\n", e );
             }
@@ -284,7 +297,7 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
           // get the lists of class names modified, kept unchanged, and unused
           ClassFile[][] lists = MungedClass.fixDispositions( );
           // add class used list to each binding factory and output files
-          for ( BindingDefinition def : bindingDefs ) {
+          for ( BindingDefinition def : bindingDefs.values( ) ) {
             def.addClassList( lists[0], lists[1] );
           }
           MungedClass.writeChanges( );
@@ -316,7 +329,34 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
         System.exit( 1 );
       }
     }
-
+    
+    public static void processFiles( ) {
+      final File libDir = new File( BaseDirectory.LIB.toString( ) );
+      for ( final File f : libDir.listFiles( ) ) {
+        if ( f.getName( ).startsWith( "eucalyptus" ) && f.getName( ).endsWith( ".jar" )
+               && !f.getName( ).matches( ".*-ext-.*" ) ) {
+          EventRecord.here( ServiceJarDiscovery.class, EventType.BOOTSTRAP_INIT_SERVICE_JAR, f.getName( ) ).info( );
+          try {
+            BindingFileSearch.INSTANCE.process( f );
+          } catch ( final Throwable e ) {
+            LOG.error( e.getMessage( ) );
+            continue;
+          }
+        }
+      }
+      for ( String pathName : ClassPath.SYSTEM_CLASS_PATH.getClassPath( ).split( File.pathSeparator ) ) {
+        File pathFile = new File( pathName );
+        if ( pathFile.isDirectory( ) ) {
+          try {
+            BindingFileSearch.INSTANCE.process( pathFile );
+          } catch ( final Throwable e ) {
+            LOG.error( e.getMessage( ) );
+            continue;
+          };
+        }
+      }
+    }
+    
     public static String[] reset( String[] paths ) {
       ClassCache.setPaths( paths );
       ClassFile.setPaths( paths );

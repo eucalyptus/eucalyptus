@@ -17,7 +17,9 @@ import java.util.TreeSet;
 import org.apache.log4j.Logger;
 import java.lang.reflect.Modifier;
 import javax.persistence.Transient;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Ats;
+import com.eucalyptus.system.SubDirectory;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 
@@ -62,7 +64,7 @@ public class InternalSoapBindingGenerator extends BindingGenerator {
                                                 };
   
   public InternalSoapBindingGenerator( ) {
-    this.outFile = new File( "modules/msgs/src/main/resources/msgs-binding.xml" );
+    this.outFile = new File( SubDirectory.CLASSCACHE.getFile( ).getAbsolutePath( ) + "/msgs-binding.xml" );
   }
   
   public ElemItem peek( ) {
@@ -317,17 +319,17 @@ public class InternalSoapBindingGenerator extends BindingGenerator {
     final String name = field.getName( );
     final String type = field.getType( ).getSimpleName( );
     if ( Modifier.isFinal( mods ) ) {
-      LOG.debug( "Ignoring field with bad type: " + field.getDeclaringClass( ).getCanonicalName( ) + "." + name + " of type " + type
+      Logs.extreme( ).debug( "Ignoring field with bad type: " + field.getDeclaringClass( ).getCanonicalName( ) + "." + name + " of type " + type
                  + " due to: final modifier" );
     } else if ( Modifier.isStatic( mods ) ) {
-      LOG.debug( "Ignoring field with bad type: " + field.getDeclaringClass( ).getCanonicalName( ) + "." + name + " of type " + type
+      Logs.extreme( ).debug( "Ignoring field with bad type: " + field.getDeclaringClass( ).getCanonicalName( ) + "." + name + " of type " + type
                  + " due to: static modifier" );
     }
     boolean ret = Iterables.any( badClasses, new Predicate<String>( ) {
       @Override
       public boolean apply( String arg0 ) {
         if ( type.matches( arg0 ) ) {
-          LOG.debug( "Ignoring field with bad type: " + field.getDeclaringClass( ).getCanonicalName( ) + "." + name + " of type " + type + " due to: " + arg0 );
+          Logs.extreme( ).debug( "Ignoring field with bad type: " + field.getDeclaringClass( ).getCanonicalName( ) + "." + name + " of type " + type + " due to: " + arg0 );
           return true;
         } else {
           return false;
@@ -338,7 +340,7 @@ public class InternalSoapBindingGenerator extends BindingGenerator {
       @Override
       public boolean apply( String arg0 ) {
         if ( name.matches( arg0 ) ) {
-          LOG.debug( "Ignoring field with bad name: " + field.getDeclaringClass( ).getCanonicalName( ) + "." + name + " of type " + type + " due to: " + arg0 );
+          Logs.extreme( ).debug( "Ignoring field with bad name: " + field.getDeclaringClass( ).getCanonicalName( ) + "." + name + " of type " + type + " due to: " + arg0 );
           return true;
         } else {
           return false;
@@ -444,7 +446,7 @@ public class InternalSoapBindingGenerator extends BindingGenerator {
     public CollectionTypeBinding( String name, TypeBinding type ) {
       this.name = name;
       this.type = type;
-      LOG.debug( "Found list type: " + type.getClass( ).getCanonicalName( ) );
+      Logs.extreme( ).debug( "Found list type: " + type.getClass( ).getCanonicalName( ) );
     }
     
     @Override
@@ -454,7 +456,7 @@ public class InternalSoapBindingGenerator extends BindingGenerator {
     
     @Override
     public String toString( ) {
-      LOG.debug( "Found list type: " + this.type.getTypeName( ) + " for name: " + this.name );
+      Logs.extreme( ).debug( "Found list type: " + this.type.getTypeName( ) + " for name: " + this.name );
       String ret = this.type.collection( this.name ).buf.toString( );
       this.type.collection( this.name ).buf = new StringBuilder( );
       return ret;
@@ -488,6 +490,10 @@ public class InternalSoapBindingGenerator extends BindingGenerator {
     public String getTypeName( ) {
       return Boolean.class.getCanonicalName( );
     }
+  }
+
+  public File getOutFile( ) {
+    return this.outFile;
   }
   
 }
