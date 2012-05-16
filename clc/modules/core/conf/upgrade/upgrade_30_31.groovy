@@ -112,11 +112,17 @@ import com.eucalyptus.entities.PersistenceContexts;
 import com.eucalyptus.upgrade.AbstractUpgradeScript;
 import com.eucalyptus.upgrade.StandalonePersistence;
 import com.eucalyptus.upgrade.UpgradeScript;
+
+// EUARE classes
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.DatabaseAuthUtils;
+
+// Enums
 import com.eucalyptus.auth.principal.User.RegistrationStatus;
+import com.eucalyptus.cloud.ImageMetadata;
+import com.eucalyptus.blockstorage.State;
 
 class upgrade_30_31 extends AbstractUpgradeScript {
     static final List<String> FROM_VERSION = ["3.0.0", "3.0.1", "3.0.2"];
@@ -166,16 +172,17 @@ class upgrade_30_31 extends AbstractUpgradeScript {
         entityKeys.remove("auth_user");
         entityKeys.remove("auth_access_key");
 
+        upgradeMisc();
+
         // Hardcode some ordering here
         for (String entityKey : entityKeys) {
             upgradeEntity(entityKey);
         }
 
         upgradeComponents();
-        upgradeMisc();
-        /* LOG.error("sleeping");
-        sleep 3600000;
-        LOG.error("done sleeping"); */
+        LOG.error("sleeping");
+        // sleep 3600000;
+        LOG.error("done sleeping");
         return;
     } 
 
@@ -219,12 +226,11 @@ class upgrade_30_31 extends AbstractUpgradeScript {
             
 
     private void upgradeAuth() {
-        def acctSetterMap = buildSetterMap(connMap['eucalyptus_auth'], "auth_account");
-        def groupSetterMap = buildSetterMap(connMap['eucalyptus_auth'], "auth_group");
-        def userSetterMap = buildSetterMap(connMap['eucalyptus_auth'], "auth_user");
-        def akeySetterMap = buildSetterMap(connMap['eucalyptus_auth'], "auth_access_key");
-        def accountProxy = null;
         def authConn = connMap['eucalyptus_auth'];
+        def acctSetterMap = buildSetterMap(authConn, "auth_account");
+        def groupSetterMap = buildSetterMap(authConn, "auth_group");
+        def userSetterMap = buildSetterMap(authConn, "auth_user");
+        def akeySetterMap = buildSetterMap(authConn, "auth_access_key");
 
         authConn.rows("""select * from auth_account""").each { row ->
             EntityWrapper<AccountEntity> db = EntityWrapper.get(AccountEntity.class); 
@@ -304,6 +310,7 @@ class upgrade_30_31 extends AbstractUpgradeScript {
             db.add(sdbprop);
         }
         db.commit();
+
     }
 
     private void upgradeEntity(entityKey) {
@@ -372,7 +379,12 @@ class upgrade_30_31 extends AbstractUpgradeScript {
             def dest = null;
             for (GroovyRowResult rowResult : rowResults) {
                 try {
-                    dest = ClassLoader.getSystemClassLoader().loadClass(entityMap.get(entityKey).getCanonicalName()).newInstance();
+                    Class cls = ClassLoader.getSystemClassLoader().loadClass(entityMap.get(entityKey).getCanonicalName());
+                    if (entityMap.get(entityKey) == "CertificateEntity") {
+                        dest = cls.newInstanceWithId(rowResult.auth_certificate_id);
+                    } else {
+                        dest = cls.newInstance();
+                    }
                     dest = convertRowToObject(setterMap, rowResult, dest);
                 } catch (ClassNotFoundException e1) {
                     LOG.error(e1);
@@ -396,6 +408,14 @@ class upgrade_30_31 extends AbstractUpgradeScript {
 
     private Object convertRowToObject(Map<String, Method> setterMap, GroovyRowResult rowResult, Object dest) {
         Set<String> columns = rowResult.keySet();
+
+        HashMap<String, Class> enumSetterMap = new HashMap<String, Class>();
+        enumSetterMap.put("setState", State.class);
+        enumSetterMap.put("setLastState", State.class);
+        enumSetterMap.put("setProtocol", NetworkRule.Protocol.class);
+        enumSetterMap.put("setPlatform", ImageMetadata.Platform.class);
+        enumSetterMap.put("setArchitecture", ImageMetadata.Architecture.class);
+
         columns.each{ c -> LOG.debug("column: " + c); }
         for (String column : columns) {
             Method setter = setterMap.get(column);
@@ -408,10 +428,21 @@ class upgrade_30_31 extends AbstractUpgradeScript {
                 Object o = rowResult.get(column);
                 if(o != null) {
                     try {
-                        if(dest instanceof Volume && (setter.getName().equals("setRemoteDevice"))) {
-                            ((Volume)dest).setRemoteDevice(null);
+                        setter.setAccessible(true);
+                        Class enumClass = enumSetterMap.get(setter.getName(), null);
+                        if (enumClass != null) {
+                            if (setter.getName() in ['setState', 'setLastState']) {
+                                if (dest instanceof NetworkGroup) {
+                                    setter.invoke(dest, NetworkGroup.State.valueOf(o));
+                                } else if (dest instanceof ImageInfo) {
+                                    setter.invoke(dest, ImageMetadata.State.valueOf(o));
+                                } else {
+                                    setter.invoke(dest, enumClass.valueOf(o));
+                                }   
+                            } else {
+                                setter.invoke(dest, enumClass.valueOf(o));
+                            }
                         } else {
-                            setter.setAccessible(true);
                             setter.invoke(dest, o);
                         }
                     } catch (IllegalArgumentException e) {
@@ -543,8 +574,7 @@ class upgrade_30_31 extends AbstractUpgradeScript {
         entities.add(GroupEntity.class)
         entities.add(ImageCacheInfo.class)
         entities.add(ImageConfiguration.class)
-        // entities.add(ImageInfo.class)
-        // entities.add(InstanceAttributes.class)
+        entities.add(ImageInfo.class)
         // entities.add(InstanceUsageSnapshot.class)
         entities.add(ISCSIMetaInfo.class)
         entities.add(ISCSIVolumeInfo.class)
@@ -559,10 +589,10 @@ class upgrade_30_31 extends AbstractUpgradeScript {
         // entities.add(ReportingAccount.class)
         // entities.add(ReportingUser.class)
         // entities.add(S3UsageSnapshot.class)
-        // entities.add(Snapshot.class)
+        entities.add(Snapshot.class)
         entities.add(SnapshotInfo.class)
         entities.add(SOARecordInfo.class)
-        // entities.add(SshKeyPair.class)
+        entities.add(SshKeyPair.class)
         entities.add(StackConfiguration.class)
         entities.add(StatementEntity.class)
         entities.add(StorageInfo.class)
@@ -573,7 +603,6 @@ class upgrade_30_31 extends AbstractUpgradeScript {
         entities.add(TorrentInfo.class)
         entities.add(UniqueIds.class)
         entities.add(UserEntity.class)
-        entities.add(VmInstance.class)
         entities.add(VmType.class)
         entities.add(Volume.class)
         entities.add(VolumeInfo.class)
