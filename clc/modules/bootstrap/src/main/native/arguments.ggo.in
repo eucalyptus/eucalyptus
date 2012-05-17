@@ -16,7 +16,7 @@ option "define"                D   "Set system properties."                     
 option "fork"                  f   "Fork and daemonize Eucalyptus."                    flag                              off
 option "kill"                  k   "Kill a daemonized Eucalyptus."                     flag                              off
 option "pidfile"               -   "Location for the pidfile."                         string  typestr="FILENAME"        default="@prefix@/var/run/eucalyptus-cloud.pid" no
-option "db-home"               -   "Set path to database home directory"                     string  typestr="DIRECTORY"       default="/usr/pgsql-9.1/"    no
+option "db-home"               -   "Set path to database home directory"               string  typestr="DIRECTORY"       off    			   hidden # DEPRRECATED
 ######                   #       #                                                    #       #                         #                      #      #           
 ###### long-opt          # short # description                                        # type  # type desc.              # default value        # req. # extras... 
 section "Logging Configuration"  #                                                    #       #                         #                      #      #

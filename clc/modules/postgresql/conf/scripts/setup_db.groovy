@@ -80,6 +80,7 @@ import groovy.sql.Sql
 import org.apache.log4j.Logger
 import org.logicalcobwebs.proxool.ProxoolFacade
 
+
 import static com.google.common.io.Closeables.closeQuietly
 import static com.google.common.io.Flushables.flushQuietly
 import static java.util.Collections.emptyMap
@@ -95,19 +96,22 @@ import static java.util.regex.Pattern.quote
 public class PostgresqlBootstrapper extends Bootstrapper.Simple implements DatabaseBootstrapper {
 
     private static Logger LOG = Logger.getLogger( "setup_db" )
-
-    // Static definitions of postgres commands and options
+    Properties props = new Properties();
+    String propFileName = "postgresql-binaries.properties";
+    
+       // Static definitions of postgres commands and options
     private static int    PG_MAX_RETRY = 5
     private static String EUCA_DB_DIR  = "data"
-    private static String PG_HOME = System.getProperty("euca.db.home")
-    private static String PG_BIN = PG_HOME + "bin/pg_ctl"
+    private String PG_HOME = System.getProperty("euca.db.home")
+    private String PG_SUFFIX = System.getProperty("euca.db.suffix")
+    private static String PG_BIN = "bin/pg_ctl"
     private static String PG_START = "start"
     private static String PG_STOP = "stop"
     private static String PG_STATUS = "status"
     private static String PG_MODE = "-mf"
     private static String PG_PORT_OPTS2 = "-o -h0.0.0.0/0 -p8777 -i"
     private static String PG_DB_OPT = "-D"
-    private static String PG_INITDB = PG_HOME + "bin/initdb"
+    private static String PG_INITDB = "bin/initdb"
     private static String PG_X_OPT = "-X"
     private static String PG_X_DIR =  SubDirectory.DB.getChildFile("tx").getAbsolutePath()
     private static String PG_USER_OPT = "-U" + DatabaseBootstrapper.DB_USERNAME
@@ -141,6 +145,32 @@ public class PostgresqlBootstrapper extends Bootstrapper.Simple implements Datab
 
     //Default constructor
     public PostgresqlBootstrapper( ) {
+	try {
+	    InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream(propFileName);
+
+	    if (inputStream == null) {
+		throw new FileNotFoundException("property file '" + propFileName
+		+ "' not found in the classpath");
+	    }
+	    
+	    props.load(inputStream)
+
+	    if ("".compareTo(PG_HOME)) {
+		PG_HOME = props.getProperty("euca.db.home")
+	    }
+
+	    if ("".compareTo(PG_HOME)) {
+		throw new Exception ("Postgresql home directory is not set")
+	    }
+	    
+	    this.PG_SUFFIX = props.getProperty("euca.db.suffix","")
+	    this.PG_BIN = PG_HOME + PG_BIN + PG_SUFFIX
+	    this.PG_INITDB = PG_HOME + PG_INITDB + PG_SUFFIX
+
+	} catch ( Exception ex ) {
+	    LOG.debug(ex, ex);
+	    System.exit(1);
+	}
     }
 
     @Override

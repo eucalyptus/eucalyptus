@@ -1,0 +1,4 @@
+export EUCA_DB_HOME	 = @EUCA_DB_HOME@
+FILE="@prefix@/etc/eucalyptus/cloud.d/postgresql-binaries.properties"
+euca.db.home=/usr/
+euca.db.suffix=

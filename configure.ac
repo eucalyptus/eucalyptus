@@ -10,10 +10,12 @@
 #               [--with-interface-theme=<name>]
 #               [--enable-appliance-store]
 #               [--enable-debug]
+#				[--db-home=<dir>]
+#			    [--db-suffix=<version>]
 
 AC_PREREQ(2.61)
 AC_INIT(Eucalyptus,
-        m4_esyscmd([cat VERSION| tr -d '\n']),
+        m4_esys:cmd([cat VERSION| tr -d '\n']),
         support@open.eucalyptus.com)
 AC_CONFIG_SRCDIR([wsdl/eucalyptus_nc.wsdl])
 AC_CONFIG_HEADER([util/eucalyptus-config.h])
@@ -83,6 +85,9 @@ AC_ARG_ENABLE(appliance-store,
         [if test "${enableval}" != "no"; then
                 EXTENSIONS="store"
         fi])
+AC_ARG_WITH(db-home,
+        [  --with-db-home=<dir>                 where postgresql is installed],
+        [DB_HOME="${withval}"])
 AC_ARG_ENABLE(debug,
         [  --enable-debug                       include debugging info when compiling],
         [if test "${enableval}" != "no"; then
@@ -143,7 +148,8 @@ fi
 
 if test -n "${EXTRA_VERSION}" ; then
 	# Extra Eucalyptus Version
-	sed -i "s/ARGUMENTS_EXTRA_VERSION.*\"unconfigured\"/ARGUMENTS_EXTRA_VERSION \"${EXTRA_VERSION}\"/" ./clc/modules/bootstrap/src/main/native/eucalyptus-opts.h
+	# sed -i "s/ARGUMENTS_EXTRA_VERSION.*\"unconfigured\"/ARGUMENTS_EXTRA_VERSION \"${EXTRA_VERSION}\"/" ./clc/modules/bootstrap/src/main/native/eucalyptus-opts.h
+	sed -i "s/ARGUMENTS_EXTRA_VERSION.*\"unconfigured\"/ARGUMENTS_EXTRA_VERSION \"${EXTRA_VERSION}\"/" ./clc/modules/bootstrap/src/main/resources/version.properties
 fi
 
 # Checks for programs.
