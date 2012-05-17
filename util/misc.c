@@ -117,7 +117,10 @@ int verify_helpers (char **helpers, char **helpers_path, int num_helpers)
             char *tok, *toka, *path, *helper, *save, *savea;
 
             tok = getenv("PATH");
-            if (!tok) return -1;
+            if (!tok) {
+                missing_helpers = -1;
+                goto cleanup;
+            }
 
             path = strdup(tok);
             if (!path) {
