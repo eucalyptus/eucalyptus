@@ -386,13 +386,6 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
   }
 
   @Override
-  public ArrayList<DownloadInfo> getImageDownloads( Session session ) throws EucalyptusServiceException {
-    return new ArrayList<DownloadInfo>( Arrays.asList( new DownloadInfo( "http://localhost", "kernel", "Kernel image" ),
-                                                          new DownloadInfo( "http://localhost", "ramdisk", "Ramdisk image" ),
-                                                          new DownloadInfo( "http://localhost", "root", "Root disk image" ) ) );
-  }
-
-  @Override
   public ArrayList<DownloadInfo> getToolDownloads( Session session ) throws EucalyptusServiceException {
     return new ArrayList<DownloadInfo>( Arrays.asList( new DownloadInfo( "http://localhost", "euca-tools", "EUCA tools" ),
                                                           new DownloadInfo( "http://localhost", "boto", "BOTO" ),

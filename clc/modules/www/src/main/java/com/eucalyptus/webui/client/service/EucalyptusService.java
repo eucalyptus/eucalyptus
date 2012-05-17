@@ -498,15 +498,6 @@ public interface EucalyptusService extends RemoteService {
   public CloudInfo getCloudInfo( Session session, boolean setExternalHostPort ) throws EucalyptusServiceException;
   
   /**
-   * Get the list of image downloads.
-   * 
-   * @param session
-   * @return
-   * @throws EucalyptusServiceException
-   */
-  public ArrayList<DownloadInfo> getImageDownloads( Session session ) throws EucalyptusServiceException;
-  
-  /**
    * Get the list of tool downloads.
    * 
    * @param session
