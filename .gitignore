@@ -1,4 +1,4 @@
-*~
+/*~
 *.ajsv
 *.class
 *.o
@@ -12,6 +12,7 @@
 .*.sw*
 autom4te.cache
 clc/bin
+clc/.classpath.bak
 clc/bind.log
 clc/.deprecated/*/build
 clc/deps
@@ -29,8 +30,8 @@ clc/modules/*/build
 clc/modules/msgs/src/main/resources/msgs-binding.xml
 clc/modules/storage-controller/include/**
 clc/modules/storage-controller/lib
-clc/modules/storage-san/include/**
-clc/modules/storage-san/lib/
+clc/modules/storage-san
+clc/modules/vmware-broker
 clc/modules/www/build-war
 clc/modules/www/conf/eucalyptus-web.properties
 clc/modules/www/src/main/java/com/eucalyptus/webui/public/themes/active

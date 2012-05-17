@@ -47,7 +47,9 @@ fixProjectName ${SRC_DIR}/devel/.project devel
   
 for m in $(ls -1 ${SRC_DIR}/clc/modules/ | sort); do 
   f=$(basename $m)
-  if [[ -d ${SRC_DIR}/clc/modules/$f ]]; then 
+  if [[ -h ${SRC_DIR}/clc/modules/$f ]]; then
+    printf "%-40.40s %s\n" "---> Skipping symlink:" "${SRC_DIR}/clc/modules/$f"
+  elif [[ -d ${SRC_DIR}/clc/modules/$f ]]; then 
     if ls -1 ${SRC_DIR}/clc/modules/$f/src/main/java/* >/dev/null 2>&1; then
       SOURCES="${SOURCES}<classpathentry kind=\"src\" output=\"modules/$f/build\" path=\"modules/$f/src/main/java\"/>"
       printf "%-40.40s %s\n" "---> Adding directory to build path:" "${SRC_DIR}/clc/modules/$f/src/main/java"
