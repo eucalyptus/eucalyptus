@@ -124,6 +124,12 @@ import com.eucalyptus.auth.principal.User.RegistrationStatus;
 import com.eucalyptus.cloud.ImageMetadata;
 import com.eucalyptus.blockstorage.State;
 
+// Reporting classes
+import com.eucalyptus.reporting.modules.storage.StorageSnapshotKey;
+import com.eucalyptus.reporting.modules.storage.StorageUsageData;
+import com.eucalyptus.reporting.modules.s3.S3SnapshotKey;
+import com.eucalyptus.reporting.modules.s3.S3UsageData;
+
 class upgrade_30_31 extends AbstractUpgradeScript {
     static final List<String> FROM_VERSION = ["3.0.0", "3.0.1", "3.0.2"];
     static final List<String> TO_VERSION   = ["3.1.0"];
@@ -302,15 +308,44 @@ class upgrade_30_31 extends AbstractUpgradeScript {
 
     private void upgradeMisc() {
         // StaticDatabaseProperty
-        def confConn = connMap["eucalyptus_config"];
+        def conn = connMap["eucalyptus_config"];
 
         def db = EntityWrapper.get(StaticDatabasePropertyEntry.class);
-        confConn.rows("""select * from config_static_property""").each { prop ->
+        conn.rows("""select * from config_static_property""").each { prop ->
             StaticDatabasePropertyEntry sdbprop = new StaticDatabasePropertyEntry(prop.config_static_field_name, prop.config_static_prop_name, prop.config_static_field_value);
             db.add(sdbprop);
         }
         db.commit();
+        
+        db = EntityWrapper.get(InstanceUsageSnapshot.class);
+        conn = connMap["eucalyptus_reporting"];
+        conn.rows("""select * from instance_usage_snapshot""").each { row ->
+            InstanceUsageSnapshot ius = new InstanceUsageSnapshot(row.uuid,
+                                                                  row.timestamp_ms,
+                                                                  row.total_network_io_megs,
+                                                                  row.total_disk_io_megs);
+            db.add(ius);
+        }
+        db.commit();
 
+        db = EntityWrapper.get(S3UsageSnapshot.class);
+        conn.rows("""select * from s3_usage_snapshot""").each { row ->
+            S3UsageSnapshot s3us = new S3UsageSnapshot(new S3SnapshotKey(row.owner_id, row.account_id, row.timestamp_ms),
+                                                       new S3UsageData(row.buckets_num, row.objects_num, row.objects_megs));
+            db.add(s3us);
+        }
+        db.commit();
+        
+        db = EntityWrapper.get(StorageUsageSnapshot.class);
+        conn.rows("""select * from storage_usage_snapshot""").each { row ->
+            StorageUsageSnapshot sus = new StorageUsageSnapshot(new StorageSnapshotKey(row.owner_id, row.account_id, 
+                                                                                       row.cluster_name, row.availability_zone,
+                                                                                       row.timestamp_ms),
+                                                                new StorageUsageData(row.volumes_num, row.volumes_megs,
+                                                                                     row.snapshot_num, row.snapshot_megs));
+            db.add(sus);
+        }
+        db.commit();
     }
 
     private void upgradeEntity(entityKey) {
@@ -415,6 +450,7 @@ class upgrade_30_31 extends AbstractUpgradeScript {
         enumSetterMap.put("setProtocol", NetworkRule.Protocol.class);
         enumSetterMap.put("setPlatform", ImageMetadata.Platform.class);
         enumSetterMap.put("setArchitecture", ImageMetadata.Architecture.class);
+        enumSetterMap.put("setImageType", ImageMetadata.Type.class);
 
         columns.each{ c -> LOG.debug("column: " + c); }
         for (String column : columns) {
@@ -503,13 +539,17 @@ class upgrade_30_31 extends AbstractUpgradeScript {
             Set<String> columnNames, Class definingClass, Field[] fields) {
         for(String column : columnNames) {
             for(Field f : fields) {
-                if(f.isAnnotationPresent(Column.class) && !f.isAnnotationPresent(Id.class)) {
+                if(f.isAnnotationPresent(Column.class)) {
+                  if (!f.isAnnotationPresent(Id.class) || definingClass in [ ReportingUser.class, ReportingAccount.class ]) {
                     Column annotClass = (Column)f.getAnnotation(Column.class);
                     if(((String)column).toLowerCase().equals(annotClass.name().toLowerCase())) {
                         String baseMethodName = f.getName( ).substring( 0, 1 ).toUpperCase( ) + f.getName( ).substring( 1 );
                         try {
                             Class[] classes = new Class[1];
                             classes[0] = f.getType();
+                            if (baseMethodName == "VolumeSc") {
+                                baseMethodName = "VolumeCluster";
+                            }
                             Method setMethod = definingClass.getDeclaredMethod( "set" + baseMethodName, classes );
                             setterMap.put(column, setMethod);
                         } catch (SecurityException e) {
@@ -519,6 +559,7 @@ class upgrade_30_31 extends AbstractUpgradeScript {
                         }
                         break;
                     }
+                  }
                 }
             }
             if(setterMap.containsKey(column)) {
@@ -575,7 +616,6 @@ class upgrade_30_31 extends AbstractUpgradeScript {
         entities.add(ImageCacheInfo.class)
         entities.add(ImageConfiguration.class)
         entities.add(ImageInfo.class)
-        // entities.add(InstanceUsageSnapshot.class)
         entities.add(ISCSIMetaInfo.class)
         entities.add(ISCSIVolumeInfo.class)
         entities.add(LogFileRecord.class)
@@ -586,19 +626,15 @@ class upgrade_30_31 extends AbstractUpgradeScript {
         entities.add(ObjectInfo.class)
         entities.add(PolicyEntity.class)
         entities.add(PrivateNetworkIndex.class)
-        // entities.add(ReportingAccount.class)
-        // entities.add(ReportingUser.class)
-        // entities.add(S3UsageSnapshot.class)
+        entities.add(ReportingAccount.class)
+        entities.add(ReportingUser.class)
         entities.add(Snapshot.class)
         entities.add(SnapshotInfo.class)
         entities.add(SOARecordInfo.class)
         entities.add(SshKeyPair.class)
-        entities.add(StackConfiguration.class)
         entities.add(StatementEntity.class)
         entities.add(StorageInfo.class)
         entities.add(StorageStatsInfo.class)
-        // Caused by: org.hibernate.PropertyValueException: not-null property references a null or transient value: com.eucalyptus.reporting.modules.storage.StorageUsageSnapshot.key
-        // entities.add(StorageUsageSnapshot.class)
         entities.add(SystemConfiguration.class)
         entities.add(TorrentInfo.class)
         entities.add(UniqueIds.class)
