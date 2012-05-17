@@ -109,9 +109,6 @@ class ConfigFile(dict):
                                '--disable-storage', '--disable-vmwarebroker']
             self['CLOUD_OPTS'] = " ".join([ x for x in self['CLOUD_OPTS'].split()
                                             if x not in deprecatedopts ])
-            
-            if self.has_key('MAX_DISK'):
-                self['MAX_DISK'] = str(int(self['MAX_DISK']) / 1024)
         else:
             self._read_config_data(oldconfig)
 
