@@ -215,12 +215,7 @@ do_start() {
 
 	cd $EUCALYPTUS/etc/eucalyptus
 
-	# options from the configuration file
-	if [ "$DISABLE_ISCSI" = "Y" ]; then
-		CLOUD_OPTS="$CLOUD_OPTS --disable-iscsi"
-	fi
-
-        #Check if we need to upgrade
+        # Check if we need to upgrade
         if [ -e $EUCALYPTUS/etc/eucalyptus/.upgrade ]; then
                 do_upgrade
         fi

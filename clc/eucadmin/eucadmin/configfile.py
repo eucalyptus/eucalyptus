@@ -100,10 +100,7 @@ class ConfigFile(dict):
             old_version = open(old_version_file).readlines()[0].strip()
       
         if old_version.startswith('2') or old_version.startswith('eee-2'):
-            self.comment('DISABLE_ISCSI')
             self._read_config_data(oldconfig)
-            if not self.has_key('DISABLE_ISCSI'):
-                self['DISABLE_ISCSI'] = 'Y'
 
             deprecatedopts = [ '--walrus-host', '--cloud-host',
                                '--remote-storage', '--remote-walrus',
