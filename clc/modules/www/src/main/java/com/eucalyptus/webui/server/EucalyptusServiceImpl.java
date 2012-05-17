@@ -526,18 +526,6 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
   }
 
   @Override
-  public ArrayList<DownloadInfo> getImageDownloads( Session session ) throws EucalyptusServiceException {
-    verifySession( session );
-    String version;
-    try {
-      version = UriUtils.encodeQuery( WebProperties.getVersion( ), "UTF-8" );
-    } catch ( Exception e ) {
-      version = WebProperties.getVersion( );
-    }
-    return DownloadsWebBackend.getDownloads( WebProperties.getProperty( WebProperties.IMAGE_DOWNLOAD_URL, WebProperties.IMAGE_DOWNLOAD_URL_DEFAULT ) + version );
-  }
-
-  @Override
   public ArrayList<DownloadInfo> getToolDownloads( Session session ) throws EucalyptusServiceException {
     verifySession( session );
     String version;

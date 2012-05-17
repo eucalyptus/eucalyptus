@@ -107,8 +107,6 @@ public interface EucalyptusServiceAsync {
 
   void getCloudInfo( Session session, boolean setExternalHostPort, AsyncCallback<CloudInfo> callback );
 
-  void getImageDownloads( Session session, AsyncCallback<ArrayList<DownloadInfo>> callback );
-
   void getToolDownloads( Session session, AsyncCallback<ArrayList<DownloadInfo>> callback );
 
   void getGuide( Session session, String snippet, AsyncCallback<ArrayList<GuideItem>> callback );
