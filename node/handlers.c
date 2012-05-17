@@ -113,10 +113,12 @@ static char * compile_timestamp_str = "";
 /* used by lower level handlers */
 sem *hyp_sem;	/* semaphore for serializing domain creation */
 sem *inst_sem;	/* guarding access to global instance structs */
+sem *inst_copy_sem;	/* guarding access to global instance structs */
 sem *addkey_sem;	/* guarding access to global instance structs */
 sem *loop_sem; // created in diskutils.c for serializing 'losetup' invocations
 
 bunchOfInstances *global_instances = NULL; 
+bunchOfInstances *global_instances_copy = NULL; 
 
 // declarations of available handlers
 extern struct handlers xen_libvirt_handlers;
@@ -435,6 +437,31 @@ refresh_instance_info(	struct nc_state_t *nc,
     }
 }
 
+// copying the linked list for use by Describe* requests
+static void copy_instances (void) 
+{ 
+    sem_p (inst_copy_sem);
+    
+    // free the old linked list copy
+    for ( bunchOfInstances * head = global_instances_copy; head; ) {
+        bunchOfInstances * container = head;
+        ncInstance * instance = head->instance;
+        head = head->next;
+        free (instance);
+        free (container);
+    }
+    global_instances_copy = NULL;
+    
+    // make a fresh copy
+    for ( bunchOfInstances * head = global_instances; head; head = head->next ) {
+        ncInstance * src_instance = head->instance;
+        ncInstance * dst_instance = (ncInstance *)malloc(sizeof(ncInstance));
+        memcpy (dst_instance, src_instance, sizeof(ncInstance));
+        add_instance (&global_instances_copy, dst_instance);
+    }
+    sem_v (inst_copy_sem);
+}
+
 void *
 monitoring_thread (void *arg)
 {
@@ -555,6 +582,8 @@ monitoring_thread (void *arg)
             fclose(FP);
             rename (nfile, nfilefinal);
         }
+        
+        copy_instances (); // copy global_instances to global_instances_copy
         sem_v (inst_sem);
         
         if (head) {
@@ -833,6 +862,10 @@ void adopt_instances()
 		virDomainFree (dom);
 		sem_v(hyp_sem);
 	}
+
+    sem_p (inst_sem);
+    copy_instances (); // copy global_instances to global_instances_copy
+    sem_v (inst_sem);
 }
 
 static int init (void)
@@ -987,8 +1020,9 @@ static int init (void)
 
 	hyp_sem = sem_alloc (1, "mutex");
 	inst_sem = sem_alloc (1, "mutex");
+	inst_copy_sem = sem_alloc (1, "mutex");
 	addkey_sem = sem_alloc (1, "mutex");
-	if (!hyp_sem || !inst_sem || !addkey_sem) {
+	if (!hyp_sem || !inst_sem || !inst_copy_sem || !addkey_sem) {
 		logprintfl (EUCAFATAL, "failed to create and initialize semaphores\n");
 		return ERROR_FATAL;
 	}

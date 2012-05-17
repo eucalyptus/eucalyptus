@@ -97,7 +97,9 @@ permission notice:
 // coming from handlers.c
 extern sem * hyp_sem;
 extern sem * inst_sem;
+extern sem * inst_copy_sem;
 extern bunchOfInstances * global_instances;
+extern bunchOfInstances * global_instances_copy;
 
 static int
 doInitialize (struct nc_state_t *nc) 
@@ -354,20 +356,20 @@ doDescribeInstances( struct nc_state_t *nc,
 	*outInstsLen = 0;
 	*outInsts = NULL;
     
-	sem_p (inst_sem);
+	sem_p (inst_copy_sem);
 	if (instIdsLen == 0) // describe all instances
-		total = total_instances (&global_instances);
+		total = total_instances (&global_instances_copy);
 	else 
 		total = instIdsLen;
     
 	*outInsts = malloc(sizeof(ncInstance *)*total);
 	if ((*outInsts) == NULL) {
-		sem_v (inst_sem);
+		sem_v (inst_copy_sem);
 		return OUT_OF_MEMORY;
 	}
     
 	k = 0;
-	for (i=0; (instance = get_instance(&global_instances)) != NULL; i++) {
+	for (i=0; (instance = get_instance(&global_instances_copy)) != NULL; i++) {
 		// only pick ones the user (or admin) is allowed to see
 		if (strcmp(meta->userId, nc->admin_user_id) 
             && strcmp(meta->userId, instance->userId))
@@ -388,7 +390,7 @@ doDescribeInstances( struct nc_state_t *nc,
         (* outInsts)[k++] = tmp;
 	}
 	*outInstsLen = k;
-	sem_v (inst_sem);
+	sem_v (inst_copy_sem);
     
 	return OK;
 }
@@ -413,14 +415,14 @@ doDescribeResource(	struct nc_state_t *nc,
     int sum_cores = 0;      // for known domains: sum of requested cores
     
     *outRes = NULL;
-    sem_p (inst_sem); 
-    while ((inst=get_instance(&global_instances))!=NULL) {
+    sem_p (inst_copy_sem); 
+    while ((inst=get_instance(&global_instances_copy))!=NULL) {
         if (inst->state == TEARDOWN) continue; // they don't take up resources
         sum_mem += inst->params.mem;
         sum_disk += (inst->params.disk);
         sum_cores += inst->params.cores;
     }
-    sem_v (inst_sem);
+    sem_v (inst_copy_sem);
     
     disk_free = nc->disk_max - sum_disk;
     if ( disk_free < 0 ) disk_free = 0; // should not happen
