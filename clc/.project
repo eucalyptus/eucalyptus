@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <projectDescription>
-	<name>zhill_eee:clc</name>
+	<name>eucalyptus:clc</name>
 	<comment></comment>
 	<projects>
 	</projects>
@@ -19,9 +19,6 @@
 	<natures>
 		<nature>org.eclipse.jdt.groovy.core.groovyNature</nature>
 		<nature>org.eclipse.jdt.core.javanature</nature>
-		<nature>org.eclipse.wst.common.project.facet.core.nature</nature>
-		<nature>com.tssap.selena.model.modeling_nature</nature>
-		<nature>com.borland.selena.uml20.uml20_nature</nature>
 		<nature>org.python.pydev.pythonNature</nature>
 		<nature>com.google.gwt.eclipse.core.gwtNature</nature>
 	</natures>
