@@ -42,7 +42,6 @@ clc/modules/www/webapps
 clc/target
 config.log
 config.status
-core
 core.*
 gatherlog/GLclient
 Makedefs
@@ -55,3 +54,8 @@ tools/eucalyptus-nc
 util/eucalyptus-config.h
 util/euca_mountwrap
 util/euca_rootwrap
+clc/.settings/org.eclipse.jdt.core.prefs
+clc/eucadmin/eucadmin/__init__.py
+storage/euca-blobs
+storage/test_blobstore
+storage/test_vbr
