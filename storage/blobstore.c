@@ -288,7 +288,8 @@ static void close_filelock (blobstore_filelock * l)
     // closing any one removes the lock for all descriptors
     // held by a process)
     for (int i=0; i<l->next_fd; i++) {
-        close (l->fd [i]);
+        if(l->fd [i] > -1)
+            close (l->fd [i]);
     }
     l->next_fd = 0; // knock the open fd counter back to 0
 }
@@ -522,18 +523,15 @@ static int open_and_lock (const char * path,
     { // critical section
         pthread_mutex_lock (&_blobstore_mutex); // grab the global mutex
         
-        // ensure we do not have this file descriptor already
-        int count = 0;
-        for (blobstore_filelock * l = locks_list; l; l=l->next)
-            for (int i=0; i<l->next_fd; i++)
-                if (l->fd [i] == fd)
-                    count++;
-        if (count>0) {
-            ERR (BLOBSTORE_ERROR_INVAL, "blobstore lock closed outside close_and_unlock");
-            pthread_mutex_unlock (&(path_lock->mutex)); // release global mutex
-            pthread_mutex_unlock (&_blobstore_mutex); // release global mutex
-            close(fd); // We must close our descriptor here. The 'error' logic will only close if assigned to the path_lock->fd array
-            goto error;
+        // ensure we do not have this file descriptor already in some other list
+        for (blobstore_filelock * l = locks_list; l; l=l->next) {
+            for (int i=0; i<l->next_fd; i++) {
+                if (l->fd [i] == fd) {
+                    l->fd [i]        = -1; // set to invalid so no one else closes our valid descriptor
+                    l->fd_status [i] =  0; // definitely unused.
+                    logprintfl (EUCAWARN, "WARNING: blobstore lock closed outside close_and_unlock\n");
+                }
+            }
         }
         
         { // inner critical section
