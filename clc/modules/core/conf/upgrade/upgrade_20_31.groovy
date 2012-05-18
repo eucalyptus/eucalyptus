@@ -80,13 +80,6 @@ import edu.ucsb.eucalyptus.cloud.entities.StorageInfo;
 import edu.ucsb.eucalyptus.cloud.entities.StorageStatsInfo;
 import edu.ucsb.eucalyptus.cloud.entities.VolumeInfo;
 
-// SAN
-import edu.ucsb.eucalyptus.cloud.entities.NetappInfo;
-import edu.ucsb.eucalyptus.cloud.entities.SANInfo;
-import edu.ucsb.eucalyptus.cloud.entities.SANVolumeInfo;
-import edu.ucsb.eucalyptus.cloud.entities.IgroupInfo;
-import edu.ucsb.eucalyptus.cloud.entities.DASInfo;
-
 // Walrus
 import edu.ucsb.eucalyptus.cloud.entities.BucketInfo;
 import edu.ucsb.eucalyptus.cloud.entities.GrantInfo;
@@ -104,10 +97,6 @@ import com.eucalyptus.network.NetworkRule;
 import com.eucalyptus.network.NetworkGroup;
 import com.eucalyptus.keys.SshKeyPair;
 import com.eucalyptus.vm.VmType;
-
-// VMware Broker
-import com.eucalyptus.broker.vmware.VMwareBrokerConfiguration;
-import com.eucalyptus.broker.vmware.VMwareBrokerInfo;
 
 // Other
 import edu.ucsb.eucalyptus.cloud.entities.LVMVolumeInfo;
@@ -129,10 +118,10 @@ import com.eucalyptus.upgrade.AbstractUpgradeScript;
 import com.eucalyptus.upgrade.StandalonePersistence;
 import com.eucalyptus.upgrade.UpgradeScript;
 
-class upgrade_20_30 extends AbstractUpgradeScript {
-    static final List<String> FROM_VERSION = ["eee-2.0.2", "eee-2.0.1", "2.0.2", "2.0.3"];
+class upgrade_20_31 extends AbstractUpgradeScript {
+    static final List<String> FROM_VERSION = ["2.0.2", "2.0.3"];
     static final List<String> TO_VERSION   = ["3.0.0", "3.0.1", "3.1.0"];
-    private static Logger LOG = Logger.getLogger( upgrade_20_30.class );
+    private static Logger LOG = Logger.getLogger( upgrade_20_31.class );
     private static List<Class> entities = new ArrayList<Class>();
     private static Map<String, Class> entityMap = new HashMap<String, Class>();
 
@@ -160,7 +149,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                                 "Volumes.volume_id",
                               ];
 
-    public upgrade_20_30() {
+    public upgrade_20_31() {
         super(1);        
     }
 
@@ -182,7 +171,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
     public void upgrade(File oldEucaHome, File newEucaHome) {
         // Do this in stages and bail out if something goes seriously wrong.
         def parts = [ 'Cluster', 'Auth', 'KeyPairs', 'Images', 'Network', 'Walrus', 
-                      'Storage', 'SAN', 'VMwareBroker' ]
+                      'Storage' ]
         buildConnectionMap();
         parts.each { this."upgrade${it}"(); }
          
@@ -681,49 +670,6 @@ class upgrade_20_30 extends AbstractUpgradeScript {
         return (user_name =~ /([^a-zA-Z0-9+=.,@-])/).replaceAll("-")
     }
 
-    public boolean upgradeVMwareBroker() {
-        def oldHome = System.getProperty( "euca.upgrade.old.dir" );
-        def newHome = System.getProperty( "euca.upgrade.new.dir" );
-
-        if (!has_table('eucalyptus_config', 'config_vmwarebroker')) {
-            return true;
-        }
-
-        connMap['eucalyptus_config'].rows('SELECT * FROM  config_vmwarebroker').each{
-            EntityWrapper<VMwareBrokerConfiguration> dbcfg = EntityWrapper.get(VMwareBrokerConfiguration.class);
-            VMwareBrokerConfiguration broker = new VMwareBrokerConfiguration(it.config_component_name, it.config_component_name + '_vmbroker', it.config_component_hostname, it.config_component_port);
-            dbcfg.add(broker);
-            dbcfg.commit();
-
-            /* This only works for a broker on the same system as the CLC */ 
-            def configxml = "";
-            if (Internets.testLocal(it.config_component_hostname)) {
-                byte[] buffer = new byte[(int) new File("${ newHome }/etc/eucalyptus/vmware_conf.xml").length()];
-                BufferedInputStream f = new BufferedInputStream(new FileInputStream("${ newHome }/etc/eucalyptus/vmware_conf.xml"));
-                f.read(buffer);
-                f.close();
-                configxml = new String(buffer);
-            }
-
-            /*  We can't do this because we probably don't have passwordless ssh as the eucalyptus user 
-             * 
-             * def process = ["ssh", it.config_component_hostname, "cat ${ newHome }/etc/eucalyptus/vmware_conf.xml" ].execute()
-             * process.waitFor() 
-             * def configxml = process.text;
-             * LOG.info("setting vmware config xml for ${ it.config_component_name } to:  ${ configxml }");
-             */
-
-            EntityWrapper<VMwareBrokerInfo> dbinfo = EntityWrapper.get(VMwareBrokerInfo.class);
-            if (configxml == "") {
-                LOG.warn("Could not inject vmwarebroker configuration for partition ${ it.config_component_name }.  This must be done manually.");
-            }
-            VMwareBrokerInfo brokerInfo = new VMwareBrokerInfo(it.config_component_name, configxml );
-            dbinfo.add(brokerInfo);
-            dbinfo.commit();
-        }
-    }
-
-
     public boolean upgradeWalrus() {
         connMap['eucalyptus_config'].rows('SELECT * FROM config_walrus').each{
             EntityWrapper<WalrusConfiguration> dbcfg = EntityWrapper.get(WalrusConfiguration.class);
@@ -954,53 +900,6 @@ class upgrade_20_30 extends AbstractUpgradeScript {
         return false;
     }
 
-    public boolean upgradeSAN() {
-        // Only eee
-        EntityWrapper<SANVolumeInfo> dbsvi = EntityWrapper.get(SANVolumeInfo.class);
-        if (has_table('eucalyptus_storage', "EquallogicVolumeInfo")) {
-            connMap['eucalyptus_storage'].rows('SELECT * FROM EquallogicVolumeInfo').each{
-                SANVolumeInfo sanvol = new SANVolumeInfo(it.volumeId, it.iqn, it.size);
-                initMetaClass(sanvol, sanvol.class);
-                sanvol.setStoreUser(it.storeUser);
-                sanvol.setScName(it.scName);
-                sanvol.setEncryptedPassword(it.encryptedPassword);
-                sanvol.setStatus(it.status);
-                sanvol.setSnapshotOf(it.snapshot_of);
-                dbsvi.add(sanvol);
-            }
-            dbsvi.commit()
-        } 
-
-        if (has_table('eucalyptus_storage', "Igroups")) {
-            EntityWrapper<IgroupInfo> dbigroup = EntityWrapper.get(IgroupInfo.class);
-            connMap['eucalyptus_storage'].rows('SELECT * FROM Igroups').each{
-                IgroupInfo igroup = new IgroupInfo(it.igroup_name, it.volume_name, it.iqn);
-                dbigroup.add(igroup);
-            }
-            dbigroup.commit();
-        }
-
-        if (has_table('eucalyptus_storage', "san_info")) {
-            EntityWrapper<SANInfo> dbsaninfo = EntityWrapper.get(SANInfo.class);
-            connMap['eucalyptus_storage'].rows('SELECT * FROM san_info').each{
-                SANInfo s = new SANInfo(it.storage_name, it.san_host, it.san_user, it.san_password);
-                dbsaninfo.add(s);
-            }
-            dbsaninfo.commit();
-        }
-
-        if (has_table('eucalyptus_storage', "netapp_info")) {
-            EntityWrapper<NetappInfo> netappinfo = EntityWrapper.get(NetappInfo.class);
-            connMap['eucalyptus_storage'].rows('SELECT * FROM netapp_info').each{
-                NetappInfo n = new NetappInfo(it.storage_name, it.netapp_aggregate, 100);
-                netappinfo.add(n);
-            }
-            netappinfo.commit();
-        }
-
-        return true;
-    }
-    
     public boolean upgradeCluster() {
         def oldHome = System.getProperty( "euca.upgrade.old.dir" );
         connMap['eucalyptus_config'].rows('SELECT * FROM config_clusters').each{
@@ -1084,8 +983,6 @@ class upgrade_20_30 extends AbstractUpgradeScript {
         entities.add(VolumeInfo.class);
         entities.add(DirectStorageInfo.class);
         entities.add(StorageStatsInfo.class);
-        // Below are for enterprise only
-        entities.add(DASInfo.class);
 
         // eucalyptus_walrus
         entities.add(ImageCacheInfo.class);
