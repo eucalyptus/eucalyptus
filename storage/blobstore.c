@@ -532,6 +532,7 @@ static int open_and_lock (const char * path,
             ERR (BLOBSTORE_ERROR_INVAL, "blobstore lock closed outside close_and_unlock");
             pthread_mutex_unlock (&(path_lock->mutex)); // release global mutex
             pthread_mutex_unlock (&_blobstore_mutex); // release global mutex
+            close(fd); // We must close our descriptor here. The 'error' logic will only close if assigned to the path_lock->fd array
             goto error;
         }
         
