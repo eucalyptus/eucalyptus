@@ -324,7 +324,11 @@ public class ZoneManager {
 	}
 
 	public static void deleteZone(String zoneName) {
-	   zones.remove(new Name(zoneName));
+	   try {
+	      zones.remove(new Name(zoneName));
+	   } catch(Exception ex) {
+	      LOG.error(ex);
+	   }
 	}
 
 }
