@@ -163,7 +163,7 @@ upgrade_db() {
   CLASSPATH=${EUCALYPTUS}/etc/eucalyptus/cloud.d/upgrade:${EUCALYPTUS}/etc/eucalyptus/cloud.d/scripts:${CLASSPATH}
 
   # clean out the target DB directory
-  rm -fv ${NEW_EUCA}/${DBDIR}/* > ${UP_LOG} 2>&1
+  rm -rfv ${NEW_EUCA}/${DBDIR}/* > ${UP_LOG} 2>&1
   
   # setup the upgrade command
   UPGRADE_CLASS="com.eucalyptus.upgrade.StandalonePersistence"
