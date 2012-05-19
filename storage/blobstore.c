@@ -288,8 +288,10 @@ static void close_filelock (blobstore_filelock * l)
     // closing any one removes the lock for all descriptors
     // held by a process)
     for (int i=0; i<l->next_fd; i++) {
-        if(l->fd [i] > -1)
+        if(l->fd [i] > -1) {
             close (l->fd [i]);
+            l->fd [i] = -1;
+        }
     }
     l->next_fd = 0; // knock the open fd counter back to 0
 }
@@ -1113,12 +1115,14 @@ static int read_blockblob_metadata_path (blockblob_path_t path_t, const blobstor
 // writes strings from 'array' or size 'array_size' (which can be 0) line-by-line
 // into a specific metadata file (based on 'path_t') of blob 'bb_id'
 // returns 0 for success and -1 for error
+//#define CHUCK
 static int write_array_blockblob_metadata_path (blockblob_path_t path_t, const blobstore * bs, const char * bb_id, char ** array, int array_size)
 {
     int ret = 0;
     char path [MAX_PATH];
     set_blockblob_metadata_path (path_t, bs, bb_id, path, sizeof (path));
 
+#ifndef CHUCK
     mode_t old_umask = umask (~BLOBSTORE_FILE_PERM);
     FILE * fp = fopen (path, "w");
     umask (old_umask);
@@ -1126,6 +1130,22 @@ static int write_array_blockblob_metadata_path (blockblob_path_t path_t, const b
         PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
         return -1;
     }
+#else /* CHUCK */
+    int   fd        = 0;
+    int   ret_close = 0;
+    FILE *fp        = NULL;
+    if ((fd = open_and_lock (path, (BLOBSTORE_FLAG_CREAT | BLOBSTORE_FLAG_RDWR), BLOBSTORE_METADATA_TIMEOUT_USEC, BLOBSTORE_FILE_PERM)) == -1) {
+        PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
+        return(-1);
+    }
+
+    if ((fp = fopen(path, "w+")) == NULL) {
+        PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
+        if((ret_close = close_and_unlock(fd)) != 0)
+            PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
+        return(-1);
+    }
+#endif /* CHUCK */
 
     for (int i=0; i<array_size; i++) {
         if (fprintf (fp, "%s\n", array [i]) < 0) {
@@ -1134,10 +1154,18 @@ static int write_array_blockblob_metadata_path (blockblob_path_t path_t, const b
             break;
         }
     }
+
     if (fclose (fp) == -1) {
         PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
         ret = -1;
     }
+    
+#ifdef CHUCK
+    if ((ret_close = close_and_unlock(fd)) != 0) {
+        PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
+        ret = -1;
+    }
+#endif /* CHUCK */
     return ret;
 }
 
@@ -1152,12 +1180,34 @@ static int read_array_blockblob_metadata_path (blockblob_path_t path_t, const bl
     char path [MAX_PATH];
     set_blockblob_metadata_path (path_t, bs, bb_id, path, sizeof (path));
 
+#ifndef CHUCK
     FILE * fp = fopen (path, "r");
     if (fp == NULL) {
         * array = NULL;
         * array_size = 0;
         return 0;
     }
+#else /* CHUCK */
+    int   fd        = 0;
+    int   ret_close = 0;
+    FILE *fp        = NULL;
+    if ((fd = open_and_lock (path, BLOBSTORE_FLAG_RDONLY, BLOBSTORE_METADATA_TIMEOUT_USEC, BLOBSTORE_FILE_PERM)) == -1) {
+        PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
+        * array = NULL;
+        * array_size = 0;
+        return 0;
+    }
+
+    if ((fp = fopen(path, "r")) == NULL) {
+        PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
+        if((ret_close = close_and_unlock(fd)) != 0)
+            PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
+
+        * array = NULL;
+        * array_size = 0;
+        return 0;
+    }
+#endif /* CHUCK */
 
     int i;
     size_t n;
@@ -1190,6 +1240,12 @@ static int read_array_blockblob_metadata_path (blockblob_path_t path_t, const bl
         PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
         ret = -1;
     }
+#ifdef CHUCK
+    if ((ret_close = close_and_unlock(fd)) != 0) {
+        PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
+        ret = -1;
+    }
+#endif /* CHUCK */
     if (ret == -1) {
         if (lines!=NULL) {
             for (int j=0; j<i; j++) {
@@ -1411,7 +1467,6 @@ static void set_device_path (blockblob * bb)
 
 static blockblob ** walk_bs (blobstore * bs, const char * dir_path, blockblob ** tail_bb, const blockblob * bb_to_avoid) 
 {
-    int ret = 0;
     DIR * dir;
     if ((dir=opendir(dir_path))==NULL) {
         return tail_bb; // ignore access errors in blobstore directory
@@ -1452,7 +1507,6 @@ static blockblob ** walk_bs (blobstore * bs, const char * dir_path, blockblob **
 
         blockblob * bb = calloc (1, sizeof (blockblob));
         if (bb==NULL) {
-            ret = 1;
             goto free;
         }
         * tail_bb = bb; // add to LL
