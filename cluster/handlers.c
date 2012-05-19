@@ -3184,7 +3184,7 @@ int init_pthreads() {
     pid = fork();
     if (!pid) {
       // set up default signal handler for this child process (for SIGTERM)
-      struct sigaction newsigact;
+      struct sigaction newsigact = { 0 };
       newsigact.sa_handler = SIG_DFL;
       newsigact.sa_flags = 0;
       sigemptyset(&newsigact.sa_mask);

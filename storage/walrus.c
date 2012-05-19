@@ -154,6 +154,7 @@ static int walrus_request_timeout (const char * walrus_op, const char * verb, co
     if (fd==-1 || lseek (fd, 0, SEEK_SET)==-1) {
         logprintfl (EUCAERROR, "{%u} walrus_request: failed to open %s for writing\n", (unsigned int)pthread_self(), outfile);
         pthread_mutex_unlock(&wreq_mutex);
+        if(fd >= 0) close(fd);
         return code;
     }
 

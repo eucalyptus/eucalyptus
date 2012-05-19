@@ -215,8 +215,8 @@ doGetConsoleOutput(	struct nc_state_t *nc,
       if (console_append) {
 	bzero(console_append, 4096);
 	rc = read(fd, console_append, (4096)-1);
-	close(fd);          
       }
+      close(fd);
     }
   }
 
