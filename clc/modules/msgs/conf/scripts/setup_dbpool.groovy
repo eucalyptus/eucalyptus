@@ -75,7 +75,7 @@ import com.eucalyptus.system.SubDirectory
 import com.eucalyptus.util.LogUtil
 
 
-Logger LOG = Logger.getLogger( "setup_dbpool" );
+Logger LOG = Logger.getLogger( "com.eucalyptus.scripts.setup_dbpool" );
 
 ClassLoader.getSystemClassLoader().loadClass('org.logicalcobwebs.proxool.ProxoolDriver');
 ClassLoader.getSystemClassLoader().loadClass('net.sf.hajdbc.local.LocalStateManager');

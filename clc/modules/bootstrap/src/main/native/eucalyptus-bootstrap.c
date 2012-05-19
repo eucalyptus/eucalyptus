@@ -416,6 +416,8 @@ int main(int argc, char *argv[]) {
 	int i;
 	if (arguments(argc, argv, args) != 0)
 		exit(1);
+	if (args->extra_version_orig != NULL)
+		args->extra_version_arg = args->extra_version_orig;
 	debug = args->debug_flag;
 	set_output(GETARG(args, out), GETARG(args, err));
 	if (args->kill_flag == 1)
@@ -656,7 +658,7 @@ char* java_library_path(euca_opts *args) {
 	int wb = 0;
 	wb += snprintf(jar_list + wb, JAVA_PATH_LEN - wb, "-Djava.class.path=%s:",
 			etc_dir);
-	wb += snprintf(jar_list + wb, JAVA_PATH_LEN - wb, "%s", class_cache_dir);
+	wb += snprintf(jar_list + wb, JAVA_PATH_LEN - wb, "%s:", class_cache_dir);
 	wb += snprintf(jar_list + wb, JAVA_PATH_LEN - wb, "%s", script_dir);
 	DIR* lib_dir_p = opendir(lib_dir);
 	if(!lib_dir_p)
@@ -766,6 +768,9 @@ int java_init(euca_opts *args, java_home_t *data) {
 	JVM_ARG(opt[++x], "-Deuca.version=%1$s", ARGUMENTS_VERSION);
 	JVM_ARG(opt[++x], "-Deuca.log.level=%1$s", GETARG(args, log_level));
 	JVM_ARG(opt[++x], "-Deuca.log.appender=%1$s", GETARG(args, log_appender));
+	if (strlen(GETARG(args, extra_version)) > 1 && strncmp(GETARG(args, extra_version), "@", 1)) {
+		JVM_ARG(opt[++x], "-Deuca.extra_version=%1$s", GETARG(args, extra_version));
+	}
 	if (args->initialize_flag) {
 		JVM_ARG(opt[++x], "-Deuca.initialize=true");
 		JVM_ARG(opt[++x], "-Deuca.remote.dns=true");
@@ -838,7 +843,12 @@ int java_init(euca_opts *args, java_home_t *data) {
 	arg.options = opt;
 	if (debug) {
 		__debug("+-------------------------------------------------------");
-		__debug("| Version:                       %x", arg.version);
+		if (strlen(GETARG(args, extra_version)) > 1 && strncmp(GETARG(args, extra_version), "@", 1))
+			__debug("| Eucalyptus version:            %s-%s", ARGUMENTS_VERSION, GETARG(args, extra_version));
+                else
+			__debug("| Eucalyptus version:            %s", ARGUMENTS_VERSION);
+
+		__debug("| JNI version:                   %x", arg.version);
 		__debug("| Ignore Unrecognized Arguments: %d", arg.ignoreUnrecognized);
 		__debug("| Extra options:                 %d", arg.nOptions);
 		for (x = 0; x < arg.nOptions; x++)

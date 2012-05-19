@@ -9,6 +9,7 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.api.BaseLoginModule;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.binding.HoldMe;
+import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.crypto.util.WSSecurity;
 
 public class WsSecLoginModule extends BaseLoginModule<WsSecCredentials> {
@@ -28,9 +29,7 @@ public class WsSecLoginModule extends BaseLoginModule<WsSecCredentials> {
     try {
       final Element secNode = WSSecurity.getSecurityElement( wrappedCredentials.getLoginData( ) );
       final XMLSignature sig = WSSecurity.getXMLSignature( secNode );
-      // this enqueues an empty string
-      //SecurityContext.enqueueSignature( sig.getTextFromTextChild( ) );
-      String sigValue = new String(sig.getSignatureValue());
+      final String sigValue = B64.standard.encString(sig.getSignatureValue());
       SecurityContext.enqueueSignature( sigValue );
       
       final X509Certificate cert = WSSecurity.verifySignature( secNode, sig );

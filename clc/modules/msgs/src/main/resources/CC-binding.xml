@@ -66,13 +66,13 @@
 <binding name="eucalyptus_ucsb_edu" force-classes="true" add-constructors="true">
   <namespace uri="http://eucalyptus.ucsb.edu/" default="elements" />
 
-  <include path="cc-network.xml" />
-  <include path="cc-volumes.xml" />
-  <include path="cc-resources.xml" />
-  <include path="cc-vms.xml" />
-  <include path="cc-getlogs.xml" />
-  <include path="cc-services.xml" />
-  <include path="broker-types.xml"/>
+  <include path="classpath:cc-network.xml" />
+  <include path="classpath:cc-volumes.xml" />
+  <include path="classpath:cc-resources.xml" />
+  <include path="classpath:cc-vms.xml" />
+  <include path="classpath:cc-getlogs.xml" />
+  <include path="classpath:cc-services.xml" />
+  <include path="classpath:broker-types.xml"/>
 
   <mapping class="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" abstract="true" extends="edu.ucsb.eucalyptus.msgs.BaseMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.BaseMessage" />

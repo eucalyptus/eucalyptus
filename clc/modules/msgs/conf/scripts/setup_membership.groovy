@@ -28,7 +28,7 @@ import com.eucalyptus.empyrean.Empyrean
 import com.eucalyptus.system.Threads
 import com.eucalyptus.util.Internets
 
-Logger LOG = Logger.getLogger( "setup_membership" );
+Logger LOG = Logger.getLogger( "com.eucalyptus.scripts.setup_membership" );
 
 String        multicastAddress           = "228.7.7.3";
 InetAddress   multicastInetAddress       = InetAddress.getByName( multicastAddress );

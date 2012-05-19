@@ -654,6 +654,7 @@ AXIS2C_HOME
 APACHE2_MODULE_DIR
 JAVA_HOME
 TOP
+EXTRA_VERSION
 EUCA_VERSION
 LIBOBJS
 JAVA
@@ -675,7 +676,6 @@ PYTHON_EXEC_PREFIX
 PYTHON_PREFIX
 PYTHON_VERSION
 PYTHON
-EXTRA_VERSION
 build_os
 build_vendor
 build_cpu
@@ -742,6 +742,7 @@ enable_appliance_store
 with_db_home
 with_db_suffix
 enable_debug
+with_extra_version
 '
       ac_precious_vars='build_alias
 host_alias
@@ -752,7 +753,6 @@ LDFLAGS
 LIBS
 CPPFLAGS
 CPP
-EXTRA_VERSION
 PYTHON'
 
 
@@ -1394,6 +1394,7 @@ Optional Packages:
   --with-interface-theme=<name>        the theme to be used
   --with-db-home=<dir>                 where postgresql is installed
   --with-db-suffix=<dir>                 where postgresql is installed
+  --extra-version=<str>                string to append to versions to make logs and messages more precise
 
 Some influential environment variables:
   CC          C compiler command
@@ -1404,9 +1405,6 @@ Some influential environment variables:
   CPPFLAGS    C/C++/Objective C preprocessor flags, e.g. -I<include dir> if
               you have headers in a nonstandard directory <include dir>
   CPP         C preprocessor
-  EXTRA_VERSION
-              extra version string that can be used for tracking provenance
-              (distro, architecture, "e.g. fc16-x86_64).
   PYTHON      the Python interpreter
 
 Use these variables to override the choices made by `configure' or to help
@@ -3840,6 +3838,11 @@ if test "${enable_debug+set}" = set; then
 fi
 
 
+# Check whether --with-extra-version was given.
+if test "${with_extra_version+set}" = set; then
+  withval=$with_extra_version; EXTRA_VERSION="${withval}"
+fi
+
 
 # If we didn't specify the services directory, let's use the default
 if test -z "$AXIS2C_SERVICES" ; then
@@ -4150,11 +4153,6 @@ fi
                 INCLUDES="${INCLUDES} -I${VDDK_HOME}/lib/vmware-vix-disklib/include/"
                 LDFLAGS="-L${VDDK_HOME}/lib ${LDFLAGS}"
         fi
-fi
-
-if test -n "${EXTRA_VERSION}" ; then
-	# Extra Eucalyptus Version
-        sed -i "s/ARGUMENTS_EXTRA_VERSION.*\"unconfigured\"/ARGUMENTS_EXTRA_VERSION \"${EXTRA_VERSION}\"/" ./clc/modules/bootstrap/src/main/native/eucalyptus-opts.h
 fi
 
 # Checks for programs.
@@ -11254,6 +11252,7 @@ ac_config_files="$ac_config_files Makedefs clc/modules/postgresql/src/main/resou
 cat >>confdefs.h <<_ACEOF
 #define EUCA_VERSION "$EUCA_VERSION"
 _ACEOF
+
 
 
 

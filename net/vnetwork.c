@@ -287,10 +287,10 @@ int vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, int
 	rc = vnetApplySingleTableRule(vnetconfig, "filter", "-A FORWARD -m conntrack --ctstate ESTABLISHED -j ACCEPT");
 	
 	slashnet = 32 - ((int)log2((double)(0xFFFFFFFF - nm)) + 1);
-	snprintf(cmd, 256, "-A FORWARD -d ! %s/%d -j ACCEPT", network, slashnet);
+	snprintf(cmd, 256, "-A FORWARD ! -d %s/%d -j ACCEPT", network, slashnet);
 	rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
 
-	snprintf(cmd, 256, "-A POSTROUTING -d ! %s/%d -s %s/%d -j MASQUERADE", network, slashnet, network, slashnet);
+	snprintf(cmd, 256, "-A POSTROUTING ! -d %s/%d -s %s/%d -j MASQUERADE", network, slashnet, network, slashnet);
 	rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
 
 	//	snprintf(cmd, 256, "-A POSTROUTING -d %s/%d -j MASQUERADE", network, slashnet);
@@ -1648,9 +1648,9 @@ int vnetStartInstanceNetwork(vnetConfig *vnetconfig, int vlan, char *publicIp, c
   } else {
 
     // do ebtables to provide MAC/IP spoofing protection
-    snprintf(rules[0], MAX_PATH, "FORWARD -i ! %s -p IPv4 -s %s --ip-src %s -j ACCEPT", vnetconfig->pubInterface, macaddr, privateIp);
-    snprintf(rules[1], MAX_PATH, "FORWARD -i ! %s -p IPv4 -s %s --ip-src ! %s -j DROP", vnetconfig->pubInterface, macaddr, privateIp);
-    snprintf(rules[2], MAX_PATH, "FORWARD -i ! %s -s %s -j ACCEPT", vnetconfig->pubInterface, macaddr);
+    snprintf(rules[0], MAX_PATH, "FORWARD ! -i %s -p IPv4 -s %s --ip-src %s -j ACCEPT", vnetconfig->pubInterface, macaddr, privateIp);
+    snprintf(rules[1], MAX_PATH, "FORWARD ! -i %s -p IPv4 -s %s ! --ip-src %s -j DROP", vnetconfig->pubInterface, macaddr, privateIp);
+    snprintf(rules[2], MAX_PATH, "FORWARD ! -i %s -s %s -j ACCEPT", vnetconfig->pubInterface, macaddr);
 
     done=0;
     for (i=0; i<numrules && !done; i++) {
@@ -1683,9 +1683,9 @@ int vnetStopInstanceNetwork(vnetConfig *vnetconfig, int vlan, char *publicIp, ch
   if (!strcmp(vnetconfig->mode, "MANAGED")) {
 
   } else {
-    snprintf(rules[0], MAX_PATH, "FORWARD -i ! %s -p IPv4 -s %s --ip-src %s -j ACCEPT", vnetconfig->pubInterface, macaddr, privateIp);
-    snprintf(rules[1], MAX_PATH, "FORWARD -i ! %s -p IPv4 -s %s --ip-src ! %s -j DROP", vnetconfig->pubInterface, macaddr, privateIp);
-    snprintf(rules[2], MAX_PATH, "FORWARD -i ! %s -s %s -j ACCEPT", vnetconfig->pubInterface, macaddr);
+    snprintf(rules[0], MAX_PATH, "FORWARD ! -i %s -p IPv4 -s %s --ip-src %s -j ACCEPT", vnetconfig->pubInterface, macaddr, privateIp);
+    snprintf(rules[1], MAX_PATH, "FORWARD ! -i %s -p IPv4 -s %s ! --ip-src %s -j DROP", vnetconfig->pubInterface, macaddr, privateIp);
+    snprintf(rules[2], MAX_PATH, "FORWARD ! -i %s -s %s -j ACCEPT", vnetconfig->pubInterface, macaddr);
     done=0;
     for (i=0; i<numrules && !done; i++) {
       snprintf(rule, MAX_PATH, "-D %s\n", rules[i]);

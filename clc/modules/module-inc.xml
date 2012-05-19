@@ -233,7 +233,7 @@
 				<include name="**/*" />
 			</fileset>
 		</copy>
-		<copy todir="${DESTDIR}${euca.lib.dir}">
+		<copy todir="${DESTDIR}${euca.lib.dir}" verbose="true">
 			<fileset file="${jar.file}" />
 		</copy>
 		<antcall target="install-module" />

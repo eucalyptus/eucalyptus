@@ -34,6 +34,7 @@ const char *eucalyptus_opts_full_help[] = {
   "\nBootstrap Configuration:",
   "  -u, --user=USERNAME           User to drop privs to after starting.  \n                                  (default=`eucalyptus')",
   "  -h, --home=DIRECTORY          Eucalyptus home directory.  \n                                  (default=`/opt/eucalyptus/')",
+  "      --extra-version=EXTRAVERSION\n                                Extra version string.  (default=`')",
   "      --initialize              Perform first-time setup.  This is run one time \n                                  (only!) on the first cloud controller before \n                                  the first time it is run.  (default=off)",
   "  -i, --bind-addr=HOSTNAME      Specifying this option causes eucalyptus-cloud \n                                  to only bind the specified local addresses.  \n                                  The default behaviour is to listen on the any \n                                  address while determining the user facing \n                                  local address based on default route and \n                                  netmask size.",
   "  -b, --bootstrap-host=HOSTNAME Host to be used for bootstrapping group \n                                  membership.  Many can be provided.  Note this \n                                  should only be necessary when UDP multicast \n                                  is not available.",
@@ -88,34 +89,34 @@ init_help_array(void)
   eucalyptus_opts_help[3] = eucalyptus_opts_full_help[3];
   eucalyptus_opts_help[4] = eucalyptus_opts_full_help[4];
   eucalyptus_opts_help[5] = eucalyptus_opts_full_help[5];
-  eucalyptus_opts_help[6] = eucalyptus_opts_full_help[6];
-  eucalyptus_opts_help[7] = eucalyptus_opts_full_help[7];
-  eucalyptus_opts_help[8] = eucalyptus_opts_full_help[8];
-  eucalyptus_opts_help[9] = eucalyptus_opts_full_help[10];
-  eucalyptus_opts_help[10] = eucalyptus_opts_full_help[11];
-  eucalyptus_opts_help[11] = eucalyptus_opts_full_help[12];
-  eucalyptus_opts_help[12] = eucalyptus_opts_full_help[13];
-  eucalyptus_opts_help[13] = eucalyptus_opts_full_help[15];
-  eucalyptus_opts_help[14] = eucalyptus_opts_full_help[16];
-  eucalyptus_opts_help[15] = eucalyptus_opts_full_help[17];
-  eucalyptus_opts_help[16] = eucalyptus_opts_full_help[18];
-  eucalyptus_opts_help[17] = eucalyptus_opts_full_help[19];
-  eucalyptus_opts_help[18] = eucalyptus_opts_full_help[20];
-  eucalyptus_opts_help[19] = eucalyptus_opts_full_help[21];
-  eucalyptus_opts_help[20] = eucalyptus_opts_full_help[22];
-  eucalyptus_opts_help[21] = eucalyptus_opts_full_help[23];
-  eucalyptus_opts_help[22] = eucalyptus_opts_full_help[24];
-  eucalyptus_opts_help[23] = eucalyptus_opts_full_help[25];
-  eucalyptus_opts_help[24] = eucalyptus_opts_full_help[26];
-  eucalyptus_opts_help[25] = eucalyptus_opts_full_help[30];
-  eucalyptus_opts_help[26] = eucalyptus_opts_full_help[35];
-  eucalyptus_opts_help[27] = eucalyptus_opts_full_help[36];
-  eucalyptus_opts_help[28] = eucalyptus_opts_full_help[38];
-  eucalyptus_opts_help[29] = eucalyptus_opts_full_help[39];
-  eucalyptus_opts_help[30] = eucalyptus_opts_full_help[40];
-  eucalyptus_opts_help[31] = eucalyptus_opts_full_help[41];
-  eucalyptus_opts_help[32] = eucalyptus_opts_full_help[42];
-  eucalyptus_opts_help[33] = eucalyptus_opts_full_help[44];
+  eucalyptus_opts_help[6] = eucalyptus_opts_full_help[7];
+  eucalyptus_opts_help[7] = eucalyptus_opts_full_help[8];
+  eucalyptus_opts_help[8] = eucalyptus_opts_full_help[9];
+  eucalyptus_opts_help[9] = eucalyptus_opts_full_help[11];
+  eucalyptus_opts_help[10] = eucalyptus_opts_full_help[12];
+  eucalyptus_opts_help[11] = eucalyptus_opts_full_help[13];
+  eucalyptus_opts_help[12] = eucalyptus_opts_full_help[14];
+  eucalyptus_opts_help[13] = eucalyptus_opts_full_help[16];
+  eucalyptus_opts_help[14] = eucalyptus_opts_full_help[17];
+  eucalyptus_opts_help[15] = eucalyptus_opts_full_help[18];
+  eucalyptus_opts_help[16] = eucalyptus_opts_full_help[19];
+  eucalyptus_opts_help[17] = eucalyptus_opts_full_help[20];
+  eucalyptus_opts_help[18] = eucalyptus_opts_full_help[21];
+  eucalyptus_opts_help[19] = eucalyptus_opts_full_help[22];
+  eucalyptus_opts_help[20] = eucalyptus_opts_full_help[23];
+  eucalyptus_opts_help[21] = eucalyptus_opts_full_help[24];
+  eucalyptus_opts_help[22] = eucalyptus_opts_full_help[25];
+  eucalyptus_opts_help[23] = eucalyptus_opts_full_help[26];
+  eucalyptus_opts_help[24] = eucalyptus_opts_full_help[27];
+  eucalyptus_opts_help[25] = eucalyptus_opts_full_help[31];
+  eucalyptus_opts_help[26] = eucalyptus_opts_full_help[36];
+  eucalyptus_opts_help[27] = eucalyptus_opts_full_help[37];
+  eucalyptus_opts_help[28] = eucalyptus_opts_full_help[39];
+  eucalyptus_opts_help[29] = eucalyptus_opts_full_help[40];
+  eucalyptus_opts_help[30] = eucalyptus_opts_full_help[41];
+  eucalyptus_opts_help[31] = eucalyptus_opts_full_help[42];
+  eucalyptus_opts_help[32] = eucalyptus_opts_full_help[43];
+  eucalyptus_opts_help[33] = eucalyptus_opts_full_help[45];
   eucalyptus_opts_help[34] = 0; 
   
 }
@@ -151,6 +152,7 @@ void clear_given (struct eucalyptus_opts *args_info)
   args_info->version_given = 0 ;
   args_info->user_given = 0 ;
   args_info->home_given = 0 ;
+  args_info->extra_version_given = 0 ;
   args_info->initialize_given = 0 ;
   args_info->bind_addr_given = 0 ;
   args_info->bootstrap_host_given = 0 ;
@@ -199,6 +201,8 @@ void clear_args (struct eucalyptus_opts *args_info)
   args_info->user_orig = NULL;
   args_info->home_arg = gengetopt_strdup ("/opt/eucalyptus/");
   args_info->home_orig = NULL;
+  args_info->extra_version_arg = gengetopt_strdup ("");
+  args_info->extra_version_orig = NULL;
   args_info->initialize_flag = 0;
   args_info->bind_addr_arg = NULL;
   args_info->bind_addr_orig = NULL;
@@ -266,55 +270,56 @@ void init_args_info(struct eucalyptus_opts *args_info)
   args_info->version_help = eucalyptus_opts_full_help[2] ;
   args_info->user_help = eucalyptus_opts_full_help[4] ;
   args_info->home_help = eucalyptus_opts_full_help[5] ;
-  args_info->initialize_help = eucalyptus_opts_full_help[6] ;
-  args_info->bind_addr_help = eucalyptus_opts_full_help[7] ;
+  args_info->extra_version_help = eucalyptus_opts_full_help[6] ;
+  args_info->initialize_help = eucalyptus_opts_full_help[7] ;
+  args_info->bind_addr_help = eucalyptus_opts_full_help[8] ;
   args_info->bind_addr_min = 0;
   args_info->bind_addr_max = 0;
-  args_info->bootstrap_host_help = eucalyptus_opts_full_help[8] ;
+  args_info->bootstrap_host_help = eucalyptus_opts_full_help[9] ;
   args_info->bootstrap_host_min = 0;
   args_info->bootstrap_host_max = 0;
-  args_info->force_remote_bootstrap_help = eucalyptus_opts_full_help[9] ;
-  args_info->define_help = eucalyptus_opts_full_help[10] ;
+  args_info->force_remote_bootstrap_help = eucalyptus_opts_full_help[10] ;
+  args_info->define_help = eucalyptus_opts_full_help[11] ;
   args_info->define_min = 0;
   args_info->define_max = 0;
-  args_info->fork_help = eucalyptus_opts_full_help[11] ;
-  args_info->kill_help = eucalyptus_opts_full_help[12] ;
-  args_info->pidfile_help = eucalyptus_opts_full_help[13] ;
-  args_info->db_home_help = eucalyptus_opts_full_help[14] ;
-  args_info->log_level_help = eucalyptus_opts_full_help[16] ;
-  args_info->log_appender_help = eucalyptus_opts_full_help[17] ;
-  args_info->exhaustive_help = eucalyptus_opts_full_help[18] ;
-  args_info->exhaustive_db_help = eucalyptus_opts_full_help[19] ;
-  args_info->exhaustive_user_help = eucalyptus_opts_full_help[20] ;
-  args_info->exhaustive_cc_help = eucalyptus_opts_full_help[21] ;
-  args_info->exhaustive_external_help = eucalyptus_opts_full_help[22] ;
-  args_info->out_help = eucalyptus_opts_full_help[23] ;
-  args_info->err_help = eucalyptus_opts_full_help[24] ;
-  args_info->remote_dns_help = eucalyptus_opts_full_help[26] ;
-  args_info->remote_cloud_help = eucalyptus_opts_full_help[27] ;
-  args_info->remote_walrus_help = eucalyptus_opts_full_help[28] ;
-  args_info->remote_storage_help = eucalyptus_opts_full_help[29] ;
-  args_info->disable_iscsi_help = eucalyptus_opts_full_help[30] ;
-  args_info->disable_cloud_help = eucalyptus_opts_full_help[31] ;
-  args_info->disable_walrus_help = eucalyptus_opts_full_help[32] ;
-  args_info->disable_dns_help = eucalyptus_opts_full_help[33] ;
-  args_info->disable_storage_help = eucalyptus_opts_full_help[34] ;
-  args_info->java_home_help = eucalyptus_opts_full_help[36] ;
+  args_info->fork_help = eucalyptus_opts_full_help[12] ;
+  args_info->kill_help = eucalyptus_opts_full_help[13] ;
+  args_info->pidfile_help = eucalyptus_opts_full_help[14] ;
+  args_info->db_home_help = eucalyptus_opts_full_help[15] ;
+  args_info->log_level_help = eucalyptus_opts_full_help[17] ;
+  args_info->log_appender_help = eucalyptus_opts_full_help[18] ;
+  args_info->exhaustive_help = eucalyptus_opts_full_help[19] ;
+  args_info->exhaustive_db_help = eucalyptus_opts_full_help[20] ;
+  args_info->exhaustive_user_help = eucalyptus_opts_full_help[21] ;
+  args_info->exhaustive_cc_help = eucalyptus_opts_full_help[22] ;
+  args_info->exhaustive_external_help = eucalyptus_opts_full_help[23] ;
+  args_info->out_help = eucalyptus_opts_full_help[24] ;
+  args_info->err_help = eucalyptus_opts_full_help[25] ;
+  args_info->remote_dns_help = eucalyptus_opts_full_help[27] ;
+  args_info->remote_cloud_help = eucalyptus_opts_full_help[28] ;
+  args_info->remote_walrus_help = eucalyptus_opts_full_help[29] ;
+  args_info->remote_storage_help = eucalyptus_opts_full_help[30] ;
+  args_info->disable_iscsi_help = eucalyptus_opts_full_help[31] ;
+  args_info->disable_cloud_help = eucalyptus_opts_full_help[32] ;
+  args_info->disable_walrus_help = eucalyptus_opts_full_help[33] ;
+  args_info->disable_dns_help = eucalyptus_opts_full_help[34] ;
+  args_info->disable_storage_help = eucalyptus_opts_full_help[35] ;
+  args_info->java_home_help = eucalyptus_opts_full_help[37] ;
   args_info->java_home_min = 0;
   args_info->java_home_max = 0;
-  args_info->jvm_name_help = eucalyptus_opts_full_help[37] ;
-  args_info->jvm_args_help = eucalyptus_opts_full_help[38] ;
+  args_info->jvm_name_help = eucalyptus_opts_full_help[38] ;
+  args_info->jvm_args_help = eucalyptus_opts_full_help[39] ;
   args_info->jvm_args_min = 0;
   args_info->jvm_args_max = 0;
-  args_info->jmx_help = eucalyptus_opts_full_help[39] ;
-  args_info->debug_help = eucalyptus_opts_full_help[40] ;
-  args_info->verbose_help = eucalyptus_opts_full_help[41] ;
-  args_info->debug_port_help = eucalyptus_opts_full_help[42] ;
-  args_info->debug_noha_help = eucalyptus_opts_full_help[43] ;
-  args_info->debug_suspend_help = eucalyptus_opts_full_help[44] ;
-  args_info->profile_help = eucalyptus_opts_full_help[45] ;
-  args_info->profiler_home_help = eucalyptus_opts_full_help[46] ;
-  args_info->agentlib_help = eucalyptus_opts_full_help[47] ;
+  args_info->jmx_help = eucalyptus_opts_full_help[40] ;
+  args_info->debug_help = eucalyptus_opts_full_help[41] ;
+  args_info->verbose_help = eucalyptus_opts_full_help[42] ;
+  args_info->debug_port_help = eucalyptus_opts_full_help[43] ;
+  args_info->debug_noha_help = eucalyptus_opts_full_help[44] ;
+  args_info->debug_suspend_help = eucalyptus_opts_full_help[45] ;
+  args_info->profile_help = eucalyptus_opts_full_help[46] ;
+  args_info->profiler_home_help = eucalyptus_opts_full_help[47] ;
+  args_info->agentlib_help = eucalyptus_opts_full_help[48] ;
   
 }
 
@@ -450,6 +455,8 @@ arguments_release (struct eucalyptus_opts *args_info)
   free_string_field (&(args_info->user_orig));
   free_string_field (&(args_info->home_arg));
   free_string_field (&(args_info->home_orig));
+  free_string_field (&(args_info->extra_version_arg));
+  free_string_field (&(args_info->extra_version_orig));
   free_multiple_string_field (args_info->bind_addr_given, &(args_info->bind_addr_arg), &(args_info->bind_addr_orig));
   free_multiple_string_field (args_info->bootstrap_host_given, &(args_info->bootstrap_host_arg), &(args_info->bootstrap_host_orig));
   free_multiple_string_field (args_info->define_given, &(args_info->define_arg), &(args_info->define_orig));
@@ -521,6 +528,8 @@ arguments_dump(FILE *outfile, struct eucalyptus_opts *args_info)
     write_into_file(outfile, "user", args_info->user_orig, 0);
   if (args_info->home_given)
     write_into_file(outfile, "home", args_info->home_orig, 0);
+  if (args_info->extra_version_given)
+    write_into_file(outfile, "extra-version", args_info->extra_version_orig, 0);
   if (args_info->initialize_given)
     write_into_file(outfile, "initialize", 0, 0 );
   write_multiple_into_file(outfile, args_info->bind_addr_given, "bind-addr", args_info->bind_addr_orig, 0);
@@ -1174,6 +1183,7 @@ arguments_internal (int argc, char * const *argv, struct eucalyptus_opts *args_i
         { "version",	0, NULL, 'V' },
         { "user",	1, NULL, 'u' },
         { "home",	1, NULL, 'h' },
+        { "extra-version",	1, NULL, 0 },
         { "initialize",	0, NULL, 0 },
         { "bind-addr",	1, NULL, 'i' },
         { "bootstrap-host",	1, NULL, 'b' },
@@ -1418,8 +1428,22 @@ arguments_internal (int argc, char * const *argv, struct eucalyptus_opts *args_i
             exit (EXIT_SUCCESS);
           }
 
+          /* Extra version string..  */
+          if (strcmp (long_options[option_index].name, "extra-version") == 0)
+          {
+          
+          
+            if (update_arg( (void *)&(args_info->extra_version_arg), 
+                 &(args_info->extra_version_orig), &(args_info->extra_version_given),
+                &(local_args_info.extra_version_given), optarg, 0, "", ARG_STRING,
+                check_ambiguity, override, 0, 0,
+                "extra-version", '-',
+                additional_error))
+              goto failure;
+          
+          }
           /* Perform first-time setup.  This is run one time (only!) on the first cloud controller before the first time it is run..  */
-          if (strcmp (long_options[option_index].name, "initialize") == 0)
+          else if (strcmp (long_options[option_index].name, "initialize") == 0)
           {
           
           

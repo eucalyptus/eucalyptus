@@ -1,7 +1,66 @@
+/*
+ * Copyright (c) 2012  Eucalyptus Systems, Inc.
+ *
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, only version 3 of the License.
+ *
+ *
+ *  This file is distributed in the hope that it will be useful, but WITHOUT
+ *  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ *  FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ *  for more details.
+ *
+ *  You should have received a copy of the GNU General Public License along
+ *  with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ *  Please contact Eucalyptus Systems, Inc., 130 Castilian
+ *  Dr., Goleta, CA 93101 USA or visit <http://www.eucalyptus.com/licenses/>
+ *  if you need additional information or have any questions.
+ *
+ *  This file may incorporate work covered under the following copyright and
+ *  permission notice:
+ *
+ *    Software License Agreement (BSD License)
+ *
+ *    Copyright (c) 2008, Regents of the University of California
+ *    All rights reserved.
+ *
+ *    Redistribution and use of this software in source and binary forms, with
+ *    or without modification, are permitted provided that the following
+ *    conditions are met:
+ *
+ *      Redistributions of source code must retain the above copyright notice,
+ *      this list of conditions and the following disclaimer.
+ *
+ *      Redistributions in binary form must reproduce the above copyright
+ *      notice, this list of conditions and the following disclaimer in the
+ *      documentation and/or other materials provided with the distribution.
+ *
+ *    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ *    IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+ *    TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+ *    PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+ *    OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ *    EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ *    PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ *    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ *    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ *    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ *    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. USERS OF
+ *    THIS SOFTWARE ACKNOWLEDGE THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE
+ *    LICENSED MATERIAL, COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS
+ *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
+ *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
+ *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
+ *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
+ *    ANY SUCH LICENSES OR RIGHTS.
+ *******************************************************************************/
 package com.eucalyptus.auth.login;
 
 import java.io.UnsupportedEncodingException;
-import java.net.URLDecoder;
 import java.util.Map;
 import java.util.NavigableSet;
 import java.util.TreeSet;
@@ -10,26 +69,22 @@ import javax.crypto.spec.SecretKeySpec;
 import org.apache.commons.codec.net.URLCodec;
 import org.apache.log4j.Logger;
 import org.apache.xml.security.utils.Base64;
-import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.api.BaseLoginModule;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.crypto.Hmac;
 
-public class Hmacv2LoginModule extends BaseLoginModule<HmacCredentials> {
+public class Hmacv2LoginModule extends HmacLoginModuleSupport {
   private static Logger LOG = Logger.getLogger( Hmacv2LoginModule.class );
-  public Hmacv2LoginModule() {}
-  
-  @Override
-  public boolean accepts( ) {
-    return super.getCallbackHandler( ) instanceof HmacCredentials && ((HmacCredentials)super.getCallbackHandler( )).getSignatureVersion( ).equals( 2 );
+
+  public Hmacv2LoginModule() {
+    super(2);
   }
 
   @Override
   public boolean authenticate( HmacCredentials credentials ) throws Exception {
     String sig = credentials.getSignature( );
-    SecurityContext.enqueueSignature( sig );
-    AccessKey accessKey = Accounts.lookupAccessKeyById( credentials.getQueryId( ) );
+    checkForReplay( sig );
+    AccessKey accessKey = lookupAccessKey( credentials );
     User user = accessKey.getUser( );
     String secretKey = accessKey.getSecretKey( );
     String canonicalString = this.makeSubjectString( credentials.getVerb( ), credentials.getHeaderHost( ), credentials.getServicePath( ), credentials.getParameters( ) );
@@ -37,7 +92,7 @@ public class Hmacv2LoginModule extends BaseLoginModule<HmacCredentials> {
     String computedSig = this.getSignature( secretKey, canonicalString, credentials.getSignatureMethod( ) );
     String computedSigWithPort = this.getSignature( secretKey, canonicalStringWithPort, credentials.getSignatureMethod( ) );
     if ( !computedSig.equals( sig ) && !computedSigWithPort.equals( sig ) ) {
-      sig = URLDecoder.decode( sig ).replaceAll("=","");
+      sig = sanitize( urldecode( sig ) );
       computedSig = this.getSignature( secretKey, canonicalString.replaceAll("\\+","%2B"), credentials.getSignatureMethod( ) ).replaceAll("\\+"," ");
       computedSigWithPort = this.getSignature( secretKey, canonicalStringWithPort.replaceAll("\\+","%2B"), credentials.getSignatureMethod( ) ).replaceAll("\\+"," ");
       if( !computedSig.equals( sig ) && !computedSigWithPort.equals( sig ) ) {
@@ -57,9 +112,6 @@ public class Hmacv2LoginModule extends BaseLoginModule<HmacCredentials> {
     //super.getGroups( ).addAll( Groups.lookupUserGroups( super.getPrincipal( ) ) );
     return true;
   }
-
-  @Override
-  public void reset( ) {}
 
   private String makeSubjectString( String httpMethod, String host, String path, final Map<String, String> parameters ) throws UnsupportedEncodingException {
     URLCodec codec = new URLCodec();
@@ -93,7 +145,7 @@ public class Hmacv2LoginModule extends BaseLoginModule<HmacCredentials> {
       Mac digest = mac.getInstance( );
       digest.init( signingKey );
       byte[] rawHmac = digest.doFinal( subject.getBytes( ) );
-      return Base64.encode( rawHmac ).replaceAll( "=", "" );
+      return sanitize( Base64.encode( rawHmac ) );
     } catch ( Exception e ) {
       LOG.error( e, e );
       throw new AuthenticationException( "Failed to compute signature" );

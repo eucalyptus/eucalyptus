@@ -1,6 +1,6 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8" ?>
 <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  ~ Copyright (c) 2009  Eucalyptus Systems, Inc.
+  ~ Copyright (c) 2012  Eucalyptus Systems, Inc.
   ~
   ~ This program is free software: you can redistribute it and/or modify
   ~ it under the terms of the GNU General Public License as published by
@@ -59,24 +59,19 @@
   ~   WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
   ~   ANY SUCH LICENSES OR RIGHTS.
   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  ~ Author: chris grzegorczyk grze@eucalyptus.com
+  ~ Log4J configuration for unit tests.
   -->
-<binding force-classes="true" add-constructors="true" xmlns:tns="http://ec2.amazonaws.com/doc/2010-06-15/" name="ec2_amazonaws_com_doc_2010_06_15">
-  <namespace uri="http://ec2.amazonaws.com/doc/2010-06-15/" default="elements" />
-  <include path="classpath:aws-base.xml" />
-  <include path="classpath:aws-instances-09-10-31.xml" />
-  <include path="classpath:aws-bundling.xml" />
-  <include path="classpath:aws-images-09-10-31.xml" />
-  <include path="classpath:aws-image-attr.xml" />
-  <include path="classpath:aws-ips.xml" />
-  <include path="classpath:aws-keypairs.xml" />
-  <include path="classpath:aws-security.xml" />
-  <include path="classpath:aws-zones-09-07-15.xml" />
-  <include path="classpath:aws-regions.xml" />
-  <include path="classpath:aws-ebs-volumes.xml" />
-  <include path="classpath:aws-ebs-snapshots-09-08-15.xml" />
-  <include path="classpath:aws-filters-tags-10-06-15.xml" />
-  <include path="classpath:aws-placement-10-06-15.xml" />
-  <include path="classpath:aws-vpc.xml" />
-  <include path="classpath:aws-unimplemented.xml" />
-</binding>
+<!DOCTYPE log4j:configuration SYSTEM "log4j.dtd">
+<log4j:configuration xmlns:log4j="http://jakarta.apache.org/log4j/">
+
+    <appender name="console" class="org.apache.log4j.ConsoleAppender">
+        <param name="Target" value="System.out" />
+        <param name="Threshold" value="DEBUG" />
+        <layout class="com.eucalyptus.system.EucaLayout" />
+    </appender>
+
+    <root>
+        <appender-ref ref="console" />
+    </root>
+
+</log4j:configuration>

@@ -1,74 +1,82 @@
 package com.eucalyptus.bootstrap;
 
 import java.io.File;
+import java.io.FileWriter;
+import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.PrintStream;
+import java.io.Reader;
+import java.io.Writer;
+import java.math.BigInteger;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.Set;
 import java.util.SortedSet;
+import java.util.concurrent.ConcurrentMap;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import javax.persistence.PersistenceContext;
-import org.apache.commons.io.FileUtils;
+import org.apache.bcel.util.ClassPath;
 import org.apache.log4j.Logger;
-import org.jibx.binding.Loader;
 import org.jibx.binding.Utility;
+import org.jibx.binding.classes.BoundClass;
+import org.jibx.binding.classes.BranchWrapper;
+import org.jibx.binding.classes.ClassCache;
+import org.jibx.binding.classes.ClassFile;
+import org.jibx.binding.classes.MungedClass;
+import org.jibx.binding.def.BindingDefinition;
+import org.jibx.binding.model.BindingElement;
+import org.jibx.binding.model.ElementBase;
+import org.jibx.binding.model.IncludeElement;
+import org.jibx.binding.model.MappingElement;
+import org.jibx.binding.model.MappingElementBase;
+import org.jibx.binding.model.ValidationContext;
 import org.jibx.runtime.JiBXException;
+import org.jibx.util.ClasspathUrlExtender;
+import com.eucalyptus.crypto.Digest;
 import com.eucalyptus.entities.PersistenceContexts;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Ats;
 import com.eucalyptus.system.BaseDirectory;
 import com.eucalyptus.system.SubDirectory;
 import com.eucalyptus.util.Classes;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.LogUtil;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.MapDifference;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
+import com.google.common.io.ByteStreams;
+import com.google.common.io.Files;
+import com.google.common.io.InputSupplier;
+import com.google.common.io.Resources;
 
 /**
  * TODO: DOCUMENT
  */
 public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscovery> {
-  private static Logger                         LOG         = Logger.getLogger( ServiceJarDiscovery.class );
-  private static SortedSet<ServiceJarDiscovery> discovery   = Sets.newTreeSet( );
-  private static Multimap<Class, String>        classList   = ArrayListMultimap.create( );
-  private static List<String>                   bindingList = Lists.newArrayList( );
+  private static Logger                         LOG       = Logger.getLogger( ServiceJarDiscovery.class );
+  private static SortedSet<ServiceJarDiscovery> discovery = Sets.newTreeSet( );
+  private static Multimap<Class, String>        classList = ArrayListMultimap.create( );
   
   enum JarFilePass {
-    BINDINGS {
-      @Override
-      public void process( File f ) throws Exception {
-        final JarFile jar = new JarFile( f );
-        final Properties props = new Properties( );
-        final List<JarEntry> jarList = Collections.list( jar.entries( ) );
-        LOG.trace( "-> Trying to load message binding info from " + f.getAbsolutePath( ) );
-        for ( final JarEntry j : jarList ) {
-          try {
-            if ( j.getName( ).matches( ".*\\-binding.xml" ) ) {
-              LOG.info( "Loading binding from: " + f.getAbsolutePath( ) + "!/" + j.getName( ) );
-              bindingList.add( j.getName( ) );
-            }
-          } catch ( RuntimeException ex ) {
-            LOG.error( ex, ex );
-            jar.close( );
-            throw ex;
-          }
-        }
-        jar.close( );
-      }
-    },
     CLASSES {
       @Override
       public void process( File f ) throws Exception {
@@ -108,17 +116,18 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
               @SuppressWarnings( { "rawtypes",
                   "unchecked" } )
               final ServiceJarDiscovery discover = new ServiceJarDiscovery( ) {
-                final Bootstrap.Discovery annote = Ats.from( candidate ).get( Bootstrap.Discovery.class );
-                final Predicate<Class> instance = ( Predicate<Class> ) Classes.builder( candidate ).newInstance( );
+                final Bootstrap.Discovery annote   = Ats.from( candidate ).get( Bootstrap.Discovery.class );
+                final Predicate<Class>    instance = ( Predicate<Class> ) Classes.builder( candidate ).newInstance( );
+                
                 @Override
                 public boolean processClass( Class discoveryCandidate ) throws Exception {
                   boolean classFiltered =
                     this.annote.value( ).length != 0 ? Iterables.any( Arrays.asList( this.annote.value( ) ), Classes.assignableTo( discoveryCandidate ) )
-                                               : true;
+                                                    : true;
                   if ( classFiltered ) {
                     boolean annotationFiltered =
                       this.annote.annotations( ).length != 0 ? Iterables.any( Arrays.asList( this.annote.annotations( ) ), Ats.from( discoveryCandidate ) )
-                                                       : true;
+                                                            : true;
                     if ( annotationFiltered ) {
                       return this.instance.apply( discoveryCandidate );
                     } else {
@@ -146,6 +155,9 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
       }
       
     };
+    
+    JarFilePass( ) {}
+    
     public abstract void process( final File f ) throws Exception;
   }
   
@@ -247,35 +259,6 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
   @Override
   public int compareTo( final ServiceJarDiscovery that ) {
     return this.getDistinctPriority( ).compareTo( that.getDistinctPriority( ) );
-  }
-  
-  public static void compileBindings( ) {
-    BootstrapClassLoader jibxLoader = BootstrapClassLoader.getInstance( );
-    final File libDir = new File( BaseDirectory.LIB.toString( ) );
-    for ( final File f : libDir.listFiles( ) ) {
-      if ( f.getName( ).startsWith( "eucalyptus" ) && f.getName( ).endsWith( ".jar" )
-           && !f.getName( ).matches( ".*-ext-.*" ) ) {
-        EventRecord.here( ServiceJarDiscovery.class, EventType.BOOTSTRAP_INIT_SERVICE_JAR, f.getName( ) ).info( );
-        try {
-//          ServiceJarDiscovery.JarFilePass.BINDINGS.process( f );
-        } catch ( final Throwable e ) {
-          Bootstrap.LOG.error( e.getMessage( ) );
-          continue;
-        }
-      }
-    }
-    try {
-      for ( String binding : bindingList ) {
-        jibxLoader.loadResourceBinding( binding );
-      }
-      jibxLoader.processBindings( );
-    } catch ( JiBXException ex ) {
-      LOG.error( ex, ex );
-      throw new Error( "Failed to prepare the system while trying to compile bindings: " + ex.getMessage( ), ex );
-    } catch ( IOException ex ) {
-      LOG.error( ex, ex );
-      throw new Error( "Failed to prepare the system while trying to compile bindings: " + ex.getMessage( ), ex );
-    }
   }
   
   public static void processLibraries( ) {

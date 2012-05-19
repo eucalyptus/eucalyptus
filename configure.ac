@@ -96,7 +96,9 @@ AC_ARG_ENABLE(debug,
         [if test "${enableval}" != "no"; then
                 CFLAGS="$CFLAGS -g -DDEBUG"
         fi])
-AC_ARG_VAR(EXTRA_VERSION,			extra version string that can be used for tracking provenance (distro, architecture, "e.g. fc16-x86_64).)
+AC_ARG_WITH(extra-version,
+        [  --extra-version=<str>                string to append to versions to make logs and messages more precise],
+        [EXTRA_VERSION="${withval}"])
 
 # If we didn't specify the services directory, let's use the default
 if test -z "$AXIS2C_SERVICES" ; then
@@ -147,11 +149,6 @@ if test -n "${VDDK_HOME}" ; then
                 INCLUDES="${INCLUDES} -I${VDDK_HOME}/lib/vmware-vix-disklib/include/"
                 LDFLAGS="-L${VDDK_HOME}/lib ${LDFLAGS}"
         fi
-fi
-
-if test -n "${EXTRA_VERSION}" ; then
-	# Extra Eucalyptus Version
-        sed -i "s/ARGUMENTS_EXTRA_VERSION.*\"unconfigured\"/ARGUMENTS_EXTRA_VERSION \"${EXTRA_VERSION}\"/" ./clc/modules/bootstrap/src/main/native/eucalyptus-opts.h
 fi
 
 # Checks for programs.
@@ -292,6 +289,7 @@ AC_CONFIG_FILES([Makedefs
 AC_DEFINE_UNQUOTED([EUCA_VERSION], "$EUCA_VERSION", [Version of Eucalyptus])
 
 AC_SUBST(EUCA_VERSION)
+AC_SUBST(EXTRA_VERSION)
 AC_SUBST(TOP)
 AC_SUBST(ANT)
 AC_SUBST(RM)

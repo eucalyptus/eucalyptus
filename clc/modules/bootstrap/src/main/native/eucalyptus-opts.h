@@ -41,6 +41,9 @@ struct eucalyptus_opts
   char * home_arg;	/**< @brief Eucalyptus home directory. (default='/opt/eucalyptus/').  */
   char * home_orig;	/**< @brief Eucalyptus home directory. original value given at command line.  */
   const char *home_help; /**< @brief Eucalyptus home directory. help description.  */
+  char * extra_version_arg;	/**< @brief Extra version string. (default='').  */
+  char * extra_version_orig;	/**< @brief Extra version string. original value given at command line.  */
+  const char *extra_version_help; /**< @brief Extra version string. help description.  */
   int initialize_flag;	/**< @brief Perform first-time setup.  This is run one time (only!) on the first cloud controller before the first time it is run. (default=off).  */
   const char *initialize_help; /**< @brief Perform first-time setup.  This is run one time (only!) on the first cloud controller before the first time it is run. help description.  */
   char ** bind_addr_arg;	/**< @brief Specifying this option causes eucalyptus-cloud to only bind the specified local addresses.  The default behaviour is to listen on the any address while determining the user facing local address based on default route and netmask size..  */
@@ -150,6 +153,7 @@ struct eucalyptus_opts
   unsigned int version_given ;	/**< @brief Whether version was given.  */
   unsigned int user_given ;	/**< @brief Whether user was given.  */
   unsigned int home_given ;	/**< @brief Whether home was given.  */
+  unsigned int extra_version_given ;	/**< @brief Whether extra-version was given.  */
   unsigned int initialize_given ;	/**< @brief Whether initialize was given.  */
   unsigned int bind_addr_given ;	/**< @brief Whether bind-addr was given.  */
   unsigned int bootstrap_host_given ;	/**< @brief Whether bootstrap-host was given.  */

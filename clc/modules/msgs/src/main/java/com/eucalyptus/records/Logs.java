@@ -2,6 +2,7 @@ package com.eucalyptus.records;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.io.PrintStream;
 import java.net.URL;
 import java.util.Enumeration;
@@ -303,63 +304,78 @@ public class Logs {
     return Logger.getLogger( "BOOTSTRAP" );
   }
   
+  private static class LoggingOutputStream extends OutputStream {
+    private static final int DEFAULT_BUFFER_LENGTH = 2048;
+    private boolean          hasBeenClosed         = false;
+    private byte[]           buf;
+    private int              count;
+    private int              curBufLength;
+    private final Logger     log;
+    private final Level      level;
+    
+    LoggingOutputStream( final Logger log, final Level level ) throws IllegalArgumentException {
+      if ( ( log == null ) || ( level == null ) ) {
+        throw new IllegalArgumentException( "Logger or log level must be not null" );
+      }
+      this.log = log;
+      this.level = level;
+      this.curBufLength = DEFAULT_BUFFER_LENGTH;
+      this.buf = new byte[this.curBufLength];
+      this.count = 0;
+    }
+    
+    public void write( final int b ) throws IOException {
+      if ( this.hasBeenClosed ) {
+        throw new IOException( "The stream has been closed." );
+      }
+      // don't log nulls
+      if ( b == 0 ) {
+        return;
+      }
+      // would this be writing past the buffer?
+      if ( this.count == this.curBufLength ) {
+        // grow the buffer
+        final int newBufLength = this.curBufLength +
+                                 DEFAULT_BUFFER_LENGTH;
+        final byte[] newBuf = new byte[newBufLength];
+        System.arraycopy( this.buf, 0, newBuf, 0, this.curBufLength );
+        this.buf = newBuf;
+        this.curBufLength = newBufLength;
+      }
+      
+      this.buf[this.count] = ( byte ) b;
+      this.count++;
+    }
+    
+    public void flush( ) {
+      if ( this.count == 0 ) {
+        return;
+      }
+      final byte[] bytes = new byte[this.count];
+      System.arraycopy( this.buf, 0, bytes, 0, this.count );
+      final String str = new String( bytes );
+      this.log.log( this.level, str );
+      this.count = 0;
+    }
+    
+    public void close( ) {
+      this.flush( );
+      this.hasBeenClosed = true;
+    }
+  }
+  
   public static void init( ) {
     logLevel.get( );
     //    System.setProperty( "log4j.configurationClass", "com.eucalyptus.util.Logs.LogConfigurator" );
     try {
+      final Logger stdLogger = ( Logs.isExtrrreeeme( ) ? Logger.getLogger( SystemBootstrapper.class ) : Logs.extreme( ) );
       final PrintStream oldOut = System.out;
-      final ByteArrayOutputStream bos = new ByteArrayOutputStream( ) {
-        @Override
-        public synchronized void reset( ) {
-          super.buf = new byte[4096];
-          super.reset( );
-        }
-      };
-      System.setOut( new PrintStream( bos, true ) {
-        @Override
-        public void flush( ) {
-          Logs.exhaust( ).info( SystemBootstrapper.class + " " + EventType.STDOUT + " " + bos.toString( ) );
-          bos.reset( );
-          super.flush( );
-        }
-        
-        @Override
-        public void close( ) {
-          Logs.exhaust( ).info( SystemBootstrapper.class + " " + EventType.STDOUT + " " + bos.toString( ) );
-          bos.reset( );
-          super.close( );
-        }
-      }
-
-      );
-      
       final PrintStream oldErr = System.err;
-      final ByteArrayOutputStream bosErr = new ByteArrayOutputStream( ) {       
-        @Override
-        public synchronized void reset( ) {
-          super.buf = new byte[4096];
-          super.reset( );
-        }
-      };
-      System.setErr( new PrintStream( bosErr, true ) {
-        
-        @Override
-        public void flush( ) {
-          Logs.exhaust( ).error( SystemBootstrapper.class + " " + EventType.STDERR + " " + bosErr.toString( ) );
-          bosErr.reset( );
-          super.flush( );
-        }
-        
-        @Override
-        public void close( ) {
-          Logs.exhaust( ).error( SystemBootstrapper.class + " " + EventType.STDERR + " " + bosErr.toString( ) );
-          bosErr.reset( );
-          super.close( );
-        }
+      if ( !System.getProperty( "euca.log.appender", "" ).equals( "console" ) ) {
+        System.setOut( new PrintStream( new LoggingOutputStream( stdLogger, Level.INFO ) ) );
+        System.setErr( new PrintStream( new LoggingOutputStream( stdLogger, Level.ERROR ) ) );
       }
-            );
-      
-      Logger.getRootLogger( ).info( LogUtil.subheader( "Starting system with debugging set as: " + Joiner.on( "\n" ).join( Logs.class.getDeclaredFields( ) ) ) );
+      Logger.getRootLogger( ).info( LogUtil.subheader( "Starting system with debugging set as: " + Logs.logLevel.get( ) ) );
     } catch ( final Exception t ) {
       t.printStackTrace( );
       System.exit( 1 );//GRZE: special case, can't open log files, hosed
@@ -377,7 +393,7 @@ public class Logs {
       
       @Override
       String exhaustLevel( ) {
-        return level( );
+        return this.level( );
       }
     },
     EXTREME {
@@ -389,7 +405,7 @@ public class Logs {
       
       @Override
       String exhaustLevel( ) {
-        return level( );
+        return this.level( );
       }
       
       @Override
@@ -442,13 +458,13 @@ public class Logs {
     private LogLevel init( ) {
       System.setProperty( PROP_LOG_LEVEL, this.level( ) );
       System.setProperty( PROP_LOG_PATTERN, this.pattern( ) );
-      System.setProperty( "euca.exhaust.level", exhaustLevel( ) );
-      System.setProperty( "euca.log.exhaustive", exhaustLevel( ) );
-      System.setProperty( "euca.log.exhaustive.cc", exhaustLevel( ) );
-      System.setProperty( "euca.log.exhaustive.user", exhaustLevel( ) );
-      System.setProperty( "euca.log.exhaustive.db", exhaustLevel( ) );
-      System.setProperty( "euca.log.exhaustive.external", exhaustLevel( ) );
-      System.setProperty( "euca.log.exhaustive.user", exhaustLevel( ) );
+      System.setProperty( "euca.exhaust.level", this.exhaustLevel( ) );
+      System.setProperty( "euca.log.exhaustive", this.exhaustLevel( ) );
+      System.setProperty( "euca.log.exhaustive.cc", this.exhaustLevel( ) );
+      System.setProperty( "euca.log.exhaustive.user", this.exhaustLevel( ) );
+      System.setProperty( "euca.log.exhaustive.db", this.exhaustLevel( ) );
+      System.setProperty( "euca.log.exhaustive.external", this.exhaustLevel( ) );
+      System.setProperty( "euca.log.exhaustive.user", this.exhaustLevel( ) );
       return this;
     }
     
@@ -468,13 +484,13 @@ public class Logs {
     static LogLevel get( ) {
       try {
         return LogLevel.valueOf( System.getProperty( PROP_LOG_LEVEL ).toUpperCase( ) ).init( );
-      } catch ( IllegalArgumentException ex ) {
+      } catch ( final IllegalArgumentException ex ) {
         if ( EXTREME.name( ).equals( System.getProperty( PROP_LOG_LEVEL ).toUpperCase( ) ) ) {
           return EXTREME.init( );
         } else {
           throw ex;
         }
-      } catch ( NullPointerException ex ) {
+      } catch ( final NullPointerException ex ) {
         return LogLevel.INFO.init( );
       }
     }
@@ -514,9 +530,14 @@ public class Logs {
   }
   
   public static String groovyDump( final Object o ) {
-    HashMap ctx = new HashMap( ) {
+    final HashMap ctx = new HashMap( ) {
+      /**
+       * 
+       */
+      private static final long serialVersionUID = 1L;
+      
       {
-        put( "o", o );
+        this.put( "o", o );
       }
     };
     try {
@@ -527,21 +548,26 @@ public class Logs {
                                 ".replaceAll(\"[\\\\w\\\\.]+\\\\.(\\\\w+)@\\\\w*\", { Object[] it -> it[1] })" +
                                 ".replaceAll(\"class:class [\\\\w\\\\.]+\\\\.(\\\\w+),\", { Object[] it -> it[1] });" +
                                 "} catch( Exception e ) {return \"\"+o;}", ctx );
-    } catch ( Exception ex ) {
+    } catch ( final Exception ex ) {
       LOG.error( ex, ex );
       return null;
     }
   }
   
   public static String groovyInspect( final Object o ) {
-    HashMap ctx = new HashMap( ) {
+    final HashMap ctx = new HashMap( ) {
+      /**
+       * 
+       */
+      private static final long serialVersionUID = 1L;
+      
       {
-        put( "o", o );
+        this.put( "o", o );
       }
     };
     try {
       return "" + Groovyness.eval( "try{return o.inspect();}catch(Exception e){return \"\"+o;}", ctx );
-    } catch ( Exception ex ) {
+    } catch ( final Exception ex ) {
       LOG.error( ex, ex );
       return null;
     }

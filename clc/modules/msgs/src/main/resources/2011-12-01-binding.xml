@@ -63,20 +63,20 @@
   -->
 <binding force-classes="true" add-constructors="true" xmlns:tns="http://ec2.amazonaws.com/doc/2011-12-01/" name="ec2_amazonaws_com_doc_2011_12_01">
   <namespace uri="http://ec2.amazonaws.com/doc/2011-12-01/" default="elements" />
-  <include path="aws-base.xml" />
-  <include path="aws-instances-10-08-31.xml" />
-  <include path="aws-bundling.xml" />
-  <include path="aws-images-10-08-31.xml" />
-  <include path="aws-image-attr.xml" />
-  <include path="aws-ips-11-01-01.xml" />
-  <include path="aws-keypairs-10-08-31.xml" />
-  <include path="aws-security-11-01-01.xml" />
-  <include path="aws-zones-10-08-31.xml" />
-  <include path="aws-regions-10-08-31.xml" />
-  <include path="aws-ebs-volumes-10-08-31.xml" />
-  <include path="aws-ebs-snapshots-10-08-31.xml" />
-  <include path="aws-filters-tags-10-06-15.xml" />
-  <include path="aws-placement-10-06-15.xml" />
-  <include path="aws-vpc.xml" />
-  <include path="aws-unimplemented.xml" />
+  <include path="classpath:aws-base.xml" />
+  <include path="classpath:aws-instances-10-08-31.xml" />
+  <include path="classpath:aws-bundling.xml" />
+  <include path="classpath:aws-images-10-08-31.xml" />
+  <include path="classpath:aws-image-attr.xml" />
+  <include path="classpath:aws-ips-11-01-01.xml" />
+  <include path="classpath:aws-keypairs-10-08-31.xml" />
+  <include path="classpath:aws-security-11-01-01.xml" />
+  <include path="classpath:aws-zones-10-08-31.xml" />
+  <include path="classpath:aws-regions-10-08-31.xml" />
+  <include path="classpath:aws-ebs-volumes-10-08-31.xml" />
+  <include path="classpath:aws-ebs-snapshots-10-08-31.xml" />
+  <include path="classpath:aws-filters-tags-10-06-15.xml" />
+  <include path="classpath:aws-placement-10-06-15.xml" />
+  <include path="classpath:aws-vpc.xml" />
+  <include path="classpath:aws-unimplemented.xml" />
 </binding>
