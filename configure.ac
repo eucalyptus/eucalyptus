@@ -87,7 +87,10 @@ AC_ARG_ENABLE(appliance-store,
         fi])
 AC_ARG_WITH(db-home,
         [  --with-db-home=<dir>                 where postgresql is installed],
-        [DB_HOME="${withval}"])
+        [EUCA_DB_HOME="${withval}"])
+AC_ARG_WITH(db-suffix,
+        [  --with-db-suffix=<dir>                 where postgresql is installed],
+        [EUCA_DB_SUFFIX="${withval}"])
 AC_ARG_ENABLE(debug,
         [  --enable-debug                       include debugging info when compiling],
         [if test "${enableval}" != "no"; then
@@ -148,8 +151,7 @@ fi
 
 if test -n "${EXTRA_VERSION}" ; then
 	# Extra Eucalyptus Version
-	# sed -i "s/ARGUMENTS_EXTRA_VERSION.*\"unconfigured\"/ARGUMENTS_EXTRA_VERSION \"${EXTRA_VERSION}\"/" ./clc/modules/bootstrap/src/main/native/eucalyptus-opts.h
-	sed -i "s/ARGUMENTS_EXTRA_VERSION.*\"unconfigured\"/ARGUMENTS_EXTRA_VERSION \"${EXTRA_VERSION}\"/" ./clc/modules/bootstrap/src/main/resources/version.properties
+        sed -i "s/ARGUMENTS_EXTRA_VERSION.*\"unconfigured\"/ARGUMENTS_EXTRA_VERSION \"${EXTRA_VERSION}\"/" ./clc/modules/bootstrap/src/main/native/eucalyptus-opts.h
 fi
 
 # Checks for programs.
@@ -277,13 +279,15 @@ AC_CHECK_FUNCS([bzero dup2 ftruncate gettimeofday mkdir pow select strchr strdup
 
 # Time to substitute and generate the files
 AC_CONFIG_FILES([Makedefs
+                 clc/modules/postgresql/src/main/resources/postgresql-binaries.properties:clc/modules/postgresql/src/main/resources/postgresql-binaries.properties.in
                  clc/eucadmin/bin/euca_conf:clc/eucadmin/bin/euca_conf.in
                  clc/eucadmin/setup.cfg.template:clc/eucadmin/setup.cfg.template.in
                  clc/eucadmin/eucadmin/__init__.py:clc/eucadmin/eucadmin/__init__.py.in
                  clc/modules/bootstrap/src/main/native/arguments.ggo:clc/modules/bootstrap/src/main/native/arguments.ggo.in
                  tools/eucalyptus-cc:tools/eucalyptus-cc.in
                  tools/eucalyptus-cloud:tools/eucalyptus-cloud.in
-                 tools/eucalyptus-nc:tools/eucalyptus-nc.in])
+                 tools/eucalyptus-nc:tools/eucalyptus-nc.in
+                 clc/modules/bootstrap/src/main/resources/version.properties:clc/modules/bootstrap/src/main/resources/version.properties.in])
 
 AC_DEFINE_UNQUOTED([EUCA_VERSION], "$EUCA_VERSION", [Version of Eucalyptus])
 
@@ -299,6 +303,8 @@ AC_SUBST(AXIS2C_SERVICES)
 AC_SUBST(AXIS2_HOME)
 AC_SUBST(LIBVIRT_HOME)
 AC_SUBST(VDDK_HOME)
+AC_SUBST(EUCA_DB_HOME)
+AC_SUBST(EUCA_DB_SUFFIX)
 AC_SUBST(CFLAGS)
 AC_SUBST(LDFLAGS)
 AC_SUBST(LIBS)

@@ -16,7 +16,7 @@ option "define"                D   "Set system properties."                     
 option "fork"                  f   "Fork and daemonize Eucalyptus."                    flag                              off
 option "kill"                  k   "Kill a daemonized Eucalyptus."                     flag                              off
 option "pidfile"               -   "Location for the pidfile."                         string  typestr="FILENAME"        default="@prefix@/var/run/eucalyptus-cloud.pid" no
-option "db-home"               -   "Set path to database home directory"               string  typestr="DIRECTORY"       off    			   hidden # DEPRRECATED
+option "db-home"               -   "Set path to database home directory"               string  typestr="DIRECTORY"       default="" 	        no     hidden # DEPRRECATED
 ######                   #       #                                                    #       #                         #                      #      #           
 ###### long-opt          # short # description                                        # type  # type desc.              # default value        # req. # extras... 
 section "Logging Configuration"  #                                                    #       #                         #                      #      #
@@ -51,7 +51,7 @@ option "jmx"                   -   "Launch with JMX enabled."                   
 option "debug"                 d   "Launch with debugger enabled."                     flag                              off
 option "verbose"               v   "Launch the JVM w/ verbose output flags."           flag                              off
 option "debug-port"            -   "Set the port to use for the debugger."             int                               default="5005"          no     dependon="debug"
-option "debug-noha"            H   "Launch with CLC in debug mode (no state management)."  flag       					 off
+option "debug-noha"            H   "Launch with CLC in debug mode (no state management)."  flag       			 off	           	hidden
 option "debug-suspend"         -   "Force debugger to wait at main()."                 flag                              off                            dependon="debug"          
 ######                   #       #                                                    #       #                         #                      #      #           
 ######                   #       #                                                    #       #                         #                      #      #           
