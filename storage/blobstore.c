@@ -528,11 +528,16 @@ static int open_and_lock (const char * path,
         // ensure we do not have this file descriptor already in some other list
         for (blobstore_filelock * l = locks_list; l; l=l->next) {
             for (int i=0; i<l->next_fd; i++) {
-                if (l->fd [i] == fd) {
-                    l->fd [i]        = -1; // set to invalid so no one else closes our valid descriptor
-                    l->fd_status [i] =  0; // definitely unused.
-                    logprintfl (EUCAWARN, "WARNING: blobstore lock closed outside close_and_unlock\n");
-                }
+                {// inner critical section
+                    pthread_mutex_lock (&(l->mutex)); // grab path-specific mutex for atomic update to the table of descriptors
+                    if (l->fd [i] == fd) {
+                        l->fd [i]        = -1; // set to invalid so no one else closes our valid descriptor
+                        l->fd_status [i] =  0; // definitely unused.
+                        l->refs--;
+                        logprintfl (EUCAWARN, "WARNING: blobstore lock closed outside close_and_unlock\n");
+                    }
+                    pthread_mutex_unlock (&(l->mutex)); // release path-specific mutex
+                }// end of inner critical section
             }
         }
         
