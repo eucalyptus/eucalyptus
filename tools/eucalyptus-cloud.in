@@ -131,6 +131,16 @@ else
 		exit 1
 	fi
 fi
+# Run additional initialization scripts if present
+if [ -d $EUCALYPTUS/etc/eucalyptus/cloud.d/init.d ]; then
+		for EUCA_INIT_FILE in $EUCALYPTUS/etc/eucalyptus/cloud.d/init.d/*; do
+			if [ -r "${EUCA_INIT_FILE}" ]; then
+				# init.d scripts are evaluated but are not permitted to modify
+				# environment
+				bash "${EUCA_INIT_FILE}" "${@}"
+			fi
+		done
+fi
 export EUCALYPTUS
 
 pidfile=$EUCALYPTUS/var/run/eucalyptus/eucalyptus-cloud.pid
