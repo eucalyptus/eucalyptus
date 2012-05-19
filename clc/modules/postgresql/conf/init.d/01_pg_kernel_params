@@ -1,0 +1,41 @@
+# Initialization script that checks PostgreSQL related kernel settings
+
+check_kernel_settings() {
+	local PROC_SEM=($(</proc/sys/kernel/sem))
+	local PROC_SEMMSL=${PROC_SEM[0]}
+	local PROC_SEMMNS=${PROC_SEM[1]}
+	local PROC_SEMOPM=${PROC_SEM[2]}
+	local PROC_SEMMNI=${PROC_SEM[3]}
+	local PROC_SHMMAX=$(</proc/sys/kernel/shmmax) 
+	local PROC_SHMALL=$(</proc/sys/kernel/shmall)
+	local PAGE_SIZE=$(getconf PAGE_SIZE)
+
+	local MIN_SEMMNS=32000
+	local MIN_SEMMNI=1536
+	local MIN_SHMMAX=536870912
+	local MIN_SHMALL=$((536870912 / PAGE_SIZE))
+
+	if [ $PROC_SEMMNS -lt $MIN_SEMMNS ] || [ $PROC_SEMMNI -lt $MIN_SEMMNI ] ; then
+		local NEW_SEMMNS=$MIN_SEMMNS
+		local NEW_SEMMNI=$MIN_SEMMNI
+		if [ $PROC_SEMMNS -gt $NEW_SEMMNS ]; then
+			NEW_SEMMNS=$PROC_SEMMNS
+		fi
+		if [ $PROC_SEMMNI -gt $NEW_SEMMNI ]; then
+			NEW_SEMMNI=$PROC_SEMMNI
+		fi
+		echo -n "${PROC_SEMMSL} ${NEW_SEMMNS} ${PROC_SEMOPM} ${NEW_SEMMNI}" > /proc/sys/kernel/sem
+	fi
+	if [ $PROC_SHMMAX -lt $MIN_SHMMAX ]; then
+		echo -n $MIN_SHMMAX > /proc/sys/kernel/shmmax
+	fi
+	if [ $PROC_SHMALL -lt $MIN_SHMALL ]; then
+		echo -n $MIN_SHMALL > /proc/sys/kernel/shmall
+	fi
+}
+
+case "$1" in
+	init|start)
+		check_kernel_settings
+		;;
+esac

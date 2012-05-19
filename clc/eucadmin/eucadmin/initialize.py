@@ -44,7 +44,7 @@ class Initialize(object):
 
     def main(self):
         db_dir = os.path.join(self.config['EUCALYPTUS'],
-                              'var/lib/eucalyptus/db')
+                              'var','lib','eucalyptus','db')
         if os.path.exists(os.path.join(db_dir, 'data/ibdata1')):
             sys.exit('Database in %s already exists' % db_dir)
         if self.debug:
@@ -55,6 +55,7 @@ class Initialize(object):
             cmd_string = InitCommand % (self.config['EUCALYPTUS'],
                                         self.config['EUCA_USER'],
                                         self.config['EUCALYPTUS'])
+        self.init_scripts()
         if 'CLOUD_OPTS' in self.config:
             cmd_string += ' %s' % self.config['CLOUD_OPTS']
         print 'Initializing Database...'
@@ -69,3 +70,21 @@ class Initialize(object):
         else:
             print 'Initialize command succeeded'
         return cmd.status
+
+    def init_scripts(self):
+        initd_dir = os.path.join(
+            self.config['EUCALYPTUS'],'etc','eucalyptus','cloud.d','init.d')
+        init_files = sorted(os.listdir( initd_dir ))
+        for init_file_name in init_files:
+            init_file_path = os.path.join(initd_dir, init_file_name)
+            if self.debug:
+                print 'Evaluating init script %s' % init_file_path
+            cmd = Command('bash %s init' % init_file_path)
+            if self.debug:
+                print '\tStatus=%d' % cmd.status
+                print '\tOutput:'
+                print cmd.stdout
+                print cmd.stderr
+            if cmd.status:
+                print 'Init script failed %s' % init_file_path
+
