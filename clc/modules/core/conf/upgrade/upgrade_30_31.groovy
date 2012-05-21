@@ -470,7 +470,9 @@ class upgrade_30_31 extends AbstractUpgradeScript {
 
         def db = EntityWrapper.get(StaticDatabasePropertyEntry.class);
         conn.rows("""select * from config_static_property""").each { prop ->
-            StaticDatabasePropertyEntry sdbprop = new StaticDatabasePropertyEntry(prop.config_static_field_name, prop.config_static_prop_name, prop.config_static_field_value);
+            // lowercase the last word of the field name
+            def fieldName = prop.config_static_field_name.replaceAll(/(.\w*)$/) { whole, match -> match.toLowerCase() }
+            StaticDatabasePropertyEntry sdbprop = new StaticDatabasePropertyEntry(fieldName, prop.config_static_prop_name, prop.config_static_field_value);
             db.add(sdbprop);
         }
         db.commit();
