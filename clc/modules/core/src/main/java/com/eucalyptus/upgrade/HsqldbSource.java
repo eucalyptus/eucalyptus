@@ -39,11 +39,13 @@ public class HsqldbSource implements DatabaseSource {
     String url = "jdbc:hsqldb:file:" + oldDbDir.getAbsolutePath( ) + File.separator + persistenceContext;
     if ( props == null ) {
       synchronized ( HsqldbSource.class ) {
-        props = new Properties( );
-        props.setProperty( "user", "sa" );
-        props.setProperty( "password", SystemIds.databasePassword( ) );
-        // NB: readonly is HSQLDB-specific
-        props.setProperty( "readonly", "true" );
+    	if ( props == null ) {
+          props = new Properties( );
+          props.setProperty( "user", "sa" );
+          props.setProperty( "password", SystemIds.databasePassword( ) );
+          // NB: readonly is HSQLDB-specific
+          props.setProperty( "readonly", "true" );
+    	}
       }
     }
     try {
