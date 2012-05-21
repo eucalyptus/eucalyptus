@@ -156,7 +156,7 @@ called, new X.509 certificates will be created for the specified user."""
             self.euca_home = os.environ.get('EUCALYPTUS', None)
             if not euca_home:
               # check if self.ServiceClass.InstallPath is the Euca home
-              if os.path.exists(os.path.join(self.ServiceClass.InstallPath, '/var/lib/eucalyptus/keys/')):
+              if os.path.exists(os.path.join(self.ServiceClass.InstallPath, 'var/lib/eucalyptus/keys/')):
                   self.euca_home = self.ServiceClass.InstallPath
               else:
                   raise ValueError('Unable to find EUCALYPTUS home')
