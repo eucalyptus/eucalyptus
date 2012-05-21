@@ -1,1 +1,1 @@
-euca.extra.version=fire
+euca.extra_version=@EXTRA_VERSION@
