@@ -1,0 +1,2 @@
+euca.db.home=@EUCA_DB_HOME@
+euca.db.suffix=@EUCA_DB_SUFFIX@
