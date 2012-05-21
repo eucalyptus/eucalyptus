@@ -187,13 +187,14 @@ class upgrade_30_31 extends AbstractUpgradeScript {
         upgradeWalrus();
         upgradeMisc();
         entityKeys.remove("CHAPUserInfo");
+        upgradeComponents();
+        entityKeys.remove("config_partition");
 
         // Hardcode some ordering here
         for (String entityKey : entityKeys) {
             upgradeEntity(entityKey);
         }
 
-        upgradeComponents();
         LOG.error("sleeping");
         // sleep 3600000;
         LOG.error("done sleeping");
@@ -202,8 +203,11 @@ class upgrade_30_31 extends AbstractUpgradeScript {
 
     private void upgradeComponents() {
         def confConn = connMap['eucalyptus_config'];
-        def compSetterMap = buildSetterMap(connMap['eucalyptus_config'], "config_component_base");
 
+        def partSetterMap = buildSetterMap(confConn, "config_partition");
+        doUpgrade('eucalyptus_config', confConn, "config_partition", partSetterMap);
+
+        def compSetterMap = buildSetterMap(confConn, "config_component_base");
         def componentMap = new HashMap<String, Class>();
         componentMap.put("ArbitratorConfiguration", Class.forName("com.eucalyptus.config.ArbitratorConfiguration"));
         componentMap.put("EucalyptusConfiguration", Class.forName("com.eucalyptus.cloud.EucalyptusConfiguration"));
@@ -796,6 +800,7 @@ class upgrade_30_31 extends AbstractUpgradeScript {
         // entities.add(NetworkRule.class)
         entities.add(NSRecordInfo.class)
         // entities.add(ObjectInfo.class)
+        entities.add(Partition.class)
         entities.add(PolicyEntity.class)
         entities.add(PrivateNetworkIndex.class)
         entities.add(ReportingAccount.class)
