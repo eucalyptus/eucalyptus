@@ -46,6 +46,7 @@ class EucAdmin(AWSQueryService):
     Port = 8773
     Provider = 'aws'
     EnvURL = 'EC2_URL'
+    InstallPath = '@prefix@'
 
     def handle_error(self, ex):
         s = ""
