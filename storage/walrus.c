@@ -348,9 +348,13 @@ static int walrus_request_timeout (const char * walrus_op, const char * verb, co
     return code;
 }
 
-static int walrus_request (const char * walrus_op, const char * verb, const char * requested_url, const char * outfile, const int do_compress) {
+#if 0
+/* Unused function */
+static int walrus_request (const char * walrus_op, const char * verb, const char * requested_url, const char * outfile, const int do_compress)
+{
     return (walrus_request_timeout(walrus_op, verb, requested_url, outfile, do_compress, 0, 0));
 }
+#endif /* 0 */
 
 /* downloads a Walrus object from the URL, saves it to outfile */
 int walrus_object_by_url (const char * url, const char * outfile, const int do_compress)
