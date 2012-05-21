@@ -1120,7 +1120,7 @@ static int read_blockblob_metadata_path (blockblob_path_t path_t, const blobstor
 // writes strings from 'array' or size 'array_size' (which can be 0) line-by-line
 // into a specific metadata file (based on 'path_t') of blob 'bb_id'
 // returns 0 for success and -1 for error
-//#define CHUCK
+#define CHUCK
 static int write_array_blockblob_metadata_path (blockblob_path_t path_t, const blobstore * bs, const char * bb_id, char ** array, int array_size)
 {
     int ret = 0;
