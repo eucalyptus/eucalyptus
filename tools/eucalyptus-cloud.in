@@ -138,6 +138,10 @@ if [ -d $EUCALYPTUS/etc/eucalyptus/cloud.d/init.d ]; then
 				# init.d scripts are evaluated but are not permitted to modify
 				# environment
 				bash "${EUCA_INIT_FILE}" "${@}"
+				if [ $? -ne 0 ] ; then
+					echo "Initialization script failed: " $(basename "${EUCA_INIT_FILE}")
+					exit 1
+				fi
 			fi
 		done
 fi
