@@ -258,6 +258,23 @@ public class NetworkGroups {
       Logs.extreme( ).error( ex, ex );
     }
     netConfig.setUseNetworkTags( netTagging.get( ) );
+    final EntityTransaction db = Entities.get( NetworkGroup.class );
+    try {
+      final List<NetworkGroup> ret = Entities.query( new NetworkGroup( ) );
+      for ( NetworkGroup group : ret ) {
+        ExtantNetwork exNet = group.getExtantNetwork( );
+        if ( exNet != null && ( exNet.getTag( ) > netConfig.getMaxNetworkTag( ) || exNet.getTag( ) < netConfig.getMinNetworkTag( ) ) ) {
+          exNet.teardown( );
+          Entities.delete( exNet );
+          group.setExtantNetwork( null );
+        }
+      }
+      db.commit( );
+    } catch ( final Exception ex ) {
+      Logs.extreme( ).error( ex, ex );
+      LOG.error( ex );
+      db.rollback( );
+    }
   }
   
   public static List<Long> networkIndexInterval( ) {
@@ -276,7 +293,7 @@ public class NetworkGroups {
     return interval;
   }
   
-  public static NetworkRangeConfiguration networkingConfiguration( ) {
+  public static synchronized NetworkRangeConfiguration networkingConfiguration( ) {
     return netConfig;
   }
   
