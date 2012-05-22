@@ -108,6 +108,17 @@ called, new X.509 certificates will be created for the specified user."""
     def setup_query(self):
         self.token = None
         self.db_pass = None
+        if 'euca_home' in self.request_params:
+            self.euca_home = self.request_params['euca_home']
+        else:
+            if 'EUCALYPTUS' in os.environ:
+                self.euca_home = os.environ['EUCALYPTUS']
+            else:
+                # check if self.ServiceClass.InstallPath is the Euca home
+                if os.path.exists(os.path.join(self.ServiceClass.InstallPath, 'var/lib/eucalyptus/keys/')):
+                    self.euca_home = self.ServiceClass.InstallPath
+                else:
+                    raise ValueError('Unable to find EUCALYPTUS home')
         self.account = self.request_params['account']
         self.user = self.request_params['user']
         self.zipfile = self.request_params['zipfile']
@@ -150,17 +161,6 @@ called, new X.509 certificates will be created for the specified user."""
     def main(self, **args):
         self.args.update(args)
         self.process_args()
-        self.euca_home = self.request_params.get('euca_home', None)
-
-        if not self.euca_home:
-            self.euca_home = os.environ.get('EUCALYPTUS', None)
-            if not self.euca_home:
-              # check if self.ServiceClass.InstallPath is the Euca home
-              if os.path.exists(os.path.join(self.ServiceClass.InstallPath, 'var/lib/eucalyptus/keys/')):
-                  self.euca_home = self.ServiceClass.InstallPath
-              else:
-                  raise ValueError('Unable to find EUCALYPTUS home')
-
         self.setup_query()
         self.check_zipfile()
         # check local service?
