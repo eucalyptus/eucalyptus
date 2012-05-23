@@ -1,4 +1,123 @@
-TODO: FIXME: Out of date
+These are build instructions for Eucalyptus 3.1 (under development).
+====================================================================
+
+***NOTE*** The following install instructions are still under development and INCOMPLETE.
+
+What follows are instructions to build and install Eucalyptus from source on CentOS/RHEL 5/6 and Ubuntu 10.04 LTS/12.04 LTS.
+
+You must install all build dependencies to be able to build and install Eucalyptus.
+
+1. Install dependencies
+=======================
+
+CentOS/RHEL 6
+-------------
+
+Build dependencies: TODO
+
+Install the following runtime dependencies.
+
+axis2c-1.6.0-0.4.el6.x86_64.rpm
+dhcp41-4.1.1-24.P1.el6.x86_64.rpm
+dhcp41-common-4.1.1-24.P1.el6.x86_64.rpm
+postgresql91-9.1.3-1PGDG.rhel6.x86_64.rpm
+postgresql91-libs-9.1.3-1PGDG.rhel6.x86_64.rpm
+postgresql91-server-9.1.3-1PGDG.rhel6.x86_64.rpm
+python-boto-2.4.1-0.1.el6.noarch.rpm
+rampartc-1.3.0-0.5.el6.x86_64.rpm
+
+CentOS/RHEL 5
+-------------
+
+Build dependencies: TODO
+
+Install the following runtime dependencies.
+
+axis2c-1.6.0-0.4.el5.x86_64.rpm
+postgresql91-9.1.3-1PGDG.rhel5.x86_64.rpm
+postgresql91-libs-9.1.3-1PGDG.rhel5.x86_64.rpm
+postgresql91-python26-4.0-2.1.el5.x86_64.rpm
+postgresql91-server-9.1.3-1PGDG.rhel5.x86_64.rpm
+python26-boto-2.1.1-0.2.el5.noarch.rpm
+rampartc-1.3.0-0.5.el5.x86_64.rpm
+
+Ubuntu 12.04 LTS
+----------------
+
+Install the following build dependencies.
+
+cdbs debhelper libaxis2c-dev librampart-dev
+default-jdk libvirt-dev libfuse-dev libfuse2 libcurl4-openssl-dev
+libssl-dev ant-optional zlib1g-dev pkg-config swig python
+python-setuptools rsync wget open-iscsi libxslt1-dev gengetopt ant
+groovy postgresql-server-dev-9.1
+
+Runtime dependencies: TODO
+
+Ubuntu 10.04 LTS
+----------------
+
+Add Martin Pitt's PPA to get PostgreSQL 9
+
+sudo add-apt-repository ppa:pitti/postgresql
+
+Install build dependencies.
+
+cdbs debhelper libaxis2c-dev librampart-dev
+default-jdk libvirt-dev libfuse-dev libfuse2 libcurl4-openssl-dev
+libssl-dev ant-optional zlib1g-dev pkg-config swig python
+python-setuptools rsync wget open-iscsi libxslt1-dev gengetopt ant
+groovy postgresql-server-dev-9.1
+
+Runtime dependencies: TODO
+
+2. Build Eucalyptus
+===================
+First, make sure JAVA_HOME and EUCALYPTUS are defined. For example, on Centos 5:
+
+export EUCALYPTUS=/
+export JAVA_HOME="/usr/lib/jvm/java-openjdk/"
+export JAVA="$JAVA_HOME/JRE/bin/java"
+
+then, build Eucalyptus:
+
+cd $EUCALYPTUS_SRC
+
+Run the "configure" script.
+
+For instance, on Ubuntu,
+
+./configure --with-axis2c=/usr/lib/axis2
+--with-axis2c-services=/usr/lib/axis2/services --prefix=$EUCALYPTUS
+--with-apache2-module-dir=/usr/lib/apache2/modules
+
+make ; make install
+
+3. Deploy Eucalyptus
+====================
+At this point, if you plan to use Eucalyptus on more than one node, you're ready to push the software out to the other nodes (although not all software components are required on all nodes, it is simpler to just mirror everything and selectively enable components via start-up scripts). If you installed Eucalyptus in its own directory, you can just sync the entire package to all of the hosts listed above using whatever mechanism you typically use to push changes to nodes (rsync, for instance).
+
+rsync -a $EUCALYPTUS/ root@{node-host-1}:$EUCALYPTUS/
+rsync -a $EUCALYPTUS/ root@{node-host-1}:$EUCALYPTUS/
+...
+
+On installations without a root user, such as Ubuntu, it may be easier to pull the software from each node one at a time:
+
+node1# rsync -a {user}@{front-end}:$EUCALYPTUS/ $EUCALYPTUS/
+node2# rsync -a {user}@{front-end}:$EUCALYPTUS/ $EUCALYPTUS/
+
+4. Configure and Use Eucalyptus
+=============================== 
+
+Please follow instructions from the "Configuring Eucalyptus" section of the Installation Guide.
+
+You can access Eucalyptus Documentation here (under construction): http://www.eucalyptus.com/eucalyptus-cloud/documentation
+
+
+
+****************************************************************
+Build/Installation instructions for older versions of Eucalyptus
+****************************************************************
 
 http://open.eucalyptus.com/wiki/EucalyptusInstallationSource_v2.0
 
