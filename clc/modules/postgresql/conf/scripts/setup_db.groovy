@@ -430,8 +430,10 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
                 String alterUser = "ALTER ROLE " + getUserName( ) + " WITH LOGIN PASSWORD \'" + getPassword( ) + "\'"
                 dbExecute( databaseName, alterUser )
             } catch (Exception e) {
-                LOG.error("Unable to create the database.", e)
-                return false
+	        if (!e.getMessage().contains("already exists")) {
+                  LOG.error("Unable to create the database.", e)
+                  return false
+	        } 
             }
         }
 
@@ -491,6 +493,14 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
             throw new Exception("Unable to start postgresql")
         }
 
+	if ( !createDBSql( ) ) {
+	    throw new Exception("Unable to create the eucalyptus database tables")
+	}
+	
+	Component dbComp = Components.lookup( Database.class )
+	dbComp.initService( )
+	prepareService( )
+	
         return true
     }
 
