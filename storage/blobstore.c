@@ -1120,25 +1120,14 @@ static int read_blockblob_metadata_path (blockblob_path_t path_t, const blobstor
 // writes strings from 'array' or size 'array_size' (which can be 0) line-by-line
 // into a specific metadata file (based on 'path_t') of blob 'bb_id'
 // returns 0 for success and -1 for error
-#define CHUCK
 static int write_array_blockblob_metadata_path (blockblob_path_t path_t, const blobstore * bs, const char * bb_id, char ** array, int array_size)
 {
     int ret = 0;
     char path [MAX_PATH];
     set_blockblob_metadata_path (path_t, bs, bb_id, path, sizeof (path));
 
-#ifndef CHUCK
-    mode_t old_umask = umask (~BLOBSTORE_FILE_PERM);
-    FILE * fp = fopen (path, "w");
-    umask (old_umask);
-    if (fp == NULL) {
-        PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
-        return -1;
-    }
-#else /* CHUCK */
-    int   fd        = 0;
-    int   ret_close = 0;
-    FILE *fp        = NULL;
+    int   fd = 0;
+    FILE *fp = NULL;
     if ((fd = open_and_lock (path, (BLOBSTORE_FLAG_CREAT | BLOBSTORE_FLAG_RDWR), BLOBSTORE_METADATA_TIMEOUT_USEC, BLOBSTORE_FILE_PERM)) == -1) {
         PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
         return(-1);
@@ -1146,11 +1135,10 @@ static int write_array_blockblob_metadata_path (blockblob_path_t path_t, const b
 
     if ((fp = fopen(path, "w+")) == NULL) {
         PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
-        if((ret_close = close_and_unlock(fd)) != 0)
+        if(close_and_unlock(fd) != 0)
             PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
         return(-1);
     }
-#endif /* CHUCK */
 
     for (int i=0; i<array_size; i++) {
         if (fprintf (fp, "%s\n", array [i]) < 0) {
@@ -1165,12 +1153,10 @@ static int write_array_blockblob_metadata_path (blockblob_path_t path_t, const b
         ret = -1;
     }
     
-#ifdef CHUCK
-    if ((ret_close = close_and_unlock(fd)) != 0) {
+    if (close_and_unlock(fd) != 0) {
         PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
         ret = -1;
     }
-#endif /* CHUCK */
     return ret;
 }
 
@@ -1185,17 +1171,8 @@ static int read_array_blockblob_metadata_path (blockblob_path_t path_t, const bl
     char path [MAX_PATH];
     set_blockblob_metadata_path (path_t, bs, bb_id, path, sizeof (path));
 
-#ifndef CHUCK
-    FILE * fp = fopen (path, "r");
-    if (fp == NULL) {
-        * array = NULL;
-        * array_size = 0;
-        return 0;
-    }
-#else /* CHUCK */
-    int   fd        = 0;
-    int   ret_close = 0;
-    FILE *fp        = NULL;
+    int   fd = 0;
+    FILE *fp = NULL;
     if ((fd = open_and_lock (path, BLOBSTORE_FLAG_RDONLY, BLOBSTORE_METADATA_TIMEOUT_USEC, BLOBSTORE_FILE_PERM)) == -1) {
         PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
         * array = NULL;
@@ -1203,16 +1180,15 @@ static int read_array_blockblob_metadata_path (blockblob_path_t path_t, const bl
         return 0;
     }
 
-    if ((fp = fopen(path, "r")) == NULL) {
+    if ((fp = fdopen(fd, "r")) == NULL) {
         PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
-        if((ret_close = close_and_unlock(fd)) != 0)
+        if(close_and_unlock(fd) != 0)
             PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
 
         * array = NULL;
         * array_size = 0;
         return 0;
     }
-#endif /* CHUCK */
 
     int i;
     size_t n;
@@ -1245,12 +1221,10 @@ static int read_array_blockblob_metadata_path (blockblob_path_t path_t, const bl
         PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
         ret = -1;
     }
-#ifdef CHUCK
-    if ((ret_close = close_and_unlock(fd)) != 0) {
+    if (close_and_unlock(fd) != 0) {
         PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
         ret = -1;
     }
-#endif /* CHUCK */
     if (ret == -1) {
         if (lines!=NULL) {
             for (int j=0; j<i; j++) {
