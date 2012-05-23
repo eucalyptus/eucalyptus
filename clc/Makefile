@@ -13,7 +13,7 @@ lib/bcprov.jar:
 	@mkdir -p ${TOP}/clc/lib
 	@git clone --depth=1 git@github.com:eucalyptus/eucalyptus-cloud-libs.git lib
 
-deps: deps/cloud-lib.tar.gz lib/bcprov.jar
+deps: lib/bcprov.jar
 
 update_properties: ${web_prop_dir}/eucalyptus-web.properties
 
