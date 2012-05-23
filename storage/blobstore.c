@@ -1126,12 +1126,18 @@ static int write_array_blockblob_metadata_path (blockblob_path_t path_t, const b
     char path [MAX_PATH];
     set_blockblob_metadata_path (path_t, bs, bb_id, path, sizeof (path));
 
-    mode_t old_umask = umask (~BLOBSTORE_FILE_PERM);
-    FILE * fp = fopen (path, "w");
-    umask (old_umask);
-    if (fp == NULL) {
+    int   fd = 0;
+    FILE *fp = NULL;
+    if ((fd = open_and_lock (path, (BLOBSTORE_FLAG_CREAT | BLOBSTORE_FLAG_RDWR), BLOBSTORE_METADATA_TIMEOUT_USEC, BLOBSTORE_FILE_PERM)) == -1) {
         PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
-        return -1;
+        return(-1);
+    }
+
+    if ((fp = fopen(path, "w+")) == NULL) {
+        PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
+        if(close_and_unlock(fd) != 0)
+            PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
+        return(-1);
     }
 
     for (int i=0; i<array_size; i++) {
@@ -1141,7 +1147,13 @@ static int write_array_blockblob_metadata_path (blockblob_path_t path_t, const b
             break;
         }
     }
+
     if (fclose (fp) == -1) {
+        PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
+        ret = -1;
+    }
+    
+    if (close_and_unlock(fd) != 0) {
         PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
         ret = -1;
     }
@@ -1159,8 +1171,20 @@ static int read_array_blockblob_metadata_path (blockblob_path_t path_t, const bl
     char path [MAX_PATH];
     set_blockblob_metadata_path (path_t, bs, bb_id, path, sizeof (path));
 
-    FILE * fp = fopen (path, "r");
-    if (fp == NULL) {
+    int   fd = 0;
+    FILE *fp = NULL;
+    if ((fd = open_and_lock (path, BLOBSTORE_FLAG_RDONLY, BLOBSTORE_METADATA_TIMEOUT_USEC, BLOBSTORE_FILE_PERM)) == -1) {
+        PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
+        * array = NULL;
+        * array_size = 0;
+        return 0;
+    }
+
+    if ((fp = fdopen(fd, "r")) == NULL) {
+        PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
+        if(close_and_unlock(fd) != 0)
+            PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
+
         * array = NULL;
         * array_size = 0;
         return 0;
@@ -1194,6 +1218,10 @@ static int read_array_blockblob_metadata_path (blockblob_path_t path_t, const bl
         lines [i] = line;
     }
     if (fclose (fp) == -1) {
+        PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
+        ret = -1;
+    }
+    if (close_and_unlock(fd) != 0) {
         PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
         ret = -1;
     }
