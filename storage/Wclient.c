@@ -75,8 +75,8 @@
 #include "walrus.h"
 #include "http.h"
 
-#define BUFSIZE 4096 /* should be big enough for CERT and the signature */
-#define STRSIZE 245 /* for short strings: files, hosts, URLs */
+#define BUFSIZE 262144 /* should be big enough for CERT and the signature */
+#define STRSIZE 1024 /* for short strings: files, hosts, URLs */
 #define WALRUS_ENDPOINT "/services/Walrus"
 #define DEFAULT_HOST_PORT "localhost:8773"
 #define DEFAULT_COMMAND "GetObject"
