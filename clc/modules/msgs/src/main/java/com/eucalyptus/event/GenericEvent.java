@@ -23,7 +23,7 @@ public class GenericEvent<T> implements Event {
   }
 
   public boolean matches( T myMessage ) {
-    return this.message.equals( message );
+    return this.message.equals( myMessage );
   }
   
 }

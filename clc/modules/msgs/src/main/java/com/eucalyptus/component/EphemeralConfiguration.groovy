@@ -166,11 +166,9 @@ class EphemeralConfiguration extends ComponentConfiguration {
     super.setName( name );
   }
 
-  @Override
   public String getSourceHostName( ) {
     return null;
   }
 
-  @Override
   public void setSourceHostName( String aliasHostName ) {}
 }

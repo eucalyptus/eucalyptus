@@ -429,7 +429,7 @@ public class EmpyreanService {
         public boolean apply( final ServiceConfiguration input ) {
           if ( listAll ) {
             return true;
-          } else if ( input.getComponentId( ).isDistributedService( ) || Empyrean.class.equals( input.getComponentId( ) ) ) {
+          } else if ( input.getComponentId( ).isDistributedService( ) || Empyrean.class.equals( input.getComponentId( ).getClass() ) ) {
             return true;
           } else if ( input.getComponentId( ).isPublicService( ) && listUserServices ) {
             return Internets.testLocal( input.getHostName( ) );

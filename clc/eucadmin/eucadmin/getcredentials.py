@@ -114,7 +114,11 @@ called, new X.509 certificates will be created for the specified user."""
             if 'EUCALYPTUS' in os.environ:
                 self.euca_home = os.environ['EUCALYPTUS']
             else:
-                raise ValueError('Unable to find EUCALYPTUS home')
+                # check if self.ServiceClass.InstallPath is the Euca home
+                if os.path.exists(os.path.join(self.ServiceClass.InstallPath, 'var/lib/eucalyptus/keys/')):
+                    self.euca_home = self.ServiceClass.InstallPath
+                else:
+                    raise ValueError('Unable to find EUCALYPTUS home')
         self.account = self.request_params['account']
         self.user = self.request_params['user']
         self.zipfile = self.request_params['zipfile']
