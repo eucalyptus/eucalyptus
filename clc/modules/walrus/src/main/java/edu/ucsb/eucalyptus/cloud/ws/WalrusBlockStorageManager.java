@@ -96,8 +96,7 @@ public class WalrusBlockStorageManager {
 	private StorageManager storageManager;
 	private WalrusManager walrusManager;
 
-	public WalrusBlockStorageManager(StorageManager storageManager,
-			WalrusManager walrusManager) {
+	public WalrusBlockStorageManager(StorageManager storageManager, WalrusManager walrusManager) {
 		this.storageManager = storageManager;
 		this.walrusManager = walrusManager;
 		startupChecks();

@@ -196,7 +196,7 @@ public class VmTypes {
       List<VmType> vmTypeList = db.query( new VmType( ) );
 
       for ( VmType v : vmTypeList ) {
-        this.vmTypeMap.putIfAbsent( v.getName( ), v );
+        this.vmTypeMap.put( v.getName( ), v );
 
         if ( !this.vmTypeMap.get( v.getName( ) ).equals( v ) ) this.vmTypeMap.replace( v.getName( ), v );
       }

@@ -86,8 +86,8 @@
 #define FIRST_TIMEOUT 4 // in seconds, goes in powers of two afterwards
 #define MAX_TIMEOUT 300 // in seconds, the cap for growing timeout values
 #define CHUNK 262144 // buffer size for decompression operations
-#define BUFSIZE 4096 // should be big enough for CERT and the signature
-#define STRSIZE 245 // for short strings: files, hosts, URLs
+#define BUFSIZE 262144 // should be big enough for CERT and the signature
+#define STRSIZE 1024 // for short strings: files, hosts, URLs
 #define WALRUS_ENDPOINT "/services/Walrus"
 #define DEFAULT_HOST_PORT "localhost:8773"
 #define GET_IMAGE_CMD "GetDecryptedImage"
@@ -348,9 +348,13 @@ static int walrus_request_timeout (const char * walrus_op, const char * verb, co
     return code;
 }
 
-static int walrus_request (const char * walrus_op, const char * verb, const char * requested_url, const char * outfile, const int do_compress) {
+#if 0
+/* Unused function */
+static int walrus_request (const char * walrus_op, const char * verb, const char * requested_url, const char * outfile, const int do_compress)
+{
     return (walrus_request_timeout(walrus_op, verb, requested_url, outfile, do_compress, 0, 0));
 }
+#endif /* 0 */
 
 /* downloads a Walrus object from the URL, saves it to outfile */
 int walrus_object_by_url (const char * url, const char * outfile, const int do_compress)

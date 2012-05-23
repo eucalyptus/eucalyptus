@@ -179,7 +179,7 @@ public class WalrusControl {
 
 	public static void configure() {
 		WalrusInfo walrusInfo = WalrusInfo.getWalrusInfo();
-                try {
+        try {
 			storageManager = BackendStorageManagerFactory.getStorageManager();
 		} catch (Exception ex) {
 			LOG.error (ex);

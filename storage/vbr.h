@@ -68,8 +68,8 @@
 #define INSTANCE_PREP_TIMEOUT_USEC 7200000000L // TODO: change the timeout?
 
 #define MAX_ARTIFACT_DEPS 16
-#define MAX_ARTIFACT_SIG 4096
-#define MAX_SSHKEY_SIZE 4096
+#define MAX_ARTIFACT_SIG 262144
+#define MAX_SSHKEY_SIZE 262144
 
 typedef struct _artifact {
     // artifact can be located either in a blobstore or on a file system:
@@ -78,6 +78,7 @@ typedef struct _artifact {
 
     char sig [MAX_ARTIFACT_SIG]; // unique signature for the artifact (IGNORED for a sentinel)
     boolean may_be_cached; // the underlying blob may reside in cache (it will not be modified by an instance)
+    boolean is_in_cache; // indicates if the artifact is known to reside in cache (value only valid after artifact allocation)
     boolean must_be_file; // the bits for this artifact must reside in a regular file (rather than just on a block device)
     boolean must_be_hollow; // create the artifact with BLOBSTORE_FLAG_HOLLOW set (so its size won count toward the limit)
     int (* creator) (struct _artifact * a); // function that can create this artifact based on info in this struct (must be NULL for a sentinel)

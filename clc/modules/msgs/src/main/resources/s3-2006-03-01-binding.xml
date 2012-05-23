@@ -639,7 +639,7 @@
 
 	<mapping name="VersioningConfiguration"
 		class="edu.ucsb.eucalyptus.msgs.GetBucketVersioningStatusResponseType">
-		<value name="Status" field="versioningStatus" />
+		<value name="Status" field="versioningStatus" usage="optional" />
 	</mapping>
 
 	<mapping name="SetBucketVersioningStatus"

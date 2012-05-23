@@ -114,4 +114,7 @@ public class ComponentIds {
     }
   }
   
+  static ComponentId createEphemeral( String componentIdName ) {
+    return new ComponentId( componentIdName ) {{}};
+  }
 }

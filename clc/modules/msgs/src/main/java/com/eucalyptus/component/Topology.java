@@ -543,7 +543,7 @@ public class Topology {
     }
     
     static ServiceKey create( final ServiceConfiguration config ) {
-      if ( config.getComponentId( ).isPartitioned( ) && !Empyrean.class.equals( config.getComponentId( ).partitionParent( ) ) ) {
+      if ( config.getComponentId( ).isPartitioned( ) && !Empyrean.class.equals( config.getComponentId( ).partitionParent( ).getClass() ) ) {
         final Partition p = Partitions.lookup( config );
         return new ServiceKey( config.getComponentId( ), p );
       } else if ( config.getComponentId( ).isAlwaysLocal( ) || ( config.getComponentId( ).isCloudLocal( ) && !config.getComponentId( ).isRegisterable( ) ) ) {

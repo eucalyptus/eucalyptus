@@ -266,7 +266,7 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
       
       @Override
       public boolean apply( final ComponentId input ) {
-        return ComponentId.this.equals( input ) || Arrays.asList( input.partitionInfo.value( ) ).contains( ComponentId.this.getClass( ) );
+        return ComponentId.this.equals( input ) || ( input.partitionInfo != null && Arrays.asList( input.partitionInfo.value( ) ).contains( ComponentId.this.getClass( ) ) );
       }
     };
   }

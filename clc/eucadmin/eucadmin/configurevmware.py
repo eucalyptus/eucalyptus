@@ -180,8 +180,12 @@ class ConfigureVMware(AWSQueryRequest):
         if not euca_home:
             euca_home = os.environ.get('EUCALYPTUS', None)
             if not euca_home:
-                print 'EUCALYPTUS not defined'
-                sys.exit(1)
+              # check if self.ServiceClass.InstallPath is the Euca home
+              if os.path.exists(os.path.join(self.ServiceClass.InstallPath, VMwareCommand)):
+                  euca_home = self.ServiceClass.InstallPath
+              else:
+                 print 'EUCALYPTUS not defined'
+                 sys.exit(1)
 
         # if a configfile was passed as an option, validate it and upload it
         if cfg_file:
