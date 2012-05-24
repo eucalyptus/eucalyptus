@@ -123,19 +123,21 @@ Ubuntu 10.04 LTS
 
 Add Martin Pitt's PPA to get postgreSQL 9.1
 
-sudo add-apt-repository ppa:pitti/postgresql
+sudo add-apt-repository ppa:pitti/postgresql (You might need to install python-software-properties)
+
+Run "apt-get update"
 
 Install the following build dependencies.
 
-cdbs debhelper libaxis2c-dev librampart-dev
-default-jdk libvirt-dev libfuse-dev libfuse2 libcurl4-openssl-dev
-libssl-dev ant-optional zlib1g-dev pkg-config swig python
-python-setuptools rsync wget open-iscsi libxslt1-dev gengetopt ant
+cdbs debhelper libaxis2c-dev librampart-dev \
+default-jdk libvirt-dev libfuse-dev libfuse2 libcurl4-openssl-dev \
+libssl-dev ant-optional zlib1g-dev pkg-config swig python \
+python-setuptools rsync wget open-iscsi libxslt1-dev gengetopt ant \
 groovy postgresql-server-dev-9.1
 
 Install the following runtime dependencies. Dependencies are broken down by Eucalyptus component.
 
-CLC: libc6, adduser, openssh-server, openssh-client, sudo, rsync, postgresql-client-9.1, python2.7, python (>= 2.5), rsync, python-boto, python-psutil, python-pygresql, lvm2, libgetargs-long-perl, postgresql-9.1, vblade, dmsetup, default-jre-headless | java6-runtime-headless, velocity, libpostgresql-jdbc-java (>= 9.1), libjboss-common-java, libhibernate-commons-annotations-java
+CLC: libc6, adduser, openssh-server, openssh-client, sudo, rsync, postgresql-client-9.1, python2.6, python (>= 2.5), rsync, python-boto, python-psutil, python-pygresql, lvm2, libgetargs-long-perl, postgresql-9.1, vblade, dmsetup, default-jre-headless | java6-runtime-headless, velocity, libpostgresql-jdbc-java (>= 9.1), libjboss-common-java, libhibernate-commons-annotations-java
 
 Walrus: libc6, adduser, openssh-server, openssh-client, sudo, rsync, postgresql-client-9.1, python (>= 2.5), python2.7, python-boto (>= 2.1), python-psutil, python-pygresql, drbd8-utils
 
