@@ -20,6 +20,14 @@ Please follow the following instructions to install required build and run-time 
 CentOS/RHEL 6
 -------------
 
+Install the EPEL repository
+
+yum --nogpg install http://download.fedoraproject.org/pub/epel/6/i386/epel-release-6-6.noarch.rpm
+
+Install the ELRepo repository (needed on the Walrus host only)
+
+yum --nogpg install http://elrepo.org/linux/elrepo/el6/x86_64/RPMS/elrepo-release-6-4.el6.elrepo.noarch.rpm
+
 Use the following repository baseurl to get extra dependencies
 
 For RHEL,
@@ -30,25 +38,28 @@ For CentOS,
 
 http://downloads.eucalyptus.com/software/eucalyptus/build-deps/3.1/centos/$releasever/$basearch
 
-Install the following build dependencies.
+Install the following build and runtime dependencies (this is the superset of all dependencies. Not all may be required for every component).
 
-ant ant-nodeps axis2-adb-codegen axis2-codegen axis2c-devel
-jpackage-utils libvirt-devel libxml2-devel libxslt-devel python-devel
-python-setuptools rampartc-devel swig velocity xalan-j2-xsltc gawk
-java-devel java-devel openssl-devel curl-devel
+yum install gcc make ant ant-nodeps axis2-adb-codegen axis2-codegen axis2c-devel jpackage-utils libvirt-devel \
+libxml2-devel libxslt-devel python-devel python-setuptools rampartc-devel swig velocity xalan-j2-xsltc gawk \
+java-devel java-devel openssl-devel curl-devel axis2c dhcp dhcp-common postgresql postgresql-libs \
+postgresql-server python-boto rampartc iscsi-initiator-utils perl-Crypt-OpenSSL-RSA perl-Crypt-OpenSSL-Random \
+sudo which jpackage-utils java lvm2 velocity drbd83 drbd83-kmod drbd-utils drbd euca2ools bitstream-vera-fonts \
+dejavu-serif-fonts  bridge-utils iptables vtun device-mapper coreutils e2fsprogs file parted util-linux rsync \
+PyGreSQL libcurl4 curl apache2 httpd libvirt tgt scsi-target-utils vconfig wget kvm dhcp-server
 
-Install the following runtime dependencies (this is the superset of all dependencies. Not all may be required for every component).
+Download and save the following file https://github.com/eucalyptus/eucalyptus-rpmspec/blob/master/euca-WSDL2C.sh
 
-axis2c dhcp41 dhcp41-common postgresql91 postgresql91-libs postgresql91-server
-python-boto rampartc open-iscsi iscsi-initiator-utils perl-Crypt-OpenSSL-RSA
-perl-Crypt-OpenSSL-Random sudo which jpackage-utils java lvm2 velocity drbd83
-drbd83-kmod drbd-utils drbd euca2ools bitstream-vera-fonts dejavu-serif-fonts 
-bridge-utils iptables vtun device-mapper coreutils e2fsprogs file parted
-util-linux rsync PyGreSQL libcurl4 curl apache2 httpd libvirt tgt scsi-target-utils
-vconfig wget kvm dhcp-server 
+to /opt/euca-WSDL2C.sh
 
 CentOS/RHEL 5
 -------------
+
+Install the EPEL repository
+
+wget http://download.fedoraproject.org/pub/epel/5/i386/epel-release-5-4.noarch.rpm
+
+rpm -Uvh epel-release-5-4.noarch.rpm
 
 Use the following repository baseurl to get extra dependencies.
 
@@ -132,7 +143,6 @@ NC: libaxis2c0, libc6 (>= 2.14), libcurl3 (>= 7.16.2-1), librampart0 (>= 1.3.0-1
 ===================
 First, make sure JAVA_HOME and EUCALYPTUS are defined. For example,
 
-export EUCALYPTUS=/
 export JAVA_HOME="/usr/lib/jvm/java-openjdk/"
 export JAVA="$JAVA_HOME/JRE/bin/java"
 export EUCALYPTUS="/"
@@ -147,7 +157,10 @@ For instance, on Ubuntu,
 
 On CentOS,
 
-./configure '--with-axis2=/usr/share/axis2-*' --with-axis2c=/usr/lib64/axis2c --prefix=$EUCALYPTUS --with-apache2-module-dir=/usr/lib64/httpd/modules
+./configure '--with-axis2=/usr/share/axis2-*' \
+--with-axis2c=/usr/lib64/axis2c --prefix=$EUCALYPTUS \
+--with-apache2-module-dir=/usr/lib64/httpd/modules \
+--with-wsdl2c-sh=/opt/euca-WSDL2C.sh
 
 make ; make install
 
