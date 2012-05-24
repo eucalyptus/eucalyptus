@@ -438,7 +438,7 @@ refresh_instance_info(	struct nc_state_t *nc,
 }
 
 // copying the linked list for use by Describe* requests
-static void copy_instances (void) 
+void copy_instances (void) 
 { 
     sem_p (inst_copy_sem);
     
@@ -762,6 +762,7 @@ void *startup_thread (void * arg)
         instance->bootTime = time (NULL);
         change_state (instance, BOOTING);
     }
+    copy_instances();
     sem_v (inst_sem);
     goto free;
 
