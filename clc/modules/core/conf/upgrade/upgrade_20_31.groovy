@@ -632,15 +632,16 @@ class upgrade_20_31 extends AbstractUpgradeScript {
                 return;
             }
             UserFullName ufn = UserFullName.getInstance(userIdMap.get(it.metadata_user_name));
-            def keyname = it.metadata_keypair_user_keyname;
+            def keyname = it.metadata_display_name;
             def committed = false;
             while (!committed) {
                 try {
                     EntityWrapper<SshKeyPair> dbkp = EntityWrapper.get(SshKeyPair.class);
-                    SshKeyPair kp = new SshKeyPair( ufn, 
-                                            keyname,
-                                            it.metadata_keypair_public_key,
-                                            it.metadata_keypair_finger_print );
+                    SshKeyPair kp = new SshKeyPair( ufn );
+                    initMetaClass(kp, kp.class);
+                    kp.setDisplayName(keyname);
+                    kp.setPublicKey(it.metadata_keypair_public_key + '.' + it.metadata_display_name);
+                    kp.setFingerPrint(it.metadata_keypair_finger_print );
                     dbkp.add(kp);
                     dbkp.commit();
                     committed = true;
