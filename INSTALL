@@ -163,16 +163,16 @@ make clean ; make ; make install
 
 4. Deploy Eucalyptus
 ====================
-At this point, if you plan to use Eucalyptus on more than one node, you're ready to push the software out to the other nodes (although not all software components are required on all nodes, it is simpler to just mirror everything and selectively enable components via start-up scripts). If you installed Eucalyptus in its own directory, you can just sync the entire package to all of the hosts listed above using whatever mechanism you typically use to push changes to nodes (rsync, for instance).
+At this point, if you plan to use Eucalyptus on more than one system, you're ready to push the software out to the other systems (although not all software components are required on all systems, it is simpler to just mirror everything and selectively enable components via start-up scripts). If you installed Eucalyptus in its own directory, you can just sync the entire package to all of the hosts listed above using whatever mechanism you typically use to push changes to systems (rsync, for instance).
 
-rsync -a $EUCALYPTUS/ root@{node-host-1}:$EUCALYPTUS/
-rsync -a $EUCALYPTUS/ root@{node-host-1}:$EUCALYPTUS/
+rsync -a $EUCALYPTUS/ root@{host-2}:$EUCALYPTUS/
+rsync -a $EUCALYPTUS/ root@{host-3}:$EUCALYPTUS/
 ...
 
-On installations without a root user, such as Ubuntu, it may be easier to pull the software from each node one at a time:
+On installations without a root user that can log in, such as Ubuntu, it may be easier to pull the software from each system one at a time:
 
-node1# rsync -a {user}@{front-end}:$EUCALYPTUS/ $EUCALYPTUS/
-node2# rsync -a {user}@{front-end}:$EUCALYPTUS/ $EUCALYPTUS/
+host-2# rsync -a {user}@{host-1}:$EUCALYPTUS/ $EUCALYPTUS/
+host-3# rsync -a {user}@{host-1}:$EUCALYPTUS/ $EUCALYPTUS/
 
 5. Configure and Use Eucalyptus
 ===============================
