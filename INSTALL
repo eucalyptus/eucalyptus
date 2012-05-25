@@ -36,8 +36,8 @@ Install the following build and runtime dependencies (this is the superset of al
 
 yum install gcc make ant ant-nodeps axis2-adb-codegen axis2-codegen axis2c-devel jpackage-utils libvirt-devel \
 libxml2-devel libxslt-devel python-devel python-setuptools rampartc-devel swig velocity xalan-j2-xsltc gawk \
-java-devel java-devel openssl-devel curl-devel axis2c dhcp dhcp-common postgresql postgresql-libs \
-postgresql-server python-boto rampartc iscsi-initiator-utils perl-Crypt-OpenSSL-RSA perl-Crypt-OpenSSL-Random \
+java-devel java-devel openssl-devel curl-devel axis2c dhcp dhcp-common postgresql91 postgresql91-server \
+python-boto rampartc iscsi-initiator-utils perl-Crypt-OpenSSL-RSA perl-Crypt-OpenSSL-Random \
 sudo which jpackage-utils java lvm2 velocity drbd83 drbd83-kmod drbd-utils drbd euca2ools bitstream-vera-fonts \
 dejavu-serif-fonts  bridge-utils iptables vtun device-mapper coreutils e2fsprogs file parted util-linux rsync \
 PyGreSQL libcurl4 curl apache2 httpd libvirt tgt scsi-target-utils vconfig wget kvm dhcp-server
@@ -156,6 +156,7 @@ On RHEL or CentOS,
 ./configure '--with-axis2=/usr/share/axis2-*' \
 --with-axis2c=/usr/lib64/axis2c --prefix=$EUCALYPTUS \
 --with-apache2-module-dir=/usr/lib64/httpd/modules \
+--with-db-home=/usr/pgsql-9.1 \
 --with-wsdl2c-sh=/opt/euca-WSDL2C.sh
 
 make clean ; make ; make install
