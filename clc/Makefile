@@ -11,7 +11,7 @@ test: deps build-test
 
 lib/bcprov.jar:
 	@mkdir -p ${TOP}/clc/lib
-	@git clone --depth=1 git@github.com:eucalyptus/eucalyptus-cloud-libs.git lib
+	@git clone --depth=1 git://github.com/eucalyptus/eucalyptus-cloud-libs.git lib
 
 deps: lib/bcprov.jar
 
