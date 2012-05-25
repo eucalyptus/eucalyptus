@@ -1379,7 +1379,7 @@ art_alloc_disk ( // allocates a 'keyed' disk artifact and possibly the underlyin
 
     artifact * disk;
 
-    if (emi_disk) { // we have a full disk
+    if (emi_disk) { // we have a full disk (TODO: remove this unused if-condition)
         if (do_make_work_copy) { // allocate a work copy of it
             disk_size_bytes = emi_disk->size_bytes;
             if ((strlen (art_sig) + strlen (emi_disk->sig)) >= sizeof (art_sig)) { // overflow
@@ -1503,25 +1503,14 @@ vbr_alloc_tree ( // creates a tree of artifacts for a given VBR (caller must fre
                     if (vbr->type==NC_RESOURCE_IMAGE && k > 0) { // only inject SSH key into an EMI which has a single partition (whole disk)
                         use_sshkey = sshkey;
                     }
-                    disk_arts [k] = art_alloc_vbr (vbr, do_make_work_copy, FALSE, use_sshkey);
+                    disk_arts [k] = art_alloc_vbr (vbr, do_make_work_copy, FALSE, use_sshkey); // this brings in disks or partitions and their work copies, if requested
                     if (disk_arts [k] == NULL) {
                         arts_free (disk_arts, EUCA_MAX_PARTITIONS);
                         goto free;
                     }
                     if (vbr->type == NC_RESOURCE_EBS) // EBS-backed instances need no additional artifacts
                         continue;
-                    if (k==0) { // if this is a disk artifact, insert a work copy in front of it
-                        disk_arts [k] = art_alloc_disk (vbr, 
-                                                        prereq_arts, total_prereq_arts, 
-                                                        NULL, 0, 
-                                                        disk_arts [k], 
-                                                        do_make_bootable, 
-                                                        do_make_work_copy);
-                        if (disk_arts [k] == NULL) {
-                            arts_free (disk_arts, EUCA_MAX_PARTITIONS);
-                            goto free;
-                        }   
-                    } else { // k>0
+                    if (k>0) {
                         partitions++; 
                     }
                     
@@ -1618,7 +1607,7 @@ find_or_create_artifact ( // finds and opens or creates artifact's blob either i
     // determine blob IDs for cache and work
     const char * id_cache = a->id;
     char id_work  [BLOBSTORE_MAX_PATH];
-    if (work_prefix && strlen (work_prefix))
+   if (work_prefix && strlen (work_prefix))
         snprintf (id_work, sizeof (id_work), "%s/%s", work_prefix, a->id);
     else 
         safe_strncpy (id_work, a->id, sizeof (id_work));
@@ -1677,9 +1666,9 @@ find_or_create_artifact ( // finds and opens or creates artifact's blob either i
         }
     }
  try_work:
-    logprintfl (EUCADEBUG, "[%s] switching to work blobstore for %s (do_create=%d ret=%d)\n", a->instanceId, id_cache, do_create, ret);
+    logprintfl (EUCADEBUG, "[%s] checking work blobstore for %03d|%s (do_create=%d ret=%d)\n", a->instanceId, a->seq, id_cache, do_create, ret);
     if (ret==BLOBSTORE_ERROR_SIGNATURE) {
-        logprintfl (EUCAWARN, "[%s] warning: signature mismatch on cached blob %s\n", a->instanceId, id_cache); // TODO: maybe invalidate?
+        logprintfl (EUCAWARN, "[%s] warning: signature mismatch on cached blob %03d|%s\n", a->instanceId, a->seq, id_cache); // TODO: maybe invalidate?
     }
     return find_or_create_blob (flags, work_bs, id_work, size_bytes, a->sig, bbp);
 }
