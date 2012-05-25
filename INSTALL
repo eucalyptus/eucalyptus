@@ -28,15 +28,9 @@ Install the ELRepo repository (needed on the Walrus host only)
 
 yum --nogpg install http://elrepo.org/linux/elrepo/el6/x86_64/RPMS/elrepo-release-6-4.el6.elrepo.noarch.rpm
 
-Use the following repository baseurl to get extra dependencies
-
-For RHEL,
+Use the following repository baseurl to get extra dependencies:
 
 http://downloads.eucalyptus.com/software/eucalyptus/build-deps/3.1/rhel/$releasever/$basearch
-
-For CentOS,
-
-http://downloads.eucalyptus.com/software/eucalyptus/build-deps/3.1/centos/$releasever/$basearch
 
 Install the following build and runtime dependencies (this is the superset of all dependencies. Not all may be required for every component).
 
@@ -61,17 +55,11 @@ wget http://download.fedoraproject.org/pub/epel/5/i386/epel-release-5-4.noarch.r
 
 rpm -Uvh epel-release-5-4.noarch.rpm
 
-Use the following repository baseurl to get extra dependencies.
-
-For RHEL,
+Use the following repository baseurl to get extra dependencies:
 
 http://downloads.eucalyptus.com/software/eucalyptus/build-deps/3.1/rhel/$releasever/$basearch
 
-For CentOS,
-
-http://downloads.eucalyptus.com/software/eucalyptus/build-deps/3.1/centos/$releasever/$basearch
-
-Install the following build dependencies.
+Install the following build dependencies:
 
 ant ant-nodeps axis2-adb-codegen axis2-codegen axis2c-devel
 jpackage-utils libvirt-devel libxml2-devel libxslt-devel python-devel
@@ -163,7 +151,7 @@ For instance, on Ubuntu,
 --with-apache2-module-dir=/usr/lib/apache2/modules \
 --with-axis2=/opt/axis2-1.4
 
-On CentOS,
+On RHEL or CentOS,
 
 ./configure '--with-axis2=/usr/share/axis2-*' \
 --with-axis2c=/usr/lib64/axis2c --prefix=$EUCALYPTUS \
