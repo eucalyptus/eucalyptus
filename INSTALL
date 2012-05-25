@@ -20,30 +20,24 @@ Please follow the following instructions to install required build and run-time 
 CentOS/RHEL 6
 -------------
 
-Install the EPEL repository
+Install the EPEL repository:
 
 yum --nogpg install http://download.fedoraproject.org/pub/epel/6/i386/epel-release-6-6.noarch.rpm
 
-Install the ELRepo repository (needed on the Walrus host only)
+Install the ELRepo repository (needed on the Walrus host only):
 
 yum --nogpg install http://elrepo.org/linux/elrepo/el6/x86_64/RPMS/elrepo-release-6-4.el6.elrepo.noarch.rpm
 
-Use the following repository baseurl to get extra dependencies
-
-For RHEL,
+Use the following repository baseurl to get extra dependencies:
 
 http://downloads.eucalyptus.com/software/eucalyptus/build-deps/3.1/rhel/$releasever/$basearch
-
-For CentOS,
-
-http://downloads.eucalyptus.com/software/eucalyptus/build-deps/3.1/centos/$releasever/$basearch
 
 Install the following build and runtime dependencies (this is the superset of all dependencies. Not all may be required for every component).
 
 yum install gcc make ant ant-nodeps axis2-adb-codegen axis2-codegen axis2c-devel jpackage-utils libvirt-devel \
 libxml2-devel libxslt-devel python-devel python-setuptools rampartc-devel swig velocity xalan-j2-xsltc gawk \
-java-devel java-devel openssl-devel curl-devel axis2c dhcp dhcp-common postgresql postgresql-libs \
-postgresql-server python-boto rampartc iscsi-initiator-utils perl-Crypt-OpenSSL-RSA perl-Crypt-OpenSSL-Random \
+java-devel java-devel openssl-devel curl-devel axis2c dhcp dhcp-common postgresql91 postgresql91-server \
+python-boto rampartc iscsi-initiator-utils perl-Crypt-OpenSSL-RSA perl-Crypt-OpenSSL-Random \
 sudo which jpackage-utils java lvm2 velocity drbd83 drbd83-kmod drbd-utils drbd euca2ools bitstream-vera-fonts \
 dejavu-serif-fonts  bridge-utils iptables vtun device-mapper coreutils e2fsprogs file parted util-linux rsync \
 PyGreSQL libcurl4 curl apache2 httpd libvirt tgt scsi-target-utils vconfig wget kvm dhcp-server
@@ -61,29 +55,23 @@ wget http://download.fedoraproject.org/pub/epel/5/i386/epel-release-5-4.noarch.r
 
 rpm -Uvh epel-release-5-4.noarch.rpm
 
-Use the following repository baseurl to get extra dependencies.
-
-For RHEL,
+Use the following repository baseurl to get extra dependencies:
 
 http://downloads.eucalyptus.com/software/eucalyptus/build-deps/3.1/rhel/$releasever/$basearch
 
-For CentOS,
-
-http://downloads.eucalyptus.com/software/eucalyptus/build-deps/3.1/centos/$releasever/$basearch
-
-Install the following build dependencies.
+Install the following build dependencies:
 
 ant ant-nodeps axis2-adb-codegen axis2-codegen axis2c-devel
 jpackage-utils libvirt-devel libxml2-devel libxslt-devel python-devel
 python-setuptools rampartc-devel swig velocity xalan-j2-xsltc gawk
 xen-tools java-devel libopenssl-devel java-devel openssl-devel curl-devel
 
-Install the following runtime dependencies (this is the superset of all dependencies. Not all may be required for every component).
+Install the following runtime dependencies (this is the superset of all dependencies. Not all may be required for every component):
 
 axis2c dhcp41 dhcp41-common postgresql91 postgresql91-libs postgresql91-server
 python-boto rampartc open-iscsi iscsi-initiator-utils perl-Crypt-OpenSSL-RSA
 perl-Crypt-OpenSSL-Random sudo which jpackage-utils java lvm2 velocity drbd83
-drbd83-kmod drbd-utils drbd euca2ools bitstream-vera-fonts dejavu-serif-fonts 
+drbd83-kmod drbd-utils drbd euca2ools bitstream-vera-fonts dejavu-serif-fonts
 bridge-utils iptables vtun device-mapper coreutils e2fsprogs file parted
 util-linux rsync PyGreSQL libcurl4 curl apache2 httpd libvirt tgt scsi-target-utils
 vconfig wget xen dhcp-server
@@ -165,30 +153,31 @@ For instance, on Ubuntu,
 --with-apache2-module-dir=/usr/lib/apache2/modules \
 --with-axis2=/opt/axis2-1.4
 
-On CentOS,
+On RHEL or CentOS,
 
 ./configure '--with-axis2=/usr/share/axis2-*' \
 --with-axis2c=/usr/lib64/axis2c --prefix=$EUCALYPTUS \
 --with-apache2-module-dir=/usr/lib64/httpd/modules \
+--with-db-home=/usr/pgsql-9.1 \
 --with-wsdl2c-sh=/opt/euca-WSDL2C.sh
 
 make clean ; make ; make install
 
 4. Deploy Eucalyptus
 ====================
-At this point, if you plan to use Eucalyptus on more than one node, you're ready to push the software out to the other nodes (although not all software components are required on all nodes, it is simpler to just mirror everything and selectively enable components via start-up scripts). If you installed Eucalyptus in its own directory, you can just sync the entire package to all of the hosts listed above using whatever mechanism you typically use to push changes to nodes (rsync, for instance).
+At this point, if you plan to use Eucalyptus on more than one system, you're ready to push the software out to the other systems (although not all software components are required on all systems, it is simpler to just mirror everything and selectively enable components via start-up scripts). If you installed Eucalyptus in its own directory, you can just sync the entire package to all of the hosts listed above using whatever mechanism you typically use to push changes to systems (rsync, for instance).
 
-rsync -a $EUCALYPTUS/ root@{node-host-1}:$EUCALYPTUS/
-rsync -a $EUCALYPTUS/ root@{node-host-1}:$EUCALYPTUS/
+rsync -a $EUCALYPTUS/ root@{host-2}:$EUCALYPTUS/
+rsync -a $EUCALYPTUS/ root@{host-3}:$EUCALYPTUS/
 ...
 
-On installations without a root user, such as Ubuntu, it may be easier to pull the software from each node one at a time:
+On installations without a root user that can log in, such as Ubuntu, it may be easier to pull the software from each system one at a time:
 
-node1# rsync -a {user}@{front-end}:$EUCALYPTUS/ $EUCALYPTUS/
-node2# rsync -a {user}@{front-end}:$EUCALYPTUS/ $EUCALYPTUS/
+host-2# rsync -a {user}@{host-1}:$EUCALYPTUS/ $EUCALYPTUS/
+host-3# rsync -a {user}@{host-1}:$EUCALYPTUS/ $EUCALYPTUS/
 
 5. Configure and Use Eucalyptus
-=============================== 
+===============================
 
 At this point forward, please follow instructions from the "Configuring Eucalyptus" section of the Installation Guide.
 
