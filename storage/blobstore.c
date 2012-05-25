@@ -2141,6 +2141,7 @@ blockblob * blockblob_open ( blobstore * bs,
         if (bb->size_bytes==0) { // find out the size from the file size
             bb->size_bytes = sb.st_size;
         } else if (bb->size_bytes != sb.st_size) { // verify the size specified by the user
+            logprintfl (EUCAERROR, "encountered a size mismatch when opening a blob (requested %lld, found %lld)\n", bb->size_bytes, sb.st_size);
             ERR (BLOBSTORE_ERROR_SIGNATURE, "size of the existing blockblob does not match");
             goto clean;
         }
@@ -2164,6 +2165,7 @@ blockblob * blockblob_open ( blobstore * bs,
             if ((sig_size=read_blockblob_metadata_path (BLOCKBLOB_PATH_SIG, bs, bb->id, buf, sizeof (buf)))!=strlen(sig)
                 ||
                 (strncmp (sig, buf, sig_size) != 0)) {
+                logprintfl (EUCAERROR, "encountered signature mismatch when opening a blob (requested size [%d], found [%d])\n", strlen (sig), sig_size);
                 ERR (BLOBSTORE_ERROR_SIGNATURE, NULL);
                 goto clean;
             }
