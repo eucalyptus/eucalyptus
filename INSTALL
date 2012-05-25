@@ -20,11 +20,11 @@ Please follow the following instructions to install required build and run-time 
 CentOS/RHEL 6
 -------------
 
-Install the EPEL repository
+Install the EPEL repository:
 
 yum --nogpg install http://download.fedoraproject.org/pub/epel/6/i386/epel-release-6-6.noarch.rpm
 
-Install the ELRepo repository (needed on the Walrus host only)
+Install the ELRepo repository (needed on the Walrus host only):
 
 yum --nogpg install http://elrepo.org/linux/elrepo/el6/x86_64/RPMS/elrepo-release-6-4.el6.elrepo.noarch.rpm
 
@@ -66,12 +66,12 @@ jpackage-utils libvirt-devel libxml2-devel libxslt-devel python-devel
 python-setuptools rampartc-devel swig velocity xalan-j2-xsltc gawk
 xen-tools java-devel libopenssl-devel java-devel openssl-devel curl-devel
 
-Install the following runtime dependencies (this is the superset of all dependencies. Not all may be required for every component).
+Install the following runtime dependencies (this is the superset of all dependencies. Not all may be required for every component):
 
 axis2c dhcp41 dhcp41-common postgresql91 postgresql91-libs postgresql91-server
 python-boto rampartc open-iscsi iscsi-initiator-utils perl-Crypt-OpenSSL-RSA
 perl-Crypt-OpenSSL-Random sudo which jpackage-utils java lvm2 velocity drbd83
-drbd83-kmod drbd-utils drbd euca2ools bitstream-vera-fonts dejavu-serif-fonts 
+drbd83-kmod drbd-utils drbd euca2ools bitstream-vera-fonts dejavu-serif-fonts
 bridge-utils iptables vtun device-mapper coreutils e2fsprogs file parted
 util-linux rsync PyGreSQL libcurl4 curl apache2 httpd libvirt tgt scsi-target-utils
 vconfig wget xen dhcp-server
@@ -174,7 +174,7 @@ node1# rsync -a {user}@{front-end}:$EUCALYPTUS/ $EUCALYPTUS/
 node2# rsync -a {user}@{front-end}:$EUCALYPTUS/ $EUCALYPTUS/
 
 5. Configure and Use Eucalyptus
-=============================== 
+===============================
 
 At this point forward, please follow instructions from the "Configuring Eucalyptus" section of the Installation Guide.
 
