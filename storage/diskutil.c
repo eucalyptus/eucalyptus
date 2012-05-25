@@ -152,9 +152,10 @@ int diskutil_init (int require_grub) // 0 = not required, 1 = required
         else
             missing_handlers--;
 
-        if (helpers_path [GRUB_SETUP]) // don't need it, but grub-setup only exists on v2
+        if (helpers_path [GRUB_SETUP]) {// don't need it, but grub-setup only exists on v2
             if (grub_version != 1)
                 grub_version = 2; // prefer 1 until 2 is implemented
+        }
         else 
             missing_handlers--;
 
@@ -597,7 +598,7 @@ int diskutil_grub (const char * path, const char * mnt_pt, const int part, const
 {
     int ret = diskutil_grub_files (mnt_pt, part, kernel, ramdisk);
     if (ret!=OK) return ret;
-    ret = diskutil_grub_mbr (path, part);
+    ret = diskutil_grub2_mbr (path, part, mnt_pt);
     return ret;
 }
 
@@ -654,7 +655,7 @@ int diskutil_grub_files (const char * mnt_pt, const int part, const char * kerne
                   "timeout=2\n\n"
                   "title TheOS\n"
                   "root (hd0,%d)\n"
-                  "kernel /boot/%s root=/dev/sda1 ro\n", part, kfile);
+                  "kernel /boot/%s root=/dev/sda1 ro\n", part, kfile); // grub 1 expects 0 for first partition
         if (ramdisk) {
             char buf2 [1024];
             snprintf (buf2, sizeof (buf2), "initrd /boot/%s\n", rfile);
@@ -675,11 +676,11 @@ int diskutil_grub_files (const char * mnt_pt, const int part, const char * kerne
                   "set timeout=2\n"
                   "insmod part_msdos\n"
                   "insmod ext2\n"
-                  "set root='(hd0,msdos%d)'\n"
+                  "set root='(hd0,%d)'\n"
                   "menuentry 'TheOS' --class os {\n"
                   "  linux /boot/%s root=/dev/sda1 ro\n"
                   "%s"
-                  "}\n", part, kfile, initrd);
+                  "}\n", part+1, kfile, initrd); // grub 2 expects 1 for first partition
     }
     if (diskutil_write2file (grub_conf_path, buf)!=OK) {
         ret = ERROR;
@@ -708,7 +709,7 @@ int diskutil_grub2_mbr (const char * path, const int part, const char * mnt_pt)
         logprintfl (EUCAERROR, "{%u} internal error: invocation of diskutil_grub2_mbr without grub found\n", (unsigned int)pthread_self());
         return ERROR;
     } else if (mnt_pt==NULL && grub_version!=1) {
-        logprintfl (EUCAERROR, "{%u} internal error: invocation of diskutil_grub2_mbr with grub 1\n", (unsigned int)pthread_self());
+        logprintfl (EUCAERROR, "{%u} internal error: invocation of diskutil_grub2_mbr with grub 1 params\n", (unsigned int)pthread_self());
         return ERROR;
     }
     
@@ -784,9 +785,22 @@ int diskutil_grub2_mbr (const char * path, const int part, const char * mnt_pt)
         }
 
     } else if (grub_version==2) {
-        char * output = pruntf (TRUE, "%s %s --modules='part_msdos ext2' --root-directory=%s %s", helpers_path[ROOTWRAP], helpers_path[GRUB_INSTALL], mnt_pt, path);
+        // create device.map file
+        char device_map_path [EUCA_MAX_PATH];
+        char device_map_buf  [512];
+        snprintf (device_map_path, sizeof (device_map_path), "%s/boot/grub/device.map", mnt_pt);
+        snprintf (device_map_buf,  sizeof (device_map_buf),  "(hd0) %s\n", path);
+        if (diskutil_write2file (device_map_path, device_map_buf)!=OK) {
+            logprintfl (EUCAWARN, "{%u} error: failed to create device.map file\n", (unsigned int)pthread_self());
+        } else {
+            logprintfl (EUCAINFO, "{%u} wrote to '%s':\n", (unsigned int)pthread_self(), device_map_path);
+            logprintfl (EUCAINFO, "{%u} %s", (unsigned int)pthread_self(), device_map_buf);
+        }
+
+        char * output = pruntf (TRUE, "%s %s --modules='part_msdos ext2' --root-directory=%s '(hd0)'", helpers_path[ROOTWRAP], helpers_path[GRUB_INSTALL], mnt_pt);
         if (!output) {
             logprintfl (EUCAINFO, "{%u} error: failed to install grub 2 on disk '%s' mounted on '%s'\n", (unsigned int)pthread_self(), path, mnt_pt);
+            exit (1);
         } else {
             free (output);
             rc = 0;

@@ -220,21 +220,36 @@ public class ServiceConfigurations {
     
     @Override
     public ServiceConfiguration apply( final ServiceId arg0 ) {
-      final Component comp = Components.lookup( arg0.getType( ) );
-      try {
-        return comp.lookup( arg0.getName( ) );
-      } catch ( final NoSuchElementException ex1 ) {
-        final ServiceBuilder<? extends ServiceConfiguration> builder = ServiceBuilders.lookup( comp.getComponentId( ) );
+        Component comp = null;
         try {
-          final URI uri = new URI( arg0.getUri( ) );
-          ServiceConfiguration config = builder.newInstance( arg0.getPartition( ), arg0.getName( ), uri.getHost( ), uri.getPort( ) );
-          comp.setup( config );
-          return config;
-        } catch ( final URISyntaxException ex ) {
-          LOG.error( ex, ex );
-          throw Exceptions.toUndeclared( ex );
+          comp = Components.lookup( arg0.getType( ) );
+        } catch ( NoSuchElementException ex2 ) {//gracefully handle case where an as-yet unknown component type is referenced
+          ComponentId compId = ComponentIds.createEphemeral( arg0.getType( ) );
+          try {
+            comp = Components.create( compId );
+          } catch ( ServiceRegistrationException ex ) {
+            try {
+              return ServiceConfigurations.createEphemeral( compId, arg0.getPartition( ), arg0.getName( ),  new URI( arg0.getUri( ) ) );
+            } catch ( URISyntaxException ex1 ) {
+              LOG.error( ex1 );
+              throw Exceptions.toUndeclared( ex1 );
+            }
+          }
         }
-      }
+        try {
+          return comp.lookup( arg0.getName( ) );
+        } catch ( final NoSuchElementException ex1 ) {
+          final ServiceBuilder<? extends ServiceConfiguration> builder = ServiceBuilders.lookup( comp.getComponentId( ) );
+          try {
+            final URI uri = new URI( arg0.getUri( ) );
+            ServiceConfiguration config = builder.newInstance( arg0.getPartition( ), arg0.getName( ), uri.getHost( ), uri.getPort( ) );
+            comp.setup( config );
+            return config;
+          } catch ( final URISyntaxException ex ) {
+            LOG.error( ex, ex );
+            throw Exceptions.toUndeclared( ex );
+          }
+        }
     }
     
   }

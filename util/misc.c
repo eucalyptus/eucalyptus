@@ -117,7 +117,10 @@ int verify_helpers (char **helpers, char **helpers_path, int num_helpers)
             char *tok, *toka, *path, *helper, *save, *savea;
 
             tok = getenv("PATH");
-            if (!tok) return -1;
+            if (!tok) {
+                missing_helpers = -1;
+                goto cleanup;
+            }
 
             path = strdup(tok);
             if (!path) {
@@ -1113,7 +1116,7 @@ int daemonrun(char *incmd, char *pidfile) {
   if (!pid) {
     char *tok=NULL, *ptr=NULL;
     int idx, rc;
-    struct sigaction newsigact;
+    struct sigaction newsigact = { 0 };
 
     newsigact.sa_handler = SIG_DFL;
     newsigact.sa_flags = 0;
@@ -1248,6 +1251,7 @@ int diff (const char * path1, const char * path2)
         logprintfl (EUCAERROR, "error: diff(): failed to open %s\n", path1);
     } else if ( (fd2 = open (path2, O_RDONLY)) < 0 ) {
         logprintfl (EUCAERROR, "error: diff(): failed to open %s\n", path2);
+        close(fd1);
     } else {
         int read1, read2;
         do {
@@ -1359,7 +1363,7 @@ char * file2str (const char * path)
     }
 
     int fp;
-    if ( ( fp = open (path, O_RDONLY) ) < 1 ) {
+    if ( ( fp = open (path, O_RDONLY) ) < 0 ) {
         logprintfl (EUCAERROR, "error: file2str() failed to open file %s\n", path);
         free (content);
         content = NULL;
@@ -1410,7 +1414,6 @@ char *file2str_seek(char *file, size_t size, int mode) {
   if (rc >= 0) {
     fd = open(file, O_RDONLY);
     if (fd >= 0) {
-
       if (mode == 1) {
 	rc = lseek(fd, (off_t)(-1 * size), SEEK_END);
 	if (rc < 0) {
@@ -1418,6 +1421,7 @@ char *file2str_seek(char *file, size_t size, int mode) {
 	  if (rc < 0) {
 	    logprintfl(EUCAERROR, "file2str_seek(): cannot seek\n");
 	    if (ret) free(ret);
+	    close(fd);
 	    return(NULL);
 	  }
 	}

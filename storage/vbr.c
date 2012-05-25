@@ -872,28 +872,29 @@ static int aoe_creator (artifact * a)
 static int copy_creator (artifact * a)
 {
     assert (a->deps[0]);
-    assert (a->deps[0]->bb);
     assert (a->deps[1]==NULL);
     artifact * dep = a->deps[0];
     virtualBootRecord * vbr = a->vbr;
     assert (vbr);
 
-    logprintfl (EUCAINFO, "[%s] copying/cloning blob %s to blob %s\n", a->instanceId, dep->bb->id, a->bb->id);
-    if (a->must_be_file) {
-        if (blockblob_copy (dep->bb, 0L, a->bb, 0L, 0L)==-1) {
-            logprintfl (EUCAERROR, "[%s] error: failed to copy blob %s to blob %s: %d %s\n", a->instanceId, dep->bb->id, a->bb->id, blobstore_get_error(), blobstore_get_last_msg());
-            return blobstore_get_error();
-        }
-    } else {
-        blockmap map [] = {
-            {BLOBSTORE_SNAPSHOT, BLOBSTORE_BLOCKBLOB, {blob:dep->bb}, 0, 0, round_up_sec (dep->size_bytes) / 512}
-        };
-        if (blockblob_clone (a->bb, map, 1)==-1) {
-            logprintfl (EUCAERROR, "[%s] error: failed to clone blob %s to blob %s: %d %s\n", a->instanceId, dep->bb->id, a->bb->id, blobstore_get_error(), blobstore_get_last_msg());
-            return blobstore_get_error();
+    if (dep->bb != NULL) { // skip copy if source is NULL (as in the case of a bypassed redundant work artifact due to caching failure)
+        logprintfl (EUCAINFO, "[%s] copying/cloning blob %s to blob %s\n", a->instanceId, dep->bb->id, a->bb->id);
+        if (a->must_be_file) {
+            if (blockblob_copy (dep->bb, 0L, a->bb, 0L, 0L)==-1) {
+                logprintfl (EUCAERROR, "[%s] error: failed to copy blob %s to blob %s: %d %s\n", a->instanceId, dep->bb->id, a->bb->id, blobstore_get_error(), blobstore_get_last_msg());
+                return blobstore_get_error();
+            }
+        } else {
+            blockmap map [] = {
+                {BLOBSTORE_SNAPSHOT, BLOBSTORE_BLOCKBLOB, {blob:dep->bb}, 0, 0, round_up_sec (dep->size_bytes) / 512}
+            };
+            if (blockblob_clone (a->bb, map, 1)==-1) {
+                logprintfl (EUCAERROR, "[%s] error: failed to clone blob %s to blob %s: %d %s\n", a->instanceId, dep->bb->id, a->bb->id, blobstore_get_error(), blobstore_get_last_msg());
+                return blobstore_get_error();
+            }
         }
     }
-
+    
     const char * dev = blockblob_get_dev (a->bb);    
     const char * bbfile = blockblob_get_file(a->bb);
 
@@ -976,7 +977,7 @@ static int copy_creator (artifact * a)
     return OK;
 }
 
-#define ART_SIG_MAX 32768
+#define ART_SIG_MAX 262144 // must be big enough for a digest and then some
 
 // Functions for adding and freeing artifacts on a tree.
 // Currently each artifact tree is used within a single
@@ -1592,10 +1593,10 @@ find_or_create_blob ( // either opens a blockblob or creates it
 #define FIND 0
 #define CREATE 1
 
-static int // returns OK or BLOBSTORE_ERROR_ error codes
+static int // returns OK or BLOBSTORE_ERROR_ error codes, will set a->is_in_cache if blob is found or created in cache
 find_or_create_artifact ( // finds and opens or creates artifact's blob either in cache or in work blobstore
                          int do_create, // create if non-zero, open if 0
-                         const artifact * a, // artifact to create or open
+                         artifact * a, // artifact to create or open
                          blobstore * work_bs, // work blobstore 
                          blobstore * cache_bs, // OPTIONAL cache blobstore
                          const char * work_prefix, // OPTIONAL instance-specific prefix for forming work blob IDs
@@ -1660,10 +1661,13 @@ find_or_create_artifact ( // finds and opens or creates artifact's blob either i
             
             ) {
             goto try_work;
+
         } else { // for all others we return the error or success
             if (!do_create && ret==BLOBSTORE_ERROR_SIGNATURE) {
                 logprintfl (EUCAWARN, "[%s] warning: signature mismatch on cached blob %03d|%s\n", a->instanceId, a->seq, id_cache); // TODO: maybe invalidate?
             }
+            if (ret == BLOBSTORE_ERROR_OK)
+                a->is_in_cache = TRUE;
             return ret;
         }
     }
@@ -1785,6 +1789,7 @@ art_implement_tree ( // traverse artifact tree and create/download/combine artif
         // for exclusive use by this process and thread)
        
         if (do_create) {
+<<<<<<< HEAD
             // try to create the artifact since last time we checked it did not exist
             switch (ret = find_or_create_artifact (CREATE, root, work_bs, (bad_sig == TRUE) ? NULL : cache_bs, work_prefix, &(root->bb))) {
             case OK:
@@ -1800,6 +1805,43 @@ art_implement_tree ( // traverse artifact tree and create/download/combine artif
             default: // all other errors
                 logprintfl (EUCAERROR, "[%s] error: failed to allocate artifact %s (%d %s) on try %d\n", root->instanceId, root->id, ret, blobstore_get_last_msg(), tries);
                 goto retry_or_fail;
+=======
+
+            // shortcut for a case where a copy creator has a dependency that 
+            // could have been cached, but was not, so a copy is not necessary
+            if (root->creator == copy_creator && 
+                root->deps [0] &&
+                root->deps [1] == NULL &&
+                root->deps [0]->may_be_cached &&
+                !root->deps [0]->is_in_cache &&
+                strcmp (root->id, root->deps [0]->id)) {
+                // set blockblob pointer to the dependency's blockblob pointer
+                // and the dependency's blockblob pointer to NULL --
+                // copy_creator will notice this special condition and will
+                // skip the copy (but not SSH key injection)
+                logprintfl (EUCADEBUG, "[%s] bypassing redundant artifact %03d|%s on try %d\n", root->instanceId,  root->seq, root->id, tries);
+                root->bb = root->deps [0]->bb;
+                root->deps [0]->bb = NULL;
+                num_opened_deps--; // so we won't attempt to close deps's blockblob
+            } else {
+
+                // try to create the artifact since last time we checked it did not exist
+                switch (ret = find_or_create_artifact (CREATE, root, work_bs, cache_bs, work_prefix, &(root->bb))) {
+                case OK:
+                    logprintfl (EUCADEBUG, "[%s] created a blob for an artifact %03d|%s on try %d\n", root->instanceId,  root->seq, root->id, tries);
+                    break;
+                case BLOBSTORE_ERROR_EXIST: // someone else created it => loop back and open it
+                    ret = BLOBSTORE_ERROR_AGAIN;
+                    // fall through
+                case BLOBSTORE_ERROR_AGAIN: // timed out (but probably exists)
+                case BLOBSTORE_ERROR_MFILE: // out of file descriptors for locking => same problem
+                    goto retry_or_fail;
+                    break;
+                default: // all other errors
+                    logprintfl (EUCAERROR, "[%s] error: failed to allocate artifact %s (%d %s) on try %d\n", root->instanceId, root->id, ret, blobstore_get_last_msg(), tries);
+                    goto retry_or_fail;
+                }
+>>>>>>> testing
             }
 
         create:

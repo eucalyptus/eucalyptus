@@ -288,7 +288,10 @@ static void close_filelock (blobstore_filelock * l)
     // closing any one removes the lock for all descriptors
     // held by a process)
     for (int i=0; i<l->next_fd; i++) {
-        close (l->fd [i]);
+        if(l->fd [i] > -1) {
+            close (l->fd [i]);
+            l->fd [i] = -1;
+        }
     }
     l->next_fd = 0; // knock the open fd counter back to 0
 }
@@ -522,17 +525,20 @@ static int open_and_lock (const char * path,
     { // critical section
         pthread_mutex_lock (&_blobstore_mutex); // grab the global mutex
         
-        // ensure we do not have this file descriptor already
-        int count = 0;
-        for (blobstore_filelock * l = locks_list; l; l=l->next)
-            for (int i=0; i<l->next_fd; i++)
-                if (l->fd [i] == fd)
-                    count++;
-        if (count>0) {
-            ERR (BLOBSTORE_ERROR_INVAL, "blobstore lock closed outside close_and_unlock");
-            pthread_mutex_unlock (&(path_lock->mutex)); // release global mutex
-            pthread_mutex_unlock (&_blobstore_mutex); // release global mutex
-            goto error;
+        // ensure we do not have this file descriptor already in some other list
+        for (blobstore_filelock * l = locks_list; l; l=l->next) {
+            {// inner critical section
+                pthread_mutex_lock (&(l->mutex)); // grab path-specific mutex for atomic update to the table of descriptors
+                for (int i=0; i<l->next_fd; i++) {
+                    if (l->fd [i] == fd) {
+                        l->fd [i]        = -1; // set to invalid so no one else closes our valid descriptor
+                        l->fd_status [i] =  0; // definitely unused.
+                        l->refs--;
+                        logprintfl (EUCAWARN, "WARNING: blobstore lock closed outside close_and_unlock\n");
+                    }
+                }
+                pthread_mutex_unlock (&(l->mutex)); // release path-specific mutex
+            }// end of inner critical section
         }
         
         { // inner critical section
@@ -1120,12 +1126,18 @@ static int write_array_blockblob_metadata_path (blockblob_path_t path_t, const b
     char path [MAX_PATH];
     set_blockblob_metadata_path (path_t, bs, bb_id, path, sizeof (path));
 
-    mode_t old_umask = umask (~BLOBSTORE_FILE_PERM);
-    FILE * fp = fopen (path, "w");
-    umask (old_umask);
-    if (fp == NULL) {
+    int   fd = 0;
+    FILE *fp = NULL;
+    if ((fd = open_and_lock (path, (BLOBSTORE_FLAG_CREAT | BLOBSTORE_FLAG_RDWR), BLOBSTORE_METADATA_TIMEOUT_USEC, BLOBSTORE_FILE_PERM)) == -1) {
         PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
-        return -1;
+        return(-1);
+    }
+
+    if ((fp = fopen(path, "w+")) == NULL) {
+        PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
+        if(close_and_unlock(fd) != 0)
+            PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
+        return(-1);
     }
 
     for (int i=0; i<array_size; i++) {
@@ -1135,7 +1147,13 @@ static int write_array_blockblob_metadata_path (blockblob_path_t path_t, const b
             break;
         }
     }
+
     if (fclose (fp) == -1) {
+        PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
+        ret = -1;
+    }
+    
+    if (close_and_unlock(fd) != 0) {
         PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
         ret = -1;
     }
@@ -1153,8 +1171,20 @@ static int read_array_blockblob_metadata_path (blockblob_path_t path_t, const bl
     char path [MAX_PATH];
     set_blockblob_metadata_path (path_t, bs, bb_id, path, sizeof (path));
 
-    FILE * fp = fopen (path, "r");
-    if (fp == NULL) {
+    int   fd = 0;
+    FILE *fp = NULL;
+    if ((fd = open_and_lock (path, BLOBSTORE_FLAG_RDONLY, BLOBSTORE_METADATA_TIMEOUT_USEC, BLOBSTORE_FILE_PERM)) == -1) {
+        PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
+        * array = NULL;
+        * array_size = 0;
+        return 0;
+    }
+
+    if ((fp = fdopen(fd, "r")) == NULL) {
+        PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
+        if(close_and_unlock(fd) != 0)
+            PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
+
         * array = NULL;
         * array_size = 0;
         return 0;
@@ -1188,6 +1218,10 @@ static int read_array_blockblob_metadata_path (blockblob_path_t path_t, const bl
         lines [i] = line;
     }
     if (fclose (fp) == -1) {
+        PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
+        ret = -1;
+    }
+    if (close_and_unlock(fd) != 0) {
         PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
         ret = -1;
     }
@@ -1412,7 +1446,6 @@ static void set_device_path (blockblob * bb)
 
 static blockblob ** walk_bs (blobstore * bs, const char * dir_path, blockblob ** tail_bb, const blockblob * bb_to_avoid) 
 {
-    int ret = 0;
     DIR * dir;
     if ((dir=opendir(dir_path))==NULL) {
         return tail_bb; // ignore access errors in blobstore directory
@@ -1453,7 +1486,6 @@ static blockblob ** walk_bs (blobstore * bs, const char * dir_path, blockblob **
 
         blockblob * bb = calloc (1, sizeof (blockblob));
         if (bb==NULL) {
-            ret = 1;
             goto free;
         }
         * tail_bb = bb; // add to LL

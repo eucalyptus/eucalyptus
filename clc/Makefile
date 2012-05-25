@@ -9,15 +9,11 @@ web_prop_dir	= ${TOP}/clc/modules/www/conf
 all: deps build
 test: deps build-test
 
-deps/cloud-lib.tar.gz:
-	@mkdir -p ${TOP}/clc/deps
-	cd ${TOP}/clc/deps/ && curl -q http://mirror.eucalyptus/dependencies/${VERSION}/cloud-lib.tar.gz > cloud-lib.tar.gz	
-
 lib/bcprov.jar:
 	@mkdir -p ${TOP}/clc/lib
-	tar -C ${TOP}/clc/lib -zxf ${TOP}/clc/deps/cloud-lib.tar.gz
+	@git clone --depth=1 git://github.com/eucalyptus/eucalyptus-cloud-libs.git lib
 
-deps: deps/cloud-lib.tar.gz lib/bcprov.jar
+deps: lib/bcprov.jar
 
 update_properties: ${web_prop_dir}/eucalyptus-web.properties
 

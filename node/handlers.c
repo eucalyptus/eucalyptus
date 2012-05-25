@@ -102,7 +102,7 @@ permission notice:
 #define MONITORING_PERIOD (5)
 #define MAX_CREATE_TRYS 5
 #define CREATE_TIMEOUT_SEC 15
-#define PER_INSTANCE_BUFFER_MB 20 // reserve this much extra room (in MB) per instance (for kernel, ramdisk, and metadata overhead)
+#define PER_INSTANCE_BUFFER_MB 20 // by default reserve this much extra room (in MB) per instance (for kernel, ramdisk, and metadata overhead)
 
 #ifdef EUCA_COMPILE_TIMESTAMP
 static char * compile_timestamp_str = EUCA_COMPILE_TIMESTAMP;
@@ -113,10 +113,12 @@ static char * compile_timestamp_str = "";
 /* used by lower level handlers */
 sem *hyp_sem;	/* semaphore for serializing domain creation */
 sem *inst_sem;	/* guarding access to global instance structs */
+sem *inst_copy_sem;	/* guarding access to global instance structs */
 sem *addkey_sem;	/* guarding access to global instance structs */
 sem *loop_sem; // created in diskutils.c for serializing 'losetup' invocations
 
 bunchOfInstances *global_instances = NULL; 
+bunchOfInstances *global_instances_copy = NULL; 
 
 // declarations of available handlers
 extern struct handlers xen_libvirt_handlers;
@@ -435,6 +437,31 @@ refresh_instance_info(	struct nc_state_t *nc,
     }
 }
 
+// copying the linked list for use by Describe* requests
+void copy_instances (void) 
+{ 
+    sem_p (inst_copy_sem);
+    
+    // free the old linked list copy
+    for ( bunchOfInstances * head = global_instances_copy; head; ) {
+        bunchOfInstances * container = head;
+        ncInstance * instance = head->instance;
+        head = head->next;
+        free (instance);
+        free (container);
+    }
+    global_instances_copy = NULL;
+    
+    // make a fresh copy
+    for ( bunchOfInstances * head = global_instances; head; head = head->next ) {
+        ncInstance * src_instance = head->instance;
+        ncInstance * dst_instance = (ncInstance *)malloc(sizeof(ncInstance));
+        memcpy (dst_instance, src_instance, sizeof(ncInstance));
+        add_instance (&global_instances_copy, dst_instance);
+    }
+    sem_v (inst_copy_sem);
+}
+
 void *
 monitoring_thread (void *arg)
 {
@@ -555,6 +582,8 @@ monitoring_thread (void *arg)
             fclose(FP);
             rename (nfile, nfilefinal);
         }
+        
+        copy_instances (); // copy global_instances to global_instances_copy
         sem_v (inst_sem);
         
         if (head) {
@@ -733,6 +762,7 @@ void *startup_thread (void * arg)
         instance->bootTime = time (NULL);
         change_state (instance, BOOTING);
     }
+    copy_instances();
     sem_v (inst_sem);
     goto free;
 
@@ -833,6 +863,10 @@ void adopt_instances()
 		virDomainFree (dom);
 		sem_v(hyp_sem);
 	}
+
+    sem_p (inst_sem);
+    copy_instances (); // copy global_instances to global_instances_copy
+    sem_v (inst_sem);
 }
 
 static int init (void)
@@ -987,8 +1021,9 @@ static int init (void)
 
 	hyp_sem = sem_alloc (1, "mutex");
 	inst_sem = sem_alloc (1, "mutex");
+	inst_copy_sem = sem_alloc (1, "mutex");
 	addkey_sem = sem_alloc (1, "mutex");
-	if (!hyp_sem || !inst_sem || !addkey_sem) {
+	if (!hyp_sem || !inst_sem || !inst_copy_sem || !addkey_sem) {
 		logprintfl (EUCAFATAL, "failed to create and initialize semaphores\n");
 		return ERROR_FATAL;
 	}
@@ -1092,6 +1127,7 @@ static int init (void)
         // look up configuration file settings for work and cache size
         long long conf_work_size_mb; GET_VAR_INT(conf_work_size_mb,  CONFIG_NC_WORK_SIZE, -1);
         long long conf_cache_size_mb; GET_VAR_INT(conf_cache_size_mb, CONFIG_NC_CACHE_SIZE, -1);
+        long long conf_work_overhead_mb; GET_VAR_INT(conf_work_overhead_mb, CONFIG_NC_OVERHEAD_SIZE, PER_INSTANCE_BUFFER_MB);
         { // accommodate legacy MAX_DISK setting by converting it
             int max_disk_gb; GET_VAR_INT(max_disk_gb, CONFIG_MAX_DISK, -1);
             if (max_disk_gb != -1) {
@@ -1177,7 +1213,10 @@ static int init (void)
        
         // record the work-space limit for max_disk 
         long long work_size_gb = (long long)(work_size_mb / MB_PER_DISK_UNIT);
-        long long overhead_mb = work_size_gb * PER_INSTANCE_BUFFER_MB; // work_size_gb is also max number of instances
+        if (conf_work_overhead_mb < 0 || conf_work_overhead_mb > work_size_mb) { // sanity check work overhead
+            conf_work_overhead_mb = PER_INSTANCE_BUFFER_MB;
+        }
+        long long overhead_mb = work_size_gb * conf_work_overhead_mb; // work_size_gb is the theoretical max number of instances
         long long disk_max_mb = work_size_mb - overhead_mb;
         nc_state.disk_max = disk_max_mb / MB_PER_DISK_UNIT;
 
@@ -1389,7 +1428,7 @@ int doDescribeInstances (ncMetadata *meta, char **instIds, int instIdsLen, ncIns
                 continue;
             vols_count++;
             
-            char * s;
+            char * s = "";
             if (! strcmp(volume->stateName, VOL_STATE_ATTACHING))        s = "a";
             if (! strcmp(volume->stateName, VOL_STATE_ATTACHED))         s = "A";
             if (! strcmp(volume->stateName, VOL_STATE_ATTACHING_FAILED)) s = "af";

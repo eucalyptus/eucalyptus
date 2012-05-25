@@ -100,10 +100,7 @@ class ConfigFile(dict):
             old_version = open(old_version_file).readlines()[0].strip()
       
         if old_version.startswith('2') or old_version.startswith('eee-2'):
-            self.comment('DISABLE_ISCSI')
             self._read_config_data(oldconfig)
-            if not self.has_key('DISABLE_ISCSI'):
-                self['DISABLE_ISCSI'] = 'Y'
 
             deprecatedopts = [ '--walrus-host', '--cloud-host',
                                '--remote-storage', '--remote-walrus',
@@ -112,9 +109,6 @@ class ConfigFile(dict):
                                '--disable-storage', '--disable-vmwarebroker']
             self['CLOUD_OPTS'] = " ".join([ x for x in self['CLOUD_OPTS'].split()
                                             if x not in deprecatedopts ])
-            
-            if self.has_key('MAX_DISK'):
-                self['MAX_DISK'] = str(int(self['MAX_DISK']) / 1024)
         else:
             self._read_config_data(oldconfig)
 

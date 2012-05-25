@@ -197,15 +197,6 @@ do_start() {
 		fi
 	fi
 
-	# we need aoe loaded
-	if [ -z "$MODPROBE" ]; then
-		echo
-		echo "Cannot find modprobe: you may have problems."
-	elif ! $MODPROBE aoe ; then
-		echo
-		echo "Failed to load aoe: you may experience problems"
-	fi
-
 	# we need IP forwarding and we need to use iptable over the bridge
 	if [ -w /proc/sys/net/ipv4/ip_forward ]; then
 		VAL=`cat /proc/sys/net/ipv4/ip_forward`

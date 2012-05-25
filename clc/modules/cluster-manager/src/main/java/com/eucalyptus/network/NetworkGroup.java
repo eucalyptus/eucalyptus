@@ -305,7 +305,7 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
     return this.extantNetwork;
   }
   
-  private void setExtantNetwork( final ExtantNetwork extantNetwork ) {
+  void setExtantNetwork( final ExtantNetwork extantNetwork ) {
     this.extantNetwork = extantNetwork;
   }
   

@@ -1,3 +1,10 @@
+********************************************************************
+NOTE: This is Eucalyptus 3.1 under development.
+
+Please see the INSTALL file for build instructions.
+
+********************************************************************
+
         EUCALYPTUS: Elastic Utility Computing Architecture 
             for Linking Your Programs To Useful Systems
 
@@ -33,7 +40,3 @@ installed OS base.  Specifically, the target resources need only run a
 standard hypervisor (Xen, KVM), along with common open-source Linux
 utilities.  All other functionality installs directly without need for
 kernel patching or module additions to the host OS domain.
-
-For more information and complete documentation, please visit our
-website (http://open.eucalyptus.com).
-

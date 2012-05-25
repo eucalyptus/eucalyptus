@@ -237,7 +237,7 @@ public class WalrusProperties {
 	}
 
 	public enum BucketParameter {
-		acl, location, prefix, maxkeys, delimiter, marker, torrent, logging, versioning, versions;
+		acl, location, prefix, maxkeys, delimiter, marker, torrent, logging, versioning, versions, versionidmarker, keymarker;
 	}
 
 	public enum ObjectParameter {
@@ -255,8 +255,7 @@ public class WalrusProperties {
 	public static String getTrackerUrl() {
 		try {
 			String walrusUrl = SystemConfiguration.getWalrusUrl();
-			TRACKER_URL = "http://" + new URI(walrusUrl).getHost() + ":" + 
-					TRACKER_PORT + "/announce";
+			TRACKER_URL = "http://" + new URI(walrusUrl).getHost() + ":" + TRACKER_PORT + "/announce";
 		} catch (EucalyptusCloudException e) {
 			LOG.error(e);
 		} catch (URISyntaxException e) {

@@ -308,7 +308,7 @@ public class StackConfiguration extends AbstractPersistent {
   public static class TemporarySchemeUpdater implements PropertyChangeListener {
     @Override
     public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
-      String scheme = Boolean.TRUE.equals( "" + newValue )
+      String scheme = Boolean.TRUE.equals( Boolean.parseBoolean("" + newValue ))
         ? "https"
         : "http";
       DEFAULT_AWS_SNS_URI_SCHEME = DEFAULT_EC2_URI_SCHEME = DEFAULT_EUARE_URI_SCHEME = DEFAULT_S3_URI_SCHEME = scheme;

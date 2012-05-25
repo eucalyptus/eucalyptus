@@ -208,12 +208,13 @@ public class ListenerRegistry {
     }
     
     public void destroy( T type ) {
+     
       this.modificationLock.lock( );
-      for ( EventListener e : this.listenerMap.get( type ) ) {
-        EventRecord.caller( ReentrantListenerRegistry.class, EventType.LISTENER_DESTROY_ALL, type.getClass( ).getSimpleName( ),
-                            e.getClass( ).getCanonicalName( ) ).trace( );
-      }
-      try {
+      try{
+        for ( EventListener e : this.listenerMap.get( type ) ) {
+          EventRecord.caller( ReentrantListenerRegistry.class, EventType.LISTENER_DESTROY_ALL, type.getClass( ).getSimpleName( ),
+                              e.getClass( ).getCanonicalName( ) ).trace( );
+        }     
         this.listenerMap.removeAll( type );
       } finally {
         this.modificationLock.unlock( );

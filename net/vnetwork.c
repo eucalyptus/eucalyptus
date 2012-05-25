@@ -2174,11 +2174,15 @@ int vnetApplyArpTableRules(vnetConfig *vnetconfig) {
 	    if (vnetconfig->publicips[k].allocated && (vnetconfig->publicips[k].dstip == vnetconfig->networks[i].addrs[j].ip)) {
 	      char *ip=NULL;
 	      ip = hex2dot(vnetconfig->networks[i].addrs[j].ip);
-	      if (ip && gw) {
-		fprintf(FH, "IP=%s,%s\n", ip,gw);
-		done++;
+	      if (ip)
+	      {
+	        if (gw)
+	        {
+		  fprintf(FH, "IP=%s,%s\n", ip,gw);
+		  done++;
+	        }
+	        free(ip);
 	      }
-	      if (ip) free(ip);
 	    }
 	  }
 	}
