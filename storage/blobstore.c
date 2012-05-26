@@ -98,7 +98,7 @@
 #define BLOBSTORE_DMSETUP_TIMEOUT_SEC 30
 #define BLOBSTORE_MAX_CONCURRENT 99
 #define BLOBSTORE_NO_TIMEOUT -1L
-#define BLOBSTORE_SIG_MAX 32768
+#define BLOBSTORE_SIG_MAX 262144
 #define DM_PATH "/dev/mapper/"
 #define DM_FORMAT DM_PATH "%s" // TODO: do not hardcode?
 #define MIN_BLOCKS_SNAPSHOT 32 // otherwise dmsetup fails with 
@@ -2173,7 +2173,8 @@ blockblob * blockblob_open ( blobstore * bs,
         if (bb->size_bytes==0) { // find out the size from the file size
             bb->size_bytes = sb.st_size;
         } else if (bb->size_bytes != sb.st_size) { // verify the size specified by the user
-            logprintfl (EUCAERROR, "encountered a size mismatch when opening a blob (requested %lld, found %lld)\n", bb->size_bytes, sb.st_size);
+            logprintfl (EUCAERROR, "{%u} encountered a size mismatch when opening a blob (requested %lld, found %lld)\n", 
+                        (unsigned int)pthread_self(), bb->size_bytes, sb.st_size);
             ERR (BLOBSTORE_ERROR_SIGNATURE, "size of the existing blockblob does not match");
             goto clean;
         }
@@ -2197,7 +2198,8 @@ blockblob * blockblob_open ( blobstore * bs,
             if ((sig_size=read_blockblob_metadata_path (BLOCKBLOB_PATH_SIG, bs, bb->id, buf, sizeof (buf)))!=strlen(sig)
                 ||
                 (strncmp (sig, buf, sig_size) != 0)) {
-                logprintfl (EUCAERROR, "encountered signature mismatch when opening a blob (requested size [%d], found [%d])\n", strlen (sig), sig_size);
+                logprintfl (EUCAERROR, "{%u} encountered signature mismatch when opening a blob (requested size [%d], found [%d])\n",
+                            (unsigned int)pthread_self(), strlen (sig), sig_size);
                 ERR (BLOBSTORE_ERROR_SIGNATURE, NULL);
                 goto clean;
             }

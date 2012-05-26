@@ -1652,7 +1652,8 @@ find_or_create_artifact ( // finds and opens or creates artifact's blob either i
         
         // for some error conditions from cache we try work blobstore
         if (( do_create && ret==BLOBSTORE_ERROR_NOSPC) ||
-            (!do_create && ret==BLOBSTORE_ERROR_NOENT)
+            (!do_create && ret==BLOBSTORE_ERROR_NOENT) ||
+            (ret==BLOBSTORE_ERROR_SIGNATURE)
 
             // these reduce reliance on cache (work copies are created more aggressively)
             //|| ret==BLOBSTORE_ERROR_NOENT 
@@ -1660,18 +1661,19 @@ find_or_create_artifact ( // finds and opens or creates artifact's blob either i
             //|| ret==BLOBSTORE_ERROR_EXIST
             
             ) {
+            a->may_be_cached = FALSE; // so we won't check cache on future invocations
             goto try_work;
 
         } else { // for all others we return the error or success
-            if (!do_create && ret==BLOBSTORE_ERROR_SIGNATURE) {
-                logprintfl (EUCAWARN, "[%s] warning: signature mismatch on cached blob %03d|%s\n", a->instanceId, a->seq, id_cache); // TODO: maybe invalidate?
-            }
             if (ret == BLOBSTORE_ERROR_OK)
                 a->is_in_cache = TRUE;
             return ret;
         }
     }
  try_work:
+    if (ret==BLOBSTORE_ERROR_SIGNATURE) {
+        logprintfl (EUCAWARN, "[%s] warning: signature mismatch on cached blob %03d|%s\n", a->instanceId, a->seq, id_cache); // TODO: maybe invalidate?
+    }
     logprintfl (EUCADEBUG, "[%s] checking work blobstore for %03d|%s (do_create=%d ret=%d)\n", a->instanceId, a->seq, id_cache, do_create, ret);
     return find_or_create_blob (flags, work_bs, id_work, size_bytes, a->sig, bbp);
 }
@@ -1711,7 +1713,6 @@ art_implement_tree ( // traverse artifact tree and create/download/combine artif
         int num_opened_deps = 0;
         boolean do_deps = TRUE;
         boolean do_create = TRUE;
-        boolean bad_sig = FALSE;
 
         if (tries++)
             usleep (ARTIFACT_RETRY_SLEEP_USEC); 
@@ -1733,9 +1734,6 @@ art_implement_tree ( // traverse artifact tree and create/download/combine artif
                 break;
             case BLOBSTORE_ERROR_NOENT: // doesn't exist yet => ok, create it
                 break; 
-            case BLOBSTORE_ERROR_SIGNATURE: // exists, but has wrong signature => create it in 'work'
-                bad_sig = TRUE;
-                break;
             case BLOBSTORE_ERROR_AGAIN: // timed out the => competition took too long
             case BLOBSTORE_ERROR_MFILE: // out of file descriptors for locking => same problem
                 goto retry_or_fail;
@@ -1789,24 +1787,6 @@ art_implement_tree ( // traverse artifact tree and create/download/combine artif
         // for exclusive use by this process and thread)
        
         if (do_create) {
-<<<<<<< HEAD
-            // try to create the artifact since last time we checked it did not exist
-            switch (ret = find_or_create_artifact (CREATE, root, work_bs, (bad_sig == TRUE) ? NULL : cache_bs, work_prefix, &(root->bb))) {
-            case OK:
-                logprintfl (EUCADEBUG, "[%s] created a blob for an artifact %03d|%s on try %d\n", root->instanceId,  root->seq, root->id, tries);
-                break;
-            case BLOBSTORE_ERROR_EXIST: // someone else created it => loop back and open it
-                ret = BLOBSTORE_ERROR_AGAIN;
-                // fall through
-            case BLOBSTORE_ERROR_AGAIN: // timed out (but probably exists)
-            case BLOBSTORE_ERROR_MFILE: // out of file descriptors for locking => same problem
-                goto retry_or_fail;
-                break;
-            default: // all other errors
-                logprintfl (EUCAERROR, "[%s] error: failed to allocate artifact %s (%d %s) on try %d\n", root->instanceId, root->id, ret, blobstore_get_last_msg(), tries);
-                goto retry_or_fail;
-=======
-
             // shortcut for a case where a copy creator has a dependency that 
             // could have been cached, but was not, so a copy is not necessary
             if (root->creator == copy_creator && 
@@ -1841,7 +1821,6 @@ art_implement_tree ( // traverse artifact tree and create/download/combine artif
                     logprintfl (EUCAERROR, "[%s] error: failed to allocate artifact %s (%d %s) on try %d\n", root->instanceId, root->id, ret, blobstore_get_last_msg(), tries);
                     goto retry_or_fail;
                 }
->>>>>>> testing
             }
 
         create:
