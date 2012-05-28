@@ -549,14 +549,6 @@ int clean_network_state(void) {
   } else {
     //    logprintfl(EUCADEBUG, "clean_network_state(): sucessfully unset metadata redirect\n");
   }
-  /*
-  snprintf(cmd, MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap ip addr del 169.254.169.254/32 dev %s", config->eucahome, tmpvnetconfig->pubInterface);
-  rc = system(cmd);
-  rc = rc>>8;
-  if (rc && (rc != 2)) {
-    logprintfl(EUCAERROR, "clean_network_state(): running cmd '%s' failed: cannot remove ip 169.254.169.254\n", cmd);
-  }
-  */
 
   for (i=1; i<NUMBER_OF_PUBLIC_IPS; i++) {
     if (tmpvnetconfig->publicips[i].ip != 0 && tmpvnetconfig->publicips[i].allocated != 0) {
