@@ -102,7 +102,7 @@ permission notice:
 #define MONITORING_PERIOD (5)
 #define MAX_CREATE_TRYS 5
 #define CREATE_TIMEOUT_SEC 15
-#define PER_INSTANCE_BUFFER_MB 20 // reserve this much extra room (in MB) per instance (for kernel, ramdisk, and metadata overhead)
+#define PER_INSTANCE_BUFFER_MB 20 // by default reserve this much extra room (in MB) per instance (for kernel, ramdisk, and metadata overhead)
 
 #ifdef EUCA_COMPILE_TIMESTAMP
 static char * compile_timestamp_str = EUCA_COMPILE_TIMESTAMP;
@@ -438,7 +438,7 @@ refresh_instance_info(	struct nc_state_t *nc,
 }
 
 // copying the linked list for use by Describe* requests
-static void copy_instances (void) 
+void copy_instances (void) 
 { 
     sem_p (inst_copy_sem);
     
@@ -762,6 +762,7 @@ void *startup_thread (void * arg)
         instance->bootTime = time (NULL);
         change_state (instance, BOOTING);
     }
+    copy_instances();
     sem_v (inst_sem);
     goto free;
 
@@ -1126,6 +1127,7 @@ static int init (void)
         // look up configuration file settings for work and cache size
         long long conf_work_size_mb; GET_VAR_INT(conf_work_size_mb,  CONFIG_NC_WORK_SIZE, -1);
         long long conf_cache_size_mb; GET_VAR_INT(conf_cache_size_mb, CONFIG_NC_CACHE_SIZE, -1);
+        long long conf_work_overhead_mb; GET_VAR_INT(conf_work_overhead_mb, CONFIG_NC_OVERHEAD_SIZE, PER_INSTANCE_BUFFER_MB);
         { // accommodate legacy MAX_DISK setting by converting it
             int max_disk_gb; GET_VAR_INT(max_disk_gb, CONFIG_MAX_DISK, -1);
             if (max_disk_gb != -1) {
@@ -1211,7 +1213,10 @@ static int init (void)
        
         // record the work-space limit for max_disk 
         long long work_size_gb = (long long)(work_size_mb / MB_PER_DISK_UNIT);
-        long long overhead_mb = work_size_gb * PER_INSTANCE_BUFFER_MB; // work_size_gb is also max number of instances
+        if (conf_work_overhead_mb < 0 || conf_work_overhead_mb > work_size_mb) { // sanity check work overhead
+            conf_work_overhead_mb = PER_INSTANCE_BUFFER_MB;
+        }
+        long long overhead_mb = work_size_gb * conf_work_overhead_mb; // work_size_gb is the theoretical max number of instances
         long long disk_max_mb = work_size_mb - overhead_mb;
         nc_state.disk_max = disk_max_mb / MB_PER_DISK_UNIT;
 

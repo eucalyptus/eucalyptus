@@ -29,20 +29,38 @@
 # Author: Mitch Garnaat mgarnaat@eucalyptus.com
 
 from eucadmin.command import Command
-import os.path
+import os
+import pwd
 import sys
 
 InitCommand = """%s/usr/sbin/eucalyptus-cloud -u %s -h %s --initialize"""
 
 DebugInitCommand = """%s/usr/sbin/eucalyptus-cloud -u %s -h %s --initialize --log-level=EXTREME -L console"""
 
+VarRunPath = """%s/var/run/eucalyptus"""
+
 class Initialize(object):
 
     def __init__(self, config, debug=False):
         self.config = config
         self.debug = debug
+        self.euca_user_name = None
+        self.euca_user_id = None
+        self.euca_user_group_id = None
 
     def main(self):
+        self.euca_user_name = self.config['EUCA_USER']
+        if self.euca_user_name == 'root':
+            root_data = pwd.getpwnam('root')
+            self.euca_user_id = root_data.pw_uid
+        else:
+            try:
+                user_data = pwd.getpwnam(self.euca_user_name)
+            except KeyError:
+                raise ValueError('Is EUCA_USER defined?')
+            self.euca_user_id = user_data.pw_uid
+            self.euca_user_group_id = user_data.pw_gid
+
         db_dir = os.path.join(self.config['EUCALYPTUS'],
                               'var','lib','eucalyptus','db')
         if os.path.exists(os.path.join(db_dir, 'data/ibdata1')):
@@ -72,6 +90,12 @@ class Initialize(object):
         return cmd.status
 
     def init_scripts(self):
+        path_string = VarRunPath % self.config['EUCALYPTUS']
+        if not os.path.isdir(path_string):
+            if self.debug:
+                print 'Creating %s' % path_string
+            os.mkdir(path_string)
+            os.chown(path_string, self.euca_user_id, self.euca_user_group_id)
         initd_dir = os.path.join(
             self.config['EUCALYPTUS'],'etc','eucalyptus','cloud.d','init.d')
         init_files = sorted(os.listdir( initd_dir ))

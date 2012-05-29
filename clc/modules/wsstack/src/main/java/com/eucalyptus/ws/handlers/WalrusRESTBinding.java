@@ -701,11 +701,20 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 			if(value != null) {
 				operationParams.put(keyString, value);
 			}
-			if(addMore) {
+				
+			//Add subresource params to the operationKey
+			for(WalrusProperties.SubResource subResource : WalrusProperties.SubResource.values()) {
+				if(keyString.toLowerCase().equals(subResource.toString().toLowerCase())) {
+					operationKey+=keyString.toLowerCase();
+				}
+			}
+			
+			/*if(addMore) {
 				//just add the first one to the key
 				operationKey += keyString.toLowerCase();
 				addMore = false;
-			}
+			}*/
+			
 			paramsToRemove.add(key);
 		}
 
@@ -777,8 +786,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 		}
 	}
 
-	private void getVersioningStatus(Map operationParams,
-			MappingHttpRequest httpRequest) throws BindingException {
+	private void getVersioningStatus(Map operationParams, MappingHttpRequest httpRequest) throws BindingException {
 		String message = getMessageString(httpRequest);
 		if(message.length() > 0) {
 			try {
