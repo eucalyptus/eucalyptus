@@ -1661,7 +1661,8 @@ find_or_create_artifact ( // finds and opens or creates artifact's blob either i
             //|| ret==BLOBSTORE_ERROR_EXIST
             
             ) {
-            a->may_be_cached = FALSE; // so we won't check cache on future invocations
+            if (ret==BLOBSTORE_ERROR_SIGNATURE)
+                a->may_be_cached = FALSE; // so we won't check cache on future invocations
             goto try_work;
 
         } else { // for all others we return the error or success
