@@ -74,7 +74,7 @@ read_sysctl_value() {
 	local SYSCTL_VAL_NAME="$2"
 	local SYSCTL_VAL_TEMP=""
 
-	SYSCTL_TEMP=$(grep "^[[:space:]]*kernel[./]${SYSCTL_VAL_NAME}[[:space:]]*=[[:space:]]*\([0-9[:space:]]*\)[[:space:]]*$" "${SYSCTL_FILE_NAME}" | sed 's/.*[[:space:]]=[[:space:]]//' | tail -1)
+	SYSCTL_TEMP=$(grep "^[[:space:]]*kernel[./]${SYSCTL_VAL_NAME}[[:space:]]*=[0-9[:space:]]*$" "${SYSCTL_FILE_NAME}" |  sed 's/^.*=[[:space:]]*\b\(.*\)\b[[:space:]]*$/\1/' | tail -1)
 	[ -z "${SYSCTL_TEMP}" ] || eval ${SYSCTL_VAL_VAR}=\"${SYSCTL_TEMP}\"
 }
 
