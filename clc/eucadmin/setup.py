@@ -62,9 +62,7 @@ class build_scripts_with_path_headers(build_scripts):
                 print line.rstrip()
 
 admin_scripts = ["bin/euca_conf",
-                 "bin/euca-clone-volume",
                  "bin/euca-configure-vmware",
-                 "bin/euca-convert-volumes",
                  "bin/euca-deregister-arbitrator",
                  "bin/euca-deregister-cloud",
                  "bin/euca-deregister-cluster",

@@ -167,6 +167,7 @@ doRunInstance(	struct nc_state_t *nc,
 
     sem_p (inst_sem); 
     int error = add_instance (&global_instances, instance);
+    copy_instances();
     sem_v (inst_sem);
     if ( error ) {
         logprintfl (EUCAERROR, "[%s] error: could not save instance struct\n", instanceId);
@@ -187,6 +188,7 @@ doRunInstance(	struct nc_state_t *nc,
         logprintfl (EUCAERROR, "[%s] failed to spawn a VM startup thread\n", instanceId);
         sem_p (inst_sem);
         remove_instance (&global_instances, instance);
+        copy_instances();
         sem_v (inst_sem);
 	if (attr) free(attr);
         goto error;
@@ -314,6 +316,7 @@ doTerminateInstance( struct nc_state_t *nc,
 	sem_p (inst_sem);
 	err = find_and_terminate_instance (nc, meta, instanceId, force, &instance, 1);
 	if (err!=OK) {
+        copy_instances();
 		sem_v(inst_sem);
 		return err;
 	}
@@ -326,6 +329,7 @@ doTerminateInstance( struct nc_state_t *nc,
             change_state (instance, SHUTOFF);
         }
 	}
+    copy_instances();
     sem_v (inst_sem);
     
 	*previousState = instance->stateCode;
@@ -480,8 +484,11 @@ doAssignAddress( struct nc_state_t *nc,
     if ( instance ) {
         snprintf(instance->ncnet.publicIp, 24, "%s", publicIp);  
     }
+    save_instance_struct (instance);
+    copy_instances();
     sem_v (inst_sem);
-    
+
+
     return ret;
 }
 
@@ -654,6 +661,7 @@ doAttachVolume (	struct nc_state_t *nc,
      sem_p (inst_sem);
      volume = save_volume (instance, volumeId, remoteDev, localDevName, localDevReal, VOL_STATE_ATTACHING);
      save_instance_struct (instance);
+     copy_instances();
      sem_v (inst_sem);
      if (!volume) {
          logprintfl (EUCAERROR, "AttachVolume(): failed to update the volume record, aborting volume attachment\n");
@@ -738,6 +746,7 @@ doAttachVolume (	struct nc_state_t *nc,
      sem_p (inst_sem);
      volume = save_volume (instance, volumeId, NULL, NULL, NULL, next_vol_state); // now we can record remoteDevReal
      save_instance_struct (instance);
+     copy_instances();
      sem_v (inst_sem);
      if (volume==NULL) {
          logprintfl (EUCAERROR, "AttachVolume(): failed to save the volume record, aborting volume attachment (detaching)\n");
@@ -827,6 +836,7 @@ doDetachVolume (	struct nc_state_t *nc,
     if (grab_inst_sem) sem_p (inst_sem);
     volume = save_volume (instance, volumeId, remoteDev, localDevName, localDevReal, VOL_STATE_DETACHING);
     save_instance_struct (instance);
+    copy_instances();
     if (grab_inst_sem) sem_v (inst_sem);
     if (!volume) {
         logprintfl (EUCAERROR, "DetachVolume(): failed to update the volume record, aborting volume attachment\n");
@@ -911,6 +921,7 @@ doDetachVolume (	struct nc_state_t *nc,
     if (grab_inst_sem) sem_p (inst_sem);
     volume = save_volume (instance, volumeId, NULL, NULL, NULL, next_vol_state);
     save_instance_struct (instance);
+    copy_instances();
     if (grab_inst_sem) sem_v (inst_sem);
     if (volume==NULL) {
         logprintfl (EUCAWARN, "DetachVolume(): failed to save the volume record\n");
@@ -954,6 +965,7 @@ static int cleanup_createImage_task (ncInstance * instance, struct createImage_p
 	change_createImage_state (instance, result);
 	if (state!=NO_STATE) // do not touch instance state (these are early failures, before we destroyed the domain)
 		change_state (instance, state);
+    copy_instances();
 	sem_v (inst_sem);
     
 	if (params) {
@@ -1069,10 +1081,12 @@ doCreateImage(	struct nc_state_t *nc,
 	
 	int err = find_and_terminate_instance (nc, meta, instanceId, 0, &instance, 1);
 	if (err!=OK) {
+        copy_instances();
         sem_v (inst_sem);
         if (params) free(params);
         return err;
 	}
+    copy_instances();
 	sem_v (inst_sem);
 	
 	// do the rest in a thread
@@ -1149,6 +1163,7 @@ static int cleanup_bundling_task (ncInstance * instance, struct bundling_params_
 	change_bundling_state (instance, result);
 	if (state!=NO_STATE) // do not touch instance state (these are early failures, before we destroyed the domain)
 		change_state (instance, state);
+    copy_instances();
 	sem_v (inst_sem);
 
 	if (params) {
@@ -1388,10 +1403,12 @@ doBundleInstance(
 	
 	int err = find_and_terminate_instance (nc, meta, instanceId, 0, &instance, 1);
 	if (err!=OK) {
+        copy_instances();
 	  sem_v (inst_sem);
 	  if (params) free(params);
 	  return err;
 	}
+    copy_instances();
 	sem_v (inst_sem);
 	
 	// do the rest in a thread
@@ -1457,6 +1474,7 @@ doDescribeBundleTasks(
 			bundle = malloc(sizeof(bundleTask));
 			if (bundle == NULL) {
 				logprintfl (EUCAERROR, "out of memory\n");
+                sem_v (inst_sem);
 				return OUT_OF_MEMORY;
 			}
 			allocate_bundleTask (bundle, instIds[i], instance->bundleTaskStateName);

@@ -386,7 +386,7 @@ int vnetSetMetadataRedirect(vnetConfig *vnetconfig) {
     char *ipbuf;
     ipbuf = hex2dot(vnetconfig->cloudIp);
     //    snprintf(cmd, 256, "-A PREROUTING -s %s/%d -d 169.254.169.254 -p tcp --dport 80 -j DNAT --to-destination %s:8773", network, slashnet, ipbuf);
-    snprintf(cmd, 256, "-A PREROUTING -d 169.254.169.254 -p tcp -m tcp --dport 80 -j DNAT --to-destination %s:8773", ipbuf);
+    snprintf(cmd, 256, "-A PREROUTING -d 169.254.169.254/32 -p tcp -m tcp --dport 80 -j DNAT --to-destination %s:8773", ipbuf);
     if (ipbuf) free(ipbuf);
     rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
   } else {
@@ -414,7 +414,7 @@ int vnetUnsetMetadataRedirect(vnetConfig *vnetconfig) {
   if (vnetconfig->cloudIp != 0) {
     char *ipbuf;
     ipbuf = hex2dot(vnetconfig->cloudIp);
-    snprintf(cmd, 256, "-D PREROUTING -d 169.254.169.254 -p tcp -m tcp --dport 80 -j DNAT --to-destination %s:8773", ipbuf);
+    snprintf(cmd, 256, "-D PREROUTING -d 169.254.169.254/32 -p tcp -m tcp --dport 80 -j DNAT --to-destination %s:8773", ipbuf);
     if (ipbuf) free(ipbuf);
     rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
   } else {

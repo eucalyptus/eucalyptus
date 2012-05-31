@@ -2765,8 +2765,19 @@ int initialize(ncMetadata *ccMeta) {
       sem_mypost(CONFIG);
     }
     
+    sem_mywait(INIT);
+    if (!init) {
+      // first time operations with everything initialized
+      sem_mywait(VNET);
+      vnetconfig->cloudIp = 0;
+      sem_mypost(VNET);
+      sem_mywait(CONFIG);
+      config->cloudIp = 0;
+      sem_mypost(CONFIG);
+    }
     // initialization went well, this thread is now initialized
     init=1;
+    sem_mypost(INIT);
   }
   
   return(ret);
