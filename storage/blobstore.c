@@ -1613,6 +1613,8 @@ static long long purge_blockblobs_lru ( blobstore * bs, blockblob * bb_list, lon
                             code, // outcome codes: D=deleted, else C=children, !=undeletable, O=open
                             bb->size_bytes / 512L, // size is in sectors
                             ctime (&(bb->last_modified))); // ctime adds a newline
+                if (purged>=need_blocks)
+                    break;
             }
             iteration++;
         } while (deleted && (purged<need_blocks));
@@ -2419,6 +2421,12 @@ static int dm_delete_devices (char * dev_names[], int size)
             char path_p [1024]; // path to the device mapper file
             // just append 'pN' to the name, e.g., sda -> sdap1
             snprintf (name_p, sizeof (name_p), "%sp%d", dev_names_removable [i], j);
+            snprintf (path_p, sizeof (path_p), DM_FORMAT, name_p);
+            if (check_path(path_p)==0) {
+                dm_delete_device (name_p);
+            }
+            // also try appending just 'N', since that may be the name format, too
+            snprintf (name_p, sizeof (name_p), "%s%d", dev_names_removable [i], j);
             snprintf (path_p, sizeof (path_p), DM_FORMAT, name_p);
             if (check_path(path_p)==0) {
                 dm_delete_device (name_p);

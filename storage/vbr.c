@@ -779,14 +779,26 @@ static int disk_creator (artifact * a) // creates a 'raw' disk based on partitio
             logprintfl (EUCAERROR, "[%s] error: no ramdisk found among the VBRs\n", a->instanceId);
             goto cleanup;
         }
-        // `parted mkpart` creates children devices for each partition
-        // (e.g., /dev/mapper/euca-diskX gets /dev/mapper/euca-diskXp1 and so on)
+        // `parted mkpart` causes children devices for each partition to be created
+        // (e.g., /dev/mapper/euca-diskX gets /dev/mapper/euca-diskXp1 or ...X1 and so on)
         // we mount such a device here so as to copy files to the root partition
         // (we cannot mount the dev of the partition's blob because it becomes
         // 'busy' after the clone operation)
-        char dev [EUCA_MAX_PATH];
-        snprintf (dev, sizeof (dev), "%sp%d", blockblob_get_dev (a->bb), root_entry);
-        
+        char * dev = NULL;
+        char dev_with_p [EUCA_MAX_PATH];
+        char dev_without_p [EUCA_MAX_PATH]; // on Ubuntu Precise, some dev names do not have 'p' in them
+        snprintf (dev_with_p,    sizeof (dev_with_p),    "%sp%d", blockblob_get_dev (a->bb), root_entry);
+        snprintf (dev_without_p, sizeof (dev_without_p), "%s%d",  blockblob_get_dev (a->bb), root_entry);
+        if (check_path (dev_with_p) == 0) {
+            dev = dev_with_p;
+        } else if (check_path (dev_without_p) == 0) {
+            dev = dev_without_p;
+        } else {
+            logprintfl (EUCAERROR, "[%s] failed to stat partition device [%s]\n", a->instanceId, dev, strerror (errno));
+            goto cleanup;
+        }
+        logprintfl (EUCAINFO, "[%s] mounted partition device %s\n", a->instanceId, dev);
+
         // mount the root partition
         char mnt_pt [EUCA_MAX_PATH] = "/tmp/euca-mount-XXXXXX";
         if (safe_mkdtemp (mnt_pt)==NULL) {
@@ -809,7 +821,7 @@ static int disk_creator (artifact * a) // creates a 'raw' disk based on partitio
         // change user of the blob device back to 'eucalyptus' (grub sets it to 'root')
         sleep (1); // without this, perms on dev-mapper devices can flip back, presumably because in-kernel ops complete after grub process finishes
         if (diskutil_ch (blockblob_get_dev (a->bb), EUCALYPTUS_ADMIN, NULL, 0) != OK) {
-            logprintfl (EUCAINFO, "[%s] error: failed to change user for '%s' to '%s'\n", a->instanceId, dev, EUCALYPTUS_ADMIN);
+            logprintfl (EUCAINFO, "[%s] error: failed to change user for '%s' to '%s'\n", a->instanceId, blockblob_get_dev (a->bb), EUCALYPTUS_ADMIN);
         }
         bootification_failed = 0;
         
