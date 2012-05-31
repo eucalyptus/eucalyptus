@@ -188,8 +188,6 @@ sub new_euca_ipt() {
     } else {
 	return(1);
     }
-    system("cp $chainmapfile /tmp/chains");
-    
     
     if (!$table || !$rulefile || !$chainmapfile || !($table eq "filter" || $table eq "nat") || $rulefile eq "" || !-f $rulefile || $chainmapfile eq "" || !-f $chainmapfile) {dodie("cannot verify commandline options");}
     
