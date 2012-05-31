@@ -34,6 +34,7 @@ from eucadmin.command import Command
 from eucadmin.cmdstrings import get_cmdstring
 import eucadmin
 import os
+import sys
 import time
 import boto.utils
 import pgdb as db
@@ -49,8 +50,8 @@ CloudPKFile = '%s/var/lib/eucalyptus/keys/cloud-pk.pem'
 class GetCredentials(AWSQueryRequest):
 
     ServiceClass = eucadmin.EucAdmin
-    Description = """Download credentials to <zipfile>.  Each time this is \
-called, new X.509 certificates will be created for the specified user."""
+    Description = ("Download a user's credentials to <zipfile>.  New X.509 "
+                   "credentials are created each time this command is called.")
 
     Params = [Param(name='euca_home',
                     short_name='e', long_name='euca-home',
@@ -59,11 +60,13 @@ called, new X.509 certificates will be created for the specified user."""
               Param(name='account',
                     short_name='a', long_name='account',
                     ptype='string', optional=True, default='eucalyptus',
-                    doc='The account whose credentials will be used'),
+                    doc=('account containing the user for which to get '
+                         'credentials (default: eucalyptus)')),
               Param(name='user',
                     short_name='u', long_name='user',
                     ptype='string', optional=True, default='admin',
-                    doc='The Eucalyptus account that will be retrieved')]
+                    doc=('user name for which to get credentials '
+                         '(default: admin)'))]
     Args = [Param(name='zipfile', long_name='zipfile',
                   ptype='string', optional=False,
                   doc='The path to the resulting zip file with credentials')]
@@ -164,8 +167,12 @@ called, new X.509 certificates will be created for the specified user."""
         self.setup_query()
         self.check_zipfile()
         # check local service?
-        
-        self.token = self.get_token()
+
+        try:
+            self.token = self.get_token()
+        except IndexError:
+            sys.exit('error: no such account or user')
+
         self.get_credentials()
 
     def main_cli(self):
