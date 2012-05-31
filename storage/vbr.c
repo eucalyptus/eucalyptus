@@ -779,14 +779,26 @@ static int disk_creator (artifact * a) // creates a 'raw' disk based on partitio
             logprintfl (EUCAERROR, "[%s] error: no ramdisk found among the VBRs\n", a->instanceId);
             goto cleanup;
         }
-        // `parted mkpart` creates children devices for each partition
-        // (e.g., /dev/mapper/euca-diskX gets /dev/mapper/euca-diskXp1 and so on)
+        // `parted mkpart` causes children devices for each partition to be created
+        // (e.g., /dev/mapper/euca-diskX gets /dev/mapper/euca-diskXp1 or ...X1 and so on)
         // we mount such a device here so as to copy files to the root partition
         // (we cannot mount the dev of the partition's blob because it becomes
         // 'busy' after the clone operation)
-        char dev [EUCA_MAX_PATH];
-        snprintf (dev, sizeof (dev), "%sp%d", blockblob_get_dev (a->bb), root_entry);
-        
+        char * dev = NULL;
+        char dev_with_p [EUCA_MAX_PATH];
+        char dev_without_p [EUCA_MAX_PATH]; // on Ubuntu Precise, some dev names do not have 'p' in them
+        snprintf (dev_with_p,    sizeof (dev_with_p),    "%sp%d", blockblob_get_dev (a->bb), root_entry);
+        snprintf (dev_without_p, sizeof (dev_without_p), "%s%d",  blockblob_get_dev (a->bb), root_entry);
+        if (check_path (dev_with_p) == 0) {
+            dev = dev_with_p;
+        } else if (check_path (dev_without_p) == 0) {
+            dev = dev_without_p;
+        } else {
+            logprintfl (EUCAERROR, "[%s] failed to stat partition device [%s]\n", a->instanceId, dev, strerror (errno));
+            goto cleanup;
+        }
+        logprintfl (EUCAINFO, "[%s] mounted partition device %s\n", a->instanceId, dev);
+
         // mount the root partition
         char mnt_pt [EUCA_MAX_PATH] = "/tmp/euca-mount-XXXXXX";
         if (safe_mkdtemp (mnt_pt)==NULL) {
@@ -809,7 +821,7 @@ static int disk_creator (artifact * a) // creates a 'raw' disk based on partitio
         // change user of the blob device back to 'eucalyptus' (grub sets it to 'root')
         sleep (1); // without this, perms on dev-mapper devices can flip back, presumably because in-kernel ops complete after grub process finishes
         if (diskutil_ch (blockblob_get_dev (a->bb), EUCALYPTUS_ADMIN, NULL, 0) != OK) {
-            logprintfl (EUCAINFO, "[%s] error: failed to change user for '%s' to '%s'\n", a->instanceId, dev, EUCALYPTUS_ADMIN);
+            logprintfl (EUCAINFO, "[%s] error: failed to change user for '%s' to '%s'\n", a->instanceId, blockblob_get_dev (a->bb), EUCALYPTUS_ADMIN);
         }
         bootification_failed = 0;
         
@@ -1380,7 +1392,7 @@ art_alloc_disk ( // allocates a 'keyed' disk artifact and possibly the underlyin
 
     artifact * disk;
 
-    if (emi_disk) { // we have a full disk
+    if (emi_disk) { // we have a full disk (TODO: remove this unused if-condition)
         if (do_make_work_copy) { // allocate a work copy of it
             disk_size_bytes = emi_disk->size_bytes;
             if ((strlen (art_sig) + strlen (emi_disk->sig)) >= sizeof (art_sig)) { // overflow
@@ -1504,25 +1516,14 @@ vbr_alloc_tree ( // creates a tree of artifacts for a given VBR (caller must fre
                     if (vbr->type==NC_RESOURCE_IMAGE && k > 0) { // only inject SSH key into an EMI which has a single partition (whole disk)
                         use_sshkey = sshkey;
                     }
-                    disk_arts [k] = art_alloc_vbr (vbr, do_make_work_copy, FALSE, use_sshkey);
+                    disk_arts [k] = art_alloc_vbr (vbr, do_make_work_copy, FALSE, use_sshkey); // this brings in disks or partitions and their work copies, if requested
                     if (disk_arts [k] == NULL) {
                         arts_free (disk_arts, EUCA_MAX_PARTITIONS);
                         goto free;
                     }
                     if (vbr->type == NC_RESOURCE_EBS) // EBS-backed instances need no additional artifacts
                         continue;
-                    if (k==0) { // if this is a disk artifact, insert a work copy in front of it
-                        disk_arts [k] = art_alloc_disk (vbr, 
-                                                        prereq_arts, total_prereq_arts, 
-                                                        NULL, 0, 
-                                                        disk_arts [k], 
-                                                        do_make_bootable, 
-                                                        do_make_work_copy);
-                        if (disk_arts [k] == NULL) {
-                            arts_free (disk_arts, EUCA_MAX_PARTITIONS);
-                            goto free;
-                        }   
-                    } else { // k>0
+                    if (k>0) {
                         partitions++; 
                     }
                     
@@ -1619,7 +1620,7 @@ find_or_create_artifact ( // finds and opens or creates artifact's blob either i
     // determine blob IDs for cache and work
     const char * id_cache = a->id;
     char id_work  [BLOBSTORE_MAX_PATH];
-    if (work_prefix && strlen (work_prefix))
+   if (work_prefix && strlen (work_prefix))
         snprintf (id_work, sizeof (id_work), "%s/%s", work_prefix, a->id);
     else 
         safe_strncpy (id_work, a->id, sizeof (id_work));
@@ -1664,7 +1665,7 @@ find_or_create_artifact ( // finds and opens or creates artifact's blob either i
         // for some error conditions from cache we try work blobstore
         if (( do_create && ret==BLOBSTORE_ERROR_NOSPC) ||
             (!do_create && ret==BLOBSTORE_ERROR_NOENT) ||
-            (!do_create && ret==BLOBSTORE_ERROR_SIGNATURE)
+            (ret==BLOBSTORE_ERROR_SIGNATURE)
 
             // these reduce reliance on cache (work copies are created more aggressively)
             //|| ret==BLOBSTORE_ERROR_NOENT 
@@ -1672,6 +1673,8 @@ find_or_create_artifact ( // finds and opens or creates artifact's blob either i
             //|| ret==BLOBSTORE_ERROR_EXIST
             
             ) {
+            if (ret==BLOBSTORE_ERROR_SIGNATURE)
+                a->may_be_cached = FALSE; // so we won't check cache on future invocations
             goto try_work;
 
         } else { // for all others we return the error or success
@@ -1681,10 +1684,10 @@ find_or_create_artifact ( // finds and opens or creates artifact's blob either i
         }
     }
  try_work:
-    logprintfl (EUCADEBUG, "[%s] switching to work blobstore for %s (do_create=%d ret=%d)\n", a->instanceId, id_cache, do_create, ret);
     if (ret==BLOBSTORE_ERROR_SIGNATURE) {
-        logprintfl (EUCAWARN, "[%s] warning: signature mismatch on cached blob %s\n", a->instanceId, id_cache); // TODO: maybe invalidate?
+        logprintfl (EUCAWARN, "[%s] warning: signature mismatch on cached blob %03d|%s\n", a->instanceId, a->seq, id_cache); // TODO: maybe invalidate?
     }
+    logprintfl (EUCADEBUG, "[%s] checking work blobstore for %03d|%s (do_create=%d ret=%d)\n", a->instanceId, a->seq, id_cache, do_create, ret);
     return find_or_create_blob (flags, work_bs, id_work, size_bytes, a->sig, bbp);
 }
 
@@ -1797,7 +1800,6 @@ art_implement_tree ( // traverse artifact tree and create/download/combine artif
         // for exclusive use by this process and thread)
        
         if (do_create) {
-
             // shortcut for a case where a copy creator has a dependency that 
             // could have been cached, but was not, so a copy is not necessary
             if (root->creator == copy_creator && 

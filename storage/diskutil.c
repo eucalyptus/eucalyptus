@@ -724,11 +724,17 @@ int diskutil_grub2_mbr (const char * path, const int part, const char * mnt_pt)
 
         // create a soft link of the first partition's device mapper entry in the
         // form that grub is looking for (not DISKp1 but just DISK1)
-        char *output = pruntf (TRUE, "%s /bin/ln -s %sp1 %s1", helpers_path[ROOTWRAP], path, path);
-        if(!output) {
-            logprintfl (EUCAINFO, "{%u} warning: failed to create partition device soft-link", (unsigned int)pthread_self());
-        } else {
-            free(output);
+        boolean created_partition_softlink = FALSE;
+        char part_path [EUCA_MAX_PATH];
+        snprintf (part_path, sizeof (EUCA_MAX_PATH), "%s1", path);
+        if (check_path (part_path) != 0) {
+            char *output = pruntf (TRUE, "%s /bin/ln -s %sp1 %s", helpers_path[ROOTWRAP], path, part_path);
+            if (!output) {
+                logprintfl (EUCAINFO, "{%u} warning: failed to create partition device soft-link (%s)\n", (unsigned int)pthread_self(), part_path);
+            } else {
+                created_partition_softlink = TRUE;
+                free (output);
+            }
         }
 
         // we now invoke grub through euca_rootwrap because it may need to operate on
@@ -776,12 +782,15 @@ int diskutil_grub2_mbr (const char * path, const int part, const char * mnt_pt)
                 rc = 0;
             }
         }
-        // try to remove the partition device soft link created above
-        output = pruntf (TRUE, "%s /bin/rm %s1", helpers_path[ROOTWRAP], path);
-        if(!output) {
-            logprintfl (EUCAINFO, "{%u} warning: failed to remove partition device soft-link", (unsigned int)pthread_self());
-        } else {
-            free(output);
+
+        // try to remove the partition device soft link that may have been created above
+        if (created_partition_softlink) {
+            char * output = pruntf (TRUE, "%s /bin/rm %s", helpers_path[ROOTWRAP], part_path);
+            if(!output) {
+                logprintfl (EUCAINFO, "{%u} warning: failed to remove partition device soft-link\n", (unsigned int)pthread_self());
+            } else {
+                free(output);
+            }
         }
 
     } else if (grub_version==2) {

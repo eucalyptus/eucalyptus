@@ -98,7 +98,7 @@
 #define BLOBSTORE_DMSETUP_TIMEOUT_SEC 30
 #define BLOBSTORE_MAX_CONCURRENT 99
 #define BLOBSTORE_NO_TIMEOUT -1L
-#define BLOBSTORE_SIG_MAX 32768
+#define BLOBSTORE_SIG_MAX 262144
 #define DM_PATH "/dev/mapper/"
 #define DM_FORMAT DM_PATH "%s" // TODO: do not hardcode?
 #define MIN_BLOCKS_SNAPSHOT 32 // otherwise dmsetup fails with 
@@ -1613,6 +1613,8 @@ static long long purge_blockblobs_lru ( blobstore * bs, blockblob * bb_list, lon
                             code, // outcome codes: D=deleted, else C=children, !=undeletable, O=open
                             bb->size_bytes / 512L, // size is in sectors
                             ctime (&(bb->last_modified))); // ctime adds a newline
+                if (purged>=need_blocks)
+                    break;
             }
             iteration++;
         } while (deleted && (purged<need_blocks));
@@ -2173,6 +2175,8 @@ blockblob * blockblob_open ( blobstore * bs,
         if (bb->size_bytes==0) { // find out the size from the file size
             bb->size_bytes = sb.st_size;
         } else if (bb->size_bytes != sb.st_size) { // verify the size specified by the user
+            logprintfl (EUCAERROR, "{%u} encountered a size mismatch when opening a blob (requested %lld, found %lld)\n", 
+                        (unsigned int)pthread_self(), bb->size_bytes, sb.st_size);
             ERR (BLOBSTORE_ERROR_SIGNATURE, "size of the existing blockblob does not match");
             goto clean;
         }
@@ -2196,6 +2200,8 @@ blockblob * blockblob_open ( blobstore * bs,
             if ((sig_size=read_blockblob_metadata_path (BLOCKBLOB_PATH_SIG, bs, bb->id, buf, sizeof (buf)))!=strlen(sig)
                 ||
                 (strncmp (sig, buf, sig_size) != 0)) {
+                logprintfl (EUCAERROR, "{%u} encountered signature mismatch when opening a blob (requested size [%d], found [%d])\n",
+                            (unsigned int)pthread_self(), strlen (sig), sig_size);
                 ERR (BLOBSTORE_ERROR_SIGNATURE, NULL);
                 goto clean;
             }
@@ -2415,6 +2421,12 @@ static int dm_delete_devices (char * dev_names[], int size)
             char path_p [1024]; // path to the device mapper file
             // just append 'pN' to the name, e.g., sda -> sdap1
             snprintf (name_p, sizeof (name_p), "%sp%d", dev_names_removable [i], j);
+            snprintf (path_p, sizeof (path_p), DM_FORMAT, name_p);
+            if (check_path(path_p)==0) {
+                dm_delete_device (name_p);
+            }
+            // also try appending just 'N', since that may be the name format, too
+            snprintf (name_p, sizeof (name_p), "%s%d", dev_names_removable [i], j);
             snprintf (path_p, sizeof (path_p), DM_FORMAT, name_p);
             if (check_path(path_p)==0) {
                 dm_delete_device (name_p);
