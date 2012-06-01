@@ -105,6 +105,7 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.TreeMultimap;
@@ -212,17 +213,28 @@ public class AdmissionControl {
       Cluster cluster = Clusters.lookup( config );
       final ResourceState state = cluster.getNodeState( );
       final List<ResourceToken> tokens = state.requestResourceAllocation( allocInfo, tryAmount, maxAmount );
-      final Supplier<ResourceToken> allocator = new Supplier<ResourceToken>( ) {
-        Iterator<ResourceToken> iter = tokens.iterator( );
-        
-        @Override
-        public ResourceToken get( ) {
-          ResourceToken ret = this.iter.next( );
-          allocInfo.getAllocationTokens( ).add( ret );
-          return ret;
-        }
-      };
-      RestrictedTypes.allocateUnitlessResources( tokens.size( ), allocator );
+      final Iterator<ResourceToken> tokenIterator = tokens.iterator( );
+      try {
+        final Supplier<ResourceToken> allocator = new Supplier<ResourceToken>( ) {
+          @Override
+          public ResourceToken get( ) {
+            final ResourceToken ret = tokenIterator.next( );
+            allocInfo.getAllocationTokens( ).add( ret );
+            return ret;
+          }
+        };
+
+        RestrictedTypes.allocateUnitlessResources( tokens.size( ), allocator );
+      } finally {
+        // release any tokens that were not allocated
+        Iterators.all( tokenIterator, new Predicate<ResourceToken>() {
+          @Override
+          public boolean apply(final ResourceToken resourceToken) {
+            state.releaseToken( resourceToken );
+            return true;
+          }
+        } );
+      }
       return allocInfo.getAllocationTokens( );
     }
     
