@@ -468,10 +468,8 @@ static int open_and_lock (const char * path,
             if (flags & BLOBSTORE_FLAG_EXCL) o_flags |= O_EXCL;
         }
 
-        if (flags & BLOBSTORE_FLAG_CREAT) {
+        if (flags & BLOBSTORE_FLAG_CREAT)
             o_flags |= O_TRUNC;
-        }
-
     } else {
         ERR (BLOBSTORE_ERROR_INVAL, "flags to open_and_lock must include either _RDONLY or _RDWR or _CREAT");
         return -1;
@@ -1124,10 +1122,8 @@ static int read_blockblob_metadata_path (blockblob_path_t path_t, const blobstor
 // writes strings from 'array' or size 'array_size' (which can be 0) line-by-line
 // into a specific metadata file (based on 'path_t') of blob 'bb_id'
 // returns 0 for success and -1 for error
-#define CHUCK
 static int write_array_blockblob_metadata_path (blockblob_path_t path_t, const blobstore * bs, const char * bb_id, char ** array, int array_size)
 {
-#ifdef CHUCK
   int           i              = 0;
   int           fd             = 0;
   int           ret            = 0;
@@ -1135,72 +1131,33 @@ static int write_array_blockblob_metadata_path (blockblob_path_t path_t, const b
   char          path[MAX_PATH] = { 0 };
 
   set_blockblob_metadata_path(path_t, bs, bb_id, path, sizeof(path));
-  if((fd = open_and_lock (path, openFlags, BLOBSTORE_METADATA_TIMEOUT_USEC, BLOBSTORE_FILE_PERM)) == -1) {
-      PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
+  if((fd = open_and_lock(path, openFlags, BLOBSTORE_METADATA_TIMEOUT_USEC, BLOBSTORE_FILE_PERM)) == -1) {
+      PROPAGATE_ERR(BLOBSTORE_ERROR_UNKNOWN);
       return(-1);
   }
 
   for(i = 0; i < array_size; i++) {
       if(write(fd, array[i], strlen(array[i])) < 0) {
-          PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
+          PROPAGATE_ERR(BLOBSTORE_ERROR_UNKNOWN);
           ret = -1;
           break;
       }
 
       if(write(fd, "\n", 1) < 0) {
-          PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
+          PROPAGATE_ERR(BLOBSTORE_ERROR_UNKNOWN);
           ret = -1;
           break;
       }
   }
 
   if(close_and_unlock(fd) != 0) {
-      PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
+      PROPAGATE_ERR(BLOBSTORE_ERROR_UNKNOWN);
       ret = -1;
   }
 
   return(ret);
-
-#else /* CHUCK */
-  int ret = 0;
-  char path [MAX_PATH];
-  set_blockblob_metadata_path (path_t, bs, bb_id, path, sizeof (path));
-
-  int   fd = 0;
-  FILE *fp = NULL;
-  if ((fd = open_and_lock (path, (BLOBSTORE_FLAG_CREAT | BLOBSTORE_FLAG_RDWR), BLOBSTORE_METADATA_TIMEOUT_USEC, BLOBSTORE_FILE_PERM)) == -1) {
-      PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
-      return(-1);
-  }
-
-  if ((fp = fopen(path, "w+")) == NULL) {
-      PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
-      if(close_and_unlock(fd) != 0)
-          PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
-      return(-1);
-  }
-
-  for (int i=0; i<array_size; i++) {
-      if (fprintf (fp, "%s\n", array [i]) < 0) {
-          PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
-          ret = -1;
-          break;
-      }
-  }
-
-  if (fclose (fp) == -1) {
-      PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
-      ret = -1;
-  }
-  if (close_and_unlock(fd) != 0) {
-      PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
-      ret = -1;
-  }
-  return ret;
-#endif /* CHUCK */
 }
 
-#ifdef CHUCK
 // Purpose:
 //   The equivalent of getline for file descriptor.
 //
@@ -1268,7 +1225,6 @@ ssize_t get_line_desc(char **ppLine, size_t *n, int fd)
 
     return(length);
 }
-#endif /* CHUCK */
 
 // reads lines from a specific metadata file (based on 'path_t') of blob 'bb_id',
 // places each line into a newly allocated string, arranges pointers to these
@@ -1277,7 +1233,6 @@ ssize_t get_line_desc(char **ppLine, size_t *n, int fd)
 // returns 0 for success and -1 for error
 static int read_array_blockblob_metadata_path (blockblob_path_t path_t, const blobstore * bs, const char * bb_id, char *** array, int * array_size)
 {
-#ifdef CHUCK
     int        fd    = 0;
     int        ret   = 0;
     int        i     = 0;
@@ -1354,79 +1309,6 @@ static int read_array_blockblob_metadata_path (blockblob_path_t path_t, const bl
     *array      = lines;
     *array_size = i;
     return(0);
-#else /* CHUCK */
-    int ret = 0;
-    char path [MAX_PATH];
-    set_blockblob_metadata_path (path_t, bs, bb_id, path, sizeof (path));
-
-    int   fd = 0;
-    FILE *fp = NULL;
-    if ((fd = open_and_lock (path, BLOBSTORE_FLAG_RDONLY, BLOBSTORE_METADATA_TIMEOUT_USEC, BLOBSTORE_FILE_PERM)) == -1) {
-        PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
-        * array = NULL;
-        * array_size = 0;
-        return 0;
-    }
-
-    if ((fp = fdopen(fd, "r")) == NULL) {
-        PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
-        if(close_and_unlock(fd) != 0)
-            PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
-
-        * array = NULL;
-        * array_size = 0;
-        return 0;
-    }
-
-    int i;
-    size_t n;
-    char ** lines = NULL;
-    for (i=0; !feof(fp); i++) {
-        char * line = NULL;
-        if (getline (&line, &n, fp)==-1) {
-            if (feof(fp)) { // need this when '\n' is last char in the file
-                free (line);
-                break;
-            }
-            PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
-            ret = -1;
-            break;
-        }
-        int len = strlen (line);
-        if (len && line [len-1] == '\n') {
-            line [len-1] = '\0'; // chop off '\n'
-        }
-        char ** bigger_lines = realloc (lines, (i+1) * sizeof(char *));
-        if (bigger_lines==NULL) {
-            ERR (BLOBSTORE_ERROR_NOMEM, NULL);
-            ret = -1;
-            break;
-        }
-        lines = bigger_lines;
-        lines [i] = line;
-    }
-    if (fclose (fp) == -1) {
-        PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
-        ret = -1;
-    }
-    if (close_and_unlock(fd) != 0) {
-        PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
-        ret = -1;
-    }
-    if (ret == -1) {
-        if (lines!=NULL) {
-            for (int j=0; j<i; j++) {
-                free (lines [j]);
-            }
-            free (lines);
-        }
-    } else {
-        * array = lines;
-        * array_size = i;
-    }
-
-    return ret;
-#endif /* CHUCK */
 }
 
 static int update_entry_blockblob_metadata_path (blockblob_path_t path_t, const blobstore * bs, const char * bb_id, const char * entry, int removing)
