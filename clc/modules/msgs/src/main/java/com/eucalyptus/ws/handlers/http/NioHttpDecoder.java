@@ -54,6 +54,7 @@ import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.handler.codec.frame.TooLongFrameException;
 import org.jboss.netty.handler.codec.http.DefaultHttpChunk;
 import org.jboss.netty.handler.codec.http.HttpChunk;
@@ -65,7 +66,9 @@ import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.jboss.netty.handler.codec.replay.ReplayingDecoder;
 import org.mortbay.log.Log;
 
+import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.context.NoSuchContextException;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.ws.StackConfiguration;
 
@@ -300,6 +303,22 @@ public class NioHttpDecoder extends ReplayingDecoder<NioHttpDecoder.State> {
       }
 
     }
+  }
+
+  @Override
+  public void channelClosed( final ChannelHandlerContext ctx,
+                             final ChannelStateEvent channelStateEvent ) throws Exception {
+    try {
+      final Channel channel = ctx.getChannel();
+      if ( channel != null ) {
+        final Context context = Contexts.lookup( channel );
+        Contexts.clear( context );
+      }
+    } catch ( NoSuchContextException e ) {
+      // nothing to clean up
+    }
+
+    super.channelClosed( ctx, channelStateEvent );
   }
 
   private boolean isDecodingRequest( ) {

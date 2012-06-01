@@ -35,7 +35,10 @@ public class Contexts {
     Context ctx = new Context( request, channel );
     request.setCorrelationId( ctx.getCorrelationId( ) );
     uuidContexts.put( ctx.getCorrelationId( ), ctx );
-    channelContexts.put( channel, ctx );
+    final Context previousContext = channelContexts.put( channel, ctx );
+    if ( previousContext != null && previousContext.getCorrelationId() != null ) {
+      uuidContexts.remove( previousContext.getCorrelationId() );
+    }
     return ctx;
   }
   
