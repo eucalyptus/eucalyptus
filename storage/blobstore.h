@@ -83,6 +83,7 @@
 #define BLOBSTORE_FLAG_RDONLY   00002
 #define BLOBSTORE_FLAG_CREAT    00004
 #define BLOBSTORE_FLAG_EXCL     00010
+#define BLOBSTORE_FLAG_TRUNC    00400
 #define BLOBSTORE_FLAG_STRICT   01000
 #define BLOBSTORE_FLAG_HOLLOW   02000 // means the blob being created should be viewed as not occupying space
 

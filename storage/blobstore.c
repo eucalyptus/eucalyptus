@@ -468,6 +468,10 @@ static int open_and_lock (const char * path,
             if (flags & BLOBSTORE_FLAG_EXCL) o_flags |= O_EXCL;
         }
 
+        if (flags & BLOBSTORE_FLAG_CREAT) {
+            o_flags |= O_TRUNC;
+        }
+
     } else {
         ERR (BLOBSTORE_ERROR_INVAL, "flags to open_and_lock must include either _RDONLY or _RDWR or _CREAT");
         return -1;
@@ -1120,45 +1124,151 @@ static int read_blockblob_metadata_path (blockblob_path_t path_t, const blobstor
 // writes strings from 'array' or size 'array_size' (which can be 0) line-by-line
 // into a specific metadata file (based on 'path_t') of blob 'bb_id'
 // returns 0 for success and -1 for error
+#define CHUCK
 static int write_array_blockblob_metadata_path (blockblob_path_t path_t, const blobstore * bs, const char * bb_id, char ** array, int array_size)
 {
-    int ret = 0;
-    char path [MAX_PATH];
-    set_blockblob_metadata_path (path_t, bs, bb_id, path, sizeof (path));
+#ifdef CHUCK
+  int           i              = 0;
+  int           fd             = 0;
+  int           ret            = 0;
+  unsigned int  openFlags      = (BLOBSTORE_FLAG_CREAT | BLOBSTORE_FLAG_TRUNC | BLOBSTORE_FLAG_RDWR);
+  char          path[MAX_PATH] = { 0 };
 
-    int   fd = 0;
-    FILE *fp = NULL;
-    if ((fd = open_and_lock (path, (BLOBSTORE_FLAG_CREAT | BLOBSTORE_FLAG_RDWR), BLOBSTORE_METADATA_TIMEOUT_USEC, BLOBSTORE_FILE_PERM)) == -1) {
-        PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
-        return(-1);
-    }
+  set_blockblob_metadata_path(path_t, bs, bb_id, path, sizeof(path));
+  if((fd = open_and_lock (path, openFlags, BLOBSTORE_METADATA_TIMEOUT_USEC, BLOBSTORE_FILE_PERM)) == -1) {
+      PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
+      return(-1);
+  }
 
-    if ((fp = fopen(path, "w+")) == NULL) {
-        PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
-        if(close_and_unlock(fd) != 0)
-            PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
-        return(-1);
-    }
+  for(i = 0; i < array_size; i++) {
+      if(write(fd, array[i], strlen(array[i])) < 0) {
+          PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
+          ret = -1;
+          break;
+      }
 
-    for (int i=0; i<array_size; i++) {
-        if (fprintf (fp, "%s\n", array [i]) < 0) {
-            PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
-            ret = -1;
-            break;
-        }
-    }
+      if(write(fd, "\n", 1) < 0) {
+          PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
+          ret = -1;
+          break;
+      }
+  }
 
-    if (fclose (fp) == -1) {
-        PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
-        ret = -1;
-    }
-    
-    if (close_and_unlock(fd) != 0) {
-        PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
-        ret = -1;
-    }
-    return ret;
+  if(close_and_unlock(fd) != 0) {
+      PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
+      ret = -1;
+  }
+
+  return(ret);
+
+#else /* CHUCK */
+  int ret = 0;
+  char path [MAX_PATH];
+  set_blockblob_metadata_path (path_t, bs, bb_id, path, sizeof (path));
+
+  int   fd = 0;
+  FILE *fp = NULL;
+  if ((fd = open_and_lock (path, (BLOBSTORE_FLAG_CREAT | BLOBSTORE_FLAG_RDWR), BLOBSTORE_METADATA_TIMEOUT_USEC, BLOBSTORE_FILE_PERM)) == -1) {
+      PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
+      return(-1);
+  }
+
+  if ((fp = fopen(path, "w+")) == NULL) {
+      PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
+      if(close_and_unlock(fd) != 0)
+          PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
+      return(-1);
+  }
+
+  for (int i=0; i<array_size; i++) {
+      if (fprintf (fp, "%s\n", array [i]) < 0) {
+          PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
+          ret = -1;
+          break;
+      }
+  }
+
+  if (fclose (fp) == -1) {
+      PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
+      ret = -1;
+  }
+  if (close_and_unlock(fd) != 0) {
+      PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
+      ret = -1;
+  }
+  return ret;
+#endif /* CHUCK */
 }
+
+#ifdef CHUCK
+// Purpose:
+//   The equivalent of getline for file descriptor.
+//
+// Arguments:
+//      ppLine - pointer to the character array to read into
+//      n      - amount of memory currently allocated for (*ppLine)
+//      fd     - file descriptor to read from
+//
+// Returns:
+//    On success, number of characters read excluding the '\n' character is returned. A
+//    value or 0 indicates we reached the end of the file. A returned value of -1 indicates
+//    an error and the errno is set appropriately. On error, the original allocated memory
+//    is left untouched.
+ssize_t get_line_desc(char **ppLine, size_t *n, int fd)
+{
+    char      c         = '\0';
+    size_t    length    = 0;
+    size_t    newSize   = (*n);
+    ssize_t   error     = 0;
+    char     *pLine     = *ppLine;
+    char     *pNewBlock = *ppLine;
+
+    do {
+        // Read one character.. If 0, then EOF, if less then error!!.
+        if((error = read(fd, &c, 1)) <= 0)
+            break;
+
+        // If we're going over, re-allocate memory
+        if((length + 1) >= newSize) {
+            newSize += 64;
+
+            if((pNewBlock = realloc(pLine, newSize)) == NULL) {
+                error = -1;
+                break;
+            }
+
+            pLine = pNewBlock;
+        }
+
+        pLine[length++] = c;
+    } while(c != '\n');
+
+    // Did we have an error?
+    if(error < 0) {
+        // If (*n) was originally 0 we should thing about freeing pLine since we allocated that memory.
+        if(((*n) == 0) && (pLine != NULL)) {
+            free(pLine);
+            pLine = NULL;
+        }
+        return(error);
+    }
+
+    // Now strip the '\n' character
+    if(pLine != NULL) {
+        (*ppLine)     = pLine;
+        pLine[length] = '\0'; /* Safety */
+
+        // Now strip '\n' if present. We could have reached EOF and no '\n' was present
+        if(pLine[length - 1] == '\n')
+            pLine[--length] = '\0';
+
+        // Update the (*n) value
+        (*n) = newSize;
+    }
+
+    return(length);
+}
+#endif /* CHUCK */
 
 // reads lines from a specific metadata file (based on 'path_t') of blob 'bb_id',
 // places each line into a newly allocated string, arranges pointers to these
@@ -1167,6 +1277,84 @@ static int write_array_blockblob_metadata_path (blockblob_path_t path_t, const b
 // returns 0 for success and -1 for error
 static int read_array_blockblob_metadata_path (blockblob_path_t path_t, const blobstore * bs, const char * bb_id, char *** array, int * array_size)
 {
+#ifdef CHUCK
+    int        fd    = 0;
+    int        ret   = 0;
+    int        i     = 0;
+    int        j     = 0;
+    size_t     n     = 0;
+    ssize_t    rdLen = 1;
+    char     **lines = NULL;
+    char      *line  = NULL;
+    char     **bigger_lines   = NULL;
+    char       path[MAX_PATH] = { 0 };
+
+    set_blockblob_metadata_path(path_t, bs, bb_id, path, sizeof(path));
+
+    /* Acquire the metadata file descriptor */
+    if((fd = open_and_lock(path, BLOBSTORE_FLAG_RDONLY, BLOBSTORE_METADATA_TIMEOUT_USEC, BLOBSTORE_FILE_PERM)) == -1) {
+        PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
+        *array      = NULL;
+        *array_size = 0;
+        return 0;
+    }
+
+    // Read each line and fill our array
+    for(i = 0, rdLen = 1; rdLen > 0; i++) {
+        n    = 0;
+        line = NULL;
+
+        /* Read the file. 0 means EOF, < 0 means error... */
+        if((rdLen = get_line_desc(&line, &n, fd)) < 0) {
+            if(line != NULL) {
+                free(line);
+                line = NULL;
+            }
+
+            PROPAGATE_ERR(BLOBSTORE_ERROR_UNKNOWN);
+            ret = -1;
+            break;
+        }
+        else if(rdLen == 0) {
+            /* EOF, no more data */
+            break;
+        }
+
+        logprintfl(EUCADEBUG2, "%s => [%d] READ LINE %s rdLen %d, n %d\n", __func__, fd, line, rdLen, n);
+
+        // Add one more entry to our metadata array
+        if((bigger_lines = realloc(lines, ((i + 1) * sizeof(char *)))) == NULL) {
+            ERR(BLOBSTORE_ERROR_NOMEM, NULL);
+            free(line);
+            line = NULL;
+            ret  = -1;
+            break;
+        }
+
+        lines    = bigger_lines;
+        lines[i] = line;
+    }
+
+    // Release the metadata file descriptor
+    if(close_and_unlock(fd) != 0) {
+        PROPAGATE_ERR(BLOBSTORE_ERROR_UNKNOWN);
+        ret = -1;
+    }
+
+    /* if something failed, lets do some house cleanup before we bail */
+    if(ret == -1) {
+        if(lines != NULL) {
+            for(j = 0; j < i; j++)
+                free(lines[j]);
+            free(lines);
+        }
+        return(ret);
+    }
+
+    *array      = lines;
+    *array_size = i;
+    return(0);
+#else /* CHUCK */
     int ret = 0;
     char path [MAX_PATH];
     set_blockblob_metadata_path (path_t, bs, bb_id, path, sizeof (path));
@@ -1238,6 +1426,7 @@ static int read_array_blockblob_metadata_path (blockblob_path_t path_t, const bl
     }
 
     return ret;
+#endif /* CHUCK */
 }
 
 static int update_entry_blockblob_metadata_path (blockblob_path_t path_t, const blobstore * bs, const char * bb_id, const char * entry, int removing)
@@ -3724,7 +3913,7 @@ static int do_metadata_test (const char * base, const char * name)
     int array_size;
     char buf [1024];
     bzero (buf, sizeof(buf));
-#define _BADMETACMD { printf ("UNEXPECTED RESULT LINE %d (errors=%d, errno=%d %s)\n", t, errors++, _blobstore_errno, blobstore_get_error_str(_blobstore_errno)); } t++
+#define _BADMETACMD { printf ("%s[%u] UNEXPECTED RESULT LINE %d (errors=%d, errno=%d %s)\n", __func__, __LINE__, t, errors++, _blobstore_errno, blobstore_get_error_str(_blobstore_errno)); } t++
 #define _STR1 "teststringtwo"
 #define _STR2 "test\nstring\none\n"
     /* 1 */ if (read_blockblob_metadata_path  (BLOCKBLOB_PATH_SIG, bs, bb1->id, buf, sizeof(buf)) != -1) _BADMETACMD; // open nonexisting file
