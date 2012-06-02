@@ -136,8 +136,11 @@ typedef struct _blobstore_filelock {
     char path [PATH_MAX]; // path that the file was open with (TODO: canonicalize?)
     int refs; // number of open file descriptors (some holding the lock, some waiting) for this path in this process
     int next_fd; // next available file descriptor in the table below:
-    int fd        [BLOBSTORE_MAX_CONCURRENT];
-    int fd_status [BLOBSTORE_MAX_CONCURRENT]; // 0 = unused, 1 = open
+    int fd                 [BLOBSTORE_MAX_CONCURRENT];
+    int fd_status          [BLOBSTORE_MAX_CONCURRENT]; // 0 = unused, 1 = open
+#ifdef _TEST_FILELOCK
+    unsigned int thread_id [BLOBSTORE_MAX_CONCURRENT];
+#endif
     pthread_rwlock_t lock; // reader/writer lock for controlling intra-process access
     pthread_mutex_t mutex; // for locking this specific struct during manipulations
     sem * sem; /// semaphore for debugging
@@ -421,7 +424,7 @@ static char * path_to_sem_name (const char * path, char * name, int name_size)
             name [i] = '-';
     return name;
 }
-#endif // _UNIT_TEST
+#endif // _TEST_LOCKS
 
 // This function creates or opens a file and locks it; the lock is 
 // - exclusive if the file is being created or written to, or a
@@ -533,10 +536,10 @@ static int open_and_lock (const char * path,
                 pthread_mutex_lock (&(l->mutex)); // grab path-specific mutex for atomic update to the table of descriptors
                 for (int i=0; i<l->next_fd; i++) {
                     if (l->fd [i] == fd) {
+                        logprintfl (EUCAWARN, "WARNING: blobstore lock closed outside close_and_unlock [fd=%d, index=%d, refs=%d]\n", fd, i, l->refs);
                         l->fd [i]        = -1; // set to invalid so no one else closes our valid descriptor
                         l->fd_status [i] =  0; // definitely unused.
                         l->refs--;
-                        logprintfl (EUCAWARN, "WARNING: blobstore lock closed outside close_and_unlock\n");
                     }
                 }
                 pthread_mutex_unlock (&(l->mutex)); // release path-specific mutex
@@ -552,6 +555,9 @@ static int open_and_lock (const char * path,
             // of the lock are through
             path_lock->fd        [path_lock->next_fd] = fd; // record file descriptor to enable future lookups
             path_lock->fd_status [path_lock->next_fd] = 1;  // mark the slot as in-use
+#ifdef _TEST_FILELOCK
+            path_lock->thread_id [path_lock->next_fd] = (unsigned int)pthread_self();
+#endif
             path_lock->next_fd++; // move the index up (it only goes up because we close all file descriptors together)
             
             pthread_mutex_unlock (&(path_lock->mutex)); // release path-specific mutex
@@ -1119,43 +1125,45 @@ static int read_blockblob_metadata_path (blockblob_path_t path_t, const blobstor
     return size;
 }
 
-// writes strings from 'array' or size 'array_size' (which can be 0) line-by-line
+// writes strings from 'array' of size 'array_size' (which can be 0) line-by-line
 // into a specific metadata file (based on 'path_t') of blob 'bb_id'
 // returns 0 for success and -1 for error
 static int write_array_blockblob_metadata_path (blockblob_path_t path_t, const blobstore * bs, const char * bb_id, char ** array, int array_size)
 {
-  int           i              = 0;
-  int           fd             = 0;
-  int           ret            = 0;
-  unsigned int  openFlags      = (BLOBSTORE_FLAG_CREAT | BLOBSTORE_FLAG_TRUNC | BLOBSTORE_FLAG_RDWR);
-  char          path[MAX_PATH] = { 0 };
+    int           i              = 0;
+    int           fd             = 0;
+    int           ret            = 0;
+    int           dataLen        = 0;
+    unsigned int  openFlags      = (BLOBSTORE_FLAG_CREAT | BLOBSTORE_FLAG_TRUNC | BLOBSTORE_FLAG_RDWR);
+    char          path[MAX_PATH] = { 0 };
 
-  set_blockblob_metadata_path(path_t, bs, bb_id, path, sizeof(path));
-  if((fd = open_and_lock(path, openFlags, BLOBSTORE_METADATA_TIMEOUT_USEC, BLOBSTORE_FILE_PERM)) == -1) {
-      PROPAGATE_ERR(BLOBSTORE_ERROR_UNKNOWN);
-      return(-1);
-  }
+    set_blockblob_metadata_path(path_t, bs, bb_id, path, sizeof(path));
+    if((fd = open_and_lock(path, openFlags, BLOBSTORE_METADATA_TIMEOUT_USEC, BLOBSTORE_FILE_PERM)) == -1) {
+        PROPAGATE_ERR(BLOBSTORE_ERROR_UNKNOWN);
+        return(-1);
+    }
 
-  for(i = 0; i < array_size; i++) {
-      if(write(fd, array[i], strlen(array[i])) < 0) {
-          PROPAGATE_ERR(BLOBSTORE_ERROR_UNKNOWN);
-          ret = -1;
-          break;
-      }
+    for(i = 0; i < array_size; i++) {
+        dataLen = strlen(array[i]);
+        if(write(fd, array[i], dataLen) != dataLen) {
+            PROPAGATE_ERR(BLOBSTORE_ERROR_UNKNOWN);
+            ret = -1;
+            break;
+        }
 
-      if(write(fd, "\n", 1) < 0) {
-          PROPAGATE_ERR(BLOBSTORE_ERROR_UNKNOWN);
-          ret = -1;
-          break;
-      }
-  }
+        if(write(fd, "\n", 1) != 1) {
+            PROPAGATE_ERR(BLOBSTORE_ERROR_UNKNOWN);
+            ret = -1;
+            break;
+        }
+    }
 
-  if(close_and_unlock(fd) != 0) {
-      PROPAGATE_ERR(BLOBSTORE_ERROR_UNKNOWN);
-      ret = -1;
-  }
+    if(close_and_unlock(fd) != 0) {
+        PROPAGATE_ERR(BLOBSTORE_ERROR_UNKNOWN);
+        ret = -1;
+    }
 
-  return(ret);
+    return(ret);
 }
 
 // Purpose:
@@ -1163,7 +1171,7 @@ static int write_array_blockblob_metadata_path (blockblob_path_t path_t, const b
 //
 // Arguments:
 //      ppLine - pointer to the character array to read into
-//      n      - amount of memory currently allocated for (*ppLine)
+//      n      - amount of memory currently allocated for (*ppLine), if any
 //      fd     - file descriptor to read from
 //
 // Returns:
@@ -1181,7 +1189,7 @@ ssize_t get_line_desc(char **ppLine, size_t *n, int fd)
     char     *pNewBlock = *ppLine;
 
     do {
-        // Read one character.. If 0, then EOF, if less then error!!.
+        // Read one character.. If 0, then EOF, if less then error!
         if((error = read(fd, &c, 1)) <= 0)
             break;
 
@@ -1202,18 +1210,18 @@ ssize_t get_line_desc(char **ppLine, size_t *n, int fd)
 
     // Did we have an error?
     if(error < 0) {
-        // If (*n) was originally 0 we should thing about freeing pLine since we allocated that memory.
+        // If (*n) was originally 0 we should free pLine since we allocated that memory.
         if(((*n) == 0) && (pLine != NULL)) {
             free(pLine);
             pLine = NULL;
         }
-        return(error);
+        return(-1);
     }
 
     // Now strip the '\n' character
     if(pLine != NULL) {
         (*ppLine)     = pLine;
-        pLine[length] = '\0'; /* Safety */
+        pLine[length] = '\0'; // Safety
 
         // Now strip '\n' if present. We could have reached EOF and no '\n' was present
         if(pLine[length - 1] == '\n')
@@ -1233,7 +1241,7 @@ ssize_t get_line_desc(char **ppLine, size_t *n, int fd)
 // returns 0 for success and -1 for error
 static int read_array_blockblob_metadata_path (blockblob_path_t path_t, const blobstore * bs, const char * bb_id, char *** array, int * array_size)
 {
-    int        fd    = 0;
+    int        fd    = -1;
     int        ret   = 0;
     int        i     = 0;
     int        j     = 0;
@@ -1246,7 +1254,7 @@ static int read_array_blockblob_metadata_path (blockblob_path_t path_t, const bl
 
     set_blockblob_metadata_path(path_t, bs, bb_id, path, sizeof(path));
 
-    /* Acquire the metadata file descriptor */
+    // Acquire the metadata file descriptor
     if((fd = open_and_lock(path, BLOBSTORE_FLAG_RDONLY, BLOBSTORE_METADATA_TIMEOUT_USEC, BLOBSTORE_FILE_PERM)) == -1) {
         PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
         *array      = NULL;
@@ -1259,7 +1267,7 @@ static int read_array_blockblob_metadata_path (blockblob_path_t path_t, const bl
         n    = 0;
         line = NULL;
 
-        /* Read the file. 0 means EOF, < 0 means error... */
+        // Read the file. 0 means EOF, < 0 means error...
         if((rdLen = get_line_desc(&line, &n, fd)) < 0) {
             if(line != NULL) {
                 free(line);
@@ -1271,7 +1279,7 @@ static int read_array_blockblob_metadata_path (blockblob_path_t path_t, const bl
             break;
         }
         else if(rdLen == 0) {
-            /* EOF, no more data */
+            // EOF, no more data
             break;
         }
 
@@ -1296,7 +1304,7 @@ static int read_array_blockblob_metadata_path (blockblob_path_t path_t, const bl
         ret = -1;
     }
 
-    /* if something failed, lets do some house cleanup before we bail */
+    // if something failed, lets do some house cleanup before we bail
     if(ret == -1) {
         if(lines != NULL) {
             for(j = 0; j < i; j++)

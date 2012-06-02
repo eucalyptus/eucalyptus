@@ -996,6 +996,7 @@ static void * createImage_thread (void *arg)
 	char buf[MAX_PATH];
 	int rc;
     
+	logprintfl (EUCADEBUG, "{%u} spawning create-image thread\n", (unsigned int)pthread_self());
 	logprintfl (EUCAINFO, "createImage_thread: waiting for instance %s to shut down\n", instance->instanceId);
 	// wait until monitor thread changes the state of the instance instance 
 	if (wait_state_transition (instance, CREATEIMAGE_SHUTDOWN, CREATEIMAGE_SHUTOFF)) { 
@@ -1233,6 +1234,7 @@ static void * bundling_thread (void *arg)
 	char cmd[MAX_PATH];
 	char buf[MAX_PATH];
 
+	logprintfl (EUCADEBUG, "{%u} spawning bundling thread\n", (unsigned int)pthread_self());
 	logprintfl (EUCAINFO, "bundling_thread: waiting for instance %s to shut down\n", instance->instanceId);
 	// wait until monitor thread changes the state of the instance instance 
 	if (wait_state_transition (instance, BUNDLING_SHUTDOWN, BUNDLING_SHUTOFF)) { 
