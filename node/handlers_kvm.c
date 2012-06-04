@@ -129,6 +129,7 @@ static void * rebooting_thread (void *arg)
     struct stat statbuf;
     int rc = 0;
 
+    logprintfl (EUCADEBUG, "{%u} spawning rebooting thread\n", (unsigned int)pthread_self());
     char * xml = file2str (instance->libvirtFilePath);
     if (xml == NULL) {
         logprintfl (EUCAERROR, "cannot obtain XML file %s\n", instance->libvirtFilePath);
