@@ -88,7 +88,7 @@ String db_pass = Databases.getPassword();
 default_pool_props = [
       'proxool.simultaneous-build-throttle': '32',
       'proxool.minimum-connection-count': '8',
-      'proxool.maximum-connection-count': '64',
+      'proxool.maximum-connection-count': '512',
       'proxool.prototype-count': '8',
       'proxool.house-keeping-test-sql': 'SELECT 1=1;',
       'proxool.house-keeping-sleep-time': '5000',
