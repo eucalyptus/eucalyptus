@@ -63,7 +63,7 @@
  */
 package com.eucalyptus.cloud.run;
 
-import java.util.ArrayList;
+import static com.eucalyptus.images.Images.findEbsRootOptionalSnapshot;
 import java.util.NoSuchElementException;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -88,6 +88,7 @@ import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.images.BlockStorageImageInfo;
+import com.eucalyptus.images.Images;
 import com.eucalyptus.keys.SshKeyPair;
 import com.eucalyptus.network.ExtantNetwork;
 import com.eucalyptus.network.NetworkGroup;
@@ -103,15 +104,14 @@ import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.Request;
 import com.eucalyptus.util.async.StatefulMessageSet;
 import com.eucalyptus.vm.VmInstance;
-import com.eucalyptus.vm.VmInstance.Reason;
 import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.vm.VmVolumeAttachment;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import edu.emory.mathcs.backport.java.util.concurrent.TimeUnit;
-import edu.ucsb.eucalyptus.cloud.NodeInfo;
 import edu.ucsb.eucalyptus.cloud.VirtualBootRecord;
 import edu.ucsb.eucalyptus.cloud.VmKeyInfo;
 import edu.ucsb.eucalyptus.cloud.VmRunResponseType;
@@ -122,7 +122,6 @@ import edu.ucsb.eucalyptus.msgs.DescribeStorageVolumesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeStorageVolumesType;
 import edu.ucsb.eucalyptus.msgs.StorageVolume;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
-import groovyjarjarantlr.collections.List;
 
 public class ClusterAllocator implements Runnable {
   private static final long BYTES_PER_GB = ( 1024L * 1024L * 1024L );
@@ -236,28 +235,28 @@ public class ClusterAllocator implements Runnable {
       final ServiceConfiguration sc = Topology.lookup( Storage.class, this.cluster.getConfiguration( ).lookupPartition( ) );
       final VirtualBootRecord root = this.allocInfo.getVmTypeInfo( ).lookupRoot( );
       if ( root.isBlockStorage( ) ) {
+        final String rootDevName = "/dev/sda1";
         final BlockStorageImageInfo imgInfo = ( ( BlockStorageImageInfo ) this.allocInfo.getBootSet( ).getMachine( ) );
         Long volSizeBytes = imgInfo.getImageSizeBytes( );
         Boolean deleteOnTerminate = imgInfo.getDeleteOnTerminate( );
-        for ( final BlockDeviceMappingItemType blockDevMapping : this.allocInfo.getRequest( ).getBlockDeviceMapping( ) ) {
-          if ( "root".equals( blockDevMapping.getVirtualName( ) ) && ( blockDevMapping.getEbs( ) != null ) ) {
-            deleteOnTerminate |= blockDevMapping.getEbs( ).getDeleteOnTermination( );
+        for ( final BlockDeviceMappingItemType blockDevMapping :
+              Iterables.filter( this.allocInfo.getRequest().getBlockDeviceMapping(), findEbsRootOptionalSnapshot(rootDevName) ) ) {
+            deleteOnTerminate = blockDevMapping.getEbs( ).getDeleteOnTermination( );
             if ( blockDevMapping.getEbs( ).getVolumeSize( ) != null ) {
               volSizeBytes = BYTES_PER_GB * blockDevMapping.getEbs( ).getVolumeSize( );
             }
-          }
         }
         final int sizeGb = ( int ) Math.ceil( volSizeBytes / BYTES_PER_GB );
         LOG.debug( "About to prepare root volume using bootable block storage: " + imgInfo + " and vbr: " + root );
         for ( final ResourceToken token : this.allocInfo.getAllocationTokens( ) ) {
           final VmInstance vm = VmInstances.lookup( token.getInstanceId( ) );
-          Volume vol = null;
+          final Volume vol;
           if ( !vm.getBootRecord( ).hasPersistentVolumes( ) ) {
             vol = Volumes.createStorageVolume( sc, this.allocInfo.getOwnerFullName( ), imgInfo.getSnapshotId( ), sizeGb, this.allocInfo.getRequest( ) );
             if ( deleteOnTerminate ) {
-              vm.addPersistentVolume( "/dev/sda1", vol );
+              vm.addPersistentVolume( rootDevName, vol );
             } else {
-              vm.addPermanentVolume( "/dev/sda1", vol );
+              vm.addPermanentVolume( rootDevName, vol );
             }
             token.setRootVolume( vol );
           } else {
