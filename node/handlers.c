@@ -1777,16 +1777,25 @@ int get_instance_stats(virDomainPtr dom, ncInstance *instance)
     char bstr[512], istr[512];
     
     // get the block device string from VBR
-    bzero(bstr, 512);
+    bzero(bstr, sizeof (bstr));
     for (n=0; n<instance->params.virtualBootRecordLen; n++) {
-        if (strcmp(instance->params.virtualBootRecord[n].guestDeviceName, "none")) {
-            if (strlen(bstr) < (510 - strlen(instance->params.virtualBootRecord[n].guestDeviceName))) {
-                strcat(bstr, instance->params.virtualBootRecord[n].guestDeviceName);
+        const virtualBootRecord * vbr = &(instance->params.virtualBootRecord[n]); 
+        if (strcmp(vbr->guestDeviceName, "none")) { // something other than 'none'
+
+            // TODO: the next section, with a special case for virtio devices,
+            // is replicated in xml.c, so the logic should be unified somehow
+            char devstr[SMALL_CHAR_BUFFER_SIZE];
+            snprintf(devstr, SMALL_CHAR_BUFFER_SIZE, "%s", vbr->guestDeviceName);
+            if (nc_state.config_use_virtio_root) {
+                devstr[0] = 'v';
+            }
+            if (strlen(bstr) < (510 - strlen(devstr))) {
+                strcat(bstr, devstr);
                 strcat(bstr, ",");
             }
         }
     }
-    
+
     // get the name of the network interface from libvirt
     sem_p(hyp_sem);
     xml = virDomainGetXMLDesc(dom, 0);
@@ -1833,7 +1842,7 @@ int get_instance_stats(virDomainPtr dom, ncInstance *instance)
     } else {
         instance->netbytes = 0;
     }
-    logprintfl(EUCADEBUG, "[%s] get_instance_stats: blkdevs=%s, blkbytes=%lld, netdevs=%s, netbytes=%lld\n", 
+    logprintfl(EUCADEBUG, "[%s] get_instance_stats: blkdevs=%s blkMB=%lld netdevs=%s netMB=%lld\n", 
                instance->instanceId, bstr, instance->blkbytes, istr, instance->netbytes);
     
   return(ret);
