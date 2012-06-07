@@ -133,6 +133,7 @@ import edu.ucsb.eucalyptus.cloud.NoSuchEntityException;
 import edu.ucsb.eucalyptus.cloud.NotModifiedException;
 import edu.ucsb.eucalyptus.cloud.PreconditionFailedException;
 import edu.ucsb.eucalyptus.cloud.TooManyBucketsException;
+import edu.ucsb.eucalyptus.cloud.WalrusException;
 import edu.ucsb.eucalyptus.cloud.entities.BucketInfo;
 import edu.ucsb.eucalyptus.cloud.entities.GrantInfo;
 import edu.ucsb.eucalyptus.cloud.entities.ImageCacheInfo;
@@ -648,25 +649,25 @@ public class WalrusManager {
 		CanonicalUserType user = new CanonicalUserType(account.getAccountNumber(), account.getName());
 
 		if (grantInfo.canRead() && grantInfo.canWrite()
-				&& grantInfo.canReadACP() && grantInfo.isWriteACP()) {
-			grants.add(new Grant(new Grantee(user), "FULL_CONTROL"));
+				&& grantInfo.canReadACP() && grantInfo.canWriteACP()) {
+			grants.add(new Grant(new Grantee(user), WalrusProperties.Permission.FULL_CONTROL.toString()));
 			return;
 		}
 
 		if (grantInfo.canRead()) {
-			grants.add(new Grant(new Grantee(user), "READ"));
+			grants.add(new Grant(new Grantee(user), WalrusProperties.Permission.READ.toString()));
 		}
 
 		if (grantInfo.canWrite()) {
-			grants.add(new Grant(new Grantee(user), "WRITE"));
+			grants.add(new Grant(new Grantee(user), WalrusProperties.Permission.WRITE.toString()));
 		}
 
 		if (grantInfo.canReadACP()) {
-			grants.add(new Grant(new Grantee(user), "READ_ACP"));
+			grants.add(new Grant(new Grantee(user), WalrusProperties.Permission.READ_ACP.toString()));
 		}
 
-		if (grantInfo.isWriteACP()) {
-			grants.add(new Grant(new Grantee(user), "WRITE_ACP"));
+		if (grantInfo.canWriteACP()) {
+			grants.add(new Grant(new Grantee(user), WalrusProperties.Permission.WRITE_ACP.toString()));
 		}
 	}
 
@@ -677,25 +678,25 @@ public class WalrusManager {
 		}
 
 		if (grantInfo.canRead() && grantInfo.canWrite()
-				&& grantInfo.canReadACP() && grantInfo.isWriteACP()) {
-			grants.add(new Grant(new Grantee(user), "FULL_CONTROL"));
+				&& grantInfo.canReadACP() && grantInfo.canWriteACP()) {
+			grants.add(new Grant(new Grantee(user), WalrusProperties.Permission.FULL_CONTROL.toString()));
 			return;
 		}
 
 		if (grantInfo.canRead()) {
-			grants.add(new Grant(new Grantee(user), "READ"));
+			grants.add(new Grant(new Grantee(user), WalrusProperties.Permission.READ.toString()));
 		}
 
 		if (grantInfo.canWrite()) {
-			grants.add(new Grant(new Grantee(user), "WRITE"));
+			grants.add(new Grant(new Grantee(user), WalrusProperties.Permission.WRITE.toString()));
 		}
 
 		if (grantInfo.canReadACP()) {
-			grants.add(new Grant(new Grantee(user), "READ_ACP"));
+			grants.add(new Grant(new Grantee(user), WalrusProperties.Permission.READ_ACP.toString()));
 		}
 
-		if (grantInfo.isWriteACP()) {
-			grants.add(new Grant(new Grantee(user), "WRITE_ACP"));
+		if (grantInfo.canWriteACP()) {
+			grants.add(new Grant(new Grantee(user), WalrusProperties.Permission.WRITE_ACP.toString()));
 		}
 	}
 
@@ -705,25 +706,25 @@ public class WalrusManager {
 			Group group = new Group(grantInfo.getGrantGroup());
 
 			if (grantInfo.canRead() && grantInfo.canWrite()
-					&& grantInfo.canReadACP() && grantInfo.isWriteACP()) {
-				grants.add(new Grant(new Grantee(group), "FULL_CONTROL"));
+					&& grantInfo.canReadACP() && grantInfo.canWriteACP()) {
+				grants.add(new Grant(new Grantee(group), WalrusProperties.Permission.FULL_CONTROL.toString()));
 				return;
 			}
 
 			if (grantInfo.canRead()) {
-				grants.add(new Grant(new Grantee(group), "READ"));
+				grants.add(new Grant(new Grantee(group), WalrusProperties.Permission.READ.toString()));
 			}
 
 			if (grantInfo.canWrite()) {
-				grants.add(new Grant(new Grantee(group), "WRITE"));
+				grants.add(new Grant(new Grantee(group), WalrusProperties.Permission.WRITE.toString()));
 			}
 
 			if (grantInfo.canReadACP()) {
-				grants.add(new Grant(new Grantee(group), "READ_ACP"));
+				grants.add(new Grant(new Grantee(group), WalrusProperties.Permission.READ_ACP.toString()));
 			}
 
-			if (grantInfo.isWriteACP()) {
-				grants.add(new Grant(new Grantee(group), "WRITE_ACP"));
+			if (grantInfo.canWriteACP()) {
+				grants.add(new Grant(new Grantee(group), WalrusProperties.Permission.WRITE_ACP.toString()));
 			}
 		}
 	}
@@ -781,7 +782,7 @@ public class WalrusManager {
 					objectInfo = new ObjectInfo(bucketName, objectKey);
 					objectInfo.setOwnerId(account.getAccountNumber());
 					List<GrantInfo> grantInfos = new ArrayList<GrantInfo>();
-					objectInfo.addGrants(account.getAccountNumber(), grantInfos, accessControlList);
+					objectInfo.addGrants(account.getAccountNumber(), bucket.getOwnerId(), grantInfos, accessControlList);
 					objectInfo.setGrants(grantInfos);
 					objectName = UUID.randomUUID().toString();
 					objectInfo.setObjectName(objectName);
@@ -810,7 +811,7 @@ public class WalrusManager {
 						objectInfo = new ObjectInfo(bucketName, objectKey);
 						objectInfo.setOwnerId(account.getAccountNumber());
 						List<GrantInfo> grantInfos = new ArrayList<GrantInfo>();
-						objectInfo.addGrants(account.getAccountNumber(), grantInfos, accessControlList);
+						objectInfo.addGrants(account.getAccountNumber(), bucket.getOwnerId(), grantInfos, accessControlList);
 						objectInfo.setGrants(grantInfos);
 						objectName =  UUID.randomUUID().toString();
 						objectInfo.setObjectName(objectName);
@@ -818,6 +819,7 @@ public class WalrusManager {
 					}
 				}				
 
+				String bucketOwnerId = bucket.getOwnerId();
 				db.commit();
 				// writes are unconditional
 				WalrusDataQueue<WalrusDataMessage> putQueue = messenger.getQueue(key, randomKey);
@@ -921,7 +923,7 @@ public class WalrusManager {
 								foundObject = dbObject.getUnique(searchObject);
 								if (ctx.hasAdministrativePrivileges() || foundObject.canWriteACP(account.getAccountNumber())) {
 									List<GrantInfo> grantInfos = new ArrayList<GrantInfo>();
-									foundObject.addGrants(account.getAccountNumber(), grantInfos, accessControlList);
+									foundObject.addGrants(account.getAccountNumber(), bucketOwnerId, grantInfos, accessControlList);
 									foundObject.setGrants(grantInfos);
 								}
 								if (WalrusProperties.enableTorrents) {
@@ -1270,8 +1272,7 @@ public class WalrusManager {
 					foundObject = new ObjectInfo(bucketName, objectKey);
 					foundObject.setOwnerId(account.getAccountNumber());
 					List<GrantInfo> grantInfos = new ArrayList<GrantInfo>();
-					foundObject
-					.addGrants(account.getAccountNumber(), grantInfos, accessControlList);
+					foundObject.addGrants(account.getAccountNumber(), bucket.getOwnerId(), grantInfos, accessControlList);
 					foundObject.setGrants(grantInfos);
 					objectName = UUID.randomUUID().toString();
 					foundObject.setObjectName(objectName);
@@ -1280,8 +1281,7 @@ public class WalrusManager {
 					// object already exists. see if we can modify acl
 					if (ctx.hasAdministrativePrivileges() || foundObject.canWriteACP(account.getAccountNumber())) {
 						List<GrantInfo> grantInfos = foundObject.getGrants();
-						foundObject.addGrants(account.getAccountNumber(), grantInfos,
-								accessControlList);
+						foundObject.addGrants(account.getAccountNumber(), bucket.getOwnerId(), grantInfos, accessControlList);
 					}
 					objectName = foundObject.getObjectName();
 				}
@@ -1435,7 +1435,7 @@ public class WalrusManager {
 				ObjectInfo objectInfo = new ObjectInfo(bucketName, key);
 				objectInfo.setObjectName(objectName);
 				List<GrantInfo> grantInfos = new ArrayList<GrantInfo>();
-				objectInfo.addGrants(account.getAccountNumber(), grantInfos, accessControlList);
+				objectInfo.addGrants(account.getAccountNumber(), bucket.getOwnerId(), grantInfos, accessControlList);
 				objectInfo.setGrants(grantInfos);
 				dbObject.add(objectInfo);
 
@@ -1887,8 +1887,15 @@ public class WalrusManager {
 		String uId = null;
 		for (GrantInfo grantInfo : grantInfos) {
 			uId = grantInfo.getUserId();								
-			try {							
-				addPermission(grants, Accounts.lookupAccountById(uId), grantInfo);
+			try {
+				if(grantInfo.getGrantGroup() != null) {
+					//Add it as a group
+					addPermission(grants, grantInfo);
+				}
+				else {
+					//Assume it's a user/account
+					addPermission(grants, Accounts.lookupAccountById(uId), grantInfo);
+				}
 			} catch (AuthException e) {
 				LOG.debug(e, e);
 
@@ -2015,7 +2022,12 @@ public class WalrusManager {
 							PolicySpec.S3_RESOURCE_BUCKET,
 							bucketName,
 							null)))) {
-				List<GrantInfo> grantInfos = new ArrayList<GrantInfo>();
+				String invalidValue = this.findInvalidGrant(accessControlList.getGrants());
+				if(invalidValue != null) {
+					db.rollback();
+					throw new WalrusException("InvalidArgument", "Invalid canned-acl or grant list permission: " + invalidValue , "Bucket", bucket.getBucketName(), HttpResponseStatus.BAD_REQUEST);
+				}
+				List<GrantInfo> grantInfos = new ArrayList<GrantInfo>();				
 				bucket.resetGlobalGrants();
 				bucket.addGrants(bucket.getOwnerId(), grantInfos, accessControlList);
 				bucket.setGrants(grantInfos);
@@ -2066,7 +2078,12 @@ public class WalrusManager {
 							PolicySpec.S3_RESOURCE_BUCKET,
 							bucketName,
 							null)))) {
-				List<GrantInfo> grantInfos = new ArrayList<GrantInfo>();
+				String invalidValue = this.findInvalidGrant(accessControlList.getGrants());
+				if(invalidValue != null) {
+					db.rollback();
+					throw new WalrusException("InvalidArgument", "Invalid canned-acl or grant list permission: " + invalidValue, "Bucket", bucket.getBucketName(), HttpResponseStatus.BAD_REQUEST);
+				}
+				List<GrantInfo> grantInfos = new ArrayList<GrantInfo>();				
 				bucket.resetGlobalGrants();
 				bucket.addGrants(bucket.getOwnerId(), grantInfos, accessControlList);
 				bucket.setGrants(grantInfos);
@@ -2129,10 +2146,14 @@ public class WalrusManager {
 							db.rollback();
 							throw new AccessDeniedException("Key", objectKey, logData);
 						}
+						String invalidValue = this.findInvalidGrant(accessControlList.getGrants());
+						if(invalidValue != null) {
+							db.rollback();
+							throw new WalrusException("InvalidArgument", "Invalid canned-acl or grant list permission: " + invalidValue, "Key", objectKey, HttpResponseStatus.BAD_REQUEST);
+						}
 						List<GrantInfo> grantInfos = new ArrayList<GrantInfo>();
 						objectInfo.resetGlobalGrants();
-						objectInfo.addGrants(objectInfo.getOwnerId(), grantInfos,
-								accessControlList);
+						objectInfo.addGrants(objectInfo.getOwnerId(), bucket.getOwnerId(), grantInfos, accessControlList);
 						objectInfo.setGrants(grantInfos);
 
 						if (WalrusProperties.enableTorrents) {
@@ -2221,10 +2242,16 @@ public class WalrusManager {
 							db.rollback();
 							throw new AccessDeniedException("Key", objectKey, logData);
 						}
+						
+						String invalidValue = this.findInvalidGrant(accessControlList.getGrants());
+						if(invalidValue != null) {
+							db.rollback();
+							throw new WalrusException("InvalidArgument", "Invalid canned-acl or grant list permission: " + invalidValue, "Key", objectKey, HttpResponseStatus.BAD_REQUEST);
+						}
+						
 						List<GrantInfo> grantInfos = new ArrayList<GrantInfo>();
 						objectInfo.resetGlobalGrants();
-						objectInfo.addGrants(objectInfo.getOwnerId(), grantInfos,
-								accessControlList);
+						objectInfo.addGrants(objectInfo.getOwnerId(), bucket.getOwnerId(), grantInfos, accessControlList);
 						objectInfo.setGrants(grantInfos);
 
 						if (WalrusProperties.enableTorrents) {
@@ -2838,8 +2865,7 @@ public class WalrusManager {
 									.setBucketName(destinationBucket);
 									destinationObjectInfo
 									.setObjectKey(destinationKey);
-									destinationObjectInfo.addGrants(account.getAccountNumber(),
-											grantInfos, accessControlList);
+									destinationObjectInfo.addGrants(account.getAccountNumber(), foundDestinationBucketInfo.getOwnerId(), grantInfos, accessControlList);
 									destinationObjectInfo.setGrants(grantInfos);
 									destinationObjectInfo
 									.setObjectName(UUID.randomUUID().toString());
@@ -2853,8 +2879,7 @@ public class WalrusManager {
 												PolicySpec.objectFullName(destinationBucket, destinationKey),
 												null)))) {
 									List<GrantInfo> grantInfos = new ArrayList<GrantInfo>();
-									destinationObjectInfo.addGrants(account.getAccountNumber(),
-											grantInfos, accessControlList);
+									destinationObjectInfo.addGrants(account.getAccountNumber(), foundDestinationBucketInfo.getOwnerId(), grantInfos, accessControlList);
 									destinationObjectInfo.setGrants(grantInfos);
 								}
 							}
@@ -3009,6 +3034,40 @@ public class WalrusManager {
 		return reply;
 	}
 
+	/*
+	 * Returns null if grants are valid, otherwise returns the permission/acl string that was invalid
+	 */
+	private String findInvalidGrant(List<Grant> grants) {
+		if (grants != null && grants.size() > 0) {
+			String permission = null;
+			boolean grantValid = false;
+			for (Grant grant: grants) {
+				grantValid = false;
+				permission = grant.getPermission();
+				
+				//Do toString comparisons to be sure that the enum acl value is in the proper form for requests (since '-' is not a valid char in enums)
+				for(WalrusProperties.CannedACL cannedACL : WalrusProperties.CannedACL.values()) {
+					if(permission.equals(cannedACL.toString())) {						
+						grantValid = true;
+						break;
+					}
+				}
+				//Do toString comparison here to be sure that the enums are translated into the proper values for requests
+				for(WalrusProperties.Permission perm : WalrusProperties.Permission.values()) {
+					if(permission.equals(perm.toString())) {
+						grantValid = true;
+						break;
+					}
+				}
+				
+				if(!grantValid) {
+					return permission;
+				}
+			}
+		}
+		return null;
+	}
+	
 	public GetBucketLoggingStatusResponseType getBucketLoggingStatus(
 			GetBucketLoggingStatusType request) throws EucalyptusCloudException {
 		GetBucketLoggingStatusResponseType reply = (GetBucketLoggingStatusResponseType) request

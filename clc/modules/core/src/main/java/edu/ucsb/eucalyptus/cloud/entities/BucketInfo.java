@@ -226,19 +226,20 @@ public class BucketInfo extends AbstractPersistent {
 	public void setGrants(List<GrantInfo> grants) {
 		this.grants = grants;
 	}
-
+	
 	public boolean canWrite(String userId) {
 		if (globalWrite) {
 			return true;
 		}
-    if (ownerId.equals(userId)) {
-      return true;
-    }
+		if (ownerId.equals(userId)) {
+			return true;
+		}
 		for (GrantInfo grantInfo: grants) {
-			if (grantInfo.getUserId().equals(userId)) {
-				if (grantInfo.canWrite()) {
-					return true;
-				}
+			if (grantInfo.getUserId() != null && grantInfo.getUserId().equals(userId) && grantInfo.canWrite()) {
+				return true;
+			}
+			else if(grantInfo.getGrantGroup() != null && WalrusProperties.isUserMember(userId, grantInfo.getGrantGroup()) && grantInfo.canWrite()) {
+				return true;
 			}
 		}
 		if(UserManagement.isAdministrator(userId)) {
@@ -252,23 +253,15 @@ public class BucketInfo extends AbstractPersistent {
 		if (globalRead) {
 			return true;
 		}
-    if (ownerId.equals(userId)) {
-      return true;
-    }
-		for (GrantInfo grantInfo: grants) {
-			if(grantInfo.getGrantGroup() != null) {
-				String groupUri = grantInfo.getGrantGroup();
-				if(groupUri.equals(WalrusProperties.AUTHENTICATED_USERS_GROUP))
-					return true;
-			}
-
+		if (ownerId.equals(userId)) {
+			return true;
 		}
-
 		for (GrantInfo grantInfo: grants) {
-			if (grantInfo.getUserId().equals(userId)) {
-				if (grantInfo.canRead()) {
-					return true;
-				}
+			if (grantInfo.getUserId() != null && grantInfo.getUserId().equals(userId) && grantInfo.canRead()) {
+				return true;
+			}
+			else if(grantInfo.getGrantGroup() != null && WalrusProperties.isUserMember(userId, grantInfo.getGrantGroup()) && grantInfo.canRead()) {
+				return true;
 			}
 		}
 
@@ -283,14 +276,15 @@ public class BucketInfo extends AbstractPersistent {
 		if (globalWriteACP) {
 			return true;
 		}
-    if (ownerId.equals(userId)) {
-      return true;
-    }
+		if (ownerId.equals(userId)) {
+			return true;
+		}
 		for (GrantInfo grantInfo: grants) {
-			if (grantInfo.getUserId().equals(userId)) {
-				if (grantInfo.isWriteACP()) {
-					return true;
-				}
+			if (grantInfo.getUserId() != null && grantInfo.getUserId().equals(userId) && grantInfo.canWriteACP()) {
+				return true;
+			}
+			else if(grantInfo.getGrantGroup() != null && WalrusProperties.isUserMember(userId, grantInfo.getGrantGroup()) && grantInfo.canWriteACP()) {
+				return true;
 			}
 		}
 		if(UserManagement.isAdministrator(userId)) {
@@ -308,7 +302,10 @@ public class BucketInfo extends AbstractPersistent {
 			return true;
 		} else {
 			for (GrantInfo grantInfo: grants) {
-				if(grantInfo.getUserId().equals(userId) && grantInfo.canReadACP()) {
+				if (grantInfo.getUserId() != null && grantInfo.getUserId().equals(userId) && grantInfo.canReadACP()) {
+					return true;
+				}
+				else if(grantInfo.getGrantGroup() != null && WalrusProperties.isUserMember(userId, grantInfo.getGrantGroup()) && grantInfo.canReadACP()) {
 					return true;
 				}
 			}
@@ -323,42 +320,51 @@ public class BucketInfo extends AbstractPersistent {
 		globalRead = globalWrite = globalReadACP = globalWriteACP = false;
 	}
 
-	public  void addGrants(String ownerId, List<GrantInfo>grantInfos, AccessControlListType accessControlList) {
+	public void addGrants(String ownerId, List<GrantInfo>grantInfos, AccessControlListType accessControlList) {
 		ArrayList<Grant> grants = accessControlList.getGrants();
 		Grant foundGrant = null;
+		Grant addGrant = null;
 		globalRead = globalReadACP = false;
 		globalWrite = globalWriteACP = false;
 		if (grants.size() > 0) {
 			for (Grant grant: grants) {
-				String permission = grant.getPermission();
-				if (permission.equals("aws-exec-read")) {
+				String permission = grant.getPermission();				
+				if (permission.equals(WalrusProperties.CannedACL.aws_exec_read.toString())) {
 					globalRead = globalReadACP = false;
 					globalWrite = globalWriteACP = false;
 					foundGrant = grant;
-				}   else if (permission.equals("public-read")) {
-					globalRead = globalReadACP = true;
+				} else if (permission.equals(WalrusProperties.CannedACL.public_read.toString())) {
+					globalReadACP = false;
+					globalRead = true;
 					globalWrite = globalWriteACP = false;
 					foundGrant = grant;
-				}   else if (permission.equals("public-read-write")) {
-					globalRead = globalReadACP = true;
-					globalWrite = globalWriteACP = true;
+				} else if (permission.equals(WalrusProperties.CannedACL.public_read_write.toString())) {
+					globalReadACP = globalWriteACP = false;
+					globalRead = globalWrite = true;
 					foundGrant = grant;
-				}   else if (permission.equals("authenticated-read")) {
+				} else if (permission.equals(WalrusProperties.CannedACL.authenticated_read.toString())) {
 					globalRead = globalReadACP = false;
 					globalWrite = globalWriteACP = false;
+					addGrant = new Grant(new Grantee(new Group(WalrusProperties.AUTHENTICATED_USERS_GROUP)), WalrusProperties.Permission.READ.toString());
+					foundGrant = grant;
+				} else if(permission.equals(WalrusProperties.CannedACL.log_delivery_write.toString())) {
+        			addGrant = new Grant(new Grantee(new Group(WalrusProperties.LOGGING_GROUP)), WalrusProperties.Permission.WRITE.toString());
+        			foundGrant = grant;
+				} else if (permission.equals(WalrusProperties.CannedACL.private_only.toString())) {
+					globalRead = globalReadACP = globalWrite = globalWriteACP = false;
 					foundGrant = grant;
 				} else if(grant.getGrantee().getGroup() != null) {
 					String groupUri = grant.getGrantee().getGroup().getUri();
 					if(groupUri.equals(WalrusProperties.ALL_USERS_GROUP)) {
-						if(permission.equals("FULL_CONTROL"))
+						if(permission.equals(WalrusProperties.Permission.FULL_CONTROL.toString()))
 							globalRead = globalReadACP = globalWrite = globalWriteACP = true;
-						else if(permission.equals("READ"))
+						else if(permission.equals(WalrusProperties.Permission.READ.toString()))
 							globalRead = true;
-						else if(permission.equals("READ_ACP"))
+						else if(permission.equals(WalrusProperties.Permission.READ_ACP.toString()))
 							globalReadACP = true;
-						else if(permission.equals("WRITE"))
+						else if(permission.equals(WalrusProperties.Permission.WRITE.toString()))
 							globalWrite = true;
-						else if(permission.equals("WRITE_ACP"))
+						else if(permission.equals(WalrusProperties.Permission.WRITE_ACP.toString()))
 							globalWriteACP = true;
 						foundGrant = grant;
 					}
@@ -367,39 +373,43 @@ public class BucketInfo extends AbstractPersistent {
 		}
 		if(foundGrant != null) {
 			grants.remove(foundGrant);
+			
+			if(addGrant != null) {
+				grants.add(addGrant);
+			}
 		}
 		GrantInfo.addGrants(ownerId, grantInfos, accessControlList);
 	}
 
 	public void readPermissions(List<Grant> grants) {
 		if(globalRead && globalReadACP && globalWrite && globalWriteACP) {
-			grants.add(new Grant(new Grantee(new Group(WalrusProperties.ALL_USERS_GROUP)), "FULL_CONTROL"));
+			grants.add(new Grant(new Grantee(new Group(WalrusProperties.ALL_USERS_GROUP)), WalrusProperties.Permission.FULL_CONTROL.toString()));
 			return;
 		}
 		if(globalRead) {
-			grants.add(new Grant(new Grantee(new Group(WalrusProperties.ALL_USERS_GROUP)), "READ"));
+			grants.add(new Grant(new Grantee(new Group(WalrusProperties.ALL_USERS_GROUP)), WalrusProperties.Permission.READ.toString()));
 		}
 		if(globalReadACP) {
-			grants.add(new Grant(new Grantee(new Group(WalrusProperties.ALL_USERS_GROUP)), "READ_ACP"));
+			grants.add(new Grant(new Grantee(new Group(WalrusProperties.ALL_USERS_GROUP)), WalrusProperties.Permission.READ_ACP.toString()));
 		}
 		if(globalWrite) {
-			grants.add(new Grant(new Grantee(new Group(WalrusProperties.ALL_USERS_GROUP)), "WRITE"));
+			grants.add(new Grant(new Grantee(new Group(WalrusProperties.ALL_USERS_GROUP)), WalrusProperties.Permission.WRITE.toString()));
 		}
 		if(globalWriteACP) {
-			grants.add(new Grant(new Grantee(new Group(WalrusProperties.ALL_USERS_GROUP)), "WRITE_ACP"));
+			grants.add(new Grant(new Grantee(new Group(WalrusProperties.ALL_USERS_GROUP)), WalrusProperties.Permission.WRITE_ACP.toString()));
 		}
 	}
 
 	public void readAllUsers(String permission) {
-		if("FULL_CONTROL".equals(permission)) {
+		if(WalrusProperties.Permission.FULL_CONTROL.toString().equals(permission)) {
 			globalRead = globalWrite = globalReadACP = globalWriteACP = true;
-		} else if("READ".equals(permission)) {
+		} else if(WalrusProperties.Permission.READ.toString().equals(permission)) {
 			globalRead = true;
-		} else if("WRITE".equals(permission)) {
+		} else if(WalrusProperties.Permission.WRITE.toString().equals(permission)) {
 			globalWrite = true;
-		} else if("READ_ACP".equals(permission)) {
+		} else if(WalrusProperties.Permission.READ_ACP.toString().equals(permission)) {
 			globalReadACP = true;
-		} else if("WRITE_ACP".equals(permission)) {
+		} else if(WalrusProperties.Permission.WRITE_ACP.toString().equals(permission)) {
 			globalWriteACP = true;
 		}
 	}

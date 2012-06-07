@@ -158,6 +158,21 @@ public class WalrusProperties {
 
 	static { Groovyness.loadConfig("walrusprops.groovy"); }
 
+	public enum CannedACL {
+		private_only { public String toString() { return "private"; }}, 
+		public_read { public String toString() { return "public-read";}}, 
+		public_read_write { public String toString() { return "public-read-write"; }}, 
+		authenticated_read { public String toString() {return "authenticated-read"; }}, 
+		bucket_owner_read { public String toString() {return "bucket-owner-read"; }}, 
+		bucket_owner_full_control { public String toString() {return "bucket-owner-full-control";}}, 
+		log_delivery_write { public String toString() { return "log-delivery-write";}},
+		aws_exec_read { public String toString() { return "aws-exec-read"; }}
+	}
+	
+	public enum Permission {
+		READ, WRITE, READ_ACP, WRITE_ACP, FULL_CONTROL
+	}
+	
 	public enum VersioningStatus {
 		Enabled, Disabled, Suspended
 	}
@@ -250,6 +265,26 @@ public class WalrusProperties {
 
 	public enum RequiredSOAPTags {
 		AWSAccessKeyId, Timestamp, Signature
+	}
+	
+	/*
+	 * Simply determines if the userId is a member of the groupId, very simplistic only for ALL_USERS and AUTHENTICATED_USERS, not arbitrary groups.
+	 * Arbitrary groups are not yet supported in Walrus bucket policies/IAM policies.
+	 */
+	public static boolean isUserMember(String userId, String groupId) {
+		if(groupId == null) {
+			return false;
+		}
+		
+		if(groupId.equals(WalrusProperties.ALL_USERS_GROUP)) {
+			return true;
+		}
+		
+		if(groupId.equals(WalrusProperties.AUTHENTICATED_USERS_GROUP) && userId != null && userId != "") {
+			return true;
+		}
+		
+		return false;
 	}
 
 	public static String getTrackerUrl() {
