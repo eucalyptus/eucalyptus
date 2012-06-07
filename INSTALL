@@ -22,7 +22,7 @@ CentOS/RHEL 6
 
 Install the EPEL repository:
 
-yum --nogpg install http://download.fedoraproject.org/pub/epel/6/i386/epel-release-6-6.noarch.rpm
+yum --nogpg install http://download.fedoraproject.org/pub/epel/6/i386/epel-release-6-7.noarch.rpm
 
 Install the ELRepo repository (needed on the Walrus host only):
 
