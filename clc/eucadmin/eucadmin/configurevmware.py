@@ -184,7 +184,7 @@ class ConfigureVMware(AWSQueryRequest):
               if os.path.exists(os.path.join(self.ServiceClass.InstallPath, VMwareCommand)):
                   euca_home = self.ServiceClass.InstallPath
               else:
-                 print 'EUCALYPTUS not defined'
+                 print 'EUCALYPTUS is not defined or you are not running this on a VMware Broker host'
                  sys.exit(1)
 
         # if a configfile was passed as an option, validate it and upload it

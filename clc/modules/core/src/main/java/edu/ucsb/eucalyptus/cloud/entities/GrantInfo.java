@@ -147,7 +147,7 @@ public class GrantInfo extends AbstractPersistent {
 		this.canReadACP = canReadACP;
 	}
 
-	public boolean isWriteACP() {
+	public boolean canWriteACP() {
 		return canWriteACP;
 	}
 

@@ -852,15 +852,15 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 				accessControlPolicy.setOwner(canonicalUser);
 
 				List<String> permissions = xmlParser.getValues("//AccessControlList/Grant/Permission");
-				if(permissions == null)
+				if(permissions == null) {
 					throw new BindingException("malformed access control list");
-
+				}
 				DTMNodeList grantees = xmlParser.getNodes("//AccessControlList/Grant/Grantee");
-				if(grantees == null)
+				if(grantees == null){
 					throw new BindingException("malformed access control list");
-
+				}
 				for(int i = 0 ; i < grantees.getLength() ; ++i) {
-					String id = xmlParser.getValue(grantees.item(i), "ID");
+					String id = xmlParser.getValue(grantees.item(i), "ID");					
 					if(id.length() > 0) {
 						String canonicalUserName = xmlParser.getValue(grantees.item(i), "DisplayName");
 						Grant grant = new Grant();
@@ -871,8 +871,9 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 						grants.add(grant);
 					} else {
 						String groupUri = xmlParser.getValue(grantees.item(i), "URI");
-						if(groupUri.length() == 0)
+						if(groupUri.length() == 0) {
 							throw new BindingException("malformed access control list");
+						}
 						Grant grant = new Grant();
 						Grantee grantee = new Grantee();
 						grantee.setGroup(new Group(groupUri));
@@ -903,13 +904,13 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 				String displayName = xmlParser.getValue("//Owner/DisplayName");
 
 				List<String> permissions = xmlParser.getValues("/AccessControlList/Grant/Permission");
-				if(permissions == null)
+				if(permissions == null) {
 					throw new BindingException("malformed access control list");
-
+				}
 				DTMNodeList grantees = xmlParser.getNodes("/AccessControlList/Grant/Grantee");
-				if(grantees == null)
+				if(grantees == null) {
 					throw new BindingException("malformed access control list");
-
+				}
 
 				for(int i = 0 ; i < grantees.getLength() ; ++i) {
 					String canonicalUserName = xmlParser.getValue(grantees.item(i), "DisplayName");
@@ -976,7 +977,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 		return failedMappings;
 	}
 
-	private void populateObjectFromBindingMap( final GroovyObject obj, final Map<String, String> paramFieldMap, final MappingHttpRequest httpRequest, final Map bindingMap)
+	private void populateObjectFromBindingMap( final GroovyObject obj, final Map<String, String> paramFieldMap, final MappingHttpRequest httpRequest, final Map bindingMap) throws BindingException
 	{
 		//process headers
 		String aclString = httpRequest.getAndRemoveHeader(WalrusProperties.AMZ_ACL);
@@ -1107,6 +1108,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 			grants = new ArrayList<Grant>();
 		}
 
+		
 		CanonicalUserType aws = new CanonicalUserType();
 		aws.setDisplayName("");
 		Grant grant = new Grant(new Grantee(aws), cannedACLString);

@@ -180,7 +180,7 @@ upgrade_db() {
     UPGRADE_SRC_DB="euca.upgrade.source=com.eucalyptus.upgrade.HsqldbSource"
   fi
   # Arbitrary string of properly formatted opts passed direct to jvm"
-  UPGRADE_OPTS="-Deuca.log.level=DEBUG -Djava.security.egd=file:/dev/./urandom -XX:MaxPermSize=512m -Deuca.db.home=/usr/pgsql-9.1/"
+  UPGRADE_OPTS="-Deuca.log.level=DEBUG -Djava.security.egd=file:/dev/./urandom -XX:MaxPermSize=512m"
   # Setup commands 
   UPGRADE_ARGS=$( for arg in ${UPGRADE_DEST_DIR} ${UPGRADE_SRC_DIR} ${UPGRADE_SRC_DB} ${UPGRADE_DEST_DB} ${UPGRADE_DEST_VERSION} ${UPGRADE_SRC_VERSION}; do echo -n " -D${arg}"; done; )
   UPGRADE_CMD="java -Xbootclasspath/p:${EUCALYPTUS}/usr/share/eucalyptus/openjdk-crypto.jar -classpath ${CLASSPATH} ${UPGRADE_OPTS} ${UPGRADE_ARGS} ${UPGRADE_CLASS}" 

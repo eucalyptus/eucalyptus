@@ -1,9 +1,9 @@
+import groovy.lang.GroovyRuntimeException;
 import java.io.File;
 import java.io.BufferedInputStream;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.lang.RuntimeException;
 import java.sql.SQLException;
 import java.sql.DatabaseMetaData;
 import java.util.ArrayList;
@@ -135,6 +135,11 @@ import com.eucalyptus.reporting.modules.s3.S3UsageData;
 // Network classes
 import com.eucalyptus.network.NetworkGroups;
 
+// Images
+import com.eucalyptus.images.KernelImageInfo;
+import com.eucalyptus.images.MachineImageInfo;
+import com.eucalyptus.images.RamdiskImageInfo;
+
 class upgrade_30_31 extends AbstractUpgradeScript {
     static final List<String> FROM_VERSION = ["3.0.0", "3.0.1", "3.0.2"];
     static final List<String> TO_VERSION   = ["3.1.0"];
@@ -182,6 +187,7 @@ class upgrade_30_31 extends AbstractUpgradeScript {
         entityKeys.remove("auth_group");
         entityKeys.remove("auth_user");
         entityKeys.remove("auth_access_key");
+        entityKeys.remove("auth_cert");
 
         upgradeNetwork();
         upgradeWalrus();
@@ -189,6 +195,11 @@ class upgrade_30_31 extends AbstractUpgradeScript {
         entityKeys.remove("CHAPUserInfo");
         upgradeComponents();
         entityKeys.remove("config_partition");
+        upgradeImages();
+        entityKeys.remove("metadata_images");
+        entityKeys.remove("kernel_images");
+        entityKeys.remove("ramdisk_images");
+        entityKeys.remove("machine_images");
 
         // Hardcode some ordering here
         for (String entityKey : entityKeys) {
@@ -249,6 +260,7 @@ class upgrade_30_31 extends AbstractUpgradeScript {
         def groupSetterMap = buildSetterMap(authConn, "auth_group");
         def userSetterMap = buildSetterMap(authConn, "auth_user");
         def akeySetterMap = buildSetterMap(authConn, "auth_access_key");
+        def certSetterMap = buildSetterMap(authConn, "auth_cert");
 
         authConn.rows("""select * from auth_account""").each { row ->
             EntityWrapper<AccountEntity> db = EntityWrapper.get(AccountEntity.class);
@@ -302,18 +314,30 @@ class upgrade_30_31 extends AbstractUpgradeScript {
                 userGroup.getUsers().add( user );
                 db.commit()
 
+                db = EntityWrapper.get(AccessKeyEntity.class);
                 authConn.rows("""select * from auth_access_key k
                                    join auth_user u on (k.auth_access_key_owning_user=u.id)
                                   where u.auth_user_id_external=?""", rowResult.auth_user_id_external).each { rowResult2 ->
-                    db = EntityWrapper.get(AccessKeyEntity.class);
                     AccessKeyEntity accessKey = new AccessKeyEntity(user);
                     accessKey = convertRowToObject(akeySetterMap, rowResult2, accessKey);
                     initMetaClass(accessKey, AccessKeyEntity.class);
                     accessKey.setSecretKey(rowResult2.auth_access_key_key);
                     accessKey.setAccess(rowResult2.auth_access_key_query_id);
                     db.add(accessKey);
-                    db.commit();
                 }
+                db.commit();
+
+                db = EntityWrapper.get(CertificateEntity.class);
+                authConn.rows("""select c.* from auth_cert c
+                                   join auth_user u on (c.auth_certificate_owning_user=u.id)
+                                  where u.auth_user_id_external=?""", rowResult.auth_user_id_external).each { rowResult3 ->
+                    CertificateEntity cert = CertificateEntity.newInstanceWithId(rowResult3.auth_certificate_id);
+                    cert = convertRowToObject(certSetterMap, rowResult3, cert);
+                    initMetaClass(cert, CertificateEntity.class);
+                    cert.setUser(user);
+                    db.add(cert);
+                }
+                db.commit();
             }
         }
     }
@@ -451,7 +475,7 @@ class upgrade_30_31 extends AbstractUpgradeScript {
                         rulesGroup.getNetworkRules().add(networkRule);
                     } catch(IllegalArgumentException e) {
                         LOG.warn("Ignored invalid network rule: protocol ${rule.metadata_network_rule_protocol}, ports ${rule.metadata_network_rule_low_port} to ${rule.metadata_network_rule_high_port}");
-                    }	
+                    }
                 }
 
                 LOG.debug("adding rules group: " + rulesGroup);
@@ -467,6 +491,39 @@ class upgrade_30_31 extends AbstractUpgradeScript {
         return true;
     }
 
+    private void upgradeImages() {
+        def connCloud = connMap['eucalyptus_cloud'];
+        def kimgSetterMap = buildSetterMap(connCloud, "kernel_images");
+        def rimgSetterMap = buildSetterMap(connCloud, "ramdisk_images");
+        def mimgSetterMap = buildSetterMap(connCloud, "machine_images");
+
+        EntityWrapper<ImageInfo> dbGen = EntityWrapper.get(ImageInfo.class);
+        connMap['eucalyptus_cloud'].rows("SELECT * FROM metadata_images").each { img ->
+            User user = Accounts.lookupUserById( img.metadata_user_id );
+            UserFullName ufn = new UserFullName(user);
+            def ii = null;
+            switch (img.metadata_image_discriminator) {
+                case "kernel":
+                    ii = new KernelImageInfo();
+                    initMetaClass(ii, ii.class);
+                    ii = convertRowToObject(kimgSetterMap, img, ii);
+                    break;
+                case "ramdisk":
+                    ii = new RamdiskImageInfo();
+                    initMetaClass(ii, ii.class);
+                    ii = convertRowToObject(rimgSetterMap, img, ii);
+                    break;
+                case "machine":
+                    ii = new MachineImageInfo();
+                    initMetaClass(ii, ii.class);
+                    ii = convertRowToObject(mimgSetterMap, img, ii);
+                    break;
+            }
+            dbGen.add(ii);
+            LOG.debug("Adding image ${img.metadata_image_name}");
+        }
+        dbGen.commit();
+    }
 
     private void upgradeMisc() {
         // StaticDatabaseProperty
@@ -667,15 +724,24 @@ class upgrade_30_31 extends AbstractUpgradeScript {
                 } else {
                     LOG.debug("Column " + column + " was NULL");
                 }
-            } else {
-                LOG.debug("Setter for " + column + " was NULL");
+            } else if (!(column in ["id", "auth_group_id_external", "auth_group_owning_account",
+                                    "auth_account_number", "auth_account_name",
+                                    "auth_user_reg_stat", "auth_user_id_external",
+                                    "auth_group_id", "auth_user_id" ])) {
+                // This should probably be a fatal exception
+                // throw new GroovyRuntimeException("Setter for " + dest.getClass().getName() + "." + column + " was NULL");
+                LOG.warn("Setter for " + dest.getClass().getName() + "." + column + " was NULL");
             }
         }
 
         return dest;
     }
 
-    private Map<String, Method> buildSetterMap(Sql conn, String entityKey) {
+    private Map<String, Method> buildSetterMap(Sql conn, String entityKeyAlias) {
+        def entityKey = entityKeyAlias;
+        if (entityKey in ["kernel_images", "ramdisk_images", "machine_images"]) {
+            entityKey = "metadata_images";
+        }
         Map<String, Method> setterMap = new HashMap<String, Method>();
         try {
             Object firstRow = conn.firstRow("SELECT * FROM " + entityKey);
@@ -685,12 +751,18 @@ class upgrade_30_31 extends AbstractUpgradeScript {
             }
             if(firstRow instanceof Map) {
                 Set<String> origColumns = ((Map) firstRow).keySet();
-                Class definingClass = entityMap.get(entityKey);
+                LOG.info("Columns for ${entityKeyAlias}: " + origColumns.join(", "));
+                Class definingClass = entityMap.get(entityKeyAlias);
                 Field[] fields = definingClass.getDeclaredFields();
                 //special case. Do this better.
                 addToSetterMap(setterMap, origColumns, definingClass, fields);
-                Class superClass = entityMap.get(entityKey).getSuperclass();
-                while(superClass.isAnnotationPresent(MappedSuperclass.class)) {
+                Class superClass = entityMap.get(entityKeyAlias).getSuperclass();
+
+                // Checking for the Table annotation here allows us to handle
+                // multiple subclasses stored in the same Table, such as
+                // image metadata.
+                while(superClass.isAnnotationPresent(MappedSuperclass.class) ||
+                      superClass.isAnnotationPresent(Table.class)) {
                     Field[] superFields = superClass.getDeclaredFields();
                     addToSetterMap(setterMap, origColumns, superClass, superFields);
                     //nothing to see here (otherwise we loop forever).
@@ -753,6 +825,11 @@ class upgrade_30_31 extends AbstractUpgradeScript {
                 LOG.info("Mapping " + entity + " to " + annot.name());
             }
         }
+
+        // fake entities for images
+        entityMap.put("kernel_images", KernelImageInfo.class);
+        entityMap.put("ramdisk_images", RamdiskImageInfo.class);
+        entityMap.put("machine_images", MachineImageInfo.class);
     }
 
     public void initMetaClass(obj, theClass) {

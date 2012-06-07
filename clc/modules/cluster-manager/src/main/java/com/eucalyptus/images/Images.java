@@ -414,10 +414,22 @@ public class Images {
   }
   
   public static Predicate<BlockDeviceMappingItemType> findEbsRoot( final String rootDevName ) {
+    return findEbsRoot( rootDevName, true );
+  }
+
+  public static Predicate<BlockDeviceMappingItemType> findEbsRootOptionalSnapshot( final String rootDevName ) {
+    return findEbsRoot( rootDevName, false );
+  }
+
+  private static Predicate<BlockDeviceMappingItemType> findEbsRoot( final String rootDevName,
+                                                                    final boolean requireSnapshotId ) {
     return new Predicate<BlockDeviceMappingItemType>( ) {
       @Override
       public boolean apply( BlockDeviceMappingItemType input ) {
-        return rootDevName.equals( input.getDeviceName( ) ) && input.getEbs( ) != null && input.getEbs( ).getSnapshotId( ) != null;
+        return
+            rootDevName.equals( input.getDeviceName( ) ) &&
+            input.getEbs( ) != null &&
+            (!requireSnapshotId || input.getEbs( ).getSnapshotId( ) != null);
       }
     };
   }
