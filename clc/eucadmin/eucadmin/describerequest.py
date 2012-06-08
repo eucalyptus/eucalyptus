@@ -58,9 +58,8 @@ class DescribeRequest(AWSQueryRequest):
         for s in services:
             if s.get('euca:hostName', None) != 'detail':
                 for field_name in fields:
-                    field_size = math.ceil(fields[field_name]/5.0)*5
-                    if len(s.get(field_name)) > field_size:
-                        fields[field_name] = field_size
+                    if len(s.get(field_name)) > fields[field_name]:
+                        fields[field_name] = len(s.get(field_name))
         fmt = '%%s\t%%-%s.%ss\t%%-%d.%ds\t%%-%ds\t%%s\t%%s' % (fields['euca:partition'],
                                                                fields['euca:partition'],
                                                                fields['euca:name'],
