@@ -242,7 +242,7 @@ public class ServiceConfigurations {
           try {
             comp = Components.create( compId );
             return comp.lookup( arg0.getName( ) );
-          } catch ( ServiceRegistrationException ex ) {
+          } catch ( Exception ex ) {
             try {
               return ServiceConfigurations.createEphemeral( compId, arg0.getPartition( ), arg0.getName( ),  new URI( arg0.getUri( ) ) );
             } catch ( URISyntaxException ex1 ) {
