@@ -253,9 +253,9 @@ public class VmInstances {
     @Override
     public Long apply( final OwnerFullName input ) {
       final EntityTransaction db = Entities.get( VmInstance.class );
-      final int i;
+      final long i;
       try {
-        i = (Integer) Entities.createCriteria( VmInstance.class )
+        i = (Long) Entities.createCriteria( VmInstance.class )
                     .add( Example.create( VmInstance.named( input, null ) ) )
                     .setReadOnly( true )
                     .setCacheable( false )
