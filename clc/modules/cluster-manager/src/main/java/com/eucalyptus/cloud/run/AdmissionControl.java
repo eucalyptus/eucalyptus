@@ -402,7 +402,7 @@ public class AdmissionControl {
             db.commit( );
           } catch ( Exception ex ) {
             db.rollback( );
-            throw new NotEnoughResourcesException( "Not enough addresses left in the network subnet assigned to requested group: " + rscToken, ex );
+            throw new NotEnoughResourcesException( "Not enough addresses left in the private network subnet assigned to requested group: " + rscToken, ex );
           }
         }
       }
