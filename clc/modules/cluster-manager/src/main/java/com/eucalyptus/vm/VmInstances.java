@@ -72,6 +72,7 @@ import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import org.hibernate.criterion.Example;
 import org.hibernate.criterion.MatchMode;
+import org.hibernate.criterion.Projections;
 import org.hibernate.criterion.Restrictions;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
@@ -252,14 +253,15 @@ public class VmInstances {
     @Override
     public Long apply( final OwnerFullName input ) {
       final EntityTransaction db = Entities.get( VmInstance.class );
-      final int i;
+      final long i;
       try {
-        i = Entities.createCriteria( VmInstance.class )
+        i = (Long) Entities.createCriteria( VmInstance.class )
                     .add( Example.create( VmInstance.named( input, null ) ) )
                     .setReadOnly( true )
                     .setCacheable( false )
-                    .list( )
-                    .size( );
+                    .setProjection( Projections.rowCount() )
+                    .uniqueResult();
+            
       } finally {
         db.rollback( );
       }
