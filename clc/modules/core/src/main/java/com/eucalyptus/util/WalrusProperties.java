@@ -70,6 +70,7 @@ import edu.ucsb.eucalyptus.msgs.UpdateWalrusConfigurationType;
 
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
@@ -280,7 +281,7 @@ public class WalrusProperties {
 			return true;
 		}
 		
-		if(groupId.equals(WalrusProperties.AUTHENTICATED_USERS_GROUP) && userId != null && userId != "") {
+		if(groupId.equals(WalrusProperties.AUTHENTICATED_USERS_GROUP) && userId != null && !"".equals(userId) && !userId.equals(Principals.nobodyUser().getUserId())) {
 			return true;
 		}
 		
