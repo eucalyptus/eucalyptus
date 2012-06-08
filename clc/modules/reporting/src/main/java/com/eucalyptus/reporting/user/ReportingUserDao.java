@@ -1,81 +1,79 @@
 package com.eucalyptus.reporting.user;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.log4j.Logger;
-import org.mortbay.log.Log;
 
 import com.eucalyptus.entities.EntityWrapper;
 
-public class ReportingAccountDao
+public class ReportingUserDao
 {
 	private static Logger LOG = Logger.getLogger( ReportingUserDao.class );
 
-	private static ReportingAccountDao instance = null;
-	
-	public static synchronized ReportingAccountDao getInstance()
+	private static ReportingUserDao instance = null;
+
+	public static synchronized ReportingUserDao getInstance()
 	{
 		if (instance == null) {
-			instance = new ReportingAccountDao();
+			instance = new ReportingUserDao();
 			instance.loadFromDb();
 		}
 		return instance;
 	}
-	
-	private final Map<String,String> accounts = new ConcurrentHashMap<String,String>();
-	
-	private ReportingAccountDao()
+
+	private final Map<String,String> users = new HashMap<String,String>();
+
+	private ReportingUserDao()
 	{
-		
+
 	}
 
-	public void addUpdateAccount(String id, String name)
+	public void addUpdateUser(String id, String name)
 	{
 		if (id==null || name==null) throw new IllegalArgumentException("args cant be null");
 
-		if (accounts.containsKey(id) && accounts.get(id).equals(name)) {
+		if (users.containsKey(id) && users.get(id).equals(name)) {
 			return;
-		} else if (accounts.containsKey(id)) {
+		} else if (users.containsKey(id)) {
+			users.put(id, name);
 			updateInDb(id, name);
-			accounts.put(id, name);
 		} else {
-			try {
+			try {			
 				addToDb(id, name);
-				accounts.put(id, name);
+				users.put(id, name);
 			} catch (RuntimeException e) {
 				LOG.error(e);
 			}
 		}
-		
+
 	}
 
-	public String getAccountName(String id)
+	public String getUserName(String id)
 	{
-		return accounts.get(id);
+		return users.get(id);
 	}
-	
 
-	
+
+
 	private void loadFromDb()
 	{
-		LOG.debug("Load accounts from db");
-		
-		EntityWrapper<ReportingAccount> entityWrapper =
-			EntityWrapper.get(ReportingAccount.class);
+		LOG.debug("Load users from db");
+
+		EntityWrapper<ReportingUser> entityWrapper =
+			EntityWrapper.get(ReportingUser.class);
 
 		try {
 			@SuppressWarnings("rawtypes")
-			List reportingAccounts = (List)
-				entityWrapper.createQuery("from ReportingAccount")
-				.list();
+			List reportingUsers = (List)
+			entityWrapper.createQuery("from ReportingUser")
+			.list();
 
-			for (Object obj: reportingAccounts) {
-				ReportingAccount Account = (ReportingAccount) obj;
-				accounts.put(Account.getId(), Account.getName());
-				LOG.debug("load account from db, id:" + Account.getId() + " name:" + Account.getName());
+			for (Object obj: reportingUsers) {
+				ReportingUser user = (ReportingUser) obj;
+				users.put(user.getId(), user.getName());
+				LOG.debug("load user from db, id:" + user.getId() + " name:" + user.getName());
 			}
-				
+
 			entityWrapper.commit();
 		} catch (Exception ex) {
 			LOG.error(ex);
@@ -83,20 +81,20 @@ public class ReportingAccountDao
 			throw new RuntimeException(ex);
 		}			
 	}
-	
+
 	private void updateInDb(String id, String name)
 	{
-		LOG.debug("Update reporting account in db, id:" + id + " name:" + name);
+		LOG.debug("Update reporting user in db, id:" + id + " name:" + name);
 
-		EntityWrapper<ReportingAccount> entityWrapper =
-			EntityWrapper.get(ReportingAccount.class);
+		EntityWrapper<ReportingUser> entityWrapper =
+			EntityWrapper.get(ReportingUser.class);
 
 		try {
-			ReportingAccount reportingAccount = (ReportingAccount)
-			entityWrapper.createQuery("from ReportingAccount where id = ?")
-				.setString(0, id)
-				.uniqueResult();
-			reportingAccount.setName(name);
+			ReportingUser reportingUser = (ReportingUser)
+			entityWrapper.createQuery("from ReportingUser where id = ?")
+			.setString(0, id)
+			.uniqueResult();
+			reportingUser.setName(name);
 			entityWrapper.commit();
 		} catch (Exception ex) {
 			LOG.error(ex);
@@ -104,16 +102,16 @@ public class ReportingAccountDao
 			throw new RuntimeException(ex);
 		}			
 	}
-	
+
 	private void addToDb(String id, String name)
 	{
-		LOG.debug("Add reporting account to db, id:" + id + " name:" + name);
-		
-		EntityWrapper<ReportingAccount> entityWrapper =
-			EntityWrapper.get(ReportingAccount.class);
+		LOG.debug("Add reporting user to db, id:" + id + " name:" + name);
+
+		EntityWrapper<ReportingUser> entityWrapper =
+			EntityWrapper.get(ReportingUser.class);
 
 		try {
-			entityWrapper.add(new ReportingAccount(id, name));
+			entityWrapper.add(new ReportingUser(id, name));
 			entityWrapper.commit();
 		} catch (Exception ex) {
 			LOG.error(ex);
