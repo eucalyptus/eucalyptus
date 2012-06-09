@@ -65,6 +65,8 @@ package edu.ucsb.eucalyptus.util;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.google.common.base.Joiner;
+
 import java.io.File;
 
 public class SystemUtil {
@@ -117,6 +119,30 @@ public class SystemUtil {
 		}
 		return -1;
 	}
+
+	 public static class CommandOutput {
+	   public int returnValue;
+	   public String output;
+	   public String error;
+	   public CommandOutput(int returnValue, String output, String error) {
+	     this.returnValue = returnValue;
+	     this.output = output;
+	     this.error = error;
+	   }
+	 }
+	 
+	 public static CommandOutput runWithRawOutput(String[] command) throws Exception {
+	   //System.out.println(Joiner.on(" ").skipNulls().join(command));
+	   Runtime rt = Runtime.getRuntime();
+	   Process proc = rt.exec(command);
+	   StreamConsumer error = new StreamConsumer(proc.getErrorStream());
+	   StreamConsumer output = new StreamConsumer(proc.getInputStream());
+	   error.start();
+	   output.start();
+	   int returnValue = proc.waitFor();
+	   output.join();
+	   return new CommandOutput(returnValue, output.getReturnValue(), error.getReturnValue());
+	 }
 
 	public static void shutdownWithError(String errorMessage) {
 		LOG.fatal(errorMessage);

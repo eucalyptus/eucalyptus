@@ -150,12 +150,11 @@ sub parse_devstring {
 
 sub login_target {
     my ($ip, $store, $passwd) = @_;
-    if(!open DISCOVERY, "iscsiadm -m discovery -t sendtargets -p $ip |") {
-	print "Could not discover targets";
-	do_exit(1)
+    if(!open STATICTARGET, "iscsiadm -m node -T $store -p $ip -o new |") {
+      print "Could not create static target";
+      do_exit(1)
     }
-
-    while(<DISCOVERY>) {};
+    while(<STATICTARGET>) {};
 
     if($password ne "not_required") {
       if(!open USERNAME, "iscsiadm -m node -T $store --op=update --name node.session.auth.username --value=$ISCSI_USER |") {
