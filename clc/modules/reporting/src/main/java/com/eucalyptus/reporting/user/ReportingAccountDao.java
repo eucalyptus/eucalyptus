@@ -4,6 +4,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.log4j.Logger;
+import org.mortbay.log.Log;
 
 import com.eucalyptus.entities.EntityWrapper;
 
@@ -13,10 +14,11 @@ public class ReportingAccountDao
 
 	private static ReportingAccountDao instance = null;
 	
-	public static ReportingAccountDao getInstance()
+	public static synchronized ReportingAccountDao getInstance()
 	{
 		if (instance == null) {
 			instance = new ReportingAccountDao();
+			instance.loadFromDb();
 		}
 		return instance;
 	}
@@ -30,8 +32,8 @@ public class ReportingAccountDao
 
 	public void addUpdateAccount(String id, String name)
 	{
+		if (id==null || name==null) throw new IllegalArgumentException("args cant be null");
 
-		loadIfNeededFromDb();
 		if (accounts.containsKey(id) && accounts.get(id).equals(name)) {
 			return;
 		} else if (accounts.containsKey(id)) {
@@ -42,7 +44,7 @@ public class ReportingAccountDao
 				addToDb(id, name);
 				accounts.put(id, name);
 			} catch (RuntimeException e) {
-				LOG.trace(e, e);
+				LOG.error(e);
 			}
 		}
 		
@@ -50,41 +52,42 @@ public class ReportingAccountDao
 
 	public String getAccountName(String id)
 	{
-		loadIfNeededFromDb();
 		return accounts.get(id);
 	}
 	
 
 	
-	private void loadIfNeededFromDb()
+	private void loadFromDb()
 	{
-		if (accounts.keySet().size() == 0) {
+		LOG.debug("Load accounts from db");
+		
+		EntityWrapper<ReportingAccount> entityWrapper =
+			EntityWrapper.get(ReportingAccount.class);
 
-			EntityWrapper<ReportingAccount> entityWrapper =
-				EntityWrapper.get(ReportingAccount.class);
+		try {
+			@SuppressWarnings("rawtypes")
+			List reportingAccounts = (List)
+				entityWrapper.createQuery("from ReportingAccount")
+				.list();
 
-			try {
-				@SuppressWarnings("rawtypes")
-				List reportingAccounts = (List)
-					entityWrapper.createQuery("from ReportingAccount")
-					.list();
-
-				for (Object obj: reportingAccounts) {
-					ReportingAccount Account = (ReportingAccount) obj;
-					accounts.put(Account.getId(), Account.getName());
-				}
+			for (Object obj: reportingAccounts) {
+				ReportingAccount Account = (ReportingAccount) obj;
+				accounts.put(Account.getId(), Account.getName());
+				LOG.debug("load account from db, id:" + Account.getId() + " name:" + Account.getName());
+			}
 				
-				entityWrapper.commit();
-			} catch (Exception ex) {
-				LOG.error(ex);
-				entityWrapper.rollback();
-				throw new RuntimeException(ex);
-			}			
-		}
+			entityWrapper.commit();
+		} catch (Exception ex) {
+			LOG.error(ex);
+			entityWrapper.rollback();
+			throw new RuntimeException(ex);
+		}			
 	}
 	
 	private void updateInDb(String id, String name)
 	{
+		LOG.debug("Update reporting account in db, id:" + id + " name:" + name);
+
 		EntityWrapper<ReportingAccount> entityWrapper =
 			EntityWrapper.get(ReportingAccount.class);
 
@@ -104,6 +107,8 @@ public class ReportingAccountDao
 	
 	private void addToDb(String id, String name)
 	{
+		LOG.debug("Add reporting account to db, id:" + id + " name:" + name);
+		
 		EntityWrapper<ReportingAccount> entityWrapper =
 			EntityWrapper.get(ReportingAccount.class);
 

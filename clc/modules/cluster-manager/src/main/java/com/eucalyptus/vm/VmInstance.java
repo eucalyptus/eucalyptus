@@ -96,6 +96,7 @@ import org.hibernate.criterion.Restrictions;
 import org.hibernate.criterion.SimpleExpression;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
+import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.blockstorage.State;
 import com.eucalyptus.blockstorage.Volume;
@@ -976,12 +977,37 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   private void fireUsageEvent( ) {
     if ( VmState.RUNNING.equals( this.getState( ) ) ) {
       try {
-        ListenerRegistry.getInstance( ).fireEvent( new InstanceEvent( this.getInstanceUuid( ), this.getDisplayName( ),
-                                                                      this.bootRecord.getVmType( ).getName( ),
-                                                                      this.getOwner( ).getUserId( ), this.getOwnerUserName( ),
-                                                                      this.getOwner( ).getAccountNumber( ), this.getOwnerAccountName( ),
-                                                                      this.placement.getClusterName( ), this.placement.getPartitionName( ),
-                                                                      this.usageStats.getNetworkBytes( ), this.usageStats.getBlockBytes( ) ) );
+    	final OwnerFullName owner = this.getOwner();
+    	final String userId = owner.getUserId();
+		/*
+		 * NOTE: We must lookup the account name and username for each
+ 		 * event sent. This is for several reasons. First, the reporting
+ 		 * subsystem keeps a historical record of all account names and
+ 		 * usernames, so we need the account name and user name at each
+ 		 * specific time. Second, the reporting subsystem is completely
+ 		 * decoupled from the rest of the system and may run on a
+ 		 * separate box with a different database (data warehouse
+ 		 * configuration), so it will not have access to the Accounts
+		 * class and cannot perform lookups, so it needs all information
+ 		 * in the event. Third, the reporting subsystem could not
+  		 * perform lookups anyways, since the account or user may have
+  		 * been deleted but we wish to generate a historical report of
+  		 * his usage. For these reasons, we must provide all reporting
+  		 * information in the event, and must look it up every time to
+  		 * detect changes. -tw
+  		 */
+    	final String userName = Accounts.lookupUserById(userId).getName();
+    	final String accountId = owner.getAccountNumber();
+    	final String accountName = Accounts.lookupAccountById(accountId).getName();
+    	final String clusterName = this.placement.getClusterName();
+    	final String zoneName = this.placement.getPartitionName();
+    	final Long networkBytes = this.usageStats.getNetworkBytes();
+    	final Long diskBytes = this.usageStats.getBlockBytes();
+    	final String instanceType = this.bootRecord.getVmType().getName();
+    	
+        ListenerRegistry.getInstance( ).fireEvent( new InstanceEvent( this.getInstanceUuid(), this.getDisplayName(),
+                                                                      instanceType, userId, userName, accountId, accountName,
+                                                                      clusterName, zoneName, networkBytes, diskBytes ) );
       } catch ( final Exception ex ) {
         LOG.error( ex, ex );
       }

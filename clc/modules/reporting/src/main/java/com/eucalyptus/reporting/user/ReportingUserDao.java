@@ -12,10 +12,11 @@ public class ReportingUserDao
 
 	private static ReportingUserDao instance = null;
 
-	public static ReportingUserDao getInstance()
+	public static synchronized ReportingUserDao getInstance()
 	{
 		if (instance == null) {
 			instance = new ReportingUserDao();
+			instance.loadFromDb();
 		}
 		return instance;
 	}
@@ -29,8 +30,8 @@ public class ReportingUserDao
 
 	public void addUpdateUser(String id, String name)
 	{
+		if (id==null || name==null) throw new IllegalArgumentException("args cant be null");
 
-		loadIfNeededFromDb();
 		if (users.containsKey(id) && users.get(id).equals(name)) {
 			return;
 		} else if (users.containsKey(id)) {
@@ -41,7 +42,7 @@ public class ReportingUserDao
 				addToDb(id, name);
 				users.put(id, name);
 			} catch (RuntimeException e) {
-				LOG.trace(e, e);
+				LOG.error(e);
 			}
 		}
 
@@ -49,41 +50,42 @@ public class ReportingUserDao
 
 	public String getUserName(String id)
 	{
-		loadIfNeededFromDb();
 		return users.get(id);
 	}
 
 
 
-	private void loadIfNeededFromDb()
+	private void loadFromDb()
 	{
-		if (users.keySet().size() == 0) {
+		LOG.debug("Load users from db");
 
-			EntityWrapper<ReportingUser> entityWrapper =
-				EntityWrapper.get(ReportingUser.class);
+		EntityWrapper<ReportingUser> entityWrapper =
+			EntityWrapper.get(ReportingUser.class);
 
-			try {
-				@SuppressWarnings("rawtypes")
-				List reportingUsers = (List)
-				entityWrapper.createQuery("from ReportingUser")
-				.list();
+		try {
+			@SuppressWarnings("rawtypes")
+			List reportingUsers = (List)
+			entityWrapper.createQuery("from ReportingUser")
+			.list();
 
-				for (Object obj: reportingUsers) {
-					ReportingUser user = (ReportingUser) obj;
-					users.put(user.getId(), user.getName());
-				}
+			for (Object obj: reportingUsers) {
+				ReportingUser user = (ReportingUser) obj;
+				users.put(user.getId(), user.getName());
+				LOG.debug("load user from db, id:" + user.getId() + " name:" + user.getName());
+			}
 
-				entityWrapper.commit();
-			} catch (Exception ex) {
-				LOG.error(ex);
-				entityWrapper.rollback();
-				throw new RuntimeException(ex);
-			}			
-		}
+			entityWrapper.commit();
+		} catch (Exception ex) {
+			LOG.error(ex);
+			entityWrapper.rollback();
+			throw new RuntimeException(ex);
+		}			
 	}
 
 	private void updateInDb(String id, String name)
 	{
+		LOG.debug("Update reporting user in db, id:" + id + " name:" + name);
+
 		EntityWrapper<ReportingUser> entityWrapper =
 			EntityWrapper.get(ReportingUser.class);
 
@@ -103,6 +105,8 @@ public class ReportingUserDao
 
 	private void addToDb(String id, String name)
 	{
+		LOG.debug("Add reporting user to db, id:" + id + " name:" + name);
+
 		EntityWrapper<ReportingUser> entityWrapper =
 			EntityWrapper.get(ReportingUser.class);
 

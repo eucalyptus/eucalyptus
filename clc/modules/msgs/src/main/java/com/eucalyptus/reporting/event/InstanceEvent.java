@@ -49,6 +49,22 @@ public class InstanceEvent
 			String accountName, String clusterName,	String availabilityZone,
 			Long cumulativeNetworkIoMegs, Long cumulativeDiskIoMegs)
 	{
+		if (uuid==null) throw new IllegalArgumentException("uuid cant be null");
+		if (instanceId==null) throw new IllegalArgumentException("instanceId cant be null");
+		if (instanceType==null) throw new IllegalArgumentException("instanceType cant be null");
+		if (userId==null) throw new IllegalArgumentException("userId cant be null");
+		if (userName==null) throw new IllegalArgumentException("userName cant be null");
+		if (accountId==null) throw new IllegalArgumentException("accountId cant be null");
+		if (accountName==null) throw new IllegalArgumentException("accountName cant be null");
+		if (clusterName==null) throw new IllegalArgumentException("clusterName cant be null");
+		if (availabilityZone==null) throw new IllegalArgumentException("availabilityZone cant be null");
+		if (cumulativeDiskIoMegs!= null && cumulativeDiskIoMegs.longValue() < 0) {
+			throw new IllegalArgumentException("cumulativeDiskIoMegs cant be negative");
+		}
+		if (cumulativeNetworkIoMegs!= null && cumulativeNetworkIoMegs.longValue() < 0) {
+			throw new IllegalArgumentException("cumulativeNetworkIoMegs cant be negative");
+		}
+		
 		this.uuid = uuid;
 		this.instanceId = instanceId;
 		this.instanceType = instanceType;
@@ -60,6 +76,49 @@ public class InstanceEvent
 		this.availabilityZone = availabilityZone;
 		this.cumulativeNetworkIoMegs = cumulativeNetworkIoMegs;
 		this.cumulativeDiskIoMegs = cumulativeDiskIoMegs;
+	}
+	
+	/**
+	 * Copy constructor
+	 */
+	public InstanceEvent(InstanceEvent e)
+	{
+		this.uuid = e.uuid;
+		this.instanceId = e.instanceId;
+		this.instanceType = e.instanceType;
+		this.userId = e.userId;
+		this.userName = e.userName;
+		this.accountId = e.accountId;
+		this.accountName = e.accountName;
+		this.clusterName = e.clusterName;
+		this.availabilityZone = e.availabilityZone;
+		this.cumulativeNetworkIoMegs = e.cumulativeNetworkIoMegs;
+		this.cumulativeDiskIoMegs = e.cumulativeDiskIoMegs;		
+	}
+
+	/**
+	 * Copy constructor with different resource usage
+	 */
+	public InstanceEvent(InstanceEvent e, Long cumulativeNetworkIoMegs, Long cumulativeDiskIoMegs)
+	{
+		if (cumulativeDiskIoMegs!= null && cumulativeDiskIoMegs.longValue() < 0) {
+			throw new IllegalArgumentException("cumulativeDiskIoMegs cant be negative");
+		}
+		if (cumulativeNetworkIoMegs!= null && cumulativeNetworkIoMegs.longValue() < 0) {
+			throw new IllegalArgumentException("cumulativeNetworkIoMegs cant be negative");
+		}
+
+		this.uuid = e.uuid;
+		this.instanceId = e.instanceId;
+		this.instanceType = e.instanceType;
+		this.userId = e.userId;
+		this.userName = e.userName;
+		this.accountId = e.accountId;
+		this.accountName = e.accountName;
+		this.clusterName = e.clusterName;
+		this.availabilityZone = e.availabilityZone;
+		this.cumulativeNetworkIoMegs = cumulativeNetworkIoMegs;
+		this.cumulativeDiskIoMegs = cumulativeDiskIoMegs;		
 	}
 
 	public String getUuid()
