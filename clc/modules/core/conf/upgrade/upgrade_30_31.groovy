@@ -120,6 +120,7 @@ import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.DatabaseAuthUtils;
+import com.eucalyptus.auth.DatabaseAccountProxy;
 
 // Enums
 import com.eucalyptus.auth.principal.User.RegistrationStatus;
@@ -147,12 +148,10 @@ class upgrade_30_31 extends AbstractUpgradeScript {
     private static List<Class> entities = new ArrayList<Class>();
     private static Map<String, Class> entityMap = new HashMap<String, Class>();
 
-    // Map users to accounts, possible substituting characters to make them "safe"
-    private static Map<String, String> safeUserMap = new HashMap<String, String>();
-    // Map users to userId of "admin" in their mapped account
-    private static Map<String, String> userIdMap = new HashMap<String, String>();
-    // Map account names to account ids
-    private static Map<String, String> accountIdMap = new HashMap<String, String>();
+    // Map user ids to accounts / user
+    private static Map<String, List> realUserMap = new HashMap<String, ArrayList<String>>();
+    // Map user id to account / user
+    private static Map<String, List> phantomUserMap = new HashMap<String, ArrayList<String>>();
     private static Map<String, Sql> connMap = new HashMap<String, Sql>();
     private static List<String> unmappedColumns = [ ];
 
@@ -188,6 +187,7 @@ class upgrade_30_31 extends AbstractUpgradeScript {
         entityKeys.remove("auth_user");
         entityKeys.remove("auth_access_key");
         entityKeys.remove("auth_cert");
+        addPhantoms();
 
         upgradeNetwork();
         upgradeWalrus();
@@ -206,9 +206,8 @@ class upgrade_30_31 extends AbstractUpgradeScript {
             upgradeEntity(entityKey);
         }
 
-        LOG.error("sleeping");
-        // sleep 3600000;
-        LOG.error("done sleeping");
+        deletePhantoms();
+
         return;
     }
 
@@ -267,7 +266,7 @@ class upgrade_30_31 extends AbstractUpgradeScript {
             AccountEntity acct = AccountEntity.newInstanceWithAccountNumber(row.auth_account_number);
             acct = convertRowToObject(acctSetterMap, row, acct);
             initMetaClass(acct, AccountEntity.class);
-            LOG.error("setting account number to " + row.auth_account_number);
+            LOG.info("setting account number to " + row.auth_account_number);
             acct.setAccountNumber(row.auth_account_number);
             db.add(acct);
             db.commit();
@@ -277,14 +276,14 @@ class upgrade_30_31 extends AbstractUpgradeScript {
             acctEnt.setAccountNumber(row.auth_account_number);
             db.commit()
 
-            LOG.error("Getting groups for account " + acctEnt.getAccountNumber());
+            LOG.info("Getting groups for account " + acctEnt.getAccountNumber());
             db = EntityWrapper.get(AccountEntity.class);
             authConn.rows("""select *
                                          from auth_group g
                                          join auth_account a on (g.auth_group_owning_account=a.id)
                                         where a.auth_account_name=?""", acct.getName()).each { rowResult ->
                 GroupEntity group = GroupEntity.newInstanceWithGroupId(rowResult.auth_group_id_external);
-                LOG.error("adding group " + rowResult.auth_group_id_external + " in " + acct.getName());
+                LOG.info("adding group " + rowResult.auth_group_id_external + " in " + acct.getName());
                 group = convertRowToObject(groupSetterMap, rowResult, group);
                 initMetaClass(group, GroupEntity.class);
                 group.setAccount(acctEnt);
@@ -301,7 +300,7 @@ class upgrade_30_31 extends AbstractUpgradeScript {
                               and a.auth_account_name=?""", acct.getName()).each { rowResult ->
                 db = EntityWrapper.get(AccountEntity.class);
                 UserEntity user = UserEntity.newInstanceWithUserId(rowResult.auth_user_id_external);
-                LOG.error("adding user " + rowResult.auth_user_id_external + " in " + acct.getName());
+                LOG.info("adding user " + rowResult.auth_user_id_external + " in " + acct.getName());
                 user = convertRowToObject(userSetterMap, rowResult, user);
                 initMetaClass(user, UserEntity.class);
                 user.setRegistrationStatus(RegistrationStatus.valueOf(rowResult.auth_user_reg_stat));
@@ -313,6 +312,10 @@ class upgrade_30_31 extends AbstractUpgradeScript {
                 user.getGroups().add( userGroup );
                 userGroup.getUsers().add( user );
                 db.commit()
+
+                realUserMap.put(rowResult.auth_user_id_external, [ rowResult.auth_user_name,
+                                                                   row.auth_account_name,
+                                                                   row.auth_account_number ])
 
                 db = EntityWrapper.get(AccessKeyEntity.class);
                 authConn.rows("""select * from auth_access_key k
@@ -339,6 +342,79 @@ class upgrade_30_31 extends AbstractUpgradeScript {
                 }
                 db.commit();
             }
+        }
+    }
+
+    private void addPhantoms() {
+        def walrusconn = connMap['eucalyptus_walrus'];
+
+        // I would not expect some of these tables to have data during upgrade,
+        // but better safe than sorry.
+        for (String table : [ 'metadata_addresses',
+                              'metadata_extant_network',
+                              'metadata_images',
+                              'metadata_instances',
+                              'metadata_keypairs',
+                              'metadata_network_group',
+                              'metadata_network_indices',
+                              'metadata_snapshots',
+                              'metadata_volumes']) {
+            connMap['eucalyptus_cloud'].rows("""select distinct metadata_user_name,metadata_user_id,metadata_account_id,metadata_account_name from """ + table).each {
+                if (!phantomUserMap.containsKey(it.metadata_user_id) &&
+                    !realUserMap.containsKey(it.metadata_user_id)) {
+                    addPhantom(it.metadata_user_id,
+                               it.metadata_user_name,
+                               it.metadata_account_id,
+                               it.metadata_account_name);
+                    phantomUserMap.put(it.metadata_user_id,
+                                       [it.metadata_user_name,
+                                        it.metadata_account_name,
+                                        it.metadata_account_id])
+                }
+            }
+        }
+    }
+
+    void addPhantom(userid, username, acctid, acctname) {
+        // DatabaseAccountProxy.addUser won't work, because we need
+        // to set the user id.  This code is otherwise equivalent
+        // to that function.
+        UserEntity newUser = UserEntity.newInstanceWithUserId(userid);
+        initMetaClass(newUser, newUser.class);
+        newUser.setPath("/");
+        newUser.setName(username);
+        newUser.setEnabled(true);
+        newUser.setRegistrationStatus( User.RegistrationStatus.CONFIRMED );
+        GroupEntity newGroup = new GroupEntity( DatabaseAuthUtils.getUserGroupName( username ) );
+        initMetaClass(newGroup, newGroup.class);
+        newGroup.setUserGroup( true );
+        EntityWrapper<AccountEntity> db = EntityWrapper.get( AccountEntity.class );
+        try {
+            AccountEntity account = DatabaseAuthUtils.getUnique( db, AccountEntity.class, "name", acctname );
+            initMetaClass(account, AccountEntity.class);
+            newGroup = db.recast( GroupEntity.class ).merge( newGroup );
+            initMetaClass(newGroup, newGroup.class);
+            newUser = db.recast( UserEntity.class ).merge( newUser );
+            initMetaClass(newUser, newUser.class);
+            newGroup.setAccount( account );
+            newGroup.getUsers( ).add( newUser );
+            newUser.getGroups( ).add( newGroup );
+            db.commit( );
+        } catch ( Exception e ) {
+            LOG.error( "Failed to add user: " + username + " in " + acctname );
+            db.rollback( );
+            throw e;
+        }
+    }
+
+    private void deletePhantoms() {
+        for (String userId : phantomUserMap.keySet()) {
+            // deleteUser
+            EntityWrapper<AccountEntity> db = EntityWrapper.get(AccountEntity.class);
+            AccountEntity acctEnt = DatabaseAuthUtils.getUnique( db, AccountEntity.class, "name", phantomUserMap[userId][1] );
+            initMetaClass(acctEnt, AccountEntity.class);
+            Account acct = new DatabaseAccountProxy(acctEnt);
+            acct.deleteUser(phantomUserMap[userId][0], false, true);
         }
     }
 
@@ -483,7 +559,6 @@ class upgrade_30_31 extends AbstractUpgradeScript {
                 dbGen.commit();
             } catch (Exception t) {
                 t.printStackTrace();
-                t.getNextException.printStackTrace();
                 dbGen.rollback();
                 throw t;
             }
@@ -646,7 +721,7 @@ class upgrade_30_31 extends AbstractUpgradeScript {
         List<GroovyRowResult> rowResults;
         try {
             rowResults = conn.rows("SELECT * FROM " + entityKey);
-            LOG.error("Got " + rowResults.size().toString() + " results from " + entityKey);
+            LOG.debug("Got " + rowResults.size().toString() + " results from " + entityKey);
             EntityWrapper db =  EntityWrapper.get(entityMap.get(entityKey));
 
             def dest = null;
@@ -660,13 +735,13 @@ class upgrade_30_31 extends AbstractUpgradeScript {
                     }
                     dest = convertRowToObject(setterMap, rowResult, dest);
                 } catch (ClassNotFoundException e1) {
-                    LOG.error(e1);
+                    LOG.warn(e1);
                     break;
                 } catch (InstantiationException e) {
-                    LOG.error(e);
+                    LOG.warn(e);
                     break;
                 } catch (IllegalAccessException e) {
-                    LOG.error(e);
+                    LOG.warn(e);
                     break;
                 }
                 db.add(dest);
@@ -720,11 +795,11 @@ class upgrade_30_31 extends AbstractUpgradeScript {
                             setter.invoke(dest, o);
                         }
                     } catch (IllegalArgumentException e) {
-                        LOG.error(dest.getClass().getName()  + " " + column + " " + e);
+                        LOG.warn(dest.getClass().getName()  + " " + column + " " + e);
                     } catch (IllegalAccessException e) {
-                        LOG.error(dest.getClass().getName()  + " " + column + " " + e);
+                        LOG.warn(dest.getClass().getName()  + " " + column + " " + e);
                     } catch (InvocationTargetException e) {
-                        LOG.error(dest.getClass().getName()  + " " + column + " " + e);
+                        LOG.warn(dest.getClass().getName()  + " " + column + " " + e);
                     }
                 } else {
                     LOG.debug("Column " + column + " was NULL");
@@ -806,9 +881,9 @@ class upgrade_30_31 extends AbstractUpgradeScript {
                             Method setMethod = definingClass.getDeclaredMethod( "set" + baseMethodName, classes );
                             setterMap.put(column, setMethod);
                         } catch (SecurityException e) {
-                            LOG.error(e);
+                            LOG.warn(e);
                         } catch (NoSuchMethodException e) {
-                            LOG.error(e);
+                            LOG.warn(e);
                         }
                         break;
                     }
