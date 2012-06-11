@@ -20,11 +20,11 @@ public class S3Event
 	public S3Event(boolean createOrDelete, long sizeMegs, String ownerId,
 			String ownerName, String accountId, String accountName)
 	{
+		super();
 		if (sizeMegs < 0) throw new IllegalArgumentException("sizeMegs for s3 objects cannot be negative");
 		if (ownerId==null) throw new IllegalArgumentException("ownerId cant be null");
 		if (accountId==null) throw new IllegalArgumentException("ownerId cant be null");
 
-		super();
 		this.objectOrBucket = true;
 		this.createOrDelete = createOrDelete;
 		this.sizeMegs = sizeMegs;
@@ -42,11 +42,10 @@ public class S3Event
 	public S3Event(boolean createOrDelete, String ownerId,	String ownerName,
 			String accountId, String accountName)
 	{
-		if (sizeMegs < 0) throw new IllegalArgumentException("sizeMegs for s3 objects cannot be negative");
+		super();
 		if (ownerId==null) throw new IllegalArgumentException("ownerId cant be null");
 		if (accountId==null) throw new IllegalArgumentException("ownerId cant be null");
 
-		super();
 		this.objectOrBucket = false;
 		this.createOrDelete = createOrDelete;
 		this.sizeMegs = 0l;
