@@ -302,7 +302,7 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
     return this;
   }
   
-  private static void removeAddress( String ipAddress ) {
+  private static void removeAddress( final String ipAddress ) {
     try {
       Addresses.getInstance( ).disable( ipAddress );
     } catch ( NoSuchElementException e1 ) {
@@ -310,7 +310,11 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
     }
     EntityWrapper<Address> db = EntityWrapper.get( Address.class );
     try {
-      Address dbAddr = db.getUnique( new Address( ipAddress ) );
+      Address dbAddr = db.getUnique( new Address( ) {
+        {
+          this.setDisplayName( ipAddress );
+        }
+      } );
       db.delete( dbAddr );
       db.commit( );
     } catch ( Exception e ) {
