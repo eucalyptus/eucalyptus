@@ -286,8 +286,8 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
       public void top( ) {
         Address.this.instanceId = UNASSIGNED_INSTANCEID;
         Address.this.instanceAddress = UNASSIGNED_INSTANCEADDR;
-        Address.this.setOwner( Principals.nobodyFullName( ) );
         Address.removeAddress( Address.this.getDisplayName( ) );
+        Address.this.setOwner( Principals.nobodyFullName( ) );
         Address.this.stateUuid = UUID.randomUUID( ).toString( );
         Address.this.atomicState.attemptMark( State.unallocated, false );
       }
@@ -302,7 +302,7 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
     return this;
   }
   
-  private static void removeAddress( String ipAddress ) {
+  private static void removeAddress( final String ipAddress ) {
     try {
       Addresses.getInstance( ).disable( ipAddress );
     } catch ( NoSuchElementException e1 ) {
@@ -310,10 +310,13 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
     }
     EntityWrapper<Address> db = EntityWrapper.get( Address.class );
     try {
-      Address dbAddr = db.getUnique( new Address( ipAddress ) );
+      Address searchAddr = new Address( ipAddress );
+      searchAddr.setOwner( null );
+      Address dbAddr = db.getUnique( searchAddr );
       db.delete( dbAddr );
       db.commit( );
     } catch ( Exception e ) {
+      Logs.extreme( ).error( e, e );
       db.rollback( );
     }
   }
