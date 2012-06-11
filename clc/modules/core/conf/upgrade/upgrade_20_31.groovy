@@ -668,7 +668,7 @@ class upgrade_20_31 extends AbstractUpgradeScript {
          * only for account names, so perhaps it should be relaxed.
          * Duplicate and trailing hyphens must also be removed.
          */
-        return (user_name =~ /([^a-zA-Z0-9+=.,@-])/).replaceAll("-")
+        return (user_name =~ /([^a-zA-Z0-9+=.,@-])/).replaceAll("-0").toLowerCase()
     }
 
     public boolean upgradeWalrus() {
