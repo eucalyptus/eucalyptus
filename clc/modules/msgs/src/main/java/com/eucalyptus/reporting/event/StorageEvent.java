@@ -27,6 +27,7 @@ public class StorageEvent
 		if (accountName==null) throw new IllegalArgumentException("accountName cant be null");
 		if (clusterName==null) throw new IllegalArgumentException("clusterName cant be null");
 		if (availabilityZone==null) throw new IllegalArgumentException("availabilityZone cant be null");
+		if (sizeMegs < 0) throw new IllegalArgumentException("Storage size cannot be negative");
 
 		this.eventType        = eventType;
 		this.createOrDelete   = createOrDelete;
