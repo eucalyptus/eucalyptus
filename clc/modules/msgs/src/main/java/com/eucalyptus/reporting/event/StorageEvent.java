@@ -20,6 +20,14 @@ public class StorageEvent
 			long sizeMegs, String ownerId, String ownerName, String accountId,
 			String accountName, String clusterName,	String availabilityZone)
 	{
+		if (eventType==null) throw new IllegalArgumentException("eventType cant be null");
+		if (ownerId==null) throw new IllegalArgumentException("ownerId cant be null");
+		if (ownerName==null) throw new IllegalArgumentException("ownerName cant be null");
+		if (accountId==null) throw new IllegalArgumentException("accountId cant be null");
+		if (accountName==null) throw new IllegalArgumentException("accountName cant be null");
+		if (clusterName==null) throw new IllegalArgumentException("clusterName cant be null");
+		if (availabilityZone==null) throw new IllegalArgumentException("availabilityZone cant be null");
+
 		this.eventType        = eventType;
 		this.createOrDelete   = createOrDelete;
 		this.sizeMegs         = sizeMegs;
