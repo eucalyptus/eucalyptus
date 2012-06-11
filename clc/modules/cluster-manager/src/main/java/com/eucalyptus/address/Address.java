@@ -286,8 +286,8 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
       public void top( ) {
         Address.this.instanceId = UNASSIGNED_INSTANCEID;
         Address.this.instanceAddress = UNASSIGNED_INSTANCEADDR;
-        Address.this.setOwner( Principals.nobodyFullName( ) );
         Address.removeAddress( Address.this.getDisplayName( ) );
+        Address.this.setOwner( Principals.nobodyFullName( ) );
         Address.this.stateUuid = UUID.randomUUID( ).toString( );
         Address.this.atomicState.attemptMark( State.unallocated, false );
       }
@@ -314,6 +314,7 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
       db.delete( dbAddr );
       db.commit( );
     } catch ( Exception e ) {
+      Logs.extreme( ).error( e, e );
       db.rollback( );
     }
   }
