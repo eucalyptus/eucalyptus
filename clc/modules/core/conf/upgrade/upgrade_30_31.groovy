@@ -205,6 +205,8 @@ class upgrade_30_31 extends AbstractUpgradeScript {
 
         upgradeNetwork();
         upgradeWalrus();
+        upgradeISCSIVolumeInfo();
+        entityKeys.remove("ISCSIVolumeInfo");
         upgradeMisc();
         entityKeys.remove("CHAPUserInfo");
         upgradeComponents();
@@ -676,6 +678,25 @@ class upgrade_30_31 extends AbstractUpgradeScript {
         db.commit();
     }
 
+    private void upgradeISCSIVolumeInfo() {
+        EntityWrapper<ISCSIVolumeInfo> db = EntityWrapper.get(ISCSIVolumeInfo.class);
+        def conn = connMap['eucalyptus_storage'];
+        def iviSetterMap = buildSetterMap(conn, "ISCSIVolumeInfo");
+        conn.rows("""select * from ISCSIVolumeInfo;""").each { row ->
+            ISCSIVolumeInfo ivi = new ISCSIVolumeInfo();
+            initMetaClass(ivi, ivi.class);
+            ivi = convertRowToObject(iviSetterMap, row, ivi);
+            // No column decorators in this class
+            ivi.setStoreName(row.storeName);
+            ivi.setStoreUser(row.storeUser);
+            ivi.setTid(row.tid);
+            ivi.setLun(row.lun);
+            ivi.setEncryptedPassword(row.encryptedPassword);
+            db.add(ivi);
+         }
+         db.commit();
+    }
+
     private void upgradeEntity(entityKey) {
         String contextName = getContextName(entityKey);
         Sql conn = connMap[contextName];
@@ -823,7 +844,7 @@ class upgrade_30_31 extends AbstractUpgradeScript {
                                     "auth_group_id", "auth_user_id" ])) {
                 // This should probably be a fatal exception
                 // throw new GroovyRuntimeException("Setter for " + dest.getClass().getName() + "." + column + " was NULL");
-                LOG.warn("Setter for " + dest.getClass().getName() + "." + column + " was NULL");
+                LOG.debug("Setter for " + dest.getClass().getName() + "." + column + " was NULL");
             }
         }
 
@@ -890,13 +911,15 @@ class upgrade_30_31 extends AbstractUpgradeScript {
                             classes[0] = f.getType();
                             if (baseMethodName == "VolumeSc") {
                                 baseMethodName = "VolumeCluster";
+                            } else if (baseMethodName == "IGroupName") {
+                                baseMethodName = "iGroupName";
                             }
                             Method setMethod = definingClass.getDeclaredMethod( "set" + baseMethodName, classes );
                             setterMap.put(column, setMethod);
                         } catch (SecurityException e) {
                             LOG.warn(e);
                         } catch (NoSuchMethodException e) {
-                            LOG.warn(e);
+                            LOG.info(e);
                         }
                         break;
                     }
