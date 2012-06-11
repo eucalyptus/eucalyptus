@@ -310,11 +310,9 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
     }
     EntityWrapper<Address> db = EntityWrapper.get( Address.class );
     try {
-      Address dbAddr = db.getUnique( new Address( ) {
-        {
-          this.setDisplayName( ipAddress );
-        }
-      } );
+      Address searchAddr = new Address( ipAddress );
+      searchAddr.setOwner( null );
+      Address dbAddr = db.getUnique( searchAddr );
       db.delete( dbAddr );
       db.commit( );
     } catch ( Exception e ) {
