@@ -499,8 +499,13 @@ class upgrade_30_31 extends AbstractUpgradeScript {
 
         EntityWrapper<ImageInfo> dbGen = EntityWrapper.get(ImageInfo.class);
         connMap['eucalyptus_cloud'].rows("SELECT * FROM metadata_images").each { img ->
-            User user = Accounts.lookupUserById( img.metadata_user_id );
-            UserFullName ufn = new UserFullName(user);
+            User user = null;
+            try {
+                user = Accounts.lookupUserById( img.metadata_user_id );
+            } catch (Exception e) {
+                // leave user as null, which translates to "nobody"
+            }
+            UserFullName ufn = UserFullName.getInstance(user, "");
             def ii = null;
             switch (img.metadata_image_discriminator) {
                 case "kernel":
