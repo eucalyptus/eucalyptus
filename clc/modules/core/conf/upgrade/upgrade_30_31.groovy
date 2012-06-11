@@ -141,6 +141,20 @@ import com.eucalyptus.images.KernelImageInfo;
 import com.eucalyptus.images.MachineImageInfo;
 import com.eucalyptus.images.RamdiskImageInfo;
 
+//VMware
+import com.eucalyptus.cloud.ws.BrokerGroupInfo;
+import com.eucalyptus.cloud.ws.BrokerVolumeInfo;
+import com.eucalyptus.broker.vmware.VMwareBrokerInfo;
+import com.eucalyptus.broker.vmware.VMwareBrokerConfiguration;
+
+// SAN
+import edu.ucsb.eucalyptus.cloud.entities.SANInfo;
+import edu.ucsb.eucalyptus.cloud.entities.DASInfo;
+import edu.ucsb.eucalyptus.cloud.entities.IgroupInfo;
+import edu.ucsb.eucalyptus.cloud.entities.SANVolumeInfo;
+import edu.ucsb.eucalyptus.cloud.entities.NetappInfo;
+import com.eucalyptus.util.BlockStorageUtil;
+
 class upgrade_30_31 extends AbstractUpgradeScript {
     static final List<String> FROM_VERSION = ["3.0.0", "3.0.1", "3.0.2"];
     static final List<String> TO_VERSION   = ["3.1.0"];
@@ -224,6 +238,7 @@ class upgrade_30_31 extends AbstractUpgradeScript {
         componentMap.put("ClusterConfiguration", Class.forName("com.eucalyptus.cluster.ClusterConfiguration"));
         componentMap.put("StorageControllerConfiguration", Class.forName("com.eucalyptus.config.StorageControllerConfiguration"));
         componentMap.put("WalrusConfiguration", Class.forName("com.eucalyptus.config.WalrusConfiguration"));
+        componentMap.put("VMwareBrokerConfiguration", Class.forName("com.eucalyptus.broker.vmware.VMwareBrokerConfiguration"));
 
         confConn.rows("""select * from config_component_base""").each { row ->
             Class componentType = componentMap[row.DTYPE];
@@ -662,12 +677,7 @@ class upgrade_30_31 extends AbstractUpgradeScript {
     }
 
     private void upgradeEntity(entityKey) {
-        def optionalTables = [ 'das_info' ]
         String contextName = getContextName(entityKey);
-        if (optionalTables.contains(entityKey) && !has_table(contextName, entityKey)) {
-            LOG.info("table ${entityKey} does not exist; skipping.");
-            return;
-        }
         Sql conn = connMap[contextName];
         if (conn != null) {
             Map<String, Method> setterMap = buildSetterMap(conn, entityKey);
@@ -788,6 +798,9 @@ class upgrade_30_31 extends AbstractUpgradeScript {
                                 } else {
                                     setter.invoke(dest, enumClass.valueOf(o));
                                 }
+                            } else if (setter.getName() == 'setSanPassword') {
+                                // decrypt the password so that it can be re-encrypted
+                                setter.invoke(dest, BlockStorageUtil.decryptSCTargetPassword(o));
                             } else {
                                 setter.invoke(dest, enumClass.valueOf(o));
                             }
@@ -981,5 +994,16 @@ class upgrade_30_31 extends AbstractUpgradeScript {
         entities.add(WalrusStatsInfo.class)
         entities.add(ZoneInfo.class)
 
+        // VMware
+        entities.add(BrokerVolumeInfo.class);
+        entities.add(BrokerGroupInfo.class);
+        entities.add(VMwareBrokerInfo.class);
+
+        // SAN
+        entities.add(SANInfo.class);
+        entities.add(DASInfo.class);
+        entities.add(IgroupInfo.class);
+        entities.add(SANVolumeInfo.class);
+        entities.add(NetappInfo.class);
     }
 }
