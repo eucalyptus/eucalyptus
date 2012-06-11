@@ -1,5 +1,7 @@
 package com.eucalyptus.context;
 
+import java.util.concurrent.Callable;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.log4j.Logger;
 import org.mule.DefaultMuleEvent;
@@ -25,6 +27,8 @@ import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
+import com.eucalyptus.empyrean.Empyrean;
+import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Exceptions;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
@@ -96,20 +100,19 @@ public class ServiceContext {
       LOG.error( ex, ex );
       throw new ServiceDispatchException( "Failed to dispatch message to " + dest + " caused by failure to obtain service dispatcher reference: "
                                           + ex.getMessage( ), ex );
-    } /*finally {
-      Threads.lookup( Empyrean.class, ServiceContext.class ).submit( new Runnable( ) {
-        @Override
-        public void run( ) {
-          try {
-            TimeUnit.SECONDS.sleep( 60 );
-            Contexts.clear( ctx );
-          } catch ( InterruptedException ex ) {
-            Thread.currentThread( ).interrupt( );
-            return;
-          }
+    } 
+    Threads.enqueue( Empyrean.class, ServiceContext.class, new Callable<Boolean>( ) {
+      @Override
+      public Boolean call( ) {
+        try {
+          TimeUnit.SECONDS.sleep( 60 );
+          Contexts.clear( ctx );
+        } catch ( InterruptedException ex ) {
+          Thread.currentThread( ).interrupt( );
         }
-      } );
-      }*/
+        return true;
+      }
+    } );
   }
   
   public static <T> T send( ComponentId dest, Object msg ) throws Exception {
