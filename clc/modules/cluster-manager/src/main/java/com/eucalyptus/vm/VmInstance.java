@@ -979,23 +979,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       try {
     	final OwnerFullName owner = this.getOwner();
     	final String userId = owner.getUserId();
-		/*
-		 * NOTE: We must lookup the account name and username for each
- 		 * event sent. This is for several reasons. First, the reporting
- 		 * subsystem keeps a historical record of all account names and
- 		 * usernames, so we need the account name and user name at each
- 		 * specific time. Second, the reporting subsystem is completely
- 		 * decoupled from the rest of the system and may run on a
- 		 * separate box with a different database (data warehouse
- 		 * configuration), so it will not have access to the Accounts
-		 * class and cannot perform lookups, so it needs all information
- 		 * in the event. Third, the reporting subsystem could not
-  		 * perform lookups anyways, since the account or user may have
-  		 * been deleted but we wish to generate a historical report of
-  		 * his usage. For these reasons, we must provide all reporting
-  		 * information in the event, and must look it up every time to
-  		 * detect changes. -tw
-  		 */
     	final String userName = Accounts.lookupUserById(userId).getName();
     	final String accountId = owner.getAccountNumber();
     	final String accountName = Accounts.lookupAccountById(accountId).getName();

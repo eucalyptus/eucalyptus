@@ -44,6 +44,21 @@ public class InstanceEvent
 	private Long   cumulativeDiskIoMegs;
 	
 
+	/**
+ 	 * Constructor for InstanceEvent. 
+ 	 *
+ 	 * NOTE: We must include separate userId, username, accountId, and
+ 	 *  accountName with each event sent, even though the names can be looked
+ 	 *  up using ID's. We must include this redundant information, for
+ 	 *  several reasons. First, the reporting subsystem may run on a totally
+ 	 *  separate machine outside of eucalyptus (data warehouse configuration)
+ 	 *  so it may not have access to the regular eucalyptus database to lookup
+ 	 *  usernames or account names. Second, the reporting subsystem stores
+ 	 *  <b>historical</b> information, and its possible that usernames and
+ 	 *  account names can change, or their users or accounts can be deleted.
+ 	 *  Thus we need the user name or account name at the time an event was
+ 	 *  sent.
+ 	 */
 	public InstanceEvent(String uuid, String instanceId, String instanceType,
 			String userId, String userName, String accountId,
 			String accountName, String clusterName,	String availabilityZone,
@@ -78,9 +93,22 @@ public class InstanceEvent
 		this.cumulativeDiskIoMegs = cumulativeDiskIoMegs;
 	}
 	
+
 	/**
-	 * Copy constructor
-	 */
+ 	 * Copy Constructor.
+ 	 *
+ 	 * NOTE: We must include separate userId, username, accountId, and
+ 	 *  accountName with each event sent, even though the names can be looked
+ 	 *  up using ID's. We must include this redundant information, for
+ 	 *  several reasons. First, the reporting subsystem may run on a totally
+ 	 *  separate machine outside of eucalyptus (data warehouse configuration)
+ 	 *  so it may not have access to the regular eucalyptus database to lookup
+ 	 *  usernames or account names. Second, the reporting subsystem stores
+ 	 *  <b>historical</b> information, and its possible that usernames and
+ 	 *  account names can change, or their users or accounts can be deleted.
+ 	 *  Thus we need the user name or account name at the time an event was
+ 	 *  sent.
+ 	 */
 	public InstanceEvent(InstanceEvent e)
 	{
 		this.uuid = e.uuid;
