@@ -1062,7 +1062,7 @@ public class WalrusManager {
 	
 								QueueSender queueSender = QueueFactory.getInstance().getSender(QueueIdentifier.S3);
 
-								queueSender.send(new S3Event(true, size / WalrusProperties.M,
+								queueSender.send(new S3Event(false, size / WalrusProperties.M,
 										userId, userName, accountId, accountName));
 
 							} catch(Exception ex) {
