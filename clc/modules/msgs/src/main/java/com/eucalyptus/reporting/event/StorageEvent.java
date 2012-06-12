@@ -106,4 +106,10 @@ public class StorageEvent
 		return true;
 	}
 	
+    public String toString()
+    {
+        return String.format("[type:%s,isCreate:%b,sizeMegs:%d,ownerId:%s,ownerName:%s,accountId:%s,accountName:%s,clusterName:%s,zone:%s]",
+                    eventType, createOrDelete, sizeMegs, ownerId, ownerName, accountId, accountName, clusterName, availabilityZone);
+    }
+
 }

@@ -121,5 +121,10 @@ public class S3Event
 		return true;
 	}
 
+	public String toString()
+	{
+		return String.format("[isObj:%b,isCreate:%b,sizeMegs:%d,ownerId:%s,ownerName:%s,accountId:%s,accountName:%s]",
+					objectOrBucket, createOrDelete, sizeMegs, ownerId, ownerName, accountId, accountName);
+	}
 }
 
