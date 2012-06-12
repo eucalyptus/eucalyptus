@@ -378,7 +378,8 @@ class upgrade_30_31 extends AbstractUpgradeScript {
                               'metadata_volumes']) {
             connMap['eucalyptus_cloud'].rows("""select distinct metadata_user_name,metadata_user_id,metadata_account_id,metadata_account_name from """ + table).each {
                 if (!phantomUserMap.containsKey(it.metadata_user_id) &&
-                    !realUserMap.containsKey(it.metadata_user_id)) {
+                    !realUserMap.containsKey(it.metadata_user_id) &&
+                    (it.metadata_account_id != '000000000001')) {
                     addPhantom(it.metadata_user_id,
                                it.metadata_user_name,
                                it.metadata_account_id,
