@@ -784,30 +784,39 @@ static int disk_creator (artifact * a) // creates a 'raw' disk based on partitio
         // we mount such a device here so as to copy files to the root partition
         // (we cannot mount the dev of the partition's blob because it becomes
         // 'busy' after the clone operation)
-        char * dev = NULL;
+        char * mapper_dev = NULL;
         char dev_with_p [EUCA_MAX_PATH];
         char dev_without_p [EUCA_MAX_PATH]; // on Ubuntu Precise, some dev names do not have 'p' in them
         snprintf (dev_with_p,    sizeof (dev_with_p),    "%sp%d", blockblob_get_dev (a->bb), root_entry);
         snprintf (dev_without_p, sizeof (dev_without_p), "%s%d",  blockblob_get_dev (a->bb), root_entry);
         if (check_path (dev_with_p) == 0) {
-            dev = dev_with_p;
+            mapper_dev = dev_with_p;
         } else if (check_path (dev_without_p) == 0) {
-            dev = dev_without_p;
+            mapper_dev = dev_without_p;
         } else {
-            logprintfl (EUCAERROR, "[%s] failed to stat partition device [%s]\n", a->instanceId, dev, strerror (errno));
+            logprintfl (EUCAERROR, "[%s] failed to stat partition device [%s]\n", a->instanceId, mapper_dev, strerror (errno));
             goto cleanup;
         }
-        logprintfl (EUCAINFO, "[%s] mounted partition device %s\n", a->instanceId, dev);
+        logprintfl (EUCAINFO, "[%s] found partition device %s\n", a->instanceId, mapper_dev);
+
+        // point a loopback device at the partition device because grub-probe on Ubuntu Precise 
+        // sometimes does not grok root partitions mounted from /dev/mapper/... 
+        char loop_dev [EUCA_MAX_PATH];
+        if (diskutil_loop (mapper_dev, 0, loop_dev, sizeof (loop_dev)) != OK) {
+            logprintfl (EUCAINFO, "[%s] error: failed to attach '%s' on a loopback device\n", a->instanceId, mapper_dev);
+            goto cleanup;
+        }
+        assert (strncmp (loop_dev, "/dev/loop", 9) == 0);
 
         // mount the root partition
         char mnt_pt [EUCA_MAX_PATH] = "/tmp/euca-mount-XXXXXX";
         if (safe_mkdtemp (mnt_pt)==NULL) {
             logprintfl (EUCAINFO, "[%s] error: mkdtemp() failed: %s\n", a->instanceId, strerror (errno));
-            goto cleanup;
+            goto unloop;
         }
-        if (diskutil_mount (dev, mnt_pt) != OK) {
-            logprintfl (EUCAINFO, "[%s] error: failed to mount '%s' on '%s'\n", a->instanceId, dev, mnt_pt);
-            goto cleanup;
+        if (diskutil_mount (loop_dev, mnt_pt) != OK) {
+            logprintfl (EUCAINFO, "[%s] error: failed to mount '%s' on '%s'\n", a->instanceId, loop_dev, mnt_pt);
+            goto unloop;
         }
         
         // copy in kernel and ramdisk and run grub over the root partition and the MBR
@@ -834,6 +843,12 @@ static int disk_creator (artifact * a) // creates a 'raw' disk based on partitio
         }
         if (rmdir (mnt_pt) != 0) {
             logprintfl (EUCAINFO, "[%s] error: failed to remove %s (there may be a resource leak): %s\n", a->instanceId, mnt_pt, strerror(errno));
+            bootification_failed = 1;
+        }
+
+    unloop:
+        if (diskutil_unloop (loop_dev) != OK) {
+            logprintfl (EUCAINFO, "[%s] error: failed to remove %s (there may be a resource leak): %s\n", a->instanceId, loop_dev, strerror(errno));
             bootification_failed = 1;
         }
         if (bootification_failed)
@@ -1958,6 +1973,7 @@ static int provisioned_instances = 0;
 static pthread_mutex_t competitors_mutex = PTHREAD_MUTEX_INITIALIZER; // process-global mutex
 #define TOTAL_VMS 1+SERIAL_ITERATIONS+COMPETITIVE_ITERATIONS*COMPETITIVE_PARTICIPANTS
 #define VBR_SIZE ( 2LL * MEGABYTE ) / VBR_SIZE_SCALING
+#define EKI_SIZE         ( 1024LL ) / VBR_SIZE_SCALING
 static virtualMachine vm_slots [TOTAL_VMS];
 static char vm_ids [TOTAL_VMS][PATH_MAX];
 static boolean do_fork = 0;
@@ -1971,8 +1987,8 @@ static int provision_vm (const char * id, const char * sshkey, const char * eki,
     pthread_mutex_unlock (&competitors_mutex);
 
     bzero   (vm, sizeof (*vm));
-    add_vbr (vm, VBR_SIZE, NC_FORMAT_NONE, "none", eki,    NC_RESOURCE_KERNEL,    NC_LOCATION_NONE, 0, 0, 0, NULL);
-    add_vbr (vm, VBR_SIZE, NC_FORMAT_NONE, "none", eri,    NC_RESOURCE_RAMDISK,   NC_LOCATION_NONE, 0, 0, 0, NULL);
+    add_vbr (vm, EKI_SIZE, NC_FORMAT_NONE, "none", eki,    NC_RESOURCE_KERNEL,    NC_LOCATION_NONE, 0, 0, 0, NULL);
+    add_vbr (vm, EKI_SIZE, NC_FORMAT_NONE, "none", eri,    NC_RESOURCE_RAMDISK,   NC_LOCATION_NONE, 0, 0, 0, NULL);
     add_vbr (vm, VBR_SIZE, NC_FORMAT_EXT3, "ext3", emi,    NC_RESOURCE_IMAGE,     NC_LOCATION_NONE, 0, 1, BUS_TYPE_SCSI, NULL);
     add_vbr (vm, VBR_SIZE, NC_FORMAT_EXT3, "ext3", "none", NC_RESOURCE_EPHEMERAL, NC_LOCATION_NONE, 0, 3, BUS_TYPE_SCSI, NULL);
     add_vbr (vm, VBR_SIZE, NC_FORMAT_SWAP, "swap", "none", NC_RESOURCE_SWAP,      NC_LOCATION_NONE, 0, 2, BUS_TYPE_SCSI, NULL);
