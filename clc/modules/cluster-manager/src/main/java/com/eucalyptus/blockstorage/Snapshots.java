@@ -76,6 +76,8 @@ import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import org.hibernate.criterion.Example;
 import org.hibernate.exception.ConstraintViolationException;
+import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.cloud.CloudMetadata.SnapshotMetadata;
@@ -295,12 +297,17 @@ public class Snapshots {
   
   public static void fireCreateEvent( final Snapshot snap ) {
     try {
+
+      final String userId = snap.getOwnerUserId();
+      final String accountId = snap.getOwnerAccountNumber();
+      final String userName = Accounts.lookupUserById(userId).getName();
+      final String accountName = Accounts.lookupAccountById(accountId).getName();
+
       ListenerRegistry.getInstance( ).fireEvent( new StorageEvent( StorageEvent.EventType.EbsSnapshot, true, snap.getVolumeSize( ),
-                                                                   snap.getOwnerUserId( ), snap.getOwnerUserName( ),
-                                                                   snap.getOwnerAccountNumber( ), snap.getOwnerAccountName( ),
+                                                                   userId, userName, accountId, accountName,
                                                                    snap.getVolumeCluster( ), snap.getVolumePartition( ) ) );
-    } catch ( EventFailedException ex ) {
-      LOG.error( ex, ex );
+    } catch ( Exception ex ) {
+      LOG.error( ex );
     }
   }
   
@@ -318,13 +325,16 @@ public class Snapshots {
   
   public static void fireDeleteEvent( Snapshot snap ) {
     try {
+      final String userId = snap.getOwnerUserId();
+      final String accountId = snap.getOwnerAccountNumber();
+      final String userName = Accounts.lookupUserById(userId).getName();
+      final String accountName = Accounts.lookupAccountById(accountId).getName();
+
       ListenerRegistry.getInstance( ).fireEvent( new StorageEvent( StorageEvent.EventType.EbsSnapshot, false, snap.getVolumeSize( ),
-                                                                   snap.getOwnerUserId( ), snap.getOwnerUserName( ),
-                                                                   snap.getOwnerAccountNumber( ), snap.getOwnerAccountName( ),
+                                                                   userId, userName, accountId, accountName,
                                                                    snap.getVolumeCluster( ), snap.getVolumePartition( ) ) );
     } catch ( Exception ex ) {
-      SnapshotManager.LOG.error( ex );
-      Logs.extreme( ).error( ex, ex );
+      LOG.error( ex );
     }
   }
 }

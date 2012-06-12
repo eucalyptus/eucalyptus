@@ -433,6 +433,17 @@ public class WalrusManager {
 					storageManager.createBucket(bucketName);
 					if (WalrusProperties.trackUsageStatistics)
 						walrusStatistics.incrementBucketCount();
+
+					/* Send an event to reporting to report this S3 usage. */
+
+					final String userId = ctx.getUser().getUserId();
+					final String accountId = ctx.getAccount().getAccountNumber();
+					final String userName = Accounts.lookupUserById(userId).getName();
+					final String accountName = Accounts.lookupAccountById(accountId).getName();
+
+					QueueSender queueSender = QueueFactory.getInstance().getSender(QueueIdentifier.S3);
+					queueSender.send(new S3Event(true, userId, userName, accountId, accountName));
+
 				} catch (IOException ex) {
 					LOG.error(ex, ex);
 					throw new BucketAlreadyExistsException(bucketName);
@@ -445,10 +456,9 @@ public class WalrusManager {
 						throw new EucalyptusCloudException("Unable to create bucket: " + bucketName);						
 					}
 				}
-				QueueSender queueSender = QueueFactory.getInstance().getSender(QueueIdentifier.S3);
-				queueSender.send(new S3Event(true, ctx.getUser().getUserId(),
-						ctx.getUser().getName(), ctx.getAccount().getAccountNumber(),
-						ctx.getAccount().getName()));
+
+
+
 			} else {
 				LOG.error( "Not authorized to create bucket by " + ctx.getUserFullName( ) );
 				db.rollback();
@@ -546,14 +556,24 @@ public class WalrusManager {
 						storageManager.deleteBucket(bucketName);
 						if (WalrusProperties.trackUsageStatistics)
 							walrusStatistics.decrementBucketCount();
-					} catch (IOException ex) {
+
+						/* Send an event to reporting to report this S3 usage. */
+	
+						final String userId = ctx.getUser().getUserId();
+						final String accountId = ctx.getAccount().getAccountNumber();
+						final String userName = Accounts.lookupUserById(userId).getName();
+						final String accountName = Accounts.lookupAccountById(accountId).getName();
+
+						QueueSender queueSender = QueueFactory.getInstance().getSender(QueueIdentifier.S3);
+						queueSender.send(new S3Event(false, userId, userName, accountId, accountName));
+
+					} catch (Exception ex) {
 						// set exception code in reply
 						LOG.error(ex);
 					}
-					QueueSender queueSender = QueueFactory.getInstance().getSender(QueueIdentifier.S3);
-					queueSender.send(new S3Event(false, ctx.getUser().getUserId(),
-							ctx.getUser().getName(), ctx.getAccount().getAccountNumber(),
-							ctx.getAccount().getName()));
+
+
+
 					Status status = new Status();
 					status.setCode(204);
 					status.setDescription("No Content");
@@ -1034,9 +1054,22 @@ public class WalrusManager {
 							try {
 								ObjectInfo foundDeleteMarker = dbObject.getUnique(deleteMarker);
 								dbObject.delete(foundDeleteMarker);
-							} catch(EucalyptusCloudException ex) {
+
+								/* Send an event to reporting to report this S3 usage. */
+			
+								final String userId = ctx.getUser().getUserId();
+								final String accountId = ctx.getAccount().getAccountNumber();
+								final String userName = Accounts.lookupUserById(userId).getName();
+								final String accountName = Accounts.lookupAccountById(accountId).getName();
+	
+								QueueSender queueSender = QueueFactory.getInstance().getSender(QueueIdentifier.S3);
+
+								queueSender.send(new S3Event(true, size / WalrusProperties.M,
+										userId, userName, accountId, accountName));
+
+							} catch(Exception ex) {
 								//no delete marker found.
-								LOG.trace("No delete marker found for: " + bucketName + "/" + objectKey);
+								LOG.error("Deletion failed for: " + bucketName + "/" + objectKey, ex);
 							}
 							dbObject.commit();
 
@@ -1056,14 +1089,8 @@ public class WalrusManager {
 							messenger.clearQueues(key);
 							messenger.removeQueue(key, randomKey);
 							LOG.info("Transfer complete: " + key);
-							QueueSender queueSender = QueueFactory.getInstance().getSender(QueueIdentifier.S3);
 
-							queueSender.send(new S3Event(true,
-									size / WalrusProperties.M,
-									ctx.getUser().getUserId(),
-									ctx.getUser().getName(),
-									ctx.getAccount().getAccountNumber(),
-									ctx.getAccount().getName()));
+
 							break;
 						} else {
 							assert (WalrusDataMessage.isData(dataMessage));
@@ -1359,15 +1386,19 @@ public class WalrusManager {
 						logData.setObjectSize(size);
 						reply.setLogData(logData);
 					}
-					QueueSender queueSender =
-							QueueFactory.getInstance()
-							.getSender(QueueIdentifier.S3);
-					queueSender.send(new S3Event(true,
-							size / WalrusProperties.M,
-							ctx.getUser().getUserId(),
-							ctx.getUser().getName(),
-							ctx.getAccount().getAccountNumber(),
-							ctx.getAccount().getName()));
+
+
+					/* Send an event to reporting to report this S3 usage. */
+	
+					final String userId = ctx.getUser().getUserId();
+					final String accountId = ctx.getAccount().getAccountNumber();
+					final String userName = Accounts.lookupUserById(userId).getName();
+					final String accountName = Accounts.lookupAccountById(accountId).getName();
+
+					QueueSender queueSender = QueueFactory.getInstance().getSender(QueueIdentifier.S3);
+					queueSender.send(new S3Event(true, size / WalrusProperties.M,
+							userId, userName, accountId, accountName));
+
 				} catch (Exception ex) {
 					LOG.error(ex);
 					db.rollback();
@@ -1659,13 +1690,18 @@ public class WalrusManager {
 				storageManager.deleteObject(bucketName, objectName);
 				if (WalrusProperties.trackUsageStatistics && (size > 0))
 					walrusStatistics.updateSpaceUsed(-size);
-				QueueSender queueSender =
-						QueueFactory.getInstance()
-						.getSender(QueueIdentifier.S3);
-				queueSender.send(new S3Event(false,
-						size / WalrusProperties.M, userId, user,
-						accountNumber, account));			
-			} catch (IOException ex) {
+
+
+					/* Send an event to reporting to report this S3 usage. */
+	
+					final String userName = Accounts.lookupUserById(this.userId).getName();
+					final String accountName = Accounts.lookupAccountById(this.accountNumber).getName();
+
+					QueueSender queueSender = QueueFactory.getInstance().getSender(QueueIdentifier.S3);
+					queueSender.send(new S3Event(false, size / WalrusProperties.M, this.userId, userName,
+						this.accountNumber, accountName));			
+
+			} catch (Exception ex) {
 				LOG.error(ex, ex);
 			}
 		}
