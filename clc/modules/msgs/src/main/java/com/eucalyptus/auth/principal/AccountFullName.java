@@ -180,7 +180,7 @@ public class AccountFullName implements OwnerFullName {
     try {
       account = Accounts.lookupAccountById( accountId );
     } catch ( AuthException ex ) {
-      LOG.error( ex, ex );
+      account = Principals.systemAccount( );
     }
     return getInstance( account, relativePath );
   }

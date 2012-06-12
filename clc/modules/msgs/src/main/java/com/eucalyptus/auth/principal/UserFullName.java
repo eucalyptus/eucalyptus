@@ -111,7 +111,8 @@ public class UserFullName implements OwnerFullName {
         userIdMap.put( userId, getInstance( Accounts.lookupUserById( userId ), relativePath ) );
         return userIdMap.get( userId );
       } catch ( final AuthException ex ) {
-        throw Exceptions.toUndeclared( ex );
+        userIdMap.put( userId, getInstance( Principals.systemUser( ), relativePath ) );
+        return userIdMap.get( userId );
       }
     }
   }
