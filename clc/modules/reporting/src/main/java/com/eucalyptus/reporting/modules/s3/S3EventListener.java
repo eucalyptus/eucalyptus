@@ -77,6 +77,7 @@ public class S3EventListener
 					long addAmountMegs = (s3Event.isCreateOrDelete())
 						? s3Event.getSizeMegs()
 						: -s3Event.getSizeMegs();
+					LOG.info("Receive event:" + s3Event.toString() + " usageData:" + usageData + " addNum:" + addNum + " addAmountMegs:" + addAmountMegs);
 
 					Long newObjectsNum =
 						addLong(usageData.getObjectsNum(), addNum);
@@ -90,6 +91,8 @@ public class S3EventListener
 					Long newBucketsNum =
 						addLong(usageData.getBucketsNum(), addNum);
 					usageData.setBucketsNum(newBucketsNum);
+					LOG.info("Receive event:" + s3Event.toString() + " usageData:" + usageData + " addNum:" + addNum);
+
 					
 				}
 
