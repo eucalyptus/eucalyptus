@@ -126,6 +126,7 @@ import com.eucalyptus.auth.DatabaseAccountProxy;
 import com.eucalyptus.auth.principal.User.RegistrationStatus;
 import com.eucalyptus.cloud.ImageMetadata;
 import com.eucalyptus.blockstorage.State;
+import com.eucalyptus.cloud.util.Reference;
 
 // Reporting classes
 import com.eucalyptus.reporting.modules.storage.StorageSnapshotKey;
@@ -797,7 +798,7 @@ class upgrade_30_31 extends AbstractUpgradeScript {
         enumSetterMap.put("setArchitecture", ImageMetadata.Architecture.class);
         enumSetterMap.put("setImageType", ImageMetadata.Type.class);
 
-        columns.each{ c -> LOG.debug("column: " + c); }
+        // columns.each{ c -> LOG.debug("column: " + c); }
         for (String column : columns) {
             Method setter = setterMap.get(column);
             if(setter == null) {
@@ -817,15 +818,19 @@ class upgrade_30_31 extends AbstractUpgradeScript {
                                     setter.invoke(dest, NetworkGroup.State.valueOf(o));
                                 } else if (dest instanceof ImageInfo) {
                                     setter.invoke(dest, ImageMetadata.State.valueOf(o));
+                                } else if (dest instanceof ExtantNetwork) {
+                                    setter.invoke(dest, Reference.State.valueOf(o));
                                 } else {
                                     setter.invoke(dest, enumClass.valueOf(o));
                                 }
-                            } else if (setter.getName() == 'setSanPassword') {
-                                // decrypt the password so that it can be re-encrypted
-                                setter.invoke(dest, BlockStorageUtil.decryptSCTargetPassword(o));
                             } else {
                                 setter.invoke(dest, enumClass.valueOf(o));
                             }
+                        } else if (setter.getName() == 'setSanPassword') {
+                            // decrypt the password so that it can be re-encrypted
+                            def decpass = BlockStorageUtil.decryptSCTargetPassword(o);
+                            setter.invoke(dest, decpass);
+                            // dest.sanPassword = o;
                         } else {
                             setter.invoke(dest, o);
                         }
