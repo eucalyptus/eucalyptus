@@ -1968,12 +1968,6 @@ public class WalrusManager {
 			// construct access control policy from grant infos
 			BucketInfo bucket = bucketList.get(0);
 
-			if(request.getVersionId() != null && !bucket.getVersioning().equals(WalrusProperties.VersioningStatus.Enabled.toString())) {
-				//Trying to get a version from a non version-enabled bucket
-				db.rollback();
-				throw new EucalyptusCloudException("Versioning not enabled on bucket");
-			}
-
 			logData = bucket.getLoggingEnabled() ? request.getLogData() : null;
 			EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
 			ObjectInfo searchObjectInfo = new ObjectInfo(bucketName, objectKey);
@@ -3483,10 +3477,8 @@ public class WalrusManager {
 		return reply;
 	}
 
-	public DeleteVersionResponseType deleteVersion(DeleteVersionType request)
-			throws EucalyptusCloudException {
-		DeleteVersionResponseType reply = (DeleteVersionResponseType) request
-				.getReply();
+	public DeleteVersionResponseType deleteVersion(DeleteVersionType request) throws EucalyptusCloudException {
+		DeleteVersionResponseType reply = (DeleteVersionResponseType) request.getReply();
 		String bucketName = request.getBucket();
 		String objectKey = request.getKey();
 		Context ctx = Contexts.lookup();
@@ -3498,77 +3490,82 @@ public class WalrusManager {
 
 		if (bucketList.size() > 0) {
 			BucketInfo bucketInfo = bucketList.get(0);
-			BucketLogData logData = bucketInfo.getLoggingEnabled() ? request
-					.getLogData() : null;
-					ObjectInfo foundObject = null;
-					EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
-					ObjectInfo searchObjectInfo = new ObjectInfo(bucketName, objectKey);
-					if(request.getVersionid() == null) {
-						db.rollback();
-						throw new EucalyptusCloudException("versionId is null");
-					}
-					searchObjectInfo.setVersionId(request.getVersionid());
-					List<ObjectInfo> objectInfos = dbObject.query(searchObjectInfo);
-					if (objectInfos.size() > 0) {
-						foundObject = objectInfos.get(0);
-					}
+			BucketLogData logData = bucketInfo.getLoggingEnabled() ? request.getLogData() : null;
+			ObjectInfo foundObject = null;
+			EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
+			ObjectInfo searchObjectInfo = new ObjectInfo(bucketName, objectKey);
+			if(request.getVersionid() == null) {
+				db.rollback();
+				throw new EucalyptusCloudException("versionId is null");
+			}
+			searchObjectInfo.setVersionId(request.getVersionid());
+			List<ObjectInfo> objectInfos = dbObject.query(searchObjectInfo);
+			if (objectInfos.size() > 0) {
+				foundObject = objectInfos.get(0);
+			}
 
-					if (foundObject != null) {
-						if (ctx.hasAdministrativePrivileges() || (
-								Lookups.checkPrivilege(PolicySpec.S3_DELETEOBJECTVERSION,
-										PolicySpec.VENDOR_S3,
-										PolicySpec.S3_RESOURCE_OBJECT,
-										PolicySpec.objectFullName(bucketName, objectKey),
-										foundObject.getOwnerId()))) {
-							dbObject.delete(foundObject);
-							if(!foundObject.getDeleted()) {
-								String objectName = foundObject.getObjectName();							 
-								for (GrantInfo grantInfo : foundObject.getGrants()) {
-									db.delete(grantInfo);
-								}
-								Long size = foundObject.getSize();
+			/* The admin can always delete object versions, and if versioning is suspended then only the bucket owner can delete a specific
+			 * version. If bucket versioning is enabled then do the normal permissions check to grant permissions.
+			 */
+			if (foundObject != null) {
+				if (ctx.hasAdministrativePrivileges() 
+						|| ( (bucketInfo.isVersioningSuspended() && bucketInfo.getOwnerId().equals(ctx.getUser().getUserId())) 
+								|| (bucketInfo.isVersioningEnabled() &&
+										Lookups.checkPrivilege(PolicySpec.S3_DELETEOBJECTVERSION,
+												PolicySpec.VENDOR_S3,
+												PolicySpec.S3_RESOURCE_OBJECT,
+												PolicySpec.objectFullName(bucketName, objectKey),
+												foundObject.getOwnerId())) ) ) {
 
-								boolean success = false;
-								int retryCount = 0;
-								do {
-									try {
-										decrementBucketSize(bucketName, size);
-										success = true;
-									} catch (NoSuchBucketException ex) {
-										db.rollback();
-										throw ex;
-									} catch (RollbackException ex) {
-										retryCount++;
-										LOG.trace("retrying update: " + bucketName);
-									} catch (EucalyptusCloudException ex) {
-										db.rollback();
-										throw ex;
-									}
-								} while(!success && (retryCount < 5));
-
-								ObjectDeleter objectDeleter = new ObjectDeleter(bucketName,
-										objectName, 
-										size, 
-										ctx.getUser().getName(),
-										ctx.getUser().getUserId(),
-										ctx.getAccount().getName(),
-										ctx.getAccount().getAccountNumber());
-								Threads.lookup(Walrus.class, WalrusManager.ObjectDeleter.class).limitTo(10).submit(objectDeleter);
-							}
-							reply.setCode("200");
-							reply.setDescription("OK");
-							if (logData != null) {
-								updateLogData(bucketInfo, logData);
-								reply.setLogData(logData);
-							}
-						} else {
-							db.rollback();
-							throw new AccessDeniedException("Key", objectKey, logData);
+					dbObject.delete(foundObject);
+					if(!foundObject.getDeleted()) {
+						String objectName = foundObject.getObjectName();							 
+						for (GrantInfo grantInfo : foundObject.getGrants()) {
+							db.delete(grantInfo);
 						}
-					} else {
-						db.rollback();
-						throw new NoSuchEntityException(objectKey, logData);
+						Long size = foundObject.getSize();
+
+						boolean success = false;
+						int retryCount = 0;
+						do {
+							try {
+								decrementBucketSize(bucketName, size);
+								success = true;
+							} catch (NoSuchBucketException ex) {
+								db.rollback();
+								throw ex;
+							} catch (RollbackException ex) {
+								retryCount++;
+								LOG.trace("retrying update: " + bucketName);
+							} catch (EucalyptusCloudException ex) {
+								db.rollback();
+								throw ex;
+							}
+						} while(!success && (retryCount < 5));
+
+						ObjectDeleter objectDeleter = new ObjectDeleter(bucketName,
+								objectName, 
+								size, 
+								ctx.getUser().getName(),
+								ctx.getUser().getUserId(),
+								ctx.getAccount().getName(),
+								ctx.getAccount().getAccountNumber());
+						Threads.lookup(Walrus.class, WalrusManager.ObjectDeleter.class).limitTo(10).submit(objectDeleter);
 					}
+					reply.setCode("200");
+					reply.setDescription("OK");
+					if (logData != null) {
+						updateLogData(bucketInfo, logData);
+						reply.setLogData(logData);
+					}
+				} else {
+					db.rollback();
+					throw new AccessDeniedException("Key", objectKey, logData);
+				}
+			} else {
+				db.rollback();
+				throw new NoSuchEntityException(objectKey, logData);
+			}
 		} else {
 			db.rollback();
 			throw new NoSuchBucketException(bucketName);
