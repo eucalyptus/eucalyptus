@@ -58,7 +58,6 @@ import com.eucalyptus.images.DeviceMapping;
 import com.eucalyptus.images.ImageConfiguration;
 import com.eucalyptus.images.ImageInfo;
 import com.eucalyptus.keys.SshKeyPair;
-import com.eucalyptus.network.ExtantNetwork;
 import com.eucalyptus.network.NetworkGroup;
 import com.eucalyptus.network.NetworkRule;
 import com.eucalyptus.network.PrivateNetworkIndex;
@@ -372,7 +371,6 @@ class upgrade_30_31 extends AbstractUpgradeScript {
         // I would not expect some of these tables to have data during upgrade,
         // but better safe than sorry.
         for (String table : [ 'metadata_addresses',
-                              'metadata_extant_network',
                               'metadata_images',
                               'metadata_instances',
                               'metadata_keypairs',
@@ -841,8 +839,6 @@ class upgrade_30_31 extends AbstractUpgradeScript {
                                     setter.invoke(dest, NetworkGroup.State.valueOf(o));
                                 } else if (dest instanceof ImageInfo) {
                                     setter.invoke(dest, ImageMetadata.State.valueOf(o));
-                                } else if (dest instanceof ExtantNetwork) {
-                                    setter.invoke(dest, Reference.State.valueOf(o));
                                 } else {
                                     setter.invoke(dest, enumClass.valueOf(o));
                                 }
@@ -1007,7 +1003,6 @@ class upgrade_30_31 extends AbstractUpgradeScript {
         entities.add(DeviceMapping.class)
         entities.add(DirectStorageInfo.class)
         entities.add(DRBDInfo.class)
-        entities.add(ExtantNetwork.class)
         entities.add(Faults.class)
         // entities.add(GrantInfo.class)
         entities.add(GroupEntity.class)
