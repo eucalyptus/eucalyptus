@@ -142,18 +142,6 @@ import com.eucalyptus.images.KernelImageInfo;
 import com.eucalyptus.images.MachineImageInfo;
 import com.eucalyptus.images.RamdiskImageInfo;
 
-//VMware
-import com.eucalyptus.cloud.ws.BrokerGroupInfo;
-import com.eucalyptus.cloud.ws.BrokerVolumeInfo;
-import com.eucalyptus.broker.vmware.VMwareBrokerInfo;
-import com.eucalyptus.broker.vmware.VMwareBrokerConfiguration;
-
-// SAN
-import edu.ucsb.eucalyptus.cloud.entities.SANInfo;
-import edu.ucsb.eucalyptus.cloud.entities.DASInfo;
-import edu.ucsb.eucalyptus.cloud.entities.IgroupInfo;
-import edu.ucsb.eucalyptus.cloud.entities.SANVolumeInfo;
-import edu.ucsb.eucalyptus.cloud.entities.NetappInfo;
 import com.eucalyptus.util.BlockStorageUtil;
 
 class upgrade_30_31 extends AbstractUpgradeScript {
@@ -191,6 +179,18 @@ class upgrade_30_31 extends AbstractUpgradeScript {
     @Override
     public void upgrade(File oldEucaHome, File newEucaHome) {
         buildConnectionMap();
+
+        // VMware
+        entities.add(Class.forName("com.eucalyptus.cloud.ws.BrokerVolumeInfo"));
+        entities.add(Class.forName("com.eucalyptus.cloud.ws.BrokerGroupInfo"));
+        entities.add(Class.forName("com.eucalyptus.broker.vmware.VMwareBrokerInfo"));
+
+        // SAN
+        entities.add(Class.forName("edu.ucsb.eucalyptus.cloud.entities.SANInfo"));
+        entities.add(Class.forName("edu.ucsb.eucalyptus.cloud.entities.DASInfo"));
+        entities.add(Class.forName("edu.ucsb.eucalyptus.cloud.entities.IgroupInfo"));
+        entities.add(Class.forName("edu.ucsb.eucalyptus.cloud.entities.SANVolumeInfo"));
+        entities.add(Class.forName("edu.ucsb.eucalyptus.cloud.entities.NetappInfo"));
 
         // Do object upgrades which follow the entity map / setter map pattern
         buildEntityMap();
@@ -705,10 +705,12 @@ class upgrade_30_31 extends AbstractUpgradeScript {
     private void upgradeSANVolumeInfo() {
         def conn = connMap['eucalyptus_storage'];
         def sviSetterMap = buildSetterMap(conn, "EquallogicVolumeInfo");
-        EntityWrapper<SANVolumeInfo> db = EntityWrapper.get(SANVolumeInfo.class);
+        def sviClass = Class.forName("edu.ucsb.eucalyptus.cloud.entities.SANVolumeInfo");
+        EntityWrapper<AbstractPersistent> db = EntityWrapper.get(sviClass);
+        db.recast(sviClass);
         conn.rows("""select * from EquallogicVolumeInfo""").each { row ->
-            SANVolumeInfo svi = new SANVolumeInfo();
-            initMetaClass(svi, svi.class);
+            def svi = sviClass.newInstance();
+            initMetaClass(svi, sviClass);
             svi = convertRowToObject(sviSetterMap, row, svi);
             // Missing column decorators for this class
             svi.setScName(row.scName);
@@ -1044,16 +1046,5 @@ class upgrade_30_31 extends AbstractUpgradeScript {
         entities.add(WalrusStatsInfo.class)
         entities.add(ZoneInfo.class)
 
-        // VMware
-        entities.add(BrokerVolumeInfo.class);
-        entities.add(BrokerGroupInfo.class);
-        entities.add(VMwareBrokerInfo.class);
-
-        // SAN
-        entities.add(SANInfo.class);
-        entities.add(DASInfo.class);
-        entities.add(IgroupInfo.class);
-        entities.add(SANVolumeInfo.class);
-        entities.add(NetappInfo.class);
     }
 }
