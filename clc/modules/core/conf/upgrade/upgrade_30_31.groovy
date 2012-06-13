@@ -120,6 +120,7 @@ import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.DatabaseAuthUtils;
 import com.eucalyptus.auth.DatabaseAccountProxy;
+import com.eucalyptus.auth.DatabaseGroupProxy;
 
 // Enums
 import com.eucalyptus.auth.principal.User.RegistrationStatus;
@@ -201,6 +202,8 @@ class upgrade_30_31 extends AbstractUpgradeScript {
         entityKeys.remove("auth_user");
         entityKeys.remove("auth_access_key");
         entityKeys.remove("auth_cert");
+        entityKeys.remove("auth_policy");
+        entityKeys.remove("auth_statement");
         addPhantoms();
 
         upgradeNetwork();
@@ -297,21 +300,27 @@ class upgrade_30_31 extends AbstractUpgradeScript {
             db.commit()
 
             LOG.info("Getting groups for account " + acctEnt.getAccountNumber());
-            db = EntityWrapper.get(AccountEntity.class);
-            authConn.rows("""select *
-                                         from auth_group g
-                                         join auth_account a on (g.auth_group_owning_account=a.id)
-                                        where a.auth_account_name=?""", acct.getName()).each { rowResult ->
+            authConn.rows("""select g.*
+                               from auth_group g
+                               join auth_account a on (g.auth_group_owning_account=a.id)
+                              where a.auth_account_name=?""", acct.getName()).each { rowResult ->
+                db = EntityWrapper.get(GroupEntity.class);
                 GroupEntity group = GroupEntity.newInstanceWithGroupId(rowResult.auth_group_id_external);
                 LOG.info("adding group " + rowResult.auth_group_id_external + " in " + acct.getName());
                 group = convertRowToObject(groupSetterMap, rowResult, group);
                 initMetaClass(group, GroupEntity.class);
                 group.setAccount(acctEnt);
-                db.recast( GroupEntity.class ).add(group);
-            }
-            db.commit()
+                db.add(group);
+                db.commit()
 
-            authConn.rows("""select *
+                authConn.rows("""select * from auth_policy
+                                  where auth_policy_owning_group=?""", rowResult.id).each { rowResult2 ->
+                    DatabaseGroupProxy groupProxy = new DatabaseGroupProxy(group);
+                    groupProxy.addPolicy(rowResult2.auth_policy_name, rowResult2.auth_policy_text);
+                }
+            }
+
+            authConn.rows("""select u.*
                              from auth_user u
                              join auth_group_has_users gu on (u.id=gu.auth_user_id)
                              join auth_group g on (gu.auth_group_id=g.id)
@@ -331,6 +340,19 @@ class upgrade_30_31 extends AbstractUpgradeScript {
                 initMetaClass(userGroup, GroupEntity.class);
                 user.getGroups().add( userGroup );
                 userGroup.getUsers().add( user );
+
+                authConn.rows("""select auth_group_id_external,auth_group_name
+                                   from auth_group g
+                                   join auth_group_has_users gu on (g.id=gu.auth_group_id)
+                                   join auth_user u on (u.id=gu.auth_user_id)
+                                  where u.auth_user_id_external=?
+                                    and auth_group_user_group=False""", rowResult.auth_user_id_external).each { rowResult2 ->
+                    GroupEntity extraGroup = DatabaseAuthUtils.getUniqueGroup(db, rowResult2.auth_group_name, acct.getName( ) );
+                    LOG.error("Adding user ${rowResult.auth_user_id_external} ( ${rowResult.auth_user_name} ) to group ${rowResult2.auth_group_name}");
+                    initMetaClass(extraGroup, GroupEntity.class);
+                    user.getGroups().add( extraGroup );
+                    extraGroup.getUsers().add( user );
+                }
                 db.commit()
 
                 realUserMap.put(rowResult.auth_user_id_external, [ rowResult.auth_user_name,
