@@ -1062,7 +1062,7 @@ public class WalrusManager {
 	
 								QueueSender queueSender = QueueFactory.getInstance().getSender(QueueIdentifier.S3);
 
-								queueSender.send(new S3Event(false, size / WalrusProperties.M,
+								queueSender.send(new S3Event(true, size / WalrusProperties.M,
 										userId, userName, accountId, accountName));
 
 							} catch(Exception ex) {
@@ -1389,6 +1389,7 @@ public class WalrusManager {
 
 
 					/* Send an event to reporting to report this S3 usage. */
+					/* SOAP */
 	
 					final String userId = ctx.getUser().getUserId();
 					final String accountId = ctx.getAccount().getAccountNumber();
