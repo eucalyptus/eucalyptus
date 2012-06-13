@@ -809,7 +809,6 @@ int diskutil_grub2_mbr (const char * path, const int part, const char * mnt_pt)
         char * output = pruntf (TRUE, "%s %s --modules='part_msdos ext2' --root-directory=%s '(hd0)'", helpers_path[ROOTWRAP], helpers_path[GRUB_INSTALL], mnt_pt);
         if (!output) {
             logprintfl (EUCAINFO, "{%u} error: failed to install grub 2 on disk '%s' mounted on '%s'\n", (unsigned int)pthread_self(), path, mnt_pt);
-            exit (1);
         } else {
             free (output);
             rc = 0;
