@@ -83,17 +83,29 @@ public class StorageEventListener
 					case EbsSnapshot:
 						Long newSnapshotsNum =
 							addLong(usageData.getSnapshotsNum(), addNum);
+						if (newSnapshotsNum!=null && newSnapshotsNum.longValue()<0) {
+							throw new IllegalStateException("Snapshots num cannot be negative");
+						}
 						usageData.setSnapshotsNum(newSnapshotsNum);
 						Long newSnapshotsMegs =
 							addLong(usageData.getSnapshotsMegs(), addAmountMegs);
+						if (newSnapshotsMegs!=null && newSnapshotsMegs.longValue()<0) {
+							throw new IllegalStateException("Snapshots megs cannot be negative");
+						}
 						usageData.setSnapshotsMegs(newSnapshotsMegs);
 						break;
 					case EbsVolume:
 						Long newVolumesNum =
 							addLong(usageData.getVolumesNum(), addNum);
+						if (newVolumesNum!=null && newVolumesNum.longValue()<0) {
+							throw new IllegalStateException("Volumes num cannot be negative");
+						}
 						usageData.setVolumesNum(newVolumesNum);
 						Long newVolumesMegs =
 							addLong(usageData.getVolumesMegs(), addAmountMegs);
+						if (newVolumesMegs!=null && newVolumesMegs.longValue()<0) {
+							throw new IllegalStateException("Volumes megs cannot be negative");
+						}
 						usageData.setVolumesMegs(newVolumesMegs);						
 						break;
 

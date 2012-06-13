@@ -406,8 +406,9 @@ public class Volumes {
       final String accountId = t.getOwnerAccountNumber();
       final String userName = Accounts.lookupUserById(userId).getName();
       final String accountName = Accounts.lookupAccountById(accountId).getName();
+      final Long volSize = (t.getSize()==null) ? null : t.getSize().longValue()*1024;
 
-      ListenerRegistry.getInstance( ).fireEvent( new StorageEvent( StorageEvent.EventType.EbsVolume, true, t.getSize( ),
+      ListenerRegistry.getInstance( ).fireEvent( new StorageEvent( StorageEvent.EventType.EbsVolume, true, volSize,
                                                                    userId, userName, accountId, accountName,
                                                                    t.getScName( ), t.getPartition( ) ) );
     } catch ( final Exception ex ) {
@@ -456,8 +457,9 @@ public class Volumes {
       final String accountId = v.getOwnerAccountNumber();
       final String userName = Accounts.lookupUserById(userId).getName();
       final String accountName = Accounts.lookupAccountById(accountId).getName();
+      final Long volSize = (v.getSize()==null) ? null : v.getSize().longValue()*1024;
 
-      ListenerRegistry.getInstance( ).fireEvent( new StorageEvent( StorageEvent.EventType.EbsVolume, false, v.getSize( ),
+      ListenerRegistry.getInstance( ).fireEvent( new StorageEvent( StorageEvent.EventType.EbsVolume, false, volSize,
                                                                    userId, userName, accountId, accountName,
                                                                    v.getScName( ), v.getPartition( ) ) );
     } catch ( final Exception ex ) {
