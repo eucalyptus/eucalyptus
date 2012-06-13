@@ -72,6 +72,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import org.hibernate.criterion.Example;
+import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.cloud.CloudMetadata.VolumeMetadata;
@@ -401,9 +402,14 @@ public class Volumes {
   
   static void fireCreateEvent( final Volume t ) {
     try {
-      ListenerRegistry.getInstance( ).fireEvent( new StorageEvent( StorageEvent.EventType.EbsVolume, true, t.getSize( ),
-                                                                   t.getOwnerUserId( ), t.getOwnerUserName( ),
-                                                                   t.getOwnerAccountNumber( ), t.getOwnerAccountName( ),
+      final String userId = t.getOwnerUserId();
+      final String accountId = t.getOwnerAccountNumber();
+      final String userName = Accounts.lookupUserById(userId).getName();
+      final String accountName = Accounts.lookupAccountById(accountId).getName();
+      final Long volSize = (t.getSize()==null) ? null : t.getSize().longValue()*1024;
+
+      ListenerRegistry.getInstance( ).fireEvent( new StorageEvent( StorageEvent.EventType.EbsVolume, true, volSize,
+                                                                   userId, userName, accountId, accountName,
                                                                    t.getScName( ), t.getPartition( ) ) );
     } catch ( final Exception ex ) {
       LOG.error( ex );
@@ -447,11 +453,16 @@ public class Volumes {
   
   static void fireDeleteEvent( final Volume v ) {
     try {
-      ListenerRegistry.getInstance( ).fireEvent( new StorageEvent( StorageEvent.EventType.EbsVolume, false, v.getSize( ),
-                                                                   v.getOwnerUserId( ), v.getOwnerUserName( ),
-                                                                   v.getOwnerAccountNumber( ), v.getOwnerAccountName( ),
+      final String userId = v.getOwnerUserId();
+      final String accountId = v.getOwnerAccountNumber();
+      final String userName = Accounts.lookupUserById(userId).getName();
+      final String accountName = Accounts.lookupAccountById(accountId).getName();
+      final Long volSize = (v.getSize()==null) ? null : v.getSize().longValue()*1024;
+
+      ListenerRegistry.getInstance( ).fireEvent( new StorageEvent( StorageEvent.EventType.EbsVolume, false, volSize,
+                                                                   userId, userName, accountId, accountName,
                                                                    v.getScName( ), v.getPartition( ) ) );
-    } catch ( final EventFailedException ex ) {
+    } catch ( final Exception ex ) {
       LOG.error( ex );
       Logs.extreme( ).error( ex, ex );
     }

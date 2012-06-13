@@ -47,8 +47,6 @@ public class S3EventListener
 				EntityWrapper.get( S3UsageSnapshot.class );
 			try {
 
-				LOG.info("Receive event:" + s3Event.toString());
-
 				/* Load usageDataMap if starting up
 				 */
 				if (usageDataMap == null) {
@@ -77,19 +75,31 @@ public class S3EventListener
 					long addAmountMegs = (s3Event.isCreateOrDelete())
 						? s3Event.getSizeMegs()
 						: -s3Event.getSizeMegs();
+					LOG.info("Receive event:" + s3Event.toString() + " usageData:" + usageData + " addNum:" + addNum + " addAmountMegs:" + addAmountMegs);
 
 					Long newObjectsNum =
 						addLong(usageData.getObjectsNum(), addNum);
+					if (newObjectsNum!=null && newObjectsNum.longValue()<0) {
+						throw new IllegalStateException("Objects num cannot be negative");
+					}
 					usageData.setObjectsNum(newObjectsNum);
 					Long newObjectsMegs =
 						addLong(usageData.getObjectsMegs(), addAmountMegs);
+					if (newObjectsMegs!=null && newObjectsMegs.longValue()<0) {
+						throw new IllegalStateException("Objects megs cannot be negative");
+					}
 					usageData.setObjectsMegs(newObjectsMegs);
 					
 				} else {
 					
 					Long newBucketsNum =
 						addLong(usageData.getBucketsNum(), addNum);
+					if (newBucketsNum!=null && newBucketsNum.longValue()<0) {
+						throw new IllegalStateException("Buckets num cannot be negative");
+					}
 					usageData.setBucketsNum(newBucketsNum);
+					LOG.info("Receive event:" + s3Event.toString() + " usageData:" + usageData + " addNum:" + addNum);
+
 					
 				}
 

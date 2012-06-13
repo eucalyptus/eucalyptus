@@ -1389,6 +1389,7 @@ public class WalrusManager {
 
 
 					/* Send an event to reporting to report this S3 usage. */
+					/* SOAP */
 	
 					final String userId = ctx.getUser().getUserId();
 					final String accountId = ctx.getAccount().getAccountNumber();

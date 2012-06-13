@@ -302,8 +302,9 @@ public class Snapshots {
       final String accountId = snap.getOwnerAccountNumber();
       final String userName = Accounts.lookupUserById(userId).getName();
       final String accountName = Accounts.lookupAccountById(accountId).getName();
+      final Long volSize = (snap.getVolumeSize()==null) ? null : snap.getVolumeSize().longValue()*1024;
 
-      ListenerRegistry.getInstance( ).fireEvent( new StorageEvent( StorageEvent.EventType.EbsSnapshot, true, snap.getVolumeSize( ),
+      ListenerRegistry.getInstance( ).fireEvent( new StorageEvent( StorageEvent.EventType.EbsSnapshot, true, volSize,
                                                                    userId, userName, accountId, accountName,
                                                                    snap.getVolumeCluster( ), snap.getVolumePartition( ) ) );
     } catch ( Exception ex ) {
@@ -329,8 +330,9 @@ public class Snapshots {
       final String accountId = snap.getOwnerAccountNumber();
       final String userName = Accounts.lookupUserById(userId).getName();
       final String accountName = Accounts.lookupAccountById(accountId).getName();
+      final Long volSize = (snap.getVolumeSize()==null) ? null : snap.getVolumeSize().longValue()*1024;
 
-      ListenerRegistry.getInstance( ).fireEvent( new StorageEvent( StorageEvent.EventType.EbsSnapshot, false, snap.getVolumeSize( ),
+      ListenerRegistry.getInstance( ).fireEvent( new StorageEvent( StorageEvent.EventType.EbsSnapshot, false, volSize,
                                                                    userId, userName, accountId, accountName,
                                                                    snap.getVolumeCluster( ), snap.getVolumePartition( ) ) );
     } catch ( Exception ex ) {

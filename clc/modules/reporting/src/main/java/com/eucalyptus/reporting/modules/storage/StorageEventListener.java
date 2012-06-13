@@ -49,8 +49,6 @@ public class StorageEventListener
 				EntityWrapper.get( StorageUsageSnapshot.class );
 			try {
 
-				LOG.debug("Receive event:" + storageEvent.toString());
-
 				/* Load usageDataMap if starting up
 				 */
 				if (usageDataMap == null) {
@@ -79,21 +77,35 @@ public class StorageEventListener
 						? storageEvent.getSizeMegs()
 						: -storageEvent.getSizeMegs();
 				long addNum = (storageEvent.isCreateOrDelete()) ? 1 : -1;
+				LOG.info("Receive event:" + storageEvent.toString() + " usageData:" + usageData + " addAmountMegs:" + addAmountMegs + " addNum:" + addNum);
+
 				switch(storageEvent.getEventType()) {
 					case EbsSnapshot:
 						Long newSnapshotsNum =
 							addLong(usageData.getSnapshotsNum(), addNum);
+						if (newSnapshotsNum!=null && newSnapshotsNum.longValue()<0) {
+							throw new IllegalStateException("Snapshots num cannot be negative");
+						}
 						usageData.setSnapshotsNum(newSnapshotsNum);
 						Long newSnapshotsMegs =
 							addLong(usageData.getSnapshotsMegs(), addAmountMegs);
+						if (newSnapshotsMegs!=null && newSnapshotsMegs.longValue()<0) {
+							throw new IllegalStateException("Snapshots megs cannot be negative");
+						}
 						usageData.setSnapshotsMegs(newSnapshotsMegs);
 						break;
 					case EbsVolume:
 						Long newVolumesNum =
 							addLong(usageData.getVolumesNum(), addNum);
+						if (newVolumesNum!=null && newVolumesNum.longValue()<0) {
+							throw new IllegalStateException("Volumes num cannot be negative");
+						}
 						usageData.setVolumesNum(newVolumesNum);
 						Long newVolumesMegs =
 							addLong(usageData.getVolumesMegs(), addAmountMegs);
+						if (newVolumesMegs!=null && newVolumesMegs.longValue()<0) {
+							throw new IllegalStateException("Volumes megs cannot be negative");
+						}
 						usageData.setVolumesMegs(newVolumesMegs);						
 						break;
 
