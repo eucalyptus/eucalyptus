@@ -218,6 +218,9 @@ class upgrade_30_31 extends AbstractUpgradeScript {
         entityKeys.remove("ramdisk_images");
         entityKeys.remove("machine_images");
 
+        upgradeSANVolumeInfo();
+        entityKeys.remove("EquallogicVolumeInfo");
+
         // Hardcode some ordering here
         for (String entityKey : entityKeys) {
             upgradeEntity(entityKey);
@@ -697,6 +700,24 @@ class upgrade_30_31 extends AbstractUpgradeScript {
             db.add(ivi);
          }
          db.commit();
+    }
+
+    private void upgradeSANVolumeInfo() {
+        def conn = connMap['eucalyptus_storage'];
+        def sviSetterMap = buildSetterMap(conn, "EquallogicVolumeInfo");
+        EntityWrapper<SANVolumeInfo> db = EntityWrapper.get(SANVolumeInfo.class);
+        conn.rows("""select * from EquallogicVolumeInfo""").each { row ->
+            SANVolumeInfo svi = new SANVolumeInfo();
+            initMetaClass(svi, svi.class);
+            svi = convertRowToObject(sviSetterMap, row, svi);
+            // Missing column decorators for this class
+            svi.setScName(row.scName);
+            svi.setIqn(row.iqn);
+            svi.setStoreUser(row.storeUser);
+            svi.setVolumeId(row.volumeId);
+            db.add(svi);
+        }
+        db.commit();
     }
 
     private void upgradeEntity(entityKey) {
