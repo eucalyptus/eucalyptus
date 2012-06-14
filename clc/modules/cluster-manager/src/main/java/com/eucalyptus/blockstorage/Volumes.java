@@ -414,7 +414,7 @@ public class Volumes {
                                                                    userId, userName, accountId, accountName,
                                                                    t.getScName( ), t.getPartition( ) ) );
     } catch ( final Exception ex ) {
-      LOG.error( ex );
+      LOG.error("createEvent failed", ex);
       Logs.extreme( ).error( ex, ex );
     }
   }
