@@ -75,7 +75,7 @@ public class S3EventListener
 					long addAmountMegs = (s3Event.isCreateOrDelete())
 						? s3Event.getSizeMegs()
 						: -s3Event.getSizeMegs();
-					LOG.info("Receive event:" + s3Event.toString() + " usageData:" + usageData + " addNum:" + addNum + " addAmountMegs:" + addAmountMegs);
+					LOG.debug("Receive event:" + s3Event.toString() + " usageData:" + usageData + " addNum:" + addNum + " addAmountMegs:" + addAmountMegs);
 
 					Long newObjectsNum =
 						addLong(usageData.getObjectsNum(), addNum);
@@ -98,7 +98,7 @@ public class S3EventListener
 						throw new IllegalStateException("Buckets num cannot be negative");
 					}
 					usageData.setBucketsNum(newBucketsNum);
-					LOG.info("Receive event:" + s3Event.toString() + " usageData:" + usageData + " addNum:" + addNum);
+					LOG.debug("Receive event:" + s3Event.toString() + " usageData:" + usageData + " addNum:" + addNum);
 
 					
 				}

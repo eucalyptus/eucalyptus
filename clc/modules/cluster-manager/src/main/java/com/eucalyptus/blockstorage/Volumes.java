@@ -374,6 +374,7 @@ public class Volumes {
   
   public static Volume createStorageVolume( final ServiceConfiguration sc, final UserFullName owner, final String snapId, final Integer newSize, final BaseMessage request ) throws ExecutionException {
     final String newId = Crypto.generateId( owner.getUniqueId( ), ID_PREFIX );
+    LOG.debug("Creating volume");
     final Volume newVol = Transactions.save( Volume.create( sc, owner, snapId, newSize, newId ), new Callback<Volume>( ) {
       
       @Override
@@ -382,15 +383,16 @@ public class Volumes {
         try {
           final CreateStorageVolumeType req = new CreateStorageVolumeType( t.getDisplayName( ), t.getSize( ), snapId, null ).regardingUserRequest( request );
           final CreateStorageVolumeResponseType ret = AsyncRequests.sendSync( sc, req );
-          LOG.debug( "Volume created: CreateStorageVolumeResponse: " +
+          LOG.debug("Volume created");
+          fireCreateEvent( t );
+          LOG.debug("Volume created: CreateStorageVolumeResponse: " +
                      ret.getVolumeId( ) + " " +
                      ret.getStatus( ) + " " +
                      ret.getSize( ) + " " +
                      ret.getSnapshotId( ) + " " +
                      ret.getCreateTime( ) );
-          fireCreateEvent( t );
         } catch ( final Exception ex ) {
-          LOG.error( "Failed to create volume: " + t.toString( ), ex );
+          LOG.error( "Failed to create volume: " + t, ex );
           t.setState( State.FAIL );
           throw Exceptions.toUndeclared( ex );
         }
@@ -412,7 +414,7 @@ public class Volumes {
                                                                    userId, userName, accountId, accountName,
                                                                    t.getScName( ), t.getPartition( ) ) );
     } catch ( final Exception ex ) {
-      LOG.error( ex );
+      LOG.error("createEvent failed", ex);
       Logs.extreme( ).error( ex, ex );
     }
   }

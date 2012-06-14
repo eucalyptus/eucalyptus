@@ -77,7 +77,7 @@ public class StorageEventListener
 						? storageEvent.getSizeMegs()
 						: -storageEvent.getSizeMegs();
 				long addNum = (storageEvent.isCreateOrDelete()) ? 1 : -1;
-				LOG.info("Receive event:" + storageEvent.toString() + " usageData:" + usageData + " addAmountMegs:" + addAmountMegs + " addNum:" + addNum);
+				LOG.debug("Receive event:" + storageEvent.toString() + " usageData:" + usageData + " addAmountMegs:" + addAmountMegs + " addNum:" + addNum);
 
 				switch(storageEvent.getEventType()) {
 					case EbsSnapshot:
