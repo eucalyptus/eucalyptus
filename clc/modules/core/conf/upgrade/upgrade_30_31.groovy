@@ -155,6 +155,7 @@ class upgrade_30_31 extends AbstractUpgradeScript {
     private static Map<String, List> realUserMap = new HashMap<String, ArrayList<String>>();
     // Map user id to account / user
     private static Map<String, List> phantomUserMap = new HashMap<String, ArrayList<String>>();
+    private static Map<String, String> phantomAcctMap = new HashMap<String, String>();
     private static Map<String, Sql> connMap = new HashMap<String, Sql>();
     private static List<String> unmappedColumns = [ ];
 
@@ -348,7 +349,7 @@ class upgrade_30_31 extends AbstractUpgradeScript {
                                   where u.auth_user_id_external=?
                                     and auth_group_user_group=False""", rowResult.auth_user_id_external).each { rowResult2 ->
                     GroupEntity extraGroup = DatabaseAuthUtils.getUniqueGroup(db, rowResult2.auth_group_name, acct.getName( ) );
-                    LOG.error("Adding user ${rowResult.auth_user_id_external} ( ${rowResult.auth_user_name} ) to group ${rowResult2.auth_group_name}");
+                    LOG.debug("Adding user ${rowResult.auth_user_id_external} ( ${rowResult.auth_user_name} ) to group ${rowResult2.auth_group_name}");
                     initMetaClass(extraGroup, GroupEntity.class);
                     user.getGroups().add( extraGroup );
                     extraGroup.getUsers().add( user );
@@ -432,8 +433,18 @@ class upgrade_30_31 extends AbstractUpgradeScript {
         newGroup.setUserGroup( true );
         EntityWrapper<AccountEntity> db = EntityWrapper.get( AccountEntity.class );
         try {
-            AccountEntity account = DatabaseAuthUtils.getUnique( db, AccountEntity.class, "name", acctname );
-            initMetaClass(account, AccountEntity.class);
+            AccountEntity account = null;
+            try {
+                account = DatabaseAuthUtils.getUnique( db, AccountEntity.class, "name", acctname );
+                initMetaClass(account, AccountEntity.class);
+            } catch (java.util.NoSuchElementException e) {
+                account = AccountEntity.newInstanceWithAccountNumber(acctid);
+                initMetaClass(account, AccountEntity.class);
+                phantomAcctMap.put(acctid, acctname);
+                account.setName(acctname);
+                db.add(account);
+            }
+
             newGroup = db.recast( GroupEntity.class ).merge( newGroup );
             initMetaClass(newGroup, newGroup.class);
             newUser = db.recast( UserEntity.class ).merge( newUser );
@@ -457,6 +468,9 @@ class upgrade_30_31 extends AbstractUpgradeScript {
             initMetaClass(acctEnt, AccountEntity.class);
             Account acct = new DatabaseAccountProxy(acctEnt);
             acct.deleteUser(phantomUserMap[userId][0], false, true);
+        }
+        for (String acctId : phantomAcctMap.keySet()) {
+            Accounts.deleteAccount(phantomAcctMap[acctId], false, true);
         }
     }
 
