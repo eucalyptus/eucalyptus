@@ -374,6 +374,7 @@ public class Volumes {
   
   public static Volume createStorageVolume( final ServiceConfiguration sc, final UserFullName owner, final String snapId, final Integer newSize, final BaseMessage request ) throws ExecutionException {
     final String newId = Crypto.generateId( owner.getUniqueId( ), ID_PREFIX );
+    LOG.debug("Creating volume");
     final Volume newVol = Transactions.save( Volume.create( sc, owner, snapId, newSize, newId ), new Callback<Volume>( ) {
       
       @Override
@@ -382,8 +383,8 @@ public class Volumes {
         try {
           final CreateStorageVolumeType req = new CreateStorageVolumeType( t.getDisplayName( ), t.getSize( ), snapId, null ).regardingUserRequest( request );
           final CreateStorageVolumeResponseType ret = AsyncRequests.sendSync( sc, req );
-          fireCreateEvent( t );
           LOG.debug("Volume created");
+          fireCreateEvent( t );
           LOG.debug("Volume created: CreateStorageVolumeResponse: " +
                      ret.getVolumeId( ) + " " +
                      ret.getStatus( ) + " " +
