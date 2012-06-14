@@ -20,12 +20,9 @@ public class MemQueue
 	public void send(Event e)
 	{
 		log.info("Event sent: " + e);
-		if (linkedList.size() > 0) {
-			for (EventListener<Event> listener : listeners) {
-				listener.fireEvent(e);
-			}
-		} else {
-			linkedList.offer(e);
+
+		for (EventListener<Event> listener : listeners) {
+			listener.fireEvent(e);
 		}
 	}
 
