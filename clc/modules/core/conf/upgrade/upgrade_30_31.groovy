@@ -9,6 +9,7 @@ import java.sql.DatabaseMetaData;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -141,6 +142,10 @@ import com.eucalyptus.network.NetworkGroups;
 import com.eucalyptus.images.KernelImageInfo;
 import com.eucalyptus.images.MachineImageInfo;
 import com.eucalyptus.images.RamdiskImageInfo;
+import com.eucalyptus.images.BlockStorageImageInfo;
+import com.eucalyptus.images.EphemeralDeviceMapping;
+import com.eucalyptus.images.SuppressDeviceMappping;
+import com.eucalyptus.images.BlockStorageDeviceMapping;
 
 import com.eucalyptus.util.BlockStorageUtil;
 
@@ -220,6 +225,11 @@ class upgrade_30_31 extends AbstractUpgradeScript {
         entityKeys.remove("kernel_images");
         entityKeys.remove("ramdisk_images");
         entityKeys.remove("machine_images");
+        entityKeys.remove("blockstorage_images");
+        entityKeys.remove("metadata_device_mappings");
+        entityKeys.remove("blockstorage_mappings");
+        entityKeys.remove("ephemeral_mappings");
+        entityKeys.remove("suppress_mappings");
 
         upgradeSANVolumeInfo();
         entityKeys.remove("EquallogicVolumeInfo");
@@ -627,6 +637,10 @@ class upgrade_30_31 extends AbstractUpgradeScript {
         def kimgSetterMap = buildSetterMap(connCloud, "kernel_images");
         def rimgSetterMap = buildSetterMap(connCloud, "ramdisk_images");
         def mimgSetterMap = buildSetterMap(connCloud, "machine_images");
+        def bimgSetterMap = buildSetterMap(connCloud, "blockstorage_images");
+        def bsdmSetterMap = buildSetterMap(connCloud, "blockstorage_mappings");
+        def edmSetterMap = buildSetterMap(connCloud, "ephemeral_mappings");
+        def sdmSetterMap = buildSetterMap(connCloud, "suppress_mappings");
 
         EntityWrapper<ImageInfo> dbGen = EntityWrapper.get(ImageInfo.class);
         connMap['eucalyptus_cloud'].rows("SELECT * FROM metadata_images").each { img ->
@@ -654,9 +668,45 @@ class upgrade_30_31 extends AbstractUpgradeScript {
                     initMetaClass(ii, ii.class);
                     ii = convertRowToObject(mimgSetterMap, img, ii);
                     break;
+                case "blockstorage":
+                    ii = new BlockStorageImageInfo();
+                    initMetaClass(ii, ii.class);
+                    ii = convertRowToObject(bimgSetterMap, img, ii);
+                    break;
             }
             dbGen.add(ii);
             LOG.debug("Adding image ${img.metadata_image_name}");
+
+            dbGen.recast(DeviceMapping.class);
+            Set<DeviceMapping> deviceMappings = new HashSet<DeviceMapping>( );
+            connMap['eucalyptus_cloud'].rows("""SELECT m.* 
+                                                  FROM metadata_device_mappings m
+                                                  JOIN metadata_images i
+                                                    ON (m.metadata_image_dev_map_fk=i.id)
+                                                 WHERE i.id=?""", img.id).each { mapping ->
+                def dm = null;
+                switch (mapping.metadata_device_mapping_discriminator) {
+                    case "blockstorage":
+                        dm = new BlockStorageDeviceMapping();
+                        initMetaClass(dm, dm.class);
+                        dm = convertRowToObject(bsdmSetterMap, mapping, dm);
+                        break;
+                    case "ephemeral":
+                        dm = new EphemeralDeviceMapping();
+                        initMetaClass(dm, dm.class);
+                        dm = convertRowToObject(edmSetterMap, mapping, dm);
+                        break;
+                    case "suppress":
+                        dm = new SuppressDeviceMappping();
+                        initMetaClass(dm, dm.class);
+                        dm = convertRowToObject(sdmSetterMap, mapping, dm);
+                        break;
+                }
+                dm.setParent(ii);
+                deviceMappings.add(dm);
+                dbGen.add(dm);
+            }
+            ii.setDeviceMappings(deviceMappings);
         }
         dbGen.commit();
     }
@@ -854,6 +904,7 @@ class upgrade_30_31 extends AbstractUpgradeScript {
         enumSetterMap.put("setPlatform", ImageMetadata.Platform.class);
         enumSetterMap.put("setArchitecture", ImageMetadata.Architecture.class);
         enumSetterMap.put("setImageType", ImageMetadata.Type.class);
+        enumSetterMap.put("setDeviceMappingType", ImageMetadata.DeviceMappingType.class);
 
         // columns.each{ c -> LOG.debug("column: " + c); }
         for (String column : columns) {
@@ -914,8 +965,13 @@ class upgrade_30_31 extends AbstractUpgradeScript {
 
     private Map<String, Method> buildSetterMap(Sql conn, String entityKeyAlias) {
         def entityKey = entityKeyAlias;
-        if (entityKey in ["kernel_images", "ramdisk_images", "machine_images"]) {
+        if (entityKey in ["kernel_images", "ramdisk_images", 
+                          "machine_images", "blockstorage_images"]) {
             entityKey = "metadata_images";
+        } else if (entityKey in ["blockstorage_mappings",
+                                 "ephemeral_mappings", 
+                                 "suppress_mappings"]) {
+            entityKey = "metadata_device_mappings";
         }
         Map<String, Method> setterMap = new HashMap<String, Method>();
         try {
@@ -1007,6 +1063,10 @@ class upgrade_30_31 extends AbstractUpgradeScript {
         entityMap.put("kernel_images", KernelImageInfo.class);
         entityMap.put("ramdisk_images", RamdiskImageInfo.class);
         entityMap.put("machine_images", MachineImageInfo.class);
+        entityMap.put("blockstorage_images", BlockStorageImageInfo.class);
+        entityMap.put("blockstorage_mappings", BlockStorageDeviceMapping.class);
+        entityMap.put("ephemeral_mappings", EphemeralDeviceMapping.class);
+        entityMap.put("suppress_mappings", SuppressDeviceMappping.class);
     }
 
     public void initMetaClass(obj, theClass) {
