@@ -287,6 +287,8 @@ public class InstanceUsageLog
     		} else if (timeMs < firstSnapshot.getTimestampMs().longValue()) {
     			this.firstSnapshot = snapshot;
     		}
+    		accumulateDiskIoMegs(snapshot);
+    		accumulateNetIoMegs(snapshot);
     	}
 
     	public InstanceAttributes getInstanceAttributes()
@@ -306,55 +308,85 @@ public class InstanceUsageLog
         		return ( truncatedEndMs-truncatedBeginMs ) / 1000;
     		}
     	}
+
+    	/**
+    	 * Calculate how much of the current reporting period lies within the
+    	 * begin and end of the generated report period.
+    	 */
+    	private double getRemainingFactor(long timestampMs)
+    	{
+    		final double periodDuration = (double)(timestampMs-lastSnapshot.getTimestampMs());
+    		if (periodDuration==0) return 0d;
+    		/* This is magic; DO NOT TOUCH. There are several cases:
+    		 * 
+    		 *   1. beginning and end of period both precede beginning of report
+    		 *   2. beginning and end of period both come after end of report
+    		 *   3. beginning of period precedes beginning of report, but end of period falls within it.
+    		 *   4. beginning of period falls within report, but end of period is after end of report.
+    		 *   5. both beginning and end of period fall within report
+    		 *   6. both beginning and end of report fall within period.
+    		 *   
+    		 *  The following formula works in all cases. PriorFraction is the fraction of the
+    		 *     period which precedes the beginning of the report. It is negative (and
+    		 *     therefore set to 0 below) if the beginning of the period is after the beginning of
+    		 *     the report. afterFraction is the opposite; it is the fraction of the reporting
+    		 *     period which falls after the end of the report. It is negative (and therefore
+    		 *     set to 0 below) if the end of the period precedes the end of the report.
+    		 *     If both the beginning and end of the period fall either before the beginning
+    		 *     or after the end of the report, then priorFraction or afterFraction will be greater
+    		 *     than 1, in which case subtracting it from 1d will result in a negative number and be
+    		 *     set to zero in the outermost Math.max(). The result is always the fraction of the
+    		 *     period which falls outside the report (from 0-1).
+    		 */
+    		final double priorFraction = (double)(period.getBeginningMs()-lastSnapshot.getTimestampMs())/periodDuration;
+    		final double afterFraction = (double)(timestampMs-period.getEndingMs())/periodDuration;
+    		return Math.max(0d, 1d-Math.max(0d,priorFraction)-Math.max(0d,afterFraction));
+    	}
+
+    	
+    	private long accumulatedDiskIoMegs = 0l;
+    	private long lastCumulativeDiskIoMegs = 0l;
+    	
+    	public void accumulateDiskIoMegs(InstanceUsageSnapshot snapshot)
+    	{
+    		double remainingFactor = getRemainingFactor(snapshot.getTimestampMs());
+    		log.debug(String.format("remainingFactor, report:%d-%d (%d), period:%d-%d (%d), factor:%f",
+    				period.getBeginningMs(), period.getEndingMs(),
+    				period.getEndingMs()-period.getBeginningMs(),
+    				lastSnapshot.getTimestampMs(), snapshot.getTimestampMs(),
+    				snapshot.getTimestampMs()-lastSnapshot.getTimestampMs(),
+    				remainingFactor));
+       		this.accumulatedDiskIoMegs += (long)(remainingFactor*(snapshot.getCumulativeDiskIoMegs()-lastCumulativeDiskIoMegs));
+    		this.lastCumulativeDiskIoMegs = snapshot.getCumulativeDiskIoMegs();
+    	}
     	
     	public long getDiskIoMegs()
     	{
-			double duration = (double)(period.getEndingMs()-period.getBeginningMs());
-			double gap = 0d;
-    		double result =
-    			(double)lastSnapshot.getCumulativeDiskIoMegs() -
-    			(double)firstSnapshot.getCumulativeDiskIoMegs();
-    		
-    		log.debug("Unadjusted disk io megs:" + result);
-			/* Extrapolate fractional usage for snapshots which occurred
-			 * before report beginning or after report end.
-			 */
-    		if (firstSnapshot.getTimestampMs() < period.getBeginningMs()) {
-    			gap = (double)(period.getBeginningMs()-firstSnapshot.getTimestampMs());
-    			result *= 1d-(gap/duration);
-    		}
-    		if (lastSnapshot.getTimestampMs() > period.getEndingMs()) {
-    			gap = (double)(lastSnapshot.getTimestampMs()-period.getEndingMs());
-    			result *= 1d-(gap/duration);
-    		}
-    		log.debug("Extrapolated disk io megs:" + result);
-    		return (long) result;
+    		return this.accumulatedDiskIoMegs;
     	}
     	
+
+    	private long accumulatedNetIoMegs = 0l;
+    	private long lastCumulativeNetIoMegs = 0l;
+
     	public long getNetIoMegs()
     	{
-			double duration = (double)(period.getEndingMs()-period.getBeginningMs());
-			double gap = 0d;
-    		double result =
-    			(double)lastSnapshot.getCumulativeNetworkIoMegs() -
-    			(double)firstSnapshot.getCumulativeNetworkIoMegs();
-    		log.debug("Unadjusted net IO megs:" + result);
-			/* Extrapolate fractional usage for snapshots which occurred
-			 * before report beginning or after report end.
-			 */
-    		if (firstSnapshot.getTimestampMs() < period.getBeginningMs()) {
-    			gap = (double)(period.getBeginningMs()-firstSnapshot.getTimestampMs());
-    			result *= 1d-(gap/duration);
-    		}
-    		if (lastSnapshot.getTimestampMs() > period.getEndingMs()) {
-    			gap = (double)(lastSnapshot.getTimestampMs()-period.getEndingMs());
-    			result *= 1d-(gap/duration);
-    		}
-    		log.debug("Extrapolated net IO megs:" + result);
-    		return (long) result;
+    		return this.accumulatedNetIoMegs;
     	}
 
+    	public void accumulateNetIoMegs(InstanceUsageSnapshot snapshot)
+    	{
+    		double remainingFactor = getRemainingFactor(snapshot.getTimestampMs());
+    		log.debug(String.format("remainingFactor, report:%d-%d (%d), period:%d-%d (%d), factor:%f",
+    				period.getBeginningMs(), period.getEndingMs(),
+    				period.getEndingMs()-period.getBeginningMs(),
+    				lastSnapshot.getTimestampMs(), snapshot.getTimestampMs(),
+    				snapshot.getTimestampMs()-lastSnapshot.getTimestampMs(),
+    				remainingFactor));
+        	this.accumulatedNetIoMegs += (long)(remainingFactor*(snapshot.getCumulativeNetworkIoMegs()-lastCumulativeNetIoMegs));    			
+    		this.lastCumulativeNetIoMegs = snapshot.getCumulativeNetworkIoMegs();
+    	}
+    	
     }
-
 
 }
