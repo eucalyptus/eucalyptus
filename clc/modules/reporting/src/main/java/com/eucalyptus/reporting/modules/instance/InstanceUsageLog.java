@@ -271,39 +271,40 @@ public class InstanceUsageLog
     	private InstanceUsageSnapshot firstSnapshot;
     	private InstanceUsageSnapshot priorSnapshot;
     	private Period period;
+    	private boolean accumulate = false;
+    	private boolean doneAccumulating = false;
     	
     	public InstanceDataAccumulator(InstanceAttributes insAttrs,
     			InstanceUsageSnapshot snapshot, Period period)
 		{
 			super();
 			this.insAttrs = insAttrs;
-			this.lastSnapshot = null;
+			this.lastSnapshot = snapshot;
 			this.priorSnapshot = snapshot;
-			this.firstSnapshot = null;
+			this.firstSnapshot = snapshot;
 			this.period = period;
 		}
     	
     	public void update(InstanceUsageSnapshot snapshot)
     	{
-    		if (firstSnapshot == null
+    		log.debug("Update time:" + snapshot.getTimestampMs() + " insId:" + insAttrs.getInstanceId());
+    		if (!accumulate
+    			&& snapshot.getTimestampMs() <= period.getEndingMs()
     			&& (priorSnapshot.getTimestampMs() >= period.getBeginningMs()
     				|| snapshot.getTimestampMs() >= period.getBeginningMs()))
     		{
-    			firstSnapshot = priorSnapshot;
-    			log.debug("Found first snapshot:" + firstSnapshot.getTimestampMs());
+    			accumulate = true;
+	    		log.debug("Start accumulating:" + priorSnapshot.getTimestampMs());
     		}
-    		if (lastSnapshot == null
-    			&& (priorSnapshot.getTimestampMs() > period.getEndingMs()))
-    		{
-    			lastSnapshot = priorSnapshot;
-    			log.debug("Found last snapshot:" + lastSnapshot.getTimestampMs());
+    		if (accumulate && !doneAccumulating) {
     	    	accumulateDiskIoMegs(snapshot);
     	    	accumulateNetIoMegs(snapshot);
+    	    	if (priorSnapshot.getTimestampMs() > period.getEndingMs()) {
+    	    		log.debug("Done accumulating:" + priorSnapshot.getTimestampMs());
+    	    		doneAccumulating = true;
+    	    	}
     		}
-    		if (firstSnapshot != null && lastSnapshot == null) {
-        		accumulateDiskIoMegs(snapshot);
-        		accumulateNetIoMegs(snapshot);    			
-    		}
+    		this.lastSnapshot = snapshot;
     		this.priorSnapshot = snapshot;    				
     	}
 
@@ -318,10 +319,11 @@ public class InstanceUsageLog
     		if (period.getBeginningMs() >= lastSnapshot.getTimestampMs()
     				|| period.getEndingMs() <= firstSnapshot.getTimestampMs()) {
     			log.debug("duration=0, period does not overlap at all, report:" + period.getBeginningMs()
-    					+ "-" + period.getEndingMs() + ", snaps:" + firstSnapshot.getTimestampMs() + "="
+    					+ "-" + period.getEndingMs() + ", snaps:" + firstSnapshot.getTimestampMs() + "-"
     					+ lastSnapshot.getTimestampMs());
     			return 0l;
     		} else {
+    			///This is all wrong; it finds the beginning regardless...
     			long truncatedBeginMs = Math.max(period.getBeginningMs(), firstSnapshot.getTimestampMs());
     			long truncatedEndMs   = Math.min(period.getEndingMs(), lastSnapshot.getTimestampMs());
     			log.debug("truncated:" + truncatedBeginMs + "-" + truncatedEndMs);
