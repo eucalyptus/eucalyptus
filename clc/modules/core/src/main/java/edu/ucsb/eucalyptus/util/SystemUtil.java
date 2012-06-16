@@ -124,10 +124,23 @@ public class SystemUtil {
 	   public int returnValue;
 	   public String output;
 	   public String error;
+	   
 	   public CommandOutput(int returnValue, String output, String error) {
 	     this.returnValue = returnValue;
 	     this.output = output;
 	     this.error = error;
+	   }
+	   
+	   public String toString() {
+	     StringBuilder sb = new StringBuilder();
+	     sb.append('[').append(returnValue).append(']').append('\n');
+	     if (output != null) {
+	       sb.append(output);
+	     }
+	     if (error != null) {
+	       sb.append(error);
+	     }
+	     return sb.toString();
 	   }
 	 }
 	 
