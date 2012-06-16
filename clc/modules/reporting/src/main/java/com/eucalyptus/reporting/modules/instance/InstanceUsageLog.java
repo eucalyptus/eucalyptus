@@ -278,6 +278,7 @@ public class InstanceUsageLog
 			super();
 			this.insAttrs = insAttrs;
 			this.firstSnapshot = snapshot;
+			this.priorSnapshot = snapshot;
 			this.lastSnapshot = snapshot;
 			this.period = period;
 		}
