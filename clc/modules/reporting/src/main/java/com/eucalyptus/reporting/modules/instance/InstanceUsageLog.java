@@ -167,7 +167,8 @@ public class InstanceUsageLog
 					"from InstanceAttributes as ia, InstanceUsageSnapshot as ius"
 					+ " where ia.uuid = ius.uuid"
 					+ " and ius.timestampMs > ?"
-					+ " and ius.timestampMs < ?")
+					+ " and ius.timestampMs < ?"
+					+ " order by ius.timestampMs")
 					.setLong(0, latestSnapshotBeforeMs)
 					.setLong(1, afterEnd)
 					.list();
@@ -177,7 +178,8 @@ public class InstanceUsageLog
 						+ " where ia.uuid = ius.uuid"
 						+ " and ia.accountId = ?"
 						+ " and ius.timestampMs > ?"
-						+ " and ius.timestampMs < ?")
+						+ " and ius.timestampMs < ?"
+						+ " order by ius.timestampMs")
 						.setString(0, accountId)
 						.setLong(1, latestSnapshotBeforeMs)
 						.setLong(2, afterEnd)
@@ -267,6 +269,7 @@ public class InstanceUsageLog
     	private final InstanceAttributes insAttrs;
     	private InstanceUsageSnapshot firstSnapshot;
     	private InstanceUsageSnapshot lastSnapshot;
+    	private InstanceUsageSnapshot priorSnapshot;
     	private Period period;
     	
     	public InstanceDataAccumulator(InstanceAttributes insAttrs,
@@ -281,14 +284,10 @@ public class InstanceUsageLog
     	
     	public void update(InstanceUsageSnapshot snapshot)
     	{
-    		final long timeMs = snapshot.getTimestampMs().longValue();
-    		if (timeMs > lastSnapshot.getTimestampMs().longValue()) {
-        		this.lastSnapshot = snapshot;    			
-    		} else if (timeMs < firstSnapshot.getTimestampMs().longValue()) {
-    			this.firstSnapshot = snapshot;
-    		}
+    		this.lastSnapshot = snapshot;
     		accumulateDiskIoMegs(snapshot);
     		accumulateNetIoMegs(snapshot);
+    		this.priorSnapshot = snapshot;
     	}
 
     	public InstanceAttributes getInstanceAttributes()
@@ -317,11 +316,11 @@ public class InstanceUsageLog
     	 */
     	private double calcWithinFactor(long timestampMs)
     	{
-    		final double periodDuration = (double)(timestampMs-lastSnapshot.getTimestampMs());
+    		final double periodDuration = (double)(timestampMs-priorSnapshot.getTimestampMs());
     		double result = 0d;
     		if (periodDuration==0) return 0d;
     		
-    		final long perBegin = lastSnapshot.getTimestampMs();
+    		final long perBegin = priorSnapshot.getTimestampMs();
     		final long perEnd = timestampMs;
     		final long repBegin = period.getBeginningMs();
     		final long repEnd = period.getEndingMs();
