@@ -267,8 +267,8 @@ public class InstanceUsageLog
     private class InstanceDataAccumulator
     {
     	private final InstanceAttributes insAttrs;
-    	private InstanceUsageSnapshot firstSnapshot;
     	private InstanceUsageSnapshot lastSnapshot;
+    	private InstanceUsageSnapshot firstSnapshot;
     	private InstanceUsageSnapshot priorSnapshot;
     	private Period period;
     	
@@ -277,18 +277,34 @@ public class InstanceUsageLog
 		{
 			super();
 			this.insAttrs = insAttrs;
-			this.firstSnapshot = snapshot;
+			this.lastSnapshot = null;
 			this.priorSnapshot = snapshot;
-			this.lastSnapshot = snapshot;
+			this.firstSnapshot = null;
 			this.period = period;
 		}
     	
     	public void update(InstanceUsageSnapshot snapshot)
     	{
-    		this.lastSnapshot = snapshot;
-    		accumulateDiskIoMegs(snapshot);
-    		accumulateNetIoMegs(snapshot);
-    		this.priorSnapshot = snapshot;
+    		if (firstSnapshot == null
+    			&& (priorSnapshot.getTimestampMs() >= period.getBeginningMs()
+    				|| snapshot.getTimestampMs() >= period.getBeginningMs()))
+    		{
+    			firstSnapshot = priorSnapshot;
+    			log.debug("Found first snapshot:" + firstSnapshot.getTimestampMs());
+    		}
+    		if (lastSnapshot == null
+    			&& (priorSnapshot.getTimestampMs() > period.getEndingMs()))
+    		{
+    			lastSnapshot = priorSnapshot;
+    			log.debug("Found last snapshot:" + lastSnapshot.getTimestampMs());
+    	    	accumulateDiskIoMegs(snapshot);
+    	    	accumulateNetIoMegs(snapshot);
+    		}
+    		if (firstSnapshot != null && lastSnapshot == null) {
+        		accumulateDiskIoMegs(snapshot);
+        		accumulateNetIoMegs(snapshot);    			
+    		}
+    		this.priorSnapshot = snapshot;    				
     	}
 
     	public InstanceAttributes getInstanceAttributes()
@@ -301,14 +317,19 @@ public class InstanceUsageLog
     		/* If report period does not overlap usage at all, then duration is 0 */
     		if (period.getBeginningMs() >= lastSnapshot.getTimestampMs()
     				|| period.getEndingMs() <= firstSnapshot.getTimestampMs()) {
+    			log.debug("duration=0, period does not overlap at all, report:" + period.getBeginningMs()
+    					+ "-" + period.getEndingMs() + ", snaps:" + firstSnapshot.getTimestampMs() + "="
+    					+ lastSnapshot.getTimestampMs());
     			return 0l;
     		} else {
     			long truncatedBeginMs = Math.max(period.getBeginningMs(), firstSnapshot.getTimestampMs());
     			long truncatedEndMs   = Math.min(period.getEndingMs(), lastSnapshot.getTimestampMs());
+    			log.debug("truncated:" + truncatedBeginMs + "-" + truncatedEndMs);
         		return ( truncatedEndMs-truncatedBeginMs ) / 1000;
     		}
     	}
 
+    	
     	/**
     	 * Calculate what fraction of the current reporting period lies within the
     	 * begin and end of the generated report period.
