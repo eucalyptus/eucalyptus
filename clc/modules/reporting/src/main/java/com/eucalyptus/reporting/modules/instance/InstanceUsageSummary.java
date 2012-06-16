@@ -349,10 +349,16 @@ public class InstanceUsageSummary
 	public void sumFromDurationSecsAndType(long durationSecs, String type)
 	{
 		if (durationSecs < 0) {
-			throw new IllegalArgumentException ("timeSecs cant be null");
+			throw new IllegalArgumentException ("durationSecs cant be <0");
 		}
 		if (type == null) {
 			throw new IllegalArgumentException("args can't be null");
+		}
+		if (durationSecs==0) {
+			/* If the instance ran for 0 seconds then it didnt run at all and
+			 * should not add to the instance count.
+			 */
+			return;
 		}
 
 		//TODO: the strings here should be in an enum or something. same with events?
