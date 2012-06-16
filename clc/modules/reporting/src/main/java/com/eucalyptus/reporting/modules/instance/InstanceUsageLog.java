@@ -231,7 +231,7 @@ public class InstanceUsageLog
 				InstanceUsageSummary ius = usageMap.get(key);
 				ius.addDiskIoMegs(accumulator.getDiskIoMegs());
 				ius.addNetworkIoMegs(accumulator.getNetIoMegs());
-				ius.sumFromPeriodType(accumulator.getDurationPeriod(),
+				ius.sumFromDurationSecsAndType(accumulator.getDurationSecs(),
 						accumulator.getInstanceAttributes().getInstanceType());
 			}
 
@@ -255,6 +255,7 @@ public class InstanceUsageLog
 
 
     /**
+     * Accumulate data for a <i>single instance</i>.
      * InstanceDataAccumulator will accumulate a series of
      * InstanceUsageSnapshot if you call the <code>update</code> method with
      * each snapshot, after which it can return the total duration of the
@@ -294,16 +295,15 @@ public class InstanceUsageLog
     	
     	public long getDurationSecs()
     	{
-    		long truncatedBeginMs = Math.max(period.getBeginningMs(), firstSnapshot.getTimestampMs());
-    		long truncatedEndMs   = Math.min(period.getEndingMs(), lastSnapshot.getTimestampMs());
-    		return ( truncatedEndMs-truncatedBeginMs ) / 1000;
-    	}
-    	
-    	public Period getDurationPeriod()
-    	{
-    		long truncatedBeginMs = Math.max(period.getBeginningMs(), firstSnapshot.getTimestampMs());
-    		long truncatedEndMs   = Math.min(period.getEndingMs(), lastSnapshot.getTimestampMs());
-    		return new Period(truncatedBeginMs, truncatedEndMs);
+    		/* If report period does not overlap usage at all, then duration is 0 */
+    		if (period.getBeginningMs() >= lastSnapshot.getTimestampMs()
+    				|| period.getEndingMs() <= firstSnapshot.getTimestampMs()) {
+    			return 0l;
+    		} else {
+    			long truncatedBeginMs = Math.max(period.getBeginningMs(), firstSnapshot.getTimestampMs());
+    			long truncatedEndMs   = Math.min(period.getEndingMs(), lastSnapshot.getTimestampMs());
+        		return ( truncatedEndMs-truncatedBeginMs ) / 1000;
+    		}
     	}
     	
     	public long getDiskIoMegs()
@@ -313,6 +313,7 @@ public class InstanceUsageLog
     		double result =
     			(double)lastSnapshot.getCumulativeDiskIoMegs() -
     			(double)firstSnapshot.getCumulativeDiskIoMegs();
+    		
     		log.debug("Unadjusted disk io megs:" + result);
 			/* Extrapolate fractional usage for snapshots which occurred
 			 * before report beginning or after report end.
