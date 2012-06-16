@@ -433,17 +433,7 @@ public class WalrusManager {
 					storageManager.createBucket(bucketName);
 					if (WalrusProperties.trackUsageStatistics)
 						walrusStatistics.incrementBucketCount();
-
-					/* Send an event to reporting to report this S3 usage. */
-
-					final String userId = ctx.getUser().getUserId();
-					final String accountId = ctx.getAccount().getAccountNumber();
-					final String userName = Accounts.lookupUserById(userId).getName();
-					final String accountName = Accounts.lookupAccountById(accountId).getName();
-
-					QueueSender queueSender = QueueFactory.getInstance().getSender(QueueIdentifier.S3);
-					queueSender.send(new S3Event(true, userId, userName, accountId, accountName));
-
+					
 				} catch (IOException ex) {
 					LOG.error(ex, ex);
 					throw new BucketAlreadyExistsException(bucketName);
@@ -457,7 +447,8 @@ public class WalrusManager {
 					}
 				}
 
-
+				/* Send an event to reporting to report this S3 usage. */				
+				reportWalrusEvent(genBucketEvent(ctx, true));
 
 			} else {
 				LOG.error( "Not authorized to create bucket by " + ctx.getUserFullName( ) );
@@ -468,7 +459,49 @@ public class WalrusManager {
 		reply.setBucket(bucketName);
 		return reply;
 	}
-
+	
+	/* These functions are for reporting S3 usage */
+	private S3Event genBucketEvent(final Context ctx, final boolean isCreate) {		
+		try {
+			User usr = ctx.getUser();		
+			return new S3Event(isCreate, usr.getUserId(), usr.getName(), usr.getAccount().getAccountNumber(), usr.getAccount().getName());
+		} catch(Exception e) {
+			LOG.error("Non-fatal exception creating S3Event for bucket, isCreate = " + isCreate + " message = " + e.getMessage());
+			return null;
+		}
+	}
+	private S3Event genObjectEvent(final Context ctx, final boolean isCreate, final long sizeInBytes) {		
+		try {
+			User usr = ctx.getUser();
+			return new S3Event(isCreate, sizeInBytes / WalrusProperties.M, usr.getUserId(), usr.getName(), usr.getAccount().getAccountNumber(), usr.getAccount().getName());
+		} catch(Exception e) {
+			LOG.error("Non-fatal exception creating S3Event for bucket, isCreate = " + isCreate + " message = " + e.getMessage());
+			return null;
+		}
+	
+	}
+	private S3Event genBucketEvent(final String usrId, final String usrName, final String accntId, final String accntName, final boolean isCreate) {
+		return new S3Event(isCreate, usrId, usrName, accntId, accntName);
+	}	
+	private S3Event genObjectEvent(final String usrId, final String usrName, final String accntId, final String accntName, final boolean isCreate, final long sizeInBytes) {
+		return new S3Event(isCreate, sizeInBytes / WalrusProperties.M, usrId, usrName, accntId, accntName);
+	}
+	
+	/* Report the event to the reporting system */
+	private void reportWalrusEvent(S3Event event) {
+		if(event != null) {
+			try {
+				QueueSender queueSender = QueueFactory.getInstance().getSender(QueueIdentifier.S3);
+				queueSender.send(event);
+			} catch(Exception ex) {
+				LOG.error("Non-fatal exception: Could not send event: " + event.toString() + " Exception = " + ex.getMessage());			
+			}	
+		}
+		else {
+			LOG.error("Non-fatal error: cannot report a null Walrus event.");
+		}
+	}
+	
 	private boolean checkBucketName(String bucketName) {
 		if(!bucketName.matches("^[A-Za-z0-9][A-Za-z0-9._-]+"))
 			return false;
@@ -554,26 +587,18 @@ public class WalrusManager {
 					// Actually remove the bucket from the backing store
 					try {
 						storageManager.deleteBucket(bucketName);
-						if (WalrusProperties.trackUsageStatistics)
+						if (WalrusProperties.trackUsageStatistics) {
 							walrusStatistics.decrementBucketCount();
-
+						}
+		
 						/* Send an event to reporting to report this S3 usage. */
-	
-						final String userId = ctx.getUser().getUserId();
-						final String accountId = ctx.getAccount().getAccountNumber();
-						final String userName = Accounts.lookupUserById(userId).getName();
-						final String accountName = Accounts.lookupAccountById(accountId).getName();
-
-						QueueSender queueSender = QueueFactory.getInstance().getSender(QueueIdentifier.S3);
-						queueSender.send(new S3Event(false, userId, userName, accountId, accountName));
-
+						reportWalrusEvent(genBucketEvent(ctx, false));
+						
 					} catch (Exception ex) {
 						// set exception code in reply
 						LOG.error(ex);
 					}
-
-
-
+					
 					Status status = new Status();
 					status.setCode(204);
 					status.setDescription("No Content");
@@ -1048,29 +1073,20 @@ public class WalrusManager {
 							}
 							dbObject.commit();
 
+							//See if a delete marker exists that needs to be removed now
 							dbObject = EntityWrapper.get(ObjectInfo.class);
 							ObjectInfo deleteMarker = new ObjectInfo(bucketName, objectKey);
 							deleteMarker.setDeleted(true);
+							ObjectInfo foundDeleteMarker = null;			
 							try {
-								ObjectInfo foundDeleteMarker = dbObject.getUnique(deleteMarker);
+								foundDeleteMarker = dbObject.getUnique(deleteMarker);
 								dbObject.delete(foundDeleteMarker);
-
-								/* Send an event to reporting to report this S3 usage. */
-			
-								final String userId = ctx.getUser().getUserId();
-								final String accountId = ctx.getAccount().getAccountNumber();
-								final String userName = Accounts.lookupUserById(userId).getName();
-								final String accountName = Accounts.lookupAccountById(accountId).getName();
-	
-								QueueSender queueSender = QueueFactory.getInstance().getSender(QueueIdentifier.S3);
-
-								queueSender.send(new S3Event(true, size / WalrusProperties.M,
-										userId, userName, accountId, accountName));
-
 							} catch(Exception ex) {
-								//no delete marker found.
-								LOG.error("Deletion failed for: " + bucketName + "/" + objectKey, ex);
+								if(foundDeleteMarker != null) {
+									LOG.error("Deletion of delete marker failed for: " + bucketName + "/" + objectKey, ex);	
+								}															
 							}
+														
 							dbObject.commit();
 
 							if (logData != null) {
@@ -1090,7 +1106,9 @@ public class WalrusManager {
 							messenger.removeQueue(key, randomKey);
 							LOG.info("Transfer complete: " + key);
 
-
+							/* Send an event to reporting to report this S3 usage. */
+							reportWalrusEvent(genObjectEvent(ctx,true,size));
+							
 							break;
 						} else {
 							assert (WalrusDataMessage.isData(dataMessage));
@@ -1124,6 +1142,8 @@ public class WalrusManager {
 			messenger.removeQueue(key, randomKey);
 			throw new NoSuchBucketException(bucketName);
 		}
+		
+		
 		reply.setEtag(md5);
 		reply.setLastModified(DateUtils.format(lastModified.getTime(),
 				DateUtils.ISO8601_DATETIME_PATTERN)
@@ -1387,19 +1407,10 @@ public class WalrusManager {
 						reply.setLogData(logData);
 					}
 
-
 					/* Send an event to reporting to report this S3 usage. */
+					reportWalrusEvent(genObjectEvent(ctx,true,size));
+
 					/* SOAP */
-	
-					final String userId = ctx.getUser().getUserId();
-					final String accountId = ctx.getAccount().getAccountNumber();
-					final String userName = Accounts.lookupUserById(userId).getName();
-					final String accountName = Accounts.lookupAccountById(accountId).getName();
-
-					QueueSender queueSender = QueueFactory.getInstance().getSender(QueueIdentifier.S3);
-					queueSender.send(new S3Event(true, size / WalrusProperties.M,
-							userId, userName, accountId, accountName));
-
 				} catch (Exception ex) {
 					LOG.error(ex);
 					db.rollback();
@@ -1692,15 +1703,8 @@ public class WalrusManager {
 				if (WalrusProperties.trackUsageStatistics && (size > 0))
 					walrusStatistics.updateSpaceUsed(-size);
 
-
 					/* Send an event to reporting to report this S3 usage. */
-	
-					final String userName = Accounts.lookupUserById(this.userId).getName();
-					final String accountName = Accounts.lookupAccountById(this.accountNumber).getName();
-
-					QueueSender queueSender = QueueFactory.getInstance().getSender(QueueIdentifier.S3);
-					queueSender.send(new S3Event(false, size / WalrusProperties.M, this.userId, userName,
-						this.accountNumber, accountName));			
+					reportWalrusEvent(genObjectEvent(userId,user,accountNumber,account,false,size));
 
 			} catch (Exception ex) {
 				LOG.error(ex, ex);
