@@ -346,30 +346,32 @@ public class InstanceUsageSummary
 		this.networkIoMegs = this.networkIoMegs + ud.getNetworkIoMegs();
 	}
 	
-	public void sumFromPeriodType(Period period, String type)
+	public void sumFromDurationSecsAndType(long durationSecs, String type)
 	{
-		if (period == null || type == null) {
+		if (durationSecs < 0) {
+			throw new IllegalArgumentException ("timeSecs cant be null");
+		}
+		if (type == null) {
 			throw new IllegalArgumentException("args can't be null");
 		}
-		long timeSecs = (period.getEndingMs() - period.getBeginningMs())/1000;
 
 		//TODO: the strings here should be in an enum or something. same with events?
 		//Autoboxing should work because we prevented nulls everywhere
 		if (type.equalsIgnoreCase("m1.small")) {
 			this.m1SmallNum = this.m1SmallNum + 1;
-			this.m1SmallTimeSecs = this.m1SmallTimeSecs + timeSecs;
+			this.m1SmallTimeSecs = this.m1SmallTimeSecs + durationSecs;
 		} else if (type.equalsIgnoreCase("c1.medium")) {
 			this.c1MediumNum = this.c1MediumNum + 1;
-			this.c1MediumTimeSecs = this.c1MediumTimeSecs + timeSecs;
+			this.c1MediumTimeSecs = this.c1MediumTimeSecs + durationSecs;
 		} else if (type.equalsIgnoreCase("m1.large")) {
 			this.m1LargeNum = this.m1LargeNum + 1;
-			this.m1LargeTimeSecs = this.m1LargeTimeSecs + timeSecs;
+			this.m1LargeTimeSecs = this.m1LargeTimeSecs + durationSecs;
 		} else if (type.equalsIgnoreCase("m1.xlarge")) {
 			this.m1XLargeNum = this.m1XLargeNum + 1;
-			this.m1XLargeTimeSecs = this.m1XLargeTimeSecs + timeSecs;
+			this.m1XLargeTimeSecs = this.m1XLargeTimeSecs + durationSecs;
 		} else if (type.equalsIgnoreCase("c1.xlarge")) {
 			this.c1XLargeNum = this.c1XLargeNum + 1;
-			this.c1XLargeTimeSecs = this.c1XLargeTimeSecs + timeSecs;
+			this.c1XLargeTimeSecs = this.c1XLargeTimeSecs + durationSecs;
 		} else {
 			throw new RuntimeException("Unrecognized type:" + type);
 		}
