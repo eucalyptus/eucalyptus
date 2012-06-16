@@ -310,37 +310,47 @@ public class InstanceUsageLog
     	}
 
     	/**
-    	 * Calculate how much of the current reporting period lies within the
+    	 * Calculate what fraction of the current reporting period lies within the
     	 * begin and end of the generated report period.
+    	 * 
+    	 * @returns a double from 0 to 1
     	 */
-    	private double getRemainingFactor(long timestampMs)
+    	private double calcWithinFactor(long timestampMs)
     	{
     		final double periodDuration = (double)(timestampMs-lastSnapshot.getTimestampMs());
+    		double result = 0d;
     		if (periodDuration==0) return 0d;
-    		/* This is magic; DO NOT TOUCH. There are several cases:
-    		 * 
-    		 *   1. beginning and end of period both precede beginning of report
-    		 *   2. beginning and end of period both come after end of report
-    		 *   3. beginning of period precedes beginning of report, but end of period falls within it.
-    		 *   4. beginning of period falls within report, but end of period is after end of report.
-    		 *   5. both beginning and end of period fall within report
-    		 *   6. both beginning and end of report fall within period.
-    		 *   
-    		 *  The following formula works in all cases. PriorFraction is the fraction of the
-    		 *     period which precedes the beginning of the report. It is negative (and
-    		 *     therefore set to 0 below) if the beginning of the period is after the beginning of
-    		 *     the report. afterFraction is the opposite; it is the fraction of the reporting
-    		 *     period which falls after the end of the report. It is negative (and therefore
-    		 *     set to 0 below) if the end of the period precedes the end of the report.
-    		 *     If both the beginning and end of the period fall either before the beginning
-    		 *     or after the end of the report, then priorFraction or afterFraction will be greater
-    		 *     than 1, in which case subtracting it from 1d will result in a negative number and be
-    		 *     set to zero in the outermost Math.max(). The result is always the fraction of the
-    		 *     period which falls outside the report (from 0-1).
-    		 */
-    		final double priorFraction = (double)(period.getBeginningMs()-lastSnapshot.getTimestampMs())/periodDuration;
-    		final double afterFraction = (double)(timestampMs-period.getEndingMs())/periodDuration;
-    		return Math.max(0d, 1d-Math.max(0d,priorFraction)-Math.max(0d,afterFraction));
+    		
+    		final long perBegin = lastSnapshot.getTimestampMs();
+    		final long perEnd = timestampMs;
+    		final long repBegin = period.getBeginningMs();
+    		final long repEnd = period.getEndingMs();
+    		
+    		if (perEnd <= repBegin || perBegin >= repEnd) {
+    			//Period falls completely outside of report, on either end
+    			result = 0d;
+    		} else if (perBegin < repBegin && perEnd <= repEnd) {
+    			//Period begin comes before report begin but period end lies within it
+    			result = ((double)perEnd-repBegin)/periodDuration;
+    		} else if (perBegin >= repBegin && perEnd >= repEnd) {
+    			//Period begin lies within report but period end comes after it
+    			 result = ((double)repEnd-perBegin)/periodDuration;
+    		} else if (perBegin >= repBegin && perEnd <= repEnd) {
+    			//Period falls entirely within report
+    			result = 1d;
+    		} else if (repBegin >= perBegin && repEnd <= perEnd) {
+    			//Report falls entirely within period (<15 second report?)
+    			result = ((double)(repBegin-perBegin)+(perEnd-repEnd))/periodDuration;
+    		} else {
+    			throw new IllegalStateException("impossible boundary condition");
+    		}
+
+    		if (result < 0 || result > 1) throw new IllegalStateException("result<0 || result>1");
+    		
+    		log.debug(String.format("remainingFactor, report:%d-%d (%d), period:%d-%d (%d), factor:%f",
+    				repBegin, repEnd, repEnd-repBegin, perBegin, perEnd, perEnd-perBegin, result));
+    		
+    		return result;
     	}
 
     	
@@ -349,13 +359,7 @@ public class InstanceUsageLog
     	
     	public void accumulateDiskIoMegs(InstanceUsageSnapshot snapshot)
     	{
-    		double remainingFactor = getRemainingFactor(snapshot.getTimestampMs());
-    		log.debug(String.format("remainingFactor, report:%d-%d (%d), period:%d-%d (%d), factor:%f",
-    				period.getBeginningMs(), period.getEndingMs(),
-    				period.getEndingMs()-period.getBeginningMs(),
-    				lastSnapshot.getTimestampMs(), snapshot.getTimestampMs(),
-    				snapshot.getTimestampMs()-lastSnapshot.getTimestampMs(),
-    				remainingFactor));
+    		double remainingFactor = calcWithinFactor(snapshot.getTimestampMs());
        		this.accumulatedDiskIoMegs += (long)(remainingFactor*(snapshot.getCumulativeDiskIoMegs()-lastCumulativeDiskIoMegs));
     		this.lastCumulativeDiskIoMegs = snapshot.getCumulativeDiskIoMegs();
     	}
@@ -376,13 +380,7 @@ public class InstanceUsageLog
 
     	public void accumulateNetIoMegs(InstanceUsageSnapshot snapshot)
     	{
-    		double remainingFactor = getRemainingFactor(snapshot.getTimestampMs());
-    		log.debug(String.format("remainingFactor, report:%d-%d (%d), period:%d-%d (%d), factor:%f",
-    				period.getBeginningMs(), period.getEndingMs(),
-    				period.getEndingMs()-period.getBeginningMs(),
-    				lastSnapshot.getTimestampMs(), snapshot.getTimestampMs(),
-    				snapshot.getTimestampMs()-lastSnapshot.getTimestampMs(),
-    				remainingFactor));
+    		double remainingFactor = calcWithinFactor(snapshot.getTimestampMs());
         	this.accumulatedNetIoMegs += (long)(remainingFactor*(snapshot.getCumulativeNetworkIoMegs()-lastCumulativeNetIoMegs));    			
     		this.lastCumulativeNetIoMegs = snapshot.getCumulativeNetworkIoMegs();
     	}
