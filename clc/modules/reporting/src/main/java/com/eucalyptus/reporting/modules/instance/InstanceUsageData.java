@@ -15,6 +15,11 @@ public class InstanceUsageData
 
 	public InstanceUsageData(Long totalNetworkIoMegs, Long totalDiskIoMegs)
 	{
+		if (totalNetworkIoMegs != null && totalNetworkIoMegs.longValue()<0)
+			throw new IllegalArgumentException("totalNetworkIoMegs<0");
+		if (totalDiskIoMegs != null && totalDiskIoMegs.longValue()<0)
+			throw new IllegalArgumentException("totalDiskIoMegs<0");
+
 		this.networkIoMegs = totalNetworkIoMegs;
 		this.diskIoMegs = totalDiskIoMegs;
 	}

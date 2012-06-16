@@ -233,6 +233,7 @@ public class InstanceUsageLog
 				ius.addNetworkIoMegs(accumulator.getNetIoMegs());
 				ius.sumFromPeriodType(accumulator.getDurationPeriod(),
 						accumulator.getInstanceAttributes().getInstanceType());
+				log.debug("Instance summary:" + ius);
 			}
 
 			entityWrapper.commit();
