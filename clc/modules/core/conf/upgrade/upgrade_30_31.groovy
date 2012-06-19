@@ -372,8 +372,7 @@ class upgrade_30_31 extends AbstractUpgradeScript {
 
                 db = EntityWrapper.get(AccessKeyEntity.class);
                 authConn.rows("""select * from auth_access_key k
-                                   join auth_user u on (k.auth_access_key_owning_user=u.id)
-                                  where u.auth_user_id_external=?""", rowResult.auth_user_id_external).each { rowResult2 ->
+                                  where k.auth_access_key_owning_user=?""", rowResult.id).each { rowResult2 ->
                     AccessKeyEntity accessKey = new AccessKeyEntity(user);
                     accessKey = convertRowToObject(akeySetterMap, rowResult2, accessKey);
                     initMetaClass(accessKey, AccessKeyEntity.class);
@@ -1115,7 +1114,6 @@ class upgrade_30_31 extends AbstractUpgradeScript {
         // entities.add(ObjectInfo.class)
         entities.add(Partition.class)
         entities.add(PolicyEntity.class)
-        entities.add(PrivateNetworkIndex.class)
         entities.add(ReportingAccount.class)
         entities.add(ReportingUser.class)
         entities.add(Snapshot.class)
