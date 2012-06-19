@@ -476,7 +476,7 @@ class upgrade_30_31 extends AbstractUpgradeScript {
             AccountEntity acctEnt = DatabaseAuthUtils.getUnique( db, AccountEntity.class, "name", phantomUserMap[userId][1] );
             initMetaClass(acctEnt, AccountEntity.class);
             Account acct = new DatabaseAccountProxy(acctEnt);
-            acct.deleteUser(phantomUserMap[userId][0], false, true);
+            acct.deleteUser(phantomUserMap[userId][0], true, true);
         }
         for (String acctId : phantomAcctMap.keySet()) {
             Accounts.deleteAccount(phantomAcctMap[acctId], false, true);
