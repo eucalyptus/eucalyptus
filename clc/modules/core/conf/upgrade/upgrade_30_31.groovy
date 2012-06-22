@@ -122,6 +122,7 @@ import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.DatabaseAuthUtils;
 import com.eucalyptus.auth.DatabaseAccountProxy;
 import com.eucalyptus.auth.DatabaseGroupProxy;
+import com.eucalyptus.auth.DatabaseUserProxy;
 
 // Enums
 import com.eucalyptus.auth.principal.User.RegistrationStatus;
@@ -387,6 +388,15 @@ class upgrade_30_31 extends AbstractUpgradeScript {
                     db.add(accessKey);
                 }
                 db.commit();
+
+                def userDelegate = new DatabaseUserProxy(user);
+                initMetaClass(userDelegate, userDelegate.class);
+                Map<String, String> info = new HashMap<String, String>( );
+                authConn.rows("""select * from auth_user_info_map
+                                  where userentity_id=?""", rowResult.id).each { infoRow ->
+                    info.put(infoRow.auth_user_info_key, infoRow.auth_user_info_value);
+                }
+                userDelegate.setInfo(info)
 
                 db = EntityWrapper.get(CertificateEntity.class);
                 authConn.rows("""select c.* from auth_cert c
