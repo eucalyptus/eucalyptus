@@ -1,0 +1,250 @@
+<html>
+<style type="text/css" title="currentStyle">
+  @import "jquery.css";
+  @import "jquery-table.css";
+</style>
+<link rel="stylesheet" href="jquery-ui-1.8.21.custom.css"/>
+<script type="text/javascript" language="javascript" src="jquery-1.7.2.min.js"></script> 
+<script type="text/javascript" language="javascript" src="jquery.ui.core.min.js"></script> 
+<script type="text/javascript" language="javascript" src="jquery.ui.widget.min.js"></script> 
+<script type="text/javascript" language="javascript" src="jquery.ui.tabs.min.js"></script> 
+<script type="text/javascript" language="javascript" src="jquery.dataTables.js"></script> 
+
+<script type="text/javascript" charset="utf-8">
+$(function() {
+    $( "#tabs" ).tabs();
+});
+
+$(document).ready(function() {
+    $('#instances').dataTable( {
+	    "bProcessing": true,
+		"sAjaxSource": "../ec2?type=instance",
+		"sAjaxDataProp": "",
+		"aoColumns": [
+		  { "mDataProp": "id" },
+		  { "mDataProp": "image_id" },
+		  { "mDataProp": "ip_address" },
+		  { "mDataProp": "private_ip_address" },
+		  { "mDataProp": "state" }
+		]
+	} );    
+} );
+$(document).ready(function() {
+    $('#images').dataTable( {
+	    "bProcessing": true,
+		"sAjaxSource": "../ec2?type=image",
+		"sAjaxDataProp": "",
+		"aoColumns": [
+		  { "mDataProp": "id" },
+		  { "mDataProp": "location" },
+		  { "mDataProp": "type" },
+		  { "mDataProp": "architecture" },
+		  { "mDataProp": "state" }
+		]
+	} );    
+} );
+$(document).ready(function() {
+    $('#keys').dataTable( {
+	    "bProcessing": true,
+		"sAjaxSource": "../ec2?type=key",
+		"sAjaxDataProp": "",
+		"aoColumns": [
+		  { "mDataProp": "name" },
+		  { "mDataProp": "fingerprint" }
+		]
+	} );    
+} );
+$(document).ready(function() {
+    $('#groups').dataTable( {
+	    "bProcessing": true,
+		"sAjaxSource": "../ec2?type=group",
+		"sAjaxDataProp": "",
+		"aoColumns": [
+		  { "mDataProp": "name" },
+		  { "mDataProp": "description" }
+		]
+	} );    
+} );
+$(document).ready(function() {
+    $('#addresses').dataTable( {
+	    "bProcessing": true,
+		"sAjaxSource": "../ec2?type=address",
+		"sAjaxDataProp": "",
+		"aoColumns": [
+		  { "mDataProp": "public_ip" },
+		  { "mDataProp": "instance_id" }
+		]
+	} );    
+} );
+$(document).ready(function() {
+    $('#volumes').dataTable( {
+	    "bProcessing": true,
+		"sAjaxSource": "../ec2?type=volume",
+		"sAjaxDataProp": "",
+		"aoColumns": [
+		  { "mDataProp": "id" },
+		  { "mDataProp": "size" },
+		  { "mDataProp": "status" },
+		  { "mDataProp": "create_time" },
+		  { "mDataProp": "snapshot_id" }
+		]
+	} );    
+} );
+$(document).ready(function() {
+    $('#snapshots').dataTable( {
+	    "bProcessing": true,
+		"sAjaxSource": "../ec2?type=snapshot",
+		"sAjaxDataProp": "",
+		"aoColumns": [
+		  { "mDataProp": "id" },
+		  { "mDataProp": "status" },
+		  { "mDataProp": "progress" },
+		  { "mDataProp": "volume_id" },
+		  { "mDataProp": "start_time" },
+		  { "mDataProp": "owner_id" }
+		]
+	} );    
+} );
+</script>
+<body>
+<img src="http://www.eucalyptus.com/sites/all/img/logos/eucalyptus-340x36.png"/>
+<div id="tabs">
+<ul>
+  <li><a href="#tabs-instances">Instances</a></li>
+  <li><a href="#tabs-images">Images</a></li>
+  <li><a href="#tabs-keys">Keys</a></li>
+  <li><a href="#tabs-groups">Security Groups</a></li>
+  <li><a href="#tabs-addresses">Elastic IPs</a></li>
+  <li><a href="#tabs-volumes">Volumes</a></li>
+  <li><a href="#tabs-snapshots">Snapshots</a></li>
+</ul>
+
+<div id="tabs-instances">
+<table id="instances" class="display">
+<thead>
+	<tr>
+		<th>id</th>
+		<th>image id</th>
+		<th>public IP</th>
+		<th>private IP</th>
+		<th>state</th>
+	</tr>
+</thead>
+<tbody>
+	<tr> 
+		<td colspan="5" class="dataTables_empty">Loading data from server</td> 
+	</tr> 
+</tbody>
+</table>
+</div>
+
+<div id="tabs-images">
+<table id="images" class="display">
+<thead>
+	<tr>
+		<th>id</th>
+		<th>location</th>
+		<th>type</th>
+		<th>architecture</th>
+		<th>state</th>
+	</tr>
+</thead>
+<tbody>
+	<tr> 
+		<td colspan="5" class="dataTables_empty">Loading data from server</td> 
+	</tr> 
+</tbody>
+</table>
+</div>
+
+<div id="tabs-keys">
+<table id="keys" class="display">
+<thead>
+	<tr>
+		<th>name</th>
+		<th>fingerprint</th>
+	</tr>
+</thead>
+<tbody>
+	<tr> 
+		<td colspan="5" class="dataTables_empty">Loading data from server</td> 
+	</tr> 
+</tbody>
+</table>
+</div>
+
+<div id="tabs-groups">
+<table id="groups" class="display">
+<thead>
+	<tr>
+		<th>name</th>
+		<th>description</th>
+	</tr>
+</thead>
+<tbody>
+	<tr> 
+		<td colspan="5" class="dataTables_empty">Loading data from server</td> 
+	</tr> 
+</tbody>
+</table>
+</div>
+
+<div id="tabs-addresses">
+<table id="addresses" class="display">
+<thead>
+	<tr>
+		<th>public IP</th>
+		<th>Instance ID</th>
+	</tr>
+</thead>
+<tbody>
+	<tr> 
+		<td colspan="5" class="dataTables_empty">Loading data from server</td> 
+	</tr> 
+</tbody>
+</table>
+</div>
+
+<div id="tabs-volumes">
+<table id="volumes" class="display">
+<thead>
+	<tr>
+		<th>id</th>
+		<th>size</th>
+		<th>status</th>
+		<th>creation time</th>
+		<th>snapshot id</th>
+	</tr>
+</thead>
+<tbody>
+	<tr> 
+		<td colspan="5" class="dataTables_empty">Loading data from server</td> 
+	</tr> 
+</tbody>
+</table>
+</div>
+
+<div id="tabs-snapshots">
+<table id="snapshots" class="display">
+<thead>
+	<tr>
+		<th>id</th>
+		<th>status</th>
+		<th>progress</th>
+		<th>volume id</th>
+		<th>start time</th>
+		<th>owner id</th>
+	</tr>
+</thead>
+<tbody>
+	<tr> 
+		<td colspan="5" class="dataTables_empty">Loading data from server</td> 
+	</tr> 
+</tbody>
+</table>
+</div>
+
+</div>
+</body>
+</html>
+
