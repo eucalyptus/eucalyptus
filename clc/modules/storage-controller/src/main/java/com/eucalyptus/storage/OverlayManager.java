@@ -967,6 +967,10 @@ public class OverlayManager implements LogicalStorageManager {
 					if(pid > 0) {
 						//enable logical volumes
 						String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + aoeVolumeInfo.getVgName() + PATH_SEPARATOR + aoeVolumeInfo.getLvName();
+						if(!logicalVolumeExists(absoluteLVName)) {
+							LOG.error("Backing volume not found: " + absoluteLVName);
+							throw new EucalyptusCloudException("Logical volume not found: " + absoluteLVName);
+						}
 						try {
 							enableLogicalVolume(absoluteLVName);
 						} catch(EucalyptusCloudException ex) {
@@ -1015,6 +1019,10 @@ public class OverlayManager implements LogicalStorageManager {
 				if(lvmVolumeInfo instanceof ISCSIVolumeInfo) {
 					ISCSIVolumeInfo iscsiVolumeInfo = (ISCSIVolumeInfo) lvmVolumeInfo;
 					String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + iscsiVolumeInfo.getVgName() + PATH_SEPARATOR + iscsiVolumeInfo.getLvName();
+					if(!logicalVolumeExists(absoluteLVName)) {
+						LOG.error("Backing volume not found: " + absoluteLVName);
+						throw new EucalyptusCloudException("Logical volume not found: " + absoluteLVName);
+					}
 					try {
 						enableLogicalVolume(absoluteLVName);
 					} catch(EucalyptusCloudException ex) {
