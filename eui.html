@@ -19,7 +19,7 @@ $(document).ready(function() {
     $('#instances').dataTable( {
 	    "bProcessing": true,
 		"sAjaxSource": "../ec2?type=instance",
-		"sAjaxDataProp": "",
+		"sAjaxDataProp": "item/instances",
 		"aoColumns": [
 		  { "mDataProp": "id" },
 		  { "mDataProp": "image_id" },

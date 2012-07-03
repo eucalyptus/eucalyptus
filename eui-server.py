@@ -1,19 +1,17 @@
+#!/usr/bin/python
+
 import tornado.ioloop
 import tornado.web
 import os
 import socket
 import random
-import boto
 import json
-from json import JSONEncoder
-from boto.ec2 import EC2Connection
-from boto.ec2.ec2object import EC2Object
-from boto.regioninfo import RegionInfo
-from boto.ec2.instance import Group
-from boto.ec2.volume import AttachmentSet
+from botoclcinterface import BotoClcInterface
+from mockclcinterface import MockClcInterface
 
 # dictionary for in-memory sessions
-sessions = {};
+sessions = {}
+use_mock = True
 
 class UserSession(object):
   def __init__(self, username, password, access_id, secret_key):
@@ -21,20 +19,6 @@ class UserSession(object):
     self.password = password
     self.access_id = access_id
     self.secret_key = secret_key
-
-class BotoEncoder(JSONEncoder):
-  def default(self, obj):
-    if isinstance(obj, RegionInfo):
-      return (obj.__dict__)
-    if isinstance(obj, EC2Connection):
-      return []
-    elif issubclass(obj.__class__, EC2Object):
-      return (obj.__dict__)
-    elif issubclass(obj.__class__, Group):
-      return (obj.__dict__)
-    elif issubclass(obj.__class__, AttachmentSet):
-      return (obj.__dict__)
-    return super(BotoEncoder, self).default(obj)
 
 
 class BaseHandler(tornado.web.RequestHandler):
@@ -54,24 +38,28 @@ class EC2Handler(BaseHandler):
           session = sessions[session_id]
         except KeyError:
           self.redirect("/login")
-        conn = boto.connect_euca(host='192.168.25.10', aws_access_key_id=session.access_id, aws_secret_access_key=session.secret_key)
+        if use_mock:
+          clc = MockClcInterface()
+        else:
+          clc = BotoClcInterface('192.168.25.10',
+                  session.access_id, session.secret_key)
         data_type = self.get_argument("type")
-        obj = []
+        ret = []
         if data_type == "image":
-          obj = conn.get_all_images()
+          ret = clc.get_all_images()
         if data_type == "instance":
-          obj = conn.get_all_instances()
+          ret = clc.get_all_instances()
         elif data_type == "address":
-          obj = conn.get_all_addresses()
+          ret = clc.get_all_addresses()
         elif data_type == "key":
-          obj = conn.get_all_key_pairs()
+          ret = clc.get_all_key_pairs()
         elif data_type == "group":
-          obj = conn.get_all_security_groups()
+          ret = clc.get_all_security_groups()
         elif data_type == "volume":
-          obj = conn.get_all_volumes()
+          ret = clc.get_all_volumes()
         elif data_type == "snapshot":
-          obj = conn.get_all_snapshots()
-        self.write(json.dumps(obj, cls=BotoEncoder, indent=2))
+          ret = clc.get_all_snapshots()
+        self.write(ret)
 
 class LoginHandler(BaseHandler):
     def get(self):
