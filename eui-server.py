@@ -6,12 +6,14 @@ import os
 import socket
 import random
 import json
+import ConfigParser
 from botoclcinterface import BotoClcInterface
 from mockclcinterface import MockClcInterface
 
 # dictionary for in-memory sessions
 sessions = {}
 use_mock = True
+config = None
 
 class UserSession(object):
   def __init__(self, username, password, access_id, secret_key):
@@ -30,7 +32,6 @@ class EC2Handler(BaseHandler):
     
     def get(self):
 #        print "Hello, " + self.current_user
-        endpoint='http://192.168.25.10:8773/services/Eucalyptus'
         session_id = self.get_cookie("session-id")
         if not(session_id):
           self.redirect("/login")
@@ -41,7 +42,7 @@ class EC2Handler(BaseHandler):
         if use_mock:
           clc = MockClcInterface()
         else:
-          clc = BotoClcInterface('192.168.25.10',
+          clc = BotoClcInterface(config.get('eui', 'clchost'),
                   session.access_id, session.secret_key)
         data_type = self.get_argument("type")
         ret = []
@@ -100,6 +101,9 @@ if __name__ == "__main__":
 #    (hostname, alt_host, ipaddrs) = socket.gethostbyaddr(socket.gethostname())
 #    for ip in ipaddrs:
 #      print "host IP: "+ip
+    config = ConfigParser.ConfigParser()
+    config.read('eui.ini')
+    use_mock = config.getboolean('eui', 'usemock')
     application.listen(8888)
     tornado.ioloop.IOLoop.instance().start()
 
