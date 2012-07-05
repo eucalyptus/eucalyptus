@@ -3,6 +3,7 @@
 import tornado.ioloop
 import tornado.web
 import os
+import io
 import socket
 import random
 import json
@@ -22,10 +23,30 @@ class UserSession(object):
     self.access_id = access_id
     self.secret_key = secret_key
 
-
 class BaseHandler(tornado.web.RequestHandler):
     def get_current_user(self):
-        return self.get_secure_cookie("user")
+        session_id = self.get_cookie("session-id")
+        if not(session_id):
+          self.redirect("/login")
+        try:
+          session = sessions[session_id]
+        except KeyError:
+          return None
+        return session.username
+
+class RootHandler(BaseHandler):
+    @tornado.web.authenticated
+
+    def get(self, path):
+        path = config.get('eui', 'staticpath')+path
+        if path.endswith('.html'):
+          self.render(path, username=self.get_current_user())
+        else:
+          if os.path.exists(path):
+            f = open(path, 'r')
+            self.write(f.read())
+          else:
+            self.send_error(status_code=404)
 
 class EC2Handler(BaseHandler):
     @tornado.web.authenticated
@@ -84,10 +105,10 @@ class LoginHandler(BaseHandler):
         print "session id : "+cookie
         self.set_cookie("session-id", cookie);
         sessions[cookie] = UserSession(user, passwd, access_id, secret_key)
-        self.redirect("/static/eui.html")
+        self.redirect("/eui.html")
 
 settings = {
-  "static_path": os.path.join(os.path.dirname(__file__), "."),
+#  "static_path": os.path.join(os.path.dirname(__file__), "."),
   "cookie_secret": "YzRmYThkNzU1NDU2NmE1ZjYxMDZiZDNmMzI4YmMzMmMK",
   "login_url": "/login",
 }
@@ -95,6 +116,7 @@ settings = {
 application = tornado.web.Application([
     (r"/ec2", EC2Handler),
     (r"/login", LoginHandler),
+    (r"/(.*)", RootHandler),
 ], **settings)
 
 if __name__ == "__main__":
