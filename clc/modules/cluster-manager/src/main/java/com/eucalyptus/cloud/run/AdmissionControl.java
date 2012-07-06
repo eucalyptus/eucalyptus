@@ -280,11 +280,12 @@ public class AdmissionControl {
             } catch ( Exception t ) {
               LOG.error( t );
               Logs.extreme( ).error( t, t );
-              if ( ( ( available = checkAvailability( vmTypeName, authorizedClusters ) ) < remaining ) || remaining > 0 ) {
+              /* if we still have some allocation remaining AND no more resources are available */
+              if ( ( ( available = checkAvailability( vmTypeName, authorizedClusters ) ) < remaining ) && ( remaining > 0 ) ) {
                 allocInfo.abort( );
                 throw new NotEnoughResourcesException( "Not enough resources (" + available + " in " + zoneName + " < " + minAmount + "): vm instances.", t );
               } else {
-                throw new NotEnoughResourcesException( "Not enough resources (" + available + " in " + zoneName + " < " + minAmount + "): vm instances.", t );
+                throw new NotEnoughResourcesException( t.getMessage(), t );
               }
             }
           }
