@@ -73,6 +73,7 @@ import com.eucalyptus.address.Addresses;
 import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.cloud.util.NotEnoughResourcesException;
+import com.eucalyptus.cloud.util.InvalidMetadataException;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.ResourceState;
@@ -243,8 +244,13 @@ public class AdmissionControl {
       RunInstancesType request = allocInfo.getRequest( );
       String clusterName = allocInfo.getPartition( ).getName( );
       String vmTypeName = allocInfo.getVmType( ).getName( );
+      
+      /* Validate min and max amount */
       final int minAmount = allocInfo.getMinCount( );
       final int maxAmount = allocInfo.getMaxCount( );
+      if(minAmount > maxAmount)
+    	  throw new RuntimeException("Maximum instance count must not be smaller than minimum instance count");
+      
       Context ctx = Contexts.lookup( );
       String zoneName = ( clusterName != null )
         ? clusterName
