@@ -34,6 +34,9 @@ class BaseHandler(tornado.web.RequestHandler):
           return None
         return session.username
 
+    def get_user_locale(self):
+      return None  # we could implement something here.
+
 class RootHandler(BaseHandler):
     @tornado.web.authenticated
 
@@ -42,10 +45,12 @@ class RootHandler(BaseHandler):
         if path.endswith('.html'):
           self.render(path, username=self.get_current_user())
         else:
+          print "path="+path
           if os.path.exists(path):
             f = open(path, 'r')
             self.write(f.read())
           else:
+            print "about to set error status 404"
             self.send_error(status_code=404)
 
 class EC2Handler(BaseHandler):
@@ -85,14 +90,10 @@ class EC2Handler(BaseHandler):
 
 class LoginHandler(BaseHandler):
     def get(self):
+        # could redirect to login page...
+        self.render("login.html", username=None)
         # ensure session is cleared
         self.set_cookie("session-id", "")
-        # could redirect to login page...
-        self.write('<html><body><form action="/login" method="post">'
-                   'Name: <input type="text" name="name"><br/>'
-                   'Password: <input type="text" name="passwd"><br/>'
-                   '<input type="submit" value="Sign in">'
-                   '</form></body></html>')
 
     def post(self):
         # validate user from args, get back tokens, then
@@ -108,12 +109,14 @@ class LoginHandler(BaseHandler):
         self.redirect("/eui.html")
 
 settings = {
-#  "static_path": os.path.join(os.path.dirname(__file__), "."),
   "cookie_secret": "YzRmYThkNzU1NDU2NmE1ZjYxMDZiZDNmMzI4YmMzMmMK",
   "login_url": "/login",
 }
 
 application = tornado.web.Application([
+    (r"/(favicon\.ico)", tornado.web.StaticFileHandler, {'path': os.path.join(os.path.dirname(__file__), './')}),
+    (r"/css/(.*)", tornado.web.StaticFileHandler, {'path': os.path.join(os.path.dirname(__file__), './css')}),
+    (r"/images/(.*)", tornado.web.StaticFileHandler, {'path': os.path.join(os.path.dirname(__file__), './images')}),
     (r"/ec2", EC2Handler),
     (r"/login", LoginHandler),
     (r"/(.*)", RootHandler),
@@ -126,7 +129,7 @@ if __name__ == "__main__":
     config = ConfigParser.ConfigParser()
     config.read('eui.ini')
     use_mock = config.getboolean('eui', 'usemock')
-    application.listen(8888)
+    application.listen(config.getint('eui', 'uiport'))
     tornado.ioloop.IOLoop.instance().start()
 
 
