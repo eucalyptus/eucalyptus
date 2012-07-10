@@ -7,6 +7,7 @@
 <script type="text/javascript" language="javascript" src="jquery.ui.core.min.js"></script> 
 <script type="text/javascript" language="javascript" src="jquery.ui.widget.min.js"></script> 
 <body onload="javascript:document.loginform.name.focus();">
+<img src="/images/eucalyptus-340x36.png"/>
 <div align="center">
 &nbsp;<br/>
 &nbsp;<br/>
@@ -16,9 +17,9 @@
 &nbsp;<br/>
 <form action="/login" method="post" name="loginform">
 <table border="0">
-<tr><td align="right">
-<img src="/images/eucalyptus-340x36.png" width="400"/>
-</td><td></td></tr>
+<tr><td align="left" span="2" bgcolor="#eeeeee">
+Login to your management console
+</td></tr>
 <tr><td align="right">
 <span id="login.text">Username</span><input type="text" name="name" size="50"/><br/>
 </td><td><div style="color:#ff0000">Rules TK</div></td></tr>
@@ -26,11 +27,11 @@
 <span id="login.text">Password</span><input type="text" name="passwd" size="50"/><br/>
 </td><td></td></tr>
 <tr><td align="right">
-<input type="submit" value="Log In"/>
-</td><td></td></tr>
-<tr><td align="right">
 <div id="login.text.help">Forgot your username or password? Contact your cloud administrator.</div>
 </td><td></td></tr>
+<tr><td></td><td align="right">
+<input type="submit" value="Log In"/>
+</td></tr>
 </table>
 </form>
 </div>
