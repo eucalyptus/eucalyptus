@@ -55,7 +55,7 @@ class RootHandler(BaseHandler):
 
 class EC2Handler(BaseHandler):
     @tornado.web.authenticated
-    
+
     def get(self):
 #        print "Hello, " + self.current_user
         session_id = self.get_cookie("session-id")
@@ -88,12 +88,18 @@ class EC2Handler(BaseHandler):
           ret = clc.get_all_snapshots()
         self.write(ret)
 
-class LoginHandler(BaseHandler):
+class LoginHandler(tornado.web.RequestHandler): #(BaseHandler):
+
     def get(self):
-        # could redirect to login page...
-        self.render("login.html", username=None)
-        # ensure session is cleared
-        self.set_cookie("session-id", "")
+        try:
+            path = config.get('eui', 'staticpath')+"login.html"
+            # could redirect to login page...
+            self.render(path, username=None)
+            # ensure session is cleared
+            self.set_cookie("session-id", "")
+        except Exception, err:
+            print "Error: %s-%s" % (path,err)
+            return
 
     def post(self):
         # validate user from args, get back tokens, then
@@ -114,7 +120,7 @@ settings = {
 }
 
 application = tornado.web.Application([
-    (r"/(favicon\.ico)", tornado.web.StaticFileHandler, {'path': os.path.join(os.path.dirname(__file__), './')}),
+    (r"/(favicon\.ico)", tornado.web.StaticFileHandler, {'path': os.path.join(os.path.dirname(__file__), './images/')}),
     (r"/css/(.*)", tornado.web.StaticFileHandler, {'path': os.path.join(os.path.dirname(__file__), './css')}),
     (r"/images/(.*)", tornado.web.StaticFileHandler, {'path': os.path.join(os.path.dirname(__file__), './images')}),
     (r"/ec2", EC2Handler),
