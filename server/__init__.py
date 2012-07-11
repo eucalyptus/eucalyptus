@@ -1,6 +1,4 @@
-#!/usr/bin/python
 
-import tornado.ioloop
 import tornado.web
 import os
 import io
@@ -11,7 +9,6 @@ import ConfigParser
 from botoclcinterface import BotoClcInterface
 from mockclcinterface import MockClcInterface
 
-# dictionary for in-memory sessions
 sessions = {}
 use_mock = True
 config = None
@@ -91,6 +88,7 @@ class EC2Handler(BaseHandler):
 class LoginHandler(tornado.web.RequestHandler): #(BaseHandler):
 
     def get(self):
+        path = None
         try:
             path = config.get('eui', 'staticpath')+"login.html"
             # could redirect to login page...
@@ -113,29 +111,3 @@ class LoginHandler(tornado.web.RequestHandler): #(BaseHandler):
         self.set_cookie("session-id", cookie);
         sessions[cookie] = UserSession(user, passwd, access_id, secret_key)
         self.redirect("/eui.html")
-
-settings = {
-  "cookie_secret": "YzRmYThkNzU1NDU2NmE1ZjYxMDZiZDNmMzI4YmMzMmMK",
-  "login_url": "/login",
-}
-
-application = tornado.web.Application([
-    (r"/(favicon\.ico)", tornado.web.StaticFileHandler, {'path': os.path.join(os.path.dirname(__file__), './images/')}),
-    (r"/css/(.*)", tornado.web.StaticFileHandler, {'path': os.path.join(os.path.dirname(__file__), './css')}),
-    (r"/images/(.*)", tornado.web.StaticFileHandler, {'path': os.path.join(os.path.dirname(__file__), './images')}),
-    (r"/ec2", EC2Handler),
-    (r"/login", LoginHandler),
-    (r"/(.*)", RootHandler),
-], **settings)
-
-if __name__ == "__main__":
-#    (hostname, alt_host, ipaddrs) = socket.gethostbyaddr(socket.gethostname())
-#    for ip in ipaddrs:
-#      print "host IP: "+ip
-    config = ConfigParser.ConfigParser()
-    config.read('eui.ini')
-    use_mock = config.getboolean('eui', 'usemock')
-    application.listen(config.getint('eui', 'uiport'))
-    tornado.ioloop.IOLoop.instance().start()
-
-
