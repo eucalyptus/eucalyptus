@@ -4,110 +4,18 @@
   @import "lib/jquery-table.css";
 </style>
 <link rel="stylesheet" href="lib/jquery-ui-1.8.21.custom.css"/>
+
+<!-- jQuery libraries -->
 <script type="text/javascript" language="javascript" src="lib/jquery-1.7.2.min.js"></script> 
 <script type="text/javascript" language="javascript" src="lib/jquery.ui.core.min.js"></script> 
 <script type="text/javascript" language="javascript" src="lib/jquery.ui.widget.min.js"></script> 
 <script type="text/javascript" language="javascript" src="lib/jquery.ui.tabs.min.js"></script> 
 <script type="text/javascript" language="javascript" src="lib/jquery.dataTables.js"></script> 
 
-<script type="text/javascript" charset="utf-8">
-$(function() {
-    $( "#tabs" ).tabs();
-});
+<!-- Eucalyptus JS -->
+<script type="text/javascript" language="javascript" src="js/eucalyptus.js"> </script>
 
-$(document).ready(function() {
-    $('#instances').dataTable( {
-	    "bProcessing": true,
-		"sAjaxSource": "../ec2?type=instance",
-		"sAjaxDataProp": "item/instances",
-		"aoColumns": [
-		  { "mDataProp": "id" },
-		  { "mDataProp": "image_id" },
-		  { "mDataProp": "ip_address" },
-		  { "mDataProp": "private_ip_address" },
-		  { "mDataProp": "state" }
-		]
-	} );    
-} );
-$(document).ready(function() {
-    $('#images').dataTable( {
-	    "bProcessing": true,
-		"sAjaxSource": "../ec2?type=image",
-		"sAjaxDataProp": "",
-		"aoColumns": [
-		  { "mDataProp": "id" },
-		  { "mDataProp": "location" },
-		  { "mDataProp": "type" },
-		  { "mDataProp": "architecture" },
-		  { "mDataProp": "state" }
-		]
-	} );    
-} );
-$(document).ready(function() {
-    $('#keys').dataTable( {
-	    "bProcessing": true,
-		"sAjaxSource": "../ec2?type=key",
-		"sAjaxDataProp": "",
-		"aoColumns": [
-		  { "mDataProp": "name" },
-		  { "mDataProp": "fingerprint" }
-		]
-	} );    
-} );
-$(document).ready(function() {
-    $('#groups').dataTable( {
-	    "bProcessing": true,
-		"sAjaxSource": "../ec2?type=group",
-		"sAjaxDataProp": "",
-		"aoColumns": [
-		  { "mDataProp": "name" },
-		  { "mDataProp": "description" }
-		]
-	} );    
-} );
-$(document).ready(function() {
-    $('#addresses').dataTable( {
-	    "bProcessing": true,
-		"sAjaxSource": "../ec2?type=address",
-		"sAjaxDataProp": "",
-		"aoColumns": [
-		  { "mDataProp": "public_ip" },
-		  { "mDataProp": "instance_id" }
-		]
-	} );    
-} );
-$(document).ready(function() {
-    $('#volumes').dataTable( {
-	    "bProcessing": true,
-		"sAjaxSource": "../ec2?type=volume",
-		"sAjaxDataProp": "",
-		"aoColumns": [
-		  { "mDataProp": "id" },
-		  { "mDataProp": "size" },
-		  { "mDataProp": "status" },
-		  { "mDataProp": "create_time" },
-		  { "mDataProp": "snapshot_id" }
-		]
-	} );    
-} );
-$(document).ready(function() {
-    $('#snapshots').dataTable( {
-	    "bProcessing": true,
-		"sAjaxSource": "../ec2?type=snapshot",
-		"sAjaxDataProp": "",
-		"aoColumns": [
-		  { "mDataProp": "id" },
-		  { "mDataProp": "status" },
-		  { "mDataProp": "progress" },
-		  { "mDataProp": "volume_id" },
-		  { "mDataProp": "start_time" },
-		  { "mDataProp": "owner_id" }
-		]
-	} );    
-} );
-</script>
 <body>
-{% include 'header.html' %}
 <div id="tabs">
 <ul>
   <li><a href="#tabs-instances">Instances</a></li>
