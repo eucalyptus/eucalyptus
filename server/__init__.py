@@ -10,7 +10,7 @@ from botoclcinterface import BotoClcInterface
 from mockclcinterface import MockClcInterface
 
 sessions = {}
-use_mock = True
+use_mock = False
 config = None
 
 class UserSession(object):
@@ -21,18 +21,33 @@ class UserSession(object):
     self.secret_key = secret_key
 
 class BaseHandler(tornado.web.RequestHandler):
+    session = None
+
     def get_current_user(self):
         session_id = self.get_cookie("session-id")
         if not(session_id):
-          self.redirect("/login")
+            self.redirect("/login")
         try:
-          session = sessions[session_id]
+            session = sessions[session_id]
         except KeyError:
-          return None
+            return None
         return session.username
 
     def get_user_locale(self):
-      return None  # we could implement something here.
+        return None  # we could implement something here.
+
+    def validate_session(self):
+        session_id = self.get_cookie("session-id")
+        if not(session_id):
+            self.redirect("/login")
+        try:
+            self.session = sessions[session_id]
+        except KeyError:
+            self.redirect("/login")
+
+    def should_use_mock(self):
+        use_mock = config.getboolean('eui', 'usemock')
+        return use_mock
 
 class RootHandler(BaseHandler):
     @tornado.web.authenticated
@@ -40,29 +55,22 @@ class RootHandler(BaseHandler):
     def get(self, path):
         path = config.get('eui', 'staticpath')+path
         if path.endswith('.html'):
-          self.render(path, username=self.get_current_user())
+            self.render(path, username=self.get_current_user())
         else:
-          print "path="+path
-          if os.path.exists(path):
-            f = open(path, 'r')
-            self.write(f.read())
-          else:
-            print "about to set error status 404"
-            self.send_error(status_code=404)
+            print "path="+path
+            if os.path.exists(path):
+                f = open(path, 'r')
+                self.write(f.read())
+            else:
+                print "about to set error status 404"
+                self.send_error(status_code=404)
 
 class EC2Handler(BaseHandler):
     @tornado.web.authenticated
 
     def get(self):
-#        print "Hello, " + self.current_user
-        session_id = self.get_cookie("session-id")
-        if not(session_id):
-          self.redirect("/login")
-        try:
-          session = sessions[session_id]
-        except KeyError:
-          self.redirect("/login")
-        if use_mock:
+        self.validate_session()
+        if self.should_use_mock():
           clc = MockClcInterface()
         else:
           clc = BotoClcInterface(config.get('eui', 'clchost'),

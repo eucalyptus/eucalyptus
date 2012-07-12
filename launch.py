@@ -4,6 +4,7 @@ import ConfigParser
 import os
 
 import server 
+from server import api
 
 settings = {
   "cookie_secret": "YzRmYThkNzU1NDU2NmE1ZjYxMDZiZDNmMzI4YmMzMmMK",
@@ -16,7 +17,7 @@ application = tornado.web.Application([
     (r"/lib/(.*)", tornado.web.StaticFileHandler, {'path': os.path.join(os.path.dirname(__file__), './static/lib')}),
     (r"/js/(.*)", tornado.web.StaticFileHandler, {'path': os.path.join(os.path.dirname(__file__), './static/js')}),
     (r"/images/(.*)", tornado.web.StaticFileHandler, {'path': os.path.join(os.path.dirname(__file__), './static/images')}),
-    (r"/ec2", server.EC2Handler),
+    (r"/ec2", api.ComputeHandler),
     (r"/login", server.LoginHandler),
     (r"/(.*)", server.RootHandler),
 ], **settings)
@@ -27,7 +28,6 @@ if __name__ == "__main__":
 #      print "host IP: "+ip
     server.config = ConfigParser.ConfigParser()
     server.config.read('server/eui.ini')
-    use_mock = server.config.getboolean('eui', 'usemock')
     application.listen(server.config.getint('eui', 'uiport'))
     tornado.ioloop.IOLoop.instance().start()
 

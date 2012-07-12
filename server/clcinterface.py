@@ -3,7 +3,7 @@
 # This class defines an interface that must be extended for either talking
 # to the CLC itself or for a testing mock
 #
-# NOTE: all methods are expected to return JSON.
+# NOTE: all methods are expected to return boto value objects.
 #
 class ClcInterface(object):
 
