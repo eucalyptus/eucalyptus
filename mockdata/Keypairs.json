@@ -1,0 +1,32 @@
+[
+  {
+    "item": "", 
+    "connection": [], 
+    "__obj_name__": "KeyPair", 
+    "name": "testkey", 
+    "fingerprint": "95:15:24:8e:94:62:f7:d4:2e:63:90:af:0a:32:c0:4f:c5:25:f0:ac", 
+    "region": {
+      "connection": null, 
+      "endpoint": "192.168.25.10", 
+      "name": "eucalyptus", 
+      "__obj_name__": "RegionInfo", 
+      "connection_cls": null
+    }, 
+    "material": null
+  }, 
+  {
+    "item": "", 
+    "connection": [], 
+    "__obj_name__": "KeyPair", 
+    "name": "dakkey", 
+    "fingerprint": "67:b9:4c:06:97:d8:b6:d2:18:32:6f:24:40:5c:15:fc:99:21:64:72", 
+    "region": {
+      "connection": null, 
+      "endpoint": "192.168.25.10", 
+      "name": "eucalyptus", 
+      "__obj_name__": "RegionInfo", 
+      "connection_cls": null
+    }, 
+    "material": null
+  }
+]

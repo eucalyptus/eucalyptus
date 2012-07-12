@@ -15,7 +15,7 @@ application = tornado.web.Application([
     (r"/(favicon\.ico)", tornado.web.StaticFileHandler, {'path': os.path.join(os.path.dirname(__file__), './static/images/')}),
     (r"/css/(.*)", tornado.web.StaticFileHandler, {'path': os.path.join(os.path.dirname(__file__), './static/css')}),
     (r"/lib/(.*)", tornado.web.StaticFileHandler, {'path': os.path.join(os.path.dirname(__file__), './static/lib')}),
-    (r"/js/(.*)", tornado.web.StaticFileHandler, {'path': os.path.join(os.path.dirname(__file__), './js')}),
+    (r"/js/(.*)", tornado.web.StaticFileHandler, {'path': os.path.join(os.path.dirname(__file__), './static/js')}),
     (r"/images/(.*)", tornado.web.StaticFileHandler, {'path': os.path.join(os.path.dirname(__file__), './static/images')}),
     (r"/ec2", api.ComputeHandler),
     (r"/login", server.LoginHandler),

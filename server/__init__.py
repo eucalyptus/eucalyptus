@@ -10,7 +10,7 @@ from botoclcinterface import BotoClcInterface
 from mockclcinterface import MockClcInterface
 
 sessions = {}
-use_mock = False
+use_mock = True
 config = None
 
 class UserSession(object):

@@ -1,0 +1,22 @@
+[
+  {
+    "__obj_name__": "SecurityGroup", 
+    "name": "default", 
+    "tags": {}, 
+    "rules": [], 
+    "region": {
+      "connection": null, 
+      "endpoint": "192.168.25.10", 
+      "name": "eucalyptus", 
+      "__obj_name__": "RegionInfo", 
+      "connection_cls": null
+    }, 
+    "ipPermissions": "", 
+    "item": "", 
+    "connection": [], 
+    "vpc_id": null, 
+    "owner_id": "072279894205", 
+    "id": null, 
+    "description": "default group"
+  }
+]

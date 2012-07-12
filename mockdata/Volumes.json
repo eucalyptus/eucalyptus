@@ -1,0 +1,30 @@
+[
+  {
+    "status": "available", 
+    "__obj_name__": "Volume", 
+    "zone": "PARTI00", 
+    "tags": {}, 
+    "region": {
+      "connection": null, 
+      "endpoint": "192.168.25.10", 
+      "name": "eucalyptus", 
+      "__obj_name__": "RegionInfo", 
+      "connection_cls": null
+    }, 
+    "attach_data": {
+      "status": null, 
+      "instance_id": null, 
+      "__obj_name__": "AttachmentSet", 
+      "attachmentSet": "", 
+      "attach_time": null, 
+      "device": null, 
+      "id": null
+    }, 
+    "connection": [], 
+    "create_time": "2012-06-28T16:25:36.227Z", 
+    "item": "", 
+    "snapshot_id": null, 
+    "id": "vol-6E463B31", 
+    "size": 2
+  }
+]
