@@ -2,6 +2,10 @@
 import boto
 import json
 
+from boto.ec2.keypair import KeyPair
+from boto.ec2.image import Image
+from boto.ec2.instance import Instance
+
 from clcinterface import ClcInterface
 from botojsonencoder import BotoJsonDecoder
 
@@ -45,6 +49,13 @@ class MockClcInterface(ClcInterface):
 
   def get_all_key_pairs(self):
     return self.keypairs
+
+  def create_key_pair(self, key_name):
+    return None #self.keypairs.append(KeyPair(key_name))
+
+  def delete_key_pair(self, key_name):
+    self.keypairs.remove(key_name)
+    return None
 
   def get_all_security_groups(self):
     return self.groups

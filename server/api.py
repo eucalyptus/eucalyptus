@@ -13,9 +13,11 @@ class ComputeHandler(server.BaseHandler):
         if action == 'DescribeKeyPairs':
           return clc.get_all_key_pairs()
         elif action == 'AddKeyPair':
-          pass
+          name = self.get_argument('KeyName')
+          clc.create_key_pair(name);
         elif action == 'DeleteKeyPair':
-          pass
+          name = self.get_argument('KeyName')
+          clc.delete_key_pair(name);
 
     def get(self):
         self.validate_session()

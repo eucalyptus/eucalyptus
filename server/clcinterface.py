@@ -16,7 +16,16 @@ class ClcInterface(object):
   def get_all_addresses(self):
     raise NotImplementedError("Are you sure you're using the right class?")
 
+  # return list of keypairs
   def get_all_key_pairs(self):
+    raise NotImplementedError("Are you sure you're using the right class?")
+
+  # returns keypair info and key
+  def create_key_pair(self, key_name):
+    raise NotImplementedError("Are you sure you're using the right class?")
+
+  # returns nothing
+  def delete_key_pair(self, key_name):
     raise NotImplementedError("Are you sure you're using the right class?")
 
   def get_all_security_groups(self):

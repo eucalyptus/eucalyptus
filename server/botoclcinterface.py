@@ -43,6 +43,12 @@ class BotoClcInterface(ClcInterface):
       self.__save_json__(obj, "mockdata/Keypairs.json")
     return obj
 
+  def create_key_pair(self, key_name):
+    return self.conn.create_key_pair(key_name)
+
+  def delete_key_pair(self, key_name):
+    return self.conn.delete_key_pair(key_name)
+
   def get_all_security_groups(self):
     obj = self.conn.get_all_security_groups()
     if self.saveclcdata:
