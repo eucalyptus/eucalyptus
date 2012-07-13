@@ -50,9 +50,11 @@ class MockClcInterface(ClcInterface):
   def get_all_key_pairs(self):
     return self.keypairs
 
+  # returns keypair info and key
   def create_key_pair(self, key_name):
     return None #self.keypairs.append(KeyPair(key_name))
 
+  # returns nothing
   def delete_key_pair(self, key_name):
     self.keypairs.remove(key_name)
     return None
@@ -63,6 +65,41 @@ class MockClcInterface(ClcInterface):
   def get_all_volumes(self):
     return self.volumes
 
+  # returns volume info
+  def create_volume(self, size, availability_zone, snapshot_id):
+    pass
+
+  # returns True if successful
+  def delete_volume(self, volume_id):
+    pass
+
+  # returns True if successful
+  def attach_volume(self, volume_id, instance_id, device):
+    pass
+
+  # returns True if successful
+  def detach_volume(self, volume_id, instance_id, device, force=False):
+    pass
+
   def get_all_snapshots(self):
     return self.snapshots
 
+  # returns snapshot info
+  def create_snapshot(self, volume_id, description):
+    pass
+
+  # returns True if successful
+  def delete_snapshot(self, snapshot_id):
+    pass
+
+  # returns list of snapshots attributes
+  def get_snapshot_attribute(self, snapshot_id, attribute):
+    pass
+
+  # returns True if successful
+  def modify_snapshot_attribute(self, snapshot_id, attribute, operation, users, groups):
+    pass
+
+  # returns True if successful
+  def reset_snapshot_attribute(self, snapshot_id, attribute):
+    pass

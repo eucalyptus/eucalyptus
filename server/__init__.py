@@ -65,34 +65,6 @@ class RootHandler(BaseHandler):
                 print "about to set error status 404"
                 self.send_error(status_code=404)
 
-class EC2Handler(BaseHandler):
-    @tornado.web.authenticated
-
-    def get(self):
-        self.validate_session()
-        if self.should_use_mock():
-          clc = MockClcInterface()
-        else:
-          clc = BotoClcInterface(config.get('eui', 'clchost'),
-                  session.access_id, session.secret_key)
-        data_type = self.get_argument("type")
-        ret = []
-        if data_type == "image":
-          ret = clc.get_all_images()
-        if data_type == "instance":
-          ret = clc.get_all_instances()
-        elif data_type == "address":
-          ret = clc.get_all_addresses()
-        elif data_type == "key":
-          ret = clc.get_all_key_pairs()
-        elif data_type == "group":
-          ret = clc.get_all_security_groups()
-        elif data_type == "volume":
-          ret = clc.get_all_volumes()
-        elif data_type == "snapshot":
-          ret = clc.get_all_snapshots()
-        self.write(ret)
-
 class LoginHandler(tornado.web.RequestHandler): #(BaseHandler):
 
     def get(self):
