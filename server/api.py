@@ -15,7 +15,7 @@ class ComputeHandler(server.BaseHandler):
         val = self.get_argument('%s.%d' % (name, index))
         while val:
           ret.append(val)
-          index++
+          index = index + 1
           val = self.get_argument('%s.%d' % (name, index))
         return ret
 
@@ -62,18 +62,18 @@ class ComputeHandler(server.BaseHandler):
         elif action == 'DeleteSnapshot':
           snapshotid = self.get_argument('SnapshotId')
           clc.delete_snapshot(snapshotid);
-        elif action = 'DescribeSnapshotAttribute':
+        elif action == 'DescribeSnapshotAttribute':
           snapshotid = self.get_argument('SnapshotId')
           attribute = self.get_argument('Attribute')
           clc.get_snapshot_attribute(snapshotid, attribute);
-        elif action = 'ModifySnapshotAttribute':
+        elif action == 'ModifySnapshotAttribute':
           snapshotid = self.get_argument('SnapshotId')
           attribute = self.get_argument('Attribute')
           operation = self.get_argument('OperationType')
           users = self.get_argument_list('UserId')
           groups = self.get_argument_list('UsersGroup')
           clc.modify_snapshot_attribute(snapshotid, attribute, operation, users, groups);
-        elif action = 'ResetSnapshotAttribute':
+        elif action == 'ResetSnapshotAttribute':
           snapshotid = self.get_argument('SnapshotId')
           attribute = self.get_argument('Attribute')
           clc.reset_snapshot_attribute(snapshotid, attribute);
