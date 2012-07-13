@@ -7,9 +7,9 @@ This prototype runs inside tornado. You'll need to download and install tornado 
 
 The two main files are eui-server.py which is the server side and the eui.html which is the client side. The rest are support files, mostly on the client.
 
-To configure this to work with your cloud/acct, edit eui-server.py and change the endpoint, access_id and secret_key in the get() method of the EC2Handler class.
+To configure this to work with your cloud/acct, edit server/eui.ini and change the endpoint. Edit server/__init__.py to change the access_id and secret_key in the post() method of the LoginHandler class.
 
-To run the server, run "python eui-server.py" and connect to http://localhost:8888/static/eui.html
+To run the server, run "launcher.sh" and connect to http://localhost:8888/static/eui.html
 
 This prototype shows tabs for the basic resource types. Those are loaded via REST calls to the server, but all load when the UI first loads, not as tabs are clicked. More work needs to be done for on-demand data loading and autmatic refresh.
 
