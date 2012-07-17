@@ -1,14 +1,27 @@
 (function($, eucalyptus) {
-  $(function(){
-    $( "#tabs" ).tabs();
+  var eucaData = window.eucaData ? window.eucaData : window.eucaData = {};
+
+  $(document).ready(function() {
+  // check cookie
+    if ($.cookie('session-id')) {
+      eucalyptus.main(eucaData);
+    } else {
+      eucalyptus.login($.extend(eucaData, {
+        doLogin : function(args){
+	  // actual login process
+          args.onSuccess();
+        }
+      }));
+    }
   });
 
   // event handler
+/*
   $(function() {
     $(document).ready(function() {
       $('#instances').dataTable( {
             "bProcessing": true,
-                "sAjaxSource": "../ec2?Action=DescribeInstances",
+                "sAjaxSource": "../ec2?type=instance",
                 "sAjaxDataProp": "item/instances",
                 "aoColumns": [
                   { "mDataProp": "id" },
@@ -20,7 +33,7 @@
       });
       $('#images').dataTable( {
             "bProcessing": true,
-                "sAjaxSource": "../ec2?Action=DescribeImages",
+                "sAjaxSource": "../ec2?type=image",
                 "sAjaxDataProp": "",
                 "aoColumns": [
                   { "mDataProp": "id" },
@@ -32,7 +45,7 @@
       });    
       $('#keys').dataTable( {
             "bProcessing": true,
-                "sAjaxSource": "../ec2?Action=DescribeKeyPairs",
+                "sAjaxSource": "../ec2?type=key",
                 "sAjaxDataProp": "",
                 "aoColumns": [
                   { "mDataProp": "name" },
@@ -41,7 +54,7 @@
       });    
       $('#groups').dataTable( {
             "bProcessing": true,
-                "sAjaxSource": "../ec2?Action=DescribeSecurityGroups",
+                "sAjaxSource": "../ec2?type=group",
                 "sAjaxDataProp": "",
                 "aoColumns": [
                   { "mDataProp": "name" },
@@ -50,7 +63,7 @@
       }); 
       $('#addresses').dataTable( {
             "bProcessing": true,
-                "sAjaxSource": "../ec2?Action=DescribeAddresses",
+                "sAjaxSource": "../ec2?type=address",
                 "sAjaxDataProp": "",
                 "aoColumns": [
                   { "mDataProp": "public_ip" },
@@ -59,7 +72,7 @@
       }); 
       $('#volumes').dataTable( {
             "bProcessing": true,
-                "sAjaxSource": "../ec2?Action=DescribeVolumes",
+                "sAjaxSource": "../ec2?type=volume",
                 "sAjaxDataProp": "",
                 "aoColumns": [
                   { "mDataProp": "id" },
@@ -71,7 +84,7 @@
       });    
       $('#snapshots').dataTable( {
             "bProcessing": true,
-                "sAjaxSource": "../ec2?Action=DescribeSnapshots",
+                "sAjaxSource": "../ec2?type=snapshot",
                 "sAjaxDataProp": "",
                 "aoColumns": [
                   { "mDataProp": "id" },
@@ -83,6 +96,7 @@
                 ]
       });  
     }); // end of document.ready()
-  }); // end of event handler
+  }); // end of event handler 
+*/
 })(jQuery,
    window.eucalyptus ? window.eucalyptus : window.eucalyptus = {});

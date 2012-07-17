@@ -1,0 +1,23 @@
+.templates div.inactive {
+  display: none;
+}
+
+.templates div.active {
+  display: table;
+}
+
+div.euca-footer.inactive {
+  display: none;
+}
+
+div.euca-footer.active{
+  display: block;
+}
+
+.euca-main.inactive {
+  display: none;
+}
+
+.euca-main.active {
+  display: none;
+}
