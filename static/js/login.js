@@ -12,12 +12,17 @@
 		    password:$form.find('input[name=password]').val() 
       };
       args.doLogin({ param: param,
-		     onSuccess: function(){
-   	             },
-		     onError: function(){
-			alert("login failed!");
-		     }		     
+        onSuccess: function(eucaData){
+	//  $.each(eucaData.context, function(key,val){
+	 //    alert("key: "+key +", val: "+val);
+	//  });
+	  window.location.href=eucaData.context['url_home'];
+   	},
+        onError: function(args){
+    	     alert("login failed!");
+        }		     
       }); 
+      return false;
     });
   }
 })(jQuery, 
