@@ -1,4 +1,30 @@
-#!/usr/bin/env python
+#!/usr/bin/python
+#
+# Copyright 2011-2012 Eucalyptus Systems, Inc.
+#
+# Redistribution and use of this software in source and binary forms,
+# with or without modification, are permitted provided that the following
+# conditions are met:
+#
+#   Redistributions of source code must retain the above copyright notice,
+#   this list of conditions and the following disclaimer.
+#
+#   Redistributions in binary form must reproduce the above copyright
+#   notice, this list of conditions and the following disclaimer in the
+#   documentation and/or other materials provided with the distribution.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+# A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+# OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+# SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+# LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+# THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 import sys, os, binascii, urllib2, MySQLdb, hashlib, psutil, re, zipfile, paramiko
 from M2Crypto import RSA, SSL
 from contextlib import contextmanager
@@ -6,22 +32,22 @@ from paramiko import SSHClient, SFTPAttributes, SFTPClient
 
 AUTH_SYS_ACCT = "eucalyptus"
 AUTH_DEFAULT_ADMIN = "admin"
-AUTH_USER_QUERY = """select 
+AUTH_USER_QUERY = """select
 			u.auth_user_token,
-			k.auth_access_key_query_id, 
+			k.auth_access_key_query_id,
 			k.auth_access_key_key
 		from (
-			auth_access_key k 
-			join 
-				auth_user u on k.auth_access_key_owning_user=u.id 
-			join 
-				auth_group_has_users gu on u.id=gu.auth_user_id 
+			auth_access_key k
 			join
-				auth_group g on gu.auth_group_id=g.id 
-			join 
-				auth_account a on g.auth_group_owning_account=a.id 
+				auth_user u on k.auth_access_key_owning_user=u.id
+			join
+				auth_group_has_users gu on u.id=gu.auth_user_id
+			join
+				auth_group g on gu.auth_group_id=g.id
+			join
+				auth_account a on g.auth_group_owning_account=a.id
 			)
-	where 
+	where
 		a.auth_account_name='%s'
 		and g.auth_group_name='_%s'
 		and k.auth_access_key_active=1;"""
@@ -29,7 +55,7 @@ AUTH_USER_QUERY = """select
 @contextmanager
 def ssh_session(host=None, username=None, password=None):
     ssh = paramiko.SSHClient()
-    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy()) 
+    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     try:
          sys.stdout.write( "[Connect:%s]"%host )
          ssh.connect(host, username=username, password=password)
@@ -39,8 +65,8 @@ def ssh_session(host=None, username=None, password=None):
          ssh.close()
 
 def bbbb():
-    for i in range(1,10): 
-        sys.stdout.write('\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b') 
+    for i in range(1,10):
+        sys.stdout.write('\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b')
     return ''
 
 def put_file(host=None,username=None,password=None,srcFile=None,destFile=None):
@@ -48,7 +74,7 @@ def put_file(host=None,username=None,password=None,srcFile=None,destFile=None):
         ftp = ssh.open_sftp()
         try:
             ftp.chdir(os.path.dirname(destFile))
-            ftp.put(srcFile,destFile,lambda x,y: 
+            ftp.put(srcFile,destFile,lambda x,y:
             sys.stdout.write( "%6.2f %sCopying %s => %s "%((100.0*x)/y,bbbb(),srcFile,destFile,) ))
         except Exception, ex:
             print ex
@@ -62,7 +88,7 @@ def get_remote_home(host=None,username=None,password=None):
         print home
 
 def get_home_cmdline(cmd=None):
-    if cmd.__contains__('-h'): 
+    if cmd.__contains__('-h'):
         return cmd[cmd.index('-h')+1]
     else:
         home = filter(lambda x: x.startswith("--home="), cmd )
@@ -72,7 +98,7 @@ def get_home():
     for i in filter(lambda x: psutil.Process(x).name.startswith("eucalyptus-cl") , psutil.get_pid_list() ):
         home = get_home_cmdline( psutil.Process(i).cmdline )
         if home: return home
-    print "ERROR: No running eucalyptus-cloud process found." 
+    print "ERROR: No running eucalyptus-cloud process found."
 
 def passphrase_callback():
     return "eucalyptus"
@@ -83,7 +109,7 @@ def db_pass():
     d.update("eucalyptus")
     pk = RSA.load_key(path,passphrase_callback)
     return binascii.hexlify(pk.sign(d.digest(),algo="sha256"))
-    
+
 def db_get(query=None):
     conn = MySQLdb.connect (host = "127.0.0.1",
                                                     user = "eucalyptus",
@@ -163,7 +189,6 @@ def main():
     print get_query_id()
     print get_secret_key()
     print get_token()
-    
+
 if __name__ == "__main__":
         main()
- 
