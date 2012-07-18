@@ -63,11 +63,12 @@
  */
 package com.eucalyptus.address;
 
+import static com.eucalyptus.reporting.event.AddressEvent.AddressAction;
+import static com.eucalyptus.reporting.event.AddressEvent.AddressAction.*;
 import java.lang.reflect.Constructor;
 import java.util.NoSuchElementException;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicMarkableReference;
-import javax.persistence.Column;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import javax.persistence.Transient;
@@ -85,10 +86,13 @@ import com.eucalyptus.cluster.callback.UnassignAddressCallback;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.reporting.event.AddressEvent;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.async.NOOP;
@@ -278,10 +282,13 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
       public void bottom( ) {}
       
     } );
+    fireUsageEvent( ownerFullName, ALLOCATE );
     return this;
   }
-  
+
   public Address release( ) {
+    fireUsageEvent( RELEASE );
+
     SplitTransition release = new SplitTransition( Transition.unallocating ) {
       public void top( ) {
         Address.this.instanceId = UNASSIGNED_INSTANCEID;
@@ -322,6 +329,8 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
   }
   
   public Address unassign( ) {
+    fireUsageEvent( DISASSOCIATE );
+
     SplitTransition unassign = new SplitTransition( Transition.unassigning ) {
       public void top( ) {
         try {
@@ -380,6 +389,7 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
     } else {
       this.transition( State.allocated, State.assigned, false, true, assign );
     }
+    fireUsageEvent( ASSOCIATE );
     return this;
   }
   
@@ -574,5 +584,18 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
   public String getPartition( ) {
     return "eucalyptus";
   }
-  
+
+  private void fireUsageEvent( final AddressAction action ) {
+    fireUsageEvent( getOwner(), action );
+  }
+
+  private void fireUsageEvent( final OwnerFullName ownerFullName,
+                               final AddressAction action ) {
+    try {
+      ListenerRegistry.getInstance().fireEvent(
+          AddressEvent.with( getDisplayName(), ownerFullName, action ) );
+    } catch ( final Exception e ) {
+      LOG.error( e, e );
+    }
+  }
 }
