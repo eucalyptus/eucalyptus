@@ -1,3 +1,23 @@
+/*************************************************************************
+ * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 3 of the License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ *
+ * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
+ * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
+ * additional information or have any questions.
+ ************************************************************************/
+
 package com.eucalyptus.reporting.modules.instance;
 
 import java.util.*;
@@ -23,8 +43,6 @@ import com.eucalyptus.reporting.Period;
  * <p>Very recent information (within the prior five minutes, for example)
  * may not have been acquired yet, in which case, an empty period or a
  * period with incomplete information may be returned.
- * 
- * @author tom.werges
  */
 @ConfigurableClass(root="instanceLog", alias="basic", description="Configuration for instance usage sampling and logging", singleton=true)
 public class InstanceUsageLog

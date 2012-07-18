@@ -1,11 +1,24 @@
 #!/bin/sh
 
+# Copyright 2009-2012 Eucalyptus Systems, Inc.
 #
-# Tests report generation for instance data. Returns 0 for success, 1 for failure.
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; version 3 of the License.
 #
-# Author: Tom Werges
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
 #
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see http://www.gnu.org/licenses/.
+#
+# Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
+# CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
+# additional information or have any questions.
 
+# Tests report generation for instance data. Returns 0 for success, 1 for failure.
 
 # Gather CLC IP
 CLC_IP=`cat ../input/2b_tested.lst |grep '\[.*CLC.*\]'|awk '{ print $1 }'`
@@ -36,4 +49,3 @@ fi
 # Verify that the report is correct, using the CsvChecker tool.
 java -jar CsvChecker.jar 0.2 instanceReference.csv /tmp/instanceReport.csv
 if [ "$?" -ne "0" ]; then echo "Report failed values check"; exit 1; fi
-

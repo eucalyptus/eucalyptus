@@ -1,6 +1,23 @@
 #!/usr/bin/perl
 
+# Copyright 2009-2012 Eucalyptus Systems, Inc.
 #
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; version 3 of the License.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see http://www.gnu.org/licenses/.
+#
+# Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
+# CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
+# additional information or have any questions.
+
 # test.pl tests the reporting system, by simulating resource usage and then
 # verifying that resultant reports are correct.
 #
@@ -17,14 +34,11 @@
 # automatically.
 #
 # This script accepts several optional arguments: duration_secs,
-# write_interval, num_users, num_users_per_account, and num_instances_per_user. 
+# write_interval, num_users, num_users_per_account, and num_instances_per_user.
 #
 # This script has dependencies which can be satisfied by sourcing the "test.sh"
 # file.
-#
-# (c)2011 Eucalyptus Systems, Inc. All Rights Reserved
-# author: tom.werges
-#
+
 use strict;
 use warnings;
 require "test_common.pl";
@@ -106,4 +120,3 @@ print "Executing: ./check_report.pl admin $write_interval $num_instances_per_use
 $return_code |= (system("./check_report.pl admin $write_interval $num_instances_per_user $output")/256);
 
 exit($return_code);
-
