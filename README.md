@@ -2,6 +2,9 @@ eucalyptus-ui
 =============
 
 Eucalyptus User App
+The Eucalyptus User App allows cloud users to do in a web browser what otherwise is done over the Eucalyptus API or command-line interface. 
+The design goal is to build a tool that is elegant and easy to use. 
+The tool provides graphical access to the underlying API and CLI, but does not provide additional functionality of its own
 
 This prototype runs inside tornado. You'll need to download and install tornado based on their instructions: http://www.tornadoweb.org/
 
