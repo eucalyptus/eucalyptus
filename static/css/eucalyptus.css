@@ -21,3 +21,27 @@ div.euca-footer.active{
 .euca-main.active {
   display: none;
 }
+
+div.euca-header.logo {
+ /*position:relative;
+ top:0px;
+ left:10px;*/
+ float: left;
+ width: 300px;
+}
+div.euca-header.navigator {
+ /*position:relative;
+ top:0px; 
+ left:400px;*/
+ padding: 0px 400px 30px 400px;
+ margin: 0px;
+ font-family:Arial,Helvetica,sans-serif;
+ font-style:oblique;
+ font-size:30px
+}
+
+div.euca-header.right {
+ position:relative;
+ top:0px;
+ left:700px;
+}

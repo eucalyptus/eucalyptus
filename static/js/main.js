@@ -1,5 +1,17 @@
 (function($, eucalyptus) {
   eucalyptus.main= function(args) {
+    var drawTopArea = function(args) {
+       var $logoArea = $('html body').find('.euca-container .euca-header #euca-logo');
+       $logoArea.addClass('euca-header logo');
+       var imgUrl = $.eucaData.context['url_home'] + $.eucaData.image['logo'];
+       $('<img>').attr('src',imgUrl).attr('width','300').appendTo($logoArea);
+    
+       var $naviArea = $('html body').find('.euca-container .euca-header #euca-navigator');
+       $naviArea.addClass('euca-header navigator');
+       $('<a>').attr('href','#').attr('id','top-button').addClass('ui-state-default ui-corner-all').text('Explore').appendTo($naviArea);
+     
+    }
+   
     // show the main divs
     var makeMenutabs = function(args) {
       var $header = $('html body').find('.euca-container .euca-main #euca-main-header');
@@ -214,11 +226,12 @@
        $table.append(
             $('<tr>').append(
 		$('<td>').append(
-		   $('<p>').text(textData['global.footer'])),
+		   $('<p>').text(textData['footer'])),
 		$('<td>').append(
        		   $('<p>').html('&nbsp;&nbsp;&nbsp;&nbsp;<a href=\'/login\'>logout</a>'))));
        $table.appendTo($footer);
     }
+    drawTopArea();
     // find div.euca-container.euca-main#euca-main-header
     var menus = [{name:'Instances', link:'#tabs-instances'}, 
                   {name:'Images', link:'#tabs-images'},

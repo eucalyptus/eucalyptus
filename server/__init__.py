@@ -12,7 +12,7 @@ from mockclcinterface import MockClcInterface
 sessions = {}
 use_mock = True
 config = None
-txt_helper = None
+data_helper = None
 class UserSession(object):
   def __init__(self, username, password, access_id, secret_key):
     self.username = username
@@ -80,8 +80,9 @@ class LoginHandler(tornado.web.RequestHandler):
         self.set_cookie("session-id", cookie);
         sessions[cookie] = UserSession(user, passwd, access_id, secret_key)
         context = ContextHelper(user)
-        text_data =  {'global.footer':txt_helper.get_text('global','footer')}
-        self.write({'context':context.get_context(), 'text':text_data})
+        text_data =  {'footer':data_helper.get_data('text','footer')}
+        img_data = {'logo':data_helper.get_data('image','logo')}
+        self.write({'context':context.get_context(), 'text':text_data, 'image':img_data})
 
 # this class is responsible for getting user-specific, 
 # cloud-specific contextual data sent to the browser upon login
@@ -105,13 +106,13 @@ class ContextHelper():
         return {'username':self.username, 'fullname':self.get_full_name(), 'timezone':self.get_time_zone(), 'language':self.get_language(), 'url_home':self.get_url_home()}
 
 # this class abstracts the customizable text sent to the browser 
-class TextHelper():
+class DataHelper():
     def __init__(self):
-        txt_path = config.get('eui', 'textpath')
-        self.txt_config = ConfigParser.ConfigParser()
-	if len(self.txt_config.read(txt_path)) != 1:
-	    raise Exception("Cannot read the text data file: %s" % txt_path)
+        data_path = config.get('eui', 'datapath')
+        self.data_config = ConfigParser.ConfigParser()
+	if len(self.data_config.read(data_path)) != 1:
+	    raise Exception("Cannot read the data file: %s" % data_path)
 
-    def get_text(self, scope, key):
-        return self.txt_config.get(scope, key)
+    def get_data(self, scope, key):
+        return self.data_config.get(scope, key)
 

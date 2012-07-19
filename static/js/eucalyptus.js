@@ -15,7 +15,7 @@
     	    dataType:"json",
 	    async:"false",
 	    success: function(data, textStatus, jqXHR){
-	       $.extend($.eucaData, {context:data.context, text:data.text});
+	       $.extend($.eucaData, {context:data.context, text:data.text, image:data.image});
                args.onSuccess($.eucaData); // call back to login UI
             },
             error: function(jqXHR, textStatus, errorThrown){
