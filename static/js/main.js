@@ -132,7 +132,7 @@
       $('#instances').dataTable( {
           "bProcessing": true,
               "sAjaxSource": "../ec2?type=instance&Action=DescribeInstances",
-              "sAjaxDataProp": "item/instances",
+              "sAjaxDataProp": "instances",
               "aoColumns": [
                 { "mDataProp": "id" },
                 { "mDataProp": "image_id" },
@@ -155,7 +155,7 @@
       }); 
       $('#keys').dataTable( {
           "bProcessing": true,
-              "sAjaxSource": "../ec2?type=key",
+              "sAjaxSource": "../ec2?type=key&Action=DescribeKeyPairs",
               "sAjaxDataProp": "",
               "aoColumns": [
                 { "mDataProp": "name" },
@@ -164,7 +164,7 @@
       });    
       $('#groups').dataTable( {
           "bProcessing": true,
-              "sAjaxSource": "../ec2?type=group",
+              "sAjaxSource": "../ec2?type=group&Action=DescribeSecurityGroups",
               "sAjaxDataProp": "",
               "aoColumns": [
                 { "mDataProp": "name" },
@@ -173,7 +173,7 @@
       }); 
       $('#addresses').dataTable( {
           "bProcessing": true,
-              "sAjaxSource": "../ec2?type=address",
+              "sAjaxSource": "../ec2?type=address&Action=DescribeAddresses",
               "sAjaxDataProp": "",
               "aoColumns": [
                 { "mDataProp": "public_ip" },
@@ -182,7 +182,7 @@
       }); 
       $('#volumes').dataTable( {
           "bProcessing": true,
-              "sAjaxSource": "../ec2?type=volume",
+              "sAjaxSource": "../ec2?type=volume&Action=DescribeVolumes",
               "sAjaxDataProp": "",
               "aoColumns": [
                 { "mDataProp": "id" },
@@ -194,7 +194,7 @@
       });    
       $('#snapshots').dataTable( {
           "bProcessing": true,
-              "sAjaxSource": "../ec2?type=snapshot",
+              "sAjaxSource": "../ec2?type=snapshot&Action=DescribeSnapshots",
               "sAjaxDataProp": "",
               "aoColumns": [
                 { "mDataProp": "id" },
@@ -205,6 +205,19 @@
                 { "mDataProp": "owner_id" }
               ]
       });  
+    }
+
+    var addFooter = function(textData){
+       var $footer = $('html body').find('.euca-container .euca-footer');
+       $footer.removeClass('inactive').addClass('active');
+       var $table = $('<table>').append('<tbody>');
+       $table.append(
+            $('<tr>').append(
+		$('<td>').append(
+		   $('<p>').text(textData['global.footer'])),
+		$('<td>').append(
+       		   $('<p>').html('&nbsp;&nbsp;&nbsp;&nbsp;<a href=\'/login\'>logout</a>'))));
+       $table.appendTo($footer);
     }
     // find div.euca-container.euca-main#euca-main-header
     var menus = [{name:'Instances', link:'#tabs-instances'}, 
@@ -220,6 +233,7 @@
       val.appendTo($body);  
     });
     fillTable();
+    addFooter(args.text);
     var $header = $('html body').find('.euca-container .euca-main #euca-main-header');
     $header.tabs();
   } // end of main

@@ -1,0 +1,3 @@
+[global]
+
+footer: 2012 Eucalyptus Systems, Inc. All rights reserved

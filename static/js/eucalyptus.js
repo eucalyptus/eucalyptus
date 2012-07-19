@@ -1,9 +1,11 @@
 (function($, eucalyptus) {
-  var eucaData = window.eucaData ? window.eucaData : window.eucaData = {};
+  if (! $.eucaData){
+	$.eucaData = {};
+  }
   $(document).ready(function() {
   // check cookie
     if ($.cookie('session-id')) {
-      eucalyptus.main(eucaData);
+      eucalyptus.main($.eucaData);
     } else {
       eucalyptus.login({
         doLogin : function(args) {
@@ -13,11 +15,8 @@
     	    dataType:"json",
 	    async:"false",
 	    success: function(data, textStatus, jqXHR){
-	       eucaData.context = {};
-               $.each(data, function(key,val){
-	          eucaData.context[key] = val;
-	       });
-               args.onSuccess(eucaData); // call back to login UI
+	       $.extend($.eucaData, {context:data.context, text:data.text});
+               args.onSuccess($.eucaData); // call back to login UI
             },
             error: function(jqXHR, textStatus, errorThrown){
 	       args.onError();

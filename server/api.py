@@ -105,5 +105,6 @@ class ComputeHandler(server.BaseHandler):
           ret = self.handleVolumes(action, clc)
         elif action.find('Snapshot') > -1:
           ret = self.handleSnapshots(action, clc)
-        self.write(json.dumps(ret, cls=BotoJsonEncoder, indent=2))
+        data=json.dumps(ret, cls=BotoJsonEncoder, indent=2)
+        self.write(data) #json.dumps(ret, cls=BotoJsonEncoder, indent=2))
 

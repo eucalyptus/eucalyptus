@@ -12,11 +12,9 @@
 		    password:$form.find('input[name=password]').val() 
       };
       args.doLogin({ param: param,
-        onSuccess: function(eucaData){
-	//  $.each(eucaData.context, function(key,val){
-	 //    alert("key: "+key +", val: "+val);
-	//  });
-	  window.location.href=eucaData.context['url_home'];
+        onSuccess: function(args){
+          $login.remove();
+          eucalyptus.main($.eucaData);
    	},
         onError: function(args){
     	     alert("login failed!");
@@ -27,6 +25,4 @@
   }
 })(jQuery, 
    window.eucalyptus ? window.eucalyptus : window.eucalyptus = {});
-
-//})(jQuery, eucalyptus);
 
