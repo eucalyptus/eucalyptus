@@ -63,6 +63,7 @@ package com.eucalyptus.reporting.event;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.notNullValue;
 import com.eucalyptus.util.OwnerFullName;
+import com.google.common.base.Objects;
 
 /**
  * AddressEvent is an event indicating address resource activity in the CLC.
@@ -87,13 +88,14 @@ public class AddressEvent implements Event {
 
   public static AddressEvent with( final String address,
                                    final OwnerFullName owner,
+                                   final String accountName,
                                    final AddressAction action ) {
     return new AddressEvent(
         address,
         owner.getUserId(),
         owner.getUserName(),
         owner.getAccountNumber(),
-        owner.getAccountName(),
+        Objects.firstNonNull( owner.getAccountName(), accountName ),
         action
     );
   }

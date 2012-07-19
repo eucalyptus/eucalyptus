@@ -76,6 +76,7 @@ import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
+import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.AccountMetadata;
@@ -593,7 +594,11 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
                                final AddressAction action ) {
     try {
       ListenerRegistry.getInstance().fireEvent(
-          AddressEvent.with( getDisplayName(), ownerFullName, action ) );
+          AddressEvent.with(
+              getDisplayName(),
+              ownerFullName,
+              Accounts.lookupAccountById(ownerFullName.getAccountNumber()).getName(),
+              action ) );
     } catch ( final Exception e ) {
       LOG.error( e, e );
     }
