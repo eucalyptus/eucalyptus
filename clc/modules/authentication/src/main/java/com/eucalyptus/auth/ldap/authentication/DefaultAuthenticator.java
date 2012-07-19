@@ -36,6 +36,7 @@ public class DefaultAuthenticator implements LdapAuthenticator {
     }    
     Properties env = new Properties( );
     env.put( Context.INITIAL_CONTEXT_FACTORY, LDAP_CONTEXT_FACTORY );
+    env.put( Context.REFERRAL, "follow");
     env.put( Context.PROVIDER_URL, serverUrl );
     env.put( Context.SECURITY_AUTHENTICATION, method );
     env.put( Context.SECURITY_PRINCIPAL, login );
