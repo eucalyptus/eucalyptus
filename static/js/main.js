@@ -8,8 +8,11 @@
     
        var $naviArea = $('html body').find('.euca-container .euca-header #euca-navigator');
        $naviArea.addClass('euca-header navigator');
-       $('<a>').attr('href','#').attr('id','top-button').addClass('ui-state-default ui-corner-all').text('Explore').appendTo($naviArea);
-     
+       //$('<a>').attr('href','#').attr('id','top-button').addClass('ui-state-default ui-corner-all').text('Explore').appendTo($naviArea);
+
+       $('<a>').attr('href','#').attr('id','top-button').addClass('euca-header navigator').text('Explore').appendTo($naviArea);
+       
+       $('html body').find('.euca-container .euca-header').css('display','block');
     }
    
     // show the main divs
@@ -228,7 +231,7 @@
 		$('<td>').append(
 		   $('<p>').text(textData['footer'])),
 		$('<td>').append(
-       		   $('<p>').html('&nbsp;&nbsp;&nbsp;&nbsp;<a href=\'/login\'>logout</a>'))));
+       		   $('<p>').html('&nbsp;&nbsp;&nbsp;&nbsp;<a id=\'logout-button\' href=\'/login\'>logout</a>'))));
        $table.appendTo($footer);
     }
     drawTopArea();
@@ -247,8 +250,27 @@
     });
     fillTable();
     addFooter(args.text);
-    var $header = $('html body').find('.euca-container .euca-main #euca-main-header');
-    $header.tabs();
+    var $mainHeader = $('html body').find('.euca-container .euca-main #euca-main-header');
+    $mainHeader.tabs();
+    var $header = $('html body').find('.euca-container .euca-header');
+    var $footer = $('html body').find('.euca-container .euca-footer');
+
+    // event handlers
+    $header.find('#euca-navigator').hover(
+       function () {
+             $(this).addClass('mouseon');
+	     $(this).find('#top-button').addClass('mouseon');
+       }, 
+       function () {
+	     $(this).removeClass('mouseon');
+	     $(this).find('#top-button').removeClass('mouseon');
+       }
+    );
+
+    // logout
+    $footer.find('#logout-button').click(function(){
+	$.cookie('session-id','');
+    });
   } // end of main
 })(jQuery,
    window.eucalyptus ? window.eucalyptus : window.eucalyptus = {});

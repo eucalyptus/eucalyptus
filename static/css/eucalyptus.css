@@ -22,26 +22,71 @@ div.euca-footer.active{
   display: none;
 }
 
-div.euca-header.logo {
- /*position:relative;
- top:0px;
- left:10px;*/
- float: left;
- width: 300px;
-}
-div.euca-header.navigator {
- /*position:relative;
- top:0px; 
- left:400px;*/
- padding: 0px 400px 30px 400px;
- margin: 0px;
- font-family:Arial,Helvetica,sans-serif;
- font-style:oblique;
- font-size:30px
+div.euca-header {
+    border-top: 5px solid #0F3F5C;
+    display: none;
 }
 
+div.euca-header.logo {
+    float: left;
+    width: 300px;
+    margin-left: 70px;
+    border: none;
+    margin-top: 10px;
+}
+
+div.euca-header.navigator {
+    background: none repeat-x scroll 50% 50% #FFFFFF;
+    height: 40px;
+    left: 400px;
+    margin: 5px;
+    padding: 0 20px;
+    position: relative;
+    width: 50px;
+    border: none;
+}
+
+div.euca-header.navigator.mouseon {
+    background: none repeat-x scroll 50% 50% #E8E8E6;
+    height: 40px;
+    left: 400px;
+    margin: 5px;
+    padding: 0 20px;
+    position: relative;
+    width: 50px;
+    border: none;
+}
+
+a#top-button.euca-header.navigator {
+    left: 0;
+    margin: 10px;
+    position: absolute;
+    top: 0;
+    color: #0F3F5C;
+    font-family: Arial,Helvetica,sans-serif;
+    font-size: 20px;
+    font-style: normal;
+    font-weight: bold;
+    text-decoration:none;
+}
+
+       
+a#top-button.euca-header.navigator.mouseon {
+    left: 0;
+    margin: 10px;
+    position: absolute;
+    top: 0;
+    color: #90AC59;
+    font-family: Arial,Helvetica,sans-serif;
+    font-size: 20px;
+    font-style: normal;
+    font-weight: bold;
+    text-decoration:none;
+}   
+
+
 div.euca-header.right {
- position:relative;
- top:0px;
- left:700px;
+    left: 700px;
+    position: relative;
+    top: 0;
 }
