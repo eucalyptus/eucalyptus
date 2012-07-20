@@ -26,8 +26,10 @@ clc/modules/authentication/conf/
 clc/modules/bootstrap/eucalyptus-cloud
 clc/modules/bootstrap/src/main/native/arguments.ggo
 clc/modules/bootstrap/src/main/native/eucalyptus-cloud
+clc/modules/bootstrap/src/main/resources/version.properties
 clc/modules/*/build
 clc/modules/msgs/src/main/resources/msgs-binding.xml
+clc/modules/postgresql/src/main/resources/postgresql-binaries.properties
 clc/modules/storage-controller/include/**
 clc/modules/storage-controller/lib
 clc/modules/storage-san
@@ -44,6 +46,7 @@ config.log
 config.status
 core.*
 gatherlog/GLclient
+gatherlog/libEucalyptusGL.so
 Makedefs
 storage/euca_imager
 storage/Wclient
@@ -59,3 +62,13 @@ clc/eucadmin/eucadmin/__init__.py
 storage/euca-blobs
 storage/test_blobstore
 storage/test_vbr
+cluster/CCclient_full
+cluster/euca_killall
+cluster/libEucalyptusCC.so
+cluster/shutdownCC
+node/NCclient
+node/NCclient_local
+node/libEucalyptusNC.so
+node/test
+node/test_hooks
+node/test_nc
