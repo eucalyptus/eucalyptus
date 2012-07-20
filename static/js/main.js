@@ -258,14 +258,19 @@
     // event handlers
     $header.find('#euca-navigator').hover(
        function () {
-             $(this).addClass('mouseon');
 	     $(this).find('#top-button').addClass('mouseon');
        }, 
        function () {
-	     $(this).removeClass('mouseon');
 	     $(this).find('#top-button').removeClass('mouseon');
        }
     );
+    $header.find('#euca-navigator').click(function (){
+        if($(this).hasClass('mouseon')){
+            $(this).removeClass('mouseon');
+        }else{
+            $(this).addClass('mouseon');
+        }
+    });
 
     // logout
     $footer.find('#logout-button').click(function(){

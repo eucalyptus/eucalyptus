@@ -80,6 +80,14 @@ class RootHandler(BaseHandler):
         else:
             self.write(ProxyResponse.generate(response))
 
+    def check_xsrf_cookie(self):
+        action = self.get_argument("action")
+	if action == 'login':
+            xsrf=self.xsrf_token
+        else:
+            super(RootHandler, self).check_xsrf_cookie()
+
+# LogoutHandler: deprecated
 class LogoutHandler(BaseHandler):
     def get(self):
         self.set_cookie("session-id","")

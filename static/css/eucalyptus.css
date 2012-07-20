@@ -23,7 +23,7 @@ div.euca-footer.active{
 }
 
 div.euca-header {
-    border-top: 5px solid #0F3F5C;
+    border-top: 10px solid #0F3F5C;
     display: none;
 }
 
@@ -43,7 +43,10 @@ div.euca-header.navigator {
     padding: 0 20px;
     position: relative;
     width: 50px;
-    border: none;
+    border-top: none;
+    border-bottom: none;
+    border-left: 2px solid #E2E6E5;
+    border-right: 2px solid #E2E6E5;
 }
 
 div.euca-header.navigator.mouseon {
@@ -54,7 +57,10 @@ div.euca-header.navigator.mouseon {
     padding: 0 20px;
     position: relative;
     width: 50px;
-    border: none;
+    border-top: none;
+    border-bottom: none;
+    border-left: 2px solid #E2E6E5;
+    border-right: 2px solid #E2E6E5;
 }
 
 a#top-button.euca-header.navigator {

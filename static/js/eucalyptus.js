@@ -7,7 +7,7 @@
     if ($.cookie('session-id')) {
        $.ajax({
   	  type:"POST",
-	  data:"action=session",
+	  data:"action=session&_xsrf="+$.cookie('_xsrf'),
 	  dataType:"json",
 	  async:"false",
 	  success: function(out, textStatus, jqXHR){
