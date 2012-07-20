@@ -25,24 +25,28 @@ div.euca-footer.active{
 div.euca-header {
     border-top: 10px solid #0F3F5C;
     display: none;
+    position: relative;
+    width: 1024px;
+    height: 50px;
+    margin-bottom: 5px;
 }
 
 div.euca-header.logo {
     float: left;
     width: 300px;
     margin-left: 70px;
-    border: none;
     margin-top: 10px;
+    border: none;
 }
 
 div.euca-header.navigator {
     background: none repeat-x scroll 50% 50% #FFFFFF;
-    height: 40px;
-    left: 400px;
-    margin: 5px;
-    padding: 0 20px;
-    position: relative;
+    float: left;
     width: 50px;
+    height: 40px;
+    margin-left: 70px;
+    margin-top: 10px;
+    padding: 0 20px;
     border-top: none;
     border-bottom: none;
     border-left: 2px solid #E2E6E5;
@@ -51,12 +55,12 @@ div.euca-header.navigator {
 
 div.euca-header.navigator.mouseon {
     background: none repeat-x scroll 50% 50% #E8E8E6;
-    height: 40px;
-    left: 400px;
-    margin: 5px;
-    padding: 0 20px;
-    position: relative;
+    float: left;
     width: 50px;
+    height: 40px;
+    margin-left: 70px;
+    margin-top: 10px;
+    padding: 0 20px;
     border-top: none;
     border-bottom: none;
     border-left: 2px solid #E2E6E5;
@@ -65,9 +69,9 @@ div.euca-header.navigator.mouseon {
 
 a#top-button.euca-header.navigator {
     left: 0;
+    top: 0;
     margin: 10px;
     position: absolute;
-    top: 0;
     color: #0F3F5C;
     font-family: Arial,Helvetica,sans-serif;
     font-size: 20px;
@@ -79,9 +83,9 @@ a#top-button.euca-header.navigator {
        
 a#top-button.euca-header.navigator.mouseon {
     left: 0;
+    top: 0;
     margin: 10px;
     position: absolute;
-    top: 0;
     color: #90AC59;
     font-family: Arial,Helvetica,sans-serif;
     font-size: 20px;
@@ -90,9 +94,68 @@ a#top-button.euca-header.navigator.mouseon {
     text-decoration:none;
 }   
 
-
-div.euca-header.right {
-    left: 700px;
+div.euca-header.help{
+    background: none repeat-x scroll 50% 50% #FFFFFF;
+    float: right; 
+    width: 50px;
+    height: 40px;
+    margin-right: 5px;
+    margin-top: 10px;
+    padding: 0 20px; 
+    border-top: none;
+    border-bottom: none;
+    border-left:none;
+    border-right: 2px solid #E2E6E5;
+}   
+   
+span.euca-header.help#help {
+    left: 0;
+    top: 10px;
     position: relative;
-    top: 0;
+    color: #0F3F5C;
+    font-family: Arial,Helvetica,sans-serif;
+    font-size: 15px;
+    font-style: normal;
+    font-weight: bold;
+    text-decoration:none;
+    text-align: center
+}   
+
+div.euca-header.user {
+    background: none repeat-x scroll 50% 50% #FFFFFF;
+    float: right; 
+    width: 50px;
+    height: 40px;
+    margin-top: 10px;
+    padding: 0 20px;
+    border-top: none;
+    border-bottom: none;
+    border-left: 2px solid #E2E6E5;
+    border-right: 2px solid #E2E6E5;
+}
+
+span.euca-header.user#name {
+    left: 0;
+    top: 10px;
+    position: relative;
+    color: #0F3F5C;
+    font-family: Arial,Helvetica,sans-serif;
+    font-size: 15px;
+    font-style: normal;
+    font-weight: bold;
+    text-decoration:none;
+    text-align: center;
+    border:none;
+}
+
+div.euca-container {
+    position:relative;
+    width:1024px;
+}
+
+div.euca-main {
+    position:relative;
+}
+div.euca-main#euca-main-header {
+    position:relative;
 }

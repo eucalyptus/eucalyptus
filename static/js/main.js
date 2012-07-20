@@ -1,18 +1,27 @@
 (function($, eucalyptus) {
   eucalyptus.main= function(args) {
     var drawTopArea = function(args) {
-       var $logoArea = $('html body').find('.euca-container .euca-header #euca-logo');
+       var $header = $('html body').find('.euca-container .euca-header');
+       var $logoArea = $header.find('#euca-logo');
        $logoArea.addClass('euca-header logo');
        var imgUrl = $.eucaData.context['url_home'] + $.eucaData.image['logo'];
-       $('<img>').attr('src',imgUrl).attr('width','300').appendTo($logoArea);
-    
-       var $naviArea = $('html body').find('.euca-container .euca-header #euca-navigator');
-       $naviArea.addClass('euca-header navigator');
-       //$('<a>').attr('href','#').attr('id','top-button').addClass('ui-state-default ui-corner-all').text('Explore').appendTo($naviArea);
 
+        //img width hardcoded
+       $('<img>').attr('src',imgUrl).attr('width','300px').appendTo($logoArea);
+   
+       var $naviArea = $header.find('#euca-navigator');
+       $naviArea.addClass('euca-header navigator');
        $('<a>').attr('href','#').attr('id','top-button').addClass('euca-header navigator').text('Explore').appendTo($naviArea);
-       
-       $('html body').find('.euca-container .euca-header').css('display','block');
+
+       var $userArea = $header.find('#euca-user');
+       $userArea.addClass('euca-header user');
+       $('<span>').addClass('euca-header user').attr('id','name').text($.eucaData.context['username']).appendTo($userArea);
+  
+       var $helpArea = $header.find('#euca-help');
+       $helpArea.addClass('euca-header help');
+       $('<span>').addClass('euca-header help').attr('id','help').text('help').appendTo($helpArea);
+
+       $('html body').find('.euca-container .euca-header').css('display','block');       
     }
    
     // show the main divs
@@ -262,6 +271,7 @@
        }, 
        function () {
 	     $(this).find('#top-button').removeClass('mouseon');
+             $(this).removeClass('mouseon');
        }
     );
     $header.find('#euca-navigator').click(function (){
