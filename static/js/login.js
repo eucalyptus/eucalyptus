@@ -17,7 +17,7 @@
           eucalyptus.main($.eucaData);
    	},
         onError: function(args){
-    	     alert("login failed!");
+    	     alert("login failed: "+args);
         }		     
       }); 
       return false;

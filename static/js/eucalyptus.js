@@ -5,21 +5,34 @@
   $(document).ready(function() {
   // check cookie
     if ($.cookie('session-id')) {
-      eucalyptus.main($.eucaData);
+       $.ajax({
+  	  type:"POST",
+	  data:"action=session",
+	  dataType:"json",
+	  async:"false",
+	  success: function(out, textStatus, jqXHR){
+	      $.extend($.eucaData, {context:out.data.context, text:out.data.text, image:out.data.image});
+              eucalyptus.main($.eucaData);
+          },
+	  error: function(jqXHR, textStatus, errorThrown){
+              $.cookie('session-id','');
+ 	      location.href='/';	   
+	  }
+       });
     } else {
       eucalyptus.login({
         doLogin : function(args) {
 	  $.ajax({
 	    type:"POST",
- 	    data:"username="+args.param.username+"&password="+args.param.password,
+ 	    data:"action=login&username="+args.param.username+"&password="+args.param.password,
     	    dataType:"json",
 	    async:"false",
-	    success: function(data, textStatus, jqXHR){
-	       $.extend($.eucaData, {context:data.context, text:data.text, image:data.image});
+	    success: function(out, textStatus, jqXHR) {
+	       $.extend($.eucaData, {context:out.data.context, text:out.data.text, image:out.data.image});
                args.onSuccess($.eucaData); // call back to login UI
             },
             error: function(jqXHR, textStatus, errorThrown){
-	       args.onError();
+	       args.onError(errorThrown);
             }
  	  });
         }

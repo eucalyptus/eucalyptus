@@ -231,7 +231,7 @@
 		$('<td>').append(
 		   $('<p>').text(textData['footer'])),
 		$('<td>').append(
-       		   $('<p>').html('&nbsp;&nbsp;&nbsp;&nbsp;<a id=\'logout-button\' href=\'/login\'>logout</a>'))));
+       		   $('<p>').html('&nbsp;&nbsp;&nbsp;&nbsp;<a id=\'logout-button\' href=\'/\'>logout</a>'))));
        $table.appendTo($footer);
     }
     drawTopArea();

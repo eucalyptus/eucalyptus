@@ -5,6 +5,8 @@ import io
 import socket
 import random
 import json
+import sys
+import traceback
 import ConfigParser
 from botoclcinterface import BotoClcInterface
 from mockclcinterface import MockClcInterface
@@ -22,11 +24,11 @@ class UserSession(object):
 
 class BaseHandler(tornado.web.RequestHandler):
     session = None
-
     def get_current_user(self):
         session_id = self.get_cookie("session-id")
         if not(session_id):
-            self.redirect("/login")
+            return None
+            #self.redirect("/login")
         try:
             session = sessions[session_id]
         except KeyError:
@@ -39,50 +41,117 @@ class BaseHandler(tornado.web.RequestHandler):
     def validate_session(self):
         session_id = self.get_cookie("session-id")
         if not(session_id):
-            self.redirect("/login")
+            self.redirect("/")
         try:
             self.session = sessions[session_id]
         except KeyError:
-            self.redirect("/login")
+            self.redirect("/")
 
     def should_use_mock(self):
         use_mock = config.getboolean('eui', 'usemock')
         return use_mock
 
 class RootHandler(BaseHandler):
-    @tornado.web.authenticated
-
     def get(self, path):
-        path = config.get('eui', 'staticpath')+"eui.html" #path
+        path = config.get('eui', 'staticpath')+"eui.html"
         self.render(path, username=self.get_current_user())
 
-class LoginHandler(tornado.web.RequestHandler):
+    def post(self, arg):
+        action = self.get_argument("action")
+        response=None
+        error=None
+        if action == 'login':
+            try:
+                response=LoginHandler.post(self)
+            except Exception, err:
+                traceback.print_exc(file=sys.stdout)
+                error={'status_code':401,'message':'failed to log-in'}
+        elif action == 'session':
+	    try:
+	        response=SessionHandler.post(self)
+	    except Exception, err:
+                traceback.print_exc(file=sys.stdout)
+		error={'status_code':400,'message':'can\'t retrieve session info'}
+        else:
+            error={'status_code':400,'message':'unknown action'}
+        
+        if error:
+            raise tornado.web.HTTPError(error['status_code'],error['message'])
+        else:
+            self.write(ProxyResponse.generate(response))
+
+class LogoutHandler(BaseHandler):
     def get(self):
-        path = None
-        try:
-            path = config.get('eui', 'staticpath')+"eui.html"
-            # ensure session is cleared
-            self.set_cookie("session-id", "")
-            # could redirect to login page...
-            self.render(path, username=None)
-        except Exception, err:
-            print "Error: %s-%s" % (path,err)
-            return
+        self.set_cookie("session-id","")
+        self.redirect("/") 
     
-    def post(self):
-        # validate user from args, get back tokens, then
-        user = self.get_argument("username")
-        passwd = self.get_argument("password")
+class ProxyHandler():
+    @staticmethod
+    def get(web_req):
+        pass
+    @staticmethod 
+    def post(web_req):
+        pass    
+
+class LoginHandler(ProxyHandler):
+    @staticmethod
+    def get(web_req):
+        return ErrorResponse(ErrorResponse.UNKNOWN_ACTION)
+    @staticmethod
+    def post(web_req):
+        user = web_req.get_argument("username")
+        passwd = web_req.get_argument("password")
         access_id='L52ISGKFHSEXSPOZYIZ1K'
         secret_key='YRRpiyw333aq1se5PneZEnskI9MMNXrSoojoJjat'
         # create session and store info there, set session id in cookie
         cookie = os.urandom(16).encode('hex');
-        self.set_cookie("session-id", cookie);
+        web_req.set_cookie("session-id", cookie);
         sessions[cookie] = UserSession(user, passwd, access_id, secret_key)
-        context = ContextHelper(user)
+        return LoginResponse(user)
+
+class SessionHandler(ProxyHandler):
+    @staticmethod
+    def post(web_req):
+        session_id = web_req.get_cookie("session-id")
+        if not(session_id):
+	    raise "session id not found"
+        session = sessions[session_id]
+        if not(session):
+	    raise "session not found"
+        user = session.username
+	return LoginResponse(user)
+
+class ProxyResponse(object):
+    RESPONSE_TYPE_AUTH = 0
+    RESPONSE_TYPE_INFO = 1
+    RESPONSE_TYPE_OP = 2
+
+    def __init__(self, resp_type):
+        self.response_type = resp_type
+
+    def get_response(self):
+        pass
+
+    @staticmethod
+    def generate(response):
+        if response.response_type == ProxyResponse.RESPONSE_TYPE_AUTH:
+            return {'type':'auth', 'data':response.get_response()} 
+        elif response.response_type == ProxyResponse.RESPONSE_TYPE_INFO:
+            return {'type':'info', 'data':response.get_response()}
+        elif response.response_type == ProxyResponse.RESPONSE_TYPE_OP:
+            return {'type':'op', 'data':response.get_response()}
+
+class LoginResponse(ProxyResponse):
+    def __init__(self, user):
+        super(LoginResponse,self).__init__(ProxyResponse.RESPONSE_TYPE_AUTH)
+        self.user = user
+    
+    def get_response(self):
+        context = ContextHelper(self.user)
         text_data =  {'footer':data_helper.get_data('text','footer')}
         img_data = {'logo':data_helper.get_data('image','logo')}
-        self.write({'context':context.get_context(), 'text':text_data, 'image':img_data})
+
+        return {'context':context.get_context(), 'text':text_data, 'image':img_data}
 
 # this class is responsible for getting user-specific, 
 # cloud-specific contextual data sent to the browser upon login
