@@ -7,19 +7,21 @@
        var imgUrl = $.eucaData.context['url_home'] + $.eucaData.image['logo'];
 
         //img width hardcoded
-       $('<img>').attr('src',imgUrl).attr('width','300px').appendTo($logoArea);
+       $('<img>').attr('src',imgUrl).attr('height','30px').appendTo($logoArea);
    
        var $naviArea = $header.find('#euca-navigator');
        $naviArea.addClass('euca-header navigator');
-       $('<a>').attr('href','#').attr('id','top-button').addClass('euca-header navigator').text('Explore').appendTo($naviArea);
+       $naviButton = $('<a>').attr('href','#').attr('id','top-button').addClass('euca-header navigator').text('Explore ');
+       $naviButton.append($('<img>').attr('src','images/triangle.gif'));
+       $naviArea.append($naviButton);
 
        var $userArea = $header.find('#euca-user');
        $userArea.addClass('euca-header user');
-       $('<span>').addClass('euca-header user').attr('id','name').text($.eucaData.context['username']).appendTo($userArea);
+       $('<span>').addClass('euca-header user').attr('id','name').text($.eucaData.context['username']+' ').append($('<img>').attr('src','images/triangle.gif')).appendTo($userArea);
   
        var $helpArea = $header.find('#euca-help');
        $helpArea.addClass('euca-header help');
-       $('<span>').addClass('euca-header help').attr('id','help').text('help').appendTo($helpArea);
+       $('<span>').addClass('euca-header help').attr('id','help').text('help ').append($('<img>').attr('src','images/triangle.gif')).appendTo($helpArea);
 
        $('html body').find('.euca-container .euca-header').css('display','block');       
     }
