@@ -8,22 +8,36 @@
 
         //img width hardcoded
        $('<img>').attr('src',imgUrl).attr('height','30px').appendTo($logoArea);
-   
+
+       //navigation area   
        var $naviArea = $header.find('#euca-navigator');
        $naviArea.addClass('euca-header navigator');
-       $naviButton = $('<a>').attr('href','#').attr('id','top-button').addClass('euca-header navigator').text('Explore ');
-       $naviButton.append($('<img>').attr('src','images/triangle.gif'));
-       $naviArea.append($naviButton);
-
+       $naviArea.append($('<table>').attr('width','auto').attr('align','center').append(
+                            $('<tbody>').append(
+			      $('<tr>').append(
+                                 $('<td>').attr('valign','middle').css('width','auto').append(
+				    $('<a>').attr('href','#').attr('id','top-button').addClass('euca-header navigator').css('display','block').text('Explorer')),
+				 $('<td>').attr('valign','middle').css('width','auto').append(
+				    $('<img>').attr('src','images/triangle.gif'))))));
+       //user area
        var $userArea = $header.find('#euca-user');
        $userArea.addClass('euca-header user');
        $('<span>').addClass('euca-header user').attr('id','name').text($.eucaData.context['username']+' ').append($('<img>').attr('src','images/triangle.gif')).appendTo($userArea);
-  
+
+       //help area 
        var $helpArea = $header.find('#euca-help');
        $helpArea.addClass('euca-header help');
        $('<span>').addClass('euca-header help').attr('id','help').text('help ').append($('<img>').attr('src','images/triangle.gif')).appendTo($helpArea);
 
        $('html body').find('.euca-container .euca-header').css('display','block');       
+    }
+
+    var makeExplorers = function(args) {
+        var $resourceContainer = $('html body').find('.euca-container .euca-explorer');
+        $.each($.eucaData.context.explorers, function(idx, val){
+            eucalyptus.explorer({'container':$resourceContainer, 'item':val});
+        });
+        //$resourceContainer.css('display','block');
     }
    
     // show the main divs
@@ -246,6 +260,7 @@
        $table.appendTo($footer);
     }
     drawTopArea();
+    makeExplorers();
     // find div.euca-container.euca-main#euca-main-header
     var menus = [{name:'Instances', link:'#tabs-instances'}, 
                   {name:'Images', link:'#tabs-images'},
@@ -256,11 +271,13 @@
                   {name:'Snapshots', link: '#tabs-snapshots'}];
     makeMenutabs(menus);
     $.each(getTabElem(), function (idx, val){
-      var $body = $('html body').find('.euca-container .euca-main #euca-main-header'); //-browser');
+      var $body = $('html body').find('.euca-container .euca-main #euca-main-header');
       val.appendTo($body);  
     });
     fillTable();
+
     addFooter(args.text);
+
     var $mainHeader = $('html body').find('.euca-container .euca-main #euca-main-header');
     $mainHeader.tabs();
     var $header = $('html body').find('.euca-container .euca-header');
@@ -277,10 +294,14 @@
        }
     );
     $header.find('#euca-navigator').click(function (){
+        var $explorer = $('html body').find('.euca-container .euca-explorer');
         if($(this).hasClass('mouseon')){
             $(this).removeClass('mouseon');
+            $explorer.toggle('blind', {}, 300 );
         }else{
             $(this).addClass('mouseon');
+            $explorer.toggle('blind', {}, 300 );
+
         }
     });
 

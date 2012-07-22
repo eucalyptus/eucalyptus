@@ -41,121 +41,126 @@ div.euca-header.logo {
 
 div.euca-header.navigator {
     background: none repeat-x scroll 50% 50% #FFFFFF;
+    border-color: -moz-use-text-color #E2E6E5;
+    border-style: none solid;
+    border-width: medium 2px;
     float: left;
-    width: 70px;
     height: 30px;
     margin-left: 70px;
     margin-top: 5px;
-    padding: 0 20px;
-    border-top: none;
-    border-bottom: none;
-    border-left: 2px solid #E2E6E5;
-    border-right: 2px solid #E2E6E5;
+    padding: 0 10px;
+    width: auto;
 }
-
 div.euca-header.navigator.mouseon {
     background: none repeat-x scroll 50% 50% #E8E8E6;
+    border-color: -moz-use-text-color #E2E6E5;
+    border-style: none solid;
+    border-width: medium 2px;
     float: left;
-    width: 70px;
     height: 30px;
     margin-left: 70px;
     margin-top: 5px;
-    padding: 0 20px;
-    border-top: none;
-    border-bottom: none;
-    border-left: 2px solid #E2E6E5;
-    border-right: 2px solid #E2E6E5;
+    padding: 0 10px;
+    width: auto;
 }
-
 a#top-button.euca-header.navigator {
-    left: 0;
-    top: 0;
-    margin: 5px;
-    position: absolute;
     color: #0F3F5C;
     font-family: Arial,Helvetica,sans-serif;
-    font-size: 20px;
+    font-size: 18px;
     font-style: normal;
     font-weight: bold;
-    text-decoration:none;
-}
-
-       
-a#top-button.euca-header.navigator.mouseon {
     left: 0;
-    top: 0;
     margin: 5px;
-    position: absolute;
+    text-decoration: none;
+    top: 0;
+}
+a#top-button.euca-header.navigator.mouseon {
     color: #90AC59;
     font-family: Arial,Helvetica,sans-serif;
-    font-size: 20px;
+    font-size: 18px;
     font-style: normal;
     font-weight: bold;
-    text-decoration:none;
-}   
-
-div.euca-header.help{
+    left: 0;
+    margin: 5px;
+    text-decoration: none;
+    top: 0;
+    cursor: default;
+}
+div.euca-header.help {
     background: none repeat-x scroll 50% 50% #FFFFFF;
-    float: right; 
-    width: auto; 
+    border-color: -moz-use-text-color #E2E6E5 -moz-use-text-color -moz-use-text-color;
+    border-style: none solid none none;
+    border-width: medium 2px medium medium;
+    float: right;
     height: 30px;
     margin-right: 10px;
     margin-top: 5px;
-    padding: 0 20px; 
-    border-top: none;
-    border-bottom: none;
-    border-left:none;
-    border-right: 2px solid #E2E6E5;
-}   
-   
-span.euca-header.help#help {
-    left: 0;
-    top: 5px;
-    position: relative;
+    padding: 0 10px;
+    width: auto;
+}
+span#help.euca-header.help {
     color: #0F3F5C;
     font-family: Arial,Helvetica,sans-serif;
     font-size: 15px;
     font-style: normal;
     font-weight: bold;
-    text-decoration:none;
-    text-align: center
-}   
-
+    left: 0;
+    position: relative;
+    text-align: center;
+    text-decoration: none;
+    top: 5px;
+}
 div.euca-header.user {
     background: none repeat-x scroll 50% 50% #FFFFFF;
-    float: right; 
-    width: auto; 
+    border-color: -moz-use-text-color #E2E6E5;
+    border-style: none solid;
+    border-width: medium 2px;
+    float: right;
     height: 30px;
     margin-top: 5px;
-    padding: 0 20px;
-    border-top: none;
-    border-bottom: none;
-    border-left: 2px solid #E2E6E5;
-    border-right: 2px solid #E2E6E5;
+    padding: 0 10px;
+    width: auto;
 }
-
-span.euca-header.user#name {
-    left: 0;
-    top: 5px;
-    position: relative;
+span#name.euca-header.user {
+    border: medium none;
     color: #0F3F5C;
     font-family: Arial,Helvetica,sans-serif;
     font-size: 15px;
     font-style: normal;
     font-weight: bold;
-    text-decoration:none;
+    left: 0;
+    position: relative;
     text-align: center;
-    border:none;
+    text-decoration: none;
+    top: 5px;
+}
+
+div.euca-explorer {
+    display: none;
+    position: relative;
+    width: 1024px;
+    height: 80px;
+    border-color: #E2E6E5;
+    border-style: solid;
+    border-width: medium 2px;
+}
+
+div.euca-explorer.explorer-item {
+    float: left;
+    width: 70px;
+    margin-left: 20px;
+    margin-top: 5px;
+    border: none;
 }
 
 div.euca-container {
-    position:relative;
-    width:1024px;
+    position: relative;
+    width: 1024px;
 }
 
 div.euca-main {
-    position:relative;
+    position: relative;
 }
-div.euca-main#euca-main-header {
-    position:relative;
+div#euca-main-header.euca-main {
+    position: relative;
 }

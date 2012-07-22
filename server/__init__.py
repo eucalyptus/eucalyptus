@@ -179,8 +179,11 @@ class ContextHelper():
     def get_language(self):
 	return "en_US"
 
+    def get_explorers(self):
+        return ['dashboard','images','instances','storage','netsec','support']
+
     def get_context(self):
-        return {'username':self.username, 'fullname':self.get_full_name(), 'timezone':self.get_time_zone(), 'language':self.get_language(), 'url_home':self.get_url_home()}
+        return {'username':self.username, 'fullname':self.get_full_name(), 'timezone':self.get_time_zone(), 'language':self.get_language(), 'url_home':self.get_url_home(), 'explorers':self.get_explorers()}
 
 # this class abstracts the customizable text sent to the browser 
 class DataHelper():
