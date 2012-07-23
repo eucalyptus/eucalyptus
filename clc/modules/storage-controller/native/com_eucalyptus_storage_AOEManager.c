@@ -1,6 +1,22 @@
-/*
- * Author: Sunil Soman sunils@cs.ucsb.edu
- */
+/*************************************************************************
+ * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 3 of the License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ *
+ * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
+ * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
+ * additional information or have any questions.
+ ************************************************************************/
 
 #include <com_eucalyptus_storage_AOEManager.h>
 #include <unistd.h>
@@ -9,7 +25,7 @@
 
 #define EUCALYPTUS_ENV_VAR_NAME  "EUCALYPTUS"
 
-extern int run_command_and_get_pid(char *cmd, char **args); 
+extern int run_command_and_get_pid(char *cmd, char **args);
 
 JNIEXPORT jint JNICALL Java_com_eucalyptus_storage_AOEManager_exportVolume
 (JNIEnv *env, jobject obj, jstring iface, jstring lvName, jint major, jint minor) {
@@ -46,4 +62,3 @@ JNIEXPORT jint JNICALL Java_com_eucalyptus_storage_AOEManager_exportVolume
     if (home) free(home);
     return pid;
 }
-
