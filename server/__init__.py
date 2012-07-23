@@ -62,13 +62,13 @@ class RootHandler(BaseHandler):
         error=None
         if action == 'login':
             try:
-                response=LoginHandler.post(self)
+                response=LoginProcessor.post(self)
             except Exception, err:
                 traceback.print_exc(file=sys.stdout)
                 error={'status_code':401,'message':'failed to log-in'}
         elif action == 'session':
 	    try:
-	        response=SessionHandler.post(self)
+	        response=SessionProcessor.post(self)
 	    except Exception, err:
                 traceback.print_exc(file=sys.stdout)
 		error={'status_code':400,'message':'can\'t retrieve session info'}
@@ -87,13 +87,7 @@ class RootHandler(BaseHandler):
         else:
             super(RootHandler, self).check_xsrf_cookie()
 
-# LogoutHandler: deprecated
-class LogoutHandler(BaseHandler):
-    def get(self):
-        self.set_cookie("session-id","")
-        self.redirect("/") 
-    
-class ProxyHandler():
+class ProxyProcessor():
     @staticmethod
     def get(web_req):
         pass
@@ -101,7 +95,7 @@ class ProxyHandler():
     def post(web_req):
         pass    
 
-class LoginHandler(ProxyHandler):
+class LoginProcessor(ProxyProcessor):
     @staticmethod
     def get(web_req):
         return ErrorResponse(ErrorResponse.UNKNOWN_ACTION)
@@ -117,7 +111,7 @@ class LoginHandler(ProxyHandler):
         sessions[cookie] = UserSession(user, passwd, access_id, secret_key)
         return LoginResponse(user)
 
-class SessionHandler(ProxyHandler):
+class SessionProcessor(ProxyProcessor):
     @staticmethod
     def post(web_req):
         session_id = web_req.get_cookie("session-id")
