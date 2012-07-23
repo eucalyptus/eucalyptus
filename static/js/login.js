@@ -7,6 +7,7 @@
 
     var $form = $login.find('form');
     // set the login event handler
+    $form.find('input[name=username]').focus();
     $form.find('input[type=submit]').click(function() {
       var param = { username:$form.find('input[name=username]').val(),
 		    password:$form.find('input[name=password]').val() 
