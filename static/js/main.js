@@ -35,7 +35,7 @@
     var makeExplorers = function(args) {
         var $resourceContainer = $('html body').find('.euca-container .euca-explorer');
         $.each($.eucaData.context.explorers, function(idx, val){
-            eucalyptus.explorer({'container':$resourceContainer, 'item':val});
+            eucalyptus.explorer({'container':$resourceContainer, 'item':val, 'idx':idx});
         });
         //$resourceContainer.css('display','block');
     }
