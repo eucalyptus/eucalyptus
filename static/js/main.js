@@ -85,7 +85,8 @@
               "aoColumns": [
                 {
                   "bSortable": false,
-                  "fnRender": function(oObj) { return '<input type="checkbox"/>' }
+                  "fnRender": function(oObj) { return '<input type="checkbox"/>' },
+                  "sWidth": "20px",
                 },
                 { "mDataProp": "name" },
                 { "mDataProp": "fingerprint", "bSortable": false }
