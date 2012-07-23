@@ -136,25 +136,22 @@ span#name.euca-header.user {
 }
 
 div.euca-explorer {
-    display: none;
+    display: none; 
     position: relative;
     width: 1024px;
     height: 80px;
+}
+
+div.euca-container.euca-explorer.explorer-item {
+    float: left;
+    width: auto;
     border-color: #E2E6E5;
     border-style: solid;
     border-width: medium 2px;
 }
 
-div.euca-explorer.explorer-item {
-    float: left;
-    width: 70px;
-    margin-left: 20px;
-    margin-top: 5px;
-    border: none;
-}
-
 div.euca-container {
-    position: relative;
+    position: static;
     width: 1024px;
 }
 

@@ -151,7 +151,10 @@ class LoginResponse(ProxyResponse):
     def get_response(self):
         context = ContextHelper(self.user)
         text_data =  {'footer':data_helper.get_data('text','footer')}
-        img_data = {'logo':data_helper.get_data('image','logo')}
+        #img_data = {'logo':data_helper.get_data('image','logo')}
+        img_data = {}
+        for n,v in data_helper.list_items('image'):
+	    img_data[n] = v 
 
         return {'context':context.get_context(), 'text':text_data, 'image':img_data}
 
@@ -189,4 +192,7 @@ class DataHelper():
 
     def get_data(self, scope, key):
         return self.data_config.get(scope, key)
+
+    def list_items(self, scope):
+        return self.data_config.items(scope);
 
