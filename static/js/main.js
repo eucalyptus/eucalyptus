@@ -50,126 +50,11 @@
       });
       $ul.appendTo($header);
      // $header.tabs();
-    }    
-    var getTabElem = function(args) {
-      var elems = [
-      	$('<div>').attr('id','tabs-instances').addClass('active').append(
-	 "<table id=\"instances\" class=\"display\">"+
-           "<thead>"+
-	     "<tr>"+
-		"<th>id</th>"+
-		"<th>image id</th>"+
-		"<th>public IP</th>"+
-		"<th>private IP</th>"+
-		"<th>state</th>"+
-	    "</tr>"+
-          "</thead>"+
-          "<tbody>"+
-	    "<tr>"+
-              "<td colspan=\"5\" class=\"dataTables_empty\">Loading data from server</td>"+
-	    "</tr>"+ 
-          "</tbody>"+ 
-        "</table>"),
-      $('<div>').attr('id','tabs-images').addClass('active').append(
-        "<table id=\"images\" class=\"display\">"+
-          "<thead>"+
-	     "<tr>"+
-   	       "<th>id</th>"+
-   	       "<th>location</th>"+
-      	       "<th>type</th>"+
- 	       "<th>architecture</th>"+
- 	       "<th>state</th>"+
-	     "</tr>"+
-           "</thead>"+
-           "<tbody>"+
-	     "<tr>"+
- 	       "<td colspan=\"5\" class=\"dataTables_empty\">Loading data from server</td>"+
-	     "</tr>"+
-           "</tbody>"+
-        "</table>"),
-      $('<div>').attr('id','tabs-keys').addClass('active').append(
-        "<table id=\"keys\" class=\"display\">"+
-           "<thead>"+
-             "<tr>"+
-                "<th>name</th>"+
-                "<th>fingerprint</th>"+
-        	"</tr>"+
-            "</thead>"+
-            "<tbody>"+
-               "<tr>"+ 
-                  "<td colspan=\"5\" class=\"dataTables_empty\">Loading data from server</td>"+
-               "</tr>"+
-	    "</tbody>"+
-        "</table>"),
-      $('<div>').attr('id','tabs-groups').addClass('active').append(
-	"<table id=\"groups\" class=\"display\">"+
-	  "<thead>"+
-            "<tr>"+
-              "<th>name</th>"+
-              "<th>description</th>"+
-            "</tr>"+
-  	  "</thead>"+
-	  "<tbody>"+
-            "<tr>"+
-             "<td colspan=\"5\" class=\"dataTables_empty\">Loading data from server</td>"+
-            "</tr>"+
-	  "</tbody>"+
-	"</table>"),
-      $('<div>').attr('id','tabs-addresses').addClass('active').append(
-	"<table id=\"addresses\ class=\"display\">"+
-	  "<thead>"+
-	    "<tr>"+
-	      "<th>public IP</th>"+
-	      "<th>Instance ID</th>"+
-	    "</tr>"+
- 	  "</thead>"+
-	  "<tbody>"+
-	    "<tr>"+
-	      "<td colspan=\"5\" class=\"dataTables_empty\">Loading data from server</td>"+
-	    "</tr>"+
-	  "</tbody>"+
-	"</table>"),
-      $('<div>').attr('id','tabs-volumes').addClass('active').append(
-	"<table id=\"volumes\" class=\"display\">"+
-	  "<thead>"+
-	    "<tr>"+
-	      "<th>id</th>"+
-	      "<th>size</th>"+
-	      "<th>status</th>"+
-	      "<th>creation time</th>"+
-	      "<th>snapshot id</th>"+
-	    "</tr>"+
-	  "</thead>"+
-	  "<tbody>"+
-	    "<tr>"+
-    	      "<td colspan=\"5\" class=\"dataTables_empty\">Loading data from server</td>"+
-	    "</tr>"+
-	  "</tbody>"+
-        "</table>"),
-      $('<div>').attr('id','tabs-snapshots').addClass('active').append(
-         "<table id=\"snapshots\" class=\"display\">"+
-	   "<thead>"+
-	     "<tr>"+
-	       "<th>id</th>"+
-	       "<th>status</th>"+
-	       "<th>progress</th>"+
-	       "<th>volume id</th>"+
-	       "<th>start time</th>"+
-	       "<th>owner id</th>"+
-	     "</tr>"+
-           "</thead>"+
-           "<tbody>"+
-	     "<tr>"+
-    	       "<td colspan=\"5\" class=\"dataTables_empty\">Loading data from server</td>"+ 
-	     "</tr>"+
-	   "</tbody>"+
-         "</table>")
-      ];
-      return elems;
     }
+
     var fillTable = function(args) {
       // fill the table
-      $('#instances').dataTable( {
+      allTablesRef['instances'] = $('#instances').dataTable( {
           "bProcessing": true,
               "sAjaxSource": "../ec2?type=instance&Action=DescribeInstances",
               "sAjaxDataProp": "instances",
@@ -181,7 +66,7 @@
                 { "mDataProp": "state" }
               ]
       });
-      $('#images').dataTable( {
+      allTablesRef['images'] = $('#images').dataTable( {
           "bProcessing": true,
               "sAjaxSource": "../ec2?type=image&Action=DescribeImages",
               "sAjaxDataProp": "",
@@ -193,16 +78,20 @@
                 { "mDataProp": "state" }
               ]
       }); 
-      $('#keys').dataTable( {
+      allTablesRef['keys'] = $('#keys').dataTable( {
           "bProcessing": true,
               "sAjaxSource": "../ec2?type=key&Action=DescribeKeyPairs",
               "sAjaxDataProp": "",
               "aoColumns": [
+                {
+                  "bSortable": false,
+                  "fnRender": function(oObj) { return '<input type="checkbox"/>' }
+                },
                 { "mDataProp": "name" },
-                { "mDataProp": "fingerprint" }
+                { "mDataProp": "fingerprint", "bSortable": false }
               ]
       });    
-      $('#groups').dataTable( {
+      allTablesRef['groups'] = $('#groups').dataTable( {
           "bProcessing": true,
               "sAjaxSource": "../ec2?type=group&Action=DescribeSecurityGroups",
               "sAjaxDataProp": "",
@@ -211,7 +100,7 @@
                 { "mDataProp": "description" }
               ]
       }); 
-      $('#addresses').dataTable( {
+      allTablesRef['addresses'] = $('#addresses').dataTable( {
           "bProcessing": true,
               "sAjaxSource": "../ec2?type=address&Action=DescribeAddresses",
               "sAjaxDataProp": "",
@@ -220,7 +109,7 @@
                 { "mDataProp": "instance_id" }
               ]
       }); 
-      $('#volumes').dataTable( {
+      allTablesRef['volumes'] = $('#volumes').dataTable( {
           "bProcessing": true,
               "sAjaxSource": "../ec2?type=volume&Action=DescribeVolumes",
               "sAjaxDataProp": "",
@@ -232,7 +121,7 @@
                 { "mDataProp": "snapshot_id" }
               ]
       });    
-      $('#snapshots').dataTable( {
+      allTablesRef['snapshots'] = $('#snapshots').dataTable( {
           "bProcessing": true,
               "sAjaxSource": "../ec2?type=snapshot&Action=DescribeSnapshots",
               "sAjaxDataProp": "",
@@ -270,10 +159,11 @@
                   {name:'Volumes', link: '#tabs-volumes'},
                   {name:'Snapshots', link: '#tabs-snapshots'}];
     makeMenutabs(menus);
-    $.each(getTabElem(), function (idx, val){
-      var $body = $('html body').find('.euca-container .euca-main #euca-main-header');
-      val.appendTo($body);  
+    var $eucaTabContainer = $('html body').find('.euca-container .euca-main #euca-main-header');
+    $('#all-tabs-container > div').each(function() {
+      ($(this)).appendTo($eucaTabContainer);
     });
+
     fillTable();
 
     addFooter(args.text);

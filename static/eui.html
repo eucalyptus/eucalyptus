@@ -19,10 +19,16 @@
 <script type="text/javascript" language="javascript" src="lib/jquery.cookies.js"></script>
 
 <!-- Eucalyptus JS -->
+<script type="text/javascript">
+  var allTablesRef = {};
+</script>
+
+<script type="text/javascript" language="javascript" src="js/jQueryExt.js"></script>
 <script type="text/javascript" language="javascript" src="js/login.js"></script>
 <script type="text/javascript" language="javascript" src="js/main.js"></script>
 <script type="text/javascript" language="javascript" src="js/eucalyptus.js"></script>
 <script type="text/javascript" language="javascript" src="js/explorer.js"></script>
+<script type="text/javascript" language="javascript" src="js/support.js"></script>
 
 <body>
 <div class="euca-container">
@@ -67,7 +73,148 @@
     </table>
     </form>
   </div> <!-- end of login -->
-</div> <!-- end of templates -->
+</div> <!-- end of templates --> 
+
+<!-- Navigation tabs.
+  TODO: move them to the right stop so there is no need to add them into the DOM
+  TODO: add nice indentation -->
+<div id="all-tabs-container" style="display:none">
+
+<div id="tabs-instances" class="active">
+  <table id="instances" class="display">
+    <thead>
+      <tr>
+        <th>id</th>
+        <th>image id</th>
+        <th>public IP</th>
+        <th>private IP</th>
+        <th>state</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td colspan="5" class="dataTables_empty">Loading data from server</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<div id="tabs-images" class="active">
+  <table id="images" class="display">
+    <thead>
+      <tr>
+        <th>id</th>
+        <th>location</th>
+        <th>type</th>
+        <th>architecture</th>
+        <th>state</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td colspan="5" class="dataTables_empty">Loading data from server</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<div id="tabs-keys" class="active">
+<table id="keys" class="display">
+<thead>
+  <tr>
+     <th width="10%">
+       <select id="selectMenu" onchange="selectMenuChangeFunc(this, allTablesRef['keys'])">
+         <option value="none">Select</option>
+         <option value="select">Select all</option>
+         <option value="deselect">Deselect all</option>
+       </select>
+     </th>
+     <th>name</th>
+     <th>fingerprint</th>
+ </tr>
+ </thead>
+ <tbody>
+    <tr> 
+       <td colspan="3" class="dataTables_empty">Loading data from server</td>
+    </tr>
+</tbody>
+</table>
+</div>
+
+<div id="tabs-groups" class="active">
+<table id="groups" class="display">
+<thead>
+ <tr>
+   <th>name</th>
+   <th>description</th>
+ </tr>
+</thead>
+<tbody>
+ <tr>
+  <td colspan="2" class="dataTables_empty">Loading data from server</td>
+ </tr>
+</tbody>
+</table>
+</div>
+
+<div id="tabs-addresses" class="active">
+<table id="addresses" class="display">
+<thead>
+<tr>
+ <th>public IP</th>
+ <th>Instance ID</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td colspan="2" class="dataTables_empty">Loading data from server</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<div id="tabs-volumes" class="active">
+<table id="volumes" class="display">
+<thead>
+<tr>
+<th>id</th>
+<th>size</th>
+<th>status</th>
+<th>creation time</th>
+<th>snapshot id</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+    <td colspan="5" class="dataTables_empty">Loading data from server</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<div id="tabs-snapshots" class="active">
+<table id="snapshots" class="display">
+<thead>
+<tr>
+<th>id</th>
+<th>status</th>
+<th>progress</th>
+<th>volume id</th>
+<th>start time</th>
+<th>owner id</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td colspan="6" class="dataTables_empty">Loading data from server</td> 
+</tr>
+</tbody>
+</table>
+</div>
+
+</div>
+<!-- end of all-tabs-container -->
+
 </body>
 </html>
 
