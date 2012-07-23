@@ -3,3 +3,9 @@ footer: 2012 Eucalyptus Systems, Inc. All rights reserved
 
 [image]
 logo: images/eucalyptus_top.jpg
+navi_dashboard: images/dashboard.png
+navi_images: images/images.png
+navi_instances: images/instances.png
+navi_storage: images/storage.png
+navi_netsec: images/netsec.png
+navi_support: images/support.png
