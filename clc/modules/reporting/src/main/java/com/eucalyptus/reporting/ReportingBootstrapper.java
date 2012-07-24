@@ -12,7 +12,9 @@ import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.ListenerRegistry;
+import com.eucalyptus.reporting.event.AddressEvent;
 import com.eucalyptus.reporting.event.InstanceEvent;
+import com.eucalyptus.reporting.event.ResourceAvailabilityEvent;
 import com.eucalyptus.reporting.event.StorageEvent;
 import com.eucalyptus.reporting.modules.instance.InstanceEventListener;
 import com.eucalyptus.reporting.modules.s3.S3EventListener;
@@ -161,8 +163,22 @@ public class ReportingBootstrapper
         }
       }
                       );
-			
-			log.info("ReportingBootstrapper started");
+
+      ListenerRegistry.getInstance( ).register( AddressEvent.class, new EventListener<AddressEvent>( ) {
+        @Override
+        public void fireEvent( AddressEvent event ) {
+          log.info( "Address event: " + event );
+        }
+      } );
+
+      ListenerRegistry.getInstance( ).register( ResourceAvailabilityEvent.class, new EventListener<ResourceAvailabilityEvent>( ) {
+        @Override
+        public void fireEvent( ResourceAvailabilityEvent event ) {
+          log.info( "Resource event: " + event );
+        }
+      } );
+
+      log.info("ReportingBootstrapper started");
 			return true;
 		} catch (Exception ex) {
 			ex.printStackTrace();
