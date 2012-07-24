@@ -59,7 +59,7 @@
               "sAjaxSource": "../ec2?type=instance&Action=DescribeInstances",
               "sAjaxDataProp": "results",
               "aoColumns": [
-                { "mDataProp": "id" },
+                { "mDataProp": "instances[0].id" },
                 { "mDataProp": "image_id" },
                 { "mDataProp": "ip_address" },
                 { "mDataProp": "private_ip_address" },
@@ -83,6 +83,8 @@
               "sAjaxSource": "../ec2?type=key&Action=DescribeKeyPairs",
               "sAjaxDataProp": "results",
               "bAutoWidth" : false,
+              "sPaginationType": "full_numbers",
+              "sDom": 'f<"clear"><"table_keys_top">rtp<"clear">',
               "aoColumns": [
                 {
                   "bSortable": false,
@@ -91,8 +93,32 @@
                 },
                 { "mDataProp": "name" },
                 { "mDataProp": "fingerprint", "bSortable": false }
-              ]
-      });    
+              ],
+              "fnDrawCallback": function( oSettings ) {
+		 $('#table_keys_count').html(oSettings.fnRecordsTotal());
+              }
+      });
+      // TODO: create a function so this can be used for all tables
+      $('#keys_filter').append('&nbsp<a class="table_refresh" href="#">Refresh</a>');
+      $('div.table_keys_top').addClass('euca-table-top');
+      $('div.table_keys_top').html('<span id="table_keys_count"></span> key pairs found. Showing <span class="show">10</span> | <span class="show">25</span> | <span class="show">50</span> | <span class="show">all</span>');
+      // TODO: highlight selected
+      $("div.table_keys_top span.show").click( function () {
+	 if ( this.innerHTML == "10" ) {
+           allTablesRef['keys'].fnSettings()._iDisplayLength = 10;
+           allTablesRef['keys'].fnDraw();
+         } else if ( this.innerHTML == "25" ) {
+           allTablesRef['keys'].fnSettings()._iDisplayLength = 25;
+           allTablesRef['keys'].fnDraw();
+         } else if ( this.innerHTML == "50" ) {
+           allTablesRef['keys'].fnSettings()._iDisplayLength = 50;
+           allTablesRef['keys'].fnDraw();
+	 } else {
+	   allTablesRef['keys'].fnSettings()._iDisplayLength = -1;
+           allTablesRef['keys'].fnDraw();
+         }
+      });
+
       allTablesRef['groups'] = $('#groups').dataTable( {
               "bProcessing": true,
               "sAjaxSource": "../ec2?type=group&Action=DescribeSecurityGroups",

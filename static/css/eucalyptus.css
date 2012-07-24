@@ -221,3 +221,7 @@ div.euca-main {
 div#euca-main-header.euca-main {
     position: relative;
 }
+
+div.euca-table-top {
+    float: right;
+}
