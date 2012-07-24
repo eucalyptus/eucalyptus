@@ -1,0 +1,36 @@
+
+<p>The event_store package provides a <i>persistent log</i> of reporting events. It contains 
+reporting events which are also hibernate entities and which are persisted indefinitely. These
+reporting events are different from the reporting events wihch are used to communicate with
+the reporting subsystem, insofar as these events are only used to keep a <i>record</i> of which
+events have occurred in the past and when.
+
+<p>This packege contains <i>persistent events</i> for: instance creation, deletion, and usage; volume creation, deletion, and usage;
+elastic ip creation, deletion, attachment, and detachment; and s3 bucket and object creation,
+deletion, and usage.
+
+<p>Although the event types are hibernate objects, this fact should be ignored by anyone
+using this package. All hibernate operations are encapsulated within EntityStore classes,
+which provide methods for inserting persistent events into the entity store. There is no
+other way to instantiate the the entity objects (constructors are package access) and no
+hiberante operations should take place outside of the EntityStore classes. For example,
+if you wanted to record that an volume creation occured, you would call:
+
+<p><code>ReportingVolumeEventStore.getInstance().insertVolumeCreateEvent(uuid, timestampMs, sizeGB, ...)</code>
+
+<p>...and similarly with instance usage, bucket creation, etc etc. 
+
+<p>All hibernate operations are encapsulated within EntityStore objects, because this package
+may need to modify objects before they are persisted. This requires that the hibernate operations
+be encapsulated.
+
+<p>External users of this package only need to use the EntityStore objects, of which there are
+six. All of them are singletons.
+
+<p>Note that usage events for instances are different from all other usage events. Instance
+usage events are persisted at periodic intervals (for example, 4 hours) whereas volume and
+S3Object usage events are written as usage occurs, which may be rarely. Also, instances
+have no delete events; instances are presumed to be destroyed when their usage events
+cease.
+
+
