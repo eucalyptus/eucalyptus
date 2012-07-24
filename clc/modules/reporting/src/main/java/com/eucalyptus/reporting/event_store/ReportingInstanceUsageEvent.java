@@ -7,16 +7,12 @@ import org.hibernate.annotations.Entity;
 import com.eucalyptus.entities.AbstractPersistent;
 
 /**
- * <p>ReportingInstanceUsageSlice is a record of cumulative instance resource usage
- * at a certain point in time, keyed by instance uuid.
- * 
- * <p>ReportingInstanceUsageSlice allows null values for some of its fields.
- * 
  * @author tom.werges
  */
+@SuppressWarnings("serial")
 @Entity @javax.persistence.Entity
 @PersistenceContext(name="eucalyptus_reporting")
-@Table(name="reporting_instance_usage_slice")
+@Table(name="reporting_instance_usage_events")
 public class ReportingInstanceUsageEvent
 	extends AbstractPersistent 
 {

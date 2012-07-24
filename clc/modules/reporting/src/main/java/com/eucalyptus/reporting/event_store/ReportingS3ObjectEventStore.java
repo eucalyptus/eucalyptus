@@ -30,7 +30,8 @@ public class ReportingS3ObjectEventStore
 			EntityWrapper.get(ReportingS3ObjectCreateEvent.class);
 
 		try {
-			ReportingS3ObjectCreateEvent s3Object = new ReportingS3ObjectCreateEvent(s3BucketName, s3ObjectName, timestampMs, userId);
+			ReportingS3ObjectCreateEvent s3Object =
+				new ReportingS3ObjectCreateEvent(s3BucketName, s3ObjectName, timestampMs, userId);
 			entityWrapper.add(s3Object);
 			entityWrapper.commit();
 			LOG.debug("Added event to db:" + s3Object);
@@ -47,7 +48,8 @@ public class ReportingS3ObjectEventStore
 			EntityWrapper.get(ReportingS3ObjectDeleteEvent.class);
 
 		try {
-			ReportingS3ObjectDeleteEvent s3Object = new ReportingS3ObjectDeleteEvent(s3BucketName, s3ObjectName, timestampMs);
+			ReportingS3ObjectDeleteEvent s3Object =
+				new ReportingS3ObjectDeleteEvent(s3BucketName, s3ObjectName, timestampMs);
 			entityWrapper.add(s3Object);
 			entityWrapper.commit();
 			LOG.debug("Added event to db:" + s3Object);

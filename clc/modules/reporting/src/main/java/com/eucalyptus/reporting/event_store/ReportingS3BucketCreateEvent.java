@@ -60,22 +60,44 @@ public class ReportingS3BucketCreateEvent
 		return this.availabilityZone;
 	}
 
+
 	@Override
-	public int hashCode()
-	{
-		return (s3BucketName == null) ? 0 : s3BucketName.hashCode();
+	public int hashCode() {
+		final int prime = 31;
+		int result = super.hashCode();
+		result = prime
+				* result
+				+ ((availabilityZone == null) ? 0 : availabilityZone.hashCode());
+		result = prime * result
+				+ ((s3BucketName == null) ? 0 : s3BucketName.hashCode());
+		result = prime * result
+				+ ((timestampMs == null) ? 0 : timestampMs.hashCode());
+		return result;
 	}
 
 	@Override
-	public boolean equals(Object obj)
-	{
-		if (this == obj) return true;
-		if (getClass() != obj.getClass()) return false;
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (!super.equals(obj))
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
 		ReportingS3BucketCreateEvent other = (ReportingS3BucketCreateEvent) obj;
+		if (availabilityZone == null) {
+			if (other.availabilityZone != null)
+				return false;
+		} else if (!availabilityZone.equals(other.availabilityZone))
+			return false;
 		if (s3BucketName == null) {
 			if (other.s3BucketName != null)
 				return false;
 		} else if (!s3BucketName.equals(other.s3BucketName))
+			return false;
+		if (timestampMs == null) {
+			if (other.timestampMs != null)
+				return false;
+		} else if (!timestampMs.equals(other.timestampMs))
 			return false;
 		return true;
 	}

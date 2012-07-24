@@ -9,7 +9,7 @@ import com.eucalyptus.entities.AbstractPersistent;
 @SuppressWarnings("serial")
 @Entity @javax.persistence.Entity
 @PersistenceContext(name="eucalyptus_reporting")
-@Table(name="reporting_volume")
+@Table(name="reporting_volume_create_events")
 public class ReportingVolumeCreateEvent
 	extends AbstractPersistent
 {

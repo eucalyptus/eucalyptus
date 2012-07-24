@@ -9,7 +9,7 @@ import org.hibernate.annotations.Entity;
 @SuppressWarnings("serial")
 @Entity @javax.persistence.Entity
 @PersistenceContext(name="eucalyptus_reporting")
-@Table(name="reporting_s3_bucket_create_events")
+@Table(name="reporting_s3_bucket_delete_events")
 public class ReportingS3BucketDeleteEvent
 {
 	@Column(name="s3_bucket_name", nullable=false)
