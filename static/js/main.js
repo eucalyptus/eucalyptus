@@ -33,11 +33,11 @@
     }
 
     var makeExplorers = function(args) {
-        var $resourceContainer = $('html body').find('.euca-container .euca-explorer');
+        var $itemContainer = $('html body').find('.euca-container .euca-explorer');
+        var $subitemContainer = $('html body').find('.euca-container .euca-explorer-sub');
         $.each($.eucaData.context.explorers, function(idx, val){
-            eucalyptus.explorer({'container':$resourceContainer, 'item':val, 'idx':idx});
+            eucalyptus.explorer({'container':$itemContainer, 'subcontainer':$subitemContainer,'item':val, 'idx':idx});
         });
-        //$resourceContainer.css('display','block');
     }
    
     // show the main divs

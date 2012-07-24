@@ -150,8 +150,9 @@ class LoginResponse(ProxyResponse):
     
     def get_response(self):
         context = ContextHelper(self.user)
-        text_data =  {'footer':data_helper.get_data('text','footer')}
-        #img_data = {'logo':data_helper.get_data('image','logo')}
+        text_data = {}
+        for n,v in data_helper.list_items('text'):
+            text_data[n] = v
         img_data = {}
         for n,v in data_helper.list_items('image'):
 	    img_data[n] = v 
@@ -179,8 +180,11 @@ class ContextHelper():
     def get_explorers(self):
         return ['dashboard','images','instances','storage','netsec','support']
 
+    def get_explorers_sub(self):
+        return {'dashboard':[],'images':[],'instances':[],'storage':['EBS Volumes','EBS Snapshots','S3 Buckets'],'netsec':['Security Groups','Keypairs']}
+
     def get_context(self):
-        return {'username':self.username, 'fullname':self.get_full_name(), 'timezone':self.get_time_zone(), 'language':self.get_language(), 'url_home':self.get_url_home(), 'explorers':self.get_explorers()}
+        return {'username':self.username, 'fullname':self.get_full_name(), 'timezone':self.get_time_zone(), 'language':self.get_language(), 'url_home':self.get_url_home(), 'explorers':self.get_explorers(), 'explorers_sub':self.get_explorers_sub()}
 
 # this class abstracts the customizable text sent to the browser 
 class DataHelper():

@@ -28,7 +28,7 @@ div.euca-header {
     position: relative;
     width: 1024px;
     height: 40px;
-    margin-bottom: 5px;
+    overflow: hidden;
 }
 
 div.euca-header.logo {
@@ -45,11 +45,11 @@ div.euca-header.navigator {
     border-style: none solid;
     border-width: medium 2px;
     float: left;
-    height: 30px;
     margin-left: 70px;
     margin-top: 5px;
     padding: 0 10px;
     width: auto;
+    height: auto;
 }
 div.euca-header.navigator.mouseon {
     background: none repeat-x scroll 50% 50% #E8E8E6;
@@ -57,11 +57,11 @@ div.euca-header.navigator.mouseon {
     border-style: none solid;
     border-width: medium 2px;
     float: left;
-    height: 30px;
     margin-left: 70px;
     margin-top: 5px;
     padding: 0 10px;
     width: auto;
+    height: auto;
 }
 a#top-button.euca-header.navigator {
     color: #0F3F5C;
@@ -136,18 +136,78 @@ span#name.euca-header.user {
 }
 
 div.euca-explorer {
-    display: none; 
-    position: relative;
-    width: 1024px;
+    display:none;
+    position:relative;
+    width:1024px;
     height: 80px;
 }
 
-div.euca-container.euca-explorer.explorer-item {
+div.euca-container.euca-explorer.euca-explorer-items {
     float: left;
     width: auto;
     border-color: #E2E6E5;
     border-style: solid;
     border-width: medium 2px;
+    padding: 0px;
+    text-align: center;
+    font-family: Arial,Helvetica,sans-serif;
+    font-size: 12px;
+    font-style: normal;
+    font-weight: bold;
+    color: #0F3F5C;
+}
+
+div.euca-container.euca-explorer.euca-explorer-items.mouseon {
+    float: left;
+    width: auto;
+    border-color: #E2E6E5;
+    border-style: solid;
+    border-width: medium 2px;
+    padding: 0px;
+    text-align: center;
+    font-family: Arial,Helvetica,sans-serif;
+    font-size: 12px;
+    font-style: normal;
+    font-weight: bold;
+    color: #90AC59;
+}
+
+.euca-container.euca-explorer.euca-explorer-items table, 
+.euca-container.euca-explorer.euca-explorer-items tr, 
+.euca-container.euca-explorer.euca-explorer-items td {
+    border-collapse: collapse;
+    margin: 0px;
+    padding: 0px;
+}
+
+/* to remove gaps bw images and table cell */
+.euca-container.euca-explorer.euca-explorer-items img {
+    display:block;
+}
+
+.euca-container.euca-explorer-sub {
+    display: none;
+    position: absolute;
+    width: auto;
+    z-index:1000;
+}
+
+.euca-container.euca-explorer-sub table,
+.euca-container.euca-explorer-sub tr,
+.euca-container.euca-explorer-sub td 
+{
+   background: none repeat-x scroll 50% 50% #FDFDFD;
+   border-color: #E2E6E5;
+   border-style: solid;
+   border-width: medium 2px;
+   padding: 5px;
+   text-align: center;
+   font-family: Arial,Helvetica,sans-serif;
+   font-size: 12px;
+   font-style: normal;
+   font-weight: bold;
+   color: #0F3F5C;
+   z-index:1000
 }
 
 div.euca-container {

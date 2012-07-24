@@ -1,5 +1,11 @@
 [text]
 footer: 2012 Eucalyptus Systems, Inc. All rights reserved
+navi_dashboard: Dashboard
+navi_images: Images
+navi_instances: Instances
+navi_storage: Storage
+navi_netsec: Network & Security
+navi_support: Support
 
 [image]
 logo: images/eucalyptus_top.jpg
