@@ -65,6 +65,7 @@ storage/test_vbr
 cluster/CCclient_full
 cluster/euca_killall
 cluster/libEucalyptusCC.so
+cluster/libEucalyptusCCFake.so
 cluster/shutdownCC
 node/NCclient
 node/NCclient_local
