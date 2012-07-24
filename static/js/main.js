@@ -55,7 +55,7 @@
     var fillTable = function(args) {
       // fill the table
       allTablesRef['instances'] = $('#instances').dataTable( {
-          "bProcessing": true,
+              "bProcessing": true,
               "sAjaxSource": "../ec2?type=instance&Action=DescribeInstances",
               "sAjaxDataProp": "results",
               "aoColumns": [
@@ -67,7 +67,7 @@
               ]
       });
       allTablesRef['images'] = $('#images').dataTable( {
-          "bProcessing": true,
+              "bProcessing": true,
               "sAjaxSource": "../ec2?type=image&Action=DescribeImages",
               "sAjaxDataProp": "results",
               "aoColumns": [
@@ -79,9 +79,10 @@
               ]
       }); 
       allTablesRef['keys'] = $('#keys').dataTable( {
-          "bProcessing": true,
+              "bProcessing": true,
               "sAjaxSource": "../ec2?type=key&Action=DescribeKeyPairs",
               "sAjaxDataProp": "results",
+              "bAutoWidth" : false,
               "aoColumns": [
                 {
                   "bSortable": false,
@@ -93,7 +94,7 @@
               ]
       });    
       allTablesRef['groups'] = $('#groups').dataTable( {
-          "bProcessing": true,
+              "bProcessing": true,
               "sAjaxSource": "../ec2?type=group&Action=DescribeSecurityGroups",
               "sAjaxDataProp": "results",
               "aoColumns": [
@@ -102,7 +103,7 @@
               ]
       }); 
       allTablesRef['addresses'] = $('#addresses').dataTable( {
-          "bProcessing": true,
+              "bProcessing": true,
               "sAjaxSource": "../ec2?type=address&Action=DescribeAddresses",
               "sAjaxDataProp": "results",
               "aoColumns": [
@@ -111,7 +112,7 @@
               ]
       }); 
       allTablesRef['volumes'] = $('#volumes').dataTable( {
-          "bProcessing": true,
+              "bProcessing": true,
               "sAjaxSource": "../ec2?type=volume&Action=DescribeVolumes",
               "sAjaxDataProp": "results",
               "aoColumns": [
@@ -123,7 +124,7 @@
               ]
       });    
       allTablesRef['snapshots'] = $('#snapshots').dataTable( {
-          "bProcessing": true,
+              "bProcessing": true,
               "sAjaxSource": "../ec2?type=snapshot&Action=DescribeSnapshots",
               "sAjaxDataProp": "results",
               "aoColumns": [
