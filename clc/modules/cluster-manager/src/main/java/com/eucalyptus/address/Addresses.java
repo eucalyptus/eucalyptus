@@ -276,7 +276,8 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
     public void fireEvent( final ClockTick event ) {
       if ( Bootstrap.isFinished() && Hosts.isCoordinator() ) {
         final List<Address> addresses = Addresses.getInstance( ).listValues( );
-        final long total = addresses.size();
+        final List<Address> disabledAddresses = Addresses.getInstance( ).listDisabledValues( );
+        final long total = addresses.size() + disabledAddresses.size();
         final long available = Iterators.size( Iterators.filter( addresses.iterator(), new Predicate<com.eucalyptus.address.Address>() {
           @Override
           public boolean apply( final Address address ) {
