@@ -57,7 +57,7 @@
       allTablesRef['instances'] = $('#instances').dataTable( {
           "bProcessing": true,
               "sAjaxSource": "../ec2?type=instance&Action=DescribeInstances",
-              "sAjaxDataProp": "instances",
+              "sAjaxDataProp": "results",
               "aoColumns": [
                 { "mDataProp": "id" },
                 { "mDataProp": "image_id" },
@@ -69,7 +69,7 @@
       allTablesRef['images'] = $('#images').dataTable( {
           "bProcessing": true,
               "sAjaxSource": "../ec2?type=image&Action=DescribeImages",
-              "sAjaxDataProp": "",
+              "sAjaxDataProp": "results",
               "aoColumns": [
                 { "mDataProp": "id" },
                 { "mDataProp": "location" },
@@ -81,7 +81,7 @@
       allTablesRef['keys'] = $('#keys').dataTable( {
           "bProcessing": true,
               "sAjaxSource": "../ec2?type=key&Action=DescribeKeyPairs",
-              "sAjaxDataProp": "",
+              "sAjaxDataProp": "results",
               "aoColumns": [
                 {
                   "bSortable": false,
@@ -95,7 +95,7 @@
       allTablesRef['groups'] = $('#groups').dataTable( {
           "bProcessing": true,
               "sAjaxSource": "../ec2?type=group&Action=DescribeSecurityGroups",
-              "sAjaxDataProp": "",
+              "sAjaxDataProp": "results",
               "aoColumns": [
                 { "mDataProp": "name" },
                 { "mDataProp": "description" }
@@ -104,7 +104,7 @@
       allTablesRef['addresses'] = $('#addresses').dataTable( {
           "bProcessing": true,
               "sAjaxSource": "../ec2?type=address&Action=DescribeAddresses",
-              "sAjaxDataProp": "",
+              "sAjaxDataProp": "results",
               "aoColumns": [
                 { "mDataProp": "public_ip" },
                 { "mDataProp": "instance_id" }
@@ -113,7 +113,7 @@
       allTablesRef['volumes'] = $('#volumes').dataTable( {
           "bProcessing": true,
               "sAjaxSource": "../ec2?type=volume&Action=DescribeVolumes",
-              "sAjaxDataProp": "",
+              "sAjaxDataProp": "results",
               "aoColumns": [
                 { "mDataProp": "id" },
                 { "mDataProp": "size" },
@@ -125,7 +125,7 @@
       allTablesRef['snapshots'] = $('#snapshots').dataTable( {
           "bProcessing": true,
               "sAjaxSource": "../ec2?type=snapshot&Action=DescribeSnapshots",
-              "sAjaxDataProp": "",
+              "sAjaxDataProp": "results",
               "aoColumns": [
                 { "mDataProp": "id" },
                 { "mDataProp": "status" },
