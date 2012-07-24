@@ -10,6 +10,7 @@ from boto.ec2.ec2object import EC2Object
 from boto.regioninfo import RegionInfo
 from boto.ec2.instance import Group
 from boto.ec2.volume import AttachmentSet
+from response import Response
 
 class BotoJsonEncoder(JSONEncoder):
   def default(self, obj):
@@ -17,7 +18,9 @@ class BotoJsonEncoder(JSONEncoder):
       values = copy.copy(obj.__dict__)
       values['__obj_name__'] = 'RegionInfo'
       return (values)
-    if isinstance(obj, EC2Connection):
+    elif isinstance(obj, Response):
+      return obj.__dict__
+    elif isinstance(obj, EC2Connection):
       return []
     elif issubclass(obj.__class__, EC2Object):
       values = copy.copy(obj.__dict__)

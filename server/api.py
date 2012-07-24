@@ -5,6 +5,7 @@ import json
 from botoclcinterface import BotoClcInterface
 from mockclcinterface import MockClcInterface
 from botojsonencoder import BotoJsonEncoder
+from response import Response
 
 class ComputeHandler(server.BaseHandler):
     @tornado.web.authenticated
@@ -105,6 +106,7 @@ class ComputeHandler(server.BaseHandler):
           ret = self.handleVolumes(action, clc)
         elif action.find('Snapshot') > -1:
           ret = self.handleSnapshots(action, clc)
+        ret = Response(ret) # wrap all responses in an object for security purposes
         data=json.dumps(ret, cls=BotoJsonEncoder, indent=2)
-        self.write(data) #json.dumps(ret, cls=BotoJsonEncoder, indent=2))
+        self.write(data)
 
