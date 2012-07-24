@@ -1,4 +1,4 @@
-/*~
+*~
 *.ajsv
 *.class
 *.o
@@ -46,6 +46,7 @@ config.log
 config.status
 core.*
 gatherlog/GLclient
+gatherlog/libEucalyptusGL.so
 Makedefs
 storage/euca_imager
 storage/Wclient
@@ -61,6 +62,14 @@ clc/eucadmin/eucadmin/__init__.py
 storage/euca-blobs
 storage/test_blobstore
 storage/test_vbr
+cluster/CCclient_full
+cluster/euca_killall
+cluster/libEucalyptusCC.so
+cluster/libEucalyptusCCFake.so
+cluster/shutdownCC
+node/NCclient
+node/NCclient_local
+node/libEucalyptusNC.so
 node/test
 node/test_hooks
 node/test_nc

@@ -114,33 +114,40 @@ generated/stubs: $(CCWSDL) $(NCWSDL)
 ../node/client-marshal-fake.o:
 	make -C ../node fake
 
-$(VNLIBS):
+$(VNLIBS): %.o: %.c
 	make -C ../net
 	make -C ../util
 	make -C ../storage
 
-$(NCLIBS):
+$(NCLIBS): %.o: %.c
 	make -C ../node
+	make -C ../util
+
+$(SCLIBS): %.o: %.c
+	make -C ../storage
+
+$(WSSECLIBS): %.o: %.c
+	make -C ../util
 
 server: $(NCLIBS) $(VNLIBS) $(SERVICE_SO)
 
 fake: all $(NC_FAKE_LIBS) $(SERVICE_SO_FAKE)
 
-$(SERVICE_SO): generated/stubs server-marshal.o handlers.o handlers-state.o server-marshal-state.o ../util/windows-bundle.o
+$(SERVICE_SO): generated/stubs server-marshal.o handlers.o handlers-state.o server-marshal-state.o ../util/windows-bundle.o $(SCLIBS) $(NCLIBS) $(VNLIBS) $(WSSECLIBS)
 	$(CC) -shared generated/*.o server-marshal.o handlers.o handlers-state.o server-marshal-state.o ../util/windows-bundle.o $(SCLIBS) $(NCLIBS) $(VNLIBS) $(WSSECLIBS) $(CC_LIBS) -o $(SERVICE_SO)
 
-$(SERVICE_SO_FAKE):
+$(SERVICE_SO_FAKE): $(SCLIBS) $(NC_FAKE_LIBS) $(VNLIBS) $(WSSECLIBS)
 	$(CC) -shared generated/*.o server-marshal.o handlers.o handlers-state.o server-marshal-state.o ../util/windows-bundle.o $(SCLIBS) $(NC_FAKE_LIBS) $(VNLIBS) $(WSSECLIBS) $(CC_LIBS) -o $(SERVICE_SO_FAKE)
 
 client: $(CLIENT)_full $(CLIENTKILLALL) $(SHUTDOWNCC)
 
-$(SHUTDOWNCC): generated/stubs $(SHUTDOWNCC).c cc-client-marshal-adb.c handlers.o handlers-state.o
+$(SHUTDOWNCC): generated/stubs $(SHUTDOWNCC).c cc-client-marshal-adb.c handlers.o handlers-state.o $(WSSECLIBS)
 	$(CC) -o $(SHUTDOWNCC) $(CFLAGS) $(INCLUDES) $(SHUTDOWNCC).c cc-client-marshal-adb.c -DMODE=1 generated/adb_*.o generated/axis2_stub_*.o ../util/misc.o ../storage/diskutil.o ../util/ipc.o $(WSSECLIBS) $(CC_LIBS)
 
-$(CLIENT)_full: generated/stubs $(CLIENT).c cc-client-marshal-adb.c handlers.o handlers-state.o
+$(CLIENT)_full: generated/stubs $(CLIENT).c cc-client-marshal-adb.c handlers.o handlers-state.o $(WSSECLIBS)
 	$(CC) -o $(CLIENT)_full $(CFLAGS) $(INCLUDES) $(CLIENT).c cc-client-marshal-adb.c -DMODE=1 generated/adb_*.o generated/axis2_stub_*.o ../util/misc.o ../storage/diskutil.o ../util/ipc.o $(WSSECLIBS) $(CC_LIBS)
 
-$(CLIENTKILLALL): generated/stubs $(CLIENT).c cc-client-marshal-adb.c handlers.o handlers-state.o
+$(CLIENTKILLALL): generated/stubs $(CLIENT).c cc-client-marshal-adb.c handlers.o handlers-state.o $(WSSECLIBS)
 	$(CC) -o $(CLIENTKILLALL) $(CFLAGS) $(INCLUDES) $(CLIENT).c cc-client-marshal-adb.c -DMODE=0 generated/adb_*.o generated/axis2_stub_*.o ../util/misc.o ../storage/diskutil.o ../util/ipc.o $(WSSECLIBS) $(CC_LIBS)
 
 fakedeploy:
