@@ -123,12 +123,8 @@
 <table id="keys" class="display">
 <thead>
   <tr>
-     <th width="10%">
-       <select id="selectMenu" onchange="selectMenuChangeFunc(this, allTablesRef['keys'])">
-         <option value="none">Select</option>
-         <option value="select">Select all</option>
-         <option value="deselect">Deselect all</option>
-       </select>
+     <th>
+       <input type="checkbox" onchange="selectCheckboxChanged(this, allTablesRef['keys'])">
      </th>
      <th>name</th>
      <th>fingerprint</th>
