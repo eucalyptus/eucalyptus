@@ -122,7 +122,7 @@ public class BindingHandler extends MessageStackHandler {
         OMElement elem = httpMessage.getOmMessage( );
         OMNamespace omNs = elem.getNamespace( );
         namespace = omNs.getNamespaceURI( );
-        if ( !namespacePattern.matcher( namespace ).matches() ) {
+        if ( namespacePattern != null && !namespacePattern.matcher( namespace ).matches() ) {
           throw new WebServicesException( "Invalid request" );
         }
         this.binding = BindingManager.getBinding( BindingManager.sanitizeNamespace( namespace ) );
