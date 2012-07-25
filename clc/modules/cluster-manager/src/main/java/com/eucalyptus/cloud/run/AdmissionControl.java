@@ -73,6 +73,7 @@ import com.eucalyptus.address.Addresses;
 import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.cloud.util.NotEnoughResourcesException;
+import com.eucalyptus.cloud.util.InvalidMetadataException;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.ResourceState;
@@ -243,8 +244,13 @@ public class AdmissionControl {
       RunInstancesType request = allocInfo.getRequest( );
       String clusterName = allocInfo.getPartition( ).getName( );
       String vmTypeName = allocInfo.getVmType( ).getName( );
+      
+      /* Validate min and max amount */
       final int minAmount = allocInfo.getMinCount( );
       final int maxAmount = allocInfo.getMaxCount( );
+      if(minAmount > maxAmount)
+    	  throw new RuntimeException("Maximum instance count must not be smaller than minimum instance count");
+      
       Context ctx = Contexts.lookup( );
       String zoneName = ( clusterName != null )
         ? clusterName
@@ -280,11 +286,12 @@ public class AdmissionControl {
             } catch ( Exception t ) {
               LOG.error( t );
               Logs.extreme( ).error( t, t );
-              if ( ( ( available = checkAvailability( vmTypeName, authorizedClusters ) ) < remaining ) || remaining > 0 ) {
+              /* if we still have some allocation remaining AND no more resources are available */
+              if ( ( ( available = checkAvailability( vmTypeName, authorizedClusters ) ) < remaining ) && ( remaining > 0 ) ) {
                 allocInfo.abort( );
                 throw new NotEnoughResourcesException( "Not enough resources (" + available + " in " + zoneName + " < " + minAmount + "): vm instances.", t );
               } else {
-                throw new NotEnoughResourcesException( "Not enough resources (" + available + " in " + zoneName + " < " + minAmount + "): vm instances.", t );
+                throw new NotEnoughResourcesException( t.getMessage(), t );
               }
             }
           }
