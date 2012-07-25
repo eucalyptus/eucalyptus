@@ -13,6 +13,7 @@ import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.reporting.event.AddressEvent;
+import com.eucalyptus.reporting.event.InstanceCreatedEvent;
 import com.eucalyptus.reporting.event.InstanceEvent;
 import com.eucalyptus.reporting.event.ResourceAvailabilityEvent;
 import com.eucalyptus.reporting.event.StorageEvent;
@@ -140,8 +141,7 @@ public class ReportingBootstrapper
 			}
 			s3Receiver.addEventListener(s3Listener);
 
-			ListenerRegistry.getInstance( ).register( InstanceEvent.class, new EventListener( ) {
-
+      ListenerRegistry.getInstance( ).register( InstanceEvent.class, new EventListener( ) {
         @Override
         public void fireEvent( Event event ) {
           if ( event instanceof InstanceEvent ) {
@@ -149,11 +149,9 @@ public class ReportingBootstrapper
             sender.send( ( com.eucalyptus.reporting.event.Event ) event );
           }
         }
-      }
-                      );
+      } );
       
       ListenerRegistry.getInstance( ).register( StorageEvent.class, new EventListener( ) {
-        
         @Override
         public void fireEvent( Event event ) {
           if ( event instanceof StorageEvent ) {
@@ -161,8 +159,21 @@ public class ReportingBootstrapper
             sender.send( ( com.eucalyptus.reporting.event.Event ) event );
           }
         }
-      }
-                      );
+      } );
+
+      ListenerRegistry.getInstance( ).register( InstanceCreatedEvent.class, new EventListener<ResourceAvailabilityEvent>( ) {
+        @Override
+        public void fireEvent( ResourceAvailabilityEvent event ) {
+          log.info( "Instance created event: " + event );
+        }
+      } );
+
+      ListenerRegistry.getInstance( ).register( InstanceEvent.class, new EventListener<ResourceAvailabilityEvent>( ) {
+        @Override
+        public void fireEvent( ResourceAvailabilityEvent event ) {
+          log.info( "Instance usage event: " + event );
+        }
+      } );
 
       ListenerRegistry.getInstance( ).register( AddressEvent.class, new EventListener<AddressEvent>( ) {
         @Override

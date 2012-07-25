@@ -27,195 +27,105 @@ package com.eucalyptus.reporting.event;
  * 
  * @author tom.werges
  */
-@SuppressWarnings("serial")
-public class InstanceEvent
-	implements Event
-{
-	private String uuid;
-	private String instanceId;
-	private String instanceType;
-	private String userId;
-	private String userName;
-	private String accountId;
-	private String accountName;
-	private String clusterName;
-	private String availabilityZone;
-	private Long   cumulativeNetworkIoMegs;
-	private Long   cumulativeDiskIoMegs;
-	
+public class InstanceEvent extends InstanceEventSupport {
+  private final Long   cumulativeNetworkIoMegs;
+  private final Long   cumulativeDiskIoMegs;
 
-	/**
- 	 * Constructor for InstanceEvent. 
- 	 *
- 	 * NOTE: We must include separate userId, username, accountId, and
- 	 *  accountName with each event sent, even though the names can be looked
- 	 *  up using ID's. We must include this redundant information, for
- 	 *  several reasons. First, the reporting subsystem may run on a totally
- 	 *  separate machine outside of eucalyptus (data warehouse configuration)
- 	 *  so it may not have access to the regular eucalyptus database to lookup
- 	 *  usernames or account names. Second, the reporting subsystem stores
- 	 *  <b>historical</b> information, and its possible that usernames and
- 	 *  account names can change, or their users or accounts can be deleted.
- 	 *  Thus we need the user name or account name at the time an event was
- 	 *  sent.
- 	 */
-	public InstanceEvent(String uuid, String instanceId, String instanceType,
-			String userId, String userName, String accountId,
-			String accountName, String clusterName,	String availabilityZone,
-			Long cumulativeNetworkIoMegs, Long cumulativeDiskIoMegs)
-	{
-		if (uuid==null) throw new IllegalArgumentException("uuid cant be null");
-		if (instanceId==null) throw new IllegalArgumentException("instanceId cant be null");
-		if (instanceType==null) throw new IllegalArgumentException("instanceType cant be null");
-		if (userId==null) throw new IllegalArgumentException("userId cant be null");
-		if (userName==null) throw new IllegalArgumentException("userName cant be null");
-		if (accountId==null) throw new IllegalArgumentException("accountId cant be null");
-		if (accountName==null) throw new IllegalArgumentException("accountName cant be null");
-		if (clusterName==null) throw new IllegalArgumentException("clusterName cant be null");
-		if (availabilityZone==null) throw new IllegalArgumentException("availabilityZone cant be null");
-		if (cumulativeDiskIoMegs!= null && cumulativeDiskIoMegs.longValue() < 0) {
-			throw new IllegalArgumentException("cumulativeDiskIoMegs cant be negative");
-		}
-		if (cumulativeNetworkIoMegs!= null && cumulativeNetworkIoMegs.longValue() < 0) {
-			throw new IllegalArgumentException("cumulativeNetworkIoMegs cant be negative");
-		}
-		
-		this.uuid = uuid;
-		this.instanceId = instanceId;
-		this.instanceType = instanceType;
-		this.userId = userId;
-		this.userName = userName;
-		this.accountId = accountId;
-		this.accountName = accountName;
-		this.clusterName = clusterName;
-		this.availabilityZone = availabilityZone;
-		this.cumulativeNetworkIoMegs = cumulativeNetworkIoMegs;
-		this.cumulativeDiskIoMegs = cumulativeDiskIoMegs;
-	}
-	
+  /**
+   * Constructor for InstanceEvent.
+   *
+   * NOTE: We must include separate userId, username, accountId, and
+   *  accountName with each event sent, even though the names can be looked
+   *  up using ID's. We must include this redundant information, for
+   *  several reasons. First, the reporting subsystem may run on a totally
+   *  separate machine outside of eucalyptus (data warehouse configuration)
+   *  so it may not have access to the regular eucalyptus database to lookup
+   *  usernames or account names. Second, the reporting subsystem stores
+   *  <b>historical</b> information, and its possible that usernames and
+   *  account names can change, or their users or accounts can be deleted.
+   *  Thus we need the user name or account name at the time an event was
+   *  sent.
+   */
+  public InstanceEvent( final String uuid,
+                        final String instanceId,
+                        final String instanceType,
+                        final String userId,
+                        final String userName,
+                        final String accountId,
+                        final String accountName,
+                        final String clusterName,
+                        final String availabilityZone,
+                        final Long cumulativeNetworkIoMegs,
+                        final Long cumulativeDiskIoMegs ) {
+    super( uuid, instanceId, instanceType, userId, userName, accountId, accountName, clusterName, availabilityZone );
 
-	/**
- 	 * Copy Constructor.
- 	 *
- 	 * NOTE: We must include separate userId, username, accountId, and
- 	 *  accountName with each event sent, even though the names can be looked
- 	 *  up using ID's. We must include this redundant information, for
- 	 *  several reasons. First, the reporting subsystem may run on a totally
- 	 *  separate machine outside of eucalyptus (data warehouse configuration)
- 	 *  so it may not have access to the regular eucalyptus database to lookup
- 	 *  usernames or account names. Second, the reporting subsystem stores
- 	 *  <b>historical</b> information, and its possible that usernames and
- 	 *  account names can change, or their users or accounts can be deleted.
- 	 *  Thus we need the user name or account name at the time an event was
- 	 *  sent.
- 	 */
-	public InstanceEvent(InstanceEvent e)
-	{
-		this.uuid = e.uuid;
-		this.instanceId = e.instanceId;
-		this.instanceType = e.instanceType;
-		this.userId = e.userId;
-		this.userName = e.userName;
-		this.accountId = e.accountId;
-		this.accountName = e.accountName;
-		this.clusterName = e.clusterName;
-		this.availabilityZone = e.availabilityZone;
-		this.cumulativeNetworkIoMegs = e.cumulativeNetworkIoMegs;
-		this.cumulativeDiskIoMegs = e.cumulativeDiskIoMegs;		
-	}
+    if ( cumulativeDiskIoMegs != null && cumulativeDiskIoMegs < 0) {
+      throw new IllegalArgumentException("cumulativeDiskIoMegs cant be negative");
+    }
+    if (cumulativeNetworkIoMegs != null && cumulativeNetworkIoMegs < 0) {
+      throw new IllegalArgumentException("cumulativeNetworkIoMegs cant be negative");
+    }
 
-	/**
-	 * Copy constructor with different resource usage
-	 */
-	public InstanceEvent(InstanceEvent e, Long cumulativeNetworkIoMegs, Long cumulativeDiskIoMegs)
-	{
-		if (cumulativeDiskIoMegs!= null && cumulativeDiskIoMegs.longValue() < 0) {
-			throw new IllegalArgumentException("cumulativeDiskIoMegs cant be negative");
-		}
-		if (cumulativeNetworkIoMegs!= null && cumulativeNetworkIoMegs.longValue() < 0) {
-			throw new IllegalArgumentException("cumulativeNetworkIoMegs cant be negative");
-		}
+    this.cumulativeNetworkIoMegs = cumulativeNetworkIoMegs;
+    this.cumulativeDiskIoMegs = cumulativeDiskIoMegs;
+  }
 
-		this.uuid = e.uuid;
-		this.instanceId = e.instanceId;
-		this.instanceType = e.instanceType;
-		this.userId = e.userId;
-		this.userName = e.userName;
-		this.accountId = e.accountId;
-		this.accountName = e.accountName;
-		this.clusterName = e.clusterName;
-		this.availabilityZone = e.availabilityZone;
-		this.cumulativeNetworkIoMegs = cumulativeNetworkIoMegs;
-		this.cumulativeDiskIoMegs = cumulativeDiskIoMegs;		
-	}
 
-	public String getUuid()
-	{
-		return uuid;
-	}
+  /**
+   * Copy Constructor.
+   *
+   * NOTE: We must include separate userId, username, accountId, and
+   *  accountName with each event sent, even though the names can be looked
+   *  up using ID's. We must include this redundant information, for
+   *  several reasons. First, the reporting subsystem may run on a totally
+   *  separate machine outside of eucalyptus (data warehouse configuration)
+   *  so it may not have access to the regular eucalyptus database to lookup
+   *  usernames or account names. Second, the reporting subsystem stores
+   *  <b>historical</b> information, and its possible that usernames and
+   *  account names can change, or their users or accounts can be deleted.
+   *  Thus we need the user name or account name at the time an event was
+   *  sent.
+   */
+  public InstanceEvent( final InstanceEvent e ) {
+    super( e );
+    this.cumulativeNetworkIoMegs = e.cumulativeNetworkIoMegs;
+    this.cumulativeDiskIoMegs = e.cumulativeDiskIoMegs;
+  }
 
-	public String getInstanceId()
-	{
-		return instanceId;
-	}
+  /**
+   * Copy constructor with different resource usage
+   */
+  public InstanceEvent( final InstanceEvent e,
+                        final Long cumulativeNetworkIoMegs,
+                        final Long cumulativeDiskIoMegs) {
+    super( e );
 
-	public String getInstanceType()
-	{
-		return instanceType;
-	}
+    if (cumulativeDiskIoMegs!= null && cumulativeDiskIoMegs < 0) {
+      throw new IllegalArgumentException("cumulativeDiskIoMegs cant be negative");
+    }
+    if (cumulativeNetworkIoMegs!= null && cumulativeNetworkIoMegs < 0) {
+      throw new IllegalArgumentException("cumulativeNetworkIoMegs cant be negative");
+    }
 
-	public String getUserId()
-	{
-		return userId;
-	}
-	
-	public String getUserName()
-	{
-		return userName;
-	}
+    this.cumulativeNetworkIoMegs = cumulativeNetworkIoMegs;
+    this.cumulativeDiskIoMegs = cumulativeDiskIoMegs;
+  }
 
-	public String getAccountId()
-	{
-		return accountId;
-	}
-	
-	public String getAccountName()
-	{
-		return accountName;
-	}
-	
-	public String getClusterName()
-	{
-		return clusterName;
-	}
+  public Long getCumulativeNetworkIoMegs() {
+    return cumulativeNetworkIoMegs;
+  }
 
-	public String getAvailabilityZone()
-	{
-		return availabilityZone;
-	}
+  public Long getCumulativeDiskIoMegs() {
+    return cumulativeDiskIoMegs;
+  }
 
-	public Long getCumulativeNetworkIoMegs()
-	{
-		return cumulativeNetworkIoMegs;
-	}
 
-	public Long getCumulativeDiskIoMegs()
-	{
-		return cumulativeDiskIoMegs;
-	}
-
-	public boolean requiresReliableTransmission()
-	{
-		return false;
-	}
-	
-	public String toString()
-	{
-		return String.format("[uuid:%s,instanceId:%s,instanceType:%s,userId:%s"
-				+ ",accountId:%s,cluster:%s,zone:%s,net:%d,disk:%d]",
-					uuid, instanceId, instanceType, userId, accountId,
-					clusterName, availabilityZone, cumulativeNetworkIoMegs,
-					cumulativeDiskIoMegs);
-	}
+  public String toString() {
+    return String.format("[uuid:%s,instanceId:%s,instanceType:%s,userId:%s"
+        + ",accountId:%s,cluster:%s,zone:%s,net:%d,disk:%d]",
+          getUuid(), getInstanceId(), getInstanceType(), getUserId(), getAccountId(),
+          getClusterName(), getAvailabilityZone(), getCumulativeNetworkIoMegs(),
+          getCumulativeDiskIoMegs() );
+  }
 
 }

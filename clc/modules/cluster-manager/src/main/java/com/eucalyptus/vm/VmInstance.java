@@ -84,7 +84,6 @@ import javax.persistence.OneToOne;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PreRemove;
 import javax.persistence.Table;
-import javax.persistence.Transient;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 import org.hibernate.annotations.Cache;
@@ -128,6 +127,7 @@ import com.eucalyptus.network.ExtantNetwork;
 import com.eucalyptus.network.NetworkGroup;
 import com.eucalyptus.network.PrivateNetworkIndex;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.reporting.event.InstanceCreatedEvent;
 import com.eucalyptus.reporting.event.InstanceEvent;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.FullName;
@@ -226,7 +226,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         return arg0.getRuntimeState( ).isBundling( );
       }
       
-    };
+    }
   }
   
   public enum VmStateSet implements Predicate<VmInstance> {
@@ -472,7 +472,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     }
     
     private static byte[] restoreUserData( final VmInfo input ) {
-      byte[] userData = null;
+      byte[] userData;
       try {
         userData = Base64.decode( input.getUserData( ) );
       } catch ( final Exception ex ) {
@@ -950,7 +950,11 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   }
   
   void store( ) {
+    final boolean creating = getNaturalId() == null;
     this.updateTimeStamps( );
+    if ( creating ) {
+      this.fireCreateEvent( );
+    }
     this.fireUsageEvent( );
     this.firePersist( );
   }
@@ -974,29 +978,52 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     }
   }
   
+  private void fireCreateEvent( ) {
+    try {
+      final OwnerFullName owner = this.getOwner();
+      final String userId = owner.getUserId();
+      final String accountId = owner.getAccountNumber();
+
+      ListenerRegistry.getInstance( ).fireEvent( new InstanceCreatedEvent(
+          getInstanceUuid(),
+          getDisplayName(),
+          this.bootRecord.getVmType().getName(),
+          userId,
+          Accounts.lookupUserById(userId).getName(),
+          accountId,
+          Accounts.lookupAccountById(accountId).getName(),
+          this.placement.getClusterName(),
+          this.placement.getPartitionName() ) );
+    } catch ( final Exception ex ) {
+      LOG.error( ex, ex );
+    }
+  }
+
   private void fireUsageEvent( ) {
     if ( VmState.RUNNING.equals( this.getState( ) ) ) {
       try {
-    	final OwnerFullName owner = this.getOwner();
-    	final String userId = owner.getUserId();
-    	final String userName = Accounts.lookupUserById(userId).getName();
-    	final String accountId = owner.getAccountNumber();
-    	final String accountName = Accounts.lookupAccountById(accountId).getName();
-    	final String clusterName = this.placement.getClusterName();
-    	final String zoneName = this.placement.getPartitionName();
-    	final Long networkBytes = this.usageStats.getNetworkBytes();
-    	final Long diskBytes = this.usageStats.getBlockBytes();
-    	final String instanceType = this.bootRecord.getVmType().getName();
-    	
-        ListenerRegistry.getInstance( ).fireEvent( new InstanceEvent( this.getInstanceUuid(), this.getDisplayName(),
-                                                                      instanceType, userId, userName, accountId, accountName,
-                                                                      clusterName, zoneName, networkBytes, diskBytes ) );
+        final OwnerFullName owner = this.getOwner();
+        final String userId = owner.getUserId();
+        final String accountId = owner.getAccountNumber();
+
+        ListenerRegistry.getInstance( ).fireEvent( new InstanceEvent(
+            getInstanceUuid(),
+            getDisplayName(),
+            this.bootRecord.getVmType().getName(),
+            userId,
+            Accounts.lookupUserById(userId).getName(),
+            accountId,
+            Accounts.lookupAccountById(accountId).getName(),
+            this.placement.getClusterName(),
+            this.placement.getPartitionName(),
+            this.usageStats.getNetworkBytes(),
+            this.usageStats.getBlockBytes() ) );
       } catch ( final Exception ex ) {
         LOG.error( ex, ex );
       }
     }
   }
-  
+
   public String getByKey( final String pathArg ) {
     final Map<String, String> m = this.getMetadataMap( );
     String path = ( pathArg != null )
@@ -1308,8 +1335,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   }
   
   /**
-   * @param stopping
-   * @param reason
+   *
    */
   public void setState( final VmState stopping, final Reason reason, final String... extra ) {
     
@@ -1329,8 +1355,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   }
   
   /**
-   * @param predicate
-   * @return
+   *
    */
   public VmVolumeAttachment lookupVolumeAttachmentByDevice( final String volumeDevice ) {
     final EntityTransaction db = Entities.get( VmInstance.class );
@@ -1356,14 +1381,13 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   }
   
   /**
-   * @param volumeId
-   * @return
+   *
    */
   public VmVolumeAttachment lookupVolumeAttachment( final String volumeId ) {
     final EntityTransaction db = Entities.get( VmInstance.class );
     try {
       final VmInstance entity = Entities.merge( this );
-      VmVolumeAttachment volumeAttachment = null;
+      VmVolumeAttachment volumeAttachment;
       try {
         volumeAttachment = entity.getTransientVolumeState( ).lookupVolumeAttachment( volumeId );
       } catch ( final NoSuchElementException ex ) {
@@ -1378,7 +1402,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   }
   
   /**
-   * @param attachVol
+   *
    */
   public void addTransientVolume( final String deviceName, final String remoteDevice, final Volume vol ) {
     final Function<Volume, Volume> attachmentFunction = new Function<Volume, Volume>( ) {
@@ -1421,8 +1445,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   }
   
   /**
-   * @param predicate
-   * @return
+   *
    */
   public boolean eachVolumeAttachment( final Predicate<VmVolumeAttachment> predicate ) {
     if ( VmStateSet.DONE.contains( this.getState( ) ) ) {
@@ -1456,8 +1479,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   }
   
   /**
-   * @param volumeId
-   * @return
+   *
    */
   public VmVolumeAttachment removeVolumeAttachment( final String volumeId ) {
     final EntityTransaction db = Entities.get( VmInstance.class );
@@ -1478,29 +1500,28 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   }
   
   /**
-   * @return
+   *
    */
   public String getServiceTag( ) {
     return this.getRuntimeState( ).getServiceTag( );
   }
   
   /**
-   * @return
+   *
    */
   public String getReservationId( ) {
     return this.vmId.getReservationId( );
   }
   
   /**
-   * @return
+   *
    */
   public byte[] getUserData( ) {
     return this.bootRecord.getUserData( );
   }
   
   /**
-   * @param volumeId
-   * @param newState
+   *
    */
   public void updateVolumeAttachment( final String volumeId, final AttachmentState newState ) {
     final EntityTransaction db = Entities.get( VmInstance.class );
@@ -1515,7 +1536,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   }
   
   /**
-   * @return
+   *
    */
   public Predicate<VmInfo> doUpdate( ) {
     return new Predicate<VmInfo>( ) {
@@ -1572,14 +1593,14 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   }
   
   /**
-   * @param bundleTaskStateName
+   *
    */
   protected void updateCreateImageTaskState( final String createImageTaskStateName ) {
     this.getRuntimeState( ).setCreateImageTaskState( createImageTaskStateName );
   }
   
   /**
-   * @param volumes
+   *
    */
   private void updateVolumeAttachments( final List<AttachedVolume> volumes ) {
     final EntityTransaction db = Entities.get( VmInstance.class );
@@ -1594,7 +1615,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   }
   
   /**
-   * @param serviceTag
+   *
    */
   public void setServiceTag( final String serviceTag ) {
     this.getRuntimeState( ).setServiceTag( serviceTag );
@@ -1765,7 +1786,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   }
   
   /**
-   * @param exampleWithPrivateIp
+   *
    */
   void setNetworkConfig( final VmNetworkConfig networkConfig ) {
     this.networkConfig = networkConfig;
@@ -1824,7 +1845,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   }
   
   /**
-   * @return
+   *
    */
   public static VmInstance create( ) {
     return new VmInstance( );
