@@ -28,7 +28,7 @@ public class ReportingVolumeEventStore
 		
 	}
 
-	public void insertCreateEvent(String uuid, String volumeId, String userId,
+	public void insertCreateEvent(String uuid, String volumeId, long timestampMs, String userId,
 					String clusterName, String availabilityZone, Long sizeGB)
 	{
 		
@@ -37,7 +37,7 @@ public class ReportingVolumeEventStore
 
 		try {
 			ReportingVolumeCreateEvent volume = new ReportingVolumeCreateEvent(uuid, volumeId,
-				userId, clusterName, availabilityZone, sizeGB);
+				timestampMs, userId, clusterName, availabilityZone, sizeGB);
 			entityWrapper.add(volume);
 			entityWrapper.commit();
 			LOG.debug("Added reporting volume to db:" + volume);
