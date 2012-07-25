@@ -19,7 +19,7 @@
       if ($.eucaData.context.explorers_sub[name] && $.eucaData.context.explorers_sub[name].length>0){
           var $table=$('<table>');
           $.each($.eucaData.context.explorers_sub[name], function(idx, val){
-              var $td = $('<td>').text(val);
+              var $td = $('<td>').append($('<a>').attr('href','#').text(val));
               $td.hover(
   	          function () {
                      $(this).addClass('euca-explorer-sub mouseon'); //css('color','#86B237');

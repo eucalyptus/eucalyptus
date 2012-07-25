@@ -6,19 +6,15 @@
   display: table;
 }
 
-div.euca-footer.inactive {
-  display: none;
-}
-
-div.euca-footer.active{
-  display: block;
-}
-
 .euca-main.inactive {
   display: none;
 }
 
 .euca-main.active {
+  display: none;
+}
+
+div.euca-footer {
   display: none;
 }
 
@@ -199,8 +195,12 @@ div.euca-container.euca-explorer.euca-explorer-items.mouseon {
 .euca-container.euca-explorer-sub tr,
 .euca-container.euca-explorer-sub td 
 {
-   padding: 2px;
-   text-align: left;
+    padding: 2px;
+    text-align: left;
+}
+
+.euca-container.euca-explorer-sub a {
+    text-decoration: none; 
 }
 
 .euca-explorer-sub.mouseon {
