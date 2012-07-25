@@ -161,16 +161,16 @@ public class ReportingBootstrapper
         }
       } );
 
-      ListenerRegistry.getInstance( ).register( InstanceCreatedEvent.class, new EventListener<ResourceAvailabilityEvent>( ) {
+      ListenerRegistry.getInstance( ).register( InstanceCreatedEvent.class, new EventListener<InstanceCreatedEvent>( ) {
         @Override
-        public void fireEvent( ResourceAvailabilityEvent event ) {
+        public void fireEvent( InstanceCreatedEvent event ) {
           log.info( "Instance created event: " + event );
         }
       } );
 
-      ListenerRegistry.getInstance( ).register( InstanceEvent.class, new EventListener<ResourceAvailabilityEvent>( ) {
+      ListenerRegistry.getInstance( ).register( InstanceEvent.class, new EventListener<InstanceEvent>( ) {
         @Override
-        public void fireEvent( ResourceAvailabilityEvent event ) {
+        public void fireEvent( InstanceEvent event ) {
           log.info( "Instance usage event: " + event );
         }
       } );

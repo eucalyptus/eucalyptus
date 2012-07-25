@@ -63,8 +63,16 @@
 
 package com.eucalyptus.vm;
 
+import static com.eucalyptus.cluster.ResourceState.VmTypeAvailability;
+import static com.eucalyptus.reporting.event.ResourceAvailabilityEvent.Availability;
+import static com.eucalyptus.reporting.event.ResourceAvailabilityEvent.Dimension;
+import static com.eucalyptus.reporting.event.ResourceAvailabilityEvent.ResourceType;
+import static com.eucalyptus.reporting.event.ResourceAvailabilityEvent.ResourceType.*;
+import static com.eucalyptus.reporting.event.ResourceAvailabilityEvent.Tag;
+import static com.eucalyptus.reporting.event.ResourceAvailabilityEvent.Type;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -78,7 +86,11 @@ import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
 import com.eucalyptus.blockstorage.State;
 import com.eucalyptus.blockstorage.Volumes;
+import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.cloud.CloudMetadata.VmInstanceMetadata;
+import com.eucalyptus.cluster.Cluster;
+import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.callback.TerminateCallback;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
@@ -91,11 +103,16 @@ import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
+import com.eucalyptus.event.ClockTick;
+import com.eucalyptus.event.EventListener;
+import com.eucalyptus.event.ListenerRegistry;
+import com.eucalyptus.event.Listeners;
 import com.eucalyptus.images.BlockStorageImageInfo;
 import com.eucalyptus.network.NetworkGroups;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.reporting.event.ResourceAvailabilityEvent;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes.QuantityMetricFunction;
 import com.eucalyptus.util.RestrictedTypes.Resolver;
@@ -108,6 +125,7 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
 import edu.ucsb.eucalyptus.msgs.DeleteStorageVolumeType;
 import edu.ucsb.eucalyptus.msgs.DetachStorageVolumeType;
@@ -255,22 +273,21 @@ public class VmInstances {
       final EntityTransaction db = Entities.get( VmInstance.class );
       final long i;
       try {
-        i = (Long) Entities.createCriteria( VmInstance.class )
+        i = ((Number) Entities.createCriteria( VmInstance.class )
                     .add( Example.create( VmInstance.named( input, null ) ) )
                     .setReadOnly( true )
                     .setCacheable( false )
                     .setProjection( Projections.rowCount() )
-                    .uniqueResult();
-            
+                    .uniqueResult()).longValue();
       } finally {
         db.rollback( );
       }
-      return ( long ) i;
+      return i;
     }
   }
   
   public static String getId( final Long rsvId, final int launchIndex ) {
-    String vmId = null;
+    String vmId;
     do {
       vmId = Crypto.generateId( Long.toString( rsvId + launchIndex ), "i" );
     } while ( VmInstances.contains( vmId ) );
@@ -638,8 +655,7 @@ public class VmInstances {
   }
   
   /**
-   * @param vm
-   * @return
+   *
    */
   public static RunningInstancesItemType transform( final VmInstance vm ) {
     if ( terminateDescribeCache.containsKey( vm.getDisplayName( ) ) ) {
@@ -688,8 +704,7 @@ public class VmInstances {
   }
   
   /**
-   * @param vm
-   * @return
+   *
    */
   public static RunningInstancesItemType transform( final String name ) {
     if ( terminateDescribeCache.containsKey( name ) ) {
@@ -698,5 +713,77 @@ public class VmInstances {
       return VmInstance.Transform.INSTANCE.apply( lookup( name ) );
     }
   }
-  
+
+  public static class VmInstanceAvailabilityEventListener implements EventListener<ClockTick> {
+
+    private static final class AvailabilityAccumulator {
+      private long total;
+      private long available;
+      private final Function<VmType,Integer> valueExtractor;
+      private final List<Availability> availabilities = Lists.newArrayList();
+
+      private AvailabilityAccumulator( final Function<VmType,Integer> valueExtractor ) {
+        this.valueExtractor = valueExtractor;
+      }
+
+      private void rollUp( final Iterable<Tag> tags ) {
+        availabilities.add( new Availability( total, available, tags ) );
+        total = 0;
+        available = 0;
+      }
+    }
+
+    public static void register( ) {
+      Listeners.register( ClockTick.class, new VmInstanceAvailabilityEventListener() );
+    }
+
+    @Override
+    public void fireEvent( final ClockTick event ) {
+      if ( Bootstrap.isFinished() && Hosts.isCoordinator() ) {
+
+        final List<ResourceAvailabilityEvent> resourceAvailabilityEvents = Lists.newArrayList();
+        final Map<ResourceType,AvailabilityAccumulator> availabilities = Maps.newEnumMap(ResourceType.class);
+        final Iterable<VmType> vmTypes = Lists.newArrayList(VmTypes.list());
+        for ( final Cluster cluster : Clusters.getInstance().listValues() ) {
+          availabilities.put( Core, new AvailabilityAccumulator( VmType.SizeProperties.Cpu ) );
+          availabilities.put( Disk, new AvailabilityAccumulator( VmType.SizeProperties.Disk ) );
+          availabilities.put( Memory, new AvailabilityAccumulator( VmType.SizeProperties.Memory ) );
+
+          for ( final VmType vmType : vmTypes ) {
+            final VmTypeAvailability va = cluster.getNodeState().getAvailability( vmType.getName() );
+
+            resourceAvailabilityEvents.add( new ResourceAvailabilityEvent( Instance, new Availability( va.getMax(), va.getAvailable(), Lists.<Tag>newArrayList(
+                new Dimension( cluster.getPartition() ),
+                new Dimension( cluster.getName() ),
+                new Type( vmType.getName() )
+                ) ) ) );
+
+            for ( final AvailabilityAccumulator availability : availabilities.values() ) {
+              availability.total = Math.max( availability.total, va.getMax() * availability.valueExtractor.apply(vmType) );
+              availability.available = Math.max( availability.available, va.getAvailable() * availability.valueExtractor.apply(vmType) );
+            }
+          }
+
+          for ( final AvailabilityAccumulator availability : availabilities.values() ) {
+            availability.rollUp(  Lists.<Tag>newArrayList(
+                new Dimension( cluster.getPartition() ),
+                new Dimension( cluster.getName() )
+            ) );
+          }
+        }
+
+        for ( final Map.Entry<ResourceType,AvailabilityAccumulator> entry : availabilities.entrySet() )  {
+          resourceAvailabilityEvents.add( new ResourceAvailabilityEvent( entry.getKey(), entry.getValue().availabilities ) );
+        }
+
+        for ( final ResourceAvailabilityEvent resourceAvailabilityEvent : resourceAvailabilityEvents  ) try {
+          ListenerRegistry.getInstance().fireEvent( resourceAvailabilityEvent );
+        } catch ( Exception ex ) {
+          LOG.error( ex, ex );
+        }
+
+      }
+    }
+  }
+
 }

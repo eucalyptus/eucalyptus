@@ -63,7 +63,6 @@
  */
 package com.eucalyptus.vm;
 
-import java.util.List;
 import javax.persistence.Column;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
@@ -80,8 +79,6 @@ import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.util.OwnerFullName;
 import com.google.common.base.Function;
 import com.google.common.base.Supplier;
-import com.google.common.collect.Lists;
-
 
 @Entity
 @javax.persistence.Entity
@@ -161,6 +158,7 @@ public class VmType extends AbstractPersistent implements VmTypeMetadata, HasFul
     this.memory = memory;
   }
   
+  @SuppressWarnings("RedundantIfStatement")
   @Override
   public boolean equals( final Object o ) {
     if ( this == o ) return true;
@@ -224,6 +222,27 @@ public class VmType extends AbstractPersistent implements VmTypeMetadata, HasFul
         return VmType.this;
       }
     };
+  }
+
+  public enum SizeProperties implements Function<VmType,Integer> {
+    Cpu {
+      @Override
+      public Integer apply( final VmType vmType ) {
+        return vmType.getCpu();
+      }
+    },
+    Disk {
+      @Override
+      public Integer apply( final VmType vmType ) {
+        return vmType.getDisk();
+      }
+    },
+    Memory {
+      @Override
+      public Integer apply( final VmType vmType ) {
+        return vmType.getMemory();
+      }
+    }
   }
   
 }
