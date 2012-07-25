@@ -34,9 +34,8 @@
 
     var makeExplorers = function(args) {
         var $itemContainer = $('html body').find('.euca-container .euca-explorer');
-        var $subitemContainer = $('html body').find('.euca-container .euca-explorer-sub');
         $.each($.eucaData.context.explorers, function(idx, val){
-            eucalyptus.explorer({'container':$itemContainer, 'subcontainer':$subitemContainer,'item':val, 'idx':idx});
+            eucalyptus.explorer({'container':$itemContainer, 'item':val, 'idx':idx});
         });
     }
    
@@ -179,6 +178,7 @@
     $header.find('#euca-navigator').hover(
        function () {
 	     $(this).find('#top-button').addClass('mouseon');
+             $(this).addClass('mouseon');
        }, 
        function () {
 	     $(this).find('#top-button').removeClass('mouseon');
@@ -188,10 +188,10 @@
     $header.find('#euca-navigator').click(function (){
         var $explorer = $('html body').find('.euca-container .euca-explorer');
         if($(this).hasClass('mouseon')){
-            $(this).removeClass('mouseon');
+        //    $(this).removeClass('mouseon');
             $explorer.toggle('blind', {}, 300 );
         }else{
-            $(this).addClass('mouseon');
+         //   $(this).addClass('mouseon');
             $explorer.toggle('blind', {}, 300 );
 
         }
