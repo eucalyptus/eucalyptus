@@ -7,6 +7,7 @@ import random
 import json
 import sys
 import traceback
+import base64
 import ConfigParser
 from botoclcinterface import BotoClcInterface
 from mockclcinterface import MockClcInterface
@@ -101,8 +102,14 @@ class LoginProcessor(ProxyProcessor):
         return ErrorResponse(ErrorResponse.UNKNOWN_ACTION)
     @staticmethod
     def post(web_req):
-        user = web_req.get_argument("username")
-        passwd = web_req.get_argument("password")
+        auth_hdr = web_req.request.headers.get('Authorization')
+        if not auth_hdr:
+            raise 'auth header not found'
+        if not auth_hdr.startswith('Basic '):
+            raise 'auth header in wrong format'
+        auth_decoded = base64.decodestring(auth_hdr[6:])
+        user, passwd = auth_decoded.split(':',2)
+        print "user: %s, pwd: %s" % (user, passwd)        
         access_id='L52ISGKFHSEXSPOZYIZ1K'
         secret_key='YRRpiyw333aq1se5PneZEnskI9MMNXrSoojoJjat'
         # create session and store info there, set session id in cookie
