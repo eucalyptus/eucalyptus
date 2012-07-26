@@ -1,4 +1,3 @@
-
 import tornado.web
 import os
 import io
@@ -15,71 +14,172 @@ from mockclcinterface import MockClcInterface
 sessions = {}
 use_mock = True
 config = None
-data_helper = None
+global_session = None
+
 class UserSession(object):
-  def __init__(self, username, password, access_id, secret_key):
-    self.username = username
-    self.password = password
-    self.access_id = access_id
-    self.secret_key = secret_key
+    def __init__(self, username, session_token, access_key, secret_key):
+        self.obj_username = username
+        self.obj_session_token = session_token
+        self.obj_access_key = access_key
+        self.obj_secret_key = secret_key
+        self.obj_fullname = None
+
+    @property
+    def username(self):
+        return self.obj_username
+
+    @property
+    def session_token(self):
+        return self.obj_session_token
+ 
+    @property
+    def access_key(self):
+        return self.obj_access_key
+
+    @property
+    def secret_key(self):
+        return self.obj_secret_key
+
+    @property
+    def fullname(self):
+        return self.obj_fullname
+  
+    @fullname.setter
+    def fullname(self, name):
+        self.obj_fullname = name 
+
+    # return only the info that's to be sent to browsers
+    def get_session(self):
+        return {'username':self.username, 'fullname':self.fullname}
+
+class GlobalSession(object):
+    def __init__(self):
+        data_path = config.get('eui', 'datapath')
+        self.data_config = ConfigParser.ConfigParser()
+        if len(self.data_config.read(data_path)) != 1:
+            raise Exception("Cannot read the data file: %s" % data_path)
+
+    def get_value(self, scope, key):
+        return self.data_config.get(scope, key) 
+
+    def list_items(self, scope):
+        items={}
+        for k,v in self.data_config.items(scope):
+            items[k] = v
+        return items
+
+    @property
+    def timezone(self):
+        return self.get_value('locale','timezone')
+ 
+    @property
+    def language(self):
+        return self.get_value('locale','language') 
+
+    @property
+    def images(self):
+        return self.list_items('image')
+
+    @property
+    def texts(self):
+        return self.list_items('text')
+
+    @property
+    def navigation_menus(self):
+        return [k for k,v in self.data_config.items('navigation')]
+
+    @property
+    def navigation_submenus(self):
+        return self.list_items('navigation')     
+
+    @property
+    def help_texts(self):
+        return self.list_items('help') 
+
+    # return the collection of global session info 
+    def get_session(self):
+        return {'timezone':self.timezone,
+                'language':self.language, 
+                'navigation_menus':self.navigation_menus, 
+                'navigation_submenus':self.navigation_submenus,
+                'texts':self.texts,
+                'images':self.images,
+                'help_texts':self.help_texts} 
+
+class EuiException(BaseException):
+    def __init__(self, status_code, message):
+        self.code = status_code
+        self.msg = message
+
+    @property
+    def status_code(self):
+        return self.code
+
+    @status_code.setter
+    def status_code(self, code):
+        self.code = code
+
+    @property
+    def message(self):
+        return self.msg
+
+    @message.setter
+    def message(self, msg):
+        self.msg = msg
 
 class BaseHandler(tornado.web.RequestHandler):
-    session = None
-    def get_current_user(self):
-        session_id = self.get_cookie("session-id")
-        if not(session_id):
-            return None
-            #self.redirect("/login")
-        try:
-            session = sessions[session_id]
-        except KeyError:
-            return None
-        return session.username
-
-    def get_user_locale(self):
-        return None  # we could implement something here.
-
-    def validate_session(self):
-        session_id = self.get_cookie("session-id")
-        if not(session_id):
-            self.redirect("/")
-        try:
-            self.session = sessions[session_id]
-        except KeyError:
-            self.redirect("/")
-
     def should_use_mock(self):
         use_mock = config.getboolean('eui', 'usemock')
         return use_mock
 
+    def authorized(self):
+        try:
+            sid = self.get_cookie("session-id")
+        except:
+            return False
+        
+        if not sid or not sessions.has_key(sid):
+            return False
+        self.user_session = sessions[sid]
+        return True     
+
 class RootHandler(BaseHandler):
     def get(self, path):
         path = config.get('eui', 'staticpath')+"eui.html"
-        self.render(path, username=self.get_current_user())
+        self.render(path)
 
     def post(self, arg):
         action = self.get_argument("action")
         response=None
-        error=None
-        if action == 'login':
-            try:
-                response=LoginProcessor.post(self)
-            except Exception, err:
-                traceback.print_exc(file=sys.stdout)
-                error={'status_code':401,'message':'failed to log-in'}
-        elif action == 'session':
-	    try:
-	        response=SessionProcessor.post(self)
-	    except Exception, err:
-                traceback.print_exc(file=sys.stdout)
-		error={'status_code':400,'message':'can\'t retrieve session info'}
-        else:
-            error={'status_code':400,'message':'unknown action'}
-        
-        if error:
-            raise tornado.web.HTTPError(error['status_code'],error['message'])
-        else:
-            self.write(ProxyResponse.generate(response))
+        try:
+            if action == 'login':
+                try:
+                    response=LoginProcessor.post(self)
+                except Exception, err:
+                    traceback.print_exc(file=sys.stdout)
+                    raise EuiException(401, 'not authorized')
+            else:
+	        if not self.authorized():
+                    raise EuiException(401, 'not authorized')
+   
+                if action == 'session':
+	            try:
+	                response=SessionProcessor.post(self)
+	            except Exception, err:
+                        traceback.print_exc(file=sys.stdout)
+                        raise EuiException(500, 'can\'t retrieve session info')
+                else:
+                    raise EuiException(500, 'unknown action')
+        except EuiException, err:  
+            if err:
+                raise tornado.web.HTTPError(err.status_code, err.message)
+            else:
+                raise tornado.web.HTTPError(500, 'unknown error occured')
+
+        if not response:
+            raise tornado.web.HTTPError(500, 'unknown error occured')
+
+        self.write(response.get_response())
 
     def check_xsrf_cookie(self):
         action = self.get_argument("action")
@@ -91,119 +191,52 @@ class RootHandler(BaseHandler):
 class ProxyProcessor():
     @staticmethod
     def get(web_req):
-        pass
+        raise "not supported"
+
     @staticmethod 
     def post(web_req):
-        pass    
+        raise "not supported"
 
 class LoginProcessor(ProxyProcessor):
-    @staticmethod
-    def get(web_req):
-        return ErrorResponse(ErrorResponse.UNKNOWN_ACTION)
     @staticmethod
     def post(web_req):
         auth_hdr = web_req.request.headers.get('Authorization')
         if not auth_hdr:
-            raise 'auth header not found'
+            raise "auth header not found"
         if not auth_hdr.startswith('Basic '):
-            raise 'auth header in wrong format'
+            raise "auth header in wrong format"
         auth_decoded = base64.decodestring(auth_hdr[6:])
         user, passwd = auth_decoded.split(':',2)
-        print "user: %s, pwd: %s" % (user, passwd)        
+
+        #hardcoded temporarily
+        session_token='PLACEHOLDER'
         access_id='L52ISGKFHSEXSPOZYIZ1K'
         secret_key='YRRpiyw333aq1se5PneZEnskI9MMNXrSoojoJjat'
+
         # create session and store info there, set session id in cookie
-        cookie = os.urandom(16).encode('hex');
-        web_req.set_cookie("session-id", cookie);
-        sessions[cookie] = UserSession(user, passwd, access_id, secret_key)
-        return LoginResponse(user)
+        while 1: 
+          sid = os.urandom(16).encode('hex');
+          if sessions.has_key(sid):
+              continue
+          break
+        web_req.set_cookie("session-id", sid);
+        sessions[sid] = UserSession(user, session_token, access_id, secret_key)
+
+        return LoginResponse(sessions[sid])
 
 class SessionProcessor(ProxyProcessor):
     @staticmethod
     def post(web_req):
-        session_id = web_req.get_cookie("session-id")
-        if not(session_id):
-	    raise "session id not found"
-        session = sessions[session_id]
-        if not(session):
-	    raise "session not found"
-        user = session.username
-	return LoginResponse(user)
+	return LoginResponse(web_req.user_session)
 
-class ProxyResponse(object):
-    RESPONSE_TYPE_AUTH = 0
-    RESPONSE_TYPE_INFO = 1
-    RESPONSE_TYPE_OP = 2
-
-    def __init__(self, resp_type):
-        self.response_type = resp_type
-
+class LoginResponse(object):
+    def __init__(self, session):
+        self.user_session = session
+     
     def get_response(self):
-        pass
+        global global_session
+        if not global_session:
+            global_session = GlobalSession() 
 
-    @staticmethod
-    def generate(response):
-        if response.response_type == ProxyResponse.RESPONSE_TYPE_AUTH:
-            return {'type':'auth', 'data':response.get_response()} 
-        elif response.response_type == ProxyResponse.RESPONSE_TYPE_INFO:
-            return {'type':'info', 'data':response.get_response()}
-        elif response.response_type == ProxyResponse.RESPONSE_TYPE_OP:
-            return {'type':'op', 'data':response.get_response()}
-
-class LoginResponse(ProxyResponse):
-    def __init__(self, user):
-        super(LoginResponse,self).__init__(ProxyResponse.RESPONSE_TYPE_AUTH)
-        self.user = user
-    
-    def get_response(self):
-        context = ContextHelper(self.user)
-        text_data = {}
-        for n,v in data_helper.list_items('text'):
-            text_data[n] = v
-        img_data = {}
-        for n,v in data_helper.list_items('image'):
-	    img_data[n] = v 
-
-        return {'context':context.get_context(), 'text':text_data, 'image':img_data}
-
-# this class is responsible for getting user-specific, 
-# cloud-specific contextual data sent to the browser upon login
-class ContextHelper():
-    def __init__(self, username):
-        self.username=username
-
-    def get_full_name(self):
-        return "Sang-Min Park"
-
-    def get_time_zone(self):
-        return "-7"
-    
-    def get_url_home(self):
-        return "http://localhost:8888/"
- 
-    def get_language(self):
-	return "en_US"
-
-    def get_explorers(self):
-        return ['dashboard','images','instances','storage','netsec','support']
-
-    def get_explorers_sub(self):
-        return {'dashboard':['Dashboard'],'images':['Images'],'instances':['Instances'],'storage':['EBS Volumes','EBS Snapshots','S3 Buckets'],'netsec':['Elastic IP', 'Security Groups','Keypairs'],'support':['User guide','Forums','Report an issue']}
-
-    def get_context(self):
-        return {'username':self.username, 'fullname':self.get_full_name(), 'timezone':self.get_time_zone(), 'language':self.get_language(), 'url_home':self.get_url_home(), 'explorers':self.get_explorers(), 'explorers_sub':self.get_explorers_sub()}
-
-# this class abstracts the customizable text sent to the browser 
-class DataHelper():
-    def __init__(self):
-        data_path = config.get('eui', 'datapath')
-        self.data_config = ConfigParser.ConfigParser()
-	if len(self.data_config.read(data_path)) != 1:
-	    raise Exception("Cannot read the data file: %s" % data_path)
-
-    def get_data(self, scope, key):
-        return self.data_config.get(scope, key)
-
-    def list_items(self, scope):
-        return self.data_config.items(scope);
+        return {'global_session':global_session.get_session(), 'user_session':self.user_session.get_session()}
 

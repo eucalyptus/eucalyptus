@@ -1,12 +1,5 @@
 (function($, eucalyptus) {
   eucalyptus.main= function(args) {
-    var makeExplorers = function(args) {
-        var $itemContainer = $('html body').find('.euca-container .euca-explorer');
-        $.each($.eucaData.context.explorers, function(idx, val){
-            eucalyptus.explorer({'container':$itemContainer, 'item':val, 'idx':idx});
-        });
-    }
-   
     // show the main divs
     var makeMenutabs = function(args) {
       var $header = $('html body').find('.euca-container .euca-main #euca-main-header');
@@ -169,7 +162,8 @@
 
     eucalyptus.header({'logo':true, 'navigation':true, 'search':false, 'userinfo':true, 'help':true});
     var $itemContainer = $('html body').find('.euca-container .euca-explorer');
-    $.each($.eucaData.context.explorers, function(idx, val){
+    $.each($.eucaData.g_session.navigation_menus, function(idx, val){
+         // idx: position of the menu, val: menu text
          eucalyptus.explorer({'container':$itemContainer, 'item':val, 'idx':idx});
     });
    
@@ -191,7 +185,7 @@
     fillTable();
 
     eucalyptus.footer([
-		   $('<p>').text($.eucaData.text['footer']),
+		   $('<p>').text($.eucaData.g_session.texts['footer']),
        		   $('<p>').html('&nbsp;&nbsp;&nbsp;&nbsp;<a id=\'logout-button\' href=\'/\'>logout</a>')]);
 
     var $mainHeader = $('html body').find('.euca-container .euca-main #euca-main-header');

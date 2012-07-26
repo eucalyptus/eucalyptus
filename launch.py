@@ -28,7 +28,6 @@ if __name__ == "__main__":
 #      print "host IP: "+ip
     server.config = ConfigParser.ConfigParser()
     server.config.read('server/eui.ini')
-    server.data_helper = server.DataHelper()
     application.listen(server.config.getint('eui', 'uiport'))
     tornado.ioloop.IOLoop.instance().start()
 
