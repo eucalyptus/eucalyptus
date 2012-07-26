@@ -166,9 +166,9 @@ public class AddressManager {
     reply.set_return( false );
     final Address address = RestrictedTypes.doPrivileged( request.getPublicIp( ), Address.class );
     if ( !address.isAllocated( ) ) {
-      throw new EucalyptusCloudException( "Cannot associated an address which is not allocated: " + request.getPublicIp( ) );
+      throw new EucalyptusCloudException( "Cannot associate an address which is not allocated: " + request.getPublicIp( ) );
     } else if ( !Contexts.lookup( ).hasAdministrativePrivileges( ) && !Contexts.lookup( ).getUserFullName( ).asAccountFullName( ).getAccountNumber( ).equals( address.getOwner( ).getAccountNumber( ) ) ) {
-      throw new EucalyptusCloudException( "Cannot associated an address which is not allocated to your account: " + request.getPublicIp( ) );
+      throw new EucalyptusCloudException( "Cannot associate an address which is not allocated to your account: " + request.getPublicIp( ) );
     }
     final VmInstance vm = RestrictedTypes.doPrivileged( request.getInstanceId( ), VmInstance.class );
     final VmInstance oldVm = findCurrentAssignedVm( address );
@@ -177,6 +177,10 @@ public class AddressManager {
       ? oldAddr.isSystemOwned( )
       : false;
     reply.set_return( true );
+    
+    if ( oldAddr != null && address.equals( oldAddr ) ) {
+      return reply;
+    }
     
     final UnconditionalCallback assignTarget = new UnconditionalCallback( ) {
       public void fire( ) {
