@@ -18,7 +18,7 @@ a record of it preserved for subsequent report generation.
 additional events. Every persistent event refers to something which happened in the past which
 cannot change. This prevents the need to "look up" already existing events as resources are used
 in the Eucalyptus system, thereby minimizing the write time on the CLC. It also allows us to keep
-of record of everything which has occurred, which would be impossible if we modified database
+a record of everything which has occurred, which would be impossible if we modified database
 tuples because previous values would then be lost.  
 
 <p>Although the event types are hibernate objects, this fact should be ignored by anyone
@@ -39,5 +39,5 @@ be encapsulated.
 <p>External users of this package only need to use the EventStore objects, of which there are
 six (InstanceEventStore, VolumeEventStore, VolumeSnapshotEventStore, ElasticIpEventStore, 
 S3BucketEventStore, and S3ObjectEventStore). All of them are singletons and contain methods for
-insert events such as creations, deletions, and usage.
+inserting events such as creations, deletions, and usage.
 
