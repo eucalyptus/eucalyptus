@@ -62,33 +62,47 @@
 package edu.ucsb.eucalyptus.cloud.ws;
 
 import static com.eucalyptus.reporting.event.ResourceAvailabilityEvent.Availability;
-import static com.eucalyptus.reporting.event.ResourceAvailabilityEvent.ResourceType.StorageWalrus;
+import static com.eucalyptus.reporting.event.ResourceAvailabilityEvent.ResourceType.StorageEBS;
+import static com.eucalyptus.reporting.event.ResourceAvailabilityEvent.Tag;
+import java.util.List;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Hosts;
+import com.eucalyptus.cluster.Cluster;
+import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.reporting.event.ResourceAvailabilityEvent;
+import com.eucalyptus.util.BlockStorageUtil;
+import com.google.common.collect.Lists;
 
 /**
- *  Event listener that fires ResourceAvailabilityEvents for the Walrus.
+ * Event listener that fires resource availability events for block storage.
  */
-public class WalrusAvailabilityEventListener implements EventListener<ClockTick> {
+public class BlockStorageAvailabilityEventListener implements EventListener<ClockTick> {
   private static Logger logger = Logger.getLogger( WalrusAvailabilityEventListener.class );
 
   public static void register( ) {
-    Listeners.register(ClockTick.class, new WalrusAvailabilityEventListener());
+    Listeners.register( ClockTick.class, new BlockStorageAvailabilityEventListener() );
   }
 
   @Override
   public void fireEvent( final ClockTick event ) {
     if ( Bootstrap.isFinished() && Hosts.isCoordinator() ) {
+      final List<Availability> resourceAvailability = Lists.newArrayList();
+      for ( final Cluster cluster : Clusters.getInstance().listValues() ) {
+        //TODO:STEVE: Get EBS storage capacity from somewhere
+        resourceAvailability.add( new Availability( 0, BlockStorageUtil.getBlockStorageTotalSize( cluster.getPartition() ), Lists.<Tag>newArrayList(
+            new ResourceAvailabilityEvent.Dimension( "availabilityZone", cluster.getPartition() ),
+            new ResourceAvailabilityEvent.Dimension( "cluster", cluster.getName() )
+        ) ) );
+      }
+
       try {
-        //TODO:STEVE: Get Walrus storage capacity from somewhere
         ListenerRegistry.getInstance().fireEvent(
-            new ResourceAvailabilityEvent( StorageWalrus, new Availability( 0, WalrusUtil.countTotalObjectSize() ) )
+            new ResourceAvailabilityEvent( StorageEBS, resourceAvailability )
         );
       } catch ( Exception ex ) {
         logger.error( ex, ex );

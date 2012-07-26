@@ -67,23 +67,29 @@ package com.eucalyptus.util;
 
 import java.security.PrivateKey;
 import java.security.PublicKey;
+import java.util.EnumSet;
 import java.util.List;
 
 import javax.crypto.Cipher;
+import javax.persistence.EntityTransaction;
 
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
+import org.hibernate.criterion.Projections;
+import org.hibernate.criterion.Restrictions;
 
-import com.eucalyptus.auth.util.X509CertHelper;
+import com.eucalyptus.blockstorage.Snapshot;
+import com.eucalyptus.blockstorage.State;
+import com.eucalyptus.blockstorage.Volume;
+import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.Storage;
-import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.StorageProperties;
+import com.eucalyptus.entities.Entities;
+import com.google.common.base.Objects;
 
 public class BlockStorageUtil {
 	private static Logger LOG = Logger.getLogger(BlockStorageUtil.class);
@@ -131,4 +137,59 @@ public class BlockStorageUtil {
 			throw new EucalyptusCloudException("Unable to decrypt storage target password", ex);
 		}
 	}
+
+  /**
+   * Get the total size used for block storage.
+   *
+   * @param partition Optional partition qualifier
+   * @return The total size used for block storage (optionally by partition)
+   */
+  public static long getBlockStorageTotalSize( final String partition ) {
+    return
+        getBlockStorageTotalVolumeSize( partition ) +
+        getBlockStorageTotalSnapshotSize( partition );
+  }
+
+  /**
+   * Get the total size used for volumes.
+   *
+   * @param partition Optional partition qualifier
+   * @return The total size used for volumes (optionally by partition)
+   */
+  public static long getBlockStorageTotalVolumeSize( final String partition ) {
+    return getBlockStorageTotalSize( partition, "partition", "size", Volume.class );
+  }
+
+  /**
+   * Get the total size used for snapshots.
+   *
+   * @param partition Optional partition qualifier
+   * @return The total size used for snapshots (optionally by partition)
+   */
+  public static long getBlockStorageTotalSnapshotSize( final String partition ) {
+    return getBlockStorageTotalSize( partition, "volumePartition", "volumeSize", Snapshot.class );
+  }
+
+  private static long getBlockStorageTotalSize( final String partition,
+                                                final String partitionProperty,
+                                                final String sizeProperty,
+                                                final Class<? extends UserMetadata<State>> sizedType ) {
+    long size = -1;
+    final EntityTransaction db = Entities.get( sizedType );
+    try {
+      size = Objects.firstNonNull( (Number) Entities.createCriteria(sizedType)
+          .add(Restrictions.in("state", EnumSet.of(State.EXTANT, State.BUSY)))
+          .add(partition == null ?
+              Restrictions.isNotNull(partitionProperty) : // Get size for all partitions.
+              Restrictions.eq(partitionProperty, partition))
+          .setProjection(Projections.sum(sizeProperty))
+          .setReadOnly(true)
+          .uniqueResult(), 0 ).longValue();
+      db.commit();
+    } catch (Exception e) {
+      LOG.error(e);
+      db.rollback();
+    }
+    return size;
+  }
 }

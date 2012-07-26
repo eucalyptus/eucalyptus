@@ -6,6 +6,7 @@ import org.hibernate.criterion.Projections;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.EntityWrapper;
+import com.google.common.base.Objects;
 import edu.ucsb.eucalyptus.cloud.entities.BucketInfo;
 import edu.ucsb.eucalyptus.cloud.entities.ObjectInfo;
 
@@ -117,10 +118,10 @@ public class WalrusUtil {
     long size = -1;
     final EntityTransaction db = Entities.get( BucketInfo.class );
     try {
-      size = ( (Number) Entities.createCriteria( BucketInfo.class )
+      size = Objects.firstNonNull( (Number) Entities.createCriteria( BucketInfo.class )
           .setProjection( Projections.sum( "bucketSize" ) )
           .setReadOnly( true )
-          .uniqueResult() ).longValue();
+          .uniqueResult(), 0 ).longValue();
       db.commit();
     } catch (Exception e) {
       db.rollback();
