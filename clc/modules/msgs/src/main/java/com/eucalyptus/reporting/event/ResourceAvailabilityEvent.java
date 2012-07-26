@@ -116,26 +116,31 @@ public class ResourceAvailabilityEvent implements Event {
   }
 
   public static abstract class Tag {
-    private final String tag;
+    private final String type;
+    private final String value;
 
-    protected Tag( final String tag ) {
-      this.tag = tag;
+    protected Tag( final String type,
+                   final String value ) {
+      this.type = type;
+      this.value = value;
     }
 
     public String toString() {
-      return String.format( "[tag:%s]", tag );
+      return String.format( "[tag:%s=%s]", type, value );
     }
   }
 
   public static final class Dimension extends Tag {
-    public Dimension( final String tag ) {
-      super( tag );
+    public Dimension( final String type,
+                      final String value ) {
+      super( type, value );
     }
   }
 
   public static final class Type extends Tag {
-    public Type( final String tag ) {
-      super( tag );
+    public Type( final String type,
+                 final String value ) {
+      super( type, value );
     }
   }
 

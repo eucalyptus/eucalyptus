@@ -753,9 +753,9 @@ public class VmInstances {
             final VmTypeAvailability va = cluster.getNodeState().getAvailability( vmType.getName() );
 
             resourceAvailabilityEvents.add( new ResourceAvailabilityEvent( Instance, new Availability( va.getMax(), va.getAvailable(), Lists.<Tag>newArrayList(
-                new Dimension( cluster.getPartition() ),
-                new Dimension( cluster.getName() ),
-                new Type( vmType.getName() )
+                new Dimension( "availabilityZone", cluster.getPartition() ),
+                new Dimension( "cluster", cluster.getName() ),
+                new Type( "vm-type", vmType.getName() )
                 ) ) ) );
 
             for ( final AvailabilityAccumulator availability : availabilities.values() ) {
@@ -766,8 +766,8 @@ public class VmInstances {
 
           for ( final AvailabilityAccumulator availability : availabilities.values() ) {
             availability.rollUp(  Lists.<Tag>newArrayList(
-                new Dimension( cluster.getPartition() ),
-                new Dimension( cluster.getName() )
+                new Dimension( "availabilityZone", cluster.getPartition() ),
+                new Dimension( "cluster", cluster.getName() )
             ) );
           }
         }

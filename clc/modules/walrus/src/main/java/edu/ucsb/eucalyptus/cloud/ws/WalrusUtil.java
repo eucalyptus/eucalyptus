@@ -1,7 +1,10 @@
 package edu.ucsb.eucalyptus.cloud.ws;
 
 import java.util.List;
+import javax.persistence.EntityTransaction;
+import org.hibernate.criterion.Projections;
 import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.EntityWrapper;
 import edu.ucsb.eucalyptus.cloud.entities.BucketInfo;
 import edu.ucsb.eucalyptus.cloud.entities.ObjectInfo;
@@ -104,5 +107,24 @@ public class WalrusUtil {
       throw new AuthException("Failed to search bucket", e);
     }
   }
-  
+
+  /**
+   * Return the total size of objects in the Walrus.
+   *
+   * @return The size or -1 if the size could not be determined.
+   */
+  public static long countTotalObjectSize() {
+    long size = -1;
+    final EntityTransaction db = Entities.get( BucketInfo.class );
+    try {
+      size = ( (Number) Entities.createCriteria( BucketInfo.class )
+          .setProjection( Projections.sum( "bucketSize" ) )
+          .setReadOnly( true )
+          .uniqueResult() ).longValue();
+      db.commit();
+    } catch (Exception e) {
+      db.rollback();
+    }
+    return size;
+  }
 }

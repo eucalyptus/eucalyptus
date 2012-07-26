@@ -59,26 +59,40 @@
  *   IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
-package com.eucalyptus.reporting.event;
+package edu.ucsb.eucalyptus.cloud.ws;
+
+import static com.eucalyptus.reporting.event.ResourceAvailabilityEvent.Availability;
+import static com.eucalyptus.reporting.event.ResourceAvailabilityEvent.ResourceType.StorageWalrus;
+import org.apache.log4j.Logger;
+import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.bootstrap.Hosts;
+import com.eucalyptus.event.ClockTick;
+import com.eucalyptus.event.EventListener;
+import com.eucalyptus.event.ListenerRegistry;
+import com.eucalyptus.event.Listeners;
+import com.eucalyptus.reporting.event.ResourceAvailabilityEvent;
 
 /**
- * An InstanceCreatedEvent is fired on the CLC when an instance is run.
+ *  Event listener that fires ResourceAvailabilityEvents for the Walrus.
  */
-public class InstanceCreatedEvent extends InstanceEventSupport
-{
-  /**
-   * Constructor for InstanceCreatedEvent.
-   */
-  public InstanceCreatedEvent( final String uuid,
-                               final String instanceId,
-                               final String instanceType,
-                               final String userId,
-                               final String userName,
-                               final String accountId,
-                               final String accountName,
-                               final String clusterName,
-                               final String availabilityZone ) {
-    super( uuid, instanceId, instanceType, userId, userName, accountId, accountName, clusterName, availabilityZone );
-  }
+public class WalrusAvailabilityEventListener implements EventListener<ClockTick> {
+  private static Logger logger = Logger.getLogger( WalrusAvailabilityEventListener.class );
 
-}
+  public static void register( ) {
+      Listeners.register(ClockTick.class, new WalrusAvailabilityEventListener());
+    }
+
+    @Override
+    public void fireEvent( final ClockTick event ) {
+      if ( Bootstrap.isFinished() && Hosts.isCoordinator() ) {
+        try {
+          //TODO:STEVE: Get Walrus storage capacity from somewhere
+          ListenerRegistry.getInstance().fireEvent(
+              new ResourceAvailabilityEvent( StorageWalrus, new Availability( 0, WalrusUtil.countTotalObjectSize() ) )
+          );
+        } catch ( Exception ex ) {
+          logger.error( ex, ex );
+        }
+      }
+    }
+  }
