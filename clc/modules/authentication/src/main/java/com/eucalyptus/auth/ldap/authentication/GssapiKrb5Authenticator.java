@@ -161,6 +161,7 @@ public class GssapiKrb5Authenticator implements LdapAuthenticator {
       public LdapContext run( ) {
         Properties env = new Properties( );
         env.put( Context.INITIAL_CONTEXT_FACTORY, LDAP_CONTEXT_FACTORY );
+        env.put( Context.REFERRAL, "follow" );
         env.put( Context.PROVIDER_URL, serverUrl );
         env.put( Context.SECURITY_AUTHENTICATION, LicParser.LDAP_AUTH_METHOD_SASL_GSSAPI );
         if ( useSsl ) {
