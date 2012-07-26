@@ -90,8 +90,8 @@ class ComputeHandler(server.BaseHandler):
             clc = MockClcInterface()
         else:
             clc = BotoClcInterface(server.config.get('eui', 'clchost'),
-                                   self.session.access_id,
-                                   self.session.secret_key)
+                                   self.user_session.access_key,
+                                   self.user_session.secret_key)
         ret = []
         action = self.get_argument("Action")
         if action == 'DescribeAvailabilityZones':
