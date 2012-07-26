@@ -4,5 +4,4 @@ class Response(object):
     results = None
 
     def __init__(self, results):
-      self.results = results
-
+        self.results = results
