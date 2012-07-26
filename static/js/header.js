@@ -5,7 +5,7 @@
        if(args.logo){
            var $logoArea = $header.find('#euca-logo');
            $logoArea.addClass('euca-header logo');
-           var imgUrl = $.eucaData.context['url_home'] + $.eucaData.image['logo'];
+           var imgUrl = $.eucaData.g_session.images['logo'];
 
            //img width hardcoded
            $('<img>').attr('src',imgUrl).attr('height','30px').appendTo($logoArea);
@@ -33,7 +33,7 @@
        if(args.userinfo) {
            var $userArea = $header.find('#euca-user');
            $userArea.addClass('euca-header user');
-           $('<span>').addClass('euca-header user').attr('id','name').text($.eucaData.context['username']+' ').append($('<img>').attr('src','images/triangle.gif')).appendTo($userArea);
+           $('<span>').addClass('euca-header user').attr('id','name').text($.eucaData.u_session['username']+' ').append($('<img>').attr('src','images/triangle.gif')).appendTo($userArea);
        }
 
        //help area 

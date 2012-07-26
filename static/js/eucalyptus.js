@@ -11,7 +11,7 @@
 	  dataType:"json",
 	  async:"false",
 	  success: function(out, textStatus, jqXHR){
-	      $.extend($.eucaData, {context:out.data.context, text:out.data.text, image:out.data.image});
+	      $.extend($.eucaData, {'g_session':out.global_session, 'u_session':out.user_session});
               eucalyptus.main($.eucaData);
           },
 	  error: function(jqXHR, textStatus, errorThrown){
@@ -33,7 +33,7 @@
     	    dataType:"json",
 	    async:"false",
 	    success: function(out, textStatus, jqXHR) {
-	       $.extend($.eucaData, {context:out.data.context, text:out.data.text, image:out.data.image});
+	       $.extend($.eucaData, {'g_session':out.global_session, 'u_session':out.user_session});
                args.onSuccess($.eucaData); // call back to login UI
             },
             error: function(jqXHR, textStatus, errorThrown){

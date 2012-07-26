@@ -3,8 +3,8 @@
       var $container = args.container;
       var name = args.item;
       // create div
-      var imgUrl = $.eucaData.image['navi_'+name];
-      var textDesc = $.eucaData.text['navi_'+name];
+      var imgUrl = $.eucaData.g_session.images[name];
+      var textDesc = name
       var $newitem = $('<div>').addClass('euca-container euca-explorer euca-explorer-items').attr('id','explorer-item-'+name).append(
 	   $('<table>').append(
 		$('<tr>').append(
@@ -16,16 +16,17 @@
           $newitem.css('margin-left','10px');
       }
       // create submenu
-      if ($.eucaData.context.explorers_sub[name] && $.eucaData.context.explorers_sub[name].length>0){
+      if ($.eucaData.g_session.navigation_submenus[name] && $.eucaData.g_session.navigation_submenus[name].length>0){
+          // submenus should be split by ','
           var $table=$('<table>');
-          $.each($.eucaData.context.explorers_sub[name], function(idx, val){
+          $.each($.eucaData.g_session.navigation_submenus[name].split(","), function(idx, val){
               var $td = $('<td>').append($('<a>').attr('href','#').text(val));
               $td.hover(
   	          function () {
-                     $(this).addClass('euca-explorer-sub mouseon'); //css('color','#86B237');
+                     $(this).addClass('euca-explorer-sub mouseon'); 
                   },
                   function () {
-                     $(this).removeClass('euca-explorer-sub mouseon'); // .css('color','#444444');
+                     $(this).removeClass('euca-explorer-sub mouseon'); 
                   });
               $table.append($('<tr>').append($td));
           }); 

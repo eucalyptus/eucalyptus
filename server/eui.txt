@@ -1,17 +1,28 @@
+[locale]
+timezone: +3
+language: en_US
+
 [text]
 footer: 2012 Eucalyptus Systems, Inc. All rights reserved
-navi_dashboard: Dashboard
-navi_images: Images
-navi_instances: Instances
-navi_storage: Storage
-navi_netsec: Network & Security
-navi_support: Support
+
+[navigation]
+Dashboard: Dashboard 
+Images: Images
+Instances: Instances
+Storage: EBS Volumes, EBS Snapshots, S3 Buckets
+Network & Security: Elastic IP, Security Groups, Keypairs
+Support: User guide, Forums, Report an issue
 
 [image]
 logo: images/eucalyptus_top.jpg
-navi_dashboard: images/dashboard.png
-navi_images: images/images.png
-navi_instances: images/instances.png
-navi_storage: images/storage.png
-navi_netsec: images/netsec.png
-navi_support: images/support.png
+Dashboard: images/dashboard.png
+Images: images/images.png
+Instances: images/instances.png
+Storage: images/storage.png
+Network & Security: images/netsec.png
+Support: images/support.png
+
+[help]
+Dashboard_01: Dashboard helps users to see the Cloud's status in one view
+Dashboard_02: You can click on instances
+Dashboard_03: You can click on storage

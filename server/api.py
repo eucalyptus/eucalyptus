@@ -84,7 +84,8 @@ class ComputeHandler(server.BaseHandler):
     # other calls are delegated to handler methods based on resource type
     #
     def get(self):
-        self.validate_session()
+	if not self.authorized():
+          raise EuiException(401, 'not authorized')
         if self.should_use_mock():
           clc = MockClcInterface()
         else:
