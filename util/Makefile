@@ -4,7 +4,7 @@
 
 include ../Makedefs
 
-all: misc.o hash.o data.o euca_auth.o euca_axis.o ipc.o windows-bundle.o euca_rootwrap euca_mountwrap
+all: fault.o misc.o hash.o data.o euca_auth.o euca_axis.o ipc.o windows-bundle.o euca_rootwrap euca_mountwrap
 
 build: all 
 
@@ -19,6 +19,9 @@ test: test.c ipc.o misc.o
 
 test_misc: misc.c ../storage/diskutil.o ipc.o euca_auth.o
 	$(CC) $(CFLAGS) $(INCLUDES) -D_UNIT_TEST -o test_misc misc.c ../storage/diskutil.o ipc.o euca_auth.o -lpthread -lcrypto $(LIBS) $(LDFLAGS)
+
+test_fault: fault.c misc.o
+	$(CC) $(CFLAGS) $(INCLUDES) -D_UNIT_TEST -o test_fault fault.c $(LIBS) $(LDFLAGS)
 
 ../storage/diskutil.o:
 	make -C ../storage
