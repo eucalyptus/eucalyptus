@@ -2,4 +2,4 @@
 
 export PYTHONPATH=`pwd`/server
 
-python launch.py
+python -tt launch.py

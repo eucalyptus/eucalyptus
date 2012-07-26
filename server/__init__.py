@@ -1,20 +1,21 @@
-import tornado.web
-import os
-import io
-import socket
-import random
-import json
-import sys
-import traceback
 import base64
 import ConfigParser
-from botoclcinterface import BotoClcInterface
-from mockclcinterface import MockClcInterface
+import io
+import json
+import os
+import random
+import socket
+import sys
+import tornado.web
+import traceback
+from .botoclcinterface import BotoClcInterface
+from .mockclcinterface import MockClcInterface
 
 sessions = {}
 use_mock = True
 config = None
 global_session = None
+
 
 class UserSession(object):
     def __init__(self, username, session_token, access_key, secret_key):
@@ -31,7 +32,7 @@ class UserSession(object):
     @property
     def session_token(self):
         return self.obj_session_token
- 
+
     @property
     def access_key(self):
         return self.obj_access_key
@@ -43,14 +44,14 @@ class UserSession(object):
     @property
     def fullname(self):
         return self.obj_fullname
-  
+
     @fullname.setter
     def fullname(self, name):
-        self.obj_fullname = name 
+        self.obj_fullname = name
 
     # return only the info that's to be sent to browsers
     def get_session(self):
-        return {'username':self.username, 'fullname':self.fullname}
+        return {'username': self.username, 'fullname': self.fullname}
 
 class GlobalSession(object):
     def __init__(self):
@@ -60,21 +61,21 @@ class GlobalSession(object):
             raise Exception("Cannot read the data file: %s" % data_path)
 
     def get_value(self, scope, key):
-        return self.data_config.get(scope, key) 
+        return self.data_config.get(scope, key)
 
     def list_items(self, scope):
-        items={}
-        for k,v in self.data_config.items(scope):
+        items = {}
+        for k, v in self.data_config.items(scope):
             items[k] = v
         return items
 
     @property
     def timezone(self):
-        return self.get_value('locale','timezone')
- 
+        return self.get_value('locale', 'timezone')
+
     @property
     def language(self):
-        return self.get_value('locale','language') 
+        return self.get_value('locale', 'language')
 
     @property
     def images(self):
@@ -86,25 +87,25 @@ class GlobalSession(object):
 
     @property
     def navigation_menus(self):
-        return [k for k,v in self.data_config.items('navigation')]
+        return [k for k, v in self.data_config.items('navigation')]
 
     @property
     def navigation_submenus(self):
-        return self.list_items('navigation')     
+        return self.list_items('navigation')
 
     @property
     def help_texts(self):
-        return self.list_items('help') 
+        return self.list_items('help')
 
-    # return the collection of global session info 
+    # return the collection of global session info
     def get_session(self):
-        return {'timezone':self.timezone,
-                'language':self.language, 
-                'navigation_menus':self.navigation_menus, 
-                'navigation_submenus':self.navigation_submenus,
-                'texts':self.texts,
-                'images':self.images,
-                'help_texts':self.help_texts} 
+        return {'timezone': self.timezone,
+                'language': self.language,
+                'navigation_menus': self.navigation_menus,
+                'navigation_submenus': self.navigation_submenus,
+                'texts': self.texts,
+                'images': self.images,
+                'help_texts': self.help_texts}
 
 class EuiException(BaseException):
     def __init__(self, status_code, message):
@@ -137,40 +138,40 @@ class BaseHandler(tornado.web.RequestHandler):
             sid = self.get_cookie("session-id")
         except:
             return False
-        
-        if not sid or not sessions.has_key(sid):
+
+        if not sid or sid not in sessions:
             return False
         self.user_session = sessions[sid]
-        return True     
+        return True
 
 class RootHandler(BaseHandler):
     def get(self, path):
-        path = config.get('eui', 'staticpath')+"eui.html"
+        path = config.get('eui', 'staticpath') + "eui.html"
         self.render(path)
 
     def post(self, arg):
         action = self.get_argument("action")
-        response=None
+        response = None
         try:
             if action == 'login':
                 try:
-                    response=LoginProcessor.post(self)
+                    response = LoginProcessor.post(self)
                 except Exception, err:
                     traceback.print_exc(file=sys.stdout)
                     raise EuiException(401, 'not authorized')
             else:
-	        if not self.authorized():
+                if not self.authorized():
                     raise EuiException(401, 'not authorized')
-   
+
                 if action == 'session':
-	            try:
-	                response=SessionProcessor.post(self)
-	            except Exception, err:
+                    try:
+                        response = SessionProcessor.post(self)
+                    except Exception, err:
                         traceback.print_exc(file=sys.stdout)
                         raise EuiException(500, 'can\'t retrieve session info')
                 else:
                     raise EuiException(500, 'unknown action')
-        except EuiException, err:  
+        except EuiException, err:
             if err:
                 raise tornado.web.HTTPError(err.status_code, err.message)
             else:
@@ -183,43 +184,43 @@ class RootHandler(BaseHandler):
 
     def check_xsrf_cookie(self):
         action = self.get_argument("action")
-	if action == 'login':
-            xsrf=self.xsrf_token
+        if action == 'login':
+            xsrf = self.xsrf_token
         else:
             super(RootHandler, self).check_xsrf_cookie()
 
 class ProxyProcessor():
     @staticmethod
     def get(web_req):
-        raise "not supported"
+        raise NotImplementedError("not supported")
 
-    @staticmethod 
+    @staticmethod
     def post(web_req):
-        raise "not supported"
+        raise NotImplementedError("not supported")
 
 class LoginProcessor(ProxyProcessor):
     @staticmethod
     def post(web_req):
         auth_hdr = web_req.request.headers.get('Authorization')
         if not auth_hdr:
-            raise "auth header not found"
+            raise NotImplementedError("auth header not found")
         if not auth_hdr.startswith('Basic '):
-            raise "auth header in wrong format"
+            raise NotImplementedError("auth header in wrong format")
         auth_decoded = base64.decodestring(auth_hdr[6:])
-        user, passwd = auth_decoded.split(':',2)
+        user, passwd = auth_decoded.split(':', 2)
 
         #hardcoded temporarily
-        session_token='PLACEHOLDER'
-        access_id='L52ISGKFHSEXSPOZYIZ1K'
-        secret_key='YRRpiyw333aq1se5PneZEnskI9MMNXrSoojoJjat'
+        session_token = 'PLACEHOLDER'
+        access_id = 'L52ISGKFHSEXSPOZYIZ1K'
+        secret_key = 'YRRpiyw333aq1se5PneZEnskI9MMNXrSoojoJjat'
 
         # create session and store info there, set session id in cookie
-        while 1: 
-          sid = os.urandom(16).encode('hex');
-          if sessions.has_key(sid):
-              continue
-          break
-        web_req.set_cookie("session-id", sid);
+        while True:
+            sid = os.urandom(16).encode('hex')
+            if sid in sessions:
+                continue
+            break
+        web_req.set_cookie("session-id", sid)
         sessions[sid] = UserSession(user, session_token, access_id, secret_key)
 
         return LoginResponse(sessions[sid])
@@ -227,16 +228,16 @@ class LoginProcessor(ProxyProcessor):
 class SessionProcessor(ProxyProcessor):
     @staticmethod
     def post(web_req):
-	return LoginResponse(web_req.user_session)
+        return LoginResponse(web_req.user_session)
 
 class LoginResponse(object):
     def __init__(self, session):
         self.user_session = session
-     
+
     def get_response(self):
         global global_session
         if not global_session:
-            global_session = GlobalSession() 
+            global_session = GlobalSession()
 
-        return {'global_session':global_session.get_session(), 'user_session':self.user_session.get_session()}
-
+        return {'global_session': global_session.get_session(),
+                'user_session': self.user_session.get_session()}

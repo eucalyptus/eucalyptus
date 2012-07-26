@@ -1,9 +1,9 @@
-#!/usr/bin/python
+#!/usr/bin/python -tt
 import tornado.ioloop
 import ConfigParser
 import os
 
-import server 
+import server
 from server import api
 
 settings = {
@@ -30,5 +30,3 @@ if __name__ == "__main__":
     server.config.read('server/eui.ini')
     application.listen(server.config.getint('eui', 'uiport'))
     tornado.ioloop.IOLoop.instance().start()
-
-
