@@ -60,5 +60,18 @@ permission notice:
 #ifndef INCLUDE_MISC_H
 #define INCLUDE_MISC_H
 
+/*
+ * Usage: log_fault (FAULT_ID, param1, param1text, param2, param2text, NULL)
+ *
+ * ...where the text of each named parameter will replace that parameter
+ * token in the fault message log text.
+ *
+ * Note that the final NULL argument is very important!
+ * (...because va_arg() is stupid.)
+ *
+ * Return value is the number of parameter arguments detected prior to NULL.
+ *
+ */
+extern int log_fault (char *, ...);
 
 #endif // INCLUDE_MISC_H

@@ -61,22 +61,76 @@ permission notice:
   ANY SUCH LICENSES OR RIGHTS.
 */
 #define _FILE_OFFSET_BITS 64 // so large-file support works on 32-bit systems
+
+#define _GNU_SOURCE
+
+#include <errno.h>
+#include <limits.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <wchar.h>
-#define _GNU_SOURCE
+#include <sys/stat.h>
 
 #include <libxml/parser.h>
 #include <libxml/tree.h>
 
 #include "fault.h"
 
-#define DEFAULT_FAULTDIR "faults/default/"
-#define CUSTOM_FAULTDIR "faults/customized/"
-#define DEFAULT_LOCALIZATION "en_US"
-#define THISFILE DEFAULT_FAULTDIR DEFAULT_LOCALIZATION "/1234.xml"
+#define DISTRO_FAULTDIR "faults/default"
+#define CUSTOM_FAULTDIR "faults/customized"
+#define ENGLISH "en_US"
+#define DEFAULT_LOCALIZATION "ru" // Russian. :)
+#define THISFILE DISTRO_FAULTDIR "/" ENGLISH "/1234.xml"
 
 int depth = 0;
+
+/*
+ * This is the order of priority (lowest to highest) for fault messages wrt
+ * customization & localization.
+ */
+enum faultdir_types {
+    DISTRO_ENGLISH = 0,         /* Please don't change the 0. */
+    DISTRO_LOCAL,
+    CUSTOM_ENGLISH,
+    CUSTOM_LOCAL,
+    NUM_FAULTDIR_TYPES,         /* For keeping score */
+};
+
+static char faultdirs[NUM_FAULTDIR_TYPES][PATH_MAX];
+
+static int
+initialize_faultdb (void)
+{
+    struct stat dirstat;
+
+    printf("--> Initializing fault registry directories.\n");
+    /* Cycle through list of faultdirs in priority order, noting any missing. */
+    snprintf (faultdirs[CUSTOM_LOCAL], PATH_MAX - 1, "%s/%s/",
+              CUSTOM_FAULTDIR, DEFAULT_LOCALIZATION);
+    snprintf (faultdirs[CUSTOM_ENGLISH], PATH_MAX - 1, "%s/%s/",
+              CUSTOM_FAULTDIR, ENGLISH);
+    snprintf (faultdirs[DISTRO_LOCAL], PATH_MAX - 1, "%s/%s/",
+              DISTRO_FAULTDIR, DEFAULT_LOCALIZATION);
+    snprintf (faultdirs[DISTRO_ENGLISH], PATH_MAX - 1, "%s/%s/",
+              DISTRO_FAULTDIR, ENGLISH);
+
+    /* Not really sure how useful this is or will be. */
+    for(int i=0; i<NUM_FAULTDIR_TYPES; i++){
+        printf ("%s:\n", faultdirs[i]);
+        if (stat(faultdirs[i], &dirstat) != 0) {
+            perror("*** Cannot stat");
+            /* FIXME: Expunge from list? Set flag? */
+        } else if (S_ISDIR(dirstat.st_mode)) {
+            printf("...ok, is a directory.\n");
+        } else {
+            printf("...NOT OK--not a directory!\n");
+        }
+    }
+    return 0;
+}
+
 
 static xmlDoc *
 get_eucafault (void)
@@ -88,42 +142,74 @@ get_eucafault (void)
 
     if (ef == NULL) {
         printf ("Could not parse file %s in get_eucafault()\n", 
-                DEFAULT_FAULTDIR DEFAULT_LOCALIZATION THISFILE);
+                THISFILE);
         return NULL;
     }
     return ef;
 }
 
 static xmlNode *
-get_eucafaults_db (void)
+get_eucafaults_db (xmlDoc *a_doc)
 {
     xmlNode *efdb = NULL;
-    xmlDoc *ef = get_eucafault();
+    a_doc = get_eucafault();
 
-    if (ef == NULL) {
+    if (a_doc == NULL) {
         printf ("get_eucafault() returned NULL in get_eucafaults_db()\n");
         return NULL;
     }
-    efdb = xmlDocGetRootElement(ef);
+    efdb = xmlDocGetRootElement(a_doc);
     // FIXME: Sanity check ^^^
 
     return efdb;
 }
 
 static void
-print_element_names(xmlNode * a_node)
+print_element_names(xmlDoc *a_doc, xmlNode * a_node)
 {
     xmlNode *cur_node = NULL;
     ++depth;
-    for (cur_node = a_node; cur_node; cur_node = cur_node->next) {
-        if (cur_node->type == XML_ELEMENT_NODE) {
-            printf("node type: Element, name:  %s\n", cur_node->name);
-            printf("                    value: %ls\n", cur_node->content);
-        }
-        print_element_names(cur_node->children);
-    }
+    //    for (cur_node = a_node; cur_node; cur_node = cur_node->next) {
+    //        if (cur_node->type == XML_ELEMENT_NODE) {
+            //            printf("node type: Element, name:  %s\n", cur_node->name);
+/*             printf("(%06d)              value: %ls\n", depth, */
+/*                    (wchar_t *)cur_node->content); */
+            xmlElemDump(stdout, a_doc, a_node);
+            printf("\n");
+            //        }
+        //print_element_names(cur_node->children);
+            //    }
     --depth;
 }
+
+int
+log_fault (char *fault_id, ...)
+{
+    va_list argv;
+    char *token;
+    int count = 0;
+    static int first_call = 1;
+
+    if (first_call) {
+        /* Sanity check. */
+        LIBXML_TEST_VERSION;
+        // FIXME: Check return code.
+        initialize_faultdb();
+        first_call = 0;
+    }
+
+    printf ("-> %s\n", fault_id);
+    va_start (argv, fault_id);
+    while((token = va_arg (argv, char *)) != NULL) {
+        printf ("%s\n", token);
+        ++count;
+    }
+    va_end(argv);
+
+
+    return count;
+}
+        
 
 
 
@@ -131,17 +217,25 @@ print_element_names(xmlNode * a_node)
 int main (int argc, char ** argv)
 {
     xmlNode *efdb = NULL;
+    xmlDoc *ef = NULL;
 
-    LIBXML_TEST_VERSION;
 
-    efdb = get_eucafaults_db();
-    print_element_names (efdb->children);
+    efdb = get_eucafaults_db(ef);
+    print_element_names (ef, xmlFirstElementChild(xmlFirstElementChild(efdb)));
+    printf("\n%s\n\n", xmlGetProp(xmlFirstElementChild(xmlFirstElementChild(efdb)), (const xmlChar*)"localized"));
+
+    //fwprintf(stdout, L"\n%s\n", (wchar_t*)xmlGetProp(xmlFirstElementChild(efdb), (const xmlChar*)"id"));
 
 /*     if (edb == NULL) { */
 /*         printf ("Did not get a parsed file\n"); */
 /*         return 1; */
 /*     } */
-    
+
+    printf("\n%d\n", 
+           log_fault("1234", "dir", "/this/is/a/directory", "user", 
+                     "this is a user", NULL));
+    printf("\n%d\n", 
+           log_fault("12345", "di", "/this/is/a/", NULL));
     return 0;
 }
 #endif // _UNIT_TEST
