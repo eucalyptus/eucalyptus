@@ -63,8 +63,7 @@
  */
 package com.eucalyptus.address;
 
-import static com.eucalyptus.reporting.event.AddressEvent.AddressAction;
-import static com.eucalyptus.reporting.event.AddressEvent.AddressAction.*;
+import static com.eucalyptus.reporting.event.AddressEvent.ActionInfo;
 import java.lang.reflect.Constructor;
 import java.util.NoSuchElementException;
 import java.util.UUID;
@@ -93,7 +92,6 @@ import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.reporting.event.AddressEvent;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.async.NOOP;
@@ -113,7 +111,7 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
     unallocated,
     allocated,
     impending,
-    assigned;
+    assigned
   }
   
   public enum Transition {
@@ -155,20 +153,20 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
     public String toString( ) {
       return this.name( );
     }
-    
   }
   
   private static Logger                   LOG                     = Logger.getLogger( Address.class );
   @Transient
+  private String                          instanceUuid;
+  @Transient
   private String                          instanceId;
   @Transient
   private String                          instanceAddress;
-  @Transient
+  public static String                    UNASSIGNED_INSTANCEUUID = "";
   public static String                    UNASSIGNED_INSTANCEID   = "available";
-  @Transient
   public static String                    UNASSIGNED_INSTANCEADDR = "0.0.0.0";
-  @Transient
   public static String                    PENDING_ASSIGNMENT      = "pending";
+  public static String                    PENDING_ASSIGNMENTUUID  = "";
   @Transient
   private AtomicMarkableReference<State>  atomicState;
   @Transient
@@ -194,6 +192,7 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
   
   public Address( String ipAddress, String partition ) {
     this( ipAddress );
+    this.instanceUuid = UNASSIGNED_INSTANCEUUID;
     this.instanceId = UNASSIGNED_INSTANCEID;
     this.instanceAddress = UNASSIGNED_INSTANCEADDR;
     this.transition = this.QUIESCENT;
@@ -201,9 +200,10 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
     this.init( );
   }
   
-  public Address( OwnerFullName ownerFullName, String address, String instanceId, String instanceAddress ) {
+  public Address( OwnerFullName ownerFullName, String address, String instanceUuid, String instanceId, String instanceAddress ) {
     this( address );
     this.setOwner( ownerFullName );
+    this.instanceUuid = instanceUuid;
     this.instanceId = instanceId;
     this.instanceAddress = instanceAddress;
     this.transition = this.QUIESCENT;
@@ -217,11 +217,13 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
     this.getOwner( );//ensure to initialize
     if ( this.instanceAddress == null || this.instanceId == null ) {
       this.instanceAddress = UNASSIGNED_INSTANCEADDR;
+      this.instanceUuid = UNASSIGNED_INSTANCEUUID;
       this.instanceId = UNASSIGNED_INSTANCEID;
     }
     if ( Principals.nobodyFullName( ).equals( super.getOwner( ) ) ) {
       this.atomicState.set( State.unallocated, true );
       this.instanceAddress = UNASSIGNED_INSTANCEADDR;
+      this.instanceUuid = UNASSIGNED_INSTANCEUUID;
       this.instanceId = UNASSIGNED_INSTANCEID;
       Addresses.getInstance( ).registerDisabled( this );
       this.atomicState.set( State.unallocated, false );
@@ -235,6 +237,7 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
         Addresses.getInstance( ).registerDisabled( this );
         this.setOwner( Principals.nobodyFullName( ) );
         this.instanceAddress = UNASSIGNED_INSTANCEADDR;
+        this.instanceUuid = UNASSIGNED_INSTANCEUUID;
         this.instanceId = UNASSIGNED_INSTANCEID;
         Address.removeAddress( this.getDisplayName( ) );
         this.atomicState.set( State.unallocated, false );
@@ -267,6 +270,7 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
   public Address allocate( final OwnerFullName ownerFullName ) {
     this.transition( State.unallocated, State.allocated, false, true, new SplitTransition( Transition.allocating ) {
       public void top( ) {
+        Address.this.instanceUuid = UNASSIGNED_INSTANCEUUID;
         Address.this.instanceId = UNASSIGNED_INSTANCEID;
         Address.this.instanceAddress = UNASSIGNED_INSTANCEADDR;
         Address.this.setOwner( ownerFullName );
@@ -283,15 +287,16 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
       public void bottom( ) {}
       
     } );
-    fireUsageEvent( ownerFullName, ALLOCATE );
+    fireUsageEvent( ownerFullName, AddressEvent.forAllocate() );
     return this;
   }
 
   public Address release( ) {
-    fireUsageEvent( RELEASE );
+    fireUsageEvent( AddressEvent.forRelease() );
 
     SplitTransition release = new SplitTransition( Transition.unallocating ) {
       public void top( ) {
+        Address.this.instanceUuid = UNASSIGNED_INSTANCEUUID;
         Address.this.instanceId = UNASSIGNED_INSTANCEID;
         Address.this.instanceAddress = UNASSIGNED_INSTANCEADDR;
         Address.removeAddress( Address.this.getDisplayName( ) );
@@ -330,7 +335,7 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
   }
   
   public Address unassign( ) {
-    fireUsageEvent( DISASSOCIATE );
+    fireUsageEvent( AddressEvent.forDisassociate( instanceUuid, instanceId ) );
 
     SplitTransition unassign = new SplitTransition( Transition.unassigning ) {
       public void top( ) {
@@ -343,6 +348,7 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
       
       public void bottom( ) {
         Address.this.stateUuid = UUID.randomUUID( ).toString( );
+        Address.this.instanceUuid = UNASSIGNED_INSTANCEUUID;
         Address.this.instanceId = UNASSIGNED_INSTANCEID;
         Address.this.instanceAddress = UNASSIGNED_INSTANCEADDR;
       }
@@ -359,6 +365,7 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
     this.transition( State.unallocated, State.impending, false, true, //
                      new SplitTransition( Transition.system ) {
                        public void top( ) {
+                         Address.this.instanceUuid = PENDING_ASSIGNMENTUUID;
                          Address.this.instanceId = PENDING_ASSIGNMENT;
                          Address.this.instanceAddress = UNASSIGNED_INSTANCEADDR;
                          Address.this.setOwner( Principals.systemFullName( ) );
@@ -390,7 +397,7 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
     } else {
       this.transition( State.allocated, State.assigned, false, true, assign );
     }
-    fireUsageEvent( ASSOCIATE );
+    fireUsageEvent( AddressEvent.forAssociate( vm.getInstanceUuid(), vm.getInstanceId() ) );
     return this;
   }
   
@@ -586,19 +593,20 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
     return "eucalyptus";
   }
 
-  private void fireUsageEvent( final AddressAction action ) {
-    fireUsageEvent( getOwner(), action );
+  private void fireUsageEvent( final ActionInfo actionInfo ) {
+    fireUsageEvent( getOwner(), actionInfo );
   }
 
   private void fireUsageEvent( final OwnerFullName ownerFullName,
-                               final AddressAction action ) {
+                               final ActionInfo actionInfo ) {
     try {
       ListenerRegistry.getInstance().fireEvent(
           AddressEvent.with(
+              getNaturalId(),
               getDisplayName(),
               ownerFullName,
               Accounts.lookupAccountById(ownerFullName.getAccountNumber()).getName(),
-              action ) );
+              actionInfo ) );
     } catch ( final Exception e ) {
       LOG.error( e, e );
     }

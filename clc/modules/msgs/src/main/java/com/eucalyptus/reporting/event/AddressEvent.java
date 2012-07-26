@@ -79,18 +79,86 @@ public class AddressEvent implements Event {
 
   public enum AddressAction { ALLOCATE, RELEASE, ASSOCIATE, DISASSOCIATE }
 
+  public static class ActionInfo {
+    private final AddressAction action;
+
+    private ActionInfo( final AddressAction action ) {
+      assertThat( action, notNullValue() );
+      this.action = action;
+    }
+
+    public AddressAction getAction() {
+      return action;
+    }
+
+    public String toString() {
+      return String.format( "[action:%s]", getAction() );
+    }
+  }
+
+  public static class InstanceActionInfo extends ActionInfo {
+    private final String instanceUuid;
+    private final String instanceId;
+
+    private InstanceActionInfo( final AddressAction action,
+                                final String instanceUuid,
+                                final String instanceId ) {
+      super( action );
+      assertThat( instanceUuid, notNullValue() );
+      assertThat(instanceId, notNullValue());
+      this.instanceUuid = instanceUuid;
+      this.instanceId = instanceId;
+    }
+
+    public String getInstanceUuid() {
+      return instanceUuid;
+    }
+
+    public String getInstanceId() {
+      return instanceId;
+    }
+
+    public String toString() {
+      return String.format( "[action:%s,instanceUuid:%s,instanceId:%s]",
+          getAction(),
+          getInstanceUuid(),
+          getInstanceId() );
+    }
+  }
+
+  private final String uuid;
   private final String address;
   private final String userId;
   private final String userName;
   private final String accountId;
   private final String accountName;
-  private final AddressAction action;
+  private final ActionInfo actionInfo;
 
-  public static AddressEvent with( final String address,
+  public static ActionInfo forAllocate() {
+    return new ActionInfo( AddressAction.ALLOCATE );
+  }
+
+  public static ActionInfo forRelease() {
+    return new ActionInfo( AddressAction.RELEASE );
+  }
+
+  public static InstanceActionInfo forAssociate( final String instanceUuid,
+                                                 final String instanceId ) {
+    return new InstanceActionInfo( AddressAction.ASSOCIATE, instanceUuid, instanceId );
+  }
+
+  public static InstanceActionInfo forDisassociate( final String instanceUuid,
+                                                    final String instanceId ) {
+    return new InstanceActionInfo( AddressAction.DISASSOCIATE, instanceUuid, instanceId );
+  }
+
+  public static AddressEvent with( final String uuid,
+                                   final String address,
                                    final OwnerFullName owner,
                                    final String accountName,
-                                   final AddressAction action ) {
+                                   final ActionInfo action ) {
     return new AddressEvent(
+        uuid,
         address,
         owner.getUserId(),
         owner.getUserName(),
@@ -100,25 +168,32 @@ public class AddressEvent implements Event {
     );
   }
 
-  private AddressEvent( final String address,
+  private AddressEvent( final String uuid,
+                        final String address,
                         final String userId,
                         final String userName,
                         final String accountId,
                         final String accountName,
-                        final AddressAction action ) {
+                        final ActionInfo actionInfo) {
+    assertThat( uuid, notNullValue() );
     assertThat( address, notNullValue() );
     assertThat( userId, notNullValue() );
     assertThat( userName, notNullValue() );
     assertThat( accountId, notNullValue() );
     assertThat( accountName, notNullValue() );
-    assertThat( action, notNullValue() );
+    assertThat(actionInfo, notNullValue() );
 
+    this.uuid = uuid;
     this.address = address;
     this.userId = userId;
     this.userName = userName;
     this.accountId = accountId;
     this.accountName = accountName;
-    this.action = action;
+    this.actionInfo = actionInfo;
+  }
+
+  public String getUuid() {
+    return uuid;
   }
 
   public String getAddress() {
@@ -141,8 +216,8 @@ public class AddressEvent implements Event {
     return accountName;
   }
 
-  public AddressAction getAction() {
-    return action;
+  public ActionInfo getActionInfo() {
+    return actionInfo;
   }
 
   @Override
@@ -152,7 +227,7 @@ public class AddressEvent implements Event {
 
   public String toString() {
     return String.format(
-        "[address:%s,userId:%s,accountId:%s,action:%s]",
-        address, userId, accountId, action );
+        "[address:%s,userId:%s,accountId:%s,actionInfo:%s]",
+        address, userId, accountId, actionInfo);
   }
 }
