@@ -1,7 +1,7 @@
 [
   {
     "__obj_name__": "Zone",
-    "name": "PARTI00"
+    "name": "PARTI00",
     "item": "",
     "state": "192.168.25.10 arn:euca:eucalyptus:PARTI00:cluster:cc_01/",
     "messageSet": "",
@@ -13,6 +13,6 @@
       "connection_cls": null
     },
     "regionName": "",
-    "connection": [],
+    "connection": []
   }
 ]
