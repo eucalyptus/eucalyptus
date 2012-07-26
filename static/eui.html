@@ -124,7 +124,7 @@
 <thead>
   <tr>
      <th>
-       <input type="checkbox" onchange="selectCheckboxChanged(this, allTablesRef['keys'])">
+       <input type="checkbox" onchange="selectCheckboxChanged(this, 'keys');">
      </th>
      <th>Name</th>
      <th>Private Key Fingerprint</th>
@@ -211,6 +211,14 @@
 
 </div>
 <!-- end of all-tabs-container -->
+
+<!-- Dialogs -->
+<div id="keys-delete-dialog" title="Delete key pairs" class="delete-dilog" style="display:none">
+  <p>You will still be able to access any instances using the deleted key pair untill you also delete the private key off of your local file system</p>
+  <p>Are you sure you want to delete the following key pairs?</p>
+  <p>KEY PAIR</p>
+  <span id="keys-delete-names"></span>
+</div>
 
 </body>
 </html>

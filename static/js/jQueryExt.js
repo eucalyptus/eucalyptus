@@ -6,5 +6,5 @@
  */
 $.fn.dataTableExt.oApi.fnGetVisiableTrNodes = function ( oSettings )
 {
-   return anDisplay = $('tbody tr', oSettings.nTable);
+  return anDisplay = $('tbody tr', oSettings.nTable);
 }

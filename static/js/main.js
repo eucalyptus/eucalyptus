@@ -101,7 +101,7 @@
       // TODO: create a function so this can be used for all tables
       $('#keys_filter').append('&nbsp<a class="table_refresh" href="#">Refresh</a>');
       $('div.table_keys_top').addClass('euca-table-top');
-      $('div.table_keys_top').html('<span id="table_keys_count"></span> key pairs found. Showing <span class="show">10</span> | <span class="show">25</span> | <span class="show">50</span> | <span class="show">all</span>');
+      $('div.table_keys_top').html('<div class="euca-table-action actionmenu"></div><div class="euca-table-size"><span id="table_keys_count"></span> key pairs found. Showing <span class="show">10</span> | <span class="show">25</span> | <span class="show">50</span> | <span class="show">all</span></div>');
       // TODO: highlight selected
       $("div.table_keys_top span.show").click( function () {
 	 if ( this.innerHTML == "10" ) {
@@ -117,6 +117,41 @@
 	   allTablesRef['keys'].fnSettings()._iDisplayLength = -1;
            allTablesRef['keys'].fnDraw();
          }
+      });
+      //action menu
+      menuContent = '<ul><li><a href="#">Actions<span class="arrow"></span></a><ul>' +
+             '<li><a href="#" id="keys-delete">Delete</a></li>' +
+             '</ul></li></ul>';
+      $menuDiv = $("div.table_keys_top div.euca-table-action");
+      $menuDiv.html(menuContent);
+      $('#keys-delete').click(function() {
+        deleteAction('keys');
+      });
+      //TODO: figure out why 'ul li a' selector does not work
+      $menuDiv.children('ul').children('li').children('a').click(function(){
+        parentUL = $(this).parent().parent();
+        if (parentUL.hasClass('activemenu')){
+          parentUL.removeClass('activemenu');
+        }
+        else {
+          parentUL.addClass('activemenu');
+        }
+      });
+      // init delete dialog
+      // TODO: figure out focus
+      $('#keys-delete-dialog').dialog({
+         autoOpen: false,
+         modal: true,
+         buttons: [
+          {
+            text: "Cancel",
+            click: function() { $(this).dialog("close"); }
+          },
+          {
+            text: "Yes, delete",
+            click: function() { $(this).dialog("close"); }
+          }
+        ]
       });
 
       allTablesRef['groups'] = $('#groups').dataTable( {
