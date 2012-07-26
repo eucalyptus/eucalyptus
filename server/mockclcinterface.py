@@ -13,6 +13,7 @@ from botojsonencoder import BotoJsonDecoder
 # strings. Might be better to represent as object graph so we can modify
 # values in the mock.
 class MockClcInterface(ClcInterface):
+  zones = None
   images = None
   instances = None
   addresses = None
@@ -23,6 +24,8 @@ class MockClcInterface(ClcInterface):
 
   # load saved state to simulate CLC
   def __init__(self):
+    f = open('mockdata/Zones.json', 'r')
+    self.zones = json.load(f, cls=BotoJsonDecoder)
     f = open('mockdata/Images.json', 'r')
     self.images = json.load(f, cls=BotoJsonDecoder)
     f = open('mockdata/Instances.json', 'r')
@@ -37,6 +40,9 @@ class MockClcInterface(ClcInterface):
     self.volumes = json.load(f, cls=BotoJsonDecoder)
     f = open('mockdata/Snapshots.json', 'r')
     self.snapshots = json.load(f, cls=BotoJsonDecoder)
+
+  def get_all_zones(self):
+    return self.zones
 
   def get_all_images(self):
     return self.images

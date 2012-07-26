@@ -19,6 +19,12 @@ class BotoClcInterface(ClcInterface):
     json.dump(obj, f, cls=BotoJsonEncoder, indent=2)
     f.close()
 
+  def get_all_zones(self):
+    obj = self.conn.get_all_zones()
+    if self.saveclcdata:
+      self.__save_json__(obj, "mockdata/Zones.json")
+    return obj
+
   def get_all_images(self):
     obj = self.conn.get_all_images()
     if self.saveclcdata:

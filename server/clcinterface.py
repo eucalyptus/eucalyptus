@@ -7,6 +7,9 @@
 #
 class ClcInterface(object):
 
+  def get_all_zones(self):
+    raise NotImplementedError("Are you sure you're using the right class?")
+
   ##
   # Image methods
   ##
