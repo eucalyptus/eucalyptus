@@ -7,6 +7,7 @@ import random
 import json
 import sys
 import traceback
+import base64
 import ConfigParser
 from botoclcinterface import BotoClcInterface
 from mockclcinterface import MockClcInterface
@@ -101,8 +102,14 @@ class LoginProcessor(ProxyProcessor):
         return ErrorResponse(ErrorResponse.UNKNOWN_ACTION)
     @staticmethod
     def post(web_req):
-        user = web_req.get_argument("username")
-        passwd = web_req.get_argument("password")
+        auth_hdr = web_req.request.headers.get('Authorization')
+        if not auth_hdr:
+            raise 'auth header not found'
+        if not auth_hdr.startswith('Basic '):
+            raise 'auth header in wrong format'
+        auth_decoded = base64.decodestring(auth_hdr[6:])
+        user, passwd = auth_decoded.split(':',2)
+        print "user: %s, pwd: %s" % (user, passwd)        
         access_id='L52ISGKFHSEXSPOZYIZ1K'
         secret_key='YRRpiyw333aq1se5PneZEnskI9MMNXrSoojoJjat'
         # create session and store info there, set session id in cookie
@@ -172,7 +179,7 @@ class ContextHelper():
         return "-7"
     
     def get_url_home(self):
-        return "http://192.168.0.107:8888/"
+        return "http://localhost:8888/"
  
     def get_language(self):
 	return "en_US"
@@ -181,7 +188,7 @@ class ContextHelper():
         return ['dashboard','images','instances','storage','netsec','support']
 
     def get_explorers_sub(self):
-        return {'dashboard':[],'images':[],'instances':[],'storage':['EBS Volumes','EBS Snapshots','S3 Buckets'],'netsec':['Security Groups','Keypairs']}
+        return {'dashboard':['Dashboard'],'images':['Images'],'instances':['Instances'],'storage':['EBS Volumes','EBS Snapshots','S3 Buckets'],'netsec':['Elastic IP', 'Security Groups','Keypairs'],'support':['User guide','Forums','Report an issue']}
 
     def get_context(self):
         return {'username':self.username, 'fullname':self.get_full_name(), 'timezone':self.get_time_zone(), 'language':self.get_language(), 'url_home':self.get_url_home(), 'explorers':self.get_explorers(), 'explorers_sub':self.get_explorers_sub()}

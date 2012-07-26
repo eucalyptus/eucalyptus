@@ -22,9 +22,14 @@
     } else {
       eucalyptus.login({
         doLogin : function(args) {
+          var tok = args.param.username+':'+args.param.password;
+          var hash = btoa(tok);
 	  $.ajax({
 	    type:"POST",
- 	    data:"action=login&username="+args.param.username+"&password="+args.param.password,
+ 	    data:"action=login", 
+            beforeSend: function (xhr) { 
+               xhr.setRequestHeader('Authorization', 'Basic '+hash); 
+            },
     	    dataType:"json",
 	    async:"false",
 	    success: function(out, textStatus, jqXHR) {

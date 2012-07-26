@@ -6,19 +6,15 @@
   display: table;
 }
 
-div.euca-footer.inactive {
-  display: none;
-}
-
-div.euca-footer.active{
-  display: block;
-}
-
 .euca-main.inactive {
   display: none;
 }
 
 .euca-main.active {
+  display: none;
+}
+
+div.euca-footer {
   display: none;
 }
 
@@ -52,7 +48,7 @@ div.euca-header.navigator {
     height: auto;
 }
 div.euca-header.navigator.mouseon {
-    background: none repeat-x scroll 50% 50% #E8E8E6;
+    background: none repeat-x scroll 50% 50% #F6F6F6;
     border-color: -moz-use-text-color #E2E6E5;
     border-style: none solid;
     border-width: medium 2px;
@@ -136,78 +132,79 @@ span#name.euca-header.user {
 }
 
 div.euca-explorer {
+    background: url("../images/explorer_background.png") no-repeat center transparent;
     display:none;
     position:relative;
     width:1024px;
-    height: 80px;
+    height: 100px;
 }
 
 div.euca-container.euca-explorer.euca-explorer-items {
     float: left;
     width: auto;
-    border-color: #E2E6E5;
-    border-style: solid;
-    border-width: medium 2px;
     padding: 0px;
     text-align: center;
     font-family: Arial,Helvetica,sans-serif;
-    font-size: 12px;
+    font-size: 14px;
     font-style: normal;
     font-weight: bold;
-    color: #0F3F5C;
+    color: #86B237;
 }
 
 div.euca-container.euca-explorer.euca-explorer-items.mouseon {
     float: left;
     width: auto;
-    border-color: #E2E6E5;
-    border-style: solid;
-    border-width: medium 2px;
     padding: 0px;
     text-align: center;
     font-family: Arial,Helvetica,sans-serif;
-    font-size: 12px;
+    font-size: 14px;
     font-style: normal;
     font-weight: bold;
-    color: #90AC59;
+    color: #0F3F5C;
 }
 
 .euca-container.euca-explorer.euca-explorer-items table, 
 .euca-container.euca-explorer.euca-explorer-items tr, 
 .euca-container.euca-explorer.euca-explorer-items td {
     border-collapse: collapse;
-    margin: 0px;
-    padding: 0px;
+    margin-left: 25px;
+    margin-right: 25px;
+    vertical-align: bottom;
+    border-bottom-color: #F6F6F6;
 }
 
 /* to remove gaps bw images and table cell */
 .euca-container.euca-explorer.euca-explorer-items img {
     display:block;
+    height:36px;
 }
 
 .euca-container.euca-explorer-sub {
-    display: none;
-    position: absolute;
+    display: block;
+    position: relative;
     width: auto;
-    z-index:1000;
+    left: 40px; /* should be changed to account for icon size */
+    font-family: Arial,Helvetica,sans-serif;
+    font-size: 12px;
+    font-style: normal;
+    font-weight: normal; 
+    color: #444444;
 }
 
 .euca-container.euca-explorer-sub table,
 .euca-container.euca-explorer-sub tr,
 .euca-container.euca-explorer-sub td 
 {
-   background: none repeat-x scroll 50% 50% #FDFDFD;
-   border-color: #E2E6E5;
-   border-style: solid;
-   border-width: medium 2px;
-   padding: 5px;
-   text-align: center;
-   font-family: Arial,Helvetica,sans-serif;
-   font-size: 12px;
-   font-style: normal;
-   font-weight: bold;
-   color: #0F3F5C;
-   z-index:1000
+    padding: 2px;
+    text-align: left;
+}
+
+.euca-container.euca-explorer-sub a {
+    text-decoration: none; 
+}
+
+.euca-explorer-sub.mouseon {
+   color: #86B237;
 }
 
 div.euca-container {
