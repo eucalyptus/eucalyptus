@@ -199,7 +199,7 @@ public abstract class AbstractSystemAddressManager {
         } else if ( ( addr != null && addr.isAssigned( ) && !addr.isPending( ) ) && ( vm == null ) ) {
           handleOrphan( cluster, addrInfo );
         } else if ( ( addr == null ) && ( vm != null ) ) {
-          addr = new Address( Principals.systemFullName( ), addrInfo.getAddress( ), vm.getInstanceId( ), vm.getPrivateAddress( ) );
+          addr = new Address( Principals.systemFullName( ), addrInfo.getAddress( ), vm.getInstanceUuid(), vm.getInstanceId( ), vm.getPrivateAddress( ) );
           clearOrphan( addrInfo );
         } else if ( ( addr == null ) && ( vm == null ) ) {
           addr = new Address( addrInfo.getAddress( ), cluster.getPartition( ) );
