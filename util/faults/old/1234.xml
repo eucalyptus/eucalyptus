@@ -15,9 +15,15 @@
       message="eucalyptus"
       localized="eucalyptus"/>
 
-    <location
-      message="${daemon} daemon on localhost"
-      localized="${daemon} сервер на системе localhost"/>
+    <location>
+      <message>
+	${daemon} daemon on localhost
+      </message>
+      <localized>
+	${daemon} сервер на системе localhost
+      </localized>
+    </location>
+	
 
     <resolution>
       <message>
