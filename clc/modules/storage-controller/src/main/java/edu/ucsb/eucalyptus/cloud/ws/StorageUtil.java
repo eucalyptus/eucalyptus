@@ -61,51 +61,76 @@
  ************************************************************************/
 package edu.ucsb.eucalyptus.cloud.ws;
 
-import static com.eucalyptus.reporting.event.ResourceAvailabilityEvent.Availability;
-import static com.eucalyptus.reporting.event.ResourceAvailabilityEvent.ResourceType.StorageEBS;
-import static com.eucalyptus.reporting.event.ResourceAvailabilityEvent.Tag;
-import java.util.List;
+import java.util.EnumSet;
+import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
-import com.eucalyptus.bootstrap.Bootstrap;
-import com.eucalyptus.bootstrap.Hosts;
-import com.eucalyptus.cluster.Cluster;
-import com.eucalyptus.cluster.Clusters;
-import com.eucalyptus.event.ClockTick;
-import com.eucalyptus.event.EventListener;
-import com.eucalyptus.event.ListenerRegistry;
-import com.eucalyptus.event.Listeners;
-import com.eucalyptus.reporting.event.ResourceAvailabilityEvent;
-import com.google.common.collect.Lists;
+import org.hibernate.criterion.Projections;
+import org.hibernate.criterion.Restrictions;
+import com.eucalyptus.blockstorage.Snapshot;
+import com.eucalyptus.blockstorage.State;
+import com.eucalyptus.blockstorage.Volume;
+import com.eucalyptus.cloud.UserMetadata;
+import com.eucalyptus.entities.Entities;
+import com.google.common.base.Objects;
 
 /**
- * Event listener that fires resource availability events for block storage.
+ *
  */
-public class BlockStorageAvailabilityEventListener implements EventListener<ClockTick> {
-  private static Logger logger = Logger.getLogger( WalrusAvailabilityEventListener.class );
+public class StorageUtil {
+  private static Logger LOG = Logger.getLogger( StorageUtil.class );
 
-  public static void register( ) {
-    Listeners.register( ClockTick.class, new BlockStorageAvailabilityEventListener() );
+  /**
+   * Get the total size used for block storage.
+   *
+   * @param partition Optional partition qualifier
+   * @return The total size used for block storage (optionally by partition)
+   */
+  public static long getBlockStorageTotalSize( final String partition ) {
+    return
+        getBlockStorageTotalVolumeSize( partition ) +
+        getBlockStorageTotalSnapshotSize( partition );
   }
 
-  @Override
-  public void fireEvent( final ClockTick event ) {
-    if ( Bootstrap.isFinished() && Hosts.isCoordinator() ) {
-      final List<Availability> resourceAvailability = Lists.newArrayList();
-      for ( final Cluster cluster : Clusters.getInstance().listValues() ) {
-        //TODO:STEVE: Get EBS storage capacity from somewhere
-        resourceAvailability.add( new Availability( 0, StorageUtil.getBlockStorageTotalSize(cluster.getPartition()), Lists.<Tag>newArrayList(
-            new ResourceAvailabilityEvent.Dimension( "availabilityZone", cluster.getPartition() ),
-            new ResourceAvailabilityEvent.Dimension( "cluster", cluster.getName() )
-        ) ) );
-      }
+  /**
+   * Get the total size used for volumes.
+   *
+   * @param partition Optional partition qualifier
+   * @return The total size used for volumes (optionally by partition)
+   */
+  public static long getBlockStorageTotalVolumeSize( final String partition ) {
+    return getBlockStorageTotalSize( partition, "partition", "size", Volume.class );
+  }
 
-      try {
-        ListenerRegistry.getInstance().fireEvent(
-            new ResourceAvailabilityEvent( StorageEBS, resourceAvailability )
-        );
-      } catch ( Exception ex ) {
-        logger.error( ex, ex );
-      }
+  /**
+   * Get the total size used for snapshots.
+   *
+   * @param partition Optional partition qualifier
+   * @return The total size used for snapshots (optionally by partition)
+   */
+  public static long getBlockStorageTotalSnapshotSize( final String partition ) {
+    return getBlockStorageTotalSize( partition, "volumePartition", "volumeSize", Snapshot.class );
+  }
+
+  private static long getBlockStorageTotalSize( final String partition,
+                                                final String partitionProperty,
+                                                final String sizeProperty,
+                                                final Class<? extends UserMetadata<State>> sizedType ) {
+    long size = -1;
+    final EntityTransaction db = Entities.get(sizedType);
+    try {
+      size = Objects.firstNonNull((Number) Entities.createCriteria(sizedType)
+          .add(Restrictions.in("state", EnumSet.of(State.EXTANT, State.BUSY)))
+          .add(partition == null ?
+              Restrictions.isNotNull(partitionProperty) : // Get size for all partitions.
+              Restrictions.eq(partitionProperty, partition))
+          .setProjection(Projections.sum(sizeProperty))
+          .setReadOnly(true)
+          .uniqueResult(), 0).longValue();
+      db.commit();
+    } catch ( Exception e ) {
+      LOG.error(e);
+      db.rollback();
     }
+    return size;
   }
 }
