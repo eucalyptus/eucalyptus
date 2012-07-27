@@ -115,7 +115,7 @@ public class WalrusUtil {
   }
 	
 	public static String URLdecode(String objectKey) throws UnsupportedEncodingException {
-		return URLDecoder.decode(objectKey, "UTF-8").replace("%20", "+").replace("%2A", "*").replace("~", "%7E").replace(" ", "+");
+		return URLDecoder.decode(objectKey, "UTF-8");
 	}
 
 	public static String[] getTarget(String operationPath) {
