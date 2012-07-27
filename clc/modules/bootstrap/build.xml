@@ -62,7 +62,8 @@
   -->
 <project name="eucalyptus-bootstrap" basedir=".">
 	<property name="builder.suffix" value="module" />
-	<import file="../module-inc.xml"/>
+
+    <import file="../module-inc.xml"/>
 	<!--================================== BUILD TARGETS ==================================-->
 	<target name="build-module">
 		<mkdir dir="build"/>
