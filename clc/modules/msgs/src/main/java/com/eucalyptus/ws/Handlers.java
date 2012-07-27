@@ -63,6 +63,7 @@
 
 package com.eucalyptus.ws;
 
+import static com.eucalyptus.component.ComponentId.ComponentPart;
 import java.net.URI;
 import java.util.HashMap;
 import java.util.List;
@@ -71,6 +72,7 @@ import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
@@ -123,6 +125,7 @@ import com.eucalyptus.http.MappingHttpMessage;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.system.Ats;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.ws.handlers.BindingHandler;
 import com.eucalyptus.ws.handlers.InternalWsSecHandler;
@@ -416,7 +419,49 @@ public class Handlers {
     };
     
   }
-  
+
+  @ChannelPipelineCoverage( "one" )
+  private static final class ComponentMessageCheckHandler implements ChannelUpstreamHandler {
+    @Nullable
+    private final Class<? extends ComponentId> componentIdClass;
+
+    private ComponentMessageCheckHandler( final ChannelPipeline pipeline ) {
+      Class<? extends ComponentId> componentIdClass = null;
+      final Ats ats = Ats.from( pipeline );
+      if ( ats.has( ComponentPart.class ) ) {
+        final ComponentPart componentPart = ats.get( ComponentPart.class );
+        if ( componentPart.value() != null ) {
+          componentIdClass = componentPart.value();
+        }
+      }
+      this.componentIdClass = componentIdClass;
+    }
+
+    @Override
+    public void handleUpstream( final ChannelHandlerContext channelHandlerContext,
+                                final ChannelEvent channelEvent ) throws Exception {
+      if ( channelEvent instanceof MessageEvent && componentIdClass != null ) {
+        final MessageEvent messageEvent = ( MessageEvent ) channelEvent;
+        final Object message = messageEvent.getMessage( );
+        final ComponentId.ComponentMessage componentMessage = Ats.from( message ).get( ComponentId.ComponentMessage.class );
+        if ( !componentIdClass.equals( componentMessage.value() ) ) {
+          LOG.warn( "Message does not match pipeline component " + componentIdClass.getSimpleName() );
+
+          final MappingHttpMessage mappingHttpMessage = MappingHttpMessage.extractMessage( channelEvent );
+          final BaseMessage baseMessage = BaseMessage.extractMessage( channelEvent );
+          if ( baseMessage != null ) {
+            Contexts.clear( Contexts.lookup( baseMessage.getCorrelationId()) );
+          }
+          channelHandlerContext.getChannel( ).write( new MappingHttpResponse(
+              mappingHttpMessage==null ? HttpVersion.HTTP_1_1  : mappingHttpMessage.getProtocolVersion( ),
+              HttpResponseStatus.BAD_REQUEST ) );
+          return;
+        }
+      }
+      channelHandlerContext.sendUpstream( channelEvent );
+    }
+  }
+
   static void sendRedirect( final ChannelHandlerContext ctx, final ChannelEvent e, final Class<? extends ComponentId> compClass, final MappingHttpRequest request ) {
     e.getFuture( ).cancel( );
     String redirectUri = null;
@@ -480,6 +525,7 @@ public class Handlers {
   }
   
   public static void addSystemHandlers( final ChannelPipeline pipeline ) {
+    pipeline.addLast( "msg-component-check", new ComponentMessageCheckHandler( pipeline ) );
     pipeline.addLast( "service-state-check", internalServiceStateHandler( ) );
     pipeline.addLast( "service-specific-mangling", ServiceHackeryHandler.INSTANCE );
     if ( StackConfiguration.ASYNC_OPERATIONS ) {

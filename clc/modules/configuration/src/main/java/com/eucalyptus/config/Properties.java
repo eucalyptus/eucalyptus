@@ -55,9 +55,6 @@ public class Properties {
     }
     ModifyPropertyValueResponseType reply = request.getReply( );
     if( INTERNAL_OP.equals( request.getName( ) ) ) {
-      if ( !Contexts.lookup( ).getRemoteAddress( ).isLoopbackAddress() ) {
-        throw new EucalyptusCloudException( "You are not authorized to interact with this service." );
-      }
       LOG.debug( "Performing euca operation: \n" + request.getValue( ) );
       try {
         reply.setName( INTERNAL_OP );
