@@ -425,15 +425,7 @@ public class Handlers {
     @Nullable
     private final Class<? extends ComponentId> componentIdClass;
 
-    private ComponentMessageCheckHandler( final ChannelPipeline pipeline ) {
-      Class<? extends ComponentId> componentIdClass = null;
-      final Ats ats = Ats.from( pipeline );
-      if ( ats.has( ComponentPart.class ) ) {
-        final ComponentPart componentPart = ats.get( ComponentPart.class );
-        if ( componentPart.value() != null ) {
-          componentIdClass = componentPart.value();
-        }
-      }
+    private ComponentMessageCheckHandler( final Class<? extends ComponentId> componentIdClass ) {
       this.componentIdClass = componentIdClass;
     }
 
@@ -523,9 +515,13 @@ public class Handlers {
     }
     
   }
-  
+
+  public static void addComponentHandlers( final Class<? extends ComponentId> componentIdClass,
+                                           final ChannelPipeline pipeline ) {
+    pipeline.addLast( "msg-component-check", new ComponentMessageCheckHandler( componentIdClass ) );
+  }
+
   public static void addSystemHandlers( final ChannelPipeline pipeline ) {
-    pipeline.addLast( "msg-component-check", new ComponentMessageCheckHandler( pipeline ) );
     pipeline.addLast( "service-state-check", internalServiceStateHandler( ) );
     pipeline.addLast( "service-specific-mangling", ServiceHackeryHandler.INSTANCE );
     if ( StackConfiguration.ASYNC_OPERATIONS ) {
