@@ -49,3 +49,35 @@ function deleteAction(tableName) {
     $("#" + tableName + "-delete-dialog").dialog('open');
   }
 }
+
+function addKeyPair(keyName) {
+  $.ajax({
+    type:"GET",
+    url:"/ec2?type=key&Action=CreateKeyPair",
+    data:"_xsrf="+$.cookie('_xsrf') + "&KeyName=" + keyName,
+    dataType:"json",
+    async:"false",
+    success:
+      function(data, textStatus, jqXHR){
+         // TODO: check if we have correct result
+         $.generateFile({
+             filename    : keyName,
+             content     : data.results.material,
+             script      : '/support?Action=DownloadFile&_xsrf=' + $.cookie('_xsrf')
+           });
+         errorNotification("Added keypair " + keyName);
+      },
+    error:
+      function(jqXHR, textStatus, errorThrown){
+         errorNotification("Fail");
+      }
+  });
+}
+
+function successNotification(message) {
+  alert(message);
+}
+
+function errorNotification(message) {
+  alert(message);
+}

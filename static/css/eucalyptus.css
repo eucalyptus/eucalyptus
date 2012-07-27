@@ -220,8 +220,8 @@ div#euca-main-header.euca-main {
 }
 
 /* Table view */
-div.euca-table-top {
-
+div.euca-table-add {
+   float: left;
 }
 
 div.euca-table-action {

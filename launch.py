@@ -5,6 +5,7 @@ import os
 
 import server
 from server import api
+from server import support
 
 settings = {
   "cookie_secret": "YzRmYThkNzU1NDU2NmE1ZjYxMDZiZDNmMzI4YmMzMmMK",
@@ -19,6 +20,7 @@ application = tornado.web.Application([
     (r"/js/(.*)", tornado.web.StaticFileHandler, {'path': os.path.join(os.path.dirname(__file__), './static/js')}),
     (r"/images/(.*)", tornado.web.StaticFileHandler, {'path': os.path.join(os.path.dirname(__file__), './static/images')}),
     (r"/ec2", api.ComputeHandler),
+    (r"/support", support.ComputeHandler),
     (r"/(.*)", server.RootHandler),
 ], **settings)
 

@@ -45,7 +45,7 @@
               "sAjaxDataProp": "results",
               "bAutoWidth" : false,
               "sPaginationType": "full_numbers",
-              "sDom": 'f<"clear"><"table_keys_top">rtp<"clear">',
+              "sDom": '<"table_keys_new">f<"clear"><"table_keys_top">rtp<"clear">',
               "aoColumns": [
                 {
                   "bSortable": false,
@@ -59,9 +59,11 @@
 		 $('#table_keys_count').html(oSettings.fnRecordsTotal());
               }
       });
-      // TODO: create a function so this can be used for all tables
-      $('#keys_filter').append('&nbsp<a class="table_refresh" href="#">Refresh</a>');
-      $('div.table_keys_top').addClass('euca-table-top');
+      // TODO: create a function so some or all of this can be reused for all tables
+      $('div.table_keys_new').addClass('euca-table-add');
+      $('div.table_keys_new').html('<a class="table-key-new" href="#">Add</a>');
+      $('#keys_filter').append('&nbsp<a class="table-refresh" href="#">Refresh</a>');
+      $('div.table_keys_top').addClass('euca-table-length');
       $('div.table_keys_top').html('<div class="euca-table-action actionmenu"></div><div class="euca-table-size"><span id="table_keys_count"></span> key pairs found. Showing <span class="show">10</span> | <span class="show">25</span> | <span class="show">50</span> | <span class="show">all</span></div>');
       // TODO: highlight selected
       $("div.table_keys_top span.show").click( function () {
@@ -87,6 +89,9 @@
       $menuDiv.html(menuContent);
       $('#keys-delete').click(function() {
         deleteAction('keys');
+      });
+      $('a.table-key-new').click(function() {
+        $("#key-add-dialog").dialog('open');
       });
       //TODO: figure out why 'ul li a' selector does not work
       $menuDiv.children('ul').children('li').children('a').click(function(){
@@ -114,6 +119,22 @@
           }
         ]
       });
+      // init add dialog
+      $('#key-add-dialog').dialog({
+         autoOpen: false,
+         modal: true,
+         buttons: [
+          {
+            text: "Create and download",
+            click: function() { $(this).dialog("close"); addKeyPair($.trim($('#key-name').val()));}
+          },
+          {
+            text: "Cancel",
+            click: function() { $(this).dialog("close"); }
+          }
+        ]
+      });
+
 
       allTablesRef['groups'] = $('#groups').dataTable( {
               "bProcessing": true,
