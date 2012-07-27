@@ -37,7 +37,7 @@
     } else {
       eucalyptus.login({
         doLogin : function(args) {
-          var tok = args.param.username+':'+args.param.password;
+          var tok = args.param.account+':'+args.param.username+':'+args.param.password;
           var hash = btoa(tok);
 	  $.ajax({
 	    type:"POST",

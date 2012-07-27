@@ -18,12 +18,17 @@ global_session = None
 
 
 class UserSession(object):
-    def __init__(self, username, session_token, access_key, secret_key):
+    def __init__(self, account, username, session_token, access_key, secret_key):
+        self.obj_account = account
         self.obj_username = username
         self.obj_session_token = session_token
         self.obj_access_key = access_key
         self.obj_secret_key = secret_key
         self.obj_fullname = None
+
+    @property
+    def account(self):
+        return self.obj_account
 
     @property
     def username(self):
@@ -184,7 +189,7 @@ class LoginProcessor(ProxyProcessor):
         if not auth_hdr.startswith('Basic '):
             raise NotImplementedError("auth header in wrong format")
         auth_decoded = base64.decodestring(auth_hdr[6:])
-        user, passwd = auth_decoded.split(':', 2)
+        account, user, passwd = auth_decoded.split(':', 3)
 
         #hardcoded temporarily
         session_token = 'PLACEHOLDER'
@@ -198,7 +203,7 @@ class LoginProcessor(ProxyProcessor):
                 continue
             break
         web_req.set_cookie("session-id", sid)
-        sessions[sid] = UserSession(user, session_token, access_id, secret_key)
+        sessions[sid] = UserSession(account, user, session_token, access_id, secret_key)
 
         return LoginResponse(sessions[sid])
 
