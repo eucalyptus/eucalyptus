@@ -3,7 +3,22 @@
 	$.eucaData = {};
   }
   $(document).ready(function() {
-  // check cookie
+    // check language and retrieve i18n customization
+    $.ajax({
+      type:"POST",
+      data:"action=lang",
+      dataType:"json",
+      async:"false",
+      success: function(out, textStatus, jqXHR){ 
+        eucalyptus.i18n({'language':out.language});
+      },
+      error: function(jqXHR, textStatus, errorThrown){
+        alert("The server is not available");
+        location.href='/';
+      }
+    });
+ 
+    // check cookie
     if ($.cookie('session-id')) {
        $.ajax({
   	  type:"POST",

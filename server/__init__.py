@@ -55,17 +55,13 @@ class UserSession(object):
 
 class GlobalSession(object):
     def __init__(self):
-        data_path = config.get('eui', 'datapath')
-        self.data_config = ConfigParser.ConfigParser()
-        if len(self.data_config.read(data_path)) != 1:
-            raise Exception("Cannot read the data file: %s" % data_path)
-
+        pass
     def get_value(self, scope, key):
-        return self.data_config.get(scope, key)
+        return config.get(scope, key)
 
     def list_items(self, scope):
         items = {}
-        for k, v in self.data_config.items(scope):
+        for k, v in config.items(scope):
             items[k] = v
         return items
 
@@ -77,35 +73,10 @@ class GlobalSession(object):
     def language(self):
         return self.get_value('locale', 'language')
 
-    @property
-    def images(self):
-        return self.list_items('image')
-
-    @property
-    def texts(self):
-        return self.list_items('text')
-
-    @property
-    def navigation_menus(self):
-        return [k for k, v in self.data_config.items('navigation')]
-
-    @property
-    def navigation_submenus(self):
-        return self.list_items('navigation')
-
-    @property
-    def help_texts(self):
-        return self.list_items('help')
-
     # return the collection of global session info
     def get_session(self):
         return {'timezone': self.timezone,
-                'language': self.language,
-                'navigation_menus': self.navigation_menus,
-                'navigation_submenus': self.navigation_submenus,
-                'texts': self.texts,
-                'images': self.images,
-                'help_texts': self.help_texts}
+                'language': self.language}
 
 class EuiException(BaseException):
     def __init__(self, status_code, message):
@@ -159,6 +130,12 @@ class RootHandler(BaseHandler):
                 except Exception, err:
                     traceback.print_exc(file=sys.stdout)
                     raise EuiException(401, 'not authorized')
+            elif action == 'lang':
+                try:
+                    response = LanguageProcessor.post(self)
+                except Exception, err:
+                    traceback.print_exc(file=sys.stdout)
+                    raise EuiException(401, 'not authorized')
             else:
                 if not self.authorized():
                     raise EuiException(401, 'not authorized')
@@ -184,7 +161,7 @@ class RootHandler(BaseHandler):
 
     def check_xsrf_cookie(self):
         action = self.get_argument("action")
-        if action == 'login':
+        if action == 'login' or action == 'lang':
             xsrf = self.xsrf_token
         else:
             super(RootHandler, self).check_xsrf_cookie()
@@ -225,12 +202,26 @@ class LoginProcessor(ProxyProcessor):
 
         return LoginResponse(sessions[sid])
 
+class LanguageProcessor(ProxyProcessor):
+    @staticmethod
+    def post(web_req):
+        language = config.get('locale','language')
+
+        return LanguageResponse(language)
+
 class SessionProcessor(ProxyProcessor):
     @staticmethod
     def post(web_req):
         return LoginResponse(web_req.user_session)
 
-class LoginResponse(object):
+class ProxyResponse(object):
+    def __init__(self):
+        pass
+
+    def get_response(self):
+        raise NotImplementedError( "Should have implemented this" )
+
+class LoginResponse(ProxyResponse):
     def __init__(self, session):
         self.user_session = session
 
@@ -241,3 +232,10 @@ class LoginResponse(object):
 
         return {'global_session': global_session.get_session(),
                 'user_session': self.user_session.get_session()}
+
+class LanguageResponse(ProxyResponse):
+    def __init__(self, lang):
+        self.language = lang
+
+    def get_response(self):
+        return {'language': self.language}

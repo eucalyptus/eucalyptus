@@ -9,7 +9,6 @@ from server import api
 settings = {
   "cookie_secret": "YzRmYThkNzU1NDU2NmE1ZjYxMDZiZDNmMzI4YmMzMmMK",
   "xsrf_cookies": True,
-#  "login_url": "/login",
 }
 
 application = tornado.web.Application([
@@ -17,6 +16,7 @@ application = tornado.web.Application([
     (r"/css/(.*)", tornado.web.StaticFileHandler, {'path': os.path.join(os.path.dirname(__file__), './static/css')}),
     (r"/lib/(.*)", tornado.web.StaticFileHandler, {'path': os.path.join(os.path.dirname(__file__), './static/lib')}),
     (r"/js/(.*)", tornado.web.StaticFileHandler, {'path': os.path.join(os.path.dirname(__file__), './static/js')}),
+    (r"/custom/(.*)", tornado.web.StaticFileHandler, {'path': os.path.join(os.path.dirname(__file__), './static/custom')}),
     (r"/images/(.*)", tornado.web.StaticFileHandler, {'path': os.path.join(os.path.dirname(__file__), './static/images')}),
     (r"/ec2", api.ComputeHandler),
     (r"/(.*)", server.RootHandler),
