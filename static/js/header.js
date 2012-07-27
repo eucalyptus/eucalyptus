@@ -5,10 +5,10 @@
        if(args.logo){
            var $logoArea = $header.find('#euca-logo');
            $logoArea.addClass('euca-header logo');
-           var imgUrl = 'images/eucalyptus_top.jpg'
+           var imgUrl = 'images/eucalyptus_top.png'
 
            //img width hardcoded
-           $('<img>').attr('src',imgUrl).attr('height','30px').appendTo($logoArea);
+           $('<img>').attr('src',imgUrl).appendTo($logoArea);
        }
 
        //navigation area   
