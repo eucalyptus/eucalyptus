@@ -100,6 +100,18 @@ enum faultdir_types {
 
 static char faultdirs[NUM_FAULTDIR_TYPES][PATH_MAX];
 
+/*
+ * Function prototypes
+ */
+
+static int initialize_faultdb (void);
+static int populate_faultdb (void);
+static xmlDoc *get_eucafault (const char *);
+static xmlNode *get_eucafaults_db (xmlDoc *a_doc);
+static void print_element_names(xmlDoc *a_doc, xmlNode *a_node);
+
+
+
 static int
 initialize_faultdb (void)
 {
@@ -118,54 +130,68 @@ initialize_faultdb (void)
 
     /* Not really sure how useful this is or will be. */
     for(int i=0; i<NUM_FAULTDIR_TYPES; i++){
-        printf ("%s:\n", faultdirs[i]);
+        //printf ("%s:\n", faultdirs[i]);
         if (stat(faultdirs[i], &dirstat) != 0) {
-            perror("*** Cannot stat");
+            printf("*** Problem with %s:\n", faultdirs[i]);
+            perror("    stat()");
+            printf("\n");
             /* FIXME: Expunge from list? Set flag? */
+            /*
         } else if (S_ISDIR(dirstat.st_mode)) {
             printf("...ok, is a directory.\n");
         } else {
             printf("...NOT OK--not a directory!\n");
+            */
         }
     }
+    return populate_faultdb();
+}
+
+static int
+populate_faultdb (void)
+{
+    
     return 0;
 }
 
-
 static xmlDoc *
-get_eucafault (void)
+get_eucafault (const char * fault_id)
 {
-    xmlDoc *ef = NULL;
-    
-    ef = xmlReadFile (THISFILE,
-                      NULL, 0);
+    xmlDoc *ef_doc = NULL;
+    char faultfile[PATH_MAX];
 
-    if (ef == NULL) {
+    // FIXME: Hard-coded path for testing!
+    snprintf (faultfile, PATH_MAX - 1, "%s/%s.xml", faultdirs[DISTRO_ENGLISH],
+              fault_id);
+    
+    ef_doc = xmlReadFile (faultfile, NULL, 0);
+
+    if (ef_doc == NULL) {
         printf ("Could not parse file %s in get_eucafault()\n", 
-                THISFILE);
+                faultfile);
         return NULL;
     }
-    return ef;
+    return ef_doc;
 }
 
 static xmlNode *
-get_eucafaults_db (xmlDoc *a_doc)
+get_eucafaults_db (xmlDoc *ef_doc)
 {
-    xmlNode *efdb = NULL;
-    a_doc = get_eucafault();
+    xmlNode *ef_root = NULL;
+    ef_doc = get_eucafault("1234");
 
-    if (a_doc == NULL) {
+    if (ef_doc == NULL) {
         printf ("get_eucafault() returned NULL in get_eucafaults_db()\n");
         return NULL;
     }
-    efdb = xmlDocGetRootElement(a_doc);
+    ef_root = xmlDocGetRootElement(ef_doc);
     // FIXME: Sanity check ^^^
 
-    return efdb;
+    return ef_root;
 }
 
 static void
-print_element_names(xmlDoc *a_doc, xmlNode * a_node)
+print_element_names(xmlDoc *a_doc, xmlNode *a_node)
 {
     xmlNode *cur_node = NULL;
     ++depth;
@@ -175,6 +201,7 @@ print_element_names(xmlDoc *a_doc, xmlNode * a_node)
 /*             printf("(%06d)              value: %ls\n", depth, */
 /*                    (wchar_t *)cur_node->content); */
             xmlElemDump(stdout, a_doc, a_node);
+            xmlDocDump(stdout, a_doc);
             printf("\n");
             //        }
         //print_element_names(cur_node->children);
@@ -198,31 +225,25 @@ log_fault (char *fault_id, ...)
         first_call = 0;
     }
 
-    printf ("-> %s\n", fault_id);
+    //printf ("-> %s\n", fault_id);
     va_start (argv, fault_id);
     while((token = va_arg (argv, char *)) != NULL) {
-        printf ("%s\n", token);
+        //printf ("%s\n", token);
         ++count;
     }
     va_end(argv);
 
-
     return count;
 }
-        
-
-
 
 #ifdef _UNIT_TEST
 int main (int argc, char ** argv)
 {
-    xmlNode *efdb = NULL;
-    xmlDoc *ef = NULL;
+    xmlNode *ef_root = NULL;
+    xmlDoc *ef_doc = NULL;
 
 
-    efdb = get_eucafaults_db(ef);
-    print_element_names (ef, xmlFirstElementChild(xmlFirstElementChild(efdb)));
-    printf("\n%s\n\n", xmlGetProp(xmlFirstElementChild(xmlFirstElementChild(efdb)), (const xmlChar*)"localized"));
+    //printf("\n%s\n\n", xmlGetProp(xmlFirstElementChild(xmlFirstElementChild(efdb)), (const xmlChar*)"localized"));
 
     //fwprintf(stdout, L"\n%s\n", (wchar_t*)xmlGetProp(xmlFirstElementChild(efdb), (const xmlChar*)"id"));
 
@@ -231,11 +252,18 @@ int main (int argc, char ** argv)
 /*         return 1; */
 /*     } */
 
-    printf("\n%d\n", 
-           log_fault("1234", "dir", "/this/is/a/directory", "user", 
-                     "this is a user", NULL));
-    printf("\n%d\n", 
-           log_fault("12345", "di", "/this/is/a/", NULL));
+/*     printf("\n%d\n",  */
+    log_fault("1234", "dir", "/this/is/a/directory", "user", 
+              "this is a user", NULL);
+/*            ); */
+/*     printf("\n%d\n",  */
+    log_fault("12345", "di", "/this/is/a/", NULL);
+/*            ); */
+
+
+    ef_root = get_eucafaults_db(ef_doc);
+    print_element_names (ef_doc, ef_root);
+
     return 0;
 }
 #endif // _UNIT_TEST
