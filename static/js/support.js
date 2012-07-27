@@ -59,17 +59,22 @@ function addKeyPair(keyName) {
     async:"false",
     success:
       function(data, textStatus, jqXHR){
-         // TODO: check if we have correct result
-         $.generateFile({
+         if (data.results && data.results.material) {
+           $.generateFile({
              filename    : keyName,
              content     : data.results.material,
              script      : '/support?Action=DownloadFile&_xsrf=' + $.cookie('_xsrf')
            });
-         errorNotification("Added keypair " + keyName);
+           // TODO: can we wait till file is saved by user?
+           successNotification("Added keypair " + keyName);
+         } else {
+           errorNotification("Failed to create keypair " + keyName);
+         }
       },
     error:
       function(jqXHR, textStatus, errorThrown){
-         errorNotification("Fail");
+        //TODO: show communication error?
+        errorNotification("Failed to create keypair " + keyName);
       }
   });
 }
