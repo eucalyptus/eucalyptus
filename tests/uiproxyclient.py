@@ -1,5 +1,6 @@
 #!/usr/bin/python
 
+import base64
 import urllib2
 import json
 from operator import itemgetter
@@ -16,12 +17,15 @@ class UIProxyClient(object):
 
     def login(self, username, password):
         # make request, storing cookie
-        req = urllib2.Request("http://localhost:8888")
-        data = "action=login&username=" + username + "&password=" + password
+        req = urllib2.Request("http://localhost:8888/")
+        data = "action=login"
+        encoded_auth = base64.encodestring("%s:%s" % (username, password))[:-1]
+        print "encoded "+encoded_auth
+        req.add_header('Authorization', "Basic %s" % encoded_auth)
         response = urllib2.urlopen(req, data)
         self.session_cookie = response.headers.get('Set-Cookie')
         print self.session_cookie
-    #    print response.read()
+        print response.read()
 
     def logout(self):
         # forget cookie
@@ -76,7 +80,7 @@ class UIProxyClient(object):
 if __name__ == "__main__":
     # make some calls to proxy class to test things out
     client = UIProxyClient()
-    client.login('test', 'test')
+    client.login('test', 'testing123')
     print "=== Getting Zones ==="
     print client.get_zones()
 #    print 

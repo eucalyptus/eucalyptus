@@ -7,7 +7,6 @@ from .botojsonencoder import BotoJsonEncoder
 from .mockclcinterface import MockClcInterface
 from .response import Response
 
-
 class ComputeHandler(server.BaseHandler):
     @tornado.web.authenticated
     def get_argument_list(self, name):
@@ -85,7 +84,7 @@ class ComputeHandler(server.BaseHandler):
     #
     def get(self):
         if not self.authorized():
-            raise EuiException(401, 'not authorized')
+            raise tornado.web.HTTPError(401, "not authorized")
         if self.should_use_mock():
             clc = MockClcInterface()
         else:
