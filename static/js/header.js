@@ -5,7 +5,7 @@
        if(args.logo){
            var $logoArea = $header.find('#euca-logo');
            $logoArea.addClass('euca-header logo');
-           var imgUrl = $.eucaData.g_session.images['logo'];
+           var imgUrl = 'images/eucalyptus_top.jpg'
 
            //img width hardcoded
            $('<img>').attr('src',imgUrl).attr('height','30px').appendTo($logoArea);
@@ -19,7 +19,7 @@
                             $('<tbody>').append(
 			      $('<tr>').append(
                                  $('<td>').attr('valign','middle').css('width','auto').append(
-				    $('<a>').attr('href','#').attr('id','top-button').addClass('euca-header navigator').css('display','block').text('Explorer')),
+				    $('<a>').attr('href','#').attr('id','top-button').addClass('euca-header navigator').css('display','block').text(button_explorer)),
 				 $('<td>').attr('valign','middle').css('width','auto').append(
 				    $('<img>').attr('src','images/triangle.gif'))))));
        }

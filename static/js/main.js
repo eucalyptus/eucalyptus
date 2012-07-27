@@ -183,10 +183,7 @@
 
     eucalyptus.header({'logo':true, 'navigation':true, 'search':false, 'userinfo':true, 'help':true});
     var $itemContainer = $('html body').find('.euca-container .euca-explorer');
-    $.each($.eucaData.g_session.navigation_menus, function(idx, val){
-         // idx: position of the menu, val: menu text
-         eucalyptus.explorer({'container':$itemContainer, 'item':val, 'idx':idx});
-    });
+    eucalyptus.explorer({'container':$itemContainer});
    
      // find div.euca-container.euca-main#euca-main-header
     var menus = [{name:'Instances', link:'#tabs-instances'}, 
@@ -206,7 +203,7 @@
     fillTable();
 
     eucalyptus.footer([
-		   $('<p>').text($.eucaData.g_session.texts['footer']),
+		   $('<p>').text(text_footer),
        		   $('<p>').html('&nbsp;&nbsp;&nbsp;&nbsp;<a id=\'logout-button\' href=\'/\'>logout</a>')]);
 
     var $mainHeader = $('html body').find('.euca-container .euca-main #euca-main-header');

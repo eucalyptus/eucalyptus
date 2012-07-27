@@ -17,7 +17,7 @@
 <script type="text/javascript" language="javascript" src="lib/jquery-ui-1.8.21.custom.min.js"></script>
 <script type="text/javascript" language="javascript" src="lib/jquery.dataTables.js"></script> 
 <script type="text/javascript" language="javascript" src="lib/jquery.cookies.js"></script>
-
+<script type="text/javascript" language="javascript" src="lib/jquery.i18n.properties-min-1.0.9.js"></script>
 <!-- Eucalyptus JS -->
 <script type="text/javascript">
   var allTablesRef = {};
@@ -32,7 +32,7 @@
 <script type="text/javascript" language="javascript" src="js/support.js"></script>
 <script type="text/javascript" language="javascript" src="js/header.js"></script>
 <script type="text/javascript" language="javascript" src="js/footer.js"></script>
-
+<script type="text/javascript" language="javascript" src="js/i18n.js"></script>
 <body>
 <div class="euca-container">
   <div class="euca-header">
@@ -51,30 +51,50 @@
 </div>
 <div class="templates">
   <div id="login" class="templates inactive">
-    <form action="/login" method="post" name="loginform">
-    <table border="0">
-      <tr><td align="left" span="2" bgcolor="#eeeeee"> Login to your management console </td></tr>
-      <tr><td align="right">
-	<span id="login.text">Username</span><input type="text" name="username" size="50"/><br/>
-        </td>
-        <td><div style="color:#ff0000">Rules TK</div>
-        </td>
-      </tr>
-      <tr><td align="right">
-        <span id="login.text">Password</span><input type="password" name="password" size="50"/><br/>
-        </td>
-        <td></td>
-      </tr>
-      <tr><td align="right"> <div id="login.text.help">Forgot your username or password? Contact your cloud administrator.</div>
-        </td>
-        <td></td>
-      </tr>
-      <tr><td></td><td align="right">
-        <input type="submit" value="Log In"/>
-        </td>
-      </tr>
-    </table>
-    </form>
+    <img src="images/eucalyptus-340x36.png" alt-text="eucalyptus logo"/>
+    &nbsp;<br/>
+    &nbsp;<br/>
+    &nbsp;<br/>
+    &nbsp;<br/>
+    &nbsp;<br/>
+    &nbsp;<br/>
+    <div align="center">
+      <form action="/login" method="post" name="loginform">
+        <table border="0" cellspacing="15">
+          <tr><td align="right">
+            <span id="login.text">Account</span>
+            <input type="text" id="account" size="50"/><br/>
+            </td>
+            <td><div style="color:#ff0000"></div>
+            </td>
+          </tr>
+          <tr><td align="right">
+            <span id="login.text">Username</span>
+            <input type="text" id="username" size="50"/><br/>
+            </td>
+            <td><div style="color:#ff0000"></div>
+            </td>
+          </tr>
+          <tr><td align="right">
+            <span id="login.text">Password</span>
+            <input type="password" id="password" size="50"/><br/>
+            </td>
+            <td></td>
+          </tr>
+          <tr>
+            <td align="right">
+            <input type="submit" name="login" value="Log In"/>
+            </td>
+            <td></td>
+          </tr>
+          <tr><td align="right">
+            <div id="login.text.help">Forgot your username or password? Contact your cloud administrator.</div>
+            </td>
+            <td></td>
+          </tr>
+        </table>
+      </form>
+    </div>
   </div> <!-- end of login -->
 </div> <!-- end of templates --> 
 
