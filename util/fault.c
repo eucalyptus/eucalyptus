@@ -106,7 +106,7 @@ static char faultdirs[NUM_FAULTDIR_TYPES][PATH_MAX];
 
 static int initialize_faultdb (void);
 static int populate_faultdb (void);
-static xmlNode *get_eucafault (const char *);
+static xmlDoc *get_eucafault (const char *);
 static xmlDoc *get_eucafaults_doc (xmlDoc *a_doc);
 static void print_element_names(xmlDoc *a_doc);
 
@@ -151,32 +151,32 @@ populate_faultdb (void)
     return 0;
 }
 
-static xmlNode *
+static xmlDoc *
 get_eucafault (const char * fault_id)
 {
-    xmlDoc *ef_doc = NULL;
+    xmlDoc *my_doc = NULL;
     char faultfile[PATH_MAX];
 
     // FIXME: Hard-coded path for testing!
     snprintf (faultfile, PATH_MAX - 1, "%s/%s.xml", faultdirs[DISTRO_ENGLISH],
               fault_id);
     
-    ef_doc = xmlReadFile (faultfile, NULL, 0);
+    my_doc = xmlReadFile (faultfile, NULL, 0);
 
-    if (ef_doc == NULL) {
+    if (my_doc == NULL) {
         printf ("Could not parse file %s in get_eucafault()\n", 
                 faultfile);
         return NULL;
     }
-    return xmlDocGetRootElement(ef_doc);
+    return my_doc;
 }
 
 static xmlDoc *
 get_eucafaults_doc (xmlDoc *ef_doc)
 {
     xmlDoc *new_doc = NULL;
-    xmlNode *ef_root = NULL;
-    ef_root = get_eucafault("1234");
+/*     xmlDoc *ef_doc = NULL; */
+    new_doc = get_eucafault("1234");
 
 /*     if (new_doc == NULL) { */
 /*         printf ("get_eucafault() returned NULL in get_eucafaults_db()\n"); */
@@ -186,7 +186,7 @@ get_eucafaults_doc (xmlDoc *ef_doc)
 
     if (xmlDocGetRootElement(ef_doc) == NULL) {
         printf ("Creating new document root element.\n");
-        xmlDocSetRootElement(ef_doc, ef_root);
+        ef_doc = xmlCopyDoc(new_doc, 1); /* 1 means recursive copy */
     }
     // FIXME: Sanity check ^^^
 
@@ -203,8 +203,9 @@ print_element_names(xmlDoc *a_doc)
             //            printf("node type: Element, name:  %s\n", cur_node->name);
 /*             printf("(%06d)              value: %ls\n", depth, */
 /*                    (wchar_t *)cur_node->content); */
-    xmlElemDump(stdout, a_doc, xmlDocGetRootElement(a_doc));
-/*             xmlDocDump(stdout, a_doc); */
+/*     xmlElemDump(stdout, a_doc, xmlDocGetRootElement(a_doc)); */
+    printf("\n");
+             xmlDocDump(stdout, a_doc);
             printf("\n");
             //        }
         //print_element_names(cur_node->children);
@@ -250,13 +251,13 @@ int main (int argc, char ** argv)
 
     //fwprintf(stdout, L"\n%s\n", (wchar_t*)xmlGetProp(xmlFirstElementChild(efdb), (const xmlChar*)"id"));
 
-    ef_doc = xmlNewDoc((xmlChar *)"1.0");
+/*     ef_doc = xmlNewDoc((xmlChar *)"1.0"); */
 
     log_fault("1234", "dir", "/this/is/a/directory", "user", 
               "this is a user", NULL);
     log_fault("12345", "di", "/this/is/a/", NULL);
 
-    get_eucafaults_doc (ef_doc);
+    ef_doc = get_eucafaults_doc (ef_doc);
     print_element_names (ef_doc);/*, xmlDocGetRootElement(ef_doc));*/
 
     return 0;
