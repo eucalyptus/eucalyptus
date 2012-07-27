@@ -150,7 +150,7 @@ public class NioServerHandler extends SimpleChannelUpstreamHandler {//TODO:GRZE:
       final FilteredPipeline filteredPipeline = Pipelines.find( request );
       if ( this.pipeline.compareAndSet( null, filteredPipeline ) ) {
         this.pipeline.get( ).unroll( ctx.getPipeline( ) );
-        final Ats ats = Ats.from( filteredPipeline );
+        final Ats ats = Ats.inClassHierarchy( filteredPipeline );
         Handlers.addComponentHandlers(
             ats.has(ComponentPart.class) ? ats.get(ComponentPart.class).value() : null,
             ctx.getPipeline() );

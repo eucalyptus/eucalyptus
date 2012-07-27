@@ -63,6 +63,7 @@
 
 package com.eucalyptus.ws;
 
+import static com.eucalyptus.component.ComponentId.ComponentMessage;
 import static com.eucalyptus.component.ComponentId.ComponentPart;
 import java.net.URI;
 import java.util.HashMap;
@@ -435,8 +436,8 @@ public class Handlers {
       if ( channelEvent instanceof MessageEvent && componentIdClass != null ) {
         final MessageEvent messageEvent = ( MessageEvent ) channelEvent;
         final Object message = messageEvent.getMessage( );
-        final ComponentId.ComponentMessage componentMessage = Ats.from( message ).get( ComponentId.ComponentMessage.class );
-        if ( !componentIdClass.equals( componentMessage.value() ) ) {
+        final ComponentMessage componentMessage = Ats.inClassHierarchy( message ).get( ComponentMessage.class );
+        if ( componentMessage == null || !componentIdClass.equals( componentMessage.value() ) ) {
           LOG.warn( "Message does not match pipeline component " + componentIdClass.getSimpleName() );
 
           final MappingHttpMessage mappingHttpMessage = MappingHttpMessage.extractMessage( channelEvent );
