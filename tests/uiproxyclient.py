@@ -15,11 +15,11 @@ class UIProxyClient(object):
     def __init__(self):
         pass
 
-    def login(self, username, password):
+    def login(self, account, username, password):
         # make request, storing cookie
         req = urllib2.Request("http://localhost:8888/")
         data = "action=login"
-        encoded_auth = base64.encodestring("%s:%s" % (username, password))[:-1]
+        encoded_auth = base64.encodestring("%s:%s:%s" % (account, username, password))[:-1]
         print "encoded "+encoded_auth
         req.add_header('Authorization', "Basic %s" % encoded_auth)
         response = urllib2.urlopen(req, data)
@@ -80,7 +80,7 @@ class UIProxyClient(object):
 if __name__ == "__main__":
     # make some calls to proxy class to test things out
     client = UIProxyClient()
-    client.login('test', 'testing123')
+    client.login('test', 'admin', 'testing123')
     print "=== Getting Zones ==="
     print client.get_zones()
 #    print 
