@@ -84,8 +84,6 @@ permission notice:
 #define DEFAULT_LOCALIZATION "ru" // Russian. :)
 #define THISFILE DISTRO_FAULTDIR "/" ENGLISH "/1234.xml"
 
-int depth = 0;
-
 /*
  * This is the order of priority (lowest to highest) for fault messages wrt
  * customization & localization.
@@ -99,6 +97,7 @@ enum faultdir_types {
 };
 
 static char faultdirs[NUM_FAULTDIR_TYPES][PATH_MAX];
+static xmlDoc *ef_doc = NULL;
 
 /*
  * Function prototypes
@@ -107,8 +106,8 @@ static char faultdirs[NUM_FAULTDIR_TYPES][PATH_MAX];
 static int initialize_faultdb (void);
 static int populate_faultdb (void);
 static xmlDoc *get_eucafault (const char *);
-static xmlDoc *get_eucafaults_doc (xmlDoc *a_doc);
-static void print_element_names(xmlDoc *a_doc);
+static void get_eucafaults_doc (void);
+static void print_element_names(void);
 
 static int
 initialize_faultdb (void)
@@ -167,12 +166,15 @@ get_eucafault (const char * fault_id)
         printf ("Could not parse file %s in get_eucafault()\n", 
                 faultfile);
         return NULL;
+    } else {
+        printf ("Successfully parsed file %s in get_eucafault()\n",
+                faultfile);
     }
     return my_doc;
 }
 
-static xmlDoc *
-get_eucafaults_doc (xmlDoc *ef_doc)
+void/* static xmlDoc * */
+get_eucafaults_doc (void)
 {
     xmlDoc *new_doc = NULL;
 /*     xmlDoc *ef_doc = NULL; */
@@ -188,14 +190,34 @@ get_eucafaults_doc (xmlDoc *ef_doc)
         printf ("Creating new document root element.\n");
         ef_doc = xmlCopyDoc(new_doc, 1); /* 1 means recursive copy */
     }
+    xmlFreeDoc(new_doc);
+
+    //print_element_names();
+
+    new_doc = get_eucafault("1236");
+    if (xmlDocGetRootElement(ef_doc) == NULL) {
+        printf ("Creating new document root element.\n");
+        ef_doc = xmlCopyDoc(new_doc, 1); /* 1 means recursive copy */
+    } else {
+        printf ("Appending to existing document root element.\n");
+        //        if (xmlDocCopyNodeList(ef_doc, xmlDocGetRootElement(new_doc)) == NULL) {
+        if (xmlAddNextSibling(xmlFirstElementChild(xmlDocGetRootElement(ef_doc)),
+                              xmlFirstElementChild(xmlDocGetRootElement(new_doc))) == NULL) {
+            printf ("*** Problem appending!");
+        }
+    } 
+    //xmlFreeDoc(new_doc);
+   
+
     // FIXME: Sanity check ^^^
 
-    return ef_doc;
+/*     return ef_doc; */
 }
 
 static void
-print_element_names(xmlDoc *a_doc)
+print_element_names(void)
 {
+    static int depth = 0;
     xmlNode *cur_node = NULL;
     ++depth;
     //    for (cur_node = a_node; cur_node; cur_node = cur_node->next) {
@@ -205,7 +227,7 @@ print_element_names(xmlDoc *a_doc)
 /*                    (wchar_t *)cur_node->content); */
 /*     xmlElemDump(stdout, a_doc, xmlDocGetRootElement(a_doc)); */
     printf("\n");
-             xmlDocDump(stdout, a_doc);
+             xmlDocDump(stdout, ef_doc);
             printf("\n");
             //        }
         //print_element_names(cur_node->children);
@@ -244,8 +266,6 @@ log_fault (char *fault_id, ...)
 int main (int argc, char ** argv)
 {
     xmlNode *ef_root = NULL;
-    xmlDoc *ef_doc = NULL;
-
 
     //printf("\n%s\n\n", xmlGetProp(xmlFirstElementChild(xmlFirstElementChild(efdb)), (const xmlChar*)"localized"));
 
@@ -257,8 +277,8 @@ int main (int argc, char ** argv)
               "this is a user", NULL);
     log_fault("12345", "di", "/this/is/a/", NULL);
 
-    ef_doc = get_eucafaults_doc (ef_doc);
-    print_element_names (ef_doc);/*, xmlDocGetRootElement(ef_doc));*/
+    get_eucafaults_doc ();
+    print_element_names ();/*, xmlDocGetRootElement(ef_doc));*/
 
     return 0;
 }
