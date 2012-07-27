@@ -75,6 +75,7 @@ import org.apache.xml.security.utils.Base64;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.crypto.Hmac;
+import com.google.common.base.Strings;
 
 public class Hmacv1LoginModule extends HmacLoginModuleSupport {
   private static Logger LOG = Logger.getLogger( Hmacv1LoginModule.class );
@@ -108,7 +109,7 @@ public class Hmacv1LoginModule extends HmacLoginModuleSupport {
     Set<String> sortedKeys = new TreeSet<String>( String.CASE_INSENSITIVE_ORDER );
     sortedKeys.addAll( parameters.keySet( ) );
     for ( String key : sortedKeys )
-      paramString = paramString.concat( key ).concat( parameters.get( key ).replaceAll( "\\+", " " ) );
+      paramString = paramString.concat( key ).concat( Strings.nullToEmpty( parameters.get(key) ).replaceAll("\\+", " ") );
     try {
       return new String(URLCodec.decodeUrl( paramString.getBytes() ) );
     } catch ( DecoderException e ) {

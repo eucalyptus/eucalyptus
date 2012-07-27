@@ -63,6 +63,8 @@
 package com.eucalyptus.cluster;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -74,6 +76,7 @@ import org.mule.api.MuleException;
 import org.mule.api.lifecycle.Startable;
 import com.eucalyptus.cluster.ResourceState.VmTypeAvailability;
 import com.eucalyptus.component.Component;
+import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceUris;
@@ -83,8 +86,10 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.vm.VmType;
 import com.eucalyptus.vm.VmTypes;
 import com.google.common.base.Function;
+import com.google.common.base.Objects;
 import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.NodeInfo;
@@ -277,25 +282,22 @@ public class ClusterEndpoint implements Startable {
                                                                                }
                                                                              };
   
-  public DescribeRegionsResponseType DescribeRegions( DescribeRegionsType request ) {//TODO:GRZE:URGENT fix the behaviour here.
-    DescribeRegionsResponseType reply = ( DescribeRegionsResponseType ) request.getReply( );
-    try {//TODO:GRZE:wtfugly
-      Component euca = Components.lookup( Eucalyptus.class );
-      NavigableSet<ServiceConfiguration> configs = euca.services( );
-      if ( !configs.isEmpty( ) && Component.State.ENABLED.equals( configs.first( ).lookupState( ) ) ) {
-        reply.getRegionInfo( ).add( new RegionInfoType( euca.getComponentId( ).name( ), ServiceUris.remotePublicify( configs.first( ) ).toASCIIString( ) ) );
+  public DescribeRegionsResponseType DescribeRegions( final DescribeRegionsType request ) {//TODO:GRZE:URGENT fix the behaviour here.
+    final DescribeRegionsResponseType reply = ( DescribeRegionsResponseType ) request.getReply( );
+    final Collection<String> regions = Objects.firstNonNull(request.getRegions(), Collections.<String>emptyList());
+    for ( final Class<? extends ComponentId> componentIdClass : ImmutableList.of(Eucalyptus.class, Walrus.class) ) {
+      try {
+        final Component component = Components.lookup( componentIdClass );
+        final String region = component.getComponentId( ).name();        
+        if ( regions.isEmpty() || regions.contains( region ) ) { 
+          final NavigableSet<ServiceConfiguration> configs = component.services( );
+          if ( !configs.isEmpty( ) && Component.State.ENABLED.equals( configs.first( ).lookupState( ) ) ) {
+            reply.getRegionInfo( ).add( new RegionInfoType( region, ServiceUris.remotePublicify( configs.first( ) ).toASCIIString( ) ) );
+          }
+        }
+      } catch ( NoSuchElementException ex ) {
+        LOG.error( ex, ex );
       }
-    } catch ( NoSuchElementException ex ) {
-      LOG.error( ex, ex );
-    }
-    try {//TODO:GRZE:wtfugly
-      Component walrus = Components.lookup( Walrus.class );
-      NavigableSet<ServiceConfiguration> configs = walrus.services( );
-      if ( !configs.isEmpty( ) && Component.State.ENABLED.equals( configs.first( ).lookupState( ) ) ) {
-        reply.getRegionInfo( ).add( new RegionInfoType( walrus.getComponentId( ).name( ), ServiceUris.remotePublicify( configs.first( ) ).toASCIIString( ) ) );
-      }
-    } catch ( NoSuchElementException ex ) {
-      LOG.error( ex, ex );
     }
     return reply;
   }
