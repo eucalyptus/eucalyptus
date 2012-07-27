@@ -483,7 +483,11 @@ public class VmInstances {
   public static VmInstance lookup( final String name ) throws NoSuchElementException, TerminatedInstanceException {
     return PersistentLookup.INSTANCE.apply( name );
   }
-  
+
+  public static Function<String,VmInstance> lookup() {
+    return PersistentLookup.INSTANCE;
+  }
+
   public static VmInstance register( final VmInstance vm ) {
     if ( !terminateDescribeCache.containsKey( vm.getInstanceId( ) ) ) {
       return Transitions.REGISTER.apply( vm );
