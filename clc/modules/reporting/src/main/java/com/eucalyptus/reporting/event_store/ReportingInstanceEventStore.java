@@ -22,24 +22,40 @@ public class ReportingInstanceEventStore
 		}
 		return instance;
 	}
-	
+
+	private final Set<String> alreadyHaveAttrUuids;
+
 	private ReportingInstanceEventStore()
 	{
-		
+		this.alreadyHaveAttrUuids = new HashSet<String>();	
 	}
 
-	public void insertCreateEvent(String uuid, long timestampMs, String instanceId,
+	/**
+	 * This can be called repeatedly and only one event will be stored in the database.
+	 */
+	public void insertAttributesEvent(String uuid, long timestampMs, String instanceId,
 			String instanceType, String userId, String clusterName, String availabilityZone)
-	{		
-		EntityWrapper<ReportingInstanceCreateEvent> entityWrapper =
-			EntityWrapper.get(ReportingInstanceCreateEvent.class);
+	{
+		EntityWrapper<ReportingInstanceAttributeEvent> entityWrapper =
+			EntityWrapper.get(ReportingInstanceAttributeEvent.class);
 
 		try {
-			ReportingInstanceCreateEvent event = new ReportingInstanceCreateEvent(uuid, timestampMs,
-					instanceId, instanceType, userId, clusterName, availabilityZone);
-			entityWrapper.add(event);
-			entityWrapper.commit();
-			LOG.debug("Added event to db:" + event);
+			/* NOTE: it's possible that the CLC has rebooted and cleared out this cache of
+			 * uuids, in which case the uuid would have already been inserted. The database
+			 * column has a unique constraint and the subsequent insertion will fail, which is
+			 * what we want in this case. There are more elegant ways of doing this which
+			 * I'll explore later. -tw
+			 */
+			if (!alreadyHaveAttrUuids.contains(uuid)) {
+				ReportingInstanceAttributeEvent event =
+					new ReportingInstanceAttributeEvent(uuid, timestampMs, instanceId, instanceType,
+							userId, clusterName, availabilityZone);
+
+				entityWrapper.add(event);
+				entityWrapper.commit();
+				alreadyHaveAttrUuids.add(uuid);
+				LOG.debug("Added event to db:" + event);
+			}
 		} catch (Exception ex) {
 			LOG.error(ex);
 			entityWrapper.rollback();
@@ -47,15 +63,21 @@ public class ReportingInstanceEventStore
 		}					
 	}
 
-	public void insertUsageEvent(String uuid, long timestampMs, Long cumulativeNetIoMegs,
-			Long cumulativeDiskIoMegs, Integer cpuUtilizationPercent)
+	public void insertUsageEvent(String uuid, long timestampMs, Long cumulativeDiskIoMegs,
+			Integer cpuUtilizationPercent, Long cumulativeNetIncomingMegsBetweenZones,
+			Long cumulateiveNetIncomingMegsWithinZone, Long cumulativeNetIncomingMegsPublicIp,
+			Long cumulativeNetOutgoingMegsBetweenZones,	Long cumulateiveNetOutgoingMegsWithinZone,
+			Long cumulativeNetOutgoingMegsPublicIp)
 	{
 		EntityWrapper<ReportingInstanceUsageEvent> entityWrapper =
 			EntityWrapper.get(ReportingInstanceUsageEvent.class);
 
 		try {
 			ReportingInstanceUsageEvent event = new ReportingInstanceUsageEvent(uuid, timestampMs,
-					cumulativeNetIoMegs, cumulativeDiskIoMegs, cpuUtilizationPercent);
+					cumulativeDiskIoMegs, cpuUtilizationPercent, cumulativeNetIncomingMegsBetweenZones,
+					cumulateiveNetIncomingMegsWithinZone, cumulativeNetIncomingMegsPublicIp,
+					cumulativeNetOutgoingMegsBetweenZones, cumulateiveNetOutgoingMegsWithinZone,
+					cumulativeNetOutgoingMegsPublicIp);
 			entityWrapper.add(event);
 			entityWrapper.commit();
 			LOG.debug("Added event to db:" + event);

@@ -85,5 +85,42 @@ public class ReportingVolumeEventStore
 		}							
 	}
 
+	
+	public void insertAttachEvent(String uuid, String instanceUuid, long timestampMs)
+	{
+		EntityWrapper<ReportingVolumeUsageEvent> entityWrapper =
+			EntityWrapper.get(ReportingVolumeAttachEvent.class);
+
+		try {
+			ReportingVolumeAttachEvent event = new ReportingVolumeAttachEvent(uuid, instanceUuid, timestampMs);
+			entityWrapper.add(event);
+			entityWrapper.commit();
+			LOG.debug("Added event to db:" + event);
+		} catch (Exception ex) {
+			LOG.error(ex);
+			entityWrapper.rollback();
+			throw new RuntimeException(ex);
+		}							
+		
+	}
+	
+	public void insertDetachEvent(String uuid, String instanceUuid, long timestampMs)
+	{
+		EntityWrapper<ReportingVolumeUsageEvent> entityWrapper =
+			EntityWrapper.get(ReportingVolumeDetachEvent.class);
+
+		try {
+			ReportingVolumeDetachEvent event = new ReportingVolumeDetachEvent(uuid, instanceUuid, timestampMs);
+			entityWrapper.add(event);
+			entityWrapper.commit();
+			LOG.debug("Added event to db:" + event);
+		} catch (Exception ex) {
+			LOG.error(ex);
+			entityWrapper.rollback();
+			throw new RuntimeException(ex);
+		}							
+		
+	}
+	
 }
 

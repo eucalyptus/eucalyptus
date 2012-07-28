@@ -9,11 +9,11 @@ import com.eucalyptus.entities.AbstractPersistent;
 @SuppressWarnings("serial")
 @Entity @javax.persistence.Entity
 @PersistenceContext(name="eucalyptus_reporting")
-@Table(name="reporting_instance_create_events")
-public class ReportingInstanceCreateEvent
+@Table(name="reporting_instance_attribute_events")
+public class ReportingInstanceAttributeEvent
 	extends AbstractPersistent
 {
-	@Column(name="uuid")
+	@Column(name="uuid",unique=true)
 	private String uuid;
 	@Column(name="timestamp_ms", nullable=false)
 	private Long timestampMs;
@@ -32,7 +32,7 @@ public class ReportingInstanceCreateEvent
 	/**
  	 * <p>Do not instantiate this class directly; use the ReportingInstanceEventStore class.
  	 */
-	protected ReportingInstanceCreateEvent()
+	protected ReportingInstanceAttributeEvent()
 	{
 		//NOTE: hibernate will overwrite these
 		this.uuid = null;
@@ -47,7 +47,7 @@ public class ReportingInstanceCreateEvent
 	/**
  	 * <p>Do not instantiate this class directly; use the ReportingInstanceEventStore class.
  	 */
-	ReportingInstanceCreateEvent(String uuid, Long timestampMs, String instanceId, String instanceType,
+	ReportingInstanceAttributeEvent(String uuid, Long timestampMs, String instanceId, String instanceType,
 				String userId, String clusterName, String availabilityZone)
 	{
 		this.uuid = uuid;
@@ -110,7 +110,7 @@ public class ReportingInstanceCreateEvent
 	{
 		if (this == obj) return true;
 		if (getClass() != obj.getClass()) return false;
-		ReportingInstanceCreateEvent other = (ReportingInstanceCreateEvent) obj;
+		ReportingInstanceAttributeEvent other = (ReportingInstanceAttributeEvent) obj;
 		if (uuid == null) {
 			if (other.uuid != null)
 				return false;

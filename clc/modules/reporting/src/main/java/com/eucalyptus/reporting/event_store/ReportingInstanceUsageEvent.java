@@ -20,8 +20,18 @@ public class ReportingInstanceUsageEvent
 	protected String uuid;
 	@Column(name="timestamp_ms", nullable=false)
 	protected Long timestampMs;
-	@Column(name="cumulative_net_io_megs", nullable=true)
-	protected Long cumulativeNetIoMegs;
+	@Column(name="cumulative_net_incoming_megs_within_zone", nullable=true)
+	protected Long cumulativeNetIncomingMegsWithinZone;
+	@Column(name="cumulative_net_incoming_megs_between_zones", nullable=true)
+	protected Long cumulativeNetIncomingMegsBetweenZones;
+	@Column(name="cumulative_net_incoming_megs_public_ip", nullable=true)
+	protected Long cumulativeNetIncomingMegsPublic;
+	@Column(name="cumulative_net_outgoing_megs_within_zone", nullable=true)
+	protected Long cumulativeNetOutgoingMegsWithinZone;
+	@Column(name="cumulative_net_outgoing_megs_between_zones", nullable=true)
+	protected Long cumulativeNetOutgoingMegsBetweenZones;
+	@Column(name="cumulative_net_outgoing_megs_public_ip", nullable=true)
+	protected Long cumulativeNetOutgoingMegsPublic;
 	@Column(name="cumulative_disk_io_megs", nullable=true)
 	protected Long cumulativeDiskIoMegs;
 	@Column(name="cpu_utilization_percent", nullable=true)
@@ -33,14 +43,21 @@ public class ReportingInstanceUsageEvent
 		//hibernate will override these thru reflection despite finality
 		this.uuid = null;
 		this.timestampMs = null;
-		this.cumulativeNetIoMegs = null;
+		this.cumulativeNetIncomingMegsBetweenZones = null;
+		this.cumulativeNetIncomingMegsWithinZone = null;
+		this.cumulativeNetIncomingMegsPublic = null;
+		this.cumulativeNetOutgoingMegsBetweenZones = null;
+		this.cumulativeNetOutgoingMegsWithinZone = null;
+		this.cumulativeNetOutgoingMegsPublic = null;
 		this.cumulativeDiskIoMegs = null;
 		this.cpuUtilizationPercent = null;
 	}
 
-	ReportingInstanceUsageEvent(String uuid, Long timestampMs,
-			Long cumulativeNetIoMegs, Long cumulativeDiskIoMegs,
-			Integer cpuUtilizationPercent)
+	ReportingInstanceUsageEvent(String uuid, Long timestampMs, Long cumulativeDiskIoMegs,
+			Integer cpuUtilizationPercent, Long cumulativeNetIncomingMegsBetweenZones,
+			Long cumulativeNetIncomingMegsWithinZone, Long cumulativeNetIncomingMegsPublicIp,
+			Long cumulativeNetOutgoingMegsBetweenZones,	Long cumulativeNetOutgoingMegsWithinZone,
+			Long cumulativeNetOutgoingMegsPublicIp)
 	{
 		if (timestampMs == null)
 			throw new IllegalArgumentException("timestampMs can't be null");
@@ -48,9 +65,14 @@ public class ReportingInstanceUsageEvent
 			throw new IllegalArgumentException("uuid can't be null");
 		this.uuid = uuid;
 		this.timestampMs = timestampMs;
-		this.cumulativeNetIoMegs = cumulativeNetIoMegs;
 		this.cumulativeDiskIoMegs = cumulativeDiskIoMegs;
 		this.cpuUtilizationPercent = cpuUtilizationPercent;
+		this.cumulativeNetIncomingMegsBetweenZones = cumulativeNetIncomingMegsBetweenZones;
+		this.cumulativeNetIncomingMegsWithinZone = cumulativeNetIncomingMegsWithinZone;
+		this.cumulativeNetIncomingMegsPublic = cumulativeNetIncomingMegsPublicIp;
+		this.cumulativeNetOutgoingMegsBetweenZones = cumulativeNetOutgoingMegsBetweenZones;
+		this.cumulativeNetOutgoingMegsWithinZone = cumulativeNetOutgoingMegsWithinZone;
+		this.cumulativeNetOutgoingMegsPublic = cumulativeNetOutgoingMegsPublicIp;
 	}
 
 	public String getUuid()
@@ -63,14 +85,57 @@ public class ReportingInstanceUsageEvent
 		return timestampMs;
 	}
 	
+
+	
 	/**
 	 * @return Can return null, which indicates unknown usage and not zero usage.
 	 */
-	public Long getCumulativeNetIoMegs()
+	public Long getCumulativeNetIncomingMegsWithinZone()
 	{
-		return cumulativeNetIoMegs;
+		return cumulativeNetIncomingMegsWithinZone;
 	}
+
+	/**
+	 * @return Can return null, which indicates unknown usage and not zero usage.
+	 */
+	public Long getCumulativeNetIncomingMegsBetweenZones()
+	{
+		return cumulativeNetIncomingMegsBetweenZones;
+	}
+
+	/**
+	 * @return Can return null, which indicates unknown usage and not zero usage.
+	 */
+	public Long getCumulativeNetIncomingMegsPublic()
+	{
+		return cumulativeNetIncomingMegsPublic;
+	}
+
+	/**
+	 * @return Can return null, which indicates unknown usage and not zero usage.
+	 */
+	public Long getCumulativeNetOutgoingMegsWithinZone()
+	{
+		return cumulativeNetOutgoingMegsWithinZone;
+	}
+
+	/**
+	 * @return Can return null, which indicates unknown usage and not zero usage.
+	 */
+	public Long getCumulativeNetOutgoingMegsBetweenZones()
+	{
+		return cumulativeNetOutgoingMegsBetweenZones;
+	}
+
 	
+	/**
+	 * @return Can return null, which indicates unknown usage and not zero usage.
+	 */
+	public Long getCumulativeNetOutgoingMegsPublic()
+	{
+		return cumulativeNetOutgoingMegsPublic;
+	}
+
 	/**
 	 * @return Can return null, which indicates unknown usage and not zero usage.
 	 */
@@ -90,7 +155,7 @@ public class ReportingInstanceUsageEvent
 	@Override
 	public String toString()
 	{
-		return "[timestamp: " + this.timestampMs + " cumulNetIoMegs:" + this.cumulativeNetIoMegs + " cumulDiskIoMegs:" + this.cumulativeDiskIoMegs + " cpuUtilization%:" + cpuUtilizationPercent + "]";
+		return "[timestamp: " + this.timestampMs + " cumulDiskIoMegs:" + this.cumulativeDiskIoMegs + " cpuUtilization%:" + cpuUtilizationPercent + "]";
 	}
 	
 	@Override
