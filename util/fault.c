@@ -89,14 +89,18 @@ permission notice:
 #define XML_SUFFIX ".xml"
 
 /*
- * This is the order of priority (lowest to highest) for fault messages wrt
+ * This is the order of priority (highest to lowest) for fault messages wrt
  * customization & localization.
+ *
+ * Once a fault id has been found and added to the in-memory repository,
+ * all further occurrences of that fault in lower-priority faultdirs will
+ * be ignored.
  */
 enum faultdir_types {
-    DISTRO_ENGLISH = 0,         /* Please don't change the 0. */
-    DISTRO_LOCAL,
-    CUSTOM_ENGLISH,
     CUSTOM_LOCAL,
+    CUSTOM_ENGLISH,
+    DISTRO_LOCAL,
+    DISTRO_ENGLISH,
     NUM_FAULTDIR_TYPES,         /* For keeping score */
 };
 
@@ -112,7 +116,6 @@ static pthread_mutex_t fault_mutex = PTHREAD_MUTEX_INITIALIZER;
  * Function prototypes
  */
 static int initialize_faultdb (void);
-static int populate_faultdb (void);
 static xmlDoc *get_eucafault (const char *, const char *);
 static int get_eucafaults_doc (void);
 static void print_element_names(void);
@@ -164,30 +167,33 @@ initialize_faultdb (void)
               DISTRO_FAULTDIR, ENGLISH);
 
     /* Not really sure how useful this is or will be. */
-    for(int i=0; i<NUM_FAULTDIR_TYPES; i++){
-        //printf ("%s:\n", faultdirs[i]);
+    for(int i = 0; i < NUM_FAULTDIR_TYPES; i++){
         if (stat(faultdirs[i], &dirstat) != 0) {
-            printf("*** Problem with %s:\n", faultdirs[i]);
-            perror("    stat()");
-            printf("\n");
-            /* FIXME: Expunge from list? Set flag? */
-            /*
-        } else if (S_ISDIR(dirstat.st_mode)) {
-            printf("...ok, is a directory.\n");
+            printf ("*** Problem with %s:\n", faultdirs[i]);
+            perror ("    stat()");
+        } else if (!S_ISDIR(dirstat.st_mode)) {
+            printf ("*** Problem with %s:\n", faultdirs[i]);
+            printf ("    Not a directory\n");
         } else {
-            printf("...NOT OK--not a directory!\n");
-            */
+            struct dirent **namelist;
+            int numfaults = scandir (faultdirs[i], &namelist, &scandir_filter,
+                                     alphasort);
+            if (numfaults == 0) {
+                printf ("*** No faults found in %s\n", faultdirs[i]);
+            } else {
+                printf ("... found %d faults in %s\n", numfaults, faultdirs[i]);
+                while (numfaults--) {
+                    get_eucafault (faultdirs[i], namelist[numfaults]->d_name);
+                }
+            }
+                    
         }
     }
-    populate = populate_faultdb ();
+    populate = get_eucafaults_doc();
+/*     populate = populate_faultdb (); */
     pthread_mutex_unlock(&fault_mutex);
-    return populate;
-}
 
-static int
-populate_faultdb (void)
-{
-    return get_eucafaults_doc ();
+    return populate;
 }
 
 static xmlDoc *
@@ -201,7 +207,9 @@ get_eucafault (const char * faultdir, const char * fault_id)
         printf ("(...looks like fault %s already exists?)\n", fault_id);
     }
     // FIXME: Hard-coded path for testing!
-    snprintf (faultfile, PATH_MAX - 1, "%s/%s.xml", faultdir, fault_id);
+/*     snprintf (faultfile, PATH_MAX - 1, "%s/%s%s", faultdir, fault_id, */
+/*               XML_SUFFIX); */
+    snprintf (faultfile, PATH_MAX - 1, "%s/%s", faultdir, fault_id);
     
     my_doc = xmlParseFile (faultfile);
     // FIXME: Should sanity check that fault id in file matches filename?
