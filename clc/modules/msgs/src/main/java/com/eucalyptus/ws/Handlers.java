@@ -434,11 +434,13 @@ public class Handlers {
     public void handleUpstream( final ChannelHandlerContext channelHandlerContext,
                                 final ChannelEvent channelEvent ) throws Exception {
       if ( channelEvent instanceof MessageEvent && componentIdClass != null ) {
-        final MessageEvent messageEvent = ( MessageEvent ) channelEvent;
-        final Object message = messageEvent.getMessage( );
-        final ComponentMessage componentMessage = Ats.inClassHierarchy( message ).get( ComponentMessage.class );
+        final BaseMessage message = BaseMessage.extractMessage( channelEvent );
+        final ComponentMessage componentMessage = message==null ? null :
+            Ats.inClassHierarchy( message ).get( ComponentMessage.class );
         if ( componentMessage == null || !componentIdClass.equals( componentMessage.value() ) ) {
-          LOG.warn( "Message does not match pipeline component " + componentIdClass.getSimpleName() );
+          LOG.warn( String.format("Message %s does not match pipeline component %s",
+              message==null ? "NULL" : message.getClass(),
+              componentIdClass.getSimpleName() ) );
 
           final MappingHttpMessage mappingHttpMessage = MappingHttpMessage.extractMessage( channelEvent );
           final BaseMessage baseMessage = BaseMessage.extractMessage( channelEvent );
