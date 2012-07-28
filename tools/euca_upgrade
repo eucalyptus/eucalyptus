@@ -247,9 +247,6 @@ for f in $(echo ${UP_SAMEVERSION} ${UP_KEYS} ${UP_DB} ${UP_CONF}); do
   fi
 done
 
-if [ -f "$EUCALYPTUS/usr/sbin/euca_conf" ]; then
-    $EUCALYPTUS/usr/sbin/euca_conf --setup
-fi
 ## NOTE: Don't bother reading past here.
 
 
