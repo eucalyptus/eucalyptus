@@ -2,7 +2,7 @@
 <eucafaults version="1" description="Templates for the fault subsystem">
   <fault
     id="1236"
-    message="ESX host ${hostIp} is not accessible any more">
+    message="ESX(i) host ${hostIp} is not accessible any more">
 
     <condition
       message="can't issue requests for host ${hostIp}"/>

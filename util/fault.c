@@ -105,7 +105,7 @@ static xmlDoc *ef_doc = NULL;
 
 static int initialize_faultdb (void);
 static int populate_faultdb (void);
-static xmlDoc *get_eucafault (const char *);
+static xmlDoc *get_eucafault (const char *, const char *);
 static void get_eucafaults_doc (void);
 static void print_element_names(void);
 
@@ -151,16 +151,15 @@ populate_faultdb (void)
 }
 
 static xmlDoc *
-get_eucafault (const char * fault_id)
+get_eucafault (const char * faultdir, const char * fault_id)
 {
     xmlDoc *my_doc = NULL;
     char faultfile[PATH_MAX];
 
     // FIXME: Hard-coded path for testing!
-    snprintf (faultfile, PATH_MAX - 1, "%s/%s.xml", faultdirs[DISTRO_ENGLISH],
-              fault_id);
+    snprintf (faultfile, PATH_MAX - 1, "%s/%s.xml", faultdir, fault_id);
     
-    my_doc = xmlReadFile (faultfile, NULL, 0);
+    my_doc = xmlParseFile (faultfile);
 
     if (my_doc == NULL) {
         printf ("Could not parse file %s in get_eucafault()\n", 
@@ -173,45 +172,57 @@ get_eucafault (const char * fault_id)
     return my_doc;
 }
 
-void/* static xmlDoc * */
+void
 get_eucafaults_doc (void)
 {
     xmlDoc *new_doc = NULL;
-/*     xmlDoc *ef_doc = NULL; */
-    new_doc = get_eucafault("1234");
-
-/*     if (new_doc == NULL) { */
-/*         printf ("get_eucafault() returned NULL in get_eucafaults_db()\n"); */
-/*         return NULL; */
-/*     } */
-/*     ef_root = xmlDocGetRootElement(new_doc); */
+    new_doc = get_eucafault(faultdirs[DISTRO_ENGLISH], "1234");
 
     if (xmlDocGetRootElement(ef_doc) == NULL) {
-        printf ("Creating new document root element.\n");
+        printf ("Creating new document.\n");
         ef_doc = xmlCopyDoc(new_doc, 1); /* 1 means recursive copy */
     }
     xmlFreeDoc(new_doc);
 
-    //print_element_names();
-
-    new_doc = get_eucafault("1236");
+    new_doc = get_eucafault(faultdirs[DISTRO_ENGLISH], "1235");
     if (xmlDocGetRootElement(ef_doc) == NULL) {
-        printf ("Creating new document root element.\n");
-        ef_doc = xmlCopyDoc(new_doc, 1); /* 1 means recursive copy */
+        printf ("Creating new document.\n");
+        ef_doc = xmlCopyDoc(new_doc, 1);
     } else {
-        printf ("Appending to existing document root element.\n");
-        //        if (xmlDocCopyNodeList(ef_doc, xmlDocGetRootElement(new_doc)) == NULL) {
+        printf ("Appending to existing document.\n");
         if (xmlAddNextSibling(xmlFirstElementChild(xmlDocGetRootElement(ef_doc)),
                               xmlFirstElementChild(xmlDocGetRootElement(new_doc))) == NULL) {
             printf ("*** Problem appending!");
         }
     } 
-    //xmlFreeDoc(new_doc);
-   
+    xmlFreeDoc(new_doc);
 
-    // FIXME: Sanity check ^^^
+    new_doc = get_eucafault(faultdirs[DISTRO_ENGLISH], "1236");
+    if (xmlDocGetRootElement(ef_doc) == NULL) {
+        printf ("Creating new document.\n");
+        ef_doc = xmlCopyDoc(new_doc, 1);
+    } else {
+        printf ("Appending to existing document.\n");
+        if (xmlAddNextSibling(xmlFirstElementChild(xmlDocGetRootElement(ef_doc)),
+                              xmlFirstElementChild(xmlDocGetRootElement(new_doc))) == NULL) {
+            printf ("*** Problem appending!");
+        }
+    } 
+    xmlFreeDoc(new_doc);
 
-/*     return ef_doc; */
+    new_doc = get_eucafault(faultdirs[DISTRO_LOCAL], "1236");
+    if (xmlDocGetRootElement(ef_doc) == NULL) {
+        printf ("Creating new document.\n");
+        ef_doc = xmlCopyDoc(new_doc, 1);
+    } else {
+        printf ("Appending to existing document.\n");
+        if (xmlAddNextSibling(xmlFirstElementChild(xmlDocGetRootElement(ef_doc)),
+                              xmlFirstElementChild(xmlDocGetRootElement(new_doc))) == NULL) {
+            printf ("*** Problem appending!");
+        }
+    } 
+    xmlFreeDoc(new_doc);
+
 }
 
 static void
@@ -265,20 +276,14 @@ log_fault (char *fault_id, ...)
 #ifdef _UNIT_TEST
 int main (int argc, char ** argv)
 {
-    xmlNode *ef_root = NULL;
-
-    //printf("\n%s\n\n", xmlGetProp(xmlFirstElementChild(xmlFirstElementChild(efdb)), (const xmlChar*)"localized"));
-
-    //fwprintf(stdout, L"\n%s\n", (wchar_t*)xmlGetProp(xmlFirstElementChild(efdb), (const xmlChar*)"id"));
-
-/*     ef_doc = xmlNewDoc((xmlChar *)"1.0"); */
-
     log_fault("1234", "dir", "/this/is/a/directory", "user", 
               "this is a user", NULL);
     log_fault("12345", "di", "/this/is/a/", NULL);
 
     get_eucafaults_doc ();
-    print_element_names ();/*, xmlDocGetRootElement(ef_doc));*/
+    print_element_names ();
+
+
 
     return 0;
 }
