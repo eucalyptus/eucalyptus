@@ -64,6 +64,7 @@ permission notice:
 
 #define _GNU_SOURCE
 
+#include <dirent.h>
 #include <errno.h>
 #include <limits.h>
 #include <pthread.h>
@@ -85,6 +86,7 @@ permission notice:
 #define ENGLISH "en_US"
 #define DEFAULT_LOCALIZATION "ru" // Russian. :)
 #define THISFILE DISTRO_FAULTDIR "/" ENGLISH "/1234.xml"
+#define XML_SUFFIX ".xml"
 
 /*
  * This is the order of priority (lowest to highest) for fault messages wrt
@@ -115,6 +117,28 @@ static xmlDoc *get_eucafault (const char *, const char *);
 static int get_eucafaults_doc (void);
 static void print_element_names(void);
 static int fault_id_exists (const char *);
+static int scandir_filter (const struct dirent *);
+static int str_end_cmp (const char *, const char *);
+
+static int
+str_end_cmp(const char *str, const char *suffix)
+{
+    if (!str || !suffix) {
+        return 0;
+    }
+    size_t lenstr = strlen(str);
+    size_t lensuffix = strlen(suffix);
+    if (lensuffix >  lenstr) {
+        return 0;
+    }
+    return strncmp(str + lenstr - lensuffix, suffix, lensuffix) == 0;
+}
+
+static int
+scandir_filter (const struct dirent *entry)
+{
+    return str_end_cmp (entry->d_name, XML_SUFFIX);
+}
 
 static int
 initialize_faultdb (void)
@@ -253,12 +277,18 @@ get_eucafaults_doc (void)
 static int
 fault_id_exists (const char *id)
 {
+    /*
+     * Does case-insensitive string comparison on the attribute name & value.
+     * (These are technically case-sensitive in XML, but I believe in being
+     * forgiving of minor transgressions--makes for happier users.
+     */
     for (xmlNode *node = xmlFirstElementChild(xmlDocGetRootElement(ef_doc));
          node; node = node->next) {
         if (node->type == XML_ELEMENT_NODE) {
             for (xmlAttr *attr = node->properties; attr; attr = attr->next) {
-                if (!strcmp((const char *)attr->name, "id")) {
-                    if (!strcmp((const char *)attr->children->content, id)) {
+                if (!strcasecmp((const char *)attr->name, "id")) {
+                    if (!strcasecmp((const char *)attr->children->content,
+                                    id)) {
                         return 1;
                     }
                 }
@@ -326,11 +356,15 @@ log_fault (char *fault_id, ...)
 #ifdef _UNIT_TEST
 int main (int argc, char ** argv)
 {
-
+    
     if (argc > 1) {
         log_fault(argv[1], NULL); /* FIXME: Add passing argv parameters. */
     }
     //print_element_names ();
+    printf("\n%d\n", str_end_cmp ("foo.xm", XML_SUFFIX));
+    printf("%d\n", str_end_cmp ("foo.xml", XML_SUFFIX));
+    printf("%d\n", str_end_cmp ("foo.xmlm", XML_SUFFIX));
+
     return 0;
 }
 #endif // _UNIT_TEST
