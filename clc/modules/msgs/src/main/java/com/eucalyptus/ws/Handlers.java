@@ -437,9 +437,9 @@ public class Handlers {
         final BaseMessage message = BaseMessage.extractMessage( channelEvent );
         final ComponentMessage componentMessage = message==null ? null :
             Ats.inClassHierarchy( message ).get( ComponentMessage.class );
-        if ( componentMessage == null || !componentIdClass.equals( componentMessage.value() ) ) {
+        if ( message != null && (componentMessage == null || !componentIdClass.equals( componentMessage.value() ) ) ) {
           LOG.warn( String.format("Message %s does not match pipeline component %s",
-              message==null ? "NULL" : message.getClass(),
+              message.getClass(),
               componentIdClass.getSimpleName() ) );
 
           final MappingHttpMessage mappingHttpMessage = MappingHttpMessage.extractMessage( channelEvent );
