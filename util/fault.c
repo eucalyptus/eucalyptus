@@ -66,9 +66,11 @@ permission notice:
 
 #include <errno.h>
 #include <limits.h>
+#include <pthread.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 #include <wchar.h>
 #include <sys/stat.h>
@@ -96,25 +98,37 @@ enum faultdir_types {
     NUM_FAULTDIR_TYPES,         /* For keeping score */
 };
 
+/*
+ * Shared data
+ */
+static int faults_initialized = 0;
 static char faultdirs[NUM_FAULTDIR_TYPES][PATH_MAX];
 static xmlDoc *ef_doc = NULL;
+static pthread_mutex_t fault_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 /*
  * Function prototypes
  */
-
 static int initialize_faultdb (void);
 static int populate_faultdb (void);
 static xmlDoc *get_eucafault (const char *, const char *);
-static void get_eucafaults_doc (void);
+static int get_eucafaults_doc (void);
 static void print_element_names(void);
+static int fault_id_exists (const char *);
 
 static int
 initialize_faultdb (void)
 {
     struct stat dirstat;
+    int populate = 0;
 
+    pthread_mutex_lock(&fault_mutex);
+    if (faults_initialized) {
+        pthread_mutex_unlock(&fault_mutex);
+        return 0;
+    }
     printf("--> Initializing fault registry directories.\n");
+    LIBXML_TEST_VERSION;
     /* Cycle through list of faultdirs in priority order, noting any missing. */
     snprintf (faultdirs[CUSTOM_LOCAL], PATH_MAX - 1, "%s/%s/",
               CUSTOM_FAULTDIR, DEFAULT_LOCALIZATION);
@@ -141,13 +155,15 @@ initialize_faultdb (void)
             */
         }
     }
-    return populate_faultdb();
+    populate = populate_faultdb ();
+    pthread_mutex_unlock(&fault_mutex);
+    return populate;
 }
 
 static int
 populate_faultdb (void)
 {
-    return 0;
+    return get_eucafaults_doc ();
 }
 
 static xmlDoc *
@@ -156,10 +172,15 @@ get_eucafault (const char * faultdir, const char * fault_id)
     xmlDoc *my_doc = NULL;
     char faultfile[PATH_MAX];
 
+    printf ("Getting fault %s\n", fault_id);
+    if (fault_id_exists(fault_id)) {
+        printf ("(...looks like fault %s already exists?)\n", fault_id);
+    }
     // FIXME: Hard-coded path for testing!
     snprintf (faultfile, PATH_MAX - 1, "%s/%s.xml", faultdir, fault_id);
     
     my_doc = xmlParseFile (faultfile);
+    // FIXME: Should sanity check that fault id in file matches filename?
 
     if (my_doc == NULL) {
         printf ("Could not parse file %s in get_eucafault()\n", 
@@ -172,10 +193,14 @@ get_eucafault (const char * faultdir, const char * fault_id)
     return my_doc;
 }
 
-void
+static int
 get_eucafaults_doc (void)
 {
     xmlDoc *new_doc = NULL;
+    if (ef_doc != NULL) {
+        printf ("get_eucafaults_doc() called twice? Returning...\n");
+        return -1;
+    }
     new_doc = get_eucafault(faultdirs[DISTRO_ENGLISH], "1234");
 
     if (xmlDocGetRootElement(ef_doc) == NULL) {
@@ -222,15 +247,31 @@ get_eucafaults_doc (void)
         }
     } 
     xmlFreeDoc(new_doc);
+    return 0;
+}
 
+static int
+fault_id_exists (const char *id)
+{
+    for (xmlNode *node = xmlFirstElementChild(xmlDocGetRootElement(ef_doc));
+         node; node = node->next) {
+        if (node->type == XML_ELEMENT_NODE) {
+            for (xmlAttr *attr = node->properties; attr; attr = attr->next) {
+                if (!strcmp((const char *)attr->name, "id")) {
+                    if (!strcmp((const char *)attr->children->content, id)) {
+                        return 1;
+                    }
+                }
+            }
+        }
+    }
+    return 0;
 }
 
 static void
 print_element_names(void)
 {
-    static int depth = 0;
-    xmlNode *cur_node = NULL;
-    ++depth;
+    //    xmlNode *cur_node = NULL;
     //    for (cur_node = a_node; cur_node; cur_node = cur_node->next) {
     //        if (cur_node->type == XML_ELEMENT_NODE) {
             //            printf("node type: Element, name:  %s\n", cur_node->name);
@@ -238,12 +279,26 @@ print_element_names(void)
 /*                    (wchar_t *)cur_node->content); */
 /*     xmlElemDump(stdout, a_doc, xmlDocGetRootElement(a_doc)); */
     printf("\n");
-             xmlDocDump(stdout, ef_doc);
-            printf("\n");
+    xmlDocDump(stdout, ef_doc);
+    printf("\n");
+
+    /*
+    for (xmlNode *cur_node = xmlFirstElementChild(xmlDocGetRootElement(ef_doc));
+         cur_node; cur_node = cur_node->next) {
+
+        if (cur_node->type == XML_ELEMENT_NODE) {
+            printf("Node name: %s\n", cur_node->name);
+            for (xmlAttr *cur_attr = cur_node->properties; cur_attr; cur_attr = cur_attr->next) {
+                printf("     attr: %s\n", cur_attr->name);
+                printf("      val: %s\n", cur_attr->children->content);
+            }
+            
+        }
+    }
+    */
             //        }
         //print_element_names(cur_node->children);
             //    }
-    --depth;
 }
 
 int
@@ -252,39 +307,30 @@ log_fault (char *fault_id, ...)
     va_list argv;
     char *token;
     int count = 0;
-    static int first_call = 1;
 
-    if (first_call) {
-        /* Sanity check. */
-        LIBXML_TEST_VERSION;
-        // FIXME: Check return code.
-        initialize_faultdb();
-        first_call = 0;
-    }
+    initialize_faultdb();
 
-    //printf ("-> %s\n", fault_id);
     va_start (argv, fault_id);
     while((token = va_arg (argv, char *)) != NULL) {
-        //printf ("%s\n", token);
         ++count;
     }
     va_end(argv);
-
-    return count;
+    if (fault_id_exists(fault_id)) {
+        printf ("FOUND FAULT %s WOO!\n", fault_id);
+    } else {
+        printf ("No such fault %s found :(\n", fault_id);
+    }
+    return count;               // FIXME: Just return void?
 }
 
 #ifdef _UNIT_TEST
 int main (int argc, char ** argv)
 {
-    log_fault("1234", "dir", "/this/is/a/directory", "user", 
-              "this is a user", NULL);
-    log_fault("12345", "di", "/this/is/a/", NULL);
 
-    get_eucafaults_doc ();
-    print_element_names ();
-
-
-
+    if (argc > 1) {
+        log_fault(argv[1], NULL); /* FIXME: Add passing argv parameters. */
+    }
+    //print_element_names ();
     return 0;
 }
 #endif // _UNIT_TEST
