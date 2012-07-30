@@ -118,23 +118,34 @@ static pthread_mutex_t fault_mutex = PTHREAD_MUTEX_INITIALIZER;
 static int initialize_faultdb (void);
 static xmlDoc *get_eucafault (const char *, const char *);
 static int get_eucafaults_doc (void);
-static void print_element_names(void);
+static void print_element_names (void);
 static int fault_id_exists (const char *);
 static int scandir_filter (const struct dirent *);
 static int str_end_cmp (const char *, const char *);
+static char *str_trim_suffix (const char *, const char *);
+static int add_eucafault (xmlDoc *);
 
 static int
-str_end_cmp(const char *str, const char *suffix)
+str_end_cmp (const char *str, const char *suffix)
 {
     if (!str || !suffix) {
         return 0;
     }
-    size_t lenstr = strlen(str);
-    size_t lensuffix = strlen(suffix);
+    size_t lenstr = strlen (str);
+    size_t lensuffix = strlen (suffix);
     if (lensuffix >  lenstr) {
         return 0;
     }
-    return strncmp(str + lenstr - lensuffix, suffix, lensuffix) == 0;
+    return strncmp (str + lenstr - lensuffix, suffix, lensuffix) == 0;
+}
+
+static char *
+str_trim_suffix (const char *str, const char *suffix)
+{
+    if (!str || !suffix || !str_end_cmp (str, suffix)) {
+        return (char *)str;
+    }
+    return strndup (str, strlen (str) - strlen (suffix));
 }
 
 static int
@@ -147,7 +158,7 @@ static int
 initialize_faultdb (void)
 {
     struct stat dirstat;
-    int populate = 0;
+    int populate = 0;           /* FIXME: Use or delete. */
 
     pthread_mutex_lock(&fault_mutex);
     if (faults_initialized) {
@@ -183,14 +194,21 @@ initialize_faultdb (void)
             } else {
                 printf ("... found %d faults in %s\n", numfaults, faultdirs[i]);
                 while (numfaults--) {
-                    get_eucafault (faultdirs[i], namelist[numfaults]->d_name);
+                    xmlDoc *new_fault = get_eucafault (faultdirs[i], str_trim_suffix (namelist[numfaults]->d_name, XML_SUFFIX));
+                    if (new_fault) {
+                        add_eucafault (new_fault);
+                        xmlFreeDoc(new_fault);
+                    } else {
+                        printf ("... not adding new fault--already exists?\n");
+                    }
                 }
             }
                     
         }
     }
-    populate = get_eucafaults_doc();
+    //populate = get_eucafaults_doc();
 /*     populate = populate_faultdb (); */
+    faults_initialized++;
     pthread_mutex_unlock(&fault_mutex);
 
     return populate;
@@ -205,14 +223,14 @@ get_eucafault (const char * faultdir, const char * fault_id)
     printf ("Getting fault %s\n", fault_id);
     if (fault_id_exists(fault_id)) {
         printf ("(...looks like fault %s already exists?)\n", fault_id);
+        return NULL;
     }
-    // FIXME: Hard-coded path for testing!
-/*     snprintf (faultfile, PATH_MAX - 1, "%s/%s%s", faultdir, fault_id, */
-/*               XML_SUFFIX); */
-    snprintf (faultfile, PATH_MAX - 1, "%s/%s", faultdir, fault_id);
+    snprintf (faultfile, PATH_MAX - 1, "%s/%s%s", faultdir, fault_id,
+              XML_SUFFIX);
     
     my_doc = xmlParseFile (faultfile);
     // FIXME: Should sanity check that fault id in file matches filename?
+    //        ...or should we expect filenames to diverge from fault id #s?
 
     if (my_doc == NULL) {
         printf ("Could not parse file %s in get_eucafault()\n", 
@@ -223,6 +241,24 @@ get_eucafault (const char * faultdir, const char * fault_id)
                 faultfile);
     }
     return my_doc;
+}
+
+static int
+add_eucafault (xmlDoc *new_doc)
+{
+    if (xmlDocGetRootElement (ef_doc) == NULL) {
+        printf ("Creating new document.\n");
+        ef_doc = xmlCopyDoc (new_doc, 1); /* 1 == recursive copy */
+        // FIXME: Add error check/return here.
+    } else {
+        printf ("Appending to existing document.\n");
+        if (xmlAddNextSibling (xmlFirstElementChild (xmlDocGetRootElement (ef_doc)),
+                               xmlFirstElementChild (xmlDocGetRootElement (new_doc))) == NULL) {
+            printf ("*** Problem appending!");
+            return -1;
+        }
+    }
+    return 0;
 }
 
 static int
@@ -365,13 +401,11 @@ log_fault (char *fault_id, ...)
 int main (int argc, char ** argv)
 {
     
+    print_element_names ();
     if (argc > 1) {
         log_fault(argv[1], NULL); /* FIXME: Add passing argv parameters. */
     }
-    //print_element_names ();
-    printf("\n%d\n", str_end_cmp ("foo.xm", XML_SUFFIX));
-    printf("%d\n", str_end_cmp ("foo.xml", XML_SUFFIX));
-    printf("%d\n", str_end_cmp ("foo.xmlm", XML_SUFFIX));
+    print_element_names ();
 
     return 0;
 }
