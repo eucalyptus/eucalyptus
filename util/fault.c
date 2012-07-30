@@ -81,11 +81,10 @@ permission notice:
 
 #include "fault.h"
 
-#define DISTRO_FAULTDIR "faults/default"
-#define CUSTOM_FAULTDIR "faults/customized"
-#define ENGLISH "en_US"
-#define DEFAULT_LOCALIZATION "ru" // Russian. :)
-#define THISFILE DISTRO_FAULTDIR "/" ENGLISH "/1234.xml"
+#define DISTRO_FAULTDIR "/usr/share/eucalyptus/faults"
+#define CUSTOM_FAULTDIR "/etc/eucalyptus/faults"
+#define DEFAULT_LOCALIZATION "en_US"
+#define LOCALIZATION_ENV_VAR "LOCALE"
 #define XML_SUFFIX ".xml"
 
 /*
@@ -97,10 +96,10 @@ permission notice:
  * be ignored.
  */
 enum faultdir_types {
-    CUSTOM_LOCAL,
-    CUSTOM_ENGLISH,
-    DISTRO_LOCAL,
-    DISTRO_ENGLISH,
+    CUSTOM_LOCALIZED,
+    CUSTOM_DEFAULT_LOCALIZATION,
+    DISTRO_LOCALIZED,
+    DISTRO_DEFAULT_LOCALIZATION,
     NUM_FAULTDIR_TYPES,         /* For keeping score */
 };
 
@@ -110,6 +109,8 @@ enum faultdir_types {
 static int faults_initialized = 0;
 static char faultdirs[NUM_FAULTDIR_TYPES][PATH_MAX];
 static xmlDoc *ef_doc = NULL;
+
+// FIXME: Thread safety is only half-baked at this point.
 static pthread_mutex_t fault_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 /*
@@ -117,8 +118,7 @@ static pthread_mutex_t fault_mutex = PTHREAD_MUTEX_INITIALIZER;
  */
 static int initialize_faultdb (void);
 static xmlDoc *get_eucafault (const char *, const char *);
-static int get_eucafaults_doc (void);
-static void print_element_names (void);
+static void dump_faultdb (void);
 static int fault_id_exists (const char *);
 static int scandir_filter (const struct dirent *);
 static int str_end_cmp (const char *, const char *);
@@ -133,6 +133,7 @@ str_end_cmp (const char *str, const char *suffix)
     }
     size_t lenstr = strlen (str);
     size_t lensuffix = strlen (suffix);
+
     if (lensuffix >  lenstr) {
         return 0;
     }
@@ -159,23 +160,34 @@ initialize_faultdb (void)
 {
     struct stat dirstat;
     int populate = 0;           /* FIXME: Use or delete. */
+    char *locale = NULL;
 
     pthread_mutex_lock(&fault_mutex);
+
     if (faults_initialized) {
         pthread_mutex_unlock(&fault_mutex);
         return 0;
     }
-    printf("--> Initializing fault registry directories.\n");
+    printf ("--> Initializing fault registry directories.\n");
+    if ((locale = getenv (LOCALIZATION_ENV_VAR)) == NULL) {
+        printf ("    $LOCALE not set, only using default LOCALE of %s\n",
+                DEFAULT_LOCALIZATION);
+    }
     LIBXML_TEST_VERSION;
+
     /* Cycle through list of faultdirs in priority order, noting any missing. */
-    snprintf (faultdirs[CUSTOM_LOCAL], PATH_MAX - 1, "%s/%s/",
+    if (locale != NULL) {
+        snprintf (faultdirs[CUSTOM_LOCALIZED], PATH_MAX - 1, "%s/%s/",
+                  CUSTOM_FAULTDIR, locale);
+    }
+    snprintf (faultdirs[CUSTOM_DEFAULT_LOCALIZATION], PATH_MAX - 1, "%s/%s/",
               CUSTOM_FAULTDIR, DEFAULT_LOCALIZATION);
-    snprintf (faultdirs[CUSTOM_ENGLISH], PATH_MAX - 1, "%s/%s/",
-              CUSTOM_FAULTDIR, ENGLISH);
-    snprintf (faultdirs[DISTRO_LOCAL], PATH_MAX - 1, "%s/%s/",
+    if (locale != NULL) {
+        snprintf (faultdirs[DISTRO_LOCALIZED], PATH_MAX - 1, "%s/%s/",
+                  DISTRO_FAULTDIR, locale);
+    }
+    snprintf (faultdirs[DISTRO_DEFAULT_LOCALIZATION], PATH_MAX - 1, "%s/%s/",
               DISTRO_FAULTDIR, DEFAULT_LOCALIZATION);
-    snprintf (faultdirs[DISTRO_ENGLISH], PATH_MAX - 1, "%s/%s/",
-              DISTRO_FAULTDIR, ENGLISH);
 
     /* Not really sure how useful this is or will be. */
     for(int i = 0; i < NUM_FAULTDIR_TYPES; i++){
@@ -193,8 +205,10 @@ initialize_faultdb (void)
                 printf ("*** No faults found in %s\n", faultdirs[i]);
             } else {
                 printf ("... found %d faults in %s\n", numfaults, faultdirs[i]);
+
                 while (numfaults--) {
                     xmlDoc *new_fault = get_eucafault (faultdirs[i], str_trim_suffix (namelist[numfaults]->d_name, XML_SUFFIX));
+
                     if (new_fault) {
                         add_eucafault (new_fault);
                         xmlFreeDoc(new_fault);
@@ -206,8 +220,6 @@ initialize_faultdb (void)
                     
         }
     }
-    //populate = get_eucafaults_doc();
-/*     populate = populate_faultdb (); */
     faults_initialized++;
     pthread_mutex_unlock(&fault_mutex);
 
@@ -221,14 +233,15 @@ get_eucafault (const char * faultdir, const char * fault_id)
     char faultfile[PATH_MAX];
 
     printf ("Getting fault %s\n", fault_id);
+
     if (fault_id_exists(fault_id)) {
         printf ("(...looks like fault %s already exists?)\n", fault_id);
         return NULL;
     }
     snprintf (faultfile, PATH_MAX - 1, "%s/%s%s", faultdir, fault_id,
               XML_SUFFIX);
-    
     my_doc = xmlParseFile (faultfile);
+
     // FIXME: Should sanity check that fault id in file matches filename?
     //        ...or should we expect filenames to diverge from fault id #s?
 
@@ -262,69 +275,12 @@ add_eucafault (xmlDoc *new_doc)
 }
 
 static int
-get_eucafaults_doc (void)
-{
-    xmlDoc *new_doc = NULL;
-    if (ef_doc != NULL) {
-        printf ("get_eucafaults_doc() called twice? Returning...\n");
-        return -1;
-    }
-    new_doc = get_eucafault(faultdirs[DISTRO_ENGLISH], "1234");
-
-    if (xmlDocGetRootElement(ef_doc) == NULL) {
-        printf ("Creating new document.\n");
-        ef_doc = xmlCopyDoc(new_doc, 1); /* 1 means recursive copy */
-    }
-    xmlFreeDoc(new_doc);
-
-    new_doc = get_eucafault(faultdirs[DISTRO_ENGLISH], "1235");
-    if (xmlDocGetRootElement(ef_doc) == NULL) {
-        printf ("Creating new document.\n");
-        ef_doc = xmlCopyDoc(new_doc, 1);
-    } else {
-        printf ("Appending to existing document.\n");
-        if (xmlAddNextSibling(xmlFirstElementChild(xmlDocGetRootElement(ef_doc)),
-                              xmlFirstElementChild(xmlDocGetRootElement(new_doc))) == NULL) {
-            printf ("*** Problem appending!");
-        }
-    } 
-    xmlFreeDoc(new_doc);
-
-    new_doc = get_eucafault(faultdirs[DISTRO_ENGLISH], "1236");
-    if (xmlDocGetRootElement(ef_doc) == NULL) {
-        printf ("Creating new document.\n");
-        ef_doc = xmlCopyDoc(new_doc, 1);
-    } else {
-        printf ("Appending to existing document.\n");
-        if (xmlAddNextSibling(xmlFirstElementChild(xmlDocGetRootElement(ef_doc)),
-                              xmlFirstElementChild(xmlDocGetRootElement(new_doc))) == NULL) {
-            printf ("*** Problem appending!");
-        }
-    } 
-    xmlFreeDoc(new_doc);
-
-    new_doc = get_eucafault(faultdirs[DISTRO_LOCAL], "1236");
-    if (xmlDocGetRootElement(ef_doc) == NULL) {
-        printf ("Creating new document.\n");
-        ef_doc = xmlCopyDoc(new_doc, 1);
-    } else {
-        printf ("Appending to existing document.\n");
-        if (xmlAddNextSibling(xmlFirstElementChild(xmlDocGetRootElement(ef_doc)),
-                              xmlFirstElementChild(xmlDocGetRootElement(new_doc))) == NULL) {
-            printf ("*** Problem appending!");
-        }
-    } 
-    xmlFreeDoc(new_doc);
-    return 0;
-}
-
-static int
 fault_id_exists (const char *id)
 {
     /*
      * Does case-insensitive string comparison on the attribute name & value.
-     * (These are technically case-sensitive in XML, but I believe in being
-     * forgiving of minor transgressions--makes for happier users.
+     * (These are technically case-sensitive in XML, but I'm being
+     * forgiving of minor transgressions in order to have happier users.
      */
     for (xmlNode *node = xmlFirstElementChild(xmlDocGetRootElement(ef_doc));
          node; node = node->next) {
@@ -343,40 +299,16 @@ fault_id_exists (const char *id)
 }
 
 static void
-print_element_names(void)
+dump_faultdb(void)
 {
-    //    xmlNode *cur_node = NULL;
-    //    for (cur_node = a_node; cur_node; cur_node = cur_node->next) {
-    //        if (cur_node->type == XML_ELEMENT_NODE) {
-            //            printf("node type: Element, name:  %s\n", cur_node->name);
-/*             printf("(%06d)              value: %ls\n", depth, */
-/*                    (wchar_t *)cur_node->content); */
-/*     xmlElemDump(stdout, a_doc, xmlDocGetRootElement(a_doc)); */
+    // FIXME: add some stats.
     printf("\n");
     xmlDocDump(stdout, ef_doc);
     printf("\n");
-
-    /*
-    for (xmlNode *cur_node = xmlFirstElementChild(xmlDocGetRootElement(ef_doc));
-         cur_node; cur_node = cur_node->next) {
-
-        if (cur_node->type == XML_ELEMENT_NODE) {
-            printf("Node name: %s\n", cur_node->name);
-            for (xmlAttr *cur_attr = cur_node->properties; cur_attr; cur_attr = cur_attr->next) {
-                printf("     attr: %s\n", cur_attr->name);
-                printf("      val: %s\n", cur_attr->children->content);
-            }
-            
-        }
-    }
-    */
-            //        }
-        //print_element_names(cur_node->children);
-            //    }
 }
 
 int
-log_fault (char *fault_id, ...)
+log_eucafault (char *fault_id, ...)
 {
     va_list argv;
     char *token;
@@ -385,28 +317,43 @@ log_fault (char *fault_id, ...)
     initialize_faultdb();
 
     va_start (argv, fault_id);
+
     while((token = va_arg (argv, char *)) != NULL) {
         ++count;
     }
     va_end(argv);
+
     if (fault_id_exists(fault_id)) {
         printf ("FOUND FAULT %s WOO!\n", fault_id);
     } else {
         printf ("No such fault %s found :(\n", fault_id);
     }
-    return count;               // FIXME: Just return void?
+    return count;               // FIXME: Just return void instead?
 }
 
 #ifdef _UNIT_TEST
 int main (int argc, char ** argv)
 {
-    
-    print_element_names ();
-    if (argc > 1) {
-        log_fault(argv[1], NULL); /* FIXME: Add passing argv parameters. */
-    }
-    print_element_names ();
+    int dump = 0;
+    int opt;
 
+    while ((opt = getopt (argc, argv, "d")) != -1) {
+        switch (opt) {
+        case 'd':
+            dump++;
+            break;
+        default:
+            fprintf (stderr, "Usage: %s [-d]\n", argv[0]);
+            return 1;
+        }
+    }
+    if (optind < argc) {
+        printf ("argv[1st]: %s", argv[optind]);
+        log_eucafault(argv[optind], NULL); /* FIXME: Add passing some parameters. */
+    }
+    if (dump) {
+        dump_faultdb ();
+    }
     return 0;
 }
 #endif // _UNIT_TEST

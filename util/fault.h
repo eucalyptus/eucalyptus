@@ -72,6 +72,6 @@ permission notice:
  * Return value is the number of parameter arguments detected prior to NULL.
  *
  */
-extern int log_fault (char *, ...);
+extern int log_eucafault (char *, ...);
 
 #endif // INCLUDE_MISC_H
