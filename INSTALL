@@ -42,6 +42,15 @@ sudo which jpackage-utils java lvm2 velocity drbd83 drbd83-kmod drbd-utils drbd 
 dejavu-serif-fonts  bridge-utils iptables vtun device-mapper coreutils e2fsprogs file parted util-linux rsync \
 PyGreSQL libcurl4 curl apache2 httpd libvirt tgt scsi-target-utils vconfig wget kvm dhcp-server
 
+Package-name & availability notes for CentOS 6.2 (and possibly earlier?):
+
+- drbd-utils was replaced by drbd83-utils.
+- libcurl4 was replaced by libcurl.
+- apache2 was replaced by httpd.
+- dhcp-server was replaced by dhcp.
+- tgt was replaced by scsi-target-utils.
+- bitstream-vera-fonts is no longer available.
+
 Download and save the following file https://github.com/eucalyptus/eucalyptus-rpmspec/blob/master/euca-WSDL2C.sh
 
 to /opt/euca-WSDL2C.sh

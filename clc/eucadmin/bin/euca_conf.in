@@ -1,33 +1,29 @@
 #!/usr/bin/python
-# Copyright (c) 2011, Eucalyptus Systems, Inc.
-# All rights reserved.
+
+# Copyright 2011-2012 Eucalyptus Systems, Inc.
 #
-# Redistribution and use of this software in source and binary forms, with or
-# without modification, are permitted provided that the following conditions
-# are met:
+# Redistribution and use of this software in source and binary forms,
+# with or without modification, are permitted provided that the following
+# conditions are met:
 #
-#   Redistributions of source code must retain the above
-#   copyright notice, this list of conditions and the
-#   following disclaimer.
+#   Redistributions of source code must retain the above copyright notice,
+#   this list of conditions and the following disclaimer.
 #
-#   Redistributions in binary form must reproduce the above
-#   copyright notice, this list of conditions and the
-#   following disclaimer in the documentation and/or other
-#   materials provided with the distribution.
+#   Redistributions in binary form must reproduce the above copyright
+#   notice, this list of conditions and the following disclaimer in the
+#   documentation and/or other materials provided with the distribution.
 #
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
-# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-# POSSIBILITY OF SUCH DAMAGE.
-#
-# Author: Mitch Garnaat mgarnaat@eucalyptus.com
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+# A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+# OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+# SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+# LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+# THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import optparse
 import inspect
@@ -591,7 +587,7 @@ class EucaConf(object):
         if self.options.upgrade_conf_file:
             print 'Upgrading from %s' % self.options.upgrade_conf_file
             self.config.mergefile(self.options.upgrade_conf_file)
-            
+
     def _do_list(self, option_name, module_name, class_name):
         if getattr(self.options, option_name):
             cls = boto.utils.find_class(module_name, class_name)
@@ -724,9 +720,10 @@ class EucaConf(object):
                 path2 = os.path.join(path1, self.options.partition_name)
                 cls = boto.utils.find_class('eucadmin.synckeys', 'SyncKeys')
                 req = cls([path2], path1, self.options.host_name,
-                          ['node-cert.pem', 'cluster-cert.pem',
-                           'cluster-pk.pem', 'node-pk.pem',
-                           'vtunpass', 'cloud-cert.pem'],
+                          ['node-cert.pem',    'node-pk.pem',
+                           'cluster-cert.pem', 'cluster-pk.pem',
+                           'cloud-cert.pem',   'cloud-pk.pem',
+                           'vtunpass'],
                           use_rsync=(not self.options.no_rsync),
                           use_scp=(not self.options.no_scp))
                 req.sync()
@@ -774,7 +771,7 @@ class EucaConf(object):
             s += '         VMwareBroker host.  Make sure you are running this'
             s += '         command on the VMwareBroker host.'
             self.warn(s)
-                                
+
     def do_register_vmwarebroker(self):
         if hasattr(self.options, 'register_vmwarebroker'):
             self._check_host()
@@ -838,7 +835,7 @@ class EucaConf(object):
                             'DeregisterVMwareBroker')
         # Make some changes in eucalyptus.conf file
         self.config.update(ConfigBrokerDereg)
-        
+
 
     def _sync_node(self, node):
         path = os.path.join(self.config['EUCALYPTUS'],
