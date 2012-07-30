@@ -88,7 +88,7 @@ public class ReportingVolumeEventStore
 	
 	public void insertAttachEvent(String uuid, String instanceUuid, long timestampMs)
 	{
-		EntityWrapper<ReportingVolumeUsageEvent> entityWrapper =
+		EntityWrapper<ReportingVolumeAttachEvent> entityWrapper =
 			EntityWrapper.get(ReportingVolumeAttachEvent.class);
 
 		try {
@@ -106,7 +106,7 @@ public class ReportingVolumeEventStore
 	
 	public void insertDetachEvent(String uuid, String instanceUuid, long timestampMs)
 	{
-		EntityWrapper<ReportingVolumeUsageEvent> entityWrapper =
+		EntityWrapper<ReportingVolumeDetachEvent> entityWrapper =
 			EntityWrapper.get(ReportingVolumeDetachEvent.class);
 
 		try {
