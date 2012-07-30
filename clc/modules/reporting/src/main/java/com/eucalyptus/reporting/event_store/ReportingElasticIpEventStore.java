@@ -1,107 +1,65 @@
 package com.eucalyptus.reporting.event_store;
 
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-
+import javax.annotation.Nonnull;
 import org.apache.log4j.Logger;
-import org.mortbay.log.Log;
-
-import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.entities.Entities;
+import com.google.common.base.Preconditions;
 
 /**
  * @author tom.werges
  */
-public class ReportingElasticIpEventStore
-{
-	private static Logger LOG = Logger.getLogger( ReportingElasticIpEventStore.class );
+public class ReportingElasticIpEventStore {
+  private static final Logger LOG = Logger.getLogger( ReportingElasticIpEventStore.class );
 
-	private static ReportingElasticIpEventStore elasticIpCrud = null;
-	
-	public static synchronized ReportingElasticIpEventStore getElasticIp()
-	{
-		if (elasticIpCrud == null) {
-			elasticIpCrud = new ReportingElasticIpEventStore();
-		}
-		return elasticIpCrud;
-	}
-	
-	private ReportingElasticIpEventStore()
-	{
-		
-	}
+  private static final ReportingElasticIpEventStore elasticIpCrud = new ReportingElasticIpEventStore();
 
-	public void insertCreateEvent(String uuid, long timestampMs, String userId, String ip)
-	{
-		
-		EntityWrapper<ReportingElasticIpCreateEvent> entityWrapper =
-			EntityWrapper.get(ReportingElasticIpCreateEvent.class);
+  public static ReportingElasticIpEventStore getElasticIp() {
+    return elasticIpCrud;
+  }
 
-		try {
-			ReportingElasticIpCreateEvent event = new ReportingElasticIpCreateEvent(uuid,
-					timestampMs, userId, ip);
-			entityWrapper.add(event);
-			entityWrapper.commit();
-			LOG.debug("Added event to db:" + event);
-		} catch (Exception ex) {
-			LOG.error(ex);
-			entityWrapper.rollback();
-			throw new RuntimeException(ex);
-		}					
-	}
+  private ReportingElasticIpEventStore() {
+  }
 
-	public void insertDeleteEvent(String uuid, long timestampMs)
-	{
-		
-		EntityWrapper<ReportingElasticIpDeleteEvent> entityWrapper =
-			EntityWrapper.get(ReportingElasticIpDeleteEvent.class);
+  public void insertCreateEvent( @Nonnull final String uuid,
+                                          final long timestampMs,
+                                 @Nonnull final String userId,
+                                 @Nonnull final String ip ) {
+    Preconditions.checkNotNull( uuid, "Uuid is required" );
+    Preconditions.checkNotNull( userId, "UserId is required" );
+    Preconditions.checkNotNull( ip, "IP is required" );
 
-		try {
-			ReportingElasticIpDeleteEvent event = new ReportingElasticIpDeleteEvent(uuid, timestampMs);
-			entityWrapper.add(event);
-			entityWrapper.commit();
-			LOG.debug("Added event to db:" + event);
-		} catch (Exception ex) {
-			LOG.error(ex);
-			entityWrapper.rollback();
-			throw new RuntimeException(ex);
-		}					
-	}
+    persist( new ReportingElasticIpCreateEvent(uuid, timestampMs, userId, ip) );
+  }
 
-	public void insertAttachEvent(String ipUuid, String instanceUuid, long timestampMs)
-	{
-		
-		EntityWrapper<ReportingElasticIpAttachEvent> entityWrapper =
-			EntityWrapper.get(ReportingElasticIpAttachEvent.class);
+  public void insertDeleteEvent( @Nonnull final String uuid,
+                                 final long timestampMs )
+  {
+    Preconditions.checkNotNull( uuid, "Uuid is required" );
 
-		try {
-			ReportingElasticIpAttachEvent event = new ReportingElasticIpAttachEvent(ipUuid, instanceUuid, timestampMs);
-			entityWrapper.add(event);
-			entityWrapper.commit();
-			LOG.debug("Added event to db:" + event);
-		} catch (Exception ex) {
-			LOG.error(ex);
-			entityWrapper.rollback();
-			throw new RuntimeException(ex);
-		}					
-	}
+    persist( new ReportingElasticIpDeleteEvent(uuid, timestampMs) );
+  }
 
-	public void insertDetachEvent(String ipUuid, String instanceUuid, long timestampMs)
-	{
-		
-		EntityWrapper<ReportingElasticIpDetachEvent> entityWrapper =
-			EntityWrapper.get(ReportingElasticIpDetachEvent.class);
+  public void insertAttachEvent( @Nonnull final String uuid,
+                                 @Nonnull final String instanceUuid,
+                                          final long timestampMs ) {
+    Preconditions.checkNotNull( uuid, "Uuid is required" );
+    Preconditions.checkNotNull( uuid, "InstanceUuid is required" );
 
-		try {
-			ReportingElasticIpDetachEvent event = new ReportingElasticIpDetachEvent(ipUuid, instanceUuid, timestampMs);
-			entityWrapper.add(event);
-			entityWrapper.commit();
-			LOG.debug("Added event to db:" + event);
-		} catch (Exception ex) {
-			LOG.error(ex);
-			entityWrapper.rollback();
-			throw new RuntimeException(ex);
-		}					
-	}
+    persist( new ReportingElasticIpAttachEvent( uuid, instanceUuid, timestampMs) );
+  }
+
+  public void insertDetachEvent( @Nonnull final String uuid,
+                                 @Nonnull final String instanceUuid,
+                                          final long timestampMs ) {
+    Preconditions.checkNotNull( uuid, "Uuid is required" );
+    Preconditions.checkNotNull( uuid, "InstanceUuid is required" );
+
+    persist( new ReportingElasticIpDetachEvent( uuid, instanceUuid, timestampMs ) );
+  }
+
+  private void persist( final Object event ) {
+    Entities.persist( event );
+  }
 
 }
 

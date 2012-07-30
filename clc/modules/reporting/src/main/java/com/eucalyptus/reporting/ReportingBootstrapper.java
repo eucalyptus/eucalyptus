@@ -237,13 +237,6 @@ public class ReportingBootstrapper
         }
       } );
 
-      ListenerRegistry.getInstance( ).register( AddressEvent.class, new EventListener<AddressEvent>( ) {
-        @Override
-        public void fireEvent( AddressEvent event ) {
-          log.info( "Address event: " + event );
-        }
-      } );
-
       ListenerRegistry.getInstance( ).register( ResourceAvailabilityEvent.class, new EventListener<ResourceAvailabilityEvent>( ) {
         @Override
         public void fireEvent( ResourceAvailabilityEvent event ) {
