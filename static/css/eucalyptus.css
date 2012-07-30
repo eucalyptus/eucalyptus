@@ -310,3 +310,23 @@ div.euca-table-size {
     position: relative;
     top: 10px;
 }
+
+/* notifications */
+div.euca-notification {
+   -moz-border-radius: 4px;
+   border-radius: 4px;
+   border-style: solid;
+   border-color: black;
+}
+div.error {
+   color: red;
+   padding: 5px;
+}
+div.success {
+   color: green;
+   padding: 5px;
+}
+a.hide-notification  {
+   float: right;
+}
+

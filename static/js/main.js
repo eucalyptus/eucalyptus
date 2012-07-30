@@ -199,6 +199,7 @@
 
     makeMenutabs(menus);
     var $eucaTabContainer = $('html body').find('.euca-container .euca-main #euca-main-header');
+    $eucaTabContainer.append('<div class="euca-notification" id="euca-notification-container"></div>');
     $('#all-tabs-container > div').each(function() {
       ($(this)).appendTo($eucaTabContainer);
     });

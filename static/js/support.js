@@ -32,6 +32,10 @@ function getAllSelectedRows(tableName, idIndex) {
   return rowsToDelete;
 }
 
+function escapeHTML(input) {
+  return $('<div/>').text(input).html();
+}
+
 //TODO: pass in index id
 function deleteAction(tableName) {
   // hide menu
@@ -48,7 +52,7 @@ function deleteAction(tableName) {
     $deleteNames = $("#" + tableName + "-delete-names");
     $deleteNames.html('');
     for (i = 0; i<rowsToDelete.length; i++) {
-      t = $('<div/>').text(rowsToDelete[i]).html();
+      t = escapeHTML(rowsToDelete[i]);
       $deleteNames.append(t).append("<br/>");
     }
     $("#" + tableName + "-delete-dialog").dialog('open');
@@ -115,10 +119,22 @@ function addKeyPair(keyName) {
   });
 }
 
+function S4() {
+   return (((1+Math.random())*0x10000)|0).toString(16).substring(1);
+}
+
+function hideNotification(notification) {
+  $("#"+notification).detach();
+}
+
 function successNotification(message) {
-  alert(message);
+  var nId = "n-"+ S4() + "-" + S4();
+  $('#euca-notification-container').append('<div class="success" id="'+ nId + '"><span>' + escapeHTML(message) + '</span><a class="hide-notification" href="#" onclick="hideNotification(\'' + nId + '\');">X</a></div>');
+  // hide after 30 sec
+  setTimeout(function(){ hideNotification(nId) }, 1000 * 30);
 }
 
 function errorNotification(message) {
-  alert(message);
+  var nId = "n-"+ S4() + "-" + S4();
+  $('#euca-notification-container').append('<div class="error" id="'+ nId + '"><span>' + escapeHTML(message) + '</span><a class="hide-notification" href="#" onclick="hideNotification(\'' + nId + '\');">X</a></div>');
 }
