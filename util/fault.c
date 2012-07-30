@@ -125,7 +125,6 @@ static pthread_mutex_t fault_mutex = PTHREAD_MUTEX_INITIALIZER;
 /*
  * Function prototypes
  */
-static int initialize_eucafault (void);
 static xmlDoc *get_eucafault (const char *, const char *);
 static void dump_eucafault_db (void);
 static int fault_id_exists (const char *);
@@ -175,88 +174,6 @@ static int
 scandir_filter (const struct dirent *entry)
 {
     return str_end_cmp (entry->d_name, XML_SUFFIX);
-}
-
-/*
- * Builds the localized fault database from XML files supplied in
- * various directories.
- */
-static int
-initialize_eucafault (void)
-{
-    struct stat dirstat;
-    int populate = 0;           /* FIXME: Use or delete. */
-    char *locale = NULL;
-
-    pthread_mutex_lock(&fault_mutex);
-
-    if (faults_initialized) {
-        printf ("*** Attempt to reinitialize fault registry? Skipping...\n");
-        pthread_mutex_unlock(&fault_mutex);
-        return 0;
-    }
-    printf ("--> Initializing fault registry directories.\n");
-    if ((locale = getenv (LOCALIZATION_ENV_VAR)) == NULL) {
-        printf ("    $LOCALE not set, using only default LOCALE of %s\n",
-                DEFAULT_LOCALIZATION);
-    }
-    LIBXML_TEST_VERSION;
-
-    /* Cycle through list of faultdirs in priority order, noting any missing. */
-    if (locale != NULL) {
-        snprintf (faultdirs[CUSTOM_LOCALIZED], PATH_MAX - 1, "%s/%s/",
-                  CUSTOM_FAULTDIR, locale);
-    } else {
-        faultdirs[CUSTOM_LOCALIZED][0] = 0;
-    }
-    snprintf (faultdirs[CUSTOM_DEFAULT_LOCALIZATION], PATH_MAX - 1, "%s/%s/",
-              CUSTOM_FAULTDIR, DEFAULT_LOCALIZATION);
-    if (locale != NULL) {
-        snprintf (faultdirs[DISTRO_LOCALIZED], PATH_MAX - 1, "%s/%s/",
-                  DISTRO_FAULTDIR, locale);
-    } else {
-        faultdirs[DISTRO_LOCALIZED][0] = 0;
-    }
-    snprintf (faultdirs[DISTRO_DEFAULT_LOCALIZATION], PATH_MAX - 1, "%s/%s/",
-              DISTRO_FAULTDIR, DEFAULT_LOCALIZATION);
-
-    /* Not really sure how useful this is or will be. */
-    for (int i = 0; i < NUM_FAULTDIR_TYPES; i++) {
-        if (faultdirs[i][0]) {
-            if (stat(faultdirs[i], &dirstat) != 0) {
-                printf ("*** Problem with %s:\n", faultdirs[i]);
-                printf ("    stat(): %s\n", strerror (errno));
-                //perror ("    stat()");
-            } else if (!S_ISDIR(dirstat.st_mode)) {
-                printf ("*** Problem with %s:\n", faultdirs[i]);
-                printf ("    Not a directory\n");
-            } else {
-                struct dirent **namelist;
-                int numfaults = scandir (faultdirs[i], &namelist, &scandir_filter,
-                                         alphasort);
-                if (numfaults == 0) {
-                    printf ("*** No faults found in %s\n", faultdirs[i]);
-                } else {
-                    printf ("... found %d faults in %s\n", numfaults, faultdirs[i]);
-
-                    while (numfaults--) {
-                        xmlDoc *new_fault = get_eucafault (faultdirs[i], str_trim_suffix (namelist[numfaults]->d_name, XML_SUFFIX));
-
-                        if (new_fault) {
-                            add_eucafault (new_fault);
-                            xmlFreeDoc(new_fault);
-                        } else {
-                            printf ("(...not adding new fault--already exists?)\n");
-                        }
-                    }
-                }
-            }
-        }
-    }
-    faults_initialized++;
-    pthread_mutex_unlock(&fault_mutex);
-
-    return populate;
 }
 
 /*
@@ -356,7 +273,92 @@ dump_eucafault_db (void)
 }
 
 /*
- * External entry point.
+ * EXTERNAL ENTRY POINT
+ *
+ * Builds the localized fault database from XML files supplied in
+ * various directories.
+ */
+int
+initialize_eucafaults (void)
+{
+    struct stat dirstat;
+    int populate = 0;           /* FIXME: Use or delete. */
+    char *locale = NULL;
+
+    pthread_mutex_lock(&fault_mutex);
+
+    if (faults_initialized) {
+        printf ("*** Attempt to reinitialize fault registry? Skipping...\n");
+        pthread_mutex_unlock(&fault_mutex);
+        return 0;
+    }
+    printf ("--> Initializing fault registry directories.\n");
+    if ((locale = getenv (LOCALIZATION_ENV_VAR)) == NULL) {
+        printf ("    $LOCALE not set, using only default LOCALE of %s\n",
+                DEFAULT_LOCALIZATION);
+    }
+    LIBXML_TEST_VERSION;
+
+    /* Cycle through list of faultdirs in priority order, noting any missing. */
+    if (locale != NULL) {
+        snprintf (faultdirs[CUSTOM_LOCALIZED], PATH_MAX - 1, "%s/%s/",
+                  CUSTOM_FAULTDIR, locale);
+    } else {
+        faultdirs[CUSTOM_LOCALIZED][0] = 0;
+    }
+    snprintf (faultdirs[CUSTOM_DEFAULT_LOCALIZATION], PATH_MAX - 1, "%s/%s/",
+              CUSTOM_FAULTDIR, DEFAULT_LOCALIZATION);
+    if (locale != NULL) {
+        snprintf (faultdirs[DISTRO_LOCALIZED], PATH_MAX - 1, "%s/%s/",
+                  DISTRO_FAULTDIR, locale);
+    } else {
+        faultdirs[DISTRO_LOCALIZED][0] = 0;
+    }
+    snprintf (faultdirs[DISTRO_DEFAULT_LOCALIZATION], PATH_MAX - 1, "%s/%s/",
+              DISTRO_FAULTDIR, DEFAULT_LOCALIZATION);
+
+    /* Not really sure how useful this is or will be. */
+    for (int i = 0; i < NUM_FAULTDIR_TYPES; i++) {
+        if (faultdirs[i][0]) {
+            if (stat(faultdirs[i], &dirstat) != 0) {
+                printf ("*** Problem with %s:\n", faultdirs[i]);
+                printf ("    stat(): %s\n", strerror (errno));
+                //perror ("    stat()");
+            } else if (!S_ISDIR(dirstat.st_mode)) {
+                printf ("*** Problem with %s:\n", faultdirs[i]);
+                printf ("    Not a directory\n");
+            } else {
+                struct dirent **namelist;
+                int numfaults = scandir (faultdirs[i], &namelist, &scandir_filter,
+                                         alphasort);
+                if (numfaults == 0) {
+                    printf ("*** No faults found in %s\n", faultdirs[i]);
+                } else {
+                    printf ("... found %d faults in %s\n", numfaults, faultdirs[i]);
+
+                    while (numfaults--) {
+                        xmlDoc *new_fault = get_eucafault (faultdirs[i], str_trim_suffix (namelist[numfaults]->d_name, XML_SUFFIX));
+
+                        if (new_fault) {
+                            add_eucafault (new_fault);
+                            xmlFreeDoc(new_fault);
+                        } else {
+                            printf ("(...not adding new fault--already exists?)\n");
+                        }
+                    }
+                }
+            }
+        }
+    }
+    faults_initialized++;       /* Not a counter--only a true/false flag */
+    pthread_mutex_unlock(&fault_mutex);
+
+    return populate;            /* FIXME: This doesn't yet return population! */
+}
+
+/*
+ * EXTERNAL ENTRY POINT
+ *
  * Logs a fault, initializing the fault model, if necessary.
  */
 int
@@ -366,7 +368,7 @@ log_eucafault (char *fault_id, ...)
     char *token;
     int count = 0;
 
-    initialize_eucafault ();
+    initialize_eucafaults ();
 
     va_start (argv, fault_id);
 
@@ -403,7 +405,7 @@ int main (int argc, char ** argv)
             return 1;
         }
     }
-    initialize_eucafault ();
+    initialize_eucafaults ();
 
     if (optind < argc) {
         printf ("argv[1st]: %s\n", argv[optind]);

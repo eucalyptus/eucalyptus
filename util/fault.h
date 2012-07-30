@@ -61,6 +61,21 @@ permission notice:
 #define INCLUDE_MISC_H
 
 /*
+ * Usage: initialize_eucafaults()
+ *
+ * Strictly speaking, an application does not need to call this
+ * initialization function, as log_eucafault() also calls it. However,
+ * calling this during application startup will ensure the
+ * fault-reporting system is properly initialized prior to any fault
+ * encounters. Thus, it is recommended all applications call
+ * initialize_eucafaults() as part of their own initialization.
+ * 
+ * Return value indicates number of faults successfully loaded into
+ * database.
+ */
+static int initialize_eucafaults (void);
+
+/*
  * Usage: log_eucafault (FAULT_ID, param1, param1text, param2, param2text, NULL)
  *
  * ...where the text of each named parameter will replace that parameter
@@ -68,6 +83,9 @@ permission notice:
  *
  * Note that the final NULL argument is very important!
  * (...because va_arg() is stupid.)
+ *
+ * Will call initialize_eucafaults() internally to ensure fault model
+ * has been loaded.
  *
  * Return value is number of parameter arguments detected prior to NULL.
  *
