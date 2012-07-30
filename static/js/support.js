@@ -67,6 +67,8 @@ function addKeyPair(keyName) {
            });
            // TODO: can we wait till file is saved by user?
            successNotification("Added keypair " + keyName);
+           // refresh table
+           allTablesRef['keys'].fnReloadAjax();
          } else {
            errorNotification("Failed to create keypair " + keyName);
          }

@@ -63,6 +63,9 @@
       $('div.table_keys_new').addClass('euca-table-add');
       $('div.table_keys_new').html('<a class="table-key-new" href="#">Add</a>');
       $('#keys_filter').append('&nbsp<a class="table-refresh" href="#">Refresh</a>');
+      $('div#keys_filter a.table-refresh').click( function () {
+        allTablesRef['keys'].fnReloadAjax();
+      });
       $('div.table_keys_top').addClass('euca-table-length');
       $('div.table_keys_top').html('<div class="euca-table-action actionmenu"></div><div class="euca-table-size"><span id="table_keys_count"></span> key pairs found. Showing <span class="show">10</span> | <span class="show">25</span> | <span class="show">50</span> | <span class="show">all</span></div>');
       // TODO: highlight selected
