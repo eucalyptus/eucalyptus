@@ -61,7 +61,7 @@ permission notice:
 #define INCLUDE_MISC_H
 
 /*
- * Usage: log_fault (FAULT_ID, param1, param1text, param2, param2text, NULL)
+ * Usage: log_eucafault (FAULT_ID, param1, param1text, param2, param2text, NULL)
  *
  * ...where the text of each named parameter will replace that parameter
  * token in the fault message log text.
@@ -69,7 +69,7 @@ permission notice:
  * Note that the final NULL argument is very important!
  * (...because va_arg() is stupid.)
  *
- * Return value is the number of parameter arguments detected prior to NULL.
+ * Return value is number of parameter arguments detected prior to NULL.
  *
  */
 extern int log_eucafault (char *, ...);
