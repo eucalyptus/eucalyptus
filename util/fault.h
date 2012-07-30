@@ -73,7 +73,7 @@ permission notice:
  * Return value indicates number of faults successfully loaded into
  * database.
  */
-static int initialize_eucafaults (void);
+extern int initialize_eucafaults (void);
 
 /*
  * Usage: log_eucafault (FAULT_ID, param1, param1text, param2, param2text, NULL)
