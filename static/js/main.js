@@ -118,7 +118,7 @@
           },
           {
             text: "Yes, delete",
-            click: function() { $(this).dialog("close"); }
+            click: function() { deleteSelectedKeyPairs(); $(this).dialog("close"); }
           }
         ]
       });
@@ -129,7 +129,7 @@
          buttons: [
           {
             text: "Create and download",
-            click: function() { $(this).dialog("close"); addKeyPair($.trim($('#key-name').val()));}
+            click: function() { $(this).dialog("close"); addKeyPair($.trim($('#key-name').val())); }
           },
           {
             text: "Cancel",
