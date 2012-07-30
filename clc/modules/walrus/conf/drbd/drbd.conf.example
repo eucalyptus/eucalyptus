@@ -3,7 +3,7 @@ common {
 }
 
 resource r0 {
-  
+
   on <walrus-host-1> {
     device    <drbd-block-dev, e.g., /dev/drbd1>;
     disk      <drbd-backing-disk-dev, e.g. /dev/sdb1>;
@@ -27,4 +27,3 @@ resource r0 {
     after-sb-1pri discard-secondary;
   }
 }
-    

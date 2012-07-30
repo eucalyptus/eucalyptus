@@ -15,8 +15,8 @@
 
 AC_PREREQ(2.61)
 AC_INIT(Eucalyptus,
-        m4_esys:cmd([cat VERSION| tr -d '\n']),
-        support@open.eucalyptus.com)
+        esyscmd([cat VERSION | tr -d '\n']),
+        community@lists.eucalyptus.com)
 AC_CONFIG_SRCDIR([wsdl/eucalyptus_nc.wsdl])
 AC_CONFIG_HEADER([util/eucalyptus-config.h])
 AC_PREFIX_DEFAULT([/opt/eucalyptus/])
