@@ -62,33 +62,24 @@
  */
 package com.eucalyptus.address;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
-import org.hibernate.criterion.Example;
-import com.eucalyptus.blockstorage.Volume;
 import com.eucalyptus.cloud.CloudMetadata.AddressMetadata;
-import com.eucalyptus.cloud.CloudMetadata.VolumeMetadata;
 import com.eucalyptus.cloud.util.NotEnoughResourcesException;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
-import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.event.AbstractNamedRegistry;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.event.SystemConfigurationEvent;
 import com.eucalyptus.util.Classes;
-import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.OwnerFullName;
-import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.RestrictedTypes.QuantityMetricFunction;
 import com.eucalyptus.util.RestrictedTypes.Resolver;
 import com.eucalyptus.util.async.AsyncRequests;
@@ -102,8 +93,6 @@ import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
-import edu.ucsb.eucalyptus.cloud.exceptions.ExceptionList;
-import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 @SuppressWarnings( "serial" )
 public class Addresses extends AbstractNamedRegistry<Address> implements EventListener {
@@ -222,11 +211,12 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
       return true;
     }
   };
-  
+
   public static void system( final VmInstance vm ) {
     try {
-      if ( VmState.PENDING.equals( vm.getState( ) ) || VmState.RUNNING.equals( vm.getState( ) ) ) {
-        Addresses.getInstance( ).getAddressManager( ).assignSystemAddress( vm );
+      if ( !vm.isUsePrivateAddressing() &&
+          (VmState.PENDING.equals( vm.getState( ) ) || VmState.RUNNING.equals( vm.getState( ) ) ) ) {
+        Addresses.getAddressManager( ).assignSystemAddress( vm );
       }
     } catch ( final NotEnoughResourcesException e ) {
       LOG.warn( "No addresses are available to provide a system address for: " + LogUtil.dumpObject( vm ) );
@@ -248,7 +238,7 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
                   Addresses.system( vm );
                 } catch ( final NoSuchElementException ex ) {}
               }
-            } ).dispatch( vm.getPartition( ) );
+            } ).dispatch(vm.getPartition());
           }
         } catch ( TerminatedInstanceException ex ) {
         } catch ( NoSuchElementException ex ) {

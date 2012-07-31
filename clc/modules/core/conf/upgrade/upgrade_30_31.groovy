@@ -151,7 +151,7 @@ import com.eucalyptus.util.BlockStorageUtil;
 
 class upgrade_30_31 extends AbstractUpgradeScript {
     static final List<String> FROM_VERSION = ["3.0.0", "3.0.1", "3.0.2"];
-    static final List<String> TO_VERSION   = ["3.1.0"];
+    static final List<String> TO_VERSION   = ["3.1.0", "3.1.1"];
     private static Logger LOG = Logger.getLogger( upgrade_30_31.class );
     private static List<Class> entities = new ArrayList<Class>();
     private static Map<String, Class> entityMap = new HashMap<String, Class>();
@@ -340,17 +340,23 @@ class upgrade_30_31 extends AbstractUpgradeScript {
                               and a.auth_account_name=?""", acct.getName()).each { rowResult ->
                 db = EntityWrapper.get(AccountEntity.class);
                 UserEntity user = UserEntity.newInstanceWithUserId(rowResult.auth_user_id_external);
-                LOG.info("adding user " + rowResult.auth_user_id_external + " in " + acct.getName());
-                user = convertRowToObject(userSetterMap, rowResult, user);
-                initMetaClass(user, UserEntity.class);
-                user.setRegistrationStatus(RegistrationStatus.valueOf(rowResult.auth_user_reg_stat));
-                GroupEntity userGroup = DatabaseAuthUtils.getUniqueGroup(db, DatabaseAuthUtils.getUserGroupName( rowResult.auth_user_name ), acct.getName( ) );
-                user = db.recast( UserEntity.class ).merge( user );
-                userGroup = db.recast( GroupEntity.class ).merge( userGroup );
-                initMetaClass(user, UserEntity.class);
-                initMetaClass(userGroup, GroupEntity.class);
-                user.getGroups().add( userGroup );
-                userGroup.getUsers().add( user );
+                try {
+                  LOG.info("adding user " + rowResult.auth_user_id_external + " in " + acct.getName());
+                  user = convertRowToObject(userSetterMap, rowResult, user);
+                  initMetaClass(user, UserEntity.class);
+                  user.setRegistrationStatus(RegistrationStatus.valueOf(rowResult.auth_user_reg_stat));
+                  GroupEntity userGroup = DatabaseAuthUtils.getUniqueGroup(db, DatabaseAuthUtils.getUserGroupName( rowResult.auth_user_name ), acct.getName( ) );
+                  user = db.recast( UserEntity.class ).merge( user );
+                  userGroup = db.recast( GroupEntity.class ).merge( userGroup );
+                  initMetaClass(user, UserEntity.class);
+                  initMetaClass(userGroup, GroupEntity.class);
+                  user.getGroups().add( userGroup );
+                  userGroup.getUsers().add( user );
+                } catch (org.hibernate.NonUniqueResultException e) {
+                  LOG.warn("Skipping non-unique user ${rowResult.auth_user_name}");
+                  db.rollback();
+                  return;
+                }
 
                 authConn.rows("""select auth_group_id_external,auth_group_name
                                    from auth_group g
