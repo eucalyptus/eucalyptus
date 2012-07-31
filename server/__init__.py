@@ -4,12 +4,9 @@ import io
 import json
 import os
 import random
-import socket
 import sys
 import tornado.web
 import traceback
-from .botoclcinterface import BotoClcInterface
-from .mockclcinterface import MockClcInterface
 
 sessions = {}
 use_mock = True
@@ -18,6 +15,7 @@ global_session = None
 
 
 class UserSession(object):
+    clc = None
     def __init__(self, account, username, session_token, access_key, secret_key):
         self.obj_account = account
         self.obj_username = username
@@ -105,6 +103,7 @@ class EuiException(BaseException):
         self.msg = msg
 
 class BaseHandler(tornado.web.RequestHandler):
+    user_session = None
     def should_use_mock(self):
         use_mock = config.getboolean('eui', 'usemock')
         return use_mock
