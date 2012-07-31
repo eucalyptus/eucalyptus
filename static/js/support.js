@@ -7,6 +7,8 @@ function selectCheckboxChanged(context, tableName) {
         cb = rows[i].firstChild.firstChild;
         if (cb != null) cb.checked = true;
       }
+      // activate action menu
+      $('div.table_' + tableName + '_top div.euca-table-action').removeClass('inactive');
       break;
     case false:
       var rows = dataTable.fnGetVisiableTrNodes();
@@ -14,22 +16,32 @@ function selectCheckboxChanged(context, tableName) {
         cb = rows[i].firstChild.firstChild;
         if (cb != null) cb.checked = false;
       }
+      // deactivate action menu
+      $('div.table_' + tableName + '_top div.euca-table-action').addClass('inactive');
       break;
+  }
+}
+
+function updateActionMenu(tableName) {
+  if (getAllSelectedRows(tableName, 1).length == 0) {
+    $('div.table_' + tableName + '_top div.euca-table-action').addClass('inactive');
+  } else {
+    $('div.table_' + tableName + '_top div.euca-table-action').removeClass('inactive');
   }
 }
 
 function getAllSelectedRows(tableName, idIndex) {
   dataTable = allTablesRef[tableName];
   var rows = dataTable.fnGetVisiableTrNodes();
-  var rowsToDelete = [];
+  var selectedRows = [];
   for (i = 0; i<rows.length; i++) {
     cb = rows[i].firstChild.firstChild;
     if (cb != null && cb.checked == true) {
       if (rows[i].childNodes[idIndex] != null)
-        rowsToDelete.push(rows[i].childNodes[idIndex].firstChild.nodeValue);
+        selectedRows.push(rows[i].childNodes[idIndex].firstChild.nodeValue);
     }
   }
-  return rowsToDelete;
+  return selectedRows;
 }
 
 function escapeHTML(input) {

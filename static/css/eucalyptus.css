@@ -321,6 +321,9 @@ div.euca-table-size {
     position: relative;
     top: 10px;
 }
+.inactive a:hover{
+    background-color:white !important;
+}
 
 /* notifications */
 div.euca-notification {

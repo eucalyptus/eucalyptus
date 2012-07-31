@@ -50,7 +50,7 @@
               "aoColumns": [
                 {
                   "bSortable": false,
-                  "fnRender": function(oObj) { return '<input type="checkbox"/>' },
+                  "fnRender": function(oObj) { return '<input type="checkbox" onclick="updateActionMenu(\'keys\')"/>' },
                   "sWidth": "20px",
                 },
                 { "mDataProp": "name" },
@@ -68,7 +68,7 @@
         allTablesRef['keys'].fnReloadAjax();
       });
       $('div.table_keys_top').addClass('euca-table-length');
-      $('div.table_keys_top').html('<div class="euca-table-action actionmenu"></div><div class="euca-table-size"><span id="table_keys_count"></span> key pairs found. Showing <span class="show">10</span> | <span class="show">25</span> | <span class="show">50</span> | <span class="show">all</span></div>');
+      $('div.table_keys_top').html('<div class="euca-table-action actionmenu inactive"></div><div class="euca-table-size"><span id="table_keys_count"></span> key pairs found. Showing <span class="show">10</span> | <span class="show">25</span> | <span class="show">50</span> | <span class="show">all</span></div>');
       // TODO: highlight selected
       $("div.table_keys_top span.show").click( function () {
 	 if ( this.innerHTML == "10" ) {
@@ -86,7 +86,7 @@
          }
       });
       //action menu
-      menuContent = '<ul><li><a href="#">Actions<span class="arrow"></span></a><ul>' +
+      menuContent = '<ul><li><a href="#">More actions<span class="arrow"></span></a><ul>' +
              '<li><a href="#" id="keys-delete">Delete</a></li>' +
              '</ul></li></ul>';
       $menuDiv = $("div.table_keys_top div.euca-table-action");
@@ -100,11 +100,13 @@
       //TODO: figure out why 'ul li a' selector does not work
       $menuDiv.children('ul').children('li').children('a').click(function(){
         parentUL = $(this).parent().parent();
-        if (parentUL.hasClass('activemenu')){
-          parentUL.removeClass('activemenu');
-        }
-        else {
-          parentUL.addClass('activemenu');
+        if (!parentUL.parent().hasClass('inactive')) {
+          if (parentUL.hasClass('activemenu')){
+            parentUL.removeClass('activemenu');
+          }
+          else {
+            parentUL.addClass('activemenu');
+          }
         }
       });
       // init delete dialog
