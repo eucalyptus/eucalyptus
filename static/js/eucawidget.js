@@ -7,15 +7,12 @@
     options : { },
 
     _init : function() {
-   
     },
 
     _create : function() { 
-
     },
 
     _destroy : function() {
-
     },
 
     subscribe : function() {
