@@ -90,6 +90,7 @@ permission notice:
 #define DEFAULT_LOCALIZATION "en_US"
 #define LOCALIZATION_ENV_VAR "LOCALE"
 #define XML_SUFFIX ".xml"
+#define COMMON_PREFIX "common"
 
 /*
  * This is the order of priority (highest to lowest) for fault messages
@@ -109,14 +110,14 @@ enum faultdir_types {
 };
 
 /*
- * Shared data
+ * NO USER-SERVICEABLE PARTS BEYOND THIS POINT
  */
-static int faults_initialized = 0;
-static char faultdirs[NUM_FAULTDIR_TYPES][PATH_MAX];
 
 /*
- * This holds the in-memory model of the fault database.
+ * Shared data
  */
+
+// This holds the in-memory model of the fault database.
 static xmlDoc *ef_doc = NULL;
 
 // FIXME: Thread safety is only half-baked at this point.
@@ -132,6 +133,7 @@ static int scandir_filter (const struct dirent *);
 static int str_end_cmp (const char *, const char *);
 static char *str_trim_suffix (const char *, const char *);
 static int add_eucafault (xmlDoc *);
+static int has_common_block(xmlDoc *);
 
 /*
  * Utility functions -- move to misc.c?
@@ -141,7 +143,6 @@ static int add_eucafault (xmlDoc *);
 /*
  * Utility function:
  * Compares end of one string to another string (the suffix) for a match.
- *
  */
 static int
 str_end_cmp (const char *str, const char *suffix)
@@ -194,6 +195,7 @@ get_eucafault (const char * faultdir, const char * fault_id)
 {
     xmlDoc *my_doc = NULL;
     char fault_file[PATH_MAX];
+    static int common_block_exists = 0; /* FIXME: I don't like this handling. */
 
     PRINTF(("Getting fault %s\n", fault_id));
 
@@ -215,6 +217,12 @@ get_eucafault (const char * faultdir, const char * fault_id)
     }
     if (fault_id_exists (fault_id, my_doc)) {
         PRINTF(("Found fault id %s in %s\n", fault_id, fault_file));
+    } else if (has_common_block (my_doc)) {
+        PRINTF(("Found common block in %s\n", fault_file));
+        if (common_block_exists++) {
+            PRINTF(("Common block already exists--skipping.\n"));
+            return NULL;
+        }
     } else {
         PRINTF(("Did NOT find fault id %s in %s\n", fault_id, fault_file));
         PRINTF(("Found fault id %s instead.\n",
@@ -228,6 +236,8 @@ get_eucafault (const char * faultdir, const char * fault_id)
 /*
  * Adds XML doc for a fault to the in-memory fault model (doc).
  * Creates model if none exists yet.
+ * 
+ * Can also add COMMON_PREFIX (<common>) block.
  */
 static int
 add_eucafault (xmlDoc *new_doc)
@@ -271,10 +281,35 @@ get_fault_id (xmlNode *node)
     }
     return NULL;
 }
-    
 /*
- * Returns true (1) if fault id already exists in model, false (0) if
- * not.
+ * Returns true (1) if common block exists in doc, false (0) if not.
+ */
+static int
+has_common_block(xmlDoc *doc)
+{
+    if (doc == NULL) {
+        return 0;
+    }
+    for (xmlNode *node = xmlFirstElementChild(xmlDocGetRootElement(doc));
+         node; node = node->next) {
+        if (node->type == XML_ELEMENT_NODE) {
+            if (!strcasecmp((const char *)node->name, COMMON_PREFIX)) {
+                PRINTF(("Found common block.\n"));
+                return 1;
+            }
+        }
+    }
+    return 0;
+}
+
+
+/*
+ * Returns true (1) if fault id exists in model, false (0) if not.
+ *
+ * Uses global fault model unless a non-NULL doc pointer is passed as a
+ * parameter, so it can be used either to match a fault id in a single
+ * doc or to determine if a fault id already exists in the overall
+ * model.
  */
 static int
 fault_id_exists (const char *id, xmlDoc *doc)
@@ -308,6 +343,8 @@ initialize_eucafaults (void)
     struct stat dirstat;
     int populate = 0;           /* FIXME: Use or delete. */
     char *locale = NULL;
+    static int faults_initialized = 0;
+    static char faultdirs[NUM_FAULTDIR_TYPES][PATH_MAX];
 
     pthread_mutex_lock(&fault_mutex);
 

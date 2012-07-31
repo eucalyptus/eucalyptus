@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<eucafaults version="1" description="Common strings for the fault subsystem">
+  <common>
+    <var name="condition" value="Condition"/>
+    <var name="cause" value="Cause"/>
+    <var name="initiator" value="Initiator"/>
+    <var name="location" value="Location"/>
+    <var name="resolution" value="Resolution"/>
+    <var name="unknown" value="unknown"/>
+    <var name="na" value="not applicable"/>
+    <var name="started_template" value="${component} started"/>
+  </common>
+</eucafaults>
