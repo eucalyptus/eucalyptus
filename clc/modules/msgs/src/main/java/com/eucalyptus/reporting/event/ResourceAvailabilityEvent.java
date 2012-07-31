@@ -64,6 +64,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Set;
 import com.google.common.base.Joiner;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
@@ -121,12 +122,23 @@ public class ResourceAvailabilityEvent implements Event {
 
     protected Tag( final String type,
                    final String value ) {
+      Preconditions.checkNotNull( type, "Type is required" );
+      Preconditions.checkNotNull( value, "Value is required" );
+
       this.type = type;
       this.value = value;
     }
 
+    public String getType() {
+      return type;
+    }
+
+    public String getValue() {
+      return value;
+    }
+
     public String toString() {
-      return String.format( "[tag:%s=%s]", type, value );
+      return String.format( "[tag:%s=%s]", getType(), getValue() );
     }
   }
 
@@ -155,6 +167,7 @@ public class ResourceAvailabilityEvent implements Event {
 
   public ResourceAvailabilityEvent( final ResourceType type,
                                     final Collection<Availability> availability ) {
+    Preconditions.checkNotNull( type, "Type is required" );
     this.type = type;
     this.availability = ImmutableList.copyOf( availability );
   }
