@@ -344,3 +344,7 @@ a.hide-notification  {
    float: right;
 }
 
+.dialog-notifications {
+   color: red;
+   padding: 5px;
+}

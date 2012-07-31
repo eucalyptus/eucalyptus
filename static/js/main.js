@@ -132,7 +132,15 @@
          buttons: [
           {
             text: "Create and download",
-            click: function() { $(this).dialog("close"); addKeyPair($.trim($('#key-name').val())); }
+            click: function() {
+              var keyName = $.trim($('#key-name').val());
+              var keyPattern = new RegExp('^[A-Za-z0-9_\s-]{1,256}$');
+              if (keyPattern.test(keyName)) {
+                $(this).dialog("close"); addKeyPair(keyName);
+              } else {
+                $('#key-add-dialog div.dialog-notifications').html("Name must be less than 256 alphanumeric characters, spaces, dashes, and/or underscores");
+              }
+            }
           },
           {
             text: "Cancel",
@@ -140,7 +148,6 @@
           }
         ]
       });
-
 
       allTablesRef['groups'] = $('#groups').dataTable( {
               "bProcessing": true,
