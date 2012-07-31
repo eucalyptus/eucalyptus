@@ -129,7 +129,7 @@ public class FalseDataGenerator
 		TestEventListener listener = new TestEventListener();
 		listener.setCurrentTimeMillis(START_TIME);
 		queueReceiver.removeAllListeners(); //Remove non-test listeners set up by bootstrapper
-		queueReceiver.addEventListener(listener);
+		//queueReceiver.addEventListener(listener);
 
 		List<InstanceAttributes> fakeInstances =
 				new ArrayList<InstanceAttributes>();

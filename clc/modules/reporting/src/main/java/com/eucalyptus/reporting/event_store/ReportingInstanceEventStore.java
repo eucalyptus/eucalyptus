@@ -1,68 +1,70 @@
 package com.eucalyptus.reporting.event_store;
 
-import java.util.*;
-
+import javax.annotation.Nonnull;
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.entities.Entities;
+import com.google.common.base.Preconditions;
 
 /**
  * @author tom.werges
  */
-public class ReportingInstanceEventStore
-{
-	private static Logger LOG = Logger.getLogger( ReportingInstanceEventStore.class );
+public class ReportingInstanceEventStore {
+  private static final Logger LOG = Logger.getLogger( ReportingInstanceEventStore.class );
 
-	private static ReportingInstanceEventStore instance = null;
-	
-	public static synchronized ReportingInstanceEventStore getInstance()
-	{
-		if (instance == null) {
-			instance = new ReportingInstanceEventStore();
-		}
-		return instance;
-	}
-	
-	private ReportingInstanceEventStore()
-	{
-		
-	}
+  private static final ReportingInstanceEventStore instance = new ReportingInstanceEventStore( );
 
-	public void insertCreateEvent(String uuid, long timestampMs, String instanceId,
-			String instanceType, String userId, String clusterName, String availabilityZone)
-	{		
-		EntityWrapper<ReportingInstanceCreateEvent> entityWrapper =
-			EntityWrapper.get(ReportingInstanceCreateEvent.class);
+  public static ReportingInstanceEventStore getInstance( ) {
+    return instance;
+  }
 
-		try {
-			ReportingInstanceCreateEvent event = new ReportingInstanceCreateEvent(uuid, timestampMs,
-					instanceId, instanceType, userId, clusterName, availabilityZone);
-			entityWrapper.add(event);
-			entityWrapper.commit();
-			LOG.debug("Added event to db:" + event);
-		} catch (Exception ex) {
-			LOG.error(ex);
-			entityWrapper.rollback();
-			throw new RuntimeException(ex);
-		}					
-	}
+  private ReportingInstanceEventStore( ) { }
 
-	public void insertUsageEvent(String uuid, long timestampMs, Long cumulativeNetIoMegs,
-			Long cumulativeDiskIoMegs, Integer cpuUtilizationPercent)
-	{
-		EntityWrapper<ReportingInstanceUsageEvent> entityWrapper =
-			EntityWrapper.get(ReportingInstanceUsageEvent.class);
+  public void insertCreateEvent( @Nonnull final String uuid,
+                                          final long timestampMs,
+                                 @Nonnull final String instanceId,
+                                 @Nonnull final String instanceType,
+                                 @Nonnull final String userId,
+                                 @Nonnull final String clusterName,
+                                 @Nonnull final String availabilityZone ) {
+    Preconditions.checkNotNull( uuid, "Uuid is required" );
+    Preconditions.checkNotNull( instanceId, "InstanceId is required" );
+    Preconditions.checkNotNull( instanceType, "InstanceType is required" );
+    Preconditions.checkNotNull( userId, "UserId is required" );
+    Preconditions.checkNotNull( clusterName, "ClusterName is required" );
+    Preconditions.checkNotNull( availabilityZone, "AvailabilityZone is required" );
 
-		try {
-			ReportingInstanceUsageEvent event = new ReportingInstanceUsageEvent(uuid, timestampMs,
-					cumulativeNetIoMegs, cumulativeDiskIoMegs, cpuUtilizationPercent);
-			entityWrapper.add(event);
-			entityWrapper.commit();
-			LOG.debug("Added event to db:" + event);
-		} catch (Exception ex) {
-			LOG.error(ex);
-			entityWrapper.rollback();
-			throw new RuntimeException(ex);
-		}							
-	}
+    persist(
+        new ReportingInstanceCreateEvent(
+            uuid,
+            timestampMs,
+            instanceId,
+            instanceType,
+            userId,
+            clusterName,
+            availabilityZone ) );
+  }
+
+  public void insertUsageEvent( @Nonnull final String uuid,
+                                         final long timestampMs,
+                                @Nonnull final Long cumulativeNetIoMegs,
+                                @Nonnull final Long cumulativeDiskIoMegs,
+                                @Nonnull final Integer cpuUtilizationPercent ) {
+    Preconditions.checkNotNull( uuid, "Uuid is required" );
+    Preconditions.checkNotNull( cumulativeNetIoMegs, "CumulativeNetIoMegs is required" );
+    Preconditions.checkNotNull( cumulativeDiskIoMegs, "CumulativeDiskIoMegs is required" );
+    Preconditions.checkNotNull( cpuUtilizationPercent, "CpuUtilizationPercent is required" );
+
+    persist(
+        new ReportingInstanceUsageEvent(
+            uuid,
+            timestampMs,
+            cumulativeNetIoMegs,
+            cumulativeDiskIoMegs,
+            cpuUtilizationPercent ) );
+  }
+
+  private void persist( final Object event ) {
+    Entities.persist( event );
+  }
 }

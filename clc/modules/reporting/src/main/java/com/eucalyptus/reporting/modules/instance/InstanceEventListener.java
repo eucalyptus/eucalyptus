@@ -63,164 +63,165 @@
 package com.eucalyptus.reporting.modules.instance;
 
 import java.util.*;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import javax.annotation.Nonnull;
 import org.apache.log4j.*;
 
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
-import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.entities.Entities;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.reporting.event.*;
+import com.eucalyptus.reporting.event_store.ReportingInstanceEventStore;
+import com.eucalyptus.reporting.event_store.ReportingInstanceUsageEvent;
 import com.eucalyptus.reporting.user.ReportingAccountDao;
 import com.eucalyptus.reporting.user.ReportingUserDao;
+import com.google.common.base.Function;
+import com.google.common.collect.MapMaker;
+import com.google.common.collect.Sets;
 
 @ConfigurableClass( root = "reporting", description = "Parameters controlling reporting")
-public class InstanceEventListener
-	implements EventListener<Event>
-{
-	private static Logger log = Logger.getLogger( InstanceEventListener.class );
+public class InstanceEventListener implements EventListener<InstanceEvent> {
+  private static final Logger log = Logger.getLogger( InstanceEventListener.class );
 
-	@ConfigurableField( initial = "1200", description = "How often the reporting system writes instance snapshots" )
-	public static long DEFAULT_WRITE_INTERVAL_SECS = 1200;
+  @ConfigurableField( initial = "1200", description = "How often the reporting system writes instance snapshots" )
+  public static long DEFAULT_WRITE_INTERVAL_SECS = 1200;
 
-	private final Set<String> recentlySeenUuids;
-	private final Map<String, InstanceUsageSnapshot> recentUsageSnapshots;
-	private long lastWriteMs;
-	
-	public InstanceEventListener()
-	{
-		this.recentlySeenUuids = new HashSet<String>();
-		this.recentUsageSnapshots = new HashMap<String, InstanceUsageSnapshot>();
-		this.lastWriteMs = 0l;
-	}
+  private final Set<String> recentlySeenUuids = Sets.newSetFromMap( new MapMaker().expireAfterAccess( 1, TimeUnit.HOURS ).<String,Boolean>makeMap() );
+  private final Map<String, DatedInstanceEvent> recentUsageEvents = new MapMaker().expireAfterAccess( 1, TimeUnit.HOURS ).makeMap();
+  private final ReadWriteLock persistenceLock = new ReentrantReadWriteLock(); // lock for recentUsageEvents bulk updates
 
-	public void fireEvent( Event e )
-	{
-	  final long receivedEventMs = this.getCurrentTimeMillis();
-	  if (e instanceof InstanceEvent) {
-		  InstanceEvent event = (InstanceEvent) e;
-		  log.info("Received instance event:" + event);
+  private final AtomicLong lastWriteMs = new AtomicLong( 0L );
 
-		  final String uuid = event.getUuid();
-		  if (uuid == null) {
-			  log.warn("Received null uuid");
-			  return;
-		  }
-		  
-		  /* Retain records of all account and user id's and names encountered
-		   * even if they're subsequently deleted.
-		   */
-		  ReportingAccountDao.getInstance().addUpdateAccount(
-				  event.getAccountId(), event.getAccountName());
-		  ReportingUserDao.getInstance().addUpdateUser(
-				  event.getUserId(), event.getUserName());
+  public InstanceEventListener() {
+  }
 
-		  /* Convert InstanceEvents to internal types. Internal types are not
-		   * exposed because the reporting.instance package won't be present
-		   * in the open src version
-		   */
-		  InstanceAttributes insAttrs = new InstanceAttributes(uuid,
-				  event.getInstanceId(), event.getInstanceType(),
-				  event.getAccountId(), event.getUserId(),
-				  event.getClusterName(), event.getAvailabilityZone());
-		  InstanceUsageSnapshot insUsageSnapshot = new InstanceUsageSnapshot(
-				  uuid, receivedEventMs, event.getCumulativeNetworkIoMegs(),
-				  event.getCumulativeDiskIoMegs());
+  public void fireEvent( @Nonnull final InstanceEvent event ) {
+    final long receivedEventMs = getCurrentTimeMillis();
 
-		  
-		  /* Write the instance attributes, but only if we don't have it
-		   * already.
-		   */
-		  EntityWrapper<InstanceAttributes> attrEntityWrapper =
-			  EntityWrapper.get(InstanceAttributes.class);
-		  try {
-			  if (! recentlySeenUuids.contains(uuid)) {
-				try {
-					attrEntityWrapper.getUnique(new InstanceAttributes()
-					{
-						{
-							setUuid(uuid);
-						}
-					});
-				} catch (Exception ex) {
-					attrEntityWrapper.add(insAttrs);
-					log.info("Wrote Reporting Instance:" + uuid);
-				}
-				recentlySeenUuids.add(uuid);
-			  }
-			  attrEntityWrapper.commit();
-		  } catch (Exception ex) {
-			  attrEntityWrapper.rollback();
-			  log.error(ex);
-		  }
+    log.debug("Received instance event:" + event);
 
- 
-		  /* Gather the latest usage snapshots (they're cumulative, so
-		   * intermediate ones don't matter except for granularity), and
-		   * write them all to the database at once every n secs.
-		   */
-		  if (! recentUsageSnapshots.containsKey(uuid)) {
-			  recentUsageSnapshots.put(uuid, insUsageSnapshot);
-		  } else {
-			  InstanceUsageSnapshot oldSnapshot =
-				  recentUsageSnapshots.get(uuid);
-			  if (oldSnapshot.getTimestampMs() < insUsageSnapshot.getTimestampMs()) {
-				  recentUsageSnapshots.put(uuid, insUsageSnapshot);
-			  } else {
-				  //log, then just continue
-				  log.error("Events are arriving out of order");
-			  }
-		  }
+    final String uuid = event.getUuid();
+    if ( uuid == null ) {
+      log.warn("Received null uuid");
+      return;
+    }
 
-		  EntityWrapper<InstanceUsageSnapshot> entityWrapper =
-			  EntityWrapper.get(InstanceUsageSnapshot.class);
-		  try {
-			  if (receivedEventMs > (lastWriteMs + DEFAULT_WRITE_INTERVAL_SECS*1000)) {
-				  for (String key: recentUsageSnapshots.keySet()) {
-					  InstanceUsageSnapshot ius = recentUsageSnapshots.get(key);
-					  entityWrapper.add(ius);
-					  log.info("Wrote Instance Usage:" + ius.getUuid() + ":" + ius.getEntityId());
-				  }
-				  recentUsageSnapshots.clear();
-				  lastWriteMs = receivedEventMs;
-			  }
-			  entityWrapper.commit();
-		  } catch (Exception ex) {
-			  entityWrapper.rollback();
-			  log.error(ex);
-		  }
-	  }
-	}
+    /* Retain records of all account and user id's and names encountered
+     * even if they're subsequently deleted.
+     */
+    ReportingAccountDao.getInstance().addUpdateAccount(
+        event.getAccountId(), event.getAccountName());
+    ReportingUserDao.getInstance().addUpdateUser(
+        event.getUserId(), event.getUserName());
 
-	//TODO: shutdown hook
-	public void flush()
-	{
-		EntityWrapper<InstanceUsageSnapshot> entityWrapper =
-			EntityWrapper.get(InstanceUsageSnapshot.class);
-		try {
-			for (String key : recentUsageSnapshots.keySet()) {
-				InstanceUsageSnapshot ius = recentUsageSnapshots.get(key);
-				entityWrapper.add(ius);
-				log.info("Wrote Instance Usage:" + ius.getUuid() + ":"
-						+ ius.getEntityId());
-			}
-			recentUsageSnapshots.clear();
-			entityWrapper.commit();
-		} catch (Exception ex) {
-			entityWrapper.rollback();
-			log.error(ex);
-		}
-	}
+    // Write the instance attributes, but only if we don't have it already.
+    if ( !recentlySeenUuids.contains(uuid) ) {
+      try {
+        log.info( "Wrote Reporting Instance:" + uuid );
+        final ReportingInstanceEventStore eventStore = ReportingInstanceEventStore.getInstance();
+        eventStore.insertCreateEvent(
+            event.getUuid(),
+            System.currentTimeMillis(),
+            event.getInstanceId(),
+            event.getInstanceType(),
+            event.getUserId(),
+            event.getClusterName(),
+            event.getAvailabilityZone()
+        );
+      } catch ( Exception ex ) {
+        //TODO:STEVE:Handle expected exception (i.e. instance already exists)
+        log.error( ex, ex );
+      } finally {
+        recentlySeenUuids.add( uuid );
+      }
+    }
 
-	/**
-	 * Get the current time which will be used for recording when an event
-	 * occurred. This can be overridden if you have some alternative method
-	 * of timekeeping (synchronized, test times, etc).
-	 */
-	protected long getCurrentTimeMillis()
-	{
-		return System.currentTimeMillis();
-	}
+    /* Gather the latest usage snapshots (they're cumulative, so
+     * intermediate ones don't matter except for granularity), and
+     * write them all to the database at once every n secs.
+     */
+    boolean accepted = false;
+    persistenceLock.readLock().lock();
+    try {
+      final DatedInstanceEvent oldInstanceEvent = recentUsageEvents.get(uuid);
+      if ( oldInstanceEvent==null || oldInstanceEvent.getTimestamp() < receivedEventMs ) {
+        recentUsageEvents.put( uuid, new DatedInstanceEvent( receivedEventMs, event ) );
+        accepted = true;
+      }
+    } finally {
+      persistenceLock.readLock().unlock();
+    }
+    if (!accepted) log.error( "Events are arriving out of order" );
 
-	
+    if ( receivedEventMs > ( lastWriteMs.get() + (DEFAULT_WRITE_INTERVAL_SECS * 1000) ) ) {
+      try {
+        flush();
+        lastWriteMs.set( receivedEventMs );
+      } catch ( Exception ex ) {
+        log.error( ex, ex );
+      }
+    }
+  }
+
+  //TODO: shutdown hook
+  public void flush() {
+    final ReportingInstanceEventStore eventStore = ReportingInstanceEventStore.getInstance();
+    persistenceLock.writeLock().lock();
+    try {
+      Entities.asTransaction( ReportingInstanceUsageEvent.class, new Function<Collection<DatedInstanceEvent>,Void>(){
+        @Override
+        public Void apply( final Collection<DatedInstanceEvent> datedInstanceEvents ) {
+          for ( final DatedInstanceEvent datedEvent : datedInstanceEvents ) {
+            //TODO:STEVE: Add CPU to instance event
+            final InstanceEvent event = datedEvent.getInstanceEvent();
+            eventStore.insertUsageEvent(
+                event.getUuid(),
+                datedEvent.getTimestamp(),
+                event.getCumulativeNetworkIoMegs(),
+                event.getCumulativeDiskIoMegs(),
+                0
+            );
+            log.debug( "Wrote instance usage for: " + event.getUuid() );
+          }
+          return null;
+        }
+      } ).apply( recentUsageEvents.values() );
+      recentUsageEvents.clear();
+    } finally {
+      persistenceLock.writeLock().unlock();
+    }
+  }
+
+  /**
+   * Get the current time which will be used for recording when an event
+   * occurred. This can be overridden if you have some alternative method
+   * of timekeeping (synchronized, test times, etc).
+   */
+  protected long getCurrentTimeMillis() {
+    return System.currentTimeMillis();
+  }
+
+  private static final class DatedInstanceEvent {
+    private final long timestamp;
+    private final InstanceEvent instanceEvent;
+
+    private DatedInstanceEvent( final long timestamp,
+                                final InstanceEvent instanceEvent ) {
+      this.timestamp = timestamp;
+      this.instanceEvent = instanceEvent;
+    }
+
+    public long getTimestamp() {
+      return timestamp;
+    }
+
+    public InstanceEvent getInstanceEvent() {
+      return instanceEvent;
+    }
+  }
 }

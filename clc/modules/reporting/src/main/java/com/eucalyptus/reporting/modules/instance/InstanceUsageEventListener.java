@@ -59,49 +59,37 @@
  *   IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
-package com.eucalyptus.reporting.modules.address;
+package com.eucalyptus.reporting.modules.instance;
 
-import static com.eucalyptus.reporting.event.AddressEvent.InstanceActionInfo;
 import javax.annotation.Nonnull;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
-import com.eucalyptus.reporting.event.AddressEvent;
-import com.eucalyptus.reporting.event_store.ReportingElasticIpEventStore;
-import com.eucalyptus.reporting.user.ReportingAccountDao;
-import com.eucalyptus.reporting.user.ReportingUserDao;
+import com.eucalyptus.reporting.event.InstanceEvent;
+import com.eucalyptus.reporting.event_store.ReportingInstanceEventStore;
 import com.google.common.base.Preconditions;
 
 /**
- * Address event listener for user actions.
+ *
  */
-public class AddressUsageEventListener implements EventListener<AddressEvent> {
+public class InstanceUsageEventListener implements EventListener<InstanceEvent> {
 
   public static void register( ) {
-    Listeners.register( AddressEvent.class, new AddressUsageEventListener() );
+    Listeners.register( InstanceEvent.class, new InstanceUsageEventListener() );
   }
 
   @Override
-  public void fireEvent( @Nonnull final AddressEvent event ) {
-    Preconditions.checkNotNull( event, "Event is required" );
+  public void fireEvent( @Nonnull final InstanceEvent event ) {
+    Preconditions.checkNotNull(event, "Event is required");
 
-    // Ensure account / user info is present and up to date
-    ReportingAccountDao.getInstance().addUpdateAccount( event.getAccountId(), event.getAccountName() );
-    ReportingUserDao.getInstance().addUpdateUser( event.getUserId(), event.getUserName() );
-
-    final ReportingElasticIpEventStore eventStore = ReportingElasticIpEventStore.getInstance();
-    switch (event.getActionInfo().getAction()) {
-      case ALLOCATE:
-        eventStore.insertCreateEvent( event.getUuid(), System.currentTimeMillis(), event.getUserId(), event.getAddress() );
-        break;
-      case RELEASE:
-        eventStore.insertDeleteEvent( event.getUuid(), System.currentTimeMillis() );
-        break;
-      case ASSOCIATE:
-        eventStore.insertAttachEvent( event.getUuid(), ((InstanceActionInfo)event.getActionInfo()).getInstanceUuid(), System.currentTimeMillis() );
-        break;
-      case DISASSOCIATE:
-        eventStore.insertDetachEvent( event.getUuid(), ((InstanceActionInfo)event.getActionInfo()).getInstanceUuid(), System.currentTimeMillis() );
-        break;
-    }
+    //TODO:STEVE: Restrict frequency of DB updates
+    //TODO:STEVE: Add CPU to instance event
+    final ReportingInstanceEventStore eventStore = ReportingInstanceEventStore.getInstance();
+    eventStore.insertUsageEvent(
+        event.getUuid(),
+        System.currentTimeMillis(),
+        event.getCumulativeNetworkIoMegs(),
+        event.getCumulativeDiskIoMegs(),
+        0
+    );
   }
 }

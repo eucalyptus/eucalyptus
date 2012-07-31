@@ -11,10 +11,10 @@ import com.google.common.base.Preconditions;
 public class ReportingElasticIpEventStore {
   private static final Logger LOG = Logger.getLogger( ReportingElasticIpEventStore.class );
 
-  private static final ReportingElasticIpEventStore elasticIpCrud = new ReportingElasticIpEventStore();
+  private static final ReportingElasticIpEventStore instance = new ReportingElasticIpEventStore();
 
-  public static ReportingElasticIpEventStore getElasticIp() {
-    return elasticIpCrud;
+  public static ReportingElasticIpEventStore getInstance() {
+    return instance;
   }
 
   private ReportingElasticIpEventStore() {

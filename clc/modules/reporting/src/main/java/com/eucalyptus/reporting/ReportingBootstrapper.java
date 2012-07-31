@@ -186,13 +186,6 @@ public class ReportingBootstrapper
 //			}, 0, POLLER_DELAY_MS);
 			log.info("Storage queue poller started");
 
-			/* Start instance receiver and instance listener
-			 */
-			QueueReceiver instanceReceiver =
-				queueFactory.getReceiver(QueueIdentifier.INSTANCE);
-			instanceReceiver.addEventListener(getInstanceListener());
-
-
 			QueueReceiver s3Receiver =
 				queueFactory.getReceiver(QueueIdentifier.S3);
 			if (s3Listener == null) {
