@@ -74,28 +74,32 @@ function deleteAction(tableName) {
 function deleteSelectedKeyPairs() {
   var rowsToDelete = getAllSelectedRows('keys', 1);
   for (i = 0; i<rowsToDelete.length; i++) {
-    keyName = rowsToDelete[i];
+    var keyName = rowsToDelete[i];
     $.ajax({
       type:"GET",
-      url:"/ec2?type=key&Action=DeleteKeyPair",
-      data:"_xsrf="+$.cookie('_xsrf') + "&KeyName=" + keyName,
+      url:"/ec2?type=key&Action=DeleteKeyPair&KeyName=" + keyName,
+      data:"_xsrf="+$.cookie('_xsrf'),
       dataType:"json",
       async:"true",
       success:
-        function(data, textStatus, jqXHR){
-          if (data.results && data.results == true) {
-            successNotification("Deleted keypair " + keyName);
-            //TODO: refresh table once
-            allTablesRef['keys'].fnReloadAjax();
-          } else {
-            errorNotification("Failed to delte keypair " + keyName);
-          }
-        },
+        (function(keyName) {
+          return function(data, textStatus, jqXHR){
+            if (data.results && data.results == true) {
+              successNotification("Deleted keypair " + keyName);
+              //TODO: refresh table once
+              allTablesRef['keys'].fnReloadAjax();
+            } else {
+              errorNotification("Failed to delete keypair " + keyName);
+            }
+           }
+        })(keyName),
       error:
-        function(jqXHR, textStatus, errorThrown){
-          //TODO: show communication error?
-          errorNotification("Failed to delete keypair " + keyName);
-        }
+        (function(keyName) {
+          return function(jqXHR, textStatus, errorThrown){
+            //TODO: show communication error?
+            errorNotification("Failed to delete keypair " + keyName);
+          }
+        })(keyName)
     });
   }
 }
@@ -132,7 +136,7 @@ function addKeyPair(keyName) {
 }
 
 function S4() {
-   return (((1+Math.random())*0x10000)|0).toString(16).substring(1);
+  return (((1+Math.random())*0x10000)|0).toString(16).substring(1);
 }
 
 function hideNotification(notification) {
