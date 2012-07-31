@@ -103,8 +103,7 @@
       $('a.table-key-new').click(function() {
         $("#key-add-dialog").dialog('open');
       });
-      //TODO: figure out why 'ul li a' selector does not work
-      $menuDiv.children('ul').children('li').children('a').click(function(){
+      $menuDiv.find('ul > li > a').click(function(){
         parentUL = $(this).parent().parent();
         if (!parentUL.parent().hasClass('inactive')) {
           if (parentUL.hasClass('activemenu')){
@@ -116,7 +115,6 @@
         }
       });
       // init delete dialog
-      // TODO: figure out focus
       $('#keys-delete-dialog').dialog({
          autoOpen: false,
          modal: true,
