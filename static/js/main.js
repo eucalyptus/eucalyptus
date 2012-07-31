@@ -68,21 +68,27 @@
         allTablesRef['keys'].fnReloadAjax();
       });
       $('div.table_keys_top').addClass('euca-table-length');
-      $('div.table_keys_top').html('<div class="euca-table-action actionmenu inactive"></div><div class="euca-table-size"><span id="table_keys_count"></span> key pairs found. Showing <span class="show">10</span> | <span class="show">25</span> | <span class="show">50</span> | <span class="show">all</span></div>');
-      // TODO: highlight selected
+      $('div.table_keys_top').html('<div class="euca-table-action actionmenu inactive"></div><div class="euca-table-size"><span id="table_keys_count"></span> key pairs found. Showing <span class="show selected">10</span> | <span class="show">25</span> | <span class="show">50</span> | <span class="show">all</span></div>');
       $("div.table_keys_top span.show").click( function () {
+         $(this).parent().children('span').each( function() {
+           $(this).removeClass("selected");
+         });
 	 if ( this.innerHTML == "10" ) {
            allTablesRef['keys'].fnSettings()._iDisplayLength = 10;
            allTablesRef['keys'].fnDraw();
+           $(this).addClass("selected");
          } else if ( this.innerHTML == "25" ) {
            allTablesRef['keys'].fnSettings()._iDisplayLength = 25;
            allTablesRef['keys'].fnDraw();
+           $(this).addClass("selected");
          } else if ( this.innerHTML == "50" ) {
            allTablesRef['keys'].fnSettings()._iDisplayLength = 50;
            allTablesRef['keys'].fnDraw();
+           $(this).addClass("selected");
 	 } else {
 	   allTablesRef['keys'].fnSettings()._iDisplayLength = -1;
            allTablesRef['keys'].fnDraw();
+           $(this).addClass("selected");
          }
       });
       //action menu
@@ -92,7 +98,7 @@
       $menuDiv = $("div.table_keys_top div.euca-table-action");
       $menuDiv.html(menuContent);
       $('#keys-delete').click(function() {
-        deleteAction('keys');
+        deleteAction('keys', 1);
       });
       $('a.table-key-new').click(function() {
         $("#key-add-dialog").dialog('open');

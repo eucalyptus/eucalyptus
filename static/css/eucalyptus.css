@@ -253,6 +253,10 @@ div.euca-table-size {
     float: right;
 }
 
+span.selected {
+    font-weight: bold;
+}
+
 /* action menu */
 
 .actionmenu{
