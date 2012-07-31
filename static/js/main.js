@@ -1,8 +1,9 @@
 (function($, eucalyptus) {
   eucalyptus.main= function(args) {
+    eucalyptus.explorer();
     // show the main divs
     var makeMenutabs = function(args) {
-      var $header = $('html body').find('.euca-container .euca-main #euca-main-header');
+      var $header = $('html body').find('.euca-container .euca-main #euca-main-container');
       var $ul = $('<ul>').addClass('active');
       $.each(args, function(idx, val) {
           var str = '<a href=\"'+val.link+'\">'+val.name+'</a>' 
@@ -49,7 +50,7 @@
               "aoColumns": [
                 {
                   "bSortable": false,
-                  "fnRender": function(oObj) { return '<input type="checkbox"/>' },
+                  "fnRender": function(oObj) { return '<input type="checkbox" onclick="updateActionMenu(\'keys\')"/>' },
                   "sWidth": "20px",
                 },
                 { "mDataProp": "name" },
@@ -67,7 +68,7 @@
         allTablesRef['keys'].fnReloadAjax();
       });
       $('div.table_keys_top').addClass('euca-table-length');
-      $('div.table_keys_top').html('<div class="euca-table-action actionmenu"></div><div class="euca-table-size"><span id="table_keys_count"></span> key pairs found. Showing <span class="show">10</span> | <span class="show">25</span> | <span class="show">50</span> | <span class="show">all</span></div>');
+      $('div.table_keys_top').html('<div class="euca-table-action actionmenu inactive"></div><div class="euca-table-size"><span id="table_keys_count"></span> key pairs found. Showing <span class="show">10</span> | <span class="show">25</span> | <span class="show">50</span> | <span class="show">all</span></div>');
       // TODO: highlight selected
       $("div.table_keys_top span.show").click( function () {
 	 if ( this.innerHTML == "10" ) {
@@ -85,7 +86,7 @@
          }
       });
       //action menu
-      menuContent = '<ul><li><a href="#">Actions<span class="arrow"></span></a><ul>' +
+      menuContent = '<ul><li><a href="#">More actions<span class="arrow"></span></a><ul>' +
              '<li><a href="#" id="keys-delete">Delete</a></li>' +
              '</ul></li></ul>';
       $menuDiv = $("div.table_keys_top div.euca-table-action");
@@ -99,11 +100,13 @@
       //TODO: figure out why 'ul li a' selector does not work
       $menuDiv.children('ul').children('li').children('a').click(function(){
         parentUL = $(this).parent().parent();
-        if (parentUL.hasClass('activemenu')){
-          parentUL.removeClass('activemenu');
-        }
-        else {
-          parentUL.addClass('activemenu');
+        if (!parentUL.parent().hasClass('inactive')) {
+          if (parentUL.hasClass('activemenu')){
+            parentUL.removeClass('activemenu');
+          }
+          else {
+            parentUL.addClass('activemenu');
+          }
         }
       });
       // init delete dialog
@@ -184,11 +187,11 @@
       });  
     }
 
-    eucalyptus.header({'logo':true, 'navigation':true, 'search':false, 'userinfo':true, 'help':true});
-    var $itemContainer = $('html body').find('.euca-container .euca-explorer');
-    eucalyptus.explorer({'container':$itemContainer});
-   
-     // find div.euca-container.euca-main#euca-main-header
+    $('html body').find('.euca-container .euca-header').header();
+    $('html body').find('.euca-container .euca-main #euca-main-container').maincontainer();
+    $('html body').find('.euca-container .euca-explorer').explorer({select: jQuery.eucalyptus.maincontainer.prototype.changeSelected});
+
+    // find div.euca-container.euca-main#euca-main-header
     var menus = [{name:'Instances', link:'#tabs-instances'}, 
                   {name:'Images', link:'#tabs-images'},
                   {name:'Keys', link: '#tabs-keys'},
@@ -198,7 +201,7 @@
                   {name:'Snapshots', link: '#tabs-snapshots'}];
 
     makeMenutabs(menus);
-    var $eucaTabContainer = $('html body').find('.euca-container .euca-main #euca-main-header');
+    var $eucaTabContainer = $('html body').find('.euca-container .euca-main #euca-main-container');
     $eucaTabContainer.append('<div class="euca-notification" id="euca-notification-container"></div>');
     $('#all-tabs-container > div').each(function() {
       ($(this)).appendTo($eucaTabContainer);
@@ -206,12 +209,11 @@
 
     fillTable();
 
-    eucalyptus.footer([
-		   $('<p>').text(text_footer),
-       		   $('<p>').html('&nbsp;&nbsp;&nbsp;&nbsp;<a id=\'logout-button\' href=\'/\'>logout</a>')]);
+    // calls eucalyptus.footer widget
+    $('html body').find('.euca-container .euca-footer').footer();
 
-    var $mainHeader = $('html body').find('.euca-container .euca-main #euca-main-header');
-    $mainHeader.tabs();
+    var $main = $('html body').find('.euca-container .euca-main #euca-main-container');
+    $main.tabs();
 
   } // end of main
 })(jQuery,

@@ -1,3 +1,13 @@
+body {
+    margin: 0;
+    padding: 0;
+    font-family: Arial,Helvetica,sans-serif;
+}
+
+.templates {
+    margin: 0 auto;
+}
+
 .templates div.inactive {
   display: none;
 }
@@ -220,6 +230,7 @@ div.euca-container.euca-explorer.euca-explorer-items.mouseon {
 div.euca-container {
     position: static;
     width: 1024px;
+    margin: 0 auto;
 }
 
 div.euca-main {
@@ -309,6 +320,9 @@ div.euca-table-size {
     margin-left: 5px;
     position: relative;
     top: 10px;
+}
+.inactive a:hover{
+    background-color:white !important;
 }
 
 /* notifications */
