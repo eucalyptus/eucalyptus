@@ -78,17 +78,17 @@ test: test.c ipc.o misc.o
 test_misc: misc.c ../storage/diskutil.o ipc.o euca_auth.o
 	$(CC) $(CFLAGS) $(INCLUDES) -D_UNIT_TEST -o test_misc misc.c ../storage/diskutil.o ipc.o euca_auth.o -lpthread -lcrypto $(LIBS) $(LDFLAGS)
 
-test_fault: fault.c fault.h misc.o
-	$(CC) $(CFLAGS) $(INCLUDES) -D_UNIT_TEST -o test_fault fault.c $(LIBS) $(LDFLAGS)
+test_fault: test_fault.c fault.o
+	$(CC) $(CFLAGS) $(INCLUDES) -D_UNIT_TEST -o test_fault test_fault.c fault.o $(LIBS) $(LDFLAGS)
 
 ../storage/diskutil.o:
 	make -C ../storage
 
-.c.o: $@
-	$(CC) -c -std=gnu99 $(CFLAGS) $(INCLUDES) $<
+%.o: %.c %.h
+	$(CC) -c -std=gnu99 $(CFLAGS) $(INCLUDES) `xslt-config --cflags` $<
 
 clean:
-	rm -rf *~ *.o test test_misc euca_rootwrap euca_mountwrap
+	rm -rf *~ *.o test test_fault test_misc euca_rootwrap euca_mountwrap
 
 distclean:
 	rm -rf config.h

@@ -126,12 +126,13 @@ static pthread_mutex_t fault_mutex = PTHREAD_MUTEX_INITIALIZER;
  * Function prototypes
  */
 static xmlDoc *get_eucafault (const char *, const char *);
-static void dump_eucafault_db (void);
 static int fault_id_exists (const char *);
 static int scandir_filter (const struct dirent *);
 static int str_end_cmp (const char *, const char *);
 static char *str_trim_suffix (const char *, const char *);
 static int add_eucafault (xmlDoc *);
+// Can be linked externally for debugging. Use -D_UNIT_TEST
+void dump_eucafaults_db (void);
 
 /*
  * Utility function:
@@ -263,8 +264,8 @@ fault_id_exists (const char *id)
 /*
  * Performs blind dump of XML fault model to stdout.
  */
-static void
-dump_eucafault_db (void)
+void
+dump_eucafaults_db (void)
 {
     // FIXME: add some stats?
     printf("\n");
@@ -384,36 +385,3 @@ log_eucafault (char *fault_id, ...)
     }
     return count;               // FIXME: Just return void instead?
 }
-
-/*
- * For development/testing: provides a way to log faults from shell
- * command line.
- */
-#ifdef _UNIT_TEST
-int main (int argc, char ** argv)
-{
-    int dump = 0;
-    int opt;
-
-    while ((opt = getopt (argc, argv, "d")) != -1) {
-        switch (opt) {
-        case 'd':
-            dump++;
-            break;
-        default:
-            fprintf (stderr, "Usage: %s [-d]\n", argv[0]);
-            return 1;
-        }
-    }
-    initialize_eucafaults ();
-
-    if (optind < argc) {
-        printf ("argv[1st]: %s\n", argv[optind]);
-        log_eucafault(argv[optind], NULL); /* FIXME: Add passing some parameters. */
-    }
-    if (dump) {
-        dump_eucafault_db ();
-    }
-    return 0;
-}
-#endif // _UNIT_TEST

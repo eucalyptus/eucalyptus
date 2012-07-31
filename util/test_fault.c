@@ -1,20 +1,23 @@
+// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
+// vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
+
 /*
-Copyright (c) 2012  Eucalyptus Systems, Inc.	
+Copyright (c) 2012  Eucalyptus Systems, Inc.
 
 This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by 
-the Free Software Foundation, only version 3 of the License.  
- 
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, only version 3 of the License.
+
 This file is distributed in the hope that it will be useful, but WITHOUT
 ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
 FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
-for more details.  
+for more details.
 
 You should have received a copy of the GNU General Public License along
 with this program.  If not, see <http://www.gnu.org/licenses/>.
- 
+
 Please contact Eucalyptus Systems, Inc., 130 Castilian
-Dr., Goleta, CA 93101 USA or visit <http://www.eucalyptus.com/licenses/> 
+Dr., Goleta, CA 93101 USA or visit <http://www.eucalyptus.com/licenses/>
 if you need additional information or have any questions.
 
 This file may incorporate work covered under the following copyright and
@@ -23,7 +26,7 @@ permission notice:
   Software License Agreement (BSD License)
 
   Copyright (c) 2008, Regents of the University of California
-  
+
 
   Redistribution and use of this software in source and binary forms, with
   or without modification, are permitted provided that the following
@@ -57,46 +60,41 @@ permission notice:
   WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
   ANY SUCH LICENSES OR RIGHTS.
 */
-#ifndef INCLUDE_MISC_H
-#define INCLUDE_MISC_H
+#define _FILE_OFFSET_BITS 64 // so large-file support works on 32-bit systems
 
-#ifdef _UNIT_TEST
-/*
- * Used by test_fault & for debugging.
- */
-extern void dump_eucafaults_db (void);
-#endif // _UNIT_TEST
+#define _GNU_SOURCE
 
-/*
- * Usage: initialize_eucafaults()
- *
- * Strictly speaking, an application does not need to call this
- * initialization function, as log_eucafault() also calls it. However,
- * calling this during application startup will ensure the
- * fault-reporting system is properly initialized prior to any fault
- * encounters. Thus, it is recommended all applications call
- * initialize_eucafaults() as part of their own initialization.
- * 
- * Return value indicates number of faults successfully loaded into
- * database.
- */
-extern int initialize_eucafaults (void);
+#include <getopt.h>
+#include <stdio.h>
+
+#include "fault.h"
 
 /*
- * Usage: log_eucafault (FAULT_ID, param1, param1text, param2, param2text, NULL)
- *
- * ...where the text of each named parameter will replace that parameter
- * token in the fault message log text.
- *
- * Note that the final NULL argument is very important!
- * (...because va_arg() is stupid.)
- *
- * Will call initialize_eucafaults() internally to ensure fault model
- * has been loaded.
- *
- * Return value is number of parameter arguments detected prior to NULL.
- *
+ * Provides a way to log test faults from shell command line.
  */
-extern int log_eucafault (char *, ...);
+int main (int argc, char ** argv)
+{
+    int dump = 0;
+    int opt;
 
-#endif // INCLUDE_MISC_H
+    while ((opt = getopt (argc, argv, "d")) != -1) {
+        switch (opt) {
+        case 'd':
+            dump++;
+            break;
+        default:
+            fprintf (stderr, "Usage: %s [-d]\n", argv[0]);
+            return 1;
+        }
+    }
+    initialize_eucafaults ();
+
+    if (optind < argc) {
+        printf ("argv[1st]: %s\n", argv[optind]);
+        log_eucafault(argv[optind], NULL); /* FIXME: Add passing some parameters. */
+    }
+    if (dump) {
+        dump_eucafaults_db ();
+    }
+    return 0;
+}
