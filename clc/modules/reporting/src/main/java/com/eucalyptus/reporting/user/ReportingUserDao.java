@@ -85,7 +85,7 @@ public class ReportingUserDao
 
 	private final Map<String,String> users = new HashMap<String,String>();
 
-	private ReportingUserDao()
+	protected ReportingUserDao()
 	{
 
 	}

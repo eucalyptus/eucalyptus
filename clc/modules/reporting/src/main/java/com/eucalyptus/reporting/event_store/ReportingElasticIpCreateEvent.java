@@ -60,7 +60,7 @@ public class ReportingElasticIpCreateEvent
  	 */
 	ReportingElasticIpCreateEvent(String uuid, Long timestampMs, String ip, String userId)
 	{
-		this.uuid = null;
+		this.uuid = uuid;
 		this.timestampMs = timestampMs;
 		this.ip = ip;
 		this.userId = userId;
