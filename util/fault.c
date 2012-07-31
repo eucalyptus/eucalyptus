@@ -125,13 +125,19 @@ static pthread_mutex_t fault_mutex = PTHREAD_MUTEX_INITIALIZER;
  * Function prototypes
  */
 static xmlDoc *get_eucafault (const char *, const char *);
-static int fault_id_exists (const char *);
+static char *get_fault_id (xmlNode *);
+static int fault_id_exists (const char *, xmlDoc *);
 static int scandir_filter (const struct dirent *);
 static int str_end_cmp (const char *, const char *);
 static char *str_trim_suffix (const char *, const char *);
 static int add_eucafault (xmlDoc *);
 // Can be linked externally for debugging. Use -D_UNIT_TEST
 void dump_eucafaults_db (void);
+
+/*
+ * Utility functions -- move to misc.c?
+ * (Might some of them already be there in one form or another?)
+ */
 
 /*
  * Utility function:
@@ -177,6 +183,10 @@ scandir_filter (const struct dirent *entry)
 }
 
 /*
+ * End utility functions.
+ */
+
+/*
  * Return an XML doc containing fault information for a given fault id.
  * ASSUMES FAULT ID MATCHES FILENAME!
  */
@@ -184,28 +194,34 @@ static xmlDoc *
 get_eucafault (const char * faultdir, const char * fault_id)
 {
     xmlDoc *my_doc = NULL;
-    char faultfile[PATH_MAX];
+    char fault_file[PATH_MAX];
 
     printf ("Getting fault %s\n", fault_id);
 
-    if (fault_id_exists(fault_id)) {
+    if (fault_id_exists(fault_id, NULL)) {
         printf ("(...looks like fault %s already exists?)\n", fault_id);
         return NULL;
     }
-    snprintf (faultfile, PATH_MAX - 1, "%s/%s%s", faultdir, fault_id,
+    snprintf (fault_file, PATH_MAX - 1, "%s/%s%s", faultdir, fault_id,
               XML_SUFFIX);
-    my_doc = xmlParseFile (faultfile);
-
-    // FIXME: Sanity check that fault id in file actually matches filename!
-    // (This is needed to properly squash duplicates.)
+    my_doc = xmlParseFile (fault_file);
 
     if (my_doc == NULL) {
         printf ("Could not parse file %s in get_eucafault()\n",
-                faultfile);
+                fault_file);
         return NULL;
     } else {
         printf ("Successfully parsed file %s in get_eucafault()\n",
-                faultfile);
+                fault_file);
+    }
+    if (fault_id_exists (fault_id, my_doc)) {
+        printf ("Found fault id %s in %s\n", fault_id, fault_file);
+    } else {
+        printf ("Did NOT find fault id %s in %s\n", fault_id, fault_file);
+        printf ("Found fault id %s instead.\n",
+                get_fault_id (xmlFirstElementChild(xmlDocGetRootElement(my_doc))));
+        printf ("NOT ADDING FAULT!\n");
+        return NULL;
     }
     return my_doc;
 }
@@ -232,29 +248,50 @@ add_eucafault (xmlDoc *new_doc)
     return 0;
 }
 
+/* 
+ * Returns the fault id found in a fault node.
+ */
+static char *
+get_fault_id (xmlNode *node)
+{
+    if (node == NULL) {
+        return NULL;
+    }
+    /*
+     * Does case-insensitive string comparison on the attribute name & value.
+     * (These are technically case-sensitive in XML, but I'm being
+     * forgiving of minor transgressions in order to have happier users.)
+     */
+    if (node->type == XML_ELEMENT_NODE) {
+        // FIXME: Double-check that this is a <fault> tag?
+        for (xmlAttr *attr = node->properties; attr; attr = attr->next) {
+            if (!strcasecmp((const char *)attr->name, "id")) {
+                return (char *)attr->children->content;
+            }
+        }
+    }
+    return NULL;
+}
+    
 /*
  * Returns true (1) if fault id already exists in model, false (0) if
  * not.
  */
 static int
-fault_id_exists (const char *id)
+fault_id_exists (const char *id, xmlDoc *doc)
 {
-    /*
-     * Does case-insensitive string comparison on the attribute name & value.
-     * (These are technically case-sensitive in XML, but I'm being
-     * forgiving of minor transgressions in order to have happier users.
+    /* 
+     * Uses global model if no doc supplied.
      */
-    for (xmlNode *node = xmlFirstElementChild(xmlDocGetRootElement(ef_doc));
+    if (doc == NULL) {
+        doc = ef_doc;
+    }
+    for (xmlNode *node = xmlFirstElementChild(xmlDocGetRootElement(doc));
          node; node = node->next) {
-        if (node->type == XML_ELEMENT_NODE) {
-            for (xmlAttr *attr = node->properties; attr; attr = attr->next) {
-                if (!strcasecmp((const char *)attr->name, "id")) {
-                    if (!strcasecmp((const char *)attr->children->content,
-                                    id)) {
-                        return 1;
-                    }
-                }
-            }
+        char *this_id = get_fault_id (node);
+
+        if ((this_id != NULL) && !strcasecmp (this_id, id)) {
+            return 1;
         }
     }
     return 0;
@@ -343,7 +380,7 @@ initialize_eucafaults (void)
                             add_eucafault (new_fault);
                             xmlFreeDoc(new_fault);
                         } else {
-                            printf ("(...not adding new fault--already exists?)\n");
+                            printf ("(...not adding new fault--mismatch or already exists?)\n");
                         }
                     }
                 }
@@ -353,7 +390,7 @@ initialize_eucafaults (void)
     faults_initialized++;       /* Not a counter--only a true/false flag */
     pthread_mutex_unlock(&fault_mutex);
 
-    return populate;            /* FIXME: This doesn't yet return population! */
+    return populate;            /* FIXME: Doesn't yet return population! */
 }
 
 /*
@@ -377,10 +414,10 @@ log_eucafault (char *fault_id, ...)
     }
     va_end(argv);
 
-    if (fault_id_exists(fault_id)) {
+    if (fault_id_exists(fault_id, NULL)) {
         printf ("FOUND FAULT %s WOO!\n", fault_id);
     } else {
         printf ("No such fault %s found :(\n", fault_id);
     }
-    return count;               // FIXME: Just return void instead?
+    return count;               /* FIXME: Just return void instead? */
 }
