@@ -60,13 +60,6 @@ permission notice:
 #ifndef INCLUDE_MISC_H
 #define INCLUDE_MISC_H
 
-#ifdef _UNIT_TEST
-/*
- * Used by test_fault & for debugging.
- */
-extern void dump_eucafaults_db (void);
-#endif // _UNIT_TEST
-
 /*
  * Usage: initialize_eucafaults()
  *

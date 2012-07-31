@@ -132,8 +132,6 @@ static int scandir_filter (const struct dirent *);
 static int str_end_cmp (const char *, const char *);
 static char *str_trim_suffix (const char *, const char *);
 static int add_eucafault (xmlDoc *);
-// Can be linked externally for debugging. Use -D_UNIT_TEST
-void dump_eucafaults_db (void);
 
 /*
  * Utility functions -- move to misc.c?
@@ -300,21 +298,6 @@ fault_id_exists (const char *id, xmlDoc *doc)
 
 /*
  * EXTERNAL ENTRY POINT
- * (Though disabled in fault.h unless _UNIT_TEST is #define'd)
- *
- * Performs blind dump of XML fault model to stdout.
- */
-void
-dump_eucafaults_db (void)
-{
-    // FIXME: add some stats?
-    printf("\n");
-    xmlDocDump(stdout, ef_doc);
-    printf("\n");
-}
-
-/*
- * EXTERNAL ENTRY POINT
  *
  * Builds the localized fault database from XML files supplied in
  * various directories.
@@ -424,3 +407,47 @@ log_eucafault (char *fault_id, ...)
     }
     return count;               /* FIXME: Just return void instead? */
 }
+
+/*
+ * Provides a way to log test faults from shell command line.
+ */
+#ifdef _UNIT_TEST
+/*
+ * Performs blind dump of XML fault model to stdout.
+ */
+static void
+dump_eucafaults_db (void)
+{
+    // FIXME: add some stats?
+    printf("\n");
+    xmlDocDump(stdout, ef_doc);
+    printf("\n");
+}
+
+int main (int argc, char ** argv)
+{
+    int dump = 0;
+    int opt;
+
+    while ((opt = getopt (argc, argv, "d")) != -1) {
+        switch (opt) {
+        case 'd':
+            dump++;
+            break;
+        default:
+            fprintf (stderr, "Usage: %s [-d]\n", argv[0]);
+            return 1;
+        }
+    }
+    initialize_eucafaults ();
+
+    if (optind < argc) {
+        printf ("argv[1st]: %s\n", argv[optind]);
+        log_eucafault(argv[optind], NULL); /* FIXME: Add passing some parameters. */
+    }
+    if (dump) {
+        dump_eucafaults_db ();
+    }
+    return 0;
+}
+#endif // _UNIT_TEST
