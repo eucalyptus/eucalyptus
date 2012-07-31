@@ -20,6 +20,7 @@
     // event receiver
     changeSelected : function (evt, ui) { 
       this._curSelected=ui.selected;
+      $('html body').find('.euca-container .euca-main #euca-main-container').dashboard();
     },
    
     ec2Completed : function (args) {
