@@ -62,6 +62,7 @@
 
 package com.eucalyptus.address;
 
+import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
@@ -166,9 +167,9 @@ public class AddressManager {
     reply.set_return( false );
     final Address address = RestrictedTypes.doPrivileged( request.getPublicIp( ), Address.class );
     if ( !address.isAllocated( ) ) {
-      throw new EucalyptusCloudException( "Cannot associated an address which is not allocated: " + request.getPublicIp( ) );
+      throw new EucalyptusCloudException( "Cannot associate an address which is not allocated: " + request.getPublicIp( ) );
     } else if ( !Contexts.lookup( ).hasAdministrativePrivileges( ) && !Contexts.lookup( ).getUserFullName( ).asAccountFullName( ).getAccountNumber( ).equals( address.getOwner( ).getAccountNumber( ) ) ) {
-      throw new EucalyptusCloudException( "Cannot associated an address which is not allocated to your account: " + request.getPublicIp( ) );
+      throw new EucalyptusCloudException( "Cannot associate an address which is not allocated to your account: " + request.getPublicIp( ) );
     }
     final VmInstance vm = RestrictedTypes.doPrivileged( request.getInstanceId( ), VmInstance.class );
     final VmInstance oldVm = findCurrentAssignedVm( address );
@@ -177,6 +178,10 @@ public class AddressManager {
       ? oldAddr.isSystemOwned( )
       : false;
     reply.set_return( true );
+    
+    if ( oldAddr != null && address.equals( oldAddr ) ) {
+      return reply;
+    }
     
     final UnconditionalCallback assignTarget = new UnconditionalCallback( ) {
       public void fire( ) {
@@ -232,10 +237,10 @@ public class AddressManager {
     return oldVm;
   }
   
-  public DisassociateAddressResponseType disassociate( DisassociateAddressType request ) throws Exception {
-    DisassociateAddressResponseType reply = ( DisassociateAddressResponseType ) request.getReply( );
+  public DisassociateAddressResponseType disassociate( final DisassociateAddressType request ) throws Exception {
+    final DisassociateAddressResponseType reply = request.getReply( );
     reply.set_return( false );
-    Context ctx = Contexts.lookup( );
+    final Context ctx = Contexts.lookup( );
     final Address address = RestrictedTypes.doPrivileged( request.getPublicIp( ), Address.class );
     reply.set_return( true );
     final String vmId = address.getInstanceId( );
@@ -244,28 +249,22 @@ public class AddressManager {
     } else {
       try {
         final VmInstance vm = VmInstances.lookup( vmId );
-        if ( address.isSystemOwned( ) ) {
-          AsyncRequests.newRequest( address.unassign( ).getCallback( ) ).then( new UnconditionalCallback( ) {
-            public void fire( ) {
-              try {
-                Addresses.system( vm );
-              } catch ( Exception e ) {
-                LOG.debug( e, e );
-              }
+        final UnconditionalCallback systemAddressAssignmentCallback = new UnconditionalCallback( ) {
+          @Override
+          public void fire( ) {
+            try {
+              Addresses.system( VmInstances.lookup( vmId ) );
+            } catch ( NoSuchElementException e ) {
+              LOG.debug( e, e );
+            } catch ( Exception e ) {
+              LOG.error("Error assigning system address for instance " + vm.getInstanceId(), e);
             }
-          } ).dispatch( vm.getPartition( ) );
-        } else {
-          AsyncRequests.newRequest( address.unassign( ).getCallback( ) ).then( new UnconditionalCallback( ) {
-            @Override
-            public void fire( ) {
-              try {
-                Addresses.system( VmInstances.lookup( vmId ) );
-              } catch ( Exception e ) {
-                LOG.debug( e, e );
-              }
-            }
-          } ).dispatch( vm.getPartition( ) );
-        }
+          }
+        };
+        
+        AsyncRequests.newRequest( address.unassign( ).getCallback( ) )
+            .then( systemAddressAssignmentCallback )
+            .dispatch( vm.getPartition() );
       } catch ( Exception e ) {
         LOG.debug( e );
         Logs.extreme( ).debug( e, e );

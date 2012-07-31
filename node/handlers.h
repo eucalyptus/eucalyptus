@@ -91,6 +91,11 @@ struct nc_state_t {
 	boolean convert_to_disk;
         boolean do_inject_key;
         int concurrent_disk_ops;
+	int staging_cleanup_threshold;
+	int booting_cleanup_threshold;
+	int bundling_cleanup_threshold;
+	int createImage_cleanup_threshold;
+	int teardown_state_duration;
 	// defined max
 	long long config_max_mem;
 	long long config_max_cores;

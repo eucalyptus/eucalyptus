@@ -120,6 +120,8 @@ public class PostgresqlBootstrapper extends Bootstrapper.Simple implements Datab
     private static String PG_W_OPT ="-w"
     private static String PG_S_OPT ="-s"
     private static String PG_DEFAULT_DBNAME = "postgres"
+    private static String PG_ENCODING = "--encoding=UTF8"
+    private static String PG_LOCALE = "--locale=C"
     private static boolean PG_USE_SSL = Boolean.valueOf( System.getProperty("euca.db.ssl", "true") )
     private static String COMMAND_GET_CONF = "getconf"
     private static String GET_CONF_SYSTEM_PAGE_SIZE = "PAGE_SIZE"
@@ -274,11 +276,14 @@ public class PostgresqlBootstrapper extends Bootstrapper.Simple implements Datab
             passFile.write( getPassword() )
             int value = runProcess([
                 PG_INITDB,
+                PG_ENCODING,
+                PG_LOCALE,
                 PG_USER_OPT,
                 PG_TRUST_OPT,
                 PG_PWD_FILE + passFile ,
                 PG_DB_OPT + SubDirectory.DB.getChildPath(EUCA_DB_DIR),
-                PG_X_OPT + PG_X_DIR
+                PG_X_OPT + PG_X_DIR,
+                PG_ENCODING
             ])
             if (value != 0) {
                 LOG.debug("Database server did not init.")

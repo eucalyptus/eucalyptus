@@ -96,7 +96,12 @@
 	<property name="jar.file" value="${target.dir}/${ant.project.name}-${euca.version}.jar" />
 	<property name="lib.dir" value="${project.basedir}/lib" />
 	<property name="modules.dir" value="${project.basedir}/modules" />
-	<!--================================== classpaths ==================================-->
+	<!--================================== module properties  ==================================-->
+	<property name="jar.build.includes" value="**/*"/>
+    <property name="jar.build.excludes" value=""/>
+    <property name="jar.resource.includes" value="**/*"/>
+    <property name="jar.resource.excludes" value="**/*.in"/>
+    <!--================================== classpaths ==================================-->
 	<path id="classpath">
 		<pathelement path="${conf.dir}" />
 		<dirset dir="${modules.dir}">
@@ -220,10 +225,12 @@
 		<delete file="${jar.file}" />
 		<jar destfile="${jar.file}">
 			<fileset dir="${build.dir}">
-				<include name="**/*" />
+				<include name="${jar.build.includes}" />
+				<exclude name="${jar.build.excludes}" />
 			</fileset>
 			<fileset dir="${rsrc.dir}">
-				<include name="**/*" />
+				<include name="${jar.resource.includes}" />
+				<exclude name="${jar.resource.excludes}" />
 			</fileset>
 		</jar>
 	</target>

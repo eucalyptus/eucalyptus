@@ -93,7 +93,7 @@ public class DescribeAvailabilityZonesResponseType extends CloudTopologyMessage 
 /** *******************************************************************************/
 public class DescribeRegionsType extends CloudTopologyMessage {
   //** added 2008-12-01  **/
-  @HttpParameterMapping (parameter = "Region")
+  @HttpParameterMapping (parameter = "RegionName")
   ArrayList<String> regions = new ArrayList<String>();
   @HttpParameterMapping (parameter = "FilterSet")
   ArrayList<Filter> filterSet = new ArrayList<Filter>();

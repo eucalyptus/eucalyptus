@@ -155,7 +155,7 @@ public class HmacLoginModuleTest {
   @Test
   public void testHmacV1LexicographicalOrdering() throws Exception {
     final HmacCredentials creds = creds(
-        "xlausnSV1OCl6OsbcMGhAljWwtE5eB39sSRD/aIQZFM=",
+        "hqd08+ge/qtPDpRIFYqnjMv1+sNbmrs/zTg9DvmZMJE=",
         new LinkedHashMap<String,String>(){{
           put( "AWSAccessKeyId", "1234567890" );
           put( "SignatureVersion", "1" );
@@ -165,7 +165,22 @@ public class HmacLoginModuleTest {
         "GET", "/path", "localhost:8773",
         1,
         Hmac.HmacSHA256);
-    assertTrue("Authentication successful", hmacV2LoginModule().authenticate(creds));
+    assertTrue("Authentication successful", hmacV1LoginModule().authenticate(creds));
+  }
+
+  @Test
+  public void testHmacV1NoValue() throws Exception {
+    final HmacCredentials creds = creds(
+        "Ul8W6d1ppeWI7A51Sdq3LYr/1vPtl5ppb/BMY08vA/Y=",
+        new LinkedHashMap<String,String>(){{
+          put( "AWSAccessKeyId", "1234567890" );
+          put( "SignatureVersion", "1" );
+          put( "NP", null );
+        }},
+        "GET", "/path", "localhost:8773",
+        1,
+        Hmac.HmacSHA256);
+    assertTrue("Authentication successful", hmacV1LoginModule().authenticate(creds));
   }
 
   @Test
@@ -316,6 +331,21 @@ public class HmacLoginModuleTest {
         2,
         Hmac.HmacSHA256);
     assertTrue("Authentication successful", hmacV2LoginModule().authenticate(creds2));
+  }
+
+  @Test
+  public void testHmacV2NoValue() throws Exception {
+    final HmacCredentials creds1 = creds(
+        "hU6YeOTMqVgax+hLoDQTqjVyi09XaadIUrp9PHNOXug=",
+        new LinkedHashMap<String,String>(){{
+          put( "AWSAccessKeyId", "1234567890" );
+          put( "SignatureVersion", "2" );
+          put( "NP", null );
+        }},
+        "GET", "/path", "localhost:8773",
+        2,
+        Hmac.HmacSHA256);
+    assertTrue("Authentication successful", hmacV2LoginModule().authenticate(creds1));
   }
 
   @Test

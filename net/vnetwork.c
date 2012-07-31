@@ -162,7 +162,7 @@ int vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, int
 	}
       } else if (role == NC) {
 	if (!bridgedev || check_bridge(bridgedev)) {
-	  logprintfl (EUCAERROR, "vnetInit(): cannot verify VNET_BRIDGE(%s), please check parameters and bridge device\n");
+	  logprintfl(EUCAERROR, "vnetInit(): cannot verify VNET_BRIDGE(%s), please check parameters and bridge device\n", SP(bridgedev));
 	  return(1);
 	}
       }

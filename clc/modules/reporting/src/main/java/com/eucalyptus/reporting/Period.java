@@ -72,6 +72,8 @@ public final class Period
 
 	public Period(long beginningMs, long endingMs)
 	{
+		if (endingMs < beginningMs) throw new IllegalArgumentException("endingMs < beginningMs");
+
 		this.beginningMs = new Long(beginningMs);
 		this.endingMs = new Long(endingMs);
 	}

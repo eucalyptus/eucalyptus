@@ -74,6 +74,7 @@ import org.apache.xml.security.utils.Base64;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.crypto.Hmac;
+import com.google.common.base.Strings;
 
 public class Hmacv2LoginModule extends HmacLoginModuleSupport {
   private static Logger LOG = Logger.getLogger( Hmacv2LoginModule.class );
@@ -131,10 +132,10 @@ public class Hmacv2LoginModule extends HmacLoginModuleSupport {
     sortedKeys.addAll( parameters.keySet( ) );
     String firstKey = sortedKeys.pollFirst( );
     if( firstKey != null ) { 
-      sb.append( codec.encode( firstKey ,"UTF-8" ) ).append( "=" ).append( codec.encode( parameters.get( firstKey ), "UTF-8" ).replaceAll( "\\+", "%20" ) );
+      sb.append( codec.encode( firstKey ,"UTF-8" ) ).append( "=" ).append( codec.encode( Strings.nullToEmpty( parameters.get( firstKey ) ), "UTF-8" ).replaceAll( "\\+", "%20" ) );
     } 
     while ( ( firstKey = sortedKeys.pollFirst( ) ) != null ) {
-      sb.append( "&" ).append( codec.encode( firstKey, "UTF-8" ) ).append( "=" ).append( codec.encode( parameters.get( firstKey ), "UTF-8" ).replaceAll( "\\+", "%20" ) );
+      sb.append( "&" ).append( codec.encode( firstKey, "UTF-8" ) ).append( "=" ).append( codec.encode( Strings.nullToEmpty( parameters.get( firstKey ) ), "UTF-8" ).replaceAll( "\\+", "%20" ) );
     }
     String subject = prefix + sb.toString( );
     LOG.trace( "VERSION2: " + subject );
