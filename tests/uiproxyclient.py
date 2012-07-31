@@ -1,9 +1,7 @@
-#!/usr/bin/python
 
 import base64
 import urllib2
 import json
-from operator import itemgetter
 
 # This is a client to test the interface that the browser uses
 # to talk to the UI proxy. It can make all of the REST calls as you
@@ -77,72 +75,3 @@ class UIProxyClient(object):
         return self.__make_request__('DetachVolume',
                     {'VolumeId': volume_id, 'InstanceId': instance_id, 'Device': device, 'Force': str(force)})
 
-if __name__ == "__main__":
-    # make some calls to proxy class to test things out
-    client = UIProxyClient()
-    client.login('test', 'admin', 'testing123')
-    print "=== Getting Zones ==="
-    print client.get_zones()
-#    print 
-#    print "=== listing keypairs ==="
-#    print 
-#    keypairs = client.get_keypairs()
-#    print keypairs
-#    print 
-#    print "=== creating keypair ==="
-#    print 
-#    keyinfo = client.create_keypair("testkey01")
-#    print keyinfo
-#    print 
-#    print "=== listing keypairs ==="
-#    print 
-#    print client.get_keypairs()
-#    print 
-#    print "=== deleting test keypair ==="
-#    print 
-#    print client.delete_keypair("testkey01")
-
-#    print 
-#    print "=== listing volumes ==="
-#    print 
-#    print client.get_volumes()
-#    print 
-#    print "=== creating volume ==="
-#    print 
-#    volinfo = client.create_volume('1', 'PARTI00', None)
-#    print volinfo
-#    print volinfo['results']['id']
-#    print volinfo['results']['status']
-#    volid = volinfo['results']['id']
-#    print 
-#    print "=== listing volumes ==="
-#    print 
-#    volumes = client.get_volumes()
-#    print volumes
-#    print 
-#    print "=== waiting for new volume to be ready ==="
-#    print 
-#    while volumes['results'][map(itemgetter('id'), volumes['results']).index(volid)]['status'] != 'available':
-#        volumes = client.get_volumes()
-#    print volumes
-#    print 
-#    print "=== attaching volume to instance ==="
-#    print 
-#    print client.attach_volume(volid, 'i-F6574412', '/dev/sdd')
-#    volumes = client.get_volumes()
-#    while volumes['results'][map(itemgetter('id'), volumes['results']).index(volid)]['attach_data']['status'] != 'attached':
-#        volumes = client.get_volumes()
-#    print client.get_volumes()
-#    print 
-#    print "=== attaching volume to instance ==="
-#    print 
-#    print client.detach_volume(volid, 'i-F6574412', '/dev/sdd')
-#    volumes = client.get_volumes()
-#    while volumes['results'][map(itemgetter('id'), volumes['results']).index(volid)]['status'] != 'available':
-#        volumes = client.get_volumes()
-#    
-#    print client.get_volumes()
-#    print 
-#    print "=== deleting test volume ==="
-#    print 
-#    print client.delete_volume(volid)
