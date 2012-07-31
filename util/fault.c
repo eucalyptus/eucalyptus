@@ -78,6 +78,7 @@ permission notice:
 #include <libxml/parser.h>
 #include <libxml/tree.h>
 
+#include <misc.h>
 #include "fault.h"
 
 /*
@@ -196,10 +197,10 @@ get_eucafault (const char * faultdir, const char * fault_id)
     xmlDoc *my_doc = NULL;
     char fault_file[PATH_MAX];
 
-    printf ("Getting fault %s\n", fault_id);
+    PRINTF(("Getting fault %s\n", fault_id));
 
     if (fault_id_exists(fault_id, NULL)) {
-        printf ("(...looks like fault %s already exists?)\n", fault_id);
+        PRINTF(("(...looks like fault %s already exists?)\n", fault_id));
         return NULL;
     }
     snprintf (fault_file, PATH_MAX - 1, "%s/%s%s", faultdir, fault_id,
@@ -207,20 +208,20 @@ get_eucafault (const char * faultdir, const char * fault_id)
     my_doc = xmlParseFile (fault_file);
 
     if (my_doc == NULL) {
-        printf ("Could not parse file %s in get_eucafault()\n",
-                fault_file);
+        PRINTF(("Could not parse file %s in get_eucafault()\n",
+                fault_file));
         return NULL;
     } else {
-        printf ("Successfully parsed file %s in get_eucafault()\n",
-                fault_file);
+        PRINTF(("Successfully parsed file %s in get_eucafault()\n",
+                fault_file));
     }
     if (fault_id_exists (fault_id, my_doc)) {
-        printf ("Found fault id %s in %s\n", fault_id, fault_file);
+        PRINTF(("Found fault id %s in %s\n", fault_id, fault_file));
     } else {
-        printf ("Did NOT find fault id %s in %s\n", fault_id, fault_file);
-        printf ("Found fault id %s instead.\n",
-                get_fault_id (xmlFirstElementChild(xmlDocGetRootElement(my_doc))));
-        printf ("NOT ADDING FAULT!\n");
+        PRINTF(("Did NOT find fault id %s in %s\n", fault_id, fault_file));
+        PRINTF(("Found fault id %s instead.\n",
+                get_fault_id (xmlFirstElementChild(xmlDocGetRootElement(my_doc)))));
+        PRINTF(("NOT ADDING FAULT!\n"));
         return NULL;
     }
     return my_doc;
@@ -234,14 +235,14 @@ static int
 add_eucafault (xmlDoc *new_doc)
 {
     if (xmlDocGetRootElement (ef_doc) == NULL) {
-        printf ("Creating new document.\n");
+        PRINTF(("Creating new document.\n"));
         ef_doc = xmlCopyDoc (new_doc, 1); /* 1 == recursive copy */
         // FIXME: Add error check/return here.
     } else {
-        printf ("Appending to existing document.\n");
+        PRINTF(("Appending to existing document.\n"));
         if (xmlAddNextSibling (xmlFirstElementChild (xmlDocGetRootElement (ef_doc)),
                                xmlFirstElementChild (xmlDocGetRootElement (new_doc))) == NULL) {
-            printf ("*** Problem appending!");
+            PRINTF(("*** Problem appending!"));
             return -1;
         }
     }
@@ -298,6 +299,9 @@ fault_id_exists (const char *id, xmlDoc *doc)
 }
 
 /*
+ * EXTERNAL ENTRY POINT
+ * (Though disabled in fault.h unless _UNIT_TEST is #define'd)
+ *
  * Performs blind dump of XML fault model to stdout.
  */
 void
@@ -325,14 +329,14 @@ initialize_eucafaults (void)
     pthread_mutex_lock(&fault_mutex);
 
     if (faults_initialized) {
-        printf ("*** Attempt to reinitialize fault registry? Skipping...\n");
+        PRINTF(("Attempt to reinitialize fault registry? Skipping...\n"));
         pthread_mutex_unlock(&fault_mutex);
         return 0;
     }
-    printf ("--> Initializing fault registry directories.\n");
+    PRINTF(("Initializing fault registry directories.\n"));
     if ((locale = getenv (LOCALIZATION_ENV_VAR)) == NULL) {
-        printf ("    $LOCALE not set, using only default LOCALE of %s\n",
-                DEFAULT_LOCALIZATION);
+        PRINTF(("$LOCALE not set, using only default LOCALE of %s\n",
+                DEFAULT_LOCALIZATION));
     }
     LIBXML_TEST_VERSION;
 
@@ -358,20 +362,19 @@ initialize_eucafaults (void)
     for (int i = 0; i < NUM_FAULTDIR_TYPES; i++) {
         if (faultdirs[i][0]) {
             if (stat(faultdirs[i], &dirstat) != 0) {
-                printf ("*** Problem with %s:\n", faultdirs[i]);
-                printf ("    stat(): %s\n", strerror (errno));
-                //perror ("    stat()");
+                PRINTF(("*** Problem with %s:\n", faultdirs[i]));
+                PRINTF(("    stat(): %s\n", strerror (errno)));
             } else if (!S_ISDIR(dirstat.st_mode)) {
-                printf ("*** Problem with %s:\n", faultdirs[i]);
-                printf ("    Not a directory\n");
+                PRINTF(("*** Problem with %s:\n", faultdirs[i]));
+                PRINTF(("    Not a directory\n"));
             } else {
                 struct dirent **namelist;
                 int numfaults = scandir (faultdirs[i], &namelist, &scandir_filter,
                                          alphasort);
                 if (numfaults == 0) {
-                    printf ("*** No faults found in %s\n", faultdirs[i]);
+                    PRINTF(("*** No faults found in %s\n", faultdirs[i]));
                 } else {
-                    printf ("... found %d faults in %s\n", numfaults, faultdirs[i]);
+                    PRINTF(("... found %d faults in %s\n", numfaults, faultdirs[i]));
 
                     while (numfaults--) {
                         xmlDoc *new_fault = get_eucafault (faultdirs[i], str_trim_suffix (namelist[numfaults]->d_name, XML_SUFFIX));
@@ -380,7 +383,7 @@ initialize_eucafaults (void)
                             add_eucafault (new_fault);
                             xmlFreeDoc(new_fault);
                         } else {
-                            printf ("(...not adding new fault--mismatch or already exists?)\n");
+                            PRINTF(("(...not adding new fault--mismatch or already exists?)\n"));
                         }
                     }
                 }
@@ -415,9 +418,9 @@ log_eucafault (char *fault_id, ...)
     va_end(argv);
 
     if (fault_id_exists(fault_id, NULL)) {
-        printf ("FOUND FAULT %s WOO!\n", fault_id);
+        printf ("\nFound fault %s.\n", fault_id);
     } else {
-        printf ("No such fault %s found :(\n", fault_id);
+        printf ("\nCould not find fault %s.\n", fault_id);
     }
     return count;               /* FIXME: Just return void instead? */
 }
