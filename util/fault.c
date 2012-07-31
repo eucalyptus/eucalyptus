@@ -110,6 +110,12 @@ enum faultdir_types {
 };
 
 /*
+ * For output formatting
+ */
+#define STARS "************************************************************************"
+#define BARS "|"
+
+/*
  * NO USER-SERVICEABLE PARTS BEYOND THIS POINT
  */
 
@@ -200,7 +206,7 @@ get_eucafault (const char * faultdir, const char * fault_id)
     PRINTF(("Getting fault %s\n", fault_id));
 
     if (fault_id_exists(fault_id, NULL)) {
-        PRINTF(("(Looks like fault %s already exists?)\n", fault_id));
+        PRINTF(("Looks like fault %s already exists.\n", fault_id));
         return NULL;
     }
     snprintf (fault_file, PATH_MAX - 1, "%s/%s%s", faultdir, fault_id,
@@ -403,7 +409,7 @@ initialize_eucafaults (void)
                             add_eucafault (new_fault);
                             xmlFreeDoc(new_fault);
                         } else {
-                            PRINTF(("(Not adding new fault--mismatch or already exists?)\n"));
+                            PRINTF(("Not adding new fault--mismatch or already exists...?\n"));
                         }
                     }
                 }
@@ -415,6 +421,14 @@ initialize_eucafaults (void)
 
     return populate;            /* FIXME: Doesn't yet return population! */
 }
+
+/*
+ * Formats fault-log output.
+ */
+/*
+static void
+format_eucafault (const char *fault_id, 
+*/
 
 /*
  * EXTERNAL ENTRY POINT

@@ -64,7 +64,6 @@ permission notice:
 #include <stdio.h>
 #include <stdlib.h>
 #define _GNU_SOURCE
-#include <wchar.h>
 #include <ctype.h> // isspace
 #include <assert.h>
 #include <stdarg.h>
@@ -72,19 +71,16 @@ permission notice:
 #include <locale.h> // setlocale
 
 #include "misc.h" // boolean
+#include "wc.h"
 
 #define VAR_PREFIX L"${" // this sequence of chars indicates beginning of a variable name
 #define VAR_SUFFIX L"}"  // this sequence of chars, when following VAR_PREFIX, means the end
 
-typedef struct wchar_map_struct {
-    wchar_t * key;
-    wchar_t * val;
-} wchar_map;
-
 // searches the 'vars' map (NULL-terminated array of wchar_map * pointers)
 // for an entry with 'key' equaling 'name' with only the first 'name_len'
 // characters considered; returns pointer to the 'val' in the map
-wchar_t * find_valn (const wchar_map * vars [], const wchar_t * name, size_t name_len) 
+static wchar_t *
+find_valn (const wchar_map * vars [], const wchar_t * name, size_t name_len) 
 {
     for (int i = 0; vars[i]!=NULL; i++) {
         const wchar_map * v = vars[i];
@@ -98,7 +94,8 @@ wchar_t * find_valn (const wchar_map * vars [], const wchar_t * name, size_t nam
 // to 0, in which case to the end of 'src'), enlarging the 'dst' as necessary 
 // returns the concatenated string or NULL if memory could not be allocated
 // if 'src' is an empty string, 'dst' is returned.
-wchar_t * wcappendn (wchar_t * dst, const wchar_t * src, size_t src_limit)
+static wchar_t * 
+wcappendn (wchar_t * dst, const wchar_t * src, size_t src_limit)
 {
     size_t src_len = wcslen (src);
     if (src_len < 1) 
@@ -119,7 +116,8 @@ wchar_t * wcappendn (wchar_t * dst, const wchar_t * src, size_t src_limit)
 // returns a new string with all variables substituted or returns NULL
 // (and logs an error with logprintfl()) if some variables were not
 // found in the map or if the map is empty
-wchar_t * varsub (const wchar_t * s, const wchar_map * vars []) 
+wchar_t *
+varsub (const wchar_t * s, const wchar_map * vars []) 
 {
     assert (s!=NULL);
     assert (vars!=NULL);
