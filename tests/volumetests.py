@@ -4,6 +4,8 @@ from operator import itemgetter
 from uiproxyclient import UIProxyClient
 
 if __name__ == "__main__":
+    instance_id = 'i-45FD403F'
+
     # make some calls to proxy class to test things out
     client = UIProxyClient()
     client.login('test', 'admin', 'testing123')
@@ -34,7 +36,7 @@ if __name__ == "__main__":
     print 
     print "=== attaching volume to instance ==="
     print 
-    print client.attach_volume(volid, 'i-F6574412', '/dev/sdd')
+    print client.attach_volume(volid, instance_id, '/dev/sdd')
     volumes = client.get_volumes()
     while volumes['results'][map(itemgetter('id'), volumes['results']).index(volid)]['attach_data']['status'] != 'attached':
         volumes = client.get_volumes()
@@ -42,7 +44,7 @@ if __name__ == "__main__":
     print 
     print "=== attaching volume to instance ==="
     print 
-    print client.detach_volume(volid, 'i-F6574412', '/dev/sdd')
+    print client.detach_volume(volid, instance_id, '/dev/sdd')
     volumes = client.get_volumes()
     while volumes['results'][map(itemgetter('id'), volumes['results']).index(volid)]['status'] != 'available':
         volumes = client.get_volumes()

@@ -4,11 +4,12 @@ import json
 
 from .botoclcinterface import BotoClcInterface
 from .botojsonencoder import BotoJsonEncoder
+from .cachingclcinterface import CachingClcInterface
 from .mockclcinterface import MockClcInterface
 from .response import Response
 
 class ComputeHandler(server.BaseHandler):
-    @tornado.web.authenticated
+
     def get_argument_list(self, name):
         ret = []
         index = 1
@@ -85,30 +86,34 @@ class ComputeHandler(server.BaseHandler):
     def get(self):
         if not self.authorized():
             raise tornado.web.HTTPError(401, "not authorized")
-        if self.should_use_mock():
-            clc = MockClcInterface()
-        else:
-            clc = BotoClcInterface(server.config.get('eui', 'clchost'),
-                                   self.user_session.access_key,
-                                   self.user_session.secret_key)
+        if not(self.user_session.clc):
+            if self.should_use_mock():
+                self.user_session.clc = MockClcInterface()
+            else:
+                self.user_session.clc = BotoClcInterface(server.config.get('eui', 'clchost'),
+                                                         self.user_session.access_key,
+                                                         self.user_session.secret_key)
+            # could make this conditional, but add caching always for now
+            self.user_session.clc = CachingClcInterface(self.user_session.clc, int(server.config.get('eui', 'pollfreq')))
+
         ret = []
         action = self.get_argument("Action")
         if action == 'DescribeAvailabilityZones':
-            ret = clc.get_all_zones()
+            ret = self.user_session.clc.get_all_zones()
         if action == 'DescribeImages':
-            ret = clc.get_all_images()
+            ret = self.user_session.clc.get_all_images()
         elif action == 'DescribeInstances':
-            ret = clc.get_all_instances()
+            ret = self.user_session.clc.get_all_instances()
         elif action == 'DescribeAddresses':
-            ret = clc.get_all_addresses()
+            ret = self.user_session.clc.get_all_addresses()
         elif action.find('KeyPair') > -1:
-            ret = self.handleKeypairs(action, clc)
+            ret = self.handleKeypairs(action, self.user_session.clc)
         elif action == 'DescribeSecurityGroups':
-            ret = clc.get_all_security_groups()
+            ret = self.user_session.clc.get_all_security_groups()
         elif action.find('Volume') > -1:
-            ret = self.handleVolumes(action, clc)
+            ret = self.handleVolumes(action, self.user_session.clc)
         elif action.find('Snapshot') > -1:
-            ret = self.handleSnapshots(action, clc)
+            ret = self.handleSnapshots(action, self.user_session.clc)
         ret = Response(ret) # wrap all responses in an object for security purposes
         data = json.dumps(ret, cls=BotoJsonEncoder, indent=2)
         self.write(data)
