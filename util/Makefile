@@ -75,13 +75,14 @@ euca_mountwrap: euca_mountwrap.c
 test: test.c ipc.o misc.o
 	$(CC) $(CFLAGS) $(INCLUDES) -o test test.c ipc.o misc.o data.o -lpthread $(LIBS) $(LDFLAGS)
 
-test_misc: misc.c ../storage/diskutil.o ipc.o euca_auth.o
-	$(CC) $(CFLAGS) $(INCLUDES) -D_UNIT_TEST -o test_misc misc.c ../storage/diskutil.o ipc.o euca_auth.o -lpthread -lcrypto $(LIBS) $(LDFLAGS)
+test_misc: misc.c ../storage/diskutil.o ipc.o
+	$(CC) $(CFLAGS) $(INCLUDES) -D_UNIT_TEST -o test_misc misc.c ../storage/diskutil.o ipc.o $(LIBS) $(LDFLAGS)
 
-test_wc: wc.c misc.o ../storage/diskutil.o ipc.o # euca_auth.o
-#	$(CC) $(CFLAGS) $(INCLUDES) -D_UNIT_TEST -o test_wc wc.c misc.o ../storage/diskutil.o ipc.o euca_auth.o -lpthread -lcrypto $(LIBS) $(LDFLAGS)
-	$(CC) $(CFLAGS) $(INCLUDES) -D_UNIT_TEST -o test_wc wc.c misc.o ../storage/diskutil.o ipc.o -lpthread -lcrypto $(LIBS) $(LDFLAGS)
+test_wc: wc.c misc.o ../storage/diskutil.o ipc.o
+	$(CC) $(CFLAGS) $(INCLUDES) -D_UNIT_TEST -o test_wc wc.c misc.o ../storage/diskutil.o ipc.o $(LIBS) $(LDFLAGS)
 
+# I plan to roll the test_fault main() back into fault.c:
+# I only kept them separate to ensure fault.c could be used cleanly via extern
 test_fault: test_fault.c fault.o
 	$(CC) $(CFLAGS) $(INCLUDES) -D_UNIT_TEST -o test_fault test_fault.c fault.o $(LIBS) $(LDFLAGS)
 
