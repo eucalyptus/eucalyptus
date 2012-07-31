@@ -125,7 +125,6 @@ import com.eucalyptus.network.ExtantNetwork;
 import com.eucalyptus.network.NetworkGroup;
 import com.eucalyptus.network.PrivateNetworkIndex;
 import com.eucalyptus.records.Logs;
-import com.eucalyptus.reporting.event.InstanceCreatedEvent;
 import com.eucalyptus.reporting.event.InstanceEvent;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.FullName;
@@ -948,11 +947,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   }
   
   void store( ) {
-    final boolean creating = getNaturalId() == null;
     this.updateTimeStamps( );
-    if ( creating ) {
-      this.fireCreateEvent( );
-    }
     this.fireUsageEvent( );
     this.firePersist( );
   }
@@ -976,27 +971,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     }
   }
   
-  private void fireCreateEvent( ) {
-    try {
-      final OwnerFullName owner = this.getOwner();
-      final String userId = owner.getUserId();
-      final String accountId = owner.getAccountNumber();
-
-      ListenerRegistry.getInstance( ).fireEvent( new InstanceCreatedEvent(
-          getInstanceUuid(),
-          getDisplayName(),
-          this.bootRecord.getVmType().getName(),
-          userId,
-          Accounts.lookupUserById(userId).getName(),
-          accountId,
-          Accounts.lookupAccountById(accountId).getName(),
-          this.placement.getClusterName(),
-          this.placement.getPartitionName() ) );
-    } catch ( final Exception ex ) {
-      LOG.error( ex, ex );
-    }
-  }
-
   private void fireUsageEvent( ) {
     if ( VmState.RUNNING.equals( this.getState( ) ) ) {
       try {

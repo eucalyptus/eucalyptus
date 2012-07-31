@@ -87,7 +87,16 @@ package com.eucalyptus.reporting.event;
  * for resource usage will be represented as "N/A" or something similar in
  * UIs.
  */
-public class InstanceEvent extends InstanceEventSupport {
+public class InstanceEvent implements Event {
+  private final String uuid;
+  private final String instanceId;
+  private final String instanceType;
+  private final String userId;
+  private final String userName;
+  private final String accountId;
+  private final String accountName;
+  private final String clusterName;
+  private final String availabilityZone;
   private final Long   cumulativeNetworkIoMegs;
   private final Long   cumulativeDiskIoMegs;
 
@@ -117,8 +126,15 @@ public class InstanceEvent extends InstanceEventSupport {
                         final String availabilityZone,
                         final Long cumulativeNetworkIoMegs,
                         final Long cumulativeDiskIoMegs ) {
-    super( uuid, instanceId, instanceType, userId, userName, accountId, accountName, clusterName, availabilityZone );
-
+    if (uuid==null) throw new IllegalArgumentException("uuid cant be null");
+    if (instanceId==null) throw new IllegalArgumentException("instanceId cant be null");
+    if (instanceType==null) throw new IllegalArgumentException("instanceType cant be null");
+    if (userId==null) throw new IllegalArgumentException("userId cant be null");
+    if (userName==null) throw new IllegalArgumentException("userName cant be null");
+    if (accountId==null) throw new IllegalArgumentException("accountId cant be null");
+    if (accountName==null) throw new IllegalArgumentException("accountName cant be null");
+    if (clusterName==null) throw new IllegalArgumentException("clusterName cant be null");
+    if (availabilityZone==null) throw new IllegalArgumentException("availabilityZone cant be null");
     if ( cumulativeDiskIoMegs != null && cumulativeDiskIoMegs < 0) {
       throw new IllegalArgumentException("cumulativeDiskIoMegs cant be negative");
     }
@@ -126,6 +142,15 @@ public class InstanceEvent extends InstanceEventSupport {
       throw new IllegalArgumentException("cumulativeNetworkIoMegs cant be negative");
     }
 
+    this.uuid = uuid;
+    this.instanceId = instanceId;
+    this.instanceType = instanceType;
+    this.userId = userId;
+    this.userName = userName;
+    this.accountId = accountId;
+    this.accountName = accountName;
+    this.clusterName = clusterName;
+    this.availabilityZone = availabilityZone;
     this.cumulativeNetworkIoMegs = cumulativeNetworkIoMegs;
     this.cumulativeDiskIoMegs = cumulativeDiskIoMegs;
   }
@@ -147,9 +172,11 @@ public class InstanceEvent extends InstanceEventSupport {
    *  sent.
    */
   public InstanceEvent( final InstanceEvent e ) {
-    super( e );
-    this.cumulativeNetworkIoMegs = e.cumulativeNetworkIoMegs;
-    this.cumulativeDiskIoMegs = e.cumulativeDiskIoMegs;
+    this(
+        e,
+        e.getCumulativeNetworkIoMegs(),
+        e.getCumulativeDiskIoMegs()
+    );
   }
 
   /**
@@ -158,17 +185,55 @@ public class InstanceEvent extends InstanceEventSupport {
   public InstanceEvent( final InstanceEvent e,
                         final Long cumulativeNetworkIoMegs,
                         final Long cumulativeDiskIoMegs) {
-    super( e );
+    this(
+        e.getUuid(),
+        e.getInstanceId(),
+        e.getInstanceType(),
+        e.getUserId(),
+        e.getUserName(),
+        e.getAccountId(),
+        e.getAccountName(),
+        e.getClusterName(),
+        e.getAvailabilityZone(),
+        cumulativeNetworkIoMegs,
+        cumulativeDiskIoMegs
+    );
+  }
 
-    if (cumulativeDiskIoMegs!= null && cumulativeDiskIoMegs < 0) {
-      throw new IllegalArgumentException("cumulativeDiskIoMegs cant be negative");
-    }
-    if (cumulativeNetworkIoMegs!= null && cumulativeNetworkIoMegs < 0) {
-      throw new IllegalArgumentException("cumulativeNetworkIoMegs cant be negative");
-    }
+  public String getUuid() {
+    return uuid;
+  }
 
-    this.cumulativeNetworkIoMegs = cumulativeNetworkIoMegs;
-    this.cumulativeDiskIoMegs = cumulativeDiskIoMegs;
+  public String getInstanceId() {
+    return instanceId;
+  }
+
+  public String getInstanceType() {
+    return instanceType;
+  }
+
+  public String getUserId() {
+    return userId;
+  }
+
+  public String getUserName() {
+    return userName;
+  }
+
+  public String getAccountId() {
+    return accountId;
+  }
+
+  public String getAccountName() {
+    return accountName;
+  }
+
+  public String getClusterName() {
+    return clusterName;
+  }
+
+  public String getAvailabilityZone() {
+    return availabilityZone;
   }
 
   public Long getCumulativeNetworkIoMegs() {
@@ -179,6 +244,9 @@ public class InstanceEvent extends InstanceEventSupport {
     return cumulativeDiskIoMegs;
   }
 
+  public boolean requiresReliableTransmission() {
+    return false;
+  }
 
   public String toString() {
     return String.format("[uuid:%s,instanceId:%s,instanceType:%s,userId:%s"
