@@ -62,15 +62,14 @@ permission notice:
 */
 #define _FILE_OFFSET_BITS 64 // so large-file support works on 32-bit systems
 
+#include <stdio.h>
+#include <stdlib.h>
 #define _GNU_SOURCE
-
 #include <dirent.h>
 #include <errno.h>
 #include <limits.h>
 #include <pthread.h>
 #include <stdarg.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <wchar.h>
