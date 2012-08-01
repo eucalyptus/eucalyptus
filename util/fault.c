@@ -116,6 +116,17 @@ enum faultdir_types {
 #define BARS "|"
 
 /*
+ * Defines the order of labels in fault log entries.
+ */
+static char *fault_labels[] = { "condition",
+                                "cause",
+                                "initiator",
+                                "location",
+                                "resolution",
+                                0,
+};
+
+/*
  * NO USER-SERVICEABLE PARTS BEYOND THIS POINT
  */
 
@@ -139,7 +150,9 @@ static int scandir_filter (const struct dirent *);
 static int str_end_cmp (const char *, const char *);
 static char *str_trim_suffix (const char *, const char *);
 static int add_eucafault (xmlDoc *);
-static int has_common_block(xmlDoc *);
+static xmlNode *common_block (xmlDoc *);
+static char *get_common_var (const char *);
+static void format_eucafault (const char *, ...);
 
 /*
  * Utility functions -- move to misc.c?
@@ -203,34 +216,34 @@ get_eucafault (const char * faultdir, const char * fault_id)
     char fault_file[PATH_MAX];
     static int common_block_exists = 0; /* FIXME: I don't like this handling. */
 
-    PRINTF(("Getting fault %s\n", fault_id));
-
-    if (fault_id_exists(fault_id, NULL)) {
-        PRINTF(("Looks like fault %s already exists.\n", fault_id));
-        return NULL;
-    }
     snprintf (fault_file, PATH_MAX - 1, "%s/%s%s", faultdir, fault_id,
               XML_SUFFIX);
+    PRINTF (("Attempting to load file %s\n", fault_file));
+
+    if (fault_id_exists (fault_id, NULL)) {
+        PRINTF (("Looks like fault %s already exists.\n", fault_id));
+        return NULL;
+    }
     my_doc = xmlParseFile (fault_file);
 
     if (my_doc == NULL) {
-        logprintfl(EUCAWARN, "Could not parse file %s in get_eucafault()\n",
+        logprintfl (EUCAWARN, "Could not parse file %s in get_eucafault()\n",
                    fault_file);
         return NULL;
     } else {
-        PRINTF(("Successfully parsed file %s in get_eucafault()\n",
+        PRINTF1 (("Successfully parsed file %s in get_eucafault()\n",
                 fault_file));
     }
     if (fault_id_exists (fault_id, my_doc)) {
-        PRINTF(("Found fault id %s in %s\n", fault_id, fault_file));
-    } else if (has_common_block (my_doc)) {
-        PRINTF(("Found common block in %s\n", fault_file));
+        PRINTF (("Found fault id %s in %s\n", fault_id, fault_file));
+    } else if (common_block (my_doc) != NULL) {
+        PRINTF (("Found <%s> block in %s\n", COMMON_PREFIX, fault_file));
         if (common_block_exists++) {
-            PRINTF(("Common block already exists--skipping.\n"));
+            PRINTF (("<%s> block already exists--skipping.\n", COMMON_PREFIX));
             return NULL;
         }
     } else {
-        logprintfl(EUCAINFO, "Did not find fault id %s in %s -- found fault id %s instead. (Not adding fault.)\n", fault_id, fault_file, get_fault_id (xmlFirstElementChild(xmlDocGetRootElement(my_doc))));
+        logprintfl (EUCAWARN, "Did not find fault id %s in %s -- found fault id %s instead. (Not adding fault.)\n", fault_id, fault_file, get_fault_id (xmlFirstElementChild (xmlDocGetRootElement (my_doc))));
         return NULL;
     }
     return my_doc;
@@ -246,15 +259,15 @@ static int
 add_eucafault (xmlDoc *new_doc)
 {
     if (xmlDocGetRootElement (ef_doc) == NULL) {
-        PRINTF(("Creating new document.\n"));
+        PRINTF1 (("Creating new document.\n"));
         ef_doc = xmlCopyDoc (new_doc, 1); /* 1 == recursive copy */
         // FIXME: Add error check/return here.
     } else {
-        PRINTF(("Appending to existing document.\n"));
+        PRINTF1 (("Appending to existing document.\n"));
         if (xmlAddNextSibling (xmlFirstElementChild (xmlDocGetRootElement (ef_doc)),
                                xmlFirstElementChild (xmlDocGetRootElement (new_doc))) == NULL) {
             // FIXME: Add more diagnostic information to this error message.
-            logprintfl(EUCAERROR, "Problem appending to fault database.\n");
+            logprintfl (EUCAERROR, "Problem appending to fault database.\n");
             return -1;
         }
     }
@@ -278,7 +291,7 @@ get_fault_id (xmlNode *node)
     if (node->type == XML_ELEMENT_NODE) {
         // FIXME: Double-check that this is a <fault> tag?
         for (xmlAttr *attr = node->properties; attr; attr = attr->next) {
-            if (!strcasecmp((const char *)attr->name, "id")) {
+            if (!strcasecmp ((const char *)attr->name, "id")) {
                 return (char *)attr->children->content;
             }
         }
@@ -288,22 +301,22 @@ get_fault_id (xmlNode *node)
 /*
  * Returns true (1) if common block exists in doc, false (0) if not.
  */
-static int
-has_common_block(xmlDoc *doc)
+static xmlNode *
+common_block (xmlDoc *doc)
 {
     if (doc == NULL) {
         return 0;
     }
-    for (xmlNode *node = xmlFirstElementChild(xmlDocGetRootElement(doc));
+    for (xmlNode *node = xmlFirstElementChild (xmlDocGetRootElement (doc));
          node; node = node->next) {
         if (node->type == XML_ELEMENT_NODE) {
-            if (!strcasecmp((const char *)node->name, COMMON_PREFIX)) {
-                PRINTF(("Found common block.\n"));
-                return 1;
+            if (!strcasecmp ((const char *)node->name, COMMON_PREFIX)) {
+                PRINTF1 (("Found <%s> block.\n", COMMON_PREFIX));
+                return node;
             }
         }
     }
-    return 0;
+    return NULL;
 }
 
 
@@ -324,7 +337,7 @@ fault_id_exists (const char *id, xmlDoc *doc)
     if (doc == NULL) {
         doc = ef_doc;
     }
-    for (xmlNode *node = xmlFirstElementChild(xmlDocGetRootElement(doc));
+    for (xmlNode *node = xmlFirstElementChild (xmlDocGetRootElement (doc));
          node; node = node->next) {
         char *this_id = get_fault_id (node);
 
@@ -350,16 +363,16 @@ initialize_eucafaults (void)
     static int faults_initialized = 0;
     static char faultdirs[NUM_FAULTDIR_TYPES][PATH_MAX];
 
-    pthread_mutex_lock(&fault_mutex);
+    pthread_mutex_lock (&fault_mutex);
 
     if (faults_initialized) {
-        PRINTF(("Attempt to reinitialize fault registry? Skipping...\n"));
-        pthread_mutex_unlock(&fault_mutex);
-        return 0;
+        PRINTF1 (("Attempt to reinitialize fault registry? Skipping...\n"));
+        pthread_mutex_unlock (&fault_mutex);
+        return 0; 
     }
-    PRINTF(("Initializing fault registry directories.\n"));
+    PRINTF (("Initializing fault registry directories.\n"));
     if ((locale = getenv (LOCALIZATION_ENV_VAR)) == NULL) {
-        logprintfl(EUCAINFO, 
+        logprintfl (EUCAINFO, 
                    "$LOCALE not set, using default $LOCALE of %s\n",
                    DEFAULT_LOCALIZATION);
     }
@@ -386,11 +399,11 @@ initialize_eucafaults (void)
     /* Not really sure how useful this is or will be. */
     for (int i = 0; i < NUM_FAULTDIR_TYPES; i++) {
         if (faultdirs[i][0]) {
-            if (stat(faultdirs[i], &dirstat) != 0) {
-                logprintfl(EUCAWARN, "stat() problem with %s: %s\n",
+            if (stat (faultdirs[i], &dirstat) != 0) {
+                logprintfl (EUCAWARN, "stat() problem with %s: %s\n",
                            faultdirs[i], strerror (errno));
-            } else if (!S_ISDIR(dirstat.st_mode)) {
-                logprintfl(EUCAWARN,
+            } else if (!S_ISDIR (dirstat.st_mode)) {
+                logprintfl (EUCAWARN,
                            "stat() problem with %s: Not a directory\n",
                            faultdirs[i], strerror (errno));
             } else {
@@ -398,18 +411,18 @@ initialize_eucafaults (void)
                 int numfaults = scandir (faultdirs[i], &namelist, &scandir_filter,
                                          alphasort);
                 if (numfaults == 0) {
-                    PRINTF(("No faults found in %s\n", faultdirs[i]));
+                    PRINTF (("No faults found in %s\n", faultdirs[i]));
                 } else {
-                    PRINTF(("Found %d faults in %s\n", numfaults,
+                    PRINTF (("Found %d %s files in %s\n", numfaults, XML_SUFFIX,
                             faultdirs[i]));
                     while (numfaults--) {
                         xmlDoc *new_fault = get_eucafault (faultdirs[i], str_trim_suffix (namelist[numfaults]->d_name, XML_SUFFIX));
 
                         if (new_fault) {
                             add_eucafault (new_fault);
-                            xmlFreeDoc(new_fault);
+                            xmlFreeDoc (new_fault);
                         } else {
-                            PRINTF(("Not adding new fault--mismatch or already exists...?\n"));
+                            PRINTF1 (("Not adding new fault--mismatch or already exists...?\n"));
                         }
                     }
                 }
@@ -417,18 +430,57 @@ initialize_eucafaults (void)
         }
     }
     faults_initialized++;       /* Not a counter--only a true/false flag */
-    pthread_mutex_unlock(&fault_mutex);
+    pthread_mutex_unlock (&fault_mutex);
 
     return populate;            /* FIXME: Doesn't yet return population! */
+}
+
+static char *
+get_common_var (const char *var)
+{
+    if (common_block (ef_doc) != NULL) {
+        return (char *)var;
+    } else {
+        // If nothing useful is found, return original variable-name string.
+        logprintfl (EUCAWARN, "Did not find <%s> block\n", COMMON_PREFIX);
+        return (char *)var;
+    }
 }
 
 /*
  * Formats fault-log output.
  */
-/*
+
 static void
-format_eucafault (const char *fault_id, 
-*/
+format_eucafault (const char *fault_id, ...)
+{
+    static FILE *logfile = NULL;
+    static int max_label_len = 0;
+
+    if (logfile == NULL) {
+        logfile = stdout;
+    }
+    // Determine alignment (but only once)
+    // FIXME: This needs to align based upon translated labels!
+    if (!max_label_len) {
+        for (int i = 0; fault_labels[i]; i++) {
+            int this_label_len = strlen (get_common_var (fault_labels[i]));
+            if (this_label_len > max_label_len) {
+                max_label_len = this_label_len;
+            }
+        }
+    }
+
+    // Now spit it out!
+    fprintf (logfile, "%s\n", STARS);
+
+    for (int i = 0; fault_labels[i]; i++) {
+        fprintf (logfile, "%s %*s:", BARS, max_label_len, fault_labels[i]);
+        fprintf (logfile, "\n");
+    }
+
+    fprintf (logfile, "%s\n\n", STARS);
+}
 
 /*
  * EXTERNAL ENTRY POINT
@@ -446,15 +498,17 @@ log_eucafault (char *fault_id, ...)
 
     va_start (argv, fault_id);
 
-    while((token = va_arg (argv, char *)) != NULL) {
+    while ((token = va_arg (argv, char *)) != NULL) {
         ++count;
     }
-    va_end(argv);
+    va_end (argv);
 
-    if (fault_id_exists(fault_id, NULL)) {
-        PRINTF(("Found fault %s.\n", fault_id));
+    if (fault_id_exists (fault_id, NULL)) {
+        format_eucafault (fault_id);
     } else {
-        PRINTF(("Could not find fault %s.\n", fault_id));
+        logprintfl (EUCAERROR,
+                    "Fault %s detected, could not find fault id in registry.\n",
+                    fault_id);
     }
     return count;               /* FIXME: Just return void instead? */
 }
@@ -470,9 +524,9 @@ static void
 dump_eucafaults_db (void)
 {
     // FIXME: add some stats?
-    printf("\n");
-    xmlDocDump(stdout, ef_doc);
-    printf("\n");
+    printf ("\n");
+    xmlDocDump (stdout, ef_doc);
+    printf ("\n");
 }
 
 int main (int argc, char ** argv)
@@ -493,8 +547,8 @@ int main (int argc, char ** argv)
     initialize_eucafaults ();
 
     if (optind < argc) {
-        PRINTF(("argv[1st]: %s\n", argv[optind]));
-        log_eucafault(argv[optind], NULL); /* FIXME: Add passing some parameters. */
+        PRINTF1 (("argv[1st]: %s\n", argv[optind]));
+        log_eucafault (argv[optind], NULL); /* FIXME: Add passing some parameters. */
     }
     if (dump) {
         dump_eucafaults_db ();
