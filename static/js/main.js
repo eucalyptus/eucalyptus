@@ -158,7 +158,7 @@
       });  
     }
 
-    $('html body').find('.euca-container .euca-header').header();
+    $('html body').find('.euca-container .euca-header').header({show_logo:true,show_navigation:true,show_user:true,show_help:true});
     var $container = $('html body').find('.euca-container .euca-main #euca-main-container');
     $container.maincontainer();
     $('html body').find('.euca-container .euca-explorer').explorer({select: function(evt, ui){ 

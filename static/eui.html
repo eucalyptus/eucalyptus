@@ -56,65 +56,33 @@
   </div>
   <div class="euca-footer">
   </div>
-</div>
+</div
+>
 <div class="templates">
-  <div id="login" class="templates">
-    <div class="login.heading">
-      <img src="images/eucalyptus-340x36.png" alt-text="eucalyptus logo"/>
+  <div id="login">
+    <div id="title" class="login">
+        <p>Log in to your management console</p>
     </div>
-    &nbsp;<br/>
-    &nbsp;<br/>
-    &nbsp;<br/>
-    &nbsp;<br/>
-    &nbsp;<br/>
-    &nbsp;<br/>
-    <div align="center" class="login">
-      <div class="login.title">
-        Log in to your management console
-      </div>
-      <form action="/login" method="post" name="loginform">
-        <table border="0" cellspacing="15">
-          <tr><td align="right">
-            <span id="login.text">Account</span>
-            <input type="text" id="account" size="50"/><br/>
-            </td>
-            <td><div style="color:#ff0000"></div>
-            </td>
-          </tr>
-          <tr><td align="right">
-            <span id="login.text">Username</span>
-            <input type="text" id="username" size="50"/><br/>
-            </td>
-            <td><div style="color:#ff0000"></div>
-            </td>
-          </tr>
-          <tr><td align="right">
-            <span id="login.text">Password</span>
-            <input type="password" id="password" size="50"/><br/>
-            </td>
-            <td></td>
-          </tr>
-          <tr>
-            <td align="right">
-            <input type="submit" name="login" value="Log In"/>
-            </td>
-            <td></td>
-          </tr>
-          <tr><td align="right">
-            <div id="login.text.help">Forgot your username or password? Contact your cloud administrator.</div>
-            </td>
-            <td></td>
-          </tr>
-        </table>
-      </form>
+    <form action="/" method="post" name="loginform">
+        <div class="form-row">
+          <label for="account">Account name</label>
+	  <input type="text" id="account" value=""/>
+        </div>
+        <div class="form-row">
+	  <label for="username">Username</label>
+	  <input type="text" id="username" value="admin"/>
+        </div>
+        <div class="form-row">
+	  <label for="password">Password</label>
+	  <input type="password" id="password" value=""/>
+        </div>
+        <div class="button-bar">
+	  <input type="submit" name="login" value="Log In" disabled="disabled" />
+        </div>
+    </form>
+    <div id="password_help" class="login">
+        <p> Forgot your password? Contact your cloud administrator. </p>
     </div>
-    &nbsp;<br/>
-    &nbsp;<br/>
-    &nbsp;<br/>
-    &nbsp;<br/>
-    &nbsp;<br/>
-    &nbsp;<br/>
-    &nbsp;<br/>
   </div> <!-- end of login -->
 
   <div id="dashboard">

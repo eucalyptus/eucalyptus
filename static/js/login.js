@@ -1,17 +1,15 @@
 (function($, eucalyptus) {
   eucalyptus.login = function(args) {
-  // select the login form
+    // take the login form, add events, and put it to main container
     var $login = $('html body').find('.templates #login').clone();
-    $login.show();
-    var $main = $('html body').find('.euca-main');
-    $login.appendTo($main);
 
     var $form = $login.find('form');
     // set the login event handler
     $form.find('input[name=account]').focus();
-    $form.find('input[name=account]').onChange = function($form) {
-        eucalyptus.login.enable($form)
-    };
+    $form.find('input[type=text]').change( function(evt) {
+      if($(this).val() != null && $(this).val()!='')
+          $form.find('input[name=login]').removeAttr('disabled');
+    });
     $form.find('input[type=submit]').click(function() {
       var param = {
             account:$form.find('input[name=account]').val(),
@@ -29,18 +27,11 @@
       }); 
       return false;
     });
+    $login.show();
+
+    var $main = $('html body').find('.euca-main');
+    $login.appendTo($main);
+    $('html body').find('.euca-container .euca-header').header({show_logo:true,show_navigator:false,show_user:false,show_help:false});
   }
 })(jQuery, 
    window.eucalyptus ? window.eucalyptus : window.eucalyptus = {});
-
-eucalyptus.login.enable = function(form) {
-  var account = form.find('input[name=account]').val();
-  var name = form.find('input[name=name]').val();
-  var passwd = form.find('input[name=passwd]').val();
-  var login = form.find('input[type=submit]');
-  if ((account==null || account=="") && (name==null || name=="") && (passwd==null || passwd==""))
-    login.disabled="1";
-  else
-    delete login.disabled;
-
-}
