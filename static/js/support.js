@@ -48,18 +48,14 @@ function escapeHTML(input) {
   return $('<div/>').text(input).html();
 }
 
-//TODO: pass in index id
-function deleteAction(tableName) {
+function deleteAction(tableName, idColumnIndex) {
   // hide menu
   $menuUl = $("div.table_" + tableName + "_top div.euca-table-action ul");
   $menuUl.removeClass('activemenu');
 
-  var rowsToDelete = getAllSelectedRows(tableName, 1);
+  var rowsToDelete = getAllSelectedRows(tableName, idColumnIndex);
 
-  if (rowsToDelete.length == 0) {
-    // nothing to do
-    // should we show a warning?
-  } else {
+  if (rowsToDelete.length > 0) {
     // show delete dialog box
     $deleteNames = $("#" + tableName + "-delete-names");
     $deleteNames.html('');
@@ -96,7 +92,6 @@ function deleteSelectedKeyPairs() {
       error:
         (function(keyName) {
           return function(jqXHR, textStatus, errorThrown){
-            //TODO: show communication error?
             errorNotification("Failed to delete keypair " + keyName);
           }
         })(keyName)
@@ -129,7 +124,6 @@ function addKeyPair(keyName) {
       },
     error:
       function(jqXHR, textStatus, errorThrown){
-        //TODO: show communication error?
         errorNotification("Failed to create keypair " + keyName);
       }
   });
