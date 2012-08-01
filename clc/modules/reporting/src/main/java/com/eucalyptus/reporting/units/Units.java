@@ -76,7 +76,11 @@ public class Units
 	public static String DEFAULT_SIZE_TIME_TIME_UNIT = "DAYS";
 	@ConfigurableField(initial = "GB", description = "Default size-time size unit (GB-days, etc)")
 	public static String DEFAULT_SIZE_TIME_SIZE_UNIT = "GB";
-
+	@ConfigurableField(initial = "30000", description = "Default collection interval time in milliseconds.")
+	public static Integer COLLECTION_INTERVAL_TIME_MS = 30000;
+	@ConfigurableField(initial = "20", description = "Default history item size.")
+	public static Integer HISTORY_SIZE = 20;
+	
 	public static Units getDefaultDisplayUnits()
 	{
 		return new Units(TimeUnit.valueOf(DEFAULT_TIME_UNIT),
@@ -89,7 +93,7 @@ public class Units
 	private final SizeUnit sizeUnit;
 	private final TimeUnit sizeTimeTimeUnit;
 	private final SizeUnit sizeTimeSizeUnit;
-
+	
 	/**
 	 * Default no-arg ctor is required for euca to set dynamic properties
 	 * above. Please don't use this; it may go away.
@@ -174,6 +178,5 @@ public class Units
 			return false;
 		return true;
 	}
-
 
 }

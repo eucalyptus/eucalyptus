@@ -170,6 +170,64 @@
         </xs:sequence>
       </xs:complexType>
 
+      <xs:complexType abstract="true" name="sensorsIdType">
+        <xs:sequence>
+          <xs:element nillable="true" minOccurs="0" maxOccurs="unbounded" name="sensorIds" type="xs:string"/>
+        </xs:sequence>
+      </xs:complexType>
+      
+      <xs:complexType abstract="true" name="instancesIdType">
+        <xs:sequence>
+          <xs:element nillable="true" minOccurs="0" maxOccurs="unbounded" name="instancesIds" type="xs:string"/>
+        </xs:sequence>
+      </xs:complexType>
+
+       <xs:complexType abstract="true" name="sensorsResourceType">
+        <xs:sequence>
+        	<xs:element name="resourceName" type="xs:string"
+        		maxOccurs="1" minOccurs="1">
+        	</xs:element>
+        	<xs:element nillable="true" minOccurs="1" maxOccurs="1"
+        		name="resouceType" type="xs:string" />
+        	<xs:element name="metrics" type="tns:metricsResourceType" maxOccurs="unbounded" minOccurs="1"></xs:element>
+        </xs:sequence>
+       </xs:complexType>
+      
+      <xs:complexType abstract="true" name="metricsResourceType">
+        <xs:sequence>
+          <xs:element nillable="true" minOccurs="1" maxOccurs="1" name="metricName" type="xs:string"/>
+          <xs:element nillable="true" minOccurs="0" maxOccurs="unbounded" name="counters" type="tns:metricCounterType"/>
+        </xs:sequence>
+      </xs:complexType>
+      
+       <xs:complexType abstract="true" name="metricCounterType">
+        <xs:sequence>
+                    <xs:element nillable="true" minOccurs="1" maxOccurs="1" name="type" type="xs:string" />
+                    <xs:element name="collectionInterval" type="xs:string" maxOccurs="1" minOccurs="1"></xs:element>
+        	<xs:element nillable="true" minOccurs="1" maxOccurs="1"
+        		name="sequenceNum" type="xs:int" />
+        	<xs:element name="dimensions" type="tns:metricDimensionsType"
+        		maxOccurs="unbounded" minOccurs="1">
+        	</xs:element>
+        </xs:sequence>
+       </xs:complexType>
+      
+      <xs:complexType abstract="true" name="metricDimensionsType">
+        <xs:sequence>
+        	<xs:element nillable="true" minOccurs="1" maxOccurs="1"
+        		name="name" type="xs:string" />
+        	<xs:element name="values" type="tns:metricDimensionsValuesType" maxOccurs="unbounded" minOccurs="0"></xs:element>
+        </xs:sequence>
+       </xs:complexType>
+
+       <xs:complexType abstract="true" name="metricDimensionsValuesType">
+        <xs:sequence>
+        	<xs:element nillable="true" minOccurs="1" maxOccurs="1"
+        		name="timestamp" type="xs:dateTime" />
+        	<xs:element nillable="true" minOccurs="0" maxOccurs="1"
+        		name="value" type="xs:float" />
+        </xs:sequence>
+       </xs:complexType>
       <xs:complexType name="serviceStatusType">
 	<xs:sequence>
 	  <xs:element nillable="false" minOccurs="1" maxOccurs="1" name="serviceId" type="tns:serviceInfoType" />
@@ -666,11 +724,33 @@
 	</xs:complexContent>
       </xs:complexType>
 
+ <xs:complexType name="describeSensorsType">
+	<xs:complexContent>
+	  <xs:extension base="tns:eucalyptusMessage">
+	    <xs:sequence>
+              <xs:element maxOccurs="unbounded" minOccurs="0" name="sensorsIds" type="tns:sensorsIdType" />
+              <xs:element maxOccurs="unbounded" minOccurs="0" name="instancesIds" type="tns:instancesIdType" />
+	    </xs:sequence>
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+
+  <xs:complexType name="describeSensorsResponseType">
+	<xs:complexContent>
+	  <xs:extension base="tns:eucalyptusMessage">
+	    <xs:sequence>
+              <xs:element maxOccurs="1" minOccurs="1" name="sensorsResources" type="tns:sensorsResourceType" />
+	    </xs:sequence>
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+
       <xs:complexType abstract="true" name="serviceTransitionType">
 	<xs:complexContent>
 	  <xs:extension base="tns:eucalyptusMessage">
 	    <xs:sequence>
               <xs:element nillable="false" minOccurs="0" maxOccurs="unbounded" name="serviceIds" type="tns:serviceInfoType" />
+              <xs:element nillable="false" minOccurs="0" maxOccurs="unbounded" name="instancesIds" type="tns:serviceInfoType" />
 	    </xs:sequence>
 	  </xs:extension>
 	</xs:complexContent>
@@ -759,6 +839,9 @@
       <xs:element name="DescribeServices" nillable="true" type="tns:describeServicesType"/>
       <xs:element name="DescribeServicesResponse" nillable="true" type="tns:describeServicesResponseType"/>
       
+      <xs:element name="DescribeSensors" nillable="true" type="tns:describeSensorsType"/>
+      <xs:element name="DescribeSensorsResponse" nillable="true" type="tns:describeSensorsResponseType"/>
+      
       <xs:element name="StartService" nillable="true" type="tns:startServiceType"/>
       <xs:element name="StartServiceResponse" nillable="true" type="tns:startServiceResponseType"/>
       
@@ -836,6 +919,11 @@
     </wsdl:part>
   </wsdl:message>
   
+  <wsdl:message name="DescribeSensorsResponse">
+    <wsdl:part element="tns:DescribeSensorsResponse" name="DescribeSensorsResponse">
+    </wsdl:part>
+  </wsdl:message>
+  
   <wsdl:message name="StartServiceResponse">
     <wsdl:part element="tns:StartServiceResponse" name="StartServiceResponse">
     </wsdl:part>
@@ -863,6 +951,11 @@
   
   <wsdl:message name="DescribeServicesResponse">
     <wsdl:part element="tns:DescribeServicesResponse" name="DescribeServicesResponse">
+    </wsdl:part>
+  </wsdl:message>
+  
+  <wsdl:message name="DescribeSensorsResponse">
+    <wsdl:part element="tns:DescribeSensorsResponse" name="DescribeSensorsResponse">
     </wsdl:part>
   </wsdl:message>
   
@@ -983,6 +1076,11 @@
 
   <wsdl:message name="DescribeServices">
     <wsdl:part element="tns:DescribeServices" name="DescribeServices">
+    </wsdl:part>
+  </wsdl:message>
+  
+  <wsdl:message name="DescribeSensors">
+    <wsdl:part element="tns:DescribeSensors" name="DescribeSensors">
     </wsdl:part>
   </wsdl:message>
   
@@ -1108,12 +1206,19 @@
   </wsdl:message>
 -->
 
-  <wsdl:portType name="EucalyptusCC">
-
+ <wsdl:portType name="EucalyptusCC">
+ 
     <wsdl:operation name="DescribeServices">
       <wsdl:input message="tns:DescribeServices" name="DescribeServices">
       </wsdl:input>
       <wsdl:output message="tns:DescribeServicesResponse" name="DescribeServicesResponse">
+      </wsdl:output>
+    </wsdl:operation>
+    
+    <wsdl:operation name="DescribeSensors">
+      <wsdl:input message="tns:DescribeSensors" name="DescribeSensors">
+      </wsdl:input>
+      <wsdl:output message="tns:DescribeSensorsResponse" name="DescribeSensorsResponse">
       </wsdl:output>
     </wsdl:operation>
     
@@ -1297,6 +1402,16 @@
 	<soap:body use="literal"/>
       </wsdl:input>
       <wsdl:output name="DescribeServicesResponse">
+	<soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+    
+    <wsdl:operation name="DescribeSensors">
+      <soap:operation soapAction="EucalyptusCC#DescribeSensors" style="document"/>
+      <wsdl:input name="DescribeSensors">
+	<soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output name="DescribeSensorsResponse">
 	<soap:body use="literal"/>
       </wsdl:output>
     </wsdl:operation>
