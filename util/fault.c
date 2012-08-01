@@ -68,6 +68,7 @@ permission notice:
 #include <dirent.h>
 #include <errno.h>
 #include <limits.h>
+#include <locale.h>
 #include <pthread.h>
 #include <stdarg.h>
 #include <string.h>
@@ -306,7 +307,7 @@ static xmlNode *
 get_common_block (xmlDoc *doc)
 {
     if (doc == NULL) {
-        return 0;
+        return NULL;
     }
     for (xmlNode *node = xmlFirstElementChild (xmlDocGetRootElement (doc));
          node; node = node->next) {
@@ -374,8 +375,8 @@ initialize_eucafaults (void)
     PRINTF (("Initializing fault registry directories.\n"));
     if ((locale = getenv (LOCALIZATION_ENV_VAR)) == NULL) {
         logprintfl (EUCAINFO, 
-                   "$LOCALE not set, using default $LOCALE of %s\n",
-                   DEFAULT_LOCALIZATION);
+                   "$%s not set, using default value of: %s\n",
+                    LOCALIZATION_ENV_VAR, DEFAULT_LOCALIZATION);
     }
     LIBXML_TEST_VERSION;
 
@@ -568,6 +569,8 @@ int main (int argc, char ** argv)
 {
     int dump = 0;
     int opt;
+
+    setlocale(LC_ALL, "en_US.utf-8");
 
     while ((opt = getopt (argc, argv, "d")) != -1) {
         switch (opt) {
