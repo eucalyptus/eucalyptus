@@ -193,13 +193,13 @@ int doBundleInstance(ncMetadata *ccMeta, char *instanceId, char *bucketName, cha
 }
 
 int doCancelBundleTask(ncMetadata *ccMeta, char *instanceId) {
-  int i, j, rc, start = 0, stop = 0, ret=0, done, timeout;
+  int i, rc, start = 0, stop = 0, ret=0, done, timeout;
   ccInstance *myInstance;
   ncStub *ncs;
   time_t op_start;
   ccResourceCache resourceCacheLocal;
 
-  i = j = 0;
+  i = 0;
   myInstance = NULL;
   op_start = time(NULL);
   
@@ -232,9 +232,9 @@ int doCancelBundleTask(ncMetadata *ccMeta, char *instanceId) {
   }
   
   done=0;
-  for (j=start; j<stop && !done; j++) {
-    timeout = ncGetTimeout(op_start, OP_TIMEOUT, stop-start, j);
-    rc = ncClientCall(ccMeta, timeout, resourceCacheLocal.resources[j].lockidx, resourceCacheLocal.resources[j].ncURL, "ncCancelBundleTask", instanceId);
+  for (i=start; i<stop && !done; i++) {
+    timeout = ncGetTimeout(op_start, OP_TIMEOUT, stop-start, i);
+    rc = ncClientCall(ccMeta, timeout, resourceCacheLocal.resources[i].lockidx, resourceCacheLocal.resources[i].ncURL, "ncCancelBundleTask", instanceId);
     if (rc) {
       ret = 1;
     } else {
@@ -720,13 +720,13 @@ int ncGetTimeout(time_t op_start, time_t op_max, int numCalls, int idx) {
 }
 
 int doAttachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *remoteDev, char *localDev) {
-  int i, j, rc, start = 0, stop = 0, ret=0, done=0, timeout;
+  int i, rc, start = 0, stop = 0, ret=0, done=0, timeout;
   ccInstance *myInstance;
   ncStub *ncs;
   time_t op_start;
   ccResourceCache resourceCacheLocal;
   
-  i = j = 0;
+  i = 0;
   myInstance = NULL;
   op_start = time(NULL);
   
@@ -760,9 +760,9 @@ int doAttachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *r
   }
   
   done=0;
-  for (j=start; j<stop && !done; j++) {
-    timeout = ncGetTimeout(op_start, OP_TIMEOUT, stop-start, j);
-    rc = ncClientCall(ccMeta, timeout, resourceCacheLocal.resources[j].lockidx, resourceCacheLocal.resources[j].ncURL, "ncAttachVolume", instanceId, volumeId, remoteDev, localDev);
+  for (i=start; i<stop && !done; i++) {
+    timeout = ncGetTimeout(op_start, OP_TIMEOUT, stop-start, i);
+    rc = ncClientCall(ccMeta, timeout, resourceCacheLocal.resources[i].lockidx, resourceCacheLocal.resources[i].ncURL, "ncAttachVolume", instanceId, volumeId, remoteDev, localDev);
     if (rc) {
       ret = 1;
     } else {
@@ -779,12 +779,12 @@ int doAttachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *r
 }
 
 int doDetachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *remoteDev, char *localDev, int force) {
-  int i, j, rc, start = 0, stop = 0, ret=0, done=0, timeout;
+  int i, rc, start = 0, stop = 0, ret=0, done=0, timeout;
   ccInstance *myInstance;
   ncStub *ncs;
   time_t op_start;
   ccResourceCache resourceCacheLocal;
-  i = j = 0;
+  i = 0;
   myInstance = NULL;
   op_start = time(NULL);
   
@@ -816,9 +816,9 @@ int doDetachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *r
     stop = resourceCacheLocal.numResources;
   }
   
-  for (j=start; j<stop; j++) {
-    timeout = ncGetTimeout(op_start, OP_TIMEOUT, stop-start, j);
-    rc = ncClientCall(ccMeta, timeout, resourceCacheLocal.resources[j].lockidx, resourceCacheLocal.resources[j].ncURL, "ncDetachVolume", instanceId, volumeId, remoteDev, localDev, force);
+  for (i=start; i<stop; i++) {
+    timeout = ncGetTimeout(op_start, OP_TIMEOUT, stop-start, i);
+    rc = ncClientCall(ccMeta, timeout, resourceCacheLocal.resources[i].lockidx, resourceCacheLocal.resources[i].ncURL, "ncDetachVolume", instanceId, volumeId, remoteDev, localDev, force);
     if (rc) {
       ret = 1;
     } else {
@@ -1168,10 +1168,7 @@ int doDescribeNetworks(ncMetadata *ccMeta, char *nameserver, char **ccs, int ccs
 
 int doStartNetwork(ncMetadata *ccMeta, char *accountId, char *uuid, char *netName, int vlan, char *nameserver, char **ccs, int ccsLen) {
   int rc, ret;
-  time_t op_start;
   char *brname;
-  
-  op_start = time(NULL);
 
   rc = initialize(ccMeta);
   if (rc || ccIsEnabled()) {
@@ -1219,13 +1216,11 @@ int doDescribeResources(ncMetadata *ccMeta, virtualMachine **ccvms, int vmLen, i
   int rc, diskpool, mempool, corepool;
   int j;
   ccResource *res;
-  time_t op_start;
   ccResourceCache resourceCacheLocal;
   char strbuf[4096];
 
   logprintfl(EUCAINFO,"DescribeResources(): called \n");
   logprintfl(EUCADEBUG,"DescribeResources(): params: userId=%s, vmLen=%d\n", SP(ccMeta ? ccMeta->userId : "UNSET"), vmLen);
-  op_start = time(NULL);
 
   rc = initialize(ccMeta);
   if (rc || ccIsEnabled()) {
@@ -1904,7 +1899,7 @@ int schedule_instance_roundrobin(virtualMachine *vm, int *outresid) {
 }
 
 int schedule_instance_explicit(virtualMachine *vm, char *targetNode, int *outresid) {
-  int i, rc, done, resid, sleepresid;
+  int i, done, resid, sleepresid;
   ccResource *res;
   
   *outresid = 0;
@@ -1953,14 +1948,14 @@ int schedule_instance_explicit(virtualMachine *vm, char *targetNode, int *outres
     *outresid = sleepresid;
   }
   if (res->state == RESASLEEP) {
-    rc = powerUp(res);
+    powerUp(res);
   }
 
   return(0);
 }
 
 int schedule_instance_greedy(virtualMachine *vm, int *outresid) {
-  int i, rc, done, resid, sleepresid;
+  int i, done, resid, sleepresid;
   ccResource *res;
   
   *outresid = 0;
@@ -2011,7 +2006,7 @@ int schedule_instance_greedy(virtualMachine *vm, int *outresid) {
     *outresid = sleepresid;
   }
   if (res->state == RESASLEEP) {
-    rc = powerUp(res);
+    powerUp(res);
   }
 
   return(0);
@@ -2023,7 +2018,6 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
   ccInstance *myInstance=NULL, 
     *retInsts=NULL;
   char instId[16], uuid[48];
-  time_t op_start=0;
   ccResource *res=NULL;
   char mac[32], privip[32], pubip[32];
   
@@ -2034,8 +2028,6 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
   
   char emiURLCached[1024], kernelURLCached[1024], ramdiskURLCached[1024];
 
-  op_start = time(NULL);
-  
   rc = initialize(ccMeta);
   if (rc || ccIsEnabled()) {
     return(1);
@@ -2326,17 +2318,15 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
 }
 
 int doGetConsoleOutput(ncMetadata *ccMeta, char *instId, char **outConsoleOutput) {
-  int i, j, rc, numInsts, start, stop, done, ret, rbytes, timeout=0;
+  int i, rc, numInsts, start, stop, done, ret, rbytes, timeout=0;
   ccInstance *myInstance;
   ncStub *ncs;
-  char *consoleOutput;
   time_t op_start;
   ccResourceCache resourceCacheLocal;
 
-  i = j = numInsts = 0;
+  i = numInsts = 0;
   op_start = time(NULL);
 
-  consoleOutput = NULL;
   myInstance = NULL;
   
   *outConsoleOutput = NULL;
@@ -2365,14 +2355,14 @@ int doGetConsoleOutput(ncMetadata *ccMeta, char *instId, char **outConsoleOutput
   }
 
   done=0;
-  for (j=start; j<stop && !done; j++) {
+  for (i=start; i<stop && !done; i++) {
     if (*outConsoleOutput) {
       free(*outConsoleOutput);
       *outConsoleOutput = NULL;
     }
 
     // if not talking to Eucalyptus NC (but, e.g., a Broker)
-    if (!strstr(resourceCacheLocal.resources[j].ncURL, "EucalyptusNC")) {
+    if (!strstr(resourceCacheLocal.resources[i].ncURL, "EucalyptusNC")) {
             char pwfile[MAX_PATH];
             *outConsoleOutput = NULL;
             snprintf(pwfile, MAX_PATH, "%s/var/lib/eucalyptus/windows/%s/console.append.log", config->eucahome, instId);
@@ -2396,8 +2386,8 @@ int doGetConsoleOutput(ncMetadata *ccMeta, char *instId, char **outConsoleOutput
             done++; // quit on the first host, since they are not queried remotely 
 
     } else { // otherwise, we *are* talking to a Eucalyptus NC, so make the remote call
-            timeout = ncGetTimeout(op_start, timeout, (stop - start), j);
-            rc = ncClientCall(ccMeta, timeout, resourceCacheLocal.resources[j].lockidx, resourceCacheLocal.resources[j].ncURL, "ncGetConsoleOutput", instId, outConsoleOutput);
+            timeout = ncGetTimeout(op_start, timeout, (stop - start), i);
+            rc = ncClientCall(ccMeta, timeout, resourceCacheLocal.resources[i].lockidx, resourceCacheLocal.resources[i].ncURL, "ncGetConsoleOutput", instId, outConsoleOutput);
     }
 
     if (rc) {
@@ -2469,7 +2459,7 @@ int doRebootInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen) {
 
   shawn();
 
-  return(0);
+  return(0); /// XXX:gholms
 }
 
 int doTerminateInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, int force, int **outStatus) {
@@ -2477,14 +2467,12 @@ int doTerminateInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, int
   char *instId;
   ccInstance *myInstance=NULL;
   ncStub *ncs;
-  time_t op_start;
   ccResourceCache resourceCacheLocal;
 
   i = j = 0;
   instId = NULL;
   myInstance = NULL;
-  op_start = time(NULL);
-  
+
   rc = initialize(ccMeta);
   if (rc || ccIsEnabled()) {
     return(1);
@@ -2566,13 +2554,13 @@ int doTerminateInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, int
 }
 
 int doCreateImage(ncMetadata *ccMeta, char *instanceId, char *volumeId, char *remoteDev) {
-  int i, j, rc, start = 0, stop = 0, ret=0, done=0, timeout;
+  int i, rc, start = 0, stop = 0, ret=0, done=0, timeout;
   ccInstance *myInstance;
   ncStub *ncs;
   time_t op_start;
   ccResourceCache resourceCacheLocal;
   
-  i = j = 0;
+  i = 0;
   myInstance = NULL;
   op_start = time(NULL);
   
@@ -2606,10 +2594,10 @@ int doCreateImage(ncMetadata *ccMeta, char *instanceId, char *volumeId, char *re
   }
   
   done=0;
-  for (j=start; j<stop && !done; j++) {
-    timeout = ncGetTimeout(op_start, OP_TIMEOUT, stop-start, j);
-    //    rc = ncClientCall(ccMeta, timeout, NCCALL, resourceCacheLocal.resources[j].ncURL, "ncCreateImage", instanceId, volumeId, remoteDev);
-    rc = ncClientCall(ccMeta, timeout, resourceCacheLocal.resources[j].lockidx, resourceCacheLocal.resources[j].ncURL, "ncCreateImage", instanceId, volumeId, remoteDev);
+  for (i=start; i<stop && !done; i++) {
+    timeout = ncGetTimeout(op_start, OP_TIMEOUT, stop-start, i);
+    //    rc = ncClientCall(ccMeta, timeout, NCCALL, resourceCacheLocal.resources[i].ncURL, "ncCreateImage", instanceId, volumeId, remoteDev);
+    rc = ncClientCall(ccMeta, timeout, resourceCacheLocal.resources[i].lockidx, resourceCacheLocal.resources[i].ncURL, "ncCreateImage", instanceId, volumeId, remoteDev);
     if (rc) {
       ret = 1;
     } else {
@@ -2936,7 +2924,7 @@ int ccCheckState(int clcTimer) {
 }
 
 int doBrokerPairing() {
-  int ret, rc, local_broker_down, i, j, is_ha_cc, port;
+  int ret, local_broker_down, i, j, is_ha_cc, port;
   char buri[MAX_PATH], uriType[32], bhost[MAX_PATH], path[MAX_PATH], curi[MAX_PATH], chost[MAX_PATH];
 
   ret = 0;
@@ -2945,7 +2933,7 @@ int doBrokerPairing() {
 
   snprintf(curi, MAX_PATH, "%s", config->ccStatus.serviceId.uris[0]);
   bzero(chost, sizeof(char) * MAX_PATH);
-  rc = tokenize_uri(curi, uriType, chost, &port, path);
+  tokenize_uri(curi, uriType, chost, &port, path);
 
   //enabled
   for (i=0; i<16; i++) {
@@ -2993,7 +2981,7 @@ int doBrokerPairing() {
 	    
 	    snprintf(buri, MAX_PATH, "%s", config->notreadyServices[i].uris[j]);
 	    bzero(bhost, sizeof(char) * MAX_PATH);
-	    rc = tokenize_uri(buri, uriType, bhost, &port, path);
+	    tokenize_uri(buri, uriType, bhost, &port, path);
 	    
 	    logprintfl(EUCADEBUG, "ccCheckState(): comparing found not ready broker host (%s) with local CC host (%s)\n", bhost, chost);
 	    if (!strcmp(chost, bhost)) {
