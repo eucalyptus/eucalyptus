@@ -144,9 +144,9 @@ static pthread_mutex_t fault_mutex = PTHREAD_MUTEX_INITIALIZER;
 /*
  * Function prototypes
  */
-static xmlDoc *get_eucafault (const char *, const char *);
+static xmlDoc *read_eucafault (const char *, const char *);
 static char *get_fault_id (xmlNode *);
-static int fault_id_exists (const char *, xmlDoc *);
+static xmlNode *get_eucafault (const char *, xmlDoc *);
 static int scandir_filter (const struct dirent *);
 static int str_end_cmp (const char *, const char *);
 static char *str_trim_suffix (const char *, const char *);
@@ -211,7 +211,7 @@ scandir_filter (const struct dirent *entry)
  * ASSUMES FAULT ID MATCHES FILENAME!
  */
 static xmlDoc *
-get_eucafault (const char * faultdir, const char * fault_id)
+read_eucafault (const char * faultdir, const char * fault_id)
 {
     xmlDoc *my_doc = NULL;
     char fault_file[PATH_MAX];
@@ -221,21 +221,21 @@ get_eucafault (const char * faultdir, const char * fault_id)
               XML_SUFFIX);
     PRINTF (("Attempting to load file %s\n", fault_file));
 
-    if (fault_id_exists (fault_id, NULL)) {
+    if (get_eucafault (fault_id, NULL) != NULL) {
         PRINTF (("Looks like fault %s already exists.\n", fault_id));
         return NULL;
     }
     my_doc = xmlParseFile (fault_file);
 
     if (my_doc == NULL) {
-        logprintfl (EUCAWARN, "Could not parse file %s in get_eucafault()\n",
+        logprintfl (EUCAWARN, "Could not parse file %s in read_eucafault()\n",
                    fault_file);
         return NULL;
     } else {
-        PRINTF1 (("Successfully parsed file %s in get_eucafault()\n",
+        PRINTF1 (("Successfully parsed file %s in read_eucafault()\n",
                 fault_file));
     }
-    if (fault_id_exists (fault_id, my_doc)) {
+    if (get_eucafault (fault_id, my_doc) != NULL) {
         PRINTF (("Found fault id %s in %s\n", fault_id, fault_file));
     } else if (get_common_block (my_doc) != NULL) {
         PRINTF (("Found <%s> block in %s\n", COMMON_PREFIX, fault_file));
@@ -323,15 +323,18 @@ get_common_block (xmlDoc *doc)
 
 
 /*
- * Returns true (1) if fault id exists in model, false (0) if not.
+ * Returns fault node if fault id exists in model, NULL if not.
  *
  * Uses global fault model unless a non-NULL doc pointer is passed as a
  * parameter, so it can be used either to match a fault id in a single
  * doc or to determine if a fault id already exists in the overall
  * model.
+ *
+ * FIXME: Extend this to return the first fault node in a doc if NULL id
+ * supplied.
  */
-static int
-fault_id_exists (const char *id, xmlDoc *doc)
+static xmlNode *
+get_eucafault (const char *id, xmlDoc *doc)
 {
     /* 
      * Uses global model if no doc supplied.
@@ -344,10 +347,10 @@ fault_id_exists (const char *id, xmlDoc *doc)
         char *this_id = get_fault_id (node);
 
         if ((this_id != NULL) && !strcasecmp (this_id, id)) {
-            return 1;
+            return node;
         }
     }
-    return 0;
+    return NULL;
 }
 
 /*
@@ -418,7 +421,7 @@ initialize_eucafaults (void)
                     PRINTF (("Found %d %s files in %s\n", numfaults, XML_SUFFIX,
                             faultdirs[i]));
                     while (numfaults--) {
-                        xmlDoc *new_fault = get_eucafault (faultdirs[i], str_trim_suffix (namelist[numfaults]->d_name, XML_SUFFIX));
+                        xmlDoc *new_fault = read_eucafault (faultdirs[i], str_trim_suffix (namelist[numfaults]->d_name, XML_SUFFIX));
 
                         if (new_fault) {
                             add_eucafault (new_fault);
@@ -443,6 +446,8 @@ initialize_eucafaults (void)
  * FIXME: Consolidate this with get_fault_id() and make some sort of
  * general-purpose fetch function? Or make get_fault_id() more general
  * and change this to call it?
+ * 
+ * FIXME: Consolidate with get_fault_var?
  * 
  * FIXME: LEAKS MEMORY!!!
  */
@@ -479,6 +484,19 @@ get_common_var (const char *var)
     // If nothing useful is found, return original variable-name string.
     logprintfl (EUCAWARN, "Did not find label '%s'\n", var);
     return (char *)var;
+}
+
+/*
+ * Retrieves a translated label from <fault> block.
+ *
+ * FIXME: Consolidate with get_fault_var?
+ * 
+ * FIXME: LEAKS MEMORY!!!
+ */
+static char *
+get_fault_var (const char *var)
+{
+    return NULL;
 }
 
 /*
@@ -539,7 +557,8 @@ log_eucafault (char *fault_id, ...)
     }
     va_end (argv);
 
-    if (fault_id_exists (fault_id, NULL)) {
+    if (get_eucafault (fault_id, NULL) != NULL) {
+        // ^-- Simple existence check for now.
         format_eucafault (fault_id);
     } else {
         logprintfl (EUCAERROR,
