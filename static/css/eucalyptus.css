@@ -212,6 +212,23 @@ div.euca-container.euca-explorer.euca-explorer-items.mouseon {
    color: #86B237;
 }
 
+div.login.heading {
+    background: #1E405C;
+    width: 1024px;
+    height: 100px;
+}
+
+div.login.title {
+    border: 5px solid black;
+}
+
+div.login {
+    position: relative;
+    width: 600px;
+    height: 250px;
+    background: #ffffff;
+}
+
 div.euca-container {
     position: static;
     width: 1024px;
