@@ -114,7 +114,7 @@ enum faultdir_types {
  * For output formatting
  */
 #define STARS "************************************************************************"
-#define BARS "|"
+#define BARS ""                 /* I want to remove these little monsters! */
 
 /*
  * Defines the order of labels in fault log entries.
@@ -495,6 +495,8 @@ get_common_var (const char *var)
  * FIXME: Consolidate with get_common_var()?
  * 
  * FIXME: LEAKS MEMORY!!!
+ *
+ * FIXME: Gosh this looks messy.
  */
 static char *
 get_fault_var (const char *var, const xmlNode *f_node)
@@ -508,8 +510,30 @@ get_fault_var (const char *var, const xmlNode *f_node)
         if ((node->type == XML_ELEMENT_NODE) &&
             !strcasecmp ((const char *)node->name, var)) {
             xmlChar *value = xmlGetProp (node, (const xmlChar *)"localized");
+
             if (value == NULL) {
                 value = xmlGetProp (node, (const xmlChar *)"message");
+            }
+            if (value == NULL) {
+                // May be a child node, e.g. for "resolution"
+                for (xmlNode *subnode = xmlFirstElementChild(node); subnode;
+                     subnode = subnode->next) {
+                    if ((node->type == XML_ELEMENT_NODE) && 
+                        !strcasecmp ((const char *)subnode->name,
+                                     "localized")) {
+                        return (char *)xmlNodeGetContent(subnode);
+                    }
+                }
+                // FIXME: Need a more elegant method than another list walk!
+                for (xmlNode *subnode = xmlFirstElementChild(node); subnode;
+                     subnode = subnode->next) {
+                    if ((node->type == XML_ELEMENT_NODE) && 
+                        !strcasecmp ((const char *)subnode->name,
+                                     "message")) {
+                        return (char *)xmlNodeGetContent(subnode);
+                    }
+                }
+
             }
             return (char *)value;
         }
@@ -559,6 +583,7 @@ format_eucafault (const char *fault_id, ...)
                  get_common_var (fault_labels[i]));
         // FIXME: free() this.
         fault_var = get_fault_var (fault_labels[i], fault_node);
+
         if (fault_var != NULL) {
             fprintf (logfile, "%s", fault_var);
         } else {
