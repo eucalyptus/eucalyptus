@@ -1,6 +1,10 @@
 package com.eucalyptus.reporting.modules.address
 
 import com.eucalyptus.reporting.event_store.ReportingElasticIpEventStore
+import com.eucalyptus.reporting.event_store.ReportingElasticIpCreateEvent
+import com.eucalyptus.reporting.event_store.ReportingElasticIpDeleteEvent
+import com.eucalyptus.reporting.event_store.ReportingElasticIpAttachEvent
+import com.eucalyptus.reporting.event_store.ReportingElasticIpDetachEvent
 import com.eucalyptus.reporting.user.ReportingAccountDao
 import com.eucalyptus.reporting.user.ReportingUserDao
 import com.google.common.base.Charsets
@@ -9,19 +13,14 @@ import com.eucalyptus.auth.principal.Principals
 
 import static org.junit.Assert.*
 import org.junit.Test
-import com.eucalyptus.reporting.event_store.ReportingElasticIpCreateEvent
-import com.eucalyptus.reporting.event_store.ReportingElasticIpDeleteEvent
-import com.eucalyptus.reporting.event_store.ReportingElasticIpAttachEvent
-import com.eucalyptus.reporting.event_store.ReportingElasticIpDetachEvent
 
 /**
  * Unit test for AddressUsageEventListener
  */
-@SuppressWarnings("GroovyAccessibility")
-public class AddressUsageEventListenerTest {
+class AddressUsageEventListenerTest {
 
   @Test
-  public void testAllocateEvent() {
+  void testAllocateEvent() {
     long timestamp = System.currentTimeMillis() - 100000
 
     Object persisted = testEvent( AddressEvent.with(
@@ -41,7 +40,7 @@ public class AddressUsageEventListenerTest {
   }
 
   @Test
-  public void testReleaseEvent() {
+  void testReleaseEvent() {
     long timestamp = System.currentTimeMillis() - 100000
 
     Object persisted = testEvent( AddressEvent.with(
@@ -59,7 +58,7 @@ public class AddressUsageEventListenerTest {
   }
 
   @Test
-  public void testAssociateEvent() {
+  void testAssociateEvent() {
     long timestamp = System.currentTimeMillis() - 100000
 
     Object persisted = testEvent( AddressEvent.with(
@@ -78,7 +77,7 @@ public class AddressUsageEventListenerTest {
   }
 
   @Test
-  public void testDisassociateEvent() {
+  void testDisassociateEvent() {
     long timestamp = System.currentTimeMillis() - 100000
 
     Object persisted = testEvent( AddressEvent.with(
@@ -97,11 +96,11 @@ public class AddressUsageEventListenerTest {
   }
 
   private Object testEvent( AddressEvent event, long timestamp ) {
-    String updatedAccountId = null;
-    String updatedAccountName = null;
-    String updatedUserId = null;
-    String updatedUserName = null;
-    Object persisted = null;
+    String updatedAccountId = null
+    String updatedAccountName = null
+    String updatedUserId = null
+    String updatedUserName = null
+    Object persisted = null
     ReportingAccountDao accountDao = new ReportingAccountDao( ) {
       @Override void addUpdateAccount( String id, String name ) {
         updatedAccountId = id
@@ -116,7 +115,7 @@ public class AddressUsageEventListenerTest {
     }
     ReportingElasticIpEventStore eventStore = new ReportingElasticIpEventStore( ) {
       @Override protected void persist( final Object o ) {
-        persisted = o;
+        persisted = o
       }
     }
     AddressUsageEventListener listener = new AddressUsageEventListener( ) {
@@ -129,7 +128,7 @@ public class AddressUsageEventListenerTest {
     listener.fireEvent( event )
 
     assertNotNull( "Persisted event", persisted )
-    assertEquals( "Account Id", "000000000000", updatedAccountId  );
+    assertEquals( "Account Id", "000000000000", updatedAccountId  )
     assertEquals( "Account Name", "testaccount", updatedAccountName )
     assertEquals( "User Id", "eucalyptus", updatedUserId )
     assertEquals( "User Name", "eucalyptus", updatedUserName )
@@ -138,6 +137,6 @@ public class AddressUsageEventListenerTest {
   }
 
   private String uuid( String seed ) {
-    return UUID.nameUUIDFromBytes( seed.getBytes(Charsets.UTF_8) ).toString();
+    return UUID.nameUUIDFromBytes( seed.getBytes(Charsets.UTF_8) ).toString()
   }
 }
