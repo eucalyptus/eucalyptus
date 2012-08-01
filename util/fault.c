@@ -145,14 +145,15 @@ static pthread_mutex_t fault_mutex = PTHREAD_MUTEX_INITIALIZER;
  * Function prototypes
  */
 static xmlDoc *read_eucafault (const char *, const char *);
-static char *get_fault_id (xmlNode *);
-static xmlNode *get_eucafault (const char *, xmlDoc *);
+static char *get_fault_id (const xmlNode *);
+static xmlNode *get_eucafault (const char *, const xmlDoc *);
 static int scandir_filter (const struct dirent *);
 static int str_end_cmp (const char *, const char *);
 static char *str_trim_suffix (const char *, const char *);
-static int add_eucafault (xmlDoc *);
-static xmlNode *get_common_block (xmlDoc *);
+static int add_eucafault (const xmlDoc *);
+static xmlNode *get_common_block (const xmlDoc *);
 static char *get_common_var (const char *);
+static char *get_fault_var (const char *, const xmlNode *);
 static void format_eucafault (const char *, ...);
 
 /*
@@ -257,16 +258,16 @@ read_eucafault (const char * faultdir, const char * fault_id)
  * Can also add COMMON_PREFIX (<common>) block.
  */
 static int
-add_eucafault (xmlDoc *new_doc)
+add_eucafault (const xmlDoc *new_doc)
 {
     if (xmlDocGetRootElement (ef_doc) == NULL) {
         PRINTF1 (("Creating new document.\n"));
-        ef_doc = xmlCopyDoc (new_doc, 1); /* 1 == recursive copy */
+        ef_doc = xmlCopyDoc ((xmlDoc *)new_doc, 1); /* 1 == recursive copy */
         // FIXME: Add error check/return here.
     } else {
         PRINTF1 (("Appending to existing document.\n"));
         if (xmlAddNextSibling (xmlFirstElementChild (xmlDocGetRootElement (ef_doc)),
-                               xmlFirstElementChild (xmlDocGetRootElement (new_doc))) == NULL) {
+                               xmlFirstElementChild (xmlDocGetRootElement ((xmlDoc *)new_doc))) == NULL) {
             // FIXME: Add more diagnostic information to this error message.
             logprintfl (EUCAERROR, "Problem appending to fault database.\n");
             return -1;
@@ -279,7 +280,7 @@ add_eucafault (xmlDoc *new_doc)
  * Returns the fault id found in a fault node.
  */
 static char *
-get_fault_id (xmlNode *node)
+get_fault_id (const xmlNode *node)
 {
     if (node == NULL) {
         return NULL;
@@ -304,12 +305,13 @@ get_fault_id (xmlNode *node)
  * Returns true (1) if common block exists in doc, false (0) if not.
  */
 static xmlNode *
-get_common_block (xmlDoc *doc)
+get_common_block (const xmlDoc *doc)
 {
     if (doc == NULL) {
         return NULL;
     }
-    for (xmlNode *node = xmlFirstElementChild (xmlDocGetRootElement (doc));
+    for (xmlNode *node =
+             xmlFirstElementChild (xmlDocGetRootElement ((xmlDoc *)doc));
          node; node = node->next) {
         if (node->type == XML_ELEMENT_NODE) {
             if (!strcasecmp ((const char *)node->name, COMMON_PREFIX)) {
@@ -334,7 +336,7 @@ get_common_block (xmlDoc *doc)
  * supplied.
  */
 static xmlNode *
-get_eucafault (const char *id, xmlDoc *doc)
+get_eucafault (const char *id, const xmlDoc *doc)
 {
     /* 
      * Uses global model if no doc supplied.
@@ -342,7 +344,8 @@ get_eucafault (const char *id, xmlDoc *doc)
     if (doc == NULL) {
         doc = ef_doc;
     }
-    for (xmlNode *node = xmlFirstElementChild (xmlDocGetRootElement (doc));
+    for (xmlNode *node =
+             xmlFirstElementChild (xmlDocGetRootElement ((xmlDoc *)doc));
          node; node = node->next) {
         char *this_id = get_fault_id (node);
 
@@ -447,7 +450,7 @@ initialize_eucafaults (void)
  * general-purpose fetch function? Or make get_fault_id() more general
  * and change this to call it?
  * 
- * FIXME: Consolidate with get_fault_var?
+ * FIXME: Consolidate with get_fault_var()?
  * 
  * FIXME: LEAKS MEMORY!!!
  */
@@ -489,13 +492,30 @@ get_common_var (const char *var)
 /*
  * Retrieves a translated label from <fault> block.
  *
- * FIXME: Consolidate with get_fault_var?
+ * FIXME: Consolidate with get_common_var()?
  * 
  * FIXME: LEAKS MEMORY!!!
  */
 static char *
-get_fault_var (const char *var)
+get_fault_var (const char *var, const xmlNode *f_node)
 {
+    if ((f_node == NULL) || (var == NULL)) {
+        // FIXME: EUCAWARN log something?
+        return NULL;
+    }
+    for (xmlNode *node = xmlFirstElementChild ((xmlNode *)f_node); node;
+         node = node->next) {
+        if ((node->type == XML_ELEMENT_NODE) &&
+            !strcasecmp ((const char *)node->name, var)) {
+            xmlChar *value = xmlGetProp (node, (const xmlChar *)"localized");
+            if (value == NULL) {
+                value = xmlGetProp (node, (const xmlChar *)"message");
+            }
+            return (char *)value;
+        }
+    }
+    logprintfl (EUCAWARN, "Did not find <%d> message in get_fault_var().\n",
+                var);
     return NULL;
 }
 
@@ -510,7 +530,13 @@ format_eucafault (const char *fault_id, ...)
 {
     static FILE *logfile = NULL;
     static int max_label_len = 0;
+    xmlNode *fault_node = get_eucafault (fault_id, NULL);
 
+    if (fault_node == NULL) {
+        logprintfl (EUCAERROR,
+                    "format_eucafault() cannot get fault node for id %s.\n",
+                    fault_id);
+    }
     if (logfile == NULL) {
         logfile = stdout;
     }
@@ -528,8 +554,16 @@ format_eucafault (const char *fault_id, ...)
     fprintf (logfile, "%s\n", STARS);
 
     for (int i = 0; fault_labels[i]; i++) {
-        fprintf (logfile, "%s %*s:", BARS, max_label_len,
+        char *fault_var = NULL;
+        fprintf (logfile, "%s %*s: ", BARS, max_label_len,
                  get_common_var (fault_labels[i]));
+        // FIXME: free() this.
+        fault_var = get_fault_var (fault_labels[i], fault_node);
+        if (fault_var != NULL) {
+            fprintf (logfile, "%s", fault_var);
+        } else {
+            fprintf (logfile, "%s", get_common_var ("unknown"));
+        }
         fprintf (logfile, "\n");
     }
 
