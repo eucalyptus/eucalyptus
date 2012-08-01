@@ -17,7 +17,6 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-
 package com.eucalyptus.reporting.event_store;
 
 import java.util.*;
@@ -102,5 +101,42 @@ public class ReportingVolumeEventStore
 		}							
 	}
 
+	
+	public void insertAttachEvent(String uuid, String instanceUuid, long timestampMs)
+	{
+		EntityWrapper<ReportingVolumeAttachEvent> entityWrapper =
+			EntityWrapper.get(ReportingVolumeAttachEvent.class);
+
+		try {
+			ReportingVolumeAttachEvent event = new ReportingVolumeAttachEvent(uuid, instanceUuid, timestampMs);
+			entityWrapper.add(event);
+			entityWrapper.commit();
+			LOG.debug("Added event to db:" + event);
+		} catch (Exception ex) {
+			LOG.error(ex);
+			entityWrapper.rollback();
+			throw new RuntimeException(ex);
+		}							
+		
+	}
+	
+	public void insertDetachEvent(String uuid, String instanceUuid, long timestampMs)
+	{
+		EntityWrapper<ReportingVolumeDetachEvent> entityWrapper =
+			EntityWrapper.get(ReportingVolumeDetachEvent.class);
+
+		try {
+			ReportingVolumeDetachEvent event = new ReportingVolumeDetachEvent(uuid, instanceUuid, timestampMs);
+			entityWrapper.add(event);
+			entityWrapper.commit();
+			LOG.debug("Added event to db:" + event);
+		} catch (Exception ex) {
+			LOG.error(ex);
+			entityWrapper.rollback();
+			throw new RuntimeException(ex);
+		}							
+		
+	}
+	
 }
 

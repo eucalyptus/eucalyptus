@@ -17,7 +17,6 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-
 package com.eucalyptus.reporting.event_store;
 
 import javax.persistence.*;
@@ -25,7 +24,6 @@ import javax.persistence.*;
 import org.hibernate.annotations.Entity;
 
 import com.eucalyptus.entities.AbstractPersistent;
-
 @Entity @javax.persistence.Entity
 @PersistenceContext(name="eucalyptus_reporting")
 @Table(name="reporting_volume_usage_events")
