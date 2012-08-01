@@ -150,7 +150,7 @@ static int scandir_filter (const struct dirent *);
 static int str_end_cmp (const char *, const char *);
 static char *str_trim_suffix (const char *, const char *);
 static int add_eucafault (xmlDoc *);
-static xmlNode *common_block (xmlDoc *);
+static xmlNode *get_common_block (xmlDoc *);
 static char *get_common_var (const char *);
 static void format_eucafault (const char *, ...);
 
@@ -236,7 +236,7 @@ get_eucafault (const char * faultdir, const char * fault_id)
     }
     if (fault_id_exists (fault_id, my_doc)) {
         PRINTF (("Found fault id %s in %s\n", fault_id, fault_file));
-    } else if (common_block (my_doc) != NULL) {
+    } else if (get_common_block (my_doc) != NULL) {
         PRINTF (("Found <%s> block in %s\n", COMMON_PREFIX, fault_file));
         if (common_block_exists++) {
             PRINTF (("<%s> block already exists--skipping.\n", COMMON_PREFIX));
@@ -288,8 +288,9 @@ get_fault_id (xmlNode *node)
      * (These are technically case-sensitive in XML, but I'm being
      * forgiving of minor transgressions in order to have happier users.)
      */
-    if (node->type == XML_ELEMENT_NODE) {
-        // FIXME: Double-check that this is a <fault> tag?
+    if ((node->type == XML_ELEMENT_NODE) &&
+        !strcasecmp ((const char *)node->name, "fault")) {
+
         for (xmlAttr *attr = node->properties; attr; attr = attr->next) {
             if (!strcasecmp ((const char *)attr->name, "id")) {
                 return (char *)attr->children->content;
@@ -302,7 +303,7 @@ get_fault_id (xmlNode *node)
  * Returns true (1) if common block exists in doc, false (0) if not.
  */
 static xmlNode *
-common_block (xmlDoc *doc)
+get_common_block (xmlDoc *doc)
 {
     if (doc == NULL) {
         return 0;
@@ -435,22 +436,56 @@ initialize_eucafaults (void)
     return populate;            /* FIXME: Doesn't yet return population! */
 }
 
+/*
+ * Retrieves a translated label from <common> block.
+ *
+ * FIXME: Consolidate this with get_fault_id() and make some sort of
+ * general-purpose fetch function? Or make get_fault_id() more general
+ * and change this to call it?
+ * 
+ * FIXME: LEAKS MEMORY!!!
+ */
 static char *
 get_common_var (const char *var)
 {
-    if (common_block (ef_doc) != NULL) {
-        return (char *)var;
-    } else {
-        // If nothing useful is found, return original variable-name string.
+    xmlNode *c_node = NULL;
+
+    if ((c_node = get_common_block (ef_doc)) == NULL) {
         logprintfl (EUCAWARN, "Did not find <%s> block\n", COMMON_PREFIX);
         return (char *)var;
     }
+    for (xmlNode *node = xmlFirstElementChild (c_node); node;
+         node = node->next) {
+        if ((node->type == XML_ELEMENT_NODE) && 
+            !strcasecmp ((const char *)node->name, "var")) {
+            xmlChar *prop = xmlGetProp (node, (const xmlChar *)"name");
+
+            if (!strcasecmp (var, (char *)prop)) {
+                xmlChar *value = NULL;
+
+                xmlFree (prop);
+                value = xmlGetProp (node, (const xmlChar *)"localized");
+
+                if (value == NULL) {
+                    value = xmlGetProp (node, (const xmlChar *)"value");
+                } 
+                return (char *)value;
+            } else {
+                xmlFree (prop);
+            }
+        }
+    }
+    // If nothing useful is found, return original variable-name string.
+    logprintfl (EUCAWARN, "Did not find label '%s'\n", var);
+    return (char *)var;
 }
 
 /*
  * Formats fault-log output.
+ *
+ * FIXME: This walks the common block more than once.
+ * FIXME: This doesn't handle wchar output yet--output is misaligned!
  */
-
 static void
 format_eucafault (const char *fault_id, ...)
 {
@@ -461,7 +496,6 @@ format_eucafault (const char *fault_id, ...)
         logfile = stdout;
     }
     // Determine alignment (but only once)
-    // FIXME: This needs to align based upon translated labels!
     if (!max_label_len) {
         for (int i = 0; fault_labels[i]; i++) {
             int this_label_len = strlen (get_common_var (fault_labels[i]));
@@ -475,7 +509,8 @@ format_eucafault (const char *fault_id, ...)
     fprintf (logfile, "%s\n", STARS);
 
     for (int i = 0; fault_labels[i]; i++) {
-        fprintf (logfile, "%s %*s:", BARS, max_label_len, fault_labels[i]);
+        fprintf (logfile, "%s %*s:", BARS, max_label_len,
+                 get_common_var (fault_labels[i]));
         fprintf (logfile, "\n");
     }
 
