@@ -3,7 +3,7 @@
 <style type="text/css" title="currentStyle">
   @import "lib/jquery.css";
   @import "lib/jquery-table.css";
-  @import "lib/jquery-ui-1.8.21.custom.css";
+  @import "lib/jquery-ui-1.9.0-beta1.css";
   @import "css/eucalyptus.css";
 </style>
 
@@ -15,7 +15,8 @@
 -->
 
 <!-- this ui library contains everything. need to slim down later by including only what's used here -->
-<script type="text/javascript" language="javascript" src="lib/jquery-ui-1.8.21.custom.min.js"></script>
+<!--<script type="text/javascript" language="javascript" src="lib/jquery-ui-1.8.21.custom.min.js"></script> -->
+<script type="text/javascript" language="javascript" src="lib/jquery-ui-1.9.0-beta1.js"></script>
 <script type="text/javascript" language="javascript" src="lib/jquery.dataTables.js"></script> 
 <script type="text/javascript" language="javascript" src="lib/jquery.cookies.js"></script>
 <script type="text/javascript" language="javascript" src="lib/jquery.i18n.properties-min-1.0.9.js"></script>
@@ -37,7 +38,7 @@
 <script type="text/javascript" language="javascript" src="js/main_container.js"></script>
 <script type="text/javascript" language="javascript" src="js/eucawidget.js"></script>
 <script type="text/javascript" language="javascript" src="js/dashboard.js"></script>
-
+<script type="text/javascript" language="javascript" src="js/keypair.js"></script>
 <body>
 <div class="euca-container">
   <div class="euca-header">
@@ -48,14 +49,15 @@
   </div>
   <div class="euca-explorer"> </div>
   <div class="euca-main">
-    <div class="euca-main" id="euca-notification"> </div>
-    <div class="euca-main" id="euca-main-container"> </div>
+    <div id="euca-notification"> </div>
+    <div id="euca-main-container"> </div>
+    <div id="euca-tab-container"> </div> <!-- temporary -->
   </div>
   <div class="euca-footer">
   </div>
 </div>
 <div class="templates">
-  <div id="login" class="templates inactive">
+  <div id="login" class="templates">
     <img src="images/eucalyptus-340x36.png" alt-text="eucalyptus logo"/>
     &nbsp;<br/>
     &nbsp;<br/>
@@ -101,6 +103,12 @@
       </form>
     </div>
   </div> <!-- end of login -->
+
+  <div id="dashboard">
+    <div class="dashboard instances"> </div>  
+    <div class="dashboard storage"> </div>
+    <div class="dashboard netsec"> </div>
+  </div>
 </div> <!-- end of templates --> 
 
 <!-- Navigation tabs.

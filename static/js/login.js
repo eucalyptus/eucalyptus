@@ -2,8 +2,9 @@
   eucalyptus.login = function(args) {
   // select the login form
     var $login = $('html body').find('.templates #login').clone();
-    $login.removeClass('templates inactive').addClass('templates active');
-    $login.appendTo('html body');
+    $login.show();
+    var $main = $('html body').find('.euca-main');
+    $login.appendTo($main);
 
     var $form = $login.find('form');
     // set the login event handler
