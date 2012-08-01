@@ -14,6 +14,7 @@ class BotoClcInterface(ClcInterface):
         self.conn = boto.connect_euca(host=clc_host,
                                 aws_access_key_id=access_id,
                                 aws_secret_access_key=secret_key)
+        self.conn.APIVersion = '2012-03-01'
 
     def __save_json__(self, obj, name):
         f = open(name, 'w')
