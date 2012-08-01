@@ -222,6 +222,9 @@
 <table id="volumes" class="display">
 <thead>
 <tr>
+<th>
+   <input type="checkbox" onchange="selectCheckboxChanged(this, 'volumes');">
+</th>
 <th>id</th>
 <th>size</th>
 <th>status</th>
@@ -231,7 +234,7 @@
 </thead>
 <tbody>
 <tr>
-    <td colspan="5" class="dataTables_empty">Loading data from server</td>
+    <td colspan="6" class="dataTables_empty">Loading data from server</td>
 </tr>
 </tbody>
 </table>
@@ -268,7 +271,7 @@
   <span id="keys-delete-names"></span>
 </div>
 
-<div id="key-add-dialog" title="Create key pair" class="add-dialog" style="display:none">
+<div id="keys-add-dialog" title="Create key pair" class="add-dialog" style="display:none">
   <p>You can use this key pair to launch more than one instance</p>
   <p>Save the file in a place you will remember. You will need to enter the path later to connect to your instances</p>
   <p>

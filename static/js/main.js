@@ -60,60 +60,7 @@
 		 $('#table_keys_count').html(oSettings.fnRecordsTotal());
               }
       });
-      // TODO: create a function so some or all of this can be reused for all tables
-      $('div.table_keys_new').addClass('euca-table-add');
-      $('div.table_keys_new').html('<a class="table-key-new" href="#">Add</a>');
-      $('#keys_filter').append('&nbsp<a class="table-refresh" href="#">Refresh</a>');
-      $('div#keys_filter a.table-refresh').click( function () {
-        allTablesRef['keys'].fnReloadAjax();
-      });
-      $('div.table_keys_top').addClass('euca-table-length');
-      $('div.table_keys_top').html('<div class="euca-table-action actionmenu inactive"></div><div class="euca-table-size"><span id="table_keys_count"></span> key pairs found. Showing <span class="show selected">10</span> | <span class="show">25</span> | <span class="show">50</span> | <span class="show">all</span></div>');
-      $("div.table_keys_top span.show").click( function () {
-         $(this).parent().children('span').each( function() {
-           $(this).removeClass("selected");
-         });
-	 if ( this.innerHTML == "10" ) {
-           allTablesRef['keys'].fnSettings()._iDisplayLength = 10;
-           allTablesRef['keys'].fnDraw();
-           $(this).addClass("selected");
-         } else if ( this.innerHTML == "25" ) {
-           allTablesRef['keys'].fnSettings()._iDisplayLength = 25;
-           allTablesRef['keys'].fnDraw();
-           $(this).addClass("selected");
-         } else if ( this.innerHTML == "50" ) {
-           allTablesRef['keys'].fnSettings()._iDisplayLength = 50;
-           allTablesRef['keys'].fnDraw();
-           $(this).addClass("selected");
-	 } else {
-	   allTablesRef['keys'].fnSettings()._iDisplayLength = -1;
-           allTablesRef['keys'].fnDraw();
-           $(this).addClass("selected");
-         }
-      });
-      //action menu
-      menuContent = '<ul><li><a href="#">More actions<span class="arrow"></span></a><ul>' +
-             '<li><a href="#" id="keys-delete">Delete</a></li>' +
-             '</ul></li></ul>';
-      $menuDiv = $("div.table_keys_top div.euca-table-action");
-      $menuDiv.html(menuContent);
-      $('#keys-delete').click(function() {
-        deleteAction('keys', 1);
-      });
-      $('a.table-key-new').click(function() {
-        $("#key-add-dialog").dialog('open');
-      });
-      $menuDiv.find('ul > li > a').click(function(){
-        parentUL = $(this).parent().parent();
-        if (!parentUL.parent().hasClass('inactive')) {
-          if (parentUL.hasClass('activemenu')){
-            parentUL.removeClass('activemenu');
-          }
-          else {
-            parentUL.addClass('activemenu');
-          }
-        }
-      });
+      setUpInfoTableLayout('keys');
       // init delete dialog
       $('#keys-delete-dialog').dialog({
          autoOpen: false,
@@ -130,7 +77,7 @@
         ]
       });
       // init add dialog
-      $('#key-add-dialog').dialog({
+      $('#keys-add-dialog').dialog({
          autoOpen: false,
          modal: true,
          buttons: [
@@ -142,7 +89,7 @@
               if (keyPattern.test(keyName)) {
                 $(this).dialog("close"); addKeyPair(keyName);
               } else {
-                $('#key-add-dialog div.dialog-notifications').html("Name must be less than 256 alphanumeric characters, spaces, dashes, and/or underscores");
+                $('#keys-add-dialog div.dialog-notifications').html("Name must be less than 256 alphanumeric characters, spaces, dashes, and/or underscores");
               }
             }
           },
@@ -175,14 +122,27 @@
               "bProcessing": true,
               "sAjaxSource": "../ec2?type=volume&Action=DescribeVolumes",
               "sAjaxDataProp": "results",
+              "bAutoWidth" : false,
+              "sPaginationType": "full_numbers",
+              "sDom": '<"table_volumes_new">f<"clear"><"table_volumes_top">rtp<"clear">',
               "aoColumns": [
+                {
+                  "bSortable": false,
+                  "fnRender": function(oObj) { return '<input type="checkbox" onclick="updateActionMenu(\'volumes\')"/>' },
+                  "sWidth": "20px",
+                },
                 { "mDataProp": "id" },
                 { "mDataProp": "size" },
                 { "mDataProp": "status" },
                 { "mDataProp": "create_time" },
                 { "mDataProp": "snapshot_id" }
-              ]
-      });    
+              ],
+              "fnDrawCallback": function( oSettings ) {
+		 $('#table_volumes_count').html(oSettings.fnRecordsTotal());
+              }
+      });
+      setUpInfoTableLayout('volumes');
+
       allTablesRef['snapshots'] = $('#snapshots').dataTable( {
               "bProcessing": true,
               "sAjaxSource": "../ec2?type=snapshot&Action=DescribeSnapshots",

@@ -3,18 +3,18 @@ function selectCheckboxChanged(context, tableName) {
   switch(context.checked) {
     case true:
       var rows = dataTable.fnGetVisiableTrNodes();
-      for (i = 0; i<rows.length; i++) {
+      for ( i = 0; i<rows.length; i++ ) {
         cb = rows[i].firstChild.firstChild;
-        if (cb != null) cb.checked = true;
+        if ( cb != null ) cb.checked = true;
       }
       // activate action menu
       $('div.table_' + tableName + '_top div.euca-table-action').removeClass('inactive');
       break;
     case false:
       var rows = dataTable.fnGetVisiableTrNodes();
-      for (i = 0; i<rows.length; i++) {
+      for ( i = 0; i<rows.length; i++ ) {
         cb = rows[i].firstChild.firstChild;
-        if (cb != null) cb.checked = false;
+        if ( cb != null ) cb.checked = false;
       }
       // deactivate action menu
       $('div.table_' + tableName + '_top div.euca-table-action').addClass('inactive');
@@ -23,7 +23,7 @@ function selectCheckboxChanged(context, tableName) {
 }
 
 function updateActionMenu(tableName) {
-  if (getAllSelectedRows(tableName, 1).length == 0) {
+  if ( getAllSelectedRows(tableName, 1).length == 0 ) {
     $('div.table_' + tableName + '_top div.euca-table-action').addClass('inactive');
   } else {
     $('div.table_' + tableName + '_top div.euca-table-action').removeClass('inactive');
@@ -34,10 +34,10 @@ function getAllSelectedRows(tableName, idIndex) {
   dataTable = allTablesRef[tableName];
   var rows = dataTable.fnGetVisiableTrNodes();
   var selectedRows = [];
-  for (i = 0; i<rows.length; i++) {
+  for ( i = 0; i<rows.length; i++ ) {
     cb = rows[i].firstChild.firstChild;
-    if (cb != null && cb.checked == true) {
-      if (rows[i].childNodes[idIndex] != null)
+    if ( cb != null && cb.checked == true ) {
+      if ( rows[i].childNodes[idIndex] != null )
         selectedRows.push(rows[i].childNodes[idIndex].firstChild.nodeValue);
     }
   }
@@ -55,11 +55,11 @@ function deleteAction(tableName, idColumnIndex) {
 
   var rowsToDelete = getAllSelectedRows(tableName, idColumnIndex);
 
-  if (rowsToDelete.length > 0) {
+  if ( rowsToDelete.length > 0 ) {
     // show delete dialog box
     $deleteNames = $("#" + tableName + "-delete-names");
     $deleteNames.html('');
-    for (i = 0; i<rowsToDelete.length; i++) {
+    for ( i = 0; i<rowsToDelete.length; i++ ) {
       t = escapeHTML(rowsToDelete[i]);
       $deleteNames.append(t).append("<br/>");
     }
@@ -69,7 +69,7 @@ function deleteAction(tableName, idColumnIndex) {
 
 function deleteSelectedKeyPairs() {
   var rowsToDelete = getAllSelectedRows('keys', 1);
-  for (i = 0; i<rowsToDelete.length; i++) {
+  for ( i = 0; i<rowsToDelete.length; i++ ) {
     var keyName = rowsToDelete[i];
     $.ajax({
       type:"GET",
@@ -80,7 +80,7 @@ function deleteSelectedKeyPairs() {
       success:
         (function(keyName) {
           return function(data, textStatus, jqXHR){
-            if (data.results && data.results == true) {
+            if ( data.results && data.results == true ) {
               successNotification("Deleted keypair " + keyName);
               //TODO: refresh table once
               allTablesRef['keys'].fnReloadAjax();
@@ -97,6 +97,67 @@ function deleteSelectedKeyPairs() {
         })(keyName)
     });
   }
+}
+
+/*
+ * Adds custom look and feel to resources table view
+ */
+function setUpInfoTableLayout(tableName) {
+  $resourceTable = $('div.table_' + tableName + '_new');
+  $resourceTable.addClass('euca-table-add');
+  $resourceTable.html('<a id="table-' + tableName + '-new" class="add-resource" "href="#">Add</a>');
+  $('#' + tableName + '_filter').append('&nbsp<a class="table-refresh" href="#">Refresh</a>');
+  $('div#' + tableName + '_filter a.table-refresh').click( function () {
+    allTablesRef[tableName].fnReloadAjax();
+  });
+  $resourceTableTop = $('div.table_' + tableName + '_top');
+  $resourceTableTop.addClass('euca-table-length');
+  $resourceTableTop.html('<div class="euca-table-action actionmenu inactive"></div><div class="euca-table-size"><span id="table_' + tableName + '_count"></span> ' + tableName + ' found. Showing <span class="show selected">10</span> | <span class="show">25</span> | <span class="show">50</span> | <span class="show">all</span></div>');
+
+  $resourceTableTop.find("span.show").click( function () {
+    $(this).parent().children('span').each( function() {
+      $(this).removeClass("selected");
+    });
+    if ( this.innerHTML == "10" ) {
+      allTablesRef[tableName].fnSettings()._iDisplayLength = 10;
+      allTablesRef[tableName].fnDraw();
+      $(this).addClass("selected");
+    } else if ( this.innerHTML == "25" ) {
+      allTablesRef[tableName].fnSettings()._iDisplayLength = 25;
+      allTablesRef[tableName].fnDraw();
+      $(this).addClass("selected");
+    } else if ( this.innerHTML == "50" ) {
+      allTablesRef[tableName].fnSettings()._iDisplayLength = 50;
+      allTablesRef[tableName].fnDraw();
+      $(this).addClass("selected");
+    } else {
+      allTablesRef[tableName].fnSettings()._iDisplayLength = -1;
+      allTablesRef[tableName].fnDraw();
+      $(this).addClass("selected");
+    }
+  });
+  //action menu
+  menuContent = '<ul><li><a href="#">More actions<span class="arrow"></span></a><ul>' +
+                '<li><a href="#" id="' + tableName + '-delete">Delete</a></li>' +
+                '</ul></li></ul>';
+  $menuDiv = $resourceTableTop.find("div.euca-table-action");
+  $menuDiv.html(menuContent);
+  $('#' + tableName + '-delete').click( function() {
+    deleteAction(tableName, 1);
+  });
+  $('#table-' + tableName + '-new').click( function() {
+    $('#' + tableName + '-add-dialog').dialog('open');
+  });
+  $menuDiv.find('ul > li > a').click( function(){
+    parentUL = $(this).parent().parent();
+    if ( !parentUL.parent().hasClass('inactive') ) {
+      if ( parentUL.hasClass('activemenu') ){
+        parentUL.removeClass('activemenu');
+      } else {
+        parentUL.addClass('activemenu');
+      }
+    }
+  });
 }
 
 function addKeyPair(keyName) {
