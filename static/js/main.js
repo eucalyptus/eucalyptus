@@ -3,7 +3,7 @@
     eucalyptus.explorer();
     // show the main divs
     var makeMenutabs = function(args) {
-      var $header = $('html body').find('.euca-container .euca-main #euca-main-container');
+      var $header = $('html body').find('.euca-container .euca-main #euca-tab-container');
       var $ul = $('<ul>').addClass('active');
       $.each(args, function(idx, val) {
           var str = '<a href=\"'+val.link+'\">'+val.name+'</a>' 
@@ -199,8 +199,11 @@
     }
 
     $('html body').find('.euca-container .euca-header').header();
-    $('html body').find('.euca-container .euca-main #euca-main-container').maincontainer();
-    $('html body').find('.euca-container .euca-explorer').explorer({select: jQuery.eucalyptus.maincontainer.prototype.changeSelected});
+    var $container = $('html body').find('.euca-container .euca-main #euca-main-container');
+    $container.maincontainer();
+    $('html body').find('.euca-container .euca-explorer').explorer({select: function(evt, ui){ 
+                                                                      $container.maincontainer("changeSelected",evt, ui);
+                                                                   }});
 
     // find div.euca-container.euca-main#euca-main-header
     var menus = [{name:'Instances', link:'#tabs-instances'}, 
@@ -212,7 +215,7 @@
                   {name:'Snapshots', link: '#tabs-snapshots'}];
 
     makeMenutabs(menus);
-    var $eucaTabContainer = $('html body').find('.euca-container .euca-main #euca-main-container');
+    var $eucaTabContainer = $('html body').find('.euca-container .euca-main #euca-tab-container');
     $eucaTabContainer.append('<div class="euca-notification" id="euca-notification-container"></div>');
     $('#all-tabs-container > div').each(function() {
       ($(this)).appendTo($eucaTabContainer);
@@ -223,7 +226,7 @@
     // calls eucalyptus.footer widget
     $('html body').find('.euca-container .euca-footer').footer();
 
-    var $main = $('html body').find('.euca-container .euca-main #euca-main-container');
+    var $main = $('html body').find('.euca-container .euca-main #euca-tab-container');
     $main.tabs();
 
   } // end of main

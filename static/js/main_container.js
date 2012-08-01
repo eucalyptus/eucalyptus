@@ -1,35 +1,48 @@
 (function($, eucalyptus) {
   $.widget('eucalyptus.maincontainer', {
     options : { 
-        default_selected : 'dashboard',
+        default_selected : 'keypair',
     },
 
     _curSelected : null,
 
     _init : function() {
-   
-     },
+      this.updateSelected(this.options.default_selected);
+    },
 
     _create : function() { 
-       this._curSelected = this.options.default_selected;
     },
 
     _destroy : function() {
     },
 
-    // event receiver
+    // event receiver for menu selection
     changeSelected : function (evt, ui) { 
-      this._curSelected=ui.selected;
-      $('html body').find('.euca-container .euca-main #euca-main-container').dashboard();
+        this.updateSelected(ui.selected);
     },
-   
-    ec2Completed : function (args) {
 
-    },
-   
-    ec2Error : function (args) {
+    updateSelected : function (selected) {
+      if(this._curSelected === selected)
+          return;
+      if(this._curSelected !== null){
+        var $curInstance = this.element.data(this._curSelected);
+        if($curInstance !== undefined){
+          $curInstance.close();
+        }
+      }
 
-    },
+      switch(selected){
+        case 'dashboard':
+          this.element.dashboard();
+          break;
+        case 'keypair':
+          this.element.keypair();
+          break;
+        default:
+          alert('unknown menu selected: '+selected);
+      }
+      this._curSelected = selected;
+    }
   });
 })(jQuery,
    window.eucalyptus ? window.eucalyptus : window.eucalyptus = {});

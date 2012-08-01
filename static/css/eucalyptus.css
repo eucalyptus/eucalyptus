@@ -6,22 +6,7 @@ body {
 
 .templates {
     margin: 0 auto;
-}
-
-.templates div.inactive {
-  display: none;
-}
-
-.templates div.active {
-  display: table;
-}
-
-.euca-main.inactive {
-  display: none;
-}
-
-.euca-main.active {
-  display: none;
+    display: none;
 }
 
 div.euca-footer {
@@ -234,11 +219,56 @@ div.euca-container {
 }
 
 div.euca-main {
+    background: url("../images/main_container_bg.png") repeat center transparent;
     position: relative;
+    display: block;
 }
 div#euca-main-header.euca-main {
     position: relative;
 }
+
+#euca-main-container {
+    border: none;
+}
+
+div#dashboard {
+    background: #ffffff;
+    position: relative;
+    margin-top: 50px;
+    margin-left: 50px;
+    margin-right: 50px;
+    width: 80%;
+    height: 80%;
+}
+
+div.dashboard.instances {
+   float: left;
+   margin-left: 5%;
+   margin-right: 5%;
+   margin-top: 20%;
+   width: 90%;
+   height: 30%;
+}
+
+div.dashboard.storage {
+   float: left;
+   clear: left;
+   margin-left: 5%;
+   margin-right: 2%;
+   margin-top: 10%;
+   width: 40%;
+   height: 30%;
+}
+
+div.dashboard.netsec {
+   float: left;
+   margin-left: 2%;
+   margin-right: 5%;
+   margin-top: 10%;
+   width: 40%;
+   height: 30%;
+}
+
 
 /* Table view */
 div.euca-table-add {

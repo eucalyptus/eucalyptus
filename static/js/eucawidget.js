@@ -14,13 +14,9 @@
 
     _destroy : function() {
     },
-
-    subscribe : function() {
-      //alert('widget subscribe');
-    },
-
-    publish : function() {
-      //alert('widget publish');
+    
+    close : function() {
+      this.element.children().detach();       
     }
   });
 })(jQuery,
