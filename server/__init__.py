@@ -192,9 +192,9 @@ class LoginProcessor(ProxyProcessor):
 
         #hardcoded temporarily
         session_token = 'PLACEHOLDER'
-        access_id = 'L52ISGKFHSEXSPOZYIZ1K'
-        secret_key = 'YRRpiyw333aq1se5PneZEnskI9MMNXrSoojoJjat'
-
+        access_id = config.get('test','accesskey') 
+        secret_key = config.get('test','secretkey')
+        print "access id: %s, secret key: %s" % (access_id, secret_key)
         # create session and store info there, set session id in cookie
         while True:
             sid = os.urandom(16).encode('hex')
