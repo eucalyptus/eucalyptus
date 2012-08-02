@@ -184,13 +184,19 @@ public class BlockStorage {
 	}
 
 	public static void stop() throws EucalyptusCloudException {
-		blockManager.stop();
+		if(blockManager != null) {
+			blockManager.stop();
+		}
 		//clean all state.
 		blockManager = null;
 		checker = null;
 		blockStorageStatistics = null;
-		volumeService.shutdown();
-		snapshotService.shutdown();
+		if(volumeService != null) {
+			volumeService.shutdown();
+		}
+		if(snapshotService != null) {
+			snapshotService.shutdown();
+		}
 		StorageProperties.enableSnapshots = StorageProperties.enableStorage = false;
 	}
 
