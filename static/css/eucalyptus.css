@@ -80,7 +80,6 @@ body {
     margin: 0 auto;
     position: relative;
     width: 1024px;
-    height: 100%; /* Why is this needed? - DY */
 }
 
 .templates {
@@ -103,7 +102,7 @@ body {
 
 /* ======== Navigator styles ======= */
 
-.navigator {
+#euca-navigator {
     display: none;
     background-color: #d7d7d7;
     border: 1px solid #E2E6E5;
@@ -114,17 +113,24 @@ body {
     margin-top: 25px;
 }
 
-.navigator.mouseon {
+#euca-navigator.mouseon {
     background-color: #e7e7e7;
 }
 
-.navigator img {
+#euca-navigator img {
     display: block;
     width: 10px;
     margin-right: 5px;
 }
 
-.navigator a#top-button {
+#euca-navigator div {
+    position: relative;
+    float: left;
+    top: 10px;
+    left: 0px;
+}
+
+#euca-navigator a#top-button {
     color: #02405f; 
     font-size: 18px;
     font-style: normal;
@@ -135,61 +141,46 @@ body {
     top: 0;
 }
 
-a#top-button.mouseon {
-    color: #02405f; 
-    font-size: 18px;
-    font-style: normal;
-    font-weight: normal;
-    left: 0;
-    margin: 5px;
-    text-decoration: none;
-    top: 0;
+#euca-navigator a#top-button.mouseon {
     cursor: default;
 }
 
-
 #euca-help {
-    float: right;
-}
-
-div.euca-header.help {
     display: none;
-    background-color: #d7d7d7;
-    border-color: -moz-use-text-color #E2E6E5 -moz-use-text-color -moz-use-text-color;
-    border-style: none solid none none;
-    border-width: medium 1px medium medium;
     float: right;
     height: 30px;
     margin-right: 10px;
     margin-top: 25px;
     padding: 0 10px;
+    background-color: #d7d7d7;
+    border-color: -moz-use-text-color #E2E6E5 -moz-use-text-color -moz-use-text-color;
+    border-style: none solid none none;
+    border-width: medium 1px medium medium;
+    color: #02405f; 
+    font-size: 15px;
+    font-style: normal;
+    font-weight: normal;
 }
 
-span#help.euca-header.help {
+#euca-help div {
+    position: relative;
+    float: left;
+    top: 5px;
+    left: 0px;
+}
+
+#euca-help img {
+   width: 10px;
+}
+
+#euca-user {
+    display: none;
     background-color: #d7d7d7;
     color: #02405f; 
     font-family: Arial,Helvetica,sans-serif;
     font-size: 15px;
     font-style: normal;
     font-weight: normal;
-    left: 0;
-    position: relative;
-    text-align: center;
-    text-decoration: none;
-    top: 5px;
-}
-
-.help img {
-    width: 10px;
-}
-
-#euca-user {
-    float: right;
-}
-
-div.euca-header.user {
-    display: none;
-    background-color: #d7d7d7;
     border-color: -moz-use-text-color #E2E6E5;
     border-style: none solid;
     border-width: medium 1px;
@@ -198,24 +189,19 @@ div.euca-header.user {
     margin-top: 25px;
     padding: 0 10px;
     width: auto;
-}
-
-span#name.euca-header.user {
-    border: medium none;
-    color: #02405f; 
-    background-color: #d7d7d7;
-    font-size: 15px;
-    font-style: normal;
-    font-weight: normal;
-    left: 0;
-    position: relative;
     text-align: center;
     text-decoration: none;
-    top: 5px;
 }
 
-.user img {
-    width: 10px;
+#euca-user div {
+    position: relative;
+    float: left;
+    top: 5px;
+    left: 0px;
+}
+
+#euca-user img {
+   width: 10px;
 }
 
 
@@ -229,7 +215,7 @@ span#name.euca-header.user {
     height: 100px;
 }
 
-div.euca-container.euca-explorer.euca-explorer-items {
+.euca-explorer-items {
     float: left;
     width: auto;
     padding: 0px;
@@ -241,7 +227,7 @@ div.euca-container.euca-explorer.euca-explorer-items {
     color: #86B237;
 }
 
-div.euca-container.euca-explorer.euca-explorer-items.mouseon {
+.euca-explorer-items.mouseon {
     float: left;
     width: auto;
     padding: 0px;
@@ -253,9 +239,9 @@ div.euca-container.euca-explorer.euca-explorer-items.mouseon {
     color: #0F3F5C;
 }
 
-.euca-container.euca-explorer.euca-explorer-items table, 
-.euca-container.euca-explorer.euca-explorer-items tr, 
-.euca-container.euca-explorer.euca-explorer-items td {
+.euca-explorer-items table, 
+.euca-explorer-items tr, 
+.euca-explorer-items td {
     border-collapse: collapse;
     margin-left: 25px;
     margin-right: 25px;
@@ -264,12 +250,12 @@ div.euca-container.euca-explorer.euca-explorer-items.mouseon {
 }
 
 /* to remove gaps bw images and table cell */
-.euca-container.euca-explorer.euca-explorer-items img {
+.euca-explorer-items img {
     display:block;
     height:36px;
 }
 
-.euca-container.euca-explorer-sub {
+.euca-explorer-sub {
     display: block;
     position: relative;
     width: auto;
@@ -281,19 +267,19 @@ div.euca-container.euca-explorer.euca-explorer-items.mouseon {
     color: #444444;
 }
 
-.euca-container.euca-explorer-sub table,
-.euca-container.euca-explorer-sub tr,
-.euca-container.euca-explorer-sub td 
+.euca-explorer-sub table,
+.euca-explorer-sub tr,
+.euca-explorer-sub td 
 {
     padding: 2px;
     text-align: left;
 }
 
-.euca-container.euca-explorer-sub a {
+.euca-explorer-sub a {
     text-decoration: none; 
 }
 
-.euca-explorer-sub.mouseon {
+.euca-explorer-sub .mouseon {
    color: #86B237;
 }
 
@@ -380,23 +366,17 @@ div.euca-container.euca-explorer.euca-explorer-items.mouseon {
     line-height: 1em;
 }
 
-/* Hey guys, it's not necessary to add 'div' to things that are selected with a class or ID */
-/* It's also not necessary to additional classes or IDs. Usually just the class name will be fine. */
-/* It's easier to troubleshoot CSS issues if you don't over-engineer the selectors. */
-/* Thanks, Dave */
-
-div#euca-main-header.euca-main {
+#euca-main-header.euca-main {
     position: relative;
 }
 
-div#euca-main-container {
+#euca-main-container {
     border: none;
     width: 1024px;
-    height: 100%; /* Why would you need this? - DY */
     display: none;
 }
 
-div#dashboard {
+#dashboard {
     display: inline-block; 
     background: #ffffff;
     position: relative;
@@ -406,7 +386,7 @@ div#dashboard {
     height: 90%;
 }
 
-div.dashboard.instances {
+#dashboard .instances {
    float: left;
    margin-left: 5%;
    margin-right: 5%;
@@ -418,7 +398,7 @@ div.dashboard.instances {
    font-size: 14px;
 }
 
-div.dashboard.storage {
+#dashboard .storage {
    float: left;
    clear: left;
    margin-left: 5%;
@@ -431,7 +411,7 @@ div.dashboard.storage {
    font-size: 14px;
 }
 
-div.dashboard.netsec {
+#dashboard .netsec {
    float: left;
    margin: 5% 0px;
    width: 45%;
@@ -441,17 +421,17 @@ div.dashboard.netsec {
    font-size: 14px;
 }
  
-div.dashboard.instances div{
+#dashboard .instances div{
    float:left;
    margin: 10% 10px;
 }
 
-div.dashboard.storage div{
+#dashboard .storage div{
    float:left;
    margin: 10% 10px;
 }
 
-div.dashboard.netsec div{
+#dashboard .netsec div{
    float:left;
    margin: 10% 10px;
 }
@@ -459,15 +439,15 @@ div.dashboard.netsec div{
 
 /* ======= Table view ======= */
 
-div.euca-table-add {
+.euca-table-add {
    float: left;
 }
 
-div.euca-table-action {
-    float: left;
+.euca-table-action {
+   float: left;
 }
 
-div.euca-table-size {
+.euca-table-size {
     float: right;
 }
 

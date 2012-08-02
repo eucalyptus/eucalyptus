@@ -12,67 +12,57 @@
         var widget = this;
         this.element.show();
         this.element.children().each(function(idx) {
-          if ($(this).hasClass('logo')){
-            if(widget.options.show_logo)
-              $(this).show();
-            else
-              $(this).hide();
-          }
-          if ($(this).hasClass('navigator')){
+          if ($(this).attr('id')==='euca-navigator'){
             if(widget.options.show_navigation)
               $(this).show();
             else
               $(this).hide();
           }
-          if ($(this).hasClass('user')){
+          if ($(this).attr('id')==='euca-user'){
             if(widget.options.show_user)
               $(this).show();
             else
               $(this).hide();
           }
-          if ($(this).hasClass('help')){
+          if ($(this).attr('id')==='euca-help'){
             if(widget.options.show_help)
               $(this).show();
             else
               $(this).hide();
           }
-          if ($(this).hasClass('search')){
+          if ($(this).attr('id')=='euca-search'){
             if(widget.options.show_search)
               $(this).show(); 
             else
               $(this).hide();
           }
         });
-       var username ="";
+       var username ='null';
        if('u_session' in $.eucaData)
          username = $.eucaData.u_session['username'];
-
-       var $userArea = this.element.find('#euca-user');
-       $userArea.addClass('euca-header user');
-       $('<span>').addClass('euca-header user').attr('id','name').text(username+' ').append($('<img>').attr('src','images/triangle.gif')).appendTo($userArea);
+       this.element.find('#euca-user-text').text(username);
     },
     _create : function(){
-       // logo area
-       //var $logoArea = this.element.find('#euca-logo');
-       //$logoArea.addClass('euca-header logo');
-       //$('<img>').attr('src',this.options.logoUrl).appendTo($logoArea);
-
        // navigation area   
        var $naviArea = this.element.find('#euca-navigator');
-       $naviArea.addClass('navigator');
-       $naviArea.append($('<table>').attr('width','auto').attr('align','center').append(
-                          $('<tbody>').append(
-	                    $('<tr>').append(
-                              $('<td>').attr('valign','middle').css('width','auto').append(
-		                $('<a>').attr('href','#').attr('id','top-button').addClass('ex-navigator').css('display','block').text(button_explorer)),
-				  $('<td>').attr('valign','middle').css('width','auto').append(
-				     $('<img>').attr('src','images/triangle.gif'))))));
-    
+       $naviArea.append($('<div>').attr('id','euca-navigator-text').append(
+		          $('<a>').attr('href','#').attr('id','top-button').addClass('ex-navigator').css('display','block').text(button_explorer)),
+                        $('<div>').attr('id','euca-navigator-icon').append(
+                          $('<img>').attr('src','images/triangle.gif')));
        
        //help area 
        var $helpArea = this.element.find('#euca-help');
-       $helpArea.addClass('euca-header help');
-       $('<span>').addClass('euca-header help').attr('id','help').text('help ').append($('<img>').attr('src','images/triangle.gif')).appendTo($helpArea);
+       $helpArea.append(
+         $('<div>').attr('id','euca-help-text').text('Help'),
+         $('<div>').attr('id','euca-help-icon').append(
+           $('<img>').attr('src','images/triangle.gif'))); 
+
+       //user area
+       var $userArea = this.element.find('#euca-user');
+       $userArea.append(
+         $('<div>').attr('id','euca-user-text').text('null'),
+         $('<div>').attr('id','euca-user-icon').append(
+           $('<img>').attr('src','images/triangle.gif'))); 
 
        // event handlers
        this.element.find('#euca-navigator').hover(

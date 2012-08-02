@@ -28,11 +28,11 @@
        args = {idx, menu, imgUrl, submenu}
       */
       createMenu : function (idx, menu) {
-        var $newitem = $('<div>').addClass('euca-container euca-explorer euca-explorer-items').attr('id','explorer-item-'+menu.text).append(
+        var $newitem = $('<div>').addClass('euca-explorer-items').attr('id','explorer-item-'+menu.text.toLowerCase()).append(
   	    $('<table>').append(
 		$('<tr>').append(
 		   $('<td>').append(
-	   		$('<img>').attr('src', menu.imgUrl).attr('id','explorer-item-'+menu.text+'-img')),
+	   		$('<img>').attr('src', menu.imgUrl).attr('id','explorer-item-'+menu.text.toLowerCase()+'-img')),
 		   $('<td>').text(menu.text))));
         if (idx == 0){
           $newitem.css('clear','left');
@@ -51,16 +51,16 @@
               ).text(submenu.text));
               $td.hover(
   	          function () {
-                     $(this).addClass('euca-explorer-sub mouseon'); 
+                     $(this).addClass('mouseon'); 
                   },
                   function () {
-                     $(this).removeClass('euca-explorer-sub mouseon'); 
+                     $(this).removeClass('mouseon'); 
                   });
               $table.append($('<tr>').append($td));
           }); 
  
           // create div
-          $sub_explorer = $('<div>').addClass('euca-container euca-explorer-sub').attr('id','explorer-subitem-'+menu.text).append(
+          $sub_explorer = $('<div>').addClass('euca-explorer-sub').attr('id','explorer-subitem-'+menu.text.toLowerCase()).append(
               $table);
           $newitem.append($sub_explorer);
         }
