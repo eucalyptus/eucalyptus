@@ -3,6 +3,18 @@
 
 @import "../css/normalize.css";
 
+/* ======= Common Color Codes ======= */
+
+/*
+
+Grey text: #666
+
+Blue text: #02405f
+
+Green links: #73a434
+
+*/
+
 
 /* ======== Base HTML styles ======= */
 
@@ -12,6 +24,28 @@ body {
     font-family: Arial,Helvetica,sans-serif;
     background: #fff;
 }
+
+
+/* ======= Helper classes ======= */
+
+.clearfix:before,
+.clearfix:after {
+    content:"";
+    display:table;
+}
+.clearfix:after {
+    clear:both;
+}
+.clearfix {
+    zoom:1; /* For IE 6/7 (trigger hasLayout) */
+}
+
+.hide-text {
+    text-indent: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
 
 /* ======== Page layout styles ======= */
 
@@ -25,13 +59,14 @@ body {
 }
 
 .euca-explorer-container {
-    /* No attributes at this time */
+    background: #eaedee url(../images/main-bgfill.png) repeat left top;
 }
 
 .euca-main-outercontainer {
     background: #eaedee url(../images/main-bgfill.png) repeat left top;
-    padding: 15px 0;
-    height: 600px;
+    /* Total min-height with padding 540px */
+    min-height: 485px;
+    padding: 15px 0 40px;
 }
 
 .euca-footer-container {
@@ -41,10 +76,7 @@ body {
     padding: 5px 0;
 }
 
-.euca-header,
-.euca-explorer,
-.euca-main,
-.euca-footer {
+.inner-container {
     margin: 0 auto;
     position: relative;
     width: 1024px;
@@ -56,63 +88,44 @@ body {
     display: none;
 }
 
+
 /* ======== Header styles ======= */
 
-.euca-header.logo {
+#euca-logo {
     float: left;
-    width: 300px;
-    margin-top: 5px;
+    height: 30px;
+    width: 220px;
+    margin: 20px 0 10px;
     border: none;
+    background: transparent url(../images/eucalyptus-logo.png) no-repeat left top;
 }
+
 
 /* ======== Navigator styles ======= */
 
-#euca-navigator {
-    width: 200px;
-}
-
-#euca-navigator table {
-    width: 200px !important;
-    background-color: #ccc;
-}
-
 .navigator {
-    background-color: #16415d;
-}
-
-div.euca-header.navigator {
     display: none;
-    border-color: -moz-use-text-color #E2E6E5;
+    background-color: #d7d7d7;
+    border: 1px solid #E2E6E5;
     border-style: none solid;
     border-width: medium 1px;
     float: left;
-    margin-left: 50px;
-    margin-top: 5px;
-    padding: 0 10px;
-    /* width: auto;
-    height: auto; */
+    margin-left: 120px;
+    margin-top: 25px;
 }
 
-div.euca-header.navigator.mouseon {
-    background: none repeat-x scroll 50% 50% #F6F6F6;
-    border-color: -moz-use-text-color #E2E6E5;
-    border-style: none solid;
-    border-width: medium 1px;
-    float: left;
-    margin-left: 70px;
-    margin-top: 5px;
-    padding: 0 10px;
-    /* width: auto;
-    height: auto; */
+.navigator.mouseon {
+    background-color: #e7e7e7;
 }
 
-.euca-header.navigator img {
+.navigator img {
+    display: block;
     width: 10px;
+    margin-right: 5px;
 }
 
-a#top-button.euca-header.navigator {
-    color: #FFFFFF; 
-    font-family: Arial,Helvetica,sans-serif;
+.navigator a#top-button {
+    color: #02405f; 
     font-size: 18px;
     font-style: normal;
     font-weight: normal; 
@@ -122,9 +135,8 @@ a#top-button.euca-header.navigator {
     top: 0;
 }
 
-a#top-button.euca-header.navigator.mouseon {
-    color: #FFFFFF; 
-    font-family: Arial,Helvetica,sans-serif;
+a#top-button.mouseon {
+    color: #02405f; 
     font-size: 18px;
     font-style: normal;
     font-weight: normal;
@@ -135,21 +147,27 @@ a#top-button.euca-header.navigator.mouseon {
     cursor: default;
 }
 
+
+#euca-help {
+    float: right;
+}
+
 div.euca-header.help {
     display: none;
+    background-color: #d7d7d7;
     border-color: -moz-use-text-color #E2E6E5 -moz-use-text-color -moz-use-text-color;
     border-style: none solid none none;
     border-width: medium 1px medium medium;
     float: right;
     height: 30px;
     margin-right: 10px;
-    margin-top: 5px;
+    margin-top: 25px;
     padding: 0 10px;
-    width: auto;
 }
 
 span#help.euca-header.help {
-    color: #FFFFFF; 
+    background-color: #d7d7d7;
+    color: #02405f; 
     font-family: Arial,Helvetica,sans-serif;
     font-size: 15px;
     font-style: normal;
@@ -161,26 +179,31 @@ span#help.euca-header.help {
     top: 5px;
 }
 
-div.euca-header.help img {
+.help img {
     width: 10px;
+}
+
+#euca-user {
+    float: right;
 }
 
 div.euca-header.user {
     display: none;
+    background-color: #d7d7d7;
     border-color: -moz-use-text-color #E2E6E5;
     border-style: none solid;
     border-width: medium 1px;
     float: right;
     height: 30px;
-    margin-top: 5px;
+    margin-top: 25px;
     padding: 0 10px;
     width: auto;
 }
 
 span#name.euca-header.user {
     border: medium none;
-    color: #FFFFFF;
-    font-family: Arial,Helvetica,sans-serif;
+    color: #02405f; 
+    background-color: #d7d7d7;
     font-size: 15px;
     font-style: normal;
     font-weight: normal;
@@ -191,17 +214,18 @@ span#name.euca-header.user {
     top: 5px;
 }
 
-div.euca-header.user img {
+.user img {
     width: 10px;
 }
 
+
 /* ======== Explorer styles ======= */
 
-div.euca-explorer {
+.euca-explorer {
     background: url("../images/explorer_background.png") no-repeat center transparent;
     display:none;
     position:relative;
-    width:1024px;
+    /* width:1024px; */
     height: 100px;
 }
 
@@ -273,7 +297,17 @@ div.euca-container.euca-explorer.euca-explorer-items.mouseon {
    color: #86B237;
 }
 
+
 /* ======== Login styles ======= */
+
+#login {
+    margin: 95px auto 0;
+    width: 650px;
+}
+
+#login form {
+    margin: 0 40px 0 20px;
+}
 
 .form-row {
     margin-bottom: 10px;
@@ -282,9 +316,69 @@ div.euca-container.euca-explorer.euca-explorer-items.mouseon {
 .form-row label {
     display: inline-block;
     width: 130px;
+    font-family: 'Play', sans-serif;
+    font-size: 13px;
+    font-weight: bold;
+    text-align: right;
+    margin-right: 15px;
+    color: #02405f;
 }
 
+.form-row input {
+    width: 265px;
+}
+
+.password-help {
+    color: #666;
+    font-size: 11px;
+    margin: 20px 0 20px 145px;
+}
+
+.password-help a {
+    color: #666;
+    text-decoration: none;
+}
+
+.password-help a:hover {
+    color: #73a434;
+    text-decoration: underline;
+}
+
+.button-bar {
+    text-align: right;
+}
+
+
 /* ======== Content styles ======= */
+
+.content-box {
+    background-color: #fff;
+    border: 1px solid #999;
+    min-height: 285px;
+
+    -webkit-border-radius: 5px;
+    -moz-border-radius: 5px;
+    border-radius: 5px;
+    
+    -webkit-box-shadow: 1px 2px 3px rgba(3,3,3,0.16), inset 0 1px 8px rgba(44,46,50,0.32);
+    -moz-box-shadow: 1px 2px 3px rgba(3,3,3,0.16), inset 0 1px 8px rgba(44,46,50,0.32);
+    box-shadow: 1px 2px 3px rgba(3,3,3,0.16), inset 0 1px 8px rgba(44,46,50,0.32);
+}
+
+.box-header {
+    background-color: #eaf2f5;
+    color: #02405f;
+    font-family: 'Play', sans-serif;
+    font-size: 15px;
+    font-weight: bold;
+    margin: 13px 0 25px;
+    padding: 8px 30px 4px;    
+}
+
+.box-header p {
+    margin: 0;
+    line-height: 1em;
+}
 
 div#euca-main-header.euca-main {
     position: relative;
@@ -298,9 +392,9 @@ div#euca-main-container {
 }
 
 div#dashboard {
+    display: inline-block;
     background: #ffffff;
     position: relative;
-    margin-top: 50px;
     margin-left: 50px;
     margin-right: 50px;
     width: 90%;
@@ -313,7 +407,7 @@ div.dashboard.instances {
    margin-right: 5%;
    margin-top: 5%;
    width: 90%;
-   height: 40%;
+   height: auto;
    border: 1px solid #DDDDDD;
    font-family: Arial,Helvetica,sans-serif;
    font-size: 14px;
@@ -324,6 +418,7 @@ div.dashboard.storage {
    clear: left;
    margin-left: 5%;
    margin-top: 5%;
+   margin-bottom: 5%;
    width: 45%;
    height: 40%;  
    border: 1px solid #DDDDDD;
@@ -333,7 +428,7 @@ div.dashboard.storage {
 
 div.dashboard.netsec {
    float: left;
-   margin-top: 5%;
+   margin: 5% 0px;
    width: 45%;
    height: 40%;
    border: 1px solid #DDDDDD;
@@ -356,6 +451,7 @@ div.dashboard.netsec div{
    margin: 10% 10px;
 }
 
+
 /* ======= Table view ======= */
 
 div.euca-table-add {
@@ -373,6 +469,7 @@ div.euca-table-size {
 span.selected {
     font-weight: bold;
 }
+
 
 /* ======= Action menu ======= */
 
@@ -457,6 +554,7 @@ span.selected {
 .inactive a:hover {
     background-color: #fff !important;
 }
+
 
 /* ======= Notifications ======= */
 

@@ -53,18 +53,18 @@
     },
     _create : function(){
        // logo area
-       var $logoArea = this.element.find('#euca-logo');
-       $logoArea.addClass('euca-header logo');
-       $('<img>').attr('src',this.options.logoUrl).appendTo($logoArea);
+       //var $logoArea = this.element.find('#euca-logo');
+       //$logoArea.addClass('euca-header logo');
+       //$('<img>').attr('src',this.options.logoUrl).appendTo($logoArea);
 
        // navigation area   
        var $naviArea = this.element.find('#euca-navigator');
-       $naviArea.addClass('euca-header navigator');
+       $naviArea.addClass('navigator');
        $naviArea.append($('<table>').attr('width','auto').attr('align','center').append(
                           $('<tbody>').append(
 	                    $('<tr>').append(
                               $('<td>').attr('valign','middle').css('width','auto').append(
-		                $('<a>').attr('href','#').attr('id','top-button').addClass('euca-header navigator').css('display','block').text(button_explorer)),
+		                $('<a>').attr('href','#').attr('id','top-button').addClass('ex-navigator').css('display','block').text(button_explorer)),
 				  $('<td>').attr('valign','middle').css('width','auto').append(
 				     $('<img>').attr('src','images/triangle.gif'))))));
     
