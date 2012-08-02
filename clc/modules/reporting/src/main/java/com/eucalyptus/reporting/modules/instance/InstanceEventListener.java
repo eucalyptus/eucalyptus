@@ -178,13 +178,13 @@ public class InstanceEventListener implements EventListener<InstanceEvent> {
         public Void apply( final Collection<DatedInstanceEvent> datedInstanceEvents ) {
           for ( final DatedInstanceEvent datedEvent : datedInstanceEvents ) {
             //TODO:STEVE: Add CPU to instance event
+        	//TODO: Add various network statistics to event
             final InstanceEvent event = datedEvent.getInstanceEvent();
             eventStore.insertUsageEvent(
                 event.getUuid(),
                 datedEvent.getTimestamp(),
-                event.getCumulativeNetworkIoMegs(),
                 event.getCumulativeDiskIoMegs(),
-                0
+                0, 0L, 0L, 0L, 0L, 0L, 0L
             );
             log.debug( "Wrote instance usage for: " + event.getUuid() );
           }
