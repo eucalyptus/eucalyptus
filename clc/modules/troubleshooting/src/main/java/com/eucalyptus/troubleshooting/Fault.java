@@ -60,7 +60,7 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.fault;
+package com.eucalyptus.troubleshooting;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -72,12 +72,14 @@ import java.io.StringWriter;
 import java.io.Writer;
 import java.util.Arrays;
 
+import org.apache.log4j.Logger;
+
 import com.eucalyptus.system.BaseDirectory;
 
 public class Fault {
 	Fault() {}
-
-	private static final File logFile = BaseDirectory.LOG.HOME.getChildFile("cloud-faults.log");
+	private static final Logger LOG = Logger.getLogger(Fault.class);
+	private static final File faultLogFile = BaseDirectory.LOG.getChildFile("cloud-faults.log");
 	private static final String ASTERISK_LINE = makeString(72, '*');
 	private static final String EMPTY_LINE = "";
 	private static final String INNER_PREFIX = "| ";
@@ -148,12 +150,15 @@ public class Fault {
 	
 	public void log() {
 		synchronized(Fault.class) {
+			if (!faultLogFile.getParentFile().isDirectory()) {
+			}
+
 			PrintWriter out = null;
 			try {
-				out = new PrintWriter(new FileWriter(logFile, true));
+				out = new PrintWriter(new FileWriter(faultLogFile, true));
 				out.println(toString());
 			} catch (IOException ex) {
-				ex.printStackTrace(); // TODO: figure out something here
+				LOG.error("Can not open " + faultLogFile.getAbsolutePath() + " for writing.");
 			} finally {
 				if (out != null) {
 					out.close();

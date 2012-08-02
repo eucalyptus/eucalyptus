@@ -61,7 +61,7 @@
  ************************************************************************/
 
 
-package com.eucalyptus.fault;
+package com.eucalyptus.troubleshooting;
 
 import java.io.File;
 import java.io.IOException;
@@ -76,6 +76,8 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
+import org.apache.log4j.Logger;
+import org.mortbay.log.Log;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NamedNodeMap;
@@ -86,7 +88,7 @@ import org.xml.sax.SAXException;
 import com.eucalyptus.system.BaseDirectory;
 
 public class FaultSubsystem {
-
+	private static final Logger LOG = Logger.getLogger(FaultSubsystem.class);
 	private File systemFaultDir = BaseDirectory.HOME.getChildFile("/usr/share/eucalyptus/faults"); 
 	private File customFaultDir = BaseDirectory.HOME.getChildFile("/etc/eucalyptus/faults"); 
 	// TODO one log per component:
@@ -125,6 +127,7 @@ public class FaultSubsystem {
 	}
 
 	private void checkFaultDir(File dir) {
+		LOG.debug("Checking " + dir.getAbsolutePath() + " for fault files");
 		if (dir == null || !dir.isDirectory()) return;
 		File[] xmlFilesToCheck = dir.listFiles(new FaultOrCommonXMLFileFilter());
 		if (xmlFilesToCheck != null) {
@@ -359,7 +362,10 @@ public class FaultSubsystem {
 
     public static Fault fault(int id) { // todo use enum
     	Fault fault = instance.faultMap.get(id);
-		if (fault == null) return null;
+		if (fault == null) {
+			LOG.error("Fault " + id + " called, does not exist!");
+			return null;
+		}
 		for (Map.Entry<String, String> commonEntry: instance.common.entrySet()) {
 			fault = fault.withVar(commonEntry.getKey(), commonEntry.getValue());
 		}

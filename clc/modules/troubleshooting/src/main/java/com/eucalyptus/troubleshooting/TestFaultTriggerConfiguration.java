@@ -59,13 +59,16 @@
  *   IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
+package com.eucalyptus.troubleshooting;
 
-package com.eucalyptus.bootstrap;
-import java.net.URL;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.Arrays;
+import java.util.Properties;
 
 import org.apache.log4j.Logger;
-import org.apache.log4j.xml.DOMConfigurator;
 
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
@@ -73,84 +76,30 @@ import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
 
-
-@RunDuring( Bootstrap.Stage.UserCredentialsInit )
-@ConfigurableClass( root = "troubleshooting",
-description = "Parameters controlling troubleshooting information." )
-public class TroubleshootingBootstrapper extends Bootstrapper {
-	private static Logger LOG        = Logger.getLogger( TroubleshootingBootstrapper.class );
-	@ConfigurableField( description = "Log level for dynamic logging.",
+@ConfigurableClass( root = "test_fault_troubleshooting",
+description = "Mechanism to test fault triggers." )
+public class TestFaultTriggerConfiguration {
+	private static final Logger LOG = Logger.getLogger(TestFaultTriggerConfiguration.class);
+	
+	@ConfigurableField( description = "Fault id last used to trigger test",
 			initial = "", //TODO: figure out how to link System.property("euca.log.level")
-			changeListener = LogLevelListener.class,
-			displayName = "euca.dynamic.log.level" )
-	public static String DYNAMIC_LOG_LEVEL = ""; 
+			changeListener = FaultIdListener.class,
+			displayName = "fault.id" )
+	private static String VAR_FAULT_ID = "";
+	@ConfigurableField( description = "Properties file location for variable substitition in text",
+			initial = "", //TODO: figure out how to link System.property("euca.log.level")
+			changeListener = FaultIdListener.class,
+			displayName = "var.properties.file" )
+	private static String VAR_PROPS_FILE="";
 
-	@Override
-	public boolean load( ) throws Exception {
-		LOG.info( "Loading troubleshooting interface." );
-		return true;
-	}
-
-	@Override
-	public boolean start( ) throws Exception {
-		LOG.info( "Starting troubleshooting interface." );
-		return true;
-	}
-
-	/**
-	 * @see com.eucalyptus.bootstrap.Bootstrapper#enable()
-	 */
-	@Override
-	public boolean enable( ) throws Exception {
-		return true;
-	}
-
-	/**
-	 * @see com.eucalyptus.bootstrap.Bootstrapper#stop()
-	 */
-	@Override
-	public boolean stop( ) throws Exception {
-		return true;
-	}
-
-	/**
-	 * @see com.eucalyptus.bootstrap.Bootstrapper#destroy()
-	 */
-	@Override
-	public void destroy( ) throws Exception {}
-
-	/**
-	 * @see com.eucalyptus.bootstrap.Bootstrapper#disable()
-	 */
-	@Override
-	public boolean disable( ) throws Exception {
-		return true;
-	}
-
-	/**
-	 * @see com.eucalyptus.bootstrap.Bootstrapper#check()
-	 */
-	@Override
-	public boolean check( ) throws Exception {
-		return true;
-	}
-
-	public static class LogLevelListener implements PropertyChangeListener {
-		private final String[] logLevels = new String[] {"ALL", "DEBUG", "INFO", "WARN", "ERROR", "FATAL", "TRACE"};
+	public static class VarPropsListener implements PropertyChangeListener {
 		/**
 		 * @see com.eucalyptus.configurable.PropertyChangeListener#fireChange(com.eucalyptus.configurable.ConfigurableProperty,
 		 *      java.lang.Object)
 		 */
 		@Override
 		public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
-			String newLogLevel = (String) newValue;
-			if (newLogLevel == null || !Arrays.asList(logLevels).contains(newLogLevel.toUpperCase())) {
-				throw new ConfigurablePropertyException("Invalid log level " + newLogLevel);
-			}
-
-			// TODO: add error checking for property and configuration
 			LOG.warn( "Change occurred to property " + t.getQualifiedName( ) + " with new value " + newValue + " which will reset logging levels." );
-
 			try {
 				t.getField( ).set( null, t.getTypeParser( ).apply( newValue ) );
 			} catch ( IllegalArgumentException e1 ) {
@@ -160,19 +109,61 @@ public class TroubleshootingBootstrapper extends Bootstrapper {
 				e1.printStackTrace();
 				throw new ConfigurablePropertyException( e1 );
 			}
-			System.setProperty("euca.log.level", newLogLevel.toUpperCase());
-			resetLoggingWithXML();
 		}
+	}
 
-		private void resetLoggingWithXML() {
-			synchronized(LogLevelListener.class) { // TODO: make sure more thread safe
-				URL url = Thread.currentThread().getContextClassLoader().getResource("log4j.xml");
-				LOG.info("Resetting log levels to " + System.getProperty("euca.log.level"));
-				if (url != null) {
-					DOMConfigurator.configure(url);
-					LOG.info("Finished resetting log levels");
-				}
+	public static class FaultIdListener implements PropertyChangeListener {
+		/**
+		 * @see com.eucalyptus.configurable.PropertyChangeListener#fireChange(com.eucalyptus.configurable.ConfigurableProperty,
+		 *      java.lang.Object)
+		 */
+		@Override
+		public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
+			LOG.warn( "Change occurred to property " + t.getQualifiedName( ) + " with new value " + newValue + " which will reset logging levels." );
+			String newValueStr = (String) newValue;
+			int newValueId = 0;
+			try {
+				newValueId = Integer.parseInt(newValueStr);
+			} catch (Exception ex) {
+				throw new ConfigurablePropertyException("Unable to set fault id to " + newValue);
 			}
+			try {
+				t.getField( ).set( null, t.getTypeParser( ).apply( newValue ) );
+			} catch ( IllegalArgumentException e1 ) {
+				e1.printStackTrace();
+				throw new ConfigurablePropertyException( e1 );
+			} catch ( IllegalAccessException e1 ) {
+				e1.printStackTrace();
+				throw new ConfigurablePropertyException( e1 );
+			}
+			Properties varProps = null;
+			LOG.warn("No properties file set for fault trigger test");
+			if (VAR_PROPS_FILE != null && !VAR_PROPS_FILE.trim().isEmpty()) {
+				File propsFile = new File(VAR_PROPS_FILE);
+				if (propsFile.exists()) {
+					varProps = new Properties();
+					InputStream in = null;
+					try {
+						in = new FileInputStream(propsFile);
+						varProps.load(in);
+					} catch (IOException ex) {
+						ex.printStackTrace();
+					} finally {
+						if (in != null) {
+							try {
+								in.close();
+							} catch (IOException ignore) {
+								;
+							}
+						}
+					}
+				} else {
+					LOG.warn("Properties file for fault trigger test " + VAR_PROPS_FILE + " does not exist");
+				}
+			} else {
+				LOG.warn("No properties file set for fault trigger test");
+			}
+			TestFaultTrigger.triggerFault(newValueId, varProps);
 		}
 	}
 

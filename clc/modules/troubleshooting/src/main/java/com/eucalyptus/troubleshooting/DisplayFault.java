@@ -60,28 +60,24 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.fault;
+package com.eucalyptus.troubleshooting;
 
-import java.io.File;
-import java.io.FileFilter;
-
-public class FaultOrCommonXMLFileFilter implements FileFilter {
-	private static final String XML_SUFFIX_LOWER = ".xml";
-	@Override
-	public boolean accept(File f) {
-		if (f != null && f.isFile() && f.getName().toLowerCase().endsWith(XML_SUFFIX_LOWER)) {
-			String name = f.getName().toLowerCase();
-			String prefix = name.substring(0, name.length() - XML_SUFFIX_LOWER.length());
-			// either a fault id (ie #### or "common")
-			try {
-				return Integer.parseInt(prefix) > 0;
-			} catch (NumberFormatException ignore) {
-				; 
+public class DisplayFault {
+	public static void main(String[] args) {
+		if (args.length == 0 || args.length % 2 == 0) {
+			System.err.println("Usage: java -jar DisplayFault.jar <id> [(key1 val1 key2 val2 ...)]");
+			System.exit(-1);
+		} else {
+			Fault f = FaultSubsystem.fault(Integer.parseInt(args[0]));
+			if (f == null) {
+				System.err.println("No fault with id " + args[0] + " in system");
+			} else {
+				for (int i=1;i<args.length;i+=2) {
+					f = f.withVar(args[i], args[i+1]);
+				}
+				f.log();
 			}
-			// otherwise common.xml
-			return ("common".equals(prefix));
 		}
-		return false;
 	}
-}
 
+}
