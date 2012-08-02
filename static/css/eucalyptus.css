@@ -80,7 +80,7 @@ body {
     margin: 0 auto;
     position: relative;
     width: 1024px;
-    height: 100%;
+    height: 100%; /* Why is this needed? - DY */
 }
 
 .templates {
@@ -380,6 +380,11 @@ div.euca-container.euca-explorer.euca-explorer-items.mouseon {
     line-height: 1em;
 }
 
+/* Hey guys, it's not necessary to add 'div' to things that are selected with a class or ID */
+/* It's also not necessary to additional classes or IDs. Usually just the class name will be fine. */
+/* It's easier to troubleshoot CSS issues if you don't over-engineer the selectors. */
+/* Thanks, Dave */
+
 div#euca-main-header.euca-main {
     position: relative;
 }
@@ -387,12 +392,12 @@ div#euca-main-header.euca-main {
 div#euca-main-container {
     border: none;
     width: 1024px;
-    height: 100%;
+    height: 100%; /* Why would you need this? - DY */
     display: none;
 }
 
 div#dashboard {
-    display: inline-block;
+    display: inline-block; 
     background: #ffffff;
     position: relative;
     margin-left: 50px;
