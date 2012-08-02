@@ -24,6 +24,7 @@ import javax.persistence.*;
 import org.hibernate.annotations.Entity;
 
 import com.eucalyptus.entities.AbstractPersistent;
+
 @Entity @javax.persistence.Entity
 @PersistenceContext(name="eucalyptus_reporting")
 @Table(name="reporting_volume_usage_events")
@@ -128,17 +129,5 @@ public class ReportingVolumeUsageEvent
 			return false;
 		return true;
 	}
-
-  /**
-   * NOTE:IMPORTANT: this method has default visibility (rather than public) only for the sake of
-   * supporting currently hand-coded proxy classes. Don't share this value with the user.
-   * 
-   * TODO: remove this if possible.
-   * @return
-   * @see {@link AbstractPersistent#getId()}
-   */
-  public String getEntityId( ) {
-    return this.getId( );
-  }
 
 }

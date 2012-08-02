@@ -62,12 +62,22 @@ public class ReportingInstanceEventStore {
   }
 
   public void insertUsageEvent( @Nonnull final String uuid,
-                                         final long timestampMs,
-                                @Nonnull final Long cumulativeNetIoMegs,
+                                final long timestampMs,
                                 @Nonnull final Long cumulativeDiskIoMegs,
-                                @Nonnull final Integer cpuUtilizationPercent ) {
+                                @Nonnull final Integer cpuUtilizationPercent,
+                                @Nonnull final Long cumulativeNetIncomingMegsBetweenZones,
+                                @Nonnull final Long cumulativeNetIncomingMegsWithinZones,
+                                @Nonnull final Long cumulativeNetIncomingMegsPublicIp,
+                                @Nonnull final Long cumulativeNetOutgoingMegsBetweenZones,
+                                @Nonnull final Long cumulativeNetOutgoingMegsWithinZones,
+                                @Nonnull final Long cumulativeNetOutgoingMegsPublicIp ) {
     Preconditions.checkNotNull( uuid, "Uuid is required" );
-    Preconditions.checkNotNull( cumulativeNetIoMegs, "CumulativeNetIoMegs is required" );
+    Preconditions.checkNotNull( cumulativeNetIncomingMegsBetweenZones, "cumulativeNetIncomingMegsBetweenZones is required" );
+    Preconditions.checkNotNull( cumulativeNetIncomingMegsWithinZones, "cumulativeNetIncomingMegsWithinZones is required" );
+    Preconditions.checkNotNull( cumulativeNetIncomingMegsPublicIp, "cumulativeNetIncomingMegsPublicIp is required" );
+    Preconditions.checkNotNull( cumulativeNetOutgoingMegsBetweenZones, "cumulativeNetOutgoingMegsBetweenZones is required" );
+    Preconditions.checkNotNull( cumulativeNetOutgoingMegsWithinZones, "cumulativeNetOutgoingMegsWithinZones is required" );
+    Preconditions.checkNotNull( cumulativeNetOutgoingMegsPublicIp, "cumulativeNetOutgoingMegsPublicIp is required" );
     Preconditions.checkNotNull( cumulativeDiskIoMegs, "CumulativeDiskIoMegs is required" );
     Preconditions.checkNotNull( cpuUtilizationPercent, "CpuUtilizationPercent is required" );
 
@@ -75,11 +85,17 @@ public class ReportingInstanceEventStore {
         new ReportingInstanceUsageEvent(
             uuid,
             timestampMs,
-            cumulativeNetIoMegs,
             cumulativeDiskIoMegs,
-            cpuUtilizationPercent ) );
+            cpuUtilizationPercent,
+            cumulativeNetIncomingMegsBetweenZones,
+            cumulativeNetIncomingMegsWithinZones,
+            cumulativeNetIncomingMegsPublicIp,
+            cumulativeNetOutgoingMegsBetweenZones,
+            cumulativeNetOutgoingMegsWithinZones,
+            cumulativeNetOutgoingMegsPublicIp) );
   }
 
   private void persist( final Object event ) {
     Entities.persist( event );
   }
+}

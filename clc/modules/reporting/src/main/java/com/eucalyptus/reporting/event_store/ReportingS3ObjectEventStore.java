@@ -23,7 +23,10 @@ import org.apache.log4j.Logger;
 
 import com.eucalyptus.entities.EntityWrapper;
 
+import com.eucalyptus.entities.AbstractPersistent;
+
 public class ReportingS3ObjectEventStore
+	extends AbstractPersistent
 {
 	private static Logger LOG = Logger.getLogger( ReportingS3ObjectEventStore.class );
 

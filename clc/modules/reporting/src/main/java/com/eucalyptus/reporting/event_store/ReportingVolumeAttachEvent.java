@@ -6,11 +6,14 @@ import javax.persistence.Table;
 
 import org.hibernate.annotations.Entity;
 
+import com.eucalyptus.entities.AbstractPersistent;
+
 @SuppressWarnings("serial")
 @Entity @javax.persistence.Entity
 @PersistenceContext(name="eucalyptus_reporting")
 @Table(name="reporting_volume_attach_events")
 public class ReportingVolumeAttachEvent
+	extends AbstractPersistent
 {
 	@Column(name="volume_uuid", nullable=false)
 	private String volumeUuid;

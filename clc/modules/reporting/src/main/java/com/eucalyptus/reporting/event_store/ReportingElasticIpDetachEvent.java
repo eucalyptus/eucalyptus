@@ -25,11 +25,14 @@ import javax.persistence.Table;
 
 import org.hibernate.annotations.Entity;
 
+import com.eucalyptus.entities.AbstractPersistent;
+
 @SuppressWarnings("serial")
 @Entity @javax.persistence.Entity
 @PersistenceContext(name="eucalyptus_reporting")
 @Table(name="reporting_elastic_ip_detach_events")
 public class ReportingElasticIpDetachEvent
+	extends AbstractPersistent
 {
 	@Column(name="ip_uuid", nullable=false)
 	private String ipUuid;

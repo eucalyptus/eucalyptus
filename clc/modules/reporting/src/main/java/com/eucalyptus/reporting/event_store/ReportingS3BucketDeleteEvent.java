@@ -25,11 +25,14 @@ import javax.persistence.Table;
 
 import org.hibernate.annotations.Entity;
 
+import com.eucalyptus.entities.AbstractPersistent;
+
 @SuppressWarnings("serial")
 @Entity @javax.persistence.Entity
 @PersistenceContext(name="eucalyptus_reporting")
 @Table(name="reporting_s3_bucket_delete_events")
 public class ReportingS3BucketDeleteEvent
+	extends AbstractPersistent
 {
 	@Column(name="s3_bucket_name", nullable=false)
 	protected String s3BucketName;
