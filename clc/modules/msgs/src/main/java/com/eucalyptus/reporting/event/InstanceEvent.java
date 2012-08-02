@@ -97,8 +97,14 @@ public class InstanceEvent implements Event {
   private final String accountName;
   private final String clusterName;
   private final String availabilityZone;
-  private final Long   cumulativeNetworkIoMegs;
   private final Long   cumulativeDiskIoMegs;
+  private final Integer cpuUtilizationPercent;
+  private final Long cumulativeNetIncomingMegsBetweenZones;
+  private final Long cumulativeNetIncomingMegsWithinZone;
+  private final Long cumulativeNetIncomingMegsPublicIp;
+  private final Long cumulativeNetOutgoingMegsBetweenZones;
+  private final Long cumulativeNetOutgoingMegsWithinZone;
+  private final Long cumulativeNetOutgoingMegsPublicIp;
 
   /**
    * Constructor for InstanceEvent.
@@ -115,7 +121,7 @@ public class InstanceEvent implements Event {
    *  Thus we need the user name or account name at the time an event was
    *  sent.
    */
-  public InstanceEvent( final String uuid,
+  public InstanceEvent( final String uuid,  //TODO:STEVE: Do something about the parameter count
                         final String instanceId,
                         final String instanceType,
                         final String userId,
@@ -124,8 +130,15 @@ public class InstanceEvent implements Event {
                         final String accountName,
                         final String clusterName,
                         final String availabilityZone,
-                        final Long cumulativeNetworkIoMegs,
-                        final Long cumulativeDiskIoMegs ) {
+                        final Long cumulativeDiskIoMegs,
+                        final Integer cpuUtilizationPercent,
+                        final Long cumulativeNetIncomingMegsBetweenZones,
+                        final Long cumulativeNetIncomingMegsWithinZone,
+                        final Long cumulativeNetIncomingMegsPublicIp,
+                        final Long cumulativeNetOutgoingMegsBetweenZones,
+                        final Long cumulativeNetOutgoingMegsWithinZone,
+                        final Long cumulativeNetOutgoingMegsPublicIp
+  ) {
     if (uuid==null) throw new IllegalArgumentException("uuid cant be null");
     if (instanceId==null) throw new IllegalArgumentException("instanceId cant be null");
     if (instanceType==null) throw new IllegalArgumentException("instanceType cant be null");
@@ -135,12 +148,14 @@ public class InstanceEvent implements Event {
     if (accountName==null) throw new IllegalArgumentException("accountName cant be null");
     if (clusterName==null) throw new IllegalArgumentException("clusterName cant be null");
     if (availabilityZone==null) throw new IllegalArgumentException("availabilityZone cant be null");
-    if ( cumulativeDiskIoMegs != null && cumulativeDiskIoMegs < 0) {
-      throw new IllegalArgumentException("cumulativeDiskIoMegs cant be negative");
-    }
-    if (cumulativeNetworkIoMegs != null && cumulativeNetworkIoMegs < 0) {
-      throw new IllegalArgumentException("cumulativeNetworkIoMegs cant be negative");
-    }
+    checkPositiveIfPresent( cumulativeDiskIoMegs, "cumulativeDiskIoMegs" );
+    checkPositiveIfPresent( cpuUtilizationPercent, "cpuUtilizationPercent" );
+    checkPositiveIfPresent( cumulativeNetIncomingMegsBetweenZones, "cumulativeNetIncomingMegsBetweenZones" );
+    checkPositiveIfPresent( cumulativeNetIncomingMegsWithinZone, "cumulativeNetIncomingMegsWithinZone" );
+    checkPositiveIfPresent( cumulativeNetIncomingMegsPublicIp, "cumulativeNetIncomingMegsPublicIp" );
+    checkPositiveIfPresent( cumulativeNetOutgoingMegsBetweenZones, "cumulativeNetOutgoingMegsBetweenZones" );
+    checkPositiveIfPresent( cumulativeNetOutgoingMegsWithinZone, "cumulativeNetOutgoingMegsWithinZone" );
+    checkPositiveIfPresent( cumulativeNetOutgoingMegsPublicIp, "cumulativeNetOutgoingMegsPublicIp" );
 
     this.uuid = uuid;
     this.instanceId = instanceId;
@@ -151,53 +166,14 @@ public class InstanceEvent implements Event {
     this.accountName = accountName;
     this.clusterName = clusterName;
     this.availabilityZone = availabilityZone;
-    this.cumulativeNetworkIoMegs = cumulativeNetworkIoMegs;
     this.cumulativeDiskIoMegs = cumulativeDiskIoMegs;
-  }
-
-
-  /**
-   * Copy Constructor.
-   *
-   * NOTE: We must include separate userId, username, accountId, and
-   *  accountName with each event sent, even though the names can be looked
-   *  up using ID's. We must include this redundant information, for
-   *  several reasons. First, the reporting subsystem may run on a totally
-   *  separate machine outside of eucalyptus (data warehouse configuration)
-   *  so it may not have access to the regular eucalyptus database to lookup
-   *  usernames or account names. Second, the reporting subsystem stores
-   *  <b>historical</b> information, and its possible that usernames and
-   *  account names can change, or their users or accounts can be deleted.
-   *  Thus we need the user name or account name at the time an event was
-   *  sent.
-   */
-  public InstanceEvent( final InstanceEvent e ) {
-    this(
-        e,
-        e.getCumulativeNetworkIoMegs(),
-        e.getCumulativeDiskIoMegs()
-    );
-  }
-
-  /**
-   * Copy constructor with different resource usage
-   */
-  public InstanceEvent( final InstanceEvent e,
-                        final Long cumulativeNetworkIoMegs,
-                        final Long cumulativeDiskIoMegs) {
-    this(
-        e.getUuid(),
-        e.getInstanceId(),
-        e.getInstanceType(),
-        e.getUserId(),
-        e.getUserName(),
-        e.getAccountId(),
-        e.getAccountName(),
-        e.getClusterName(),
-        e.getAvailabilityZone(),
-        cumulativeNetworkIoMegs,
-        cumulativeDiskIoMegs
-    );
+    this.cpuUtilizationPercent = cpuUtilizationPercent;
+    this.cumulativeNetIncomingMegsBetweenZones = cumulativeNetIncomingMegsBetweenZones;
+    this.cumulativeNetIncomingMegsWithinZone = cumulativeNetIncomingMegsWithinZone;
+    this.cumulativeNetIncomingMegsPublicIp = cumulativeNetIncomingMegsPublicIp;
+    this.cumulativeNetOutgoingMegsBetweenZones = cumulativeNetOutgoingMegsBetweenZones;
+    this.cumulativeNetOutgoingMegsWithinZone = cumulativeNetOutgoingMegsWithinZone;
+    this.cumulativeNetOutgoingMegsPublicIp = cumulativeNetOutgoingMegsPublicIp;
   }
 
   public String getUuid() {
@@ -236,12 +212,36 @@ public class InstanceEvent implements Event {
     return availabilityZone;
   }
 
-  public Long getCumulativeNetworkIoMegs() {
-    return cumulativeNetworkIoMegs;
-  }
-
   public Long getCumulativeDiskIoMegs() {
     return cumulativeDiskIoMegs;
+  }
+
+  public Integer getCpuUtilizationPercent() {
+    return cpuUtilizationPercent;
+  }
+
+  public Long getCumulativeNetIncomingMegsBetweenZones() {
+    return cumulativeNetIncomingMegsBetweenZones;
+  }
+
+  public Long getCumulativeNetIncomingMegsWithinZone() {
+    return cumulativeNetIncomingMegsWithinZone;
+  }
+
+  public Long getCumulativeNetIncomingMegsPublicIp() {
+    return cumulativeNetIncomingMegsPublicIp;
+  }
+
+  public Long getCumulativeNetOutgoingMegsBetweenZones() {
+    return cumulativeNetOutgoingMegsBetweenZones;
+  }
+
+  public Long getCumulativeNetOutgoingMegsWithinZone() {
+    return cumulativeNetOutgoingMegsWithinZone;
+  }
+
+  public Long getCumulativeNetOutgoingMegsPublicIp() {
+    return cumulativeNetOutgoingMegsPublicIp;
   }
 
   public boolean requiresReliableTransmission() {
@@ -250,10 +250,15 @@ public class InstanceEvent implements Event {
 
   public String toString() {
     return String.format("[uuid:%s,instanceId:%s,instanceType:%s,userId:%s"
-        + ",accountId:%s,cluster:%s,zone:%s,net:%d,disk:%d]",
+        + ",accountId:%s,cluster:%s,zone:%s,disk:%d,cpu:%d]",
           getUuid(), getInstanceId(), getInstanceType(), getUserId(), getAccountId(),
-          getClusterName(), getAvailabilityZone(), getCumulativeNetworkIoMegs(),
-          getCumulativeDiskIoMegs() );
+          getClusterName(), getAvailabilityZone(),
+          getCumulativeDiskIoMegs(), getCpuUtilizationPercent() );
   }
 
+  private void checkPositiveIfPresent( final Number value, final String description ) {
+    if ( value != null && value.longValue() < 0L ) {
+      throw new IllegalArgumentException( description + " cant be negative" );
+    }
+  }
 }

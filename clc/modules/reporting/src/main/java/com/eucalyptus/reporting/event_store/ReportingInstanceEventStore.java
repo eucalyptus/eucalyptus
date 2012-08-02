@@ -26,15 +26,13 @@ import com.eucalyptus.entities.Entities;
 import com.google.common.base.Preconditions;
 
 public class ReportingInstanceEventStore {
-  private static final Logger LOG = Logger.getLogger( ReportingInstanceEventStore.class );
-
   private static final ReportingInstanceEventStore instance = new ReportingInstanceEventStore( );
 
   public static ReportingInstanceEventStore getInstance( ) {
     return instance;
   }
 
-  private ReportingInstanceEventStore( ) { }
+  protected ReportingInstanceEventStore( ) { }
 
   public void insertCreateEvent( @Nonnull final String uuid,
                                           final long timestampMs,
@@ -62,24 +60,24 @@ public class ReportingInstanceEventStore {
   }
 
   public void insertUsageEvent( @Nonnull final String uuid,
-                                final long timestampMs,
+                                         final long timestampMs,
                                 @Nonnull final Long cumulativeDiskIoMegs,
                                 @Nonnull final Integer cpuUtilizationPercent,
                                 @Nonnull final Long cumulativeNetIncomingMegsBetweenZones,
-                                @Nonnull final Long cumulativeNetIncomingMegsWithinZones,
+                                @Nonnull final Long cumulativeNetIncomingMegsWithinZone,
                                 @Nonnull final Long cumulativeNetIncomingMegsPublicIp,
                                 @Nonnull final Long cumulativeNetOutgoingMegsBetweenZones,
-                                @Nonnull final Long cumulativeNetOutgoingMegsWithinZones,
+                                @Nonnull final Long cumulativeNetOutgoingMegsWithinZone,
                                 @Nonnull final Long cumulativeNetOutgoingMegsPublicIp ) {
     Preconditions.checkNotNull( uuid, "Uuid is required" );
-    Preconditions.checkNotNull( cumulativeNetIncomingMegsBetweenZones, "cumulativeNetIncomingMegsBetweenZones is required" );
-    Preconditions.checkNotNull( cumulativeNetIncomingMegsWithinZones, "cumulativeNetIncomingMegsWithinZones is required" );
-    Preconditions.checkNotNull( cumulativeNetIncomingMegsPublicIp, "cumulativeNetIncomingMegsPublicIp is required" );
-    Preconditions.checkNotNull( cumulativeNetOutgoingMegsBetweenZones, "cumulativeNetOutgoingMegsBetweenZones is required" );
-    Preconditions.checkNotNull( cumulativeNetOutgoingMegsWithinZones, "cumulativeNetOutgoingMegsWithinZones is required" );
-    Preconditions.checkNotNull( cumulativeNetOutgoingMegsPublicIp, "cumulativeNetOutgoingMegsPublicIp is required" );
     Preconditions.checkNotNull( cumulativeDiskIoMegs, "CumulativeDiskIoMegs is required" );
     Preconditions.checkNotNull( cpuUtilizationPercent, "CpuUtilizationPercent is required" );
+    Preconditions.checkNotNull( cumulativeNetIncomingMegsBetweenZones, "CumulativeNetIncomingMegsBetweenZones is required" );
+    Preconditions.checkNotNull( cumulativeNetIncomingMegsWithinZone, "CumulativeNetIncomingMegsWithinZone is required" );
+    Preconditions.checkNotNull( cumulativeNetIncomingMegsPublicIp, "CumulativeNetIncomingMegsPublicIp is required" );
+    Preconditions.checkNotNull( cumulativeNetOutgoingMegsBetweenZones, "CumulativeNetOutgoingMegsBetweenZones is required" );
+    Preconditions.checkNotNull( cumulativeNetOutgoingMegsWithinZone, "CumulativeNetOutgoingMegsWithinZone is required" );
+    Preconditions.checkNotNull( cumulativeNetOutgoingMegsPublicIp, "CumulativeNetOutgoingMegsPublicIp is required" );
 
     persist(
         new ReportingInstanceUsageEvent(
@@ -88,14 +86,14 @@ public class ReportingInstanceEventStore {
             cumulativeDiskIoMegs,
             cpuUtilizationPercent,
             cumulativeNetIncomingMegsBetweenZones,
-            cumulativeNetIncomingMegsWithinZones,
+            cumulativeNetIncomingMegsWithinZone,
             cumulativeNetIncomingMegsPublicIp,
             cumulativeNetOutgoingMegsBetweenZones,
-            cumulativeNetOutgoingMegsWithinZones,
-            cumulativeNetOutgoingMegsPublicIp) );
+            cumulativeNetOutgoingMegsWithinZone,
+            cumulativeNetOutgoingMegsPublicIp ) );
   }
 
-  private void persist( final Object event ) {
+  protected void persist( final Object event ) {
     Entities.persist( event );
   }
 }

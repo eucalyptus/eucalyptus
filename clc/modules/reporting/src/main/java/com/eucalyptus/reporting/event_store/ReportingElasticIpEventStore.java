@@ -33,7 +33,7 @@ public class ReportingElasticIpEventStore {
     return instance;
   }
 
-  private ReportingElasticIpEventStore() {
+  protected ReportingElasticIpEventStore() {
   }
 
   public void insertCreateEvent( @Nonnull final String uuid,
@@ -44,7 +44,7 @@ public class ReportingElasticIpEventStore {
     Preconditions.checkNotNull( userId, "UserId is required" );
     Preconditions.checkNotNull( ip, "IP is required" );
 
-    persist( new ReportingElasticIpCreateEvent(uuid, timestampMs, userId, ip) );
+    persist( new ReportingElasticIpCreateEvent(uuid, timestampMs, ip, userId) );
   }
 
   public void insertDeleteEvent( @Nonnull final String uuid,
@@ -73,7 +73,7 @@ public class ReportingElasticIpEventStore {
     persist( new ReportingElasticIpDetachEvent( uuid, instanceUuid, timestampMs ) );
   }
 
-  private void persist( final Object event ) {
+  protected void persist( final Object event ) {
     Entities.persist( event );
   }
 }

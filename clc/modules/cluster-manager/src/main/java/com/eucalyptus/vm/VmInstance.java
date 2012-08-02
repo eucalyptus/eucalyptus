@@ -988,8 +988,8 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
             Accounts.lookupAccountById(accountId).getName(),
             this.placement.getClusterName(),
             this.placement.getPartitionName(),
-            this.usageStats.getNetworkBytes(),
-            this.usageStats.getBlockBytes() ) );
+            this.usageStats.getBlockBytes(),
+            0, 0L ,0L ,0L ,0L ,0L ,0L ) ); //TODO Add CPU and network utilization
       } catch ( final Exception ex ) {
         LOG.error( ex, ex );
       }

@@ -91,10 +91,9 @@ public class InstanceEventListener implements EventListener<InstanceEvent> {
   @ConfigurableField( initial = "1200", description = "How often the reporting system writes instance snapshots" )
   public static long DEFAULT_WRITE_INTERVAL_SECS = 1200;
 
-  private final Set<String> recentlySeenUuids = Sets.newSetFromMap( new MapMaker().expireAfterAccess( 1, TimeUnit.HOURS ).<String,Boolean>makeMap() );
-  private final Map<String, DatedInstanceEvent> recentUsageEvents = new MapMaker().expireAfterAccess( 1, TimeUnit.HOURS ).makeMap();
+  private final Set<String> recentlySeenUuids = Sets.newSetFromMap( getExpiringMapMaker().<String,Boolean>makeMap() );
+  private final Map<String, DatedInstanceEvent> recentUsageEvents = getExpiringMapMaker().makeMap();
   private final ReadWriteLock persistenceLock = new ReentrantReadWriteLock(); // lock for recentUsageEvents bulk updates
-
   private final AtomicLong lastWriteMs = new AtomicLong( 0L );
 
   public InstanceEventListener() {
@@ -114,19 +113,17 @@ public class InstanceEventListener implements EventListener<InstanceEvent> {
     /* Retain records of all account and user id's and names encountered
      * even if they're subsequently deleted.
      */
-    ReportingAccountDao.getInstance().addUpdateAccount(
-        event.getAccountId(), event.getAccountName());
-    ReportingUserDao.getInstance().addUpdateUser(
-        event.getUserId(), event.getUserName());
+    getReportingAccountDao().addUpdateAccount( event.getAccountId(), event.getAccountName() );
+    getReportingUserDao().addUpdateUser( event.getUserId(), event.getUserName() );
 
     // Write the instance attributes, but only if we don't have it already.
     if ( !recentlySeenUuids.contains(uuid) ) {
       try {
         log.info( "Wrote Reporting Instance:" + uuid );
-        final ReportingInstanceEventStore eventStore = ReportingInstanceEventStore.getInstance();
+        final ReportingInstanceEventStore eventStore = getReportingInstanceEventStore();
         eventStore.insertCreateEvent(
             event.getUuid(),
-            System.currentTimeMillis(),
+            receivedEventMs,
             event.getInstanceId(),
             event.getInstanceType(),
             event.getUserId(),
@@ -170,21 +167,25 @@ public class InstanceEventListener implements EventListener<InstanceEvent> {
 
   //TODO: shutdown hook
   public void flush() {
-    final ReportingInstanceEventStore eventStore = ReportingInstanceEventStore.getInstance();
+    final ReportingInstanceEventStore eventStore = getReportingInstanceEventStore();
     persistenceLock.writeLock().lock();
     try {
-      Entities.asTransaction( ReportingInstanceUsageEvent.class, new Function<Collection<DatedInstanceEvent>,Void>(){
+      transactional( ReportingInstanceUsageEvent.class, new Function<Collection<DatedInstanceEvent>,Void>(){
         @Override
         public Void apply( final Collection<DatedInstanceEvent> datedInstanceEvents ) {
           for ( final DatedInstanceEvent datedEvent : datedInstanceEvents ) {
-            //TODO:STEVE: Add CPU to instance event
-        	//TODO: Add various network statistics to event
             final InstanceEvent event = datedEvent.getInstanceEvent();
             eventStore.insertUsageEvent(
                 event.getUuid(),
                 datedEvent.getTimestamp(),
                 event.getCumulativeDiskIoMegs(),
-                0, 0L, 0L, 0L, 0L, 0L, 0L
+                event.getCpuUtilizationPercent(),
+                event.getCumulativeNetIncomingMegsBetweenZones(),
+                event.getCumulativeNetIncomingMegsWithinZone(),
+                event.getCumulativeNetIncomingMegsPublicIp(),
+                event.getCumulativeNetOutgoingMegsBetweenZones(),
+                event.getCumulativeNetOutgoingMegsWithinZone(),
+                event.getCumulativeNetOutgoingMegsPublicIp()
             );
             log.debug( "Wrote instance usage for: " + event.getUuid() );
           }
@@ -197,6 +198,18 @@ public class InstanceEventListener implements EventListener<InstanceEvent> {
     }
   }
 
+  protected ReportingAccountDao getReportingAccountDao() {
+    return ReportingAccountDao.getInstance();
+  }
+
+  protected ReportingUserDao getReportingUserDao() {
+    return ReportingUserDao.getInstance();
+  }
+
+  protected ReportingInstanceEventStore getReportingInstanceEventStore() {
+    return ReportingInstanceEventStore.getInstance();
+  }
+
   /**
    * Get the current time which will be used for recording when an event
    * occurred. This can be overridden if you have some alternative method
@@ -204,6 +217,15 @@ public class InstanceEventListener implements EventListener<InstanceEvent> {
    */
   protected long getCurrentTimeMillis() {
     return System.currentTimeMillis();
+  }
+
+  protected MapMaker getExpiringMapMaker() {
+    return new MapMaker().expireAfterAccess( 1, TimeUnit.HOURS );
+  }
+
+  protected <P,R> Function<P,R> transactional( final Class<?> clazz,
+                                               final Function<P,R> callback ) {
+    return Entities.asTransaction( clazz, callback );
   }
 
   private static final class DatedInstanceEvent {
