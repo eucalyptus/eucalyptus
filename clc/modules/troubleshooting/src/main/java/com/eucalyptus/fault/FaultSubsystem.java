@@ -83,29 +83,41 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
+import com.eucalyptus.system.BaseDirectory;
+
 public class FaultSubsystem {
-	// TODO allow customization
-	private static File systemFaultDir = new File("/usr/share/eucalyptus/faults"); 
-	private static File customFaultDir = new File("/etc/eucalyptus/faults"); 
 
-	public Map<String, Fault> faultMap = new HashMap<String, Fault>();
+	private File systemFaultDir = BaseDirectory.HOME.getChildFile("/usr/share/eucalyptus/faults"); 
+	private File customFaultDir = BaseDirectory.HOME.getChildFile("/etc/eucalyptus/faults"); 
+	// TODO one log per component:
+	private Map<Integer, Fault> faultMap = new HashMap<Integer, Fault>();
 	private Map<String, String> common = new HashMap<String, String>();
-	public static final SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+	private final SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+	private static final FaultSubsystem instance = new FaultSubsystem();
 
-	public void init() {
-		// add unknown in case it isn't there
+	
+	private FaultSubsystem() {
+		// If a message or localized message is not defined in the xml file at all,
+		// the value "unknown" will be displayed.  Specifically, ${unknown}, or whatever
+		// the localized equivalent will be.
+		// Just in case someone forgot to put "unknown" in common, we add it here to start.
 		common.put("unknown", "unknown");
+
 		String locale = System.getenv("LOCALE");
 		List<File> faultDirsToCheck = new ArrayList<File>();
+		// Start with the system en_US fault dir
 		faultDirsToCheck.add(new File(systemFaultDir, "en_US"));
+
+		// Add the system locale-specific fault dir
 		if (locale != null && !locale.equals("en_US")) {
 			faultDirsToCheck.add(new File(systemFaultDir, locale));
-			
 		}
+		// next check the custom en_US fault dir 
 		faultDirsToCheck.add(new File(customFaultDir, "en_US"));
+
+		// Add the system locale-specific fault dir
 		if (locale != null && !locale.equals("en_US")) {
 			faultDirsToCheck.add(new File(customFaultDir, locale));
-			
 		}
 		for(File faultDirToCheck: faultDirsToCheck) {
 			checkFaultDir(faultDirToCheck);
@@ -117,11 +129,16 @@ public class FaultSubsystem {
 		File[] xmlFilesToCheck = dir.listFiles(new FaultOrCommonXMLFileFilter());
 		if (xmlFilesToCheck != null) {
 			for (int i=0;i<xmlFilesToCheck.length;i++) {
-				checkFaultXMLFile(xmlFilesToCheck[i]);
+				if (xmlFilesToCheck[i].getName().equalsIgnoreCase("common.xml")) {
+					parseCommonXMLFile(xmlFilesToCheck[i]);
+				} else {
+					parseFaultXMLFile(xmlFilesToCheck[i]);
+				}
 			}
 		}
 	}
-	private void checkFaultXMLFile(File file) {
+
+	private void parseCommonXMLFile(File file) {
 		try {
 			DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
 			DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
@@ -134,15 +151,36 @@ public class FaultSubsystem {
 			} else {
 				NodeList commonNodeList = eucaFaultsElement.getElementsByTagName("common");
 				if (commonNodeList != null) {
-					checkCommonNodeList(commonNodeList);
+					parseCommonNodeList(commonNodeList);
 				}
-				NodeList faultsNodeList = eucaFaultsElement.getElementsByTagName("faults");
-				if (faultsNodeList != null) {
-					checkFaultsNodeList(faultsNodeList);
-				}
+			}
+		} catch (ParserConfigurationException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (SAXException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+
+	
+	private void parseFaultXMLFile(File file) {
+		try {
+			DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
+			DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
+			Document doc = dBuilder.parse(file);
+			Element eucaFaultsElement = doc.getDocumentElement();
+			eucaFaultsElement.normalize();
+			// TODO: incorporate version
+			if (!eucaFaultsElement.getNodeName().toLowerCase().equals("eucafaults")) {
+				throw new IllegalArgumentException("Root element is not 'eucafaults'");
+			} else {
 				NodeList faultNodeList = eucaFaultsElement.getElementsByTagName("fault");
 				if (faultNodeList != null) {
-					checkFaultNodeList(faultNodeList);
+					parseFaultNodeList(faultNodeList);
 				}
 			}
 		} catch (ParserConfigurationException e) {
@@ -157,18 +195,18 @@ public class FaultSubsystem {
 		}
 	}
 	
-	private void checkCommonNodeList(NodeList nodeList) {
+	private void parseCommonNodeList(NodeList nodeList) {
 		if (nodeList != null) {
 			for (int i=0;i<nodeList.getLength();i++) {
 				Node node = nodeList.item(i);
 				if ((node != null && node instanceof Element)) {
-					checkCommonElement((Element) node);
+					parseCommonElement((Element) node);
 				}
 			}
 		}
 	}
 
-	private void checkCommonElement(Element element) {
+	private void parseCommonElement(Element element) {
 		if (element != null) {
 			NodeList varNodeList = element.getElementsByTagName("var");
 			if (varNodeList != null) {
@@ -196,42 +234,29 @@ public class FaultSubsystem {
 		}
 	}
 
-	private void checkFaultsNodeList(NodeList nodeList) {
+
+	private void parseFaultNodeList(NodeList nodeList) {
 		if (nodeList != null) {
 			for (int i=0;i<nodeList.getLength();i++) {
 				Node node = nodeList.item(i);
 				if ((node != null && node instanceof Element)) {
-					checkFaultsElement((Element) node);
+					parseFaultElement((Element) node);
 				}
 			}
 		}
 	}
 
-	private void checkFaultsElement(Element element) {
+	private void parseFaultElement(Element element) {
 		if (element != null) {
-			NodeList faultNodeList = element.getElementsByTagName("fault");
-			if (faultNodeList != null) {
-				checkFaultNodeList(faultNodeList);
-			}
-		}
-	}
-
-	private void checkFaultNodeList(NodeList nodeList) {
-		if (nodeList != null) {
-			for (int i=0;i<nodeList.getLength();i++) {
-				Node node = nodeList.item(i);
-				if ((node != null && node instanceof Element)) {
-					checkFaultElement((Element) node);
-				}
-			}
-		}
-	}
-
-	private void checkFaultElement(Element element) {
-		if (element != null) {
-			String id = element.getAttribute("id");
-			if (id == null) {
+			String idStr = element.getAttribute("id");
+			if (idStr == null) {
 				throw new IllegalArgumentException("id is null");
+			}
+			int id = 0;
+			try {
+				id = Integer.parseInt(idStr);
+			} catch (NumberFormatException ex) {
+				throw new IllegalArgumentException(ex);
 			}
 			Fault fault = new Fault();
 			String faultMessage = getLocalizedMessageAttribute(element);
@@ -315,10 +340,7 @@ public class FaultSubsystem {
 		return "${unknown}";
 	}
 
-	
-	
-	
-    private static String getSubElementText(Element parentElement, String subElementName) {
+    private String getSubElementText(Element parentElement, String subElementName) {
 		NodeList subElementNodeList = parentElement.getElementsByTagName(subElementName);
 		if (subElementNodeList == null) return null;
 		if (subElementNodeList.getLength() > 1) {
@@ -335,16 +357,15 @@ public class FaultSubsystem {
 		return subElementChildrenNodeList.item(0).getNodeValue();
     }
 
-    public Fault fault(String id) { // todo use enum
-    	System.out.println(common);
-    	Fault fault = faultMap.get(id);
+    public static Fault fault(int id) { // todo use enum
+    	Fault fault = instance.faultMap.get(id);
 		if (fault == null) return null;
-		for (Map.Entry<String, String> commonEntry: common.entrySet()) {
+		for (Map.Entry<String, String> commonEntry: instance.common.entrySet()) {
 			fault = fault.withVar(commonEntry.getKey(), commonEntry.getValue());
 		}
 		// once more just in case elements are "unknown"
-		fault.withVar("unknown", common.get("unknown"));
-		return fault.withVar("timestamp", formatter.format(new Date()));
+		fault = fault.withVar("unknown", instance.common.get("unknown"));
+		return fault.withVar("timestamp", instance.formatter.format(new Date()));
 	}
     
 }

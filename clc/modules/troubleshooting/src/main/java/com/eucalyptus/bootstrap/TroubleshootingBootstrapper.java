@@ -61,96 +61,119 @@
  ************************************************************************/
 
 package com.eucalyptus.bootstrap;
+import java.net.URL;
+import java.util.Arrays;
+
+import org.apache.log4j.Logger;
+import org.apache.log4j.xml.DOMConfigurator;
+
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
-import org.apache.log4j.Logger;
 
 
 @RunDuring( Bootstrap.Stage.UserCredentialsInit )
 @ConfigurableClass( root = "troubleshooting",
-                    description = "Parameters controlling troubleshooting information." )
+description = "Parameters controlling troubleshooting information." )
 public class TroubleshootingBootstrapper extends Bootstrapper {
-  private static Logger LOG        = Logger.getLogger( TroubleshootingBootstrapper.class );
-  @ConfigurableField( description = "Log level for dynamic logging.",
-                      initial = "", //TODO: figure out how to link System.property("euca.log.level")
-                      changeListener = LogLevelListener.class,
-                      displayName = "euca.dynamic.log.level" )
-  public static String DYNAMIC_LOG_LEVEL = ""; 
-  
-  @Override
-  public boolean load( ) throws Exception {
-    LOG.info( "Loading troubleshooting interface." );
-    return true;
-  }
-  
-  @Override
-  public boolean start( ) throws Exception {
-    LOG.info( "Starting troubleshooting interface." );
-    return true;
-  }
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#enable()
-   */
-  @Override
-  public boolean enable( ) throws Exception {
-    return true;
-  }
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#stop()
-   */
-  @Override
-  public boolean stop( ) throws Exception {
-    return true;
-  }
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#destroy()
-   */
-  @Override
-  public void destroy( ) throws Exception {}
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#disable()
-   */
-  @Override
-  public boolean disable( ) throws Exception {
-    return true;
-  }
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#check()
-   */
-  @Override
-  public boolean check( ) throws Exception {
-    return true;
-  }
-  
-  public static class LogLevelListener implements PropertyChangeListener {
-    /**
-     * @see com.eucalyptus.configurable.PropertyChangeListener#fireChange(com.eucalyptus.configurable.ConfigurableProperty,
-     *      java.lang.Object)
-     */
-    @Override
-    public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
-      // TODO: add error checking for property and configuration
-    	LOG.warn( "Change occurred to property " + t.getQualifiedName( ) + " with new value " + newValue + " which will reset logging levels." );
+	private static Logger LOG        = Logger.getLogger( TroubleshootingBootstrapper.class );
+	@ConfigurableField( description = "Log level for dynamic logging.",
+			initial = "", //TODO: figure out how to link System.property("euca.log.level")
+			changeListener = LogLevelListener.class,
+			displayName = "euca.dynamic.log.level" )
+	public static String DYNAMIC_LOG_LEVEL = ""; 
 
-      try {
-        t.getField( ).set( null, t.getTypeParser( ).apply( newValue ) );
-      } catch ( IllegalArgumentException e1 ) {
-    	  e1.printStackTrace();
-        throw new ConfigurablePropertyException( e1 );
-      } catch ( IllegalAccessException e1 ) {
-    	  e1.printStackTrace();
-        throw new ConfigurablePropertyException( e1 );
-      }
-      
-    }
-  }
+	@Override
+	public boolean load( ) throws Exception {
+		LOG.info( "Loading troubleshooting interface." );
+		return true;
+	}
+
+	@Override
+	public boolean start( ) throws Exception {
+		LOG.info( "Starting troubleshooting interface." );
+		return true;
+	}
+
+	/**
+	 * @see com.eucalyptus.bootstrap.Bootstrapper#enable()
+	 */
+	@Override
+	public boolean enable( ) throws Exception {
+		return true;
+	}
+
+	/**
+	 * @see com.eucalyptus.bootstrap.Bootstrapper#stop()
+	 */
+	@Override
+	public boolean stop( ) throws Exception {
+		return true;
+	}
+
+	/**
+	 * @see com.eucalyptus.bootstrap.Bootstrapper#destroy()
+	 */
+	@Override
+	public void destroy( ) throws Exception {}
+
+	/**
+	 * @see com.eucalyptus.bootstrap.Bootstrapper#disable()
+	 */
+	@Override
+	public boolean disable( ) throws Exception {
+		return true;
+	}
+
+	/**
+	 * @see com.eucalyptus.bootstrap.Bootstrapper#check()
+	 */
+	@Override
+	public boolean check( ) throws Exception {
+		return true;
+	}
+
+	public static class LogLevelListener implements PropertyChangeListener {
+		private final String[] logLevels = new String[] {"ALL", "DEBUG", "INFO", "WARN", "ERROR", "FATAL", "TRACE"};
+		/**
+		 * @see com.eucalyptus.configurable.PropertyChangeListener#fireChange(com.eucalyptus.configurable.ConfigurableProperty,
+		 *      java.lang.Object)
+		 */
+		@Override
+		public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
+			String newLogLevel = (String) newValue;
+			if (newLogLevel == null || !Arrays.asList(logLevels).contains(newLogLevel.toUpperCase())) {
+				throw new ConfigurablePropertyException("Invalid log level " + newLogLevel);
+			}
+
+			// TODO: add error checking for property and configuration
+			LOG.warn( "Change occurred to property " + t.getQualifiedName( ) + " with new value " + newValue + " which will reset logging levels." );
+
+			try {
+				t.getField( ).set( null, t.getTypeParser( ).apply( newValue ) );
+			} catch ( IllegalArgumentException e1 ) {
+				e1.printStackTrace();
+				throw new ConfigurablePropertyException( e1 );
+			} catch ( IllegalAccessException e1 ) {
+				e1.printStackTrace();
+				throw new ConfigurablePropertyException( e1 );
+			}
+			System.setProperty("euca.log.level", newLogLevel.toUpperCase());
+			resetLoggingWithXML();
+		}
+
+		private void resetLoggingWithXML() {
+			synchronized(LogLevelListener.class) { // TODO: make sure more thread safe
+				URL url = Thread.currentThread().getContextClassLoader().getResource("log4j.xml");
+				LOG.info("Resetting log levels to " + System.getProperty("euca.log.level"));
+				if (url != null) {
+					DOMConfigurator.configure(url);
+					LOG.info("Finished resetting log levels");
+				}
+			}
+		}
+	}
 
 }

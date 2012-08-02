@@ -63,15 +63,21 @@
 package com.eucalyptus.fault;
 
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringReader;
 import java.io.StringWriter;
+import java.io.Writer;
 import java.util.Arrays;
+
+import com.eucalyptus.system.BaseDirectory;
 
 public class Fault {
 	Fault() {}
 
+	private static final File logFile = BaseDirectory.LOG.HOME.getChildFile("cloud-faults.log");
 	private static final String ASTERISK_LINE = makeString(72, '*');
 	private static final String EMPTY_LINE = "";
 	private static final String INNER_PREFIX = "| ";
@@ -136,8 +142,24 @@ public class Fault {
 		return retVal;
 	}
 
+	public void log(Writer writer) throws IOException {
+		writer.write(toString());
+	}
+	
 	public void log() {
-		System.out.println(toString());
+		synchronized(Fault.class) {
+			PrintWriter out = null;
+			try {
+				out = new PrintWriter(new FileWriter(logFile, true));
+				out.println(toString());
+			} catch (IOException ex) {
+				ex.printStackTrace(); // TODO: figure out something here
+			} finally {
+				if (out != null) {
+					out.close();
+				}
+			}
+		}
 	}
 
 	public String toString() {

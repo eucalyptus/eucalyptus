@@ -68,9 +68,7 @@ public class DisplayFault {
 			System.err.println("Usage: java -jar DisplayFault.jar <id> [(key1 val1 key2 val2 ...)]");
 			System.exit(-1);
 		} else {
-			FaultSubsystem fs = new FaultSubsystem();
-			fs.init();
-			Fault f = fs.fault(args[0]);
+			Fault f = FaultSubsystem.fault(Integer.parseInt(args[0]));
 			if (f == null) {
 				System.err.println("No fault with id " + args[0] + " in system");
 			} else {
