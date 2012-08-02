@@ -87,7 +87,7 @@ public class ReportingAccountDao
 	
 	private final Map<String,String> accounts = new ConcurrentHashMap<String,String>();
 	
-	private ReportingAccountDao()
+	protected ReportingAccountDao()
 	{
 		
 	}

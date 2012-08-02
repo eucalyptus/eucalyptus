@@ -25,11 +25,14 @@ import javax.persistence.Table;
 
 import org.hibernate.annotations.Entity;
 
+import com.eucalyptus.entities.AbstractPersistent;
+
 @SuppressWarnings("serial")
 @Entity @javax.persistence.Entity
 @PersistenceContext(name="eucalyptus_reporting")
 @Table(name="reporting_volume_delete_events")
 public class ReportingVolumeDeleteEvent
+	extends AbstractPersistent
 {
 	@Column(name="uuid", nullable=false)
 	private String uuid;
@@ -92,4 +95,5 @@ public class ReportingVolumeDeleteEvent
 		return true;
 	}
 	
+
 }

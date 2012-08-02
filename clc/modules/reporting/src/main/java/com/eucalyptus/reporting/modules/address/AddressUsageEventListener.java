@@ -42,24 +42,47 @@ public class AddressUsageEventListener implements EventListener<AddressEvent> {
   public void fireEvent( @Nonnull final AddressEvent event ) {
     Preconditions.checkNotNull( event, "Event is required" );
 
-    // Ensure account / user info is present and up to date
-    ReportingAccountDao.getInstance().addUpdateAccount( event.getAccountId(), event.getAccountName() );
-    ReportingUserDao.getInstance().addUpdateUser( event.getUserId(), event.getUserName() );
+    final long timestamp = getCurrentTimeMillis();
 
-    final ReportingElasticIpEventStore eventStore = ReportingElasticIpEventStore.getInstance();
+    // Ensure account / user info is present and up to date
+    getReportingAccountDao().addUpdateAccount( event.getAccountId(), event.getAccountName() );
+    getReportingUserDao().addUpdateUser( event.getUserId(), event.getUserName() );
+
+    final ReportingElasticIpEventStore eventStore = getReportingElasticIpEventStore();
     switch (event.getActionInfo().getAction()) {
       case ALLOCATE:
-        eventStore.insertCreateEvent( event.getUuid(), System.currentTimeMillis(), event.getUserId(), event.getAddress() );
+        eventStore.insertCreateEvent( event.getUuid(), timestamp, event.getUserId(), event.getAddress() );
         break;
       case RELEASE:
-        eventStore.insertDeleteEvent( event.getUuid(), System.currentTimeMillis() );
+        eventStore.insertDeleteEvent( event.getUuid(), timestamp );
         break;
       case ASSOCIATE:
-        eventStore.insertAttachEvent( event.getUuid(), ((InstanceActionInfo)event.getActionInfo()).getInstanceUuid(), System.currentTimeMillis() );
+        eventStore.insertAttachEvent( event.getUuid(), ((InstanceActionInfo)event.getActionInfo()).getInstanceUuid(), timestamp );
         break;
       case DISASSOCIATE:
-        eventStore.insertDetachEvent( event.getUuid(), ((InstanceActionInfo)event.getActionInfo()).getInstanceUuid(), System.currentTimeMillis() );
+        eventStore.insertDetachEvent( event.getUuid(), ((InstanceActionInfo)event.getActionInfo()).getInstanceUuid(), timestamp );
         break;
     }
+  }
+
+  protected ReportingAccountDao getReportingAccountDao() {
+    return ReportingAccountDao.getInstance();
+  }
+
+  protected ReportingUserDao getReportingUserDao() {
+    return ReportingUserDao.getInstance();
+  }
+
+  protected ReportingElasticIpEventStore getReportingElasticIpEventStore() {
+    return ReportingElasticIpEventStore.getInstance();
+  }
+
+  /**
+   * Get the current time which will be used for recording when an event
+   * occurred. This can be overridden if you have some alternative method
+   * of timekeeping (synchronized, test times, etc).
+   */
+  protected long getCurrentTimeMillis() {
+    return System.currentTimeMillis();
   }
 }

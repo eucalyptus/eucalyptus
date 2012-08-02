@@ -155,8 +155,8 @@ public class FalseDataGenerator
 
 				InstanceEvent event = new InstanceEvent(uuid, instanceId,
 						instanceType, userId, userName, accountId,
-						accountName, clusterName, availZone, new Long(netIoMegs),
-						new Long(diskIoMegs));
+						accountName, clusterName, availZone, diskIoMegs,
+						0, 0L, 0L, 0L, 0L, 0L, 0L );
 
 				System.out.println("Generating:" + i);
 				queueSender.send(event);
