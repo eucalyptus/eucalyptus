@@ -1,3 +1,11 @@
+/*
+ * License
+ */
+
+/* Constats */
+var RETURN_KEY_CODE = 13;
+var RETURN_MAC_KEY_CODE = 10;
+var BACKSPACE_KEY_CODE = 8;
 function selectCheckboxChanged(context, tableName) {
   dataTable = allTablesRef[tableName];
   switch(context.checked) {
@@ -132,18 +140,18 @@ function deleteSelectedVolumes() {
 /*
  * Adds custom look and feel to resources table view
  */
-function setUpInfoTableLayout(tableName) {
-  $resourceTable = $('div.table_' + tableName + '_new');
-  $resourceTable.addClass('euca-table-add');
-  $resourceTable.html('<a id="table-' + tableName + '-new" class="add-resource" "href="#">Add</a>');
+function setUpInfoTableLayout(tableName, resourceName) {
+  $resourceTableHeader = $('div.table_' + tableName + '_header');
+  $resourceTableHeader.addClass('euca-table-header');
+  $resourceTableHeader.html("<span>Manage " + resourceName +"</span><div class='help-link'><a href='#'>?</a></div>");
   $('#' + tableName + '_filter').append('&nbsp<a class="table-refresh" href="#">Refresh</a>');
   $('div#' + tableName + '_filter a.table-refresh').click( function () {
     allTablesRef[tableName].fnReloadAjax();
   });
   $resourceTableTop = $('div.table_' + tableName + '_top');
   $resourceTableTop.addClass('euca-table-length');
-  $resourceTableTop.html('<div class="euca-table-action actionmenu inactive"></div><div class="euca-table-size"><span id="table_' + tableName + '_count"></span> ' + tableName + ' found. Showing <span class="show selected">10</span> | <span class="show">25</span> | <span class="show">50</span> | <span class="show">all</span></div>');
-
+  $resourceTableTop.html('<div class="euca-table-add"></div><div class="euca-table-action actionmenu inactive"></div><div class="euca-table-size"><span id="table_' + tableName + '_count"></span> ' + tableName + ' found. Showing <span class="show selected">10</span> | <span class="show">25</span> | <span class="show">50</span> | <span class="show">all</span></div>');
+  $resourceTableTop.find("div.euca-table-add").html('<a id="table-' + tableName + '-new" class="add-resource" "href="#">Add</a>');
   $resourceTableTop.find("span.show").click( function () {
     $(this).parent().children('span').each( function() {
       $(this).removeClass("selected");
