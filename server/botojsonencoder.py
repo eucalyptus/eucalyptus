@@ -8,13 +8,19 @@ from boto.ec2 import EC2Connection
 from boto.ec2.ec2object import EC2Object
 from boto.regioninfo import RegionInfo
 from boto.ec2.instance import Group
+from boto.ec2.securitygroup import GroupOrCIDR
+from boto.ec2.securitygroup import IPPermissions
 from boto.ec2.volume import AttachmentSet
 from .response import Response
 
 
 class BotoJsonEncoder(JSONEncoder):
     def default(self, obj):
-        if isinstance(obj, RegionInfo):
+        if issubclass(obj.__class__, EC2Object):
+            values = copy.copy(obj.__dict__)
+            values['__obj_name__'] = obj.__class__.__name__
+            return (values)
+        elif isinstance(obj, RegionInfo):
             values = copy.copy(obj.__dict__)
             values['__obj_name__'] = 'RegionInfo'
             return (values)
@@ -22,10 +28,6 @@ class BotoJsonEncoder(JSONEncoder):
             return obj.__dict__
         elif isinstance(obj, EC2Connection):
             return []
-        elif issubclass(obj.__class__, EC2Object):
-            values = copy.copy(obj.__dict__)
-            values['__obj_name__'] = obj.__class__.__name__
-            return (values)
         elif issubclass(obj.__class__, Group):
             values = copy.copy(obj.__dict__)
             values['__obj_name__'] = obj.__class__.__name__
@@ -33,6 +35,16 @@ class BotoJsonEncoder(JSONEncoder):
         elif issubclass(obj.__class__, AttachmentSet):
             values = copy.copy(obj.__dict__)
             values['__obj_name__'] = 'AttachmentSet'
+            return (values)
+        elif issubclass(obj.__class__, IPPermissions):
+            values = copy.copy(obj.__dict__)
+            # this is because I found a "parent" property set to self - dak
+            values['parent'] = None
+            values['__obj_name__'] = 'IPPermissions'
+            return (values)
+        elif issubclass(obj.__class__, GroupOrCIDR):
+            values = copy.copy(obj.__dict__)
+            values['__obj_name__'] = 'GroupOrCIDR'
             return (values)
         return super(BotoJsonEncoder, self).default(obj)
 

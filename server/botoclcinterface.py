@@ -11,9 +11,10 @@ class BotoClcInterface(ClcInterface):
     saveclcdata = False
 
     def __init__(self, clc_host, access_id, secret_key):
+        #boto.set_stream_logger('foo')
         self.conn = boto.connect_euca(host=clc_host,
                                 aws_access_key_id=access_id,
-                                aws_secret_access_key=secret_key)
+                                aws_secret_access_key=secret_key, debug=0)
         self.conn.APIVersion = '2012-03-01'
 
     def __save_json__(self, obj, name):
