@@ -162,6 +162,8 @@
     var $container = $('html body').find('.euca-container .euca-main #euca-main-container');
     $container.maincontainer();
     $('html body').find('.euca-container .euca-explorer').explorer({select: function(evt, ui){ 
+                                                                      if (ui.selected === 'dashboard')
+                                                                        $('html body').find('#euca-tab-container').remove();
                                                                       $container.maincontainer("changeSelected",evt, ui);
                                                                    }});
 

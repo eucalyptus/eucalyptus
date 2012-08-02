@@ -31,6 +31,7 @@ body {
 .euca-main-outercontainer {
     background: #eaedee url(../images/main-bgfill.png) repeat left top;
     padding: 15px 0;
+    height: 600px;
 }
 
 .euca-footer-container {
@@ -47,6 +48,7 @@ body {
     margin: 0 auto;
     position: relative;
     width: 1024px;
+    height: 100%;
 }
 
 .templates {
@@ -288,8 +290,11 @@ div#euca-main-header.euca-main {
     position: relative;
 }
 
-div#euca-main-container.euca-main {
+div#euca-main-container {
     border: none;
+    width: 1024px;
+    height: 100%;
+    display: none;
 }
 
 div#dashboard {
@@ -298,36 +303,57 @@ div#dashboard {
     margin-top: 50px;
     margin-left: 50px;
     margin-right: 50px;
-    width: 80%;
-    height: 80%;
+    width: 90%;
+    height: 90%;
 }
 
 div.dashboard.instances {
    float: left;
    margin-left: 5%;
    margin-right: 5%;
-   margin-top: 20%;
+   margin-top: 5%;
    width: 90%;
-   height: 30%;
+   height: 40%;
+   border: 1px solid #DDDDDD;
+   font-family: Arial,Helvetica,sans-serif;
+   font-size: 14px;
 }
 
 div.dashboard.storage {
    float: left;
    clear: left;
    margin-left: 5%;
-   margin-right: 2%;
-   margin-top: 10%;
-   width: 40%;
-   height: 30%;
+   margin-top: 5%;
+   width: 45%;
+   height: 40%;  
+   border: 1px solid #DDDDDD;
+   font-family: Arial,Helvetica,sans-serif;
+   font-size: 14px;
 }
 
 div.dashboard.netsec {
    float: left;
-   margin-left: 2%;
-   margin-right: 5%;
-   margin-top: 10%;
-   width: 40%;
-   height: 30%;
+   margin-top: 5%;
+   width: 45%;
+   height: 40%;
+   border: 1px solid #DDDDDD;
+   font-family: Arial,Helvetica,sans-serif;
+   font-size: 14px;
+}
+ 
+div.dashboard.instances div{
+   float:left;
+   margin: 10% 10px;
+}
+
+div.dashboard.storage div{
+   float:left;
+   margin: 10% 10px;
+}
+
+div.dashboard.netsec div{
+   float:left;
+   margin: 10% 10px;
 }
 
 /* ======= Table view ======= */
