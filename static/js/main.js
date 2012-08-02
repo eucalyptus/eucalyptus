@@ -1,3 +1,6 @@
+/*
+ * License
+ */
 (function($, eucalyptus) {
   eucalyptus.main= function(args) {
     eucalyptus.explorer();
@@ -46,7 +49,7 @@
               "sAjaxDataProp": "results",
               "bAutoWidth" : false,
               "sPaginationType": "full_numbers",
-              "sDom": '<"table_keys_new">f<"clear"><"table_keys_top">rtp<"clear">',
+              "sDom": '<"table_keys_header">f<"clear"><"table_keys_top">rtp<"clear">',
               "aoColumns": [
                 {
                   "bSortable": false,
@@ -60,41 +63,82 @@
 		 $('#table_keys_count').html(oSettings.fnRecordsTotal());
               }
       });
-      setUpInfoTableLayout('keys');
+      setUpInfoTableLayout('keys', 'key pairs');
       // init delete dialog
+      var deleteButtonId = "delete-" + S4();
+      var cancelButtonId = "cancel-" + S4();
       $('#keys-delete-dialog').dialog({
          autoOpen: false,
          modal: true,
+         width: 600,
+         open: function(event, ui) {
+	     $('.ui-widget-overlay').live("click", function() {
+	       $('#keys-delete-dialog').dialog("close");
+	     });
+             $(":button:contains('Delete')").attr('id', deleteButtonId);
+             $('#' + deleteButtonId + ' span').text("Yes, delete");
+             $(":button:contains('Cancel')").attr('id', cancelButtonId);
+             $('#' + cancelButtonId + ' span').text("Cancel");
+             $('#' + cancelButtonId).focus();
+             $('.ui-dialog-titlebar').append('<div class="help-link"><a href="#">?</a></div>');
+           },
          buttons: [
+          {
+            text: "Delete",
+            click: function() { deleteSelectedKeyPairs(); $(this).dialog("close"); }
+          },
           {
             text: "Cancel",
             click: function() { $(this).dialog("close"); }
-          },
-          {
-            text: "Yes, delete",
-            click: function() { deleteSelectedKeyPairs(); $(this).dialog("close"); }
           }
         ]
       });
       // init add dialog
+      var createButtonId = "create-" + S4();
+      var cancelButtonId = "cancel-" + S4();
       $('#keys-add-dialog').dialog({
          autoOpen: false,
          modal: true,
+         width: 600,
+         open: function(event, ui) {
+	     $('.ui-widget-overlay').live("click", function() {
+	       $('#keys-add-dialog').dialog("close");
+	     });
+             $('.ui-dialog-titlebar').append('<div class="help-link"><a href="#">?</a></div>');
+             $(":button:contains('Create')").attr('id', createButtonId);
+             $createButton = $('#' + createButtonId);
+             $createButton.prop("disabled", true).addClass("ui-state-disabled");
+             $('#' + createButtonId + ' span').text("Create and download");
+             $(":button:contains('Cancel')").attr('id', cancelButtonId);
+             $('#' + cancelButtonId + ' span').text("Cancel");
+             $('#key-name').keypress( function(e) {
+               if( e.which === RETURN_KEY_CODE || e.which === RETURN_MAC_KEY_CODE ) {
+                 $('#' + createButtonId).trigger('click');
+               } else if ( e.which === 0 ) {
+               } else if ( e.which === BACKSPACE_KEY_CODE && $(this).val().length == 1 ) {
+                 $createButton.prop("disabled", true).addClass("ui-state-disabled");
+               } else if ( $(this).val().length == 0 ) {
+                 $createButton.prop("disabled", true).addClass("ui-state-disabled");
+               } else {
+                 $createButton.prop("disabled", false).removeClass("ui-state-disabled");
+               }
+             });
+           },
          buttons: [
           {
-            text: "Create and download",
+            text: "Create", // do not translate here
             click: function() {
               var keyName = $.trim($('#key-name').val());
               var keyPattern = new RegExp('^[A-Za-z0-9_\s-]{1,256}$');
               if (keyPattern.test(keyName)) {
                 $(this).dialog("close"); addKeyPair(keyName);
               } else {
-                $('#keys-add-dialog div.dialog-notifications').html("Name must be less than 256 alphanumeric characters, spaces, dashes, and/or underscores");
+                $('#keys-add-dialog div.dialog-notifications').html("Name must be less than 256 alphanumeric characters, spaces, dashes, and/or underscores.");
               }
             }
           },
           {
-            text: "Cancel",
+            text: "Cancel", // do not translate here
             click: function() { $(this).dialog("close"); }
           }
         ]
@@ -124,7 +168,7 @@
               "sAjaxDataProp": "results",
               "bAutoWidth" : false,
               "sPaginationType": "full_numbers",
-              "sDom": '<"table_volumes_new">f<"clear"><"table_volumes_top">rtp<"clear">',
+              "sDom": '<"table_volumes_header">f<"clear"><"table_volumes_top">rtp<"clear">',
               "aoColumns": [
                 {
                   "bSortable": false,
@@ -141,7 +185,41 @@
 		 $('#table_volumes_count').html(oSettings.fnRecordsTotal());
               }
       });
-      setUpInfoTableLayout('volumes');
+      setUpInfoTableLayout('volumes', 'volumes');
+      // init delete dialog
+      $('#volumes-delete-dialog').dialog({
+         autoOpen: false,
+         modal: true,
+         width: 600,
+         buttons: [
+          {
+            text: "Cancel",
+            click: function() { $(this).dialog("close"); }
+          },
+          {
+            text: "Yes, delete",
+            click: function() { deleteSelectedVolumes(); $(this).dialog("close"); }
+          }
+        ]
+      });
+      // init add dialog
+      $('#volumes-add-dialog').dialog({
+         autoOpen: false,
+         modal: true,
+         width: 600,
+         buttons: [
+          {
+            text: "Create",
+            click: function() {
+                $(this).dialog("close");
+            }
+          },
+          {
+            text: "Cancel",
+            click: function() { $(this).dialog("close"); }
+          }
+        ]
+      });
 
       allTablesRef['snapshots'] = $('#snapshots').dataTable( {
               "bProcessing": true,

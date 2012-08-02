@@ -569,3 +569,18 @@ a.hide-notification  {
    padding: 5px;
 }
 
+.euca-table-header {
+   -moz-border-radius: 2px;
+   border-radius: 2px;
+   border-style: solid;
+   border-color: black;
+}
+
+div.help-link {
+   float: right;
+}
+
+/* Hide close X button in UI dialogs */
+.ui-dialog-titlebar-close {
+   visibility: hidden;
+}
