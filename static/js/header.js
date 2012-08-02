@@ -53,9 +53,9 @@
     },
     _create : function(){
        // logo area
-       var $logoArea = this.element.find('#euca-logo');
-       $logoArea.addClass('euca-header logo');
-       $('<img>').attr('src',this.options.logoUrl).appendTo($logoArea);
+       //var $logoArea = this.element.find('#euca-logo');
+       //$logoArea.addClass('euca-header logo');
+       //$('<img>').attr('src',this.options.logoUrl).appendTo($logoArea);
 
        // navigation area   
        var $naviArea = this.element.find('#euca-navigator');
