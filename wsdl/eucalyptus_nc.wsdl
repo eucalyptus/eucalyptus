@@ -912,7 +912,7 @@
   </wsdl:operation>
   <wsdl:operation name="ncDescribeSensors">
     <wsdl:input message="tns:ncDescribeSensors" name="ncDescribeSensors">
-    </wsdl:input message>
+    </wsdl:input>
     <wsdl:output message="tns:ncDescribeSensorsResponse" name="ncDescribeSensorsResponse">
     </wsdl:output>
   </wsdl:operation> 
