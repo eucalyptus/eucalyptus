@@ -409,7 +409,25 @@
 	</xs:extension>
       </xs:complexContent>
     </xs:complexType>
-    
+
+    <xs:complexType name="ncPowerDownType">
+      <xs:complexContent>
+      <xs:extension base="tns:eucalyptusMessage">
+        <xs:sequence>
+        </xs:sequence>
+      </xs:extension>
+      </xs:complexContent>
+    </xs:complexType>
+
+    <xs:complexType name="ncPowerDownResponseType">
+      <xs:complexContent>
+      <xs:extension base="tns:eucalyptusMessage">
+        <xs:sequence>
+        </xs:sequence>
+      </xs:extension>
+      </xs:complexContent>
+    </xs:complexType>
+
     <xs:complexType name="ncDescribeResourceResponseType">
       <xs:complexContent>
 	<xs:extension base="tns:eucalyptusMessage">

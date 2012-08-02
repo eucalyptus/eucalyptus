@@ -949,41 +949,6 @@
     </wsdl:part>
   </wsdl:message>
   
-  <wsdl:message name="DescribeServicesResponse">
-    <wsdl:part element="tns:DescribeServicesResponse" name="DescribeServicesResponse">
-    </wsdl:part>
-  </wsdl:message>
-  
-  <wsdl:message name="DescribeSensorsResponse">
-    <wsdl:part element="tns:DescribeSensorsResponse" name="DescribeSensorsResponse">
-    </wsdl:part>
-  </wsdl:message>
-  
-  <wsdl:message name="StartServiceResponse">
-    <wsdl:part element="tns:StartServiceResponse" name="StartServiceResponse">
-    </wsdl:part>
-  </wsdl:message>
-  
-  <wsdl:message name="StopServiceResponse">
-    <wsdl:part element="tns:StopServiceResponse" name="StopServiceResponse">
-    </wsdl:part>
-  </wsdl:message>
-  
-  <wsdl:message name="EnableServiceResponse">
-    <wsdl:part element="tns:EnableServiceResponse" name="EnableServiceResponse">
-    </wsdl:part>
-  </wsdl:message>
-  
-  <wsdl:message name="DisableServiceResponse">
-    <wsdl:part element="tns:DisableServiceResponse" name="DisableServiceResponse">
-    </wsdl:part>
-  </wsdl:message>
-
-  <wsdl:message name="ShutdownServiceResponse">
-    <wsdl:part element="tns:ShutdownServiceResponse" name="ShutdownServiceResponse">
-    </wsdl:part>
-  </wsdl:message>
-  
   <wsdl:message name="AttachVolumeResponse">
     <wsdl:part element="tns:AttachVolumeResponse" name="AttachVolumeResponse">
     </wsdl:part>
