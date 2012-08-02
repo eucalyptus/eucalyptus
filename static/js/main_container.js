@@ -8,6 +8,7 @@
 
     _init : function() {
       this.updateSelected(this.options.default_selected);
+      this.element.show();
     },
 
     _create : function() { 

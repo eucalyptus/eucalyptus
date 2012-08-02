@@ -1,7 +1,86 @@
+
+/* Add a stylesheet to normalize the rendering by different browsers */
+
+@import "../css/normalize.css";
+
+/* ======= Common Color Codes ======= */
+
+/*
+
+Grey text: #666
+
+Blue text: #02405f
+
+Green links: #73a434
+
+*/
+
+
+/* ======== Base HTML styles ======= */
+
 body {
     margin: 0;
     padding: 0;
     font-family: Arial,Helvetica,sans-serif;
+    background: #fff;
+}
+
+
+/* ======= Helper classes ======= */
+
+.clearfix:before,
+.clearfix:after {
+    content:"";
+    display:table;
+}
+.clearfix:after {
+    clear:both;
+}
+.clearfix {
+    zoom:1; /* For IE 6/7 (trigger hasLayout) */
+}
+
+.hide-text {
+    text-indent: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+
+/* ======== Page layout styles ======= */
+
+.euca-container {
+    /* No attributes at this time */
+}
+
+.euca-header-container {
+    background: transparent url(../images/header-bgfill.png) repeat-x left top;
+    height: 61px;
+}
+
+.euca-explorer-container {
+    background: #eaedee url(../images/main-bgfill.png) repeat left top;
+}
+
+.euca-main-outercontainer {
+    background: #eaedee url(../images/main-bgfill.png) repeat left top;
+    /* Total min-height with padding 540px */
+    min-height: 485px;
+    padding: 15px 0 40px;
+}
+
+.euca-footer-container {
+    background: transparent url(../images/footer-bgfill.png) repeat-x left top;
+    margin-bottom: 20px;
+    min-height: 30px;
+    padding: 5px 0;
+}
+
+.inner-container {
+    margin: 0 auto;
+    position: relative;
+    width: 1024px;
+    height: 100%; /* Why is this needed? - DY */
 }
 
 .templates {
@@ -9,59 +88,44 @@ body {
     display: none;
 }
 
-div.euca-footer {
-  display: none;
-}
 
-div.euca-header {
-    background: none repeat-x scroll 50% 50% #1E405C;
-    border-top: 10px solid #0F3F5C;
-    display: none;
-    position: relative;
-    width: 1024px;
-    height: 40px;
-    overflow: hidden;
-}
+/* ======== Header styles ======= */
 
-div.euca-header.logo {
+#euca-logo {
     float: left;
-    width: 300px;
-    margin-left: 70px;
-    margin-top: 5px;
+    height: 30px;
+    width: 220px;
+    margin: 20px 0 10px;
     border: none;
+    background: transparent url(../images/eucalyptus-logo.png) no-repeat left top;
 }
 
-div.euca-header.navigator {
-    border-color: -moz-use-text-color #E2E6E5;
+
+/* ======== Navigator styles ======= */
+
+.navigator {
+    display: none;
+    background-color: #d7d7d7;
+    border: 1px solid #E2E6E5;
     border-style: none solid;
     border-width: medium 1px;
     float: left;
-    margin-left: 70px;
-    margin-top: 5px;
-    padding: 0 10px;
-    width: auto;
-    height: auto;
-}
-div.euca-header.navigator.mouseon {
-    background: none repeat-x scroll 50% 50% #F6F6F6;
-    border-color: -moz-use-text-color #E2E6E5;
-    border-style: none solid;
-    border-width: medium 1px;
-    float: left;
-    margin-left: 70px;
-    margin-top: 5px;
-    padding: 0 10px;
-    width: auto;
-    height: auto;
+    margin-left: 120px;
+    margin-top: 25px;
 }
 
-.euca-header.navigator img {
+.navigator.mouseon {
+    background-color: #e7e7e7;
+}
+
+.navigator img {
+    display: block;
     width: 10px;
+    margin-right: 5px;
 }
 
-a#top-button.euca-header.navigator {
-    color: #FFFFFF; 
-    font-family: Arial,Helvetica,sans-serif;
+.navigator a#top-button {
+    color: #02405f; 
     font-size: 18px;
     font-style: normal;
     font-weight: normal; 
@@ -70,9 +134,9 @@ a#top-button.euca-header.navigator {
     text-decoration: none;
     top: 0;
 }
-a#top-button.euca-header.navigator.mouseon {
-    color: #1E405C; 
-    font-family: Arial,Helvetica,sans-serif;
+
+a#top-button.mouseon {
+    color: #02405f; 
     font-size: 18px;
     font-style: normal;
     font-weight: normal;
@@ -82,19 +146,28 @@ a#top-button.euca-header.navigator.mouseon {
     top: 0;
     cursor: default;
 }
+
+
+#euca-help {
+    float: right;
+}
+
 div.euca-header.help {
+    display: none;
+    background-color: #d7d7d7;
     border-color: -moz-use-text-color #E2E6E5 -moz-use-text-color -moz-use-text-color;
     border-style: none solid none none;
     border-width: medium 1px medium medium;
     float: right;
     height: 30px;
     margin-right: 10px;
-    margin-top: 5px;
+    margin-top: 25px;
     padding: 0 10px;
-    width: auto;
 }
+
 span#help.euca-header.help {
-    color: #FFFFFF; 
+    background-color: #d7d7d7;
+    color: #02405f; 
     font-family: Arial,Helvetica,sans-serif;
     font-size: 15px;
     font-style: normal;
@@ -105,24 +178,32 @@ span#help.euca-header.help {
     text-decoration: none;
     top: 5px;
 }
-div.euca-header.help img {
+
+.help img {
     width: 10px;
 }
 
+#euca-user {
+    float: right;
+}
+
 div.euca-header.user {
+    display: none;
+    background-color: #d7d7d7;
     border-color: -moz-use-text-color #E2E6E5;
     border-style: none solid;
     border-width: medium 1px;
     float: right;
     height: 30px;
-    margin-top: 5px;
+    margin-top: 25px;
     padding: 0 10px;
     width: auto;
 }
+
 span#name.euca-header.user {
     border: medium none;
-    color: #FFFFFF;
-    font-family: Arial,Helvetica,sans-serif;
+    color: #02405f; 
+    background-color: #d7d7d7;
     font-size: 15px;
     font-style: normal;
     font-weight: normal;
@@ -133,14 +214,18 @@ span#name.euca-header.user {
     top: 5px;
 }
 
-div.euca-header.user img {
+.user img {
     width: 10px;
 }
-div.euca-explorer {
+
+
+/* ======== Explorer styles ======= */
+
+.euca-explorer {
     background: url("../images/explorer_background.png") no-repeat center transparent;
     display:none;
     position:relative;
-    width:1024px;
+    /* width:1024px; */
     height: 100px;
 }
 
@@ -212,82 +297,168 @@ div.euca-container.euca-explorer.euca-explorer-items.mouseon {
    color: #86B237;
 }
 
-div.login.heading {
-    background: #1E405C;
-    width: 1024px;
-    height: 100px;
+
+/* ======== Login styles ======= */
+
+#login {
+    margin: 95px auto 0;
+    width: 650px;
 }
 
-div.login.title {
-    border: 5px solid black;
+#login form {
+    margin: 0 40px 0 20px;
 }
 
-div.login {
-    position: relative;
-    width: 600px;
-    height: 250px;
-    background: #ffffff;
+.form-row {
+    margin-bottom: 10px;
 }
 
-div.euca-container {
-    position: static;
-    width: 1024px;
-    margin: 0 auto;
+.form-row label {
+    display: inline-block;
+    width: 130px;
+    font-family: 'Play', sans-serif;
+    font-size: 13px;
+    font-weight: bold;
+    text-align: right;
+    margin-right: 15px;
+    color: #02405f;
 }
 
-div.euca-main {
-    background: url("../images/main_container_bg.png") repeat center transparent;
-    position: relative;
-    display: block;
+.form-row input {
+    width: 265px;
 }
+
+.password-help {
+    color: #666;
+    font-size: 11px;
+    margin: 20px 0 20px 145px;
+}
+
+.password-help a {
+    color: #666;
+    text-decoration: none;
+}
+
+.password-help a:hover {
+    color: #73a434;
+    text-decoration: underline;
+}
+
+.button-bar {
+    text-align: right;
+}
+
+
+/* ======== Content styles ======= */
+
+.content-box {
+    background-color: #fff;
+    border: 1px solid #999;
+    min-height: 285px;
+
+    -webkit-border-radius: 5px;
+    -moz-border-radius: 5px;
+    border-radius: 5px;
+    
+    -webkit-box-shadow: 1px 2px 3px rgba(3,3,3,0.16), inset 0 1px 8px rgba(44,46,50,0.32);
+    -moz-box-shadow: 1px 2px 3px rgba(3,3,3,0.16), inset 0 1px 8px rgba(44,46,50,0.32);
+    box-shadow: 1px 2px 3px rgba(3,3,3,0.16), inset 0 1px 8px rgba(44,46,50,0.32);
+}
+
+.box-header {
+    background-color: #eaf2f5;
+    color: #02405f;
+    font-family: 'Play', sans-serif;
+    font-size: 15px;
+    font-weight: bold;
+    margin: 13px 0 25px;
+    padding: 8px 30px 4px;    
+}
+
+.box-header p {
+    margin: 0;
+    line-height: 1em;
+}
+
+/* Hey guys, it's not necessary to add 'div' to things that are selected with a class or ID */
+/* It's also not necessary to additional classes or IDs. Usually just the class name will be fine. */
+/* It's easier to troubleshoot CSS issues if you don't over-engineer the selectors. */
+/* Thanks, Dave */
+
 div#euca-main-header.euca-main {
     position: relative;
 }
 
-#euca-main-container {
+div#euca-main-container {
     border: none;
+    width: 1024px;
+    height: 100%; /* Why would you need this? - DY */
+    display: none;
 }
 
 div#dashboard {
+    display: inline-block; 
     background: #ffffff;
     position: relative;
-    margin-top: 50px;
     margin-left: 50px;
     margin-right: 50px;
-    width: 80%;
-    height: 80%;
+    width: 90%;
+    height: 90%;
 }
 
 div.dashboard.instances {
    float: left;
    margin-left: 5%;
    margin-right: 5%;
-   margin-top: 20%;
+   margin-top: 5%;
    width: 90%;
-   height: 30%;
+   height: auto;
+   border: 1px solid #DDDDDD;
+   font-family: Arial,Helvetica,sans-serif;
+   font-size: 14px;
 }
 
 div.dashboard.storage {
    float: left;
    clear: left;
    margin-left: 5%;
-   margin-right: 2%;
-   margin-top: 10%;
-   width: 40%;
-   height: 30%;
+   margin-top: 5%;
+   margin-bottom: 5%;
+   width: 45%;
+   height: 40%;  
+   border: 1px solid #DDDDDD;
+   font-family: Arial,Helvetica,sans-serif;
+   font-size: 14px;
 }
 
 div.dashboard.netsec {
    float: left;
-   margin-left: 2%;
-   margin-right: 5%;
-   margin-top: 10%;
-   width: 40%;
-   height: 30%;
+   margin: 5% 0px;
+   width: 45%;
+   height: 40%;
+   border: 1px solid #DDDDDD;
+   font-family: Arial,Helvetica,sans-serif;
+   font-size: 14px;
+}
+ 
+div.dashboard.instances div{
+   float:left;
+   margin: 10% 10px;
+}
+
+div.dashboard.storage div{
+   float:left;
+   margin: 10% 10px;
+}
+
+div.dashboard.netsec div{
+   float:left;
+   margin: 10% 10px;
 }
 
 
-/* Table view */
+/* ======= Table view ======= */
+
 div.euca-table-add {
    float: left;
 }
@@ -304,49 +475,58 @@ span.selected {
     font-weight: bold;
 }
 
-/* action menu */
 
-.actionmenu{
+/* ======= Action menu ======= */
+
+.actionmenu {
     font: 13px/27px Arial,sans-serif;
-    color:#3366CC;
-    height:30px;
-    margin-left:-10px;
+    color: #3366CC;
+    height: 30px;
+    margin-left: -10px;
 }
-.actionmenu a:hover{
-    background-color:#e4ebf8;
+
+.actionmenu a:hover {
+    background-color: #e4ebf8;
 }
+
 .actionmenu a {
     text-decoration: none;
     padding: 4px 8px 7px;
-    color:#3366CC;
+    color: #3366CC;
     outline:none;
 }
-.actionmenu ul{
+
+.actionmenu ul {
     list-style: none;
-    margin:0;
-    padding:0 0 0 10px;
+    margin: 0;
+    padding: 0 0 0 10px;
 }
-.actionmenu ul li{
-    padding:0;
-    float:left;
+
+.actionmenu ul li {
+    padding: 0;
+    float: left;
  }
-.actionmenu ul li ul li{
-    padding:0;
-    float:none;
+
+.actionmenu ul li ul li {
+    padding: 0;
+    float: none;
     margin: 0 0 0 0px;
-    width:100%;
+    width: 100%;
 }
-.actionmenu ul li ul{
+
+.actionmenu ul li ul {
     position: absolute;
     margin-top: -1px;
-    display:none;
+    display: none;
     padding: 0px 16px 0px 0;
 }
-.activemenu ul{
-    display:block !important;
+
+.activemenu ul {
+    display: block !important;
 }
-.activemenu a{
-    background-color: white;
+
+.activemenu a {
+    background-color: #fff;
     border-bottom: 0;
     display: block;
     height: 29px;
@@ -354,17 +534,20 @@ span.selected {
     position:relative;
     z-index: 1;
 }
-.activemenu a:hover{
-    background-color:white;
+
+.activemenu a:hover {
+    background-color: #fff;
 }
-.activemenu ul a:hover{
-    background-color:#e4ebf8;
+
+.activemenu ul a:hover {
+    background-color: #e4ebf8;
 }
-.activemenu ul a{
-    border: 0 !important;
-    border:0;
+
+.activemenu ul a {
+    border: 0;
     width: 100%;
 }
+
 .arrow {
     border-color: #3366CC transparent transparent;
     border-style: solid dashed dashed;
@@ -372,25 +555,31 @@ span.selected {
     position: relative;
     top: 10px;
 }
-.inactive a:hover{
-    background-color:white !important;
+
+.inactive a:hover {
+    background-color: #fff !important;
 }
 
-/* notifications */
-div.euca-notification {
+
+/* ======= Notifications ======= */
+
+.euca-notification {
    -moz-border-radius: 4px;
    border-radius: 4px;
    border-style: solid;
    border-color: black;
 }
-div.error {
+
+.error {
    color: red;
    padding: 5px;
 }
-div.success {
+
+.success {
    color: green;
    padding: 5px;
 }
+
 a.hide-notification  {
    float: right;
 }
