@@ -1071,7 +1071,6 @@
       <soap:body use="literal"/>
     </wsdl:output>
   </wsdl:operation>
-</wsdl:binding>
 
 <wsdl:operation name="ncDescribeSensors">
     <soap:operation soapAction="EucalyptusNC#ncDescribeSensors" style="document"/>
