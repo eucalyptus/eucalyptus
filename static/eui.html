@@ -267,7 +267,7 @@
 <div id="keys-delete-dialog" title="Delete key pairs" class="delete-dialog" style="display:none">
   <p>You will still be able to access any instances using the deleted key pair untill you also delete the private key off of your local file system</p>
   <p>Are you sure you want to delete the following key pairs?</p>
-  <p>KEY PAIR</p>
+  <p>Key pairs</p>
   <span id="keys-delete-names"></span>
 </div>
 
@@ -276,6 +276,21 @@
   <p>Save the file in a place you will remember. You will need to enter the path later to connect to your instances</p>
   <p>
     <input type="text" id="key-name" class="required"/><div class="dialog-notifications"></div>
+  </p>
+</div>
+
+<div id="volumes-delete-dialog" title="Delete volumes" class="delete-dialog" style="display:none">
+  <p>Are you sure you want to delete the following volumes?</p>
+  <p>All data on the volumes will be destroyed</p>
+  <p>Volumes</p>
+  <span id="volumes-delete-names"></span>
+</div>
+
+<div id="volumes-add-dialog" title="Create volumes" class="add-dialog" style="display:none">
+  <p>You can use this key pair to launch more than one instance</p>
+  <p>Save the file in a place you will remember. You will need to enter the path later to connect to your instances</p>
+  <p>
+    <input type="text" id="volumes-name" class="required"/><div class="dialog-notifications"></div>
   </p>
 </div>
 

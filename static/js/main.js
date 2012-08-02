@@ -142,6 +142,38 @@
               }
       });
       setUpInfoTableLayout('volumes');
+      // init delete dialog
+      $('#volumes-delete-dialog').dialog({
+         autoOpen: false,
+         modal: true,
+         buttons: [
+          {
+            text: "Cancel",
+            click: function() { $(this).dialog("close"); }
+          },
+          {
+            text: "Yes, delete",
+            click: function() { deleteSelectedVolumes(); $(this).dialog("close"); }
+          }
+        ]
+      });
+      // init add dialog
+      $('#volumes-add-dialog').dialog({
+         autoOpen: false,
+         modal: true,
+         buttons: [
+          {
+            text: "Create",
+            click: function() {
+                $(this).dialog("close");
+            }
+          },
+          {
+            text: "Cancel",
+            click: function() { $(this).dialog("close"); }
+          }
+        ]
+      });
 
       allTablesRef['snapshots'] = $('#snapshots').dataTable( {
               "bProcessing": true,

@@ -82,7 +82,6 @@ function deleteSelectedKeyPairs() {
           return function(data, textStatus, jqXHR){
             if ( data.results && data.results == true ) {
               successNotification("Deleted keypair " + keyName);
-              //TODO: refresh table once
               allTablesRef['keys'].fnReloadAjax();
             } else {
               errorNotification("Failed to delete keypair " + keyName);
@@ -95,6 +94,37 @@ function deleteSelectedKeyPairs() {
             errorNotification("Failed to delete keypair " + keyName);
           }
         })(keyName)
+    });
+  }
+}
+
+function deleteSelectedVolumes() {
+  var rowsToDelete = getAllSelectedRows('volumes', 1);
+  for ( i = 0; i<rowsToDelete.length; i++ ) {
+    var volumeId = rowsToDelete[i];
+    $.ajax({
+      type:"GET",
+      url:"/ec2?type=key&Action=DeleteVolume&VolumeId=" + volumeId,
+      data:"_xsrf="+$.cookie('_xsrf'),
+      dataType:"json",
+      async:"true",
+      success:
+        (function(volumeId) {
+          return function(data, textStatus, jqXHR){
+            if ( data.results && data.results == true ) {
+              successNotification("Scheduled volume delete for " + volumeId);
+              allTablesRef['volumes'].fnReloadAjax();
+            } else {
+              errorNotification("Failed to schedule volume delete for " + volumeId);
+            }
+           }
+        })(volumeId),
+      error:
+        (function(volumeId) {
+          return function(jqXHR, textStatus, errorThrown){
+            errorNotification("Failed to schedule volumvolumese delete for " + volumeId);
+          }
+        })(volumeId)
     });
   }
 }
