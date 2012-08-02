@@ -76,10 +76,7 @@ body {
     padding: 5px 0;
 }
 
-.euca-header,
-.euca-explorer,
-.euca-main,
-.euca-footer {
+.inner-container {
     margin: 0 auto;
     position: relative;
     width: 1024px;
@@ -105,52 +102,29 @@ body {
 
 /* ======== Navigator styles ======= */
 
-#euca-navigator {
-    width: 200px;
-}
-
-#euca-navigator table {
-    width: 200px !important;
-    background-color: #ccc;
-}
-
 .navigator {
-    background-color: #16415d;
-}
-
-div.euca-header.navigator {
     display: none;
-    border-color: -moz-use-text-color #E2E6E5;
+    background-color: #d7d7d7;
+    border: 1px solid #E2E6E5;
     border-style: none solid;
     border-width: medium 1px;
     float: left;
-    margin-left: 50px;
-    margin-top: 5px;
-    padding: 0 10px;
-    /* width: auto;
-    height: auto; */
+    margin-left: 120px;
+    margin-top: 25px;
 }
 
-div.euca-header.navigator.mouseon {
-    background: none repeat-x scroll 50% 50% #F6F6F6;
-    border-color: -moz-use-text-color #E2E6E5;
-    border-style: none solid;
-    border-width: medium 1px;
-    float: left;
-    margin-left: 70px;
-    margin-top: 5px;
-    padding: 0 10px;
-    /* width: auto;
-    height: auto; */
+.navigator.mouseon {
+    background-color: #e7e7e7;
 }
 
-.euca-header.navigator img {
+.navigator img {
+    display: block;
     width: 10px;
+    margin-right: 5px;
 }
 
-a#top-button.euca-header.navigator {
-    color: #FFFFFF; 
-    font-family: Arial,Helvetica,sans-serif;
+.navigator a#top-button {
+    color: #02405f; 
     font-size: 18px;
     font-style: normal;
     font-weight: normal; 
@@ -160,9 +134,8 @@ a#top-button.euca-header.navigator {
     top: 0;
 }
 
-a#top-button.euca-header.navigator.mouseon {
-    color: #FFFFFF; 
-    font-family: Arial,Helvetica,sans-serif;
+a#top-button.mouseon {
+    color: #02405f; 
     font-size: 18px;
     font-style: normal;
     font-weight: normal;
@@ -173,21 +146,27 @@ a#top-button.euca-header.navigator.mouseon {
     cursor: default;
 }
 
+
+#euca-help {
+    float: right;
+}
+
 div.euca-header.help {
     display: none;
+    background-color: #d7d7d7;
     border-color: -moz-use-text-color #E2E6E5 -moz-use-text-color -moz-use-text-color;
     border-style: none solid none none;
     border-width: medium 1px medium medium;
     float: right;
     height: 30px;
     margin-right: 10px;
-    margin-top: 5px;
+    margin-top: 25px;
     padding: 0 10px;
-    width: auto;
 }
 
 span#help.euca-header.help {
-    color: #FFFFFF; 
+    background-color: #d7d7d7;
+    color: #02405f; 
     font-family: Arial,Helvetica,sans-serif;
     font-size: 15px;
     font-style: normal;
@@ -199,26 +178,31 @@ span#help.euca-header.help {
     top: 5px;
 }
 
-div.euca-header.help img {
+.help img {
     width: 10px;
+}
+
+#euca-user {
+    float: right;
 }
 
 div.euca-header.user {
     display: none;
+    background-color: #d7d7d7;
     border-color: -moz-use-text-color #E2E6E5;
     border-style: none solid;
     border-width: medium 1px;
     float: right;
     height: 30px;
-    margin-top: 5px;
+    margin-top: 25px;
     padding: 0 10px;
     width: auto;
 }
 
 span#name.euca-header.user {
     border: medium none;
-    color: #FFFFFF;
-    font-family: Arial,Helvetica,sans-serif;
+    color: #02405f; 
+    background-color: #d7d7d7;
     font-size: 15px;
     font-style: normal;
     font-weight: normal;
@@ -229,7 +213,7 @@ span#name.euca-header.user {
     top: 5px;
 }
 
-div.euca-header.user img {
+.user img {
     width: 10px;
 }
 
@@ -240,7 +224,7 @@ div.euca-header.user img {
     background: url("../images/explorer_background.png") no-repeat center transparent;
     display:none;
     position:relative;
-    width:1024px;
+    /* width:1024px; */
     height: 100px;
 }
 
