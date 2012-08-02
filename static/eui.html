@@ -1,231 +1,257 @@
 <!DOCTYPE html>
 <html>
-<title>Eu-i</title>
-<style type="text/css" title="currentStyle">
-  @import "lib/jquery.css";
-  @import "lib/jquery-table.css";
-  @import "lib/jquery-ui-1.9.0-beta1.css";
-  @import "css/eucalyptus.css";
-</style>
+  <head>
+    <title>Eucalyptus</title>
+    <style type="text/css" title="currentStyle">
+      @import "lib/jquery.css";
+      @import "lib/jquery-table.css";
+      @import "lib/jquery-ui-1.9.0-beta1.css";
+      @import "css/eucalyptus.css";
+    </style>
 
-<!-- jQuery libraries -->
-<script type="text/javascript" language="javascript" src="lib/jquery-1.7.2.min.js"></script> 
-<!--<script type="text/javascript" language="javascript" src="lib/jquery.ui.core.min.js"></script> 
-<script type="text/javascript" language="javascript" src="lib/jquery.ui.widget.min.js"></script> 
-<script type="text/javascript" language="javascript" src="lib/jquery.ui.tabs.min.js"></script> 
--->
+    <!-- jQuery libraries -->
+    <script type="text/javascript" language="javascript" src="lib/jquery-1.7.2.min.js"></script> 
+    <!--<script type="text/javascript" language="javascript" src="lib/jquery.ui.core.min.js"></script> 
+    <script type="text/javascript" language="javascript" src="lib/jquery.ui.widget.min.js"></script> 
+    <script type="text/javascript" language="javascript" src="lib/jquery.ui.tabs.min.js"></script> 
+    -->
 
-<!-- this ui library contains everything. need to slim down later by including only what's used here -->
-<!--<script type="text/javascript" language="javascript" src="lib/jquery-ui-1.8.21.custom.min.js"></script> -->
-<script type="text/javascript" language="javascript" src="lib/jquery-ui-1.9.0-beta1.js"></script>
-<script type="text/javascript" language="javascript" src="lib/jquery.dataTables.js"></script> 
-<script type="text/javascript" language="javascript" src="lib/jquery.cookies.js"></script>
-<script type="text/javascript" language="javascript" src="lib/jquery.i18n.properties-min-1.0.9.js"></script>
-<!-- Eucalyptus JS -->
-<script type="text/javascript">
-  var allTablesRef = {};
-</script>
+    <!-- this ui library contains everything. need to slim down later by including only what's used here -->
+    <!--<script type="text/javascript" language="javascript" src="lib/jquery-ui-1.8.21.custom.min.js"></script> -->
+    <script type="text/javascript" language="javascript" src="lib/jquery-ui-1.9.0-beta1.js"></script>
+    <script type="text/javascript" language="javascript" src="lib/jquery.dataTables.js"></script> 
+    <script type="text/javascript" language="javascript" src="lib/jquery.cookies.js"></script>
+    <script type="text/javascript" language="javascript" src="lib/jquery.i18n.properties-min-1.0.9.js"></script>
+    <!-- Eucalyptus JS -->
+    <script type="text/javascript">
+      var allTablesRef = {};
+    </script>
 
-<script type="text/javascript" language="javascript" src="js/jquery.generateFile.js"></script>
-<script type="text/javascript" language="javascript" src="js/jQueryExt.js"></script>
-<script type="text/javascript" language="javascript" src="js/login.js"></script>
-<script type="text/javascript" language="javascript" src="js/main.js"></script>
-<script type="text/javascript" language="javascript" src="js/eucalyptus.js"></script>
-<script type="text/javascript" language="javascript" src="js/explorer.js"></script>
-<script type="text/javascript" language="javascript" src="js/support.js"></script>
-<script type="text/javascript" language="javascript" src="js/header.js"></script>
-<script type="text/javascript" language="javascript" src="js/footer.js"></script>
-<script type="text/javascript" language="javascript" src="js/i18n.js"></script>
-<script type="text/javascript" language="javascript" src="js/main_container.js"></script>
-<script type="text/javascript" language="javascript" src="js/eucawidget.js"></script>
-<script type="text/javascript" language="javascript" src="js/dashboard.js"></script>
-<script type="text/javascript" language="javascript" src="js/keypair.js"></script>
-<body>
-<div class="euca-container">
-  <div class="euca-header">
-    <div id="euca-logo"> </div>
-    <div id="euca-navigator"> </div>
-    <div id="euca-help"> </div>
-    <div id="euca-user"> </div>
-  </div>
-  <div class="euca-explorer"> </div>
-  <div class="euca-main">
-    <div id="euca-notification"> </div>
-    <div id="euca-main-container"> </div>
-    <div id="euca-tab-container"> </div> <!-- temporary -->
-  </div>
-  <div class="euca-footer">
-  </div>
-</div
->
-<div class="templates">
-  <div id="login">
-    <div id="title" class="login">
-        <p>Log in to your management console</p>
+    <script type="text/javascript" language="javascript" src="js/jquery.generateFile.js"></script>
+    <script type="text/javascript" language="javascript" src="js/jQueryExt.js"></script>
+    <script type="text/javascript" language="javascript" src="js/login.js"></script>
+    <script type="text/javascript" language="javascript" src="js/main.js"></script>
+    <script type="text/javascript" language="javascript" src="js/eucalyptus.js"></script>
+    <script type="text/javascript" language="javascript" src="js/explorer.js"></script>
+    <script type="text/javascript" language="javascript" src="js/support.js"></script>
+    <script type="text/javascript" language="javascript" src="js/header.js"></script>
+    <script type="text/javascript" language="javascript" src="js/footer.js"></script>
+    <script type="text/javascript" language="javascript" src="js/i18n.js"></script>
+    <script type="text/javascript" language="javascript" src="js/main_container.js"></script>
+    <script type="text/javascript" language="javascript" src="js/eucawidget.js"></script>
+    <script type="text/javascript" language="javascript" src="js/dashboard.js"></script>
+    <script type="text/javascript" language="javascript" src="js/keypair.js"></script>
+  </head> 
+
+  <body>
+    <div class="euca-container">
+      
+      <div class="euca-header-container">
+        <div class="euca-header">
+          <div id="euca-logo"></div>
+          <div id="euca-navigator"></div>
+          <div id="euca-help"></div>
+          <div id="euca-user"></div>
+        </div>
+      </div>
+
+      <div class="euca-explorer-container">
+        <div class="euca-explorer"></div>
+      </div>      
+
+      <div class="euca-main-outercontainer">
+          <div class="euca-main">
+            <div id="euca-notification"> </div>
+            <div id="euca-main-container"></div>
+            <div id="euca-tab-container"></div> <!-- temporary -->
+          </div>       
+      </div>
+
+      <div class="euca-footer-container">
+        <div class="euca-footer"></div>  
+      </div>
     </div>
-    <form action="/" method="post" name="loginform">
-        <div class="form-row">
-          <label for="account">Account name</label>
-	  <input type="text" id="account" value=""/>
-        </div>
-        <div class="form-row">
-	  <label for="username">Username</label>
-	  <input type="text" id="username" value="admin"/>
-        </div>
-        <div class="form-row">
-	  <label for="password">Password</label>
-	  <input type="password" id="password" value=""/>
-        </div>
-        <div class="button-bar">
-	  <input type="submit" name="login" value="Log In" disabled="disabled" />
-        </div>
-    </form>
-    <div id="password_help" class="login">
-        <p> Forgot your password? Contact your cloud administrator. </p>
-    </div>
-  </div> <!-- end of login -->
+    <!-- END .euca-container -->
 
-  <div id="dashboard">
-    <div class="dashboard instances"> </div>  
-    <div class="dashboard storage"> </div>
-    <div class="dashboard netsec"> </div>
-  </div>
-</div> <!-- end of templates --> 
+    <div class="templates">
+
+      <div id="login">
+
+        <div id="title" class="login">
+            <p>Log in to your management console</p>
+        </div>
+
+        <form action="/" method="post" name="loginform">
+
+          <div class="form-row">
+            <label for="account">Account name</label>
+            <input type="text" id="account" value=""/>
+          </div>
+          
+          <div class="form-row">
+            <label for="username">Username</label>
+            <input type="text" id="username" value="admin"/>
+          </div>
+
+          <div class="form-row">
+            <label for="password">Password</label>
+            <input type="password" id="password" value=""/>
+          </div>
+
+          <div class="button-bar">
+            <input type="submit" name="login" value="Log In" disabled="disabled" />
+          </div>
+        </form>
+
+        <div id="password_help" class="login">
+            <p> Forgot your password? Contact your cloud administrator. </p>
+        </div>
+
+      </div>
+      <!-- end of login -->
+
+      <div id="dashboard">
+        <div class="dashboard instances"> </div>  
+        <div class="dashboard storage"> </div>
+        <div class="dashboard netsec"> </div>
+      </div>
+
+    </div> <!-- end of templates --> 
 
 <!-- Navigation tabs.
   TODO: move them to the right stop so there is no need to add them into the DOM
   TODO: add nice indentation -->
 <div id="all-tabs-container" style="display:none">
 
-<div id="tabs-instances" class="active">
-  <table id="instances" class="display">
-    <thead>
-      <tr>
-        <th>id</th>
-        <th>image id</th>
-        <th>public IP</th>
-        <th>private IP</th>
-        <th>state</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td colspan="5" class="dataTables_empty">Loading data from server</td>
-      </tr>
-    </tbody>
-  </table>
-</div>
+  <div id="tabs-instances" class="active">
+    <table id="instances" class="display">
+      <thead>
+        <tr>
+          <th>id</th>
+          <th>image id</th>
+          <th>public IP</th>
+          <th>private IP</th>
+          <th>state</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td colspan="5" class="dataTables_empty">Loading data from server</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
 
-<div id="tabs-images" class="active">
-  <table id="images" class="display">
-    <thead>
-      <tr>
-        <th>id</th>
-        <th>location</th>
-        <th>type</th>
-        <th>architecture</th>
-        <th>state</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td colspan="5" class="dataTables_empty">Loading data from server</td>
-      </tr>
-    </tbody>
-  </table>
-</div>
+  <div id="tabs-images" class="active">
+    <table id="images" class="display">
+      <thead>
+        <tr>
+          <th>id</th>
+          <th>location</th>
+          <th>type</th>
+          <th>architecture</th>
+          <th>state</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td colspan="5" class="dataTables_empty">Loading data from server</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
 
-<div id="tabs-keys" class="active">
-<table id="keys" class="display">
-<thead>
-  <tr>
-     <th>
-       <input type="checkbox" onchange="selectCheckboxChanged(this, 'keys');">
-     </th>
-     <th>Name</th>
-     <th>Private Key Fingerprint</th>
- </tr>
- </thead>
- <tbody>
-    <tr> 
-       <td colspan="3" class="dataTables_empty">Loading data from server</td>
-    </tr>
-</tbody>
-</table>
-</div>
+  <div id="tabs-keys" class="active">
+    <table id="keys" class="display">
+      <thead>
+        <tr>
+          <th>
+            <input type="checkbox" onchange="selectCheckboxChanged(this, 'keys');">
+          </th>
+          <th>Name</th>
+          <th>Private Key Fingerprint</th>
+        </tr>
+       </thead>
+       <tbody>
+          <tr> 
+            <td colspan="3" class="dataTables_empty">Loading data from server</td>
+          </tr>
+      </tbody>
+    </table>
+  </div>
 
 <div id="tabs-groups" class="active">
-<table id="groups" class="display">
-<thead>
- <tr>
-   <th>name</th>
-   <th>description</th>
- </tr>
-</thead>
-<tbody>
- <tr>
-  <td colspan="2" class="dataTables_empty">Loading data from server</td>
- </tr>
-</tbody>
-</table>
+  <table id="groups" class="display">
+    <thead>
+       <tr>
+         <th>name</th>
+         <th>description</th>
+       </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td colspan="2" class="dataTables_empty">Loading data from server</td>
+      </tr>
+    </tbody>
+  </table>
 </div>
 
 <div id="tabs-addresses" class="active">
-<table id="addresses" class="display">
-<thead>
-<tr>
- <th>public IP</th>
- <th>Instance ID</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-  <td colspan="2" class="dataTables_empty">Loading data from server</td>
-</tr>
-</tbody>
-</table>
+  <table id="addresses" class="display">
+    <thead>
+      <tr>
+        <th>public IP</th>
+        <th>Instance ID</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td colspan="2" class="dataTables_empty">Loading data from server</td>
+      </tr>
+    </tbody>
+  </table>
 </div>
 
 <div id="tabs-volumes" class="active">
-<table id="volumes" class="display">
-<thead>
-<tr>
-<th>
-   <input type="checkbox" onchange="selectCheckboxChanged(this, 'volumes');">
-</th>
-<th>id</th>
-<th>size</th>
-<th>status</th>
-<th>creation time</th>
-<th>snapshot id</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-    <td colspan="6" class="dataTables_empty">Loading data from server</td>
-</tr>
-</tbody>
-</table>
+  <table id="volumes" class="display">
+    <thead>
+      <tr>
+        <th>
+          <input type="checkbox" onchange="selectCheckboxChanged(this, 'volumes');">
+        </th>
+        <th>id</th>
+        <th>size</th>
+        <th>status</th>
+        <th>creation time</th>
+        <th>snapshot id</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td colspan="6" class="dataTables_empty">Loading data from server</td>
+      </tr>
+    </tbody>
+  </table>
 </div>
 
 <div id="tabs-snapshots" class="active">
-<table id="snapshots" class="display">
-<thead>
-<tr>
-<th>id</th>
-<th>status</th>
-<th>progress</th>
-<th>volume id</th>
-<th>start time</th>
-<th>owner id</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td colspan="6" class="dataTables_empty">Loading data from server</td> 
-</tr>
-</tbody>
-</table>
+  <table id="snapshots" class="display">
+    <thead>
+      <tr>
+        <th>id</th>
+        <th>status</th>
+        <th>progress</th>
+        <th>volume id</th>
+        <th>start time</th>
+        <th>owner id</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td colspan="6" class="dataTables_empty">Loading data from server</td> 
+      </tr>
+    </tbody>
+  </table>
 </div>
 
 </div>
@@ -233,15 +259,15 @@
 
 <!-- Dialogs -->
 <div id="keys-delete-dialog" title="Delete key pairs" class="delete-dialog" style="display:none">
-  <p>You will still be able to access any instances using the deleted key pair untill you also delete the private key off of your local file system</p>
+  <p>You will still be able to access any instances using the deleted key pair until you also delete the private key off of your local file system.</p>
   <p>Are you sure you want to delete the following key pairs?</p>
   <p>KEY PAIR</p>
   <span id="keys-delete-names"></span>
 </div>
 
 <div id="keys-add-dialog" title="Create key pair" class="add-dialog" style="display:none">
-  <p>You can use this key pair to launch more than one instance</p>
-  <p>Save the file in a place you will remember. You will need to enter the path later to connect to your instances</p>
+  <p>You can use this key pair to launch more than one instance.</p>
+  <p>Save the file in a place you will remember. You will need to enter the path later to connect to your instances.</p>
   <p>
     <input type="text" id="key-name" class="required"/><div class="dialog-notifications"></div>
   </p>

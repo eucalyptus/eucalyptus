@@ -1,7 +1,52 @@
+
+/* Add a stylesheet to normalize the rendering by different browsers */
+
+@import "../css/normalize.css";
+
+
+/* ======== Base HTML styles ======= */
+
 body {
     margin: 0;
     padding: 0;
     font-family: Arial,Helvetica,sans-serif;
+    background: #fff;
+}
+
+/* ======== Page layout styles ======= */
+
+.euca-container {
+    /* No attributes at this time */
+}
+
+.euca-header-container {
+    background: transparent url(../images/header-bgfill.png) repeat-x left top;
+    height: 61px;
+}
+
+.euca-explorer-container {
+    /* No attributes at this time */
+}
+
+.euca-main-outercontainer {
+    background: #eaedee url(../images/main-bgfill.png) repeat left top;
+    padding: 15px 0;
+}
+
+.euca-footer-container {
+    background: transparent url(../images/footer-bgfill.png) repeat-x left top;
+    margin-bottom: 20px;
+    min-height: 30px;
+    padding: 5px 0;
+}
+
+.euca-header,
+.euca-explorer,
+.euca-main,
+.euca-footer {
+    margin: 0 auto;
+    position: relative;
+    width: 1024px;
 }
 
 .templates {
@@ -9,26 +54,28 @@ body {
     display: none;
 }
 
-div.euca-footer {
-  display: none;
-}
+/* ======== Header styles ======= */
 
-div.euca-header {
-    display: block;
-    background: none repeat-x scroll 50% 50% #1E405C;
-    border-top: 10px solid #0F3F5C;
-    position: relative;
-    width: 1024px;
-    height: 40px;
-    overflow: hidden;
-}
-
-div.euca-header.logo {
+.euca-header.logo {
     float: left;
     width: 300px;
-    margin-left: 70px;
     margin-top: 5px;
     border: none;
+}
+
+/* ======== Navigator styles ======= */
+
+#euca-navigator {
+    width: 200px;
+}
+
+#euca-navigator table {
+    width: 200px !important;
+    background-color: #ccc;
+}
+
+.navigator {
+    background-color: #16415d;
 }
 
 div.euca-header.navigator {
@@ -37,12 +84,13 @@ div.euca-header.navigator {
     border-style: none solid;
     border-width: medium 1px;
     float: left;
-    margin-left: 70px;
+    margin-left: 50px;
     margin-top: 5px;
     padding: 0 10px;
-    width: auto;
-    height: auto;
+    /* width: auto;
+    height: auto; */
 }
+
 div.euca-header.navigator.mouseon {
     background: none repeat-x scroll 50% 50% #F6F6F6;
     border-color: -moz-use-text-color #E2E6E5;
@@ -52,8 +100,8 @@ div.euca-header.navigator.mouseon {
     margin-left: 70px;
     margin-top: 5px;
     padding: 0 10px;
-    width: auto;
-    height: auto;
+    /* width: auto;
+    height: auto; */
 }
 
 .euca-header.navigator img {
@@ -71,8 +119,9 @@ a#top-button.euca-header.navigator {
     text-decoration: none;
     top: 0;
 }
+
 a#top-button.euca-header.navigator.mouseon {
-    color: #1E405C; 
+    color: #FFFFFF; 
     font-family: Arial,Helvetica,sans-serif;
     font-size: 18px;
     font-style: normal;
@@ -83,6 +132,7 @@ a#top-button.euca-header.navigator.mouseon {
     top: 0;
     cursor: default;
 }
+
 div.euca-header.help {
     display: none;
     border-color: -moz-use-text-color #E2E6E5 -moz-use-text-color -moz-use-text-color;
@@ -95,6 +145,7 @@ div.euca-header.help {
     padding: 0 10px;
     width: auto;
 }
+
 span#help.euca-header.help {
     color: #FFFFFF; 
     font-family: Arial,Helvetica,sans-serif;
@@ -107,6 +158,7 @@ span#help.euca-header.help {
     text-decoration: none;
     top: 5px;
 }
+
 div.euca-header.help img {
     width: 10px;
 }
@@ -122,6 +174,7 @@ div.euca-header.user {
     padding: 0 10px;
     width: auto;
 }
+
 span#name.euca-header.user {
     border: medium none;
     color: #FFFFFF;
@@ -139,6 +192,9 @@ span#name.euca-header.user {
 div.euca-header.user img {
     width: 10px;
 }
+
+/* ======== Explorer styles ======= */
+
 div.euca-explorer {
     background: url("../images/explorer_background.png") no-repeat center transparent;
     display:none;
@@ -215,12 +271,18 @@ div.euca-container.euca-explorer.euca-explorer-items.mouseon {
    color: #86B237;
 }
 
-div.euca-main {
-    background: url("../images/main_container_bg.png") repeat center transparent;
-    position: relative;
-    display: block;
-    width: 1024px;
+/* ======== Login styles ======= */
+
+.form-row {
+    margin-bottom: 10px;
 }
+
+.form-row label {
+    display: inline-block;
+    width: 130px;
+}
+
+/* ======== Content styles ======= */
 
 div#euca-main-header.euca-main {
     position: relative;
@@ -268,8 +330,8 @@ div.dashboard.netsec {
    height: 30%;
 }
 
+/* ======= Table view ======= */
 
-/* Table view */
 div.euca-table-add {
    float: left;
 }
@@ -286,49 +348,57 @@ span.selected {
     font-weight: bold;
 }
 
-/* action menu */
+/* ======= Action menu ======= */
 
-.actionmenu{
+.actionmenu {
     font: 13px/27px Arial,sans-serif;
-    color:#3366CC;
-    height:30px;
-    margin-left:-10px;
+    color: #3366CC;
+    height: 30px;
+    margin-left: -10px;
 }
-.actionmenu a:hover{
-    background-color:#e4ebf8;
+
+.actionmenu a:hover {
+    background-color: #e4ebf8;
 }
+
 .actionmenu a {
     text-decoration: none;
     padding: 4px 8px 7px;
-    color:#3366CC;
+    color: #3366CC;
     outline:none;
 }
-.actionmenu ul{
+
+.actionmenu ul {
     list-style: none;
-    margin:0;
-    padding:0 0 0 10px;
+    margin: 0;
+    padding: 0 0 0 10px;
 }
-.actionmenu ul li{
-    padding:0;
-    float:left;
+
+.actionmenu ul li {
+    padding: 0;
+    float: left;
  }
-.actionmenu ul li ul li{
-    padding:0;
-    float:none;
+
+.actionmenu ul li ul li {
+    padding: 0;
+    float: none;
     margin: 0 0 0 0px;
-    width:100%;
+    width: 100%;
 }
-.actionmenu ul li ul{
+
+.actionmenu ul li ul {
     position: absolute;
     margin-top: -1px;
-    display:none;
+    display: none;
     padding: 0px 16px 0px 0;
 }
-.activemenu ul{
-    display:block !important;
+
+.activemenu ul {
+    display: block !important;
 }
-.activemenu a{
-    background-color: white;
+
+.activemenu a {
+    background-color: #fff;
     border-bottom: 0;
     display: block;
     height: 29px;
@@ -336,17 +406,20 @@ span.selected {
     position:relative;
     z-index: 1;
 }
-.activemenu a:hover{
-    background-color:white;
+
+.activemenu a:hover {
+    background-color: #fff;
 }
-.activemenu ul a:hover{
-    background-color:#e4ebf8;
+
+.activemenu ul a:hover {
+    background-color: #e4ebf8;
 }
-.activemenu ul a{
-    border: 0 !important;
-    border:0;
+
+.activemenu ul a {
+    border: 0;
     width: 100%;
 }
+
 .arrow {
     border-color: #3366CC transparent transparent;
     border-style: solid dashed dashed;
@@ -354,25 +427,30 @@ span.selected {
     position: relative;
     top: 10px;
 }
-.inactive a:hover{
-    background-color:white !important;
+
+.inactive a:hover {
+    background-color: #fff !important;
 }
 
-/* notifications */
-div.euca-notification {
+/* ======= Notifications ======= */
+
+.euca-notification {
    -moz-border-radius: 4px;
    border-radius: 4px;
    border-style: solid;
    border-color: black;
 }
-div.error {
+
+.error {
    color: red;
    padding: 5px;
 }
-div.success {
+
+.success {
    color: green;
    padding: 5px;
 }
+
 a.hide-notification  {
    float: right;
 }
@@ -381,3 +459,4 @@ a.hide-notification  {
    color: red;
    padding: 5px;
 }
+
