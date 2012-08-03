@@ -65,6 +65,7 @@ permission notice:
 #include <stdio.h>
 #include <stdlib.h>
 #define _GNU_SOURCE
+#include <assert.h>
 #include <dirent.h>
 #include <errno.h>
 #include <limits.h>
@@ -80,7 +81,8 @@ permission notice:
 #include <libxml/tree.h>
 
 #include <misc.h>
-#include "fault.h"
+#include <fault.h>
+#include <wc.h>
 
 /*
  * These definitions are all easily customized.
@@ -154,7 +156,7 @@ static int add_eucafault (const xmlDoc *);
 static xmlNode *get_common_block (const xmlDoc *);
 static char *get_common_var (const char *);
 static char *get_fault_var (const char *, const xmlNode *);
-static void format_eucafault (const char *, ...);
+static void format_eucafault (const char *, const char_map **);
 
 /*
  * Utility functions -- move to misc.c?
@@ -550,7 +552,7 @@ get_fault_var (const char *var, const xmlNode *f_node)
  * FIXME: This doesn't handle wchar output yet--output is misaligned!
  */
 static void
-format_eucafault (const char *fault_id, ...)
+format_eucafault (const char *fault_id, const char_map **map)
 {
     static FILE *logfile = NULL;
     static int max_label_len = 0;
@@ -585,7 +587,12 @@ format_eucafault (const char *fault_id, ...)
         fault_var = get_fault_var (fault_labels[i], fault_node);
 
         if (fault_var != NULL) {
-            fprintf (logfile, "%s", fault_var);
+            char *fault_subbed = NULL;
+            if ((fault_subbed = c_varsub (fault_var, map)) != NULL) {
+                fprintf (logfile, "%s", fault_subbed);
+            } else {
+                fprintf (logfile, "%s", fault_var);
+            }                
         } else {
             fprintf (logfile, "%s", get_common_var ("unknown"));
         }
@@ -601,24 +608,24 @@ format_eucafault (const char *fault_id, ...)
  * Logs a fault, initializing the fault model, if necessary.
  */
 int
-log_eucafault (char *fault_id, ...)
+log_eucafault (char *fault_id, const char_map **map)
 {
-    va_list argv;
+    //va_list argv;
     char *token;
     int count = 0;
 
     initialize_eucafaults ();
 
-    va_start (argv, fault_id);
+    //va_start (argv, fault_id);
 
-    while ((token = va_arg (argv, char *)) != NULL) {
-        ++count;
-    }
-    va_end (argv);
+    //    while ((token = va_arg (argv, char *)) != NULL) {
+    //        ++count;
+    //    }
+    //va_end (argv);
 
     if (get_eucafault (fault_id, NULL) != NULL) {
         // ^-- Simple existence check for now.
-        format_eucafault (fault_id);
+        format_eucafault (fault_id, map);
     } else {
         logprintfl (EUCAERROR,
                     "Fault %s detected, could not find fault id in registry.\n",
@@ -643,7 +650,8 @@ dump_eucafaults_db (void)
     printf ("\n");
 }
 
-int main (int argc, char ** argv)
+int
+main (int argc, char ** argv)
 {
     int dump = 0;
     int opt;
@@ -663,8 +671,10 @@ int main (int argc, char ** argv)
     initialize_eucafaults ();
 
     if (optind < argc) {
-        PRINTF1 (("argv[1st]: %s\n", argv[optind]));
-        log_eucafault (argv[optind], NULL); /* FIXME: Add passing some parameters. */
+        char_map **m = c_varmap_alloc(NULL, "daemon", "Balrog");
+        PRINTF (("argv[1st of %d]: %s\n", argc - optind, argv[optind]));
+        log_eucafault (argv[optind], (const char_map **)m); /* FIXME: Add passing some parameters. */
+        assert (1==0);
     }
     if (dump) {
         dump_eucafaults_db ();
