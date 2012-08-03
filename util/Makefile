@@ -62,7 +62,7 @@
 
 include ../Makedefs
 
-all: misc.o hash.o data.o euca_auth.o euca_axis.o ipc.o windows-bundle.o euca_rootwrap euca_mountwrap
+all: log.o misc.o config.o hash.o data.o euca_auth.o euca_axis.o ipc.o windows-bundle.o euca_rootwrap euca_mountwrap
 
 build: all
 
@@ -72,11 +72,11 @@ euca_rootwrap: euca_rootwrap.c
 euca_mountwrap: euca_mountwrap.c
 	$(CC) $(CFLAGS) $(INCLUDES) -o euca_mountwrap euca_mountwrap.c
 
-test: test.c ipc.o misc.o
-	$(CC) $(CFLAGS) $(INCLUDES) -o test test.c ipc.o misc.o data.o -lpthread $(LIBS) $(LDFLAGS)
+test: test.c ipc.o log.o misc.o
+	$(CC) $(CFLAGS) $(INCLUDES) -o test test.c ipc.o log.o misc.o data.o -lpthread $(LIBS) $(LDFLAGS)
 
 test_misc: misc.c ../storage/diskutil.o ipc.o euca_auth.o
-	$(CC) $(CFLAGS) $(INCLUDES) -D_UNIT_TEST -o test_misc misc.c ../storage/diskutil.o ipc.o euca_auth.o -lpthread -lcrypto $(LIBS) $(LDFLAGS)
+	$(CC) $(CFLAGS) $(INCLUDES) -D_UNIT_TEST -o test_misc misc.c log.o ../storage/diskutil.o ipc.o euca_auth.o -lpthread -lcrypto $(LIBS) $(LDFLAGS)
 
 ../storage/diskutil.o:
 	make -C ../storage

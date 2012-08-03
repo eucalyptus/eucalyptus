@@ -136,7 +136,7 @@
 /* system limit defaults */
 #define MAXNODES 1024
 #define MAXINSTANCES 2048
-#define MAXLOGFILESIZE 32768000
+#define MAXLOGFILESIZE 10485760
 #define EUCA_MAX_GROUPS 64
 #define EUCA_MAX_VOLUMES 64
 #define EUCA_MAX_VBRS 64
