@@ -69,6 +69,7 @@
 #include <client-marshal.h>
 #include <vnetwork.h>
 #include <linux/limits.h>
+#include "config.h"
 
 #ifndef MAX_PATH
 #define MAX_PATH 4096
@@ -82,12 +83,7 @@ enum {SHARED_MEM, SHARED_FILE};
 enum {INIT, CONFIG, VNET, INSTCACHE, RESCACHE, RESCACHESTAGE, REFRESHLOCK, BUNDLECACHE, NCCALL0, NCCALL1, NCCALL2, NCCALL3, NCCALL4, NCCALL5, NCCALL6, NCCALL7, NCCALL8, NCCALL9, NCCALL10, NCCALL11, NCCALL12, NCCALL13, NCCALL14, NCCALL15, NCCALL16, NCCALL17, NCCALL18, NCCALL19, NCCALL20, NCCALL21, NCCALL22, NCCALL23, NCCALL24, NCCALL25, NCCALL26, NCCALL27, NCCALL28, NCCALL29, NCCALL30, NCCALL31, ENDLOCK};
 enum {PRIMORDIAL, INITIALIZED, LOADED, DISABLED, ENABLED, STOPPED, NOTREADY, SHUTDOWNCC};
 
-typedef struct configEntry_t {
-  char *key;
-  char *defaultValue;
-} configEntry;
-
-static configEntry configKeysRestart[] = {
+static configEntry configKeysRestartCC[] = {
   {"DISABLE_TUNNELING", "N"},
   {"ENABLE_WS_SECURITY", "Y"},
   {"EUCALYPTUS", "/"},
@@ -117,20 +113,18 @@ static configEntry configKeysRestart[] = {
   {"CC_IMAGE_PROXY", NULL},
   {"CC_IMAGE_PROXY_CACHE_SIZE", "32768"},
   {"CC_IMAGE_PROXY_PATH", "$EUCALYPTUS/var/lib/eucalyptus/dynserv/"},
-  {"LOGLEVEL", "DEBUG"},
-  {"LOGROLLNUMBER", "4"},
   {NULL, NULL}
 };
-static configEntry configKeysNoRestart[] = {
+static configEntry configKeysNoRestartCC[] = {
   {"NODES", NULL},
   {"NC_POLLING_FREQUENCY", "6"},
   {"CLC_POLLING_FREQUENCY", "6"},
   {"CC_ARBITRATORS", NULL},
+  {"LOGLEVEL", "DEBUG"},
+  {"LOGROLLNUMBER", "4"},
+  {"LOGMAXSIZE", "10485760"},
   {NULL, NULL}
 };
-
-static char *configValuesRestart[256], *configValuesNoRestart[256];
-static int configRestartLen=0, configNoRestartLen=0;
 
 typedef struct instance_t {
   char instanceId[16];
@@ -218,6 +212,10 @@ typedef struct ccInstanceCache_t {
 
 typedef struct ccConfig_t {
   char eucahome[MAX_PATH];
+  char log_file_path[MAX_PATH];
+  long log_max_size_bytes;
+  int log_roll_number;
+  int log_level;
   char proxyPath[MAX_PATH];
   char proxyIp[32];
   int use_proxy;
@@ -228,7 +226,7 @@ typedef struct ccConfig_t {
   int initialized, kick_dhcp;
   int schedPolicy, schedState;
   int idleThresh, wakeThresh;
-  time_t configMtime, instanceTimeout, ncPollingFrequency, clcPollingFrequency;
+  time_t instanceTimeout, ncPollingFrequency, clcPollingFrequency;
   int threads[3];
   int ncFanout;
   int ccState, ccLastState, kick_network, kick_enabled, kick_monitor_running;
@@ -336,9 +334,6 @@ int ccIsDisabled(void);
 int ccChangeState(int newstate);
 int ccCheckState(int clcTimer);
 int ccGetStateString(char *outstr, int n);
-
-int readConfigFile(char configFiles[][MAX_PATH], int numFiles);
-char *configFileValue(char *key);
 
 void *monitor_thread(void *);
 
