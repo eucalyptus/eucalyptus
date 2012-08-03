@@ -4,11 +4,11 @@
 
     _init : function() {
       $div = $('html body div.templates').find('#dashboard').clone();       
-      var $inst = $div.find('.dashboard.instances');
+      var $inst = $div.find('.instances');
       $.each(this._getInstances(), function (idx, val) { val.appendTo($inst);});
-      var $storage = $div.find('.dashboard.storage');
+      var $storage = $div.find('.storage');
       $.each(this._getStorage(), function (idx, val) { val.appendTo($storage);});
-      var $netsec = $div.find('.dashboard.netsec');
+      var $netsec = $div.find('.netsec');
       $.each(this._getNetSec(), function (idx, val) { val.appendTo($netsec);});
 
       $div.appendTo(this.element); 

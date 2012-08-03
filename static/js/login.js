@@ -29,7 +29,7 @@
     });
     $login.show();
 
-    var $main = $('html body').find('.euca-main');
+    var $main = $('html body').find('.euca-main-outercontainer .inner-container');
     $login.appendTo($main);
     $('html body').find('.euca-container .euca-header').header({show_logo:true,show_navigator:false,show_user:false,show_help:false});
   }

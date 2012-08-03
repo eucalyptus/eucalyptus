@@ -2,15 +2,15 @@
   eucalyptus.explorer = function(){ 
     $.widget("eucalyptus.explorer", {
       options : {
-        menus : [ {key:'dashboard', text:menu_dashboard, imgUrl:'images/dashboard.png'}, 
-                {key:'images', text:menu_images, imgUrl:'images/images.png'},
-                {key:'instances', text:menu_instances, imgUrl:'images/instances.png'},
-                {key:'storage', text:menu_storage, imgUrl:'images/storage.png'},
-                {key:'netsec', text:menu_netsec, imgUrl:'images/netsec.png'},
-                {key:'support', text:menu_support, imgUrl:'images/support.png'}],
-        submenus : {dashboard: [{key:'dashboard', text:menu_dashboard_dashboard}],
-                  images: [{key:'images', text:menu_images_images}],
-                  instances: [{key:'instances', text:menu_instances_instances}],
+        menus : [ {key:'dashboard', text:menu_dashboard}, 
+                {key:'images', text:menu_images},
+                {key:'instances', text:menu_instances},
+                {key:'storage', text:menu_storage},
+                {key:'netsec', text:menu_netsec},
+                {key:'support', text:menu_support}],
+        submenus : {//dashboard: [{key:'dashboard', text:menu_dashboard_dashboard}],
+                  //images: [{key:'images', text:menu_images_images}],
+                  //instances: [{key:'instances', text:menu_instances_instances}],
                   storage: [{key:'volume', text:menu_storage_volumes}, {key:'snapshot', text:menu_storage_snapshots},{key:'bucket',text:menu_storage_buckets}],
                   netsec: [{key:'eip',text:menu_netsec_eip},{key:'sgroup',text:menu_netsec_sgroup},{key:'keypair',text:menu_netsec_keypair}],
                   support: [{key:'guide', text:menu_support_guide},{key:'forum', text: menu_support_forum},{key:'report', text: menu_support_report}]}
@@ -19,52 +19,58 @@
       _init : function() { },
 
       _create : function() {
+        // resource-explorer
+        var $ul = $('<ul>').addClass('resource-nav');
         for(i=0; i<this.options.menus.length; i++){
-          this.element.append(this.createMenu(i, this.options.menus[i]));
+          $ul.append(this.createResourceMenu(i, this.options.menus[i]));
         }
+        this.element.append($ul);
+ 
+        // user-menu (logout, preference)
+        //$ul = $('<ul>').addClass('resource-nav');
+        //$ul.append(this.createUserMenu());
+        //this.element.append($('<div>').addClass('user-explorer').append($ul)); 
       },
 
-      /*
-       args = {idx, menu, imgUrl, submenu}
-      */
-      createMenu : function (idx, menu) {
-        var $newitem = $('<div>').addClass('euca-container euca-explorer euca-explorer-items').attr('id','explorer-item-'+menu.text).append(
-  	    $('<table>').append(
-		$('<tr>').append(
-		   $('<td>').append(
-	   		$('<img>').attr('src', menu.imgUrl).attr('id','explorer-item-'+menu.text+'-img')),
-		   $('<td>').text(menu.text))));
-        if (idx == 0){
-          $newitem.css('clear','left');
-          $newitem.css('margin-left','10px');
+      createUserMenu : function () {
+        user_menu = { preference : menu_user_preferences,
+                      logout : menu_user_logout,
         }
-        // create submenu
-        if (menu.key in this.options.submenus){
-          // submenus should be split by ','
-          var $table=$('<table>');
-          var header = this;
+        var arr = [];
+        var header = this;
+        $.each(user_menu, function (key, val) {
+          $.extend(arr, $('<li>').append(
+             $('<a>').attr('href','#').text(val).click(function(evt) {
+               header._trigger("select", evt, {selected:key});
+             })));
+        });
+        return arr;
+      },
+
+      createResourceMenu : function (idx, menu) {
+        var $submenu = $('<ul>');
+        var header = this;
+        if(menu.key in this.options.submenus){
           $.each(this.options.submenus[menu.key], function (idx, submenu){
-              var $td = $('<td>').append($('<a>').attr('href','#').click(
-                function(evtObj){ 
-                  header._trigger("select", evtObj, {selected:submenu.key});
-                }
-              ).text(submenu.text));
-              $td.hover(
-  	          function () {
-                     $(this).addClass('euca-explorer-sub mouseon'); 
-                  },
-                  function () {
-                     $(this).removeClass('euca-explorer-sub mouseon'); 
-                  });
-              $table.append($('<tr>').append($td));
-          }); 
- 
-          // create div
-          $sub_explorer = $('<div>').addClass('euca-container euca-explorer-sub').attr('id','explorer-subitem-'+menu.text).append(
-              $table);
-          $newitem.append($sub_explorer);
+            $submenu.append($('<li>').append(
+                            $('<a>').attr('href','#').text(submenu.text).click(
+                              function (evt){
+                                header._trigger("select", evt, {selected:submenu.key}); 
+                              })));
+          });
         }
-        return $newitem;
+        var $menu = $('<li>').append(
+                         $('<a>').addClass('lnk-'+menu.key.toLowerCase()).attr('href','#').text(menu.text));
+        if(menu.key in this.options.submenus)
+          $menu.append($submenu);
+        else {
+          $menu.find('a').click( 
+            function (evt) {
+              header._trigger("select", evt, {selected:menu.key}); 
+            }
+          );
+        }
+        return $menu;
       },
       _destroy : function() { } 
      }); // end of widget()

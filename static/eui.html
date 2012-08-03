@@ -49,7 +49,7 @@
     <div class="euca-container">
       
       <div class="euca-header-container">
-        <div class="euca-header inner-container">
+        <div class="inner-container">
           <a id="euca-logo" class="hide-text" href="/">Eucalyptus</a>
           <div id="euca-navigator"></div>
           <div id="euca-help"></div>
@@ -58,11 +58,11 @@
       </div>
 
       <div class="euca-explorer-container">
-        <div class="euca-explorer inner-container"></div>
+        <div class="inner-container clearfix"></div>
       </div>      
 
       <div class="euca-main-outercontainer">
-          <div class="euca-main inner-container">
+          <div class="inner-container">
             <div id="euca-notification"> </div>
             <div id="euca-main-container">
               <div id="euca-tab-container"></div> <!-- temporary -->
@@ -71,7 +71,7 @@
       </div>
 
       <div class="euca-footer-container">
-        <div class="euca-footer inner-container"></div>  
+        <div class="inner-container"></div>  
       </div>
     </div>
     <!-- END .euca-container -->
@@ -113,10 +113,10 @@
       </div>
       <!-- end of login -->
 
-      <div id="dashboard">
-        <div class="dashboard instances"> </div>  
-        <div class="dashboard storage"> </div>
-        <div class="dashboard netsec"> </div>
+      <div id="dashboard" class="content-box">
+        <div class="instances"> </div>  
+        <div class="storage"> </div>
+        <div class="netsec"> </div>
       </div>
 
     </div> <!-- end of templates --> 
@@ -264,7 +264,7 @@
 <div id="keys-delete-dialog" title="Delete key pairs" class="delete-dialog" style="display:none">
   <p>You will still be able to access any instances using the deleted key pair until you also delete the private key off of your local file system.</p>
   <p>Are you sure you want to delete the following key pairs?</p>
-  <p>KEY PAIR</p>
+  <p>Key pairs</p>
   <span id="keys-delete-names"></span>
 </div>
 
@@ -272,7 +272,22 @@
   <p>You can use this key pair to launch more than one instance.</p>
   <p>Save the file in a place you will remember. You will need to enter the path later to connect to your instances.</p>
   <p>
-    <input type="text" id="key-name" class="required"/><div class="dialog-notifications"></div>
+    <span class="field">Name</span><input type="text" id="key-name" class="required"/><div class="dialog-notifications"></div>
+  </p>
+</div>
+
+<div id="volumes-delete-dialog" title="Delete volumes" class="delete-dialog" style="display:none">
+  <p>Are you sure you want to delete the following volumes?</p>
+  <p>All data on the volumes will be destroyed.</p>
+  <p>Volumes</p>
+  <span id="volumes-delete-names"></span>
+</div>
+
+<div id="volumes-add-dialog" title="Create volumes" class="add-dialog" style="display:none">
+  <p>You can use this key pair to launch more than one instance.</p>
+  <p>Save the file in a place you will remember. You will need to enter the path later to connect to your instances.</p>
+  <p>
+    <input type="text" id="volumes-name" class="required"/><div class="dialog-notifications"></div>
   </p>
 </div>
 
