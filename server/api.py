@@ -54,7 +54,6 @@ class ComputeHandler(server.BaseHandler):
             src_security_group_owner_id = self.get_argument('IpPermissions.1.Groups.1.UserId', None)
             src_security_group_group_id = self.get_argument('IpPermissions.1.Groups.1.GroupId', None)
             cidr_ip = self.get_argument_list('IpPermissions.1.IpRanges', 'CidrIp')
-            print "cidr = "+cidr_ip[0]
             return clc.authorize_security_group(name,
                                  src_security_group_name,
                                  src_security_group_owner_id,
@@ -77,6 +76,22 @@ class ComputeHandler(server.BaseHandler):
                                  ip_protocol, from_port, to_port,
                                  cidr_ip, group_id,
                                  src_security_group_group_id)
+
+    def handleAddresses(self, action, clc):
+        if action == 'DescribeAddresses':
+            return clc.get_all_addresses()
+        elif action == 'AllocateAddress':
+            return clc.allocate_address()
+        elif action == 'ReleaseAddress':
+            publicip = self.get_argument('PublicIp')
+            return clc.release_address(publicip)
+        elif action == 'AssociateAddress':
+            publicip = self.get_argument('PublicIp')
+            instanceid = self.get_argument('InstanceId')
+            return clc.associate_address(publicip, instanceid)
+        elif action == 'DisassociateAddress':
+            publicip = self.get_argument('PublicIp')
+            return clc.disassociate_address(publicip)
 
     def handleVolumes(self, action, clc):
         if action == 'DescribeVolumes':
@@ -152,8 +167,8 @@ class ComputeHandler(server.BaseHandler):
             ret = self.user_session.clc.get_all_images()
         elif action == 'DescribeInstances':
             ret = self.user_session.clc.get_all_instances()
-        elif action == 'DescribeAddresses':
-            ret = self.user_session.clc.get_all_addresses()
+        elif action.find('Address') > -1:
+            ret = self.handleAddresses(action, self.user_session.clc)
         elif action.find('KeyPair') > -1:
             ret = self.handleKeypairs(action, self.user_session.clc)
         elif action.find('SecurityGroup') > -1:

@@ -125,6 +125,24 @@ class UIProxyClient(object):
         return self.__make_request__('RevokeSecurityGroupIngress', params)
 
     ##
+    # Addresss methods
+    ##
+    def get_addresses(self):
+        return self.__make_request__('DescribeAddresses', {})
+
+    def allocate_address(self):
+        return self.__make_request__('AllocateAddress', {})
+
+    def release_address(self, publicip):
+        return self.__make_request__('ReleaseAddress', {'PublicIp': publicip})
+
+    def associate_address(self, publicip, instanceid):
+        return self.__make_request__('AssociateAddress', {'PublicIp': publicip, 'InstanceId': instanceid})
+
+    def disassociate_address(self, publicip):
+        return self.__make_request__('DisassociateAddress', {'PublicIp': publicip})
+
+    ##
     # Volume methods
     ##
     def get_volumes(self):

@@ -27,6 +27,22 @@ class ClcInterface(object):
     def get_all_addresses(self):
         raise NotImplementedError("Are you sure you're using the right class?")
 
+    # returns address info
+    def allocate_address(self):
+        raise NotImplementedError("Are you sure you're using the right class?")
+
+    # returns True if successful
+    def release_address(self, publicip):
+        raise NotImplementedError("Are you sure you're using the right class?")
+
+    # returns True if successful
+    def associate_address(self, publicip, instanceid):
+        raise NotImplementedError("Are you sure you're using the right class?")
+
+    # returns True if successful
+    def disassociate_address(self, publicip):
+        raise NotImplementedError("Are you sure you're using the right class?")
+
     ##
     # Keypair methods
     ##

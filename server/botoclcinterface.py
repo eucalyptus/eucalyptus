@@ -46,6 +46,22 @@ class BotoClcInterface(ClcInterface):
             self.__save_json__(obj, "mockdata/Addresses.json")
         return obj
 
+    # returns address info
+    def allocate_address(self):
+        return self.conn.allocate_address()
+
+    # returns True if successful
+    def release_address(self, publicip):
+        return self.conn.release_address(publicip)
+
+    # returns True if successful
+    def associate_address(self, publicip, instanceid):
+        return self.conn.associate_address(publicip, instanceid)
+
+    # returns True if successful
+    def disassociate_address(self, publicip):
+        return self.conn.disassociate_address(publicip)
+
     def get_all_key_pairs(self):
         obj = self.conn.get_all_key_pairs()
         if self.saveclcdata:
