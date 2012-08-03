@@ -66,6 +66,42 @@ class BotoClcInterface(ClcInterface):
             self.__save_json__(obj, "mockdata/Groups.json")
         return obj
 
+    # returns True if successful
+    def create_security_group(self, name, description):
+        return self.conn.create_security_group(name, description)
+
+    # returns True if successful
+    def delete_security_group(self, name=None, group_id=None):
+        return self.conn.delete_security_group(name, group_id)
+
+    # returns True if successful
+    def authorize_security_group(self, name=None,
+                                 src_security_group_name=None,
+                                 src_security_group_owner_id=None,
+                                 ip_protocol=None, from_port=None, to_port=None,
+                                 cidr_ip=None, group_id=None,
+                                 src_security_group_group_id=None):
+        return self.conn.authorize_security_group_deprecated(name, 
+                                 src_security_group_name,
+                                 src_security_group_owner_id,
+                                 ip_protocol, from_port, to_port,
+                                 cidr_ip)#, group_id,
+                                 #src_security_group_group_id)
+
+    # returns True if successful
+    def revoke_security_group(self, name=None,
+                                 src_security_group_name=None,
+                                 src_security_group_owner_id=None,
+                                 ip_protocol=None, from_port=None, to_port=None,
+                                 cidr_ip=None, group_id=None,
+                                 src_security_group_group_id=None):
+        return self.conn.revoke_security_group_deprecated(name,
+                                 src_security_group_name,
+                                 src_security_group_owner_id,
+                                 ip_protocol, from_port, to_port,
+                                 cidr_ip)#, group_id,
+                                 #src_security_group_group_id)
+
     def get_all_volumes(self):
         obj = self.conn.get_all_volumes()
         if self.saveclcdata:
