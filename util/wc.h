@@ -73,5 +73,7 @@ typedef struct wchar_map_struct {
 } wchar_map;
 
 extern wchar_t *varsub (const wchar_t *, const wchar_map **);
+extern wchar_map **varmap_alloc (wchar_map **, const wchar_t *, const wchar_t*);
+extern void varmap_free (wchar_map **);
 
 #endif // INCLUDE_WC_H

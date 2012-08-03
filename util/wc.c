@@ -172,7 +172,7 @@ varsub (const wchar_t * s, const wchar_map * vars [])
     return result;
 }
 
-static wchar_map **
+wchar_map **
 varmap_alloc (wchar_map **map, const wchar_t *key, const wchar_t *val)
 {
     int i = 0;
