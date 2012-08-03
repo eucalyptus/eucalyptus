@@ -141,12 +141,12 @@ public class TroubleshootingBootstrapper extends Bootstrapper {
 			initial = "", //TODO: figure out how to link System.property("euca.log.level")
 			changeListener = FaultIdListener.class,
 			displayName = "test.fault.id" )
-	public static String VAR_FAULT_ID = "";
+	public static String TEST_FAULT_ID = "";
 	@ConfigurableField( description = "Properties file location for variable substitition in text",
 			initial = "", //TODO: figure out how to link System.property("euca.log.level")
-			changeListener = FaultIdListener.class,
+			changeListener = VarPropsListener.class,
 			displayName = "test.fault.var.properties.file" )
-	public static String VAR_PROPS_FILE="";
+	public static String TEST_FAULT_VAR_PROPERTIES_FILE="";
 
 	public static class VarPropsListener implements PropertyChangeListener {
 		/**
@@ -155,7 +155,7 @@ public class TroubleshootingBootstrapper extends Bootstrapper {
 		 */
 		@Override
 		public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
-			LOG.warn( "Change occurred to property " + t.getQualifiedName( ) + " with new value " + newValue + " which will reset logging levels." );
+			LOG.warn( "Change occurred to property " + t.getQualifiedName( ) + " with new value " + newValue + "." );
 			try {
 				t.getField( ).set( null, t.getTypeParser( ).apply( newValue ) );
 			} catch ( IllegalArgumentException e1 ) {
@@ -175,13 +175,18 @@ public class TroubleshootingBootstrapper extends Bootstrapper {
 		 */
 		@Override
 		public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
-			LOG.warn( "Change occurred to property " + t.getQualifiedName( ) + " with new value " + newValue + " which will reset logging levels." );
+			LOG.warn( "Change occurred to property " + t.getQualifiedName( ) + " with new value " + newValue + "." );
 			String newValueStr = (String) newValue;
-			int newValueId = 0;
-			try {
-				newValueId = Integer.parseInt(newValueStr);
-			} catch (Exception ex) {
-				throw new ConfigurablePropertyException("Unable to set fault id to " + newValue);
+			int newValueId = -1;
+			if (newValueStr != null && !newValueStr.trim().isEmpty()) {
+				try {
+					newValueId = Integer.parseInt(newValueStr);
+				} catch (Exception ex) {
+					throw new ConfigurablePropertyException("Unable to set fault id to " + newValue);
+				}
+			}
+			if (newValueId == -1) {
+				newValueStr = "";
 			}
 			try {
 				t.getField( ).set( null, t.getTypeParser( ).apply( newValue ) );
@@ -192,34 +197,36 @@ public class TroubleshootingBootstrapper extends Bootstrapper {
 				e1.printStackTrace();
 				throw new ConfigurablePropertyException( e1 );
 			}
-			Properties varProps = null;
-			LOG.warn("No properties file set for fault trigger test");
-			if (VAR_PROPS_FILE != null && !VAR_PROPS_FILE.trim().isEmpty()) {
-				File propsFile = new File(VAR_PROPS_FILE);
-				if (propsFile.exists()) {
-					varProps = new Properties();
-					InputStream in = null;
-					try {
-						in = new FileInputStream(propsFile);
-						varProps.load(in);
-					} catch (IOException ex) {
-						ex.printStackTrace();
-					} finally {
-						if (in != null) {
-							try {
-								in.close();
-							} catch (IOException ignore) {
-								;
+			LOG.info("While setting the fault id, properties file is set to " + TEST_FAULT_VAR_PROPERTIES_FILE);
+			if (newValueId > -1) {
+				Properties varProps = null;
+				if (TEST_FAULT_VAR_PROPERTIES_FILE != null && !TEST_FAULT_VAR_PROPERTIES_FILE.trim().isEmpty()) {
+					File propsFile = new File(TEST_FAULT_VAR_PROPERTIES_FILE);
+					if (propsFile.exists()) {
+						varProps = new Properties();
+						InputStream in = null;
+						try {
+							in = new FileInputStream(propsFile);
+							varProps.load(in);
+						} catch (IOException ex) {
+							ex.printStackTrace();
+						} finally {
+							if (in != null) {
+								try {
+									in.close();
+								} catch (IOException ignore) {
+									;
+								}
 							}
 						}
+					} else {
+						LOG.warn("Properties file for fault trigger test " + TEST_FAULT_VAR_PROPERTIES_FILE + " does not exist");
 					}
 				} else {
-					LOG.warn("Properties file for fault trigger test " + VAR_PROPS_FILE + " does not exist");
+					LOG.warn("No properties file set for fault trigger test");
 				}
-			} else {
-				LOG.warn("No properties file set for fault trigger test");
+				TestFaultTrigger.triggerFault(newValueId, varProps);
 			}
-			TestFaultTrigger.triggerFault(newValueId, varProps);
 		}
 	}
 
@@ -242,7 +249,7 @@ public class TroubleshootingBootstrapper extends Bootstrapper {
 		 */
 		@Override
 		public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
-			LOG.warn( "Change occurred to property " + t.getQualifiedName( ) + " with new value " + newValue + " which will reset logging levels." );
+			LOG.warn( "Change occurred to property " + t.getQualifiedName( ) + " with new value " + newValue + "." );
 			try {
 				t.getField( ).set( null, t.getTypeParser( ).apply( newValue ) );
 			} catch ( IllegalArgumentException e1 ) {
@@ -268,7 +275,7 @@ public class TroubleshootingBootstrapper extends Bootstrapper {
 				throw new ConfigurablePropertyException("Invalid log level " + newLogLevel);
 			}
 			// TODO: add error checking for property and configuration
-			LOG.warn( "Change occurred to property " + t.getQualifiedName( ) + " with new value " + newValue + " which will reset logging levels." );
+			LOG.warn( "Change occurred to property " + t.getQualifiedName( ) + " with new value " + newValue + "." );
 			try {
 				t.getField( ).set( null, t.getTypeParser( ).apply( newValue ) );
 			} catch ( IllegalArgumentException e1 ) {
