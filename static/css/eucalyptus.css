@@ -75,11 +75,12 @@ body {
     min-height: 30px;
     padding: 5px 0;
 }
+
 .euca-footer-container li {
    float: left;
    width: 150px;
 }
-+
+
 .inner-container {
     margin: 0 auto;
     position: relative;
