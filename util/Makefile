@@ -63,6 +63,7 @@
 include ../Makedefs
 
 FAULT_DEBUG = -DDEBUG
+CC += -g
 
 all: fault.o misc.o wc.o hash.o data.o euca_auth.o euca_axis.o ipc.o windows-bundle.o euca_rootwrap euca_mountwrap
 
@@ -85,8 +86,8 @@ test_wc: wc.c misc.o ../storage/diskutil.o ipc.o
 
 # I plan to roll the test_fault main() back into fault.c:
 # I only kept them separate to ensure fault.c could be used cleanly via extern
-test_fault: fault.c misc.o ../storage/diskutil.o ipc.o
-	$(CC) $(CFLAGS) $(INCLUDES) `xslt-config --cflags` $(FAULT_DEBUG) -D_UNIT_TEST -o test_fault fault.c misc.o ../storage/diskutil.o ipc.o $(LIBS) $(LDFLAGS)
+test_fault: fault.c misc.o wc.o ../storage/diskutil.o ipc.o
+	$(CC) $(CFLAGS) $(INCLUDES) `xslt-config --cflags` $(FAULT_DEBUG) -D_UNIT_TEST -o test_fault fault.c misc.o wc.o ../storage/diskutil.o ipc.o $(LIBS) $(LDFLAGS)
 
 ../storage/diskutil.o:
 	make -C ../storage
