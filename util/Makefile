@@ -64,8 +64,7 @@ include ../Makedefs
 
 #DEBUGS = -DDEBUG # -DDEBUG1
 CC += -g
-
-all: utf8.o log.o config.o fault.o misc.o wc.o hash.o data.o euca_auth.o euca_axis.o ipc.o windows-bundle.o euca_rootwrap euca_mountwrap
+all: utf8.o log.o config.o fault.o misc.o wc.o hash.o data.o sensor.o euca_auth.o euca_axis.o ipc.o windows-bundle.o euca_rootwrap euca_mountwrap
 
 build: all
 

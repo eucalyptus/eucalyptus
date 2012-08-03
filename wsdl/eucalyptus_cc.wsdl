@@ -170,18 +170,6 @@
         </xs:sequence>
       </xs:complexType>
 
-      <xs:complexType abstract="true" name="sensorsIdType">
-        <xs:sequence>
-          <xs:element nillable="true" minOccurs="0" maxOccurs="unbounded" name="sensorIds" type="xs:string"/>
-        </xs:sequence>
-      </xs:complexType>
-      
-      <xs:complexType abstract="true" name="instancesIdType">
-        <xs:sequence>
-          <xs:element nillable="true" minOccurs="0" maxOccurs="unbounded" name="instancesIds" type="xs:string"/>
-        </xs:sequence>
-      </xs:complexType>
-
        <xs:complexType abstract="true" name="sensorsResourceType">
         <xs:sequence>
         	<xs:element name="resourceName" type="xs:string"
@@ -728,8 +716,8 @@
 	<xs:complexContent>
 	  <xs:extension base="tns:eucalyptusMessage">
 	    <xs:sequence>
-              <xs:element maxOccurs="unbounded" minOccurs="0" name="sensorsIds" type="tns:sensorsIdType" />
-              <xs:element maxOccurs="unbounded" minOccurs="0" name="instancesIds" type="tns:instancesIdType" />
+              <xs:element maxOccurs="unbounded" minOccurs="0" name="instanceIds" type="xs:string" />
+              <xs:element maxOccurs="unbounded" minOccurs="0" name="sensorIds" type="xs:string" />
 	    </xs:sequence>
 	  </xs:extension>
 	</xs:complexContent>
@@ -739,7 +727,7 @@
 	<xs:complexContent>
 	  <xs:extension base="tns:eucalyptusMessage">
 	    <xs:sequence>
-              <xs:element maxOccurs="1" minOccurs="1" name="sensorsResources" type="tns:sensorsResourceType" />
+              <xs:element maxOccurs="unbounded" minOccurs="0" name="sensorsResources" type="tns:sensorsResourceType" />
 	    </xs:sequence>
 	  </xs:extension>
 	</xs:complexContent>

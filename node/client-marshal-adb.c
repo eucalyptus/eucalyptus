@@ -73,6 +73,7 @@
 #include "client-marshal.h"
 #include "misc.h"
 #include "adb-helpers.h"
+#include "sensor.h"
 
 #define NULL_ERROR_MSG "() could not be invoked (check NC host, port, and credentials)\n"
 
@@ -226,6 +227,54 @@ static ncInstance * copy_instance_from_adb (adb_instanceType_t * instance, axuti
     }
     
     return outInst;
+}
+
+static sensorMetric * copy_sensor_metric_from_adb (adb_metricsResourceType_t * metric, axutil_env_t * env)
+{
+    sensorMetric * m = malloc (sizeof (sensorMetric));
+    if (m==NULL)
+        return NULL;
+
+    safe_strncpy (m->metricName, (char *)adb_metricsResourceType_get_metricName(metric, env), sizeof (m->metricName));
+    m->countersLen = adb_metricsResourceType_sizeof_counters(metric, env);
+    if (m->countersLen>0) {
+        m->counters = malloc (sizeof (sensorCounter *) * m->countersLen);
+        if (m->counters == NULL) {
+            logprintfl (EUCAERROR, "out of memory in copy_sensor_metric_from_adb\n");
+            return NULL;
+        }
+    }
+}
+
+// #define ARRAY_COPY_TEMPLATE(CONTAINERTYPE,ARRAYNAME,ARRAYTYPE
+
+static sensorResource * copy_sensor_resource_from_adb (adb_sensorsResourceType_t * resource, axutil_env_t * env)
+{
+    sensorResource * so = malloc (sizeof (sensorResource));
+    if (so==NULL)
+        return NULL;
+    so->metricsLen = adb_sensorsResourceType_sizeof_metrics(resource, env);
+    if (so->metricsLen>0) {
+        so->metrics = malloc (sizeof (sensorMetric *) * so->metricsLen);
+        if (so->metrics == NULL) {
+            logprintfl (EUCAERROR, "out of memory in copy_sensor_resource_from_adb\n");
+            return NULL;
+        }
+        for (int i=0; i<so->metricsLen; i++) {
+            adb_metricsResourceType_t * metric = NULL;
+            so->metrics [i] = copy_sensor_metric_from_adb (metric, env);
+            if (so->metrics [i] == NULL) { // allocation failure - free up everything
+                for (int j=0; j<i; j++) {
+                    sensor_free_metric (so->metrics [i]);
+                }
+            }
+        }
+    }
+
+    safe_strncpy (so->resourceName, (char *)adb_sensorsResourceType_get_resourceName(resource, env), sizeof (so->resourceName));
+    safe_strncpy (so->resourceType, (char *)adb_sensorsResourceType_get_resourceType(resource, env), sizeof (so->resourceType));
+    
+    return so;
 }
 
 int ncRunInstanceStub (ncStub *st, ncMetadata *meta, char *uuid, char *instanceId, char *reservationId, virtualMachine *params, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *ownerId, char *accountId, char *keyName, netConfig *netparams, char *userData, char *launchIndex, char *platform, int expiryTime, char **groupNames, int groupNamesSize, ncInstance **outInstPtr)
@@ -923,20 +972,78 @@ int ncCreateImageStub (ncStub *st, ncMetadata *meta, char *instanceId, char *vol
     return status;
 }
 
+int ncDescribeSensorsStub (ncStub *st, ncMetadata *meta, char **instIds, int instIdsLen, char **sensorIds, int sensorIdsLen, sensorResource ***outResources, int *outResourcesLen)
+{
+    axutil_env_t * env  = st->env;
+    axis2_stub_t * stub = st->stub;
+    adb_ncDescribeSensors_t     * input   = adb_ncDescribeSensors_create (env); 
+    adb_ncDescribeSensorsType_t * request = adb_ncDescribeSensorsType_create (env);
+    
+    // set standard input fields
+    adb_ncDescribeSensorsType_set_nodeName(request, env, st->node_name);
+    if (meta) {
+      if (meta->correlationId) { meta->correlationId = NULL; }
+      EUCA_MESSAGE_MARSHAL(ncDescribeSensorsType, request, meta);
+    }
+    
+    for (int i=0; i<instIdsLen; i++) {
+        adb_ncDescribeSensorsType_add_instanceIds(request, env, instIds[i]);
+    }
+    for (int i=0; i<sensorIdsLen; i++) {
+        adb_ncDescribeSensorsType_add_sensorIds(request, env, sensorIds[i]);
+    }
+    adb_ncDescribeSensors_set_ncDescribeSensors(input, env, request);
+
+    int status = 0;
+    { // do it
+        adb_ncDescribeSensorsResponse_t * output = axis2_stub_op_EucalyptusNC_ncDescribeSensors (stub, env, input);
+        
+        if (!output) {
+            logprintfl (EUCAERROR, "ERROR: DescribeSensors" NULL_ERROR_MSG);
+            status = -1;
+
+        } else {
+            adb_ncDescribeSensorsResponseType_t * response = adb_ncDescribeSensorsResponse_get_ncDescribeSensorsResponse (output, env);
+            if ( adb_ncDescribeSensorsResponseType_get_return(response, env) == AXIS2_FALSE ) {
+                logprintfl (EUCAERROR, "ERROR: DescribeSensors returned an error\n");
+                status = 1;
+            }
+
+            * outResourcesLen = adb_ncDescribeSensorsResponseType_sizeof_sensorsResources(response, env);
+            if (* outResourcesLen) {
+                * outResources = malloc (sizeof(sensorResource *) * *outResourcesLen);
+                if ( * outResources == NULL ) { 
+                    logprintfl (EUCAERROR, "ERROR: out of memory in ncDescribeSensorsStub()\n");
+                    * outResourcesLen = 0;
+                    status = 2;
+                } else {
+                    for (int i=0; i<*outResourcesLen; i++) {
+                        adb_sensorsResourceType_t * resource = adb_ncDescribeSensorsResponseType_get_sensorsResources_at(response, env, i);
+                        (* outResources)[i] = copy_sensor_resource_from_adb (resource, env);
+                    }
+                }
+            }
+        }
+    }
+    
+    return status;
+}
+
 /*************************
  a template for future ops
  *************************
-
-    axutil_env_t * env  = stub->env;
-    axis2_stub_t * stub = stub->stub;
+int ncOPERATIONStub (ncStub *st, ncMetadata *meta, ...)
+{
+    axutil_env_t * env  = st->env;
+    axis2_stub_t * stub = st->stub;
     adb_ncOPERATION_t     * input   = adb_ncOPERATION_create (env); 
     adb_ncOPERATIONType_t * request = adb_ncOPERATIONType_create (env);
     
     // set standard input fields
     adb_ncOPERATIONType_set_nodeName(request, env, st->node_name);
     if (meta) {
-        adb_ncOPERATIONType_set_correlationId (request, env, CORRELATION_ID);
-        adb_ncOPERATIONType_set_userId (request, env, meta->userId);
+      if (meta->correlationId) { meta->correlationId = NULL; }
+      EUCA_MESSAGE_MARSHAL(ncOPERATIONType, request, meta);
     }
     
     // TODO: set op-specific input fields
@@ -963,4 +1070,5 @@ int ncCreateImageStub (ncStub *st, ncMetadata *meta, char *instanceId, char *vol
     }
     
     return status;
+}
 */
