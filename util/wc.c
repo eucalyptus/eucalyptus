@@ -172,6 +172,46 @@ varsub (const wchar_t * s, const wchar_map * vars [])
     return result;
 }
 
+static wchar_map **
+varmap_alloc (wchar_map **map, const wchar_t *key, const wchar_t *val)
+{
+    int i = 0;
+
+    if (map == NULL) {
+        map = malloc (2 * sizeof (wchar_map *));
+    } else {
+        while (map[i]) {
+            i++;
+        }
+        map = realloc (map, (i + 2) * sizeof (wchar_map *));
+    }
+    map[i] = malloc (sizeof (wchar_map));
+    map[i]->key = wcsdup (key);
+    map[i]->val = wcsdup (val);
+    map[i+1] = NULL;            /* NULL terminator */
+        
+    return map;    
+}
+    
+void
+varmap_free (wchar_map **map)
+{
+    int i = 0;
+
+    if (map == NULL) {
+        logprintfl (EUCAWARN, "varmap_free() called on NULL map.\n");
+        return;
+    }
+    while (map[i]) {
+        free (map[i]->key);
+        free (map[i]->val);
+        free (map[i]);
+        i++;
+    }
+    free (map[i]);              /* NULL terminator */
+    free (map);
+}
+
 /////////////////////////////////////////////// unit testing code ///////////////////////////////////////////////////
 
 #ifdef _UNIT_TEST
@@ -179,26 +219,29 @@ varsub (const wchar_t * s, const wchar_map * vars [])
 const wchar_t * s1 = L"The quick ${color} ${subject} jümps øver the låzy ${øbject}";
 const wchar_t * s2 = L"${}A m${}alformed ${color} string${}${}";
 const wchar_t * s3 = L"An undefined ${variable}";
-wchar_map v1 = { L"color", L"brown" };
-wchar_map v2 = { L"subject", L"føx" };
-wchar_map v3 = { L"øbject", L"dog" };
-const wchar_map * m [] = { &v1, &v2, &v3, NULL };
+wchar_map **m = NULL;
 
-int main (int argc, char ** argv)
+int
+main (int argc, char ** argv)
 {
     setlocale(LC_ALL, "en_US.UTF-8");
 
+    m = varmap_alloc (NULL, L"color", L"brown");
+    m = varmap_alloc (m, L"subject", L"føx");
+    m = varmap_alloc (m, L"øbject", L"dog");
+
     printf ("       nice string: %ls\n", s1);
-    wchar_t * s1_sub = varsub (s1, m);
+    wchar_t * s1_sub = varsub (s1, (const wchar_map **)m);
     assert (s1_sub != NULL);
     printf ("nice string subbed: %ls\n", s1_sub);
 
     printf ("       ugly string: %ls\n", s2);
-    wchar_t * s2_sub = varsub (s2, m);
+    wchar_t * s2_sub = varsub (s2, (const wchar_map **)m);
     assert (s2_sub != NULL);
     printf ("ugly string subbed: %ls\n", s2_sub);
+    assert (varsub (s3, (const wchar_map **)m) == NULL);
 
-    assert (varsub (s3, m) == NULL);
+    varmap_free(m);
 }
 
 #endif
