@@ -1,5 +1,6 @@
 
 import base64
+import urllib
 import urllib2
 import json
 
@@ -18,7 +19,6 @@ class UIProxyClient(object):
         req = urllib2.Request("http://localhost:8888/")
         data = "action=login"
         encoded_auth = base64.encodestring("%s:%s:%s" % (account, username, password))[:-1]
-        print "encoded "+encoded_auth
         req.add_header('Authorization', "Basic %s" % encoded_auth)
         response = urllib2.urlopen(req, data)
         self.session_cookie = response.headers.get('Set-Cookie')
@@ -35,17 +35,25 @@ class UIProxyClient(object):
         request.add_header('cookie', self.session_cookie)
 
     def __make_request__(self, action, params):
-        url = 'http://localhost:8888/ec2?Action=' + action
-        for k in params.keys():
-            url = url + '&' + k + '=' + params[k]
+        for param in params.keys():
+            if params[param]==None:
+                del params[param]
+        params['Action'] = action
+        url = 'http://localhost:8888/ec2?' + urllib.urlencode(params)
         req = urllib2.Request(url)
         self.__check_logged_in__(req)
         response = urllib2.urlopen(req)
         return json.loads(response.read())
 
+    ##
+    # Zone methods
+    ##
     def get_zones(self):
         return self.__make_request__('DescribeAvailabilityZones', {})
 
+    ##
+    # Keypair methods
+    ##
     def get_keypairs(self):
         return self.__make_request__('DescribeKeyPairs', {})
 
@@ -55,6 +63,88 @@ class UIProxyClient(object):
     def delete_keypair(self, name):
         return self.__make_request__('DeleteKeyPair', {'KeyName': name})
 
+    def get_keypairs(self):
+        return self.__make_request__('DescribeKeyPairs', {})
+
+    ##
+    # Security Group methods
+    ##
+    def get_security_groups(self):
+        return self.__make_request__('DescribeSecurityGroups', {})
+
+    # returns True if successful
+    def create_security_group(self, name, description):
+        return self.__make_request__('CreateSecurityGroup', {'GroupName': name, 'GroupDescription': description})
+
+    # returns True if successful
+    def delete_security_group(self, name=None, group_id=None):
+        return self.__make_request__('DeleteSecurityGroup', {'GroupName': name, 'GroupId': group_id})
+
+    # returns True if successful
+    def authorize_security_group(self, name=None,
+                                 src_security_group_name=None,
+                                 src_security_group_owner_id=None,
+                                 ip_protocol=None, from_port=None, to_port=None,
+                                 cidr_ip=None, group_id=None,
+                                 src_security_group_group_id=None):
+        params = {'GroupName': name, 'GroupId': group_id,
+                  'IpPermissions.1.Groups.1.GroupName': src_security_group_name,
+                  'IpPermissions.1.Groups.1.UserId': src_security_group_owner_id,
+                  'IpPermissions.1.Groups.1.GroupId': src_security_group_group_id,
+                  'IpPermissions.1.IpProtocol': ip_protocol,
+                  'IpPermissions.1.FromPort': from_port,
+                  'IpPermissions.1.ToPort': to_port}
+        if cidr_ip:
+            if not isinstance(cidr_ip, list):
+                cidr_ip = [cidr_ip]
+            for i, single_cidr_ip in enumerate(cidr_ip):
+                params['IpPermissions.1.IpRanges.%d.CidrIp' % (i+1)] = \
+                    single_cidr_ip
+        return self.__make_request__('AuthorizeSecurityGroupIngress', params)
+
+    # returns True if successful
+    def revoke_security_group(self, name=None,
+                                 src_security_group_name=None,
+                                 src_security_group_owner_id=None,
+                                 ip_protocol=None, from_port=None, to_port=None,
+                                 cidr_ip=None, group_id=None,
+                                 src_security_group_group_id=None):
+        params = {'GroupName': name, 'GroupId': group_id,
+                  'IpPermissions.1.Groups.1.GroupName': src_security_group_name,
+                  'IpPermissions.1.Groups.1.UserId': src_security_group_owner_id,
+                  'IpPermissions.1.Groups.1.GroupId': src_security_group_group_id,
+                  'IpPermissions.1.IpProtocol': ip_protocol,
+                  'IpPermissions.1.FromPort': from_port,
+                  'IpPermissions.1.ToPort': to_port}
+        if cidr_ip:
+            if not isinstance(cidr_ip, list):
+                cidr_ip = [cidr_ip]
+            for i, single_cidr_ip in enumerate(cidr_ip):
+                params['IpPermissions.1.IpRanges.%d.CidrIp' % (i+1)] = \
+                    single_cidr_ip
+        return self.__make_request__('RevokeSecurityGroupIngress', params)
+
+    ##
+    # Addresss methods
+    ##
+    def get_addresses(self):
+        return self.__make_request__('DescribeAddresses', {})
+
+    def allocate_address(self):
+        return self.__make_request__('AllocateAddress', {})
+
+    def release_address(self, publicip):
+        return self.__make_request__('ReleaseAddress', {'PublicIp': publicip})
+
+    def associate_address(self, publicip, instanceid):
+        return self.__make_request__('AssociateAddress', {'PublicIp': publicip, 'InstanceId': instanceid})
+
+    def disassociate_address(self, publicip):
+        return self.__make_request__('DisassociateAddress', {'PublicIp': publicip})
+
+    ##
+    # Volume methods
+    ##
     def get_volumes(self):
         return self.__make_request__('DescribeVolumes', {})
 

@@ -46,6 +46,22 @@ class BotoClcInterface(ClcInterface):
             self.__save_json__(obj, "mockdata/Addresses.json")
         return obj
 
+    # returns address info
+    def allocate_address(self):
+        return self.conn.allocate_address()
+
+    # returns True if successful
+    def release_address(self, publicip):
+        return self.conn.release_address(publicip)
+
+    # returns True if successful
+    def associate_address(self, publicip, instanceid):
+        return self.conn.associate_address(publicip, instanceid)
+
+    # returns True if successful
+    def disassociate_address(self, publicip):
+        return self.conn.disassociate_address(publicip)
+
     def get_all_key_pairs(self):
         obj = self.conn.get_all_key_pairs()
         if self.saveclcdata:
@@ -65,6 +81,42 @@ class BotoClcInterface(ClcInterface):
         if self.saveclcdata:
             self.__save_json__(obj, "mockdata/Groups.json")
         return obj
+
+    # returns True if successful
+    def create_security_group(self, name, description):
+        return self.conn.create_security_group(name, description)
+
+    # returns True if successful
+    def delete_security_group(self, name=None, group_id=None):
+        return self.conn.delete_security_group(name, group_id)
+
+    # returns True if successful
+    def authorize_security_group(self, name=None,
+                                 src_security_group_name=None,
+                                 src_security_group_owner_id=None,
+                                 ip_protocol=None, from_port=None, to_port=None,
+                                 cidr_ip=None, group_id=None,
+                                 src_security_group_group_id=None):
+        return self.conn.authorize_security_group_deprecated(name, 
+                                 src_security_group_name,
+                                 src_security_group_owner_id,
+                                 ip_protocol, from_port, to_port,
+                                 cidr_ip)#, group_id,
+                                 #src_security_group_group_id)
+
+    # returns True if successful
+    def revoke_security_group(self, name=None,
+                                 src_security_group_name=None,
+                                 src_security_group_owner_id=None,
+                                 ip_protocol=None, from_port=None, to_port=None,
+                                 cidr_ip=None, group_id=None,
+                                 src_security_group_group_id=None):
+        return self.conn.revoke_security_group_deprecated(name,
+                                 src_security_group_name,
+                                 src_security_group_owner_id,
+                                 ip_protocol, from_port, to_port,
+                                 cidr_ip)#, group_id,
+                                 #src_security_group_group_id)
 
     def get_all_volumes(self):
         obj = self.conn.get_all_volumes()

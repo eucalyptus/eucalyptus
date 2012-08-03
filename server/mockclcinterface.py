@@ -52,6 +52,22 @@ class MockClcInterface(ClcInterface):
     def get_all_addresses(self):
         return self.addresses
 
+    # returns address info
+    def allocate_address(self):
+        return None
+
+    # returns True if successful
+    def release_address(self, publicip):
+        return False
+
+    # returns True if successful
+    def associate_address(self, publicip, instanceid):
+        return False
+
+    # returns True if successful
+    def disassociate_address(self, publicip):
+        return False
+
     def get_all_key_pairs(self):
         return self.keypairs
 
@@ -62,10 +78,36 @@ class MockClcInterface(ClcInterface):
     # returns nothing
     def delete_key_pair(self, key_name):
         self.keypairs.remove(key_name)
-        return None
+        return True
 
     def get_all_security_groups(self):
         return self.groups
+
+    # returns True if successful
+    def create_security_group(self, name, description):
+        return False
+
+    # returns True if successful
+    def delete_security_group(self, name=None, group_id=None):
+        return False
+
+    # returns True if successful
+    def authorize_security_group(self, name=None,
+                                 src_security_group_name=None,
+                                 src_security_group_owner_id=None,
+                                 ip_protocol=None, from_port=None, to_port=None,
+                                 cidr_ip=None, group_id=None,
+                                 src_security_group_group_id=None):
+        return False
+
+    # returns True if successful
+    def revoke_security_group(self, name=None,
+                                 src_security_group_name=None,
+                                 src_security_group_owner_id=None,
+                                 ip_protocol=None, from_port=None, to_port=None,
+                                 cidr_ip=None, group_id=None,
+                                 src_security_group_group_id=None):
+        return False
 
     def get_all_volumes(self):
         return self.volumes

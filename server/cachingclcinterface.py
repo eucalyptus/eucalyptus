@@ -62,6 +62,26 @@ class CachingClcInterface(ClcInterface):
             self.imageUpdate = datetime.now()
         return self.addresses
 
+    # returns address info
+    def allocate_address(self):
+        self.addressUpdate = datetime.min   # invalidate cache
+        return self.clc.allocate_address()
+
+    # returns True if successful
+    def release_address(self, publicip):
+        self.addressUpdate = datetime.min   # invalidate cache
+        return self.clc.release_address(publicip)
+
+    # returns True if successful
+    def associate_address(self, publicip, instanceid):
+        self.addressUpdate = datetime.min   # invalidate cache
+        return self.clc.associate_address(publicip, instanceid)
+
+    # returns True if successful
+    def disassociate_address(self, publicip):
+        self.addressUpdate = datetime.min   # invalidate cache
+        return self.clc.disassociate_address(publicip)
+
     def get_all_key_pairs(self):
         if (datetime.now() - self.keypairUpdate) > timedelta(seconds = self.pollfreq):
             self.keypairs = self.clc.get_all_key_pairs()
@@ -83,6 +103,46 @@ class CachingClcInterface(ClcInterface):
             self.groups = self.clc.get_all_security_groups()
             self.groupUpdate = datetime.now()
         return self.groups
+
+    # returns True if successful
+    def create_security_group(self, name, description):
+        self.groupUpdate = datetime.min   # invalidate cache
+        return self.clc.create_security_group(name, description)
+
+    # returns True if successful
+    def delete_security_group(self, name=None, group_id=None):
+        self.groupUpdate = datetime.min   # invalidate cache
+        return self.clc.delete_security_group(name, group_id)
+
+    # returns True if successful
+    def authorize_security_group(self, name=None,
+                                 src_security_group_name=None,
+                                 src_security_group_owner_id=None,
+                                 ip_protocol=None, from_port=None, to_port=None,
+                                 cidr_ip=None, group_id=None,
+                                 src_security_group_group_id=None):
+        self.groupUpdate = datetime.min   # invalidate cache
+        return self.clc.authorize_security_group(name, 
+                                 src_security_group_name,
+                                 src_security_group_owner_id,
+                                 ip_protocol, from_port, to_port,
+                                 cidr_ip, group_id,
+                                 src_security_group_group_id)
+
+    # returns True if successful
+    def revoke_security_group(self, name=None,
+                                 src_security_group_name=None,
+                                 src_security_group_owner_id=None,
+                                 ip_protocol=None, from_port=None, to_port=None,
+                                 cidr_ip=None, group_id=None,
+                                 src_security_group_group_id=None):
+        self.groupUpdate = datetime.min   # invalidate cache
+        return self.clc.revoke_security_group(name,
+                                 src_security_group_name,
+                                 src_security_group_owner_id,
+                                 ip_protocol, from_port, to_port,
+                                 cidr_ip, group_id,
+                                 src_security_group_group_id)
 
     def get_all_volumes(self):
         if (datetime.now() - self.volumeUpdate) > timedelta(seconds = self.pollfreq):

@@ -27,6 +27,22 @@ class ClcInterface(object):
     def get_all_addresses(self):
         raise NotImplementedError("Are you sure you're using the right class?")
 
+    # returns address info
+    def allocate_address(self):
+        raise NotImplementedError("Are you sure you're using the right class?")
+
+    # returns True if successful
+    def release_address(self, publicip):
+        raise NotImplementedError("Are you sure you're using the right class?")
+
+    # returns True if successful
+    def associate_address(self, publicip, instanceid):
+        raise NotImplementedError("Are you sure you're using the right class?")
+
+    # returns True if successful
+    def disassociate_address(self, publicip):
+        raise NotImplementedError("Are you sure you're using the right class?")
+
     ##
     # Keypair methods
     ##
@@ -46,6 +62,32 @@ class ClcInterface(object):
     # Security Group methods
     ##
     def get_all_security_groups(self):
+        raise NotImplementedError("Are you sure you're using the right class?")
+
+    # returns True if successful
+    def create_security_group(self, name, description):
+        raise NotImplementedError("Are you sure you're using the right class?")
+
+    # returns True if successful
+    def delete_security_group(self, name=None, group_id=None):
+        raise NotImplementedError("Are you sure you're using the right class?")
+
+    # returns True if successful
+    def authorize_security_group(self, name=None,
+                                 src_security_group_name=None,
+                                 src_security_group_owner_id=None,
+                                 ip_protocol=None, from_port=None, to_port=None,
+                                 cidr_ip=None, group_id=None,
+                                 src_security_group_group_id=None):
+        raise NotImplementedError("Are you sure you're using the right class?")
+
+    # returns True if successful
+    def revoke_security_group(self, name=None,
+                                 src_security_group_name=None,
+                                 src_security_group_owner_id=None,
+                                 ip_protocol=None, from_port=None, to_port=None,
+                                 cidr_ip=None, group_id=None,
+                                 src_security_group_group_id=None):
         raise NotImplementedError("Are you sure you're using the right class?")
 
     ##
