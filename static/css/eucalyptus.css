@@ -208,11 +208,11 @@ body {
 /* ======== Explorer styles ======= */
 
 .euca-explorer-container {
+  display:none;
   background: transparent url("../images/explorer_background.png") repeat-x left top;
 }
 
 .euca-explorer-container .inner-container {
-    display:none;
     height: 120px;
 }
 
