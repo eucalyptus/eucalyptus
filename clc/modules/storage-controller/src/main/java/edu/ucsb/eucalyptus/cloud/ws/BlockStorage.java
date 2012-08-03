@@ -779,7 +779,7 @@ public class BlockStorage {
 				byte[] bytes = new byte[1024];
 				//Originally this was <=0, empty volume/snapshot would always return 0, so only check for <0
 				if(snapInStream.read(bytes) < 0) {
-					throw new EucalyptusCloudException("Unable to read snapshot file");
+					throw new EucalyptusCloudException("Unable to read snapshot file: " + snapshotFileName);
 				}				
 			} catch (FileNotFoundException e) {
 				throw new EucalyptusCloudException(e);
