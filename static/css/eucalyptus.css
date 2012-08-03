@@ -75,7 +75,11 @@ body {
     min-height: 30px;
     padding: 5px 0;
 }
-
+.euca-footer-container li {
+   float: left;
+   width: 150px;
+}
++
 .inner-container {
     margin: 0 auto;
     position: relative;
@@ -226,6 +230,25 @@ body {
   width: auto;
 }
 
+.user-menu {
+  position: absolute;
+  background: transparent url("../images/explorer_background.png") repeat-x left top;
+}
+
+.user-menu li {
+   float: left;
+   width: 120px;
+}
+
+.help-menu {
+  position: absolute;
+  background: transparent url("../images/explorer_background.png") repeat-x left top;
+}
+
+.help-menu li {
+   float: left;
+   width: 120px;
+}
 
 /* ======== Login styles ======= */
 

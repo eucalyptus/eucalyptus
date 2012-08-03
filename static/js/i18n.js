@@ -32,6 +32,11 @@
         $.i18n.prop('menu_support_guide');
         $.i18n.prop('menu_support_forum');
         $.i18n.prop('menu_support_report');
+        $.i18n.prop('menu_user_preferences');
+        $.i18n.prop('menu_user_logout');
+        $.i18n.prop('menu_help_documentation');
+        $.i18n.prop('menu_help_forum');
+        $.i18n.prop('menu_help_report');
 
         $.i18n.prop('help_dashboard_01');
         $.i18n.prop('help_dashboard_02');

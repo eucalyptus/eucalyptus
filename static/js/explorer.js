@@ -19,14 +19,35 @@
       _init : function() { },
 
       _create : function() {
+        // resource-explorer
         var $ul = $('<ul>').addClass('resource-nav');
         for(i=0; i<this.options.menus.length; i++){
-          $ul.append(this.createMenu(i, this.options.menus[i]));
+          $ul.append(this.createResourceMenu(i, this.options.menus[i]));
         }
         this.element.append($ul);
+ 
+        // user-menu (logout, preference)
+        //$ul = $('<ul>').addClass('resource-nav');
+        //$ul.append(this.createUserMenu());
+        //this.element.append($('<div>').addClass('user-explorer').append($ul)); 
       },
 
-      createMenu : function (idx, menu) {
+      createUserMenu : function () {
+        user_menu = { preference : menu_user_preferences,
+                      logout : menu_user_logout,
+        }
+        var arr = [];
+        var header = this;
+        $.each(user_menu, function (key, val) {
+          $.extend(arr, $('<li>').append(
+             $('<a>').attr('href','#').text(val).click(function(evt) {
+               header._trigger("select", evt, {selected:key});
+             })));
+        });
+        return arr;
+      },
+
+      createResourceMenu : function (idx, menu) {
         var $submenu = $('<ul>');
         var header = this;
         if(menu.key in this.options.submenus){

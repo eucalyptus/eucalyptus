@@ -40,29 +40,23 @@
        var username ='null';
        if('u_session' in $.eucaData)
          username = $.eucaData.u_session['username'];
-       this.element.find('#euca-user-text').text(username);
+       this.element.find('#euca-user a').text(username);
     },
     _create : function(){
+       var thisObj = this;
        // navigation area   
        var $naviArea = this.element.find('#euca-navigator');
-       $naviArea.append($('<div>').attr('id','euca-navigator-text').append(
-		          $('<a>').attr('href','#').attr('id','top-button').addClass('ex-navigator').css('display','block').text(button_explorer)),
-                        $('<div>').attr('id','euca-navigator-icon').append(
-                          $('<img>').attr('src','images/triangle.gif')));
+       $naviArea.append($('<a>').attr('href','#').attr('id','top-button').addClass('ex-navigator').css('display','block').text(button_explorer));
        
        //help area 
        var $helpArea = this.element.find('#euca-help');
        $helpArea.append(
-         $('<div>').attr('id','euca-help-text').text('Help'),
-         $('<div>').attr('id','euca-help-icon').append(
-           $('<img>').attr('src','images/triangle.gif'))); 
+         $('<a>').attr('href','#').text('Help'));
 
        //user area
        var $userArea = this.element.find('#euca-user');
        $userArea.append(
-         $('<div>').attr('id','euca-user-text').text('null'),
-         $('<div>').attr('id','euca-user-icon').append(
-           $('<img>').attr('src','images/triangle.gif'))); 
+         $('<a>').attr('href','#').text('null'));
 
        // event handlers
        this.element.find('#euca-navigator').hover(
@@ -84,8 +78,70 @@
              $explorer.toggle('blind', {}, 300 );
          }
        });
+
+       this.element.find('#euca-user').click(function (evt) {
+         if($(this).hasClass('clicked')){
+           $(this).removeClass('clicked');
+           $('html body').find('.user-menu').remove();
+         }
+         else{
+           var left = $(this).position().left;
+           var top = $('html body').find('.euca-main-outercontainer').position().top; 
+           $('html body').append(thisObj.createUserMenu(left, top));
+           $(this).addClass('clicked');
+         }
+       });
+       
+       this.element.find('#euca-help').click(function (evt) {
+         if($(this).hasClass('clicked')){
+           $(this).removeClass('clicked');
+           $('html body').find('.help-menu').remove();
+         }
+         else{
+           var left = $(this).position().left;
+           var top = $('html body').find('.euca-main-outercontainer').position().top; 
+           $('html body').append(thisObj.createHelpMenu(left, top));
+           $(this).addClass('clicked');
+         }
+       });
     },
-    _destroy : function(){
+   
+   createUserMenu : function (left, top) {
+      user_menu = { preference : menu_user_preferences,
+                    logout : menu_user_logout,
+      }
+      var header = this;
+      var $ul = $('<ul>'); 
+      $.each(user_menu, function (key, val) {
+        $ul.append(
+           $('<li>').append(
+             $('<a>').attr('href','#').text(val).click(function(evt) {
+               header._trigger("select", evt, {selected:key});
+           })));
+      });
+
+      return $('<div>').addClass('user-menu').css('left',left+'px').css('top',top+'px').append($ul);
+    },
+ 
+   createHelpMenu : function (left, top) {
+      help_menu = { documentation : menu_help_documentation,
+                    forum : menu_help_forum,
+                    report : menu_help_report
+                  }
+      var header = this;
+      var $ul = $('<ul>'); 
+      $.each(help_menu, function (key, val) {
+        $ul.append(
+           $('<li>').append(
+             $('<a>').attr('href','#').text(val).click(function(evt) {
+               header._trigger("select", evt, {selected:key});
+           })));
+      });
+
+      return $('<div>').addClass('help-menu').css('left',left+'px').css('top',top+'px').append($ul);
+    },
+
+   _destroy : function(){
     }
   });    
 })(jQuery,
