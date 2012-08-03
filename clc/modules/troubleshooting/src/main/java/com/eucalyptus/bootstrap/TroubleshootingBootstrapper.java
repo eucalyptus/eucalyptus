@@ -59,7 +59,8 @@
  *   IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
-package com.eucalyptus.troubleshooting;
+
+package com.eucalyptus.bootstrap;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -69,28 +70,83 @@ import java.util.Arrays;
 import java.util.Properties;
 
 import org.apache.log4j.Logger;
-
+import com.eucalyptus.cloud.ws.DNSControl;
+import com.eucalyptus.component.id.Dns;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
+import com.eucalyptus.troubleshooting.LoggingResetter;
+import com.eucalyptus.troubleshooting.TestFaultTrigger;
 
-@ConfigurableClass( root = "test_fault_troubleshooting",
-description = "Mechanism to test fault triggers." )
-public class TestFaultTriggerConfiguration {
-	private static final Logger LOG = Logger.getLogger(TestFaultTriggerConfiguration.class);
-	
+@RunDuring( Bootstrap.Stage.CloudServiceInit )
+@ConfigurableClass( root = "troubleshooting",
+description = "Parameters controlling troubleshooting information." )
+public class TroubleshootingBootstrapper extends Bootstrapper {
+	private static final Logger          LOG = Logger.getLogger( TroubleshootingBootstrapper.class );
+
+	  @Override
+	  public boolean load( ) throws Exception {
+	    return true;
+	  }
+	  
+	  @Override
+	  public boolean start( ) throws Exception {
+	    LOG.info( "Starting troubleshooting interface." );
+	    return true;
+	  }
+	  
+	  /**
+	   * @see com.eucalyptus.bootstrap.Bootstrapper#enable()
+	   */
+	  @Override
+	  public boolean enable( ) throws Exception {
+	    return true;
+	  }
+	  
+	  /**
+	   * @see com.eucalyptus.bootstrap.Bootstrapper#stop()
+	   */
+	  @Override
+	  public boolean stop( ) throws Exception {
+	    return true;
+	  }
+	  
+	  /**
+	   * @see com.eucalyptus.bootstrap.Bootstrapper#destroy()
+	   */
+	  @Override
+	  public void destroy( ) throws Exception {}
+	  
+	  /**
+	   * @see com.eucalyptus.bootstrap.Bootstrapper#disable()
+	   */
+	  @Override
+	  public boolean disable( ) throws Exception {
+	    return true;
+	  }
+	  
+	  /**
+	   * @see com.eucalyptus.bootstrap.Bootstrapper#check()
+	   */
+	  @Override
+	  public boolean check( ) throws Exception {
+	    return true;
+	  }
+	  
+
+
 	@ConfigurableField( description = "Fault id last used to trigger test",
 			initial = "", //TODO: figure out how to link System.property("euca.log.level")
 			changeListener = FaultIdListener.class,
-			displayName = "fault.id" )
-	private static String VAR_FAULT_ID = "";
+			displayName = "test.fault.id" )
+	public static String VAR_FAULT_ID = "";
 	@ConfigurableField( description = "Properties file location for variable substitition in text",
 			initial = "", //TODO: figure out how to link System.property("euca.log.level")
 			changeListener = FaultIdListener.class,
-			displayName = "var.properties.file" )
-	private static String VAR_PROPS_FILE="";
+			displayName = "test.fault.var.properties.file" )
+	public static String VAR_PROPS_FILE="";
 
 	public static class VarPropsListener implements PropertyChangeListener {
 		/**
@@ -164,6 +220,74 @@ public class TestFaultTriggerConfiguration {
 				LOG.warn("No properties file set for fault trigger test");
 			}
 			TestFaultTrigger.triggerFault(newValueId, varProps);
+		}
+	}
+
+	@ConfigurableField( description = "'true' if we override system log levels.",
+			initial = "false", 
+			changeListener = LogLevelOverrideListener.class,
+			displayName = "euca.override.log.levels" )
+	public static String ENABLE_TROUBLESHOOTING_LOG_LEVEL_OVERRIDE = "false";
+	@ConfigurableField( description = "Log level for dynamic override.",
+			initial = "", //TODO: figure out how to link System.property("euca.log.level")
+			changeListener = LogLevelListener.class,
+			displayName = "euca.dynamic.log.level" )
+	public static String TROUBLESHOOTING_LOG_LEVEL = "";
+
+	public static class LogLevelOverrideListener implements PropertyChangeListener {
+		private final String[] logLevels = new String[] {"ALL", "DEBUG", "INFO", "WARN", "ERROR", "FATAL", "TRACE"};
+		/**
+		 * @see com.eucalyptus.configurable.PropertyChangeListener#fireChange(com.eucalyptus.configurable.ConfigurableProperty,
+		 *      java.lang.Object)
+		 */
+		@Override
+		public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
+			LOG.warn( "Change occurred to property " + t.getQualifiedName( ) + " with new value " + newValue + " which will reset logging levels." );
+			try {
+				t.getField( ).set( null, t.getTypeParser( ).apply( newValue ) );
+			} catch ( IllegalArgumentException e1 ) {
+				e1.printStackTrace();
+				throw new ConfigurablePropertyException( e1 );
+			} catch ( IllegalAccessException e1 ) {
+				e1.printStackTrace();
+				throw new ConfigurablePropertyException( e1 );
+			}
+		}
+	}
+
+	public static class LogLevelListener implements PropertyChangeListener {
+		private final String[] logLevels = new String[] {"ALL", "DEBUG", "INFO", "WARN", "ERROR", "FATAL", "TRACE"};
+		/**
+		 * @see com.eucalyptus.configurable.PropertyChangeListener#fireChange(com.eucalyptus.configurable.ConfigurableProperty,
+		 *      java.lang.Object)
+		 */
+		@Override
+		public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
+			String newLogLevel = (String) newValue;
+			if (newLogLevel == null || !Arrays.asList(logLevels).contains(newLogLevel.toUpperCase())) {
+				throw new ConfigurablePropertyException("Invalid log level " + newLogLevel);
+			}
+			// TODO: add error checking for property and configuration
+			LOG.warn( "Change occurred to property " + t.getQualifiedName( ) + " with new value " + newValue + " which will reset logging levels." );
+			try {
+				t.getField( ).set( null, t.getTypeParser( ).apply( newValue ) );
+			} catch ( IllegalArgumentException e1 ) {
+				e1.printStackTrace();
+				throw new ConfigurablePropertyException( e1 );
+			} catch ( IllegalAccessException e1 ) {
+				e1.printStackTrace();
+				throw new ConfigurablePropertyException( e1 );
+			}
+			if (Boolean.parseBoolean(ENABLE_TROUBLESHOOTING_LOG_LEVEL_OVERRIDE)) {
+				System.setProperty("euca.log.level", newLogLevel.toUpperCase());
+				LoggingResetter.resetLoggingLevels();
+			}
+			LOG.fatal("test level FATAL");
+			LOG.error("test level ERROR");
+			LOG.warn("test level WARN");
+			LOG.info("test level INFO");
+			LOG.debug("test level DEBUG");
+			LOG.trace("test level TRACE");
 		}
 	}
 

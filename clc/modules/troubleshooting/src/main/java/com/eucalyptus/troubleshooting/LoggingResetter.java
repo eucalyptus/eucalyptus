@@ -86,7 +86,7 @@ public class LoggingResetter {
 		}
 	}
 
-	static void resetLoggingLevels() {
+	public static void resetLoggingLevels() {
 		synchronized(LoggingResetter.class) { // TODO: make sure more thread safe
 			LOG.info("Resetting log levels to " + System.getProperty("euca.log.level"));
 			resetLogLevel(LogManager.getRootLogger(), System.getProperty("euca.log.level"));
