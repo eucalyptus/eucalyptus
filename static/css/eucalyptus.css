@@ -207,12 +207,23 @@ body {
 
 /* ======== Explorer styles ======= */
 
+.euca-explorer-container {
+  background: transparent url("../images/explorer_background.png") repeat-x left top;
+}
+
 .euca-explorer-container .inner-container {
-    background: url("../images/explorer_background.png") no-repeat center transparent;
     display:none;
-    position:relative;
-    /* width:1024px; */
-    height: 100px;
+    height: 120px;
+}
+
+.resource-nav li {
+  float: left;
+  width: 160px;
+}
+
+.resource-nav li ul li {
+  float: none;
+  width: auto;
 }
 
 
