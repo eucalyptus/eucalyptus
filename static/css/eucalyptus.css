@@ -207,80 +207,12 @@ body {
 
 /* ======== Explorer styles ======= */
 
-.euca-explorer {
+.euca-explorer-container .inner-container {
     background: url("../images/explorer_background.png") no-repeat center transparent;
     display:none;
     position:relative;
     /* width:1024px; */
     height: 100px;
-}
-
-.euca-explorer-items {
-    float: left;
-    width: auto;
-    padding: 0px;
-    text-align: center;
-    font-family: Arial,Helvetica,sans-serif;
-    font-size: 14px;
-    font-style: normal;
-    font-weight: bold;
-    color: #86B237;
-}
-
-.euca-explorer-items.mouseon {
-    float: left;
-    width: auto;
-    padding: 0px;
-    text-align: center;
-    font-family: Arial,Helvetica,sans-serif;
-    font-size: 14px;
-    font-style: normal;
-    font-weight: bold;
-    color: #0F3F5C;
-}
-
-.euca-explorer-items table, 
-.euca-explorer-items tr, 
-.euca-explorer-items td {
-    border-collapse: collapse;
-    margin-left: 25px;
-    margin-right: 25px;
-    vertical-align: bottom;
-    border-bottom-color: #F6F6F6;
-}
-
-/* to remove gaps bw images and table cell */
-.euca-explorer-items img {
-    display:block;
-    height:36px;
-}
-
-.euca-explorer-sub {
-    display: block;
-    position: relative;
-    width: auto;
-    left: 40px; /* should be changed to account for icon size */
-    font-family: Arial,Helvetica,sans-serif;
-    font-size: 12px;
-    font-style: normal;
-    font-weight: normal; 
-    color: #444444;
-}
-
-.euca-explorer-sub table,
-.euca-explorer-sub tr,
-.euca-explorer-sub td 
-{
-    padding: 2px;
-    text-align: left;
-}
-
-.euca-explorer-sub a {
-    text-decoration: none; 
-}
-
-.euca-explorer-sub .mouseon {
-   color: #86B237;
 }
 
 
@@ -364,10 +296,6 @@ body {
 .box-header p {
     margin: 0;
     line-height: 1em;
-}
-
-#euca-main-header.euca-main {
-    position: relative;
 }
 
 #euca-main-container {

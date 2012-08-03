@@ -6,14 +6,13 @@
     eucalyptus.explorer();
     // show the main divs
     var makeMenutabs = function(args) {
-      var $header = $('html body').find('.euca-container .euca-main #euca-tab-container');
+      var $header = $('html body').find('.euca-main-outercontainer .inner-container #euca-tab-container');
       var $ul = $('<ul>').addClass('active');
       $.each(args, function(idx, val) {
           var str = '<a href=\"'+val.link+'\">'+val.name+'</a>' 
           $('<li>').append(str).appendTo($ul);
       });
       $ul.appendTo($header);
-     // $header.tabs();
     }
      
     // will be deprecated
@@ -236,10 +235,10 @@
       });  
     }
 
-    $('html body').find('.euca-container .euca-header').header({show_logo:true,show_navigation:true,show_user:true,show_help:true});
-    var $container = $('html body').find('.euca-container .euca-main #euca-main-container');
+    $('html body').find('.euca-container .euca-header-container .inner-container').header({show_logo:true,show_navigation:true,show_user:true,show_help:true});
+    var $container = $('html body').find('.euca-main-outercontainer .inner-container #euca-main-container');
     $container.maincontainer();
-    $('html body').find('.euca-container .euca-explorer').explorer({select: function(evt, ui){ 
+    $('html body').find('.euca-explorer-container .inner-container').explorer({select: function(evt, ui){ 
                                                                       if (ui.selected === 'dashboard')
                                                                         $('html body').find('#euca-tab-container').remove();
                                                                       $container.maincontainer("changeSelected",evt, ui);
@@ -255,7 +254,7 @@
                   {name:'Snapshots', link: '#tabs-snapshots'}];
 
     makeMenutabs(menus);
-    var $eucaTabContainer = $('html body').find('.euca-container .euca-main #euca-tab-container');
+    var $eucaTabContainer = $('html body').find('.euca-main-outercontainer .inner-container #euca-tab-container');
     $eucaTabContainer.append('<div class="euca-notification" id="euca-notification-container"></div>');
     $('#all-tabs-container > div').each(function() {
       ($(this)).appendTo($eucaTabContainer);
@@ -264,9 +263,9 @@
     fillTable();
 
     // calls eucalyptus.footer widget
-    $('html body').find('.euca-container .euca-footer').footer();
+    $('html body').find('.euca-footer-container .inner-container').footer();
 
-    var $main = $('html body').find('.euca-container .euca-main #euca-tab-container');
+    var $main = $('html body').find('.euca-main-outercontainer .inner-container #euca-tab-container');
     $main.tabs();
 
   } // end of main

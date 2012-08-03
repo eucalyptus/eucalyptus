@@ -77,7 +77,7 @@
        );
  
        this.element.find('#euca-navigator').click(function (){
-         var $explorer = $('html body').find('.euca-container .euca-explorer');
+         var $explorer = $('html body').find('.euca-explorer-container .inner-container');
          if($(this).hasClass('mouseon')){
              $explorer.toggle('blind', {}, 300 );
          }else{
