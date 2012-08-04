@@ -14,7 +14,7 @@
        }
      }, 
      _init: function () {
-       $ul = this.element.find('ul');
+       $ul = this.element.find('ul').addClass('footer-nav');
        $.each(this.options.footer_items, function (key,val) { 
          if(val !== null)
            $ul.append($('<li>').append(val)); 

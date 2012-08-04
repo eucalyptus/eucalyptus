@@ -50,14 +50,14 @@
   <body>
     <div class="euca-container">
       
-      <div class="euca-header-container">
-        <div class="inner-container">
+      <header class="euca-header-container">
+        <div class="inner-container clearfix">
           <a id="euca-logo" class="hide-text" href="/">Eucalyptus</a>
           <div id="euca-navigator"></div>
           <div id="euca-help"></div>
           <div id="euca-user"></div>
         </div>
-      </div>
+      </header>
 
       <div class="euca-explorer-container">
         <div class="inner-container clearfix"></div>
@@ -65,223 +65,240 @@
 
       <div class="euca-main-outercontainer">
           <div class="inner-container">
-            <div id="euca-notification"> </div>
+            <div id="euca-notification"></div>
             <div id="euca-main-container">
-              <div id="euca-tab-container"></div> <!-- temporary -->
+              <div id="euca-tab-container"></div><!-- temporary -->
             </div>
           </div>       
       </div>
-      <div class="euca-footer-container">
-        <div class="inner-container"></div>  
-      </div>
+
+      <footer class="euca-footer-container">
+        <div class="inner-container">
+          <div class="copyright">&copy; 2012 Eucalyptus Systems. All rights reserved.</div>
+        </div>  
+      </footer>
+
     </div>
-    <!-- END .euca-container -->
+    <!-- END euca-container -->
+
+    
     <div class="templates">
+      
+      <!-- Login template -->
       <script id="loginTmpl" type="text/x-jsrender">
         <div id="login" class="content-box">
           <div id="title" class="box-header"> {{!>login_title}} </div>
           <form action="/" method="post" name="loginform">
+            
             <div class="form-row">
               <label for="account">{{!>login_acct}}</label>
               <input type="text" id="account" value=""/>
             </div>
+            
             <div class="form-row">
               <label for="username">{{!>login_uname}}</label>
               <input type="text" id="username" value="admin"/>
             </div>
+            
             <div class="form-row">
               <label for="password">{{!>login_pwd}}</label>
               <input type="password" id="password" value=""/>
             </div>
+            
             <div class="password-help">
               <p>{{!>login_pwd_help}} <a href="#"> {{!>login_pwd_link}} </a></p>
             </div>
+            
             <div class="button-bar">
               <input type="submit" name="login" value="{{!>login_btn}}" disabled="disabled" />
             </div>
+
           </form>        
         </div>
-     </script>
-     <!-- end of login -->
+      </script>
+      <!-- END Login template -->
 
+      <!-- Dashboard template -->
       <div id="dashboard" class="content-box">
         <div class="instances"> </div>  
         <div class="storage"> </div>
         <div class="netsec"> </div>
       </div>
+      <!-- END Dashboard template -->
 
-    </div> <!-- end of templates --> 
+    </div>
+    <!-- END of templates --> 
 
-<!-- Navigation tabs.
-  TODO: move them to the right stop so there is no need to add them into the DOM
-  TODO: add nice indentation -->
-<div id="all-tabs-container" style="display:none">
+    <!-- Navigation tabs.
+      TODO: move them to the right stop so there is no need to add them into the DOM
+      TODO: add nice indentation -->
+    <div id="all-tabs-container" style="display:none">
 
-  <div id="tabs-instances" class="active">
-    <table id="instances" class="display">
-      <thead>
-        <tr>
-          <th>id</th>
-          <th>image id</th>
-          <th>public IP</th>
-          <th>private IP</th>
-          <th>state</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td colspan="5" class="dataTables_empty">Loading data from server</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
+      <div id="tabs-instances" class="active">
+        <table id="instances" class="display">
+          <thead>
+            <tr>
+              <th>id</th>
+              <th>image id</th>
+              <th>public IP</th>
+              <th>private IP</th>
+              <th>state</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td colspan="5" class="dataTables_empty">Loading data from server</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
 
-  <div id="tabs-images" class="active">
-    <table id="images" class="display">
-      <thead>
-        <tr>
-          <th>id</th>
-          <th>location</th>
-          <th>type</th>
-          <th>architecture</th>
-          <th>state</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td colspan="5" class="dataTables_empty">Loading data from server</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
+      <div id="tabs-images" class="active">
+        <table id="images" class="display">
+          <thead>
+            <tr>
+              <th>id</th>
+              <th>location</th>
+              <th>type</th>
+              <th>architecture</th>
+              <th>state</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td colspan="5" class="dataTables_empty">Loading data from server</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
 
-  <div id="tabs-keys" class="active">
-    <table id="keys" class="display">
-      <thead>
-        <tr>
-          <th>
-            <input type="checkbox" onchange="selectCheckboxChanged(this, 'keys');">
-          </th>
-          <th>Name</th>
-          <th>Private Key Fingerprint</th>
-        </tr>
-       </thead>
-       <tbody>
-          <tr> 
-            <td colspan="3" class="dataTables_empty">Loading data from server</td>
-          </tr>
-      </tbody>
-    </table>
-  </div>
+      <div id="tabs-keys" class="active">
+        <table id="keys" class="display">
+          <thead>
+            <tr>
+              <th>
+                <input type="checkbox" onchange="selectCheckboxChanged(this, 'keys');">
+              </th>
+              <th>Name</th>
+              <th>Private Key Fingerprint</th>
+            </tr>
+           </thead>
+           <tbody>
+              <tr> 
+                <td colspan="3" class="dataTables_empty">Loading data from server</td>
+              </tr>
+          </tbody>
+        </table>
+      </div>
 
-<div id="tabs-groups" class="active">
-  <table id="groups" class="display">
-    <thead>
-       <tr>
-         <th>name</th>
-         <th>description</th>
-       </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td colspan="2" class="dataTables_empty">Loading data from server</td>
-      </tr>
-    </tbody>
-  </table>
-</div>
+      <div id="tabs-groups" class="active">
+        <table id="groups" class="display">
+          <thead>
+             <tr>
+               <th>name</th>
+               <th>description</th>
+             </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td colspan="2" class="dataTables_empty">Loading data from server</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
 
-<div id="tabs-addresses" class="active">
-  <table id="addresses" class="display">
-    <thead>
-      <tr>
-        <th>public IP</th>
-        <th>Instance ID</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td colspan="2" class="dataTables_empty">Loading data from server</td>
-      </tr>
-    </tbody>
-  </table>
-</div>
+      <div id="tabs-addresses" class="active">
+        <table id="addresses" class="display">
+          <thead>
+            <tr>
+              <th>public IP</th>
+              <th>Instance ID</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td colspan="2" class="dataTables_empty">Loading data from server</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
 
-<div id="tabs-volumes" class="active">
-  <table id="volumes" class="display">
-    <thead>
-      <tr>
-        <th>
-          <input type="checkbox" onchange="selectCheckboxChanged(this, 'volumes');">
-        </th>
-        <th>id</th>
-        <th>size</th>
-        <th>status</th>
-        <th>creation time</th>
-        <th>snapshot id</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td colspan="6" class="dataTables_empty">Loading data from server</td>
-      </tr>
-    </tbody>
-  </table>
-</div>
+      <div id="tabs-volumes" class="active">
+        <table id="volumes" class="display">
+          <thead>
+            <tr>
+              <th>
+                <input type="checkbox" onchange="selectCheckboxChanged(this, 'volumes');">
+              </th>
+              <th>id</th>
+              <th>size</th>
+              <th>status</th>
+              <th>creation time</th>
+              <th>snapshot id</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td colspan="6" class="dataTables_empty">Loading data from server</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
 
-<div id="tabs-snapshots" class="active">
-  <table id="snapshots" class="display">
-    <thead>
-      <tr>
-        <th>id</th>
-        <th>status</th>
-        <th>progress</th>
-        <th>volume id</th>
-        <th>start time</th>
-        <th>owner id</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td colspan="6" class="dataTables_empty">Loading data from server</td> 
-      </tr>
-    </tbody>
-  </table>
-</div>
+      <div id="tabs-snapshots" class="active">
+        <table id="snapshots" class="display">
+          <thead>
+            <tr>
+              <th>id</th>
+              <th>status</th>
+              <th>progress</th>
+              <th>volume id</th>
+              <th>start time</th>
+              <th>owner id</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td colspan="6" class="dataTables_empty">Loading data from server</td> 
+            </tr>
+          </tbody>
+        </table>
+      </div>
 
-</div>
-<!-- end of all-tabs-container -->
+    </div>
+    <!-- END all-tabs-container -->
 
-<!-- Dialogs -->
-<div id="keys-delete-dialog" title="Delete key pairs" class="delete-dialog" style="display:none">
-  <p>You will still be able to access any instances using the deleted key pair until you also delete the private key off of your local file system.</p>
-  <p>Are you sure you want to delete the following key pairs?</p>
-  <p>Key pairs</p>
-  <span id="keys-delete-names"></span>
-</div>
+    <!-- Dialogs -->
+    <div id="keys-delete-dialog" title="Delete key pairs" class="delete-dialog" style="display:none">
+      <p>You will still be able to access any instances using the deleted key pair until you also delete the private key off of your local file system.</p>
+      <p>Are you sure you want to delete the following key pairs?</p>
+      <p>Key pairs</p>
+      <span id="keys-delete-names"></span>
+    </div>
 
-<div id="keys-add-dialog" title="Create key pair" class="add-dialog" style="display:none">
-  <p>You can use this key pair to launch more than one instance.</p>
-  <p>Save the file in a place you will remember. You will need to enter the path later to connect to your instances.</p>
-  <p>
-    <span class="field">Name</span><input type="text" id="key-name" class="required"/><div class="dialog-notifications"></div>
-  </p>
-</div>
+    <div id="keys-add-dialog" title="Create key pair" class="add-dialog" style="display:none">
+      <p>You can use this key pair to launch more than one instance.</p>
+      <p>Save the file in a place you will remember. You will need to enter the path later to connect to your instances.</p>
+      <p>
+        <span class="field">Name</span><input type="text" id="key-name" class="required"/><div class="dialog-notifications"></div>
+      </p>
+    </div>
 
-<div id="volumes-delete-dialog" title="Delete volumes" class="delete-dialog" style="display:none">
-  <p>Are you sure you want to delete the following volumes?</p>
-  <p>All data on the volumes will be destroyed.</p>
-  <p>Volumes</p>
-  <span id="volumes-delete-names"></span>
-</div>
+    <div id="volumes-delete-dialog" title="Delete volumes" class="delete-dialog" style="display:none">
+      <p>Are you sure you want to delete the following volumes?</p>
+      <p>All data on the volumes will be destroyed.</p>
+      <p>Volumes</p>
+      <span id="volumes-delete-names"></span>
+    </div>
 
-<div id="volumes-add-dialog" title="Create volume" class="add-dialog" style="display:none">
-  <p>You can use this key pair to launch more than one instance.</p>
-  <p>Save the file in a place you will remember. You will need to enter the path later to connect to your instances.</p>
-  <p>
-    <input type="text" id="volumes-name" class="required"/><div class="dialog-notifications"></div>
-  </p>
-</div>
+    <div id="volumes-add-dialog" title="Create volume" class="add-dialog" style="display:none">
+      <p>You can use this key pair to launch more than one instance.</p>
+      <p>Save the file in a place you will remember. You will need to enter the path later to connect to your instances.</p>
+      <p>
+        <input type="text" id="volumes-name" class="required"/><div class="dialog-notifications"></div>
+      </p>
+    </div>
+    <!-- END Dialogs -->
 
-</body>
+  </body>
 </html>
-

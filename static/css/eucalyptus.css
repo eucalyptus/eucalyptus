@@ -7,6 +7,8 @@
 
 /*
 
+Main text color: #444
+
 Grey text: #666
 
 Blue text: #02405f
@@ -23,6 +25,7 @@ body {
     padding: 0;
     font-family: Arial,Helvetica,sans-serif;
     background: #fff;
+    color: #444;
 }
 
 
@@ -71,14 +74,11 @@ body {
 
 .euca-footer-container {
     background: transparent url(../images/footer-bgfill.png) repeat-x left top;
+    color: #999;
+    font-size: 12px;
     margin-bottom: 20px;
     min-height: 30px;
-    padding: 5px 0;
-}
-
-.euca-footer-container li {
-   float: left;
-   width: 150px;
+    padding: 10px 0;
 }
 
 .inner-container {
@@ -269,9 +269,9 @@ body {
 .form-row label {
     display: inline-block;
     width: 130px;
-    font-family: 'Play', sans-serif;
+    font-family: "PlayBold", Arial, sans-serif;
     font-size: 13px;
-    font-weight: bold;
+    font-weight: normal;
     text-align: right;
     margin-right: 15px;
     color: #02405f;
@@ -321,9 +321,9 @@ body {
 .box-header {
     background-color: #eaf2f5;
     color: #02405f;
-    font-family: 'Play', sans-serif;
+    font-family: "PlayBold", Arial, sans-serif;
     font-size: 15px;
-    font-weight: bold;
+    font-weight: normal;
     margin: 13px 0 25px;
     padding: 8px 30px 4px;    
 }
@@ -334,8 +334,6 @@ body {
 }
 
 #euca-main-container {
-    border: none;
-    width: 1024px;
     display: none;
 }
 
@@ -547,3 +545,36 @@ div.help-link {
 .ui-dialog-titlebar-close {
    visibility: hidden;
 }
+
+/* ======= Footer styles ======= */
+
+.copyright {
+  float: left;
+  margin-left: 5px;
+}
+
+.footer-nav {
+  float: right;
+  list-style-type: none;
+  margin: 0 5px 0 0;
+  padding: 0;
+}
+
+.footer-nav li {
+   float: left;
+   display: inline;
+   margin-left: 12px;
+}
+
+.footer-nav li a {
+  color: #73a434;
+  text-decoration: none;
+}
+
+.footer-nav li a:hover {
+  color: #73a434;
+  text-decoration: underline;
+}
+
+
+
