@@ -21,11 +21,14 @@ Green links: #73a434
 /* ======== Base HTML styles ======= */
 
 body {
+    
+    background: #fff;
+    border-top: 10px solid #02405f;
+    color: #444;
+    font-family: Arial,Helvetica,sans-serif;
+    font-size: 1em;
     margin: 0;
     padding: 0;
-    font-family: Arial,Helvetica,sans-serif;
-    background: #fff;
-    color: #444;
 }
 
 
@@ -57,8 +60,8 @@ body {
 }
 
 .euca-header-container {
-    background: transparent url(../images/header-bgfill.png) repeat-x left top;
-    height: 61px;
+    background: transparent url(../images/css-sprites.png) repeat left -25px;
+    height: 50px;
 }
 
 .euca-explorer-container {
@@ -97,11 +100,11 @@ body {
 
 #euca-logo {
     float: left;
-    height: 30px;
-    width: 220px;
-    margin: 20px 0 10px;
+    height: 22px;
+    width: 207px;
+    margin-top: 13px;
+    background: transparent url(../images/css-sprites.png) no-repeat center 0;
     border: none;
-    background: transparent url(../images/eucalyptus-logo.png) no-repeat left top;
 }
 
 
