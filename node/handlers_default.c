@@ -1495,6 +1495,54 @@ doDescribeBundleTasks(
 	return OK;
 }
 
+int doDescribeSensors (struct nc_state_t *nc, // TODO3.2: actually implement the function
+                       ncMetadata *meta, 
+                       char **instIds,
+                       int instIdsLen,
+                       char **sensorIds,
+                       int sensorIdsLen,
+                       sensorResource ***outResources,
+                       int *outResourcesLen)
+{
+    sensorResource example = { 
+        .resourceName = "i-23456",
+        .resourceType = "instance",
+        .metricsLen = 1,
+        .metrics = { 
+            {
+                .metricName = "CPUUtilization",
+                .countersLen = 1,
+                .counters = {
+                    {
+                        .type = SENSOR_AVERAGE,
+                        .collectionIntervalMs = 20000,
+                        .sequenceNum = 0,
+                        .dimensionsLen = 1,
+                        .dimensions = {
+                            {
+                                .dimensionName = "default",
+                                .valuesLen = 3,
+                                .values = {
+                                    { .timestampMs = 1344056910424, .value = 33.3, .available = 1 },
+                                    { .timestampMs = 1344056930424, .value = 34.7, .available = 1 },
+                                    { .timestampMs = 1344056950424, .value = 31.1, .available = 1 },
+                                    { .timestampMs = 1344056970424, .value = -999, .available = 0 },
+                                    { .timestampMs = 1344056990424, .value = 39.9, .available = 1 },
+                                }
+                            }
+                        }
+                    }
+                }
+            } 
+        }
+    };
+    * outResources = malloc (1 * sizeof (sensorResource *));
+    * outResources [0] = malloc (sizeof (sensorResource));
+    memcpy (* outResources [0], &example, sizeof (sensorResource));
+    * outResourcesLen = 1;
+    return 0;
+}
+
 struct handlers default_libvirt_handlers = {
     .name = "default",
     .doInitialize        = doInitialize,
@@ -1512,5 +1560,6 @@ struct handlers default_libvirt_handlers = {
     .doCreateImage       = doCreateImage,
     .doBundleInstance    = doBundleInstance,
     .doCancelBundleTask  = doCancelBundleTask,
-    .doDescribeBundleTasks    = doDescribeBundleTasks
+    .doDescribeBundleTasks    = doDescribeBundleTasks,
+    .doDescribeSensors   = doDescribeSensors
 };

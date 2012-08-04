@@ -32,7 +32,20 @@
 #include "misc.h"
 #include "sensor.h"
 
-void sensor_free_metric (sensorMetric * m)
+int sensor_str2type (const char * counterType)
 {
-    // TODO
+    for (int i=0; i<(sizeof (sensorCounterTypeName) / sizeof (char *)); i++) {
+        if (strcmp (sensorCounterTypeName[i], counterType) == 0)
+            return i;
+    }
+    logprintfl (EUCAERROR, "internal error (sensor counter type out of range)\n");
+    return -1;
+}
+
+const char * sensor_type2str (int type)
+{
+    if (type>=0 && type<(sizeof (sensorCounterTypeName) / sizeof (char *)))
+        return sensorCounterTypeName[type];
+    else
+        return "[invalid]";
 }

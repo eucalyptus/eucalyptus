@@ -117,8 +117,8 @@
        <xs:complexType abstract="true" name="metricCounterType">
         <xs:sequence>
 	  <xs:element name="type" type="xs:string" minOccurs="1" maxOccurs="1" />
-	  <xs:element name="collectionIntervalMs" type="xs:int" maxOccurs="1" minOccurs="1"/>>
-	  <xs:element name="sequenceNum" type="xs:int" minOccurs="1" maxOccurs="1" />
+	  <xs:element name="collectionIntervalMs" type="xs:long" maxOccurs="1" minOccurs="1"/>>
+	  <xs:element name="sequenceNum" type="xs:long" minOccurs="1" maxOccurs="1" />
 	  <xs:element name="dimensions" type="tns:metricDimensionsType" maxOccurs="unbounded" minOccurs="1"/>
         </xs:sequence>
        </xs:complexType>
@@ -133,7 +133,7 @@
        <xs:complexType abstract="true" name="metricDimensionsValuesType">
 	 <xs:sequence>
 	   <xs:element name="timestamp" type="xs:dateTime" nillable="true" minOccurs="1" maxOccurs="1" />
-	   <xs:element name="value" type="xs:float" nillable="true" minOccurs="0" maxOccurs="1" />
+	   <xs:element name="value" type="xs:double" nillable="true" minOccurs="0" maxOccurs="1" />
 	 </xs:sequence>
        </xs:complexType>
 

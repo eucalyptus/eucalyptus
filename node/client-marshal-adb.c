@@ -229,54 +229,6 @@ static ncInstance * copy_instance_from_adb (adb_instanceType_t * instance, axuti
     return outInst;
 }
 
-static sensorMetric * copy_sensor_metric_from_adb (adb_metricsResourceType_t * metric, axutil_env_t * env)
-{
-    sensorMetric * m = malloc (sizeof (sensorMetric));
-    if (m==NULL)
-        return NULL;
-
-    safe_strncpy (m->metricName, (char *)adb_metricsResourceType_get_metricName(metric, env), sizeof (m->metricName));
-    m->countersLen = adb_metricsResourceType_sizeof_counters(metric, env);
-    if (m->countersLen>0) {
-        m->counters = malloc (sizeof (sensorCounter *) * m->countersLen);
-        if (m->counters == NULL) {
-            logprintfl (EUCAERROR, "out of memory in copy_sensor_metric_from_adb\n");
-            return NULL;
-        }
-    }
-}
-
-// #define ARRAY_COPY_TEMPLATE(CONTAINERTYPE,ARRAYNAME,ARRAYTYPE
-
-static sensorResource * copy_sensor_resource_from_adb (adb_sensorsResourceType_t * resource, axutil_env_t * env)
-{
-    sensorResource * so = malloc (sizeof (sensorResource));
-    if (so==NULL)
-        return NULL;
-    so->metricsLen = adb_sensorsResourceType_sizeof_metrics(resource, env);
-    if (so->metricsLen>0) {
-        so->metrics = malloc (sizeof (sensorMetric *) * so->metricsLen);
-        if (so->metrics == NULL) {
-            logprintfl (EUCAERROR, "out of memory in copy_sensor_resource_from_adb\n");
-            return NULL;
-        }
-        for (int i=0; i<so->metricsLen; i++) {
-            adb_metricsResourceType_t * metric = NULL;
-            so->metrics [i] = copy_sensor_metric_from_adb (metric, env);
-            if (so->metrics [i] == NULL) { // allocation failure - free up everything
-                for (int j=0; j<i; j++) {
-                    sensor_free_metric (so->metrics [i]);
-                }
-            }
-        }
-    }
-
-    safe_strncpy (so->resourceName, (char *)adb_sensorsResourceType_get_resourceName(resource, env), sizeof (so->resourceName));
-    safe_strncpy (so->resourceType, (char *)adb_sensorsResourceType_get_resourceType(resource, env), sizeof (so->resourceType));
-    
-    return so;
-}
-
 int ncRunInstanceStub (ncStub *st, ncMetadata *meta, char *uuid, char *instanceId, char *reservationId, virtualMachine *params, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *ownerId, char *accountId, char *keyName, netConfig *netparams, char *userData, char *launchIndex, char *platform, int expiryTime, char **groupNames, int groupNamesSize, ncInstance **outInstPtr)
 {
     int i;

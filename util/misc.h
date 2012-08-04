@@ -199,5 +199,6 @@ int construct_uri(char *uri, char *uriType, char *host, int port, char *path);
 char * strdupcat (char * original, char * new);
 int ensure_directories_exist (const char * path, int is_file_path, const char *user, const char *group, mode_t mode);
 long long time_usec (void);
+long long time_ms (void);
 
 #endif

@@ -23,7 +23,12 @@
 
 #ifndef INCLUDE_SENSOR_H
 #define INCLUDE_SENSOR_H
-#define MAX_SENSOR_NAME 64
+
+#define MAX_SENSOR_NAME_LEN    64
+#define MAX_SENSOR_VALUES      32 // by default 20
+#define MAX_SENSOR_DIMENSIONS  32 // root, ephemeral[0-1], vol-XYZ
+#define MAX_SENSOR_COUNTERS    2  // we only have two types of counters (summation|average) for now
+#define MAX_SENSOR_METRICS     16 // currently 9 are implemented
 
 typedef struct {
     long long timestampMs; // in milliseconds
@@ -32,32 +37,38 @@ typedef struct {
 } sensorValue;
 
 typedef struct {
-    char dimensionName [MAX_SENSOR_NAME]; // e.g. "default", "root", "vol-123ABC"
-    sensorValue ** values;                // array of pointers
-    int valuesLen;                        // size of the array
+    char dimensionName [MAX_SENSOR_NAME_LEN]; // e.g. "default", "root", "vol-123ABC"
+    sensorValue values [MAX_SENSOR_VALUES];   // array of values (not pointers, to simplify shared-memory region use)
+    int valuesLen;                            // size of the array
 } sensorDimension;
 
+static char * sensorCounterTypeName [] = {
+    "summation",
+    "average"
+};
+
 typedef struct {
-    enum { SENSOR_SUMMATION, SENSOR_AVERAGE } type;
-    long long collectionIntervalMs; // the spacing of values, based on sensor's configuration
-    long long sequenceNum;          // starts with 0 when sensor is reset and monotonically increases
-    sensorDimension ** dimensions;  // array of pointers
-    int dimensionsLen;              // size of the array
+    enum { SENSOR_SUMMATION=0, SENSOR_AVERAGE } type;
+    long long collectionIntervalMs;                     // the spacing of values, based on sensor's configuration
+    long long sequenceNum;                              // starts with 0 when sensor is reset and monotonically increases
+    sensorDimension dimensions [MAX_SENSOR_DIMENSIONS]; // array of values (not pointers, to simplify shared-memory region use)
+    int dimensionsLen;                                  // size of the array
 } sensorCounter;
 
 typedef struct {
-    char metricName [MAX_SENSOR_NAME]; // e.g. "CPUUtilization"
-    sensorCounter ** counters;         // array of pointers
-    int countersLen;                   // size of the array
+    char metricName [MAX_SENSOR_NAME_LEN];        // e.g. "CPUUtilization"
+    sensorCounter counters [MAX_SENSOR_COUNTERS]; // array of values (not pointers, to simplify shared-memory region use)
+    int countersLen;                              // size of the array
 } sensorMetric;
 
 typedef struct {
-    char resourceName [MAX_SENSOR_NAME]; // e.g. "i-1234567"
-    char resourceType [MAX_SENSOR_NAME]; // e.g. "instance"
-    sensorMetric ** metrics;             // array of pointers
-    int metricsLen;                      // size of the array
+    char resourceName [MAX_SENSOR_NAME_LEN];   // e.g. "i-1234567"
+    char resourceType [MAX_SENSOR_NAME_LEN];   // e.g. "instance"
+    sensorMetric metrics [MAX_SENSOR_METRICS]; // array of values (not pointers, to simplify shared-memory region use)
+    int metricsLen;                            // size of the array
 } sensorResource;
 
-void sensor_free_metric (sensorMetric * m);
+int sensor_str2type (const char * counterType);
+const char * sensor_type2str (int type);
 
 #endif
