@@ -133,18 +133,26 @@ ncStub * ncStubCreate (char *endpoint_uri, char *logfile, char *homedir)
 
     // TODO: what if endpoint_uri, home, or env are NULL?
     stub = axis2_stub_create_EucalyptusNC(env, client_home, (axis2_char_t *)uri);
-
-    if (stub && (st = malloc (sizeof(ncStub)))) {
-        st->env=env;
-        st->client_home=strdup((char *)client_home);
-        st->endpoint_uri=(axis2_char_t *)strdup(endpoint_uri);
-	st->node_name=(axis2_char_t *)strdup(node_name);
-        st->stub=stub;
-	if (st->client_home == NULL || st->endpoint_uri == NULL) {
-            logprintfl (EUCAWARN, "WARNING: out of memory");
-	}
+    
+    if (stub) {
+        st = malloc (sizeof(ncStub));
+        if (st) {
+            st->env=env;
+            st->client_home=strdup((char *)client_home);
+            st->endpoint_uri=(axis2_char_t *)strdup(endpoint_uri);
+            st->node_name=(axis2_char_t *)strdup(node_name);
+            st->stub=stub;
+            if (st->client_home == NULL || st->endpoint_uri == NULL || st->node_name == NULL) {
+                logprintfl (EUCAWARN, "WARNING: out of memory (%s:%s:%d client_home=%u endpoint_uri=%u node_name=%u)",
+                            __FILE__, __FUNCTION__, __LINE__, st->client_home, st->endpoint_uri, st->node_name);
+            }
+        } else {
+            logprintfl (EUCAWARN, "WARNING: out of memory for 'st' (%s:%s:%d)\n",
+                        __FILE__, __FUNCTION__, __LINE__);
+        }
     } else {
-        logprintfl (EUCAWARN, "WARNING: out of memory");
+        logprintfl (EUCAERROR, "failed to create a stub for EucalyptusNC service (stub=%u env=%u client_home=%s)\n", 
+                    stub, env, client_home);
     } 
     
     free (node_name);
