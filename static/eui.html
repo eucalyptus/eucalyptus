@@ -24,6 +24,8 @@
     <script type="text/javascript" language="javascript" src="lib/jquery.dataTables.js"></script> 
     <script type="text/javascript" language="javascript" src="lib/jquery.cookies.js"></script>
     <script type="text/javascript" language="javascript" src="lib/jquery.i18n.properties-min-1.0.9.js"></script>
+    <script type="text/javascript" language="javascript" src="lib/jsrender.js"></script>
+
     <!-- Eucalyptus JS -->
     <script type="text/javascript">
       var allTablesRef = {};
@@ -69,49 +71,38 @@
             </div>
           </div>       
       </div>
-
       <div class="euca-footer-container">
         <div class="inner-container"></div>  
       </div>
     </div>
     <!-- END .euca-container -->
-
     <div class="templates">
-
-      <div id="login" class="content-box">
-
-        <div id="title" class="box-header">
-            <p>Log in to your management console</p>
+      <script id="loginTmpl" type="text/x-jsrender">
+        <div id="login" class="content-box">
+          <div id="title" class="box-header"> {{!>login_title}} </div>
+          <form action="/" method="post" name="loginform">
+            <div class="form-row">
+              <label for="account">{{!>login_acct}}</label>
+              <input type="text" id="account" value=""/>
+            </div>
+            <div class="form-row">
+              <label for="username">{{!>login_uname}}</label>
+              <input type="text" id="username" value="admin"/>
+            </div>
+            <div class="form-row">
+              <label for="password">{{!>login_pwd}}</label>
+              <input type="password" id="password" value=""/>
+            </div>
+            <div class="password-help">
+              <p>{{!>login_pwd_help}} <a href="#"> {{!>login_pwd_link}} </a></p>
+            </div>
+            <div class="button-bar">
+              <input type="submit" name="login" value="{{!>login_btn}}" disabled="disabled" />
+            </div>
+          </form>        
         </div>
-
-        <form action="/" method="post" name="loginform">
-
-          <div class="form-row">
-            <label for="account">Account name</label>
-            <input type="text" id="account" value=""/>
-          </div>
-          
-          <div class="form-row">
-            <label for="username">Username</label>
-            <input type="text" id="username" value="admin"/>
-          </div>
-
-          <div class="form-row">
-            <label for="password">Password</label>
-            <input type="password" id="password" value=""/>
-          </div>
-
-          <div class="password-help">
-            <p>Forgot your password? <a href="/">Contact your cloud administrator.</a></p>
-          </div>
-
-          <div class="button-bar">
-            <input type="submit" name="login" value="Log In" disabled="disabled" />
-          </div>
-        </form>        
-
-      </div>
-      <!-- end of login -->
+     </script>
+     <!-- end of login -->
 
       <div id="dashboard" class="content-box">
         <div class="instances"> </div>  

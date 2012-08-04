@@ -35,8 +35,8 @@
 	    }
           });
         } else {
-          eucalyptus.login({
-            doLogin : function(args) {
+          var $main = $('html body').find('.euca-main-outercontainer .inner-container');
+          $main.login({ doLogin : function(evt, args) {
               var tok = args.param.account+':'+args.param.username+':'+args.param.password;
               var hash = btoa(tok);
 	      $.ajax({
@@ -55,8 +55,7 @@
 	          args.onError(errorThrown);
                 }
  	     });
-           }
-         }); // end of login
+         }});
        } // end of else
     }); // end of done
   });
