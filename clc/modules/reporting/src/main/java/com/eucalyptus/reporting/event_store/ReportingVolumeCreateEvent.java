@@ -40,8 +40,6 @@ public class ReportingVolumeCreateEvent
 	private String volumeId;
 	@Column(name="user_id", nullable=false)
 	private String userId;
-	@Column(name="cluster_name", nullable=false)
-	private String clusterName;
 	@Column(name="availability_zone", nullable=false)
 	private String availabilityZone;
 	@Column(name="sizeGB", nullable=false)

@@ -19,6 +19,8 @@ public class ReportingVolumeAttachEvent
 	private String volumeUuid;
 	@Column(name="instance_uuid", nullable=false)
 	private String instanceUuid;
+	@Column(name = "size_gb", nullable = false)
+	private Long sizeGB;
 	@Column(name="timestamp_ms", nullable=false)
 	private Long timestampMs;
 
@@ -27,14 +29,17 @@ public class ReportingVolumeAttachEvent
 	{
 		this.volumeUuid = null;
 		this.instanceUuid = null;
+		this.sizeGB = null;
 		this.timestampMs = null;
+		
 	}
 	
 	ReportingVolumeAttachEvent(String volumeUuid, String instanceUuid,
-			long timestampMs)
+			long sizeGB, long timestampMs)
 	{
 		this.volumeUuid = volumeUuid;
 		this.instanceUuid = instanceUuid;
+		this.sizeGB = sizeGB;
 		this.timestampMs = timestampMs;
 	}
 
@@ -53,46 +58,56 @@ public class ReportingVolumeAttachEvent
 		return timestampMs;
 	}
 
+	public Long getSizeGB() 
+	{
+	    	return sizeGB;
+	}
+
 	@Override
 	public int hashCode() {
-		final int prime = 31;
-		int result = 1;
-		result = prime * result
-				+ ((instanceUuid == null) ? 0 : instanceUuid.hashCode());
-		result = prime * result
-				+ ((timestampMs == null) ? 0 : timestampMs.hashCode());
-		result = prime * result
-				+ ((volumeUuid == null) ? 0 : volumeUuid.hashCode());
-		return result;
+	    final int prime = 31;
+	    int result = super.hashCode();
+	    result = prime * result
+		    + ((instanceUuid == null) ? 0 : instanceUuid.hashCode());
+	    result = prime * result
+		    + ((sizeGB == null) ? 0 : sizeGB.hashCode());
+	    result = prime * result
+		    + ((timestampMs == null) ? 0 : timestampMs.hashCode());
+	    result = prime * result
+		    + ((volumeUuid == null) ? 0 : volumeUuid.hashCode());
+	    return result;
 	}
 
 	@Override
 	public boolean equals(Object obj) {
-		if (this == obj)
-			return true;
-		if (obj == null)
-			return false;
-		if (getClass() != obj.getClass())
-			return false;
-		ReportingVolumeAttachEvent other = (ReportingVolumeAttachEvent) obj;
-		if (instanceUuid == null) {
-			if (other.instanceUuid != null)
-				return false;
-		} else if (!instanceUuid.equals(other.instanceUuid))
-			return false;
-		if (timestampMs == null) {
-			if (other.timestampMs != null)
-				return false;
-		} else if (!timestampMs.equals(other.timestampMs))
-			return false;
-		if (volumeUuid == null) {
-			if (other.volumeUuid != null)
-				return false;
-		} else if (!volumeUuid.equals(other.volumeUuid))
-			return false;
+	    if (this == obj)
 		return true;
+	    if (!super.equals(obj))
+		return false;
+	    if (getClass() != obj.getClass())
+		return false;
+	    ReportingVolumeAttachEvent other = (ReportingVolumeAttachEvent) obj;
+	    if (instanceUuid == null) {
+		if (other.instanceUuid != null)
+		    return false;
+	    } else if (!instanceUuid.equals(other.instanceUuid))
+		return false;
+	    if (sizeGB == null) {
+		if (other.sizeGB != null)
+		    return false;
+	    } else if (!sizeGB.equals(other.sizeGB))
+		return false;
+	    if (timestampMs == null) {
+		if (other.timestampMs != null)
+		    return false;
+	    } else if (!timestampMs.equals(other.timestampMs))
+		return false;
+	    if (volumeUuid == null) {
+		if (other.volumeUuid != null)
+		    return false;
+	    } else if (!volumeUuid.equals(other.volumeUuid))
+		return false;
+	    return true;
 	}
-
-	
 	
 }
