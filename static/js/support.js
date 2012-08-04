@@ -6,6 +6,11 @@
 var RETURN_KEY_CODE = 13;
 var RETURN_MAC_KEY_CODE = 10;
 var BACKSPACE_KEY_CODE = 8;
+//TODO: translate
+var SINGULAR = {}
+SINGULAR['keys'] = 'key';
+SINGULAR['volumes'] = 'volume';
+
 function selectCheckboxChanged(context, tableName) {
   dataTable = allTablesRef[tableName];
   switch(context.checked) {
@@ -151,7 +156,7 @@ function setUpInfoTableLayout(tableName, resourceName) {
   $resourceTableTop = $('div.table_' + tableName + '_top');
   $resourceTableTop.addClass('euca-table-length');
   $resourceTableTop.html('<div class="euca-table-add"></div><div class="euca-table-action actionmenu inactive"></div><div class="euca-table-size"><span id="table_' + tableName + '_count"></span> ' + tableName + ' found. Showing <span class="show selected">10</span> | <span class="show">25</span> | <span class="show">50</span> | <span class="show">all</span></div>');
-  $resourceTableTop.find("div.euca-table-add").html('<a id="table-' + tableName + '-new" class="add-resource" "href="#">Add</a>');
+  $resourceTableTop.find("div.euca-table-add").html('<a id="table-' + tableName + '-new" class="add-resource" "href="#">Create new ' + SINGULAR[tableName] + '</a>');
   $resourceTableTop.find("span.show").click( function () {
     $(this).parent().children('span').each( function() {
       $(this).removeClass("selected");
