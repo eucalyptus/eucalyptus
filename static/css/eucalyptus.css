@@ -25,7 +25,7 @@ body {
     background: #fff;
     border-top: 10px solid #02405f;
     color: #444;
-    font-family: Arial,Helvetica,sans-serif;
+    font-family: Arial, sans-serif;
     font-size: 1em;
     margin: 0;
     padding: 0;
@@ -112,105 +112,73 @@ body {
 
 #euca-navigator {
     display: none;
-    background-color: #d7d7d7;
-    border: 1px solid #E2E6E5;
-    border-style: none solid;
-    border-width: medium 1px;
     float: left;
-    margin-left: 120px;
-    margin-top: 25px;
+    margin-left: 18px;
+    border: 1px solid #e3e1e1;
+    border-width: 0 1px;
 }
 
 #euca-navigator.mouseon {
-    background-color: #e7e7e7;
+    background-color: #ebe9eb;
 }
 
-#euca-navigator img {
+#resources-link {
     display: block;
-    width: 10px;
-    margin-right: 5px;
-}
-
-#euca-navigator div {
-    position: relative;
-    float: left;
-    top: 10px;
-    left: 0px;
-}
-
-#euca-navigator a#top-button {
-    color: #02405f; 
-    font-size: 18px;
-    font-style: normal;
-    font-weight: normal; 
-    left: 0;
-    margin: 5px;
+    background: transparent url(../images/css-sprites-small.png) no-repeat right 4px;
+    color: #73a434;
+    font-family: "Play", Arial, sans-serif;
+    font-size: 16px;
+    line-height: 20px;
+    margin: 13px 25px;
+    outline: 0;
+    padding-right: 19px; 
     text-decoration: none;
-    top: 0;
 }
 
-#euca-navigator a#top-button.mouseon {
+#resources-link.mouseon {
     cursor: default;
 }
 
+/* ======= User and Help Header Navs ======= */
+
 #euca-help {
     display: none;
-    float: right;
-    height: 30px;
-    margin-right: 10px;
-    margin-top: 25px;
-    padding: 0 10px;
-    background-color: #d7d7d7;
-    border-color: -moz-use-text-color #E2E6E5 -moz-use-text-color -moz-use-text-color;
-    border-style: none solid none none;
-    border-width: medium 1px medium medium;
-    color: #02405f; 
-    font-size: 15px;
-    font-style: normal;
-    font-weight: normal;
-}
-
-#euca-help div {
-    position: relative;
-    float: left;
-    top: 5px;
-    left: 0px;
-}
-
-#euca-help img {
-   width: 10px;
 }
 
 #euca-user {
-    display: none;
-    background-color: #d7d7d7;
-    color: #02405f; 
-    font-family: Arial,Helvetica,sans-serif;
-    font-size: 15px;
-    font-style: normal;
-    font-weight: normal;
-    border-color: -moz-use-text-color #E2E6E5;
-    border-style: none solid;
-    border-width: medium 1px;
+    display: none;   
+}
+
+.header-nav {
     float: right;
-    height: 30px;
-    margin-top: 25px;
-    padding: 0 10px;
-    width: auto;
-    text-align: center;
+    border: 1px solid #e3e1e1;
+    border-width: 0 1px;
+}
+
+#euca-help.header-nav {
+    border-left: 0;
+}
+
+.header-nav a {
+    display: block;
+    background: transparent url(../images/css-sprites-small.png) no-repeat right -15px;
+    color: #02405f;
+    font-family: "Play", Arial, sans-serif;
+    font-size: 14px;
+    font-weight: normal;
+    line-height: 1em;
+    margin: 16px 12px;
+    outline: 0;
+    padding-right: 18px;
     text-decoration: none;
 }
 
-#euca-user div {
-    position: relative;
-    float: left;
-    top: 5px;
-    left: 0px;
+.header-nav a:hover {
+    text-decoration: none;
 }
 
-#euca-user img {
-   width: 10px;
-}
+
+
 
 
 /* ======== Explorer styles ======= */

@@ -46,7 +46,7 @@
        var thisObj = this;
        // navigation area   
        var $naviArea = this.element.find('#euca-navigator');
-       $naviArea.append($('<a>').attr('href','#').attr('id','top-button').addClass('ex-navigator').css('display','block').text(button_explorer));
+       $naviArea.append($('<a>').attr('href','#').attr('id','resources-link').css('display','block').text(button_explorer));
        
        //help area 
        var $helpArea = this.element.find('#euca-help');
@@ -61,11 +61,11 @@
        // event handlers
        this.element.find('#euca-navigator').hover(
          function () {
-           $(this).find('#top-button').addClass('mouseon');
+           $(this).find('#resources-link').addClass('mouseon');
            $(this).addClass('mouseon');
          }, 
          function () {
-           $(this).find('#top-button').removeClass('mouseon');
+           $(this).find('#resources-link').removeClass('mouseon');
            $(this).removeClass('mouseon');
          }
        );
