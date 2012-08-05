@@ -19,15 +19,15 @@
       _init : function() { },
 
       _create : function() {
-        // resource-explorer
-        var $ul = $('<ul>').addClass('resource-nav');
+        // resources-explorer
+        var $ul = $('<ul>').addClass('resources-nav');
         for(i=0; i<this.options.menus.length; i++){
           $ul.append(this.createResourceMenu(i, this.options.menus[i]));
         }
         this.element.append($ul);
  
         // user-menu (logout, preference)
-        //$ul = $('<ul>').addClass('resource-nav');
+        //$ul = $('<ul>').addClass('resources-nav');
         //$ul.append(this.createUserMenu());
         //this.element.append($('<div>').addClass('user-explorer').append($ul)); 
       },

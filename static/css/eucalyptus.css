@@ -1,5 +1,5 @@
 
-/* Add a stylesheet to normalize the rendering by different browsers */
+/* Add a stylesheet to normalize the rendering by different web browsers */
 
 @import "../css/normalize.css";
 
@@ -11,7 +11,9 @@ Main text color: #444
 
 Grey text: #666
 
-Blue text: #02405f
+Light grey text: #999
+
+Blue text & links: #02405f
 
 Green links: #73a434
 
@@ -65,7 +67,16 @@ body {
 }
 
 .euca-explorer-container {
-    background: #eaedee url(../images/main-bgfill.png) repeat left top;
+  display:none;
+  background: transparent url(../images/css-sprites.png) repeat-x left -75px;
+
+  /* Needed so the drop shadow will appear above the next section */
+  position: relative;
+  z-index: 20;
+
+  -webkit-box-shadow: 0px 4px 7px rgba(0,0,0,0.34);
+  -moz-box-shadow: 0px 4px 7px rgba(0,0,0,0.34);
+  box-shadow: 0px 4px 7px rgba(0,0,0,0.34);
 }
 
 .euca-main-outercontainer {
@@ -73,6 +84,8 @@ body {
     /* Total min-height with padding 540px */
     min-height: 485px;
     padding: 15px 0 40px;
+    /* Set to a lower number than the Explorer, so the drop shadow will work */
+    z-index: 1;
 }
 
 .euca-footer-container {
@@ -86,8 +99,9 @@ body {
 
 .inner-container {
     margin: 0 auto;
+    padding: 0 10px;
     position: relative;
-    width: 1024px;
+    width: 960px;
 }
 
 .templates {
@@ -136,7 +150,7 @@ body {
 }
 
 #resources-link.mouseon {
-    cursor: default;
+
 }
 
 /* ======= User and Help Header Navs ======= */
@@ -177,34 +191,9 @@ body {
     text-decoration: none;
 }
 
-
-
-
-
-/* ======== Explorer styles ======= */
-
-.euca-explorer-container {
-  display:none;
-  background: transparent url("../images/explorer_background.png") repeat-x left top;
-}
-
-.euca-explorer-container .inner-container {
-    height: 120px;
-}
-
-.resource-nav li {
-  float: left;
-  width: 160px;
-}
-
-.resource-nav li ul li {
-  float: none;
-  width: auto;
-}
-
 .user-menu {
   position: absolute;
-  background: transparent url("../images/explorer_background.png") repeat-x left top;
+  background: transparent url(../images/explorer_background.png) repeat-x left top;
 }
 
 .user-menu li {
@@ -214,13 +203,164 @@ body {
 
 .help-menu {
   position: absolute;
-  background: transparent url("../images/explorer_background.png") repeat-x left top;
+  background: transparent url(../images/explorer_background.png) repeat-x left top;
+   z-index: 25;
 }
 
 .help-menu li {
    float: left;
    width: 120px;
 }
+
+
+/* ======== Explorer Resource Navigation styles ======= */
+
+.resources-nav {
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+} 
+
+.resources-nav li {
+  float: left;
+  width: 160px;
+  /* Needed so submenus that can be positioned absolutely */
+  position: relative;
+}
+
+.resources-nav li a {
+  display: block;
+  background-image: url(../images/explorer-icon-sprites.png);
+  background-repeat: no-repeat;
+  border-left: 1px solid #e3e1e1;
+  color: #02405f;
+  font-family: "Play", Arial, sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1em;
+  margin: 3px 0;
+  padding: 52px 0 4px;
+  text-align: center;
+  text-decoration: none;
+}
+
+.resources-nav li:last-child a {
+  border-right: 1px solid #e3e1e1;
+}
+
+.resources-nav li:hover a,
+.resources-nav li a:hover {
+  color: #73a434;
+  text-decoration: none;
+}
+
+
+/* ==== Link specific styling (including hover and selected states) ==== */
+
+.lnk-dashboard {
+  background-position: 0 0;
+}
+.lnk-dashboard:hover {
+  background-position: 0 -75px;
+}
+
+.lnk-images {
+  background-position: -160px 0;
+}
+.lnk-images:hover {
+  background-position: -160px -75px;
+}
+
+.lnk-instances {
+  background-position: -320px 0;
+}
+.lnk-instances:hover {
+  background-position: -320px -75px;
+}
+
+.lnk-storage {
+  background-position: -480px 0;
+}
+.lnk-storage:hover {
+  background-position: -480px -75px;
+}
+
+.lnk-netsec {
+  background-position: -640px 0;
+}
+.lnk-netsec:hover {
+  background-position: -640px -75px;
+}
+
+.lnk-support {
+  background-position: -800px 0;
+}
+.lnk-support:hover {
+  background-position: -800px -75px;
+}
+
+/* ==== Submenus ==== */
+
+.resources-nav li ul {
+  display: none;
+  background-color: #fff;
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+  position: absolute;
+  top: 74px;
+  left: 0;
+  width: 160px;
+  /* Set so the submewnu appears under the shadow of the parent, but above the content below it */
+  z-index: 2;
+
+  -webkit-box-shadow: 0px 5px 8px rgba(0,0,0,0.34), inset 0px 2px 6px rgba(0,0,0,0.34);
+  -moz-box-shadow: 0px 5px 8px rgba(0,0,0,0.34), inset 0px 2px 6px rgba(0,0,0,0.34); 
+  box-shadow: 0px 5px 8px rgba(0,0,0,0.34), inset 0px 2px 6px rgba(0,0,0,0.34);
+}
+
+.resources-nav li:hover ul {
+  /* Show the submenu when the parent list item is hovered */
+  display: block;
+}
+
+.resources-nav li ul li {
+  float: none;
+  width: auto;
+  border-top: 1px solid #ccc;
+}
+
+.resources-nav li ul li:first-child {
+  border-top: 0;
+}
+
+.resources-nav li:hover ul li a,
+.resources-nav li ul li a {
+  background-image: none;
+  border: 0;
+  color: #02405f;
+  font-family: "Play", Arial, sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  height: auto;
+  margin: 0;
+  padding: 7px 10px 7px 35px;
+  text-align: left;
+  text-decoration: none;
+}
+
+.resources-nav li:hover ul li a:hover,
+.resources-nav li ul li a:hover {
+  color: #73a434;
+} 
+
+ /* Override the border inherited from the parent menu */
+
+.resources-nav li:last-child li a,
+.resources-nav li ul li:last-child a {
+    border-right: 0;
+}
+
 
 /* ======== Login styles ======= */
 
