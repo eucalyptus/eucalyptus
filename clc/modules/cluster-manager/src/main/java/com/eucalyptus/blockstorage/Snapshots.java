@@ -97,6 +97,7 @@ import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.reporting.event.StorageEvent;
+import com.eucalyptus.reporting.modules.storage.SnapShotUsageEventListener;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -306,6 +307,8 @@ public class Snapshots {
       ListenerRegistry.getInstance( ).fireEvent( new StorageEvent( StorageEvent.EventType.EbsSnapshot, true, volSize,
                                                                    userId, userName, accountId, accountName,
                                                                    snap.getVolumeCluster( ), snap.getVolumePartition( ) ) );
+      
+      
     } catch ( Exception ex ) {
       LOG.error( ex );
     }

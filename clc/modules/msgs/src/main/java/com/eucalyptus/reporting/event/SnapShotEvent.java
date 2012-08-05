@@ -28,7 +28,7 @@ public class SnapShotEvent implements Event {
 
     private final ActionInfo actionInfo;
     private final String uuid;
-    private final String sizeGB;
+    private final Long sizeGB;
     private final String ownerId;
     private final String ownerName;
     private final String accountId;
@@ -36,7 +36,7 @@ public class SnapShotEvent implements Event {
     private final String displayName;
     
     public static SnapShotEvent with(final ActionInfo actionInfo,
-	    final String uuid, final String sizeGB, final OwnerFullName owner,
+	    final String uuid, final Long sizeGB, final OwnerFullName owner,
 	    final String displayName) {
 
 	return new SnapShotEvent(actionInfo, uuid, sizeGB, owner.getUserId(),
@@ -44,7 +44,7 @@ public class SnapShotEvent implements Event {
 		owner.getAccountName(), displayName);
     }
 
-    private SnapShotEvent(ActionInfo actionInfo, String uuid, String sizeGB,
+    private SnapShotEvent(ActionInfo actionInfo, String uuid, Long sizeGB,
 	    String ownerId, String ownerName, String accountId,
 	    String accountName, String displayName) {
 
@@ -71,7 +71,7 @@ public class SnapShotEvent implements Event {
 	return displayName;
     }
 
-    public String getSizeMegs() {
+    public Long getSizeGB() {
 	return sizeGB;
     }
 

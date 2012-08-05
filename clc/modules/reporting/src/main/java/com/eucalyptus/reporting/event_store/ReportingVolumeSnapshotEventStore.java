@@ -44,8 +44,7 @@ public class ReportingVolumeSnapshotEventStore
 		
 	}
 
-	public void insertCreateEvent(String uuid, String volumeSnapshotId, String volumeId,
-			Long timestampMs, String userId, Long sizeGB)
+	public void insertCreateEvent(String uuid, String volumeSnapshotId, Long timestampMs, String userId, Long sizeGB)
 	{
 		
 		EntityWrapper<ReportingVolumeSnapshotCreateEvent> entityWrapper =

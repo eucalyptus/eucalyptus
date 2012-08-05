@@ -88,9 +88,8 @@ public class VolumeEvent implements Event {
 	    final String uuid, final long sizeGB, final OwnerFullName owner,
 	    final String displayName, final String availabilityZone) {
 
-	return new VolumeEvent(actionInfo, uuid, sizeGB, owner.getUserId(),
-		owner.getUserName(), owner.getAccountNumber(),
-		owner.getAccountName(), displayName, availabilityZone);
+	return new VolumeEvent(actionInfo, uuid, sizeGB, owner.getUserId(), 
+		owner.getUserName(), owner.getAccountNumber(),owner.getAccountName(), displayName, availabilityZone);
     }
 
     private VolumeEvent(ActionInfo actionInfo, String uuid, long sizeGB,

@@ -54,6 +54,7 @@ public class ReportingVolumeEventStore
 		try {
 			ReportingVolumeCreateEvent volume = new ReportingVolumeCreateEvent(uuid, volumeId,
 				timestampMs, userId, availabilityZone, sizeGB);
+			
 			entityWrapper.add(volume);
 			entityWrapper.commit();
 			LOG.debug("Added reporting volume to db:" + volume);

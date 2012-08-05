@@ -34,7 +34,7 @@ import com.google.common.base.Preconditions;
 public class SnapShotUsageEventListener implements EventListener<SnapShotEvent> {
 
     public static void register() {
-	Listeners.register(VolumeEvent.class, new SnapShotUsageEventListener());
+	Listeners.register(SnapShotEvent.class, new SnapShotUsageEventListener());
     }
 
     @Override
@@ -50,7 +50,7 @@ public class SnapShotUsageEventListener implements EventListener<SnapShotEvent> 
 	    switch (event.getActionInfo().getAction()) {
 	    case SNAPSHOTCREATE :
 		eventStore.insertCreateEvent(event.getUuid(), event.getDisplayName(), event.getTimeInMs(), 
-			event.getOwnerName(), event.getSizeMegs());
+			event.getOwnerName(), event.getSizeGB());
 	      break;
 	    case SNAPSHOTDELETE :
 		eventStore.insertDeleteEvent(event.getUuid(), event.getTimeInMs());
