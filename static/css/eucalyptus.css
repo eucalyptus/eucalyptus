@@ -126,14 +126,16 @@ body {
 
 #euca-navigator {
     display: none;
-    float: left;
-    margin-left: 18px;
+    position: absolute;
+    left: 235px;
     border: 1px solid #e3e1e1;
     border-width: 0 1px;
 }
 
 #euca-navigator.mouseon {
     background-color: #ebe9eb;
+    border-color: #ccc;
+    padding-bottom: 4px;
 }
 
 #resources-link {
@@ -149,9 +151,6 @@ body {
     text-decoration: none;
 }
 
-#resources-link.mouseon {
-
-}
 
 /* ======= User and Help Header Navs ======= */
 
@@ -193,23 +192,42 @@ body {
 
 .user-menu {
   position: absolute;
-  background: transparent url(../images/explorer_background.png) repeat-x left top;
+  z-index: 25;
+}
+
+.user-menu ul {
+  background-color: #fff;
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+
+  -webkit-box-shadow: 0px 5px 8px rgba(0,0,0,0.34);
+  -moz-box-shadow: 0px 5px 8px rgba(0,0,0,0.34); 
+  box-shadow: 0px 5px 8px rgba(0,0,0,0.34);
 }
 
 .user-menu li {
-   float: left;
-   width: 120px;
+  width: 120px;
 }
 
 .help-menu {
   position: absolute;
-  background: transparent url(../images/explorer_background.png) repeat-x left top;
-   z-index: 25;
+  z-index: 25;
+}
+
+.help-menu ul {
+  background-color: #fff;
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+
+  -webkit-box-shadow: 0px 5px 8px rgba(0,0,0,0.34);
+  -moz-box-shadow: 0px 5px 8px rgba(0,0,0,0.34); 
+  box-shadow: 0px 5px 8px rgba(0,0,0,0.34);
 }
 
 .help-menu li {
-   float: left;
-   width: 120px;
+  width: 120px;
 }
 
 
@@ -260,6 +278,7 @@ body {
 .lnk-dashboard {
   background-position: 0 0;
 }
+.resources-nav li:hover a.lnk-dashboard,
 .lnk-dashboard:hover {
   background-position: 0 -75px;
 }
@@ -267,6 +286,7 @@ body {
 .lnk-images {
   background-position: -160px 0;
 }
+.resources-nav li:hover a.lnk-images,
 .lnk-images:hover {
   background-position: -160px -75px;
 }
@@ -274,29 +294,33 @@ body {
 .lnk-instances {
   background-position: -320px 0;
 }
+.resources-nav li:hover a.lnk-instances,
 .lnk-instances:hover {
   background-position: -320px -75px;
 }
 
 .lnk-storage {
-  background-position: -480px 0;
+  background-position: -483px 0;
 }
+.resources-nav li:hover a.lnk-storage,
 .lnk-storage:hover {
-  background-position: -480px -75px;
+  background-position: -483px -75px;
 }
 
 .lnk-netsec {
-  background-position: -640px 0;
+  background-position: -650px 0;
 }
+.resources-nav li:hover a.lnk-netsec,
 .lnk-netsec:hover {
-  background-position: -640px -75px;
+  background-position: -650px -75px;
 }
 
 .lnk-support {
-  background-position: -800px 0;
+  background-position: -810px 0;
 }
+.resources-nav li:hover a.lnk-support,
 .lnk-support:hover {
-  background-position: -800px -75px;
+  background-position: -810px -75px;
 }
 
 /* ==== Submenus ==== */
