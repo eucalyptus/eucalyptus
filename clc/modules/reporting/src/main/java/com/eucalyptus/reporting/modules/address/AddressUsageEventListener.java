@@ -25,8 +25,8 @@ import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.reporting.event.AddressEvent;
 import com.eucalyptus.reporting.event_store.ReportingElasticIpEventStore;
-import com.eucalyptus.reporting.user.ReportingAccountDao;
-import com.eucalyptus.reporting.user.ReportingUserDao;
+import com.eucalyptus.reporting.domain.ReportingAccountCrud;
+import com.eucalyptus.reporting.domain.ReportingUserCrud;
 import com.google.common.base.Preconditions;
 
 /**
@@ -45,8 +45,8 @@ public class AddressUsageEventListener implements EventListener<AddressEvent> {
     final long timestamp = getCurrentTimeMillis();
 
     // Ensure account / user info is present and up to date
-    getReportingAccountDao().addUpdateAccount( event.getAccountId(), event.getAccountName() );
-    getReportingUserDao().addUpdateUser( event.getUserId(), event.getUserName() );
+    getReportingAccountCrud().createOrUpdateAccount( event.getAccountId(), event.getAccountName() );
+    getReportingUserCrud().createOrUpdateUser( event.getUserId(), event.getAccountId(), event.getUserName() );
 
     final ReportingElasticIpEventStore eventStore = getReportingElasticIpEventStore();
     switch (event.getActionInfo().getAction()) {
@@ -65,12 +65,12 @@ public class AddressUsageEventListener implements EventListener<AddressEvent> {
     }
   }
 
-  protected ReportingAccountDao getReportingAccountDao() {
-    return ReportingAccountDao.getInstance();
+  protected ReportingAccountCrud getReportingAccountCrud() {
+    return ReportingAccountCrud.getInstance();
   }
 
-  protected ReportingUserDao getReportingUserDao() {
-    return ReportingUserDao.getInstance();
+  protected ReportingUserCrud getReportingUserCrud() {
+    return ReportingUserCrud.getInstance();
   }
 
   protected ReportingElasticIpEventStore getReportingElasticIpEventStore() {

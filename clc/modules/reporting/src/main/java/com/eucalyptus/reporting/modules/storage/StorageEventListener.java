@@ -70,8 +70,8 @@ import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.reporting.event.Event;
 import com.eucalyptus.reporting.event.StorageEvent;
-import com.eucalyptus.reporting.user.ReportingAccountDao;
-import com.eucalyptus.reporting.user.ReportingUserDao;
+import com.eucalyptus.reporting.domain.ReportingAccountCrud;
+import com.eucalyptus.reporting.domain.ReportingUserCrud;
 
 public class StorageEventListener
 	implements EventListener<Event>
@@ -97,9 +97,9 @@ public class StorageEventListener
 			/* Retain records of all account and user id's and names encountered
 			 * even if they're subsequently deleted.
 			 */
-			ReportingAccountDao.getInstance().addUpdateAccount(
+			ReportingAccountCrud.getInstance().createOrUpdateAccount(
 					storageEvent.getAccountId(), storageEvent.getAccountName());
-			ReportingUserDao.getInstance().addUpdateUser(storageEvent.getOwnerId(),
+			ReportingUserCrud.getInstance().createOrUpdateUser(storageEvent.getOwnerId(), storageEvent.getAccountId(),
 					storageEvent.getOwnerName());
 
 
