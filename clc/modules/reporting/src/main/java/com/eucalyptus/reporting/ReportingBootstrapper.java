@@ -75,10 +75,12 @@ import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.reporting.event.InstanceEvent;
-import com.eucalyptus.reporting.event.StorageEvent;
+import com.eucalyptus.reporting.event.SnapShotEvent;
+import com.eucalyptus.reporting.event.VolumeEvent;
 import com.eucalyptus.reporting.modules.instance.InstanceEventListener;
 import com.eucalyptus.reporting.modules.s3.S3EventListener;
-import com.eucalyptus.reporting.modules.storage.StorageEventListener;
+import com.eucalyptus.reporting.modules.storage.SnapShotUsageEventListener;
+import com.eucalyptus.reporting.modules.storage.VolumeUsageEventListener;
 import com.eucalyptus.reporting.queue.QueueFactory;
 import com.eucalyptus.reporting.queue.QueueFactory.QueueIdentifier;
 import com.eucalyptus.reporting.queue.QueueReceiver;
@@ -94,7 +96,8 @@ public class ReportingBootstrapper
 
 	private static long POLLER_DELAY_MS = 10000l;
 
-	private StorageEventListener storageListener;
+	private static SnapShotUsageEventListener snapshotListener = null;
+	private VolumeUsageEventListener volumeListener;
 	private static InstanceEventListener instanceListener = null;
 	private S3EventListener s3Listener;
 	private QueueFactory queueFactory;
@@ -105,6 +108,8 @@ public class ReportingBootstrapper
 	public ReportingBootstrapper()
 	{
 		this.instanceListener = null;
+		this.snapshotListener = null;
+		this.volumeListener = null;
 	}
 
 	@Override
@@ -161,8 +166,9 @@ public class ReportingBootstrapper
 
 			/* Start storage receiver and storage queue poller thread
 			 */
-			QueueReceiver storageReceiver =
+			/* QueueReceiver storageReceiver =
 				queueFactory.getReceiver(QueueIdentifier.STORAGE);
+			
 			if (storageListener == null) {
 				storageListener = new StorageEventListener();
 				log.info("New storage listener instantiated");
@@ -170,6 +176,19 @@ public class ReportingBootstrapper
 				log.info("Used existing storage listener");
 			}
 			storageReceiver.addEventListener(storageListener);
+			
+			/* Start snapshot receiver and snapshot queue poller thread */
+			
+			QueueReceiver snapshotReceiver =
+				queueFactory.getReceiver(QueueIdentifier.SNAPSHOT);
+			
+			if (snapshotListener == null) {
+				snapshotListener = new SnapShotUsageEventListener();
+				log.info("New snapshot listener instantiated");
+			} else {
+				log.info("Used existing snapshot listener");
+			}
+			snapshotReceiver.addEventListener(snapshotListener);
 
 //			final StorageEventPoller poller = new StorageEventPoller(storageReceiver);
 //			this.storagePoller = poller;

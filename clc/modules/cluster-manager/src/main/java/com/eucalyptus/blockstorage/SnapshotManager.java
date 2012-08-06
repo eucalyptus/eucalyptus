@@ -91,6 +91,7 @@ import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.images.Images;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.reporting.event.SnapShotEvent;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
@@ -174,7 +175,8 @@ public class SnapshotManager {
           } else if ( isReservedSnapshot( request.getSnapshotId( ) ) ) {
             throw Exceptions.toUndeclared( "Snapshot " + request.getSnapshotId( ) + " is in use, deletion not permitted", new EucalyptusCloudException( ) );
           } else {
-            Snapshots.fireDeleteEvent( snap );
+            Snapshots.fireUsageEvent( snap, SnapShotEvent.forSnapShotDelete() );
+            
             final ServiceConfiguration sc = Topology.lookup( Storage.class, Partitions.lookupByName( snap.getPartition( ) ) );
             try {
               DeleteStorageSnapshotResponseType scReply = AsyncRequests.sendSync( sc, new DeleteStorageSnapshotType( snap.getDisplayName( ) ) );

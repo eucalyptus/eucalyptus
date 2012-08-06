@@ -33,11 +33,12 @@ import com.google.common.base.Preconditions;
 
 public class SnapShotUsageEventListener implements EventListener<SnapShotEvent> {
 
+    public SnapShotUsageEventListener() {}
+    
     public static void register() {
 	Listeners.register(SnapShotEvent.class,
 		new SnapShotUsageEventListener());
     }
-
     @Override
     public void fireEvent(@Nonnull final SnapShotEvent event) {
 	Preconditions.checkNotNull(event, "Event is required");

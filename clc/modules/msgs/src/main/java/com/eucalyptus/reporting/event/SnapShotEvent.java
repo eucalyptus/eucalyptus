@@ -2,12 +2,15 @@ package com.eucalyptus.reporting.event;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.notNullValue;
+
 import com.eucalyptus.util.OwnerFullName;
 
 @SuppressWarnings("serial")
-public class SnapShotEvent implements Event {
+public class SnapShotEvent implements com.eucalyptus.event.Event {
 
-    public enum SnapShotAction { SNAPSHOTCREATE, SNAPSHOTDELETE };
+    public enum SnapShotAction {
+	SNAPSHOTCREATE, SNAPSHOTDELETE
+    };
 
     public static class ActionInfo {
 	private final SnapShotAction action;
@@ -34,9 +37,17 @@ public class SnapShotEvent implements Event {
     private final String accountId;
     private final String accountName;
     private final String displayName;
-    
+
+    public static ActionInfo forSnapShotCreate() {
+	return new ActionInfo(SnapShotAction.SNAPSHOTCREATE);
+    }
+
+    public static ActionInfo forSnapShotDelete() {
+	return new ActionInfo(SnapShotAction.SNAPSHOTDELETE);
+    }
+
     public static SnapShotEvent with(final ActionInfo actionInfo,
-	    final String uuid, final Long sizeGB, final OwnerFullName owner,
+	    final String uuid, final long sizeGB, final OwnerFullName owner,
 	    final String displayName) {
 
 	return new SnapShotEvent(actionInfo, uuid, sizeGB, owner.getUserId(),
@@ -44,7 +55,7 @@ public class SnapShotEvent implements Event {
 		owner.getAccountName(), displayName);
     }
 
-    private SnapShotEvent(ActionInfo actionInfo, String uuid, Long sizeGB,
+    private SnapShotEvent(ActionInfo actionInfo, String uuid, long sizeGB,
 	    String ownerId, String ownerName, String accountId,
 	    String accountName, String displayName) {
 
@@ -92,18 +103,17 @@ public class SnapShotEvent implements Event {
     }
 
     public ActionInfo getActionInfo() {
-	    return actionInfo;
+	return actionInfo;
     }
-    
+
     public String getUuid() {
-	    return uuid;
+	return uuid;
     }
-    
+
     public Long getTimeInMs() {
 	return System.currentTimeMillis();
     }
-    
-    @Override
+
     public boolean requiresReliableTransmission() {
 	return false;
     }

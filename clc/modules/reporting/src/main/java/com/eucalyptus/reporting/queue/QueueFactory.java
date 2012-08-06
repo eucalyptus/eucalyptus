@@ -94,8 +94,9 @@ public class QueueFactory
 	public enum QueueIdentifier
 	{
 		INSTANCE("InstanceQueue"),
-		STORAGE("StorageQueue"),
-		S3("S3");
+		S3("S3"),
+		SNAPSHOT("SNAPSHOTQUEUE"),
+		VOLUME("VOLUMEQUEUE");
 		
 		private final String queueName;
 
