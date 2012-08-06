@@ -220,7 +220,7 @@ public class TroubleshootingBootstrapper extends Bootstrapper {
 							}
 						}
 					} else {
-						LOG.warn("Properties file for fault trigger test " + TEST_FAULT_VAR_PROPERTIES_FILE + " does not exist");
+						LOG.warn("Properties file for fault trigger test " + TEST_FAULT_VAR_PROPERTIES_FILE + " does not exist (or can not be read)");
 					}
 				} else {
 					LOG.warn("No properties file set for fault trigger test");

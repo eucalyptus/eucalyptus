@@ -72,6 +72,9 @@ public class TestFaultTrigger {
 		LOG.debug("Triggering fault " + id + " with vars " + varProps);
 		try {
 			Fault fault = FaultSubsystem.fault(id);
+			if (fault == null) {
+				LOG.error("Error triggering fault: " + id + ", no fault found in XML files");
+			}
 			if (varProps != null) {
 				Enumeration e = varProps.propertyNames();
 				while (e.hasMoreElements()) {
