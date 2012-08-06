@@ -1,5 +1,5 @@
 
-/* Add a stylesheet to normalize the rendering by different browsers */
+/* Add a stylesheet to normalize the rendering by different web browsers */
 
 @import "../css/normalize.css";
 
@@ -7,9 +7,13 @@
 
 /*
 
+Main text color: #444
+
 Grey text: #666
 
-Blue text: #02405f
+Light grey text: #999
+
+Blue text & links: #02405f
 
 Green links: #73a434
 
@@ -19,10 +23,14 @@ Green links: #73a434
 /* ======== Base HTML styles ======= */
 
 body {
+    
+    background: #fff;
+    border-top: 10px solid #02405f;
+    color: #444;
+    font-family: Arial, sans-serif;
+    font-size: 1em;
     margin: 0;
     padding: 0;
-    font-family: Arial,Helvetica,sans-serif;
-    background: #fff;
 }
 
 
@@ -54,12 +62,21 @@ body {
 }
 
 .euca-header-container {
-    background: transparent url(../images/header-bgfill.png) repeat-x left top;
-    height: 61px;
+    background: transparent url(../images/css-sprites.png) repeat left -25px;
+    height: 50px;
 }
 
 .euca-explorer-container {
-    background: #eaedee url(../images/main-bgfill.png) repeat left top;
+  display:none;
+  background: transparent url(../images/css-sprites.png) repeat-x left -75px;
+
+  /* Needed so the drop shadow will appear above the next section */
+  position: relative;
+  z-index: 20;
+
+  -webkit-box-shadow: 0px 4px 7px rgba(0,0,0,0.34);
+  -moz-box-shadow: 0px 4px 7px rgba(0,0,0,0.34);
+  box-shadow: 0px 4px 7px rgba(0,0,0,0.34);
 }
 
 .euca-main-outercontainer {
@@ -67,24 +84,24 @@ body {
     /* Total min-height with padding 540px */
     min-height: 485px;
     padding: 15px 0 40px;
+    /* Set to a lower number than the Explorer, so the drop shadow will work */
+    z-index: 1;
 }
 
 .euca-footer-container {
     background: transparent url(../images/footer-bgfill.png) repeat-x left top;
+    color: #999;
+    font-size: 12px;
     margin-bottom: 20px;
     min-height: 30px;
-    padding: 5px 0;
-}
-
-.euca-footer-container li {
-   float: left;
-   width: 150px;
+    padding: 10px 0;
 }
 
 .inner-container {
     margin: 0 auto;
+    padding: 0 10px;
     position: relative;
-    width: 1024px;
+    width: 960px;
 }
 
 .templates {
@@ -97,11 +114,11 @@ body {
 
 #euca-logo {
     float: left;
-    height: 30px;
-    width: 220px;
-    margin: 20px 0 10px;
+    height: 22px;
+    width: 207px;
+    margin-top: 13px;
+    background: transparent url(../images/css-sprites.png) no-repeat center 0;
     border: none;
-    background: transparent url(../images/eucalyptus-logo.png) no-repeat left top;
 }
 
 
@@ -109,147 +126,265 @@ body {
 
 #euca-navigator {
     display: none;
-    background-color: #d7d7d7;
-    border: 1px solid #E2E6E5;
-    border-style: none solid;
-    border-width: medium 1px;
-    float: left;
-    margin-left: 120px;
-    margin-top: 25px;
+    position: absolute;
+    left: 235px;
+    border: 1px solid #e3e1e1;
+    border-width: 0 1px;
 }
 
 #euca-navigator.mouseon {
-    background-color: #e7e7e7;
+    background-color: #ebe9eb;
+    border-color: #ccc;
+    padding-bottom: 4px;
 }
 
-#euca-navigator img {
+#resources-link {
     display: block;
-    width: 10px;
-    margin-right: 5px;
-}
-
-#euca-navigator div {
-    position: relative;
-    float: left;
-    top: 10px;
-    left: 0px;
-}
-
-#euca-navigator a#top-button {
-    color: #02405f; 
-    font-size: 18px;
-    font-style: normal;
-    font-weight: normal; 
-    left: 0;
-    margin: 5px;
+    background: transparent url(../images/css-sprites-small.png) no-repeat right 4px;
+    color: #73a434;
+    font-family: "Play", Arial, sans-serif;
+    font-size: 16px;
+    line-height: 20px;
+    margin: 13px 25px;
+    outline: 0;
+    padding-right: 19px; 
     text-decoration: none;
-    top: 0;
 }
 
-#euca-navigator a#top-button.mouseon {
-    cursor: default;
-}
+
+/* ======= User and Help Header Navs ======= */
 
 #euca-help {
     display: none;
-    float: right;
-    height: 30px;
-    margin-right: 10px;
-    margin-top: 25px;
-    padding: 0 10px;
-    background-color: #d7d7d7;
-    border-color: -moz-use-text-color #E2E6E5 -moz-use-text-color -moz-use-text-color;
-    border-style: none solid none none;
-    border-width: medium 1px medium medium;
-    color: #02405f; 
-    font-size: 15px;
-    font-style: normal;
-    font-weight: normal;
-}
-
-#euca-help div {
-    position: relative;
-    float: left;
-    top: 5px;
-    left: 0px;
-}
-
-#euca-help img {
-   width: 10px;
 }
 
 #euca-user {
-    display: none;
-    background-color: #d7d7d7;
-    color: #02405f; 
-    font-family: Arial,Helvetica,sans-serif;
-    font-size: 15px;
-    font-style: normal;
-    font-weight: normal;
-    border-color: -moz-use-text-color #E2E6E5;
-    border-style: none solid;
-    border-width: medium 1px;
+    display: none;   
+}
+
+.header-nav {
     float: right;
-    height: 30px;
-    margin-top: 25px;
-    padding: 0 10px;
-    width: auto;
-    text-align: center;
+    border: 1px solid #e3e1e1;
+    border-width: 0 1px;
+}
+
+#euca-help.header-nav {
+    border-left: 0;
+}
+
+.header-nav a {
+    display: block;
+    background: transparent url(../images/css-sprites-small.png) no-repeat right -15px;
+    color: #02405f;
+    font-family: "Play", Arial, sans-serif;
+    font-size: 14px;
+    font-weight: normal;
+    line-height: 1em;
+    margin: 16px 12px;
+    outline: 0;
+    padding-right: 18px;
     text-decoration: none;
 }
 
-#euca-user div {
-    position: relative;
-    float: left;
-    top: 5px;
-    left: 0px;
-}
-
-#euca-user img {
-   width: 10px;
-}
-
-
-/* ======== Explorer styles ======= */
-
-.euca-explorer-container {
-  display:none;
-  background: transparent url("../images/explorer_background.png") repeat-x left top;
-}
-
-.euca-explorer-container .inner-container {
-    height: 120px;
-}
-
-.resource-nav li {
-  float: left;
-  width: 160px;
-}
-
-.resource-nav li ul li {
-  float: none;
-  width: auto;
+.header-nav a:hover {
+    text-decoration: none;
 }
 
 .user-menu {
   position: absolute;
-  background: transparent url("../images/explorer_background.png") repeat-x left top;
+  z-index: 25;
+}
+
+.user-menu ul {
+  background-color: #fff;
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+
+  -webkit-box-shadow: 0px 5px 8px rgba(0,0,0,0.34);
+  -moz-box-shadow: 0px 5px 8px rgba(0,0,0,0.34); 
+  box-shadow: 0px 5px 8px rgba(0,0,0,0.34);
 }
 
 .user-menu li {
-   float: left;
-   width: 120px;
+  width: 120px;
 }
 
 .help-menu {
   position: absolute;
-  background: transparent url("../images/explorer_background.png") repeat-x left top;
+  z-index: 25;
+}
+
+.help-menu ul {
+  background-color: #fff;
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+
+  -webkit-box-shadow: 0px 5px 8px rgba(0,0,0,0.34);
+  -moz-box-shadow: 0px 5px 8px rgba(0,0,0,0.34); 
+  box-shadow: 0px 5px 8px rgba(0,0,0,0.34);
 }
 
 .help-menu li {
-   float: left;
-   width: 120px;
+  width: 120px;
 }
+
+
+/* ======== Explorer Resource Navigation styles ======= */
+
+.resources-nav {
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+} 
+
+.resources-nav li {
+  float: left;
+  width: 160px;
+  /* Needed so submenus that can be positioned absolutely */
+  position: relative;
+}
+
+.resources-nav li a {
+  display: block;
+  background-image: url(../images/explorer-icon-sprites.png);
+  background-repeat: no-repeat;
+  border-left: 1px solid #e3e1e1;
+  color: #02405f;
+  font-family: "Play", Arial, sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1em;
+  margin: 3px 0;
+  padding: 52px 0 4px;
+  text-align: center;
+  text-decoration: none;
+}
+
+.resources-nav li:last-child a {
+  border-right: 1px solid #e3e1e1;
+}
+
+.resources-nav li:hover a,
+.resources-nav li a:hover {
+  color: #73a434;
+  text-decoration: none;
+}
+
+
+/* ==== Link specific styling (including hover and selected states) ==== */
+
+.lnk-dashboard {
+  background-position: 0 0;
+}
+.resources-nav li:hover a.lnk-dashboard,
+.lnk-dashboard:hover {
+  background-position: 0 -75px;
+}
+
+.lnk-images {
+  background-position: -160px 0;
+}
+.resources-nav li:hover a.lnk-images,
+.lnk-images:hover {
+  background-position: -160px -75px;
+}
+
+.lnk-instances {
+  background-position: -320px 0;
+}
+.resources-nav li:hover a.lnk-instances,
+.lnk-instances:hover {
+  background-position: -320px -75px;
+}
+
+.lnk-storage {
+  background-position: -483px 0;
+}
+.resources-nav li:hover a.lnk-storage,
+.lnk-storage:hover {
+  background-position: -483px -75px;
+}
+
+.lnk-netsec {
+  background-position: -650px 0;
+}
+.resources-nav li:hover a.lnk-netsec,
+.lnk-netsec:hover {
+  background-position: -650px -75px;
+}
+
+.lnk-support {
+  background-position: -810px 0;
+}
+.resources-nav li:hover a.lnk-support,
+.lnk-support:hover {
+  background-position: -810px -75px;
+}
+
+/* ==== Submenus ==== */
+
+.resources-nav li ul {
+  display: none;
+  background-color: #fff;
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+  position: absolute;
+  top: 74px;
+  left: 0;
+  width: 160px;
+  /* Set so the submewnu appears under the shadow of the parent, but above the content below it */
+  z-index: 2;
+
+  -webkit-box-shadow: 0px 5px 8px rgba(0,0,0,0.34), inset 0px 2px 6px rgba(0,0,0,0.34);
+  -moz-box-shadow: 0px 5px 8px rgba(0,0,0,0.34), inset 0px 2px 6px rgba(0,0,0,0.34); 
+  box-shadow: 0px 5px 8px rgba(0,0,0,0.34), inset 0px 2px 6px rgba(0,0,0,0.34);
+}
+
+.resources-nav li:hover ul {
+  /* Show the submenu when the parent list item is hovered */
+  display: block;
+}
+
+.resources-nav li ul li {
+  float: none;
+  width: auto;
+  border-top: 1px solid #ccc;
+}
+
+.resources-nav li ul li:first-child {
+  border-top: 0;
+}
+
+.resources-nav li:hover ul li a,
+.resources-nav li ul li a {
+  background-image: none;
+  border: 0;
+  color: #02405f;
+  font-family: "Play", Arial, sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  height: auto;
+  margin: 0;
+  padding: 7px 10px 7px 35px;
+  text-align: left;
+  text-decoration: none;
+}
+
+.resources-nav li:hover ul li a:hover,
+.resources-nav li ul li a:hover {
+  color: #73a434;
+} 
+
+ /* Override the border inherited from the parent menu */
+
+.resources-nav li:last-child li a,
+.resources-nav li ul li:last-child a {
+    border-right: 0;
+}
+
 
 /* ======== Login styles ======= */
 
@@ -269,9 +404,9 @@ body {
 .form-row label {
     display: inline-block;
     width: 130px;
-    font-family: 'Play', sans-serif;
+    font-family: "PlayBold", Arial, sans-serif;
     font-size: 13px;
-    font-weight: bold;
+    font-weight: normal;
     text-align: right;
     margin-right: 15px;
     color: #02405f;
@@ -321,9 +456,9 @@ body {
 .box-header {
     background-color: #eaf2f5;
     color: #02405f;
-    font-family: 'Play', sans-serif;
+    font-family: "PlayBold", Arial, sans-serif;
     font-size: 15px;
-    font-weight: bold;
+    font-weight: normal;
     margin: 13px 0 25px;
     padding: 8px 30px 4px;    
 }
@@ -334,8 +469,6 @@ body {
 }
 
 #euca-main-container {
-    border: none;
-    width: 1024px;
     display: none;
 }
 
@@ -547,3 +680,36 @@ div.help-link {
 .ui-dialog-titlebar-close {
    visibility: hidden;
 }
+
+/* ======= Footer styles ======= */
+
+.copyright {
+  float: left;
+  margin-left: 5px;
+}
+
+.footer-nav {
+  float: right;
+  list-style-type: none;
+  margin: 0 5px 0 0;
+  padding: 0;
+}
+
+.footer-nav li {
+   float: left;
+   display: inline;
+   margin-left: 12px;
+}
+
+.footer-nav li a {
+  color: #73a434;
+  text-decoration: none;
+}
+
+.footer-nav li a:hover {
+  color: #73a434;
+  text-decoration: underline;
+}
+
+
+
