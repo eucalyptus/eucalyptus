@@ -7,8 +7,7 @@
       mode:'both',
       language: args.language, 
       callback: function() {
-        // We specified mode: 'both' so translated values will be
-        // available as JS vars/functions and as a map
+        // when jsrender is used, the variables should be propped to make it available as $.i18n.map
         $.i18n.prop('login_title');
         $.i18n.prop('login_acct');
         $.i18n.prop('login_uname');
@@ -16,6 +15,10 @@
         $.i18n.prop('login_pwd_help');
         $.i18n.prop('login_pwd_link');
         $.i18n.prop('login_btn');
+
+        $.i18n.prop('kp_tbl_hdr_name');
+        $.i18n.prop('kp_tbl_hdr_fingerprint');
+        $.i18n.prop('table_loading');
       }
     });
   }

@@ -62,6 +62,10 @@
 		 $('#table_keys_count').html(oSettings.fnRecordsTotal());
               }
       });
+      
+      return ;
+
+ 
       setUpInfoTableLayout('keys', 'key pairs');
       // init delete dialog
       var deleteButtonId = "delete-" + S4();
@@ -239,11 +243,11 @@
     var $container = $('html body').find('.euca-main-outercontainer .inner-container #euca-main-container');
     $container.maincontainer();
     $('html body').find('.euca-explorer-container .inner-container').explorer({select: function(evt, ui){ 
-                                                                      if (ui.selected === 'dashboard')
-                                                                        $('html body').find('#euca-tab-container').remove();
                                                                       $container.maincontainer("changeSelected",evt, ui);
                                                                    }});
 
+    $('html body').find('.euca-footer-container .inner-container').footer();
+/* 
     // find div.euca-container.euca-main#euca-main-header
     var menus = [{name:'Instances', link:'#tabs-instances'}, 
                   {name:'Images', link:'#tabs-images'},
@@ -262,12 +266,9 @@
 
     fillTable();
 
-    // calls eucalyptus.footer widget
-    $('html body').find('.euca-footer-container .inner-container').footer();
-
     var $main = $('html body').find('.euca-main-outercontainer .inner-container #euca-tab-container');
-    $main.tabs();
-
+//    $main.tabs();
+*/
   } // end of main
 })(jQuery,
    window.eucalyptus ? window.eucalyptus : window.eucalyptus = {});
