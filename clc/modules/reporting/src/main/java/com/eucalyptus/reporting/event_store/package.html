@@ -1,4 +1,3 @@
-
 <p>The event_store package provides a <i>persistent log</i> of reporting events. It permanently
 keeps a record of events which occur in the Eucalyptus system, such as volume creations and deletions,
 instance usage, and so on. This log of events is subsequently used to generate visual reports of
@@ -32,7 +31,7 @@ if you wanted to record that a volume creation occured, you would call:
 
 <p>...and similarly with instance usage, bucket creation, etc etc. 
 
-<p>All hibernate operations are encapsulated within EventStore objects, because this package
+<p>All hibernate operations are encapsulated within EntityStore objects, because this package
 may need to modify objects before they are persisted. This requires that the hibernate operations
 be encapsulated.
 
@@ -40,4 +39,10 @@ be encapsulated.
 six (InstanceEventStore, VolumeEventStore, VolumeSnapshotEventStore, ElasticIpEventStore, 
 S3BucketEventStore, and S3ObjectEventStore). All of them are singletons and contain methods for
 inserting events such as creations, deletions, and usage.
+six. All of them are singletons.
 
+<p>Note that usage events for instances are different from all other usage events. Instance
+usage events are persisted at periodic intervals (for example, 4 hours) whereas volume and
+S3Object usage events are written as usage occurs, which may be rarely. Also, instances
+have no delete events; instances are presumed to be destroyed when their usage events
+cease.

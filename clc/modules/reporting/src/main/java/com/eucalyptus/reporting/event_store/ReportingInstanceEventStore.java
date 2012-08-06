@@ -1,90 +1,99 @@
+/*************************************************************************
+ * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 3 of the License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ *
+ * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
+ * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
+ * additional information or have any questions.
+ ************************************************************************/
 package com.eucalyptus.reporting.event_store;
 
-import java.util.*;
-
+import javax.annotation.Nonnull;
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.entities.Entities;
+import com.google.common.base.Preconditions;
 
-/**
- * @author tom.werges
- */
-public class ReportingInstanceEventStore
-{
-	private static Logger LOG = Logger.getLogger( ReportingInstanceEventStore.class );
+public class ReportingInstanceEventStore {
+  private static final ReportingInstanceEventStore instance = new ReportingInstanceEventStore( );
 
-	private static ReportingInstanceEventStore instance = null;
-	
-	public static synchronized ReportingInstanceEventStore getInstance()
-	{
-		if (instance == null) {
-			instance = new ReportingInstanceEventStore();
-		}
-		return instance;
-	}
+  public static ReportingInstanceEventStore getInstance( ) {
+    return instance;
+  }
 
-	private final Set<String> alreadyHaveAttrUuids;
+  protected ReportingInstanceEventStore( ) { }
 
-	private ReportingInstanceEventStore()
-	{
-		this.alreadyHaveAttrUuids = new HashSet<String>();	
-	}
+  public void insertCreateEvent( @Nonnull final String uuid,
+                                          final long timestampMs,
+                                 @Nonnull final String instanceId,
+                                 @Nonnull final String instanceType,
+                                 @Nonnull final String userId,
+                                 @Nonnull final String clusterName,
+                                 @Nonnull final String availabilityZone ) {
+    Preconditions.checkNotNull( uuid, "Uuid is required" );
+    Preconditions.checkNotNull( instanceId, "InstanceId is required" );
+    Preconditions.checkNotNull( instanceType, "InstanceType is required" );
+    Preconditions.checkNotNull( userId, "UserId is required" );
+    Preconditions.checkNotNull( clusterName, "ClusterName is required" );
+    Preconditions.checkNotNull( availabilityZone, "AvailabilityZone is required" );
 
-	/**
-	 * This can be called repeatedly and only one event will be stored in the database.
-	 */
-	public void insertAttributesEvent(String uuid, long timestampMs, String instanceId,
-			String instanceType, String userId, String clusterName, String availabilityZone)
-	{
-		EntityWrapper<ReportingInstanceAttributeEvent> entityWrapper =
-			EntityWrapper.get(ReportingInstanceAttributeEvent.class);
+    persist(
+        new ReportingInstanceCreateEvent(
+            uuid,
+            timestampMs,
+            instanceId,
+            instanceType,
+            userId,
+            clusterName,
+            availabilityZone ) );
+  }
 
-		try {
-			/* NOTE: it's possible that the CLC has rebooted and cleared out this cache of
-			 * uuids, in which case the uuid would have already been inserted. The database
-			 * column has a unique constraint and the subsequent insertion will fail, which is
-			 * what we want in this case. There are more elegant ways of doing this which
-			 * I'll explore later. -tw
-			 */
-			if (!alreadyHaveAttrUuids.contains(uuid)) {
-				ReportingInstanceAttributeEvent event =
-					new ReportingInstanceAttributeEvent(uuid, timestampMs, instanceId, instanceType,
-							userId, clusterName, availabilityZone);
+  public void insertUsageEvent( @Nonnull final String uuid,
+                                         final long timestampMs,
+                                @Nonnull final Long cumulativeDiskIoMegs,
+                                @Nonnull final Integer cpuUtilizationPercent,
+                                @Nonnull final Long cumulativeNetIncomingMegsBetweenZones,
+                                @Nonnull final Long cumulativeNetIncomingMegsWithinZone,
+                                @Nonnull final Long cumulativeNetIncomingMegsPublicIp,
+                                @Nonnull final Long cumulativeNetOutgoingMegsBetweenZones,
+                                @Nonnull final Long cumulativeNetOutgoingMegsWithinZone,
+                                @Nonnull final Long cumulativeNetOutgoingMegsPublicIp ) {
+    Preconditions.checkNotNull( uuid, "Uuid is required" );
+    Preconditions.checkNotNull( cumulativeDiskIoMegs, "CumulativeDiskIoMegs is required" );
+    Preconditions.checkNotNull( cpuUtilizationPercent, "CpuUtilizationPercent is required" );
+    Preconditions.checkNotNull( cumulativeNetIncomingMegsBetweenZones, "CumulativeNetIncomingMegsBetweenZones is required" );
+    Preconditions.checkNotNull( cumulativeNetIncomingMegsWithinZone, "CumulativeNetIncomingMegsWithinZone is required" );
+    Preconditions.checkNotNull( cumulativeNetIncomingMegsPublicIp, "CumulativeNetIncomingMegsPublicIp is required" );
+    Preconditions.checkNotNull( cumulativeNetOutgoingMegsBetweenZones, "CumulativeNetOutgoingMegsBetweenZones is required" );
+    Preconditions.checkNotNull( cumulativeNetOutgoingMegsWithinZone, "CumulativeNetOutgoingMegsWithinZone is required" );
+    Preconditions.checkNotNull( cumulativeNetOutgoingMegsPublicIp, "CumulativeNetOutgoingMegsPublicIp is required" );
 
-				entityWrapper.add(event);
-				entityWrapper.commit();
-				alreadyHaveAttrUuids.add(uuid);
-				LOG.debug("Added event to db:" + event);
-			}
-		} catch (Exception ex) {
-			LOG.error(ex);
-			entityWrapper.rollback();
-			throw new RuntimeException(ex);
-		}					
-	}
+    persist(
+        new ReportingInstanceUsageEvent(
+            uuid,
+            timestampMs,
+            cumulativeDiskIoMegs,
+            cpuUtilizationPercent,
+            cumulativeNetIncomingMegsBetweenZones,
+            cumulativeNetIncomingMegsWithinZone,
+            cumulativeNetIncomingMegsPublicIp,
+            cumulativeNetOutgoingMegsBetweenZones,
+            cumulativeNetOutgoingMegsWithinZone,
+            cumulativeNetOutgoingMegsPublicIp ) );
+  }
 
-	public void insertUsageEvent(String uuid, long timestampMs, Long cumulativeDiskIoMegs,
-			Integer cpuUtilizationPercent, Long cumulativeNetIncomingMegsBetweenZones,
-			Long cumulateiveNetIncomingMegsWithinZone, Long cumulativeNetIncomingMegsPublicIp,
-			Long cumulativeNetOutgoingMegsBetweenZones,	Long cumulateiveNetOutgoingMegsWithinZone,
-			Long cumulativeNetOutgoingMegsPublicIp)
-	{
-		EntityWrapper<ReportingInstanceUsageEvent> entityWrapper =
-			EntityWrapper.get(ReportingInstanceUsageEvent.class);
-
-		try {
-			ReportingInstanceUsageEvent event = new ReportingInstanceUsageEvent(uuid, timestampMs,
-					cumulativeDiskIoMegs, cpuUtilizationPercent, cumulativeNetIncomingMegsBetweenZones,
-					cumulateiveNetIncomingMegsWithinZone, cumulativeNetIncomingMegsPublicIp,
-					cumulativeNetOutgoingMegsBetweenZones, cumulateiveNetOutgoingMegsWithinZone,
-					cumulativeNetOutgoingMegsPublicIp);
-			entityWrapper.add(event);
-			entityWrapper.commit();
-			LOG.debug("Added event to db:" + event);
-		} catch (Exception ex) {
-			LOG.error(ex);
-			entityWrapper.rollback();
-			throw new RuntimeException(ex);
-		}							
-	}
+  protected void persist( final Object event ) {
+    Entities.persist( event );
+  }
 }

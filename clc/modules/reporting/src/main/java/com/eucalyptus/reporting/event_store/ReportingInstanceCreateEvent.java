@@ -28,54 +28,54 @@ import com.eucalyptus.entities.AbstractPersistent;
 @SuppressWarnings("serial")
 @Entity @javax.persistence.Entity
 @PersistenceContext(name="eucalyptus_reporting")
-@Table(name="reporting_volume_create_events")
-public class ReportingVolumeCreateEvent
+@Table(name="reporting_instance_create_events")
+public class ReportingInstanceCreateEvent
 	extends AbstractPersistent
 {
-	@Column(name="uuid", nullable=false)
+	@Column(name="uuid")
 	private String uuid;
 	@Column(name="timestamp_ms", nullable=false)
 	private Long timestampMs;
-	@Column(name="volume_id", nullable=false)
-	private String volumeId;
-	@Column(name="user_id", nullable=false)
+	@Column(name="instance_id", nullable=false)
+	private String instanceId;
+	@Column(name="instance_type")
+	private String instanceType;
+	@Column(name="user_id")
 	private String userId;
-	@Column(name="cluster_name", nullable=false)
+	@Column(name="cluster_name")
 	private String clusterName;
-	@Column(name="availability_zone", nullable=false)
+	@Column(name="availability_zone")
 	private String availabilityZone;
-	@Column(name="sizeGB", nullable=false)
-	private Long sizeGB;
 
 
 	/**
- 	 * <p>Do not instantiate this class directly; use the ReportingVolumeCrud class.
+ 	 * <p>Do not instantiate this class directly; use the ReportingInstanceEventStore class.
  	 */
-	protected ReportingVolumeCreateEvent()
+	protected ReportingInstanceCreateEvent()
 	{
 		//NOTE: hibernate will overwrite these
 		this.uuid = null;
 		this.timestampMs = null;
-		this.volumeId = null;
+		this.instanceId = null;
+		this.instanceType = null;
 		this.userId = null;
 		this.clusterName = null;
 		this.availabilityZone = null;
-		this.sizeGB = null;
 	}
 
 	/**
- 	 * <p>Do not instantiate this class directly; use the ReportingVolumeCrud class.
+ 	 * <p>Do not instantiate this class directly; use the ReportingInstanceEventStore class.
  	 */
-	ReportingVolumeCreateEvent(String uuid, String volumeId, Long timestampMs,
-				String userId, String clusterName, String availabilityZone, Long sizeGB)
+	ReportingInstanceCreateEvent(String uuid, Long timestampMs, String instanceId, String instanceType,
+				String userId, String clusterName, String availabilityZone)
 	{
 		this.uuid = uuid;
 		this.timestampMs = timestampMs;
-		this.volumeId = volumeId;
+		this.instanceId = instanceId;
+		this.instanceType = instanceType;
 		this.userId = userId;
 		this.clusterName = clusterName;
 		this.availabilityZone = availabilityZone;
-		this.sizeGB = sizeGB;
 	}
 
 	public String getUuid()
@@ -87,22 +87,27 @@ public class ReportingVolumeCreateEvent
 	{
 		this.uuid = uuid;
 	}
-
+	
 	public Long getTimestampMs()
 	{
-		return timestampMs;
+		return this.timestampMs;
 	}
 
-	public String getVolumeId()
+	public String getInstanceId()
 	{
-		return this.volumeId;
+		return this.instanceId;
+	}
+
+	public String getInstanceType()
+	{
+		return this.instanceType;
 	}
 
 	public String getUserId()
 	{
 		return this.userId;
 	}
-
+	
 	public String getClusterName()
 	{
 		return this.clusterName;
@@ -111,11 +116,6 @@ public class ReportingVolumeCreateEvent
 	public String getAvailabilityZone()
 	{
 		return this.availabilityZone;
-	}
-
-	public Long getSizeGB()
-	{
-		return this.sizeGB;
 	}
 
 	@Override
@@ -129,7 +129,7 @@ public class ReportingVolumeCreateEvent
 	{
 		if (this == obj) return true;
 		if (getClass() != obj.getClass()) return false;
-		ReportingVolumeCreateEvent other = (ReportingVolumeCreateEvent) obj;
+		ReportingInstanceCreateEvent other = (ReportingInstanceCreateEvent) obj;
 		if (uuid == null) {
 			if (other.uuid != null)
 				return false;
@@ -141,7 +141,7 @@ public class ReportingVolumeCreateEvent
 	@Override
 	public String toString()
 	{
-		return "[uuid:" + this.uuid+ " volumeId:" + this.volumeId + " userId:" + this.userId + "]";
+		return "[uuid:" + this.uuid+ " instanceId:" + this.instanceId + " userId:" + this.userId + "]";
 	}
 
 

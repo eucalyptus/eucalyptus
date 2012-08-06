@@ -1,3 +1,22 @@
+/*************************************************************************
+ * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 3 of the License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ *
+ * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
+ * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
+ * additional information or have any questions.
+ ************************************************************************/
 package com.eucalyptus.reporting.event_store;
 
 import javax.persistence.*;
@@ -6,9 +25,6 @@ import org.hibernate.annotations.Entity;
 
 import com.eucalyptus.entities.AbstractPersistent;
 
-/**
- * @author tom.werges
- */
 @Entity @javax.persistence.Entity
 @PersistenceContext(name="eucalyptus_reporting")
 @Table(name="reporting_s3_object_usage_events")
@@ -109,17 +125,5 @@ public class ReportingS3ObjectUsageEvent
 		+ this.cumulativeGetRequests + " cumulPutRequests:" + this.cumulativePutRequests + "]";
 	}
 	
-
-  /**
-   * NOTE:IMPORTANT: this method has default visibility (rather than public) only for the sake of
-   * supporting currently hand-coded proxy classes. Don't share this value with the user.
-   * 
-   * TODO: remove this if possible.
-   * @return
-   * @see {@link AbstractPersistent#getId()}
-   */
-  public String getEntityId( ) {
-    return this.getId( );
-  }
 
 }
