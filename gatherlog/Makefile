@@ -96,12 +96,12 @@ generated/stubs: $(GLWSDL)
 server: $(SERVICE_SO)
 
 $(SERVICE_SO): generated/stubs $(GENERATEDOBJS) gl-client-marshal-adb.o server-marshal.o handlers.o
-	$(CC) -shared generated/*.o server-marshal.o handlers.o $(WSSECLIBS) $(LIBS) $(LDFLAGS) ../util/misc.o ../storage/diskutil.o ../util/ipc.o ../util/euca_auth.o ./gl-client-marshal-adb.o -o $(SERVICE_SO) -lssl -lcrypto
+	$(CC) -shared generated/*.o server-marshal.o handlers.o $(WSSECLIBS) $(LIBS) $(LDFLAGS) ../util/log.o ../util/misc.o ../storage/diskutil.o ../util/ipc.o ../util/euca_auth.o ./gl-client-marshal-adb.o -o $(SERVICE_SO) -lssl -lcrypto
 
 client: $(CLIENT)
 
 $(CLIENT): generated/stubs $(CLIENT).c gl-client-marshal-adb.c handlers.o
-	$(CC) -o $(CLIENT) $(CFLAGS) $(INCLUDES) $(CLIENT).c gl-client-marshal-adb.c generated/adb_*.o generated/axis2_stub_*.o ../util/misc.o ../storage/diskutil.o ../util/ipc.o ../util/euca_auth.o -DMODE=1 $(LIBS) $(LDFLAGS) -lssl -lcrypto
+	$(CC) -o $(CLIENT) $(CFLAGS) $(INCLUDES) $(CLIENT).c gl-client-marshal-adb.c generated/adb_*.o generated/axis2_stub_*.o ../util/log.o ../util/misc.o ../storage/diskutil.o ../util/ipc.o ../util/euca_auth.o -DMODE=1 $(LIBS) $(LDFLAGS) -lssl -lcrypto
 
 deploy:
 	$(INSTALL) -d $(DESTDIR)$(AXIS2C_SERVICES)/$(SERVICE_NAME)/

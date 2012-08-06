@@ -60,6 +60,8 @@ permission notice:
 #ifndef INCLUDE_MISC_H
 #define INCLUDE_MISC_H
 
+#include <wc.h>
+
 /*
  * Usage: initialize_eucafaults()
  *
@@ -90,6 +92,6 @@ extern int initialize_eucafaults (void);
  * Return value is number of parameter arguments detected prior to NULL.
  *
  */
-extern int log_eucafault (char *, ...);
+extern int log_eucafault (char *, const wchar_map **);
 
 #endif // INCLUDE_MISC_H

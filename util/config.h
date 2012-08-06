@@ -1,8 +1,6 @@
-// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
-// vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
-
+// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-                                                                                                     // vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
 /*
-Copyright (c) 2012  Eucalyptus Systems, Inc.	
+Copyright (c) 2009  Eucalyptus Systems, Inc.	
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by 
@@ -60,29 +58,21 @@ permission notice:
   WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
   ANY SUCH LICENSES OR RIGHTS.
 */
+#ifndef CONFIG_H
+#define CONFIG_H
 
-#ifndef INCLUDE_WC_H
-#define INCLUDE_WC_H
+#include "misc.h"
 
-#define _GNU_SOURCE
-#include <wchar.h>
+typedef struct configEntry_t {
+  char *key;
+  char *defaultValue;
+} configEntry;
 
-typedef struct wchar_map_struct {
-    wchar_t * key;
-    wchar_t * val;
-} wchar_map;
+void configInitValues (configEntry newConfigKeysRestart[], configEntry newConfigKeysNoRestart[]);
+char *configFileValue(const char *key);
+int configFileValueLong(const char *key, long *val);
+int isConfigModified (char configFiles[][MAX_PATH], int numFiles);
+int readConfigFile(char configFiles[][MAX_PATH], int numFiles);
+void configReadLogParams(int *log_level_out, int *log_roll_number_out, long *log_max_size_bytes_out);
 
-typedef struct char_map_struct {
-    char * key;
-    char * val;
-} char_map;
-
-extern wchar_t *varsub (const wchar_t *, const wchar_map **);
-extern wchar_map **varmap_alloc (wchar_map **, const wchar_t *, const wchar_t*);
-extern void varmap_free (wchar_map **);
-
-extern char *c_varsub (const char *, const char_map **);
-extern char_map **c_varmap_alloc (char_map **, const char *, const char *);
-extern void c_varmap_free (char_map **);
-
-#endif // INCLUDE_WC_H
+#endif /* CONFIG_H */

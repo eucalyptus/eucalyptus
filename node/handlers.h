@@ -1,3 +1,6 @@
+// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
+// vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
+
 /*************************************************************************
  * Copyright 2009-2012 Eucalyptus Systems, Inc.
  *
@@ -68,6 +71,7 @@
 
 #include "vnetwork.h"
 #include "data.h"
+#include "config.h"
 
 #include <windows-bundle.h>
 
@@ -105,8 +109,9 @@ struct nc_state_t {
 	long long cores_max;
 	// paths
 	char home[MAX_PATH];
-	char config_network_path [MAX_PATH];
-        char libvirt_xslt_path[MAX_PATH];
+    char configFiles[2][MAX_PATH];
+    char config_network_path [MAX_PATH];
+    char libvirt_xslt_path[MAX_PATH];
 	char get_info_cmd_path[MAX_PATH];
 	char rootwrap_cmd_path[MAX_PATH];
 	char virsh_cmd_path[MAX_PATH];
@@ -116,12 +121,26 @@ struct nc_state_t {
 	int config_use_virtio_net;	// KVM: use virtio for network
 	int config_use_virtio_disk;	// KVM: use virtio for disk attachment
 	int config_use_virtio_root;	// KVM: use virtio for root partition
-        // windows support
+    // windows support
 	char ncBundleUploadCmd[MAX_PATH];
   	char ncCheckBucketCmd[MAX_PATH];
   	char ncDeleteBundleCmd[MAX_PATH];
 };
 
+static configEntry configKeysRestartNC[] = {
+    {"ENABLE_WS_SECURITY", "Y"},
+    {"EUCALYPTUS", "/"},
+    {"NC_PORT", "8775"},
+    {"NC_SERVICE", "axis2/services/EucalyptusNC"},
+    {NULL, NULL}
+};
+
+static configEntry configKeysNoRestartNC[] = {
+    {"LOGLEVEL", "DEBUG"},
+    {"LOGROLLNUMBER", "4"},
+    {"LOGMAXSIZE", "10485760"},
+    {NULL, NULL}
+};
 
 struct handlers {
     char name [CHAR_BUFFER_SIZE];

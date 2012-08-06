@@ -99,6 +99,7 @@
 #include "vbr.h"
 #include "iscsi.h"
 #include "hooks.h"
+#include "config.h"
 
 #include "windows-bundle.h"
 #define MONITORING_PERIOD (5)
@@ -464,6 +465,21 @@ void copy_instances (void)
     sem_v (inst_copy_sem);
 }
 
+// helper that is used during initialization and by monitornig thread
+static void 
+update_log_params (void)
+{
+    int log_level;
+    int log_roll_number;
+    long log_max_size_bytes;
+
+    // read log params from config file and update in-memory configuration
+    configReadLogParams (&log_level, &log_roll_number, &log_max_size_bytes);
+
+    // reconfigure the logging subsystem to use the new values, if any
+    log_params_set (log_level, log_roll_number, log_max_size_bytes);
+}
+
 void *
 monitoring_thread (void *arg)
 {
@@ -593,6 +609,24 @@ monitoring_thread (void *arg)
         }
         
         sleep (MONITORING_PERIOD);
+
+        // see if config file has changed and react to those changes
+        int rc = isConfigModified (nc_state.configFiles, 2);
+        if (rc < 0) // error
+            continue;
+        else if (rc > 0) { // config modification time has changed
+            rc = readConfigFile(nc_state.configFiles, 2);
+            if (rc) {
+                // something has changed that can be read in
+                logprintfl(EUCAINFO, "monitoring_thread(): configuration file has been modified, ingressing new options\n");
+
+                // log-related options
+                update_log_params();
+
+                // TODO: pick up other NC options dynamically?
+            }
+        }
+                
     }
     
     return NULL;
@@ -875,8 +909,7 @@ static int init (void)
 {
 	static int initialized = 0;
 	int do_warn = 0, i, j;
-	char configFiles[2][MAX_PATH],
-		log[MAX_PATH],
+	char logFile[MAX_PATH],
 		*bridge=NULL,
 		*hypervisor=NULL,
 		*s=NULL,
@@ -904,39 +937,24 @@ static int init (void)
     }
 
 	// set the minimum log for now
-	snprintf(log, MAX_PATH, "%s/var/log/eucalyptus/nc.log", nc_state.home);
-	logfile(log, EUCAINFO, 4);
-        logprintfl (EUCAINFO, "{%u} spawning Eucalyptus node controller %s\n", (unsigned int)pthread_self(), compile_timestamp_str);
+	snprintf(logFile, MAX_PATH, "%s/var/log/eucalyptus/nc.log", nc_state.home);
+    log_file_set(logFile);
+    logprintfl (EUCAINFO, "{%u} spawning Eucalyptus node controller %s\n", (unsigned int)pthread_self(), compile_timestamp_str);
 	if (do_warn) 
 		logprintfl (EUCAWARN, "env variable %s not set, using /\n", EUCALYPTUS_ENV_VAR_NAME);
-
+    
 	// search for the config file
-	snprintf(configFiles[1], MAX_PATH, EUCALYPTUS_CONF_LOCATION, nc_state.home);
-	if (stat(configFiles[1], &mystat)) {
-		logprintfl (EUCAFATAL, "could not open configuration file %s\n", configFiles[1]);
+	snprintf(nc_state.configFiles[1], MAX_PATH, EUCALYPTUS_CONF_LOCATION, nc_state.home);
+	if (stat(nc_state.configFiles[1], &mystat)) {
+		logprintfl (EUCAFATAL, "could not open configuration file %s\n", nc_state.configFiles[1]);
 		return 1;
 	}
-	snprintf(configFiles[0], MAX_PATH, EUCALYPTUS_CONF_OVERRIDE_LOCATION, nc_state.home);
-	logprintfl (EUCAINFO, "NC is looking for configuration in %s,%s\n", configFiles[1], configFiles[0]);
-
-	// reset the log level to the requested value
-	tmp = getConfString(configFiles, 2, "LOGLEVEL");
-	i = EUCADEBUG;
-	if (tmp) {
-		if (!strcmp(tmp,"INFO")) {i=EUCAINFO;}
-		else if (!strcmp(tmp,"WARN")) {i=EUCAWARN;}
-		else if (!strcmp(tmp,"ERROR")) {i=EUCAERROR;}
-		else if (!strcmp(tmp,"FATAL")) {i=EUCAFATAL;}
-        else if (!strcmp(tmp,"DEBUG2")) {i=EUCADEBUG2;}
-		free(tmp);
-	}
-	tmp = getConfString(configFiles, 2, "LOGROLLNUMBER");
-	j = 4;
-	if (tmp) {
-        j = atoi(tmp);
-		free(tmp);
-	}
-	logfile(log, i, j);
+	snprintf(nc_state.configFiles[0], MAX_PATH, EUCALYPTUS_CONF_OVERRIDE_LOCATION, nc_state.home);
+	logprintfl (EUCAINFO, "NC is looking for configuration in %s,%s\n", nc_state.configFiles[1], nc_state.configFiles[0]);
+    
+    configInitValues(configKeysRestartNC, configKeysNoRestartNC); // initialize config subsystem
+    readConfigFile(nc_state.configFiles, 2);
+    update_log_params();
 
     { 
         /* Initialize libvirtd.conf, since some buggy versions of libvirt
@@ -993,7 +1011,7 @@ static int init (void)
     }
 
 #define GET_VAR_INT(var,name,def)                   \
-        s = getConfString(configFiles, 2, name); \
+        s = getConfString(nc_state.configFiles, 2, name); \
 	if (s){					\
 		var = atoi(s);\
 		free (s);\
@@ -1050,7 +1068,7 @@ static int init (void)
 	snprintf (nc_state.rootwrap_cmd_path, MAX_PATH, EUCALYPTUS_ROOTWRAP, nc_state.home);
 
 	// determine the hypervisor to use
-	hypervisor = getConfString(configFiles, 2, CONFIG_HYPERVISOR);
+	hypervisor = getConfString(nc_state.configFiles, 2, CONFIG_HYPERVISOR);
 	if (!hypervisor) {
 		logprintfl (EUCAFATAL, "value %s is not set in the config file\n", CONFIG_HYPERVISOR);
 		return ERROR_FATAL;
@@ -1099,7 +1117,7 @@ static int init (void)
 	logprintfl(EUCAINFO, "virtual cpu cores available for instances: %lld\n", nc_state.cores_max);
     
     { // backing store configuration
-        char * instance_path = getConfString(configFiles, 2, INSTANCE_PATH);
+        char * instance_path = getConfString(nc_state.configFiles, 2, INSTANCE_PATH);
 
         // determine bytes available on the file system to which instance path belongs
         if (instance_path == NULL) {
@@ -1274,7 +1292,7 @@ static int init (void)
 	}
 	snprintf (nc_state.config_network_path, MAX_PATH, NC_NET_PATH_DEFAULT, nc_state.home);
 
-	tmp = getConfString(configFiles, 2, "VNET_MODE");
+	tmp = getConfString(nc_state.configFiles, 2, "VNET_MODE");
     if (!tmp) {
         logprintfl(EUCAWARN,"WARNING: VNET_MODE is not defined, defaulting to 'SYSTEM'\n"); 
         tmp = strdup("SYSTEM"); 
@@ -1286,15 +1304,15 @@ static int init (void)
 
     int initFail = 0;
     if(tmp && (!strcmp(tmp, "SYSTEM") || !strcmp(tmp, "STATIC") || !strcmp(tmp, "MANAGED-NOVLAN"))) {
-        bridge = getConfString(configFiles, 2, "VNET_BRIDGE");
+        bridge = getConfString(nc_state.configFiles, 2, "VNET_BRIDGE");
         if(!bridge) {
             logprintfl(EUCAFATAL,"in 'SYSTEM', 'STATIC' or 'MANAGED-NOVLAN' network mode, you must specify a value for VNET_BRIDGE\n");
             initFail = 1;
         }
     } else if(tmp && !strcmp(tmp, "MANAGED")) {
-        pubinterface = getConfString(configFiles, 2, "VNET_PUBINTERFACE");
+        pubinterface = getConfString(nc_state.configFiles, 2, "VNET_PUBINTERFACE");
         if (!pubinterface) 
-            pubinterface = getConfString(configFiles, 2, "VNET_INTERFACE");
+            pubinterface = getConfString(nc_state.configFiles, 2, "VNET_INTERFACE");
 
         if (!pubinterface) {
             logprintfl(EUCAWARN,"WARNING: VNET_PUBINTERFACE is not defined, defaulting to 'eth0'\n"); 
@@ -1335,7 +1353,7 @@ static int init (void)
         return ERROR_FATAL;
     
 	// set NC helper path
-	tmp = getConfString(configFiles, 2, CONFIG_NC_BUNDLE_UPLOAD);
+	tmp = getConfString(nc_state.configFiles, 2, CONFIG_NC_BUNDLE_UPLOAD);
 	if (tmp) {
 	  snprintf (nc_state.ncBundleUploadCmd, MAX_PATH, "%s", tmp);
 	  free(tmp);
@@ -1344,7 +1362,7 @@ static int init (void)
 	}
 
 	// set NC helper path
-	tmp = getConfString(configFiles, 2, CONFIG_NC_CHECK_BUCKET);
+	tmp = getConfString(nc_state.configFiles, 2, CONFIG_NC_CHECK_BUCKET);
 	if (tmp) {
 	  snprintf (nc_state.ncCheckBucketCmd, MAX_PATH, "%s", tmp);
 	  free(tmp);
@@ -1353,7 +1371,7 @@ static int init (void)
 	}
 
 	// set NC helper path
-	tmp = getConfString(configFiles, 2, CONFIG_NC_DELETE_BUNDLE);
+	tmp = getConfString(nc_state.configFiles, 2, CONFIG_NC_DELETE_BUNDLE);
 	if (tmp) {
 	  snprintf (nc_state.ncDeleteBundleCmd, MAX_PATH, "%s", tmp);
 	  free(tmp);

@@ -193,13 +193,13 @@ int doBundleInstance(ncMetadata *ccMeta, char *instanceId, char *bucketName, cha
 }
 
 int doCancelBundleTask(ncMetadata *ccMeta, char *instanceId) {
-  int i, j, rc, start = 0, stop = 0, ret=0, done, timeout;
+  int i, rc, start = 0, stop = 0, ret=0, done, timeout;
   ccInstance *myInstance;
   ncStub *ncs;
   time_t op_start;
   ccResourceCache resourceCacheLocal;
 
-  i = j = 0;
+  i = 0;
   myInstance = NULL;
   op_start = time(NULL);
   
@@ -232,9 +232,9 @@ int doCancelBundleTask(ncMetadata *ccMeta, char *instanceId) {
   }
   
   done=0;
-  for (j=start; j<stop && !done; j++) {
-    timeout = ncGetTimeout(op_start, OP_TIMEOUT, stop-start, j);
-    rc = ncClientCall(ccMeta, timeout, resourceCacheLocal.resources[j].lockidx, resourceCacheLocal.resources[j].ncURL, "ncCancelBundleTask", instanceId);
+  for (i=start; i<stop && !done; i++) {
+    timeout = ncGetTimeout(op_start, OP_TIMEOUT, stop-start, i);
+    rc = ncClientCall(ccMeta, timeout, resourceCacheLocal.resources[i].lockidx, resourceCacheLocal.resources[i].ncURL, "ncCancelBundleTask", instanceId);
     if (rc) {
       ret = 1;
     } else {
@@ -720,13 +720,13 @@ int ncGetTimeout(time_t op_start, time_t op_max, int numCalls, int idx) {
 }
 
 int doAttachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *remoteDev, char *localDev) {
-  int i, j, rc, start = 0, stop = 0, ret=0, done=0, timeout;
+  int i, rc, start = 0, stop = 0, ret=0, done=0, timeout;
   ccInstance *myInstance;
   ncStub *ncs;
   time_t op_start;
   ccResourceCache resourceCacheLocal;
   
-  i = j = 0;
+  i = 0;
   myInstance = NULL;
   op_start = time(NULL);
   
@@ -760,9 +760,9 @@ int doAttachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *r
   }
   
   done=0;
-  for (j=start; j<stop && !done; j++) {
-    timeout = ncGetTimeout(op_start, OP_TIMEOUT, stop-start, j);
-    rc = ncClientCall(ccMeta, timeout, resourceCacheLocal.resources[j].lockidx, resourceCacheLocal.resources[j].ncURL, "ncAttachVolume", instanceId, volumeId, remoteDev, localDev);
+  for (i=start; i<stop && !done; i++) {
+    timeout = ncGetTimeout(op_start, OP_TIMEOUT, stop-start, i);
+    rc = ncClientCall(ccMeta, timeout, resourceCacheLocal.resources[i].lockidx, resourceCacheLocal.resources[i].ncURL, "ncAttachVolume", instanceId, volumeId, remoteDev, localDev);
     if (rc) {
       ret = 1;
     } else {
@@ -779,12 +779,12 @@ int doAttachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *r
 }
 
 int doDetachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *remoteDev, char *localDev, int force) {
-  int i, j, rc, start = 0, stop = 0, ret=0, done=0, timeout;
+  int i, rc, start = 0, stop = 0, ret=0, done=0, timeout;
   ccInstance *myInstance;
   ncStub *ncs;
   time_t op_start;
   ccResourceCache resourceCacheLocal;
-  i = j = 0;
+  i = 0;
   myInstance = NULL;
   op_start = time(NULL);
   
@@ -816,9 +816,9 @@ int doDetachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *r
     stop = resourceCacheLocal.numResources;
   }
   
-  for (j=start; j<stop; j++) {
-    timeout = ncGetTimeout(op_start, OP_TIMEOUT, stop-start, j);
-    rc = ncClientCall(ccMeta, timeout, resourceCacheLocal.resources[j].lockidx, resourceCacheLocal.resources[j].ncURL, "ncDetachVolume", instanceId, volumeId, remoteDev, localDev, force);
+  for (i=start; i<stop; i++) {
+    timeout = ncGetTimeout(op_start, OP_TIMEOUT, stop-start, i);
+    rc = ncClientCall(ccMeta, timeout, resourceCacheLocal.resources[i].lockidx, resourceCacheLocal.resources[i].ncURL, "ncDetachVolume", instanceId, volumeId, remoteDev, localDev, force);
     if (rc) {
       ret = 1;
     } else {
@@ -1168,10 +1168,7 @@ int doDescribeNetworks(ncMetadata *ccMeta, char *nameserver, char **ccs, int ccs
 
 int doStartNetwork(ncMetadata *ccMeta, char *accountId, char *uuid, char *netName, int vlan, char *nameserver, char **ccs, int ccsLen) {
   int rc, ret;
-  time_t op_start;
   char *brname;
-  
-  op_start = time(NULL);
 
   rc = initialize(ccMeta);
   if (rc || ccIsEnabled()) {
@@ -1219,13 +1216,11 @@ int doDescribeResources(ncMetadata *ccMeta, virtualMachine **ccvms, int vmLen, i
   int rc, diskpool, mempool, corepool;
   int j;
   ccResource *res;
-  time_t op_start;
   ccResourceCache resourceCacheLocal;
   char strbuf[4096];
 
   logprintfl(EUCAINFO,"DescribeResources(): called \n");
   logprintfl(EUCADEBUG,"DescribeResources(): params: userId=%s, vmLen=%d\n", SP(ccMeta ? ccMeta->userId : "UNSET"), vmLen);
-  op_start = time(NULL);
 
   rc = initialize(ccMeta);
   if (rc || ccIsEnabled()) {
@@ -1387,7 +1382,14 @@ int refresh_resources(ncMetadata *ccMeta, int timeout, int dolock) {
 	    changeState(&(resourceCacheStage->resources[i]), RESDOWN);
 	  }
 	} else {
-	  logprintfl(EUCADEBUG,"refresh_resources(): received data from node=%s mem=%d/%d disk=%d/%d cores=%d/%d\n", resourceCacheStage->resources[i].hostname, ncResDst->memorySizeMax, ncResDst->memorySizeAvailable, ncResDst->diskSizeMax,  ncResDst->diskSizeAvailable, ncResDst->numberOfCoresMax, ncResDst->numberOfCoresAvailable);
+	  logprintfl(EUCADEBUG,"refresh_resources(): received data from node=%s mem=%d/%d disk=%d/%d cores=%d/%d\n", 
+		     resourceCacheStage->resources[i].hostname, 
+		     ncResDst->memorySizeAvailable, 
+		     ncResDst->memorySizeMax, 
+		     ncResDst->diskSizeAvailable, 
+		     ncResDst->diskSizeMax,
+		     ncResDst->numberOfCoresAvailable,
+		     ncResDst->numberOfCoresMax);
 	  resourceCacheStage->resources[i].maxMemory = ncResDst->memorySizeMax;
 	  resourceCacheStage->resources[i].availMemory = ncResDst->memorySizeAvailable;
 	  resourceCacheStage->resources[i].maxDisk = ncResDst->diskSizeMax;
@@ -1904,7 +1906,7 @@ int schedule_instance_roundrobin(virtualMachine *vm, int *outresid) {
 }
 
 int schedule_instance_explicit(virtualMachine *vm, char *targetNode, int *outresid) {
-  int i, rc, done, resid, sleepresid;
+  int i, done, resid, sleepresid;
   ccResource *res;
   
   *outresid = 0;
@@ -1953,14 +1955,14 @@ int schedule_instance_explicit(virtualMachine *vm, char *targetNode, int *outres
     *outresid = sleepresid;
   }
   if (res->state == RESASLEEP) {
-    rc = powerUp(res);
+    powerUp(res);
   }
 
   return(0);
 }
 
 int schedule_instance_greedy(virtualMachine *vm, int *outresid) {
-  int i, rc, done, resid, sleepresid;
+  int i, done, resid, sleepresid;
   ccResource *res;
   
   *outresid = 0;
@@ -2011,7 +2013,7 @@ int schedule_instance_greedy(virtualMachine *vm, int *outresid) {
     *outresid = sleepresid;
   }
   if (res->state == RESASLEEP) {
-    rc = powerUp(res);
+    powerUp(res);
   }
 
   return(0);
@@ -2023,7 +2025,6 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
   ccInstance *myInstance=NULL, 
     *retInsts=NULL;
   char instId[16], uuid[48];
-  time_t op_start=0;
   ccResource *res=NULL;
   char mac[32], privip[32], pubip[32];
   
@@ -2034,8 +2035,6 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
   
   char emiURLCached[1024], kernelURLCached[1024], ramdiskURLCached[1024];
 
-  op_start = time(NULL);
-  
   rc = initialize(ccMeta);
   if (rc || ccIsEnabled()) {
     return(1);
@@ -2326,17 +2325,15 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
 }
 
 int doGetConsoleOutput(ncMetadata *ccMeta, char *instId, char **outConsoleOutput) {
-  int i, j, rc, numInsts, start, stop, done, ret, rbytes, timeout=0;
+  int i, rc, numInsts, start, stop, done, ret, rbytes, timeout=0;
   ccInstance *myInstance;
   ncStub *ncs;
-  char *consoleOutput;
   time_t op_start;
   ccResourceCache resourceCacheLocal;
 
-  i = j = numInsts = 0;
+  i = numInsts = 0;
   op_start = time(NULL);
 
-  consoleOutput = NULL;
   myInstance = NULL;
   
   *outConsoleOutput = NULL;
@@ -2365,14 +2362,14 @@ int doGetConsoleOutput(ncMetadata *ccMeta, char *instId, char **outConsoleOutput
   }
 
   done=0;
-  for (j=start; j<stop && !done; j++) {
+  for (i=start; i<stop && !done; i++) {
     if (*outConsoleOutput) {
       free(*outConsoleOutput);
       *outConsoleOutput = NULL;
     }
 
     // if not talking to Eucalyptus NC (but, e.g., a Broker)
-    if (!strstr(resourceCacheLocal.resources[j].ncURL, "EucalyptusNC")) {
+    if (!strstr(resourceCacheLocal.resources[i].ncURL, "EucalyptusNC")) {
             char pwfile[MAX_PATH];
             *outConsoleOutput = NULL;
             snprintf(pwfile, MAX_PATH, "%s/var/lib/eucalyptus/windows/%s/console.append.log", config->eucahome, instId);
@@ -2396,8 +2393,8 @@ int doGetConsoleOutput(ncMetadata *ccMeta, char *instId, char **outConsoleOutput
             done++; // quit on the first host, since they are not queried remotely 
 
     } else { // otherwise, we *are* talking to a Eucalyptus NC, so make the remote call
-            timeout = ncGetTimeout(op_start, timeout, (stop - start), j);
-            rc = ncClientCall(ccMeta, timeout, resourceCacheLocal.resources[j].lockidx, resourceCacheLocal.resources[j].ncURL, "ncGetConsoleOutput", instId, outConsoleOutput);
+            timeout = ncGetTimeout(op_start, timeout, (stop - start), i);
+            rc = ncClientCall(ccMeta, timeout, resourceCacheLocal.resources[i].lockidx, resourceCacheLocal.resources[i].ncURL, "ncGetConsoleOutput", instId, outConsoleOutput);
     }
 
     if (rc) {
@@ -2469,7 +2466,7 @@ int doRebootInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen) {
 
   shawn();
 
-  return(0);
+  return(0); /// XXX:gholms
 }
 
 int doTerminateInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, int force, int **outStatus) {
@@ -2477,14 +2474,12 @@ int doTerminateInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, int
   char *instId;
   ccInstance *myInstance=NULL;
   ncStub *ncs;
-  time_t op_start;
   ccResourceCache resourceCacheLocal;
 
   i = j = 0;
   instId = NULL;
   myInstance = NULL;
-  op_start = time(NULL);
-  
+
   rc = initialize(ccMeta);
   if (rc || ccIsEnabled()) {
     return(1);
@@ -2566,13 +2561,13 @@ int doTerminateInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, int
 }
 
 int doCreateImage(ncMetadata *ccMeta, char *instanceId, char *volumeId, char *remoteDev) {
-  int i, j, rc, start = 0, stop = 0, ret=0, done=0, timeout;
+  int i, rc, start = 0, stop = 0, ret=0, done=0, timeout;
   ccInstance *myInstance;
   ncStub *ncs;
   time_t op_start;
   ccResourceCache resourceCacheLocal;
   
-  i = j = 0;
+  i = 0;
   myInstance = NULL;
   op_start = time(NULL);
   
@@ -2606,10 +2601,10 @@ int doCreateImage(ncMetadata *ccMeta, char *instanceId, char *volumeId, char *re
   }
   
   done=0;
-  for (j=start; j<stop && !done; j++) {
-    timeout = ncGetTimeout(op_start, OP_TIMEOUT, stop-start, j);
-    //    rc = ncClientCall(ccMeta, timeout, NCCALL, resourceCacheLocal.resources[j].ncURL, "ncCreateImage", instanceId, volumeId, remoteDev);
-    rc = ncClientCall(ccMeta, timeout, resourceCacheLocal.resources[j].lockidx, resourceCacheLocal.resources[j].ncURL, "ncCreateImage", instanceId, volumeId, remoteDev);
+  for (i=start; i<stop && !done; i++) {
+    timeout = ncGetTimeout(op_start, OP_TIMEOUT, stop-start, i);
+    //    rc = ncClientCall(ccMeta, timeout, NCCALL, resourceCacheLocal.resources[i].ncURL, "ncCreateImage", instanceId, volumeId, remoteDev);
+    rc = ncClientCall(ccMeta, timeout, resourceCacheLocal.resources[i].lockidx, resourceCacheLocal.resources[i].ncURL, "ncCreateImage", instanceId, volumeId, remoteDev);
     if (rc) {
       ret = 1;
     } else {
@@ -2693,7 +2688,7 @@ int initialize(ncMetadata *ccMeta) {
     logprintfl(EUCAERROR, "initialize(): cannot initialize thread\n");
   }
 
-  rc = init_localstate();
+  rc = init_log();
   if (rc) {
     ret = 1;
     logprintfl(EUCAERROR, "initialize(): cannot initialize local state\n");
@@ -2936,7 +2931,7 @@ int ccCheckState(int clcTimer) {
 }
 
 int doBrokerPairing() {
-  int ret, rc, local_broker_down, i, j, is_ha_cc, port;
+  int ret, local_broker_down, i, j, is_ha_cc, port;
   char buri[MAX_PATH], uriType[32], bhost[MAX_PATH], path[MAX_PATH], curi[MAX_PATH], chost[MAX_PATH];
 
   ret = 0;
@@ -2945,7 +2940,7 @@ int doBrokerPairing() {
 
   snprintf(curi, MAX_PATH, "%s", config->ccStatus.serviceId.uris[0]);
   bzero(chost, sizeof(char) * MAX_PATH);
-  rc = tokenize_uri(curi, uriType, chost, &port, path);
+  tokenize_uri(curi, uriType, chost, &port, path);
 
   //enabled
   for (i=0; i<16; i++) {
@@ -2993,7 +2988,7 @@ int doBrokerPairing() {
 	    
 	    snprintf(buri, MAX_PATH, "%s", config->notreadyServices[i].uris[j]);
 	    bzero(bhost, sizeof(char) * MAX_PATH);
-	    rc = tokenize_uri(buri, uriType, bhost, &port, path);
+	    tokenize_uri(buri, uriType, bhost, &port, path);
 	    
 	    logprintfl(EUCADEBUG, "ccCheckState(): comparing found not ready broker host (%s) with local CC host (%s)\n", bhost, chost);
 	    if (!strcmp(chost, bhost)) {
@@ -3218,58 +3213,44 @@ int init_pthreads() {
   return(0);
 }
 
-int init_localstate(void) {
-  int rc, loglevel, logrollnumber, ret;
-  char *tmpstr=NULL, logFile[MAX_PATH], configFiles[2][MAX_PATH], home[MAX_PATH], vfile[MAX_PATH];
+int init_log(void) 
+{
+    char logFile[MAX_PATH], configFiles[2][MAX_PATH], home[MAX_PATH];
 
-  ret=0;
-  if (local_init) {
-  } else {
-    // thread is not initialized, run first time local state setup
-    bzero(logFile, MAX_PATH);
-    bzero(home, MAX_PATH);
-    bzero(configFiles[0], MAX_PATH);
-    bzero(configFiles[1], MAX_PATH);
-    
-    tmpstr = getenv(EUCALYPTUS_ENV_VAR_NAME);
-    if (!tmpstr) {
-      snprintf(home, MAX_PATH, "/");
-    } else {
-      snprintf(home, MAX_PATH, "%s", tmpstr);
+    if (local_init==0) { // called by this process for the first time
+
+        // TODO: code below is replicated in init_config(), it would be good to join them
+        bzero(logFile, MAX_PATH);
+        bzero(home, MAX_PATH);
+        bzero(configFiles[0], MAX_PATH);
+        bzero(configFiles[1], MAX_PATH);
+
+        char * tmpstr = getenv(EUCALYPTUS_ENV_VAR_NAME);
+        if (!tmpstr) {
+            snprintf(home, MAX_PATH, "/");
+        } else {
+            snprintf(home, MAX_PATH, "%s", tmpstr);
+        }
+
+        snprintf(configFiles[1], MAX_PATH, EUCALYPTUS_CONF_LOCATION, home);
+        snprintf(configFiles[0], MAX_PATH, EUCALYPTUS_CONF_OVERRIDE_LOCATION, home);
+        snprintf(logFile, MAX_PATH, "%s/var/log/eucalyptus/cc.log", home);  
+
+        configInitValues(configKeysRestartCC, configKeysNoRestartCC); // initialize config subsystem
+        readConfigFile(configFiles, 2);
+        configReadLogParams (&(config->log_level), &(config->log_roll_number), &(config->log_max_size_bytes));
+
+        // set the log file path (levels and size limits are set below)
+        log_file_set(logFile);
+
+        local_init=1;
     }
-    
-    snprintf(configFiles[1], MAX_PATH, EUCALYPTUS_CONF_LOCATION, home);
-    snprintf(configFiles[0], MAX_PATH, EUCALYPTUS_CONF_OVERRIDE_LOCATION, home);
-    snprintf(logFile, MAX_PATH, "%s/var/log/eucalyptus/cc.log", home);  
-    
-    tmpstr = getConfString(configFiles, 2, "LOGLEVEL");
-    if (!tmpstr) {
-      loglevel = EUCADEBUG;
-    } else {
-      if (!strcmp(tmpstr,"DEBUG")) {loglevel=EUCADEBUG;}
-      else if (!strcmp(tmpstr,"INFO")) {loglevel=EUCAINFO;}
-      else if (!strcmp(tmpstr,"WARN")) {loglevel=EUCAWARN;}
-      else if (!strcmp(tmpstr,"ERROR")) {loglevel=EUCAERROR;}
-      else if (!strcmp(tmpstr,"FATAL")) {loglevel=EUCAFATAL;}
-      else {loglevel=EUCADEBUG;}
-    }
-    if (tmpstr) free(tmpstr);
 
-    tmpstr = getConfString(configFiles, 2, "LOGROLLNUMBER");
-    if (!tmpstr) {
-      logrollnumber = 4;
-    } else {
-      logrollnumber = atoi(tmpstr);
-    }
-    if (tmpstr) free(tmpstr);
+    // update log params on every request so that the updated values discovered
+    // by monitoring_thread will get picked up by other processes, too
+    log_params_set (config->log_level, (int)config->log_roll_number, config->log_max_size_bytes);
 
-    // set up logfile
-    logfile(logFile, loglevel, logrollnumber);
-    
-    local_init=1;
-  }
-
-  return(ret);
+    return 0;
 }
 
 int init_thread(void) {
@@ -3346,45 +3327,27 @@ int init_thread(void) {
 }
 
 int update_config(void) {
-  char home[MAX_PATH], *tmpstr=NULL;
+  char *tmpstr=NULL;
   ccResource *res=NULL;
-  int rc, numHosts, ret;
-  time_t configMtime;
-  struct stat statbuf;
-  int i;
+  int rc, numHosts, ret=0;
 
-  ret = 0;
-
-  configMtime = 0;
   sem_mywait(CONFIG);
 
-  for (i=0; i<2; i++) {
-    // stat the config file, update modification time
-    rc = stat(config->configFiles[i], &statbuf);
-    if (!rc) {
-      if (statbuf.st_mtime > 0 || statbuf.st_ctime > 0) {
-	if (statbuf.st_ctime > statbuf.st_mtime) {
-	  configMtime = statbuf.st_ctime;
-	} else {
-	  configMtime = statbuf.st_mtime;
-	}
-      }
-    }
-  }
-  if (configMtime == 0) {
-    logprintfl(EUCAERROR, "update_config(): could not stat config files (%s,%s)\n", config->configFiles[0], config->configFiles[1]);
+  rc = isConfigModified (config->configFiles, 2);
+  if (rc < 0) { // error
     sem_mypost(CONFIG);
     return(1);
-  }
-  
-  // check to see if the configfile has changed
-  logprintfl(EUCADEBUG, "update_config(): current mtime=%d, stored mtime=%d\n", configMtime, config->configMtime);
-  if (config->configMtime != configMtime) {
+  } else if (rc > 0) { // config modification time has changed
     rc = readConfigFile(config->configFiles, 2);
     if (rc) {
       // something has changed that can be read in
       logprintfl(EUCAINFO, "update_config(): ingressing new options.\n");
 
+      // read log params from config file and update in-memory configuration
+      configReadLogParams (&(config->log_level), &(config->log_roll_number), &(config->log_max_size_bytes));
+      // reconfigure the logging subsystem to use the new values, if any
+      log_params_set (config->log_level, (int)config->log_roll_number, config->log_max_size_bytes);
+      
       // NODES
       logprintfl(EUCAINFO, "update_config(): refreshing node list.\n");
       res = NULL;
@@ -3450,7 +3413,6 @@ int update_config(void) {
     }
   }
   
-  config->configMtime = configMtime;
   sem_mypost(CONFIG);
   
   return(ret);
@@ -3463,7 +3425,7 @@ int init_config(void) {
   
   char configFiles[2][MAX_PATH], netPath[MAX_PATH], eucahome[MAX_PATH], policyFile[MAX_PATH], home[MAX_PATH], proxyPath[MAX_PATH], arbitrators[256];
   
-  time_t configMtime, instanceTimeout, ncPollingFrequency, clcPollingFrequency, ncFanout;
+  time_t instanceTimeout, ncPollingFrequency, clcPollingFrequency, ncFanout;
   struct stat statbuf;
   
   // read in base config information
@@ -3502,6 +3464,7 @@ int init_config(void) {
   logprintfl(EUCADEBUG, "init_config(): called.\n");
   logprintfl(EUCADEBUG, "init_config(): initializing CC configuration\n");  
 
+  configInitValues(configKeysRestartCC, configKeysNoRestartCC);
   readConfigFile(configFiles, 2);
   
   // DHCP configuration section
@@ -3929,7 +3892,6 @@ int init_config(void) {
   config->schedPolicy = schedPolicy;
   config->idleThresh = idleThresh;
   config->wakeThresh = wakeThresh;
-  //  config->configMtime = configMtime;
   config->instanceTimeout = instanceTimeout;
   config->ncPollingFrequency = ncPollingFrequency;
   config->clcPollingFrequency = clcPollingFrequency;
@@ -5137,69 +5099,4 @@ int image_cache_proxykick(ccResource *res, int *numHosts) {
   
   if (nodestr) free(nodestr);
   return(rc);
-}
-
-char *configFileValue(char *key) {
-  int i;
-  for (i=0; i<configRestartLen; i++) {
-    if (configKeysRestart[i].key) {
-      if (!strcmp(configKeysRestart[i].key, key)) {
-	return(configValuesRestart[i] ? strdup(configValuesRestart[i]) : (configKeysRestart[i].defaultValue ? strdup(configKeysRestart[i].defaultValue) : NULL));
-      }
-    }
-  }
-  for (i=0; i<configNoRestartLen; i++) {
-    if (configKeysNoRestart[i].key) {
-      if (!strcmp(configKeysNoRestart[i].key, key)) {
-	return(configValuesNoRestart[i] ? strdup(configValuesNoRestart[i]) : (configKeysNoRestart[i].defaultValue ? strdup(configKeysNoRestart[i].defaultValue) : NULL));
-      }
-    }
-  }
-  return(NULL);
-}
-
-int readConfigFile(char configFiles[][MAX_PATH], int numFiles) {
-  int i, ret=0;
-  char *old=NULL, *new=NULL;
-
-  for (i=0; configKeysRestart[i].key; i++) {
-    old = configValuesRestart[i];
-    new = getConfString(configFiles, numFiles, configKeysRestart[i].key);
-    if (configRestartLen) {
-      if ( (!old && new) || (old && !new) || ( (old && new) && strcmp(old, new) ) ) {
-	logprintfl(EUCAWARN, "readConfigFile(): configuration file changed (KEY=%s, ORIGVALUE=%s, NEWVALUE=%s): clean restart is required before this change will take effect!\n", configKeysRestart[i].key, SP(old), SP(new));
-      }
-      if (new) free(new);
-    } else {
-      logprintfl(EUCAINFO, "readConfigFile(): read (%s=%s, default=%s)\n", configKeysRestart[i].key, SP(new), SP(configKeysRestart[i].defaultValue));
-      if (configValuesRestart[i]) free(configValuesRestart[i]);
-      configValuesRestart[i] = new;
-      ret++;
-    }
-  }
-  configRestartLen = i;
-  
-  for (i=0; configKeysNoRestart[i].key; i++) {
-    old = configValuesNoRestart[i];
-    new = getConfString(configFiles, numFiles, configKeysNoRestart[i].key);
-    
-    if (configNoRestartLen) {
-      if ( (!old && new) || (old && !new) || ( (old && new) && strcmp(old, new) ) ) {
-	logprintfl(EUCAINFO, "readConfigFile(): configuration file changed (KEY=%s, ORIGVALUE=%s, NEWVALUE=%s): change will take effect immediately.\n", configKeysNoRestart[i].key, SP(old), SP(new));
-	ret++;
-	if (configValuesNoRestart[i]) free(configValuesNoRestart[i]);
-	configValuesNoRestart[i] = new;
-      } else {
-	if (new) free(new);
-      }
-    } else {
-      logprintfl(EUCAINFO, "readConfigFile(): read (%s=%s, default=%s)\n", configKeysNoRestart[i].key, SP(new), SP(configKeysNoRestart[i].defaultValue));
-      if (configValuesNoRestart[i]) free(configValuesNoRestart[i]);
-      configValuesNoRestart[i] = new;
-      ret++;
-    }
-  }
-  configNoRestartLen = i;
-
-  return(ret);
 }
