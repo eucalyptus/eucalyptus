@@ -175,8 +175,11 @@
                   "sWidth": "20px",
                 },
                 { "mDataProp": "id" },
+                {
+                  "fnRender": function(oObj) { return oObj.aData.status },
+                  "sWidth": "20px",
+                },
                 { "mDataProp": "size" },
-                { "mDataProp": "status" },
                 { "mDataProp": "create_time" },
                 { "mDataProp": "snapshot_id" }
               ],
