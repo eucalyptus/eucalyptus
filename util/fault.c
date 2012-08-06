@@ -65,7 +65,6 @@ permission notice:
 #include <stdio.h>
 #include <stdlib.h>
 #define _GNU_SOURCE
-#include <assert.h>
 #include <dirent.h>
 #include <errno.h>
 #include <limits.h>
@@ -256,7 +255,7 @@ read_eucafault (const char * faultdir, const char * fault_id)
 /*
  * Adds XML doc for a fault to the in-memory fault model (doc).
  * Creates model if none exists yet.
- * 
+ *
  * Can also add COMMON_PREFIX (<common>) block.
  */
 static int
@@ -278,7 +277,7 @@ add_eucafault (const xmlDoc *new_doc)
     return 0;
 }
 
-/* 
+/*
  * Returns the fault id found in a fault node.
  */
 static char *
@@ -340,7 +339,7 @@ get_common_block (const xmlDoc *doc)
 static xmlNode *
 get_eucafault (const char *id, const xmlDoc *doc)
 {
-    /* 
+    /*
      * Uses global model if no doc supplied.
      */
     if (doc == NULL) {
@@ -378,11 +377,11 @@ initialize_eucafaults (void)
     if (faults_initialized) {
         PRINTF1 (("Attempt to reinitialize fault registry? Skipping...\n"));
         pthread_mutex_unlock (&fault_mutex);
-        return 0; 
+        return 0;
     }
     PRINTF (("Initializing fault registry directories.\n"));
     if ((locale = getenv (LOCALIZATION_ENV_VAR)) == NULL) {
-        logprintfl (EUCAINFO, 
+        logprintfl (EUCAINFO,
                    "$%s not set, using default value of: %s\n",
                     LOCALIZATION_ENV_VAR, DEFAULT_LOCALIZATION);
     }
@@ -448,13 +447,14 @@ initialize_eucafaults (void)
 /*
  * Retrieves a translated label from <common> block.
  *
+ * NOTE: The pointer returned by this function must be free()'d by the
+ * caller.
+ *
  * FIXME: Consolidate this with get_fault_id() and make some sort of
  * general-purpose fetch function? Or make get_fault_id() more general
  * and change this to call it?
- * 
+ *
  * FIXME: Consolidate with get_fault_var()?
- * 
- * FIXME: LEAKS MEMORY!!!
  */
 static char *
 get_common_var (const char *var)
@@ -467,7 +467,7 @@ get_common_var (const char *var)
     }
     for (xmlNode *node = xmlFirstElementChild (c_node); node;
          node = node->next) {
-        if ((node->type == XML_ELEMENT_NODE) && 
+        if ((node->type == XML_ELEMENT_NODE) &&
             !strcasecmp ((const char *)node->name, "var")) {
             xmlChar *prop = xmlGetProp (node, (const xmlChar *)"name");
 
@@ -479,7 +479,7 @@ get_common_var (const char *var)
 
                 if (value == NULL) {
                     value = xmlGetProp (node, (const xmlChar *)"value");
-                } 
+                }
                 return (char *)value;
             } else {
                 xmlFree (prop);
@@ -494,9 +494,10 @@ get_common_var (const char *var)
 /*
  * Retrieves a translated label from <fault> block.
  *
+ * NOTE: The pointer returned by this function must be free()'d by the
+ * caller.
+ *
  * FIXME: Consolidate with get_common_var()?
- * 
- * FIXME: LEAKS MEMORY!!!
  *
  * FIXME: Gosh this looks messy.
  */
@@ -518,21 +519,21 @@ get_fault_var (const char *var, const xmlNode *f_node)
             }
             if (value == NULL) {
                 // May be a child node, e.g. for "resolution"
-                for (xmlNode *subnode = xmlFirstElementChild(node); subnode;
+                for (xmlNode *subnode = xmlFirstElementChild (node); subnode;
                      subnode = subnode->next) {
-                    if ((node->type == XML_ELEMENT_NODE) && 
+                    if ((node->type == XML_ELEMENT_NODE) &&
                         !strcasecmp ((const char *)subnode->name,
                                      "localized")) {
-                        return (char *)xmlNodeGetContent(subnode);
+                        return (char *)xmlNodeGetContent (subnode);
                     }
                 }
                 // FIXME: Need a more elegant method than another list walk!
-                for (xmlNode *subnode = xmlFirstElementChild(node); subnode;
+                for (xmlNode *subnode = xmlFirstElementChild (node); subnode;
                      subnode = subnode->next) {
-                    if ((node->type == XML_ELEMENT_NODE) && 
+                    if ((node->type == XML_ELEMENT_NODE) &&
                         !strcasecmp ((const char *)subnode->name,
                                      "message")) {
-                        return (char *)xmlNodeGetContent(subnode);
+                        return (char *)xmlNodeGetContent (subnode);
                     }
                 }
 
@@ -569,7 +570,10 @@ format_eucafault (const char *fault_id, const char_map **map)
     // Determine alignment (but only once)
     if (!max_label_len) {
         for (int i = 0; fault_labels[i]; i++) {
-            int this_label_len = strlen (get_common_var (fault_labels[i]));
+            int this_label_len = 0;
+            char *label = get_common_var (fault_labels[i]);
+            this_label_len = strlen (label);
+            free (label);
             if (this_label_len > max_label_len) {
                 max_label_len = this_label_len;
             }
@@ -581,9 +585,9 @@ format_eucafault (const char *fault_id, const char_map **map)
 
     for (int i = 0; fault_labels[i]; i++) {
         char *fault_var = NULL;
-        fprintf (logfile, "%s %*s: ", BARS, max_label_len,
-                 get_common_var (fault_labels[i]));
-        // FIXME: free() this.
+        char *common_var = get_common_var (fault_labels[i]);
+        fprintf (logfile, "%s %*s: ", BARS, max_label_len, common_var);
+        free (common_var);
         fault_var = get_fault_var (fault_labels[i], fault_node);
 
         if (fault_var != NULL) {
@@ -592,9 +596,12 @@ format_eucafault (const char *fault_id, const char_map **map)
                 fprintf (logfile, "%s", fault_subbed);
             } else {
                 fprintf (logfile, "%s", fault_var);
-            }                
+            }
+            free (fault_var);
         } else {
-            fprintf (logfile, "%s", get_common_var ("unknown"));
+            common_var = get_common_var ("unknown");
+            fprintf (logfile, "%s", common_var);
+            free (common_var);
         }
         fprintf (logfile, "\n");
     }
@@ -656,7 +663,7 @@ main (int argc, char ** argv)
     int dump = 0;
     int opt;
 
-    setlocale(LC_ALL, "en_US.utf-8");
+    setlocale (LC_ALL, "en_US.utf-8");
 
     while ((opt = getopt (argc, argv, "d")) != -1) {
         switch (opt) {
@@ -671,10 +678,12 @@ main (int argc, char ** argv)
     initialize_eucafaults ();
 
     if (optind < argc) {
-        char_map **m = c_varmap_alloc(NULL, "daemon", "Balrog");
+        char_map **m = c_varmap_alloc (NULL, "daemon", "Balrog");
+        m = c_varmap_alloc (m, "hostIp", "127.0.0.1");
+        m = c_varmap_alloc (m, "brokerIp", "127.0.0.2");
+        m = c_varmap_alloc (m, "endpointIp", "127.0.0.3");
         PRINTF (("argv[1st of %d]: %s\n", argc - optind, argv[optind]));
         log_eucafault (argv[optind], (const char_map **)m); /* FIXME: Add passing some parameters. */
-        assert (1==0);
     }
     if (dump) {
         dump_eucafaults_db ();
