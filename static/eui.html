@@ -2,7 +2,6 @@
 <html>
   <head>
     <title>Eucalyptus</title>
-
     <link href="http://fonts.googleapis.com/css?family=Play:400,700" rel="stylesheet">
     <style type="text/css" title="currentStyle">
       @import "lib/jquery.css";
@@ -20,6 +19,7 @@
 
     <!-- this ui library contains everything. need to slim down later by including only what's used here -->
     <!--<script type="text/javascript" language="javascript" src="lib/jquery-ui-1.8.21.custom.min.js"></script> -->
+    <!-- jquery-ui 1.9.0 beta for inheritance of widgets -->
     <script type="text/javascript" language="javascript" src="lib/jquery-ui-1.9.0-beta1.js"></script>
     <script type="text/javascript" language="javascript" src="lib/jquery.dataTables.js"></script> 
     <script type="text/javascript" language="javascript" src="lib/jquery.cookies.js"></script>
@@ -50,15 +50,14 @@
 
   <body>
     <div class="euca-container">
-      
-      <header class="euca-header-container">
+      <div class="euca-header-container">
         <div class="inner-container clearfix">
           <a id="euca-logo" class="hide-text" href="/">Eucalyptus</a>
           <div id="euca-navigator"></div>
           <div id="euca-help" class="header-nav"></div>
           <div id="euca-user" class="header-nav"></div>
         </div>
-      </header>
+      </div>
 
       <div class="euca-explorer-container">
         <div class="inner-container clearfix"></div>

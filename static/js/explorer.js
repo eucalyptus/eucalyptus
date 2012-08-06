@@ -6,14 +6,9 @@
                 {key:'images', text:menu_images},
                 {key:'instances', text:menu_instances},
                 {key:'storage', text:menu_storage},
-                {key:'netsec', text:menu_netsec},
-                {key:'support', text:menu_support}],
-        submenus : {//dashboard: [{key:'dashboard', text:menu_dashboard_dashboard}],
-                  //images: [{key:'images', text:menu_images_images}],
-                  //instances: [{key:'instances', text:menu_instances_instances}],
-                  storage: [{key:'volume', text:menu_storage_volumes}, {key:'snapshot', text:menu_storage_snapshots},{key:'bucket',text:menu_storage_buckets}],
-                  netsec: [{key:'eip',text:menu_netsec_eip},{key:'sgroup',text:menu_netsec_sgroup},{key:'keypair',text:menu_netsec_keypair}],
-                  support: [{key:'guide', text:menu_support_guide},{key:'forum', text: menu_support_forum},{key:'report', text: menu_support_report}]}
+                {key:'netsec', text:menu_netsec}],
+        submenus : { storage: [{key:'volume', text:menu_storage_volumes}, {key:'snapshot', text:menu_storage_snapshots},{key:'bucket',text:menu_storage_buckets}],
+                  netsec: [{key:'sgroup',text:menu_netsec_sgroup},{key:'keypair',text:menu_netsec_keypair},{key:'eip',text:menu_netsec_eip}]},
       },
 
       _init : function() { },
