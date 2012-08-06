@@ -195,7 +195,7 @@ varsub (const wchar_t * s, const wchar_map * vars [])
         }
         wchar_t * val = find_valn (vars, var_start + pref_len, var_len);
         if (val == NULL) {
-            logprintfl (EUCAERROR, "failed to substitute variable\n"); // TODO: print variable name
+            logprintfl (EUCAWARN, "failed to substitute variable\n"); // TODO: print variable name
             if (result != NULL) 
                 free (result);
             return NULL;
@@ -297,7 +297,7 @@ c_varsub (const char * s, const char_map * vars [])
         }
         char * val = c_find_valn (vars, var_start + pref_len, var_len);
         if (val == NULL) {
-            logprintfl (EUCAERROR, "failed to substitute variable\n"); // TODO: print variable name
+            logprintfl (EUCAWARN, "failed to substitute variable\n"); // TODO: print variable name
             if (result != NULL) 
                 free (result);
             return NULL;
@@ -348,7 +348,7 @@ c_varmap_free (char_map **map)
     int i = 0;
 
     if (map == NULL) {
-        logprintfl (EUCAWARN, "varmap_free() called on NULL map.\n");
+        logprintfl (EUCAWARN, "c_varmap_free() called on NULL map.\n");
         return;
     }
     while (map[i]) {
