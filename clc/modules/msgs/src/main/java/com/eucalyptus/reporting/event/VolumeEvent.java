@@ -22,6 +22,7 @@ package com.eucalyptus.reporting.event;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.notNullValue;
+
 import com.eucalyptus.util.OwnerFullName;
 
 @SuppressWarnings("serial")
@@ -84,12 +85,33 @@ public class VolumeEvent implements Event {
     private final String displayName;
     private final String availabilityZone;
 
+    public static ActionInfo forVolumeCreate() {
+	return new ActionInfo(VolumeAction.VOLUMECREATE);
+    }
+
+    public static ActionInfo forVolumeDelete() {
+	return new ActionInfo(VolumeAction.VOLUMEDELETE);
+    }
+
+    public static InstanceActionInfo forVolumeAttach(final String instanceUuid,
+	    final String instanceId) {
+	return new InstanceActionInfo(VolumeAction.VOLUMEATTACH, instanceUuid,
+		instanceId);
+    }
+
+    public static InstanceActionInfo forVolumeDetach(final String instanceUuid,
+	    final String instanceId) {
+	return new InstanceActionInfo(VolumeAction.VOLUMEDETACH, instanceUuid,
+		instanceId);
+    }
+
     public static VolumeEvent with(final ActionInfo actionInfo,
 	    final String uuid, final long sizeGB, final OwnerFullName owner,
 	    final String displayName, final String availabilityZone) {
 
-	return new VolumeEvent(actionInfo, uuid, sizeGB, owner.getUserId(), 
-		owner.getUserName(), owner.getAccountNumber(),owner.getAccountName(), displayName, availabilityZone);
+	return new VolumeEvent(actionInfo, uuid, sizeGB, owner.getUserId(),
+		owner.getUserName(), owner.getAccountNumber(),
+		owner.getAccountName(), displayName, availabilityZone);
     }
 
     private VolumeEvent(ActionInfo actionInfo, String uuid, long sizeGB,
