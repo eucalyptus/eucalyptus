@@ -34,35 +34,56 @@ import com.google.common.base.Preconditions;
 public class SnapShotUsageEventListener implements EventListener<SnapShotEvent> {
 
     public static void register() {
-	Listeners.register(SnapShotEvent.class, new SnapShotUsageEventListener());
+	Listeners.register(SnapShotEvent.class,
+		new SnapShotUsageEventListener());
     }
 
     @Override
-	  public void fireEvent( @Nonnull final SnapShotEvent event ) {
-	    Preconditions.checkNotNull( event, "Event is required" );
- 
-	    // Ensure account / user info is present and up to date
-	    ReportingAccountDao.getInstance().addUpdateAccount( event.getAccountId(), event.getAccountName() );
-	    ReportingUserDao.getInstance().addUpdateUser( event.getOwnerId(), event.getOwnerName() );
+    public void fireEvent(@Nonnull final SnapShotEvent event) {
+	Preconditions.checkNotNull(event, "Event is required");
 
-	    final ReportingVolumeSnapshotEventStore eventStore = ReportingVolumeSnapshotEventStore.getInstance();
-	    
-	    switch (event.getActionInfo().getAction()) {
-	    case SNAPSHOTCREATE :
-		eventStore.insertCreateEvent(event.getUuid(), event.getDisplayName(), event.getTimeInMs(), 
-			event.getOwnerName(), event.getSizeGB());
-	      break;
-	    case SNAPSHOTDELETE :
-		eventStore.insertDeleteEvent(event.getUuid(), event.getTimeInMs());
-	      break;
-	    }
-	    
-	  }    protected ReportingAccountDao getReportingAccountDao() {
+	final long timeInMs = getCurrentTimeMillis();
+
+	final ReportingAccountDao reportingAccountDao = getReportingAccountDao();
+
+	reportingAccountDao.addUpdateAccount(event.getAccountId(),
+		event.getAccountName());
+
+	final ReportingUserDao reportingUserDao = getReportingUserDao();
+
+	reportingUserDao
+		.addUpdateUser(event.getOwnerId(), event.getOwnerName());
+
+	final ReportingVolumeSnapshotEventStore eventStore = ReportingVolumeSnapshotEventStore
+		.getInstance();
+
+	switch (event.getActionInfo().getAction()) {
+	case SNAPSHOTCREATE:
+	    eventStore.insertCreateEvent(event.getUuid(),
+		    event.getDisplayName(), timeInMs, event.getOwnerName(),
+		    event.getSizeGB());
+	    break;
+	case SNAPSHOTDELETE:
+	    eventStore.insertDeleteEvent(event.getUuid(), timeInMs);
+	    break;
+	}
+
+    }
+
+    protected ReportingAccountDao getReportingAccountDao() {
 	return ReportingAccountDao.getInstance();
     }
 
     protected ReportingUserDao getReportingUserDao() {
 	return ReportingUserDao.getInstance();
+    }
+
+    protected ReportingVolumeSnapshotEventStore getReportingVolumeSnapshotEventStore() {
+	return ReportingVolumeSnapshotEventStore.getInstance();
+    }
+
+    protected long getCurrentTimeMillis() {
+	return System.currentTimeMillis();
     }
 
 }

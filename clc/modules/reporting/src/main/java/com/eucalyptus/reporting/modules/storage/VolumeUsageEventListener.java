@@ -32,7 +32,7 @@ import com.eucalyptus.reporting.user.ReportingUserDao;
 import com.google.common.base.Preconditions;
 
 /**
- * Address event listener for user actions.
+ * Volume event listener for user actions.
  */
 public class VolumeUsageEventListener implements EventListener<VolumeEvent> {
 
@@ -45,21 +45,24 @@ public class VolumeUsageEventListener implements EventListener<VolumeEvent> {
 	Preconditions.checkNotNull(event, "Event is required");
 
 	final long timeInMs = getCurrentTimeMillis();
-	// Ensure account / user info is present and up to date
-	ReportingAccountDao.getInstance().addUpdateAccount(
-		event.getAccountId(), event.getAccountName());
-	ReportingUserDao.getInstance().addUpdateUser(event.getOwnerId(),
-		event.getOwnerName());
 
-	final ReportingVolumeEventStore eventStore = ReportingVolumeEventStore
-		.getInstance();
+	final ReportingAccountDao reportingAccountDao = getReportingAccountDao();
+
+	reportingAccountDao.addUpdateAccount(event.getAccountId(),
+		event.getAccountName());
+
+	final ReportingUserDao reportingUserDao = getReportingUserDao();
+
+	reportingUserDao
+		.addUpdateUser(event.getOwnerId(), event.getOwnerName());
+
+	final ReportingVolumeEventStore eventStore = getReportingVolumeEventStore();
 
 	switch (event.getActionInfo().getAction()) {
 	case VOLUMECREATE:
 	    eventStore.insertCreateEvent(event.getUuid(),
-		    event.getDisplayName(), timeInMs,
-		    event.getOwnerId(), event.getAvailabilityZone(),
-		    event.getSizeGB());
+		    event.getDisplayName(), timeInMs, event.getOwnerId(),
+		    event.getAvailabilityZone(), event.getSizeGB());
 	    break;
 	case VOLUMEDELETE:
 	    eventStore.insertDeleteEvent(event.getUuid(), timeInMs);
@@ -84,6 +87,10 @@ public class VolumeUsageEventListener implements EventListener<VolumeEvent> {
 
     protected ReportingUserDao getReportingUserDao() {
 	return ReportingUserDao.getInstance();
+    }
+
+    protected ReportingVolumeEventStore getReportingVolumeEventStore() {
+	return ReportingVolumeEventStore.getInstance();
     }
 
     protected long getCurrentTimeMillis() {
