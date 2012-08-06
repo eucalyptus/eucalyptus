@@ -9,8 +9,8 @@ import com.eucalyptus.reporting.Period;
 import com.eucalyptus.reporting.ReportingModule;
 import com.eucalyptus.reporting.ReportingCriterion;
 import com.eucalyptus.reporting.units.Units;
-import com.eucalyptus.reporting.user.ReportingAccountDao;
-import com.eucalyptus.reporting.user.ReportingUserDao;
+import com.eucalyptus.reporting.domain.ReportingAccountDao;
+import com.eucalyptus.reporting.domain.ReportingUserDao;
 
 public class S3ReportingModule
 	implements ReportingModule<S3ReportLine>
@@ -69,11 +69,11 @@ public class S3ReportingModule
 
 		switch (criterion) {
 			case ACCOUNT:
-				return ReportingAccountDao.getInstance().getAccountName(key.getAccountId());
+				return ReportingAccountDao.getInstance().getReportingAccount(key.getAccountId()).getName();
 			case USER:
-				return ReportingUserDao.getInstance().getUserName(key.getOwnerId());
+				return ReportingUserDao.getInstance().getReportingUser(key.getOwnerId()).getName();
 			default:
-				return ReportingUserDao.getInstance().getUserName(key.getOwnerId());
+				return ReportingUserDao.getInstance().getReportingUser(key.getOwnerId()).getName();
 		}
 	}
 	
