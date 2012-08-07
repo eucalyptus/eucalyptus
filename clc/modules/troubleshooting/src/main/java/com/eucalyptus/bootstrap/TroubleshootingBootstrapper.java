@@ -66,8 +66,11 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Properties;
+import java.util.StringTokenizer;
 
 import org.apache.log4j.Logger;
 import com.eucalyptus.cloud.ws.DNSControl;
@@ -139,97 +142,55 @@ public class TroubleshootingBootstrapper extends Bootstrapper {
 
 	@ConfigurableField( description = "Fault id last used to trigger test",
 			initial = "", //TODO: figure out how to link System.property("euca.log.level")
-			changeListener = FaultIdListener.class,
-			displayName = "test.fault.id" )
-	public static String TEST_FAULT_ID = "";
-	@ConfigurableField( description = "Properties file location for variable substitition in text",
-			initial = "", //TODO: figure out how to link System.property("euca.log.level")
-			changeListener = VarPropsListener.class,
-			displayName = "test.fault.var.properties.file" )
-	public static String TEST_FAULT_VAR_PROPERTIES_FILE="";
+			changeListener = TriggerFaultListener.class,
+			displayName = "trigger.fault" )
+	public static String TRIGGER_FAULT = "";
 
-	public static class VarPropsListener implements PropertyChangeListener {
+
+	public static class TriggerFaultListener implements PropertyChangeListener {
 		/**
 		 * @see com.eucalyptus.configurable.PropertyChangeListener#fireChange(com.eucalyptus.configurable.ConfigurableProperty,
 		 *      java.lang.Object)
 		 */
 		@Override
 		public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
-			LOG.warn( "Change occurred to property " + t.getQualifiedName( ) + " with new value " + newValue + "." );
+			LOG.info( "Triggering fault with params " + newValue);
+			List<String> args = split((String) newValue);
+			if (args == null) throw new ConfigurablePropertyException("Invalid params for fault trigger " + newValue);
+			if (args.size() < 1) throw new ConfigurablePropertyException("No fault id specified for fault trigger " + newValue);
+			int faultId = -1;
 			try {
-				t.getField( ).set( null, t.getTypeParser( ).apply( newValue ) );
-			} catch ( IllegalArgumentException e1 ) {
-				e1.printStackTrace();
-				throw new ConfigurablePropertyException( e1 );
-			} catch ( IllegalAccessException e1 ) {
-				e1.printStackTrace();
-				throw new ConfigurablePropertyException( e1 );
+				faultId = Integer.parseInt(args.get(0));
+			} catch (Exception ex) {
+				throw new ConfigurablePropertyException("Invalid params for fault trigger " + newValue);
 			}
+			// There should be an odd number of arguments.  A fault id, and an even number of key value
+			// pairs.  If there are not, discard the last value
+			if (args.size() % 0 == 0) {
+				LOG.warn("Unmatched key/value pairs in fault trigger, ignoring last value " + args.get(args.size() - 1));
+				args.remove(args.size() - 1);
+			}
+			Properties varProps = new Properties();
+			for (int i=1;i<args.size();i+=2) {
+				varProps.setProperty(args.get(i), args.get(i+1));
+			}
+			TestFaultTrigger.triggerFault(faultId, varProps);
+			LOG.info("Triggered fault with params " + newValue);
+		}
+
+		private List<String> split(String s) {
+			ArrayList<String> retVal = new ArrayList<String>();
+			if (s != null) {
+				StringTokenizer stok = new StringTokenizer(s);
+				while (stok.hasMoreTokens()) {
+					retVal.add(stok.nextToken());
+				}
+			}
+			return retVal;
 		}
 	}
 
-	public static class FaultIdListener implements PropertyChangeListener {
-		/**
-		 * @see com.eucalyptus.configurable.PropertyChangeListener#fireChange(com.eucalyptus.configurable.ConfigurableProperty,
-		 *      java.lang.Object)
-		 */
-		@Override
-		public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
-			LOG.warn( "Change occurred to property " + t.getQualifiedName( ) + " with new value " + newValue + "." );
-			String newValueStr = (String) newValue;
-			int newValueId = -1;
-			if (newValueStr != null && !newValueStr.trim().isEmpty()) {
-				try {
-					newValueId = Integer.parseInt(newValueStr);
-				} catch (Exception ex) {
-					throw new ConfigurablePropertyException("Unable to set fault id to " + newValue);
-				}
-			}
-			if (newValueId == -1) {
-				newValueStr = "";
-			}
-			try {
-				t.getField( ).set( null, t.getTypeParser( ).apply( newValue ) );
-			} catch ( IllegalArgumentException e1 ) {
-				e1.printStackTrace();
-				throw new ConfigurablePropertyException( e1 );
-			} catch ( IllegalAccessException e1 ) {
-				e1.printStackTrace();
-				throw new ConfigurablePropertyException( e1 );
-			}
-			LOG.info("While setting the fault id, properties file is set to " + TEST_FAULT_VAR_PROPERTIES_FILE);
-			if (newValueId > -1) {
-				Properties varProps = null;
-				if (TEST_FAULT_VAR_PROPERTIES_FILE != null && !TEST_FAULT_VAR_PROPERTIES_FILE.trim().isEmpty()) {
-					File propsFile = new File(TEST_FAULT_VAR_PROPERTIES_FILE);
-					if (propsFile.exists()) {
-						varProps = new Properties();
-						InputStream in = null;
-						try {
-							in = new FileInputStream(propsFile);
-							varProps.load(in);
-						} catch (IOException ex) {
-							ex.printStackTrace();
-						} finally {
-							if (in != null) {
-								try {
-									in.close();
-								} catch (IOException ignore) {
-									;
-								}
-							}
-						}
-					} else {
-						LOG.warn("Properties file for fault trigger test " + TEST_FAULT_VAR_PROPERTIES_FILE + " does not exist (or can not be read)");
-					}
-				} else {
-					LOG.warn("No properties file set for fault trigger test");
-				}
-				TestFaultTrigger.triggerFault(newValueId, varProps);
-			}
-		}
-	}
-
+	
 	@ConfigurableField( description = "'true' if we override system log levels.",
 			initial = "false", 
 			changeListener = LogLevelOverrideListener.class,
@@ -242,7 +203,6 @@ public class TroubleshootingBootstrapper extends Bootstrapper {
 	public static String TROUBLESHOOTING_LOG_LEVEL = "";
 
 	public static class LogLevelOverrideListener implements PropertyChangeListener {
-		private final String[] logLevels = new String[] {"ALL", "DEBUG", "INFO", "WARN", "ERROR", "FATAL", "TRACE"};
 		/**
 		 * @see com.eucalyptus.configurable.PropertyChangeListener#fireChange(com.eucalyptus.configurable.ConfigurableProperty,
 		 *      java.lang.Object)
