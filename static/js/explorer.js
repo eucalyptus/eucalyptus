@@ -21,10 +21,6 @@
         }
         this.element.append($ul);
  
-        // user-menu (logout, preference)
-        //$ul = $('<ul>').addClass('resources-nav');
-        //$ul.append(this.createUserMenu());
-        //this.element.append($('<div>').addClass('user-explorer').append($ul)); 
       },
 
       createUserMenu : function () {
