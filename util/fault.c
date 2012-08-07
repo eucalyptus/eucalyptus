@@ -1,71 +1,31 @@
 // -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
 // vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
 
-/*
-Copyright (c) 2012  Eucalyptus Systems, Inc.
+/*************************************************************************
+ * Copyright 2012 Eucalyptus Systems, Inc.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 3 of the License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ *
+ * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
+ * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
+ * additional information or have any questions.
+ ************************************************************************/
 
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, only version 3 of the License.
-
-This file is distributed in the hope that it will be useful, but WITHOUT
-ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
-for more details.
-
-You should have received a copy of the GNU General Public License along
-with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-Please contact Eucalyptus Systems, Inc., 130 Castilian
-Dr., Goleta, CA 93101 USA or visit <http://www.eucalyptus.com/licenses/>
-if you need additional information or have any questions.
-
-This file may incorporate work covered under the following copyright and
-permission notice:
-
-  Software License Agreement (BSD License)
-
-  Copyright (c) 2008, Regents of the University of California
-
-
-  Redistribution and use of this software in source and binary forms, with
-  or without modification, are permitted provided that the following
-  conditions are met:
-
-    Redistributions of source code must retain the above copyright notice,
-    this list of conditions and the following disclaimer.
-
-    Redistributions in binary form must reproduce the above copyright
-    notice, this list of conditions and the following disclaimer in the
-    documentation and/or other materials provided with the distribution.
-
-  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
-  IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
-  TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
-  PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
-  OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
-  EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
-  PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
-  PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-  LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
-  NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. USERS OF
-  THIS SOFTWARE ACKNOWLEDGE THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE
-  LICENSED MATERIAL, COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS
-  SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
-  IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
-  BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-  THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
-  OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
-  WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
-  ANY SUCH LICENSES OR RIGHTS.
-*/
 #define _FILE_OFFSET_BITS 64 // so large-file support works on 32-bit systems
 
 #include <stdio.h>
 #include <stdlib.h>
 #define _GNU_SOURCE
-#include <assert.h>
 #include <dirent.h>
 #include <errno.h>
 #include <limits.h>
@@ -151,7 +111,7 @@ static char *get_fault_id (const xmlNode *);
 static xmlNode *get_eucafault (const char *, const xmlDoc *);
 static int scandir_filter (const struct dirent *);
 static int str_end_cmp (const char *, const char *);
-static char *str_trim_suffix (const char *, const char *);
+static char *str_trim_suffix (char *, const char *);
 static int add_eucafault (const xmlDoc *);
 static xmlNode *get_common_block (const xmlDoc *);
 static char *get_common_var (const char *);
@@ -185,14 +145,21 @@ str_end_cmp (const char *str, const char *suffix)
 /*
  * Utility function:
  * Trims end of string off if it matches a supplied suffix.
+ *
+ * NOTE: The pointer returned by this function must be free()'d by the
+ * caller.
  */
 static char *
-str_trim_suffix (const char *str, const char *suffix)
+str_trim_suffix (char *str, const char *suffix)
 {
     if (!str || !suffix || !str_end_cmp (str, suffix)) {
         return (char *)str;
+    } else {
+        int trim = strlen (str) - strlen (suffix);
+        *(str + trim) = '\0';
+        PRINTF1 (("str_trim_suffix() returning: %s\n", str));
     }
-    return strndup (str, strlen (str) - strlen (suffix));
+    return str;
 }
 
 /*
@@ -244,10 +211,12 @@ read_eucafault (const char * faultdir, const char * fault_id)
         PRINTF (("Found <%s> block in %s\n", COMMON_PREFIX, fault_file));
         if (common_block_exists++) {
             PRINTF (("<%s> block already exists--skipping.\n", COMMON_PREFIX));
+            xmlFreeDoc (my_doc);
             return NULL;
         }
     } else {
         logprintfl (EUCAWARN, "Did not find fault id %s in %s -- found fault id %s instead. (Not adding fault.)\n", fault_id, fault_file, get_fault_id (xmlFirstElementChild (xmlDocGetRootElement (my_doc))));
+        xmlFreeDoc (my_doc);
         return NULL;
     }
     return my_doc;
@@ -256,7 +225,7 @@ read_eucafault (const char * faultdir, const char * fault_id)
 /*
  * Adds XML doc for a fault to the in-memory fault model (doc).
  * Creates model if none exists yet.
- * 
+ *
  * Can also add COMMON_PREFIX (<common>) block.
  */
 static int
@@ -278,7 +247,7 @@ add_eucafault (const xmlDoc *new_doc)
     return 0;
 }
 
-/* 
+/*
  * Returns the fault id found in a fault node.
  */
 static char *
@@ -340,7 +309,7 @@ get_common_block (const xmlDoc *doc)
 static xmlNode *
 get_eucafault (const char *id, const xmlDoc *doc)
 {
-    /* 
+    /*
      * Uses global model if no doc supplied.
      */
     if (doc == NULL) {
@@ -378,11 +347,11 @@ initialize_eucafaults (void)
     if (faults_initialized) {
         PRINTF1 (("Attempt to reinitialize fault registry? Skipping...\n"));
         pthread_mutex_unlock (&fault_mutex);
-        return 0; 
+        return 0;
     }
     PRINTF (("Initializing fault registry directories.\n"));
     if ((locale = getenv (LOCALIZATION_ENV_VAR)) == NULL) {
-        logprintfl (EUCAINFO, 
+        logprintfl (EUCAINFO,
                    "$%s not set, using default value of: %s\n",
                     LOCALIZATION_ENV_VAR, DEFAULT_LOCALIZATION);
     }
@@ -427,6 +396,7 @@ initialize_eucafaults (void)
                             faultdirs[i]));
                     while (numfaults--) {
                         xmlDoc *new_fault = read_eucafault (faultdirs[i], str_trim_suffix (namelist[numfaults]->d_name, XML_SUFFIX));
+                        free (namelist[numfaults]);
 
                         if (new_fault) {
                             add_eucafault (new_fault);
@@ -435,6 +405,7 @@ initialize_eucafaults (void)
                             PRINTF1 (("Not adding new fault--mismatch or already exists...?\n"));
                         }
                     }
+                    free (namelist);
                 }
             }
         }
@@ -448,13 +419,14 @@ initialize_eucafaults (void)
 /*
  * Retrieves a translated label from <common> block.
  *
+ * NOTE: The pointer returned by this function must be free()'d by the
+ * caller.
+ *
  * FIXME: Consolidate this with get_fault_id() and make some sort of
  * general-purpose fetch function? Or make get_fault_id() more general
  * and change this to call it?
- * 
+ *
  * FIXME: Consolidate with get_fault_var()?
- * 
- * FIXME: LEAKS MEMORY!!!
  */
 static char *
 get_common_var (const char *var)
@@ -467,7 +439,7 @@ get_common_var (const char *var)
     }
     for (xmlNode *node = xmlFirstElementChild (c_node); node;
          node = node->next) {
-        if ((node->type == XML_ELEMENT_NODE) && 
+        if ((node->type == XML_ELEMENT_NODE) &&
             !strcasecmp ((const char *)node->name, "var")) {
             xmlChar *prop = xmlGetProp (node, (const xmlChar *)"name");
 
@@ -479,7 +451,7 @@ get_common_var (const char *var)
 
                 if (value == NULL) {
                     value = xmlGetProp (node, (const xmlChar *)"value");
-                } 
+                }
                 return (char *)value;
             } else {
                 xmlFree (prop);
@@ -494,9 +466,10 @@ get_common_var (const char *var)
 /*
  * Retrieves a translated label from <fault> block.
  *
+ * NOTE: The pointer returned by this function must be free()'d by the
+ * caller.
+ *
  * FIXME: Consolidate with get_common_var()?
- * 
- * FIXME: LEAKS MEMORY!!!
  *
  * FIXME: Gosh this looks messy.
  */
@@ -518,21 +491,21 @@ get_fault_var (const char *var, const xmlNode *f_node)
             }
             if (value == NULL) {
                 // May be a child node, e.g. for "resolution"
-                for (xmlNode *subnode = xmlFirstElementChild(node); subnode;
+                for (xmlNode *subnode = xmlFirstElementChild (node); subnode;
                      subnode = subnode->next) {
-                    if ((node->type == XML_ELEMENT_NODE) && 
+                    if ((node->type == XML_ELEMENT_NODE) &&
                         !strcasecmp ((const char *)subnode->name,
                                      "localized")) {
-                        return (char *)xmlNodeGetContent(subnode);
+                        return (char *)xmlNodeGetContent (subnode);
                     }
                 }
                 // FIXME: Need a more elegant method than another list walk!
-                for (xmlNode *subnode = xmlFirstElementChild(node); subnode;
+                for (xmlNode *subnode = xmlFirstElementChild (node); subnode;
                      subnode = subnode->next) {
-                    if ((node->type == XML_ELEMENT_NODE) && 
+                    if ((node->type == XML_ELEMENT_NODE) &&
                         !strcasecmp ((const char *)subnode->name,
                                      "message")) {
-                        return (char *)xmlNodeGetContent(subnode);
+                        return (char *)xmlNodeGetContent (subnode);
                     }
                 }
 
@@ -569,7 +542,10 @@ format_eucafault (const char *fault_id, const char_map **map)
     // Determine alignment (but only once)
     if (!max_label_len) {
         for (int i = 0; fault_labels[i]; i++) {
-            int this_label_len = strlen (get_common_var (fault_labels[i]));
+            int this_label_len = 0;
+            char *label = get_common_var (fault_labels[i]);
+            this_label_len = strlen (label);
+            free (label);
             if (this_label_len > max_label_len) {
                 max_label_len = this_label_len;
             }
@@ -581,9 +557,9 @@ format_eucafault (const char *fault_id, const char_map **map)
 
     for (int i = 0; fault_labels[i]; i++) {
         char *fault_var = NULL;
-        fprintf (logfile, "%s %*s: ", BARS, max_label_len,
-                 get_common_var (fault_labels[i]));
-        // FIXME: free() this.
+        char *common_var = get_common_var (fault_labels[i]);
+        fprintf (logfile, "%s %*s: ", BARS, max_label_len, common_var);
+        free (common_var);
         fault_var = get_fault_var (fault_labels[i], fault_node);
 
         if (fault_var != NULL) {
@@ -592,9 +568,12 @@ format_eucafault (const char *fault_id, const char_map **map)
                 fprintf (logfile, "%s", fault_subbed);
             } else {
                 fprintf (logfile, "%s", fault_var);
-            }                
+            }
+            free (fault_var);
         } else {
-            fprintf (logfile, "%s", get_common_var ("unknown"));
+            common_var = get_common_var ("unknown");
+            fprintf (logfile, "%s", common_var);
+            free (common_var);
         }
         fprintf (logfile, "\n");
     }
@@ -656,7 +635,7 @@ main (int argc, char ** argv)
     int dump = 0;
     int opt;
 
-    setlocale(LC_ALL, "en_US.utf-8");
+    setlocale (LC_ALL, "en_US.utf-8");
 
     while ((opt = getopt (argc, argv, "d")) != -1) {
         switch (opt) {
@@ -671,10 +650,13 @@ main (int argc, char ** argv)
     initialize_eucafaults ();
 
     if (optind < argc) {
-        char_map **m = c_varmap_alloc(NULL, "daemon", "Balrog");
+        char_map **m = c_varmap_alloc (NULL, "daemon", "Balrog");
+        m = c_varmap_alloc (m, "hostIp", "127.0.0.1");
+        m = c_varmap_alloc (m, "brokerIp", "127.0.0.2");
+        m = c_varmap_alloc (m, "endpointIp", "127.0.0.3");
         PRINTF (("argv[1st of %d]: %s\n", argc - optind, argv[optind]));
         log_eucafault (argv[optind], (const char_map **)m); /* FIXME: Add passing some parameters. */
-        assert (1==0);
+        c_varmap_free (m);
     }
     if (dump) {
         dump_eucafaults_db ();
