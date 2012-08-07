@@ -134,20 +134,26 @@ body {
 #euca-navigator.mouseon {
     background-color: #ebe9eb;
     border-color: #ccc;
-    padding-bottom: 4px;
+    padding-bottom: 2px;
 }
 
 #resources-link {
     display: block;
-    background: transparent url(../images/css-sprites-small.png) no-repeat right 4px;
-    color: #73a434;
+    background: transparent url(../images/css-sprites-small.png) no-repeat right 0;
+    color: #02405f;
     font-family: "Play", Arial, sans-serif;
     font-size: 16px;
-    line-height: 20px;
-    margin: 13px 25px;
+    font-weight: bold;
+    line-height: 48px;
+    margin: 0 10px 0 0;
+    padding: 0 32px 0 20px;
     outline: 0;
-    padding-right: 19px; 
     text-decoration: none;
+}
+
+#resources-link:hover {
+  background-position: right -50px;
+  color: #73a434;
 }
 
 
@@ -155,80 +161,82 @@ body {
 
 #euca-help {
     display: none;
+    float: right;
 }
 
 #euca-user {
-    display: none;   
+    display: none;
+    float: right;   
 }
 
 .header-nav {
-    float: right;
     border: 1px solid #e3e1e1;
     border-width: 0 1px;
 }
 
-#euca-help.header-nav {
+#euca-help .header-nav {
     border-left: 0;
 }
 
+.header-nav,
+.header-nav ul {
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+}
+
 .header-nav a {
-    display: block;
-    background: transparent url(../images/css-sprites-small.png) no-repeat right -15px;
-    color: #02405f;
-    font-family: "Play", Arial, sans-serif;
-    font-size: 14px;
-    font-weight: normal;
-    line-height: 1em;
-    margin: 16px 12px;
-    outline: 0;
-    padding-right: 18px;
-    text-decoration: none;
+  display: block;
+  background: transparent url(../images/css-sprites-small.png) no-repeat right 0;
+  color: #02405f;
+  font-family: "Play", Arial, sans-serif;
+  font-size: 14px;
+  font-weight: normal;
+  line-height: 1em;
+  outline: 0;
+  padding: 17px 28px 16px 12px;
+  text-decoration: none;
 }
 
+.header-nav .toggle-on,
 .header-nav a:hover {
-    text-decoration: none;
+  background-position: right -50px;
+  color: #73a434;
+  text-decoration: none;
 }
 
-.user-menu {
+/* ==== Submenu ==== */
+
+.header-nav ul {
+  display: none;
   position: absolute;
-  z-index: 25;
-}
-
-.user-menu ul {
+  top: 48px;
+  z-index: 25;  
   background-color: #fff;
-  list-style-type: none;
-  margin: 0;
-  padding: 0;
 
   -webkit-box-shadow: 0px 5px 8px rgba(0,0,0,0.34);
   -moz-box-shadow: 0px 5px 8px rgba(0,0,0,0.34); 
   box-shadow: 0px 5px 8px rgba(0,0,0,0.34);
 }
 
-.user-menu li {
-  width: 120px;
+#euca-user .header-nav ul {
+  /* User nav should position, so it flys out to the left */
+  /* right: 10px;  TO-DO */
+} 
+
+.header-nav ul li {
+  border-top: 1px solid #ccc;
+  min-width: 105px;
 }
 
-.help-menu {
-  position: absolute;
-  z-index: 25;
+.header-nav ul li:first-child {
+  border-top: 0;
 }
 
-.help-menu ul {
-  background-color: #fff;
-  list-style-type: none;
-  margin: 0;
-  padding: 0;
-
-  -webkit-box-shadow: 0px 5px 8px rgba(0,0,0,0.34);
-  -moz-box-shadow: 0px 5px 8px rgba(0,0,0,0.34); 
-  box-shadow: 0px 5px 8px rgba(0,0,0,0.34);
+.header-nav ul li a {
+  background-image: none;
+  padding: 11px 12px;
 }
-
-.help-menu li {
-  width: 120px;
-}
-
 
 /* ======== Explorer Resource Navigation styles ======= */
 
