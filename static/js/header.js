@@ -19,14 +19,16 @@
               $(this).hide();
           }
           if ($(this).attr('id')==='euca-user'){
-            if(widget.options.show_user)
+            if(widget.options.show_user){
               $(this).show();
+            }
             else
               $(this).hide();
           }
           if ($(this).attr('id')==='euca-help'){
-            if(widget.options.show_help)
+            if(widget.options.show_help){
               $(this).show();
+            }
             else
               $(this).hide();
           }
@@ -50,7 +52,10 @@
        $helpArea.append(
          $('<ul>').addClass('header-nav').append(
            $('<li>').append(
-             $('<a>').attr('href','#').text(menu_help),
+             $('<a>').attr('href','#').text(menu_help).click(function(e){ 
+               	$helpArea.find('.header-nav ul').slideToggle('fast'); 
+		$(this).toggleClass('toggle-on');
+             }),
              $('<ul>').append(
                $('<li>').append(
                  $('<a>').attr('href','#').text(menu_help_documentation).click(function(e){
@@ -67,7 +72,10 @@
        $userArea.append(
          $('<ul>').addClass('header-nav').append(
            $('<li>').append(
-             $('<a>').attr('href','#').text($.eucaData.u_session['username']),
+             $('<a>').attr('href','#').text($.eucaData.u_session['username']).click(function(e){
+               $userArea.find('.header-nav ul').slideToggle('fast');
+               $(this).toggleClass('toggle-on');
+             }),
              $('<ul>').append(
                $('<li>').append(
                  $('<a>').attr('href','#').text(menu_user_preferences).click(function(e) {
