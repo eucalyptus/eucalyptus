@@ -54,7 +54,7 @@ class UserSession(object):
 
     # return only the info that's to be sent to browsers
     def get_session(self):
-        return {'username': self.username, 'fullname': self.fullname}
+        return {'account':self.account, 'username': self.username, 'fullname': self.fullname}
 
 class GlobalSession(object):
     def __init__(self):

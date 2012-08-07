@@ -68,11 +68,12 @@
                    thisObj._trigger('select',e, {selected:'report'});}))))));
 
        //user area
+       var uname =$.eucaData.u_session['account']+'/'+ $.eucaData.u_session['username'];
        var $userArea = this.element.find('#euca-user');
        $userArea.append(
          $('<ul>').addClass('header-nav').append(
            $('<li>').append(
-             $('<a>').attr('href','#').text($.eucaData.u_session['username']).click(function(e){
+             $('<a>').attr('href','#').text(uname).click(function(e){
                $userArea.find('.header-nav ul').slideToggle('fast');
                $(this).toggleClass('toggle-on');
              }),

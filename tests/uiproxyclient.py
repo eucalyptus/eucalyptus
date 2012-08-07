@@ -34,6 +34,10 @@ class UIProxyClient(object):
             print "Need to login first!!"
         request.add_header('cookie', self.session_cookie)
 
+    def __add_param_list(self, params, name, list):
+        for idx, val in list:
+            params["name.%s" % (idx + 1)] = val
+
     def __make_request__(self, action, params):
         for param in params.keys():
             if params[param]==None:
@@ -50,6 +54,111 @@ class UIProxyClient(object):
     ##
     def get_zones(self):
         return self.__make_request__('DescribeAvailabilityZones', {})
+
+    ##
+    # Image methods
+    ##
+    def get_images(self):
+        return self.__make_request__('DescribeImages', {})
+
+    ##
+    # Instance methods
+    ##
+    def get_instances(self):
+        return self.__make_request__('DescribeInstances', {})
+
+    def run_instances(self, image_id, min_count=1, max_count=1,
+                      key_name=None, security_groups=None,
+                      user_data=None, addressing_type=None,
+                      instance_type='m1.small', placement=None,
+                      kernel_id=None, ramdisk_id=None,
+                      monitoring_enabled=False, subnet_id=None,
+                      block_device_map=None,
+                      disable_api_termination=False,
+                      instance_initiated_shutdown_behavior=None,
+                      private_ip_address=None,
+                      placement_group=None, client_token=None,
+                      security_group_ids=None,
+                      additional_info=None, instance_profile_name=None,
+                      instance_profile_arn=None, tenancy=None):
+        params = {'ImageId':image_id,
+                  'MinCount':min_count,
+                  'MaxCount':max_count}
+        if key_name:
+            params['KeyName'] = key_name
+        if security_group_ids:
+            l = []
+            for group in security_group_ids:
+                if isinstance(group, SecurityGroup):
+                    l.append(group.id)
+                else:
+                    l.append(group)
+            self.build_list_params(params, l, 'SecurityGroupId')
+        if security_groups:
+            l = []
+            for group in security_groups:
+                if isinstance(group, SecurityGroup):
+                    l.append(group.name)
+                else:
+                    l.append(group)
+            self.build_list_params(params, l, 'SecurityGroup')
+        if user_data:
+            params['UserData'] = base64.b64encode(user_data)
+        if addressing_type:
+            params['AddressingType'] = addressing_type
+        if instance_type:
+            params['InstanceType'] = instance_type
+        if placement:
+            params['Placement.AvailabilityZone'] = placement
+        if placement_group:
+            params['Placement.GroupName'] = placement_group
+        if tenancy:
+            params['Placement.Tenancy'] = tenancy
+        if kernel_id:
+            params['KernelId'] = kernel_id
+        if ramdisk_id:
+            params['RamdiskId'] = ramdisk_id
+        if monitoring_enabled:
+            params['Monitoring.Enabled'] = 'true'
+        if subnet_id:
+            params['SubnetId'] = subnet_id
+        if private_ip_address:
+            params['PrivateIpAddress'] = private_ip_address
+        if block_device_map:
+            block_device_map.build_list_params(params)
+        if disable_api_termination:
+            params['DisableApiTermination'] = 'true'
+        if instance_initiated_shutdown_behavior:
+            val = instance_initiated_shutdown_behavior
+            params['InstanceInitiatedShutdownBehavior'] = val
+        if client_token:
+            params['ClientToken'] = client_token
+        if additional_info:
+            params['AdditionalInfo'] = additional_info
+        return self.__make_request__('RunInstances', params)
+
+    def terminate_instances(self, instanceids):
+        params = {}
+        self.__add_param_list__(params, 'IsntanceId', instanceids)
+        return self.__make_request__('TerminateInstances', params)
+
+    def stop_instances(self, instanceids):
+        params = {}
+        self.__add_param_list__(params, 'IsntanceId', instanceids)
+        return self.__make_request__('StopInstances', params)
+
+    def start_instances(self, instanceids):
+        params = {}
+        self.__add_param_list__(params, 'IsntanceId', instanceids)
+        return self.__make_request__('StartInstances', params)
+
+    def restart_instances(self, instanceids):
+        params = {}
+        self.__add_param_list__(params, 'IsntanceId', instanceids)
+        return self.__make_request__('RestartInstances', params)
+
+    def get_console_output(self, isntanceid):
+        return self.__make_request__('DescribeInstances', {'InstanceId': instanceid})
 
     ##
     # Keypair methods
@@ -164,4 +273,10 @@ class UIProxyClient(object):
     def detach_volume(self, volume_id, instance_id, device, force=False):
         return self.__make_request__('DetachVolume',
                     {'VolumeId': volume_id, 'InstanceId': instance_id, 'Device': device, 'Force': str(force)})
+
+    ##
+    # Snapshot methods
+    ##
+    def get_snapshots(self):
+        return self.__make_request__('DescribeSnapshots', {})
 

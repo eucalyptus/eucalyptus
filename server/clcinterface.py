@@ -21,6 +21,42 @@ class ClcInterface(object):
     def get_all_instances(self):
         raise NotImplementedError("Are you sure you're using the right class?")
 
+    def run_instances(self, image_id, min_count=1, max_count=1,
+                      key_name=None, security_groups=None,
+                      user_data=None, addressing_type=None,
+                      instance_type='m1.small', placement=None,
+                      kernel_id=None, ramdisk_id=None,
+                      monitoring_enabled=False, subnet_id=None,
+                      block_device_map=None,
+                      disable_api_termination=False,
+                      instance_initiated_shutdown_behavior=None,
+                      private_ip_address=None,
+                      placement_group=None, client_token=None,
+                      security_group_ids=None,
+                      additional_info=None, instance_profile_name=None,
+                      instance_profile_arn=None, tenancy=None):
+        raise NotImplementedError("Are you sure you're using the right class?")
+
+    # returns instance list
+    def terminate_instances(self, instance_ids):
+        raise NotImplementedError("Are you sure you're using the right class?")
+
+    # returns instance list
+    def stop_instances(self, instance_ids, force=False):
+        raise NotImplementedError("Are you sure you're using the right class?")
+
+    # returns instance list
+    def start_instances(self, instance_ids):
+        raise NotImplementedError("Are you sure you're using the right class?")
+
+    # returns instance status
+    def reboot_instances(self, instance_ids):
+        raise NotImplementedError("Are you sure you're using the right class?")
+
+    # returns console output
+    def get_console_output(self, instance_id):
+        raise NotImplementedError("Are you sure you're using the right class?")
+
     ##
     # Elastic IP methods
     ##

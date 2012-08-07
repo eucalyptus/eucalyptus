@@ -40,6 +40,55 @@ class BotoClcInterface(ClcInterface):
             self.__save_json__(obj, "mockdata/Instances.json")
         return obj
 
+    def run_instances(self, image_id, min_count=1, max_count=1,
+                      key_name=None, security_groups=None,
+                      user_data=None, addressing_type=None,
+                      instance_type='m1.small', placement=None,
+                      kernel_id=None, ramdisk_id=None,
+                      monitoring_enabled=False, subnet_id=None,
+                      block_device_map=None,
+                      disable_api_termination=False,
+                      instance_initiated_shutdown_behavior=None,
+                      private_ip_address=None,
+                      placement_group=None, client_token=None,
+                      security_group_ids=None,
+                      additional_info=None, instance_profile_name=None,
+                      instance_profile_arn=None, tenancy=None):
+        return self.conn.run_instances(image_id, min_count, max_count,
+                      key_name, security_groups,
+                      user_data, addressing_type,
+                      instance_type, placement,
+                      kernel_id, ramdisk_id,
+                      monitoring_enabled, subnet_id,
+                      block_device_map,
+                      disable_api_termination,
+                      instance_initiated_shutdown_behavior,
+                      private_ip_address,
+                      placement_group, client_token,
+                      security_group_ids,
+                      additional_info, instance_profile_name,
+                      instance_profile_arn, tenancy)
+
+    # returns instance list
+    def terminate_instances(self, instance_ids):
+        return self.conn.terminate_instances(instance_ids)
+
+    # returns instance list
+    def stop_instances(self, instance_ids, force=False):
+        return self.conn.stop_instances(instance_ids, force)
+
+    # returns instance list
+    def start_instances(self, instance_ids):
+        return self.conn.start_instances(instance_ids)
+
+    # returns instance status
+    def reboot_instances(self, instance_ids):
+        return self.conn.reboot_instances(instance_ids)
+
+    # returns console output
+    def get_console_output(self, instance_id):
+        return self.clc.get_console_output(instance_id)
+
     def get_all_addresses(self):
         obj = self.conn.get_all_addresses()
         if self.saveclcdata:
