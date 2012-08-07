@@ -14,6 +14,7 @@
     },
 
     table : null, // jQuery object to the table
+    actionMenu : null,
 
     _init : function() {
       this.table = this.options.base_table.dataTable(this.options.dt_arg);
@@ -22,13 +23,26 @@
       this.decorateHeader({title:this.options.header_title});
       this.decorateSearchBar({refresh: this.options.search_refresh});
       this.decorateTopBar({txt_create: this.options.txt_create, txt_found : this.options.txt_found});
-      this.decorateActionMenu({text: this.options.menu_text, actions: this.options.menu_actions });
+      this.actionMenu = this.decorateActionMenu({text: this.options.menu_text, actions: this.options.menu_actions });
+      this.addActions(this.actionMenu);
     },
 
     _create : function() {
     },
 
     _destroy : function() {
+    },
+
+    refreshTable : function() {
+      this.table.fnReloadAjax();
+    },
+
+    activateMenu : function() {
+      this.actionMenu.removeClass('inactive');
+    },
+
+    deactivateMenu : function() {
+      this.actionMenu.addClass('inactive');
     },
 
     // args.title = title in the header (e.g.,'Manage key pairs');
@@ -44,10 +58,11 @@
 
     // args.refresh = text 'Refresh'
     decorateSearchBar : function(args) {
+      var thisObj = this; // ref to widget instance
       var $searchBar = this.element.find('#'+this.options.id+'_filter');
       $searchBar.append(
         $('<a>').addClass('table-refresh').attr('href','#').text(args.refresh).click(function(){
-          this.table.fnReloadAjax();
+          thisObj.refreshTable();
         }));
       return $searchBar;
     },   
@@ -135,10 +150,35 @@
       return $menuDiv;
     },
 
-   /* getAllSelectedRows = function (idIndex) {
+    addActions : function (actionMenu) {
+      thisTable = this.table;
+      // add select/deselect all action
+      $checkbox = this.element.find('#' + this.options.id + '-check-all');
+      $checkbox.change(function() {
+        var rows = thisTable.fnGetVisiableTrNodes();
+        if(this.checked) {
+          for ( i = 0; i<rows.length; i++ ) {
+            cb = rows[i].firstChild.firstChild;
+            if ( cb != null ) cb.checked = true;
+          }
+         // activate action menu
+          actionMenu.removeClass('inactive');
+        } else {
+          for ( i = 0; i<rows.length; i++ ) {
+            cb = rows[i].firstChild.firstChild;
+            if ( cb != null ) cb.checked = false;
+          }
+          // deactivate action menu
+          actionMenu.addClass('inactive');
+        }
+      });
+    },
+
+    getAllSelectedRows : function (idIndex) {
       var dataTable = this.table;
       if ( !dataTable )
         return [];
+      idIndex = idIndex || 1;
       var rows = dataTable.fnGetVisiableTrNodes();
       var selectedRows = [];
       for ( i = 0; i<rows.length; i++ ) {
@@ -149,26 +189,8 @@
         }
       }
       return selectedRows;
-    },
+    }
 
-    deleteAction = function (idColumnIndex) {
-      var tableName = this.element.options.id;
-      // hide menu
-      $menuUl = $("div.table_" + tableName + "_top div.euca-table-action ul");
-      $menuUl.removeClass('activemenu');
-      var rowsToDelete = getAllSelectedRows(idColumnIndex);
-
-      if ( rowsToDelete.length > 0 ) {
-        // show delete dialog box
-        $deleteNames = $("#" + tableName + "-delete-names");
-        $deleteNames.html('');
-        for ( i = 0; i<rowsToDelete.length; i++ ) {
-          t = escapeHTML(rowsToDelete[i]);
-          $deleteNames.append(t).append("<br/>");
-        }
-        $("#" + tableName + "-delete-dialog").dialog('open');
-      }
-    },*/
   });
 })(jQuery,
    window.eucalyptus ? window.eucalyptus : window.eucalyptus = {});

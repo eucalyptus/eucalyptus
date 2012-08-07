@@ -1,45 +1,47 @@
 (function($, eucalyptus) {
   $.widget('eucalyptus.keypair', $.eucalyptus.eucawidget, {
     options : { },
-    keytable : null,
+    tableWrapper : null,
     // TODO: is _init() the right method to instantiate everything? 
     _init : function() {
-         var thisObj = this;
-         var $tmpl = $('html body').find('.templates #keypairTblTmpl').clone();
-         var $wrapper = $($tmpl.render($.i18n.map));
-         this.element.add($wrapper);
-         var $base_table = $wrapper.find('table'); 
-         $wrapper.eucatable({
-           id : 'keys', // user of this widget should customize these options,
-           base_table : $base_table,
-           dt_arg : {
-                "bProcessing": true,
-                "sAjaxSource": "../ec2?type=key&Action=DescribeKeyPairs",
-                "sAjaxDataProp": "results",
-                "bAutoWidth" : false,
-                "sPaginationType": "full_numbers",
-                "sDom": '<"table_keys_header">f<"clear"><"table_keys_top">rtp<"clear">',
-                "aoColumns": [
-                  {
-                    "bSortable": false,
-                    "fnRender": function(oObj) { return '<input type="checkbox" onclick="updateActionMenu(\'keys\')"/>' },
-                    "sWidth": "20px",
-                  },
-                  { "mDataProp": "name" },
-                  { "mDataProp": "fingerprint", "bSortable": false }
-                ],
-                "fnDrawCallback": function( oSettings ) {
-                $('#table_keys_count').html(oSettings.fnRecordsTotal());
-                }
-              },
-           header_title : keypair_h_title,
-           search_refresh : search_refresh,
-           txt_create : keypair_create,
-           txt_found : keypair_found,
-           menu_text : table_menu_main_action,
-           menu_actions : { delete: [table_menu_delete_action, function () { deleteAction('keys', 1); } ] }
-      }).appendTo(this.element);
-      
+      var thisObj = this;
+      var $tmpl = $('html body').find('.templates #keypairTblTmpl').clone();
+      var $wrapper = $($tmpl.render($.i18n.map));
+      this.element.add($wrapper);
+      var $base_table = $wrapper.find('table');
+      tableWrapper = $wrapper.eucatable({
+        id : 'keys', // user of this widget should customize these options,
+        base_table : $base_table,
+        dt_arg : {
+          "bProcessing": true,
+          "sAjaxSource": "../ec2?type=key&Action=DescribeKeyPairs",
+          "sAjaxDataProp": "results",
+          "bAutoWidth" : false,
+          "sPaginationType": "full_numbers",
+          "sDom": '<"table_keys_header">f<"clear"><"table_keys_top">rtp<"clear">',
+          "aoColumns": [
+            {
+              "bSortable": false,
+              "fnRender": function(oObj) { return '<input type="checkbox" onclick="updateActionMenu(this)"/>' },
+              "sWidth": "20px",
+            },
+            { "mDataProp": "name" },
+            { "mDataProp": "fingerprint", "bSortable": false }
+          ],
+          "fnDrawCallback": function( oSettings ) {
+             $('#table_keys_count').html(oSettings.fnRecordsTotal());
+
+          }
+        },
+        header_title : keypair_h_title,
+        search_refresh : search_refresh,
+        txt_create : keypair_create,
+        txt_found : keypair_found,
+        menu_text : table_menu_main_action,
+        menu_actions : { delete: [table_menu_delete_action, function () { deleteAction('keys'); } ] }
+      });
+      tableWrapper.appendTo(this.element);
+
       $tmpl = $('html body').find('.templates #keypairDelDlgTmpl').clone();
       $del_dialog = $($tmpl.render($.i18n.map));
 
@@ -86,7 +88,7 @@
                       }
                       else{
                         // TODO: notification should be handled better, generic way
-                        $('#keys-add-dialog div.dialog-notifications').html("Name must be less than 256 alphanumeric characters, spaces, dashes, and/or underscores.");
+                        $('#keys-add-dialog div.dialog-notifications').html(keypair_dialog_error_msg);
                       }
                     }
                   },
@@ -101,7 +103,6 @@
     },
 
     _addKeyPair : function(keyName) {
-      alert('add keypair called for '+keyName);
       $.ajax({
         type:"GET",
         url:"/ec2?type=key&Action=CreateKeyPair",
@@ -111,27 +112,26 @@
         success:
         function(data, textStatus, jqXHR){
           if (data.results && data.results.material) {
-             $.generateFile({
-               filename    : keyName,
-               content     : data.results.material,
-               script      : '/support?Action=DownloadFile&_xsrf=' + $.cookie('_xsrf')
-             });
-           // TODO: can we wait till file is saved by user?
-           successNotification("Added keypair " + keyName);
-           // refresh table
-           allTablesRef['keys'].fnReloadAjax();
-         } else {
-           errorNotification("Failed to create keypair " + keyName);
-         }
+            $.generateFile({
+              filename    : keyName,
+              content     : data.results.material,
+              script      : '/support?Action=DownloadFile&_xsrf=' + $.cookie('_xsrf')
+            });
+            successNotification(keypair_create_success + ' ' + keyName);
+            tableWrapper.eucatable('refreshTable');
+          } else {
+            errorNotification(keypair_create_error + ' ' + keyName);
+          }
         },
         error:
         function(jqXHR, textStatus, errorThrown){
-          errorNotification("Failed to create keypair " + keyName);
+          errorNotification(keypair_delete_error + ' ' + keyName);
         }
       });
     },
+
     _deleteSelectedKeyPairs : function () {
-      var rowsToDelete = getAllSelectedRows('keys', 1);
+      var rowsToDelete = tableWrapper.eucatable('getAllSelectedRows');
       for ( i = 0; i<rowsToDelete.length; i++ ) {
         var keyName = rowsToDelete[i];
         $.ajax({
@@ -144,17 +144,17 @@
           (function(keyName) {
             return function(data, textStatus, jqXHR){
               if ( data.results && data.results == true ) {
-                successNotification("Deleted keypair " + keyName);
-                allTablesRef['keys'].fnReloadAjax();
+                successNotification(keypair_delete_success + ' ' + keyName);
+                tableWrapper.eucatable('refreshTable');
               } else {
-                errorNotification("Failed to delete keypair " + keyName);
+                errorNotification(keypair_delete_error + ' ' + keyName);
               }
            }
           })(keyName),
           error:
           (function(keyName) {
             return function(jqXHR, textStatus, errorThrown){
-              errorNotification("Failed to delete keypair " + keyName);
+              errorNotification(keypair_delete_error + ' ' + keyName);
             }
           })(keyName)
         });

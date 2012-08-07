@@ -6,69 +6,30 @@
 var RETURN_KEY_CODE = 13;
 var RETURN_MAC_KEY_CODE = 10;
 var BACKSPACE_KEY_CODE = 8;
-//TODO: translate
-var SINGULAR = {}
-SINGULAR['keys'] = 'key';
-SINGULAR['volumes'] = 'volume';
 
-function selectCheckboxChanged(context, tableName) {
-  dataTable = allTablesRef[tableName];
-  switch(context.checked) {
-    case true:
-      var rows = dataTable.fnGetVisiableTrNodes();
-      for ( i = 0; i<rows.length; i++ ) {
-        cb = rows[i].firstChild.firstChild;
-        if ( cb != null ) cb.checked = true;
-      }
-      // activate action menu
-      $('div.table_' + tableName + '_top div.euca-table-action').removeClass('inactive');
-      break;
-    case false:
-      var rows = dataTable.fnGetVisiableTrNodes();
-      for ( i = 0; i<rows.length; i++ ) {
-        cb = rows[i].firstChild.firstChild;
-        if ( cb != null ) cb.checked = false;
-      }
-      // deactivate action menu
-      $('div.table_' + tableName + '_top div.euca-table-action').addClass('inactive');
-      break;
-  }
-}
-
-function updateActionMenu(tableName) {
-  if ( getAllSelectedRows(tableName, 1).length == 0 ) {
-    $('div.table_' + tableName + '_top div.euca-table-action').addClass('inactive');
+function updateActionMenu(context) {
+  $parentDiv = $(context).parents('div.dataTables_wrapper').parent();
+  selectedRows = $parentDiv.eucatable('getAllSelectedRows');
+  if ( selectedRows.length == 0 ) {
+    $parentDiv.eucatable('deactivateMenu');
   } else {
-    $('div.table_' + tableName + '_top div.euca-table-action').removeClass('inactive');
+    $parentDiv.eucatable('activateMenu');
   }
-}
-
-function getAllSelectedRows(tableName, idIndex) {
-  dataTable = allTablesRef[tableName];
-  if ( !dataTable )
-    return [];
-  var rows = dataTable.fnGetVisiableTrNodes();
-  var selectedRows = [];
-  for ( i = 0; i<rows.length; i++ ) {
-    cb = rows[i].firstChild.firstChild;
-    if ( cb != null && cb.checked == true ) {
-      if ( rows[i].childNodes[idIndex] != null )
-        selectedRows.push(rows[i].childNodes[idIndex].firstChild.nodeValue);
-    }
-  }
-  return selectedRows;
 }
 
 function escapeHTML(input) {
   return $('<div/>').text(input).html();
 }
 
-function deleteAction(tableName, idColumnIndex) {
-  // hide menu
+//TODO: move this into eucatable
+function deleteAction(tableName) {
+  $tableWrapper = $('div#'+tableName+'-wrapper');
+
+  //TODO: fix hide menu
   $menuUl = $("div.table_" + tableName + "_top div.euca-table-action ul");
   $menuUl.removeClass('activemenu');
 
-  var rowsToDelete = getAllSelectedRows(tableName, idColumnIndex);
+  var rowsToDelete = $tableWrapper.eucatable('getAllSelectedRows');
 
   if ( rowsToDelete.length > 0 ) {
     // show delete dialog box
@@ -81,6 +42,7 @@ function deleteAction(tableName, idColumnIndex) {
     $("#" + tableName + "-delete-dialog").dialog('open');
   }
 }
+
 function deleteSelectedVolumes() {
   var rowsToDelete = getAllSelectedRows('volumes', 1);
   for ( i = 0; i<rowsToDelete.length; i++ ) {
@@ -121,6 +83,7 @@ function hideNotification(notification) {
 
 function successNotification(message) {
   var nId = "n-"+ S4() + "-" + S4();
+//  alert(message);
   $('#euca-notification-container').append('<div class="success" id="'+ nId + '"><span>' + escapeHTML(message) + '</span><a class="hide-notification" href="#" onclick="hideNotification(\'' + nId + '\');">X</a></div>');
   // hide after 30 sec
   setTimeout(function(){ hideNotification(nId) }, 1000 * 30);
@@ -128,5 +91,6 @@ function successNotification(message) {
 
 function errorNotification(message) {
   var nId = "n-"+ S4() + "-" + S4();
+//  alert(message);
   $('#euca-notification-container').append('<div class="error" id="'+ nId + '"><span>' + escapeHTML(message) + '</span><a class="hide-notification" href="#" onclick="hideNotification(\'' + nId + '\');">X</a></div>');
 }
