@@ -16,9 +16,9 @@
       });
       $form.find('input[type=submit]').click(function(evt) {
         var param = {
-          account:$form.find('input[name=account]').val(),
-          username:$form.find('input[name=username]').val(),
-          password:$form.find('input[name=password]').val() 
+          account:$form.find('input[id=account]').val(),
+          username:$form.find('input[id=username]').val(),
+          password:$form.find('input[id=password]').val() 
         };
         thisObj._trigger('doLogin', evt, { param: param,
           onSuccess: function(args){
