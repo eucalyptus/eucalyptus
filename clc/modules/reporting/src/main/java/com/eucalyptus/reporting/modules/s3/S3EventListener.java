@@ -70,8 +70,8 @@ import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.reporting.event.S3Event;
-import com.eucalyptus.reporting.user.ReportingAccountDao;
-import com.eucalyptus.reporting.user.ReportingUserDao;
+import com.eucalyptus.reporting.domain.ReportingAccountCrud;
+import com.eucalyptus.reporting.domain.ReportingUserCrud;
 
 public class S3EventListener
 	implements EventListener<Event>
@@ -96,9 +96,9 @@ public class S3EventListener
 			/* Retain records of all account and user id's and names encountered
 			 * even if they're subsequently deleted.
 			 */
-			ReportingAccountDao.getInstance().addUpdateAccount(
+			ReportingAccountCrud.getInstance().createOrUpdateAccount(
 					s3Event.getAccountId(), s3Event.getAccountName());
-			ReportingUserDao.getInstance().addUpdateUser(s3Event.getOwnerId(),
+			ReportingUserCrud.getInstance().createOrUpdateUser(s3Event.getOwnerId(), s3Event.getAccountId(),
 					s3Event.getOwnerName());
 
 			long timeMillis = getCurrentTimeMillis();
