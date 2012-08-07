@@ -22,6 +22,8 @@ package com.eucalyptus.reporting.event;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.notNullValue;
+
+import com.eucalyptus.event.Event;
 import com.eucalyptus.util.OwnerFullName;
 
 @SuppressWarnings("serial")
@@ -172,12 +174,7 @@ public class VolumeEvent implements Event {
     public String getAvailabilityZone() {
 	return availabilityZone;
     }
-
-    @Override
-    public boolean requiresReliableTransmission() {
-	return true;
-    }
-
+    
     @Override
     public String toString() {
 	return "VolumeEvent [actionInfo=" + actionInfo + ", uuid=" + uuid

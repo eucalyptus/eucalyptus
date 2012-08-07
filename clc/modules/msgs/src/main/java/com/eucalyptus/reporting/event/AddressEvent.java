@@ -21,6 +21,8 @@ package com.eucalyptus.reporting.event;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.notNullValue;
+
+import com.eucalyptus.event.Event;
 import com.eucalyptus.util.OwnerFullName;
 import com.google.common.base.Objects;
 
@@ -177,11 +179,6 @@ public class AddressEvent implements Event {
 
   public ActionInfo getActionInfo() {
     return actionInfo;
-  }
-
-  @Override
-  public boolean requiresReliableTransmission() {
-    return false;
   }
 
   public String toString() {

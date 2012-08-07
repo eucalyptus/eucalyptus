@@ -68,7 +68,7 @@ import org.apache.log4j.Logger;
 
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.event.EventListener;
-import com.eucalyptus.reporting.event.Event;
+import com.eucalyptus.event.Event;
 import com.eucalyptus.reporting.event.S3Event;
 import com.eucalyptus.reporting.user.ReportingAccountDao;
 import com.eucalyptus.reporting.user.ReportingUserDao;

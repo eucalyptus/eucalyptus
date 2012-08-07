@@ -3,10 +3,12 @@ package com.eucalyptus.reporting.event;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.notNullValue;
 
+import com.eucalyptus.event.Event;
 import com.eucalyptus.util.OwnerFullName;
 
+
 @SuppressWarnings("serial")
-public class SnapShotEvent implements com.eucalyptus.event.Event {
+public class SnapShotEvent implements Event {
 
     public enum SnapShotAction {
 	SNAPSHOTCREATE, SNAPSHOTDELETE

@@ -44,7 +44,7 @@ public class ReportingVolumeSnapshotEventStore
 		
 	}
 
-	public void insertCreateEvent(String uuid, String volumeSnapshotId, Long timestampMs, String userId, Long sizeGB)
+	public void insertCreateEvent(String uuid, String volumeSnapshotId, long timestampMs, String userId, long sizeGB)
 	{
 		
 		EntityWrapper<ReportingVolumeSnapshotCreateEvent> entityWrapper =
@@ -52,7 +52,7 @@ public class ReportingVolumeSnapshotEventStore
 
 		try {
 			ReportingVolumeSnapshotCreateEvent volumeSnapshot = new ReportingVolumeSnapshotCreateEvent(uuid,
-					volumeSnapshotId, volumeId, timestampMs, userId, sizeGB);
+					volumeSnapshotId, timestampMs, userId, sizeGB);
 			entityWrapper.add(volumeSnapshot);
 			entityWrapper.commit();
 			LOG.debug("Added reporting volumeSnapshot to db:" + volumeSnapshot);
