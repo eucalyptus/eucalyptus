@@ -36,8 +36,7 @@
 
     // args.title = title in the header (e.g.,'Manage key pairs');
     decorateHeader : function(args) {
-      var thisObj = this; // ref to widget instance
-      $header = this.element.find('.table_' + thisObj.options.id + '_header');
+      $header = this.element.find('.table_' + this.options.id + '_header');
       $header.addClass('euca-table-header');
       $header.append(
         $('<span>').text(args.title).append(
@@ -51,7 +50,7 @@
       var $searchBar = this.element.find('#'+this.options.id+'_filter');
       $searchBar.append(
         $('<a>').addClass('table-refresh').attr('href','#').text(args.refresh).click(function(){
-          thisObj.table.fnReloadAjax();
+          this.table.fnReloadAjax();
         }));
       return $searchBar;
     },   
