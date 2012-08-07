@@ -46,6 +46,7 @@
     <script type="text/javascript" language="javascript" src="js/dashboard.js"></script>
     <script type="text/javascript" language="javascript" src="js/keypair.js"></script>
     <script type="text/javascript" language="javascript" src="js/template/eucatable.js"></script>
+    <script type="text/javascript" language="javascript" src="js/template/eucadialog.js"></script>
   </head> 
 
   <body>
@@ -148,8 +149,25 @@
         </table>
         </div>
       </script>
+      <!-- Dialog template -->
+      <script id="keypairAddDlgTmpl" type="text/x-jsrender">
+        <div id="keys-add-dialog" title="Create key pair" class="add-dialog" style="display:none">
+          {{!: keypair_dialog_add_text }}
+          <p>
+            <span class="field">{{!>keypair_dialog_add_name}}</span><input type="text" id="key-name" class="required"/><div class="dialog-notifications"></div>
+          </p>
+        </div>
+      </script>
+
+      <script id="keypairDelDlgTmpl" type="text/x-jsrender">
+        <div id="keys-delete-dialog" title="Delete key pairs" class="delete-dialog" style="display:none">
+          {{!: keypair_dialog_del_text }}
+          <span id="keys-delete-names"></span>
+        </div>
+      </script>
     </div> 
     <!-- END of templates --> 
+
 
     <!-- Navigation tabs.
       TODO: move them to the right stop so there is no need to add them into the DOM
@@ -290,22 +308,6 @@
     <!-- END all-tabs-container -->
 
     <!-- TODO: add i18n -->
-    <!-- Dialogs -->
-    <div id="keys-delete-dialog" title="Delete key pairs" class="delete-dialog" style="display:none">
-      <p>You will still be able to access any instances using the deleted key pair until you also delete the private key off of your local file system.</p>
-      <p>Are you sure you want to delete the following key pairs?</p>
-      <p>Key pairs</p>
-      <span id="keys-delete-names"></span>
-    </div>
-
-    <div id="keys-add-dialog" title="Create key pair" class="add-dialog" style="display:none">
-      <p>You can use this key pair to launch more than one instance.</p>
-      <p>Save the file in a place you will remember. You will need to enter the path later to connect to your instances.</p>
-      <p>
-        <span class="field">Name</span><input type="text" id="key-name" class="required"/><div class="dialog-notifications"></div>
-      </p>
-    </div>
-
     <div id="volumes-delete-dialog" title="Delete volumes" class="delete-dialog" style="display:none">
       <p>Are you sure you want to delete the following volumes?</p>
       <p>All data on the volumes will be destroyed.</p>
@@ -320,7 +322,5 @@
         <input type="text" id="volumes-name" class="required"/><div class="dialog-notifications"></div>
       </p>
     </div>
-    <!-- END Dialogs -->
-
   </body>
 </html>

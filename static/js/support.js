@@ -81,38 +81,6 @@ function deleteAction(tableName, idColumnIndex) {
     $("#" + tableName + "-delete-dialog").dialog('open');
   }
 }
-
-function deleteSelectedKeyPairs() {
-  var rowsToDelete = getAllSelectedRows('keys', 1);
-  for ( i = 0; i<rowsToDelete.length; i++ ) {
-    var keyName = rowsToDelete[i];
-    $.ajax({
-      type:"GET",
-      url:"/ec2?type=key&Action=DeleteKeyPair&KeyName=" + keyName,
-      data:"_xsrf="+$.cookie('_xsrf'),
-      dataType:"json",
-      async:"true",
-      success:
-        (function(keyName) {
-          return function(data, textStatus, jqXHR){
-            if ( data.results && data.results == true ) {
-              successNotification("Deleted keypair " + keyName);
-              allTablesRef['keys'].fnReloadAjax();
-            } else {
-              errorNotification("Failed to delete keypair " + keyName);
-            }
-           }
-        })(keyName),
-      error:
-        (function(keyName) {
-          return function(jqXHR, textStatus, errorThrown){
-            errorNotification("Failed to delete keypair " + keyName);
-          }
-        })(keyName)
-    });
-  }
-}
-
 function deleteSelectedVolumes() {
   var rowsToDelete = getAllSelectedRows('volumes', 1);
   for ( i = 0; i<rowsToDelete.length; i++ ) {
@@ -143,37 +111,6 @@ function deleteSelectedVolumes() {
     });
   }
 }
-
-function addKeyPair(keyName) {
-  $.ajax({
-    type:"GET",
-    url:"/ec2?type=key&Action=CreateKeyPair",
-    data:"_xsrf="+$.cookie('_xsrf') + "&KeyName=" + keyName,
-    dataType:"json",
-    async:"false",
-    success:
-      function(data, textStatus, jqXHR){
-         if (data.results && data.results.material) {
-           $.generateFile({
-             filename    : keyName,
-             content     : data.results.material,
-             script      : '/support?Action=DownloadFile&_xsrf=' + $.cookie('_xsrf')
-           });
-           // TODO: can we wait till file is saved by user?
-           successNotification("Added keypair " + keyName);
-           // refresh table
-           allTablesRef['keys'].fnReloadAjax();
-         } else {
-           errorNotification("Failed to create keypair " + keyName);
-         }
-      },
-    error:
-      function(jqXHR, textStatus, errorThrown){
-        errorNotification("Failed to create keypair " + keyName);
-      }
-  });
-}
-
 function S4() {
   return (((1+Math.random())*0x10000)|0).toString(16).substring(1);
 }

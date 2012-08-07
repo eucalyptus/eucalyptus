@@ -9,7 +9,8 @@
                 txt_create : 'Create resource',
                 txt_found : 'resources found',
                 menu_text : 'More actions',
-                menu_actions : { delete: ['Delete', function () { deleteAction('table', 1); } ] }
+                menu_actions : null // e.g., { delete: ["Delete", function () { dialog.... } ] }
+ 
     },
 
     table : null, // jQuery object to the table
@@ -17,7 +18,7 @@
     _init : function() {
       this.table = this.options.base_table.dataTable(this.options.dt_arg);
       // register table, so all support function can find it
-      allTablesRef[this.options.id] = this.options.base_table;
+      allTablesRef[this.options.id] = this.table;
       this.decorateHeader({title:this.options.header_title});
       this.decorateSearchBar({refresh: this.options.search_refresh});
       this.decorateTopBar({txt_create: this.options.txt_create, txt_found : this.options.txt_found});
@@ -25,10 +26,6 @@
     },
 
     _create : function() {
-      /*this.table = this.options.base_table.dataTable(this.options.dt_arg);
-      this.decorateHeader({title:this.options.header_title});
-      this.decorateSearchBar({refresh: this.options.search_refresh});
-      this.decorateTopBar({txt_create: this.options.txt_create, txt_found : this.options.txt_found});*/
     },
 
     _destroy : function() {
@@ -110,7 +107,7 @@
         return undefined;
 
       var $actionItems = $('<li>');
-      $.each(args.actions, function (key, value){
+      $.each(args.actions, function (key, value){ // key:action, value: property
         $('<a>').attr('href','#').attr('id', thisObj.options.id+'-'+key).text (value[0]).click( function() {
           value[1].call();  
         }).appendTo($actionItems);
@@ -136,7 +133,42 @@
       });
 
       return $menuDiv;
-    }
+    },
+
+   /* getAllSelectedRows = function (idIndex) {
+      var dataTable = this.table;
+      if ( !dataTable )
+        return [];
+      var rows = dataTable.fnGetVisiableTrNodes();
+      var selectedRows = [];
+      for ( i = 0; i<rows.length; i++ ) {
+        cb = rows[i].firstChild.firstChild;
+        if ( cb != null && cb.checked == true ) {
+          if ( rows[i].childNodes[idIndex] != null )
+            selectedRows.push(rows[i].childNodes[idIndex].firstChild.nodeValue);
+        }
+      }
+      return selectedRows;
+    },
+
+    deleteAction = function (idColumnIndex) {
+      var tableName = this.element.options.id;
+      // hide menu
+      $menuUl = $("div.table_" + tableName + "_top div.euca-table-action ul");
+      $menuUl.removeClass('activemenu');
+      var rowsToDelete = getAllSelectedRows(idColumnIndex);
+
+      if ( rowsToDelete.length > 0 ) {
+        // show delete dialog box
+        $deleteNames = $("#" + tableName + "-delete-names");
+        $deleteNames.html('');
+        for ( i = 0; i<rowsToDelete.length; i++ ) {
+          t = escapeHTML(rowsToDelete[i]);
+          $deleteNames.append(t).append("<br/>");
+        }
+        $("#" + tableName + "-delete-dialog").dialog('open');
+      }
+    },*/
   });
 })(jQuery,
    window.eucalyptus ? window.eucalyptus : window.eucalyptus = {});
