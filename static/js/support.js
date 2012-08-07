@@ -45,6 +45,8 @@ function updateActionMenu(tableName) {
 
 function getAllSelectedRows(tableName, idIndex) {
   dataTable = allTablesRef[tableName];
+  if ( !dataTable )
+    return [];
   var rows = dataTable.fnGetVisiableTrNodes();
   var selectedRows = [];
   for ( i = 0; i<rows.length; i++ ) {
@@ -140,67 +142,6 @@ function deleteSelectedVolumes() {
         })(volumeId)
     });
   }
-}
-
-/*
- * Adds custom look and feel to resources table view
- */
-function setUpInfoTableLayout(tableName, resourceName) {
-  $resourceTableHeader = $('div.table_' + tableName + '_header');
-  $resourceTableHeader.addClass('euca-table-header');
-  $resourceTableHeader.html("<span>Manage " + resourceName +"</span><div class='help-link'><a href='#'>?</a></div>");
-  $('#' + tableName + '_filter').append('&nbsp<a class="table-refresh" href="#">Refresh</a>');
-  $('div#' + tableName + '_filter a.table-refresh').click( function () {
-    allTablesRef[tableName].fnReloadAjax();
-  });
-  $resourceTableTop = $('div.table_' + tableName + '_top');
-  $resourceTableTop.addClass('euca-table-length');
-  $resourceTableTop.html('<div class="euca-table-add"></div><div class="euca-table-action actionmenu inactive"></div><div class="euca-table-size"><span id="table_' + tableName + '_count"></span> ' + tableName + ' found. Showing <span class="show selected">10</span> | <span class="show">25</span> | <span class="show">50</span> | <span class="show">all</span></div>');
-  $resourceTableTop.find("div.euca-table-add").html('<a id="table-' + tableName + '-new" class="add-resource" "href="#">Create new ' + SINGULAR[tableName] + '</a>');
-  $resourceTableTop.find("span.show").click( function () {
-    $(this).parent().children('span').each( function() {
-      $(this).removeClass("selected");
-    });
-    if ( this.innerHTML == "10" ) {
-      allTablesRef[tableName].fnSettings()._iDisplayLength = 10;
-      allTablesRef[tableName].fnDraw();
-      $(this).addClass("selected");
-    } else if ( this.innerHTML == "25" ) {
-      allTablesRef[tableName].fnSettings()._iDisplayLength = 25;
-      allTablesRef[tableName].fnDraw();
-      $(this).addClass("selected");
-    } else if ( this.innerHTML == "50" ) {
-      allTablesRef[tableName].fnSettings()._iDisplayLength = 50;
-      allTablesRef[tableName].fnDraw();
-      $(this).addClass("selected");
-    } else {
-      allTablesRef[tableName].fnSettings()._iDisplayLength = -1;
-      allTablesRef[tableName].fnDraw();
-      $(this).addClass("selected");
-    }
-  });
-  //action menu
-  menuContent = '<ul><li><a href="#">More actions<span class="arrow"></span></a><ul>' +
-                '<li><a href="#" id="' + tableName + '-delete">Delete</a></li>' +
-                '</ul></li></ul>';
-  $menuDiv = $resourceTableTop.find("div.euca-table-action");
-  $menuDiv.html(menuContent);
-  $('#' + tableName + '-delete').click( function() {
-    deleteAction(tableName, 1);
-  });
-  $('#table-' + tableName + '-new').click( function() {
-    $('#' + tableName + '-add-dialog').dialog('open');
-  });
-  $menuDiv.find('ul > li > a').click( function(){
-    parentUL = $(this).parent().parent();
-    if ( !parentUL.parent().hasClass('inactive') ) {
-      if ( parentUL.hasClass('activemenu') ){
-        parentUL.removeClass('activemenu');
-      } else {
-        parentUL.addClass('activemenu');
-      }
-    }
-  });
 }
 
 function addKeyPair(keyName) {

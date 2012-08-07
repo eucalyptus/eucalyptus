@@ -48,7 +48,7 @@
               "sAjaxDataProp": "results",
               "bAutoWidth" : false,
               "sPaginationType": "full_numbers",
-              "sDom": '<"table_keys_header">f<"clear"><"table_keys_top">rtp<"clear">',
+              "sDom": '<"table_keys_header">f<"clear"><"table_keys_top"><"clear">rtp<"clear">',
               "aoColumns": [
                 {
                   "bSortable": false,

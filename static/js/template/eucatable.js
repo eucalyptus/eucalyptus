@@ -8,15 +8,20 @@
                 search_refresh : 'Refresh',
                 txt_create : 'Create resource',
                 txt_found : 'resources found',
+                menu_text : 'More actions',
+                menu_actions : { delete: ['Delete', function () { deleteAction('table', 1); } ] }
     },
 
     table : null, // jQuery object to the table
 
     _init : function() {
       this.table = this.options.base_table.dataTable(this.options.dt_arg);
+      // register table, so all support function can find it
+      allTablesRef[this.options.id] = this.options.base_table;
       this.decorateHeader({title:this.options.header_title});
       this.decorateSearchBar({refresh: this.options.search_refresh});
       this.decorateTopBar({txt_create: this.options.txt_create, txt_found : this.options.txt_found});
+      this.decorateActionMenu({text: this.options.menu_text, actions: this.options.menu_actions });
     },
 
     _create : function() {
@@ -40,6 +45,7 @@
             $('<a>').attr('href','#').text('?'))));
       return $header;
     },
+
     // args.refresh = text 'Refresh'
     decorateSearchBar : function(args) {
       var $searchBar = this.element.find('#'+this.options.id+'_filter');
@@ -63,11 +69,14 @@
         $('<div>').addClass('euca-table-size').append(
           $('<span>').attr('id','table_' + this.options.id + '_count'),
           $('<span>').attr('id','tbl_txt_found').html('&nbsp; '+args.txt_found),
-          $('<div>').text('Showing ').append(
-            $('<span>').addClass('show selected').text('10 |'),
-            $('<span>').addClass('show').text('25 |'),
-            $('<span>').addClass('show').text('50 |'),
-            $('<span>').addClass('show').text('all'))));
+          'Showing&nbsp;',
+          $('<span>').addClass('show selected').text('10'),
+          '&nbsp;|&nbsp;',
+          $('<span>').addClass('show').text('25'),
+          '&nbsp;|&nbsp;',
+          $('<span>').addClass('show').text('50'),
+          '&nbsp;|&nbsp;',
+          $('<span>').addClass('show').text('all')));
 
       $tableTop.find('span.show').click( function () {
         $(this).parent().children('span').each( function() {
@@ -81,39 +90,41 @@
         thisObj.table.fnDraw();
         $(this).addClass('selected');
       });
+      // add action to create new
+      this.element.find('#table-' + this.options.id + '-new').click( function() {
+        $('#' + thisObj.options.id + '-add-dialog').dialog('open');
+      });
       return $tableTop;
     },
 
     /*
       args.text : text (e.g., More actions)
       args.action : { action_key : [Text, click Callback] }
-                   e.g., { delete : [Delete, function () { dialog('open'); } } 
+                   e.g., { delete : [Delete, function () { dialog('open'); } ] }
     */
-    decorateAction : function (args){
+    decorateActionMenu : function (args){
       var thisObj = this; // ref to widget object
-      var $menuDiv = this.table.find('div.euca-table-action');
+      var $menuDiv = this.element.find('div.euca-table-action');
       if ($menuDiv === undefined)
         return undefined;
+      if (!args.actions)
+        return undefined;
 
-      var actionItems = $('<li>');
-      $.each(args.action, function (key, value){
+      var $actionItems = $('<li>');
+      $.each(args.actions, function (key, value){
         $('<a>').attr('href','#').attr('id', thisObj.options.id+'-'+key).text (value[0]).click( function() {
           value[1].call();  
-        }).appendTo(actionItems); 
+        }).appendTo($actionItems);
       });
-  
+
       $menuDiv.append(
         $('<ul>').append(
           $('<li>').append(
             $('<a>').attr('href','#').text(args.text).append(
-              $('<span>').addClass('arrow')),
-            $('<ul>').append(
-              $actionItems))));
- 
-      this.element.find('#table-' + this.options.id + '-new').click( function() {
-        $('#' + thisObj.options.id + '-add-dialog').dialog('open');
-      });
-  
+              $('<span>').addClass('arrow'),
+              $('<ul>').append($actionItems)
+            ))));
+
       $menuDiv.find('ul > li > a').click( function(){
         parentUL = $(this).parent().parent();
         if ( !parentUL.parent().hasClass('inactive') ) {
@@ -124,6 +135,8 @@
           }
         }
       });
+
+      return $menuDiv;
     }
   });
 })(jQuery,
