@@ -249,7 +249,7 @@
                                                                       $container.maincontainer("changeSelected",evt, ui);
                                                                    }});
 
-    $('html body').find('.euca-footer-container .inner-container').footer();
+    $('html body').find('.euca-container .euca-footer-container .inner-container').footer();
 /* 
     // find div.euca-container.euca-main#euca-main-header
     var menus = [{name:'Instances', link:'#tabs-instances'}, 

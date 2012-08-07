@@ -7,7 +7,8 @@
       mode:'both',
       language: args.language, 
       callback: function() {
-        // when jsrender is used, the variables should be propped to make it available as $.i18n.map
+        // when jsrender is used, the variables should be propped to make it available as $.i18n.map 
+        $.i18n.prop('text_footer');
         $.i18n.prop('login_title');
         $.i18n.prop('login_acct');
         $.i18n.prop('login_uname');

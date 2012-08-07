@@ -67,17 +67,13 @@
           <div class="inner-container">
             <div id="euca-notification"></div>
             <div id="euca-main-container">
-            <!--<div id="euca-tab-container"></div> temporary -->
             </div>
           </div>       
       </div>
-
+      
       <footer class="euca-footer-container">
-        <div class="inner-container">
-          <div class="copyright">&copy; 2012 Eucalyptus and Eucalyptus Systems, Inc. All rights reserved.</div>
-        </div>  
+        <div class="inner-container"> </div>  
       </footer>
-
     </div>
     <!-- END euca-container -->
 
@@ -116,6 +112,11 @@
         </div>
       </script>
       <!-- END Login template -->
+
+      <!-- Footer template -->
+      <script id="footerTmpl" type="text/x-jsrender">
+        <div class="copyright">&copy; {{!>text_footer}}</div>
+      </script>
 
       <!-- Dashboard template -->
       <div id="dashboard" class="content-box">
