@@ -2,22 +2,22 @@
 // vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
 
 /*
-Copyright (c) 2012  Eucalyptus Systems, Inc.	
+Copyright (c) 2012  Eucalyptus Systems, Inc.
 
 This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by 
-the Free Software Foundation, only version 3 of the License.  
- 
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, only version 3 of the License.
+
 This file is distributed in the hope that it will be useful, but WITHOUT
 ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
 FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
-for more details.  
+for more details.
 
 You should have received a copy of the GNU General Public License along
 with this program.  If not, see <http://www.gnu.org/licenses/>.
- 
+
 Please contact Eucalyptus Systems, Inc., 130 Castilian
-Dr., Goleta, CA 93101 USA or visit <http://www.eucalyptus.com/licenses/> 
+Dr., Goleta, CA 93101 USA or visit <http://www.eucalyptus.com/licenses/>
 if you need additional information or have any questions.
 
 This file may incorporate work covered under the following copyright and
@@ -26,7 +26,7 @@ permission notice:
   Software License Agreement (BSD License)
 
   Copyright (c) 2008, Regents of the University of California
-  
+
 
   Redistribution and use of this software in source and binary forms, with
   or without modification, are permitted provided that the following
@@ -84,7 +84,7 @@ permission notice:
 // for an entry with 'key' equaling 'name' with only the first 'name_len'
 // characters considered; returns pointer to the 'val' in the map
 static wchar_t *
-find_valn (const wchar_map * vars [], const wchar_t * name, size_t name_len) 
+find_valn (const wchar_map * vars [], const wchar_t * name, size_t name_len)
 {
     for (int i = 0; vars[i]!=NULL; i++) {
         const wchar_map * v = vars[i];
@@ -98,7 +98,7 @@ find_valn (const wchar_map * vars [], const wchar_t * name, size_t name_len)
 // for an entry with 'key' equaling 'name' with only the first 'name_len'
 // characters considered; returns pointer to the 'val' in the map
 static char *
-c_find_valn (const char_map * vars [], const char * name, size_t name_len) 
+c_find_valn (const char_map * vars [], const char * name, size_t name_len)
 {
     for (int i = 0; vars[i]!=NULL; i++) {
         const char_map * v = vars[i];
@@ -109,14 +109,14 @@ c_find_valn (const char_map * vars [], const char * name, size_t name_len)
 }
 
 // appends string 'src' to 'dst', up to 'src_len' characters (unless set
-// to 0, in which case to the end of 'src'), enlarging the 'dst' as necessary 
+// to 0, in which case to the end of 'src'), enlarging the 'dst' as necessary
 // returns the concatenated string or NULL if memory could not be allocated
 // if 'src' is an empty string, 'dst' is returned.
-static wchar_t * 
+static wchar_t *
 wcappendn (wchar_t * dst, const wchar_t * src, size_t src_limit)
 {
     size_t src_len = wcslen (src);
-    if (src_len < 1) 
+    if (src_len < 1)
         return dst;
     if (src_len > src_limit && src_limit > 0)
         src_len = src_limit;
@@ -134,14 +134,14 @@ wcappendn (wchar_t * dst, const wchar_t * src, size_t src_limit)
 }
 
 // appends string 'src' to 'dst', up to 'src_len' characters (unless set
-// to 0, in which case to the end of 'src'), enlarging the 'dst' as necessary 
+// to 0, in which case to the end of 'src'), enlarging the 'dst' as necessary
 // returns the concatenated string or NULL if memory could not be allocated
 // if 'src' is an empty string, 'dst' is returned.
-static char * 
+static char *
 c_wcappendn (char * dst, const char * src, size_t src_limit)
 {
     size_t src_len = strlen (src);
-    if (src_len < 1) 
+    if (src_len < 1)
         return dst;
     if (src_len > src_limit && src_limit > 0)
         src_len = src_limit;
@@ -158,13 +158,13 @@ c_wcappendn (char * dst, const char * src, size_t src_limit)
     return strncat (dst, src, src_len);
 }
 
-// substitutes in 's' all occurence of variables '${var}' 
+// substitutes in 's' all occurence of variables '${var}'
 // based on the 'vars' map (NULL-terminated array of wchar_map * pointers)
 // returns a new string with all variables substituted or returns NULL
 // (and logs an error with logprintfl()) if some variables were not
 // found in the map or if the map is empty
 wchar_t *
-varsub (const wchar_t * s, const wchar_map * vars []) 
+varsub (const wchar_t * s, const wchar_map * vars [])
 {
     assert (s!=NULL);
     assert (vars!=NULL);
@@ -196,7 +196,7 @@ varsub (const wchar_t * s, const wchar_map * vars [])
         wchar_t * val = find_valn (vars, var_start + pref_len, var_len);
         if (val == NULL) {
             logprintfl (EUCAWARN, "failed to substitute variable\n"); // TODO: print variable name
-            if (result != NULL) 
+            if (result != NULL)
                 free (result);
             return NULL;
         }
@@ -211,7 +211,7 @@ varsub (const wchar_t * s, const wchar_map * vars [])
         remainder = var_end + suff_len;
     }
     result = wcappendn (result, remainder, 0);
-    
+
     if (malformed) {
         logprintfl (EUCAWARN, "malformed string used for substitution\n"); // TODO: print the string
     }
@@ -225,21 +225,25 @@ varmap_alloc (wchar_map **map, const wchar_t *key, const wchar_t *val)
     int i = 0;
 
     if (map == NULL) {
-        map = malloc (2 * sizeof (wchar_map *));
+        PRINTF1 (("malloc(): %d\n", sizeof (wchar_map *) + sizeof (wchar_t *)));
+        map = malloc (sizeof (wchar_map *) + sizeof (wchar_t *));
     } else {
         while (map[i]) {
             i++;
         }
-        map = realloc (map, (i + 2) * sizeof (wchar_map *));
+        PRINTF1 (("relloc(): %d\n", (i + 1) * sizeof (wchar_map *) +
+                 sizeof (wchar_t *)));
+        map = realloc (map, (i + 1) * sizeof (wchar_map *) +
+                       sizeof (wchar_t *));
     }
     map[i] = malloc (sizeof (wchar_map));
     map[i]->key = wcsdup (key);
     map[i]->val = wcsdup (val);
     map[i+1] = NULL;            /* NULL terminator */
-        
-    return map;    
+
+    return map;
 }
-    
+
 void
 varmap_free (wchar_map **map)
 {
@@ -260,13 +264,13 @@ varmap_free (wchar_map **map)
 }
 
 
-// substitutes in 's' all occurence of variables '${var}' 
+// substitutes in 's' all occurence of variables '${var}'
 // based on the 'vars' map (NULL-terminated array of wchar_map * pointers)
 // returns a new string with all variables substituted or returns NULL
 // (and logs an error with logprintfl()) if some variables were not
 // found in the map or if the map is empty
 char *
-c_varsub (const char * s, const char_map * vars []) 
+c_varsub (const char * s, const char_map * vars [])
 {
     assert (s!=NULL);
     assert (vars!=NULL);
@@ -298,7 +302,7 @@ c_varsub (const char * s, const char_map * vars [])
         char * val = c_find_valn (vars, var_start + pref_len, var_len);
         if (val == NULL) {
             logprintfl (EUCAWARN, "failed to substitute variable\n"); // TODO: print variable name
-            if (result != NULL) 
+            if (result != NULL)
                 free (result);
             return NULL;
         }
@@ -313,7 +317,7 @@ c_varsub (const char * s, const char_map * vars [])
         remainder = var_end + suff_len;
     }
     result = c_wcappendn (result, remainder, 0);
-    
+
     if (malformed) {
         logprintfl (EUCAWARN, "malformed string used for substitution\n"); // TODO: print the string
     }
@@ -327,21 +331,24 @@ c_varmap_alloc (char_map **map, const char *key, const char *val)
     int i = 0;
 
     if (map == NULL) {
-        map = malloc (2 * sizeof (char_map *));
+        PRINTF1 (("malloc(): %d\n", sizeof (char_map *) + sizeof (char *)));
+        map = malloc (sizeof (char_map *) + sizeof (char *));
     } else {
         while (map[i]) {
             i++;
         }
-        map = realloc (map, (i + 2) * sizeof (char_map *));
+        PRINTF1 (("relloc(): %d\n", (i + 1) * sizeof (char_map *) +
+                 sizeof (char *)));
+        map = realloc (map, (i + 1) * sizeof (char_map *) + sizeof (char *));
     }
     map[i] = malloc (sizeof (char_map));
     map[i]->key = strdup (key);
     map[i]->val = strdup (val);
     map[i+1] = NULL;            /* NULL terminator */
-        
-    return map;    
+
+    return map;
 }
-    
+
 void
 c_varmap_free (char_map **map)
 {

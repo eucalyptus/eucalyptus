@@ -150,7 +150,7 @@ static char *get_fault_id (const xmlNode *);
 static xmlNode *get_eucafault (const char *, const xmlDoc *);
 static int scandir_filter (const struct dirent *);
 static int str_end_cmp (const char *, const char *);
-static char *str_trim_suffix (const char *, const char *);
+static char *str_trim_suffix (char *, const char *);
 static int add_eucafault (const xmlDoc *);
 static xmlNode *get_common_block (const xmlDoc *);
 static char *get_common_var (const char *);
@@ -184,14 +184,21 @@ str_end_cmp (const char *str, const char *suffix)
 /*
  * Utility function:
  * Trims end of string off if it matches a supplied suffix.
+ *
+ * NOTE: The pointer returned by this function must be free()'d by the
+ * caller.
  */
 static char *
-str_trim_suffix (const char *str, const char *suffix)
+str_trim_suffix (char *str, const char *suffix)
 {
     if (!str || !suffix || !str_end_cmp (str, suffix)) {
         return (char *)str;
+    } else {
+        int trim = strlen (str) - strlen (suffix);
+        *(str + trim) = '\0';
+        PRINTF1 (("str_trim_suffix() returning: %s\n", str));
     }
-    return strndup (str, strlen (str) - strlen (suffix));
+    return str;
 }
 
 /*
@@ -243,10 +250,12 @@ read_eucafault (const char * faultdir, const char * fault_id)
         PRINTF (("Found <%s> block in %s\n", COMMON_PREFIX, fault_file));
         if (common_block_exists++) {
             PRINTF (("<%s> block already exists--skipping.\n", COMMON_PREFIX));
+            xmlFreeDoc (my_doc);
             return NULL;
         }
     } else {
         logprintfl (EUCAWARN, "Did not find fault id %s in %s -- found fault id %s instead. (Not adding fault.)\n", fault_id, fault_file, get_fault_id (xmlFirstElementChild (xmlDocGetRootElement (my_doc))));
+        xmlFreeDoc (my_doc);
         return NULL;
     }
     return my_doc;
@@ -426,6 +435,7 @@ initialize_eucafaults (void)
                             faultdirs[i]));
                     while (numfaults--) {
                         xmlDoc *new_fault = read_eucafault (faultdirs[i], str_trim_suffix (namelist[numfaults]->d_name, XML_SUFFIX));
+                        free (namelist[numfaults]);
 
                         if (new_fault) {
                             add_eucafault (new_fault);
@@ -434,6 +444,7 @@ initialize_eucafaults (void)
                             PRINTF1 (("Not adding new fault--mismatch or already exists...?\n"));
                         }
                     }
+                    free (namelist);
                 }
             }
         }
@@ -684,6 +695,7 @@ main (int argc, char ** argv)
         m = c_varmap_alloc (m, "endpointIp", "127.0.0.3");
         PRINTF (("argv[1st of %d]: %s\n", argc - optind, argv[optind]));
         log_eucafault (argv[optind], (const char_map **)m); /* FIXME: Add passing some parameters. */
+        c_varmap_free (m);
     }
     if (dump) {
         dump_eucafaults_db ();
