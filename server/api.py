@@ -1,6 +1,7 @@
 import tornado.web
 import server
 import json
+from boto.ec2.blockdevicemapping import BlockDeviceMapping
 
 from .botoclcinterface import BotoClcInterface
 from .botojsonencoder import BotoJsonEncoder
@@ -22,6 +23,96 @@ class ComputeHandler(server.BaseHandler):
             index = index + 1
             val = self.get_argument(pattern % index, None)
         return ret
+
+    def handleInstances(self, action, clc):
+        if action == 'DescribeInstances':
+            return clc.get_all_instances()
+        elif action == 'RunInstances':
+            image_id = self.get_argument('ImageId');
+            min = self.get_argument('MinCount', '1');
+            max = self.get_argument('MaxCount', '1');
+            key = self.get_argument('KeyName', None);
+            groups = self.get_argument_list('SecurityGroup')
+            sec_group_ids = self.get_argument_list('SecurityGroupId')
+            user_data = self.get_argument('UserData', None);
+            addr_type = self.get_argument('AddressingType', None);
+            vm_type = self.get_argument('InstanceType', None);
+            placement = self.get_argument('Placement.AvailabilityZone', None);
+            placement_group = self.get_argument('Placement.GroupName', None);
+            tenancy = self.get_argument('Placement.Tenancy', None);
+            kernel = self.get_argument('KernelId', None);
+            ramdisk = self.get_argument('RamdiskId', None);
+            monitoring=False
+            if self.get_argument('Monitoring.Enabled', '') == 'true':
+                monitoring=True
+            subnet = self.get_argument('SubnetId', None);
+            private_ip = self.get_argument('PrivateIpAddress', None);
+            # get block device mappings
+            bdm = []
+            mapping = self.get_argument('BlockDeviceMapping.1.DeviceName', None)
+            idx = 1
+            while mapping:
+                pre = 'BlockDeviceMapping.$d' % idx
+                block_dev_mapping = BlockDeviceMapping()
+                block_dev_mapping.dev_name = mapping
+                block_dev_mapping.ephemeral_name = self.get_argument('%s.VirtualName' % pre, None)
+                if not(block_dev_mapping.ephemeral_name):
+                    block_dev_mapping.no_device = \
+                            (self.get_argument('%s.NoDevice' % pre, '') == 'true')
+                    block_dev_mapping.snapshot_id = \
+                            self.get_argument('%s.Ebs.SnapshotId' % pre, None)
+                    block_dev_mapping.size = \
+                            self.get_argument('%s.Ebs.VolumeSize' % pre, None)
+                    block_dev_mapping.delete_on_termination = \
+                            (self.get_argument('%s.DeleteOnTermination' % pre, '') == 'true')
+                bdm.append(block_dev_mapping)
+                idx += 1
+                mapping = self.get_argument('BlockDeviceMapping.%d.DeviceName' % idx, None)
+            if len(bdm) == 0:
+                bdm = None
+                
+            api_termination=False
+            if self.get_argument('DisableApiTermination', '') == 'true':
+                api_termination=True
+            instance_shutdown=False
+            if self.get_argument('InstanceInitiatedShutdownBehavior', '') == 'true':
+                instance_shutdown=True
+            token = self.get_argument('ClientToken', None);
+            addition_info = self.get_argument('AdditionInfo', None);
+            instance_profile_name = self.get_argument('IamInstanceProfile.Name', None);
+            instance_profile_arn = self.get_argument('IamInstanceProfile.Arn', None);
+
+            return clc.run_instances(image_id, min_count=min, max_count=max,
+                                key_name=key, security_groups=groups,
+                                user_data=user_data, addressing_type=addr_type,
+                                instance_type=vm_type, placement=placement,
+                                kernel_id=kernel, ramdisk_id=ramdisk,
+                                monitoring_enabled=monitoring, subnet_id=subnet,
+                                block_device_map=bdm,
+                                disable_api_termination=api_termination,
+                                instance_initiated_shutdown_behavior=instance_shutdown,
+                                private_ip_address=private_ip,
+                                placement_group=placement_group, client_token=token,
+                                security_group_ids=sec_group_ids,
+                                additional_info=addition_info,
+                                instance_profile_name=instance_profile_name,
+                                instance_profile_arn=instance_profile_arn,
+                                tenancy=tenancy)
+        elif action == 'TerminateInstances':
+            instance_ids = self.get_argument_list('InstanceId')
+            return clc.terminate_instances(instance_ids)
+        elif action == 'StopInstances':
+            instance_ids = self.get_argument_list('InstanceId')
+            return clc.stop_instances(instance_ids)
+        elif action == 'StartInstances':
+            instance_ids = self.get_argument_list('InstanceId')
+            return clc.start_instances(instance_ids)
+        elif action == 'RebootInstances':
+            instance_ids = self.get_argument_list('InstanceId')
+            return clc.reboot_instances(instance_ids)
+        elif action == 'GetConsoleOutput':
+            instance_id = self.get_argument('InstanceId')
+            return clc.reboot_instances(instance_id)
 
     def handleKeypairs(self, action, clc):
         if action == 'DescribeKeyPairs':
@@ -165,8 +256,8 @@ class ComputeHandler(server.BaseHandler):
             ret = self.user_session.clc.get_all_zones()
         if action == 'DescribeImages':
             ret = self.user_session.clc.get_all_images()
-        elif action == 'DescribeInstances':
-            ret = self.user_session.clc.get_all_instances()
+        elif action.find('Instance') > -1 or action == 'GetConsoleOutput':
+            ret = self.handleInstances(action, self.user_session.clc)
         elif action.find('Address') > -1:
             ret = self.handleAddresses(action, self.user_session.clc)
         elif action.find('KeyPair') > -1:

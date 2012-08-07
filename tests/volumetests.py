@@ -1,5 +1,6 @@
 #!/usr/bin/python
 
+import time
 from operator import itemgetter
 from uiproxyclient import UIProxyClient
 
@@ -31,6 +32,7 @@ if __name__ == "__main__":
     print "=== waiting for new volume to be ready ==="
     print 
     while volumes['results'][map(itemgetter('id'), volumes['results']).index(volid)]['status'] != 'available':
+        time.sleep(3)
         volumes = client.get_volumes()
     print volumes
     print 
@@ -39,6 +41,7 @@ if __name__ == "__main__":
     print client.attach_volume(volid, instance_id, '/dev/sdd')
     volumes = client.get_volumes()
     while volumes['results'][map(itemgetter('id'), volumes['results']).index(volid)]['attach_data']['status'] != 'attached':
+        time.sleep(3)
         volumes = client.get_volumes()
     print client.get_volumes()
     print 
@@ -47,6 +50,7 @@ if __name__ == "__main__":
     print client.detach_volume(volid, instance_id, '/dev/sdd')
     volumes = client.get_volumes()
     while volumes['results'][map(itemgetter('id'), volumes['results']).index(volid)]['status'] != 'available':
+        time.sleep(3)
         volumes = client.get_volumes()
     
     print client.get_volumes()
