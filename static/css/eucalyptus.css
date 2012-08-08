@@ -154,6 +154,7 @@ body {
     text-decoration: none;
 }
 
+.toggle-on #resources-link, 
 #resources-link:hover {
   background-position: right -50px;
   color: #73a434;
