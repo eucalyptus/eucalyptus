@@ -192,36 +192,11 @@ public class TroubleshootingBootstrapper extends Bootstrapper {
 	}
 
 	
-	@ConfigurableField( description = "'true' if we override system log levels.",
-			initial = "false", 
-			changeListener = LogLevelOverrideListener.class,
-			displayName = "euca.override.log.levels" )
-	public static String ENABLE_TROUBLESHOOTING_LOG_LEVEL_OVERRIDE = "false";
 	@ConfigurableField( description = "Log level for dynamic override.",
 			initial = "", //TODO: figure out how to link System.property("euca.log.level")
 			changeListener = LogLevelListener.class,
-			displayName = "euca.dynamic.log.level" )
-	public static String TROUBLESHOOTING_LOG_LEVEL = "";
-
-	public static class LogLevelOverrideListener implements PropertyChangeListener {
-		/**
-		 * @see com.eucalyptus.configurable.PropertyChangeListener#fireChange(com.eucalyptus.configurable.ConfigurableProperty,
-		 *      java.lang.Object)
-		 */
-		@Override
-		public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
-			LOG.warn( "Change occurred to property " + t.getQualifiedName( ) + " with new value " + newValue + "." );
-			try {
-				t.getField( ).set( null, t.getTypeParser( ).apply( newValue ) );
-			} catch ( IllegalArgumentException e1 ) {
-				e1.printStackTrace();
-				throw new ConfigurablePropertyException( e1 );
-			} catch ( IllegalAccessException e1 ) {
-				e1.printStackTrace();
-				throw new ConfigurablePropertyException( e1 );
-			}
-		}
-	}
+			displayName = "euca.log.level" )
+	public static String EUCA_LOG_LEVEL = "";
 
 	public static class LogLevelListener implements PropertyChangeListener {
 		private final String[] logLevels = new String[] {"ALL", "DEBUG", "INFO", "WARN", "ERROR", "FATAL", "TRACE"};
@@ -232,7 +207,8 @@ public class TroubleshootingBootstrapper extends Bootstrapper {
 		@Override
 		public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
 			String newLogLevel = (String) newValue;
-			if (newLogLevel == null || !Arrays.asList(logLevels).contains(newLogLevel.toUpperCase())) {
+			newLogLevel = makeNotNullAndTrim(newLogLevel).toUpperCase();// Null or empty will not reset log levels
+			if (!(newLogLevel.isEmpty() || Arrays.asList(logLevels).contains(newLogLevel))) {
 				throw new ConfigurablePropertyException("Invalid log level " + newLogLevel);
 			}
 			// TODO: add error checking for property and configuration
@@ -246,10 +222,10 @@ public class TroubleshootingBootstrapper extends Bootstrapper {
 				e1.printStackTrace();
 				throw new ConfigurablePropertyException( e1 );
 			}
-			if (Boolean.parseBoolean(ENABLE_TROUBLESHOOTING_LOG_LEVEL_OVERRIDE)) {
+			if (newLogLevel.isEmpty()) {
 				System.setProperty("euca.log.level", newLogLevel.toUpperCase());
-				LoggingResetter.resetLoggingLevels();
-				//LoggingResetter.resetLoggingWithXML();
+				//LoggingResetter.resetLoggingLevels();
+				LoggingResetter.resetLoggingWithXML();
 			}
 			LOG.fatal("test level FATAL");
 			LOG.error("test level ERROR");
@@ -257,6 +233,13 @@ public class TroubleshootingBootstrapper extends Bootstrapper {
 			LOG.info("test level INFO");
 			LOG.debug("test level DEBUG");
 			LOG.trace("test level TRACE");
+		}
+		private String makeNotNullAndTrim(String s) {
+			if (s == null) {
+				return "";
+			} else {
+				return s.trim();
+			}
 		}
 	}
 
