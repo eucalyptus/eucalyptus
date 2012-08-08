@@ -75,7 +75,7 @@ import org.apache.log4j.xml.DOMConfigurator;
 public class LoggingResetter {
 	private static final Logger LOG = Logger.getLogger(LoggingResetter.class);
 	
-	static void resetLoggingWithXML() {
+	public static void resetLoggingWithXML() {
 		synchronized(LoggingResetter.class) { // TODO: make sure more thread safe
 			URL url = Thread.currentThread().getContextClassLoader().getResource("log4j.xml");
 			LOG.info("Resetting log levels to " + System.getProperty("euca.log.level"));

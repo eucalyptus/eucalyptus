@@ -248,7 +248,8 @@ public class TroubleshootingBootstrapper extends Bootstrapper {
 			}
 			if (Boolean.parseBoolean(ENABLE_TROUBLESHOOTING_LOG_LEVEL_OVERRIDE)) {
 				System.setProperty("euca.log.level", newLogLevel.toUpperCase());
-				LoggingResetter.resetLoggingWithXML();
+				LoggingResetter.resetLoggingLevels();
+				//LoggingResetter.resetLoggingWithXML();
 			}
 			LOG.fatal("test level FATAL");
 			LOG.error("test level ERROR");
