@@ -48,6 +48,7 @@
 
 /*
  * These definitions are all easily customized.
+ *
  * FIXME: Make some or all of them configuration-file options?
  */
 #define DISTRO_FAULTDIR "/usr/share/eucalyptus/faults"
@@ -55,7 +56,8 @@
 #define DEFAULT_LOCALIZATION "en_US"
 #define LOCALIZATION_ENV_VAR "LOCALE"
 #define XML_SUFFIX ".xml"
-#define COMMON_PREFIX "common"
+#define COMMON_PREFIX "common"  /* For .xml file defining common fault
+                                   labels */
 
 /*
  * This is the order of priority (highest to lowest) for fault messages
@@ -112,9 +114,9 @@ static xmlDoc *read_eucafault (const char *, const char *);
 static char *get_fault_id (const xmlNode *);
 static xmlNode *get_eucafault (const char *, const xmlDoc *);
 static int scandir_filter (const struct dirent *);
-static int str_end_cmp (const char *, const char *);
+static boolean str_end_cmp (const char *, const char *);
 static char *str_trim_suffix (char *, const char *);
-static int add_eucafault (const xmlDoc *);
+static boolean add_eucafault (const xmlDoc *);
 static xmlNode *get_common_block (const xmlDoc *);
 static char *get_common_var (const char *);
 static char *get_fault_var (const char *, const xmlNode *);
@@ -129,17 +131,17 @@ static void format_eucafault (const char *, const char_map **);
  * Utility function:
  * Compares end of one string to another string (the suffix) for a match.
  */
-static int
+static boolean
 str_end_cmp (const char *str, const char *suffix)
 {
     if (!str || !suffix) {
-        return 0;
+        return FALSE;
     }
     size_t lenstr = strlen (str);
     size_t lensuffix = strlen (suffix);
 
     if (lensuffix >  lenstr) {
-        return 0;
+        return FALSE;
     }
     return strncmp (str + lenstr - lensuffix, suffix, lensuffix) == 0;
 }
@@ -187,7 +189,7 @@ read_eucafault (const char * faultdir, const char * fault_id)
 {
     xmlDoc *my_doc = NULL;
     char fault_file[PATH_MAX];
-    static int common_block_exists = 0; /* FIXME: I don't like this handling. */
+    static int common_block_exists = 0;
 
     snprintf (fault_file, PATH_MAX - 1, "%s/%s%s", faultdir, fault_id,
               XML_SUFFIX);
@@ -230,23 +232,27 @@ read_eucafault (const char * faultdir, const char * fault_id)
  *
  * Can also add COMMON_PREFIX (<common>) block.
  */
-static int
+static boolean
 add_eucafault (const xmlDoc *new_doc)
 {
     if (xmlDocGetRootElement (ef_doc) == NULL) {
         PRINTF1 (("Creating new document.\n"));
         ef_doc = xmlCopyDoc ((xmlDoc *)new_doc, 1); /* 1 == recursive copy */
-        // FIXME: Add error check/return here.
+
+        if (ef_doc == NULL) {
+            logprintfl (EUCAERROR, "Problem creating fault database.\n");
+            return FALSE;
+        }
     } else {
         PRINTF1 (("Appending to existing document.\n"));
         if (xmlAddNextSibling (xmlFirstElementChild (xmlDocGetRootElement (ef_doc)),
                                xmlFirstElementChild (xmlDocGetRootElement ((xmlDoc *)new_doc))) == NULL) {
             // FIXME: Add more diagnostic information to this error message.
-            logprintfl (EUCAERROR, "Problem appending to fault database.\n");
-            return -1;
+            logprintfl (EUCAERROR, "Problem adding to fault database.\n");
+            return FALSE;
         }
     }
-    return 0;
+    return TRUE;
 }
 
 /*
@@ -341,7 +347,7 @@ initialize_eucafaults (void)
     struct stat dirstat;
     int populate = 0;           /* FIXME: Use or delete. */
     char *locale = NULL;
-    static int faults_initialized = 0;
+    static boolean faults_initialized = FALSE;
     static char faultdirs[NUM_FAULTDIR_TYPES][PATH_MAX];
 
     pthread_mutex_lock (&fault_mutex);
@@ -401,7 +407,9 @@ initialize_eucafaults (void)
                         free (namelist[numfaults]);
 
                         if (new_fault) {
-                            add_eucafault (new_fault);
+                            if (add_eucafault (new_fault)) {
+                                faults_initialized = TRUE;
+                            }
                             xmlFreeDoc (new_fault);
                         } else {
                             PRINTF1 (("Not adding new fault--mismatch or already exists...?\n"));
@@ -412,7 +420,6 @@ initialize_eucafaults (void)
             }
         }
     }
-    faults_initialized++;       /* Not a counter--only a true/false flag */
     pthread_mutex_unlock (&fault_mutex);
 
     return populate;            /* FIXME: Doesn't yet return population! */
@@ -437,7 +444,7 @@ get_common_var (const char *var)
 
     if ((c_node = get_common_block (ef_doc)) == NULL) {
         logprintfl (EUCAWARN, "Did not find <%s> block\n", COMMON_PREFIX);
-        return (char *)var;
+        return strdup (var);
     }
     for (xmlNode *node = xmlFirstElementChild (c_node); node;
          node = node->next) {
@@ -462,7 +469,7 @@ get_common_var (const char *var)
     }
     // If nothing useful is found, return original variable-name string.
     logprintfl (EUCAWARN, "Did not find label '%s'\n", var);
-    return (char *)var;
+    return strdup (var);
 }
 
 /*
@@ -515,16 +522,13 @@ get_fault_var (const char *var, const xmlNode *f_node)
             return (char *)value;
         }
     }
-    logprintfl (EUCAWARN, "Did not find <%d> message in get_fault_var().\n",
+    logprintfl (EUCAWARN, "Did not find <%s> message in get_fault_var().\n",
                 var);
     return NULL;
 }
 
 /*
- * Formats fault-log output.
- *
- * FIXME: This walks the common block more than once.
- * FIXME: This doesn't handle wchar output yet--output is misaligned!
+ * Formats fault-log output and sends to logfile (or console).
  */
 static void
 format_eucafault (const char *fault_id, const char_map **map)
@@ -538,10 +542,11 @@ format_eucafault (const char *fault_id, const char_map **map)
                     "format_eucafault() cannot get fault node for id %s.\n",
                     fault_id);
     }
+    // FIXME: Add real logfiles.
     if (logfile == NULL) {
         logfile = stdout;
     }
-    // Determine alignment (but only once)
+    // Determine label alignment. (Only needs to be done once.)
     if (!max_label_len) {
         for (int i = 0; fault_labels[i]; i++) {
             int label_len = 0;
