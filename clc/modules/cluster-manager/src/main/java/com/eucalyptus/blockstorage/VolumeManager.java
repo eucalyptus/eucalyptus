@@ -378,6 +378,8 @@ public class VolumeManager {
                .withDetails( volume.getOwner( ).toString( ), volume.getDisplayName( ), "instance", vm.getInstanceId( ) )
                .withDetails( "partition", vm.getPartition( ).toString( ) ).info( );
     reply.setAttachedVolume( attachVol );
+    
+    Volumes.fireUsageEvent(volume, VolumeEvent.forVolumeAttach(vm.getInstanceUuid(), volume.getDisplayName()));
     return reply;
   }
   
@@ -451,6 +453,7 @@ public class VolumeManager {
                .withDetails( "cluster", ccConfig.getFullName( ).toString( ) ).info( );
     volume.setStatus( "detaching" );
     reply.setDetachedVolume( volume );
+    Volumes.fireUsageEvent(vol, VolumeEvent.forVolumeDetach(vm.getInstanceUuid(), vm.getInstanceId()));
     return reply;
   }
   
