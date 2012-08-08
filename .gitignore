@@ -57,6 +57,9 @@ tools/eucalyptus-nc
 util/eucalyptus-config.h
 util/euca_mountwrap
 util/euca_rootwrap
+util/test_misc
+util/test_fault
+util/test_wc
 clc/.settings/org.eclipse.jdt.core.prefs
 clc/eucadmin/eucadmin/__init__.py
 storage/euca-blobs

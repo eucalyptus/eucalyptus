@@ -2,22 +2,22 @@
 // vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
 
 /*
-Copyright (c) 2009  Eucalyptus Systems, Inc.	
+Copyright (c) 2009  Eucalyptus Systems, Inc.
 
 This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by 
-the Free Software Foundation, only version 3 of the License.  
- 
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, only version 3 of the License.
+
 This file is distributed in the hope that it will be useful, but WITHOUT
 ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
 FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
-for more details.  
+for more details.
 
 You should have received a copy of the GNU General Public License along
 with this program.  If not, see <http://www.gnu.org/licenses/>.
- 
+
 Please contact Eucalyptus Systems, Inc., 130 Castilian
-Dr., Goleta, CA 93101 USA or visit <http://www.eucalyptus.com/licenses/> 
+Dr., Goleta, CA 93101 USA or visit <http://www.eucalyptus.com/licenses/>
 if you need additional information or have any questions.
 
 This file may incorporate work covered under the following copyright and
@@ -26,7 +26,7 @@ permission notice:
   Software License Agreement (BSD License)
 
   Copyright (c) 2008, Regents of the University of California
-  
+
 
   Redistribution and use of this software in source and binary forms, with
   or without modification, are permitted provided that the following
@@ -64,7 +64,7 @@ permission notice:
 #include <stdlib.h>
 #define __USE_GNU
 #include <string.h>
-#include <stdarg.h> 
+#include <stdarg.h>
 #include <time.h>
 #include <sys/stat.h>
 #include <sys/time.h>
@@ -110,7 +110,7 @@ FILE * get_file (void)
     if (!rc && ((int)statbuf.st_size > log_max_size_bytes)) {
         int i;
         char oldFile[EUCA_MAX_PATH], newFile[EUCA_MAX_PATH];
-        
+
         rc = stat(logFile, &statbuf);
         if (!rc && ((int)statbuf.st_size > log_max_size_bytes)) {
             for (i=log_roll_number-1; i>=0; i--) {
@@ -142,8 +142,8 @@ void log_params_set(int log_level_in, int log_roll_number_in, long log_max_size_
     } else {
         log_level = DEFAULT_LOG_LEVEL;
     }
-    
-    if (log_roll_number_in > 0 && 
+
+    if (log_roll_number_in > 0 &&
         log_roll_number_in < 100 &&
         log_roll_number != log_roll_number_in) {
 
@@ -169,21 +169,21 @@ void log_params_get(int *log_level_out, int *log_roll_number_out, long *log_max_
 int log_file_set(const char * file)
 {
     logging = 0;
-    
+
     if (LOGFH != NULL) {
         fclose(LOGFH);
     }
 
     if (file == NULL) {
         LOGFH = NULL;
-    } else {        
+    } else {
         snprintf(logFile, EUCA_MAX_PATH, "%s", file);
         LOGFH = fopen(file, "a");
         if (LOGFH) {
             logging=1;
         }
     }
-    
+
     return (1-logging);
 }
 
@@ -195,72 +195,72 @@ int logfile(char *file, int log_level_in, int log_roll_number_in) // TODO: legac
 
 // print timestamp in YYYY-MM-DD HH:MM:SS format
 static void print_timestamp (FILE * file)
-{ 
+{
     time_t t = time (NULL);
     struct tm tm;
     gmtime_r(&t, &tm);
     char buf[27];
     if (strftime (buf, sizeof(buf), "%F %T", &tm)) {
-        fprintf(file, "%s", buf);
+        fprintf(file, "%s ", buf);
     }
 }
 
-int logprintf(const char *format, ...) 
+int logprintf(const char *format, ...)
 {
     va_list ap;
     int rc;
     char buf[27], *eol;
     time_t t;
     FILE *file;
-    
+
     rc = 1;
     va_start(ap, format);
-    
+
     if (logging) {
         file = LOGFH;
     } else {
         file = stdout;
     }
-    
+
     print_timestamp (file);
     rc = vfprintf(file, format, ap);
     fflush(file);
-    
+
     va_end(ap);
     return(rc);
 }
 
-int logprintfl(int level, const char *format, ...) 
+int logprintfl(int level, const char *format, ...)
 {
     va_list ap;
     int rc, fd;
     FILE *file;
-    
+
     if (level < log_level) {
         return (0);
     }
-    
+
     rc = 1;
     va_start(ap, format);
-    
+
     if (logging) {
         file = get_file();
     } else {
         file = stderr;
     }
-    
+
     print_timestamp (file);
 
     // log level, a 5-char field, indented to the right
-    if (level == EUCATRACE)       { fprintf (file, " %s", "TRACE");}
-    else if (level == EUCADEBUG3) { fprintf (file, " %s", "DBUG3");}
-    else if (level == EUCADEBUG2) { fprintf (file, " %s", "DBUG2");}
-    else if (level == EUCADEBUG)  { fprintf (file, " %s", "DEBUG");}
-    else if (level == EUCAINFO)   { fprintf (file, " %s", " INFO");}
-    else if (level == EUCAWARN)   { fprintf (file, " %s", " WARN");}
-    else if (level == EUCAERROR)  { fprintf (file, " %s", "ERROR");}
-    else if (level == EUCAFATAL)  { fprintf (file, " %s", "FATAL");}
-    else                          { fprintf (file, " %s", "?????");}
+    if (level == EUCATRACE)       { fprintf (file, "%s", "TRACE");}
+    else if (level == EUCADEBUG3) { fprintf (file, "%s", "DBUG3");}
+    else if (level == EUCADEBUG2) { fprintf (file, "%s", "DBUG2");}
+    else if (level == EUCADEBUG)  { fprintf (file, "%s", "DEBUG");}
+    else if (level == EUCAINFO)   { fprintf (file, "%s", " INFO");}
+    else if (level == EUCAWARN)   { fprintf (file, "%s", " WARN");}
+    else if (level == EUCAERROR)  { fprintf (file, "%s", "ERROR");}
+    else if (level == EUCAFATAL)  { fprintf (file, "%s", "FATAL");}
+    else                          { fprintf (file, "%s", "?????");}
 
     // the PID and thread ID
     fprintf (file, " %06d:%06d", getpid(), (pid_t) syscall (SYS_gettid));
@@ -270,7 +270,7 @@ int logprintfl(int level, const char *format, ...)
 
     rc = vfprintf(file, format, ap);
     fflush(file);
-    
+
     va_end(ap);
     return(rc);
 }
@@ -280,12 +280,12 @@ int logcat (int debug_level, const char * file_name)
 {
 	int got = 0;
 	char buf [BUFSIZE];
-	
+
 	FILE *fp = fopen (file_name, "r");
 	if (!fp) return got;
     while ( fgets (buf, BUFSIZE, fp) ) {
         int l = strlen (buf);
-        if ( l<0 ) 
+        if ( l<0 )
             break;
         if ( l+1<BUFSIZE && buf[l-1]!='\n' ) {
             buf [l++] = '\n';
@@ -298,7 +298,7 @@ int logcat (int debug_level, const char * file_name)
 	return got;
 }
 
-void eventlog(char *hostTag, char *userTag, char *cid, char *eventTag, char *other) 
+void eventlog(char *hostTag, char *userTag, char *cid, char *eventTag, char *other)
 {
   double ts;
   struct timeval tv;
@@ -313,9 +313,9 @@ void eventlog(char *hostTag, char *userTag, char *cid, char *eventTag, char *oth
   if(PH) {
       fscanf(PH, "%256s", hostName);
       pclose(PH);
-  
+
       snprintf (hostTagFull, 256, "%s/%s", hostName, hostTag);
-  
+
       gettimeofday(&tv, NULL);
       ts = (double)tv.tv_sec + ((double)tv.tv_usec / 1000000.0);
 

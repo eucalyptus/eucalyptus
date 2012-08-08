@@ -62,7 +62,10 @@
 
 include ../Makedefs
 
-all: log.o misc.o config.o hash.o data.o euca_auth.o euca_axis.o ipc.o windows-bundle.o euca_rootwrap euca_mountwrap
+#FAULT_DEBUG = -DDEBUG
+#CC += -g
+
+all: utf8.o log.o config.o fault.o misc.o wc.o hash.o data.o euca_auth.o euca_axis.o ipc.o windows-bundle.o euca_rootwrap euca_mountwrap
 
 build: all
 
@@ -75,17 +78,23 @@ euca_mountwrap: euca_mountwrap.c
 test: test.c ipc.o log.o misc.o
 	$(CC) $(CFLAGS) $(INCLUDES) -o test test.c ipc.o log.o misc.o data.o -lpthread $(LIBS) $(LDFLAGS)
 
-test_misc: misc.c ../storage/diskutil.o ipc.o euca_auth.o
-	$(CC) $(CFLAGS) $(INCLUDES) -D_UNIT_TEST -o test_misc misc.c log.o ../storage/diskutil.o ipc.o euca_auth.o -lpthread -lcrypto $(LIBS) $(LDFLAGS)
+test_misc: misc.c log.o ../storage/diskutil.o ipc.o
+	$(CC) $(CFLAGS) $(INCLUDES) -D_UNIT_TEST -o test_misc misc.c log.o ../storage/diskutil.o ipc.o $(LIBS) $(LDFLAGS)
+
+test_wc: wc.c misc.o log.o ../storage/diskutil.o ipc.o
+	$(CC) $(CFLAGS) $(INCLUDES) -D_UNIT_TEST -o test_wc wc.c misc.o log.o ../storage/diskutil.o ipc.o $(LIBS) $(LDFLAGS)
+
+test_fault: fault.c misc.o log.o wc.o ../storage/diskutil.o ipc.o utf8.o
+	$(CC) $(CFLAGS) $(INCLUDES) `xslt-config --cflags` $(FAULT_DEBUG) -D_UNIT_TEST -o test_fault fault.c misc.o log.o wc.o ../storage/diskutil.o ipc.o utf8.o $(LIBS) $(LDFLAGS)
 
 ../storage/diskutil.o:
 	make -C ../storage
 
-.c.o: $@
-	$(CC) -c -std=gnu99 $(CFLAGS) $(INCLUDES) $<
+%.o: %.c %.h
+	$(CC) -c -std=gnu99 $(CFLAGS) $(INCLUDES) `xslt-config --cflags` $<
 
 clean:
-	rm -rf *~ *.o test test_misc euca_rootwrap euca_mountwrap
+	rm -rf *~ *.o test test_fault test_misc euca_rootwrap euca_mountwrap
 
 distclean:
 	rm -rf config.h
