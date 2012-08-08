@@ -93,42 +93,6 @@
         });
     },
    
-   // OK to delete this ?
-   createUserMenu : function (left, top) {
-      user_menu = { preference : menu_user_preferences,
-                    logout : menu_user_logout,
-      }
-      var header = this;
-      var $ul = $('<ul>'); 
-      $.each(user_menu, function (key, val) {
-        $ul.append(
-           $('<li>').append(
-             $('<a>').attr('href','#').text(val).click(function(evt) {
-               header._trigger("select", evt, {selected:key});
-           })));
-      });
-
-      return $('<div>').addClass('user-menu').css('left',left+'px').css('top',top+'px').append($ul);
-    },
- 
-   // OK to delete this ?
-   createHelpMenu : function (left, top) {
-      help_menu = { documentation : menu_help_documentation,
-                    forum : menu_help_forum,
-                    report : menu_help_report
-                  }
-      var header = this;
-      var $ul = $('<ul>'); 
-      $.each(help_menu, function (key, val) {
-        $ul.append(
-           $('<li>').append(
-             $('<a>').attr('href','#').text(val).click(function(evt) {
-               header._trigger("select", evt, {selected:key});
-           })));
-      });
-
-      return $('<div>').addClass('help-menu').css('left',left+'px').css('top',top+'px').append($ul);
-    },
 
    _destroy : function(){
     }
