@@ -154,7 +154,7 @@
 
       <!-- Dialog template -->
       <script id="keypairAddDlgTmpl" type="text/x-jsrender">
-        <div id="keys-add-dialog" title="{{!>keypair_dialog_add_title}}" class="add-dialog" style="display:none">
+        <div id="keys-add-dialog" title="{{!>keypair_dialog_add_title}}" class="add-dialog">
           {{!: keypair_dialog_add_text }}
           <p>
             <span class="field">{{!>keypair_dialog_add_name}}</span><input type="text" id="key-name" class="required"/><div class="dialog-notifications"></div>
@@ -163,7 +163,7 @@
       </script>
 
       <script id="keypairDelDlgTmpl" type="text/x-jsrender">
-        <div id="keys-delete-dialog" title="{{!>keypair_dialog_del_title}}" class="delete-dialog" style="display:none">
+        <div id="keys-delete-dialog" title="{{!>keypair_dialog_del_title}}" class="delete-dialog">
           {{!: keypair_dialog_del_text }}
           <span class="delete-names"></span>
         </div>

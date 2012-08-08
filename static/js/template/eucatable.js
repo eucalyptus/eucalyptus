@@ -10,7 +10,6 @@
                 txt_found : 'resources found',
                 menu_text : 'More actions',
                 menu_actions : null // e.g., { delete: ["Delete", function () { dialog.... } ] }
- 
     },
 
     table : null, // jQuery object to the table
@@ -151,6 +150,7 @@
     },
 
     addActions : function (actionMenu) {
+      var thisObj = this;
       thisTable = this.table;
       // add select/deselect all action
       $checkbox = this.element.find('#' + this.options.id + '-check-all');
@@ -172,6 +172,12 @@
           actionMenu.addClass('inactive');
         }
       });
+      // add on row click acion
+      this.element.find('table tbody').click( function (e) {
+        $(e.target.parentNode.firstChild.firstChild).click();
+        thisObj._trigger('select_row');
+      } );
+
     },
 
     getAllSelectedRows : function (idIndex) {

@@ -23,7 +23,7 @@
           "aoColumns": [
             {
               "bSortable": false,
-              "fnRender": function(oObj) { return '<input type="checkbox" onclick="updateActionMenu(this)"/>' },
+              "fnRender": function(oObj) { return '<input type="checkbox"/>' },
               "sWidth": "20px",
             },
             { "mDataProp": "name" },
@@ -39,7 +39,8 @@
         txt_create : keypair_create,
         txt_found : keypair_found,
         menu_text : table_menu_main_action,
-        menu_actions : { delete: [table_menu_delete_action, function (args) { thisObj.deleteAction(args) } ] }
+        menu_actions : { delete: [table_menu_delete_action, function (args) { thisObj.deleteAction(args) } ] },
+        select_row : function (args) { alert('selected'); },
       });
       tableWrapper.appendTo(this.element);
 
