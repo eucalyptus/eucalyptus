@@ -24,11 +24,10 @@ import javax.annotation.Nonnull;
 
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
-import com.eucalyptus.event.Event;
 import com.eucalyptus.reporting.event.SnapShotEvent;
 import com.eucalyptus.reporting.event_store.ReportingVolumeSnapshotEventStore;
-import com.eucalyptus.reporting.user.ReportingAccountDao;
-import com.eucalyptus.reporting.user.ReportingUserDao;
+import com.eucalyptus.reporting.domain.ReportingUserCrud;
+import com.eucalyptus.reporting.domain.ReportingAccountCrud;
 
 import com.google.common.base.Preconditions;
 
@@ -46,15 +45,14 @@ public class SnapShotUsageEventListener implements EventListener<SnapShotEvent> 
 
 	final long timeInMs = getCurrentTimeMillis();
 
-	final ReportingAccountDao reportingAccountDao = getReportingAccountDao();
+	final ReportingAccountCrud reportingAccountDao = getReportingAccountCrud();
 
-	reportingAccountDao.addUpdateAccount(event.getAccountId(),
-		event.getAccountName());
+	reportingAccountDao.createOrUpdateAccount(event.getAccountId(), event.getAccountName());
+	
 
-	final ReportingUserDao reportingUserDao = getReportingUserDao();
+	final ReportingUserCrud reportingUserCrud = getReportingUserCrud();
 
-	reportingUserDao
-		.addUpdateUser(event.getOwnerId(), event.getOwnerName());
+	reportingUserCrud.createOrUpdateUser(event.getOwnerId(), event.getAccountId(), event.getAccountName());
 
 	final ReportingVolumeSnapshotEventStore eventStore = ReportingVolumeSnapshotEventStore
 		.getInstance();
@@ -72,12 +70,12 @@ public class SnapShotUsageEventListener implements EventListener<SnapShotEvent> 
 
     }
 
-    protected ReportingAccountDao getReportingAccountDao() {
-	return ReportingAccountDao.getInstance();
+    protected ReportingAccountCrud getReportingAccountCrud() {
+	return ReportingAccountCrud.getInstance();
     }
 
-    protected ReportingUserDao getReportingUserDao() {
-	return ReportingUserDao.getInstance();
+    protected ReportingUserCrud getReportingUserCrud() {
+	return ReportingUserCrud.getInstance();
     }
 
     protected ReportingVolumeSnapshotEventStore getReportingVolumeSnapshotEventStore() {
