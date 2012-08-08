@@ -80,9 +80,10 @@ import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
+import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.troubleshooting.LoggingResetter;
 import com.eucalyptus.troubleshooting.TestFaultTrigger;
-
+@Provides(Empyrean.class)
 @RunDuring( Bootstrap.Stage.CloudServiceInit )
 @ConfigurableClass( root = "troubleshooting",
 description = "Parameters controlling troubleshooting information." )
@@ -247,7 +248,7 @@ public class TroubleshootingBootstrapper extends Bootstrapper {
 			}
 			if (Boolean.parseBoolean(ENABLE_TROUBLESHOOTING_LOG_LEVEL_OVERRIDE)) {
 				System.setProperty("euca.log.level", newLogLevel.toUpperCase());
-				LoggingResetter.resetLoggingLevels();
+				LoggingResetter.resetLoggingWithXML();
 			}
 			LOG.fatal("test level FATAL");
 			LOG.error("test level ERROR");
