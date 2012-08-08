@@ -50,6 +50,7 @@
  * These definitions are all easily customized.
  *
  * FIXME: Make some or all of them configuration-file options?
+ * FIXME: Make paths relative to some configurable base directory?
  */
 #define DISTRO_FAULTDIR "/usr/share/eucalyptus/faults"
 #define CUSTOM_FAULTDIR "/etc/eucalyptus/faults"
@@ -58,6 +59,8 @@
 #define XML_SUFFIX ".xml"
 #define COMMON_PREFIX "common"  /* For .xml file defining common fault
                                    labels */
+#define LOCALIZED_TAG "localized"
+#define MESSAGE_TAG "message"
 
 /*
  * This is the order of priority (highest to lowest) for fault messages
@@ -312,7 +315,7 @@ get_common_block (const xmlDoc *doc)
  * model.
  *
  * FIXME: Extend this to return the first fault node in a doc if NULL id
- * supplied.
+ * supplied?
  */
 static xmlNode *
 get_eucafault (const char *id, const xmlDoc *doc)
@@ -456,7 +459,7 @@ get_common_var (const char *var)
                 xmlChar *value = NULL;
 
                 xmlFree (prop);
-                value = xmlGetProp (node, (const xmlChar *)"localized");
+                value = xmlGetProp (node, (const xmlChar *)LOCALIZED_TAG);
 
                 if (value == NULL) {
                     value = xmlGetProp (node, (const xmlChar *)"value");
@@ -486,17 +489,31 @@ static char *
 get_fault_var (const char *var, const xmlNode *f_node)
 {
     if ((f_node == NULL) || (var == NULL)) {
-        // FIXME: EUCAWARN log something?
+        logprintfl (EUCAWARN, "get_fault_var() called with one or more NULL arguments.\n");
         return NULL;
+    }
+    // Just in case we're matching the top-level node.
+    // FIXME: Move this into a new tmfunction to eliminate repeated logic below?
+    if ((f_node->type == XML_ELEMENT_NODE) &&
+        !strcasecmp ((const char *)f_node->name, var)) {
+        xmlChar *value = xmlGetProp ((xmlNode *)f_node,
+                                     (const xmlChar *)LOCALIZED_TAG);
+        if (value == NULL) {
+            value = xmlGetProp ((xmlNode *)f_node,
+                                (const xmlChar *)MESSAGE_TAG);
+        }
+        // This is a special (parent) case, so it doesn't handle
+        // message/localized text in a child node.
+        return (char *)value;
     }
     for (xmlNode *node = xmlFirstElementChild ((xmlNode *)f_node); node;
          node = node->next) {
         if ((node->type == XML_ELEMENT_NODE) &&
             !strcasecmp ((const char *)node->name, var)) {
-            xmlChar *value = xmlGetProp (node, (const xmlChar *)"localized");
+            xmlChar *value = xmlGetProp (node, (const xmlChar *)LOCALIZED_TAG);
 
             if (value == NULL) {
-                value = xmlGetProp (node, (const xmlChar *)"message");
+                value = xmlGetProp (node, (const xmlChar *)MESSAGE_TAG);
             }
             if (value == NULL) {
                 // May be a child node, e.g. for "resolution"
@@ -504,7 +521,7 @@ get_fault_var (const char *var, const xmlNode *f_node)
                      subnode = subnode->next) {
                     if ((node->type == XML_ELEMENT_NODE) &&
                         !strcasecmp ((const char *)subnode->name,
-                                     "localized")) {
+                                     LOCALIZED_TAG)) {
                         return (char *)xmlNodeGetContent (subnode);
                     }
                 }
@@ -513,11 +530,10 @@ get_fault_var (const char *var, const xmlNode *f_node)
                      subnode = subnode->next) {
                     if ((node->type == XML_ELEMENT_NODE) &&
                         !strcasecmp ((const char *)subnode->name,
-                                     "message")) {
+                                     MESSAGE_TAG)) {
                         return (char *)xmlNodeGetContent (subnode);
                     }
                 }
-
             }
             return (char *)value;
         }
@@ -535,6 +551,9 @@ format_eucafault (const char *fault_id, const char_map **map)
 {
     static FILE *logfile = NULL;
     static int max_label_len = 0;
+    char *fault_var = NULL;
+    time_t secs;
+    struct tm lt;
     xmlNode *fault_node = get_eucafault (fault_id, NULL);
 
     if (fault_node == NULL) {
@@ -562,13 +581,48 @@ format_eucafault (const char *fault_id, const char_map **map)
             }
         }
     }
+    // Top border.
     fprintf (logfile, "%s\n", STARS);
 
+    // Get time.
+    secs = time (NULL);
+    if (localtime_r (&secs, &lt) == NULL) {
+        // Someone call Dr. Who.
+        lt.tm_year = lt.tm_mon = lt.tm_mday = 0;
+        lt.tm_hour = lt.tm_min = lt.tm_sec = 0;
+        lt.tm_isdst = 0;
+        tzname[0] = tzname[1] = 0;
+    } else {
+        // Account for implied offsets in struct.
+        lt.tm_year += 1900;
+        lt.tm_mon += 1;
+    }
+    // Construct timestamped fault header.
+    fprintf (logfile, "  ERR-%s %04d-%02d-%02d %02d:%02d:%02d %s ", fault_id,
+             lt.tm_year, lt.tm_mon, lt.tm_mday,
+             lt.tm_hour, lt.tm_min, lt.tm_sec, tzname[lt.tm_isdst]);
+
+    if ((fault_var = get_fault_var ("fault", fault_node)) != NULL) {
+        char *fault_subbed = NULL;
+
+        if ((fault_subbed = c_varsub (fault_var, map)) != NULL) {
+            fprintf (logfile, "%s\n\n", fault_subbed);
+        } else {
+            fprintf (logfile, "%s\n\n", fault_var);
+        }
+        free (fault_subbed);
+        free (fault_var);
+    } else {
+        char *common_var = get_common_var ("unknown");
+        fprintf (logfile, "%s\n\n", common_var);
+        free (common_var);
+    }
+
+    // Construct fault information lines.
     for (int i = 0; fault_labels[i]; i++) {
         int w_common_var_len = 0;
         int common_var_len = 0;
         int padding = 0;
-        char *fault_var = NULL;
         char *common_var = get_common_var (fault_labels[i]);
 
         common_var_len = strlen (common_var);
@@ -577,9 +631,8 @@ format_eucafault (const char *fault_id, const char_map **map)
         padding = max_label_len - w_common_var_len + 1;
         fprintf (logfile, "%s%*s %s: ", BARS, padding, " ", common_var);
         free (common_var);
-        fault_var = get_fault_var (fault_labels[i], fault_node);
 
-        if (fault_var != NULL) {
+        if ((fault_var = get_fault_var (fault_labels[i], fault_node)) != NULL) {
             char *fault_subbed = NULL;
 
             if ((fault_subbed = c_varsub (fault_var, map)) != NULL) {
@@ -596,6 +649,7 @@ format_eucafault (const char *fault_id, const char_map **map)
         }
         fprintf (logfile, "\n");
     }
+    // Bottom border.
     fprintf (logfile, "%s\n\n", STARS);
 }
 
@@ -635,6 +689,7 @@ log_eucafault (char *fault_id, const char_map **map)
  * Provides a way to log test faults from shell command line.
  */
 #ifdef _UNIT_TEST
+
 /*
  * Performs blind dump of XML fault model to stdout.
  */
@@ -647,8 +702,11 @@ dump_eucafaults_db (void)
     printf ("\n");
 }
 
+/*
+ * I am not an animal.
+ */
 int
-main (int argc, char ** argv)
+main (int argc, char **argv)
 {
     int dump = 0;
     int opt;
