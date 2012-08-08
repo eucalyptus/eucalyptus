@@ -212,7 +212,7 @@ class ComputeHandler(server.BaseHandler):
             return clc.get_all_snapshots()
         elif action == 'CreateSnapshot':
             volumeid = self.get_argument('VolumeId')
-            description = self.get_argument('Description')
+            description = self.get_argument('Description', None)
             return clc.create_snapshot(volumeid, description)
         elif action == 'DeleteSnapshot':
             snapshotid = self.get_argument('SnapshotId')

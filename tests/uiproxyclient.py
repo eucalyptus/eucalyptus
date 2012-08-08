@@ -34,9 +34,9 @@ class UIProxyClient(object):
             print "Need to login first!!"
         request.add_header('cookie', self.session_cookie)
 
-    def __add_param_list(self, params, name, list):
+    def __add_param_list__(self, params, name, list):
         for idx, val in list:
-            params["name.%s" % (idx + 1)] = val
+            params["%s.%d" % (name, idx + 1)] = val
 
     def __make_request__(self, action, params):
         for param in params.keys():
@@ -60,6 +60,15 @@ class UIProxyClient(object):
     ##
     def get_images(self):
         return self.__make_request__('DescribeImages', {})
+
+    def get_image_attribute(self, image_id, attribute='launchPermission'):
+        return None
+
+    def modify_image_attribute(self, image_id, attribute='launchPermission', operation='add', user_ids=None, groups=None):
+        return None
+
+    def reset_image_attribute(self, image_id, attribute='launchPermission'):
+        return None
 
     ##
     # Instance methods
@@ -139,22 +148,22 @@ class UIProxyClient(object):
 
     def terminate_instances(self, instanceids):
         params = {}
-        self.__add_param_list__(params, 'IsntanceId', instanceids)
+        self.__add_param_list__(params, 'InstanceId', instanceids)
         return self.__make_request__('TerminateInstances', params)
 
     def stop_instances(self, instanceids):
         params = {}
-        self.__add_param_list__(params, 'IsntanceId', instanceids)
+        self.__add_param_list__(params, 'InstanceId', instanceids)
         return self.__make_request__('StopInstances', params)
 
     def start_instances(self, instanceids):
         params = {}
-        self.__add_param_list__(params, 'IsntanceId', instanceids)
+        self.__add_param_list__(params, 'InstanceId', instanceids)
         return self.__make_request__('StartInstances', params)
 
     def restart_instances(self, instanceids):
         params = {}
-        self.__add_param_list__(params, 'IsntanceId', instanceids)
+        self.__add_param_list__(params, 'InstanceId', instanceids)
         return self.__make_request__('RestartInstances', params)
 
     def get_console_output(self, isntanceid):
@@ -280,3 +289,25 @@ class UIProxyClient(object):
     def get_snapshots(self):
         return self.__make_request__('DescribeSnapshots', {})
 
+    def create_snapshot(self, volume_id, description=None):
+        params = {'VolumeId': volume_id}
+        if description:
+            params['Description'] = description
+        return self.__make_request__('CreateSnapshot', params)
+
+    def delete_snapshot(self, snapshot_id):
+        return self.__make_request__('DeleteSnapshot', {'SnapshotId': snapshot_id})
+
+    def get_snapshot_attribute(self, snapshot_id, attribute='createVolumePermission'):
+        return self.__make_request__('DescribeSnapshotAttribute', {'SnapshotId': snapshot_id, 'Attribute': attribute})
+
+    def modify_snapshot_attribute(self, snapshot_id, attribute='createVolumePermission', operation='add', users=None, groups=None):
+        params = {'SnapshotId': snapshot_id, 'Attribute': attribute, 'OperationType': operation}
+        if users:
+            self.__add_params_list__(params, 'UserId', users);
+        if groups:
+            self.__add_params_list__(params, 'UserGroup', groups);
+        return self.__make_request__('ModifySnapshotAttribute', params)
+
+    def reset_snapshot_attribute(self, snapshot_id, attribute='createVolumePermission'):
+        return self.__make_request__('ResetSnapshotAttribute', {'SnapshotId': snapshot_id, 'Attribute': attribute})
