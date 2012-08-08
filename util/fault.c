@@ -582,6 +582,7 @@ format_eucafault (const char *fault_id, const char_map **map)
             } else {
                 fprintf (logfile, "%s", fault_var);
             }
+            free (fault_subbed);
             free (fault_var);
         } else {
             common_var = get_common_var ("unknown");
