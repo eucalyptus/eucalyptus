@@ -54,7 +54,7 @@
            $('<li>').append(
              $('<a>').attr('href','#').text(menu_help).click(function(e){ 
                	$helpArea.find('.header-nav ul').slideToggle('fast'); 
-		$(this).toggleClass('toggle-on');
+		            $(this).toggleClass('toggle-on');
              }),
              $('<ul>').append(
                $('<li>').append(

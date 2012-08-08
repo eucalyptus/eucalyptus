@@ -82,8 +82,8 @@ body {
 .euca-main-outercontainer {
     background: #eaedee url(../images/main-bgfill.png) repeat left top;
     /* Total min-height with padding 540px */
-    min-height: 485px;
-    padding: 15px 0 40px;
+    min-height: 440px;
+    padding: 50px 0;
     /* Set to a lower number than the Explorer, so the drop shadow will work */
     z-index: 1;
 }
@@ -267,6 +267,7 @@ body {
   font-weight: 700;
   line-height: 1em;
   margin: 3px 0;
+  outline: none;
   padding: 52px 0 4px;
   text-align: center;
   text-decoration: none;
@@ -476,13 +477,8 @@ body {
 }
 
 #dashboard {
-    display: inline-block; 
-    background: #ffffff;
     position: relative;
-    margin-left: 50px;
-    margin-right: 50px;
-    width: 90%;
-    height: 90%;
+    margin: 0 20px;
 }
 
 #dashboard .instances {
