@@ -39,6 +39,9 @@
         case 'keypair':
           this.element.keypair();
           break;
+        case 'volume':
+          this.element.volume();
+          break;
         default:
           alert('unknown menu selected: '+selected);
       }

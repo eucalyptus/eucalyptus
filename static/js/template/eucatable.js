@@ -19,7 +19,7 @@
     _init : function() {
       this.table = this.options.base_table.dataTable(this.options.dt_arg);
       // register table, so all support function can find it
-      allTablesRef[this.options.id] = this.table;
+//      allTablesRef[this.options.id] = this.table;
       this.decorateHeader({title:this.options.header_title});
       this.decorateSearchBar({refresh: this.options.search_refresh});
       this.decorateTopBar({txt_create: this.options.txt_create, txt_found : this.options.txt_found});
