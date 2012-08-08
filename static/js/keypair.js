@@ -39,8 +39,8 @@
         txt_create : keypair_create,
         txt_found : keypair_found,
         menu_text : table_menu_main_action,
-        menu_actions : { delete: [table_menu_delete_action, function (args) { thisObj.deleteAction(args) } ] },
-        select_row : function (args) { alert('selected'); },
+        menu_actions : { delete: [table_menu_delete_action, function (args) { thisObj.deleteAction(args); } ] },
+        row_click : function (args) { thisObj.handleRowClick(args); },
       });
       tableWrapper.appendTo(this.element);
 
@@ -65,15 +65,14 @@
       // when calling eucadialog, the buttons should have domid to attach the specific domid that's used by event handler written here 
       $add_dialog.find('#key-name').keypress( function(e){
         var $createButton = $('#'+createButtonId);
-        if( e.which === RETURN_KEY_CODE || e.which === RETURN_MAC_KEY_CODE ) 
+        if( e.which === RETURN_KEY_CODE || e.which === RETURN_MAC_KEY_CODE ) {
            $createButton.trigger('click');
-        else if ( e.which === 0 ) {
-        } else if ( e.which === BACKSPACE_KEY_CODE && $(this).val().length == 1 ) 
+        } else if ( e.which === 0 ) {
+        } else if ( e.which === BACKSPACE_KEY_CODE && $(this).val().length == 1 ) {
            $createButton.prop("disabled", true).addClass("ui-state-disabled");
-        else if ( $(this).val().length == 0 )
-           $createButton.prop("disabled", true).addClass("ui-state-disabled");
-        else 
+        } else {
            $createButton.prop("disabled", false).removeClass("ui-state-disabled");
+        }
       });
 
       $add_dialog.eucadialog({
@@ -102,6 +101,16 @@
     },
 
     _destroy : function() {
+    },
+
+    handleRowClick : function(args) {
+      count = tableWrapper.eucatable('countSelectedRows');
+      if ( count == 0 )
+        // disable menu
+        tableWrapper.eucatable('deactivateMenu');
+      else
+        // enable delete menu
+        tableWrapper.eucatable('activateMenu');
     },
 
     _addKeyPair : function(keyName) {
