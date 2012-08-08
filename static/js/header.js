@@ -45,7 +45,7 @@
        var thisObj = this;
        // navigation area   
        var $naviArea = this.element.find('#euca-navigator');
-       $naviArea.append($('<a>').attr('href','#').attr('id','resources-link').css('display','block').text(button_explorer));
+       $naviArea.append($('<a>').attr('href','#').attr('id','resources-link').text(button_explorer));
        
        //help area 
        var $helpArea = this.element.find('#euca-help');
@@ -85,54 +85,15 @@
                  $('<a>').attr('href','#').text(menu_user_logout).click(function(e) {
                    thisObj._trigger('select',e, {selected:'logout'});}))))));
 
-       // event handlers
-       this.element.find('#euca-navigator').hover(
-         function () {
-           $(this).find('#resources-link').addClass('mouseon');
-           $(this).addClass('mouseon');
-         }, 
-         function () {
-           $(this).find('#resources-link').removeClass('mouseon');
-           $(this).removeClass('mouseon');
-         }
-       );
- 
-       this.element.find('#euca-navigator').click(function (){
-         var $explorer = $('html body').find('.euca-explorer-container');
-         if($(this).hasClass('mouseon')){
-             $explorer.toggle('blind', {}, 300 );
-         }else{
-             $explorer.toggle('blind', {}, 300 );
-         }
-       });
-       /*
-       this.element.find('#euca-user').click(function (evt) {
-         if($(this).hasClass('clicked')){
-           $(this).removeClass('clicked');
-           $('html body').find('.user-menu').remove();
-         }
-         else{
-           var left = $(this).position().left;
-           var top = $('html body').find('.euca-main-outercontainer').position().top; 
-           $('html body').append(thisObj.createUserMenu(left, top));
-           $(this).addClass('clicked');
-         }
-       });
-       
-       this.element.find('#euca-help').click(function (evt) {
-         if($(this).hasClass('clicked')){
-           $(this).removeClass('clicked');
-           $('html body').find('.help-menu').remove();
-         }
-         else{
-           var left = $(this).position().left;
-           var top = $('html body').find('.euca-main-outercontainer').position().top; 
-           $('html body').append(thisObj.createHelpMenu(left, top));
-           $(this).addClass('clicked');
-         }
-       });*/
+        // event handlers
+        var $navigator = $('#euca-navigator');
+        $navigator.click(function (){
+          $('#euca-explorer').slideToggle('fast'); 
+          $navigator.toggleClass('toggle-on');
+        });
     },
    
+   // OK to delete this ?
    createUserMenu : function (left, top) {
       user_menu = { preference : menu_user_preferences,
                     logout : menu_user_logout,
@@ -150,6 +111,7 @@
       return $('<div>').addClass('user-menu').css('left',left+'px').css('top',top+'px').append($ul);
     },
  
+   // OK to delete this ?
    createHelpMenu : function (left, top) {
       help_menu = { documentation : menu_help_documentation,
                     forum : menu_help_forum,

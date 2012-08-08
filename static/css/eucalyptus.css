@@ -134,10 +134,10 @@ body {
     border-width: 0 1px;
 }
 
-#euca-navigator.mouseon {
-    background-color: #ebe9eb;
+#euca-navigator.toggle-on {
+    background-color: #eceaec;
     border-color: #ccc;
-    padding-bottom: 2px;
+    padding-bottom: 4px;
 }
 
 #resources-link {
@@ -147,7 +147,7 @@ body {
     font-family: "Play", Arial, sans-serif;
     font-size: 16px;
     font-weight: bold;
-    line-height: 48px;
+    line-height: 47px;
     margin: 0 10px 0 0;
     padding: 0 32px 0 20px;
     outline: 0;
