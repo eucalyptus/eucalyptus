@@ -42,8 +42,9 @@ import com.google.common.base.Preconditions;
  */
 public class VolumeUsageEventListener implements EventListener<VolumeEvent> {
 
-    private static Logger LOG = Logger.getLogger(VolumeUsageEventListener.class);
-    
+    private static Logger LOG = Logger
+	    .getLogger(VolumeUsageEventListener.class);
+
     public static void register() {
 	Listeners.register(VolumeEvent.class, new VolumeUsageEventListener());
     }

@@ -38,14 +38,17 @@ import com.google.common.base.Preconditions;
 
 public class SnapShotUsageEventListener implements EventListener<SnapShotEvent> {
 
-    private static Logger LOG = Logger.getLogger(SnapShotUsageEventListener.class);
-    
-    public SnapShotUsageEventListener() {}
-    
+    private static Logger LOG = Logger
+	    .getLogger(SnapShotUsageEventListener.class);
+
+    public SnapShotUsageEventListener() {
+    }
+
     public static void register() {
 	Listeners.register(SnapShotEvent.class,
 		new SnapShotUsageEventListener());
     }
+
     @Override
     public void fireEvent(@Nonnull final SnapShotEvent event) {
 	Preconditions.checkNotNull(event, "Event is required");
@@ -55,39 +58,37 @@ public class SnapShotUsageEventListener implements EventListener<SnapShotEvent> 
 	User user = null;
 
 	try {
-	    user = Accounts.lookupUserById(event.getOwnerFullName().getUserId());
-	
-	
-	final ReportingAccountCrud reportingAccountDao = getReportingAccountCrud();
+	    user = Accounts
+		    .lookupUserById(event.getOwnerFullName().getUserId());
 
-	reportingAccountDao.createOrUpdateAccount(user.getAccount()
+	    final ReportingAccountCrud reportingAccountDao = getReportingAccountCrud();
+
+	    reportingAccountDao.createOrUpdateAccount(user.getAccount()
 		    .getName(), user.getAccount().getAccountNumber());
-	
 
-	final ReportingUserCrud reportingUserCrud = getReportingUserCrud();
+	    final ReportingUserCrud reportingUserCrud = getReportingUserCrud();
 
-	reportingUserCrud.createOrUpdateUser(user.getUserId(), user
+	    reportingUserCrud.createOrUpdateUser(user.getUserId(), user
 		    .getAccount().getAccountNumber(), user.getName());
 
-	final ReportingVolumeSnapshotEventStore eventStore = ReportingVolumeSnapshotEventStore
-		.getInstance();
+	    final ReportingVolumeSnapshotEventStore eventStore = ReportingVolumeSnapshotEventStore
+		    .getInstance();
 
-	switch (event.getActionInfo().getAction()) {
-	case SNAPSHOTCREATE:
-	    eventStore.insertCreateEvent(event.getUuid(),
-		    event.getDisplayName(), timeInMs, event.getOwnerFullName().getUserName(),
-		    event.getSizeGB());
-	    break;
-	case SNAPSHOTDELETE:
-	    eventStore.insertDeleteEvent(event.getUuid(), timeInMs);
-	    break;
+	    switch (event.getActionInfo().getAction()) {
+	    case SNAPSHOTCREATE:
+		eventStore.insertCreateEvent(event.getUuid(), event
+			.getDisplayName(), timeInMs, event.getOwnerFullName()
+			.getUserName(), event.getSizeGB());
+		break;
+	    case SNAPSHOTDELETE:
+		eventStore.insertDeleteEvent(event.getUuid(), timeInMs);
+		break;
+	    }
+
+	} catch (AuthException e) {
+	    LOG.error("Unable fire snap shot reporting event", e.getCause());
 	}
 
-	
-    } catch (AuthException e) {
-	   LOG.error("Unable fire snap shot reporting event", e.getCause());
-	}
-	
     }
 
     protected ReportingAccountCrud getReportingAccountCrud() {
