@@ -33,6 +33,7 @@ body {
     padding: 0;
 }
 
+
 /* ======= Helper classes ======= */
 
 .clearfix:before,
@@ -95,6 +96,8 @@ body {
     min-height: 30px;
     padding: 10px 0;
 }
+
+/* ==== NOTE: The inner-container class determines the content area within all major layout sections ==== */
 
 .inner-container {
     margin: 0 auto;
@@ -226,7 +229,7 @@ body {
 
 .header-nav ul li {
   border-top: 1px solid #ccc;
-  min-width: 105px;
+  min-width: 125px;
 }
 
 .header-nav ul li:first-child {
@@ -235,7 +238,7 @@ body {
 
 .header-nav ul li a {
   background-image: none;
-  padding: 11px 12px;
+  padding: 9px 12px;
 }
 
 /* ======== Explorer Resource Navigation styles ======= */
@@ -248,7 +251,7 @@ body {
 
 .resources-nav li {
   float: left;
-  width: 160px;
+  width: 192px;
   /* Needed so submenus that can be positioned absolutely */
   position: relative;
 }
@@ -283,54 +286,47 @@ body {
 /* ==== Link specific styling (including hover and selected states) ==== */
 
 .lnk-dashboard {
-  background-position: 0 0;
+  background-position: center 0;
 }
 .resources-nav li:hover a.lnk-dashboard,
 .lnk-dashboard:hover {
-  background-position: 0 -75px;
+  background-position: center -75px;
 }
 
 .lnk-images {
-  background-position: -160px 0;
+  background-position: center -150px;
 }
 .resources-nav li:hover a.lnk-images,
 .lnk-images:hover {
-  background-position: -160px -75px;
+  background-position: center -225px;
 }
 
 .lnk-instances {
-  background-position: -320px 0;
+  background-position: center -300px;
 }
 .resources-nav li:hover a.lnk-instances,
 .lnk-instances:hover {
-  background-position: -320px -75px;
+  background-position: center -375px;
 }
 
 .lnk-storage {
-  background-position: -483px 0;
+  background-position: center -450px;
 }
 .resources-nav li:hover a.lnk-storage,
 .lnk-storage:hover {
-  background-position: -483px -75px;
+  background-position: center -525px;
 }
 
 .lnk-netsec {
-  background-position: -650px 0;
+  background-position: center -600px;
 }
 .resources-nav li:hover a.lnk-netsec,
 .lnk-netsec:hover {
-  background-position: -650px -75px;
+  background-position: center -675px;
 }
 
-.lnk-support {
-  background-position: -810px 0;
-}
-.resources-nav li:hover a.lnk-support,
-.lnk-support:hover {
-  background-position: -810px -75px;
-}
 
-/* ==== Submenus ==== */
+/* ==== Explorer Submenus ==== */
 
 .resources-nav li ul {
   display: none;
@@ -341,13 +337,13 @@ body {
   position: absolute;
   top: 74px;
   left: 0;
-  width: 160px;
-  /* Set so the submewnu appears under the shadow of the parent, but above the content below it */
+  width: 192px;
+  /* Set so the submenu appears under the shadow of the parent, but above the content below it */
   z-index: 2;
 
-  -webkit-box-shadow: 0px 5px 8px rgba(0,0,0,0.34), inset 0px 2px 6px rgba(0,0,0,0.34);
-  -moz-box-shadow: 0px 5px 8px rgba(0,0,0,0.34), inset 0px 2px 6px rgba(0,0,0,0.34); 
-  box-shadow: 0px 5px 8px rgba(0,0,0,0.34), inset 0px 2px 6px rgba(0,0,0,0.34);
+  -webkit-box-shadow: 0px 4px 8px rgba(0,0,0,0.34), inset 0px 12px 10px -9px rgba(0,0,0,0.50);
+  -moz-box-shadow: 0px 4px 8px rgba(0,0,0,0.34), inset 0px 12px 10px -9px rgba(0,0,0,0.50); 
+  box-shadow: 0px 4px 8px rgba(0,0,0,0.34), inset 0px 12px 10px -9px rgba(0,0,0,0.50);
 }
 
 .resources-nav li:hover ul {
@@ -375,7 +371,7 @@ body {
   font-weight: 400;
   height: auto;
   margin: 0;
-  padding: 7px 10px 7px 35px;
+  padding: 9px 10px 9px 35px;
   text-align: left;
   text-decoration: none;
 }
@@ -663,7 +659,7 @@ span.selected {
    padding: 5px;
 }
 
-a.hide-notification  {
+.hide-notification  {
    float: right;
 }
 
@@ -679,7 +675,7 @@ a.hide-notification  {
    border-color: black;
 }
 
-div.help-link {
+.help-link {
    float: right;
 }
 
