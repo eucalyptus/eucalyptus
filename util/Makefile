@@ -62,10 +62,10 @@
 
 include ../Makedefs
 
-FAULT_DEBUG = -DDEBUG
-CC += -g
+#FAULT_DEBUG = -DDEBUG
+#CC += -g
 
-all: log.o config.o fault.o misc.o wc.o hash.o data.o euca_auth.o euca_axis.o ipc.o windows-bundle.o euca_rootwrap euca_mountwrap
+all: utf8.o log.o config.o fault.o misc.o wc.o hash.o data.o euca_auth.o euca_axis.o ipc.o windows-bundle.o euca_rootwrap euca_mountwrap
 
 build: all
 
@@ -84,10 +84,8 @@ test_misc: misc.c log.o ../storage/diskutil.o ipc.o
 test_wc: wc.c misc.o log.o ../storage/diskutil.o ipc.o
 	$(CC) $(CFLAGS) $(INCLUDES) -D_UNIT_TEST -o test_wc wc.c misc.o log.o ../storage/diskutil.o ipc.o $(LIBS) $(LDFLAGS)
 
-# I plan to roll the test_fault main() back into fault.c:
-# I only kept them separate to ensure fault.c could be used cleanly via extern
-test_fault: fault.c misc.o log.o wc.o ../storage/diskutil.o ipc.o
-	$(CC) $(CFLAGS) $(INCLUDES) `xslt-config --cflags` $(FAULT_DEBUG) -D_UNIT_TEST -o test_fault fault.c misc.o log.o wc.o ../storage/diskutil.o ipc.o $(LIBS) $(LDFLAGS)
+test_fault: fault.c misc.o log.o wc.o ../storage/diskutil.o ipc.o utf8.o
+	$(CC) $(CFLAGS) $(INCLUDES) `xslt-config --cflags` $(FAULT_DEBUG) -D_UNIT_TEST -o test_fault fault.c misc.o log.o wc.o ../storage/diskutil.o ipc.o utf8.o $(LIBS) $(LDFLAGS)
 
 ../storage/diskutil.o:
 	make -C ../storage

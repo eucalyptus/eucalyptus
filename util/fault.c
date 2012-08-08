@@ -26,6 +26,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #define _GNU_SOURCE
+#include <assert.h>
 #include <dirent.h>
 #include <errno.h>
 #include <limits.h>
@@ -43,6 +44,7 @@
 #include <misc.h>
 #include <fault.h>
 #include <wc.h>
+#include <utf8.h>
 
 /*
  * These definitions are all easily customized.
@@ -542,33 +544,45 @@ format_eucafault (const char *fault_id, const char_map **map)
     // Determine alignment (but only once)
     if (!max_label_len) {
         for (int i = 0; fault_labels[i]; i++) {
-            int this_label_len = 0;
+            int label_len = 0;
+            int w_label_len = 0;
+
             char *label = get_common_var (fault_labels[i]);
-            this_label_len = strlen (label);
+            label_len = strlen (label);
+
+            w_label_len = utf8_to_wchar (label, label_len, NULL, 0, 0);
             free (label);
-            if (this_label_len > max_label_len) {
-                max_label_len = this_label_len;
+            if (w_label_len > max_label_len) {
+                max_label_len = w_label_len;
             }
         }
     }
-
-    // Now spit it out!
     fprintf (logfile, "%s\n", STARS);
 
     for (int i = 0; fault_labels[i]; i++) {
+        int w_common_var_len = 0;
+        int common_var_len = 0;
+        int padding = 0;
         char *fault_var = NULL;
         char *common_var = get_common_var (fault_labels[i]);
-        fprintf (logfile, "%s %*s: ", BARS, max_label_len, common_var);
+
+        common_var_len = strlen (common_var);
+        w_common_var_len = utf8_to_wchar (common_var, common_var_len, NULL, 0,
+                                          0);
+        padding = max_label_len - w_common_var_len + 1;
+        fprintf (logfile, "%s%*s %s: ", BARS, padding, " ", common_var);
         free (common_var);
         fault_var = get_fault_var (fault_labels[i], fault_node);
 
         if (fault_var != NULL) {
             char *fault_subbed = NULL;
+
             if ((fault_subbed = c_varsub (fault_var, map)) != NULL) {
                 fprintf (logfile, "%s", fault_subbed);
             } else {
                 fprintf (logfile, "%s", fault_var);
             }
+            free (fault_subbed);
             free (fault_var);
         } else {
             common_var = get_common_var ("unknown");
@@ -577,7 +591,6 @@ format_eucafault (const char *fault_id, const char_map **map)
         }
         fprintf (logfile, "\n");
     }
-
     fprintf (logfile, "%s\n\n", STARS);
 }
 
@@ -590,7 +603,7 @@ int
 log_eucafault (char *fault_id, const char_map **map)
 {
     //va_list argv;
-    char *token;
+    //char *token;
     int count = 0;
 
     initialize_eucafaults ();
@@ -635,7 +648,7 @@ main (int argc, char ** argv)
     int dump = 0;
     int opt;
 
-    setlocale (LC_ALL, "en_US.utf-8");
+    //setlocale (LC_ALL, "en_US.utf-8");
 
     while ((opt = getopt (argc, argv, "d")) != -1) {
         switch (opt) {

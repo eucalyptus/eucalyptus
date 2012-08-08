@@ -395,11 +395,12 @@ main (int argc, char ** argv)
     wchar_t * s1_sub = varsub (s1, (const wchar_map **)m);
     assert (s1_sub != NULL);
     printf ("nice string subbed: %ls\n", s1_sub);
-
+    free (s1_sub);
     printf ("       ugly string: %ls\n", s2);
     wchar_t * s2_sub = varsub (s2, (const wchar_map **)m);
     assert (s2_sub != NULL);
     printf ("ugly string subbed: %ls\n", s2_sub);
+    free (s2_sub);
     assert (varsub (s3, (const wchar_map **)m) == NULL);
 
     varmap_free(m);
@@ -413,11 +414,12 @@ main (int argc, char ** argv)
     char * c_s1_sub = c_varsub (c_s1, (const char_map **)c_m);
     assert (c_s1_sub != NULL);
     printf ("nice string subbed: %s\n", c_s1_sub);
-
+    free (c_s1_sub);
     printf ("       ugly string: %s\n", c_s2);
     char * c_s2_sub = c_varsub (c_s2, (const char_map **)c_m);
     assert (c_s2_sub != NULL);
     printf ("ugly string subbed: %s\n", c_s2_sub);
+    free (c_s2_sub);
     assert (c_varsub (c_s3, (const char_map **)c_m) == NULL);
 
     c_varmap_free(c_m);
