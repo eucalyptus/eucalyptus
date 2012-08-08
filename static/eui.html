@@ -26,11 +26,6 @@
     <script type="text/javascript" language="javascript" src="lib/jquery.i18n.properties-min-1.0.9.js"></script>
     <script type="text/javascript" language="javascript" src="lib/jsrender.js"></script>
 
-    <!-- Eucalyptus JS -->
-    <script type="text/javascript">
-      var allTablesRef = {};
-    </script>
-
     <script type="text/javascript" language="javascript" src="js/jquery.generateFile.js"></script>
     <script type="text/javascript" language="javascript" src="js/jQueryExt.js"></script>
     <script type="text/javascript" language="javascript" src="js/login.js"></script>
@@ -45,6 +40,7 @@
     <script type="text/javascript" language="javascript" src="js/eucawidget.js"></script>
     <script type="text/javascript" language="javascript" src="js/dashboard.js"></script>
     <script type="text/javascript" language="javascript" src="js/keypair.js"></script>
+    <script type="text/javascript" language="javascript" src="js/volume.js"></script>
     <script type="text/javascript" language="javascript" src="js/template/eucatable.js"></script>
     <script type="text/javascript" language="javascript" src="js/template/eucadialog.js"></script>
   </head> 
@@ -120,11 +116,29 @@
       </script>
 
       <!-- Dashboard template -->
-      <div id="dashboard" class="content-box clearfix">
-        <div class="instances"> </div>  
-        <div class="storage"> </div>
-        <div class="netsec"> </div>
-      </div>
+     <div id="dashboard" class="content-box clearfix">
+       <div class="instances">
+         <div id="dashboard-instance-img">
+           <img src="images/dashboard_instance.png">
+         </div>
+         <div id="dashboard-instance-dropbox">
+         <div id="dashboard-instance-running">
+         <div id="dashboard-instance-stopped">
+         <div id="dashboard-instance-launch">
+</div>
+<div class="storage">
+<div id="dashboard-storage-img">
+<div id="dashboard-storage-volume">
+<div id="dashboard-storage-snapshot">
+<div id="dashboard-storage-buckets">
+</div>
+<div class="netsec">
+<div id="dashboard-netsec-img">
+<div id="dashboard-netsec-sgroup">
+<div id="dashboard-netsec-eip">
+<div id="dashboard-netsec-keypair">
+</div>
+</div>
       <!-- END Dashboard template -->
 
       <!-- Datatable templates -->
