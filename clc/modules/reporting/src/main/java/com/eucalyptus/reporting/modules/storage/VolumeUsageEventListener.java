@@ -97,8 +97,7 @@ public class VolumeUsageEventListener implements EventListener<VolumeEvent> {
 	    }
 
 	} catch (AuthException e) {
-	    LOG.debug("Unable to find event with user id "
-		    + event.getOwner().getUserId());
+	    LOG.error("Unable to fire volume reporting event.", e.getCause());
 	}
     }
 

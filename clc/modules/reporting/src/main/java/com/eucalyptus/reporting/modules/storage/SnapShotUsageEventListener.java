@@ -22,6 +22,11 @@ package com.eucalyptus.reporting.modules.storage;
 
 import javax.annotation.Nonnull;
 
+import org.apache.log4j.Logger;
+
+import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.reporting.event.SnapShotEvent;
@@ -33,6 +38,8 @@ import com.google.common.base.Preconditions;
 
 public class SnapShotUsageEventListener implements EventListener<SnapShotEvent> {
 
+    private static Logger LOG = Logger.getLogger(SnapShotUsageEventListener.class);
+    
     public SnapShotUsageEventListener() {}
     
     public static void register() {
@@ -45,14 +52,22 @@ public class SnapShotUsageEventListener implements EventListener<SnapShotEvent> 
 
 	final long timeInMs = getCurrentTimeMillis();
 
+	User user = null;
+
+	try {
+	    user = Accounts.lookupUserById(event.getOwnerFullName().getUserId());
+	
+	
 	final ReportingAccountCrud reportingAccountDao = getReportingAccountCrud();
 
-	reportingAccountDao.createOrUpdateAccount(event.getAccountId(), event.getAccountName());
+	reportingAccountDao.createOrUpdateAccount(user.getAccount()
+		    .getName(), user.getAccount().getAccountNumber());
 	
 
 	final ReportingUserCrud reportingUserCrud = getReportingUserCrud();
 
-	reportingUserCrud.createOrUpdateUser(event.getOwnerId(), event.getAccountId(), event.getAccountName());
+	reportingUserCrud.createOrUpdateUser(user.getUserId(), user
+		    .getAccount().getAccountNumber(), user.getName());
 
 	final ReportingVolumeSnapshotEventStore eventStore = ReportingVolumeSnapshotEventStore
 		.getInstance();
@@ -60,7 +75,7 @@ public class SnapShotUsageEventListener implements EventListener<SnapShotEvent> 
 	switch (event.getActionInfo().getAction()) {
 	case SNAPSHOTCREATE:
 	    eventStore.insertCreateEvent(event.getUuid(),
-		    event.getDisplayName(), timeInMs, event.getOwnerName(),
+		    event.getDisplayName(), timeInMs, event.getOwnerFullName().getUserName(),
 		    event.getSizeGB());
 	    break;
 	case SNAPSHOTDELETE:
@@ -68,6 +83,11 @@ public class SnapShotUsageEventListener implements EventListener<SnapShotEvent> 
 	    break;
 	}
 
+	
+    } catch (AuthException e) {
+	   LOG.error("Unable fire snap shot reporting event", e.getCause());
+	}
+	
     }
 
     protected ReportingAccountCrud getReportingAccountCrud() {

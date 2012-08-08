@@ -34,10 +34,7 @@ public class SnapShotEvent implements Event {
     private final ActionInfo actionInfo;
     private final String uuid;
     private final Long sizeGB;
-    private final String ownerId;
-    private final String ownerName;
-    private final String accountId;
-    private final String accountName;
+    private final OwnerFullName ownerFullName;
     private final String displayName;
 
     public static ActionInfo forSnapShotCreate() {
@@ -49,33 +46,24 @@ public class SnapShotEvent implements Event {
     }
 
     public static SnapShotEvent with(final ActionInfo actionInfo,
-	    final String uuid, final long sizeGB, final OwnerFullName owner,
+	    final String uuid, final long sizeGB, final OwnerFullName ownerFullName,
 	    final String displayName) {
 
-	return new SnapShotEvent(actionInfo, uuid, sizeGB, owner.getUserId(),
-		owner.getUserName(), owner.getAccountNumber(),
-		owner.getAccountName(), displayName);
+	return new SnapShotEvent(actionInfo, uuid, sizeGB, ownerFullName, displayName);
     }
 
     private SnapShotEvent(ActionInfo actionInfo, String uuid, long sizeGB,
-	    String ownerId, String ownerName, String accountId,
-	    String accountName, String displayName) {
+	    OwnerFullName ownerFullName , String displayName) {
 
 	assertThat(actionInfo, notNullValue());
 	assertThat(uuid, notNullValue());
 	assertThat(sizeGB, notNullValue());
-	assertThat(ownerId, notNullValue());
-	assertThat(accountId, notNullValue());
-	assertThat(accountName, notNullValue());
 	assertThat(displayName, notNullValue());
-
+	assertThat(ownerFullName.getUserId(), notNullValue());
 	this.actionInfo = actionInfo;
 	this.uuid = uuid;
 	this.sizeGB = sizeGB;
-	this.ownerId = ownerId;
-	this.ownerName = ownerName;
-	this.accountId = accountId;
-	this.accountName = accountName;
+	this.ownerFullName = ownerFullName;
 	this.displayName = displayName;
     }
 
@@ -88,20 +76,8 @@ public class SnapShotEvent implements Event {
 	return sizeGB;
     }
 
-    public String getOwnerId() {
-	return ownerId;
-    }
-
-    public String getOwnerName() {
-	return ownerName;
-    }
-
-    public String getAccountId() {
-	return accountId;
-    }
-
-    public String getAccountName() {
-	return accountName;
+    public OwnerFullName getOwnerFullName() {
+	return ownerFullName;
     }
 
     public ActionInfo getActionInfo() {
@@ -123,9 +99,7 @@ public class SnapShotEvent implements Event {
     @Override
     public String toString() {
 	return "SnapShotEvent [actionInfo=" + actionInfo + ", uuid=" + uuid
-		+ ", sizeGB=" + sizeGB + ", ownerId=" + ownerId
-		+ ", ownerName=" + ownerName + ", accountId=" + accountId
-		+ ", accountName=" + accountName + ", displayName="
+		+ ", sizeGB=" + sizeGB + "," + "ownerName=" + ownerFullName.getUserName() + " displayName="
 		+ displayName + "]";
     }
 
