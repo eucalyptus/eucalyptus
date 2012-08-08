@@ -94,7 +94,7 @@ public class FaultSubsystem {
 	// TODO one log per component:
 	private Map<Integer, Fault> faultMap = new HashMap<Integer, Fault>();
 	private Map<String, String> common = new HashMap<String, String>();
-	private final SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+	private final SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss z");
 	private static final FaultSubsystem instance = new FaultSubsystem();
 
 	
