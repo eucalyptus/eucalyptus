@@ -27,8 +27,8 @@ import com.eucalyptus.event.Listeners;
 import com.eucalyptus.reporting.event.VolumeEvent;
 import com.eucalyptus.reporting.event.VolumeEvent.InstanceActionInfo;
 import com.eucalyptus.reporting.event_store.ReportingVolumeEventStore;
-import com.eucalyptus.reporting.user.ReportingAccountDao;
-import com.eucalyptus.reporting.user.ReportingUserDao;
+import com.eucalyptus.reporting.domain.ReportingAccountCrud;
+import com.eucalyptus.reporting.domain.ReportingUserCrud;
 import com.google.common.base.Preconditions;
 
 /**
@@ -46,15 +46,13 @@ public class VolumeUsageEventListener implements EventListener<VolumeEvent> {
 
 	final long timeInMs = getCurrentTimeMillis();
 
-	final ReportingAccountDao reportingAccountDao = getReportingAccountDao();
+	final ReportingAccountCrud reportingAccountCrud = getReportingAccountCrud();
 
-	reportingAccountDao.addUpdateAccount(event.getAccountId(),
-		event.getAccountName());
+	reportingAccountCrud.createOrUpdateAccount(event.getAccountId(), event.getAccountName());
+	
+	final ReportingUserCrud reportingUserCrud = getReportingUserCrud();
 
-	final ReportingUserDao reportingUserDao = getReportingUserDao();
-
-	reportingUserDao
-		.addUpdateUser(event.getOwnerId(), event.getOwnerName());
+	reportingUserCrud.createOrUpdateUser(event.getOwnerId(), event.getAccountId(), event.getAccountName());
 
 	final ReportingVolumeEventStore eventStore = getReportingVolumeEventStore();
 
@@ -81,12 +79,12 @@ public class VolumeUsageEventListener implements EventListener<VolumeEvent> {
 
     }
 
-    protected ReportingAccountDao getReportingAccountDao() {
-	return ReportingAccountDao.getInstance();
+    protected ReportingAccountCrud getReportingAccountCrud() {
+	return ReportingAccountCrud.getInstance();
     }
 
-    protected ReportingUserDao getReportingUserDao() {
-	return ReportingUserDao.getInstance();
+    protected ReportingUserCrud getReportingUserCrud() {
+	return ReportingUserCrud.getInstance();
     }
 
     protected ReportingVolumeEventStore getReportingVolumeEventStore() {
