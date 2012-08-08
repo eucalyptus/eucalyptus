@@ -22,6 +22,11 @@ package com.eucalyptus.reporting.modules.storage;
 
 import javax.annotation.Nonnull;
 
+import org.apache.log4j.Logger;
+
+import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.reporting.event.VolumeEvent;
@@ -29,6 +34,7 @@ import com.eucalyptus.reporting.event.VolumeEvent.InstanceActionInfo;
 import com.eucalyptus.reporting.event_store.ReportingVolumeEventStore;
 import com.eucalyptus.reporting.domain.ReportingAccountCrud;
 import com.eucalyptus.reporting.domain.ReportingUserCrud;
+
 import com.google.common.base.Preconditions;
 
 /**
@@ -36,6 +42,8 @@ import com.google.common.base.Preconditions;
  */
 public class VolumeUsageEventListener implements EventListener<VolumeEvent> {
 
+    private static Logger LOG = Logger.getLogger(VolumeUsageEventListener.class);
+    
     public static void register() {
 	Listeners.register(VolumeEvent.class, new VolumeUsageEventListener());
     }
@@ -45,38 +53,53 @@ public class VolumeUsageEventListener implements EventListener<VolumeEvent> {
 	Preconditions.checkNotNull(event, "Event is required");
 
 	final long timeInMs = getCurrentTimeMillis();
+	User user = null;
 
-	final ReportingAccountCrud reportingAccountCrud = getReportingAccountCrud();
+	try {
+	    user = Accounts.lookupUserById(event.getOwner().getUserId());
 
-	reportingAccountCrud.createOrUpdateAccount(event.getAccountId(), event.getAccountName());
-	
-	final ReportingUserCrud reportingUserCrud = getReportingUserCrud();
+	    final ReportingAccountCrud reportingAccountCrud = getReportingAccountCrud();
 
-	reportingUserCrud.createOrUpdateUser(event.getOwnerId(), event.getAccountId(), event.getAccountName());
+	    reportingAccountCrud.createOrUpdateAccount(user.getAccount()
+		    .getName(), user.getAccount().getAccountNumber());
 
-	final ReportingVolumeEventStore eventStore = getReportingVolumeEventStore();
+	    final ReportingUserCrud reportingUserCrud = getReportingUserCrud();
 
-	switch (event.getActionInfo().getAction()) {
-	case VOLUMECREATE:
-	    eventStore.insertCreateEvent(event.getUuid(),
-		    event.getDisplayName(), timeInMs, event.getOwnerId(),
-		    event.getAvailabilityZone(), event.getSizeGB());
-	    break;
-	case VOLUMEDELETE:
-	    eventStore.insertDeleteEvent(event.getUuid(), timeInMs);
-	    break;
-	case VOLUMEATTACH:
-	    eventStore.insertAttachEvent(event.getUuid(),
-		    ((InstanceActionInfo) event.getActionInfo())
-			    .getInstanceUuid(), event.getSizeGB(), timeInMs);
-	    break;
-	case VOLUMEDETACH:
-	    eventStore.insertDetachEvent(event.getUuid(),
-		    ((InstanceActionInfo) event.getActionInfo())
-			    .getInstanceUuid(), event.getSizeGB(), timeInMs);
-	    break;
+	    reportingUserCrud.createOrUpdateUser(user.getUserId(), user
+		    .getAccount().getAccountNumber(), user.getName());
+
+	    final ReportingVolumeEventStore eventStore = getReportingVolumeEventStore();
+
+	    switch (event.getActionInfo().getAction()) {
+	    case VOLUMECREATE:
+		eventStore.insertCreateEvent(event.getUuid(), event
+			.getDisplayName(), timeInMs, event.getOwner()
+			.getUserId(), event.getAvailabilityZone(), event
+			.getSizeGB());
+		break;
+	    case VOLUMEDELETE:
+		eventStore.insertDeleteEvent(event.getUuid(), timeInMs);
+		break;
+	    case VOLUMEATTACH:
+		eventStore
+			.insertAttachEvent(event.getUuid(),
+				((InstanceActionInfo) event.getActionInfo())
+					.getInstanceUuid(), event.getSizeGB(),
+				timeInMs);
+		break;
+	    case VOLUMEDETACH:
+		eventStore
+			.insertDetachEvent(event.getUuid(),
+				((InstanceActionInfo) event.getActionInfo())
+					.getInstanceUuid(), event.getSizeGB(),
+				timeInMs);
+		break;
+	    }
+
+	} catch (AuthException e) {
+	    LOG.debug("Unable to find event with user id "
+		    + event.getOwner().getUserId());
 	}
-
     }
 
     protected ReportingAccountCrud getReportingAccountCrud() {
