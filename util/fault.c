@@ -586,21 +586,19 @@ format_eucafault (const char *fault_id, const char_map **map)
 
     // Get time.
     secs = time (NULL);
-    if (localtime_r (&secs, &lt) == NULL) {
+    if (gmtime_r (&secs, &lt) == NULL) {
         // Someone call Dr. Who.
         lt.tm_year = lt.tm_mon = lt.tm_mday = 0;
         lt.tm_hour = lt.tm_min = lt.tm_sec = 0;
-        lt.tm_isdst = 0;
-        tzname[0] = tzname[1] = 0;
     } else {
         // Account for implied offsets in struct.
         lt.tm_year += 1900;
         lt.tm_mon += 1;
     }
     // Construct timestamped fault header.
-    fprintf (logfile, "  ERR-%s %04d-%02d-%02d %02d:%02d:%02d %s ", fault_id,
+    fprintf (logfile, "  ERR-%s %04d-%02d-%02d %02d:%02d:%02dZ ", fault_id,
              lt.tm_year, lt.tm_mon, lt.tm_mday,
-             lt.tm_hour, lt.tm_min, lt.tm_sec, tzname[lt.tm_isdst]);
+             lt.tm_hour, lt.tm_min, lt.tm_sec);
 
     if ((fault_var = get_fault_var ("fault", fault_node)) != NULL) {
         char *fault_subbed = NULL;
