@@ -2,6 +2,7 @@
   $.widget('eucalyptus.keypair', $.eucalyptus.eucawidget, {
     options : { },
     tableWrapper : null,
+    delDialog : null,
     // TODO: is _init() the right method to instantiate everything? 
     _init : function() {
       var thisObj = this;
@@ -38,14 +39,14 @@
         txt_create : keypair_create,
         txt_found : keypair_found,
         menu_text : table_menu_main_action,
-        menu_actions : { delete: [table_menu_delete_action, function () { deleteAction('keys'); } ] }
+        menu_actions : { delete: [table_menu_delete_action, function (args) { thisObj.deleteAction(args) } ] }
       });
       tableWrapper.appendTo(this.element);
 
       $tmpl = $('html body').find('.templates #keypairDelDlgTmpl').clone();
       $del_dialog = $($tmpl.render($.i18n.map));
 
-      $del_dialog.eucadialog({ 
+      this.delDialog = $del_dialog.eucadialog({
          id: 'keys-delete',
          title: $('<div>').addClass('help-link').append( 
                   $('<a>').attr('href','#').text('?')),
@@ -163,7 +164,23 @@
 
     close: function() {
       this._super('close');
+    },
+
+    deleteAction : function(rowsToDelete) {
+      //TODO: add hide menu
+
+      if ( rowsToDelete.length > 0 ) {
+        // show delete dialog box
+        $deleteNames = this.delDialog.find("span.delete-names")
+        $deleteNames.html('');
+        for ( i = 0; i<rowsToDelete.length; i++ ) {
+          t = escapeHTML(rowsToDelete[i]);
+          $deleteNames.append(t).append("<br/>");
+        }
+        this.delDialog.dialog('open');
+      }
     }
+
   });
 })(jQuery,
    window.eucalyptus ? window.eucalyptus : window.eucalyptus = {});

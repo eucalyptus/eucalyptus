@@ -124,7 +124,7 @@
       var $actionItems = $('<li>');
       $.each(args.actions, function (key, value){ // key:action, value: property
         $('<a>').attr('href','#').attr('id', thisObj.options.id+'-'+key).text (value[0]).click( function() {
-          value[1].call();  
+          value[1].call(this, thisObj.getAllSelectedRows());
         }).appendTo($actionItems);
       });
 

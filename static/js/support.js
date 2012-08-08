@@ -21,28 +21,6 @@ function escapeHTML(input) {
   return $('<div/>').text(input).html();
 }
 
-//TODO: move this into eucatable
-function deleteAction(tableName) {
-  $tableWrapper = $('div#'+tableName+'-wrapper');
-
-  //TODO: fix hide menu
-  $menuUl = $("div.table_" + tableName + "_top div.euca-table-action ul");
-  $menuUl.removeClass('activemenu');
-
-  var rowsToDelete = $tableWrapper.eucatable('getAllSelectedRows');
-
-  if ( rowsToDelete.length > 0 ) {
-    // show delete dialog box
-    $deleteNames = $("#" + tableName + "-delete-names");
-    $deleteNames.html('');
-    for ( i = 0; i<rowsToDelete.length; i++ ) {
-      t = escapeHTML(rowsToDelete[i]);
-      $deleteNames.append(t).append("<br/>");
-    }
-    $("#" + tableName + "-delete-dialog").dialog('open');
-  }
-}
-
 function deleteSelectedVolumes() {
   var rowsToDelete = getAllSelectedRows('volumes', 1);
   for ( i = 0; i<rowsToDelete.length; i++ ) {
@@ -73,6 +51,7 @@ function deleteSelectedVolumes() {
     });
   }
 }
+
 function S4() {
   return (((1+Math.random())*0x10000)|0).toString(16).substring(1);
 }
