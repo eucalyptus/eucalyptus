@@ -18,7 +18,7 @@
   CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
   additional information or have any questions.
   -->
-<<eucafaults version="1" description="Templates for the fault subsystem">
+<eucafaults version="1" description="Templates for the fault subsystem">
   <fault
     id="1234"
     message="${daemon} is not running">
@@ -36,8 +36,8 @@
 
     <resolution>
       <message>
-        1) install NTPD
-        2) run NTPD
+        1) install ${daemon}
+        2) run ${daemon}
       </message>
     </resolution>
   </fault>
