@@ -155,6 +155,9 @@ public class TroubleshootingBootstrapper extends Bootstrapper {
 		 */
 		@Override
 		public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
+			if (newValue == null) {
+				newValue = "";
+			}
 			LOG.info( "Triggering fault with params " + newValue);
 			List<String> args = split((String) newValue);
 			if (args == null) throw new ConfigurablePropertyException("Invalid params for fault trigger " + newValue);
@@ -206,6 +209,9 @@ public class TroubleshootingBootstrapper extends Bootstrapper {
 		 */
 		@Override
 		public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
+			if (newValue == null) {
+				newValue = "";
+			}
 			String newLogLevel = (String) newValue;
 			newLogLevel = makeNotNullAndTrim(newLogLevel).toUpperCase();// Null or empty will not reset log levels
 			if (!(newLogLevel.isEmpty() || Arrays.asList(logLevels).contains(newLogLevel))) {

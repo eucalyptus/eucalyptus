@@ -82,7 +82,7 @@ public class Fault {
 	private static final File faultLogFile = BaseDirectory.LOG.getChildFile("cloud-faults.log");
 	private static final String ASTERISK_LINE = makeString(72, '*');
 	private static final String EMPTY_LINE = "";
-	private static final String INNER_PREFIX = "| ";
+	private static final String INNER_PREFIX = "  ";
 	private String faultLine = "${err_id} ${timestamp} ${fault_msg}";
 	private String conditionLine = "${condition}: ${condition_msg}";
 	private String causeLine = "${cause}: ${cause_msg}";
@@ -90,20 +90,20 @@ public class Fault {
 	private String locationLine = "${location}: ${location_msg}";
 	private String resolutionLine = "${resolution}:";
 	private String resolutionMessageLines = "${resolution_msg}";
-	
+
 	// Fault looks like
 	//***********************************************************************
-	//| ${err_id} ${timestamp} ${fault_msg}
-	//|
-	//| ${condition}: ${condition_msg}
-	//| ${cause}: ${cause_msg}
-	//| ${initiator}: ${initiator_msg} 
-	//| ${location}: ${location_msg}
-	//| ${resolution}: 
-	//|
-	//| $resolution_msg
+	//  ${err_id} ${timestamp} ${fault_msg}
+	// 
+	//  ${condition}: ${condition_msg}
+	//  ${cause}: ${cause_msg}
+	//  ${initiator}: ${initiator_msg} 
+	//  ${location}: ${location_msg}
+	//  ${resolution}: 
+	// 
+	//  $resolution_msg
 	//***********************************************************************
-	
+
 	private static String prefixLines(String prefix, String... lines) {
 		StringWriter stringWriter = new StringWriter();
 		PrintWriter out = new PrintWriter(stringWriter);
@@ -123,8 +123,8 @@ public class Fault {
 		out.close();
 		return stringWriter.toString();
 	}
-	
-	
+
+
 	private static String makeString(int i, char c) {
 		char[] stringArray = new char[i];
 		Arrays.fill(stringArray, c);
@@ -147,21 +147,21 @@ public class Fault {
 	public void log(Writer writer) throws IOException {
 		writer.write(toString());
 	}
-	
+
 	public void log() {
 		synchronized(Fault.class) {
 			if (!faultLogFile.getParentFile().isDirectory()) {
-			}
 
-			PrintWriter out = null;
-			try {
-				out = new PrintWriter(new FileWriter(faultLogFile, true));
-				out.println(toString());
-			} catch (IOException ex) {
-				LOG.error("Can not open " + faultLogFile.getAbsolutePath() + " for writing.");
-			} finally {
-				if (out != null) {
-					out.close();
+				PrintWriter out = null;
+				try {
+					out = new PrintWriter(new FileWriter(faultLogFile, true));
+					out.println(toString());
+				} catch (IOException ex) {
+					LOG.error("Can not open " + faultLogFile.getAbsolutePath() + " for writing.");
+				} finally {
+					if (out != null) {
+						out.close();
+					}
 				}
 			}
 		}
@@ -188,16 +188,15 @@ public class Fault {
 		out.println();
 		out.println(ASTERISK_LINE);
 		out.println(prefixLines(INNER_PREFIX, 
-							faultLine, 
-							EMPTY_LINE, 
-							conditionLine, 
-							causeLine,
-							initiatorLine,
-							locationLine,
-							resolutionLine,
-							EMPTY_LINE, 
-							resolutionMessageLines)
-					);
+				faultLine, 
+				EMPTY_LINE, 
+				conditionLine, 
+				causeLine,
+				initiatorLine,
+				locationLine,
+				resolutionLine,
+				resolutionMessageLines)
+				);
 		out.println(ASTERISK_LINE);
 		out.close();
 		return stringWriter.toString();
@@ -222,6 +221,6 @@ public class Fault {
 		}
 		return retVal;
 	}
-	
+
 
 }
