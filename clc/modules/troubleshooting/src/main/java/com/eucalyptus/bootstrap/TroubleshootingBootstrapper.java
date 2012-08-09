@@ -68,10 +68,15 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Enumeration;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Properties;
+import java.util.Set;
 import java.util.StringTokenizer;
 
+import org.apache.log4j.Appender;
+import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 import com.eucalyptus.cloud.ws.DNSControl;
 import com.eucalyptus.component.id.Dns;
@@ -231,7 +236,27 @@ public class TroubleshootingBootstrapper extends Bootstrapper {
 			if (newLogLevel.isEmpty()) {
 				System.setProperty("euca.log.level", newLogLevel.toUpperCase());
 				//LoggingResetter.resetLoggingLevels();
-				LoggingResetter.resetLoggingWithXML();
+				//LoggingResetter.resetLoggingWithXML();
+				Set<Appender> allAppenderSet = new HashSet<Appender>();
+				List<Appender> allAppenderList = new ArrayList<Appender>();
+				Enumeration e = LogManager.getRootLogger().getAllAppenders();
+				while (e.hasMoreElements()) {
+					Appender a = (Appender) e.nextElement();
+					allAppenderSet.add(a);
+					allAppenderList.add(a);
+				}
+				Enumeration e2 = LogManager.getLoggerRepository().getCurrentLoggers();
+				while (e2.hasMoreElements()) {
+					Logger logger = (Logger) e2.nextElement();
+					Enumeration e3 = logger.getAllAppenders();
+					while (e3.hasMoreElements()) {
+						Appender a = (Appender) e3.nextElement();
+						allAppenderSet.add(a);
+						allAppenderList.add(a);
+					}
+				}
+				LOG.fatal("Set appenders = " + allAppenderSet.size());
+				LOG.fatal("List appenders = " + allAppenderList.size());
 			}
 			LOG.fatal("test level FATAL");
 			LOG.error("test level ERROR");
