@@ -29,6 +29,17 @@
         // volume
         $.i18n.prop('volume_dialog_del_text');
         $.i18n.prop('volume_dialog_add_text');
+
+        // dashboard
+        $.i18n.prop('dashboard_az_all');
+        $.i18n.prop('dashboard_instance_running');
+        $.i18n.prop('dashboard_instance_stopped');
+        $.i18n.prop('dashboard_volumes');
+        $.i18n.prop('dashboard_snapshots');
+        $.i18n.prop('dashboard_buckets');
+        $.i18n.prop('dashboard_sgroup');
+        $.i18n.prop('dashboard_eip');
+        $.i18n.prop('dashboard_keypair');
       }
     });
   }
