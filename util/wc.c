@@ -163,6 +163,9 @@ c_wcappendn (char * dst, const char * src, size_t src_limit)
 // returns a new string with all variables substituted or returns NULL
 // (and logs an error with logprintfl()) if some variables were not
 // found in the map or if the map is empty
+//
+// FIXME: This currently will not sub any variables if it can't sub *all*
+//        variables. This is unfriendly: it should sub what it can.
 wchar_t *
 varsub (const wchar_t * s, const wchar_map * vars [])
 {
@@ -269,6 +272,9 @@ varmap_free (wchar_map **map)
 // returns a new string with all variables substituted or returns NULL
 // (and logs an error with logprintfl()) if some variables were not
 // found in the map or if the map is empty
+//
+// FIXME: This currently will not sub any variables if it can't sub *all*
+//        variables. This is unfriendly: it should sub what it can.
 char *
 c_varsub (const char * s, const char_map * vars [])
 {
