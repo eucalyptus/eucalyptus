@@ -36,18 +36,19 @@
  * encounters. Thus, it is recommended all applications call
  * initialize_eucafaults() as part of their own initialization.
  *
- * Return value indicates number of faults successfully loaded into
- * database.
+ * Returns the number of faults successfully loaded into registry. If
+ * the registry was previously loaded, returns the number of loaded
+ * faults as a negative number.
  */
 extern int initialize_eucafaults (void);
 
 /*
  * Usage: log_eucafault (FAULT_ID, parameter_map)
  *
- * Will call initialize_eucafaults() internally to ensure fault model
+ * Will call initialize_eucafaults() internally to ensure fault registry
  * has been loaded.
  *
- * Return TRUE if fault successfully logged, FALSE otherwise.
+ * Returns TRUE if fault successfully logged, FALSE otherwise.
  */
 extern boolean log_eucafault (char *, const char_map **);
 
@@ -61,7 +62,7 @@ extern boolean log_eucafault (char *, const char_map **);
  * Note that the final NULL argument is very important!
  * (...because va_arg() is stupid.)
  *
- * Will call initialize_eucafaults() internally to ensure fault model
+ * Will call initialize_eucafaults() internally to ensure fault registry
  * has been loaded.
  *
  * Returns the number of substitution parameters it was called with,

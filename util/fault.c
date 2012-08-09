@@ -52,6 +52,7 @@
  * FIXME: Make some or all of them configuration-file options?
  * FIXME: Make paths relative to some configurable base directory?
  */
+#define LOGDIR "/var/log/eucalyptus"
 #define DISTRO_FAULTDIR "/usr/share/eucalyptus/faults"
 #define CUSTOM_FAULTDIR "/etc/eucalyptus/faults"
 #define DEFAULT_LOCALIZATION "en_US"
@@ -104,7 +105,7 @@ static char *fault_labels[] = { "condition",
  * Shared data
  */
 
-// This holds the in-memory model of the fault database.
+// This holds the in-memory model of the fault registry.
 static xmlDoc *ef_doc = NULL;
 
 // FIXME: Thread safety is only half-baked at this point.
@@ -230,8 +231,8 @@ read_eucafault (const char * faultdir, const char * fault_id)
 }
 
 /*
- * Adds XML doc for a fault to the in-memory fault model (doc).
- * Creates model if none exists yet.
+ * Adds XML doc for a fault to the in-memory fault registry (doc).
+ * Creates registry if none exists yet.
  *
  * Can also add COMMON_PREFIX (<common>) block.
  */
@@ -243,15 +244,14 @@ add_eucafault (const xmlDoc *new_doc)
         ef_doc = xmlCopyDoc ((xmlDoc *)new_doc, 1); /* 1 == recursive copy */
 
         if (ef_doc == NULL) {
-            logprintfl (EUCAERROR, "Problem creating fault database.\n");
+            logprintfl (EUCAERROR, "Problem creating fault registry.\n");
             return FALSE;
         }
     } else {
         PRINTF1 (("Appending to existing document.\n"));
         if (xmlAddNextSibling (xmlFirstElementChild (xmlDocGetRootElement (ef_doc)),
                                xmlFirstElementChild (xmlDocGetRootElement ((xmlDoc *)new_doc))) == NULL) {
-            // FIXME: Add more diagnostic information to this error message?
-            logprintfl (EUCAERROR, "Problem adding to fault database.\n");
+            logprintfl (EUCAERROR, "Problem adding fault to existing registry.\n");
             return FALSE;
         }
     }
@@ -307,21 +307,20 @@ get_common_block (const xmlDoc *doc)
 
 
 /*
- * Returns fault node if fault id exists in model, NULL if not.
+ * Returns fault node if fault id exists in registry, NULL if not.
  *
- * Uses global fault model unless a non-NULL doc pointer is passed as a
+ * Uses global fault registry unless a non-NULL doc pointer is passed as a
  * parameter, so it can be used either to match a fault id in a single
  * doc or to determine if a fault id already exists in the overall
- * model.
+ * registry.
  *
- * FIXME: Extend this to return the first fault node in a doc if NULL id
- * supplied?
+ * If NULL id supplied, simply returns the first fault node in document.
  */
 static xmlNode *
 get_eucafault (const char *id, const xmlDoc *doc)
 {
     /*
-     * Uses global model if no doc supplied.
+     * Uses global registry if no doc supplied.
      */
     if (doc == NULL) {
         doc = ef_doc;
@@ -331,7 +330,9 @@ get_eucafault (const char *id, const xmlDoc *doc)
          node; node = node->next) {
         char *this_id = get_fault_id (node);
 
-        if ((this_id != NULL) && !strcasecmp (this_id, id)) {
+        if (id == NULL) {
+            return node;
+        } else if ((this_id != NULL) && !strcasecmp (this_id, id)) {
             return node;
         }
     }
@@ -341,24 +342,27 @@ get_eucafault (const char *id, const xmlDoc *doc)
 /*
  * EXTERNAL ENTRY POINT
  *
- * Builds the localized fault database from XML files supplied in
+ * Builds the localized fault registry from XML files supplied in
  * various directories.
+ *
+ * Returns the number of faults successfully loaded into registry. If
+ * the registry was previously loaded, returns the number of loaded
+ * faults as a negative number.
  */
 int
 initialize_eucafaults (void)
 {
     struct stat dirstat;
-    int populate = 0;           /* FIXME: Use or delete. */
+    static int faults_loaded = 0;
     char *locale = NULL;
-    static boolean faults_initialized = FALSE;
     static char faultdirs[NUM_FAULTDIR_TYPES][PATH_MAX];
 
     pthread_mutex_lock (&fault_mutex);
 
-    if (faults_initialized) {
+    if (faults_loaded) {
         PRINTF1 (("Attempt to reinitialize fault registry? Skipping...\n"));
         pthread_mutex_unlock (&fault_mutex);
-        return 0;
+        return -faults_loaded;
     }
     PRINTF (("Initializing fault registry directories.\n"));
     if ((locale = getenv (LOCALIZATION_ENV_VAR)) == NULL) {
@@ -410,7 +414,7 @@ initialize_eucafaults (void)
 
                         if (new_fault) {
                             if (add_eucafault (new_fault)) {
-                                faults_initialized = TRUE;
+                                faults_loaded++;
                             }
                             xmlFreeDoc (new_fault);
                         } else {
@@ -423,8 +427,8 @@ initialize_eucafaults (void)
         }
     }
     pthread_mutex_unlock (&fault_mutex);
-
-    return populate;            /* FIXME: Doesn't yet return population! */
+    PRINTF (("Loaded %d faults into registry.\n", faults_loaded));
+    return faults_loaded;
 }
 
 /*
@@ -524,7 +528,7 @@ get_fault_var (const char *var, const xmlNode *f_node)
                         return (char *)xmlNodeGetContent (subnode);
                     }
                 }
-                // FIXME: Need a more elegant method than another list walk.
+                // FIXME: More elegant method than another list walk?
                 for (xmlNode *subnode = xmlFirstElementChild (node); subnode;
                      subnode = subnode->next) {
                     if ((node->type == XML_ELEMENT_NODE) &&
@@ -655,12 +659,14 @@ format_eucafault (const char *fault_id, const char_map **map)
 /*
  * EXTERNAL ENTRY POINT
  *
- * Logs a fault, initializing the fault model, if necessary.
+ * Logs a fault, initializing the fault registry, if necessary.
  */
 boolean
 log_eucafault (char *fault_id, const char_map **map)
 {
-    initialize_eucafaults ();
+    int load = initialize_eucafaults ();
+
+    PRINTF1 (("initialize_eucafaults() returned %d\n", load));
 
     if (get_eucafault (fault_id, NULL) != NULL) {
         // ^-- Simple existence check for now.
@@ -676,7 +682,7 @@ log_eucafault (char *fault_id, const char_map **map)
 /*
  * EXTERNAL ENTRY POINT
  *
- * Logs a fault, initializing the fault model, if necessary.
+ * Logs a fault, initializing the fault registry, if necessary.
  *
  * Returns the number of substitution parameters it was called with,
  * returning it as a negative number if the underlying log_eucafault()
@@ -689,8 +695,9 @@ log_eucafault_v (char *fault_id, ...)
     char *token[2];
     char_map **m = NULL;
     int count = 0;
+    int load = initialize_eucafaults ();
 
-    initialize_eucafaults ();
+    PRINTF1 (("initialize_eucafaults() returned %d\n", load));
     va_start (argv, fault_id);
 
     while ((token[count % 2] = va_arg (argv, char *)) != NULL) {
@@ -719,17 +726,19 @@ log_eucafault_v (char *fault_id, ...)
 #ifdef _UNIT_TEST
 
 /*
- * Performs blind dump of XML fault model to stdout.
+ * Performs blind dump of XML fault registry to stdout.
  */
 static void
 dump_eucafaults_db (void)
 {
-    // FIXME: add some stats?
     printf ("\n");
     xmlDocDump (stdout, ef_doc);
     printf ("\n");
 }
 
+/*
+ * Prints simple usage message.
+ */
 static void
 usage (char *argv0)
 {
@@ -757,7 +766,9 @@ main (int argc, char **argv)
             return 1;
         }
     }
-    initialize_eucafaults ();
+    opt = initialize_eucafaults ();
+
+    PRINTF (("initialize_eucafaults() returned %d\n", opt));
 
     if (optind < argc) {
         char_map **m = c_varmap_alloc (NULL, "daemon", "Balrog");
