@@ -47,9 +47,9 @@ extern int initialize_eucafaults (void);
  * Will call initialize_eucafaults() internally to ensure fault model
  * has been loaded.
  *
- * Return value is number of parameter arguments detected prior to NULL.
+ * Return TRUE if fault successfully logged, FALSE otherwise.
  */
-extern int log_eucafault (char *, const char_map **);
+extern boolean log_eucafault (char *, const char_map **);
 
 /*
  * Usage: log_eucafault_v (FAULT_ID, param1, param1text, param2, param2text,
@@ -64,7 +64,9 @@ extern int log_eucafault (char *, const char_map **);
  * Will call initialize_eucafaults() internally to ensure fault model
  * has been loaded.
  *
- * Return value is number of parameter arguments detected prior to NULL.
+ * Returns the number of substitution parameters it was called with,
+ * returning it as a negative number if the underlying log_eucafault()
+ * call returned FALSE.
  */
 extern int log_eucafault_v (char *, ...);
 

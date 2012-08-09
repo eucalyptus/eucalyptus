@@ -123,7 +123,7 @@ static boolean add_eucafault (const xmlDoc *);
 static xmlNode *get_common_block (const xmlDoc *);
 static char *get_common_var (const char *);
 static char *get_fault_var (const char *, const xmlNode *);
-static void format_eucafault (const char *, const char_map **);
+static boolean format_eucafault (const char *, const char_map **);
 
 /*
  * Utility functions -- move to misc.c?
@@ -250,7 +250,7 @@ add_eucafault (const xmlDoc *new_doc)
         PRINTF1 (("Appending to existing document.\n"));
         if (xmlAddNextSibling (xmlFirstElementChild (xmlDocGetRootElement (ef_doc)),
                                xmlFirstElementChild (xmlDocGetRootElement ((xmlDoc *)new_doc))) == NULL) {
-            // FIXME: Add more diagnostic information to this error message.
+            // FIXME: Add more diagnostic information to this error message?
             logprintfl (EUCAERROR, "Problem adding to fault database.\n");
             return FALSE;
         }
@@ -389,10 +389,10 @@ initialize_eucafaults (void)
     for (int i = 0; i < NUM_FAULTDIR_TYPES; i++) {
         if (faultdirs[i][0]) {
             if (stat (faultdirs[i], &dirstat) != 0) {
-                logprintfl (EUCAWARN, "stat() problem with %s: %s\n",
+                logprintfl (EUCAINFO, "stat() problem with %s: %s\n",
                            faultdirs[i], strerror (errno));
             } else if (!S_ISDIR (dirstat.st_mode)) {
-                logprintfl (EUCAWARN,
+                logprintfl (EUCAINFO,
                            "stat() problem with %s: Not a directory\n",
                            faultdirs[i], strerror (errno));
             } else {
@@ -524,7 +524,7 @@ get_fault_var (const char *var, const xmlNode *f_node)
                         return (char *)xmlNodeGetContent (subnode);
                     }
                 }
-                // FIXME: Need a more elegant method than another list walk!
+                // FIXME: Need a more elegant method than another list walk.
                 for (xmlNode *subnode = xmlFirstElementChild (node); subnode;
                      subnode = subnode->next) {
                     if ((node->type == XML_ELEMENT_NODE) &&
@@ -545,7 +545,7 @@ get_fault_var (const char *var, const xmlNode *f_node)
 /*
  * Formats fault-log output and sends to logfile (or console).
  */
-static void
+static boolean
 format_eucafault (const char *fault_id, const char_map **map)
 {
     static FILE *logfile = NULL;
@@ -559,6 +559,7 @@ format_eucafault (const char *fault_id, const char_map **map)
         logprintfl (EUCAERROR,
                     "format_eucafault() cannot get fault node for id %s.\n",
                     fault_id);
+        return FALSE;
     }
     // FIXME: Add real logfiles.
     if (logfile == NULL) {
@@ -648,6 +649,7 @@ format_eucafault (const char *fault_id, const char_map **map)
     }
     // Bottom border.
     fprintf (logfile, "%s\n\n", STARS);
+    return TRUE;
 }
 
 /*
@@ -655,22 +657,20 @@ format_eucafault (const char *fault_id, const char_map **map)
  *
  * Logs a fault, initializing the fault model, if necessary.
  */
-int
+boolean
 log_eucafault (char *fault_id, const char_map **map)
 {
-    int count = 0;
-
     initialize_eucafaults ();
 
     if (get_eucafault (fault_id, NULL) != NULL) {
         // ^-- Simple existence check for now.
-        format_eucafault (fault_id, map);
+        return format_eucafault (fault_id, map);
     } else {
         logprintfl (EUCAERROR,
                     "Fault %s detected, could not find fault id in registry.\n",
                     fault_id);
+        return FALSE;
     }
-    return count;               /* FIXME: Just return void instead? */
 }
 
 /*
@@ -678,7 +678,9 @@ log_eucafault (char *fault_id, const char_map **map)
  *
  * Logs a fault, initializing the fault model, if necessary.
  *
- * Returns the number of substitution parameters it was called with.
+ * Returns the number of substitution parameters it was called with,
+ * returning it as a negative number if the underlying log_eucafault()
+ * call returned FALSE.
  */
 int
 log_eucafault_v (char *fault_id, ...)
@@ -702,7 +704,11 @@ log_eucafault_v (char *fault_id, ...)
     if (count % 2) {
         logprintfl (EUCAWARN, "log_eucafault_v() called with an odd (unmatched) number of substitution parameters: %d\n", count);
     }
-    log_eucafault (fault_id, (const char_map **)m);
+    if (!log_eucafault (fault_id, (const char_map **)m)) {
+        logprintfl (EUCAERROR,
+                    "log_eucafault() returned FALSE inside log_eucafault_v()\n");
+        count *= -1;
+    }
     c_varmap_free (m);
     return count;
 }
@@ -755,12 +761,15 @@ main (int argc, char **argv)
         PRINTF (("argv[1st of %d]: %s\n", argc - optind, argv[optind]));
         log_eucafault (argv[optind], (const char_map **)m);
         c_varmap_free (m);
-        printf ("Args: %d\n", log_eucafault_v (argv[optind],
-                                               "daemon", "Balrog",
-                                               "hostIp", "127.0.0.1",
-                                               "brokerIp", "127.0.0.2",
-                                               "endpointIp", "127.0.0.3",
-                                               "unmatched!", NULL));
+        // FIXME: reusing & abusing opt
+        opt = log_eucafault_v (argv[optind], "daemon", "Balrog",
+                               "hostIp", "127.0.0.1",
+                               "brokerIp", "127.0.0.2",
+                               "endpointIp", "127.0.0.3",
+                               "unmatched!", NULL);
+        PRINTF (("log_eucafault_v args returned: %d\n", opt));
+
+        // FIXME: Could also use a test that builds **m up from **argv.
     }
     if (dump) {
         dump_eucafaults_db ();
