@@ -758,10 +758,11 @@ main (int argc, char **argv)
         m = c_varmap_alloc (m, "hostIp", "127.0.0.1");
         m = c_varmap_alloc (m, "brokerIp", "127.0.0.2");
         m = c_varmap_alloc (m, "endpointIp", "127.0.0.3");
-        PRINTF (("argv[1st of %d]: %s\n", argc - optind, argv[optind]));
+        PRINTF1 (("argv[1st of %d]: %s\n", argc - optind, argv[optind]));
         log_eucafault (argv[optind], (const char_map **)m);
         c_varmap_free (m);
-        // FIXME: reusing & abusing opt
+
+        // Reusing & abusing opt. :)
         opt = log_eucafault_v (argv[optind], "daemon", "Balrog",
                                "hostIp", "127.0.0.1",
                                "brokerIp", "127.0.0.2",
@@ -769,7 +770,20 @@ main (int argc, char **argv)
                                "unmatched!", NULL);
         PRINTF (("log_eucafault_v args returned: %d\n", opt));
 
-        // FIXME: Could also use a test that builds **m up from **argv.
+        // This allows substitution-argument pairs for unit test to be
+        // passed in on command line.
+        m = NULL;
+        for (opt = optind + 1; opt < argc; opt++) {
+            PRINTF1 (("argv[opt]: %s\n", argv[opt]));
+            if ((opt - optind + 1) % 2) {
+                PRINTF1 (("...now have two, calling c_varmap_alloc()\n"));
+                m = c_varmap_alloc (m, argv[opt - 1], argv[opt]);
+            }
+        }
+        if (m != NULL) {
+            log_eucafault (argv[optind], (const char_map **)m);
+            c_varmap_free (m);
+        }
     }
     if (dump) {
         dump_eucafaults_db ();
