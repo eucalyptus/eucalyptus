@@ -730,6 +730,12 @@ dump_eucafaults_db (void)
     printf ("\n");
 }
 
+static void
+usage (char *argv0)
+{
+    fprintf (stderr, "Usage: %s [-d] fault-id [param1 param1Value] [param2 param2Value] [...]\n", argv0);
+}
+
 /*
  * I am not an animal.
  */
@@ -747,7 +753,7 @@ main (int argc, char **argv)
             dump++;
             break;
         default:
-            fprintf (stderr, "Usage: %s [-d] [fault id] [param1 param1Value] [...]\n", argv[0]);
+            usage (argv[0]);
             return 1;
         }
     }
@@ -787,6 +793,10 @@ main (int argc, char **argv)
     }
     if (dump) {
         dump_eucafaults_db ();
+    }
+    if (optind >= argc) {
+        usage (argv[0]);
+        return 1;
     }
     return 0;
 }
