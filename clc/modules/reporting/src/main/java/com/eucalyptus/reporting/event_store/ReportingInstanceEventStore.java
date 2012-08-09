@@ -20,9 +20,10 @@
 package com.eucalyptus.reporting.event_store;
 
 import javax.annotation.Nonnull;
-import org.apache.log4j.Logger;
+import javax.persistence.EntityTransaction;
 
 import com.eucalyptus.entities.Entities;
+import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Preconditions;
 
 public class ReportingInstanceEventStore {
@@ -94,6 +95,13 @@ public class ReportingInstanceEventStore {
   }
 
   protected void persist( final Object event ) {
-    Entities.persist( event );
+    final EntityTransaction db = Entities.get( event );
+    try {
+      Entities.persist( event );
+      db.commit();
+    } catch ( final Exception e ) {
+      db.rollback();
+      throw Exceptions.toUndeclared( e );
+    }
   }
 }

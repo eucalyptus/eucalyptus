@@ -20,13 +20,12 @@
 package com.eucalyptus.reporting.event_store;
 
 import javax.annotation.Nonnull;
-import org.apache.log4j.Logger;
+import javax.persistence.EntityTransaction;
 import com.eucalyptus.entities.Entities;
+import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Preconditions;
 
 public class ReportingElasticIpEventStore {
-  private static final Logger LOG = Logger.getLogger( ReportingElasticIpEventStore.class );
-
   private static final ReportingElasticIpEventStore instance = new ReportingElasticIpEventStore();
 
   public static ReportingElasticIpEventStore getInstance() {
@@ -48,7 +47,7 @@ public class ReportingElasticIpEventStore {
   }
 
   public void insertDeleteEvent( @Nonnull final String uuid,
-                                 final long timestampMs )
+                                          final long timestampMs )
   {
     Preconditions.checkNotNull( uuid, "Uuid is required" );
 
@@ -74,7 +73,14 @@ public class ReportingElasticIpEventStore {
   }
 
   protected void persist( final Object event ) {
-    Entities.persist( event );
+    final EntityTransaction db = Entities.get( event );
+    try {
+      Entities.persist( event );
+      db.commit();
+    } catch ( final Exception e ) {
+      db.rollback();
+      throw Exceptions.toUndeclared( e );
+    }
   }
 }
 

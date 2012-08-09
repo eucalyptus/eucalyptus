@@ -80,8 +80,6 @@ import com.eucalyptus.reporting.event_store.ReportingInstanceEventStore;
 import com.eucalyptus.reporting.event_store.ReportingInstanceUsageEvent;
 import com.eucalyptus.reporting.domain.ReportingAccountCrud;
 import com.eucalyptus.reporting.domain.ReportingUserCrud;
-import com.eucalyptus.reporting.domain.ReportingAccountDao;
-import com.eucalyptus.reporting.domain.ReportingUserDao;
 import com.google.common.base.Function;
 import com.google.common.collect.MapMaker;
 import com.google.common.collect.Sets;
@@ -112,13 +110,11 @@ public class InstanceEventListener implements EventListener<InstanceEvent> {
       return;
     }
 
-	  /* Retain records of all account and user id's and names encountered
-	   * even if they're subsequently deleted.
-	   */
-	  ReportingAccountCrud.getInstance().createOrUpdateAccount(
-			  event.getAccountId(), event.getAccountName());
-	  ReportingUserCrud.getInstance().createOrUpdateUser(
-			  event.getUserId(), event.getAccountId(), event.getUserName());
+    /* Retain records of all account and user id's and names encountered
+     * even if they're subsequently deleted.
+     */
+    getReportingAccountCrud().createOrUpdateAccount( event.getAccountId(), event.getAccountName() );
+    getReportingUserCrud().createOrUpdateUser( event.getUserId(), event.getAccountId(), event.getUserName() );
 
     // Write the instance attributes, but only if we don't have it already.
     if ( !recentlySeenUuids.contains(uuid) ) {
@@ -202,12 +198,12 @@ public class InstanceEventListener implements EventListener<InstanceEvent> {
     }
   }
 
-  protected ReportingAccountDao getReportingAccountDao() {
-    return ReportingAccountDao.getInstance();
+  protected ReportingAccountCrud getReportingAccountCrud() {
+    return ReportingAccountCrud.getInstance();
   }
 
-  protected ReportingUserDao getReportingUserDao() {
-    return ReportingUserDao.getInstance();
+  protected ReportingUserCrud getReportingUserCrud() {
+    return ReportingUserCrud.getInstance();
   }
 
   protected ReportingInstanceEventStore getReportingInstanceEventStore() {
