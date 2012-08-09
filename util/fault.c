@@ -386,7 +386,6 @@ initialize_eucafaults (void)
     snprintf (faultdirs[DISTRO_DEFAULT_LOCALIZATION], PATH_MAX - 1, "%s/%s/",
               DISTRO_FAULTDIR, DEFAULT_LOCALIZATION);
 
-    /* Not really sure how useful this is or will be. */
     for (int i = 0; i < NUM_FAULTDIR_TYPES; i++) {
         if (faultdirs[i][0]) {
             if (stat (faultdirs[i], &dirstat) != 0) {
@@ -659,18 +658,9 @@ format_eucafault (const char *fault_id, const char_map **map)
 int
 log_eucafault (char *fault_id, const char_map **map)
 {
-    //va_list argv;
-    //char *token;
     int count = 0;
 
     initialize_eucafaults ();
-
-    //va_start (argv, fault_id);
-
-    //    while ((token = va_arg (argv, char *)) != NULL) {
-    //        ++count;
-    //    }
-    //va_end (argv);
 
     if (get_eucafault (fault_id, NULL) != NULL) {
         // ^-- Simple existence check for now.
@@ -681,6 +671,40 @@ log_eucafault (char *fault_id, const char_map **map)
                     fault_id);
     }
     return count;               /* FIXME: Just return void instead? */
+}
+
+/*
+ * EXTERNAL ENTRY POINT
+ *
+ * Logs a fault, initializing the fault model, if necessary.
+ *
+ * Returns the number of substitution parameters it was called with.
+ */
+int
+log_eucafault_v (char *fault_id, ...)
+{
+    va_list argv;
+    char *token[2];
+    char_map **m = NULL;
+    int count = 0;
+
+    initialize_eucafaults ();
+    va_start (argv, fault_id);
+
+    while ((token[count % 2] = va_arg (argv, char *)) != NULL) {
+        ++count;
+        if (! (count % 2)) {
+            m = c_varmap_alloc (m, token[0], token[1]);
+        }
+    }
+    va_end (argv);
+
+    if (count % 2) {
+        logprintfl (EUCAWARN, "log_eucafault_v() called with an odd (unmatched) number of substitution parameters: %d\n", count);
+    }
+    log_eucafault (fault_id, (const char_map **)m);
+    c_varmap_free (m);
+    return count;
 }
 
 /*
@@ -729,8 +753,14 @@ main (int argc, char **argv)
         m = c_varmap_alloc (m, "brokerIp", "127.0.0.2");
         m = c_varmap_alloc (m, "endpointIp", "127.0.0.3");
         PRINTF (("argv[1st of %d]: %s\n", argc - optind, argv[optind]));
-        log_eucafault (argv[optind], (const char_map **)m); /* FIXME: Add passing some parameters. */
+        log_eucafault (argv[optind], (const char_map **)m);
         c_varmap_free (m);
+        printf ("Args: %d\n", log_eucafault_v (argv[optind],
+                                               "daemon", "Balrog",
+                                               "hostIp", "127.0.0.1",
+                                               "brokerIp", "127.0.0.2",
+                                               "endpointIp", "127.0.0.3",
+                                               "unmatched!", NULL));
     }
     if (dump) {
         dump_eucafaults_db ();

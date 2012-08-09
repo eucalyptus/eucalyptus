@@ -42,7 +42,18 @@
 extern int initialize_eucafaults (void);
 
 /*
- * Usage: log_eucafault (FAULT_ID, param1, param1text, param2, param2text, NULL)
+ * Usage: log_eucafault (FAULT_ID, parameter_map)
+ *
+ * Will call initialize_eucafaults() internally to ensure fault model
+ * has been loaded.
+ *
+ * Return value is number of parameter arguments detected prior to NULL.
+ */
+extern int log_eucafault (char *, const char_map **);
+
+/*
+ * Usage: log_eucafault_v (FAULT_ID, param1, param1text, param2, param2text,
+ *                         ..., NULL)
  *
  * ...where the text of each named parameter will replace that parameter
  * token in the fault message log text.
@@ -54,8 +65,7 @@ extern int initialize_eucafaults (void);
  * has been loaded.
  *
  * Return value is number of parameter arguments detected prior to NULL.
- *
  */
-extern int log_eucafault (char *, const wchar_map **);
+extern int log_eucafault_v (char *, ...);
 
 #endif // INCLUDE_MISC_H
