@@ -36,8 +36,6 @@ public class ReportingVolumeSnapshotCreateEvent
 	private String uuid;
 	@Column(name="volume_snapshot_id", nullable=false)
 	private String volumeSnapshotId;
-	//@Column(name="volume_id", nullable=false)
-	//private String volumeId;
 	@Column(name="timestamp_ms", nullable=false)
 	private Long timestampMs;
 	@Column(name="user_id")
@@ -54,7 +52,6 @@ public class ReportingVolumeSnapshotCreateEvent
 		//NOTE: hibernate will overwrite these
 		this.uuid = null;
 		this.volumeSnapshotId = null;
-		//this.volumeId = null;
 		this.timestampMs = null;
 		this.userId = null;
 		this.sizeGB = null;
@@ -68,7 +65,6 @@ public class ReportingVolumeSnapshotCreateEvent
 	{
 		this.uuid = uuid;
 		this.volumeSnapshotId = volumeSnapshotId;
-		//this.volumeId = volumeId;
 		this.timestampMs = timestampMs;
 		this.userId = userId;
 		this.sizeGB = sizeGB;
@@ -88,11 +84,6 @@ public class ReportingVolumeSnapshotCreateEvent
 	{
 		return this.volumeSnapshotId;
 	}
-	
-	/* public String getVolumeId()
-	{
-		return this.volumeId;
-	} */
 	
 	public Long getTimestampMs()
 	{

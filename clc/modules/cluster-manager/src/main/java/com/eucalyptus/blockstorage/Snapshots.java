@@ -313,9 +313,7 @@ public class Snapshots {
 	  final ActionInfo actionInfo) {
       try {  
 	  ListenerRegistry.getInstance().fireEvent(
-		  SnapShotEvent.with(actionInfo, snap.getNaturalId(), snap
-			  .getVolumeSize().longValue(), snap.getOwner(), snap
-			  .getDisplayName()));
+		  SnapShotEvent.with(actionInfo, snap.getDisplayName(), snap.getOwner(), snap.getVolumeSize().longValue()));
 
       } catch (final Exception e) {
 	  LOG.error(e, e);

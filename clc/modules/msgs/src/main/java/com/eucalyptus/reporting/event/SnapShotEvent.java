@@ -3,6 +3,8 @@ package com.eucalyptus.reporting.event;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.notNullValue;
 
+import java.util.UUID;
+
 import com.eucalyptus.event.Event;
 import com.eucalyptus.util.OwnerFullName;
 
@@ -32,11 +34,11 @@ public class SnapShotEvent implements Event {
     }
 
     private final ActionInfo actionInfo;
-    private final String uuid;
     private final Long sizeGB;
     private final OwnerFullName ownerFullName;
-    private final String displayName;
-
+    private final String snapshotId;
+    private final String uuid;
+    
     public static ActionInfo forSnapShotCreate() {
 	return new ActionInfo(SnapShotAction.SNAPSHOTCREATE);
     }
@@ -45,31 +47,32 @@ public class SnapShotEvent implements Event {
 	return new ActionInfo(SnapShotAction.SNAPSHOTDELETE);
     }
 
-    public static SnapShotEvent with(final ActionInfo actionInfo,
-	    final String uuid, final long sizeGB, final OwnerFullName ownerFullName,
-	    final String displayName) {
+    public static SnapShotEvent with(final ActionInfo actionInfo, String snapshotId,
+	    final OwnerFullName ownerFullName,
+	    final long sizeGB) {
 
-	return new SnapShotEvent(actionInfo, uuid, sizeGB, ownerFullName, displayName);
+	final String snapShotUUID = UUID.randomUUID().toString();
+	
+	return new SnapShotEvent(actionInfo, snapShotUUID, snapshotId, ownerFullName, sizeGB );
     }
 
-    private SnapShotEvent(ActionInfo actionInfo, String uuid, long sizeGB,
-	    OwnerFullName ownerFullName , String displayName) {
+    private SnapShotEvent(ActionInfo actionInfo, String uuid, String snapshotId, OwnerFullName ownerFullName , long sizeGB) {
 
 	assertThat(actionInfo, notNullValue());
 	assertThat(uuid, notNullValue());
 	assertThat(sizeGB, notNullValue());
-	assertThat(displayName, notNullValue());
 	assertThat(ownerFullName.getUserId(), notNullValue());
+	assertThat(snapshotId, notNullValue());
 	this.actionInfo = actionInfo;
-	this.uuid = uuid;
 	this.sizeGB = sizeGB;
 	this.ownerFullName = ownerFullName;
-	this.displayName = displayName;
+	this.snapshotId = snapshotId;
+	this.uuid = uuid;
     }
 
-    public String getDisplayName() {
+    public String getSnapshotId() {
 
-	return displayName;
+	return snapshotId;
     }
 
     public Long getSizeGB() {
@@ -84,23 +87,15 @@ public class SnapShotEvent implements Event {
 	return actionInfo;
     }
 
-    public String getUuid() {
+    public String getUUID() {
 	return uuid;
-    }
-
-    public Long getTimeInMs() {
-	return System.currentTimeMillis();
-    }
-
-    public boolean requiresReliableTransmission() {
-	return false;
     }
 
     @Override
     public String toString() {
-	return "SnapShotEvent [actionInfo=" + actionInfo + ", uuid=" + uuid
-		+ ", sizeGB=" + sizeGB + "," + "ownerName=" + ownerFullName.getUserName() + " displayName="
-		+ displayName + "]";
+	return "SnapShotEvent [actionInfo=" + actionInfo + ", sizeGB=" + sizeGB
+		+ ", userName=" + ownerFullName.getUserName() + ", snapshotId="
+		+ snapshotId + ", uuid=" + uuid + "]";
     }
-
+    
 }
