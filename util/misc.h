@@ -106,9 +106,9 @@ char *getConfString(char configFiles[][MAX_PATH], int numFiles, char *key);
 /**
  * Search in file #path# for a variable named #name#. It will put
  * whatever after the = in value (which will need to be freed by the
- * caller). 
+ * caller).
  *
- * Returns -1 on error (open file, out of memory, parse error ...) 
+ * Returns -1 on error (open file, out of memory, parse error ...)
  *          0 if variable not found in file
  *          1 if found and value is indeed valid
  *
@@ -164,24 +164,6 @@ char parse_boolean (const char * s);
 // argument checker
 int param_check(char *func, ...);
 // end of dan't functions
-
-#ifdef DEBUG
-#define PRINTF(a) logprintf a
-#else
-#define PRINTF(a)
-#endif
-
-#ifdef DEBUG1
-#define PRINTF1(a) logprintf a
-#else
-#define PRINTF1(a)
-#endif
-
-#ifdef DEBUGXML
-#define PRINTF_XML(a) logprintf a
-#else
-#define PRINTF_XML(a)
-#endif
 
 int hash_code (const char * s);
 char * get_string_stats (const char * s);
