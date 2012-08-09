@@ -62,6 +62,7 @@
 
 package com.eucalyptus.webui.client.activity;
 
+import static com.eucalyptus.webui.shared.checker.ValueCheckerFactory.ValueSaver;
 import java.util.ArrayList;
 import java.util.Arrays;
 import com.eucalyptus.webui.client.ClientFactory;
@@ -70,7 +71,6 @@ import com.eucalyptus.webui.client.place.ResetPasswordPlace;
 import com.eucalyptus.webui.client.view.InputField;
 import com.eucalyptus.webui.client.view.InputView;
 import com.eucalyptus.webui.client.view.ActionResultView.ResultType;
-import com.eucalyptus.webui.client.view.InputField.ValueType;
 import com.eucalyptus.webui.shared.checker.ValueChecker;
 import com.eucalyptus.webui.shared.checker.ValueCheckerFactory;
 import com.google.gwt.user.client.History;
@@ -95,8 +95,10 @@ public class ResetPasswordActivity extends AbstractActionActivity implements Inp
   @Override
   protected void doAction( String confirmationCode ) {
     this.confirmationCode = confirmationCode;
-    
-    InputView dialog = this.clientFactory.getInputView( );
+
+    final ValueSaver passwordSaver = ValueCheckerFactory.createValueSaver();
+    final ValueChecker passwordEqualityChecker = ValueCheckerFactory.createEqualityChecker( ValueCheckerFactory.PASSWORDS_NOT_MATCH, passwordSaver );
+    final InputView dialog = this.clientFactory.getInputView( );
     dialog.setPresenter( this );
     dialog.display( RESET_PASSWORD_CAPTION, RESET_PASSWORD_SUBJECT, new ArrayList<InputField>( Arrays.asList( new InputField( ) {
 
@@ -112,7 +114,9 @@ public class ResetPasswordActivity extends AbstractActionActivity implements Inp
 
       @Override
       public ValueChecker getChecker( ) {
-        return ValueCheckerFactory.createPasswordChecker( );
+        return ValueCheckerFactory.checkerForAll(
+            ValueCheckerFactory.createPasswordChecker( ),
+            passwordSaver );
       }
       
     }, new InputField( ) {
@@ -129,7 +133,7 @@ public class ResetPasswordActivity extends AbstractActionActivity implements Inp
 
       @Override
       public ValueChecker getChecker( ) {
-        return null;
+        return passwordEqualityChecker;
       }
       
     } ) ) );

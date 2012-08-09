@@ -74,6 +74,7 @@ import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.crypto.util.PEMFiles;
 import com.eucalyptus.util.OwnerFullName;
+import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
@@ -706,5 +707,19 @@ public class Principals {
   public static boolean isFakeIdentify( String id ) {
     return Sets.newHashSet( SYSTEM_USER.getUserId( ), SYSTEM_ACCOUNT.getAccountNumber( ),
                             NOBODY_ACCOUNT.getAccountNumber( ), NOBODY_USER.getUserId( ) ).contains( id );
+  }
+
+  /**
+   * Do the given User objects represent the same user.
+   *
+   * @param user1 The first user to compare
+   * @param user2 The second user to compare
+   * @return True if the given Users represent the same user.
+   */
+  public static boolean isSameUser( final User user1,
+                                    final User user2 ) {
+    return user1 != null && user2 != null &&
+        !Strings.isNullOrEmpty( user1.getUserId() ) && !Strings.isNullOrEmpty( user2.getUserId() ) &&
+        user1.getUserId().equals( user2.getUserId() );
   }
 }
