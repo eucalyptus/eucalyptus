@@ -65,7 +65,6 @@ package com.eucalyptus.reporting.queue;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.reporting.queue.mem.MemQueueFactory;
-import com.eucalyptus.reporting.queue.mq.MqQueueFactory;
 
 public class QueueFactory
 {
@@ -86,16 +85,15 @@ public class QueueFactory
 	
 	private QueueFactory()
 	{
-		internalFactory = USE_MEM_QUEUE
-				? new MemQueueFactory()
-				: new MqQueueFactory();
+		internalFactory = new MemQueueFactory();
 	}
 
 	public enum QueueIdentifier
 	{
 		INSTANCE("InstanceQueue"),
-		STORAGE("StorageQueue"),
-		S3("S3");
+		S3("S3"),
+		SNAPSHOT("SNAPSHOTQUEUE"),
+		VOLUME("VOLUMEQUEUE");
 		
 		private final String queueName;
 

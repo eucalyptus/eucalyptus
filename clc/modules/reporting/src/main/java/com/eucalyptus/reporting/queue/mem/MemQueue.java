@@ -66,8 +66,9 @@ import java.util.*;
 
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
-import com.eucalyptus.reporting.event.Event;
+
 import com.eucalyptus.reporting.queue.*;
 
 public class MemQueue
@@ -88,14 +89,15 @@ public class MemQueue
 		}
 	}
 
+	@SuppressWarnings("unchecked")
 	@Override
-	public void addEventListener(EventListener<Event> el)
+	public void addEventListener(EventListener<? extends Event> el)
 	{
-		listeners.add(el);
+		listeners.add((EventListener<Event>) el);
 	}
 
-	@Override
-	public void removeEventListener(EventListener<Event> el)
+	@Override 
+	public void removeEventListener(EventListener<? extends Event> el)
 	{
 		listeners.remove(el);
 	}

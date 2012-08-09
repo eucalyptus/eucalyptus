@@ -89,6 +89,7 @@ import com.eucalyptus.records.EventClass;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.reporting.event.VolumeEvent;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.RestrictedTypes;
@@ -198,7 +199,7 @@ public class VolumeManager {
           }
           if ( State.FAIL.equals( vol.getState( ) ) || State.ANNIHILATED.equals( vol.getState( ) ) ) {
             Entities.delete( vol );
-            Volumes.fireDeleteEvent( vol );
+            Volumes.fireUsageEvent( vol, VolumeEvent.forVolumeDelete());
             return vol;
           } else if ( State.ANNIHILATING.equals( vol.getState( ) ) ) {
             return vol;
@@ -275,7 +276,7 @@ public class VolumeManager {
           Volume foundVol = Entities.uniqueResult( Volume.named( ownerFullName, input ) );
           if ( State.ANNIHILATED.equals( foundVol.getState( ) ) ) {
             Entities.delete( foundVol );
-            Volumes.fireDeleteEvent( foundVol );
+            Volumes.fireUsageEvent( foundVol, VolumeEvent.forVolumeDelete() );
             reply.getVolumeSet( ).add( foundVol.morph( new edu.ucsb.eucalyptus.msgs.Volume( ) ) );
             return foundVol;
           } else if ( RestrictedTypes.filterPrivileged( ).apply( foundVol ) ) {
@@ -377,6 +378,8 @@ public class VolumeManager {
                .withDetails( volume.getOwner( ).toString( ), volume.getDisplayName( ), "instance", vm.getInstanceId( ) )
                .withDetails( "partition", vm.getPartition( ).toString( ) ).info( );
     reply.setAttachedVolume( attachVol );
+    
+    Volumes.fireUsageEvent(volume, VolumeEvent.forVolumeAttach(vm.getInstanceUuid(), volume.getDisplayName()));
     return reply;
   }
   
@@ -450,6 +453,7 @@ public class VolumeManager {
                .withDetails( "cluster", ccConfig.getFullName( ).toString( ) ).info( );
     volume.setStatus( "detaching" );
     reply.setDetachedVolume( volume );
+    Volumes.fireUsageEvent(vol, VolumeEvent.forVolumeDetach(vm.getInstanceUuid(), vm.getInstanceId()));
     return reply;
   }
   

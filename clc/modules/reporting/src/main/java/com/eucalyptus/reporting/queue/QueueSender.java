@@ -62,7 +62,7 @@
 
 package com.eucalyptus.reporting.queue;
 
-import com.eucalyptus.reporting.event.Event;
+import com.eucalyptus.event.Event;
 
 public interface QueueSender
 {

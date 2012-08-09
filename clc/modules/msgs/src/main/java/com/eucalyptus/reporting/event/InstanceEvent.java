@@ -62,6 +62,8 @@
 
 package com.eucalyptus.reporting.event;
 
+import com.eucalyptus.event.Event;
+
 /**
  * <p>InstanceEvent is an event sent from the CLC to the reporting mechanism,
  * indicating resource usage by an instance.

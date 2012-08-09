@@ -22,6 +22,8 @@ package com.eucalyptus.reporting.event;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Set;
+
+import com.eucalyptus.event.Event;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -137,11 +139,6 @@ public class ResourceAvailabilityEvent implements Event {
 
   public Collection<Availability> getAvailability() {
     return availability;
-  }
-
-  @Override
-  public boolean requiresReliableTransmission() {
-    return false;
   }
 
   public String toString() {

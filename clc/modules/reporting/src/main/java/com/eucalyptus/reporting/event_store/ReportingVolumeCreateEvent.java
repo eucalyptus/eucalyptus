@@ -40,8 +40,6 @@ public class ReportingVolumeCreateEvent
 	private String volumeId;
 	@Column(name="user_id", nullable=false)
 	private String userId;
-	@Column(name="cluster_name", nullable=false)
-	private String clusterName;
 	@Column(name="availability_zone", nullable=false)
 	private String availabilityZone;
 	@Column(name="sizeGB", nullable=false)
@@ -58,7 +56,6 @@ public class ReportingVolumeCreateEvent
 		this.timestampMs = null;
 		this.volumeId = null;
 		this.userId = null;
-		this.clusterName = null;
 		this.availabilityZone = null;
 		this.sizeGB = null;
 	}
@@ -66,14 +63,13 @@ public class ReportingVolumeCreateEvent
 	/**
  	 * <p>Do not instantiate this class directly; use the ReportingVolumeCrud class.
  	 */
-	ReportingVolumeCreateEvent(String uuid, String volumeId, Long timestampMs,
-				String userId, String clusterName, String availabilityZone, Long sizeGB)
+	ReportingVolumeCreateEvent(String uuid, String volumeId, long timestampMs,
+				String userId, String availabilityZone, long sizeGB)
 	{
 		this.uuid = uuid;
 		this.timestampMs = timestampMs;
 		this.volumeId = volumeId;
 		this.userId = userId;
-		this.clusterName = clusterName;
 		this.availabilityZone = availabilityZone;
 		this.sizeGB = sizeGB;
 	}
@@ -101,11 +97,6 @@ public class ReportingVolumeCreateEvent
 	public String getUserId()
 	{
 		return this.userId;
-	}
-
-	public String getClusterName()
-	{
-		return this.clusterName;
 	}
 
 	public String getAvailabilityZone()
