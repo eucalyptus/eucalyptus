@@ -348,10 +348,11 @@ body {
   box-shadow: 0px 4px 8px rgba(0,0,0,0.34), inset 0px 12px 10px -9px rgba(0,0,0,0.50);
 }
 
+/*
 .resources-nav li:hover ul {
   /* Show the submenu when the parent list item is hovered */
   display: block;
-}
+}*/
 
 .resources-nav li ul li {
   float: none;

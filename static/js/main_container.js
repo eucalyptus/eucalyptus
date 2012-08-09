@@ -42,6 +42,11 @@
         case 'volume':
           this.element.volume();
           break;
+
+        case 'logout':
+          $.cookie('session-id','');
+          location.href = '/';
+          break;
         default:
           alert('unknown menu selected: '+selected);
       }
