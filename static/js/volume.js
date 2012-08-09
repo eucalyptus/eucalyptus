@@ -6,60 +6,62 @@
     // TODO: is _init() the right method to instantiate everything? 
     _init : function() {
       var thisObj = this;
-      var $tmpl = $('html body').find('.templates #keypairTblTmpl').clone();
+      var $tmpl = $('html body').find('.templates #volumeTblTmpl').clone();
       var $wrapper = $($tmpl.render($.i18n.map));
       this.element.add($wrapper);
       var $base_table = $wrapper.find('table');
       tableWrapper = $wrapper.eucatable({
-        id : 'keys', // user of this widget should customize these options,
+        id : 'volumes', // user of this widget should customize these options,
         base_table : $base_table,
         dt_arg : {
           "bProcessing": true,
-          "sAjaxSource": "../ec2?type=key&Action=DescribeKeyPairs",
+          "sAjaxSource": "../ec2?type=volume&Action=DescribeVolumes",
           "sAjaxDataProp": "results",
           "bAutoWidth" : false,
           "sPaginationType": "full_numbers",
-          "sDom": '<"table_keys_header">f<"clear"><"table_keys_top">rtp<"clear">',
+          "sDom": '<"table_volumes_header">f<"clear"><"table_volumes_top">rtp<"clear">',
           "aoColumns": [
             {
               "bSortable": false,
-              "fnRender": function(oObj) { return '<input type="checkbox" onclick="updateActionMenu(this)"/>' },
+              "fnRender": function(oObj) { return '<input type="checkbox"/>' },
               "sWidth": "20px",
             },
-            { "mDataProp": "name" },
-            { "mDataProp": "fingerprint", "bSortable": false }
+            { "mDataProp": "id" },
+            { "mDataProp": "status" },
+            { "mDataProp": "size" },
+            { "mDataProp": "create_time" },
+            { "mDataProp": "snapshot_id" },
           ],
           "fnDrawCallback": function( oSettings ) {
-             $('#table_keys_count').html(oSettings.fnRecordsTotal());
-
+             $('#table_volumes_count').html(oSettings.fnRecordsTotal());
           }
         },
-        header_title : keypair_h_title,
+        header_title : volume_h_title,
         search_refresh : search_refresh,
-        txt_create : keypair_create,
-        txt_found : keypair_found,
+        txt_create : volume_create,
+        txt_found : volume_found,
         menu_text : table_menu_main_action,
-        menu_actions : { delete: [table_menu_delete_action, function (args) { thisObj.deleteAction(args) } ] }
+        menu_actions : { delete: [table_menu_delete_action, function (args) { thisObj.deleteAction(args) } ] },
+        row_click : function (args) { thisObj.handleRowClick(args); }
       });
       tableWrapper.appendTo(this.element);
 
-      $tmpl = $('html body').find('.templates #keypairDelDlgTmpl').clone();
+      $tmpl = $('html body').find('.templates #volumeDelDlgTmpl').clone();
       $del_dialog = $($tmpl.render($.i18n.map));
 
       this.delDialog = $del_dialog.eucadialog({
-         id: 'keys-delete',
-         title: $('<div>').addClass('help-link').append( 
-                  $('<a>').attr('href','#').text('?')),
+         id: 'volumes-delete',
+         title: volume_dialog_del_title,
          buttons: {
-           'delete': {text: keypair_dialog_del_btn, click: function() { thisObj._deleteSelectedKeyPairs(); $del_dialog.dialog("close");}},
-           'cancel': {text: keypair_dialog_cancel_btn, focus:true, click: function() { $del_dialog.dialog("close");}} 
-         } 
+           'delete': {text: volume_dialog_del_btn, click: function() { thisObj._deleteSelectedVolumes(); $del_dialog.dialog("close");}},
+           'cancel': {text: volume_dialog_cancel_btn, focus:true, click: function() { $del_dialog.dialog("close");}} 
+         }
        });
 
-      var createButtonId = 'keys-add-btn';
-      $tmpl = $('html body').find('.templates #keypairAddDlgTmpl').clone();
+      var createButtonId = 'volume-add-btn';
+      $tmpl = $('html body').find('.templates #volumeAddDlgTmpl').clone();
       $add_dialog = $($tmpl.render($.i18n.map));
-
+/*
       // add custom event handler to dialog elements
       // when calling eucadialog, the buttons should have domid to attach the specific domid that's used by event handler written here 
       $add_dialog.find('#key-name').keypress( function(e){
@@ -74,26 +76,14 @@
         else 
            $createButton.prop("disabled", false).removeClass("ui-state-disabled");
       });
-
+*/
       $add_dialog.eucadialog({
-        id: 'keys-add',
-        title: $('<div>').addClass('help-link').append(
-                 $('<a>').attr('href','#').text('?')),
+        id: 'volumes-add',
+        title: volume_dialog_add_title,
         buttons: { 
         // e.g., add : { domid: keys-add-btn, text: "Add new key", disabled: true, focus: true, click : function() { }, keypress : function() { }, ...} 
-        'create': { domid: createButtonId, text: keypair_dialog_create_btn, disabled: true,  click: function() {
-                      var keyName = $.trim($add_dialog.find('#key-name').val());
-                      var keyPattern = new RegExp('^[A-Za-z0-9_\s-]{1,256}$');
-                      if (keyPattern.test(keyName)){
-                        $add_dialog.dialog("close"); thisObj._addKeyPair(keyName);
-                      }
-                      else{
-                        // TODO: notification should be handled better, generic way
-                        $('#keys-add-dialog div.dialog-notifications').html(keypair_dialog_error_msg);
-                      }
-                    }
-                  },
-        'cancel': {text: keypair_dialog_cancel_btn, focus:true, click: function() { $add_dialog.dialog("close");}} 
+        'create': { domid: createButtonId, text: volume_dialog_create_btn, disabled: true,  click: function() { $add_dialog.dialog("close"); }},
+        'cancel': {text: volume_dialog_cancel_btn, focus:true, click: function() { $add_dialog.dialog("close");}} 
       }});
     },
 
@@ -103,6 +93,16 @@
     _destroy : function() {
     },
 
+    handleRowClick : function(args) {
+      count = tableWrapper.eucatable('countSelectedRows');
+      if ( count == 0 )
+        // disable menu
+        tableWrapper.eucatable('deactivateMenu');
+      else
+        // enable delete menu
+        tableWrapper.eucatable('activateMenu');
+    },
+/*
     _addKeyPair : function(keyName) {
       $.ajax({
         type:"GET",
@@ -130,34 +130,34 @@
         }
       });
     },
-
-    _deleteSelectedKeyPairs : function () {
+*/
+    _deleteSelectedVolumes : function () {
       var rowsToDelete = tableWrapper.eucatable('getAllSelectedRows');
       for ( i = 0; i<rowsToDelete.length; i++ ) {
-        var keyName = rowsToDelete[i];
+        var volumeId = rowsToDelete[i];
         $.ajax({
           type:"GET",
-          url:"/ec2?type=key&Action=DeleteKeyPair&KeyName=" + keyName,
+          url:"/ec2?type=key&Action=DeleteVolume&VolumeId=" + volumeId,
           data:"_xsrf="+$.cookie('_xsrf'),
           dataType:"json",
           async:"true",
           success:
-          (function(keyName) {
+          (function(volumeId) {
             return function(data, textStatus, jqXHR){
               if ( data.results && data.results == true ) {
-                successNotification(keypair_delete_success + ' ' + keyName);
+                successNotification(volume_delete_success + ' ' + volumeId);
                 tableWrapper.eucatable('refreshTable');
               } else {
-                errorNotification(keypair_delete_error + ' ' + keyName);
+                errorNotification(volume_delete_error + ' ' + volumeId);
               }
            }
-          })(keyName),
+          })(volumeId),
           error:
-          (function(keyName) {
+          (function(volumeId) {
             return function(jqXHR, textStatus, errorThrown){
-              errorNotification(keypair_delete_error + ' ' + keyName);
+              errorNotification(volume_delete_error + ' ' + volumeId);
             }
-          })(keyName)
+          })(volumeId)
         });
       }
     },

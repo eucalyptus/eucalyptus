@@ -31,7 +31,6 @@
           ],
           "fnDrawCallback": function( oSettings ) {
              $('#table_keys_count').html(oSettings.fnRecordsTotal());
-
           }
         },
         header_title : keypair_h_title,
@@ -49,8 +48,7 @@
 
       this.delDialog = $del_dialog.eucadialog({
          id: 'keys-delete',
-         title: $('<div>').addClass('help-link').append( 
-                  $('<a>').attr('href','#').text('?')),
+         title: keypair_dialog_del_title,
          buttons: {
            'delete': {text: keypair_dialog_del_btn, click: function() { thisObj._deleteSelectedKeyPairs(); $del_dialog.dialog("close");}},
            'cancel': {text: keypair_dialog_cancel_btn, focus:true, click: function() { $del_dialog.dialog("close");}} 
@@ -77,8 +75,7 @@
 
       $add_dialog.eucadialog({
         id: 'keys-add',
-        title: $('<div>').addClass('help-link').append(
-                 $('<a>').attr('href','#').text('?')),
+        title: keypair_dialog_add_title,
         buttons: { 
         // e.g., add : { domid: keys-add-btn, text: "Add new key", disabled: true, focus: true, click : function() { }, keypress : function() { }, ...} 
         'create': { domid: createButtonId, text: keypair_dialog_create_btn, disabled: true,  click: function() {

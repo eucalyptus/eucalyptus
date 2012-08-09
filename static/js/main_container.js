@@ -1,7 +1,7 @@
 (function($, eucalyptus) {
   $.widget('eucalyptus.maincontainer', {
     options : { 
-        default_selected : 'keypair',
+        default_selected : 'volume',
     },
 
     _curSelected : null,

@@ -141,8 +141,6 @@
 </div>
       <!-- END Dashboard template -->
 
-      <!-- Datatable templates -->
-
       <!-- Keypair table -->
       <script id="keypairTblTmpl" type="text/x-jsrender">
         <div id="keys-wrapper">
@@ -157,7 +155,7 @@
             </tr>
            </thead>
            <tbody>
-              <tr> 
+              <tr>
                 <td colspan="3" class="dataTables_empty">{{!>table_loading}}</td>
               </tr>
           </tbody>
@@ -166,9 +164,9 @@
       </script>
       <!-- END Keypair table -->
 
-      <!-- Dialog template -->
+      <!-- Keypair dialog template -->
       <script id="keypairAddDlgTmpl" type="text/x-jsrender">
-        <div id="keys-add-dialog" title="{{!>keypair_dialog_add_title}}" class="add-dialog">
+        <div id="keys-add-dialog" class="add-dialog">
           {{!: keypair_dialog_add_text }}
           <p>
             <span class="field">{{!>keypair_dialog_add_name}}</span><input type="text" id="key-name" class="required"/><div class="dialog-notifications"></div>
@@ -177,12 +175,56 @@
       </script>
 
       <script id="keypairDelDlgTmpl" type="text/x-jsrender">
-        <div id="keys-delete-dialog" title="{{!>keypair_dialog_del_title}}" class="delete-dialog">
+        <div id="keys-delete-dialog" class="delete-dialog">
           {{!: keypair_dialog_del_text }}
           <span class="delete-names"></span>
         </div>
       </script>
-      <!-- END Dialog template -->
+      <!-- END Keypair dialog template -->
+
+      <!-- Volume table -->
+      <script id="volumeTblTmpl" type="text/x-jsrender">
+        <div id="volumes-wrapper">
+        <table id="volumes" class="display">
+          <thead>
+            <tr>
+              <th>
+                <input type="checkbox" id="volumes-check-all">
+              </th>
+              <th>{{!>vl_tbl_hdr_id}}</th>
+              <th>{{!>vl_tbl_hdr_status}}</th>
+              <th>{{!>vl_tbl_hdr_size}}</th>
+              <th>{{!>vl_tbl_hdr_creation_time}}</th>
+              <th>{{!>vl_tbl_hdr_snapshot_id}}</th>
+            </tr>
+           </thead>
+           <tbody>
+              <tr>
+                <td colspan="6" class="dataTables_empty">{{!>table_loading}}</td>
+              </tr>
+          </tbody>
+        </table>
+        </div>
+      </script>
+      <!-- END Volume table -->
+
+      <!-- Volume dialog template -->
+      <script id="volumeAddDlgTmpl" type="text/x-jsrender">
+        <div id="volumes-add-dialog" class="add-dialog">
+          {{!: volume_dialog_add_text }}
+          <p>
+            <span class="field">{{!>volume_dialog_add_name}}</span><input type="text" id="volume-name" class="required"/><div class="dialog-notifications"></div>
+          </p>
+        </div>
+      </script>
+
+      <script id="volumeDelDlgTmpl" type="text/x-jsrender">
+        <div id="volumes-delete-dialog" class="delete-dialog">
+          {{!: volume_dialog_del_text }}
+          <span class="delete-names"></span>
+        </div>
+      </script>
+      <!-- END Volume dialog template -->
 
     </div> 
     <!-- END of templates --> 
@@ -231,25 +273,6 @@
           </tbody>
         </table>
       </div>
-
-      <div id="tabs-keys" class="active">
-        <table id="keys" class="display">
-          <thead>
-            <tr>
-              <th>
-                <input type="checkbox" onchange="selectCheckboxChanged(this, 'keys');">
-              </th>
-              <th>Name</th>
-              <th>Private Key Fingerprint</th>
-            </tr>
-           </thead>
-           <tbody>
-              <tr> 
-                <td colspan="3" class="dataTables_empty">Loading data from server</td>
-              </tr>
-          </tbody>
-        </table>
-      </div>
       
       <div id="tabs-groups" class="active">
         <table id="groups" class="display">
@@ -278,28 +301,6 @@
           <tbody>
             <tr>
               <td colspan="2" class="dataTables_empty">Loading data from server</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <div id="tabs-volumes" class="active">
-        <table id="volumes" class="display">
-          <thead>
-            <tr>
-              <th>
-                <input type="checkbox" onchange="selectCheckboxChanged(this, 'volumes');">
-              </th>
-              <th>id</th>
-              <th>status</th>
-              <th>size</th>
-              <th>creation time</th>
-              <th>snapshot id</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td colspan="6" class="dataTables_empty">Loading data from server</td>
             </tr>
           </tbody>
         </table>

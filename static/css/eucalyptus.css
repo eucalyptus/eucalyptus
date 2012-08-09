@@ -672,6 +672,10 @@ span.selected {
    border-color: black;
 }
 
+.resources-found {
+   padding-right: 5px;
+}
+
 .help-link {
    float: right;
 }

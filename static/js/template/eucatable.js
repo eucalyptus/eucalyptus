@@ -76,7 +76,7 @@
         $('<div>').addClass('euca-table-action actionmenu inactive'),
         $('<div>').addClass('euca-table-size').append(
           $('<span>').attr('id','table_' + this.options.id + '_count'),
-          $('<span>').attr('id','tbl_txt_found').html('&nbsp; '+args.txt_found),
+          $('<span>').attr('id','tbl_txt_found').addClass('resources-found').html('&nbsp; '+args.txt_found),
           'Showing&nbsp;',
           $('<span>').addClass('show selected').text('10'),
           '&nbsp;|&nbsp;',

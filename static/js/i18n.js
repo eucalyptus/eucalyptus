@@ -25,8 +25,10 @@
         $.i18n.prop('keypair_dialog_del_text');
         $.i18n.prop('keypair_dialog_add_text');
         $.i18n.prop('keypair_dialog_add_name');
-        $.i18n.prop('keypair_dialog_add_title');
-        $.i18n.prop('keypair_dialog_del_title');
+
+        // volume
+        $.i18n.prop('volume_dialog_del_text');
+        $.i18n.prop('volume_dialog_add_text');
       }
     });
   }
