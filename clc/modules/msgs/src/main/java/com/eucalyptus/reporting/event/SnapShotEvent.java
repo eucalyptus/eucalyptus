@@ -47,11 +47,9 @@ public class SnapShotEvent implements Event {
 	return new ActionInfo(SnapShotAction.SNAPSHOTDELETE);
     }
 
-    public static SnapShotEvent with(final ActionInfo actionInfo, String snapshotId,
+    public static SnapShotEvent with(final ActionInfo actionInfo, String snapShotUUID, String snapshotId,
 	    final OwnerFullName ownerFullName,
 	    final long sizeGB) {
-
-	final String snapShotUUID = UUID.randomUUID().toString();
 	
 	return new SnapShotEvent(actionInfo, snapShotUUID, snapshotId, ownerFullName, sizeGB );
     }
