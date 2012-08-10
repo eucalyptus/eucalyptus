@@ -1,5 +1,6 @@
 package com.eucalyptus.webui.client.activity;
 
+import static com.eucalyptus.webui.shared.checker.ValueCheckerFactory.ValueSaver;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Set;
@@ -11,7 +12,6 @@ import com.eucalyptus.webui.client.service.SearchRange;
 import com.eucalyptus.webui.client.service.SearchResult;
 import com.eucalyptus.webui.client.service.SearchResultRow;
 import com.eucalyptus.webui.client.view.ConfirmationView;
-import com.eucalyptus.webui.client.view.DetailView;
 import com.eucalyptus.webui.client.view.FooterView;
 import com.eucalyptus.webui.client.view.InputField;
 import com.eucalyptus.webui.client.view.InputView;
@@ -21,6 +21,7 @@ import com.eucalyptus.webui.client.view.FooterView.StatusType;
 import com.eucalyptus.webui.client.view.LogView.LogType;
 import com.eucalyptus.webui.shared.checker.ValueChecker;
 import com.eucalyptus.webui.shared.checker.ValueCheckerFactory;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.gwt.user.client.rpc.AsyncCallback;
 
@@ -513,7 +514,21 @@ public class UserActivity extends AbstractSearchActivity
       clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.ERROR, "Must select a single user to change password", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
       return;
     }
-    InputView dialog = this.clientFactory.getInputView( );
+
+    final String sessionUserId = this.clientFactory.getSessionData( ).getLoginUser( ).getUserId( );
+    final String selectedUserId = Iterables.get( currentSelected, 0 ).getField( 0 );
+    final ValueSaver oldPasswordSaver;
+    final ValueChecker passwordInequalityChecker;
+    if ( sessionUserId.equals( selectedUserId ) ) {
+      oldPasswordSaver = ValueCheckerFactory.createValueSaver();
+      passwordInequalityChecker = ValueCheckerFactory.createInequalityChecker( ValueCheckerFactory.PASSWORD_NOT_CHANGED, oldPasswordSaver );
+    } else {
+      oldPasswordSaver = null;
+      passwordInequalityChecker = null;
+    }    
+    final ValueSaver newPasswordSaver = ValueCheckerFactory.createValueSaver();
+    final ValueChecker passwordEqualityChecker = ValueCheckerFactory.createEqualityChecker( ValueCheckerFactory.PASSWORDS_NOT_MATCH, newPasswordSaver );
+    final InputView dialog = this.clientFactory.getInputView( );
     dialog.setPresenter( this );
     dialog.display( CHANGE_PASSWORD_CAPTION, CHANGE_PASSWORD_SUBJECT, new ArrayList<InputField>( Arrays.asList( new InputField( ) {
 
@@ -529,7 +544,7 @@ public class UserActivity extends AbstractSearchActivity
 
       @Override
       public ValueChecker getChecker( ) {
-        return null;
+        return oldPasswordSaver;
       }
       
     }, new InputField( ) {
@@ -546,7 +561,11 @@ public class UserActivity extends AbstractSearchActivity
 
       @Override
       public ValueChecker getChecker( ) {
-        return ValueCheckerFactory.createPasswordChecker( );
+        return ValueCheckerFactory.checkerForAll(
+            passwordInequalityChecker,
+            ValueCheckerFactory.createPasswordChecker(),
+            newPasswordSaver
+        );
       }
       
     }, new InputField( ) {
@@ -563,7 +582,7 @@ public class UserActivity extends AbstractSearchActivity
 
       @Override
       public ValueChecker getChecker( ) {
-        return null;
+        return passwordEqualityChecker;
       }
       
     } ) ) );
@@ -575,7 +594,7 @@ public class UserActivity extends AbstractSearchActivity
     }
     final String userId = this.currentSelected.toArray( new SearchResultRow[0] )[0].getField( 0 );
     this.clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.LOADING, "Changing password ...", 0 );
-    
+
     this.clientFactory.getBackendService( ).changePassword( this.clientFactory.getLocalSession( ).getSession( ), userId, oldPass, newPass, null, new AsyncCallback<Void>( ) {
 
       @Override

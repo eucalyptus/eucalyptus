@@ -122,6 +122,7 @@ import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.DatabaseAuthUtils;
 import com.eucalyptus.auth.DatabaseAccountProxy;
 import com.eucalyptus.auth.DatabaseGroupProxy;
+import com.eucalyptus.auth.DatabaseUserProxy;
 
 // Enums
 import com.eucalyptus.auth.principal.User.RegistrationStatus;
@@ -147,7 +148,14 @@ import com.eucalyptus.images.EphemeralDeviceMapping;
 import com.eucalyptus.images.SuppressDeviceMappping;
 import com.eucalyptus.images.BlockStorageDeviceMapping;
 
+import com.eucalyptus.images.BlockStorageDeviceMapping;
+
 import com.eucalyptus.util.BlockStorageUtil;
+
+// Perform discovery for EUARE policy maps
+import com.eucalyptus.auth.policy.condition.ConditionOpDiscovery;
+import com.eucalyptus.auth.policy.key.KeyDiscovery;
+import com.eucalyptus.bootstrap.ServiceJarDiscovery;
 
 class upgrade_30_31 extends AbstractUpgradeScript {
     static final List<String> FROM_VERSION = ["3.0.0", "3.0.1", "3.0.2"];
@@ -184,6 +192,9 @@ class upgrade_30_31 extends AbstractUpgradeScript {
 
     @Override
     public void upgrade(File oldEucaHome, File newEucaHome) {
+		ServiceJarDiscovery.runDiscovery(new ConditionOpDiscovery());
+		ServiceJarDiscovery.runDiscovery(new KeyDiscovery());
+		
         buildConnectionMap();
 
         // VMware
@@ -387,6 +398,15 @@ class upgrade_30_31 extends AbstractUpgradeScript {
                     db.add(accessKey);
                 }
                 db.commit();
+
+                def userDelegate = new DatabaseUserProxy(user);
+                initMetaClass(userDelegate, userDelegate.class);
+                Map<String, String> info = new HashMap<String, String>( );
+                authConn.rows("""select * from auth_user_info_map
+                                  where userentity_id=?""", rowResult.id).each { infoRow ->
+                    info.put(infoRow.auth_user_info_key, infoRow.auth_user_info_value);
+                }
+                userDelegate.setInfo(info)
 
                 db = EntityWrapper.get(CertificateEntity.class);
                 authConn.rows("""select c.* from auth_cert c
