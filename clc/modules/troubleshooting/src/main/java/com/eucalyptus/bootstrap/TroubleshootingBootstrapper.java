@@ -218,7 +218,7 @@ public class TroubleshootingBootstrapper extends Bootstrapper {
 				newValue = "";
 			}
 			String newLogLevel = (String) newValue;
-			newLogLevel = makeNotNullAndTrim(newLogLevel).toUpperCase();// Null or empty will not reset log levels
+			newLogLevel = newLogLevel.trim().toUpperCase();
 			if (!(newLogLevel.isEmpty() || Arrays.asList(logLevels).contains(newLogLevel))) {
 				throw new ConfigurablePropertyException("Invalid log level " + newLogLevel);
 			}
@@ -233,30 +233,9 @@ public class TroubleshootingBootstrapper extends Bootstrapper {
 				e1.printStackTrace();
 				throw new ConfigurablePropertyException( e1 );
 			}
-			if (newLogLevel.isEmpty()) {
+			if (!newLogLevel.isEmpty()) {
 				System.setProperty("euca.log.level", newLogLevel.toUpperCase());
-				//LoggingResetter.resetLoggingLevels();
-				//LoggingResetter.resetLoggingWithXML();
-				Set<Appender> allAppenderSet = new HashSet<Appender>();
-				List<Appender> allAppenderList = new ArrayList<Appender>();
-				Enumeration e = LogManager.getRootLogger().getAllAppenders();
-				while (e.hasMoreElements()) {
-					Appender a = (Appender) e.nextElement();
-					allAppenderSet.add(a);
-					allAppenderList.add(a);
-				}
-				Enumeration e2 = LogManager.getLoggerRepository().getCurrentLoggers();
-				while (e2.hasMoreElements()) {
-					Logger logger = (Logger) e2.nextElement();
-					Enumeration e3 = logger.getAllAppenders();
-					while (e3.hasMoreElements()) {
-						Appender a = (Appender) e3.nextElement();
-						allAppenderSet.add(a);
-						allAppenderList.add(a);
-					}
-				}
-				LOG.fatal("Set appenders = " + allAppenderSet.size());
-				LOG.fatal("List appenders = " + allAppenderList.size());
+				LoggingResetter.resetLoggingWithXML();
 			}
 			LOG.fatal("test level FATAL");
 			LOG.error("test level ERROR");
@@ -265,13 +244,5 @@ public class TroubleshootingBootstrapper extends Bootstrapper {
 			LOG.debug("test level DEBUG");
 			LOG.trace("test level TRACE");
 		}
-		private String makeNotNullAndTrim(String s) {
-			if (s == null) {
-				return "";
-			} else {
-				return s.trim();
-			}
-		}
 	}
-
 }
