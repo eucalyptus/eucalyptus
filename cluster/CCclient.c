@@ -134,9 +134,9 @@ int main(int argc, char **argv) {
   }
   
   if (MODE == 0) {
-    snprintf(endpoint_uri, 256," http://localhost:%d/axis2/services/EucalyptusCC", port);
+    snprintf(endpoint_uri, 256,"http://localhost:%d/axis2/services/EucalyptusCC", port);
   } else {
-    snprintf(endpoint_uri, 256," http://%s/axis2/services/EucalyptusCC", argv[1]);
+    snprintf(endpoint_uri, 256,"http://%s/axis2/services/EucalyptusCC", argv[1]);
   }
   //env =  axutil_env_create_all(NULL, 0);
   env =  axutil_env_create_all("/tmp/fofo", AXIS2_LOG_LEVEL_TRACE);

@@ -74,7 +74,7 @@
 extern ncMetadata mymeta;
 
 int cc_killallInstances(axutil_env_t *env, axis2_stub_t *stub) {
-  int rc, instIdsLen;
+  int instIdsLen;
   char *instIds[256];
   adb_ccInstanceType_t *it;
   axis2_char_t *instId=NULL;
@@ -126,7 +126,7 @@ int cc_killallInstances(axutil_env_t *env, axis2_stub_t *stub) {
 	}
       }
 
-      rc = cc_terminateInstances(instIds, instIdsLen, env, stub);
+      cc_terminateInstances(instIds, instIdsLen, env, stub);
     }
   }
   return(0);

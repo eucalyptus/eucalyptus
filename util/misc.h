@@ -69,6 +69,7 @@
 #include <sys/types.h> // mode_t
 #include <linux/limits.h>
 #include <stdint.h> // uint32_t
+#include "log.h" // so everyone picks up the logging functions
 
 typedef unsigned char boolean;
 #define TRUE 1
@@ -95,8 +96,6 @@ typedef unsigned char boolean;
 
 #define SP(a) a ? a : "UNSET"
 #define RANDALPHANUM rand()%2 ? rand()%26+97 : rand()%2 ? rand()%26+65 : rand()%10+48
-
-enum {EUCADEBUG3, EUCADEBUG2, EUCADEBUG, EUCAINFO, EUCAWARN, EUCAERROR, EUCAFATAL};
 
 char * replace_string (char ** stringp, char * source, char * destination );
 int sscanf_lines (char * lines, char * format, void * varp);
@@ -147,10 +146,6 @@ char **
 from_var_to_char_list(const char *var);
 
 // dan's functions
-int logprintf(const char *format, ...);
-int logprintfl(int level, const char *format, ...);
-void eventlog(char *hostTag, char *userTag, char *cid, char *eventTag, char *other);
-int logfile(char *file, int in_loglevel, int in_logrollnumber);
 int check_process(pid_t pid, char *search);
 int check_directory(const char *dir);
 int check_file (const char *file);
@@ -195,7 +190,6 @@ int daemonmaintain(char *cmd, char *procname, char *pidfile, int force, char *ro
 int run (const char * arg1, ...);
 int vrun (const char * fmt, ...);
 int cat (const char * file_name);
-int logcat (int debug_level, const char * file_name);
 int touch (const char * path);
 int diff (const char * path1, const char * path2);
 long long dir_size (const char * path);
