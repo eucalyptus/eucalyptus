@@ -28,14 +28,20 @@
             },
             { "mDataProp": "id" },
             {
-              "fnRender": function(oObj) { return '<div class="volume-status-' + oObj.aData.status + '">&nbsp;</div>'; },
+              "fnRender": function(oObj) { s = (oObj.aData.status == 'in-use') ? oObj.aData.attach_data.status : oObj.aData.status; return '<div class="volume-status-' + s + '">&nbsp;</div>'; },
               "sWidth": "20px",
+              "bSearchable": false,
+              "iDataSort": 8, // sort on hiden status column
             },
             { "mDataProp": "size" },
             { "mDataProp": "attach_data.instance_id" },
             { "mDataProp": "snapshot_id" },
             { "mDataProp": "zone" },
             { "mDataProp": "create_time" },
+            {
+              "bVisible": false,
+              "fnRender": function(oObj) { s = (oObj.aData.status == 'in-use') ? oObj.aData.attach_data.status : oObj.aData.status; return s; }
+            }
           ],
           "fnDrawCallback": function( oSettings ) {
              $('#table_volumes_count').html(oSettings.fnRecordsTotal());
@@ -53,11 +59,11 @@
 
       //add leged to the volumes table
       $tableLegend = $("div.table-volumes-legend");
-      $tableLegend.append($('<span>').addClass('volume-legend').html('Legend'));
+      $tableLegend.append($('<span>').addClass('volume-legend').html(volume_legend));
       //TODO: add more statuses
-      statuses = ['available', 'in-use']
+      statuses = ['available', 'attached', 'attaching']
       for (s in statuses)
-        $tableLegend.append($('<span>').addClass('volume-status-legend').addClass('volume-status-' + statuses[s]).html(statuses[s]));
+        $tableLegend.append($('<span>').addClass('volume-status-legend').addClass('volume-status-' + statuses[s]).html($.i18n.map['volume_state_' + statuses[s]]));
 
       $tmpl = $('html body').find('.templates #volumeDelDlgTmpl').clone();
       $del_dialog = $($tmpl.render($.i18n.map));
