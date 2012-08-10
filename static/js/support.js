@@ -6,17 +6,7 @@
 var RETURN_KEY_CODE = 13;
 var RETURN_MAC_KEY_CODE = 10;
 var BACKSPACE_KEY_CODE = 8;
-/*
-function updateActionMenu(context) {
-  $parentDiv = $(context).parents('div.dataTables_wrapper').parent();
-  selectedRows = $parentDiv.eucatable('getAllSelectedRows');
-  if ( selectedRows.length == 0 ) {
-    $parentDiv.eucatable('deactivateMenu');
-  } else {
-    $parentDiv.eucatable('activateMenu');
-  }
-}
-*/
+
 function escapeHTML(input) {
   return $('<div/>').text(input).html();
 }
