@@ -31,7 +31,7 @@
           $curInstance.close();
         }
       }
-
+      $('html body').eucaevent('unclick_all'); // this will close menus that's pulled down
       switch(selected){
         case 'dashboard':
           this.element.dashboard();
@@ -42,7 +42,6 @@
         case 'volume':
           this.element.volume();
           break;
-
         case 'logout':
           $.cookie('session-id','');
           location.href = '/';
