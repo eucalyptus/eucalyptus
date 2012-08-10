@@ -75,6 +75,7 @@ import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.event.EventListener;
+import com.eucalyptus.event.Listeners;
 import com.eucalyptus.reporting.event.*;
 import com.eucalyptus.reporting.event_store.ReportingInstanceEventStore;
 import com.eucalyptus.reporting.event_store.ReportingInstanceUsageEvent;
@@ -96,7 +97,8 @@ public class InstanceEventListener implements EventListener<InstanceEvent> {
   private final ReadWriteLock persistenceLock = new ReentrantReadWriteLock(); // lock for recentUsageEvents bulk updates
   private final AtomicLong lastWriteMs = new AtomicLong( 0L );
 
-  public InstanceEventListener() {
+  public static void register( ) {
+    Listeners.register( InstanceEvent.class, new InstanceEventListener() );
   }
 
   public void fireEvent( @Nonnull final InstanceEvent event ) {
