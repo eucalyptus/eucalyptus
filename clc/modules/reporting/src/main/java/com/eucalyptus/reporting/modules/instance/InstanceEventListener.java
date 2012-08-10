@@ -70,6 +70,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import javax.annotation.Nonnull;
 import org.apache.log4j.*;
+import org.hibernate.exception.ConstraintViolationException;
 
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
@@ -132,8 +133,9 @@ public class InstanceEventListener implements EventListener<InstanceEvent> {
             event.getClusterName(),
             event.getAvailabilityZone()
         );
+      } catch ( ConstraintViolationException ex ) {
+        log.debug( ex, ex ); // info already exists for instance
       } catch ( Exception ex ) {
-        //TODO:STEVE:Handle expected exception (i.e. instance already exists)
         log.error( ex, ex );
       } finally {
         recentlySeenUuids.add( uuid );

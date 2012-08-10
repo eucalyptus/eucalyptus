@@ -123,7 +123,7 @@ public class InstanceEvent implements Event {
    *  Thus we need the user name or account name at the time an event was
    *  sent.
    */
-  public InstanceEvent( final String uuid,  //TODO:STEVE: Do something about the parameter count
+  public InstanceEvent( final String uuid,
                         final String instanceId,
                         final String instanceType,
                         final String userId,

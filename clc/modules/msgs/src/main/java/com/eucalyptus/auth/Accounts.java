@@ -68,13 +68,10 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.auth.api.AccountProvider;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.Account;
-import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.Certificate;
-import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.auth.principal.UserFullName;
-import com.eucalyptus.util.FullName;
+import com.google.common.base.Function;
 
 /**
  * <h2>Eucalyptus/AWS IDs & Access Keys:</h2>
@@ -231,5 +228,30 @@ public class Accounts {
       }
     }
   }
-  
+
+  public static Function<Account,String> toAccountNumber() {
+    return AccountStringProperties.ACCOUNT_NUMBER;
+  }
+
+  public static Function<User,String> toUserId() {
+    return UserStringProperties.USER_ID;
+  }
+
+  private enum AccountStringProperties implements Function<Account,String> {
+    ACCOUNT_NUMBER {
+      @Override
+      public String apply( final Account account ) {
+        return account.getAccountNumber();
+      }
+    }
+  }
+
+  private enum UserStringProperties implements Function<User,String> {
+    USER_ID {
+      @Override
+      public String apply( final User user ) {
+        return user.getUserId();
+      }
+    }
+  }
 }

@@ -384,8 +384,11 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
   public Address assign( final VmInstance vm ) {
     SplitTransition assign = new SplitTransition( Transition.assigning ) {
       public void top( ) {
-        Address.this.setInstanceId( vm.getInstanceId( ) );
-        Address.this.setInstanceAddress( vm.getPrivateAddress( ) );
+        Address.this.setInstanceInfo(
+            vm.getInstanceUuid(),
+            vm.getInstanceId( ),
+            vm.getPrivateAddress( )
+        );
         Address.this.stateUuid = UUID.randomUUID( ).toString( );
       }
       
@@ -477,7 +480,7 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
       }
     }
   }
-  
+
   public String getInstanceId( ) {
     return this.instanceId;
   }
@@ -490,18 +493,18 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
     return this.instanceAddress;
   }
   
-  private void setInstanceAddress( String instanceAddress ) {
-    this.instanceAddress = instanceAddress;
-  }
-  
   public String getStateUuid( ) {
     return this.stateUuid;
   }
-  
-  public void setInstanceId( String instanceId ) {
+
+  private void setInstanceInfo( final String instanceUuid,
+                                final String instanceId,
+                                final String instanceAddress ) {
+    this.instanceUuid = instanceUuid;
     this.instanceId = instanceId;
+    this.instanceAddress = instanceAddress;
   }
-  
+
   @Override
   public String toString( ) {
     return "Address " + this.getDisplayName( ) + " " + ( this.isAllocated( )
@@ -598,16 +601,18 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
 
   private void fireUsageEvent( final OwnerFullName ownerFullName,
                                final ActionInfo actionInfo ) {
-    try {
-      ListenerRegistry.getInstance().fireEvent(
-          AddressEvent.with(
-              getNaturalId(),
-              getDisplayName(),
-              ownerFullName,
-              Accounts.lookupAccountById(ownerFullName.getAccountNumber()).getName(),
-              actionInfo ) );
-    } catch ( final Exception e ) {
-      LOG.error( e, e );
+    if ( !Principals.isFakeIdentityAccountNumber( ownerFullName.getAccountNumber() ) ) {
+      try {
+        ListenerRegistry.getInstance().fireEvent(
+            AddressEvent.with(
+                getNaturalId(),
+                getDisplayName(),
+                ownerFullName,
+                Accounts.lookupAccountById(ownerFullName.getAccountNumber()).getName(),
+                actionInfo ) );
+      } catch ( final Exception e ) {
+        LOG.error( e, e );
+      }
     }
   }
 }

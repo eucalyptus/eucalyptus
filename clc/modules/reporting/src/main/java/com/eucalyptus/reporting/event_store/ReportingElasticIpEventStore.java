@@ -58,7 +58,7 @@ public class ReportingElasticIpEventStore {
                                  @Nonnull final String instanceUuid,
                                           final long timestampMs ) {
     Preconditions.checkNotNull( uuid, "Uuid is required" );
-    Preconditions.checkNotNull( uuid, "InstanceUuid is required" );
+    Preconditions.checkNotNull( instanceUuid, "InstanceUuid is required" );
 
     persist( new ReportingElasticIpAttachEvent( uuid, instanceUuid, timestampMs) );
   }
@@ -67,7 +67,7 @@ public class ReportingElasticIpEventStore {
                                  @Nonnull final String instanceUuid,
                                           final long timestampMs ) {
     Preconditions.checkNotNull( uuid, "Uuid is required" );
-    Preconditions.checkNotNull( uuid, "InstanceUuid is required" );
+    Preconditions.checkNotNull( instanceUuid, "InstanceUuid is required" );
 
     persist( new ReportingElasticIpDetachEvent( uuid, instanceUuid, timestampMs ) );
   }
