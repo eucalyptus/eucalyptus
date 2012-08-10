@@ -30,6 +30,10 @@
     _destroy : function() {
     },
 
+    reDrawTable : function() {
+      this.table.fnDraw();
+    },
+
     refreshTable : function() {
       this.table.fnReloadAjax();
     },

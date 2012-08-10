@@ -19,7 +19,7 @@
           "sAjaxDataProp": "results",
           "bAutoWidth" : false,
           "sPaginationType": "full_numbers",
-          "sDom": '<"table_volumes_header">f<"clear"><"table_volumes_top">rt<"table-volumes-legend">p<"clear">',
+          "sDom": '<"table_volumes_header"><"table-volume-filter">f<"clear"><"table_volumes_top">rt<"table-volumes-legend">p<"clear">',
           "aoColumns": [
             {
               "bSortable": false,
@@ -57,11 +57,48 @@
       });
       tableWrapper.appendTo(this.element);
 
+      //add filter to the table
+      $tableFilter = $('div.table-volume-filter');
+      $tableFilter.addClass('euca-table-filter');
+      $tableFilter.append(
+        $('<span>').addClass("filter-label").html(volume_filter_label),
+        $('<select>').attr('id', 'volumes-selector'));
+
+      //TODO: add more states
+      attachedStates = { 'attached':1, 'attaching':1 };
+      detachedStates = { 'available':1 };
+
+      filterOptions = ['all', 'attached', 'detached'];
+      $sel = $tableFilter.find("#volumes-selector");
+      for (o in filterOptions)
+        $sel.append($('<option>').val(filterOptions[o]).text($.i18n.map['volume_selecter_' + filterOptions[o]]));
+
+      $.fn.dataTableExt.afnFiltering.push(
+	function( oSettings, aData, iDataIndex ) {
+          // first check if this is called on a volumes table
+          if (oSettings.sInstance != 'volumes')
+            return true;
+          selectorValue = $("#volumes-selector").val();
+          switch (selectorValue) {
+            case 'attached':
+              return attachedStates[aData[8]] == 1;
+              break;
+            case 'detached':
+              return detachedStates[aData[8]] == 1;
+              break;
+          }
+          return true;
+        }
+      );
+
+      // attach action
+      $("#volumes-selector").change( function() { thisObj.reDrawTable() } );
+
       //add leged to the volumes table
       $tableLegend = $("div.table-volumes-legend");
       $tableLegend.append($('<span>').addClass('volume-legend').html(volume_legend));
-      //TODO: add more statuses
-      statuses = ['available', 'attached', 'attaching']
+      //TODO: this might not work in all browsers
+      statuses = [].concat(Object.keys(attachedStates),Object.keys(detachedStates));
       for (s in statuses)
         $tableLegend.append($('<span>').addClass('volume-status-legend').addClass('volume-status-' + statuses[s]).html($.i18n.map['volume_state_' + statuses[s]]));
 
@@ -110,6 +147,10 @@
     },
 
     _destroy : function() {
+    },
+
+    reDrawTable : function() {
+      tableWrapper.eucatable('reDrawTable');
     },
 
     handleRowClick : function(args) {

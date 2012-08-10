@@ -740,6 +740,14 @@ tr.even td.sorting_1 {
    border-color: black;
 }
 
+.euca-table-filter {
+  float: left;
+}
+
+.filter-label {
+  padding-right: 5px;
+}
+
 .resources-found {
    padding-right: 5px;
 }
