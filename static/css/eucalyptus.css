@@ -791,7 +791,7 @@ tr.even td.sorting_1 {
 }
 
 .volume-status-legend {
-  padding-left: 10px;
+  padding-left: 12px;
   background-position: left !important;
   margin-left: 15px;
 }
@@ -805,9 +805,13 @@ tr.even td.sorting_1 {
   background-repeat: no-repeat;
   background-position: center;
 }
-
-.volume-status-in-use {
+.volume-status-attached {
   background-image: url('../images/red-ball-10x10.png');
+  background-repeat: no-repeat;
+  background-position: center;
+}
+.volume-status-attaching {
+  background-image: url('../images/black-ball-10x10.png');
   background-repeat: no-repeat;
   background-position: center;
 }
