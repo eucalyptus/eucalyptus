@@ -76,12 +76,11 @@ public class SnapShotUsageEventListener implements EventListener<SnapShotEvent> 
 
 	    switch (event.getActionInfo().getAction()) {
 	    case SNAPSHOTCREATE:
-		eventStore.insertCreateEvent(event.getUuid(), event
-			.getDisplayName(), timeInMs, event.getOwnerFullName()
+		eventStore.insertCreateEvent(event.getUUID(), event.getSnapshotId(), timeInMs, event.getOwnerFullName()
 			.getUserName(), event.getSizeGB());
 		break;
 	    case SNAPSHOTDELETE:
-		eventStore.insertDeleteEvent(event.getUuid(), timeInMs);
+		eventStore.insertDeleteEvent(event.getUUID(), event.getSnapshotId(), event.getOwnerFullName().getUserName(), timeInMs);
 		break;
 	    }
 

@@ -63,14 +63,14 @@ public class ReportingVolumeSnapshotEventStore
 		}					
 	}
 	
-	public void insertDeleteEvent(String uuid, long timestampMs)
+	public void insertDeleteEvent(String uuid, String snapShotId, String userId, long timestampMs)
 	{
 		
 		EntityWrapper<ReportingVolumeSnapshotDeleteEvent> entityWrapper =
 			EntityWrapper.get(ReportingVolumeSnapshotDeleteEvent.class);
 
 		try {
-			ReportingVolumeSnapshotDeleteEvent event = new ReportingVolumeSnapshotDeleteEvent(uuid, timestampMs);
+			ReportingVolumeSnapshotDeleteEvent event = new ReportingVolumeSnapshotDeleteEvent(uuid, snapShotId, userId, timestampMs);
 			entityWrapper.add(event);
 			entityWrapper.commit();
 			LOG.debug("Added event to db:" + event);

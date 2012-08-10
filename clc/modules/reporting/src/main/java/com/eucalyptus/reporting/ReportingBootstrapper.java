@@ -196,30 +196,6 @@ public class ReportingBootstrapper extends Bootstrapper {
 			}
 		    });
 
-	    ListenerRegistry.getInstance().register(SnapShotEvent.class,
-		    new EventListener() {
-			@Override
-			public void fireEvent(Event event) {
-			    if (event instanceof SnapShotEvent) {
-				QueueSender sender = QueueFactory.getInstance()
-					.getSender(QueueIdentifier.SNAPSHOT);
-				sender.send((com.eucalyptus.event.Event) event);
-			    }
-			}
-		    });
-
-	    ListenerRegistry.getInstance().register(VolumeEvent.class,
-		    new EventListener() {
-			@Override
-			public void fireEvent(Event event) {
-			    if (event instanceof VolumeEvent) {
-				QueueSender sender = QueueFactory.getInstance()
-					.getSender(QueueIdentifier.VOLUME);
-				sender.send((com.eucalyptus.event.Event) event);
-			    }
-			}
-		    });
-
 	    log.info("ReportingBootstrapper started");
 	    return true;
 	} catch (Exception ex) {

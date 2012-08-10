@@ -38,12 +38,18 @@ public class ReportingVolumeSnapshotDeleteEvent
 	private String uuid;
 	@Column(name="timestamp_ms", nullable=false)
 	private Long timestampMs;
+	@Column(name="username", nullable=false)
+	private String username;
+	@Column(name="snapshotid", nullable=false)
+	private String snapshotid;
 	
-	protected ReportingVolumeSnapshotDeleteEvent(String uuid, Long timestampMs)
+	protected ReportingVolumeSnapshotDeleteEvent(String uuid, String snapshotid, String username, Long timestampMs)
 	{
 		super();
 		this.uuid = uuid;
 		this.timestampMs = timestampMs;
+		this.snapshotid = snapshotid;
+		this.username = username;
 	}
 
 	protected ReportingVolumeSnapshotDeleteEvent()
@@ -51,6 +57,8 @@ public class ReportingVolumeSnapshotDeleteEvent
 		super();
 		this.uuid = null;
 		this.timestampMs = null;
+		this.snapshotid = null;
+		this.username = null;
 	}
 
 	public String getUuid()
@@ -61,6 +69,14 @@ public class ReportingVolumeSnapshotDeleteEvent
 	public Long getTimestampMs()
 	{
 		return timestampMs;
+	}
+
+	public String getUsername() {
+	    return username;
+	}
+
+	public String getSnapshotid() {
+	    return snapshotid;
 	}
 	
 }
