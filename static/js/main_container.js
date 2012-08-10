@@ -1,7 +1,7 @@
 (function($, eucalyptus) {
   $.widget('eucalyptus.maincontainer', {
     options : { 
-        default_selected : 'volume',
+        default_selected : 'dashboard',
     },
 
     _curSelected : null,
