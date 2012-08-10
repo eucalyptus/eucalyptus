@@ -785,4 +785,29 @@ tr.even td.sorting_1 {
 }
 
 
+/* Volume statuses */
+.table-volume-legend {
+  float: left;
+}
 
+.volume-status-legend {
+  padding-left: 10px;
+  background-position: left !important;
+  margin-left: 15px;
+}
+
+.volume-legend {
+  float: left;
+}
+
+.volume-status-available {
+  background-image: url('../images/green-ball-10x10.png');
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+.volume-status-in-use {
+  background-image: url('../images/red-ball-10x10.png');
+  background-repeat: no-repeat;
+  background-position: center;
+}

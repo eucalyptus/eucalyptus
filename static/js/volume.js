@@ -19,7 +19,7 @@
           "sAjaxDataProp": "results",
           "bAutoWidth" : false,
           "sPaginationType": "full_numbers",
-          "sDom": '<"table_volumes_header">f<"clear"><"table_volumes_top">rtp<"clear">',
+          "sDom": '<"table_volumes_header">f<"clear"><"table_volumes_top">rt<"table-volumes-legend">p<"clear">',
           "aoColumns": [
             {
               "bSortable": false,
@@ -27,10 +27,15 @@
               "sWidth": "20px",
             },
             { "mDataProp": "id" },
-            { "mDataProp": "status" },
+            {
+              "fnRender": function(oObj) { return '<div class="volume-status-' + oObj.aData.status + '">&nbsp;</div>'; },
+              "sWidth": "20px",
+            },
             { "mDataProp": "size" },
-            { "mDataProp": "create_time" },
+            { "mDataProp": "attach_data.instance_id" },
             { "mDataProp": "snapshot_id" },
+            { "mDataProp": "zone" },
+            { "mDataProp": "create_time" },
           ],
           "fnDrawCallback": function( oSettings ) {
              $('#table_volumes_count').html(oSettings.fnRecordsTotal());
@@ -45,6 +50,14 @@
         row_click : function (args) { thisObj.handleRowClick(args); }
       });
       tableWrapper.appendTo(this.element);
+
+      //add leged to the volumes table
+      $tableLegend = $("div.table-volumes-legend");
+      $tableLegend.append($('<span>').addClass('volume-legend').html('Legend'));
+      //TODO: add more statuses
+      statuses = ['available', 'in-use']
+      for (s in statuses)
+        $tableLegend.append($('<span>').addClass('volume-status-legend').addClass('volume-status-' + statuses[s]).html(statuses[s]));
 
       $tmpl = $('html body').find('.templates #volumeDelDlgTmpl').clone();
       $del_dialog = $($tmpl.render($.i18n.map));
