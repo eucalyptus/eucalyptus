@@ -193,6 +193,7 @@ public class Snapshots {
                   entity.setProgress( storageSnapshot.getProgress( ) );
                 } else if ( State.EXTANT.equals( entity.getState( ) ) ) {
                   entity.setProgress( "100%" );
+                  fireUsageEvent( entity, SnapShotEvent.forSnapShotCreate());
                 } else if ( State.GENERATING.equals( entity.getState( ) ) ) {
                   if ( entity.getProgress( ) == null ) {
                     entity.setProgress( "0%" );
@@ -284,15 +285,13 @@ public class Snapshots {
             throw Exceptions.toUndeclared( ex );
           }
         }
-      } );
+      } ); 
     } catch ( ConstraintViolationException ex ) {
       throw new DuplicateMetadataException( "Duplicate snapshot creation: " + snap + ": " + ex.getMessage( ), ex );
     } catch ( ExecutionException ex ) {
       LOG.error( ex.getCause( ), ex.getCause( ) );
       throw new EucalyptusCloudException( ex );
     }
-    
-    fireUsageEvent( snap, SnapShotEvent.forSnapShotCreate());
     
     return snap;
   }

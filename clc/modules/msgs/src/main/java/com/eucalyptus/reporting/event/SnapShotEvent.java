@@ -3,8 +3,6 @@ package com.eucalyptus.reporting.event;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.notNullValue;
 
-import java.util.UUID;
-
 import com.eucalyptus.event.Event;
 import com.eucalyptus.util.OwnerFullName;
 
