@@ -32,7 +32,7 @@ import com.eucalyptus.entities.AbstractPersistent;
 public class ReportingVolumeCreateEvent
 	extends AbstractPersistent
 {
-	@Column(name="uuid", nullable=false)
+	@Column(name="uuid", nullable=false, unique=true)
 	private String uuid;
 	@Column(name="timestamp_ms", nullable=false)
 	private Long timestampMs;

@@ -38,72 +38,57 @@ import com.google.common.base.Preconditions;
 
 public class SnapShotUsageEventListener implements EventListener<SnapShotEvent> {
 
-    private static Logger LOG = Logger
-	    .getLogger(SnapShotUsageEventListener.class);
+  private static Logger LOG = Logger.getLogger( SnapShotUsageEventListener.class );
 
-    public SnapShotUsageEventListener() {
+  public SnapShotUsageEventListener() {
+  }
+
+  public static void register() {
+    Listeners.register( SnapShotEvent.class, new SnapShotUsageEventListener() );
+  }
+
+  @Override
+  public void fireEvent( @Nonnull final SnapShotEvent event ) {
+    Preconditions.checkNotNull(event, "Event is required");
+
+    final long timeInMs = getCurrentTimeMillis();
+
+    try {
+      final User user = Accounts.lookupUserById(event.getOwnerFullName().getUserId());
+
+      getReportingAccountCrud().createOrUpdateAccount(user.getAccount()
+          .getName(), user.getAccount().getAccountNumber());
+      getReportingUserCrud().createOrUpdateUser(user.getUserId(), user
+          .getAccount().getAccountNumber(), user.getName());
+
+      final ReportingVolumeSnapshotEventStore eventStore = getReportingVolumeSnapshotEventStore();
+      switch (event.getActionInfo().getAction()) {
+        case SNAPSHOTCREATE:
+          eventStore.insertCreateEvent(event.getUUID(), event.getSnapshotId(), timeInMs, event.getOwnerFullName()
+              .getUserName(), event.getSizeGB());
+          break;
+        case SNAPSHOTDELETE:
+          eventStore.insertDeleteEvent(event.getUUID(), event.getSnapshotId(), event.getOwnerFullName().getUserName(), timeInMs);
+          break;
+      }
+    } catch (AuthException e) {
+        LOG.error("Unable fire snap shot reporting event", e.getCause());
     }
+  }
 
-    public static void register() {
-	Listeners.register(SnapShotEvent.class,
-		new SnapShotUsageEventListener());
-    }
+  protected ReportingAccountCrud getReportingAccountCrud() {
+    return ReportingAccountCrud.getInstance();
+  }
 
-    @Override
-    public void fireEvent(@Nonnull final SnapShotEvent event) {
-	Preconditions.checkNotNull(event, "Event is required");
+  protected ReportingUserCrud getReportingUserCrud() {
+    return ReportingUserCrud.getInstance();
+  }
 
-	final long timeInMs = getCurrentTimeMillis();
+  protected ReportingVolumeSnapshotEventStore getReportingVolumeSnapshotEventStore() {
+    return ReportingVolumeSnapshotEventStore.getInstance();
+  }
 
-	User user = null;
-
-	try {
-	    user = Accounts
-		    .lookupUserById(event.getOwnerFullName().getUserId());
-
-	    final ReportingAccountCrud reportingAccountDao = getReportingAccountCrud();
-
-	    reportingAccountDao.createOrUpdateAccount(user.getAccount()
-		    .getName(), user.getAccount().getAccountNumber());
-
-	    final ReportingUserCrud reportingUserCrud = getReportingUserCrud();
-
-	    reportingUserCrud.createOrUpdateUser(user.getUserId(), user
-		    .getAccount().getAccountNumber(), user.getName());
-
-	    final ReportingVolumeSnapshotEventStore eventStore = ReportingVolumeSnapshotEventStore
-		    .getInstance();
-
-	    switch (event.getActionInfo().getAction()) {
-	    case SNAPSHOTCREATE:
-		eventStore.insertCreateEvent(event.getUUID(), event.getSnapshotId(), timeInMs, event.getOwnerFullName()
-			.getUserName(), event.getSizeGB());
-		break;
-	    case SNAPSHOTDELETE:
-		eventStore.insertDeleteEvent(event.getUUID(), event.getSnapshotId(), event.getOwnerFullName().getUserName(), timeInMs);
-		break;
-	    }
-
-	} catch (AuthException e) {
-	    LOG.error("Unable fire snap shot reporting event", e.getCause());
-	}
-
-    }
-
-    protected ReportingAccountCrud getReportingAccountCrud() {
-	return ReportingAccountCrud.getInstance();
-    }
-
-    protected ReportingUserCrud getReportingUserCrud() {
-	return ReportingUserCrud.getInstance();
-    }
-
-    protected ReportingVolumeSnapshotEventStore getReportingVolumeSnapshotEventStore() {
-	return ReportingVolumeSnapshotEventStore.getInstance();
-    }
-
-    protected long getCurrentTimeMillis() {
-	return System.currentTimeMillis();
-    }
-
+  protected long getCurrentTimeMillis() {
+    return System.currentTimeMillis();
+  }
 }

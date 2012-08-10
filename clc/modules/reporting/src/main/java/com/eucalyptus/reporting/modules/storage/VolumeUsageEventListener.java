@@ -42,80 +42,69 @@ import com.google.common.base.Preconditions;
  */
 public class VolumeUsageEventListener implements EventListener<VolumeEvent> {
 
-    private static Logger LOG = Logger
-	    .getLogger(VolumeUsageEventListener.class);
+  private static Logger LOG = Logger.getLogger(VolumeUsageEventListener.class);
 
-    public static void register() {
-	Listeners.register(VolumeEvent.class, new VolumeUsageEventListener());
+  public static void register() {
+    Listeners.register( VolumeEvent.class, new VolumeUsageEventListener() );
+  }
+
+  @Override
+  public void fireEvent(@Nonnull final VolumeEvent event) {
+    Preconditions.checkNotNull(event, "Event is required");
+
+    final long timeInMs = getCurrentTimeMillis();
+    try {
+      final User user = Accounts.lookupUserById(event.getOwner().getUserId());
+
+      getReportingAccountCrud().createOrUpdateAccount(user.getAccount()
+          .getName(), user.getAccount().getAccountNumber());
+      getReportingUserCrud().createOrUpdateUser(user.getUserId(), user
+          .getAccount().getAccountNumber(), user.getName());
+
+      final ReportingVolumeEventStore eventStore = getReportingVolumeEventStore();
+      switch (event.getActionInfo().getAction()) {
+        case VOLUMECREATE:
+          eventStore.insertCreateEvent(event.getUuid(), event
+              .getDisplayName(), timeInMs, event.getOwner()
+              .getUserId(), event.getAvailabilityZone(), event
+              .getSizeGB());
+          break;
+        case VOLUMEDELETE:
+          eventStore.insertDeleteEvent(event.getUuid(), timeInMs);
+          break;
+        case VOLUMEATTACH:
+          eventStore
+              .insertAttachEvent(event.getUuid(),
+                  ((InstanceActionInfo) event.getActionInfo())
+                      .getInstanceUuid(), event.getSizeGB(),
+                  timeInMs);
+          break;
+        case VOLUMEDETACH:
+          eventStore
+              .insertDetachEvent(event.getUuid(),
+                  ((InstanceActionInfo) event.getActionInfo())
+                      .getInstanceUuid(), event.getSizeGB(),
+                  timeInMs);
+          break;
+      }
+    } catch (AuthException e) {
+        LOG.error("Unable to fire volume reporting event.", e.getCause());
     }
+  }
 
-    @Override
-    public void fireEvent(@Nonnull final VolumeEvent event) {
-	Preconditions.checkNotNull(event, "Event is required");
+  protected ReportingAccountCrud getReportingAccountCrud() {
+    return ReportingAccountCrud.getInstance();
+  }
 
-	final long timeInMs = getCurrentTimeMillis();
-	User user = null;
+  protected ReportingUserCrud getReportingUserCrud() {
+    return ReportingUserCrud.getInstance();
+  }
 
-	try {
-	    user = Accounts.lookupUserById(event.getOwner().getUserId());
+  protected ReportingVolumeEventStore getReportingVolumeEventStore() {
+    return ReportingVolumeEventStore.getInstance();
+  }
 
-	    final ReportingAccountCrud reportingAccountCrud = getReportingAccountCrud();
-
-	    reportingAccountCrud.createOrUpdateAccount(user.getAccount()
-		    .getName(), user.getAccount().getAccountNumber());
-
-	    final ReportingUserCrud reportingUserCrud = getReportingUserCrud();
-
-	    reportingUserCrud.createOrUpdateUser(user.getUserId(), user
-		    .getAccount().getAccountNumber(), user.getName());
-
-	    final ReportingVolumeEventStore eventStore = getReportingVolumeEventStore();
-
-	    switch (event.getActionInfo().getAction()) {
-	    case VOLUMECREATE:
-		eventStore.insertCreateEvent(event.getUuid(), event
-			.getDisplayName(), timeInMs, event.getOwner()
-			.getUserId(), event.getAvailabilityZone(), event
-			.getSizeGB());
-		break;
-	    case VOLUMEDELETE:
-		eventStore.insertDeleteEvent(event.getUuid(), timeInMs);
-		break;
-	    case VOLUMEATTACH:
-		eventStore
-			.insertAttachEvent(event.getUuid(),
-				((InstanceActionInfo) event.getActionInfo())
-					.getInstanceUuid(), event.getSizeGB(),
-				timeInMs);
-		break;
-	    case VOLUMEDETACH:
-		eventStore
-			.insertDetachEvent(event.getUuid(),
-				((InstanceActionInfo) event.getActionInfo())
-					.getInstanceUuid(), event.getSizeGB(),
-				timeInMs);
-		break;
-	    }
-
-	} catch (AuthException e) {
-	    LOG.error("Unable to fire volume reporting event.", e.getCause());
-	}
-    }
-
-    protected ReportingAccountCrud getReportingAccountCrud() {
-	return ReportingAccountCrud.getInstance();
-    }
-
-    protected ReportingUserCrud getReportingUserCrud() {
-	return ReportingUserCrud.getInstance();
-    }
-
-    protected ReportingVolumeEventStore getReportingVolumeEventStore() {
-	return ReportingVolumeEventStore.getInstance();
-    }
-
-    protected long getCurrentTimeMillis() {
-	return System.currentTimeMillis();
-    }
-
+  protected long getCurrentTimeMillis() {
+    return System.currentTimeMillis();
+  }
 }

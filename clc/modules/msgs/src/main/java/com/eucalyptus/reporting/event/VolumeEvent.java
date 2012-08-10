@@ -28,139 +28,141 @@ import com.eucalyptus.util.OwnerFullName;
 
 @SuppressWarnings("serial")
 public class VolumeEvent implements Event {
-    public enum VolumeAction {
-	VOLUMECREATE, VOLUMEDELETE, VOLUMEATTACH, VOLUMEDETACH
-    };
+  public enum VolumeAction {
+    VOLUMECREATE, VOLUMEDELETE, VOLUMEATTACH, VOLUMEDETACH
+  }
 
-    public static class ActionInfo {
-	private final VolumeAction action;
+  public static class ActionInfo {
+    private final VolumeAction action;
 
-	private ActionInfo(final VolumeAction action) {
-	    assertThat(action, notNullValue());
-	    this.action = action;
-	}
-
-	public VolumeAction getAction() {
-	    return action;
-	}
-
-	public String toString() {
-	    return String.format("[action:%s]", getAction());
-	}
+    private ActionInfo(final VolumeAction action) {
+      assertThat(action, notNullValue());
+      this.action = action;
     }
 
-    public static class InstanceActionInfo extends ActionInfo {
-	private final String instanceUuid;
-	private final String instanceId;
-
-	private InstanceActionInfo(final VolumeAction action,
-		final String instanceUuid, final String instanceId) {
-	    super(action);
-	    assertThat(instanceUuid, notNullValue());
-	    assertThat(instanceId, notNullValue());
-	    this.instanceUuid = instanceUuid;
-	    this.instanceId = instanceId;
-	}
-
-	public String getInstanceUuid() {
-	    return instanceUuid;
-	}
-
-	public String getInstanceId() {
-	    return instanceId;
-	}
-
-	public String toString() {
-	    return String.format("[action:%s,instanceUuid:%s,instanceId:%s]",
-		    getAction(), getInstanceUuid(), getInstanceId());
-	}
+    public VolumeAction getAction() {
+      return action;
     }
 
-    private final ActionInfo actionInfo;
-    private final String uuid;
-    private final long sizeGB;
-    private final OwnerFullName ownerFullName;
-    private final String displayName;
-    private final String availabilityZone;
-
-    public static ActionInfo forVolumeCreate() {
-	return new ActionInfo(VolumeAction.VOLUMECREATE);
-    }
-
-    public static ActionInfo forVolumeDelete() {
-	return new ActionInfo(VolumeAction.VOLUMEDELETE);
-    }
-
-    public static InstanceActionInfo forVolumeAttach(final String instanceUuid,
-	    final String instanceId) {
-	return new InstanceActionInfo(VolumeAction.VOLUMEATTACH, instanceUuid,
-		instanceId);
-    }
-
-    public static InstanceActionInfo forVolumeDetach(final String instanceUuid,
-	    final String instanceId) {
-	return new InstanceActionInfo(VolumeAction.VOLUMEDETACH, instanceUuid,
-		instanceId);
-    }
-
-    public static VolumeEvent with(final ActionInfo actionInfo,
-	    final String uuid, final long sizeGB, final OwnerFullName ownerFullName,
-	    final String displayName, final String availabilityZone) {
-
-	return new VolumeEvent(actionInfo, uuid, sizeGB, ownerFullName,
-		displayName, availabilityZone);
-    }
-
-    private VolumeEvent(ActionInfo actionInfo, String uuid, long sizeGB,  OwnerFullName ownerFullName, String displayName, String availabilityZone) {
-
-	assertThat(actionInfo, notNullValue());
-	assertThat(uuid, notNullValue());
-	assertThat(sizeGB, notNullValue());
-	assertThat(displayName, notNullValue());
-	assertThat(availabilityZone, notNullValue());
-	assertThat(ownerFullName.getUserId(), notNullValue());
-	assertThat(ownerFullName.getAccountNumber(), notNullValue());
-	assertThat(ownerFullName.getUserName(), notNullValue());
-	this.ownerFullName = ownerFullName;
-	this.actionInfo = actionInfo;
-	this.uuid = uuid;
-	this.sizeGB = sizeGB;
-	this.displayName = displayName;
-	this.availabilityZone = availabilityZone;
-    }
-
-    public String getDisplayName() {
-
-	return displayName;
-    }
-
-    public long getSizeGB() {
-	return sizeGB;
-    }
-
-    public OwnerFullName getOwner() {
-	return ownerFullName;
-    }
-
-
-    public ActionInfo getActionInfo() {
-	return actionInfo;
-    }
-
-    public String getUuid() {
-	return uuid;
-    }
-
-    public String getAvailabilityZone() {
-	return availabilityZone;
-    }
-    
-    @Override
     public String toString() {
-	return "VolumeEvent [actionInfo=" + actionInfo + ", uuid=" + uuid
-		+ ", sizeGB=" + sizeGB 
-		+ ", ownerName=" + ownerFullName.getUserName() + ", displayName="
-		+ displayName + ", availabilityZone=" + availabilityZone + "]";
+      return String.format("[action:%s]", getAction());
     }
+  }
+
+  public static class InstanceActionInfo extends ActionInfo {
+    private final String instanceUuid;
+    private final String instanceId;
+
+    private InstanceActionInfo(final VolumeAction action,
+                               final String instanceUuid, final String instanceId) {
+      super(action);
+      assertThat(instanceUuid, notNullValue());
+      assertThat(instanceId, notNullValue());
+      this.instanceUuid = instanceUuid;
+      this.instanceId = instanceId;
+    }
+
+    public String getInstanceUuid() {
+      return instanceUuid;
+    }
+
+    public String getInstanceId() {
+      return instanceId;
+    }
+
+    public String toString() {
+      return String.format("[action:%s,instanceUuid:%s,instanceId:%s]",
+          getAction(), getInstanceUuid(), getInstanceId());
+    }
+  }
+
+  private final ActionInfo actionInfo;
+  private final String uuid;
+  private final long sizeGB;
+  private final OwnerFullName ownerFullName;
+  private final String displayName;
+  private final String availabilityZone;
+
+  public static ActionInfo forVolumeCreate() {
+    return new ActionInfo( VolumeAction.VOLUMECREATE );
+  }
+
+  public static ActionInfo forVolumeDelete() {
+    return new ActionInfo( VolumeAction.VOLUMEDELETE );
+  }
+
+  public static InstanceActionInfo forVolumeAttach( final String instanceUuid,
+                                                    final String instanceId ) {
+    return new InstanceActionInfo( VolumeAction.VOLUMEATTACH, instanceUuid, instanceId );
+  }
+
+  public static InstanceActionInfo forVolumeDetach( final String instanceUuid,
+                                                    final String instanceId ) {
+    return new InstanceActionInfo( VolumeAction.VOLUMEDETACH, instanceUuid, instanceId );
+  }
+
+  public static VolumeEvent with( final ActionInfo actionInfo,
+                                  final String uuid,
+                                  final long sizeGB,
+                                  final OwnerFullName ownerFullName,
+                                  final String displayName,
+                                  final String availabilityZone ) {
+    return new VolumeEvent( actionInfo, uuid, sizeGB, ownerFullName, displayName, availabilityZone );
+  }
+
+  private VolumeEvent( final ActionInfo actionInfo,
+                       final String uuid,
+                       final long sizeGB,
+                       final OwnerFullName ownerFullName,
+                       final String displayName,
+                       final String availabilityZone ) {
+    assertThat(actionInfo, notNullValue());
+    assertThat(uuid, notNullValue());
+    assertThat(sizeGB, notNullValue());
+    assertThat(displayName, notNullValue());
+    assertThat(availabilityZone, notNullValue());
+    assertThat(ownerFullName.getUserId(), notNullValue());
+    assertThat(ownerFullName.getAccountNumber(), notNullValue());
+    assertThat(ownerFullName.getUserName(), notNullValue());
+    this.ownerFullName = ownerFullName;
+    this.actionInfo = actionInfo;
+    this.uuid = uuid;
+    this.sizeGB = sizeGB;
+    this.displayName = displayName;
+    this.availabilityZone = availabilityZone;
+  }
+
+  public String getDisplayName() {
+    return displayName;
+  }
+
+  public long getSizeGB() {
+    return sizeGB;
+  }
+
+  public OwnerFullName getOwner() {
+    return ownerFullName;
+  }
+
+
+  public ActionInfo getActionInfo() {
+    return actionInfo;
+  }
+
+  public String getUuid() {
+    return uuid;
+  }
+
+  public String getAvailabilityZone() {
+    return availabilityZone;
+  }
+
+  @Override
+  public String toString() {
+    return "VolumeEvent [actionInfo=" + actionInfo + ", uuid=" + uuid
+        + ", sizeGB=" + sizeGB
+        + ", ownerName=" + ownerFullName.getUserName() + ", displayName="
+        + displayName + ", availabilityZone=" + availabilityZone + "]";
+  }
 
 }

@@ -193,7 +193,6 @@ public class Snapshots {
                   entity.setProgress( storageSnapshot.getProgress( ) );
                 } else if ( State.EXTANT.equals( entity.getState( ) ) ) {
                   entity.setProgress( "100%" );
-                  fireUsageEvent( entity, SnapShotEvent.forSnapShotCreate());
                 } else if ( State.GENERATING.equals( entity.getState( ) ) ) {
                   if ( entity.getProgress( ) == null ) {
                     entity.setProgress( "0%" );
@@ -306,16 +305,6 @@ public class Snapshots {
   
   public static List<Snapshot> list( ) throws TransactionException {
     return Transactions.findAll( Snapshot.named( null, null ) );
-  }
-  
-  public static void fireUsageEvent(final Snapshot snap,
-	  final ActionInfo actionInfo) {
-      try {  
-	  ListenerRegistry.getInstance().fireEvent(
-		  SnapShotEvent.with(actionInfo, snap.getNaturalId(), snap.getDisplayName(), snap.getOwner(), snap.getVolumeSize().longValue()));
-      } catch (final Exception e) {
-	  LOG.error(e, e);
-      }
   }
 
 }

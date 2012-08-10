@@ -32,7 +32,7 @@ import com.eucalyptus.entities.AbstractPersistent;
 public class ReportingVolumeSnapshotCreateEvent
 	extends AbstractPersistent
 {
-	@Column(name="uuid")
+	@Column(name="uuid", nullable=false, unique=true)
 	private String uuid;
 	@Column(name="volume_snapshot_id", nullable=false)
 	private String volumeSnapshotId;
