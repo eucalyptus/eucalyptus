@@ -44,7 +44,7 @@
             }
           ],
           "fnDrawCallback": function( oSettings ) {
-             $('#table_volumes_count').html(oSettings.fnRecordsTotal());
+             $('#table_volumes_count').html(oSettings.fnRecordsDisplay());
           }
         },
         header_title : volume_h_title,
