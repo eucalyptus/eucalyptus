@@ -13,10 +13,14 @@
          autoOpen: false,  // assume the three params are fixed for all dialogs
          modal: true,
          width: 600,
+         title: thisObj.options.title,
          open: function(event, ui) {
-             $('.ui-dialog-titlebar').append(thisObj.options.title);
+             $titleBar = thisObj.element.parent().find('.ui-dialog-titlebar');
+             if ( $titleBar.find("div.help-link").length == 0 ) {
+               // first time opened
+               $titleBar.append($('<div>').addClass('help-link').append($('<a>').attr('href','#').text('?')));
+             }
 
-             // TODO: is this the right div?
              $('.ui-widget-overlay').live("click", function() {
                thisObj.element.dialog("close");
              });

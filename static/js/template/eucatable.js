@@ -10,7 +10,6 @@
                 txt_found : 'resources found',
                 menu_text : 'More actions',
                 menu_actions : null // e.g., { delete: ["Delete", function () { dialog.... } ] }
- 
     },
 
     table : null, // jQuery object to the table
@@ -18,8 +17,6 @@
 
     _init : function() {
       this.table = this.options.base_table.dataTable(this.options.dt_arg);
-      // register table, so all support function can find it
-      allTablesRef[this.options.id] = this.table;
       this.decorateHeader({title:this.options.header_title});
       this.decorateSearchBar({refresh: this.options.search_refresh});
       this.decorateTopBar({txt_create: this.options.txt_create, txt_found : this.options.txt_found});
@@ -31,6 +28,10 @@
     },
 
     _destroy : function() {
+    },
+
+    reDrawTable : function() {
+      this.table.fnDraw();
     },
 
     refreshTable : function() {
@@ -79,7 +80,7 @@
         $('<div>').addClass('euca-table-action actionmenu inactive'),
         $('<div>').addClass('euca-table-size').append(
           $('<span>').attr('id','table_' + this.options.id + '_count'),
-          $('<span>').attr('id','tbl_txt_found').html('&nbsp; '+args.txt_found),
+          $('<span>').attr('id','tbl_txt_found').addClass('resources-found').html('&nbsp; '+args.txt_found),
           'Showing&nbsp;',
           $('<span>').addClass('show selected').text('10'),
           '&nbsp;|&nbsp;',
@@ -124,7 +125,7 @@
       var $actionItems = $('<li>');
       $.each(args.actions, function (key, value){ // key:action, value: property
         $('<a>').attr('href','#').attr('id', thisObj.options.id+'-'+key).text (value[0]).click( function() {
-          value[1].call();  
+          value[1].call(this, thisObj.getAllSelectedRows());
         }).appendTo($actionItems);
       });
 
@@ -151,6 +152,7 @@
     },
 
     addActions : function (actionMenu) {
+      var thisObj = this;
       thisTable = this.table;
       // add select/deselect all action
       $checkbox = this.element.find('#' + this.options.id + '-check-all');
@@ -172,6 +174,26 @@
           actionMenu.addClass('inactive');
         }
       });
+      // add on row click acion
+      this.element.find('table tbody').click( function (e) {
+        $(e.target.parentNode.firstChild.firstChild).click();
+        thisObj._trigger('row_click', this);
+      });
+
+    },
+
+    countSelectedRows : function () {
+      var dataTable = this.table;
+      if ( !dataTable )
+        return 0;
+      var rows = dataTable.fnGetVisiableTrNodes();
+      var selectedRows = 0;
+      for ( i = 0; i<rows.length; i++ ) {
+        cb = rows[i].firstChild.firstChild;
+        if ( cb != null && cb.checked == true )
+          selectedRows = selectedRows + 1;
+      }
+      return selectedRows;
     },
 
     getAllSelectedRows : function (idIndex) {

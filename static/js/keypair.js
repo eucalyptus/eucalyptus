@@ -2,6 +2,7 @@
   $.widget('eucalyptus.keypair', $.eucalyptus.eucawidget, {
     options : { },
     tableWrapper : null,
+    delDialog : null,
     // TODO: is _init() the right method to instantiate everything? 
     _init : function() {
       var thisObj = this;
@@ -22,7 +23,7 @@
           "aoColumns": [
             {
               "bSortable": false,
-              "fnRender": function(oObj) { return '<input type="checkbox" onclick="updateActionMenu(this)"/>' },
+              "fnRender": function(oObj) { return '<input type="checkbox"/>' },
               "sWidth": "20px",
             },
             { "mDataProp": "name" },
@@ -30,7 +31,6 @@
           ],
           "fnDrawCallback": function( oSettings ) {
              $('#table_keys_count').html(oSettings.fnRecordsTotal());
-
           }
         },
         header_title : keypair_h_title,
@@ -38,17 +38,17 @@
         txt_create : keypair_create,
         txt_found : keypair_found,
         menu_text : table_menu_main_action,
-        menu_actions : { delete: [table_menu_delete_action, function () { deleteAction('keys'); } ] }
+        menu_actions : { delete: [table_menu_delete_action, function (args) { thisObj.deleteAction(args); } ] },
+        row_click : function (args) { thisObj.handleRowClick(args); },
       });
       tableWrapper.appendTo(this.element);
 
       $tmpl = $('html body').find('.templates #keypairDelDlgTmpl').clone();
       $del_dialog = $($tmpl.render($.i18n.map));
 
-      $del_dialog.eucadialog({ 
+      this.delDialog = $del_dialog.eucadialog({
          id: 'keys-delete',
-         title: $('<div>').addClass('help-link').append( 
-                  $('<a>').attr('href','#').text('?')),
+         title: keypair_dialog_del_title,
          buttons: {
            'delete': {text: keypair_dialog_del_btn, click: function() { thisObj._deleteSelectedKeyPairs(); $del_dialog.dialog("close");}},
            'cancel': {text: keypair_dialog_cancel_btn, focus:true, click: function() { $del_dialog.dialog("close");}} 
@@ -63,21 +63,19 @@
       // when calling eucadialog, the buttons should have domid to attach the specific domid that's used by event handler written here 
       $add_dialog.find('#key-name').keypress( function(e){
         var $createButton = $('#'+createButtonId);
-        if( e.which === RETURN_KEY_CODE || e.which === RETURN_MAC_KEY_CODE ) 
+        if( e.which === RETURN_KEY_CODE || e.which === RETURN_MAC_KEY_CODE ) {
            $createButton.trigger('click');
-        else if ( e.which === 0 ) {
-        } else if ( e.which === BACKSPACE_KEY_CODE && $(this).val().length == 1 ) 
+        } else if ( e.which === 0 ) {
+        } else if ( e.which === BACKSPACE_KEY_CODE && $(this).val().length == 1 ) {
            $createButton.prop("disabled", true).addClass("ui-state-disabled");
-        else if ( $(this).val().length == 0 )
-           $createButton.prop("disabled", true).addClass("ui-state-disabled");
-        else 
+        } else {
            $createButton.prop("disabled", false).removeClass("ui-state-disabled");
+        }
       });
 
       $add_dialog.eucadialog({
         id: 'keys-add',
-        title: $('<div>').addClass('help-link').append(
-                 $('<a>').attr('href','#').text('?')),
+        title: keypair_dialog_add_title,
         buttons: { 
         // e.g., add : { domid: keys-add-btn, text: "Add new key", disabled: true, focus: true, click : function() { }, keypress : function() { }, ...} 
         'create': { domid: createButtonId, text: keypair_dialog_create_btn, disabled: true,  click: function() {
@@ -100,6 +98,16 @@
     },
 
     _destroy : function() {
+    },
+
+    handleRowClick : function(args) {
+      count = tableWrapper.eucatable('countSelectedRows');
+      if ( count == 0 )
+        // disable menu
+        tableWrapper.eucatable('deactivateMenu');
+      else
+        // enable delete menu
+        tableWrapper.eucatable('activateMenu');
     },
 
     _addKeyPair : function(keyName) {
@@ -163,7 +171,23 @@
 
     close: function() {
       this._super('close');
+    },
+
+    deleteAction : function(rowsToDelete) {
+      //TODO: add hide menu
+
+      if ( rowsToDelete.length > 0 ) {
+        // show delete dialog box
+        $deleteNames = this.delDialog.find("span.delete-names")
+        $deleteNames.html('');
+        for ( i = 0; i<rowsToDelete.length; i++ ) {
+          t = escapeHTML(rowsToDelete[i]);
+          $deleteNames.append(t).append("<br/>");
+        }
+        this.delDialog.dialog('open');
+      }
     }
+
   });
 })(jQuery,
    window.eucalyptus ? window.eucalyptus : window.eucalyptus = {});

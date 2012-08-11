@@ -83,7 +83,7 @@ body {
     background: #eaedee url(../images/main-bgfill.png) repeat left top;
     /* Total min-height with padding 540px */
     min-height: 440px;
-    padding: 50px 0;
+    padding: 30px 0;
     /* Set to a lower number than the Explorer, so the drop shadow will work */
     z-index: 1;
 }
@@ -348,11 +348,6 @@ body {
   box-shadow: 0px 4px 8px rgba(0,0,0,0.34), inset 0px 12px 10px -9px rgba(0,0,0,0.50);
 }
 
-.resources-nav li:hover ul {
-  /* Show the submenu when the parent list item is hovered */
-  display: block;
-}
-
 .resources-nav li ul li {
   float: none;
   width: auto;
@@ -446,31 +441,53 @@ body {
 
 .content-box {
     background-color: #fff;
-    border: 1px solid #999;
+    border: 1px solid #aaabab;
     min-height: 285px;
 
     -webkit-border-radius: 5px;
     -moz-border-radius: 5px;
     border-radius: 5px;
     
-    -webkit-box-shadow: 1px 2px 3px rgba(3,3,3,0.16), inset 0 1px 8px rgba(44,46,50,0.32);
-    -moz-box-shadow: 1px 2px 3px rgba(3,3,3,0.16), inset 0 1px 8px rgba(44,46,50,0.32);
-    box-shadow: 1px 2px 3px rgba(3,3,3,0.16), inset 0 1px 8px rgba(44,46,50,0.32);
+    -webkit-box-shadow: 0px 2px 3px rgba(3,3,3,0.30), inset 0 1px 8px rgba(44,46,50,0.32);
+    -moz-box-shadow: 0px 2px 3px rgba(3,3,3,0.30), inset 0 1px 8px rgba(44,46,50,0.32);
+    box-shadow: 0px 2px 3px rgba(3,3,3,0.30), inset 0 1px 8px rgba(44,46,50,0.32);
 }
 
-.box-header {
+.box-header,
+.euca-table-header {
     background-color: #eaf2f5;
     color: #02405f;
-    font-family: "PlayBold", Arial, sans-serif;
-    font-size: 15px;
-    font-weight: normal;
-    margin: 13px 0 25px;
-    padding: 8px 30px 4px;    
+    font-family: "Play", Arial, sans-serif;
+    font-size: 18px;
+    font-weight: bold;
+    margin: 3px 0 20px;
+    position: relative;
+    left: -8px;
+    padding: 8px 8px;
+    width: 100%;
+
+    -webkit-box-shadow: 0px 2px 3px rgba(3,3,3,0.16);
+    -moz-box-shadow: 0px 2px 3px rgba(3,3,3,0.16);
+    box-shadow: 0px 2px 3px rgba(3,3,3,0.16);    
 }
 
-.box-header p {
+.box-header p,
+.euca-table-header span {
     margin: 0;
+    padding-left: 40px;
     line-height: 1em;
+}
+
+.inner-box {
+  padding: 10px;
+
+  -webkit-border-radius: 5px;
+  -moz-border-radius: 5px;
+  border-radius: 5px;
+
+  -webkit-box-shadow: inset 0 1px 8px rgba(44,46,50,0.32);
+  -moz-box-shadow: inset 0 1px 8px rgba(44,46,50,0.32);
+  box-shadow: inset 0 1px 8px rgba(44,46,50,0.32);
 }
 
 #euca-main-container {
@@ -478,58 +495,39 @@ body {
 }
 
 #dashboard {
-    position: relative;
-    margin: 0 20px;
+  padding: 30px;
+  font-size: 14px;
 }
 
 #dashboard .instances {
-   float: left;
-   margin-left: 5%;
-   margin-right: 5%;
-   margin-top: 5%;
-   width: 90%;
-   height: auto;
-   border: 1px solid #DDDDDD;
-   font-family: Arial,Helvetica,sans-serif;
-   font-size: 14px;
+  margin-bottom: 30px;
 }
 
 #dashboard .storage {
-   float: left;
-   clear: left;
-   margin-left: 5%;
-   margin-top: 5%;
-   margin-bottom: 5%;
-   width: 45%;
-   height: 40%;  
-   border: 1px solid #DDDDDD;
-   font-family: Arial,Helvetica,sans-serif;
-   font-size: 14px;
+  float: left;
+  width: 46%;
+  height: 35%; 
 }
 
 #dashboard .netsec {
-   float: left;
-   margin: 5% 0px;
-   width: 45%;
-   height: 40%;
-   border: 1px solid #DDDDDD;
-   font-family: Arial,Helvetica,sans-serif;
-   font-size: 14px;
+  float: right;
+  width: 46%;
+  height: 35%;
 }
  
-#dashboard .instances div{
-   float:left;
-   margin: 10% 10px;
+#dashboard .instances div {
+  float:left;
+  margin: 0 10px;
 }
 
-#dashboard .storage div{
-   float:left;
-   margin: 10% 10px;
+#dashboard .storage div {
+  float:left;
+  margin: 0 10px;
 }
 
-#dashboard .netsec div{
-   float:left;
-   margin: 10% 10px;
+#dashboard .netsec div {
+  float:left;
+  margin: 0 10px;
 }
 
 
@@ -545,10 +543,80 @@ body {
 
 .euca-table-size {
     float: right;
+    margin: 10px 15px 5px 0;
 }
 
 span.selected {
     font-weight: bold;
+}
+
+
+/* ======= jQuery table style overrides ======= */
+
+.dataTables_wrapper {
+
+  background-color: #fff;
+  border: 1px solid #d7d5d5;
+
+  margin: 0 8px;
+  padding: 15px 0; 
+
+  -webkit-border-radius: 5px;
+  -moz-border-radius: 5px;
+  border-radius: 5px;
+
+  -webkit-box-shadow: 0px 2px 3px rgba(3,3,3,0.30);
+  -moz-box-shadow: 0px 2px 3px rgba(3,3,3,0.30);
+  box-shadow: 0px 2px 3px rgba(3,3,3,0.30);
+
+}
+
+.dataTables_paginate {
+  margin: 15px 15px 0 0;
+}
+
+.dataTables_filter {
+  padding-right: 15px;
+  width: 45%;
+}
+
+table.display {
+  background-color: #fff;
+  border-bottom: 2px solid #dae2e8;
+  border-right: 0px solid #dae2e8;
+}
+
+table.display thead th {
+  padding: 8px 18px 8px 10px;
+  font-family: "Play", Arial, sans-serif;
+  font-size: 11px;
+  font-weight: bold;
+  color: #7aa92a;
+  text-transform: uppercase;
+  border-top: 2px solid #dae2e8;
+  border-left: 1px solid #dae2e8;
+  border-bottom: 0;
+}
+
+table.display tr.heading2 td {
+  border-bottom: 1px solid #aaa;
+}
+
+table.display td {
+  padding: 8px 10px;
+  border-top: 2px solid #dae2e8;
+  border-left: 1px solid #dae2e8;
+  font-size: 11px;
+}
+
+tr.odd,
+tr.even {
+  background-color: #fff;
+}
+
+tr.odd td.sorting_1,
+tr.even td.sorting_1 {
+  background-color: #f0f7f7;
 }
 
 
@@ -672,8 +740,21 @@ span.selected {
    border-color: black;
 }
 
+.euca-table-filter {
+  float: left;
+}
+
+.filter-label {
+  padding-right: 5px;
+}
+
+.resources-found {
+   padding-right: 5px;
+}
+
 .help-link {
    float: right;
+   margin-right: 20px;
 }
 
 /* Hide close X button in UI dialogs */
@@ -712,4 +793,33 @@ span.selected {
 }
 
 
+/* Volume statuses */
+.table-volume-legend {
+  float: left;
+}
 
+.volume-status-legend {
+  padding-left: 12px;
+  background-position: left !important;
+  margin-left: 15px;
+}
+
+.volume-legend {
+  float: left;
+}
+
+.volume-status-available {
+  background-image: url('../images/green-ball-10x10.png');
+  background-repeat: no-repeat;
+  background-position: center;
+}
+.volume-status-attached {
+  background-image: url('../images/red-ball-10x10.png');
+  background-repeat: no-repeat;
+  background-position: center;
+}
+.volume-status-attaching {
+  background-image: url('../images/black-ball-10x10.png');
+  background-repeat: no-repeat;
+  background-position: center;
+}

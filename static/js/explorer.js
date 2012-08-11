@@ -39,6 +39,7 @@
       },
 
       createResourceMenu : function (idx, menu) {
+        var thisObj = this;
         var $submenu = $('<ul>');
         var header = this;
         if(menu.key in this.options.submenus){
@@ -50,10 +51,22 @@
                               })));
           });
         }
+        var clsName = 'lnk-'+menu.key.toLowerCase();
         var $menu = $('<li>').append(
-                         $('<a>').addClass('lnk-'+menu.key.toLowerCase()).attr('href','#').text(menu.text));
-        if(menu.key in this.options.submenus)
+                         $('<a>').addClass(clsName).attr('href','#').text(menu.text));
+        if(menu.key in this.options.submenus){
           $menu.append($submenu);
+          $menu.find('a').click(function(evt) {
+            $submenu.slideToggle('fast');
+            $menu.toggleClass('toggle-on'); 
+            $('html body').trigger('click','navigator:'+menu.key);
+            if ($menu.hasClass('toggle-on'))
+              $('html body').eucaevent('add_click', 'navigator:'+menu.key, evt);
+            else
+              $('html body').eucaevent('del_click', 'navigator:'+menu.key);
+            return false;
+          });
+        }
         else {
           $menu.find('a').click( 
             function (evt) {
@@ -63,7 +76,19 @@
         }
         return $menu;
       },
-      _destroy : function() { } 
+      _destroy : function() { },
+
+      // called when the explorer is slide down
+      onSlide : function() { 
+        // make sure no menus has 'toggle-on' class set
+        this.element.find('.toggle-on').each( function() {
+          $(this).removeClass('toggle-on');   
+        }); 
+ 
+        this.element.find('.resources-nav').each(function() {
+          $(this).find('li ul').hide();
+        });
+      },
      }); // end of widget()
    } // end of eucalyptus.explorer()
 })(jQuery,

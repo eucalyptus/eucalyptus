@@ -26,11 +26,6 @@
     <script type="text/javascript" language="javascript" src="lib/jquery.i18n.properties-min-1.0.9.js"></script>
     <script type="text/javascript" language="javascript" src="lib/jsrender.js"></script>
 
-    <!-- Eucalyptus JS -->
-    <script type="text/javascript">
-      var allTablesRef = {};
-    </script>
-
     <script type="text/javascript" language="javascript" src="js/jquery.generateFile.js"></script>
     <script type="text/javascript" language="javascript" src="js/jQueryExt.js"></script>
     <script type="text/javascript" language="javascript" src="js/login.js"></script>
@@ -45,6 +40,8 @@
     <script type="text/javascript" language="javascript" src="js/eucawidget.js"></script>
     <script type="text/javascript" language="javascript" src="js/dashboard.js"></script>
     <script type="text/javascript" language="javascript" src="js/keypair.js"></script>
+    <script type="text/javascript" language="javascript" src="js/volume.js"></script>
+    <script type="text/javascript" language="javascript" src="js/eucaevent.js"></script>
     <script type="text/javascript" language="javascript" src="js/template/eucatable.js"></script>
     <script type="text/javascript" language="javascript" src="js/template/eucadialog.js"></script>
   </head> 
@@ -120,14 +117,58 @@
       </script>
 
       <!-- Dashboard template -->
+      <script id="dashboardTmpl" type="text/x-jsrender">
       <div id="dashboard" class="content-box clearfix">
-        <div class="instances"> </div>  
-        <div class="storage"> </div>
-        <div class="netsec"> </div>
-      </div>
-      <!-- END Dashboard template -->
+        <div class="instances inner-box clearfix">
+          <div id="dashboard-instance-img">
+            <img src="images/dashboard_instance.png">
+          </div>
+          <div id="dashboard-instance-az">
+            <select>
+             <option value="all">{{!>dashboard_az_all}}</option>
+           </select>
+          </div>
+          <div id="dashboard-instance-running">
+            <span></span> {{!>dashboard_instance_running}}
+          </div>
+          <div id="dashboard-instance-stopped">
+            <span></span> {{!>dashboard_instance_stopped}}
+          </div>
+          <div id="dashboard-instance-launch"> INSTANCE LAUNCH BUTTON </div> 
+        </div>
 
-      <!-- Datatable templates -->
+        <div class="storage inner-box clearfix">
+          <div id="dashboard-storage-img">
+            <img src="images/dashboard_storage.png">
+          </div>
+          <div id="dashboard-storage-volume">
+            <span></span> {{!>dashboard_volumes}}
+          </div>
+          <div id="dashboard-storage-snapshot">
+            <span></span> {{!>dashboard_snapshots}}
+          </div>
+          <div id="dashboard-storage-buckets">
+            <span></span> {{!>dashboard_buckets}}
+          </div> 
+        </div>
+
+        <div class="netsec inner-box clearfix">
+          <div id="dashboard-netsec-img">
+            <img src="images/dashboard_netsec.png">
+          </div>
+          <div id="dashboard-netsec-sgroup">
+            <span></span> {{!>dashboard_sgroup}}
+          </div>
+          <div id="dashboard-netsec-eip">
+            <span></span> {{!>dashboard_eip}}
+          </div>
+          <div id="dashboard-netsec-keypair">
+            <span></span> {{!>dashboard_keypair}}
+          </div>
+        </div>
+      </div>
+      </script>
+      <!-- END Dashboard template -->
 
       <!-- Keypair table -->
       <script id="keypairTblTmpl" type="text/x-jsrender">
@@ -143,7 +184,7 @@
             </tr>
            </thead>
            <tbody>
-              <tr> 
+              <tr>
                 <td colspan="3" class="dataTables_empty">{{!>table_loading}}</td>
               </tr>
           </tbody>
@@ -152,9 +193,9 @@
       </script>
       <!-- END Keypair table -->
 
-      <!-- Dialog template -->
+      <!-- Keypair dialog template -->
       <script id="keypairAddDlgTmpl" type="text/x-jsrender">
-        <div id="keys-add-dialog" title="{{!>keypair_dialog_add_title}}" class="add-dialog" style="display:none">
+        <div id="keys-add-dialog" class="add-dialog">
           {{!: keypair_dialog_add_text }}
           <p>
             <span class="field">{{!>keypair_dialog_add_name}}</span><input type="text" id="key-name" class="required"/><div class="dialog-notifications"></div>
@@ -163,12 +204,58 @@
       </script>
 
       <script id="keypairDelDlgTmpl" type="text/x-jsrender">
-        <div id="keys-delete-dialog" title="{{!>keypair_dialog_del_title}}" class="delete-dialog" style="display:none">
+        <div id="keys-delete-dialog" class="delete-dialog">
           {{!: keypair_dialog_del_text }}
-          <span id="keys-delete-names"></span>
+          <span class="delete-names"></span>
         </div>
       </script>
-      <!-- END Dialog template -->
+      <!-- END Keypair dialog template -->
+
+      <!-- Volume table -->
+      <script id="volumeTblTmpl" type="text/x-jsrender">
+        <div id="volumes-wrapper">
+        <table id="volumes" class="display">
+          <thead>
+            <tr>
+              <th>
+                <input type="checkbox" id="volumes-check-all">
+              </th>
+              <th>{{!>vl_tbl_hdr_id}}</th>
+              <th>{{!>vl_tbl_hdr_status}}</th>
+              <th>{{!>vl_tbl_hdr_size}}</th>
+              <th>{{!>vl_tbl_hdr_attached_to}}</th>
+              <th>{{!>vl_tbl_hdr_snapshot_id}}</th>
+              <th>{{!>vl_tbl_hdr_availability_zone}}</th>
+              <th>{{!>vl_tbl_hdr_creation_time}}</th>
+            </tr>
+           </thead>
+           <tbody>
+              <tr>
+                <td colspan="8" class="dataTables_empty">{{!>table_loading}}</td>
+              </tr>
+          </tbody>
+        </table>
+        </div>
+      </script>
+      <!-- END Volume table -->
+
+      <!-- Volume dialog template -->
+      <script id="volumeAddDlgTmpl" type="text/x-jsrender">
+        <div id="volumes-add-dialog" class="add-dialog">
+          {{!: volume_dialog_add_text }}
+          <p>
+            <span class="field">{{!>volume_dialog_add_name}}</span><input type="text" id="volume-name" class="required"/><div class="dialog-notifications"></div>
+          </p>
+        </div>
+      </script>
+
+      <script id="volumeDelDlgTmpl" type="text/x-jsrender">
+        <div id="volumes-delete-dialog" class="delete-dialog">
+          {{!: volume_dialog_del_text }}
+          <span class="delete-names"></span>
+        </div>
+      </script>
+      <!-- END Volume dialog template -->
 
     </div> 
     <!-- END of templates --> 
@@ -217,25 +304,6 @@
           </tbody>
         </table>
       </div>
-
-      <div id="tabs-keys" class="active">
-        <table id="keys" class="display">
-          <thead>
-            <tr>
-              <th>
-                <input type="checkbox" onchange="selectCheckboxChanged(this, 'keys');">
-              </th>
-              <th>Name</th>
-              <th>Private Key Fingerprint</th>
-            </tr>
-           </thead>
-           <tbody>
-              <tr> 
-                <td colspan="3" class="dataTables_empty">Loading data from server</td>
-              </tr>
-          </tbody>
-        </table>
-      </div>
       
       <div id="tabs-groups" class="active">
         <table id="groups" class="display">
@@ -264,28 +332,6 @@
           <tbody>
             <tr>
               <td colspan="2" class="dataTables_empty">Loading data from server</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <div id="tabs-volumes" class="active">
-        <table id="volumes" class="display">
-          <thead>
-            <tr>
-              <th>
-                <input type="checkbox" onchange="selectCheckboxChanged(this, 'volumes');">
-              </th>
-              <th>id</th>
-              <th>status</th>
-              <th>size</th>
-              <th>creation time</th>
-              <th>snapshot id</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td colspan="6" class="dataTables_empty">Loading data from server</td>
             </tr>
           </tbody>
         </table>

@@ -125,9 +125,9 @@ class CachingClcInterface(ClcInterface):
         return self.clc.get_console_output(instance_id)
 
     def get_all_addresses(self):
-        if (datetime.now() - self.imageUpdate) > timedelta(seconds = self.pollfreq):
-            self.images = self.clc.get_all_images()
-            self.imageUpdate = datetime.now()
+        if (datetime.now() - self.addressUpdate) > timedelta(seconds = self.pollfreq):
+            self.addresses = self.clc.get_all_addresses()
+            self.addressUpdate = datetime.now()
         return self.addresses
 
     # returns address info

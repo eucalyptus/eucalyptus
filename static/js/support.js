@@ -7,40 +7,8 @@ var RETURN_KEY_CODE = 13;
 var RETURN_MAC_KEY_CODE = 10;
 var BACKSPACE_KEY_CODE = 8;
 
-function updateActionMenu(context) {
-  $parentDiv = $(context).parents('div.dataTables_wrapper').parent();
-  selectedRows = $parentDiv.eucatable('getAllSelectedRows');
-  if ( selectedRows.length == 0 ) {
-    $parentDiv.eucatable('deactivateMenu');
-  } else {
-    $parentDiv.eucatable('activateMenu');
-  }
-}
-
 function escapeHTML(input) {
   return $('<div/>').text(input).html();
-}
-
-//TODO: move this into eucatable
-function deleteAction(tableName) {
-  $tableWrapper = $('div#'+tableName+'-wrapper');
-
-  //TODO: fix hide menu
-  $menuUl = $("div.table_" + tableName + "_top div.euca-table-action ul");
-  $menuUl.removeClass('activemenu');
-
-  var rowsToDelete = $tableWrapper.eucatable('getAllSelectedRows');
-
-  if ( rowsToDelete.length > 0 ) {
-    // show delete dialog box
-    $deleteNames = $("#" + tableName + "-delete-names");
-    $deleteNames.html('');
-    for ( i = 0; i<rowsToDelete.length; i++ ) {
-      t = escapeHTML(rowsToDelete[i]);
-      $deleteNames.append(t).append("<br/>");
-    }
-    $("#" + tableName + "-delete-dialog").dialog('open');
-  }
 }
 
 function deleteSelectedVolumes() {
@@ -73,6 +41,7 @@ function deleteSelectedVolumes() {
     });
   }
 }
+
 function S4() {
   return (((1+Math.random())*0x10000)|0).toString(16).substring(1);
 }

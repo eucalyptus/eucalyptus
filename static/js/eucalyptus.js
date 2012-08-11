@@ -58,6 +58,6 @@
          }});
        } // end of else
     }); // end of done
-  });
+  }); // end of document.ready
 })(jQuery,
    window.eucalyptus ? window.eucalyptus : window.eucalyptus = {});

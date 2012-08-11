@@ -1,7 +1,7 @@
 (function($, eucalyptus) {
   $.widget('eucalyptus.maincontainer', {
     options : { 
-        default_selected : 'keypair',
+        default_selected : 'dashboard',
     },
 
     _curSelected : null,
@@ -31,13 +31,20 @@
           $curInstance.close();
         }
       }
-
+      $('html body').eucaevent('unclick_all'); // this will close menus that's pulled down
       switch(selected){
         case 'dashboard':
           this.element.dashboard();
           break;
         case 'keypair':
           this.element.keypair();
+          break;
+        case 'volume':
+          this.element.volume();
+          break;
+        case 'logout':
+          $.cookie('session-id','');
+          location.href = '/';
           break;
         default:
           alert('unknown menu selected: '+selected);
