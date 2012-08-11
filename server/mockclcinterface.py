@@ -46,6 +46,18 @@ class MockClcInterface(ClcInterface):
     def get_all_images(self):
         return self.images
 
+    # returns list of snapshots attributes
+    def get_image_attribute(self, image_id, attribute):
+        return None
+
+    # returns True if successful
+    def modify_image_attribute(self, image_id, attribute, operation, users, groups):
+        return None
+
+    # returns True if successful
+    def reset_image_attribute(self, image_id, attribute):
+        return None
+
     def get_all_instances(self):
         return self.instances
 

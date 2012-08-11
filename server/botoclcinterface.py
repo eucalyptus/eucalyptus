@@ -34,6 +34,18 @@ class BotoClcInterface(ClcInterface):
             self.__save_json__(obj, "mockdata/Images.json")
         return obj
 
+    # returns list of image attributes
+    def get_image_attribute(self, image_id, attribute):
+        return self.conn.get_image_attribute(image_id, attribute)
+
+    # returns True if successful
+    def modify_image_attribute(self, image_id, attribute, operation, users, groups):
+        return self.conn.modify_image_attribute(image_id, attribute, operation, users, groups)
+
+    # returns True if successful
+    def reset_image_attribute(self, image_id, attribute):
+        return self.conn.reset_image_attribute(image_id, attribute)
+
     def get_all_instances(self):
         obj = self.conn.get_all_instances()
         if self.saveclcdata:

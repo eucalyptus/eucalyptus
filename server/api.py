@@ -24,6 +24,25 @@ class ComputeHandler(server.BaseHandler):
             val = self.get_argument(pattern % index, None)
         return ret
 
+    def handleImages(self, action, clc):
+        if action == 'DescribeImages':
+            return clc.get_all_images()
+        elif action == 'DescribeImageAttribute':
+            imageid = self.get_argument('ImageId')
+            attribute = self.get_argument('Attribute')
+            return clc.get_image_attribute(imageid, attribute)
+        elif action == 'ModifyImageAttribute':
+            imageid = self.get_argument('ImageId')
+            attribute = self.get_argument('Attribute')
+            operation = self.get_argument('OperationType')
+            users = self.get_argument_list('UserId')
+            groups = self.get_argument_list('UserGroup')
+            return clc.modify_image_attribute(imageid, attribute, operation, users, groups)
+        elif action == 'ResetImageAttribute':
+            imageid = self.get_argument('ImageId')
+            attribute = self.get_argument('Attribute')
+            return clc.reset_image_attribute(imageid, attribute)
+
     def handleInstances(self, action, clc):
         if action == 'DescribeInstances':
             return clc.get_all_instances()
@@ -254,8 +273,8 @@ class ComputeHandler(server.BaseHandler):
         action = self.get_argument("Action")
         if action == 'DescribeAvailabilityZones':
             ret = self.user_session.clc.get_all_zones()
-        if action == 'DescribeImages':
-            ret = self.user_session.clc.get_all_images()
+        elif action.find('Image') > -1:
+            ret = self.handleImages(action, self.user_session.clc)
         elif action.find('Instance') > -1 or action == 'GetConsoleOutput':
             ret = self.handleInstances(action, self.user_session.clc)
         elif action.find('Address') > -1:

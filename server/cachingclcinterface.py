@@ -50,6 +50,20 @@ class CachingClcInterface(ClcInterface):
             self.imageUpdate = datetime.now()
         return self.images
 
+    # returns list of image attributes
+    def get_image_attribute(self, image_id, attribute):
+        return self.clc.get_image_attribute(image_id, attribute)
+
+    # returns True if successful
+    def modify_image_attribute(self, image_id, attribute, operation, users, groups):
+        self.imageUpdate = datetime.min   # invalidate cache
+        return self.clc.modify_image_attribute(image_id, attribute, operation, users, groups)
+
+    # returns True if successful
+    def reset_image_attribute(self, image_id, attribute):
+        self.imageUpdate = datetime.min   # invalidate cache
+        return self.clc.reset_image_attribute(image_id, attribute)
+
     def get_all_instances(self):
         if (datetime.now() - self.instanceUpdate) > timedelta(seconds = self.pollfreq):
             self.instances = self.clc.get_all_instances()

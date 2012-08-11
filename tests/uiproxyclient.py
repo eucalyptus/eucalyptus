@@ -35,7 +35,7 @@ class UIProxyClient(object):
         request.add_header('cookie', self.session_cookie)
 
     def __add_param_list__(self, params, name, list):
-        for idx, val in list:
+        for idx, val in enumerate(list):
             params["%s.%d" % (name, idx + 1)] = val
 
     def __make_request__(self, action, params):
@@ -62,13 +62,18 @@ class UIProxyClient(object):
         return self.__make_request__('DescribeImages', {})
 
     def get_image_attribute(self, image_id, attribute='launchPermission'):
-        return None
+        return self.__make_request__('DescribeImageAttribute', {'ImageId': image_id, 'Attribute': attribute})
 
     def modify_image_attribute(self, image_id, attribute='launchPermission', operation='add', user_ids=None, groups=None):
-        return None
+        params = {'ImageId': image_id, 'Attribute': attribute, 'OperationType': operation}
+        if user_ids:
+            self.__add_param_list__(params, 'UserId', user_ids);
+        if groups:
+            self.__add_param_list__(params, 'UserGroup', groups);
+        return self.__make_request__('ModifyImageAttribute', params)
 
     def reset_image_attribute(self, image_id, attribute='launchPermission'):
-        return None
+        return self.__make_request__('ResetImageAttribute', {'ImageId': image_id, 'Attribute': attribute})
 
     ##
     # Instance methods

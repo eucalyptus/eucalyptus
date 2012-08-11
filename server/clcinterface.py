@@ -15,6 +15,18 @@ class ClcInterface(object):
     def get_all_images(self):
         raise NotImplementedError("Are you sure you're using the right class?")
 
+    # returns list of image attributes
+    def get_image_attribute(self, image_id, attribute):
+        raise NotImplementedError("Are you sure you're using the right class?")
+
+    # returns True if successful
+    def modify_image_attribute(self, image_id, attribute, operation, users, groups):
+        raise NotImplementedError("Are you sure you're using the right class?")
+
+    # returns True if successful
+    def reset_image_attribute(self, image_id, attribute):
+        raise NotImplementedError("Are you sure you're using the right class?")
+
     ##
     # Instance methods
     ##
