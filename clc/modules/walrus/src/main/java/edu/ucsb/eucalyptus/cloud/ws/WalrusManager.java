@@ -105,9 +105,8 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.crypto.Digest;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.TransactionException;
+import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.reporting.event.S3Event;
-import com.eucalyptus.reporting.queue.*;
-import com.eucalyptus.reporting.queue.QueueFactory.QueueIdentifier;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Lookups;
@@ -488,8 +487,7 @@ public class WalrusManager {
 	private void reportWalrusEvent(S3Event event) {
 		if(event != null) {
 			try {
-				QueueSender queueSender = QueueFactory.getInstance().getSender(QueueIdentifier.S3);
-				queueSender.send(event);
+        ListenerRegistry.getInstance().fireEvent(event);
 			} catch(Exception ex) {
 				LOG.error("Non-fatal exception: Could not send event: " + event.toString() + " Exception = " + ex.getMessage());			
 			}	

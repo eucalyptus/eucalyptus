@@ -72,6 +72,7 @@ import javax.annotation.Nonnull;
 import org.apache.log4j.*;
 import org.hibernate.exception.ConstraintViolationException;
 
+import com.eucalyptus.bootstrap.OrderedShutdown;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.entities.Entities;
@@ -99,7 +100,14 @@ public class InstanceEventListener implements EventListener<InstanceEvent> {
   private final AtomicLong lastWriteMs = new AtomicLong( 0L );
 
   public static void register( ) {
-    Listeners.register( InstanceEvent.class, new InstanceEventListener() );
+    final InstanceEventListener listener = new InstanceEventListener( );
+    Listeners.register( InstanceEvent.class, listener );
+    OrderedShutdown.registerPreShutdownHook( new Runnable() {
+      @Override
+      public void run( ) {
+        listener.flush();
+      }
+    } );
   }
 
   public void fireEvent( @Nonnull final InstanceEvent event ) {
