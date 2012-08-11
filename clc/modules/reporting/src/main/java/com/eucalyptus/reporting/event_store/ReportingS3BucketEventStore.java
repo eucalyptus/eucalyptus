@@ -17,7 +17,6 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-
 package com.eucalyptus.reporting.event_store;
 
 import java.util.*;

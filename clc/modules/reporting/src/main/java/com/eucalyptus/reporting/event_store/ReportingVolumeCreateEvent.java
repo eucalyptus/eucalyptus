@@ -17,7 +17,6 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-
 package com.eucalyptus.reporting.event_store;
 
 import javax.persistence.*;
@@ -33,7 +32,7 @@ import com.eucalyptus.entities.AbstractPersistent;
 public class ReportingVolumeCreateEvent
 	extends AbstractPersistent
 {
-	@Column(name="uuid", nullable=false)
+	@Column(name="uuid", nullable=false, unique=true)
 	private String uuid;
 	@Column(name="timestamp_ms", nullable=false)
 	private Long timestampMs;
@@ -41,8 +40,6 @@ public class ReportingVolumeCreateEvent
 	private String volumeId;
 	@Column(name="user_id", nullable=false)
 	private String userId;
-	@Column(name="cluster_name", nullable=false)
-	private String clusterName;
 	@Column(name="availability_zone", nullable=false)
 	private String availabilityZone;
 	@Column(name="sizeGB", nullable=false)
@@ -59,7 +56,6 @@ public class ReportingVolumeCreateEvent
 		this.timestampMs = null;
 		this.volumeId = null;
 		this.userId = null;
-		this.clusterName = null;
 		this.availabilityZone = null;
 		this.sizeGB = null;
 	}
@@ -67,14 +63,13 @@ public class ReportingVolumeCreateEvent
 	/**
  	 * <p>Do not instantiate this class directly; use the ReportingVolumeCrud class.
  	 */
-	ReportingVolumeCreateEvent(String uuid, String volumeId, Long timestampMs,
-				String userId, String clusterName, String availabilityZone, Long sizeGB)
+	ReportingVolumeCreateEvent(String uuid, String volumeId, long timestampMs,
+				String userId, String availabilityZone, long sizeGB)
 	{
 		this.uuid = uuid;
 		this.timestampMs = timestampMs;
 		this.volumeId = volumeId;
 		this.userId = userId;
-		this.clusterName = clusterName;
 		this.availabilityZone = availabilityZone;
 		this.sizeGB = sizeGB;
 	}
@@ -102,11 +97,6 @@ public class ReportingVolumeCreateEvent
 	public String getUserId()
 	{
 		return this.userId;
-	}
-
-	public String getClusterName()
-	{
-		return this.clusterName;
 	}
 
 	public String getAvailabilityZone()
@@ -144,5 +134,6 @@ public class ReportingVolumeCreateEvent
 	{
 		return "[uuid:" + this.uuid+ " volumeId:" + this.volumeId + " userId:" + this.userId + "]";
 	}
+
 
 }

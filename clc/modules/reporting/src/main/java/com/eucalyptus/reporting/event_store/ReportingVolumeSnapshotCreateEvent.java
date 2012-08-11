@@ -17,7 +17,6 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-
 package com.eucalyptus.reporting.event_store;
 
 import javax.persistence.*;
@@ -33,12 +32,10 @@ import com.eucalyptus.entities.AbstractPersistent;
 public class ReportingVolumeSnapshotCreateEvent
 	extends AbstractPersistent
 {
-	@Column(name="uuid")
+	@Column(name="uuid", nullable=false, unique=true)
 	private String uuid;
 	@Column(name="volume_snapshot_id", nullable=false)
 	private String volumeSnapshotId;
-	@Column(name="volume_id", nullable=false)
-	private String volumeId;
 	@Column(name="timestamp_ms", nullable=false)
 	private Long timestampMs;
 	@Column(name="user_id")
@@ -55,7 +52,6 @@ public class ReportingVolumeSnapshotCreateEvent
 		//NOTE: hibernate will overwrite these
 		this.uuid = null;
 		this.volumeSnapshotId = null;
-		this.volumeId = null;
 		this.timestampMs = null;
 		this.userId = null;
 		this.sizeGB = null;
@@ -65,11 +61,10 @@ public class ReportingVolumeSnapshotCreateEvent
  	 * <p>Do not instantiate this class directly; use the ReportingVolumeSnapshotCrud class.
  	 */
 	ReportingVolumeSnapshotCreateEvent(String uuid, String volumeSnapshotId,
-				String volumeId, Long timestampMs, String userId, Long sizeGB)
+				 Long timestampMs, String userId, Long sizeGB)
 	{
 		this.uuid = uuid;
 		this.volumeSnapshotId = volumeSnapshotId;
-		this.volumeId = volumeId;
 		this.timestampMs = timestampMs;
 		this.userId = userId;
 		this.sizeGB = sizeGB;
@@ -88,11 +83,6 @@ public class ReportingVolumeSnapshotCreateEvent
 	public String getVolumeSnapshotId()
 	{
 		return this.volumeSnapshotId;
-	}
-	
-	public String getVolumeId()
-	{
-		return this.volumeId;
 	}
 	
 	public Long getTimestampMs()
@@ -138,9 +128,7 @@ public class ReportingVolumeSnapshotCreateEvent
 	@Override
 	public String toString()
 	{
-		return "[uuid:" + this.uuid + " volumeSnapshotId:" + this.volumeSnapshotId + " volumeId:"
-				+ volumeId + " timestampMs:" + timestampMs + " userId:" + this.userId + "]";
+		return "[uuid:" + this.uuid + " volumeSnapshotId:" + this.volumeSnapshotId + " timestampMs:" + timestampMs + " userId:" + this.userId + "]";
 	}
-
 
 }
