@@ -42,6 +42,7 @@
     <script type="text/javascript" language="javascript" src="js/keypair.js"></script>
     <script type="text/javascript" language="javascript" src="js/volume.js"></script>
     <script type="text/javascript" language="javascript" src="js/eucaevent.js"></script>
+    <script type="text/javascript" language="javascript" src="js/notification.js"></script>
     <script type="text/javascript" language="javascript" src="js/template/eucatable.js"></script>
     <script type="text/javascript" language="javascript" src="js/template/eucadialog.js"></script>
   </head> 
@@ -61,12 +62,20 @@
         <div class="inner-container clearfix"></div>
       </div>      
 
+      <div class="euca-notification-container">
+        <div class="inner-container"> 
+          <div id="euca-notification" class="notification-box clearfix">
+            <div id="euca-notification-title"> </div>
+            <div id="euca-notification-desc"> </div>
+            <div id="euca-notification-close"> </div>
+          </div>
+        </div>
+      </div>
       <div class="euca-main-outercontainer">
-          <div class="inner-container">
-            <div id="euca-notification"></div>
-            <div id="euca-main-container">
-            </div>
-          </div>       
+        <div class="inner-container">
+          <div id="euca-main-container">
+          </div>
+        </div>       
       </div>
       
       <footer class="euca-footer-container">

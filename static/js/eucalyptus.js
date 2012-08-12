@@ -13,7 +13,7 @@
           eucalyptus.i18n({'language':out.language});
         },
         error: function(jqXHR, textStatus, errorThrown){
-          //TODO: should present error screen
+          //TODO: should present error screen; can we use notification?
           alert("The server is not available");
           location.href='/';
         }

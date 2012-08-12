@@ -10,13 +10,12 @@
       this._setStorageSummary($div.find('.storage'));
       this._setNetSecSummary($div.find('.netsec'));  
       $div.appendTo(this.element); 
+      $('html body').find(DOM_BINDING['notification']).notification('success', 'dashboard (testing)', 'dashboard loaded successfully');
     },
 
-    _create : function() { 
-    },
+    _create : function() { },
 
-    _destroy : function() {
-    },
+    _destroy : function() { },
     
     // initiate ajax call-- describe-instances
     // attach spinning wheel until we refresh the content with the ajax response
@@ -50,11 +49,11 @@
             $instObj.find('#dashboard-instance-stopped span').text(numStopped);   
           } else {
             //TODO: need to call notification subsystem
-            alert('can\'t describe instances');
+            $('html body').find(DOM_BINDING['notification']).notification('error', 'dashboard', 'can\'t retrieve instances due to server failure');
           }
         },
         error: function(jqXHR, textStatus, errorThrown){ //TODO: need to call notification subsystem
-            alert('can\'t describe instances');
+            $('html body').find(DOM_BINDING['notification']).notification('error', 'dashboard', 'can\'t retrieve instances due to server failure');
         }
       });
 
@@ -80,11 +79,12 @@
             $storageObj.find('#dashboard-storage-volume span').text(numVol);
           } else {
             //TODO: need to call notification subsystem
-            alert('can\'t describe volumes');
+            $('html body').find(DOM_BINDING['notification']).notification('error', 'dashboard', 'can\'t retrieve volumes due to server failure');
+
           }
         },
         error: function(jqXHR, textStatus, errorThrown){ //TODO: need to call notification subsystem
-            alert('can\'t describe volumes');
+            $('html body').find(DOM_BINDING['notification']).notification('error', 'dashboard', 'can\'t retrieve volumes due to server failure');
         }
       });
 
@@ -102,13 +102,16 @@
             $storageObj.find('#dashboard-storage-snapshot span').text(numSnapshots);
           } else {
             //TODO: need to call notification subsystem
-            alert('can\'t describe snapshots');
+            $('html body').find(DOM_BINDING['notification']).notification('error', 'dashboard', 'can\'t retrieve snapshots due to server failure');
           }
         },
         error: function(jqXHR, textStatus, errorThrown){ //TODO: need to call notification subsystem
-            alert('can\'t describe snapshots');
+            $('html body').find(DOM_BINDING['notification']).notification('error', 'dashboard', 'can\'t retrieve snapshots due to server failure');
         }
       });
+
+      //$('html body').find(DOM_BINDING['notification']).notification('error', 'dashboard', 'can\'t retrieve buckets due to server failure');
+
 
       //az = $instObj.find('#dashboard-instance-dropbox').value();
       $storageObj.find('#dashboard-storage-volume').prepend(
@@ -133,11 +136,11 @@
             $netsecObj.find('#dashboard-netsec-sgroup span').text(numGroups);
           } else {
             //TODO: need to call notification subsystem
-            alert('can\'t describe security groups');
+            $('html body').find(DOM_BINDING['notification']).notification('error', 'dashboard', 'can\'t retrieve security groups due to server failure');
           }
         },
         error: function(jqXHR, textStatus, errorThrown){ //TODO: need to call notification subsystem
-            alert('can\'t describe security groups');
+          $('html body').find(DOM_BINDING['notification']).notification('error', 'dashboard', 'can\'t retrieve security groups due to server failure');
         }
       });
 
@@ -154,11 +157,11 @@
             $netsecObj.find('#dashboard-netsec-eip span').text(numAddr);
           } else {
             //TODO: need to call notification subsystem
-            alert('can\'t describe addresses');
+            $('html body').find(DOM_BINDING['notification']).notification('error', 'dashboard', 'can\'t retrieve addresses due to server failure');
           } 
         },
         error: function(jqXHR, textStatus, errorThrown){ //TODO: need to call notification subsystem
-            alert('can\'t describe addresses');
+            $('html body').find(DOM_BINDING['notification']).notification('error', 'dashboard', 'can\'t retrieve addresses due to server failure');
         } 
       });
 
@@ -175,11 +178,11 @@
             $netsecObj.find('#dashboard-netsec-keypair span').text(numKeypair);
           } else {
             //TODO: need to call notification subsystem
-            alert('can\'t describe keypair');
+            $('html body').find(DOM_BINDING['notification']).notification('error', 'dashboard', 'can\'t retrieve key pairs due to server failure');
           }
         },
         error: function(jqXHR, textStatus, errorThrown){ //TODO: need to call notification subsystem
-            alert('can\'t describe keypair');
+            $('html body').find(DOM_BINDING['notification']).notification('error', 'dashboard', 'can\'t retrieve key pairs due to server failure');
         }
       });
 

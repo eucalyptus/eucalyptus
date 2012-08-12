@@ -7,6 +7,13 @@ var RETURN_KEY_CODE = 13;
 var RETURN_MAC_KEY_CODE = 10;
 var BACKSPACE_KEY_CODE = 8;
 
+var DOM_BINDING = {header:'.euca-container .euca-header-container .inner-container',
+                   main:'.euca-main-outercontainer .inner-container #euca-main-container',
+                   notification:'.euca-container .euca-notification-container .inner-container #euca-notification',
+                   explorer:'.euca-explorer-container .inner-container',
+                   footer:'.euca-container .euca-footer-container .inner-container',
+                  };
+
 function escapeHTML(input) {
   return $('<div/>').text(input).html();
 }
