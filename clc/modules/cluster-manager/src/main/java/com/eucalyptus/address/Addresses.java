@@ -62,8 +62,13 @@
 
 package com.eucalyptus.address;
 
+import static com.eucalyptus.reporting.event.ResourceAvailabilityEvent.ResourceType.Address;
+import java.util.List;
 import java.util.NoSuchElementException;
+import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
+import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.cloud.CloudMetadata.AddressMetadata;
 import com.eucalyptus.cloud.util.NotEnoughResourcesException;
 import com.eucalyptus.cluster.Cluster;
@@ -72,10 +77,13 @@ import com.eucalyptus.component.Partition;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.event.AbstractNamedRegistry;
+import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.ListenerRegistry;
+import com.eucalyptus.event.Listeners;
 import com.eucalyptus.event.SystemConfigurationEvent;
+import com.eucalyptus.reporting.event.ResourceAvailabilityEvent;
 import com.eucalyptus.util.Classes;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.LogUtil;
@@ -93,6 +101,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Iterators;
 
 @SuppressWarnings( "serial" )
 public class Addresses extends AbstractNamedRegistry<Address> implements EventListener {
@@ -211,7 +220,7 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
       return true;
     }
   };
-
+  
   public static void system( final VmInstance vm ) {
     try {
       if ( !vm.isUsePrivateAddressing() &&
@@ -238,7 +247,7 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
                   Addresses.system( vm );
                 } catch ( final NoSuchElementException ex ) {}
               }
-            } ).dispatch(vm.getPartition());
+            } ).dispatch( vm.getPartition( ) );
           }
         } catch ( TerminatedInstanceException ex ) {
         } catch ( NoSuchElementException ex ) {
@@ -255,6 +264,34 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
   public void fireEvent( final Event event ) {
     if ( event instanceof SystemConfigurationEvent ) {
       Addresses.systemAddressManager = Addresses.getProvider( );
+    }
+  }
+
+  public static class AddressAvailabilityEventListener implements EventListener<ClockTick> {
+
+    public static void register( ) {
+      Listeners.register(ClockTick.class, new AddressAvailabilityEventListener());
+    }
+
+    @Override
+    public void fireEvent( final ClockTick event ) {
+      if ( Bootstrap.isFinished() && Hosts.isCoordinator() ) {
+        final List<Address> addresses = Addresses.getInstance( ).listValues( );
+        final List<Address> disabledAddresses = Addresses.getInstance( ).listDisabledValues( );
+        final long total = addresses.size() + disabledAddresses.size();
+        final long available = Iterators.size( Iterators.filter( addresses.iterator(), new Predicate<com.eucalyptus.address.Address>() {
+          @Override
+          public boolean apply( final Address address ) {
+            return !address.isAllocated();
+          }
+        } ) );
+
+        try {
+          ListenerRegistry.getInstance( ).fireEvent( new ResourceAvailabilityEvent( Address, new ResourceAvailabilityEvent.Availability( total, available ) ) );
+        } catch ( Exception ex ) {
+          LOG.error( ex, ex );
+        }
+      }
     }
   }
 }

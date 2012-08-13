@@ -17,10 +17,7 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-
 package com.eucalyptus.reporting.domain;
-
-import java.util.*;
 
 import org.apache.log4j.Logger;
 
@@ -44,7 +41,7 @@ public class ReportingAccountCrud
 		return instance;
 	}
 		
-	private ReportingAccountCrud()
+	protected ReportingAccountCrud()
 	{
 		
 	}

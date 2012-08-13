@@ -62,6 +62,8 @@
 
 package com.eucalyptus.reporting.event;
 
+import com.eucalyptus.event.Event;
+
 public class S3Event
 	implements Event
 {
@@ -175,12 +177,6 @@ public class S3Event
 	public String getAccountName()
 	{
 		return accountName;
-	}
-
-	@Override
-	public boolean requiresReliableTransmission()
-	{
-		return true;
 	}
 
 	public String toString()

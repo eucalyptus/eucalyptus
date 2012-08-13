@@ -100,8 +100,8 @@ public class S3UsageSnapshot
 	
 	public S3UsageSnapshot(S3SnapshotKey key, S3UsageData usageData)
 	{
-		this.key = key;
-		this.usageData = usageData;
+		this.key = new S3SnapshotKey( key );
+		this.usageData = new S3UsageData( usageData );
 	}
 
 	public S3SnapshotKey getSnapshotKey()

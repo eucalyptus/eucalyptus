@@ -86,11 +86,12 @@ import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.IllegalContextAccessException;
 import com.eucalyptus.entities.Entities;
-import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.Transactions;
+import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.images.Images;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.reporting.event.SnapShotEvent;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
@@ -122,7 +123,6 @@ public class SnapshotManager {
   
   public CreateSnapshotResponseType create( CreateSnapshotType request ) throws EucalyptusCloudException, NoSuchComponentException, DuplicateMetadataException, AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException, TransactionException {
     final Context ctx = Contexts.lookup( );
-    EntityWrapper<Snapshot> db = EntityWrapper.get( Snapshot.class );
     Volume vol = Transactions.find( Volume.named( ctx.getUserFullName( ).asAccountFullName( ), request.getVolumeId( ) ) );
     final ServiceConfiguration sc = Topology.lookup( Storage.class, Partitions.lookupByName( vol.getPartition( ) ) );
     final Volume volReady = Volumes.checkVolumeReady( vol );
@@ -139,7 +139,8 @@ public class SnapshotManager {
     };
     Snapshot snap = RestrictedTypes.allocateUnitlessResource( allocator );
     snap = Snapshots.startCreateSnapshot( volReady, snap );
-    
+    fireUsageEvent( snap, SnapShotEvent.forSnapShotCreate() );
+
     CreateSnapshotResponseType reply = ( CreateSnapshotResponseType ) request.getReply( );
     edu.ucsb.eucalyptus.msgs.Snapshot snapMsg = snap.morph( new edu.ucsb.eucalyptus.msgs.Snapshot( ) );
     snapMsg.setProgress( "0%" );
@@ -147,14 +148,6 @@ public class SnapshotManager {
     snapMsg.setVolumeSize( volReady.getSize( ).toString( ) );
     reply.setSnapshot( snapMsg );
     return reply;
-  }
-  
-  /**
-   * @throws DuplicateMetadataException
-   * @deprecated Use {@link Snapshots#startCreateSnapshot(Volume,Snapshot)} instead
-   */
-  private static Snapshot startCreateSnapshot( final Volume vol, final Snapshot snap ) throws EucalyptusCloudException, DuplicateMetadataException {
-    return Snapshots.startCreateSnapshot( vol, snap );
   }
 
   public DeleteSnapshotResponseType delete( final DeleteSnapshotType request ) throws EucalyptusCloudException {
@@ -174,7 +167,8 @@ public class SnapshotManager {
           } else if ( isReservedSnapshot( request.getSnapshotId( ) ) ) {
             throw Exceptions.toUndeclared( "Snapshot " + request.getSnapshotId( ) + " is in use, deletion not permitted", new EucalyptusCloudException( ) );
           } else {
-            Snapshots.fireDeleteEvent( snap );
+            fireUsageEvent(snap, SnapShotEvent.forSnapShotDelete());
+            
             final ServiceConfiguration sc = Topology.lookup( Storage.class, Partitions.lookupByName( snap.getPartition( ) ) );
             try {
               DeleteStorageSnapshotResponseType scReply = AsyncRequests.sendSync( sc, new DeleteStorageSnapshotType( snap.getDisplayName( ) ) );
@@ -274,6 +268,16 @@ public class SnapshotManager {
       return Iterables.any(
           Entities.query(Images.exampleBlockStorageWithSnapshotId(identifier), true),
           inState(EnumSet.of( pending, available ) ) );
+    }
+  }
+
+  private static void fireUsageEvent( final Snapshot snap,
+                                      final SnapShotEvent.ActionInfo actionInfo ) {
+    try {
+      ListenerRegistry.getInstance().fireEvent(
+          SnapShotEvent.with(actionInfo, snap.getNaturalId(), snap.getDisplayName(), snap.getOwner(), snap.getVolumeSize().longValue()));
+    } catch (final Exception e) {
+      LOG.error(e, e);
     }
   }
 }

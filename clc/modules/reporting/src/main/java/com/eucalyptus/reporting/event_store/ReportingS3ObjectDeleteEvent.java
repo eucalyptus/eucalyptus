@@ -17,7 +17,6 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-
 package com.eucalyptus.reporting.event_store;
 
 import javax.persistence.Column;
@@ -26,11 +25,14 @@ import javax.persistence.Table;
 
 import org.hibernate.annotations.Entity;
 
+import com.eucalyptus.entities.AbstractPersistent;
+
 @SuppressWarnings("serial")
 @Entity @javax.persistence.Entity
 @PersistenceContext(name="eucalyptus_reporting")
 @Table(name="reporting_s3_object_delete_events")
 public class ReportingS3ObjectDeleteEvent
+	extends AbstractPersistent
 {
 	@Column(name="s3_bucket_name", nullable=false)
 	private String s3BucketName;

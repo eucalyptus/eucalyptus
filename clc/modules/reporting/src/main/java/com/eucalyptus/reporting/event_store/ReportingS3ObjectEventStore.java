@@ -17,14 +17,16 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-
 package com.eucalyptus.reporting.event_store;
 
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.entities.EntityWrapper;
 
+import com.eucalyptus.entities.AbstractPersistent;
+
 public class ReportingS3ObjectEventStore
+	extends AbstractPersistent
 {
 	private static Logger LOG = Logger.getLogger( ReportingS3ObjectEventStore.class );
 

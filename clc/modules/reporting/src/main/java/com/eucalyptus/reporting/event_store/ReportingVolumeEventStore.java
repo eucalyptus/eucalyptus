@@ -17,7 +17,6 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-
 package com.eucalyptus.reporting.event_store;
 
 import java.util.*;
@@ -32,7 +31,7 @@ public class ReportingVolumeEventStore
 
 	private static ReportingVolumeEventStore instance = null;
 	
-	public static synchronized ReportingVolumeEventStore getVolume()
+	public static synchronized ReportingVolumeEventStore getInstance()
 	{
 		if (instance == null) {
 			instance = new ReportingVolumeEventStore();
@@ -46,7 +45,7 @@ public class ReportingVolumeEventStore
 	}
 
 	public void insertCreateEvent(String uuid, String volumeId, long timestampMs, String userId,
-					String clusterName, String availabilityZone, Long sizeGB)
+					 String availabilityZone, Long sizeGB)
 	{
 		
 		EntityWrapper<ReportingVolumeCreateEvent> entityWrapper =
@@ -54,7 +53,8 @@ public class ReportingVolumeEventStore
 
 		try {
 			ReportingVolumeCreateEvent volume = new ReportingVolumeCreateEvent(uuid, volumeId,
-				timestampMs, userId, clusterName, availabilityZone, sizeGB);
+				timestampMs, userId, availabilityZone, sizeGB);
+			
 			entityWrapper.add(volume);
 			entityWrapper.commit();
 			LOG.debug("Added reporting volume to db:" + volume);
@@ -102,5 +102,42 @@ public class ReportingVolumeEventStore
 		}							
 	}
 
+	
+	public void insertAttachEvent(String uuid, String instanceUuid, long sizeGB, long timestampMs)
+	{
+		EntityWrapper<ReportingVolumeAttachEvent> entityWrapper =
+			EntityWrapper.get(ReportingVolumeAttachEvent.class);
+
+		try {
+			ReportingVolumeAttachEvent event = new ReportingVolumeAttachEvent(uuid, instanceUuid, sizeGB, timestampMs);
+			entityWrapper.add(event);
+			entityWrapper.commit();
+			LOG.debug("Added event to db:" + event);
+		} catch (Exception ex) {
+			LOG.error(ex);
+			entityWrapper.rollback();
+			throw new RuntimeException(ex);
+		}							
+		
+	}
+	
+	public void insertDetachEvent(String uuid, String instanceUuid, long sizeGB, long timestampMs)
+	{
+		EntityWrapper<ReportingVolumeDetachEvent> entityWrapper =
+			EntityWrapper.get(ReportingVolumeDetachEvent.class);
+
+		try {
+			ReportingVolumeDetachEvent event = new ReportingVolumeDetachEvent(uuid, instanceUuid, sizeGB, timestampMs);
+			entityWrapper.add(event);
+			entityWrapper.commit();
+			LOG.debug("Added event to db:" + event);
+		} catch (Exception ex) {
+			LOG.error(ex);
+			entityWrapper.rollback();
+			throw new RuntimeException(ex);
+		}							
+		
+	}
+	
 }
 

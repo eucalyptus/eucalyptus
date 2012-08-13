@@ -62,11 +62,11 @@
 
 package com.eucalyptus.address;
 
+import static com.eucalyptus.reporting.event.AddressEvent.ActionInfo;
 import java.lang.reflect.Constructor;
 import java.util.NoSuchElementException;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicMarkableReference;
-import javax.persistence.Column;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import javax.persistence.Transient;
@@ -74,6 +74,7 @@ import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
+import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.AccountMetadata;
@@ -84,9 +85,11 @@ import com.eucalyptus.cluster.callback.UnassignAddressCallback;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.reporting.event.AddressEvent;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.OwnerFullName;
@@ -107,7 +110,7 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
     unallocated,
     allocated,
     impending,
-    assigned;
+    assigned
   }
   
   public enum Transition {
@@ -149,20 +152,20 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
     public String toString( ) {
       return this.name( );
     }
-    
   }
   
   private static Logger                   LOG                     = Logger.getLogger( Address.class );
   @Transient
+  private String                          instanceUuid;
+  @Transient
   private String                          instanceId;
   @Transient
   private String                          instanceAddress;
-  @Transient
+  public static String                    UNASSIGNED_INSTANCEUUID = "";
   public static String                    UNASSIGNED_INSTANCEID   = "available";
-  @Transient
   public static String                    UNASSIGNED_INSTANCEADDR = "0.0.0.0";
-  @Transient
   public static String                    PENDING_ASSIGNMENT      = "pending";
+  public static String                    PENDING_ASSIGNMENTUUID  = "";
   @Transient
   private AtomicMarkableReference<State>  atomicState;
   @Transient
@@ -188,6 +191,7 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
   
   public Address( String ipAddress, String partition ) {
     this( ipAddress );
+    this.instanceUuid = UNASSIGNED_INSTANCEUUID;
     this.instanceId = UNASSIGNED_INSTANCEID;
     this.instanceAddress = UNASSIGNED_INSTANCEADDR;
     this.transition = this.QUIESCENT;
@@ -195,9 +199,10 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
     this.init( );
   }
   
-  public Address( OwnerFullName ownerFullName, String address, String instanceId, String instanceAddress ) {
+  public Address( OwnerFullName ownerFullName, String address, String instanceUuid, String instanceId, String instanceAddress ) {
     this( address );
     this.setOwner( ownerFullName );
+    this.instanceUuid = instanceUuid;
     this.instanceId = instanceId;
     this.instanceAddress = instanceAddress;
     this.transition = this.QUIESCENT;
@@ -211,11 +216,13 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
     this.getOwner( );//ensure to initialize
     if ( this.instanceAddress == null || this.instanceId == null ) {
       this.instanceAddress = UNASSIGNED_INSTANCEADDR;
+      this.instanceUuid = UNASSIGNED_INSTANCEUUID;
       this.instanceId = UNASSIGNED_INSTANCEID;
     }
     if ( Principals.nobodyFullName( ).equals( super.getOwner( ) ) ) {
       this.atomicState.set( State.unallocated, true );
       this.instanceAddress = UNASSIGNED_INSTANCEADDR;
+      this.instanceUuid = UNASSIGNED_INSTANCEUUID;
       this.instanceId = UNASSIGNED_INSTANCEID;
       Addresses.getInstance( ).registerDisabled( this );
       this.atomicState.set( State.unallocated, false );
@@ -229,6 +236,7 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
         Addresses.getInstance( ).registerDisabled( this );
         this.setOwner( Principals.nobodyFullName( ) );
         this.instanceAddress = UNASSIGNED_INSTANCEADDR;
+        this.instanceUuid = UNASSIGNED_INSTANCEUUID;
         this.instanceId = UNASSIGNED_INSTANCEID;
         Address.removeAddress( this.getDisplayName( ) );
         this.atomicState.set( State.unallocated, false );
@@ -261,6 +269,7 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
   public Address allocate( final OwnerFullName ownerFullName ) {
     this.transition( State.unallocated, State.allocated, false, true, new SplitTransition( Transition.allocating ) {
       public void top( ) {
+        Address.this.instanceUuid = UNASSIGNED_INSTANCEUUID;
         Address.this.instanceId = UNASSIGNED_INSTANCEID;
         Address.this.instanceAddress = UNASSIGNED_INSTANCEADDR;
         Address.this.setOwner( ownerFullName );
@@ -277,12 +286,16 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
       public void bottom( ) {}
       
     } );
+    fireUsageEvent( ownerFullName, AddressEvent.forAllocate() );
     return this;
   }
-  
+
   public Address release( ) {
+    fireUsageEvent( AddressEvent.forRelease() );
+
     SplitTransition release = new SplitTransition( Transition.unallocating ) {
       public void top( ) {
+        Address.this.instanceUuid = UNASSIGNED_INSTANCEUUID;
         Address.this.instanceId = UNASSIGNED_INSTANCEID;
         Address.this.instanceAddress = UNASSIGNED_INSTANCEADDR;
         Address.removeAddress( Address.this.getDisplayName( ) );
@@ -321,6 +334,8 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
   }
   
   public Address unassign( ) {
+    fireUsageEvent( AddressEvent.forDisassociate( instanceUuid, instanceId ) );
+
     SplitTransition unassign = new SplitTransition( Transition.unassigning ) {
       public void top( ) {
         try {
@@ -332,6 +347,7 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
       
       public void bottom( ) {
         Address.this.stateUuid = UUID.randomUUID( ).toString( );
+        Address.this.instanceUuid = UNASSIGNED_INSTANCEUUID;
         Address.this.instanceId = UNASSIGNED_INSTANCEID;
         Address.this.instanceAddress = UNASSIGNED_INSTANCEADDR;
       }
@@ -348,6 +364,7 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
     this.transition( State.unallocated, State.impending, false, true, //
                      new SplitTransition( Transition.system ) {
                        public void top( ) {
+                         Address.this.instanceUuid = PENDING_ASSIGNMENTUUID;
                          Address.this.instanceId = PENDING_ASSIGNMENT;
                          Address.this.instanceAddress = UNASSIGNED_INSTANCEADDR;
                          Address.this.setOwner( Principals.systemFullName( ) );
@@ -367,8 +384,11 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
   public Address assign( final VmInstance vm ) {
     SplitTransition assign = new SplitTransition( Transition.assigning ) {
       public void top( ) {
-        Address.this.setInstanceId( vm.getInstanceId( ) );
-        Address.this.setInstanceAddress( vm.getPrivateAddress( ) );
+        Address.this.setInstanceInfo(
+            vm.getInstanceUuid(),
+            vm.getInstanceId( ),
+            vm.getPrivateAddress( )
+        );
         Address.this.stateUuid = UUID.randomUUID( ).toString( );
       }
       
@@ -379,6 +399,7 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
     } else {
       this.transition( State.allocated, State.assigned, false, true, assign );
     }
+    fireUsageEvent( AddressEvent.forAssociate( vm.getInstanceUuid(), vm.getInstanceId() ) );
     return this;
   }
   
@@ -459,7 +480,7 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
       }
     }
   }
-  
+
   public String getInstanceId( ) {
     return this.instanceId;
   }
@@ -472,18 +493,18 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
     return this.instanceAddress;
   }
   
-  private void setInstanceAddress( String instanceAddress ) {
-    this.instanceAddress = instanceAddress;
-  }
-  
   public String getStateUuid( ) {
     return this.stateUuid;
   }
-  
-  public void setInstanceId( String instanceId ) {
+
+  private void setInstanceInfo( final String instanceUuid,
+                                final String instanceId,
+                                final String instanceAddress ) {
+    this.instanceUuid = instanceUuid;
     this.instanceId = instanceId;
+    this.instanceAddress = instanceAddress;
   }
-  
+
   @Override
   public String toString( ) {
     return "Address " + this.getDisplayName( ) + " " + ( this.isAllocated( )
@@ -573,5 +594,25 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
   public String getPartition( ) {
     return "eucalyptus";
   }
-  
+
+  private void fireUsageEvent( final ActionInfo actionInfo ) {
+    fireUsageEvent( getOwner(), actionInfo );
+  }
+
+  private void fireUsageEvent( final OwnerFullName ownerFullName,
+                               final ActionInfo actionInfo ) {
+    if ( !Principals.isFakeIdentityAccountNumber( ownerFullName.getAccountNumber() ) ) {
+      try {
+        ListenerRegistry.getInstance().fireEvent(
+            AddressEvent.with(
+                getNaturalId(),
+                getDisplayName(),
+                ownerFullName,
+                Accounts.lookupAccountById(ownerFullName.getAccountNumber()).getName(),
+                actionInfo ) );
+      } catch ( final Exception e ) {
+        LOG.error( e, e );
+      }
+    }
+  }
 }
