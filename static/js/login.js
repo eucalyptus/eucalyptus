@@ -26,6 +26,7 @@
             eucalyptus.main($.eucaData);
    	  },
           onError: function(args){
+             // TODO: need an error notification screen for login failure
     	     alert("login failed: "+args);
           }		     
         });

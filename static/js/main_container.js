@@ -47,7 +47,7 @@
           location.href = '/';
           break;
         default:
-          alert('unknown menu selected: '+selected);
+          $('html body').find(DOM_BINDING['notification']).notification('error', 'internal error', selected+' not yet implemented', 1);
       }
       this._curSelected = selected;
     }
