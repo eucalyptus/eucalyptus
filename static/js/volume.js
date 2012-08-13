@@ -43,10 +43,7 @@
               "bVisible": false,
               "fnRender": function(oObj) { s = (oObj.aData.status == 'in-use') ? oObj.aData.attach_data.status : oObj.aData.status; return s; }
             }
-          ],
-          "fnDrawCallback": function( oSettings ) {
-             $('#table_volumes_count').html(oSettings.fnRecordsDisplay());
-          }
+          ]
         },
         header_title : volume_h_title,
         search_refresh : search_refresh,
@@ -54,7 +51,8 @@
         txt_found : volume_found,
         menu_text : table_menu_main_action,
         menu_actions : { delete: [table_menu_delete_action, function (args) { thisObj.deleteAction(args) } ] },
-        row_click : function (args) { thisObj.handleRowClick(args); }
+        row_click : function (args) { thisObj.handleRowClick(args); },
+      //  td_hover_actions : { instance: [4, function (args) { thisObj.handleInstanceHover(args); }], snapshot: [5, function (args) { thisObj.handleSnapshotHover(args); }] }
       });
       tableWrapper.appendTo(this.element);
 
@@ -149,7 +147,30 @@
 
     _destroy : function() {
     },
+/*
+    handleInstanceHover : function(e) {
+      switch(e.type) {
+        case 'mouseleave':
+          $(e.currentTarget).removeClass("hoverCell");
+          break;
+        case 'mouseenter':
+          $(e.currentTarget).addClass("hoverCell");
+          break;
+      }
+    },
 
+    handleSnapshotHover : function(e) {
+      switch(e.type) {
+        case 'mouseleave':
+          $(e.currentTarget).removeClass("hoverCell");
+          $(e.currentTarget).off('click');
+          break;
+        case 'mouseenter':
+          $(e.currentTarget).addClass("hoverCell");
+          break;
+      }
+    },
+*/
     reDrawTable : function() {
       tableWrapper.eucatable('reDrawTable');
     },
@@ -163,6 +184,7 @@
         // enable delete menu
         tableWrapper.eucatable('activateMenu');
     },
+
 /*
     _addKeyPair : function(keyName) {
       $.ajax({

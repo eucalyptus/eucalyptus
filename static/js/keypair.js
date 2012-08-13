@@ -28,10 +28,7 @@
             },
             { "mDataProp": "name" },
             { "mDataProp": "fingerprint", "bSortable": false }
-          ],
-          "fnDrawCallback": function( oSettings ) {
-             $('#table_keys_count').html(oSettings.fnRecordsTotal());
-          }
+          ]
         },
         header_title : keypair_h_title,
         search_refresh : search_refresh,

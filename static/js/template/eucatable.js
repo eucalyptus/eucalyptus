@@ -16,6 +16,9 @@
     actionMenu : null,
 
     _init : function() {
+      thisObj = this;
+      // add draw call back
+      this.options.dt_arg['fnDrawCallback'] = function( oSettings ) { thisObj.drawCallback(oSettings); };
       this.table = this.options.base_table.dataTable(this.options.dt_arg);
       this.decorateHeader({title:this.options.header_title});
       this.decorateSearchBar({refresh: this.options.search_refresh});
@@ -28,6 +31,25 @@
     },
 
     _destroy : function() {
+    },
+
+    drawCallback : function(oSettings) {
+      thisObj = this;
+      $('#table_' + this.options.id + '_count').html(oSettings.fnRecordsDisplay());
+      $('#' + this.options.id + ' tbody').find('tr').each(function(index, tr) {
+        $.each(thisObj.options.td_hover_actions, function (key, value) {
+          $td = $(tr).find('td:eq(' + value[0] +')');
+          // first check if there is anything there
+          if ($td.html() != '') {
+            $td.hover( function(e) {
+              value[1].call(this, e);
+            });
+            $td.click( function(e) {
+              e.stopPropagation();
+            });
+          }
+        });
+      });
     },
 
     reDrawTable : function() {
@@ -174,12 +196,15 @@
           actionMenu.addClass('inactive');
         }
       });
+      //TODO: add hover to select all
+      $checkbox.parent().hover( function () {
+        //TODO: add action here
+      });
       // add on row click acion
       this.element.find('table tbody').click( function (e) {
         $(e.target.parentNode.firstChild.firstChild).click();
         thisObj._trigger('row_click', this);
       });
-
     },
 
     countSelectedRows : function () {

@@ -764,6 +764,7 @@ tr.even td.sorting_1 {
    padding: 5px;
 }
 
+/* === Euca tables === */
 .euca-table-header {
    -moz-border-radius: 2px;
    border-radius: 2px;
@@ -781,6 +782,10 @@ tr.even td.sorting_1 {
 
 .resources-found {
    padding-right: 5px;
+}
+
+.hoverCell {
+   color: green;
 }
 
 .help-link {
