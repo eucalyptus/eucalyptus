@@ -75,6 +75,8 @@ import org.xbill.DNS.RRset;
 import org.xbill.DNS.Record;
 import org.xbill.DNS.SOARecord;
 import org.xbill.DNS.TextParseException;
+import org.xbill.DNS.Type;
+
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -169,6 +171,9 @@ public class TransientZone extends Zone {
   public SetResponse findRecords( Name name, int type ) {
     if( StackConfiguration.USE_INSTANCE_DNS && name.toString( ).matches("euca-.+{3}-.+{3}-.+{3}-.+{3}\\..*") ) {
       try {
+    	if(type == Type.AAAA)
+    		return(SetResponse.ofType(SetResponse.SUCCESSFUL));
+    	
         String[] tryIp = name.toString( ).replaceAll( "euca-", "" ).replaceAll("\\.eucalyptus.*","").split("-");
         if( tryIp.length < 4 ) return super.findRecords( name, type );
         String ipCandidate = new StringBuffer()
