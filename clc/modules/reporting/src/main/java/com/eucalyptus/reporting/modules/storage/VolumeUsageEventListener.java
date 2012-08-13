@@ -54,7 +54,7 @@ public class VolumeUsageEventListener implements EventListener<VolumeEvent> {
 
     final long timeInMs = getCurrentTimeMillis();
     try {
-      final User user = Accounts.lookupUserById(event.getOwner().getUserId());
+      final User user = lookupUser( event.getOwner().getUserId() );
 
       getReportingAccountCrud().createOrUpdateAccount(user.getAccount()
           .getName(), user.getAccount().getAccountNumber());
@@ -106,5 +106,9 @@ public class VolumeUsageEventListener implements EventListener<VolumeEvent> {
 
   protected long getCurrentTimeMillis() {
     return System.currentTimeMillis();
+  }
+
+  protected User lookupUser( final String userId ) throws AuthException {
+    return Accounts.lookupUserById( userId );
   }
 }

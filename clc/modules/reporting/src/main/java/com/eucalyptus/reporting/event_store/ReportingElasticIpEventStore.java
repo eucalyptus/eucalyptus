@@ -20,12 +20,9 @@
 package com.eucalyptus.reporting.event_store;
 
 import javax.annotation.Nonnull;
-import javax.persistence.EntityTransaction;
-import com.eucalyptus.entities.Entities;
-import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Preconditions;
 
-public class ReportingElasticIpEventStore {
+public class ReportingElasticIpEventStore extends EventStoreSupport {
   private static final ReportingElasticIpEventStore instance = new ReportingElasticIpEventStore();
 
   public static ReportingElasticIpEventStore getInstance() {
@@ -70,17 +67,6 @@ public class ReportingElasticIpEventStore {
     Preconditions.checkNotNull( instanceUuid, "InstanceUuid is required" );
 
     persist( new ReportingElasticIpDetachEvent( uuid, instanceUuid, timestampMs ) );
-  }
-
-  protected void persist( final Object event ) {
-    final EntityTransaction db = Entities.get( event );
-    try {
-      Entities.persist( event );
-      db.commit();
-    } catch ( final Exception e ) {
-      db.rollback();
-      throw Exceptions.toUndeclared( e );
-    }
   }
 }
 

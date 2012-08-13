@@ -20,13 +20,10 @@
 package com.eucalyptus.reporting.event_store;
 
 import javax.annotation.Nonnull;
-import javax.persistence.EntityTransaction;
 
-import com.eucalyptus.entities.Entities;
-import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Preconditions;
 
-public class ReportingInstanceEventStore {
+public class ReportingInstanceEventStore extends EventStoreSupport {
   private static final ReportingInstanceEventStore instance = new ReportingInstanceEventStore( );
 
   public static ReportingInstanceEventStore getInstance( ) {
@@ -92,16 +89,5 @@ public class ReportingInstanceEventStore {
             cumulativeNetOutgoingMegsBetweenZones,
             cumulativeNetOutgoingMegsWithinZone,
             cumulativeNetOutgoingMegsPublicIp ) );
-  }
-
-  protected void persist( final Object event ) {
-    final EntityTransaction db = Entities.get( event );
-    try {
-      Entities.persist( event );
-      db.commit();
-    } catch ( final Exception e ) {
-      db.rollback();
-      throw Exceptions.toUndeclared( e );
-    }
   }
 }
