@@ -1,21 +1,62 @@
 [
   {
+    "rules_egress": [], 
     "__obj_name__": "SecurityGroup", 
-    "name": "default", 
+    "name": "test_grp", 
     "tags": {}, 
     "rules": [], 
     "region": {
       "connection": null, 
-      "endpoint": "192.168.25.10", 
+      "endpoint": "10.20.30.203", 
       "name": "eucalyptus", 
       "__obj_name__": "RegionInfo", 
       "connection_cls": null
     }, 
-    "ipPermissions": "", 
     "item": "", 
     "connection": [], 
     "vpc_id": null, 
-    "owner_id": "072279894205", 
+    "owner_id": "310668762374", 
+    "id": null, 
+    "description": "group for testing"
+  }, 
+  {
+    "rules_egress": [], 
+    "__obj_name__": "SecurityGroup", 
+    "name": "default", 
+    "tags": {}, 
+    "rules": [
+      {
+        "from_port": "22", 
+        "ip_protocol": "tcp", 
+        "parent": null, 
+        "to_port": "22", 
+        "__obj_name__": "IPPermissions", 
+        "item": "", 
+        "grants": [
+          {
+            "__obj_name__": "GroupOrCIDR", 
+            "name": null, 
+            "item": "", 
+            "group_id": null, 
+            "cidr_ip": "0.0.0.0/0", 
+            "owner_id": null
+          }
+        ], 
+        "ipRanges": "", 
+        "groups": ""
+      }
+    ], 
+    "region": {
+      "connection": null, 
+      "endpoint": "10.20.30.203", 
+      "name": "eucalyptus", 
+      "__obj_name__": "RegionInfo", 
+      "connection_cls": null
+    }, 
+    "item": "", 
+    "connection": [], 
+    "vpc_id": null, 
+    "owner_id": "310668762374", 
     "id": null, 
     "description": "default group"
   }
