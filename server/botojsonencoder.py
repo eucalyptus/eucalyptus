@@ -8,6 +8,7 @@ from boto.ec2 import EC2Connection
 from boto.ec2.ec2object import EC2Object
 from boto.regioninfo import RegionInfo
 from boto.ec2.image import ImageAttribute
+from boto.ec2.instance import ConsoleOutput
 from boto.ec2.instance import Group
 from boto.ec2.securitygroup import GroupOrCIDR
 from boto.ec2.securitygroup import IPPermissions
@@ -29,25 +30,29 @@ class BotoJsonEncoder(JSONEncoder):
             return obj.__dict__
         elif isinstance(obj, EC2Connection):
             return []
-        elif issubclass(obj.__class__, Group):
+        elif isinstance(obj, Group):
             values = copy.copy(obj.__dict__)
-            values['__obj_name__'] = obj.__class__.__name__
+            values['__obj_name__'] = 'Group'
             return (values)
-        elif issubclass(obj.__class__, ImageAttribute):
+        elif isinstance(obj, ConsoleOutput):
+            values = copy.copy(obj.__dict__)
+            values['__obj_name__'] = 'ConsoleOutput'
+            return (values)
+        elif isinstance(obj, ImageAttribute):
             values = copy.copy(obj.__dict__)
             values['__obj_name__'] = 'ImageAttribute'
             return (values)
-        elif issubclass(obj.__class__, AttachmentSet):
+        elif isinstance(obj, AttachmentSet):
             values = copy.copy(obj.__dict__)
             values['__obj_name__'] = 'AttachmentSet'
             return (values)
-        elif issubclass(obj.__class__, IPPermissions):
+        elif isinstance(obj, IPPermissions):
             values = copy.copy(obj.__dict__)
             # this is because I found a "parent" property set to self - dak
             values['parent'] = None
             values['__obj_name__'] = 'IPPermissions'
             return (values)
-        elif issubclass(obj.__class__, GroupOrCIDR):
+        elif isinstance(obj, GroupOrCIDR):
             values = copy.copy(obj.__dict__)
             values['__obj_name__'] = 'GroupOrCIDR'
             return (values)
