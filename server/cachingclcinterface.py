@@ -1,3 +1,4 @@
+import ConfigParser
 from datetime import datetime, timedelta
 
 from boto.ec2.image import Image
@@ -13,39 +14,85 @@ from .clcinterface import ClcInterface
 # some things will need to be re-written.
 class CachingClcInterface(ClcInterface):
     clc = None
-    pollfreq = 0
 
     zones = None
     zoneUpdate = datetime.min
+    zoneFreq = 0
+
     images = None
     imageUpdate = datetime.min
+    imageFreq = 0
+
     instances = None
     instanceUpdate = datetime.min
+    instanceFreq = 0
+
     addresses = None
     addressUpdate = datetime.min
+    addressFreq = 0
+
     keypairs = None
     keypairUpdate = datetime.min
+    keypairFreq = 0
+
     groups = None
     groupUpdate = datetime.min
+    groupFreq = 0
+
     volumes = None
     volumeUpdate = datetime.min
+    volumeFreq = 0
+
     snapshots = None
     snapshotUpdate = datetime.min
+    snapshotFreq = 0
 
     # load saved state to simulate CLC
-    def __init__(self, clcinterface, pollfreq):
+    def __init__(self, clcinterface, config):
         self.clc = clcinterface
-        self.pollfreq = pollfreq
+        pollfreq = config.getint('eui', 'pollfreq')
+        try:
+            self.zoneFreq = config.getint('eui', 'pollfreq.zones')
+        except ConfigParser.NoOptionError:
+            self.zoneFreq = pollfreq
+        try:
+            self.imageFreq = config.getint('eui', 'pollfreq.images')
+        except ConfigParser.NoOptionError:
+            self.imageFreq = pollfreq
+        try:
+            self.instanceFreq = config.getint('eui', 'pollfreq.instances')
+        except ConfigParser.NoOptionError:
+            self.instanceFreq = pollfreq
+        try:
+            self.keypairFreq = config.getint('eui', 'pollfreq.keypairs')
+        except ConfigParser.NoOptionError:
+            self.keypairFreq = pollfreq
+        try:
+            self.groupFreq = config.getint('eui', 'pollfreq.groups')
+        except ConfigParser.NoOptionError:
+            self.groupFreq = pollfreq
+        try:
+            self.addressFreq = config.getint('eui', 'pollfreq.addresses')
+        except ConfigParser.NoOptionError:
+            self.addressFreq = pollfreq
+        try:
+            self.volumeFreq = config.getint('eui', 'pollfreq.volumes')
+        except ConfigParser.NoOptionError:
+            self.volumeFreq = pollfreq
+        try:
+            self.snapshotFreq = config.getint('eui', 'pollfreq.snapshots')
+        except ConfigParser.NoOptionError:
+            self.snapshotFreq = pollfreq
 
     def get_all_zones(self):
         # if cache stale, update it
-        if (datetime.now() - self.zoneUpdate) > timedelta(seconds = self.pollfreq):
+        if (datetime.now() - self.zoneUpdate) > timedelta(seconds = self.zonefreq):
             self.zones = self.clc.get_all_zones()
             self.zoneUpdate = datetime.now()
         return self.zones
 
     def get_all_images(self):
-        if (datetime.now() - self.imageUpdate) > timedelta(seconds = self.pollfreq):
+        if (datetime.now() - self.imageUpdate) > timedelta(seconds = self.imageFreq):
             self.images = self.clc.get_all_images()
             self.imageUpdate = datetime.now()
         return self.images
@@ -65,7 +112,7 @@ class CachingClcInterface(ClcInterface):
         return self.clc.reset_image_attribute(image_id, attribute)
 
     def get_all_instances(self):
-        if (datetime.now() - self.instanceUpdate) > timedelta(seconds = self.pollfreq):
+        if (datetime.now() - self.instanceUpdate) > timedelta(seconds = self.instanceFreq):
             self.instances = self.clc.get_all_instances()
             self.instanceUpdate = datetime.now()
         return self.instances
@@ -125,7 +172,7 @@ class CachingClcInterface(ClcInterface):
         return self.clc.get_console_output(instance_id)
 
     def get_all_addresses(self):
-        if (datetime.now() - self.addressUpdate) > timedelta(seconds = self.pollfreq):
+        if (datetime.now() - self.addressUpdate) > timedelta(seconds = self.addressFreq):
             self.addresses = self.clc.get_all_addresses()
             self.addressUpdate = datetime.now()
         return self.addresses
@@ -151,7 +198,7 @@ class CachingClcInterface(ClcInterface):
         return self.clc.disassociate_address(publicip)
 
     def get_all_key_pairs(self):
-        if (datetime.now() - self.keypairUpdate) > timedelta(seconds = self.pollfreq):
+        if (datetime.now() - self.keypairUpdate) > timedelta(seconds = self.keypairFreq):
             self.keypairs = self.clc.get_all_key_pairs()
             self.keypairUpdate = datetime.now()
         return self.keypairs
@@ -167,7 +214,7 @@ class CachingClcInterface(ClcInterface):
         return self.clc.delete_key_pair(key_name)
 
     def get_all_security_groups(self):
-        if (datetime.now() - self.groupUpdate) > timedelta(seconds = self.pollfreq):
+        if (datetime.now() - self.groupUpdate) > timedelta(seconds = self.groupFreq):
             self.groups = self.clc.get_all_security_groups()
             self.groupUpdate = datetime.now()
         return self.groups
@@ -213,7 +260,7 @@ class CachingClcInterface(ClcInterface):
                                  src_security_group_group_id)
 
     def get_all_volumes(self):
-        if (datetime.now() - self.volumeUpdate) > timedelta(seconds = self.pollfreq):
+        if (datetime.now() - self.volumeUpdate) > timedelta(seconds = self.volumeFreq):
             self.volumes = self.clc.get_all_volumes()
             self.volumeUpdate = datetime.now()
         return self.volumes
@@ -239,7 +286,7 @@ class CachingClcInterface(ClcInterface):
         return self.clc.detach_volume(volume_id, instance_id, device, force)
 
     def get_all_snapshots(self):
-        if (datetime.now() - self.snapshotUpdate) > timedelta(seconds = self.pollfreq):
+        if (datetime.now() - self.snapshotUpdate) > timedelta(seconds = self.snapshotFreq):
             self.snapshots = self.clc.get_all_snapshots()
             self.snapshotUpdate = datetime.now()
         return self.snapshots

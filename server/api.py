@@ -267,7 +267,7 @@ class ComputeHandler(server.BaseHandler):
                                                          self.user_session.access_key,
                                                          self.user_session.secret_key)
             # could make this conditional, but add caching always for now
-            self.user_session.clc = CachingClcInterface(self.user_session.clc, int(server.config.get('eui', 'pollfreq')))
+            self.user_session.clc = CachingClcInterface(self.user_session.clc, server.config)
 
         ret = []
         action = self.get_argument("Action")
