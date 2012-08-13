@@ -20,6 +20,7 @@
 
 package com.eucalyptus.reporting.modules.storage;
 
+import static com.eucalyptus.reporting.event.SnapShotEvent.CreateActionInfo;
 import javax.annotation.Nonnull;
 
 import org.apache.log4j.Logger;
@@ -51,7 +52,7 @@ public class SnapShotUsageEventListener implements EventListener<SnapShotEvent> 
     final long timeInMs = getCurrentTimeMillis();
 
     try {
-      final User user = lookupUser( event.getOwnerFullName().getUserId() );
+      final User user = lookupUser( event.getOwner().getUserId() );
 
       getReportingAccountCrud().createOrUpdateAccount(user.getAccount()
           .getName(), user.getAccount().getAccountNumber());
@@ -61,11 +62,11 @@ public class SnapShotUsageEventListener implements EventListener<SnapShotEvent> 
       final ReportingVolumeSnapshotEventStore eventStore = getReportingVolumeSnapshotEventStore();
       switch (event.getActionInfo().getAction()) {
         case SNAPSHOTCREATE:
-          eventStore.insertCreateEvent(event.getUUID(), event.getSnapshotId(), timeInMs, event.getOwnerFullName()
-              .getUserId(), event.getSizeGB());
+          eventStore.insertCreateEvent(event.getUuid(), event.getSnapshotId(), timeInMs, event.getOwner()
+              .getUserId(), ((CreateActionInfo)event.getActionInfo()).getSize() );
           break;
         case SNAPSHOTDELETE:
-          eventStore.insertDeleteEvent(event.getUUID(), timeInMs);
+          eventStore.insertDeleteEvent(event.getUuid(), timeInMs);
           break;
       }
     } catch (AuthException e) {

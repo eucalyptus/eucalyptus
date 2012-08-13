@@ -62,6 +62,7 @@
 
 package com.eucalyptus.blockstorage;
 
+import static com.eucalyptus.reporting.event.VolumeEvent.VolumeAction;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -71,7 +72,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import org.hibernate.criterion.Example;
-import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.cloud.CloudMetadata.VolumeMetadata;
@@ -86,12 +86,11 @@ import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.event.ClockTick;
-import com.eucalyptus.event.EventFailedException;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.records.Logs;
-import com.eucalyptus.reporting.event.VolumeEvent.ActionInfo;
+import com.eucalyptus.reporting.event.EventActionInfo;
 import com.eucalyptus.reporting.event.VolumeEvent;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Callback;
@@ -400,9 +399,9 @@ public class Volumes {
   
   static State transformStorageState( final State volumeState, final String storageState ) {
     if ( State.GENERATING.equals( volumeState ) ) {
-      if ( "failed".toString( ).equals( storageState ) ) {
+      if ("failed".equals(storageState) ) {
         return State.FAIL;
-      } else if ( "available".toString( ).equals( storageState ) ) {
+      } else if ("available".equals(storageState) ) {
         return State.EXTANT;
       } else {
         return State.GENERATING;
@@ -410,11 +409,11 @@ public class Volumes {
     } else if ( State.ANNIHILATING.equals( volumeState ) ) {
       return State.ANNIHILATING;
     } else if ( !State.ANNIHILATING.equals( volumeState ) && !State.BUSY.equals( volumeState ) ) {
-      if ( "failed".toString( ).equals( storageState ) ) {
+      if ("failed".equals(storageState) ) {
         return State.FAIL;
-      } else if ( "creating".toString( ).equals( storageState ) ) {
+      } else if ("creating".equals(storageState) ) {
         return State.GENERATING;
-      } else if ( "available".toString( ).equals( storageState ) ) {
+      } else if ("available".equals(storageState) ) {
         return State.EXTANT;
       } else if ( "in-use".equals( storageState ) ) {
         return State.BUSY;
@@ -424,23 +423,29 @@ public class Volumes {
     } else if ( State.BUSY.equals( volumeState ) ) {
       return State.BUSY;
     } else {
-      if ( "failed".toString( ).equals( storageState ) ) {
+      if ("failed".equals(storageState) ) {
         return State.FAIL;
       } else {
         return State.ANNIHILATED;
       }
     }
   }
-  
-  static void fireUsageEvent(final Volume volume,
-	  final ActionInfo actionInfo) {
-      try {  
-	  ListenerRegistry.getInstance().fireEvent(
-		  VolumeEvent.with(actionInfo, volume.getNaturalId(), volume.getSize().longValue(), volume.getOwner(), volume
-			  .getDisplayName(), volume.getPartition()));	  
-      } catch (final Exception e) {
-	  LOG.error(e, e);
-      }
+
+  static void fireUsageEvent( final Volume volume,
+                              final EventActionInfo<VolumeAction> actionInfo ) {
+    try {
+      ListenerRegistry.getInstance().fireEvent(
+          VolumeEvent.with(
+              actionInfo,
+              volume.getNaturalId(),
+              volume.getDisplayName(),
+              volume.getSize().longValue(),
+              volume.getOwner(),
+              volume.getPartition())
+      );
+    } catch (final Exception e) {
+      LOG.error(e, e);
+    }
   }
 
   
