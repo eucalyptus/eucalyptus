@@ -36,20 +36,22 @@
     drawCallback : function(oSettings) {
       thisObj = this;
       $('#table_' + this.options.id + '_count').html(oSettings.fnRecordsDisplay());
-      $('#' + this.options.id + ' tbody').find('tr').each(function(index, tr) {
-        $.each(thisObj.options.td_hover_actions, function (key, value) {
-          $td = $(tr).find('td:eq(' + value[0] +')');
-          // first check if there is anything there
-          if ($td.html() != '') {
-            $td.hover( function(e) {
-              value[1].call(this, e);
-            });
-            $td.click( function(e) {
-              e.stopPropagation();
-            });
-          }
+      if (thisObj.options.td_hover_actions) {
+        $('#' + this.options.id + ' tbody').find('tr').each(function(index, tr) {
+          $.each(thisObj.options.td_hover_actions, function (key, value) {
+            $td = $(tr).find('td:eq(' + value[0] +')');
+            // first check if there is anything there
+            if ($td.html() != '') {
+              $td.hover( function(e) {
+                value[1].call(this, e);
+              });
+              $td.click( function(e) {
+                e.stopPropagation();
+              });
+            }
+          });
         });
-      });
+      }
     },
 
     reDrawTable : function() {
