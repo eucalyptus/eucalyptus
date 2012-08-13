@@ -1,6 +1,7 @@
 import boto
 import json
 
+from operator import itemgetter
 from boto.ec2.image import Image
 from boto.ec2.instance import Instance
 from boto.ec2.keypair import KeyPair
@@ -121,11 +122,19 @@ class MockClcInterface(ClcInterface):
 
     # returns keypair info and key
     def create_key_pair(self, key_name):
-        return None #self.keypairs.append(KeyPair(key_name))
+        newkey = {
+                'name': key_name,
+                'fingerprint': 'd0:0d:01:02:03:04:05:06:07:08:09:0a:0b:0c:0d:0e:0f:d0:0d',
+                'material': 'sorry, no keymaterial, this came from the mock interface',
+                '__obj_name__': 'KeyPair'
+            }
+        self.keypairs.append(newkey)
+        return newkey
 
     # returns nothing
     def delete_key_pair(self, key_name):
-        self.keypairs.remove(key_name)
+        idx = map(itemgetter('name'), self.keypairs).index(key_name)
+        self.keypairs.remove(self.keypairs[idx])
         return True
 
     def get_all_security_groups(self):
