@@ -1,5 +1,7 @@
 import boto
 import json
+import os
+import datetime
 
 from operator import itemgetter
 from boto.ec2.image import Image
@@ -142,11 +144,28 @@ class MockClcInterface(ClcInterface):
 
     # returns True if successful
     def create_security_group(self, name, description):
+        newgroup = {
+                'name': 'default', 
+                'description': 'default group',
+                '__obj_name__': 'SecurityGroup',
+                'tags': {}, 
+                'rules': [], 
+                'ipPermissions': '', 
+                'connection': [], 
+                'vpc_id': '', 
+                'owner_id': '072279894205'
+            }
+        self.groups.append(newgroup)
         return False
 
     # returns True if successful
     def delete_security_group(self, name=None, group_id=None):
-        return False
+        if name:
+            idx = map(itemgetter('name'), self.groups).index(name)
+        if group_id:
+            raise NotImplementedError("Are you sure you're using the right class?")
+        self.groups.remove(self.groups[idx])
+        return True
 
     # returns True if successful
     def authorize_security_group(self, name=None,
@@ -155,7 +174,27 @@ class MockClcInterface(ClcInterface):
                                  ip_protocol=None, from_port=None, to_port=None,
                                  cidr_ip=None, group_id=None,
                                  src_security_group_group_id=None):
-        return False
+        newrule = {
+                'ip_protocol': ip_protocol, 
+                'from_port': from_port, 
+                'to_port': to_port, 
+                'parent': '', 
+                '__obj_name__': 'IPPermissions', 
+                'grants': [
+                  {
+                    '__obj_name__': 'GroupOrCIDR', 
+                    'name': '', 
+                    'group_id': '', 
+                    'cidr_ip': cidr_ip,
+                    'owner_id': ''
+                  }
+                ], 
+                'ipRanges': '', 
+                'groups': ''
+            }
+        idx = map(itemgetter('name'), self.groups).index(name)
+        self.groups[idx].rules.append(newrule)
+        return True
 
     # returns True if successful
     def revoke_security_group(self, name=None,
@@ -169,13 +208,39 @@ class MockClcInterface(ClcInterface):
     def get_all_volumes(self):
         return self.volumes
 
+    def __gen_id__(self, prefix):
+        id = os.urandom(4).encode('hex')
+        return prefix+'-'+id
+
     # returns volume info
     def create_volume(self, size, availability_zone, snapshot_id):
-        pass
+        newvol = {
+                'id': self.__gen_id__('vol'),
+                'size': size,
+                'status': 'available',
+                '__obj_name__': 'Volume',
+                'zone': availability_zone,
+                'tags': {},
+                'attach_data': {
+                  'status': '',
+                  'instance_id': '',
+                  '__obj_name__': 'AttachmentSet',
+                  'attachmentSet': '',
+                  'attach_time': '',
+                  'device': '',
+                  'id': ''
+                },
+                'create_time': datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%S.%fZ'),
+                'snapshot_id': snapshot_id,
+            }
+        self.volumes.append(newvol)
+        return newvol
 
     # returns True if successful
     def delete_volume(self, volume_id):
-        pass
+        idx = map(itemgetter('id'), self.volumes).index(volume_id)
+        self.volumes.remove(self.volumes[idx])
+        return True
 
     # returns True if successful
     def attach_volume(self, volume_id, instance_id, device):
@@ -190,11 +255,27 @@ class MockClcInterface(ClcInterface):
 
     # returns snapshot info
     def create_snapshot(self, volume_id, description):
-        pass
+        idx = map(itemgetter('id'), self.volumes).index(volume_id)
+        newsnap = {
+                'status': 'completed', 
+                '__obj_name__': 'Snapshot', 
+                'description': description, 
+                'tags': {}, 
+                'start_time': datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%S.%fZ'),
+                'id': self.__gen_id__('snap'),
+                'volume_size': self.volumes[idx]['size'], 
+                'volume_id': volume_id, 
+                'progress': '100%', 
+                'owner_id': '072279894205'
+            }
+        self.snapshots.append(newsnap)
+        return newsnap
 
     # returns True if successful
     def delete_snapshot(self, snapshot_id):
-        pass
+        idx = map(itemgetter('id'), self.snapshots).index(snapshot_id)
+        self.snapshots.remove(self.snapshots[idx])
+        return True
 
     # returns list of snapshots attributes
     def get_snapshot_attribute(self, snapshot_id, attribute):
