@@ -2,15 +2,19 @@
   $.widget('eucalyptus.keypair', $.eucalyptus.eucawidget, {
     options : { },
     tableWrapper : null,
-    delDialog : null,
+    $delDialog : null,
+    $addDialog : null,
     // TODO: is _init() the right method to instantiate everything? 
     _init : function() {
       var thisObj = this;
       var $tmpl = $('html body').find('.templates #keypairTblTmpl').clone();
       var $wrapper = $($tmpl.render($.i18n.map));
-      this.element.add($wrapper);
-      var $base_table = $wrapper.find('table');
-      tableWrapper = $wrapper.eucatable({
+      var $keyTable = $wrapper.children().first();
+      var $keyHelp = $wrapper.children().last();
+ 
+      this.element.add($keyTable);
+      var $base_table = $keyTable.find('table');
+      this.tableWrapper = $keyTable.eucatable({
         id : 'keys', // user of this widget should customize these options,
         base_table : $base_table,
         dt_arg : {
@@ -37,24 +41,31 @@
         menu_text : table_menu_main_action,
         menu_actions : { delete: [table_menu_delete_action, function (args) { thisObj.deleteAction(args); } ] },
         row_click : function (args) { thisObj.handleRowClick(args); },
+        menu_click_create : function (args) { thisObj.$addDialog.eucadialog('open')},
+        help : {title:keypair_table_help_title, content:$keyHelp}, 
       });
-      tableWrapper.appendTo(this.element);
+      this.tableWrapper.appendTo(this.element);
 
-      $tmpl = $('html body').find('.templates #keypairDelDlgTmpl').clone();
-      $del_dialog = $($tmpl.render($.i18n.map));
+      var $tmpl = $('html body').find('.templates #keypairDelDlgTmpl').clone();
+      var $rendered = $($tmpl.render($.i18n.map));
+      var $del_dialog = $rendered.children().first();
+      var $del_help = $rendered.children().last();
 
-      this.delDialog = $del_dialog.eucadialog({
+      this.$delDialog = $del_dialog.eucadialog({
          id: 'keys-delete',
          title: keypair_dialog_del_title,
          buttons: {
            'delete': {text: keypair_dialog_del_btn, click: function() { thisObj._deleteSelectedKeyPairs(); $del_dialog.dialog("close");}},
            'cancel': {text: keypair_dialog_cancel_btn, focus:true, click: function() { $del_dialog.dialog("close");}} 
-         } 
+         },
+         help: {title: keypair_dialog_delete_help_title, content: $del_help}, 
        });
 
-      var createButtonId = 'keys-add-btn';
+      var createButtonId = 'keys-add-btn'; 
       $tmpl = $('html body').find('.templates #keypairAddDlgTmpl').clone();
-      $add_dialog = $($tmpl.render($.i18n.map));
+      $rendered = $($tmpl.render($.i18n.map));
+      $add_dialog = $rendered.children().first();
+      $add_help = $rendered.children().last();
 
       // add custom event handler to dialog elements
       // when calling eucadialog, the buttons should have domid to attach the specific domid that's used by event handler written here 
@@ -70,7 +81,7 @@
         }
       });
 
-      $add_dialog.eucadialog({
+      this.$addDialog = $add_dialog.eucadialog({
         id: 'keys-add',
         title: keypair_dialog_add_title,
         buttons: { 
@@ -79,7 +90,8 @@
                       var keyName = $.trim($add_dialog.find('#key-name').val());
                       var keyPattern = new RegExp('^[A-Za-z0-9_\s-]{1,256}$');
                       if (keyPattern.test(keyName)){
-                        $add_dialog.dialog("close"); thisObj._addKeyPair(keyName);
+                        $add_dialog.dialog("close"); 
+                        thisObj._addKeyPair(keyName);
                       }
                       else{
                         // TODO: notification should be handled better, generic way
@@ -87,8 +99,10 @@
                       }
                     }
                   },
-        'cancel': {text: keypair_dialog_cancel_btn, focus:true, click: function() { $add_dialog.dialog("close");}} 
-      }});
+        'cancel': {text: keypair_dialog_cancel_btn, focus:true, click: function() { $add_dialog.eucadialog("close");}},
+        },
+      help : {title: keypair_dialog_add_help_title, content: $add_help},
+      });
     },
 
     _create : function() { 
@@ -98,16 +112,17 @@
     },
 
     handleRowClick : function(args) {
-      count = tableWrapper.eucatable('countSelectedRows');
+      count = this.tableWrapper.eucatable('countSelectedRows');
       if ( count == 0 )
         // disable menu
-        tableWrapper.eucatable('deactivateMenu');
+        this.tableWrapper.eucatable('deactivateMenu');
       else
         // enable delete menu
-        tableWrapper.eucatable('activateMenu');
+        this.tableWrapper.eucatable('activateMenu');
     },
 
     _addKeyPair : function(keyName) {
+      var thisObj = this;
       $.ajax({
         type:"GET",
         url:"/ec2?type=key&Action=CreateKeyPair",
@@ -123,7 +138,7 @@
               script      : '/support?Action=DownloadFile&_xsrf=' + $.cookie('_xsrf')
             });
             successNotification(keypair_create_success + ' ' + keyName);
-            tableWrapper.eucatable('refreshTable');
+            thisObj.tableWrapper.eucatable('refreshTable');
           } else {
             errorNotification(keypair_create_error + ' ' + keyName);
           }
@@ -136,7 +151,8 @@
     },
 
     _deleteSelectedKeyPairs : function () {
-      var rowsToDelete = tableWrapper.eucatable('getAllSelectedRows');
+      var thisObj = this;
+      var rowsToDelete = this.tableWrapper.eucatable('getAllSelectedRows');
       for ( i = 0; i<rowsToDelete.length; i++ ) {
         var keyName = rowsToDelete[i];
         $.ajax({
@@ -150,7 +166,7 @@
             return function(data, textStatus, jqXHR){
               if ( data.results && data.results == true ) {
                 successNotification(keypair_delete_success + ' ' + keyName);
-                tableWrapper.eucatable('refreshTable');
+                thisObj.tableWrapper.eucatable('refreshTable');
               } else {
                 errorNotification(keypair_delete_error + ' ' + keyName);
               }
@@ -175,13 +191,13 @@
 
       if ( rowsToDelete.length > 0 ) {
         // show delete dialog box
-        $deleteNames = this.delDialog.find("span.delete-names")
+        $deleteNames = this.$delDialog.find("span.delete-names")
         $deleteNames.html('');
         for ( i = 0; i<rowsToDelete.length; i++ ) {
           t = escapeHTML(rowsToDelete[i]);
           $deleteNames.append(t).append("<br/>");
         }
-        this.delDialog.dialog('open');
+        this.$delDialog.dialog('open');
       }
     }
 

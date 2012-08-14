@@ -25,6 +25,13 @@
         $.i18n.prop('keypair_dialog_del_text');
         $.i18n.prop('keypair_dialog_add_text');
         $.i18n.prop('keypair_dialog_add_name');
+        $.i18n.prop('keypair_dialog_add_help');
+        $.i18n.prop('keypair_dialog_delete_help');
+        $.i18n.prop('keypair_table_help');
+
+        // sgroup
+        $.i18n.prop('sgroup_dialog_del_text');
+        $.i18n.prop('sgroup_dialog_add_text');
 
         // volume
         $.i18n.prop('volume_dialog_del_text');
@@ -40,6 +47,10 @@
         $.i18n.prop('dashboard_sgroup');
         $.i18n.prop('dashboard_eip');
         $.i18n.prop('dashboard_keypair');
+
+
+        // help
+        $.i18n.prop('page_help_backto_page');
       }
     });
   }

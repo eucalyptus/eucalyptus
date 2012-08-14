@@ -23,14 +23,13 @@ Green links: #73a434
 /* ======== Base HTML styles ======= */
 
 body {
-    
-    background: #fff;
-    border-top: 10px solid #02405f;
-    color: #444;
-    font-family: Arial, sans-serif;
-    font-size: 1em;
-    margin: 0;
-    padding: 0;
+  background: #fff;
+  border-top: 10px solid #02405f;
+  color: #444;
+  font-family: Arial, sans-serif;
+  font-size: 1em;
+  margin: 0;
+  padding: 0;
 }
 
 
@@ -38,32 +37,32 @@ body {
 
 .clearfix:before,
 .clearfix:after {
-    content:"";
-    display:table;
+  content:"";
+  display:table;
 }
 .clearfix:after {
-    clear:both;
+  clear:both;
 }
 .clearfix {
-    zoom:1; /* For IE 6/7 (trigger hasLayout) */
+  zoom:1; /* For IE 6/7 (trigger hasLayout) */
 }
 
 .hide-text {
-    text-indent: 100%;
-    white-space: nowrap;
-    overflow: hidden;
+  text-indent: 100%;
+  white-space: nowrap;
+  overflow: hidden;
 }
 
 
 /* ======== Page layout styles ======= */
 
 .euca-container {
-    /* No attributes at this time */
+  /* No attributes at this time */
 }
 
 .euca-header-container {
-    background: transparent url(../images/css-sprites.png) repeat left -25px;
-    height: 50px;
+  background: transparent url(../images/css-sprites.png) repeat left -25px;
+  height: 50px;
 }
 
 .euca-explorer-container {
@@ -79,7 +78,8 @@ body {
   box-shadow: 0px 4px 7px rgba(0,0,0,0.34);
 }
 
-/* spark: temporary styling for notification*/
+/* ======= spark: temporary styling for notification ======= */
+
 .euca-notification-container {
   display:block;
   position: relative; /* this should be changed because notification shouldn't push contents down */
@@ -88,101 +88,101 @@ body {
 }
 
 .notification-box {
-    display: none;
-    background-color: #fff;
-    border: 1px solid #aaabab;
-    min-height: 50px;
+  display: none;
+  background-color: #fff;
+  border: 1px solid #aaabab;
+  min-height: 50px;
 
-    -webkit-border-radius: 5px;
-    -moz-border-radius: 5px;
-    border-radius: 5px;
-    
-    -webkit-box-shadow: 0px 2px 3px rgba(3,3,3,0.30), inset 0 1px 8px rgba(44,46,50,0.32);
-    -moz-box-shadow: 0px 2px 3px rgba(3,3,3,0.30), inset 0 1px 8px rgba(44,46,50,0.32);
-    box-shadow: 0px 2px 3px rgba(3,3,3,0.30), inset 0 1px 8px rgba(44,46,50,0.32);
+  -webkit-border-radius: 5px;
+  -moz-border-radius: 5px;
+  border-radius: 5px;
+
+  -webkit-box-shadow: 0px 2px 3px rgba(3,3,3,0.30), inset 0 1px 8px rgba(44,46,50,0.32);
+  -moz-box-shadow: 0px 2px 3px rgba(3,3,3,0.30), inset 0 1px 8px rgba(44,46,50,0.32);
+  box-shadow: 0px 2px 3px rgba(3,3,3,0.30), inset 0 1px 8px rgba(44,46,50,0.32);
 }
 
 #euca-notification-close {
-    float:right;
-    width:20px;
-    height:20px;
-    text-decoration: none;
+  float:right;
+  width:20px;
+  height:20px;
+  text-decoration: none;
 }
-/***********************************/
+/* ======= END temporary styling for notification ======= */
 
 .euca-main-outercontainer {
-    background: #eaedee url(../images/main-bgfill.png) repeat left top;
-    /* Total min-height with padding 540px */
-    min-height: 440px;
-    padding: 30px 0;
-    /* Set to a lower number than the Explorer, so the drop shadow will work */
-    z-index: 1;
+  background: #eaedee url(../images/main-bgfill.png) repeat left top;
+  /* Total min-height with padding 540px */
+  min-height: 440px;
+  padding: 30px 0;
+  /* Set to a lower number than the Explorer, so the drop shadow will work */
+  z-index: 1;
 }
 
 .euca-footer-container {
-    background: transparent url(../images/footer-bgfill.png) repeat-x left top;
-    color: #999;
-    font-size: 12px;
-    margin-bottom: 20px;
-    min-height: 30px;
-    padding: 10px 0;
+  background: transparent url(../images/footer-bgfill.png) repeat-x left top;
+  color: #999;
+  font-size: 12px;
+  margin-bottom: 20px;
+  min-height: 30px;
+  padding: 10px 0;
 }
 
 /* ==== NOTE: The inner-container class determines the content area within all major layout sections ==== */
 
 .inner-container {
-    margin: 0 auto;
-    padding: 0 10px;
-    position: relative;
-    width: 960px;
+  margin: 0 auto;
+  padding: 0 10px;
+  position: relative;
+  width: 960px;
 }
 
 .templates {
-    margin: 0 auto;
-    display: none;
+  margin: 0 auto;
+  display: none;
 }
 
 
 /* ======== Header styles ======= */
 
 #euca-logo {
-    float: left;
-    height: 22px;
-    width: 207px;
-    margin-top: 13px;
-    background: transparent url(../images/css-sprites.png) no-repeat center 0;
-    border: none;
+  float: left;
+  height: 22px;
+  width: 207px;
+  margin-top: 13px;
+  background: transparent url(../images/css-sprites.png) no-repeat center 0;
+  border: none;
 }
 
 
 /* ======== Navigator styles ======= */
 
 #euca-navigator {
-    display: none;
-    position: absolute;
-    left: 235px;
-    border: 1px solid #e3e1e1;
-    border-width: 0 1px;
+  display: none;
+  position: absolute;
+  left: 235px;
+  border: 1px solid #e3e1e1;
+  border-width: 0 1px;
 }
 
 #euca-navigator.toggle-on {
-    background-color: #eceaec;
-    border-color: #ccc;
-    padding-bottom: 4px;
+  background-color: #eceaec;
+  border-color: #ccc;
+  padding-bottom: 4px;
 }
 
 #resources-link {
-    display: block;
-    background: transparent url(../images/css-sprites-small.png) no-repeat right 0;
-    color: #02405f;
-    font-family: "Play", Arial, sans-serif;
-    font-size: 16px;
-    font-weight: bold;
-    line-height: 47px;
-    margin: 0 10px 0 0;
-    padding: 0 32px 0 20px;
-    outline: 0;
-    text-decoration: none;
+  display: block;
+  background: transparent url(../images/css-sprites-small.png) no-repeat right 0;
+  color: #02405f;
+  font-family: "Play", Arial, sans-serif;
+  font-size: 16px;
+  font-weight: bold;
+  line-height: 47px;
+  margin: 0 10px 0 0;
+  padding: 0 32px 0 20px;
+  outline: 0;
+  text-decoration: none;
 }
 
 .toggle-on #resources-link, 
@@ -195,22 +195,22 @@ body {
 /* ======= User and Help Header Navs ======= */
 
 #euca-help {
-    display: none;
-    float: right;
+  display: none;
+  float: right;
 }
 
 #euca-user {
-    display: none;
-    float: right;   
+  display: none;
+  float: right;   
 }
 
 .header-nav {
-    border: 1px solid #e3e1e1;
-    border-width: 0 1px;
+  border: 1px solid #e3e1e1;
+  border-width: 0 1px;
 }
 
 #euca-help .header-nav {
-    border-left: 0;
+  border-left: 0;
 }
 
 .header-nav,
@@ -240,7 +240,7 @@ body {
   text-decoration: none;
 }
 
-/* ==== Submenu ==== */
+/* ==== User and Help Submenus ==== */
 
 .header-nav ul {
   display: none;
@@ -409,104 +409,104 @@ body {
   color: #73a434;
 } 
 
- /* Override the border inherited from the parent menu */
+/* Override the border inherited from the parent menu */
 
 .resources-nav li:last-child li a,
 .resources-nav li ul li:last-child a {
-    border-right: 0;
+  border-right: 0;
 }
 
 
 /* ======== Login styles ======= */
 
 #login {
-    margin: 95px auto 0;
-    width: 650px;
+  margin: 95px auto 0;
+  width: 650px;
 }
 
 #login form {
-    margin: 0 40px 0 20px;
+  margin: 0 40px 0 20px;
 }
 
 .form-row {
-    margin-bottom: 10px;
+  margin-bottom: 10px;
 }
 
 .form-row label {
-    display: inline-block;
-    width: 130px;
-    font-family: "PlayBold", Arial, sans-serif;
-    font-size: 13px;
-    font-weight: normal;
-    text-align: right;
-    margin-right: 15px;
-    color: #02405f;
+  display: inline-block;
+  width: 130px;
+  font-family: "PlayBold", Arial, sans-serif;
+  font-size: 13px;
+  font-weight: normal;
+  text-align: right;
+  margin-right: 15px;
+  color: #02405f;
 }
 
 .form-row input {
-    width: 265px;
+  width: 265px;
 }
 
 .password-help {
-    color: #666;
-    font-size: 11px;
-    margin: 20px 0 20px 145px;
+  color: #666;
+  font-size: 11px;
+  margin: 20px 0 20px 145px;
 }
 
 .password-help a {
-    color: #666;
-    text-decoration: none;
+  color: #666;
+  text-decoration: none;
 }
 
 .password-help a:hover {
-    color: #73a434;
-    text-decoration: underline;
+  color: #73a434;
+  text-decoration: underline;
 }
 
 .button-bar {
-    text-align: right;
+  text-align: right;
 }
 
 
 /* ======== Content styles ======= */
 
 .content-box {
-    background-color: #fff;
-    border: 1px solid #aaabab;
-    min-height: 285px;
+  background-color: #fff;
+  border: 1px solid #aaabab;
+  min-height: 285px;
 
-    -webkit-border-radius: 5px;
-    -moz-border-radius: 5px;
-    border-radius: 5px;
-    
-    -webkit-box-shadow: 0px 2px 3px rgba(3,3,3,0.30), inset 0 1px 8px rgba(44,46,50,0.32);
-    -moz-box-shadow: 0px 2px 3px rgba(3,3,3,0.30), inset 0 1px 8px rgba(44,46,50,0.32);
-    box-shadow: 0px 2px 3px rgba(3,3,3,0.30), inset 0 1px 8px rgba(44,46,50,0.32);
+  -webkit-border-radius: 5px;
+  -moz-border-radius: 5px;
+  border-radius: 5px;
+
+  -webkit-box-shadow: 0px 2px 3px rgba(3,3,3,0.30), inset 0 1px 8px rgba(44,46,50,0.32);
+  -moz-box-shadow: 0px 2px 3px rgba(3,3,3,0.30), inset 0 1px 8px rgba(44,46,50,0.32);
+  box-shadow: 0px 2px 3px rgba(3,3,3,0.30), inset 0 1px 8px rgba(44,46,50,0.32);
 }
 
 .box-header,
 .euca-table-header {
-    background-color: #eaf2f5;
-    color: #02405f;
-    font-family: "Play", Arial, sans-serif;
-    font-size: 18px;
-    font-weight: bold;
-    margin: 3px 0 20px;
-    position: relative;
-    left: -8px;
-    padding: 8px 8px;
-    width: 100%;
+  background-color: #eaf2f5;
+  color: #02405f;
+  font-family: "Play", Arial, sans-serif;
+  font-size: 18px;
+  font-weight: bold;
+  margin: 3px 0 20px;
+  position: relative;
+  left: -8px;
+  padding: 8px 8px;
+  width: 100%;
 
-    -webkit-box-shadow: 0px 2px 3px rgba(3,3,3,0.16);
-    -moz-box-shadow: 0px 2px 3px rgba(3,3,3,0.16);
-    box-shadow: 0px 2px 3px rgba(3,3,3,0.16);    
+  -webkit-box-shadow: 0px 2px 3px rgba(3,3,3,0.16);
+  -moz-box-shadow: 0px 2px 3px rgba(3,3,3,0.16);
+  box-shadow: 0px 2px 3px rgba(3,3,3,0.16);    
 }
 
 .box-header p,
 .euca-table-header span {
-    margin: 0;
-    padding-left: 40px;
-    line-height: 1em;
+  margin: 0;
+  padding-left: 40px;
+  line-height: 1em;
 }
 
 .inner-box {
@@ -522,7 +522,7 @@ body {
 }
 
 #euca-main-container {
-    display: none;
+  display: none;
 }
 
 #dashboard {
@@ -545,7 +545,7 @@ body {
   width: 46%;
   height: 35%;
 }
- 
+
 #dashboard .instances div {
   float:left;
   margin: 0 10px;
@@ -555,7 +555,7 @@ body {
   float:left;
   margin: 0 10px;
 }
-
+  
 #dashboard .netsec div {
   float:left;
   margin: 0 10px;
@@ -565,27 +565,26 @@ body {
 /* ======= Table view ======= */
 
 .euca-table-add {
-   float: left;
+  float: left;
 }
 
 .euca-table-action {
-   float: left;
+  float: left;
 }
 
 .euca-table-size {
-    float: right;
-    margin: 10px 15px 5px 0;
+  float: right;
+  margin: 10px 15px 5px 0;
 }
 
 span.selected {
-    font-weight: bold;
+  font-weight: bold;
 }
 
 
 /* ======= jQuery table style overrides ======= */
 
 .dataTables_wrapper {
-
   background-color: #fff;
   border: 1px solid #d7d5d5;
 
@@ -599,7 +598,6 @@ span.selected {
   -webkit-box-shadow: 0px 2px 3px rgba(3,3,3,0.30);
   -moz-box-shadow: 0px 2px 3px rgba(3,3,3,0.30);
   box-shadow: 0px 2px 3px rgba(3,3,3,0.30);
-
 }
 
 .dataTables_paginate {
@@ -650,126 +648,136 @@ tr.even td.sorting_1 {
   background-color: #f0f7f7;
 }
 
+.table_center_cell {
+  text-align: center;
+}
 
 /* ======= Action menu ======= */
 
 .actionmenu {
-    font: 13px/27px Arial,sans-serif;
-    color: #3366CC;
-    height: 30px;
-    margin-left: -10px;
+  font: 13px/27px Arial,sans-serif;
+  color: #3366CC;
+  height: 30px;
+  margin-left: -10px;
 }
 
 .actionmenu a:hover {
-    background-color: #e4ebf8;
+  background-color: #e4ebf8;
 }
 
 .actionmenu a {
-    text-decoration: none;
-    padding: 4px 8px 7px;
-    color: #3366CC;
-    outline:none;
+  text-decoration: none;
+  padding: 4px 8px 7px;
+  color: #3366CC;
+  outline:none;
 }
 
 .actionmenu ul {
-    list-style: none;
-    margin: 0;
-    padding: 0 0 0 10px;
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 10px;
 }
 
 .actionmenu ul li {
-    padding: 0;
-    float: left;
- }
+  padding: 0;
+  float: left;
+}
 
 .actionmenu ul li ul li {
-    padding: 0;
-    float: none;
-    margin: 0 0 0 0px;
-    width: 100%;
+  padding: 0;
+  float: none;
+  margin: 0 0 0 0px;
+  width: 100%;
 }
 
 .actionmenu ul li ul {
-    position: absolute;
-    margin-top: -1px;
-    display: none;
-    padding: 0px 16px 0px 0;
+  position: absolute;
+  margin-top: -1px;
+  display: none;
+  padding: 0px 16px 0px 0;
 }
 
 .activemenu ul {
-    display: block !important;
+  display: block !important;
 }
 
 .activemenu a {
-    background-color: #fff;
-    border-bottom: 0;
-    display: block;
-    height: 29px;
-    padding: 0 8px 0 8px;
-    position:relative;
-    z-index: 1;
+  background-color: #fff;
+  border-bottom: 0;
+  display: block;
+  height: 29px;
+  padding: 0 8px 0 8px;
+  position:relative;
+  z-index: 1;
 }
 
 .activemenu a:hover {
-    background-color: #fff;
+  background-color: #fff;
 }
 
 .activemenu ul a:hover {
-    background-color: #e4ebf8;
+  background-color: #e4ebf8;
 }
 
 .activemenu ul a {
-    border: 0;
-    width: 100%;
+  border: 0;
+  width: 100%;
 }
 
 .arrow {
-    border-color: #3366CC transparent transparent;
-    border-style: solid dashed dashed;
-    margin-left: 5px;
-    position: relative;
-    top: 10px;
+  border-color: #3366CC transparent transparent;
+  border-style: solid dashed dashed;
+  margin-left: 5px;
+  position: relative;
+  top: 10px;
 }
 
 .inactive a:hover {
-    background-color: #fff !important;
+  background-color: #fff !important;
 }
 
+/* ======= Help page related ===== */
 
+.dialog-help-button,
+.table-help-button {
+  float: right;
+  margin-top: 10px;
+}
 /* ======= Notifications ======= */
 
 .euca-notification {
-   -moz-border-radius: 4px;
-   border-radius: 4px;
-   border-style: solid;
-   border-color: black;
+  -moz-border-radius: 4px;
+  border-radius: 4px;
+  border-style: solid;
+  border-color: black;
 }
 
 .error {
-   color: red;
-   padding: 5px;
+  color: red;
+  padding: 5px;
 }
 
 .success {
-   color: green;
-   padding: 5px;
+  color: green;
+  padding: 5px;
 }
 
 .hide-notification  {
-   float: right;
+  float: right;
 }
 
 .dialog-notifications {
-   color: red;
-   padding: 5px;
+  color: red;
+  padding: 5px;
 }
 
 /* === Euca tables === */
+
 .euca-table-header {
-   -moz-border-radius: 2px;
-   border-radius: 2px;
-   border-style: solid;
-   border-color: black;
+  -moz-border-radius: 2px;
+  border-radius: 2px;
+  border-style: solid;
+  border-color: black;
 }
 
 .euca-table-filter {
@@ -781,21 +789,21 @@ tr.even td.sorting_1 {
 }
 
 .resources-found {
-   padding-right: 5px;
+  padding-right: 5px;
 }
 
 .hoverCell {
-   color: green;
+  color: green;
 }
 
 .help-link {
-   float: right;
-   margin-right: 20px;
+  float: right;
+  margin-right: 20px;
 }
 
 /* Hide close X button in UI dialogs */
 .ui-dialog-titlebar-close {
-   visibility: hidden;
+  visibility: hidden;
 }
 
 /* ======= Footer styles ======= */
@@ -813,9 +821,9 @@ tr.even td.sorting_1 {
 }
 
 .footer-nav li {
-   float: left;
-   display: inline;
-   margin-left: 12px;
+  float: left;
+  display: inline;
+  margin-left: 12px;
 }
 
 .footer-nav li a {
@@ -829,7 +837,8 @@ tr.even td.sorting_1 {
 }
 
 
-/* Volume statuses */
+/* ======= Volume statuses ====== */
+
 .table-volume-legend {
   float: left;
 }
