@@ -52,6 +52,7 @@
         menu_text : table_menu_main_action,
         menu_actions : { delete: [table_menu_delete_action, function (args) { thisObj.deleteAction(args) } ] },
         row_click : function (args) { thisObj.handleRowClick(args); },
+        context_menu : { value_column: 8 }
       //  td_hover_actions : { instance: [4, function (args) { thisObj.handleInstanceHover(args); }], snapshot: [5, function (args) { thisObj.handleSnapshotHover(args); }] }
       });
       tableWrapper.appendTo(this.element);

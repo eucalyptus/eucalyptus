@@ -1,15 +1,16 @@
 (function($, eucalyptus) {
   $.widget('eucalyptus.eucatable', {
     options : { 
-                id : 'table', // user of this widget should customize these options
-                base_table : null,
-                dt_arg : null,
-                header_title : 'Manage resources',
-                search_refresh : 'Refresh',
-                txt_create : 'Create resource',
-                txt_found : 'resources found',
-                menu_text : 'More actions',
-                menu_actions : null // e.g., { delete: ["Delete", function () { dialog.... } ] }
+      id : 'table', // user of this widget should customize these options
+      base_table : null,
+      dt_arg : null,
+      header_title : 'Manage resources',
+      search_refresh : 'Refresh',
+      txt_create : 'Create resource',
+      txt_found : 'resources found',
+      menu_text : 'More actions',
+      menu_actions : null, // e.g., { delete: ["Delete", function () { dialog.... } ] }
+      context_menu : null // e.g {build_callback: funcion(args) {}, value_column: index }
     },
 
     table : null, // jQuery object to the table
@@ -36,10 +37,12 @@
     drawCallback : function(oSettings) {
       thisObj = this;
       $('#table_' + this.options.id + '_count').html(oSettings.fnRecordsDisplay());
-      if (thisObj.options.td_hover_actions) {
-        $('#' + this.options.id + ' tbody').find('tr').each(function(index, tr) {
+      this.element.find('table tbody').find('tr').each(function(index, tr) {
+        // add custom td handlers
+        $currentRow = $(tr);
+        if (thisObj.options.td_hover_actions) {
           $.each(thisObj.options.td_hover_actions, function (key, value) {
-            $td = $(tr).find('td:eq(' + value[0] +')');
+            $td = $currentRow.find('td:eq(' + value[0] +')');
             // first check if there is anything there
             if ($td.html() != '') {
               $td.hover( function(e) {
@@ -50,8 +53,38 @@
               });
             }
           });
+        };
+        // add generic row handler
+        $currentRow.click( function (e) {
+          // checked/uncheck on checkbox
+          $rowCheckbox = $(e.target).parents('tr').find(':input[type="checkbox"]');
+          $rowCheckbox.attr('checked', !$rowCheckbox.is(':checked'));
+          thisObj._trigger('row_click', this);
         });
-      }
+        if (thisObj.options.context_menu) {
+          rID = 'ri-'+S4()+S4();
+          $currentRow.attr('id', rID);
+          // context menu
+          $.contextMenu({
+            selector: '#'+rID,
+            build: function($trigger, e) {
+            itemsList = {
+                    "one": {name: "Blah"},
+                    "two": {name: "Two"},
+                    "three": {name: "Three"},
+            }
+            return {
+              callback: function(key, options) {
+                var m = "clicked: " + key;
+                window.console && console.log(m) || alert(m); 
+              },
+              items: itemsList,
+            };
+          }
+        });
+        }
+      });
+      
     },
 
     reDrawTable : function() {
@@ -201,11 +234,6 @@
       //TODO: add hover to select all
       $checkbox.parent().hover( function () {
         //TODO: add action here
-      });
-      // add on row click acion
-      this.element.find('table tbody').click( function (e) {
-        $(e.target.parentNode.firstChild.firstChild).click();
-        thisObj._trigger('row_click', this);
       });
     },
 
