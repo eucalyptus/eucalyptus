@@ -131,7 +131,7 @@ class ComputeHandler(server.BaseHandler):
             return clc.reboot_instances(instance_ids)
         elif action == 'GetConsoleOutput':
             instance_id = self.get_argument('InstanceId')
-            return clc.reboot_instances(instance_id)
+            return clc.get_console_output(instance_id)
 
     def handleKeypairs(self, action, clc):
         if action == 'DescribeKeyPairs':

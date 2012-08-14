@@ -99,7 +99,7 @@ class BotoClcInterface(ClcInterface):
 
     # returns console output
     def get_console_output(self, instance_id):
-        return self.clc.get_console_output(instance_id)
+        return self.conn.get_console_output(instance_id)
 
     def get_all_addresses(self):
         obj = self.conn.get_all_addresses()
