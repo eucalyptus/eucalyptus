@@ -59,44 +59,56 @@
  *   IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
-package com.eucalyptus.troubleshooting;
+package com.eucalyptus.troubleshooting.fault.xml;
 
-import java.util.Enumeration;
-import java.util.Properties;
-
-import org.apache.log4j.Logger;
-
-import com.eucalyptus.troubleshooting.fault.Fault;
-import com.eucalyptus.troubleshooting.fault.FaultComponent;
-import com.eucalyptus.troubleshooting.fault.FaultLogger;
-import com.eucalyptus.troubleshooting.fault.FaultSubsystem;
-
-public class TestFaultTrigger {
-	private static final Logger LOG = Logger.getLogger(TestFaultTrigger.class);
-	public static void triggerFault(int id, Properties varProps) {
-		// log it in all components
-		for (FaultComponent faultComponent: FaultComponent.values()) {
-			try {
-				FaultLogger faultLogger = FaultSubsystem.getFaultLogger(FaultComponent.BROKER);
-				LOG.debug("Triggering fault in component " + faultComponent + " with id " + id + " and vars " + varProps);
-				Fault fault = FaultSubsystem.fault(id);
-				if (fault == null) {
-					LOG.error("Error triggering fault: " + id + ", no fault found in XML files");
-				}
-				if (varProps != null) {
-					Enumeration e = varProps.propertyNames();
-					while (e.hasMoreElements()) {
-						String name = (String) e.nextElement();
-						String value = varProps.getProperty(name);
-						if (value == null) continue;
-						fault = fault.withVar(name, value);
-					}
-				}
-				faultLogger.log(fault);
-			} catch (Exception ex) {
-				LOG.error("Error triggering fault: " + ex);
-				ex.printStackTrace();
-			}
+public class FaultField implements EffectiveValue {
+	private FaultFieldName name;
+	private String messageAttribute;
+	private String localizedAttribute;
+	private String messageElement;
+	private String localizedElement;
+	@Override
+	public String getEffectiveValue() {
+		// attributes, then elements (to be like C)
+		if (localizedAttribute != null) {
+			return localizedAttribute;
 		}
+		if (messageAttribute != null) {
+			return messageAttribute;
+		}
+		if (localizedElement != null) {
+			return localizedElement;
+		}
+		return messageElement;
+	}
+	public FaultFieldName getName() {
+		return name;
+	}
+	public void setName(FaultFieldName name) {
+		this.name = name;
+	}
+	public String getMessageAttribute() {
+		return messageAttribute;
+	}
+	public void setMessageAttribute(String messageAttribute) {
+		this.messageAttribute = messageAttribute;
+	}
+	public String getLocalizedAttribute() {
+		return localizedAttribute;
+	}
+	public void setLocalizedAttribute(String localizedAttribute) {
+		this.localizedAttribute = localizedAttribute;
+	}
+	public String getMessageElement() {
+		return messageElement;
+	}
+	public void setMessageElement(String messageElement) {
+		this.messageElement = messageElement;
+	}
+	public String getLocalizedElement() {
+		return localizedElement;
+	}
+	public void setLocalizedElement(String localizedElement) {
+		this.localizedElement = localizedElement;
 	}
 }

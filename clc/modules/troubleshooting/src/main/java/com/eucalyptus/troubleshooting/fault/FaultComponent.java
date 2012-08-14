@@ -59,25 +59,12 @@
  *   IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
-
-package com.eucalyptus.troubleshooting;
-
-public class DisplayFault {
-	public static void main(String[] args) {
-		if (args.length == 0 || args.length % 2 == 0) {
-			System.err.println("Usage: java -jar DisplayFault.jar <id> [(key1 val1 key2 val2 ...)]");
-			System.exit(-1);
-		} else {
-			Fault f = FaultSubsystem.fault(Integer.parseInt(args[0]));
-			if (f == null) {
-				System.err.println("No fault with id " + args[0] + " in system");
-			} else {
-				for (int i=1;i<args.length;i+=2) {
-					f = f.withVar(args[i], args[i+1]);
-				}
-				f.log();
-			}
-		}
-	}
-
+package com.eucalyptus.troubleshooting.fault;
+public enum FaultComponent {
+	CLOUD,
+	WALRUS,
+	SC,
+	BROKER,
+	CC,
+	NC
 }

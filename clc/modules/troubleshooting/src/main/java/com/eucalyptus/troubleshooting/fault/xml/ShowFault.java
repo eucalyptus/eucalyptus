@@ -59,44 +59,18 @@
  *   IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
-package com.eucalyptus.troubleshooting;
+package com.eucalyptus.troubleshooting.fault.xml;
 
-import java.util.Enumeration;
-import java.util.Properties;
+import java.io.File;
 
-import org.apache.log4j.Logger;
+import org.apache.log4j.BasicConfigurator;
 
-import com.eucalyptus.troubleshooting.fault.Fault;
-import com.eucalyptus.troubleshooting.fault.FaultComponent;
-import com.eucalyptus.troubleshooting.fault.FaultLogger;
-import com.eucalyptus.troubleshooting.fault.FaultSubsystem;
-
-public class TestFaultTrigger {
-	private static final Logger LOG = Logger.getLogger(TestFaultTrigger.class);
-	public static void triggerFault(int id, Properties varProps) {
-		// log it in all components
-		for (FaultComponent faultComponent: FaultComponent.values()) {
-			try {
-				FaultLogger faultLogger = FaultSubsystem.getFaultLogger(FaultComponent.BROKER);
-				LOG.debug("Triggering fault in component " + faultComponent + " with id " + id + " and vars " + varProps);
-				Fault fault = FaultSubsystem.fault(id);
-				if (fault == null) {
-					LOG.error("Error triggering fault: " + id + ", no fault found in XML files");
-				}
-				if (varProps != null) {
-					Enumeration e = varProps.propertyNames();
-					while (e.hasMoreElements()) {
-						String name = (String) e.nextElement();
-						String value = varProps.getProperty(name);
-						if (value == null) continue;
-						fault = fault.withVar(name, value);
-					}
-				}
-				faultLogger.log(fault);
-			} catch (Exception ex) {
-				LOG.error("Error triggering fault: " + ex);
-				ex.printStackTrace();
-			}
-		}
+public class ShowFault {
+	public static void main(String[] args) {
+		BasicConfigurator.configure();
+		XMLFaultRegistry registry = new XMLFaultRegistry();
+		registry.crawlDirectory(new File("/usr/share/eucalyptus/faults/en_US"));
+		//System.out.println(registry.lookupFault(1234).withVar("daemon", "NTPD").toString());
+		System.out.println(registry.lookupFault(4).toString());
 	}
 }

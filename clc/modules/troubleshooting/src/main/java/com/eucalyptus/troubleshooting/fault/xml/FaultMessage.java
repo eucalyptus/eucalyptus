@@ -59,29 +59,29 @@
  *   IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
+package com.eucalyptus.troubleshooting.fault.xml;
 
-package com.eucalyptus.troubleshooting;
-
-import java.io.File;
-import java.io.FileFilter;
-
-public class FaultOrCommonXMLFileFilter implements FileFilter {
-	private static final String XML_SUFFIX_LOWER = ".xml";
-	@Override
-	public boolean accept(File f) {
-		if (f != null && f.isFile() && f.getName().toLowerCase().endsWith(XML_SUFFIX_LOWER)) {
-			String name = f.getName().toLowerCase();
-			String prefix = name.substring(0, name.length() - XML_SUFFIX_LOWER.length());
-			// either a fault id (ie #### or "common")
-			try {
-				return Integer.parseInt(prefix) > 0;
-			} catch (NumberFormatException ignore) {
-				; 
-			}
-			// otherwise common.xml
-			return ("common".equals(prefix));
-		}
-		return false;
+public class FaultMessage implements EffectiveValue {
+	private String message;
+	private String localized;
+	public String getMessage() {
+		return message;
 	}
+	public void setMessage(String message) {
+		this.message = message;
+	}
+	public String getLocalized() {
+		return localized;
+	}
+	public void setLocalized(String localized) {
+		this.localized = localized;
+	}
+	@Override
+	public String getEffectiveValue() {
+		if (localized != null) {
+			return localized;
+		}
+		return message;
+	}
+	
 }
-
