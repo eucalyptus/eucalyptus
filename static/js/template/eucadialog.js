@@ -4,8 +4,10 @@
        id : null, // e.g., keys-add, keys-delete, etc
        title : null,
        buttons :  {},
+       help : null,  // help title and content 
        // e.g., add : { domid: keys-add-btn, text: "Add new key", disabled: true, focus: true, click : function() { }, keypress : function() { }, ...} 
     },
+    help_flipped : false,
     
     _init : function() {
       var thisObj = this;
@@ -22,7 +24,7 @@
              }
 
              $('.ui-widget-overlay').live("click", function() {
-               thisObj.element.dialog("close");
+               thisObj.close();
              });
 
              $.each(thisObj.options.buttons, function (btn_id, btn_prop){ 
@@ -39,15 +41,74 @@
                  $btn.prop("disabled", true).addClass("ui-state-disabled");
              });
 
+             /* page-level help -- prototype */
+             thisObj._setHelp(thisObj.element.parent());
          },
          buttons: thisObj._makeButtons(),
       });
+    },
+    
+    open : function() {
+      this.element.dialog('open');      
+    },
+    
+    close : function() {
+      // this method should clean-up things
+      this.element.dialog('close');
+      this.element.find('input').each(function () { 
+        $(this).val(''); // clear all input fields TODO: what if some fields have initialized data?
+      });
+      if(this.help_flipped){
+        this.element.find('.dialog-inner-content').revertFlip();
+        $buttonPane.show();
+        $titleBar.find('span').text(thisObj.options.title);
+      }  
     },
     
     _create : function() {  
     },
 
     _destroy : function() {
+    },
+
+    _setHelp : function($dialog) {
+      var thisObj = this;
+      $buttonPane = $dialog.find('.ui-dialog-buttonpane');
+      $titleBar = $dialog.find('.ui-dialog-titlebar');
+      $contentPane =  this.element.find('.dialog-inner-content');
+
+      $helpLink = $titleBar.find('.help-link a');
+      $helpLink.click(function(evt) {
+        if(!thisObj.help_flipped){ // TODO: is this right comparison(text comparison)?
+          $contentPane.flip({
+            direction : 'lr',
+            speed : 400,
+            color : '#ffffff',
+            bgColor : '#ffffff',
+            content : thisObj.options.help.content,
+            onEnd : function(){
+              thisObj.element.find('.dialog-help-button a').click( function(evt) {
+                  $contentPane.revertFlip();
+              });
+              // at the end of flip/revertFlip, change the ?/x button
+              if(!thisObj.help_flipped){
+                $helpLink.text('x');
+                if(thisObj.options.help.title)
+                  $titleBar.find('span').text(thisObj.options.help.title);
+                $buttonPane.hide(); 
+                thisObj.help_flipped =true;
+              } else{
+                $helpLink.text('?');
+                $buttonPane.show();
+                $titleBar.find('span').text(thisObj.options.title);
+                thisObj.help_flipped=false;
+              }
+            }
+          });
+        }else{ // when flipped to help page
+          thisObj.close();
+        }
+      }); 
     },
 
     _makeButtons : function() {

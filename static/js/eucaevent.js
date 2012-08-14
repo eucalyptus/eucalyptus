@@ -8,15 +8,13 @@
     _init : function(){
       var thisObj = this;
       this.element.click( function (evt, src) {
-        //console.log("src: "+src);
         $.each(thisObj._clicked, function (k, v){
            // $(evt.target).parent()[0]
             // e.g., src='navigator:storage:volumes', k = 'storage'
-          console.log('src:'+src+', key:'+k); 
           if (!src || src.indexOf(k) == -1)
             $(v.target).trigger('click');
         });
-        console.log('num events: '+Object.keys(thisObj._clicked).length);
+//        console.log('num events: '+Object.keys(thisObj._clicked).length);
       });
     },
 

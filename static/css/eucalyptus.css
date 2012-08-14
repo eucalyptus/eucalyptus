@@ -735,7 +735,13 @@ tr.even td.sorting_1 {
     background-color: #fff !important;
 }
 
+/* ======= Help page related ===== */
 
+.dialog-help-button,
+.table-help-button {
+  float: right;
+  margin-top: 10px;
+}
 /* ======= Notifications ======= */
 
 .euca-notification {
