@@ -26,6 +26,10 @@
         $.i18n.prop('keypair_dialog_add_text');
         $.i18n.prop('keypair_dialog_add_name');
 
+        // sgroup
+        $.i18n.prop('sgroup_dialog_del_text');
+        $.i18n.prop('sgroup_dialog_add_text');
+
         // volume
         $.i18n.prop('volume_dialog_del_text');
         $.i18n.prop('volume_dialog_add_text');

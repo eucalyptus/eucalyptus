@@ -39,6 +39,9 @@
         case 'keypair':
           this.element.keypair();
           break;
+        case 'sgroup':
+          this.element.sgroup();
+          break;
         case 'volume':
           this.element.volume();
           break;

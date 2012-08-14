@@ -40,6 +40,7 @@
     <script type="text/javascript" language="javascript" src="js/eucawidget.js"></script>
     <script type="text/javascript" language="javascript" src="js/dashboard.js"></script>
     <script type="text/javascript" language="javascript" src="js/keypair.js"></script>
+    <script type="text/javascript" language="javascript" src="js/sgroup.js"></script>
     <script type="text/javascript" language="javascript" src="js/volume.js"></script>
     <script type="text/javascript" language="javascript" src="js/eucaevent.js"></script>
     <script type="text/javascript" language="javascript" src="js/notification.js"></script>
@@ -219,6 +220,48 @@
         </div>
       </script>
       <!-- END Keypair dialog template -->
+
+      <!-- Secruity Group table -->
+      <script id="sgroupTblTmpl" type="text/x-jsrender">
+        <div id="sgroups-wrapper">
+        <table id="sgroups" class="display">
+          <thead>
+            <tr>
+              <th>
+                <input type="checkbox" id="sgroups-check-all">
+              </th>
+              <th>{{!>sg_tbl_hdr_name}}</th>
+              <th>{{!>sg_tbl_hdr_description}}</th>
+              <th>{{!>sg_tbl_hdr_rules}}</th>
+            </tr>
+           </thead>
+           <tbody>
+              <tr>
+                <td colspan="8" class="dataTables_empty">{{!>table_loading}}</td>
+              </tr>
+          </tbody>
+        </table>
+        </div>
+      </script>
+      <!-- END Security Group table -->
+
+      <!-- Security Group dialog template -->
+      <script id="sgroupAddDlgTmpl" type="text/x-jsrender">
+        <div id="sgroups-add-dialog" class="add-dialog">
+          {{!: sgroup_dialog_add_text }}
+          <p>
+            <span class="field">{{!>sgroup_dialog_add_name}}</span><input type="text" id="sgroup-name" class="required"/><div class="dialog-notifications"></div>
+          </p>
+        </div>
+      </script>
+
+      <script id="sgroupDelDlgTmpl" type="text/x-jsrender">
+        <div id="sgroups-delete-dialog" class="delete-dialog">
+          {{!: sgroup_dialog_del_text }}
+          <span class="delete-names"></span>
+        </div>
+      </script>
+      <!-- END Security Group dialog template -->
 
       <!-- Volume table -->
       <script id="volumeTblTmpl" type="text/x-jsrender">
