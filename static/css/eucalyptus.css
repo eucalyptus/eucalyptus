@@ -648,6 +648,9 @@ tr.even td.sorting_1 {
   background-color: #f0f7f7;
 }
 
+.table_center_cell {
+  text-align: center;
+}
 
 /* ======= Action menu ======= */
 

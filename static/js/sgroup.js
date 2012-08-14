@@ -28,8 +28,12 @@
             },
             { "mDataProp": "name" },
             { "mDataProp": "description" },
-            // output creation time in browser format and timezone
-            { "fnRender": function(oObj) { d = new Date(oObj.aData.create_time); return d.toLocaleString(); } },
+            {
+              "bSortable": false,
+              "fnRender": function(oObj) { return '<a href="#">Show rules</a>' },
+              "sWidth": "200px",
+              "sClass": "table_center_cell",
+            }
           ]
         },
         header_title : sgroup_h_title,
