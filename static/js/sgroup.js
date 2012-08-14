@@ -19,7 +19,7 @@
           "sAjaxDataProp": "results",
           "bAutoWidth" : false,
           "sPaginationType": "full_numbers",
-          "sDom": '<"table_sgroups_header"><"table-sgroup-filter">f<"clear"><"table_sgroups_top">rt<"table-sgroups-legend">p<"clear">',
+          "sDom": '<"table_sgroups_header">f<"clear"><"table_sgroups_top">rt<"table-sgroups-legend">p<"clear">',
           "aoColumns": [
             {
               "bSortable": false,
@@ -43,30 +43,8 @@
         menu_text : table_menu_main_action,
         menu_actions : { delete: [table_menu_delete_action, function (args) { thisObj.deleteAction(args) } ] },
         row_click : function (args) { thisObj.handleRowClick(args); },
-      //  td_hover_actions : { instance: [4, function (args) { thisObj.handleInstanceHover(args); }], snapshot: [5, function (args) { thisObj.handleSnapshotHover(args); }] }
       });
       tableWrapper.appendTo(this.element);
-
-      //add filter to the table
-      $tableFilter = $('div.table-sgroup-filter');
-      $tableFilter.addClass('euca-table-filter');
-      $tableFilter.append(
-        $('<span>').addClass("filter-label").html(sgroup_filter_label),
-        $('<select>').attr('id', 'sgroups-selector'));
-
-      filterOptions = ['all'];
-      $sel = $tableFilter.find("#sgroups-selector");
-      for (o in filterOptions)
-        $sel.append($('<option>').val(filterOptions[o]).text($.i18n.map['sgroup_selecter_' + filterOptions[o]]));
-
-      $.fn.dataTableExt.afnFiltering.push(
-	function( oSettings, aData, iDataIndex ) {
-          // first check if this is called on a sgroups table
-          if (oSettings.sInstance != 'sgroups')
-            return true;
-          return true;
-        }
-      );
 
       // attach action
       $("#sgroups-selector").change( function() { thisObj.reDrawTable() } );
