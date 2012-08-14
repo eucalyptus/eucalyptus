@@ -230,6 +230,9 @@ public RRset []
 answers() {
 	if (type != SUCCESSFUL)
 		return null;
+	
+	if (data == null)
+		data = new ArrayList();
 	List l = (List) data;
 	return (RRset []) l.toArray(new RRset[l.size()]);
 }
