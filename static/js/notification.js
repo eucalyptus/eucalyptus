@@ -11,6 +11,7 @@
             thisObj.element.slideToggle('fast');
             thisObj.element.toggleClass('toggle-on');
           }
+          return false;
         }));
     },
 

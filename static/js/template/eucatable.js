@@ -9,22 +9,25 @@
                 txt_create : 'Create resource',
                 txt_found : 'resources found',
                 menu_text : 'More actions',
-                menu_actions : null // e.g., { delete: ["Delete", function () { dialog.... } ] }
+                menu_actions : null,
+                help : null // e.g., { delete: ["Delete", function () { dialog.... } ] }
     },
 
     table : null, // jQuery object to the table
     actionMenu : null,
+    help_flipped : false,
 
     _init : function() {
       thisObj = this;
       // add draw call back
       this.options.dt_arg['fnDrawCallback'] = function( oSettings ) { thisObj.drawCallback(oSettings); };
       this.table = this.options.base_table.dataTable(this.options.dt_arg);
-      this.decorateHeader({title:this.options.header_title});
-      this.decorateSearchBar({refresh: this.options.search_refresh});
-      this.decorateTopBar({txt_create: this.options.txt_create, txt_found : this.options.txt_found});
-      this.actionMenu = this.decorateActionMenu({text: this.options.menu_text, actions: this.options.menu_actions });
-      this.addActions(this.actionMenu);
+      var $header = this._decorateHeader({title:this.options.header_title});
+      this._decorateSearchBar({refresh: this.options.search_refresh});
+      this._decorateTopBar({txt_create: this.options.txt_create, txt_found : this.options.txt_found});
+      this.actionMenu = this._decorateActionMenu({text: this.options.menu_text, actions: this.options.menu_actions });
+      this._addActions(this.actionMenu);
+      this._setHelp($header); // add page-level help
     },
 
     _create : function() {
@@ -33,25 +36,58 @@
     _destroy : function() {
     },
 
+    _setHelp : function($header) {
+      var thisObj = this;
+      var $helpLink = $header.find('.help-link a');
+      var $helpHeader = $header.clone();
+      $helpHeader.find('.help-link').remove();
+      var funcOnClick = function(evt){
+        if(!thisObj.help_flipped){
+            var $helpWrapper = $('<div>').addClass('table-help');
+            $helpWrapper.append($helpHeader,thisObj.options.help.content);
+            thisObj.element.flip({
+              direction : 'lr',
+              speed : 300,
+              color : '#ffffff',
+              bgColor : '#ffffff',
+              content : $helpWrapper,
+              onEnd : function() {
+                thisObj.element.find('.table-help-button a').click( function(evt) {
+                  thisObj.element.revertFlip();
+                }); 
+                // at the end of flip/revertFlip, change the ?/x button
+                if(!thisObj.help_flipped){
+                  if(thisObj.options.help.title)
+                    thisObj.element.find('.euca-table-header span').text(thisObj.options.help.title);
+                  thisObj.help_flipped =true;
+                }else{
+                  thisObj.help_flipped = false;
+                }
+              }
+            });             
+          }else{
+            ;
+        }
+      }
+      $helpLink.live('click',funcOnClick);
+    },
+
     drawCallback : function(oSettings) {
       thisObj = this;
       $('#table_' + this.options.id + '_count').html(oSettings.fnRecordsDisplay());
-      if (thisObj.options.td_hover_actions) {
-        $('#' + this.options.id + ' tbody').find('tr').each(function(index, tr) {
-          $.each(thisObj.options.td_hover_actions, function (key, value) {
-            $td = $(tr).find('td:eq(' + value[0] +')');
-            // first check if there is anything there
-            if ($td.html() != '') {
-              $td.hover( function(e) {
-                value[1].call(this, e);
-              });
-              $td.click( function(e) {
-                e.stopPropagation();
-              });
-            }
-          });
-        });
-      }
+      $('#' + this.options.id + ' tbody').find('tr').each(function(index, tr) {
+        $.each(thisObj.options.td_hover_actions, function (key, value) {
+          $td = $(tr).find('td:eq(' + value[0] +')');
+          // first check if there is anything there
+          if ($td.html() != '') {
+            $td.hover( function(e) {
+              value[1].call(this, e);
+            });
+            $td.click(function(e) {
+              e.stopPropagation();
+            });
+          }
+      })});
     },
 
     reDrawTable : function() {
@@ -71,7 +107,8 @@
     },
 
     // args.title = title in the header (e.g.,'Manage key pairs');
-    decorateHeader : function(args) {
+    _decorateHeader : function(args) {
+      var thisObj = this;
       $header = this.element.find('.table_' + this.options.id + '_header');
       $header.addClass('euca-table-header');
       $header.append(
@@ -82,11 +119,11 @@
     },
 
     // args.refresh = text 'Refresh'
-    decorateSearchBar : function(args) {
+    _decorateSearchBar : function(args) {
       var thisObj = this; // ref to widget instance
       var $searchBar = this.element.find('#'+this.options.id+'_filter');
       $searchBar.append(
-        $('<a>').addClass('table-refresh').attr('href','#').text(args.refresh).click(function(){
+        $('<a>').addClass('table-refresh').attr('href','#').text(args.refresh).live('click',function(){
           thisObj.refreshTable();
         }));
       return $searchBar;
@@ -94,7 +131,7 @@
 
     // args.txt_create (e.g., Create new key)
     // args.txt_found ('e.g., 12 keys found)
-    decorateTopBar : function(args) {
+    _decorateTopBar : function(args) {
       var thisObj = this; // ref to widget instance
       $tableTop = this.element.find('.table_' + this.options.id + '_top');
       $tableTop.addClass('euca-table-length');
@@ -114,7 +151,7 @@
           '&nbsp;|&nbsp;',
           $('<span>').addClass('show').text('all')));
 
-      $tableTop.find('span.show').click( function () {
+      $tableTop.find('span.show').live('click',function () {
         $(this).parent().children('span').each( function() {
           $(this).removeClass('selected');
         });
@@ -126,9 +163,10 @@
         thisObj.table.fnDraw();
         $(this).addClass('selected');
       });
+
       // add action to create new
-      this.element.find('#table-' + this.options.id + '-new').click( function() {
-        $('#' + thisObj.options.id + '-add-dialog').dialog('open');
+      this.element.find('#table-' + this.options.id + '-new').live('click',function() {
+        thisObj._trigger('menu_click_create'); // users of the table should listen to
       });
       return $tableTop;
     },
@@ -138,7 +176,7 @@
       args.action : { action_key : [Text, click Callback] }
                    e.g., { delete : [Delete, function () { dialog('open'); } ] }
     */
-    decorateActionMenu : function (args){
+    _decorateActionMenu : function (args){
       var thisObj = this; // ref to widget object
       var $menuDiv = this.element.find('div.euca-table-action');
       if ($menuDiv === undefined)
@@ -148,7 +186,7 @@
 
       var $actionItems = $('<li>');
       $.each(args.actions, function (key, value){ // key:action, value: property
-        $('<a>').attr('href','#').attr('id', thisObj.options.id+'-'+key).text (value[0]).click( function() {
+        $('<a>').attr('href','#').attr('id', thisObj.options.id+'-'+key).text (value[0]).click(function() {
           value[1].call(this, thisObj.getAllSelectedRows());
         }).appendTo($actionItems);
       });
@@ -175,7 +213,7 @@
       return $menuDiv;
     },
 
-    addActions : function (actionMenu) {
+    _addActions : function (actionMenu) {
       var thisObj = this;
       thisTable = this.table;
       // add select/deselect all action
@@ -203,8 +241,8 @@
         //TODO: add action here
       });
       // add on row click acion
-      this.element.find('table tbody').click( function (e) {
-        $(e.target.parentNode.firstChild.firstChild).click();
+      this.element.find('table tbody').click(function (e) {
+        $(e.target.parentNode.firstChild.firstChild).trigger('click'); //();
         thisObj._trigger('row_click', this);
       });
     },
