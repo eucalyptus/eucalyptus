@@ -79,10 +79,12 @@ import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 import org.apache.log4j.helpers.OptionConverter;
+import org.apache.log4j.xml.Log4jEntityResolver;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
+import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 
 
@@ -118,10 +120,13 @@ public class LoggingResetter {
 		try {
 			DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
 			DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
+			dBuilder.setEntityResolver(new Log4jEntityResolver());
 			URL url = Thread.currentThread().getContextClassLoader().getResource("log4j.xml");
 			if (url != null) {
 				in = url.openStream();
-				Document document = dBuilder.parse(in);
+				InputSource inputSource = new InputSource(in);
+				inputSource.setSystemId("dummy://log4j.dtd");
+				Document document = dBuilder.parse(inputSource);
 				Element documentElement = document.getDocumentElement();
 				smallLoggingConfiguration = parse(documentElement);
 			}
