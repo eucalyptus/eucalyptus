@@ -96,7 +96,7 @@ int main(int argc, char **argv) {
   if (argc != 2 || !argv[1]) {
     printf("must supply argument <host>:<port>\n");
   }
-  snprintf(endpoint_uri, 256," http://%s/axis2/services/EucalyptusCC", argv[1]);
+  snprintf(endpoint_uri, 256,"http://%s/axis2/services/EucalyptusCC", argv[1]);
 
   env =  axutil_env_create_all(logFile, AXIS2_LOG_LEVEL_TRACE);
   

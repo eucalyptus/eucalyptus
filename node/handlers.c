@@ -221,6 +221,13 @@ print_running_domains (void)
 	logprintfl (EUCAINFO, "currently running/booting: %s\n", buf);
 }
 
+static void 
+invalidate_hypervisor_conn()
+{
+    virConnectClose(nc_state.conn);
+    nc_state.conn = NULL;
+}
+
 virConnectPtr *
 check_hypervisor_conn()
 {
@@ -340,6 +347,7 @@ refresh_instance_info(	struct nc_state_t *nc,
                    old_state==PAUSED ||
                    old_state==SHUTDOWN) {
             // most likely the user has shut it down from the inside
+            invalidate_hypervisor_conn(); // to rule out libvirt badness, we'll restart the connection
             if (instance->retries) {
                 instance->retries--;
                 logprintfl (EUCAWARN, "[%s] warning: hypervisor failed to find domain, will retry %d more times\n", instance->instanceId, instance->retries);
@@ -717,6 +725,11 @@ void *startup_thread (void * arg)
         if (i>0) {
             logprintfl (EUCAINFO, "[%s] attempt %d of %d to create the instance\n", instance->instanceId, i+1, MAX_CREATE_TRYS);
         }
+        if (! check_hypervisor_conn ()) { // check again, since we may have invalidated the connection in previous loop iteration
+            logprintfl (EUCAERROR, "[%s] could not contact the hypervisor, abandoning the instance\n", instance->instanceId);
+            goto shutoff;
+        }
+
         sem_p (hyp_sem);
         sem_p (loop_sem);
 
@@ -763,7 +776,8 @@ void *startup_thread (void * arg)
 
             } else if (WEXITSTATUS(status) != 0) {
                 logprintfl (EUCAERROR, "[%s] hypervisor failed to create the instance\n", instance->instanceId);
-
+                invalidate_hypervisor_conn(); // guard against libvirtd connection badness
+                
             } else {
                 created = TRUE;
             }

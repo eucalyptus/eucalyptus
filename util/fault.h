@@ -36,13 +36,25 @@
  * encounters. Thus, it is recommended all applications call
  * initialize_eucafaults() as part of their own initialization.
  *
- * Return value indicates number of faults successfully loaded into
- * database.
+ * Returns the number of faults successfully loaded into registry. If
+ * the registry was previously loaded, returns the number of loaded
+ * faults as a negative number.
  */
 extern int initialize_eucafaults (void);
 
 /*
- * Usage: log_eucafault (FAULT_ID, param1, param1text, param2, param2text, NULL)
+ * Usage: log_eucafault (FAULT_ID, parameter_map)
+ *
+ * Will call initialize_eucafaults() internally to ensure fault registry
+ * has been loaded.
+ *
+ * Returns TRUE if fault successfully logged, FALSE otherwise.
+ */
+extern boolean log_eucafault (char *, const char_map **);
+
+/*
+ * Usage: log_eucafault_v (FAULT_ID, param1, param1text, param2, param2text,
+ *                         ..., NULL)
  *
  * ...where the text of each named parameter will replace that parameter
  * token in the fault message log text.
@@ -50,12 +62,13 @@ extern int initialize_eucafaults (void);
  * Note that the final NULL argument is very important!
  * (...because va_arg() is stupid.)
  *
- * Will call initialize_eucafaults() internally to ensure fault model
+ * Will call initialize_eucafaults() internally to ensure fault registry
  * has been loaded.
  *
- * Return value is number of parameter arguments detected prior to NULL.
- *
+ * Returns the number of substitution parameters it was called with,
+ * returning it as a negative number if the underlying log_eucafault()
+ * call returned FALSE.
  */
-extern int log_eucafault (char *, const wchar_map **);
+extern int log_eucafault_v (char *, ...);
 
 #endif // INCLUDE_MISC_H

@@ -71,8 +71,6 @@ import com.eucalyptus.webui.shared.checker.ValueChecker;
 import com.google.common.collect.Lists;
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.event.dom.client.ClickEvent;
-import com.google.gwt.event.dom.client.KeyPressEvent;
-import com.google.gwt.event.dom.client.KeyPressHandler;
 import com.google.gwt.resources.client.ClientBundle;
 import com.google.gwt.resources.client.CssResource;
 import com.google.gwt.resources.client.ImageResource;
@@ -115,8 +113,6 @@ public class InputViewImpl extends DialogBox implements InputView {
   private static final String TITLE_WIDTH = "160px";
   private static final String INPUT_WIDTH = "280px";
   private static final String INDICATOR_WIDTH = "12px";
-  
-  private static final String PASSWORDS_NOT_MATCH = "Passwords do not match";
 
   protected static final int TEXT_AREA_LINES = 10;
   
@@ -345,18 +341,6 @@ public class InputViewImpl extends DialogBox implements InputView {
             checker.check( value );            
           }
           values.add( value );
-          if ( ValueType.NEWPASSWORD.equals( field.getType( ) ) ) {
-            // If it is a new password input, check the next field/row
-            // to make sure the two password inputs match.
-            InputField nextField = fields.get( i + 1 );
-            if ( ValueType.PASSWORD.equals( nextField.getType( ) ) ) {
-              if ( !input.getValue( ).equals( inputs.get( i + 1 ).getValue( ) ) ) {
-                grid.setWidget( i + 1, 2, new Image( resources.denied( ) ) );
-                this.error.setText( PASSWORDS_NOT_MATCH );
-                return null;
-              }
-            }
-          }
         } catch ( InvalidValueException e ) {
           grid.setWidget( i, 2, new Image( resources.denied( ) ) );
           this.error.setText( e.getMessage( ) );

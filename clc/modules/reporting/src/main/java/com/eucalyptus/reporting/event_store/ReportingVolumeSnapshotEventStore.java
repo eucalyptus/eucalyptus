@@ -17,7 +17,6 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-
 package com.eucalyptus.reporting.event_store;
 
 import java.util.*;
@@ -32,7 +31,7 @@ public class ReportingVolumeSnapshotEventStore
 
 	private static ReportingVolumeSnapshotEventStore instance = null;
 	
-	public static synchronized ReportingVolumeSnapshotEventStore getVolumeSnapshot()
+	public static synchronized ReportingVolumeSnapshotEventStore getInstance()
 	{
 		if (instance == null) {
 			instance = new ReportingVolumeSnapshotEventStore();
@@ -45,8 +44,7 @@ public class ReportingVolumeSnapshotEventStore
 		
 	}
 
-	public void insertCreateEvent(String uuid, String volumeSnapshotId, String volumeId,
-			Long timestampMs, String userId, Long sizeGB)
+	public void insertCreateEvent(String uuid, String volumeSnapshotId, long timestampMs, String userId, long sizeGB)
 	{
 		
 		EntityWrapper<ReportingVolumeSnapshotCreateEvent> entityWrapper =
@@ -54,7 +52,7 @@ public class ReportingVolumeSnapshotEventStore
 
 		try {
 			ReportingVolumeSnapshotCreateEvent volumeSnapshot = new ReportingVolumeSnapshotCreateEvent(uuid,
-					volumeSnapshotId, volumeId, timestampMs, userId, sizeGB);
+					volumeSnapshotId, timestampMs, userId, sizeGB);
 			entityWrapper.add(volumeSnapshot);
 			entityWrapper.commit();
 			LOG.debug("Added reporting volumeSnapshot to db:" + volumeSnapshot);
@@ -65,14 +63,14 @@ public class ReportingVolumeSnapshotEventStore
 		}					
 	}
 	
-	public void insertDeleteEvent(String uuid, long timestampMs)
+	public void insertDeleteEvent(String uuid, String snapShotId, String userId, long timestampMs)
 	{
 		
 		EntityWrapper<ReportingVolumeSnapshotDeleteEvent> entityWrapper =
 			EntityWrapper.get(ReportingVolumeSnapshotDeleteEvent.class);
 
 		try {
-			ReportingVolumeSnapshotDeleteEvent event = new ReportingVolumeSnapshotDeleteEvent(uuid, timestampMs);
+			ReportingVolumeSnapshotDeleteEvent event = new ReportingVolumeSnapshotDeleteEvent(uuid, snapShotId, userId, timestampMs);
 			entityWrapper.add(event);
 			entityWrapper.commit();
 			LOG.debug("Added event to db:" + event);

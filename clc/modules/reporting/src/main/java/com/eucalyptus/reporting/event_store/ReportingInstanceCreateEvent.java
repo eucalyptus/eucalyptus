@@ -17,7 +17,6 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-
 package com.eucalyptus.reporting.event_store;
 
 import javax.persistence.*;
@@ -33,19 +32,19 @@ import com.eucalyptus.entities.AbstractPersistent;
 public class ReportingInstanceCreateEvent
 	extends AbstractPersistent
 {
-	@Column(name="uuid")
+	@Column(name="uuid", nullable=false, unique=true)
 	private String uuid;
 	@Column(name="timestamp_ms", nullable=false)
 	private Long timestampMs;
 	@Column(name="instance_id", nullable=false)
 	private String instanceId;
-	@Column(name="instance_type")
+	@Column(name="instance_type", nullable=false)
 	private String instanceType;
-	@Column(name="user_id")
+	@Column(name="user_id", nullable=false)
 	private String userId;
-	@Column(name="cluster_name")
+	@Column(name="cluster_name", nullable=false)
 	private String clusterName;
-	@Column(name="availability_zone")
+	@Column(name="availability_zone", nullable=false)
 	private String availabilityZone;
 
 

@@ -69,8 +69,6 @@ import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.reporting.Period;
 import com.eucalyptus.reporting.event.S3Event;
 import com.eucalyptus.reporting.modules.s3.*;
-import com.eucalyptus.reporting.queue.*;
-import com.eucalyptus.reporting.queue.QueueFactory.QueueIdentifier;
 import com.eucalyptus.util.ExposedCommand;
 
 public class FalseDataGenerator
@@ -88,15 +86,9 @@ public class FalseDataGenerator
 	{
 		System.out.println(" ----> GENERATING FALSE DATA");
 
-		QueueSender queueSender = QueueFactory.getInstance().getSender(QueueIdentifier.S3);
-
 		TestEventListener listener = new TestEventListener();
 		listener.setCurrentTimeMillis(START_TIME);
-		QueueReceiver queueReceiver = QueueFactory.getInstance().getReceiver(QueueIdentifier.S3);
-		queueReceiver.removeAllListeners(); //Remove non-test listeners set up by bootstrapper
-		queueReceiver.addEventListener(listener);
-	
-		
+
 		for (int i = 0; i < SNAPSHOTS_PER_USER; i++) {
 			
 			long timestampMs = (i * TIME_USAGE_APART) + START_TIME;
@@ -112,11 +104,9 @@ public class FalseDataGenerator
 				long sizeMegs = 1024 + i;
 				S3Event event = new S3Event(true, sizeMegs, userId, userName,
 						accountId, accountName);
-				queueSender.send(event);
 				if (i % 10 == 0) {
 					event = new S3Event(true, userId, userName, accountId,
 							accountName);
-					queueSender.send(event);
 				}
 				System.out.printf("Sending event for %d,%d\n", i, j);
 

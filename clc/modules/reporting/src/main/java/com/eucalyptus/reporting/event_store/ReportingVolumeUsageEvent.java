@@ -17,7 +17,6 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-
 package com.eucalyptus.reporting.event_store;
 
 import javax.persistence.*;
@@ -130,17 +129,5 @@ public class ReportingVolumeUsageEvent
 			return false;
 		return true;
 	}
-
-  /**
-   * NOTE:IMPORTANT: this method has default visibility (rather than public) only for the sake of
-   * supporting currently hand-coded proxy classes. Don't share this value with the user.
-   * 
-   * TODO: remove this if possible.
-   * @return
-   * @see {@link AbstractPersistent#getId()}
-   */
-  public String getEntityId( ) {
-    return this.getId( );
-  }
 
 }

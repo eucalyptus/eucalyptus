@@ -64,12 +64,12 @@ package com.eucalyptus.reporting.units;
 
 public enum SizeUnit
 {
-	BYTES(1),
-	KB(1<<10),
-	MB(1<<20),
-	GB(1<<30),
-	TB(1<<40),
-	PB(1<<50);
+	BYTES(1L),
+	KB(1L<<10),
+	MB(1L<<20),
+	GB(1L<<30),
+	TB(1L<<40),
+	PB(1L<<50);
 	
 	private final long factor;
 	private SizeUnit(long factor)

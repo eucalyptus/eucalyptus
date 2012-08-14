@@ -40,12 +40,12 @@
 
     <resolution>
       <message>
-        1) install NTPD
-        2) run NTPD
+        1) install ${daemon}
+        2) run ${daemon}
       </message>
       <localized>
-        1) установите пакет NTPD
-        2) запустите сервер NTPD
+        1) установите пакет ${daemon}
+        2) запустите сервер ${daemon}
       </localized>
     </resolution>
   </fault>
