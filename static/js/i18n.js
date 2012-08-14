@@ -32,6 +32,8 @@
         // sgroup
         $.i18n.prop('sgroup_dialog_del_text');
         $.i18n.prop('sgroup_dialog_add_text');
+        $.i18n.prop('sgroup_dialog_add_name');
+        $.i18n.prop('sgroup_dialog_add_description');
 
         // volume
         $.i18n.prop('volume_dialog_del_text');

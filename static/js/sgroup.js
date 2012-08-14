@@ -3,6 +3,7 @@
     options : { },
     tableWrapper : null,
     delDialog : null,
+    $addDialog : null,
     // TODO: is _init() the right method to instantiate everything? 
     _init : function() {
       var thisObj = this;
@@ -43,6 +44,7 @@
         menu_text : table_menu_main_action,
         menu_actions : { delete: [table_menu_delete_action, function (args) { thisObj.deleteAction(args) } ] },
         row_click : function (args) { thisObj.handleRowClick(args); },
+        menu_click_create : function (args) { thisObj.$addDialog.eucadialog('open')},
       });
       tableWrapper.appendTo(this.element);
 
@@ -63,11 +65,12 @@
 
       var createButtonId = 'sgroup-add-btn';
       $tmpl = $('html body').find('.templates #sgroupAddDlgTmpl').clone();
-      $add_dialog = $($tmpl.render($.i18n.map));
-/*
+      $rendered = $($tmpl.render($.i18n.map));
+      $add_dialog = $rendered.children().first();
+
       // add custom event handler to dialog elements
       // when calling eucadialog, the buttons should have domid to attach the specific domid that's used by event handler written here 
-      $add_dialog.find('#key-name').keypress( function(e){
+      $add_dialog.find('#sgroup-name').keypress( function(e){
         var $createButton = $('#'+createButtonId);
         if( e.which === RETURN_KEY_CODE || e.which === RETURN_MAC_KEY_CODE ) 
            $createButton.trigger('click');
@@ -79,12 +82,12 @@
         else 
            $createButton.prop("disabled", false).removeClass("ui-state-disabled");
       });
-*/
-      $add_dialog.eucadialog({
+
+      this.$addDialog = $add_dialog.eucadialog({
         id: 'sgroups-add',
         title: sgroup_dialog_add_title,
         buttons: { 
-        // e.g., add : { domid: keys-add-btn, text: "Add new key", disabled: true, focus: true, click : function() { }, keypress : function() { }, ...} 
+        // e.g., add : { domid: sgroup-add-btn, text: "Add new group", disabled: true, focus: true, click : function() { }, keypress : function() { }, ...} 
         'create': { domid: createButtonId, text: sgroup_dialog_create_btn, disabled: true,  click: function() { $add_dialog.dialog("close"); }},
         'cancel': {text: sgroup_dialog_cancel_btn, focus:true, click: function() { $add_dialog.dialog("close");}}
       }});
@@ -133,22 +136,16 @@
         tableWrapper.eucatable('activateMenu');
     },
 
-/*
-    _addKeyPair : function(keyName) {
+    _addSecurityGroup : function(groupName, groupDesc) {
       $.ajax({
         type:"GET",
-        url:"/ec2?type=key&Action=CreateKeyPair",
-        data:"_xsrf="+$.cookie('_xsrf') + "&KeyName=" + keyName,
+        url:"/ec2?Action=CreateSecurityGroup",
+        data:"_xsrf="+$.cookie('_xsrf') + "&GroupName=" + groupName + "&GroupDescription=" + groupDesc,
         dataType:"json",
         async:"false",
         success:
         function(data, textStatus, jqXHR){
-          if (data.results && data.results.material) {
-            $.generateFile({
-              filename    : keyName,
-              content     : data.results.material,
-              script      : '/support?Action=DownloadFile&_xsrf=' + $.cookie('_xsrf')
-            });
+          if (data.results && data.results.status == true) {
             successNotification(keypair_create_success + ' ' + keyName);
             tableWrapper.eucatable('refreshTable');
           } else {
@@ -161,14 +158,14 @@
         }
       });
     },
-*/
+
     _deleteSelectedSecurityGroups : function () {
       var rowsToDelete = tableWrapper.eucatable('getAllSelectedRows');
       for ( i = 0; i<rowsToDelete.length; i++ ) {
         var sgroupName = rowsToDelete[i];
         $.ajax({
           type:"GET",
-          url:"/ec2?type=key&Action=DeleteSecurityGroup&GroupName=" + sgroupName,
+          url:"/ec2?Action=DeleteSecurityGroup&GroupName=" + sgroupName,
           data:"_xsrf="+$.cookie('_xsrf'),
           dataType:"json",
           async:"true",
