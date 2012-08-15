@@ -23,18 +23,23 @@
     },
 
     updateSelected : function (selected) {
-      if(this._curSelected === selected)
-          return;
+      if(this._curSelected === selected){
+        $('html body').trigger('click');
+        return;
+      }
+
       if(this._curSelected !== null){
         var $curInstance = this.element.data(this._curSelected);
         if($curInstance !== undefined){
           $curInstance.close();
         }
       }
+
       $('html body').eucaevent('unclick_all'); // this will close menus that's pulled down
       switch(selected){
         case 'dashboard':
-          this.element.dashboard();
+          var $container = $('html body').find(DOM_BINDING['main']);
+          this.element.dashboard({select: function(evt, ui){$container.maincontainer("changeSelected", evt, ui)}});
           break;
         case 'keypair':
           this.element.keypair();
@@ -61,6 +66,10 @@
         $curInstance.close();
       }
       this._curSelected = null;
+    },
+
+    getSelected : function () {
+      return this._curSelected;
     }
   });
 })(jQuery,

@@ -6,9 +6,9 @@
       var $tmpl = $('html body div.templates').find('#dashboardTmpl').clone();       
       var $div = $($tmpl.render($.i18n.map));
 
-      this._setInstSummary($div.find('.instances'));
-      this._setStorageSummary($div.find('.storage'));
-      this._setNetSecSummary($div.find('.netsec'));  
+      this._setInstSummary($div.find('#dashboard-content .instances'));
+      this._setStorageSummary($div.find('#dashboard-content .storage'));
+      this._setNetSecSummary($div.find('#dashboard-content .netsec'));  
       $div.appendTo(this.element); 
       $('html body').find(DOM_BINDING['notification']).notification('success', 'dashboard (testing)', 'dashboard loaded successfully');
     },
@@ -20,6 +20,7 @@
     // initiate ajax call-- describe-instances
     // attach spinning wheel until we refresh the content with the ajax response
     _setInstSummary : function($instObj) {
+      var thisObj = this;
       var az=$instObj.find('#dashboard-instance-az select').val();
       // TODO: this is probably not the right place to call describe-instances. instances page should receive the data from server
       $.ajax({
@@ -46,7 +47,19 @@
             $instObj.find('#dashboard-instance-running img').remove();
             $instObj.find('#dashboard-instance-stopped img').remove();
             $instObj.find('#dashboard-instance-running span').text(numRunning);
-            $instObj.find('#dashboard-instance-stopped span').text(numStopped);   
+            $instObj.find('#dashboard-instance-stopped span').text(numStopped);
+            $instObj.find('#dashboard-instance-running').wrapAll(
+              $('<a>').attr('href','#').click( function(evt){
+                  thisObj._trigger('select', evt, {selected:'instance'});
+                }));
+            $instObj.find('#dashboard-instance-stopped').wrapAll(
+              $('<a>').attr('href','#').click( function(evt){
+                  thisObj._trigger('select', evt, {selected:'instance'});
+                }));
+            $instObj.find('#dashboard-instance-img').wrapAll(
+              $('<a>').attr('href','#').click( function(evt){
+                  thisObj._trigger('select', evt, {selected:'instance'});
+                }));
           } else {
             //TODO: need to call notification subsystem
             $('html body').find(DOM_BINDING['notification']).notification('error', 'dashboard', 'can\'t retrieve instances due to server failure');
@@ -65,6 +78,7 @@
     },
 
     _setStorageSummary : function($storageObj) {
+      var thisObj = this;
      // TODO: this is probably not the right place to call describe-volumes
       $.ajax({
         type:"GET",
@@ -77,6 +91,15 @@
             var numVol = data.results.length;
             $storageObj.find('#dashboard-storage-volume img').remove();
             $storageObj.find('#dashboard-storage-volume span').text(numVol);
+            
+            $storageObj.find('#dashboard-storage-img').wrapAll(
+              $('<a>').attr('href','#').click( function(evt){
+                  thisObj._trigger('select', evt, {selected:'volume'});
+                }));
+            $storageObj.find('#dashboard-storage-volume').wrapAll(
+              $('<a>').attr('href','#').click( function(evt){
+                  thisObj._trigger('select', evt, {selected:'volume'});
+              }));
           } else {
             //TODO: need to call notification subsystem
             $('html body').find(DOM_BINDING['notification']).notification('error', 'dashboard', 'can\'t retrieve volumes due to server failure');
@@ -100,6 +123,12 @@
             var numSnapshots = data.results.length;
             $storageObj.find('#dashboard-storage-snapshot img').remove();
             $storageObj.find('#dashboard-storage-snapshot span').text(numSnapshots);
+ 
+            $storageObj.find('#dashboard-storage-snapshot').wrapAll(
+              $('<a>').attr('href','#').click( function(evt){
+                  thisObj._trigger('select', evt, {selected:'snapshot'});
+              }));
+
           } else {
             //TODO: need to call notification subsystem
             $('html body').find(DOM_BINDING['notification']).notification('error', 'dashboard', 'can\'t retrieve snapshots due to server failure');
@@ -123,6 +152,7 @@
     },
   
     _setNetSecSummary : function($netsecObj) {
+      var thisObj = this;
       $.ajax({
         type:"GET",
         url:"/ec2?Action=DescribeSecurityGroups",
@@ -134,6 +164,16 @@
             var numGroups = data.results.length;
             $netsecObj.find('#dashboard-netsec-sgroup img').remove();
             $netsecObj.find('#dashboard-netsec-sgroup span').text(numGroups);
+
+            $netsecObj.find('#dashboard-netsec-img').wrapAll(
+              $('<a>').attr('href','#').click( function(evt){
+                  thisObj._trigger('select', evt, {selected:'sgroup'});
+            }));
+
+            $netsecObj.find('#dashboard-netsec-sgroup').wrapAll(
+              $('<a>').attr('href','#').click( function(evt){
+                  thisObj._trigger('select', evt, {selected:'sgroup'});
+            }));
           } else {
             //TODO: need to call notification subsystem
             $('html body').find(DOM_BINDING['notification']).notification('error', 'dashboard', 'can\'t retrieve security groups due to server failure');
@@ -155,6 +195,11 @@
             var numAddr = data.results.length;
             $netsecObj.find('#dashboard-netsec-eip img').remove();
             $netsecObj.find('#dashboard-netsec-eip span').text(numAddr);
+
+            $netsecObj.find('#dashboard-netsec-eip').wrapAll(
+              $('<a>').attr('href','#').click( function(evt){
+                  thisObj._trigger('select', evt, {selected:'eip'});
+            }));
           } else {
             //TODO: need to call notification subsystem
             $('html body').find(DOM_BINDING['notification']).notification('error', 'dashboard', 'can\'t retrieve addresses due to server failure');
@@ -176,6 +221,10 @@
             var numKeypair = data.results.length;
             $netsecObj.find('#dashboard-netsec-keypair img').remove();
             $netsecObj.find('#dashboard-netsec-keypair span').text(numKeypair);
+            $netsecObj.find('#dashboard-netsec-keypair').wrapAll(
+              $('<a>').attr('href','#').click( function(evt){
+                  thisObj._trigger('select', evt, {selected:'keypair'});
+            }));
           } else {
             //TODO: need to call notification subsystem
             $('html body').find(DOM_BINDING['notification']).notification('error', 'dashboard', 'can\'t retrieve key pairs due to server failure');

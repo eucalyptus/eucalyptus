@@ -38,6 +38,7 @@
         $.i18n.prop('volume_dialog_add_text');
 
         // dashboard
+        $.i18n.prop('dashboard_title');
         $.i18n.prop('dashboard_az_all');
         $.i18n.prop('dashboard_instance_running');
         $.i18n.prop('dashboard_instance_stopped');

@@ -45,6 +45,7 @@
     <script type="text/javascript" language="javascript" src="js/dashboard.js"></script>
     <script type="text/javascript" language="javascript" src="js/keypair.js"></script>
     <script type="text/javascript" language="javascript" src="js/volume.js"></script>
+    <script type="text/javascript" language="javascript" src="js/sgroup.js"></script>
     <script type="text/javascript" language="javascript" src="js/eucaevent.js"></script>
     <script type="text/javascript" language="javascript" src="js/notification.js"></script>
     <script type="text/javascript" language="javascript" src="js/help.js"></script>
@@ -133,54 +134,57 @@
       <!-- Dashboard template -->
       <script id="dashboardTmpl" type="text/x-jsrender">
       <div id="dashboard" class="content-box clearfix">
-        <div class="instances inner-box clearfix">
-          <div id="dashboard-instance-img">
-            <img src="images/dashboard_instance.png">
+        <div class="box-header"> <span> {{!>dashboard_title}} </span> </div>
+        <div id="dashboard-content">
+          <div class="instances inner-box clearfix">
+            <div id="dashboard-instance-img">
+              <img src="images/dashboard_instance.png">
+            </div>
+            <div id="dashboard-instance-az">
+              <select>
+               <option value="all">{{!>dashboard_az_all}}</option>
+             </select>
+            </div>
+            <div id="dashboard-instance-running">
+              <span></span> {{!>dashboard_instance_running}}
+            </div>
+            <div id="dashboard-instance-stopped">
+              <span></span> {{!>dashboard_instance_stopped}}
+            </div>
+            <div id="dashboard-instance-launch"> INSTANCE LAUNCH BUTTON </div> 
           </div>
-          <div id="dashboard-instance-az">
-            <select>
-             <option value="all">{{!>dashboard_az_all}}</option>
-           </select>
-          </div>
-          <div id="dashboard-instance-running">
-            <span></span> {{!>dashboard_instance_running}}
-          </div>
-          <div id="dashboard-instance-stopped">
-            <span></span> {{!>dashboard_instance_stopped}}
-          </div>
-          <div id="dashboard-instance-launch"> INSTANCE LAUNCH BUTTON </div> 
-        </div>
 
-        <div class="storage inner-box clearfix">
-          <div id="dashboard-storage-img">
-            <img src="images/dashboard_storage.png">
+          <div class="storage inner-box clearfix">
+            <div id="dashboard-storage-img">
+              <img src="images/dashboard_storage.png">
+            </div>
+            <div id="dashboard-storage-volume">
+              <span></span> {{!>dashboard_volumes}}
+            </div>
+            <div id="dashboard-storage-snapshot">
+              <span></span> {{!>dashboard_snapshots}}
+            </div>
+            <div id="dashboard-storage-buckets">
+              <span></span> {{!>dashboard_buckets}}
+            </div> 
           </div>
-          <div id="dashboard-storage-volume">
-            <span></span> {{!>dashboard_volumes}}
-          </div>
-          <div id="dashboard-storage-snapshot">
-            <span></span> {{!>dashboard_snapshots}}
-          </div>
-          <div id="dashboard-storage-buckets">
-            <span></span> {{!>dashboard_buckets}}
-          </div> 
-        </div>
 
-        <div class="netsec inner-box clearfix">
-          <div id="dashboard-netsec-img">
-            <img src="images/dashboard_netsec.png">
-          </div>
-          <div id="dashboard-netsec-sgroup">
-            <span></span> {{!>dashboard_sgroup}}
-          </div>
-          <div id="dashboard-netsec-eip">
-            <span></span> {{!>dashboard_eip}}
-          </div>
-          <div id="dashboard-netsec-keypair">
-            <span></span> {{!>dashboard_keypair}}
+          <div class="netsec inner-box clearfix">
+            <div id="dashboard-netsec-img">
+              <img src="images/dashboard_netsec.png">
+            </div>
+            <div id="dashboard-netsec-sgroup">
+              <span></span> {{!>dashboard_sgroup}}
+            </div>
+            <div id="dashboard-netsec-eip">
+              <span></span> {{!>dashboard_eip}}
+            </div>
+            <div id="dashboard-netsec-keypair">
+              <span></span> {{!>dashboard_keypair}}
+            </div>
           </div>
         </div>
-      </div>
+       </div>
       </script>
       <!-- END Dashboard template -->
 

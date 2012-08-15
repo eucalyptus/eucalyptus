@@ -54,14 +54,15 @@
        var $help_menus = $('<ul>');
        $.each(help_menus, function(k, v){
          $('<li>').append(
-           $('<a>').attr('href','#').text(v).click(function(e){
-             thisObj._trigger('select',e, {selected:k});
+           $('<a>').attr('href','#').text(v).click(function(e,src){
+             if(src!=='triggered')
+               thisObj._trigger('select',e, {selected:k});
             })).appendTo($help_menus);
        });
        $helpArea.append(
          $('<ul>').addClass('header-nav').append(
            $('<li>').append(
-             $('<a>').attr('href','#').text(menu_help).click(function(evt){ 
+             $('<a>').attr('href','#').text(menu_help).click(function(evt, src){ 
                	$helpArea.find('.header-nav ul').slideToggle('fast'); 
 	        $(this).toggleClass('toggle-on');
                 $('html body').trigger('click','help');
@@ -75,12 +76,24 @@
      
 
        //user area
+       var user_menus = {'preference':menu_user_preferences,'aboutcloud':menu_user_aboutcloud,'logout':menu_user_logout}
+
        var uname =$.eucaData.u_session['account']+'/'+ $.eucaData.u_session['username'];
        var $userArea = this.element.find('#euca-user');
+      
+       var $user_menus = $('<ul>');
+       $.each(user_menus, function(k, v){
+         $('<li>').append(
+           $('<a>').attr('href','#').text(v).click(function(e,src){
+             if(src!=='triggered')
+               thisObj._trigger('select',e, {selected:k});
+            })).appendTo($user_menus);
+       });
+ 
        $userArea.append(
          $('<ul>').addClass('header-nav').append(
            $('<li>').append(
-             $('<a>').attr('href','#').text(uname).click(function(evt){
+             $('<a>').attr('href','#').text(uname).click(function(evt, src){
                $userArea.find('.header-nav ul').slideToggle('fast');
                $(this).toggleClass('toggle-on');
                $('html body').trigger('click', 'user');
@@ -90,17 +103,11 @@
                  $('html body').eucaevent('del_click', 'user');
                return false;
              }),
-             $('<ul>').append(
-               $('<li>').append(
-                 $('<a>').attr('href','#').text(menu_user_preferences).click(function(e) {
-                   thisObj._trigger('select',e, {selected:'preference'});})),
-               $('<li>').append(
-                 $('<a>').attr('href','#').text(menu_user_logout).click(function(e) {
-                   thisObj._trigger('select',e, {selected:'logout'});}))))));
+             $user_menus)));
 
         // event handlers
         var $navigator = $('#euca-navigator');
-        $navigator.click(function (evt){
+        $navigator.click(function (evt, src){
           $('#euca-explorer').slideToggle('fast'); 
           $navigator.toggleClass('toggle-on');
           $('html body').trigger('click','navigator');

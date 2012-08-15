@@ -12,7 +12,7 @@
            // $(evt.target).parent()[0]
             // e.g., src='navigator:storage:volumes', k = 'storage'
           if (!src || src.indexOf(k) == -1)
-            $(v.target).trigger('click');
+            $(v.target).trigger('click', ['triggered']);
         });
 //        console.log('num events: '+Object.keys(thisObj._clicked).length);
       });
