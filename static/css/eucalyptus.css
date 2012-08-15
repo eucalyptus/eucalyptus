@@ -661,81 +661,9 @@ tr.even td.sorting_1 {
   margin-left: -10px;
 }
 
-.actionmenu a:hover {
-  background-color: #e4ebf8;
+.inactive-menu {
+  color: gray;
 }
-
-.actionmenu a {
-  text-decoration: none;
-  padding: 4px 8px 7px;
-  color: #3366CC;
-  outline:none;
-}
-
-.actionmenu ul {
-  list-style: none;
-  margin: 0;
-  padding: 0 0 0 10px;
-}
-
-.actionmenu ul li {
-  padding: 0;
-  float: left;
-}
-
-.actionmenu ul li ul li {
-  padding: 0;
-  float: none;
-  margin: 0 0 0 0px;
-  width: 100%;
-}
-
-.actionmenu ul li ul {
-  position: absolute;
-  margin-top: -1px;
-  display: none;
-  padding: 0px 16px 0px 0;
-}
-
-.activemenu ul {
-  display: block !important;
-}
-
-.activemenu a {
-  background-color: #fff;
-  border-bottom: 0;
-  display: block;
-  height: 29px;
-  padding: 0 8px 0 8px;
-  position:relative;
-  z-index: 1;
-}
-
-.activemenu a:hover {
-  background-color: #fff;
-}
-
-.activemenu ul a:hover {
-  background-color: #e4ebf8;
-}
-
-.activemenu ul a {
-  border: 0;
-  width: 100%;
-}
-
-.arrow {
-  border-color: #3366CC transparent transparent;
-  border-style: solid dashed dashed;
-  margin-left: 5px;
-  position: relative;
-  top: 10px;
-}
-
-.inactive a:hover {
-  background-color: #fff !important;
-}
-
 /* ======= Help page related ===== */
 
 .dialog-help-button,
@@ -858,13 +786,28 @@ tr.even td.sorting_1 {
   background-repeat: no-repeat;
   background-position: center;
 }
-.volume-status-attached {
+.volume-status-in-use {
   background-image: url('../images/red-ball-10x10.png');
   background-repeat: no-repeat;
   background-position: center;
 }
-.volume-status-attaching {
+.volume-status-error {
   background-image: url('../images/black-ball-10x10.png');
+  background-repeat: no-repeat;
+  background-position: center;
+}
+.volume-status-creating {
+  background-image: url('../images/gray-ball-10x10.png');
+  background-repeat: no-repeat;
+  background-position: center;
+}
+.volume-status-deleting {
+  background-image: url('../images/blue-ball-10x10.png');
+  background-repeat: no-repeat;
+  background-position: center;
+}
+.volume-status-deleted {
+  background-image: url('../images/brown-ball-10x10.png');
   background-repeat: no-repeat;
   background-position: center;
 }

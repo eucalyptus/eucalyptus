@@ -39,7 +39,7 @@
         txt_create : keypair_create,
         txt_found : keypair_found,
         menu_text : table_menu_main_action,
-        menu_actions : { delete: [table_menu_delete_action, function (args) { thisObj.deleteAction(args); } ] },
+        menu_actions : { delete: { name: table_menu_delete_action, callback: function(key, opt) { thisObj.deleteAction(thisObj); } } },
         row_click : function (args) { thisObj.handleRowClick(args); },
         menu_click_create : function (args) { thisObj.$addDialog.eucadialog('open')},
         help : {title:keypair_table_help_title, content:$keyHelp}, 
@@ -112,12 +112,9 @@
     },
 
     handleRowClick : function(args) {
-      count = this.tableWrapper.eucatable('countSelectedRows');
-      if ( count == 0 )
-        // disable menu
+      if ( this.tableWrapper.eucatable('countSelectedRows') == 0 )
         this.tableWrapper.eucatable('deactivateMenu');
       else
-        // enable delete menu
         this.tableWrapper.eucatable('activateMenu');
     },
 
@@ -152,7 +149,7 @@
 
     _deleteSelectedKeyPairs : function () {
       var thisObj = this;
-      var rowsToDelete = this.tableWrapper.eucatable('getAllSelectedRows');
+      var rowsToDelete = thisObj._getTableWrapper().eucatable('getAllSelectedRows');
       for ( i = 0; i<rowsToDelete.length; i++ ) {
         var keyName = rowsToDelete[i];
         $.ajax({
@@ -166,7 +163,7 @@
             return function(data, textStatus, jqXHR){
               if ( data.results && data.results == true ) {
                 successNotification(keypair_delete_success + ' ' + keyName);
-                thisObj.tableWrapper.eucatable('refreshTable');
+                thisObj._getTableWrapper().eucatable('refreshTable');
               } else {
                 errorNotification(keypair_delete_error + ' ' + keyName);
               }
@@ -186,9 +183,13 @@
       this._super('close');
     },
 
-    deleteAction : function(rowsToDelete) {
-      //TODO: add hide menu
+    _getTableWrapper : function() {
+      return this.tableWrapper;
+    },
 
+    deleteAction : function(thisObj) {
+      $tableWrapper = thisObj._getTableWrapper();
+      rowsToDelete = $tableWrapper.eucatable('getAllSelectedRows');
       if ( rowsToDelete.length > 0 ) {
         // show delete dialog box
         $deleteNames = this.$delDialog.find("span.delete-names")

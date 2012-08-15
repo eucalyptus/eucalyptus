@@ -18,6 +18,24 @@ function escapeHTML(input) {
   return $('<div/>').text(input).html();
 }
 
+function isFunction(obj) {
+  return obj && {}.toString.call(obj) == '[object Function]';
+}
+
+
+/** Add Array.indexOf to IE **/
+
+if( !Array.prototype.indexOf ) {
+  Array.prototype.indexOf = function(needle) {
+    for(var i = 0; i < this.length; i++) {
+      if(this[i] === needle) {
+        return i;
+      }
+    }
+    return -1;
+  };
+}
+
 function deleteSelectedVolumes() {
   var rowsToDelete = getAllSelectedRows('volumes', 1);
   for ( i = 0; i<rowsToDelete.length; i++ ) {

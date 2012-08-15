@@ -10,23 +10,23 @@
       txt_found : 'resources found',
       menu_text : 'More actions',
       menu_actions : null, // e.g., { delete: ["Delete", function () { dialog.... } ] }
-      context_menu : null, // e.g { build_callback: funcion(args) {}, value_column_inx: index }
+      context_menu : null, // e.g { build_callback: funcion(args) {} }
+      value_column_inx: null, // e.g 8
       help : null // e.g., { delete: ["Delete", function () { dialog.... } ] }
     },
 
     table : null, // jQuery object to the table
-    actionMenu : null,
     help_flipped : false,
 
     _init : function() {
       thisObj = this;
       // add draw call back
-      this.options.dt_arg['fnDrawCallback'] = function( oSettings ) { thisObj.drawCallback(oSettings); };
+      this.options.dt_arg['fnDrawCallback'] = function( oSettings ) { thisObj._drawCallback(oSettings); };
       this.table = this.options.base_table.dataTable(this.options.dt_arg);
       var $header = this._decorateHeader({title:this.options.header_title});
       this._decorateSearchBar({refresh: this.options.search_refresh});
       this._decorateTopBar({txt_create: this.options.txt_create, txt_found : this.options.txt_found});
-      this.actionMenu = this._decorateActionMenu({text: this.options.menu_text, actions: this.options.menu_actions });
+      this._decorateActionMenu({text: this.options.menu_text, actions: this.options.menu_actions });
       this._addActions(this.actionMenu);
       this._setHelp($header); // add page-level help
     },
@@ -73,8 +73,8 @@
       $helpLink.live('click',funcOnClick);
     },
 
-    drawCallback : function(oSettings) {
-      thisObj = this;
+    _drawCallback : function(oSettings) {
+      var thisObj = this;
       $('#table_' + this.options.id + '_count').html(oSettings.fnRecordsDisplay());
       this.element.find('table tbody').find('tr').each(function(index, tr) {
         // add custom td handlers
@@ -100,6 +100,7 @@
           $rowCheckbox.attr('checked', !$rowCheckbox.is(':checked'));
           thisObj._trigger('row_click', this);
         });
+
         if (thisObj.options.context_menu) {
           contextMenuParams = thisObj.options.context_menu;
           rID = 'ri-'+S4()+S4();
@@ -108,7 +109,6 @@
           $.contextMenu({
             selector: '#'+rID,
             build: function(trigger, e) {
-              // get value from thisObj.options.context_menu.value_column_inx
               rowId = $(trigger).attr('id');
               nNotes = thisObj.table.fnGetNodes();
               inx = 0;
@@ -119,12 +119,8 @@
                 }
               };
               var itemsList = contextMenuParams.build_callback.call(
-                      this, thisObj.table.fnGetData(inx, contextMenuParams.value_column_inx));
+                      this, thisObj.table.fnGetData(inx, thisObj.options.value_column_inx));
               return {
-                callback: function(key, options) {
-                  var m = "clicked: " + key;
-                  window.console && console.log(m) || alert(m); 
-                },
                 items: itemsList,
               };
             }
@@ -142,11 +138,15 @@
     },
 
     activateMenu : function() {
-      this.actionMenu.removeClass('inactive');
+      $menu = $('#more-actions-'+this.options.id);
+      $menu.removeClass("inactive-menu");
+      $menu.contextMenu(true);
     },
 
     deactivateMenu : function() {
-      this.actionMenu.addClass('inactive');
+      $menu = $('#more-actions-'+this.options.id);
+      $menu.addClass("inactive-menu");
+      $menu.contextMenu(false);
     },
 
     // args.title = title in the header (e.g.,'Manage key pairs');
@@ -181,7 +181,7 @@
       $tableTop.append(
         $('<div>').addClass('euca-table-add').append(
           $('<a>').attr('id','table-'+this.options.id+'-new').addClass('add-resource').attr('href','#').text(args.txt_create)),
-        $('<div>').addClass('euca-table-action actionmenu inactive'),
+        $('<div>').addClass('euca-table-action actionmenu'),
         $('<div>').addClass('euca-table-size').append(
           $('<span>').attr('id','table_' + this.options.id + '_count'),
           $('<span>').attr('id','tbl_txt_found').addClass('resources-found').html('&nbsp; '+args.txt_found),
@@ -227,31 +227,25 @@
       if (!args.actions)
         return undefined;
 
-      var $actionItems = $('<li>');
-      $.each(args.actions, function (key, value){ // key:action, value: property
-        $('<a>').attr('href','#').attr('id', thisObj.options.id+'-'+key).text (value[0]).click(function() {
-          value[1].call(this, thisObj.getAllSelectedRows());
-        }).appendTo($actionItems);
-      });
-
-      $menuDiv.append(
-        $('<ul>').append(
-          $('<li>').append(
-            $('<a>').attr('href','#').text(args.text).append(
-              $('<span>').addClass('arrow'),
-              $('<ul>').append($actionItems)
-            ))));
-
-      $menuDiv.find('ul > li > a').click( function(){
-        parentUL = $(this).parent().parent();
-        if ( !parentUL.parent().hasClass('inactive') ) {
-          if ( parentUL.hasClass('activemenu') ){
-            parentUL.removeClass('activemenu');
-          } else {
-            parentUL.addClass('activemenu');
-          }
-        }
-      });
+      $menuDiv.append($('<span>').attr('id','more-actions-'+this.options.id).
+                      addClass("inactive-menu").text(args.text));
+      $.contextMenu({
+            selector: '#more-actions-'+this.options.id,
+            trigger: "left",
+            build: function(trigger, e) {
+              var itemsList;
+              if ( isFunction(args.actions) )
+                itemsList = args.actions.call(
+                      this, thisObj.getIndexValueForSelectedRows());
+              else
+                itemsList = args.actions;
+              return {
+                items: itemsList,
+              };
+            }
+          });
+      // TODO: init menu in deactive state
+      $('#more-actions-'+this.options.id).contextMenu(false);
 
       return $menuDiv;
     },
@@ -269,14 +263,14 @@
             if ( cb != null ) cb.checked = true;
           }
          // activate action menu
-          actionMenu.removeClass('inactive');
+          thisObj.activateMenu();
         } else {
           for ( i = 0; i<rows.length; i++ ) {
             cb = rows[i].firstChild.firstChild;
             if ( cb != null ) cb.checked = false;
           }
           // deactivate action menu
-          actionMenu.addClass('inactive');
+          thisObj.deactivateMenu();
         }
       });
       //TODO: add hover to select all
@@ -295,6 +289,21 @@
         cb = rows[i].firstChild.firstChild;
         if ( cb != null && cb.checked == true )
           selectedRows = selectedRows + 1;
+      }
+      return selectedRows;
+    },
+
+    getIndexValueForSelectedRows : function () {
+      var dataTable = this.table;
+      if ( !dataTable )
+        return [];
+      var rows = dataTable.fnGetVisiableTrNodes();
+      var selectedRows = [];
+      for ( i = 0; i<rows.length; i++ ) {
+        cb = rows[i].firstChild.firstChild;
+        if ( cb != null && cb.checked == true ) {
+          selectedRows.push(dataTable.fnGetData(rows[i], this.options.value_column_inx));
+        }
       }
       return selectedRows;
     },

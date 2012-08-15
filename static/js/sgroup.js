@@ -10,7 +10,7 @@
       var $wrapper = $($tmpl.render($.i18n.map));
       this.element.add($wrapper);
       var $base_table = $wrapper.find('table');
-      tableWrapper = $wrapper.eucatable({
+      this.tableWrapper = $wrapper.eucatable({
         id : 'sgroups', // user of this widget should customize these options,
         base_table : $base_table,
         dt_arg : {
@@ -41,10 +41,10 @@
         txt_create : sgroup_create,
         txt_found : sgroup_found,
         menu_text : table_menu_main_action,
-        menu_actions : { delete: [table_menu_delete_action, function (args) { thisObj.deleteAction(args) } ] },
+        menu_actions : { delete: { name: table_menu_delete_action, callback: function(key, opt) { thisObj.deleteAction(thisObj); } } },
         row_click : function (args) { thisObj.handleRowClick(args); },
       });
-      tableWrapper.appendTo(this.element);
+      this.tableWrapper.appendTo(this.element);
 
       // attach action
       $("#sgroups-selector").change( function() { thisObj.reDrawTable() } );
@@ -120,17 +120,14 @@
     },
 */
     reDrawTable : function() {
-      tableWrapper.eucatable('reDrawTable');
+      this.tableWrapper.eucatable('reDrawTable');
     },
 
     handleRowClick : function(args) {
-      count = tableWrapper.eucatable('countSelectedRows');
-      if ( count == 0 )
-        // disable menu
-        tableWrapper.eucatable('deactivateMenu');
+      if ( this.tableWrapper.eucatable('countSelectedRows') == 0 )
+        this.tableWrapper.eucatable('deactivateMenu');
       else
-        // enable delete menu
-        tableWrapper.eucatable('activateMenu');
+        this.tableWrapper.eucatable('activateMenu');
     },
 
 /*
@@ -163,7 +160,8 @@
     },
 */
     _deleteSelectedSecurityGroups : function () {
-      var rowsToDelete = tableWrapper.eucatable('getAllSelectedRows');
+      thisObj = this;
+      var rowsToDelete = thisObj._getTableWrapper().eucatable('getAllSelectedRows');
       for ( i = 0; i<rowsToDelete.length; i++ ) {
         var sgroupName = rowsToDelete[i];
         $.ajax({
@@ -177,7 +175,7 @@
             return function(data, textStatus, jqXHR){
               if ( data.results && data.results == true ) {
                 successNotification(sgroup_delete_success + ' ' + sgroupName);
-                tableWrapper.eucatable('refreshTable');
+                thisObj._getTableWrapper().eucatable('refreshTable');
               } else {
                 errorNotification(sgroup_delete_error + ' ' + sgroupName);
               }
@@ -197,9 +195,13 @@
       this._super('close');
     },
 
-    deleteAction : function(rowsToDelete) {
-      //TODO: add hide menu
+    _getTableWrapper : function() {
+      return this.tableWrapper;
+    },
 
+    deleteAction : function(thisObj) {
+      $tableWrapper = thisObj._getTableWrapper();
+      rowsToDelete = $tableWrapper.eucatable('getAllSelectedRows');
       if ( rowsToDelete.length > 0 ) {
         // show delete dialog box
         $deleteNames = this.delDialog.find("span.delete-names")
