@@ -737,9 +737,10 @@ tr.even td.sorting_1 {
 }
 
 /* ======= Help page related ===== */
-
-.dialog-help-button,
-.table-help-button {
+.help-content {
+  padding: 10px;
+}
+.help-revert-button {
   float: right;
   margin-top: 10px;
 }

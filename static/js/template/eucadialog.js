@@ -87,7 +87,7 @@
             bgColor : '#ffffff',
             content : thisObj.options.help.content,
             onEnd : function(){
-              thisObj.element.find('.dialog-help-button a').click( function(evt) {
+              thisObj.element.find('.help-revert-button a').click( function(evt) {
                   $contentPane.revertFlip();
               });
               // at the end of flip/revertFlip, change the ?/x button
