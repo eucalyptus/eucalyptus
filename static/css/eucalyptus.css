@@ -512,15 +512,19 @@ body {
 }
 
 .button {
+  display: inline-block;
   color: #fff;
   font-family: "Play", Arial, sans-serif;
   font-size: 17px;
   font-weight: normal;
   line-height: 1;
+  text-decoration: none;
 
   padding: 10px 24px;
   border-radius: 5px;
   border: 1px solid rgba(128,128,128,0.6);
+
+
   /* background-image: -webkit-gradient(linear, center top, center bottom, from(#c8df8e), to(#bfbfbf), color-stop(3%, #f7f7f7), color-stop(12%, #f2f2f2), color-stop(90%, #d9d9d9)); */
   background-image: -webkit-linear-gradient(top, #c8df8e, #73a434 49%, #8dc63f 100%);
   background-image: -moz-linear-gradient(top, #c8df8e, #73a434 49%, #8dc63f 100%);
@@ -596,44 +600,68 @@ body {
   font-size: 14px;
 }
 
-#dashboard .instances {
+#dashboard-instance-az {
+  float: left;
+  margin: 20px 0 0 10px; 
+}
+
+#dashboard-instance-img,
+ {
+  float: left;
+  padding: 5px;
+
+  /* background-color: lime; */
+}
+
+.instances {
   margin-bottom: 30px;
 }
 
-#dashboard .storage {
+.storage {
   float: left;
   width: 46%;
-  height: 35%; 
+  min-height: 35%; 
 }
 
-#dashboard .netsec {
+.netsec {
   float: right;
   width: 46%;
-  height: 35%;
+  min-height: 35%;
 }
 
-#dashboard .instances div {
-  float:left;
-  margin: 0 10px;
+.status-running {
+  padding-left: 40px;
+
+  /* background-color: orange; */
 }
 
-#dashboard .storage div {
-  float:left;
-  margin: 0 10px;
+.status-stopped {
+  padding-left: 40px;
+
+  /* background-color: orange; */
 }
   
-#dashboard .netsec div {
+.status-readout {
   float:left;
-  margin: 0 10px;
+  margin-left: 5px;
+  width: 90px;
+  text-align: center;
+
+  /* background-color: greenyellow; */
 }
  
-#dashboard span {
+.status-readout span {
   display: block;
   color: #222;
   font-size: 28px;
-  background-color: pink;
-  text-align: center;
 
+  /* background-color: hotpink; */
+}
+
+#dashboard-instance-launch {
+  padding: 10px;
+  
+  /* background-color: plum; */
 }
 
 
