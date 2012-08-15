@@ -31,6 +31,8 @@
  *
  * ...where the logfile_name argument sets the filename prefix (under
  * the configured logfile directory) for fault logs from this process.
+ * If logfile_name is NULL, tries to determine a filename prefix from
+ * argv[0] (program_invocation_shortname).
  *
  * Strictly speaking, an application does not need to call this
  * initialization function, as log_eucafault() and log_eucafault_v()
@@ -42,8 +44,8 @@
  * initialize_eucafaults() as part of their own initialization.
  *
  * Returns the number of faults successfully loaded into registry. If
- * the registry was previously loaded, returns the number of loaded
- * faults as a negative number.
+ * the registry was previously loaded, returns the number of previously
+ * loaded faults as a negative number.
  */
 extern int initialize_eucafaults (char *);
 

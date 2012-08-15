@@ -52,7 +52,7 @@
  * FIXME: Make some or all of them configuration-file options?
  * FIXME: Make paths relative to some configurable base directory?
  */
-#define FAULTLOGDIR "./faultlog"
+#define FAULTLOGDIR "/var/log/eucalyptus"
 #define DISTRO_FAULTDIR "/usr/share/eucalyptus/faults"
 #define CUSTOM_FAULTDIR "/etc/eucalyptus/faults"
 #define DEFAULT_LOCALIZATION "en_US"
@@ -108,8 +108,11 @@ static char *fault_labels[] = { "condition",
 // This holds the in-memory model of the fault registry.
 static xmlDoc *ef_doc = NULL;
 
-// This holds the full pathname of the fault log;
+// Fault log filehandle.
 static FILE *faultlog = NULL;
+
+// Global equivalent to argv[0]'s basename.
+extern char *program_invocation_short_name;
 
 // FIXME: Thread safety is only half-baked at this point.
 static pthread_mutex_t fault_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -199,8 +202,7 @@ read_eucafault (const char *faultdir, const char *fault_id)
     char fault_file[PATH_MAX];
     static int common_block_exists = 0;
 
-    snprintf (fault_file, PATH_MAX - 1, "%s/%s%s", faultdir, fault_id,
-              XML_SUFFIX);
+    snprintf (fault_file, PATH_MAX, "%s/%s%s", faultdir, fault_id, XML_SUFFIX);
     PRINTF (("Attempting to load file %s\n", fault_file));
 
     if (get_eucafault (fault_id, NULL) != NULL) {
@@ -345,8 +347,11 @@ get_eucafault (const char *id, const xmlDoc *doc)
 
 /*
  * Builds up the fault log path from supplied argument and configured
- * directory prefix. If passed NULL, assembles a best-guess path based
- * upon process argv[0].
+ * directory prefix. If passed NULL, tries to determine process name and
+ * uses that for building up the path.
+ *
+ * Returns TRUE if fault logfile successfully opened, FALSE otherwise
+ * (meaning logging is to stderr).
  */
 
 static boolean
@@ -355,30 +360,34 @@ initialize_faultlog (const char *fileprefix)
     char faultlogpath[PATH_MAX];
     char *fileprefix_i;
 
-    PRINTF (("Initializing faultlog to %s", fileprefix));
-    if (fileprefix != NULL) {
-        // Prune any leading path:
+    if (fileprefix == NULL) {
+        // FIXME: program_infocation_short_name is a GNU'ism and is not
+        // portable--should wrap with an autoconf check.
+        snprintf (faultlogpath, PATH_MAX, "%s/%s-faults.log", FAULTLOGDIR,
+                  program_invocation_short_name);
+    } else {
+        // Prune any leading directores from path.
         fileprefix_i = rindex (fileprefix, '/');
 
         if (fileprefix_i != NULL) {
             fileprefix = fileprefix_i + 1;
         }
-        snprintf (faultlogpath, PATH_MAX - 1, "%s/%s-faults.log", FAULTLOGDIR, fileprefix);
-    } else {
-        faultlog = stdout;
-        return FALSE;
+        snprintf (faultlogpath, PATH_MAX, "%s/%s-faults.log", FAULTLOGDIR,
+                  fileprefix);
     }
+    PRINTF (("Initializing faultlog using %s\n", faultlogpath));
     faultlog = fopen (faultlogpath, "a+");
+
     if (faultlog == NULL) {
         logprintfl (EUCAERROR, "Cannot open fault log file %s: %s\n",
                     faultlogpath, strerror (errno));
-        faultlog = stdout;
+        logprintfl (EUCAERROR, "Logging faults to stderr...\n");
+        faultlog = stderr;
         return FALSE;
     } else {
         return TRUE;
     }
 }
-
 
 /*
  * EXTERNAL ENTRY POINT
@@ -387,8 +396,8 @@ initialize_faultlog (const char *fileprefix)
  * various directories.
  *
  * Returns the number of faults successfully loaded into registry. If
- * the registry was previously loaded, returns the number of loaded
- * faults as a negative number.
+ * the registry was previously loaded, returns the number of previously
+ * loaded faults as a negative number.
  */
 int
 initialize_eucafaults (char *fileprefix)
@@ -405,12 +414,9 @@ initialize_eucafaults (char *fileprefix)
         pthread_mutex_unlock (&fault_mutex);
         return -faults_loaded;
     }
-    if (fileprefix != NULL) {
-        initialize_faultlog (fileprefix);
-    } else {
-        faultlog = stdout;
-    }
+    initialize_faultlog (fileprefix);
     PRINTF (("Initializing fault registry directories.\n"));
+
     if ((locale = getenv (LOCALIZATION_ENV_VAR)) == NULL) {
         logprintfl (EUCAINFO,
                    "$%s not set, using default value of: %s\n",
@@ -420,20 +426,20 @@ initialize_eucafaults (char *fileprefix)
 
     /* Cycle through list of faultdirs in priority order, noting any missing. */
     if (locale != NULL) {
-        snprintf (faultdirs[CUSTOM_LOCALIZED], PATH_MAX - 1, "%s/%s/",
+        snprintf (faultdirs[CUSTOM_LOCALIZED], PATH_MAX, "%s/%s/",
                   CUSTOM_FAULTDIR, locale);
     } else {
         faultdirs[CUSTOM_LOCALIZED][0] = 0;
     }
-    snprintf (faultdirs[CUSTOM_DEFAULT_LOCALIZATION], PATH_MAX - 1, "%s/%s/",
+    snprintf (faultdirs[CUSTOM_DEFAULT_LOCALIZATION], PATH_MAX, "%s/%s/",
               CUSTOM_FAULTDIR, DEFAULT_LOCALIZATION);
     if (locale != NULL) {
-        snprintf (faultdirs[DISTRO_LOCALIZED], PATH_MAX - 1, "%s/%s/",
+        snprintf (faultdirs[DISTRO_LOCALIZED], PATH_MAX, "%s/%s/",
                   DISTRO_FAULTDIR, locale);
     } else {
         faultdirs[DISTRO_LOCALIZED][0] = 0;
     }
-    snprintf (faultdirs[DISTRO_DEFAULT_LOCALIZATION], PATH_MAX - 1, "%s/%s/",
+    snprintf (faultdirs[DISTRO_DEFAULT_LOCALIZATION], PATH_MAX, "%s/%s/",
               DISTRO_FAULTDIR, DEFAULT_LOCALIZATION);
 
     for (int i = 0; i < NUM_FAULTDIR_TYPES; i++) {
@@ -610,10 +616,6 @@ format_eucafault (const char *fault_id, const char_map **map)
                     fault_id);
         return FALSE;
     }
-/*     // FIXME: Add real faultlogs. */
-/*     if (faultlog == NULL) { */
-/*         faultlog = stdout; */
-/*     } */
     // Determine label alignment. (Only needs to be done once.)
     if (!max_label_len) {
         for (int i = 0; fault_labels[i]; i++) {
@@ -813,7 +815,10 @@ main (int argc, char **argv)
             return 1;
         }
     }
-    opt = initialize_eucafaults (argv[0]);
+    // NULL forces initialize_eucafaults()'s call to
+    // initialize_faultlog() to guess at process name for creating
+    // logfile.
+    opt = initialize_eucafaults (NULL);
 
     PRINTF (("initialize_eucafaults() returned %d\n", opt));
 
