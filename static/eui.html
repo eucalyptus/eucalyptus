@@ -2,11 +2,9 @@
 <html>
   <head>
     <title>Eucalyptus</title>
-    <link href="http://fonts.googleapis.com/css?family=Play:400,700" rel="stylesheet">
     <style type="text/css" title="currentStyle">
       @import "lib/jquery.css";
       @import "lib/jquery-table.css";
-      @import "lib/jquery.contextMenu.css";
       @import "lib/jquery-ui-1.9.0-beta1.css";
       @import "css/eucalyptus.css";
     </style>
@@ -18,7 +16,7 @@
     <script type="text/javascript" language="javascript" src="lib/jquery.ui.tabs.min.js"></script> 
     -->
 
-    <!-- TODO: this ui library contains everything. need to slim down later by including only what's used here -->
+    <!-- this ui library contains everything. need to slim down later by including only what's used here -->
     <!--<script type="text/javascript" language="javascript" src="lib/jquery-ui-1.8.21.custom.min.js"></script> -->
     <!-- jquery-ui 1.9.0 beta for inheritance of widgets -->
     <script type="text/javascript" language="javascript" src="lib/jquery-ui-1.9.0-beta1.js"></script>
@@ -26,9 +24,6 @@
     <script type="text/javascript" language="javascript" src="lib/jquery.cookies.js"></script>
     <script type="text/javascript" language="javascript" src="lib/jquery.i18n.properties-min-1.0.9.js"></script>
     <script type="text/javascript" language="javascript" src="lib/jsrender.js"></script>
-    <script type="text/javascript" language="javascript" src="lib/jquery.ui.position.js"></script>
-    <script type="text/javascript" language="javascript" src="lib/jquery.contextMenu.js"></script>
-    <script type="text/javascript" language="javascript" src="lib/jquery.flip.min.js"</script>
 
     <script type="text/javascript" language="javascript" src="js/jquery.generateFile.js"></script>
     <script type="text/javascript" language="javascript" src="js/jQueryExt.js"></script>
@@ -44,7 +39,6 @@
     <script type="text/javascript" language="javascript" src="js/eucawidget.js"></script>
     <script type="text/javascript" language="javascript" src="js/dashboard.js"></script>
     <script type="text/javascript" language="javascript" src="js/keypair.js"></script>
-    <script type="text/javascript" language="javascript" src="js/sgroup.js"></script>
     <script type="text/javascript" language="javascript" src="js/volume.js"></script>
     <script type="text/javascript" language="javascript" src="js/eucaevent.js"></script>
     <script type="text/javascript" language="javascript" src="js/notification.js"></script>
@@ -113,11 +107,11 @@
             </div>
             
             <div class="password-help">
-              <p>{{!>login_pwd_help}} <a href="#"> {{!>login_pwd_link}} </a></p>
+              <p>{{!>login_pwd_help}} <a href="#">{{!>login_pwd_link}}</a>.</p>
             </div>
             
             <div class="button-bar">
-              <input type="submit" name="login" value="{{!>login_btn}}" disabled="disabled" />
+              <input type="submit" name="login" class="button" value="{{!>login_btn}}" disabled="disabled" />
             </div>
 
           </form>        
@@ -187,118 +181,43 @@
       <!-- Keypair table -->
       <script id="keypairTblTmpl" type="text/x-jsrender">
         <div id="keys-wrapper">
-          <div id="keys-table">
-            <table id="keys" class="display">
-              <thead>
-                <tr>
-                  <th>
-                    <input type="checkbox" id="keys-check-all">
-                  </th>
-                  <th>{{!>kp_tbl_hdr_name}}</th>
-                  <th>{{!>kp_tbl_hdr_fingerprint}}</th>
-                </tr>
-               </thead>
-               <tbody>
-                 <tr>
-                   <td colspan="3" class="dataTables_empty">{{!>table_loading}}</td>
-                 </tr>
-              </tbody>
-            </table>
-          </div>
-          <div id="keys-table-help">
-            <div class="table-help-content">
-              {{!: keypair_table_help }}
-            </div>
-            <div class="table-help-button"> 
-              <a href="#"> {{!>page_help_backto_page}} key pair </a>
-            </div>
-          </div>
+        <table id="keys" class="display">
+          <thead>
+            <tr>
+              <th>
+                <input type="checkbox" id="keys-check-all">
+              </th>
+              <th>{{!>kp_tbl_hdr_name}}</th>
+              <th>{{!>kp_tbl_hdr_fingerprint}}</th>
+            </tr>
+           </thead>
+           <tbody>
+              <tr>
+                <td colspan="3" class="dataTables_empty">{{!>table_loading}}</td>
+              </tr>
+          </tbody>
+        </table>
         </div>
       </script>
       <!-- END Keypair table -->
 
       <!-- Keypair dialog template -->
       <script id="keypairAddDlgTmpl" type="text/x-jsrender">
-        <div id="keys-add-dialog-wrapper">
-          <div id="keys-add-dialog" class="add-dialog">
-            <div class="dialog-inner-content">
-              {{!: keypair_dialog_add_text }}
-              <p>
-              <span class="field">{{!>keypair_dialog_add_name}}</span><input type="text" id="key-name" class="required"/><div class="dialog-notifications"></div>
-            </p>
-            </div>
-          </div>
-          <div id="keys-add-dialog-help" class="dialog-help">
-            <div class="dialog-help-content">
-              {{!: keypair_dialog_add_help }}
-            </div>
-            <div class="dialog-help-button"> 
-              <a href="#"> {{!>page_help_backto_page}} key pair </a>
-            </div>
-          </div>
-        </div>
-      </script>
-
-      <script id="keypairDelDlgTmpl" type="text/x-jsrender">
-        <div id="keys-delete-dialog-wrapper">
-          <div id="keys-delete-dialog" class="delete-dialog">
-            <div class="dialog-inner-content">
-            {{!: keypair_dialog_del_text }}
-            <span class="delete-names"></span>
-            </div>
-          </div>
-          <div id="keys-delete-dialog-help" class="dialog-help">
-            <div class="dialog-help-content">
-              {{!: keypair_dialog_delete_help}}
-            </div>
-             <div class="dialog-help-button"> 
-              <a href="#"> {{!>page_help_backto_page}} key pair </a>
-            </div>
-          </div> 
-      </script>
-      <!-- END Keypair dialog template -->
-
-      <!-- Secruity Group table -->
-      <script id="sgroupTblTmpl" type="text/x-jsrender">
-        <div id="sgroups-wrapper">
-        <table id="sgroups" class="display">
-          <thead>
-            <tr>
-              <th>
-                <input type="checkbox" id="sgroups-check-all">
-              </th>
-              <th>{{!>sg_tbl_hdr_name}}</th>
-              <th>{{!>sg_tbl_hdr_description}}</th>
-              <th>{{!>sg_tbl_hdr_rules}}</th>
-            </tr>
-           </thead>
-           <tbody>
-              <tr>
-                <td colspan="8" class="dataTables_empty">{{!>table_loading}}</td>
-              </tr>
-          </tbody>
-        </table>
-        </div>
-      </script>
-      <!-- END Security Group table -->
-
-      <!-- Security Group dialog template -->
-      <script id="sgroupAddDlgTmpl" type="text/x-jsrender">
-        <div id="sgroups-add-dialog" class="add-dialog">
-          {{!: sgroup_dialog_add_text }}
+        <div id="keys-add-dialog" class="add-dialog">
+          {{!: keypair_dialog_add_text }}
           <p>
-            <span class="field">{{!>sgroup_dialog_add_name}}</span><input type="text" id="sgroup-name" class="required"/><div class="dialog-notifications"></div>
+            <span class="field">{{!>keypair_dialog_add_name}}</span><input type="text" id="key-name" class="required"/><div class="dialog-notifications"></div>
           </p>
         </div>
       </script>
 
-      <script id="sgroupDelDlgTmpl" type="text/x-jsrender">
-        <div id="sgroups-delete-dialog" class="delete-dialog">
-          {{!: sgroup_dialog_del_text }}
+      <script id="keypairDelDlgTmpl" type="text/x-jsrender">
+        <div id="keys-delete-dialog" class="delete-dialog">
+          {{!: keypair_dialog_del_text }}
           <span class="delete-names"></span>
         </div>
       </script>
-      <!-- END Security Group dialog template -->
+      <!-- END Keypair dialog template -->
 
       <!-- Volume table -->
       <script id="volumeTblTmpl" type="text/x-jsrender">
