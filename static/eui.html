@@ -172,26 +172,32 @@
                <option value="all">{{!>dashboard_az_all}}</option>
              </select>
             </div>
-            <div id="dashboard-instance-running">
-              <span></span> {{!>dashboard_instance_running}}
+            <div id="dashboard-instance-running" class="status-running clearfix">
+              <div class="status-readout">
+                <span></span> {{!>dashboard_instance_running}}
+              </div>
             </div>
-            <div id="dashboard-instance-stopped">
+            <div id="dashboard-instance-stopped" class="status-stopped clearfix">
+              <div class="status-readout">
               <span></span> {{!>dashboard_instance_stopped}}
+              </div>
             </div>
-            <div id="dashboard-instance-launch"> INSTANCE LAUNCH BUTTON </div> 
+            <div id="dashboard-instance-launch" class="clearfix">
+              <a href="#" class="button">Launch New Instance</a>
+            </div> 
           </div>
 
           <div class="storage inner-box clearfix">
             <div id="dashboard-storage-img">
               <img src="images/dashboard_storage.png">
             </div>
-            <div id="dashboard-storage-volume">
+            <div id="dashboard-storage-volume" class="status-readout">
               <span></span> {{!>dashboard_volumes}}
             </div>
-            <div id="dashboard-storage-snapshot">
+            <div id="dashboard-storage-snapshot" class="status-readout">
               <span></span> {{!>dashboard_snapshots}}
             </div>
-            <div id="dashboard-storage-buckets">
+            <div id="dashboard-storage-buckets" class="status-readout">
               <span></span> {{!>dashboard_buckets}}
             </div> 
           </div>
@@ -200,13 +206,13 @@
             <div id="dashboard-netsec-img">
               <img src="images/dashboard_netsec.png">
             </div>
-            <div id="dashboard-netsec-sgroup">
+            <div id="dashboard-netsec-sgroup" class="status-readout">
               <span></span> {{!>dashboard_sgroup}}
             </div>
-            <div id="dashboard-netsec-eip">
+            <div id="dashboard-netsec-eip" class="status-readout">
               <span></span> {{!>dashboard_eip}}
             </div>
-            <div id="dashboard-netsec-keypair">
+            <div id="dashboard-netsec-keypair" class="status-readout">
               <span></span> {{!>dashboard_keypair}}
             </div>
           </div>
