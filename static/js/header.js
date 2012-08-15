@@ -1,3 +1,30 @@
+/*************************************************************************
+ * Copyright 2011-2012 Eucalyptus Systems, Inc.
+ *
+ * Redistribution and use of this software in source and binary forms,
+ * with or without modification, are permitted provided that the following
+ * conditions are met:
+ *
+ *   Redistributions of source code must retain the above copyright notice,
+ *   this list of conditions and the following disclaimer.
+ *
+ *   Redistributions in binary form must reproduce the above copyright
+ *   notice, this list of conditions and the following disclaimer in the
+ *   documentation and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ ************************************************************************/
+
 (function($, eucalyptus) {
   $.widget('eucalyptus.header', {
     options : {
@@ -54,14 +81,15 @@
        var $help_menus = $('<ul>');
        $.each(help_menus, function(k, v){
          $('<li>').append(
-           $('<a>').attr('href','#').text(v).click(function(e){
-             thisObj._trigger('select',e, {selected:k});
+           $('<a>').attr('href','#').text(v).click(function(e,src){
+             if(src!=='triggered')
+               thisObj._trigger('select',e, {selected:k});
             })).appendTo($help_menus);
        });
        $helpArea.append(
          $('<ul>').addClass('header-nav').append(
            $('<li>').append(
-             $('<a>').attr('href','#').text(menu_help).click(function(evt){ 
+             $('<a>').attr('href','#').text(menu_help).click(function(evt, src){ 
                	$helpArea.find('.header-nav ul').slideToggle('fast'); 
 	        $(this).toggleClass('toggle-on');
                 $('html body').trigger('click','help');
@@ -75,12 +103,24 @@
      
 
        //user area
+       var user_menus = {'preference':menu_user_preferences,'aboutcloud':menu_user_aboutcloud,'logout':menu_user_logout}
+
        var uname =$.eucaData.u_session['account']+'/'+ $.eucaData.u_session['username'];
        var $userArea = this.element.find('#euca-user');
+      
+       var $user_menus = $('<ul>');
+       $.each(user_menus, function(k, v){
+         $('<li>').append(
+           $('<a>').attr('href','#').text(v).click(function(e,src){
+             if(src!=='triggered')
+               thisObj._trigger('select',e, {selected:k});
+            })).appendTo($user_menus);
+       });
+ 
        $userArea.append(
          $('<ul>').addClass('header-nav').append(
            $('<li>').append(
-             $('<a>').attr('href','#').text(uname).click(function(evt){
+             $('<a>').attr('href','#').text(uname).click(function(evt, src){
                $userArea.find('.header-nav ul').slideToggle('fast');
                $(this).toggleClass('toggle-on');
                $('html body').trigger('click', 'user');
@@ -90,17 +130,11 @@
                  $('html body').eucaevent('del_click', 'user');
                return false;
              }),
-             $('<ul>').append(
-               $('<li>').append(
-                 $('<a>').attr('href','#').text(menu_user_preferences).click(function(e) {
-                   thisObj._trigger('select',e, {selected:'preference'});})),
-               $('<li>').append(
-                 $('<a>').attr('href','#').text(menu_user_logout).click(function(e) {
-                   thisObj._trigger('select',e, {selected:'logout'});}))))));
+             $user_menus)));
 
         // event handlers
         var $navigator = $('#euca-navigator');
-        $navigator.click(function (evt){
+        $navigator.click(function (evt, src){
           $('#euca-explorer').slideToggle('fast'); 
           $navigator.toggleClass('toggle-on');
           $('html body').trigger('click','navigator');

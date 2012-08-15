@@ -19,6 +19,30 @@ Green links: #73a434
 
 */
 
+/* ======= Settings for PlayRegular and PlayBold fonts ======= */
+
+@font-face {
+  font-family: 'PlayRegular';
+  src: url('../fonts/play/Play-Regular-webfont.eot');
+  src: url('../fonts/play/Play-Regular-webfont.eot?#iefix') format('embedded-opentype'),
+       url('../fonts/play/Play-Regular-webfont.woff') format('woff'),
+       url('../fonts/play/Play-Regular-webfont.ttf') format('truetype'),
+       url('../fonts/play/Play-Regular-webfont.svg#PlayRegular') format('svg');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'PlayBold';
+  src: url('../fonts/play/Play-Bold-webfont.eot');
+  src: url('../fonts/play/Play-Bold-webfont.eot?#iefix') format('embedded-opentype'),
+       url('../fonts/play/Play-Bold-webfont.woff') format('woff'),
+       url('../fonts/play/Play-Bold-webfont.ttf') format('truetype'),
+       url('../fonts/play/Play-Bold-webfont.svg#PlayBold') format('svg');
+  font-weight: normal;
+  font-style: normal;
+}
+
 
 /* ======== Base HTML styles ======= */
 
@@ -326,7 +350,7 @@ body {
   background-position: center -75px;
 }
 
-.lnk-images {
+.lnk-image {
   background-position: center -150px;
 }
 .resources-nav li:hover a.lnk-images,
@@ -334,7 +358,7 @@ body {
   background-position: center -225px;
 }
 
-.lnk-instances {
+.lnk-instance {
   background-position: center -300px;
 }
 .resources-nav li:hover a.lnk-instances,
@@ -421,11 +445,11 @@ body {
 
 #login {
   margin: 95px auto 0;
-  width: 650px;
+  width: 660px;
 }
 
 #login form {
-  margin: 0 40px 0 20px;
+  margin: 0 35px 30px 20px;
 }
 
 .form-row {
@@ -434,23 +458,43 @@ body {
 
 .form-row label {
   display: inline-block;
-  width: 130px;
-  font-family: "PlayBold", Arial, sans-serif;
+  width: 90px;
+  font-family: "Play", Arial, sans-serif;
   font-size: 13px;
-  font-weight: normal;
+  font-weight: bold;
   text-align: right;
-  margin-right: 15px;
+  margin-right: 13px;
   color: #02405f;
 }
 
-.form-row input {
-  width: 265px;
+.input-field {
+  background-color: #f3f6f9;
+  border-radius: 4px;
+  border: 1px solid #9eb1c3;
+  color: #666;
+  font-size: 12px;
+  padding: 6px;
+  width: 255px;
+  outline: none;
+
+  -moz-box-shadow: inset 0 0 3px #a8b9c8;
+  -webkit-box-shadow: inset 0 0 3px #a8b9c8;
+  box-shadow: inset 0 0 3px #a8b9c8;
 }
+
+.input-field:focus {
+  border-color: #6699cc;
+
+  -moz-box-shadow: inset 0 0 4px #6699cc;
+  -webkit-box-shadow: inset 0 0 4px #6699cc;
+  box-shadow: inset 0 0 4px #6699cc;
+} 
 
 .password-help {
   color: #666;
   font-size: 11px;
-  margin: 20px 0 20px 145px;
+  margin: 20px 225px 25px 0;
+  text-align: right;
 }
 
 .password-help a {
@@ -465,6 +509,28 @@ body {
 
 .button-bar {
   text-align: right;
+}
+
+.button {
+  color: #fff;
+  font-family: "Play", Arial, sans-serif;
+  font-size: 17px;
+  font-weight: normal;
+  line-height: 1;
+
+  padding: 10px 24px;
+  border-radius: 5px;
+  border: 1px solid rgba(128,128,128,0.6);
+  /* background-image: -webkit-gradient(linear, center top, center bottom, from(#c8df8e), to(#bfbfbf), color-stop(3%, #f7f7f7), color-stop(12%, #f2f2f2), color-stop(90%, #d9d9d9)); */
+  background-image: -webkit-linear-gradient(top, #c8df8e, #73a434 49%, #8dc63f 100%);
+  background-image: -moz-linear-gradient(top, #c8df8e, #73a434 49%, #8dc63f 100%);
+  background-image: -o-linear-gradient(top, #c8df8e, #73a434 49%, #8dc63f 100%);
+  background-image: -ms-linear-gradient(top, #c8df8e, #73a434 49%, #8dc63f 100%);
+  background-image: linear-gradient(to bottom, #c8df8e, #73a434 49%, #8dc63f 100%);
+
+  -webkit-box-shadow: 0 0px 3px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.30);
+  -moz-box-shadow: 0 0px 3px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.30);
+  box-shadow: 0 0px 3px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.30);
 }
 
 
@@ -559,6 +625,15 @@ body {
 #dashboard .netsec div {
   float:left;
   margin: 0 10px;
+}
+ 
+#dashboard span {
+  display: block;
+  color: #222;
+  font-size: 28px;
+  background-color: pink;
+  text-align: center;
+
 }
 
 
@@ -737,9 +812,10 @@ tr.even td.sorting_1 {
 }
 
 /* ======= Help page related ===== */
-
-.dialog-help-button,
-.table-help-button {
+.help-content {
+  padding: 10px;
+}
+.help-revert-button {
   float: right;
   margin-top: 10px;
 }

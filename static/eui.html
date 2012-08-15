@@ -1,12 +1,37 @@
+<!-- 
+  Copyright 2011-2012 Eucalyptus Systems, Inc.
+ 
+  Redistribution and use of this software in source and binary forms,
+  with or without modification, are permitted provided that the following
+  conditions are met:
+ 
+    Redistributions of source code must retain the above copyright notice,
+    this list of conditions and the following disclaimer.
+ 
+    Redistributions in binary form must reproduce the above copyright
+    notice, this list of conditions and the following disclaimer in the
+    documentation and/or other materials provided with the distribution.
+ 
+  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+  OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+-->
+
 <!DOCTYPE html>
 <html>
   <head>
     <title>Eucalyptus</title>
-    <link href="http://fonts.googleapis.com/css?family=Play:400,700" rel="stylesheet">
     <style type="text/css" title="currentStyle">
       @import "lib/jquery.css";
       @import "lib/jquery-table.css";
-      @import "lib/jquery.contextMenu.css";
       @import "lib/jquery-ui-1.9.0-beta1.css";
       @import "css/eucalyptus.css";
     </style>
@@ -18,7 +43,7 @@
     <script type="text/javascript" language="javascript" src="lib/jquery.ui.tabs.min.js"></script> 
     -->
 
-    <!-- TODO: this ui library contains everything. need to slim down later by including only what's used here -->
+    <!-- this ui library contains everything. need to slim down later by including only what's used here -->
     <!--<script type="text/javascript" language="javascript" src="lib/jquery-ui-1.8.21.custom.min.js"></script> -->
     <!-- jquery-ui 1.9.0 beta for inheritance of widgets -->
     <script type="text/javascript" language="javascript" src="lib/jquery-ui-1.9.0-beta1.js"></script>
@@ -29,9 +54,11 @@
     <script type="text/javascript" language="javascript" src="lib/jquery.ui.position.js"></script>
     <script type="text/javascript" language="javascript" src="lib/jquery.contextMenu.js"></script>
     <script type="text/javascript" language="javascript" src="lib/jquery.flip.min.js"</script>
-
     <script type="text/javascript" language="javascript" src="js/jquery.generateFile.js"></script>
     <script type="text/javascript" language="javascript" src="js/jQueryExt.js"></script>
+
+
+    <!-- Eucalyptus UI javascripts -->
     <script type="text/javascript" language="javascript" src="js/login.js"></script>
     <script type="text/javascript" language="javascript" src="js/main.js"></script>
     <script type="text/javascript" language="javascript" src="js/eucalyptus.js"></script>
@@ -44,10 +71,11 @@
     <script type="text/javascript" language="javascript" src="js/eucawidget.js"></script>
     <script type="text/javascript" language="javascript" src="js/dashboard.js"></script>
     <script type="text/javascript" language="javascript" src="js/keypair.js"></script>
-    <script type="text/javascript" language="javascript" src="js/sgroup.js"></script>
     <script type="text/javascript" language="javascript" src="js/volume.js"></script>
+    <script type="text/javascript" language="javascript" src="js/sgroup.js"></script>
     <script type="text/javascript" language="javascript" src="js/eucaevent.js"></script>
     <script type="text/javascript" language="javascript" src="js/notification.js"></script>
+    <script type="text/javascript" language="javascript" src="js/help.js"></script>
     <script type="text/javascript" language="javascript" src="js/template/eucatable.js"></script>
     <script type="text/javascript" language="javascript" src="js/template/eucadialog.js"></script>
   </head> 
@@ -99,25 +127,25 @@
             
             <div class="form-row">
               <label for="account">{{!>login_acct}}</label>
-              <input type="text" id="account" value=""/>
+              <input type="text" id="account" class="input-field" value=""/>
             </div>
             
             <div class="form-row">
               <label for="username">{{!>login_uname}}</label>
-              <input type="text" id="username" value="admin"/>
+              <input type="text" id="username" class="input-field" value="admin"/>
             </div>
             
             <div class="form-row">
               <label for="password">{{!>login_pwd}}</label>
-              <input type="password" id="password" value=""/>
+              <input type="password" id="password" class="input-field" value=""/>
             </div>
             
             <div class="password-help">
-              <p>{{!>login_pwd_help}} <a href="#"> {{!>login_pwd_link}} </a></p>
+              <p>{{!>login_pwd_help}} <a href="#">{{!>login_pwd_link}}</a>.</p>
             </div>
             
             <div class="button-bar">
-              <input type="submit" name="login" value="{{!>login_btn}}" disabled="disabled" />
+              <input type="submit" name="login" class="button" value="{{!>login_btn}}" disabled="disabled" />
             </div>
 
           </form>        
@@ -133,54 +161,57 @@
       <!-- Dashboard template -->
       <script id="dashboardTmpl" type="text/x-jsrender">
       <div id="dashboard" class="content-box clearfix">
-        <div class="instances inner-box clearfix">
-          <div id="dashboard-instance-img">
-            <img src="images/dashboard_instance.png">
+        <div class="box-header"> <span> {{!>dashboard_title}} </span> </div>
+        <div id="dashboard-content">
+          <div class="instances inner-box clearfix">
+            <div id="dashboard-instance-img">
+              <img src="images/dashboard_instance.png">
+            </div>
+            <div id="dashboard-instance-az">
+              <select>
+               <option value="all">{{!>dashboard_az_all}}</option>
+             </select>
+            </div>
+            <div id="dashboard-instance-running">
+              <span></span> {{!>dashboard_instance_running}}
+            </div>
+            <div id="dashboard-instance-stopped">
+              <span></span> {{!>dashboard_instance_stopped}}
+            </div>
+            <div id="dashboard-instance-launch"> INSTANCE LAUNCH BUTTON </div> 
           </div>
-          <div id="dashboard-instance-az">
-            <select>
-             <option value="all">{{!>dashboard_az_all}}</option>
-           </select>
-          </div>
-          <div id="dashboard-instance-running">
-            <span></span> {{!>dashboard_instance_running}}
-          </div>
-          <div id="dashboard-instance-stopped">
-            <span></span> {{!>dashboard_instance_stopped}}
-          </div>
-          <div id="dashboard-instance-launch"> INSTANCE LAUNCH BUTTON </div> 
-        </div>
 
-        <div class="storage inner-box clearfix">
-          <div id="dashboard-storage-img">
-            <img src="images/dashboard_storage.png">
+          <div class="storage inner-box clearfix">
+            <div id="dashboard-storage-img">
+              <img src="images/dashboard_storage.png">
+            </div>
+            <div id="dashboard-storage-volume">
+              <span></span> {{!>dashboard_volumes}}
+            </div>
+            <div id="dashboard-storage-snapshot">
+              <span></span> {{!>dashboard_snapshots}}
+            </div>
+            <div id="dashboard-storage-buckets">
+              <span></span> {{!>dashboard_buckets}}
+            </div> 
           </div>
-          <div id="dashboard-storage-volume">
-            <span></span> {{!>dashboard_volumes}}
-          </div>
-          <div id="dashboard-storage-snapshot">
-            <span></span> {{!>dashboard_snapshots}}
-          </div>
-          <div id="dashboard-storage-buckets">
-            <span></span> {{!>dashboard_buckets}}
-          </div> 
-        </div>
 
-        <div class="netsec inner-box clearfix">
-          <div id="dashboard-netsec-img">
-            <img src="images/dashboard_netsec.png">
-          </div>
-          <div id="dashboard-netsec-sgroup">
-            <span></span> {{!>dashboard_sgroup}}
-          </div>
-          <div id="dashboard-netsec-eip">
-            <span></span> {{!>dashboard_eip}}
-          </div>
-          <div id="dashboard-netsec-keypair">
-            <span></span> {{!>dashboard_keypair}}
+          <div class="netsec inner-box clearfix">
+            <div id="dashboard-netsec-img">
+              <img src="images/dashboard_netsec.png">
+            </div>
+            <div id="dashboard-netsec-sgroup">
+              <span></span> {{!>dashboard_sgroup}}
+            </div>
+            <div id="dashboard-netsec-eip">
+              <span></span> {{!>dashboard_eip}}
+            </div>
+            <div id="dashboard-netsec-keypair">
+              <span></span> {{!>dashboard_keypair}}
+            </div>
           </div>
         </div>
-      </div>
+       </div>
       </script>
       <!-- END Dashboard template -->
 
@@ -205,12 +236,12 @@
               </tbody>
             </table>
           </div>
-          <div id="keys-table-help">
-            <div class="table-help-content">
-              {{!: keypair_table_help }}
+          <div id="keypair-help">
+            <div class="help-content">
+              {{!: landing_content }}
             </div>
-            <div class="table-help-button"> 
-              <a href="#"> {{!>page_help_backto_page}} key pair </a>
+            <div class="help-revert-button"> 
+              <a href="#">{{!>revert_button}}</a>
             </div>
           </div>
         </div>
@@ -230,10 +261,10 @@
           </div>
           <div id="keys-add-dialog-help" class="dialog-help">
             <div class="dialog-help-content">
-              {{!: keypair_dialog_add_help }}
+              {{!: dialog_add_content }}
             </div>
-            <div class="dialog-help-button"> 
-              <a href="#"> {{!>page_help_backto_page}} key pair </a>
+            <div class="help-revert-button"> 
+              <a href="#"> {{!>revert_button}}</a>
             </div>
           </div>
         </div>
@@ -249,10 +280,10 @@
           </div>
           <div id="keys-delete-dialog-help" class="dialog-help">
             <div class="dialog-help-content">
-              {{!: keypair_dialog_delete_help}}
+              {{!: dialog_delete_content}}
             </div>
-             <div class="dialog-help-button"> 
-              <a href="#"> {{!>page_help_backto_page}} key pair </a>
+             <div class="help-revert-button"> 
+              <a href="#"> {{!>revert_button}}</a>
             </div>
           </div> 
       </script>
@@ -265,16 +296,15 @@
           <thead>
             <tr>
               <th>
-                <input type="checkbox" id="sgroups-check-all">
+                <input type="checkbox" id="keys-check-all">
               </th>
-              <th>{{!>sg_tbl_hdr_name}}</th>
-              <th>{{!>sg_tbl_hdr_description}}</th>
-              <th>{{!>sg_tbl_hdr_rules}}</th>
+              <th>{{!>kp_tbl_hdr_name}}</th>
+              <th>{{!>kp_tbl_hdr_fingerprint}}</th>
             </tr>
            </thead>
            <tbody>
               <tr>
-                <td colspan="8" class="dataTables_empty">{{!>table_loading}}</td>
+                <td colspan="3" class="dataTables_empty">{{!>table_loading}}</td>
               </tr>
           </tbody>
         </table>
@@ -304,27 +334,37 @@
       <!-- Volume table -->
       <script id="volumeTblTmpl" type="text/x-jsrender">
         <div id="volumes-wrapper">
-        <table id="volumes" class="display">
-          <thead>
-            <tr>
-              <th>
-                <input type="checkbox" id="volumes-check-all">
-              </th>
-              <th>{{!>vl_tbl_hdr_id}}</th>
-              <th>{{!>vl_tbl_hdr_status}}</th>
-              <th>{{!>vl_tbl_hdr_size}}</th>
-              <th>{{!>vl_tbl_hdr_attached_to}}</th>
-              <th>{{!>vl_tbl_hdr_snapshot_id}}</th>
-              <th>{{!>vl_tbl_hdr_availability_zone}}</th>
-              <th>{{!>vl_tbl_hdr_creation_time}}</th>
-            </tr>
-           </thead>
-           <tbody>
-              <tr>
-                <td colspan="8" class="dataTables_empty">{{!>table_loading}}</td>
-              </tr>
-          </tbody>
-        </table>
+          <div id="volumes-table">
+            <table id="volumes" class="display">
+              <thead>
+                <tr>
+                  <th>
+                    <input type="checkbox" id="volumes-check-all">
+                  </th>
+                  <th>{{!>vl_tbl_hdr_id}}</th>
+                  <th>{{!>vl_tbl_hdr_status}}</th>
+                  <th>{{!>vl_tbl_hdr_size}}</th>
+                  <th>{{!>vl_tbl_hdr_attached_to}}</th>
+                  <th>{{!>vl_tbl_hdr_snapshot_id}}</th>
+                  <th>{{!>vl_tbl_hdr_availability_zone}}</th>
+                  <th>{{!>vl_tbl_hdr_creation_time}}</th>
+                </tr>
+               </thead>
+               <tbody>
+                 <tr>
+                   <td colspan="8" class="dataTables_empty">{{!>table_loading}}</td>
+                 </tr>
+              </tbody>
+            </table>
+          </div>
+          <div id="volume-help">
+            <div class="help-content">
+              {{!: landing_content }}
+            </div>
+            <div class="help-revert-button"> 
+              <a href="#">{{!>revert_button}}</a>
+            </div>
+          </div>
         </div>
       </script>
       <!-- END Volume table -->
@@ -340,9 +380,21 @@
       </script>
 
       <script id="volumeDelDlgTmpl" type="text/x-jsrender">
-        <div id="volumes-delete-dialog" class="delete-dialog">
-          {{!: volume_dialog_del_text }}
-          <span class="delete-names"></span>
+        <div id="volumes-delete-dialog-wrapper">
+          <div id="volumes-delete-dialog" class="delete-dialog">
+            <div class="dialog-inner-content">
+              {{!: volume_dialog_del_text }}
+              <span class="delete-names"></span>
+            </div>
+          </div>
+          <div id="volumes-delete-dialog-help" class="dialog-help">
+            <div class="dialog-help-content">
+              {{!: dialog_delete_content}}
+            </div>
+            <div class="help-revert-button"> 
+              <a href="#"> {{!>revert_button}}</a>
+            </div>
+          </div>
         </div>
       </script>
       <!-- END Volume dialog template -->
