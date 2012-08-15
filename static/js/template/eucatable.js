@@ -13,11 +13,8 @@
       context_menu : null, // e.g { build_callback: funcion(args) {}, value_column_inx: index }
       help : null // e.g., { delete: ["Delete", function () { dialog.... } ] }
     },
-
     table : null, // jQuery object to the table
     actionMenu : null,
-    help_flipped : false,
-
     _init : function() {
       thisObj = this;
       // add draw call back
@@ -28,49 +25,12 @@
       this._decorateTopBar({txt_create: this.options.txt_create, txt_found : this.options.txt_found});
       this.actionMenu = this._decorateActionMenu({text: this.options.menu_text, actions: this.options.menu_actions });
       this._addActions(this.actionMenu);
-      this._setHelp($header); // add page-level help
     },
 
     _create : function() {
     },
 
     _destroy : function() {
-    },
-
-    _setHelp : function($header) {
-      var thisObj = this;
-      var $helpLink = $header.find('.help-link a');
-      var $helpHeader = $header.clone();
-      $helpHeader.find('.help-link').remove();
-      var funcOnClick = function(evt){
-        if(!thisObj.help_flipped){
-            var $helpWrapper = $('<div>').addClass('table-help');
-            $helpWrapper.append($helpHeader,thisObj.options.help.content);
-            thisObj.element.flip({
-              direction : 'lr',
-              speed : 300,
-              color : '#ffffff',
-              bgColor : '#ffffff',
-              content : $helpWrapper,
-              onEnd : function() {
-                thisObj.element.find('.table-help-button a').click( function(evt) {
-                  thisObj.element.revertFlip();
-                }); 
-                // at the end of flip/revertFlip, change the ?/x button
-                if(!thisObj.help_flipped){
-                  if(thisObj.options.help.title)
-                    thisObj.element.find('.euca-table-header span').text(thisObj.options.help.title);
-                  thisObj.help_flipped =true;
-                }else{
-                  thisObj.help_flipped = false;
-                }
-              }
-            });             
-          }else{
-            ;
-        }
-      }
-      $helpLink.live('click',funcOnClick);
     },
 
     drawCallback : function(oSettings) {
@@ -157,7 +117,9 @@
       $header.append(
         $('<span>').text(args.title).append(
           $('<div>').addClass('help-link').append(
-            $('<a>').attr('href','#').text('?'))));
+            $('<a>').attr('href','#').text('?').click( function(evt){
+              thisObj._trigger('help_click', evt);
+            }))));
       return $header;
     },
 
@@ -166,7 +128,7 @@
       var thisObj = this; // ref to widget instance
       var $searchBar = this.element.find('#'+this.options.id+'_filter');
       $searchBar.append(
-        $('<a>').addClass('table-refresh').attr('href','#').text(args.refresh).live('click',function(){
+        $('<a>').addClass('table-refresh').attr('href','#').text(args.refresh).click(function(){
           thisObj.refreshTable();
         }));
       return $searchBar;
@@ -194,7 +156,7 @@
           '&nbsp;|&nbsp;',
           $('<span>').addClass('show').text('all')));
 
-      $tableTop.find('span.show').live('click',function () {
+      $tableTop.find('span.show').click(function () {
         $(this).parent().children('span').each( function() {
           $(this).removeClass('selected');
         });
@@ -208,7 +170,7 @@
       });
 
       // add action to create new
-      this.element.find('#table-' + this.options.id + '-new').live('click',function() {
+      this.element.find('#table-' + this.options.id + '-new').click(function() {
         thisObj._trigger('menu_click_create'); // users of the table should listen to
       });
       return $tableTop;

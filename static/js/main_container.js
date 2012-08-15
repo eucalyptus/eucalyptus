@@ -53,6 +53,14 @@
           $('html body').find(DOM_BINDING['notification']).notification('error', 'internal error', selected+' not yet implemented', 1);
       }
       this._curSelected = selected;
+    },
+
+    clearSelected : function (){
+      var $curInstance = this.element.data(this._curSelected);
+      if($curInstance !== undefined){
+        $curInstance.close();
+      }
+      this._curSelected = null;
     }
   });
 })(jQuery,

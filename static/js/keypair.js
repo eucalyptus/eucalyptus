@@ -11,8 +11,8 @@
       var $wrapper = $($tmpl.render($.i18n.map));
       var $keyTable = $wrapper.children().first();
       var $keyHelp = $wrapper.children().last();
- 
       this.element.add($keyTable);
+
       var $base_table = $keyTable.find('table');
       this.tableWrapper = $keyTable.eucatable({
         id : 'keys', // user of this widget should customize these options,
@@ -42,7 +42,11 @@
         menu_actions : { delete: [table_menu_delete_action, function (args) { thisObj.deleteAction(args); } ] },
         row_click : function (args) { thisObj.handleRowClick(args); },
         menu_click_create : function (args) { thisObj.$addDialog.eucadialog('open')},
-        help : {title:keypair_table_help_title, content:$keyHelp}, 
+        help_click : function(evt) { 
+          var $helpHeader = $('<div>').addClass('euca-table-header').append(
+                              $('<span>').text(keypair_table_help_title));
+          thisObj._flipToHelp(evt,$helpHeader, $keyHelp);
+        },
       });
       this.tableWrapper.appendTo(this.element);
 
