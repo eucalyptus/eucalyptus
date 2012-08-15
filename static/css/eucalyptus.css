@@ -467,7 +467,7 @@ body {
   color: #02405f;
 }
 
-.form-row input {
+.input-field {
   background-color: #f3f6f9;
   border-radius: 4px;
   border: 1px solid #9eb1c3;
@@ -475,7 +475,20 @@ body {
   font-size: 12px;
   padding: 6px;
   width: 255px;
+  outline: none;
+
+  -moz-box-shadow: inset 0 0 3px #a8b9c8;
+  -webkit-box-shadow: inset 0 0 3px #a8b9c8;
+  box-shadow: inset 0 0 3px #a8b9c8;
 }
+
+.input-field:focus {
+  border-color: #6699cc;
+
+  -moz-box-shadow: inset 0 0 4px #6699cc;
+  -webkit-box-shadow: inset 0 0 4px #6699cc;
+  box-shadow: inset 0 0 4px #6699cc;
+} 
 
 .password-help {
   color: #666;
@@ -612,6 +625,15 @@ body {
 #dashboard .netsec div {
   float:left;
   margin: 0 10px;
+}
+ 
+#dashboard span {
+  display: block;
+  color: #222;
+  font-size: 28px;
+  background-color: pink;
+  text-align: center;
+
 }
 
 
