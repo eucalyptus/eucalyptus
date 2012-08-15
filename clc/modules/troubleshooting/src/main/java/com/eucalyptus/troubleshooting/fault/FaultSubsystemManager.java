@@ -61,7 +61,9 @@
  ************************************************************************/
 package com.eucalyptus.troubleshooting.fault;
 
+import com.eucalyptus.component.ComponentId;
+
 public interface FaultSubsystemManager {
-	public FaultLogger getFaultLogger(FaultComponent component);
+	public FaultLogger getFaultLogger(ComponentId componentId);
 	public FaultRegistry getFaultRegistry();
 }

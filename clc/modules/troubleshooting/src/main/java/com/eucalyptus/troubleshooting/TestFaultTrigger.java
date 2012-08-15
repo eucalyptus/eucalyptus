@@ -66,8 +66,9 @@ import java.util.Properties;
 
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.troubleshooting.fault.Fault;
-import com.eucalyptus.troubleshooting.fault.FaultComponent;
 import com.eucalyptus.troubleshooting.fault.FaultLogger;
 import com.eucalyptus.troubleshooting.fault.FaultSubsystem;
 
@@ -75,10 +76,10 @@ public class TestFaultTrigger {
 	private static final Logger LOG = Logger.getLogger(TestFaultTrigger.class);
 	public static void triggerFault(int id, Properties varProps) {
 		// log it in all components
-		for (FaultComponent faultComponent: FaultComponent.values()) {
+		for (ComponentId componentId: ComponentIds.list()) {
 			try {
-				FaultLogger faultLogger = FaultSubsystem.getFaultLogger(FaultComponent.BROKER);
-				LOG.debug("Triggering fault in component " + faultComponent + " with id " + id + " and vars " + varProps);
+				FaultLogger faultLogger = FaultSubsystem.getFaultLogger(componentId);
+				LOG.debug("Triggering fault in component " + componentId.getName() + " with id " + id + " and vars " + varProps);
 				Fault fault = FaultSubsystem.fault(id);
 				if (fault == null) {
 					LOG.error("Error triggering fault: " + id + ", no fault found in XML files");

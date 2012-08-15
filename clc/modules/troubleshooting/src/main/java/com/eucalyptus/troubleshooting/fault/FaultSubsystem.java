@@ -61,13 +61,14 @@
  ************************************************************************/
 package com.eucalyptus.troubleshooting.fault;
 
+import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.troubleshooting.fault.xml.DeFaultSubsystemManager;
 
 public class FaultSubsystem {
 	private static final FaultSubsystemManager delegate = new DeFaultSubsystemManager();
 
-	public static FaultLogger getFaultLogger(FaultComponent component) {
-		return delegate.getFaultLogger(component);
+	public static FaultLogger getFaultLogger(ComponentId componentId) {
+		return delegate.getFaultLogger(componentId);
 	}
 
 	public static Fault getFault(int id) {

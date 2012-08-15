@@ -75,15 +75,15 @@ import org.apache.log4j.Logger;
 import org.apache.log4j.PatternLayout;
 import org.apache.log4j.RollingFileAppender;
 
+import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.system.BaseDirectory;
-import com.eucalyptus.troubleshooting.fault.FaultComponent;
 import com.eucalyptus.troubleshooting.fault.FaultLogger;
 import com.eucalyptus.troubleshooting.fault.FaultRegistry;
 import com.eucalyptus.troubleshooting.fault.FaultSubsystemManager;
 
 public class DeFaultSubsystemManager implements FaultSubsystemManager {
 
-	private Map<FaultComponent, FaultLogger> loggerMap = new ConcurrentHashMap<FaultComponent, FaultLogger>();
+	private Map<ComponentId, FaultLogger> loggerMap = new ConcurrentHashMap<ComponentId, FaultLogger>();
 	private XMLFaultRegistry faultRegistry = null;
 	private File systemFaultDir = BaseDirectory.HOME.getChildFile("/usr/share/eucalyptus/faults"); 
 	private File customFaultDir = BaseDirectory.HOME.getChildFile("/etc/eucalyptus/faults"); 
@@ -148,19 +148,19 @@ public class DeFaultSubsystemManager implements FaultSubsystemManager {
 	
 
 	@Override
-	public synchronized FaultLogger getFaultLogger(FaultComponent component) {
-		if (component == null) throw new IllegalArgumentException("component is null");
-		FaultLogger logger = loggerMap.get(component);
+	public synchronized FaultLogger getFaultLogger(ComponentId componentId) {
+		if (componentId == null) throw new IllegalArgumentException("componentId is null");
+		FaultLogger logger = loggerMap.get(componentId);
 		if (logger == null) {
-			logger = initLogger(component);
+			logger = initLogger(componentId);
 		}
 		return logger;
 	}
 
-	private FaultLogger initLogger(FaultComponent component) {
-		final String targetLoggerName = "com.eucalyptus.troubleshooting.fault." + component.toString().toLowerCase() + ".log";
-		final String targetAppenderName = component.toString().toLowerCase() + "-fault-log";
-		final String targetLogFileName = component.toString().toLowerCase() + "-fault.log";
+	private FaultLogger initLogger(ComponentId componentId) {
+		final String targetLoggerName = "com.eucalyptus.troubleshooting.fault." + componentId.getName().toLowerCase() + ".log";
+		final String targetAppenderName = componentId.getName().toLowerCase() + "-fault-log";
+		final String targetLogFileName = componentId.getName().toLowerCase() + "-fault.log";
 				
 //				BaseDirectory.LOG.getChildFile
 		// first find the actual logger (if it exists). Should be named com.eucalyptus.troubleshooting.fault.${component}.log
@@ -169,7 +169,7 @@ public class DeFaultSubsystemManager implements FaultSubsystemManager {
 		Enumeration logEnum = LogManager.getCurrentLoggers();
 		while (logEnum.hasMoreElements()) {
 			Logger currentLogger = (Logger) logEnum.nextElement();
-			if (logger == null || currentLogger.getName().equals("com.eucalyptus.troubleshooting.fault." + component.toString() + ".log")) {
+			if (logger == null || currentLogger.getName().equals(targetLoggerName)) {
 				logger = currentLogger;
 			}
 		}
