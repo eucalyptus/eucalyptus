@@ -72,7 +72,7 @@
         menu_actions : { delete: [table_menu_delete_action, function (args) { thisObj.deleteAction(args) } ] },
         row_click : function (args) { thisObj.handleRowClick(args); },
         menu_click_create : function (args) { thisObj.$addDialog.eucadialog('open')},
-        context_menu : { value_column: 4 }
+        context_menu : { value_column_inx: 4, build_callback: function (state) { return thisObj.buildContextMenu(state) } },
       });
       tableWrapper.appendTo(this.element);
 
@@ -125,6 +125,15 @@
     },
 
     _destroy : function() {
+    },
+
+    buildContextMenu : function(state) {
+      //TODO: update it with more states
+      return {
+        "what?": { "name": volume_con_menu_attach },
+        "how?": { "name": volume_con_menu_create_snapshot },
+        "who?": { "name": volume_con_menu_delete }
+      }
     },
 /*
     handleInstanceHover : function(e) {

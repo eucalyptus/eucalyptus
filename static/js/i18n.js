@@ -57,6 +57,9 @@
         $.i18n.prop('keypair_table_help');
 
         // sgroup
+        $.i18n.prop('sgroup_tbl_hdr_name');
+        $.i18n.prop('sgroup_tbl_hdr_description');
+        $.i18n.prop('sgroup_tbl_hdr_rules');
         $.i18n.prop('sgroup_dialog_del_text');
         $.i18n.prop('sgroup_dialog_add_text');
         $.i18n.prop('sgroup_dialog_add_name');
