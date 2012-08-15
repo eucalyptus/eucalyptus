@@ -52,7 +52,7 @@
         menu_text : table_menu_main_action,
         menu_actions : { delete: [table_menu_delete_action, function (args) { thisObj.deleteAction(args) } ] },
         row_click : function (args) { thisObj.handleRowClick(args); },
-        context_menu : { value_column: 8 }
+        context_menu : { value_column_inx: 8, build_callback: function (state) { return thisObj.buildContextMenu(state) } }
       //  td_hover_actions : { instance: [4, function (args) { thisObj.handleInstanceHover(args); }], snapshot: [5, function (args) { thisObj.handleSnapshotHover(args); }] }
       });
       tableWrapper.appendTo(this.element);
@@ -65,8 +65,9 @@
         $('<select>').attr('id', 'volumes-selector'));
 
       //TODO: add more states
-      attachedStates = { 'attached':1, 'attaching':1 };
+      attachedStates = { 'attached':1, 'attaching':1, 'detaching':1 };
       detachedStates = { 'available':1 };
+      otherStates = ['creating', 'deleting', 'deleted', 'error'];
 
       filterOptions = ['all', 'attached', 'detached'];
       $sel = $tableFilter.find("#volumes-selector");
@@ -98,7 +99,7 @@
       $tableLegend = $("div.table-volumes-legend");
       $tableLegend.append($('<span>').addClass('volume-legend').html(volume_legend));
       //TODO: this might not work in all browsers
-      statuses = [].concat(Object.keys(attachedStates),Object.keys(detachedStates));
+      statuses = [].concat(Object.keys(attachedStates),Object.keys(detachedStates), otherStates);
       for (s in statuses)
         $tableLegend.append($('<span>').addClass('volume-status-legend').addClass('volume-status-' + statuses[s]).html($.i18n.map['volume_state_' + statuses[s]]));
 
@@ -147,6 +148,37 @@
     },
 
     _destroy : function() {
+    },
+
+    buildContextMenu : function(state) {
+      //TODO: update it with more states
+      switch (state) {
+        case 'available':
+          return {
+            "attach": { "name": volume_con_menu_attach },
+            "create_snapshot": { "name": volume_con_menu_create_snapshot },
+            "delete": { "name": volume_con_menu_delete }
+          }
+        case 'attached':
+          return {
+            "detach": { "name": volume_con_menu_detach },
+            "force_detach": { "name": volume_con_menu_force_detach },
+            "create_snapshot": { "name": volume_con_menu_create_snapshot },
+            "delete": { "name": "Delete" }
+          }
+        case 'attaching':
+          return {
+            "attach": { "name": volume_con_menu_attach },
+            "detach": { "name": volume_con_menu_detach },
+            "force_detach": { "name": volume_con_menu_force_detach },
+            "create_snapshot": { "name": volume_con_menu_create_snapshot },
+            "delete": { "name": volume_con_menu_delete }
+          }
+        default:
+          return {
+            "delete": { "name": volume_con_menu_delete }
+          }
+      }
     },
 /*
     handleInstanceHover : function(e) {

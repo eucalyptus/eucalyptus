@@ -10,7 +10,8 @@
       txt_found : 'resources found',
       menu_text : 'More actions',
       menu_actions : null, // e.g., { delete: ["Delete", function () { dialog.... } ] }
-      context_menu : null, // e.g {build_callback: funcion(args) {}, value_column: index }
+      context_menu : null, // e.g { build_callback: funcion(args) {}, value_column_inx: index }
+      help : null // e.g., { delete: ["Delete", function () { dialog.... } ] }
     },
     table : null, // jQuery object to the table
     actionMenu : null,
@@ -60,26 +61,34 @@
           thisObj._trigger('row_click', this);
         });
         if (thisObj.options.context_menu) {
+          contextMenuParams = thisObj.options.context_menu;
           rID = 'ri-'+S4()+S4();
           $currentRow.attr('id', rID);
           // context menu
           $.contextMenu({
             selector: '#'+rID,
-            build: function($trigger, e) {
-            itemsList = {
-                    "one": {name: "Blah"},
-                    "two": {name: "Two"},
-                    "three": {name: "Three"},
+            build: function(trigger, e) {
+              // get value from thisObj.options.context_menu.value_column_inx
+              rowId = $(trigger).attr('id');
+              nNotes = thisObj.table.fnGetNodes();
+              inx = 0;
+              for ( i in nNotes ){
+                if ( rowId == $(nNotes[i]).attr('id') ) {
+                  inx = i;
+                  break;
+                }
+              };
+              var itemsList = contextMenuParams.build_callback.call(
+                      this, thisObj.table.fnGetData(inx, contextMenuParams.value_column_inx));
+              return {
+                callback: function(key, options) {
+                  var m = "clicked: " + key;
+                  window.console && console.log(m) || alert(m); 
+                },
+                items: itemsList,
+              };
             }
-            return {
-              callback: function(key, options) {
-                var m = "clicked: " + key;
-                window.console && console.log(m) || alert(m); 
-              },
-              items: itemsList,
-            };
-          }
-        });
+          });
         }
       });      
     },
