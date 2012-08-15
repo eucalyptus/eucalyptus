@@ -45,6 +45,7 @@
         menu_actions : { delete: [table_menu_delete_action, function (args) { thisObj.deleteAction(args) } ] },
         row_click : function (args) { thisObj.handleRowClick(args); },
         menu_click_create : function (args) { thisObj.$addDialog.eucadialog('open')},
+        context_menu : { value_column: 4 }
       });
       tableWrapper.appendTo(this.element);
 
