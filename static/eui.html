@@ -47,6 +47,7 @@
     <script type="text/javascript" language="javascript" src="js/volume.js"></script>
     <script type="text/javascript" language="javascript" src="js/eucaevent.js"></script>
     <script type="text/javascript" language="javascript" src="js/notification.js"></script>
+    <script type="text/javascript" language="javascript" src="js/help.js"></script>
     <script type="text/javascript" language="javascript" src="js/template/eucatable.js"></script>
     <script type="text/javascript" language="javascript" src="js/template/eucadialog.js"></script>
   </head> 
@@ -206,10 +207,10 @@
           </div>
           <div id="keypair-help">
             <div class="help-content">
-              {{!: keypair_table_help }}
+              {{!: landing_content }}
             </div>
             <div class="help-revert-button"> 
-              <a href="#"> {{!>page_help_backto_page}} key pair </a>
+              <a href="#">{{!>revert_button}}</a>
             </div>
           </div>
         </div>
@@ -229,10 +230,10 @@
           </div>
           <div id="keys-add-dialog-help" class="dialog-help">
             <div class="dialog-help-content">
-              {{!: keypair_dialog_add_help }}
+              {{!: dialog_add_content }}
             </div>
             <div class="help-revert-button"> 
-              <a href="#"> {{!>page_help_backto_page}} key pair </a>
+              <a href="#"> {{!>revert_button}}</a>
             </div>
           </div>
         </div>
@@ -248,10 +249,10 @@
           </div>
           <div id="keys-delete-dialog-help" class="dialog-help">
             <div class="dialog-help-content">
-              {{!: keypair_dialog_delete_help}}
+              {{!: dialog_delete_content}}
             </div>
              <div class="help-revert-button"> 
-              <a href="#"> {{!>page_help_backto_page}} key pair </a>
+              <a href="#"> {{!>revert_button}}</a>
             </div>
           </div> 
       </script>
@@ -280,48 +281,40 @@
       </script>
       <!-- END Keypair table -->
 
-      <!-- Keypair dialog template -->
-      <script id="keypairAddDlgTmpl" type="text/x-jsrender">
-        <div id="keys-add-dialog" class="add-dialog">
-          {{!: keypair_dialog_add_text }}
-          <p>
-            <span class="field">{{!>keypair_dialog_add_name}}</span><input type="text" id="key-name" class="required"/><div class="dialog-notifications"></div>
-          </p>
-        </div>
-      </script>
-
-      <script id="keypairDelDlgTmpl" type="text/x-jsrender">
-        <div id="keys-delete-dialog" class="delete-dialog">
-          {{!: keypair_dialog_del_text }}
-          <span class="delete-names"></span>
-        </div>
-      </script>
-      <!-- END Keypair dialog template -->
-
       <!-- Volume table -->
       <script id="volumeTblTmpl" type="text/x-jsrender">
         <div id="volumes-wrapper">
-        <table id="volumes" class="display">
-          <thead>
-            <tr>
-              <th>
-                <input type="checkbox" id="volumes-check-all">
-              </th>
-              <th>{{!>vl_tbl_hdr_id}}</th>
-              <th>{{!>vl_tbl_hdr_status}}</th>
-              <th>{{!>vl_tbl_hdr_size}}</th>
-              <th>{{!>vl_tbl_hdr_attached_to}}</th>
-              <th>{{!>vl_tbl_hdr_snapshot_id}}</th>
-              <th>{{!>vl_tbl_hdr_availability_zone}}</th>
-              <th>{{!>vl_tbl_hdr_creation_time}}</th>
-            </tr>
-           </thead>
-           <tbody>
-              <tr>
-                <td colspan="8" class="dataTables_empty">{{!>table_loading}}</td>
-              </tr>
-          </tbody>
-        </table>
+          <div id="volumes-table">
+            <table id="volumes" class="display">
+              <thead>
+                <tr>
+                  <th>
+                    <input type="checkbox" id="volumes-check-all">
+                  </th>
+                  <th>{{!>vl_tbl_hdr_id}}</th>
+                  <th>{{!>vl_tbl_hdr_status}}</th>
+                  <th>{{!>vl_tbl_hdr_size}}</th>
+                  <th>{{!>vl_tbl_hdr_attached_to}}</th>
+                  <th>{{!>vl_tbl_hdr_snapshot_id}}</th>
+                  <th>{{!>vl_tbl_hdr_availability_zone}}</th>
+                  <th>{{!>vl_tbl_hdr_creation_time}}</th>
+                </tr>
+               </thead>
+               <tbody>
+                 <tr>
+                   <td colspan="8" class="dataTables_empty">{{!>table_loading}}</td>
+                 </tr>
+              </tbody>
+            </table>
+          </div>
+          <div id="volume-help">
+            <div class="help-content">
+              {{!: landing_content }}
+            </div>
+            <div class="help-revert-button"> 
+              <a href="#">{{!>revert_button}}</a>
+            </div>
+          </div>
         </div>
       </script>
       <!-- END Volume table -->
@@ -337,9 +330,21 @@
       </script>
 
       <script id="volumeDelDlgTmpl" type="text/x-jsrender">
-        <div id="volumes-delete-dialog" class="delete-dialog">
-          {{!: volume_dialog_del_text }}
-          <span class="delete-names"></span>
+        <div id="volumes-delete-dialog-wrapper">
+          <div id="volumes-delete-dialog" class="delete-dialog">
+            <div class="dialog-inner-content">
+              {{!: volume_dialog_del_text }}
+              <span class="delete-names"></span>
+            </div>
+          </div>
+          <div id="volumes-delete-dialog-help" class="dialog-help">
+            <div class="dialog-help-content">
+              {{!: dialog_delete_content}}
+            </div>
+            <div class="help-revert-button"> 
+              <a href="#"> {{!>revert_button}}</a>
+            </div>
+          </div>
         </div>
       </script>
       <!-- END Volume dialog template -->

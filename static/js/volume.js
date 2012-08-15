@@ -7,10 +7,13 @@
     _init : function() {
       var thisObj = this;
       var $tmpl = $('html body').find('.templates #volumeTblTmpl').clone();
-      var $wrapper = $($tmpl.render($.i18n.map));
-      this.element.add($wrapper);
-      var $base_table = $wrapper.find('table');
-      tableWrapper = $wrapper.eucatable({
+      var $wrapper = $($tmpl.render($.extend($.i18n.map, help_volume)));
+      var $volTable = $wrapper.children().first();
+      var $volHelp = $wrapper.children().last();
+      this.element.add($volTable);
+      var $base_table = $volTable.find('table');
+
+      tableWrapper = $volTable.eucatable({
         id : 'volumes', // user of this widget should customize these options,
         base_table : $base_table,
         dt_arg : {
@@ -52,8 +55,13 @@
         menu_text : table_menu_main_action,
         menu_actions : { delete: [table_menu_delete_action, function (args) { thisObj.deleteAction(args) } ] },
         row_click : function (args) { thisObj.handleRowClick(args); },
-        context_menu : { value_column_inx: 8, build_callback: function (state) { return thisObj.buildContextMenu(state) } }
+        context_menu : { value_column_inx: 8, build_callback: function (state) { return thisObj.buildContextMenu(state) } },
       //  td_hover_actions : { instance: [4, function (args) { thisObj.handleInstanceHover(args); }], snapshot: [5, function (args) { thisObj.handleSnapshotHover(args); }] }
+        help_click : function(evt) {
+                       var $helpHeader = $('<div>').addClass('euca-table-header').append(
+                              $('<span>').text(help_volume['landing_title']));
+                       thisObj._flipToHelp(evt,$helpHeader, $volHelp);
+        },
       });
       tableWrapper.appendTo(this.element);
 
@@ -104,15 +112,17 @@
         $tableLegend.append($('<span>').addClass('volume-status-legend').addClass('volume-status-' + statuses[s]).html($.i18n.map['volume_state_' + statuses[s]]));
 
       $tmpl = $('html body').find('.templates #volumeDelDlgTmpl').clone();
-      $del_dialog = $($tmpl.render($.i18n.map));
-
+      var $rendered = $($tmpl.render($.extend($.i18n.map, help_volume)));
+      var $del_dialog = $rendered.children().first();
+      var $del_help = $rendered.children().last();
       this.delDialog = $del_dialog.eucadialog({
          id: 'volumes-delete',
          title: volume_dialog_del_title,
          buttons: {
            'delete': {text: volume_dialog_del_btn, click: function() { thisObj._deleteSelectedVolumes(); $del_dialog.dialog("close");}},
            'cancel': {text: volume_dialog_cancel_btn, focus:true, click: function() { $del_dialog.dialog("close");}} 
-         }
+         },
+         help: {title: help_volume['dialog_delete_title'], content: $del_help},
        });
 
       var createButtonId = 'volume-add-btn';

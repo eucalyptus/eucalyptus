@@ -8,7 +8,7 @@
     _init : function() {
       var thisObj = this;
       var $tmpl = $('html body').find('.templates #keypairTblTmpl').clone();
-      var $wrapper = $($tmpl.render($.i18n.map));
+      var $wrapper = $($tmpl.render($.extend($.i18n.map, help_keypair)));
       var $keyTable = $wrapper.children().first();
       var $keyHelp = $wrapper.children().last();
       this.element.add($keyTable);
@@ -44,14 +44,14 @@
         menu_click_create : function (args) { thisObj.$addDialog.eucadialog('open')},
         help_click : function(evt) { 
           var $helpHeader = $('<div>').addClass('euca-table-header').append(
-                              $('<span>').text(keypair_table_help_title));
+                              $('<span>').text(help_keypair['landing_title']));
           thisObj._flipToHelp(evt,$helpHeader, $keyHelp);
         },
       });
       this.tableWrapper.appendTo(this.element);
 
       var $tmpl = $('html body').find('.templates #keypairDelDlgTmpl').clone();
-      var $rendered = $($tmpl.render($.i18n.map));
+      var $rendered = $($tmpl.render($.extend($.i18n.map, help_keypair)));
       var $del_dialog = $rendered.children().first();
       var $del_help = $rendered.children().last();
 
@@ -62,12 +62,12 @@
            'delete': {text: keypair_dialog_del_btn, click: function() { thisObj._deleteSelectedKeyPairs(); $del_dialog.dialog("close");}},
            'cancel': {text: keypair_dialog_cancel_btn, focus:true, click: function() { $del_dialog.dialog("close");}} 
          },
-         help: {title: keypair_dialog_delete_help_title, content: $del_help}, 
+         help: {title: help_keypair['dialog_delete_title'], content: $del_help}, 
        });
 
       var createButtonId = 'keys-add-btn'; 
       $tmpl = $('html body').find('.templates #keypairAddDlgTmpl').clone();
-      $rendered = $($tmpl.render($.i18n.map));
+      $rendered = $($tmpl.render($.extend($.i18n.map, help_keypair)));
       $add_dialog = $rendered.children().first();
       $add_help = $rendered.children().last();
 
@@ -105,7 +105,7 @@
                   },
         'cancel': {text: keypair_dialog_cancel_btn, focus:true, click: function() { $add_dialog.eucadialog("close");}},
         },
-      help : {title: keypair_dialog_add_help_title, content: $add_help},
+        help : {title: help_keypair['dialog_add_title'], content: $add_help},
       });
     },
 
