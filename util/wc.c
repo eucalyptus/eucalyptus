@@ -267,10 +267,38 @@ c_varsub (const char * s, const char_map * vars [])
         }
         char * val = c_find_valn (vars, var_start + pref_len, var_len);
         if (val == NULL) {
-            logprintfl (EUCAWARN, "failed to substitute variable\n"); // TODO: print variable name
-            if (result != NULL)
-                free (result);
-            return NULL;
+            char *missed_var = NULL;
+            char *vartok = NULL;
+            if ((missed_var = strndup (var_start + pref_len, var_len)) == NULL) {
+                logprintfl (EUCAWARN, "failed to substitute variable\n");
+            } else {
+
+                logprintfl (EUCAWARN, "failed to substitute variable: %s%s%s\n",
+                            C_VAR_PREFIX, missed_var, C_VAR_SUFFIX);
+            }
+            if ((vartok = (char *)malloc (strlen (C_VAR_PREFIX) +
+                                          strlen (C_VAR_SUFFIX) +
+                                          strlen (missed_var) + 1)) == NULL) {
+                if (result != NULL) {
+                    free (result);
+                }
+                return NULL;
+            }
+            sprintf (vartok, "%s%s%s", C_VAR_PREFIX, missed_var, C_VAR_SUFFIX);
+            if (var_start > remainder) { // there is text prior to the variable
+                result = c_wcappendn (result, remainder, var_start - remainder);
+                if (result == NULL) {
+                    logprintfl (EUCAERROR, "failed to append during variable substitution"); // TODO: more specific error
+                    break;
+                }
+            }
+            result = c_wcappendn (result, vartok, 0);
+            remainder = var_end + suff_len; // move the pointer past the empty variable (skip it)
+            if (missed_var != NULL) {
+                free (missed_var);
+            }
+            free (vartok);
+            continue;
         }
         if (var_start > remainder) { // there is text prior to the variable
             result = c_wcappendn (result, remainder, var_start - remainder);
@@ -372,21 +400,28 @@ main (int argc, char ** argv)
     varmap_free(m);
 
     // Now do it again, this time non-widechar
-    c_m = c_varmap_alloc (NULL, "color", "brown");
+    c_m = c_varmap_alloc (NULL, "colorxxxxxx", "brown"); // FIXME: This matches
     c_m = c_varmap_alloc (c_m, "subject", "fox");
     c_m = c_varmap_alloc (c_m, "object", "dog");
 
     printf ("       nice string: %s\n", c_s1);
     char * c_s1_sub = c_varsub (c_s1, (const char_map **)c_m);
-    assert (c_s1_sub != NULL);
+
     printf ("nice string subbed: %s\n", c_s1_sub);
+
+    assert (c_s1_sub != NULL);
     free (c_s1_sub);
     printf ("       ugly string: %s\n", c_s2);
     char * c_s2_sub = c_varsub (c_s2, (const char_map **)c_m);
     assert (c_s2_sub != NULL);
     printf ("ugly string subbed: %s\n", c_s2_sub);
     free (c_s2_sub);
-    assert (c_varsub (c_s3, (const char_map **)c_m) == NULL);
+
+    printf (" unsubbable string: %s\n", c_s3);
+    char * c_s3_sub = c_varsub (c_s3, (const char_map **)c_m);
+    printf ("   unsubbed string: %s\n", c_s3_sub);
+    assert (!strcmp (c_s3, c_s3_sub));
+    free (c_s3_sub);
 
     c_varmap_free(c_m);
 }

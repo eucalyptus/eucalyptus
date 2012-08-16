@@ -52,7 +52,7 @@
  * FIXME: Make some or all of them configuration-file options?
  * FIXME: Make paths relative to some configurable base directory?
  */
-#define LOGDIR "/var/log/eucalyptus"
+#define FAULTLOGDIR "/var/log/eucalyptus"
 #define DISTRO_FAULTDIR "/usr/share/eucalyptus/faults"
 #define CUSTOM_FAULTDIR "/etc/eucalyptus/faults"
 #define DEFAULT_LOCALIZATION "en_US"
@@ -108,6 +108,12 @@ static char *fault_labels[] = { "condition",
 // This holds the in-memory model of the fault registry.
 static xmlDoc *ef_doc = NULL;
 
+// Fault log filehandle.
+static FILE *faultlog = NULL;
+
+// Global equivalent to argv[0]'s basename.
+extern char *program_invocation_short_name;
+
 // FIXME: Thread safety is only half-baked at this point.
 static pthread_mutex_t fault_mutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -125,6 +131,7 @@ static xmlNode *get_common_block (const xmlDoc *);
 static char *get_common_var (const char *);
 static char *get_fault_var (const char *, const xmlNode *);
 static boolean format_eucafault (const char *, const char_map **);
+static boolean initialize_faultlog (const char *);
 
 /*
  * Utility functions -- move to misc.c?
@@ -189,14 +196,13 @@ scandir_filter (const struct dirent *entry)
  * ASSUMES FAULT ID MATCHES FILENAME!
  */
 static xmlDoc *
-read_eucafault (const char * faultdir, const char * fault_id)
+read_eucafault (const char *faultdir, const char *fault_id)
 {
     xmlDoc *my_doc = NULL;
     char fault_file[PATH_MAX];
     static int common_block_exists = 0;
 
-    snprintf (fault_file, PATH_MAX - 1, "%s/%s%s", faultdir, fault_id,
-              XML_SUFFIX);
+    snprintf (fault_file, PATH_MAX, "%s/%s%s", faultdir, fault_id, XML_SUFFIX);
     PRINTF (("Attempting to load file %s\n", fault_file));
 
     if (get_eucafault (fault_id, NULL) != NULL) {
@@ -340,17 +346,61 @@ get_eucafault (const char *id, const xmlDoc *doc)
 }
 
 /*
+ * Builds up the fault log path from supplied argument and configured
+ * directory prefix. If passed NULL, tries to determine process name and
+ * uses that for building up the path.
+ *
+ * Returns TRUE if fault logfile successfully opened, FALSE otherwise
+ * (meaning logging is to stderr).
+ */
+
+static boolean
+initialize_faultlog (const char *fileprefix)
+{
+    char faultlogpath[PATH_MAX];
+    char *fileprefix_i;
+
+    if (fileprefix == NULL) {
+        // FIXME: program_infocation_short_name is a GNU'ism and is not
+        // portable--should wrap with an autoconf check.
+        snprintf (faultlogpath, PATH_MAX, "%s/%s-faults.log", FAULTLOGDIR,
+                  program_invocation_short_name);
+    } else {
+        // Prune any leading directores from path.
+        fileprefix_i = rindex (fileprefix, '/');
+
+        if (fileprefix_i != NULL) {
+            fileprefix = fileprefix_i + 1;
+        }
+        snprintf (faultlogpath, PATH_MAX, "%s/%s-faults.log", FAULTLOGDIR,
+                  fileprefix);
+    }
+    PRINTF (("Initializing faultlog using %s\n", faultlogpath));
+    faultlog = fopen (faultlogpath, "a+");
+
+    if (faultlog == NULL) {
+        logprintfl (EUCAERROR, "Cannot open fault log file %s: %s\n",
+                    faultlogpath, strerror (errno));
+        logprintfl (EUCAERROR, "Logging faults to stderr...\n");
+        faultlog = stderr;
+        return FALSE;
+    } else {
+        return TRUE;
+    }
+}
+
+/*
  * EXTERNAL ENTRY POINT
  *
  * Builds the localized fault registry from XML files supplied in
  * various directories.
  *
  * Returns the number of faults successfully loaded into registry. If
- * the registry was previously loaded, returns the number of loaded
- * faults as a negative number.
+ * the registry was previously loaded, returns the number of previously
+ * loaded faults as a negative number.
  */
 int
-initialize_eucafaults (void)
+initialize_eucafaults (char *fileprefix)
 {
     struct stat dirstat;
     static int faults_loaded = 0;
@@ -364,7 +414,9 @@ initialize_eucafaults (void)
         pthread_mutex_unlock (&fault_mutex);
         return -faults_loaded;
     }
+    initialize_faultlog (fileprefix);
     PRINTF (("Initializing fault registry directories.\n"));
+
     if ((locale = getenv (LOCALIZATION_ENV_VAR)) == NULL) {
         logprintfl (EUCAINFO,
                    "$%s not set, using default value of: %s\n",
@@ -374,20 +426,20 @@ initialize_eucafaults (void)
 
     /* Cycle through list of faultdirs in priority order, noting any missing. */
     if (locale != NULL) {
-        snprintf (faultdirs[CUSTOM_LOCALIZED], PATH_MAX - 1, "%s/%s/",
+        snprintf (faultdirs[CUSTOM_LOCALIZED], PATH_MAX, "%s/%s/",
                   CUSTOM_FAULTDIR, locale);
     } else {
         faultdirs[CUSTOM_LOCALIZED][0] = 0;
     }
-    snprintf (faultdirs[CUSTOM_DEFAULT_LOCALIZATION], PATH_MAX - 1, "%s/%s/",
+    snprintf (faultdirs[CUSTOM_DEFAULT_LOCALIZATION], PATH_MAX, "%s/%s/",
               CUSTOM_FAULTDIR, DEFAULT_LOCALIZATION);
     if (locale != NULL) {
-        snprintf (faultdirs[DISTRO_LOCALIZED], PATH_MAX - 1, "%s/%s/",
+        snprintf (faultdirs[DISTRO_LOCALIZED], PATH_MAX, "%s/%s/",
                   DISTRO_FAULTDIR, locale);
     } else {
         faultdirs[DISTRO_LOCALIZED][0] = 0;
     }
-    snprintf (faultdirs[DISTRO_DEFAULT_LOCALIZATION], PATH_MAX - 1, "%s/%s/",
+    snprintf (faultdirs[DISTRO_DEFAULT_LOCALIZATION], PATH_MAX, "%s/%s/",
               DISTRO_FAULTDIR, DEFAULT_LOCALIZATION);
 
     for (int i = 0; i < NUM_FAULTDIR_TYPES; i++) {
@@ -547,12 +599,11 @@ get_fault_var (const char *var, const xmlNode *f_node)
 }
 
 /*
- * Formats fault-log output and sends to logfile (or console).
+ * Formats fault-log output and sends to fault log (or console).
  */
 static boolean
 format_eucafault (const char *fault_id, const char_map **map)
 {
-    static FILE *logfile = NULL;
     static int max_label_len = 0;
     char *fault_var = NULL;
     time_t secs;
@@ -564,10 +615,6 @@ format_eucafault (const char *fault_id, const char_map **map)
                     "format_eucafault() cannot get fault node for id %s.\n",
                     fault_id);
         return FALSE;
-    }
-    // FIXME: Add real logfiles.
-    if (logfile == NULL) {
-        logfile = stdout;
     }
     // Determine label alignment. (Only needs to be done once.)
     if (!max_label_len) {
@@ -586,7 +633,7 @@ format_eucafault (const char *fault_id, const char_map **map)
         }
     }
     // Top border.
-    fprintf (logfile, "%s\n", STARS);
+    fprintf (faultlog, "%s\n", STARS);
 
     // Get time.
     secs = time (NULL);
@@ -600,7 +647,7 @@ format_eucafault (const char *fault_id, const char_map **map)
         lt.tm_mon += 1;
     }
     // Construct timestamped fault header.
-    fprintf (logfile, "  ERR-%s %04d-%02d-%02d %02d:%02d:%02dZ ", fault_id,
+    fprintf (faultlog, "  ERR-%s %04d-%02d-%02d %02d:%02d:%02dZ ", fault_id,
              lt.tm_year, lt.tm_mon, lt.tm_mday,
              lt.tm_hour, lt.tm_min, lt.tm_sec);
 
@@ -608,15 +655,15 @@ format_eucafault (const char *fault_id, const char_map **map)
         char *fault_subbed = NULL;
 
         if ((fault_subbed = c_varsub (fault_var, map)) != NULL) {
-            fprintf (logfile, "%s\n\n", fault_subbed);
+            fprintf (faultlog, "%s\n\n", fault_subbed);
         } else {
-            fprintf (logfile, "%s\n\n", fault_var);
+            fprintf (faultlog, "%s\n\n", fault_var);
         }
         free (fault_subbed);
         free (fault_var);
     } else {
         char *common_var = get_common_var ("unknown");
-        fprintf (logfile, "%s\n\n", common_var);
+        fprintf (faultlog, "%s\n\n", common_var);
         free (common_var);
     }
 
@@ -631,28 +678,28 @@ format_eucafault (const char *fault_id, const char_map **map)
         w_common_var_len = utf8_to_wchar (common_var, common_var_len, NULL, 0,
                                           0);
         padding = max_label_len - w_common_var_len + 1;
-        fprintf (logfile, "%s%*s %s: ", BARS, padding, " ", common_var);
+        fprintf (faultlog, "%s%*s %s: ", BARS, padding, " ", common_var);
         free (common_var);
 
         if ((fault_var = get_fault_var (fault_labels[i], fault_node)) != NULL) {
             char *fault_subbed = NULL;
 
             if ((fault_subbed = c_varsub (fault_var, map)) != NULL) {
-                fprintf (logfile, "%s", fault_subbed);
+                fprintf (faultlog, "%s", fault_subbed);
             } else {
-                fprintf (logfile, "%s", fault_var);
+                fprintf (faultlog, "%s", fault_var);
             }
             free (fault_subbed);
             free (fault_var);
         } else {
             common_var = get_common_var ("unknown");
-            fprintf (logfile, "%s", common_var);
+            fprintf (faultlog, "%s", common_var);
             free (common_var);
         }
-        fprintf (logfile, "\n");
+        fprintf (faultlog, "\n");
     }
     // Bottom border.
-    fprintf (logfile, "%s\n\n", STARS);
+    fprintf (faultlog, "%s\n\n", STARS);
     return TRUE;
 }
 
@@ -660,11 +707,13 @@ format_eucafault (const char *fault_id, const char_map **map)
  * EXTERNAL ENTRY POINT
  *
  * Logs a fault, initializing the fault registry, if necessary.
+ *
+ * Returns TRUE if fault successfully logged, FALSE otherwise.
  */
 boolean
-log_eucafault (char *fault_id, const char_map **map)
+log_eucafault (const char *fault_id, const char_map **map)
 {
-    int load = initialize_eucafaults ();
+    int load = initialize_eucafaults (NULL);
 
     PRINTF1 (("initialize_eucafaults() returned %d\n", load));
 
@@ -689,13 +738,13 @@ log_eucafault (char *fault_id, const char_map **map)
  * call returned FALSE.
  */
 int
-log_eucafault_v (char *fault_id, ...)
+log_eucafault_v (const char *fault_id, ...)
 {
     va_list argv;
     char *token[2];
     char_map **m = NULL;
     int count = 0;
-    int load = initialize_eucafaults ();
+    int load = initialize_eucafaults (NULL);
 
     PRINTF1 (("initialize_eucafaults() returned %d\n", load));
     va_start (argv, fault_id);
@@ -740,7 +789,7 @@ dump_eucafaults_db (void)
  * Prints simple usage message.
  */
 static void
-usage (char *argv0)
+usage (const char *argv0)
 {
     fprintf (stderr, "Usage: %s [-d] fault-id [param1 param1Value] [param2 param2Value] [...]\n", argv0);
 }
@@ -766,7 +815,10 @@ main (int argc, char **argv)
             return 1;
         }
     }
-    opt = initialize_eucafaults ();
+    // NULL forces initialize_eucafaults()'s call to
+    // initialize_faultlog() to guess at process name for creating
+    // logfile.
+    opt = initialize_eucafaults (NULL);
 
     PRINTF (("initialize_eucafaults() returned %d\n", opt));
 
@@ -797,6 +849,7 @@ main (int argc, char **argv)
                 m = c_varmap_alloc (m, argv[opt - 1], argv[opt]);
             }
         }
+        // Don't bother logging if there are no substitutions.
         if (m != NULL) {
             log_eucafault (argv[optind], (const char_map **)m);
             c_varmap_free (m);

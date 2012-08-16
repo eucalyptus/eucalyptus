@@ -27,30 +27,40 @@
 #include <wc.h>
 
 /*
- * Usage: initialize_eucafaults()
+ * Usage: initialize_eucafaults(logfile_name)
+ *
+ * ...where the logfile_name argument sets the filename prefix (under
+ * the configured logfile directory) for fault logs from this process.
+ * If logfile_name is NULL, tries to determine a filename prefix from
+ * argv[0] (program_invocation_shortname).
  *
  * Strictly speaking, an application does not need to call this
- * initialization function, as log_eucafault() also calls it. However,
- * calling this during application startup will ensure the
- * fault-reporting system is properly initialized prior to any fault
- * encounters. Thus, it is recommended all applications call
+ * initialization function, as log_eucafault() and log_eucafault_v()
+ * also call it and try to determine a filename prefix based upon
+ * process name. However, calling this during application startup will
+ * ensure the fault-reporting system is properly initialized prior to
+ * any fault encounters, as well as ensure the desired filename prefix
+ * is used for logging. Thus, it is recommended all applications call
  * initialize_eucafaults() as part of their own initialization.
  *
  * Returns the number of faults successfully loaded into registry. If
- * the registry was previously loaded, returns the number of loaded
- * faults as a negative number.
+ * the registry was previously loaded, returns the number of previously
+ * loaded faults as a negative number.
  */
-extern int initialize_eucafaults (void);
+extern int initialize_eucafaults (char *);
 
 /*
  * Usage: log_eucafault (FAULT_ID, parameter_map)
+ *
+ * ...where the parameter map is a set of param/paramText key/value
+ * pairs in struct form as defined in wc.h.
  *
  * Will call initialize_eucafaults() internally to ensure fault registry
  * has been loaded.
  *
  * Returns TRUE if fault successfully logged, FALSE otherwise.
  */
-extern boolean log_eucafault (char *, const char_map **);
+extern boolean log_eucafault (const char *, const char_map **);
 
 /*
  * Usage: log_eucafault_v (FAULT_ID, param1, param1text, param2, param2text,
@@ -69,6 +79,6 @@ extern boolean log_eucafault (char *, const char_map **);
  * returning it as a negative number if the underlying log_eucafault()
  * call returned FALSE.
  */
-extern int log_eucafault_v (char *, ...);
+extern int log_eucafault_v (const char *, ...);
 
 #endif // INCLUDE_MISC_H
