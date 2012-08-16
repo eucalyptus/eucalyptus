@@ -931,8 +931,7 @@ static int copy_creator (artifact * a)
         // tune file system, which is needed to boot EMIs fscked long ago
         logprintfl (EUCAINFO, "[%s] tuning root file system on disk %d partition %d\n", a->instanceId, vbr->diskNumber, vbr->partitionNumber);
         if (diskutil_tune (dev) == ERROR) {
-            logprintfl (EUCAERROR, "[%s] error: failed to tune root file system: %s\n", a->instanceId, blobstore_get_last_msg());
-            return ERROR;
+            logprintfl (EUCAWARN, "[%s] error: failed to tune root file system: %s\n", a->instanceId, blobstore_get_last_msg());
         }
     }
     
