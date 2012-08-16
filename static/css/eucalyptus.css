@@ -772,6 +772,7 @@ body {
 
 .status-readout img {
   display: inline-block;
+  /* Margin will need to change if a different indicator image is used */
   margin: 11px auto 8px;
 }
 

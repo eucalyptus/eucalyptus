@@ -64,8 +64,9 @@
                 }
              // });
             });
-            $instObj.find('#dashboard-instance-running img').remove();
-            $instObj.find('#dashboard-instance-stopped img').remove();
+            // selector is different for these two because of extra div
+            $instObj.find('#dashboard-instance-running div img').remove();
+            $instObj.find('#dashboard-instance-stopped div img').remove();
             $instObj.find('#dashboard-instance-running span').text(numRunning);
             $instObj.find('#dashboard-instance-stopped span').text(numStopped);
             $instObj.find('#dashboard-instance-running').wrapAll(
@@ -91,9 +92,11 @@
       });
 
       //az = $instObj.find('#dashboard-instance-dropbox').value();
-      $instObj.find('#dashboard-instance-running').prepend(
+
+      // selector is different for these two because of extra div
+      $instObj.find('#dashboard-instance-running div').prepend(
         $('<img>').attr('src','images/dots32.gif'));
-      $instObj.find('#dashboard-instance-stopped').prepend(
+      $instObj.find('#dashboard-instance-stopped div').prepend(
         $('<img>').attr('src','images/dots32.gif'));
     },
 
