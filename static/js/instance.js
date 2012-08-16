@@ -19,7 +19,7 @@
  ************************************************************************/
 
 (function($, eucalyptus) {
-  $.widget('eucalyptus.volume', $.eucalyptus.eucawidget, {
+  $.widget('eucalyptus.instance', $.eucalyptus.eucawidget, {
     options : { },
     tableWrapper : null,
     delDialog : null,
