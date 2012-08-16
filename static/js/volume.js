@@ -1,3 +1,30 @@
+/*************************************************************************
+ * Copyright 2011-2012 Eucalyptus Systems, Inc.
+ *
+ * Redistribution and use of this software in source and binary forms,
+ * with or without modification, are permitted provided that the following
+ * conditions are met:
+ *
+ *   Redistributions of source code must retain the above copyright notice,
+ *   this list of conditions and the following disclaimer.
+ *
+ *   Redistributions in binary form must reproduce the above copyright
+ *   notice, this list of conditions and the following disclaimer in the
+ *   documentation and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ ************************************************************************/
+
 (function($, eucalyptus) {
   $.widget('eucalyptus.volume', $.eucalyptus.eucawidget, {
     options : { },
@@ -6,10 +33,13 @@
     _init : function() {
       var thisObj = this;
       var $tmpl = $('html body').find('.templates #volumeTblTmpl').clone();
-      var $wrapper = $($tmpl.render($.i18n.map));
-      this.element.add($wrapper);
-      var $base_table = $wrapper.find('table');
-      this.tableWrapper = $wrapper.eucatable({
+      var $wrapper = $($tmpl.render($.extend($.i18n.map, help_volume)));
+      var $volTable = $wrapper.children().first();
+      var $volHelp = $wrapper.children().last();
+      this.element.add($volTable);
+      var $base_table = $volTable.find('table');
+
+      this.tableWrapper = $volTable.eucatable({
         id : 'volumes', // user of this widget should customize these options,
         base_table : $base_table,
         dt_arg : {
@@ -54,6 +84,11 @@
         context_menu : { build_callback: function (state) { return thisObj.buildContextMenu(state) } },
         value_column_inx: 8,
       //  td_hover_actions : { instance: [4, function (args) { thisObj.handleInstanceHover(args); }], snapshot: [5, function (args) { thisObj.handleSnapshotHover(args); }] }
+        help_click : function(evt) {
+                       var $helpHeader = $('<div>').addClass('euca-table-header').append(
+                              $('<span>').text(help_volume['landing_title']));
+                       thisObj._flipToHelp(evt,$helpHeader, $volHelp);
+        },
       });
       this.tableWrapper.appendTo(this.element);
 
@@ -99,15 +134,17 @@
         $tableLegend.append($('<span>').addClass('volume-status-legend').addClass('volume-status-' + statuses[s]).html($.i18n.map['volume_state_' + statuses[s].replace('-','_')]));
 
       $tmpl = $('html body').find('.templates #volumeDelDlgTmpl').clone();
-      $del_dialog = $($tmpl.render($.i18n.map));
-
+      var $rendered = $($tmpl.render($.extend($.i18n.map, help_volume)));
+      var $del_dialog = $rendered.children().first();
+      var $del_help = $rendered.children().last();
       this.delDialog = $del_dialog.eucadialog({
          id: 'volumes-delete',
          title: volume_dialog_del_title,
          buttons: {
            'delete': {text: volume_dialog_del_btn, click: function() { thisObj._deleteSelectedVolumes(); $del_dialog.dialog("close");}},
            'cancel': {text: volume_dialog_cancel_btn, focus:true, click: function() { $del_dialog.dialog("close");}} 
-         }
+         },
+         help: {title: help_volume['dialog_delete_title'], content: $del_help},
        });
 
       var createButtonId = 'volume-add-btn';

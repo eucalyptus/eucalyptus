@@ -1,8 +1,36 @@
+/*************************************************************************
+ * Copyright 2011-2012 Eucalyptus Systems, Inc.
+ *
+ * Redistribution and use of this software in source and binary forms,
+ * with or without modification, are permitted provided that the following
+ * conditions are met:
+ *
+ *   Redistributions of source code must retain the above copyright notice,
+ *   this list of conditions and the following disclaimer.
+ *
+ *   Redistributions in binary form must reproduce the above copyright
+ *   notice, this list of conditions and the following disclaimer in the
+ *   documentation and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ ************************************************************************/
+
 (function($, eucalyptus) {
   $.widget('eucalyptus.sgroup', $.eucalyptus.eucawidget, {
     options : { },
     tableWrapper : null,
     delDialog : null,
+    $addDialog : null,
     // TODO: is _init() the right method to instantiate everything? 
     _init : function() {
       var thisObj = this;
@@ -43,6 +71,8 @@
         menu_text : table_menu_main_action,
         menu_actions : { delete: { name: table_menu_delete_action, callback: function(key, opt) { thisObj.deleteAction(thisObj); } } },
         row_click : function (args) { thisObj.handleRowClick(args); },
+        menu_click_create : function (args) { thisObj.$addDialog.eucadialog('open')},
+        context_menu : { value_column_inx: 4, build_callback: function (state) { return thisObj.buildContextMenu(state) } },
       });
       this.tableWrapper.appendTo(this.element);
 
@@ -63,11 +93,12 @@
 
       var createButtonId = 'sgroup-add-btn';
       $tmpl = $('html body').find('.templates #sgroupAddDlgTmpl').clone();
-      $add_dialog = $($tmpl.render($.i18n.map));
-/*
+      $rendered = $($tmpl.render($.i18n.map));
+      $add_dialog = $rendered.children().first();
+
       // add custom event handler to dialog elements
       // when calling eucadialog, the buttons should have domid to attach the specific domid that's used by event handler written here 
-      $add_dialog.find('#key-name').keypress( function(e){
+      $add_dialog.find('#sgroup-name').keypress( function(e){
         var $createButton = $('#'+createButtonId);
         if( e.which === RETURN_KEY_CODE || e.which === RETURN_MAC_KEY_CODE ) 
            $createButton.trigger('click');
@@ -79,12 +110,12 @@
         else 
            $createButton.prop("disabled", false).removeClass("ui-state-disabled");
       });
-*/
-      $add_dialog.eucadialog({
+
+      this.$addDialog = $add_dialog.eucadialog({
         id: 'sgroups-add',
         title: sgroup_dialog_add_title,
         buttons: { 
-        // e.g., add : { domid: keys-add-btn, text: "Add new key", disabled: true, focus: true, click : function() { }, keypress : function() { }, ...} 
+        // e.g., add : { domid: sgroup-add-btn, text: "Add new group", disabled: true, focus: true, click : function() { }, keypress : function() { }, ...} 
         'create': { domid: createButtonId, text: sgroup_dialog_create_btn, disabled: true,  click: function() { $add_dialog.dialog("close"); }},
         'cancel': {text: sgroup_dialog_cancel_btn, focus:true, click: function() { $add_dialog.dialog("close");}}
       }});
@@ -94,6 +125,15 @@
     },
 
     _destroy : function() {
+    },
+
+    buildContextMenu : function(state) {
+      //TODO: update it with more states
+      return {
+        "what?": { "name": volume_con_menu_attach },
+        "how?": { "name": volume_con_menu_create_snapshot },
+        "who?": { "name": volume_con_menu_delete }
+      }
     },
 /*
     handleInstanceHover : function(e) {
@@ -130,22 +170,16 @@
         this.tableWrapper.eucatable('activateMenu');
     },
 
-/*
-    _addKeyPair : function(keyName) {
+    _addSecurityGroup : function(groupName, groupDesc) {
       $.ajax({
         type:"GET",
-        url:"/ec2?type=key&Action=CreateKeyPair",
-        data:"_xsrf="+$.cookie('_xsrf') + "&KeyName=" + keyName,
+        url:"/ec2?Action=CreateSecurityGroup",
+        data:"_xsrf="+$.cookie('_xsrf') + "&GroupName=" + groupName + "&GroupDescription=" + groupDesc,
         dataType:"json",
         async:"false",
         success:
         function(data, textStatus, jqXHR){
-          if (data.results && data.results.material) {
-            $.generateFile({
-              filename    : keyName,
-              content     : data.results.material,
-              script      : '/support?Action=DownloadFile&_xsrf=' + $.cookie('_xsrf')
-            });
+          if (data.results && data.results.status == true) {
             successNotification(keypair_create_success + ' ' + keyName);
             tableWrapper.eucatable('refreshTable');
           } else {
@@ -158,7 +192,7 @@
         }
       });
     },
-*/
+
     _deleteSelectedSecurityGroups : function () {
       thisObj = this;
       var rowsToDelete = thisObj._getTableWrapper().eucatable('getAllSelectedRows');
@@ -166,7 +200,7 @@
         var sgroupName = rowsToDelete[i];
         $.ajax({
           type:"GET",
-          url:"/ec2?type=key&Action=DeleteSecurityGroup&GroupName=" + sgroupName,
+          url:"/ec2?Action=DeleteSecurityGroup&GroupName=" + sgroupName,
           data:"_xsrf="+$.cookie('_xsrf'),
           dataType:"json",
           async:"true",

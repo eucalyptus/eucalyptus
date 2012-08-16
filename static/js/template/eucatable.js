@@ -1,3 +1,30 @@
+/*************************************************************************
+ * Copyright 2011-2012 Eucalyptus Systems, Inc.
+ *
+ * Redistribution and use of this software in source and binary forms,
+ * with or without modification, are permitted provided that the following
+ * conditions are met:
+ *
+ *   Redistributions of source code must retain the above copyright notice,
+ *   this list of conditions and the following disclaimer.
+ *
+ *   Redistributions in binary form must reproduce the above copyright
+ *   notice, this list of conditions and the following disclaimer in the
+ *   documentation and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ ************************************************************************/
+
 (function($, eucalyptus) {
   $.widget('eucalyptus.eucatable', {
     options : { 
@@ -14,10 +41,9 @@
       value_column_inx: null, // e.g 8
       help : null // e.g., { delete: ["Delete", function () { dialog.... } ] }
     },
-
     table : null, // jQuery object to the table
     help_flipped : false,
-
+    actionMenu : null,
     _init : function() {
       thisObj = this;
       // add draw call back
@@ -28,7 +54,6 @@
       this._decorateTopBar({txt_create: this.options.txt_create, txt_found : this.options.txt_found});
       this._decorateActionMenu({text: this.options.menu_text, actions: this.options.menu_actions });
       this._addActions(this.actionMenu);
-      this._setHelp($header); // add page-level help
     },
 
     _create : function() {
@@ -74,7 +99,7 @@
     },
 
     _drawCallback : function(oSettings) {
-      var thisObj = this;
+      thisObj = this;
       $('#table_' + this.options.id + '_count').html(oSettings.fnRecordsDisplay());
       this.element.find('table tbody').find('tr').each(function(index, tr) {
         // add custom td handlers
@@ -157,7 +182,9 @@
       $header.append(
         $('<span>').text(args.title).append(
           $('<div>').addClass('help-link').append(
-            $('<a>').attr('href','#').text('?'))));
+            $('<a>').attr('href','#').text('?').click( function(evt){
+              thisObj._trigger('help_click', evt);
+            }))));
       return $header;
     },
 
@@ -166,7 +193,7 @@
       var thisObj = this; // ref to widget instance
       var $searchBar = this.element.find('#'+this.options.id+'_filter');
       $searchBar.append(
-        $('<a>').addClass('table-refresh').attr('href','#').text(args.refresh).live('click',function(){
+        $('<a>').addClass('table-refresh').attr('href','#').text(args.refresh).click(function(){
           thisObj.refreshTable();
         }));
       return $searchBar;
@@ -194,7 +221,7 @@
           '&nbsp;|&nbsp;',
           $('<span>').addClass('show').text('all')));
 
-      $tableTop.find('span.show').live('click',function () {
+      $tableTop.find('span.show').click(function () {
         $(this).parent().children('span').each( function() {
           $(this).removeClass('selected');
         });
@@ -208,7 +235,7 @@
       });
 
       // add action to create new
-      this.element.find('#table-' + this.options.id + '-new').live('click',function() {
+      this.element.find('#table-' + this.options.id + '-new').click(function() {
         thisObj._trigger('menu_click_create'); // users of the table should listen to
       });
       return $tableTop;

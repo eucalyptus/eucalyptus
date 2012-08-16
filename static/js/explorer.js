@@ -1,10 +1,37 @@
+/*************************************************************************
+ * Copyright 2011-2012 Eucalyptus Systems, Inc.
+ *
+ * Redistribution and use of this software in source and binary forms,
+ * with or without modification, are permitted provided that the following
+ * conditions are met:
+ *
+ *   Redistributions of source code must retain the above copyright notice,
+ *   this list of conditions and the following disclaimer.
+ *
+ *   Redistributions in binary form must reproduce the above copyright
+ *   notice, this list of conditions and the following disclaimer in the
+ *   documentation and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ ************************************************************************/
+
 (function($, eucalyptus) {
   eucalyptus.explorer = function(){ 
     $.widget("eucalyptus.explorer", {
       options : {
         menus : [ {key:'dashboard', text:menu_dashboard}, 
-                {key:'images', text:menu_images},
-                {key:'instances', text:menu_instances},
+                {key:'image', text:menu_images},
+                {key:'instance', text:menu_instances},
                 {key:'storage', text:menu_storage},
                 {key:'netsec', text:menu_netsec}],
         submenus : { storage: [{key:'volume', text:menu_storage_volumes}, {key:'snapshot', text:menu_storage_snapshots},{key:'bucket',text:menu_storage_buckets}],
@@ -46,8 +73,9 @@
           $.each(this.options.submenus[menu.key], function (idx, submenu){
             $submenu.append($('<li>').append(
                             $('<a>').attr('href','#').text(submenu.text).click(
-                              function (evt){
-                                header._trigger("select", evt, {selected:submenu.key}); 
+                              function (evt, src){
+                                if(src!=='triggered')
+                                  header._trigger("select", evt, {selected:submenu.key}); 
                               })));
           });
         }
@@ -56,7 +84,7 @@
                          $('<a>').addClass(clsName).attr('href','#').text(menu.text));
         if(menu.key in this.options.submenus){
           $menu.append($submenu);
-          $menu.find('a').click(function(evt) {
+          $menu.find('a').click(function(evt, src) {
             $submenu.slideToggle('fast');
             $menu.toggleClass('toggle-on'); 
             $('html body').trigger('click','navigator:'+menu.key);
@@ -69,8 +97,9 @@
         }
         else {
           $menu.find('a').click( 
-            function (evt) {
-              header._trigger("select", evt, {selected:menu.key}); 
+            function (evt, src) {
+              if(src!=='triggered')
+                header._trigger("select", evt, {selected:menu.key}); 
             }
           );
         }
