@@ -408,6 +408,47 @@
       </script>
       <!-- END Volume dialog template -->
 
+      <!-- Instance landing table template -->
+      <script id="instanceTblTmpl" type="text/x-jsrender">
+        <div id="instances-wrapper">
+          <div id="instances-table">
+            <table id="instances" class="display">
+              <thead>
+                <tr>
+                  <th>
+                    <input type="checkbox" id="instances-check-all">
+                  </th>
+                  <th>{{!>inst_tbl_hdr_os}}</th>
+                  <th>{{!>inst_tbl_hdr_id}}</th>
+                  <th>{{!>inst_tbl_hdr_state}}</th>
+                  <th>{{!>inst_tbl_hdr_manifest}}</th>
+                  <th>{{!>inst_tbl_hdr_availability_zone}}</th>
+                  <th>{{!>inst_tbl_hdr_public_ip}}</th>
+                  <th>{{!>inst_tbl_hdr_private_ip}}</th>
+                  <th>{{!>inst_tbl_hdr_keyname}}</th>
+                  <th>{{!>inst_tbl_hdr_sgroup}}</th>
+                  <th>{{!>inst_tbl_hdr_launch_time}}</th>
+                </tr>
+               </thead>
+               <tbody>
+                 <tr>
+                   <td colspan="8" class="dataTables_empty">{{!>table_loading}}</td>
+                 </tr>
+              </tbody>
+            </table>
+          </div>
+          <div id="instance-help">
+            <div class="help-content">
+              {{!: landing_content }}
+            </div>
+            <div class="help-revert-button"> 
+              <a href="#">{{!>revert_button}}</a>
+            </div>
+          </div>
+        </div>
+      </script>
+      <!-- END Instance landing table template -->
+
     </div> 
     <!-- END of templates --> 
 

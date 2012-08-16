@@ -26,96 +26,85 @@
     // TODO: is _init() the right method to instantiate everything? 
     _init : function() {
       var thisObj = this;
-      var $tmpl = $('html body').find('.templates #volumeTblTmpl').clone();
+      var $tmpl = $('html body').find('.templates #instanceTblTmpl').clone();
       var $wrapper = $($tmpl.render($.extend($.i18n.map, help_volume)));
-      var $volTable = $wrapper.children().first();
-      var $volHelp = $wrapper.children().last();
-      this.element.add($volTable);
-      var $base_table = $volTable.find('table');
+      var $instTable = $wrapper.children().first();
+      var $instHelp = $wrapper.children().last();
+      this.element.add($instTable);
+      var $base_table = $instTable.find('table');
 
-      tableWrapper = $volTable.eucatable({
-        id : 'volumes', // user of this widget should customize these options,
+      tableWrapper = $instTable.eucatable({
+        id : 'instances', // user of this widget should customize these options,
         base_table : $base_table,
         dt_arg : {
           "bProcessing": true,
-          "sAjaxSource": "../ec2?Action=DescribeVolumes",
+          "sAjaxSource": "../ec2?Action=DescribeInstances",
           "sAjaxDataProp": "results",
           "bAutoWidth" : false,
           "sPaginationType": "full_numbers",
-          "sDom": '<"table_volumes_header"><"table-volume-filter">f<"clear"><"table_volumes_top">rt<"table-volumes-legend">p<"clear">',
+          "sDom": '<"table_instances_header"><"table-instance-filter">f<"clear"><"table_instances_top">rt<"table-instances-legend">p<"clear">',
           "aoColumns": [
             {
               "bSortable": false,
               "fnRender": function(oObj) { return '<input type="checkbox"/>' },
               "sWidth": "20px",
             },
+            { "mDataProp": "platform" },
             { "mDataProp": "id" },
-            {
-              "fnRender": function(oObj) { s = (oObj.aData.status == 'in-use') ? oObj.aData.attach_data.status : oObj.aData.status; return '<div class="volume-status-' + s + '">&nbsp;</div>'; },
-              "sWidth": "20px",
-              "bSearchable": false,
-              "iDataSort": 8, // sort on hiden status column
-            },
-            { "mDataProp": "size" },
-            { "mDataProp": "attach_data.instance_id" },
-            { "mDataProp": "snapshot_id" },
-            { "mDataProp": "zone" },
+            { "mDataProp": "state" },
+            { "mDataProp": "image_id" }, // TODO: this should be mapped to manifest 
+            { "mDataProp": "placement" }, // TODO: placement==zone?
+            { "mDataProp": "ip_address" },
+            { "mDataProp": "private_ip_address" },
+            { "mDataProp": "key_name" },
+            { "mDataProp": "group_name" },
             // output creation time in browser format and timezone
-            { "fnRender": function(oObj) { d = new Date(oObj.aData.create_time); return d.toLocaleString(); } },
-            {
-              "bVisible": false,
-              "fnRender": function(oObj) { s = (oObj.aData.status == 'in-use') ? oObj.aData.attach_data.status : oObj.aData.status; return s; }
-            }
+            { "fnRender": function(oObj) { d = new Date(oObj.aData.launch_time); return d.toLocaleString(); } },
           ]
         },
-        header_title : volume_h_title,
+        header_title : instance_h_title,
         search_refresh : search_refresh,
-        txt_create : volume_create,
-        txt_found : volume_found,
+        txt_create : instance_create,
+        txt_found : instance_found,
         menu_text : table_menu_main_action,
         menu_actions : { delete: [table_menu_delete_action, function (args) { thisObj.deleteAction(args) } ] },
         row_click : function (args) { thisObj.handleRowClick(args); },
-        context_menu : { value_column_inx: 8, build_callback: function (state) { return thisObj.buildContextMenu(state) } },
+        //context_menu : { value_column_inx: 8, build_callback: function (state) { return thisObj.buildContextMenu(state) } },
       //  td_hover_actions : { instance: [4, function (args) { thisObj.handleInstanceHover(args); }], snapshot: [5, function (args) { thisObj.handleSnapshotHover(args); }] }
         help_click : function(evt) {
           var $helpHeader = $('<div>').addClass('euca-table-header').append(
-                              $('<span>').text(help_volume['landing_title']).append(
+                              $('<span>').text(help_instance['landing_title']).append(
                                 $('<div>').addClass('help-link').append(
                                   $('<a>').attr('href','#').html('&larr;'))));
-          thisObj._flipToHelp(evt,$helpHeader, $volHelp);
+          thisObj._flipToHelp(evt,$helpHeader, $instHelp);
         },
       });
       tableWrapper.appendTo(this.element);
 
       //add filter to the table
-      $tableFilter = $('div.table-volume-filter');
+      $tableFilter = $('div.table-instance-filter');
       $tableFilter.addClass('euca-table-filter');
       $tableFilter.append(
-        $('<span>').addClass("filter-label").html(volume_filter_label),
-        $('<select>').attr('id', 'volumes-selector'));
+        $('<span>').addClass("filter-label").html(table_filter_label),
+        $('<select>').attr('id', 'instances-selector'));
 
-      //TODO: add more states
-      attachedStates = { 'attached':1, 'attaching':1, 'detaching':1 };
-      detachedStates = { 'available':1 };
-      otherStates = ['creating', 'deleting', 'deleted', 'error'];
-
-      filterOptions = ['all', 'attached', 'detached'];
-      $sel = $tableFilter.find("#volumes-selector");
+      filterOptions = ['linux', 'windows'];
+      $sel = $tableFilter.find("#instances-selector");
       for (o in filterOptions)
-        $sel.append($('<option>').val(filterOptions[o]).text($.i18n.map['volume_selecter_' + filterOptions[o]]));
+        $sel.append($('<option>').val(filterOptions[o]).text($.i18n.map['instance_selecter_' + filterOptions[o]]));
 
       $.fn.dataTableExt.afnFiltering.push(
 	function( oSettings, aData, iDataIndex ) {
           // first check if this is called on a volumes table
-          if (oSettings.sInstance != 'volumes')
+          if (oSettings.sInstance != 'instances')
             return true;
-          selectorValue = $("#volumes-selector").val();
+          selectorValue = $("#instances-selector").val();
           switch (selectorValue) {
-            case 'attached':
-              return attachedStates[aData[8]] == 1;
+            case 'linux':
+              //return attachedStates[aData[8]] == 1;
               break;
-            case 'detached':
-              return detachedStates[aData[8]] == 1;
+            case 'windows':
+              //return detachedStates[aData[8]] == 1;
               break;
           }
           return true;
@@ -123,16 +112,19 @@
       );
 
       // attach action
-      $("#volumes-selector").change( function() { thisObj.reDrawTable() } );
+      $("#instances-selector").change( function() { thisObj.reDrawTable() } );
 
+      // TODO: should be a template in html
       //add leged to the volumes table
-      $tableLegend = $("div.table-volumes-legend");
-      $tableLegend.append($('<span>').addClass('volume-legend').html(volume_legend));
+/*
+      $tableLegend = $("div.table-instances-legend");
+      $tableLegend.append($('<span>').addClass('instance-legend').html(volume_legend));
       //TODO: this might not work in all browsers
       statuses = [].concat(Object.keys(attachedStates),Object.keys(detachedStates), otherStates);
       for (s in statuses)
-        $tableLegend.append($('<span>').addClass('volume-status-legend').addClass('volume-status-' + statuses[s]).html($.i18n.map['volume_state_' + statuses[s]]));
-
+        $tableLegend.append($('<span>').addClass('instance-status-legend').addClass('instance-status-' + statuses[s]).html($.i18n.map['instance_state_' + statuses[s]]));
+*/
+/*
       $tmpl = $('html body').find('.templates #volumeDelDlgTmpl').clone();
       var $rendered = $($tmpl.render($.extend($.i18n.map, help_volume)));
       var $del_dialog = $rendered.children().first();
@@ -165,7 +157,6 @@
         else 
            $createButton.prop("disabled", false).removeClass("ui-state-disabled");
       });
-*/
       $add_dialog.eucadialog({
         id: 'volumes-add',
         title: volume_dialog_add_title,
@@ -174,8 +165,8 @@
         'create': { domid: createButtonId, text: volume_dialog_create_btn, disabled: true,  click: function() { $add_dialog.dialog("close"); }},
         'cancel': {text: volume_dialog_cancel_btn, focus:true, click: function() { $add_dialog.dialog("close");}}
       }});
+*/
     },
-
     _create : function() { 
     },
 

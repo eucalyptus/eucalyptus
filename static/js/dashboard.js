@@ -53,8 +53,8 @@
           if (data.results) {
             var numRunning = 0;
             var numStopped = 0;
-            $.each(data.results, function (idx, res){
-              $.each(res.instances, function(ix, instance){
+            $.each(data.results, function (idx, instance){
+              //$.each(res.instances, function(ix, instance){
                 // TODO: check if placement is the right identifier of availability zones
                 if (az==='all' || instance.placement === az ){
                   if (instance.state === 'running')
@@ -62,7 +62,7 @@
                   else if (instance.state === 'stopped')
                     numStopped++;
                 }
-              });
+             // });
             });
             $instObj.find('#dashboard-instance-running img').remove();
             $instObj.find('#dashboard-instance-stopped img').remove();

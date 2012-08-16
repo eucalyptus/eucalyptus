@@ -91,7 +91,7 @@
       $tableFilter = $('div.table-volume-filter');
       $tableFilter.addClass('euca-table-filter');
       $tableFilter.append(
-        $('<span>').addClass("filter-label").html(volume_filter_label),
+        $('<span>').addClass("filter-label").html(table_filter_label),
         $('<select>').attr('id', 'volumes-selector'));
 
       //TODO: add more states
@@ -125,6 +125,7 @@
       // attach action
       $("#volumes-selector").change( function() { thisObj.reDrawTable() } );
 
+      // TODO: let's move legend to html as a template
       //add leged to the volumes table
       $tableLegend = $("div.table-volumes-legend");
       $tableLegend.append($('<span>').addClass('volume-legend').html(volume_legend));
