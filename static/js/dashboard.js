@@ -1,28 +1,21 @@
 /*************************************************************************
- * Copyright 2011-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2012 Eucalyptus Systems, Inc.
  *
- * Redistribution and use of this software in source and binary forms,
- * with or without modification, are permitted provided that the following
- * conditions are met:
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 3 of the License.
  *
- *   Redistributions of source code must retain the above copyright notice,
- *   this list of conditions and the following disclaimer.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- *   Redistributions in binary form must reproduce the above copyright
- *   notice, this list of conditions and the following disclaimer in the
- *   documentation and/or other materials provided with the distribution.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
+ * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
+ * additional information or have any questions.
  ************************************************************************/
 
 (function($, eucalyptus) {
@@ -37,7 +30,7 @@
       this._setStorageSummary($div.find('#dashboard-content .storage'));
       this._setNetSecSummary($div.find('#dashboard-content .netsec'));  
       $div.appendTo(this.element); 
-      $('html body').find(DOM_BINDING['notification']).notification('success', 'dashboard (testing)', 'dashboard loaded successfully');
+      //$('html body').find(DOM_BINDING['notification']).notification('success', 'dashboard (testing)', 'dashboard loaded successfully');
     },
 
     _create : function() { },
@@ -60,8 +53,8 @@
           if (data.results) {
             var numRunning = 0;
             var numStopped = 0;
-            $.each(data.results, function (idx, res){
-              $.each(res.instances, function(ix, instance){
+            $.each(data.results, function (idx, instance){
+              //$.each(res.instances, function(ix, instance){
                 // TODO: check if placement is the right identifier of availability zones
                 if (az==='all' || instance.placement === az ){
                   if (instance.state === 'running')
@@ -69,10 +62,11 @@
                   else if (instance.state === 'stopped')
                     numStopped++;
                 }
-              });
+             // });
             });
-            $instObj.find('#dashboard-instance-running img').remove();
-            $instObj.find('#dashboard-instance-stopped img').remove();
+            // selector is different for these two because of extra div
+            $instObj.find('#dashboard-instance-running div img').remove();
+            $instObj.find('#dashboard-instance-stopped div img').remove();
             $instObj.find('#dashboard-instance-running span').text(numRunning);
             $instObj.find('#dashboard-instance-stopped span').text(numStopped);
             $instObj.find('#dashboard-instance-running').wrapAll(
@@ -98,10 +92,12 @@
       });
 
       //az = $instObj.find('#dashboard-instance-dropbox').value();
-      $instObj.find('#dashboard-instance-running').prepend(
-        $('<img>').attr('src','images/loading.gif'));
-      $instObj.find('#dashboard-instance-stopped').prepend(
-        $('<img>').attr('src','images/loading.gif'));
+
+      // selector is different for these two because of extra div
+      $instObj.find('#dashboard-instance-running div').prepend(
+        $('<img>').attr('src','images/dots32.gif'));
+      $instObj.find('#dashboard-instance-stopped div').prepend(
+        $('<img>').attr('src','images/dots32.gif'));
     },
 
     _setStorageSummary : function($storageObj) {
@@ -171,11 +167,11 @@
 
       //az = $instObj.find('#dashboard-instance-dropbox').value();
       $storageObj.find('#dashboard-storage-volume').prepend(
-        $('<img>').attr('src','images/loading.gif'));
+        $('<img>').attr('src','images/dots32.gif'));
       $storageObj.find('#dashboard-storage-snapshot').prepend(
-        $('<img>').attr('src','images/loading.gif'));
+        $('<img>').attr('src','images/dots32.gif'));
       $storageObj.find('#dashboard-storage-buckets').prepend(
-        $('<img>').attr('src','images/loading.gif'));
+        $('<img>').attr('src','images/dots32.gif'));
     },
   
     _setNetSecSummary : function($netsecObj) {
@@ -264,11 +260,11 @@
 
       //az = $instObj.find('#dashboard-instance-dropbox').value();
       $netsecObj.find('#dashboard-netsec-sgroup').prepend(
-        $('<img>').attr('src','images/loading.gif'));
+        $('<img>').attr('src','images/dots32.gif'));
       $netsecObj.find('#dashboard-netsec-eip').prepend(
-        $('<img>').attr('src','images/loading.gif'));
+        $('<img>').attr('src','images/dots32.gif'));
       $netsecObj.find('#dashboard-netsec-keypair').prepend(
-        $('<img>').attr('src','images/loading.gif'));
+        $('<img>').attr('src','images/dots32.gif'));
     },
 
     close: function() {
