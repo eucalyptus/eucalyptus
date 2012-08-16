@@ -20,6 +20,7 @@ application = tornado.web.Application([
         (r"/custom/(.*)", tornado.web.StaticFileHandler, {'path': os.path.join(os.path.dirname(__file__), './static/custom')}),
         (r"/images/(.*)", tornado.web.StaticFileHandler, {'path': os.path.join(os.path.dirname(__file__), './static/images')}),
         (r"/helps/(.*)", tornado.web.StaticFileHandler, {'path': os.path.join(os.path.dirname(__file__), './static/helps')}),
+        (r"/fonts/(.*)", tornado.web.StaticFileHandler, {'path': os.path.join(os.path.dirname(__file__), './static/fonts')}),
         (r"/ec2", api.ComputeHandler),
         (r"/support", support.ComputeHandler),
         (r"/(.*)", server.RootHandler),
