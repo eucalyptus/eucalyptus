@@ -99,9 +99,9 @@
 
       //az = $instObj.find('#dashboard-instance-dropbox').value();
       $instObj.find('#dashboard-instance-running').prepend(
-        $('<img>').attr('src','images/loading.gif'));
+        $('<img>').attr('src','images/dots32.gif'));
       $instObj.find('#dashboard-instance-stopped').prepend(
-        $('<img>').attr('src','images/loading.gif'));
+        $('<img>').attr('src','images/dots32.gif'));
     },
 
     _setStorageSummary : function($storageObj) {
@@ -171,11 +171,11 @@
 
       //az = $instObj.find('#dashboard-instance-dropbox').value();
       $storageObj.find('#dashboard-storage-volume').prepend(
-        $('<img>').attr('src','images/loading.gif'));
+        $('<img>').attr('src','images/dots32.gif'));
       $storageObj.find('#dashboard-storage-snapshot').prepend(
-        $('<img>').attr('src','images/loading.gif'));
+        $('<img>').attr('src','images/dots32.gif'));
       $storageObj.find('#dashboard-storage-buckets').prepend(
-        $('<img>').attr('src','images/loading.gif'));
+        $('<img>').attr('src','images/dots32.gif'));
     },
   
     _setNetSecSummary : function($netsecObj) {
@@ -264,11 +264,11 @@
 
       //az = $instObj.find('#dashboard-instance-dropbox').value();
       $netsecObj.find('#dashboard-netsec-sgroup').prepend(
-        $('<img>').attr('src','images/loading.gif'));
+        $('<img>').attr('src','images/dots32.gif'));
       $netsecObj.find('#dashboard-netsec-eip').prepend(
-        $('<img>').attr('src','images/loading.gif'));
+        $('<img>').attr('src','images/dots32.gif'));
       $netsecObj.find('#dashboard-netsec-keypair').prepend(
-        $('<img>').attr('src','images/loading.gif'));
+        $('<img>').attr('src','images/dots32.gif'));
     },
 
     close: function() {

@@ -163,8 +163,11 @@
       <script id="dashboardTmpl" type="text/x-jsrender">
       <div id="dashboard" class="content-box clearfix">
         <div class="box-header"> <span> {{!>dashboard_title}} </span> </div>
+        
         <div id="dashboard-content">
+          
           <div class="instances inner-box clearfix">
+            <h3>Instances</h3>
             <div id="dashboard-instance-img">
               <img src="images/dashboard_instance.png">
             </div>
@@ -180,15 +183,16 @@
             </div>
             <div id="dashboard-instance-stopped" class="status-stopped clearfix">
               <div class="status-readout">
-              <span></span> {{!>dashboard_instance_stopped}}
+                <span></span> {{!>dashboard_instance_stopped}}
               </div>
             </div>
-            <div id="dashboard-instance-launch" class="clearfix">
-              <a href="#" class="button">Launch new instance</a>
+            <div id="dashboard-instance-launch">
+              <a href="#" class="tall-button">Launch new instance</a>
             </div> 
           </div>
 
           <div class="storage inner-box clearfix">
+            <h3>Storage</h3>
             <div id="dashboard-storage-img">
               <img src="images/dashboard_storage.png">
             </div>
@@ -204,6 +208,7 @@
           </div>
 
           <div class="netsec inner-box clearfix">
+            <h3>Network &amp; Security</h3>
             <div id="dashboard-netsec-img">
               <img src="images/dashboard_netsec.png">
             </div>
@@ -217,7 +222,9 @@
               <span></span> {{!>dashboard_eip}}
             </div>           
           </div>
+
         </div>
+        <!-- END dashboard-content -->
        </div>
       </script>
       <!-- END Dashboard template -->
