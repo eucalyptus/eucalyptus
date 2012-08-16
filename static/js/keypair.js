@@ -52,14 +52,15 @@
             },
             { "mDataProp": "name" },
             { "mDataProp": "fingerprint", "bSortable": false }
-          ]
+          ],
+          "fnDrawCallback": function( oSettings ) { thisObj._drawCallback(oSettings); }
         },
         header_title : keypair_h_title,
         search_refresh : search_refresh,
         txt_create : keypair_create,
         txt_found : keypair_found,
         menu_text : table_menu_main_action,
-        menu_actions : { delete: { name: table_menu_delete_action, callback: function(key, opt) { thisObj.deleteAction(thisObj); } } },
+        menu_actions : { delete: { name: table_menu_delete_action, callback: function(key, opt) { thisObj.deleteAction(); } } },
         row_click : function (args) { thisObj.handleRowClick(args); },
         menu_click_create : function (args) { thisObj.$addDialog.eucadialog('open')},
         help_click : function(evt) { 
@@ -137,7 +138,21 @@
     _destroy : function() {
     },
 
-    handleRowClick : function(args) {
+    _drawCallback : function(oSettings) {
+      thisObj = this;
+      $('#table_keys_count').html(oSettings.fnRecordsDisplay());
+      this.element.find('table tbody').find('tr').each(function(index, tr) {
+        $currentRow = $(tr);
+        $currentRow.click( function (e) {
+          // checked/uncheck on checkbox
+          $rowCheckbox = $(e.target).parents('tr').find(':input[type="checkbox"]');
+          $rowCheckbox.attr('checked', !$rowCheckbox.is(':checked'));
+          thisObj._handleRowClick();
+        });
+      });
+    },
+
+    _handleRowClick : function() {
       if ( this.tableWrapper.eucatable('countSelectedRows') == 0 )
         this.tableWrapper.eucatable('deactivateMenu');
       else
@@ -148,7 +163,7 @@
       var thisObj = this;
       $.ajax({
         type:"GET",
-        url:"/ec2?type=key&Action=CreateKeyPair",
+        url:"/ec2?Action=CreateKeyPair",
         data:"_xsrf="+$.cookie('_xsrf') + "&KeyName=" + keyName,
         dataType:"json",
         async:"false",
@@ -180,7 +195,7 @@
         var keyName = rowsToDelete[i];
         $.ajax({
           type:"GET",
-          url:"/ec2?type=key&Action=DeleteKeyPair&KeyName=" + keyName,
+          url:"/ec2?Action=DeleteKeyPair&KeyName=" + keyName,
           data:"_xsrf="+$.cookie('_xsrf'),
           dataType:"json",
           async:"true",
@@ -213,12 +228,12 @@
       return this.tableWrapper;
     },
 
-    deleteAction : function(thisObj) {
-      $tableWrapper = thisObj._getTableWrapper();
+    deleteAction : function() {
+      $tableWrapper = this._getTableWrapper();
       rowsToDelete = $tableWrapper.eucatable('getAllSelectedRows');
       if ( rowsToDelete.length > 0 ) {
         // show delete dialog box
-        $deleteNames = this.$delDialog.find("span.delete-names")
+        $deleteNames = this.$delDialog.find("span.resource-ids")
         $deleteNames.html('');
         for ( i = 0; i<rowsToDelete.length; i++ ) {
           t = escapeHTML(rowsToDelete[i]);

@@ -55,14 +55,15 @@
               "sWidth": "200px",
               "sClass": "table_center_cell",
             }
-          ]
+          ],
+          "fnDrawCallback": function( oSettings ) { thisObj._drawCallback(oSettings); }
         },
         header_title : sgroup_h_title,
         search_refresh : search_refresh,
         txt_create : sgroup_create,
         txt_found : sgroup_found,
         menu_text : table_menu_main_action,
-        menu_actions : { delete: { name: table_menu_delete_action, callback: function(key, opt) { thisObj.deleteAction(thisObj); } } },
+        menu_actions : { delete: { name: table_menu_delete_action, callback: function(key, opt) { thisObj.deleteAction(); } } },
         row_click : function (args) { thisObj.handleRowClick(args); },
         menu_click_create : function (args) { thisObj.$addDialog.eucadialog('open')},
         context_menu : { value_column_inx: 4, build_callback: function (state) { return thisObj.buildContextMenu(state) } },
@@ -120,6 +121,20 @@
     _destroy : function() {
     },
 
+    _drawCallback : function(oSettings) {
+      thisObj = this;
+      $('#table_keys_count').html(oSettings.fnRecordsDisplay());
+      this.element.find('table tbody').find('tr').each(function(index, tr) {
+        $currentRow = $(tr);
+        $currentRow.click( function (e) {
+          // checked/uncheck on checkbox
+          $rowCheckbox = $(e.target).parents('tr').find(':input[type="checkbox"]');
+          $rowCheckbox.attr('checked', !$rowCheckbox.is(':checked'));
+          thisObj._handleRowClick();
+        });
+      });
+    },
+
     buildContextMenu : function(state) {
       // huh? what really goes here? just edit rules, maybe add rules?
       return {
@@ -156,7 +171,7 @@
       this.tableWrapper.eucatable('reDrawTable');
     },
 
-    handleRowClick : function(args) {
+    _handleRowClick : function() {
       if ( this.tableWrapper.eucatable('countSelectedRows') == 0 )
         this.tableWrapper.eucatable('deactivateMenu');
       else
@@ -226,12 +241,12 @@
       return this.tableWrapper;
     },
 
-    deleteAction : function(thisObj) {
-      $tableWrapper = thisObj._getTableWrapper();
+    deleteAction : function() {
+      $tableWrapper = this._getTableWrapper();
       rowsToDelete = $tableWrapper.eucatable('getAllSelectedRows');
       if ( rowsToDelete.length > 0 ) {
         // show delete dialog box
-        $deleteNames = this.delDialog.find("span.delete-names")
+        $deleteNames = this.delDialog.find("span.resource-ids")
         $deleteNames.html('');
         for ( i = 0; i<rowsToDelete.length; i++ ) {
           t = escapeHTML(rowsToDelete[i]);

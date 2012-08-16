@@ -29,9 +29,8 @@
       txt_create : 'Create resource',
       txt_found : 'resources found',
       menu_text : 'More actions',
-      menu_actions : null, // e.g., { delete: ["Delete", function () { dialog.... } ] }
-      context_menu : null, // e.g { build_callback: funcion(args) {} }
-      value_column_inx: null, // e.g 8
+      menu_actions : null, // e.g., TODO: add help
+      value_column_inx : null, // e.g 8
       help : null // e.g., { delete: ["Delete", function () { dialog.... } ] }
     },
     table : null, // jQuery object to the table
@@ -40,7 +39,7 @@
     _init : function() {
       thisObj = this;
       // add draw call back
-      this.options.dt_arg['fnDrawCallback'] = function( oSettings ) { thisObj._drawCallback(oSettings); };
+      // this.options.dt_arg['fnDrawCallback'] = function( oSettings ) { thisObj._drawCallback(oSettings); };
       this.table = this.options.base_table.dataTable(this.options.dt_arg);
       var $header = this._decorateHeader({title:this.options.header_title});
       this._decorateSearchBar({refresh: this.options.search_refresh});
@@ -90,7 +89,7 @@
       }
       $helpLink.live('click',funcOnClick);
     },
-
+/*
     _drawCallback : function(oSettings) {
       thisObj = this;
       $('#table_' + this.options.id + '_count').html(oSettings.fnRecordsDisplay());
@@ -146,13 +145,17 @@
         }
       });      
     },
-
+*/
     reDrawTable : function() {
       this.table.fnDraw();
     },
 
     refreshTable : function() {
       this.table.fnReloadAjax();
+    },
+
+    getTable : function() {
+      return this.table;
     },
 
     activateMenu : function() {
@@ -327,7 +330,7 @@
       }
       return selectedRows;
     },
-
+    //TODO: re-use  getContentForSelectedRows ?
     getAllSelectedRows : function (idIndex) {
       var dataTable = this.table;
       if ( !dataTable )
@@ -343,8 +346,22 @@
         }
       }
       return selectedRows;
-    }
+    },
 
+    getContentForSelectedRows : function () {
+      var dataTable = this.table;
+      if ( !dataTable )
+        return [];
+      var rows = dataTable.fnGetVisiableTrNodes();
+      var selectedRows = [];
+      for ( i = 0; i<rows.length; i++ ) {
+        cb = rows[i].firstChild.firstChild;
+        if ( cb != null && cb.checked == true ) {
+          selectedRows.push(rows[i]);
+        }
+      }
+      return selectedRows;
+    }
   });
 })(jQuery,
    window.eucalyptus ? window.eucalyptus : window.eucalyptus = {});
