@@ -1,34 +1,28 @@
-<!-- 
-  Copyright 2011-2012 Eucalyptus Systems, Inc.
- 
-  Redistribution and use of this software in source and binary forms,
-  with or without modification, are permitted provided that the following
-  conditions are met:
- 
-    Redistributions of source code must retain the above copyright notice,
-    this list of conditions and the following disclaimer.
- 
-    Redistributions in binary form must reproduce the above copyright
-    notice, this list of conditions and the following disclaimer in the
-    documentation and/or other materials provided with the distribution.
- 
-  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
-  OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
--->
+<!--
+  Copyright 2009-2012 Eucalyptus Systems, Inc.
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; version 3 of the License.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see http://www.gnu.org/licenses/.
+
+  Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
+  CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
+  additional information or have any questions.
+  -->
 
 <!DOCTYPE html>
 <html>
   <head>
     <title>Eucalyptus</title>
+    <link rel="stylesheet" type="text/css" href="http://fonts.googleapis.com/css?family=Play:400,700" />
     <style type="text/css" title="currentStyle">
       @import "lib/jquery.css";
       @import "lib/jquery-table.css";
@@ -53,9 +47,9 @@
     <script type="text/javascript" language="javascript" src="lib/jsrender.js"></script>
     <script type="text/javascript" language="javascript" src="lib/jquery.ui.position.js"></script>
     <script type="text/javascript" language="javascript" src="lib/jquery.contextMenu.js"></script>
-    <script type="text/javascript" language="javascript" src="lib/jquery.flip.min.js"</script>
-    <script type="text/javascript" language="javascript" src="js/jquery.generateFile.js"></script>
-    <script type="text/javascript" language="javascript" src="js/jQueryExt.js"></script>
+    <script type="text/javascript" language="javascript" src="lib/jquery.flip.js"</script>
+    <script type="text/javascript" language="javascript" src="js/jquery_generate_file.js"></script>
+    <script type="text/javascript" language="javascript" src="js/jquery_ext.js"></script>
 
 
     <!-- Eucalyptus UI javascripts -->
@@ -70,6 +64,7 @@
     <script type="text/javascript" language="javascript" src="js/main_container.js"></script>
     <script type="text/javascript" language="javascript" src="js/eucawidget.js"></script>
     <script type="text/javascript" language="javascript" src="js/dashboard.js"></script>
+    <script type="text/javascript" language="javascript" src="js/instance.js"></script>
     <script type="text/javascript" language="javascript" src="js/keypair.js"></script>
     <script type="text/javascript" language="javascript" src="js/volume.js"></script>
     <script type="text/javascript" language="javascript" src="js/sgroup.js"></script>
@@ -98,9 +93,9 @@
       <div class="euca-notification-container">
         <div class="inner-container"> 
           <div id="euca-notification" class="notification-box clearfix">
-            <div id="euca-notification-title"> </div>
-            <div id="euca-notification-desc"> </div>
             <div id="euca-notification-close"> </div>
+            <div id="euca-notification-title"> </div>
+            <div id="euca-notification-desc"> </div>            
           </div>
         </div>
       </div>
@@ -122,7 +117,7 @@
       <!-- Login template -->
       <script id="loginTmpl" type="text/x-jsrender">
         <div id="login" class="content-box">
-          <div id="title" class="box-header"> {{!>login_title}} </div>
+          <div id="title" class="box-header"><span>{{!>login_title}}</span></div>
           <form action="/" method="post" name="loginform">
             
             <div class="form-row">
@@ -162,8 +157,11 @@
       <script id="dashboardTmpl" type="text/x-jsrender">
       <div id="dashboard" class="content-box clearfix">
         <div class="box-header"> <span> {{!>dashboard_title}} </span> </div>
+        
         <div id="dashboard-content">
+          
           <div class="instances inner-box clearfix">
+            <h3>Instances</h3>
             <div id="dashboard-instance-img">
               <img src="images/dashboard_instance.png">
             </div>
@@ -179,15 +177,16 @@
             </div>
             <div id="dashboard-instance-stopped" class="status-stopped clearfix">
               <div class="status-readout">
-              <span></span> {{!>dashboard_instance_stopped}}
+                <span></span> {{!>dashboard_instance_stopped}}
               </div>
             </div>
-            <div id="dashboard-instance-launch" class="clearfix">
-              <a href="#" class="button">Launch New Instance</a>
+            <div id="dashboard-instance-launch">
+              <a href="#" class="tall-button">Launch new instance</a>
             </div> 
           </div>
 
           <div class="storage inner-box clearfix">
+            <h3>Storage</h3>
             <div id="dashboard-storage-img">
               <img src="images/dashboard_storage.png">
             </div>
@@ -203,20 +202,23 @@
           </div>
 
           <div class="netsec inner-box clearfix">
+            <h3>Network &amp; Security</h3>
             <div id="dashboard-netsec-img">
               <img src="images/dashboard_netsec.png">
             </div>
             <div id="dashboard-netsec-sgroup" class="status-readout">
               <span></span> {{!>dashboard_sgroup}}
             </div>
-            <div id="dashboard-netsec-eip" class="status-readout">
-              <span></span> {{!>dashboard_eip}}
-            </div>
-            <div id="dashboard-netsec-keypair" class="status-readout">
+             <div id="dashboard-netsec-keypair" class="status-readout">
               <span></span> {{!>dashboard_keypair}}
             </div>
+            <div id="dashboard-netsec-eip" class="status-readout">
+              <span></span> {{!>dashboard_eip}}
+            </div>           
           </div>
+
         </div>
+        <!-- END dashboard-content -->
        </div>
       </script>
       <!-- END Dashboard template -->
@@ -405,6 +407,47 @@
         </div>
       </script>
       <!-- END Volume dialog template -->
+
+      <!-- Instance landing table template -->
+      <script id="instanceTblTmpl" type="text/x-jsrender">
+        <div id="instances-wrapper">
+          <div id="instances-table">
+            <table id="instances" class="display">
+              <thead>
+                <tr>
+                  <th>
+                    <input type="checkbox" id="instances-check-all">
+                  </th>
+                  <th>{{!>inst_tbl_hdr_os}}</th>
+                  <th>{{!>inst_tbl_hdr_id}}</th>
+                  <th>{{!>inst_tbl_hdr_state}}</th>
+                  <th>{{!>inst_tbl_hdr_manifest}}</th>
+                  <th>{{!>inst_tbl_hdr_availability_zone}}</th>
+                  <th>{{!>inst_tbl_hdr_public_ip}}</th>
+                  <th>{{!>inst_tbl_hdr_private_ip}}</th>
+                  <th>{{!>inst_tbl_hdr_keyname}}</th>
+                  <th>{{!>inst_tbl_hdr_sgroup}}</th>
+                  <th>{{!>inst_tbl_hdr_launch_time}}</th>
+                </tr>
+               </thead>
+               <tbody>
+                 <tr>
+                   <td colspan="8" class="dataTables_empty">{{!>table_loading}}</td>
+                 </tr>
+              </tbody>
+            </table>
+          </div>
+          <div id="instance-help">
+            <div class="help-content">
+              {{!: landing_content }}
+            </div>
+            <div class="help-revert-button"> 
+              <a href="#">{{!>revert_button}}</a>
+            </div>
+          </div>
+        </div>
+      </script>
+      <!-- END Instance landing table template -->
 
     </div> 
     <!-- END of templates --> 
