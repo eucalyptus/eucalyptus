@@ -31,7 +31,7 @@ public class ReportingVolumeEventStore
 
 	private static ReportingVolumeEventStore instance = null;
 	
-	public static synchronized ReportingVolumeEventStore getVolume()
+	public static synchronized ReportingVolumeEventStore getInstance()
 	{
 		if (instance == null) {
 			instance = new ReportingVolumeEventStore();

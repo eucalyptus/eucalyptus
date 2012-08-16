@@ -31,7 +31,7 @@ public class ReportingVolumeSnapshotEventStore
 
 	private static ReportingVolumeSnapshotEventStore instance = null;
 	
-	public static synchronized ReportingVolumeSnapshotEventStore getVolumeSnapshot()
+	public static synchronized ReportingVolumeSnapshotEventStore getInstance()
 	{
 		if (instance == null) {
 			instance = new ReportingVolumeSnapshotEventStore();
@@ -44,7 +44,7 @@ public class ReportingVolumeSnapshotEventStore
 		
 	}
 
-	public void insertCreateEvent(String uuid, String volumeSnapshotId, String volumeId,
+	public void insertCreateEvent(String uuid, String volumeSnapshotUuid, String volumeId,
 			Long timestampMs, String userId, Long sizeGB)
 	{
 		
@@ -53,7 +53,7 @@ public class ReportingVolumeSnapshotEventStore
 
 		try {
 			ReportingVolumeSnapshotCreateEvent volumeSnapshot = new ReportingVolumeSnapshotCreateEvent(uuid,
-					volumeSnapshotId, volumeId, timestampMs, userId, sizeGB);
+					volumeSnapshotUuid, volumeId, timestampMs, userId, sizeGB);
 			entityWrapper.add(volumeSnapshot);
 			entityWrapper.commit();
 			LOG.debug("Added reporting volumeSnapshot to db:" + volumeSnapshot);
