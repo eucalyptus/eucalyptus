@@ -56,8 +56,10 @@
        thisObj.element.children().flip({
          direction : 'lr',
          speed : 300,
-         color : '#ffffff',
-         bgColor : '#ffffff',
+         bgColor : 'white',
+         color : 'white',
+         easingIn: 'easeInQuad',
+         easingOut: 'easeOutQuad',
          content : $helpWrapper,
          onEnd : function() {
             thisObj.element.find('.help-revert-button a').click( function(evt) {

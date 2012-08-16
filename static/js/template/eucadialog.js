@@ -109,9 +109,11 @@
         if(!thisObj.help_flipped){ // TODO: is this right comparison(text comparison)?
           $contentPane.flip({
             direction : 'lr',
-            speed : 400,
-            color : '#ffffff',
-            bgColor : '#ffffff',
+            speed : 300,
+            color : 'white',
+            bgColor : 'white',
+            easingIn: 'easeInQuad',
+            easingOut: 'easeOutQuad',
             content : thisObj.options.help.content,
             onEnd : function(){
               thisObj.element.find('.help-revert-button a').click( function(evt) {
