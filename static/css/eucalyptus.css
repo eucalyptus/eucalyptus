@@ -463,7 +463,13 @@ body {
 /* ======== Login styles ======= */
 
 #login {
-  margin: 95px auto 0;
+  margin: 75px auto 0;
+  padding-top: 90px;
+  min-height: 200px;
+  width: 660px;
+}
+
+#login .box-header {
   width: 660px;
 }
 
@@ -568,27 +574,32 @@ body {
   background-color: #fff;
   border: 1px solid #aaabab;
   min-height: 285px;
+  margin: 0 8px;
+  padding-top: 95px;
+  position: relative;
 
   -webkit-border-radius: 5px;
   -moz-border-radius: 5px;
   border-radius: 5px;
 
-  -webkit-box-shadow: 0px 2px 3px rgba(3,3,3,0.30), inset 0 1px 8px rgba(44,46,50,0.32);
-  -moz-box-shadow: 0px 2px 3px rgba(3,3,3,0.30), inset 0 1px 8px rgba(44,46,50,0.32);
-  box-shadow: 0px 2px 3px rgba(3,3,3,0.30), inset 0 1px 8px rgba(44,46,50,0.32);
+  -webkit-box-shadow: 0px 2px 3px rgba(3,3,3,0.30), inset 0 1px 4px rgba(44,46,50,0.32);
+  -moz-box-shadow: 0px 2px 3px rgba(3,3,3,0.30), inset 0 1px 4px rgba(44,46,50,0.32);
+  box-shadow: 0px 2px 3px rgba(3,3,3,0.30), inset 0 1px 4px rgba(44,46,50,0.32);
 }
 
 .box-header,
 .euca-table-header {
   background-color: #eaf2f5;
+  border-top: 1px solid #f5f5f5;
   color: #02405f;
   font-family: "Play", Arial, sans-serif;
   font-size: 18px;
   font-weight: bold;
-  margin: 3px 0 20px;
-  position: relative;
+  margin: 0 0 20px;
+  position: absolute;
+  top: 12px;
   left: -8px;
-  padding: 8px 8px;
+  padding: 6px 8px;
   width: 100%;
 
   -webkit-box-shadow: 0px 2px 3px rgba(3,3,3,0.16);
@@ -597,9 +608,10 @@ body {
 }
 
 .box-header p,
+.box-header span,
 .euca-table-header span {
   margin: 0;
-  padding-left: 40px;
+  padding-left: 35px;
   line-height: 1em;
 }
 
@@ -622,7 +634,7 @@ body {
 /* ======= Dashboard ======= */
 
 #dashboard {
-  padding: 30px;
+  padding: 75px 30px 30px;
   font-size: 14px;
 }
 
@@ -764,7 +776,7 @@ span.selected {
   border: 1px solid #d7d5d5;
 
   margin: 0 8px;
-  padding: 15px 0; 
+  padding: 68px 0 15px 0; 
 
   -webkit-border-radius: 5px;
   -moz-border-radius: 5px;
@@ -951,10 +963,9 @@ tr.even td.sorting_1 {
 /* === Euca tables === */
 
 .euca-table-header {
-  -moz-border-radius: 2px;
-  border-radius: 2px;
-  border-style: solid;
-  border-color: black;
+
+  /* These will be styled in the same section as the box-header */
+
 }
 
 .euca-table-filter {
