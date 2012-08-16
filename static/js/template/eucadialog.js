@@ -121,7 +121,7 @@
               });
               // at the end of flip/revertFlip, change the ?/x button
               if(!thisObj.help_flipped){
-                $helpLink.text('x');
+                $helpLink.html('&larr;');
                 if(thisObj.options.help.title)
                   $titleBar.find('span').text(thisObj.options.help.title);
                 $buttonPane.hide(); 
@@ -135,7 +135,7 @@
             }
           });
         }else{ // when flipped to help page
-          thisObj.close();
+          $contentPane.revertFlip();
         }
       }); 
     },

@@ -65,6 +65,9 @@
             thisObj.element.find('.help-revert-button a').click( function(evt) {
               thisObj.element.children().revertFlip();
             });
+            thisObj.element.find('.help-link a').click( function(evt) {
+              thisObj.element.children().revertFlip();
+            });       
             if(!thisObj._help_flipped){
                thisObj._help_flipped = true;
             }else{

@@ -71,7 +71,9 @@
         menu_click_create : function (args) { thisObj.$addDialog.eucadialog('open')},
         help_click : function(evt) { 
           var $helpHeader = $('<div>').addClass('euca-table-header').append(
-                              $('<span>').text(help_keypair['landing_title']));
+                              $('<span>').text(help_keypair['landing_title']).append(
+                                $('<div>').addClass('help-link').append(
+                                  $('<a>').attr('href','#').html('&larr;'))));
           thisObj._flipToHelp(evt,$helpHeader, $keyHelp);
         },
       });

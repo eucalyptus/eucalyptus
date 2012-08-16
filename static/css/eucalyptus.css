@@ -957,6 +957,9 @@ tr.even td.sorting_1 {
   float: right;
   margin-right: 20px;
 }
+.help-link a {
+  text-decoration:none
+}
 
 /* Hide close X button in UI dialogs */
 .ui-dialog-titlebar-close {

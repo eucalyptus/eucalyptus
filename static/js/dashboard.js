@@ -37,7 +37,7 @@
       this._setStorageSummary($div.find('#dashboard-content .storage'));
       this._setNetSecSummary($div.find('#dashboard-content .netsec'));  
       $div.appendTo(this.element); 
-      $('html body').find(DOM_BINDING['notification']).notification('success', 'dashboard (testing)', 'dashboard loaded successfully');
+      //$('html body').find(DOM_BINDING['notification']).notification('success', 'dashboard (testing)', 'dashboard loaded successfully');
     },
 
     _create : function() { },

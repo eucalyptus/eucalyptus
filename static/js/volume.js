@@ -85,9 +85,11 @@
         context_menu : { value_column_inx: 8, build_callback: function (state) { return thisObj.buildContextMenu(state) } },
       //  td_hover_actions : { instance: [4, function (args) { thisObj.handleInstanceHover(args); }], snapshot: [5, function (args) { thisObj.handleSnapshotHover(args); }] }
         help_click : function(evt) {
-                       var $helpHeader = $('<div>').addClass('euca-table-header').append(
-                              $('<span>').text(help_volume['landing_title']));
-                       thisObj._flipToHelp(evt,$helpHeader, $volHelp);
+          var $helpHeader = $('<div>').addClass('euca-table-header').append(
+                              $('<span>').text(help_volume['landing_title']).append(
+                                $('<div>').addClass('help-link').append(
+                                  $('<a>').attr('href','#').html('&larr;'))));
+          thisObj._flipToHelp(evt,$helpHeader, $volHelp);
         },
       });
       tableWrapper.appendTo(this.element);
