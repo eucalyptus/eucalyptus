@@ -69,7 +69,7 @@
         txt_create : sgroup_create,
         txt_found : sgroup_found,
         menu_text : table_menu_main_action,
-        menu_actions : { delete: [table_menu_delete_action, function (args) { thisObj.deleteAction(args) } ] },
+        menu_actions : { delete: [table_menu_delete_action, function (args) { thisObj.deleteAction(args) }], edit: [table_menu_edit_rules_action, function (args) { thisObj.editAction(args) }] },
         row_click : function (args) { thisObj.handleRowClick(args); },
         menu_click_create : function (args) { thisObj.$addDialog.eucadialog('open')},
         context_menu : { value_column_inx: 4, build_callback: function (state) { return thisObj.buildContextMenu(state) } },
@@ -128,11 +128,11 @@
     },
 
     buildContextMenu : function(state) {
-      //TODO: update it with more states
+      // huh? what really goes here? just edit rules, maybe add rules?
       return {
-        "what?": { "name": volume_con_menu_attach },
-        "how?": { "name": volume_con_menu_create_snapshot },
-        "who?": { "name": volume_con_menu_delete }
+        "what": { "what?": volume_con_menu_attach },
+        "how": { "how?": volume_con_menu_create_snapshot },
+        "who": { "who?": volume_con_menu_delete }
       }
     },
 /*
@@ -183,15 +183,15 @@
         success:
         function(data, textStatus, jqXHR){
           if (data.results && data.results.status == true) {
-            successNotification(keypair_create_success + ' ' + keyName);
+            successNotification(sgroup_create_success + ' ' + keyName);
             tableWrapper.eucatable('refreshTable');
           } else {
-            errorNotification(keypair_create_error + ' ' + keyName);
+            errorNotification(sgroup_create_error + ' ' + keyName);
           }
         },
         error:
         function(jqXHR, textStatus, errorThrown){
-          errorNotification(keypair_delete_error + ' ' + keyName);
+          errorNotification(sgroup_delete_error + ' ' + keyName);
         }
       });
     },
@@ -243,6 +243,23 @@
           $deleteNames.append(t).append("<br/>");
         }
         this.delDialog.dialog('open');
+      }
+    },
+
+    editAction : function(rowsToEdit) {
+      //TODO: add hide menu
+
+      if ( rowsToEdit.length > 0 ) {
+        // show edit dialog box
+        /*
+        $deleteNames = this.delDialog.find("span.delete-names")
+        $deleteNames.html('');
+        for ( i = 0; i<rowsToDelete.length; i++ ) {
+          t = escapeHTML(rowsToDelete[i]);
+          $deleteNames.append(t).append("<br/>");
+        }
+        this.delDialog.dialog('open');
+        */
       }
     }
 
