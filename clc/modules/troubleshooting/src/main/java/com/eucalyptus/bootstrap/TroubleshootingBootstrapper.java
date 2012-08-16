@@ -62,24 +62,14 @@
 
 package com.eucalyptus.bootstrap;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Enumeration;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Properties;
-import java.util.Set;
 import java.util.StringTokenizer;
 
-import org.apache.log4j.Appender;
-import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
-import com.eucalyptus.cloud.ws.DNSControl;
-import com.eucalyptus.component.id.Dns;
+
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableProperty;
@@ -175,7 +165,7 @@ public class TroubleshootingBootstrapper extends Bootstrapper {
 			}
 			// There should be an odd number of arguments.  A fault id, and an even number of key value
 			// pairs.  If there are not, discard the last value
-			if (args.size() % 0 == 0) {
+			if (args.size() % 2 == 0) {
 				LOG.warn("Unmatched key/value pairs in fault trigger, ignoring last value " + args.get(args.size() - 1));
 				args.remove(args.size() - 1);
 			}
@@ -185,6 +175,7 @@ public class TroubleshootingBootstrapper extends Bootstrapper {
 			}
 			TestFaultTrigger.triggerFault(faultId, varProps);
 			LOG.info("Triggered fault with params " + newValue);
+			throw new ConfigurablePropertyException("Fault triggered, value not persisted");
 		}
 
 		private List<String> split(String s) {

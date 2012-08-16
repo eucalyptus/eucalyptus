@@ -61,6 +61,9 @@
  ************************************************************************/
 package com.eucalyptus.troubleshooting.fault.xml;
 
+import java.util.Enumeration;
+
+import org.apache.log4j.Appender;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.troubleshooting.fault.Fault;
@@ -73,6 +76,14 @@ public class XMLFaultLogger implements FaultLogger {
 	}
 	@Override
 	public void log(Fault fault) {
+		// temp
+		Logger tmpLogger = Logger.getLogger(XMLFaultLogger.class);
+		tmpLogger.info("For logger " + LOG.getName());
+		Enumeration appenderEnum = LOG.getAllAppenders();
+		while (appenderEnum.hasMoreElements()) {
+			tmpLogger.info("appender " + ((Appender) appenderEnum.nextElement()).getName());
+			
+		}
 		LOG.fatal(fault.toString());
 	}
 

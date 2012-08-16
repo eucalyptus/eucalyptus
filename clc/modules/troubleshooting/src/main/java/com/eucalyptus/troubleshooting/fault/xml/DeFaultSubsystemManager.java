@@ -82,7 +82,7 @@ import com.eucalyptus.troubleshooting.fault.FaultRegistry;
 import com.eucalyptus.troubleshooting.fault.FaultSubsystemManager;
 
 public class DeFaultSubsystemManager implements FaultSubsystemManager {
-
+	private static final Logger LOG = Logger.getLogger(DeFaultSubsystemManager.class);
 	private Map<ComponentId, FaultLogger> loggerMap = new ConcurrentHashMap<ComponentId, FaultLogger>();
 	private XMLFaultRegistry faultRegistry = null;
 	private File systemFaultDir = BaseDirectory.HOME.getChildFile("/usr/share/eucalyptus/faults"); 
@@ -153,6 +153,7 @@ public class DeFaultSubsystemManager implements FaultSubsystemManager {
 		FaultLogger logger = loggerMap.get(componentId);
 		if (logger == null) {
 			logger = initLogger(componentId);
+			loggerMap.put(componentId, logger);
 		}
 		return logger;
 	}
@@ -162,29 +163,35 @@ public class DeFaultSubsystemManager implements FaultSubsystemManager {
 		final String targetAppenderName = componentId.getName().toLowerCase() + "-fault-log";
 		final String targetLogFileName = componentId.getName().toLowerCase() + "-fault.log";
 				
-//				BaseDirectory.LOG.getChildFile
 		// first find the actual logger (if it exists). Should be named com.eucalyptus.troubleshooting.fault.${component}.log
 		// Scan the loggers to see if it already exists.  Otherwise add it
+		LOG.info("looking for logger " + targetLoggerName);
 		Logger logger = null;
 		Enumeration logEnum = LogManager.getCurrentLoggers();
 		while (logEnum.hasMoreElements()) {
 			Logger currentLogger = (Logger) logEnum.nextElement();
-			if (logger == null || currentLogger.getName().equals(targetLoggerName)) {
+			if (logger == null && currentLogger.getName().equals(targetLoggerName)) {
 				logger = currentLogger;
+				LOG.info("Found logger " + targetLoggerName);
+				break;
 			}
 		}
 		if (logger == null) {
+			LOG.info("Didn't find logger " + targetLoggerName + ", creating it now");
 			logger = Logger.getLogger(targetLoggerName);
 			logger.setAdditivity(false);
 			logger.setLevel(Level.FATAL);
 		}
 		// Check the log registry for the appender named ${component}-fault-log.  Need to check all loggers (unfortunately)
+		LOG.info("Checking root logger for appender " + targetAppenderName);
 		Appender appender = checkAppender(LogManager.getRootLogger(), targetAppenderName);
 		if (appender == null) {
-			Enumeration logEnum2 = LogManager.getCurrentLoggers();
-			while (logEnum2.hasMoreElements()) {
+			logEnum = LogManager.getCurrentLoggers();
+			while (logEnum.hasMoreElements()) {
 				if (appender == null) {
-					appender = checkAppender((Logger) logEnum.nextElement(), targetAppenderName);
+					Logger currentLogger = (Logger) logEnum.nextElement();
+					LOG.info("Checking " + currentLogger.getName() + " for appender " + targetAppenderName);
+					appender = checkAppender(currentLogger, targetAppenderName);
 				} else {
 					break; // found it
 				}
@@ -199,6 +206,7 @@ public class DeFaultSubsystemManager implements FaultSubsystemManager {
 			rAppender.setLayout(new PatternLayout("%m%n"));
 			rAppender.setThreshold(Level.FATAL);
 			rAppender.activateOptions();
+			rAppender.setName(targetAppenderName);
 			appender = rAppender;
 		}
 

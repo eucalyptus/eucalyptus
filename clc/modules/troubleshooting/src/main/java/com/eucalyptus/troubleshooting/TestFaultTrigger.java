@@ -93,6 +93,7 @@ public class TestFaultTrigger {
 						fault = fault.withVar(name, value);
 					}
 				}
+				LOG.info("Fault: " + fault.toString());
 				faultLogger.log(fault);
 			} catch (Exception ex) {
 				LOG.error("Error triggering fault: " + ex);
