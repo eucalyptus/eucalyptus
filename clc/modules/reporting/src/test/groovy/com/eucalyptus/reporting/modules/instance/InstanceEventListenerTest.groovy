@@ -1,8 +1,8 @@
 package com.eucalyptus.reporting.modules.instance
 
+import com.eucalyptus.reporting.domain.ReportingAccountCrud
+import com.eucalyptus.reporting.domain.ReportingUserCrud
 import com.eucalyptus.reporting.event.InstanceEvent
-import com.eucalyptus.reporting.user.ReportingAccountDao
-import com.eucalyptus.reporting.user.ReportingUserDao
 import com.eucalyptus.reporting.event_store.ReportingInstanceEventStore
 
 import static org.junit.Assert.*
@@ -26,14 +26,14 @@ class InstanceEventListenerTest {
   Reference<String> updatedUserId = new Reference<String>()
   Reference<String> updatedUserName = new Reference<String>()
   List<Object> persisted = Lists.newArrayList()
-  ReportingAccountDao accountDao = new ReportingAccountDao( ) {
-    @Override void addUpdateAccount( String id, String name ) {
+  ReportingAccountCrud accountDao = new ReportingAccountCrud( ) {
+    @Override void createOrUpdateAccount( String id, String name ) {
       updatedAccountId.set( id )
       updatedAccountName.set( name )
     }
   }
-  ReportingUserDao userDao = new ReportingUserDao( ) {
-    @Override void addUpdateUser( String id, String name ) {
+  ReportingUserCrud userDao = new ReportingUserCrud( ) {
+    @Override void createOrUpdateUser( String id, String accountId, String name ) {
       updatedUserId.set( id )
       updatedUserName.set( name )
     }
@@ -44,8 +44,8 @@ class InstanceEventListenerTest {
     }
   }
   InstanceEventListener listener = new InstanceEventListener( ) {
-    @Override protected ReportingAccountDao getReportingAccountDao() { return accountDao }
-    @Override protected ReportingUserDao getReportingUserDao() { return userDao }
+    @Override protected ReportingAccountCrud getReportingAccountCrud() { return accountDao }
+    @Override protected ReportingUserCrud getReportingUserCrud() { return userDao }
     @Override protected ReportingInstanceEventStore getReportingInstanceEventStore() { eventStore }
     @Override protected long getCurrentTimeMillis() { timestamp.get() }
     @Override protected def <P, R> Function<P, R> transactional( final Class<?> clazz,
@@ -55,6 +55,11 @@ class InstanceEventListenerTest {
     @Override protected MapMaker getExpiringMapMaker() {
       return new MapMaker().expireAfterAccess( 1, TimeUnit.SECONDS );
     }
+  }
+
+  @Test
+  void testInstantiable() {
+    new InstanceEventListener()
   }
 
   @Test

@@ -19,69 +19,37 @@
  ************************************************************************/
 package com.eucalyptus.reporting.event_store;
 
-import java.util.*;
+import com.google.common.base.Preconditions;
 
-import org.apache.log4j.Logger;
-
-import com.eucalyptus.entities.EntityWrapper;
-
-public class ReportingVolumeSnapshotEventStore
+public class ReportingVolumeSnapshotEventStore extends EventStoreSupport
 {
-	private static Logger LOG = Logger.getLogger( ReportingVolumeSnapshotEventStore.class );
+  private static final ReportingVolumeSnapshotEventStore instance = new ReportingVolumeSnapshotEventStore();
 
-	private static ReportingVolumeSnapshotEventStore instance = null;
-	
-	public static synchronized ReportingVolumeSnapshotEventStore getInstance()
-	{
-		if (instance == null) {
-			instance = new ReportingVolumeSnapshotEventStore();
-		}
-		return instance;
-	}
-	
-	private ReportingVolumeSnapshotEventStore()
-	{
-		
-	}
+  public static ReportingVolumeSnapshotEventStore getInstance() {
+    return instance;
+  }
 
-	public void insertCreateEvent(String uuid, String volumeSnapshotUuid, String volumeId,
-			Long timestampMs, String userId, Long sizeGB)
-	{
-		
-		EntityWrapper<ReportingVolumeSnapshotCreateEvent> entityWrapper =
-			EntityWrapper.get(ReportingVolumeSnapshotCreateEvent.class);
+  private ReportingVolumeSnapshotEventStore( ) {
+  }
 
-		try {
-			ReportingVolumeSnapshotCreateEvent volumeSnapshot = new ReportingVolumeSnapshotCreateEvent(uuid,
-					volumeSnapshotUuid, volumeId, timestampMs, userId, sizeGB);
-			entityWrapper.add(volumeSnapshot);
-			entityWrapper.commit();
-			LOG.debug("Added reporting volumeSnapshot to db:" + volumeSnapshot);
-		} catch (Exception ex) {
-			LOG.error(ex);
-			entityWrapper.rollback();
-			throw new RuntimeException(ex);
-		}					
-	}
-	
-	public void insertDeleteEvent(String uuid, long timestampMs)
-	{
-		
-		EntityWrapper<ReportingVolumeSnapshotDeleteEvent> entityWrapper =
-			EntityWrapper.get(ReportingVolumeSnapshotDeleteEvent.class);
+  public void insertCreateEvent( final String uuid,
+                                 final String volumeSnapshotId,
+                                 final long timestampMs,
+                                 final String userId,
+                                 final long sizeGB ) {
+    Preconditions.checkNotNull(uuid, "Uuid is required");
+    Preconditions.checkNotNull(volumeSnapshotId, "VolumeSnapshotId is required");
+    Preconditions.checkNotNull(userId, "UserId is required");
 
-		try {
-			ReportingVolumeSnapshotDeleteEvent event = new ReportingVolumeSnapshotDeleteEvent(uuid, timestampMs);
-			entityWrapper.add(event);
-			entityWrapper.commit();
-			LOG.debug("Added event to db:" + event);
-		} catch (Exception ex) {
-			LOG.error(ex);
-			entityWrapper.rollback();
-			throw new RuntimeException(ex);
-		}					
-	}
+    persist( new ReportingVolumeSnapshotCreateEvent(uuid, volumeSnapshotId, timestampMs, userId, sizeGB ) );
+  }
 
+  public void insertDeleteEvent( final String uuid,
+                                 final long timestampMs )
+  {
+    Preconditions.checkNotNull(uuid, "Uuid is required");
 
+    persist( new ReportingVolumeSnapshotDeleteEvent(uuid, timestampMs) );
+  }
 }
 

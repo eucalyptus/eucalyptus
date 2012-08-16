@@ -19,8 +19,6 @@
  ************************************************************************/
 package com.eucalyptus.reporting.domain;
 
-import java.util.*;
-
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.entities.EntityWrapper;
@@ -43,7 +41,7 @@ public class ReportingAccountCrud
 		return instance;
 	}
 		
-	private ReportingAccountCrud()
+	protected ReportingAccountCrud()
 	{
 		
 	}

@@ -67,6 +67,8 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.PolicyParseException;
 import com.eucalyptus.component.auth.SystemCredentials;
@@ -74,8 +76,9 @@ import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.crypto.util.PEMFiles;
 import com.eucalyptus.util.OwnerFullName;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 
 public class Principals {
   
@@ -675,7 +678,14 @@ public class Principals {
                                                 @Override
                                                 public void removeInfo(String key) throws AuthException {}
                                               };
-  
+
+  private static final Set<Account> FAKE_ACCOUNTS        = ImmutableSet.of( systemAccount(), nobodyAccount() );
+  private static final Set<String>  FAKE_ACCOUNT_NUMBERS =
+      ImmutableSet.copyOf( Iterables.transform(FAKE_ACCOUNTS, Accounts.toAccountNumber() ) );
+  private static final Set<User>    FAKE_USERS           = ImmutableSet.of( systemUser(), nobodyUser() );
+  private static final Set<String>  FAKE_USER_IDS        =
+      ImmutableSet.copyOf( Iterables.transform(FAKE_USERS, Accounts.toUserId() ) );
+
   public static User systemUser( ) {
     return SYSTEM_USER;
   }
@@ -702,9 +712,18 @@ public class Principals {
   public static OwnerFullName systemFullName( ) {
     return SYSTEM_USER_ERN;
   }
-  
+
+  public static boolean isFakeIdentityAccountNumber( final String id ) {
+    return FAKE_ACCOUNT_NUMBERS.contains( id );
+  }
+
+  public static boolean isFakeIdentityUserId( final String id ) {
+    return FAKE_USER_IDS.contains( id );
+  }
+
   public static boolean isFakeIdentify( String id ) {
-    return Sets.newHashSet( SYSTEM_USER.getUserId( ), SYSTEM_ACCOUNT.getAccountNumber( ),
-                            NOBODY_ACCOUNT.getAccountNumber( ), NOBODY_USER.getUserId( ) ).contains( id );
+    return
+        isFakeIdentityAccountNumber( id ) ||
+        isFakeIdentityUserId( id );
   }
 }

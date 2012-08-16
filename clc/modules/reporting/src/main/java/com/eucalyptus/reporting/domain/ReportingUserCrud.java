@@ -43,7 +43,7 @@ public class ReportingUserCrud
 		return instance;
 	}
 
-	private ReportingUserCrud()
+	protected ReportingUserCrud()
 	{
 	}
 

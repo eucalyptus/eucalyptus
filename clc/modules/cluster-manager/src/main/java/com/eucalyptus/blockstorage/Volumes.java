@@ -62,6 +62,7 @@
 
 package com.eucalyptus.blockstorage;
 
+import static com.eucalyptus.reporting.event.VolumeEvent.VolumeAction;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -71,7 +72,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import org.hibernate.criterion.Example;
-import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.cloud.CloudMetadata.VolumeMetadata;
@@ -86,12 +86,12 @@ import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.event.ClockTick;
-import com.eucalyptus.event.EventFailedException;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.records.Logs;
-import com.eucalyptus.reporting.event.StorageEvent;
+import com.eucalyptus.reporting.event.EventActionInfo;
+import com.eucalyptus.reporting.event.VolumeEvent;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -383,13 +383,9 @@ public class Volumes {
           final CreateStorageVolumeType req = new CreateStorageVolumeType( t.getDisplayName( ), t.getSize( ), snapId, null ).regardingUserRequest( request );
           final CreateStorageVolumeResponseType ret = AsyncRequests.sendSync( sc, req );
           LOG.debug("Volume created");
-          fireCreateEvent( t );
-          LOG.debug("Volume created: CreateStorageVolumeResponse: " +
-                     ret.getVolumeId( ) + " " +
-                     ret.getStatus( ) + " " +
-                     ret.getSize( ) + " " +
-                     ret.getSnapshotId( ) + " " +
-                     ret.getCreateTime( ) );
+          
+          fireUsageEvent( t, VolumeEvent.forVolumeCreate());
+          
         } catch ( final Exception ex ) {
           LOG.error( "Failed to create volume: " + t, ex );
           t.setState( State.FAIL );
@@ -401,28 +397,11 @@ public class Volumes {
     return newVol;
   }
   
-  static void fireCreateEvent( final Volume t ) {
-    try {
-      final String userId = t.getOwnerUserId();
-      final String accountId = t.getOwnerAccountNumber();
-      final String userName = Accounts.lookupUserById(userId).getName();
-      final String accountName = Accounts.lookupAccountById(accountId).getName();
-      final Long volSize = (t.getSize()==null) ? null : t.getSize().longValue()*1024;
-
-      ListenerRegistry.getInstance( ).fireEvent( new StorageEvent( StorageEvent.EventType.EbsVolume, true, volSize,
-                                                                   userId, userName, accountId, accountName,
-                                                                   t.getScName( ), t.getPartition( ) ) );
-    } catch ( final Exception ex ) {
-      LOG.error("createEvent failed", ex);
-      Logs.extreme( ).error( ex, ex );
-    }
-  }
-  
   static State transformStorageState( final State volumeState, final String storageState ) {
     if ( State.GENERATING.equals( volumeState ) ) {
-      if ( "failed".toString( ).equals( storageState ) ) {
+      if ("failed".equals(storageState) ) {
         return State.FAIL;
-      } else if ( "available".toString( ).equals( storageState ) ) {
+      } else if ("available".equals(storageState) ) {
         return State.EXTANT;
       } else {
         return State.GENERATING;
@@ -430,11 +409,11 @@ public class Volumes {
     } else if ( State.ANNIHILATING.equals( volumeState ) ) {
       return State.ANNIHILATING;
     } else if ( !State.ANNIHILATING.equals( volumeState ) && !State.BUSY.equals( volumeState ) ) {
-      if ( "failed".toString( ).equals( storageState ) ) {
+      if ("failed".equals(storageState) ) {
         return State.FAIL;
-      } else if ( "creating".toString( ).equals( storageState ) ) {
+      } else if ("creating".equals(storageState) ) {
         return State.GENERATING;
-      } else if ( "available".toString( ).equals( storageState ) ) {
+      } else if ("available".equals(storageState) ) {
         return State.EXTANT;
       } else if ( "in-use".equals( storageState ) ) {
         return State.BUSY;
@@ -444,29 +423,32 @@ public class Volumes {
     } else if ( State.BUSY.equals( volumeState ) ) {
       return State.BUSY;
     } else {
-      if ( "failed".toString( ).equals( storageState ) ) {
+      if ("failed".equals(storageState) ) {
         return State.FAIL;
       } else {
         return State.ANNIHILATED;
       }
     }
   }
-  
-  static void fireDeleteEvent( final Volume v ) {
-    try {
-      final String userId = v.getOwnerUserId();
-      final String accountId = v.getOwnerAccountNumber();
-      final String userName = Accounts.lookupUserById(userId).getName();
-      final String accountName = Accounts.lookupAccountById(accountId).getName();
-      final Long volSize = (v.getSize()==null) ? null : v.getSize().longValue()*1024;
 
-      ListenerRegistry.getInstance( ).fireEvent( new StorageEvent( StorageEvent.EventType.EbsVolume, false, volSize,
-                                                                   userId, userName, accountId, accountName,
-                                                                   v.getScName( ), v.getPartition( ) ) );
-    } catch ( final Exception ex ) {
-      LOG.error( ex );
-      Logs.extreme( ).error( ex, ex );
+  static void fireUsageEvent( final Volume volume,
+                              final EventActionInfo<VolumeAction> actionInfo ) {
+    try {
+      ListenerRegistry.getInstance().fireEvent(
+          VolumeEvent.with(
+              actionInfo,
+              volume.getNaturalId(),
+              volume.getDisplayName(),
+              volume.getSize().longValue(),
+              volume.getOwner(),
+              volume.getPartition())
+      );
+    } catch (final Exception e) {
+      LOG.error(e, e);
     }
   }
+
+  
+  
   
 }

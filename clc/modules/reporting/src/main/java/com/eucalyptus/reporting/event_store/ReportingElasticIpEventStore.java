@@ -20,13 +20,9 @@
 package com.eucalyptus.reporting.event_store;
 
 import javax.annotation.Nonnull;
-import org.apache.log4j.Logger;
-import com.eucalyptus.entities.Entities;
 import com.google.common.base.Preconditions;
 
-public class ReportingElasticIpEventStore {
-  private static final Logger LOG = Logger.getLogger( ReportingElasticIpEventStore.class );
-
+public class ReportingElasticIpEventStore extends EventStoreSupport {
   private static final ReportingElasticIpEventStore instance = new ReportingElasticIpEventStore();
 
   public static ReportingElasticIpEventStore getInstance() {
@@ -48,7 +44,7 @@ public class ReportingElasticIpEventStore {
   }
 
   public void insertDeleteEvent( @Nonnull final String uuid,
-                                 final long timestampMs )
+                                          final long timestampMs )
   {
     Preconditions.checkNotNull( uuid, "Uuid is required" );
 
@@ -59,7 +55,7 @@ public class ReportingElasticIpEventStore {
                                  @Nonnull final String instanceUuid,
                                           final long timestampMs ) {
     Preconditions.checkNotNull( uuid, "Uuid is required" );
-    Preconditions.checkNotNull( uuid, "InstanceUuid is required" );
+    Preconditions.checkNotNull( instanceUuid, "InstanceUuid is required" );
 
     persist( new ReportingElasticIpAttachEvent( uuid, instanceUuid, timestampMs) );
   }
@@ -68,13 +64,9 @@ public class ReportingElasticIpEventStore {
                                  @Nonnull final String instanceUuid,
                                           final long timestampMs ) {
     Preconditions.checkNotNull( uuid, "Uuid is required" );
-    Preconditions.checkNotNull( uuid, "InstanceUuid is required" );
+    Preconditions.checkNotNull( instanceUuid, "InstanceUuid is required" );
 
     persist( new ReportingElasticIpDetachEvent( uuid, instanceUuid, timestampMs ) );
-  }
-
-  protected void persist( final Object event ) {
-    Entities.persist( event );
   }
 }
 

@@ -62,7 +62,7 @@
 
 package com.eucalyptus.address;
 
-import static com.eucalyptus.reporting.event.AddressEvent.ActionInfo;
+import static com.eucalyptus.reporting.event.AddressEvent.AddressAction;
 import java.lang.reflect.Constructor;
 import java.util.NoSuchElementException;
 import java.util.UUID;
@@ -90,6 +90,7 @@ import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.reporting.event.AddressEvent;
+import com.eucalyptus.reporting.event.EventActionInfo;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.OwnerFullName;
@@ -384,8 +385,11 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
   public Address assign( final VmInstance vm ) {
     SplitTransition assign = new SplitTransition( Transition.assigning ) {
       public void top( ) {
-        Address.this.setInstanceId( vm.getInstanceId( ) );
-        Address.this.setInstanceAddress( vm.getPrivateAddress( ) );
+        Address.this.setInstanceInfo(
+            vm.getInstanceUuid(),
+            vm.getInstanceId( ),
+            vm.getPrivateAddress( )
+        );
         Address.this.stateUuid = UUID.randomUUID( ).toString( );
       }
       
@@ -477,7 +481,7 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
       }
     }
   }
-  
+
   public String getInstanceId( ) {
     return this.instanceId;
   }
@@ -490,18 +494,18 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
     return this.instanceAddress;
   }
   
-  private void setInstanceAddress( String instanceAddress ) {
-    this.instanceAddress = instanceAddress;
-  }
-  
   public String getStateUuid( ) {
     return this.stateUuid;
   }
-  
-  public void setInstanceId( String instanceId ) {
+
+  private void setInstanceInfo( final String instanceUuid,
+                                final String instanceId,
+                                final String instanceAddress ) {
+    this.instanceUuid = instanceUuid;
     this.instanceId = instanceId;
+    this.instanceAddress = instanceAddress;
   }
-  
+
   @Override
   public String toString( ) {
     return "Address " + this.getDisplayName( ) + " " + ( this.isAllocated( )
@@ -592,22 +596,24 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
     return "eucalyptus";
   }
 
-  private void fireUsageEvent( final ActionInfo actionInfo ) {
+  private void fireUsageEvent( final EventActionInfo<AddressAction> actionInfo ) {
     fireUsageEvent( getOwner(), actionInfo );
   }
 
   private void fireUsageEvent( final OwnerFullName ownerFullName,
-                               final ActionInfo actionInfo ) {
-    try {
-      ListenerRegistry.getInstance().fireEvent(
-          AddressEvent.with(
-              getNaturalId(),
-              getDisplayName(),
-              ownerFullName,
-              Accounts.lookupAccountById(ownerFullName.getAccountNumber()).getName(),
-              actionInfo ) );
-    } catch ( final Exception e ) {
-      LOG.error( e, e );
+                               final EventActionInfo<AddressAction> actionInfo ) {
+    if ( !Principals.isFakeIdentityAccountNumber( ownerFullName.getAccountNumber() ) ) {
+      try {
+        ListenerRegistry.getInstance().fireEvent(
+            AddressEvent.with(
+                getNaturalId(),
+                getDisplayName(),
+                ownerFullName,
+                Accounts.lookupAccountById(ownerFullName.getAccountNumber()).getName(),
+                actionInfo ) );
+      } catch ( final Exception e ) {
+        LOG.error( e, e );
+      }
     }
   }
 }

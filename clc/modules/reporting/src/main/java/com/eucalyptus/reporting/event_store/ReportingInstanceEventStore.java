@@ -20,12 +20,10 @@
 package com.eucalyptus.reporting.event_store;
 
 import javax.annotation.Nonnull;
-import org.apache.log4j.Logger;
 
-import com.eucalyptus.entities.Entities;
 import com.google.common.base.Preconditions;
 
-public class ReportingInstanceEventStore {
+public class ReportingInstanceEventStore extends EventStoreSupport {
   private static final ReportingInstanceEventStore instance = new ReportingInstanceEventStore( );
 
   public static ReportingInstanceEventStore getInstance( ) {
@@ -91,9 +89,5 @@ public class ReportingInstanceEventStore {
             cumulativeNetOutgoingMegsBetweenZones,
             cumulativeNetOutgoingMegsWithinZone,
             cumulativeNetOutgoingMegsPublicIp ) );
-  }
-
-  protected void persist( final Object event ) {
-    Entities.persist( event );
   }
 }

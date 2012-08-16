@@ -62,6 +62,8 @@
 
 package com.eucalyptus.reporting.event;
 
+import com.eucalyptus.event.Event;
+
 /**
  * <p>InstanceEvent is an event sent from the CLC to the reporting mechanism,
  * indicating resource usage by an instance.
@@ -121,7 +123,7 @@ public class InstanceEvent implements Event {
    *  Thus we need the user name or account name at the time an event was
    *  sent.
    */
-  public InstanceEvent( final String uuid,  //TODO:STEVE: Do something about the parameter count
+  public InstanceEvent( final String uuid,
                         final String instanceId,
                         final String instanceType,
                         final String userId,

@@ -75,8 +75,6 @@ import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import org.hibernate.criterion.Example;
 import org.hibernate.exception.ConstraintViolationException;
-import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.cloud.CloudMetadata.SnapshotMetadata;
@@ -91,12 +89,9 @@ import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.event.ClockTick;
-import com.eucalyptus.event.EventFailedException;
 import com.eucalyptus.event.EventListener;
-import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.records.Logs;
-import com.eucalyptus.reporting.event.StorageEvent;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -283,32 +278,15 @@ public class Snapshots {
             throw Exceptions.toUndeclared( ex );
           }
         }
-      } );
+      } ); 
     } catch ( ConstraintViolationException ex ) {
       throw new DuplicateMetadataException( "Duplicate snapshot creation: " + snap + ": " + ex.getMessage( ), ex );
     } catch ( ExecutionException ex ) {
       LOG.error( ex.getCause( ), ex.getCause( ) );
       throw new EucalyptusCloudException( ex );
     }
-    fireCreateEvent( snap );
+    
     return snap;
-  }
-  
-  public static void fireCreateEvent( final Snapshot snap ) {
-    try {
-
-      final String userId = snap.getOwnerUserId();
-      final String accountId = snap.getOwnerAccountNumber();
-      final String userName = Accounts.lookupUserById(userId).getName();
-      final String accountName = Accounts.lookupAccountById(accountId).getName();
-      final Long volSize = (snap.getVolumeSize()==null) ? null : snap.getVolumeSize().longValue()*1024;
-
-      ListenerRegistry.getInstance( ).fireEvent( new StorageEvent( StorageEvent.EventType.EbsSnapshot, true, volSize,
-                                                                   userId, userName, accountId, accountName,
-                                                                   snap.getVolumeCluster( ), snap.getVolumePartition( ) ) );
-    } catch ( Exception ex ) {
-      LOG.error( ex );
-    }
   }
   
   public static Snapshot named( final String snapshotId ) {
@@ -322,20 +300,5 @@ public class Snapshots {
   public static List<Snapshot> list( ) throws TransactionException {
     return Transactions.findAll( Snapshot.named( null, null ) );
   }
-  
-  public static void fireDeleteEvent( Snapshot snap ) {
-    try {
-      final String userId = snap.getOwnerUserId();
-      final String accountId = snap.getOwnerAccountNumber();
-      final String userName = Accounts.lookupUserById(userId).getName();
-      final String accountName = Accounts.lookupAccountById(accountId).getName();
-      final Long volSize = (snap.getVolumeSize()==null) ? null : snap.getVolumeSize().longValue()*1024;
 
-      ListenerRegistry.getInstance( ).fireEvent( new StorageEvent( StorageEvent.EventType.EbsSnapshot, false, volSize,
-                                                                   userId, userName, accountId, accountName,
-                                                                   snap.getVolumeCluster( ), snap.getVolumePartition( ) ) );
-    } catch ( Exception ex ) {
-      LOG.error( ex );
-    }
-  }
 }

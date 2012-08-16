@@ -70,18 +70,19 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import javax.annotation.Nonnull;
 import org.apache.log4j.*;
+import org.hibernate.exception.ConstraintViolationException;
 
+import com.eucalyptus.bootstrap.OrderedShutdown;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.event.EventListener;
+import com.eucalyptus.event.Listeners;
 import com.eucalyptus.reporting.event.*;
 import com.eucalyptus.reporting.event_store.ReportingInstanceEventStore;
 import com.eucalyptus.reporting.event_store.ReportingInstanceUsageEvent;
 import com.eucalyptus.reporting.domain.ReportingAccountCrud;
 import com.eucalyptus.reporting.domain.ReportingUserCrud;
-import com.eucalyptus.reporting.domain.ReportingAccountDao;
-import com.eucalyptus.reporting.domain.ReportingUserDao;
 import com.google.common.base.Function;
 import com.google.common.collect.MapMaker;
 import com.google.common.collect.Sets;
@@ -98,7 +99,15 @@ public class InstanceEventListener implements EventListener<InstanceEvent> {
   private final ReadWriteLock persistenceLock = new ReentrantReadWriteLock(); // lock for recentUsageEvents bulk updates
   private final AtomicLong lastWriteMs = new AtomicLong( 0L );
 
-  public InstanceEventListener() {
+  public static void register( ) {
+    final InstanceEventListener listener = new InstanceEventListener( );
+    Listeners.register( InstanceEvent.class, listener );
+    OrderedShutdown.registerPreShutdownHook( new Runnable() {
+      @Override
+      public void run( ) {
+        listener.flush();
+      }
+    } );
   }
 
   public void fireEvent( @Nonnull final InstanceEvent event ) {
@@ -112,13 +121,11 @@ public class InstanceEventListener implements EventListener<InstanceEvent> {
       return;
     }
 
-	  /* Retain records of all account and user id's and names encountered
-	   * even if they're subsequently deleted.
-	   */
-	  ReportingAccountCrud.getInstance().createOrUpdateAccount(
-			  event.getAccountId(), event.getAccountName());
-	  ReportingUserCrud.getInstance().createOrUpdateUser(
-			  event.getUserId(), event.getAccountId(), event.getUserName());
+    /* Retain records of all account and user id's and names encountered
+     * even if they're subsequently deleted.
+     */
+    getReportingAccountCrud().createOrUpdateAccount( event.getAccountId(), event.getAccountName() );
+    getReportingUserCrud().createOrUpdateUser( event.getUserId(), event.getAccountId(), event.getUserName() );
 
     // Write the instance attributes, but only if we don't have it already.
     if ( !recentlySeenUuids.contains(uuid) ) {
@@ -134,8 +141,9 @@ public class InstanceEventListener implements EventListener<InstanceEvent> {
             event.getClusterName(),
             event.getAvailabilityZone()
         );
+      } catch ( ConstraintViolationException ex ) {
+        log.debug( ex, ex ); // info already exists for instance
       } catch ( Exception ex ) {
-        //TODO:STEVE:Handle expected exception (i.e. instance already exists)
         log.error( ex, ex );
       } finally {
         recentlySeenUuids.add( uuid );
@@ -202,12 +210,12 @@ public class InstanceEventListener implements EventListener<InstanceEvent> {
     }
   }
 
-  protected ReportingAccountDao getReportingAccountDao() {
-    return ReportingAccountDao.getInstance();
+  protected ReportingAccountCrud getReportingAccountCrud() {
+    return ReportingAccountCrud.getInstance();
   }
 
-  protected ReportingUserDao getReportingUserDao() {
-    return ReportingUserDao.getInstance();
+  protected ReportingUserCrud getReportingUserCrud() {
+    return ReportingUserCrud.getInstance();
   }
 
   protected ReportingInstanceEventStore getReportingInstanceEventStore() {

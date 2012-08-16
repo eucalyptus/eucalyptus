@@ -69,8 +69,6 @@ import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.reporting.*;
 import com.eucalyptus.reporting.event.InstanceEvent;
 import com.eucalyptus.reporting.modules.instance.*;
-import com.eucalyptus.reporting.queue.*;
-import com.eucalyptus.reporting.queue.QueueFactory.QueueIdentifier;
 import com.eucalyptus.util.ExposedCommand;
 
 /**
@@ -123,13 +121,8 @@ public class FalseDataGenerator
 	{
 		System.out.println(" ----> GENERATING FALSE DATA");
 
-		QueueSender	queueSender = QueueFactory.getInstance().getSender(QueueIdentifier.INSTANCE);
-
-		QueueReceiver queueReceiver = QueueFactory.getInstance().getReceiver(QueueIdentifier.INSTANCE);
 		TestEventListener listener = new TestEventListener();
 		listener.setCurrentTimeMillis(START_TIME);
-		queueReceiver.removeAllListeners(); //Remove non-test listeners set up by bootstrapper
-		//queueReceiver.addEventListener(listener);
 
 		List<InstanceAttributes> fakeInstances =
 				new ArrayList<InstanceAttributes>();
@@ -159,8 +152,6 @@ public class FalseDataGenerator
 						0, 0L, 0L, 0L, 0L, 0L, 0L );
 
 				System.out.println("Generating:" + i);
-				queueSender.send(event);
-				
 			}
 			
 		}

@@ -63,171 +63,170 @@
 package com.eucalyptus.reporting.modules.s3;
 
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import javax.annotation.Nonnull;
+import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.entities.Entities;
 import com.eucalyptus.event.EventListener;
-import com.eucalyptus.reporting.event.Event;
+import com.eucalyptus.event.Listeners;
 import com.eucalyptus.reporting.event.S3Event;
 import com.eucalyptus.reporting.domain.ReportingAccountCrud;
 import com.eucalyptus.reporting.domain.ReportingUserCrud;
+import com.google.common.base.Preconditions;
 
-public class S3EventListener
-	implements EventListener<Event>
-{
-	private static Logger LOG = Logger.getLogger( S3EventListener.class );
-	
-	private static long WRITE_INTERVAL_MS = 10800000l; //write every 3 hrs
+@SuppressWarnings("SynchronizationOnLocalVariableOrMethodParameter")
+public class S3EventListener implements EventListener<S3Event> {
+  private static final Logger LOG = Logger.getLogger( S3EventListener.class );
 
-	private Map<S3SummaryKey, S3UsageData> usageDataMap;
-	private long lastAllSnapshotMs = 0l;
+  private static final long WRITE_INTERVAL_MS = TimeUnit.HOURS.toMillis( 3L );
+  private final ReadWriteLock usageDataLock = new ReentrantReadWriteLock();
+  private ConcurrentMap<S3SummaryKey, S3UsageData> usageDataMap; //TODO Expire data
+  private final AtomicLong lastAllSnapshotMs = new AtomicLong( 0L );
+  private final Object allSnapshotLock = new Object();
 
-	public S3EventListener()
-	{
-	}
-	
-	@Override
-	public void fireEvent(Event event)
-	{
-		if (event instanceof S3Event) {
-			S3Event s3Event = (S3Event) event;
+  public static void register() {
+    Listeners.register(S3Event.class, new S3EventListener());
+  }
 
-			/* Retain records of all account and user id's and names encountered
-			 * even if they're subsequently deleted.
-			 */
-			ReportingAccountCrud.getInstance().createOrUpdateAccount(
-					s3Event.getAccountId(), s3Event.getAccountName());
-			ReportingUserCrud.getInstance().createOrUpdateUser(s3Event.getOwnerId(), s3Event.getAccountId(),
-					s3Event.getOwnerName());
+  public S3EventListener() {
+  }
 
-			long timeMillis = getCurrentTimeMillis();
+  @Override
+  public void fireEvent( @Nonnull final S3Event event ) {
+    Preconditions.checkNotNull( event, "Event is required" );
 
-			final S3UsageLog usageLog = S3UsageLog.getS3UsageLog();
+    /* Retain records of all account and user id's and names encountered
+    * even if they're subsequently deleted.
+    */
+    ReportingAccountCrud.getInstance().createOrUpdateAccount(
+        event.getAccountId(), event.getAccountName());
+    ReportingUserCrud.getInstance().createOrUpdateUser(event.getOwnerId(), event.getAccountId(),
+        event.getOwnerName());
 
-			EntityWrapper<S3UsageSnapshot> entityWrapper =
-				EntityWrapper.get( S3UsageSnapshot.class );
-			try {
+    final long timeMillis = getCurrentTimeMillis();
+    final S3UsageLog usageLog = S3UsageLog.getS3UsageLog();
 
-				/* Load usageDataMap if starting up
-				 */
-				if (usageDataMap == null) {
+    final EntityTransaction entityTransaction = Entities.get(S3UsageSnapshot.class);
+    try {
+      // Load usageDataMap if starting up
+      ConcurrentMap<S3SummaryKey, S3UsageData> usageDataMap;
+      usageDataLock.readLock().lock();
+      try {
+        usageDataMap = this.usageDataMap;
+      } finally {
+        usageDataLock.readLock().unlock();
+      }
 
-					this.usageDataMap = usageLog.findLatestUsageData();
-					LOG.info("Loaded usageDataMap");
+      if ( usageDataMap == null ) {
+          usageDataLock.writeLock().lock();
+          try {
+            if ( this.usageDataMap == null ) {
+              usageDataMap = this.usageDataMap =
+                  new ConcurrentHashMap<S3SummaryKey,S3UsageData>( usageLog.findLatestUsageData() );
+            } else {
+              usageDataMap = this.usageDataMap;
+            }
+            LOG.info("Loaded usageDataMap");
+          } finally {
+            usageDataLock.writeLock().unlock();
+          }
+      }
 
-				}
+      // Update usageDataMap
+      final S3SummaryKey key = new S3SummaryKey( event.getOwnerId(), event.getAccountId() );
+      final S3UsageData usageData = usageDataMap.putIfAbsent(key, new S3UsageData());
+      final long addNum = (event.isCreateOrDelete()) ? 1 : -1;
 
-				
-				/* Update usageDataMap
-				 */
-				S3SummaryKey key = new S3SummaryKey(s3Event.getOwnerId(),
-						s3Event.getAccountId());
-				S3UsageData usageData;
-				if (usageDataMap.containsKey(key)) {
-					usageData = usageDataMap.get(key);
-				} else {
-					usageData = new S3UsageData();
-					usageDataMap.put(key, usageData);
-				}
-				long addNum = (s3Event.isCreateOrDelete()) ? 1 : -1;
+      if ( event.isObjectOrBucket() ) {
+        synchronized ( usageData ) {
+          final long addAmountMegs = (event.isCreateOrDelete())
+              ? event.getSizeMegs()
+              : -event.getSizeMegs();
+          LOG.debug("Receive event:" + event.toString() + " usageData:" + usageData + " addNum:" + addNum + " addAmountMegs:" + addAmountMegs);
 
-				if (s3Event.isObjectOrBucket()) {
-					
-					long addAmountMegs = (s3Event.isCreateOrDelete())
-						? s3Event.getSizeMegs()
-						: -s3Event.getSizeMegs();
-					LOG.debug("Receive event:" + s3Event.toString() + " usageData:" + usageData + " addNum:" + addNum + " addAmountMegs:" + addAmountMegs);
+          final Long newObjectsNum = usageData.getObjectsNum() + addNum;
+          if (newObjectsNum != null && newObjectsNum < 0) {
+            throw new IllegalStateException("Objects num cannot be negative");
+          }
+          usageData.setObjectsNum(newObjectsNum);
+          final Long newObjectsMegs = usageData.getObjectsMegs() + addAmountMegs;
+          if (newObjectsMegs != null && newObjectsMegs < 0) {
+            throw new IllegalStateException("Objects megs cannot be negative");
+          }
+          usageData.setObjectsMegs(newObjectsMegs);
+        }
+      } else synchronized ( usageData ) {
+        final Long newBucketsNum = usageData.getBucketsNum() + addNum;
+        if (newBucketsNum != null && newBucketsNum < 0) {
+          throw new IllegalStateException("Buckets num cannot be negative");
+        }
+        usageData.setBucketsNum(newBucketsNum);
+        LOG.debug("Receive event:" + event.toString() + " usageData:" + usageData + " addNum:" + addNum);
+      }
 
-					Long newObjectsNum =
-						addLong(usageData.getObjectsNum(), addNum);
-					if (newObjectsNum!=null && newObjectsNum.longValue()<0) {
-						throw new IllegalStateException("Objects num cannot be negative");
-					}
-					usageData.setObjectsNum(newObjectsNum);
-					Long newObjectsMegs =
-						addLong(usageData.getObjectsMegs(), addAmountMegs);
-					if (newObjectsMegs!=null && newObjectsMegs.longValue()<0) {
-						throw new IllegalStateException("Objects megs cannot be negative");
-					}
-					usageData.setObjectsMegs(newObjectsMegs);
-					
-				} else {
-					
-					Long newBucketsNum =
-						addLong(usageData.getBucketsNum(), addNum);
-					if (newBucketsNum!=null && newBucketsNum.longValue()<0) {
-						throw new IllegalStateException("Buckets num cannot be negative");
-					}
-					usageData.setBucketsNum(newBucketsNum);
-					LOG.debug("Receive event:" + s3Event.toString() + " usageData:" + usageData + " addNum:" + addNum);
+      // Write data to DB
+      boolean wroteAll = false;
+      if ( shouldWriteAll(timeMillis) ) {
+        // Write all snapshots
+        synchronized ( allSnapshotLock ) {
+          if ( shouldWriteAll(timeMillis) ) {
+            LOG.info("Starting allSnapshot...");
+            for ( Map.Entry<S3SummaryKey,S3UsageData> entry : usageDataMap.entrySet() ) {
+              final S3UsageSnapshot sus = toUsageSnapshot(timeMillis, entry.getKey(), entry.getValue());
+              sus.setAllSnapshot(true);
+              LOG.info("Storing part of allSnapshot:" + sus);
+              Entities.persist(sus);
+              lastAllSnapshotMs.set( timeMillis );
+              wroteAll = true;
+            }
+            LOG.info("Ending allSnapshot...");
+          }
+        }
+      }
 
-					
-				}
+      if ( !wroteAll ) {
+        // Write this snapshot
+        final S3UsageSnapshot sus = toUsageSnapshot(timeMillis, key, usageData);
+        LOG.info("Storing:" + sus);
+        Entities.persist(sus);
+      }
 
-				/* Write data to DB
-				 */
-				if ((timeMillis - lastAllSnapshotMs) > WRITE_INTERVAL_MS) {
-					/* Write all snapshots
-					 */
-					LOG.info("Starting allSnapshot...");
-					for (S3SummaryKey summaryKey: usageDataMap.keySet()) {
-						S3SnapshotKey snapshotKey = new S3SnapshotKey(
-								summaryKey.getOwnerId(), summaryKey.getAccountId(),
-								timeMillis);
-						S3UsageSnapshot sus =
-							new S3UsageSnapshot(snapshotKey, usageDataMap.get(key));
-						sus.setAllSnapshot(true);
-						LOG.info("Storing part of allSnapshot:" + sus);
-						entityWrapper.add(sus);
-						lastAllSnapshotMs = timeMillis;
-					}
-					LOG.info("Ending allSnapshot...");
-				} else {
-					/* Write this snapshot
-					 */
-					S3SnapshotKey snapshotKey = new S3SnapshotKey(
-							key.getOwnerId(), key.getAccountId(),
-							timeMillis);
-					S3UsageSnapshot sus =
-						new S3UsageSnapshot(snapshotKey, usageDataMap.get(key));
-					LOG.info("Storing:" + sus);
-					entityWrapper.add(sus);
-				}
+      entityTransaction.commit();
+    } catch (Exception ex) {
+      entityTransaction.rollback();
+      LOG.error(ex);
+    }
+  }
 
-				entityWrapper.commit();
-			} catch (Exception ex) {
-				entityWrapper.rollback();
-				LOG.error(ex);		
-			}
-		}
-	}
-	
-	private static final Long addLong(Long a, long b)
-	{
-		return new Long(a.longValue() + b);
-	}
+  private S3UsageSnapshot toUsageSnapshot( final long timeMillis,
+                                           final S3SummaryKey key,
+                                           final S3UsageData usageData) {
+    final S3SnapshotKey snapshotKey = new S3SnapshotKey(
+        key.getOwnerId(), key.getAccountId(),
+        timeMillis);
+    final S3UsageSnapshot sus;
+    synchronized ( usageData ) {
+        sus = new S3UsageSnapshot(snapshotKey, usageData);
+    }
+    return sus;
+  }
 
-	/**
-	 * Overridable for the purpose of testing. Testing generates fake events
-	 * with fake times.
-	 */
-	protected long getCurrentTimeMillis()
-	{
-		return (this.testCurrentTimeMillis == null)
-				? System.currentTimeMillis()
-				: this.testCurrentTimeMillis.longValue();
-	}
+  private boolean shouldWriteAll( final long timeMillis ) {
+    return (timeMillis - lastAllSnapshotMs.get()) > WRITE_INTERVAL_MS;
+  }
 
-	private Long testCurrentTimeMillis = null;
-
-	/**
-	 * Used only for testing. Sets the poller into test mode and overrides the
-	 * actual timestamp with a false one.
-	 */
-	protected void setCurrentTimeMillis(long testCurrentTimeMillis)
-	{
-		this.testCurrentTimeMillis = new Long(testCurrentTimeMillis);
-	}
-	
+  /**
+   * Overridable for the purpose of testing.
+   */
+  protected long getCurrentTimeMillis() {
+    return System.currentTimeMillis();
+  }
 }

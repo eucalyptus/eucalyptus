@@ -1,12 +1,12 @@
 package com.eucalyptus.reporting.modules.address
 
+import com.eucalyptus.reporting.domain.ReportingAccountCrud
+import com.eucalyptus.reporting.domain.ReportingUserCrud
 import com.eucalyptus.reporting.event_store.ReportingElasticIpEventStore
 import com.eucalyptus.reporting.event_store.ReportingElasticIpCreateEvent
 import com.eucalyptus.reporting.event_store.ReportingElasticIpDeleteEvent
 import com.eucalyptus.reporting.event_store.ReportingElasticIpAttachEvent
 import com.eucalyptus.reporting.event_store.ReportingElasticIpDetachEvent
-import com.eucalyptus.reporting.user.ReportingAccountDao
-import com.eucalyptus.reporting.user.ReportingUserDao
 import com.google.common.base.Charsets
 import com.eucalyptus.reporting.event.AddressEvent
 import com.eucalyptus.auth.principal.Principals
@@ -18,6 +18,11 @@ import org.junit.Test
  * Unit test for AddressUsageEventListener
  */
 class AddressUsageEventListenerTest {
+
+  @Test
+  void testInstantiable() {
+    new AddressUsageEventListener()
+  }
 
   @Test
   void testAllocateEvent() {
@@ -101,14 +106,14 @@ class AddressUsageEventListenerTest {
     String updatedUserId = null
     String updatedUserName = null
     Object persisted = null
-    ReportingAccountDao accountDao = new ReportingAccountDao( ) {
-      @Override void addUpdateAccount( String id, String name ) {
+    ReportingAccountCrud accountCrud = new ReportingAccountCrud( ) {
+      @Override void createOrUpdateAccount( String id, String name ) {
         updatedAccountId = id
         updatedAccountName = name
       }
     }
-    ReportingUserDao userDao = new ReportingUserDao( ) {
-      @Override void addUpdateUser( String id, String name ) {
+    ReportingUserCrud userCrud = new ReportingUserCrud( ) {
+      @Override void createOrUpdateUser( String id, String accountId, String name ) {
         updatedUserId = id
         updatedUserName = name
       }
@@ -119,8 +124,8 @@ class AddressUsageEventListenerTest {
       }
     }
     AddressUsageEventListener listener = new AddressUsageEventListener( ) {
-      @Override protected ReportingAccountDao getReportingAccountDao() { return accountDao }
-      @Override protected ReportingUserDao getReportingUserDao() { return userDao }
+      @Override protected ReportingAccountCrud getReportingAccountCrud() { return accountCrud }
+      @Override protected ReportingUserCrud getReportingUserCrud() { return userCrud }
       @Override protected ReportingElasticIpEventStore getReportingElasticIpEventStore() { eventStore }
       @Override protected long getCurrentTimeMillis() { timestamp }
     }
