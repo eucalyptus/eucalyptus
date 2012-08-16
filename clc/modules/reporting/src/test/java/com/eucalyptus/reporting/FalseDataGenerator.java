@@ -8,6 +8,8 @@ import com.eucalyptus.reporting.event_store.ReportingS3BucketEventStore;
 import com.eucalyptus.reporting.event_store.ReportingS3ObjectEventStore;
 import com.eucalyptus.reporting.event_store.ReportingVolumeEventStore;
 import com.eucalyptus.reporting.event_store.ReportingVolumeSnapshotEventStore;
+import com.eucalyptus.reporting.domain.ReportingAccountCrud;
+import com.eucalyptus.reporting.domain.ReportingUserCrud;
 import com.eucalyptus.util.ExposedCommand;
 
 /**
@@ -17,7 +19,7 @@ import com.eucalyptus.util.ExposedCommand;
  * 
  * <p>FalseDataGenerator is meant to be called from the <code>CommandServlet</code>
  * 
- * <p>TODO: put instructions here on how to run this.
+ * <p>To run: use devel/generate_false_data.sh; NOTE: read docs at top of that shell script
  * 
  * <p>False data should be deleted afterward by calling the <pre>deleteFalseData</pre> method.
  * 
@@ -106,13 +108,18 @@ public class FalseDataGenerator
 
 		/* Generate every combination of zones, clusters, accounts, and users */
 		int uniqueUserId = 0;
+		int uniqueAccountId = 0;
+		int uniqueClusterId = 0;
 		for (int availZoneNum = 0; availZoneNum<NUM_AVAIL_ZONE; availZoneNum++) {
 			String availZone = "zone-" + availZoneNum;
 			for (int clusterNum=0; clusterNum<NUM_CLUSTERS_PER_ZONE; clusterNum++) {
-				String cluster = "cluster-" + clusterNum;
+				uniqueClusterId++;
+				String cluster = "cluster-" + uniqueClusterId;
 				for (int accountNum=0; accountNum<NUM_ACCOUNTS_PER_CLUSTER; accountNum++) {
-					String account = "account-" + accountNum;
-					//Add account
+					uniqueAccountId++;
+					String accountId = "acct-" + uniqueAccountId;
+					String accountName = "account-" + uniqueAccountId;
+					ReportingAccountCrud.getInstance().createOrUpdateAccount(accountId, accountName);
 					for (int userNum=0; userNum<NUM_USERS_PER_ACCOUNT; userNum++) {
 						System.out.printf("Generating usage for user %d", userNum);
 						String user = "user-" + userNum;
@@ -124,7 +131,9 @@ public class FalseDataGenerator
 						 * Also generate usage.
 						 */
 
-						//Add user
+						String userId = "u-" + uniqueUserId;
+						String userName = "user-" + uniqueUserId;
+						ReportingUserCrud.getInstance().createOrUpdateUser(userId, accountId, userName);
 
 						/* These uuids must not overlap as we want the userNum/uuidNum combo to be
 						 * unique here. We need to know the full range of every instance, volume,
