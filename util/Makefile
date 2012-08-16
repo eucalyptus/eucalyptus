@@ -97,7 +97,7 @@ clean:
 	rm -rf *~ *.o test test_fault test_misc test_wc euca_rootwrap euca_mountwrap
 
 distclean:
-	rm -rf config.h
+	rm -rf eucalyptus-config.h
 
 install:
 	@$(INSTALL) -m 0755 euca_rootwrap $(DESTDIR)$(usrdir)/lib/eucalyptus/
