@@ -132,6 +132,12 @@
           $rowCheckbox.attr('checked', !$rowCheckbox.is(':checked'));
           thisObj._handleRowClick();
         });
+        $currentRow.find(':input[type="checkbox"]').click( function (e) {
+          $cb = $(this)
+          $cb.attr('checked', $cb.is(':checked'));
+          thisObj._handleRowClick();
+          e.stopPropagation();
+        });
       });
     },
 
