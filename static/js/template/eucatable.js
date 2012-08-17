@@ -88,8 +88,14 @@
           $rowCheckbox = $(e.target).parents('tr').find(':input[type="checkbox"]');
           $rowCheckbox.attr('checked', !$rowCheckbox.is(':checked'));
           thisObj._trigger('row_click', this);
+          e.stopPropagation();
         });
-
+        $currentRow.find(':input[type="checkbox"]').click( function (e) {
+          $cb = $(this);
+          $cb.attr('checked', !$cb.is(':checked'));
+          thisObj._trigger('row_click', this);
+          e.stopPropagation();
+        });
         if (thisObj.options.context_menu) {
           contextMenuParams = thisObj.options.context_menu;
           rID = 'ri-'+S4()+S4();
