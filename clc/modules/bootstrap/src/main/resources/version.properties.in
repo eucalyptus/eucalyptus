@@ -1,1 +1,1 @@
-euca.extra_version=@EXTRA_VERSION@
+extra-version=@EXTRA_VERSION@
