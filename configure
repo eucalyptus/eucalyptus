@@ -1394,7 +1394,7 @@ Optional Packages:
   --with-interface-theme=<name>        the theme to be used
   --with-db-home=<dir>                 where postgresql is installed
   --with-db-suffix=<dir>                 where postgresql is installed
-  --extra-version=<str>                string to append to versions to make logs and messages more precise
+  --with-extra-version=<str>                string to append to versions to make logs and messages more precise
 
 Some influential environment variables:
   CC          C compiler command
