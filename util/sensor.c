@@ -49,3 +49,122 @@ const char * sensor_type2str (int type)
     else
         return "[invalid]";
 }
+
+int sensor_res2str (char * buf, int bufLen, const sensorResource **res, int resLen)
+{
+    char * s = buf;
+    int left = bufLen-1;
+    int printed;
+
+    for (int r=0; r<resLen; r++) {
+        const sensorResource * sr = res [r];
+        printed = snprintf (s, left, "resource: %s type: %s metrics: %d\n", sr->resourceName, sr->resourceType, sr->metricsLen);
+#define MAYBE_BAIL s = s + printed; left = left - printed; if (left < 1) return (bufLen - left);
+        MAYBE_BAIL
+        for (int m=0; m<sr->metricsLen; m++) {
+            const sensorMetric * sm = sr->metrics + m;
+            printed = snprintf (s, left, "\tmetric: %s counters: %d\n", sm->metricName, sm->countersLen); 
+            MAYBE_BAIL
+            for (int c=0; c<sm->countersLen; c++) {
+                const sensorCounter * sc = sm->counters + c;
+                printed = snprintf (s, left, "\t\tcounter: %s interval: %lld seq: %lld dimensions: %d\n", 
+                                    sensor_type2str(sc->type), sc->collectionIntervalMs, sc->sequenceNum, sc->dimensionsLen);
+                MAYBE_BAIL
+                for (int d=0; d<sc->dimensionsLen; d++) {
+                    const sensorDimension * sd = sc->dimensions + d;
+                    printed = snprintf (s, left, "\t\t\tdimension: %s values: %d\n", sd->dimensionName, sd->valuesLen);
+                    MAYBE_BAIL
+                    for (int v=0; v<sd->valuesLen; v++) {
+                        const sensorValue * sv = sd->values + v;
+                        printed = snprintf (s, left, "\t\t\t\t%lld %s %f\n", sv->timestampMs, sv->available?"YES":" NO", sv->available?sv->value:-1);
+                        MAYBE_BAIL
+                    }
+                }
+            }
+        }
+    }
+    * s = '\0';
+
+    return 0;
+}
+
+int sensor_set_instance_data (const char * instanceId, const char ** sensorIds, int sensorIdsLen, sensorResource * sr) // TODO3.2: actually implement the function
+{
+    sensorResource example = { 
+        .resourceName = "i-23456",
+        .resourceType = "instance",
+        .metricsLen = 2,
+        .metrics = { 
+            {
+                .metricName = "CPUUtilization",
+                .countersLen = 1,
+                .counters = {
+                    {
+                        .type = SENSOR_AVERAGE,
+                        .collectionIntervalMs = 20000,
+                        .sequenceNum = 0,
+                        .dimensionsLen = 1,
+                        .dimensions = {
+                            {
+                                .dimensionName = "default",
+                                .valuesLen = 5,
+                                .values = {
+                                    { .timestampMs = 1344056910424, .value = 33.3, .available = 1 },
+                                    { .timestampMs = 1344056930424, .value = 34.7, .available = 1 },
+                                    { .timestampMs = 1344056950424, .value = 31.1, .available = 1 },
+                                    { .timestampMs = 1344056970424, .value = -999, .available = 0 },
+                                    { .timestampMs = 1344056990424, .value = 39.9, .available = 1 },
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            {
+                .metricName = "DiskReadOps",
+                .countersLen = 1,
+                .counters = {
+                    {
+                        .type = SENSOR_SUMMATION,
+                        .collectionIntervalMs = 20000,
+                        .sequenceNum = 0,
+                        .dimensionsLen = 3,
+                        .dimensions = {
+                            {
+                                .dimensionName = "root",
+                                .valuesLen = 3,
+                                .values = {
+                                    { .timestampMs = 1344056910424, .value = 0.0, .available = 1 },
+                                    { .timestampMs = 1344056930424, .value = 111.0, .available = 1 },
+                                    { .timestampMs = 1344056950424, .value = 2222222.0, .available = 1 },
+                                }
+                            },
+                            {
+                                .dimensionName = "ephemeral0",
+                                .valuesLen = 3,
+                                .values = {
+                                    { .timestampMs = 1344056910424, .value = 0.0, .available = 1 },
+                                    { .timestampMs = 1344056930424, .value = 0.0, .available = 1 },
+                                    { .timestampMs = 1344056950424, .value = 3333333.0, .available = 1 },
+                                }
+                            },
+                            {
+                                .dimensionName = "vol-34567",
+                                .valuesLen = 3,
+                                .values = {
+                                    { .timestampMs = 1344056910424, .value = 0.0, .available = 1 },
+                                    { .timestampMs = 1344056930424, .value = 44444.0, .available = 1 },
+                                    { .timestampMs = 1344056950424, .value = 55555555.0, .available = 1 },
+                                }
+                            }
+                        }
+                    }
+                }
+            } 
+        }
+    };
+    memcpy (sr, &example, sizeof(sensorResource));
+    strncpy (sr->resourceName, instanceId, sizeof(sr->resourceName));
+
+    return 0;
+}

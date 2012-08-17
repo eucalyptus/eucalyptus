@@ -601,7 +601,10 @@ int main (int argc, char **argv)
             printf("ncDescribeSensors() failed: error=%d\n", rc);
             exit(1);
         }
-        
+        char buf [10240];
+        sensor_res2str (buf, sizeof(buf), res, resSize);
+        printf ("resources: %d\n%s\n", resSize, buf);
+
     /***********************************************************/
     } else {
         fprintf (stderr, "ERROR: command %s unknown (try -h)\n", command);

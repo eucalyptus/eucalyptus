@@ -94,6 +94,7 @@
 #include "iscsi.h"
 #include "xml.h"
 #include "hooks.h"
+#include "sensor.h"
 
 #include "windows-bundle.h"
 
@@ -1495,7 +1496,8 @@ doDescribeBundleTasks(
 	return OK;
 }
 
-int doDescribeSensors (struct nc_state_t *nc, // TODO3.2: actually implement the function
+static int 
+doDescribeSensors (struct nc_state_t *nc,
                        ncMetadata *meta, 
                        char **instIds,
                        int instIdsLen,
@@ -1504,42 +1506,48 @@ int doDescribeSensors (struct nc_state_t *nc, // TODO3.2: actually implement the
                        sensorResource ***outResources,
                        int *outResourcesLen)
 {
-    sensorResource example = { 
-        .resourceName = "i-23456",
-        .resourceType = "instance",
-        .metricsLen = 1,
-        .metrics = { 
-            {
-                .metricName = "CPUUtilization",
-                .countersLen = 1,
-                .counters = {
-                    {
-                        .type = SENSOR_AVERAGE,
-                        .collectionIntervalMs = 20000,
-                        .sequenceNum = 0,
-                        .dimensionsLen = 1,
-                        .dimensions = {
-                            {
-                                .dimensionName = "default",
-                                .valuesLen = 3,
-                                .values = {
-                                    { .timestampMs = 1344056910424, .value = 33.3, .available = 1 },
-                                    { .timestampMs = 1344056930424, .value = 34.7, .available = 1 },
-                                    { .timestampMs = 1344056950424, .value = 31.1, .available = 1 },
-                                    { .timestampMs = 1344056970424, .value = -999, .available = 0 },
-                                    { .timestampMs = 1344056990424, .value = 39.9, .available = 1 },
-                                }
-                            }
-                        }
-                    }
-                }
-            } 
-        }
-    };
-    * outResources = malloc (1 * sizeof (sensorResource *));
-    * outResources [0] = malloc (sizeof (sensorResource));
-    memcpy (* outResources [0], &example, sizeof (sensorResource));
-    * outResourcesLen = 1;
+    int total;
+
+	sem_p (inst_copy_sem);
+	if (instIdsLen == 0) // describe all instances
+		total = total_instances (&global_instances_copy);
+	else 
+		total = instIdsLen;
+
+    * outResources = malloc (total * sizeof (sensorResource *));
+    if ((*outResources) == NULL) {
+        sem_v (inst_copy_sem);
+        return OUT_OF_MEMORY;
+    }
+    
+	int k = 0;
+    ncInstance * instance;
+	for (int i=0; (instance = get_instance(&global_instances_copy)) != NULL; i++) {
+		// only pick ones the user (or admin) is allowed to see
+		if (strcmp(meta->userId, nc->admin_user_id) 
+            && strcmp(meta->userId, instance->userId))
+			continue;
+        
+		if (instIdsLen > 0) {
+            int j;
+            
+			for (j=0; j < instIdsLen; j++)
+				if (!strcmp(instance->instanceId, instIds[j]))
+					break;
+            
+			if (j >= instIdsLen)
+				// instance of no relevance right now
+				continue;
+		}
+        
+        * outResources [k] = malloc (sizeof (sensorResource));
+        sensor_set_instance_data (instance->instanceId, sensorIds, sensorIdsLen, * outResources [k]);
+        k++;
+	}
+    
+    * outResourcesLen = k;
+	sem_v (inst_copy_sem);
+    
     return 0;
 }
 

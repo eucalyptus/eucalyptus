@@ -962,7 +962,7 @@ adb_ncDescribeBundleTasksResponse_t* ncDescribeBundleTasksMarshal (adb_ncDescrib
 
 adb_ncDescribeSensorsResponse_t* ncDescribeSensorsMarshal (adb_ncDescribeSensors_t* ncDescribeSensors, const axutil_env_t *env)
 {
-    int result = OK;
+    int result = ERROR;
 
     pthread_mutex_lock(&ncHandlerLock);
     adb_ncDescribeSensorsType_t * input          = adb_ncDescribeSensors_get_ncDescribeSensors(ncDescribeSensors, env);
@@ -1008,6 +1008,7 @@ adb_ncDescribeSensorsResponse_t* ncDescribeSensorsMarshal (adb_ncDescribeSensors
             logprintfl (EUCAERROR, "ERROR: doDescribeSensors() failed error=%d\n", error);
 
         } else {
+
             // set standard fields in output
             adb_ncDescribeSensorsResponseType_set_correlationId(output, env, correlationId);
             adb_ncDescribeSensorsResponseType_set_userId(output, env, userId);
@@ -1034,11 +1035,11 @@ adb_ncDescribeSensorsResponse_t* ncDescribeSensorsMarshal (adb_ncDescribeSensors
     } else {
         adb_ncDescribeSensorsResponseType_set_return(output, env, AXIS2_TRUE);
     }
-
+    
     // set response to output
     adb_ncDescribeSensorsResponse_set_ncDescribeSensorsResponse(response, env, output);
     pthread_mutex_unlock(&ncHandlerLock);
-
+    
     return response;
 }
 

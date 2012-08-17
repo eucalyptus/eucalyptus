@@ -1808,6 +1808,30 @@ int doCreateImage (ncMetadata *meta, char *instanceId, char *volumeId, char *rem
 	return ret;
 }
 
+int 
+doDescribeSensors (ncMetadata *meta, 
+                   char **instIds,
+                   int instIdsLen,
+                   char **sensorIds,
+                   int sensorIdsLen,
+                   sensorResource ***outResources,
+                   int *outResourcesLen)
+{
+	int ret;
+    
+	if (init())
+		return 1;
+    
+	logprintfl (EUCADEBUG2, "doDescribeSensors: invoked (instIdsLen=%d sensorIdsLen=%d)\n", instIdsLen, sensorIdsLen);
+    
+	if (nc_state.H->doDescribeSensors)
+		ret = nc_state.H->doDescribeSensors (&nc_state, meta, instIds, instIdsLen, sensorIds, sensorIdsLen, outResources, outResourcesLen);
+	else 
+		ret = nc_state.D->doDescribeSensors (&nc_state, meta, instIds, instIdsLen, sensorIds, sensorIdsLen, outResources, outResourcesLen);
+    
+	return ret;
+}
+
 int get_instance_stats(virDomainPtr dom, ncInstance *instance)
 {
     char *xml;

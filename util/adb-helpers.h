@@ -392,7 +392,9 @@ static inline adb_sensorsResourceType_t * copy_sensor_resource_to_adb (const axu
                     if (sv->available) {
                         adb_metricDimensionsValuesType_set_value (value, env, sv->value);
                     }
+                    adb_metricDimensionsType_add_values(dimension, env, value);
                 }
+                adb_metricCounterType_add_dimensions(counter, env, dimension);
             }
             adb_metricsResourceType_add_counters(metric, env, counter);
         }

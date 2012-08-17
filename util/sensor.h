@@ -70,5 +70,7 @@ typedef struct {
 
 int sensor_str2type (const char * counterType);
 const char * sensor_type2str (int type);
+int sensor_res2str (char * buf, int bufLen, const sensorResource **res, int resLen);
+int sensor_set_instance_data (const char * instanceId, const char ** sensorIds, int sensorIdsLen, sensorResource * sr);
 
 #endif
