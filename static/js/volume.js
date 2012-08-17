@@ -325,7 +325,7 @@
             return function(data, textStatus, jqXHR){
               if ( data.results && data.results == true ) {
                 notifySuccess('detach-volume', volume_detach_success + ' ' + volumeId);
-                thisObj.tableWrapper.eucatable('refreshTable');
+                thisObj.baseTable.eucatable('refreshTable');
               } else {
                 notifyError('detach-volume', volume_detach_error + ' ' + volumeId);
               }
