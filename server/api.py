@@ -222,7 +222,7 @@ class ComputeHandler(server.BaseHandler):
         elif action == 'DetachVolume':
             volumeid = self.get_argument('VolumeId')
             force = self.get_argument('Force', False)
-            return clc.detach_volume(volumeid, instanceid, device, force)
+            return clc.detach_volume(volumeid, None, None, force)
 
     def handleSnapshots(self, action, clc):
         if action == "DescribeSnapshots":

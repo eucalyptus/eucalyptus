@@ -25,6 +25,8 @@
     tableWrapper : null,
     delDialog : null,
     detachDialog : null,
+    forceDetachDialog : null,
+
     _init : function() {
       var thisObj = this;
       var $tmpl = $('html body').find('.templates #volumeTblTmpl').clone();
@@ -151,10 +153,24 @@
          id: 'volumes-detach',
          title: volume_dialog_detach_title,
          buttons: {
-           'detach': {text: volume_dialog_detach_btn, click: function() { thisObj._detachListedVolumes(); $detach_dialog.dialog("close");}},
+           'detach': {text: volume_dialog_detach_btn, click: function() { thisObj._detachListedVolumes(false); $detach_dialog.dialog("close");}},
            'cancel': {text: volume_dialog_cancel_btn, focus:true, click: function() { $detach_dialog.dialog("close");}} 
          },
          help: {title: help_volume['dialog_detach_title'], content: $detach_help},
+       });
+
+      $tmpl = $('html body').find('.templates #volumeForceDetachDlgTmpl').clone();
+      var $rendered = $($tmpl.render($.extend($.i18n.map, help_volume)));
+      var $force_detach_dialog = $rendered.children().first();
+      var $force_detach_help = $rendered.children().last();
+      this.forceDetachDialog = $force_detach_dialog.eucadialog({
+         id: 'volumes-force-detach',
+         title: volume_dialog_force_detach_title,
+         buttons: {
+           'detach': {text: volume_dialog_detach_btn, click: function() { thisObj._detachListedVolumes(true); $force_detach_dialog.dialog("close");}},
+           'cancel': {text: volume_dialog_cancel_btn, focus:true, click: function() { $force_detach_dialog.dialog("close");}} 
+         },
+         help: {title: help_volume['dialog_force_detach_title'], content: $force_detach_help},
        });
 
       var createButtonId = 'volume-add-btn';
@@ -307,10 +323,10 @@
       }
     },
 
-    //TODO: add instance id, force and device
-    _detachListedVolumes : function () {
+    _detachListedVolumes : function (force) {
       thisObj = this;
-      $volumesToDelete = this.detachDialog.find("#volumes-to-detach");
+      dialogToUse = force ? this.forceDetachDialog : this.detachDialog; 
+      $volumesToDelete = dialogToUse.find("#volumes-to-detach");
       var volumes = $volumesToDelete.text().split(ID_SEPARATOR);
       for ( i = 0; i<volumes.length; i++ ) {
         var volumeId = volumes[i];
@@ -324,17 +340,26 @@
           (function(volumeId) {
             return function(data, textStatus, jqXHR){
               if ( data.results && data.results == true ) {
-                notifySuccess('detach-volume', volume_detach_success + ' ' + volumeId);
+                if (force)
+                  notifySuccess('force-detach-volume', volume_force_detach_success + ' ' + volumeId);
+                else
+                  notifySuccess('detach-volume', volume_detach_success + ' ' + volumeId);
                 thisObj.baseTable.eucatable('refreshTable');
               } else {
-                notifyError('detach-volume', volume_detach_error + ' ' + volumeId);
+                if (force)
+                  notifyError('force-detach-volume', volume_force_detach_error + ' ' + volumeId);
+                else
+                  notifyError('detach-volume', volume_detach_error + ' ' + volumeId);
               }
            }
           })(volumeId),
           error:
           (function(volumeId) {
             return function(jqXHR, textStatus, errorThrown){
-              notifyError('detach-volume', volume_detach_error + ' ' + volumeId);
+              if (force)
+                notifyError('force-detach-volume', volume_force_detach_error + ' ' + volumeId);
+              else
+                notifyError('detach-volume', volume_detach_error + ' ' + volumeId);
             }
           })(volumeId)
         });
@@ -385,10 +410,11 @@
         volumes.push([row.find('td:eq(1)').text(), row.find('td:eq(4)').text()]);
       }
 
+      dialogToUse = force ? this.forceDetachDialog : this.detachDialog;
       if ( volumes.length > 0 ) {
-        $detachIds = this.detachDialog.find("tbody.resource-ids");
+        $detachIds = dialogToUse.find("tbody.resource-ids");
         $detachIds.html('');
-        $volumesToDetach = this.detachDialog.find("#volumes-to-detach");
+        $volumesToDetach = dialogToUse.find("#volumes-to-detach");
         ids = [];
         for ( i = 0; i<volumes.length; i++ ) {
           vol = escapeHTML(volumes[i][0]);
@@ -398,7 +424,7 @@
           $detachIds.append($tr);
         }
         $volumesToDetach.html(ids.join(ID_SEPARATOR));
-        this.detachDialog.dialog('open');
+        dialogToUse.dialog('open');
       }
     },
 
