@@ -157,35 +157,21 @@ public class FalseDataGenerator
 							System.out.printf(" Generating usage for period %d", periodNum);
 							long timeMs = START_TIME + (PERIOD_DURATION*periodNum);
 
-							/* Create a fake instance if one should be created in this period. */
-							if (NUM_PERIODS_PER_ENTITY % periodNum == 0) {
+							/* Create a fake instance, a fake volume, and a fake elastic IP if they should be created in this period. */
+							if (periodNum % NUM_PERIODS_PER_ENTITY == 0) {
 								/* cycle thru instance types */
-								int typeNum = FalseInstanceType.values().length%createdInstanceNum;
+								int typeNum = createdInstanceNum%FalseInstanceType.values().length;
 								FalseInstanceType type = FalseInstanceType.values()[typeNum];
 								instanceUuid = String.format(UUID_FORMAT, uniqueUserId, instanceUuidNum++);
 								ReportingInstanceEventStore.getInstance().insertCreateEvent(instanceUuid,
 										timeMs, ("i-" + userNum + "-" + periodNum),
 										type.toString(), user, cluster, availZone);
 								createdInstanceNum++;
-							}
 
-							/* Create a fake volume if one should be created in this period. */
-							if (NUM_PERIODS_PER_ENTITY % periodNum == 0) {
 								volumeUuid = String.format(UUID_FORMAT, uniqueUserId, volumeUuidNum++);
 								ReportingVolumeEventStore.getInstance().insertCreateEvent(volumeUuid, ("vol-" + userNum + "-" + periodNum),
 										timeMs, user, cluster, availZone, VOLUME_SIZE);
-							}
-							
-							/* Create a fake snapshot if one should be created in this period. */
-							if (NUM_PERIODS_PER_SNAPSHOT % periodNum == 0) {
-								String uuid = String.format(UUID_FORMAT, uniqueUserId, snapshotUuidNum++);
-								ReportingVolumeSnapshotEventStore.getInstance().insertCreateEvent(uuid,
-										("snap-" + userNum + "-" + periodNum),
-										volumeUuid, timeMs, user, SNAPSHOT_SIZE);
-							}
-							
-							/* Create a fake elastic IP if one should be created in this period. */
-							if (NUM_PERIODS_PER_ENTITY % periodNum == 0) {
+
 								elasticIpUuid = String.format(UUID_FORMAT, uniqueUserId, elasticIpUuidNum++);
 								String ip = String.format("%d.%d.%d.%d",
 										(userNum >> 8) % 256,
@@ -194,15 +180,23 @@ public class FalseDataGenerator
 										periodNum % 256);
 								ReportingElasticIpEventStore.getInstance().insertCreateEvent(elasticIpUuid, timeMs, user, ip);
 							}
+
+							/* Create a fake snapshot if one should be created in this period. */
+							if (periodNum % NUM_PERIODS_PER_SNAPSHOT == 0) {
+								String uuid = String.format(UUID_FORMAT, uniqueUserId, snapshotUuidNum++);
+								ReportingVolumeSnapshotEventStore.getInstance().insertCreateEvent(uuid,
+										("snap-" + userNum + "-" + periodNum),
+										volumeUuid, timeMs, user, SNAPSHOT_SIZE);
+							}
 							
 							/* Create a fake bucket if one should be created in this period. */
-							if (NUM_PERIODS_PER_BUCKET % periodNum == 0) {
+							if (periodNum % NUM_PERIODS_PER_BUCKET == 0) {
 								bucketUuid = String.format(UUID_FORMAT, uniqueUserId, bucketUuidNum++);
 								ReportingS3BucketEventStore.getInstance().insertS3BucketCreateEvent(bucketUuid, user, availZone);
 							}
 							
 							/* Create a fake object if one should be created in this period. */
-							if (NUM_PERIODS_PER_OBJECT % periodNum == 0) {
+							if (periodNum % NUM_PERIODS_PER_OBJECT == 0) {
 								String uuid = String.format(UUID_FORMAT, uniqueUserId, objectUuidNum++);
 								ReportingS3ObjectEventStore.getInstance().insertS3ObjectCreateEvent(bucketUuid, uuid,
 										timeMs, user);
