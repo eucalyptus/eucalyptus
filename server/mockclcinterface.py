@@ -247,7 +247,7 @@ class MockClcInterface(ClcInterface):
         pass
 
     # returns True if successful
-    def detach_volume(self, volume_id, instance_id, device, force=False):
+    def detach_volume(self, volume_id, force=False):
         pass
 
     def get_all_snapshots(self):

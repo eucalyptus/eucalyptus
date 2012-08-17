@@ -284,9 +284,9 @@ class UIProxyClient(object):
         return self.__make_request__('AttachVolume',
                     {'VolumeId': volume_id, 'InstanceId': instance_id, 'Device': device})
 
-    def detach_volume(self, volume_id, instance_id, device, force=False):
+    def detach_volume(self, volume_id, force=False):
         return self.__make_request__('DetachVolume',
-                    {'VolumeId': volume_id, 'InstanceId': instance_id, 'Device': device, 'Force': str(force)})
+                    {'VolumeId': volume_id, 'Force': str(force)})
 
     ##
     # Snapshot methods

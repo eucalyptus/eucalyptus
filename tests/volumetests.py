@@ -45,9 +45,9 @@ if __name__ == "__main__":
         volumes = client.get_volumes()
     print client.get_volumes()
     print 
-    print "=== attaching volume to instance ==="
+    print "=== detaching volume from instance ==="
     print 
-    print client.detach_volume(volid, instance_id, '/dev/sdd')
+    print client.detach_volume(volid)
     volumes = client.get_volumes()
     while volumes['results'][map(itemgetter('id'), volumes['results']).index(volid)]['status'] != 'available':
         time.sleep(3)

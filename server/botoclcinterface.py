@@ -199,7 +199,7 @@ class BotoClcInterface(ClcInterface):
 
     # returns True if successful
     def detach_volume(self, volume_id, instance_id, device, force=False):
-        return self.conn.detach_volume(volume_id, instance_id, device, force)
+        return self.conn.detach_volume(volume_id, None, None, force)
 
     def get_all_snapshots(self):
         obj = self.conn.get_all_snapshots()

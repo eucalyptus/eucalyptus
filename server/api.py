@@ -221,8 +221,6 @@ class ComputeHandler(server.BaseHandler):
             return clc.attach_volume(volumeid, instanceid, device)
         elif action == 'DetachVolume':
             volumeid = self.get_argument('VolumeId')
-            instanceid = self.get_argument('InstanceId')
-            device = self.get_argument('Device')
             force = self.get_argument('Force', False)
             return clc.detach_volume(volumeid, instanceid, device, force)
 
