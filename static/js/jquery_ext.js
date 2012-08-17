@@ -24,7 +24,7 @@
  * Returns:  array or rows
  * Inputs:   object:oSettings - DataTables settings object
  */
-$.fn.dataTableExt.oApi.fnGetVisiableTrNodes = function ( oSettings )
+$.fn.dataTableExt.oApi.fnGetVisibleTrNodes = function ( oSettings )
 {
   return anDisplay = $('tbody tr', oSettings.nTable);
 }

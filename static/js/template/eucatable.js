@@ -21,30 +21,38 @@
 (function($, eucalyptus) {
   $.widget('eucalyptus.eucatable', {
     options : { 
-      id : 'table', // user of this widget should customize these options
-      base_table : null,
+      id : '', // user of this widget should customize these options
       dt_arg : null,
-      header_title : 'Manage resources',
-      search_refresh : 'Refresh',
-      txt_create : 'Create resource',
-      txt_found : 'resources found',
-      menu_text : 'More actions',
+      text : {
+        header_title : '',
+        search_refresh : '',
+        create_resource : '',
+        resource_found : '',
+        action : '',
+      },
       menu_actions : null, // e.g., TODO: add help
-      value_column_inx : null, // e.g 8
-      help : null // e.g., { delete: ["Delete", function () { dialog.... } ] }
     },
     table : null, // jQuery object to the table
-    help_flipped : false,
     actionMenu : null,
     _init : function() {
-      thisObj = this;
+      thisObj = this; // 
       // add draw call back
-      // this.options.dt_arg['fnDrawCallback'] = function( oSettings ) { thisObj._drawCallback(oSettings); };
-      this.table = this.options.base_table.dataTable(this.options.dt_arg);
-      var $header = this._decorateHeader({title:this.options.header_title});
-      this._decorateSearchBar({refresh: this.options.search_refresh});
-      this._decorateTopBar({txt_create: this.options.txt_create, txt_found : this.options.txt_found});
-      this._decorateActionMenu({text: this.options.menu_text, actions: this.options.menu_actions });
+      this.options.dt_arg['fnDrawCallback'] = function( oSettings ) { 
+        try{
+          thisObj._drawCallback(oSettings); 
+        }catch(e){
+          // for some reason, dom to look for data is changed between calls (TODO: figure out why) 
+          // exception handler is to catch the case
+          var obj= thisObj.element.children().first().data('eucatable');
+          if(obj)
+            obj._drawCallback(oSettings);
+        }
+      };
+      this.table = this.element.find('table').dataTable(this.options.dt_arg);
+      var $header = this._decorateHeader();
+      this._decorateSearchBar();
+      this._decorateTopBar();
+      this._decorateActionMenu();
       this._addActions(this.actionMenu);
     },
 
@@ -54,42 +62,6 @@
     _destroy : function() {
     },
 
-    _setHelp : function($header) {
-      var thisObj = this;
-      var $helpLink = $header.find('.help-link a');
-      var $helpHeader = $header.clone();
-      $helpHeader.find('.help-link').remove();
-      var funcOnClick = function(evt){
-        if(!thisObj.help_flipped){
-            var $helpWrapper = $('<div>').addClass('table-help');
-            $helpWrapper.append($helpHeader,thisObj.options.help.content);
-            thisObj.element.flip({
-              direction : 'lr',
-              speed : 300,
-              color : '#ffffff',
-              bgColor : '#ffffff',
-              content : $helpWrapper,
-              onEnd : function() {
-                thisObj.element.find('.table-help-button a').click( function(evt) {
-                  thisObj.element.revertFlip();
-                }); 
-                // at the end of flip/revertFlip, change the ?/x button
-                if(!thisObj.help_flipped){
-                  if(thisObj.options.help.title)
-                    thisObj.element.find('.euca-table-header span').text(thisObj.options.help.title);
-                  thisObj.help_flipped =true;
-                }else{
-                  thisObj.help_flipped = false;
-                }
-              }
-            });             
-          }else{
-            ;
-        }
-      }
-      $helpLink.live('click',funcOnClick);
-    },
-/*
     _drawCallback : function(oSettings) {
       thisObj = this;
       $('#table_' + this.options.id + '_count').html(oSettings.fnRecordsDisplay());
@@ -135,8 +107,9 @@
                   break;
                 }
               };
-              var itemsList = contextMenuParams.build_callback.call(
-                      this, thisObj.table.fnGetData(inx, thisObj.options.value_column_inx));
+              var itemsList = contextMenuParams.build_callback( 
+                thisObj.table.fnGetData(inx) // entire row is given to callback
+              );
               return {
                 items: itemsList,
               };
@@ -145,7 +118,7 @@
         }
       });      
     },
-*/
+
     reDrawTable : function() {
       this.table.fnDraw();
     },
@@ -176,7 +149,7 @@
       $header = this.element.find('.table_' + this.options.id + '_header');
       $header.addClass('euca-table-header');
       $header.append(
-        $('<span>').text(args.title).append(
+        $('<span>').text(thisObj.options.text.header_title).append(
           $('<div>').addClass('help-link').append(
             $('<a>').attr('href','#').text('?').click( function(evt){
               thisObj._trigger('help_click', evt);
@@ -188,8 +161,9 @@
     _decorateSearchBar : function(args) {
       var thisObj = this; // ref to widget instance
       var $searchBar = this.element.find('#'+this.options.id+'_filter');
+      var refresh = this.options.text.search_refresh ? this.options.text.search_refresh : search_refresh;
       $searchBar.append(
-        $('<a>').addClass('table-refresh').attr('href','#').text(args.refresh).click(function(){
+        $('<a>').addClass('table-refresh').attr('href','#').text(refresh).click(function(){
           thisObj.refreshTable();
         }));
       return $searchBar;
@@ -203,11 +177,11 @@
       $tableTop.addClass('euca-table-length');
       $tableTop.append(
         $('<div>').addClass('euca-table-add').append(
-          $('<a>').attr('id','table-'+this.options.id+'-new').addClass('add-resource').attr('href','#').text(args.txt_create)),
+          $('<a>').attr('id','table-'+this.options.id+'-new').addClass('add-resource').attr('href','#').text(thisObj.options.text.create_resource)),
         $('<div>').addClass('euca-table-action actionmenu'),
         $('<div>').addClass('euca-table-size').append(
           $('<span>').attr('id','table_' + this.options.id + '_count'),
-          $('<span>').attr('id','tbl_txt_found').addClass('resources-found').html('&nbsp; '+args.txt_found),
+          $('<span>').attr('id','tbl_txt_found').addClass('resources-found').html('&nbsp; '+thisObj.options.text.resource_found),
           'Showing&nbsp;',
           $('<span>').addClass('show selected').text('10'),
           '&nbsp;|&nbsp;',
@@ -247,21 +221,17 @@
       var $menuDiv = this.element.find('div.euca-table-action');
       if ($menuDiv === undefined)
         return undefined;
-      if (!args.actions)
+      if (!this.options.menu_actions)
         return undefined;
-
+      var txt_action = this.options.text.action ? this.options.text.action : table_menu_main_action;
       $menuDiv.append($('<span>').attr('id','more-actions-'+this.options.id).
-                      addClass("inactive-menu").text(args.text));
+                      addClass("inactive-menu").text(txt_action));
+      var actions = thisObj.options.menu_actions;
       $.contextMenu({
             selector: '#more-actions-'+this.options.id,
             trigger: "left",
             build: function(trigger, e) {
-              var itemsList;
-              if ( isFunction(args.actions) )
-                itemsList = args.actions.call(
-                      this, thisObj.getIndexValueForSelectedRows());
-              else
-                itemsList = args.actions;
+              var itemsList = actions.call();
               return {
                 items: itemsList,
               };
@@ -279,7 +249,7 @@
       // add select/deselect all action
       $checkbox = this.element.find('#' + this.options.id + '-check-all');
       $checkbox.change(function() {
-        var rows = thisTable.fnGetVisiableTrNodes();
+        var rows = thisTable.fnGetVisibleTrNodes();
         if(this.checked) {
           for ( i = 0; i<rows.length; i++ ) {
             cb = rows[i].firstChild.firstChild;
@@ -306,7 +276,7 @@
       var dataTable = this.table;
       if ( !dataTable )
         return 0;
-      var rows = dataTable.fnGetVisiableTrNodes();
+      var rows = dataTable.fnGetVisibleTrNodes();
       var selectedRows = 0;
       for ( i = 0; i<rows.length; i++ ) {
         cb = rows[i].firstChild.firstChild;
@@ -316,16 +286,16 @@
       return selectedRows;
     },
 
-    getIndexValueForSelectedRows : function () {
+    getValueForSelectedRows : function (columnIdx) {
       var dataTable = this.table;
       if ( !dataTable )
         return [];
-      var rows = dataTable.fnGetVisiableTrNodes();
+      var rows = dataTable.fnGetVisibleTrNodes();
       var selectedRows = [];
       for ( i = 0; i<rows.length; i++ ) {
         cb = rows[i].firstChild.firstChild;
         if ( cb != null && cb.checked == true ) {
-          selectedRows.push(dataTable.fnGetData(rows[i], this.options.value_column_inx));
+          selectedRows.push(dataTable.fnGetData(rows[i], columnIdx));
         }
       }
       return selectedRows;
@@ -336,7 +306,7 @@
       if ( !dataTable )
         return [];
       idIndex = idIndex || 1;
-      var rows = dataTable.fnGetVisiableTrNodes();
+      var rows = dataTable.fnGetVisibleTrNodes();
       var selectedRows = [];
       for ( i = 0; i<rows.length; i++ ) {
         cb = rows[i].firstChild.firstChild;
@@ -352,7 +322,7 @@
       var dataTable = this.table;
       if ( !dataTable )
         return [];
-      var rows = dataTable.fnGetVisiableTrNodes();
+      var rows = dataTable.fnGetVisibleTrNodes();
       var selectedRows = [];
       for ( i = 0; i<rows.length; i++ ) {
         cb = rows[i].firstChild.firstChild;

@@ -30,10 +30,8 @@
       var $tmpl = $('html body').find('.templates #sgroupTblTmpl').clone();
       var $wrapper = $($tmpl.render($.i18n.map));
       this.element.add($wrapper);
-      var $base_table = $wrapper.find('table');
       this.tableWrapper = $wrapper.eucatable({
         id : 'sgroups', // user of this widget should customize these options,
-        base_table : $base_table,
         dt_arg : {
           "bProcessing": true,
           "sAjaxSource": "../ec2?Action=DescribeSecurityGroups",
@@ -58,11 +56,11 @@
           ],
           "fnDrawCallback": function( oSettings ) { thisObj._drawCallback(oSettings); }
         },
-        header_title : sgroup_h_title,
-        search_refresh : search_refresh,
-        txt_create : sgroup_create,
-        txt_found : sgroup_found,
-        menu_text : table_menu_main_action,
+        text : {
+          header_title : sgroup_h_title,
+          create_resource : sgroup_create,
+          resource_found : sgroup_found,
+        },
         menu_actions : { delete: { name: table_menu_delete_action, callback: function(key, opt) { thisObj.deleteAction(); } } },
         row_click : function (args) { thisObj.handleRowClick(args); },
         menu_click_create : function (args) { thisObj.$addDialog.eucadialog('open')},

@@ -146,6 +146,34 @@
         btnArr.push(btn);  
       });
       return btnArr; 
+    },
+
+    setSelectedResources : function (resources) {
+      $span = this.element.find("span.resource-ids");
+      $span.html('');
+      $.each(resources, function(idx, name){
+        $span.append(name).append('<br/>');
+      });
+    },
+
+    onKeypress : function(evt_src_id, button_id) {
+      var thisObj = this;
+      evt_src_id = evt_src_id.replace('#','');
+      button_id = button_id.replace('#','');
+      var $evt_src = this.element.find('#'+evt_src_id);
+      var $button = null;
+      $evt_src.keypress( function(e){
+        if($button==null)
+          $button =thisObj.element.parent().find('#'+button_id); 
+        if( e.which === RETURN_KEY_CODE || e.which === RETURN_MAC_KEY_CODE ) {
+           $button.trigger('click');
+        } else if ( e.which === 0 ) {
+        } else if ( e.which === BACKSPACE_KEY_CODE && $(this).val().length == 1 ) {
+           $button.prop("disabled", true).addClass("ui-state-disabled");
+        } else {
+           $button.prop("disabled", false).removeClass("ui-state-disabled");
+        }
+      });
     }
   });
 })(jQuery,

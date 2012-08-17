@@ -33,10 +33,8 @@
       var $keyHelp = $wrapper.children().last();
       this.element.add($keyTable);
 
-      var $base_table = $keyTable.find('table');
       this.tableWrapper = $keyTable.eucatable({
         id : 'keys', // user of this widget should customize these options,
-        base_table : $base_table,
         dt_arg : {
           "bProcessing": true,
           "sAjaxSource": "../ec2?type=key&Action=DescribeKeyPairs",
@@ -55,13 +53,13 @@
           ],
           "fnDrawCallback": function( oSettings ) { thisObj._drawCallback(oSettings); }
         },
-        header_title : keypair_h_title,
-        search_refresh : search_refresh,
-        txt_create : keypair_create,
-        txt_found : keypair_found,
-        menu_text : table_menu_main_action,
-        menu_actions : { delete: { name: table_menu_delete_action, callback: function(key, opt) { thisObj.deleteAction(); } } },
-        row_click : function (args) { thisObj.handleRowClick(args); },
+        text : {
+          header_title : keypair_h_title,
+          create_resource : keypair_create,
+          resource_found : keypair_found,
+        },
+        menu_actions : function(args){ return thisObj._buildActionsMenu(args);},
+        row_click : function (args) { thisObj._handleRowClick(args);},
         menu_click_create : function (args) { thisObj.$addDialog.eucadialog('open')},
         help_click : function(evt) { 
           var $helpHeader = $('<div>').addClass('euca-table-header').append(
@@ -94,20 +92,6 @@
       $add_dialog = $rendered.children().first();
       $add_help = $rendered.children().last();
 
-      // add custom event handler to dialog elements
-      // when calling eucadialog, the buttons should have domid to attach the specific domid that's used by event handler written here 
-      $add_dialog.find('#key-name').keypress( function(e){
-        var $createButton = $('#'+createButtonId);
-        if( e.which === RETURN_KEY_CODE || e.which === RETURN_MAC_KEY_CODE ) {
-           $createButton.trigger('click');
-        } else if ( e.which === 0 ) {
-        } else if ( e.which === BACKSPACE_KEY_CODE && $(this).val().length == 1 ) {
-           $createButton.prop("disabled", true).addClass("ui-state-disabled");
-        } else {
-           $createButton.prop("disabled", false).removeClass("ui-state-disabled");
-        }
-      });
-
       this.$addDialog = $add_dialog.eucadialog({
         id: 'keys-add',
         title: keypair_dialog_add_title,
@@ -126,10 +110,11 @@
                       }
                     }
                   },
-        'cancel': {text: keypair_dialog_cancel_btn, focus:true, click: function() { $add_dialog.eucadialog("close");}},
+        'cancel': {domid: 'keys-cancel-btn', text: keypair_dialog_cancel_btn, focus:true, click: function() { $add_dialog.eucadialog("close");}},
         },
         help : {title: help_keypair['dialog_add_title'], content: $add_help},
       });
+      $add_dialog.eucadialog('onKeypress', 'key-name', createButtonId); 
     },
 
     _create : function() { 
@@ -181,22 +166,22 @@
               content     : data.results.material,
               script      : '/support?Action=DownloadFile&_xsrf=' + $.cookie('_xsrf')
             });
-            successNotification(keypair_create_success + ' ' + keyName);
+            notifySuccess('add-key-pair', keypair_create_success + ': ' + keyName);
             thisObj.tableWrapper.eucatable('refreshTable');
           } else {
-            errorNotification(keypair_create_error + ' ' + keyName);
+            notifyError('add-key-pair',keypair_create_error + ' ' + keyName);
           }
         },
         error:
         function(jqXHR, textStatus, errorThrown){
-          errorNotification(keypair_delete_error + ' ' + keyName);
+          notifyError('add-key-pair', keypair_delete_error + ' ' + keyName);
         }
       });
     },
 
     _deleteSelectedKeyPairs : function () {
       var thisObj = this;
-      var rowsToDelete = thisObj._getTableWrapper().eucatable('getAllSelectedRows');
+      var rowsToDelete = thisObj.tableWrapper.eucatable('getAllSelectedRows');
       for ( i = 0; i<rowsToDelete.length; i++ ) {
         var keyName = rowsToDelete[i];
         $.ajax({
@@ -209,46 +194,38 @@
           (function(keyName) {
             return function(data, textStatus, jqXHR){
               if ( data.results && data.results == true ) {
-                successNotification(keypair_delete_success + ' ' + keyName);
-                thisObj._getTableWrapper().eucatable('refreshTable');
+                notifySuccess('delete-keypair', keypair_delete_success + ' ' + keyName);
+                thisObj.tableWrapper.eucatable('refreshTable');
               } else {
-                errorNotification(keypair_delete_error + ' ' + keyName);
+                notifyError('delete-keypair', keypair_delete_error + ' ' + keyName);
               }
            }
           })(keyName),
           error:
           (function(keyName) {
             return function(jqXHR, textStatus, errorThrown){
-              errorNotification(keypair_delete_error + ' ' + keyName);
+              notifyError('delete-keypair', keypair_delete_error + ' ' + keyName);
             }
           })(keyName)
         });
       }
     },
+    
+    _buildActionsMenu : function() {
+      thisObj = this;
+      var itemsList = { 'delete': {"name": table_menu_delete_action, callback: function(key, opt) { 
+        keysToDelete = thisObj.tableWrapper.eucatable('getValueForSelectedRows', 1);
+        if ( keysToDelete.length > 0 ) {
+          thisObj.$delDialog.eucadialog('setSelectedResources', keysToDelete);
+          thisObj.$delDialog.dialog('open');
+        }
+      }}}
+      return itemsList;
+    },
 
     close: function() {
       this._super('close');
     },
-
-    _getTableWrapper : function() {
-      return this.tableWrapper;
-    },
-
-    deleteAction : function() {
-      $tableWrapper = this._getTableWrapper();
-      rowsToDelete = $tableWrapper.eucatable('getAllSelectedRows');
-      if ( rowsToDelete.length > 0 ) {
-        // show delete dialog box
-        $deleteNames = this.$delDialog.find("span.resource-ids")
-        $deleteNames.html('');
-        for ( i = 0; i<rowsToDelete.length; i++ ) {
-          t = escapeHTML(rowsToDelete[i]);
-          $deleteNames.append(t).append("<br/>");
-        }
-        this.$delDialog.dialog('open');
-      }
-    }
-
   });
 })(jQuery,
    window.eucalyptus ? window.eucalyptus : window.eucalyptus = {});

@@ -21,6 +21,7 @@
 (function($, eucalyptus) {
   $.widget('eucalyptus.volume', $.eucalyptus.eucawidget, {
     options : { },
+    baseTable : null,
     tableWrapper : null,
     delDialog : null,
     detachDialog : null,
@@ -30,12 +31,10 @@
       var $wrapper = $($tmpl.render($.extend($.i18n.map, help_volume)));
       var $volTable = $wrapper.children().first();
       var $volHelp = $wrapper.children().last();
+      this.baseTable = $volTable;
       this.element.add($volTable);
-      var $base_table = $volTable.find('table');
-
       this.tableWrapper = $volTable.eucatable({
         id : 'volumes', // user of this widget should customize these options,
-        base_table : $base_table,
         dt_arg : {
           "bProcessing": true,
           "sAjaxSource": "../ec2?Action=DescribeVolumes",
@@ -67,16 +66,15 @@
               "mDataProp": "status"
             }
           ],
-          "fnDrawCallback": function( oSettings ) { thisObj._drawCallback(oSettings); }
         },
-        header_title : volume_h_title,
-        search_refresh : search_refresh,
-        txt_create : volume_create,
-        txt_found : volume_found,
-        menu_text : table_menu_main_action,
-        menu_actions : function() { return thisObj.buildActionsMenu(); },
-        value_column_inx : 8,
-        row_click : function (args) { thisObj.handleRowClick(args); },
+        text : {
+          header_title : volume_h_title,
+          create_resource : volume_create,
+          resource_found : volume_found,
+        },
+        menu_actions : function(){ return thisObj._buildActionsMenu()},
+        context_menu : {build_callback : function(state) { return thisObj.buildContextMenu(state);}},
+        row_click : function (args) { thisObj._handleRowClick(args); },
       //  td_hover_actions : { instance: [4, function (args) { thisObj.handleInstanceHover(args); }], snapshot: [5, function (args) { thisObj.handleSnapshotHover(args); }] }
         help_click : function(evt) {
           var $helpHeader = $('<div>').addClass('euca-table-header').append(
@@ -89,6 +87,7 @@
       this.tableWrapper.appendTo(this.element);
 
       //add filter to the table
+      // TODO: make templates
       $tableFilter = $('div.table-volume-filter');
       $tableFilter.addClass('euca-table-filter');
       $tableFilter.append(
@@ -161,27 +160,11 @@
       var createButtonId = 'volume-add-btn';
       $tmpl = $('html body').find('.templates #volumeAddDlgTmpl').clone();
       $add_dialog = $($tmpl.render($.i18n.map));
-/*
-      // add custom event handler to dialog elements
-      // when calling eucadialog, the buttons should have domid to attach the specific domid that's used by event handler written here 
-      $add_dialog.find('#key-name').keypress( function(e){
-        var $createButton = $('#'+createButtonId);
-        if( e.which === RETURN_KEY_CODE || e.which === RETURN_MAC_KEY_CODE ) 
-           $createButton.trigger('click');
-        else if ( e.which === 0 ) {
-        } else if ( e.which === BACKSPACE_KEY_CODE && $(this).val().length == 1 ) 
-           $createButton.prop("disabled", true).addClass("ui-state-disabled");
-        else if ( $(this).val().length == 0 )
-           $createButton.prop("disabled", true).addClass("ui-state-disabled");
-        else 
-           $createButton.prop("disabled", false).removeClass("ui-state-disabled");
-      });
-*/
+      
       $add_dialog.eucadialog({
         id: 'volumes-add',
         title: volume_dialog_add_title,
         buttons: { 
-        // e.g., add : { domid: keys-add-btn, text: "Add new key", disabled: true, focus: true, click : function() { }, keypress : function() { }, ...} 
         'create': { domid: createButtonId, text: volume_dialog_create_btn, disabled: true,  click: function() { $add_dialog.dialog("close"); }},
         'cancel': {text: volume_dialog_cancel_btn, focus:true, click: function() { $add_dialog.dialog("close");}}
       }});
@@ -193,17 +176,9 @@
     _destroy : function() {
     },
 
-    _drawCallback : function(oSettings) {
-       $('#table_volumes_count').html(oSettings.fnRecordsDisplay());
-    },
-
-    _getTableWrapper : function() {
-      return this.tableWrapper;
-    },
-
-    buildActionsMenu : function() {
+    _buildActionsMenu : function() {
       thisObj = this;
-      selectedVolumes = thisObj.tableWrapper.eucatable('getIndexValueForSelectedRows');
+      selectedVolumes = thisObj.tableWrapper.eucatable('getValueForSelectedRows', 8); // 8th column=status (this is volume's knowledge)
       itemsList = {};
       // add attach action
       if ( selectedVolumes.length == 1 && selectedVolumes.indexOf('available') == 0 ){
@@ -239,8 +214,11 @@
       return $(rowSelector).find('td:eq(1)').text();
     },
 
-    buildContextMenu : function(state) {
-      thisObj = this;
+    buildContextMenu : function(row) {
+     // var thisObj = this; ==> this causes the problem..why?
+      var thisObj = $('html body').find(DOM_BINDING['main']).data("volume");
+
+      var state = row['status'];
       switch (state) {
         case 'available':
           return {
@@ -289,46 +267,6 @@
       this.tableWrapper.eucatable('reDrawTable');
     },
 
-    _drawCallback : function(oSettings) {
-      thisObj = this;
-      $('#table_volumes_count').html(oSettings.fnRecordsDisplay());
-      this.element.find('table tbody').find('tr').each(function(index, tr) {
-        $currentRow = $(tr);
-        $currentRow.click( function (e) {
-          // checked/uncheck on checkbox
-          $rowCheckbox = $(e.target).parents('tr').find(':input[type="checkbox"]');
-          $rowCheckbox.attr('checked', !$rowCheckbox.is(':checked'));
-          thisObj._handleRowClick();
-        });
-        $currentRow.find(':input[type="checkbox"]').click( function (e) {
-          $cb = $(this)
-          $cb.attr('checked', $cb.is(':checked'));
-          thisObj._handleRowClick();
-          e.stopPropagation();
-        });
-        rID = 'ri-'+S4()+S4();
-        $currentRow.attr('id', rID);
-        // context menu
-        $.contextMenu({
-          selector: '#'+rID,
-          build: function(trigger, e) {
-            rowId = $(trigger).attr('id');
-            // ??? Why do we need to call dataTable() on object that is alredy a dataTable?
-            $table = thisObj.tableWrapper.eucatable('getTable').dataTable();
-            nNotes = $table.fnGetNodes();
-            inx = 0;
-            for ( i in nNotes ){
-              if ( rowId == $(nNotes[i]).attr('id') ) {
-               inx = i;
-               break;
-              }
-            };
-            return { items: thisObj.buildContextMenu($table.fnGetData(inx, 8)) };
-          }
-        });
-      });
-    },
-
     _handleRowClick : function(args) {
       if ( this.tableWrapper.eucatable('countSelectedRows') == 0 )
         this.tableWrapper.eucatable('deactivateMenu');
@@ -352,17 +290,17 @@
           (function(volumeId) {
             return function(data, textStatus, jqXHR){
               if ( data.results && data.results == true ) {
-                successNotification(volume_delete_success + ' ' + volumeId);
-                thisObj._getTableWrapper().eucatable('refreshTable');
+                notifySuccess('delete volume', volume_delete_success + ': ' + volumeId);
+                thisObj.baseTable.eucatable('refreshTable');
               } else {
-                errorNotification(volume_delete_error + ' ' + volumeId);
+                notifyError('delete volume', volume_delete_error + ': ' + volumeId); // TODO: error code
               }
            }
           })(volumeId),
           error:
           (function(volumeId) {
             return function(jqXHR, textStatus, errorThrown){
-              errorNotification(volume_delete_error + ' ' + volumeId);
+              notifyError('delete volume', volume_delete_error + ': ' + volumeId); // TODO: error code?
             }
           })(volumeId)
         });
@@ -386,17 +324,17 @@
           (function(volumeId) {
             return function(data, textStatus, jqXHR){
               if ( data.results && data.results == true ) {
-                successNotification(volume_detach_success + ' ' + volumeId);
-                thisObj._getTableWrapper().eucatable('refreshTable');
+                notifySuccess('detach-volume', volume_detach_success + ' ' + volumeId);
+                thisObj.tableWrapper.eucatable('refreshTable');
               } else {
-                errorNotification(volume_detach_error + ' ' + volumeId);
+                notifyError('detach-volume', volume_detach_error + ' ' + volumeId);
               }
            }
           })(volumeId),
           error:
           (function(volumeId) {
             return function(jqXHR, textStatus, errorThrown){
-              errorNotification(volume_detach_error + ' ' + volumeId);
+              notifyError('detach-volume', volume_detach_error + ' ' + volumeId);
             }
           })(volumeId)
         });
@@ -410,7 +348,7 @@
     deleteAction : function(volumeId) {
       volumesToDelete = [];
       if ( !volumeId ) {
-        $tableWrapper = thisObj._getTableWrapper();
+        $tableWrapper = thisObj.tableWrapper;
         volumesToDelete = $tableWrapper.eucatable('getAllSelectedRows');
       } else {
         volumesToDelete[0] = volumeId;
@@ -437,7 +375,7 @@
     detachAction : function(row, force) {
       volumes = [];
       if ( !row ) {
-        $tableWrapper = thisObj._getTableWrapper();
+        $tableWrapper = thisObj.tableWrapper;
         rows = $tableWrapper.eucatable('getContentForSelectedRows');
         for(r in rows){
           $row = $(rows[r]);

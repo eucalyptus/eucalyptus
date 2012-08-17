@@ -31,11 +31,9 @@
       var $instTable = $wrapper.children().first();
       var $instHelp = $wrapper.children().last();
       this.element.add($instTable);
-      var $base_table = $instTable.find('table');
 
       tableWrapper = $instTable.eucatable({
         id : 'instances', // user of this widget should customize these options,
-        base_table : $base_table,
         dt_arg : {
           "bProcessing": true,
           "sAjaxSource": "../ec2?Action=DescribeInstances",
@@ -62,11 +60,11 @@
             { "fnRender": function(oObj) { d = new Date(oObj.aData.launch_time); return d.toLocaleString(); } },
           ]
         },
-        header_title : instance_h_title,
-        search_refresh : search_refresh,
-        txt_create : instance_create,
-        txt_found : instance_found,
-        menu_text : table_menu_main_action,
+        text : {
+          header_title : instance_h_title,
+          create_resource : instance_create,
+          resource_found : instance_found,
+        },
         menu_actions : { delete: [table_menu_delete_action, function (args) { thisObj.deleteAction(args) } ] },
         row_click : function (args) { thisObj.handleRowClick(args); },
         //context_menu : { value_column_inx: 8, build_callback: function (state) { return thisObj.buildContextMenu(state) } },

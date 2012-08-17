@@ -18,7 +18,7 @@
  * additional information or have any questions.
  ************************************************************************/
 
-/* Constats */
+/* Constants */
 var RETURN_KEY_CODE = 13;
 var RETURN_MAC_KEY_CODE = 10;
 var BACKSPACE_KEY_CODE = 8;
@@ -42,7 +42,6 @@ function isFunction(obj) {
 
 
 /** Add Array.indexOf to IE **/
-
 if( !Array.prototype.indexOf ) {
   Array.prototype.indexOf = function(needle) {
     for(var i = 0; i < this.length; i++) {
@@ -54,55 +53,14 @@ if( !Array.prototype.indexOf ) {
   };
 }
 
-function deleteSelectedVolumes() {
-  var rowsToDelete = getAllSelectedRows('volumes', 1);
-  for ( i = 0; i<rowsToDelete.length; i++ ) {
-    var volumeId = rowsToDelete[i];
-    $.ajax({
-      type:"GET",
-      url:"/ec2?type=key&Action=DeleteVolume&VolumeId=" + volumeId,
-      data:"_xsrf="+$.cookie('_xsrf'),
-      dataType:"json",
-      async:"true",
-      success:
-        (function(volumeId) {
-          return function(data, textStatus, jqXHR){
-            if ( data.results && data.results == true ) {
-              successNotification("Scheduled volume delete for " + volumeId);
-              allTablesRef['volumes'].fnReloadAjax();
-            } else {
-              errorNotification("Failed to schedule volume delete for " + volumeId);
-            }
-           }
-        })(volumeId),
-      error:
-        (function(volumeId) {
-          return function(jqXHR, textStatus, errorThrown){
-            errorNotification("Failed to schedule volumvolumese delete for " + volumeId);
-          }
-        })(volumeId)
-    });
-  }
-}
-
 function S4() {
   return (((1+Math.random())*0x10000)|0).toString(16).substring(1);
 }
 
-function hideNotification(notification) {
-  $("#"+notification).detach();
+function notifySuccess(title, message) {
+  $('html body').find(DOM_BINDING['notification']).notification('success', title, message);
 }
 
-function successNotification(message) {
-  var nId = "n-"+ S4() + "-" + S4();
-//  alert(message);
-  $('#euca-notification-container').append('<div class="success" id="'+ nId + '"><span>' + escapeHTML(message) + '</span><a class="hide-notification" href="#" onclick="hideNotification(\'' + nId + '\');">X</a></div>');
-  // hide after 30 sec
-  setTimeout(function(){ hideNotification(nId) }, 1000 * 30);
-}
-
-function errorNotification(message) {
-  var nId = "n-"+ S4() + "-" + S4();
-//  alert(message);
-  $('#euca-notification-container').append('<div class="error" id="'+ nId + '"><span>' + escapeHTML(message) + '</span><a class="hide-notification" href="#" onclick="hideNotification(\'' + nId + '\');">X</a></div>');
+function notifyError(title, message, code) {
+  $('html body').find(DOM_BINDING['notification']).notification('error', title, message, code);
 }

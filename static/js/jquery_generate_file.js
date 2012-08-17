@@ -27,7 +27,6 @@
 (function($){
   // Creating a jQuery plugin:
   $.generateFile = function(options){
-
     options = options || {};
 
     if(!options.script || !options.filename || !options.content){
@@ -55,7 +54,7 @@
     setTimeout(function(){
     // The body element of the iframe document:
 
-    var body = (iframe.prop('contentDocument') !== undefined) ?
+      var body = (iframe.prop('contentDocument') !== undefined) ?
       iframe.prop('contentDocument').body :
       iframe.prop('document').body;	// IE
 			
