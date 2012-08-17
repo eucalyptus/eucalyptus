@@ -39,7 +39,7 @@
       // add draw call back
       this.options.dt_arg['fnDrawCallback'] = function( oSettings ) { 
         try{
-          thisObj._drawCallback(oSettings); 
+          thisObj._drawCallback(oSettings);
         }catch(e){
           // for some reason, dom to look for data is changed between calls (TODO: figure out why) 
           // exception handler is to catch the case
@@ -105,6 +105,12 @@
             selector: '#'+rID,
             build: function(trigger, e) {
               rowId = $(trigger).attr('id');
+              // TODO : thisObj.table sometime is undef :(
+              if (!thisObj.table) {
+                $table = $($(trigger).parents('table')[0]);
+                thisObj.table = $table.dataTable();
+              }
+
               nNotes = thisObj.table.fnGetNodes();
               inx = 0;
               for ( i in nNotes ){
