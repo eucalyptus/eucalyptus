@@ -86,7 +86,7 @@ class CachingClcInterface(ClcInterface):
 
     def get_all_zones(self):
         # if cache stale, update it
-        if (datetime.now() - self.zoneUpdate) > timedelta(seconds = self.zonefreq):
+        if (datetime.now() - self.zoneUpdate) > timedelta(seconds = self.zoneFreq):
             self.zones = self.clc.get_all_zones()
             self.zoneUpdate = datetime.now()
         return self.zones
