@@ -21,13 +21,14 @@
  * additional information or have any questions.
  ************************************************************************/
 
-#ifndef INCLUDE_MISC_H
-#define INCLUDE_MISC_H
+#ifndef INCLUDE_FAULT_H
+#define INCLUDE_FAULT_H
 
-#include <wc.h>
+#include "misc.h"
+#include "wc.h"
 
 /*
- * Usage: initialize_eucafaults(logfile_name)
+ * Usage: init_eucafaults(logfile_name)
  *
  * ...where the logfile_name argument sets the filename prefix (under
  * the configured logfile directory) for fault logs from this process.
@@ -41,13 +42,13 @@
  * ensure the fault-reporting system is properly initialized prior to
  * any fault encounters, as well as ensure the desired filename prefix
  * is used for logging. Thus, it is recommended all applications call
- * initialize_eucafaults() as part of their own initialization.
+ * init_eucafaults() as part of their own initialization.
  *
  * Returns the number of faults successfully loaded into registry. If
  * the registry was previously loaded, returns the number of previously
  * loaded faults as a negative number.
  */
-extern int initialize_eucafaults (char *);
+extern int init_eucafaults (char *);
 
 /*
  * Usage: log_eucafault (FAULT_ID, parameter_map)
@@ -55,8 +56,8 @@ extern int initialize_eucafaults (char *);
  * ...where the parameter map is a set of param/paramText key/value
  * pairs in struct form as defined in wc.h.
  *
- * Will call initialize_eucafaults() internally to ensure fault registry
- * has been loaded.
+ * Will call init_eucafaults() internally to ensure fault registry has
+ * been loaded.
  *
  * Returns TRUE if fault successfully logged, FALSE otherwise.
  */
@@ -72,8 +73,8 @@ extern boolean log_eucafault (const char *, const char_map **);
  * Note that the final NULL argument is very important!
  * (...because va_arg() is stupid.)
  *
- * Will call initialize_eucafaults() internally to ensure fault registry
- * has been loaded.
+ * Will call init_eucafaults() internally to ensure fault registry has
+ * been loaded.
  *
  * Returns the number of substitution parameters it was called with,
  * returning it as a negative number if the underlying log_eucafault()
@@ -81,4 +82,4 @@ extern boolean log_eucafault (const char *, const char_map **);
  */
 extern int log_eucafault_v (const char *, ...);
 
-#endif // INCLUDE_MISC_H
+#endif // INCLUDE_FAULT_H

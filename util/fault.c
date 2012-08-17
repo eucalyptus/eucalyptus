@@ -400,7 +400,7 @@ initialize_faultlog (const char *fileprefix)
  * loaded faults as a negative number.
  */
 int
-initialize_eucafaults (char *fileprefix)
+init_eucafaults (char *fileprefix)
 {
     struct stat dirstat;
     static int faults_loaded = 0;
@@ -599,7 +599,7 @@ get_fault_var (const char *var, const xmlNode *f_node)
 }
 
 /*
- * Formats fault-log output and sends to fault log (or console).
+ * Formats fault-log output and sends to fault log (or stdout/stderr).
  */
 static boolean
 format_eucafault (const char *fault_id, const char_map **map)
@@ -612,7 +612,7 @@ format_eucafault (const char *fault_id, const char_map **map)
 
     if (fault_node == NULL) {
         logprintfl (EUCAERROR,
-                    "format_eucafault() cannot get fault node for id %s.\n",
+                    "Fault %s detected, could not find fault id in registry.\n",
                     fault_id);
         return FALSE;
     }
@@ -713,19 +713,11 @@ format_eucafault (const char *fault_id, const char_map **map)
 boolean
 log_eucafault (const char *fault_id, const char_map **map)
 {
-    int load = initialize_eucafaults (NULL);
+    int load = init_eucafaults (NULL);
 
-    PRINTF1 (("initialize_eucafaults() returned %d\n", load));
+    PRINTF1 (("init_eucafaults() returned %d\n", load));
 
-    if (get_eucafault (fault_id, NULL) != NULL) {
-        // ^-- Simple existence check for now.
-        return format_eucafault (fault_id, map);
-    } else {
-        logprintfl (EUCAERROR,
-                    "Fault %s detected, could not find fault id in registry.\n",
-                    fault_id);
-        return FALSE;
-    }
+    return format_eucafault (fault_id, map);
 }
 
 /*
@@ -744,9 +736,9 @@ log_eucafault_v (const char *fault_id, ...)
     char *token[2];
     char_map **m = NULL;
     int count = 0;
-    int load = initialize_eucafaults (NULL);
+    int load = init_eucafaults (NULL);
 
-    PRINTF1 (("initialize_eucafaults() returned %d\n", load));
+    PRINTF1 (("init_eucafaults() returned %d\n", load));
     va_start (argv, fault_id);
 
     while ((token[count % 2] = va_arg (argv, char *)) != NULL) {
@@ -761,8 +753,7 @@ log_eucafault_v (const char *fault_id, ...)
         logprintfl (EUCAWARN, "log_eucafault_v() called with an odd (unmatched) number of substitution parameters: %d\n", count);
     }
     if (!log_eucafault (fault_id, (const char_map **)m)) {
-        logprintfl (EUCAERROR,
-                    "log_eucafault() returned FALSE inside log_eucafault_v()\n");
+        PRINTF (("log_eucafault() returned FALSE inside log_eucafault_v()\n"));
         count *= -1;
     }
     c_varmap_free (m);
@@ -815,12 +806,12 @@ main (int argc, char **argv)
             return 1;
         }
     }
-    // NULL forces initialize_eucafaults()'s call to
+    // NULL forces init_eucafaults()'s call to
     // initialize_faultlog() to guess at process name for creating
     // logfile.
-    opt = initialize_eucafaults (NULL);
+    opt = init_eucafaults (NULL);
 
-    PRINTF (("initialize_eucafaults() returned %d\n", opt));
+    PRINTF (("init_eucafaults() returned %d\n", opt));
 
     if (optind < argc) {
         char_map **m = c_varmap_alloc (NULL, "daemon", "Balrog");
