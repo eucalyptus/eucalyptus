@@ -59,43 +59,26 @@
  *   IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
-package com.eucalyptus.troubleshooting;
-
-import java.util.Enumeration;
-import java.util.Properties;
-
-import org.apache.log4j.Logger;
+package com.eucalyptus.troubleshooting.fault;
 
 import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.component.ComponentIds;
-import com.eucalyptus.troubleshooting.fault.Fault;
-import com.eucalyptus.troubleshooting.fault.FaultBuilder;
-import com.eucalyptus.troubleshooting.fault.FaultLogger;
-import com.eucalyptus.troubleshooting.fault.FaultSubsystem;
-import com.eucalyptus.troubleshooting.fault.FaultSubsystem2;
+import com.eucalyptus.troubleshooting.fault.xml.DeFaultSubsystemManager;
 
-public class TestFaultTrigger {
-	private static final Logger LOG = Logger.getLogger(TestFaultTrigger.class);
-	public static void triggerFault(int id, Properties varProps) {
-		// log it in all components
-		for (ComponentId componentId: ComponentIds.list()) {
-			try {
-				FaultBuilder faultBuilder = FaultSubsystem.forComponent(componentId).havingId(id);
-				LOG.debug("Triggering fault in component " + componentId.getName() + " with id " + id + " and vars " + varProps);
-				if (varProps != null) {
-					Enumeration e = varProps.propertyNames();
-					while (e.hasMoreElements()) {
-						String name = (String) e.nextElement();
-						String value = varProps.getProperty(name);
-						if (value == null) continue;
-						faultBuilder = faultBuilder.withVar(name, value);
-					}
-				}
-				faultBuilder.log();
-			} catch (Exception ex) {
-				LOG.error("Error triggering fault: " + ex);
-				ex.printStackTrace();
-			}
-		}
+public class FaultSubsystem2 {
+	private static final FaultSubsystemManager delegate = new DeFaultSubsystemManager();
+
+	public static FaultLogger getFaultLogger(ComponentId componentId) {
+		return delegate.getFaultLogger(componentId);
+	}
+
+	public static Fault getFault(int id) {
+		return getFaultRegistry().lookupFault(id);
+	}
+	public static FaultRegistry getFaultRegistry() {
+		return delegate.getFaultRegistry();
+	}
+
+	public static Fault fault(int id) {
+		return getFaultRegistry().lookupFault(id); // TODO: perhaps not make this null so chaining won't cause null pointer exception?
 	}
 }

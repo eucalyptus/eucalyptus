@@ -59,43 +59,66 @@
  *   IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
-package com.eucalyptus.troubleshooting;
+package com.eucalyptus.troubleshooting.fault.xml;
 
-import java.util.Enumeration;
-import java.util.Properties;
+import java.util.ArrayList;
 
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.troubleshooting.fault.Fault;
 import com.eucalyptus.troubleshooting.fault.FaultBuilder;
 import com.eucalyptus.troubleshooting.fault.FaultLogger;
-import com.eucalyptus.troubleshooting.fault.FaultSubsystem;
-import com.eucalyptus.troubleshooting.fault.FaultSubsystem2;
 
-public class TestFaultTrigger {
-	private static final Logger LOG = Logger.getLogger(TestFaultTrigger.class);
-	public static void triggerFault(int id, Properties varProps) {
-		// log it in all components
-		for (ComponentId componentId: ComponentIds.list()) {
-			try {
-				FaultBuilder faultBuilder = FaultSubsystem.forComponent(componentId).havingId(id);
-				LOG.debug("Triggering fault in component " + componentId.getName() + " with id " + id + " and vars " + varProps);
-				if (varProps != null) {
-					Enumeration e = varProps.propertyNames();
-					while (e.hasMoreElements()) {
-						String name = (String) e.nextElement();
-						String value = varProps.getProperty(name);
-						if (value == null) continue;
-						faultBuilder = faultBuilder.withVar(name, value);
-					}
-				}
-				faultBuilder.log();
-			} catch (Exception ex) {
-				LOG.error("Error triggering fault: " + ex);
-				ex.printStackTrace();
-			}
+public class FaultBuilderImpl implements FaultBuilder {
+	private static final Logger LOG = Logger.getLogger(FaultBuilder.class);
+	private class NameValuePair {
+		private String name;
+		private String value;
+		public String getName() {
+			return name;
+		}
+		public String getValue() {
+			return value;
+		}
+		public NameValuePair(String name, String value) {
+			super();
+			this.name = name;
+			this.value = value;
+		}
+		
+	}
+	private DeFaultSubsystemManager faultSubsystemManager;
+	private ComponentId componentId;
+	private ArrayList<NameValuePair> vars = new ArrayList<NameValuePair>();
+	private int faultId;
+
+	public FaultBuilderImpl(DeFaultSubsystemManager faultSubsystemManager, ComponentId componentId) {
+		this.faultSubsystemManager = faultSubsystemManager;
+		this.componentId = componentId;
+	}
+	@Override
+	public FaultBuilder withVar(String name, String value) {
+		vars.add(new NameValuePair(name, value));
+		return this;
+	}
+
+	@Override
+	public FaultBuilder havingId(int faultId) {
+		this.faultId = faultId;
+		return this;
+	}
+
+	@Override
+	public void log() {
+		try {
+			FaultLogger faultLogger = faultSubsystemManager.getFaultLogger(componentId);
+			Fault fault = faultSubsystemManager.getFaultRegistry().lookupFault(faultId);
+			faultLogger.log(fault);
+		} catch (Exception ex) {
+			LOG.error("Error writing fault with id " + faultId + "  for component " + componentId);
+			ex.printStackTrace();
 		}
 	}
+
 }

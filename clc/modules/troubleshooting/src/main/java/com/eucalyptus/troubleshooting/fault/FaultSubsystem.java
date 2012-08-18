@@ -63,22 +63,11 @@ package com.eucalyptus.troubleshooting.fault;
 
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.troubleshooting.fault.xml.DeFaultSubsystemManager;
+import com.eucalyptus.troubleshooting.fault.xml.FaultBuilderImpl;
 
 public class FaultSubsystem {
-	private static final FaultSubsystemManager delegate = new DeFaultSubsystemManager();
-
-	public static FaultLogger getFaultLogger(ComponentId componentId) {
-		return delegate.getFaultLogger(componentId);
-	}
-
-	public static Fault getFault(int id) {
-		return getFaultRegistry().lookupFault(id);
-	}
-	public static FaultRegistry getFaultRegistry() {
-		return delegate.getFaultRegistry();
-	}
-
-	public static Fault fault(int id) {
-		return getFaultRegistry().lookupFault(id); // TODO: perhaps not make this null so chaining won't cause null pointer exception?
+	private static final DeFaultSubsystemManager faultSubsystemManager = new DeFaultSubsystemManager();
+	public static FaultBuilder forComponent(ComponentId componentId) {
+		return new FaultBuilderImpl(faultSubsystemManager, componentId);
 	}
 }
