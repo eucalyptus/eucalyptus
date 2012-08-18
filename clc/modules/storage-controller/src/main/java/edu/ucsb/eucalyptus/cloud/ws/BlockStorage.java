@@ -184,13 +184,19 @@ public class BlockStorage {
 	}
 
 	public static void stop() throws EucalyptusCloudException {
-		blockManager.stop();
+		if(blockManager != null) {
+			blockManager.stop();
+		}
 		//clean all state.
 		blockManager = null;
 		checker = null;
 		blockStorageStatistics = null;
-		volumeService.shutdown();
-		snapshotService.shutdown();
+		if(volumeService != null) {
+			volumeService.shutdown();
+		}
+		if(snapshotService != null) {
+			snapshotService.shutdown();
+		}
 		StorageProperties.enableSnapshots = StorageProperties.enableStorage = false;
 	}
 
@@ -771,8 +777,9 @@ public class BlockStorage {
 			try {
 				snapInStream = new FileInputStream(snapshotFile);
 				byte[] bytes = new byte[1024];
-				if(snapInStream.read(bytes) <= 0) {
-					throw new EucalyptusCloudException("Unable to read snapshot file");
+				//Originally this was <=0, empty volume/snapshot would always return 0, so only check for <0
+				if(snapInStream.read(bytes) < 0) {
+					throw new EucalyptusCloudException("Unable to read snapshot file: " + snapshotFileName);
 				}				
 			} catch (FileNotFoundException e) {
 				throw new EucalyptusCloudException(e);
