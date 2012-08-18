@@ -77,20 +77,17 @@ import org.apache.log4j.RollingFileAppender;
 
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.system.BaseDirectory;
-import com.eucalyptus.troubleshooting.fault.FaultLogger;
-import com.eucalyptus.troubleshooting.fault.FaultRegistry;
-import com.eucalyptus.troubleshooting.fault.FaultSubsystemManager;
 
-public class DeFaultSubsystemManager implements FaultSubsystemManager {
-	private static final Logger LOG = Logger.getLogger(DeFaultSubsystemManager.class);
+public class FaultSubsystemManager {
+	private static final Logger LOG = Logger.getLogger(FaultSubsystemManager.class);
 	private Map<ComponentId, FaultLogger> loggerMap = new ConcurrentHashMap<ComponentId, FaultLogger>();
-	private XMLFaultRegistry faultRegistry = null;
+	private FaultRegistry faultRegistry = null;
 	private File systemFaultDir = BaseDirectory.HOME.getChildFile("/usr/share/eucalyptus/faults"); 
 	private File customFaultDir = BaseDirectory.HOME.getChildFile("/etc/eucalyptus/faults"); 
 	private static final String DEFAULT_LOCALE = "en_US";
 
-	public DeFaultSubsystemManager() {
-		faultRegistry = new XMLFaultRegistry();
+	public FaultSubsystemManager() {
+		faultRegistry = new FaultRegistry();
 		String locale = System.getenv("LOCALE");
 		
 		// Start with the system default locale fault dir
@@ -147,7 +144,6 @@ public class DeFaultSubsystemManager implements FaultSubsystemManager {
  */
 	
 
-	@Override
 	public synchronized FaultLogger getFaultLogger(ComponentId componentId) {
 		if (componentId == null) throw new IllegalArgumentException("componentId is null");
 		FaultLogger logger = loggerMap.get(componentId);
@@ -214,7 +210,7 @@ public class DeFaultSubsystemManager implements FaultSubsystemManager {
 		if (checkAppender(logger, targetAppenderName) == null) {
 			logger.addAppender(appender);
 		}
-		FaultLogger faultLogger = new XMLFaultLogger(logger);
+		FaultLogger faultLogger = new FaultLogger(logger);
 		return faultLogger;
 	}
 
@@ -230,7 +226,6 @@ public class DeFaultSubsystemManager implements FaultSubsystemManager {
 		return null;
 	}
 
-	@Override
 	public FaultRegistry getFaultRegistry() {
 		return faultRegistry;
 	}

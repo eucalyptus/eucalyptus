@@ -61,16 +61,26 @@
  ************************************************************************/
 package com.eucalyptus.troubleshooting.fault.xml;
 
-import java.io.File;
+import java.util.Enumeration;
 
-import org.apache.log4j.BasicConfigurator;
+import org.apache.log4j.Appender;
+import org.apache.log4j.Logger;
 
-public class ShowFault {
-	public static void main(String[] args) {
-		BasicConfigurator.configure();
-		XMLFaultRegistry registry = new XMLFaultRegistry();
-		registry.crawlDirectory(new File("/usr/share/eucalyptus/faults/en_US"));
-		//System.out.println(registry.lookupFault(1234).withVar("daemon", "NTPD").toString());
-		System.out.println(registry.lookupFault(4).toString());
+public class FaultLogger {
+	private Logger LOG;
+	FaultLogger(Logger LOG) {
+		this.LOG = LOG;
 	}
+	public void log(Fault fault) {
+		// temp
+		Logger tmpLogger = Logger.getLogger(FaultLogger.class);
+		tmpLogger.info("For logger " + LOG.getName());
+		Enumeration appenderEnum = LOG.getAllAppenders();
+		while (appenderEnum.hasMoreElements()) {
+			tmpLogger.info("appender " + ((Appender) appenderEnum.nextElement()).getName());
+			
+		}
+		LOG.fatal(fault.toString());
+	}
+
 }

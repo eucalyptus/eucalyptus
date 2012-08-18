@@ -70,9 +70,8 @@ import java.util.Date;
 import java.util.Map;
 import java.util.TimeZone;
 
-import com.eucalyptus.troubleshooting.fault.Fault;
 
-public class XMLFault implements Fault, Cloneable {
+public class Fault implements Cloneable {
 	private int id;
 	private FaultMessage message;
 	private Map<String, Common> commonMap;
@@ -80,7 +79,6 @@ public class XMLFault implements Fault, Cloneable {
 	private String stringRepresentation;
 	private static final String INNER_FAULT_PREFIX = "  "; // "| ";
 	private static final String UNKNOWN = "unknown"; 
-	@Override
 	public synchronized Fault withVar(String key, String value) {
 		toString();
 		String realKey = "${" + key + "}";
@@ -199,7 +197,7 @@ public class XMLFault implements Fault, Cloneable {
 
 	@Override
 	protected Object clone() {
-		XMLFault clone = new XMLFault();
+		Fault clone = new Fault();
 		clone.id = this.id;
 		clone.faultFieldMap = this.faultFieldMap;
 		clone.commonMap = this.commonMap;

@@ -68,11 +68,8 @@ import org.apache.log4j.Logger;
 
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
-import com.eucalyptus.troubleshooting.fault.Fault;
 import com.eucalyptus.troubleshooting.fault.FaultBuilder;
-import com.eucalyptus.troubleshooting.fault.FaultLogger;
 import com.eucalyptus.troubleshooting.fault.FaultSubsystem;
-import com.eucalyptus.troubleshooting.fault.FaultSubsystem2;
 
 public class TestFaultTrigger {
 	private static final Logger LOG = Logger.getLogger(TestFaultTrigger.class);

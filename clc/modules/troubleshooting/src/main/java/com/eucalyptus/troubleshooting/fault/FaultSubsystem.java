@@ -62,11 +62,11 @@
 package com.eucalyptus.troubleshooting.fault;
 
 import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.troubleshooting.fault.xml.DeFaultSubsystemManager;
+import com.eucalyptus.troubleshooting.fault.xml.FaultSubsystemManager;
 import com.eucalyptus.troubleshooting.fault.xml.FaultBuilderImpl;
 
 public class FaultSubsystem {
-	private static final DeFaultSubsystemManager faultSubsystemManager = new DeFaultSubsystemManager();
+	private static final FaultSubsystemManager faultSubsystemManager = new FaultSubsystemManager();
 	public static FaultBuilder forComponent(ComponentId componentId) {
 		return new FaultBuilderImpl(faultSubsystemManager, componentId);
 	}

@@ -66,9 +66,7 @@ import java.util.ArrayList;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.troubleshooting.fault.Fault;
 import com.eucalyptus.troubleshooting.fault.FaultBuilder;
-import com.eucalyptus.troubleshooting.fault.FaultLogger;
 
 public class FaultBuilderImpl implements FaultBuilder {
 	private static final Logger LOG = Logger.getLogger(FaultBuilder.class);
@@ -88,12 +86,12 @@ public class FaultBuilderImpl implements FaultBuilder {
 		}
 		
 	}
-	private DeFaultSubsystemManager faultSubsystemManager;
+	private FaultSubsystemManager faultSubsystemManager;
 	private ComponentId componentId;
 	private ArrayList<NameValuePair> vars = new ArrayList<NameValuePair>();
 	private int faultId;
 
-	public FaultBuilderImpl(DeFaultSubsystemManager faultSubsystemManager, ComponentId componentId) {
+	public FaultBuilderImpl(FaultSubsystemManager faultSubsystemManager, ComponentId componentId) {
 		this.faultSubsystemManager = faultSubsystemManager;
 		this.componentId = componentId;
 	}

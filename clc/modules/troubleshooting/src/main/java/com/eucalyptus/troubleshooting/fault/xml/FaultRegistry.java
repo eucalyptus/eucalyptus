@@ -79,12 +79,8 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
-import com.eucalyptus.troubleshooting.fault.Fault;
-import com.eucalyptus.troubleshooting.fault.FaultRegistry;
-
-
-public class XMLFaultRegistry implements FaultRegistry {
-	private static final Logger LOG = Logger.getLogger(XMLFaultRegistry.class);
+public class FaultRegistry {
+	private static final Logger LOG = Logger.getLogger(FaultRegistry.class);
 	private static final String EUCAFAULTS = "eucafaults";
 	private static final String COMMON = "common";
 	private static final String VAR = "var";
@@ -99,9 +95,9 @@ public class XMLFaultRegistry implements FaultRegistry {
 	private static final String XML_SUFFIX = ".xml";
 	private static final String COMMON_XML = COMMON + XML_SUFFIX;
 
-	public XMLFaultRegistry() {
+	public FaultRegistry() {
 		commonMap = new HashMap<String, Common>();
-		faultMap = new HashMap<Integer, XMLFault>();
+		faultMap = new HashMap<Integer, Fault>();
 	}
 		
 	void crawlDirectory(File rootDir) {
@@ -158,7 +154,7 @@ public class XMLFaultRegistry implements FaultRegistry {
 	}
 
 	private void parseFaultXMLFile(File faultXMLFile,
-			Map<Integer, XMLFault> faultMap, Map<String, Common> commonMap) {
+			Map<Integer, Fault> faultMap, Map<String, Common> commonMap) {
 		try {
 			LOG.debug("Parsing fault file " + faultXMLFile);
 			DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
@@ -185,7 +181,7 @@ public class XMLFaultRegistry implements FaultRegistry {
 					if (currentNode.getNodeType() == Node.ELEMENT_NODE) {
 						Element currentElement = (Element) currentNode;
 						if (FAULT.equalsIgnoreCase(currentElement.getTagName())) {
-							XMLFault fault = parseFaultElement(currentElement, commonMap);
+							Fault fault = parseFaultElement(currentElement, commonMap);
 							if (fault.getId() != parseIdFromFileName(faultXMLFile.getName())) {
 								LOG.warn("Fault " + fault.getId() + " found in file " + faultXMLFile + ", in the wrong file.  Will not be processed");
 							} else {
@@ -205,10 +201,10 @@ public class XMLFaultRegistry implements FaultRegistry {
 		}
 	}
 
-	private XMLFault parseFaultElement(Element element,
+	private Fault parseFaultElement(Element element,
 			Map<String, Common> commonMap2) {
 		if (element == null) return null;
-		XMLFault fault = new XMLFault();
+		Fault fault = new Fault();
 		fault.setId(-1);
 		try {
 			fault.setId(Integer.parseInt(getAttribute(element, ID)));
@@ -299,7 +295,7 @@ public class XMLFaultRegistry implements FaultRegistry {
 	}
 
 	public Map<String, Common> commonMap;
-	public Map<Integer, XMLFault> faultMap;
+	public Map<Integer, Fault> faultMap;
 
 	private String getAttribute(Element element, String attributeName) {
 		if (element == null) return null;
@@ -326,9 +322,8 @@ public class XMLFaultRegistry implements FaultRegistry {
 		}
 	}
 
-	@Override
 	public Fault lookupFault(int id) {
-		XMLFault fault = faultMap.get(id);
+		Fault fault = faultMap.get(id);
 		if (fault == null) {
 			return fault;
 		} else {
