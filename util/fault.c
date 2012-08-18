@@ -479,7 +479,8 @@ init_eucafaults (char *fileprefix)
         }
     }
     pthread_mutex_unlock (&fault_mutex);
-    PRINTF (("Loaded %d faults into registry.\n", faults_loaded));
+    logprintfl (EUCAINFO, "Loaded %d fault-logger descriptions into registry.\n",
+               faults_loaded);
     return faults_loaded;
 }
 
