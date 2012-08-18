@@ -129,23 +129,23 @@ static configEntry configKeysNoRestartCC[] = {
 typedef struct instance_t {
   char instanceId[16];
   char reservationId[16];
-  
+
   char amiId[16];
   char kernelId[16];
   char ramdiskId[16];
-  
+
   char amiURL[512];
   char kernelURL[512];
   char ramdiskURL[512];
-  
+
   char state[16];
   char ccState[16];
   time_t ts;
-  
+
   char ownerId[48];
   char accountId[48];
   char keyName[1024];
-  
+
   netConfig ccnet, ncnet;
   virtualMachine ccvm;
 
@@ -299,6 +299,7 @@ void print_resourceCache(void);
 void invalidate_resourceCache(void);
 
 int initialize(ncMetadata *ccMeta);
+int init_log(void);
 int init_thread(void);
 int init_localstate(void);
 int init_config(void);
