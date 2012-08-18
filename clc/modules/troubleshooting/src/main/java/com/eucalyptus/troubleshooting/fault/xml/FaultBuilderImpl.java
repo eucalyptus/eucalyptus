@@ -112,6 +112,9 @@ public class FaultBuilderImpl implements FaultBuilder {
 		try {
 			FaultLogger faultLogger = faultSubsystemManager.getFaultLogger(componentId);
 			Fault fault = faultSubsystemManager.getFaultRegistry().lookupFault(faultId);
+			for (NameValuePair nameValuePair: vars) {
+				fault = fault.withVar(nameValuePair.getName(), nameValuePair.getValue());
+			}
 			faultLogger.log(fault);
 		} catch (Exception ex) {
 			LOG.error("Error writing fault with id " + faultId + "  for component " + componentId);
