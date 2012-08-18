@@ -840,11 +840,13 @@ main (int argc, char **argv)
                 m = c_varmap_alloc (m, argv[opt - 1], argv[opt]);
             }
         }
-        // Don't bother logging if there are no substitutions.
         if (m != NULL) {
             log_eucafault (argv[optind], (const char_map **)m);
             c_varmap_free (m);
+        } else {
+            log_eucafault (argv[optind], NULL);
         }
+        log_eucafault_v (argv[optind]); // Deliberately call with no params.
     }
     if (dump) {
         dump_eucafaults_db ();
