@@ -129,8 +129,12 @@ c_wcappendn (char * dst, const char * src, size_t src_limit)
 wchar_t *
 varsub (const wchar_t * s, const wchar_map * vars [])
 {
-    assert (s!=NULL);
-    assert (vars!=NULL);
+    if (s == NULL) {
+        return NULL;
+    }
+    if (vars == NULL) {
+        return (wchar_t *)wcsdup (s);
+    }
     size_t pref_len = wcslen (VAR_PREFIX);
     size_t suff_len = wcslen (VAR_SUFFIX);
 
@@ -213,7 +217,7 @@ varmap_free (wchar_map **map)
     int i = 0;
 
     if (map == NULL) {
-        logprintfl (EUCAWARN, "varmap_free() called on NULL map.\n");
+        PRINTF (("varmap_free() called on NULL map.\n"));
         return;
     }
     while (map[i]) {
@@ -232,14 +236,15 @@ varmap_free (wchar_map **map)
 // returns a new string with all variables substituted or returns NULL
 // (and logs an error with logprintfl()) if some variables were not
 // found in the map or if the map is empty
-//
-// FIXME: This currently will not sub any variables if it can't sub *all*
-//        variables. This is unfriendly: it should sub what it can.
 char *
 c_varsub (const char * s, const char_map * vars [])
 {
-    assert (s!=NULL);
-    assert (vars!=NULL);
+    if (s == NULL) {
+        return NULL;
+    }
+    if (vars == NULL) {
+        return (char *)strdup (s);
+    }
     size_t pref_len = strlen (C_VAR_PREFIX);
     size_t suff_len = strlen (C_VAR_SUFFIX);
 
@@ -349,7 +354,7 @@ c_varmap_free (char_map **map)
     int i = 0;
 
     if (map == NULL) {
-        logprintfl (EUCAWARN, "c_varmap_free() called on NULL map.\n");
+        PRINTF (("c_varmap_free() called on NULL map.\n"));
         return;
     }
     while (map[i]) {
@@ -395,9 +400,15 @@ main (int argc, char ** argv)
     assert (s2_sub != NULL);
     printf ("ugly string subbed: %ls\n", s2_sub);
     free (s2_sub);
+    printf (" unsubbable string: %ls\n", s3);
     assert (varsub (s3, (const wchar_map **)m) == NULL);
 
     varmap_free(m);
+
+    printf ("  sending null map: %ls\n", s3); // Reuse s3
+    wchar_t *s3_sub = varsub (s3, NULL);
+    printf ("returned from null: %ls\n", s3_sub);
+    free (s3_sub);
 
     // Now do it again, this time non-widechar
     c_m = c_varmap_alloc (NULL, "colorxxxxxx", "brown"); // FIXME: This matches
@@ -424,6 +435,12 @@ main (int argc, char ** argv)
     free (c_s3_sub);
 
     c_varmap_free(c_m);
+
+    printf ("  sending null map: %s\n", c_s3); // Reuse s3
+    c_s3_sub = c_varsub (c_s3, NULL);
+    printf ("returned from null: %s\n", c_s3_sub);
+    assert (!strcmp (c_s3, c_s3_sub));
+    free (c_s3_sub);
 }
 
 #endif
