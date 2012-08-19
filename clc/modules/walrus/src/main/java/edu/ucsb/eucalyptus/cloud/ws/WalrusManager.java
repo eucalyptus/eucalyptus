@@ -3312,7 +3312,7 @@ public class WalrusManager {
 				Criteria objCriteria = dbObject.createCriteria(ObjectInfo.class);
 				objCriteria.add(Example.create(searchObj));						
 				objCriteria.addOrder(Order.asc("objectKey"));
-				objCriteria.addOrder(Order.asc("lastModified"));
+				objCriteria.addOrder(Order.desc("lastModified"));
 				objCriteria.setMaxResults(queryStrideSize); //add one to, hopefully, indicate truncation in one call												
 
 				if(keyMarker != null) {
@@ -3335,7 +3335,7 @@ public class WalrusManager {
 							dbObject.rollback();
 							throw new EucalyptusCloudException("Next-Key-Marker or Next-Version-Id marker invalid");
 						}
-						objCriteria.add(Restrictions.or(Restrictions.and(Restrictions.ge("objectKey", keyMarker),Restrictions.ge("lastModified", resumeDate)),Restrictions.gt("objectKey", keyMarker)));
+						objCriteria.add(Restrictions.or(Restrictions.and(Restrictions.ge("objectKey", keyMarker),Restrictions.le("lastModified", resumeDate)),Restrictions.gt("objectKey", keyMarker)));
 					} else {
 						objCriteria.add(Restrictions.ge("objectKey", keyMarker));
 					}
