@@ -14,5 +14,21 @@
     },
     "regionName": "",
     "connection": []
+  },
+  {
+    "__obj_name__": "Zone",
+    "name": "PARTI01",
+    "item": "",
+    "state": "192.168.25.10 arn:euca:eucalyptus:PARTI00:cluster:cc_00/",
+    "messageSet": "",
+    "region": {
+      "connection": null,
+      "endpoint": "192.168.25.10",
+      "name": "eucalyptus",
+      "__obj_name__": "RegionInfo",
+      "connection_cls": null
+    },
+    "regionName": "",
+    "connection": []
   }
 ]

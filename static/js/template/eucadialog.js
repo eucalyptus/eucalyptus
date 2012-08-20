@@ -23,9 +23,10 @@
     options : { 
        id : null, // e.g., keys-add, keys-delete, etc
        title : null,
+       // e.g., add : { domid: keys-add-btn, text: "Add new key", disabled: true, focus: true, click : function() { }, keypress : function() { }, ...} 
        buttons :  {},
        help : null,  // help title and content 
-       // e.g., add : { domid: keys-add-btn, text: "Add new key", disabled: true, focus: true, click : function() { }, keypress : function() { }, ...} 
+       onOpen: null, // function(thisDialog) {}
     },
     help_flipped : false,
     
@@ -63,7 +64,12 @@
 
              /* page-level help -- prototype */
              thisObj._setHelp(thisObj.element.parent());
+
+             /* call onOpen function if passed */
+             if ( thisObj.options.onOpen && isFunction(thisObj.options.onOpen) )
+               thisObj.options.onOpen.call(this, thisObj); 
          },
+
          buttons: thisObj._makeButtons(),
       });
     },
@@ -156,22 +162,28 @@
       });
     },
 
-    onKeypress : function(evt_src_id, button_id) {
+    onKeypress : function(evt_src_id, button_id, checkFunction) {
       var thisObj = this;
       evt_src_id = evt_src_id.replace('#','');
       button_id = button_id.replace('#','');
       var $evt_src = this.element.find('#'+evt_src_id);
       var $button = null;
+
       $evt_src.keypress( function(e){
-        if($button==null)
-          $button =thisObj.element.parent().find('#'+button_id); 
+        if( $button==null )
+          $button = thisObj.element.parent().find('#'+button_id);
         if( e.which === RETURN_KEY_CODE || e.which === RETURN_MAC_KEY_CODE ) {
            $button.trigger('click');
         } else if ( e.which === 0 ) {
         } else if ( e.which === BACKSPACE_KEY_CODE && $(this).val().length == 1 ) {
-           $button.prop("disabled", true).addClass("ui-state-disabled");
+          $button.prop("disabled", true).addClass("ui-state-disabled");
         } else {
-           $button.prop("disabled", false).removeClass("ui-state-disabled");
+           if ( isFunction(checkFunction) ) {
+             if ( checkFunction.call(this) )
+               $button.prop("disabled", false).removeClass("ui-state-disabled");
+           } else {
+             $button.prop("disabled", false).removeClass("ui-state-disabled");
+           }
         }
       });
     }
