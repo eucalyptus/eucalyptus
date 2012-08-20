@@ -46,7 +46,7 @@ function loadHtml(url, handler){
 var help_keypair = {
   load : function(arg){
     loadHtml('helps/'+arg.language+'/describe_keypairs.html', function(data){help_keypair.landing_content=data})
-    loadHtml('helps/'+arg.language+'/create_keypairs_console.html', function(data){help_keypair.dialog_add_content=data})
+    loadHtml('helps/'+arg.language+'/console_create_keypair.html', function(data){help_keypair.dialog_add_content=data})
   },
   revert_button: "Back to key pair",
   landing_title: "Key pairs -- help",
@@ -59,7 +59,7 @@ var help_keypair = {
 
 var help_volume = {
   load : function(arg){
-    loadHtml('helps/'+arg.language+'/create_volumes.html', function(data){help_volume.landing_content=data})
+    loadHtml('helps/'+arg.language+'/console_create_volume.html', function(data){help_volume.landing_content=data})
   },
   revert_button: "Back to volumes",
   landing_title: "Volume -- help",

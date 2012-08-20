@@ -1,0 +1,102 @@
+
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xml:lang="en-us" lang="en-us">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<meta name="DC.Type" content="task"/>
+<meta name="DC.Title" content="Create a Volume"/>
+<meta name="abstract" content="Eucalyptus offers persistent storage that you can attach to a running instance. These Eucalyptus block storage (EBS) volumes persist autonomously from the running life of an instance. After you attach a block volume to an instance, you can use it like any other physical hard drive."/>
+<meta name="description" content="Eucalyptus offers persistent storage that you can attach to a running instance. These Eucalyptus block storage (EBS) volumes persist autonomously from the running life of an instance. After you attach a block volume to an instance, you can use it like any other physical hard drive."/>
+<meta name="prodname" content="Eucalyptus"/>
+<meta name="version" content="3.2"/>
+<meta name="copyright" content="Eucalyptus Systems 2012" type="primary"/>
+<meta name="DC.Rights.Owner" content="Eucalyptus Systems 2012" type="primary"/>
+<meta name="DC.Format" content="XHTML"/>
+<meta name="DC.Identifier" content="create_volume_ui_help_context"/>
+<link rel="stylesheet" type="text/css" href="../oxygen-webhelp/resources/css/commonltr.css"/>
+<link rel="stylesheet" type="text/css" href="../oxygen-webhelp/resources/css/webhelp_topic.css"/>
+<title>Create a Volume</title>
+<script type="text/javascript" src="../oxygen-webhelp/resources/js/jquery.js"> </script>
+<script type="text/javascript" src="../oxygen-webhelp/resources/js/jquery-ui.custom.min.js"> </script>
+<script type="text/javascript" src="../oxygen-webhelp/resources/js/frames_redirect.js"> </script>
+<script type="text/javascript"><!--
+    var prefix = "../index.html";
+    var ratingFile = "";
+    redirectToToc(window.location.search);
+    function highlightSearchTerm(){
+        if(parent.termsToHighlight != null){
+        // highlight each term in the content view  
+          for(i = 0 ; i < parent.termsToHighlight.length ; i++){        
+              $('*', window.parent.contentwin.document).highlight(parent.termsToHighlight[i]);
+          }
+        }
+    }
+//--></script></head>
+<body onload="highlightSearchTerm()" id="create_volume_ui_help_context">
+
+
+    <h1 class="title topictitle1">Create a Volume</h1>
+
+    
+    <div class="body taskbody"><p class="shortdesc"> Eucalyptus offers persistent storage that you can attach to a running instance.
+        These Eucalyptus block storage (EBS) volumes persist autonomously from the running life of
+        an instance. After you attach a block volume to an instance, you can use it like any other
+        physical hard drive. </p>
+</div>
+
+    <div class="topic task nested1" id="create_volume_ui_help_steps">
+        <h2 class="title topictitle2">Create a Volume with the Console</h2>
+
+        
+        <div class="body taskbody"><p class="shortdesc"/>
+
+            <ol class="ol steps"><li class="li step">
+                    <span class="ph cmd">Click the <span class="ph uicontrol">Create Volume</span> link at the top of the
+                            <span class="ph uicontrol">Manage Volumes</span> screen. The <span class="ph uicontrol">Create
+                            Volume</span> dialog box will appear.</span>
+                </li>
+<li class="li step">
+                    <span class="ph cmd">If you would like to create a volume from an existing snapshot, select the
+                        snapshot from the <span class="ph uicontrol">Create from snapshot?</span> drop-down
+                        listbox. </span>
+                </li>
+<li class="li step">
+                    <span class="ph cmd"> Enter the size of the volume in gigabytes in the <span class="ph uicontrol">Volume Size
+                            (GB)</span> text box. </span>
+                     
+                        <div class="note note"><span class="notetitle">Note:</span> If you're creating a volume from a snapshot, you can't enter a volume
+                            size that's smaller than the original snapshot you've selected.</div>
+
+                    
+                </li>
+<li class="li step">
+                    <span class="ph cmd"> Select an availability zone from the <span class="ph uicontrol">Availability
+                            Zone</span> drop-down list box. </span>
+                </li>
+<li class="li step">
+                    <span class="ph cmd">Click the <span class="ph uicontrol">Create Volume</span> button.</span>
+                </li>
+</ol>
+
+        </div>
+
+    </div>
+
+
+    <script type="text/javascript">
+        <!--
+            function expand(){
+                if (parent.tocwin){
+                    parent.tocwin.expandToTopic(window.location.href, this.getAttribute('href'));
+                }
+            }
+            var aArray = document.getElementsByTagName('a');
+            var i;
+            for (i = 0; i< aArray.length; i++){
+              aArray[i].onclick = expand;
+            }
+        -->
+    </script> 
+                         </body>
+</html>
