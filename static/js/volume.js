@@ -234,7 +234,7 @@
     },
 
     _initAddDialog : function(dialog) {
-       this.addDialog.find('div.dialog-notifications').html();
+       this.addDialog.find('div.dialog-notifications').html('');
        $.ajax({
           type:"GET",
           url:"/ec2?Action=DescribeAvailabilityZones",
@@ -419,9 +419,10 @@
 
     _createVolume : function (size, az, snapshotId) {
       thisObj = this;
+      sid = snapshotId != '' ? "&SnapshotId=" + snapshotId : '';
       $.ajax({
         type:"GET",
-        url:"/ec2?Action=CreateVolume&Size=" + size + "&AvailabilityZone=" + az + "&SnapshotId=" + (snapshotId != '' ? snapshotId : 'None'),
+        url:"/ec2?Action=CreateVolume&Size=" + size + "&AvailabilityZone=" + az + sid,
         data:"_xsrf="+$.cookie('_xsrf'),
         dataType:"json",
         async:"true",
