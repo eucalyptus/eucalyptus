@@ -45,7 +45,17 @@ class ComputeHandler(server.BaseHandler):
 
     def handleInstances(self, action, clc):
         if action == 'DescribeInstances':
-            return clc.get_all_instances()
+            # apply transformation of data to normalize instances
+            instances = clc.get_all_instances()
+            ret = []
+            for res in instances:
+                for inst in res['instances']:
+                    inst['reservation_id'] = res['id']
+                    inst['owner_id'] = res['owner_id']
+                    inst['groups'] = res['groups']
+                    inst['group_name'] = res['groups'][0]['id']
+                    ret.append(inst)
+            return ret
         elif action == 'RunInstances':
             image_id = self.get_argument('ImageId');
             min = self.get_argument('MinCount', '1');
