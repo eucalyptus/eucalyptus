@@ -2621,6 +2621,28 @@ int doCreateImage(ncMetadata *ccMeta, char *instanceId, char *volumeId, char *re
   return(ret);
 }
 
+int doDescribeSensors(ncMetadata *meta, char **instIds, int instIdsLen, char **sensorIds, int sensorIdsLen, sensorResource ***outResources, int *outResourcesLen)
+{
+  logprintfl(EUCAINFO, "DescribeSensors(): invoked\n");
+  
+  int total = 1;
+  * outResources = malloc (total * sizeof (sensorResource *));
+  if ((*outResources) == NULL) {
+    return OUT_OF_MEMORY;
+  }
+  
+  int k = 0;
+  * outResources [k] = malloc (sizeof (sensorResource));
+  sensor_set_instance_data ("i-666", sensorIds, sensorIdsLen, * outResources [k]);
+  k++;
+    
+  * outResourcesLen = k;
+  
+    //  * outResources = NULL;
+    //  * outResourcesLen = 0;
+  return 0;
+}
+
 int setup_shared_buffer(void **buf, char *bufname, size_t bytes, sem_t **lock, char *lockname, int mode) {
   int shd, rc, ret;
 

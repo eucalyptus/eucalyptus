@@ -70,6 +70,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include "adb-helpers.h"
+#include "sensor.h"
 
 extern ncMetadata mymeta;
 
@@ -1239,6 +1240,61 @@ int cc_registerImage(char *imageloc, axutil_env_t *env, axis2_stub_t *stub) {
   return 0;
 }
 */
+
+int cc_describeSensors (char **instIds, int instIdsLen, char **sensorIds, int sensorIdsLen, sensorResource ***outResources, int *outResourcesLen, axutil_env_t *env, axis2_stub_t *stub)
+{
+    adb_DescribeSensors_t     * input   = adb_DescribeSensors_create (env); 
+    adb_describeSensorsType_t * request = adb_describeSensorsType_create (env);
+
+    // set standard input fields
+    EUCA_MESSAGE_MARSHAL(describeSensorsType, request, (&mymeta));
+    adb_describeSensorsType_set_userId(request, env, "eucalyptus");
+
+    for (int i=0; i<instIdsLen; i++) {
+      adb_describeSensorsType_add_instanceIds(request, env, instIds[i]);
+    }
+    for (int i=0; i<sensorIdsLen; i++) {
+      adb_describeSensorsType_add_sensorIds(request, env, sensorIds[i]);
+    }
+    adb_DescribeSensors_set_DescribeSensors(input, env, request);
+    
+    int status = 0;
+
+    { // do it
+        adb_DescribeSensorsResponse_t * output = axis2_stub_op_EucalyptusCC_DescribeSensors (stub, env, input);
+
+        if (!output) {
+            logprintfl (EUCAERROR, "ERROR: DescribeSensors could not be invoked\n");
+            status = -1;
+
+        } else {
+	  adb_describeSensorsResponseType_t * response = adb_DescribeSensorsResponse_get_DescribeSensorsResponse (output, env);
+	  
+            if ( adb_describeSensorsResponseType_get_return(response, env) == AXIS2_FALSE ) {
+                logprintfl (EUCAERROR, "ERROR: DescribeSensors returned an error\n");
+                status = 1;
+            }
+
+            * outResourcesLen = adb_describeSensorsResponseType_sizeof_sensorsResources(response, env);
+            if (* outResourcesLen) {
+                * outResources = malloc (sizeof(sensorResource *) * *outResourcesLen);
+                if ( * outResources == NULL ) { 
+                    logprintfl (EUCAERROR, "ERROR: out of memory in ncDescribeSensorsStub()\n");
+                    * outResourcesLen = 0;
+                    status = 2;
+                } else {
+                    for (int i=0; i<*outResourcesLen; i++) {
+                        adb_sensorsResourceType_t * resource = adb_describeSensorsResponseType_get_sensorsResources_at(response, env, i);
+                        (* outResources)[i] = copy_sensor_resource_from_adb (resource, env);
+                    }
+                }
+            }
+        }
+    }
+
+
+    return status;
+}
 
 int cc_describeServices(axutil_env_t *env, axis2_stub_t *stub) {
   adb_DescribeServices_t *adbrequest;
