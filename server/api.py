@@ -3,6 +3,7 @@ import server
 import json
 from boto.ec2.blockdevicemapping import BlockDeviceMapping
 
+from boto.ec2.ec2object import EC2Object
 from .botoclcinterface import BotoClcInterface
 from .botojsonencoder import BotoJsonEncoder
 from .cachingclcinterface import CachingClcInterface
@@ -49,18 +50,20 @@ class ComputeHandler(server.BaseHandler):
             instances = clc.get_all_instances()
             ret = []
             for res in instances:
-#                for inst in res['instances']:
-#                    inst['reservation_id'] = res['id']
-#                    inst['owner_id'] = res['owner_id']
-#                    inst['groups'] = res['groups']
-#                    inst['group_name'] = res['groups'][0]['id']
-#                    ret.append(inst)
-                for inst in res.instances:
-                    inst.reservation_id = res.id
-                    inst.owner_id = res.owner_id
-                    inst.groups = res.groups
-                    inst.group_name = res.groups[0].id
-                    ret.append(inst)
+                if issubclass(res.__class__, EC2Object):
+                    for inst in res.instances:
+                        inst.reservation_id = res.id
+                        inst.owner_id = res.owner_id
+                        inst.groups = res.groups
+                        inst.group_name = res.groups[0].id
+                        ret.append(inst)
+                else:
+                    for inst in res['instances']:
+                        inst['reservation_id'] = res['id']
+                        inst['owner_id'] = res['owner_id']
+                        inst['groups'] = res['groups']
+                        inst['group_name'] = res['groups'][0]['id']
+                        ret.append(inst)
             return ret
         elif action == 'RunInstances':
             image_id = self.get_argument('ImageId');
