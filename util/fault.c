@@ -41,6 +41,7 @@
 #include <libxml/parser.h>
 #include <libxml/tree.h>
 
+#include <eucalyptus.h>
 #include <misc.h>
 #include <fault.h>
 #include <wc.h>
@@ -116,6 +117,9 @@ extern char *program_invocation_short_name;
 
 // FIXME: Thread safety is only half-baked at this point.
 static pthread_mutex_t fault_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+// base install directory ($EUCALYPTUS) or '\0' if root
+static char euca_base [PATH_MAX] = "";
 
 /*
  * Function prototypes
@@ -363,7 +367,7 @@ initialize_faultlog (const char *fileprefix)
     if (fileprefix == NULL) {
         // FIXME: program_infocation_short_name is a GNU'ism and is not
         // portable--should wrap with an autoconf check.
-        snprintf (faultlogpath, PATH_MAX, "%s/%s-faults.log", FAULTLOGDIR,
+        snprintf (faultlogpath, PATH_MAX, "%s%s/%s-faults.log", euca_base, FAULTLOGDIR,
                   program_invocation_short_name);
     } else {
         // Prune any leading directores from path.
@@ -372,7 +376,7 @@ initialize_faultlog (const char *fileprefix)
         if (fileprefix_i != NULL) {
             fileprefix = fileprefix_i + 1;
         }
-        snprintf (faultlogpath, PATH_MAX, "%s/%s-faults.log", FAULTLOGDIR,
+        snprintf (faultlogpath, PATH_MAX, "%s%s/%s-faults.log", euca_base, FAULTLOGDIR,
                   fileprefix);
     }
     PRINTF (("Initializing faultlog using %s\n", faultlogpath));
@@ -414,6 +418,12 @@ init_eucafaults (char *fileprefix)
         pthread_mutex_unlock (&fault_mutex);
         return -faults_loaded;
     }
+
+	char * euca_env = getenv(EUCALYPTUS_ENV_VAR_NAME);
+	if (euca_env) {
+        strncpy(euca_base, euca_env, MAX_PATH - 1);
+    }
+
     initialize_faultlog (fileprefix);
     PRINTF (("Initializing fault registry directories.\n"));
 
@@ -426,21 +436,21 @@ init_eucafaults (char *fileprefix)
 
     /* Cycle through list of faultdirs in priority order, noting any missing. */
     if (locale != NULL) {
-        snprintf (faultdirs[CUSTOM_LOCALIZED], PATH_MAX, "%s/%s/",
-                  CUSTOM_FAULTDIR, locale);
+        snprintf (faultdirs[CUSTOM_LOCALIZED], PATH_MAX, "%s%s/%s/",
+                  euca_base, CUSTOM_FAULTDIR, locale);
     } else {
         faultdirs[CUSTOM_LOCALIZED][0] = 0;
     }
-    snprintf (faultdirs[CUSTOM_DEFAULT_LOCALIZATION], PATH_MAX, "%s/%s/",
-              CUSTOM_FAULTDIR, DEFAULT_LOCALIZATION);
+    snprintf (faultdirs[CUSTOM_DEFAULT_LOCALIZATION], PATH_MAX, "%s%s/%s/",
+              euca_base, CUSTOM_FAULTDIR, DEFAULT_LOCALIZATION);
     if (locale != NULL) {
-        snprintf (faultdirs[DISTRO_LOCALIZED], PATH_MAX, "%s/%s/",
-                  DISTRO_FAULTDIR, locale);
+        snprintf (faultdirs[DISTRO_LOCALIZED], PATH_MAX, "%s%s/%s/",
+                  euca_base, DISTRO_FAULTDIR, locale);
     } else {
         faultdirs[DISTRO_LOCALIZED][0] = 0;
     }
-    snprintf (faultdirs[DISTRO_DEFAULT_LOCALIZATION], PATH_MAX, "%s/%s/",
-              DISTRO_FAULTDIR, DEFAULT_LOCALIZATION);
+    snprintf (faultdirs[DISTRO_DEFAULT_LOCALIZATION], PATH_MAX, "%s%s/%s/",
+              euca_base, DISTRO_FAULTDIR, DEFAULT_LOCALIZATION);
 
     for (int i = 0; i < NUM_FAULTDIR_TYPES; i++) {
         if (faultdirs[i][0]) {
