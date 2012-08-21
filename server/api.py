@@ -56,8 +56,6 @@ class ComputeHandler(server.BaseHandler):
                         inst.owner_id = res.owner_id
                         inst.groups = res.groups
                         inst.group_name = res.groups[0].id
-                        if hasattr(inst, 'platform') == False:
-                            inst.platform = 'linux'
                         ret.append(inst)
                 else:
                     for inst in res['instances']:
@@ -65,8 +63,6 @@ class ComputeHandler(server.BaseHandler):
                         inst['owner_id'] = res['owner_id']
                         inst['groups'] = res['groups']
                         inst['group_name'] = res['groups'][0]['id']
-                        if not('platform' in inst):
-                            inst['platform'] = 'linux'
                         ret.append(inst)
             return ret
         elif action == 'RunInstances':

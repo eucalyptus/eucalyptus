@@ -7,6 +7,7 @@ from json import JSONDecoder
 from boto.ec2 import EC2Connection
 from boto.ec2.ec2object import EC2Object
 from boto.regioninfo import RegionInfo
+from boto.ec2.blockdevicemapping import BlockDeviceType
 from boto.ec2.image import ImageAttribute
 from boto.ec2.instance import ConsoleOutput
 from boto.ec2.instance import Group
@@ -55,6 +56,11 @@ class BotoJsonEncoder(JSONEncoder):
         elif isinstance(obj, GroupOrCIDR):
             values = copy.copy(obj.__dict__)
             values['__obj_name__'] = 'GroupOrCIDR'
+            return (values)
+        elif isinstance(obj, BlockDeviceType):
+            values = copy.copy(obj.__dict__)
+            values['connection'] = None
+            values['__obj_name__'] = 'BlockDeviceType'
             return (values)
         return super(BotoJsonEncoder, self).default(obj)
 
