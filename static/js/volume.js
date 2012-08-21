@@ -27,6 +27,7 @@
     detachDialog : null,
     forceDetachDialog : null,
     addDialog : null,
+    waitDialog : null,
     _init : function() {
       var thisObj = this;
       var $tmpl = $('html body').find('.templates #volumeTblTmpl').clone();
@@ -76,7 +77,7 @@
         },
         menu_actions : function(){ return thisObj._buildActionsMenu()},
         context_menu : {build_callback : function(state) { return thisObj.buildContextMenu(state);}},
-        menu_click_create : function (args) { thisObj.addDialog.eucadialog('open')},
+        menu_click_create : function (args) { thisObj.waitDialog.eucadialog('open')},
         row_click : function (args) { thisObj._handleRowClick(args); },
       //  td_hover_actions : { instance: [4, function (args) { thisObj.handleInstanceHover(args); }], snapshot: [5, function (args) { thisObj.handleSnapshotHover(args); }] }
         help_click : function(evt) {
@@ -174,6 +175,20 @@
          help: {title: help_volume['dialog_force_detach_title'], content: $force_detach_help},
        });
 
+      $tmpl = $('html body').find('.templates #volumeWaitDlgTmpl').clone();
+      var $rendered = $($tmpl.render($.extend($.i18n.map, help_volume)));
+      var $wait_dialog = $rendered.children().first();
+      var $wait_dialog_help = $rendered.children().last();
+      this.waitDialog = $wait_dialog.eucadialog({
+         id: 'volumes-wait',
+         title: volume_dialog_wait,
+         buttons: {
+           'cancel': { text: volume_dialog_cancel_btn, focus:true, click: function() { $wait_dialog.dialog("close"); } } 
+         },
+         help: {title: help_volume['dialog_volume_wait_title'], content: $wait_dialog_help},
+         onOpen: function(dialog) { thisObj._initAddDialog(); }
+       });
+
       var createButtonId = 'volumes-add-btn';
       $tmpl = $('html body').find('.templates #volumeAddDlgTmpl').clone();
       var $rendered = $($tmpl.render($.extend($.i18n.map, help_volume)));
@@ -210,7 +225,6 @@
            'cancel': {text: volume_dialog_cancel_btn, focus:true, click: function() { $add_dialog.dialog("close");}} 
          },
          help: {title: help_volume['dialog_add_title'], content: $add_help},
-         onOpen: function(dialog) { thisObj._initAddDialog(dialog); }
        });
        this.addDialog.eucadialog('onKeypress', 'volume-size', createButtonId, function () {
          var az = thisObj.addDialog.find('#volume-add-az-selector').val();
@@ -233,14 +247,14 @@
     _destroy : function() {
     },
 
-    _initAddDialog : function(dialog) {
-       this.addDialog.find('div.dialog-notifications').html('');
-       $.ajax({
+    _initAddDialog : function() {
+      this.addDialog.find('div.dialog-notifications').html('');
+      $.ajax({
           type:"GET",
           url:"/ec2?Action=DescribeAvailabilityZones",
           data:"_xsrf="+$.cookie('_xsrf'),
           dataType:"json",
-          async:"true",
+          async:"false",
           success:
            function(data, textStatus, jqXHR){
               $azSelector = $('#volume-add-az-selector').html('');
@@ -258,13 +272,13 @@
             function(jqXHR, textStatus, errorThrown){
               notifyError('tbd', tbd);
             }
-        });
-        $.ajax({
+      });
+      $.ajax({
           type:"GET",
           url:"/ec2?Action=DescribeSnapshots",
           data:"_xsrf="+$.cookie('_xsrf'),
           dataType:"json",
-          async:"true",
+          async:"false",
           success:
            function(data, textStatus, jqXHR){
               $snapSelector = $('#volume-add-snapshot-selector').html('');
@@ -272,8 +286,10 @@
               if ( data.results ) {
                 for( res in data.results) {
                   snapshot = data.results[res];
-                  $snapSelector.append($('<option>').attr('value', snapshot.id).attr('title', snapshot.volume_size).text(
-                     snapshot.id + ' (' + snapshot.volume_size + ' ' + $.i18n.map['size_gb'] +')'));
+                  if ( snapshot.status === 'completed' ) {
+                    $snapSelector.append($('<option>').attr('value', snapshot.id).attr('title', snapshot.volume_size).text(
+                      snapshot.id + ' (' + snapshot.volume_size + ' ' + $.i18n.map['size_gb'] +')'));
+                  }
                 } 
               } else {
                 notifyError('tbd', tbd);
@@ -283,7 +299,9 @@
             function(jqXHR, textStatus, errorThrown){
               notifyError('tbd', tbd);
             }
-        }); 
+        });
+      this.waitDialog.dialog("close");
+      this.addDialog.dialog("open");
     },
 
     _buildActionsMenu : function() {
