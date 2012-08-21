@@ -325,11 +325,50 @@
       <script id="sgroupAddDlgTmpl" type="text/x-jsrender">
         <div id="sgroups-add-wrapper">
         <div id="sgroups-add-dialog" class="add-dialog">
-          {{!: sgroup_dialog_add_text }}
-          <p>
-            <span class="field">{{!>sgroup_dialog_add_name}}</span><input type="text" id="sgroup-name" class="required"/><div class="dialog-notifications"></div>
-            <span class="field">{{!>sgroup_dialog_add_description}}</span><input type="text" id="sgroup-description" class="required"/><div class="dialog-notifications"></div>
-          </p>
+          {{!: required_fields }}
+          <div class="group inner-box clearfix">
+              <h3>Group *</h3>
+              {{!: sgroup_dialog_add_group }}
+              <p>
+              <span class="field">{{!>sgroup_dialog_add_name}}</span><input type="text" id="sgroup-name" class="required"/><div class="dialog-notifications"></div>
+              <span class="field">{{!>sgroup_dialog_add_description}}</span><input type="text" id="sgroup-description" class="required"/><div class="dialog-notifications"></div>
+              </p>
+          </div>
+          <div class="rules inner-box clearfix">
+              <h3>Rules</h3>
+              {{!: sgroup_dialog_add_rules }}
+              <p>
+              <span class="field">{{!>sgroup_dialog_add_protocol}}</span>
+                  <select name="sgroup-template">
+                    <option value-"none">Select protocol</option>
+                    <option>SSH (TCP port 22, for terminal access)</option>
+                    <option>RDP (TCP port 3389, for Windows instances)</option>
+                    <option>HTTP (TCP port 80, for web servers)</option>
+                    <option>HTTPS (TCP port 443, for web servers)</option>
+                    <option>MS SQL (TCP port 1433)</option>
+                    <option>MySQL (TCP port 3306)</option>
+                    <optgroup label="----------------">
+                    <option>POP3 (TCP port 110)</option>
+                    <option>POP3S (TCP port 995)</option>
+                    <option>LDAP (TCP port 389)</option>
+                    <option>IMAP (TCP port 143)</option>
+                    <option>SMTP (TCP port 465)</option>
+                    </optgroup>
+                    <optgroup label="----------------">
+                    <option>Custom TCP</option>
+                    <option>Custom UDP</option>
+                    <option>Custom ICMP</option>
+                    </optgroup>
+                  </select><br/>
+              <div id="morerools" style='display: none;'>
+              <span class="field">{{!>sgroup_dialog_add_ports}}</span><input type="text" id="sgroup-ports" class="required"/><div class="dialog-notifications"></div>
+              <span class="field">{{!>sgroup_dialog_add_allow}}</span>
+              <input type="radio" name="allow-group" id="sgroup-ports" value="ip"/>{{!>sgroup_dialog_add_allow_ip}}<input type="text" id="allow-ip"/>
+              <input type="radio" name="allow-group" id="sgroup-ports" value="group"/>{{!>sgroup_dialog_add_allow_group}}<br/><input type="text" id="allow-ip"/>
+              <input type="radio" name="allow-group" id="sgroup-ports" value="instances"/>{{!>sgroup_dialog_add_allow_instances}}<br/>
+              </div>
+              </p>
+          </div>
         </div>
           <div id="sgroups-add-dialog-help" class="dialog-help">
             <div class="dialog-help-content">
