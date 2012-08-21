@@ -76,7 +76,7 @@
           resource_found : volume_found,
         },
         menu_actions : function(){ return thisObj._buildActionsMenu()},
-        context_menu : {build_callback : function(state) { return thisObj.buildContextMenu(state);}},
+        context_menu : {build_callback : function(state) { return thisObj._buildContextMenu(state);}},
         menu_click_create : function (args) { thisObj.waitDialog.eucadialog('open')},
         row_click : function (args) { thisObj._handleRowClick(args); },
       //  td_hover_actions : { instance: [4, function (args) { thisObj.handleInstanceHover(args); }], snapshot: [5, function (args) { thisObj.handleSnapshotHover(args); }] }
@@ -122,7 +122,7 @@
       );
 
       // attach action
-      $("#volumes-selector").change( function() { thisObj.reDrawTable() } );
+      $("#volumes-selector").change( function() { thisObj._reDrawTable() } );
 
       // TODO: let's move legend to html as a template
       //add leged to the volumes table
@@ -311,7 +311,7 @@
       itemsList = {};
       // add attach action
       if ( selectedVolumes.length == 1 && selectedVolumes.indexOf('available') == 0 ){
-         itemsList['attach'] = { "name": volume_action_attach, callback: function(key, opt) { thisObj.attachAction(); } }
+         itemsList['attach'] = { "name": volume_action_attach, callback: function(key, opt) { thisObj._attachAction(); } }
       }
       // detach actions
       if ( selectedVolumes.length > 0 ) {
@@ -323,18 +323,18 @@
           }
         }
         if ( addDetach ) {
-          itemsList['detach'] = { "name": volume_action_detach, callback: function(key, opt) { thisObj.detachAction(false); } }
-          itemsList['force_detach'] = { "name": volume_action_force_detach, callback: function(key, opt) { thisObj.detachAction(true); } }
+          itemsList['detach'] = { "name": volume_action_detach, callback: function(key, opt) { thisObj._detachAction(false); } }
+          itemsList['force_detach'] = { "name": volume_action_force_detach, callback: function(key, opt) { thisObj._detachAction(true); } }
         }
       }
       if ( selectedVolumes.length  == 1 ) {
          if ( selectedVolumes[0] == 'in-use' || selectedVolumes[0] == 'available' ) {
-            itemsList['create_snapshot'] = { "name": volume_action_create_snapshot, callback: function(key, opt) { thisObj.createSnapshotAction(); } }
+            itemsList['create_snapshot'] = { "name": volume_action_create_snapshot, callback: function(key, opt) { thisObj._createSnapshotAction(); } }
         }
       }
       // add delete action
       if ( selectedVolumes.length > 0 ){
-         itemsList['delete'] = { "name": volume_action_delete, callback: function(key, opt) { thisObj.deleteAction(); } }
+         itemsList['delete'] = { "name": volume_action_delete, callback: function(key, opt) { thisObj._deleteAction(); } }
       }
       return itemsList;
     },
@@ -343,7 +343,7 @@
       return $(rowSelector).find('td:eq(1)').text();
     },
 
-    buildContextMenu : function(row) {
+    _buildContextMenu : function(row) {
      // var thisObj = this; ==> this causes the problem..why?
       var thisObj = $('html body').find(DOM_BINDING['main']).data("volume");
 
@@ -351,20 +351,20 @@
       switch (state) {
         case 'available':
           return {
-            "attach": { "name": volume_action_attach, callback: function(key, opt) { thisObj.attachAction(thisObj._getVolumeId(opt.selector)); } },
-            "create_snapshot": { "name": volume_action_create_snapshot, callback: function(key, opt) { thisObj.createSnapshotAction(thisObj._getVolumeId(opt.selector)); } },
-            "delete": { "name": volume_action_delete, callback: function(key, opt) { thisObj.deleteAction(thisObj._getVolumeId(opt.selector)); } }
+            "attach": { "name": volume_action_attach, callback: function(key, opt) { thisObj._attachAction(thisObj._getVolumeId(opt.selector)); } },
+            "create_snapshot": { "name": volume_action_create_snapshot, callback: function(key, opt) { thisObj._createSnapshotAction(thisObj._getVolumeId(opt.selector)); } },
+            "delete": { "name": volume_action_delete, callback: function(key, opt) { thisObj._deleteAction(thisObj._getVolumeId(opt.selector)); } }
           }
         case 'in-use':
           return {
-            "detach": { "name": volume_action_detach, callback: function(key, opt) { thisObj.detachAction($(opt.selector), false); } },
-            "force_detach": { "name": volume_action_force_detach, callback: function(key, opt) { thisObj.detachAction($(opt.selector), true); } },
-            "create_snapshot": { "name": volume_action_create_snapshot, callback: function(key, opt) { thisObj.createSnapshotAction(thisObj._getVolumeId(opt.selector)); } },
-            "delete": { "name": volume_action_delete, callback: function(key, opt) { thisObj.deleteAction(thisObj._getVolumeId(opt.selector)); } }
+            "detach": { "name": volume_action_detach, callback: function(key, opt) { thisObj._detachAction($(opt.selector), false); } },
+            "force_detach": { "name": volume_action_force_detach, callback: function(key, opt) { thisObj._detachAction($(opt.selector), true); } },
+            "create_snapshot": { "name": volume_action_create_snapshot, callback: function(key, opt) { thisObj._createSnapshotAction(thisObj._getVolumeId(opt.selector)); } },
+            "delete": { "name": volume_action_delete, callback: function(key, opt) { thisObj._deleteAction(thisObj._getVolumeId(opt.selector)); } }
           }
         default:
           return {
-            "delete": { "name": volume_action_delete, callback: function(key, opt) { thisObj.deleteAction(thisObj._getVolumeId(opt.selector)); } }
+            "delete": { "name": volume_action_delete, callback: function(key, opt) { thisObj._deleteAction(thisObj._getVolumeId(opt.selector)); } }
           }
       }
     },
@@ -392,7 +392,7 @@
       }
     },
 */
-    reDrawTable : function() {
+    _reDrawTable : function() {
       this.tableWrapper.eucatable('reDrawTable');
     },
 
@@ -508,7 +508,7 @@
       this._super('close');
     },
 
-    deleteAction : function(volumeId) {
+    _deleteAction : function(volumeId) {
       volumesToDelete = [];
       if ( !volumeId ) {
         $tableWrapper = thisObj.tableWrapper;
@@ -531,11 +531,11 @@
       }
     },
 
-    attachAction : function() {
-      selectedRows = this.tableWrapper.eucatable('getAllSelectedRows');
+    _attachAction : function() {
+
     },
 
-    detachAction : function(row, force) {
+    _detachAction : function(row, force) {
       volumes = [];
       if ( !row ) {
         $tableWrapper = thisObj.tableWrapper;
@@ -566,8 +566,8 @@
       }
     },
 
-    createSnapshotAction : function() {
-      selectedRows = this.tableWrapper.eucatable('getAllSelectedRows');
+    _createSnapshotAction : function() {
+
     },
 
   });
