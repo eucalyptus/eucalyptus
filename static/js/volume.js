@@ -129,7 +129,7 @@
       $tableLegend = $("div.table-volumes-legend");
       $tableLegend.append($('<span>').addClass('volume-legend').html(volume_legend));
 
-      statuses = ['available', 'in-use', 'creating', 'deleting', 'deleted', 'error'];
+      statuses = ['creating', 'available', 'in-use', 'deleting', 'deleted', 'error'];
       for (s in statuses)
         $tableLegend.append($('<span>').addClass('volume-status-legend').addClass('volume-status-' + statuses[s]).html($.i18n.map['volume_state_' + statuses[s].replace('-','_')]));
 
