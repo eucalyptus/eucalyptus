@@ -119,58 +119,15 @@
     _destroy : function() {
     },
 
-    _drawCallback : function(oSettings) {
-      thisObj = this;
-      $('#table_keys_count').html(oSettings.fnRecordsDisplay());
-      this.element.find('table tbody').find('tr').each(function(index, tr) {
-        $currentRow = $(tr);
-        $currentRow.click( function (e) {
-          // checked/uncheck on checkbox
-          $rowCheckbox = $(e.target).parents('tr').find(':input[type="checkbox"]');
-          $rowCheckbox.attr('checked', !$rowCheckbox.is(':checked'));
-          thisObj._handleRowClick();
-        });
-        $currentRow.find(':input[type="checkbox"]').click( function (e) {
-          $cb = $(this)
-          $cb.attr('checked', $cb.is(':checked'));
-          thisObj._handleRowClick();
-          e.stopPropagation();
-        });
-      });
-    },
-
     buildContextMenu : function(state) {
       // huh? what really goes here? just edit rules, maybe add rules?
       return {
-        "what": { "what?": volume_con_menu_attach },
-        "how": { "how?": volume_con_menu_create_snapshot },
-        "who": { "who?": volume_con_menu_delete }
-      }
-    },
-/*
-    handleInstanceHover : function(e) {
-      switch(e.type) {
-        case 'mouseleave':
-          $(e.currentTarget).removeClass("hoverCell");
-          break;
-        case 'mouseenter':
-          $(e.currentTarget).addClass("hoverCell");
-          break;
+        "what": { "name": "what", callback: function(key, opt) { alert(key);} },
+        "how": { "name": "how", callback: function(key, opt) { alert(key);} },
+        "who": { "name": "who", callback: function(key, opt) { alert(key);} }
       }
     },
 
-    handleSnapshotHover : function(e) {
-      switch(e.type) {
-        case 'mouseleave':
-          $(e.currentTarget).removeClass("hoverCell");
-          $(e.currentTarget).off('click');
-          break;
-        case 'mouseenter':
-          $(e.currentTarget).addClass("hoverCell");
-          break;
-      }
-    },
-*/
     reDrawTable : function() {
       this.tableWrapper.eucatable('reDrawTable');
     },
