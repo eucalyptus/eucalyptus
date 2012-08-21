@@ -26,8 +26,8 @@ import static org.hamcrest.Matchers.notNullValue;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.util.OwnerFullName;
 
-@SuppressWarnings("serial")
 public class SnapShotEvent implements Event {
+  private static final long serialVersionUID = 1L;
 
   public enum SnapShotAction {
     SNAPSHOTCREATE,
@@ -35,6 +35,7 @@ public class SnapShotEvent implements Event {
   }
 
   public static class CreateActionInfo extends EventActionInfo<SnapShotAction> {
+    private static final long serialVersionUID = 1L;
     private final Long size;
 
     private CreateActionInfo( final Long size ) {

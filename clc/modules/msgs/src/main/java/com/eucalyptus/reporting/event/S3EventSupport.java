@@ -21,58 +21,63 @@ package com.eucalyptus.reporting.event;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.notNullValue;
-import java.io.Serializable;
+import javax.annotation.Nonnull;
+import com.eucalyptus.event.Event;
+import com.eucalyptus.util.OwnerFullName;
 
 /**
- * Encapsulates information associated with a specific event action.
+ * Support class for S3 events
  */
-public class EventActionInfo<E extends Enum<E>> implements Serializable {
+class S3EventSupport<E extends Enum<E>> implements Event {
   private static final long serialVersionUID = 1L;
-  private final E action;
 
-  EventActionInfo( final E action ) {
-    assertThat( action, notNullValue() );
+  private final E action;
+  private final OwnerFullName ownerFullName;
+  private final String uuid;
+  private final Long size;
+  private final String bucketName;
+
+  S3EventSupport( @Nonnull final E action,
+                  @Nonnull final String uuid,
+                  @Nonnull final String bucketName,
+                  @Nonnull final OwnerFullName ownerFullName,
+                  @Nonnull final Long size ) {
+    assertThat(action, notNullValue());
+    assertThat(uuid, notNullValue());
+    assertThat(bucketName, notNullValue());
+    assertThat(ownerFullName, notNullValue());
+    assertThat(ownerFullName.getUserId(), notNullValue());
+    assertThat(size, notNullValue());
+
     this.action = action;
+    this.ownerFullName = ownerFullName;
+    this.uuid = uuid;
+    this.size = size;
+    this.bucketName = bucketName;
   }
 
+  @Nonnull
   public E getAction() {
     return action;
   }
 
-  public String toString() {
-    return String.format( "[action:%s]", getAction() );
+  @Nonnull
+  public OwnerFullName getOwner() {
+    return ownerFullName;
   }
 
-  /**
-   * Information for an action associated with an (VM) instance.
-   */
-  public static class InstanceEventActionInfo<E extends Enum<E>> extends EventActionInfo<E> {
-    private final String instanceUuid;
-    private final String instanceId;
+  @Nonnull
+  public String getUuid() {
+    return uuid;
+  }
 
-    InstanceEventActionInfo( final E action,
-                             final String instanceUuid,
-                             final String instanceId ) {
-      super( action );
-      assertThat( instanceUuid, notNullValue() );
-      assertThat(instanceId, notNullValue());
-      this.instanceUuid = instanceUuid;
-      this.instanceId = instanceId;
-    }
+  @Nonnull
+  public Long getSize() {
+    return size;
+  }
 
-    public String getInstanceUuid() {
-      return instanceUuid;
-    }
-
-    public String getInstanceId() {
-      return instanceId;
-    }
-
-    public String toString() {
-      return String.format( "[action:%s,instanceUuid:%s,instanceId:%s]",
-          getAction(),
-          getInstanceUuid(),
-          getInstanceId() );
-    }
+  @Nonnull
+  public String getBucketName() {
+    return bucketName;
   }
 }

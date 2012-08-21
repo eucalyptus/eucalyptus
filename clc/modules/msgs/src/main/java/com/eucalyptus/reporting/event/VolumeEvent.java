@@ -27,8 +27,9 @@ import static com.eucalyptus.reporting.event.EventActionInfo.InstanceEventAction
 import com.eucalyptus.event.Event;
 import com.eucalyptus.util.OwnerFullName;
 
-@SuppressWarnings("serial")
 public class VolumeEvent implements Event {
+  private static final long serialVersionUID = 1L;
+
   public enum VolumeAction {
     VOLUMECREATE, VOLUMEDELETE, VOLUMEATTACH, VOLUMEDETACH
   }

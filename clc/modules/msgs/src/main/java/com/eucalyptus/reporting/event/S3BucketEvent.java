@@ -20,84 +20,52 @@
 
 package com.eucalyptus.reporting.event;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.notNullValue;
-
-import com.eucalyptus.event.Event;
+import javax.annotation.Nonnull;
 import com.eucalyptus.util.OwnerFullName;
 
-@SuppressWarnings("serial")
-public class S3BucketEvent implements Event {
+public class S3BucketEvent extends S3EventSupport<S3BucketEvent.S3BucketAction> {
+  private static final long serialVersionUID = 1L;
 
-    public enum S3BucketAction {
-	BUCKETCREATE, BUCKETDELETE
-    }
+  /**
+   * @see #forS3BucketCreate
+   * @see #forS3BucketDelete
+   */
+  public enum S3BucketAction {
+    BUCKETCREATE, BUCKETDELETE
+  }
 
-    private final EventActionInfo<S3BucketAction> actionInfo;
-    private final OwnerFullName ownerFullName;
-    private final String uuid;
-    private final Long size;
-    private final String bucketName;
+  public static S3BucketAction forS3BucketCreate() {
+    return S3BucketAction.BUCKETCREATE;
+  }
 
-    public static EventActionInfo<S3BucketAction> forS3BucketCreate() {
-	return new EventActionInfo<S3BucketAction>(S3BucketAction.BUCKETCREATE);
-    }
+  public static S3BucketAction forS3BucketDelete() {
+    return S3BucketAction.BUCKETDELETE;
+  }
 
-    public static EventActionInfo<S3BucketAction> forS3BucketDelete() {
-	return new EventActionInfo<S3BucketAction>(S3BucketAction.BUCKETDELETE);
-    }
+  /**
+   * @see #forS3BucketCreate
+   * @see #forS3BucketDelete
+   */
+  public static S3BucketEvent with( @Nonnull final S3BucketAction action,
+                                    @Nonnull final String s3UUID,
+                                    @Nonnull final String bucketName,
+                                    @Nonnull final OwnerFullName ownerFullName,
+                                    @Nonnull final Long size ) {
+    return new S3BucketEvent( action, s3UUID, bucketName, ownerFullName, size );
+  }
 
-    public static S3BucketEvent with(
-	    final EventActionInfo<S3BucketAction> actionInfo,
-	    final String s3UUID, final OwnerFullName ownerFullName,
-	    final Long size, final String bucketName) {
+  S3BucketEvent( @Nonnull final S3BucketAction action,
+                 @Nonnull final String uuid,
+                 @Nonnull final String bucketName,
+                 @Nonnull final OwnerFullName ownerFullName,
+                 @Nonnull final Long size) {
+    super( action, uuid, bucketName, ownerFullName, size );
+  }
 
-	return new S3BucketEvent(actionInfo, s3UUID, ownerFullName, size,
-		bucketName);
-    }
-
-    private S3BucketEvent(final EventActionInfo<S3BucketAction> actionInfo,
-	    final String uuid, final OwnerFullName ownerFullName,
-	    final Long size, final String bucketName) {
-	assertThat(actionInfo, notNullValue());
-	assertThat(uuid, notNullValue());
-	assertThat(ownerFullName.getUserId(), notNullValue());
-	assertThat(size, notNullValue());
-	assertThat(bucketName, notNullValue());
-
-	this.actionInfo = actionInfo;
-	this.ownerFullName = ownerFullName;
-	this.uuid = uuid;
-	this.size = size;
-	this.bucketName = bucketName;
-
-    }
-
-    public EventActionInfo<S3BucketAction> getActionInfo() {
-	return actionInfo;
-    }
-
-    public OwnerFullName getOwner() {
-	return ownerFullName;
-    }
-
-    public String getUuid() {
-	return uuid;
-    }
-
-    public Long getSize() {
-	return size;
-    }
-
-    public String getBucketName() {
-	return bucketName;
-    }
-
-    @Override
-    public String toString() {
-	return "S3BucketEvent [actionInfo=" + actionInfo + ", userId="
-		+ ownerFullName.getUserId() + ", uuid=" + uuid + ", size="
-		+ size + ", bucketName=" + bucketName + "]";
-    }
-
+  @Override
+  public String toString() {
+    return "S3BucketEvent [action=" + getAction() + ", userId="
+        + getOwner().getUserId() + ", uuid=" + getUuid() + ", size="
+        + getSize() + ", bucketName=" + getBucketName() + "]";
+  }
 }

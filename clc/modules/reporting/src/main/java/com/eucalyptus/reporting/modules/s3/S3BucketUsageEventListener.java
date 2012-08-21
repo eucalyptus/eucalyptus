@@ -58,7 +58,7 @@ public class S3BucketUsageEventListener implements EventListener<S3BucketEvent>{
             .getAccount().getAccountNumber(), user.getName());
 
         final ReportingS3BucketEventStore eventStore = getReportingS3BucketEventStore();
-        switch (event.getActionInfo().getAction()) {
+        switch (event.getAction()) {
           case BUCKETCREATE:
             eventStore.insertS3BucketCreateEvent(event.getBucketName(), event.getSize(), event.getOwner().getUserId(), timeInMs);
             break;

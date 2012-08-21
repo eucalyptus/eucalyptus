@@ -128,6 +128,93 @@ public class ReportingEventTest {
   }
 
   @Test
+  public void testInstanceEventCreation() {
+    final InstanceEvent event = new InstanceEvent(
+        uuid( "i-00000001" ),
+        "i-00000001",
+        "c1.medium",
+        Principals.systemFullName().getUserId(),
+        Principals.systemFullName().getUserName(),
+        Principals.systemFullName().getAccountNumber(),
+        "testaccount",
+        "CC_111",
+        "PARTI00",
+        1L,
+        2,
+        3L,
+        4L,
+        5L,
+        6L,
+        7L,
+        8L
+        );
+
+    assertEquals( "uuid", uuid( "i-00000001" ), event.getUuid() );
+    assertEquals( "instance id", "i-00000001", event.getInstanceId() );
+    assertEquals( "account number", Principals.systemFullName().getAccountNumber(), event.getAccountId() );
+    assertEquals( "account name", "testaccount", event.getAccountName() );
+    assertEquals( "user number", Principals.systemFullName().getUserId(), event.getUserId() );
+    assertEquals( "user name", Principals.systemFullName().getUserName(), event.getUserName() );
+    assertEquals( "cluster name", "CC_111", event.getClusterName() );
+    assertEquals( "availability zone", "PARTI00", event.getAvailabilityZone() );
+    assertEquals( "disk IO", (Long)1L, event.getCumulativeDiskIoMegs() );
+    assertEquals( "cpu utilization", (Integer)2, event.getCpuUtilizationPercent());
+    assertEquals( "net incoming between", (Long)3L, event.getCumulativeNetIncomingMegsBetweenZones() );
+    assertEquals( "net incoming within", (Long)4L, event.getCumulativeNetIncomingMegsWithinZone() );
+    assertEquals( "net incoming public", (Long)5L, event.getCumulativeNetIncomingMegsPublicIp() );
+    assertEquals( "net outgoing between", (Long)6L, event.getCumulativeNetOutgoingMegsBetweenZones() );
+    assertEquals( "net outgoing within", (Long)7L, event.getCumulativeNetOutgoingMegsWithinZone() );
+    assertEquals( "net outgoing public", (Long)8L, event.getCumulativeNetOutgoingMegsPublicIp() );
+    assertEquals( "event string", "[uuid:51b56c1f-8c0d-3096-8c5e-e78ae6c8f4c0,instanceId:i-00000001,instanceType:c1.medium,userId:eucalyptus,accountId:000000000000,cluster:CC_111,zone:PARTI00,disk:1,cpu:2]", event.toString() );
+  }
+
+  @Test
+  public void testInstanceEventCreationWithoutOptional() {
+    new InstanceEvent(
+        uuid( "i-00000001" ),
+        "i-00000001",
+        "c1.medium",
+        Principals.systemFullName().getUserId(),
+        Principals.systemFullName().getUserName(),
+        Principals.systemFullName().getAccountNumber(),
+        "testaccount",
+        "CC_111",
+        "PARTI00",
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+    );
+  }
+
+  @Test(expected=IllegalArgumentException.class)
+  public void testInstanceEventCreationFailure() {
+    new InstanceEvent(
+        uuid( "i-00000001" ),
+        "i-00000001",
+        "c1.medium",
+        Principals.systemFullName().getUserId(),
+        Principals.systemFullName().getUserName(),
+        Principals.systemFullName().getAccountNumber(),
+        "testaccount",
+        "CC_111",
+        "PARTI00",
+        -1L,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+    );
+  }
+
+  @Test
   public void testResourceAvailabilitySimpleEventCreation() {
     final ResourceAvailabilityEvent event =
         new ResourceAvailabilityEvent(
@@ -136,7 +223,7 @@ public class ReportingEventTest {
 
     assertEquals( "type", ResourceType.Address, event.getType() );
     assertEquals( "availability size", 1, event.getAvailability().size() );
-    assertEquals( "total", 4, Iterables.get( event.getAvailability(), 0 ).getTotal() );
+    assertEquals( "total", 4, Iterables.get(event.getAvailability(), 0).getTotal() );
     assertEquals( "available", 2, Iterables.get( event.getAvailability(), 0 ).getAvailable() );
   }
 
@@ -164,6 +251,90 @@ public class ReportingEventTest {
     assertEquals( "a2 available", 4, Iterables.get(event.getAvailability(), 2).getAvailable() );
     assertEquals( "a2 tags size", 2, Iterables.get(event.getAvailability(), 2).getTags().size() );
     assertEquals( "event string", "[type:Instance,availability:[total:4,available:2,tags:[tag:type=c1.small]],[total:5,available:3,tags:[tag:type=a1.sauce]],[total:6,available:4,tags:[tag:type=f2.foo],[tag:color=red]]]", event.toString() );
+  }
+
+  @Test
+  public void testS3BucketEventCreation() {
+    final S3BucketEvent createEvent = S3BucketEvent.with(
+      S3BucketEvent.forS3BucketCreate(),
+      uuid("bucket1"),
+      "bucket1",
+      Principals.systemFullName(),
+      12L
+    );
+
+    assertEquals("action", S3BucketEvent.S3BucketAction.BUCKETCREATE, createEvent.getAction() );
+    assertEquals("uuid", uuid("bucket1"), createEvent.getUuid());
+    assertEquals("bucket name", "bucket1", createEvent.getBucketName());
+    assertEquals("owner", Principals.systemFullName(), createEvent.getOwner() );
+    assertEquals("size", (Long) 12L, createEvent.getSize());
+    assertEquals("create event string", "S3BucketEvent [action=BUCKETCREATE, userId=eucalyptus, uuid=721449c1-7af4-3c6b-aee3-7abc80049ae0, size=12, bucketName=bucket1]", createEvent.toString());
+
+    final S3BucketEvent deleteEvent = S3BucketEvent.with(
+        S3BucketEvent.forS3BucketDelete(),
+        uuid("bucket1"),
+        "bucket1",
+        Principals.systemFullName(),
+        12L
+    );
+
+    assertEquals("action", S3BucketEvent.S3BucketAction.BUCKETDELETE, deleteEvent.getAction() );
+    assertEquals("uuid", uuid("bucket1"), deleteEvent.getUuid());
+    assertEquals("bucket name", "bucket1", deleteEvent.getBucketName());
+    assertEquals("owner", Principals.systemFullName(), deleteEvent.getOwner() );
+    assertEquals("size", (Long) 12L, deleteEvent.getSize());
+    assertEquals("delete event string", "S3BucketEvent [action=BUCKETDELETE, userId=eucalyptus, uuid=721449c1-7af4-3c6b-aee3-7abc80049ae0, size=12, bucketName=bucket1]", deleteEvent.toString());
+  }
+
+  @Test
+  public void testS3ObjectEventCreation() {
+    final S3ObjectEvent getEvent = S3ObjectEvent.with(
+        S3ObjectEvent.forS3ObjectGet(),
+        uuid("bucket1"),
+        "bucket1",
+        "object1",
+        Principals.systemFullName(),
+        12L
+    );
+
+    assertEquals("action", S3ObjectEvent.S3ObjectAction.OBJECTGET, getEvent.getAction());
+    assertEquals("uuid", uuid("bucket1"), getEvent.getUuid());
+    assertEquals("bucket name", "bucket1", getEvent.getBucketName());
+    assertEquals("owner", Principals.systemFullName(), getEvent.getOwner());
+    assertEquals("size", (Long) 12L, getEvent.getSize());
+    assertEquals("get event string", "S3ObjectEvent [action=OBJECTGET, ownerFullName=arn:aws:euare::000000000000:user/eucalyptus, uuid=721449c1-7af4-3c6b-aee3-7abc80049ae0, size=12, bucketName=bucket1, objectName=object1]", getEvent.toString());
+
+    final S3ObjectEvent putEvent = S3ObjectEvent.with(
+        S3ObjectEvent.forS3ObjectCreate(),
+        uuid("bucket1"),
+        "bucket1",
+        "object1",
+        Principals.systemFullName(),
+        12L
+    );
+
+    assertEquals("action", S3ObjectEvent.S3ObjectAction.OBJECTCREATE, putEvent.getAction());
+    assertEquals("uuid", uuid("bucket1"), putEvent.getUuid());
+    assertEquals("bucket name", "bucket1", putEvent.getBucketName());
+    assertEquals("owner", Principals.systemFullName(), putEvent.getOwner());
+    assertEquals("size", (Long) 12L, putEvent.getSize());
+    assertEquals("get event string", "S3ObjectEvent [action=OBJECTCREATE, ownerFullName=arn:aws:euare::000000000000:user/eucalyptus, uuid=721449c1-7af4-3c6b-aee3-7abc80049ae0, size=12, bucketName=bucket1, objectName=object1]", putEvent.toString());
+
+    final S3ObjectEvent deleteEvent = S3ObjectEvent.with(
+        S3ObjectEvent.forS3ObjectDelete(),
+        uuid("bucket1"),
+        "bucket1",
+        "object1",
+        Principals.systemFullName(),
+        12L
+    );
+
+    assertEquals("action", S3ObjectEvent.S3ObjectAction.OBJECTDELETE, deleteEvent.getAction());
+    assertEquals("uuid", uuid("bucket1"), deleteEvent.getUuid());
+    assertEquals("bucket name", "bucket1", deleteEvent.getBucketName());
+    assertEquals("owner", Principals.systemFullName(), deleteEvent.getOwner());
+    assertEquals("size", (Long) 12L, deleteEvent.getSize());
+    assertEquals("get event string", "S3ObjectEvent [action=OBJECTDELETE, ownerFullName=arn:aws:euare::000000000000:user/eucalyptus, uuid=721449c1-7af4-3c6b-aee3-7abc80049ae0, size=12, bucketName=bucket1, objectName=object1]", deleteEvent.toString());
   }
 
   @Test

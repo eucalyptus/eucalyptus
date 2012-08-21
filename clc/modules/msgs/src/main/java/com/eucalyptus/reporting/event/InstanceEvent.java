@@ -90,6 +90,8 @@ import com.eucalyptus.event.Event;
  * UIs.
  */
 public class InstanceEvent implements Event {
+  private static final long serialVersionUID = 1L;
+
   private final String uuid;
   private final String instanceId;
   private final String instanceType;
@@ -244,10 +246,6 @@ public class InstanceEvent implements Event {
 
   public Long getCumulativeNetOutgoingMegsPublicIp() {
     return cumulativeNetOutgoingMegsPublicIp;
-  }
-
-  public boolean requiresReliableTransmission() {
-    return false;
   }
 
   public String toString() {

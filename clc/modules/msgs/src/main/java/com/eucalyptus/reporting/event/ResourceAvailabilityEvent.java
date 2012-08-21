@@ -19,6 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.reporting.event;
 
+import java.io.Serializable;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Set;
@@ -39,10 +40,12 @@ import com.google.common.collect.ImmutableSet;
  * a type.</p>
  */
 public class ResourceAvailabilityEvent implements Event {
+  private static final long serialVersionUID = 1L;
 
   public enum ResourceType { Instance, Core, Memory, Disk, Address, StorageWalrus, StorageEBS }
 
-  public static final class Availability {
+  public static final class Availability implements Serializable {
+    private static final long serialVersionUID = 1L;
     private final long total;
     private final long available;
     private final Set<Tag> tags;
@@ -77,7 +80,8 @@ public class ResourceAvailabilityEvent implements Event {
     }
   }
 
-  public static abstract class Tag {
+  public static abstract class Tag implements Serializable {
+    private static final long serialVersionUID = 1L;
     private final String type;
     private final String value;
 
@@ -104,6 +108,7 @@ public class ResourceAvailabilityEvent implements Event {
   }
 
   public static final class Dimension extends Tag {
+    private static final long serialVersionUID = 1L;
     public Dimension( final String type,
                       final String value ) {
       super( type, value );
@@ -111,6 +116,7 @@ public class ResourceAvailabilityEvent implements Event {
   }
 
   public static final class Type extends Tag {
+    private static final long serialVersionUID = 1L;
     public Type( final String type,
                  final String value ) {
       super( type, value );

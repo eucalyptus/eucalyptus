@@ -38,6 +38,7 @@ import com.google.common.base.Objects;
  * activity.</p>
  */
 public class AddressEvent implements Event {
+  private static final long serialVersionUID = 1L;
 
   public enum AddressAction { ALLOCATE, RELEASE, ASSOCIATE, DISASSOCIATE }
 
