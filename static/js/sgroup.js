@@ -120,6 +120,11 @@
       this.addDialog.eucadialog('onKeypress', 'sgroup-description', createButtonId, function () {
          thisObj._validateForm(createButtonId);
       });
+      this.addDialog.eucadialog('onKeypress', 'sgroup-template', 'morerools', function () {
+         thediv = $.trim(this.addDialog.find('morerools'));
+         if (thediv.style.display == 'none')
+             thediv.style.display = 'block'
+      });
     },
 
     _create : function() { 

@@ -733,7 +733,9 @@ body {
 
 .instances,
 .storage,
-.netsec {
+.netsec,
+.groups,
+.rules {
   position: relative;
   padding-top: 25px;
 }
