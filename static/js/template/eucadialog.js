@@ -39,25 +39,26 @@
          title: thisObj.options.title,
          open: function(event, ui) {
              $titleBar = thisObj.element.parent().find('.ui-dialog-titlebar');
+             firstTimeOpened = false;
              if ( $titleBar.find("div.help-link").length == 0 ) {
                // first time opened
                $titleBar.append($('<div>').addClass('help-link').append($('<a>').attr('href','#').text('?')));
+               firstTimeOpened = true;
              }
 
              $('.ui-widget-overlay').live("click", function() {
                thisObj.close();
              });
 
-             $.each(thisObj.options.buttons, function (btn_id, btn_prop){ 
-               // random ID will cause trouble with selenium
-               var $btn = $(":button:contains('"+ btn_id +"')");
-               if(btn_prop.domid !== undefined)
-                 $btn.attr('id',btn_prop.domid);
-               else
-                 $btn.attr('id', 'btn-'+thisObj.options.id);
+             $.each(thisObj.options.buttons, function (btn_id, btn_prop){
+               var $btn = firstTimeOpened ? thisObj.element.parent().find(":button:contains('"+ btn_id +"')")
+                          : thisObj.element.parent().find(":button#" + thisObj._getButtonId(btn_id, btn_prop));
+
+               if ( firstTimeOpened )
+                 $btn.attr('id', thisObj._getButtonId(btn_id, btn_prop));
                $btn.find('span').text(btn_prop.text);
                if(btn_prop.focus !== undefined && btn_prop.focus)
-                 $btn.focus();    
+                 $btn.focus();
                if(btn_prop.disabled !== undefined && btn_prop.disabled)
                  $btn.prop("disabled", true).addClass("ui-state-disabled");
              });
@@ -73,7 +74,11 @@
          buttons: thisObj._makeButtons(),
       });
     },
-    
+
+    _getButtonId : function(btn_id, btn_prop) {
+       return btn_prop.domid !== undefined ? btn_prop.domid : 'btn-' + this.options.id + '-' + btn_id;
+    },
+
     open : function() {
       this.element.dialog('open');      
     },
@@ -173,7 +178,12 @@
         if( $button==null )
           $button = thisObj.element.parent().find('#'+button_id);
         if( e.which === RETURN_KEY_CODE || e.which === RETURN_MAC_KEY_CODE ) {
-           $button.trigger('click');
+           if ( isFunction(checkFunction) ) {
+             if ( checkFunction.call(this) )
+               $button.trigger('click');
+           } else {
+               $button.trigger('click');
+           }
         } else if ( e.which === 0 ) {
         } else if ( e.which === BACKSPACE_KEY_CODE && $(this).val().length == 1 ) {
           $button.prop("disabled", true).addClass("ui-state-disabled");
