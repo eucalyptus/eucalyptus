@@ -31,9 +31,11 @@
         action : '',
       },
       menu_actions : null, // e.g., TODO: add help
+      draw_cell_callback : null,  // if we want to customize how the cell is drawn (e.g., map EMI to manifest)
+                                  // {column: 3, callback: function(){ } }
     },
+
     table : null, // jQuery object to the table
-    actionMenu : null,
 
     _init : function() {
       thisObj = this; // 
@@ -54,7 +56,7 @@
       this._decorateSearchBar();
       this._decorateTopBar();
       this._decorateActionMenu();
-      this._addActions(this.actionMenu);
+      this._addActions()
     },
 
     _create : function() {
@@ -128,7 +130,17 @@
             }
           });
         }
-      });      
+      });    
+
+      if(thisObj.options.draw_cell_callback){
+        this.element.find('table tbody').find('td').each(function(index, td) { 
+          var pos = thisObj.table.fnGetPosition(td);
+          var oldVal = $(td).html();
+          var newVal = thisObj.options.draw_cell_callback(pos[0], pos[1], $(td).html());
+          if(oldVal !== newVal)
+            $(td).html(newVal);
+        });
+      }
     },
 
     reDrawTable : function() {
@@ -255,7 +267,7 @@
       return $menuDiv;
     },
 
-    _addActions : function (actionMenu) {
+    _addActions : function (args) {
       var thisObj = this;
       thisTable = this.table;
       // add select/deselect all action

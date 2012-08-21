@@ -21,14 +21,18 @@
 (function($, eucalyptus) {
   $.widget('eucalyptus.sgroup', $.eucalyptus.eucawidget, {
     options : { },
+    baseTable : null,
     tableWrapper : null,
     delDialog : null,
-    $addDialog : null,
+    addDialog : null,
     // TODO: is _init() the right method to instantiate everything? 
     _init : function() {
       var thisObj = this;
       var $tmpl = $('html body').find('.templates #sgroupTblTmpl').clone();
       var $wrapper = $($tmpl.render($.i18n.map));
+      var $sgroupTable = $wrapper.children().first();
+      var $sgroupHelp = $wrapper.children().last();
+      this.baseTable = $sgroupTable;
       this.element.add($wrapper);
       this.tableWrapper = $wrapper.eucatable({
         id : 'sgroups', // user of this widget should customize these options,
@@ -54,17 +58,23 @@
               "sClass": "table_center_cell",
             }
           ],
-          "fnDrawCallback": function( oSettings ) { thisObj._drawCallback(oSettings); }
         },
         text : {
           header_title : sgroup_h_title,
           create_resource : sgroup_create,
           resource_found : sgroup_found,
         },
-        menu_actions : { delete: { name: table_menu_delete_action, callback: function(key, opt) { thisObj.deleteAction(); } } },
-        row_click : function (args) { thisObj.handleRowClick(args); },
-        menu_click_create : function (args) { thisObj.$addDialog.eucadialog('open')},
-        context_menu : { value_column_inx: 4, build_callback: function (state) { return thisObj.buildContextMenu(state) } },
+        menu_actions : function(){ return thisObj._buildActionsMenu()},
+        context_menu : {build_callback : function(state) { return thisObj.buildContextMenu(state);}},
+        menu_click_create : function (args) { thisObj.addDialog.eucadialog('open')},
+        row_click : function (args) { thisObj._handleRowClick(args); },
+        help_click : function(evt) {
+          var $helpHeader = $('<div>').addClass('euca-table-header').append(
+                              $('<span>').text(help_sgroup['landing_title']).append(
+                                $('<div>').addClass('help-link').append(
+                                  $('<a>').attr('href','#').html('&larr;'))));
+          thisObj._flipToHelp(evt,$helpHeader, $sgroupHelp);
+        },
       });
       this.tableWrapper.appendTo(this.element);
 
@@ -84,33 +94,31 @@
        });
 
       var createButtonId = 'sgroup-add-btn';
-      $tmpl = $('html body').find('.templates #sgroupAddDlgTmpl').clone();
-      $rendered = $($tmpl.render($.i18n.map));
-      $add_dialog = $rendered.children().first();
-
-      // add custom event handler to dialog elements
-      // when calling eucadialog, the buttons should have domid to attach the specific domid that's used by event handler written here 
-      $add_dialog.find('#sgroup-name').keypress( function(e){
-        var $createButton = $('#'+createButtonId);
-        if( e.which === RETURN_KEY_CODE || e.which === RETURN_MAC_KEY_CODE ) 
-           $createButton.trigger('click');
-        else if ( e.which === 0 ) {
-        } else if ( e.which === BACKSPACE_KEY_CODE && $(this).val().length == 1 ) 
-           $createButton.prop("disabled", true).addClass("ui-state-disabled");
-        else if ( $(this).val().length == 0 )
-           $createButton.prop("disabled", true).addClass("ui-state-disabled");
-        else 
-           $createButton.prop("disabled", false).removeClass("ui-state-disabled");
-      });
-
-      this.$addDialog = $add_dialog.eucadialog({
+      var $tmpl = $('html body').find('.templates #sgroupAddDlgTmpl').clone();
+      var $rendered = $($tmpl.render($.extend($.i18n.map, help_sgroup)));
+      var $add_dialog = $rendered.children().first();
+      var $add_help = $rendered.children().last();
+      this.addDialog = $add_dialog.eucadialog({
         id: 'sgroups-add',
         title: sgroup_dialog_add_title,
         buttons: { 
         // e.g., add : { domid: sgroup-add-btn, text: "Add new group", disabled: true, focus: true, click : function() { }, keypress : function() { }, ...} 
-        'create': { domid: createButtonId, text: sgroup_dialog_create_btn, disabled: true,  click: function() { $add_dialog.dialog("close"); }},
-        'cancel': {text: sgroup_dialog_cancel_btn, focus:true, click: function() { $add_dialog.dialog("close");}}
-      }});
+        'create': { domid: createButtonId, text: sgroup_dialog_create_btn, disabled: true,  click: function() {
+              var name = $.trim($add_dialog.find('#sgroup-name').val());
+              var desc = $.trim($add_dialog.find('#sgroup-description').val());
+              thisObj._addSecurityGroup(name, desc);
+              $add_dialog.dialog("close");
+            }},
+        'cancel': {text: sgroup_dialog_cancel_btn, focus:true, click: function() { $add_dialog.dialog("close");}},
+        },
+        help: {title: help_volume['dialog_add_title'], content: $add_help},
+      });
+      this.addDialog.eucadialog('onKeypress', 'sgroup-name', createButtonId, function () {
+         thisObj._validateForm(createButtonId);
+      });
+      this.addDialog.eucadialog('onKeypress', 'sgroup-description', createButtonId, function () {
+         thisObj._validateForm(createButtonId);
+      });
     },
 
     _create : function() { 
@@ -119,13 +127,49 @@
     _destroy : function() {
     },
 
-    buildContextMenu : function(state) {
-      // huh? what really goes here? just edit rules, maybe add rules?
-      return {
-        "what": { "name": "what", callback: function(key, opt) { alert(key);} },
-        "how": { "name": "how", callback: function(key, opt) { alert(key);} },
-        "who": { "name": "who", callback: function(key, opt) { alert(key);} }
+    _validateForm : function(createButtonId) {
+       name = $.trim(this.addDialog.find('#sgroup-name').val());
+       desc = $.trim(this.addDialog.find('#sgroup-description').val());
+       $button = this.addDialog.parent().find('#' + createButtonId);
+       if ( name.length > 0 && desc.length > 0 )     
+         $button.prop("disabled", false).removeClass("ui-state-disabled");
+       else
+         $button.prop("disabled", false).addClass("ui-state-disabled");
+    },
+
+    _whatsup : function() {
+      var isValid = true;
+      $notification = $add_dialog.find('div.dialog-notifications');
+      if ( size == parseInt(size) ) {
+        if ( $snapshot.val() != '' && parseInt($snapshot.attr('title')) > parseInt(size) ) {
+          isValid = false;
+          $notification.html(volume_dialog_snapshot_error_msg);
+        }
+      } else {
+        isValid = false; 
+        $notification.html(volume_dialog_size_error_msg);
       }
+      if ( az === '' ) {
+        isValid = false;
+        $notification.html($notification.html + "<br/>" + volume_dialog_size_error_msg);
+      }
+      if ( isValid ) {
+        thisObj._createVolume(size, az, $snapshot.val());
+        $add_dialog.dialog("close");
+      } 
+    },
+
+    _getGroupName : function(rowSelector) {
+      return $(rowSelector).find('td:eq(1)').text();
+    },
+
+    buildContextMenu : function(row) {
+     // var thisObj = this; ==> this causes the problem..why?
+      var thisObj = $('html body').find(DOM_BINDING['main']).data("sgroup");
+      return {
+          "edit": { "name": sgroup_action_edit, callback: function(key, opt) { thisObj.editAction(thisObj._getGroupName(opt.selector)); } },
+          "delete": { "name": sgroup_action_delete, callback: function(key, opt) { thisObj.deleteAction(thisObj._getGroupName(opt.selector)); } },
+          };
     },
 
     reDrawTable : function() {
@@ -140,6 +184,7 @@
     },
 
     _addSecurityGroup : function(groupName, groupDesc) {
+      thisObj = this;
       $.ajax({
         type:"GET",
         url:"/ec2?Action=CreateSecurityGroup",
@@ -148,16 +193,17 @@
         async:"false",
         success:
         function(data, textStatus, jqXHR){
+          $notification = thisObj.addDialog.find('div.dialog-notifications');
           if (data.results && data.results.status == true) {
-            successNotification(sgroup_create_success + ' ' + keyName);
-            tableWrapper.eucatable('refreshTable');
+            notifySuccess(sgroup_create_success + ' ' + groupName);
+            thisObj.tableWrapper.eucatable('refreshTable');
           } else {
-            errorNotification(sgroup_create_error + ' ' + keyName);
+            notifyFailure(sgroup_create_error + ' ' + groupName);
           }
         },
         error:
         function(jqXHR, textStatus, errorThrown){
-          errorNotification(sgroup_delete_error + ' ' + keyName);
+          $notification(sgroup_delete_error + ' ' + groupName);
         }
       });
     },
@@ -177,17 +223,17 @@
           (function(sgroupName) {
             return function(data, textStatus, jqXHR){
               if ( data.results && data.results == true ) {
-                successNotification(sgroup_delete_success + ' ' + sgroupName);
+                notifySuccess(sgroup_delete_success + ' ' + sgroupName);
                 thisObj._getTableWrapper().eucatable('refreshTable');
               } else {
-                errorNotification(sgroup_delete_error + ' ' + sgroupName);
+                notifyFailure(sgroup_delete_error + ' ' + sgroupName);
               }
            }
           })(sgroupName),
           error:
           (function(sgroupName) {
             return function(jqXHR, textStatus, errorThrown){
-              errorNotification(sgroup_delete_error + ' ' + sgroupName);
+              $notification(sgroup_delete_error + ' ' + sgroupName);
             }
           })(sgroupName)
         });
@@ -200,6 +246,16 @@
 
     _getTableWrapper : function() {
       return this.tableWrapper;
+    },
+
+    _buildActionsMenu : function() {
+      thisObj = this;
+      itemsList = {};
+      // add edit action
+      itemsList['edit'] = { "name": sgroup_action_edit, callback: function(key, opt) { thisObj.editAction(); } }
+      // add delete action
+      itemsList['delete'] = { "name": sgroup_action_delete, callback: function(key, opt) { thisObj.deleteAction(); } }
+      return itemsList;
     },
 
     deleteAction : function() {
