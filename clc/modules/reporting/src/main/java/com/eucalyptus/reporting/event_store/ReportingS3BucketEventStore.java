@@ -44,13 +44,13 @@ public class ReportingS3BucketEventStore
 		
 	}
 
-	public void insertS3BucketCreateEvent(String s3BucketName, String userId, String availabilityZone)
+	public void insertS3BucketCreateEvent(String s3BucketName, Long s3BucketSize, String userId, Long timeInMs)
 	{
 		EntityWrapper<ReportingS3BucketCreateEvent> entityWrapper =
 			EntityWrapper.get(ReportingS3BucketCreateEvent.class);
 
 		try {
-			ReportingS3BucketCreateEvent s3Bucket = new ReportingS3BucketCreateEvent(s3BucketName, userId, availabilityZone);
+			ReportingS3BucketCreateEvent s3Bucket = new ReportingS3BucketCreateEvent(s3BucketName, s3BucketSize, userId, timeInMs);
 			entityWrapper.add(s3Bucket);
 			entityWrapper.commit();
 			LOG.debug("Added event to db:" + s3Bucket);
@@ -61,13 +61,13 @@ public class ReportingS3BucketEventStore
 		}					
 	}
 
-	public void insertS3BucketDeleteEvent(String s3BucketName, long timestampMs)
+	public void insertS3BucketDeleteEvent(String s3BucketName, Long s3BucketSize, String userId, Long timeInMs)
 	{
 		EntityWrapper<ReportingS3BucketDeleteEvent> entityWrapper =
 			EntityWrapper.get(ReportingS3BucketDeleteEvent.class);
 
 		try {
-			ReportingS3BucketDeleteEvent s3Bucket = new ReportingS3BucketDeleteEvent(s3BucketName, timestampMs);
+			ReportingS3BucketDeleteEvent s3Bucket = new ReportingS3BucketDeleteEvent(s3BucketName, s3BucketSize, userId, timeInMs);
 			entityWrapper.add(s3Bucket);
 			entityWrapper.commit();
 			LOG.debug("Added event to db:" + s3Bucket);

@@ -45,7 +45,7 @@ public class ReportingS3ObjectEventStore
 		
 	}
 
-	public void insertS3ObjectCreateEvent(String s3BucketName, String s3ObjectName, long timestampMs,
+	public void insertS3ObjectCreateEvent(String s3BucketName, String s3ObjectName, long s3ObjectSize, long timestampMs,
 			String userId)
 	{
 		EntityWrapper<ReportingS3ObjectCreateEvent> entityWrapper =
@@ -53,7 +53,7 @@ public class ReportingS3ObjectEventStore
 
 		try {
 			ReportingS3ObjectCreateEvent s3Object =
-				new ReportingS3ObjectCreateEvent(s3BucketName, s3ObjectName, timestampMs, userId);
+				new ReportingS3ObjectCreateEvent(s3BucketName, s3ObjectName, s3ObjectSize, timestampMs, userId);
 			entityWrapper.add(s3Object);
 			entityWrapper.commit();
 			LOG.debug("Added event to db:" + s3Object);
@@ -64,14 +64,14 @@ public class ReportingS3ObjectEventStore
 		}					
 	}
 
-	public void insertS3ObjectDeleteEvent(String s3BucketName, String s3ObjectName, long timestampMs)
+	public void insertS3ObjectDeleteEvent(String s3BucketName, String s3ObjectName, Long s3ObjectSize, Long timestampMs, String userId)
 	{
 		EntityWrapper<ReportingS3ObjectDeleteEvent> entityWrapper =
 			EntityWrapper.get(ReportingS3ObjectDeleteEvent.class);
 
 		try {
 			ReportingS3ObjectDeleteEvent s3Object =
-				new ReportingS3ObjectDeleteEvent(s3BucketName, s3ObjectName, timestampMs);
+				new ReportingS3ObjectDeleteEvent(s3BucketName, s3ObjectName, s3ObjectSize, timestampMs, userId);
 			entityWrapper.add(s3Object);
 			entityWrapper.commit();
 			LOG.debug("Added event to db:" + s3Object);
@@ -82,17 +82,13 @@ public class ReportingS3ObjectEventStore
 		}							
 	}
 
-	public void insertS3ObjectUsageEvent(String s3BucketName, String s3ObjectName, long timestampMs,
-			Long cumulativeMegsRead, Long cumulativeMegsWritten, Long cumulativeGetRequests,
-			Long cumulativePutRequests)
+	public void insertS3ObjectUsageEvent(String s3BucketName, String s3ObjectName, Long s3ObjectSize, Long timestampMs, String userId)
 	{
 		EntityWrapper<ReportingS3ObjectUsageEvent> entityWrapper =
 			EntityWrapper.get(ReportingS3ObjectUsageEvent.class);
 
 		try {
-			ReportingS3ObjectUsageEvent s3Object = new ReportingS3ObjectUsageEvent(s3BucketName,
-					s3ObjectName, timestampMs, cumulativeMegsRead, cumulativeMegsWritten,
-					cumulativeGetRequests, cumulativePutRequests);
+			ReportingS3ObjectUsageEvent s3Object = new ReportingS3ObjectUsageEvent(s3BucketName, s3ObjectName, s3ObjectSize, timestampMs, userId);
 			entityWrapper.add(s3Object);
 			entityWrapper.commit();
 			LOG.debug("Added event to db:" + s3Object);
