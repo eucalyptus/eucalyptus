@@ -147,7 +147,7 @@ upgrade_db() {
       fi
   fi
   
-  if [ -n "${SAME_VERSION}" ]; then
+  if [ -n "${SAME_VERSION}" -o "${OLD_EUCA_VERSION:0:3}" == "3.1" ]; then
     for x in $(\ls -ad ${OLD_EUCA}/${DBDIR}/* 2>&1 | grep eucalyptus) ; do
       cp -a --preserve $x ${NEW_EUCA}/${DBDIR}/
     done
