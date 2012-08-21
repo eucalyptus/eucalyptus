@@ -88,16 +88,21 @@
         };
         // add generic row handler
         $currentRow.click( function (e) {
+          //alert(thisObj.element.html());
           // checked/uncheck on checkbox
           $rowCheckbox = $(e.target).parents('tr').find(':input[type="checkbox"]');
           $rowCheckbox.attr('checked', !$rowCheckbox.is(':checked'));
           e.stopPropagation();
+          thisObj._onRowClick();
           thisObj._trigger('row_click', e);
         });
+
         $currentRow.find(':input[type="checkbox"]').click( function (e) {
           e.stopPropagation();
+          thisObj._onRowClick();
           thisObj._trigger('row_click', e);
         });
+
         if (thisObj.options.context_menu) {
           contextMenuParams = thisObj.options.context_menu;
           rID = 'ri-'+S4()+S4();
@@ -155,13 +160,20 @@
       return this.table;
     },
 
-    activateMenu : function() {
+    _onRowClick : function() {
+      if ( this.countSelectedRows() === 0 )
+        this._deactivateMenu();
+      else
+        this._activateMenu();
+    },
+
+    _activateMenu : function() {
       $menu = $('#more-actions-'+this.options.id);
       $menu.removeClass("inactive-menu");
       $menu.contextMenu(true);
     },
 
-    deactivateMenu : function() {
+    _deactivateMenu : function() {
       $menu = $('#more-actions-'+this.options.id);
       $menu.addClass("inactive-menu");
       $menu.contextMenu(false);
@@ -355,7 +367,7 @@
         }
       }
       return selectedRows;
-    }
+    },
   });
 })(jQuery,
    window.eucalyptus ? window.eucalyptus : window.eucalyptus = {});

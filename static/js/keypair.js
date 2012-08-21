@@ -59,7 +59,6 @@
           resource_found : keypair_found,
         },
         menu_actions : function(args){ return thisObj._buildActionsMenu(args); },
-        row_click : function (args) { thisObj._handleRowClick(args); },
         menu_click_create : function (args) { thisObj.addDialog.eucadialog('open') },
         context_menu : {build_callback : function(state) { return thisObj._buildContextMenu(state); }},
         help_click : function(evt) { 
@@ -133,13 +132,6 @@
       return {
         "delete": { "name": table_menu_delete_action, callback: function(key, opt) { thisObj._deleteAction(thisObj._getKeyId(opt.selector)); } }
       }
-    },
-
-    _handleRowClick : function() {
-      if ( this.tableWrapper.eucatable('countSelectedRows') == 0 )
-        this.tableWrapper.eucatable('deactivateMenu');
-      else
-        this.tableWrapper.eucatable('activateMenu');
     },
 
     _deleteAction : function(keyId) {

@@ -78,7 +78,6 @@
         menu_actions : function(){ return thisObj._buildActionsMenu()},
         context_menu : {build_callback : function(state) { return thisObj._buildContextMenu(state);}},
         menu_click_create : function (args) { thisObj.waitDialog.eucadialog('open')},
-        row_click : function (args) { thisObj._handleRowClick(args); },
       //  td_hover_actions : { instance: [4, function (args) { thisObj.handleInstanceHover(args); }], snapshot: [5, function (args) { thisObj.handleSnapshotHover(args); }] }
         help_click : function(evt) {
           var $helpHeader = $('<div>').addClass('euca-table-header').append(
@@ -394,13 +393,6 @@
 */
     _reDrawTable : function() {
       this.tableWrapper.eucatable('reDrawTable');
-    },
-
-    _handleRowClick : function(args) {
-      if ( this.tableWrapper.eucatable('countSelectedRows') == 0 )
-        this.tableWrapper.eucatable('deactivateMenu');
-      else
-        this.tableWrapper.eucatable('activateMenu');
     },
 
     _deleteListedVolumes : function () {

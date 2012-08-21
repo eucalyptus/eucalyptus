@@ -67,7 +67,6 @@
         menu_actions : function(){ return thisObj._buildActionsMenu()},
         context_menu : {build_callback : function(state) { return thisObj.buildContextMenu(state);}},
         menu_click_create : function (args) { thisObj.addDialog.eucadialog('open')},
-        row_click : function (args) { thisObj._handleRowClick(args); },
         help_click : function(evt) {
           var $helpHeader = $('<div>').addClass('euca-table-header').append(
                               $('<span>').text(help_sgroup['landing_title']).append(
@@ -174,13 +173,6 @@
 
     reDrawTable : function() {
       this.tableWrapper.eucatable('reDrawTable');
-    },
-
-    _handleRowClick : function() {
-      if ( this.tableWrapper.eucatable('countSelectedRows') == 0 )
-        this.tableWrapper.eucatable('deactivateMenu');
-      else
-        this.tableWrapper.eucatable('activateMenu');
     },
 
     _addSecurityGroup : function(groupName, groupDesc) {

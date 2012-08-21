@@ -69,7 +69,6 @@
             resource_found : instance_found,
           },
           menu_actions : { delete: [table_menu_delete_action, function (args) { thisObj.deleteAction(args) } ] },
-          row_click : function (evt) { thisObj.handleRowClick(evt); },
           help_click : function(evt) {
             // TODO: make this a reusable operation
             var $helpHeader = $('<div>').addClass('euca-table-header').append(
@@ -176,16 +175,6 @@
     
     _reDrawTable : function() {
       tableWrapper.eucatable('reDrawTable');
-    },
-
-    _handleRowClick : function(args) {
-      count = tableWrapper.eucatable('countSelectedRows');
-      if ( count == 0 )
-        // disable menu
-        tableWrapper.eucatable('deactivateMenu');
-      else
-        // enable delete menu
-        tableWrapper.eucatable('activateMenu');
     },
 
     close: function() {
