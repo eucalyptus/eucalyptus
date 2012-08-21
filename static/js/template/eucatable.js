@@ -34,10 +34,11 @@
     },
     table : null, // jQuery object to the table
     actionMenu : null,
+
     _init : function() {
       thisObj = this; // 
       // add draw call back
-      this.options.dt_arg['fnDrawCallback'] = function( oSettings ) { 
+      this.options.dt_arg['fnDrawCallback'] = function( oSettings ) {
         try{
           thisObj._drawCallback(oSettings);
         }catch(e){
@@ -64,6 +65,7 @@
 
     _drawCallback : function(oSettings) {
       thisObj = this;
+
       $('#table_' + this.options.id + '_count').html(oSettings.fnRecordsDisplay());
       this.element.find('table tbody').find('tr').each(function(index, tr) {
         // add custom td handlers
