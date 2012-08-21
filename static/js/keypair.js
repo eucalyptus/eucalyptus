@@ -22,8 +22,8 @@
   $.widget('eucalyptus.keypair', $.eucalyptus.eucawidget, {
     options : { },
     tableWrapper : null,
-    $delDialog : null,
-    $addDialog : null,
+    delDialog : null,
+    addDialog : null,
     // TODO: is _init() the right method to instantiate everything? 
     _init : function() {
       var thisObj = this;
@@ -58,9 +58,9 @@
           create_resource : keypair_create,
           resource_found : keypair_found,
         },
-        menu_actions : function(args){ return thisObj._buildActionsMenu(args);},
-        row_click : function (args) { thisObj._handleRowClick(args);},
-        menu_click_create : function (args) { thisObj.$addDialog.eucadialog('open')},
+        menu_actions : function(args){ return thisObj._buildActionsMenu(args); },
+        menu_click_create : function (args) { thisObj.addDialog.eucadialog('open') },
+        context_menu : {build_callback : function(state) { return thisObj._buildContextMenu(state); }},
         help_click : function(evt) { 
           var $helpHeader = $('<div>').addClass('euca-table-header').append(
                               $('<span>').text(help_keypair['landing_title']).append(
@@ -76,7 +76,7 @@
       var $del_dialog = $rendered.children().first();
       var $del_help = $rendered.children().last();
 
-      this.$delDialog = $del_dialog.eucadialog({
+      this.delDialog = $del_dialog.eucadialog({
          id: 'keys-delete',
          title: keypair_dialog_del_title,
          buttons: {
@@ -92,7 +92,7 @@
       $add_dialog = $rendered.children().first();
       $add_help = $rendered.children().last();
 
-      this.$addDialog = $add_dialog.eucadialog({
+      this.addDialog = $add_dialog.eucadialog({
         id: 'keys-add',
         title: keypair_dialog_add_title,
         buttons: { 
@@ -123,31 +123,38 @@
     _destroy : function() {
     },
 
-    _drawCallback : function(oSettings) {
-      thisObj = this;
-      $('#table_keys_count').html(oSettings.fnRecordsDisplay());
-      this.element.find('table tbody').find('tr').each(function(index, tr) {
-        $currentRow = $(tr);
-        $currentRow.click( function (e) {
-          // checked/uncheck on checkbox
-          $rowCheckbox = $(e.target).parents('tr').find(':input[type="checkbox"]');
-          $rowCheckbox.attr('checked', !$rowCheckbox.is(':checked'));
-          thisObj._handleRowClick();
-        });
-        $currentRow.find(':input[type="checkbox"]').click( function (e) {
-          $cb = $(this)
-          $cb.attr('checked', $cb.is(':checked'));
-          thisObj._handleRowClick();
-          e.stopPropagation();
-        });
-      });
+    _getKeyId : function(rowSelector) {
+      return $(rowSelector).find('td:eq(1)').text();
     },
 
-    _handleRowClick : function() {
-      if ( this.tableWrapper.eucatable('countSelectedRows') == 0 )
-        this.tableWrapper.eucatable('deactivateMenu');
-      else
-        this.tableWrapper.eucatable('activateMenu');
+    _buildContextMenu : function() {
+      thisObj = this;
+      return {
+        "delete": { "name": table_menu_delete_action, callback: function(key, opt) { thisObj._deleteAction(thisObj._getKeyId(opt.selector)); } }
+      }
+    },
+
+    _deleteAction : function(keyId) {
+      keysToDelete = [];
+      if ( !keyId ) {
+        $tableWrapper = thisObj.tableWrapper;
+        keysToDelete = $tableWrapper.eucatable('getAllSelectedRows');
+      } else {
+        keysToDelete[0] = keyId;
+      }
+
+      if ( keysToDelete.length > 0 ) {
+        // show delete dialog box
+        $deleteNames = this.delDialog.find("span.resource-ids")
+        $deleteNames.html('');
+        $keysToDelete = this.delDialog.find("#keys-to-delete");
+        $keysToDelete.html(keysToDelete.join(ID_SEPARATOR));
+        for ( i = 0; i<keysToDelete.length; i++ ) {
+          t = escapeHTML(keysToDelete[i]);
+          $deleteNames.append(t).append("<br/>");
+        }
+        this.delDialog.dialog('open');
+      }
     },
 
     _addKeyPair : function(keyName) {
@@ -181,7 +188,8 @@
 
     _deleteSelectedKeyPairs : function () {
       var thisObj = this;
-      var rowsToDelete = thisObj.tableWrapper.eucatable('getAllSelectedRows');
+      $keysToDelete = this.delDialog.find("#keys-to-delete");
+      var rowsToDelete = $keysToDelete.text().split(ID_SEPARATOR);
       for ( i = 0; i<rowsToDelete.length; i++ ) {
         var keyName = rowsToDelete[i];
         $.ajax({
@@ -216,8 +224,8 @@
       var itemsList = { 'delete': {"name": table_menu_delete_action, callback: function(key, opt) { 
         keysToDelete = thisObj.tableWrapper.eucatable('getValueForSelectedRows', 1);
         if ( keysToDelete.length > 0 ) {
-          thisObj.$delDialog.eucadialog('setSelectedResources', keysToDelete);
-          thisObj.$delDialog.dialog('open');
+          thisObj.delDialog.eucadialog('setSelectedResources', keysToDelete);
+          thisObj.delDialog.dialog('open');
         }
       }}}
       return itemsList;

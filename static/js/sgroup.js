@@ -58,7 +58,6 @@
               "sClass": "table_center_cell",
             }
           ],
-          "fnDrawCallback": function( oSettings ) { thisObj._drawCallback(oSettings); }
         },
         text : {
           header_title : sgroup_h_title,
@@ -68,7 +67,6 @@
         menu_actions : function(){ return thisObj._buildActionsMenu()},
         context_menu : {build_callback : function(state) { return thisObj.buildContextMenu(state);}},
         menu_click_create : function (args) { thisObj.addDialog.eucadialog('open')},
-        row_click : function (args) { thisObj._handleRowClick(args); },
         help_click : function(evt) {
           var $helpHeader = $('<div>').addClass('euca-table-header').append(
                               $('<span>').text(help_sgroup['landing_title']).append(
@@ -165,26 +163,6 @@
       } 
     },
 
-    _drawCallback : function(oSettings) {
-      thisObj = this;
-      $('#table_keys_count').html(oSettings.fnRecordsDisplay());
-      this.element.find('table tbody').find('tr').each(function(index, tr) {
-        $currentRow = $(tr);
-        $currentRow.click( function (e) {
-          // checked/uncheck on checkbox
-          $rowCheckbox = $(e.target).parents('tr').find(':input[type="checkbox"]');
-          $rowCheckbox.attr('checked', !$rowCheckbox.is(':checked'));
-          thisObj._handleRowClick();
-        });
-        $currentRow.find(':input[type="checkbox"]').click( function (e) {
-          $cb = $(this)
-          $cb.attr('checked', $cb.is(':checked'));
-          thisObj._handleRowClick();
-          e.stopPropagation();
-        });
-      });
-    },
-
     _getGroupName : function(rowSelector) {
       return $(rowSelector).find('td:eq(1)').text();
     },
@@ -198,39 +176,8 @@
           };
     },
 
-/*
-    handleInstanceHover : function(e) {
-      switch(e.type) {
-        case 'mouseleave':
-          $(e.currentTarget).removeClass("hoverCell");
-          break;
-        case 'mouseenter':
-          $(e.currentTarget).addClass("hoverCell");
-          break;
-      }
-    },
-
-    handleSnapshotHover : function(e) {
-      switch(e.type) {
-        case 'mouseleave':
-          $(e.currentTarget).removeClass("hoverCell");
-          $(e.currentTarget).off('click');
-          break;
-        case 'mouseenter':
-          $(e.currentTarget).addClass("hoverCell");
-          break;
-      }
-    },
-*/
     reDrawTable : function() {
       this.tableWrapper.eucatable('reDrawTable');
-    },
-
-    _handleRowClick : function() {
-      if ( this.tableWrapper.eucatable('countSelectedRows') == 0 )
-        this.tableWrapper.eucatable('deactivateMenu');
-      else
-        this.tableWrapper.eucatable('activateMenu');
     },
 
     _addSecurityGroup : function(groupName, groupDesc) {

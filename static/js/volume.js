@@ -27,6 +27,7 @@
     detachDialog : null,
     forceDetachDialog : null,
     addDialog : null,
+    attachDialog : null,
     waitDialog : null,
     _init : function() {
       var thisObj = this;
@@ -76,9 +77,8 @@
           resource_found : volume_found,
         },
         menu_actions : function(){ return thisObj._buildActionsMenu()},
-        context_menu : {build_callback : function(state) { return thisObj.buildContextMenu(state);}},
-        menu_click_create : function (args) { thisObj.waitDialog.eucadialog('open')},
-        row_click : function (args) { thisObj._handleRowClick(args); },
+        context_menu : {build_callback : function(state) { return thisObj._buildContextMenu(state);}},
+        menu_click_create : function (args) { thisObj.waitDialog.eucadialog('setOnOpen', function() {thisObj._initAddDialog();} ); thisObj.waitDialog.eucadialog('open')},
       //  td_hover_actions : { instance: [4, function (args) { thisObj.handleInstanceHover(args); }], snapshot: [5, function (args) { thisObj.handleSnapshotHover(args); }] }
         help_click : function(evt) {
           var $helpHeader = $('<div>').addClass('euca-table-header').append(
@@ -122,7 +122,7 @@
       );
 
       // attach action
-      $("#volumes-selector").change( function() { thisObj.reDrawTable() } );
+      $("#volumes-selector").change( function() { thisObj._reDrawTable() } );
 
       // TODO: let's move legend to html as a template
       //add leged to the volumes table
@@ -186,7 +186,27 @@
            'cancel': { text: volume_dialog_cancel_btn, focus:true, click: function() { $wait_dialog.dialog("close"); } } 
          },
          help: {title: help_volume['dialog_volume_wait_title'], content: $wait_dialog_help},
-         onOpen: function(dialog) { thisObj._initAddDialog(); }
+       });
+
+      $tmpl = $('html body').find('.templates #volumeAttachDlgTmpl').clone();
+      var $rendered = $($tmpl.render($.extend($.i18n.map, help_volume)));
+      var $attach_dialog = $rendered.children().first();
+      var $attach_dialog_help = $rendered.children().last();
+      this.attachDialog = $attach_dialog.eucadialog({
+         id: 'volumes-attach',
+         title: volume_dialog_attach_title,
+         buttons: {
+           'attach': { text: volume_dialog_attach_btn, click: function() { 
+                volumeId = $attach_dialog.find('#volume-attach-volume-selector').val();
+                instanceId = $attach_dialog.find('#volume-attach-instance-selector').val()
+                device = $.trim($attach_dialog.find('#volume-attach-device-name').val());
+                thisObj._attachVolume(volumeId, instanceId, device);
+                $attach_dialog.dialog("close");
+              } 
+            },
+           'cancel': { text: volume_dialog_cancel_btn, focus:true, click: function() { $attach_dialog.dialog("close"); } }
+         },
+         help: {title: help_volume['dialog_volume_attach_title'], content: $attach_dialog_help},
        });
 
       var createButtonId = 'volumes-add-btn';
@@ -281,9 +301,9 @@
           dataType:"json",
           async:"false",
           success:
-           function(data, textStatus, jqXHR){
+            function(data, textStatus, jqXHR){
               $snapSelector = $('#volume-add-snapshot-selector').html('');
-              $snapSelector.append($('<option>').attr('value', '').text($.i18n.map['selection_none']));
+              $snapSelector.append($('<option>').attr('value', '').text($.i18n.map['volume_dialog_zone_select']));
               if ( data.results ) {
                 for( res in data.results) {
                   snapshot = data.results[res];
@@ -305,13 +325,48 @@
       this.addDialog.dialog("open");
     },
 
+    _initAttachDialog : function(volumeId) {
+      $.ajax({
+        type:"GET",
+        url:"/ec2?Action=DescribeInstances",
+        data:"_xsrf="+$.cookie('_xsrf'),
+        dataType:"json",
+        async:"false",
+        success:
+          function(data, textStatus, jqXHR){
+            $instanceSelector = $('#volume-attach-instance-selector').html('');
+            $instanceSelector.append($('<option>').attr('value', '').text($.i18n.map['volume_attach_select_instance']));
+            if ( data.results ) {
+              for( res in data.results) {
+                instance = data.results[res];
+                if ( instance.state === 'running' ) {
+                  $instanceSelector.append($('<option>').attr('value', instance.id).text(instance.id));
+                }
+              } 
+            } else {
+              notifyError('tbd', tbd);
+            }
+          },
+        error:
+          function(jqXHR, textStatus, errorThrown){
+            notifyError('tbd', tbd);
+          }
+      });
+      this.attachDialog.find('div.dialog-notifications').html('');
+      $volumeSelector = this.attachDialog.find('#volume-attach-volume-selector');
+      $volumeSelector.append($('<option>').attr('value', volumeId).text(volumeId));
+      $volumeSelector.attr('disabled', 'disabled');
+      this.waitDialog.dialog("close");
+      this.attachDialog.dialog("open");
+    },
+
     _buildActionsMenu : function() {
       thisObj = this;
       selectedVolumes = thisObj.tableWrapper.eucatable('getValueForSelectedRows', 8); // 8th column=status (this is volume's knowledge)
       itemsList = {};
       // add attach action
       if ( selectedVolumes.length == 1 && selectedVolumes.indexOf('available') == 0 ){
-         itemsList['attach'] = { "name": volume_action_attach, callback: function(key, opt) { thisObj.attachAction(); } }
+         itemsList['attach'] = { "name": volume_action_attach, callback: function(key, opt) { thisObj._attachAction(); } }
       }
       // detach actions
       if ( selectedVolumes.length > 0 ) {
@@ -323,18 +378,18 @@
           }
         }
         if ( addDetach ) {
-          itemsList['detach'] = { "name": volume_action_detach, callback: function(key, opt) { thisObj.detachAction(false); } }
-          itemsList['force_detach'] = { "name": volume_action_force_detach, callback: function(key, opt) { thisObj.detachAction(true); } }
+          itemsList['detach'] = { "name": volume_action_detach, callback: function(key, opt) { thisObj._detachAction(false); } }
+          itemsList['force_detach'] = { "name": volume_action_force_detach, callback: function(key, opt) { thisObj._detachAction(true); } }
         }
       }
       if ( selectedVolumes.length  == 1 ) {
          if ( selectedVolumes[0] == 'in-use' || selectedVolumes[0] == 'available' ) {
-            itemsList['create_snapshot'] = { "name": volume_action_create_snapshot, callback: function(key, opt) { thisObj.createSnapshotAction(); } }
+            itemsList['create_snapshot'] = { "name": volume_action_create_snapshot, callback: function(key, opt) { thisObj._createSnapshotAction(); } }
         }
       }
       // add delete action
       if ( selectedVolumes.length > 0 ){
-         itemsList['delete'] = { "name": volume_action_delete, callback: function(key, opt) { thisObj.deleteAction(); } }
+         itemsList['delete'] = { "name": volume_action_delete, callback: function(key, opt) { thisObj._deleteAction(); } }
       }
       return itemsList;
     },
@@ -343,7 +398,7 @@
       return $(rowSelector).find('td:eq(1)').text();
     },
 
-    buildContextMenu : function(row) {
+    _buildContextMenu : function(row) {
      // var thisObj = this; ==> this causes the problem..why?
       var thisObj = $('html body').find(DOM_BINDING['main']).data("volume");
 
@@ -351,20 +406,20 @@
       switch (state) {
         case 'available':
           return {
-            "attach": { "name": volume_action_attach, callback: function(key, opt) { thisObj.attachAction(thisObj._getVolumeId(opt.selector)); } },
-            "create_snapshot": { "name": volume_action_create_snapshot, callback: function(key, opt) { thisObj.createSnapshotAction(thisObj._getVolumeId(opt.selector)); } },
-            "delete": { "name": volume_action_delete, callback: function(key, opt) { thisObj.deleteAction(thisObj._getVolumeId(opt.selector)); } }
+            "attach": { "name": volume_action_attach, callback: function(key, opt) { thisObj._attachAction(thisObj._getVolumeId(opt.selector)); } },
+            "create_snapshot": { "name": volume_action_create_snapshot, callback: function(key, opt) { thisObj._createSnapshotAction(thisObj._getVolumeId(opt.selector)); } },
+            "delete": { "name": volume_action_delete, callback: function(key, opt) { thisObj._deleteAction(thisObj._getVolumeId(opt.selector)); } }
           }
         case 'in-use':
           return {
-            "detach": { "name": volume_action_detach, callback: function(key, opt) { thisObj.detachAction($(opt.selector), false); } },
-            "force_detach": { "name": volume_action_force_detach, callback: function(key, opt) { thisObj.detachAction($(opt.selector), true); } },
-            "create_snapshot": { "name": volume_action_create_snapshot, callback: function(key, opt) { thisObj.createSnapshotAction(thisObj._getVolumeId(opt.selector)); } },
-            "delete": { "name": volume_action_delete, callback: function(key, opt) { thisObj.deleteAction(thisObj._getVolumeId(opt.selector)); } }
+            "detach": { "name": volume_action_detach, callback: function(key, opt) { thisObj._detachAction($(opt.selector), false); } },
+            "force_detach": { "name": volume_action_force_detach, callback: function(key, opt) { thisObj._detachAction($(opt.selector), true); } },
+            "create_snapshot": { "name": volume_action_create_snapshot, callback: function(key, opt) { thisObj._createSnapshotAction(thisObj._getVolumeId(opt.selector)); } },
+            "delete": { "name": volume_action_delete, callback: function(key, opt) { thisObj._deleteAction(thisObj._getVolumeId(opt.selector)); } }
           }
         default:
           return {
-            "delete": { "name": volume_action_delete, callback: function(key, opt) { thisObj.deleteAction(thisObj._getVolumeId(opt.selector)); } }
+            "delete": { "name": volume_action_delete, callback: function(key, opt) { thisObj._deleteAction(thisObj._getVolumeId(opt.selector)); } }
           }
       }
     },
@@ -392,15 +447,8 @@
       }
     },
 */
-    reDrawTable : function() {
+    _reDrawTable : function() {
       this.tableWrapper.eucatable('reDrawTable');
-    },
-
-    _handleRowClick : function(args) {
-      if ( this.tableWrapper.eucatable('countSelectedRows') == 0 )
-        this.tableWrapper.eucatable('deactivateMenu');
-      else
-        this.tableWrapper.eucatable('activateMenu');
     },
 
     _deleteListedVolumes : function () {
@@ -434,6 +482,30 @@
           })(volumeId)
         });
       }
+    },
+
+    _attachVolume : function (volumeId, instanceId, device) {
+      thisObj = this;
+      $.ajax({
+        type:"GET",
+        url:"/ec2?Action=AttachVolume&VolumeId=" + volumeId + "&InstanceId=" + instanceId + "&Device=" + device,
+        data:"_xsrf="+$.cookie('_xsrf'),
+        dataType:"json",
+        async:"true",
+        success:
+          function(data, textStatus, jqXHR){
+            if ( data.results ) {
+              notifySuccess('attach-volume', volume_attach_success + ' ' + volumeId);
+              thisObj.tableWrapper.eucatable('refreshTable');
+            } else {
+              notifyError('attach-volume', volume_attach_error);
+            }
+          },
+        error:
+          function(jqXHR, textStatus, errorThrown){
+            notifyError('attach-volume', volume_attach_error);
+          }
+      });
     },
 
     _createVolume : function (size, az, snapshotId) {
@@ -508,7 +580,7 @@
       this._super('close');
     },
 
-    deleteAction : function(volumeId) {
+    _deleteAction : function(volumeId) {
       volumesToDelete = [];
       if ( !volumeId ) {
         $tableWrapper = thisObj.tableWrapper;
@@ -531,11 +603,18 @@
       }
     },
 
-    attachAction : function() {
-      selectedRows = this.tableWrapper.eucatable('getAllSelectedRows');
+    _attachAction : function(volumeId) {
+      thisObj = this;
+      if ( !volumeId ) {
+        rows = thisObj.tableWrapper.eucatable('getAllSelectedRows', 1);
+        volumeId = rows[0];
+      }
+
+      thisObj.waitDialog.eucadialog('setOnOpen', function() {thisObj._initAttachDialog(volumeId);} ); 
+      thisObj.waitDialog.eucadialog('open');
     },
 
-    detachAction : function(row, force) {
+    _detachAction : function(row, force) {
       volumes = [];
       if ( !row ) {
         $tableWrapper = thisObj.tableWrapper;
@@ -566,8 +645,8 @@
       }
     },
 
-    createSnapshotAction : function() {
-      selectedRows = this.tableWrapper.eucatable('getAllSelectedRows');
+    _createSnapshotAction : function() {
+
     },
 
   });

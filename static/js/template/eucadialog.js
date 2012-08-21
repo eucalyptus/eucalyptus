@@ -29,7 +29,8 @@
        onOpen: null, // function(thisDialog) {}
     },
     help_flipped : false,
-    
+    onOpen : null,
+
     _init : function() {
       var thisObj = this;
       this.element.dialog({
@@ -67,12 +68,19 @@
              thisObj._setHelp(thisObj.element.parent());
 
              /* call onOpen function if passed */
-             if ( thisObj.options.onOpen && isFunction(thisObj.options.onOpen) )
-               thisObj.options.onOpen.call(this, thisObj); 
+             if ( thisObj.onOpen )
+               thisObj.onOpen.call(this, thisObj); 
          },
 
          buttons: thisObj._makeButtons(),
       });
+    },
+
+    setOnOpen : function(onOpenFunction) {
+      if ( isFunction(onOpenFunction))
+        this.onOpen = onOpenFunction;
+      else
+        throw('OnOpen must be a funciton');
     },
 
     _getButtonId : function(btn_id, btn_prop) {
