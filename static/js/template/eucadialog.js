@@ -173,7 +173,12 @@
         if( $button==null )
           $button = thisObj.element.parent().find('#'+button_id);
         if( e.which === RETURN_KEY_CODE || e.which === RETURN_MAC_KEY_CODE ) {
-           $button.trigger('click');
+           if ( isFunction(checkFunction) ) {
+             if ( checkFunction.call(this) )
+               $button.trigger('click');
+           } else {
+               $button.trigger('click');
+           }
         } else if ( e.which === 0 ) {
         } else if ( e.which === BACKSPACE_KEY_CODE && $(this).val().length == 1 ) {
           $button.prop("disabled", true).addClass("ui-state-disabled");

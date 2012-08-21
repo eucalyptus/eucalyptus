@@ -204,6 +204,7 @@
               var $snapshot = $add_dialog.find('#volume-add-snapshot-selector :selected');
               var isValid = true;
               $notification = $add_dialog.find('div.dialog-notifications');
+
               if ( size == parseInt(size) ) {
                 if ( $snapshot.val() != '' && parseInt($snapshot.attr('title')) > parseInt(size) ) {
                   isValid = false;
@@ -215,7 +216,7 @@
               }
               if ( az === '' ) {
                 isValid = false;
-                $notification.html($notification.html + "<br/>" + volume_dialog_size_error_msg);
+                $notification.html($notification.html() + "<br/>" + volume_dialog_az_error_msg);
               }
               if ( isValid ) {
                 thisObj._createVolume(size, az, $snapshot.val());
@@ -418,17 +419,17 @@
           (function(volumeId) {
             return function(data, textStatus, jqXHR){
               if ( data.results && data.results == true ) {
-                notifySuccess('delete volume', volume_delete_success + ': ' + volumeId);
+                notifySuccess('delete-volume', volume_delete_success + ': ' + volumeId);
                 thisObj.baseTable.eucatable('refreshTable');
               } else {
-                notifyError('delete volume', volume_delete_error + ': ' + volumeId); // TODO: error code
+                notifyError('delete-volume', volume_delete_error + ': ' + volumeId);
               }
            }
           })(volumeId),
           error:
           (function(volumeId) {
             return function(jqXHR, textStatus, errorThrown){
-              notifyError('delete volume', volume_delete_error + ': ' + volumeId); // TODO: error code?
+              notifyError('delete-volume', volume_delete_error + ': ' + volumeId);
             }
           })(volumeId)
         });
