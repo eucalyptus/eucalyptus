@@ -27,6 +27,7 @@
     detachDialog : null,
     forceDetachDialog : null,
     addDialog : null,
+    attachDialog : null,
     waitDialog : null,
     _init : function() {
       var thisObj = this;
@@ -77,7 +78,7 @@
         },
         menu_actions : function(){ return thisObj._buildActionsMenu()},
         context_menu : {build_callback : function(state) { return thisObj._buildContextMenu(state);}},
-        menu_click_create : function (args) { thisObj.waitDialog.eucadialog('open')},
+        menu_click_create : function (args) { thisObj.waitDialog.eucadialog('setOnOpen', function() {thisObj._initAddDialog();} ); thisObj.waitDialog.eucadialog('open')},
         row_click : function (args) { thisObj._handleRowClick(args); },
       //  td_hover_actions : { instance: [4, function (args) { thisObj.handleInstanceHover(args); }], snapshot: [5, function (args) { thisObj.handleSnapshotHover(args); }] }
         help_click : function(evt) {
@@ -186,7 +187,27 @@
            'cancel': { text: volume_dialog_cancel_btn, focus:true, click: function() { $wait_dialog.dialog("close"); } } 
          },
          help: {title: help_volume['dialog_volume_wait_title'], content: $wait_dialog_help},
-         onOpen: function(dialog) { thisObj._initAddDialog(); }
+       });
+
+      $tmpl = $('html body').find('.templates #volumeAttachDlgTmpl').clone();
+      var $rendered = $($tmpl.render($.extend($.i18n.map, help_volume)));
+      var $attach_dialog = $rendered.children().first();
+      var $attach_dialog_help = $rendered.children().last();
+      this.attachDialog = $attach_dialog.eucadialog({
+         id: 'volumes-attach',
+         title: volume_dialog_attach_title,
+         buttons: {
+           'attach': { text: volume_dialog_attach_btn, click: function() { 
+                volumeId = $attach_dialog.find('#volume-attach-volume-selector').val();
+                instanceId = $attach_dialog.find('#volume-attach-instance-selector').val()
+                device = $.trim($attach_dialog.find('#volume-attach-device-name').val());
+                thisObj._attachVolume(volumeId, instanceId, device);
+                $attach_dialog.dialog("close");
+              } 
+            },
+           'cancel': { text: volume_dialog_cancel_btn, focus:true, click: function() { $attach_dialog.dialog("close"); } }
+         },
+         help: {title: help_volume['dialog_volume_attach_title'], content: $attach_dialog_help},
        });
 
       var createButtonId = 'volumes-add-btn';
@@ -281,9 +302,9 @@
           dataType:"json",
           async:"false",
           success:
-           function(data, textStatus, jqXHR){
+            function(data, textStatus, jqXHR){
               $snapSelector = $('#volume-add-snapshot-selector').html('');
-              $snapSelector.append($('<option>').attr('value', '').text($.i18n.map['selection_none']));
+              $snapSelector.append($('<option>').attr('value', '').text($.i18n.map['volume_dialog_zone_select']));
               if ( data.results ) {
                 for( res in data.results) {
                   snapshot = data.results[res];
@@ -303,6 +324,41 @@
         });
       this.waitDialog.dialog("close");
       this.addDialog.dialog("open");
+    },
+
+    _initAttachDialog : function(volumeId) {
+      $.ajax({
+        type:"GET",
+        url:"/ec2?Action=DescribeInstances",
+        data:"_xsrf="+$.cookie('_xsrf'),
+        dataType:"json",
+        async:"false",
+        success:
+          function(data, textStatus, jqXHR){
+            $instanceSelector = $('#volume-attach-instance-selector').html('');
+            $instanceSelector.append($('<option>').attr('value', '').text($.i18n.map['volume_attach_select_instance']));
+            if ( data.results ) {
+              for( res in data.results) {
+                instance = data.results[res];
+                if ( instance.state === 'running' ) {
+                  $instanceSelector.append($('<option>').attr('value', instance.id).text(instance.id));
+                }
+              } 
+            } else {
+              notifyError('tbd', tbd);
+            }
+          },
+        error:
+          function(jqXHR, textStatus, errorThrown){
+            notifyError('tbd', tbd);
+          }
+      });
+      this.attachDialog.find('div.dialog-notifications').html('');
+      $volumeSelector = this.attachDialog.find('#volume-attach-volume-selector');
+      $volumeSelector.append($('<option>').attr('value', volumeId).text(volumeId));
+      $volumeSelector.attr('disabled', 'disabled');
+      this.waitDialog.dialog("close");
+      this.attachDialog.dialog("open");
     },
 
     _buildActionsMenu : function() {
@@ -436,6 +492,30 @@
       }
     },
 
+    _attachVolume : function (volumeId, instanceId, device) {
+      thisObj = this;
+      $.ajax({
+        type:"GET",
+        url:"/ec2?Action=AttachVolume&VolumeId=" + volumeId + "&InstanceId=" + instanceId + "&Device=" + device,
+        data:"_xsrf="+$.cookie('_xsrf'),
+        dataType:"json",
+        async:"true",
+        success:
+          function(data, textStatus, jqXHR){
+            if ( data.results ) {
+              notifySuccess('attach-volume', volume_attach_success + ' ' + volumeId);
+              thisObj.tableWrapper.eucatable('refreshTable');
+            } else {
+              notifyError('attach-volume', volume_attach_error);
+            }
+          },
+        error:
+          function(jqXHR, textStatus, errorThrown){
+            notifyError('attach-volume', volume_attach_error);
+          }
+      });
+    },
+
     _createVolume : function (size, az, snapshotId) {
       thisObj = this;
       sid = snapshotId != '' ? "&SnapshotId=" + snapshotId : '';
@@ -531,8 +611,15 @@
       }
     },
 
-    _attachAction : function() {
+    _attachAction : function(volumeId) {
+      thisObj = this;
+      if ( !volumeId ) {
+        rows = thisObj.tableWrapper.eucatable('getAllSelectedRows', 1);
+        volumeId = rows[0];
+      }
 
+      thisObj.waitDialog.eucadialog('setOnOpen', function() {thisObj._initAttachDialog(volumeId);} ); 
+      thisObj.waitDialog.eucadialog('open');
     },
 
     _detachAction : function(row, force) {

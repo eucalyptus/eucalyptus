@@ -488,7 +488,7 @@
           </div>
           <div id="volumes-add-dialog-help" class="dialog-help">
             <div class="dialog-help-content">
-              {{!: dialog_add_content}}
+              {{!: volume_dialog_add_content}}
             </div>
             <div class="help-revert-button">
               <a href="#"> {{!>revert_button}}</a>
@@ -497,6 +497,35 @@
         </div>
       </script>
 
+      <script id="volumeAttachDlgTmpl" type="text/x-jsrender">
+        <div id="volumes-attach-dialog-wrapper">
+          <div id="volumes-attach-dialog" class="delete-dialog">
+            <div class="dialog-inner-content">
+              <div class="dialog-field">
+                <span class="label">{{!: volume_dialog_attach_volume_label }}</span>
+                <select id="volume-attach-volume-selector"></select>
+              </div>
+              <div class="dialog-field">
+                <span class="label">{{!: volume_dialog_attach_instance_label }}</span>
+                <select id="volume-attach-instance-selector"></select>
+              </div>
+              <div class="dialog-field">
+                <span class="label">{{!: volume_dialog_attach_device_label }}</span>
+                <input type="text" id="volume-attach-device-name" class="required"/>
+              </div>
+              <div class="dialog-notifications"></div>
+            </div>
+          </div>
+          <div id="volumes-attach-dialog-help" class="dialog-help">
+            <div class="dialog-help-content">
+              {{!: volume_dialog_attach_content}}
+            </div>
+            <div class="help-revert-button">
+              <a href="#"> {{!>revert_button}}</a>
+            </div>
+          </div>
+        </div>
+      </script>
       <script id="volumeWaitDlgTmpl" type="text/x-jsrender">
         <div id="volumes-wait-dialog-wrapper">
           <div id="volumes-wait-dialog" class="delete-dialog">
