@@ -602,10 +602,6 @@
       }
     },
 
-    close: function() {
-      this._super('close');
-    },
-
     _deleteAction : function(volumeId) {
       var thisObj = this;
       volumesToDelete = [];
@@ -681,6 +677,11 @@
 
     },
 
+/**** Public Methods ****/
+    close: function() {
+      this._super('close');
+    },
+/**** End of Public Methods ****/
   });
-})(jQuery,
-   window.eucalyptus ? window.eucalyptus : window.eucalyptus = {});
+})
+(jQuery, window.eucalyptus ? window.eucalyptus : window.eucalyptus = {});

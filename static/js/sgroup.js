@@ -177,7 +177,7 @@
       return $(rowSelector).find('td:eq(1)').text();
     },
 
-    reDrawTable : function() {
+    _reDrawTable : function() {
       this.tableWrapper.eucatable('reDrawTable');
     },
 
@@ -238,10 +238,6 @@
       }
     },
 
-    close: function() {
-      this._super('close');
-    },
-
     _getTableWrapper : function() {
       return this.tableWrapper;
     },
@@ -276,8 +272,13 @@
         this.delDialog.dialog('open');
         */
       }
-    }
+    },
 
+/**** Public Methods ****/
+    close: function() {
+      this._super('close');
+    },
+/**** End of Public Methods ****/
   });
 })(jQuery,
    window.eucalyptus ? window.eucalyptus : window.eucalyptus = {});

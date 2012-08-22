@@ -225,10 +225,13 @@
         });
       }
     },
-    
+   
+/**** Public Methods ****/ 
     close: function() {
       this._super('close');
     },
+
+/**** End of Public Methods ****/
   });
 })(jQuery,
    window.eucalyptus ? window.eucalyptus : window.eucalyptus = {});

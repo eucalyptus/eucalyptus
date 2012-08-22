@@ -149,9 +149,6 @@
       tableWrapper.eucatable('reDrawTable');
     },
 
-    close: function() {
-      this._super('close');
-    },
 
     _deleteAction : function(rowsToDelete) {
       //TODO: add hide menu
@@ -190,7 +187,13 @@
            ;//TODO: how to notify errors?
         }
       });
-    }
+    },
+
+/**** Public Methods ****/
+    close: function() {
+      this._super('close');
+    },
+/**** End of Public Methods ****/
   });
 })(jQuery,
    window.eucalyptus ? window.eucalyptus : window.eucalyptus = {});

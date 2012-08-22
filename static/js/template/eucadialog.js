@@ -76,34 +76,10 @@
       });
     },
 
-    setOnOpen : function(onOpenFunction) {
-      if ( isFunction(onOpenFunction))
-        this.onOpen = onOpenFunction;
-      else
-        throw('OnOpen must be a funciton');
-    },
-
     _getButtonId : function(btn_id, btn_prop) {
        return btn_prop.domid !== undefined ? btn_prop.domid : 'btn-' + this.options.id + '-' + btn_id;
     },
 
-    open : function() {
-      this.element.dialog('open');      
-    },
-    
-    close : function() {
-      // this method should clean-up things
-      this.element.dialog('close');
-      this.element.find('input').each(function () { 
-        $(this).val(''); // clear all input fields TODO: what if some fields have initialized data?
-      });
-      if(this.help_flipped){
-        this.element.find('.dialog-inner-content').revertFlip();
-        $buttonPane.show();
-        $titleBar.find('span').text(thisObj.options.title);
-      }  
-    },
-    
     _create : function() {  
     },
 
@@ -167,6 +143,31 @@
       return btnArr; 
     },
 
+/**** Public Methods ****/
+    open : function() {
+      this.element.dialog('open');      
+    },
+    
+    close : function() {
+      // this method should clean-up things
+      this.element.dialog('close');
+      this.element.find('input').each(function () { 
+        $(this).val(''); // clear all input fields TODO: what if some fields have initialized data?
+      });
+      if(this.help_flipped){
+        this.element.find('.dialog-inner-content').revertFlip();
+        $buttonPane.show();
+        $titleBar.find('span').text(thisObj.options.title);
+      }  
+    },
+    
+    setOnOpen : function(onOpenFunction) {
+      if ( isFunction(onOpenFunction))
+        this.onOpen = onOpenFunction;
+      else
+        throw('OnOpen must be a funciton');
+    },
+    
     setSelectedResources : function (resources) {
       $span = this.element.find("span.resource-ids");
       $span.html('');
@@ -204,7 +205,8 @@
            }
         }
       });
-    }
+    },
+/**** End of Public Methods ****/
   });
 })(jQuery,
    window.eucalyptus ? window.eucalyptus : window.eucalyptus = {});
