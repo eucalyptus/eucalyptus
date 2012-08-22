@@ -49,6 +49,7 @@ public class FalseDataGenerator
 
 	private static final long VOLUME_SIZE   = 2;
 	private static final long SNAPSHOT_SIZE = 2;
+	private static final long BUCKET_SIZE   = 2;
 	private static final long OBJECT_SIZE   = 2;
 
 	private static final long INSTANCE_CUMULATIVE_DISK_USAGE_PER_PERIOD                 = 2;
@@ -170,7 +171,7 @@ public class FalseDataGenerator
 
 								volumeUuid = String.format(UUID_FORMAT, uniqueUserId, volumeUuidNum++);
 								ReportingVolumeEventStore.getInstance().insertCreateEvent(volumeUuid, ("vol-" + userNum + "-" + periodNum),
-										timeMs, user, cluster, availZone, VOLUME_SIZE);
+										timeMs, user, availZone, VOLUME_SIZE);
 
 								elasticIpUuid = String.format(UUID_FORMAT, uniqueUserId, elasticIpUuidNum++);
 								String ip = String.format("%d.%d.%d.%d",
@@ -186,20 +187,20 @@ public class FalseDataGenerator
 								String uuid = String.format(UUID_FORMAT, uniqueUserId, snapshotUuidNum++);
 								ReportingVolumeSnapshotEventStore.getInstance().insertCreateEvent(uuid,
 										("snap-" + userNum + "-" + periodNum),
-										volumeUuid, timeMs, user, SNAPSHOT_SIZE);
+										timeMs, user, SNAPSHOT_SIZE);
 							}
 							
 							/* Create a fake bucket if one should be created in this period. */
 							if (periodNum % NUM_PERIODS_PER_BUCKET == 0) {
 								bucketUuid = String.format(UUID_FORMAT, uniqueUserId, bucketUuidNum++);
-								ReportingS3BucketEventStore.getInstance().insertS3BucketCreateEvent(bucketUuid, user, availZone);
+								ReportingS3BucketEventStore.getInstance().insertS3BucketCreateEvent(bucketUuid, BUCKET_SIZE, user, timeMs);
 							}
 							
 							/* Create a fake object if one should be created in this period. */
 							if (periodNum % NUM_PERIODS_PER_OBJECT == 0) {
 								String uuid = String.format(UUID_FORMAT, uniqueUserId, objectUuidNum++);
 								ReportingS3ObjectEventStore.getInstance().insertS3ObjectCreateEvent(bucketUuid, uuid,
-										timeMs, user);
+										OBJECT_SIZE, timeMs, user);
 							}
 							
 								
@@ -229,18 +230,14 @@ public class FalseDataGenerator
 							/* Generate object usage in this period for every object that was created before */
 							for (long i=OBJECT_UUID_START; i<objectUuidNum-2; i++) {
 								String uuid = String.format(UUID_FORMAT, uniqueUserId, i);
-								long bucketNum = ((long)i)/(NUM_PERIODS_PER_OBJECT/NUM_PERIODS_PER_BUCKET);
+								long bucketNum = i/(NUM_PERIODS_PER_OBJECT/NUM_PERIODS_PER_BUCKET);
 								bucketUuid = String.format(UUID_FORMAT, uniqueUserId, bucketNum);
 								ReportingS3ObjectEventStore.getInstance().insertS3ObjectUsageEvent(
-										bucketUuid,	uuid, timeMs,
-										OBJECT_CUMULATIVE_READ_PER_PERIOD,
-										OBJECT_CUMULATIVE_WRITTEN_PER_PERIOD,
-										OBJECT_CUMULATIVE_GETS_PER_PERIOD,
-										OBJECT_CUMULATIVE_PUTS_PER_PERIOD);
+										bucketUuid,	uuid, OBJECT_SIZE, timeMs, user );
 							}
 
 							/* Attach Volumes and Elastic IPs to Instances */
-							ReportingVolumeEventStore.getInstance().insertAttachEvent(volumeUuid, instanceUuid, timeMs);
+							ReportingVolumeEventStore.getInstance().insertAttachEvent(volumeUuid, instanceUuid, VOLUME_SIZE, timeMs);
 							ReportingElasticIpEventStore.getInstance().insertAttachEvent(elasticIpUuid, instanceUuid, timeMs);
 							attachments.add(new Attachment(instanceUuid, volumeUuid, elasticIpUuid));
 
@@ -248,7 +245,7 @@ public class FalseDataGenerator
 							if (attachments.size() >= ATTACH_PERIODS_DURATION) {
 								Attachment attachment = attachments.remove(0);
 								ReportingVolumeEventStore.getInstance().insertDetachEvent(attachment.getVolumeUuid(),
-										attachment.getInstanceUuid(), timeMs);
+										attachment.getInstanceUuid(), VOLUME_SIZE, timeMs);
 								ReportingElasticIpEventStore.getInstance().insertDetachEvent(attachment.getElasticIpUuid(),
 										attachment.getInstanceUuid(), timeMs);
 							}
