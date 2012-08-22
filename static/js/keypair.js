@@ -60,13 +60,9 @@
           resource_found : keypair_found,
         },
         menu_actions : function(args){ 
-          var itemsList = { 'delete': {"name": table_menu_delete_action, callback: function(key, opt) { 
-            keysToDelete = thisObj.tableWrapper.eucatable('getValueForSelectedRows', 1);
-            if ( keysToDelete.length > 0 ) {
-              thisObj.delDialog.eucadialog('setSelectedResources', keysToDelete);
-              thisObj.delDialog.dialog('open');
-            }
-          }}}
+          var itemsList = { 
+            'delete': {"name": table_menu_delete_action, callback: function(key, opt) { thisObj._deleteAction(); } }
+          };
           return itemsList;
         },
         menu_click_create : function (args) { thisObj.addDialog.eucadialog('open') },
@@ -142,6 +138,7 @@
     },
 
     _deleteAction : function(keyId) {
+      thisObj = this;
       keysToDelete = [];
       if ( !keyId ) {
         $tableWrapper = thisObj.tableWrapper;
@@ -151,16 +148,10 @@
       }
 
       if ( keysToDelete.length > 0 ) {
-        // show delete dialog box
-        $deleteNames = this.delDialog.find("span.resource-ids")
-        $deleteNames.html('');
-        $keysToDelete = this.delDialog.find("#keys-to-delete");
+        thisObj.delDialog.eucadialog('setSelectedResources', keysToDelete);
+        $keysToDelete = thisObj.delDialog.find("#keys-to-delete");
         $keysToDelete.html(keysToDelete.join(ID_SEPARATOR));
-        for ( i = 0; i<keysToDelete.length; i++ ) {
-          t = escapeHTML(keysToDelete[i]);
-          $deleteNames.append(t).append("<br/>");
-        }
-        this.delDialog.dialog('open');
+        thisObj.delDialog.dialog('open');
       }
     },
 

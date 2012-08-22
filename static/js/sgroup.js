@@ -243,17 +243,14 @@
     },
 
     _deleteAction : function() {
+      thisObj = this;
       var $tableWrapper = this._getTableWrapper();
       rowsToDelete = $tableWrapper.eucatable('getAllSelectedRows');
       if ( rowsToDelete.length > 0 ) {
-        // show delete dialog box
-        $deleteNames = this.delDialog.find("span.resource-ids")
-        $deleteNames.html('');
-        for ( i = 0; i<rowsToDelete.length; i++ ) {
-          t = escapeHTML(rowsToDelete[i]);
-          $deleteNames.append(t).append("<br/>");
-        }
-        this.delDialog.dialog('open');
+        thisObj.delDialog.eucadialog('setSelectedResources', rowsToDelete);
+        $groupsToDelete = thisObj.delDialog.find("#keys-to-delete");
+        $groupsToDelete.html(rowsToDelete.join(ID_SEPARATOR));
+        thisObj.delDialog.dialog('open');
       }
     },
 

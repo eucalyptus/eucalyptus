@@ -240,6 +240,7 @@
          help: {title: help_volume['dialog_volume_wait_title'], content: $wait_dialog_help},
        });
 
+      var attachButtonId = 'volume-attach-btn';
       $tmpl = $('html body').find('.templates #volumeAttachDlgTmpl').clone();
       var $rendered = $($tmpl.render($.extend($.i18n.map, help_volume)));
       var $attach_dialog = $rendered.children().first();
@@ -248,7 +249,7 @@
          id: 'volumes-attach',
          title: volume_dialog_attach_title,
          buttons: {
-           'attach': { text: volume_dialog_attach_btn, click: function() { 
+           'attach': { domid: attachButtonId, text: volume_dialog_attach_btn, disabled: true, click: function() { 
                 volumeId = $attach_dialog.find('#volume-attach-volume-selector').val();
                 instanceId = $attach_dialog.find('#volume-attach-instance-selector').val()
                 device = $.trim($attach_dialog.find('#volume-attach-device-name').val());
@@ -259,6 +260,19 @@
            'cancel': { text: volume_dialog_cancel_btn, focus:true, click: function() { $attach_dialog.dialog("close"); } }
          },
          help: {title: help_volume['dialog_volume_attach_title'], content: $attach_dialog_help},
+       });
+      this.attachDialog.eucadialog('onKeypress', 'volume-attach-device-name', attachButtonId, function () {
+         var inst = thisObj.attachDialog.find('#volume-attach-instance-selector').val();
+         return inst != '';
+        });
+      this.attachDialog.find('#volume-attach-instance-selector').change( function () {
+        instanceId = thisObj.attachDialog.find('#volume-attach-instance-selector').val()
+        device = thisObj.attachDialog.find('#volume-attach-device-name').val();
+        $button = thisObj.attachDialog.parent().find('#' + attachButtonId);
+        if ( device.length > 0 && instanceId !== '')
+          $button.prop("disabled", false).removeClass("ui-state-disabled");
+        else
+          $button.prop("disabled", false).addClass("ui-state-disabled");
        });
 
       var createButtonId = 'volumes-add-btn';
@@ -406,6 +420,7 @@
       });
       this.attachDialog.find('div.dialog-notifications').html('');
       $volumeSelector = this.attachDialog.find('#volume-attach-volume-selector');
+      $volumeSelector.html('');
       $volumeSelector.append($('<option>').attr('value', volumeId).text(volumeId));
       $volumeSelector.attr('disabled', 'disabled');
       this.waitDialog.dialog("close");
@@ -575,7 +590,7 @@
           success:
           (function(volumeId) {
             return function(data, textStatus, jqXHR){
-              if ( data.results && data.results == true ) {
+              if ( data.results && data.results == 'detaching' ) {
                 if (force)
                   notifySuccess('force-detach-volume', volume_force_detach_success + ' ' + volumeId);
                 else
@@ -612,16 +627,10 @@
       }
 
       if ( volumesToDelete.length > 0 ) {
-        // show delete dialog box
-        $deleteNames = this.delDialog.find("span.resource-ids")
-        $deleteNames.html('');
-        $volumesToDelete = this.delDialog.find("#volumes-to-delete");
+        thisObj.delDialog.eucadialog('setSelectedResources', volumesToDelete);
+        $volumesToDelete = thisObj.delDialog.find("#volumes-to-delete");
         $volumesToDelete.html(volumesToDelete.join(ID_SEPARATOR));
-        for ( i = 0; i<volumesToDelete.length; i++ ) {
-          t = escapeHTML(volumesToDelete[i]);
-          $deleteNames.append(t).append("<br/>");
-        }
-        this.delDialog.dialog('open');
+        thisObj.delDialog.dialog('open');
       }
     },
 
@@ -633,12 +642,15 @@
 
     _attachAction : function(volumeId) {
       thisObj = this;
+      var volumeToAttach = '';
       if ( !volumeId ) {
         rows = thisObj.tableWrapper.eucatable('getAllSelectedRows', 1);
-        volumeId = rows[0];
+        volumeToAttach = rows[0];
+      } else {
+        volumeToAttach = volumeId;
       }
 
-      thisObj.waitDialog.eucadialog('setOnOpen', function() {thisObj._initAttachDialog(volumeId);} ); 
+      thisObj.waitDialog.eucadialog('setOnOpen', function() {thisObj._initAttachDialog(volumeToAttach);} ); 
       thisObj.waitDialog.eucadialog('open');
     },
 
