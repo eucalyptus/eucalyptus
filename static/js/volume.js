@@ -355,7 +355,7 @@
           success:
             function(data, textStatus, jqXHR){
               $snapSelector = $('#volume-add-snapshot-selector').html('');
-              $snapSelector.append($('<option>').attr('value', '').text($.i18n.map['volume_dialog_zone_select']));
+              $snapSelector.append($('<option>').attr('value', '').text($.i18n.map['selection_none']));
               if ( data.results ) {
                 for( res in data.results) {
                   snapshot = data.results[res];

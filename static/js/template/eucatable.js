@@ -66,7 +66,7 @@
     },
 
     _drawCallback : function(oSettings) {
-      thisObj = this;
+      var thisObj = this;
       $('#table_' + this.options.id + '_count').html(oSettings.fnRecordsDisplay());
       this.element.find('table tbody').find('tr').each(function(index, tr) {
         // add custom td handlers
