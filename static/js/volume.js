@@ -260,6 +260,11 @@
            'cancel': { text: volume_dialog_cancel_btn, focus:true, click: function() { $attach_dialog.dialog("close"); } }
          },
          help: {title: help_volume['dialog_volume_attach_title'], content: $attach_dialog_help},
+         on_open: {spin: true, callback: function(args) {
+           var dfd = $.Deferred();
+           thisObj._initAttachDialog(dfd) ; // pulls instance info from server
+           return dfd.promise()
+         }},
        });
       this.attachDialog.eucadialog('onKeypress', 'volume-attach-device-name', attachButtonId, function () {
          var inst = thisObj.attachDialog.find('#volume-attach-instance-selector').val();
@@ -314,7 +319,7 @@
          help: {title: help_volume['dialog_add_title'], content: $add_help},
          on_open: {spin: true, callback: function(args) {
            var dfd = $.Deferred();
-           thisObj._initAddDialog(dfd) ;
+           thisObj._initAddDialog(dfd) ; // pulls az and snapshot info from the server
            return dfd.promise()
          }},
        });
@@ -398,7 +403,7 @@
       }, function (output) { dfd.resolve(); });
     },
 
-    _initAttachDialog : function(volumeId) { 
+    _initAttachDialog : function(dfd) {  // should resolve dfd object
       $.ajax({
         type:"GET",
         url:"/ec2?Action=DescribeInstances",
@@ -417,21 +422,16 @@
                 }
               } 
             } else {
-              notifyError('tbd', tbd);
+              notifyError('describe-instances', 'failed to load instances'); //TODO : this is the right notification method?
             }
+            dfd.resolve();
           },
         error:
           function(jqXHR, textStatus, errorThrown){
-            notifyError('tbd', tbd);
+            notifyError('describe-instances', 'failed to load instances'); //TODO : this is the right notification method?
+            dfd.resolve();
           }
-      });
-      this.attachDialog.find('div.dialog-notifications').html('');
-      $volumeSelector = this.attachDialog.find('#volume-attach-volume-selector');
-      $volumeSelector.html('');
-      $volumeSelector.append($('<option>').attr('value', volumeId).text(volumeId));
-      $volumeSelector.attr('disabled', 'disabled');
-      this.waitDialog.dialog("close");
-      this.attachDialog.dialog("open");
+      })
     },
 
     _getVolumeId : function(rowSelector) {
@@ -620,9 +620,12 @@
       } else {
         volumeToAttach = volumeId;
       }
-
-      thisObj.waitDialog.eucadialog('setOnOpen', function() {thisObj._initAttachDialog(volumeToAttach);} ); 
-      thisObj.waitDialog.eucadialog('open');
+      this.attachDialog.find('div.dialog-notifications').html('');
+      $volumeSelector = this.attachDialog.find('#volume-attach-volume-selector');
+      $volumeSelector.html('');
+      $volumeSelector.append($('<option>').attr('value', volumeId).text(volumeId));
+      $volumeSelector.attr('disabled', 'disabled');
+      this.attachDialog.eucadialog('open');
     },
 
     _detachAction : function(row, force) {
