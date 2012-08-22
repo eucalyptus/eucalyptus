@@ -340,14 +340,16 @@
               {{!: sgroup_dialog_add_rules }}
               <p>
               <span class="field">{{!>sgroup_dialog_add_protocol}}</span>
-                  <select name="sgroup-template">
-                    <option value-"none">Select protocol</option>
+                  <select id="sgroup-template">
+                    <option value="none">Select protocol</option>
+                    <optgroup label="">
                     <option>SSH (TCP port 22, for terminal access)</option>
                     <option>RDP (TCP port 3389, for Windows instances)</option>
                     <option>HTTP (TCP port 80, for web servers)</option>
                     <option>HTTPS (TCP port 443, for web servers)</option>
                     <option>MS SQL (TCP port 1433)</option>
                     <option>MySQL (TCP port 3306)</option>
+                    </optgroup>
                     <optgroup label="----------------">
                     <option>POP3 (TCP port 110)</option>
                     <option>POP3S (TCP port 995)</option>
@@ -362,11 +364,11 @@
                     </optgroup>
                   </select><br/>
               <div id="morerools" style='display: none;'>
-              <span class="field">{{!>sgroup_dialog_add_ports}}</span><input type="text" id="sgroup-ports" class="required"/><div class="dialog-notifications"></div>
-              <span class="field">{{!>sgroup_dialog_add_allow}}</span>
-              <input type="radio" name="allow-group" id="sgroup-ports" value="ip"/>{{!>sgroup_dialog_add_allow_ip}}<input type="text" id="allow-ip"/>
-              <input type="radio" name="allow-group" id="sgroup-ports" value="group"/>{{!>sgroup_dialog_add_allow_group}}<br/><input type="text" id="allow-ip"/>
-              <input type="radio" name="allow-group" id="sgroup-ports" value="instances"/>{{!>sgroup_dialog_add_allow_instances}}<br/>
+                <span class="field">{{!>sgroup_dialog_add_ports}}</span><input type="text" id="sgroup-ports" class="required"/><div class="dialog-notifications"></div>
+                <span class="field">{{!>sgroup_dialog_add_allow}}</span>
+                <input type="radio" name="allow-group" id="sgroup-allow-ip" value="ip" checked="yes"/>{{!>sgroup_dialog_add_allow_ip}}<input type="text" id="allow-ip"/><a href="#" id='ip-check'>my ip<a><br/>
+                <input type="radio" name="allow-group" id="sgroup-allow-group" value="group"/>{{!>sgroup_dialog_add_allow_group}}<br/><input type="text" id="allow-group"/><br/>
+                <input type="radio" name="allow-group" id="sgroup-allow-instances" value="instances"/>{{!>sgroup_dialog_add_allow_instances}}<br/>
               </div>
               </p>
           </div>

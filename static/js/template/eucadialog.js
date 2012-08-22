@@ -175,6 +175,18 @@
       });
     },
 
+    onChange : function(evt_src_id, button_id, checkFunction) {
+      var thisObj = this;
+      evt_src_id = evt_src_id.replace('#','');
+      var $evt_src = this.element.find('#'+evt_src_id);
+
+      $evt_src.change( function(e){
+         if ( isFunction(checkFunction) ) {
+           checkFunction.call(this);
+         }
+      });
+    },
+
     onKeypress : function(evt_src_id, button_id, checkFunction) {
       var thisObj = this;
       evt_src_id = evt_src_id.replace('#','');
