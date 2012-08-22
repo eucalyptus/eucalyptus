@@ -24,6 +24,7 @@
     tableWrapper : null,
     delDialog : null,
     emiToManifest : {},
+    emiToPlatform : {},
     // TODO: is _init() the right method to instantiate everything? 
     _init : function() {
       var thisObj = this;
@@ -33,7 +34,7 @@
       var $instHelp = $wrapper.children().last();
       this.element.add($instTable);
       $.when(
-        thisObj._getManifest()
+        thisObj._getEmi()
       ).done(function(out){
           thisObj.tableWrapper = $instTable.eucatable({
           id : 'instances', // user of this widget should customize these options,
@@ -50,7 +51,14 @@
                 "fnRender": function(oObj) { return '<input type="checkbox"/>' },
                 "sWidth": "20px",
               },
-              { "mDataProp": "platform" },
+              { // platform
+                "fnRender" : function(oObj) { 
+                   if (thisObj.emiToPlatform[oObj.aData.image_id])
+                     return thisObj.emiToPlatform[oObj.aData.image_id];
+                   else
+                     return "linux";
+                 }
+              },
               { "mDataProp": "id" },
               { "mDataProp": "state" },
               { "mDataProp": "image_id" }, // TODO: this should be mapped to manifest 
@@ -160,7 +168,7 @@
       }
     },
  
-    _getManifest : function() {
+    _getEmi : function() {
       var thisObj = this;
       return $.ajax({
         type:"GET",
@@ -172,6 +180,7 @@
           if (data.results) {
             $.each(data.results, function(idx, img){
                thisObj.emiToManifest[img['name']] = img['location'];
+               thisObj.emiToPlatform[img['name']] = img['platform'];
             });
             } else {
                   ;//TODO: how to notify errors?
