@@ -67,7 +67,6 @@
 
     _drawCallback : function(oSettings) {
       thisObj = this;
-
       $('#table_' + this.options.id + '_count').html(oSettings.fnRecordsDisplay());
       this.element.find('table tbody').find('tr').each(function(index, tr) {
         // add custom td handlers
@@ -88,7 +87,6 @@
         };
         // add generic row handler
         $currentRow.click( function (e) {
-          //alert(thisObj.element.html());
           // checked/uncheck on checkbox
           $rowCheckbox = $(e.target).parents('tr').find(':input[type="checkbox"]');
           $rowCheckbox.attr('checked', !$rowCheckbox.is(':checked'));
@@ -103,8 +101,7 @@
           thisObj._trigger('row_click', e);
         });
 
-        if (thisObj.options.context_menu) {
-          contextMenuParams = thisObj.options.context_menu;
+        if (thisObj.options.context_menu_actions) {
           rID = 'ri-'+S4()+S4();
           $currentRow.attr('id', rID);
           // context menu
@@ -126,7 +123,7 @@
                   break;
                 }
               };
-              var itemsList = contextMenuParams.build_callback( 
+              var itemsList = thisObj.options.context_menu_actions( 
                 thisObj.table.fnGetData(inx) // entire row is given to callback
               );
               return {
@@ -262,12 +259,13 @@
       var txt_action = this.options.text.action ? this.options.text.action : table_menu_main_action;
       $menuDiv.append($('<span>').attr('id','more-actions-'+this.options.id).
                       addClass("inactive-menu").text(txt_action));
-      var actions = thisObj.options.menu_actions;
+
+      //var itemsList = thisObj.options.menu_actions();
       $.contextMenu({
             selector: '#more-actions-'+this.options.id,
             trigger: "left",
             build: function(trigger, e) {
-              var itemsList = actions.call();
+                var itemsList = thisObj.options.menu_actions();
               return {
                 items: itemsList,
               };
@@ -292,14 +290,14 @@
             if ( cb != null ) cb.checked = true;
           }
          // activate action menu
-          thisObj.activateMenu();
+          thisObj._activateMenu();
         } else {
           for ( i = 0; i<rows.length; i++ ) {
             cb = rows[i].firstChild.firstChild;
             if ( cb != null ) cb.checked = false;
           }
           // deactivate action menu
-          thisObj.deactivateMenu();
+          thisObj._deactivateMenu();
         }
       });
       //TODO: add hover to select all

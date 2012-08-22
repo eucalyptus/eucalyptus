@@ -22,6 +22,7 @@
   $.widget('eucalyptus.keypair', $.eucalyptus.eucawidget, {
     options : { },
     tableWrapper : null,
+    baseTable : null,
     delDialog : null,
     addDialog : null,
     // TODO: is _init() the right method to instantiate everything? 
@@ -32,7 +33,7 @@
       var $keyTable = $wrapper.children().first();
       var $keyHelp = $wrapper.children().last();
       this.element.add($keyTable);
-
+      this.baseTable = $keyTable;
       this.tableWrapper = $keyTable.eucatable({
         id : 'keys', // user of this widget should customize these options,
         dt_arg : {
@@ -58,9 +59,22 @@
           create_resource : keypair_create,
           resource_found : keypair_found,
         },
-        menu_actions : function(args){ return thisObj._buildActionsMenu(args); },
+        menu_actions : function(args){ 
+          var itemsList = { 'delete': {"name": table_menu_delete_action, callback: function(key, opt) { 
+            keysToDelete = thisObj.tableWrapper.eucatable('getValueForSelectedRows', 1);
+            if ( keysToDelete.length > 0 ) {
+              thisObj.delDialog.eucadialog('setSelectedResources', keysToDelete);
+              thisObj.delDialog.dialog('open');
+            }
+          }}}
+          return itemsList;
+        },
         menu_click_create : function (args) { thisObj.addDialog.eucadialog('open') },
-        context_menu : {build_callback : function(state) { return thisObj._buildContextMenu(state); }},
+        context_menu_actions : function(state) { 
+          return {
+            "delete": { "name": table_menu_delete_action, callback: function(key, opt) { thisObj._deleteAction(thisObj._getKeyId(opt.selector)); } }
+          }
+        },
         help_click : function(evt) { 
           var $helpHeader = $('<div>').addClass('euca-table-header').append(
                               $('<span>').text(help_keypair['landing_title']).append(
@@ -125,13 +139,6 @@
 
     _getKeyId : function(rowSelector) {
       return $(rowSelector).find('td:eq(1)').text();
-    },
-
-    _buildContextMenu : function() {
-      thisObj = this;
-      return {
-        "delete": { "name": table_menu_delete_action, callback: function(key, opt) { thisObj._deleteAction(thisObj._getKeyId(opt.selector)); } }
-      }
     },
 
     _deleteAction : function(keyId) {
@@ -219,18 +226,6 @@
       }
     },
     
-    _buildActionsMenu : function() {
-      thisObj = this;
-      var itemsList = { 'delete': {"name": table_menu_delete_action, callback: function(key, opt) { 
-        keysToDelete = thisObj.tableWrapper.eucatable('getValueForSelectedRows', 1);
-        if ( keysToDelete.length > 0 ) {
-          thisObj.delDialog.eucadialog('setSelectedResources', keysToDelete);
-          thisObj.delDialog.dialog('open');
-        }
-      }}}
-      return itemsList;
-    },
-
     close: function() {
       this._super('close');
     },
