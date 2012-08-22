@@ -29,7 +29,7 @@ public class ReportingVolumeSnapshotEventStore extends EventStoreSupport
     return instance;
   }
 
-  private ReportingVolumeSnapshotEventStore( ) {
+  protected ReportingVolumeSnapshotEventStore( ) {
   }
 
   public void insertCreateEvent( final String uuid,

@@ -52,7 +52,7 @@ public class ReportingVolumeDetachEvent
 		return instanceUuid;
 	}
 
-	public Long sizeGB() 
+	public Long getSizeGB()
 	{
 	    	return sizeGB;
 	}

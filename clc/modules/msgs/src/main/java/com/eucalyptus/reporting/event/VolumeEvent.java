@@ -50,12 +50,12 @@ public class VolumeEvent implements Event {
   }
 
   public static InstanceEventActionInfo<VolumeAction> forVolumeAttach( final String instanceUuid,
-                                                    final String instanceId ) {
+                                                                       final String instanceId ) {
     return new InstanceEventActionInfo<VolumeAction>( VolumeAction.VOLUMEATTACH, instanceUuid, instanceId );
   }
 
   public static InstanceEventActionInfo<VolumeAction> forVolumeDetach( final String instanceUuid,
-                                                    final String instanceId ) {
+                                                                       final String instanceId ) {
     return new InstanceEventActionInfo<VolumeAction>( VolumeAction.VOLUMEDETACH, instanceUuid, instanceId );
   }
 

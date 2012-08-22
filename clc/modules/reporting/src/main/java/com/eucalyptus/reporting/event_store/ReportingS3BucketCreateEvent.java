@@ -38,8 +38,8 @@ public class ReportingS3BucketCreateEvent
 	protected Long timestampMs;
 	@Column(name="user_id", nullable=false)
 	protected String userId;
-        @Column(name="bucket_size", nullable=false)
-        protected Long bucketSize;
+  @Column(name="bucket_size", nullable=false)
+  protected Long bucketSize;
         
 	/**
  	 * <p>Do not instantiate this class directly; use the ReportingS3BucketCrud class.
