@@ -64,8 +64,18 @@
           create_resource : sgroup_create,
           resource_found : sgroup_found,
         },
-        menu_actions : function(){ return thisObj._buildActionsMenu()},
-        context_menu : {build_callback : function(state) { return thisObj.buildContextMenu(state);}},
+        menu_actions : function(){
+          itemsList = {};
+          itemsList['edit'] = { "name": sgroup_action_edit, callback: function(key, opt) { thisObj._editAction(); } }
+          itemsList['delete'] = { "name": sgroup_action_delete, callback: function(key, opt) { thisObj._deleteAction(); } }
+          return itemsList;
+        },
+        context_menu : function(state) { 
+          return {
+          "edit": { "name": sgroup_action_edit, callback: function(key, opt) { thisObj._editAction(thisObj._getGroupName(opt.selector)); } },
+          "delete": { "name": sgroup_action_delete, callback: function(key, opt) { thisObj._deleteAction(thisObj._getGroupName(opt.selector)); } },
+          };
+        },
         menu_click_create : function (args) { thisObj.addDialog.eucadialog('open')},
         help_click : function(evt) {
           var $helpHeader = $('<div>').addClass('euca-table-header').append(
@@ -168,15 +178,6 @@
       return $(rowSelector).find('td:eq(1)').text();
     },
 
-    buildContextMenu : function(row) {
-     // var thisObj = this; ==> this causes the problem..why?
-      var thisObj = $('html body').find(DOM_BINDING['main']).data("sgroup");
-      return {
-          "edit": { "name": sgroup_action_edit, callback: function(key, opt) { thisObj.editAction(thisObj._getGroupName(opt.selector)); } },
-          "delete": { "name": sgroup_action_delete, callback: function(key, opt) { thisObj.deleteAction(thisObj._getGroupName(opt.selector)); } },
-          };
-    },
-
     reDrawTable : function() {
       this.tableWrapper.eucatable('reDrawTable');
     },
@@ -246,18 +247,8 @@
       return this.tableWrapper;
     },
 
-    _buildActionsMenu : function() {
-      thisObj = this;
-      itemsList = {};
-      // add edit action
-      itemsList['edit'] = { "name": sgroup_action_edit, callback: function(key, opt) { thisObj.editAction(); } }
-      // add delete action
-      itemsList['delete'] = { "name": sgroup_action_delete, callback: function(key, opt) { thisObj.deleteAction(); } }
-      return itemsList;
-    },
-
-    deleteAction : function() {
-      $tableWrapper = this._getTableWrapper();
+    _deleteAction : function() {
+      var $tableWrapper = this._getTableWrapper();
       rowsToDelete = $tableWrapper.eucatable('getAllSelectedRows');
       if ( rowsToDelete.length > 0 ) {
         // show delete dialog box
@@ -271,7 +262,7 @@
       }
     },
 
-    editAction : function(rowsToEdit) {
+    _editAction : function(rowsToEdit) {
       //TODO: add hide menu
 
       if ( rowsToEdit.length > 0 ) {

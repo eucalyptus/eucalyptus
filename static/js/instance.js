@@ -24,6 +24,7 @@
     tableWrapper : null,
     delDialog : null,
     emiToManifest : {},
+    emiToPlatform : {},
     // TODO: is _init() the right method to instantiate everything? 
     _init : function() {
       var thisObj = this;
@@ -33,7 +34,7 @@
       var $instHelp = $wrapper.children().last();
       this.element.add($instTable);
       $.when(
-        thisObj.getManifest()
+        thisObj._getEmi()
       ).done(function(out){
           thisObj.tableWrapper = $instTable.eucatable({
           id : 'instances', // user of this widget should customize these options,
@@ -50,7 +51,14 @@
                 "fnRender": function(oObj) { return '<input type="checkbox"/>' },
                 "sWidth": "20px",
               },
-              { "mDataProp": "platform" },
+              { // platform
+                "fnRender" : function(oObj) { 
+                   if (thisObj.emiToPlatform[oObj.aData.image_id])
+                     return thisObj.emiToPlatform[oObj.aData.image_id];
+                   else
+                     return "linux";
+                 }
+              },
               { "mDataProp": "id" },
               { "mDataProp": "state" },
               { "mDataProp": "image_id" }, // TODO: this should be mapped to manifest 
@@ -68,7 +76,7 @@
             create_resource : instance_create,
             resource_found : instance_found,
           },
-          menu_actions : { delete: [table_menu_delete_action, function (args) { thisObj.deleteAction(args) } ] },
+          menu_actions : function(args){ return { delete: {name:table_menu_delete_action, callback: function (args) { thisObj._deleteAction(args) }}}},
           help_click : function(evt) {
             // TODO: make this a reusable operation
             var $helpHeader = $('<div>').addClass('euca-table-header').append(
@@ -88,22 +96,22 @@
           },
         }) //end of eucatable
 
-      thisObj.tableWrapper.appendTo(thisObj.element);
+        thisObj.tableWrapper.appendTo(thisObj.element);
 
       //add filter to the table TODO: make templates
-      $tableFilter = $('div.table-instance-filter');
-      $tableFilter.addClass('euca-table-filter');
-      $tableFilter.append(
-        $('<span>').addClass("filter-label").html(table_filter_label),
-        $('<select>').attr('id', 'instances-selector'));
+        $tableFilter = $('div.table-instance-filter');
+        $tableFilter.addClass('euca-table-filter');
+        $tableFilter.append(
+          $('<span>').addClass("filter-label").html(table_filter_label),
+          $('<select>').attr('id', 'instances-selector'));
 
-      filterOptions = ['linux', 'windows'];
-      $sel = $tableFilter.find("#instances-selector");
-      for (o in filterOptions)
-        $sel.append($('<option>').val(filterOptions[o]).text($.i18n.map['instance_selecter_' + filterOptions[o]]));
+        filterOptions = ['linux', 'windows'];
+        $sel = $tableFilter.find("#instances-selector");
+        for (o in filterOptions)
+          $sel.append($('<option>').val(filterOptions[o]).text($.i18n.map['instance_selecter_' + filterOptions[o]]));
 
-      $.fn.dataTableExt.afnFiltering.push(
-	function( oSettings, aData, iDataIndex ) {
+        $.fn.dataTableExt.afnFiltering.push(
+  	  function( oSettings, aData, iDataIndex ) {
           // first check if this is called on a volumes table
           if (oSettings.sInstance != 'instances')
             return true;
@@ -117,44 +125,8 @@
               break;
           }
           return true;
-        }
-      );
-
-
+        });
       }); // end of done()
-/*
-      thisObj.tableWrapper.appendTo(this.element);
-
-      //add filter to the table TODO: make templates
-      $tableFilter = $('div.table-instance-filter');
-      $tableFilter.addClass('euca-table-filter');
-      $tableFilter.append(
-        $('<span>').addClass("filter-label").html(table_filter_label),
-        $('<select>').attr('id', 'instances-selector'));
-
-      filterOptions = ['linux', 'windows'];
-      $sel = $tableFilter.find("#instances-selector");
-      for (o in filterOptions)
-        $sel.append($('<option>').val(filterOptions[o]).text($.i18n.map['instance_selecter_' + filterOptions[o]]));
-
-      $.fn.dataTableExt.afnFiltering.push(
-	function( oSettings, aData, iDataIndex ) {
-          // first check if this is called on a volumes table
-          if (oSettings.sInstance != 'instances')
-            return true;
-          selectorValue = $("#instances-selector").val();
-          switch (selectorValue) {
-            case 'linux':
-              //return attachedStates[aData[8]] == 1;
-              break;
-            case 'windows':
-              //return detachedStates[aData[8]] == 1;
-              break;
-          }
-          return true;
-        }
-      );
-*/
       // TODO: should be a template in html
       //add leged to the volumes table
 /*
@@ -181,7 +153,7 @@
       this._super('close');
     },
 
-    deleteAction : function(rowsToDelete) {
+    _deleteAction : function(rowsToDelete) {
       //TODO: add hide menu
 
       if ( rowsToDelete.length > 0 ) {
@@ -196,7 +168,7 @@
       }
     },
  
-    getManifest : function() {
+    _getEmi : function() {
       var thisObj = this;
       return $.ajax({
         type:"GET",
@@ -208,6 +180,7 @@
           if (data.results) {
             $.each(data.results, function(idx, img){
                thisObj.emiToManifest[img['name']] = img['location'];
+               thisObj.emiToPlatform[img['name']] = img['platform'];
             });
             } else {
                   ;//TODO: how to notify errors?

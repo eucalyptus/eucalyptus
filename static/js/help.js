@@ -72,7 +72,7 @@ var help_volume = {
 
 var help_sgroup = {
   load : function(arg){
-    ;
+    loadHtml('helps/'+arg.language+'/console_create_security_group.html', function(data){help_volume.landing_content=data})
   },
   revert_button: "Back to security group",
   landing_title: "",
