@@ -958,13 +958,16 @@ tr.even td.sorting_1 {
   color: green;
 }
 
-.help-link {
+.help-link,
+.help-return {
   float: right;
   height: 16px;
   margin: 3px 20px 0 0;
 }
 
-.help-link a {
+.help-link a,
+.help-return a
+ {
   display: inline-block;
   height: 16px;
   width: 16px;
@@ -972,6 +975,12 @@ tr.even td.sorting_1 {
   text-indent: 100%;
   white-space: nowrap;
   overflow: hidden;
+}
+
+.help-return a {
+
+  /* TODO - Shift the background image position once the arrow icon has been added to the css-sprites-small.png */
+
 }
 
 /* Hide close X button in UI dialogs */
