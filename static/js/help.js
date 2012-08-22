@@ -19,7 +19,7 @@
  ************************************************************************/
 
 (function($, eucalyptus) {
-  eucalyptus.helps = function(args){
+  eucalyptus.help = function(args){
     language = args['language']; // not used yet
     help_keypair.load({language:language});
     help_volume.load({language:language});
@@ -45,8 +45,8 @@ function loadHtml(url, handler){
   //[keypair]
 var help_keypair = {
   load : function(arg){
-    loadHtml('helps/'+arg.language+'/describe_keypairs.html', function(data){help_keypair.landing_content=data})
-    loadHtml('helps/'+arg.language+'/console_create_keypair.html', function(data){help_keypair.dialog_add_content=data})
+    loadHtml('help/'+arg.language+'/describe_keypairs.html', function(data){help_keypair.landing_content=data})
+    loadHtml('help/'+arg.language+'/console_create_keypair.html', function(data){help_keypair.dialog_add_content=data})
   },
   revert_button: "Back to key pair",
   landing_title: "Key pairs -- help",
@@ -59,7 +59,7 @@ var help_keypair = {
 
 var help_volume = {
   load : function(arg){
-    loadHtml('helps/'+arg.language+'/console_create_volume.html', function(data){help_volume.landing_content=data})
+    loadHtml('help/'+arg.language+'/console_create_volume.html', function(data){help_volume.landing_content=data})
   },
   revert_button: "Back to volumes",
   landing_title: "Volume -- help",
@@ -72,7 +72,7 @@ var help_volume = {
 
 var help_sgroup = {
   load : function(arg){
-    loadHtml('helps/'+arg.language+'/console_create_security_group.html', function(data){help_volume.landing_content=data})
+    loadHtml('help/'+arg.language+'/console_create_security_group.html', function(data){help_volume.landing_content=data})
   },
   revert_button: "Back to security group",
   landing_title: "",

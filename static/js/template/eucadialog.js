@@ -26,10 +26,9 @@
        // e.g., add : { domid: keys-add-btn, text: "Add new key", disabled: true, focus: true, click : function() { }, keypress : function() { }, ...} 
        buttons :  {},
        help : null,  // help title and content 
-       onOpen: null, // function(thisDialog) {}
+       on_open: null, // {spin: True, callback: function(){}}
     },
     help_flipped : false,
-    onOpen : null,
 
     _init : function() {
       var thisObj = this;
@@ -68,46 +67,44 @@
              thisObj._setHelp(thisObj.element.parent());
 
              /* call onOpen function if passed */
-             if ( thisObj.onOpen )
-               thisObj.onOpen.call(this, thisObj); 
+             if ( thisObj.options.on_open ){
+               if(thisObj.options.on_open['spin']){
+                 thisObj._activateSpinWheel();
+                 $.when(thisObj.options.on_open.callback()).done( function(output){
+                   thisObj._removeSpinWheel(); }
+                 );
+               }else
+                 thisObj.options.on_open.callback();
+             }
          },
 
          buttons: thisObj._makeButtons(),
       });
     },
 
-    setOnOpen : function(onOpenFunction) {
-      if ( isFunction(onOpenFunction))
-        this.onOpen = onOpenFunction;
-      else
-        throw('OnOpen must be a funciton');
-    },
-
     _getButtonId : function(btn_id, btn_prop) {
        return btn_prop.domid !== undefined ? btn_prop.domid : 'btn-' + this.options.id + '-' + btn_id;
     },
 
-    open : function() {
-      this.element.dialog('open');      
-    },
-    
-    close : function() {
-      // this method should clean-up things
-      this.element.dialog('close');
-      this.element.find('input').each(function () { 
-        $(this).val(''); // clear all input fields TODO: what if some fields have initialized data?
-      });
-      if(this.help_flipped){
-        this.element.find('.dialog-inner-content').revertFlip();
-        $buttonPane.show();
-        $titleBar.find('span').text(thisObj.options.title);
-      }  
-    },
-    
     _create : function() {  
     },
 
     _destroy : function() {
+    },
+
+    _activateSpinWheel : function() {
+      var $spinWheel = $('<div>').addClass('status-readout').append(
+                         $('<img>').attr('src','images/dots32.gif'),
+                       $('<span>').text('Loading...')
+                       );
+      this.element.prepend($spinWheel);
+      this.element.find('.dialog-inner-content').hide();
+    },
+ 
+    _removeSpinWheel : function() {
+      var $spinWheel = this.element.find('.status-readout');
+      $spinWheel.remove();
+      this.element.find('.dialog-inner-content').show();
     },
 
     _setHelp : function($dialog) {
@@ -167,6 +164,31 @@
       return btnArr; 
     },
 
+/**** Public Methods ****/
+    open : function() {
+      this.element.dialog('open');      
+    },
+    
+    close : function() {
+      // this method should clean-up things
+      this.element.dialog('close');
+      this.element.find('input').each(function () { 
+        $(this).val(''); // clear all input fields TODO: what if some fields have initialized data?
+      });
+      if(this.help_flipped){
+        this.element.find('.dialog-inner-content').revertFlip();
+        $buttonPane.show();
+        $titleBar.find('span').text(thisObj.options.title);
+      }  
+    },
+    
+    setOnOpen : function(onOpenFunction) {
+      if ( isFunction(onOpenFunction))
+        this.onOpen = onOpenFunction;
+      else
+        throw('OnOpen must be a funciton');
+    },
+    
     setSelectedResources : function (resources) {
       $span = this.element.find("span.resource-ids");
       $span.html('');
@@ -216,7 +238,8 @@
            }
         }
       });
-    }
+    },
+/**** End of Public Methods ****/
   });
 })(jQuery,
    window.eucalyptus ? window.eucalyptus : window.eucalyptus = {});
