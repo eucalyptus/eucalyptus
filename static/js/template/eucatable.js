@@ -31,6 +31,7 @@
         action : '',
       },
       menu_actions : null, // e.g., TODO: add help
+      context_menu_actions : null,
       draw_cell_callback : null,  // if we want to customize how the cell is drawn (e.g., map EMI to manifest)
                                   // {column: 3, callback: function(){ } }
     },
@@ -145,20 +146,8 @@
       }
     },
 
-    reDrawTable : function() {
-      this.table.fnDraw();
-    },
-
-    refreshTable : function() {
-      this.table.fnReloadAjax();
-    },
-
-    getTable : function() {
-      return this.table;
-    },
-
     _onRowClick : function() {
-      if ( this.countSelectedRows() === 0 )
+      if ( this._countSelectedRows() === 0 )
         this._deactivateMenu();
       else
         this._activateMenu();
@@ -306,7 +295,7 @@
       });
     },
 
-    countSelectedRows : function () {
+    _countSelectedRows : function () {
       var dataTable = this.table;
       if ( !dataTable )
         return 0;
@@ -318,6 +307,16 @@
           selectedRows = selectedRows + 1;
       }
       return selectedRows;
+    },
+
+/**** Public Methods ****/
+    reDrawTable : function() {
+      this.table.fnDraw();
+    },
+
+    // this reloads data and refresh table
+    refreshTable : function() {
+      this.table.fnReloadAjax();
     },
 
     getValueForSelectedRows : function (columnIdx) {
@@ -334,6 +333,7 @@
       }
       return selectedRows;
     },
+
     //TODO: re-use  getContentForSelectedRows ?
     getAllSelectedRows : function (idIndex) {
       var dataTable = this.table;
@@ -366,6 +366,8 @@
       }
       return selectedRows;
     },
+
+/**** End of Public Methods ****/ 
   });
 })(jQuery,
    window.eucalyptus ? window.eucalyptus : window.eucalyptus = {});
