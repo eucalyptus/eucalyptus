@@ -312,6 +312,11 @@
            'cancel': {text: volume_dialog_cancel_btn, focus:true, click: function() { $add_dialog.dialog("close");}} 
          },
          help: {title: help_volume['dialog_add_title'], content: $add_help},
+         on_open: {spin: true, callback: function(args) {
+           var dfd = $.Deferred();
+           thisObj._initAddDialog(dfd) ;
+           return dfd.promise()
+         }},
        });
        this.addDialog.eucadialog('onKeypress', 'volume-size', createButtonId, function () {
          var az = thisObj.addDialog.find('#volume-add-az-selector').val();
@@ -334,9 +339,10 @@
     _destroy : function() {
     },
 
-    _initAddDialog : function() {
+    _initAddDialog : function(dfd) { // method should resolve dfd object
       this.addDialog.find('div.dialog-notifications').html('');
-      $.ajax({
+      $.when(
+        $.ajax({
           type:"GET",
           url:"/ec2?Action=DescribeAvailabilityZones",
           data:"_xsrf="+$.cookie('_xsrf'),
@@ -352,15 +358,15 @@
                   $azSelector.append($('<option>').attr('value', azName).text(azName));
                 } 
               } else {
-                notifyError('tbd', tbd);
+                notifyError('availability zones', 'failed to load availability zones'); // TODO: i18n
               }
            },
           error:
             function(jqXHR, textStatus, errorThrown){
-              notifyError('tbd', tbd);
+                notifyError('availability zones', 'failed to load availability zones'); // TODO: i18n
             }
-      });
-      $.ajax({
+      })).then(function (output){
+        $.ajax({
           type:"GET",
           url:"/ec2?Action=DescribeSnapshots",
           data:"_xsrf="+$.cookie('_xsrf'),
@@ -379,19 +385,20 @@
                   }
                 } 
               } else {
-                notifyError('tbd', tbd);
+                notifyError('snapshots', 'failed to load snapshots');
               }
+              dfd.resolve();
            },
           error:
             function(jqXHR, textStatus, errorThrown){
-              notifyError('tbd', tbd);
+              notifyError('snapshots', 'falied to load snapshots');
+              dfd.resolve();
             }
         });
-      this.waitDialog.dialog("close");
-      this.addDialog.dialog("open");
+      }, function (output) { dfd.resolve(); });
     },
 
-    _initAttachDialog : function(volumeId) {
+    _initAttachDialog : function(volumeId) { 
       $.ajax({
         type:"GET",
         url:"/ec2?Action=DescribeInstances",
@@ -425,40 +432,6 @@
       $volumeSelector.attr('disabled', 'disabled');
       this.waitDialog.dialog("close");
       this.attachDialog.dialog("open");
-    },
-
-    _buildActionsMenu : function() {
-      thisObj = this;
-      selectedVolumes = thisObj.tableWrapper.eucatable('getValueForSelectedRows', 8); // 8th column=status (this is volume's knowledge)
-      itemsList = {};
-      // add attach action
-      if ( selectedVolumes.length == 1 && selectedVolumes.indexOf('available') == 0 ){
-         itemsList['attach'] = { "name": volume_action_attach, callback: function(key, opt) { thisObj._attachAction(); } }
-      }
-      // detach actions
-      if ( selectedVolumes.length > 0 ) {
-        addDetach = true;
-        for (s in selectedVolumes) {
-          if ( selectedVolumes[s] != 'in-use' ) {
-            addDetach = false;
-            break;
-          }
-        }
-        if ( addDetach ) {
-          itemsList['detach'] = { "name": volume_action_detach, callback: function(key, opt) { thisObj._detachAction(false); } }
-          itemsList['force_detach'] = { "name": volume_action_force_detach, callback: function(key, opt) { thisObj._detachAction(true); } }
-        }
-      }
-      if ( selectedVolumes.length  == 1 ) {
-         if ( selectedVolumes[0] == 'in-use' || selectedVolumes[0] == 'available' ) {
-            itemsList['create_snapshot'] = { "name": volume_action_create_snapshot, callback: function(key, opt) { thisObj._createSnapshotAction(); } }
-        }
-      }
-      // add delete action
-      if ( selectedVolumes.length > 0 ){
-         itemsList['delete'] = { "name": volume_action_delete, callback: function(key, opt) { thisObj._deleteAction(); } }
-      }
-      return itemsList;
     },
 
     _getVolumeId : function(rowSelector) {
@@ -635,9 +608,7 @@
     },
 
     _createAction : function() {
-      thisObj = this;
-      thisObj.waitDialog.eucadialog('setOnOpen', function() {thisObj._initAddDialog();} );
-      thisObj.waitDialog.eucadialog('open');
+      this.addDialog.eucadialog('open');
     },
 
     _attachAction : function(volumeId) {

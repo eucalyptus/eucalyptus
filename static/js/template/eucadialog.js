@@ -26,10 +26,9 @@
        // e.g., add : { domid: keys-add-btn, text: "Add new key", disabled: true, focus: true, click : function() { }, keypress : function() { }, ...} 
        buttons :  {},
        help : null,  // help title and content 
-       onOpen: null, // function(thisDialog) {}
+       on_open: null, // {spin: True, callback: function(){}}
     },
     help_flipped : false,
-    onOpen : null,
 
     _init : function() {
       var thisObj = this;
@@ -68,8 +67,15 @@
              thisObj._setHelp(thisObj.element.parent());
 
              /* call onOpen function if passed */
-             if ( thisObj.onOpen )
-               thisObj.onOpen.call(this, thisObj); 
+             if ( thisObj.options.on_open ){
+               if(thisObj.options.on_open['spin']){
+                 thisObj._activateSpinWheel();
+                 $.when(thisObj.options.on_open.callback()).done( function(output){
+                   thisObj._removeSpinWheel(); }
+                 );
+               }else
+                 thisObj.options.on_open.callback();
+             }
          },
 
          buttons: thisObj._makeButtons(),
@@ -84,6 +90,21 @@
     },
 
     _destroy : function() {
+    },
+
+    _activateSpinWheel : function() {
+      var $spinWheel = $('<div>').addClass('status-readout').append(
+                         $('<img>').attr('src','images/dots32.gif'),
+                       $('<span>').text('Loading...')
+                       );
+      this.element.prepend($spinWheel);
+      this.element.find('.dialog-inner-content').hide();
+    },
+ 
+    _removeSpinWheel : function() {
+      var $spinWheel = this.element.find('.status-readout');
+      $spinWheel.remove();
+      this.element.find('.dialog-inner-content').show();
     },
 
     _setHelp : function($dialog) {
