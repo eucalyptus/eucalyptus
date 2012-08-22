@@ -130,7 +130,7 @@
               }
           }
         },
-        menu_click_create : function (args) { thisObj.waitDialog.eucadialog('open')},
+        menu_click_create : function (args) { thisObj._createAction() },
       //  td_hover_actions : { instance: [4, function (args) { thisObj.handleInstanceHover(args); }], snapshot: [5, function (args) { thisObj.handleSnapshotHover(args); }] }
         help_click : function(evt) {
           var $helpHeader = $('<div>').addClass('euca-table-header').append(
@@ -627,6 +627,12 @@
         }
         this.delDialog.dialog('open');
       }
+    },
+
+    _createAction : function() {
+      thisObj = this;
+      thisObj.waitDialog.eucadialog('setOnOpen', function() {thisObj._initAddDialog();} );
+      thisObj.waitDialog.eucadialog('open');
     },
 
     _attachAction : function(volumeId) {
