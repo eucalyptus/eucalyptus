@@ -536,7 +536,8 @@ body {
 }
 
 .button,
-.tall-button {
+.large-button,
+.xlarge-button {
   display: inline-block;
   color: #fff;
   font-family: "Play", Arial, sans-serif;
@@ -544,11 +545,9 @@ body {
   font-weight: bold;
   line-height: 1;
   text-decoration: none;
-
-  padding: 10px 24px;
+  padding: 5px 24px;
   border-radius: 5px;
   border: 1px solid rgba(128,128,128,0.6);
-
 
   /* background-image: -webkit-gradient(linear, center top, center bottom, from(#c8df8e), to(#bfbfbf), color-stop(3%, #f7f7f7), color-stop(12%, #f2f2f2), color-stop(90%, #d9d9d9)); */
   background-image: -webkit-linear-gradient(top, #c8df8e, #73a434 49%, #8dc63f 100%);
@@ -562,9 +561,26 @@ body {
   box-shadow: 0 0px 3px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.30);
 }
 
-.tall-button {
+.large-button {
+  /* Used on Login page */
+  padding: 10px 24px;
+}
+
+.xlarge-button {
+  /* Used on Dashboard */
   padding: 20px 24px;
 }
+
+.button:hover,
+.large-button:hover,
+.xlarge-button:hover {
+  /* background-image: -webkit-gradient(linear, center top, center bottom, from(#c8df8e), to(#bfbfbf), color-stop(3%, #f7f7f7), color-stop(12%, #f2f2f2), color-stop(90%, #d9d9d9)); */
+  background-image: -webkit-linear-gradient(top, #73a434, #336600 49%, #73a434 100%);
+  background-image: -moz-linear-gradient(top, #73a434, #336600 49%, #73a434 100%);
+  background-image: -o-linear-gradient(top, #73a434, #336600 49%, #73a434 100%);
+  background-image: -ms-linear-gradient(top, #73a434, #336600 49%, #73a434 100%);
+  background-image: linear-gradient(to bottom, #73a434, #336600 49%, #73a434 100%);
+} 
 
 
 /* ======== Content styles ======= */
@@ -944,10 +960,18 @@ tr.even td.sorting_1 {
 
 .help-link {
   float: right;
-  margin-right: 20px;
+  height: 16px;
+  margin: 3px 20px 0 0;
 }
+
 .help-link a {
-  text-decoration:none
+  display: inline-block;
+  height: 16px;
+  width: 16px;
+  background: transparent url(../images/css-sprites-small.png) no-repeat left -150px;
+  text-indent: 100%;
+  white-space: nowrap;
+  overflow: hidden;
 }
 
 /* Hide close X button in UI dialogs */

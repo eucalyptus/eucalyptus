@@ -213,7 +213,7 @@
       $tableTop.addClass('euca-table-length');
       $tableTop.append(
         $('<div>').addClass('euca-table-add').append(
-          $('<a>').attr('id','table-'+this.options.id+'-new').addClass('add-resource').attr('href','#').text(thisObj.options.text.create_resource)),
+          $('<a>').attr('id','table-'+this.options.id+'-new').addClass('button').attr('href','#').text(thisObj.options.text.create_resource)),
         $('<div>').addClass('euca-table-action actionmenu'),
         $('<div>').addClass('euca-table-size').append(
           $('<span>').attr('id','table_' + this.options.id + '_count'),
