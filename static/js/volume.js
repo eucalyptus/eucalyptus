@@ -28,7 +28,6 @@
     forceDetachDialog : null,
     addDialog : null,
     attachDialog : null,
-    waitDialog : null,
     _init : function() {
       var thisObj = this;
       var $tmpl = $('html body').find('.templates #volumeTblTmpl').clone();
@@ -227,19 +226,6 @@
          help: {title: help_volume['dialog_force_detach_title'], content: $force_detach_help},
        });
 
-      $tmpl = $('html body').find('.templates #volumeWaitDlgTmpl').clone();
-      var $rendered = $($tmpl.render($.extend($.i18n.map, help_volume)));
-      var $wait_dialog = $rendered.children().first();
-      var $wait_dialog_help = $rendered.children().last();
-      this.waitDialog = $wait_dialog.eucadialog({
-         id: 'volumes-wait',
-         title: volume_dialog_wait,
-         buttons: {
-           'cancel': { text: volume_dialog_cancel_btn, focus:true, click: function() { $wait_dialog.dialog("close"); } } 
-         },
-         help: {title: help_volume['dialog_volume_wait_title'], content: $wait_dialog_help},
-       });
-
       var attachButtonId = 'volume-attach-btn';
       $tmpl = $('html body').find('.templates #volumeAttachDlgTmpl').clone();
       var $rendered = $($tmpl.render($.extend($.i18n.map, help_volume)));
@@ -294,20 +280,19 @@
               var az = $add_dialog.find('#volume-add-az-selector').val();
               var $snapshot = $add_dialog.find('#volume-add-snapshot-selector :selected');
               var isValid = true;
-              $notification = $add_dialog.find('div.dialog-notifications');
 
               if ( size == parseInt(size) ) {
                 if ( $snapshot.val() != '' && parseInt($snapshot.attr('title')) > parseInt(size) ) {
                   isValid = false;
-                  $notification.html(volume_dialog_snapshot_error_msg);
+                  $add_dialog.eucadialog('showError', volume_dialog_snapshot_error_msg);
                 }
               } else {
                 isValid = false; 
-                $notification.html(volume_dialog_size_error_msg);
+                $add_dialog.eucadialog('showError', volume_dialog_size_error_msg);
               }
               if ( az === '' ) {
                 isValid = false;
-                $notification.html($notification.html() + "<br/>" + volume_dialog_az_error_msg);
+                $add_dialog.eucadialog('showError', volume_dialog_az_error_msg);
               }
               if ( isValid ) {
                 thisObj._createVolume(size, az, $snapshot.val());
@@ -345,7 +330,6 @@
     },
 
     _initAddDialog : function(dfd) { // method should resolve dfd object
-      this.addDialog.find('div.dialog-notifications').html('');
       $.when(
         $.ajax({
           type:"GET",
@@ -503,7 +487,7 @@
     },
 
     _attachVolume : function (volumeId, instanceId, device) {
-      thisObj = this;
+      var thisObj = this;
       $.ajax({
         type:"GET",
         url:"/ec2?Action=AttachVolume&VolumeId=" + volumeId + "&InstanceId=" + instanceId + "&Device=" + device,
@@ -616,7 +600,7 @@
     },
 
     _attachAction : function(volumeId) {
-      thisObj = this;
+      var thisObj = this;
       var volumeToAttach = '';
       if ( !volumeId ) {
         rows = thisObj.tableWrapper.eucatable('getAllSelectedRows', 1);
@@ -624,7 +608,6 @@
       } else {
         volumeToAttach = volumeId;
       }
-      this.attachDialog.find('div.dialog-notifications').html('');
       $volumeSelector = this.attachDialog.find('#volume-attach-volume-selector');
       $volumeSelector.html('');
       $volumeSelector.append($('<option>').attr('value', volumeId).text(volumeId));

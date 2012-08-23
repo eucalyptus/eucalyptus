@@ -115,8 +115,7 @@
                         thisObj._addKeyPair(keyName);
                       }
                       else{
-                        // TODO: notification should be handled better, generic way
-                        $('#keys-add-dialog div.dialog-notifications').html(keypair_dialog_error_msg);
+                        this.addDialog.eucadialog('showError', keypair_dialog_error_msg);
                       }
                     }
                   },
@@ -138,7 +137,7 @@
     },
 
     _deleteAction : function(keyId) {
-      thisObj = this;
+      var thisObj = this;
       keysToDelete = [];
       if ( !keyId ) {
         $tableWrapper = thisObj.tableWrapper;

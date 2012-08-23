@@ -929,7 +929,7 @@ tr.even td.sorting_1 {
   float: right;
 }
 
-.dialog-notifications {
+.dialog-error {
   color: red;
   padding: 5px;
 }
