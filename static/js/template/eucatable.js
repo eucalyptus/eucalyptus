@@ -50,7 +50,7 @@
       this._decorateTopBar();
       this._decorateActionMenu();
       this._decorateLegend();
-      this._addActions()
+      this._addActions();
     },
 
     _create : function() {
@@ -206,7 +206,7 @@
     // args.refresh = text 'Refresh'
     _decorateSearchBar : function(args) {
       var thisObj = this; // ref to widget instance
-     // filters : null, // e.g., [{name: "volume_state", options: ["available","attached","attaching"], filter_col: 8, alias: {"detached":"available" }}]
+  // filters : null, // e.g., [{name: "volume_state", options: ["available","attached","attaching"], filter_col: 8, alias: {"detached":"available" }}]
       if(thisObj.options.filters){
         $.each(thisObj.options.filters, function (idx, filter){
           var $filter = thisObj.element.find('#'+filter['name']+'-filter');
@@ -233,7 +233,7 @@
                 return true;
             });
           }
-          $selector.change( function() { thisObj._reDrawTable() } );
+          $selector.change( function() { thisObj.table.fnDraw(); } );
         });
       }      
 
@@ -243,6 +243,14 @@
         $('<a>').addClass('table-refresh').attr('href','#').text(refresh).click(function(){
           thisObj.refreshTable();
         }));
+      
+      var filterArr = [];
+      thisObj.element.find('.euca-table-filter').each(function(){ filterArr.push($(this));});
+      thisObj.element.find('.dataTables_filter').each(function(){ filterArr.push($(this));});
+      var $wrapper = $('<div class="table-filter-wrapper"/>');
+      $(filterArr).each(function(){$wrapper.append($(this).clone(true));}); 
+      $wrapper.insertAfter(filterArr[filterArr.length-1]);
+      $(filterArr).each(function(){$(this).remove();});
     },   
 
     // args.txt_create (e.g., Create new key)
@@ -384,11 +392,7 @@
       return selectedRows;
     },
 
-    _reDrawTable : function() {
-      this.table.fnDraw();
-    },
 /**** Public Methods ****/
-
     // this reloads data and refresh table
     refreshTable : function() {
       this.table.fnReloadAjax();
