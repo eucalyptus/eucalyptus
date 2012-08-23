@@ -946,6 +946,19 @@ tr.even td.sorting_1 {
   float: left;
 }
 
+.table-legend {
+  float:left;
+  margin-top: 15px;
+  margin-left: 15px;
+}
+
+.table-legend-item {
+  padding-left: 12px;
+  background-position: left !important;
+  background-repeat: no-repeat;
+  margin-left: 15px;
+}
+
 .filter-label {
   padding-right: 5px;
 }
@@ -1018,18 +1031,7 @@ tr.even td.sorting_1 {
   text-decoration: underline;
 }
 
-
-.table-legend {
-  float:left;
-}
-
-.table-legend-item {
-  padding-left: 12px;
-  background-position: left !important;
-  background-repeat: no-repeat;
-  margin-left: 15px;
-}
-/* ======= Volume statuses ====== */
+/* ======= Volume status ====== */
 #legend-volumes-available {
   background-image: url('../images/green-ball-10x10.png');
 }

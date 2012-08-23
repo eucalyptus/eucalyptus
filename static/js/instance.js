@@ -61,7 +61,7 @@
               },
               { "mDataProp": "id" },
               { "mDataProp": "state" },
-              { "mDataProp": "image_id" }, // TODO: this should be mapped to manifest 
+              { "mDataProp": "image_id" }, 
               { "mDataProp": "placement" }, // TODO: placement==zone?
               { "mDataProp": "ip_address" },
               { "mDataProp": "private_ip_address" },

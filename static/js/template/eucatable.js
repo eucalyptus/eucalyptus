@@ -83,8 +83,8 @@
         });
       }
       sDom += 'f<"clear"><"table_'+thisObj.options.id+'_top">rt';
-      if(thisObj.options.legend)
-        sDom += '<"#'+thisObj.options.id+'-legend">';
+      //if(thisObj.options.legend)
+       // sDom += '<"#'+thisObj.options.id+'-legend">';
       sDom += 'p<"clear">';
       dt_arg['sDom'] = sDom;  
       return dt_arg;
@@ -325,9 +325,10 @@
 
       if(!thisObj.options.legend)
         return;
-      // legend : null, // e.g., ['available', 'attaching', 'attached', ...] 
 
-      $legend = thisObj.element.find('#'+thisObj.options.id+'-legend');
+      $legend = $('<div>').attr('id',thisObj.options.id+'-legend'); 
+
+      //$legend = thisObj.element.find('#'+thisObj.options.id+'-legend');
       $legend.addClass('table-legend');
       $legend.append($('<span>').html(legend_label));
 
@@ -336,6 +337,8 @@
         var text = $.i18n.map[thisObj.options.id+'_legend_'+val] ? $.i18n.map[thisObj.options.id+'_legend_'+val] : val;
         $legend.append($('<span>').addClass('table-legend-item').attr('id',domid).html(text));
       });
+
+      thisObj.element.append($legend);
     },
 
     _addActions : function (args) {
