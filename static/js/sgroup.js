@@ -219,7 +219,7 @@
     },
 
     _addSecurityGroup : function(groupName, groupDesc) {
-      thisObj = this;
+      var thisObj = this;
       $.ajax({
         type:"GET",
         url:"/ec2?Action=CreateSecurityGroup",
@@ -230,7 +230,7 @@
     },
 
     _addIngressRule : function(groupName, fromPort, toPort, protocol, cidr, fromGroup) {
-      thisObj = this;
+      var thisObj = this;
       var req_params = "&GroupName=" + groupName +
                        "&IpPermissions.1.IpProtocol=" + protocol +
                        "&IpPermissions.1.FromPort=" + fromPort +
@@ -287,7 +287,7 @@
     },
 
     _deleteAction : function() {
-      thisObj = this;
+      var thisObj = this;
       var $tableWrapper = this._getTableWrapper();
       rowsToDelete = $tableWrapper.eucatable('getAllSelectedRows');
       if ( rowsToDelete.length > 0 ) {

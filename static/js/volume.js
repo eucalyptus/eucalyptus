@@ -226,8 +226,6 @@
          help: {title: help_volume['dialog_force_detach_title'], content: $force_detach_help},
        });
 
-      $tmpl = $('html body').find('.templates #volumeWaitDlgTmpl').clone();
-      var $rendered = $($tmpl.render($.extend($.i18n.map, help_volume)));
       var attachButtonId = 'volume-attach-btn';
       $tmpl = $('html body').find('.templates #volumeAttachDlgTmpl').clone();
       var $rendered = $($tmpl.render($.extend($.i18n.map, help_volume)));
@@ -251,7 +249,7 @@
          on_open: {spin: true, callback: function(args) {
            var dfd = $.Deferred();
            thisObj._initAttachDialog(dfd) ; // pulls instance info from server
-           return dfd.promise()
+           return dfd.promise();
          }},
        });
       this.attachDialog.eucadialog('onKeypress', 'volume-attach-device-name', attachButtonId, function () {
@@ -485,7 +483,7 @@
     },
 
     _attachVolume : function (volumeId, instanceId, device) {
-      thisObj = this;
+      var thisObj = this;
       $.ajax({
         type:"GET",
         url:"/ec2?Action=AttachVolume&VolumeId=" + volumeId + "&InstanceId=" + instanceId + "&Device=" + device,
@@ -598,7 +596,7 @@
     },
 
     _attachAction : function(volumeId) {
-      thisObj = this;
+      var thisObj = this;
       var volumeToAttach = '';
       if ( !volumeId ) {
         rows = thisObj.tableWrapper.eucatable('getAllSelectedRows', 1);

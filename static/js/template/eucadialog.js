@@ -187,13 +187,6 @@
       }  
     },
     
-    setOnOpen : function(onOpenFunction) {
-      if ( isFunction(onOpenFunction))
-        this.onOpen = onOpenFunction;
-      else
-        throw('OnOpen must be a funciton');
-    },
-    
     setSelectedResources : function (resources) {
       $span = this.element.find("span.resource-ids");
       $span.html('');

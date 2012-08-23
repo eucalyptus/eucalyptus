@@ -137,7 +137,7 @@
     },
 
     _deleteAction : function(keyId) {
-      thisObj = this;
+      var thisObj = this;
       keysToDelete = [];
       if ( !keyId ) {
         $tableWrapper = thisObj.tableWrapper;
