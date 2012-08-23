@@ -281,9 +281,9 @@ class CachingClcInterface(ClcInterface):
         return self.clc.attach_volume(volume_id, instance_id, device)
 
     # returns True if successful
-    def detach_volume(self, volume_id, instance_id, device, force=False):
+    def detach_volume(self, volume_id, force=False):
         self.volumeUpdate = datetime.min   # invalidate cache
-        return self.clc.detach_volume(volume_id, instance_id, device, force)
+        return self.clc.detach_volume(volume_id, force)
 
     def get_all_snapshots(self):
         if (datetime.now() - self.snapshotUpdate) > timedelta(seconds = self.snapshotFreq):
