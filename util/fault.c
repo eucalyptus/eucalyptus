@@ -206,6 +206,10 @@ scandir_filter (const struct dirent *entry)
 static xmlNodePtr xmlFirstElementChild (xmlNodePtr parent)
 {
     xmlNodePtr child;
+
+    if (parent == NULL) {
+        return NULL;
+    }
     for (child = parent->children; child != NULL; child = child->next) {
         if (child->type == XML_ELEMENT_NODE) {
             break;
