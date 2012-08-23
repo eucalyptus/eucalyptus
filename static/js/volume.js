@@ -28,7 +28,6 @@
     forceDetachDialog : null,
     addDialog : null,
     attachDialog : null,
-    waitDialog : null,
     _init : function() {
       var thisObj = this;
       var $tmpl = $('html body').find('.templates #volumeTblTmpl').clone();
@@ -229,17 +228,6 @@
 
       $tmpl = $('html body').find('.templates #volumeWaitDlgTmpl').clone();
       var $rendered = $($tmpl.render($.extend($.i18n.map, help_volume)));
-      var $wait_dialog = $rendered.children().first();
-      var $wait_dialog_help = $rendered.children().last();
-      this.waitDialog = $wait_dialog.eucadialog({
-         id: 'volumes-wait',
-         title: volume_dialog_wait,
-         buttons: {
-           'cancel': { text: volume_dialog_cancel_btn, focus:true, click: function() { $wait_dialog.dialog("close"); } } 
-         },
-         help: {title: help_volume['dialog_volume_wait_title'], content: $wait_dialog_help},
-       });
-
       var attachButtonId = 'volume-attach-btn';
       $tmpl = $('html body').find('.templates #volumeAttachDlgTmpl').clone();
       var $rendered = $($tmpl.render($.extend($.i18n.map, help_volume)));
