@@ -363,12 +363,15 @@
                     <option>Custom ICMP</option>
                     </optgroup>
                   </select><br/>
-              <div id="morerools" style='display: none;'>
+              <div id="sgroup-morerools" style='display: none;'>
                 <span class="field">{{!>sgroup_dialog_add_ports}}</span><input type="text" id="sgroup-ports" class="required"/><div class="dialog-notifications"></div>
                 <span class="field">{{!>sgroup_dialog_add_allow}}</span>
-                <input type="radio" name="allow-group" id="sgroup-allow-ip" value="ip" checked="yes"/>{{!>sgroup_dialog_add_allow_ip}}<input type="text" id="allow-ip"/><a href="#" id='ip-check'>my ip<a><br/>
+                <input type="radio" name="allow-group" id="sgroup-allow-ip" value="ip" checked="yes"/>{{!>sgroup_dialog_add_allow_ip}}<input type="text" id="allow-ip"/><a href="#" id='sgroup-ip-check'>my ip<a><br/>
                 <input type="radio" name="allow-group" id="sgroup-allow-group" value="group"/>{{!>sgroup_dialog_add_allow_group}}<br/><input type="text" id="allow-group"/><br/>
                 <input type="radio" name="allow-group" id="sgroup-allow-instances" value="instances"/>{{!>sgroup_dialog_add_allow_instances}}<br/>
+                <a href='#' id='sgroup-add-rule'>Add Another Rule</a><br/>
+                <div id="sgroup-rules-list">
+                </div>
               </div>
               </p>
           </div>
