@@ -56,7 +56,8 @@ class ComputeHandler(server.BaseHandler):
                         inst.reservation_id = res.id
                         inst.owner_id = res.owner_id
                         inst.groups = res.groups
-                        inst.group_name = res.groups[0].id
+                        if res.groups:
+                            inst.group_name = res.groups[0].id
                         ret.append(inst)
                 else:
                     for inst in res['instances']:
