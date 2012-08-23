@@ -41,6 +41,7 @@
 #include <libxml/parser.h>
 #include <libxml/tree.h>
 
+#include <eucalyptus-config.h>
 #include <eucalyptus.h>
 #include <misc.h>
 #include <fault.h>
@@ -137,6 +138,10 @@ static char *get_fault_var (const char *, const xmlNode *);
 static boolean format_eucafault (const char *, const char_map **);
 static boolean initialize_faultlog (const char *);
 
+#ifndef HAVE_XMLFIRSTELEMENTCHILD
+static xmlNodePtr xmlFirstElementChild (xmlNodePtr);
+#endif // HAVE_XMLFIRSTELEMENTCHILD
+
 /*
  * Utility functions -- move to misc.c?
  * (Might some of them already be there in one form or another?)
@@ -190,6 +195,25 @@ scandir_filter (const struct dirent *entry)
 {
     return str_end_cmp (entry->d_name, XML_SUFFIX);
 }
+
+#ifndef HAVE_XMLFIRSTELEMENTCHILD
+/*
+ * Utility function:
+ *
+ * Needed for older versions of libxml2 (e.g. on RHEL/CentOS 5), which
+ * don't contain this function.
+ */
+static xmlNodePtr xmlFirstElementChild (xmlNodePtr parent)
+{
+    xmlNodePtr child;
+    for (child = parent->children; child != NULL; child = child->next) {
+        if (child->type == XML_ELEMENT_NODE) {
+            break;
+        }
+    }
+    return child;
+}
+#endif // HAVE_XMLFIRSTELEMENTCHILD
 
 /*
  * End utility functions.
