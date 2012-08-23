@@ -31,7 +31,7 @@
         async:"false", // async option deprecated as of jQuery 1.8
         success: function(out, textStatus, jqXHR){ 
           eucalyptus.i18n({'language':out.language});
-          eucalyptus.helps({'language':out.language}); // loads help files
+          eucalyptus.help({'language':out.language}); // loads help files
         },
         error: function(jqXHR, textStatus, errorThrown){
           //TODO: should present error screen; can we use notification?

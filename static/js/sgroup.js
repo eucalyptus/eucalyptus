@@ -25,6 +25,7 @@
     tableWrapper : null,
     delDialog : null,
     addDialog : null,
+    rulesList : null,
     // TODO: is _init() the right method to instantiate everything? 
     _init : function() {
       var thisObj = this;
@@ -76,7 +77,7 @@
           "delete": { "name": sgroup_action_delete, callback: function(key, opt) { thisObj._deleteAction(thisObj._getGroupName(opt.selector)); } },
           };
         },
-        menu_click_create : function (args) { thisObj.addDialog.eucadialog('open')},
+        menu_click_create : function (args) { thisObj.ruleList=null; thisObj.addDialog.eucadialog('open')},
         help_click : function(evt) {
           var $helpHeader = $('<div>').addClass('euca-table-header').append(
                               $('<span>').text(help_sgroup['landing_title']).append(
@@ -115,7 +116,24 @@
         'create': { domid: createButtonId, text: sgroup_dialog_create_btn, disabled: true,  click: function() {
               var name = $.trim($add_dialog.find('#sgroup-name').val());
               var desc = $.trim($add_dialog.find('#sgroup-description').val());
-              thisObj._addSecurityGroup(name, desc);
+              thisObj._storeRule();    // flush rule from form into array
+              var actions = new Array();
+              for (rule in thisObj.rulesList)
+                alert("rule port = "+rule.port);
+
+              $.when(thisObj._addSecurityGroup(name, desc)).then(function(data, textStatus, jqXHR){
+                                    $notification = thisObj.addDialog.find('div.dialog-notifications');
+                                    if (data.results && data.results.status == true) {
+                                        notifySuccess(sgroup_create_success + ' ' + name);
+                                        thisObj.tableWrapper.eucatable('refreshTable');
+                                    } else {
+                                        notifyFailure(sgroup_create_error + ' ' + name);
+                                    }
+                                 },
+                                 function(jqXHR, textStatus, errorThrown){
+                                    $notification(sgroup_delete_error + ' ' + name);
+                                 }
+              );
               $add_dialog.dialog("close");
             }},
         'cancel': {text: sgroup_dialog_cancel_btn, focus:true, click: function() { $add_dialog.dialog("close");}},
@@ -128,10 +146,35 @@
       this.addDialog.eucadialog('onKeypress', 'sgroup-description', createButtonId, function () {
          thisObj._validateForm(createButtonId);
       });
-      this.addDialog.eucadialog('onKeypress', 'sgroup-template', 'morerools', function () {
-         thediv = $.trim(this.addDialog.find('morerools'));
-         if (thediv.style.display == 'none')
-             thediv.style.display = 'block'
+      this.addDialog.eucadialog('onChange', 'sgroup-template', 'unused', function () {
+         var thediv = $('#morerools');
+         var sel = $('#sgroup-template');
+         var templ = sel.val();
+         if (templ == 'none') {
+            thediv.css('display','none')
+            $('#sgroup-ports').val('');
+         }
+         else {
+            thediv.css('display','block')
+            if (templ.indexOf('Custom', 0) == -1) {
+                var idx = templ.indexOf('port', 0);
+                var part = templ.substr(idx+5);
+                $('#sgroup-ports').val(parseInt(part));
+            }
+            else
+                $('#sgroup-ports').val('');
+         }
+      });
+      this.addDialog.find('#ip-check').click(function () {
+        $.ajax({
+            type: 'GET',
+            url: 'http://checkip.amazonaws.com/',
+            crossDomain:'true',
+            success: function(data, textStatus, jqXHR) {
+                         alert("ip="+data.results);
+                         $('#allow-ip').text(data.results)
+                     }
+        });
       });
     },
 
@@ -151,26 +194,21 @@
          $button.prop("disabled", false).addClass("ui-state-disabled");
     },
 
-    _whatsup : function() {
-      var isValid = true;
-      $notification = $add_dialog.find('div.dialog-notifications');
-      if ( size == parseInt(size) ) {
-        if ( $snapshot.val() != '' && parseInt($snapshot.attr('title')) > parseInt(size) ) {
-          isValid = false;
-          $notification.html(volume_dialog_snapshot_error_msg);
+    _storeRule : function() {
+        if (this.rulesList == null) {
+            this.rulesList = new Array();
         }
-      } else {
-        isValid = false; 
-        $notification.html(volume_dialog_size_error_msg);
-      }
-      if ( az === '' ) {
-        isValid = false;
-        $notification.html($notification.html + "<br/>" + volume_dialog_size_error_msg);
-      }
-      if ( isValid ) {
-        thisObj._createVolume(size, az, $snapshot.val());
-        $add_dialog.dialog("close");
-      } 
+        var rule = new Object();
+        rule.protocol = 'TCP';
+        rule.port = $('#sgroup-ports').val();
+        alert("port = "+rule.port);
+        if ($('#sgroup-allow-ip').checked) {
+            rule.ipaddr = $('#allow-ip').val();
+        }
+        else if ($('#sgroup-allow-group').checked) {
+            rule.group = $('#allow-group').val();
+        }
+        this.rulesList.push(rule);
     },
 
     _getGroupName : function(rowSelector) {
@@ -189,20 +227,27 @@
         data:"_xsrf="+$.cookie('_xsrf') + "&GroupName=" + groupName + "&GroupDescription=" + groupDesc,
         dataType:"json",
         async:"false",
-        success:
-        function(data, textStatus, jqXHR){
-          $notification = thisObj.addDialog.find('div.dialog-notifications');
-          if (data.results && data.results.status == true) {
-            notifySuccess(sgroup_create_success + ' ' + groupName);
-            thisObj.tableWrapper.eucatable('refreshTable');
-          } else {
-            notifyFailure(sgroup_create_error + ' ' + groupName);
-          }
-        },
-        error:
-        function(jqXHR, textStatus, errorThrown){
-          $notification(sgroup_delete_error + ' ' + groupName);
-        }
+      });
+    },
+
+    _addIngressRule : function(groupName, fromPort, toPort, protocol, cidr, fromGroup) {
+      thisObj = this;
+      var req_params = "&GroupName=" + groupName +
+                       "&IpPermissions.1.IpProtocol=" + protocol +
+                       "&IpPermissions.1.FromPort=" + fromPort +
+                       "&IpPermissions.1.ToPort=" + toPort;
+      if (fromGroup) {
+        params = params + "&IpPermissions.1.Groups.1.GroupName=" + fromGroup;
+      }
+      if (cidr) {
+        params = params + "&IpPermissions.1.IpRanges.1.CidrIp=" + cidr;
+      }
+      $.ajax({
+        type:"GET",
+        url:"/ec2?Action=AuthorizeSecurityGroupIngress",
+        data:"_xsrf="+$.cookie('_xsrf') + req_params,
+        dataType:"json",
+        async:"false",
       });
     },
 

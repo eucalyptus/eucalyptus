@@ -244,11 +244,11 @@ class MockClcInterface(ClcInterface):
 
     # returns True if successful
     def attach_volume(self, volume_id, instance_id, device):
-        pass
+        return True
 
     # returns True if successful
     def detach_volume(self, volume_id, force=False):
-        pass
+        return True
 
     def get_all_snapshots(self):
         return self.snapshots

@@ -1,6 +1,7 @@
 import tornado.web
 import server
 import json
+import time
 from boto.ec2.blockdevicemapping import BlockDeviceMapping
 
 from boto.ec2.ec2object import EC2Object
@@ -306,4 +307,6 @@ class ComputeHandler(server.BaseHandler):
             ret = self.handleSnapshots(action, self.user_session.clc)
         ret = Response(ret) # wrap all responses in an object for security purposes
         data = json.dumps(ret, cls=BotoJsonEncoder, indent=2)
+        if(server.config.get('test','apidelay')):
+            time.sleep(int(server.config.get('test','apidelay'))/1000.0);
         self.write(data)
