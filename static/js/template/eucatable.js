@@ -34,6 +34,8 @@
       context_menu_actions : null,
       draw_cell_callback : null,  // if we want to customize how the cell is drawn (e.g., map EMI to manifest)
                                   // {column: 3, callback: function(){ } }
+      filters : null, // e.g., [{name: "volume_state", options: ["available","attached","attaching"], filter_col: 8, alias: {"detached":"available" }}]
+      legend : null, // e.g., ['available', 'attaching', 'attached', ...] 
     },
 
     table : null, // jQuery object to the table
@@ -41,8 +43,27 @@
     _init : function() {
       var thisObj = this; // 
       // add draw call back
-      this.options.dt_arg['fnDrawCallback'] = function( oSettings ) {
-        try{
+      var dtArg = this._getTableParam();
+      this.table = this.element.find('table').dataTable(dtArg);
+      var $header = this._decorateHeader();
+      this._decorateSearchBar();
+      this._decorateTopBar();
+      this._decorateActionMenu();
+      this._decorateLegend();
+      this._addActions()
+    },
+
+    _create : function() {
+    },
+
+    _destroy : function() {
+    },
+
+    _getTableParam : function(args){
+      var thisObj = this;
+      var dt_arg = this.options.dt_arg;      
+      dt_arg['fnDrawCallback'] = function( oSettings ) {
+      try{
           thisObj._drawCallback(oSettings);
         }catch(e){
           // for some reason, dom to look for data is changed between calls (TODO: figure out why) 
@@ -51,19 +72,22 @@
           if(obj)
             obj._drawCallback(oSettings);
         }
-      };
-      this.table = this.element.find('table').dataTable(this.options.dt_arg);
-      var $header = this._decorateHeader();
-      this._decorateSearchBar();
-      this._decorateTopBar();
-      this._decorateActionMenu();
-      this._addActions()
-    },
+      }
 
-    _create : function() {
-    },
-
-    _destroy : function() {
+    //  "sDom": '<"table_volumes_header"><"table-volume-filter">f<"clear"><"table_volumes_top">rt<"table-volumes-legend">p<"clear">',
+      var sDom = '<"table_'+ this.options.id + '_header">';
+      if(thisObj.options.filters){
+        $.each(thisObj.options.filters, function(idx, filter){
+          var name = filter['name']+'-filter';
+          sDom += '<"#'+name+'">';
+        });
+      }
+      sDom += 'f<"clear"><"table_'+thisObj.options.id+'_top">rt';
+      if(thisObj.options.legend)
+        sDom += '<"#'+thisObj.options.id+'-legend">';
+      sDom += 'p<"clear">';
+      dt_arg['sDom'] = sDom;  
+      return dt_arg;
     },
 
     _drawCallback : function(oSettings) {
@@ -182,13 +206,43 @@
     // args.refresh = text 'Refresh'
     _decorateSearchBar : function(args) {
       var thisObj = this; // ref to widget instance
+     // filters : null, // e.g., [{name: "volume_state", options: ["available","attached","attaching"], filter_col: 8, alias: {"detached":"available" }}]
+      if(thisObj.options.filters){
+        $.each(thisObj.options.filters, function (idx, filter){
+          var $filter = thisObj.element.find('#'+filter['name']+'-filter');
+          $filter.addClass('euca-table-filter');
+          $filter.append(
+            $('<span>').addClass('filter-label').html(table_filter_label),
+            $('<select>').attr('id',filter['name']+'-selector'));
+          var $selector = $filter.find('#'+filter['name']+'-selector');
+          $.each(filter.options, function(idx, option){
+            var text = $.i18n.map[filter['name']+'_selector_'+option] ? $.i18n.map[filter['name']+'_selector_'+option] : option; 
+            $selector.append($('<option>').val(option).text(text));
+          });
+         
+          if(filter['filter_col'] && filter['alias']){
+            var aliasTbl = filter['alias'];
+            $.fn.dataTableExt.afnFiltering.push(
+	      function( oSettings, aData, iDataIndex ) {
+                if (oSettings.sInstance !== thisObj.options.id)
+                  return true;
+                var selectorVal =  $selector.val();
+                if(aliasTbl[selectorVal]){
+                  return aliasTbl[selectorVal] == aData[filter['filter_col']];
+                }
+                return true;
+            });
+          }
+          $selector.change( function() { thisObj._reDrawTable() } );
+        });
+      }      
+
       var $searchBar = this.element.find('#'+this.options.id+'_filter');
       var refresh = this.options.text.search_refresh ? this.options.text.search_refresh : search_refresh;
       $searchBar.append(
         $('<a>').addClass('table-refresh').attr('href','#').text(refresh).click(function(){
           thisObj.refreshTable();
         }));
-      return $searchBar;
     },   
 
     // args.txt_create (e.g., Create new key)
@@ -266,6 +320,24 @@
       return $menuDiv;
     },
 
+    _decorateLegend : function (args) {
+      var thisObj = this;
+
+      if(!thisObj.options.legend)
+        return;
+      // legend : null, // e.g., ['available', 'attaching', 'attached', ...] 
+
+      $legend = thisObj.element.find('#'+thisObj.options.id+'-legend');
+      $legend.addClass('table-legend');
+      $legend.append($('<span>').html(legend_label));
+
+      $.each(thisObj.options.legend, function(idx, val){
+        var domid = 'legend-'+thisObj.options.id +'-'+val;
+        var text = $.i18n.map[thisObj.options.id+'_legend_'+val] ? $.i18n.map[thisObj.options.id+'_legend_'+val] : val;
+        $legend.append($('<span>').addClass('table-legend-item').attr('id',domid).html(text));
+      });
+    },
+
     _addActions : function (args) {
       var thisObj = this;
       thisTable = this.table;
@@ -309,10 +381,10 @@
       return selectedRows;
     },
 
-/**** Public Methods ****/
-    reDrawTable : function() {
+    _reDrawTable : function() {
       this.table.fnDraw();
     },
+/**** Public Methods ****/
 
     // this reloads data and refresh table
     refreshTable : function() {
