@@ -20,6 +20,11 @@ import org.junit.Test
 class AddressUsageEventListenerTest {
 
   @Test
+  void testInstantiable() {
+    new AddressUsageEventListener()
+  }
+
+  @Test
   void testAllocateEvent() {
     long timestamp = System.currentTimeMillis() - 100000
 

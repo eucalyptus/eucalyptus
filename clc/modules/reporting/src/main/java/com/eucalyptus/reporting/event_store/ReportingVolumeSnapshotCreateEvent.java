@@ -38,7 +38,7 @@ public class ReportingVolumeSnapshotCreateEvent
 	private String volumeSnapshotId;
 	@Column(name="timestamp_ms", nullable=false)
 	private Long timestampMs;
-	@Column(name="user_id")
+	@Column(name="user_id", nullable=false)
 	private String userId;
 	@Column(name="sizeGB", nullable=false)
 	private Long sizeGB;

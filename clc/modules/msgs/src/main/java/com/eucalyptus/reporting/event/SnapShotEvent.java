@@ -26,66 +26,73 @@ import static org.hamcrest.Matchers.notNullValue;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.util.OwnerFullName;
 
-@SuppressWarnings("serial")
 public class SnapShotEvent implements Event {
+  private static final long serialVersionUID = 1L;
 
   public enum SnapShotAction {
     SNAPSHOTCREATE,
     SNAPSHOTDELETE
   }
 
-  public static class ActionInfo {
-    private final SnapShotAction action;
+  public static class CreateActionInfo extends EventActionInfo<SnapShotAction> {
+    private static final long serialVersionUID = 1L;
+    private final Long size;
 
-    private ActionInfo(final SnapShotAction action) {
-      assertThat(action, notNullValue());
-      this.action = action;
+    private CreateActionInfo( final Long size ) {
+      super( SnapShotAction.SNAPSHOTCREATE );
+      this.size = size;
     }
 
-    public SnapShotAction getAction() {
-      return action;
+    /**
+     * Get the size in GiB
+     */
+    public Long getSize() {
+      return size;
     }
 
     public String toString() {
-      return String.format("[action:%s]", getAction());
+      return String.format("[action:%s,size:%s]", getAction(), getSize());
     }
   }
 
-  private final ActionInfo actionInfo;
-  private final Long sizeGB;
+  private final EventActionInfo<SnapShotAction> actionInfo;
   private final OwnerFullName ownerFullName;
   private final String snapshotId;
   private final String uuid;
 
-  public static ActionInfo forSnapShotCreate() {
-    return new ActionInfo(SnapShotAction.SNAPSHOTCREATE);
+  /**
+   * Action for snapshot creation.
+   *
+   * @param size The snapshot size in GiB
+   * @return The action info
+   */
+  public static EventActionInfo<SnapShotAction> forSnapShotCreate( final Long size ) {
+    assertThat(size, notNullValue());
+
+    return new CreateActionInfo( size );
   }
 
-  public static ActionInfo forSnapShotDelete() {
-    return new ActionInfo(SnapShotAction.SNAPSHOTDELETE);
+  public static EventActionInfo<SnapShotAction> forSnapShotDelete() {
+    return new EventActionInfo<SnapShotAction>(SnapShotAction.SNAPSHOTDELETE);
   }
 
-  public static SnapShotEvent with( final ActionInfo actionInfo,
+  public static SnapShotEvent with( final EventActionInfo<SnapShotAction> actionInfo,
                                     final String snapShotUUID,
                                     final String snapshotId,
-                                    final OwnerFullName ownerFullName,
-                                    final long sizeGB ) {
+                                    final OwnerFullName ownerFullName ) {
 
-    return new SnapShotEvent(actionInfo, snapShotUUID, snapshotId, ownerFullName, sizeGB);
+    return new SnapShotEvent( actionInfo, snapShotUUID, snapshotId, ownerFullName );
   }
 
-  private SnapShotEvent( final ActionInfo actionInfo,
+  private SnapShotEvent( final EventActionInfo<SnapShotAction> actionInfo,
                          final String uuid,
                          final String snapshotId,
-                         final OwnerFullName ownerFullName,
-                         final long sizeGB) {
+                         final OwnerFullName ownerFullName ) {
     assertThat(actionInfo, notNullValue());
     assertThat(uuid, notNullValue());
-    assertThat(sizeGB, notNullValue());
     assertThat(ownerFullName.getUserId(), notNullValue());
     assertThat(snapshotId, notNullValue());
     this.actionInfo = actionInfo;
-    this.sizeGB = sizeGB;
     this.ownerFullName = ownerFullName;
     this.snapshotId = snapshotId;
     this.uuid = uuid;
@@ -95,25 +102,21 @@ public class SnapShotEvent implements Event {
     return snapshotId;
   }
 
-  public Long getSizeGB() {
-    return sizeGB;
-  }
-
-  public OwnerFullName getOwnerFullName() {
+  public OwnerFullName getOwner() {
     return ownerFullName;
   }
 
-  public ActionInfo getActionInfo() {
+  public EventActionInfo<SnapShotAction> getActionInfo() {
     return actionInfo;
   }
 
-  public String getUUID() {
+  public String getUuid() {
     return uuid;
   }
 
   @Override
   public String toString() {
-    return "SnapShotEvent [actionInfo=" + actionInfo + ", sizeGB=" + sizeGB
+    return "SnapShotEvent [actionInfo=" + actionInfo
         + ", userName=" + ownerFullName.getUserName() + ", snapshotId="
         + snapshotId + ", uuid=" + uuid + "]";
   }

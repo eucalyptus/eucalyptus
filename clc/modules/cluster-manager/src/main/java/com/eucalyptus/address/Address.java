@@ -62,7 +62,7 @@
 
 package com.eucalyptus.address;
 
-import static com.eucalyptus.reporting.event.AddressEvent.ActionInfo;
+import static com.eucalyptus.reporting.event.AddressEvent.AddressAction;
 import java.lang.reflect.Constructor;
 import java.util.NoSuchElementException;
 import java.util.UUID;
@@ -90,6 +90,7 @@ import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.reporting.event.AddressEvent;
+import com.eucalyptus.reporting.event.EventActionInfo;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.OwnerFullName;
@@ -595,12 +596,12 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
     return "eucalyptus";
   }
 
-  private void fireUsageEvent( final ActionInfo actionInfo ) {
+  private void fireUsageEvent( final EventActionInfo<AddressAction> actionInfo ) {
     fireUsageEvent( getOwner(), actionInfo );
   }
 
   private void fireUsageEvent( final OwnerFullName ownerFullName,
-                               final ActionInfo actionInfo ) {
+                               final EventActionInfo<AddressAction> actionInfo ) {
     if ( !Principals.isFakeIdentityAccountNumber( ownerFullName.getAccountNumber() ) ) {
       try {
         ListenerRegistry.getInstance().fireEvent(

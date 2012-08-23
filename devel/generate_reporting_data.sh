@@ -62,7 +62,7 @@
 
 # Script to generate fake reporting data for testing of reporting.
 #
-# Usage: generate_reporting_data adminPassword (create|delete) (instance|storage|s3)+
+# Usage: generate_reporting_data adminPassword (create|delete)
 #
 # This calls the FalseDataGenerator classes in a running Eucalyptus instance,
 #  by using the CommandServlet. The FalseDataGenerator classes then generate
@@ -74,9 +74,9 @@
 
 # Verify number of params, and display usage if wrong number
 
-if [ "$#" -lt "3" ]
+if [ "$#" -lt "2" ]
 then
-	echo "Usage: generate_false_data adminPassword (create|delete) (instance|storage|s3)+"
+	echo "Usage: generate_false_data adminPassword (create|delete)"
 	exit 1
 fi
 
@@ -96,7 +96,7 @@ case "$command" in
 	;;
 	* )
 		echo "No such command:$command"
-		echo "Usage: generate_false_data adminPassword (create|delete) (instance|storage|s3)+"
+		echo "Usage: generate_false_data adminPassword (create|delete)"
 		exit 1
 esac
 
@@ -113,25 +113,12 @@ export session=`cat /tmp/sessionId`
 echo "session id:" $session
 
 
-# Parse type params and execute commands for instance, storage, and/or s3
+# Execute
 
-for xx in ${@}
-do
-	case "$xx" in
-		"instance" )
-			class="com.eucalyptus.reporting.instance.FalseDataGenerator"
-		;;
-		"storage" )
-			class="com.eucalyptus.reporting.storage.FalseDataGenerator"
-		;;
-		"s3" )
-			class="com.eucalyptus.reporting.s3.FalseDataGenerator"
-		;;
-	esac
-	wget --no-check-certificate -O /tmp/nothing "https://localhost:8443/commandservlet?sessionId=$session&className=$class&methodName=$method"
-	if [ "$?" -ne "0" ]
-	then
-		echo "Command failed; session:$session class:$class method:$method"
-		exit 1
-	 fi
-done
+wget --no-check-certificate -O /tmp/nothing "https://localhost:8443/commandservlet?sessionId=$session&className=com.eucalyptus.reporting.FalseDataGenerator&methodName=$method"
+if [ "$?" -ne "0" ]
+then
+	echo "Command failed; session:$session method:$method"
+	exit 1
+ fi
+

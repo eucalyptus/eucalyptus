@@ -20,6 +20,9 @@
 
 package com.eucalyptus.reporting.modules.storage;
 
+import static com.eucalyptus.reporting.event.EventActionInfo.InstanceEventActionInfo;
+import static com.eucalyptus.reporting.event.VolumeEvent.VolumeAction;
+
 import javax.annotation.Nonnull;
 
 import org.apache.log4j.Logger;
@@ -29,8 +32,8 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
+import com.eucalyptus.reporting.event.EventActionInfo;
 import com.eucalyptus.reporting.event.VolumeEvent;
-import com.eucalyptus.reporting.event.VolumeEvent.InstanceActionInfo;
 import com.eucalyptus.reporting.event_store.ReportingVolumeEventStore;
 import com.eucalyptus.reporting.domain.ReportingAccountCrud;
 import com.eucalyptus.reporting.domain.ReportingUserCrud;
@@ -54,7 +57,7 @@ public class VolumeUsageEventListener implements EventListener<VolumeEvent> {
 
     final long timeInMs = getCurrentTimeMillis();
     try {
-      final User user = Accounts.lookupUserById(event.getOwner().getUserId());
+      final User user = lookupUser(event.getOwner().getUserId());
 
       getReportingAccountCrud().createOrUpdateAccount(user.getAccount()
           .getName(), user.getAccount().getAccountNumber());
@@ -65,7 +68,7 @@ public class VolumeUsageEventListener implements EventListener<VolumeEvent> {
       switch (event.getActionInfo().getAction()) {
         case VOLUMECREATE:
           eventStore.insertCreateEvent(event.getUuid(), event
-              .getDisplayName(), timeInMs, event.getOwner()
+              .getVolumeId(), timeInMs, event.getOwner()
               .getUserId(), event.getAvailabilityZone(), event
               .getSizeGB());
           break;
@@ -75,14 +78,14 @@ public class VolumeUsageEventListener implements EventListener<VolumeEvent> {
         case VOLUMEATTACH:
           eventStore
               .insertAttachEvent(event.getUuid(),
-                  ((InstanceActionInfo) event.getActionInfo())
+                  ((EventActionInfo.InstanceEventActionInfo<VolumeAction>) event.getActionInfo())
                       .getInstanceUuid(), event.getSizeGB(),
                   timeInMs);
           break;
         case VOLUMEDETACH:
           eventStore
               .insertDetachEvent(event.getUuid(),
-                  ((InstanceActionInfo) event.getActionInfo())
+                  ((InstanceEventActionInfo) event.getActionInfo())
                       .getInstanceUuid(), event.getSizeGB(),
                   timeInMs);
           break;
@@ -106,5 +109,9 @@ public class VolumeUsageEventListener implements EventListener<VolumeEvent> {
 
   protected long getCurrentTimeMillis() {
     return System.currentTimeMillis();
+  }
+
+  protected User lookupUser( final String userId ) throws AuthException {
+    return Accounts.lookupUserById( userId );
   }
 }

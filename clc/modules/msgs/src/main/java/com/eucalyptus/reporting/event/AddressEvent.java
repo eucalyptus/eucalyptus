@@ -21,6 +21,7 @@ package com.eucalyptus.reporting.event;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.notNullValue;
+import static com.eucalyptus.reporting.event.EventActionInfo.InstanceEventActionInfo;
 
 import com.eucalyptus.event.Event;
 import com.eucalyptus.util.OwnerFullName;
@@ -37,55 +38,9 @@ import com.google.common.base.Objects;
  * activity.</p>
  */
 public class AddressEvent implements Event {
+  private static final long serialVersionUID = 1L;
 
   public enum AddressAction { ALLOCATE, RELEASE, ASSOCIATE, DISASSOCIATE }
-
-  public static class ActionInfo {
-    private final AddressAction action;
-
-    private ActionInfo( final AddressAction action ) {
-      assertThat( action, notNullValue() );
-      this.action = action;
-    }
-
-    public AddressAction getAction() {
-      return action;
-    }
-
-    public String toString() {
-      return String.format( "[action:%s]", getAction() );
-    }
-  }
-
-  public static class InstanceActionInfo extends ActionInfo {
-    private final String instanceUuid;
-    private final String instanceId;
-
-    private InstanceActionInfo( final AddressAction action,
-                                final String instanceUuid,
-                                final String instanceId ) {
-      super( action );
-      assertThat( instanceUuid, notNullValue() );
-      assertThat(instanceId, notNullValue());
-      this.instanceUuid = instanceUuid;
-      this.instanceId = instanceId;
-    }
-
-    public String getInstanceUuid() {
-      return instanceUuid;
-    }
-
-    public String getInstanceId() {
-      return instanceId;
-    }
-
-    public String toString() {
-      return String.format( "[action:%s,instanceUuid:%s,instanceId:%s]",
-          getAction(),
-          getInstanceUuid(),
-          getInstanceId() );
-    }
-  }
 
   private final String uuid;
   private final String address;
@@ -93,31 +48,31 @@ public class AddressEvent implements Event {
   private final String userName;
   private final String accountId;
   private final String accountName;
-  private final ActionInfo actionInfo;
+  private final EventActionInfo<AddressAction> actionInfo;
 
-  public static ActionInfo forAllocate() {
-    return new ActionInfo( AddressAction.ALLOCATE );
+  public static EventActionInfo<AddressAction> forAllocate() {
+    return new EventActionInfo<AddressAction>( AddressAction.ALLOCATE );
   }
 
-  public static ActionInfo forRelease() {
-    return new ActionInfo( AddressAction.RELEASE );
+  public static EventActionInfo<AddressAction> forRelease() {
+    return new EventActionInfo<AddressAction>( AddressAction.RELEASE );
   }
 
-  public static InstanceActionInfo forAssociate( final String instanceUuid,
+  public static InstanceEventActionInfo<AddressAction> forAssociate( final String instanceUuid,
                                                  final String instanceId ) {
-    return new InstanceActionInfo( AddressAction.ASSOCIATE, instanceUuid, instanceId );
+    return new InstanceEventActionInfo<AddressAction>( AddressAction.ASSOCIATE, instanceUuid, instanceId );
   }
 
-  public static InstanceActionInfo forDisassociate( final String instanceUuid,
+  public static InstanceEventActionInfo<AddressAction> forDisassociate( final String instanceUuid,
                                                     final String instanceId ) {
-    return new InstanceActionInfo( AddressAction.DISASSOCIATE, instanceUuid, instanceId );
+    return new InstanceEventActionInfo<AddressAction>( AddressAction.DISASSOCIATE, instanceUuid, instanceId );
   }
 
   public static AddressEvent with( final String uuid,
                                    final String address,
                                    final OwnerFullName owner,
                                    final String accountName,
-                                   final ActionInfo action ) {
+                                   final EventActionInfo<AddressAction> action ) {
     return new AddressEvent(
         uuid,
         address,
@@ -135,7 +90,7 @@ public class AddressEvent implements Event {
                         final String userName,
                         final String accountId,
                         final String accountName,
-                        final ActionInfo actionInfo) {
+                        final EventActionInfo<AddressAction> actionInfo) {
     assertThat( uuid, notNullValue() );
     assertThat( address, notNullValue() );
     assertThat( userId, notNullValue() );
@@ -177,7 +132,7 @@ public class AddressEvent implements Event {
     return accountName;
   }
 
-  public ActionInfo getActionInfo() {
+  public EventActionInfo<AddressAction> getActionInfo() {
     return actionInfo;
   }
 

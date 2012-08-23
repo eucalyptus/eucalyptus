@@ -65,6 +65,7 @@ package com.eucalyptus.blockstorage;
 import static com.eucalyptus.cloud.ImageMetadata.State.available;
 import static com.eucalyptus.cloud.ImageMetadata.State.pending;
 import static com.eucalyptus.images.Images.inState;
+import static com.eucalyptus.reporting.event.SnapShotEvent.SnapShotAction;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -91,6 +92,7 @@ import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.images.Images;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.reporting.event.EventActionInfo;
 import com.eucalyptus.reporting.event.SnapShotEvent;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -139,7 +141,7 @@ public class SnapshotManager {
     };
     Snapshot snap = RestrictedTypes.allocateUnitlessResource( allocator );
     snap = Snapshots.startCreateSnapshot( volReady, snap );
-    fireUsageEvent( snap, SnapShotEvent.forSnapShotCreate() );
+    fireUsageEvent( snap, SnapShotEvent.forSnapShotCreate( snap.getVolumeSize().longValue() ) );
 
     CreateSnapshotResponseType reply = ( CreateSnapshotResponseType ) request.getReply( );
     edu.ucsb.eucalyptus.msgs.Snapshot snapMsg = snap.morph( new edu.ucsb.eucalyptus.msgs.Snapshot( ) );
@@ -272,10 +274,10 @@ public class SnapshotManager {
   }
 
   private static void fireUsageEvent( final Snapshot snap,
-                                      final SnapShotEvent.ActionInfo actionInfo ) {
+                                      final EventActionInfo<SnapShotAction> actionInfo ) {
     try {
       ListenerRegistry.getInstance().fireEvent(
-          SnapShotEvent.with(actionInfo, snap.getNaturalId(), snap.getDisplayName(), snap.getOwner(), snap.getVolumeSize().longValue()));
+          SnapShotEvent.with(actionInfo, snap.getNaturalId(), snap.getDisplayName(), snap.getOwner() ));
     } catch (final Exception e) {
       LOG.error(e, e);
     }

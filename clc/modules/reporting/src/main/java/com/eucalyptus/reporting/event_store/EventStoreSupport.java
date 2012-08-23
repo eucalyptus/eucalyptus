@@ -19,44 +19,24 @@
  ************************************************************************/
 package com.eucalyptus.reporting.event_store;
 
-import javax.persistence.Column;
-import javax.persistence.PersistenceContext;
-import javax.persistence.Table;
+import javax.persistence.EntityTransaction;
+import com.eucalyptus.entities.Entities;
+import com.eucalyptus.util.Exceptions;
 
-import org.hibernate.annotations.Entity;
+/**
+ * Support class for event stores
+ */
+class EventStoreSupport {
 
-import com.eucalyptus.entities.AbstractPersistent;
-
-@SuppressWarnings("serial")
-@Entity @javax.persistence.Entity
-@PersistenceContext(name="eucalyptus_reporting")
-@Table(name="reporting_volume_snapshot_delete_events")
-public class ReportingVolumeSnapshotDeleteEvent
-	extends AbstractPersistent
-{
-	@Column(name="uuid", nullable=false)
-	private String uuid;
-	@Column(name="timestamp_ms", nullable=false)
-	private Long timestampMs;
-
-	protected ReportingVolumeSnapshotDeleteEvent(String uuid, Long timestampMs)
-	{
-		this.uuid = uuid;
-		this.timestampMs = timestampMs;
-	}
-
-	protected ReportingVolumeSnapshotDeleteEvent()
-	{
-	}
-
-	public String getUuid()
-	{
-		return uuid;
-	}
-	
-	public Long getTimestampMs()
-	{
-		return timestampMs;
-	}
+  protected void persist( final Object event ) {
+    final EntityTransaction db = Entities.get(event);
+    try {
+      Entities.persist( event );
+      db.commit();
+    } catch ( final Exception e ) {
+      db.rollback();
+      throw Exceptions.toUndeclared(e);
+    }
+  }
 
 }

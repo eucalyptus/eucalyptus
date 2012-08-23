@@ -19,125 +19,69 @@
  ************************************************************************/
 package com.eucalyptus.reporting.event_store;
 
-import java.util.*;
+import com.google.common.base.Preconditions;
 
-import org.apache.log4j.Logger;
-
-import com.eucalyptus.entities.EntityWrapper;
-
-public class ReportingVolumeEventStore
+public class ReportingVolumeEventStore extends EventStoreSupport
 {
-	private static Logger LOG = Logger.getLogger( ReportingVolumeEventStore.class );
+  private static final ReportingVolumeEventStore instance = new ReportingVolumeEventStore();
 
-	private static ReportingVolumeEventStore instance = null;
-	
-	public static synchronized ReportingVolumeEventStore getInstance()
-	{
-		if (instance == null) {
-			instance = new ReportingVolumeEventStore();
-		}
-		return instance;
-	}
-	
-	private ReportingVolumeEventStore()
-	{
-		
-	}
+  public static ReportingVolumeEventStore getInstance() {
+    return instance;
+  }
 
-	public void insertCreateEvent(String uuid, String volumeId, long timestampMs, String userId,
-					 String availabilityZone, Long sizeGB)
-	{
-		
-		EntityWrapper<ReportingVolumeCreateEvent> entityWrapper =
-			EntityWrapper.get(ReportingVolumeCreateEvent.class);
+  protected ReportingVolumeEventStore() {
+  }
 
-		try {
-			ReportingVolumeCreateEvent volume = new ReportingVolumeCreateEvent(uuid, volumeId,
-				timestampMs, userId, availabilityZone, sizeGB);
-			
-			entityWrapper.add(volume);
-			entityWrapper.commit();
-			LOG.debug("Added reporting volume to db:" + volume);
-		} catch (Exception ex) {
-			LOG.error(ex);
-			entityWrapper.rollback();
-			throw new RuntimeException(ex);
-		}					
-	}
+  public void insertCreateEvent( final String uuid,
+                                 final String volumeId,
+                                 final long timestampMs,
+                                 final String userId,
+                                 final String availabilityZone,
+                                 final long sizeGB ) {
+    Preconditions.checkNotNull(uuid, "Uuid is required");
+    Preconditions.checkNotNull(volumeId, "VolumeId is required");
+    Preconditions.checkNotNull(userId, "UserId is required");
+    Preconditions.checkNotNull(availabilityZone, "AvailabilityZone is required");
 
-	public void insertDeleteEvent(String uuid, long timestampMs)
-	{
-		
-		EntityWrapper<ReportingVolumeDeleteEvent> entityWrapper =
-			EntityWrapper.get(ReportingVolumeDeleteEvent.class);
+    persist( new ReportingVolumeCreateEvent(uuid, volumeId, timestampMs, userId, availabilityZone, sizeGB) );
+  }
 
-		try {
-			ReportingVolumeDeleteEvent event = new ReportingVolumeDeleteEvent(uuid, timestampMs);
-			entityWrapper.add(event);
-			entityWrapper.commit();
-			LOG.debug("Added event to db:" + event);
-		} catch (Exception ex) {
-			LOG.error(ex);
-			entityWrapper.rollback();
-			throw new RuntimeException(ex);
-		}					
-	}
+  public void insertDeleteEvent( final String uuid,
+                                 final long timestampMs) {
 
-	public void insertUsageEvent(String uuid, long timestampMs, Long cumulativeMegsRead,
-			Long cumulativeMegsWritten)
-	{
-		EntityWrapper<ReportingVolumeUsageEvent> entityWrapper =
-			EntityWrapper.get(ReportingVolumeUsageEvent.class);
+    Preconditions.checkNotNull(uuid, "Uuid is required");
 
-		try {
-			ReportingVolumeUsageEvent event = new ReportingVolumeUsageEvent(uuid, timestampMs,
-					cumulativeMegsRead, cumulativeMegsWritten);
-			entityWrapper.add(event);
-			entityWrapper.commit();
-			LOG.debug("Added event to db:" + event);
-		} catch (Exception ex) {
-			LOG.error(ex);
-			entityWrapper.rollback();
-			throw new RuntimeException(ex);
-		}							
-	}
+    persist( new ReportingVolumeDeleteEvent(uuid, timestampMs) );
+  }
 
-	
-	public void insertAttachEvent(String uuid, String instanceUuid, long sizeGB, long timestampMs)
-	{
-		EntityWrapper<ReportingVolumeAttachEvent> entityWrapper =
-			EntityWrapper.get(ReportingVolumeAttachEvent.class);
+  public void insertUsageEvent( final String uuid,
+                                final long timestampMs,
+                                final long cumulativeMegsRead,
+                                final long cumulativeMegsWritten ) {
+    Preconditions.checkNotNull(uuid, "Uuid is required");
 
-		try {
-			ReportingVolumeAttachEvent event = new ReportingVolumeAttachEvent(uuid, instanceUuid, sizeGB, timestampMs);
-			entityWrapper.add(event);
-			entityWrapper.commit();
-			LOG.debug("Added event to db:" + event);
-		} catch (Exception ex) {
-			LOG.error(ex);
-			entityWrapper.rollback();
-			throw new RuntimeException(ex);
-		}							
-		
-	}
-	
-	public void insertDetachEvent(String uuid, String instanceUuid, long sizeGB, long timestampMs)
-	{
-		EntityWrapper<ReportingVolumeDetachEvent> entityWrapper =
-			EntityWrapper.get(ReportingVolumeDetachEvent.class);
+    persist( new ReportingVolumeUsageEvent(uuid, timestampMs, cumulativeMegsRead, cumulativeMegsWritten) );
+  }
 
-		try {
-			ReportingVolumeDetachEvent event = new ReportingVolumeDetachEvent(uuid, instanceUuid, sizeGB, timestampMs);
-			entityWrapper.add(event);
-			entityWrapper.commit();
-			LOG.debug("Added event to db:" + event);
-		} catch (Exception ex) {
-			LOG.error(ex);
-			entityWrapper.rollback();
-			throw new RuntimeException(ex);
-		}							
-		
-	}
-	
+  public void insertAttachEvent( final String uuid,
+                                 final String instanceUuid,
+                                 final long sizeGB,
+                                 final long timestampMs) {
+    Preconditions.checkNotNull(uuid, "Uuid is required");
+    Preconditions.checkNotNull(instanceUuid, "InstanceUuid is required");
+
+    persist( new ReportingVolumeAttachEvent(uuid, instanceUuid, sizeGB, timestampMs) );
+  }
+
+  public void insertDetachEvent( final String uuid,
+                                 final String instanceUuid,
+                                 final long sizeGB,
+                                 final long timestampMs ) {
+    Preconditions.checkNotNull(uuid, "Uuid is required");
+    Preconditions.checkNotNull(instanceUuid, "InstanceUuid is required");
+
+    persist( new ReportingVolumeDetachEvent(uuid, instanceUuid, sizeGB, timestampMs) );
+  }
+
 }
 

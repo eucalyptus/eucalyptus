@@ -58,6 +58,11 @@ class InstanceEventListenerTest {
   }
 
   @Test
+  void testInstantiable() {
+    new InstanceEventListener()
+  }
+
+  @Test
   void testRunNewInstance() {
     long timestamp = System.currentTimeMillis() - 10000
     List<Object> persisted = testEvent( newInstanceEvent("i-00000001"), timestamp )

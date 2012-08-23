@@ -19,88 +19,27 @@
  ************************************************************************/
 package com.eucalyptus.reporting.event_store;
 
-import org.apache.log4j.Logger;
-
-import com.eucalyptus.entities.EntityWrapper;
-
-import com.eucalyptus.entities.AbstractPersistent;
-
-public class ReportingS3ObjectEventStore
-	extends AbstractPersistent
+public class ReportingS3ObjectEventStore extends EventStoreSupport
 {
-	private static Logger LOG = Logger.getLogger( ReportingS3ObjectEventStore.class );
+  private static ReportingS3ObjectEventStore instance = new ReportingS3ObjectEventStore();
 
-	private static ReportingS3ObjectEventStore instance = null;
-	
-	public static synchronized ReportingS3ObjectEventStore getInstance()
-	{
-		if (instance == null) {
-			instance = new ReportingS3ObjectEventStore();
-		}
-		return instance;
-	}
-	
-	private ReportingS3ObjectEventStore()
-	{
-		
-	}
+  public static ReportingS3ObjectEventStore getInstance() {
+    return instance;
+  }
 
-	public void insertS3ObjectCreateEvent(String s3BucketName, String s3ObjectName, long timestampMs,
-			String userId)
-	{
-		EntityWrapper<ReportingS3ObjectCreateEvent> entityWrapper =
-			EntityWrapper.get(ReportingS3ObjectCreateEvent.class);
+  protected ReportingS3ObjectEventStore() {
+  }
 
-		try {
-			ReportingS3ObjectCreateEvent s3Object =
-				new ReportingS3ObjectCreateEvent(s3BucketName, s3ObjectName, timestampMs, userId);
-			entityWrapper.add(s3Object);
-			entityWrapper.commit();
-			LOG.debug("Added event to db:" + s3Object);
-		} catch (Exception ex) {
-			LOG.error(ex);
-			entityWrapper.rollback();
-			throw new RuntimeException(ex);
-		}					
-	}
+  public void insertS3ObjectCreateEvent(String s3BucketName, String s3ObjectName, long s3ObjectSize, long timestampMs,
+                                        String userId) {
+    persist( new ReportingS3ObjectCreateEvent(s3BucketName, s3ObjectName, s3ObjectSize, timestampMs, userId) );
+  }
 
-	public void insertS3ObjectDeleteEvent(String s3BucketName, String s3ObjectName, long timestampMs)
-	{
-		EntityWrapper<ReportingS3ObjectDeleteEvent> entityWrapper =
-			EntityWrapper.get(ReportingS3ObjectDeleteEvent.class);
+  public void insertS3ObjectDeleteEvent(String s3BucketName, String s3ObjectName, Long s3ObjectSize, Long timestampMs, String userId) {
+    persist( new ReportingS3ObjectDeleteEvent(s3BucketName, s3ObjectName, s3ObjectSize, timestampMs, userId) );
+  }
 
-		try {
-			ReportingS3ObjectDeleteEvent s3Object =
-				new ReportingS3ObjectDeleteEvent(s3BucketName, s3ObjectName, timestampMs);
-			entityWrapper.add(s3Object);
-			entityWrapper.commit();
-			LOG.debug("Added event to db:" + s3Object);
-		} catch (Exception ex) {
-			LOG.error(ex);
-			entityWrapper.rollback();
-			throw new RuntimeException(ex);
-		}							
-	}
-
-	public void insertS3ObjectUsageEvent(String s3BucketName, String s3ObjectName, long timestampMs,
-			Long cumulativeMegsRead, Long cumulativeMegsWritten, Long cumulativeGetRequests,
-			Long cumulativePutRequests)
-	{
-		EntityWrapper<ReportingS3ObjectUsageEvent> entityWrapper =
-			EntityWrapper.get(ReportingS3ObjectUsageEvent.class);
-
-		try {
-			ReportingS3ObjectUsageEvent s3Object = new ReportingS3ObjectUsageEvent(s3BucketName,
-					s3ObjectName, timestampMs, cumulativeMegsRead, cumulativeMegsWritten,
-					cumulativeGetRequests, cumulativePutRequests);
-			entityWrapper.add(s3Object);
-			entityWrapper.commit();
-			LOG.debug("Added event to db:" + s3Object);
-		} catch (Exception ex) {
-			LOG.error(ex);
-			entityWrapper.rollback();
-			throw new RuntimeException(ex);
-		}							
-	}
-
+  public void insertS3ObjectUsageEvent(String s3BucketName, String s3ObjectName, Long s3ObjectSize, Long timestampMs, String userId) {
+    persist( new ReportingS3ObjectUsageEvent(s3BucketName, s3ObjectName, s3ObjectSize, timestampMs, userId) );
+  }
 }

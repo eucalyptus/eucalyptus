@@ -20,6 +20,7 @@
 
 package com.eucalyptus.reporting.modules.storage;
 
+import static com.eucalyptus.reporting.event.SnapShotEvent.CreateActionInfo;
 import javax.annotation.Nonnull;
 
 import org.apache.log4j.Logger;
@@ -40,9 +41,6 @@ public class SnapShotUsageEventListener implements EventListener<SnapShotEvent> 
 
   private static Logger LOG = Logger.getLogger( SnapShotUsageEventListener.class );
 
-  public SnapShotUsageEventListener() {
-  }
-
   public static void register() {
     Listeners.register( SnapShotEvent.class, new SnapShotUsageEventListener() );
   }
@@ -54,7 +52,7 @@ public class SnapShotUsageEventListener implements EventListener<SnapShotEvent> 
     final long timeInMs = getCurrentTimeMillis();
 
     try {
-      final User user = Accounts.lookupUserById(event.getOwnerFullName().getUserId());
+      final User user = lookupUser( event.getOwner().getUserId() );
 
       getReportingAccountCrud().createOrUpdateAccount(user.getAccount()
           .getName(), user.getAccount().getAccountNumber());
@@ -64,11 +62,11 @@ public class SnapShotUsageEventListener implements EventListener<SnapShotEvent> 
       final ReportingVolumeSnapshotEventStore eventStore = getReportingVolumeSnapshotEventStore();
       switch (event.getActionInfo().getAction()) {
         case SNAPSHOTCREATE:
-          eventStore.insertCreateEvent(event.getUUID(), event.getSnapshotId(), timeInMs, event.getOwnerFullName()
-              .getUserName(), event.getSizeGB());
+          eventStore.insertCreateEvent(event.getUuid(), event.getSnapshotId(), timeInMs, event.getOwner()
+              .getUserId(), ((CreateActionInfo)event.getActionInfo()).getSize() );
           break;
         case SNAPSHOTDELETE:
-          eventStore.insertDeleteEvent(event.getUUID(), event.getSnapshotId(), event.getOwnerFullName().getUserName(), timeInMs);
+          eventStore.insertDeleteEvent(event.getUuid(), timeInMs);
           break;
       }
     } catch (AuthException e) {
@@ -90,5 +88,9 @@ public class SnapShotUsageEventListener implements EventListener<SnapShotEvent> 
 
   protected long getCurrentTimeMillis() {
     return System.currentTimeMillis();
+  }
+
+  protected User lookupUser( final String userId ) throws AuthException {
+    return Accounts.lookupUserById( userId );
   }
 }

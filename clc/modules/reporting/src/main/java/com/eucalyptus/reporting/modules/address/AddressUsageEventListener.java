@@ -19,7 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.reporting.modules.address;
 
-import static com.eucalyptus.reporting.event.AddressEvent.InstanceActionInfo;
+import static com.eucalyptus.reporting.event.EventActionInfo.InstanceEventActionInfo;
 import javax.annotation.Nonnull;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
@@ -57,10 +57,10 @@ public class AddressUsageEventListener implements EventListener<AddressEvent> {
         eventStore.insertDeleteEvent( event.getUuid(), timestamp );
         break;
       case ASSOCIATE:
-        eventStore.insertAttachEvent( event.getUuid(), ((InstanceActionInfo)event.getActionInfo()).getInstanceUuid(), timestamp );
+        eventStore.insertAttachEvent( event.getUuid(), ((InstanceEventActionInfo)event.getActionInfo()).getInstanceUuid(), timestamp );
         break;
       case DISASSOCIATE:
-        eventStore.insertDetachEvent( event.getUuid(), ((InstanceActionInfo)event.getActionInfo()).getInstanceUuid(), timestamp );
+        eventStore.insertDetachEvent( event.getUuid(), ((InstanceEventActionInfo)event.getActionInfo()).getInstanceUuid(), timestamp );
         break;
     }
   }
