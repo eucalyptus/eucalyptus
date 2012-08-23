@@ -70,11 +70,12 @@
              if ( thisObj.options.on_open ){
                if(thisObj.options.on_open['spin']){
                  thisObj._activateSpinWheel();
-                 $.when(thisObj.options.on_open.callback()).done( function(output){
-                   thisObj._removeSpinWheel(); }
+                 $.when(thisObj.options.on_open.callback()).done( function(){ thisObj._removeSpinWheel(); }
+                  ).fail( function(){ thisObj.element.dialog('close'); }
                  );
-               }else
+               } else {
                  thisObj.options.on_open.callback();
+               }
              }
          },
 

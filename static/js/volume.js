@@ -262,8 +262,8 @@
          help: {title: help_volume['dialog_volume_attach_title'], content: $attach_dialog_help},
          on_open: {spin: true, callback: function(args) {
            var dfd = $.Deferred();
-           thisObj._initAttachDialog(dfd) ; // pulls instance info from server
-           return dfd.promise()
+           thisObj._initAttachDialog(dfd); // pulls instance info from server
+           return dfd.promise();
          }},
        });
       this.attachDialog.eucadialog('onKeypress', 'volume-attach-device-name', attachButtonId, function () {
@@ -320,7 +320,7 @@
          on_open: {spin: true, callback: function(args) {
            var dfd = $.Deferred();
            thisObj._initAddDialog(dfd) ; // pulls az and snapshot info from the server
-           return dfd.promise()
+           return dfd.promise();
          }},
        });
        this.addDialog.eucadialog('onKeypress', 'volume-size', createButtonId, function () {
@@ -363,12 +363,14 @@
                   $azSelector.append($('<option>').attr('value', azName).text(azName));
                 } 
               } else {
-                notifyError(null, error_loading_az_msg);
+                notifyError(null, error_loading_azs_msg);
+                dfd.reject();
               }
            },
           error:
             function(jqXHR, textStatus, errorThrown){
-                notifyError(null, error_loading_az_msg);
+              notifyError(null, error_loading_azs_msg);
+              dfd.reject();
             }
       })).then(function (output){
         $.ajax({
@@ -389,18 +391,19 @@
                       snapshot.id + ' (' + snapshot.volume_size + ' ' + $.i18n.map['size_gb'] +')'));
                   }
                 } 
+                dfd.resolve();
               } else {
                 notifyError(null, error_loading_snapshots_msg);
+                dfd.reject();
               }
-              dfd.resolve();
            },
           error:
             function(jqXHR, textStatus, errorThrown){
               notifyError(null, error_loading_snapshots_msg);
-              dfd.resolve();
+              dfd.reject();
             }
         });
-      }, function (output) { dfd.resolve(); });
+      }, function (output) { dfd.reject(); });
     },
 
     _initAttachDialog : function(dfd) {  // should resolve dfd object
@@ -420,16 +423,17 @@
                 if ( instance.state === 'running' ) {
                   $instanceSelector.append($('<option>').attr('value', instance.id).text(instance.id));
                 }
-              } 
+              }
+              dfd.resolve();
             } else {
               notifyError(null, error_loading_instances_msg);
+              dfd.reject();
             }
-            dfd.resolve();
           },
         error:
           function(jqXHR, textStatus, errorThrown){
             notifyError(null, error_loading_instances_msg);
-            dfd.resolve();
+            dfd.reject();
           }
       })
     },
