@@ -28,10 +28,15 @@
        help : null,  // help title and content 
        on_open: null, // {spin: True, callback: function(){}}
     },
+    $error_div : null,
     help_flipped : false,
 
     _init : function() {
       var thisObj = this;
+      /// create div for displaying errors
+      thisObj.$error_div = $('<div>').addClass('dialog-error');
+      thisObj.element.append(thisObj.$error_div);
+
       this.element.dialog({
          autoOpen: false,  // assume the three params are fixed for all dialogs
          modal: true,
@@ -239,6 +244,16 @@
         }
       });
     },
+
+    showError : function(error, append){
+      if(!append)
+        this.$error_div.children().detach();
+      else
+        this.$error_div.append($('<br>'));
+
+      this.$error_div.append(
+        $('<span>').html(error)); 
+    } 
 /**** End of Public Methods ****/
   });
 })(jQuery,

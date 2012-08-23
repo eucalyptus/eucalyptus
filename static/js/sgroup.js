@@ -122,7 +122,6 @@
                 alert("rule port = "+rule.port);
 
               $.when(thisObj._addSecurityGroup(name, desc)).then(function(data, textStatus, jqXHR){
-                                    $notification = thisObj.addDialog.find('div.dialog-notifications');
                                     if (data.results && data.results.status == true) {
                                         notifySuccess(sgroup_create_success + ' ' + name);
                                         thisObj.tableWrapper.eucatable('refreshTable');
@@ -131,7 +130,7 @@
                                     }
                                  },
                                  function(jqXHR, textStatus, errorThrown){
-                                    $notification(sgroup_delete_error + ' ' + name);
+                                    this.addDialog.eucadialog('showError',sgroup_delete_error + ' ' + name);
                                  }
               );
               $add_dialog.dialog("close");
@@ -252,7 +251,7 @@
     },
 
     _deleteSelectedSecurityGroups : function () {
-      thisObj = this;
+      var thisObj = this;
       var rowsToDelete = thisObj._getTableWrapper().eucatable('getAllSelectedRows');
       for ( i = 0; i<rowsToDelete.length; i++ ) {
         var sgroupName = rowsToDelete[i];
@@ -276,7 +275,7 @@
           error:
           (function(sgroupName) {
             return function(jqXHR, textStatus, errorThrown){
-              $notification(sgroup_delete_error + ' ' + sgroupName);
+              thisObj.delDialog.eucadialog('showError', sgroup_delete_error + ' ' + sgroupName);
             }
           })(sgroupName)
         });
