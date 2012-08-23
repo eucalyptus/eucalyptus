@@ -885,7 +885,7 @@ main (int argc, char **argv)
         } else {
             log_eucafault (argv[optind], NULL);
         }
-        log_eucafault_v (argv[optind]); // Deliberately call with no params.
+        log_eucafault_v (argv[optind], NULL); // Deliberately call w/NULL.
     }
     if (dump) {
         dump_eucafaults_db ();
