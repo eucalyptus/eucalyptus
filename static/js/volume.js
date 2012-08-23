@@ -610,7 +610,7 @@
       }
       $volumeSelector = this.attachDialog.find('#volume-attach-volume-selector');
       $volumeSelector.html('');
-      $volumeSelector.append($('<option>').attr('value', volumeId).text(volumeId));
+      $volumeSelector.append($('<option>').attr('value', volumeId).text(volumeToAttach));
       $volumeSelector.attr('disabled', 'disabled');
       this.attachDialog.eucadialog('open');
     },
