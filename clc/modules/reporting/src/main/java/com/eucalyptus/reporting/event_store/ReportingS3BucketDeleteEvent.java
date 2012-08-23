@@ -56,9 +56,9 @@ public class ReportingS3BucketDeleteEvent
 	{
 		super();
 		this.s3BucketName = s3BucketName;
-    this.s3BucketSize = s3BucketSize;
-    this.s3userId = userId;
-    this.timestampMs = timeInMs;
+		this.timestampMs = timeInMs;
+		this.s3BucketSize = s3BucketSize;
+		this.timestampMs = timeInMs;
 	}
 
 	public String getS3BucketName()

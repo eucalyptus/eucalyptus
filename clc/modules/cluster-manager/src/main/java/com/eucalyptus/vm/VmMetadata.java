@@ -75,6 +75,7 @@ import com.google.common.base.Joiner;
 public class VmMetadata {
   private static//
   Logger                                                      LOG                       = Logger.getLogger( VmMetadata.class );
+ 
   private static//
   Function<MetadataRequest, ByteArray>                        dynamicFunc               = new Function<MetadataRequest, ByteArray>( ) {
                                                                                           public ByteArray apply( MetadataRequest arg0 ) {
@@ -147,6 +148,7 @@ public class VmMetadata {
                                                                                                 }
                                                                                               } );
                                                                                             put( "network-topology", new NetworkGroupsMetadata( ) );
+                                                                                            put( "sensors-conf", new SensorsConfigMetadata( ) );
                                                                                           }
                                                                                         };
   

@@ -22,7 +22,6 @@ package com.eucalyptus.reporting.event;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.notNullValue;
-
 import javax.annotation.Nonnull;
 import com.eucalyptus.util.OwnerFullName;
 
