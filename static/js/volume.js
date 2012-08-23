@@ -44,7 +44,6 @@
           "sAjaxDataProp": "results",
           "bAutoWidth" : false,
           "sPaginationType": "full_numbers",
-          "sDom": '<"table_volumes_header"><"table-volume-filter">f<"clear"><"table_volumes_top">rt<"table-volumes-legend">p<"clear">',
           "aoColumns": [
             {
               "bSortable": false,
@@ -53,7 +52,9 @@
             },
             { "mDataProp": "id" },
             {
-              "fnRender": function(oObj) { s = (oObj.aData.status == 'in-use') ? oObj.aData.attach_data.status : oObj.aData.status; return '<div title="'+ $.i18n.map['volume_state_' + s.replace('-','_')] +'" class="volume-status-' + oObj.aData.status + '">&nbsp;</div>'; },
+              "fnRender": function(oObj) { 
+                 return '<div class="table-legend-item" id="legend-volumes-'+oObj.aData.status+'">&nbsp;</div>';
+               },
               "sWidth": "20px",
               "bSearchable": false,
               "iDataSort": 8, // sort on hiden status column
@@ -138,51 +139,10 @@
                                   $('<a>').attr('href','#').html('&larr;'))));
           thisObj._flipToHelp(evt,$helpHeader, $volHelp);
         },
+        filters : [{name:"vol_state", options: ['all','attached','detached'], filter_col:8, alias: {'attached':'in-use','detached':'available'}}],
+        legend : ['creating', 'available', 'in-use', 'deleting', 'deleted', 'error'],
       });
       this.tableWrapper.appendTo(this.element);
-
-      //add filter to the table
-      // TODO: make templates
-      $tableFilter = $('div.table-volume-filter');
-      $tableFilter.addClass('euca-table-filter');
-      $tableFilter.append(
-        $('<span>').addClass("filter-label").html(table_filter_label),
-        $('<select>').attr('id', 'volumes-selector'));
-
-      filterOptions = ['all', 'attached', 'detached'];
-      $sel = $tableFilter.find("#volumes-selector");
-      for (o in filterOptions)
-        $sel.append($('<option>').val(filterOptions[o]).text($.i18n.map['volume_selecter_' + filterOptions[o]]));
-
-      $.fn.dataTableExt.afnFiltering.push(
-	function( oSettings, aData, iDataIndex ) {
-          // first check if this is called on a volumes table
-          if (oSettings.sInstance != 'volumes')
-            return true;
-          selectorValue = $("#volumes-selector").val();
-          switch (selectorValue) {
-            case 'attached':
-              return 'in-use' == aData[8];
-              break;
-            case 'detached':
-              return 'available' == aData[8];
-              break;
-          }
-          return true;
-        }
-      );
-
-      // attach action
-      $("#volumes-selector").change( function() { thisObj._reDrawTable() } );
-
-      // TODO: let's move legend to html as a template
-      //add leged to the volumes table
-      $tableLegend = $("div.table-volumes-legend");
-      $tableLegend.append($('<span>').addClass('volume-legend').html(volume_legend));
-
-      statuses = ['creating', 'available', 'in-use', 'deleting', 'deleted', 'error'];
-      for (s in statuses)
-        $tableLegend.append($('<span>').addClass('volume-status-legend').addClass('volume-status-' + statuses[s]).html($.i18n.map['volume_state_' + statuses[s].replace('-','_')]));
 
       $tmpl = $('html body').find('.templates #volumeDelDlgTmpl').clone();
       var $rendered = $($tmpl.render($.extend($.i18n.map, help_volume)));
@@ -449,10 +409,6 @@
       }
     },
 */
-    _reDrawTable : function() {
-      this.tableWrapper.eucatable('reDrawTable');
-    },
-
     _deleteListedVolumes : function () {
       var thisObj = this;
       $volumesToDelete = this.delDialog.find("#volumes-to-delete");

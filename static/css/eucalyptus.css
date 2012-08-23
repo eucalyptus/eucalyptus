@@ -946,6 +946,19 @@ tr.even td.sorting_1 {
   float: left;
 }
 
+.table-legend {
+  float:left;
+  margin-top: 15px;
+  margin-left: 15px;
+}
+
+.table-legend-item {
+  padding-left: 12px;
+  background-position: left !important;
+  background-repeat: no-repeat;
+  margin-left: 15px;
+}
+
 .filter-label {
   padding-right: 5px;
 }
@@ -1018,50 +1031,22 @@ tr.even td.sorting_1 {
   text-decoration: underline;
 }
 
-
-/* ======= Volume statuses ====== */
-
-.table-volume-legend {
-  float: left;
-}
-
-.volume-status-legend {
-  padding-left: 12px;
-  background-position: left !important;
-  margin-left: 15px;
-}
-
-.volume-legend {
-  float: left;
-}
-
-.volume-status-available {
+/* ======= Volume status ====== */
+#legend-volumes-available {
   background-image: url('../images/green-ball-10x10.png');
-  background-repeat: no-repeat;
-  background-position: center;
 }
-.volume-status-in-use {
+#legend-volumes-in-use {
   background-image: url('../images/red-ball-10x10.png');
-  background-repeat: no-repeat;
-  background-position: center;
 }
-.volume-status-error {
+#legend-volumes-error {
   background-image: url('../images/black-ball-10x10.png');
-  background-repeat: no-repeat;
-  background-position: center;
 }
-.volume-status-creating {
+#legend-volumes-creating {
   background-image: url('../images/gray-ball-10x10.png');
-  background-repeat: no-repeat;
-  background-position: center;
 }
-.volume-status-deleting {
+#legend-volumes-deleting {
   background-image: url('../images/blue-ball-10x10.png');
-  background-repeat: no-repeat;
-  background-position: center;
 }
-.volume-status-deleted {
+#legend-volumes-deleted {
   background-image: url('../images/brown-ball-10x10.png');
-  background-repeat: no-repeat;
-  background-position: center;
 }
