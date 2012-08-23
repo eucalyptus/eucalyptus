@@ -94,6 +94,7 @@
 #include "iscsi.h"
 #include "xml.h"
 #include "hooks.h"
+#include "sensor.h"
 
 #include "windows-bundle.h"
 
@@ -1495,6 +1496,61 @@ doDescribeBundleTasks(
 	return OK;
 }
 
+static int 
+doDescribeSensors (struct nc_state_t *nc,
+                       ncMetadata *meta, 
+                       char **instIds,
+                       int instIdsLen,
+                       char **sensorIds,
+                       int sensorIdsLen,
+                       sensorResource ***outResources,
+                       int *outResourcesLen)
+{
+    int total;
+
+	sem_p (inst_copy_sem);
+	if (instIdsLen == 0) // describe all instances
+		total = total_instances (&global_instances_copy);
+	else 
+		total = instIdsLen;
+
+    * outResources = malloc (total * sizeof (sensorResource *));
+    if ((*outResources) == NULL) {
+        sem_v (inst_copy_sem);
+        return OUT_OF_MEMORY;
+    }
+    
+	int k = 0;
+    ncInstance * instance;
+	for (int i=0; (instance = get_instance(&global_instances_copy)) != NULL; i++) {
+		// only pick ones the user (or admin) is allowed to see
+		if (strcmp(meta->userId, nc->admin_user_id) 
+            && strcmp(meta->userId, instance->userId))
+			continue;
+        
+		if (instIdsLen > 0) {
+            int j;
+            
+			for (j=0; j < instIdsLen; j++)
+				if (!strcmp(instance->instanceId, instIds[j]))
+					break;
+            
+			if (j >= instIdsLen)
+				// instance of no relevance right now
+				continue;
+		}
+        
+        * outResources [k] = malloc (sizeof (sensorResource));
+        sensor_set_instance_data (instance->instanceId, sensorIds, sensorIdsLen, * outResources [k]);
+        k++;
+	}
+    
+    * outResourcesLen = k;
+	sem_v (inst_copy_sem);
+    
+    return 0;
+}
+
 struct handlers default_libvirt_handlers = {
     .name = "default",
     .doInitialize        = doInitialize,
@@ -1512,5 +1568,6 @@ struct handlers default_libvirt_handlers = {
     .doCreateImage       = doCreateImage,
     .doBundleInstance    = doBundleInstance,
     .doCancelBundleTask  = doCancelBundleTask,
-    .doDescribeBundleTasks    = doDescribeBundleTasks
+    .doDescribeBundleTasks    = doDescribeBundleTasks,
+    .doDescribeSensors   = doDescribeSensors
 };

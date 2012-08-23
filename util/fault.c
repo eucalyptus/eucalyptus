@@ -40,8 +40,8 @@
 
 #include <libxml/parser.h>
 #include <libxml/tree.h>
-
 #include <eucalyptus-config.h>
+
 #include <eucalyptus.h>
 #include <misc.h>
 #include <fault.h>

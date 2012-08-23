@@ -97,64 +97,48 @@
         </xs:sequence>
       </xs:complexType>
 
-      <xs:complexType abstract="true" name="sensorsIdType">
-        <xs:sequence>
-          <xs:element nillable="true" minOccurs="0" maxOccurs="unbounded" name="sensorIds" type="xs:string"/>
-        </xs:sequence>
-      </xs:complexType>
-      
-      <xs:complexType abstract="true" name="instancesIdType">
-        <xs:sequence>
-          <xs:element nillable="true" minOccurs="0" maxOccurs="unbounded" name="instancesIds" type="xs:string"/>
-        </xs:sequence>
-      </xs:complexType>
+      <!-- sensor-related data types -->
 
        <xs:complexType abstract="true" name="sensorsResourceType">
         <xs:sequence>
-        	<xs:element name="resourceName" type="xs:string"
-        		maxOccurs="1" minOccurs="1">
-        	</xs:element>
-        	<xs:element nillable="true" minOccurs="1" maxOccurs="1"
-        		name="resouceType" type="xs:string" />
-        	<xs:element name="metrics" type="tns:metricsResourceType" maxOccurs="unbounded" minOccurs="1"></xs:element>
+	  <xs:element name="resourceName" type="xs:string" maxOccurs="1" minOccurs="1"/>
+	  <xs:element name="resourceType" type="xs:string" minOccurs="1" maxOccurs="1" />
+	  <xs:element name="metrics" type="tns:metricsResourceType" maxOccurs="unbounded" minOccurs="1"/>
         </xs:sequence>
        </xs:complexType>
       
       <xs:complexType abstract="true" name="metricsResourceType">
         <xs:sequence>
-          <xs:element nillable="true" minOccurs="1" maxOccurs="1" name="metricName" type="xs:string"/>
-          <xs:element nillable="true" minOccurs="0" maxOccurs="unbounded" name="counters" type="tns:metricCounterType"/>
+          <xs:element name="metricName" type="xs:string" nillable="true" minOccurs="1" maxOccurs="1" />
+          <xs:element name="counters" type="tns:metricCounterType" nillable="true" minOccurs="0" maxOccurs="unbounded" />
         </xs:sequence>
       </xs:complexType>
       
        <xs:complexType abstract="true" name="metricCounterType">
         <xs:sequence>
-                    <xs:element nillable="true" minOccurs="1" maxOccurs="1" name="type" type="xs:string" />
-                    <xs:element name="collectionInterval" type="xs:string" maxOccurs="1" minOccurs="1"></xs:element>
-        	<xs:element nillable="true" minOccurs="1" maxOccurs="1"
-        		name="sequenceNum" type="xs:int" />
-        	<xs:element name="dimensions" type="tns:metricDimensionsType"
-        		maxOccurs="unbounded" minOccurs="1">
-        	</xs:element>
+	  <xs:element name="type" type="xs:string" minOccurs="1" maxOccurs="1" />
+	  <xs:element name="collectionIntervalMs" type="xs:long" maxOccurs="1" minOccurs="1"/>>
+	  <xs:element name="sequenceNum" type="xs:long" minOccurs="1" maxOccurs="1" />
+	  <xs:element name="dimensions" type="tns:metricDimensionsType" maxOccurs="unbounded" minOccurs="1"/>
         </xs:sequence>
        </xs:complexType>
       
       <xs:complexType abstract="true" name="metricDimensionsType">
         <xs:sequence>
-        	<xs:element nillable="true" minOccurs="1" maxOccurs="1"
-        		name="name" type="xs:string" />
-        	<xs:element name="values" type="tns:metricDimensionsValuesType" maxOccurs="unbounded" minOccurs="0"></xs:element>
+	  <xs:element name="dimensionName" type="xs:string" minOccurs="1" maxOccurs="1" />
+	  <xs:element name="values" type="tns:metricDimensionsValuesType" maxOccurs="unbounded" minOccurs="0"/>
         </xs:sequence>
        </xs:complexType>
 
        <xs:complexType abstract="true" name="metricDimensionsValuesType">
-        <xs:sequence>
-        	<xs:element nillable="true" minOccurs="1" maxOccurs="1"
-        		name="timestamp" type="xs:dateTime" />
-        	<xs:element nillable="true" minOccurs="0" maxOccurs="1"
-        		name="value" type="xs:float" />
-        </xs:sequence>
+	 <xs:sequence>
+	   <xs:element name="timestamp" type="xs:dateTime" nillable="true" minOccurs="1" maxOccurs="1" />
+	   <xs:element name="value" type="xs:double" nillable="true" minOccurs="0" maxOccurs="1" />
+	 </xs:sequence>
        </xs:complexType>
+
+       <!-- end of sensor-related types -->
+
       <xs:complexType name="serviceStatusType">
 	<xs:sequence>
 	  <xs:element nillable="false" minOccurs="1" maxOccurs="1" name="serviceId" type="tns:serviceInfoType" />
@@ -574,8 +558,8 @@
 	<xs:complexContent>
 	  <xs:extension base="tns:eucalyptusMessage">
 	    <xs:sequence>
-              <xs:element maxOccurs="unbounded" minOccurs="0" name="sensorsIds" type="tns:sensorsIdType" />
-              <xs:element maxOccurs="unbounded" minOccurs="0" name="instancesIds" type="tns:instancesIdType" />
+              <xs:element maxOccurs="unbounded" minOccurs="0" name="instanceIds" type="xs:string" />
+              <xs:element maxOccurs="unbounded" minOccurs="0" name="sensorIds" type="xs:string" />
 	    </xs:sequence>
 	  </xs:extension>
 	</xs:complexContent>
@@ -585,7 +569,7 @@
 	<xs:complexContent>
 	  <xs:extension base="tns:eucalyptusMessage">
 	    <xs:sequence>
-              <xs:element maxOccurs="1" minOccurs="1" name="sensorsResources" type="tns:sensorsResourceType" />
+              <xs:element maxOccurs="unbounded" minOccurs="0" name="sensorsResources" type="tns:sensorsResourceType" />
 	    </xs:sequence>
 	  </xs:extension>
 	</xs:complexContent>

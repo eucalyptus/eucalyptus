@@ -1050,36 +1050,15 @@ static int init (void)
 
     // read in .pem files
 	if (euca_init_cert ()) {
-	  logprintfl (EUCAERROR, "init(): failed to find cryptographic certificates\n");
+	  logprintfl (EUCAERROR, "failed to find cryptographic certificates\n");
 	  return ERROR_FATAL;
 	}
 
-	//// from now on we have unrecoverable failure, so no point in retrying to re-init ////
-	initialized = -1;
-
-	hyp_sem = sem_alloc (1, "mutex");
-	inst_sem = sem_alloc (1, "mutex");
-	inst_copy_sem = sem_alloc (1, "mutex");
-	addkey_sem = sem_alloc (1, "mutex");
-	if (!hyp_sem || !inst_sem || !inst_copy_sem || !addkey_sem) {
-		logprintfl (EUCAFATAL, "failed to create and initialize semaphores\n");
-		return ERROR_FATAL;
-	}
-
-    if (diskutil_init(FALSE) || (loop_sem = diskutil_get_loop_sem())==NULL) { // NC does not need GRUB for now
-        logprintfl (EUCAFATAL, "failed to find all dependencies\n");
+    // check on dependencies (3rd-party programs that NC invokes)
+    if (diskutil_init(FALSE)) { // NC does not need GRUB for now
+        logprintfl (EUCAFATAL, "failed to find all required dependencies\n");
 		return ERROR_FATAL;
     }
-
-    init_iscsi (nc_state.home);
-
-	// set default in the paths. the driver will override
-	nc_state.config_network_path[0] = '\0';
-	nc_state.xm_cmd_path[0] = '\0';
-	nc_state.virsh_cmd_path[0] = '\0';
-	nc_state.get_info_cmd_path[0] = '\0';
-	snprintf (nc_state.libvirt_xslt_path, MAX_PATH, EUCALYPTUS_LIBVIRT_XSLT, nc_state.home);
-	snprintf (nc_state.rootwrap_cmd_path, MAX_PATH, EUCALYPTUS_ROOTWRAP, nc_state.home);
 
 	// determine the hypervisor to use
 	hypervisor = getConfString(nc_state.configFiles, 2, CONFIG_HYPERVISOR);
@@ -1109,6 +1088,33 @@ static int init (void)
 		GET_VAR_INT(nc_state.config_use_virtio_root, CONFIG_USE_VIRTIO_ROOT, 0);
 	}
 	free (hypervisor);
+
+	//// from now on we have unrecoverable failure, so no point in retrying to re-init ////
+	initialized = -1;
+
+	hyp_sem = sem_alloc (1, "mutex");
+	inst_sem = sem_alloc (1, "mutex");
+	inst_copy_sem = sem_alloc (1, "mutex");
+	addkey_sem = sem_alloc (1, "mutex");
+	if (!hyp_sem || !inst_sem || !inst_copy_sem || !addkey_sem) {
+		logprintfl (EUCAFATAL, "failed to create and initialize semaphores\n");
+		return ERROR_FATAL;
+	}
+
+    if ((loop_sem = diskutil_get_loop_sem())==NULL) { // NC does not need GRUB for now
+        logprintfl (EUCAFATAL, "failed to find all dependencies\n");
+		return ERROR_FATAL;
+    }
+
+    init_iscsi (nc_state.home);
+
+	// set default in the paths. the driver will override
+	nc_state.config_network_path[0] = '\0';
+	nc_state.xm_cmd_path[0] = '\0';
+	nc_state.virsh_cmd_path[0] = '\0';
+	nc_state.get_info_cmd_path[0] = '\0';
+	snprintf (nc_state.libvirt_xslt_path, MAX_PATH, EUCALYPTUS_LIBVIRT_XSLT, nc_state.home);
+	snprintf (nc_state.rootwrap_cmd_path, MAX_PATH, EUCALYPTUS_ROOTWRAP, nc_state.home);
 
 	// NOTE: this is the only call which needs to be called on both
 	// the default and the specific handler! All the others will be
@@ -1804,6 +1810,30 @@ int doCreateImage (ncMetadata *meta, char *instanceId, char *volumeId, char *rem
 		ret = nc_state.H->doCreateImage (&nc_state, meta, instanceId, volumeId, remoteDev);
 	else 
 		ret = nc_state.D->doCreateImage (&nc_state, meta, instanceId, volumeId, remoteDev);
+    
+	return ret;
+}
+
+int 
+doDescribeSensors (ncMetadata *meta, 
+                   char **instIds,
+                   int instIdsLen,
+                   char **sensorIds,
+                   int sensorIdsLen,
+                   sensorResource ***outResources,
+                   int *outResourcesLen)
+{
+	int ret;
+    
+	if (init())
+		return 1;
+    
+	logprintfl (EUCADEBUG2, "doDescribeSensors: invoked (instIdsLen=%d sensorIdsLen=%d)\n", instIdsLen, sensorIdsLen);
+    
+	if (nc_state.H->doDescribeSensors)
+		ret = nc_state.H->doDescribeSensors (&nc_state, meta, instIds, instIdsLen, sensorIds, sensorIdsLen, outResources, outResourcesLen);
+	else 
+		ret = nc_state.D->doDescribeSensors (&nc_state, meta, instIds, instIdsLen, sensorIds, sensorIdsLen, outResources, outResourcesLen);
     
 	return ret;
 }

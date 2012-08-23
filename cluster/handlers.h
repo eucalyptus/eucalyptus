@@ -267,6 +267,7 @@ int doDescribeResources(ncMetadata *ccMeta, virtualMachine **ccvms, int vmLen, i
 int doFlushNetwork(ncMetadata *ccMeta, char *accountId, char *destName);
 
 int doCreateImage(ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev);
+int doDescribeSensors(ncMetadata *meta, char **instIds, int instIdsLen, char **sensorIds, int sensorIdsLen, sensorResource ***outResources, int *outResourcesLen);
 
 int schedule_instance(virtualMachine *vm, char *targetNode, int *outresid);
 int schedule_instance_greedy(virtualMachine *vm, int *outresid);

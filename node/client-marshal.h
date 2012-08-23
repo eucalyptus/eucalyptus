@@ -65,6 +65,7 @@
 
 #include "axis2_stub_EucalyptusNC.h" /* for axis2_ and axutil_ defs */
 #include "data.h" /* for eucalyptus defs */
+#include "sensor.h" // sensorResource
 
 #include <windows-bundle.h>
 
@@ -97,6 +98,6 @@ int ncCancelBundleTaskStub (ncStub *stub, ncMetadata *meta, char *instanceId);
 int ncDescribeBundleTasksStub (ncStub *stub, ncMetadata *meta, char **instIds, int instIdsLen, bundleTask ***outBundleTasks, int *outBundleTasksLen);
 
 int ncCreateImageStub (ncStub *stub, ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev);
-
+int ncDescribeSensorsStub (ncStub *st, ncMetadata *meta, char **instIds, int instIdsLen, char **sensorIds, int sensorIdsLen, sensorResource ***outResources, int *outResourcesLen);
 
 #endif

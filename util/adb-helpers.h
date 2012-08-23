@@ -1,3 +1,6 @@
+// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
+// vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
+
 /*************************************************************************
  * Copyright 2009-2012 Eucalyptus Systems, Inc.
  *
@@ -62,6 +65,8 @@
 
 #ifndef _ADB_HELPERS_H
 #define _ADB_HELPERS_H
+
+#include "sensor.h"
 
 #define EUCA_MESSAGE_UNMARSHAL(thefunc, theadb, themeta)		\
   {									\
@@ -128,7 +133,6 @@
 
 //    logprintfl(EUCADEBUG, "eucalyptusMessageMarshal: excerpt: userId=%s correlationId=%s epoch=%d services[0].name=%s services[0].type=%s services[0].uris[0]=%s\n", SP(themeta->userId), SP(themeta->correlationId), themeta->epoch, SP(themeta->services[0].name), SP(themeta->services[0].type), SP(themeta->services[0].uris[0]));
 
-
 static inline int datetime_to_unix (axutil_date_time_t *dt, const axutil_env_t *env)
 {
     time_t tsu, ts, tsdelta, tsdelta_min;
@@ -157,6 +161,32 @@ static inline int datetime_to_unix (axutil_date_time_t *dt, const axutil_env_t *
     };
     
     return (int) mktime(&t);
+}
+
+static inline long long datetime_to_unixms (axutil_date_time_t *dt, const axutil_env_t *env) // TODO3.2: test if this millisecond-precision conversion routine works
+{
+    long long seconds = datetime_to_unix (dt, env);
+    return (seconds * 1000) + (long long)axutil_date_time_get_msec (dt, env);
+}
+
+static inline axutil_date_time_t * unixms_to_datetime (const axutil_env_t * env, long long timestampMs) // TODO3.2: test if this millisecond-precision conversion routine works
+{
+    int msec = (int)(timestampMs % 1000);
+    time_t sec = (time_t)(timestampMs / 1000);
+    
+    struct tm t;
+    localtime_r (&sec, &t);
+    axutil_date_time_t * dt = axutil_date_time_create(env);
+    axutil_date_time_set_date_time(dt,
+                                   env,
+                                   t.tm_year + 1900,
+                                   t.tm_mon + 1,
+                                   t.tm_mday,
+                                   t.tm_hour,
+                                   t.tm_min,
+                                   t.tm_sec,
+                                   msec);
+    return dt;
 }
 
 static inline void copy_vm_type_from_adb (virtualMachine * params, adb_virtualMachineType_t * vm_type, const axutil_env_t *env)
@@ -196,7 +226,7 @@ static inline adb_virtualMachineType_t * copy_vm_type_to_adb (const axutil_env_t
   adb_virtualMachineType_set_cores(vm_type, env, params->cores);
   adb_virtualMachineType_set_disk(vm_type, env, params->disk);
   adb_virtualMachineType_set_name(vm_type, env, params->name);
-  //  for (i=0; i<sizeof(params->virtualBootRecord)/sizeof(virtualBootRecord); i++) { // TODO: dan ask dmitrii
+
   for (i=0; i<EUCA_MAX_VBRS && i<params->virtualBootRecordLen; i++) {
     virtualBootRecord * vbr = & params->virtualBootRecord [i];
     if (strlen(vbr->resourceLocation)>0) {
@@ -238,6 +268,139 @@ static inline void copy_service_info_type_from_adb(serviceInfoType * input, adb_
   for (i=0; i<input->urisLen && i<8; i++) {
     snprintf(input->uris[i], 512, "%s", adb_serviceInfoType_get_uris_at(sit, env, i));
   }
+}
+
+static inline int copy_sensor_value_from_adb (sensorValue * sv, adb_metricDimensionsValuesType_t * value, axutil_env_t * env)
+{
+    axutil_date_time_t *dt = adb_metricDimensionsValuesType_get_timestamp(value, env);
+    sv->timestampMs = datetime_to_unixms(dt, env);
+    if (adb_metricDimensionsValuesType_is_value_nil(value, env)) {
+        sv->value = -99.99; // funky unset value to make it stand out
+        sv->available = 0;
+    } else {
+        sv->value = (double)adb_metricDimensionsValuesType_get_value(value, env);
+        sv->available = 1;
+    }
+    return 0;
+}
+
+static inline int copy_sensor_dimension_from_adb (sensorDimension * sd, adb_metricDimensionsType_t * dimension, axutil_env_t * env)
+{
+    sd->valuesLen = adb_metricDimensionsType_sizeof_values(dimension, env);
+    if (sd->valuesLen > MAX_SENSOR_VALUES) {
+        logprintfl (EUCAERROR, "overflow of 'values' array in 'sensorDimension'");
+        return 1;
+    }
+    for (int i=0; i<sd->valuesLen; i++) {
+        adb_metricDimensionsValuesType_t * value = adb_metricDimensionsType_get_values_at(dimension, env, i);
+        if (copy_sensor_value_from_adb (sd->values + i, value, env) != 0)
+            return 1;
+    }
+
+    safe_strncpy (sd->dimensionName, (char *)adb_metricDimensionsType_get_dimensionName(dimension, env), sizeof (sd->dimensionName));
+
+    return 0;
+}
+
+static inline int copy_sensor_counter_from_adb (sensorCounter * sc, adb_metricCounterType_t * counter, axutil_env_t * env)
+{
+    sc->dimensionsLen = adb_metricCounterType_sizeof_dimensions(counter, env);
+    if (sc->dimensionsLen > MAX_SENSOR_DIMENSIONS) {
+        logprintfl (EUCAERROR, "overflow of 'dimensions' array in 'sensorCounter'");
+        return 1;
+    }
+    for (int i=0; i<sc->dimensionsLen; i++) {
+        adb_metricDimensionsType_t * dimension = adb_metricCounterType_get_dimensions_at(counter, env, i);
+        if (copy_sensor_dimension_from_adb (sc->dimensions + i, dimension, env) != 0)
+            return 1;
+    }
+
+    sc->collectionIntervalMs = (long long)adb_metricCounterType_get_collectionIntervalMs(counter, env);
+    sc->sequenceNum = (long long)adb_metricCounterType_get_sequenceNum(counter, env);
+    sc->type = sensor_str2type ((char *)adb_metricCounterType_get_type(counter, env));
+
+    return 0;
+}
+
+static inline int copy_sensor_metric_from_adb (sensorMetric * sm, adb_metricsResourceType_t * metric, axutil_env_t * env)
+{
+    sm->countersLen = adb_metricsResourceType_sizeof_counters(metric, env);
+    if (sm->countersLen > MAX_SENSOR_COUNTERS) {
+        logprintfl (EUCAERROR, "overflow of 'counters' array in 'sensorMetric'");
+        return 1;
+    }
+    for (int i=0; i<sm->countersLen; i++) {
+        adb_metricCounterType_t * counter = adb_metricsResourceType_get_counters_at(metric, env, i);
+        if (copy_sensor_counter_from_adb (sm->counters + i, counter, env) != 0)
+            return 1;
+    }
+    
+    safe_strncpy (sm->metricName, (char *)adb_metricsResourceType_get_metricName(metric, env), sizeof (sm->metricName));
+
+    return 0;
+}
+
+static inline sensorResource * copy_sensor_resource_from_adb (adb_sensorsResourceType_t * resource, axutil_env_t * env)
+{
+    sensorResource * sr = malloc (sizeof (sensorResource));
+    if (sr==NULL)
+        return NULL;
+    sr->metricsLen = adb_sensorsResourceType_sizeof_metrics(resource, env);
+    if (sr->metricsLen > MAX_SENSOR_METRICS) {
+        logprintfl (EUCAERROR, "overflow of 'metrics' array in 'sensorResource'");
+        free (sr);
+        return NULL;
+    }
+    for (int i=0; i<sr->metricsLen; i++) {
+        adb_metricsResourceType_t * metric = adb_sensorsResourceType_get_metrics_at(resource, env, i);
+        if (copy_sensor_metric_from_adb (sr->metrics + i, metric, env) != 0) {
+            free (sr);
+            return NULL;
+        }
+    }
+    
+    safe_strncpy (sr->resourceName, (char *)adb_sensorsResourceType_get_resourceName(resource, env), sizeof (sr->resourceName));
+    safe_strncpy (sr->resourceType, (char *)adb_sensorsResourceType_get_resourceType(resource, env), sizeof (sr->resourceType));
+    
+    return sr;
+}
+
+static inline adb_sensorsResourceType_t * copy_sensor_resource_to_adb (const axutil_env_t * env, const sensorResource * sr)
+{
+    adb_sensorsResourceType_t * resource = adb_sensorsResourceType_create(env);    
+    adb_sensorsResourceType_set_resourceName (resource, env, sr->resourceName);
+    adb_sensorsResourceType_set_resourceType (resource, env, sr->resourceType);
+    for (int m=0; m<sr->metricsLen; m++) {
+        const sensorMetric * sm = sr->metrics + m;
+        adb_metricsResourceType_t * metric = adb_metricsResourceType_create(env);
+        adb_metricsResourceType_set_metricName (metric, env, sm->metricName);
+        for (int c=0; c<sm->countersLen; c++) {
+            const sensorCounter * sc = sm->counters + c;
+            adb_metricCounterType_t * counter = adb_metricCounterType_create(env);
+            adb_metricCounterType_set_type                 (counter, env, sensor_type2str(sc->type));
+            adb_metricCounterType_set_collectionIntervalMs (counter, env, sc->collectionIntervalMs);
+            adb_metricCounterType_set_sequenceNum          (counter, env, sc->sequenceNum);
+            for (int d=0; d<sc->dimensionsLen; d++) {
+                const sensorDimension * sd = sc->dimensions + d;
+                adb_metricDimensionsType_t * dimension = adb_metricDimensionsType_create(env);
+                adb_metricDimensionsType_set_dimensionName (dimension, env, sd->dimensionName);
+                for (int v=0; v<sd->valuesLen; v++) {
+                    const sensorValue * sv = sd->values + v;
+                    adb_metricDimensionsValuesType_t * value = adb_metricDimensionsValuesType_create(env);
+                    axutil_date_time_t* ts = unixms_to_datetime (env, sv->timestampMs);
+                    adb_metricDimensionsValuesType_set_timestamp (value, env, ts);
+                    if (sv->available) {
+                        adb_metricDimensionsValuesType_set_value (value, env, sv->value);
+                    }
+                    adb_metricDimensionsType_add_values(dimension, env, value);
+                }
+                adb_metricCounterType_add_dimensions(counter, env, dimension);
+            }
+            adb_metricsResourceType_add_counters(metric, env, counter);
+        }
+        adb_sensorsResourceType_add_metrics(resource, env, metric);
+    }
+    return resource;
 }
 
 #endif // _ADB_HELPERS_H

@@ -189,7 +189,7 @@ int diskutil_init (int require_grub) // 0 = not required, 1 = required
             }
         }
         
-        if (initialized < 1)
+        if (initialized < 1 && loop_sem==NULL)
             loop_sem = sem_alloc (1, "mutex");
         initialized = 1 + require_grub;
     }

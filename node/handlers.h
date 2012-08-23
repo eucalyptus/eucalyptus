@@ -72,6 +72,7 @@
 #include "vnetwork.h"
 #include "data.h"
 #include "config.h"
+#include "sensor.h"
 
 #include <windows-bundle.h>
 
@@ -241,6 +242,14 @@ struct handlers {
 					 int instIdsLen,
 					 bundleTask ***outBundleTasks,
 					 int *outBundleTasksLen);
+  int (*doDescribeSensors) (struct nc_state_t *nc,
+			    ncMetadata *meta, 
+			    char **instIds, 
+			    int instIdsLen, 
+			    char **sensorIds, 
+			    int sensorIdsLen, 
+			    sensorResource ***outResources, 
+			    int *outResourcesLen);
 };
 
 #ifdef HANDLERS_FANOUT // only declare for the fanout code, not the actual handlers
@@ -259,7 +268,7 @@ int doBundleInstance		(ncMetadata *meta, char *instanceId, char *bucketName, cha
 int doCancelBundleTask		(ncMetadata *meta, char *instanceId);
 int doDescribeBundleTasks	(ncMetadata *meta, char **instIds, int instIdsLen, bundleTask ***outBundleTasks, int *outBundleTasksLen);
 int doCreateImage		(ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev);
-
+int doDescribeSensors           (ncMetadata *meta, char **instIds, int instIdsLen, char **sensorIds, int sensorIdsLen, sensorResource ***outResources, int *outResourcesLen);
 #endif /* HANDLERS_FANOUT */
 
 int callBundleInstanceHelper(struct nc_state_t *nc, char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey, char *S3Policy, char *S3PolicySig);

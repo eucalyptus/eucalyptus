@@ -1825,6 +1825,12 @@ long long time_usec (void)
     return (long long)tv.tv_sec * 1000000 + tv.tv_usec;
 }
 
+// time since 1970 in milliseconds
+long long time_ms (void)
+{
+    return time_usec()/1000;
+}
+
 // ensure the temp file is only readable by the user
 char *safe_mkdtemp (char *template)
 {

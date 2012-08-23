@@ -1,3 +1,6 @@
+// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
+// vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
+
 /*************************************************************************
  * Copyright 2009-2012 Eucalyptus Systems, Inc.
  *
@@ -66,6 +69,7 @@
 #include "client-marshal.h"
 #include "misc.h"
 #include "euca_axis.h"
+#include "sensor.h"
 
 #define NC_ENDPOINT "/axis2/services/EucalyptusNC"
 #define WALRUS_ENDPOINT "/services/Walrus"
@@ -86,7 +90,8 @@ void usage (void)
              "\t\tdescribeResource\n"
              "\t\tattachVolume\t\t[-i -V -R -L]\n"
              "\t\tdetachVolume\t\t[-i -V -R -L]\n"
-			 "\t\bundleInstance\t\t[-i]\n"
+			 "\t\tbundleInstance\t\t[-i]\n"
+             "\t\tdescribeSensors\n"
         "\toptions:\n"
              "\t\t-d \t\t- print debug output\n"
              "\t\t-l \t\t- local invocation => do not use WSSEC\n"
@@ -481,9 +486,8 @@ int main (int argc, char **argv)
       instIdsLen=4;
       bundleTask **outBundleTasks=NULL;
       int outBundleTasksLen=0;
-      int i, rc;
       rc = ncDescribeBundleTasksStub(stub, &meta, instIds, instIdsLen, &outBundleTasks, &outBundleTasksLen);
-      for (i=0; i<outBundleTasksLen; i++) {
+      for (int i=0; i<outBundleTasksLen; i++) {
 	printf("BUNDLE %d: %s %s\n", i, outBundleTasks[i]->instanceId, outBundleTasks[i]->state);
       }
     } else if (!strcmp(command, "assignAddress")) {
@@ -585,7 +589,22 @@ int main (int argc, char **argv)
             printf("ncDetachVolume() failed: error=%d\n", rc);
             exit(1);
         }
-        
+
+    /***********************************************************/
+    } else if (!strcmp(command, "describeSensors")) {
+
+        sensorResource ** res;
+        int resSize;
+
+        int rc = ncDescribeSensorsStub (stub, &meta, NULL, 0, NULL, 0, &res, &resSize);
+        if (rc != 0) {
+            printf("ncDescribeSensors() failed: error=%d\n", rc);
+            exit(1);
+        }
+        char buf [10240];
+        sensor_res2str (buf, sizeof(buf), res, resSize);
+        printf ("resources: %d\n%s\n", resSize, buf);
+
     /***********************************************************/
     } else {
         fprintf (stderr, "ERROR: command %s unknown (try -h)\n", command);
