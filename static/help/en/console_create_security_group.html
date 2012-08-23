@@ -4,15 +4,17 @@
 <html xml:lang="en-us" lang="en-us">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
-<meta name="copyright" content="(C) Copyright 2005"/>
-<meta name="DC.rights.owner" content="(C) Copyright 2005"/>
 <meta name="DC.Type" content="task"/>
 <meta name="DC.Title" content="Create a Security Group"/>
 <meta name="abstract" content="Eucalyptus enables you to control access to your cloud using security groups. A security group contains a group of rules that control inbound traffic to instances in the group for the specified protocols and ports."/>
 <meta name="description" content="Eucalyptus enables you to control access to your cloud using security groups. A security group contains a group of rules that control inbound traffic to instances in the group for the specified protocols and ports."/>
+<meta name="prodname" content="Eucalyptus"/>
+<meta name="version" content="3.2"/>
+<meta name="copyright" content="Eucalyptus Systems 2012" type="primary"/>
+<meta name="DC.Rights.Owner" content="Eucalyptus Systems 2012" type="primary"/>
 <meta name="DC.Format" content="XHTML"/>
 <meta name="DC.Identifier" content="create_volume_ui_help_context"/>
-<link rel="stylesheet" type="text/css" href="commonltr.css"/>
+<link rel="stylesheet" type="text/css" href="../commonltr.css"/>
 <title>Create a Security Group</title>
 </head>
 <body id="create_volume_ui_help_context">
@@ -57,7 +59,7 @@
                             <span class="ph cmd"> Select the type of inbound traffic for the rule using the radio
                                 buttons: </span>
                              
-                                <p class="p">To grant access to an IP address or range of IP address, select
+                                <p class="p">To grant access to an IP address or range of IP addresses, select
                                     the <span class="ph uicontrol">IP Address</span> radio button and enter a CIDR range in the text
                                     box.</p>
 
@@ -68,11 +70,14 @@
                                     security group</span> radio button and enter the name of the security
                                     group in the text box.</p>
 
+                                <p class="p">To grant access to only to other instances in this security group, select the <span class="ph uicontrol">Other
+                                    instances in this security group</span> radio button.</p>
+
                             
                         </li>
 
                         <li class="li substep">
-                            <span class="ph cmd">Click the <span class="ph uicontrol">Add rule</span> button.</span>
+                            <span class="ph cmd">Click the <span class="ph uicontrol">Add another rule</span> button.</span>
                         </li>
 
                     </ol>

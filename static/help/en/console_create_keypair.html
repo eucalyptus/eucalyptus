@@ -22,18 +22,24 @@
 
 	<div class="body taskbody">
 		<div class="section context" id="create_keypairs_ui_help__create_keypairs_ui_help_context">
-        	<p class="p">Eucalyptus uses cryptographic keypairs to verify access to instances. Before you can run
-        		an instance, you must create a keypair. Creating a keypair generates two keys: a public key (saved within Eucalyptus) and a corresponding private key (output to the user as a character string). To enable this private key you must save it to a file and set appropriate access permissions (using the chmod command), as shown in the example below.</p>
+			<p class="p">Eucalyptus uses cryptographic key pairs to verify access to instances. Before you can
+				run an instance, you must create a key pair. Creating a key pair generates two keys:
+				a public key (saved within Eucalyptus) and a corresponding private key (output to
+				the user as a character string). To enable this private key you must save it to a
+				file and set appropriate access permissions (using the chmod command), as shown in
+				the example below.</p>
 
-        	<p class="p">When you create a VM instance, the public key is then injected into the VM. Later, when attempting to login to the VM instance using SSH, the public key is checked against your private key to verify access. Note that the private key becomes obsolete when the public key is deleted. 
-        	</p>
+			<p class="p">When you create a VM instance, the public key is then injected into the VM. Later,
+				when attempting to login to the VM instance using SSH, the public key is checked
+				against your private key to verify access. Note that the private key becomes
+				obsolete when the public key is deleted. </p>
 
-        </div>
+		</div>
 
 	</div>
 
 	<div class="topic task nested1" id="create_keypairs_ui_help_steps">
-		<h2 class="title topictitle2">Create Keypairs with the Console</h2>
+		<h2 class="title topictitle2">Create Key Pairs with the Console</h2>
 
 		
 		<div class="body taskbody"><p class="shortdesc"/>
@@ -41,30 +47,36 @@
 			<div class="section context"/>
 
 			<ol class="ol steps" id="create_keypairs_ui_help_steps__d13e33"><li class="li step">
-					<span class="ph cmd">From the main dashboard screen, click the <span class="ph uicontrol">Key Pairs</span> link in the <span class="ph uicontrol">Network and Security</span> section. 
+					<span class="ph cmd">From the main dashboard screen, click the <span class="ph uicontrol">Key Pairs</span>
+						link in the <span class="ph uicontrol">Network and Security</span> section, or select
+						the Network and Security submenu from the Manage Resources navigation menu.
 						The <span class="ph uicontrol">Manage Keypairs</span> screen will appear.</span>
 				</li>
 <li class="li step">
-					<span class="ph cmd">On the <span class="ph uicontrol">Manage Keypairs</span> screen, click the <span class="ph uicontrol">Create new keypair</span> link. 
-					The <span class="ph uicontrol">Create New Key Pair</span> dialog will appear.</span>
+					<span class="ph cmd">On the <span class="ph uicontrol">Manage Key Pairs</span> screen, click the
+							<span class="ph uicontrol">Create new key pair</span> link. The <span class="ph uicontrol">Create
+							New Key Pair</span> dialog will appear.</span>
 				</li>
 <li class="li step">
-					<span class="ph cmd">Type a name for the new key pair into the <span class="ph uicontrol">Name</span> text box.</span>
+					<span class="ph cmd">Type a name for the new key pair into the <span class="ph uicontrol">Name</span> text
+						box.</span>
 				</li>
 <li class="li step">
-					<span class="ph cmd">
-						Click the <span class="ph uicontrol">Create and Download</span> button.
-					</span>
-				</li>
-<li class="li step">
-					<span class="ph cmd">
-						Click the <span class="ph uicontrol">Create and Download</span> button. A dialog box will appear prompting you to save the private half of the key pair.
-					</span>
-				</li>
-<li class="li step">
-					<span class="ph cmd">Select a location on your local file system to save the private half of the local key pair, then press <span class="ph uicontrol">Save</span>.</span>
+					<span class="ph cmd"> Click the <span class="ph uicontrol">Create and Download</span> button. The private
+						half of the key pair is saved to the default download location for your
+						browser. </span>
 					 
-						<div class="note note"><span class="notetitle">Note:</span> Keep your private key file in a safe place. If you lose it, you will be unable to access instances created with the key pair.</div>
+						<div class="note note"><span class="notetitle">Note:</span> Keep your private key file in a safe place. If you
+							lose it, you will be unable to access instances created with the key
+							pair.</div>
+
+					
+				</li>
+<li class="li step">
+					<span class="ph cmd">Change file permissions to enable access to the private key file in the
+						local directory. For example, on a Linux or Mac OS X system:</span>
+					 
+						<pre class="pre codeblock">chmod 0600 &lt;keypair_name&gt;.private</pre>
 
 					
 				</li>
