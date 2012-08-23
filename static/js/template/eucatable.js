@@ -39,7 +39,7 @@
     table : null, // jQuery object to the table
 
     _init : function() {
-      thisObj = this; // 
+      var thisObj = this; // 
       // add draw call back
       this.options.dt_arg['fnDrawCallback'] = function( oSettings ) {
         try{

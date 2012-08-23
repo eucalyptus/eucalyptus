@@ -77,7 +77,7 @@
           "delete": { "name": sgroup_action_delete, callback: function(key, opt) { thisObj._deleteAction(thisObj._getGroupName(opt.selector)); } },
           };
         },
-        menu_click_create : function (args) { thisObj.ruleList=null; thisObj.addDialog.eucadialog('open')},
+        menu_click_create : function (args) { thisObj.rulesList=null; thisObj.addDialog.eucadialog('open')},
         help_click : function(evt) {
           var $helpHeader = $('<div>').addClass('euca-table-header').append(
                               $('<span>').text(help_sgroup['landing_title']).append(
@@ -118,8 +118,16 @@
               var desc = $.trim($add_dialog.find('#sgroup-description').val());
               thisObj._storeRule();    // flush rule from form into array
               var actions = new Array();
+              actions.push(thisObj._addSecurityGroup(name, desc));
               for (rule in thisObj.rulesList)
-                alert("rule port = "+rule.port);
+                alert("rule ipaddr = "+thisObj.rulesList[rule].ipaddr);
+                actions.push(thisObj._addIngressRule(name,
+                                       thisObj.rulesList[rule].port,
+                                       thisObj.rulesList[rule].port,
+                                       thisObj.rulesList[rule].protocol,
+                                       thisObj.rulesList[rule].ipaddr,
+                                       thisObj.rulesList[rule].fromGroup
+                                       ));
 
               $.when(thisObj._addSecurityGroup(name, desc)).then(function(data, textStatus, jqXHR){
                                     if (data.results && data.results.status == true) {
@@ -146,7 +154,7 @@
          thisObj._validateForm(createButtonId);
       });
       this.addDialog.eucadialog('onChange', 'sgroup-template', 'unused', function () {
-         var thediv = $('#morerools');
+         var thediv = $('#sgroup-morerools');
          var sel = $('#sgroup-template');
          var templ = sel.val();
          if (templ == 'none') {
@@ -164,16 +172,24 @@
                 $('#sgroup-ports').val('');
          }
       });
-      this.addDialog.find('#ip-check').click(function () {
+      this.addDialog.find('#sgroup-ip-check').click(function () {
         $.ajax({
             type: 'GET',
             url: 'http://checkip.amazonaws.com/',
             crossDomain:'true',
             success: function(data, textStatus, jqXHR) {
-                         alert("ip="+data.results);
-                         $('#allow-ip').text(data.results)
+                         $('#allow-ip').val(data)
                      }
         });
+      });
+      this.addDialog.find('#sgroup-add-rule').click(function () {
+        thisObj._storeRule();
+        // now reset form
+        $('#sgroup-template').val('none');
+        $('#sgroup-ports').val('');
+        $('#allow-ip').val('');
+        $('#allow-group').val('');
+        thisObj._refreshRulesList();
       });
     },
 
@@ -198,16 +214,28 @@
             this.rulesList = new Array();
         }
         var rule = new Object();
-        rule.protocol = 'TCP';
+        rule.protocol = 'tcp';
         rule.port = $('#sgroup-ports').val();
-        alert("port = "+rule.port);
-        if ($('#sgroup-allow-ip').checked) {
+        if ($("input[@name='allow-group']:checked").val() == 'ip') {
             rule.ipaddr = $('#allow-ip').val();
         }
-        else if ($('#sgroup-allow-group').checked) {
+        else if ($("input[@name='allow-group']:checked").val() == 'group') {
             rule.group = $('#allow-group').val();
         }
         this.rulesList.push(rule);
+    },
+
+    _refreshRulesList : function() {
+        if (this.rulesList != null) {
+            var theDiv = $('#sgroup-rules-list')
+            theDiv.html("loading...");
+            var msg = "";
+            for (rule in thisObj.rulesList)
+                msg += "Rule: "+this.rulesList[rule].protocol+" ("+
+                             this.rulesList[rule].port+"), "+
+                             this.rulesList[rule].cidr+"<br/>";
+            theDiv.html(msg);
+        }
     },
 
     _getGroupName : function(rowSelector) {
@@ -219,7 +247,7 @@
     },
 
     _addSecurityGroup : function(groupName, groupDesc) {
-      thisObj = this;
+      var thisObj = this;
       $.ajax({
         type:"GET",
         url:"/ec2?Action=CreateSecurityGroup",
@@ -230,7 +258,7 @@
     },
 
     _addIngressRule : function(groupName, fromPort, toPort, protocol, cidr, fromGroup) {
-      thisObj = this;
+      var thisObj = this;
       var req_params = "&GroupName=" + groupName +
                        "&IpPermissions.1.IpProtocol=" + protocol +
                        "&IpPermissions.1.FromPort=" + fromPort +
@@ -287,7 +315,7 @@
     },
 
     _deleteAction : function() {
-      thisObj = this;
+      var thisObj = this;
       var $tableWrapper = this._getTableWrapper();
       rowsToDelete = $tableWrapper.eucatable('getAllSelectedRows');
       if ( rowsToDelete.length > 0 ) {
