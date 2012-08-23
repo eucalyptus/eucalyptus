@@ -129,18 +129,17 @@
                                        thisObj.rulesList[rule].fromGroup
                                        ));
 
-              $.when(actions).then(function(data, textStatus, jqXHR){
-                                      $notification = thisObj.addDialog.find('div.dialog-notifications');
-                                      if (data.results && data.results.status == true) {
-                                          this.notifySuccess(sgroup_create_success + ' ' + name);
-                                          thisObj.tableWrapper.eucatable('refreshTable');
-                                      } else {
-                                          this.notifyFailure(sgroup_create_error + ' ' + name);
-                                      }
-                                   },
-                                   function(jqXHR, textStatus, errorThrown){
-                                      $notification(sgroup_delete_error + ' ' + name);
-                                   }
+              $.when(thisObj._addSecurityGroup(name, desc)).then(function(data, textStatus, jqXHR){
+                                    if (data.results && data.results.status == true) {
+                                        notifySuccess(sgroup_create_success + ' ' + name);
+                                        thisObj.tableWrapper.eucatable('refreshTable');
+                                    } else {
+                                        notifyFailure(sgroup_create_error + ' ' + name);
+                                    }
+                                 },
+                                 function(jqXHR, textStatus, errorThrown){
+                                    this.addDialog.eucadialog('showError',sgroup_delete_error + ' ' + name);
+                                 }
               );
               $add_dialog.dialog("close");
             }},
@@ -248,7 +247,7 @@
     },
 
     _addSecurityGroup : function(groupName, groupDesc) {
-      thisObj = this;
+      var thisObj = this;
       $.ajax({
         type:"GET",
         url:"/ec2?Action=CreateSecurityGroup",
@@ -259,7 +258,7 @@
     },
 
     _addIngressRule : function(groupName, fromPort, toPort, protocol, cidr, fromGroup) {
-      thisObj = this;
+      var thisObj = this;
       var req_params = "&GroupName=" + groupName +
                        "&IpPermissions.1.IpProtocol=" + protocol +
                        "&IpPermissions.1.FromPort=" + fromPort +
@@ -280,7 +279,7 @@
     },
 
     _deleteSelectedSecurityGroups : function () {
-      thisObj = this;
+      var thisObj = this;
       var rowsToDelete = thisObj._getTableWrapper().eucatable('getAllSelectedRows');
       for ( i = 0; i<rowsToDelete.length; i++ ) {
         var sgroupName = rowsToDelete[i];
@@ -304,7 +303,7 @@
           error:
           (function(sgroupName) {
             return function(jqXHR, textStatus, errorThrown){
-              $notification(sgroup_delete_error + ' ' + sgroupName);
+              thisObj.delDialog.eucadialog('showError', sgroup_delete_error + ' ' + sgroupName);
             }
           })(sgroupName)
         });
@@ -316,7 +315,7 @@
     },
 
     _deleteAction : function() {
-      thisObj = this;
+      var thisObj = this;
       var $tableWrapper = this._getTableWrapper();
       rowsToDelete = $tableWrapper.eucatable('getAllSelectedRows');
       if ( rowsToDelete.length > 0 ) {

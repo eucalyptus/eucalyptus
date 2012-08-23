@@ -157,7 +157,7 @@ class ClcInterface(object):
         raise NotImplementedError("Are you sure you're using the right class?")
 
     # returns True if successful
-    def detach_volume(self, volume_id, instance_id, device, force=False):
+    def detach_volume(self, volume_id, force=False):
         raise NotImplementedError("Are you sure you're using the right class?")
 
     ##

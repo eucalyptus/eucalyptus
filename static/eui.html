@@ -263,7 +263,7 @@
             <div class="dialog-inner-content">
               {{!: keypair_dialog_add_text }}
               <p>
-              <span class="field">{{!>keypair_dialog_add_name}}</span><input type="text" id="key-name" class="required"/><div class="dialog-notifications"></div>
+              <span class="field">{{!>keypair_dialog_add_name}}</span><input type="text" id="key-name" class="required"/>
             </p>
             </div>
           </div>
@@ -331,8 +331,8 @@
               <h3>Group *</h3>
               {{!: sgroup_dialog_add_group }}
               <p>
-              <span class="field">{{!>sgroup_dialog_add_name}}</span><input type="text" id="sgroup-name" class="required"/><div class="dialog-notifications"></div>
-              <span class="field">{{!>sgroup_dialog_add_description}}</span><input type="text" id="sgroup-description" class="required"/><div class="dialog-notifications"></div>
+              <span class="field">{{!>sgroup_dialog_add_name}}</span><input type="text" id="sgroup-name" class="required"/>
+              <span class="field">{{!>sgroup_dialog_add_description}}</span><input type="text" id="sgroup-description" class="required"/>
               </p>
           </div>
           <div class="rules inner-box clearfix">
@@ -527,7 +527,6 @@
                 <span class="label">{{!: volume_dialog_az_label }}</span>
                 <select id="volume-add-az-selector"></select>
               </div>
-              <div class="dialog-notifications"></div>
             </div>
           </div>
           <div id="volumes-add-dialog-help" class="dialog-help">
@@ -557,29 +556,11 @@
                 <span class="label">{{!: volume_dialog_attach_device_label }}</span>
                 <input type="text" id="volume-attach-device-name" class="required"/>
               </div>
-              <div class="dialog-notifications"></div>
             </div>
           </div>
           <div id="volumes-attach-dialog-help" class="dialog-help">
             <div class="dialog-help-content">
               {{!: volume_dialog_attach_content}}
-            </div>
-            <div class="help-revert-button">
-              <a href="#"> {{!>revert_button}}</a>
-            </div>
-          </div>
-        </div>
-      </script>
-      <script id="volumeWaitDlgTmpl" type="text/x-jsrender">
-        <div id="volumes-wait-dialog-wrapper">
-          <div id="volumes-wait-dialog" class="delete-dialog">
-            <div class="dialog-inner-content">
-              <p>{{!: volume_dialog_wait_text }}</p>
-            </div>
-          </div>
-          <div id="volumes-wait-dialog-help" class="dialog-help">
-            <div class="dialog-help-content">
-              {{!: dialog_wait_content}}
             </div>
             <div class="help-revert-button">
               <a href="#"> {{!>revert_button}}</a>

@@ -61,6 +61,10 @@ function notifySuccess(title, message) {
   $('html body').find(DOM_BINDING['notification']).notification('success', title, message);
 }
 
-function notifyError(title, message, code) {
-  $('html body').find(DOM_BINDING['notification']).notification('error', title, message, code);
+function notifyError(title, message, proxyMessage, code) {
+  var desc = message;
+  if (proxyMessage)
+    desc += "("+proxyMessage+")";
+  
+  $('html body').find(DOM_BINDING['notification']).notification('error', title, desc, code);
 }

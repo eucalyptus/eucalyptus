@@ -28,7 +28,6 @@
     forceDetachDialog : null,
     addDialog : null,
     attachDialog : null,
-    waitDialog : null,
     _init : function() {
       var thisObj = this;
       var $tmpl = $('html body').find('.templates #volumeTblTmpl').clone();
@@ -227,19 +226,6 @@
          help: {title: help_volume['dialog_force_detach_title'], content: $force_detach_help},
        });
 
-      $tmpl = $('html body').find('.templates #volumeWaitDlgTmpl').clone();
-      var $rendered = $($tmpl.render($.extend($.i18n.map, help_volume)));
-      var $wait_dialog = $rendered.children().first();
-      var $wait_dialog_help = $rendered.children().last();
-      this.waitDialog = $wait_dialog.eucadialog({
-         id: 'volumes-wait',
-         title: volume_dialog_wait,
-         buttons: {
-           'cancel': { text: volume_dialog_cancel_btn, focus:true, click: function() { $wait_dialog.dialog("close"); } } 
-         },
-         help: {title: help_volume['dialog_volume_wait_title'], content: $wait_dialog_help},
-       });
-
       var attachButtonId = 'volume-attach-btn';
       $tmpl = $('html body').find('.templates #volumeAttachDlgTmpl').clone();
       var $rendered = $($tmpl.render($.extend($.i18n.map, help_volume)));
@@ -262,8 +248,8 @@
          help: {title: help_volume['dialog_volume_attach_title'], content: $attach_dialog_help},
          on_open: {spin: true, callback: function(args) {
            var dfd = $.Deferred();
-           thisObj._initAttachDialog(dfd) ; // pulls instance info from server
-           return dfd.promise()
+           thisObj._initAttachDialog(dfd); // pulls instance info from server
+           return dfd.promise();
          }},
        });
       this.attachDialog.eucadialog('onKeypress', 'volume-attach-device-name', attachButtonId, function () {
@@ -294,20 +280,19 @@
               var az = $add_dialog.find('#volume-add-az-selector').val();
               var $snapshot = $add_dialog.find('#volume-add-snapshot-selector :selected');
               var isValid = true;
-              $notification = $add_dialog.find('div.dialog-notifications');
 
               if ( size == parseInt(size) ) {
                 if ( $snapshot.val() != '' && parseInt($snapshot.attr('title')) > parseInt(size) ) {
                   isValid = false;
-                  $notification.html(volume_dialog_snapshot_error_msg);
+                  $add_dialog.eucadialog('showError', volume_dialog_snapshot_error_msg);
                 }
               } else {
                 isValid = false; 
-                $notification.html(volume_dialog_size_error_msg);
+                $add_dialog.eucadialog('showError', volume_dialog_size_error_msg);
               }
               if ( az === '' ) {
                 isValid = false;
-                $notification.html($notification.html() + "<br/>" + volume_dialog_az_error_msg);
+                $add_dialog.eucadialog('showError', volume_dialog_az_error_msg);
               }
               if ( isValid ) {
                 thisObj._createVolume(size, az, $snapshot.val());
@@ -320,7 +305,7 @@
          on_open: {spin: true, callback: function(args) {
            var dfd = $.Deferred();
            thisObj._initAddDialog(dfd) ; // pulls az and snapshot info from the server
-           return dfd.promise()
+           return dfd.promise();
          }},
        });
        this.addDialog.eucadialog('onKeypress', 'volume-size', createButtonId, function () {
@@ -345,14 +330,13 @@
     },
 
     _initAddDialog : function(dfd) { // method should resolve dfd object
-      this.addDialog.find('div.dialog-notifications').html('');
       $.when(
         $.ajax({
           type:"GET",
           url:"/ec2?Action=DescribeAvailabilityZones",
           data:"_xsrf="+$.cookie('_xsrf'),
           dataType:"json",
-          async:"false",
+          async:false,
           success:
            function(data, textStatus, jqXHR){
               $azSelector = $('#volume-add-az-selector').html('');
@@ -363,12 +347,14 @@
                   $azSelector.append($('<option>').attr('value', azName).text(azName));
                 } 
               } else {
-                notifyError('availability zones', 'failed to load availability zones'); // TODO: i18n
+                notifyError(null, error_loading_azs_msg);
+                dfd.reject();
               }
            },
           error:
             function(jqXHR, textStatus, errorThrown){
-                notifyError('availability zones', 'failed to load availability zones'); // TODO: i18n
+              notifyError(null, error_loading_azs_msg);
+              dfd.reject();
             }
       })).then(function (output){
         $.ajax({
@@ -376,7 +362,7 @@
           url:"/ec2?Action=DescribeSnapshots",
           data:"_xsrf="+$.cookie('_xsrf'),
           dataType:"json",
-          async:"false",
+          async:false,
           success:
             function(data, textStatus, jqXHR){
               $snapSelector = $('#volume-add-snapshot-selector').html('');
@@ -389,18 +375,19 @@
                       snapshot.id + ' (' + snapshot.volume_size + ' ' + $.i18n.map['size_gb'] +')'));
                   }
                 } 
+                dfd.resolve();
               } else {
-                notifyError('snapshots', 'failed to load snapshots');
+                notifyError(null, error_loading_snapshots_msg);
+                dfd.reject();
               }
-              dfd.resolve();
            },
           error:
             function(jqXHR, textStatus, errorThrown){
-              notifyError('snapshots', 'falied to load snapshots');
-              dfd.resolve();
+              notifyError(null, error_loading_snapshots_msg);
+              dfd.reject();
             }
         });
-      }, function (output) { dfd.resolve(); });
+      }, function (output) { dfd.reject(); });
     },
 
     _initAttachDialog : function(dfd) {  // should resolve dfd object
@@ -409,7 +396,7 @@
         url:"/ec2?Action=DescribeInstances",
         data:"_xsrf="+$.cookie('_xsrf'),
         dataType:"json",
-        async:"false",
+        async:false,
         success:
           function(data, textStatus, jqXHR){
             $instanceSelector = $('#volume-attach-instance-selector').html('');
@@ -420,16 +407,17 @@
                 if ( instance.state === 'running' ) {
                   $instanceSelector.append($('<option>').attr('value', instance.id).text(instance.id));
                 }
-              } 
+              }
+              dfd.resolve();
             } else {
-              notifyError('describe-instances', 'failed to load instances'); //TODO : this is the right notification method?
+              notifyError(null, error_loading_instances_msg);
+              dfd.reject();
             }
-            dfd.resolve();
           },
         error:
           function(jqXHR, textStatus, errorThrown){
-            notifyError('describe-instances', 'failed to load instances'); //TODO : this is the right notification method?
-            dfd.resolve();
+            notifyError(null, error_loading_instances_msg);
+            dfd.reject();
           }
       })
     },
@@ -476,22 +464,22 @@
           url:"/ec2?Action=DeleteVolume&VolumeId=" + volumeId,
           data:"_xsrf="+$.cookie('_xsrf'),
           dataType:"json",
-          async:"true",
+          async:true,
           success:
           (function(volumeId) {
             return function(data, textStatus, jqXHR){
               if ( data.results && data.results == true ) {
-                notifySuccess('delete-volume', volume_delete_success + ': ' + volumeId);
+                notifySuccess(null, volume_delete_success + ' ' + volumeId);
                 thisObj.tableWrapper.eucatable('refreshTable');
               } else {
-                notifyError('delete-volume', volume_delete_error + ': ' + volumeId);
+                notifyError(null, volume_delete_error + ' ' + volumeId);
               }
            }
           })(volumeId),
           error:
           (function(volumeId) {
             return function(jqXHR, textStatus, errorThrown){
-              notifyError('delete-volume', volume_delete_error + ': ' + volumeId);
+              notifyError(null, volume_delete_error + ' ' + volumeId);
             }
           })(volumeId)
         });
@@ -499,25 +487,25 @@
     },
 
     _attachVolume : function (volumeId, instanceId, device) {
-      thisObj = this;
+      var thisObj = this;
       $.ajax({
         type:"GET",
         url:"/ec2?Action=AttachVolume&VolumeId=" + volumeId + "&InstanceId=" + instanceId + "&Device=" + device,
         data:"_xsrf="+$.cookie('_xsrf'),
         dataType:"json",
-        async:"true",
+        async:true,
         success:
           function(data, textStatus, jqXHR){
             if ( data.results ) {
-              notifySuccess('attach-volume', volume_attach_success + ' ' + volumeId);
+              notifySuccess(null, volume_attach_success + ' ' + volumeId);
               thisObj.tableWrapper.eucatable('refreshTable');
             } else {
-              notifyError('attach-volume', volume_attach_error);
+              notifyError(null, volume_attach_error + ' ' + volumeId);
             }
           },
         error:
           function(jqXHR, textStatus, errorThrown){
-            notifyError('attach-volume', volume_attach_error);
+            notifyError(null, volume_attach_error + ' ' + volumeId);
           }
       });
     },
@@ -530,19 +518,19 @@
         url:"/ec2?Action=CreateVolume&Size=" + size + "&AvailabilityZone=" + az + sid,
         data:"_xsrf="+$.cookie('_xsrf'),
         dataType:"json",
-        async:"true",
+        async:true,
         success:
           function(data, textStatus, jqXHR){
             if ( data.results ) {
-              notifySuccess('add-volume', volume_create_success + ' ' + data.results.id);
+              notifySuccess(null, volume_create_success + ' ' + data.results.id);
               thisObj.tableWrapper.eucatable('refreshTable');
             } else {
-              notifyError('add-volume', volume_create_error);
+              notifyError(null, volume_create_error);
             }
           },
         error:
           function(jqXHR, textStatus, errorThrown){
-            notifyError('add-volume', volume_create_error);
+            notifyError(null, volume_create_error);
           }
       });
     },
@@ -559,21 +547,21 @@
           url:"/ec2?Action=DetachVolume&VolumeId=" + volumeId,
           data:"_xsrf="+$.cookie('_xsrf'),
           dataType:"json",
-          async:"true",
+          async:true,
           success:
           (function(volumeId) {
             return function(data, textStatus, jqXHR){
               if ( data.results && data.results == 'detaching' ) {
                 if (force)
-                  notifySuccess('force-detach-volume', volume_force_detach_success + ' ' + volumeId);
+                  notifySuccess(null, volume_force_detach_success + ' ' + volumeId);
                 else
-                  notifySuccess('detach-volume', volume_detach_success + ' ' + volumeId);
+                  notifySuccess(null, volume_detach_success + ' ' + volumeId);
                 thisObj.tableWrapper.eucatable('refreshTable');
               } else {
                 if (force)
-                  notifyError('force-detach-volume', volume_force_detach_error + ' ' + volumeId);
+                  notifyError(null, volume_force_detach_error + ' ' + volumeId);
                 else
-                  notifyError('detach-volume', volume_detach_error + ' ' + volumeId);
+                  notifyError(null, volume_detach_error + ' ' + volumeId);
               }
            }
           })(volumeId),
@@ -581,9 +569,9 @@
           (function(volumeId) {
             return function(jqXHR, textStatus, errorThrown){
               if (force)
-                notifyError('force-detach-volume', volume_force_detach_error + ' ' + volumeId);
+                notifyError(null, volume_force_detach_error + ' ' + volumeId);
               else
-                notifyError('detach-volume', volume_detach_error + ' ' + volumeId);
+                notifyError(null, volume_detach_error + ' ' + volumeId);
             }
           })(volumeId)
         });
@@ -612,7 +600,7 @@
     },
 
     _attachAction : function(volumeId) {
-      thisObj = this;
+      var thisObj = this;
       var volumeToAttach = '';
       if ( !volumeId ) {
         rows = thisObj.tableWrapper.eucatable('getAllSelectedRows', 1);
@@ -620,10 +608,9 @@
       } else {
         volumeToAttach = volumeId;
       }
-      this.attachDialog.find('div.dialog-notifications').html('');
       $volumeSelector = this.attachDialog.find('#volume-attach-volume-selector');
       $volumeSelector.html('');
-      $volumeSelector.append($('<option>').attr('value', volumeId).text(volumeId));
+      $volumeSelector.append($('<option>').attr('value', volumeId).text(volumeToAttach));
       $volumeSelector.attr('disabled', 'disabled');
       this.attachDialog.eucadialog('open');
     },

@@ -115,8 +115,7 @@
                         thisObj._addKeyPair(keyName);
                       }
                       else{
-                        // TODO: notification should be handled better, generic way
-                        $('#keys-add-dialog div.dialog-notifications').html(keypair_dialog_error_msg);
+                        this.addDialog.eucadialog('showError', keypair_dialog_error_msg);
                       }
                     }
                   },
@@ -138,7 +137,7 @@
     },
 
     _deleteAction : function(keyId) {
-      thisObj = this;
+      var thisObj = this;
       keysToDelete = [];
       if ( !keyId ) {
         $tableWrapper = thisObj.tableWrapper;
@@ -162,7 +161,7 @@
         url:"/ec2?Action=CreateKeyPair",
         data:"_xsrf="+$.cookie('_xsrf') + "&KeyName=" + keyName,
         dataType:"json",
-        async:"false",
+        async:false,
         success:
         function(data, textStatus, jqXHR){
           if (data.results && data.results.material) {
@@ -171,15 +170,15 @@
               content     : data.results.material,
               script      : '/support?Action=DownloadFile&_xsrf=' + $.cookie('_xsrf')
             });
-            notifySuccess('add-key-pair', keypair_create_success + ': ' + keyName);
+            notifySuccess(null, keypair_create_success + ' ' + keyName);
             thisObj.tableWrapper.eucatable('refreshTable');
           } else {
-            notifyError('add-key-pair',keypair_create_error + ' ' + keyName);
+            notifyError(null, keypair_create_error + ' ' + keyName);
           }
         },
         error:
         function(jqXHR, textStatus, errorThrown){
-          notifyError('add-key-pair', keypair_delete_error + ' ' + keyName);
+          notifyError(null, keypair_delete_error + ' ' + keyName);
         }
       });
     },
@@ -195,22 +194,22 @@
           url:"/ec2?Action=DeleteKeyPair&KeyName=" + keyName,
           data:"_xsrf="+$.cookie('_xsrf'),
           dataType:"json",
-          async:"true",
+          async:true,
           success:
           (function(keyName) {
             return function(data, textStatus, jqXHR){
               if ( data.results && data.results == true ) {
-                notifySuccess('delete-keypair', keypair_delete_success + ' ' + keyName);
+                notifySuccess(null, keypair_delete_success + ' ' + keyName);
                 thisObj.tableWrapper.eucatable('refreshTable');
               } else {
-                notifyError('delete-keypair', keypair_delete_error + ' ' + keyName);
+                notifyError(null, keypair_delete_error + ' ' + keyName);
               }
            }
           })(keyName),
           error:
           (function(keyName) {
             return function(jqXHR, textStatus, errorThrown){
-              notifyError('delete-keypair', keypair_delete_error + ' ' + keyName);
+              notifyError(null, keypair_delete_error + ' ' + keyName);
             }
           })(keyName)
         });
