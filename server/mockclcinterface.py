@@ -1,4 +1,5 @@
 import boto
+import copy
 import json
 import os
 import datetime
@@ -214,6 +215,11 @@ class MockClcInterface(ClcInterface):
 
     # returns volume info
     def create_volume(self, size, availability_zone, snapshot_id):
+        numToCreate = 1;
+        if (int(size) > 1000):
+            numToCreate = int(size) - 1000;
+            size = '1'
+
         newvol = {
                 'id': self.__gen_id__('vol'),
                 'size': size,
@@ -233,6 +239,12 @@ class MockClcInterface(ClcInterface):
                 'create_time': datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%S.%fZ'),
                 'snapshot_id': snapshot_id,
             }
+        if (numToCreate > 1):
+            for i in range(0, numToCreate-1):
+                self.volumes.append(newvol)
+                newvol = copy.copy(newvol)
+                newvol['id'] = self.__gen_id__('vol');
+                newvol['size'] = "%d"  % (i+2)
         self.volumes.append(newvol)
         return newvol
 
