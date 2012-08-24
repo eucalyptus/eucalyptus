@@ -28,9 +28,89 @@
 #include <ctype.h> // isspace
 #include <assert.h>
 #include <stdarg.h>
+#include <unistd.h> // usleep
+#include <pthread.h> 
 
+#include "eucalyptus.h"
 #include "misc.h"
 #include "sensor.h"
+#include "ipc.h"
+
+#define UNSET -1
+
+static useconds_t next_sleep_duration_usec = DEFAULT_SENSOR_SLEEP_DURATION_USEC;
+static long long collection_interval_time_ms = UNSET;
+static int history_size = UNSET;
+static boolean initialized = FALSE;
+static sem * conf_sem = NULL;
+
+static void * sensor_thread (void *arg) 
+{
+    logprintfl (EUCADEBUG, "{%u} spawning sensor thread\n", (unsigned int)pthread_self());
+
+    for (;;) {
+        sleep (next_sleep_duration_usec);
+
+        if (collection_interval_time_ms == UNSET ||
+            history_size == UNSET) {
+            continue;
+        }
+        
+        
+    }
+
+    return NULL;
+}
+
+int sensor_init (void)
+{
+    if (initialized)
+        return OK;
+    
+    conf_sem = sem_alloc (1, "mutex");
+    if (conf_sem==NULL) {
+        logprintfl (EUCAFATAL, "failed to allocate semaphore for sensor\n");
+        return ERROR_FATAL;
+    }
+    
+    { // start the sensor thread
+        pthread_t tcb;
+        if (pthread_create (&tcb, NULL, sensor_thread, NULL)) {
+            logprintfl (EUCAFATAL, "failed to spawn a sensor thread\n");
+            return ERROR_FATAL;
+        }
+        if (pthread_detach (tcb)) {
+            logprintfl (EUCAFATAL, "failed to detach the sensor thread\n");
+            return ERROR_FATAL;
+        }
+    }
+
+
+    
+    initialized = TRUE;
+    return OK;
+}
+
+int sensor_config (int new_history_size, long long new_collection_interval_time_ms)
+{
+    if (initialized == FALSE) return 1;
+    if (new_history_size < 0) return 1; // nonsense value
+    if (new_history_size > MAX_SENSOR_VALUES) return 1; // static data struct too small
+    if (new_collection_interval_time_ms < MIN_COLLECTION_INTERVAL_MS) return 1;
+    if (new_collection_interval_time_ms > MIN_COLLECTION_INTERVAL_MS) return 1;
+
+    if (history_size != new_history_size)
+        logprintfl (EUCAINFO, "setting sensor history size to %d\n", new_history_size);
+    if (collection_interval_time_ms != new_collection_interval_time_ms)
+        logprintfl (EUCAINFO, "setting sensor collection interval time to %lld\n", new_collection_interval_time_ms);
+
+    sem_p (conf_sem);
+    history_size = new_history_size;
+    collection_interval_time_ms = new_collection_interval_time_ms;
+    sem_v (conf_sem);
+
+    return 0;
+}
 
 int sensor_str2type (const char * counterType)
 {

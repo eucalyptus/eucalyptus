@@ -30,6 +30,10 @@
 #define MAX_SENSOR_COUNTERS    2  // we only have two types of counters (summation|average) for now
 #define MAX_SENSOR_METRICS     16 // currently 9 are implemented
 
+#define DEFAULT_SENSOR_SLEEP_DURATION_USEC 5000000L
+#define MIN_COLLECTION_INTERVAL_MS 1000L // below 1 second is too frequent
+#define MAX_COLLECTION_INTERVAL_MS 86400000L // above 24 hours is too infrequent
+
 typedef struct {
     long long timestampMs; // in milliseconds
     double value;          // measurement
@@ -68,6 +72,8 @@ typedef struct {
     int metricsLen;                            // size of the array
 } sensorResource;
 
+int sensor_init (void);
+int sensor_config (int new_history_size, long long new_collection_interval_time_ms);
 int sensor_str2type (const char * counterType);
 const char * sensor_type2str (int type);
 int sensor_res2str (char * buf, int bufLen, const sensorResource **res, int resLen);

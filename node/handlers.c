@@ -1816,6 +1816,8 @@ int doCreateImage (ncMetadata *meta, char *instanceId, char *volumeId, char *rem
 
 int 
 doDescribeSensors (ncMetadata *meta, 
+                   int historySize,
+                   long long collectionIntervalTimeMs,
                    char **instIds,
                    int instIdsLen,
                    char **sensorIds,
@@ -1831,9 +1833,9 @@ doDescribeSensors (ncMetadata *meta,
 	logprintfl (EUCADEBUG2, "doDescribeSensors: invoked (instIdsLen=%d sensorIdsLen=%d)\n", instIdsLen, sensorIdsLen);
     
 	if (nc_state.H->doDescribeSensors)
-		ret = nc_state.H->doDescribeSensors (&nc_state, meta, instIds, instIdsLen, sensorIds, sensorIdsLen, outResources, outResourcesLen);
+		ret = nc_state.H->doDescribeSensors (&nc_state, meta, historySize, collectionIntervalTimeMs, instIds, instIdsLen, sensorIds, sensorIdsLen, outResources, outResourcesLen);
 	else 
-		ret = nc_state.D->doDescribeSensors (&nc_state, meta, instIds, instIdsLen, sensorIds, sensorIdsLen, outResources, outResourcesLen);
+		ret = nc_state.D->doDescribeSensors (&nc_state, meta, historySize, collectionIntervalTimeMs, instIds, instIdsLen, sensorIds, sensorIdsLen, outResources, outResourcesLen);
     
 	return ret;
 }

@@ -1499,6 +1499,8 @@ doDescribeBundleTasks(
 static int 
 doDescribeSensors (struct nc_state_t *nc,
                        ncMetadata *meta, 
+                   int historySize,
+                   long long collectionIntervalTimeMs,
                        char **instIds,
                        int instIdsLen,
                        char **sensorIds,

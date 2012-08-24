@@ -282,6 +282,8 @@ adb_DescribeSensorsResponse_t *DescribeSensorsMarshal(adb_DescribeSensors_t *des
     /////axis2_char_t * userId = adb_describeSensorsType_get_userId(input, env);
 
     // get operation-specific fields from input
+    int historySize = adb_describeSensorsType_get_historySize(input, env);
+    long long collectionIntervalTimeMs = adb_describeSensorsType_get_collectionIntervalTimeMs(input, env);
     int instIdsLen = adb_describeSensorsType_sizeof_instanceIds(input, env);
     char ** instIds = malloc (sizeof(char *) * instIdsLen);
     if (instIds == NULL) {

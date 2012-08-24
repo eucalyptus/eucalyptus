@@ -1241,7 +1241,7 @@ int cc_registerImage(char *imageloc, axutil_env_t *env, axis2_stub_t *stub) {
 }
 */
 
-int cc_describeSensors (char **instIds, int instIdsLen, char **sensorIds, int sensorIdsLen, sensorResource ***outResources, int *outResourcesLen, axutil_env_t *env, axis2_stub_t *stub)
+int cc_describeSensors (int historySize, long long collectionIntervalTimeMs, char **instIds, int instIdsLen, char **sensorIds, int sensorIdsLen, sensorResource ***outResources, int *outResourcesLen, axutil_env_t *env, axis2_stub_t *stub)
 {
     adb_DescribeSensors_t     * input   = adb_DescribeSensors_create (env); 
     adb_describeSensorsType_t * request = adb_describeSensorsType_create (env);
@@ -1250,6 +1250,9 @@ int cc_describeSensors (char **instIds, int instIdsLen, char **sensorIds, int se
     EUCA_MESSAGE_MARSHAL(describeSensorsType, request, (&mymeta));
     adb_describeSensorsType_set_userId(request, env, "eucalyptus");
 
+    // set custom input fields
+    adb_describeSensorsType_set_historySize(request, env, historySize);
+    adb_describeSensorsType_set_collectionIntervalTimeMs(request, env, collectionIntervalTimeMs);
     for (int i=0; i<instIdsLen; i++) {
       adb_describeSensorsType_add_instanceIds(request, env, instIds[i]);
     }

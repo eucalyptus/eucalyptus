@@ -974,6 +974,8 @@ adb_ncDescribeSensorsResponse_t* ncDescribeSensorsMarshal (adb_ncDescribeSensors
     axis2_char_t * userId = adb_ncDescribeSensorsType_get_userId(input, env);
 
     // get operation-specific fields from input
+    int historySize = adb_ncDescribeSensorsType_get_historySize(input, env);
+    long long collectionIntervalTimeMs = adb_ncDescribeSensorsType_get_collectionIntervalTimeMs(input, env);
     int instIdsLen = adb_ncDescribeSensorsType_sizeof_instanceIds(input, env);
     char ** instIds = malloc (sizeof(char *) * instIdsLen);
     if (instIds == NULL) {
@@ -1002,7 +1004,7 @@ adb_ncDescribeSensorsResponse_t* ncDescribeSensorsMarshal (adb_ncDescribeSensors
         sensorResource **outResources;
         int outResourcesLen;
         
-        int error = doDescribeSensors (&meta, instIds, instIdsLen, sensorIds, sensorIdsLen, &outResources, &outResourcesLen);
+        int error = doDescribeSensors (&meta, historySize, collectionIntervalTimeMs, instIds, instIdsLen, sensorIds, sensorIdsLen, &outResources, &outResourcesLen);
 
         if (error) {
             logprintfl (EUCAERROR, "ERROR: doDescribeSensors() failed error=%d\n", error);

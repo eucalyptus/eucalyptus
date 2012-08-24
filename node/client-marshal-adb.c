@@ -932,7 +932,7 @@ int ncCreateImageStub (ncStub *st, ncMetadata *meta, char *instanceId, char *vol
     return status;
 }
 
-int ncDescribeSensorsStub (ncStub *st, ncMetadata *meta, char **instIds, int instIdsLen, char **sensorIds, int sensorIdsLen, sensorResource ***outResources, int *outResourcesLen)
+int ncDescribeSensorsStub (ncStub *st, ncMetadata *meta, int historySize, long long collectionIntervalTimeMs, char **instIds, int instIdsLen, char **sensorIds, int sensorIdsLen, sensorResource ***outResources, int *outResourcesLen)
 {
     axutil_env_t * env  = st->env;
     axis2_stub_t * stub = st->stub;
@@ -946,6 +946,9 @@ int ncDescribeSensorsStub (ncStub *st, ncMetadata *meta, char **instIds, int ins
       EUCA_MESSAGE_MARSHAL(ncDescribeSensorsType, request, meta);
     }
     
+    // set custom input fields
+    adb_ncDescribeSensorsType_set_historySize(request, env, historySize);
+    adb_ncDescribeSensorsType_set_collectionIntervalTimeMs(request, env, collectionIntervalTimeMs);
     for (int i=0; i<instIdsLen; i++) {
         adb_ncDescribeSensorsType_add_instanceIds(request, env, instIds[i]);
     }
@@ -953,7 +956,7 @@ int ncDescribeSensorsStub (ncStub *st, ncMetadata *meta, char **instIds, int ins
         adb_ncDescribeSensorsType_add_sensorIds(request, env, sensorIds[i]);
     }
     adb_ncDescribeSensors_set_ncDescribeSensors(input, env, request);
-
+    
     int status = 0;
     { // do it
         adb_ncDescribeSensorsResponse_t * output = axis2_stub_op_EucalyptusNC_ncDescribeSensors (stub, env, input);
