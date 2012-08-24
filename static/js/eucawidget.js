@@ -63,8 +63,10 @@
             });       
             if(!thisObj._help_flipped){
                thisObj._help_flipped = true;
+               thisObj.element.find('.help-link').removeClass().addClass('help-return');
             }else{
                thisObj._help_flipped = false;
+               thisObj.element.find('.help-return').removeClass().addClass('help-link');
                var $container = $('html body').find(DOM_BINDING['main']);
                $container.maincontainer("clearSelected");
                $container.maincontainer("changeSelected",evt, {selected:thisObj.widgetName});

@@ -77,10 +77,10 @@
               $('<a>').attr('href','#').click( function(evt){
                   thisObj._trigger('select', evt, {selected:'instance'});
                 }));
-            $instObj.find('#dashboard-instance-img').wrapAll(
+       /*     $instObj.find('#dashboard-instance-img').wrapAll(
               $('<a>').attr('href','#').click( function(evt){
                   thisObj._trigger('select', evt, {selected:'instance'});
-                }));
+                }));*/
           } else {
             //TODO: need to call notification subsystem
             $('html body').find(DOM_BINDING['notification']).notification('error', 'dashboard', 'can\'t retrieve instances due to server failure');
@@ -115,10 +115,6 @@
             $storageObj.find('#dashboard-storage-volume img').remove();
             $storageObj.find('#dashboard-storage-volume span').text(numVol);
             
-            $storageObj.find('#dashboard-storage-img').wrapAll(
-              $('<a>').attr('href','#').click( function(evt){
-                  thisObj._trigger('select', evt, {selected:'volume'});
-                }));
             $storageObj.find('#dashboard-storage-volume').wrapAll(
               $('<a>').attr('href','#').click( function(evt){
                   thisObj._trigger('select', evt, {selected:'volume'});
@@ -187,11 +183,6 @@
             var numGroups = data.results.length;
             $netsecObj.find('#dashboard-netsec-sgroup img').remove();
             $netsecObj.find('#dashboard-netsec-sgroup span').text(numGroups);
-
-            $netsecObj.find('#dashboard-netsec-img').wrapAll(
-              $('<a>').attr('href','#').click( function(evt){
-                  thisObj._trigger('select', evt, {selected:'sgroup'});
-            }));
 
             $netsecObj.find('#dashboard-netsec-sgroup').wrapAll(
               $('<a>').attr('href','#').click( function(evt){

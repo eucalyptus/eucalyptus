@@ -50,6 +50,7 @@
       this._decorateTopBar();
       this._decorateActionMenu();
       this._decorateLegend();
+      //this._decoratePagination();
       this._addActions();
     },
 
@@ -347,6 +348,13 @@
       });
 
       thisObj.element.append($legend);
+    },
+
+    _decoratePagination : function (args) {
+      var $paginate = this.element.find('.dataTables_paginate'); 
+      var $clone = $paginate.clone(true,true); 
+      //$paginate.remove();
+      this.element.append($clone);
     },
 
     _addActions : function (args) {

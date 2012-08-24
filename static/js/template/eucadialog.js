@@ -44,23 +44,15 @@
          title: thisObj.options.title,
          open: function(event, ui) {
              $titleBar = thisObj.element.parent().find('.ui-dialog-titlebar');
-             firstTimeOpened = false;
-             if ( $titleBar.find("div.help-link").length == 0 ) {
-               // first time opened
-               $titleBar.append($('<div>').addClass('help-link').append($('<a>').attr('href','#').text('?')));
-               firstTimeOpened = true;
-             }
+             $titleBar.append($('<div>').addClass('help-link').append($('<a>').attr('href','#').text('?')));
 
              $('.ui-widget-overlay').live("click", function() {
                thisObj.close();
              });
 
              $.each(thisObj.options.buttons, function (btn_id, btn_prop){
-               var $btn = firstTimeOpened ? thisObj.element.parent().find(":button:contains('"+ btn_id +"')")
-                          : thisObj.element.parent().find(":button#" + thisObj._getButtonId(btn_id, btn_prop));
-
-               if ( firstTimeOpened )
-                 $btn.attr('id', thisObj._getButtonId(btn_id, btn_prop));
+               var $btn = thisObj.element.parent().find(":button:contains('"+ btn_id +"')");
+               $btn.attr('id', thisObj._getButtonId(btn_id, btn_prop));
                $btn.find('span').text(btn_prop.text);
                if(btn_prop.focus !== undefined && btn_prop.focus)
                  $btn.focus();
@@ -136,13 +128,15 @@
               });
               // at the end of flip/revertFlip, change the ?/x button
               if(!thisObj.help_flipped){
-                $helpLink.html('&larr;');
+                $titleBar.find('.help-link').removeClass().addClass('help-return');
+                $helpLink.html('&nbsp;');
                 if(thisObj.options.help.title)
                   $titleBar.find('span').text(thisObj.options.help.title);
                 $buttonPane.hide(); 
                 thisObj.help_flipped =true;
               } else{
-                $helpLink.text('?');
+                $titleBar.find('.help-return').removeClass().addClass('help-link');
+                $helpLink.html('&nbsp;');
                 $buttonPane.show();
                 $titleBar.find('span').text(thisObj.options.title);
                 thisObj.help_flipped=false;
