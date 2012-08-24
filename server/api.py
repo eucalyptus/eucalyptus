@@ -1,3 +1,4 @@
+import ConfigParser
 import tornado.web
 import server
 import json
@@ -308,6 +309,9 @@ class ComputeHandler(server.BaseHandler):
             ret = self.handleSnapshots(action, self.user_session.clc)
         ret = Response(ret) # wrap all responses in an object for security purposes
         data = json.dumps(ret, cls=BotoJsonEncoder, indent=2)
-        if(server.config.get('test','apidelay')):
-            time.sleep(int(server.config.get('test','apidelay'))/1000.0);
+        try:
+            if(server.config.get('test','apidelay')):
+                time.sleep(int(server.config.get('test','apidelay'))/1000.0);
+        except ConfigParser.NoOptionError:
+            pass
         self.write(data)
