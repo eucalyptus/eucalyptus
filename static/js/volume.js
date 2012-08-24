@@ -140,7 +140,7 @@
           thisObj._flipToHelp(evt,$helpHeader, $volHelp);
         },
         filters : [{name:"vol_state", options: ['all','attached','detached'], filter_col:8, alias: {'attached':'in-use','detached':'available'}}],
-        legend : ['creating', 'available', 'in-use', 'deleting', 'deleted', 'error'],
+        legend : ['creating', 'available', 'in_use', 'deleting', 'deleted', 'error'],
       });
       this.tableWrapper.appendTo(this.element);
 
