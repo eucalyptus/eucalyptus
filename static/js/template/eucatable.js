@@ -87,6 +87,8 @@
        // sDom += '<"#'+thisObj.options.id+'-legend">';
       sDom += 'p<"clear">';
       dt_arg['sDom'] = sDom;  
+      dt_arg['oLanguage'] = { "sProcessing": "<img src=\"images/dots32.gif\"/> &nbsp; <span>Loading...</span>"};
+
       return dt_arg;
     },
 
@@ -115,6 +117,7 @@
           // checked/uncheck on checkbox
           $rowCheckbox = $(e.target).parents('tr').find(':input[type="checkbox"]');
           $rowCheckbox.attr('checked', !$rowCheckbox.is(':checked'));
+          $(e.target).parents('tr').toggleClass('selected-row');
           e.stopPropagation();
           thisObj._onRowClick();
           thisObj._trigger('row_click', e);
