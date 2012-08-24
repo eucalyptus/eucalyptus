@@ -343,7 +343,8 @@
 
       $.each(thisObj.options.legend, function(idx, val){
         var domid = 'legend-'+thisObj.options.id +'-'+val;
-        var text = $.i18n.map[thisObj.options.id+'_legend_'+val] ? $.i18n.map[thisObj.options.id+'_legend_'+val] : val;
+        textId = thisObj.options.id+'_legend_'+val.replace('-','_');
+        var text = $.i18n.map[textId] ? $.i18n.map[textId] : val;
         $legend.append($('<span>').addClass('table-legend-item').attr('id',domid).html(text));
       });
 
