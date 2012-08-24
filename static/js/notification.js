@@ -77,9 +77,9 @@
       if (args.success){
         setTimeout(function(){ 
            //TODO: is this enough?; no unique ID necessary?
-           if(thisObj.element.find('#euca-notification-title').text() === args.title)
+           if(thisObj.element.find('#euca-notification-desc').text() === args.desc)
              thisObj.element.find('#euca-notification-close a').trigger('click');
-        }, 3000);
+        }, 5000);
       }
     },
    

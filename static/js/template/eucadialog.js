@@ -44,7 +44,8 @@
          title: thisObj.options.title,
          open: function(event, ui) {
              $titleBar = thisObj.element.parent().find('.ui-dialog-titlebar');
-             $titleBar.append($('<div>').addClass('help-link').append($('<a>').attr('href','#').text('?')));
+             if($titleBar.find('.help-link').length <= 0)
+               $titleBar.append($('<div>').addClass('help-link').append($('<a>').attr('href','#').text('?')));
 
              $('.ui-widget-overlay').live("click", function() {
                thisObj.close();
@@ -62,7 +63,6 @@
 
              /* page-level help -- prototype */
              thisObj._setHelp(thisObj.element.parent());
-
              /* call onOpen function if passed */
              if ( thisObj.options.on_open ){
                if(thisObj.options.on_open['spin']){
@@ -238,7 +238,6 @@
         this.$error_div.children().detach();
       else
         this.$error_div.append($('<br>'));
-
       this.$error_div.append(
         $('<span>').html(error)); 
     } 

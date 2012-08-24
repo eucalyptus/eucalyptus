@@ -49,8 +49,7 @@
       this._decorateSearchBar();
       this._decorateTopBar();
       this._decorateActionMenu();
-      this._decorateLegend();
-      //this._decoratePagination();
+      this._decorateLegendPagination();
       this._addActions();
     },
 
@@ -329,25 +328,24 @@
       return $menuDiv;
     },
 
-    _decorateLegend : function (args) {
+    _decorateLegendPagination : function (args) {
       var thisObj = this;
+      var $wrapper = $('<div>').addClass('legend-pagination-wrapper');
+      thisObj.element.find('.dataTables_paginate').wrapAll($wrapper); 
+      if(thisObj.options.legend){
+        $legend = $('<div>').attr('id',thisObj.options.id+'-legend'); 
 
-      if(!thisObj.options.legend)
-        return;
+        $legend.addClass('table-legend');
+        $legend.append($('<span>').html(legend_label));
 
-      $legend = $('<div>').attr('id',thisObj.options.id+'-legend'); 
-
-      //$legend = thisObj.element.find('#'+thisObj.options.id+'-legend');
-      $legend.addClass('table-legend');
-      $legend.append($('<span>').html(legend_label));
-
-      $.each(thisObj.options.legend, function(idx, val){
-        var domid = 'legend-'+thisObj.options.id +'-'+val;
-        var text = $.i18n.map[thisObj.options.id+'_legend_'+val] ? $.i18n.map[thisObj.options.id+'_legend_'+val] : val;
-        $legend.append($('<span>').addClass('table-legend-item').attr('id',domid).html(text));
-      });
-
-      thisObj.element.append($legend);
+        $.each(thisObj.options.legend, function(idx, val){
+          var domid = 'legend-'+thisObj.options.id +'-'+val;
+          textId = thisObj.options.id+'_legend_'+val.replace('-','_');
+          var text = $.i18n.map[textId] ? $.i18n.map[textId] : val;
+          $legend.append($('<span>').addClass('table-legend-item').attr('id',domid).html(text));
+        });
+        thisObj.element.find('.legend-pagination-wrapper').prepend($legend);
+      }
     },
 
     _decoratePagination : function (args) {
