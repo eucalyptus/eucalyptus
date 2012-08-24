@@ -50,7 +50,7 @@
       this._decorateTopBar();
       this._decorateActionMenu();
       this._decorateLegend();
-      this._decoratePagination();
+      //this._decoratePagination();
       this._addActions();
     },
 
