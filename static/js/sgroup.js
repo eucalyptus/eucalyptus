@@ -178,6 +178,7 @@
             url: 'http://checkip.amazonaws.com/',
             crossDomain:'true',
             success: function(data, textStatus, jqXHR) {
+                        alert(data);
                          $('#allow-ip').val(data)
                      }
         });
@@ -213,6 +214,9 @@
         if (this.rulesList == null) {
             this.rulesList = new Array();
         }
+        // if nothing selected, don't save
+        if ($('#sgroup-template').val() == 'none')
+            return
         var rule = new Object();
         rule.protocol = 'tcp';
         rule.port = $('#sgroup-ports').val();
@@ -230,10 +234,10 @@
             var theDiv = $('#sgroup-rules-list')
             theDiv.html("loading...");
             var msg = "";
-            for (rule in thisObj.rulesList)
+            for (rule in this.rulesList)
                 msg += "Rule: "+this.rulesList[rule].protocol+" ("+
                              this.rulesList[rule].port+"), "+
-                             this.rulesList[rule].cidr+"<br/>";
+                             this.rulesList[rule].ipaddr+"<br/>";
             theDiv.html(msg);
         }
     },
