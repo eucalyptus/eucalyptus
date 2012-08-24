@@ -4,12 +4,14 @@ import server
 import json
 import time
 from boto.ec2.blockdevicemapping import BlockDeviceMapping
+from boto.exception import EC2ResponseError
 
 from boto.ec2.ec2object import EC2Object
 from .botoclcinterface import BotoClcInterface
 from .botojsonencoder import BotoJsonEncoder
 from .cachingclcinterface import CachingClcInterface
 from .mockclcinterface import MockClcInterface
+from .response import ClcError
 from .response import Response
 
 class ComputeHandler(server.BaseHandler):
@@ -290,28 +292,34 @@ class ComputeHandler(server.BaseHandler):
             self.user_session.clc = CachingClcInterface(self.user_session.clc, server.config)
 
         ret = []
-        action = self.get_argument("Action")
-        if action == 'DescribeAvailabilityZones':
-            ret = self.user_session.clc.get_all_zones()
-        elif action.find('Image') > -1:
-            ret = self.handleImages(action, self.user_session.clc)
-        elif action.find('Instance') > -1 or action == 'GetConsoleOutput':
-            ret = self.handleInstances(action, self.user_session.clc)
-        elif action.find('Address') > -1:
-            ret = self.handleAddresses(action, self.user_session.clc)
-        elif action.find('KeyPair') > -1:
-            ret = self.handleKeypairs(action, self.user_session.clc)
-        elif action.find('SecurityGroup') > -1:
-            ret = self.handleGroups(action, self.user_session.clc)
-        elif action.find('Volume') > -1:
-            ret = self.handleVolumes(action, self.user_session.clc)
-        elif action.find('Snapshot') > -1:
-            ret = self.handleSnapshots(action, self.user_session.clc)
-        ret = Response(ret) # wrap all responses in an object for security purposes
-        data = json.dumps(ret, cls=BotoJsonEncoder, indent=2)
         try:
-            if(server.config.get('test','apidelay')):
-                time.sleep(int(server.config.get('test','apidelay'))/1000.0);
-        except ConfigParser.NoOptionError:
-            pass
-        self.write(data)
+            action = self.get_argument("Action")
+            if action == 'DescribeAvailabilityZones':
+                ret = self.user_session.clc.get_all_zones()
+            elif action.find('Image') > -1:
+                ret = self.handleImages(action, self.user_session.clc)
+            elif action.find('Instance') > -1 or action == 'GetConsoleOutput':
+                ret = self.handleInstances(action, self.user_session.clc)
+            elif action.find('Address') > -1:
+                ret = self.handleAddresses(action, self.user_session.clc)
+            elif action.find('KeyPair') > -1:
+                ret = self.handleKeypairs(action, self.user_session.clc)
+            elif action.find('SecurityGroup') > -1:
+                ret = self.handleGroups(action, self.user_session.clc)
+            elif action.find('Volume') > -1:
+                ret = self.handleVolumes(action, self.user_session.clc)
+            elif action.find('Snapshot') > -1:
+                ret = self.handleSnapshots(action, self.user_session.clc)
+            ret = Response(ret) # wrap all responses in an object for security purposes
+            data = json.dumps(ret, cls=BotoJsonEncoder, indent=2)
+            try:
+                if(server.config.get('test','apidelay')):
+                    time.sleep(int(server.config.get('test','apidelay'))/1000.0);
+            except ConfigParser.NoOptionError:
+                pass
+            self.write(data)
+        except EC2ResponseError as err:
+            ret = ClcError(err.status, err.reason, err.errors[0])
+            self.set_status(err.status);
+            self.finish(json.dumps(ret, cls=BotoJsonEncoder))
+

@@ -821,7 +821,7 @@ span.selected {
   background-color: #fff;
   border: 1px solid #d7d5d5;
 
-  margin: 0 8px;
+  margin: 0 8px 25px;
   padding: 68px 0 15px 0; 
 
   -webkit-border-radius: 5px;
@@ -834,12 +834,16 @@ span.selected {
 }
 
 .dataTables_paginate {
-  margin: 15px 15px 0 0;
+  float: right;
 }
 
 .dataTables_filter {
   padding-right: 15px;
-  width: 45%;
+  /* width: 45%; */
+}
+
+.paging_full_numbers {
+    width: 320px;
 }
 
 table.display {
@@ -946,10 +950,16 @@ tr.even td.sorting_1 {
   float: left;
 }
 
+.legend-pagination-wrapper {
+  height: 30px;
+  position: absolute;
+  width: 100%;
+  bottom: -45px;
+}
+
 .table-legend {
   float:left;
-  margin-top: 15px;
-  margin-left: 15px;
+  margin-top: 3px;
 }
 
 .table-legend-item {

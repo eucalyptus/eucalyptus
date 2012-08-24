@@ -14,6 +14,7 @@ from boto.ec2.instance import Group
 from boto.ec2.securitygroup import GroupOrCIDR
 from boto.ec2.securitygroup import IPPermissions
 from boto.ec2.volume import AttachmentSet
+from .response import ClcError
 from .response import Response
 
 
@@ -27,6 +28,8 @@ class BotoJsonEncoder(JSONEncoder):
             values = copy.copy(obj.__dict__)
             values['__obj_name__'] = 'RegionInfo'
             return (values)
+        elif isinstance(obj, ClcError):
+            return obj.__dict__
         elif isinstance(obj, Response):
             return obj.__dict__
         elif isinstance(obj, EC2Connection):
