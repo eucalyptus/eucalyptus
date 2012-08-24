@@ -75,7 +75,6 @@
       }
        
       if (args.success){
-        alert('success');
         setTimeout(function(){ 
            //TODO: is this enough?; no unique ID necessary?
            if(thisObj.element.find('#euca-notification-desc').text() === args.desc)
