@@ -322,7 +322,7 @@ body {
   background-position: center -75px;
 }
 
-.lnk-image {
+.lnk-images {
   background-position: center -150px;
 }
 .resources-nav li:hover a.lnk-images,
@@ -330,7 +330,7 @@ body {
   background-position: center -225px;
 }
 
-.lnk-instance {
+.lnk-instances {
   background-position: center -300px;
 }
 .resources-nav li:hover a.lnk-instances,

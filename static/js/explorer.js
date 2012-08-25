@@ -23,8 +23,8 @@
     $.widget("eucalyptus.explorer", {
       options : {
         menus : [ {key:'dashboard', text:menu_dashboard}, 
-                {key:'image', text:menu_images},
-                {key:'instance', text:menu_instances},
+                {key:'images', text:menu_images},
+                {key:'instances', text:menu_instances},
                 {key:'storage', text:menu_storage},
                 {key:'netsec', text:menu_netsec}],
         submenus : { storage: [{key:'volume', text:menu_storage_volumes}, {key:'snapshot', text:menu_storage_snapshots},{key:'bucket',text:menu_storage_buckets}],
