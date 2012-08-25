@@ -87,14 +87,33 @@
        // sDom += '<"#'+thisObj.options.id+'-legend">';
       sDom += 'p<"clear">';
       dt_arg['sDom'] = sDom;  
-      dt_arg['oLanguage'] = { "sProcessing": "<img src=\"images/dots32.gif\"/> &nbsp; <span>Loading...</span>"};
-
+      dt_arg['oLanguage'] = { "sProcessing": "<img src=\"images/dots32.gif\"/> &nbsp; <span>Loading...</span>", 
+                              "sLoadingRecords": ""}
+      
       return dt_arg;
     },
 
     _drawCallback : function(oSettings) {
       var thisObj = this;
       $('#table_' + this.options.id + '_count').html(oSettings.fnRecordsDisplay());
+
+      this.element.find('table thead tr').each(function(index, tr){
+        var $checkAll = $(tr).find(':input[type="checkbox"]');
+        $checkAll.click( function (e) {
+          var unchecked = true;
+          thisObj.element.find('table tbody').find('tr').each(function(innerIdx, innerTr) {
+            $(innerTr).removeClass('selected-row');
+          });
+         /* if(unchecked){
+            thisObj.element.find('table tbody').find('tr').each(function(innerIdx, innerTr) {
+              $(innerTr).removeClass('selected-row').addClass('selected-row');});
+          }else{
+            thisObj.element.find('table tbody').find('tr').each(function(innerIdx, innerTr) {
+              $(innerTr).removeClass('selected-row');});
+          }*/
+        }); 
+       
+      }); 
       this.element.find('table tbody').find('tr').each(function(index, tr) {
         // add custom td handlers
         $currentRow = $(tr);
@@ -115,19 +134,24 @@
         // add generic row handler
         $currentRow.click( function (e) {
           // checked/uncheck on checkbox
+          var $selectedRow = $(e.target).parents('tr');
+          $selectedRow.toggleClass('selected-row');
           $rowCheckbox = $(e.target).parents('tr').find(':input[type="checkbox"]');
-          $rowCheckbox.attr('checked', !$rowCheckbox.is(':checked'));
-          $(e.target).parents('tr').toggleClass('selected-row');
+          if($selectedRow.hasClass('selected-row'))
+            $rowCheckbox.attr('checked', true);
+          else
+            $rowCheckbox.attr('checked', false);
           e.stopPropagation();
           thisObj._onRowClick();
           thisObj._trigger('row_click', e);
         });
 
-        $currentRow.find(':input[type="checkbox"]').click( function (e) {
-          e.stopPropagation();
-          thisObj._onRowClick();
-          thisObj._trigger('row_click', e);
-        });
+        /*$currentRow.find(':input[type="checkbox"]').click( function (e) {
+           
+          //e.stopPropagation();
+         // thisObj._onRowClick();
+          //thisObj._trigger('row_click', e);
+        });*/
 
         if (thisObj.options.context_menu_actions) {
           rID = 'ri-'+S4()+S4();
