@@ -146,7 +146,7 @@ body {
   height: 22px;
   width: 207px;
   margin-top: 13px;
-  background: transparent url(../images/css-sprites.png) no-repeat center 0;
+  background: transparent url(../images/css-sprites.png) no-repeat left 0;
   border: none;
 }
 
@@ -738,9 +738,17 @@ body {
 #dashboard-storage-img,
 #dashboard-netsec-img {
   float: left;
-  padding-top: 10px;
-  width: 115px;
-  text-align: center;
+  margin-top: 2px;  
+  height: 85px;
+  width: 110px;
+  background: transparent url(../images/css-sprites.png) no-repeat -150px -325px;
+}
+
+#dashboard-storage-img {
+  background-position: 0 -425px; 
+}
+#dashboard-netsec-img {
+  background-position: -150px -425px;
 }
 
 .instances,
