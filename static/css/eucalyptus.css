@@ -171,9 +171,8 @@ body {
   display: block;
   background: transparent url(../images/css-sprites-small.png) no-repeat right 0;
   color: #02405f;
-  font-family: "Play", Arial, sans-serif;
+  font-family: 'PlayBold', Arial, sans-serif;
   font-size: 16px;
-  font-weight: bold;
   line-height: 47px;
   margin: 0 10px 0 0;
   padding: 0 32px 0 20px;
@@ -220,7 +219,7 @@ body {
   display: block;
   background: transparent url(../images/css-sprites-small.png) no-repeat right 0;
   color: #02405f;
-  font-family: "Play", Arial, sans-serif;
+  font-family: 'PlayRegular', Arial, sans-serif;
   font-size: 14px;
   font-weight: normal;
   line-height: 1em;
@@ -290,9 +289,8 @@ body {
   background-repeat: no-repeat;
   border-left: 1px solid #e3e1e1;
   color: #02405f;
-  font-family: "Play", Arial, sans-serif;
+  font-family: 'PlayBold', Arial, sans-serif;
   font-size: 12px;
-  font-weight: 700;
   line-height: 1em;
   margin: 3px 0;
   outline: none;
@@ -326,7 +324,7 @@ body {
   background-position: center -150px;
 }
 .resources-nav li:hover a.lnk-image,
-.lnk-images:hover {
+.lnk-image:hover {
   background-position: center -225px;
 }
 
@@ -334,7 +332,7 @@ body {
   background-position: center -300px;
 }
 .resources-nav li:hover a.lnk-instance,
-.lnk-instances:hover {
+.lnk-instance:hover {
   background-position: center -375px;
 }
 
@@ -342,6 +340,7 @@ body {
   background-position: center -450px;
 }
 .resources-nav li:hover a.lnk-storage,
+.resources-nav li.toggle-on a.lnk-storage,
 .lnk-storage:hover {
   background-position: center -525px;
 }
@@ -350,6 +349,7 @@ body {
   background-position: center -600px;
 }
 .resources-nav li:hover a.lnk-netsec,
+.resources-nav li.toggle-on a.lnk-netsec,
 .lnk-netsec:hover {
   background-position: center -675px;
 }
@@ -390,9 +390,8 @@ body {
   background-image: none;
   border: 0;
   color: #02405f;
-  font-family: "Play", Arial, sans-serif;
+  font-family: 'PlayRegular', Arial, sans-serif;
   font-size: 14px;
-  font-weight: 400;
   height: auto;
   margin: 0;
   padding: 9px 10px 9px 35px;
@@ -423,7 +422,7 @@ body {
   min-height: 15px;
   margin-top: 5px;
   padding: 15px 0;
-  font-family: 'Play', Arial, sans-serif;
+  font-family: 'PlayRegular', Arial, sans-serif;
   text-align: center;
   width: 960px;
 
@@ -437,7 +436,7 @@ body {
 }
 
 #euca-notification-title {
-  font-weight: bold;
+  font-family: 'PlayBold', Arial, sans-serif;
   font-size: 1.2em;
 }
 
@@ -483,9 +482,8 @@ body {
 .form-row label {
   display: inline-block;
   width: 90px;
-  font-family: "Play", Arial, sans-serif;
+  font-family: 'PlayBold', Arial, sans-serif;
   font-size: 13px;
-  font-weight: bold;
   text-align: right;
   margin-right: 13px;
   color: #02405f;
@@ -540,9 +538,8 @@ body {
 .xlarge-button {
   display: inline-block;
   color: #fff;
-  font-family: "Play", Arial, sans-serif;
+  font-family: 'PlayBold', Arial, sans-serif;
   font-size: 16px;
-  font-weight: bold;
   line-height: 1;
   text-decoration: none;
   padding: 5px 24px;
@@ -607,9 +604,8 @@ body {
   background-color: #eaf2f5;
   border-top: 1px solid #e7e5e5;
   color: #02405f;
-  font-family: "Play", Arial, sans-serif;
+  font-family: 'PlayBold', Arial, sans-serif;
   font-size: 18px;
-  font-weight: bold;
   margin: 0 0 20px;
   position: absolute;
   top: 12px;
@@ -683,14 +679,14 @@ body {
 
 .inner-box h3 {
   position: absolute;
-  top: 8px;
+  top: 9px;
   left: -7px;
-  background: transparent url(../images/css-sprites.png) no-repeat left -160px;
-  font-family: 'Play', Arial, sans-serif;
+  background: transparent url(../images/css-sprites.png) no-repeat left -158px;
+  font-family: 'PlayBold', Arial, sans-serif;
   font-size: 12px;
   line-height: 1.5;
   text-align: center;
-  font-weight: bold;
+  font-weight: normal;
   color: #02405f;
   margin: 0;
   padding: 0 0 7px 0px;
@@ -704,7 +700,7 @@ body {
 }
 
 #dashboard-instance-az select {
-  font-family: 'Play', Arial, sans-serif;
+  font-family: 'PlayRegular', Arial, sans-serif;
   padding: 5px 4px;
   outline: none;
   width: 190px;
@@ -854,9 +850,9 @@ table.display {
 
 table.display thead th {
   padding: 8px 18px 8px 10px;
-  font-family: "Play", Arial, sans-serif;
+  font-family: 'PlayBold', Arial, sans-serif;
   font-size: 11px;
-  font-weight: bold;
+  font-weight: normal;
   color: #7aa92a;
   text-transform: uppercase;
   border-top: 2px solid #dae2e8;
