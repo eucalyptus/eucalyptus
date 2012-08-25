@@ -242,10 +242,9 @@
 	      function( oSettings, aData, iDataIndex ) {
                 if (oSettings.sInstance !== thisObj.options.id)
                   return true;
-                var selectorVal =  $selector.val();
-                if(aliasTbl[selectorVal]){
+                var selectorVal = thisObj.element.find('select#'+filter['name']+'-selector').val();
+                if(aliasTbl[selectorVal])
                   return aliasTbl[selectorVal] == aData[filter['filter_col']];
-                }
                 return true;
             });
           }
