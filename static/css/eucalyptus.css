@@ -322,18 +322,18 @@ body {
   background-position: center -75px;
 }
 
-.lnk-images {
+.lnk-image {
   background-position: center -150px;
 }
-.resources-nav li:hover a.lnk-images,
+.resources-nav li:hover a.lnk-image,
 .lnk-images:hover {
   background-position: center -225px;
 }
 
-.lnk-instances {
+.lnk-instance {
   background-position: center -300px;
 }
-.resources-nav li:hover a.lnk-instances,
+.resources-nav li:hover a.lnk-instance,
 .lnk-instances:hover {
   background-position: center -375px;
 }
