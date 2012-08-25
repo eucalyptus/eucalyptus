@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Copyright 2009-2012 Eucalyptus Systems, Inc.
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; version 3 of the License.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see http://www.gnu.org/licenses/.
+
+  Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
+  CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
+  additional information or have any questions.
+  -->
+<binding force-classes="true" add-constructors="true" name="www_eucalyptus_com_ns_2012_08_24">
+    <namespace uri="http://www.eucalyptus.com/ns/reporting/2012-08-24/" default="elements"/>
+
+    <format
+            type="java.util.Date"
+            deserializer="org.jibx.runtime.Utility.deserializeDateTime"
+            serializer="com.eucalyptus.ws.util.SerializationUtils.serializeDateTime"/>
+
+    <mapping class="com.eucalyptus.reporting.service.ReportingMessage" abstract="true"/>
+    <mapping class="com.eucalyptus.reporting.service.ReportingResponseMetadataType" abstract="true">
+        <value name="RequestId" field="requestId"/>
+    </mapping>
+    <mapping name="Error" class="com.eucalyptus.reporting.service.ReportingErrorType">
+        <value name="Type" field="type" usage="required"/>
+        <value name="Code" field="code" usage="required"/>
+        <value name="Message" field="message" usage="required"/>
+        <structure field="detail" usage="required" map-as="com.eucalyptus.reporting.service.ReportingErrorDetailType"/>
+    </mapping>
+    <mapping name="Detail" class="com.eucalyptus.reporting.service.ReportingErrorDetailType">
+    </mapping>
+    <mapping name="ErrorResponse" class="com.eucalyptus.reporting.service.ReportingErrorResponseType" extends="com.eucalyptus.reporting.service.ReportingMessage">
+        <structure map-as="com.eucalyptus.reporting.service.ReportingMessage"/>
+        <collection field="errors">
+            <structure map-as="com.eucalyptus.reporting.service.ReportingErrorType"/>
+        </collection>
+        <value name="RequestId" field="requestId" usage="required"/>
+    </mapping>
+    <mapping class="com.eucalyptus.reporting.service.ExportDataResultType" abstract="true">
+        <value name="Data" field="data" usage="required"/>
+    </mapping>
+    <mapping name="ExportData" class="com.eucalyptus.reporting.service.ExportDataType" extends="com.eucalyptus.reporting.service.ReportingMessage">
+        <structure map-as="com.eucalyptus.reporting.service.ReportingMessage"/>
+    </mapping>
+    <mapping name="ExportDataResponse" class="com.eucalyptus.reporting.service.ExportDataResponseType" extends="com.eucalyptus.reporting.service.ReportingMessage">
+        <structure map-as="com.eucalyptus.reporting.service.ReportingMessage"/>
+        <structure name="ExportDataResult" field="result" type="com.eucalyptus.reporting.service.ExportDataResultType"/>
+        <structure name="ResponseMetadata" field="responseMetadata" type="com.eucalyptus.reporting.service.ReportingResponseMetadataType"/>
+    </mapping>
+
+</binding>
