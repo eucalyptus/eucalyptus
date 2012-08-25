@@ -88,7 +88,7 @@
       sDom += 'p<"clear">';
       dt_arg['sDom'] = sDom;  
       dt_arg['oLanguage'] = { "sProcessing": "<img src=\"images/dots32.gif\"/> &nbsp; <span>Loading...</span>", 
-                              "sLoadingRecords": ""}
+                             "sLoadingRecords": ""}
       
       return dt_arg;
     },
@@ -100,19 +100,14 @@
       this.element.find('table thead tr').each(function(index, tr){
         var $checkAll = $(tr).find(':input[type="checkbox"]');
         $checkAll.click( function (e) {
-          var unchecked = true;
-          thisObj.element.find('table tbody').find('tr').each(function(innerIdx, innerTr) {
-            $(innerTr).removeClass('selected-row');
+          var checked = $(this).is(':checked');
+          thisObj.element.find('table tbody tr').each(function(innerIdx, innerTr){
+            if(checked)
+              $(innerTr).addClass('selected-row');
+            else
+              $(innerTr).removeClass('selected-row');
           });
-         /* if(unchecked){
-            thisObj.element.find('table tbody').find('tr').each(function(innerIdx, innerTr) {
-              $(innerTr).removeClass('selected-row').addClass('selected-row');});
-          }else{
-            thisObj.element.find('table tbody').find('tr').each(function(innerIdx, innerTr) {
-              $(innerTr).removeClass('selected-row');});
-          }*/
-        }); 
-       
+        });
       }); 
       this.element.find('table tbody').find('tr').each(function(index, tr) {
         // add custom td handlers
@@ -141,17 +136,11 @@
             $rowCheckbox.attr('checked', true);
           else
             $rowCheckbox.attr('checked', false);
+
           e.stopPropagation();
           thisObj._onRowClick();
           thisObj._trigger('row_click', e);
         });
-
-        /*$currentRow.find(':input[type="checkbox"]').click( function (e) {
-           
-          //e.stopPropagation();
-         // thisObj._onRowClick();
-          //thisObj._trigger('row_click', e);
-        });*/
 
         if (thisObj.options.context_menu_actions) {
           rID = 'ri-'+S4()+S4();
@@ -373,13 +362,6 @@
         });
         thisObj.element.find('.legend-pagination-wrapper').prepend($legend);
       }
-    },
-
-    _decoratePagination : function (args) {
-      var $paginate = this.element.find('.dataTables_paginate'); 
-      var $clone = $paginate.clone(true,true); 
-      //$paginate.remove();
-      this.element.append($clone);
     },
 
     _addActions : function (args) {
