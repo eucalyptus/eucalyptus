@@ -262,7 +262,7 @@
       var filterArr = [];
       thisObj.element.find('.euca-table-filter').each(function(){ filterArr.push($(this));});
       thisObj.element.find('.dataTables_filter').each(function(){ filterArr.push($(this));});
-      var $wrapper = $('<div class="table-filter-wrapper"/>');
+      var $wrapper = $('<div class="table-filter-wrapper clearfix"/>');
       $(filterArr).each(function(){$wrapper.append($(this).clone(true));}); 
       $wrapper.insertAfter(filterArr[filterArr.length-1]);
       $(filterArr).each(function(){$(this).remove();});
@@ -345,13 +345,13 @@
 
     _decorateLegendPagination : function (args) {
       var thisObj = this;
-      var $wrapper = $('<div>').addClass('legend-pagination-wrapper');
+      var $wrapper = $('<div>').addClass('legend-pagination-wrapper clearfix');
       thisObj.element.find('.dataTables_paginate').wrapAll($wrapper); 
       if(thisObj.options.legend){
         $legend = $('<div>').attr('id',thisObj.options.id+'-legend'); 
 
         $legend.addClass('table-legend');
-        $legend.append($('<span>').html(legend_label));
+        $legend.append($('<span class="table-legend-title">').html(legend_label));
 
         $.each(thisObj.options.legend, function(idx, val){
           var domid = 'legend-'+thisObj.options.id +'-'+val;

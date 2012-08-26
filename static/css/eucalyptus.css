@@ -910,14 +910,20 @@ tr.selected-row {
 .inactive-menu {
   color: gray;
 }
+
+
 /* ======= Help page related ===== */
+
 .help-content {
   padding: 10px;
 }
+
 .help-revert-button {
   float: right;
   margin-top: 10px;
 }
+
+
 /* ======= Notifications ======= */
 
 .euca-notification {
@@ -954,28 +960,98 @@ tr.selected-row {
 
 }
 
+.table-filter-wrapper {
+  /* Container for the search, and optional filters */
+  /* background-color: wheat; */ 
+}
+
 .euca-table-filter {
   float: left;
 }
 
 .legend-pagination-wrapper {
-  height: 30px;
   position: absolute;
   width: 100%;
   bottom: -45px;
 }
 
+.table-legend,
+.dataTables_paginate {
+  height: 26px;
+  background-color: #fff;
+  border: 1px solid #d7d5d5;
+  border-radius: 5px;
+
+  -webkit-box-shadow: 0 1px 3px rgba(0,0,0,0.35),  inset 0 0 8px rgba(128,128,128,0.35);
+  -moz-box-shadow: 0 1px 3px rgba(0,0,0,0.35),  inset 0 0 8px rgba(128,128,128,0.35);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.35),  inset 0 0 8px rgba(128,128,128,0.35);
+}
+
 .table-legend {
   float:left;
-  margin-top: 3px;
+}
+
+.table-legend span {
+  display: inline-block;
+}
+
+.table-legend-title {
+  padding: 0 15px;
+  font-family: 'PlayBold', Arial, sans-serif;
+  font-size: 13px;
+  color: #455560;
+  line-height: 26px;
+  text-transform: uppercase;
+  border-right: 1px solid #d7d5d5;  
 }
 
 .table-legend-item {
-  padding-left: 12px;
-  background-position: left !important;
-  background-repeat: no-repeat;
   margin-left: 15px;
+  padding-left: 18px;
+  font-family: 'PlayRegular', Arial, sans-serif;
+  font-size: 11px;
+  color: #02405f;
+  line-height: 26px;
+  background: transparent url(../images/css-sprites-small.png) no-repeat left -220px;
 }
+
+.table-legend .table-legend-item:nth-child(2) {
+  /* border-left: 1px solid #fff;
+  margin-left: 0;
+  padding-left: 33px; */
+}
+
+.table-legend .table-legend-item:last-child {
+  padding-right: 15px;
+}
+
+
+/* ======= Volume status ======= */
+
+#legend-volumes-available {
+  background-position: left -220px;
+}
+
+#legend-volumes-in-use {
+  background-position: left -250px;
+}
+
+#legend-volumes-error {
+  background-position: left -280px;
+}
+
+#legend-volumes-creating {
+  background-position: left -310px;
+}
+
+#legend-volumes-deleting {
+  background-position: left -340px;
+}
+
+#legend-volumes-deleted {
+  background-position: left -370px;
+}
+
 
 .filter-label {
   padding-right: 5px;
@@ -1009,15 +1085,14 @@ tr.selected-row {
 }
 
 .help-return a {
-
-  /* TODO - Shift the background image position once the arrow icon has been added to the css-sprites-small.png */
-
+  background-position: left -170px;
 }
 
 /* Hide close X button in UI dialogs */
 .ui-dialog-titlebar-close {
   visibility: hidden;
 }
+
 
 /* ======= Footer styles ======= */
 
@@ -1049,22 +1124,4 @@ tr.selected-row {
   text-decoration: underline;
 }
 
-/* ======= Volume status ====== */
-#legend-volumes-available {
-  background-image: url('../images/green-ball-10x10.png');
-}
-#legend-volumes-in-use {
-  background-image: url('../images/red-ball-10x10.png');
-}
-#legend-volumes-error {
-  background-image: url('../images/black-ball-10x10.png');
-}
-#legend-volumes-creating {
-  background-image: url('../images/gray-ball-10x10.png');
-}
-#legend-volumes-deleting {
-  background-image: url('../images/blue-ball-10x10.png');
-}
-#legend-volumes-deleted {
-  background-image: url('../images/brown-ball-10x10.png');
-}
+
