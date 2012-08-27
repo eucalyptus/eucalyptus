@@ -225,7 +225,8 @@ static xmlNodePtr xmlFirstElementChild (xmlNodePtr parent)
 
 /*
  * Return an XML doc containing fault information for a given fault id.
- * ASSUMES FAULT ID MATCHES FILENAME!
+ *
+ * Assumes--indeed REQUIRES--that fault id matches filename prefix!
  */
 static xmlDoc *
 read_eucafault (const char *faultdir, const char *fault_id)
@@ -333,6 +334,7 @@ get_common_block (const xmlDoc *doc)
     for (xmlNode *node =
              xmlFirstElementChild (xmlDocGetRootElement ((xmlDoc *)doc));
          node; node = node->next) {
+
         if (node->type == XML_ELEMENT_NODE) {
             if (!strcasecmp ((const char *)node->name, COMMON_PREFIX)) {
                 PRINTF1 (("Found <%s> block.\n", COMMON_PREFIX));
@@ -366,6 +368,7 @@ get_eucafault (const char *id, const xmlDoc *doc)
     for (xmlNode *node =
              xmlFirstElementChild (xmlDocGetRootElement ((xmlDoc *)doc));
          node; node = node->next) {
+
         char *this_id = get_fault_id (node);
 
         if (id == NULL) {
@@ -404,8 +407,8 @@ initialize_faultlog (const char *fileprefix)
         if (fileprefix_i != NULL) {
             fileprefix = fileprefix_i + 1;
         }
-        snprintf (faultlogpath, PATH_MAX, "%s%s/%s-faults.log", euca_base, FAULTLOGDIR,
-                  fileprefix);
+        snprintf (faultlogpath, PATH_MAX, "%s%s/%s-faults.log", euca_base,
+                  FAULTLOGDIR, fileprefix);
     }
     PRINTF (("Initializing faultlog using %s\n", faultlogpath));
     faultlog = fopen (faultlogpath, "a+");
@@ -444,12 +447,13 @@ init_eucafaults (char *fileprefix)
     if (faults_loaded) {
         PRINTF1 (("Attempt to reinitialize fault registry? Skipping...\n"));
         pthread_mutex_unlock (&fault_mutex);
-        return -faults_loaded;
+        return -faults_loaded;  // Negative return because already loaded.
     }
 
-	char * euca_env = getenv(EUCALYPTUS_ENV_VAR_NAME);
+	char *euca_env = getenv (EUCALYPTUS_ENV_VAR_NAME);
+
 	if (euca_env) {
-        strncpy(euca_base, euca_env, MAX_PATH - 1);
+        strncpy (euca_base, euca_env, MAX_PATH - 1);
     }
 
     initialize_faultlog (fileprefix);
@@ -517,7 +521,7 @@ init_eucafaults (char *fileprefix)
         }
     }
     pthread_mutex_unlock (&fault_mutex);
-    logprintfl (EUCAINFO, "Loaded %d fault-logger descriptions into registry.\n",
+    logprintfl (EUCAINFO, "Loaded %d eucafault descriptions into registry.\n",
                faults_loaded);
     return faults_loaded;
 }
@@ -860,6 +864,9 @@ main (int argc, char **argv)
         PRINTF1 (("argv[1st of %d]: %s\n", argc - optind, argv[optind]));
         log_eucafault (argv[optind], (const char_map **)m);
         c_varmap_free (m);
+
+        // Now log to stdout for the remainder of the test.
+        faultlog = stdout;
 
         // Reusing & abusing opt. :)
         opt = log_eucafault_v (argv[optind], "daemon", "Balrog",

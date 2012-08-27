@@ -20,27 +20,33 @@
   -->
 <eucafaults version="1" description="Templates for the fault subsystem">
   <fault
-    id="1237"
-    message="ESX(i) host ${hostIp} is not accessible any more">
+    id="1002"
+    message="${daemon} is not running"
+    localized="${daemon} не запущен">
 
     <condition
-      message="can't issue requests for host ${hostIp}"/>
+      message="can't find running ${daemon} process"
+      localized="процесс ${daemon} на системе не найден"/>
 
     <cause/> <!-- since 'message' is not set, default value, $unknown, will be used -->
 
     <initiator
-      message="eucalyptus"/>
+      message="eucalyptus"
+      localized="eucalyptus"/>
 
     <location
-      message="requests from ${brokerIp} to endpoint ${endpointIp}"/>
+      message="${daemon} daemon on localhost"
+      localized="${daemon} сервер на системе localhost"/>
 
     <resolution>
       <message>
-        Ensure that:
-        - host ${hostIp} is powered on
-        - host is accessible from ${brokerIp} on port 443
-        - host credentials match those in Broker's configuration
+        1) install ${daemon}
+        2) run ${daemon}
       </message>
+      <localized>
+        1) установите пакет ${daemon}
+        2) запустите сервер ${daemon}
+      </localized>
     </resolution>
   </fault>
 </eucafaults>

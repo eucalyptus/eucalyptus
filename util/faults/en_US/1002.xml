@@ -20,23 +20,19 @@
   -->
 <eucafaults version="1" description="Templates for the fault subsystem">
   <fault
-    id="1236"
-    message="ESX(i) host ${hostIp} is not accessible any more"
-    localized="ESX(i) машина ${hostIp} больше не доступна">
+    id="1002"
+    message="ESX(i) host ${hostIp} is not accessible any more">
 
     <condition
-      message="can't issue requests for host ${hostIp}"
-      localized="запросы на машину ${hostIp} не успешны"/>
+      message="can't issue requests for host ${hostIp}"/>
 
     <cause/> <!-- since 'message' is not set, default value, $unknown, will be used -->
 
     <initiator
-      message="eucalyptus"
-      localized="eucalyptus"/>
+      message="eucalyptus"/>
 
     <location
-      message="requests from ${brokerIp} to endpoint ${endpointIp}"
-      localized="запросы от ${brokerIp} на ${endpointIp}"/>
+      message="requests from ${brokerIp} to endpoint ${endpointIp}"/>
 
     <resolution>
       <message>
@@ -45,12 +41,6 @@
         - host is accessible from ${brokerIp} on port 443
         - host credentials match those in Broker's configuration
       </message>
-      <localized>
-        Убедитесь, что:
-        - машина ${hostIp} включена
-        - машина доступна на порту 443 с машины ${brokerIp}
-        - логин и пароль соответствуют конфигурации Брокера
-      </localized>
     </resolution>
   </fault>
 </eucafaults>
