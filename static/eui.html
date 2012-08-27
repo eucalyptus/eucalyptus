@@ -365,7 +365,7 @@
         </div>
           <div id="sgroups-add-dialog-help" class="dialog-help">
             <div class="dialog-help-content">
-              {{!: dialog_delete_content}}
+              {{!: dialog_add_content}}
             </div>
             <div class="help-revert-button"> 
               <a href="#"> {{!>revert_button}}</a>
@@ -466,33 +466,6 @@
         </div>
       </script>
 
-      <script id="volumeForceDetachDlgTmpl" type="text/x-jsrender">
-        <div id="volumes-force-detach-dialog-wrapper">
-          <div id="volumes-force-detach-dialog" class="delete-dialog">
-            <div class="dialog-inner-content">
-              {{!: volume_dialog_force_detach_text }}
-              <table>
-                <thead>
-                  <tr><th>{{!: volume_dialog_detach_vol_head }}</th><th>{{!: volume_dialog_detach_inst_head }}</th></tr>
-                <thead>
-                <tbody class="resource-ids">
-                </tbody>
-              </table>
-              <span class="resource-ids"></span>
-              <span style="display:none" id="volumes-to-detach"/>
-            </div>
-          </div>
-          <div id="volumes-force-detach-dialog-help" class="dialog-help">
-            <div class="dialog-help-content">
-              {{!: dialog_force_detach_content}}
-            </div>
-            <div class="help-revert-button">
-              <a href="#"> {{!>revert_button}}</a>
-            </div>
-          </div>
-        </div>
-      </script>
-      
       <script id="volumeAddDlgTmpl" type="text/x-jsrender">
         <div id="volumes-add-dialog-wrapper">
           <div id="volumes-add-dialog" class="delete-dialog">
@@ -515,7 +488,7 @@
           </div>
           <div id="volumes-add-dialog-help" class="dialog-help">
             <div class="dialog-help-content">
-              {{!: volume_dialog_add_content}}
+              {{!: dialog_add_content }}
             </div>
             <div class="help-revert-button">
               <a href="#"> {{!>revert_button}}</a>
@@ -544,7 +517,7 @@
           </div>
           <div id="volumes-attach-dialog-help" class="dialog-help">
             <div class="dialog-help-content">
-              {{!: volume_dialog_attach_content}}
+              {{!: dialog_attach_content}}
             </div>
             <div class="help-revert-button">
               <a href="#"> {{!>revert_button}}</a>

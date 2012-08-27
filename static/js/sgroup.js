@@ -79,11 +79,7 @@
         },
         menu_click_create : function (args) { thisObj.rulesList=null; thisObj.addDialog.eucadialog('open')},
         help_click : function(evt) {
-          var $helpHeader = $('<div>').addClass('euca-table-header').append(
-                              $('<span>').text(help_sgroup['landing_title']).append(
-                                $('<div>').addClass('help-link').append(
-                                  $('<a>').attr('href','#').html('&larr;'))));
-          thisObj._flipToHelp(evt,$helpHeader, $sgroupHelp);
+          thisObj._flipToHelp(evt, $sgroupHelp);
         },
       });
       this.tableWrapper.appendTo(this.element);
