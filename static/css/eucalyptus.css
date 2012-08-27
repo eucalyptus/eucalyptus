@@ -889,7 +889,9 @@ tr.even td.sorting_1 {
   text-align: center;
 }
 
-tr.selected-row {
+tr.selected-row,
+tr.selected-row td.sorting_1
+ {
   background-color: #f1ffe3;
 }
 
