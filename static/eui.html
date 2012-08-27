@@ -536,7 +536,7 @@
               <thead>
                 <tr>
                   <th>
-                    <input type="checkbox" id="volumes-check-all">
+                    <input type="checkbox" id="snapshots-check-all">
                   </th>
                   <th>{{!>sn_tbl_hdr_id}}</th>
                   <th>{{!>sn_tbl_hdr_status}}</th>
@@ -587,6 +587,26 @@
           </div>
         </div>
       </script>
+      <script id="snapshotDelDlgTmpl" type="text/x-jsrender">
+        <div id="snapshot-euca-dialog-wrapper">
+          <div id="snapshot-delete-dialog" class="euca-dialog">
+            <div class="dialog-inner-content">
+              {{!: snapshot_delete_dialog_text }}
+              <span class="resource-ids"></span>
+              <span style="display:none" id="snapshots-to-delete"/>
+            </div>
+          </div>
+          <div id="snapshot-delete-dialog-help" class="dialog-help">
+            <div class="dialog-help-content">
+              {{!: snapshot_dialog_delete_content}}
+            </div>
+            <div class="help-revert-button"> 
+              <a href="#"> {{!>revert_button}}</a>
+            </div>
+          </div>
+        </div>
+      </script>
+
       <!-- END Snapshot dialog template -->
 
       <!-- Instance landing table template -->

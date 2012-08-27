@@ -304,6 +304,7 @@
           url:"/ec2?Action=DescribeAvailabilityZones",
           data:"_xsrf="+$.cookie('_xsrf'),
           dataType:"json",
+          cache:false,
           async:false,
           success:
            function(data, textStatus, jqXHR){
@@ -331,6 +332,7 @@
           data:"_xsrf="+$.cookie('_xsrf'),
           dataType:"json",
           async:false,
+          cache:false,
           success:
             function(data, textStatus, jqXHR){
               $snapSelector = $('#volume-add-snapshot-selector').html('');
@@ -365,6 +367,7 @@
         data:"_xsrf="+$.cookie('_xsrf'),
         dataType:"json",
         async:false,
+        cache:false,
         success:
           function(data, textStatus, jqXHR){
             $instanceSelector = $('#volume-attach-instance-selector').html('');

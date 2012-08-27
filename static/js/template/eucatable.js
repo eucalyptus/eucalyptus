@@ -232,7 +232,8 @@
             $('<select>').attr('id',filter['name']+'-selector'));
           var $selector = $filter.find('#'+filter['name']+'-selector');
           $.each(filter.options, function(idx, option){
-            var text = $.i18n.map[filter['name']+'_selector_'+option] ? $.i18n.map[filter['name']+'_selector_'+option] : option; 
+            var fName = filter['name']+'_selector_'+option.replace('-','_');
+            var text = $.i18n.map[fName] ? $.i18n.map[fName] : option; 
             $selector.append($('<option>').val(option).text(text));
           });
          
