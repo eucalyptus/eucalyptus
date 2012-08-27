@@ -36,6 +36,11 @@ function escapeHTML(input) {
   return $('<div/>').text(input).html();
 }
 
+function asHTML(input) {
+  return $('<div/>').append(input).html();
+}
+
+
 function isFunction(obj) {
   return obj && {}.toString.call(obj) == '[object Function]';
 }
