@@ -30,7 +30,6 @@
       this._setStorageSummary($div.find('#dashboard-content .storage'));
       this._setNetSecSummary($div.find('#dashboard-content .netsec'));  
       $div.appendTo(this.element); 
-      //$('html body').find(DOM_BINDING['notification']).notification('success', 'dashboard (testing)', 'dashboard loaded successfully');
     },
 
     _create : function() { },
@@ -41,8 +40,43 @@
     // attach spinning wheel until we refresh the content with the ajax response
     _setInstSummary : function($instObj) {
       var thisObj = this;
-      var az=$instObj.find('#dashboard-instance-az select').val();
+      // retrieve az 
+      $.ajax({
+        type:"GET",
+        url:"/ec2?Action=DescribeAvailabilityZones",
+        data:"_xsrf="+$.cookie('_xsrf'),
+        dataType:"json",
+        async:false,
+        success: function(data, textStatus, jqXHR){
+          if ( data.results ) {
+            var $az=$instObj.find('#dashboard-instance-az select');
+            for( res in data.results) {
+              azName = data.results[res].name;
+              $az.append($('<option>').attr('value', azName).text(azName));
+            }
+            // update the display
+            $az.change( function (e) {
+              thisObj._reloadInstSummary($instObj);
+            }); 
+          } else {
+            ;
+          }
+        },
+        error: function(jqXHR, textStatus, errorThrown){
+          $('html body').find(DOM_BINDING['notification']).notification('error', 'dashboard', 'can\'t retrieve zones due to server failure');
+        }
+      });
+
       // TODO: this is probably not the right place to call describe-instances. instances page should receive the data from server
+      // selector is different for these two because of extra div
+      $instObj.find('#dashboard-instance-running div').prepend(
+        $('<img>').attr('src','images/dots32.gif'));
+      $instObj.find('#dashboard-instance-stopped div').prepend(
+        $('<img>').attr('src','images/dots32.gif'));
+      thisObj._reloadInstSummary($instObj);
+    },
+
+    _reloadInstSummary : function($instObj){
       $.ajax({
         type:"GET",
         url:"/ec2?Action=DescribeInstances",
@@ -53,8 +87,8 @@
           if (data.results) {
             var numRunning = 0;
             var numStopped = 0;
+            var az=$instObj.find('#dashboard-instance-az select').val();
             $.each(data.results, function (idx, instance){
-              //$.each(res.instances, function(ix, instance){
                 // TODO: check if placement is the right identifier of availability zones
                 if (az==='all' || instance.placement === az ){
                   if (instance.state === 'running')
@@ -90,14 +124,6 @@
             $('html body').find(DOM_BINDING['notification']).notification('error', 'dashboard', 'can\'t retrieve instances due to server failure');
         }
       });
-
-      //az = $instObj.find('#dashboard-instance-dropbox').value();
-
-      // selector is different for these two because of extra div
-      $instObj.find('#dashboard-instance-running div').prepend(
-        $('<img>').attr('src','images/dots32.gif'));
-      $instObj.find('#dashboard-instance-stopped div').prepend(
-        $('<img>').attr('src','images/dots32.gif'));
     },
 
     _setStorageSummary : function($storageObj) {

@@ -29,7 +29,7 @@
     _init : function() {
       var thisObj = this;
       var $tmpl = $('html body').find('.templates #instanceTblTmpl').clone();
-      var $wrapper = $($tmpl.render($.extend($.i18n.map, help_volume)));
+      var $wrapper = $($tmpl.render($.extend($.i18n.map, help_instance)));
       var $instTable = $wrapper.children().first();
       var $instHelp = $wrapper.children().last();
       this.element.add($instTable);
@@ -79,11 +79,7 @@
           menu_actions : function(args){ return { delete: {name:table_menu_delete_action, callback: function (args) { thisObj._deleteAction(args) }}}},
           help_click : function(evt) {
             // TODO: make this a reusable operation
-            var $helpHeader = $('<div>').addClass('euca-table-header').append(
-                              $('<span>').text(help_instance['landing_title']).append(
-                                $('<div>').addClass('help-link').append(
-                                  $('<a>').attr('href','#').html('&larr;'))));
-            thisObj._flipToHelp(evt,$helpHeader, $instHelp);
+            thisObj._flipToHelp(evt,$instHelp);
           },
           draw_cell_callback : function(row, col, val){
             if(col===4){
