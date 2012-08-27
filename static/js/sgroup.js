@@ -118,23 +118,31 @@
               var desc = $.trim($add_dialog.find('#sgroup-description').val());
               thisObj._storeRule();    // flush rule from form into array
               var actions = new Array();
-              actions.push(thisObj._addSecurityGroup(name, desc));
+//              actions.push(thisObj._addSecurityGroup(name, desc));
               for (rule in thisObj.rulesList)
-                alert("rule ipaddr = "+thisObj.rulesList[rule].ipaddr);
-                actions.push(thisObj._addIngressRule(name,
+                actions.push(function() {
+                                thisObj._addIngressRule(name,
                                        thisObj.rulesList[rule].port,
                                        thisObj.rulesList[rule].port,
                                        thisObj.rulesList[rule].protocol,
                                        thisObj.rulesList[rule].ipaddr,
                                        thisObj.rulesList[rule].fromGroup
-                                       ));
+                                )
+                              });
+//              $(function() {
+//                 $.when.apply($, actions).done(function() {
+//                     alert("all done");
+//                 });
+//              });
 
-              $.when(thisObj._addSecurityGroup(name, desc)).then(function(data, textStatus, jqXHR){
+              $.when(thisObj._addSecurityGroup(name, desc)).then(function(data, textStatus, jqXHR) {
                                     if (data.results && data.results.status == true) {
-                                        notifySuccess(sgroup_create_success + ' ' + name);
-                                        thisObj.tableWrapper.eucatable('refreshTable');
+                                        $.when.apply($,actions).done(function() {
+                                            notifySuccess(sgroup_create_success + ' ' + name);
+                                            thisObj.tableWrapper.eucatable('refreshTable');
+                                        });
                                     } else {
-                                        notifyFailure(sgroup_create_error + ' ' + name);
+                                        notifyError(sgroup_create_error + ' ' + name);
                                     }
                                  },
                                  function(jqXHR, textStatus, errorThrown){
@@ -235,7 +243,7 @@
             theDiv.html("loading...");
             var msg = "";
             for (rule in this.rulesList)
-                msg += "Rule: "+this.rulesList[rule].protocol+" ("+
+                msg += "<a href='#'>Delete</a> Rule: "+this.rulesList[rule].protocol+" ("+
                              this.rulesList[rule].port+"), "+
                              this.rulesList[rule].ipaddr+"<br/>";
             theDiv.html(msg);
@@ -268,10 +276,10 @@
                        "&IpPermissions.1.FromPort=" + fromPort +
                        "&IpPermissions.1.ToPort=" + toPort;
       if (fromGroup) {
-        params = params + "&IpPermissions.1.Groups.1.GroupName=" + fromGroup;
+        req_params = req_params + "&IpPermissions.1.Groups.1.GroupName=" + fromGroup;
       }
       if (cidr) {
-        params = params + "&IpPermissions.1.IpRanges.1.CidrIp=" + cidr;
+        req_params = req_params + "&IpPermissions.1.IpRanges.1.CidrIp=" + cidr;
       }
       $.ajax({
         type:"GET",
