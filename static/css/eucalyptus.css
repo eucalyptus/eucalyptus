@@ -1052,7 +1052,7 @@ tr.selected-row {
 
 .table-legend,
 .dataTables_paginate {
-  height: 26px;
+  height: 27px;
   background-color: #fff;
   border: 1px solid #d7d5d5;
   border-radius: 5px;
@@ -1133,13 +1133,93 @@ tr.selected-row {
 
 .dataTables_paginate {
   float: right;
+  text-align: center;
 }
+
+/* Override the jquery-table default styling */
 
 .paging_full_numbers {
-    width: 320px;
+  font-family: 'PlayBold', Arial, sans-serif;
+  font-size: 12px;
+  color: #73a434;
+  line-height: 26px;
+  width: auto;
 }
 
-/* Not sure what this is doing  */
+.paging_full_numbers span.paginate_button,
+.paging_full_numbers span.paginate_active {
+  display: inline-block;
+  margin: 0;
+  background-color: transparent;
+  border: 0;
+  height: 23px;
+  width: 30px;
+  border-left: 1px solid #fff;
+  border-right: 1px solid #d7d5d5;
+
+  border-radius: 0;
+
+}
+.paging_full_numbers span.paginate_button:hover {
+  background-color: transparent;
+  text-decoration: underline;
+}
+
+.paging_full_numbers span.first,
+.paging_full_numbers span.previous,
+.paging_full_numbers span.next,
+.paging_full_numbers span.last {
+  text-indent: -9999px;
+  background-image: url(../images/css-sprites.png);
+  background-repeat: no-repeat;
+}
+
+.paging_full_numbers span.first  {
+  width: 45px;
+  background-position: 0 -600px;
+  border-left: 0;
+}
+.paging_full_numbers span.first.paginate_button_disabled {
+  background-position: 0 -630px;
+}
+
+.paging_full_numbers span.previous {
+  width: 30px;
+  background-position: -50px -600px;
+}
+.paging_full_numbers span.previous.paginate_button_disabled {
+  background-position: -50px -630px;
+}
+
+.paging_full_numbers span.next  {
+  width: 30px; 
+  background-position: -85px -600px; 
+}
+.paging_full_numbers span.next.paginate_button_disabled {
+  background-position: -85px -630px;
+
+}
+
+.paging_full_numbers span.last  {
+  width: 45px;
+  background-position: -120px -600px;
+  border-right: 0;
+}
+.paging_full_numbers span.last.paginate_button_disabled {
+  background-position: -120px -630px;
+}
+
+.paging_full_numbers span.paginate_active {
+  color: #02405f;
+  cursor: default;
+}
+
+.paging_full_numbers span.paginate_button_disabled {
+  cursor: default;
+}
+
+
+/* Not sure what this is supposed to be doing */
 
 .hoverCell {
   color: green;
