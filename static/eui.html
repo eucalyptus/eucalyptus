@@ -48,6 +48,7 @@
     <script type="text/javascript" language="javascript" src="lib/jquery.ui.position.js"></script>
     <script type="text/javascript" language="javascript" src="lib/jquery.contextMenu.js"></script>
     <script type="text/javascript" language="javascript" src="lib/jquery.flip.js"></script>
+    <script type="text/javascript" language="javascript" src="lib/jquery.cookie.js"></script>
 
     <!-- Eucalyptus UI javascripts -->
     <script type="text/javascript" language="javascript" src="js/jquery_ext.js"></script>
@@ -132,6 +133,10 @@
             <div class="form-row">
               <label for="password">{{!>login_pwd}}</label>
               <input type="password" id="password" class="input-field" value=""/>
+            </div>
+
+            <div class="form-row">
+              <input type="checkbox" id="remember" class="input-field" value="">{{!>login_remember}}</input>
             </div>
             
             <div class="password-help">

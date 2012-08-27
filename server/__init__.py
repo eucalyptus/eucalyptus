@@ -189,6 +189,7 @@ class LoginProcessor(ProxyProcessor):
             raise NotImplementedError("auth header in wrong format")
         auth_decoded = base64.decodestring(auth_hdr[6:])
         account, user, passwd = auth_decoded.split(':', 3)
+        remember = web_req.get_argument("remember")
 
         #hardcoded temporarily
         session_token = 'PLACEHOLDER'
@@ -201,6 +202,9 @@ class LoginProcessor(ProxyProcessor):
                 continue
             break
         web_req.set_cookie("session-id", sid)
+        if remember == 'yes':
+            web_req.set_cookie("account", account)
+            web_req.set_cookie("username", user)
         sessions[sid] = UserSession(account, user, session_token, access_id, secret_key)
 
         return LoginResponse(sessions[sid])

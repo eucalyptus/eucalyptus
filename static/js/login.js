@@ -29,7 +29,6 @@
       
       var $form = $login.find('form');
       // set the login event handler
-      $form.find('input[name=account]').focus();
       $form.find('input[type=text]').change( function(evt) {
         if($(this).val() != null && $(this).val()!='')
           $form.find('input[name=login]').removeAttr('disabled');
@@ -38,13 +37,14 @@
         var param = {
           account:$form.find('input[id=account]').val(),
           username:$form.find('input[id=username]').val(),
-          password:$form.find('input[id=password]').val() 
+          password:$form.find('input[id=password]').val(),
+          remember:$form.find('input[id=remember]').val() 
         };
         thisObj._trigger('doLogin', evt, { param: param,
           onSuccess: function(args){
             $login.remove();
             eucalyptus.main($.eucaData);
-   	  },
+   	      },
           onError: function(args){
              // TODO: need an error notification screen for login failure
     	     alert("login failed: "+args);
@@ -52,9 +52,22 @@
         });
         return false;
       });
+      last_account = $.cookie('account');
+      last_username = $.cookie('username');
+      if (last_account != null) {
+        $form.find('input[id=account]').val(last_account);
+        $form.find('input[id=username]').val(last_username);
+        $form.find('input[name=login]').removeAttr('disabled');
+      }
       //rendered = $login.render($.i18n.map);
       this.element.append($login);
       $('html body').find('.euca-container .euca-header').header({show_logo:true,show_navigator:false,show_user:false,show_help:false});
+      if (last_account == null) {
+        $form.find('input[id=account]').focus();
+      }
+      else {
+        $form.find('input[id=password]').focus();
+      }
     },
     _destroy : function() { },
   });
