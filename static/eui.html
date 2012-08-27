@@ -22,7 +22,6 @@
 <html>
   <head>
     <title>Eucalyptus</title>
-    <link rel="stylesheet" type="text/css" href="http://fonts.googleapis.com/css?family=Play:400,700" />
     <style type="text/css" title="currentStyle">
       @import "lib/jquery.css";
       @import "lib/jquery-table.css";
@@ -67,6 +66,7 @@
     <script type="text/javascript" language="javascript" src="js/instance.js"></script>
     <script type="text/javascript" language="javascript" src="js/keypair.js"></script>
     <script type="text/javascript" language="javascript" src="js/volume.js"></script>
+    <script type="text/javascript" language="javascript" src="js/snapshot.js"></script>
     <script type="text/javascript" language="javascript" src="js/sgroup.js"></script>
     <script type="text/javascript" language="javascript" src="js/eucaevent.js"></script>
     <script type="text/javascript" language="javascript" src="js/notification.js"></script>
@@ -162,9 +162,7 @@
           
           <div class="instances inner-box clearfix">
             <h3>Instances</h3>
-            <div id="dashboard-instance-img">
-              <img src="images/dashboard_instance.png">
-            </div>
+            <div id="dashboard-instance-img"></div>
             <div id="dashboard-instance-az">
               <select>
                <option value="all">{{!>dashboard_az_all}}</option>
@@ -187,9 +185,7 @@
 
           <div class="storage inner-box clearfix">
             <h3>Storage</h3>
-            <div id="dashboard-storage-img">
-              <img src="images/dashboard_storage.png">
-            </div>
+            <div id="dashboard-storage-img"></div>
             <div id="dashboard-storage-volume" class="status-readout">
               <span></span> {{!>dashboard_volumes}}
             </div>
@@ -203,9 +199,7 @@
 
           <div class="netsec inner-box clearfix">
             <h3>Network &amp; Security</h3>
-            <div id="dashboard-netsec-img">
-              <img src="images/dashboard_netsec.png">
-            </div>
+            <div id="dashboard-netsec-img"></div>
             <div id="dashboard-netsec-sgroup" class="status-readout">
               <span></span> {{!>dashboard_sgroup}}
             </div>
@@ -238,9 +232,6 @@
                 </tr>
                </thead>
                <tbody>
-                 <tr>
-                   <td colspan="3" class="dataTables_empty">{{!>table_loading}}</td>
-                 </tr>
               </tbody>
             </table>
           </div>
@@ -313,9 +304,6 @@
             </tr>
            </thead>
            <tbody>
-              <tr>
-                <td colspan="3" class="dataTables_empty">{{!>table_loading}}</td>
-              </tr>
           </tbody>
         </table>
         </div>
@@ -378,7 +366,7 @@
         </div>
           <div id="sgroups-add-dialog-help" class="dialog-help">
             <div class="dialog-help-content">
-              {{!: dialog_delete_content}}
+              {{!: dialog_add_content}}
             </div>
             <div class="help-revert-button"> 
               <a href="#"> {{!>revert_button}}</a>
@@ -416,10 +404,7 @@
                 </tr>
                </thead>
                <tbody>
-                 <tr>
-                   <td colspan="8" class="dataTables_empty">{{!>table_loading}}</td>
-                 </tr>
-              </tbody>
+               </tbody>
             </table>
           </div>
           <div id="volume-help">
@@ -482,33 +467,6 @@
         </div>
       </script>
 
-      <script id="volumeForceDetachDlgTmpl" type="text/x-jsrender">
-        <div id="volumes-force-detach-dialog-wrapper">
-          <div id="volumes-force-detach-dialog" class="euca-dialog">
-            <div class="dialog-inner-content">
-              {{!: volume_dialog_force_detach_text }}
-              <table>
-                <thead>
-                  <tr><th>{{!: volume_dialog_detach_vol_head }}</th><th>{{!: volume_dialog_detach_inst_head }}</th></tr>
-                <thead>
-                <tbody class="resource-ids">
-                </tbody>
-              </table>
-              <span class="resource-ids"></span>
-              <span style="display:none" id="volumes-to-detach"/>
-            </div>
-          </div>
-          <div id="volumes-force-detach-dialog-help" class="dialog-help">
-            <div class="dialog-help-content">
-              {{!: dialog_force_detach_content}}
-            </div>
-            <div class="help-revert-button">
-              <a href="#"> {{!>revert_button}}</a>
-            </div>
-          </div>
-        </div>
-      </script>
-      
       <script id="volumeAddDlgTmpl" type="text/x-jsrender">
         <div id="volumes-add-dialog-wrapper">
           <div id="volumes-add-dialog" class="euca-dialog">
@@ -531,7 +489,7 @@
           </div>
           <div id="volumes-add-dialog-help" class="dialog-help">
             <div class="dialog-help-content">
-              {{!: volume_dialog_add_content}}
+              {{!: dialog_add_content }}
             </div>
             <div class="help-revert-button">
               <a href="#"> {{!>revert_button}}</a>
@@ -560,7 +518,7 @@
           </div>
           <div id="volumes-attach-dialog-help" class="dialog-help">
             <div class="dialog-help-content">
-              {{!: volume_dialog_attach_content}}
+              {{!: dialog_attach_content}}
             </div>
             <div class="help-revert-button">
               <a href="#"> {{!>revert_button}}</a>
@@ -569,6 +527,41 @@
         </div>
       </script>
       <!-- END Volume dialog template -->
+
+      <!-- Snapshot table -->
+      <script id="snapshotTblTmpl" type="text/x-jsrender">
+        <div id="snapshot-wrapper">
+          <div id="snapshot-table">
+            <table id="snapshots" class="display">
+              <thead>
+                <tr>
+                  <th>
+                    <input type="checkbox" id="volumes-check-all">
+                  </th>
+                  <th>{{!>sn_tbl_hdr_id}}</th>
+                  <th>{{!>sn_tbl_hdr_status}}</th>
+                  <th>{{!>sn_tbl_hdr_size}}</th>
+                  <th>{{!>sn_tbl_hdr_volume_id}}</th>
+                  <th>{{!>sn_tbl_hdr_description}}</th>
+                  <th>{{!>sn_tbl_hdr_creation_time}}</th>
+                </tr>
+               </thead>
+               <tbody>
+               </tbody>
+            </table>
+          </div>
+          <div id="snapshot-help">
+            <div class="help-content">
+              {{!: landing_content }}
+            </div>
+            <div class="help-revert-button"> 
+              <a href="#">{{!>revert_button}}</a>
+            </div>
+          </div>
+        </div>
+      </script>
+      <!-- END Volume table -->
+
       <!-- Snapshot dialog template -->
       <script id="snapshotCreateDlgTmpl" type="text/x-jsrender">
         <div id="snapshot-create-dialog-wrapper">
@@ -619,9 +612,6 @@
                 </tr>
                </thead>
                <tbody>
-                 <tr>
-                   <td colspan="8" class="dataTables_empty">{{!>table_loading}}</td>
-                 </tr>
               </tbody>
             </table>
           </div>

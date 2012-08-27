@@ -39,7 +39,6 @@
 
         $.i18n.prop('kp_tbl_hdr_name');
         $.i18n.prop('kp_tbl_hdr_fingerprint');
-        $.i18n.prop('table_loading');
 
         // keypair
         $.i18n.prop('keypair_dialog_del_text');

@@ -24,9 +24,17 @@
     help_keypair.load({language:language});
     help_volume.load({language:language});
     help_sgroup.load({language:language}); 
+    help_instance.load({language:language}); 
   }
 })(jQuery, 
    window.eucalyptus ? window.eucalyptus : window.eucalyptus = {});
+
+function getLandingHelpHeader(args){
+  var $helpHeader = $('<div>').addClass('euca-table-header').append(
+                     $('<div>').addClass('help-link').append(
+                       $('<a>').attr('href','#').html('&larr;')));
+  return $helpHeader;
+}
 
 function loadHtml(url, handler){
     $.ajax(url, {
@@ -45,11 +53,12 @@ function loadHtml(url, handler){
   //[keypair]
 var help_keypair = {
   load : function(arg){
-    loadHtml('help/'+arg.language+'/describe_keypairs.html', function(data){help_keypair.landing_content=data})
+    loadHtml('help/'+arg.language+'/console_manage_keypairs.html', function(data){help_keypair.landing_content=data})
     loadHtml('help/'+arg.language+'/console_create_keypair.html', function(data){help_keypair.dialog_add_content=data})
+    loadHtml('help/'+arg.language+'/console_delete_keypair.html', function(data){help_keypair.dialog_delete_content=data})
   },
   revert_button: "Back to key pair",
-  landing_title: "Key pairs -- help",
+  landing_title: "Key pairs -- help", // TODO: deprecate
   landing_content: "",
   dialog_add_title: "Creating new key pair?",
   dialog_add_content: "",
@@ -59,10 +68,11 @@ var help_keypair = {
 
 var help_volume = {
   load : function(arg){
-    loadHtml('help/'+arg.language+'/console_create_volume.html', function(data){help_volume.landing_content=data})
+    loadHtml('help/'+arg.language+'/console_manage_volumes.html', function(data){help_volume.landing_content=data})
+    loadHtml('help/'+arg.language+'/console_create_volume.html', function(data){help_volume.dialog_add_content=data})
   },
   revert_button: "Back to volumes",
-  landing_title: "Volume -- help",
+  landing_title: "Volume -- help", // TODO: deprecate
   landing_content: "",
   dialog_add_title: "Creating new volume?", 
   dialog_add_content: "",
@@ -75,7 +85,20 @@ var help_sgroup = {
     loadHtml('help/'+arg.language+'/console_create_security_group.html', function(data){help_volume.landing_content=data})
   },
   revert_button: "Back to security group",
-  landing_title: "",
+  landing_title: "",  // TODO: deprecate
+  landing_content: "",
+  dialog_add_title: "",
+  dialog_add_content: "",
+  dialog_delete_title: "",
+  dialog_delete_content: "",
+}
+
+var help_instance = {
+  load : function(arg){
+    loadHtml('help/'+arg.language+'/console_manage_instances.html', function(data){help_instance.landing_content=data})
+  },
+  revert_button: "Back to instances", // TODO: i18n
+  landing_title: "",  // TODO: deprecate
   landing_content: "",
   dialog_add_title: "",
   dialog_add_content: "",

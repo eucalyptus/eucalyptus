@@ -73,6 +73,9 @@
         case 'volume':
           this.element.volume();
           break;
+        case 'snapshot':
+          this.element.snapshot();
+          break;
         case 'logout':
           $.cookie('session-id','');
           location.href = '/';

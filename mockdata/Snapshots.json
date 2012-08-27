@@ -21,17 +21,38 @@
     "owner_id": "072279894205"
   },
   {
-    "status": "completed", 
+    "status": "pending", 
     "__obj_name__": "Snapshot", 
     "description": null, 
     "tags": {}, 
     "start_time": "2012-06-28T16:27:05.662Z", 
-    "id": "snap-117C38D5", 
+    "id": "snap-887C38F4", 
     "volume_size": 10, 
     "connection": [], 
     "item": "", 
     "volume_id": "vol-FF463B31", 
-    "progress": "100%", 
+    "progress": "80%", 
+    "region": {
+      "connection": null, 
+      "endpoint": "192.168.25.10", 
+      "name": "eucalyptus", 
+      "__obj_name__": "RegionInfo", 
+      "connection_cls": null
+    }, 
+    "owner_id": "072279894205"
+  },
+  {
+    "status": "pending", 
+    "__obj_name__": "Snapshot", 
+    "description": "Back up", 
+    "tags": {}, 
+    "start_time": "2012-06-28T16:27:05.662Z", 
+    "id": "snap-999C38D6", 
+    "volume_size": 10, 
+    "connection": [], 
+    "item": "", 
+    "volume_id": "vol-FF463B31", 
+    "progress": "35%", 
     "region": {
       "connection": null, 
       "endpoint": "192.168.25.10", 
@@ -44,7 +65,7 @@
   {
     "status": "completed", 
     "__obj_name__": "Snapshot", 
-    "description": null, 
+    "description": "New", 
     "tags": {}, 
     "start_time": "2012-06-28T16:27:05.662Z", 
     "id": "snap-C27C38D5", 
