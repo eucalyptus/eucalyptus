@@ -39,11 +39,7 @@
       this.tableWrapper = $volTable.eucatable({
         id : 'volumes', // user of this widget should customize these options,
         dt_arg : {
-          "bProcessing": true,
           "sAjaxSource": "../ec2?Action=DescribeVolumes",
-          "sAjaxDataProp": "results",
-          "bAutoWidth" : false,
-          "sPaginationType": "full_numbers",
           "aoColumns": [
             {
               "bSortable": false,
@@ -77,58 +73,10 @@
           resource_found : volume_found,
         },
         menu_actions : function(args){ 
-          selectedVolumes = thisObj.baseTable.eucatable('getValueForSelectedRows', 8); // 8th column=status (this is volume's knowledge)
-          var itemsList = {};
-         // add attach action
-          if ( selectedVolumes.length == 1 && selectedVolumes.indexOf('available') == 0 ){
-            itemsList['attach'] = { "name": volume_action_attach, callback: function(key, opt) { thisObj._attachAction(); } }
-          }
-          // detach actions
-          if ( selectedVolumes.length > 0 ) {
-            addDetach = true;
-            for (s in selectedVolumes) {
-              if ( selectedVolumes[s] != 'in-use' ) {
-                addDetach = false;
-                break;
-              }
-            }
-            if ( addDetach ) {
-              itemsList['detach'] = { "name": volume_action_detach, callback: function(key, opt) { thisObj._detachAction(false); } }
-              //itemsList['force_detach'] = { "name": volume_action_force_detach, callback: function(key, opt) { thisObj._detachAction(true); } }
-            }
-          }
-          if ( selectedVolumes.length  == 1 ) {
-             if ( selectedVolumes[0] == 'in-use' || selectedVolumes[0] == 'available' ) {
-                itemsList['create_snapshot'] = { "name": volume_action_create_snapshot, callback: function(key, opt) { thisObj._createSnapshotAction(); } }
-            }
-          }
-        // add delete action
-          if ( selectedVolumes.length > 0 ){
-             itemsList['delete'] = { "name": volume_action_delete, callback: function(key, opt) { thisObj._deleteAction(); } }
-          }
-          return itemsList;
+          return thisObj._createMenuActions();
         },
         context_menu_actions : function(row) {
-          var state = row['status'];
-          switch (state) {
-            case 'available':
-              return {
-                "attach": { "name": volume_action_attach, callback: function(key, opt) { thisObj._attachAction(thisObj._getVolumeId(opt.selector)); } },
-                "create_snapshot": { "name": volume_action_create_snapshot, callback: function(key, opt) { thisObj._createSnapshotAction(thisObj._getVolumeId(opt.selector)); } },
-                "delete": { "name": volume_action_delete, callback: function(key, opt) { thisObj._deleteAction(thisObj._getVolumeId(opt.selector)); } }
-              }
-            case 'in-use':
-              return {
-                "detach": { "name": volume_action_detach, callback: function(key, opt) { thisObj._detachAction($(opt.selector), false); } },
-               // "force_detach": { "name": volume_action_force_detach, callback: function(key, opt) { thisObj._detachAction($(opt.selector), true); } },
-                "create_snapshot": { "name": volume_action_create_snapshot, callback: function(key, opt) { thisObj._createSnapshotAction(thisObj._getVolumeId(opt.selector)); } },
-                "delete": { "name": volume_action_delete, callback: function(key, opt) { thisObj._deleteAction(thisObj._getVolumeId(opt.selector)); } }
-              }
-            default:
-              return {
-                "delete": { "name": volume_action_delete, callback: function(key, opt) { thisObj._deleteAction(thisObj._getVolumeId(opt.selector)); } }
-              }
-          }
+          return thisObj._createMenuActions();
         },
         menu_click_create : function (args) { thisObj._createAction() },
       //  td_hover_actions : { instance: [4, function (args) { thisObj.handleInstanceHover(args); }], snapshot: [5, function (args) { thisObj.handleSnapshotHover(args); }] }
@@ -520,7 +468,7 @@
       var thisObj = this;
       volumesToDelete = [];
       if ( !volumeId ) {
-        volumesToDelete = thisObj.tableWrapper.eucatable('getAllSelectedRows');
+        volumesToDelete = thisObj.tableWrapper.eucatable('getSelectedRows', 1);
       } else {
         volumesToDelete[0] = volumeId;
       }
@@ -541,7 +489,7 @@
       var thisObj = this;
       var volumeToAttach = '';
       if ( !volumeId ) {
-        rows = thisObj.tableWrapper.eucatable('getAllSelectedRows', 1);
+        rows = thisObj.tableWrapper.eucatable('getSelectedRows', 1);
         volumeToAttach = rows[0];
       } else {
         volumeToAttach = volumeId;
@@ -557,7 +505,7 @@
       var thisObj = this;
       volumes = [];
       if ( !row ) {
-        rows = thisObj.tableWrapper.eucatable('getContentForSelectedRows');
+        rows = thisObj.tableWrapper.eucatable('getSelectedRows');
         for(r in rows){
           $row = $(rows[r]);
           volumes.push([$row.find('td:eq(1)').text(), $row.find('td:eq(4)').text()]);
@@ -586,6 +534,39 @@
 
     _createSnapshotAction : function() {
 
+    },
+
+    _createMenuActions : function() {
+      var thisObj = this;
+      var selectedVolumes = thisObj.baseTable.eucatable('getSelectedRows', 8); // 8th column=status (this is volume's knowledge)
+      var itemsList = {};
+      // add attach action
+      if ( selectedVolumes.length == 1 && selectedVolumes.indexOf('available') == 0 ){
+        itemsList['attach'] = { "name": volume_action_attach, callback: function(key, opt) { thisObj._attachAction(); } }
+      }
+          // detach actions
+      if ( selectedVolumes.length > 0 ) {
+        addDetach = true;
+        for (s in selectedVolumes) {
+          if ( selectedVolumes[s] != 'in-use' ) {
+            addDetach = false;
+            break;
+          }
+        }
+        if ( addDetach )
+          itemsList['detach'] = { "name": volume_action_detach, callback: function(key, opt) { thisObj._detachAction(false); } }
+      }
+
+      // create snapshot-action
+      if ( selectedVolumes.length  == 1 ) {
+         if ( selectedVolumes[0] == 'in-use' || selectedVolumes[0] == 'available' )
+            itemsList['create_snapshot'] = { "name": volume_action_create_snapshot, callback: function(key, opt) { thisObj._createSnapshotAction(); } }
+      }
+      // add delete action
+      if ( selectedVolumes.length > 0 ){
+        itemsList['delete'] = { "name": volume_action_delete, callback: function(key, opt) { thisObj._deleteAction(); } }
+      }
+      return itemsList;
     },
 
 /**** Public Methods ****/

@@ -38,12 +38,7 @@
       this.tableWrapper = $wrapper.eucatable({
         id : 'sgroups', // user of this widget should customize these options,
         dt_arg : {
-          "bProcessing": true,
           "sAjaxSource": "../ec2?Action=DescribeSecurityGroups",
-          "sAjaxDataProp": "results",
-          "bAutoWidth" : false,
-          "sPaginationType": "full_numbers",
-          "sDom": '<"table_sgroups_header">f<"clear"><"table_sgroups_top">rt<"table-sgroups-legend">p<"clear">',
           "aoColumns": [
             {
               "bSortable": false,
@@ -66,16 +61,12 @@
           resource_found : sgroup_found,
         },
         menu_actions : function(){
-          itemsList = {};
-          itemsList['edit'] = { "name": sgroup_action_edit, callback: function(key, opt) { thisObj._editAction(); } }
-          itemsList['delete'] = { "name": sgroup_action_delete, callback: function(key, opt) { thisObj._deleteAction(); } }
-          return itemsList;
+          return{"edit": {"name": sgroup_action_edit, callback: function(key, opt) { thisObj._editAction();}},
+                 "delete" : { "name": sgroup_action_delete, callback: function(key, opt) { thisObj._deleteAction();}}};
         },
         context_menu : function(state) { 
-          return {
-          "edit": { "name": sgroup_action_edit, callback: function(key, opt) { thisObj._editAction(thisObj._getGroupName(opt.selector)); } },
-          "delete": { "name": sgroup_action_delete, callback: function(key, opt) { thisObj._deleteAction(thisObj._getGroupName(opt.selector)); } },
-          };
+          return{"edit": {"name": sgroup_action_edit, callback: function(key, opt) { thisObj._editAction();}},
+                 "delete" : { "name": sgroup_action_delete, callback: function(key, opt) { thisObj._deleteAction();}}};
         },
         menu_click_create : function (args) { thisObj.rulesList=null; thisObj.addDialog.eucadialog('open')},
         help_click : function(evt) {
@@ -288,7 +279,7 @@
 
     _deleteSelectedSecurityGroups : function () {
       var thisObj = this;
-      var rowsToDelete = thisObj._getTableWrapper().eucatable('getAllSelectedRows');
+      var rowsToDelete = thisObj._getTableWrapper().eucatable('getSelectedRows', 1);
       for ( i = 0; i<rowsToDelete.length; i++ ) {
         var sgroupName = rowsToDelete[i];
         $.ajax({
@@ -325,7 +316,7 @@
     _deleteAction : function() {
       var thisObj = this;
       var $tableWrapper = this._getTableWrapper();
-      rowsToDelete = $tableWrapper.eucatable('getAllSelectedRows');
+      rowsToDelete = $tableWrapper.eucatable('getSelectedRows', 1);
       if ( rowsToDelete.length > 0 ) {
         thisObj.delDialog.eucadialog('setSelectedResources', rowsToDelete);
         $groupsToDelete = thisObj.delDialog.find("#keys-to-delete");
