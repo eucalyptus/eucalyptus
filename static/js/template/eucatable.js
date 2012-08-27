@@ -61,7 +61,11 @@
 
     _getTableParam : function(args){
       var thisObj = this;
-      var dt_arg = this.options.dt_arg;      
+      var dt_arg = {};
+      dt_arg["bProcessing"] = true;
+      dt_arg["sAjaxDataProp"] = "results";
+      dt_arg["bAutoWidth"] = false;
+      dt_arg["sPaginationType"] = "full_numbers",
       dt_arg['fnDrawCallback'] = function( oSettings ) {
       try{
           thisObj._drawCallback(oSettings);
@@ -74,7 +78,6 @@
         }
       }
 
-    //  "sDom": '<"table_volumes_header"><"table-volume-filter">f<"clear"><"table_volumes_top">rt<"table-volumes-legend">p<"clear">',
       var sDom = '<"table_'+ this.options.id + '_header">';
       if(thisObj.options.filters){
         $.each(thisObj.options.filters, function(idx, filter){
@@ -89,7 +92,10 @@
       dt_arg['sDom'] = sDom;  
       dt_arg['oLanguage'] = { "sProcessing": "<img src=\"images/dots32.gif\"/> &nbsp; <span>Loading...</span>", 
                              "sLoadingRecords": ""}
-      
+      // let users override 
+      $.each(thisObj.options.dt_arg, function(k,v){
+        dt_arg[k] = v;
+      });
       return dt_arg;
     },
 
@@ -145,31 +151,12 @@
         if (thisObj.options.context_menu_actions) {
           rID = 'ri-'+S4()+S4();
           $currentRow.attr('id', rID);
-          // context menu
           $.contextMenu({
             selector: '#'+rID,
             build: function(trigger, e) {
-              rowId = $(trigger).attr('id');
-              // TODO : thisObj.table sometime is undef :(
-              if (!thisObj.table) {
-                $table = $($(trigger).parents('table')[0]);
-                thisObj.table = $table.dataTable();
-              }
-
-              nNotes = thisObj.table.fnGetNodes();
-              inx = 0;
-              for ( i in nNotes ){
-                if ( rowId == $(nNotes[i]).attr('id') ) {
-                  inx = i;
-                  break;
-                }
-              };
-              var itemsList = thisObj.options.context_menu_actions( 
-                thisObj.table.fnGetData(inx) // entire row is given to callback
-              );
-              return {
-                items: itemsList,
-              };
+              if(thisObj._countSelectedRows() <= 0)
+                return null;
+              return { items: thisObj.options.context_menu_actions()};
             }
           });
         }
@@ -413,7 +400,8 @@
       this.table.fnReloadAjax();
     },
 
-    getValueForSelectedRows : function (columnIdx) {
+    // (optional) columnIdx: if undefined, returns matrix
+    getSelectedRows : function (columnIdx) {
       var dataTable = this.table;
       if ( !dataTable )
         return [];
@@ -422,45 +410,14 @@
       for ( i = 0; i<rows.length; i++ ) {
         cb = rows[i].firstChild.firstChild;
         if ( cb != null && cb.checked == true ) {
-          selectedRows.push(dataTable.fnGetData(rows[i], columnIdx));
+          if(columnIdx)
+            selectedRows.push(dataTable.fnGetData(rows[i], columnIdx));
+          else
+            selectedRows.push(dataTable.fnGetData(rows[i]));
         }
       }
       return selectedRows;
     },
-
-    //TODO: re-use  getContentForSelectedRows ?
-    getAllSelectedRows : function (idIndex) {
-      var dataTable = this.table;
-      if ( !dataTable )
-        return [];
-      idIndex = idIndex || 1;
-      var rows = dataTable.fnGetVisibleTrNodes();
-      var selectedRows = [];
-      for ( i = 0; i<rows.length; i++ ) {
-        cb = rows[i].firstChild.firstChild;
-        if ( cb != null && cb.checked == true ) {
-          if ( rows[i].childNodes[idIndex] != null )
-            selectedRows.push(rows[i].childNodes[idIndex].firstChild.nodeValue);
-        }
-      }
-      return selectedRows;
-    },
-
-    getContentForSelectedRows : function () {
-      var dataTable = this.table;
-      if ( !dataTable )
-        return [];
-      var rows = dataTable.fnGetVisibleTrNodes();
-      var selectedRows = [];
-      for ( i = 0; i<rows.length; i++ ) {
-        cb = rows[i].firstChild.firstChild;
-        if ( cb != null && cb.checked == true ) {
-          selectedRows.push(rows[i]);
-        }
-      }
-      return selectedRows;
-    },
-
 /**** End of Public Methods ****/ 
   });
 })(jQuery,

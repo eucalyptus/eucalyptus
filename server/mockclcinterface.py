@@ -157,7 +157,7 @@ class MockClcInterface(ClcInterface):
                 'owner_id': '072279894205'
             }
         self.groups.append(newgroup)
-        return False
+        return True
 
     # returns True if successful
     def delete_security_group(self, name=None, group_id=None):

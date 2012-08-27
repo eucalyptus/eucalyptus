@@ -38,12 +38,7 @@
       this.tableWrapper = $wrapper.eucatable({
         id : 'sgroups', // user of this widget should customize these options,
         dt_arg : {
-          "bProcessing": true,
           "sAjaxSource": "../ec2?Action=DescribeSecurityGroups",
-          "sAjaxDataProp": "results",
-          "bAutoWidth" : false,
-          "sPaginationType": "full_numbers",
-          "sDom": '<"table_sgroups_header">f<"clear"><"table_sgroups_top">rt<"table-sgroups-legend">p<"clear">',
           "aoColumns": [
             {
               "bSortable": false,
@@ -66,16 +61,12 @@
           resource_found : sgroup_found,
         },
         menu_actions : function(){
-          itemsList = {};
-          itemsList['edit'] = { "name": sgroup_action_edit, callback: function(key, opt) { thisObj._editAction(); } }
-          itemsList['delete'] = { "name": sgroup_action_delete, callback: function(key, opt) { thisObj._deleteAction(); } }
-          return itemsList;
+          return{"edit": {"name": sgroup_action_edit, callback: function(key, opt) { thisObj._editAction();}},
+                 "delete" : { "name": sgroup_action_delete, callback: function(key, opt) { thisObj._deleteAction();}}};
         },
         context_menu : function(state) { 
-          return {
-          "edit": { "name": sgroup_action_edit, callback: function(key, opt) { thisObj._editAction(thisObj._getGroupName(opt.selector)); } },
-          "delete": { "name": sgroup_action_delete, callback: function(key, opt) { thisObj._deleteAction(thisObj._getGroupName(opt.selector)); } },
-          };
+          return{"edit": {"name": sgroup_action_edit, callback: function(key, opt) { thisObj._editAction();}},
+                 "delete" : { "name": sgroup_action_delete, callback: function(key, opt) { thisObj._deleteAction();}}};
         },
         menu_click_create : function (args) { thisObj.rulesList=null; thisObj.addDialog.eucadialog('open')},
         help_click : function(evt) {
@@ -114,23 +105,31 @@
               var desc = $.trim($add_dialog.find('#sgroup-description').val());
               thisObj._storeRule();    // flush rule from form into array
               var actions = new Array();
-              actions.push(thisObj._addSecurityGroup(name, desc));
+//              actions.push(thisObj._addSecurityGroup(name, desc));
               for (rule in thisObj.rulesList)
-                alert("rule ipaddr = "+thisObj.rulesList[rule].ipaddr);
-                actions.push(thisObj._addIngressRule(name,
+                actions.push(function() {
+                                thisObj._addIngressRule(name,
                                        thisObj.rulesList[rule].port,
                                        thisObj.rulesList[rule].port,
                                        thisObj.rulesList[rule].protocol,
                                        thisObj.rulesList[rule].ipaddr,
                                        thisObj.rulesList[rule].fromGroup
-                                       ));
+                                )
+                              });
+//              $(function() {
+//                 $.when.apply($, actions).done(function() {
+//                     alert("all done");
+//                 });
+//              });
 
-              $.when(thisObj._addSecurityGroup(name, desc)).then(function(data, textStatus, jqXHR){
+              $.when(thisObj._addSecurityGroup(name, desc)).then(function(data, textStatus, jqXHR) {
                                     if (data.results && data.results.status == true) {
-                                        notifySuccess(sgroup_create_success + ' ' + name);
-                                        thisObj.tableWrapper.eucatable('refreshTable');
+                                        $.when.apply($,actions).done(function() {
+                                            notifySuccess(sgroup_create_success + ' ' + name);
+                                            thisObj.tableWrapper.eucatable('refreshTable');
+                                        });
                                     } else {
-                                        notifyFailure(sgroup_create_error + ' ' + name);
+                                        notifyError(sgroup_create_error + ' ' + name);
                                     }
                                  },
                                  function(jqXHR, textStatus, errorThrown){
@@ -231,7 +230,7 @@
             theDiv.html("loading...");
             var msg = "";
             for (rule in this.rulesList)
-                msg += "Rule: "+this.rulesList[rule].protocol+" ("+
+                msg += "<a href='#'>Delete</a> Rule: "+this.rulesList[rule].protocol+" ("+
                              this.rulesList[rule].port+"), "+
                              this.rulesList[rule].ipaddr+"<br/>";
             theDiv.html(msg);
@@ -264,10 +263,10 @@
                        "&IpPermissions.1.FromPort=" + fromPort +
                        "&IpPermissions.1.ToPort=" + toPort;
       if (fromGroup) {
-        params = params + "&IpPermissions.1.Groups.1.GroupName=" + fromGroup;
+        req_params = req_params + "&IpPermissions.1.Groups.1.GroupName=" + fromGroup;
       }
       if (cidr) {
-        params = params + "&IpPermissions.1.IpRanges.1.CidrIp=" + cidr;
+        req_params = req_params + "&IpPermissions.1.IpRanges.1.CidrIp=" + cidr;
       }
       $.ajax({
         type:"GET",
@@ -280,7 +279,7 @@
 
     _deleteSelectedSecurityGroups : function () {
       var thisObj = this;
-      var rowsToDelete = thisObj._getTableWrapper().eucatable('getAllSelectedRows');
+      var rowsToDelete = thisObj._getTableWrapper().eucatable('getSelectedRows', 1);
       for ( i = 0; i<rowsToDelete.length; i++ ) {
         var sgroupName = rowsToDelete[i];
         $.ajax({
@@ -317,7 +316,7 @@
     _deleteAction : function() {
       var thisObj = this;
       var $tableWrapper = this._getTableWrapper();
-      rowsToDelete = $tableWrapper.eucatable('getAllSelectedRows');
+      rowsToDelete = $tableWrapper.eucatable('getSelectedRows', 1);
       if ( rowsToDelete.length > 0 ) {
         thisObj.delDialog.eucadialog('setSelectedResources', rowsToDelete);
         $groupsToDelete = thisObj.delDialog.find("#keys-to-delete");

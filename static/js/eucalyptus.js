@@ -60,9 +60,10 @@
           $main.login({ doLogin : function(evt, args) {
               var tok = args.param.account+':'+args.param.username+':'+args.param.password;
               var hash = btoa(tok);
+              var remember = (args.param.remember!=null)?"yes":"no";
 	      $.ajax({
 	        type:"POST",
- 	        data:"action=login", 
+ 	        data:"action=login&remember="+remember, 
                 beforeSend: function (xhr) { 
                    xhr.setRequestHeader('Authorization', 'Basic '+hash); 
                 },

@@ -37,12 +37,7 @@
       this.tableWrapper = $keyTable.eucatable({
         id : 'keys', // user of this widget should customize these options,
         dt_arg : {
-          "bProcessing": true,
           "sAjaxSource": "../ec2?type=key&Action=DescribeKeyPairs",
-          "sAjaxDataProp": "results",
-          "bAutoWidth" : false,
-          "sPaginationType": "full_numbers",
-          "sDom": '<"table_keys_header">f<"clear"><"table_keys_top">rtp<"clear">',
           "aoColumns": [
             {
               "bSortable": false,
@@ -52,7 +47,6 @@
             { "mDataProp": "name" },
             { "mDataProp": "fingerprint", "bSortable": false }
           ],
-          "fnDrawCallback": function( oSettings ) { thisObj._drawCallback(oSettings); }
         },
         text : {
           header_title : keypair_h_title,
@@ -60,16 +54,11 @@
           resource_found : keypair_found,
         },
         menu_actions : function(args){ 
-          var itemsList = { 
-            'delete': {"name": table_menu_delete_action, callback: function(key, opt) { thisObj._deleteAction(); } }
-          };
-          return itemsList;
+          return {'delete': {"name": table_menu_delete_action, callback: function(key, opt) { thisObj._deleteAction(); } }};
         },
         menu_click_create : function (args) { thisObj.addDialog.eucadialog('open') },
         context_menu_actions : function(state) { 
-          return {
-            "delete": { "name": table_menu_delete_action, callback: function(key, opt) { thisObj._deleteAction(thisObj._getKeyId(opt.selector)); } }
-          }
+          return {'delete': {"name": table_menu_delete_action, callback: function(key, opt) { thisObj._deleteAction(); } }};
         },
         help_click : function(evt) { 
           thisObj._flipToHelp(evt, $keyHelp);
@@ -137,7 +126,7 @@
       keysToDelete = [];
       if ( !keyId ) {
         $tableWrapper = thisObj.tableWrapper;
-        keysToDelete = $tableWrapper.eucatable('getAllSelectedRows');
+        keysToDelete = $tableWrapper.eucatable('getSelectedRows', 1);
       } else {
         keysToDelete[0] = keyId;
       }
