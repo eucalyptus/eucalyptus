@@ -273,7 +273,7 @@
     _decorateTopBar : function(args) {
       var thisObj = this; // ref to widget instance
       $tableTop = this.element.find('.table_' + this.options.id + '_top');
-      $tableTop.addClass('euca-table-length');
+      $tableTop.addClass('euca-table-length clearfix');
       $tableTop.append(
         $('<div>').addClass('euca-table-add').append(
           $('<a>').attr('id','table-'+this.options.id+'-new').addClass('button').attr('href','#').text(thisObj.options.text.create_resource)),
@@ -281,21 +281,21 @@
         $('<div>').addClass('euca-table-size').append(
           $('<span>').attr('id','table_' + this.options.id + '_count'),
           $('<span>').attr('id','tbl_txt_found').addClass('resources-found').html('&nbsp; '+thisObj.options.text.resource_found),
-          'Showing&nbsp;',
+          'Showing:',
           $('<span>').addClass('show selected').text('10'),
           '&nbsp;|&nbsp;',
           $('<span>').addClass('show').text('25'),
           '&nbsp;|&nbsp;',
           $('<span>').addClass('show').text('50'),
           '&nbsp;|&nbsp;',
-          $('<span>').addClass('show').text('all')));
+          $('<span>').addClass('show').text('All')));
 
       $tableTop.find('span.show').click(function () {
         $(this).parent().children('span').each( function() {
           $(this).removeClass('selected');
         });
         
-        if ($(this).text() == 'all')
+        if ($(this).text() == 'All')
           thisObj.table.fnSettings()._iDisplayLength = -1;
         else
           thisObj.table.fnSettings()._iDisplayLength = parseInt($(this).text().replace('|',''));

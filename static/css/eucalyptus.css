@@ -447,14 +447,42 @@ body {
 #euca-notification-close a {
   float: right;
   position: relative;
-  top: -10px;
+  top: -7px;
   left: -10px;
-  background: transparent url(../images/css-sprites.png) repeat-x left -340px;
+  background: transparent url(../images/css-sprites-small.png) no-repeat left -230px;
   width: 16px;
   height: 16px;
   text-decoration: none;
   text-indent: -9999px;
   outline: none;
+}
+
+/* ======= Notifications ======= */
+
+.euca-notification {
+  -moz-border-radius: 4px;
+  border-radius: 4px;
+  border-style: solid;
+  border-color: black;
+}
+
+.error {
+  color: red;
+  padding: 5px;
+}
+
+.success {
+  color: green;
+  padding: 5px;
+}
+
+.hide-notification  {
+  float: right;
+}
+
+.dialog-error {
+  color: red;
+  padding: 5px;
 }
 
 
@@ -489,7 +517,8 @@ body {
   color: #02405f;
 }
 
-.input-field {
+.input-field,
+.dataTables_filter input {
   background-color: #f3f6f9;
   border-radius: 4px;
   border: 1px solid #9eb1c3;
@@ -504,7 +533,8 @@ body {
   box-shadow: inset 0 0 3px #a8b9c8;
 }
 
-.input-field:focus {
+.input-field:focus,
+.dataTables_filter input:focus {
   border-color: #6699cc;
 
   -moz-box-shadow: inset 0 0 4px #6699cc;
@@ -544,7 +574,7 @@ body {
   text-decoration: none;
   padding: 5px 24px;
   border-radius: 5px;
-  border: 1px solid rgba(128,128,128,0.6);
+  border: 1px solid rgba(90,110,90,0.4);
 
   /* background-image: -webkit-gradient(linear, center top, center bottom, from(#c8df8e), to(#bfbfbf), color-stop(3%, #f7f7f7), color-stop(12%, #f2f2f2), color-stop(90%, #d9d9d9)); */
   background-image: -webkit-linear-gradient(top, #c8df8e, #73a434 49%, #8dc63f 100%);
@@ -553,9 +583,9 @@ body {
   background-image: -ms-linear-gradient(top, #c8df8e, #73a434 49%, #8dc63f 100%);
   background-image: linear-gradient(to bottom, #c8df8e, #73a434 49%, #8dc63f 100%);
 
-  -webkit-box-shadow: 0 0px 3px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.30);
-  -moz-box-shadow: 0 0px 3px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.30);
-  box-shadow: 0 0px 3px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.30);
+  -webkit-box-shadow: 0 1px 2px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.30);
+  -moz-box-shadow: 0 1px 2px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.30);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.30);
 }
 
 .large-button {
@@ -571,12 +601,11 @@ body {
 .button:hover,
 .large-button:hover,
 .xlarge-button:hover {
-  /* background-image: -webkit-gradient(linear, center top, center bottom, from(#c8df8e), to(#bfbfbf), color-stop(3%, #f7f7f7), color-stop(12%, #f2f2f2), color-stop(90%, #d9d9d9)); */
-  background-image: -webkit-linear-gradient(top, #73a434, #336600 49%, #73a434 100%);
-  background-image: -moz-linear-gradient(top, #73a434, #336600 49%, #73a434 100%);
-  background-image: -o-linear-gradient(top, #73a434, #336600 49%, #73a434 100%);
-  background-image: -ms-linear-gradient(top, #73a434, #336600 49%, #73a434 100%);
-  background-image: linear-gradient(to bottom, #73a434, #336600 49%, #73a434 100%);
+  background-image: -webkit-linear-gradient(top, #d5ed97, #7eb339 49%, #93cf42 100%);
+  background-image: -moz-linear-gradient(top, #d5ed97, #7eb339 49%, #93cf42 100%);
+  background-image: -o-linear-gradient(top, #d5ed97, #7eb339 49%, #93cf42 100%);
+  background-image: -ms-linear-gradient(top, #d5ed97, #7eb339 49%, #93cf42 100%);
+  background-image: linear-gradient(to bottom, #d5ed97, #7eb339 49%, #93cf42 100%);
 } 
 
 
@@ -799,34 +828,14 @@ body {
 }
 
 
-/* ======= Table view ======= */
-
-.euca-table-add {
-  float: left;
-}
-
-.euca-table-action {
-  float: left;
-}
-
-.euca-table-size {
-  float: right;
-  margin: 10px 15px 5px 0;
-}
-
-span.selected {
-  font-weight: bold;
-}
-
-
 /* ======= jQuery table style overrides ======= */
 
 .dataTables_wrapper {
   background-color: #fff;
   border: 1px solid #d7d5d5;
 
-  margin: 0 8px 25px;
-  padding: 68px 0 15px 0; 
+  margin: 0 8px 35px;
+  padding: 47px 0 10px 0; 
 
   -webkit-border-radius: 5px;
   -moz-border-radius: 5px;
@@ -835,19 +844,6 @@ span.selected {
   -webkit-box-shadow: 0px 2px 3px rgba(3,3,3,0.30);
   -moz-box-shadow: 0px 2px 3px rgba(3,3,3,0.30);
   box-shadow: 0px 2px 3px rgba(3,3,3,0.30);
-}
-
-.dataTables_paginate {
-  float: right;
-}
-
-.dataTables_filter {
-  padding-right: 15px;
-  /* width: 45%; */
-}
-
-.paging_full_numbers {
-    width: 320px;
 }
 
 table.display {
@@ -897,8 +893,116 @@ tr.selected-row {
   background-color: #f1ffe3;
 }
 
+/* ======= Help page related ===== */
 
-/* ======= Action menu ======= */
+.help-link,
+.help-return {
+  float: right;
+  height: 16px;
+  margin: 3px 20px 0 0;
+}
+
+.help-link a,
+.help-return a
+ {
+  display: inline-block;
+  height: 16px;
+  width: 16px;
+  background: transparent url(../images/css-sprites-small.png) no-repeat left -150px;
+  text-indent: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.help-return a {
+  background-position: left -170px;
+}
+
+.help-content {
+  padding: 10px;
+}
+
+.help-revert-button {
+  float: right;
+  margin-top: 10px;
+}
+
+/* Hide close X button in UI dialogs */
+
+.ui-dialog-titlebar-close {
+  visibility: hidden;
+}
+
+/* ==== Search and optional filters will appear before the table ==== */
+
+/* == Optional filters == */
+
+.table-filter-wrapper {
+  padding: 12px 15px;
+  min-height: 31px;
+  background: transparent url(../images/css-sprites.png) repeat-x left -530px;
+}
+
+.euca-table-filter {
+  float: left;
+}
+
+.filter-label {
+  padding-right: 5px;
+  font-family: 'PlayRegular', Arial, sans-serif;
+  font-size: 12px;
+  color: #02405F;
+}
+
+/* == Search == */
+
+.dataTables_filter {
+  width: auto;
+}
+
+.dataTables_filter label {
+  margin-right: 10px;
+  font-family: 'PlayRegular', Arial, sans-serif;
+  font-size: 12px;
+  color: #02405f;
+}
+
+.dataTables_filter input {
+  /* This element shares styling with .input-field */
+  background: transparent url(../images/css-sprites-small.png) no-repeat right -250px;
+}
+
+.table-refresh {
+  display: inline-block;
+  margin: 0 0 0 30px;
+  padding-left: 23px;
+  font-family: 'PlayBold', Arial, sans-serif;
+  font-size: 12px;
+  line-height: 27px;
+  color: #73a434;
+  background: transparent url(../images/css-sprites-small.png) no-repeat 0 -190px;
+  text-decoration: none;
+}
+
+.table-refresh:hover {
+  text-decoration: underline;
+}
+
+/* ==== Create/Add buttons and menus, and the results and table size selector ==== */
+
+.euca-table-length {
+  padding: 10px 10px 10px 15px;
+}
+
+/* == Table add and action menu  == */
+
+.euca-table-add {
+  float: left;
+}
+
+.euca-table-action {
+  float: left;
+}
 
 .actionmenu {
   font: 13px/27px Arial,sans-serif;
@@ -911,63 +1015,34 @@ tr.selected-row {
   color: gray;
 }
 
+/* == Results and table size == */
 
-/* ======= Help page related ===== */
-
-.help-content {
-  padding: 10px;
-}
-
-.help-revert-button {
+.euca-table-size {
   float: right;
-  margin-top: 10px;
+  margin-top: 15px;
+  font-size: 12px;
+  color: #666;
+}
+
+.resources-found {
+  margin-right: 5px;
+}
+
+.show {
+  display: inline-block;
+  padding: 0 8px;
+  color: #87b932
+}
+
+.selected {
+  color: #02405f;
+  font-weight: bold;
 }
 
 
-/* ======= Notifications ======= */
+/* ==== Legend and Pagination appear after the table ==== */
 
-.euca-notification {
-  -moz-border-radius: 4px;
-  border-radius: 4px;
-  border-style: solid;
-  border-color: black;
-}
-
-.error {
-  color: red;
-  padding: 5px;
-}
-
-.success {
-  color: green;
-  padding: 5px;
-}
-
-.hide-notification  {
-  float: right;
-}
-
-.dialog-error {
-  color: red;
-  padding: 5px;
-}
-
-/* === Euca tables === */
-
-.euca-table-header {
-
-  /* These will be styled in the same section as the box-header */
-
-}
-
-.table-filter-wrapper {
-  /* Container for the search, and optional filters */
-  /* background-color: wheat; */ 
-}
-
-.euca-table-filter {
-  float: left;
-}
+/* == Legend == */
 
 .legend-pagination-wrapper {
   position: absolute;
@@ -998,7 +1073,7 @@ tr.selected-row {
 .table-legend-title {
   padding: 0 15px;
   font-family: 'PlayBold', Arial, sans-serif;
-  font-size: 13px;
+  font-size: 11px;
   color: #455560;
   line-height: 26px;
   text-transform: uppercase;
@@ -1012,13 +1087,15 @@ tr.selected-row {
   font-size: 11px;
   color: #02405f;
   line-height: 26px;
-  background: transparent url(../images/css-sprites-small.png) no-repeat left -220px;
+  background: transparent url(../images/css-sprites-small.png) no-repeat left -280px;
 }
 
 .table-legend .table-legend-item:nth-child(2) {
   /* border-left: 1px solid #fff;
   margin-left: 0;
   padding-left: 33px; */
+
+  /* TODO: Add left border after wrapper span has been added */
 }
 
 .table-legend .table-legend-item:last-child {
@@ -1026,71 +1103,46 @@ tr.selected-row {
 }
 
 
-/* ======= Volume status ======= */
+/*  Legend icons - Volume status */
 
 #legend-volumes-available {
-  background-position: left -220px;
-}
-
-#legend-volumes-in-use {
-  background-position: left -250px;
-}
-
-#legend-volumes-error {
   background-position: left -280px;
 }
 
-#legend-volumes-creating {
+#legend-volumes-in-use {
   background-position: left -310px;
 }
 
-#legend-volumes-deleting {
+#legend-volumes-error {
   background-position: left -340px;
 }
 
-#legend-volumes-deleted {
+#legend-volumes-creating {
   background-position: left -370px;
 }
 
-
-.filter-label {
-  padding-right: 5px;
+#legend-volumes-deleting {
+  background-position: left -400px;
 }
 
-.resources-found {
-  padding-right: 5px;
+#legend-volumes-deleted {
+  background-position: left -430px;
 }
+
+/* == Pagination == */
+
+.dataTables_paginate {
+  float: right;
+}
+
+.paging_full_numbers {
+    width: 320px;
+}
+
+/* Not sure what this is doing  */
 
 .hoverCell {
   color: green;
-}
-
-.help-link,
-.help-return {
-  float: right;
-  height: 16px;
-  margin: 3px 20px 0 0;
-}
-
-.help-link a,
-.help-return a
- {
-  display: inline-block;
-  height: 16px;
-  width: 16px;
-  background: transparent url(../images/css-sprites-small.png) no-repeat left -150px;
-  text-indent: 100%;
-  white-space: nowrap;
-  overflow: hidden;
-}
-
-.help-return a {
-  background-position: left -170px;
-}
-
-/* Hide close X button in UI dialogs */
-.ui-dialog-titlebar-close {
-  visibility: hidden;
 }
 
 
