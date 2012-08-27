@@ -28,6 +28,7 @@
     forceDetachDialog : null,
     addDialog : null,
     attachDialog : null,
+    createSnapshotDialog : null,
     _init : function() {
       var thisObj = this;
       var $tmpl = $('html body').find('.templates #volumeTblTmpl').clone();
@@ -131,7 +132,6 @@
           }
         },
         menu_click_create : function (args) { thisObj._createAction() },
-      //  td_hover_actions : { instance: [4, function (args) { thisObj.handleInstanceHover(args); }], snapshot: [5, function (args) { thisObj.handleSnapshotHover(args); }] }
         help_click : function(evt) {
           var $helpHeader = $('<div>').addClass('euca-table-header').append(
                               $('<span>').text(help_volume['landing_title']).append(
@@ -144,6 +144,7 @@
       });
       this.tableWrapper.appendTo(this.element);
 
+      // volume delete dialog start
       $tmpl = $('html body').find('.templates #volumeDelDlgTmpl').clone();
       var $rendered = $($tmpl.render($.extend($.i18n.map, help_volume)));
       var $del_dialog = $rendered.children().first();
@@ -157,7 +158,8 @@
          },
          help: {title: help_volume['dialog_delete_title'], content: $del_help},
        });
-
+      // volume delete dialog end
+      // volume force detach dialog start
       $tmpl = $('html body').find('.templates #volumeDetachDlgTmpl').clone();
       var $rendered = $($tmpl.render($.extend($.i18n.map, help_volume)));
       var $detach_dialog = $rendered.children().first();
@@ -171,7 +173,8 @@
          },
          help: {title: help_volume['dialog_detach_title'], content: $detach_help},
        });
-
+      // volume detach dialog end
+      // volume force detach dialog start
       $tmpl = $('html body').find('.templates #volumeForceDetachDlgTmpl').clone();
       var $rendered = $($tmpl.render($.extend($.i18n.map, help_volume)));
       var $force_detach_dialog = $rendered.children().first();
@@ -185,7 +188,8 @@
          },
          help: {title: help_volume['dialog_force_detach_title'], content: $force_detach_help},
        });
-
+      // volume force detach dialog end
+      // attach dialog start
       var attachButtonId = 'volume-attach-btn';
       $tmpl = $('html body').find('.templates #volumeAttachDlgTmpl').clone();
       var $rendered = $($tmpl.render($.extend($.i18n.map, help_volume)));
@@ -225,7 +229,29 @@
         else
           $button.prop("disabled", false).addClass("ui-state-disabled");
        });
-
+      // attach dialog end
+      // create snapshot dialog end
+      $tmpl = $('html body').find('.templates #snapshotCreateDlgTmpl').clone();
+      var $rendered = $($tmpl.render($.extend($.i18n.map, help_volume)));
+      var $snapshot_dialog = $rendered.children().first();
+      var $snapshot_dialog_help = $rendered.children().last();
+      this.createSnapshotDialog = $snapshot_dialog.eucadialog({
+         id: 'snapshot-create-from-volume',
+         title: snapshot_create_dialog_title,
+         buttons: {
+           'attach': { text: snapshot_create_dialog_create_btn, click: function() { 
+                volumeId = $snapshot_dialog.find('#snapshot-create-volume-selector').val();
+                description = $.trim($snapshot_dialog.find('#snapshot-create-description').val());
+                thisObj._createSnapshot(volumeId, description);
+                $snapshot_dialog.dialog("close");
+              } 
+            },
+           'cancel': { text: volume_dialog_cancel_btn, focus:true, click: function() { $snapshot_dialog.dialog("close"); } }
+         },
+         help: {title: help_volume['dialog_snapshot_create_title'], content: $snapshot_dialog_help},
+       });
+      // create snapshot dialog end
+      // volume create dialog start
       var createButtonId = 'volumes-add-btn';
       $tmpl = $('html body').find('.templates #volumeAddDlgTmpl').clone();
       var $rendered = $($tmpl.render($.extend($.i18n.map, help_volume)));
@@ -281,6 +307,7 @@
          else
            $button.prop("disabled", false).addClass("ui-state-disabled");
        });
+       // volume create dialog end
     },
 
     _create : function() { 
@@ -442,6 +469,31 @@
       }
     },
 
+    _createSnapshot : function (volumeId, description) {
+      var thisObj = this;
+      $.ajax({
+        type:"GET",
+        url:"/ec2?Action=CreateSnapshot&VolumeId=" + volumeId + "&Description=" + description,
+        data:"_xsrf="+$.cookie('_xsrf'),
+        dataType:"json",
+        async:true,
+        success:
+          function(data, textStatus, jqXHR){
+            if ( data.results ) {
+              notifySuccess(null, snapshot_create_success + ' ' + volumeId);
+              thisObj.tableWrapper.eucatable('refreshTable');
+            } else {
+              notifyError(null, snapshot_create_error + ' ' + volumeId);
+            }
+          },
+        error:
+          function(jqXHR, textStatus, errorThrown){
+            notifyError(null, snapshot_create_error + ' ' + volumeId);
+          }
+      });
+
+    },
+
     _attachVolume : function (volumeId, instanceId, device) {
       var thisObj = this;
       $.ajax({
@@ -566,7 +618,7 @@
       }
       $volumeSelector = this.attachDialog.find('#volume-attach-volume-selector');
       $volumeSelector.html('');
-      $volumeSelector.append($('<option>').attr('value', volumeId).text(volumeToAttach));
+      $volumeSelector.append($('<option>').attr('value', volumeToAttach).text(volumeToAttach));
       $volumeSelector.attr('disabled', 'disabled');
       this.attachDialog.eucadialog('open');
     },
@@ -602,8 +654,19 @@
       }
     },
 
-    _createSnapshotAction : function() {
-
+    _createSnapshotAction : function(volumeId) {
+      volumeToUse = '';
+      if ( !volumeId ) {
+        rows = this.tableWrapper.eucatable('getAllSelectedRows', 1);
+        volumeToUse = rows[0];
+      } else {
+        volumeToUse = volumeId;
+      }
+      $volumeSelector = this.createSnapshotDialog.find('#snapshot-create-volume-selector');
+      $volumeSelector.html('');
+      $volumeSelector.append($('<option>').attr('value', volumeToUse).text(volumeToUse));
+      $volumeSelector.attr('disabled', 'disabled');
+      this.createSnapshotDialog.dialog('open');
     },
 
 /**** Public Methods ****/
