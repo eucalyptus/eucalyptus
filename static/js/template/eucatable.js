@@ -87,14 +87,28 @@
        // sDom += '<"#'+thisObj.options.id+'-legend">';
       sDom += 'p<"clear">';
       dt_arg['sDom'] = sDom;  
-      dt_arg['oLanguage'] = { "sProcessing": "<img src=\"images/dots32.gif\"/> &nbsp; <span>Loading...</span>"};
-
+      dt_arg['oLanguage'] = { "sProcessing": "<img src=\"images/dots32.gif\"/> &nbsp; <span>Loading...</span>", 
+                             "sLoadingRecords": ""}
+      
       return dt_arg;
     },
 
     _drawCallback : function(oSettings) {
       var thisObj = this;
       $('#table_' + this.options.id + '_count').html(oSettings.fnRecordsDisplay());
+
+      this.element.find('table thead tr').each(function(index, tr){
+        var $checkAll = $(tr).find(':input[type="checkbox"]');
+        $checkAll.click( function (e) {
+          var checked = $(this).is(':checked');
+          thisObj.element.find('table tbody tr').each(function(innerIdx, innerTr){
+            if(checked)
+              $(innerTr).addClass('selected-row');
+            else
+              $(innerTr).removeClass('selected-row');
+          });
+        });
+      }); 
       this.element.find('table tbody').find('tr').each(function(index, tr) {
         // add custom td handlers
         $currentRow = $(tr);
@@ -115,15 +129,14 @@
         // add generic row handler
         $currentRow.click( function (e) {
           // checked/uncheck on checkbox
+          var $selectedRow = $(e.target).parents('tr');
+          $selectedRow.toggleClass('selected-row');
           $rowCheckbox = $(e.target).parents('tr').find(':input[type="checkbox"]');
-          $rowCheckbox.attr('checked', !$rowCheckbox.is(':checked'));
-          $(e.target).parents('tr').toggleClass('selected-row');
-          e.stopPropagation();
-          thisObj._onRowClick();
-          thisObj._trigger('row_click', e);
-        });
+          if($selectedRow.hasClass('selected-row'))
+            $rowCheckbox.attr('checked', true);
+          else
+            $rowCheckbox.attr('checked', false);
 
-        $currentRow.find(':input[type="checkbox"]').click( function (e) {
           e.stopPropagation();
           thisObj._onRowClick();
           thisObj._trigger('row_click', e);
@@ -229,10 +242,9 @@
 	      function( oSettings, aData, iDataIndex ) {
                 if (oSettings.sInstance !== thisObj.options.id)
                   return true;
-                var selectorVal =  $selector.val();
-                if(aliasTbl[selectorVal]){
+                var selectorVal = thisObj.element.find('select#'+filter['name']+'-selector').val();
+                if(aliasTbl[selectorVal])
                   return aliasTbl[selectorVal] == aData[filter['filter_col']];
-                }
                 return true;
             });
           }
@@ -250,7 +262,7 @@
       var filterArr = [];
       thisObj.element.find('.euca-table-filter').each(function(){ filterArr.push($(this));});
       thisObj.element.find('.dataTables_filter').each(function(){ filterArr.push($(this));});
-      var $wrapper = $('<div class="table-filter-wrapper"/>');
+      var $wrapper = $('<div class="table-filter-wrapper clearfix"/>');
       $(filterArr).each(function(){$wrapper.append($(this).clone(true));}); 
       $wrapper.insertAfter(filterArr[filterArr.length-1]);
       $(filterArr).each(function(){$(this).remove();});
@@ -261,7 +273,7 @@
     _decorateTopBar : function(args) {
       var thisObj = this; // ref to widget instance
       $tableTop = this.element.find('.table_' + this.options.id + '_top');
-      $tableTop.addClass('euca-table-length');
+      $tableTop.addClass('euca-table-length clearfix');
       $tableTop.append(
         $('<div>').addClass('euca-table-add').append(
           $('<a>').attr('id','table-'+this.options.id+'-new').addClass('button').attr('href','#').text(thisObj.options.text.create_resource)),
@@ -269,21 +281,21 @@
         $('<div>').addClass('euca-table-size').append(
           $('<span>').attr('id','table_' + this.options.id + '_count'),
           $('<span>').attr('id','tbl_txt_found').addClass('resources-found').html('&nbsp; '+thisObj.options.text.resource_found),
-          'Showing&nbsp;',
+          'Showing:',
           $('<span>').addClass('show selected').text('10'),
           '&nbsp;|&nbsp;',
           $('<span>').addClass('show').text('25'),
           '&nbsp;|&nbsp;',
           $('<span>').addClass('show').text('50'),
           '&nbsp;|&nbsp;',
-          $('<span>').addClass('show').text('all')));
+          $('<span>').addClass('show').text('All')));
 
       $tableTop.find('span.show').click(function () {
         $(this).parent().children('span').each( function() {
           $(this).removeClass('selected');
         });
         
-        if ($(this).text() == 'all')
+        if ($(this).text() == 'All')
           thisObj.table.fnSettings()._iDisplayLength = -1;
         else
           thisObj.table.fnSettings()._iDisplayLength = parseInt($(this).text().replace('|',''));
@@ -333,13 +345,13 @@
 
     _decorateLegendPagination : function (args) {
       var thisObj = this;
-      var $wrapper = $('<div>').addClass('legend-pagination-wrapper');
+      var $wrapper = $('<div>').addClass('legend-pagination-wrapper clearfix');
       thisObj.element.find('.dataTables_paginate').wrapAll($wrapper); 
       if(thisObj.options.legend){
         $legend = $('<div>').attr('id',thisObj.options.id+'-legend'); 
 
         $legend.addClass('table-legend');
-        $legend.append($('<span>').html(legend_label));
+        $legend.append($('<span class="table-legend-title">').html(legend_label));
 
         $.each(thisObj.options.legend, function(idx, val){
           var domid = 'legend-'+thisObj.options.id +'-'+val;
@@ -349,13 +361,6 @@
         });
         thisObj.element.find('.legend-pagination-wrapper').prepend($legend);
       }
-    },
-
-    _decoratePagination : function (args) {
-      var $paginate = this.element.find('.dataTables_paginate'); 
-      var $clone = $paginate.clone(true,true); 
-      //$paginate.remove();
-      this.element.append($clone);
     },
 
     _addActions : function (args) {

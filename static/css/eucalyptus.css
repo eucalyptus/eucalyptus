@@ -146,7 +146,7 @@ body {
   height: 22px;
   width: 207px;
   margin-top: 13px;
-  background: transparent url(../images/css-sprites.png) no-repeat center 0;
+  background: transparent url(../images/css-sprites.png) no-repeat left 0;
   border: none;
 }
 
@@ -171,9 +171,8 @@ body {
   display: block;
   background: transparent url(../images/css-sprites-small.png) no-repeat right 0;
   color: #02405f;
-  font-family: "Play", Arial, sans-serif;
+  font-family: 'PlayBold', Arial, sans-serif;
   font-size: 16px;
-  font-weight: bold;
   line-height: 47px;
   margin: 0 10px 0 0;
   padding: 0 32px 0 20px;
@@ -220,7 +219,7 @@ body {
   display: block;
   background: transparent url(../images/css-sprites-small.png) no-repeat right 0;
   color: #02405f;
-  font-family: "Play", Arial, sans-serif;
+  font-family: 'PlayRegular', Arial, sans-serif;
   font-size: 14px;
   font-weight: normal;
   line-height: 1em;
@@ -290,9 +289,8 @@ body {
   background-repeat: no-repeat;
   border-left: 1px solid #e3e1e1;
   color: #02405f;
-  font-family: "Play", Arial, sans-serif;
+  font-family: 'PlayBold', Arial, sans-serif;
   font-size: 12px;
-  font-weight: 700;
   line-height: 1em;
   margin: 3px 0;
   outline: none;
@@ -325,16 +323,16 @@ body {
 .lnk-image {
   background-position: center -150px;
 }
-.resources-nav li:hover a.lnk-images,
-.lnk-images:hover {
+.resources-nav li:hover a.lnk-image,
+.lnk-image:hover {
   background-position: center -225px;
 }
 
 .lnk-instance {
   background-position: center -300px;
 }
-.resources-nav li:hover a.lnk-instances,
-.lnk-instances:hover {
+.resources-nav li:hover a.lnk-instance,
+.lnk-instance:hover {
   background-position: center -375px;
 }
 
@@ -342,6 +340,7 @@ body {
   background-position: center -450px;
 }
 .resources-nav li:hover a.lnk-storage,
+.resources-nav li.toggle-on a.lnk-storage,
 .lnk-storage:hover {
   background-position: center -525px;
 }
@@ -350,6 +349,7 @@ body {
   background-position: center -600px;
 }
 .resources-nav li:hover a.lnk-netsec,
+.resources-nav li.toggle-on a.lnk-netsec,
 .lnk-netsec:hover {
   background-position: center -675px;
 }
@@ -390,9 +390,8 @@ body {
   background-image: none;
   border: 0;
   color: #02405f;
-  font-family: "Play", Arial, sans-serif;
+  font-family: 'PlayRegular', Arial, sans-serif;
   font-size: 14px;
-  font-weight: 400;
   height: auto;
   margin: 0;
   padding: 9px 10px 9px 35px;
@@ -423,7 +422,7 @@ body {
   min-height: 15px;
   margin-top: 5px;
   padding: 15px 0;
-  font-family: 'Play', Arial, sans-serif;
+  font-family: 'PlayRegular', Arial, sans-serif;
   text-align: center;
   width: 960px;
 
@@ -437,7 +436,7 @@ body {
 }
 
 #euca-notification-title {
-  font-weight: bold;
+  font-family: 'PlayBold', Arial, sans-serif;
   font-size: 1.2em;
 }
 
@@ -448,14 +447,42 @@ body {
 #euca-notification-close a {
   float: right;
   position: relative;
-  top: -10px;
+  top: -7px;
   left: -10px;
-  background: transparent url(../images/css-sprites.png) repeat-x left -340px;
+  background: transparent url(../images/css-sprites-small.png) no-repeat left -230px;
   width: 16px;
   height: 16px;
   text-decoration: none;
   text-indent: -9999px;
   outline: none;
+}
+
+/* ======= Notifications ======= */
+
+.euca-notification {
+  -moz-border-radius: 4px;
+  border-radius: 4px;
+  border-style: solid;
+  border-color: black;
+}
+
+.error {
+  color: red;
+  padding: 5px;
+}
+
+.success {
+  color: green;
+  padding: 5px;
+}
+
+.hide-notification  {
+  float: right;
+}
+
+.dialog-error {
+  color: red;
+  padding: 5px;
 }
 
 
@@ -483,15 +510,15 @@ body {
 .form-row label {
   display: inline-block;
   width: 90px;
-  font-family: "Play", Arial, sans-serif;
+  font-family: 'PlayBold', Arial, sans-serif;
   font-size: 13px;
-  font-weight: bold;
   text-align: right;
   margin-right: 13px;
   color: #02405f;
 }
 
-.input-field {
+.input-field,
+.dataTables_filter input {
   background-color: #f3f6f9;
   border-radius: 4px;
   border: 1px solid #9eb1c3;
@@ -506,7 +533,8 @@ body {
   box-shadow: inset 0 0 3px #a8b9c8;
 }
 
-.input-field:focus {
+.input-field:focus,
+.dataTables_filter input:focus {
   border-color: #6699cc;
 
   -moz-box-shadow: inset 0 0 4px #6699cc;
@@ -540,14 +568,13 @@ body {
 .xlarge-button {
   display: inline-block;
   color: #fff;
-  font-family: "Play", Arial, sans-serif;
+  font-family: 'PlayBold', Arial, sans-serif;
   font-size: 16px;
-  font-weight: bold;
   line-height: 1;
   text-decoration: none;
   padding: 5px 24px;
   border-radius: 5px;
-  border: 1px solid rgba(128,128,128,0.6);
+  border: 1px solid rgba(90,110,90,0.4);
 
   /* background-image: -webkit-gradient(linear, center top, center bottom, from(#c8df8e), to(#bfbfbf), color-stop(3%, #f7f7f7), color-stop(12%, #f2f2f2), color-stop(90%, #d9d9d9)); */
   background-image: -webkit-linear-gradient(top, #c8df8e, #73a434 49%, #8dc63f 100%);
@@ -556,9 +583,9 @@ body {
   background-image: -ms-linear-gradient(top, #c8df8e, #73a434 49%, #8dc63f 100%);
   background-image: linear-gradient(to bottom, #c8df8e, #73a434 49%, #8dc63f 100%);
 
-  -webkit-box-shadow: 0 0px 3px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.30);
-  -moz-box-shadow: 0 0px 3px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.30);
-  box-shadow: 0 0px 3px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.30);
+  -webkit-box-shadow: 0 1px 2px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.30);
+  -moz-box-shadow: 0 1px 2px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.30);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.30);
 }
 
 .large-button {
@@ -574,12 +601,11 @@ body {
 .button:hover,
 .large-button:hover,
 .xlarge-button:hover {
-  /* background-image: -webkit-gradient(linear, center top, center bottom, from(#c8df8e), to(#bfbfbf), color-stop(3%, #f7f7f7), color-stop(12%, #f2f2f2), color-stop(90%, #d9d9d9)); */
-  background-image: -webkit-linear-gradient(top, #73a434, #336600 49%, #73a434 100%);
-  background-image: -moz-linear-gradient(top, #73a434, #336600 49%, #73a434 100%);
-  background-image: -o-linear-gradient(top, #73a434, #336600 49%, #73a434 100%);
-  background-image: -ms-linear-gradient(top, #73a434, #336600 49%, #73a434 100%);
-  background-image: linear-gradient(to bottom, #73a434, #336600 49%, #73a434 100%);
+  background-image: -webkit-linear-gradient(top, #d5ed97, #7eb339 49%, #93cf42 100%);
+  background-image: -moz-linear-gradient(top, #d5ed97, #7eb339 49%, #93cf42 100%);
+  background-image: -o-linear-gradient(top, #d5ed97, #7eb339 49%, #93cf42 100%);
+  background-image: -ms-linear-gradient(top, #d5ed97, #7eb339 49%, #93cf42 100%);
+  background-image: linear-gradient(to bottom, #d5ed97, #7eb339 49%, #93cf42 100%);
 } 
 
 
@@ -607,9 +633,8 @@ body {
   background-color: #eaf2f5;
   border-top: 1px solid #e7e5e5;
   color: #02405f;
-  font-family: "Play", Arial, sans-serif;
+  font-family: 'PlayBold', Arial, sans-serif;
   font-size: 18px;
-  font-weight: bold;
   margin: 0 0 20px;
   position: absolute;
   top: 12px;
@@ -683,14 +708,14 @@ body {
 
 .inner-box h3 {
   position: absolute;
-  top: 8px;
+  top: 9px;
   left: -7px;
-  background: transparent url(../images/css-sprites.png) no-repeat left -160px;
-  font-family: 'Play', Arial, sans-serif;
+  background: transparent url(../images/css-sprites.png) no-repeat left -158px;
+  font-family: 'PlayBold', Arial, sans-serif;
   font-size: 12px;
   line-height: 1.5;
   text-align: center;
-  font-weight: bold;
+  font-weight: normal;
   color: #02405f;
   margin: 0;
   padding: 0 0 7px 0px;
@@ -704,7 +729,7 @@ body {
 }
 
 #dashboard-instance-az select {
-  font-family: 'Play', Arial, sans-serif;
+  font-family: 'PlayRegular', Arial, sans-serif;
   padding: 5px 4px;
   outline: none;
   width: 190px;
@@ -742,9 +767,17 @@ body {
 #dashboard-storage-img,
 #dashboard-netsec-img {
   float: left;
-  padding-top: 10px;
-  width: 115px;
-  text-align: center;
+  margin-top: 2px;  
+  height: 85px;
+  width: 110px;
+  background: transparent url(../images/css-sprites.png) no-repeat -150px -325px;
+}
+
+#dashboard-storage-img {
+  background-position: 0 -425px; 
+}
+#dashboard-netsec-img {
+  background-position: -150px -425px;
 }
 
 .instances,
@@ -795,34 +828,14 @@ body {
 }
 
 
-/* ======= Table view ======= */
-
-.euca-table-add {
-  float: left;
-}
-
-.euca-table-action {
-  float: left;
-}
-
-.euca-table-size {
-  float: right;
-  margin: 10px 15px 5px 0;
-}
-
-span.selected {
-  font-weight: bold;
-}
-
-
 /* ======= jQuery table style overrides ======= */
 
 .dataTables_wrapper {
   background-color: #fff;
   border: 1px solid #d7d5d5;
 
-  margin: 0 8px 25px;
-  padding: 68px 0 15px 0; 
+  margin: 0 8px 35px;
+  padding: 47px 0 10px 0; 
 
   -webkit-border-radius: 5px;
   -moz-border-radius: 5px;
@@ -833,19 +846,6 @@ span.selected {
   box-shadow: 0px 2px 3px rgba(3,3,3,0.30);
 }
 
-.dataTables_paginate {
-  float: right;
-}
-
-.dataTables_filter {
-  padding-right: 15px;
-  /* width: 45%; */
-}
-
-.paging_full_numbers {
-    width: 320px;
-}
-
 table.display {
   background-color: #fff;
   border-bottom: 2px solid #dae2e8;
@@ -854,9 +854,9 @@ table.display {
 
 table.display thead th {
   padding: 8px 18px 8px 10px;
-  font-family: "Play", Arial, sans-serif;
+  font-family: 'PlayBold', Arial, sans-serif;
   font-size: 11px;
-  font-weight: bold;
+  font-weight: normal;
   color: #7aa92a;
   text-transform: uppercase;
   border-top: 2px solid #dae2e8;
@@ -889,101 +889,13 @@ tr.even td.sorting_1 {
   text-align: center;
 }
 
-tr.selected-row {
+tr.selected-row,
+tr.selected-row td.sorting_1
+ {
   background-color: #f1ffe3;
 }
 
-
-/* ======= Action menu ======= */
-
-.actionmenu {
-  font: 13px/27px Arial,sans-serif;
-  color: #3366CC;
-  height: 30px;
-  margin-left: -10px;
-}
-
-.inactive-menu {
-  color: gray;
-}
 /* ======= Help page related ===== */
-.help-content {
-  padding: 10px;
-}
-.help-revert-button {
-  float: right;
-  margin-top: 10px;
-}
-/* ======= Notifications ======= */
-
-.euca-notification {
-  -moz-border-radius: 4px;
-  border-radius: 4px;
-  border-style: solid;
-  border-color: black;
-}
-
-.error {
-  color: red;
-  padding: 5px;
-}
-
-.success {
-  color: green;
-  padding: 5px;
-}
-
-.hide-notification  {
-  float: right;
-}
-
-.dialog-error {
-  color: red;
-  padding: 5px;
-}
-
-/* === Euca tables === */
-
-.euca-table-header {
-
-  /* These will be styled in the same section as the box-header */
-
-}
-
-.euca-table-filter {
-  float: left;
-}
-
-.legend-pagination-wrapper {
-  height: 30px;
-  position: absolute;
-  width: 100%;
-  bottom: -45px;
-}
-
-.table-legend {
-  float:left;
-  margin-top: 3px;
-}
-
-.table-legend-item {
-  padding-left: 12px;
-  background-position: left !important;
-  background-repeat: no-repeat;
-  margin-left: 15px;
-}
-
-.filter-label {
-  padding-right: 5px;
-}
-
-.resources-found {
-  padding-right: 5px;
-}
-
-.hoverCell {
-  color: green;
-}
 
 .help-link,
 .help-return {
@@ -1005,15 +917,317 @@ tr.selected-row {
 }
 
 .help-return a {
+  background-position: left -170px;
+}
 
-  /* TODO - Shift the background image position once the arrow icon has been added to the css-sprites-small.png */
+.help-content {
+  padding: 10px;
+}
 
+.help-revert-button {
+  float: right;
+  margin-top: 10px;
 }
 
 /* Hide close X button in UI dialogs */
+
 .ui-dialog-titlebar-close {
   visibility: hidden;
 }
+
+/* ==== Search and optional filters will appear before the table ==== */
+
+/* == Optional filters == */
+
+.table-filter-wrapper {
+  padding: 12px 15px;
+  min-height: 31px;
+  background: transparent url(../images/css-sprites.png) repeat-x left -530px;
+}
+
+.euca-table-filter {
+  float: left;
+}
+
+.filter-label {
+  padding-right: 5px;
+  font-family: 'PlayRegular', Arial, sans-serif;
+  font-size: 12px;
+  color: #02405F;
+}
+
+/* == Search == */
+
+.dataTables_filter {
+  width: auto;
+}
+
+.dataTables_filter label {
+  margin-right: 10px;
+  font-family: 'PlayRegular', Arial, sans-serif;
+  font-size: 12px;
+  color: #02405f;
+}
+
+.dataTables_filter input {
+  /* This element shares styling with .input-field */
+  background: transparent url(../images/css-sprites-small.png) no-repeat right -250px;
+}
+
+.table-refresh {
+  display: inline-block;
+  margin: 0 0 0 30px;
+  padding-left: 23px;
+  font-family: 'PlayBold', Arial, sans-serif;
+  font-size: 12px;
+  line-height: 27px;
+  color: #73a434;
+  background: transparent url(../images/css-sprites-small.png) no-repeat 0 -190px;
+  text-decoration: none;
+}
+
+.table-refresh:hover {
+  text-decoration: underline;
+}
+
+/* ==== Create/Add buttons and menus, and the results and table size selector ==== */
+
+.euca-table-length {
+  padding: 10px 10px 10px 15px;
+}
+
+/* == Table add and action menu  == */
+
+.euca-table-add {
+  float: left;
+}
+
+.euca-table-action {
+  float: left;
+}
+
+.actionmenu {
+  font-size: 13px;
+  line-height: 27px;
+  color: #3366CC;
+  height: 30px;
+  margin-left: 15px;
+}
+
+.inactive-menu {
+  color: gray;
+}
+
+/* == Results and table size == */
+
+.euca-table-size {
+  float: right;
+  margin-top: 15px;
+  font-size: 12px;
+  color: #666;
+}
+
+.resources-found {
+  margin-right: 5px;
+}
+
+.show {
+  display: inline-block;
+  padding: 0 8px;
+  color: #87b932
+}
+
+.selected {
+  color: #02405f;
+  font-weight: bold;
+}
+
+
+/* ==== Legend and Pagination appear after the table ==== */
+
+/* == Legend == */
+
+.legend-pagination-wrapper {
+  position: absolute;
+  width: 100%;
+  bottom: -45px;
+}
+
+.table-legend,
+.dataTables_paginate {
+  height: 27px;
+  background-color: #fff;
+  border: 1px solid #d7d5d5;
+  border-radius: 5px;
+
+  -webkit-box-shadow: 0 1px 3px rgba(0,0,0,0.35),  inset 0 0 8px rgba(128,128,128,0.35);
+  -moz-box-shadow: 0 1px 3px rgba(0,0,0,0.35),  inset 0 0 8px rgba(128,128,128,0.35);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.35),  inset 0 0 8px rgba(128,128,128,0.35);
+}
+
+.table-legend {
+  float:left;
+}
+
+.table-legend span {
+  display: inline-block;
+}
+
+.table-legend-title {
+  padding: 0 15px;
+  font-family: 'PlayBold', Arial, sans-serif;
+  font-size: 11px;
+  color: #455560;
+  line-height: 26px;
+  text-transform: uppercase;
+  border-right: 1px solid #d7d5d5;  
+}
+
+.table-legend-item {
+  margin-left: 15px;
+  padding-left: 18px;
+  font-family: 'PlayRegular', Arial, sans-serif;
+  font-size: 11px;
+  color: #02405f;
+  line-height: 26px;
+  background: transparent url(../images/css-sprites-small.png) no-repeat left -280px;
+}
+
+.table-legend .table-legend-item:nth-child(2) {
+  /* border-left: 1px solid #fff;
+  margin-left: 0;
+  padding-left: 33px; */
+
+  /* TODO: Add left border after wrapper span has been added */
+}
+
+.table-legend .table-legend-item:last-child {
+  padding-right: 15px;
+}
+
+
+/*  Legend icons - Volume status */
+
+#legend-volumes-available {
+  background-position: left -280px;
+}
+
+#legend-volumes-in-use {
+  background-position: left -310px;
+}
+
+#legend-volumes-error {
+  background-position: left -340px;
+}
+
+#legend-volumes-creating {
+  background-position: left -370px;
+}
+
+#legend-volumes-deleting {
+  background-position: left -400px;
+}
+
+#legend-volumes-deleted {
+  background-position: left -430px;
+}
+
+/* == Pagination == */
+
+.dataTables_paginate {
+  float: right;
+  text-align: center;
+}
+
+/* Override the jquery-table default styling */
+
+.paging_full_numbers {
+  font-family: 'PlayBold', Arial, sans-serif;
+  font-size: 12px;
+  color: #73a434;
+  line-height: 26px;
+  width: auto;
+}
+
+.paging_full_numbers span.paginate_button,
+.paging_full_numbers span.paginate_active {
+  display: inline-block;
+  margin: 0;
+  background-color: transparent;
+  border: 0;
+  height: 23px;
+  width: 30px;
+  border-left: 1px solid #fff;
+  border-right: 1px solid #d7d5d5;
+
+  border-radius: 0;
+
+}
+.paging_full_numbers span.paginate_button:hover {
+  background-color: transparent;
+  text-decoration: underline;
+}
+
+.paging_full_numbers span.first,
+.paging_full_numbers span.previous,
+.paging_full_numbers span.next,
+.paging_full_numbers span.last {
+  text-indent: -9999px;
+  background-image: url(../images/css-sprites.png);
+  background-repeat: no-repeat;
+}
+
+.paging_full_numbers span.first  {
+  width: 45px;
+  background-position: 0 -600px;
+  border-left: 0;
+}
+.paging_full_numbers span.first.paginate_button_disabled {
+  background-position: 0 -630px;
+}
+
+.paging_full_numbers span.previous {
+  width: 30px;
+  background-position: -50px -600px;
+}
+.paging_full_numbers span.previous.paginate_button_disabled {
+  background-position: -50px -630px;
+}
+
+.paging_full_numbers span.next  {
+  width: 30px; 
+  background-position: -85px -600px; 
+}
+.paging_full_numbers span.next.paginate_button_disabled {
+  background-position: -85px -630px;
+
+}
+
+.paging_full_numbers span.last  {
+  width: 45px;
+  background-position: -120px -600px;
+  border-right: 0;
+}
+.paging_full_numbers span.last.paginate_button_disabled {
+  background-position: -120px -630px;
+}
+
+.paging_full_numbers span.paginate_active {
+  color: #02405f;
+  cursor: default;
+}
+
+.paging_full_numbers span.paginate_button_disabled {
+  cursor: default;
+}
+
+
+/* Not sure what this is supposed to be doing */
+
+.hoverCell {
+  color: green;
+}
+
 
 /* ======= Footer styles ======= */
 
@@ -1045,22 +1259,4 @@ tr.selected-row {
   text-decoration: underline;
 }
 
-/* ======= Volume status ====== */
-#legend-volumes-available {
-  background-image: url('../images/green-ball-10x10.png');
-}
-#legend-volumes-in-use {
-  background-image: url('../images/red-ball-10x10.png');
-}
-#legend-volumes-error {
-  background-image: url('../images/black-ball-10x10.png');
-}
-#legend-volumes-creating {
-  background-image: url('../images/gray-ball-10x10.png');
-}
-#legend-volumes-deleting {
-  background-image: url('../images/blue-ball-10x10.png');
-}
-#legend-volumes-deleted {
-  background-image: url('../images/brown-ball-10x10.png');
-}
+
