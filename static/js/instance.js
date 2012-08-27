@@ -39,12 +39,7 @@
           thisObj.tableWrapper = $instTable.eucatable({
           id : 'instances', // user of this widget should customize these options,
           dt_arg : {
-            "bProcessing": true,
             "sAjaxSource": "../ec2?Action=DescribeInstances",
-            "sAjaxDataProp": "results",
-            "bAutoWidth" : false,
-            "sPaginationType": "full_numbers",
-            "sDom": '<"table_instances_header"><"table-instance-filter">f<"clear"><"table_instances_top">rt<"table-instances-legend">p<"clear">',
             "aoColumns": [
               {
                 "bSortable": false,
@@ -69,6 +64,10 @@
               { "mDataProp": "group_name" },
             // output creation time in browser format and timezone
               { "fnRender": function(oObj) { d = new Date(oObj.aData.launch_time); return d.toLocaleString(); } },
+              {
+                "bVisible": false,
+                "mDataProp": "root_device_type"
+              },
             ]
           },
           text : {
@@ -76,7 +75,10 @@
             create_resource : instance_create,
             resource_found : instance_found,
           },
-          menu_actions : function(args){ return { delete: {name:table_menu_delete_action, callback: function (args) { thisObj._deleteAction(args) }}}},
+          menu_actions : function(args){
+            // dimension: #selected, inst_state, vol_state, type            
+ 
+          },
           help_click : function(evt) {
             // TODO: make this a reusable operation
             thisObj._flipToHelp(evt,$instHelp);
@@ -91,48 +93,11 @@
               return val;
           },
         }) //end of eucatable
-
         thisObj.tableWrapper.appendTo(thisObj.element);
 
-      //add filter to the table TODO: make templates
-        $tableFilter = $('div.table-instance-filter');
-        $tableFilter.addClass('euca-table-filter');
-        $tableFilter.append(
-          $('<span>').addClass("filter-label").html(table_filter_label),
-          $('<select>').attr('id', 'instances-selector'));
 
-        filterOptions = ['linux', 'windows'];
-        $sel = $tableFilter.find("#instances-selector");
-        for (o in filterOptions)
-          $sel.append($('<option>').val(filterOptions[o]).text($.i18n.map['instance_selecter_' + filterOptions[o]]));
 
-        $.fn.dataTableExt.afnFiltering.push(
-  	  function( oSettings, aData, iDataIndex ) {
-          // first check if this is called on a volumes table
-          if (oSettings.sInstance != 'instances')
-            return true;
-          selectorValue = $("#instances-selector").val();
-          switch (selectorValue) {
-            case 'linux':
-              //return attachedStates[aData[8]] == 1;
-              break;
-            case 'windows':
-              //return detachedStates[aData[8]] == 1;
-              break;
-          }
-          return true;
-        });
       }); // end of done()
-      // TODO: should be a template in html
-      //add leged to the volumes table
-/*
-      $tableLegend = $("div.table-instances-legend");
-      $tableLegend.append($('<span>').addClass('instance-legend').html(volume_legend));
-      //TODO: this might not work in all browsers
-      statuses = [].concat(Object.keys(attachedStates),Object.keys(detachedStates), otherStates);
-      for (s in statuses)
-        $tableLegend.append($('<span>').addClass('instance-status-legend').addClass('instance-status-' + statuses[s]).html($.i18n.map['instance_state_' + statuses[s]]));
-*/
     },
     _create : function() { 
     },
@@ -140,27 +105,6 @@
     _destroy : function() {
     },
     
-    
-    _reDrawTable : function() {
-      tableWrapper.eucatable('reDrawTable');
-    },
-
-
-    _deleteAction : function(rowsToDelete) {
-      //TODO: add hide menu
-
-      if ( rowsToDelete.length > 0 ) {
-        // show delete dialog box
-        $deleteNames = this.delDialog.find("span.delete-names")
-        $deleteNames.html('');
-        for ( i = 0; i<rowsToDelete.length; i++ ) {
-          t = escapeHTML(rowsToDelete[i]);
-          $deleteNames.append(t).append("<br/>");
-        }
-        this.delDialog.dialog('open');
-      }
-    },
- 
     _getEmi : function() {
       var thisObj = this;
       return $.ajax({
