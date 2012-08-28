@@ -1,3 +1,19 @@
+*Wed Jul 7 2012 Eucalyptus Systems (support@eucalyptus.com)
+    * Version 3.1.0
+    * New Features:
+	- FastStart (FastStart is an automated installer for an entry-level 
+	  Eucalyptus cloud.)
+	- New packaged platform support (Added support for CentOS 6.x 
+	  and Ubuntu 12.04 LTS)
+	-vSphere 5 support (plugin only).
+    * Resolves the following issues: 
+	EUCA-304 EUCA-1473 EUCA-1492 EUCA-1636 EUCA-1792 EUCA-2002 EUCA-2024 
+	EUCA-2046 EUCA-2204 EUCA-2260 EUCA-2311 EUCA-2327 EUCA-2333 EUCA-2340 
+	EUCA-2345 EUCA-2413 EUCA-2417 EUCA-2418 EUCA-2430 EUCA-2445 EUCA-2547 
+	EUCA-3066 EUCA-3270 EUCA-3313 EUCA-3314 EUCA-3315
+    * Bug tracker: https://eucalyptus.atlassian.net
+    * Downloads: http://www.eucalyptus.com/download/eucalyptus
+
 *Wed Oct 20 2010 Eucalyptus Systems (support@eucalyptus.com)
     * Version 2.0.1
     * Bug fix minor release.
