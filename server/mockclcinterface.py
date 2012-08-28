@@ -11,6 +11,7 @@ from boto.ec2.keypair import KeyPair
 
 from .botojsonencoder import BotoJsonDecoder
 from .clcinterface import ClcInterface
+from .configloader import ConfigLoader
 
 # This class provides an implmentation of the clcinterface using canned json
 # strings. Might be better to represent as object graph so we can modify
@@ -27,21 +28,27 @@ class MockClcInterface(ClcInterface):
 
     # load saved state to simulate CLC
     def __init__(self):
-        with open('mockdata/Zones.json') as f:
+        self.config = ConfigLoader.getParser()
+        if self.config.has_option('eui', 'mockpath'):
+            self.mockpath = self.config.get('eui', 'mockpath')
+        else:
+            self.mockpath = 'mockdata'
+
+        with open(os.path.join(self.mockpath, 'Zones.json')) as f:
             self.zones = json.load(f, cls=BotoJsonDecoder)
-        with open('mockdata/Images.json') as f:
+        with open(os.path.join(self.mockpath, 'Images.json')) as f:
             self.images = json.load(f, cls=BotoJsonDecoder)
-        with open('mockdata/Instances.json') as f:
+        with open(os.path.join(self.mockpath, 'Instances.json')) as f:
             self.instances = json.load(f, cls=BotoJsonDecoder)
-        with open('mockdata/Addresses.json') as f:
+        with open(os.path.join(self.mockpath, 'Addresses.json')) as f:
             self.addresses = json.load(f, cls=BotoJsonDecoder)
-        with open('mockdata/Keypairs.json') as f:
+        with open(os.path.join(self.mockpath, 'Keypairs.json')) as f:
             self.keypairs = json.load(f, cls=BotoJsonDecoder)
-        with open('mockdata/Groups.json') as f:
+        with open(os.path.join(self.mockpath, 'Groups.json')) as f:
             self.groups = json.load(f, cls=BotoJsonDecoder)
-        with open('mockdata/Volumes.json') as f:
+        with open(os.path.join(self.mockpath, 'Volumes.json')) as f:
             self.volumes = json.load(f, cls=BotoJsonDecoder)
-        with open('mockdata/Snapshots.json') as f:
+        with open(os.path.join(self.mockpath, 'Snapshots.json')) as f:
             self.snapshots = json.load(f, cls=BotoJsonDecoder)
 
     def get_all_zones(self):
