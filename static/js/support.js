@@ -73,3 +73,14 @@ function notifyError(title, message, proxyMessage, code) {
   
   $('html body').find(DOM_BINDING['notification']).notification('error', title, desc, code);
 }
+
+function allInArray(val_arr, larger_arr){
+   var ret = true;
+   for (i in val_arr){
+     if($.inArray(val_arr[i], larger_arr)<0){
+       ret = false;
+       break;
+     }
+   }
+   return ret;
+}

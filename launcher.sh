@@ -1,5 +1,5 @@
 #!/bin/bash
 
-export PYTHONPATH=`pwd`/server
+export PYTHONPATH=`pwd`
 
 python -tt launch.py

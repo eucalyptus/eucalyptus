@@ -121,7 +121,10 @@ class BaseHandler(tornado.web.RequestHandler):
 
 class RootHandler(BaseHandler):
     def get(self, path):
-        path = config.get('eui', 'staticpath') + "eui.html"
+        if config.has_option('eui', 'staticpath'):
+            path = os.path.join(config.get('eui', 'staticpath'), "eui.html")
+        else:
+            path = '../static/eui.html'
         self.render(path)
 
     def post(self, arg):

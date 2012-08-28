@@ -400,7 +400,7 @@
       this.table.fnReloadAjax();
     },
 
-    // (optional) columnIdx: if undefined, returns matrix
+    // (optional) columnIdx: if undefined, returns matrix [row_idx, col_key]
     getSelectedRows : function (columnIdx) {
       var dataTable = this.table;
       if ( !dataTable )
@@ -412,8 +412,9 @@
         if ( cb != null && cb.checked == true ) {
           if(columnIdx)
             selectedRows.push(dataTable.fnGetData(rows[i], columnIdx));
-          else
-            selectedRows.push(dataTable.fnGetData(rows[i]));
+          else{
+            selectedRows.push(dataTable.fnGetData(rows[i])); // returns the entire row with key, value
+          }
         }
       }
       return selectedRows;
