@@ -62,6 +62,9 @@
 
 package edu.ucsb.eucalyptus.msgs;
 
+import java.util.ArrayList;
+import java.util.Date;
+import java.lang.Double;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus
 import com.eucalyptus.component.ComponentId
 import com.eucalyptus.component.ComponentId.ComponentMessage
@@ -72,7 +75,7 @@ import com.eucalyptus.component.id.Eucalyptus
 import com.eucalyptus.system.Threads
 import com.eucalyptus.util.Exceptions
 import edu.ucsb.eucalyptus.cloud.VirtualBootRecord
-
+import com.eucalyptus.binding.HttpParameterMapping
 
 
 public class ComponentType extends EucalyptusData {
@@ -255,6 +258,67 @@ public class EucalyptusData implements BaseData {
   }
 }
 /** *******************************************************************************/
+
+public class DescribeSensorsType extends EucalyptusMessage {
+    Integer historySize;
+    Integer collectionIntervalTimeMs;
+    @HttpParameterMapping (parameter = "sensorId")
+    ArrayList<String> sensorIds = new ArrayList<String>();
+    @HttpParameterMapping (parameter = "instanceId")
+    ArrayList<String> instanceIds = new ArrayList<String>();
+    
+    def DescribeSensorsType(){}
+    
+    def DescribeSensorsType (Integer historySize, Integer collectioIntervalTimeMs, ArrayList<String> sensorIds, ArrayList<String> instanceIds ) {
+	this.historySize = historySize;
+	this.collectionIntervalTimeMs = collectionIntervalTimeMs;
+	this.sensorIds = sensorIds;
+	this.instanceIds = instanceIds;
+    }
+
+    @Override
+    public String toString( ) {
+	return "DescribeSensorsType ${historySize} ${collectionIntervalTimeMs} ${sensorIds} ${instanceIds}";
+      }
+}
+
+public class DescribeSensorsResponseType extends EucalyptusMessage {
+    
+    ArrayList<SensorsResourceType> sensorResources = new ArrayList<SensorsResourceType>();
+    
+}
+
+public class SensorsResourceType extends EucalyptusData {
+    String resourceName;
+    String resourceType;
+    
+    ArrayList<MetricsResourceType> metrics = new ArrayList<MetricsResourceType>();
+    
+}
+
+public class MetricsResourceType extends EucalyptusData {
+    String metricName;
+    ArrayList<MetricCounterType> counters = new ArrayList<MetricCounterType>();
+}
+
+public class MetricCounterType extends EucalyptusData {
+    String type;
+    Long collectionIntervalMs;
+    Long sequenceNum;
+    ArrayList<MetricDimensionsType> dimensions = new ArrayList<MetricDimensionsType>();
+}
+
+public class MetricDimensionsType extends EucalyptusData {
+    String dimensionName;
+    ArrayList<MetricDimensionsValuesType> values = new ArrayList<MetricDimensionsValuesType>();
+}
+
+public class MetricDimensionsValuesType extends EucalyptusData {
+    Date timestamp;
+    Double value;
+}
+
+
 public class DescribeResourcesType extends CloudClusterMessage {
   
   ArrayList<VmTypeInfo> instanceTypes = new ArrayList<VmTypeInfo>();
