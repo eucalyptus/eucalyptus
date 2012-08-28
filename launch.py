@@ -1,26 +1,35 @@
 #!/usr/bin/python -tt
 import tornado.ioloop
-import ConfigParser
 import os
 
 import server
 from server import api
 from server import support
+from server.configloader import ConfigLoader
 
 settings = {
   "cookie_secret": "YzRmYThkNzU1NDU2NmE1ZjYxMDZiZDNmMzI4YmMzMmMK",
   "xsrf_cookies": True,
 }
 
+# default webroot location for development
+webroot = os.path.join(os.path.dirname(__file__), 'static')
+
+server.config = ConfigLoader.getParser()
+# When staticpath is in the config we will assume that it is
+# not a relative path
+if server.config.has_option('eui', 'staticpath'):
+    webroot = server.config.get('eui', 'staticpath')
+
 application = tornado.web.Application([
-        (r"/(favicon\.ico)", tornado.web.StaticFileHandler, {'path': os.path.join(os.path.dirname(__file__), './static/images/')}),
-        (r"/css/(.*)", tornado.web.StaticFileHandler, {'path': os.path.join(os.path.dirname(__file__), './static/css')}),
-        (r"/lib/(.*)", tornado.web.StaticFileHandler, {'path': os.path.join(os.path.dirname(__file__), './static/lib')}),
-        (r"/js/(.*)", tornado.web.StaticFileHandler, {'path': os.path.join(os.path.dirname(__file__), './static/js')}),
-        (r"/custom/(.*)", tornado.web.StaticFileHandler, {'path': os.path.join(os.path.dirname(__file__), './static/custom')}),
-        (r"/images/(.*)", tornado.web.StaticFileHandler, {'path': os.path.join(os.path.dirname(__file__), './static/images')}),
-        (r"/help/(.*)", tornado.web.StaticFileHandler, {'path': os.path.join(os.path.dirname(__file__), './static/help')}),
-        (r"/fonts/(.*)", tornado.web.StaticFileHandler, {'path': os.path.join(os.path.dirname(__file__), './static/fonts')}),
+        (r"/(favicon\.ico)", tornado.web.StaticFileHandler, {'path': os.path.join(webroot, 'images')}),
+        (r"/css/(.*)", tornado.web.StaticFileHandler, {'path': os.path.join(webroot, 'css')}),
+        (r"/lib/(.*)", tornado.web.StaticFileHandler, {'path': os.path.join(webroot, 'lib')}),
+        (r"/js/(.*)", tornado.web.StaticFileHandler, {'path': os.path.join(webroot, 'js')}),
+        (r"/custom/(.*)", tornado.web.StaticFileHandler, {'path': os.path.join(webroot, 'custom')}),
+        (r"/images/(.*)", tornado.web.StaticFileHandler, {'path': os.path.join(webroot, 'images')}),
+        (r"/help/(.*)", tornado.web.StaticFileHandler, {'path': os.path.join(webroot, '.help')}),
+        (r"/fonts/(.*)", tornado.web.StaticFileHandler, {'path': os.path.join(webroot, 'fonts')}),
         (r"/ec2", api.ComputeHandler),
         (r"/support", support.ComputeHandler),
         (r"/(.*)", server.RootHandler),
@@ -30,7 +39,5 @@ if __name__ == "__main__":
 #    (hostname, alt_host, ipaddrs) = socket.gethostbyaddr(socket.gethostname())
 #    for ip in ipaddrs:
 #      print "host IP: "+ip
-    server.config = ConfigParser.ConfigParser()
-    server.config.read('server/eui.ini')
     application.listen(server.config.getint('eui', 'uiport'))
     tornado.ioloop.IOLoop.instance().start()
