@@ -19,25 +19,23 @@
  ************************************************************************/
 package com.eucalyptus.reporting.event_store;
 
+import java.util.Set;
 import javax.persistence.*;
 
 import org.hibernate.annotations.Entity;
 
-import com.eucalyptus.entities.AbstractPersistent;
-
-@SuppressWarnings("serial")
 @Entity @javax.persistence.Entity
 @PersistenceContext(name="eucalyptus_reporting")
 @Table(name="reporting_s3_object_create_events")
 public class ReportingS3ObjectCreateEvent
-	extends AbstractPersistent
+	extends ReportingEventSupport
 {
+	private static final long serialVersionUID = 1L;
+
 	@Column(name="s3_bucket_name", nullable=false)
 	protected String s3BucketName;
 	@Column(name="s3_object_name", nullable=false)
 	protected String s3ObjectName;
-	@Column(name="timestamp_ms", nullable=false)
-	protected Long timestampMs;
 	@Column(name="user_id", nullable=false)
 	protected String userId;
 	@Column(name="s3_object_size", nullable=false)
@@ -48,12 +46,6 @@ public class ReportingS3ObjectCreateEvent
  	 */
 	protected ReportingS3ObjectCreateEvent()
 	{
-		//NOTE: hibernate will overwrite these
-		this.s3ObjectName = null;
-		this.s3BucketName = null;
-		this.s3ObjectSize = null;
-		this.timestampMs = null;
-		this.userId = null;
 	}
 
 	/**
@@ -83,14 +75,22 @@ public class ReportingS3ObjectCreateEvent
 		return this.userId;
 	}
 	
-	public Long getTimestampMs()
-	{
-		return this.timestampMs;
-	}
-
 	public Long getS3ObjectSize()
 	{
 	    	return this.s3ObjectSize;
+	}
+
+	@Override
+	public EventDependency asDependency() {
+		return asDependency( "s3ObjectName", s3ObjectName );
+	}
+
+  @Override
+	public Set<EventDependency> getDependencies() {
+		return withDependencies()
+				.user( userId )
+				.relation( ReportingS3BucketCreateEvent.class, "s3BucketName", s3BucketName )
+				.set();
 	}
 
 	@Override

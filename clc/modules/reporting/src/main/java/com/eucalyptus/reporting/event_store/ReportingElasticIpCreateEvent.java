@@ -19,23 +19,21 @@
  ************************************************************************/
 package com.eucalyptus.reporting.event_store;
 
+import java.util.Set;
 import javax.persistence.*;
 
 import org.hibernate.annotations.Entity;
 
-import com.eucalyptus.entities.AbstractPersistent;
-
-@SuppressWarnings("serial")
 @Entity @javax.persistence.Entity
 @PersistenceContext(name="eucalyptus_reporting")
 @Table(name="reporting_elastic_ip_create_events")
 public class ReportingElasticIpCreateEvent
-	extends AbstractPersistent
+	extends ReportingEventSupport
 {
+	private static final long serialVersionUID = 1L;
+
 	@Column(name="uuid", nullable=false)
 	private String uuid;
-	@Column(name="timestamp_ms", nullable=false)
-	private Long timestampMs;
 	@Column(name="ip", nullable=false)
 	private String ip;
 	@Column(name="user_id", nullable=false)
@@ -47,11 +45,6 @@ public class ReportingElasticIpCreateEvent
  	 */
 	protected ReportingElasticIpCreateEvent()
 	{
-		//NOTE: hibernate will overwrite these
-		this.uuid = null;
-		this.timestampMs = null;
-		this.ip = null;
-		this.userId = null;
 	}
 
 	/**
@@ -70,11 +63,6 @@ public class ReportingElasticIpCreateEvent
 		return this.uuid;
 	}
 	
-	public Long getTimestampMs()
-	{
-		return this.timestampMs;
-	}
-
 	public String getIp()
 	{
 		return this.ip;
@@ -83,6 +71,18 @@ public class ReportingElasticIpCreateEvent
 	public String getUserId()
 	{
 		return this.userId;
+	}
+
+	@Override
+	public EventDependency asDependency() {
+		return asDependency( "uuid", uuid );
+	}
+
+  @Override
+	public Set<EventDependency> getDependencies() {
+		return withDependencies()
+				.user( userId )
+				.set();
 	}
 
 	@Override

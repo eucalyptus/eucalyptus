@@ -1,36 +1,30 @@
 package com.eucalyptus.reporting.event_store;
 
+import java.util.Set;
 import javax.persistence.Column;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 
 import org.hibernate.annotations.Entity;
 
-import com.eucalyptus.entities.AbstractPersistent;
-
-@SuppressWarnings("serial")
 @Entity @javax.persistence.Entity
 @PersistenceContext(name="eucalyptus_reporting")
 @Table(name="reporting_volume_detach_events")
 public class ReportingVolumeDetachEvent
-	extends AbstractPersistent
+	extends ReportingEventSupport
 {
+	private static final long serialVersionUID = 1L;
+
 	@Column(name="volume_uuid", nullable=false)
 	private String volumeUuid;
 	@Column(name="instance_uuid", nullable=false)
 	private String instanceUuid;
 	@Column(name="size_gb", nullable = false)
 	private Long sizeGB;
-	@Column(name="timestamp_ms", nullable=false)
-	private Long timestampMs;
 
 	
 	ReportingVolumeDetachEvent()
 	{
-		this.volumeUuid = null;
-		this.instanceUuid = null;
-		this.sizeGB = null;
-		this.timestampMs = null;
 	}
 	
 	ReportingVolumeDetachEvent(String volumeUuid, String instanceUuid,
@@ -56,10 +50,13 @@ public class ReportingVolumeDetachEvent
 	{
 	    	return sizeGB;
 	}
-	
-	public Long getTimestampMs()
-	{
-		return timestampMs;
+
+	@Override
+	public Set<EventDependency> getDependencies() {
+		return withDependencies()
+				.relation( ReportingVolumeCreateEvent.class, "uuid", volumeUuid )
+				.relation( ReportingInstanceCreateEvent.class, "uuid", instanceUuid )
+				.set();
 	}
 
 	@Override

@@ -19,34 +19,29 @@
  ************************************************************************/
 package com.eucalyptus.reporting.event_store;
 
+import java.util.Set;
 import javax.persistence.Column;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 
 import org.hibernate.annotations.Entity;
 
-import com.eucalyptus.entities.AbstractPersistent;
-
-@SuppressWarnings("serial")
 @Entity @javax.persistence.Entity
 @PersistenceContext(name="eucalyptus_reporting")
 @Table(name="reporting_elastic_ip_attach_events")
 public class ReportingElasticIpAttachEvent
-	extends AbstractPersistent
+	extends ReportingEventSupport
 {
-	@Column(name="ip_uuid", nullable=false)
+  private static final long serialVersionUID = 1L;
+
+  @Column(name="ip_uuid", nullable=false)
 	private String ipUuid;
 	@Column(name="instance_uuid", nullable=false)
 	private String instanceUuid;
-	@Column(name="timestamp_ms", nullable=false)
-	private Long timestampMs;
-	
-	
-	
+
 	protected ReportingElasticIpAttachEvent(String ipUuid, String instanceUuid,
 			Long timestampMs)
 	{
-		super();
 		this.ipUuid = ipUuid;
 		this.instanceUuid = instanceUuid;
 		this.timestampMs = timestampMs;
@@ -54,10 +49,6 @@ public class ReportingElasticIpAttachEvent
 
 	protected ReportingElasticIpAttachEvent()
 	{
-		super();
-		this.ipUuid = null;
-		this.instanceUuid = null;
-		this.timestampMs = null;
 	}
 
 	public String getIpUuid()
@@ -69,10 +60,12 @@ public class ReportingElasticIpAttachEvent
 	{
 		return instanceUuid;
 	}
-	
-	public Long getTimestampMs()
-	{
-		return timestampMs;
+
+  @Override
+	public Set<EventDependency> getDependencies() {
+		return withDependencies()
+				.relation(ReportingElasticIpCreateEvent.class, "uuid", ipUuid)
+				.set();
 	}
 
 	@Override

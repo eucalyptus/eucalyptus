@@ -18,7 +18,7 @@
   CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
   additional information or have any questions.
   -->
-<binding force-classes="true" add-constructors="true" name="www_eucalyptus_com_ns_2012_08_24">
+<binding force-classes="true" add-constructors="true" name="www_eucalyptus_com_ns_reporting_2012_08_24">
     <namespace uri="http://www.eucalyptus.com/ns/reporting/2012-08-24/" default="elements"/>
 
     <format
@@ -26,7 +26,8 @@
             deserializer="org.jibx.runtime.Utility.deserializeDateTime"
             serializer="com.eucalyptus.ws.util.SerializationUtils.serializeDateTime"/>
 
-    <mapping class="com.eucalyptus.reporting.service.ReportingMessage" abstract="true"/>
+    <mapping class="com.eucalyptus.reporting.service.ReportingMessage" abstract="true">
+    </mapping>
     <mapping class="com.eucalyptus.reporting.service.ReportingResponseMetadataType" abstract="true">
         <value name="RequestId" field="requestId"/>
     </mapping>
@@ -50,6 +51,8 @@
     </mapping>
     <mapping name="ExportData" class="com.eucalyptus.reporting.service.ExportDataType" extends="com.eucalyptus.reporting.service.ReportingMessage">
         <structure map-as="com.eucalyptus.reporting.service.ReportingMessage"/>
+        <value name="Start" field="startDate"/>
+        <value name="End" field="endDate" usage="required"/>
     </mapping>
     <mapping name="ExportDataResponse" class="com.eucalyptus.reporting.service.ExportDataResponseType" extends="com.eucalyptus.reporting.service.ReportingMessage">
         <structure map-as="com.eucalyptus.reporting.service.ReportingMessage"/>
