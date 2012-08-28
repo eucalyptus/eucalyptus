@@ -177,7 +177,7 @@ public class ReportingDataExportService {
         addToExportList(exportData, dependencies, (ReportingEventSupport) value);
       } else if ( value instanceof ReportingUser) {
         final ReportingUser user = (ReportingUser) value;
-        dependencies.add( new EventDependency( ReportingUser.class, "id", user.getId() ) );
+        dependencies.add( dependency );
 
         ensureDependency(
             exportData,
@@ -185,6 +185,10 @@ public class ReportingDataExportService {
             new EventDependency( ReportingAccount.class, "id", user.getAccountId() ) );
 
         exportData.add( user );
+      }  else if ( value instanceof ReportingAccount ) {
+        final ReportingAccount account = (ReportingAccount) value;
+        dependencies.add( dependency );
+        exportData.add( account );
       }
     }
   }
