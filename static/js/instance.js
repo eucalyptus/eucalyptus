@@ -25,6 +25,8 @@
     delDialog : null,
     emiToManifest : {},
     emiToPlatform : {},
+    instVolMap : {},// {i-123456: {vol-123456:attached,vol-234567:attaching,...}}
+    instIpMap : {}, // {i-123456: 192.168.0.1}
     // TODO: is _init() the right method to instantiate everything? 
     _init : function() {
       var thisObj = this;
@@ -33,9 +35,14 @@
       var $instTable = $wrapper.children().first();
       var $instHelp = $wrapper.children().last();
       this.element.add($instTable);
+
       $.when(
         thisObj._getEmi()
-      ).done(function(out){
+      ).then( 
+        thisObj._mapVolumeState()
+       ).then(
+        thisObj._mapIp()
+       ).done(function(out){
           thisObj.tableWrapper = $instTable.eucatable({
           id : 'instances', // user of this widget should customize these options,
           dt_arg : {
@@ -76,8 +83,7 @@
             resource_found : instance_found,
           },
           menu_actions : function(args){
-            // dimension: #selected, inst_state, vol_state, type            
- 
+            return thisObj._createMenuActions(); 
           },
           help_click : function(evt) {
             // TODO: make this a reusable operation
@@ -129,6 +135,150 @@
       });
     },
 
+    _createMenuActions : function(args) {
+      var thisObj = this;
+    // # selected rows, instance_state, attach state, inst type
+      var selectedRows = thisObj.tableWrapper.eucatable('getSelectedRows');  
+      var numSelected = selectedRows.length;
+      var stateMap = {};
+      var rootTypeMap = {}; 
+      var instIds = [];
+      $.each(selectedRows, function(rowIdx, row){
+        $.each(row, function(key, val){
+          instIds.push(row['id'].toLowerCase());
+          if(key==='state') {
+            if(!stateMap[val])
+              stateMap[val] = [row['id'].toLowerCase()];
+            else
+              stateMap[val].push(row['id'].toLowerCase()); 
+          } else if(key === 'root_device_type')
+
+            if(!rootTypeMap[val])
+              rootTypeMap[val] = [row['id'].toLowerCase()];
+            else
+              rootTypeMap[val].push(row['id'].toLowerCase()); 
+        });
+      });
+     var menuItems = {};
+
+     if(numSelected === 1 && 'running' in stateMap && $.inArray(instIds[0], stateMap['running']>=0)){
+       menuItems['connect'] = {"name":instance_action_connect, callback: function(key, opt) { ; }}
+     }
+
+     if(numSelected >= 1 && 'ebs' in rootTypeMap && !('instance-store' in rootTypeMap) &&
+        ('running' in stateMap) && allInArray(instIds, stateMap['running'])){
+       menuItems['stop'] = {"name":instance_action_stop, callback: function(key, opt){ ; }}
+     }
+
+     if(numSelected >= 1 && 'ebs' in rootTypeMap && !('instance-store' in rootTypeMap) &&
+       ('stopped' in stateMap) && allInArray(instIds, stateMap['stopped'])){
+       menuItems['start'] = {"name":instance_action_start, callback: function(key, opt){ ; }} 
+     }
+
+     if(numSelected >= 1 && ('running' in stateMap) && allInArray(instIds, stateMap['running'])){
+       menuItems['reboot'] = {"name":instance_action_reboot, callback: function(key, opt){ ; }}
+     }
+
+     if(numSelected == 1){
+       menuItems['launchmore'] = {"name":instance_action_launch_more, callback: function(key, opt){ ; }}
+     }
+  
+     if(numSelected >= 1){ // TODO: no state check for terminate?
+       menuItems['terminate'] = {"name":instance_action_terminate, callback: function(key, opt){ ; }}
+     }
+
+     if(numSelected === 1 && 'running' in stateMap && $.inArray(instIds[0], stateMap['running']>=0)){
+       menuItems['console'] = {"name":instance_action_console, callback: function(key, opt) { ; }}
+       menuItems['attach'] = {"name":instance_action_attach, callback: function(key, opt) { ; }}
+     }
+   
+     // detach-volume is for one selected instance 
+     if(numSelected === 1 && 'running' in stateMap && $.inArray(instIds[0], stateMap['running']>=0) && 
+        (instIds[0] in thisObj.instVolMap)){
+       var vols = thisObj.instVolMap[instIds[0]];
+       var attachedFound = false;
+       $.each(vols, function(vol, state){
+         if(state==='attached')
+           attachedFound = true;
+       });   
+       if(attachedFound)
+         menuItems['detach'] = {"name":instance_action_detach, callback: function(key, opt) { ; }}
+     }
+
+     // TODO: assuming associate-address is valid for only running/pending instances
+     if(numSelected === 1 && ('running' in stateMap || 'pending' in stateMap) && ($.inArray(instIds[0], stateMap['running']>=0) || $.inArray(instIds[0], stateMap['pending'] >=0)))
+       menuItems['associate'] = {"name":instance_action_associate, callback: function(key, opt){; }}
+  
+     // TODO: assuming disassociate-address is for only one selected instance 
+     if(numSelected  === 1 && instIds[0] in thisObj.instIpMap){
+       menuItems['disassociate'] = {"name":instance_action_disassociate, callback: function(key, opt){;}}
+     }
+ 
+     return menuItems;
+    },
+    // TODO: should be auto-reloaded
+    _mapVolumeState : function() {
+      var thisObj = this;
+      $.ajax({
+        type:"GET",
+        url:"/ec2?Action=DescribeVolumes",
+        data:"_xsrf="+$.cookie('_xsrf'),
+        dataType:"json",
+        async:"false",
+        success: function(data, textStatus, jqXHR){
+          if (data.results) {
+            thisObj.instVolMap = {};
+            $.each(data.results, function(idx, volume){
+              if (volume.attach_data && volume.attach_data['status']){
+                var inst = volume.attach_data['instance_id'].toLowerCase();
+                var state = volume.attach_data['status'];
+                var vol_id = volume.id;
+                if(!(inst in thisObj.instVolMap))
+                  thisObj.instVolMap[inst] = {};
+                var vols = thisObj.instVolMap[inst];
+                $.extend(vols, {vol_id:state})
+              } 
+            });
+          } else {
+            ;
+          }
+        },
+        error: function(jqXHR, textStatus, errorThrown){ //TODO: need to call notification subsystem
+          ;
+        }
+      });
+    },
+
+    // TODO: should be auto-reloaded
+    _mapIp : function() {
+      var thisObj = this;
+      $.ajax({
+        type:"GET",
+        url:"/ec2?Action=DescribeAddresses",
+        data:"_xsrf="+$.cookie('_xsrf'),
+        dataType:"json",
+        async:"false",
+        success: function(data, textStatus, jqXHR){
+          if (data.results) {
+            thisObj.instIpMap = {};
+            $.each(data.results, function(idx, addr){
+              if (addr['instance_id'] && addr['instance_id'].length > 0){
+                var instId = addr['instance_id'];
+                instId = instId.substring(0, 10); 
+                instId = instId.toLowerCase();
+                thisObj.instIpMap[instId] = addr['public_ip'];
+              }
+            });
+          }else{
+            ;
+          }
+        },
+        error: function(jqXHR, textStatus, errorThrown){ //TODO: need to call notification subsystem
+          ;
+        }
+      });
+    },
+     
 /**** Public Methods ****/
     close: function() {
       this._super('close');
