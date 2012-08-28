@@ -19,42 +19,34 @@
  ************************************************************************/
 package com.eucalyptus.reporting.event_store;
 
+import java.util.Set;
 import javax.persistence.Column;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 
 import org.hibernate.annotations.Entity;
 
-import com.eucalyptus.entities.AbstractPersistent;
-
-@SuppressWarnings("serial")
 @Entity @javax.persistence.Entity
 @PersistenceContext(name="eucalyptus_reporting")
 @Table(name="reporting_s3_bucket_delete_events")
 public class ReportingS3BucketDeleteEvent
-	extends AbstractPersistent
+	extends ReportingEventSupport
 {
+	private static final long serialVersionUID = 1L;
+
 	@Column(name="s3_bucket_name", nullable=false)
 	protected String s3BucketName;
 	@Column(name="s3_bucket_size", nullable=false)
 	protected Long s3BucketSize;
 	@Column(name="s3_bucket_userId", nullable=false)
 	protected String s3userId;
-	@Column(name="timestamp_ms", nullable=false)
-	protected Long timestampMs;
 
 	protected ReportingS3BucketDeleteEvent()
 	{
-		super();
-		this.timestampMs = null;
-		this.s3BucketName = null;
-		this.s3BucketSize = null;
-		this.s3userId = null;
 	}
 
 	protected ReportingS3BucketDeleteEvent(String s3BucketName, Long s3BucketSize, String userId, Long timeInMs)
 	{
-		super();
 		this.s3BucketName = s3BucketName;
 		this.timestampMs = timeInMs;
 		this.s3BucketSize = s3BucketSize;
@@ -66,11 +58,6 @@ public class ReportingS3BucketDeleteEvent
 		return s3BucketName;
 	}
 
-	public Long getTimestampMs()
-	{
-		return timestampMs;
-	}
-
 	public Long getS3BucketSize() {
 	    return s3BucketSize;
 	}
@@ -79,6 +66,15 @@ public class ReportingS3BucketDeleteEvent
 	public String getS3userId() {
 	    return s3userId;
 	}
+
+	@Override
+	public Set<EventDependency> getDependencies() {
+		return withDependencies()
+				.user( s3userId )
+				.relation( ReportingS3BucketCreateEvent.class, "s3BucketName", s3BucketName )
+				.set();
+	}
+
 
 	@Override
 	public int hashCode() {

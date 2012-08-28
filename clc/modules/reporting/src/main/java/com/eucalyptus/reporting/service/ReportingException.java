@@ -17,45 +17,34 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.reporting.event_store;
+package com.eucalyptus.reporting.service;
 
-import java.util.Set;
-import javax.persistence.Column;
-import javax.persistence.PersistenceContext;
-import javax.persistence.Table;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import com.eucalyptus.util.EucalyptusCloudException;
 
-import org.hibernate.annotations.Entity;
+/**
+ *
+ */
+public class ReportingException extends EucalyptusCloudException {
+  public static final String NOT_AUTHORIZED = "NotAuthorized";
+  private static final long serialVersionUID = 1L;
 
-@Entity @javax.persistence.Entity
-@PersistenceContext(name="eucalyptus_reporting")
-@Table(name="reporting_volume_snapshot_delete_events")
-public class ReportingVolumeSnapshotDeleteEvent
-	extends ReportingEventSupport
-{
-	private static final long serialVersionUID = 1L;
+  private final HttpResponseStatus status;
+  private final String error;
 
-	@Column(name="uuid", nullable=false)
-	private String uuid;
+  public ReportingException( final HttpResponseStatus status,
+                             final String error,
+                             final String message ) {
+    super( message );
+    this.status = status;
+    this.error = error;
+  }
 
-	protected ReportingVolumeSnapshotDeleteEvent(String uuid, Long timestampMs)
-	{
-		this.uuid = uuid;
-		this.timestampMs = timestampMs;
-	}
+  public HttpResponseStatus getStatus() {
+    return status;
+  }
 
-	protected ReportingVolumeSnapshotDeleteEvent()
-	{
-	}
-
-	public String getUuid()
-	{
-		return uuid;
-	}
-
-	@Override
-	public Set<EventDependency> getDependencies() {
-		return withDependencies()
-				.relation( ReportingVolumeSnapshotCreateEvent.class, "uuid", uuid )
-				.set();
-	}
+  public String getError() {
+    return error;
+  }
 }

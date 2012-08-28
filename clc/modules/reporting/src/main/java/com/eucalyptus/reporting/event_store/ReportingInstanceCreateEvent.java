@@ -19,23 +19,21 @@
  ************************************************************************/
 package com.eucalyptus.reporting.event_store;
 
+import java.util.Set;
 import javax.persistence.*;
 
 import org.hibernate.annotations.Entity;
 
-import com.eucalyptus.entities.AbstractPersistent;
-
-@SuppressWarnings("serial")
 @Entity @javax.persistence.Entity
 @PersistenceContext(name="eucalyptus_reporting")
 @Table(name="reporting_instance_create_events")
 public class ReportingInstanceCreateEvent
-	extends AbstractPersistent
+	extends ReportingEventSupport
 {
+	private static final long serialVersionUID = 1L;
+
 	@Column(name="uuid", nullable=false, unique=true)
 	private String uuid;
-	@Column(name="timestamp_ms", nullable=false)
-	private Long timestampMs;
 	@Column(name="instance_id", nullable=false)
 	private String instanceId;
 	@Column(name="instance_type", nullable=false)
@@ -53,14 +51,6 @@ public class ReportingInstanceCreateEvent
  	 */
 	protected ReportingInstanceCreateEvent()
 	{
-		//NOTE: hibernate will overwrite these
-		this.uuid = null;
-		this.timestampMs = null;
-		this.instanceId = null;
-		this.instanceType = null;
-		this.userId = null;
-		this.clusterName = null;
-		this.availabilityZone = null;
 	}
 
 	/**
@@ -83,16 +73,6 @@ public class ReportingInstanceCreateEvent
 		return this.uuid;
 	}
 	
-	void setUuid(String uuid)
-	{
-		this.uuid = uuid;
-	}
-	
-	public Long getTimestampMs()
-	{
-		return this.timestampMs;
-	}
-
 	public String getInstanceId()
 	{
 		return this.instanceId;
@@ -116,6 +96,18 @@ public class ReportingInstanceCreateEvent
 	public String getAvailabilityZone()
 	{
 		return this.availabilityZone;
+	}
+
+	@Override
+	public EventDependency asDependency() {
+		return asDependency( "uuid", uuid );
+	}
+
+  @Override
+	public Set<EventDependency> getDependencies() {
+		return withDependencies()
+				.user( userId )
+				.set();
 	}
 
 	@Override
