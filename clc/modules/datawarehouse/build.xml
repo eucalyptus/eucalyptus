@@ -26,4 +26,8 @@
     </uptodate>
 
     <import file="../module-inc.xml"/>
+
+    <target name="install">
+        <!-- Datawarehouse JAR must not be included in regular distribution  -->
+    </target>
 </project>

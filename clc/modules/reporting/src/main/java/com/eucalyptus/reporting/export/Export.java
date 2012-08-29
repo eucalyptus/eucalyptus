@@ -19,7 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.reporting.export;
 
-import static com.eucalyptus.reporting.export.ExportUtils.eventClasses;
+import static com.eucalyptus.reporting.export.ExportUtils.getEventClasses;
 import java.util.Date;
 import java.util.List;
 import java.util.Set;
@@ -55,7 +55,7 @@ public class Export {
     }
 
     final Set<ReportingEventSupport.EventDependency> dependencies = Sets.newHashSet();
-    for ( final Class<? extends AbstractPersistent> eventClass : eventClasses ) {
+    for ( final Class<? extends AbstractPersistent> eventClass : getEventClasses() ) {
       final EntityTransaction transaction = Entities.get( eventClass );
       try {
         addToExportList(

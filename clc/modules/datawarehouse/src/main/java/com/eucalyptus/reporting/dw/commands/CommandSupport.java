@@ -30,8 +30,7 @@ import org.hibernate.ejb.Ejb3Configuration;
 import org.logicalcobwebs.proxool.ProxoolException;
 import org.logicalcobwebs.proxool.configuration.PropertyConfigurator;
 import com.eucalyptus.entities.PersistenceContexts;
-import com.eucalyptus.reporting.domain.ReportingUser;
-import com.eucalyptus.reporting.event_store.ReportingEventSupport;
+import com.eucalyptus.reporting.export.ExportUtils;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Objects;
 import com.google.common.collect.Iterables;
@@ -79,9 +78,9 @@ abstract class CommandSupport {
 
     Ejb3Configuration config = new Ejb3Configuration();
     config.setProperties( properties );
-    config.addPackage(ReportingUser.class.getPackage().getName() );
-    config.addPackage( ReportingEventSupport.class.getPackage().getName() );
-
+    for ( Class<?> eventClass : ExportUtils.getPersistentClasses() ) {
+      config.addAnnotatedClass( eventClass );
+    }
     PersistenceContexts.registerPersistenceContext( "eucalyptus_reporting", config );
   }
 

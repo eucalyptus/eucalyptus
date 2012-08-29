@@ -20,6 +20,8 @@
 package com.eucalyptus.reporting.export;
 
 import java.util.List;
+import com.eucalyptus.reporting.domain.ReportingAccount;
+import com.eucalyptus.reporting.domain.ReportingUser;
 import com.eucalyptus.reporting.event_store.ReportingElasticIpAttachEvent;
 import com.eucalyptus.reporting.event_store.ReportingElasticIpCreateEvent;
 import com.eucalyptus.reporting.event_store.ReportingElasticIpDeleteEvent;
@@ -40,13 +42,19 @@ import com.eucalyptus.reporting.event_store.ReportingVolumeSnapshotCreateEvent;
 import com.eucalyptus.reporting.event_store.ReportingVolumeSnapshotDeleteEvent;
 import com.eucalyptus.reporting.event_store.ReportingVolumeUsageEvent;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 
 /**
  *
  */
-class ExportUtils {
+public class ExportUtils {
 
-  static final List<Class<? extends ReportingEventSupport>> eventClasses = ImmutableList.of(
+  private static final List<Class<?>> supportClasses = ImmutableList.<Class<?>>of(
+      ReportingUser.class,
+      ReportingAccount.class
+  );
+
+  private static final List<Class<? extends ReportingEventSupport>> eventClasses = ImmutableList.of(
       ReportingElasticIpCreateEvent.class,
       ReportingElasticIpAttachEvent.class,
       ReportingElasticIpDetachEvent.class,
@@ -66,4 +74,20 @@ class ExportUtils {
       ReportingVolumeSnapshotDeleteEvent.class,
       ReportingVolumeUsageEvent.class
   );
+
+  public static Class<?> getTemplateClass() {
+    return eventClasses.get( 0 );
+  }
+
+  public static Iterable<Class<? extends ReportingEventSupport>> getEventClasses() {
+    return eventClasses;
+  }
+
+  public static Iterable<Class<?>> getSupportClasses() {
+    return supportClasses;
+  }
+
+  public static Iterable<Class<?>> getPersistentClasses() {
+    return Iterables.<Class<?>>concat( ExportUtils.eventClasses, ExportUtils.supportClasses );
+  }
 }

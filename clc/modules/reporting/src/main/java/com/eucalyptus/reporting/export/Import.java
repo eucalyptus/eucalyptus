@@ -23,9 +23,6 @@ import java.util.List;
 import javax.persistence.EntityTransaction;
 import org.hibernate.Criteria;
 import com.eucalyptus.entities.Entities;
-import com.eucalyptus.reporting.domain.ReportingAccount;
-import com.eucalyptus.reporting.domain.ReportingUser;
-import com.eucalyptus.reporting.event_store.ReportingEventSupport;
 
 /**
  *
@@ -33,18 +30,16 @@ import com.eucalyptus.reporting.event_store.ReportingEventSupport;
 public class Import {
 
   public static void deleteAll() {
-    for ( final Class<? extends ReportingEventSupport> reportingClass : ExportUtils.eventClasses ) {
+    for ( final Class<?> reportingClass : ExportUtils.getPersistentClasses() ) {
       deleteAll( reportingClass );
     }
-    deleteAll( ReportingUser.class );
-    deleteAll( ReportingAccount.class );
   }
 
   public static void importData( final ReportingExport export ) {
-    final EntityTransaction transaction = Entities.get( ExportUtils.eventClasses.get(0) );
+    final EntityTransaction transaction = Entities.get( ExportUtils.getTemplateClass() );
     try {
       for ( final Object item : export ) {
-        Entities.merge( item );
+        Entities.mergeDirect(item);
       }
     } finally {
       transaction.commit();
@@ -52,7 +47,7 @@ public class Import {
   }
 
   private static void deleteAll( final Class<?> persistentClass ) {
-    final EntityTransaction transaction = Entities.get(persistentClass);
+    final EntityTransaction transaction = Entities.get( ExportUtils.getTemplateClass() );
     try {
       final List<?> entities = Entities.createCriteria(persistentClass)
           .setResultTransformer(Criteria.DISTINCT_ROOT_ENTITY)
