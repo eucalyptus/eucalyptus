@@ -28,7 +28,7 @@ application = tornado.web.Application([
         (r"/js/(.*)", tornado.web.StaticFileHandler, {'path': os.path.join(webroot, 'js')}),
         (r"/custom/(.*)", tornado.web.StaticFileHandler, {'path': os.path.join(webroot, 'custom')}),
         (r"/images/(.*)", tornado.web.StaticFileHandler, {'path': os.path.join(webroot, 'images')}),
-        (r"/help/(.*)", tornado.web.StaticFileHandler, {'path': os.path.join(webroot, '.help')}),
+        (r"/help/(.*)", tornado.web.StaticFileHandler, {'path': os.path.join(webroot, 'help')}),
         (r"/fonts/(.*)", tornado.web.StaticFileHandler, {'path': os.path.join(webroot, 'fonts')}),
         (r"/ec2", api.ComputeHandler),
         (r"/support", support.ComputeHandler),
