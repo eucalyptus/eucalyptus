@@ -259,14 +259,16 @@ public class EucalyptusData implements BaseData {
 }
 /** *******************************************************************************/
 
-public class DescribeSensorsType extends EucalyptusMessage {
+public class DescribeSensorsType extends CloudClusterMessage {
     Integer historySize;
     Integer collectionIntervalTimeMs;
     @HttpParameterMapping (parameter = "sensorId")
     ArrayList<String> sensorIds = new ArrayList<String>();
     @HttpParameterMapping (parameter = "instanceId")
     ArrayList<String> instanceIds = new ArrayList<String>();
-    
+    String nameServer;
+    ArrayList<String> clusterControllers = new ArrayList<String>();
+ 
     def DescribeSensorsType(){}
     
     def DescribeSensorsType (Integer historySize, Integer collectioIntervalTimeMs, ArrayList<String> sensorIds, ArrayList<String> instanceIds ) {
@@ -282,7 +284,7 @@ public class DescribeSensorsType extends EucalyptusMessage {
       }
 }
 
-public class DescribeSensorsResponseType extends EucalyptusMessage {
+public class DescribeSensorsResponseType extends CloudClusterMessage {
     
     ArrayList<SensorsResourceType> sensorResources = new ArrayList<SensorsResourceType>();
     
