@@ -181,7 +181,7 @@
         $titleBar.find('span').text(thisObj.options.title);
       }  
     },
-    
+    /// TODO: fix    
     setSelectedResources : function (resources) {
       $span = this.element.find("span.resource-ids");
       $span.html('');

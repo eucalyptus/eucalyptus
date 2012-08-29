@@ -555,33 +555,18 @@
       this.attachDialog.eucadialog('open');
     },
 
-    _detachAction : function(row, force) {
+    _detachAction : function(){
       var thisObj = this;
-      volumes = [];
-      if ( !row ) {
-        rows = thisObj.tableWrapper.eucatable('getSelectedRows');
-        for(r in rows){
-          $row = $(rows[r]);
-          volumes.push([$row.find('td:eq(1)').text(), $row.find('td:eq(4)').text()]);
-        }
-      } else {
-        volumes.push([row.find('td:eq(1)').text(), row.find('td:eq(4)').text()]);
-      }
-
+      var rows = thisObj.tableWrapper.eucatable('getSelectedRows');
       dialogToUse = this.detachDialog;
-      if ( volumes.length > 0 ) {
+      if ( rows.length > 0 ) {
         $detachIds = dialogToUse.find("tbody.resource-ids");
         $detachIds.html('');
         $volumesToDetach = dialogToUse.find("#volumes-to-detach");
-        ids = [];
-        for ( i = 0; i<volumes.length; i++ ) {
-          vol = escapeHTML(volumes[i][0]);
-          inst = escapeHTML(volumes[i][1]);
-          ids.push(volumes[i][0]);
-          $tr = $('<tr>').append($('<td>').text(vol),$('<td>').text(inst));
+        $.each(rows, function(idx, volume){
+          $tr = $('<tr>').append($('<td>').text(volume['id']),$('<td>').text(volume.attach_data['instance_id']));
           $detachIds.append($tr);
-        }
-        $volumesToDetach.html(ids.join(ID_SEPARATOR));
+        });
         dialogToUse.dialog('open');
       }
     },
@@ -589,7 +574,7 @@
     _createSnapshotAction : function(volumeId) {
       volumeToUse = '';
       if ( !volumeId ) {
-        rows = this.tableWrapper.eucatable('getAllSelectedRows', 1);
+        rows = this.tableWrapper.eucatable('getSelectedRows', 1);
         volumeToUse = rows[0];
       } else {
         volumeToUse = volumeId;
@@ -603,32 +588,32 @@
 
     _createMenuActions : function() {
       var thisObj = this;
-      var selectedVolumes = thisObj.baseTable.eucatable('getSelectedRows', 8); // 8th column=status (this is volume's knowledge)
+      var volumeStates = thisObj.baseTable.eucatable('getSelectedRows', 8); // 8th column=status (this is volume's knowledge)
       var itemsList = {};
+    
+      (function(){
+        itemsList['attach'] = { "name": volume_action_attach, callback: function(key, opt) {;}, disabled: function(){ return true;} } 
+        itemsList['detach'] = { "name": volume_action_detach, callback: function(key, opt) {;}, disabled: function(){ return true;} }
+        itemsList['create_snapshot'] = { "name": volume_action_create_snapshot, callback: function(key, opt) {;}, disabled: function(){ return true;} }
+        itemsList['delete'] = { "name": volume_action_delete, callback: function(key, opt) {;}, disabled: function(){ return true;} }
+      })();
+
       // add attach action
-      if ( selectedVolumes.length == 1 && selectedVolumes.indexOf('available') == 0 ){
+      if ( volumeStates.length === 1 && volumeStates.indexOf('available') === 0 ){
         itemsList['attach'] = { "name": volume_action_attach, callback: function(key, opt) { thisObj._attachAction(); } }
       }
-          // detach actions
-      if ( selectedVolumes.length > 0 ) {
-        addDetach = true;
-        for (s in selectedVolumes) {
-          if ( selectedVolumes[s] != 'in-use' ) {
-            addDetach = false;
-            break;
-          }
-        }
-        if ( addDetach )
-          itemsList['detach'] = { "name": volume_action_detach, callback: function(key, opt) { thisObj._detachAction(false); } }
-      }
+      // detach actions
+      if ( volumeStates.length > 0  && onlyInArray('in-use', volumeStates))
+        itemsList['detach'] = { "name": volume_action_detach, callback: function(key, opt) { thisObj._detachAction(); } }
 
       // create snapshot-action
-      if ( selectedVolumes.length  == 1 ) {
-         if ( selectedVolumes[0] == 'in-use' || selectedVolumes[0] == 'available' )
+      if ( volumeStates.length  === 1) { 
+         if ( volumeStates[0] === 'in-use' || volumeStates[0] === 'available' )
             itemsList['create_snapshot'] = { "name": volume_action_create_snapshot, callback: function(key, opt) { thisObj._createSnapshotAction(); } }
       }
+
       // add delete action
-      if ( selectedVolumes.length > 0 ){
+      if ( volumeStates.length > 0 && onlyInArray('available', volumeStates)){
         itemsList['delete'] = { "name": volume_action_delete, callback: function(key, opt) { thisObj._deleteAction(); } }
       }
       return itemsList;
