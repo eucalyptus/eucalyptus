@@ -76,7 +76,7 @@
          title: keypair_dialog_del_title,
          buttons: {
            'delete': {text: keypair_dialog_del_btn, click: function() { thisObj._deleteSelectedKeyPairs(); $del_dialog.dialog("close");}},
-           'cancel': {text: keypair_dialog_cancel_btn, focus:true, click: function() { $del_dialog.dialog("close");}} 
+           'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $del_dialog.dialog("close");}} 
          },
          help: {title: help_keypair['dialog_delete_title'], content: $del_help}, 
        });
@@ -104,7 +104,7 @@
                       }
                     }
                   },
-        'cancel': {domid: 'keys-cancel-btn', text: keypair_dialog_cancel_btn, focus:true, click: function() { $add_dialog.eucadialog("close");}},
+        'cancel': {domid: 'keys-cancel-btn', text: dialog_cancel_btn, focus:true, click: function() { $add_dialog.eucadialog("close");}},
         },
         help : {title: help_keypair['dialog_add_title'], content: $add_help},
       });
@@ -121,20 +121,18 @@
       return $(rowSelector).find('td:eq(1)').text();
     },
 
-    _deleteAction : function(keyId) {
+    _deleteAction : function() {
       var thisObj = this;
-      keysToDelete = [];
-      if ( !keyId ) {
-        $tableWrapper = thisObj.tableWrapper;
-        keysToDelete = $tableWrapper.eucatable('getSelectedRows', 1);
-      } else {
-        keysToDelete[0] = keyId;
-      }
+      var keysToDelete = [];
+      var $tableWrapper = thisObj.tableWrapper;
+      keysToDelete = $tableWrapper.eucatable('getSelectedRows', 1);
+      var matrix = [];
+      $.each(keysToDelete,function(idx, key){
+        matrix.push([key]);
+      });
 
       if ( keysToDelete.length > 0 ) {
-        thisObj.delDialog.eucadialog('setSelectedResources', keysToDelete);
-        $keysToDelete = thisObj.delDialog.find("#keys-to-delete");
-        $keysToDelete.html(keysToDelete.join(ID_SEPARATOR));
+        thisObj.delDialog.eucadialog('setSelectedResources', {title:[keypair_dialog_del_resource_title], contents: matrix});
         thisObj.delDialog.dialog('open');
       }
     },
@@ -170,10 +168,10 @@
 
     _deleteSelectedKeyPairs : function () {
       var thisObj = this;
-      $keysToDelete = this.delDialog.find("#keys-to-delete");
-      var rowsToDelete = $keysToDelete.text().split(ID_SEPARATOR);
-      for ( i = 0; i<rowsToDelete.length; i++ ) {
-        var keyName = rowsToDelete[i];
+      var keysToDelete = thisObj.delDialog.eucadialog('getSelectedResources',0);
+
+      for ( i = 0; i<keysToDelete.length; i++ ) {
+        var keyName = keysToDelete[i];
         $.ajax({
           type:"GET",
           url:"/ec2?Action=DeleteKeyPair&KeyName=" + keyName,

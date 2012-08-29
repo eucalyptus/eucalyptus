@@ -99,7 +99,7 @@
          title: snapshot_delete_dialog_title,
          buttons: {
            'delete': {text: snapshot_dialog_del_btn, click: function() { thisObj._deleteListedSnapshots(); $del_dialog.dialog("close");}},
-           'cancel': {text: snapshot_dialog_cancel_btn, focus:true, click: function() { $del_dialog.dialog("close");}} 
+           'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $del_dialog.dialog("close");}} 
          },
          help: {title: help_volume['dialog_delete_title'], content: $del_help},
        });
@@ -120,7 +120,7 @@
                 $snapshot_dialog.dialog("close");
               } 
             },
-           'cancel': { text: snapshot_dialog_cancel_btn, focus:true, click: function() { $snapshot_dialog.dialog("close"); } }
+           'cancel': { text: dialog_cancel_btn, focus:true, click: function() { $snapshot_dialog.dialog("close"); } }
          },
          help: {title: help_volume['dialog_snapshot_create_title'], content: $snapshot_dialog_help},
          on_open: {spin: true, callback: function(args) {
@@ -187,10 +187,9 @@
 
     _deleteListedSnapshots : function () {
       var thisObj = this;
-      $snapshotsToDelete = this.delDialog.find("#snapshots-to-delete");
-      var rowsToDelete = $snapshotsToDelete.text().split(ID_SEPARATOR);
-      for ( i = 0; i<rowsToDelete.length; i++ ) {
-        var snapshotId = rowsToDelete[i];
+      var snapshotsToDelete = thisObj.delDialog.eucadialog('getSelectedResources',0);
+      for ( i = 0; i<snapshotsToDelete.length; i++ ) {
+        var snapshotId = snapshotsToDelete[i];
         $.ajax({
           type:"GET",
           url:"/ec2?Action=DeleteSnapshot&SnapshotId=" + snapshotId,
@@ -242,19 +241,15 @@
       });
     },
 
-    _deleteAction : function(snapshotId) {
+    _deleteAction : function(){
       var thisObj = this;
-      snapshotsToDelete = [];
-      if ( !snapshotId ) {
-        snapshotsToDelete = thisObj.tableWrapper.eucatable('getSelectedRows', 1);
-      } else {
-        snapshotsToDelete[0] = snapshotId;
-      }
-
+      snapshotsToDelete = thisObj.tableWrapper.eucatable('getSelectedRows', 1);
+      var matrix = [];
+      $.each(snapshotsToDelete,function(idx, key){
+        matrix.push([key]);
+      });
       if ( snapshotsToDelete.length > 0 ) {
-        thisObj.delDialog.eucadialog('setSelectedResources', snapshotsToDelete);
-        $snapshotsToDelete = thisObj.delDialog.find("#snapshots-to-delete");
-        $snapshotsToDelete.html(snapshotsToDelete.join(ID_SEPARATOR));
+        thisObj.delDialog.eucadialog('setSelectedResources',{title:[snapshot_delete_resource_title], contents: matrix});
         thisObj.delDialog.dialog('open');
       }
     },
