@@ -30,85 +30,162 @@
 #include <stdarg.h>
 #include <unistd.h> // usleep
 #include <pthread.h> 
+#include <assert.h>
 
 #include "eucalyptus.h"
 #include "misc.h"
 #include "sensor.h"
 #include "ipc.h"
 
-#define UNSET -1
+#define MAX_SENSOR_RESOURCES MAXINSTANCES
 
 static useconds_t next_sleep_duration_usec = DEFAULT_SENSOR_SLEEP_DURATION_USEC;
-static long long collection_interval_time_ms = UNSET;
-static int history_size = UNSET;
-static boolean initialized = FALSE;
-static sem * conf_sem = NULL;
+static sensorResourceCache * sensor_state = NULL;
+static sem * state_sem = NULL;
+
+// Never-returning function that performs polling of sensors and updates 
+// their 'resources' while holding the 'sem'. This may be called from 
+// sensor_init() directly or via a thread
+static void sensor_bottom_half (void)
+{        
+    assert(sensor_state!=NULL && state_sem!=NULL);
+
+    for (;;) {
+        usleep (next_sleep_duration_usec);
+
+        boolean skip = FALSE;
+        sem_p (state_sem);
+        if (sensor_state->collection_interval_time_ms == 0 ||
+            sensor_state->history_size == 0) {
+            skip = TRUE;
+        }
+        sem_v (state_sem);
+        
+        if (skip)
+            continue;
+
+        logprintfl (EUCADEBUG, "sensor bottom half polling sensors...\n");
+
+    }
+    
+}
 
 static void * sensor_thread (void *arg) 
 {
-    logprintfl (EUCADEBUG, "{%u} spawning sensor thread\n", (unsigned int)pthread_self());
-
-    for (;;) {
-        sleep (next_sleep_duration_usec);
-
-        if (collection_interval_time_ms == UNSET ||
-            history_size == UNSET) {
-            continue;
-        }
-        
-        
-    }
-
+    logprintfl (EUCADEBUG, "spawning sensor thread\n");
+    sensor_bottom_half ();
     return NULL;
 }
 
-int sensor_init (void)
+static void init_state (int resources_size)
 {
-    if (initialized)
-        return OK;
-    
-    conf_sem = sem_alloc (1, "mutex");
-    if (conf_sem==NULL) {
-        logprintfl (EUCAFATAL, "failed to allocate semaphore for sensor\n");
-        return ERROR_FATAL;
+    logprintfl (EUCADEBUG, "initializing sensor shared memory (%d KB)...\n",
+                (sizeof(sensorResourceCache)+sizeof(sensorResource)*(resources_size-1))/1024);
+    sensor_state->max_resources = resources_size;
+    sensor_state->collection_interval_time_ms = 0;
+    sensor_state->history_size = 0;
+    for (int i; i<resources_size; i++) {
+        sensorResource * sr = sensor_state->resources + i;
+        bzero (sr, sizeof (sensorResource));
     }
+    sensor_state->initialized = TRUE; // inter-process init done
+    logprintfl (EUCADEBUG, "initialized sensor shared memory\n");
+}
+
+// Sensor subsystem initialization routine, which must be called before 
+// all state-full sensor_* functions. If 'sem' and 'resources' are set,
+// this function will use them. Otherwise, this function will allocate 
+// memory and will perform data collection in a thread. If run_bottom_half
+// is TRUE, the logic normally running in a background thread will be
+// executed synchronously, causing sensor_init() to never return.
+int sensor_init (sem * sem, sensorResourceCache * resources, int resources_size, boolean run_bottom_half)
+{
+    int use_resources_size = MAX_SENSOR_RESOURCES;
+
+    if (sem || resources) { // we will use an externally allocated semaphore and memory region
+        if (sem==NULL || resources==NULL || resources_size<1) { // all must be set
+            return ERROR;
+        }
+
+        if (sensor_state != NULL) { // already invoked this in this process
+            if (sensor_state != resources || state_sem != sem) { // but with different params?!
+                return ERROR;
+            } else {
+                return OK;
+            }
+        } else { // first invocation in this process, so set the static pointers
+            sensor_state = resources;
+            state_sem = sem;            
+        }
+
+        // if this process is the first to get to global state, initialize it
+        sem_p (state_sem);
+        if (!sensor_state->initialized) {
+            init_state (resources_size);
+        } 
+        sem_v (state_sem);
+
+        if (! run_bottom_half)
+            return OK;
+
+        sensor_bottom_half (); // never to return
+
+    } else { // we will allocate a memory region and a semaphore in this process
+        if (resources_size>0) {
+            use_resources_size = resources_size;
+        }
+
+        if (sensor_state != NULL || state_sem != NULL) // already initialized
+            return OK;
     
-    { // start the sensor thread
-        pthread_t tcb;
-        if (pthread_create (&tcb, NULL, sensor_thread, NULL)) {
-            logprintfl (EUCAFATAL, "failed to spawn a sensor thread\n");
+        state_sem = sem_alloc (1, "mutex");
+        if (state_sem==NULL) {
+            logprintfl (EUCAFATAL, "failed to allocate semaphore for sensor\n");
             return ERROR_FATAL;
         }
-        if (pthread_detach (tcb)) {
-            logprintfl (EUCAFATAL, "failed to detach the sensor thread\n");
+        
+        sensor_state = malloc (sizeof(sensorResourceCache)+sizeof(sensorResource)*(use_resources_size-1));
+        if (sensor_state==NULL) {
+            logprintfl (EUCAFATAL, "failed to allocate memory for sensor data\n");
+            sem_free (state_sem);
             return ERROR_FATAL;
         }
+
+        init_state (use_resources_size);
+
+        { // start the sensor thread
+            pthread_t tcb;
+            if (pthread_create (&tcb, NULL, sensor_thread, NULL)) {
+                logprintfl (EUCAFATAL, "failed to spawn a sensor thread\n");
+                return ERROR_FATAL;
+            }
+            if (pthread_detach (tcb)) {
+                logprintfl (EUCAFATAL, "failed to detach the sensor thread\n");
+                return ERROR_FATAL;
+            }
+        }
     }
-
-
     
-    initialized = TRUE;
     return OK;
 }
 
 int sensor_config (int new_history_size, long long new_collection_interval_time_ms)
 {
-    if (initialized == FALSE) return 1;
-    if (new_history_size < 0) return 1; // nonsense value
-    if (new_history_size > MAX_SENSOR_VALUES) return 1; // static data struct too small
-    if (new_collection_interval_time_ms < MIN_COLLECTION_INTERVAL_MS) return 1;
-    if (new_collection_interval_time_ms > MIN_COLLECTION_INTERVAL_MS) return 1;
+    if (sensor_state == NULL || sensor_state->initialized == FALSE) return 1;
+    if (new_history_size < 0) return 2; // nonsense value
+    if (new_history_size > MAX_SENSOR_VALUES) return 3; // static data struct too small
+    if (new_collection_interval_time_ms < MIN_COLLECTION_INTERVAL_MS) return 4;
+    if (new_collection_interval_time_ms > MAX_COLLECTION_INTERVAL_MS) return 5;
 
-    if (history_size != new_history_size)
+    sem_p (state_sem);
+    if (sensor_state->history_size != new_history_size)
         logprintfl (EUCAINFO, "setting sensor history size to %d\n", new_history_size);
-    if (collection_interval_time_ms != new_collection_interval_time_ms)
+    if (sensor_state->collection_interval_time_ms != new_collection_interval_time_ms)
         logprintfl (EUCAINFO, "setting sensor collection interval time to %lld\n", new_collection_interval_time_ms);
-
-    sem_p (conf_sem);
-    history_size = new_history_size;
-    collection_interval_time_ms = new_collection_interval_time_ms;
-    sem_v (conf_sem);
-
+    sensor_state->history_size = new_history_size;
+    sensor_state->collection_interval_time_ms = new_collection_interval_time_ms;
+    sem_v (state_sem);
+    
     return 0;
 }
 
@@ -130,7 +207,7 @@ const char * sensor_type2str (int type)
         return "[invalid]";
 }
 
-int sensor_res2str (char * buf, int bufLen, const sensorResource **res, int resLen)
+int sensor_res2str (char * buf, int bufLen, sensorResource **res, int resLen)
 {
     char * s = buf;
     int left = bufLen-1;

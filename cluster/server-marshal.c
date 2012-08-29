@@ -311,7 +311,7 @@ adb_DescribeSensorsResponse_t *DescribeSensorsMarshal(adb_DescribeSensors_t *des
         sensorResource **outResources;
         int outResourcesLen;
 
-	int error = doDescribeSensors (&meta, instIds, instIdsLen, sensorIds, sensorIdsLen, &outResources, &outResourcesLen);
+	int error = doDescribeSensors (&meta, historySize, collectionIntervalTimeMs, instIds, instIdsLen, sensorIds, sensorIdsLen, &outResources, &outResourcesLen);
 
         if (error) {
             logprintfl (EUCAERROR, "ERROR: doDescribeSensors() failed error=%d\n", error);
@@ -333,8 +333,6 @@ adb_DescribeSensorsResponse_t *DescribeSensorsMarshal(adb_DescribeSensors_t *des
                 free (outResources);
             
             result = OK; // success
-
-	    logprintfl (EUCAINFO, "DescribeSensors() yay correlationId=%s userId=%s outResourcesLen=%d\n", meta.correlationId, meta.userId, outResourcesLen);
         }
     }
 
@@ -349,7 +347,6 @@ adb_DescribeSensorsResponse_t *DescribeSensorsMarshal(adb_DescribeSensors_t *des
     // set response to output
     adb_DescribeSensorsResponse_t * response   = adb_DescribeSensorsResponse_create(env);
     adb_DescribeSensorsResponse_set_DescribeSensorsResponse(response, env, output);
-    logprintfl (EUCAINFO, "DescribeSensors() returning result=%d response=%x / %p\n", result, response, response);
 
     return response;
 }

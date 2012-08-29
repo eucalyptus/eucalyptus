@@ -95,6 +95,7 @@
 #include "fault.h"
 
 #define SUPERUSER "eucalyptus"
+#define MAX_SENSOR_RESOURCES MAXINSTANCES 
 
 // Globals
 
@@ -102,6 +103,7 @@
 int config_init=0;
 int local_init=0;
 int thread_init=0;
+int sensor_initd=0;
 int init=0;
 
 // shared (between CC processes) globals
@@ -110,6 +112,7 @@ ccInstanceCache *instanceCache=NULL;
 vnetConfig *vnetconfig=NULL;
 ccResourceCache *resourceCache=NULL;
 ccResourceCache *resourceCacheStage=NULL;
+sensorResourceCache *ccSensorResourceCache=NULL;
 
 // shared (between CC processes) semaphores
 sem_t *locks[ENDLOCK];
@@ -2621,9 +2624,12 @@ int doCreateImage(ncMetadata *ccMeta, char *instanceId, char *volumeId, char *re
   return(ret);
 }
 
-int doDescribeSensors(ncMetadata *meta, char **instIds, int instIdsLen, char **sensorIds, int sensorIdsLen, sensorResource ***outResources, int *outResourcesLen)
+int doDescribeSensors(ncMetadata *meta, int historySize, long long collectionIntervalTimeMs, char **instIds, int instIdsLen, char **sensorIds, int sensorIdsLen, sensorResource ***outResources, int *outResourcesLen)
 {
-  logprintfl(EUCAINFO, "DescribeSensors(): invoked\n");
+  logprintfl(EUCAINFO, "DescribeSensors(): invoked historySize=%d collectionIntervalTimeMs=%lld\n", historySize, collectionIntervalTimeMs);
+  int err = sensor_config (historySize, collectionIntervalTimeMs); // update the config parameters if they are different
+  if (err != 0)
+    logprintfl (EUCAERROR, "failed to update sensor configuration (err=%d)\n", err);
 
   int total = 1;
   * outResources = malloc (total * sizeof (sensorResource *));
@@ -3221,7 +3227,7 @@ int init_pthreads() {
     pid = fork();
     if (!pid) {
       // set up default signal handler for this child process (for SIGTERM)
-      struct sigaction newsigact = { 0 };
+      struct sigaction newsigact = { { NULL } };
       newsigact.sa_handler = SIG_DFL;
       newsigact.sa_flags = 0;
       sigemptyset(&newsigact.sa_mask);
@@ -3236,6 +3242,35 @@ int init_pthreads() {
     }
   }
 
+  if (sensor_initd==0) {
+    sem * s = sem_alloc_posix (locks[SENSORCACHE]);
+    if (config->threads[SENSOR] == 0 || check_process(config->threads[SENSOR], NULL)) {
+      int pid;
+      pid = fork();
+      if (!pid) {
+	// set up default signal handler for this child process (for SIGTERM)
+	struct sigaction newsigact = { { NULL } };
+	newsigact.sa_handler = SIG_DFL;
+	newsigact.sa_flags = 0;
+	sigemptyset(&newsigact.sa_mask);
+	sigprocmask(SIG_SETMASK, &newsigact.sa_mask, NULL);
+	sigaction(SIGTERM, &newsigact, NULL);
+	logprintfl (EUCADEBUG, "sensor polling process running\n");
+	if (sensor_init (s, ccSensorResourceCache, MAX_SENSOR_RESOURCES, TRUE)==ERROR) // this call will not return
+	  logprintfl (EUCAERROR, "failed to invoke the sensor polling process\n");
+	exit(0);
+      } else {
+	config->threads[SENSOR] = pid;
+      }
+    }
+    if (sensor_init (s, ccSensorResourceCache, MAX_SENSOR_RESOURCES, FALSE)==ERROR) { // this call will return
+      logprintfl (EUCAERROR, "failed to initialize sensor subsystem in this process\n");
+    } else {
+      logprintfl (EUCADEBUG, "sensor subsystem initialized in this process\n");
+      sensor_initd = 1;
+    }
+  }
+  
   sem_mypost(CONFIG);
 
   return(0);
@@ -3334,6 +3369,15 @@ int init_thread(void) {
       rc = setup_shared_buffer((void **)&resourceCacheStage, "/eucalyptusCCResourceCacheStage", sizeof(ccResourceCache), &(locks[RESCACHESTAGE]), "/eucalyptusCCResourceCacheStatgeLock", SHARED_FILE);
       if (rc != 0) {
 	fprintf(stderr, "init_thread(): Cannot set up shared memory region for ccResourceCacheStage, exiting...\n");
+	sem_mypost(INIT);
+	exit(1);
+      }
+    }
+
+    if (ccSensorResourceCache == NULL) {
+      rc = setup_shared_buffer((void **)&ccSensorResourceCache, "/eucalyptusCCSensorResourceCache", sizeof(sensorResourceCache)+sizeof(sensorResource)*(MAX_SENSOR_RESOURCES-1), &(locks[SENSORCACHE]), "/eucalyptusCCSensorResourceCacheLock", SHARED_FILE);
+      if (rc != 0) {
+	fprintf(stderr, "init_thread(): Cannot set up shared memory region for ccSensorResourceCache, exiting...\n");
 	sem_mypost(INIT);
 	exit(1);
       }

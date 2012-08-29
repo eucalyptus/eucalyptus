@@ -24,6 +24,8 @@
 #ifndef INCLUDE_SENSOR_H
 #define INCLUDE_SENSOR_H
 
+#include "ipc.h"
+
 #define MAX_SENSOR_NAME_LEN    64
 #define MAX_SENSOR_VALUES      32 // by default 20
 #define MAX_SENSOR_DIMENSIONS  32 // root, ephemeral[0-1], vol-XYZ
@@ -72,11 +74,20 @@ typedef struct {
     int metricsLen;                            // size of the array
 } sensorResource;
 
-int sensor_init (void);
+typedef struct {
+    long long collection_interval_time_ms;
+    int history_size;
+    boolean initialized;
+    int max_resources;
+    int used_resources;
+    sensorResource resources[1]; // if struct should be allocated with extra space after it for additional cache elements
+} sensorResourceCache;
+
+int sensor_init (sem * sem, sensorResourceCache * resources, int resources_size, boolean run_bottom_half);
 int sensor_config (int new_history_size, long long new_collection_interval_time_ms);
 int sensor_str2type (const char * counterType);
 const char * sensor_type2str (int type);
-int sensor_res2str (char * buf, int bufLen, const sensorResource **res, int resLen);
+int sensor_res2str (char * buf, int bufLen, sensorResource **res, int resLen);
 int sensor_set_instance_data (const char * instanceId, const char ** sensorIds, int sensorIdsLen, sensorResource * sr);
 
 #endif

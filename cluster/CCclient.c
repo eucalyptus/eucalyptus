@@ -374,6 +374,9 @@ int main(int argc, char **argv) {
         char buf [10240];
         sensor_res2str (buf, sizeof(buf), res, resSize);
         printf ("resources: %d\n%s\n", resSize, buf);
+    } else {
+      printf("unrecognized operation '%s'\n", argv[2]);
+      exit(1);
     }
   }
   

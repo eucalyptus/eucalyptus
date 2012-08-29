@@ -1510,6 +1510,10 @@ doDescribeSensors (struct nc_state_t *nc,
 {
     int total;
 
+    int err = sensor_config (historySize, collectionIntervalTimeMs); // update the config parameters if they are different
+    if (err != 0)
+        logprintfl (EUCAERROR, "failed to update sensor configuration (err=%d)\n", err);
+    
 	sem_p (inst_copy_sem);
 	if (instIdsLen == 0) // describe all instances
 		total = total_instances (&global_instances_copy);
