@@ -35,12 +35,8 @@
     _destroy : function() {
     },
     
-    close : function() {
-      this.element.children().detach();       
-    },
 
     _help_flipped : false,
-
     _flipToHelp : function(evt, helpContent ) {
        var thisObj  = this;
        var $helpWrapper = $('<div>').addClass('help-page-wrapper');
@@ -73,6 +69,11 @@
           }
         });
     },
+/****** Public Methods *********/
+    close : function() {
+      this.element.children().detach();       
+    },
+/*******************************/
   });
 })(jQuery,
    window.eucalyptus ? window.eucalyptus : window.eucalyptus = {});

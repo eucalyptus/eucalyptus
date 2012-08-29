@@ -98,7 +98,7 @@
          title: volume_dialog_del_title,
          buttons: {
            'delete': {text: volume_dialog_del_btn, click: function() { thisObj._deleteListedVolumes(); $del_dialog.dialog("close");}},
-           'cancel': {text: volume_dialog_cancel_btn, focus:true, click: function() { $del_dialog.dialog("close");}} 
+           'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $del_dialog.dialog("close");}} 
          },
          help: {title: help_volume['dialog_delete_title'], content: $del_help},
        });
@@ -113,7 +113,7 @@
          title: volume_dialog_detach_title,
          buttons: {
            'detach': {text: volume_dialog_detach_btn, click: function() { thisObj._detachListedVolumes(false); $detach_dialog.dialog("close");}},
-           'cancel': {text: volume_dialog_cancel_btn, focus:true, click: function() { $detach_dialog.dialog("close");}} 
+           'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $detach_dialog.dialog("close");}} 
          },
          help: {title: help_volume['dialog_detach_title'], content: $detach_help},
        });
@@ -136,7 +136,7 @@
                 $attach_dialog.dialog("close");
               } 
             },
-           'cancel': { text: volume_dialog_cancel_btn, focus:true, click: function() { $attach_dialog.dialog("close"); } }
+           'cancel': { text: dialog_cancel_btn, focus:true, click: function() { $attach_dialog.dialog("close"); } }
          },
          help: {title: help_volume['dialog_volume_attach_title'], content: $attach_dialog_help},
          on_open: {spin: true, callback: function(args) {
@@ -175,7 +175,7 @@
                 $snapshot_dialog.dialog("close");
               } 
             },
-           'cancel': { text: volume_dialog_cancel_btn, focus:true, click: function() { $snapshot_dialog.dialog("close"); } }
+           'cancel': { text: dialog_cancel_btn, focus:true, click: function() { $snapshot_dialog.dialog("close"); } }
          },
          help: {title: help_volume['dialog_snapshot_create_title'], content: $snapshot_dialog_help},
        });
@@ -214,7 +214,7 @@
                 $add_dialog.dialog("close");
               } 
             }},
-           'cancel': {text: volume_dialog_cancel_btn, focus:true, click: function() { $add_dialog.dialog("close");}} 
+           'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $add_dialog.dialog("close");}} 
          },
          help: {title: help_volume['dialog_add_title'], content: $add_help},
          on_open: {spin: true, callback: function(args) {
@@ -342,36 +342,11 @@
       })
     },
 
-/*
-    handleInstanceHover : function(e) {
-      switch(e.type) {
-        case 'mouseleave':
-          $(e.currentTarget).removeClass("hoverCell");
-          break;
-        case 'mouseenter':
-          $(e.currentTarget).addClass("hoverCell");
-          break;
-      }
-    },
-
-    handleSnapshotHover : function(e) {
-      switch(e.type) {
-        case 'mouseleave':
-          $(e.currentTarget).removeClass("hoverCell");
-          $(e.currentTarget).off('click');
-          break;
-        case 'mouseenter':
-          $(e.currentTarget).addClass("hoverCell");
-          break;
-      }
-    },
-*/
     _deleteListedVolumes : function () {
       var thisObj = this;
-      $volumesToDelete = this.delDialog.find("#volumes-to-delete");
-      var rowsToDelete = $volumesToDelete.text().split(ID_SEPARATOR);
-      for ( i = 0; i<rowsToDelete.length; i++ ) {
-        var volumeId = rowsToDelete[i];
+      var $volumesToDelete = this.delDialog.eucadialog('getSelectedResources', 0);
+      for ( i = 0; i<$volumesToDelete.length; i++ ) {
+        var volumeId = $volumesToDelete[i];
         $.ajax({
           type:"GET",
           url:"/ec2?Action=DeleteVolume&VolumeId=" + volumeId,
@@ -476,8 +451,7 @@
     _detachListedVolumes : function (force) {
       var thisObj = this;
       dialogToUse = this.detachDialog; 
-      $volumesToDelete = dialogToUse.find("#volumes-to-detach");
-      var volumes = $volumesToDelete.text().split(ID_SEPARATOR);
+      var volumes =  dialogToUse.eucadialog('getSelectedResources', 0);
       for ( i = 0; i<volumes.length; i++ ) {
         var volumeId = volumes[i];
         $.ajax({
@@ -519,11 +493,8 @@
     _deleteAction : function() {
       var thisObj = this;
       volumesToDelete = thisObj.tableWrapper.eucatable('getSelectedRows', 1);
-
-      if ( volumesToDelete.length > 0 ) {
-        thisObj.delDialog.eucadialog('setSelectedResources', volumesToDelete);
-        $volumesToDelete = thisObj.delDialog.find("#volumes-to-delete");
-        $volumesToDelete.html(volumesToDelete.join(ID_SEPARATOR));
+      if( volumesToDelete.length > 0 ) {
+        thisObj.delDialog.eucadialog('setSelectedResources', {title:[volume_dialog_del_resource_title], contents: [[volumesToDelete]]});
         thisObj.delDialog.dialog('open');
       }
     },
@@ -548,33 +519,16 @@
       this.attachDialog.eucadialog('open');
     },
 
-    _detachAction : function(row, force) {
+    _detachAction : function(){
       var thisObj = this;
-      volumes = [];
-      if ( !row ) {
-        rows = thisObj.tableWrapper.eucatable('getSelectedRows');
-        for(r in rows){
-          $row = $(rows[r]);
-          volumes.push([$row.find('td:eq(1)').text(), $row.find('td:eq(4)').text()]);
-        }
-      } else {
-        volumes.push([row.find('td:eq(1)').text(), row.find('td:eq(4)').text()]);
-      }
-
+      var rows = thisObj.tableWrapper.eucatable('getSelectedRows');
       dialogToUse = this.detachDialog;
-      if ( volumes.length > 0 ) {
-        $detachIds = dialogToUse.find("tbody.resource-ids");
-        $detachIds.html('');
-        $volumesToDetach = dialogToUse.find("#volumes-to-detach");
-        ids = [];
-        for ( i = 0; i<volumes.length; i++ ) {
-          vol = escapeHTML(volumes[i][0]);
-          inst = escapeHTML(volumes[i][1]);
-          ids.push(volumes[i][0]);
-          $tr = $('<tr>').append($('<td>').text(vol),$('<td>').text(inst));
-          $detachIds.append($tr);
-        }
-        $volumesToDetach.html(ids.join(ID_SEPARATOR));
+      if ( rows.length > 0 ) {
+        var matrix = [];
+        $.each(rows, function(idx, volume){
+          matrix.push([volume.id , volume.attach_data.instance_id]); 
+        });
+        dialogToUse.eucadialog('setSelectedResources', {title: [volume_dialog_detach_vol_head, volume_dialog_detach_inst_head], contents: matrix});
         dialogToUse.dialog('open');
       }
     },
@@ -582,7 +536,7 @@
     _createSnapshotAction : function(volumeId) {
       volumeToUse = '';
       if ( !volumeId ) {
-        rows = this.tableWrapper.eucatable('getAllSelectedRows', 1);
+        rows = this.tableWrapper.eucatable('getSelectedRows', 1);
         volumeToUse = rows[0];
       } else {
         volumeToUse = volumeId;
@@ -596,32 +550,32 @@
 
     _createMenuActions : function() {
       var thisObj = this;
-      var selectedVolumes = thisObj.baseTable.eucatable('getSelectedRows', 8); // 8th column=status (this is volume's knowledge)
+      var volumeStates = thisObj.baseTable.eucatable('getSelectedRows', 8); // 8th column=status (this is volume's knowledge)
       var itemsList = {};
+    
+      (function(){
+        itemsList['attach'] = { "name": volume_action_attach, callback: function(key, opt) {;}, disabled: function(){ return true;} } 
+        itemsList['detach'] = { "name": volume_action_detach, callback: function(key, opt) {;}, disabled: function(){ return true;} }
+        itemsList['create_snapshot'] = { "name": volume_action_create_snapshot, callback: function(key, opt) {;}, disabled: function(){ return true;} }
+        itemsList['delete'] = { "name": volume_action_delete, callback: function(key, opt) {;}, disabled: function(){ return true;} }
+      })();
+
       // add attach action
-      if ( selectedVolumes.length == 1 && selectedVolumes.indexOf('available') == 0 ){
+      if ( volumeStates.length === 1 && volumeStates.indexOf('available') === 0 ){
         itemsList['attach'] = { "name": volume_action_attach, callback: function(key, opt) { thisObj._attachAction(); } }
       }
-          // detach actions
-      if ( selectedVolumes.length > 0 ) {
-        addDetach = true;
-        for (s in selectedVolumes) {
-          if ( selectedVolumes[s] != 'in-use' ) {
-            addDetach = false;
-            break;
-          }
-        }
-        if ( addDetach )
-          itemsList['detach'] = { "name": volume_action_detach, callback: function(key, opt) { thisObj._detachAction(false); } }
-      }
+      // detach actions
+      if ( volumeStates.length > 0  && onlyInArray('in-use', volumeStates))
+        itemsList['detach'] = { "name": volume_action_detach, callback: function(key, opt) { thisObj._detachAction(); } }
 
       // create snapshot-action
-      if ( selectedVolumes.length  == 1 ) {
-         if ( selectedVolumes[0] == 'in-use' || selectedVolumes[0] == 'available' )
+      if ( volumeStates.length  === 1) { 
+         if ( volumeStates[0] === 'in-use' || volumeStates[0] === 'available' )
             itemsList['create_snapshot'] = { "name": volume_action_create_snapshot, callback: function(key, opt) { thisObj._createSnapshotAction(); } }
       }
+
       // add delete action
-      if ( selectedVolumes.length > 0 ){
+      if ( volumeStates.length > 0 && onlyInArray('available', volumeStates)){
         itemsList['delete'] = { "name": volume_action_delete, callback: function(key, opt) { thisObj._deleteAction(); } }
       }
       return itemsList;

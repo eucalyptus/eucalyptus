@@ -34,14 +34,19 @@
       var $wrapper = $($tmpl.render($.extend($.i18n.map, help_instance)));
       var $instTable = $wrapper.children().first();
       var $instHelp = $wrapper.children().last();
-      this.element.add($instTable);
 
-      $.when(
-        thisObj._getEmi()
-      ).then( 
-        thisObj._mapVolumeState()
-       ).then(
-        thisObj._mapIp()
+      this._reloadData();
+      this.element.add($instTable);
+       $.when( 
+        (function(){
+          var dfd = $.Deferred();
+          $.when(thisObj._getEmi())
+           .then(function(){thisObj._mapVolumeState()}, function(){ dfd.resolve();})
+           .then(function(){thisObj._mapIp()}, function(){dfd.resolve();})
+           .done(function(){dfd.resolve()})
+           .fail(function(){dfd.resolve()})
+          return dfd.promise(); 
+        })()
        ).done(function(out){
           thisObj.tableWrapper = $instTable.eucatable({
           id : 'instances', // user of this widget should customize these options,
@@ -110,6 +115,17 @@
 
     _destroy : function() {
     },
+
+    descVolRepeat : null,
+    descAddrRepeat : null,  
+    _reloadData : function() {
+      var thisObj = this;
+      thisObj.descVolRepeat = runRepeat(function(){return thisObj._mapVolumeState(); },10000);
+      thisObj.descAddrRepeat = runRepeat(function(){return thisObj._mapIp();}, 10000);
+      /* to cancel later: cancelRepeat(thisObj.descVolRepeat);
+         to clear all repeat: clearRepeat();
+      */
+    },
     
     _getEmi : function() {
       var thisObj = this;
@@ -160,6 +176,20 @@
         });
       });
      var menuItems = {};
+     // add all menu items first
+     (function(){
+       menuItems['connect'] = {"name":instance_action_connect, callback: function(key, opt) { ; }, disabled: function(){ return true; }};
+       menuItems['stop'] = {"name":instance_action_stop, callback: function(key, opt){ ; }, disabled: function(){ return true; }};
+       menuItems['start'] = {"name":instance_action_start, callback: function(key, opt){ ; }, disabled: function(){ return true; }};
+       menuItems['reboot'] = {"name":instance_action_reboot, callback: function(key, opt){ ; }, disabled: function(){ return true; }};
+       menuItems['launchmore'] = {"name":instance_action_launch_more, callback: function(key, opt){ ; }, disabled: function(){ return true; }};
+       menuItems['terminate'] = {"name":instance_action_terminate, callback: function(key, opt){ ; }, disabled: function(){ return true; }};
+       menuItems['console'] = {"name":instance_action_console, callback: function(key, opt) { ; }, disabled: function(){ return true; }};
+       menuItems['attach'] = {"name":instance_action_attach, callback: function(key, opt) { ; }, disabled: function(){ return true; }};
+       menuItems['detach'] = {"name":instance_action_detach, callback: function(key, opt) { ; }, disabled: function(){ return true; }};
+       menuItems['associate'] = {"name":instance_action_associate, callback: function(key, opt){; }, disabled: function(){ return true; }};
+       menuItems['disassociate'] = {"name":instance_action_disassociate, callback: function(key, opt){;}, disabled: function(){ return true; }};
+     })();
 
      if(numSelected === 1 && 'running' in stateMap && $.inArray(instIds[0], stateMap['running']>=0)){
        menuItems['connect'] = {"name":instance_action_connect, callback: function(key, opt) { ; }}
@@ -216,6 +246,7 @@
  
      return menuItems;
     },
+    _countVol : 0,
     // TODO: should be auto-reloaded
     _mapVolumeState : function() {
       var thisObj = this;
@@ -239,13 +270,10 @@
                 $.extend(vols, {vol_id:state})
               } 
             });
-          } else {
-            ;
-          }
+          } else { ; }
         },
         error: function(jqXHR, textStatus, errorThrown){ //TODO: need to call notification subsystem
-          ;
-        }
+          ; }
       });
     },
 
@@ -269,13 +297,10 @@
                 thisObj.instIpMap[instId] = addr['public_ip'];
               }
             });
-          }else{
-            ;
-          }
+          }else{ ; }
         },
         error: function(jqXHR, textStatus, errorThrown){ //TODO: need to call notification subsystem
-          ;
-        }
+          ; }
       });
     },
      

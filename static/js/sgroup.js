@@ -86,7 +86,7 @@
          title: sgroup_dialog_del_title,
          buttons: {
            'delete': {text: sgroup_dialog_del_btn, click: function() { thisObj._deleteSelectedSecurityGroups(); $del_dialog.dialog("close");}},
-           'cancel': {text: sgroup_dialog_cancel_btn, focus:true, click: function() { $del_dialog.dialog("close");}} 
+           'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $del_dialog.dialog("close");}} 
          }
        });
 
@@ -138,7 +138,7 @@
               );
               $add_dialog.dialog("close");
             }},
-        'cancel': {text: sgroup_dialog_cancel_btn, focus:true, click: function() { $add_dialog.dialog("close");}},
+        'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $add_dialog.dialog("close");}},
         },
         help: {title: help_volume['dialog_add_title'], content: $add_help},
       });
@@ -317,10 +317,13 @@
       var thisObj = this;
       var $tableWrapper = this._getTableWrapper();
       rowsToDelete = $tableWrapper.eucatable('getSelectedRows', 1);
+      var matrix = [];
+      $.each(rowsToDelete,function(idx, group){
+        matrix.push([group]);
+      });
+
       if ( rowsToDelete.length > 0 ) {
-        thisObj.delDialog.eucadialog('setSelectedResources', rowsToDelete);
-        $groupsToDelete = thisObj.delDialog.find("#keys-to-delete");
-        $groupsToDelete.html(rowsToDelete.join(ID_SEPARATOR));
+        thisObj.delDialog.eucadialog('setSelectedResources', {title:[sgroup_dialog_del_resource_title], contents: matrix});
         thisObj.delDialog.dialog('open');
       }
     },

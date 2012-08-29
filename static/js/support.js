@@ -84,3 +84,40 @@ function allInArray(val_arr, larger_arr){
    }
    return ret;
 }
+
+function onlyInArray(val, array){
+  for (i in array) { 
+    if (array[i] !== val )
+      return false;
+  }
+  return true; 
+}
+
+var _rqueue = {};
+function _delayedExec(cbName, callback){
+  if(cbName in _rqueue){  
+     setTimeout(function() { return _delayedExec(cbName, callback);}, _rqueue[cbName]);
+     callback.apply(this);
+  }
+}
+
+/****** Public Methods *********/
+function runRepeat(callback, millisec){
+  var cbName = null; 
+  do{
+    cbName = 'q-'+S4()+'-'+S4();
+  }while(cbName in _rqueue);
+  _rqueue[cbName] = millisec;
+  setTimeout(function(){ return _delayedExec(cbName, callback);}, millisec);
+  
+  return cbName;
+}
+
+function cancelRepeat (cbName){
+  delete _rqueue[cbName];
+}
+    
+function clearRepeat() {
+  _rqueue = {}; 
+}
+    

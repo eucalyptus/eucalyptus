@@ -163,8 +163,8 @@
 
     _releaseListedIps : function () {
       var thisObj = this;
-      $eipsToDelete = this.releaseDialog.find("#eips-to-release");
-      var rowsToDelete = $eipsToDelete.text().split(ID_SEPARATOR);
+      $eipsToRelease = this.releaseDialog.find("#eips-to-release");
+      var rowsToDelete = $eipsToRelease.text().split(ID_SEPARATOR);
       for ( i = 0; i<rowsToDelete.length; i++ ) {
         var eipId = rowsToDelete[i];
         $.ajax({
@@ -283,9 +283,12 @@
     _releaseAction : function() {
       var thisObj = this;
       eipsToRelease = thisObj.tableWrapper.eucatable('getSelectedRows', 1);
-
+      var matrix = [];
+      $.each(eipsToRelease,function(idx, key){
+        matrix.push([key]);
+      });
       if ( eipsToRelease.length > 0 ) {
-        thisObj.releaseDialog.eucadialog('setSelectedResources', eipsToDelete);
+        thisObj.releaseDialog.eucadialog('setSelectedResources', {title:[eip_release_resource_title], contents: matrix});
         $eipsToRelease = thisObj.releaseDialog.find("#eips-to-release");
         $eipsToRelease.html(eipsToRelease.join(ID_SEPARATOR));
         thisObj.releaseDialog.dialog('open');
