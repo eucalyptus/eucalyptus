@@ -17,7 +17,7 @@ class UIProxyClient(object):
     def login(self, account, username, password):
         # make request, storing cookie
         req = urllib2.Request("http://localhost:8888/")
-        data = "action=login"
+        data = "action=login&remember=no"
         encoded_auth = base64.encodestring("%s:%s:%s" % (account, username, password))[:-1]
         req.add_header('Authorization', "Basic %s" % encoded_auth)
         response = urllib2.urlopen(req, data)
