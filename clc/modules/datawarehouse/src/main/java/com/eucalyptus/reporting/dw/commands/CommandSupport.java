@@ -56,7 +56,7 @@ abstract class CommandSupport {
   private void setupPersistenceContext() {
     final Properties properties = new Properties();
     try {
-      properties.load( CommandSupport.class.getResourceAsStream( "../datawarehouse_persistence.properties" ) );
+      properties.load( CommandSupport.class.getClassLoader().getResourceAsStream("com/eucalyptus/reporting/dw/datawarehouse_persistence.properties" ) );
     } catch (IOException e) {
       throw Exceptions.toUndeclared(e);
     }
@@ -114,6 +114,7 @@ abstract class CommandSupport {
       withArg( "dbn",  "db-name", "Database name", false );
       withArg( "dbu",  "db-user", "Database username", false );
       withArg( "dbp",  "db-pass", "Database password", true );
+      withFlag( "dbs", "db-ssl", "Database connection uses SSL" );
     }
 
     ArgumentsBuilder withFlag( final String argument,
