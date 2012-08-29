@@ -65,7 +65,9 @@ import java.io.File;
 import java.io.FileFilter;
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -94,10 +96,13 @@ public class FaultRegistry {
 	private static final String MESSAGE = "message";
 	private static final String XML_SUFFIX = ".xml";
 	private static final String COMMON_XML = COMMON + XML_SUFFIX;
+	
+	public static final Fault SUPPRESSED_FAULT = new Fault(); // token to indicate fault is suppressed
 
 	public FaultRegistry() {
 		commonMap = new HashMap<String, Common>();
 		faultMap = new HashMap<Integer, Fault>();
+		suppressedFaults = new HashSet<Integer>();
 	}
 		
 	void crawlDirectory(File rootDir) {
@@ -108,7 +113,7 @@ public class FaultRegistry {
 			File[] faultFiles = rootDir.listFiles(new FaultFileFilter());
 			if (faultFiles != null) {
 				for (File faultFile: faultFiles) {
-					parseFaultXMLFile(faultFile, faultMap, commonMap);
+					parseFaultXMLFile(faultFile, faultMap, commonMap, suppressedFaults);
 				}
 			}
 		} else {
@@ -154,9 +159,19 @@ public class FaultRegistry {
 	}
 
 	private void parseFaultXMLFile(File faultXMLFile,
-			Map<Integer, Fault> faultMap, Map<String, Common> commonMap) {
+			Map<Integer, Fault> faultMap, Map<String, Common> commonMap, Set<Integer> suppressedFaults) {
 		try {
 			LOG.debug("Parsing fault file " + faultXMLFile);
+			// Special case, zero length file.  (Turn on or off)
+			int faultId = parseIdFromFileName(faultXMLFile.getName());
+			if (suppressedFaults.contains(faultId) && faultXMLFile.length() != 0) {
+				suppressedFaults.remove(faultId);
+			// Zero length means suppress fault
+			} else if (faultXMLFile.exists() && faultXMLFile.length() == 0) {
+				faultMap.remove(faultId);
+				suppressedFaults.add(faultId);
+				return;
+			}
 			DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
 			DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
 			Document doc = dBuilder.parse(faultXMLFile);
@@ -182,7 +197,7 @@ public class FaultRegistry {
 						Element currentElement = (Element) currentNode;
 						if (FAULT.equalsIgnoreCase(currentElement.getTagName())) {
 							Fault fault = parseFaultElement(currentElement, commonMap);
-							if (fault.getId() != parseIdFromFileName(faultXMLFile.getName())) {
+							if (fault.getId() != faultId) {
 								LOG.warn("Fault " + fault.getId() + " found in file " + faultXMLFile + ", in the wrong file.  Will not be processed");
 							} else {
 								LOG.debug("Successfully parsed " + faultXMLFile + " and read in fault " + fault.getId());
@@ -293,9 +308,9 @@ public class FaultRegistry {
 			}
 		}
 	}
-
-	public Map<String, Common> commonMap;
-	public Map<Integer, Fault> faultMap;
+	private Set<Integer> suppressedFaults; // new request
+	private Map<String, Common> commonMap;
+	private Map<Integer, Fault> faultMap;
 
 	private String getAttribute(Element element, String attributeName) {
 		if (element == null) return null;
@@ -323,6 +338,9 @@ public class FaultRegistry {
 	}
 
 	public Fault lookupFault(int id) {
+		if (suppressedFaults.contains(id)) {
+			return SUPPRESSED_FAULT;
+		}
 		Fault fault = faultMap.get(id);
 		if (fault == null) {
 			return fault;
