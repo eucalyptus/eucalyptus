@@ -138,7 +138,7 @@ upgrade_db() {
           return
       fi
   elif ! (ls ${OLD_EUCA}/${DBDIR}/* >/dev/null 2>&1); then 
-      if [ "${OLD_EUCA_VERSION:0:3}" == "3.0" ]; then
+      if [ "${OLD_EUCA_VERSION:0:3}" == "3.0" ] || [ "${OLD_EUCA_VERSION:0:3}" == "3.1" ]; then
           log "This is not a CLC.  Skipping DB upgrade."
           return
       else 
