@@ -110,7 +110,7 @@ public class Hmacv2LoginModule extends HmacLoginModuleSupport {
         }
       }
     }
-    super.setCredential( credentials.getQueryId( ) );
+    super.setCredential( credentials.getQueryIdCredential( ) );
     super.setPrincipal( user );
     //super.getGroups( ).addAll( Groups.lookupUserGroups( super.getPrincipal( ) ) );
     return true;

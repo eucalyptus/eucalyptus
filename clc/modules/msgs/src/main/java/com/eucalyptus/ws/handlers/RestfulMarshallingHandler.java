@@ -188,7 +188,7 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
           }
         }
         byte[] req = byteOut.toByteArray( );
-        ChannelBuffer buffer = ChannelBuffers.copiedBuffer( req );
+        ChannelBuffer buffer = ChannelBuffers.wrappedBuffer( req );
         httpResponse.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf( buffer.readableBytes( ) ) );
         httpResponse.addHeader( HttpHeaders.Names.CONTENT_TYPE, "application/xml; charset=UTF-8" );
         httpResponse.setContent( buffer );

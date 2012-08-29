@@ -82,10 +82,10 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
-import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.AccessKeys;
 import com.eucalyptus.auth.login.AuthenticationException;
+import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.binding.HoldMe;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.crypto.Hmac;
@@ -153,9 +153,10 @@ public class WalrusSoapUserAuthenticationHandler extends MessageStackHandler {
 	private void authenticate(MappingHttpRequest httpRequest, String accessKeyID, String signature, String data) throws AuthenticationException {
 		signature = signature.replaceAll("=", "");
 		try {
-			User user = Accounts.lookupUserByAccessKeyId( accessKeyID );  
-			String queryKey = user.getKey( accessKeyID ).getSecretKey( );
-			String authSig = checkSignature( queryKey, data );
+			final AccessKey key = AccessKeys.lookupAccessKey( accessKeyID, null );  //Walrus SOAP API does not currently support temporary credentials
+			final User user = key.getUser();
+			final String queryKey = key.getSecretKey();
+			final String authSig = checkSignature( queryKey, data );
 			if (!authSig.equals(signature))
 				throw new AuthenticationException( "User authentication failed. Could not verify signature" );
 			Contexts.lookup( httpRequest.getCorrelationId( ) ).setUser( user );

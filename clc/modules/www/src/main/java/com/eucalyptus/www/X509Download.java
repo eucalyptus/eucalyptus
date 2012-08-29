@@ -88,7 +88,7 @@ import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.component.id.Euare;
 import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.component.id.Eucalyptus.Notifications;
+import com.eucalyptus.component.id.Tokens;
 import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.crypto.Certs;
 import com.eucalyptus.crypto.util.PEMFiles;
@@ -190,7 +190,7 @@ public class X509Download extends HttpServlet {
     String userSecretKey = null;
     KeyPair keyPair = null;
     try {
-      for ( AccessKey k : u.getKeys( ) ) {
+      for ( AccessKey k : u.getKeys() ) {
         if ( k.isActive( ) ) {
           userAccessKey = k.getAccessKey( );
           userSecretKey = k.getSecretKey( );
@@ -248,9 +248,14 @@ public class X509Download extends HttpServlet {
       //Disable notifications for now
       //sb.append( "\nexport AWS_SNS_URL=" + ServiceUris.remote( Notifications.class ) );
       if ( Topology.isEnabled( Euare.class ) ) {//GRZE:NOTE: this is temporary
-        sb.append( "\nexport EUARE_URL=" + ServiceUris.remotePublicify(  Euare.class ) );
+        sb.append( "\nexport EUARE_URL=" + ServiceUris.remotePublicify( Euare.class ) );
       } else {
         sb.append( "\necho WARN:  EUARE URL is not configured. >&2" );
+      }
+      if ( Topology.isEnabled( Tokens.class ) ) {
+        sb.append( "\nexport TOKEN_URL=" + ServiceUris.remotePublicify( Tokens.class ) );
+      } else {
+        sb.append( "\necho WARN:  TOKEN URL is not configured. >&2" );
       }
       sb.append( "\nexport EUSTORE_URL=" + StackConfiguration.DEFAULT_EUSTORE_URL );
       sb.append( "\nexport EC2_PRIVATE_KEY=${EUCA_KEY_DIR}/" + baseName + "-pk.pem" );

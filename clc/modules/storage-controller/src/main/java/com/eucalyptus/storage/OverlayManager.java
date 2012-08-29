@@ -78,15 +78,14 @@ import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 
 import com.eucalyptus.auth.util.Hashes;
-import com.eucalyptus.auth.util.X509CertHelper;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.id.ClusterController;
-import com.eucalyptus.config.StorageControllerBuilder;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.PropertyDirectory;
+import com.eucalyptus.crypto.Ciphers;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.StorageProperties;
@@ -97,7 +96,6 @@ import edu.ucsb.eucalyptus.cloud.entities.DirectStorageInfo;
 import edu.ucsb.eucalyptus.cloud.entities.ISCSIVolumeInfo;
 import edu.ucsb.eucalyptus.cloud.entities.LVMVolumeInfo;
 import edu.ucsb.eucalyptus.cloud.entities.StorageInfo;
-import edu.ucsb.eucalyptus.cloud.entities.VolumeInfo;
 import edu.ucsb.eucalyptus.msgs.ComponentProperty;
 import edu.ucsb.eucalyptus.util.StreamConsumer;
 import edu.ucsb.eucalyptus.util.SystemUtil;
@@ -1179,7 +1177,7 @@ public class OverlayManager implements LogicalStorageManager {
 				List<ServiceConfiguration> partitionConfigs = ServiceConfigurations.listPartition( ClusterController.class, StorageProperties.NAME );
 				ServiceConfiguration clusterConfig = partitionConfigs.get( 0 );
 				PublicKey ncPublicKey = Partitions.lookup( clusterConfig ).getNodeCertificate( ).getPublicKey();
-				Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+				Cipher cipher = Ciphers.RSA_PKCS1.get();
 				cipher.init(Cipher.ENCRYPT_MODE, ncPublicKey);
 				return new String(Base64.encode(cipher.doFinal(password.getBytes())));	      
 			} catch ( Exception e ) {
